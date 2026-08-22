@@ -5,6 +5,7 @@
       'fc-spot': isSpot,
       'fgr-row--focus': isFocused,
       'fc-dimmed': isDimmed,
+      'fgr-row--veiled': isVeiled,
     }"
     :style="{ '--node-c': entry.color }"
     :data-forge-id="entry.id"
@@ -63,9 +64,31 @@ import { Icon } from '@iconify/vue'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { forgeLevelParts } from '@/composables/ui/useForgeUpgrades'
 import type { ForgeUpgradeEntry } from '@/types'
-import { FORGE_GROWN_BADGE, FORGE_GROWN_ICON_SIZE } from '@/config/constants'
+import {
+  FORGE_FOCUS_DIM_OPACITY,
+  FORGE_GROWN_BADGE,
+  FORGE_GROWN_ICON_SIZE,
+} from '@/config/constants'
 
-const props = defineProps<{ entry: ForgeUpgradeEntry }>()
+const props = withDefaults(
+  defineProps<{
+    entry: ForgeUpgradeEntry
+    /**
+     * Der Fokus-Schleier liegt. Kommt von der Liste und nicht aus dem
+     * Composable: nur sie weiss, welche Zeilen sie gerade rendert — und der
+     * Schleier hängt genau daran (`focusVeiled` in `ForgeUpgradesSection`).
+     */
+    focusVeiled?: boolean
+    /** Diese Zeile ist eine noch offene Voraussetzung des Fokus. Im Archiv
+     *  praktisch nie — ein ausgewachsener Knoten ist erfüllt —, aber die
+     *  Weiche steht hier trotzdem: sie ist dieselbe wie an der Upgrade-Zeile,
+     *  und zwei verschiedene Antworten auf dieselbe Frage liefen auseinander. */
+    focusRequired?: boolean
+  }>(),
+  { focusVeiled: false, focusRequired: false },
+)
+
+const dimOpacity = String(FORGE_FOCUS_DIM_OPACITY)
 
 const { hoverId, pinnedId, setListHover, focusNode } = useForgeSpotlight()
 
@@ -78,6 +101,20 @@ const isSpot = computed(() => hoverId.value === props.entry.id || isFocused.valu
 
 const isDimmed = computed(
   () => hoverId.value !== null && hoverId.value !== props.entry.id && !isFocused.value,
+)
+
+/**
+ * Zurückgetreten, weil ANDERSWO etwas festgehalten ist.
+ *
+ * Getrennt von `isDimmed` und nicht mit ihm verrechnet, obwohl beide am Ende
+ * die Deckkraft senken: der Zeiger ist flüchtig, der Fokus steht — und was
+ * dauerhaft liegt, dämpft leiser (`FORGE_FOCUS_DIM_OPACITY` gegen 0,42). Fallen
+ * beide zusammen, gewinnt die spätere Regel im Stylesheet, und das ist die
+ * härtere des Zeigers; genau richtig, denn dann zeigt der Spieler wirklich
+ * woandershin.
+ */
+const isVeiled = computed(
+  () => props.focusVeiled && !isFocused.value && !props.focusRequired,
 )
 
 const levelParts = computed(() => forgeLevelParts(props.entry.level, props.entry.maxLevel))
@@ -134,6 +171,14 @@ const levelParts = computed(() => forgeLevelParts(props.entry.level, props.entry
 .fgr-row.fc-spot {
   background: #241a10;
   border-color: var(--node-c, #e8c040);
+}
+
+/* Der Fokus liegt auf einer ANDEREN Zeile. Eigene Klasse statt eines zweiten
+   Wertes an `.fc-dimmed`, weil die beiden Dämpfungen verschieden lange stehen —
+   Herleitung an `FORGE_FOCUS_DIM_OPACITY`. Sie steht VOR `.fc-dimmed` im
+   Stylesheet: treffen beide zusammen, soll die härtere des Zeigers gewinnen. */
+.fgr-row.fgr-row--veiled {
+  opacity: v-bind(dimOpacity);
 }
 
 .fgr-row.fc-dimmed {

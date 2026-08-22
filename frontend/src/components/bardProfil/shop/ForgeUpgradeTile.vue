@@ -9,6 +9,8 @@
         'fc-spot': isSpot,
         'fut-row--focus': isFocused,
         'fc-dimmed': isDimmed,
+        'fut-row--veiled': isVeiled,
+        'fut-row--needed': focusRequired && !isFocused,
       },
     ]"
     :style="{ '--node-c': entry.color }"
@@ -24,6 +26,21 @@
     <span v-if="isFocused" class="fut-pin" aria-hidden="true">
       <Icon :icon="FORGE_PIN_ICON" width="100%" height="100%" />
     </span>
+
+    <!-- WIRD FÜR DEN FOKUS GEBRAUCHT — die Marke, die den Schleier lesbar
+         macht: sie steht an genau den Zeilen, die hell durch ihn hindurchstehen,
+         und sagt WARUM.
+
+         Derselbe Sitz wie die Pin-Marke, und beide treffen sich nie: eine Zeile,
+         die der Fokus braucht, ist nicht selbst der Fokus (`isFocused` steht in
+         der Weiche). Oben rechts ginge nicht — dort sitzt die NEU-Marke —, und
+         die ganze rechte Höhe gehört der Kauffläche.
+
+         Reiner Text, kein Glyph: die Zeile trägt schon Knotenbild, Stufe, Name,
+         Wirkungssprung, Materialband und bis zu zwei Marken. Die Wortwahl ist
+         die des Meep-Baums („Still needed first"), damit beide Leitern dasselbe
+         sagen. -->
+    <span v-if="focusRequired && !isFocused" class="fut-needed">{{ FORGE_FOCUS_REQ_LABEL }}</span>
 
     <!-- NEU SEIT DEM LETZTEN BLICK — dieselbe Marke, dieselbe Ecke wie am
          Header und am Profil-Reiter (`ShopReadyBadge`). Der Spieler folgt ihr
@@ -291,6 +308,9 @@ import {
   FORGE_CARD_FLASH_MS,
   FORGE_SPOTLIGHT_ARRIVAL_MS,
   FORGE_CHIME_IMAGE,
+  FORGE_FOCUS_DIM_OPACITY,
+  FORGE_FOCUS_REQ_LABEL,
+  FORGE_REQ_OPEN_COLOR,
   FORGE_COUNT_TOKEN,
   FORGE_FRESH_BADGE_ROW_PX,
   FORGE_FRESH_TITLE,
@@ -320,6 +340,8 @@ const bulkWidth = `${FORGE_ROW_BULK_WIDTH_PX}px`
 /* Statischer Wert, einmal je Zeile gesetzt — kein Frame-Wert (Performance-Regel
    3). Dasselbe Muster wie `bulkWidth` darüber. */
 const freshBadgeSize = `${FORGE_FRESH_BADGE_ROW_PX}px`
+const dimOpacity = String(FORGE_FOCUS_DIM_OPACITY)
+const neededColor = FORGE_REQ_OPEN_COLOR
 
 const props = withDefaults(
   defineProps<{
@@ -341,8 +363,20 @@ const props = withDefaults(
      * nur sie weiss, ob die Zeile vorher überhaupt ausserhalb ihres Kastens lag.
      */
     arrived?: boolean
+    /**
+     * Der Fokus-Schleier liegt über der Liste.
+     *
+     * Kommt von der Liste und nicht aus `useForgeSpotlight()`: der Schleier
+     * hängt nicht am Fokus allein, sondern daran, ob dabei überhaupt eine
+     * SICHTBARE Zeile hell bleibt — und das weiss nur, wer die Abschnitte
+     * rendert (`focusVeiled` in `ForgeUpgradesSection`).
+     */
+    focusVeiled?: boolean
+    /** Diese Zeile ist eine noch offene Voraussetzung des fokussierten Knotens
+     *  — sie bleibt hell und trägt die Marke. */
+    focusRequired?: boolean
   }>(),
-  { bulkCount: 0, arrived: false },
+  { bulkCount: 0, arrived: false, focusVeiled: false, focusRequired: false },
 )
 defineEmits<{ (e: 'buy', id: string): void; (e: 'buyMany', id: string): void }>()
 
@@ -375,6 +409,22 @@ const isSpot = computed(() => hoverId.value === props.entry.id || isFocused.valu
 const isDimmed = computed(
   () => hoverId.value !== null && hoverId.value !== props.entry.id && !isFocused.value,
 )
+
+/**
+ * Zurückgetreten, weil ANDERSWO etwas festgehalten ist.
+ *
+ * Der Gegenpart zu `isDimmed` darüber, und getrennt von ihm, weil die beiden
+ * verschieden lange stehen: der Zeiger ist flüchtig und darf hart dämpfen
+ * (0,42), der Fokus steht bis zum Lösen und dämpft leiser
+ * (`FORGE_FOCUS_DIM_OPACITY`). Treffen beide zusammen, gewinnt die spätere Regel
+ * im Stylesheet — die des Zeigers, und das ist richtig: dann sieht der Spieler
+ * gerade wirklich woandershin.
+ *
+ * Was den Schleier von der alten, zurückgenommenen Fassung unterscheidet, steht
+ * nicht hier, sondern in `ForgeUpgradesSection`: er liegt nur, wenn er
+ * gleichzeitig etwas HELL lässt.
+ */
+const isVeiled = computed(() => props.focusVeiled && !isFocused.value && !props.focusRequired)
 
 /**
  * „Offen, aber es reicht nicht" — der Zustand, der ZURÜCKTRITT.
@@ -630,10 +680,62 @@ const buyTitle = computed(() => {
   opacity: 1;
 }
 
+/* ── Der Fokus liegt auf einer ANDEREN Zeile ─────────────────
+   Die Dämpfung, die es hier lange NICHT gab: ein Fokus liess die Liste
+   unverändert laut, und der festgehaltene Eintrag war unter fünfundvierzig
+   Zeilen an einer 1px-Rahmenfarbe zu suchen.
+
+   Was die alte, zurückgenommene Fassung falsch machte, war nicht das Dämpfen,
+   sondern die AUSNAHMSLOSIGKEIT — jede andere Zeile ging auf 0,42, und eine
+   Spalte, in der nichts mehr hervorsteht, liest sich als abgeschaltet. Deshalb
+   zwei Auflagen: der Schleier liegt nur, wenn dabei etwas hell bleibt (der
+   Anschlag steht in `ForgeUpgradesSection`), und was der Fokus noch braucht,
+   steht voll deckend darin (`--needed`).
+
+   Klasse je Zeile, NICHT als geerbte Variable am Listenrahmen
+   (Performance-Regel 3) — dieselbe Auflage wie bei der Zeigerdämpfung darunter.
+   Nur `opacity`, kein `filter`: fünfundvierzig gleichzeitig entsättigte Zeilen
+   wären fünfundvierzig Ebenen (Performance-Regel 2). */
+.fut-row.fut-row--veiled {
+  opacity: v-bind(dimOpacity);
+}
+
 /* Klasse je Zeile, NICHT als geerbte Variable am Listenrahmen
-   (Performance-Regel 3). */
+   (Performance-Regel 3). Steht NACH dem Schleier: fallen beide zusammen,
+   gewinnt die härtere — der Zeiger meint dann wirklich etwas anderes. */
 .fut-row.fc-dimmed {
   opacity: 0.42;
+}
+
+/* ── Was der Fokus noch BRAUCHT ──────────────────────────────
+   Die Zeile bleibt voll deckend und hebt ihre Knotenkante mit — dieselbe
+   Leiter, die `--ready` (0,8) und `fc-spot` (1) schon benutzen, hier ohne
+   deren Verbreiterung auf 4px: gebraucht ist nicht gemeint. Kein eigener
+   Rahmen: Rot heisst in dieser Spalte „das reicht nicht" (`--short`), und die
+   Aussage stünde sonst zweimal in zwei Bedeutungen an derselben Zeile. */
+.fut-row.fut-row--needed::before {
+  opacity: 1;
+}
+
+/* Die Marke. Sitzt, wo sonst die Pin-Marke sitzt — sie treffen sich nie.
+   Innerhalb der Zeile, weil die `overflow: hidden` trägt; `pointer-events`
+   bleiben aus, damit sie den Klick auf die Zeile nicht schluckt. */
+.fut-needed {
+  position: absolute;
+  top: 5px;
+  left: 6px;
+  z-index: 3;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, v-bind(neededColor) 45%, transparent);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.45);
+  color: v-bind(neededColor);
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 /* ── Die FESTGEHALTENE Auswahl ───────────────────────────────

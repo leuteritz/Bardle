@@ -5,7 +5,9 @@ import {
   FORGE_SPOTLIGHT_COMPASS_SIZE_PX,
   FORGE_VIEWPORT_KEEPOUTS,
   FORGE_SPOTLIGHT_EDGE_MARGIN_PX,
+  FORGE_SPOTLIGHT_MAX_LIMBS,
 } from '@/config/constants'
+import type { ForgeLockKind, ForgeUpgradeState } from '@/types'
 
 /**
  * Liegt das Gemeinte im Bild — und wenn nicht, in welcher Richtung?
@@ -363,4 +365,73 @@ export function forgeRowInView(
   boxBottom: number,
 ): boolean {
   return rowTop >= boxTop && rowBottom <= boxBottom
+}
+
+/**
+ * Was ein Knoten mit einem anderen zu tun hat — die drei Felder, die die
+ * Kettensuche darunter liest.
+ *
+ * Ein eigener Strukturtyp statt `ForgeUpgradeEntry`: die Suche braucht drei von
+ * dreissig Feldern, und die Spec müsste sonst je Fall einen vollständigen
+ * Eintrag samt Preisen, Texten und Materialien erfinden. `ForgeUpgradeEntry`
+ * erfüllt ihn strukturell, ein Cast ist nicht nötig.
+ */
+export interface ForgeReqNode {
+  state: ForgeUpgradeState
+  lockKind: ForgeLockKind
+  reqs: readonly { id: string; met: boolean }[]
+}
+
+/**
+ * Was der Spieler als NÄCHSTES kaufen muss, damit der fokussierte Knoten aufgeht
+ * — beschränkt auf das, was die Detailspalte gerade überhaupt zeigt.
+ *
+ * Der Baum links stellt eine ähnliche Frage (`spotReqs` in `ForgeTreePanel`),
+ * aber nicht dieselbe: dort geht es um den ZEIGER, um die DIREKTEN Vorgänger und
+ * um deren `met`-Flag für die Ringe am Kreis. Hier geht es um den FOKUS, und die
+ * Antwort muss eine Zeile treffen, die es in der Liste auch gibt — gesperrte
+ * Einträge stehen dort nicht (`sections` in `ForgeUpgradesSection`). Ist der
+ * direkte Vorgänger selbst gesperrt, läuft die Suche über dessen Vorgänger
+ * weiter, bis sie auf etwas Sichtbares stösst.
+ *
+ * Drei Abbrüche, und jeder von ihnen bedeutet „von hier aus hilft kein Kauf":
+ * ein Knoten, der gar nicht gesperrt ist; eine Phasen- oder Prestige-Sperre,
+ * gegen die kein Vorgänger etwas ausrichtet (dieselbe Weiche wie im Baum); und
+ * der Tiefendeckel, der zugleich die Bremse gegen einen Zyklus im Katalog ist.
+ *
+ * Eine LEERE Menge ist ein gültiges Ergebnis und die Aufrufseite muss sie
+ * auswerten: steht dann auch der Fokus selbst nicht in der Liste, darf sie NICHT
+ * dämpfen — eine Spalte, in der jede Zeile zurücktritt und keine hervorsteht,
+ * liest sich als abgeschaltet.
+ */
+export function forgeOpenReqIds(
+  entryById: ReadonlyMap<string, ForgeReqNode>,
+  focusId: string | null,
+  visible: ReadonlySet<string>,
+): Set<string> {
+  const out = new Set<string>()
+  if (focusId === null) return out
+
+  const seen = new Set<string>([focusId])
+  let front: string[] = [focusId]
+
+  for (let depth = 0; depth < FORGE_SPOTLIGHT_MAX_LIMBS && front.length > 0; depth++) {
+    const next: string[] = []
+    for (const id of front) {
+      const entry = entryById.get(id)
+      if (!entry || entry.state !== 'locked') continue
+      if (entry.lockKind === 'phase' || entry.lockKind === 'prestige') continue
+      for (const req of entry.reqs) {
+        if (req.met || seen.has(req.id)) continue
+        seen.add(req.id)
+        // Sichtbar heisst kaufbar heisst Endpunkt — weiter nach oben zu laufen
+        // führte an einer Zeile vorbei, die der Spieler jetzt anklicken kann.
+        if (visible.has(req.id)) out.add(req.id)
+        else next.push(req.id)
+      }
+    }
+    front = next
+  }
+
+  return out
 }

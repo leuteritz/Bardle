@@ -3773,3 +3773,33 @@ export const FORGE_AXIS_SEARCH_ALIAS: Record<ForgeAxisId, string> = {
 /** Icon-Kanten der Such-Chips. Die Achsen tragen `game-icons`-Motive und
  *  brauchen ihre 20 px; Familie und Zustand sind gefüllte Geometrie. */
 export const FORGE_SEARCH_CHIP_ICON = { axis: 20, family: 16, state: 16 } as const
+
+/* ── DER FOKUS-SCHLEIER DER DETAILSPALTE ─────────────────────────────────────
+ *
+ * Solange ein Knoten fokussiert ist, treten die übrigen Zeilen der Spalte
+ * zurück — aber NUR, wenn dabei etwas hervorsteht: der Fokus selbst oder eine
+ * Zeile, die er noch braucht (`forgeOpenReqIds`). Ohne diesen Anschlag wäre es
+ * die Fassung, die schon einmal zurückgenommen wurde: hundertvierundfünfzig
+ * gleichmässig gedimmte Zeilen lesen sich als abgeschaltete Liste.
+ */
+
+/**
+ * 0,5 und nicht 0,42 wie die Hover-Dämpfung nebenan.
+ *
+ * Der Unterschied ist die DAUER. Der Zeiger ist ein paar Zehntelsekunden auf
+ * einer Zeile, der Fokus steht, bis der Spieler ihn löst — und was dauerhaft
+ * liegt, darf leiser dämpfen. Bei 0,42 fiel die zweite Zeile der Kostenangabe
+ * gegen `#111008` unter die Lesbarkeitsgrenze.
+ */
+export const FORGE_FOCUS_DIM_OPACITY = 0.5
+
+/** Die Marke an einer Zeile, die der Fokus noch braucht. In Versalien wie die
+ *  Trenner der Liste; die Farbe ist `FORGE_REQ_OPEN_COLOR` — rot fehlt, grün
+ *  steht, dieselbe Kodierung wie am Kranz im Baum. */
+export const FORGE_FOCUS_REQ_LABEL = 'NEEDED FIRST'
+
+/* Die Kopfzeile über der Liste — sie sagt, WARUM die Spalte gerade gedämpft ist,
+ * und gibt den Ausweg. Escape allein ist unsichtbar. */
+export const FORGE_FOCUS_NOTE_LABEL = 'Focused'
+export const FORGE_FOCUS_NOTE_NEEDED = 'needed first'
+export const FORGE_FOCUS_NOTE_CLEAR = 'Clear'

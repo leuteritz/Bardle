@@ -6,7 +6,9 @@ import {
   forgeCompassReach,
   forgeNodeInView,
   forgeNodeScreenPoint,
+  forgeOpenReqIds,
   forgeRowInView,
+  type ForgeReqNode,
   type ForgeCamera,
   type ForgeViewBox,
 } from '@/utils/ui/forgeSpotlightView'
@@ -14,6 +16,7 @@ import {
   FORGE_SPOTLIGHT_COMPASS_INSET_PX,
   FORGE_VIEWPORT_KEEPOUTS,
   FORGE_SPOTLIGHT_EDGE_MARGIN_PX,
+  FORGE_SPOTLIGHT_MAX_LIMBS,
   FORGE_STAGE_SIZE,
 } from '@/config/constants'
 
@@ -382,5 +385,127 @@ describe('forgeRowInView', () => {
 
   it('führt eine bündig anliegende Zeile als drin — kein eigener Saum', () => {
     expect(forgeRowInView(100, 500, 100, 500)).toBe(true)
+  })
+})
+
+
+/**
+ * Die Kettensuche hinter dem Fokus-Schleier der Detailspalte.
+ *
+ * Sie beantwortet „was muss ich als Nächstes kaufen, damit das hier aufgeht" —
+ * und zwar so, dass die Antwort eine Zeile trifft, die es in der Liste auch
+ * gibt. Gesperrte Knoten stehen dort nicht.
+ */
+describe('forgeOpenReqIds', () => {
+  function node(
+    state: ForgeReqNode['state'],
+    reqs: { id: string; met: boolean }[],
+    lockKind: ForgeReqNode['lockKind'] = state === 'locked' ? 'parent' : '',
+  ): ForgeReqNode {
+    return { state, lockKind, reqs }
+  }
+
+  it('meldet nichts ohne Fokus', () => {
+    expect(forgeOpenReqIds(new Map(), null, new Set()).size).toBe(0)
+  })
+
+  it('meldet nichts für einen freigeschalteten Knoten — seine Vorgänger sind erledigt', () => {
+    const map = new Map<string, ForgeReqNode>([
+      ['leaf', node('partial', [{ id: 'branch', met: true }])],
+      ['branch', node('affordable', [])],
+    ])
+    expect(forgeOpenReqIds(map, 'leaf', new Set(['leaf', 'branch'])).size).toBe(0)
+  })
+
+  it('nennt den offenen Vorgänger, wenn er in der Liste steht', () => {
+    const map = new Map<string, ForgeReqNode>([
+      ['leaf', node('locked', [{ id: 'branch', met: false }])],
+      ['branch', node('partial', [])],
+    ])
+    expect([...forgeOpenReqIds(map, 'leaf', new Set(['branch']))]).toEqual(['branch'])
+  })
+
+  it('überspringt einen erfüllten Vorgänger und meldet nur den offenen', () => {
+    const map = new Map<string, ForgeReqNode>([
+      [
+        'crown',
+        node('locked', [
+          { id: 'branch', met: true },
+          { id: 'ward', met: false },
+        ]),
+      ],
+      ['branch', node('maxed', [])],
+      ['ward', node('empty', [])],
+    ])
+    expect([...forgeOpenReqIds(map, 'crown', new Set(['branch', 'ward']))]).toEqual(['ward'])
+  })
+
+  it('läuft über einen gesperrten Vorgänger hinweg bis zur sichtbaren Zeile', () => {
+    // leaf ← branch (gesperrt, steht nicht in der Liste) ← root (sichtbar)
+    const map = new Map<string, ForgeReqNode>([
+      ['leaf', node('locked', [{ id: 'branch', met: false }])],
+      ['branch', node('locked', [{ id: 'root', met: false }])],
+      ['root', node('partial', [])],
+    ])
+    expect([...forgeOpenReqIds(map, 'leaf', new Set(['root']))]).toEqual(['root'])
+  })
+
+  it('meldet nichts gegen eine Phasensperre — kein Kauf hilft dagegen', () => {
+    const map = new Map<string, ForgeReqNode>([
+      ['leaf', node('locked', [{ id: 'branch', met: false }], 'phase')],
+      ['branch', node('partial', [])],
+    ])
+    expect(forgeOpenReqIds(map, 'leaf', new Set(['branch'])).size).toBe(0)
+  })
+
+  it('meldet nichts gegen eine Prestige-Sperre', () => {
+    const map = new Map<string, ForgeReqNode>([
+      ['leaf', node('locked', [{ id: 'branch', met: false }], 'prestige')],
+      ['branch', node('partial', [])],
+    ])
+    expect(forgeOpenReqIds(map, 'leaf', new Set(['branch'])).size).toBe(0)
+  })
+
+  it('lässt einen Vorgänger aus, den es als Baumknoten gar nicht gibt', () => {
+    const map = new Map<string, ForgeReqNode>([
+      ['leaf', node('locked', [{ id: 'ghost', met: false }])],
+    ])
+    expect(forgeOpenReqIds(map, 'leaf', new Set(['leaf'])).size).toBe(0)
+  })
+
+  it('terminiert bei einem Zyklus im Katalog', () => {
+    const map = new Map<string, ForgeReqNode>([
+      ['a', node('locked', [{ id: 'b', met: false }])],
+      ['b', node('locked', [{ id: 'a', met: false }])],
+    ])
+    expect(forgeOpenReqIds(map, 'a', new Set()).size).toBe(0)
+  })
+
+  it('bricht jenseits des Tiefendeckels ab', () => {
+    // Eine Kette, die um ein Glied länger ist als der Deckel: das sichtbare Ende
+    // liegt ausserhalb der Reichweite und wird nicht mehr gemeldet.
+    const depth = FORGE_SPOTLIGHT_MAX_LIMBS + 1
+    const map = new Map<string, ForgeReqNode>()
+    for (let i = 0; i < depth; i++) {
+      map.set(`n${i}`, node('locked', [{ id: `n${i + 1}`, met: false }]))
+    }
+    map.set(`n${depth}`, node('partial', []))
+    expect(forgeOpenReqIds(map, 'n0', new Set([`n${depth}`])).size).toBe(0)
+  })
+
+  it('meldet zwei offene Vorgänger nebeneinander', () => {
+    const map = new Map<string, ForgeReqNode>([
+      [
+        'crown',
+        node('locked', [
+          { id: 'ward', met: false },
+          { id: 'covenant', met: false },
+        ]),
+      ],
+      ['ward', node('empty', [])],
+      ['covenant', node('partial', [])],
+    ])
+    const out = forgeOpenReqIds(map, 'crown', new Set(['ward', 'covenant']))
+    expect([...out].sort()).toEqual(['covenant', 'ward'])
   })
 })

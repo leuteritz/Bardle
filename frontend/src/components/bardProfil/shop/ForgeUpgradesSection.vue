@@ -13,6 +13,28 @@
       <button class="fu-search-clear" type="button" @click="clearSearch">Clear</button>
     </div>
 
+    <!-- Warum die Spalte gerade gedämpft ist — und der Weg heraus. Sie steht
+         NUR, solange der Schleier wirklich liegt (`focusVeiled`), nie bloss
+         weil ein Fokus gesetzt ist: die Zeile erklärt eine Dämpfung, und wo
+         keine ist, erklärt sie nichts. Gebaut wie die Suchzeile darüber,
+         eingefärbt in der Knotenfarbe statt in Azur. -->
+    <div
+      v-if="focusVeiled && focusEntry"
+      class="fu-focus-note"
+      :style="{ '--node-c': focusEntry.color }"
+    >
+      <Icon :icon="focusEntry.icon" width="15" height="15" class="fu-focus-ico" />
+      <span class="fu-focus-label">{{ FORGE_FOCUS_NOTE_LABEL }}</span>
+      <span class="fu-focus-name">{{ focusEntry.name }}</span>
+      <span v-if="focusReqIds.size > 0" class="fu-focus-need">
+        {{ focusReqIds.size }} {{ FORGE_FOCUS_NOTE_NEEDED }}
+      </span>
+      <span v-else class="fu-focus-spacer" />
+      <button class="fu-focus-clear" type="button" @click="clearPin">
+        {{ FORGE_FOCUS_NOTE_CLEAR }}
+      </button>
+    </div>
+
     <!-- ══ Die Töpfe ════════════════════════════════════════════════
          Ready · Saving up · und zuletzt das eingeklappte Archiv. Ein leerer
          Topf fällt ganz weg — Gesperrtes steht hier gar nicht erst, siehe
@@ -62,13 +84,21 @@
           :fresh="freshIds.has(entry.id)"
           :bulk-count="bulkOf(entry.id)"
           :arrived="arrivedId === entry.id"
+          :focus-veiled="focusVeiled"
+          :focus-required="focusReqIds.has(entry.id)"
           @buy="grow"
           @buy-many="growMany"
         />
       </template>
 
       <template v-else-if="archiveOpen">
-        <ForgeGrownRow v-for="entry in section.entries" :key="entry.id" :entry="entry" />
+        <ForgeGrownRow
+          v-for="entry in section.entries"
+          :key="entry.id"
+          :entry="entry"
+          :focus-veiled="focusVeiled"
+          :focus-required="focusReqIds.has(entry.id)"
+        />
       </template>
     </section>
 
@@ -141,7 +171,7 @@ import {
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeSearch } from '@/composables/ui/useForgeSearch'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
-import { forgeRowInView } from '@/utils/ui/forgeSpotlightView'
+import { forgeOpenReqIds, forgeRowInView } from '@/utils/ui/forgeSpotlightView'
 import ForgeUpgradeTile from './ForgeUpgradeTile.vue'
 import ForgeGrownRow from './ForgeGrownRow.vue'
 import ForgeRowTooltip from './ForgeRowTooltip.vue'
@@ -158,6 +188,10 @@ import {
   FORGE_DIVIDER_SAVING_COLOR,
   FORGE_DIVIDER_SAVING_ICON,
   FORGE_DIVIDER_SAVING_LABEL,
+  FORGE_REQ_OPEN_COLOR,
+  FORGE_FOCUS_NOTE_CLEAR,
+  FORGE_FOCUS_NOTE_LABEL,
+  FORGE_FOCUS_NOTE_NEEDED,
   FORGE_SPOTLIGHT_ARRIVAL_MS,
   FORGE_SPOTLIGHT_SCROLL_DELAY_MS,
   FORGE_UPGRADE_EMPTY_ICON,
@@ -324,6 +358,57 @@ const sections = computed<UpgradeSection[]>(() => {
 
   return out.filter((section) => section.entries.length > 0)
 })
+
+// ── Der Fokus-Schleier ───────────────────────────────────────────────────────
+/**
+ * Was die Spalte gerade WIRKLICH zeigt.
+ *
+ * Nicht `upgradeEntries`: gesperrte Einträge fallen in `sections` heraus, die
+ * Suche schneidet dort ebenfalls, und das Archiv steht nur offen, wenn es
+ * aufgeklappt ist. Der Schleier darf sich nur auf Zeilen berufen, die der
+ * Spieler auch sieht — eine Hervorhebung auf einer Zeile, die es nicht gibt,
+ * wäre eine Dämpfung ohne Gegenstück.
+ */
+const visibleIds = computed(() => {
+  const out = new Set<string>()
+  for (const section of sections.value) {
+    if (section.id === 'grown' && !archiveOpen.value) continue
+    for (const entry of section.entries) out.add(entry.id)
+  }
+  return out
+})
+
+/** Der fokussierte Eintrag — auch dann, wenn er gesperrt ist und in dieser
+ *  Spalte gar keine Zeile hat. Die Kopfzeile nennt ihn trotzdem. */
+const focusEntry = computed(() =>
+  pinnedId.value === null ? null : (entryById.value.get(pinnedId.value) ?? null),
+)
+
+/**
+ * Die Zeilen, die der Fokus noch braucht — hier ist die Dämpfung eine Auskunft
+ * und keine Abschaltung. Gerechnet in `utils/ui/forgeSpotlightView.ts`, weil es
+ * eine reine Mengenfrage ist und dort geprüft wird.
+ */
+const focusReqIds = computed(() =>
+  forgeOpenReqIds(entryById.value, pinnedId.value, visibleIds.value),
+)
+
+/**
+ * Liegt der Schleier?
+ *
+ * Der ANSCHLAG des ganzen Umbaus: gedämpft wird nur, wenn dabei auch etwas
+ * hervorsteht — der Fokus selbst oder eine Zeile, die er braucht. Ein Knoten
+ * hinter einer Phasen- oder Prestige-Sperre hat weder das eine noch das andere;
+ * dort bleibt die Liste unverändert laut, statt vollständig grau dazustehen.
+ */
+/** Statischer Wert, einmal je Mount gesetzt — kein Frame-Wert. */
+const reqColor = FORGE_REQ_OPEN_COLOR
+
+const focusVeiled = computed(
+  () =>
+    pinnedId.value !== null &&
+    (visibleIds.value.has(pinnedId.value) || focusReqIds.value.size > 0),
+)
 
 /** Welche Zeile gerade quittiert. Rein visuell, daher reale Zeit. */
 const flashedId = ref<string | null>(null)
@@ -755,6 +840,83 @@ onUnmounted(() => {
 
 .fu-search-clear:hover {
   color: #e07060;
+  border-color: #7a4e20;
+}
+
+/* ══════════════════════════════════════════════════
+   DIE KOPFZEILE DES FOKUS
+   Dieselben Maße und dieselbe Form wie die Trefferzeile der Suche darüber —
+   sie beantworten dieselbe Art Frage („warum sieht die Liste gerade so aus"),
+   und zwei verschiedene Formen dafür wären zwei Sprachen für eine Sache.
+   Die Farbe kommt vom Knoten selbst und nicht aus der Palette: sie ist derselbe
+   Ton, den die fokussierte Zeile und ihr Kreis im Baum tragen.
+══════════════════════════════════════════════════ */
+.fu-focus-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  background: #16140e;
+  border: 1px solid color-mix(in srgb, var(--node-c, #c89040) 40%, #2a1a08);
+  border-radius: 4px;
+}
+
+.fu-focus-ico {
+  flex-shrink: 0;
+  color: var(--node-c, #c89040);
+}
+
+.fu-focus-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(232, 220, 192, 0.45);
+}
+
+/* Der Name gibt als Erster nach — die beiden Angaben rechts sind kurz und
+   dürfen nicht umbrechen. */
+.fu-focus-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--node-c, #e8c040);
+}
+
+/* Dieselbe Farbe wie die Marke an den Zeilen, auf die sie sich bezieht. */
+.fu-focus-need {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  color: v-bind(reqColor);
+}
+
+/* Ohne offene Voraussetzung steht rechts nichts — der Knopf bliebe sonst am
+   Namen kleben, sobald dieser kurz ist. */
+.fu-focus-spacer {
+  flex: 1 1 auto;
+}
+
+.fu-focus-clear {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #e8c040;
+  background: none;
+  border: 1px solid #4a3010;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.fu-focus-clear:hover {
   border-color: #7a4e20;
 }
 
