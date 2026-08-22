@@ -247,9 +247,13 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* `max()` über ALLE Vorgänger, nicht nur den direkten: jede Karte der Spalte
+   veröffentlicht `0px`, solange sie unsichtbar ist — eine Kette, die nur das
+   nächsthöhere Glied liest, rutscht deshalb unter eine sichtbare Karte, sobald
+   das dazwischenliegende Glied fehlt. */
 .vhc-root {
   position: fixed;
-  top: calc(var(--autopick-bottom, 0px) + 0.5rem);
+  top: calc(max(var(--wayfinder-bottom, 0px), var(--autopick-bottom, 0px)) + 0.5rem);
   left: 0.75rem;
   z-index: 899;
   width: clamp(232px, calc(var(--header-vp-left, 22vw) - 1.5rem), 460px);
@@ -480,5 +484,25 @@ onUnmounted(() => {
 .vhc-leave-to {
   opacity: 0;
   transform: translateX(-12px);
+}
+
+/* ── Auflösungsstufen ──────────────────────────────────────────────────────
+   Nur Anker und Breitendeckel, keine Schriftgrade: die Karte stand als einzige
+   der Spalte ohne Media-Query da und blieb ab 2400 px bei `left: .75rem` und
+   Deckel 460 stehen, während die vier Nachbarn auf 1rem und 580/700 wechseln —
+   über hundert Pixel Versatz an den rechten Kanten, genau das Fehlerbild, das
+   der Kommentar in `OmenHudCard` beschreibt. */
+@media (min-width: 2400px) {
+  .vhc-root {
+    top: calc(max(var(--wayfinder-bottom, 0px), var(--autopick-bottom, 0px)) + 0.7rem);
+    left: 1rem;
+    width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 580px);
+  }
+}
+
+@media (min-width: 3400px) {
+  .vhc-root {
+    width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 700px);
+  }
 }
 </style>

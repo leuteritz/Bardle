@@ -129,15 +129,6 @@ export interface ShopUpgrade {
   icon: string
 }
 
-export interface MissionReward {
-  id: string
-  name: string
-  description: string
-  icon: string
-  cost: number
-  effect: { type: string; value: number; buildingId?: string }
-}
-
 export interface BuildingStat {
   id: string
   name: string
@@ -306,6 +297,8 @@ export type MaterialSourceId =
   | 'void'
   /** Caretaker's Ledger (constellation): a doubled click shook something loose. */
   | 'click'
+  /** A claimed Wayfinder mission. */
+  | 'mission'
 
 /** What a unit of material was spent on. Labels: MATERIAL_SINK_LABELS. */
 export type MaterialSinkId =
@@ -332,26 +325,3 @@ export interface MaterialFlowShare {
 }
 
 // ── Universe run (header universe tooltip) ───────────────────────────────────
-
-export type MissionConditionType =
-  | 'totalChimes'
-  | 'totalClicks'
-  | 'singleBuildingLevel'
-  | 'totalBuildingLevels'
-  | 'ownedBuildingTypes'
-
-export interface MissionCondition {
-  type: MissionConditionType
-  target: number
-  buildingId?: string
-}
-
-export interface Mission {
-  id: string
-  name: string
-  icon: string
-  description: string
-  condition: MissionCondition
-  rewardUpgrade: MissionReward
-  claimed: boolean
-}

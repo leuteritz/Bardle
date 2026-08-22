@@ -1,15 +1,11 @@
 import { defineStore } from 'pinia'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
-import { useDrifterStore } from '@/stores/world/drifterStore'
-import { useGalaxyStore } from '@/stores/world/galaxyStore'
-import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
-import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
-import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { progressMetricValue } from '@/utils/game/progressMetrics'
 import { useHerald } from '@/composables/ui/useHerald'
 import { logOmenCompleted } from '@/config/ui/eventLog'
 import { omenIcon } from '@/utils/game/rolledIcons'
@@ -113,32 +109,7 @@ export const useOmenStore = defineStore('omen', {
      * Vorzeichen offen ist und niemand hinsieht.
      */
     metricValue(): (metric: OmenMetricId) => number {
-      return (metric) => {
-        switch (metric) {
-          case 'chimesEarned':
-            return useGameStore().totalChimesEarned
-          case 'clicks':
-            return useGameStore().totalClicks
-          case 'meepsEarned':
-            return useGameStore().totalMeepsEarned
-          case 'driftersCollected':
-            return useDrifterStore().totalDriftersCollected
-          case 'bossesDefeated':
-            return usePlanetBossStore().totalBossesDefeated
-          case 'starsRescued':
-            return useGalaxyStore().totalStarsRescued
-          case 'battleWins':
-            return useBattleStore().totalWins
-          case 'championKills':
-            return useBattleStore().totalKills
-          case 'championLevelsGained':
-            return useChampionLevelStore().totalLevelsBought
-          case 'materialsCollected':
-            return useInventoryStore().totalMaterialsCollected
-          case 'expeditionsCompleted':
-            return useExpeditionStore().totalExpeditionsSucceeded
-        }
-      }
+      return (metric) => progressMetricValue(metric)
     },
 
     /**

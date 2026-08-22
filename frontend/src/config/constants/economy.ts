@@ -55,6 +55,7 @@ export const MATERIAL_SOURCE_LABELS: Record<string, string> = {
   expedition: 'Expeditions',
   void: 'Sealed Rifts',
   click: 'Shaken Loose',
+  mission: 'Wayfinder',
 }
 export const MATERIAL_SOURCE_ICONS: Record<string, string> = {
   drop: 'game-icons:falling-rocks',
@@ -65,6 +66,7 @@ export const MATERIAL_SOURCE_ICONS: Record<string, string> = {
   expedition: 'game-icons:caravan',
   void: 'game-icons:vortex',
   click: 'game-icons:click',
+  mission: 'game-icons:direction-signs',
 }
 export const MATERIAL_SINK_LABELS: Record<string, string> = {
   recruit: 'Champion Recruits',

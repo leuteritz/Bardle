@@ -10,6 +10,7 @@ import { STATS_TAB_GAUGE } from '@/config/constants'
 import { universes } from '@/config/progression/universes'
 import StatsColumnHeader from './StatsColumnHeader.vue'
 import StatCategoryAccordion from './StatCategoryAccordion.vue'
+import WayfinderSection from './WayfinderSection.vue'
 
 /**
  * Left column of the Bard-Stats deck: how far this run has come.
@@ -210,6 +211,11 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
       </div>
 
       <StatCategoryAccordion :query="journeySearch" />
+
+      <!-- Die Leiter der Wanderung am Fuß der Journey-Spalte — spiegelbildlich
+           zum Codex am Fuß der Mittelspalte. Diese Spalte scrollt ohnehin, eine
+           Sektion hier kostet keine Höhe. -->
+      <WayfinderSection />
     </div>
   </section>
 </template>

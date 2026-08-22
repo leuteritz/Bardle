@@ -58,6 +58,21 @@ export interface HudFieldMetrics {
   abilityBarTop: number
   /** Halbe Breite derselben Leiste; sie steht mittig. 0 = keine Leiste. */
   abilityBarHalfW: number
+  /**
+   * `--wayfinder-bottom` / `--wayfinder-right`: die Missionskarte oben links.
+   *
+   * Von den fünf Karten dieser Spalte ist sie die einzige, die IMMER steht —
+   * und nur deshalb steht sie überhaupt in der Kontur. Die vier flüchtigen
+   * darunter aufzunehmen hiesse, das freie Feld im Sekundentakt zu verschieben:
+   * ein Drifter, der eine Bahn geplant hat, müsste sie mitten im Flug
+   * aufgeben, weil ein Vorzeichen erschienen ist. Konservativ ist hier das
+   * Gegenteil von vollständig.
+   *
+   * Beides sind reine `px`-Werte aus JavaScript, also nicht vom
+   * `calc()`-Fallstrick betroffen, an dem `--hud-panel-size` scheitert.
+   */
+  wayfinderBottom: number
+  wayfinderRight: number
 }
 
 /**
@@ -154,10 +169,24 @@ export function hudAbilityBarTopAt(x: number, m: HudFieldMetrics): number {
   return Math.abs(x - m.viewportW / 2) <= m.abilityBarHalfW ? m.abilityBarTop : m.viewportH
 }
 
+/**
+ * Unterkante der Missionskarte an der Stelle `x` — 0 rechts von ihr.
+ *
+ * Sie ist ein Rechteck und kein Bogen, also reicht der Vergleich mit ihrer
+ * rechten Kante. Getrennt von `hudHeaderBottomAt` gehalten, weil die beiden
+ * verschiedene Formen sind: der Header EXISTIERT links der Spalte gar nicht
+ * (`x < headerLeft` liefert dort 0), und genau in diese Lücke hängt die Karte.
+ */
+export function hudLeftColumnBottomAt(x: number, m: HudFieldMetrics): number {
+  return x <= m.wayfinderRight ? m.wayfinderBottom : 0
+}
+
 /** Die freie senkrechte Spanne an der Stelle `x`. */
 export function hudFreeBandAt(x: number, m: HudFieldMetrics): { top: number; bottom: number } {
   return {
-    top: hudHeaderBottomAt(x, m),
+    // Die tiefere der beiden Oberkanten gewinnt: unter dem Header ist es der
+    // Header, links davon die Missionskarte, und in der Überlappung beides.
+    top: Math.max(hudHeaderBottomAt(x, m), hudLeftColumnBottomAt(x, m)),
     // Die tiefere der beiden Unterkanten gewinnt. Über dem Mittelstreifen ist
     // das die Leiste, an den Seiten die Bar — und zwischen beiden liegt kein
     // Übergang, sondern eine Stufe: die Leiste hört seitlich einfach auf.
@@ -218,6 +247,8 @@ export function readHudFieldMetrics(centerArc: HeaderCenterArc | null): HudField
       keycapBar: 0,
       abilityBarTop: 0,
       abilityBarHalfW: 0,
+      wayfinderBottom: 0,
+      wayfinderRight: 0,
     }
   }
   const style = getComputedStyle(document.documentElement)
@@ -240,6 +271,8 @@ export function readHudFieldMetrics(centerArc: HeaderCenterArc | null): HudField
     keycapBar: Math.max(0, read('--kb-hud-h', 0)),
     abilityBarTop: Math.max(0, read('--ability-bar-top', 0)),
     abilityBarHalfW: Math.max(0, read('--ability-bar-w', 0)) / 2,
+    wayfinderBottom: Math.max(0, read('--wayfinder-bottom', 0)),
+    wayfinderRight: Math.max(0, read('--wayfinder-right', 0)),
   }
 }
 

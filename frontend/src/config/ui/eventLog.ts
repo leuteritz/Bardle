@@ -3,7 +3,7 @@
 // haengen am selben useEventLog-Composable und lagen vorher als zwei
 // Ein-Zweck-Dateien nebeneinander.
 import { useEventLog, type GameEventType } from '@/composables/ui/useEventLog'
-import { ROLE_COLORS } from '@/config/constants'
+import { ROLE_COLORS, MISSION_ACCENT_HEX } from '@/config/constants'
 
 export const typeColor: Record<GameEventType, string> = {
   support: ROLE_COLORS.support,
@@ -22,6 +22,11 @@ export const typeColor: Record<GameEventType, string> = {
   // klingende Zeilen (ein Ziel ist erreicht, ein Bonus gilt ab jetzt) und
   // müssen im Log auf den ersten Blick auseinanderzuhalten sein.
   omen: '#a8b0f0',
+  // Mint-Teal zwischen dem Gold der Chronicle und dem Violett der Vorzeichen:
+  // drei Systeme melden erreichte Ziele, und im Vorbeilesen trennt sie nur die
+  // Farbe. Steht als MISSION_ACCENT_HEX in den Konstanten, damit Log-Zeile,
+  // Kartenrand und Herald-Banner denselben Ton tragen.
+  mission: MISSION_ACCENT_HEX,
   // Magenta, und das einzige Rot-Ende im Log: die Void-Zeilen sind die
   // einzigen, die von einem VERLUST berichten. Bewusst weit weg vom Violett
   // der Vorzeichen darüber — die beiden dürfen sich nicht ähneln, weil sie
@@ -141,4 +146,14 @@ export function logChronicleRank(rankTitle: string, effectLine: string) {
 export function logOmenCompleted(omenName: string, effectLine: string, swift: boolean) {
   const { addEvent } = useEventLog()
   addEvent(`${swift ? 'Swift omen' : 'Omen'}: ${omenName} — ${effectLine}`, 'omen')
+}
+
+/**
+ * Eine Wayfinder-Mission wurde eingelöst. Das Kapitel steht mit in der Zeile,
+ * weil die Leiter 41 Stufen lang ist — ohne es liest sich der Log nach ein paar
+ * Stunden wie eine Liste unverbundener Namen.
+ */
+export function logMissionClaimed(missionName: string, rewardLine: string, chapterName: string) {
+  const { addEvent } = useEventLog()
+  addEvent(`${chapterName}: ${missionName} — ${rewardLine}`, 'mission')
 }

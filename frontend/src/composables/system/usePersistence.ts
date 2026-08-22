@@ -25,6 +25,7 @@ import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
+import { useMissionStore } from '@/stores/progression/missionStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import type {
   ChampionProgress,
@@ -129,6 +130,7 @@ export function usePersistence() {
     const bardAbilityStore = useBardAbilityStore()
     const achievementStore = useAchievementStore()
     const omenStore = useOmenStore()
+    const missionStore = useMissionStore()
     const providenceStore = useProvidenceStore()
 
     const saveData = {
@@ -437,6 +439,17 @@ export function usePersistence() {
         offerCooldownSec: omenStore.offerCooldownSec,
         totalOmensCompleted: omenStore.totalOmensCompleted,
         totalOmensSwift: omenStore.totalOmensSwift,
+      },
+      // Wayfinder. Nur die POSITION — kein Fortschritt, keine Missions-IDs. Die
+      // Leiter misst absolut gegen Zähler, die ohnehin gespeichert sind; alles
+      // Weitere wäre eine zweite Fassung derselben Zahl. `claimReady` muss
+      // dagegen mit: die Latche darf einen Reload überleben, sonst verliert ein
+      // Spieler, der genau dazwischen schliesst, seine Belohnung.
+      missions: {
+        index: missionStore.index,
+        claimReady: missionStore.claimReady,
+        caughtUp: missionStore.caughtUp,
+        totalMissionsClaimed: missionStore.totalMissionsClaimed,
       },
       // Providence. Das GANZE gewürfelte Ergebnis, nicht eine ID: seit Achse
       // und Höhe beim Prestige gezogen werden, steht die laufende Vorsehung in
@@ -1081,6 +1094,24 @@ export function usePersistence() {
       omenStoreLoad.totalOmensSwift = savedOmens?.totalOmensSwift ?? 0
       omenStoreLoad.omenNow = gameNow()
 
+      // Wayfinder. Steht nach allen Stores, deren Zähler die Leiter misst.
+      //
+      // Der `catchUpSilently()`-Zweig ist der eigentliche Inhalt dieses Blocks:
+      // ein Spielstand aus der Zeit VOR dem Wayfinder trägt keinen
+      // `missions`-Schlüssel und erfüllt trotzdem auf einen Schlag drei Kapitel.
+      // Ohne den stillen Nachlauf bekäme sein Besitzer dreissig Banner und
+      // dreissig Belohnungen für Wege, die er längst gegangen ist.
+      const missionStoreLoad = useMissionStore()
+      const savedMissions = saved.missions
+      if (savedMissions) {
+        missionStoreLoad.index = savedMissions.index ?? 0
+        missionStoreLoad.claimReady = savedMissions.claimReady ?? false
+        missionStoreLoad.caughtUp = savedMissions.caughtUp ?? 0
+        missionStoreLoad.totalMissionsClaimed = savedMissions.totalMissionsClaimed ?? 0
+      } else {
+        missionStoreLoad.catchUpSilently()
+      }
+
       // Providence. Ein Spielstand von vor diesem Feature hat keine — der Lauf
       // steht dann unter keiner Vorsehung, alle Effektgetter geben 1 zurück.
       // Geprüft wird nur, ob überhaupt Effekte dranhängen: ein Eintrag ohne sie
@@ -1325,6 +1356,11 @@ export function usePersistence() {
 
     // 7j. Reset omenStore — clears the running omen, the offer and every buff.
     useOmenStore().$reset()
+
+    // 7j2. Reset missionStore — die Leiter beginnt wieder bei der ersten Stufe.
+    // Prestige tut das NIE: die Leiter überlebt einen Aufbruch, ihre Stufen sind
+    // Meilensteine der ganzen Wanderung.
+    useMissionStore().$reset()
 
     // 7k. Reset providenceStore — a full wipe puts the wanderer back on the
     // first run, which stands under no providence at all. Prestige never does:

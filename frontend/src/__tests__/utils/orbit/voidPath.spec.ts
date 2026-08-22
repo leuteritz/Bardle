@@ -45,6 +45,11 @@ const METRICS: HudFieldMetrics = {
   // Ohne Fähigkeitenleiste — die Zusicherungen unten gelten der BAR-Kontur.
   abilityBarTop: 0,
   abilityBarHalfW: 0,
+  // Ohne Missionskarte, aus demselben Grund: die Kante der linken Spalte hat
+  // ihre eigene Spec (`hudFieldLeftColumn.spec.ts`) und würde die Aussagen hier
+  // nur verschieben.
+  wayfinderBottom: 0,
+  wayfinderRight: 0,
 }
 
 const UP = -Math.PI / 2

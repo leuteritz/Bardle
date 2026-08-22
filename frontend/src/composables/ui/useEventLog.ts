@@ -16,6 +16,7 @@ export type GameEventType =
   | 'prestige'
   | 'chronicle'
   | 'omen'
+  | 'mission'
   | 'void'
   | 'info'
 

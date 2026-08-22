@@ -1,12 +1,6 @@
 import { defineStore } from 'pinia'
-import { useGameStore } from '@/stores/core/gameStore'
-import { useBattleStore } from '@/stores/battle/battleStore'
-import { useDrifterStore } from '@/stores/world/drifterStore'
-import { useStarForgeStore } from '@/stores/progression/starForgeStore'
-import { usePlanetShopStore } from '@/stores/world/planetShopStore'
-import { usePlanetBossStore } from '@/stores/world/planetBossStore'
-import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useShopStore } from '@/stores/economy/shopStore'
+import { progressMetricValue } from '@/utils/game/progressMetrics'
 import { useHerald } from '@/composables/ui/useHerald'
 import { logChronicleRank, logChronicleStage } from '@/config/ui/eventLog'
 import { formatPercentValue, toRoman } from '@/utils/ui/format'
@@ -95,48 +89,12 @@ export const useAchievementStore = defineStore('achievement', {
      * kein gecachter Getter: sonst hinge dieser eine Wert an den Feldern von
      * sieben Stores gleichzeitig und würde bei jeder ihrer Änderungen neu
      * berechnet — auch wenn niemand hinschaut.
+     *
+     * Aufgelöst wird in `utils/game/progressMetrics.ts` — dieselbe Tabelle, aus
+     * der Omens und Wayfinder lesen.
      */
     metricValue(): (metric: ChronicleMetricId) => number {
-      return (metric) => {
-        switch (metric) {
-          case 'lifetimeChimes':
-            return useGameStore().totalChimesEarned
-          case 'championsRecruited':
-            return useBattleStore().ownedChampions.length
-          case 'battleWins':
-            return useBattleStore().totalWins
-          case 'driftersCollected':
-            return useDrifterStore().totalDriftersCollected
-          case 'forgeLevels': {
-            // Gezählt werden die GEDECKELTEN Ringe plus die Relikte.
-            //
-            // `boughLevels` fehlt ABSICHTLICH: Ring 7 kennt keine Obergrenze,
-            // und eine unbegrenzte Zahl in dieser Summe machte jede Schwelle
-            // der Bahn „Sunsmith" trivial. Schlimmer, sie wäre ein
-            // geschlossener Kreis — der Lohn der Bahn ist
-            // `forgeMaterialCostMult`, also billigere Baumknoten.
-            //
-            // `crownLevels` fehlt aus dem anderen Grund: fünf Einsen sind keine
-            // geschmiedete Tiefe, sondern fünf Entscheidungen.
-            const forge = useStarForgeStore()
-            const sum = (levels: Record<string, number>) =>
-              Object.values(levels).reduce((total, l) => total + l, 0)
-            return (
-              sum(forge.branchLevels) +
-              sum(forge.leafLevels) +
-              sum(forge.wardLevels) +
-              sum(forge.pactLevels) +
-              sum(forge.relicLevels)
-            )
-          }
-          case 'planetLevels':
-            return usePlanetShopStore().purchasedSlots.reduce((sum, slot) => sum + slot.level, 0)
-          case 'bossesDefeated':
-            return usePlanetBossStore().totalBossesDefeated
-          case 'starsRescued':
-            return useGalaxyStore().totalStarsRescued
-        }
-      }
+      return (metric) => progressMetricValue(metric)
     },
 
     /** Jede Bahn samt Stand — die einzige Quelle, aus der der Tab liest. */

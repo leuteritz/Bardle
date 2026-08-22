@@ -171,7 +171,9 @@ onUnmounted(() => {
    läuft. */
 .apt-root {
   position: fixed;
-  top: 0.5rem;
+  /* Unter dem Wayfinder — er ist das einzige dauerhafte Element der Spalte und
+     steht deshalb ganz oben. */
+  top: calc(var(--wayfinder-bottom, 0px) + 0.5rem);
   left: 0.75rem;
   z-index: 900;
   width: clamp(232px, calc(var(--header-vp-left, 22vw) - 1.5rem), 460px);
@@ -388,7 +390,7 @@ onUnmounted(() => {
 
 @media (min-width: 2400px) {
   .apt-root {
-    top: 0.7rem;
+    top: calc(var(--wayfinder-bottom, 0px) + 0.7rem);
     left: 1rem;
     gap: 10px;
     padding: 13px 15px 15px;

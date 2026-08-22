@@ -13,6 +13,7 @@ import PlanetRescueOverlay from '@/components/idle/planet/PlanetRescueOverlay.vu
 import StarFightModal from '@/components/idle/planet/StarFightModal.vue'
 import AugmentSelectionModal from '@/components/augment/AugmentSelectionModal.vue'
 import AugmentAutoPickToast from '@/components/augment/AugmentAutoPickToast.vue'
+import WayfinderHudCard from '@/components/idle/mission/WayfinderHudCard.vue'
 import RoleSelectionModal from '@/components/roleSelection/RoleSelectionModal.vue'
 import HyperspaceOverlay from '@/components/idle/prestige/HyperspaceOverlay.vue'
 import UniverseSelectModal from '@/components/idle/prestige/UniverseSelectModal.vue'
@@ -111,6 +112,12 @@ watch(
     <NebulaFlythroughComponent />
     <StarFightModal />
     <AugmentSelectionModal />
+    <!-- Wayfinder: das oberste und einzige DAUERHAFTE Glied der linken
+         Kartenspalte. Alles darunter — Auto-Pick, Riss, Vorzeichen, Drifter —
+         ist flüchtig und würde eine ständig sichtbare Karte sonst mehrmals pro
+         Minute auf und ab schieben. Ein Element, das immer da ist, darf sich
+         nicht bewegen. -->
+    <WayfinderHudCard />
     <AugmentAutoPickToast />
     <RoleSelectionModal />
     <HyperspaceOverlay />

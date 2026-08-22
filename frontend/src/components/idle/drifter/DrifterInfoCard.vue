@@ -237,15 +237,16 @@ onUnmounted(clearTimers)
 </template>
 
 <style scoped>
-/* Unter dem, was oben links schon steht: der Auto-Pick-Meldung und der
-   Omen-Karte. Beide veröffentlichen ihre eigene Unterkante per ResizeObserver
-   und sind 0, solange sie nicht stehen — `max()` statt einer Summe, weil beide
-   Werte ABSOLUTE Unterkanten sind und nicht Höhen, die sich stapeln ließen.
-   So teilen sich die drei Karten die Ecke, ohne sich je zu überdecken. */
+/* Unter allem, was oben links schon steht: dem Wayfinder, der Auto-Pick-Meldung,
+   der Riss- und der Omen-Karte. Jede veröffentlicht ihre eigene Unterkante per
+   ResizeObserver und ist 0, solange sie nicht steht — `max()` statt einer Summe,
+   weil das ABSOLUTE Unterkanten sind und nicht Höhen, die sich stapeln ließen.
+   So teilen sich die fünf Karten die Ecke, ohne sich je zu überdecken. */
 .dic-root {
   position: fixed;
   top: calc(
     max(
+        var(--wayfinder-bottom, 0px),
         var(--autopick-bottom, 0px),
         var(--omen-card-bottom, 0px),
         var(--void-card-bottom, 0px)
@@ -555,7 +556,16 @@ onUnmounted(clearTimers)
 
 @media (min-width: 2400px) {
   .dic-root {
-    top: calc(max(var(--autopick-bottom, 0px), var(--omen-card-bottom, 0px)) + 0.7rem);
+    /* Die volle Kette, wie oben. Sie stand hier ohne `--void-card-bottom`, und
+       ab 2400 px lag die Karte damit über der Riss-Karte. */
+    top: calc(
+      max(
+          var(--wayfinder-bottom, 0px),
+          var(--autopick-bottom, 0px),
+          var(--omen-card-bottom, 0px),
+          var(--void-card-bottom, 0px)
+        ) + 0.7rem
+    );
     left: 1rem;
     gap: 10px;
     padding: 13px 15px 15px;

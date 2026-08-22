@@ -24,7 +24,7 @@ export const CHRONICLE_TRACKS: ChronicleTrackDef[] = [
     blurb: 'Every chime the journey has ever earned',
     icon: 'game-icons:ringing-bell',
     color: '#e8c040',
-    metric: 'lifetimeChimes',
+    metric: 'chimesEarned',
     bonus: 'cpsMult',
     unit: 'chimes',
     effect: 'Chimes per second +{v}%',

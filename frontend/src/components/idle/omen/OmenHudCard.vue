@@ -185,7 +185,13 @@ onUnmounted(() => {
    nicht über die Breite. */
 .ohc-root {
   position: fixed;
-  top: calc(max(var(--autopick-bottom, 0px), var(--void-card-bottom, 0px)) + 0.5rem);
+  top: calc(
+    max(
+        var(--wayfinder-bottom, 0px),
+        var(--autopick-bottom, 0px),
+        var(--void-card-bottom, 0px)
+      ) + 0.5rem
+  );
   left: 0.75rem;
   z-index: 899;
   width: clamp(232px, calc(var(--header-vp-left, 22vw) - 1.5rem), 460px);
@@ -390,7 +396,15 @@ onUnmounted(() => {
    proportional mitwachsen — sie steht dauerhaft im Bild. */
 @media (min-width: 2400px) {
   .ohc-root {
-    top: calc(var(--autopick-bottom, 0px) + 0.7rem);
+    /* Die volle Kette, wie oben. Sie stand hier auf ein einziges Glied gekürzt,
+       und ab 2400 px lag die Karte damit über der Void-Karte. */
+    top: calc(
+      max(
+          var(--wayfinder-bottom, 0px),
+          var(--autopick-bottom, 0px),
+          var(--void-card-bottom, 0px)
+        ) + 0.7rem
+    );
     left: 1rem;
     width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 580px);
     gap: 6px;

@@ -15,6 +15,7 @@ type LogCategory =
   | 'BardAbility'
   | 'Chronicle'
   | 'Omen'
+  | 'Wayfinder'
   | 'Providence'
   | 'System'
 
@@ -44,6 +45,7 @@ const CATEGORY_COLORS: Record<LogCategory, string> = {
   ChampionLevel: '#3b82f6',
   Chronicle: '#8b5cf6',
   Omen: '#8b5cf6',
+  Wayfinder: '#7ad0be',
   Providence: '#8b5cf6',
   System: '#8b5cf6',
 }

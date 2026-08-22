@@ -38,7 +38,7 @@ function track(id: string): ChronicleTrackDef {
  *  Store und Bahn auseinander, fällt es hier auf und nicht erst im Spiel. */
 function setMetric(trackId: string, value: number) {
   switch (track(trackId).metric) {
-    case 'lifetimeChimes':
+    case 'chimesEarned':
       useGameStore().totalChimesEarned = value
       break
     case 'championsRecruited':

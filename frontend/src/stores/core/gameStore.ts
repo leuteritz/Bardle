@@ -16,6 +16,7 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
+import { useMissionStore } from '@/stores/progression/missionStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useVoidStore } from '@/stores/world/voidStore'
@@ -977,6 +978,13 @@ export const useGameStore = defineStore('game', {
       // second. Its own payout is a timed buff, which the chronicle does not
       // read — the order between these two is therefore free.
       useOmenStore().tick()
+      // Der Wayfinder daneben, aus demselben Grund: seine Leiter misst eine
+      // ABSOLUTE Zahl gegen dieselben Zähler und muss sie auf Endstand sehen.
+      // Er zahlt in Chimes und Material aus, was der Chronicle unter sich zwar
+      // mitzählt — aber erst im nächsten Takt, und ein Meilenstein einen Takt
+      // später ist kein Fehler. Die Reihenfolge zwischen Omen und Wayfinder ist
+      // frei.
+      useMissionStore().tick()
       // Chronicle last: every counter this second feeds it (chimes above,
       // bosses, stars, drifters), so a milestone announced here is one that was
       // just earned — not one from the previous tick.

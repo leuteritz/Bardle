@@ -20,7 +20,7 @@ import type { HeraldDelta, HeraldReceiptKind } from '@/types'
  * konstruktiv nie überlappen. Sie wissen im Code nichts voneinander: eine
  * Quittung fasst `queue`/`current` nie an, eine Zeremonie `receipts` nie.
  */
-export type HeraldKind = 'warp' | 'champion' | 'rankup' | 'chronicle' | 'omen'
+export type HeraldKind = 'warp' | 'champion' | 'rankup' | 'chronicle' | 'omen' | 'mission'
 
 /** Fully-resolved presentation payload — the composable stays purely mechanical
  *  (queue + preempt + timer); the caller supplies everything the banner shows. */

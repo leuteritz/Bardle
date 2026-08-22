@@ -5,6 +5,8 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
+import { useMissionStore } from '@/stores/progression/missionStore'
+import { MISSIONS, MISSION_CHAPTERS } from '@/config/progression/missions'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 // Der Skill-Tree-Tab trägt selbst keine Admin-Leiste mehr — die beiden Knöpfe
@@ -30,6 +32,7 @@ const gameStore = useGameStore()
 const battleStore = useBattleStore()
 const starGroupStore = useStarGroupStore()
 const omenStore = useOmenStore()
+const missionStore = useMissionStore()
 const inventoryStore = useInventoryStore()
 const galaxyStore = useGalaxyStore()
 const meepTree = useMeepTreeStore()
@@ -151,6 +154,15 @@ function triggerFlash(key: string) {
   setTimeout(() => {
     flashKey.value = null
   }, ADMIN_FIELD_FLASH_MS)
+}
+
+/** Ans nächste Kapitel der Leiter, ohne auszuzahlen — vom letzten wieder an den
+ *  Anfang, sonst hätte der Knopf ab Kapitel VII keine Wirkung mehr. */
+function jumpMissionChapter() {
+  const current = MISSIONS[Math.min(missionStore.index, MISSIONS.length - 1)]?.chapter
+  const i = MISSION_CHAPTERS.findIndex((c) => c.id === current)
+  const next = MISSION_CHAPTERS[(i + 1) % MISSION_CHAPTERS.length]
+  missionStore.adminJumpToChapter(next.id)
 }
 
 // ── Star Spawn ────────────────────────────────────────────────────────────────
@@ -337,6 +349,27 @@ function fillAllResources() {
         @click="omenStore.forceOffer()"
       >
         <Icon icon="game-icons:star-swirl" class="admin-btn-icon" /> Offer Omens
+      </button>
+      <!-- Wayfinder. Drei Knöpfe, weil drei Zustände zu prüfen sind: der
+           erfüllte (leuchtet, wartet auf den Klick), ein späteres Kapitel und
+           der Anfang. Keiner zahlt etwas aus, den Lohn holt der Klick. -->
+      <button
+        class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
+        @click="missionStore.adminMakeClaimable()"
+      >
+        <Icon icon="game-icons:direction-signs" class="admin-btn-icon" /> Arm Mission
+      </button>
+      <button
+        class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
+        @click="jumpMissionChapter"
+      >
+        <Icon icon="game-icons:stairs-goal" class="admin-btn-icon" /> Next Chapter
+      </button>
+      <button
+        class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
+        @click="missionStore.adminResetLadder()"
+      >
+        <Icon icon="game-icons:backward-time" class="admin-btn-icon" /> Reset Ladder
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--galaxy-boss flex items-center gap-1.5 px-3 py-1.5"

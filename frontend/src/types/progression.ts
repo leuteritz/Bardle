@@ -309,6 +309,59 @@ export interface BardAbilityBuff {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// FORTSCHRITTS-METRIKEN — die geteilte Liste dreier Systeme
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Jede Zahl, an der ein Fortschrittssystem messen kann — EINE Liste für
+ * Chronicle, Omens und Wayfinder. Aufgelöst wird sie in
+ * `utils/game/progressMetrics.ts`; `config/` kennt nur den Schlüssel.
+ *
+ * Die drei Systeme wählen daraus per `Extract` aus, statt eigene Unions zu
+ * führen: dieselbe Zahl an zwei Stellen aufzulösen ist derselbe Fehler wie ein
+ * zweiter, parallel gepflegter Zähler — nur eine Ebene höher.
+ */
+export type ProgressMetricId =
+  // ── Wirtschaft ──
+  | 'chimesEarned'
+  | 'clicks'
+  | 'meepsEarned'
+  | 'materialsCollected'
+  | 'shopBuildingLevels'
+  // ── Bard ──
+  | 'bardLevel'
+  | 'abilityCasts'
+  | 'prestiges'
+  | 'meepNodesBought'
+  // ── Kosmos ──
+  | 'starsRescued'
+  | 'galaxiesFreed'
+  | 'planetsCleared'
+  | 'driftersCollected'
+  | 'riftsSealed'
+  // ── Orbit ──
+  | 'planetSlotsOwned'
+  | 'planetLevels'
+  | 'bossesDefeated'
+  | 'starPhase'
+  | 'forgeLevels'
+  // ── Kader ──
+  | 'championsRecruited'
+  | 'championLevelsGained'
+  | 'teamSlotsFilled'
+  | 'battleWins'
+  | 'championKills'
+  | 'expeditionsCompleted'
+
+/**
+ * Die Zähler, die ein Prestige auf null zieht (`executePrestigeReset`). Ein
+ * System, das ABSOLUT misst, darf sie nur dort verwenden, wo der Meilenstein
+ * vor dem ersten Aufbruch fällt — sonst steht er nach jedem Prestige wieder
+ * offen.
+ */
+export type RunScopedMetricId = Extract<ProgressMetricId, 'bardLevel' | 'shopBuildingLevels'>
+
+// ═══════════════════════════════════════════════════════════════════════════
 // CHRONICLE — Meilensteine über alle Spielsysteme
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -330,11 +383,13 @@ export type ChronicleBonusKey =
 
 /**
  * Die Zahl, an der eine Bahn ihren Fortschritt misst. Nur der Schlüssel steht
- * in der Config — welches Store-Feld dahintersteht, löst der Store auf. Sonst
- * müsste `config/` Stores importieren, und die Richtung läuft umgekehrt.
+ * in der Config — welches Store-Feld dahintersteht, löst
+ * `utils/game/progressMetrics.ts` auf. Sonst müsste `config/` Stores
+ * importieren, und die Richtung läuft umgekehrt.
  */
-export type ChronicleMetricId =
-  | 'lifetimeChimes'
+export type ChronicleMetricId = Extract<
+  ProgressMetricId,
+  | 'chimesEarned'
   | 'championsRecruited'
   | 'battleWins'
   | 'driftersCollected'
@@ -342,6 +397,7 @@ export type ChronicleMetricId =
   | 'planetLevels'
   | 'bossesDefeated'
   | 'starsRescued'
+>
 
 /** Eine Stufe einer Bahn. Das Zahlzeichen (I–V) folgt aus dem Index. */
 export interface ChronicleStageDef {
@@ -423,7 +479,8 @@ export interface ChronicleTrackView extends ChronicleTrackDef {
  * den Startwert nachzieht — aber ein Zähler, der REGELMÄSSIG fällt, wäre als
  * Ziel trotzdem unfair und gehört nicht in diese Liste.
  */
-export type OmenMetricId =
+export type OmenMetricId = Extract<
+  ProgressMetricId,
   | 'chimesEarned'
   | 'clicks'
   | 'meepsEarned'
@@ -435,6 +492,7 @@ export type OmenMetricId =
   | 'championLevelsGained'
   | 'materialsCollected'
   | 'expeditionsCompleted'
+>
 
 /**
  * Das System, dem ein Vorzeichen entstammt. Rein zum Sortieren des Angebots:
@@ -656,4 +714,93 @@ export interface MeepSkillTipAnchor {
   top: number
   bottom: number
   left: number
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE WAYFINDER — die Leiter, an der Bard sich orientiert
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Der Wayfinder darf alles messen — er ist das System, das überall hinzeigt. */
+export type MissionMetricId = ProgressMetricId
+
+/**
+ * Chimes als Lohn. Drei Böden, das Maximum gewinnt: die erste Mission fällt bei
+ * CpS 0 und CpC 1, die letzte bei beidem jenseits von 1e9 — eine Zahl kann das
+ * nicht abdecken. Dasselbe Muster wie `DrifterInstantReward`, nur je Mission
+ * gestellt statt global.
+ */
+export interface MissionChimeReward {
+  /** So viele Sekunden laufender Produktion. */
+  cpsSeconds?: number
+  /** Boden: so viele Klicks zum aktuellen Klickwert. */
+  clicks?: number
+  /** Harter Boden für die ersten Missionen, in denen beides fast null ist. */
+  flat?: number
+}
+
+/**
+ * Was eine Mission auszahlt. BEWUSST ohne Buff und ohne Prozentsatz: Buffs sind
+ * die Währung der Omens, Prozente die des Codex. Ein dauerhafter Multiplikator
+ * aus einer Anleitung wäre eine vierte Balance-Achse neben Forge, Meep-Baum und
+ * Solar.
+ */
+export interface MissionReward {
+  chimes?: MissionChimeReward
+  /** Nur an Kapitelenden — der dritte Meep-Weg neben Drifter und Expedition. */
+  meeps?: number
+  materials?: { id: string; qty: number }[]
+}
+
+/** Ein Kapitel der Leiter. Die Leitfarbe hängt am KAPITEL, nicht an der
+ *  Mission — so hat die Leiter einen sichtbaren Bogen statt 41 Einzeltönen. */
+export interface MissionChapterDef {
+  id: string
+  name: string
+  color: string
+}
+
+/** Eine Mission, wie sie im Katalog steht. */
+export interface MissionDef {
+  id: string
+  chapter: string
+  name: string
+  /** Ein Satz Stimmung. Nur im Stats-Panel und im Tooltip. */
+  blurb: string
+  /** Was zu tun ist, mit `{n}` für die Zielmenge. */
+  objective: string
+  /** Festes Glyph, kein `iconPool`: eine Mission wird nicht gewürfelt, der
+   *  Spieler soll sie in der Vorschau wiedererkennen (Icon-Regel 11). */
+  icon: string
+  metric: MissionMetricId
+  /** ABSOLUT gegen den Lebenszeit-Stand, keine Differenz. */
+  target: number
+  /** Einheit hinter den Zahlen ("strikes", "chimes", "buildings"). */
+  unit: string
+  reward: MissionReward
+}
+
+/** Die aktive Mission, wie die Karte sie zeigt. */
+export interface MissionView extends MissionDef {
+  /** 1-basiert über die ganze Leiter — „12 of 41". */
+  ordinal: number
+  chapterName: string
+  chapterNumeral: string
+  color: string
+  /** Aktueller Metrikstand, bei `target` gedeckelt. */
+  progress: number
+  /** Anteil 0–1. */
+  ratio: number
+  claimReady: boolean
+  /** Der Lohn in einer Zeile: „+8m PRODUCTION", „+1 MEEP". */
+  rewardLabel: string
+}
+
+/** Eine Vorschauzeile unter der aktiven Karte. */
+export interface MissionPreview {
+  id: string
+  name: string
+  icon: string
+  progress: number
+  target: number
+  unit: string
 }

@@ -17,6 +17,7 @@ import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
+import { useMissionStore } from '@/stores/progression/missionStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useSectionStore } from '@/stores/core/sectionStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
@@ -94,6 +95,7 @@ export function useStatCatalog(query: Ref<string>): {
   const drifterStore = useDrifterStore()
   const voidStore = useVoidStore()
   const omenStore = useOmenStore()
+  const missionStore = useMissionStore()
   const bardAbilityStore = useBardAbilityStore()
   const achievementStore = useAchievementStore()
   const playerStore = usePlayerStore()
@@ -1435,6 +1437,16 @@ export function useStatCatalog(query: Ref<string>): {
         key: 'drifter-xp',
         label: 'Drifter XP Buff',
         value: bonus(drifterStore.xpMult),
+      },
+      // ── Wayfinder ──
+      // Nur die Zahl der gegangenen Stufen: WELCHE offen ist, steht auf der
+      // Karte im Spielbild und ausführlich in der Sektion am Fuß der
+      // Journey-Spalte.
+      {
+        key: 'wayfinder-claimed',
+        label: 'Milestones Walked',
+        value: int(missionStore.totalMissionsClaimed),
+        keywords: 'wayfinder mission milestone ladder objective',
       },
       // ── Omens ──
       // Nur die Zähler und die laufende Wirkung: welches Vorzeichen gerade offen
