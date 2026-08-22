@@ -124,9 +124,13 @@ export const PAUSE_SUN_VH_FACTOR = 0.16
 export const PAUSE_PANEL_DESIGN_WIDTH = 1140
 export const PAUSE_PANEL_MAX_SCALE = 1.3
 
-/** Breite BEIDER Meta-Säulen der Heldenzeile. Gleich breit ist Bedingung, nicht
- *  Geschmack — nur so bleibt die Sonnenscheibe in der Panelmitte. */
-export const PAUSE_META_COL_WIDTH = 168
+/** Breite der Zustandsspalte (Sonne, Vitalität, Universe/Galaxy/Level) rechts im
+ *  Panel. Hergeleitet, nicht gewählt: die grösste Scheibe (200) samt zwei gleich
+ *  breiten Ledgern muss hineinpassen, und links müssen 1052 − 460 − 30 = 562 für
+ *  das 426 breite Material-Raster bleiben. */
+export const PAUSE_STATE_COL_WIDTH = 460
+/** Abstand zwischen Bilanz- und Zustandsspalte. */
+export const PAUSE_BODY_COL_GAP = 30
 
 // HUD panel corner arc radius (shared by CommandPanel and MiniMap)
 export const HUD_PANEL_ARC_R = 60
@@ -330,13 +334,14 @@ export const PAUSE_LEDGER_POP_OFFSETS = [12, 52, 30, 74]
 
 // ── Pause-Overlay: Karten der laufenden Vorgänge ───────────────────────────
 // Alle Karten der Reihe sind gleich breit: ein Stern je Karte (höchstens drei),
-// dazu die Void-Karte (PAUSE_VOID_CARD_WIDTH) und die Champion-Karte
-// (PAUSE_CHAMPION_CARD_WIDTH) — in der Spitze also FÜNF.
+// dazu die Void-Karte (PAUSE_VOID_CARD_WIDTH), die Champion-Karte
+// (PAUSE_CHAMPION_CARD_WIDTH) und der Drifter-Buff (PAUSE_DRIFTER_CARD_WIDTH) —
+// in der Spitze also SECHS.
 //
-// Die Rechnung, an der diese Werte hängen (Panelinnenraum 960 − 2 × 44 = 872):
+// Die Rechnung, an der diese Werte hängen (Panelinnenraum 1140 − 2 × 44 = 1052):
 //
-//   4 Karten → 4 × 208 + 3 × 6 =  850  ≤ 872   → eine Zeile
-//   5 Karten → 5 × 208 + 4 × 6 = 1064  > 872   → zwei Zeilen
+//   4 Karten → 4 × 208 + 3 × 6 =  850  ≤ 1052  → eine Zeile
+//   5 Karten → 5 × 208 + 4 × 6 = 1064  > 1052  → zwei Zeilen
 //
 // Die Reihe bricht ab der fünften Karte also um, und genau dafür reserviert
 // `.callout-row` fest ZWEI Kartenzeilen. Die Reservierung ist der Punkt: eine

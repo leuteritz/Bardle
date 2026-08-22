@@ -28,10 +28,14 @@
                (#111008) but below the content (z-index: -1). -->
           <CosmicStageBackground class="pause-cosmic-bg" />
           <RpgFrame />
-          <!-- Header -->
-          <header class="pause-header">
+          <!-- Kopfzeile: Titel und Uhr teilen sich EINE Zeile. Getrennt
+               untereinander kostete das Paar 133 px Panelhöhe — die teuerste
+               Grösse im Panel, weil der Fit-Scale auf jeder Referenzauflösung
+               höhenlimitiert ist. -->
+          <header class="pause-head">
             <h1 class="pause-title">Paused</h1>
             <div class="pause-timer" role="timer" aria-label="Pause duration">
+              <span class="pause-timer__tag">Adrift for</span>
               <span class="pause-timer__value">
                 <!-- Zweite, deckungsgleiche Lage derselben Ziffern: sie trägt
                      KEINE Farbe, nur den kräftigen Schein, und allein ihre
@@ -53,230 +57,236 @@
               </span>
             </div>
           </header>
+          <span class="pause-head__rule" aria-hidden="true"></span>
 
-          <!-- Hero: the live sun in its current phase (no planets, no champions).
-               Die Scheibe bleibt frei: Ring und Plakette lagen vorher genau auf
-               der Fläche, an der die Phase erkennbar ist — Korona, Farbe,
-               Oberfläche. Die HP stehen deshalb als eigene Leiste darunter.
+          <!-- Zwei Spalten statt zehn Bänder: links, was während der Pause
+               hereinkam, rechts, wie es steht. Nebeneinander statt untereinander
+               spart rund 200 px Höhe — und weil der Fit-Scale höhenlimitiert
+               ist, wächst dadurch die Skalierung des GANZEN Overlays.
 
-               Links und rechts die Bilanz der laufenden Pause: was die Sonne
-               verloren und was sie zurückgewonnen hat. Beides läuft pausiert
-               weiter — Void-Einschläge und Boss-Enrage treffen sie, die
-               Regeneration hält dagegen —, und bis hierher war davon nur zu
-               sehen, dass die Vitalitätsleiste stiller schrumpfte.
-
-               Die Zeile ist GENAU so hoch wie die Scheibe (`--sun-d`): ein
-               Zuwachs hier änderte die Panelhöhe und zöge den Fit-Scale des
-               ganzen Overlays mit. Die Ledger sind darin nur mittig gestellt. -->
+               Beide Spalten sind `stretch` und verteilen ihren Überschuss mit
+               `space-between`; die Body-Höhe ist die der höheren. Getrennt wird
+               mit einer Haarlinie, nicht mit zwei Kästen. -->
           <div
-            class="hero-row"
+            class="pause-body"
             :style="{
-              '--sun-d': `${sunDiameter}px`,
-              '--meta-col-w': `${PAUSE_META_COL_WIDTH}px`,
+              '--state-col-w': `${PAUSE_STATE_COL_WIDTH}px`,
+              '--body-gap': `${PAUSE_BODY_COL_GAP}px`,
             }"
           >
-            <div class="meta-col">
-              <PauseMetaPillar
-                label="Universe"
-                :value="toRoman(gameStore.currentUniverse)"
-                :sub="universeName"
-                :pct="universePct"
-                :meter="`${gameStore.currentUniverse} / ${gameStore.totalUniverses}`"
-                :color="JOURNEY_AXIS_COLORS.universe"
-                align="left"
-              />
-              <PauseMetaPillar
-                label="Galaxy"
-                :value="String(galaxyStore.currentGalaxy)"
-                :sub="galaxyName"
-                :pct="galaxyPct"
-                :meter="`${galaxyStore.starsRescued} / ${galaxyStore.starsRequired} ✦`"
-                :color="JOURNEY_AXIS_COLORS.galaxy"
-                align="left"
-              />
-            </div>
-            <SunLedger tone="regen" :total="pauseRegen" />
-            <div
-              class="sun-hero"
-              :style="{ width: `${sunDiameter}px`, height: `${sunDiameter}px` }"
-            >
-              <div class="sun-hero__disc" aria-hidden="true">
-                <CometDisc v-if="solarStore.isCometState" :diameter="sunDiameter" />
-                <PhaseSunDisc v-else :diameter="sunDiameter" />
-              </div>
-            </div>
-            <SunLedger tone="damage" :total="pauseDamage" :pops="damagePops" />
-            <div class="meta-col">
-              <PauseMetaPillar
-                label="Level"
-                :value="String(gameStore.level)"
-                :sub="levelSub"
-                :pct="gameStore.levelProgress"
-                :meter="`${Math.floor(gameStore.levelProgress)} %`"
-                :color="JOURNEY_AXIS_COLORS.level"
-                align="right"
-                emphasis
-              />
-            </div>
-          </div>
-          <span class="sun-phase-label" :style="{ color: sunPhaseLabelColor }">
-            {{ sunPhase.name }}
-          </span>
+            <!-- ── Links: die Bilanz ─────────────────────────────────── -->
+            <section class="tally-col">
+              <h2 class="col-head">The tally</h2>
 
-          <!-- Der Streifen bleibt ein eigenes Element dieser Datei: seine HÖHE
-               geht in die Panelhöhe und damit in den Fit-Scale des GANZEN
-               Overlays ein. -->
-          <div class="vital-strip">
-            <VitalityBar
-              :current="playerStore.currentHP"
-              :max="playerStore.maxHP"
-              :regen-per-sec="regen"
-              label-placement="inside"
-              spark
-              :aria-label="`Health ${Math.ceil(playerStore.currentHP)} of ${playerStore.maxHP}`"
-            />
-          </div>
-
-          <div class="chime-readout">
-            <!-- Der Heiligenschein liegt als eigene Ebene hinter der Münze und
-                 blendet im Takt auf; die Münze selbst trägt ihren Schatten
-                 statisch. Vorher atmete ein `drop-shadow`-Filter direkt am
-                 Bild — jeder Frame eine Neurasterung (siehe „Performance"
-                 Regel 2). -->
-            <span class="chime-orb">
-              <span class="chime-orb__halo" aria-hidden="true" />
-              <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
-            </span>
-            <span v-ink-center.y class="chime-value">+{{ formatNumber(accumulatedChimes) }}</span>
-          </div>
-
-          <!-- Stat tiles — Health sitzt am Sonnenhero, hier bleiben die beiden
-               Kacheln, die eine Aufschlüsselung tragen. -->
-          <div
-            class="stat-grid"
-            :style="{
-              '--mat-tile-w': `${PAUSE_MATERIAL_TILE_WIDTH}px`,
-              '--mat-tile-pad': `${PAUSE_MATERIAL_TILE_PAD_X}px`,
-            }"
-          >
-            <!-- Kills aufgeschlüsselt: die Gesamtzahl steht im Label, darunter
-                 steht, was tatsächlich gefallen ist. Zeilen ohne Treffer
-                 bleiben stehen und dimmen nur ab — sonst spränge das Layout,
-                 sobald während der Pause die erste Kategorie dazukommt. -->
-            <div class="stat-tile stat-tile--kills">
-              <span class="stat-tile__label">
-                <Icon icon="game-icons:crossed-swords" width="20" height="20" class="stat-tile__icon" aria-hidden="true" />
-                Kills
-                <span v-if="pauseKills > 0" class="stat-tile__total">{{ formatNumber(pauseKills) }}</span>
-              </span>
-              <!-- Ein Chip je Kategorie nebeneinander statt einer Liste
-                   untereinander: die Kachelhöhe ist gedeckelt, die Breite nicht
-                   — waagerecht bekommt dieselbe Zahl doppelt so viel Schrift.
-                   Getrennt wird mit Haarlinien, nicht mit fünf Kästchen; die
-                   Kopfzeile darüber setzt dasselbe Mittel bereits waagerecht. -->
-              <div class="kill-row">
-                <div
-                  v-for="row in killBreakdown"
-                  :key="row.key"
-                  class="kill-chip"
-                  :class="{ 'kill-chip--zero': row.count === 0 }"
-                  :style="{ '--kill-color': row.color }"
-                  :title="row.title"
-                >
-                  <Icon
-                    :icon="row.icon"
-                    width="26"
-                    height="26"
-                    class="kill-chip__icon"
-                    :class="{ 'kill-chip__icon--geometric': row.key === 'champions' }"
-                    aria-hidden="true"
-                  />
-                  <!-- Kurzform, nicht formatNumber: die hängt immer zwei
-                       Nachkommastellen an („12.35K", sechs Zeichen) und lief in
-                       einem 117-px-Chip gemessen über. Dieselbe Stelle wie beim
-                       SunLedger. -->
-                  <span class="kill-chip__count">{{ formatNumberCompact(row.count) }}</span>
-                  <span class="kill-chip__label">{{ row.label }}</span>
-                  <span class="kill-chip__rule" aria-hidden="true"></span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Materialien bekommen die breitere der beiden Spalten: fünf
-                 Karten je Reihe, zwei Reihen — damit passen alle zehn
-                 Materialien hinein. Die Karten haben KEINE eigene Fassung mehr
-                 (kein Rahmen, keine Füllung, keine Aura): der Platz, den sie
-                 gekostet haben, gehört jetzt dem Bild — es füllt seine Zelle
-                 vollständig aus. Übrig bleiben Bild und Menge. -->
-            <div class="stat-tile stat-tile--materials">
-              <span class="stat-tile__label">
-                <Icon icon="game-icons:ore" width="20" height="20" class="stat-tile__icon" aria-hidden="true" />
-                Materials
-                <span v-if="totalMaterials > 0" class="stat-tile__total">{{ formatNumber(totalMaterials) }}</span>
-              </span>
-              <span v-if="visibleMaterials.length === 0" class="mat-empty">Nothing yet</span>
-              <TransitionGroup
-                v-else
-                tag="div"
-                name="mat-pop"
-                class="mat-grid"
-                :style="{
-                  '--mat-cols': PAUSE_MATERIAL_COLUMNS,
-                  '--mat-rows': PAUSE_MATERIAL_ROWS,
-                  '--mat-row-h': `${PAUSE_MATERIAL_CELL_PX}px`,
-                  '--mat-gap': `${PAUSE_MATERIAL_GAP_PX}px`,
-                }"
-              >
-                <div
-                  v-for="mat in visibleMaterials"
-                  :key="mat.id"
-                  class="mat-card"
-                  :style="{ '--mat-color': mat.color }"
-                  :title="`${mat.name} — ${mat.rarity}`"
-                >
-                  <img v-if="mat.image" :src="mat.image" :alt="mat.name" class="mat-card__img" />
-                  <!-- Vier der zehn Materialien haben in den Stammdaten kein
-                       Bild; sie bekommen dasselbe Monogramm wie im Loot-Band
-                       des Star-Fight-Modals, statt leer zu bleiben. -->
-                  <span v-else class="mat-card__mono">{{ mat.monogram }}</span>
-                  <span class="mat-card__amount"
-                    ><span class="mat-card__x" aria-hidden="true">×</span
-                    >{{ formatNumber(mat.amount) }}</span
+              <!-- Der Heiligenschein liegt als eigene Ebene hinter der Münze und
+                   blendet im Takt auf; die Münze selbst trägt ihren Schatten
+                   statisch. Vorher atmete ein `drop-shadow`-Filter direkt am
+                   Bild — jeder Frame eine Neurasterung (siehe „Performance"
+                   Regel 2). -->
+              <div class="chime-readout">
+                <span class="chime-orb">
+                  <span class="chime-orb__halo" aria-hidden="true" />
+                  <img src="/img/BardAbilities/BardChime.png" alt="" class="chime-img" />
+                </span>
+                <span class="chime-stack">
+                  <span v-ink-center.y class="chime-value"
+                    >+{{ formatNumber(accumulatedChimes) }}</span
                   >
-                </div>
-                <div v-if="hiddenMaterialCount > 0" key="more" class="mat-card mat-card--more">
-                  +{{ hiddenMaterialCount }}
-                </div>
-              </TransitionGroup>
-            </div>
-          </div>
+                  <span class="chime-cap">Chimes gathered</span>
+                </span>
+              </div>
 
-          <!-- Auto-battle record during the pause — feste Höhe, Werte poppen ein -->
-          <div class="battle-strip">
-            <span class="battle-strip__label">
-              <Icon icon="ri:sword-fill" width="18" height="18" class="battle-strip__icon" aria-hidden="true" />
-              Auto Battle
-            </span>
-            <template v-if="pauseBattleTotal > 0">
-              <span class="battle-strip__record">
-                <span class="battle-strip__wins">{{ pauseBattleWins }}W</span>
-                <span class="battle-strip__sep">·</span>
-                <span class="battle-strip__losses">{{ pauseBattleLosses }}L</span>
-              </span>
-              <span
-                class="battle-strip__lp"
-                :class="pauseBattleLp > 0 ? 'lp--pos' : pauseBattleLp < 0 ? 'lp--neg' : 'lp--zero'"
-              >{{ pauseBattleLp > 0 ? '+' : '' }}{{ pauseBattleLp }} LP</span>
-              <span v-if="pauseBattleChimes > 0" class="battle-strip__chimes">
-                <img
-                  src="/img/BardAbilities/BardChime-128.png"
-                  alt=""
-                  class="battle-strip__chime-img"
+              <!-- Kills aufgeschlüsselt: die Gesamtzahl steht im Kopf, darunter
+                   steht, was tatsächlich gefallen ist. Zeilen ohne Treffer
+                   bleiben stehen und dimmen nur ab — sonst spränge das Layout,
+                   sobald während der Pause die erste Kategorie dazukommt. -->
+              <div class="tally-block">
+                <span class="sec-head">
+                  <Icon icon="game-icons:crossed-swords" width="18" height="18" class="sec-head__icon" aria-hidden="true" />
+                  Kills
+                  <span v-if="pauseKills > 0" class="sec-head__n">{{ formatNumber(pauseKills) }}</span>
+                </span>
+                <!-- Ein Chip je Kategorie nebeneinander statt einer Liste
+                     untereinander: waagerecht bekommt dieselbe Zahl doppelt so
+                     viel Schrift. Getrennt wird mit dem Farbstrich der
+                     Kategorie, nicht mit fünf Kästchen. -->
+                <div class="kill-row">
+                  <div
+                    v-for="row in killBreakdown"
+                    :key="row.key"
+                    class="kill-chip"
+                    :class="{ 'kill-chip--zero': row.count === 0 }"
+                    :style="{ '--kill-color': row.color }"
+                    :title="row.title"
+                  >
+                    <!-- Kurzform, nicht formatNumber: die hängt immer zwei
+                         Nachkommastellen an („12.35K", sechs Zeichen) und lief in
+                         einem 117-px-Chip gemessen über. Dieselbe Stelle wie beim
+                         SunLedger. -->
+                    <span class="kill-chip__count">{{ formatNumberCompact(row.count) }}</span>
+                    <span class="kill-chip__label">{{ row.label }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Fünf Karten je Reihe, zwei Reihen — damit passen alle zehn
+                   Materialien hinein. Die Karten haben KEINE eigene Fassung
+                   (kein Rahmen, keine Füllung, keine Aura): der Platz, den sie
+                   gekostet haben, gehört dem Bild — es füllt seine Zelle
+                   vollständig aus. Übrig bleiben Bild und Menge. -->
+              <div class="tally-block">
+                <span class="sec-head">
+                  <Icon icon="game-icons:ore" width="18" height="18" class="sec-head__icon" aria-hidden="true" />
+                  Materials
+                  <span v-if="totalMaterials > 0" class="sec-head__n">{{ formatNumber(totalMaterials) }}</span>
+                </span>
+                <span v-if="visibleMaterials.length === 0" class="mat-empty">Nothing yet</span>
+                <TransitionGroup
+                  v-else
+                  tag="div"
+                  name="mat-pop"
+                  class="mat-grid"
+                  :style="{
+                    '--mat-cols': PAUSE_MATERIAL_COLUMNS,
+                    '--mat-rows': PAUSE_MATERIAL_ROWS,
+                    '--mat-row-h': `${PAUSE_MATERIAL_CELL_PX}px`,
+                    '--mat-gap': `${PAUSE_MATERIAL_GAP_PX}px`,
+                    '--mat-grid-w': `${PAUSE_MATERIAL_TILE_WIDTH}px`,
+                  }"
+                >
+                  <div
+                    v-for="mat in visibleMaterials"
+                    :key="mat.id"
+                    class="mat-card"
+                    :style="{ '--mat-color': mat.color }"
+                    :title="`${mat.name} — ${mat.rarity}`"
+                  >
+                    <img v-if="mat.image" :src="mat.image" :alt="mat.name" class="mat-card__img" />
+                    <!-- Vier der zehn Materialien haben in den Stammdaten kein
+                         Bild; sie bekommen dasselbe Monogramm wie im Loot-Band
+                         des Star-Fight-Modals, statt leer zu bleiben. -->
+                    <span v-else class="mat-card__mono">{{ mat.monogram }}</span>
+                    <span class="mat-card__amount"
+                      ><span class="mat-card__x" aria-hidden="true">×</span
+                      >{{ formatNumber(mat.amount) }}</span
+                    >
+                  </div>
+                  <div v-if="hiddenMaterialCount > 0" key="more" class="mat-card mat-card--more">
+                    +{{ hiddenMaterialCount }}
+                  </div>
+                </TransitionGroup>
+              </div>
+
+              <!-- Auto-Battle-Bilanz der Pause -->
+              <div class="tally-block">
+                <span class="sec-head">
+                  <Icon icon="ri:sword-fill" width="18" height="18" class="sec-head__icon" aria-hidden="true" />
+                  Auto Battle
+                </span>
+                <div class="battle-strip">
+                  <template v-if="pauseBattleTotal > 0">
+                    <span class="battle-strip__record">
+                      <span class="battle-strip__wins">{{ pauseBattleWins }}W</span>
+                      <span class="battle-strip__sep">·</span>
+                      <span class="battle-strip__losses">{{ pauseBattleLosses }}L</span>
+                    </span>
+                    <span
+                      class="battle-strip__lp"
+                      :class="pauseBattleLp > 0 ? 'lp--pos' : pauseBattleLp < 0 ? 'lp--neg' : 'lp--zero'"
+                    >{{ pauseBattleLp > 0 ? '+' : '' }}{{ pauseBattleLp }} LP</span>
+                    <span v-if="pauseBattleChimes > 0" class="battle-strip__chimes">
+                      <img
+                        src="/img/BardAbilities/BardChime-128.png"
+                        alt=""
+                        class="battle-strip__chime-img"
+                      />
+                      +{{ formatNumber(pauseBattleChimes) }}
+                    </span>
+                  </template>
+                  <span v-else class="battle-strip__idle">No battles finished yet</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- ── Rechts: der Zustand ───────────────────────────────── -->
+            <section class="state-col">
+              <h2 class="col-head">Where you stand</h2>
+
+              <!-- Die Scheibe bleibt frei: Ring und Plakette lagen vorher genau
+                   auf der Fläche, an der die Phase erkennbar ist — Korona,
+                   Farbe, Oberfläche. Die HP stehen deshalb als eigene Leiste
+                   darunter.
+
+                   Links und rechts die Bilanz der laufenden Pause: was die Sonne
+                   verloren und was sie zurückgewonnen hat. Beides läuft pausiert
+                   weiter — Void-Einschläge und Boss-Enrage treffen sie, die
+                   Regeneration hält dagegen.
+
+                   Die beiden Ledger-Spalten sind gleich breit. Das ist Bedingung,
+                   nicht Geschmack: nur so steht die Scheibe mittig in IHRER
+                   Spalte (gemessen `.sun-hero` gegen `.state-col`, Toleranz
+                   null). -->
+              <div class="state-block">
+                <div class="sun-block" :style="{ '--sun-d': `${sunDiameter}px` }">
+                  <SunLedger tone="regen" :total="pauseRegen" />
+                  <div
+                    class="sun-hero"
+                    :style="{ width: `${sunDiameter}px`, height: `${sunDiameter}px` }"
+                  >
+                    <div class="sun-hero__disc" aria-hidden="true">
+                      <CometDisc v-if="solarStore.isCometState" :diameter="sunDiameter" />
+                      <PhaseSunDisc v-else :diameter="sunDiameter" />
+                    </div>
+                  </div>
+                  <SunLedger tone="damage" :total="pauseDamage" :pops="damagePops" />
+                </div>
+                <span class="sun-phase-label" :style="{ color: sunPhaseLabelColor }">
+                  {{ sunPhase.name }}
+                </span>
+              </div>
+
+              <!-- Der Streifen bleibt ein eigenes Element dieser Datei: seine
+                   HÖHE geht in die Panelhöhe und damit in den Fit-Scale des
+                   GANZEN Overlays ein. -->
+              <div class="vital-strip">
+                <VitalityBar
+                  :current="playerStore.currentHP"
+                  :max="playerStore.maxHP"
+                  :regen-per-sec="regen"
+                  label-placement="inside"
+                  spark
+                  :aria-label="`Health ${Math.ceil(playerStore.currentHP)} of ${playerStore.maxHP}`"
                 />
-                +{{ formatNumber(pauseBattleChimes) }}
-              </span>
-            </template>
-            <span v-else class="battle-strip__idle">No battles finished yet</span>
+              </div>
+
+              <div class="state-rows">
+                <PauseMetaPillar
+                  label="Universe"
+                  :value="toRoman(gameStore.currentUniverse)"
+                  :sub="universeName"
+                  :pct="universePct"
+                  :meter="`${gameStore.currentUniverse} / ${gameStore.totalUniverses}`"
+                  :color="JOURNEY_AXIS_COLORS.universe"
+                />
+                <PauseMetaPillar
+                  label="Galaxy"
+                  :value="String(galaxyStore.currentGalaxy)"
+                  :sub="galaxyName"
+                  :pct="galaxyPct"
+                  :meter="`${galaxyStore.starsRescued} / ${galaxyStore.starsRequired} ✦`"
+                  :color="JOURNEY_AXIS_COLORS.galaxy"
+                />
+                <PauseMetaPillar
+                  label="Level"
+                  :value="String(gameStore.level)"
+                  :sub="levelSub"
+                  :pct="gameStore.levelProgress"
+                  :meter="`${Math.floor(gameStore.levelProgress)} %`"
+                  :color="JOURNEY_AXIS_COLORS.level"
+                  emphasis
+                />
+              </div>
+            </section>
           </div>
 
           <!-- Awaiting on return — immer gerendert mit fester Zeilenhöhe, damit
@@ -382,11 +392,11 @@
             </div>
           </div>
 
-          <!-- Continue -->
-          <!-- Die Tasten stehen IM Knopf, nicht als Hinweiszeile darunter: sie
-               gehören zu derselben Handlung, und die eigene Zeile kostete den
-               Panelfuß eine ganze Reihe Höhe. Beschriftung bleibt optisch
-               mittig (Dreispalter), die Tasten sitzen an der rechten Kante. -->
+          <!-- Fußzeile statt Knopf: der einzige Ausgang braucht keinen Rahmen,
+               um gefunden zu werden — eine Trennlinie darüber genügt. Die Tasten
+               stehen weiterhin IN der Zeile, nicht als Hinweis darunter: sie
+               gehören zu derselben Handlung. Beschriftung bleibt optisch mittig
+               (Dreispalter), die Tasten sitzen an der rechten Kante. -->
           <button
             class="continue-btn"
             :aria-label="`Resume journey — press ${pauseCap} or ${PAUSE_ESCAPE_CAP}`"
@@ -442,13 +452,13 @@ import {
   PAUSE_SUN_VH_FACTOR,
   PAUSE_PANEL_DESIGN_WIDTH,
   PAUSE_PANEL_MAX_SCALE,
-  PAUSE_META_COL_WIDTH,
+  PAUSE_STATE_COL_WIDTH,
+  PAUSE_BODY_COL_GAP,
   JOURNEY_AXIS_COLORS,
   PAUSE_MATERIAL_COLUMNS,
   PAUSE_MATERIAL_ROWS,
   PAUSE_MATERIAL_CELL_PX,
   PAUSE_MATERIAL_GAP_PX,
-  PAUSE_MATERIAL_TILE_PAD_X,
   PAUSE_MATERIAL_TILE_WIDTH,
   PAUSE_LEDGER_MAX_POPS,
   DAMAGE_FLOAT_DURATION_MS,
@@ -465,9 +475,7 @@ import {
   PAUSE_STAR_HP_STEPS,
   STAR_TIMER_TICK_MS,
   VOID_SEVERITY_COLOR,
-  VOID_CARD_ICON,
   VOID_KIT_ACCENT,
-  BATTLE_STAT_GAME_ICONS,
   SCOREBOARD_STAT_COLORS,
   DRIFTER_RARITY_COLOR,
 } from '@/config/constants'
@@ -1063,7 +1071,6 @@ const killBreakdown = computed(() => {
   return [
     {
       key: 'planets',
-      icon: 'game-icons:exploding-planet',
       label: 'Planets',
       count: s.planetsCleared,
       color: '#e0a850',
@@ -1071,7 +1078,6 @@ const killBreakdown = computed(() => {
     },
     {
       key: 'stars',
-      icon: 'game-icons:allied-star',
       label: 'Stars',
       count: s.starsRescued,
       color: '#7fd8d0',
@@ -1079,7 +1085,6 @@ const killBreakdown = computed(() => {
     },
     {
       key: 'bosses',
-      icon: 'game-icons:alien-skull',
       label: 'Bosses',
       count: s.galaxyBossesFelled,
       color: '#cc6050',
@@ -1087,7 +1092,6 @@ const killBreakdown = computed(() => {
     },
     {
       key: 'void',
-      icon: VOID_CARD_ICON,
       label: 'Void',
       count: s.voidSlain,
       color: VOID_KIT_ACCENT,
@@ -1095,7 +1099,6 @@ const killBreakdown = computed(() => {
     },
     {
       key: 'champions',
-      icon: BATTLE_STAT_GAME_ICONS.kills,
       label: 'Champions',
       count: s.championKills,
       color: SCOREBOARD_STAT_COLORS.kills,
@@ -1263,7 +1266,7 @@ function particleStyle(i: number): Record<string, string> {
   transform-origin: center center;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: clamp(14px, 2.4vh, 24px);
   padding: clamp(22px, 4vh, 40px) clamp(20px, 4vw, 44px) clamp(18px, 3vh, 30px);
   background: #111008;
@@ -1292,148 +1295,222 @@ function particleStyle(i: number): Record<string, string> {
   z-index: -1;
 }
 
-/* ── Header ───────────────────────────────────────────── */
-.pause-header {
+/* ── Kopfzeile ────────────────────────────────────────── */
+/* Titel und Uhr auf EINER Grundlinie. Untereinander kosteten sie 133 px, und
+   Höhe ist im Panel die teuerste Grösse: der Fit-Scale ist auf jeder
+   Referenzauflösung höhenlimitiert. */
+.pause-head {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
 }
+
 .pause-title {
   margin: 0;
-  font-family: 'MedievalSharp', cursive;
-  font-size: clamp(2.8rem, 5.2vw, 4.2rem);
+  font-size: 3.5rem;
   font-weight: 400;
   line-height: 1;
   color: #f4e2a0;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-shadow:
-    0 0 30px rgba(240, 208, 96, 0.4),
-    0 2px 6px rgba(0, 0, 0, 0.8);
+    0 0 26px rgba(240, 208, 96, 0.28),
+    0 3px 8px rgba(0, 0, 0, 0.9);
 }
+
 .pause-timer {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: clamp(6px, 1vh, 10px);
+  align-items: baseline;
+  gap: 12px;
 }
+
+.pause-timer__tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.42);
+}
+
 .pause-timer__value {
   position: relative;
-  display: inline-flex;
-  align-items: baseline;
-  font-size: clamp(2rem, 3.6vw, 3rem);
+  display: flex;
+  font-size: 2.75rem;
   font-weight: 800;
   line-height: 1;
   color: #f0d060;
-  /* Grundschein statisch. Was atmet, ist die Ebene darunter. */
-  text-shadow:
-    0 0 22px rgba(240, 208, 96, 0.45),
-    0 0 48px rgba(200, 144, 64, 0.22);
+  font-variant-numeric: tabular-nums;
 }
+
 /* Farbloser Zwilling hinter den Ziffern: `text-shadow` zeichnet auch bei
-   transparenter Schrift, übrig bleibt also reiner Schein. Er liegt exakt auf
-   den Ziffern (dieselbe Zeichenkette, dieselben Zellenbreiten) und blendet im
-   Takt auf — animiert wird nur `opacity`, das bleibt Compositor-Arbeit. */
+   transparenter Schrift, übrig bleibt reiner Schein. Er liegt exakt auf der
+   Zahl und blendet im Takt auf — animiert wird NUR `opacity`. Der Takt auf der
+   Zahl selbst rasterte sonst in jedem Frame neu. */
 .pause-timer__glow {
   position: absolute;
   inset: 0;
-  display: inline-flex;
-  align-items: baseline;
+  display: flex;
   color: transparent;
   text-shadow:
-    0 0 30px rgba(240, 208, 96, 0.4),
-    0 0 64px rgba(200, 144, 64, 0.2);
-  opacity: 0;
+    0 0 14px rgba(240, 208, 96, 0.9),
+    0 0 30px rgba(240, 208, 96, 0.5);
   pointer-events: none;
   animation: timer-breathe 5s ease-in-out infinite;
 }
-/* Every glyph sits in a fixed-width cell so nothing shifts as digits change. */
+
+/* Feste Ziffernbreite: die Uhr darf beim Weiterlaufen nicht atmen. */
 .timer-digit {
   display: inline-block;
   width: 0.74em;
   text-align: center;
 }
+
 .timer-sep {
   display: inline-block;
   width: 0.44em;
   text-align: center;
   transform: translateY(-0.04em);
 }
+
 @keyframes timer-breathe {
   0%,
   100% {
-    opacity: 0;
+    opacity: 0.35;
   }
   50% {
     opacity: 1;
   }
 }
-/* ── Sun hero ─────────────────────────────────────────── */
-/* Die Heldenzeile ist die Standtafel des Panels: Ort — Regeneration — Scheibe —
-   Schaden — Bard. Beide Meta-Spalten sind auf dieselbe feste Breite gesetzt und
-   die Ledger-Spalten teilen sich den Rest zu gleichen Teilen; nur so steht die
-   Scheibe exakt in der Panelmitte. Eine der beiden Meta-Spalten breiter zu
-   machen verschöbe sie.
 
-   `min-height` statt fester Höhe: Maß der Zeile bleibt die Scheibe. Die Säulen
-   sind an `--sun-d` gekoppelt und passen ab einem Durchmesser von 152 px (Full
-   HD) hinein — `min-height` fängt nur den Randfall darunter ab, statt sie
-   stillschweigend überlaufen zu lassen. Jeder Zuwachs hier ändert die Panelhöhe
-   und mit ihr den Fit-Scale des gesamten Overlays.
+.pause-head__rule {
+  height: 1px;
+  width: 100%;
+  margin-top: -14px;
+  background: linear-gradient(to right, rgba(200, 144, 64, 0.55), rgba(122, 78, 32, 0.08));
+}
 
-   Platzrechnung je Ledger-Spalte: (1140 Panelbreite − 2 × 44 Innenabstand
-   − 2 × 168 Meta − 200 max. Scheibe − 4 Spaltenabstände) / 2 ≈ 210 px. */
-.hero-row {
+/* ── Zwei Spalten ─────────────────────────────────────── */
+/* Links, was hereinkam; rechts, wie es steht. Die Zustandsspalte hat eine feste
+   Breite (PAUSE_STATE_COL_WIDTH), die Bilanzspalte nimmt den Rest — 1052 − 460
+   − 30 = 562, gerade genug für das 426 breite Material-Raster.
+
+   Beide Spalten laufen von OBEN, mit festem Abstand zwischen den Abschnitten —
+   nicht `space-between`: im frischen Spielstand ist die Bilanzspalte kurz (kein
+   Material, keine Battles), und ein verteilter Überschuss riss die Abschnitte
+   dann sichtbar auseinander. Die Restluft sammelt sich lieber am Fuss der
+   kürzeren Spalte. */
+.pause-body {
   display: grid;
-  /* `minmax(0, 1fr)` statt `1fr`: eine ungewöhnlich lange Zahl darf die
-     Ledger-Spalte nicht über ihren Anteil hinaus aufblähen — sonst wanderte die
-     Scheibe aus der Panelmitte. Sie ragt dann nach außen und wird notfalls vom
-     Panel beschnitten; die Mitte bleibt unangetastet. */
-  grid-template-columns:
-    var(--meta-col-w) minmax(0, 1fr) auto minmax(0, 1fr)
-    var(--meta-col-w);
+  grid-template-columns: minmax(0, 1fr) var(--state-col-w);
+  gap: var(--body-gap);
+  align-items: stretch;
+  width: 100%;
+}
+
+.tally-col,
+.state-col {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+
+/* Trennung durch eine Haarlinie, nicht durch zwei Kästen — dasselbe Mittel,
+   das die Kill-Chips untereinander schon benutzen. */
+.state-col {
+  padding-left: var(--body-gap);
+  border-left: 1px solid rgba(122, 78, 32, 0.35);
+}
+
+.col-head {
+  margin: 0;
+  padding-bottom: 9px;
+  border-bottom: 1px solid rgba(122, 78, 32, 0.45);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.42);
+}
+
+.tally-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* EIN Kopfformat für alle Abschnitte beider Spalten: Grösse und Laufweite sind
+   überall gleich, unterschieden wird über die Farbe des Icons. Vorher trug fast
+   jeder Abschnitt seine eigene Beschriftungsgrösse. */
+/* Feste Höhe, weil die Summe rechts erst erscheint, sobald etwas gefallen ist:
+   ohne sie wüchse der Kopf mitten in der Pause um 6 px und schöbe alles
+   darunter nach — dasselbe Muster wie bei `.callout-head`. */
+.sec-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.42);
+  white-space: nowrap;
+}
+
+.sec-head__icon {
+  flex-shrink: 0;
+  color: #c89040;
+}
+
+.sec-head__n {
+  margin-left: auto;
+  font-size: 1.4em;
+  letter-spacing: 0.02em;
+  color: #f0d060;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Sonnenscheibe mit Bilanz ─────────────────────────── */
+/* Beide Ledger-Spalten sind gleich breit — Bedingung, nicht Geschmack: nur so
+   steht die Scheibe mittig in IHRER Spalte. Gemessen `.sun-hero` gegen
+   `.state-col`, Toleranz null.
+
+   Der Block ist GENAU so hoch wie die Scheibe (`--sun-d`): ein Zuwachs hier
+   änderte die Panelhöhe und zöge den Fit-Scale des ganzen Overlays mit. */
+.state-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.sun-block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   justify-items: center;
-  /* Luft zur Scheibe: ihr Kasten ist quadratisch, ihre Korona läuft darüber
-     hinaus — ohne diesen Abstand berührte die Akzentlinie den Schein. */
-  column-gap: clamp(16px, 2.2vw, 30px);
+  column-gap: 18px;
   width: 100%;
   min-height: var(--sun-d);
 }
 
-/* Die Meta-Säulen stehen an den Panelkanten, die Ledger kleben an der Scheibe
-   und wachsen nach außen — beide Paare spiegeln sich um die Mitte. */
-.hero-row > :nth-child(1) {
-  justify-self: start;
-}
-.hero-row > :nth-child(2) {
-  justify-self: end;
-}
-.hero-row > :nth-child(4) {
-  justify-self: start;
-}
-.hero-row > :nth-child(5) {
+.sun-block > :nth-child(1) {
   justify-self: end;
 }
 
-/* Universe über Galaxy: die Ortskette liest sich von außen nach innen auf die
-   Scheibe zu. Rechts steht nur der Bard, seine Säule zentriert die Zeile. */
-.meta-col {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(10px, 1.6vh, 16px);
-  width: 100%;
-  min-width: 0;
+.sun-block > :nth-child(3) {
+  justify-self: start;
 }
 
-/* Maße kommen inline aus `sunDiameter` (PAUSE_SUN_*): dieselbe Spanne stand
-   hier als `clamp()` ein zweites Mal, und beide Fassungen mussten von Hand
-   gleichgehalten werden. */
 .sun-hero {
   position: relative;
   flex-shrink: 0;
   pointer-events: none;
 }
+
 .sun-hero__disc {
   display: grid;
   place-items: center;
@@ -1442,341 +1519,200 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 .sun-phase-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  margin-top: calc(-1 * clamp(10px, 1.6vh, 18px));
-  font-family: 'MedievalSharp', cursive;
-  font-size: clamp(1.05rem, 1.6vw, 1.5rem);
-  letter-spacing: 0.16em;
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
-  text-shadow: 0 0 18px currentColor;
+  line-height: 1.15;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
 }
-/* ── Vitalitäts-Leiste ────────────────────────────────────
-   Bewusst ohne eigene Fassung: das Panel trägt darunter bereits drei umrandete
-   Blöcke, ein vierter Kasten direkt unter der Sonne hätte die Leiste von ihr
-   getrennt. So bleibt sie die Lebensanzeige DER Sonne — die Struktur trägt der
-   Balken selbst über seinen eingelassenen Rand.
 
-   Der Streifen besitzt nur noch die Maße — die gestapelten Ebenen stehen in
-   `components/ui/VitalityBar.vue`, wo sie sich alle vier Spieler-Leisten teilen. */
+/* ── Vitalitäts-Leiste ────────────────────────────────── */
+/* Der Streifen bleibt ein eigenes Element dieser Datei: seine HÖHE geht in die
+   Panelhöhe und damit in den Fit-Scale des GANZEN Overlays ein. Die Leiste
+   selbst bringt ihre Farbstufen, Ebenen und ihr Timing mit — hier stehen nur
+   ihre Masse. */
 .vital-strip {
-  /* `block`, nicht `flex`: `inside` ist ein Block, und als Flex-Item ohne
-     Eigenbreite fiele der Track auf null zurück — seine `width: 100%` misst
-     dann gegen eine unbestimmte Breite. */
   display: block;
   width: 100%;
   height: var(--vb-h);
-  /* Die Leiste gehört optisch zur Sonne darüber, nicht zur Kachelreihe
-     darunter — der halbe Panel-Gap rückt sie näher an das Phasen-Label. */
-  margin-top: calc(-1 * clamp(6px, 1vh, 10px));
-  padding: 0 2px;
-
-  /* Die Höhe geht in die Panelhöhe und damit in den Fit-Scale des GANZEN
-     Overlays ein (`docs/hud-and-layout.md` — Breite ist billig, Höhe teuer). */
   --vb-h: 44px;
   --vb-radius: 5px;
-  /* Die Anteile des Orbits, der denselben Satz trägt — nicht die Vorgaben
-     (0,5 / 0,3 / 0,25): das Panel läuft skaliert (~0,61 auf Full HD), 44 · 0,5
-     blieben davon real 13px. Ohne Pixelböden wie dort: dieser Balken ist mit
-     44px doppelt so hoch, die Böden griffen nie. */
   --vb-label-size: calc(var(--vb-h) * 0.64);
   --vb-label-sub-size: calc(var(--vb-h) * 0.44);
   --vb-regen-size: calc(var(--vb-h) * 0.34);
   --vb-tick-inset: calc(var(--vb-h) * 0.2);
-  /* Mittiger Satz verträgt keine Reserve — sie zählt zur Satzbreite und stünde
-     leer links der Achse. */
   --vb-cur-reserve: 0;
 }
 
-/* ── Chime readout ────────────────────────────────────── */
+/* ── Die drei Achsen ──────────────────────────────────── */
+.state-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+/* ── Chime-Ablesung ───────────────────────────────────── */
+/* Die grösste Zahl des Panels — sie ist der Grund, warum man überhaupt
+   pausiert hat. Beschriftung darunter, klein: Zahlen dominieren. */
 .chime-readout {
   display: flex;
   align-items: center;
-  gap: clamp(12px, 1.6vw, 20px);
+  gap: 16px;
+  min-width: 0;
 }
+
 .chime-orb {
   position: relative;
-  display: flex;
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
 }
+
 .chime-img {
   position: relative;
-  width: clamp(54px, 7.5vh, 84px);
-  height: clamp(54px, 7.5vh, 84px);
+  z-index: 1;
+  width: 72px;
+  height: 72px;
   object-fit: contain;
-  /* Statischer Grundschatten — der Umschlag nach oben kommt vom Halo. */
-  filter: drop-shadow(0 0 12px rgba(232, 192, 64, 0.5));
+  /* Statischer Schatten am Bild, der Takt liegt auf der Ebene darunter. */
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.8));
 }
-/* Runder Schein hinter der Münze. Er greift über deren Kante hinaus, damit der
-   Verlauf dort ankommt, wo vorher der weite drop-shadow lag. */
+
+/* Eigene Ebene für den Schein: animiert wird NUR ihre Opazität. Vorher atmete
+   ein `drop-shadow`-Filter direkt am Bild — jeder Frame eine Neurasterung
+   (siehe „Performance" Regel 2). */
 .chime-orb__halo {
   position: absolute;
-  inset: -35%;
+  width: 118px;
+  height: 118px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(232, 192, 64, 0.5) 0%,
-    rgba(232, 192, 64, 0.22) 42%,
+    rgba(255, 214, 96, 0.36) 0%,
+    rgba(255, 214, 96, 0.12) 45%,
     transparent 70%
   );
-  opacity: 0;
   pointer-events: none;
-  animation: chime-glow 5s ease-in-out infinite;
+  animation: chime-glow 3.4s ease-in-out infinite;
 }
+
 @keyframes chime-glow {
   0%,
   100% {
-    opacity: 0;
+    opacity: 0.45;
   }
   50% {
     opacity: 1;
   }
 }
+
+.chime-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .chime-value {
-  font-size: clamp(2.4rem, 4.2vw, 3.6rem);
+  font-size: 4.5rem;
   font-weight: 800;
-  line-height: 1;
-  /* Der Höhenausgleich gegen die Chime-Grafik daneben kommt gemessen von
-     v-ink-center.y — die Schriftgröße hängt hier an vw, ein fester em-Wert
-     träfe nur eine Fensterbreite (siehe utils/ui/textInkOffset.ts). */
+  line-height: 0.98;
   color: #f0d060;
   font-variant-numeric: tabular-nums;
   text-shadow:
-    0 0 24px rgba(240, 208, 96, 0.5),
-    0 0 50px rgba(200, 144, 64, 0.25);
+    0 0 24px rgba(240, 208, 96, 0.4),
+    0 3px 8px rgba(0, 0, 0, 0.9);
 }
 
-/* ── Stat tiles ───────────────────────────────────────── */
-/* Zwei Kacheln, beide mit Aufschlüsselung: Kills braucht Platz für fünf
-   Chips, Materials für zwei Reihen à fünf Karten — damit passen alle zehn
-   Materialien hinein, ohne dass ein „+N" nötig wird.
-   Die Materialbreite ist HERGELEITET und nicht gewählt: die Bilder sind
-   quadratisch und über `--mat-row-h` höhenbegrenzt, jede Zelle, die breiter
-   steht als hoch, verschenkt die Differenz. Mit dem früheren `1fr 1.85fr` waren
-   das 50px je Zelle, fünfmal pro Reihe. Die erste Spalte bleibt `1fr` und nimmt
-   den ganzen Rest — das ist der Platz, aus dem die Kill-Chips ihre Größe
-   ziehen (365 → 614px), ohne dass die Panelhöhe sich bewegt. */
-.stat-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--mat-tile-w);
-  /* Feste Zeilenhöhe: alle drei Tiles exakt gleich groß, egal wie viel
-     Inhalt (HP-Leiste, Material-Karten) eine einzelne Kachel hat. Bemessen
-     am größten Inhalt — zwei Reihen Material-Karten. */
-  /* Bemessen am höheren Inhalt und NACHGEMESSEN, nicht gerechnet: Kopfzeile,
-     Abstand, zwei Reihen Material-Bilder (2 × 78 + 6 Lücke) und Innenabstand
-     ergeben zusammen 236 px.
-     Mit dem breiteren Panel (960 statt 620) ist die Material-Kachel rund 560 px
-     breit — fünf Zellen à über 100 px. Die Bilder sind quadratisch, ihre HÖHE
-     ist damit der Engpass, nicht die Breite: 78 px ist die Zeilenhöhe, die noch
-     in die Kachel passt, ohne dass die zusätzliche Panelhöhe den Fit-Scale
-     spürbar drückt.
-     Diese Zahl und `--mat-row-h` hängen zusammen — mit 84 px Zeilenhöhe kam der
-     Inhalt auf 240 px und die zweite Materialreihe wurde unten abgeschnitten.
-     Das fällt nur mit GEFÜLLTEM Inventar auf; ein leeres Overlay sieht in
-     beiden Fällen richtig aus. */
-  grid-auto-rows: 238px;
-  /* Explizit, nicht dem geerbten `baseline` überlassen: die Material-Kachel
-     hat ihre erste Baseline im Kartenraster statt in einer Wertzeile und
-     rutschte dadurch gegenüber Health und Kills nach unten. */
-  align-items: stretch;
-  gap: clamp(8px, 1.2vw, 12px);
-  width: 100%;
-}
-.stat-tile {
-  display: grid;
-  /* Überschrift oben am Kachelrand, Inhalt füllt den Rest darunter. Die zweite
-     Zeile ist 1fr statt auto — würde der ganze Block zentriert, hinge der Kopf
-     je nach Inhaltshöhe unterschiedlich tief, und die Köpfe der beiden Kacheln
-     stünden nicht mehr auf einer Linie. */
-  grid-template-rows: auto 1fr;
-  justify-items: center;
-  row-gap: 7px;
-  text-align: center;
-  padding: clamp(10px, 1.4vh, 14px) clamp(10px, 1.4vw, 14px);
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  background: rgba(255, 200, 80, 0.05);
-  border: 1px solid rgba(122, 78, 32, 0.55);
-  border-radius: 5px;
-  min-width: 0;
-}
-/* Überschrift der Kachel: deutlich größer als die Zeilen darunter und über die
-   volle Breite gezogen, mit der Gesamtzahl am rechten Rand. Vorher war sie ein
-   11px-Flüstern über dem eigentlichen Inhalt. Eine Haarlinie darunter trennt
-   Kopf und Inhalt, ohne einen zweiten Kasten aufzumachen. */
-.stat-tile__label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  justify-self: stretch;
-  padding-bottom: 7px;
-  border-bottom: 1px solid rgba(122, 78, 32, 0.45);
-  font-size: 1.02rem;
+.chime-cap {
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(232, 216, 176, 0.82);
-  white-space: nowrap;
+  color: rgba(216, 200, 160, 0.42);
 }
-.stat-tile__icon {
-  color: #c89040;
-  flex-shrink: 0;
-}
-/* Die Materialkachel gibt ihren seitlichen Innenabstand an das Bildraster ab:
-   ohne Rahmen um die einzelnen Karten ist jeder Pixel Kachelrand ein Pixel
-   weniger Material. Die Kopfzeile behält ihren Abstand über ein eigenes
-   Padding, damit sie nicht am Kachelrand klebt. */
-.stat-tile--materials {
-  padding-left: var(--mat-tile-pad);
-  padding-right: var(--mat-tile-pad);
-}
-.stat-tile--materials .stat-tile__label {
-  padding-left: 7px;
-  padding-right: 7px;
-}
-/* Die Kachel füllt sich mit Karten statt mit einer Zahl — der reservierte
-   Bar-Slot der anderen beiden entfällt hier, sonst stünde das Raster
-   außermittig. */
 
-/* ── Kill-Aufschlüsselung ─────────────────────────────────
-   Fünf Chips nebeneinander, je einer für eine Kategorie: Icon, Zahl, Name,
-   darunter ein Strich in der Kategoriefarbe. Waagerecht statt untereinander,
-   weil die Kachelhöhe fest bei 238px steht, die Breite aber aus der
-   Material-Kachel kommt (siehe .stat-grid) — derselbe Platz trägt so eine
-   doppelt so große Zahl. */
+/* ── Kill-Aufschlüsselung ─────────────────────────────── */
+/* Ein Chip je Kategorie nebeneinander statt einer Liste untereinander:
+   waagerecht bekommt dieselbe Zahl doppelt so viel Schrift. Zugeordnet wird
+   über den Farbstrich an der Kante, nicht über fünf Kästchen. */
 .kill-row {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  align-items: stretch;
-  justify-self: stretch;
+  gap: 10px;
   width: 100%;
-  height: 100%;
 }
+
 .kill-chip {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
+  align-items: flex-start;
+  gap: 5px;
+  padding-left: 10px;
   min-width: 0;
-  padding: 0 4px;
+  border-left: 2px solid var(--kill-color);
 }
-/* Haarlinie statt Kasten — dieselbe Farbe, die den Kopf der Kachel abtrennt. */
-.kill-chip + .kill-chip {
-  border-left: 1px solid rgba(122, 78, 32, 0.35);
-}
-/* Die Kategoriefarbe kommt inline aus killBreakdown — Planeten bernstein,
-   Sterne im Türkis der Stern-Callouts, Galaxiebosse im Warnrot der
-   Bosskämpfe, der Void in seinem Magenta, die Champion-Kills im Grün der
-   Kill-Spalte des Scoreboards. */
-.kill-chip__icon {
-  color: var(--kill-color);
-  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.6));
-}
-/* Das Einzelschwert der Kills ist das einzige `ph`-Glyph in der Reihe: gefüllt
-   und geometrisch, daneben stehen vier `game-icons`-Motive. Ohne Ausgleich
-   wirkt es kleiner als es ist (Icon-Regel 10). Statisch, kein Dauerläufer. */
-.kill-chip__icon--geometric {
-  transform: scale(0.88);
-}
+
 .kill-chip__count {
   max-width: 100%;
-  font-size: 2.4rem;
+  overflow: hidden;
+  font-size: 2.6rem;
   font-weight: 800;
   line-height: 1;
   color: #ece0c0;
   font-variant-numeric: tabular-nums;
-  /* Riegel gegen den Überlauf: die Kurzform bleibt bei fünf Zeichen, aber ein
-     Chip, der aus der Kachel läuft, schöbe die ganze Reihe. */
-  white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
 }
+
 .kill-chip__label {
   max-width: 100%;
-  font-size: 0.84rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.6);
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* Der Strich trägt die Zuordnung zur Farbe, ohne dass der Chip einen Rahmen
-   braucht — dasselbe Mittel wie der Farbstrich am Label der Meta-Säulen. */
-.kill-chip__rule {
-  width: 46%;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--kill-color);
-}
-/* Noch nichts gefallen: der Chip bleibt stehen, tritt aber zurück — er ist
-   dann eine Ankündigung, keine Meldung. */
-.kill-chip--zero {
-  opacity: 0.32;
-}
-.kill-chip--zero .kill-chip__rule {
-  background: rgba(216, 200, 160, 0.25);
-}
-/* Gesamtzahl am rechten Rand der Überschrift — die Aufschlüsselung steht
-   darunter, hier zählt nur die Summe. */
-.stat-tile__total {
-  margin-left: auto;
-  font-size: 1.15em;
+  font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0;
-  color: #f0d060;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 12px rgba(240, 208, 96, 0.35);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: rgba(216, 200, 160, 0.5);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* ── Materialien in der Stat-Kachel ───────────────────────
-   Die Karten haben keine eigene Fassung: kein Rahmen, keine Füllung, keine
-   Aura. Was von jeder Karte bleibt, sind Bild und Menge — der Zierrat kostete
-   in einer 52px-Zelle mehr Fläche, als er trug (siehe „Performance" Regel 7).
-   Die Seltenheit steckt weiterhin in --mat-color, die jetzt allein die
-   Mengenzahl färbt.
+/* Kategorien ohne Treffer bleiben STEHEN und dimmen nur ab — verschwänden sie,
+   spränge das Raster, sobald während der Pause die erste dazukommt. */
+.kill-chip--zero {
+  opacity: 0.3;
+}
 
-   Der gewonnene Platz geht ins Bild: es füllt seine Rasterzelle vollständig
-   aus und ist damit gut die Hälfte größer als zuvor (40px → ~84px Kantenlänge
-   auf der Design-Breite, mit dem Fit-Scale wächst es auf 2K/4K entsprechend
-   mit). Das bleibt in der 256er-Variante von materialIconMd korrekt
-   eingebettet — bei DPR 2 sind das 168px Anzeige gegen 256px Quelle.
+/* ── Materialien ──────────────────────────────────────── */
+/* Fünf Karten je Reihe, zwei Reihen. Die Rasterhöhe ist FEST reserviert:
+   klappte die zweite Reihe erst beim fünften Material auf, änderte sich die
+   Panelhöhe mitten in der Pause — und mit ihr der Fit-Scale.
 
-   Feste Maße statt vh-Clamps: das Panel hat eine feste Design-Breite, die
-   Größenanpassung an den Viewport macht ausschließlich useFitScale. Ein
-   zweiter, davon unabhängiger vh-Bezug würde nur gegen den Fit-Scale rechnen. */
-/* Beide Reihen stehen als explizite Grid-Zeilen fest — auch wenn erst zwei
-   Materialien gefallen sind. Klappte die zweite Reihe erst beim fünften Fund
-   auf, wüchse mitten in der Pause die Panelhöhe und mit ihr sprünge der
-   Fit-Scale des gesamten Overlays. */
-/* Zeilenhöhe und Spalt kommen inline aus den Konstanten: die Breite der ganzen
-   Kachel wird daraus gerechnet (PAUSE_MATERIAL_TILE_WIDTH), und zwei Fassungen
-   derselben Zahl — eine hier, eine dort — liefen auseinander. */
+   Die Karten haben keine eigene Fassung: der Platz, den Rahmen und Füllung
+   gekostet haben, gehört dem Bild. Übrig bleiben Bild und Menge. */
 .mat-grid {
   display: grid;
-  grid-template-columns: repeat(var(--mat-cols, 4), 1fr);
+  grid-template-columns: repeat(var(--mat-cols, 5), 1fr);
   grid-template-rows: repeat(var(--mat-rows, 2), var(--mat-row-h));
-  justify-self: stretch;
-  /* Feste Rasterhöhe, deshalb im Restbereich zentriert statt gestreckt —
-     sonst zöge 1fr die Zeilen auseinander. */
-  align-self: center;
   gap: var(--mat-gap);
-  width: 100%;
+  width: var(--mat-grid-w);
+  max-width: 100%;
 }
+
 .mat-empty {
+  display: flex;
+  align-items: center;
+  height: calc(var(--mat-row-h, 78px) * 2 + var(--mat-gap, 6px));
   font-size: 0.95rem;
   font-style: italic;
   letter-spacing: 0.06em;
   color: rgba(216, 200, 160, 0.3);
 }
 
-/* Reiner Rahmen im Wortsinn nicht mehr vorhanden: die Karte ist nur noch die
-   Zelle, in der Bild und Menge liegen. */
 .mat-card {
   position: relative;
   display: flex;
@@ -1784,42 +1720,36 @@ function particleStyle(i: number): Record<string, string> {
   justify-content: center;
   min-width: 0;
 }
-/* Überzähliges ist kein Material — nur eine Zahl, entsprechend zurückgenommen */
+
 .mat-card--more {
   font-size: 1.1rem;
   font-weight: 800;
   color: rgba(216, 200, 160, 0.5);
   font-variant-numeric: tabular-nums;
 }
-/* Das Bild füllt die Zelle vollständig aus; `contain` hält das
-   Seitenverhältnis, die quadratischen Quellen landen also auf der
-   Zellenbreite. Der Schatten trennt es vom Panelgrund, seit der Rahmen es
-   nicht mehr tut — statisch, nicht animiert. */
+
 .mat-card__img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.75));
 }
-/* Bildloses Material: nur die Initialen in der Seltenheitsfarbe, ohne Scheibe
-   — dieselbe Regel wie für die Karte selbst. Dafür so groß, dass sie das
-   Gewicht eines Bildes haben. */
+
+/* Vier der zehn Materialien haben in den Stammdaten kein Bild — für sie steht
+   dasselbe Monogramm wie im Loot-Band des Star-Fight-Modals. */
 .mat-card__mono {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
   font-size: 1.7rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   color: var(--mat-color);
-  text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.95),
-    0 0 10px color-mix(in srgb, var(--mat-color) 40%, transparent);
+  opacity: 0.85;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
 }
-/* Die Menge sitzt auf der unteren Kante des Bildes — ohne Plakette darunter,
-   die Lesbarkeit trägt der Schatten. Sie ist der eigentliche Messwert der
-   Kachel und deshalb bewusst groß: bei ~84px Zellenbreite bleibt selbst die
-   längste Ausgabe des Formatierers („×999.9K") innerhalb der Zelle. */
+
 .mat-card__amount {
   position: absolute;
   right: 0;
@@ -1830,138 +1760,118 @@ function particleStyle(i: number): Record<string, string> {
   color: var(--mat-color);
   font-variant-numeric: tabular-nums;
   text-shadow:
-    0 1px 2px rgba(6, 4, 0, 1),
-    0 0 4px rgba(6, 4, 0, 1),
-    0 0 9px rgba(6, 4, 0, 0.9);
+    0 1px 4px rgba(0, 0, 0, 0.95),
+    0 0 10px rgba(0, 0, 0, 0.8);
 }
-/* Das Malzeichen trägt keine Information, die die Zahl nicht selbst hat — es
-   bleibt klein und zurückgenommen. Der gesparte Platz gehört der Zahl: die
-   längste Ausgabe („×999.9K") bleibt damit sicher in der Zelle, statt in den
-   Spalt zur Nachbarkarte zu ragen. */
+
 .mat-card__x {
   font-size: 0.7em;
   font-weight: 700;
   opacity: 0.6;
 }
 
-/* Neue Materialkarte federt ins Raster ein — derselbe Pop wie bei den
-   Callout-Badges, damit ein Fund während der Pause auffällt. */
+/* Neue Materialien federn ein, statt still zu erscheinen. */
 .mat-pop-enter-active {
   transition:
-    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
-    opacity 0.25s ease;
+    transform 0.36s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.24s ease;
 }
+
 .mat-pop-enter-from {
   opacity: 0;
   transform: scale(0.5);
 }
+
 .mat-pop-leave-active {
-  position: absolute;
   transition:
     transform 0.2s ease,
     opacity 0.2s ease;
+  position: absolute;
 }
+
 .mat-pop-leave-to {
   opacity: 0;
   transform: scale(0.7);
 }
+
 .mat-pop-move {
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ── Auto-battle strip ────────────────────────────────── */
+/* ── Auto-Battle ──────────────────────────────────────── */
+/* Feste Höhe aus demselben Grund wie beim Abschnittskopf: der Leersatz ist
+   kleiner als die Bilanz, die ihn ablöst, sobald das erste Match durch ist. */
 .battle-strip {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: clamp(10px, 1.4vw, 16px);
+  align-items: baseline;
+  gap: 16px;
   width: 100%;
-  height: 54px;
-  padding: 0 clamp(12px, 1.6vw, 16px);
-  background: rgba(255, 200, 80, 0.05);
-  border: 1px solid rgba(122, 78, 32, 0.55);
-  border-radius: 5px;
+  height: 36px;
 }
+
 .battle-strip__idle {
-  font-size: clamp(0.85rem, 1.1vw, 0.95rem);
+  font-size: 0.9rem;
   font-style: italic;
   letter-spacing: 0.06em;
   color: rgba(216, 200, 160, 0.32);
 }
-/* Gleiche Kopfzeilen-Sprache wie die Kacheln darüber — sonst läse sich die
-   Leiste als Fußnote statt als gleichrangiger Block. */
-.battle-strip__label {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 1.02rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(232, 216, 176, 0.82);
-  white-space: nowrap;
-}
-.battle-strip__icon {
-  color: #c89040;
-  flex-shrink: 0;
-}
+
 .battle-strip__record {
-  display: inline-flex;
+  display: flex;
   align-items: baseline;
-  gap: 7px;
-  font-size: clamp(1.25rem, 1.8vw, 1.55rem);
+  gap: 6px;
+  font-size: 1.7rem;
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
+
 .battle-strip__wins {
   color: #74d448;
-  text-shadow: 0 0 10px rgba(116, 212, 72, 0.35);
 }
+
 .battle-strip__losses {
   color: #cc6050;
-  text-shadow: 0 0 10px rgba(204, 96, 80, 0.3);
 }
+
 .battle-strip__sep {
   color: rgba(216, 200, 160, 0.35);
-  font-weight: 700;
 }
+
 .battle-strip__lp {
-  font-size: clamp(1.1rem, 1.6vw, 1.38rem);
+  font-size: 1.1rem;
   font-weight: 800;
-  line-height: 1;
+  letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
+
 .lp--pos {
   color: #74d448;
-  text-shadow: 0 0 10px rgba(116, 212, 72, 0.35);
 }
+
 .lp--neg {
   color: #cc6050;
-  text-shadow: 0 0 10px rgba(204, 96, 80, 0.3);
 }
+
 .lp--zero {
-  color: rgba(216, 200, 160, 0.5);
+  color: rgba(216, 200, 160, 0.45);
 }
+
 .battle-strip__chimes {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: clamp(1.1rem, 1.6vw, 1.38rem);
+  gap: 7px;
+  margin-left: auto;
+  font-size: 1.2rem;
   font-weight: 800;
-  line-height: 1;
   color: #f0d060;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 12px rgba(240, 208, 96, 0.4);
-  white-space: nowrap;
 }
+
 .battle-strip__chime-img {
   width: 24px;
   height: 24px;
   object-fit: contain;
-  filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.5));
 }
 
 /* ── Callouts ─────────────────────────────────────────── */
@@ -2086,31 +1996,26 @@ function particleStyle(i: number): Record<string, string> {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   width: 100%;
-  padding: clamp(9px, 1.3vh, 13px) clamp(10px, 1.2vw, 14px);
-  background: linear-gradient(to bottom, rgba(240, 208, 96, 0.16), rgba(200, 144, 64, 0.1));
-  border: 1px solid rgba(240, 208, 96, 0.45);
-  border-radius: 12px;
+  padding: 16px 4px 2px;
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(122, 78, 32, 0.55);
   color: #f4e2a0;
-  font-size: clamp(0.82rem, 1.15vw, 0.95rem);
+  font-size: 1rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   cursor: pointer;
   transition:
-    background 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.1s ease;
+    color 0.18s ease,
+    border-color 0.18s ease;
 }
 .continue-btn:hover {
-  background: linear-gradient(to bottom, rgba(240, 208, 96, 0.26), rgba(200, 144, 64, 0.16));
-  border-color: rgba(240, 208, 96, 0.75);
-  box-shadow: 0 0 24px rgba(240, 208, 96, 0.25);
-  transform: translateY(-1px);
+  border-color: rgba(240, 208, 96, 0.6);
+  color: #ffeeb4;
 }
 .continue-btn:active {
-  transform: translateY(0);
-  box-shadow: none;
+  color: #f0d060;
 }
 .continue-btn:focus-visible {
   outline: 2px solid #f0d060;
