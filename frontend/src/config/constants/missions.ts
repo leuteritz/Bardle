@@ -44,8 +44,11 @@ export const MISSION_ACCENT_HEX = '#7ad0be'
  *  Materialgutschrift. */
 export const MISSION_SYSTEM_ICON = 'game-icons:direction-signs'
 
-/** Überschrift der Karte, sobald die Leiter durch ist. Sie steht einmal und
- *  verschwindet dann — ein dauerhaftes „fertig" wäre totes Chrome. */
+/** Überschrift, sobald die Leiter durch ist. Zwei Verbraucher mit
+ *  verschiedener Lebensdauer: draußen stünde sie einmal und ginge wieder — ein
+ *  dauerhaftes „fertig" im freien Bild wäre totes Chrome. Im Pause-Overlay
+ *  bleibt sie stehen, weil die Zeile dort ohnehin eine reservierte Höhe hat und
+ *  ein Verschwinden den Fit-Scale des Panels springen ließe. */
 export const MISSION_LADDER_DONE_TITLE = 'Every Road Walked'
 export const MISSION_LADDER_DONE_LINE = 'The Caretaker sets his own course now'
 

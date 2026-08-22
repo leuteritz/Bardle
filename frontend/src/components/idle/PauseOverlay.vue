@@ -76,7 +76,29 @@
           >
             <!-- ── Links: die Bilanz ─────────────────────────────────── -->
             <section class="tally-col">
-              <h2 class="col-head">The tally</h2>
+              <!-- Die Marke steht IN der vorhandenen Kopfzeile, nicht als
+                   eigener Block: die Bilanzspalte ist auf Full HD die höhere,
+                   ein vierter Abschnitt ginge dort direkt in die Panelhöhe. Sie
+                   bleibt bei null stehen und dimmt nur ab — verschwände sie,
+                   spränge die Kopfzeile, sobald der erste Meilenstein fällt. -->
+              <h2 class="col-head">
+                The tally
+                <span
+                  class="col-head__wf"
+                  :class="{ 'col-head__wf--zero': pauseMilestones === 0 }"
+                  title="Wayfinder milestones claimed during this pause"
+                >
+                  <Icon
+                    :icon="MISSION_SYSTEM_ICON"
+                    width="13"
+                    height="13"
+                    class="col-head__wf-icon"
+                    aria-hidden="true"
+                  />
+                  <span class="col-head__wf-label">Milestones</span>
+                  <span class="col-head__wf-n">{{ pauseMilestones }}</span>
+                </span>
+              </h2>
 
               <!-- Der Heiligenschein liegt als eigene Ebene hinter der Münze und
                    blendet im Takt auf; die Münze selbst trägt ihren Schatten
@@ -339,6 +361,14 @@
                   emphasis
                 />
               </div>
+
+              <!-- Die Leiter steht draußen als Karte oben links bei z-index 899
+                   und liegt damit unter diesem Overlay; ihr Herold (9700)
+                   ebenso. Sie läuft pausiert weiter — hier ist die Stelle, an
+                   der man ihr dabei zusehen kann. Geschwister von `.state-rows`,
+                   nicht Kind davon: sie ist keine vierte Journey-Achse, sondern
+                   das nächste Ziel. -->
+              <PauseWayfinderRow />
             </section>
           </div>
 
@@ -529,6 +559,7 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useUiStore } from '@/stores/core/uiStore'
+import { useMissionStore } from '@/stores/progression/missionStore'
 import { getVoidRift } from '@/config/world/void'
 import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
 import { universes } from '@/config/progression/universes'
@@ -575,6 +606,7 @@ import {
   VOID_SEVERITY_COLOR,
   VOID_KIT_ACCENT,
   SCOREBOARD_STAT_COLORS,
+  MISSION_SYSTEM_ICON,
 } from '@/config/constants'
 import type { PauseChampionCallout, PlanetType } from '@/types'
 import { splitDuration, toRoman } from '@/utils/ui/format'
@@ -597,6 +629,7 @@ import PauseStarCard from './PauseStarCard.vue'
 import PauseVoidCard from './PauseVoidCard.vue'
 import SunLedger from './SunLedger.vue'
 import PauseMetaPillar from './PauseMetaPillar.vue'
+import PauseWayfinderRow from './PauseWayfinderRow.vue'
 import { gameNow } from '@/utils/game/gameClock'
 
 // Die Pause hat zwei Quellen — Fenster ohne Fokus und das Kürzel des Spielers.
@@ -620,6 +653,7 @@ const playerStore = usePlayerStore()
 const planetBossStore = usePlanetBossStore()
 const planetShopStore = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
+const missionStore = useMissionStore()
 
 // Die Rollenwahl hält das Spiel bereits an und liegt über allem — eine zweite
 // Pause darüber wäre nur ein Overlay über einem Overlay.
@@ -673,6 +707,7 @@ const galaxyPct = computed(
 const levelSub = computed(() => `${formatNumberCompact(gameStore.chimesToNextLevel)} to next`)
 
 const pauseStartChimes = ref(0)
+const pauseStartMissions = ref(0)
 const pauseTick = ref(0)
 /**
  * Der schnellere der beiden Takte (STAR_TIMER_TICK_MS). Er treibt bisher die
@@ -771,6 +806,7 @@ watch(
     if (paused) {
       gameStore.setPauseState(true)
       pauseStartChimes.value = gameStore.chimes
+      pauseStartMissions.value = missionStore.totalMissionsClaimed
       pauseStartDamage.value = playerStore.totalDamageTaken
       pauseStartRegen.value = playerStore.totalHpRegenerated
       damagePops.value = []
@@ -817,6 +853,16 @@ onUnmounted(() => {
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onEscape)
 })
+
+/**
+ * Meilensteine dieser Pause. Differenz gegen den Lebenszeit-Zähler, dasselbe
+ * Muster wie bei Schaden und Regeneration — kein `pauseStats`-Feld und damit
+ * keine Änderung am Spielstand. Reaktiv, also ohne Takt: die Leiter rückt im
+ * ungebremsten Spiel-Tick weiter.
+ */
+const pauseMilestones = computed(() =>
+  Math.max(0, missionStore.totalMissionsClaimed - pauseStartMissions.value),
+)
 
 const accumulatedChimes = computed(() => {
   void pauseTick.value
@@ -1500,6 +1546,9 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 .col-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   padding-bottom: 9px;
   border-bottom: 1px solid rgba(122, 78, 32, 0.45);
@@ -1508,6 +1557,42 @@ function particleStyle(i: number): Record<string, string> {
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: rgba(216, 200, 160, 0.42);
+}
+
+/* Meilensteine dieser Pause, rechts in der Kopfzeile der Bilanz. Sie steht
+   IMMER — bei null gedimmt, sonst im Mint des Wayfinders. Ihre Zeilenhöhe darf
+   die der Kopfzeile nicht überschreiten: beide Spalten teilen sich `.col-head`,
+   und eine höhere Bilanz-Kopfzeile schöbe die Spalten auseinander. */
+.col-head__wf {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  line-height: 1;
+  color: #7ad0be;
+}
+
+.col-head__wf--zero {
+  opacity: 0.3;
+}
+
+.col-head__wf-icon {
+  flex-shrink: 0;
+}
+
+/* Das Wort dazu: ohne es sagt eine Zahl am Kopfrand nicht, was sie zählt — und
+   ein Tooltip ist keine Beschriftung. Platz ist da, die Kopfzeile trägt links
+   nur zwei Wörter. */
+.col-head__wf-label {
+  font-size: 0.86em;
+  letter-spacing: 0.16em;
+  opacity: 0.75;
+}
+
+.col-head__wf-n {
+  font-size: 1.15em;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 .tally-block {
@@ -1622,10 +1707,14 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* ── Die drei Achsen ──────────────────────────────────── */
+/* Die Lücke war 24 px, solange die Spalte mit drei Zeilen endete. Die
+   Wayfinder-Zeile darunter kostet Panelhöhe (die Zustandsspalte hat auf Full HD
+   gemessene 3,5 px Luft, auf QHD ist sie die höhere Spalte) — 16 px holen einen
+   Teil davon zurück, ohne dass die Zeilen aneinanderrücken. */
 .state-rows {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   width: 100%;
 }
 

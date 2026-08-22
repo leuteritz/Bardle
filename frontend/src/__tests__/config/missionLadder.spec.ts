@@ -210,6 +210,37 @@ describe('mission ladder — presentation', () => {
     }
   })
 
+  /**
+   * Die Zeile im Pause-Overlay hat eine RESERVIERTE Höhe und eine reservierte
+   * Belohnungsbreite (`PAUSE_WAYFINDER_ROW_H`, `PAUSE_WAYFINDER_REWARD_W`) —
+   * jedes Feld steht dort einzeilig. Gemessen wurde im Browser in MedievalSharp
+   * bei 429 px Spaltenbreite: längster Name 181 px bei 23 Zeichen, längste
+   * Aufgabe 255 px bei 42, längste Belohnung 196 px bei 34.
+   *
+   * Zeichen statt Pixel, weil eine Spec keine Schrift misst. Die Grenzen liegen
+   * über dem heutigen Katalog und unter dem, was ellipsiert würde: eine neue
+   * Mission mit doppelt so langem Namen fiele hier auf, statt im Panel still
+   * abgeschnitten zu werden.
+   */
+  it('fits the reserved pause row', () => {
+    const NAME_MAX = 30
+    const OBJECTIVE_MAX = 52
+    const REWARD_MAX = 42
+    for (const m of MISSIONS) {
+      expect(m.name.length, `"${m.id}" name too long for the pause row`).toBeLessThanOrEqual(
+        NAME_MAX,
+      )
+      expect(
+        missionObjectiveLine(m).length,
+        `"${m.id}" objective too long for the pause row`,
+      ).toBeLessThanOrEqual(OBJECTIVE_MAX)
+      expect(
+        missionRewardLabel(m).length,
+        `"${m.id}" reward label too long for the pause row`,
+      ).toBeLessThanOrEqual(REWARD_MAX)
+    }
+  })
+
   it('keeps musical vocabulary out of the ladder', () => {
     // Bard ist der Wandering Caretaker, kein Musiker — „Chimes" ist Bestand aus
     // seinem Kit, alles andere Musikalische ist gesperrt.

@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useMissionStore } from '@/stores/progression/missionStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { invalidateHudField } from '@/utils/ui/hudField'
-import { missionObjectiveLine, getMission } from '@/config/progression/missions'
-import { MISSION_CLAIM_FLASH_MS } from '@/config/constants'
+import { useMissionFace } from '@/composables/ui/useMissionFace'
+import { missionObjectiveLine } from '@/config/progression/missions'
 import type { MissionDef } from '@/types'
 
 /**
@@ -23,71 +21,16 @@ import type { MissionDef } from '@/types'
  * zweiter Timer neben dem Spiel-Tick wäre ein zweiter Grund, pro Sekunde zu
  * rendern.
  */
-const missionStore = useMissionStore()
 const uiStore = useUiStore()
-const { activeView, lastClaimed } = storeToRefs(missionStore)
 
-/** Was die Karte zeigt. Beim Abschlussblitz ist das NICHT `activeView`: der
- *  Store ist da schon eine Stufe weiter. */
-interface CardFace {
-  id: string
-  name: string
-  /** Was zu tun ist, mit eingesetzter Zielmenge. */
-  task: string
-  color: string
-  progress: number
-  target: number
-  ratio: number
-  tooltip: string
-}
+/** Gesicht und Abschlussblitz teilt die Karte mit der Wayfinder-Zeile im
+ *  Pause-Overlay — beim Blitz steht der Store schon eine Stufe weiter, und
+ *  diese Einsicht zweimal zu halten hiesse, zwei Zustandsmaschinen zu pflegen. */
+const { face, flashing } = useMissionFace()
 
 function tooltipFor(def: MissionDef, rewardLabel: string): string {
   return `${def.name} — ${missionObjectiveLine(def)}. ${def.blurb} · ${rewardLabel}`
 }
-
-const flashed = ref<CardFace | null>(null)
-let flashTimer: ReturnType<typeof setTimeout> | null = null
-
-watch(
-  () => lastClaimed.value.seq,
-  (seq) => {
-    if (!seq) return
-    const def = getMission(lastClaimed.value.defId)
-    if (!def) return
-    flashed.value = {
-      id: def.id,
-      name: def.name,
-      task: missionObjectiveLine(def),
-      color: missionStore.chapterOf(def).color,
-      progress: def.target,
-      target: def.target,
-      ratio: 1,
-      tooltip: tooltipFor(def, 'Claimed'),
-    }
-    // Wanduhr: die Frist schützt die Lesezeit des Spielers, keinen Spielwert.
-    if (flashTimer) clearTimeout(flashTimer)
-    flashTimer = setTimeout(() => {
-      flashed.value = null
-      flashTimer = null
-    }, MISSION_CLAIM_FLASH_MS)
-  },
-)
-
-const face = computed<CardFace | null>(() => {
-  if (flashed.value) return flashed.value
-  const view = activeView.value
-  if (!view) return null
-  return {
-    id: view.id,
-    name: view.name,
-    task: missionObjectiveLine(view),
-    color: view.color,
-    progress: view.progress,
-    target: view.target,
-    ratio: view.ratio,
-    tooltip: tooltipFor(view, view.rewardLabel),
-  }
-})
 
 /** Unter einem geöffneten Profil-Tab ist nichts davon zu lesen. An `face`, nicht
  *  an `activeView`: sonst verschwände die letzte Stufe, während sie gefeiert wird. */
@@ -132,7 +75,6 @@ watch(
 
 onUnmounted(() => {
   resizeObserver?.disconnect()
-  if (flashTimer) clearTimeout(flashTimer)
   const style = document.documentElement.style
   style.setProperty('--wayfinder-bottom', '0px')
   style.setProperty('--wayfinder-right', '0px')
@@ -149,9 +91,9 @@ onUnmounted(() => {
       v-if="visible && face"
       ref="root"
       class="wf-root"
-      :class="{ 'wf-root--done': flashed !== null }"
+      :class="{ 'wf-root--done': flashing }"
       :style="{ '--accent': face.color }"
-      :title="face.tooltip"
+      :title="tooltipFor(face.def, flashing ? 'Claimed' : face.rewardLabel)"
       role="status"
     >
       <!-- Die Kartenfläche IST der Balken. Der Schlüssel wechselt beim

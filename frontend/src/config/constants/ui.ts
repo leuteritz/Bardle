@@ -515,6 +515,35 @@ export const PAUSE_KIT_ROW_H = (PAUSE_KIT_BAND_H - PAUSE_KIT_GAP_PX) / 2
  *  — dieselben Bilder wie auf den Kacheln draußen, nur klein. */
 export const PAUSE_KIT_ROW_ART_PX = 56
 
+// ── Die Wayfinder-Zeile am Fuß der Zustandsspalte ────────────────────────
+// Draußen steht die Leiter als HUD-Karte oben links bei z-index 899 — unter
+// diesem Overlay (9998) samt seiner Deckung. Sie läuft pausiert weiter
+// (`missionStore.tick()` hängt im ungebremsten Spiel-Tick), war aber nicht zu
+// sehen; dieselbe Lage, aus der heraus das Kit-Band entstanden ist.
+//
+// Die Spalte trägt innen 429 px (460 − 30 Trennabstand − 1 Haarlinie).
+// Gemessen in MedievalSharp über alle 41 Missionen: längster Name 181 px,
+// längste Aufgabe 255, längste Belohnung 196, längster Kapitelname 152.
+// Alles passt EINZEILIG — deshalb hat die Zeile keine Klammerung wie die
+// HUD-Karte draußen, wo ihr nur 208 px bleiben.
+/** Reservierte Gesamthöhe der Zeile. Hergeleitet: Kopf 18 + Name 19 +
+ *  Aufgabe 16 + Messband 12 + drei Lücken 13 = 78, zwei Pixel Luft.
+ *
+ *  FEST, und das ist der Punkt: wächst die Zeile mit dem Zustand, springt der
+ *  Fit-Scale des ganzen Overlays mitten in der Pause — beim Missionswechsel,
+ *  beim Abschlussblitz und beim Ende der Leiter. Dieselbe Reservierung wie
+ *  PAUSE_KIT_EFFECT_ROWS und PAUSE_CALLOUT_ROWS. */
+export const PAUSE_WAYFINDER_ROW_H = 80
+/** Reservierte Breite des Belohnungslabels neben dem Namen. Der längste Fall
+ *  im Katalog misst 196 px („+12m PRODUCTION · +4 SOLAR ESSENCE"); der Name
+ *  weicht davor zurück, nie umgekehrt. Gebunden in `missionLadder.spec.ts`. */
+export const PAUSE_WAYFINDER_REWARD_W = 200
+/** Reservierte Breite des Zählers in `ch`, dazu `tabular-nums`.
+ *  `formatNumberCompact` liefert je Seite höchstens fünf Zeichen, mit
+ *  Schrägstrich elf — sonst wanderte der Balken, sobald eine Zahl eine Stelle
+ *  gewinnt. Dieselbe Stelle wie bei der Chime-Ablesung. */
+export const PAUSE_WAYFINDER_COUNT_CH = 12
+
 // ── Star-Timer-Bars (Header) — Planeten-Kugeln mit Boss-HP-Füllstand ──────
 // Die Bars lesen die Boss-Daten NICHT reaktiv, sondern über einen Snapshot,
 // der im Takt von STAR_TIMER_TICK_MS neu gebaut wird. Damit invalidiert das

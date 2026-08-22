@@ -787,6 +787,7 @@ export interface MissionView extends MissionDef {
   progress: number
   /** Anteil 0–1. */
   ratio: number
-  /** Der Lohn in einer Zeile: „+8m PRODUCTION", „+1 MEEP". Nur im Tooltip. */
+  /** Der Lohn in einer Zeile: „+8m PRODUCTION", „+1 MEEP". Im Tooltip der
+   *  HUD-Karte, sichtbar im Stats-Panel und in der Pause-Zeile. */
   rewardLabel: string
 }
