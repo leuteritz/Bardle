@@ -11,11 +11,14 @@ import AdminBadgeLabPanel from './AdminBadgeLabPanel.vue'
 
 <template>
   <!-- Dashboard-Raster: füllt die volle Modalhöhe, kein Y-Scroll.
-       Links Quick Actions + die beiden Weltereignis-Panels (Drifter, Void
-       Tide), rechts Galaxy Jump + Star Phase. Die beiden Weltereignisse stehen
-       bewusst nebeneinander: sie sind dieselbe Art von Werkzeug — etwas in den
-       Orbit setzen, das dort von selbst weiterläuft. -->
+       Oben der Endzustand-Knopf über beide Spalten, darunter links Quick
+       Actions + die beiden Weltereignis-Panels (Drifter, Void Tide), rechts
+       Galaxy Jump + Star Phase. Die beiden Weltereignisse stehen bewusst
+       nebeneinander: sie sind dieselbe Art von Werkzeug — etwas in den Orbit
+       setzen, das dort von selbst weiterläuft. -->
   <div class="admin-dash">
+    <!-- Erste Zeile, volle Breite: er tut, was alle Quick Actions zusammen tun. -->
+    <AdminMaxEverythingPanel class="admin-dash-hero" />
     <div class="admin-dash-left">
       <AdminQuickActionsPanel dashboard />
       <!-- Die beiden Weltereignisse teilen sich EINE Zeile statt zwei. Beide
@@ -37,15 +40,6 @@ import AdminBadgeLabPanel from './AdminBadgeLabPanel.vue'
       <AdminStarPhasePanel dashboard />
       <!-- Das Prüfwerkzeug für die Notify-Marken. -->
       <AdminBadgeLabPanel />
-      <!-- Der Endzustand-Knopf steht unten über die volle Spaltenbreite: er tut,
-           was die neun Quick Actions zusammen tun, und wäre als zehnte Kachel im
-           3er-Raster eine vierte Zeile mit zwei Lücken.
-           Warum RECHTS und nicht unter Quick Actions: die linke Spalte hat keine
-           Höhe übrig. Gemessen (Full HD) kostete er dort 66 px, und Quick Actions
-           lief um 18 px über — die letzten drei Knöpfe standen unter der
-           Kartenkante. Rechts gibt die Sternphasen-Karte den Platz aus ihrem
-           gestreckten Kachelraster ab, ohne selbst überzulaufen. -->
-      <AdminMaxEverythingPanel />
     </div>
   </div>
 </template>
@@ -56,10 +50,14 @@ import AdminBadgeLabPanel from './AdminBadgeLabPanel.vue'
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: clamp(10px, 1.3vw, 18px);
   padding: clamp(10px, 1.8vh, 20px);
   overflow: hidden;
+}
+
+.admin-dash-hero {
+  grid-column: 1 / -1;
 }
 
 .admin-dash-left,
@@ -83,6 +81,26 @@ import AdminBadgeLabPanel from './AdminBadgeLabPanel.vue'
   flex: 0 0 auto;
 }
 
+/* Full HD und WUXGA: die Spalte trägt mehr Inhalt als Höhe da ist — gemessen
+   667 px Spalte gegen 396 px allein für die beiden Weltereignis-Panels. Quick
+   Actions blieben davon 255 px, und sein Kachelraster wurde auf die Mindestzeile
+   gestaucht, bis Icon und Beschriftung übereinanderlagen. Sie ROLLT darum wie
+   die rechte Spalte, statt ihren ersten Inhalt zu quetschen. */
+@media (max-height: 1100px) {
+  .admin-dash-left {
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #5c3310 #111;
+  }
+  /* `height: auto` schlägt das `height: 100%` der Karte — ohne das füllt sie in
+     der rollenden Spalte weiter die volle Höhe und schiebt die Weltereignisse
+     aus dem Bild. */
+  .admin-dash-left > :first-child {
+    flex: 0 0 auto;
+    height: auto;
+  }
+}
+
 /* Drifter und The Void nebeneinander, gleich breit. `align-items: start`,
    damit das kürzere der beiden nicht auf die Höhe des längeren gestreckt wird
    und dabei sein Kachelraster auseinanderzieht. */
@@ -93,14 +111,8 @@ import AdminBadgeLabPanel from './AdminBadgeLabPanel.vue'
   gap: clamp(10px, 1.3vw, 18px);
 }
 
-/* Nicht positionell, sondern benannt: als `:first-child`/`:last-child`
-   geschrieben galt die Regel nur, solange genau zwei Panels in der Spalte
-   standen — mit dem dritten hätte `:last-child` still den Endzustand-Knopf
-   gestreckt statt die Sternphasen-Karte. Wer wächst, sagt es selbst. */
-/* Die rechte Spalte ROLLT, seit sie fünf Panels trägt, und darum trägt jedes
+/* Die rechte Spalte ROLLT, seit sie vier Panels trägt, und darum trägt jedes
    Panel darin seine Inhaltshöhe — es gibt kein „wer füllt den Rest" mehr.
-   Gemessen auf Full HD: 741 px Spaltenhöhe, 1012 px Inhalt, also 271 px Rollweg;
-   ab 2K ist der Platz da und die Leiste erscheint gar nicht erst.
 
    Der Weg dahin steht hier, weil beide Sackgassen plausibel aussehen: die
    Sternphasen-Karte streckt ihr `fill`-Prop (`height: 100%`), NICHT die alte

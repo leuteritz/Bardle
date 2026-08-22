@@ -489,10 +489,14 @@ function fillAllResources() {
   flex: 1;
   min-height: 0;
   display: grid;
-  /* Action-Buttons fließen in ein 3-Spalten-Raster auf jeder Desktop-Auflösung */
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-auto-rows: minmax(38px, 1fr);
+  grid-auto-rows: minmax(34px, 1fr);
   gap: 8px;
+  /* Ventil statt abgeschnittener Knöpfe: die Karte selbst clippt (overflow:
+     hidden), und unter ihrer Kante ist ein Knopf nicht mehr vorhanden. */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
 }
 /* Buttons als Dashboard-Kacheln: Icon oben, Label darunter */
 .qa-actions--dashboard .admin-spawn-btn {
@@ -508,6 +512,30 @@ function fillAllResources() {
 .qa-actions--dashboard .star-icon {
   width: clamp(18px, 2.8vh, 30px);
   height: clamp(18px, 2.8vh, 30px);
+}
+
+/* Full HD und WUXGA: 14 Knöpfe in vier Spalten sind vier Reihen statt fünf, und
+   die Kachel selbst wird flacher. Gemessen lief das Raster hier schon vor der
+   Hero-Zeile um 56 px über — die letzten Knöpfe standen unter der Kartenkante. */
+@media (max-height: 1100px) {
+  .qa-actions--dashboard {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .qa-actions--dashboard .admin-spawn-btn {
+    gap: 3px;
+    padding: 4px 6px;
+    font-size: 0.72rem;
+  }
+  .qa-actions--dashboard .admin-btn-icon,
+  .qa-actions--dashboard .star-icon {
+    width: 19px;
+    height: 19px;
+  }
+  .qa-card-body {
+    gap: 10px;
+    padding: 10px;
+  }
 }
 
 .admin-section-label {
