@@ -310,6 +310,7 @@
               '--pause-kit-tile': `${PAUSE_KIT_TILE_PX}px`,
               '--pause-kit-passive': `${PAUSE_KIT_PASSIVE_PX}px`,
               '--pause-kit-gap': `${PAUSE_KIT_GAP_PX}px`,
+              '--pause-kit-meep-w': `${PAUSE_KIT_MEEP_COL_W}px`,
               '--pause-kit-chip-h': `${PAUSE_KIT_EFFECT_CHIP_H}px`,
               '--pause-kit-band-h': `${PAUSE_KIT_BAND_H}px`,
             }"
@@ -512,6 +513,7 @@ import {
   PAUSE_KIT_TILE_PX,
   PAUSE_KIT_PASSIVE_PX,
   PAUSE_KIT_GAP_PX,
+  PAUSE_KIT_MEEP_COL_W,
   PAUSE_KIT_EFFECT_CHIP_H,
   PAUSE_KIT_BAND_H,
   PAUSE_STAR_HP_STEPS,

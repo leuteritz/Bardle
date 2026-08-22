@@ -42,7 +42,13 @@
 
       <span class="chip-text">
         <span class="chip-head">
-          <span class="chip-mult">{{ chip.multiplier }}×</span>
+          <!-- In the kit band the chip says where it CAME from. Three plates
+               that only read "2× CHIMES · 38s" do not tell you which one is
+               about to run out, and the band has the width for a name. The
+               multiplier moves down to join the axis, so the plate keeps its
+               two text lines and its height. -->
+          <span v-if="props.dock === 'pause'" class="chip-name">{{ chip.name }}</span>
+          <span v-else class="chip-mult">{{ chip.multiplier }}×</span>
           <!-- Reserved width: the seconds drop from two digits to one, and
                without the reservation every chip in the row would twitch
                sideways once per second. -->
@@ -53,7 +59,11 @@
         </span>
         <!-- Own line across the full text column, so "DAMAGE" is not competing
              with the clock for the same few pixels. -->
-        <span class="chip-label">{{ chip.label }}</span>
+        <span class="chip-label">
+          <span v-if="props.dock === 'pause'" class="chip-label-mult"
+            >{{ chip.multiplier }}×</span
+          >{{ chip.label }}</span
+        >
       </span>
 
       <span class="chip-track" aria-hidden="true">
@@ -737,5 +747,29 @@ const overflowCount = computed(() => chips.value.length - visibleChips.value.len
   font-size: 14px;
   letter-spacing: 0.04em;
   color: #6b6152;
+}
+
+/* Der Name im Band. Er nimmt den Platz des Multiplikators in der Kopfzeile —
+   die Uhr daneben behält ihre reservierte Breite, der Name bekommt den Rest.
+   Ein Omen-Buff trägt im Namen ein angehängtes „(swift)" und läuft sonst
+   über; abgeschnitten wird mit Auslassung, nicht mit Umbruch (eine dritte
+   Zeile spränge über die reservierte Chip-Höhe). */
+.chip-name {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 14px;
+  font-weight: 700;
+  color: #e8dcc0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Der Multiplikator in der zweiten Zeile, vor der Achse. In der Chip-Farbe,
+   damit er sich vom Label absetzt, ohne eine eigene Zeile zu brauchen. */
+.chip-label-mult {
+  margin-right: 6px;
+  font-weight: 700;
+  color: var(--chip-color, #e8c040);
 }
 </style>

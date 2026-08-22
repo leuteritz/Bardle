@@ -153,6 +153,33 @@
         @hover="(on: boolean) => (hoveredId = on ? 'passive' : null)"
       />
 
+      <!-- Nur im Kit-Band: was die Passive gerade einbringt, in Worten. Der
+           Meep-Bestand steht sonst NUR im Header — und der liegt pausiert unter
+           dem Overlay, die Bilanzspalte daneben führt ihn nicht. Wer pausierte,
+           sah seinen laufenden Ertrag nirgends.
+
+           Er steht IN der Reihe und nicht als Nachbar des Docks im Overlay:
+           er gehört zur Passive, nicht zum Band. Alle drei Werte liegen ohnehin
+           hier — kein neuer Store-Zugriff, keine zweite Rechnung. -->
+      <div v-if="props.dock === 'pause'" class="ab-meep-col">
+        <span class="ab-meep-col__head">{{ BARD_PASSIVE.name }}</span>
+        <!-- Zwei Zahlen, und KEINE davon ist die Klickstrecke: die steht schon
+             im Ring der Kachel gleich daneben, und zweimal dieselbe Zahl im
+             Abstand von 20 px liest sich als Fehler.
+
+             Was hier steht, ist beides pausiert sonst nirgends zu sehen — der
+             laufende Ertrag hat im Overlay keine andere Stelle, und der
+             Bestand steht nur im Header, der unter dem Overlay liegt. -->
+        <span class="ab-meep-col__row">
+          <span class="ab-meep-col__value">{{ formatNumberCompact(gameStore.pendingMeeps) }}</span>
+          <span class="ab-meep-col__cap">Meeps<br />this run</span>
+        </span>
+        <span class="ab-meep-col__row ab-meep-col__row--held">
+          <span class="ab-meep-col__value">{{ formatNumberCompact(gameStore.meeps) }}</span>
+          <span class="ab-meep-col__cap">in hand</span>
+        </span>
+      </div>
+
       <span class="ab-divider" aria-hidden="true"></span>
 
       <BardAbilityTile
@@ -177,7 +204,7 @@ import { useUiStore } from '@/stores/core/uiStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { onKeybinding, triggerKeybind } from '@/composables/system/useKeybindings'
-import { formatNumber } from '@/config/ui/numberFormat'
+import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
 import { invalidateHudField } from '@/utils/ui/hudField'
 import {
   BARD_ABILITIES,
@@ -1627,8 +1654,8 @@ onUnmounted(() => {
    bereits useFitScale, eine zweite Staffelung skalierte doppelt — auf 4K
    stünde die Kachel um Faktor 1,5 × 1,3 zu groß. */
 .ability-bar.ability-bar--pause {
-  --ab-size: var(--pause-kit-tile, 150px);
-  --ab-passive-size: var(--pause-kit-passive, 132px);
+  --ab-size: var(--pause-kit-tile, 104px);
+  --ab-passive-size: var(--pause-kit-passive, 198px);
   --ab-gap: var(--pause-kit-gap, 12px);
   position: relative;
   bottom: auto;
@@ -1658,5 +1685,75 @@ onUnmounted(() => {
 .ability-bar--pause :deep(.ab-tile),
 .ability-bar--pause :deep(.ab-passive) {
   cursor: default;
+}
+
+/* ── Die Meep-Spalte neben der Passive (nur im Kit-Band) ──────────────────
+   Die Passive ist dort der Anker: sie füllt die Bandhöhe, und rechts von ihr
+   steht in Worten, was sie gerade einbringt. Feste Breite, damit die Zahl beim
+   Wachsen nicht die ganze Kachelreihe seitwärts schiebt — dieselbe Begründung
+   wie bei der reservierten Uhr-Breite der Buff-Chips. */
+.ab-meep-col {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  width: var(--pause-kit-meep-w, 180px);
+  min-width: 0;
+  pointer-events: none;
+  text-align: left;
+}
+
+.ab-meep-col__head {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.42);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Zahl links, Beschriftung rechts daneben — untereinander gestapelt bräuchte
+   jede Angabe drei Zeilen, und die Spalte steht neben einer 198 px hohen
+   Kachel, nicht unter ihr. */
+.ab-meep-col__row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* Meep-Orange wie im Header, in der Materialleiste und am Ring der Kachel —
+   dieselbe Sache trägt im ganzen Spiel dieselbe Farbe. */
+/* Reservierte Breite, rechtsbuendig: sonst haengt die Beschriftung der einen
+   Zeile weiter links als die der anderen, sobald die Zahlen verschieden viele
+   Stellen haben. Dieselbe Reservierung wie bei der Uhr der Buff-Chips. */
+.ab-meep-col__value {
+  flex: 0 0 auto;
+  min-width: 3.4ch;
+  text-align: right;
+  font-size: 2rem;
+  line-height: 0.95;
+  font-weight: 700;
+  color: #fdba74;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Der Bestand ist das Ruhigere von beiden: er bewegt sich während der Pause
+   nicht, der Ertrag schon. */
+.ab-meep-col__row--held .ab-meep-col__value {
+  font-size: 1.4rem;
+  color: rgba(253, 186, 116, 0.72);
+}
+
+.ab-meep-col__cap {
+  min-width: 0;
+  font-size: 0.68rem;
+  line-height: 1.15;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.5);
 }
 </style>

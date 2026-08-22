@@ -120,13 +120,18 @@ export const PAUSE_SUN_VH_FACTOR = 0.16
  *  Der alte Deckel (1140) hielt die Callout-Reihe absichtlich ZWEIZEILIG. Mit
  *  dem Kit-Band ist die Reihe einzeilig reserviert (PAUSE_CALLOUT_ROWS), und
  *  der Innenraum muss die fünf Karten in EINER Zeile tragen:
- *  5 × 208 + 4 × 6 = 1064 ≤ 1200 − 2 × 44 = 1112.
+ *  5 × 208 + 4 × 6 = 1064 ≤ 1280 − 2 × 44 = 1192.
  *
- *  Nach oben grenzt sie jetzt etwas anderes: die erhobenen Seitenpanels der
- *  Bottom-Bar (BOTTOM_BAR_SIDE_W, z-index 10000) liegen ÜBER dem Overlay, und
- *  die Panelunterkante reicht in ihre Höhe. Die SKALIERTE Panelbreite muss
- *  deshalb unter der Lücke zwischen ihnen bleiben (Full HD ~1040 px). */
-export const PAUSE_PANEL_DESIGN_WIDTH = 1200
+ *  Was den Innenraum wirklich bestimmt, ist inzwischen das Kit-Band: die
+ *  Kit-Reihe misst 867 (siehe PAUSE_KIT_MEEP_COL_W), und der Effekt-Spalte
+ *  müssen danach rund 300 bleiben, damit ein Buff-Name neben seine Uhr passt.
+ *
+ *  Nach oben grenzt etwas anderes: die erhobenen Seitenpanels der Bottom-Bar
+ *  (BOTTOM_BAR_SIDE_W, z-index 10000) liegen ÜBER dem Overlay, und die
+ *  Panelunterkante reicht in ihre Höhe. Die SKALIERTE Panelbreite muss deshalb
+ *  unter der Lücke zwischen ihnen bleiben — gemessen 1260 px auf Full HD gegen
+ *  1280 × 0,7927 = 1015. */
+export const PAUSE_PANEL_DESIGN_WIDTH = 1280
 export const PAUSE_PANEL_MAX_SCALE = 1.3
 
 /** Breite der Zustandsspalte (Sonne, Vitalität, Universe/Galaxy/Level) rechts im
@@ -439,17 +444,31 @@ export const PAUSE_STAR_PLANET_ROW_WIDTH =
 // useFitScale darüber, und eine zweite Staffelung skalierte doppelt — auf 4K
 // stünde die Kachel dann um Faktor 1,5 × 1,3 zu groß.
 //
-// 150 statt der 84 draußen: das Band bezahlt seine Höhe mit der einzeilig
-// gewordenen Callout-Reihe (−102 px) und dem entfallenen MVP-Puffer der Bühne.
-// Nach dem Fit-Scale (Full HD ~0,8) bleiben effektiv ~120 px je Kachel — rund
-// das Anderthalbfache dessen, was im freien Bild steht.
-export const PAUSE_KIT_TILE_PX = 150
-/** Die Passive ist die einzige Kachel, die nichts kostet und nichts kühlt —
- *  sie steht vor dem Trennstrich und bleibt kleiner als Q/W/E/R. Dasselbe
- *  Verhältnis wie draußen (72 zu 84). */
-export const PAUSE_KIT_PASSIVE_PX = 132
+// ── Die Hierarchie ist hier UMGEKEHRT, und das ist kein Versehen ───────────
+// Draußen ist die Passive rund und kleiner als die vier Slots: sie ist kein
+// Knopf, sondern ein Zustand, und soll die Zeile anführen, ohne mit ihr um
+// Aufmerksamkeit zu ringen (der Kommentar steht in `BardPassiveTile.vue`).
+//
+// Im Band gilt das Gegenteil. Dort ist NICHTS bedienbar — `castAbility()`
+// kehrt bei `dock === 'pause'` sofort zurück —, der Knopf-Charakter von
+// Q/W/E/R fällt also weg. Was bleibt, ist der Zustand, und den zeigt allein
+// die Passive: ihr Meep-Ring läuft immer, während Q/W/E/R im frühen Spiel
+// gesperrt sind (LV 3/8/15/25) und dann vier graue Kacheln mit Schlosssymbol
+// füllen — vormals viermal so groß wie das einzige, was etwas anzeigt.
+export const PAUSE_KIT_TILE_PX = 104
 /** Lücke zwischen den Kacheln und zwischen den Band-Spalten. */
 export const PAUSE_KIT_GAP_PX = 12
+/** Breite der Meep-Spalte neben der Passive. Sie trägt den Namen der Passive,
+ *  die Meeps des laufenden Durchlaufs und die Klicks bis zum nächsten.
+ *
+ *  Grund für sie: der Meep-Bestand steht sonst NUR im Header, und der ist
+ *  pausiert verdeckt — die Bilanzspalte führt Chimes, Kills, Materialien und
+ *  Battles, Meeps nicht. Wer pausierte, sah seinen laufenden Ertrag nirgends.
+ *
+ *  180 ist an der Kit-Reihe bemessen, die damit auf
+ *  `198 + 180 + 4 × 104 + 1 + 6 × 12 = 867` kommt (Passive, Meep-Spalte, vier
+ *  Kacheln, Trennstrich, sechs Lücken). Siehe PAUSE_PANEL_DESIGN_WIDTH. */
+export const PAUSE_KIT_MEEP_COL_W = 180
 /** Höhe eines Effekt-Chips im Band. Zwischen der freien Reihe (84) und der
  *  Star-Fight-Schiene (50): das Band hat Breite im Überfluss, aber jede Zeile
  *  Höhe geht in den Fit-Scale des ganzen Overlays. */
@@ -464,10 +483,18 @@ export const PAUSE_KIT_EFFECT_ROWS = 3
 /** Höhe der Effekt-Spalte — drei Chips plus ihre Lücken. */
 export const PAUSE_KIT_EFFECT_COL_H =
   PAUSE_KIT_EFFECT_ROWS * PAUSE_KIT_EFFECT_CHIP_H + (PAUSE_KIT_EFFECT_ROWS - 1) * PAUSE_KIT_GAP_PX
-/** Reservierte Höhe des Bandinhalts: die höhere der beiden Spalten. Abgeleitet,
- *  nicht gewählt — eine eigene Zahl liefe beim ersten Nachjustieren der
- *  Kachelkante still von den Kacheln weg. */
-export const PAUSE_KIT_BAND_H = Math.max(PAUSE_KIT_TILE_PX, PAUSE_KIT_EFFECT_COL_H)
+/** Die Passive ist der ANKER des Bands und so hoch wie die Effekt-Spalte
+ *  daneben — abgeleitet, nicht gewählt. Beide Bandspalten schließen dadurch
+ *  bündig ab, und das Band liest sich als eine Fläche statt als zwei
+ *  verschieden hohe Blöcke.
+ *
+ *  Sie ist damit zugleich das Höchste im Band: die Bandhöhe kostet nichts
+ *  extra, solange die Passive die Effekt-Spalte nicht überragt. */
+export const PAUSE_KIT_PASSIVE_PX = PAUSE_KIT_EFFECT_COL_H
+/** Reservierte Höhe des Bandinhalts: die höchste der Spalten. Abgeleitet,
+ *  nicht gewählt — eine eigene Zahl liefe beim ersten Nachjustieren still von
+ *  dem weg, was tatsächlich darin steht. */
+export const PAUSE_KIT_BAND_H = Math.max(PAUSE_KIT_PASSIVE_PX, PAUSE_KIT_TILE_PX)
 
 // ── Star-Timer-Bars (Header) — Planeten-Kugeln mit Boss-HP-Füllstand ──────
 // Die Bars lesen die Boss-Daten NICHT reaktiv, sondern über einen Snapshot,
