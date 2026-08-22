@@ -14,7 +14,7 @@
           'timer-bar-row--raging': entry.isRaging,
           'timer-bar-row--eclipsed': entry.isEclipsed,
           'timer-bar-row--joined': entry.joined,
-          'timer-bar-row--targeted': targetedStarId === entry.starId,
+          'timer-bar-row--targeted': entry.isTargeted,
           'star-hover-active': starGroupStore.hoveredTimerStarId === entry.starId,
         }"
         :style="entry.style"
@@ -42,6 +42,22 @@
                 :style="{ transform: entry.tf.fill }"
               />
             </Transition>
+            <!-- Der Einschlag. `:key` ist der Auslöser: Vue ersetzt das
+                 Element, die Animation setzt neu an. -->
+            <span
+              v-if="entry.isTargeted && !entry.isEclipsed"
+              :key="hitSeq"
+              class="bar-hit-wave bar-hit-wave--left"
+            />
+          </div>
+          <!-- HP-Spur: zwei Ebenen, derselbe Wert — nur die hintere läuft nach.
+               Der Abstand dazwischen ist der eben verlorene Anteil. -->
+          <div v-if="entry.isTargeted && entry.focusHp !== null" class="bar-hp-trace">
+            <span
+              class="bar-hp-trace__ghost"
+              :style="{ transform: `scaleX(${entry.focusHp})` }"
+            />
+            <span class="bar-hp-trace__fill" :style="{ transform: `scaleX(${entry.focusHp})` }" />
           </div>
           <!-- Track-Wrapper wandern per transform (Compositor) statt per
                left/right (Layout + Paint pro Frame und Balken) -->
@@ -109,6 +125,18 @@
                 :style="{ transform: entry.tf.fill }"
               />
             </Transition>
+            <span
+              v-if="entry.isTargeted && !entry.isEclipsed"
+              :key="hitSeq"
+              class="bar-hit-wave bar-hit-wave--right"
+            />
+          </div>
+          <div v-if="entry.isTargeted && entry.focusHp !== null" class="bar-hp-trace">
+            <span
+              class="bar-hp-trace__ghost"
+              :style="{ transform: `scaleX(${entry.focusHp})` }"
+            />
+            <span class="bar-hp-trace__fill" :style="{ transform: `scaleX(${entry.focusHp})` }" />
           </div>
           <div
             v-if="entry.fillRatio > 0"
@@ -176,6 +204,7 @@ import {
   STAR_TIMER_HP_PCT_STEPS,
   STAR_TIMER_HP_MIN_PCT,
   STAR_TIMER_HP_REVEAL_MS,
+  STAR_TIMER_HIT_WAVE_MS,
   STAR_TIMER_CENTER_OVERLAP_PX,
   STAR_TIMER_WIDTH_SNAP_PX,
 } from '@/config/constants'
@@ -365,6 +394,15 @@ const focusedBossId = shallowRef<string | null>(null)
 const targetedStarId = shallowRef<string | null>(null)
 
 /**
+ * Impulszähler der Treffer-Welle — hängt im Template als `:key` am
+ * Wellen-Element, jeder Schritt setzt die Animation neu auf. Der
+ * Mindestabstand ist nötig, weil der Snapshot 5×/s tickt: ohne ihn schnitte
+ * jeder Treffer die laufende Welle ab.
+ */
+const hitSeq = shallowRef(0)
+let lastWaveAt = 0
+
+/**
  * Treffer werden aus dem HP-Verlauf zweier Snapshots abgeleitet, nicht an den
  * Schadensquellen gemeldet: So erfasst die Anzeige jede Quelle automatisch
  * (Klick, Splash, Rollen-Burst, Turret, DoT), ohne dass eine davon die
@@ -379,11 +417,14 @@ function refreshBossSnapshot(): void {
   const prevSnap = bossSnapshot.value
   const next = new Map<string, BossSnapshot>()
   const nowTs = gameNow()
+  const focusId = planetBossStore.activeBoss?.planetId ?? null
+  let focusHit = false
 
   for (const boss of planetBossStore.activeBosses) {
     const ratio = clamp01(boss.maxHP > 0 ? boss.currentHP / boss.maxHP : 0)
     const prev = prevSnap.get(boss.planetId)
     const tookDamage = prev !== undefined && boss.currentHP < prev.rawHp
+    if (tookDamage && boss.planetId === focusId) focusHit = true
     next.set(boss.planetId, {
       startTime: boss.startTime,
       enrageTimerMs: boss.enrageTimerMs,
@@ -401,7 +442,11 @@ function refreshBossSnapshot(): void {
   bossSnapshot.value = next
   // Ebenfalls ungetrackt gelesen — ein reaktiver Zugriff auf activeBoss würde
   // die Bars bei jeder Boss-Mutation invalidieren und den Snapshot aushebeln.
-  focusedBossId.value = planetBossStore.activeBoss?.planetId ?? null
+  focusedBossId.value = focusId
+  if (focusHit && nowTs - lastWaveAt >= STAR_TIMER_HIT_WAVE_MS) {
+    lastWaveAt = nowTs
+    hitSeq.value++
+  }
   // Dieselbe Quelle wie die Zielmarke am Stern im Orbit, aus demselben Grund
   // ungetrackt: der Getter hängt an activeBoss.
   targetedStarId.value = starGroupStore.targetedStarId
@@ -469,6 +514,17 @@ interface BarEntry {
   curseRatio: number
   /** Boss dieses Sterns rast gerade — doppelter Schaden, Bar schlägt in Crimson um */
   isRaging: boolean
+  /**
+   * Auf DIESEN Stern wird gerade geschossen — dieselbe Aussage wie die Marke am
+   * Stern im Orbit. Nur diese eine Zeile trägt Zielkante, HP-Spur und Welle.
+   */
+  isTargeted: boolean
+  /**
+   * Roher HP-Anteil des bekämpften Planeten für die HP-Spur, sonst `null`.
+   * Bleibt auch in der Verdeckung `null`: Ein verdeckter Stern nimmt keinen
+   * Schaden, eine sinkende Linie behauptete dort das Gegenteil.
+   */
+  focusHp: number | null
   /**
    * Beide Hälften treffen sich auf der Mittelachse — die Zeile hängt unterhalb
    * des Header-Ovals, wo keine Rundung mehr dazwischen liegt. Nur dann bekommt
@@ -592,12 +648,17 @@ function bossTimerLookup(planetId: string): StarBossTimer | undefined {
  * Der bekämpfte Planet steht am inneren Ende und grenzt damit direkt an seine
  * HP-Zahl, die hinter der Kugelreihe hängt. Die Bar arbeitet sich also von
  * außen nach innen durch den Stern.
+ *
+ * Der zurückgegebene `focusHp` ist der ROHE Anteil, nicht der der Kugel: Deren
+ * Bodensatz (`STAR_TIMER_HP_MIN_FILL`) behauptete auf einer Linie über die
+ * halbe Balkenbreite bei 2 % HP noch ein Fünftel.
  */
-function buildPlanetDots(star: StarGroup): PlanetDot[] {
+function buildPlanetDots(star: StarGroup): { dots: PlanetDot[]; focusHp: number | null } {
   const snap = bossSnapshot.value
   const dots: PlanetDot[] = []
   const clearedDots: PlanetDot[] = []
   let focusedDot: PlanetDot | null = null
+  let focusHp: number | null = null
 
   const focusId = focusedBossId.value
   const nowTs = now.value
@@ -619,13 +680,15 @@ function buildPlanetDots(star: StarGroup): PlanetDot[] {
       showHp: slot.planetId === focusId || nowTs < (boss?.revealUntil ?? 0),
       state: hp <= STAR_TIMER_HP_CRITICAL_RATIO ? 'critical' : hp <= STAR_TIMER_HP_LOW_RATIO ? 'low' : 'ok',
     }
-    if (slot.planetId === focusId) focusedDot = dot
-    else dots.push(dot)
+    if (slot.planetId === focusId) {
+      focusedDot = dot
+      focusHp = hp
+    } else dots.push(dot)
   }
 
   const ordered = clearedDots.concat(dots)
   if (focusedDot) ordered.push(focusedDot)
-  return ordered
+  return { dots: ordered, focusHp }
 }
 
 
@@ -634,6 +697,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
     BarEntry,
     | 'palette'
     | 'isRaging'
+    | 'isTargeted'
     | 'joined'
     | 'isEclipsed'
     | 'eclipseProgress'
@@ -661,7 +725,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
     const allCleared = total > 0 && cleared >= total
     const isCursed = cursedStarId === star.id && !!curse && nowTs < curse.activeUntil
     const curseRatio = isCursed ? clamp01((curse!.activeUntil - nowTs) / ROLE_MID_CURSE_DURATION_MS) : 0
-    const planets = buildPlanetDots(star)
+    const { dots: planets, focusHp } = buildPlanetDots(star)
     // Einmal vorgefiltert statt im Template — sonst entstünde bei jedem Render
     // ein neues Array und v-for müsste die Liste jedes Mal neu abgleichen.
     // Gespiegelt zur Kugelreihe: die Zahl des innersten (bekämpften) Planeten
@@ -688,6 +752,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
           curseRatio,
           planets,
           hpLabels,
+          focusHp,
         })
       }
     } else if (star.starType === 'champion') {
@@ -713,6 +778,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
           curseRatio,
           planets,
           hpLabels,
+          focusHp,
         })
       }
     } else if (star.starType === 'boss_escort' || star.starType === 'galaxy_boss') {
@@ -735,6 +801,7 @@ const sortedEntries = computed<BarEntry[]>(() => {
           curseRatio,
           planets,
           hpLabels,
+          focusHp,
         })
       }
     }
@@ -801,6 +868,10 @@ const sortedEntries = computed<BarEntry[]>(() => {
       tf,
       ...entry,
       isRaging: entry.starId === ragingStarId,
+      isTargeted: entry.starId === targetedStarId.value,
+      // In der Verdeckung fließt kein Schaden — dann trägt die Zeile auch keine
+      // HP-Spur, die sinken könnte.
+      focusHp: eclipse ? null : entry.focusHp,
       joined,
       isEclipsed: eclipse !== undefined,
       eclipseProgress: eclipse?.target ?? 0,
@@ -1007,12 +1078,158 @@ watch(
    Der Ring liegt am RAND der Zeile, nicht auf der Füllung: Fluch (Innenring),
    Rage (Überzug) und Eclipse (Füllung wird Rahmen) teilen sich diese Fläche
    bereits, und der Zielstern ist regelmäßig auch der rasende — ein vierter Ring
-   dort verdeckte einen der drei. */
+   dort verdeckte einen der drei.
+
+   Dazu die KANTE: ein senkrechter Strich genau dort, wo die Füllung endet und
+   Sekundenzahl und Kugeln hängen. Sie sitzt am Track-Wrapper, nicht auf der
+   Füllung — die ist per scaleX gestaucht und machte aus 2 px je nach Restzeit
+   einen halben. Der Ring sagt WELCHE Zeile, die Kante sagt WO auf ihr gerade
+   gearbeitet wird; beide statisch. */
 .timer-bar-row--targeted {
   border-radius: 3px;
   box-shadow:
     0 0 0 1px rgba(95, 240, 255, 0.5),
     0 0 10px rgba(40, 200, 235, 0.28);
+}
+
+.timer-bar-row--targeted .bar-edge-track::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    rgba(150, 250, 255, 0.35) 0%,
+    #7ff0ff 50%,
+    rgba(150, 250, 255, 0.35) 100%
+  );
+  box-shadow: 0 0 6px rgba(60, 215, 245, 0.8);
+  pointer-events: none;
+}
+
+.bar-edge-track--left::before {
+  left: 0;
+}
+
+.bar-edge-track--right::before {
+  right: 0;
+}
+
+/* ── HP-Spur: wie tief steht der bekämpfte Planet ───────────────────────────
+   Eigene Linie am Fuß statt einer weiteren Aussage im Balken — der misst ZEIT,
+   die Spur misst LEBEN. Gleiche Geometrie wie er, damit beide zusammen lesen.
+
+   Der helle Rest entsteht allein aus der Transition, nicht aus einem zweiten
+   Wert im Script: der könnte auseinanderlaufen. */
+.bar-hp-trace {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  pointer-events: none;
+  /* Gedämpft statt schwarz — voll deckend liest sich die Bahn auf dem warmen
+     Balken als Riss statt als Rille. */
+  background: rgba(6, 10, 16, 0.5);
+}
+
+.bar-hp-trace__ghost,
+.bar-hp-trace__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: right center;
+  will-change: transform;
+}
+
+.bar-side--right .bar-hp-trace__ghost,
+.bar-side--right .bar-hp-trace__fill {
+  transform-origin: left center;
+}
+
+.bar-hp-trace__ghost {
+  background: rgba(255, 255, 255, 0.92);
+  /* Gemessen: OHNE Verzögerung davor. Eine Wartezeit setzt jeder neue Treffer
+     zurück — unter Dauerbeschuss stünde der Rest dauerhaft auf dem Anfangswert. */
+  transition: transform 0.45s ease-out;
+}
+
+.bar-hp-trace__fill {
+  background: linear-gradient(to right, #2aa8c4 0%, #5fe4f8 100%);
+  transition: transform 0.12s linear;
+}
+
+.bar-side--right .bar-hp-trace__fill {
+  background: linear-gradient(to left, #2aa8c4 0%, #5fe4f8 100%);
+}
+
+/* ── Treffer-Welle ──────────────────────────────────────────────────────────
+   Der Streif braucht den klemmenden Rahmen: Er läuft über die Balkenkante
+   hinaus, ohne Klemmung stünde Licht im leeren Teil der Zeile.
+
+   `z-index` gegen den Rage-Überzug (`.bar-fill::after`) — ein Pseudo-Element
+   ist das letzte Kind, und der Zielstern ist regelmäßig auch der rasende. */
+.bar-hit-wave {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.bar-hit-wave::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(
+    to right,
+    rgba(210, 250, 255, 0) 0%,
+    rgba(225, 252, 255, 0.9) 50%,
+    rgba(210, 250, 255, 0) 100%
+  );
+  /* Dauer = STAR_TIMER_HIT_WAVE_MS. Ändert sich die Konstante, ändert sich
+     auch der Mindestabstand zweier Wellen — beide müssen zusammenbleiben. */
+  animation: bar-hit-wave-left 260ms ease-out forwards;
+}
+
+.bar-hit-wave--right::before {
+  animation-name: bar-hit-wave-right;
+}
+
+/* Nach außen heißt je Seite die andere Richtung: Die Füllung hängt an der
+   Bildschirmmitte, ihre wandernde Kante zeigt nach außen. Die Prozente beziehen
+   sich auf die BREITE DES STREIFS (45 % der Seite) — 222 % setzt ihn genau
+   hinter das eine Ende, −100 % genau hinter das andere. */
+@keyframes bar-hit-wave-left {
+  0% {
+    transform: translateX(222%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes bar-hit-wave-right {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(222%);
+    opacity: 0;
+  }
 }
 
 .bar-side {
@@ -1383,6 +1600,19 @@ watch(
   .planet-hp,
   .planet-hp--critical {
     animation: none;
+  }
+
+  /* Der Einschlag entfällt ganz — er ist reine Bewegung. Zielkante und HP-Spur
+     bleiben: Sie sind Information. Nur ihr Nachlaufen fällt weg, die Spur
+     springt dann auf den neuen Stand. */
+  .bar-hit-wave::before {
+    animation: none;
+    opacity: 0;
+  }
+
+  .bar-hp-trace__ghost,
+  .bar-hp-trace__fill {
+    transition: none;
   }
 }
 

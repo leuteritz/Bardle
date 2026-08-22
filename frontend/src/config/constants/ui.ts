@@ -574,6 +574,11 @@ export const STAR_TIMER_HP_MIN_PCT = 1
 // sie ein, sobald er getroffen wird, und nach dieser Zeit ohne weiteren Treffer
 // wieder aus — die Bar bleibt ruhig, statt permanent Zahlen zu zeigen.
 export const STAR_TIMER_HP_REVEAL_MS = 2000
+// Treffer-Welle auf der Zeile des bekämpften Sterns: Dauer UND Mindestabstand
+// zweier Wellen. Ohne den Abstand schnitte bei Dauerbeschuss jeder Tick die
+// laufende Welle ab und die Zeile flackerte, statt einen Einschlag zu zeigen.
+// Der Keyframe `bar-hit-wave-*` trägt dieselbe Dauer.
+export const STAR_TIMER_HIT_WAVE_MS = 260
 // Jede Bar endet an der Bogenkante des Header-Ovals auf Höhe ihrer eigenen
 // UNTERkante — dort ist das Oval am schmalsten, sodass die senkrechte
 // Balkenkante über die restliche Zeilenhöhe hinter dem Oval verschwindet. Diese
