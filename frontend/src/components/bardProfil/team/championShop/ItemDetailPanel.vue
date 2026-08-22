@@ -1,10 +1,16 @@
 <template>
   <aside class="cs-detail" :class="{ 'cs-detail--wide': wide }">
-    <!-- Back (wide only) + prev / next navigation (shared list with the cards) -->
+    <!-- Clearing the subject leaves the overview card standing in this
+         column; prev/next walk the same list the cards are drawn from. -->
     <div class="cs-detail-nav">
-      <button v-if="wide" class="cs-back-btn" @click="$emit('back')">
-        <span class="cs-back-arrow">←</span>
-        Back to shop
+      <button
+        v-if="wide"
+        class="cs-back-btn"
+        title="Clear the selection (Esc)"
+        @click="$emit('back')"
+      >
+        <span class="cs-back-arrow">✕</span>
+        Close
       </button>
       <div class="cs-detail-steps">
         <button
@@ -162,7 +168,7 @@ export default defineComponent({
     },
     index: { type: Number, default: -1 },
     total: { type: Number, default: 0 },
-    /** Fills the whole shop rail — see ChampionDetailPanel's `wide`. */
+    /** Fills its column edge to edge — see ChampionDetailPanel's `wide`. */
     wide: { type: Boolean, default: false },
   },
   emits: ['prev', 'next', 'buy', 'back'],

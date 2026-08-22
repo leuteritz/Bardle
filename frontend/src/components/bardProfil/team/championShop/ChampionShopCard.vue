@@ -106,9 +106,11 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* ══ Grid slot — invisible, holds layout space only ══ */
+/* ══ Grid slot — invisible, holds layout space only ══
+   Height comes from the grid that lays the cards out (--cs-card-h on .cs-atlas),
+   so rows stay even no matter how wide auto-fill makes a column. */
 .champion-card-slot {
-  height: 140px;
+  height: var(--cs-card-h, 140px);
   position: relative;
   z-index: 1;
   --text-transition-dur: 0.22s;

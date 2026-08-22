@@ -1,339 +1,90 @@
 <template>
-  <div class="rpg-frame cs-layout h-full">
-    <div class="cs-left">
-    <!-- ── Domain tabs: the shop's two halves ──
-         Top row of the rail now that it carries no title stripe, so it doubles
-         as the shop's own header. The two halves are no longer one scroll with
-         a heading in the middle: a tab shows ONLY its own domain, and takes the
-         filter panel with it. Champions and items share nothing — not a price,
-         not a stat, not a way of being read — so scrolling past one to reach the
-         other only ever cost the player the distance.
-         The counts are what keeps the split honest: each tab carries how many
-         cards it holds under the current search and filters, so the other half
-         can never quietly swallow a hit. Above the search on purpose — picking a
-         domain comes before narrowing it down. -->
-    <div class="cs-jump-row" role="tablist" aria-label="Shop domain">
+  <div ref="atlasRef" class="cs-atlas">
+    <!-- ══ Command bar: what to browse, and how to narrow it ══
+         Spans all three zones because it governs all three: the domain decides
+         what the facets mean and what the grid holds, and the search reads both
+         halves. The counts are what keeps the split honest — each tab carries
+         how many cards it holds under the current search and facets, so the
+         other half can never quietly swallow a hit. -->
+    <header class="cs-atlas-bar">
+      <div class="cs-domain" role="tablist" aria-label="Shop domain">
+        <button
+          class="cs-domain-btn"
+          :class="{ 'cs-domain-btn--active': activeDomain === 'champions' }"
+          role="tab"
+          :aria-selected="activeDomain === 'champions'"
+          :title="`${reachableChampionCount} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies`"
+          @click="showDomain('champions')"
+        >
+          <Icon icon="ph:users-three-fill" width="20" height="20" class="cs-domain-icon" />
+          Champions
+          <span class="cs-domain-count">{{ reachableChampionCount }}</span>
+        </button>
+        <button
+          class="cs-domain-btn"
+          :class="{ 'cs-domain-btn--active': activeDomain === 'items' }"
+          role="tab"
+          :aria-selected="activeDomain === 'items'"
+          :title="`${visibleItemsCount} item(s) on offer under the current filters`"
+          @click="showDomain('items')"
+        >
+          <Icon icon="ph:backpack-fill" width="20" height="20" class="cs-domain-icon" />
+          Items
+          <span class="cs-domain-count">{{ visibleItemsCount }}</span>
+        </button>
+      </div>
+
+      <RpgSearchBar
+        ref="searchInputRef"
+        v-model="searchQuery"
+        class="cs-atlas-search"
+        size="sm"
+        placeholder="Search champions, traits or items..."
+        aria-label="Search champions, traits and items"
+        @clear="resetSearch"
+      />
+
       <button
-        class="cs-jump-btn"
-        :class="{ 'cs-jump-btn--active': activeDomain === 'champions' }"
-        role="tab"
-        :aria-selected="activeDomain === 'champions'"
-        :title="`${reachableChampionCount} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies`"
-        @click="showDomain('champions')"
+        v-if="hasActiveFilter"
+        class="cs-bar-btn cs-bar-btn--reset"
+        title="Clear every filter"
+        @click="clearFilters"
       >
-        <Icon icon="ph:users-three-fill" width="22" height="22" class="cs-jump-icon" />
-        Champions
-        <span class="cs-jump-count">{{ reachableChampionCount }}</span>
+        <Icon icon="lucide:rotate-ccw" width="15" height="15" />
+        Reset
       </button>
       <button
-        class="cs-jump-btn"
-        :class="{ 'cs-jump-btn--active': activeDomain === 'items' }"
-        role="tab"
-        :aria-selected="activeDomain === 'items'"
-        :title="`${visibleItemsCount} item(s) on offer under the current filters`"
-        @click="showDomain('items')"
+        v-if="canCollapseAll"
+        class="cs-bar-btn"
+        :class="{ 'cs-bar-btn--on': allTiersCollapsed }"
+        :title="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
+        :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
+        @click="toggleAllTiers"
       >
-        <Icon icon="ph:backpack-fill" width="22" height="22" class="cs-jump-icon" />
-        Items
-        <span class="cs-jump-count">{{ visibleItemsCount }}</span>
+        <Icon :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'" width="16" height="16" />
       </button>
-    </div>
+      <!-- The shop covers the board it was opened from, so the button that
+           opened it is not on screen to close it again — this one is. -->
+      <button class="cs-bar-close" aria-label="Close shop" title="Close shop (Esc)" @click="emitClose">
+        &#10005;
+      </button>
+    </header>
 
-    <!-- ── Header: Search + Role Filter ── -->
-    <div class="rpg-header cs-header">
-      <div class="cs-search-row">
-        <RpgSearchBar
-          ref="searchInputRef"
-          v-model="searchQuery"
-          class="cs-search-bar"
-          placeholder="Search champions, traits or items..."
-          aria-label="Search champions, traits and items"
-          :aria-expanded="filterOpen"
-          @clear="resetSearch"
-          @blur="onSearchBlur"
-          @focus="onSearchFocus"
-        />
-        <!-- Filter panel toggle -->
-        <button
-          class="filter-toggle-btn"
-          :class="{
-            'filter-toggle-btn--open': filterOpen,
-            'filter-toggle-btn--active': hasActiveFilter,
-          }"
-          :title="filterOpen ? 'Hide filters' : 'Show filters'"
-          aria-label="Toggle filters"
-          @click="filterOpen = !filterOpen"
-        >
-          <Icon icon="lucide:sliders-horizontal" width="18" height="18" />
-          <span class="filter-toggle-label">Filter</span>
-          <span class="filter-toggle-chevron">{{ filterOpen ? '▾' : '▴' }}</span>
-          <span v-if="hasActiveFilter && !filterOpen" class="filter-active-dot"></span>
-        </button>
-
-        <!-- Collapse / expand every section of the open tab -->
-        <button
-          v-if="canCollapseAll"
-          class="tier-collapse-all"
-          :class="{ 'tier-collapse-all--active': allTiersCollapsed }"
-          :title="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
-          :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
-          @click="toggleAllTiers"
-          @keydown.enter.prevent="toggleAllTiers"
-          @keydown.space.prevent="toggleAllTiers"
-        >
-          <Icon :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'" width="18" height="18" />
-        </button>
-
-        <!-- No close button: the rail is dismissed by clicking the sigil board
-             it is open in front of (or Escape), the same gesture that closes the
-             role details page. -->
-      </div>
-
-      <!-- ── Active filter summary: always visible while filters are set ── -->
-      <div v-if="hasActiveFilter" class="cs-active-filters">
-        <button class="trait-chip trait-chip--clear-all" @click="clearFilters">
-          × Clear filters
-        </button>
-        <span class="filter-sep"></span>
-        <span class="cs-active-label">Active:</span>
-        <button
-          v-if="activeRoleDef"
-          class="trait-chip trait-chip--active"
-          :style="`--chip-color: ${activeRoleDef.color}`"
-          title="Remove role filter"
-          @click="setActiveRole('all')"
-        >
-          <img :src="activeRoleDef.image" :alt="activeRoleDef.label" class="role-chip-img" />
-          {{ activeRoleDef.short }}
-          <span class="chip-dismiss">×</span>
-        </button>
-        <button
-          v-if="activeTierDef"
-          class="trait-chip trait-chip--active"
-          :style="`--chip-color: ${activeTierDef.color}`"
-          title="Remove tier filter"
-          @click="activeTier = 'all'"
-        >
-          <Icon :icon="activeTierDef.icon" class="trait-chip-icon" />
-          {{ activeTierDef.name }}
-          <span class="chip-dismiss">×</span>
-        </button>
-        <button
-          v-for="chip in activeTraitChips"
-          :key="chip.id"
-          class="trait-chip trait-chip--active"
-          :style="`--chip-color: ${chip.color}`"
-          :title="`Remove ${chip.label} filter`"
-          @click="toggleTrait(chip.id)"
-        >
-          <Icon v-if="chip.icon" :icon="chip.icon" class="trait-chip-icon" />
-          {{ chip.label }}
-          <span class="chip-dismiss">×</span>
-        </button>
-        <button
-          v-for="cat in activeItemCatChips"
-          :key="'cat-' + cat.id"
-          class="trait-chip trait-chip--active"
-          :style="`--chip-color: ${cat.color}`"
-          :title="`Remove ${cat.label} filter`"
-          @click="toggleItemCat(cat.id)"
-        >
-          <img :src="cat.image" :alt="cat.label" class="role-chip-img" />
-          {{ cat.label }}
-          <span class="chip-dismiss">×</span>
-        </button>
-        <button
-          v-for="r in activeRarityChips"
-          :key="'rar-' + r.id"
-          class="trait-chip trait-chip--active"
-          :style="`--chip-color: ${r.color}`"
-          :title="`Remove ${r.label} filter`"
-          @click="toggleRarity(r.id)"
-        >
-          {{ r.label }}
-          <span class="chip-dismiss">×</span>
-        </button>
-      </div>
-
-      <!-- ── Filter panel: labeled category sections ──
-           The panel carries only the chips that apply to the open tab — the
-           other domain's chips would narrow a list that is not on screen at all.
-           Rarity is an item property and therefore belongs to the item set — and
-           opens it, because it is the coarsest cut through the loot table; the
-           category is the finer one underneath. The "Active:" row above stays
-           whole across both tabs, so a chip set in one half is never lost behind
-           the other. -->
-      <Transition name="filter-panel">
-      <div v-show="filterOpen" class="cs-filter-panel">
-        <Transition name="cs-filter-domain" mode="out-in">
-
-          <!-- ══ Item domain: Rarity, then Category ══ -->
-          <div v-if="activeDomain === 'items'" key="items" class="cs-filter-group">
-            <div class="filter-divider">
-              <span class="filter-divider-label">Rarity</span>
-            </div>
-            <div class="cs-filter-row cs-filter-row--wrap">
-              <button
-                v-for="r in ITEM_RARITIES"
-                :key="r.id"
-                class="trait-chip"
-                :class="{ 'trait-chip--active': activeRarities.includes(r.id) }"
-                :style="`--chip-color: ${r.color}`"
-                :title="`${r.label} items`"
-                @click="toggleRarity(r.id)"
-              >
-                {{ r.label }}
-                <span v-if="activeRarities.includes(r.id)" class="chip-dismiss">×</span>
-              </button>
-            </div>
-
-            <div class="filter-divider">
-              <span class="filter-divider-label">Item Category</span>
-            </div>
-            <div class="cs-filter-row cs-filter-row--wrap">
-              <button
-                v-for="cat in ITEM_CATEGORIES"
-                :key="cat.id"
-                class="trait-chip role-chip"
-                :class="{ 'trait-chip--active': activeItemCats.includes(cat.id) }"
-                :style="`--chip-color: ${cat.color}`"
-                :title="cat.label"
-                @click="toggleItemCat(cat.id)"
-              >
-                <img :src="cat.image" :alt="cat.label" class="role-chip-img" />
-                {{ cat.label }}
-                <span v-if="activeItemCats.includes(cat.id)" class="chip-dismiss">×</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- ══ Champion domain: Role, Tier, Traits, Origins ══ -->
-          <div v-else key="champions" class="cs-filter-group">
-            <!-- Section: Role -->
-            <div class="filter-divider">
-              <span class="filter-divider-label">Role</span>
-            </div>
-            <div class="cs-filter-row cs-filter-row--wrap">
-              <button
-                v-for="r in roleChips"
-                :key="r.key"
-                class="trait-chip role-chip"
-                :class="{
-                  'trait-chip--active': activeRole === r.key,
-                  'trait-chip--disabled': !r.available,
-                }"
-                :style="`--chip-color: ${r.color}`"
-                :disabled="!r.available"
-                :title="r.available ? r.label : 'No champions in shop'"
-                @click="setActiveRole(activeRole === r.key ? 'all' : (r.key as any))"
-              >
-                <img :src="r.image" :alt="r.label" class="role-chip-img" />
-                {{ r.short }}
-              </button>
-            </div>
-
-            <!-- Section: Tier -->
-            <div class="filter-divider">
-              <span class="filter-divider-label">Tier</span>
-            </div>
-            <div class="cs-filter-row cs-filter-row--wrap">
-              <button
-                v-for="t in tierChips"
-                :key="t.starLevel"
-                class="trait-chip"
-                :class="{
-                  'trait-chip--active': activeTier === t.starLevel,
-                  'trait-chip--disabled': t.locked || !t.available,
-                }"
-                :style="`--chip-color: ${t.color}`"
-                :disabled="t.locked || !t.available"
-                :title="
-                  t.locked
-                    ? `Locked — unlocks by Galaxy ${t.requiredGalaxy}`
-                    : !t.available
-                      ? 'No champions in shop'
-                      : `★${t.starLevel} ${t.name}`
-                "
-                @click="activeTier = activeTier === t.starLevel ? 'all' : t.starLevel"
-              >
-                <Icon :icon="t.icon" class="trait-chip-icon" />
-                {{ t.name }}
-              </button>
-            </div>
-
-            <!-- Row 2: Trait chips (all visible; unavailable ones greyed out) -->
-            <div class="filter-divider">
-              <span class="filter-divider-label">Traits</span>
-            </div>
-            <div v-if="noTraitFound" class="trait-empty-state">No trait found</div>
-            <div v-else class="cs-filter-row cs-filter-row--wrap">
-              <TransitionGroup tag="div" name="chip" class="chip-group">
-                <button
-                  v-for="trait in traitChips"
-                  :key="trait.id"
-                  v-show="!hasSearchTraitMatch || searchMatchedTraits.has(trait.id)"
-                  class="trait-chip"
-                  :class="{
-                    'trait-chip--active': activeTraits.includes(trait.id),
-                    'trait-chip--disabled': !trait.available,
-                    'trait-chip--search-match': searchMatchedTraits.has(trait.id) && !activeTraits.includes(trait.id),
-                    'trait-chip--cross-role': activeRole !== 'all' && searchQuery.trim() && !roleTraitIds.has(trait.id),
-                  }"
-                  :style="`--chip-color: ${trait.color}`"
-                  :disabled="!trait.available"
-                  :title="trait.available ? `${filterChampionCount[trait.id] ?? 0} Champions${activeRole !== 'all' && !roleTraitIds.has(trait.id) ? ' (other roles)' : ''}` : 'No champions in shop'"
-                  tabindex="0"
-                  @click="toggleTrait(trait.id)"
-                  @keydown="onChipKeydown($event, trait.id)"
-                >
-                  <Icon :icon="trait.icon" class="trait-chip-icon" />
-                  {{ trait.name }}
-                  <span v-if="activeTraits.includes(trait.id)" class="chip-dismiss" @click.stop="toggleTrait(trait.id)">×</span>
-                </button>
-              </TransitionGroup>
-            </div>
-
-            <!-- Row 3: Origin chips (all visible; unavailable ones greyed out) -->
-            <div class="filter-divider">
-              <span class="filter-divider-label">Origins</span>
-            </div>
-            <div class="cs-filter-row cs-filter-row--wrap">
-              <TransitionGroup tag="div" name="chip" class="chip-group">
-                <button
-                  v-for="origin in originChips"
-                  :key="origin.origin"
-                  v-show="!hasSearchTraitMatch || searchMatchedTraits.has(origin.origin)"
-                  class="trait-chip"
-                  :class="{
-                    'trait-chip--active': activeTraits.includes(origin.origin),
-                    'trait-chip--disabled': !origin.available,
-                    'trait-chip--search-match': searchMatchedTraits.has(origin.origin) && !activeTraits.includes(origin.origin),
-                    'trait-chip--cross-role': activeRole !== 'all' && searchQuery.trim() && !roleOriginIds.has(origin.origin),
-                  }"
-                  :style="`--chip-color: ${origin.color}`"
-                  :disabled="!origin.available"
-                  :title="origin.available ? `${filterChampionCount[origin.origin] ?? 0} Champions${activeRole !== 'all' && !roleOriginIds.has(origin.origin) ? ' (other roles)' : ''}` : 'No champions in shop'"
-                  tabindex="0"
-                  @click="toggleTrait(origin.origin)"
-                  @keydown="onChipKeydown($event, origin.origin)"
-                >
-                  <Icon :icon="origin.icon" class="trait-chip-icon" />
-                  {{ origin.origin }}
-                  <span v-if="activeTraits.includes(origin.origin)" class="chip-dismiss" @click.stop="toggleTrait(origin.origin)">×</span>
-                </button>
-              </TransitionGroup>
-            </div>
-          </div>
-
-        </Transition>
-      </div>
-      </Transition>
-    </div>
+    <ShopFacetRail
+      class="cs-atlas-facets"
+      :groups="facetGroups"
+      :folded="facetsFolded"
+      :affordable-only="affordableOnly"
+      :affordable-count="affordableCount"
+      @toggle="onFacetToggle"
+      @fold="setFacetsFolded"
+      @update:affordable-only="affordableOnly = $event"
+    />
 
     <!-- ── Grid: the open tab, and nothing else ── -->
     <div
       ref="gridRef"
-      class="flex-1 min-h-0 overflow-y-auto rpg-scrollbar cs-grid"
+      class="cs-atlas-grid rpg-scrollbar"
       :class="{ 'is-scrolling': gridScrolling }"
       @scroll.passive="onGridScroll"
     >
@@ -417,8 +168,8 @@
             </span>
           </div>
           <Transition @enter="onTierEnter" @after-enter="onTierAfterEnter" @leave="onTierLeave">
-            <div v-show="!isTierCollapsed(group.tier)" class="tier-body-inner">
-              <div v-if="group.champions.length" class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+            <div v-if="!isTierCollapsed(group.tier)" class="tier-body-inner">
+              <div v-if="group.champions.length" class="cs-cards">
                 <ChampionShopCard
                   v-for="champion in group.champions"
                   :key="champion.name"
@@ -453,7 +204,7 @@
           <div class="cross-role-divider">
             <span class="cross-role-divider-label">Other Roles</span>
           </div>
-          <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+          <div class="cs-cards">
             <ChampionShopCard
               v-for="champion in crossRoleChampions"
               :key="'cross-' + champion.name"
@@ -524,8 +275,8 @@
               </span>
             </div>
             <Transition @enter="onTierEnter" @after-enter="onTierAfterEnter" @leave="onTierLeave">
-              <div v-show="!isItemCatCollapsed(group.id)" class="tier-body-inner">
-                <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+              <div v-if="!isItemCatCollapsed(group.id)" class="tier-body-inner">
+                <div class="cs-cards">
                   <ItemShopCard
                     v-for="item in group.items"
                     :key="item.id"
@@ -552,20 +303,21 @@
 
     </Transition>
     </div>
-    </div>
 
-    <!-- ══ Detail layer ══
-         The shop lives in a rail now, not in a modal, so the detail is no longer
-         a column standing next to the grid and waiting to be filled: it slides
-         over the grid when a card is picked and leaves again on ←. Browsing gets
-         the rail's full width, inspecting gets it too, and neither view spends
-         half its space on the other. Typing in the search still SELECTS the best
-         hit (the card highlights in the grid) but never opens this layer —
-         opening it while the player is narrowing a list would bury the list. -->
-    <Transition name="cs-detail-layer">
-      <div v-if="detailOpen && (itemDetail || detail)" class="cs-detail-layer">
+    <!-- ══ Detail column ══
+         A column, not a layer. It used to slide OVER the grid because 900px of
+         rail could not carry both; across the full tab it stands beside the
+         cards and browsing never has to be undone to read one. Which means the
+         empty state is now a state the player SEES — hence the overview card
+         rather than a blank panel.
+         Typing in the search still only SELECTS the best hit (its card lights
+         up in the grid); that selection now shows here for free, which is what
+         the layer could never do without burying the list. -->
+    <aside class="cs-atlas-detail">
+      <Transition name="cs-detail-swap" mode="out-in">
         <ItemDetailPanel
           v-if="itemDetail"
+          key="item"
           wide
           :detail="itemDetail"
           :index="selectedIndex"
@@ -576,7 +328,8 @@
           @buy="handleBuyItem"
         />
         <ChampionDetailPanel
-          v-else
+          v-else-if="detail"
+          key="champion"
           wide
           :detail="detail"
           :index="selectedIndex"
@@ -586,10 +339,24 @@
           @back="closeDetail"
           @buy="handleBuy"
         />
-      </div>
-    </Transition>
+        <ShopOverviewCard
+          v-else
+          key="overview"
+          :domain="activeDomain"
+          :owned="overviewOwned"
+          :total="overviewTotal"
+          :galaxy="overviewGalaxy"
+          :next-tier="overviewNextTier"
+          :picks="overviewPicks"
+          :sets="overviewSets"
+          :empty-hint="overviewEmptyHint"
+          @pick="onOverviewPick"
+        />
+      </Transition>
+    </aside>
   </div>
 </template>
+
 
 <script lang="ts">
 import { ref, defineComponent, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
@@ -603,6 +370,8 @@ import ChampionDetailPanel from './ChampionDetailPanel.vue'
 import ItemShopCard from './ItemShopCard.vue'
 import ItemDetailPanel from './ItemDetailPanel.vue'
 import RpgSearchBar from '../../../ui/RpgSearchBar.vue'
+import ShopFacetRail from './ShopFacetRail.vue'
+import ShopOverviewCard from './ShopOverviewCard.vue'
 import { useItemStore } from '@/stores/economy/itemStore'
 import { SHOP_ITEMS, ITEM_CATEGORIES, ITEM_RARITIES, ITEM_SETS } from '@/config/economy/items'
 import { getChampionRoles, CHAMPION_ROLES, getChampionNames } from '@/config/champions/championData'
@@ -620,6 +389,15 @@ import {
   SHOP_JUMP_EXPAND_SETTLE_MS,
   SHOP_SCROLL_SETTLE_MS,
   CHAMPION_NEW_BADGE_DISMISS_MS,
+  TEAM_SHOP_FACET_RAIL_WIDTH,
+  TEAM_SHOP_FACET_RAIL_COLLAPSED,
+  TEAM_SHOP_FACET_AUTOFOLD_WIDTH,
+  TEAM_SHOP_DETAIL_MIN_WIDTH,
+  TEAM_SHOP_DETAIL_PCT,
+  TEAM_SHOP_DETAIL_MAX_WIDTH,
+  TEAM_SHOP_CARD_MIN_WIDTH,
+  TEAM_SHOP_CARD_HEIGHT,
+  TEAM_SHOP_GRID_GAP,
 } from '@/config/constants'
 import { useHerald } from '@/composables/ui/useHerald'
 import type {
@@ -629,12 +407,25 @@ import type {
   ItemCategory,
   ItemRarity,
   PlanetType,
+  ShopFacetGroup,
+  ShopOverviewPick,
+  ShopOverviewSet,
+  ShopOverviewTier,
 } from '@/types'
 
 
 export default defineComponent({
   name: 'ChampionShopComponent',
-  components: { Icon, ChampionShopCard, ChampionDetailPanel, ItemShopCard, ItemDetailPanel, RpgSearchBar },
+  components: {
+    Icon,
+    ChampionShopCard,
+    ChampionDetailPanel,
+    ItemShopCard,
+    ItemDetailPanel,
+    RpgSearchBar,
+    ShopFacetRail,
+    ShopOverviewCard,
+  },
   props: {
     initialRole: { type: String, default: 'all' },
     /**
@@ -644,7 +435,7 @@ export default defineComponent({
      */
     closeDetailToken: { type: Number, default: 0 },
   },
-  emits: ['roleChange', 'detailState'],
+  emits: ['roleChange', 'detailState', 'close'],
   setup(props, { emit }) {
     const championNames = ref<string[]>(getChampionNames())
     const battleStore = useBattleStore()
@@ -662,7 +453,14 @@ export default defineComponent({
     // Item-domain filter chips (unified shop): categories + rarities, multi-select.
     const activeItemCats = ref<ItemCategory[]>([])
     const activeRarities = ref<ItemRarity[]>([])
-    const filterOpen = ref(false)
+    const activeSets = ref<string[]>([])
+    /**
+     * The one cut that applies to both halves: hide everything the player
+     * cannot pay for right now. It sits above the domain facets in the rail
+     * because it asks a different kind of question than they do — not what
+     * kind of thing this is, but whether it is a decision at all today.
+     */
+    const affordableOnly = ref(false)
     /**
      * Which half of the shop is on screen. Declared up here with the filter
      * state because that is what it is: the coarsest filter of them all, above
@@ -719,10 +517,6 @@ export default defineComponent({
         : [...activeTraits.value, id]
     }
 
-    function clearTraits() {
-      activeTraits.value = []
-    }
-
     function toggleItemCat(id: ItemCategory) {
       activeItemCats.value = activeItemCats.value.includes(id)
         ? activeItemCats.value.filter((c) => c !== id)
@@ -741,54 +535,14 @@ export default defineComponent({
       activeTier.value = 'all'
       activeItemCats.value = []
       activeRarities.value = []
+      activeSets.value = []
+      affordableOnly.value = false
       setActiveRole('all')
     }
 
     function resetSearch() {
       searchQuery.value = ''
-      activeTraits.value = []
-      activeTier.value = 'all'
-      activeItemCats.value = []
-      activeRarities.value = []
-      setActiveRole('all')
-    }
-
-    let blurTimer: ReturnType<typeof setTimeout> | null = null
-    function onSearchBlur() {
-      blurTimer = setTimeout(() => {
-        if (
-          !searchQuery.value.trim() &&
-          activeTraits.value.length === 0 &&
-          activeItemCats.value.length === 0 &&
-          activeRarities.value.length === 0
-        ) {
-          filterOpen.value = false
-        }
-      }, 200)
-    }
-    function onSearchFocus() {
-      if (blurTimer) { clearTimeout(blurTimer); blurTimer = null }
-    }
-
-    function onChipKeydown(event: KeyboardEvent, traitId: string) {
-      const panel = (event.target as HTMLElement).closest('.cs-filter-panel')
-      if (!panel) return
-      const chips = Array.from(panel.querySelectorAll<HTMLElement>('.trait-chip[tabindex="0"]'))
-      const idx = chips.indexOf(event.target as HTMLElement)
-      if (event.key === 'ArrowRight') {
-        event.preventDefault()
-        chips[(idx + 1) % chips.length]?.focus()
-      } else if (event.key === 'ArrowLeft') {
-        event.preventDefault()
-        chips[(idx - 1 + chips.length) % chips.length]?.focus()
-      } else if (event.key === 'Escape') {
-        event.preventDefault()
-        filterOpen.value = false
-        searchInputRef.value?.focus()
-      } else if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault()
-        toggleTrait(traitId)
-      }
+      clearFilters()
     }
 
     function isOwned(name: string): boolean {
@@ -917,11 +671,23 @@ const shopChampionNames = computed(() =>
       battleStore.recruitableChampions.map((r) => r.name)
     )
 
+    /**
+     * What the grid can hold: everything not owned yet, locked cards included.
+     *
+     * The facets used to be measured against the RECRUITABLE pool instead, back
+     * when they lived in a drawer and only said whether a chip was worth
+     * offering. Standing open with a count beside every row, that pool lies: the
+     * grid draws locked champions too, so a facet reading 0 next to five visible
+     * cards of that trait is simply wrong. A facet counts what it would leave
+     * standing — nothing else.
+     */
+    const gridChampionNames = computed(() => championNames.value.filter((n) => !isOwned(n)))
+
     // Role-only pool (no search expansion) — used for cross-role chip detection and watch validation
     const roleChampionNames = computed(() =>
       activeRole.value === 'all'
-        ? shopChampionNames.value
-        : shopChampionNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value),
+        ? gridChampionNames.value
+        : gridChampionNames.value.filter((name) => CHAMPION_ROLES[name] === activeRole.value),
     )
 
     // Role chips: greyed out when no purchasable champion of that role exists.
@@ -933,7 +699,7 @@ const shopChampionNames = computed(() =>
         short: r.short,
         color: r.color,
         image: r.image,
-        available: shopChampionNames.value.some((name) => CHAMPION_ROLES[name] === r.key),
+        available: gridChampionNames.value.some((name) => CHAMPION_ROLES[name] === r.key),
       })),
     )
 
@@ -943,7 +709,7 @@ const shopChampionNames = computed(() =>
         const q = searchQuery.value.toLowerCase().trim()
         const anyTraitMatch = TRAIT_DEFINITIONS.some((t) => t.name.toLowerCase().includes(q))
         const anyOriginMatch = Object.keys(ORIGIN_SYNERGIES).some((o) => o.toLowerCase().includes(q))
-        if (anyTraitMatch || anyOriginMatch) return shopChampionNames.value
+        if (anyTraitMatch || anyOriginMatch) return gridChampionNames.value
       }
       return roleChampionNames.value
     })
@@ -995,25 +761,7 @@ const shopChampionNames = computed(() =>
       return counts
     })
 
-    // Which trait/origin IDs belong to the current role (not cross-role)
-    const roleTraitIds = computed(() => {
-      const seen = new Set<string>()
-      for (const name of roleChampionNames.value) {
-        for (const tid of (CHAMPION_TRAITS[name] ?? [])) seen.add(tid)
-      }
-      return seen
-    })
-
-    const roleOriginIds = computed(() => {
-      const seen = new Set<string>()
-      for (const name of roleChampionNames.value) {
-        const o = getChampionOrigin(name)
-        if (o && ORIGIN_SYNERGIES[o]) seen.add(o)
-      }
-      return seen
-    })
-
-    watch(shopChampionNames, () => {
+    watch(gridChampionNames, () => {
       // Drop the tier filter once its last purchasable champion is gone.
       if (
         activeTier.value !== 'all' &&
@@ -1028,19 +776,13 @@ const shopChampionNames = computed(() =>
       if (filtered.length !== activeTraits.value.length) activeTraits.value = filtered
     })
 
-    watch(searchQuery, (q) => {
-      if (q.trim()) {
-        filterOpen.value = true
-      } else if (activeTraits.value.length === 0) {
-        filterOpen.value = false
-      }
-    })
-
     const filteredChampions = computed(() => {
       return championNames.value
         .map((name) => ({ name }))
         .filter((c) => {
           if (isOwned(c.name)) return false
+          if (affordableOnly.value && !(isUnlocked(c.name) && canAffordChampion(c.name)))
+            return false
           if (activeRole.value !== 'all' && !getChampionRoles(c.name).includes(activeRole.value))
             return false
           if (activeTraits.value.length > 0) {
@@ -1191,10 +933,17 @@ const shopChampionNames = computed(() =>
     // further down runs immediately and would otherwise hit them in their TDZ.
     const championFiltersActive = computed(
       () =>
-        activeTraits.value.length > 0 || activeTier.value !== 'all' || activeRole.value !== 'all',
+        activeTraits.value.length > 0 ||
+        activeTier.value !== 'all' ||
+        activeRole.value !== 'all' ||
+        affordableOnly.value,
     )
     const itemFiltersActive = computed(
-      () => activeItemCats.value.length > 0 || activeRarities.value.length > 0,
+      () =>
+        activeItemCats.value.length > 0 ||
+        activeRarities.value.length > 0 ||
+        activeSets.value.length > 0 ||
+        affordableOnly.value,
     )
     /** While searching/filtering, force every tier open so matches are never hidden. */
     const championNarrowed = computed(
@@ -1254,6 +1003,12 @@ const shopChampionNames = computed(() =>
 
     // Tier expand/collapse animation — animate height 0 ↔ scrollHeight, then clear
     // inline styles so an open tier is overflow:visible (hover-expanded cards spill out).
+    //
+    // The bodies are v-if, not v-show: collapsed used to mean "rendered and
+    // hidden", which put all 165 champion cards in the DOM the moment the shop
+    // opened — 133 ms of mount for rows nobody was looking at. Now a section
+    // costs its cards only while it is open, and the transition still runs
+    // because @enter/@leave fire on create and destroy just the same.
     function onTierEnter(el: Element) {
       const node = el as HTMLElement
       node.style.height = '0'
@@ -1334,16 +1089,15 @@ const shopChampionNames = computed(() =>
       return matched
     })
     const hasSearchTraitMatch = computed(() => searchMatchedTraits.value.size > 0)
-    const noTraitFound = computed(
-      () => searchQuery.value.trim() !== '' && !hasSearchTraitMatch.value,
-    )
     const hasActiveFilter = computed(
       () =>
         activeTraits.value.length > 0 ||
         activeTier.value !== 'all' ||
         activeRole.value !== 'all' ||
         activeItemCats.value.length > 0 ||
-        activeRarities.value.length > 0,
+        activeRarities.value.length > 0 ||
+        activeSets.value.length > 0 ||
+        affordableOnly.value,
     )
 
     // ── Items: search + chip filtering, grouped by category ──
@@ -1356,6 +1110,9 @@ const shopChampionNames = computed(() =>
           return false
         if (activeRarities.value.length > 0 && !activeRarities.value.includes(item.rarity))
           return false
+        if (activeSets.value.length > 0 && !(item.setId && activeSets.value.includes(item.setId)))
+          return false
+        if (affordableOnly.value && !canAffordItem(item.id)) return false
         if (searchQuery.value.trim()) {
           const q = searchQuery.value.toLowerCase().trim()
           return (
@@ -1548,36 +1305,6 @@ const shopChampionNames = computed(() =>
       }, SHOP_SCROLL_SETTLE_MS)
     }
 
-    // ── Active filter summary chips for the item domain ──
-    const activeItemCatChips = computed(() =>
-      ITEM_CATEGORIES.filter((c) => activeItemCats.value.includes(c.id)),
-    )
-    const activeRarityChips = computed(() =>
-      ITEM_RARITIES.filter((r) => activeRarities.value.includes(r.id)),
-    )
-
-    // ── Active filter summary chips (shown even with the panel collapsed) ──
-    const activeRoleDef = computed(() =>
-      activeRole.value === 'all' ? null : (ROLES.find((r) => r.key === activeRole.value) ?? null),
-    )
-    const activeTierDef = computed(() =>
-      activeTier.value === 'all'
-        ? null
-        : (CHAMPION_TIERS_BY_STAR.find((t) => t.starLevel === activeTier.value) ?? null),
-    )
-    const activeTraitChips = computed(() =>
-      activeTraits.value.map((id) => {
-        const trait = TRAIT_DEFINITIONS.find((t) => t.id === id)
-        if (trait) return { id, label: trait.name, icon: trait.icon, color: trait.color }
-        const origin = ORIGIN_SYNERGIES[id as keyof typeof ORIGIN_SYNERGIES]
-        return { id, label: id, icon: origin?.icon ?? '', color: origin?.color ?? '#c89040' }
-      }),
-    )
-
-    const unlockedCount = computed(() => {
-      return battleStore.recruitableChampions.length
-    })
-
     const newChampionNames = computed(() =>
       new Set(
         battleStore.newlyUnlockedChampions.filter((n) =>
@@ -1681,31 +1408,28 @@ const shopChampionNames = computed(() =>
       selectedChampion.value = null
     }
 
-    // ── Detail layer ──
-    // Selection and visibility are two different things here: the search selects
-    // (to highlight the matching card) without opening, a card click does both.
-    const detailOpen = ref(false)
+    // ── Detail column ──
+    // Selecting and opening used to be two things, because opening meant
+    // covering the grid. The column stands beside it now, so a selection IS
+    // the open page — and the search, which only ever selected, gets to show
+    // its hit for free.
+    const hasSelection = computed(() => !!(selectedChampion.value || selectedItem.value))
 
     function openChampion(name: string) {
       selectChampion(name)
-      detailOpen.value = true
     }
 
     function openItem(id: string) {
       selectItem(id)
-      detailOpen.value = true
     }
 
+    /** Escape's first stop: drop the subject, the overview card takes over. */
     function closeDetail() {
-      detailOpen.value = false
+      selectedChampion.value = null
+      selectedItem.value = null
     }
 
-    // A selection can go stale on its own (recruited, filtered out) — the layer
-    // must not stay up over an empty subject.
-    watch([selectedChampion, selectedItem], ([champion, item]) => {
-      if (!champion && !item) detailOpen.value = false
-    })
-    watch(detailOpen, (open) => emit('detailState', open))
+    watch(hasSelection, (open) => emit('detailState', open), { immediate: true })
     watch(
       () => props.closeDetailToken,
       () => closeDetail(),
@@ -1777,9 +1501,8 @@ const shopChampionNames = computed(() =>
      * so the selection is a decision the player can act on rather than the
      * alphabetically first name.
      *
-     * The detail layer stays closed on purpose. It covers the grid, and covering
-     * the shop in the moment it opens would answer a question nobody asked — the
-     * selection shows as the lit card, one click away from its page.
+     * That pick fills the detail column straight away. It costs the grid
+     * nothing to do so — which is exactly what the old layer could not say.
      */
     function openAtHighestTier() {
       // a deep link (notify badge → pendingChampionSearch) has already aimed the
@@ -1963,8 +1686,324 @@ const shopChampionNames = computed(() =>
       })
     }
 
+    // ══ Atlas: three zones, one bar ═════════════════════════════════════════
+    const atlasRef = ref<HTMLElement | null>(null)
+    /**
+     * Explicit fold, or `null` for "let the width decide". Kept apart from the
+     * measured default on purpose: once the player has folded or unfolded the
+     * rail themselves, resizing the window must not undo that decision.
+     */
+    const userFacetsFolded = ref<boolean | null>(null)
+    const atlasWidth = ref(0)
+    const facetsFolded = computed(
+      () =>
+        userFacetsFolded.value ??
+        (atlasWidth.value > 0 && atlasWidth.value < TEAM_SHOP_FACET_AUTOFOLD_WIDTH),
+    )
+    function setFacetsFolded(folded: boolean) {
+      userFacetsFolded.value = folded
+    }
+
+    /**
+     * The three zones share one budget: whatever the facets and the detail take,
+     * the grid gets the rest. Written as one string rather than three custom
+     * properties so the columns can never be measured mid-swap against a stale
+     * sibling.
+     */
+    const atlasColumns = computed(() => {
+      const facet = facetsFolded.value ? TEAM_SHOP_FACET_RAIL_COLLAPSED : TEAM_SHOP_FACET_RAIL_WIDTH
+      return `${facet}px minmax(0, 1fr) clamp(${TEAM_SHOP_DETAIL_MIN_WIDTH}px, ${TEAM_SHOP_DETAIL_PCT}%, ${TEAM_SHOP_DETAIL_MAX_WIDTH}px)`
+    })
+    const cardMinWidthPx = computed(() => `${TEAM_SHOP_CARD_MIN_WIDTH}px`)
+    const cardHeightPx = computed(() => `${TEAM_SHOP_CARD_HEIGHT}px`)
+    const gridGapPx = computed(() => `${TEAM_SHOP_GRID_GAP}px`)
+
+    let atlasObserver: ResizeObserver | null = null
+    onMounted(() => {
+      const el = atlasRef.value
+      if (!el || typeof ResizeObserver === 'undefined') return
+      atlasObserver = new ResizeObserver((entries) => {
+        atlasWidth.value = entries[0]?.contentRect.width ?? 0
+      })
+      atlasObserver.observe(el)
+    })
+    onUnmounted(() => {
+      atlasObserver?.disconnect()
+      atlasObserver = null
+    })
+
+    function emitClose() {
+      emit('close')
+    }
+
+    // ── Facets ──────────────────────────────────────────────────────────────
+    // Counts come from the UNFILTERED pool on purpose: a count that shrank as
+    // its own chip narrowed the list would answer a question nobody asked, and
+    // the number a player wants from a facet is "how many are there", not "how
+    // many survive what I already picked".
+    const setPartCounts = computed(() => {
+      const owned = new Map<string, number>()
+      const total = new Map<string, number>()
+      for (const item of SHOP_ITEMS) {
+        if (!item.setId) continue
+        total.set(item.setId, (total.get(item.setId) ?? 0) + 1)
+        if ((itemStore.ownedItems[item.id] ?? 0) > 0) {
+          owned.set(item.setId, (owned.get(item.setId) ?? 0) + 1)
+        }
+      }
+      return { owned, total }
+    })
+
+    const facetGroups = computed<ShopFacetGroup[]>(() => {
+      if (activeDomain.value === 'items') {
+        return [
+          {
+            id: 'category',
+            label: 'Category',
+            icon: 'lucide:layers',
+            chips: ITEM_CATEGORIES.map((c) => ({
+              id: c.id,
+              label: c.label,
+              color: c.color,
+              image: c.image,
+              count: SHOP_ITEMS.filter((i) => i.category === c.id).length,
+              active: activeItemCats.value.includes(c.id),
+            })),
+          },
+          {
+            id: 'rarity',
+            label: 'Rarity',
+            icon: 'lucide:gem',
+            chips: ITEM_RARITIES.map((r) => ({
+              id: r.id,
+              label: r.label,
+              color: r.color,
+              count: SHOP_ITEMS.filter((i) => i.rarity === r.id).length,
+              active: activeRarities.value.includes(r.id),
+            })),
+          },
+          {
+            id: 'set',
+            label: 'Sets',
+            icon: 'lucide:link',
+            chips: ITEM_SETS.map((s) => ({
+              id: s.setId,
+              label: s.setName,
+              icon: s.icon.startsWith('/') ? undefined : s.icon,
+              image: s.icon.startsWith('/') ? s.icon : undefined,
+              color: '#b87ed8',
+              count: setPartCounts.value.total.get(s.setId) ?? 0,
+              active: activeSets.value.includes(s.setId),
+              title: s.description,
+            })),
+          },
+        ]
+      }
+      return [
+        {
+          id: 'role',
+          label: 'Role',
+          icon: 'lucide:users',
+          chips: roleChips.value.map((r) => ({
+            id: r.key,
+            label: r.label,
+            color: r.color,
+            image: r.image,
+            count: gridChampionNames.value.filter((n) => CHAMPION_ROLES[n] === r.key).length,
+            active: activeRole.value === r.key,
+            disabled: !r.available,
+            title: r.available ? r.label : 'No champions in shop',
+          })),
+        },
+        {
+          id: 'tier',
+          label: 'Tier',
+          icon: 'lucide:star',
+          chips: tierChips.value.map((t) => ({
+            id: String(t.starLevel),
+            label: `★${t.starLevel} ${t.name}`,
+            color: t.color,
+            icon: t.icon,
+            count: chipPool.value.filter((n) => getChampionStarLevel(n) === t.starLevel).length,
+            active: activeTier.value === t.starLevel,
+            disabled: t.locked || !t.available,
+            locked: t.locked,
+            title: t.locked
+              ? `Locked — unlocks by Galaxy ${t.requiredGalaxy}`
+              : t.available
+                ? `★${t.starLevel} ${t.name}`
+                : 'No champions in shop',
+          })),
+        },
+        {
+          id: 'trait',
+          label: 'Traits',
+          icon: 'lucide:sparkles',
+          // Typing a trait NAME narrows the facet list to what it matched: the
+          // search reads chips too, and leaving fifteen of them standing while
+          // one is meant would make the player find it twice.
+          chips: traitChips.value
+            .filter((t) => !hasSearchTraitMatch.value || searchMatchedTraits.value.has(t.id))
+            .map((t) => ({
+            id: t.id,
+            label: t.name,
+            color: t.color,
+            icon: t.icon,
+            count: filterChampionCount.value[t.id] ?? 0,
+            active: activeTraits.value.includes(t.id),
+            disabled: !t.available,
+          })),
+        },
+        {
+          id: 'origin',
+          label: 'Origins',
+          icon: 'lucide:map-pin',
+          chips: originChips.value
+            .filter((o) => !hasSearchTraitMatch.value || searchMatchedTraits.value.has(o.origin))
+            .map((o) => ({
+            id: o.origin,
+            label: o.origin,
+            color: o.color,
+            icon: o.icon,
+            count: filterChampionCount.value[o.origin] ?? 0,
+            active: activeTraits.value.includes(o.origin),
+            disabled: !o.available,
+          })),
+        },
+      ]
+    })
+
+    function onFacetToggle(groupId: string, chipId: string) {
+      switch (groupId) {
+        case 'role':
+          setActiveRole(activeRole.value === chipId ? 'all' : (chipId as ChampionRole))
+          break
+        case 'tier': {
+          const star = Number(chipId)
+          activeTier.value = activeTier.value === star ? 'all' : star
+          break
+        }
+        case 'trait':
+        case 'origin':
+          toggleTrait(chipId)
+          break
+        case 'category':
+          toggleItemCat(chipId as ItemCategory)
+          break
+        case 'rarity':
+          toggleRarity(chipId as ItemRarity)
+          break
+        case 'set':
+          activeSets.value = activeSets.value.includes(chipId)
+            ? activeSets.value.filter((id) => id !== chipId)
+            : [...activeSets.value, chipId]
+          break
+      }
+    }
+
+    /** Cards the player could pay for right now, independent of every filter —
+     *  including the affordable filter itself, which would make it circular. */
+    const affordableCount = computed(() =>
+      activeDomain.value === 'items'
+        ? SHOP_ITEMS.filter((i) => canAffordItem(i.id)).length
+        : shopChampionNames.value.filter((n) => canClickBuy(n)).length,
+    )
+
+    // ── Overview card (detail column, nothing picked) ────────────────────────
+    const overviewOwned = computed(() =>
+      activeDomain.value === 'items'
+        ? SHOP_ITEMS.filter((i) => (itemStore.ownedItems[i.id] ?? 0) > 0).length
+        : battleStore.ownedChampions.filter((n) => n !== 'Bard').length,
+    )
+    const overviewTotal = computed(() =>
+      activeDomain.value === 'items'
+        ? SHOP_ITEMS.length
+        : championNames.value.filter((n) => n !== 'Bard').length,
+    )
+    const overviewGalaxy = computed(() => galaxyStore.currentGalaxy)
+
+    /** The next wall, not the next step: the lowest tier still galaxy-locked. */
+    const overviewNextTier = computed<ShopOverviewTier | null>(() => {
+      const next = CHAMPION_TIERS_BY_STAR.find((t) => isTierGalaxyLocked(t.starLevel))
+      if (!next) return null
+      return {
+        starLevel: next.starLevel,
+        name: next.name,
+        icon: next.icon,
+        color: next.color,
+        requiredGalaxy: requiredGalaxyForTier(next.starLevel),
+      }
+    })
+
+    const OVERVIEW_PICK_LIMIT = 3
+    const overviewPicks = computed<ShopOverviewPick[]>(() => {
+      if (activeDomain.value === 'items') {
+        return SHOP_ITEMS.filter((i) => canAffordItem(i.id))
+          .sort((a, b) => itemStore.itemPrice(a.id) - itemStore.itemPrice(b.id))
+          .slice(0, OVERVIEW_PICK_LIMIT)
+          .map((i) => {
+            const rarity = ITEM_RARITIES.find((r) => r.id === i.rarity)
+            return {
+              kind: 'item' as const,
+              id: i.id,
+              name: i.name,
+              image: i.icon.startsWith('/') ? i.icon : undefined,
+              icon: i.icon.startsWith('/') ? undefined : i.icon,
+              color: rarity?.color ?? '#e8c040',
+              sub: `${rarity?.label ?? i.rarity} · ${itemStore.itemPrice(i.id).toLocaleString()} chimes`,
+            }
+          })
+      }
+      return shopChampionNames.value
+        .filter((n) => canClickBuy(n))
+        .sort((a, b) => getChampionStarLevel(b) - getChampionStarLevel(a) || a.localeCompare(b))
+        .slice(0, OVERVIEW_PICK_LIMIT)
+        .map((name) => ({
+          kind: 'champion' as const,
+          id: name,
+          name,
+          image: battleStore.getChampionImage(name, { size: 'sm' }),
+          color: getTierColor(name),
+          sub: `★${getChampionStarLevel(name)} · ${getChimesPrice(name).toLocaleString()} chimes`,
+        }))
+    })
+
+    const overviewSets = computed<ShopOverviewSet[]>(() =>
+      ITEM_SETS.map((s) => ({
+        id: s.setId,
+        name: s.setName,
+        icon: s.icon.startsWith('/') ? undefined : s.icon,
+        image: s.icon.startsWith('/') ? s.icon : undefined,
+        description: s.description,
+        ownedParts: setPartCounts.value.owned.get(s.setId) ?? 0,
+        totalParts: setPartCounts.value.total.get(s.setId) ?? 0,
+        active: itemStore.activeSetBonuses.some((b) => b.setId === s.setId),
+      })),
+    )
+
+    /**
+      * Why the picks are empty, when they are. "Nothing affordable" is the wrong
+      * answer for a fresh save: the player may be sitting on billions of chimes
+      * and still have nobody to spend them on, because no home planet has fallen
+      * yet. An empty state that names the wrong cause sends them to farm the
+      * wrong thing.
+      */
+    const overviewEmptyHint = computed(() => {
+      if (activeDomain.value === 'items') {
+        return 'Nothing affordable yet — chimes are still gathering.'
+      }
+      if (shopChampionNames.value.length === 0) {
+        return 'No champion unlocked yet — rescue a home planet in the orbit to bring one into the shop.'
+      }
+      return 'Nothing affordable yet — chimes and materials are still gathering.'
+    })
+
+    function onOverviewPick(kind: 'champion' | 'item', id: string) {
+      if (kind === 'champion') selectChampion(id)
+      else selectItem(id)
+    }
+
     return {
-      filteredChampions,
       tierGroups,
       tierOwned,
       tierTotal,
@@ -1975,80 +2014,37 @@ const shopChampionNames = computed(() =>
       onTierEnter,
       onTierAfterEnter,
       onTierLeave,
-      traitChips,
-      originChips,
-      filterChampionCount,
-      roleTraitIds,
-      roleOriginIds,
-      searchMatchedTraits,
-      hasSearchTraitMatch,
-      noTraitFound,
-      filterOpen,
       hasActiveFilter,
-      activeRoleDef,
-      activeTierDef,
-      activeTraitChips,
-      unlockedCount,
       battleStore,
       CHAMPION_ROLES,
-      roleChips,
-      getChampionRoles,
-      activeRole,
       searchQuery,
-      activeTraits,
-      activeTier,
-      tierChips,
       isOwned,
       isUnlocked,
       isLocked,
-      getMaterialCost,
-      getChimesPrice,
       getTierColor,
-      canAffordChimes,
       canAffordChampion,
-      canClickBuy,
       handleBuy,
-      hasEnoughMaterial,
-      getMaterialName,
-      getMaterialImage,
       getLockedTooltip,
       getCardClass,
-      setActiveRole,
       resetSearch,
-      toggleTrait,
-      clearTraits,
       clearFilters,
-      onSearchBlur,
-      onSearchFocus,
-      onChipKeydown,
       searchInputRef,
       isNew,
       dismissNewOnHover,
       getChampionDetail,
       crossRoleChampions,
       selectedChampion,
-      selectChampion,
       openChampion,
       openItem,
-      detailOpen,
       closeDetail,
       gridScrolling,
       selectPrev,
       selectNext,
       selectedIndex,
-      visibleChampionList,
       visibleEntries,
       detail,
       ROLE_BADGE,
       // ── Unified shop: items ──
-      ITEM_CATEGORIES,
-      ITEM_RARITIES,
-      activeItemCats,
-      activeRarities,
-      toggleItemCat,
-      toggleRarity,
-      activeItemCatChips,
-      activeRarityChips,
       itemGroups,
       crossRoleOnly,
       noChampionsFound,
@@ -2057,7 +2053,6 @@ const shopChampionNames = computed(() =>
       isItemCatCollapsed,
       toggleItemCatSection,
       selectedItem,
-      selectItem,
       itemDetail,
       handleBuyItem,
       visibleItemsCount,
@@ -2066,57 +2061,249 @@ const shopChampionNames = computed(() =>
       showDomain,
       canCollapseAll,
       onGridScroll,
+      // ── Atlas ──
+      atlasRef,
+      atlasColumns,
+      cardMinWidthPx,
+      cardHeightPx,
+      gridGapPx,
+      facetsFolded,
+      setFacetsFolded,
+      facetGroups,
+      onFacetToggle,
+      affordableOnly,
+      affordableCount,
+      emitClose,
+      overviewOwned,
+      overviewTotal,
+      overviewGalaxy,
+      overviewNextTier,
+      overviewPicks,
+      overviewSets,
+      overviewEmptyHint,
+      onOverviewPick,
     }
   },
 })
 </script>
 
 <style scoped>
-/* the rail already frames — suppress rpg-frame double border */
-.rpg-frame {
-  border: none;
-  box-shadow: none;
-  --text-transition-dur: 0.22s;
-}
-/* ── Master/detail: the grid owns the rail, the detail slides over it ── */
-.cs-layout {
+/* ══ Atlas ══════════════════════════════════════════════════════════════════
+   Three zones under one bar. The shop covers the whole tab now, so this is the
+   frame — nothing else draws a border around it.
+
+   `container-type` and not a media query: the profile modal is inset by
+   `--hud-panel-size` on both sides, so the width that decides whether the facet
+   rail fits is the ATLAS's, not the viewport's. Two machines on the same
+   monitor at different UI scales get different answers, and only the container
+   knows which. */
+.cs-atlas {
+  container-type: inline-size;
+  /* fixed-px content designed for 1920×1080 — zoom down on smaller desktops,
+     same factor the rest of the team tab uses */
+  zoom: var(--team-ui-scale, 1);
   position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: v-bind(atlasColumns);
+  grid-template-rows: auto minmax(0, 1fr);
+  background: #111008;
+  --text-transition-dur: 0.22s;
+  --cs-card-h: v-bind(cardHeightPx);
+}
+
+/* ── Command bar ──
+   Spans all three columns: the domain it names decides what the facets mean
+   AND what the grid holds, so it cannot belong to one of them. */
+.cs-atlas-bar {
+  grid-column: 1 / -1;
   display: flex;
-  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #1e1006;
+  border-bottom: 3px solid #5c3310;
+}
+.cs-domain {
+  display: flex;
+  flex-shrink: 0;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cs-domain-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: #16120a;
+  border: none;
+  color: #8a6030;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.cs-domain-btn + .cs-domain-btn {
+  border-left: 1px solid #3e200a;
+}
+.cs-domain-btn:hover {
+  color: #c89040;
+  background: #201a10;
+}
+.cs-domain-btn--active {
+  background: #2a1c0c;
+  color: #e8c040;
+}
+.cs-domain-icon {
+  flex-shrink: 0;
+}
+/* The count is what keeps the split honest — it says how many cards the OTHER
+   half is holding, so a search can never quietly land out of sight. */
+.cs-domain-count {
+  min-width: 22px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(10, 8, 4, 0.7);
+  border: 1px solid #3e200a;
+  font-size: 10.5px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.cs-domain-btn--active .cs-domain-count {
+  border-color: #7a4e20;
+  color: #e8c060;
+}
+
+.cs-atlas-search {
+  flex: 1;
+  min-width: 0;
+  max-width: 420px;
+}
+
+.cs-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  background: #16120a;
+  color: #c89040;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s;
+}
+.cs-bar-btn:hover {
+  color: #e8c060;
+  background: #221408;
+  border-color: #7a4e20;
+}
+.cs-bar-btn--on {
+  color: #e8c040;
+  border-color: #7a4e20;
+}
+.cs-bar-btn--reset {
+  color: #cc8070;
+  border-color: #6a3020;
+}
+.cs-bar-btn--reset:hover {
+  color: #ffdddd;
+  border-color: #cc6050;
+  background: rgba(60, 20, 14, 0.7);
+}
+.cs-bar-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  border-radius: 4px;
+  background: rgba(14, 10, 4, 0.85);
+  border: 1px solid #5c3310;
+  color: #c89040;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+.cs-bar-close:hover {
+  color: #ffdddd;
+  border-color: #cc6050;
+  background: rgba(60, 20, 14, 0.7);
+}
+
+/* ── The three zones ── */
+.cs-atlas-facets {
+  grid-row: 2;
   min-height: 0;
 }
-.cs-left {
-  flex: 1;
+.cs-atlas-grid {
+  grid-row: 2;
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  background: #111008;
+}
+.cs-atlas-detail {
+  grid-row: 2;
+  position: relative;
+  z-index: 1;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  background: #14100a;
+  border-left: 2px solid #5c3310;
 }
-/* Header sits on the same deep surface as the tier grid below — no separate
-   panel color, no hard border. The divider is the same left-anchored fading
-   gold line the tier headers use, so search bar and tier sections read as one
-   continuous design. */
-.rpg-header {
-  background: transparent;
-  border-bottom: none;
+/* The column swaps subjects, it does not slide in and out — only its content
+   changes, so the exchange is a beat rather than a movement. */
+.cs-detail-swap-enter-active {
+  transition:
+    opacity 0.17s ease-out,
+    transform 0.17s ease-out;
 }
-.cs-header {
-  position: relative;
+.cs-detail-swap-leave-active {
+  transition:
+    opacity 0.09s ease-in,
+    transform 0.09s ease-in;
 }
-.cs-header::after {
-  content: '';
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 0;
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(
-    to right,
-    #c89040,
-    rgba(200, 144, 64, 0.35) 55%,
-    transparent
-  );
+.cs-detail-swap-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.cs-detail-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-detail-swap-enter-from,
+  .cs-detail-swap-leave-to {
+    transform: none;
+  }
 }
 
 /* ── Empty state ── */
@@ -2137,111 +2324,6 @@ const shopChampionNames = computed(() =>
 .is-scrolling .item-card-slot {
   pointer-events: none;
   --pulse-play: paused;
-}
-
-/* ── Filter scope swap ──
-   Champion chips and item chips never stand in the panel at the same time, so
-   the exchange gets a beat of its own instead of snapping: the leaving set
-   drops away, the arriving one settles in from just above. Both stay on
-   opacity/transform — the orbit keeps running behind the open rail, and a
-   height or shadow animation here would be paid per frame by everything on
-   screen, not just by the four rows of chips. */
-.cs-filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.cs-filter-domain-enter-active {
-  transition:
-    opacity 0.17s ease-out,
-    transform 0.17s ease-out;
-}
-.cs-filter-domain-leave-active {
-  transition:
-    opacity 0.1s ease-in,
-    transform 0.1s ease-in;
-}
-.cs-filter-domain-enter-from {
-  opacity: 0;
-  transform: translateY(-5px);
-}
-.cs-filter-domain-leave-to {
-  opacity: 0;
-  transform: translateY(5px);
-}
-
-/* ── Domain bar: Champions | Items ──
-   Two halves of one bar rather than two chips in a row: it is the rail's top
-   edge, so it has to look like structure, not like a control someone dropped on
-   top. Same tab language as the equipment picker (EquipmentPickerPanel .ep-tabs)
-   — flat segments, a wood divider between them, the active one lifted out of the
-   header colour with a gold underline — so the two rails read as one family. */
-.cs-jump-row {
-  display: flex;
-  flex-shrink: 0;
-  background: #1e1006;
-  border-bottom: 3px solid #5c3310;
-}
-.cs-jump-btn {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 11px;
-  padding: 14px 12px;
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.5);
-  background: transparent;
-  border: none;
-  border-right: 1px solid rgba(92, 51, 16, 0.4);
-  border-radius: 0;
-  cursor: pointer;
-  transition:
-    color 0.15s,
-    background 0.15s;
-}
-.cs-jump-btn:last-child {
-  border-right: none;
-}
-.cs-jump-btn:hover:not(:disabled) {
-  color: #c89040;
-  background: rgba(92, 51, 16, 0.18);
-}
-.cs-jump-btn--active {
-  color: #e8c060;
-  background: #111008;
-  box-shadow: inset 0 -3px 0 #c89040;
-}
-.cs-jump-btn:disabled {
-  opacity: 0.35;
-  filter: grayscale(55%);
-  cursor: not-allowed;
-}
-.cs-jump-icon {
-  flex-shrink: 0;
-  color: currentColor;
-  opacity: 0.75;
-}
-.cs-jump-btn--active .cs-jump-icon {
-  opacity: 1;
-}
-.cs-jump-count {
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  padding: 2px 8px;
-  border-radius: 3px;
-  line-height: 1.5;
-  color: #b89a5a;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(122, 78, 32, 0.5);
-}
-.cs-jump-btn--active .cs-jump-count {
-  color: #e8c040;
-  border-color: rgba(200, 144, 64, 0.6);
 }
 
 /* ── Item sections: category icon in the tier-style header ── */
@@ -2309,59 +2391,23 @@ const shopChampionNames = computed(() =>
   opacity: 0.7;
 }
 
-/* ── Header-Bar ── */
-.cs-header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* ── Grid area ──
+   Same horizontal inset as the tier headers, so cards and section rules share
+   one left edge. */
+.cs-atlas-grid {
   padding: 12px 14px;
-  flex-shrink: 0;
 }
-/* Shared search row + filter toggle + collapsible filter panel + chips live in
-   rpg-theme.css (── Champion Filter ──), reused by ChampionSelectPanel. Only the
-   grid padding and the detail layer are scoped here. */
 
-/* ── Grid area — same horizontal inset as the header so search bar and tier
-   headers align on one left edge ── */
-.cs-grid { padding: 12px 14px; }
-
-/* ── Detail layer ──
-   Covers the grid rather than sitting beside it. Opaque on purpose: the grid
-   below keeps its scroll position and its expanded sections, so ← lands exactly
-   where the player left. Only transform and opacity animate, so opening it costs
-   the compositor nothing even with a full grid of pulsing cards behind it. */
-.cs-detail-layer {
-  position: absolute;
-  inset: 0;
-  /* above the hover lift a card gives itself (.champion-card-slot:hover, z 20) —
-     the pointer is still ON the card that opened this layer, so a lower value
-     lets that one card punch through the hero */
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: #14100a;
-}
-.cs-detail-layer-enter-active {
-  transition:
-    transform 0.26s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.26s ease;
-}
-.cs-detail-layer-leave-active {
-  transition:
-    transform 0.14s cubic-bezier(0.55, 0, 1, 0.45),
-    opacity 0.14s ease;
-}
-.cs-detail-layer-enter-from,
-.cs-detail-layer-leave-to {
-  transform: translateX(5%);
-  opacity: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-  .cs-detail-layer-enter-from,
-  .cs-detail-layer-leave-to {
-    transform: none;
-  }
+/* ── Card grid ──
+   auto-fill, not a fixed column count: the grid gets whatever the facet rail
+   and the detail column leave over, and that number is different at Full HD
+   than at 2K. Tailwind's sm:/md: breakpoints measured the VIEWPORT, which the
+   profile modal is inset from on both sides — they were counting the wrong
+   width. */
+.cs-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(v-bind(cardMinWidthPx), 1fr));
+  gap: v-bind(gridGapPx);
 }
 
 /* ── Cross-role search results ── */
@@ -2503,22 +2549,6 @@ const shopChampionNames = computed(() =>
 }
 .trait-chip--disabled:hover {
   opacity: 0.35;
-}
-
-/* active filter summary bar (below the search row) */
-.cs-active-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 2px 1px;
-}
-.cs-active-label {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(200, 164, 90, 0.55);
-  margin-right: 2px;
 }
 
 </style>

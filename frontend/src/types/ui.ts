@@ -75,6 +75,66 @@ export interface StatCategoryView extends StatCategoryDef {
   totalCount: number
 }
 
+/* ── Champion Shop facet rail ──
+   The rail renders these and nothing else: it cannot resolve what a facet means
+   against the catalog, so the shop hands it fully-formed rows. Champions and
+   items therefore fill ONE component with two different sets of groups. */
+export interface ShopFacetChip {
+  id: string
+  label: string
+  /** Drives the row's left border and its active tint. */
+  color?: string
+  icon?: string
+  image?: string
+  /** How many cards would be left standing — omitted where a count says nothing. */
+  count?: number
+  active: boolean
+  disabled?: boolean
+  /** Locked shows a padlock instead of the count (galaxy-gated tiers). */
+  locked?: boolean
+  title?: string
+}
+
+export interface ShopFacetGroup {
+  id: string
+  label: string
+  /** Shown as the group's stub while the rail is folded. */
+  icon: string
+  chips: ShopFacetChip[]
+}
+
+/* ── Champion Shop overview card (detail column, nothing picked) ── */
+export interface ShopOverviewTier {
+  starLevel: number
+  name: string
+  icon: string
+  color: string
+  requiredGalaxy: number
+}
+
+export interface ShopOverviewPick {
+  kind: 'champion' | 'item'
+  id: string
+  name: string
+  image?: string
+  icon?: string
+  color: string
+  /** One line of why it is worth the click — tier and price, or rarity. */
+  sub: string
+}
+
+export interface ShopOverviewSet {
+  id: string
+  name: string
+  /** Iconify name — or `image`, since item icons are half asset paths. */
+  icon?: string
+  image?: string
+  description: string
+  ownedParts: number
+  totalParts: number
+  active: boolean
+}
+
 /* ── Champion Shop detail panel ── */
 export interface ShopDetailMaterial {
   id: string

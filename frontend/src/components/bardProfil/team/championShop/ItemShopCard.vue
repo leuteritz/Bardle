@@ -85,7 +85,7 @@ export default defineComponent({
 <style scoped>
 /* ══ Grid slot — same footprint as the champion cards ══ */
 .item-card-slot {
-  height: 140px;
+  height: var(--cs-card-h, 140px);
   position: relative;
   z-index: 1;
   cursor: pointer;

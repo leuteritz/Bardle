@@ -1,11 +1,17 @@
 <template>
   <aside class="cs-detail" :class="{ 'cs-detail--wide': wide }">
     <template v-if="detail">
-      <!-- Back (wide only) + prev / next navigation -->
+      <!-- Clearing the subject leaves the overview card standing in this
+           column; there is no list to go BACK to, it never went away. -->
       <div class="cs-detail-nav">
-        <button v-if="wide" class="cs-back-btn" @click="$emit('back')">
-          <span class="cs-back-arrow">←</span>
-          Back to shop
+        <button
+          v-if="wide"
+          class="cs-back-btn"
+          title="Clear the selection (Esc)"
+          @click="$emit('back')"
+        >
+          <span class="cs-back-arrow">✕</span>
+          Close
         </button>
         <div class="cs-detail-steps">
           <button
@@ -260,9 +266,11 @@ export default defineComponent({
   border-left: 3px solid #5c3310;
 }
 
-/* ══ Wide variant — the panel IS the rail ══
-   Everything below is the same panel at a different width; only the four rules
-   here change, so the two variants can never drift into two designs. */
+/* ══ Wide variant — the panel fills its column ══
+   Everything below is the same panel at a different width; only the rules
+   here change, so the two variants can never drift into two designs. The
+   body grid is auto-fit, so the same rule that gave the 900px rail two
+   columns gives the atlas column one — without a third variant. */
 .cs-detail--wide {
   width: 100%;
   flex: 1;

@@ -249,15 +249,52 @@ export const TEAM_SIGIL_ROSTER_FOLD_MS = 240
 /** Width (px) of the team synergies panel — the other, narrower side panel. */
 export const TEAM_SIGIL_SYNERGIES_PANEL_WIDTH = 460
 /**
- * Width (px) of the shop rail. Deliberately the SAME number as the details page:
- * the two open on the same edge from the same board, and a rail that changed
- * width per destination would make the camera travel a different distance every
- * time. At this width the card grid keeps the four columns it had in the old
- * modal — there the grid shared its width with a permanent detail column, here
- * it owns all of it and the detail slides in over it instead.
+ * ── Shop „Atlas" ──
+ *
+ * The shop is the one board destination that does NOT open into the rail: it
+ * takes the whole tab under the profile header. A rail 900px wide has no room
+ * for a permanent detail column, which is why the detail used to slide OVER the
+ * grid — reading a card meant losing the list. Across the full tab (~1240px at
+ * Full HD, ~1660 at 2K) facets, grid and detail stand side by side and neither
+ * hides the other.
+ *
+ * The three widths add up: whatever the facets and the detail take, the grid
+ * gets the rest. That is why the detail is a percentage between two bounds
+ * rather than a fixed number — at Full HD it has to give the grid its four
+ * columns back, at 2K it can afford to grow with the splash art.
+ *
+ * Worked through, because the four numbers only make sense together (grid width
+ * = atlas − facets − detail, minus 28px of padding; a column costs
+ * CARD_MIN_WIDTH + GRID_GAP):
+ *   Full HD  atlas 1240 → detail 360 → grid 656 → 4 columns
+ *   2K       atlas 1660 → detail 498 → grid 938 → 5 columns
+ *   4K       atlas 2940 → detail 520 → grid 2196 → 13 columns
+ * Four at Full HD is the floor that matters: it is what the old 900px rail
+ * showed, and this layout must not buy its detail column with a narrower grid.
  */
-export const TEAM_SHOP_PANEL_WIDTH = TEAM_SIGIL_DETAILS_PANEL_WIDTH
-/** Width (px) of the expeditions rail — same rail, same reason. */
+export const TEAM_SHOP_FACET_RAIL_WIDTH = 196
+/** Collapsed facet rail — the group icons stay, the chips fold away. */
+export const TEAM_SHOP_FACET_RAIL_COLLAPSED = 52
+export const TEAM_SHOP_DETAIL_MIN_WIDTH = 360
+export const TEAM_SHOP_DETAIL_PCT = 30
+export const TEAM_SHOP_DETAIL_MAX_WIDTH = 520
+/**
+ * Container width (px) below which the facet rail folds itself. Measured against
+ * the ATLAS, not the viewport — the profile modal is inset by `--hud-panel-size`
+ * on both sides, so a viewport media query would fold the rail on the wrong
+ * screens (see `container-type: inline-size` on .cs-atlas).
+ */
+export const TEAM_SHOP_FACET_AUTOFOLD_WIDTH = 1180
+/**
+ * Card grid geometry. The min width is what `repeat(auto-fill, minmax(…))` in
+ * .cs-cards reads, so the column count follows the space the other two zones
+ * leave over instead of being fixed per breakpoint.
+ */
+export const TEAM_SHOP_CARD_MIN_WIDTH = 150
+export const TEAM_SHOP_CARD_HEIGHT = 168
+export const TEAM_SHOP_GRID_GAP = 10
+/** Width (px) of the expeditions rail — same rail as the details page, so the
+ *  board camera travels the same distance for either. */
 export const TEAM_EXPEDITION_PANEL_WIDTH = TEAM_SIGIL_DETAILS_PANEL_WIDTH
 /**
  * Width (px) of the equipment rail. The odd one out on purpose: it is opened
