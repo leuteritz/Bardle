@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
@@ -18,12 +18,18 @@ import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 // Die Kader-Befüllung teilen sich zwei Knöpfe (hier und "Max Everything") und
 // lebt deshalb in utils/game statt zweimal als Kopie in je einer Komponente.
 import { fillTeamWithRandomChampions } from '@/utils/game/maxEverything'
+// Dieselbe Rechnung wie beim Spielstand-Laden — eine zweite Fassung im Panel
+// zeigte Zahlen, die kein echter Offline-Zeitraum ergibt.
+import { openOfflineWindow } from '@/utils/game/offlineWindow'
 import {
   ADMIN_QUICK_RESOURCE_AMOUNT,
   GALAXY_BOSS_SPAWN_ANIM_MS,
   ADMIN_FIELD_FLASH_MS,
   ADMIN_CHIMES_STEP,
   ADMIN_FILL_MATERIAL_AMOUNT,
+  ADMIN_OFFLINE_WINDOW_HOURS,
+  ADMIN_OFFLINE_WINDOW_MIN_CHIMES,
+  SECONDS_PER_HOUR,
 } from '@/config/constants'
 
 withDefaults(defineProps<{ dashboard?: boolean }>(), { dashboard: false })
@@ -241,6 +247,18 @@ function forcePrestige() {
   gameStore.prestigeAvailable = true
 }
 
+/** Öffnet das Offline-Fenster samt „The Crossing" mit vier Stunden Abwesenheit.
+ *  Schließt ein offenes zuerst: `showOfflineModal` von true auf true ist keine
+ *  Änderung, der Watcher im Wirt liefe nicht und die Runde bliebe stehen. */
+async function triggerOfflineWindow() {
+  gameStore.showOfflineModal = false
+  await nextTick()
+  openOfflineWindow(
+    ADMIN_OFFLINE_WINDOW_HOURS * SECONDS_PER_HOUR,
+    ADMIN_OFFLINE_WINDOW_MIN_CHIMES,
+  )
+}
+
 function fillAllResources() {
   MATERIALS.forEach((m) => {
     inventoryStore.collectedMaterials[m.id] = ADMIN_FILL_MATERIAL_AMOUNT
@@ -349,6 +367,14 @@ function fillAllResources() {
         @click="omenStore.forceOffer()"
       >
         <Icon icon="game-icons:star-swirl" class="admin-btn-icon" /> Offer Omens
+      </button>
+      <!-- Offline-Fenster samt „The Crossing". Sonst nur über ein zurückdatiertes
+           `savedAt` und einen Reload zu erreichen. -->
+      <button
+        class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
+        @click="triggerOfflineWindow"
+      >
+        <Icon icon="game-icons:dungeon-gate" class="admin-btn-icon" /> Offline Window
       </button>
       <!-- Wayfinder. Einlösen zahlt sofort aus; nach „Reset Ladder" läuft die
            Leiter sich selbst ab, eine Stufe je Takt. -->

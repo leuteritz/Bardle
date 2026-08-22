@@ -90,6 +90,12 @@ export const ADMIN_JUMP_SHAKE_MS = 450
 export const ADMIN_CHIMES_STEP = 100_000
 /** Menge je Material, die „alles auffüllen" setzt. */
 export const ADMIN_FILL_MATERIAL_AMOUNT = 9999
+/** Abwesenheit, die der Admin-Knopf „Offline Window" vorgibt. */
+export const ADMIN_OFFLINE_WINDOW_HOURS = 4
+/** Notnagel dieses Knopfs: auf einem frischen Spielstand ist `chimesPerSecond` 0,
+ *  und das Fenster zeigte dann den Leerzustand statt der Tore — genau dann will
+ *  man sie sehen. Greift nur, wenn die echte Rechnung darunter liegt. */
+export const ADMIN_OFFLINE_WINDOW_MIN_CHIMES = 50_000
 
 /** Refresh rate of HUD countdown tickers (buff/respawn timers): the deadline
  *  timestamps are reactive, Date.now() is not — a ref ticks the comparison. */

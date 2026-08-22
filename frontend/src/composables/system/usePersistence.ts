@@ -42,14 +42,10 @@ import {
   SAVE_KEY,
   SAVE_VERSION,
   SAVE_ID_RENAMES,
-  OFFLINE_CPS_RATE,
-  OFFLINE_MAX_HOURS,
-  OFFLINE_MIN_SECONDS,
   ITEM_SLOT_COUNT,
   ALLIES_PER_ROLE,
   createEmptyAllyRows,
   STAR_PHASE_DATA,
-  SECONDS_PER_HOUR,
   CHIMES_PER_CLICK_BASE,
   UNIVERSE_RESCUE_INITIAL_COST,
   BATTLE_HISTORY_SAVE_LIMIT,
@@ -59,6 +55,7 @@ import {
 import { DRAKE_TYPES, type DrakeTypeId } from '@/config/battle/drakes'
 import { logger } from '@/utils/logger'
 import { anchorGameClock, gameClockOffset, gameNow } from '@/utils/game/gameClock'
+import { openOfflineWindow } from '@/utils/game/offlineWindow'
 
 /** Content id as the current catalog spells it — see SAVE_ID_RENAMES. An id
  *  that was never renamed passes through untouched. */
@@ -1137,29 +1134,13 @@ export function usePersistence() {
       const savedAt = saved.savedAt as number | undefined
       if (savedAt && typeof savedAt === 'number') {
         const rawSeconds = Math.floor((now - savedAt) / 1000)
-        const maxOfflineHours =
-          OFFLINE_MAX_HOURS +
-          starForgeStore.offlineMaxHoursBonus +
-          meepTreeStore.fx.offlineMaxHoursBonus
-        const cappedSeconds = Math.min(rawSeconds, maxOfflineHours * SECONDS_PER_HOUR)
-        if (cappedSeconds >= OFFLINE_MIN_SECONDS) {
-          const offlineMul =
-            planetShopStore.planetOfflineBoostMultiplier *
-            starForgeStore.offlineEarningsMult *
-            meepTreeStore.fx.offlineEarningsMult
-          const earned = Math.floor(
-            gameStore.chimesPerSecond * OFFLINE_CPS_RATE * offlineMul * cappedSeconds,
-          )
-          gameStore.offlineChimes = earned
-          gameStore.offlineSeconds = cappedSeconds
-          gameStore.totalOfflineChimes += earned
-          gameStore.totalOfflineSeconds += cappedSeconds
-          gameStore.showOfflineModal = true
-        }
+        // Deckel, Multiplikatoren und Mindestdauer stecken im Helfer — dieselbe
+        // Rechnung benutzt der Admin-Knopf im Quick-Actions-Panel.
+        openOfflineWindow(rawSeconds)
         // Tireless Quarry (Star-Forge-Krone): die Harvester holen ihr eigenes
-        // Fenster nach. Es hängt NICHT an `cappedSeconds` — der Chime-Deckel
-        // ist eine andere Zahl mit einer anderen Herleitung, und der Getter
-        // liefert 0, solange die Krone nicht steht.
+        // Fenster nach. Es hängt an `rawSeconds` und NICHT an der gedeckelten
+        // Fensterdauer — der Chime-Deckel ist eine andere Zahl mit einer anderen
+        // Herleitung, und der Getter liefert 0, solange die Krone nicht steht.
         planetShopStore.catchUpHarvest(rawSeconds)
         // Homeward Sky (Star-Forge-Krone): derselbe Gedanke, andere Waehrung —
         // ein Drifter wartet am Himmel. Ebenfalls `rawSeconds` und ebenfalls
