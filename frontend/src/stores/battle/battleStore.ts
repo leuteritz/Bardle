@@ -1504,6 +1504,9 @@ export const useBattleStore = defineStore('battle', {
         if (battleResult) gameStore.pauseStats.battleWins++
         else gameStore.pauseStats.battleLosses++
         gameStore.pauseStats.battleLp += actualLpChange
+        // Die Kills desselben Kampfes — der Getter summiert das Spielerteam und
+        // ist hier noch gefüllt, accumulateBattleStats() liest ihn erst danach.
+        gameStore.pauseStats.championKills += this.team1Kills
       }
 
       this.totalBattleTime += this.battleTime

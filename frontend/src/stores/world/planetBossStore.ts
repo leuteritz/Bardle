@@ -668,10 +668,8 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       }
 
       if (gameStore.isGamePaused) {
-        // `kills` bleibt die Gesamtsumme; die Kategorie daneben schlüsselt auf,
-        // was gefallen ist. Der Galaxieboss zählt nur hier — der Stern, auf dem
-        // er sitzt, wird zusätzlich als Rettung gemeldet (starGroupStore).
-        gameStore.pauseStats.kills++
+        // Der Galaxieboss zählt nur hier — der Stern, auf dem er sitzt, wird
+        // zusätzlich als Rettung gemeldet (starGroupStore).
         if (boss.isGalaxyBoss) gameStore.pauseStats.galaxyBossesFelled++
         else gameStore.pauseStats.planetsCleared++
         for (const slot of boss.rewardSlots) {

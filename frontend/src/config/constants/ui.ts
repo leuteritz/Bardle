@@ -273,6 +273,20 @@ export const FPS_POOR_THRESHOLD = 30
 // mitten in der Pause — und mit ihr der Fit-Scale des gesamten Overlays.
 export const PAUSE_MATERIAL_COLUMNS = 5
 export const PAUSE_MATERIAL_ROWS = 2
+/** Kantenlänge einer Zelle. Die Materialbilder sind quadratisch, die Zelle ist
+ *  deshalb so BREIT wie hoch — stand sie breiter, lag der Überschuss brach. */
+export const PAUSE_MATERIAL_CELL_PX = 78
+export const PAUSE_MATERIAL_GAP_PX = 6
+/** Seitlicher Innenabstand der Material-Kachel — knapper als bei der Nachbarin:
+ *  ohne Rahmen um die Karten ist jeder Pixel Kachelrand ein Pixel weniger Bild. */
+export const PAUSE_MATERIAL_TILE_PAD_X = 6
+/** Breite der Material-Kachel, damit die Kills-Kachel daneben den ganzen REST
+ *  bekommt. Sie ist hergeleitet und nicht gewählt: sobald die Zelle breiter
+ *  steht als hoch, verschenkt jedes Bild die Differenz. */
+export const PAUSE_MATERIAL_TILE_WIDTH =
+  PAUSE_MATERIAL_COLUMNS * PAUSE_MATERIAL_CELL_PX +
+  (PAUSE_MATERIAL_COLUMNS - 1) * PAUSE_MATERIAL_GAP_PX +
+  2 * PAUSE_MATERIAL_TILE_PAD_X
 
 // ── HP-Stufen ──────────────────────────────────────────────────────────────
 // Die EINE Skala der Spieler-Sonne. Sie hiess einmal PAUSE_HP_*, solange das

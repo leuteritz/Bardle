@@ -152,7 +152,13 @@
 
           <!-- Stat tiles — Health sitzt am Sonnenhero, hier bleiben die beiden
                Kacheln, die eine Aufschlüsselung tragen. -->
-          <div class="stat-grid">
+          <div
+            class="stat-grid"
+            :style="{
+              '--mat-tile-w': `${PAUSE_MATERIAL_TILE_WIDTH}px`,
+              '--mat-tile-pad': `${PAUSE_MATERIAL_TILE_PAD_X}px`,
+            }"
+          >
             <!-- Kills aufgeschlüsselt: die Gesamtzahl steht im Label, darunter
                  steht, was tatsächlich gefallen ist. Zeilen ohne Treffer
                  bleiben stehen und dimmen nur ab — sonst spränge das Layout,
@@ -163,32 +169,36 @@
                 Kills
                 <span v-if="pauseKills > 0" class="stat-tile__total">{{ formatNumber(pauseKills) }}</span>
               </span>
-              <!-- Drei Zellen je Zeile direkt im Raster, damit die Zahlen
-                   spaltenweise fluchten statt hinter unterschiedlich langen
-                   Wörtern zu hängen. -->
-              <div class="kill-list">
-                <template v-for="row in killBreakdown" :key="row.key">
+              <!-- Ein Chip je Kategorie nebeneinander statt einer Liste
+                   untereinander: die Kachelhöhe ist gedeckelt, die Breite nicht
+                   — waagerecht bekommt dieselbe Zahl doppelt so viel Schrift.
+                   Getrennt wird mit Haarlinien, nicht mit fünf Kästchen; die
+                   Kopfzeile darüber setzt dasselbe Mittel bereits waagerecht. -->
+              <div class="kill-row">
+                <div
+                  v-for="row in killBreakdown"
+                  :key="row.key"
+                  class="kill-chip"
+                  :class="{ 'kill-chip--zero': row.count === 0 }"
+                  :style="{ '--kill-color': row.color }"
+                  :title="row.title"
+                >
                   <Icon
                     :icon="row.icon"
-                    width="18"
-                    height="18"
-                    class="kill-cell kill-cell__icon"
-                    :class="{ 'kill-cell--zero': row.count === 0 }"
-                    :style="{ color: row.color }"
+                    width="26"
+                    height="26"
+                    class="kill-chip__icon"
+                    :class="{ 'kill-chip__icon--geometric': row.key === 'champions' }"
                     aria-hidden="true"
                   />
-                  <span
-                    class="kill-cell kill-cell__label"
-                    :class="{ 'kill-cell--zero': row.count === 0 }"
-                    :title="row.title"
-                    >{{ row.label }}</span
-                  >
-                  <span
-                    class="kill-cell kill-cell__count"
-                    :class="{ 'kill-cell--zero': row.count === 0 }"
-                    >{{ formatNumber(row.count) }}</span
-                  >
-                </template>
+                  <!-- Kurzform, nicht formatNumber: die hängt immer zwei
+                       Nachkommastellen an („12.35K", sechs Zeichen) und lief in
+                       einem 117-px-Chip gemessen über. Dieselbe Stelle wie beim
+                       SunLedger. -->
+                  <span class="kill-chip__count">{{ formatNumberCompact(row.count) }}</span>
+                  <span class="kill-chip__label">{{ row.label }}</span>
+                  <span class="kill-chip__rule" aria-hidden="true"></span>
+                </div>
               </div>
             </div>
 
@@ -210,7 +220,12 @@
                 tag="div"
                 name="mat-pop"
                 class="mat-grid"
-                :style="{ '--mat-cols': PAUSE_MATERIAL_COLUMNS, '--mat-rows': PAUSE_MATERIAL_ROWS }"
+                :style="{
+                  '--mat-cols': PAUSE_MATERIAL_COLUMNS,
+                  '--mat-rows': PAUSE_MATERIAL_ROWS,
+                  '--mat-row-h': `${PAUSE_MATERIAL_CELL_PX}px`,
+                  '--mat-gap': `${PAUSE_MATERIAL_GAP_PX}px`,
+                }"
               >
                 <div
                   v-for="mat in visibleMaterials"
@@ -294,7 +309,9 @@
               </Transition>
             </div>
             <TransitionGroup
-              v-if="activeResourceStars.length > 0 || championCallout || voidThreat"
+              v-if="
+                activeResourceStars.length > 0 || championCallout || voidThreat || drifterBuff
+              "
               tag="div"
               name="callout-pop"
               class="callout-row"
@@ -339,6 +356,25 @@
                 :duration-ms="s.durationMs"
                 :color="s.color"
                 :planets="s.planets"
+              />
+
+              <!-- Der Drifter-Buff steht ganz hinten: er läuft ab wie die
+                   Sterne, aber niemand muss deswegen zurückkommen — dieselbe
+                   Begründung, aus der die Buff-Leiste draußen die ruhigsten
+                   Einträge ans Ende der Reihe stellt. -->
+              <PauseDrifterCard
+                v-if="drifterBuff"
+                key="drifter-buff"
+                :secs="drifterBuff.secs"
+                :ends-at="drifterBuff.endsAt"
+                :duration-ms="drifterBuff.durationMs"
+                :name="drifterBuff.name"
+                :icon="drifterBuff.icon"
+                :color="drifterBuff.color"
+                :rank-color="drifterBuff.rankColor"
+                :axis="drifterBuff.axis"
+                :multiplier="drifterBuff.multiplier"
+                :count="drifterBuff.count"
               />
             </TransitionGroup>
             <div v-else class="callout-row callout-row--empty">
@@ -389,8 +425,11 @@ import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useVoidStore } from '@/stores/world/voidStore'
+import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { getVoidRift } from '@/config/world/void'
+import { getDrifter } from '@/config/world/drifters'
+import { buffAxisLabel, buffPeakMultiplier } from '@/utils/ui/buffAxis'
 import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
 import { universes } from '@/config/progression/universes'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
@@ -407,6 +446,10 @@ import {
   JOURNEY_AXIS_COLORS,
   PAUSE_MATERIAL_COLUMNS,
   PAUSE_MATERIAL_ROWS,
+  PAUSE_MATERIAL_CELL_PX,
+  PAUSE_MATERIAL_GAP_PX,
+  PAUSE_MATERIAL_TILE_PAD_X,
+  PAUSE_MATERIAL_TILE_WIDTH,
   PAUSE_LEDGER_MAX_POPS,
   DAMAGE_FLOAT_DURATION_MS,
   MATERIAL_RARITY_COLOR,
@@ -422,6 +465,11 @@ import {
   PAUSE_STAR_HP_STEPS,
   STAR_TIMER_TICK_MS,
   VOID_SEVERITY_COLOR,
+  VOID_CARD_ICON,
+  VOID_KIT_ACCENT,
+  BATTLE_STAT_GAME_ICONS,
+  SCOREBOARD_STAT_COLORS,
+  DRIFTER_RARITY_COLOR,
 } from '@/config/constants'
 import type { PauseChampionCallout, PlanetType } from '@/types'
 import { splitDuration, toRoman } from '@/utils/ui/format'
@@ -441,6 +489,7 @@ import KeyCap from '@/components/keybinds/KeyCap.vue'
 import PauseChampionCard from './PauseChampionCard.vue'
 import PauseStarCard from './PauseStarCard.vue'
 import PauseVoidCard from './PauseVoidCard.vue'
+import PauseDrifterCard from './PauseDrifterCard.vue'
 import SunLedger from './SunLedger.vue'
 import PauseMetaPillar from './PauseMetaPillar.vue'
 import { gameNow } from '@/utils/game/gameClock'
@@ -475,6 +524,7 @@ onKeybinding('pause', () => {
 })
 const starGroupStore = useStarGroupStore()
 const voidStore = useVoidStore()
+const drifterStore = useDrifterStore()
 const uiStore = useUiStore()
 
 function computeSunDiameter(): number {
@@ -621,13 +671,16 @@ watch(
       lastResourceStarsKey = ''
       lastVoidThreatKey = ''
       lastChampionKey = ''
+      lastDrifterBuffKey = ''
       refreshResourceStars()
       refreshVoidThreat()
       refreshChampionCallout()
+      refreshDrifterBuff()
       starInterval = setInterval(() => {
         refreshResourceStars()
         refreshVoidThreat()
         refreshChampionCallout()
+        refreshDrifterBuff()
       }, STAR_TIMER_TICK_MS)
       window.addEventListener('keydown', onEscape)
     } else {
@@ -826,6 +879,63 @@ function refreshVoidThreat(): void {
   voidThreat.value = next
 }
 
+// ── Der Drifter ─────────────────────────────────────────────────────────────
+// Der Drifter selbst kommt in der Pause nicht vor: neue erscheinen nicht (der
+// Layer sperrt den Spawn, sobald er verdeckt ist), und anklicken lässt sich
+// durch das Overlay ohnehin keiner. Was WEITERLÄUFT, ist sein Lohn — die Buffs
+// laufen im Spiel-Tick ab, auch pausiert. Das ist das einzige, was die Pause
+// beim Drifter kostet, und deshalb das einzige, was hier steht.
+//
+// EINE Karte für alle laufenden Buffs, gezeigt wird der mit der kürzesten Uhr
+// — dasselbe Muster wie „vorderstes Wesen plus wie viele dahinter" beim Void.
+interface PauseDrifterBuff {
+  secs: number
+  endsAt: number
+  durationMs: number
+  name: string
+  icon: string
+  color: string
+  rankColor: string
+  axis: string
+  multiplier: number
+  count: number
+}
+
+const drifterBuff = shallowRef<PauseDrifterBuff | null>(null)
+
+function buildDrifterBuff(): PauseDrifterBuff | null {
+  const live = drifterStore.liveBuffs
+  if (live.length === 0) return null
+  const soonest = live.reduce((a, b) => (b.expiresAt < a.expiresAt ? b : a))
+  const def = getDrifter(soonest.sourceId)
+  if (!def) return null
+  return {
+    secs: Math.max(0, Math.ceil((soonest.expiresAt - gameNow()) / 1000)),
+    endsAt: soonest.expiresAt,
+    durationMs: soonest.durationMs,
+    name: def.name,
+    icon: def.icon,
+    color: def.color,
+    rankColor: DRIFTER_RARITY_COLOR[def.rarity] ?? def.color,
+    axis: buffAxisLabel(soonest.effects),
+    multiplier: buffPeakMultiplier(soonest.effects),
+    count: live.length,
+  }
+}
+
+function drifterBuffKey(b: PauseDrifterBuff | null): string {
+  return b ? `${b.name}:${b.secs}:${b.endsAt}:${b.count}` : ''
+}
+
+let lastDrifterBuffKey = ''
+function refreshDrifterBuff(): void {
+  const next = buildDrifterBuff()
+  const key = drifterBuffKey(next)
+  if (key === lastDrifterBuffKey) return
+  lastDrifterBuffKey = key
+  drifterBuff.value = next
+}
+
 // ── Der Champion ────────────────────────────────────────────────────────────
 // EINE Karte für zwei Zustände, und sie steht immer an erster Stelle:
 //
@@ -940,11 +1050,14 @@ const timerChars = computed(() => {
   return `${hours > 0 ? hours + ':' : ''}${mm}:${ss}`.split('')
 })
 
-const pauseKills = computed(() => gameStore.pauseStats.kills)
-
-// Aufschlüsselung der Kills. Die drei Zeilen stehen immer — Kategorien ohne
+// Aufschlüsselung der Kills. Die fünf Chips stehen immer — Kategorien ohne
 // Treffer dimmen ab, statt zu verschwinden: die Kachelhöhe ist fest, und ein
 // Layoutsprung mitten in der Pause zöge den Fit-Scale des Overlays mit.
+//
+// Reihenfolge: Welt zuerst, Kampf zuletzt. Icons und Farben kommen aus dem
+// Bestand — `VOID_CARD_ICON` ist dasselbe Zeichen, das die Void-HUD-Karte
+// trägt, und `BATTLE_STAT_GAME_ICONS.kills` das Einzelschwert, das im ganzen
+// Spiel für Kills steht (die gekreuzten Klingen gehören der Battle-Phase).
 const killBreakdown = computed(() => {
   const s = gameStore.pauseStats
   return [
@@ -972,8 +1085,29 @@ const killBreakdown = computed(() => {
       color: '#cc6050',
       title: 'Galaxy bosses felled',
     },
+    {
+      key: 'void',
+      icon: VOID_CARD_ICON,
+      label: 'Void',
+      count: s.voidSlain,
+      color: VOID_KIT_ACCENT,
+      title: 'Void creatures slain while the orbit kept firing',
+    },
+    {
+      key: 'champions',
+      icon: BATTLE_STAT_GAME_ICONS.kills,
+      label: 'Champions',
+      count: s.championKills,
+      color: SCOREBOARD_STAT_COLORS.kills,
+      title: 'Enemy champions your team took down in auto battle',
+    },
   ]
 })
+
+// Die Summe wird aus der Aufschlüsselung gebildet und nicht zusätzlich im Store
+// mitgeführt: ein zweiter Zähler daneben lief bereits auseinander — er ließ die
+// befreiten Sterne aus.
+const pauseKills = computed(() => killBreakdown.value.reduce((n, row) => n + row.count, 0))
 const pauseBattleWins = computed(() => gameStore.pauseStats.battleWins)
 const pauseBattleLosses = computed(() => gameStore.pauseStats.battleLosses)
 const pauseBattleChimes = computed(() => gameStore.pauseStats.battleChimes)
@@ -1415,12 +1549,18 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* ── Stat tiles ───────────────────────────────────────── */
-/* Zwei Kacheln, beide mit Aufschlüsselung: Kills braucht Platz für drei
-   Zeilen, Materials für zwei Reihen à fünf Karten — damit passen alle zehn
-   Materialien hinein, ohne dass ein „+N" nötig wird. */
+/* Zwei Kacheln, beide mit Aufschlüsselung: Kills braucht Platz für fünf
+   Chips, Materials für zwei Reihen à fünf Karten — damit passen alle zehn
+   Materialien hinein, ohne dass ein „+N" nötig wird.
+   Die Materialbreite ist HERGELEITET und nicht gewählt: die Bilder sind
+   quadratisch und über `--mat-row-h` höhenbegrenzt, jede Zelle, die breiter
+   steht als hoch, verschenkt die Differenz. Mit dem früheren `1fr 1.85fr` waren
+   das 50px je Zelle, fünfmal pro Reihe. Die erste Spalte bleibt `1fr` und nimmt
+   den ganzen Rest — das ist der Platz, aus dem die Kill-Chips ihre Größe
+   ziehen (365 → 614px), ohne dass die Panelhöhe sich bewegt. */
 .stat-grid {
   display: grid;
-  grid-template-columns: 1fr 1.85fr;
+  grid-template-columns: minmax(0, 1fr) var(--mat-tile-w);
   /* Feste Zeilenhöhe: alle drei Tiles exakt gleich groß, egal wie viel
      Inhalt (HP-Leiste, Material-Karten) eine einzelne Kachel hat. Bemessen
      am größten Inhalt — zwei Reihen Material-Karten. */
@@ -1460,7 +1600,7 @@ function particleStyle(i: number): Record<string, string> {
   overflow: hidden;
   background: rgba(255, 200, 80, 0.05);
   border: 1px solid rgba(122, 78, 32, 0.55);
-  border-radius: 12px;
+  border-radius: 5px;
   min-width: 0;
 }
 /* Überschrift der Kachel: deutlich größer als die Zeilen darunter und über die
@@ -1490,8 +1630,8 @@ function particleStyle(i: number): Record<string, string> {
    weniger Material. Die Kopfzeile behält ihren Abstand über ein eigenes
    Padding, damit sie nicht am Kachelrand klebt. */
 .stat-tile--materials {
-  padding-left: 6px;
-  padding-right: 6px;
+  padding-left: var(--mat-tile-pad);
+  padding-right: var(--mat-tile-pad);
 }
 .stat-tile--materials .stat-tile__label {
   padding-left: 7px;
@@ -1502,52 +1642,85 @@ function particleStyle(i: number): Record<string, string> {
    außermittig. */
 
 /* ── Kill-Aufschlüsselung ─────────────────────────────────
-   Drei feste Zeilen, linksbündig ausgerichtet: Icon, Kategorie, Zahl. Die
-   Zahlen stehen in einer eigenen, rechtsbündigen Spalte, damit sie
-   untereinander fluchten statt hinter unterschiedlich langen Wörtern zu
-   hängen. */
-.kill-list {
+   Fünf Chips nebeneinander, je einer für eine Kategorie: Icon, Zahl, Name,
+   darunter ein Strich in der Kategoriefarbe. Waagerecht statt untereinander,
+   weil die Kachelhöhe fest bei 238px steht, die Breite aber aus der
+   Material-Kachel kommt (siehe .stat-grid) — derselbe Platz trägt so eine
+   doppelt so große Zahl. */
+.kill-row {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  /* Füllt den Bereich unter der Überschrift und verteilt die drei Zeilen
-     gleichmäßig darin, statt sie oben zusammenzudrängen. */
-  align-content: space-evenly;
-  justify-self: center;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: stretch;
+  justify-self: stretch;
+  width: 100%;
   height: 100%;
-  column-gap: 10px;
-  row-gap: 8px;
-  /* Nicht über die ganze Kachelbreite ziehen: mit dem breiteren Panel
-     stünden Label und Zahl sonst an entgegengesetzten Rändern und die
-     Zeile läse sich als zwei getrennte Angaben statt als eine. */
-  max-width: 210px;
-  margin: 0 auto;
+}
+.kill-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 0 4px;
+}
+/* Haarlinie statt Kasten — dieselbe Farbe, die den Kopf der Kachel abtrennt. */
+.kill-chip + .kill-chip {
+  border-left: 1px solid rgba(122, 78, 32, 0.35);
 }
 /* Die Kategoriefarbe kommt inline aus killBreakdown — Planeten bernstein,
    Sterne im Türkis der Stern-Callouts, Galaxiebosse im Warnrot der
-   Bosskämpfe. */
-.kill-cell__icon {
+   Bosskämpfe, der Void in seinem Magenta, die Champion-Kills im Grün der
+   Kill-Spalte des Scoreboards. */
+.kill-chip__icon {
+  color: var(--kill-color);
   filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.6));
 }
-.kill-cell__label {
-  font-size: 0.84rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.6);
-  white-space: nowrap;
+/* Das Einzelschwert der Kills ist das einzige `ph`-Glyph in der Reihe: gefüllt
+   und geometrisch, daneben stehen vier `game-icons`-Motive. Ohne Ausgleich
+   wirkt es kleiner als es ist (Icon-Regel 10). Statisch, kein Dauerläufer. */
+.kill-chip__icon--geometric {
+  transform: scale(0.88);
 }
-.kill-cell__count {
-  font-size: 1.32rem;
+.kill-chip__count {
+  max-width: 100%;
+  font-size: 2.4rem;
   font-weight: 800;
   line-height: 1;
   color: #ece0c0;
   font-variant-numeric: tabular-nums;
+  /* Riegel gegen den Überlauf: die Kurzform bleibt bei fünf Zeichen, aber ein
+     Chip, der aus der Kachel läuft, schöbe die ganze Reihe. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-/* Noch nichts gefallen: die Zeile bleibt stehen, tritt aber zurück — sie ist
+.kill-chip__label {
+  max-width: 100%;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(216, 200, 160, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Der Strich trägt die Zuordnung zur Farbe, ohne dass der Chip einen Rahmen
+   braucht — dasselbe Mittel wie der Farbstrich am Label der Meta-Säulen. */
+.kill-chip__rule {
+  width: 46%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--kill-color);
+}
+/* Noch nichts gefallen: der Chip bleibt stehen, tritt aber zurück — er ist
    dann eine Ankündigung, keine Meldung. */
-.kill-cell--zero {
+.kill-chip--zero {
   opacity: 0.32;
+}
+.kill-chip--zero .kill-chip__rule {
+  background: rgba(216, 200, 160, 0.25);
 }
 /* Gesamtzahl am rechten Rand der Überschrift — die Aufschlüsselung steht
    darunter, hier zählt nur die Summe. */
@@ -1581,13 +1754,10 @@ function particleStyle(i: number): Record<string, string> {
    Materialien gefallen sind. Klappte die zweite Reihe erst beim fünften Fund
    auf, wüchse mitten in der Pause die Panelhöhe und mit ihr sprünge der
    Fit-Scale des gesamten Overlays. */
+/* Zeilenhöhe und Spalt kommen inline aus den Konstanten: die Breite der ganzen
+   Kachel wird daraus gerechnet (PAUSE_MATERIAL_TILE_WIDTH), und zwei Fassungen
+   derselben Zahl — eine hier, eine dort — liefen auseinander. */
 .mat-grid {
-  /* So hoch wie die Zelle breit ist: die Materialbilder sind quadratisch,
-     jede zusätzliche Zeilenhöhe darüber hinaus wäre Leerraum. */
-  --mat-row-h: 78px;
-  /* Ohne Rahmen trennt schon die Silhouette der Bilder — ein breiter Spalt
-     würde sie nur kleiner machen. */
-  --mat-gap: 6px;
   display: grid;
   grid-template-columns: repeat(var(--mat-cols, 4), 1fr);
   grid-template-rows: repeat(var(--mat-rows, 2), var(--mat-row-h));
@@ -1710,7 +1880,7 @@ function particleStyle(i: number): Record<string, string> {
   padding: 0 clamp(12px, 1.6vw, 16px);
   background: rgba(255, 200, 80, 0.05);
   border: 1px solid rgba(122, 78, 32, 0.55);
-  border-radius: 12px;
+  border-radius: 5px;
 }
 .battle-strip__idle {
   font-size: clamp(0.85rem, 1.1vw, 0.95rem);

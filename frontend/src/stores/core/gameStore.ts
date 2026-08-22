@@ -186,14 +186,16 @@ export const useGameStore = defineStore('game', {
     isGamePaused: false,
 
     pauseStats: {
-      /** Besiegte Bosse insgesamt — Summe der drei Kategorien darunter. */
-      kills: 0,
       /** Reguläre Planeten, die während der Pause gefallen sind. */
       planetsCleared: 0,
       /** Sterne, deren Planeten während der Pause vollständig befreit wurden. */
       starsRescued: 0,
       /** Galaxieboss-Planeten — die seltenen, dicken Brocken. */
       galaxyBossesFelled: 0,
+      /** Void-Wesen, die der Orbit pausiert erlegt hat — er feuert weiter. */
+      voidSlain: 0,
+      /** Gegnerische Champions, die der Kader im Auto-Battle geholt hat. */
+      championKills: 0,
       materialsEarned: {} as Record<string, number>,
       battleWins: 0,
       battleLosses: 0,
@@ -462,10 +464,11 @@ export const useGameStore = defineStore('game', {
     },
 
     resetPauseStats() {
-      this.pauseStats.kills = 0
       this.pauseStats.planetsCleared = 0
       this.pauseStats.starsRescued = 0
       this.pauseStats.galaxyBossesFelled = 0
+      this.pauseStats.voidSlain = 0
+      this.pauseStats.championKills = 0
       this.pauseStats.materialsEarned = {}
       this.pauseStats.battleWins = 0
       this.pauseStats.battleLosses = 0

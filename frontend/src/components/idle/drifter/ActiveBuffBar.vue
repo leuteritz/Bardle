@@ -66,14 +66,12 @@ import { omenIcon } from '@/utils/game/rolledIcons'
 import { getOmen } from '@/config/progression/omens'
 import {
   getDrifter,
-  DRIFTER_BUFF_EFFECT_LABELS,
-  DRIFTER_BUFF_LABEL_ALL,
   MVP_BUFF_ICON,
   MVP_BUFF_COLOR,
   MVP_BUFF_LABEL,
   MVP_BUFF_NAME,
 } from '@/config/world/drifters'
-import type { DrifterBuffEffects, TimedBuffEffects } from '@/types'
+import { buffAxisLabel, buffPeakMultiplier } from '@/utils/ui/buffAxis'
 import {
   DRIFTER_BUFF_EXPIRY_WARN_SEC,
   DRIFTER_RARITY_COLOR,
@@ -137,16 +135,14 @@ const chips = computed<BuffChip[]>(() => {
   for (const buff of drifterStore.liveBuffs) {
     const def = getDrifter(buff.sourceId)
     if (!def) continue
-    const keys = Object.keys(buff.effects) as (keyof DrifterBuffEffects)[]
     const remainingMs = Math.max(0, buff.expiresAt - drifterStore.drifterNow)
     out.push({
       key: `drifter-${buff.sourceId}`,
       icon: def.icon,
       color: def.color,
       name: def.name,
-      // A buff on a single axis names it; one that lifts several says so.
-      label: keys.length === 1 ? DRIFTER_BUFF_EFFECT_LABELS[keys[0]] : DRIFTER_BUFF_LABEL_ALL,
-      multiplier: Math.max(...keys.map((k) => buff.effects[k] ?? 1)),
+      label: buffAxisLabel(buff.effects),
+      multiplier: buffPeakMultiplier(buff.effects),
       secondsLeft: Math.ceil(remainingMs / 1000),
       progress: buff.durationMs > 0 ? Math.min(1, remainingMs / buff.durationMs) : 0,
       rankColor: DRIFTER_RARITY_COLOR[def.rarity],
@@ -158,7 +154,6 @@ const chips = computed<BuffChip[]>(() => {
   for (const buff of omenStore.liveBuffs) {
     const def = getOmen(buff.sourceId)
     if (!def) continue
-    const keys = Object.keys(buff.effects) as (keyof TimedBuffEffects)[]
     const remainingMs = Math.max(0, buff.expiresAt - omenStore.omenNow)
     out.push({
       key: `omen-${buff.sourceId}`,
@@ -170,8 +165,8 @@ const chips = computed<BuffChip[]>(() => {
       // hat für ein zweites Abzeichen keinen Platz, und wissen muss man es nur,
       // solange der Buff läuft.
       name: buff.swift ? `${def.name} (swift)` : def.name,
-      label: keys.length === 1 ? DRIFTER_BUFF_EFFECT_LABELS[keys[0]] : DRIFTER_BUFF_LABEL_ALL,
-      multiplier: Math.max(...keys.map((k) => buff.effects[k] ?? 1)),
+      label: buffAxisLabel(buff.effects),
+      multiplier: buffPeakMultiplier(buff.effects),
       secondsLeft: Math.ceil(remainingMs / 1000),
       progress: buff.durationMs > 0 ? Math.min(1, remainingMs / buff.durationMs) : 0,
     })

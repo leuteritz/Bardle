@@ -965,6 +965,10 @@ export const useVoidStore = defineStore('void', {
       this.active = this.active.filter((m) => m.uid !== monster.uid)
       if (this.active.length === before) return
       this.totalRiftsSealed++
+      // Der Orbit feuert auch pausiert — was dabei fällt, gehört in die Bilanz
+      // des Pause-Overlays. Steht hinter der Sperre oben, zählt also nie doppelt.
+      const gameStore = useGameStore()
+      if (gameStore.isGamePaused) gameStore.pauseStats.voidSlain++
       if (!def) return
 
       this._applyBoon(def)
