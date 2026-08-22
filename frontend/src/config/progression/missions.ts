@@ -649,7 +649,7 @@ function productionSpan(seconds: number): string {
  * Der Lohn in einer Zeile: „+8m PRODUCTION", „+1 MEEP", „+3 STARDUST".
  *
  * Rein aus der Definition und damit statisch — die tatsächliche Menge rechnet
- * der Store im Moment der Auszahlung und trägt sie in Quittung und Log. Steht
+ * der Store im Moment der Auszahlung und trägt sie in Zeremonie und Log. Steht
  * hier und nicht in Store oder Komponente, weil DREI Stellen sie zeigen: die
  * HUD-Karte, der Tooltip der Vorschauzeile und das Stats-Panel.
  */

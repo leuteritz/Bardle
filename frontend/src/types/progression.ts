@@ -781,26 +781,12 @@ export interface MissionDef {
 
 /** Die aktive Mission, wie die Karte sie zeigt. */
 export interface MissionView extends MissionDef {
-  /** 1-basiert über die ganze Leiter — „12 of 41". */
-  ordinal: number
-  chapterName: string
-  chapterNumeral: string
+  /** Kapitelfarbe — die Füllung der Karte. */
   color: string
   /** Aktueller Metrikstand, bei `target` gedeckelt. */
   progress: number
   /** Anteil 0–1. */
   ratio: number
-  claimReady: boolean
-  /** Der Lohn in einer Zeile: „+8m PRODUCTION", „+1 MEEP". */
+  /** Der Lohn in einer Zeile: „+8m PRODUCTION", „+1 MEEP". Nur im Tooltip. */
   rewardLabel: string
-}
-
-/** Eine Vorschauzeile unter der aktiven Karte. */
-export interface MissionPreview {
-  id: string
-  name: string
-  icon: string
-  progress: number
-  target: number
-  unit: string
 }

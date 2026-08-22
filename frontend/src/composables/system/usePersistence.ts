@@ -442,12 +442,9 @@ export function usePersistence() {
       },
       // Wayfinder. Nur die POSITION — kein Fortschritt, keine Missions-IDs. Die
       // Leiter misst absolut gegen Zähler, die ohnehin gespeichert sind; alles
-      // Weitere wäre eine zweite Fassung derselben Zahl. `claimReady` muss
-      // dagegen mit: die Latche darf einen Reload überleben, sonst verliert ein
-      // Spieler, der genau dazwischen schliesst, seine Belohnung.
+      // Weitere wäre eine zweite Fassung derselben Zahl.
       missions: {
         index: missionStore.index,
-        claimReady: missionStore.claimReady,
         caughtUp: missionStore.caughtUp,
         totalMissionsClaimed: missionStore.totalMissionsClaimed,
       },
@@ -1105,7 +1102,6 @@ export function usePersistence() {
       const savedMissions = saved.missions
       if (savedMissions) {
         missionStoreLoad.index = savedMissions.index ?? 0
-        missionStoreLoad.claimReady = savedMissions.claimReady ?? false
         missionStoreLoad.caughtUp = savedMissions.caughtUp ?? 0
         missionStoreLoad.totalMissionsClaimed = savedMissions.totalMissionsClaimed ?? 0
       } else {

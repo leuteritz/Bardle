@@ -15,21 +15,17 @@ import {
   missionRewardLabel,
 } from '@/config/progression/missions'
 import { MATERIALS } from '@/config/economy/materials'
-import {
-  MISSION_PREVIEW_COUNT,
-  MISSION_CHIME_REWARD_CAP_SEC,
-  MISSION_HERALD_ACCENT,
-} from '@/config/constants'
-import type { HeraldDelta, MissionChapterDef, MissionDef, MissionPreview, MissionView } from '@/types'
+import { formatNumber } from '@/config/ui/numberFormat'
+import { MISSION_CHIME_REWARD_CAP_SEC, MISSION_HERALD_ACCENT } from '@/config/constants'
+import type { MissionChapterDef, MissionDef, MissionView } from '@/types'
 import { logger } from '@/utils/logger'
 
 /**
  * THE WAYFINDER
  *
  * Die Leiter, an der Bard sich orientiert: immer genau EIN Ziel, und zwar das
- * nächste. Der Store hält davon nur die Position — welche Stufe offen ist, ob
- * sie erfüllt darauf wartet, abgeholt zu werden, und wie viele beim ersten
- * Laden still übersprungen wurden.
+ * nächste. Der Store hält davon nur die Position — welche Stufe offen ist und
+ * wie viele beim ersten Laden still übersprungen wurden.
  *
  * ── Warum der Fortschritt ABSOLUT gemessen wird ─────────────────────────────
  * Genau umgekehrt zu den Omen, die gegen einen bei der Annahme eingefrorenen
@@ -37,12 +33,6 @@ import { logger } from '@/utils/logger'
  * Vorzeichen ist eine Aufgabe, ein Meilenstein ist eine Stelle auf dem Weg. Wer
  * sie überschritten hat, hat sie überschritten — und nur so trägt die Leiter
  * auch einen Spielstand, der älter ist als sie.
- *
- * ── Warum `claimReady` im State steht und nicht abgeleitet ist ──────────────
- * Zwei Metriken der Leiter sind lauf-lokal (`bardLevel`, `shopBuildingLevels`)
- * und fallen beim Prestige auf null. Ein abgeleitetes „erfüllt" nähme dem
- * Spieler die Belohnung unter dem Cursor wieder weg. Die Latche fällt nur durch
- * `claim()` oder eine Admin-Aktion.
  *
  * ── Warum es hier keine Uhr gibt ────────────────────────────────────────────
  * Kein `missionNow`, kein Cooldown, keine Frist. Der Wayfinder ist das einzige
@@ -54,8 +44,6 @@ export const useMissionStore = defineStore('mission', {
   state: () => ({
     /** Position in `MISSIONS`. `>= MISSION_COUNT` heißt: Leiter durch. */
     index: 0,
-    /** Erfüllt und wartet auf den Klick — eine Latche, siehe Kopf. */
-    claimReady: false,
     /**
      * Missionen, die der stille Nachlauf beim ersten Laden übersprungen hat.
      * Reine Anzeige: ohne sie wirkte eine Leiter, die bei Stufe 34 beginnt, wie
@@ -98,27 +86,11 @@ export const useMissionStore = defineStore('mission', {
       const progress = Math.min(raw, def.target)
       return {
         ...def,
-        ordinal: state.index + 1,
-        chapterName: chapter.name,
-        chapterNumeral: toRoman(missionChapterIndex(def) + 1),
         color: chapter.color,
         progress,
         ratio: def.target > 0 ? progress / def.target : 0,
-        claimReady: state.claimReady,
         rewardLabel: missionRewardLabel(def),
       }
-    },
-
-    /** Die nächsten Stufen als Vorschauzeilen — am Ende der Leiter weniger. */
-    upcomingViews(state): MissionPreview[] {
-      return MISSIONS.slice(state.index + 1, state.index + 1 + MISSION_PREVIEW_COUNT).map((def) => ({
-        id: def.id,
-        name: def.name,
-        icon: def.icon,
-        progress: Math.min(progressMetricValue(def.metric), def.target),
-        target: def.target,
-        unit: def.unit,
-      }))
     },
 
     /** Wie viele Stufen stehen — Zähler der Kopfzeile im Stats-Panel. */
@@ -129,70 +101,42 @@ export const useMissionStore = defineStore('mission', {
 
   actions: {
     /**
-     * Einmal pro Sekunde aus `gameStore.tick()`, zwischen Omen und Chronicle.
-     * Der Platz ist begründet: die Leiter misst eine ABSOLUTE Zahl gegen die
-     * Zähler oberhalb und muss sie auf dem Endstand dieser Sekunde sehen.
+     * Einmal pro Takt aus `gameStore.tick()`, zwischen Omen und Chronicle. Der
+     * Platz ist begründet: die Leiter misst eine ABSOLUTE Zahl gegen die Zähler
+     * oberhalb und muss sie auf dem Endstand dieser Sekunde sehen.
+     *
+     * HÖCHSTENS EINE Stufe je Takt: die Chime-Belohnung erhöht `chimesEarned`
+     * und über `calculateLevel()` auch `bardLevel` — sie kann die nächste Stufe
+     * selbst erfüllen. Eine Schleife liefe über halbe Kapitel, während der
+     * Herold nur drei Banner behält.
      */
     tick(): void {
-      if (this.claimReady || this.isComplete) return
       const def = MISSIONS[this.index]
       if (!def) return
       if (progressMetricValue(def.metric) < def.target) return
+      this._claim(def)
+    },
 
-      this.claimReady = true
+    /** Auszahlen, weiterrücken, feiern. Ruft NIEMANDEN — die nächste Stufe
+     *  gehört dem nächsten Takt, sonst wäre die Kette wieder rekursiv. */
+    _claim(def: MissionDef): void {
+      const line = this._applyReward(def)
       const chapter = MISSION_CHAPTERS[missionChapterIndex(def)] ?? MISSION_CHAPTERS[0]
+
+      this.index++
+      this.totalMissionsClaimed++
+      this.lastClaimed = { defId: def.id, at: gameNow(), seq: this.lastClaimed.seq + 1 }
+
+      logMissionClaimed(def.name, line, chapter.name)
       useHerald().announce({
         kind: 'mission',
         eyebrow: `WAYFINDER · ${toRoman(missionChapterIndex(def) + 1)}`,
         headline: def.name,
-        subline: 'Ready to claim',
+        subline: line,
         icon: def.icon,
         accent: MISSION_HERALD_ACCENT,
       })
-      logger.info('Wayfinder', 'mission ready', { id: def.id, chapter: chapter.id })
-    },
-
-    /**
-     * Die Karte wurde geklickt: auszahlen, weiterrücken, sofort neu prüfen.
-     *
-     * Das erneute `tick()` am Ende ist kein Beiwerk — eine Stufe kann bereits
-     * erfüllt sein, wenn die vorige fällt (wer vierzig Bosse gefällt hat, hat
-     * auch fünfzehn). Der Spieler bekommt sie dann als nächsten Klick, nicht
-     * geschenkt: jede Einlösung ist ihr eigener Moment.
-     */
-    claim(): boolean {
-      if (!this.claimReady) return false
-      const def = MISSIONS[this.index]
-      if (!def) {
-        this.claimReady = false
-        return false
-      }
-
-      const paid = this._applyReward(def)
-      const chapter = MISSION_CHAPTERS[missionChapterIndex(def)] ?? MISSION_CHAPTERS[0]
-
-      this.index++
-      this.claimReady = false
-      this.totalMissionsClaimed++
-      this.lastClaimed = { defId: def.id, at: gameNow(), seq: this.lastClaimed.seq + 1 }
-
-      logMissionClaimed(def.name, paid.line, chapter.name)
-      useHerald().announceReceipt({
-        kind: 'unlock',
-        // Namensraum mit SCHRÄGSTRICH, nie mit Doppelpunkt — ein Doppelpunkt
-        // hat die Form eines Iconify-Namens und wird vom Icon-Sweep als Verweis
-        // auf ein unbekanntes Set gelesen.
-        mergeKey: 'wayfinder/claim',
-        eyebrow: `WAYFINDER · ${toRoman(missionChapterIndex(def) + 1)}`,
-        headline: def.name,
-        subline: paid.line,
-        icon: def.icon,
-        accent: MISSION_HERALD_ACCENT,
-        delta: paid.delta,
-      })
-
-      this.tick()
-      return true
+      logger.info('Wayfinder', 'mission claimed', { id: def.id, chapter: chapter.id })
     },
 
     /**
@@ -213,26 +157,24 @@ export const useMissionStore = defineStore('mission', {
         this.index++
         skipped++
       }
-      this.claimReady = false
       this.caughtUp = skipped
       if (skipped > 0) logger.info('Wayfinder', 'ladder caught up', { skipped })
     },
 
     /**
      * Eine Mission auszahlen. Reihenfolge wie in `drifterStore._applyReward`:
-     * Chimes, Meeps, Material. `_`-Präfix, weil nur `claim()` sie ruft.
+     * Chimes, Meeps, Material. `_`-Präfix, weil nur `_claim()` sie ruft.
      *
      * KEIN `useShopStore().refreshRates()` am Ende, und das ist Absicht: keine
      * der drei Belohnungen berührt CpS oder CpC. Ein Meep wirkt erst, wenn er im
      * Baum ausgegeben ist, und dieser Kauf ruft selbst.
      *
-     * @returns die Zeile für Quittung und Log samt Delta — die ECHTEN Zahlen,
-     *          nicht das statische Etikett der Karte.
+     * @returns die Zeile für Zeremonie und Log — die ECHTEN Zahlen, nicht das
+     *          statische Etikett der Karte.
      */
-    _applyReward(def: MissionDef): { line: string; delta?: HeraldDelta } {
+    _applyReward(def: MissionDef): string {
       const gameStore = useGameStore()
       const parts: string[] = []
-      let delta: HeraldDelta | undefined
 
       const chimes = def.reward.chimes
       if (chimes) {
@@ -252,8 +194,9 @@ export const useMissionStore = defineStore('mission', {
           gameStore.totalChimesEarned += gain
           gameStore.chimesEarnedForLevel += gain
           gameStore.calculateLevel()
-          parts.push(`+${Math.round(gain).toLocaleString()} chimes`)
-          delta = { value: Math.round(gain), unit: 'chimes' }
+          // Kurzform, nicht `toLocaleString()`: die Zeremonie klemmt ihre
+          // Unterzeile auf EINE Zeile, und dort passt kein `+1.234.567.890`.
+          parts.push(`+${formatNumber(gain)} chimes`)
         }
       }
 
@@ -269,12 +212,13 @@ export const useMissionStore = defineStore('mission', {
         parts.push(`+${mat.qty} ${name}`)
       }
 
-      return { line: parts.join(' · '), delta }
+      return parts.join(' · ')
     },
 
-    /** Admin: die laufende Mission sofort einlösbar machen. */
-    adminMakeClaimable(): void {
-      if (!this.isComplete) this.claimReady = true
+    /** Admin: die laufende Stufe sofort einlösen, erfüllt oder nicht. */
+    adminClaimNow(): void {
+      const def = MISSIONS[this.index]
+      if (def) this._claim(def)
     },
 
     /** Admin: an den Anfang eines Kapitels springen, ohne auszuzahlen. */
@@ -282,14 +226,13 @@ export const useMissionStore = defineStore('mission', {
       const start = MISSION_CHAPTER_STARTS[chapterId]
       if (start === undefined || start < 0) return
       this.index = start
-      this.claimReady = false
     },
 
     /** Admin: die Leiter auf Anfang. `caughtUp` fällt mit — sonst behauptet das
-     *  Stats-Panel weiter, es habe etwas übersprungen. */
+     *  Stats-Panel weiter, es habe etwas übersprungen. Die Leiter läuft sich
+     *  danach selbst ab, eine Stufe je Takt. */
     adminResetLadder(): void {
       this.index = 0
-      this.claimReady = false
       this.caughtUp = 0
     },
   },

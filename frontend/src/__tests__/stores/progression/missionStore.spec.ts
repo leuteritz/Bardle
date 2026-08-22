@@ -24,7 +24,9 @@ import {
   MISSION_CHAPTER_STARTS,
   getMission,
 } from '@/config/progression/missions'
-import { MISSION_PREVIEW_COUNT, MISSION_CHIME_REWARD_CAP_SEC } from '@/config/constants'
+import { MISSION_CHIME_REWARD_CAP_SEC } from '@/config/constants'
+import { useHerald } from '@/composables/ui/useHerald'
+import { progressMetricValue } from '@/utils/game/progressMetrics'
 import type { MissionDef, ProgressMetricId } from '@/types'
 
 /** Die Mission zu einer ID — schlägt laut fehl, wenn eine umbenannt wurde. */
@@ -132,18 +134,23 @@ function setMetric(metric: ProgressMetricId, value: number) {
   }
 }
 
-/** Bringt die Leiter auf die Mission mit dieser ID und erfüllt sie. */
-function fulfil(id: string) {
-  const store = useMissionStore()
+/** Bringt die Leiter auf diese Stufe und erfüllt ihre Metrik — ohne Takt. */
+function arm(id: string) {
   const def = mission(id)
-  store.index = MISSION_INDEX[id]
+  useMissionStore().index = MISSION_INDEX[id]
   setMetric(def.metric, def.target)
-  store.tick()
+}
+
+/** Dasselbe, und der Takt löst sie ein. */
+function fulfil(id: string) {
+  arm(id)
+  useMissionStore().tick()
 }
 
 describe('missionStore — the running rung', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    useHerald().reset()
   })
 
   it('starts on the first mission of the ladder', () => {
@@ -151,23 +158,23 @@ describe('missionStore — the running rung', () => {
     expect(store.index).toBe(0)
     expect(store.activeView?.id).toBe(MISSIONS[0].id)
     expect(store.activeView?.ratio).toBe(0)
-    expect(store.claimReady).toBe(false)
   })
 
-  it('does not arm below the target', () => {
+  it('leaves an unmet rung alone', () => {
     const store = useMissionStore()
     setMetric('clicks', mission('firstTouch').target - 1)
     store.tick()
-    expect(store.claimReady).toBe(false)
+    expect(store.index).toBe(0)
+    expect(store.totalMissionsClaimed).toBe(0)
     expect(store.activeView?.ratio).toBeLessThan(1)
   })
 
-  it('arms at the target without advancing', () => {
+  it('claims the moment the target is met', () => {
     const store = useMissionStore()
     fulfil('firstTouch')
-    expect(store.claimReady).toBe(true)
-    expect(store.index).toBe(0)
-    expect(store.activeView?.ratio).toBe(1)
+    expect(store.index).toBe(1)
+    expect(store.totalMissionsClaimed).toBe(1)
+    expect(store.lastClaimed.defId).toBe('firstTouch')
   })
 
   it('caps the shown progress at the target', () => {
@@ -177,42 +184,41 @@ describe('missionStore — the running rung', () => {
     expect(store.activeView?.ratio).toBe(1)
   })
 
-  it('advances only on claim', () => {
-    const store = useMissionStore()
-    fulfil('firstTouch')
-    expect(store.claim()).toBe(true)
-    expect(store.index).toBe(1)
-    expect(store.claimReady).toBe(false)
-    expect(store.totalMissionsClaimed).toBe(1)
-    expect(store.lastClaimed.defId).toBe('firstTouch')
-  })
-
-  it('refuses to claim what is not armed', () => {
-    const store = useMissionStore()
-    expect(store.claim()).toBe(false)
-    expect(store.index).toBe(0)
-    expect(store.totalMissionsClaimed).toBe(0)
-  })
-
-  it('pays exactly once when claimed twice', () => {
+  it('does not pay the same rung twice', () => {
     const store = useMissionStore()
     const game = useGameStore()
     fulfil('firstTouch')
-    store.claim()
     const after = game.chimes
-    expect(store.claim()).toBe(false)
+    store.tick()
     expect(game.chimes).toBe(after)
     expect(store.totalMissionsClaimed).toBe(1)
+  })
+
+  it('stamps the claim and raises the sequence', () => {
+    const store = useMissionStore()
+    fulfil('firstTouch')
+    expect(store.lastClaimed.seq).toBe(1)
+    fulfil('firstLight')
+    expect(store.lastClaimed.seq).toBe(2)
+    expect(store.lastClaimed.defId).toBe('firstLight')
+  })
+
+  it('announces a ceremony, not a receipt', () => {
+    const { current, receipts } = useHerald()
+    fulfil('firstTouch')
+    expect(current.value?.headline).toBe(mission('firstTouch').name)
+    expect(current.value?.subline).toContain('chimes')
+    expect(receipts.value).toHaveLength(0)
   })
 })
 
 describe('missionStore — payout', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    useHerald().reset()
   })
 
   it('credits all four chime fields and recalculates the level', () => {
-    const store = useMissionStore()
     const game = useGameStore()
     const before = {
       chimes: game.chimes,
@@ -221,7 +227,6 @@ describe('missionStore — payout', () => {
       level: game.chimesEarnedForLevel,
     }
     fulfil('firstTouch')
-    store.claim()
 
     const gain = game.chimes - before.chimes
     expect(gain, 'the flat floor should have paid').toBeGreaterThan(0)
@@ -232,71 +237,50 @@ describe('missionStore — payout', () => {
   })
 
   it('takes the largest of the three chime floors', () => {
-    const store = useMissionStore()
     const game = useGameStore()
     // „The First Stone" zahlt max(80 flat, 40 Klicks). Ein hoher Klickwert muss
     // den festen Boden überholen, sonst ist die Staffelung wirkungslos.
     game.chimesPerClick = 1000
-    store.index = MISSION_INDEX['firstStone']
-    setMetric('shopBuildingLevels', mission('firstStone').target)
-    store.tick()
+    arm('firstStone')
     const before = game.chimes
-    store.claim()
+    useMissionStore().tick()
     expect(game.chimes - before).toBeGreaterThan(80)
   })
 
   it('caps the production-based reward', () => {
-    const store = useMissionStore()
     const game = useGameStore()
     const def = mission('aBillionRings')
     expect(def.reward.chimes?.cpsSeconds).toBeDefined()
-    store.index = MISSION_INDEX['aBillionRings']
-    setMetric('chimesEarned', def.target)
-    store.tick()
+    arm('aBillionRings')
     const cps = game.chimesPerSecond
     const before = game.chimes
-    store.claim()
+    useMissionStore().tick()
     expect(game.chimes - before).toBeLessThanOrEqual(cps * MISSION_CHIME_REWARD_CAP_SEC + 1)
   })
 
   it('grants meeps through the store, not the raw field', () => {
-    const store = useMissionStore()
     const game = useGameStore()
     const def = mission('oneWhoAnswered')
     const before = { meeps: game.meeps, total: game.totalMeepsEarned }
     fulfil('oneWhoAnswered')
-    store.claim()
     expect(game.meeps - before.meeps).toBe(def.reward.meeps)
     expect(game.totalMeepsEarned - before.total).toBe(def.reward.meeps)
   })
 
   it('books materials under the wayfinder source', () => {
-    const store = useMissionStore()
     const inventory = useInventoryStore()
     const def = mission('oneLessDark')
     const mat = def.reward.materials![0]
     fulfil('oneLessDark')
-    store.claim()
     expect(inventory.collectedMaterials[mat.id]).toBeGreaterThanOrEqual(mat.qty)
     expect(inventory.sourceTally[mat.id]?.mission).toBe(mat.qty)
   })
 })
 
-describe('missionStore — preview and chaining', () => {
+describe('missionStore — the ladder walk', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-  })
-
-  it('shows the agreed number of upcoming rungs', () => {
-    const store = useMissionStore()
-    expect(store.upcomingViews).toHaveLength(MISSION_PREVIEW_COUNT)
-    expect(store.upcomingViews[0].id).toBe(MISSIONS[1].id)
-  })
-
-  it('runs out of preview rows at the end of the ladder', () => {
-    const store = useMissionStore()
-    store.index = MISSION_COUNT - 1
-    expect(store.upcomingViews).toHaveLength(0)
+    useHerald().reset()
   })
 
   it('goes silent once the ladder is walked', () => {
@@ -305,47 +289,75 @@ describe('missionStore — preview and chaining', () => {
     expect(store.isComplete).toBe(true)
     expect(store.activeView).toBeNull()
     expect(() => store.tick()).not.toThrow()
-    expect(store.claim()).toBe(false)
+    expect(store.totalMissionsClaimed).toBe(0)
+    expect(store.lastClaimed.seq).toBe(0)
   })
 
-  it('re-arms immediately when the next rung is already met', () => {
+  it('walks one rung per tick', () => {
     const store = useMissionStore()
-    // Wer beide Ziele längst überschritten hat, bekommt die zweite Stufe als
-    // zweiten Klick — nicht geschenkt, aber auch nicht erst im nächsten Takt.
     setMetric(MISSIONS[0].metric, MISSIONS[0].target)
     setMetric(MISSIONS[1].metric, MISSIONS[1].target)
     store.tick()
-    expect(store.claimReady).toBe(true)
-    store.claim()
     expect(store.index).toBe(1)
-    expect(store.claimReady, 'the second rung should arm within the same claim').toBe(true)
+    expect(store.totalMissionsClaimed).toBe(1)
+    store.tick()
+    expect(store.index).toBe(2)
+    expect(store.totalMissionsClaimed).toBe(2)
+  })
+
+  it('does not cascade through its own chime reward', () => {
+    // „First Touch" zahlt flat, und dieselben Chimes erfüllen „First Light".
+    // Ohne die Ein-Stufe-Regel liefe ein einziger Takt durch beide.
+    const store = useMissionStore()
+    setMetric('clicks', mission('firstTouch').target)
+    setMetric('chimesEarned', mission('firstLight').target - 1)
+    store.tick()
+    expect(store.index).toBe(1)
+    expect(store.totalMissionsClaimed).toBe(1)
+    expect(
+      progressMetricValue('chimesEarned'),
+      'the reward must actually have met the next rung, else this test proves nothing',
+    ).toBeGreaterThanOrEqual(mission('firstLight').target)
+    store.tick()
+    expect(store.index).toBe(2)
+  })
+
+  it('ends the ladder on the last rung', () => {
+    const store = useMissionStore()
+    const last = MISSIONS[MISSION_COUNT - 1]
+    store.index = MISSION_COUNT - 1
+    setMetric(last.metric, last.target)
+    store.tick()
+    expect(store.index).toBe(MISSION_COUNT)
+    expect(store.isComplete).toBe(true)
+    expect(store.activeView).toBeNull()
+    expect(store.lastClaimed.seq).toBe(1)
   })
 })
 
 describe('missionStore — resilience', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    useHerald().reset()
   })
 
-  it('keeps the latch when a run-scoped metric falls away', () => {
-    // `shopBuildingLevels` fällt beim Prestige auf null. Eine erarbeitete
-    // Belohnung darf dem Spieler nicht unter dem Cursor weggenommen werden.
+  it('does not pay a rung whose run-scoped metric fell away', () => {
+    // Ohne Latche gibt es kein Versprechen, das gebrochen werden könnte: das
+    // Fenster zwischen „erfüllt" und „ausgezahlt" ist einen Takt breit.
     const store = useMissionStore()
-    fulfil('firstStone')
-    expect(store.claimReady).toBe(true)
+    arm('firstStone')
     setMetric('shopBuildingLevels', 0)
     store.tick()
-    expect(store.claimReady).toBe(true)
-    expect(store.claim()).toBe(true)
+    expect(store.index).toBe(MISSION_INDEX['firstStone'])
+    expect(store.totalMissionsClaimed).toBe(0)
   })
 
   it('survives an index beyond the catalogue', () => {
     const store = useMissionStore()
     store.index = MISSION_COUNT + 5
     expect(store.activeView).toBeNull()
-    expect(store.upcomingViews).toHaveLength(0)
     expect(() => store.tick()).not.toThrow()
-    expect(store.claim()).toBe(false)
+    expect(store.totalMissionsClaimed).toBe(0)
   })
 })
 
@@ -379,27 +391,37 @@ describe('missionStore — silent catch-up', () => {
     store.catchUpSilently()
     expect(store.index).toBe(MISSION_COUNT)
     expect(store.caughtUp).toBe(MISSION_COUNT)
-    expect(store.claimReady).toBe(false)
   })
 })
 
 describe('missionStore — admin', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    useHerald().reset()
   })
 
-  it('arms the running mission on demand', () => {
+  it('claims the running rung on demand, met or not', () => {
     const store = useMissionStore()
-    store.adminMakeClaimable()
-    expect(store.claimReady).toBe(true)
-    expect(store.claim()).toBe(true)
+    const game = useGameStore()
+    const before = game.chimes
+    store.adminClaimNow()
+    expect(store.index).toBe(1)
+    expect(store.totalMissionsClaimed).toBe(1)
+    expect(game.chimes).toBeGreaterThan(before)
+    expect(store.lastClaimed.seq).toBe(1)
+  })
+
+  it('does nothing past the end of the ladder', () => {
+    const store = useMissionStore()
+    store.index = MISSION_COUNT
+    expect(() => store.adminClaimNow()).not.toThrow()
+    expect(store.totalMissionsClaimed).toBe(0)
   })
 
   it('jumps to the start of a chapter', () => {
     const store = useMissionStore()
     store.adminJumpToChapter('deepField')
     expect(store.index).toBe(MISSION_CHAPTER_STARTS['deepField'])
-    expect(store.claimReady).toBe(false)
   })
 
   it('ignores an unknown chapter', () => {
@@ -412,10 +434,8 @@ describe('missionStore — admin', () => {
     const store = useMissionStore()
     store.index = 12
     store.caughtUp = 12
-    store.claimReady = true
     store.adminResetLadder()
     expect(store.index).toBe(0)
     expect(store.caughtUp).toBe(0)
-    expect(store.claimReady).toBe(false)
   })
 })

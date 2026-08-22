@@ -350,14 +350,13 @@ function fillAllResources() {
       >
         <Icon icon="game-icons:star-swirl" class="admin-btn-icon" /> Offer Omens
       </button>
-      <!-- Wayfinder. Drei Knöpfe, weil drei Zustände zu prüfen sind: der
-           erfüllte (leuchtet, wartet auf den Klick), ein späteres Kapitel und
-           der Anfang. Keiner zahlt etwas aus, den Lohn holt der Klick. -->
+      <!-- Wayfinder. Einlösen zahlt sofort aus; nach „Reset Ladder" läuft die
+           Leiter sich selbst ab, eine Stufe je Takt. -->
       <button
         class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"
-        @click="missionStore.adminMakeClaimable()"
+        @click="missionStore.adminClaimNow()"
       >
-        <Icon icon="game-icons:direction-signs" class="admin-btn-icon" /> Arm Mission
+        <Icon icon="game-icons:direction-signs" class="admin-btn-icon" /> Claim Mission
       </button>
       <button
         class="admin-spawn-btn admin-spawn-btn--neutral flex items-center gap-1.5 px-3 py-1.5"

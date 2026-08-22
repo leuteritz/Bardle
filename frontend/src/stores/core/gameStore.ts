@@ -983,10 +983,9 @@ export const useGameStore = defineStore('game', {
       useOmenStore().tick()
       // Der Wayfinder daneben, aus demselben Grund: seine Leiter misst eine
       // ABSOLUTE Zahl gegen dieselben Zähler und muss sie auf Endstand sehen.
-      // Er zahlt in Chimes und Material aus, was der Chronicle unter sich zwar
-      // mitzählt — aber erst im nächsten Takt, und ein Meilenstein einen Takt
-      // später ist kein Fehler. Die Reihenfolge zwischen Omen und Wayfinder ist
-      // frei.
+      // Er zahlt selbst aus, VOR dem Chronicle — dessen Zähler sehen die
+      // Gutschrift damit in derselben Sekunde. Die Reihenfolge zwischen Omen und
+      // Wayfinder ist frei.
       useMissionStore().tick()
       // Chronicle last: every counter this second feeds it (chimes above,
       // bosses, stars, drifters), so a milestone announced here is one that was

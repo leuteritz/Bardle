@@ -31,8 +31,8 @@ import StatsColumnHeader from './StatsColumnHeader.vue'
  * Master-Detail wie im Codex, aus demselben Grund: 41 Missionen nebeneinander
  * gibt es hier nicht. Sieben Kapitelwappen tragen den Überblick, EIN Feld
  * darunter die Tiefe. Kein Abzeichen an der Tab-Leiste und kein `markSeen()` —
- * eingelöst wird auf der HUD-Karte, nicht hier; eine Marke schickte den Spieler
- * an eine Stelle, an der es nichts zu tun gibt.
+ * eingelöst wird von selbst; eine Marke schickte den Spieler an eine Stelle, an
+ * der es nichts zu tun gibt.
  */
 const store = useMissionStore()
 

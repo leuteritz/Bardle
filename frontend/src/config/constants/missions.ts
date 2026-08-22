@@ -12,13 +12,11 @@
 // ═════════════════════════════════════════════════════════════════════════════
 
 /**
- * Wie viele der kommenden Missionen die Karte unter der aktiven andeutet.
- *
- * Zwei, nicht drei: die Vorschau beantwortet „wohin führt das", nicht „was
- * kann ich alles". Eine dritte Zeile kostete Höhe an einer Karte, die dauerhaft
- * im Bild steht, und die Spalte darunter trägt bis zu vier weitere Karten.
+ * Wie lange die eingelöste Stufe auf der Karte stehenbleibt: Füllung voll, Grün,
+ * dann zieht die nächste ein. Kürzer als ein Takt, damit zwei Einlösungen
+ * hintereinander zwei Blitze sind und nicht einer.
  */
-export const MISSION_PREVIEW_COUNT = 2
+export const MISSION_CLAIM_FLASH_MS = 700
 
 /**
  * Obergrenze der Chime-Belohnung, ausgedrückt in Sekunden laufender Produktion.
