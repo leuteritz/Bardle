@@ -1,33 +1,17 @@
 <script setup lang="ts">
 /**
- * Eine Karte im Pause-Overlay: der Champion.
- *
- * Sie steht IMMER an derselben Stelle — als erste Karte der Reihe, ganz oben
- * links. Vorher war der Fund eine volle Bannerzeile über den Karten, also eine
- * eigene Form an einer eigenen Stelle; und sobald der Stern wirklich spawnte,
- * verschwand sie ersatzlos, während seine 60-Sekunden-Uhr weiterlief. Beides
- * fasst diese Karte zusammen.
+ * Eine Karte im Pause-Overlay: der Champion. Immer erste Karte der Reihe.
  *
  * ZWEI Zustände, EINE Karte:
+ *   • `awaited` — gefunden, sein Stern steht noch nicht. Links das Bild der
+ *     GEWÄHLTEN ROLLE anstelle des Zifferblatts, rechts allein ihr Name;
+ *     welcher Champion es wird, steht erst beim Spawn fest.
+ *   • `active` — der Stern läuft: der Bogen zählt seine Frist ab, das Porträt
+ *     zeigt den echten Champion, darunter steht das Leben seines Planeten.
  *
- *   • `awaited` — der Champion ist gefunden, sein Stern steht noch nicht am
- *     Himmel (bei ruhendem Idle-Layer wird er vorgemerkt und erscheint erst mit
- *     der Rückkehr). Es gibt nichts zu zählen, also trägt das Zifferblatt-Feld
- *     das Wappen der GEWÄHLTEN ROLLE statt eines Bogens: welcher Champion es
- *     wird, steht erst beim Spawn fest.
- *   • `active` — der Stern läuft. Dann zählt der Bogen seine Frist ab, das
- *     Bildnis zeigt den echten Champion und darunter steht, wie weit sein
- *     Planet heruntergekämpft ist.
- *
- * Bauplan und Maße kommen von den Nachbarn: Zifferblatt links, Körper rechts,
- * Bildnis hinter dem Text (`PauseVoidCard`), abbrennender Bogen und
- * Alarmumschlag (`PauseStarCard`). Der Bogen LEERT sich wie beim Stern — hier
- * verstreicht eine Gelegenheit, keine Gefahr rückt heran.
- *
- * Was sie darüber hinaus trägt, ist absichtlich sparsam: eine Goldlinie an der
- * Oberkante und ein Lichtstreifen, der einmal je Runde durchläuft. Beides
- * bewegt ausschließlich `transform`/`opacity`, und beides gibt es in der Reihe
- * nur EINMAL — daran ist sie als die wichtigste Karte zu erkennen.
+ * Der Bogen LEERT sich wie beim Stern — hier verstreicht eine Gelegenheit,
+ * keine Gefahr rückt heran. Der Lichtstreifen läuft in der Reihe nur auf dieser
+ * Karte; er ist, seit die Goldkante weg ist, ihr einziges Erkennungszeichen.
  */
 import { computed, ref, watch, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -139,9 +123,6 @@ const dashOffset = computed(() => {
     role="img"
     :aria-label="ariaLabel"
   >
-    <!-- Goldlinie der Oberkante — der Hausverlauf, statisch. Sie trägt in
-         dieser Reihe nur die Champion-Karte. -->
-    <span class="pcc__crown" aria-hidden="true" />
     <!-- Lichtstreifen, der einmal je Runde durchläuft. Bewegt wird allein ein
          transform (siehe „Performance" Regel 2). -->
     <span class="pcc__sheen" aria-hidden="true" />
@@ -178,61 +159,76 @@ const dashOffset = computed(() => {
         >
       </template>
       <template v-else>
-        <span class="pcc-crest">
-          <span class="pcc-crest__halo" />
+        <span class="pcc-plate">
+          <span class="pcc-plate__aura" />
+          <img
+            v-if="callout.art"
+            :src="callout.art"
+            alt=""
+            class="pcc-plate__art"
+            draggable="false"
+            @dragstart.prevent
+          />
+          <!-- Ohne bekannte Rolle gibt es kein Bild, und ein leeres Feld stünde
+               an der auffälligsten Stelle der Karte. -->
           <Icon
+            v-else
             :icon="callout.roleIcon"
             :width="PAUSE_CHAMPION_CREST_PX"
             :height="PAUSE_CHAMPION_CREST_PX"
-            class="pcc-crest__icon"
+            class="pcc-plate__glyph"
           />
         </span>
       </template>
     </div>
 
     <!-- ── Körper ── -->
-    <div class="pcc-body">
-      <!-- Bildnis: im laufenden Stern der echte Champion, davor die Rolle, die
-           der Spieler gewählt hat. Rechts angeschnitten, nach links unter einen
-           Verlauf auslaufend — dasselbe Muster wie bei der Void-Karte, und der
-           Grund ist derselbe: nebeneinander blieben von 208 px kaum 56 für die
-           Schrift, und ein langer Championname zerfiele zu „Aure…". -->
-      <div class="pcc-art" aria-hidden="true">
-        <img
-          v-if="callout.art"
-          :src="callout.art"
-          alt=""
-          class="pcc-art__img"
-          :class="{ 'pcc-art__img--role': !isActive }"
-          draggable="false"
-          @dragstart.prevent
-        />
-        <span class="pcc-art__veil" />
-      </div>
-
-      <span class="pcc-eyebrow">{{ isActive ? 'Champion Star' : 'Champion Found' }}</span>
-      <span class="pcc-name">{{ callout.title }}</span>
-
-      <!-- Fußzeile: im Wartezustand der Hinweis, wann der Stern kommt; im
-           laufenden Stern das Leben seines Champion-Planeten und daneben, wie
-           viele Begleitwelten noch stehen. -->
-      <span v-if="!isActive" class="pcc-status">{{ callout.status }}</span>
-      <span v-else class="pcc-foot">
-        <span class="pcc-hp" :class="hpStageClass(hpPercent)">
-          <!-- Pro-Wert gesetzter Transform steht inline am Balken selbst, nicht
-               als Variable am Container (siehe „Performance" Regel 3). -->
-          <span class="pcc-hp__fill" :style="{ transform: `scaleX(${callout.bossHp})` }" />
-        </span>
-        <span v-if="pips.length > 0" class="pcc-pips">
-          <span
-            v-for="(cleared, i) in pips"
-            :key="i"
-            class="pcc-pip"
-            :class="{ 'pcc-pip--cleared': cleared }"
+    <div class="pcc-body" :class="{ 'pcc-body--role': !isActive }">
+      <template v-if="isActive">
+        <!-- Bildnis rechts angeschnitten, nach links unter einen Verlauf
+             auslaufend — dasselbe Muster wie bei der Void-Karte: nebeneinander
+             blieben von 208 px kaum 56 für die Schrift, und ein langer
+             Championname zerfiele zu „Aure…". -->
+        <div class="pcc-art" aria-hidden="true">
+          <img
+            v-if="callout.art"
+            :src="callout.art"
+            alt=""
+            class="pcc-art__img"
+            draggable="false"
+            @dragstart.prevent
           />
-          <span v-if="pipOverflow > 0" class="pcc-pips__more">+{{ pipOverflow }}</span>
+          <span class="pcc-art__veil" />
+        </div>
+
+        <span class="pcc-eyebrow">Champion Star</span>
+        <span class="pcc-name">{{ callout.title }}</span>
+
+        <!-- Fußzeile: das Leben des Champion-Planeten und daneben, wie viele
+             Begleitwelten noch stehen. -->
+        <span class="pcc-foot">
+          <span class="pcc-hp" :class="hpStageClass(hpPercent)">
+            <!-- Pro-Wert gesetzter Transform steht inline am Balken selbst,
+                 nicht als Variable am Container („Performance" Regel 3). -->
+            <span class="pcc-hp__fill" :style="{ transform: `scaleX(${callout.bossHp})` }" />
+          </span>
+          <span v-if="pips.length > 0" class="pcc-pips">
+            <span
+              v-for="(cleared, i) in pips"
+              :key="i"
+              class="pcc-pip"
+              :class="{ 'pcc-pip--cleared': cleared }"
+            />
+            <span v-if="pipOverflow > 0" class="pcc-pips__more">+{{ pipOverflow }}</span>
+          </span>
         </span>
-      </span>
+      </template>
+
+      <!-- Wartezustand: der Rollenname allein, groß. Das Motiv steht links. -->
+      <template v-else>
+        <span class="pcc-role">{{ callout.title }}</span>
+        <span class="pcc-role__rule" aria-hidden="true" />
+      </template>
     </div>
   </div>
 </template>
@@ -269,29 +265,6 @@ const dashOffset = computed(() => {
 }
 .pcc--urgent {
   border-color: #cc6050;
-}
-
-/* Goldlinie der Oberkante — der Hausverlauf aus CLAUDE.md, statisch.
-   `z-index` ist Pflicht: das Bildnis liegt im Körper und damit SPÄTER im
-   Dokument; ohne die Ebene deckte es die rechte Hälfte der Linie ab, und die
-   Goldlinie hörte mitten in der Karte auf. */
-.pcc__crown {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  z-index: 2;
-  background: linear-gradient(
-    to right,
-    #5c3310,
-    #c89040,
-    #e8c060,
-    #d4a020,
-    #c89040,
-    #5c3310
-  );
-  pointer-events: none;
 }
 
 /* Ein Streifen, eine Ebene, ein transform — unabhängig davon, wie lange die
@@ -421,37 +394,50 @@ const dashOffset = computed(() => {
   opacity: 0.6;
 }
 
-/* ── Rollenwappen (Wartezustand) ── */
-.pcc-crest {
-  position: relative;
+/* ── Rollenbild (Wartezustand) ── */
+/* Keine Fassung und kein Ring mehr: das Bild IST das Motiv und füllt das Feld.
+   Hinter ihm liegt eine eigene Ebene mit STATISCHEM Verlauf, animiert wird nur
+   deren Opazität (Performance-Regel 11). */
+.pcc-plate {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
 }
-/* Eigene Ebene mit STATISCHEM Schein, animiert wird nur ihre Opazität
-   (Performance-Regel 11) — ein atmender box-shadow rasterte jeden Frame neu. */
-.pcc-crest__halo {
+.pcc-plate__aura {
   position: absolute;
-  inset: 12%;
+  inset: -8%;
   border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--pcc-color) 55%, transparent);
-  box-shadow:
-    inset 0 0 12px color-mix(in srgb, var(--pcc-color) 30%, transparent),
-    0 0 16px color-mix(in srgb, var(--pcc-color) 35%, transparent);
-  animation: pcc-crest-breathe 2.6s ease-in-out infinite;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--pcc-color) 40%, transparent),
+    color-mix(in srgb, var(--pcc-color) 13%, transparent) 50%,
+    transparent 72%
+  );
+  animation: pcc-plate-breathe 2.6s ease-in-out infinite;
 }
-@keyframes pcc-crest-breathe {
+@keyframes pcc-plate-breathe {
   0%,
   100% {
-    opacity: 0.35;
+    opacity: 0.4;
   }
   50% {
     opacity: 1;
   }
 }
-.pcc-crest__icon {
+/* Freigestellte Grafiken mit eigenem Seitenverhältnis (165…240 × 256) —
+   `contain` im festen Quadrat, sonst wandert die Kante je Rolle. Der Kasten
+   hängt an `inset`, NICHT an `height: 100%`: als Grid-Item löste das Prozentmaß
+   nicht auf, und das Bild wuchs auf sein Seitenverhältnis (Jungle 70 × 108,6 px,
+   von der Karte oben und unten abgeschnitten). */
+.pcc-plate__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.pcc-plate__glyph {
   position: relative;
   color: var(--pcc-color);
 }
@@ -468,6 +454,11 @@ const dashOffset = computed(() => {
   /* Das Bild darf bis an die Kartenkante laufen; die Karte selbst clippt. */
   align-self: stretch;
   padding: 8px 0;
+}
+/* Eine Zeile statt dreier: sie steht mittig und atmet weiter. */
+.pcc-body--role {
+  justify-content: center;
+  gap: 7px;
 }
 
 /* ── Bildnis ── */
@@ -511,14 +502,6 @@ const dashOffset = computed(() => {
   transform: scale(1.08);
   opacity: 0.9;
 }
-/* Das Rollenbild ist eine freigestellte Grafik, kein Porträt: es soll ganz zu
-   sehen sein und rechts stehen, statt formatfüllend beschnitten zu werden. */
-.pcc-art__img--role {
-  object-fit: contain;
-  object-position: 78% 50%;
-  transform: none;
-  opacity: 0.75;
-}
 /* Nur noch die waagerechte Dämpfung: sie setzt das Bild von Ober- und
    Unterkante ab. Das seitliche Ausblenden macht die Maske am Container. */
 .pcc-art__veil {
@@ -536,8 +519,9 @@ const dashOffset = computed(() => {
 /* Text über dem Bild. */
 .pcc-eyebrow,
 .pcc-name,
-.pcc-status,
-.pcc-foot {
+.pcc-foot,
+.pcc-role,
+.pcc-role__rule {
   position: relative;
   z-index: 1;
 }
@@ -572,22 +556,31 @@ const dashOffset = computed(() => {
     0 1px 4px rgba(5, 3, 0, 0.95);
 }
 
-/* Wartezustand: der Hinweis, wann der Stern kommt. */
-.pcc-status {
-  align-self: flex-start;
-  max-width: 100%;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: rgba(6, 4, 0, 0.62);
-  border: 1px solid color-mix(in srgb, var(--pcc-color) 35%, transparent);
-  font-size: 9.5px;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: 0.04em;
-  color: color-mix(in srgb, var(--pcc-color) 40%, #f2ead0);
+/* Wartezustand: der Rollenname ist die EINZIGE Zeile und damit die Hauptzeile
+   der Karte. 20 px sind am Grenzfall gemessen, nicht am längsten Rollennamen:
+   der Körper ist 108 px breit (208 − 3 − 1 Rahmen − 2 × 8 Polster − 70 Feld −
+   10 Lücke), und der Fallback „UNKNOWN" braucht bei 22 px 112 px — er stünde
+   also abgeschnitten da. Bei 20 px sind es 102, „JUNGLE" misst 76. Die Zeile
+   behält die volle Körperbreite, damit der Schein nicht am Kastenrand abreißt. */
+.pcc-role {
+  font-size: 20px;
+  line-height: 1.05;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pcc-color);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow:
+    0 0 12px color-mix(in srgb, var(--pcc-color) 40%, transparent),
+    0 1px 4px rgba(5, 3, 0, 0.95);
+}
+/* Ein einzelnes Wort steht sonst ohne Fuß in der Luft. */
+.pcc-role__rule {
+  width: 34px;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to right, var(--pcc-color), transparent);
 }
 
 /* ── Fußzeile des laufenden Sterns ── */
@@ -664,7 +657,7 @@ const dashOffset = computed(() => {
     animation: none;
     opacity: 0;
   }
-  .pcc-crest__halo {
+  .pcc-plate__aura {
     animation: none;
     opacity: 0.8;
   }

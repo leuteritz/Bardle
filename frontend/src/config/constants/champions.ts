@@ -53,9 +53,9 @@ export const PAUSE_CHAMPION_CARD_WIDTH = 208
 /** So viele Begleitplaneten zeigt die Karte einzeln als Punkt. Ein Champion-
  *  Stern trägt 1 + STAR_EXTRA_PLANET_MIN…RANGE Welten; darüber steht die Zahl. */
 export const PAUSE_CHAMPION_PIPS_MAX = 5
-/** Kantenlänge des Rollenwappens, das im Zustand „gefunden, wartet" anstelle
- *  des Zifferblatts steht. Es sitzt im selben Feld (PAUSE_STAR_DIAL_PX = 70),
- *  füllt es aber nicht aus — der Ring darum ist Teil des Bildes. */
+/** Kantenlänge des Ersatzwappens (PAUSE_CHAMPION_FALLBACK_ICON) im Feld
+ *  PAUSE_STAR_DIAL_PX — es springt nur ein, wenn im Zustand „gefunden, wartet"
+ *  kein Rollenbild vorliegt. Sonst steht dort das Bild selbst. */
 export const PAUSE_CHAMPION_CREST_PX = 34
 /** Wappen, wenn die Rolle des Sterns (ausnahmsweise) nicht bekannt ist — der
  *  Stern selbst. Sonst stünde ein leeres Feld an der auffälligsten Stelle. */
