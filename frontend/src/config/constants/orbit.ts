@@ -612,13 +612,6 @@ export const DRIFTER_RARITY_COLOR: Record<string, string> = {
  *  gleichzeitige Klickziele im vollen Orbit-Bild lesen sich als Unruhe. */
 export const DRIFTER_MAX_CONCURRENT = 1
 
-/** Breite der Drifter-Karte im Pause-Overlay. Gleich breit wie Stern-, Void-
- *  und Champion-Karte — die Reihe rechnet mit EINEM Kartenmaß, sonst fällt der
- *  Umbruch an einer anderen Stelle als reserviert. */
-export const PAUSE_DRIFTER_CARD_WIDTH = 208
-/** Höchstens so viele Buff-Punkte stehen auf der Karte, der Rest als „+N". */
-export const PAUSE_DRIFTER_PIPS_MAX = 4
-
 /** Deckel auf der Sofort-Auszahlung: so viele Sekunden Produktion maximal,
  *  unabhängig davon, was der Drifter-Typ verspricht. Verhindert, dass ein
  *  einzelner Klick bei extremer CPS die gesamte Progression überspringt. */

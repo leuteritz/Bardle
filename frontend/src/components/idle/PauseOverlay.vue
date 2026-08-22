@@ -289,6 +289,63 @@
             </section>
           </div>
 
+          <!-- ── Das Kit-Band ───────────────────────────────────────────────
+               Fähigkeitenleiste und Buff-Reihe stehen im freien Bild bei
+               z-index 10001 und lagen damit ÜBER diesem Overlay (9998) — nicht
+               ausgeblendet, sondern mitten auf dem Panel. App.vue hängt beide
+               pausiert hierher um; es ist dieselbe Instanz, nur mit anderer
+               Form (`dock: 'pause'`).
+
+               Quer statt als dritte Spalte: die Kacheln sind das einzige im
+               Panel, das der Spieler wiedererkennen muss, und in einer schmalen
+               Säule blieben sie klein. Die Höhe dafür kommt aus der einzeilig
+               gewordenen Callout-Reihe und dem gekürzten Bühnenpuffer.
+
+               Beide Spalten sind auf PAUSE_KIT_BAND_H fest reserviert: liefe
+               die Höhe mit der Zahl der Buffs, spränge der Fit-Scale des
+               ganzen Overlays, sobald während der Pause einer ausläuft. -->
+          <section
+            class="kit-band"
+            :style="{
+              '--pause-kit-tile': `${PAUSE_KIT_TILE_PX}px`,
+              '--pause-kit-passive': `${PAUSE_KIT_PASSIVE_PX}px`,
+              '--pause-kit-gap': `${PAUSE_KIT_GAP_PX}px`,
+              '--pause-kit-chip-h': `${PAUSE_KIT_EFFECT_CHIP_H}px`,
+              '--pause-kit-band-h': `${PAUSE_KIT_BAND_H}px`,
+            }"
+          >
+            <div class="kit-col">
+              <span class="sec-head">
+                <Icon
+                  icon="game-icons:magic-palm"
+                  width="18"
+                  height="18"
+                  class="sec-head__icon"
+                  aria-hidden="true"
+                />
+                Your kit
+              </span>
+              <!-- Anzeige, kein Bedienfeld: die Kacheln zünden pausiert nichts
+                   (siehe `castAbility`). Was sie zeigen, läuft trotzdem weiter
+                   — Abklingzeiten enden auch im Stillstand. -->
+              <div id="pause-ability-dock" class="kit-dock" />
+            </div>
+
+            <div class="kit-col kit-col--effects">
+              <span class="sec-head">
+                <Icon
+                  icon="game-icons:hourglass"
+                  width="18"
+                  height="18"
+                  class="sec-head__icon"
+                  aria-hidden="true"
+                />
+                Active effects
+              </span>
+              <div id="pause-buff-dock" class="kit-dock" />
+            </div>
+          </section>
+
           <!-- Awaiting on return — immer gerendert mit fester Zeilenhöhe, damit
                aufpoppende Badges die Panel-Höhe (und den Fit-Scale) nie ändern -->
           <div
@@ -296,6 +353,7 @@
             :style="{
               '--star-card-h': `${PAUSE_STAR_CARD_HEIGHT}px`,
               '--star-card-gap': `${PAUSE_STAR_CARD_GAP_PX}px`,
+              '--star-card-rows': PAUSE_CALLOUT_ROWS,
             }"
           >
             <!-- Kopfzeile mit fester Höhe: die Level-Up-Marke sitzt neben der
@@ -320,7 +378,7 @@
             </div>
             <TransitionGroup
               v-if="
-                activeResourceStars.length > 0 || championCallout || voidThreat || drifterBuff
+                activeResourceStars.length > 0 || championCallout || voidThreat
               "
               tag="div"
               name="callout-pop"
@@ -366,25 +424,6 @@
                 :duration-ms="s.durationMs"
                 :color="s.color"
                 :planets="s.planets"
-              />
-
-              <!-- Der Drifter-Buff steht ganz hinten: er läuft ab wie die
-                   Sterne, aber niemand muss deswegen zurückkommen — dieselbe
-                   Begründung, aus der die Buff-Leiste draußen die ruhigsten
-                   Einträge ans Ende der Reihe stellt. -->
-              <PauseDrifterCard
-                v-if="drifterBuff"
-                key="drifter-buff"
-                :secs="drifterBuff.secs"
-                :ends-at="drifterBuff.endsAt"
-                :duration-ms="drifterBuff.durationMs"
-                :name="drifterBuff.name"
-                :icon="drifterBuff.icon"
-                :color="drifterBuff.color"
-                :rank-color="drifterBuff.rankColor"
-                :axis="drifterBuff.axis"
-                :multiplier="drifterBuff.multiplier"
-                :count="drifterBuff.count"
               />
             </TransitionGroup>
             <div v-else class="callout-row callout-row--empty">
@@ -435,11 +474,8 @@ import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useVoidStore } from '@/stores/world/voidStore'
-import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { getVoidRift } from '@/config/world/void'
-import { getDrifter } from '@/config/world/drifters'
-import { buffAxisLabel, buffPeakMultiplier } from '@/utils/ui/buffAxis'
 import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
 import { universes } from '@/config/progression/universes'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
@@ -472,12 +508,17 @@ import {
   PAUSE_ESCAPE_CAP,
   PAUSE_STAR_CARD_HEIGHT,
   PAUSE_STAR_CARD_GAP_PX,
+  PAUSE_CALLOUT_ROWS,
+  PAUSE_KIT_TILE_PX,
+  PAUSE_KIT_PASSIVE_PX,
+  PAUSE_KIT_GAP_PX,
+  PAUSE_KIT_EFFECT_CHIP_H,
+  PAUSE_KIT_BAND_H,
   PAUSE_STAR_HP_STEPS,
   STAR_TIMER_TICK_MS,
   VOID_SEVERITY_COLOR,
   VOID_KIT_ACCENT,
   SCOREBOARD_STAT_COLORS,
-  DRIFTER_RARITY_COLOR,
 } from '@/config/constants'
 import type { PauseChampionCallout, PlanetType } from '@/types'
 import { splitDuration, toRoman } from '@/utils/ui/format'
@@ -497,7 +538,6 @@ import KeyCap from '@/components/keybinds/KeyCap.vue'
 import PauseChampionCard from './PauseChampionCard.vue'
 import PauseStarCard from './PauseStarCard.vue'
 import PauseVoidCard from './PauseVoidCard.vue'
-import PauseDrifterCard from './PauseDrifterCard.vue'
 import SunLedger from './SunLedger.vue'
 import PauseMetaPillar from './PauseMetaPillar.vue'
 import { gameNow } from '@/utils/game/gameClock'
@@ -532,7 +572,6 @@ onKeybinding('pause', () => {
 })
 const starGroupStore = useStarGroupStore()
 const voidStore = useVoidStore()
-const drifterStore = useDrifterStore()
 const uiStore = useUiStore()
 
 function computeSunDiameter(): number {
@@ -679,16 +718,13 @@ watch(
       lastResourceStarsKey = ''
       lastVoidThreatKey = ''
       lastChampionKey = ''
-      lastDrifterBuffKey = ''
       refreshResourceStars()
       refreshVoidThreat()
       refreshChampionCallout()
-      refreshDrifterBuff()
       starInterval = setInterval(() => {
         refreshResourceStars()
         refreshVoidThreat()
         refreshChampionCallout()
-        refreshDrifterBuff()
       }, STAR_TIMER_TICK_MS)
       window.addEventListener('keydown', onEscape)
     } else {
@@ -890,59 +926,14 @@ function refreshVoidThreat(): void {
 // ── Der Drifter ─────────────────────────────────────────────────────────────
 // Der Drifter selbst kommt in der Pause nicht vor: neue erscheinen nicht (der
 // Layer sperrt den Spawn, sobald er verdeckt ist), und anklicken lässt sich
-// durch das Overlay ohnehin keiner. Was WEITERLÄUFT, ist sein Lohn — die Buffs
-// laufen im Spiel-Tick ab, auch pausiert. Das ist das einzige, was die Pause
-// beim Drifter kostet, und deshalb das einzige, was hier steht.
+// durch das Overlay ohnehin keiner. Was WEITERLÄUFT, ist sein Lohn — und der
+// steht heute im Kit-Band, als Chip neben MVP- und Omen-Buff.
 //
-// EINE Karte für alle laufenden Buffs, gezeigt wird der mit der kürzesten Uhr
-// — dasselbe Muster wie „vorderstes Wesen plus wie viele dahinter" beim Void.
-interface PauseDrifterBuff {
-  secs: number
-  endsAt: number
-  durationMs: number
-  name: string
-  icon: string
-  color: string
-  rankColor: string
-  axis: string
-  multiplier: number
-  count: number
-}
-
-const drifterBuff = shallowRef<PauseDrifterBuff | null>(null)
-
-function buildDrifterBuff(): PauseDrifterBuff | null {
-  const live = drifterStore.liveBuffs
-  if (live.length === 0) return null
-  const soonest = live.reduce((a, b) => (b.expiresAt < a.expiresAt ? b : a))
-  const def = getDrifter(soonest.sourceId)
-  if (!def) return null
-  return {
-    secs: Math.max(0, Math.ceil((soonest.expiresAt - gameNow()) / 1000)),
-    endsAt: soonest.expiresAt,
-    durationMs: soonest.durationMs,
-    name: def.name,
-    icon: def.icon,
-    color: def.color,
-    rankColor: DRIFTER_RARITY_COLOR[def.rarity] ?? def.color,
-    axis: buffAxisLabel(soonest.effects),
-    multiplier: buffPeakMultiplier(soonest.effects),
-    count: live.length,
-  }
-}
-
-function drifterBuffKey(b: PauseDrifterBuff | null): string {
-  return b ? `${b.name}:${b.secs}:${b.endsAt}:${b.count}` : ''
-}
-
-let lastDrifterBuffKey = ''
-function refreshDrifterBuff(): void {
-  const next = buildDrifterBuff()
-  const key = drifterBuffKey(next)
-  if (key === lastDrifterBuffKey) return
-  lastDrifterBuffKey = key
-  drifterBuff.value = next
-}
+// Er hatte einmal eine eigene Karte in der Reihe unten (`PauseDrifterCard`).
+// Sie zeigte nur den Buff mit der kürzesten Uhr, während MVP und Omen gar
+// nicht vorkamen — drei Belohnungen derselben Art in zwei Formen, von denen
+// eine unvollständig war. Mit der Karte fiel zugleich die sechste Spalte der
+// Reihe weg, und die passt seitdem in EINE Zeile (siehe PAUSE_CALLOUT_ROWS).
 
 // ── Der Champion ────────────────────────────────────────────────────────────
 // EINE Karte für zwei Zustände, und sie steht immer an erster Stelle:
@@ -1201,17 +1192,23 @@ function particleStyle(i: number): Record<string, string> {
 
 /* Verfügbare Bühne: alles oberhalb der Bottom-Bar. useFitScale passt das Panel
    uniform hier ein — schrumpft auf Full HD, wächst (bis max scale) auf 2K/4K.
-   Der Bottom-Abstand reserviert zusätzlich die volle Höhe des MVP-Honor-Buff-
-   Badges (MvpBuffOverlay: sitzt 16px über dem Scoreboard-Streifen, ~64px hoch,
-   z-index über dem Overlay) — dauerhaft, damit das Panel beim Erscheinen des
-   Buffs nicht springt. Oben spiegelt derselbe Abstand den Buff-Puffer, damit
-   das Panel harmonisch mit gleichem Luftraum über und unter sich sitzt. */
+
+   Oben und unten stand hier einmal je `clamp(88px, 10vh, 112px)`: Platz für das
+   MVP-Honor-Badge, das damals über dem Overlay lag. Das gibt es nicht mehr —
+   das Badge ist längst ein Chip der Buff-Reihe, und was von `MvpBuffOverlay`
+   blieb, ist Ambiente bei z-index 40. Über dem Overlay (9998) liegt nur noch
+   die Bottom-Bar (10000); der Header steht bei 25.
+
+   Der Puffer war damit reine Reservierung für nichts — rund 160 px Bühnenhöhe,
+   die der Fit-Scale nicht nutzen konnte. Sie bezahlen heute das Kit-Band. Was
+   bleibt, ist Luft: unten der tiefe Mittelstreifen der Bottom-Bar, oben und
+   unten gleich viel, damit das Panel mittig zwischen seinen Kanten sitzt. */
 .pause-stage {
   position: absolute;
-  top: clamp(88px, 10vh, 112px);
+  top: clamp(24px, 3vh, 40px);
   left: 12px;
   right: 12px;
-  bottom: calc(var(--bottom-center-strip-h, 79px) + clamp(88px, 10vh, 112px));
+  bottom: calc(var(--bottom-center-strip-h, 79px) + clamp(24px, 3vh, 40px));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1874,6 +1871,47 @@ function particleStyle(i: number): Record<string, string> {
   object-fit: contain;
 }
 
+/* ── Das Kit-Band ─────────────────────────────────────────────────────────
+   Zwei Spalten, die verschieden gemessen werden: links nimmt die Kachelreihe
+   genau die Breite, die sie braucht (`auto`), rechts bekommen die Chips den
+   Rest. Andersherum — beide `1fr` — schrumpfte die Reihe auf schmalen Panels
+   und die Kacheln mit ihr, und genau das soll sie nicht.
+
+   Die Trennlinie ist dieselbe Haarlinie wie zwischen Bilanz und Zustand: eine
+   Linie, kein zweiter Kasten. */
+.kit-band {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--pause-kit-gap);
+  width: 100%;
+}
+
+.kit-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.kit-col--effects {
+  padding-left: var(--pause-kit-gap);
+  border-left: 1px solid rgba(122, 78, 32, 0.35);
+}
+
+/* Fest reserviert, nicht mitwachsend: hier hängt der Fit-Scale des ganzen
+   Overlays daran. Die Kacheln sind flacher als die volle Effekt-Spalte und
+   stehen deshalb mittig in ihrem Feld — oben ausgerichtet risse zwischen
+   Reihe und Bandkante eine Lücke auf, die nach Fehler aussieht. */
+.kit-dock {
+  display: flex;
+  align-items: center;
+  height: var(--pause-kit-band-h);
+}
+
+.kit-col--effects .kit-dock {
+  align-items: stretch;
+}
+
 /* ── Callouts ─────────────────────────────────────────── */
 .callout-section {
   display: flex;
@@ -1946,7 +1984,13 @@ function particleStyle(i: number): Record<string, string> {
   align-content: flex-start;
   justify-content: flex-start;
   gap: var(--star-card-gap);
-  height: calc(2 * var(--star-card-h) + var(--star-card-gap));
+  /* Die Reservierung steht als Zahl in PAUSE_CALLOUT_ROWS, nicht als `2 *`
+     hier — mit der Drifter-Karte ist die sechste Spalte weggefallen, und die
+     fünf verbliebenen passen in eine Zeile. */
+  height: calc(
+    var(--star-card-rows) * var(--star-card-h) + (var(--star-card-rows) - 1) *
+      var(--star-card-gap)
+  );
   width: 100%;
   overflow: hidden;
 }

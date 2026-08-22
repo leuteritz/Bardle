@@ -2,8 +2,10 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { GAME_SPEED_DEFAULT } from '@/config/constants'
+import type { AbilityBarDock } from '@/types'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyTheme } from '@/composables/ui/useGalaxyTheme'
+import { useGamePause } from '@/composables/system/useGamePause'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { useSpaceMusic } from '@/composables/system/useSpaceMusic'
 import MusicControlWidget from '@/components/idle/MusicControlWidget.vue'
@@ -43,11 +45,21 @@ import KeybindPanel from '@/components/keybinds/KeybindPanel.vue'
 
 const gameStore = useGameStore()
 const starGroupStore = useStarGroupStore()
+const { isPaused } = useGamePause()
 
 /**
- * Fähigkeitenleiste und Buff-Reihe stehen im Star Fight in der Schiene des
- * Modals statt unten am Bild — dort lagen sie über Sonnen-Horizont und
- * Spieler-HP.
+ * Fähigkeitenleiste und Buff-Reihe stehen an DREI Stellen, je nachdem, was
+ * gerade das Bild bestimmt:
+ *
+ *   pause → im Kit-Band des Pause-Overlays
+ *   rail  → in der Schiene des Star-Fight-Modals
+ *   free  → unten am Bild, über dem Scoreboard
+ *
+ * Im Star Fight lagen sie über Sonnen-Horizont und Spieler-HP. Pausiert lagen
+ * sie über dem Overlay selbst: beide Leisten stehen bei z-index 10001, das
+ * Overlay bei 9998 — sie schwebten also mitten auf dem Panel, samt Hover und
+ * Klick. Die Pause hat Vorrang vor dem Star Fight, weil ihr Overlay über
+ * beidem liegt.
  *
  * `<Teleport>` SETZT die Komponente UM, es erzeugt sie nicht neu: die
  * Tastenanmeldung der Leiste, ihr rAF-Lauf für alle Cooldowns und das
@@ -75,19 +87,42 @@ const starGroupStore = useStarGroupStore()
  * Der Rückweg braucht kein `nextTick`: der Watcher läuft vor dem Rendern, die
  * Leisten ziehen also zurück, solange das Dock noch im DOM steht.
  */
-const abilitiesDocked = ref(false)
+const railDocked = ref(false)
+const pauseDocked = ref(false)
 
 watch(
   () => starGroupStore.starFightModalOpen,
   async (open) => {
     if (!open) {
-      abilitiesDocked.value = false
+      railDocked.value = false
       return
     }
     await nextTick()
-    abilitiesDocked.value = document.getElementById('sf-ability-dock') !== null
+    railDocked.value = document.getElementById('sf-ability-dock') !== null
   },
 )
+
+watch(isPaused, async (paused) => {
+  if (!paused) {
+    pauseDocked.value = false
+    return
+  }
+  await nextTick()
+  pauseDocked.value = document.getElementById('pause-ability-dock') !== null
+})
+
+/** Ein Wert, zwei Verbraucher — Ziel und Prop dürfen nie auseinanderlaufen. */
+const abilityDock = computed<AbilityBarDock>(() =>
+  pauseDocked.value ? 'pause' : railDocked.value ? 'rail' : 'free',
+)
+
+/** Die Dock-Kennungen ausgeschrieben statt aus dem Zustand zusammengesetzt:
+ *  ein Template-String fände `#orbit-ability-dock` in keiner Suche wieder. */
+const ABILITY_DOCK_IDS: Record<AbilityBarDock, { ability: string; buff: string }> = {
+  free: { ability: '#orbit-ability-dock', buff: '#orbit-buff-dock' },
+  rail: { ability: '#sf-ability-dock', buff: '#sf-buff-dock' },
+  pause: { ability: '#pause-ability-dock', buff: '#pause-buff-dock' },
+}
 useGalaxyTheme()
 useSpaceMusic()
 
@@ -156,8 +191,8 @@ watch(
     <DrifterLayer />
     <DrifterInfoCard />
     <div id="orbit-buff-dock" class="bard-dock" />
-    <Teleport defer :to="abilitiesDocked ? '#sf-buff-dock' : '#orbit-buff-dock'">
-      <ActiveBuffBar :docked="abilitiesDocked" />
+    <Teleport defer :to="ABILITY_DOCK_IDS[abilityDock].buff">
+      <ActiveBuffBar :dock="abilityDock" />
     </Teleport>
 
     <!-- The Void: der Riss steht im Orbit auf derselben Ebene wie die Drifter,
@@ -179,8 +214,8 @@ watch(
          Buff-Reihe über sich; der Stase-Schleier liegt über dem Orbit, aber
          unter jedem Modal. -->
     <div id="orbit-ability-dock" class="bard-dock" />
-    <Teleport defer :to="abilitiesDocked ? '#sf-ability-dock' : '#orbit-ability-dock'">
-      <BardAbilityBar :docked="abilitiesDocked" />
+    <Teleport defer :to="ABILITY_DOCK_IDS[abilityDock].ability">
+      <BardAbilityBar :dock="abilityDock" />
     </Teleport>
     <TemperedFateOverlay />
 

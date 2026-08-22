@@ -4,19 +4,27 @@
        covers the screen — nothing under there can be read anyway.
 
        During a star fight the row is docked into the modal's rail instead
-       (`docked`): at the bottom of the screen it sat on top of the sun horizon
-       and the player's own health bar. App.vue teleports the same instance —
-       only the shape changes, from a wide row to a narrow column. -->
+       (`dock: 'rail'`): at the bottom of the screen it sat on top of the sun
+       horizon and the player's own health bar. While the game is paused it
+       stands in the pause overlay's kit band (`dock: 'pause'`) — in the free
+       field it sits at z-index 10001, on top of the overlay itself.
+       App.vue teleports the same instance — only the shape changes.
+
+       Paused the `bardActiveTab` guard does not apply: it keeps the row out of
+       a view that covers it, and the overlay covers everything anyway. -->
   <TransitionGroup
-    v-if="uiStore.bardActiveTab === null"
+    v-if="uiStore.bardActiveTab === null || props.dock === 'pause'"
     name="buff-chip"
     tag="div"
     class="buff-bar"
-    :class="{ 'buff-bar--docked': props.docked }"
+    :class="{
+      'buff-bar--docked': props.dock === 'rail',
+      'buff-bar--pause': props.dock === 'pause',
+    }"
     role="status"
   >
     <div
-      v-for="chip in chips"
+      v-for="chip in visibleChips"
       :key="chip.key"
       class="buff-chip"
       :class="{
@@ -52,6 +60,22 @@
         <span class="chip-progress" :style="{ transform: `scaleX(${chip.progress})` }"></span>
       </span>
     </div>
+
+    <!-- Die Spalte im Pause-Band ist auf PAUSE_KIT_EFFECT_ROWS fest reserviert;
+         was darüber hinausgeht, steht als Zahl. Dasselbe Muster wie
+         `.mat-card--more` im Material-Raster — und aus demselben Grund: eine
+         mitwachsende Spalte ließe die Bandhöhe und damit den Fit-Scale des
+         ganzen Overlays springen, sobald ein Buff ausläuft. -->
+    <div v-if="overflowCount > 0" key="more" class="buff-chip buff-chip--more">
+      +{{ overflowCount }} more
+    </div>
+
+    <!-- Nur im Band: dort ist die Spalte eine Fläche mit Überschrift, und eine
+         leere Fläche unter einer Überschrift liest sich als Fehler. Im freien
+         Bild verschwindet die Reihe stattdessen ganz. -->
+    <div v-if="props.dock === 'pause' && chips.length === 0" key="empty" class="buff-empty">
+      Nothing running
+    </div>
   </TransitionGroup>
 </template>
 
@@ -77,14 +101,15 @@ import {
   DRIFTER_RARITY_COLOR,
   HONOR_MVP_BUFF_MULT,
   HONOR_MVP_BUFF_DURATION_S,
+  PAUSE_KIT_EFFECT_ROWS,
 } from '@/config/constants'
+import type { AbilityBarDock } from '@/types'
 
 /**
- * `docked` — the row stands as a narrow column in the star fight modal's rail
- * instead of across the bottom of the screen. Decided by App.vue, which also
+ * Where the row stands — see `AbilityBarDock`. Decided by App.vue, which also
  * does the teleporting; reading it from a store here would state it twice.
  */
-const props = withDefaults(defineProps<{ docked?: boolean }>(), { docked: false })
+const props = withDefaults(defineProps<{ dock?: AbilityBarDock }>(), { dock: 'free' })
 
 const gameStore = useGameStore()
 const uiStore = useUiStore()
@@ -174,6 +199,22 @@ const chips = computed<BuffChip[]>(() => {
 
   return out
 })
+
+/**
+ * Im Band stehen höchstens PAUSE_KIT_EFFECT_ROWS Einträge. Läuft es über, gibt
+ * der letzte Platz seine Zeile an die Zahl ab — sonst stünde die Zahl als
+ * vierte Zeile in einer Spalte, die für drei reserviert ist.
+ *
+ * Überall sonst gilt kein Deckel: dort trägt die Reihe die Breite des Bildes.
+ */
+const visibleChips = computed<BuffChip[]>(() => {
+  if (props.dock !== 'pause') return chips.value
+  return chips.value.length > PAUSE_KIT_EFFECT_ROWS
+    ? chips.value.slice(0, PAUSE_KIT_EFFECT_ROWS - 1)
+    : chips.value
+})
+
+const overflowCount = computed(() => chips.value.length - visibleChips.value.length)
 </script>
 
 <style scoped>
@@ -615,5 +656,86 @@ const chips = computed<BuffChip[]>(() => {
   .buff-bar--docked .chip-label {
     font-size: 13px;
   }
+}
+
+/* ── Im Kit-Band des Pause-Overlays ───────────────────────────────────────
+   Dieselbe Spaltenform wie in der Star-Fight-Schiene, nur mit eigener
+   Zeilenhöhe: das Band hat Breite im Überfluss, aber jede Zeile Höhe geht in
+   den Fit-Scale des ganzen Overlays.
+
+   Doppelte Spezifität gegen die Auflösungsstufen weiter oben — über dem Panel
+   liegt bereits useFitScale, eine zweite Staffelung skalierte doppelt. */
+.buff-bar.buff-bar--pause {
+  --chip-h: var(--pause-kit-chip-h, 58px);
+  position: static;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: var(--pause-kit-gap, 12px);
+  width: 100%;
+  max-width: none;
+  transform: none;
+  z-index: auto;
+}
+
+.buff-bar--pause .buff-chip {
+  width: 100%;
+  flex: 0 0 auto;
+  height: var(--chip-h);
+  gap: 10px;
+  padding: 0 12px 0 10px;
+}
+
+.buff-bar--pause .chip-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.buff-bar--pause .chip-icon__glyph {
+  width: 24px;
+  height: 24px;
+}
+
+.buff-bar--pause .chip-mult {
+  font-size: 17px;
+}
+
+.buff-bar--pause .chip-seconds {
+  font-size: 17px;
+}
+
+.buff-bar--pause .chip-unit {
+  font-size: 12px;
+}
+
+.buff-bar--pause .chip-label {
+  font-size: 13px;
+}
+
+/* Der Rest-Zähler trägt keine Uhr und keinen Rang — er ist eine Zahl, kein
+   Effekt. Deshalb ohne Farbkante und ohne Fortschrittsschiene. */
+.buff-chip--more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: #8a7a62;
+  background: #16140e;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+}
+
+/* Eine Fläche mit Überschrift, in der nichts steht, liest sich als Fehler —
+   derselbe gedämpfte Satz wie in der leeren Callout-Reihe des Overlays. */
+.buff-empty {
+  display: flex;
+  align-items: center;
+  height: var(--pause-kit-chip-h, 58px);
+  padding: 0 12px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: #6b6152;
 }
 </style>

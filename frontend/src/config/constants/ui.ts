@@ -117,11 +117,16 @@ export const PAUSE_SUN_VH_FACTOR = 0.16
 /** Pause overlay panel — fixed design surface (px) that useFitScale shrinks on
  *  flat viewports (Full HD) and grows (up to max scale) on 2K/4K.
  *
- *  Gedeckelt bei 1140: der Innenraum bleibt 1140 − 2 × 44 = 1052, und die
- *  Callout-Reihe bricht ab der fünften Karte weiter um (5 × 208 + 4 × 6 = 1064).
- *  Ab 1152 passten fünf Karten in EINE Zeile und die fest reservierte zweite
- *  Zeile stünde dauerhaft leer. */
-export const PAUSE_PANEL_DESIGN_WIDTH = 1140
+ *  Der alte Deckel (1140) hielt die Callout-Reihe absichtlich ZWEIZEILIG. Mit
+ *  dem Kit-Band ist die Reihe einzeilig reserviert (PAUSE_CALLOUT_ROWS), und
+ *  der Innenraum muss die fünf Karten in EINER Zeile tragen:
+ *  5 × 208 + 4 × 6 = 1064 ≤ 1200 − 2 × 44 = 1112.
+ *
+ *  Nach oben grenzt sie jetzt etwas anderes: die erhobenen Seitenpanels der
+ *  Bottom-Bar (BOTTOM_BAR_SIDE_W, z-index 10000) liegen ÜBER dem Overlay, und
+ *  die Panelunterkante reicht in ihre Höhe. Die SKALIERTE Panelbreite muss
+ *  deshalb unter der Lücke zwischen ihnen bleiben (Full HD ~1040 px). */
+export const PAUSE_PANEL_DESIGN_WIDTH = 1200
 export const PAUSE_PANEL_MAX_SCALE = 1.3
 
 /** Breite der Zustandsspalte (Sonne, Vitalität, Universe/Galaxy/Level) rechts im
@@ -334,26 +339,24 @@ export const PAUSE_LEDGER_POP_OFFSETS = [12, 52, 30, 74]
 
 // ── Pause-Overlay: Karten der laufenden Vorgänge ───────────────────────────
 // Alle Karten der Reihe sind gleich breit: ein Stern je Karte (höchstens drei),
-// dazu die Void-Karte (PAUSE_VOID_CARD_WIDTH), die Champion-Karte
-// (PAUSE_CHAMPION_CARD_WIDTH) und der Drifter-Buff (PAUSE_DRIFTER_CARD_WIDTH) —
-// in der Spitze also SECHS.
+// dazu die Void-Karte (PAUSE_VOID_CARD_WIDTH) und die Champion-Karte
+// (PAUSE_CHAMPION_CARD_WIDTH) — in der Spitze also FÜNF.
 //
-// Die Rechnung, an der diese Werte hängen (Panelinnenraum 1140 − 2 × 44 = 1052):
+// Die Rechnung, an der diese Werte hängen (Panelinnenraum 1200 − 2 × 44 = 1112):
 //
-//   4 Karten → 4 × 208 + 3 × 6 =  850  ≤ 1052  → eine Zeile
-//   5 Karten → 5 × 208 + 4 × 6 = 1064  > 1052  → zwei Zeilen
+//   5 Karten → 5 × 208 + 4 × 6 = 1064  ≤ 1112  → eine Zeile
 //
-// Die Reihe bricht ab der fünften Karte also um, und genau dafür reserviert
-// `.callout-row` fest ZWEI Kartenzeilen. Die Reservierung ist der Punkt: eine
+// Der Drifter-Buff war einmal die sechste Karte. Er steht heute als Chip im
+// Kit-Band, zusammen mit MVP- und Omen-Buff — eine Belohnungsart, eine Form.
+// Damit passt die Reihe in EINE Zeile, und `.callout-row` reserviert nur noch
+// eine (PAUSE_CALLOUT_ROWS). Die Reservierung ist weiterhin der Punkt: eine
 // Höhe, die mit der Zahl der Karten wächst, ließe den Fit-Scale des ganzen
-// Overlays mitten in der Pause springen. Wer eine Karte breiter macht, muss
-// entweder das Panel mitziehen oder in Kauf nehmen, dass schon vier Karten
-// umbrechen — dann steht die zweite Zeile fast immer besetzt.
+// Overlays mitten in der Pause springen.
 //
-// Der Platz dafür kam aus zwei Quellen: das Panel ist breiter (was laut
-// `.pause-panel` nichts kostet, weil der Fit-Scale auf jeder Referenzauflösung
-// höhenlimitiert ist) und der Sonnen-Hero kleiner. Beides ging an die Karten —
-// sie zeigen etwas, das gerade LÄUFT, die Sonne ein Standbild.
+// Wer eine SECHSTE Karte ergänzt, bricht die Reservierung und zieht die
+// Panelhöhe mit — dann muss das Panel auf mindestens 1366 mitwachsen
+// (6 × 208 + 5 × 6 + 2 × 44 = 1366), und erst danach die Bottom-Bar-Lücke
+// nachmessen (siehe PAUSE_PANEL_DESIGN_WIDTH).
 export const PAUSE_STAR_CARD_WIDTH = 208
 export const PAUSE_STAR_CARD_HEIGHT = 96
 /** Waagerechter Innenabstand der Karte. Er steht hier und nicht nur im CSS,
@@ -366,6 +369,9 @@ export const PAUSE_STAR_DIAL_GAP_PX = 10
  *  Sie steht in beiden Rechnungen oben: in der Breite zwischen den Karten und
  *  in der reservierten Höhe zwischen den zwei Zeilen. */
 export const PAUSE_STAR_CARD_GAP_PX = 6
+/** So viele Kartenzeilen reserviert `.callout-row` fest — unabhängig davon,
+ *  wie viele Karten gerade stehen. Siehe die Rechnung oben. */
+export const PAUSE_CALLOUT_ROWS = 1
 /** Kantenlänge des Zifferblatts. Sie ist am Textinhalt bemessen, nicht am
  *  freien Platz: die Restzeit steht IM Ring, und der nutzbare Raum ist der
  *  Innenkreis, nicht dessen Kasten. Gemessen bei 52 px stand „28s" (34 px
@@ -421,6 +427,47 @@ export const PAUSE_STAR_HP_STEPS = 100
  *  zusammen, statt aus der Karte zu laufen. */
 export const PAUSE_STAR_PLANET_ROW_WIDTH =
   PAUSE_STAR_CARD_WIDTH - 2 * PAUSE_STAR_CARD_PAD_X - PAUSE_STAR_DIAL_PX - PAUSE_STAR_DIAL_GAP_PX
+
+// ── Pause-Overlay: das Kit-Band ────────────────────────────────────────────
+// Fähigkeitenleiste und Buff-Reihe liegen im freien Bild bei z-index 10001 und
+// schwebten damit ÜBER dem Pause-Overlay (9998). Pausiert stehen sie deshalb
+// nicht mehr dort, sondern angedockt im Panel: links die fünf Kacheln
+// (Passive + Q/W/E/R), rechts alle laufenden Effekte mit ihrer Restzeit.
+//
+// Die Kachelkante ist hier FEST, nicht gestaffelt. Draußen wächst sie mit dem
+// Viewport (`min-width: 2400px` → 104, `3400px` → 128); im Panel liegt bereits
+// useFitScale darüber, und eine zweite Staffelung skalierte doppelt — auf 4K
+// stünde die Kachel dann um Faktor 1,5 × 1,3 zu groß.
+//
+// 150 statt der 84 draußen: das Band bezahlt seine Höhe mit der einzeilig
+// gewordenen Callout-Reihe (−102 px) und dem entfallenen MVP-Puffer der Bühne.
+// Nach dem Fit-Scale (Full HD ~0,8) bleiben effektiv ~120 px je Kachel — rund
+// das Anderthalbfache dessen, was im freien Bild steht.
+export const PAUSE_KIT_TILE_PX = 150
+/** Die Passive ist die einzige Kachel, die nichts kostet und nichts kühlt —
+ *  sie steht vor dem Trennstrich und bleibt kleiner als Q/W/E/R. Dasselbe
+ *  Verhältnis wie draußen (72 zu 84). */
+export const PAUSE_KIT_PASSIVE_PX = 132
+/** Lücke zwischen den Kacheln und zwischen den Band-Spalten. */
+export const PAUSE_KIT_GAP_PX = 12
+/** Höhe eines Effekt-Chips im Band. Zwischen der freien Reihe (84) und der
+ *  Star-Fight-Schiene (50): das Band hat Breite im Überfluss, aber jede Zeile
+ *  Höhe geht in den Fit-Scale des ganzen Overlays. */
+export const PAUSE_KIT_EFFECT_CHIP_H = 58
+/** So viele Effekt-Chips stehen einzeln, der Rest als „+N" — dasselbe Muster
+ *  wie `.mat-card--more` im Material-Raster.
+ *
+ *  Die Zahl IST die Reservierung: die Spalte ist immer so hoch, ob null oder
+ *  sechs Buffs laufen. Eine mitwachsende Spalte ließe die Bandhöhe und damit
+ *  den Fit-Scale springen, sobald während der Pause ein Buff ausläuft. */
+export const PAUSE_KIT_EFFECT_ROWS = 3
+/** Höhe der Effekt-Spalte — drei Chips plus ihre Lücken. */
+export const PAUSE_KIT_EFFECT_COL_H =
+  PAUSE_KIT_EFFECT_ROWS * PAUSE_KIT_EFFECT_CHIP_H + (PAUSE_KIT_EFFECT_ROWS - 1) * PAUSE_KIT_GAP_PX
+/** Reservierte Höhe des Bandinhalts: die höhere der beiden Spalten. Abgeleitet,
+ *  nicht gewählt — eine eigene Zahl liefe beim ersten Nachjustieren der
+ *  Kachelkante still von den Kacheln weg. */
+export const PAUSE_KIT_BAND_H = Math.max(PAUSE_KIT_TILE_PX, PAUSE_KIT_EFFECT_COL_H)
 
 // ── Star-Timer-Bars (Header) — Planeten-Kugeln mit Boss-HP-Füllstand ──────
 // Die Bars lesen die Boss-Daten NICHT reaktiv, sondern über einen Snapshot,

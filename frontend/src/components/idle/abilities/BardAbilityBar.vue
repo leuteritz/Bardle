@@ -6,23 +6,34 @@
     Tastenanmeldung, damit ein „e" im Champion-Filter keine Fähigkeit zündet,
     die niemand sieht (useKeybindings meldet beim Unmount selbst ab).
 
-    Im Star Fight steht sie ANGEDOCKT in der Schiene des Modals (`docked`): dort
-    läge sie unten über Sonnen-Horizont und Spieler-HP. App.vue setzt sie per
-    `<Teleport>` um — dieselbe Instanz, also dieselbe Tastenanmeldung und
-    derselbe rAF-Lauf; nur Form und Anker wechseln.
+    Im Star Fight steht sie ANGEDOCKT in der Schiene des Modals (`dock: 'rail'`):
+    dort läge sie unten über Sonnen-Horizont und Spieler-HP. Pausiert steht sie
+    im Kit-Band des Pause-Overlays (`dock: 'pause'`) — im freien Bild läge sie
+    bei z-index 10001 ÜBER dem Overlay (9998), also mitten auf dem Panel.
+    App.vue setzt sie per `<Teleport>` um — dieselbe Instanz, also dieselbe
+    Tastenanmeldung und derselbe rAF-Lauf; nur Form und Anker wechseln.
+
+    Pausiert gilt der `bardActiveTab`-Vorbehalt nicht: er hält die Tastatur von
+    einer unsichtbaren Leiste fern, und im Band zündet ohnehin nichts (siehe
+    `castAbility`). Ohne die Lockerung stünde das Band leer, sobald jemand mit
+    offenem Profil-Tab pausiert.
   -->
   <div
-    v-if="uiStore.bardActiveTab === null"
+    v-if="uiStore.bardActiveTab === null || props.dock === 'pause'"
     ref="barEl"
     class="ability-bar"
-    :class="{ 'ability-bar--in': revealed, 'ability-bar--docked': props.docked }"
+    :class="{
+      'ability-bar--in': revealed,
+      'ability-bar--docked': props.dock === 'rail',
+      'ability-bar--pause': props.dock === 'pause',
+    }"
     role="toolbar"
     aria-label="Bard abilities"
   >
     <!-- Was das letzte Wirken bewirkt hat, in einem Satz. Steht über allem
          anderen, weil es die Rückmeldung auf die gerade gedrückte Taste ist. -->
     <Transition name="ab-toast">
-      <div v-if="toast" class="ab-toast" :style="{ '--ab-color': toastColor }" role="status">
+      <div v-if="toast && props.dock !== 'pause'" class="ab-toast" :style="{ '--ab-color': toastColor }" role="status">
         <span v-ink-center.x.y class="ab-toast-key">{{ toastKey }}</span>
         <span v-ink-center.y class="ab-toast-text">{{ toast }}</span>
       </div>
@@ -185,17 +196,23 @@ import {
   ABILITY_TIP_VIEWPORT_MARGIN_PX,
   RESONANCE_MAX_STACKS,
 } from '@/config/constants'
-import type { BardAbilityId, BardEffectLine, KeybindId } from '@/types'
+import type { AbilityBarDock, BardAbilityId, BardEffectLine, KeybindId } from '@/types'
 import { gameNow } from '@/utils/game/gameClock'
 import { formatCooldownSeconds } from '@/utils/ui/format'
 
 /**
- * `docked` — die Leiste steht senkrecht in der Schiene des Star-Fight-Modals
- * statt waagerecht unten am Bild. Die Entscheidung gehört zu der Stelle, die
- * auch teleportiert (App.vue); stünde sie hier als Store-Zugriff, gäbe es sie
+ * Wo die Leiste steht. Die Entscheidung gehört zu der Stelle, die auch
+ * teleportiert (App.vue); stünde sie hier als Store-Zugriff, gäbe es sie
  * zweimal.
+ *
+ * `free`  — waagerecht unten am Bild, `position: fixed`
+ * `rail`  — senkrecht in der Schiene des Star-Fight-Modals
+ * `pause` — waagerecht im Kit-Band des Pause-Overlays, nur als ANZEIGE
+ *
+ * Drei benannte Werte statt zweier Booleans: `docked && paused` wäre ein
+ * vierter Zustand, den es nicht gibt.
  */
-const props = withDefaults(defineProps<{ docked?: boolean }>(), { docked: false })
+const props = withDefaults(defineProps<{ dock?: AbilityBarDock }>(), { dock: 'free' })
 
 const uiStore = useUiStore()
 const store = useBardAbilityStore()
@@ -446,6 +463,11 @@ watch(() => gameStore.level, ensureLoop)
 
 // ── Wirken ──────────────────────────────────────────────────────────────────
 function castAbility(id: BardAbilityId): void {
+  // Pausiert ist die Leiste eine Anzeige: das Spiel steht, also wirkt auch
+  // keine Fähigkeit. Die Sperre steht HIER und nicht am Klick-Handler — die
+  // Tastenanmeldungen laufen durch dieselbe Funktion, ein zweiter Riegel am
+  // Kachelrand ließe Q/W/E/R offen.
+  if (props.dock === 'pause') return
   if (!store.cast(id)) return
   const els = tileEls.get(id)
   if (els?.tile) {
@@ -543,7 +565,7 @@ function placeTip(): void {
   // wird dann in der HÖHE, und der Zeiger sitzt an der linken Kante. Der
   // Anker ist die Leiste selbst — sie steht in der Schiene, nicht in der
   // Bildmitte, ihre Lage lässt sich also nicht ausrechnen.
-  if (props.docked) {
+  if (props.dock === 'rail') {
     const bar = barEl.value
     if (!bar) return
     const barTop = bar.getBoundingClientRect().top
@@ -570,6 +592,31 @@ function placeTip(): void {
     tip.style.left = ''
     tip.style.top = `${Math.round(top)}px`
     tip.style.setProperty('--ab-caret-dy', `${Math.round(centerY - (top + tipH / 2))}px`)
+    return
+  }
+
+  // Im Kit-Band steht die Leiste waagerecht wie im freien Bild, aber weder in
+  // der Bildmitte noch im unskalierten Raum: `.pause-panel` trägt ein
+  // `transform: scale()`. Client-Rects sind dort skaliert, `offsetWidth` ist es
+  // nicht — der Zweig unten mischte beides und liefe mit wachsendem Fit-Scale
+  // immer weiter daneben. Gerechnet wird deshalb im Layoutraum der Leiste, und
+  // der Faktor wird gemessen statt durchgereicht.
+  if (props.dock === 'pause') {
+    const bar = barEl.value
+    if (!bar) return
+    const barRect = bar.getBoundingClientRect()
+    const k = bar.offsetWidth > 0 ? barRect.width / bar.offsetWidth : 1
+    const tipW = tip.offsetWidth
+    const center = (rect.left + rect.width / 2 - barRect.left) / k
+
+    // Geklemmt wird gegen die LEISTE, nicht gegen den Viewport: das Panel
+    // schneidet ab (`overflow: hidden`), und die Kachelreihe ist auf jeder
+    // Stufe breiter als der Kasten — innerhalb ihrer Kanten steht er immer.
+    const left = Math.min(Math.max(center - tipW / 2, 0), bar.offsetWidth - tipW)
+
+    tip.style.top = ''
+    tip.style.left = `${Math.round(left)}px`
+    tip.style.setProperty('--ab-caret-dx', `${Math.round(center - (left + tipW / 2))}px`)
     return
   }
 
@@ -813,7 +860,7 @@ function publishEdges(rect: DOMRect | null): void {
  *  in der Schiene. Würde hier die Säulenhöhe (≈460 px) landen, schöbe sie
  *  jeden anderen Verbraucher dieser Variablen ins Nichts. */
 function measureRow(): void {
-  if (props.docked) {
+  if (props.dock !== 'free') {
     publishHeight(-ABILITY_BAR_STACK_GAP_PX)
     publishEdges(null)
     return
@@ -841,7 +888,7 @@ watch(revealed, async () => {
 // Beim An- und Abdocken wechseln Form und Anker — beide Maße stehen erst nach
 // dem nächsten Rendern fest.
 watch(
-  () => props.docked,
+  () => props.dock,
   async () => {
     await nextTick()
     measureRow()
@@ -1569,5 +1616,47 @@ onUnmounted(() => {
   .ab-tip-leave-active {
     transition: none;
   }
+}
+
+/* ── Im Kit-Band des Pause-Overlays ───────────────────────────────────────
+   Waagerecht wie im freien Bild, aber im Fluss des Panels statt am Bildrand.
+
+   Die Maße kommen als CSS-Variablen vom Dock, nicht aus einer zweiten Zahl
+   hier (PAUSE_KIT_TILE_PX und Nachbarn sind die eine Quelle). Doppelte
+   Spezifität gegen die Auflösungsstufen weiter oben: über dem Panel liegt
+   bereits useFitScale, eine zweite Staffelung skalierte doppelt — auf 4K
+   stünde die Kachel um Faktor 1,5 × 1,3 zu groß. */
+.ability-bar.ability-bar--pause {
+  --ab-size: var(--pause-kit-tile, 150px);
+  --ab-passive-size: var(--pause-kit-passive, 132px);
+  --ab-gap: var(--pause-kit-gap, 12px);
+  position: relative;
+  bottom: auto;
+  left: auto;
+  z-index: auto;
+  transform: none;
+  transition: opacity 320ms ease;
+}
+
+.ability-bar.ability-bar--pause.ability-bar--in {
+  transform: none;
+}
+
+/* Der Kasten ist im freien Bild Flex-Kind der Spalte — seine Höhe fällt in den
+   Fluss. Im Band ließe genau das die Bandhöhe beim Überfahren wachsen, und mit
+   ihr spränge der Fit-Scale des GANZEN Overlays. Er steht deshalb über der
+   Reihe und aus dem Fluss; `left` schreibt placeTip (Zweig `pause`). */
+.ability-bar--pause .ab-tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  margin-bottom: 0;
+}
+
+/* Anzeige, kein Knopf. `pointer-events` bleiben an — ohne Hover gäbe es auch
+   keinen Tooltip, und der ist hier der einzige Weg zu Rang und Wirkung. */
+.ability-bar--pause :deep(.ab-tile),
+.ability-bar--pause :deep(.ab-passive) {
+  cursor: default;
 }
 </style>

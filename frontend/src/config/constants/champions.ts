@@ -44,11 +44,12 @@ export const CHAMPION_TRAVEL_LY_PER_GALAXY = 500 // +500 LY per Galaxy
 export const CHAMPION_STAR_DURATION_MS = 60_000 // champion star window: 60s
 
 // ── Champion-Karte im Pause-Overlay ────────────────────────────────────────
-// Sie steht in derselben Reihe wie die Stern- und die Void-Karte und ist genau
-// so breit wie beide (PAUSE_STAR_CARD_WIDTH / PAUSE_VOID_CARD_WIDTH, beide 208).
-// Die Zahl steht hier und nicht dort, weil sie zum Champion-Stern gehört —
-// dieselbe Aufteilung wie bei PAUSE_VOID_CARD_WIDTH in `void.ts`. Wer sie
-// ändert, muss die Reihenrechnung im Kopf von `ui.ts` mitziehen.
+// Sie steht an erster Stelle der Reihe, neben Stern- und Void-Karte, und ist
+// genau so breit wie beide (PAUSE_STAR_CARD_WIDTH / PAUSE_VOID_CARD_WIDTH,
+// beide 208). Die Zahl steht hier und nicht dort, weil sie zum Champion-Stern
+// gehört — dieselbe Aufteilung wie bei PAUSE_VOID_CARD_WIDTH in `void.ts`.
+// Wer sie ändert, muss die Reihenrechnung im Kopf von `ui.ts` mitziehen: die
+// Reihe ist auf EINE Zeile reserviert und trägt genau fünf Karten.
 export const PAUSE_CHAMPION_CARD_WIDTH = 208
 /** So viele Begleitplaneten zeigt die Karte einzeln als Punkt. Ein Champion-
  *  Stern trägt 1 + STAR_EXTRA_PLANET_MIN…RANGE Welten; darüber steht die Zahl. */
