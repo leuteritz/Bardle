@@ -115,9 +115,18 @@ export const PAUSE_SUN_MAX_DIAMETER = 200
 export const PAUSE_SUN_VH_FACTOR = 0.16
 
 /** Pause overlay panel — fixed design surface (px) that useFitScale shrinks on
- *  flat viewports (Full HD) and grows (up to max scale) on 2K/4K. */
-export const PAUSE_PANEL_DESIGN_WIDTH = 960
+ *  flat viewports (Full HD) and grows (up to max scale) on 2K/4K.
+ *
+ *  Gedeckelt bei 1140: der Innenraum bleibt 1140 − 2 × 44 = 1052, und die
+ *  Callout-Reihe bricht ab der fünften Karte weiter um (5 × 208 + 4 × 6 = 1064).
+ *  Ab 1152 passten fünf Karten in EINE Zeile und die fest reservierte zweite
+ *  Zeile stünde dauerhaft leer. */
+export const PAUSE_PANEL_DESIGN_WIDTH = 1140
 export const PAUSE_PANEL_MAX_SCALE = 1.3
+
+/** Breite BEIDER Meta-Säulen der Heldenzeile. Gleich breit ist Bedingung, nicht
+ *  Geschmack — nur so bleibt die Sonnenscheibe in der Panelmitte. */
+export const PAUSE_META_COL_WIDTH = 168
 
 // HUD panel corner arc radius (shared by CommandPanel and MiniMap)
 export const HUD_PANEL_ARC_R = 60
@@ -630,6 +639,15 @@ export const STATS_TAB_DECK_RESIZE = {
   MAX_RIGHT: 440,
   /** the middle (Augments) column never shrinks below this */
   MIN_MIDDLE: 260,
+} as const
+
+/** Die drei Fortschrittsachsen Level / Galaxy / Universe tragen überall
+ *  dieselbe Farbe — Journey-Ringe im Stats-Tab und Meta-Säulen im Pause-Overlay
+ *  lesen von hier. */
+export const JOURNEY_AXIS_COLORS = {
+  level: '#e8c040',
+  galaxy: '#9a6fd0',
+  universe: '#52b830',
 } as const
 
 /** Bard Stats "Journey" progress gauges (Level / Galaxy / Universe). The ring is

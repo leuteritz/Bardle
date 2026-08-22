@@ -6,7 +6,7 @@ import { formatCompactDuration, durationSegments, toRoman } from '@/utils/ui/for
 import { formatNumber } from '@/config/ui/numberFormat'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
-import { STATS_TAB_GAUGE } from '@/config/constants'
+import { JOURNEY_AXIS_COLORS, STATS_TAB_GAUGE } from '@/config/constants'
 import { universes } from '@/config/progression/universes'
 import StatsColumnHeader from './StatsColumnHeader.vue'
 import StatCategoryAccordion from './StatCategoryAccordion.vue'
@@ -77,7 +77,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
       sub: `${Math.floor(levelProgress.value)}%`,
       starIcon: false,
       pct: levelProgress.value,
-      color: '#e8c040',
+      color: JOURNEY_AXIS_COLORS.level,
       full: false,
       tip:
         `Level ${level.value} — ${formatNumber(gameStore.currentLevelChimes)} of ` +
@@ -90,7 +90,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
       sub: `${starsRescued.value}/${starsRequired.value}`,
       starIcon: true,
       pct: (starsRescued.value / Math.max(1, starsRequired.value)) * 100,
-      color: '#9a6fd0',
+      color: JOURNEY_AXIS_COLORS.galaxy,
       full: galaxyDone,
       tip: galaxyStore.needsFinalBoss
         ? `Galaxy ${currentGalaxy.value} — every star rescued, the galaxy core awaits`
@@ -103,7 +103,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
       sub: `${currentUniverse.value}/${totalUniverses.value}`,
       starIcon: false,
       pct: universePct,
-      color: '#52b830',
+      color: JOURNEY_AXIS_COLORS.universe,
       full: currentUniverse.value >= totalUniverses.value,
       tip: `${universeName} — universe ${currentUniverse.value} of ${totalUniverses.value}`,
     },

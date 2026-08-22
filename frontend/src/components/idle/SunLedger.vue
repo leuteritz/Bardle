@@ -32,7 +32,7 @@
  *    Lage derselben Ziffern — dasselbe Muster wie beim Pause-Timer.
  */
 import { computed } from 'vue'
-import { formatNumber } from '@/config/ui/numberFormat'
+import { formatNumberCompact } from '@/config/ui/numberFormat'
 import { DAMAGE_FLOAT_DURATION_MS, PAUSE_LEDGER_POP_OFFSETS } from '@/config/constants'
 
 const props = defineProps<{
@@ -59,7 +59,9 @@ const label = computed(() => (isDamage.value ? 'Damage taken' : 'HP restored'))
  * `playerStore.regenTick()` schreibt dann nichts in seinen Zähler.
  */
 const isVisible = computed(() => props.total > 0)
-const valueText = computed(() => `${sign.value}${formatNumber(props.total)}`)
+// formatNumberCompact statt formatNumber: die Spalte ist ~210 px breit, und
+// formatNumber liefert im Extremfall "999.99K" — sieben Zeichen plus Vorzeichen.
+const valueText = computed(() => `${sign.value}${formatNumberCompact(props.total)}`)
 
 /**
  * Drift des aufsteigenden Treffers — immer nach AUSSEN, also vom Ledger weg in
@@ -102,7 +104,7 @@ function popOffset(index: number): string {
         :key="p.id"
         class="ledger__pop"
         :style="{ '--dx': popOffset(i) }"
-        >{{ sign }}{{ formatNumber(p.value) }}</span
+        >{{ sign }}{{ formatNumberCompact(p.value) }}</span
       >
     </span>
   </div>
@@ -166,12 +168,14 @@ function popOffset(index: number): string {
    Heldenzeile): die Spalte darf nie höher werden als die Scheibe neben ihr,
    sonst überliefe sie das Phasen-Label darunter. Mit `vw` allein wäre das nicht
    zu halten — Panelgröße und Viewport laufen wegen des Fit-Scales gerade nicht
-   parallel. */
+   parallel. Der Faktor liegt bei 0,26 statt 0,4: die Meta-Säulen der
+   Standtafel verengen die Randspalten auf ~210 px, und die Bilanz der Pause
+   darf nicht größer dastehen als die Werte, die sie begleitet. */
 .ledger__value {
   position: relative;
   display: inline-block;
   transform-origin: var(--ledger-origin);
-  font-size: clamp(2.4rem, calc(var(--sun-d, 180px) * 0.4), 4.4rem);
+  font-size: clamp(1.6rem, calc(var(--sun-d, 180px) * 0.26), 3rem);
   font-weight: 800;
   line-height: 1.05;
   white-space: nowrap;

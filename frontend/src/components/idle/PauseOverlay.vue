@@ -52,20 +52,6 @@
                 >{{ ch }}</span>
               </span>
             </div>
-            <div class="pause-meta-row">
-              <span class="meta-chip">
-                <span class="meta-chip__label">Level</span>
-                <span class="meta-chip__value">{{ gameStore.level }}</span>
-              </span>
-              <span class="meta-chip">
-                <span class="meta-chip__label">Universe</span>
-                <span class="meta-chip__value">{{ gameStore.currentUniverse }}</span>
-              </span>
-              <span class="meta-chip">
-                <span class="meta-chip__label">Galaxy</span>
-                <span class="meta-chip__value">{{ galaxyStore.currentGalaxy }}</span>
-              </span>
-            </div>
           </header>
 
           <!-- Hero: the live sun in its current phase (no planets, no champions).
@@ -82,7 +68,33 @@
                Die Zeile ist GENAU so hoch wie die Scheibe (`--sun-d`): ein
                Zuwachs hier änderte die Panelhöhe und zöge den Fit-Scale des
                ganzen Overlays mit. Die Ledger sind darin nur mittig gestellt. -->
-          <div class="hero-row" :style="{ '--sun-d': `${sunDiameter}px` }">
+          <div
+            class="hero-row"
+            :style="{
+              '--sun-d': `${sunDiameter}px`,
+              '--meta-col-w': `${PAUSE_META_COL_WIDTH}px`,
+            }"
+          >
+            <div class="meta-col">
+              <PauseMetaPillar
+                label="Universe"
+                :value="toRoman(gameStore.currentUniverse)"
+                :sub="universeName"
+                :pct="universePct"
+                :meter="`${gameStore.currentUniverse} / ${gameStore.totalUniverses}`"
+                :color="JOURNEY_AXIS_COLORS.universe"
+                align="left"
+              />
+              <PauseMetaPillar
+                label="Galaxy"
+                :value="String(galaxyStore.currentGalaxy)"
+                :sub="galaxyName"
+                :pct="galaxyPct"
+                :meter="`${galaxyStore.starsRescued} / ${galaxyStore.starsRequired} ✦`"
+                :color="JOURNEY_AXIS_COLORS.galaxy"
+                align="left"
+              />
+            </div>
             <SunLedger tone="regen" :total="pauseRegen" />
             <div
               class="sun-hero"
@@ -94,6 +106,18 @@
               </div>
             </div>
             <SunLedger tone="damage" :total="pauseDamage" :pops="damagePops" />
+            <div class="meta-col">
+              <PauseMetaPillar
+                label="Level"
+                :value="String(gameStore.level)"
+                :sub="levelSub"
+                :pct="gameStore.levelProgress"
+                :meter="`${Math.floor(gameStore.levelProgress)} %`"
+                :color="JOURNEY_AXIS_COLORS.level"
+                align="right"
+                emphasis
+              />
+            </div>
           </div>
           <span class="sun-phase-label" :style="{ color: sunPhaseLabelColor }">
             {{ sunPhase.name }}
@@ -367,7 +391,9 @@ import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { getVoidRift } from '@/config/world/void'
-import { formatNumber } from '@/config/ui/numberFormat'
+import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
+import { universes } from '@/config/progression/universes'
+import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import { MATERIALS, materialIconMd } from '@/config/economy/materials'
 import {
   STAR_PHASE_DATA,
@@ -377,6 +403,8 @@ import {
   PAUSE_SUN_VH_FACTOR,
   PAUSE_PANEL_DESIGN_WIDTH,
   PAUSE_PANEL_MAX_SCALE,
+  PAUSE_META_COL_WIDTH,
+  JOURNEY_AXIS_COLORS,
   PAUSE_MATERIAL_COLUMNS,
   PAUSE_MATERIAL_ROWS,
   PAUSE_LEDGER_MAX_POPS,
@@ -396,7 +424,7 @@ import {
   VOID_SEVERITY_COLOR,
 } from '@/config/constants'
 import type { PauseChampionCallout, PlanetType } from '@/types'
-import { splitDuration } from '@/utils/ui/format'
+import { splitDuration, toRoman } from '@/utils/ui/format'
 import {
   championStarDeadlineAt,
   starDeadlineAt,
@@ -414,6 +442,7 @@ import PauseChampionCard from './PauseChampionCard.vue'
 import PauseStarCard from './PauseStarCard.vue'
 import PauseVoidCard from './PauseVoidCard.vue'
 import SunLedger from './SunLedger.vue'
+import PauseMetaPillar from './PauseMetaPillar.vue'
 import { gameNow } from '@/utils/game/gameClock'
 
 // Die Pause hat zwei Quellen — Fenster ohne Fokus und das Kürzel des Spielers.
@@ -473,6 +502,21 @@ const sunPhaseLabelColor = computed(() => {
   const p = sunPhase.value
   return 'phasePrimary' in p ? p.phasePrimary : p.accent
 })
+
+// ── Standtafel neben der Scheibe: links der Ort, rechts der Bard ────────────
+// Namen und Brüche stammen aus denselben Quellen wie die Header-Tooltips und die
+// Journey-Ringe des Stats-Tabs — hier wird nichts zum zweiten Mal aufgelöst.
+const universeName = computed(() => universes[gameStore.currentUniverse - 1]?.name ?? 'Uncharted')
+const universePct = computed(
+  () => (gameStore.currentUniverse / Math.max(1, gameStore.totalUniverses)) * 100,
+)
+const galaxyName = computed(
+  () => GALAXY_THEMES[galaxyStore.currentThemeIndex % GALAXY_THEMES.length]?.name ?? 'Uncharted',
+)
+const galaxyPct = computed(
+  () => (galaxyStore.starsRescued / Math.max(1, galaxyStore.starsRequired)) * 100,
+)
+const levelSub = computed(() => `${formatNumberCompact(gameStore.chimesToNextLevel)} to next`)
 
 const pauseStartChimes = ref(0)
 const pauseTick = ref(0)
@@ -1190,72 +1234,62 @@ function particleStyle(i: number): Record<string, string> {
     opacity: 1;
   }
 }
-.pause-meta-row {
-  display: flex;
-  align-items: stretch;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: clamp(16px, 2.2vw, 28px);
-  margin-top: clamp(8px, 1.2vh, 14px);
-}
-.meta-chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  white-space: nowrap;
-}
-.meta-chip__label {
-  font-size: clamp(0.66rem, 0.9vw, 0.76rem);
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.55);
-}
-.meta-chip__value {
-  font-size: clamp(1rem, 1.5vw, 1.3rem);
-  font-weight: 800;
-  line-height: 1;
-  color: #ece0c0;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 12px rgba(236, 224, 192, 0.25);
-}
-
 /* ── Sun hero ─────────────────────────────────────────── */
-/* Die Heldenzeile: Regeneration — Scheibe — Schaden. Beide Randspalten sind
-   gleich breit (1fr), die Scheibe steht dadurch exakt in der Panelmitte, genau
-   wie vor dem Einbau der Ledger.
+/* Die Heldenzeile ist die Standtafel des Panels: Ort — Regeneration — Scheibe —
+   Schaden — Bard. Beide Meta-Spalten sind auf dieselbe feste Breite gesetzt und
+   die Ledger-Spalten teilen sich den Rest zu gleichen Teilen; nur so steht die
+   Scheibe exakt in der Panelmitte. Eine der beiden Meta-Spalten breiter zu
+   machen verschöbe sie.
 
-   Die feste Höhe ist der Kern des Ganzen: sie ist der Durchmesser der Scheibe
-   und NICHT der höchste Inhalt. Wüchse die Zeile mit dem Ledger, änderte sich
-   die Panelhöhe — und mit ihr der Fit-Scale des gesamten Overlays (das Panel
-   ist auf jeder Desktop-Auflösung höhenlimitiert). Der negative `margin-top`
-   des Phasen-Labels darunter hängt ebenfalls daran.
+   `min-height` statt fester Höhe: Maß der Zeile bleibt die Scheibe. Die Säulen
+   sind an `--sun-d` gekoppelt und passen ab einem Durchmesser von 152 px (Full
+   HD) hinein — `min-height` fängt nur den Randfall darunter ab, statt sie
+   stillschweigend überlaufen zu lassen. Jeder Zuwachs hier ändert die Panelhöhe
+   und mit ihr den Fit-Scale des gesamten Overlays.
 
-   Platzrechnung je Randspalte: (960 Panelbreite − 2 × 44 Innenabstand
-   − 200 max. Scheibe) / 2 ≈ 336 px gegen ~170 px, die der breiteste Ledger
-   braucht. */
+   Platzrechnung je Ledger-Spalte: (1140 Panelbreite − 2 × 44 Innenabstand
+   − 2 × 168 Meta − 200 max. Scheibe − 4 Spaltenabstände) / 2 ≈ 210 px. */
 .hero-row {
   display: grid;
   /* `minmax(0, 1fr)` statt `1fr`: eine ungewöhnlich lange Zahl darf die
-     Randspalte nicht über ihren Anteil hinaus aufblähen — sonst wanderte die
+     Ledger-Spalte nicht über ihren Anteil hinaus aufblähen — sonst wanderte die
      Scheibe aus der Panelmitte. Sie ragt dann nach außen und wird notfalls vom
      Panel beschnitten; die Mitte bleibt unangetastet. */
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns:
+    var(--meta-col-w) minmax(0, 1fr) auto minmax(0, 1fr)
+    var(--meta-col-w);
   align-items: center;
   justify-items: center;
   /* Luft zur Scheibe: ihr Kasten ist quadratisch, ihre Korona läuft darüber
      hinaus — ohne diesen Abstand berührte die Akzentlinie den Schein. */
   column-gap: clamp(16px, 2.2vw, 30px);
   width: 100%;
-  height: var(--sun-d);
+  min-height: var(--sun-d);
 }
 
-/* Beide Ledger kleben an der Scheibe, ihre Zahlen wachsen nach außen. */
-.hero-row > :first-child {
+/* Die Meta-Säulen stehen an den Panelkanten, die Ledger kleben an der Scheibe
+   und wachsen nach außen — beide Paare spiegeln sich um die Mitte. */
+.hero-row > :nth-child(1) {
+  justify-self: start;
+}
+.hero-row > :nth-child(2) {
   justify-self: end;
 }
-.hero-row > :last-child {
+.hero-row > :nth-child(4) {
   justify-self: start;
+}
+.hero-row > :nth-child(5) {
+  justify-self: end;
+}
+
+/* Universe über Galaxy: die Ortskette liest sich von außen nach innen auf die
+   Scheibe zu. Rechts steht nur der Bard, seine Säule zentriert die Zeile. */
+.meta-col {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.6vh, 16px);
+  width: 100%;
+  min-width: 0;
 }
 
 /* Maße kommen inline aus `sunDiameter` (PAUSE_SUN_*): dieselbe Spanne stand
