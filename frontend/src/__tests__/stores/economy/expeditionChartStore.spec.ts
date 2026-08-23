@@ -4,7 +4,11 @@ import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
-import { EXPEDITION_CHART_MAX, EXPEDITION_WAYMARK_MAX } from '@/config/constants'
+import {
+  EXPEDITION_CHART_MAX,
+  EXPEDITION_UNLOCK_GALAXY,
+  EXPEDITION_WAYMARK_MAX,
+} from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 
 function freed(galaxy: number): CompletedGalaxyRecord {
@@ -35,6 +39,18 @@ describe('expedition chart — das Tor', () => {
     expect(chart.isUnlocked).toBe(true)
     expect(chart.destinations).toHaveLength(1)
     expect(chart.maxFreedGalaxy).toBe(1)
+  })
+
+  // Die Zahl im gesperrten Reiter und die Bedingung dahinter dürfen nicht
+  // auseinanderlaufen.
+  it('meint mit der angezeigten Schwelle denselben Moment', () => {
+    const chart = useExpeditionChartStore()
+    const galaxy = useGalaxyStore()
+    galaxy.currentGalaxy = EXPEDITION_UNLOCK_GALAXY - 1
+    expect(chart.isUnlocked).toBe(false)
+    galaxy.completedGalaxies.push(freed(EXPEDITION_UNLOCK_GALAXY - 1))
+    galaxy.currentGalaxy = EXPEDITION_UNLOCK_GALAXY
+    expect(chart.isUnlocked).toBe(true)
   })
 
   it('sortiert die Ziele mit dem jüngsten zuerst', () => {

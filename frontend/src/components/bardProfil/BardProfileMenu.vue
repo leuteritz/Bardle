@@ -8,10 +8,10 @@ import { useGamePause } from '@/composables/system/useGamePause'
 import { onKeybinding } from '@/composables/system/useKeybindings'
 import type { BardTabId } from '@/stores/core/uiStore'
 import type { KeybindId } from '@/types'
-import { formatBadgeCount } from '@/utils/ui/format'
+import { formatBadgeCount, toRoman } from '@/utils/ui/format'
 import { useBadgeFlare } from '@/composables/ui/useBadgeFlare'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
-import { HEADER_GEM_ICONS } from '@/config/constants'
+import { EXPEDITION_UNLOCK_GALAXY, HEADER_GEM_ICONS } from '@/config/constants'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import RpgBadgeTooltipBody from '@/components/ui/RpgBadgeTooltipBody.vue'
 import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
@@ -112,8 +112,8 @@ const allMenuItems: {
   name: string
   icon: string
   boost?: boolean
-  /** Fehlt der Reiter noch, liefert das Tor `false` — siehe `menuItems`. */
-  gate?: () => boolean
+  /** Gesperrt heißt sichtbar und anklickbar — siehe `menuItems`. */
+  locked?: () => boolean
 }[] = [
   { id: 'bard', name: 'Journey', icon: 'ph:compass-rose-fill' },
   { id: 'shop', name: 'Shop', icon: HEADER_GEM_ICONS.shop },
@@ -121,9 +121,9 @@ const allMenuItems: {
   { id: 'team', name: 'Team', icon: 'ph:users-three-fill' },
   {
     id: 'expedition',
-    name: 'Chart',
+    name: 'Voyages',
     icon: 'ph:map-trifold-fill',
-    gate: () => expeditionChartStore.isUnlocked,
+    locked: () => !expeditionChartStore.isUnlocked,
   },
   { id: 'battle', name: 'Rift', icon: 'ri:sword-fill', boost: true },
   { id: 'planets', name: 'Planets', icon: 'ph:planet-fill' },
@@ -131,12 +131,20 @@ const allMenuItems: {
 ]
 
 /**
- * Die sichtbare Leiste. Ein Reiter ohne Inhalt ist schlimmer als keiner: die
- * Expedition braucht eine befreite Galaxie, sonst hätte sie kein einziges Ziel.
- * Das Tor steht deshalb an EINER Stelle — hier und in `uiStore.setBardTab`, das
- * denselben Getter liest.
+ * Die Leiste steht vollständig, vom ersten Tick an. Ein Reiter, den es noch
+ * nicht gibt, ist kein Ziel, auf das man hinarbeiten kann — Voyages bleibt
+ * deshalb sichtbar und anklickbar und trägt seinen Zustand selbst: gedämpft mit
+ * Schloss hier, ausbuchstabiert im Reiter (`ExpeditionLockedPanel`). Aus dem
+ * Grund steht in `uiStore.setBardTab` auch keine Wache mehr.
  */
-const menuItems = computed(() => allMenuItems.filter((i) => i.gate?.() ?? true))
+const menuItems = computed(() =>
+  allMenuItems.map((i) => ({ ...i, locked: i.locked?.() ?? false })),
+)
+
+const lockedTabNote = `unlocks in Galaxy ${toRoman(EXPEDITION_UNLOCK_GALAXY)}`
+function tabLabel(item: { name: string; locked: boolean }) {
+  return item.locked ? `${item.name} — ${lockedTabNote}` : item.name
+}
 
 /**
  * Was einmal stand, bleibt stehen — Modalrahmen wie Tab-Inhalte.
@@ -316,8 +324,11 @@ onUnmounted(() => {
                   <button
                     @click="uiStore.setBardTab(item.id)"
                     class="rp-tab relative flex items-center justify-center gap-1.5 overflow-hidden"
-                    :class="uiStore.bardActiveTab === item.id ? 'rp-tab--active' : ''"
-                    :aria-label="item.name"
+                    :class="{
+                      'rp-tab--active': uiStore.bardActiveTab === item.id,
+                      'rp-tab--locked': item.locked,
+                    }"
+                    :aria-label="tabLabel(item)"
                     :aria-current="uiStore.bardActiveTab === item.id ? 'page' : undefined"
                   >
                     <!-- Ein Glyph steht ALLEIN für seinen Reiter und trägt
@@ -334,6 +345,9 @@ onUnmounted(() => {
                       v-if="uiStore.bardActiveTab === item.id"
                       class="absolute bottom-0 rp-tab-indicator left-2 right-2"
                     />
+                    <span v-if="item.locked" class="rp-tab-lock" aria-hidden="true">
+                      <Icon icon="lucide:lock" width="14" height="14" />
+                    </span>
                     <div v-if="item.id === 'team' && championBadgeCount > 0" class="team-badge-row">
                       <span class="mini-badge mini-badge--champion">{{ championBadgeCount }}</span>
                     </div>
@@ -807,6 +821,28 @@ onUnmounted(() => {
 .rp-tab--active .rp-tab-icon {
   color: #9fe062;
   filter: drop-shadow(0 0 6px rgba(100, 210, 50, 0.5));
+}
+
+/* ── Gesperrt ────────────────────────────────────────────────────────────
+   Nicht ausgegraut bis zur Unkenntlichkeit: der Reiter führt an einen echten
+   Inhalt, er kündigt ihn nur an. Das Schloss sitzt im Knopf, weil dessen
+   `overflow: hidden` alles außerhalb abschneidet. */
+.rp-tab--locked:not(.rp-tab--active) .rp-tab-icon {
+  color: #5f594c;
+}
+
+.rp-tab--locked:hover:not(.rp-tab--active) .rp-tab-icon {
+  color: #9a927e;
+}
+
+.rp-tab-lock {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  color: #a07a3c;
 }
 
 /* ── Namenschip ──────────────────────────────────────────────────────────

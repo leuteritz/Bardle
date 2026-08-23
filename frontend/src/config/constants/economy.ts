@@ -571,6 +571,13 @@ export const EXPEDITION_CHART_MAX = 5
 /** Wegmarken, die ein Champion an EINEM Ziel sammeln kann (Stufe 4). */
 export const EXPEDITION_WAYMARK_MAX = 5
 
+/**
+ * Die Galaxie, ab der Voyages offensteht — reine ANZEIGEZAHL. Das Tor selbst
+ * ist `expeditionChartStore.isUnlocked` (eine befreite Galaxie); beides meint
+ * denselben Moment, `expeditionChartStore.spec.ts` bindet sie aneinander.
+ */
+export const EXPEDITION_UNLOCK_GALAXY = 2
+
 // ── Expedition ledger ─────────────────────────────────────────────────────────
 //
 // The meta layer: every resolved mission counts once, forever. Ranks widen the
