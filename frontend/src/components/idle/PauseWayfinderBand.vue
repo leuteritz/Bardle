@@ -88,6 +88,7 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
 <template>
   <section
     class="wfb"
+    aria-label="Wayfinder"
     :class="{ 'wfb--done': flashing }"
     :style="{
       '--wfb-h': `${PAUSE_WAYFINDER_BAND_H}px`,
@@ -111,8 +112,6 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
         class="wfb__head-icon"
         aria-hidden="true"
       />
-      <span class="wfb__head-label">Wayfinder</span>
-
       <div class="wfb__path" aria-hidden="true">
         <span
           v-for="ch in chapters"
@@ -141,7 +140,7 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
         :class="{ 'wfb__gained--zero': props.milestones === 0 }"
         title="Wayfinder milestones claimed during this pause"
       >
-        +{{ props.milestones }} this pause
+        +{{ props.milestones }}
       </span>
     </div>
 
@@ -189,8 +188,8 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
 }
 
 /* ── Kopfzeile ────────────────────────────────────────── */
-/* Dasselbe Format wie `.sec-head` im Panel: gleiche Grösse, gleiche Laufweite,
-   feste Höhe. Nur der Inhalt rechts ist reicher. */
+/* Feste Höhe wie `.sec-head` im Panel; das Systemglyph trägt links, was vorher
+   danebenstand. */
 .wfb__head {
   display: flex;
   align-items: center;
@@ -202,16 +201,6 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
 .wfb__head-icon {
   flex-shrink: 0;
   color: #c89040;
-}
-
-.wfb__head-label {
-  flex-shrink: 0;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.42);
-  white-space: nowrap;
 }
 
 /* Sieben Etappen, gleich breit — nicht nach Kapitelgrösse gewichtet: gezeigt

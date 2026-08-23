@@ -34,9 +34,6 @@ const KIT_CELLS = 4
 /** `.kit-cell` padding-inline (10 links, 12 rechts) plus die Lücke zur Kunst. */
 const CELL_TEXT_INSET = 10 + 12 + 10
 
-/** `.sec-head` plus die Lücke darunter (`.kit-col` gap). */
-const BAND_HEAD_H = 24 + 10
-
 const kitColWidth = INNER - PAUSE_KIT_EFFECT_COL_W - 2 * PAUSE_KIT_GAP_PX
 const cellWidth = (kitColWidth - (KIT_CELLS - 1) * PAUSE_KIT_GAP_PX) / KIT_CELLS
 const textWidth = cellWidth - CELL_TEXT_INSET - PAUSE_KIT_CELL_ART_PX
@@ -62,11 +59,11 @@ describe('pause kit band layout', () => {
 
   /**
    * Der Grund für den Umbau: das Band stand einmal als 2 × 2-Raster und kostete
-   * mit Kopfzeile 232 px Panelhöhe. Bleibt es darunter, bleibt der Fit-Scale
-   * mindestens dort, wo er war.
+   * mit Kopfzeile 232 px Panelhöhe, mit der einreihigen Fassung noch 114. Seit
+   * die Kopfzeilen gefallen sind, ist die Bandhöhe der ganze Preis.
    */
   it('stays under the two-row band it replaced', () => {
-    expect(BAND_HEAD_H + PAUSE_KIT_BAND_H).toBeLessThan(232)
+    expect(PAUSE_KIT_BAND_H).toBeLessThan(114)
   })
 
   it('leaves room for four cells side by side', () => {

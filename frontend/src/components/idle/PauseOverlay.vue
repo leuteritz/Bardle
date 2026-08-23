@@ -34,27 +34,45 @@
                höhenlimitiert ist. -->
           <header class="pause-head">
             <h1 class="pause-title">Paused</h1>
-            <div class="pause-timer" role="timer" aria-label="Pause duration">
-              <span class="pause-timer__tag">Adrift for</span>
-              <span class="pause-timer__value">
-                <!-- Zweite, deckungsgleiche Lage derselben Ziffern: sie trägt
-                     KEINE Farbe, nur den kräftigen Schein, und allein ihre
-                     Opazität atmet. Der Takt lag vorher auf `text-shadow` der
-                     Ziffern selbst — das rastert die Zeile in jedem Frame neu
-                     (siehe „Performance" Regel 2 und 11). -->
-                <span class="pause-timer__glow" aria-hidden="true">
+            <!-- Die Level-Up-Marke meldet keine laufende Frist, sondern eine
+                 offene Entscheidung — sie steht deshalb hier oben und nicht bei
+                 den Karten. Niedriger als die Uhr, ihr Auftauchen ändert die
+                 Kopfhöhe also nicht. -->
+            <div class="pause-head__right">
+              <Transition name="callout-pop">
+                <span v-if="pendingAugmentCount > 0" class="level-chip">
+                  <Icon
+                    icon="ph:arrow-fat-up-fill"
+                    width="14"
+                    height="14"
+                    class="level-chip__icon"
+                    aria-hidden="true"
+                  />
+                  Level-Up
+                  <span class="level-chip__count">×{{ pendingAugmentCount }}</span>
+                </span>
+              </Transition>
+              <div class="pause-timer" role="timer" aria-label="Pause duration">
+                <span class="pause-timer__value">
+                  <!-- Zweite, deckungsgleiche Lage derselben Ziffern: sie trägt
+                       KEINE Farbe, nur den kräftigen Schein, und allein ihre
+                       Opazität atmet. Der Takt lag vorher auf `text-shadow` der
+                       Ziffern selbst — das rastert die Zeile in jedem Frame neu
+                       (siehe „Performance" Regel 2 und 11). -->
+                  <span class="pause-timer__glow" aria-hidden="true">
+                    <span
+                      v-for="(ch, i) in timerChars"
+                      :key="i"
+                      :class="ch === ':' ? 'timer-sep' : 'timer-digit'"
+                    >{{ ch }}</span>
+                  </span>
                   <span
                     v-for="(ch, i) in timerChars"
                     :key="i"
                     :class="ch === ':' ? 'timer-sep' : 'timer-digit'"
                   >{{ ch }}</span>
                 </span>
-                <span
-                  v-for="(ch, i) in timerChars"
-                  :key="i"
-                  :class="ch === ':' ? 'timer-sep' : 'timer-digit'"
-                >{{ ch }}</span>
-              </span>
+              </div>
             </div>
           </header>
           <span class="pause-head__rule" aria-hidden="true"></span>
@@ -83,8 +101,7 @@
             }"
           >
             <!-- ── Links: die Bilanz ─────────────────────────────────── -->
-            <section class="tally-col">
-              <h2 class="col-head">The tally</h2>
+            <section class="tally-col" aria-label="The tally">
 
               <!-- Der Heiligenschein liegt als eigene Ebene hinter der Münze und
                    blendet im Takt auf; die Münze selbst trägt ihren Schatten
@@ -119,11 +136,17 @@
                            Nachkommastellen an („999.99K", sieben Zeichen) und
                            macht die Zahl damit unbegrenzt breit. Dieselbe
                            Stelle wie bei den Kill-Chips und beim SunLedger. -->
-                      <span v-ink-center.y class="chime-value"
+                      <span
+                        v-ink-center.y
+                        class="chime-value"
+                        :aria-label="`Chimes gathered: ${formatNumber(accumulatedChimes)}`"
                         >+{{ formatNumberCompact(accumulatedChimes) }}</span
                       >
                     </span>
-                    <span class="chime-cap">Chimes gathered</span>
+                    <!-- Nur Platzhalter: die Strecke hat hier kein Ziel. Der
+                         Balken steht trotzdem, sonst stünde die Zahl der
+                         rechten Hälfte höher als diese. -->
+                    <span class="chime-fill chime-fill--ghost" aria-hidden="true" />
                   </span>
                 </div>
 
@@ -140,9 +163,14 @@
                     <span class="chime-value-row">
                       <!-- Steht die Strecke auf 0, ist der Meep fällig — dann
                            das Wort, nicht „0". -->
-                      <span v-ink-center.y class="chime-value chime-value--meep">{{
-                        chimesToNextMeep > 0 ? formatNumberCompact(chimesToNextMeep) : 'Ready'
-                      }}</span>
+                      <span
+                        v-ink-center.y
+                        class="chime-value chime-value--meep"
+                        :aria-label="`Chimes to next meep: ${formatNumber(chimesToNextMeep)}`"
+                        >{{
+                          chimesToNextMeep > 0 ? formatNumberCompact(chimesToNextMeep) : 'Ready'
+                        }}</span
+                      >
                       <!-- Der Bestand steht NEBEN der Zahl, nicht unter ihr und
                            nicht in der Beschriftung: als dritte Zeile machte er
                            den Block 23 px höher (Fit-Scale), in der
@@ -152,7 +180,15 @@
                         >· {{ formatNumberCompact(gameStore.pendingMeeps) }} pending</span
                       >
                     </span>
-                    <span class="chime-cap">To next meep</span>
+                    <!-- Was die Beschriftung sagte, sagt jetzt der Füllstand:
+                         dieselbe Strecke, die auch den Ring der Passiv-Kachel
+                         füllt. Gefüllt wird per `transform`, nie über `width`. -->
+                    <span class="chime-fill" aria-hidden="true">
+                      <span
+                        class="chime-fill__bar"
+                        :style="{ transform: `scaleX(${gameStore.pendingMeepFill})` }"
+                      />
+                    </span>
                   </span>
                 </div>
               </div>
@@ -162,9 +198,8 @@
                    bleiben stehen und dimmen nur ab — sonst spränge das Layout,
                    sobald während der Pause die erste Kategorie dazukommt. -->
               <div class="tally-block">
-                <span class="sec-head">
-                  <Icon icon="game-icons:crossed-swords" width="18" height="18" class="sec-head__icon" aria-hidden="true" />
-                  Kills
+                <span class="sec-head" aria-label="Kills">
+                  <Icon icon="ph:sword-fill" width="20" height="20" class="sec-head__icon" aria-hidden="true" />
                   <span v-if="pauseKills > 0" class="sec-head__n">{{ formatNumber(pauseKills) }}</span>
                 </span>
                 <!-- Ein Chip je Kategorie nebeneinander statt einer Liste
@@ -196,9 +231,8 @@
                    gekostet haben, gehört dem Bild — es füllt seine Zelle
                    vollständig aus. Übrig bleiben Bild und Menge. -->
               <div class="tally-block">
-                <span class="sec-head">
-                  <Icon icon="game-icons:ore" width="18" height="18" class="sec-head__icon" aria-hidden="true" />
-                  Materials
+                <span class="sec-head" aria-label="Materials">
+                  <Icon icon="game-icons:ore" width="20" height="20" class="sec-head__icon" aria-hidden="true" />
                   <span v-if="totalMaterials > 0" class="sec-head__n">{{ formatNumber(totalMaterials) }}</span>
                 </span>
                 <span v-if="visibleMaterials.length === 0" class="mat-empty">Nothing yet</span>
@@ -240,9 +274,12 @@
 
               <!-- Auto-Battle-Bilanz der Pause -->
               <div class="tally-block">
-                <span class="sec-head">
-                  <Icon icon="ri:sword-fill" width="18" height="18" class="sec-head__icon" aria-hidden="true" />
-                  Auto Battle
+                <!-- Der Pokal, nicht die Klinge: `ri:sword-fill` trägt im
+                     Scoreboard die Kampfphase, und ohne Beschriftung daneben
+                     stünde dasselbe Motiv für zwei Dinge. -->
+                <span class="sec-head" aria-label="Auto Battle">
+                  <Icon icon="ph:trophy-fill" width="20" height="20" class="sec-head__icon" aria-hidden="true" />
+                  <span v-if="pauseBattleTotal > 0" class="sec-head__n">{{ pauseBattleTotal }}</span>
                 </span>
                 <div class="battle-strip">
                   <template v-if="pauseBattleTotal > 0">
@@ -264,14 +301,13 @@
                       +{{ formatNumber(pauseBattleChimes) }}
                     </span>
                   </template>
-                  <span v-else class="battle-strip__idle">No battles finished yet</span>
+                  <span v-else class="battle-strip__idle">No battles yet</span>
                 </div>
               </div>
             </section>
 
             <!-- ── Rechts: der Zustand ───────────────────────────────── -->
-            <section class="state-col">
-              <h2 class="col-head">Where you stand</h2>
+            <section class="state-col" aria-label="Where you stand">
 
               <!-- Die Scheibe bleibt frei: Ring und Plakette lagen vorher genau
                    auf der Fläche, an der die Phase erkennbar ist — Korona,
@@ -377,17 +413,7 @@
               '--pause-kit-effect-w': `${PAUSE_KIT_EFFECT_COL_W}px`,
             }"
           >
-            <div class="kit-col">
-              <span class="sec-head">
-                <Icon
-                  icon="game-icons:magic-palm"
-                  width="18"
-                  height="18"
-                  class="sec-head__icon"
-                  aria-hidden="true"
-                />
-                Your kit
-              </span>
+            <div class="kit-col" aria-label="Your kit">
               <!-- Anzeige, kein Bedienfeld — deshalb Zeilen statt Kacheln.
                    Der Tick ist derselbe, der auch die Karten unten fortschreibt:
                    Abklingzeiten enden auch im Stillstand. -->
@@ -396,17 +422,7 @@
               </div>
             </div>
 
-            <div class="kit-col kit-col--effects">
-              <span class="sec-head">
-                <Icon
-                  icon="game-icons:hourglass"
-                  width="18"
-                  height="18"
-                  class="sec-head__icon"
-                  aria-hidden="true"
-                />
-                Active effects
-              </span>
+            <div class="kit-col kit-col--effects" aria-label="Active effects">
               <div id="pause-buff-dock" class="kit-dock" />
             </div>
           </section>
@@ -415,32 +431,13 @@
                aufpoppende Badges die Panel-Höhe (und den Fit-Scale) nie ändern -->
           <div
             class="callout-section"
+            aria-label="Awaiting your return"
             :style="{
               '--star-card-h': `${PAUSE_STAR_CARD_HEIGHT}px`,
               '--star-card-gap': `${PAUSE_STAR_CARD_GAP_PX}px`,
               '--star-card-rows': PAUSE_CALLOUT_ROWS,
             }"
           >
-            <!-- Kopfzeile mit fester Höhe: die Level-Up-Marke sitzt neben der
-                 Überschrift statt zwischen den Flyby-Karten. Sie ist kein
-                 laufender Vorgang, sondern etwas, das auf eine Entscheidung
-                 wartet — und die Kartenreihe bleibt dadurch sortenrein. -->
-            <div class="callout-head">
-              <span class="callout-heading">Awaiting your return</span>
-              <Transition name="callout-pop">
-                <span v-if="pendingAugmentCount > 0" class="level-chip">
-                  <Icon
-                    icon="ph:arrow-fat-up-fill"
-                    width="14"
-                    height="14"
-                    class="level-chip__icon"
-                    aria-hidden="true"
-                  />
-                  Level-Up
-                  <span class="level-chip__count">×{{ pendingAugmentCount }}</span>
-                </span>
-              </Transition>
-            </div>
             <TransitionGroup
               v-if="
                 activeResourceStars.length > 0 || championCallout || voidThreat
@@ -1313,8 +1310,11 @@ function particleStyle(i: number): Record<string, string> {
 .pause-stage {
   position: absolute;
   top: clamp(24px, 3vh, 40px);
-  left: 12px;
-  right: 12px;
+  /* Die Seitenpanels der Bottom-Bar liegen mit z-index 10000 ÜBER dem Overlay.
+     Die Bühne endet deshalb an ihrer Kante — dann deckelt `useFitScale` die
+     skalierte Panelbreite von selbst, statt sie an einer Zahl zu messen. */
+  left: var(--hud-panel-size, 330px);
+  right: var(--hud-panel-size, 330px);
   bottom: calc(var(--bottom-center-strip-h, 79px) + clamp(24px, 3vh, 40px));
   display: flex;
   align-items: center;
@@ -1423,18 +1423,19 @@ function particleStyle(i: number): Record<string, string> {
     0 3px 8px rgba(0, 0, 0, 0.9);
 }
 
+/* Die Kopfzeile richtet an der Grundlinie aus; die Pille daneben darf das
+   nicht mitmachen, sonst hinge sie an ihrer Textbasis gegen eine 2,75-rem-Uhr. */
+.pause-head__right {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 16px;
+}
+
 .pause-timer {
   display: flex;
   align-items: baseline;
   gap: 12px;
-}
-
-.pause-timer__tag {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.42);
 }
 
 .pause-timer__value {
@@ -1504,12 +1505,16 @@ function particleStyle(i: number): Record<string, string> {
    Material, keine Battles), und ein verteilter Überschuss riss die Abschnitte
    dann sichtbar auseinander. Die Restluft sammelt sich lieber am Fuss der
    kürzeren Spalte. */
+/* EINE durchgehende Kante statt zweier Striche unter zwei Überschriften: sie
+   kostet ein Viertel der Höhe und schliesst beide Spalten gleich ab. */
 .pause-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--state-col-w);
   gap: var(--body-gap);
   align-items: stretch;
   width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid rgba(122, 78, 32, 0.45);
 }
 
 .tally-col,
@@ -1527,20 +1532,6 @@ function particleStyle(i: number): Record<string, string> {
   border-left: 1px solid rgba(122, 78, 32, 0.35);
 }
 
-.col-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  padding-bottom: 9px;
-  border-bottom: 1px solid rgba(122, 78, 32, 0.45);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.42);
-}
-
 .tally-block {
   display: flex;
   flex-direction: column;
@@ -1548,23 +1539,24 @@ function particleStyle(i: number): Record<string, string> {
   min-width: 0;
 }
 
-/* EIN Kopfformat für alle Abschnitte beider Spalten: Grösse und Laufweite sind
-   überall gleich, unterschieden wird über die Farbe des Icons. Vorher trug fast
-   jeder Abschnitt seine eigene Beschriftungsgrösse. */
-/* Feste Höhe, weil die Summe rechts erst erscheint, sobald etwas gefallen ist:
-   ohne sie wüchse der Kopf mitten in der Pause um 6 px und schöbe alles
-   darunter nach — dasselbe Muster wie bei `.callout-head`. */
+/* Glyph links, Summe rechts, dazwischen eine Haarlinie statt eines Wortes: ein
+   einzelnes Icon in einer leeren Zeile liest sich als Fleck, eine Kante als
+   Abschnittsanfang. Sie läuft durch, solange die Summe fehlt.
+   Feste Höhe, weil die Summe erst erscheint, sobald etwas gefallen ist — ohne
+   sie wüchse der Kopf mitten in der Pause und schöbe alles darunter nach. */
 .sec-head {
   display: flex;
   align-items: center;
-  gap: 8px;
   height: 24px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.42);
-  white-space: nowrap;
+}
+
+.sec-head::after {
+  content: '';
+  order: 1;
+  flex: 1 1 auto;
+  height: 1px;
+  margin-left: 10px;
+  background: rgba(122, 78, 32, 0.45);
 }
 
 .sec-head__icon {
@@ -1573,8 +1565,10 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 .sec-head__n {
-  margin-left: auto;
-  font-size: 1.4em;
+  order: 2;
+  margin-left: 10px;
+  font-size: 1rem;
+  font-weight: 800;
   letter-spacing: 0.02em;
   color: #f0d060;
   font-variant-numeric: tabular-nums;
@@ -1813,17 +1807,29 @@ function particleStyle(i: number): Record<string, string> {
   text-overflow: ellipsis;
 }
 
-/* Sperrung 0,16em statt 0,24em: „CHIMES GATHERED" maß in MedievalSharp
-   gemessen 347 px und lief damit aus seiner Spalte. */
-.chime-cap {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.42);
-  white-space: nowrap;
+/* Die Strecke zum nächsten Meep als Linie statt als Beschriftung. Gefüllt wird
+   per `transform` an einem Kind — `width` je Frame rastert die Box neu.
+   Die linke Hälfte trägt dieselbe Zeile unsichtbar, sonst stünde ihre Zahl
+   höher als die rechte. */
+.chime-fill {
+  position: relative;
+  height: 3px;
+  margin-top: 6px;
+  border-radius: 1px;
+  background: rgba(122, 78, 32, 0.55);
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.chime-fill--ghost {
+  visibility: hidden;
+}
+
+.chime-fill__bar {
+  position: absolute;
+  inset: 0;
+  background: #fdba74;
+  transform-origin: left center;
+  transition: transform 0.4s ease-out;
 }
 
 /* ── Kill-Aufschlüsselung ─────────────────────────────── */
@@ -2089,7 +2095,6 @@ function particleStyle(i: number): Record<string, string> {
 .kit-col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
   min-width: 0;
 }
 
@@ -2112,29 +2117,10 @@ function particleStyle(i: number): Record<string, string> {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
   width: 100%;
 }
-/* Überschrift und Level-Up-Marke auf einer Zeile mit fester Höhe: taucht die
-   Marke mitten in der Pause auf, rückt darunter nichts nach.
-   Linksbündig wie die Karten darunter — beide teilen sich damit EINE Kante,
-   an der das Auge den Abschnitt findet. */
-.callout-head {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-  height: 22px;
-}
-.callout-heading {
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.55);
-}
-/* Die einzige verbliebene Pille im Abschnitt — sie meldet keine laufende Frist,
-   sondern eine offene Entscheidung, und steht deshalb bei der Überschrift. */
+/* Steht in der Kopfzeile des Panels, nicht mehr über den Karten: sie meldet
+   keine laufende Frist, sondern eine offene Entscheidung. */
 .level-chip {
   display: inline-flex;
   align-items: center;
@@ -2310,6 +2296,9 @@ function particleStyle(i: number): Record<string, string> {
   .chime-orb__halo,
   .pause-timer__glow {
     animation: none;
+  }
+  .chime-fill__bar {
+    transition: none;
   }
   /* Die Vitalitätsleiste hält sich selbst an — sie ist ein eigenes Bauteil und
      bringt ihren `prefers-reduced-motion`-Block mit. */

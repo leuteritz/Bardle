@@ -133,17 +133,15 @@ export const PAUSE_SUN_VH_FACTOR = 0.16
  *    neben seine Uhr passt, die Fähigkeitsspalten teilen sich den Rest.
  *  • Die Bilanz-Ablesung — sie ist der eigentliche Grund für die Breite. Ihre
  *    beiden Hälften sind gleich breit (`1fr 1fr`), und gebraucht wird in jeder
- *    (gemessen, nicht geschätzt): 347 px für „CHIMES GATHERED" in MedievalSharp
- *    mit Sperrung, 286 px für die reservierte Zahl, 290 px für die Meep-Zeile
- *    aus Zahl und Bestand. Bei 1320 standen der Textspalte nur 275 zur
- *    Verfügung — Beschriftung UND Zusatz wurden ellipsiert. 1440 macht daraus
- *    335, und die Sperrung der Beschriftung ging von 0,24em auf 0,16em.
+ *    (gemessen, nicht geschätzt): 286 px für die reservierte Chime-Zahl, 290 px
+ *    für die Meep-Zeile aus Zahl und Bestand. Die Beschriftungen darunter sind
+ *    gefallen — die Zahlenbreite trägt die Rechnung allein.
  *
  *  Nach oben grenzt etwas anderes: die erhobenen Seitenpanels der Bottom-Bar
- *  (BOTTOM_BAR_SIDE_W, z-index 10000) liegen ÜBER dem Overlay, und die
- *  Panelunterkante reicht in ihre Höhe. Die SKALIERTE Panelbreite muss deshalb
- *  unter der Lücke zwischen ihnen bleiben — gemessen 1260 px auf Full HD gegen
- *  1440 × 0,7927 = 1141. */
+ *  (BOTTOM_BAR_SIDE_W, z-index 10000) liegen ÜBER dem Overlay. Die SKALIERTE
+ *  Panelbreite muss unter der Lücke zwischen ihnen bleiben; `.pause-stage`
+ *  endet deshalb an `--hud-panel-size`, womit `useFitScale` den Deckel selbst
+ *  zieht statt einer Zahl an dieser Stelle. */
 export const PAUSE_PANEL_DESIGN_WIDTH = 1440
 export const PAUSE_PANEL_MAX_SCALE = 1.3
 
@@ -456,9 +454,11 @@ export const PAUSE_STAR_PLANET_ROW_WIDTH =
 // (Passive + Q/W/E/R), rechts alle laufenden Effekte mit ihrer Restzeit.
 //
 /* ── Pause-Overlay: die Bilanz-Ablesung ───────────────────────────────────
- * „Chimes gathered" und „To next meep" stehen als zwei GLEICH BREITE Hälften
- * nebeneinander (`1fr 1fr`), jede aus einer festen Orb-Spalte und dem Text
- * daneben.
+ * Gesammelte Chimes und die Strecke zum nächsten Meep stehen als zwei GLEICH
+ * BREITE Hälften nebeneinander (`1fr 1fr`), jede aus einer festen Orb-Spalte
+ * und dem Text daneben. Beschriftungen tragen sie nicht mehr — rechts sagt ein
+ * Füllstand, was „To next meep" sagte; links steht dieselbe Zeile unsichtbar,
+ * sonst stünden die beiden Zahlen nicht auf einer Höhe.
  *
  * Der Grund ist eine feste Position: vorher waren beide Hälften inhaltsbreit
  * und mit `space-between` an die Kanten gedrückt — die rechte wuchs damit nach
@@ -472,7 +472,8 @@ export const PAUSE_STAR_PLANET_ROW_WIDTH =
  */
 /** Breite der Orb-Spalte — die Bildkante selbst. Der Schein darum ist 118 px
  *  und absolut positioniert; er ragt über die Spalte, ohne das Raster
- *  anzufassen. */
+ *  anzufassen. Ohne die Beschriftungen ist sie zugleich der Höhenboden des
+ *  Blocks. */
 export const PAUSE_READOUT_ORB_PX = 72
 /** Abstand zwischen Orb und Text, und zwischen den beiden Hälften. */
 export const PAUSE_READOUT_GAP_PX = 16
@@ -480,10 +481,10 @@ export const PAUSE_READOUT_GAP_PX = 16
 // ── Das Kit-Band steht EINREIHIG ──────────────────────────────────────────
 // Vier Fähigkeiten nebeneinander statt 2 × 2 untereinander. Das Band hat
 // Breite im Überfluss und zahlt jede Zeile Höhe mit dem Fit-Scale des ganzen
-// Overlays — die flache Reihe kostet 114 px statt 232.
+// Overlays — die flache Reihe kostet 80 px statt 232.
 //
-// Die Passive kommt hier nicht vor: sie steht als zweite Ablesung oben bei
-// „Chimes gathered", weil beide Füllstände pausiert weiterlaufen.
+// Die Passive kommt hier nicht vor: sie steht als zweite Ablesung oben in der
+// Bilanz, weil beide Füllstände pausiert weiterlaufen.
 /** Lücke zwischen den Zellen und zwischen den Band-Spalten. */
 export const PAUSE_KIT_GAP_PX = 12
 /** Höhe einer Fähigkeitszelle: Kunst 44 mittig, daneben Name 20 + 6 + Fuß 18. */

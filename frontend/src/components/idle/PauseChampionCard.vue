@@ -201,7 +201,6 @@ const dashOffset = computed(() => {
           <span class="pcc-art__veil" />
         </div>
 
-        <span class="pcc-eyebrow">Champion Star</span>
         <span class="pcc-name">{{ callout.title }}</span>
 
         <!-- Fußzeile: das Leben des Champion-Planeten und daneben, wie viele
@@ -517,26 +516,12 @@ const dashOffset = computed(() => {
 }
 
 /* Text über dem Bild. */
-.pcc-eyebrow,
 .pcc-name,
 .pcc-foot,
 .pcc-role,
 .pcc-role__rule {
   position: relative;
   z-index: 1;
-}
-
-.pcc-eyebrow {
-  font-size: 9.5px;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: #e8c040;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 1px 4px rgba(5, 3, 0, 0.95);
 }
 
 /* 14 px ist am LÄNGSTEN Championnamen bemessen, nicht am Platz: „Nunu &
