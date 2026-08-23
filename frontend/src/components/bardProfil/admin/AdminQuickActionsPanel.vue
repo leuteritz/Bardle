@@ -221,6 +221,12 @@ function startBossPhase() {
 
 function forceCompleteGalaxy() {
   galaxyStore.starsRescued = galaxyStore.starsRequired
+  // Ohne die Versuchsreihe trägt der Archiveintrag zu wenige ✦-Marker und der
+  // Snapshot eine verkürzte Route — dieselbe Auffüllung wie in startBossPhase().
+  galaxyStore.attemptResults = Array.from(
+    { length: galaxyStore.starsRequired },
+    () => 'rescued' as const,
+  )
   galaxyStore.galaxyBossDefeated = true
   galaxyStore.pendingGalaxyBoss = false
   galaxyStore.bossEscortsDefeated = galaxyStore.bossEscortsTotal

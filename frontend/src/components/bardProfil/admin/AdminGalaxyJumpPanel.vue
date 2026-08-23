@@ -48,8 +48,11 @@ function jump(target: number | null) {
     triggerShake()
     return
   }
-  galaxyStore.adminJumpToGalaxy(n)
-  statusMsg.value = `Warped to Galaxy ${galaxyStore.currentGalaxy}`
+  const archived = galaxyStore.adminJumpToGalaxy(n)
+  statusMsg.value =
+    archived > 0
+      ? `Warped to Galaxy ${galaxyStore.currentGalaxy} — ${archived} galaxies archived`
+      : `Warped to Galaxy ${galaxyStore.currentGalaxy}`
   warping.value = true
   if (warpTimer) clearTimeout(warpTimer)
   warpTimer = setTimeout(() => {

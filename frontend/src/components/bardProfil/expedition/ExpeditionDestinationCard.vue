@@ -12,7 +12,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { renderGalaxySnapshot } from '@/utils/fx/galaxySnapshot'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
-import { EXPEDITION_CHART_MAX } from '@/config/constants'
+import { EXPEDITION_CHART_MAX, ARCHIVE_SNAPSHOT_ROOT_MARGIN } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { DestinationProgress } from '@/types'
 
@@ -40,7 +40,7 @@ onMounted(() => {
       observer?.disconnect()
       observer = null
     },
-    { rootMargin: '160px' },
+    { rootMargin: ARCHIVE_SNAPSHOT_ROOT_MARGIN },
   )
   observer.observe(root.value)
 })

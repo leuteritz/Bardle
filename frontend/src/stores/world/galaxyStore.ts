@@ -9,6 +9,7 @@ import { unlockedChampionTierCount } from '@/config/champions/championTiers'
 import type { ChampionRole } from '@/types'
 import { clampPercent } from '@/utils/orbit/geometry'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
+import { buildBackfillRecord, backfillThemeRng } from '@/utils/game/galaxyArchiveBackfill'
 import {
   CHAMPION_TRAVEL_BASE_MS,
   CHAMPION_TRAVEL_SCALE_MS,
@@ -37,6 +38,9 @@ import {
   TIER_UNLOCK_MATERIAL_LATE,
   TIER_UNLOCK_LATE_FROM_TIER,
   TIER_UNLOCK_COST_CAP_TIER,
+  MIN_THEME_HUE_DISTANCE,
+  ADMIN_ARCHIVE_RECENT_GAP_MS,
+  ADMIN_ARCHIVE_GAP_MS,
 } from '@/config/constants'
 
 export type ChampionTravelState = 'idle' | 'traveling' | 'champion_available' | 'champion_spawned'
@@ -74,7 +78,7 @@ export interface TierUnlockCost {
  * eine längere Reise dagegen nichts als Warten. Der Deckel verhindert, dass
  * eine späte Galaxie zu einem Marathon aus vierzig gleichen Sternen wird.
  */
-function computeRequired(galaxy: number): number {
+export function computeRequired(galaxy: number): number {
   const raw =
     GALAXY_STARS_BASE_REQUIRED +
     (galaxy - 1) +
@@ -162,12 +166,41 @@ function hueDistance(a: number, b: number): number {
   return d > 180 ? 360 - d : d
 }
 
-// Mindest-Farbton-Abstand zur Vorgänger-Galaxie: verhindert, dass zwei
-// ähnliche Farbwelten (z. B. zwei Grüntöne) direkt aufeinander folgen.
-const MIN_THEME_HUE_DISTANCE = 60
-
 function themeHue(index: number): number {
   return hexToHue(GALAXY_THEMES[index].accentColor)
+}
+
+/**
+ * Die Farbwelt der nächsten Galaxie. Rein — der Archiv-Nachtrag zieht die
+ * Kette 1 → 2 → … mit demselben Verfahren, mit dem `commitAdvance()` sie im
+ * Spiel weiterschreibt; zwei Verfahren liefen hier auseinander.
+ */
+export function pickThemeIndex(
+  galaxy: number,
+  currentThemeIndex: number,
+  used: number[],
+  rng: () => number = Math.random,
+): { themeIndex: number; used: number[] } {
+  // Galaxie 1 ist immer das vertraute Blau (Blue Veil).
+  if (galaxy === 1) return { themeIndex: 0, used: [0] }
+
+  let nextUsed = [...used]
+  let available = allNonHomeThemeIndices().filter((i) => !nextUsed.includes(i))
+  if (available.length === 0) {
+    // Alle Themes gesehen → Zyklus neu starten, aber ohne direkte Wiederholung.
+    nextUsed = [0]
+    available = allNonHomeThemeIndices().filter((i) => i !== currentThemeIndex)
+  }
+  // Deutlich anders als die Vorgänger-Galaxie: nur Themes mit genug
+  // Farbton-Abstand zulassen — falls keins übrig ist, Regel lockern.
+  const currentHue = themeHue(currentThemeIndex)
+  const contrasting = available.filter(
+    (i) => hueDistance(themeHue(i), currentHue) >= MIN_THEME_HUE_DISTANCE,
+  )
+  if (contrasting.length > 0) available = contrasting
+  const themeIndex = available[Math.floor(rng() * available.length)]
+  nextUsed.push(themeIndex)
+  return { themeIndex, used: nextUsed }
 }
 
 export const useGalaxyStore = defineStore('galaxy', {
@@ -628,40 +661,96 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.resourceStarElapsedMs = 0
       this.resourceStarNextIntervalMs = 0
       this.pendingChampionStar = false
-      if (this.currentGalaxy === 1) {
-        // Galaxie 1 ist immer das vertraute Blau (Blue Veil).
-        this.currentThemeIndex = 0
-        this.usedThemeIndices = [0]
-      } else {
-        let available = allNonHomeThemeIndices().filter((i) => !this.usedThemeIndices.includes(i))
-        if (available.length === 0) {
-          // Alle Themes gesehen → Zyklus neu starten, aber ohne direkte Wiederholung.
-          this.usedThemeIndices = [0]
-          available = allNonHomeThemeIndices().filter((i) => i !== this.currentThemeIndex)
-        }
-        // Deutlich anders als die Vorgänger-Galaxie: nur Themes mit genug
-        // Farbton-Abstand zulassen — falls keins übrig ist, Regel lockern.
-        const currentHue = themeHue(this.currentThemeIndex)
-        const contrasting = available.filter(
-          (i) => hueDistance(themeHue(i), currentHue) >= MIN_THEME_HUE_DISTANCE,
-        )
-        if (contrasting.length > 0) available = contrasting
-        const next = available[Math.floor(Math.random() * available.length)]
-        this.currentThemeIndex = next
-        this.usedThemeIndices.push(next)
-      }
+      const theme = pickThemeIndex(
+        this.currentGalaxy,
+        this.currentThemeIndex,
+        this.usedThemeIndices,
+      )
+      this.currentThemeIndex = theme.themeIndex
+      this.usedThemeIndices = theme.used
       this.requestRoleSelection()
+    },
+
+    /**
+     * Admin-only: die übersprungenen Läufe 1…upto ins Archiv nachtragen.
+     *
+     * Ohne das bleibt `completedGalaxies` nach einem Sprung leer — und damit
+     * nicht nur die Archivspalte, sondern auch Voyages, deren EINZIGE Quelle
+     * dieses Array ist (Tor, Zielliste, Name, Skala, Ziehungsgewicht).
+     *
+     * Bestehende Einträge bleiben unangetastet — ein echt gespielter Lauf
+     * überlebt jeden Sprung, auch einen zurück. Gibt zurück, wie viele
+     * Galaxien nachgetragen wurden.
+     */
+    adminBackfillArchive(upto: number): number {
+      const last = Math.floor(upto)
+      if (last < 1) return 0
+
+      const byGalaxy = new Map<number, CompletedGalaxyRecord>(
+        this.completedGalaxies.map((r) => [r.galaxy, r]),
+      )
+      if (Array.from({ length: last }, (_, i) => i + 1).every((g) => byGalaxy.has(g))) return 0
+
+      let themeIndex = this.currentThemeIndex
+      let used = [...this.usedThemeIndices]
+      const added: CompletedGalaxyRecord[] = []
+
+      for (let g = 1; g <= last; g++) {
+        const existing = byGalaxy.get(g)
+        if (existing) {
+          // Ein echt gespielter Lauf ist das nächste Glied der Farbkette.
+          themeIndex = existing.themeIndex
+          if (!used.includes(themeIndex)) used.push(themeIndex)
+          continue
+        }
+        const theme = pickThemeIndex(g, themeIndex, used, backfillThemeRng(g))
+        themeIndex = theme.themeIndex
+        used = theme.used
+        added.push(buildBackfillRecord(g, computeRequired(g), themeIndex, 0))
+      }
+
+      // Stempel rückwärts vergeben, damit die Archivkarten aufsteigende Daten
+      // tragen. Wanduhr ist hier richtig: der Stempel wird als Datum gerendert
+      // und nie gegen eine Frist geprüft.
+      // eslint-disable-next-line no-restricted-syntax
+      let stamp = Date.now() - ADMIN_ARCHIVE_RECENT_GAP_MS
+      for (let i = added.length - 1; i >= 0; i--) {
+        added[i].completedAt = stamp
+        stamp -= added[i].durationSeconds * 1000 + ADMIN_ARCHIVE_GAP_MS
+      }
+
+      for (const record of added) {
+        this.completedGalaxies.push(record)
+        this.totalStarsRescued += record.attemptResults.filter((r) => r === 'rescued').length
+        this.totalStarsLost += record.attemptResults.filter((r) => r === 'failed').length
+        this.totalGalaxyBossesDefeated++
+        this.totalBossEscortsDefeated += computeBossEscortCount(record.galaxy)
+      }
+      this.completedGalaxies.sort((a, b) => a.galaxy - b.galaxy)
+      this.currentThemeIndex = themeIndex
+      this.usedThemeIndices = used
+      return added.length
     },
 
     // Admin-only: teleport straight to galaxy N. Reuses commitAdvance() so the
     // resulting state is identical to legitimately entering galaxy N (stars reset,
     // starsRequired recomputed, champion pool re-rolled, theme + role-selection set).
     // unlockedTier is raised so later legit advances aren't blocked at a tier gate.
-    adminJumpToGalaxy(target: number) {
+    // Der Nachtrag läuft VOR commitAdvance(): der wählt danach die Farbwelt für
+    // N im Kontrast zu N−1, und die Kette bleibt lückenlos.
+    adminJumpToGalaxy(target: number): number {
       const n = Math.max(1, Math.floor(target))
+      // Die laufende Galaxie noch unter IHRER Nummer archivieren, falls sie
+      // fertig ist — danach die Bossmarke löschen, sonst schriebe das
+      // Sicherheitsnetz in commitAdvance() denselben Lauf ein zweites Mal, dann
+      // aber unter der Nummer n−1 und über den Nachtrag hinweg.
+      this.maybeRecordCompletion()
+      this.galaxyBossDefeated = false
+      const filled = this.adminBackfillArchive(n - 1)
       this.currentGalaxy = n - 1
       this.unlockedTier = Math.max(this.unlockedTier, tierOf(n))
       this.commitAdvance()
+      return filled
     },
   },
 })

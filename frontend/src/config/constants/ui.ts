@@ -229,6 +229,9 @@ export const MINIMAP_ROUTE_ARROW_GAP = 14 // chevron tip distance before the seg
 export const MINIMAP_ROUTE_ARROW_SPREAD = 0.48 // half-opening angle of the chevron in radians (~27°)
 export const SNAPSHOT_ROUTE_ARROW_SIZE = 3.5 // chevron wing length in the archive snapshot (smaller canvas)
 export const SNAPSHOT_ROUTE_ARROW_GAP = 12 // chevron tip distance before the endpoint in the snapshot
+// Vorlauf des IntersectionObserver, der einen Archiv-Snapshot zeichnen lässt —
+// renderGalaxySnapshot rastert synchron, Dutzende in einem Frame sind teuer.
+export const ARCHIVE_SNAPSHOT_ROOT_MARGIN = '160px'
 export const MINIMAP_COMET_HEAD_R = 4.5 // player comet head radius (× √zoom)
 export const MINIMAP_COMET_TAIL_LEN = 46 // comet tail length in px along the flight curve
 export const MINIMAP_COMET_TAIL_SEGMENTS = 14 // tail sample count

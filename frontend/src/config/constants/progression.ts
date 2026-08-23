@@ -180,6 +180,29 @@ export const GALAXY_STARS_LATE_BONUS = 2
  * späte Galaxie bei rund zwei Stunden.
  */
 export const GALAXY_STARS_MAX = 36
+
+/**
+ * Mindest-Farbton-Abstand zur Vorgänger-Galaxie: verhindert, dass zwei
+ * ähnliche Farbwelten (z. B. zwei Grüntöne) direkt aufeinander folgen.
+ */
+export const MIN_THEME_HUE_DISTANCE = 60
+
+// ── Archiv-Nachtrag beim Admin-Galaxiesprung ──────────────────────────────
+// Ein Sprung auf Galaxie N trägt die übersprungenen Läufe 1…N−1 nach, sonst
+// bleiben Galaxy-Archiv und Voyages leer (completedGalaxies ist ihre einzige
+// Quelle). Deterministisch je Galaxienummer — derselbe Sprung liefert immer
+// dasselbe Archiv.
+export const ADMIN_ARCHIVE_SEED_SALT = 7919
+/** Galaxie 1 verliert keinen Stern; der Anteil steigt bis zur Rampe und sättigt. */
+export const ADMIN_ARCHIVE_FAIL_RATE_MAX = 0.3
+export const ADMIN_ARCHIVE_FAIL_RAMP_GALAXIES = 12
+/** 3 Sterne ≈ 10 min, 36 Sterne ≈ 2 h — die Zeitrechnung aus docs/balance.md. */
+export const ADMIN_ARCHIVE_SECONDS_PER_STAR = 210
+export const ADMIN_ARCHIVE_DURATION_JITTER = 0.25
+/** Rückdatierung: der jüngste Eintrag liegt so weit zurück, dann je Lauf ein Sprung. */
+export const ADMIN_ARCHIVE_RECENT_GAP_MS = 5 * 60_000
+export const ADMIN_ARCHIVE_GAP_MS = 12 * 60_000
+
 export const GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS = 4000
 export const GALAXY_STAR_FAILED_SIGNAL_MS = 2600 // "Star Lost" flash on the minimap
 export const GALAXY_BOSS_SPAWN_ANIM_MS = 5_000
