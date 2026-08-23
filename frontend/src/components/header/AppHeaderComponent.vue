@@ -16,6 +16,7 @@ import {
   HEADER_NOTIF_BADGE_MAX_PX,
   HEADER_BADGE_EDGE_GAP_FRAC,
   CENTER_CHIMES_TOOLTIP_GAP_PX,
+  LEVEL_TOOLTIP_WIDTH,
 } from '@/config/constants'
 import {
   HEADER_BADGE_OVERLAP_FRAC,
@@ -35,6 +36,7 @@ import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
 import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
 import SunPhaseIndicator from './SunPhaseIndicator.vue'
+import LevelProgressTooltip from './LevelProgressTooltip.vue'
 
 const gameStore = useGameStore()
 const uiStore = useUiStore()
@@ -351,7 +353,7 @@ onUnmounted(() => {
         />
       </svg>
 
-      <RpgBadgeTooltip :gap="CENTER_CHIMES_TOOLTIP_GAP_PX">
+      <RpgBadgeTooltip :gap="CENTER_CHIMES_TOOLTIP_GAP_PX" :width="LEVEL_TOOLTIP_WIDTH">
       <div
         ref="chimesRef"
         class="center-chimes"
@@ -393,16 +395,16 @@ onUnmounted(() => {
         </div>
       </div>
       <template #tip>
-        <RpgBadgeTooltipBody kind="level" />
+        <LevelProgressTooltip />
       </template>
       </RpgBadgeTooltip>
 
-      <RpgBadgeTooltip>
+      <RpgBadgeTooltip :width="LEVEL_TOOLTIP_WIDTH">
         <div class="arc-level-badge" :style="{ top: svgH - badgeOverlapPx + 'px' }">
           <span v-ink-center class="arc-level-text">{{ gameStore.level }}</span>
         </div>
         <template #tip>
-          <RpgBadgeTooltipBody kind="level" />
+          <LevelProgressTooltip />
         </template>
       </RpgBadgeTooltip>
 

@@ -272,8 +272,9 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
     accent: BADGE_ACCENT_LEVEL,
     icon: 'ph:arrow-fat-up-fill',
     tab: null,
-    // Kein Abzeichen, nur ein Tooltip-Kind. Steht hier aus demselben Grund, aus
-    // dem es in NOTIFY_BADGE_TITLE steht: eine halbe Tabelle ist schlechter.
+    // Kein Abzeichen; den Titel trägt der Kopf von LevelProgressTooltip.vue.
+    // Steht hier aus demselben Grund, aus dem es in NOTIFY_BADGE_TITLE steht:
+    // eine halbe Tabelle ist schlechter.
     hasBadge: false,
     heralds: false,
     sites: [],

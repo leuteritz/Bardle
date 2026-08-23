@@ -391,6 +391,10 @@ export const GALAXY_TOOLTIP_ICONS = {
  */
 export const GALAXY_ATTEMPT_STRIP_MAX = 24
 
+// ── Header level tooltip ──────────────────────────────────────
+/** Schmaler als das Meep-Panel: eine Bilanz, ein Balken, eine kurze Liste. */
+export const LEVEL_TOOLTIP_WIDTH = 'clamp(345px, 20vw, 495px)'
+
 // ── Header meep tooltip ────────────────────────────────────────────────────
 /** Wie das Galaxie-Panel: eine Spalte Zweige, keine zwei Bilanzblöcke. */
 export const MEEP_TOOLTIP_WIDTH = 'clamp(360px, 21vw, 500px)'
