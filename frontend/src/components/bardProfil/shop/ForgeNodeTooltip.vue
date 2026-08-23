@@ -1,50 +1,45 @@
 <template>
   <div
     ref="cardEl"
-    class="node-tooltip"
+    class="ftip node-tooltip"
     :class="side === 'below' ? 'node-tooltip--below' : 'node-tooltip--above'"
     :style="cardStyle"
     aria-hidden="true"
   >
-    <!-- Akzentleiste und die linke Kante der Wirkung tragen die Farbe des
-         Knotens: so liest man Karte und Kreis als dasselbe Ding, ohne dass ein
-         Wort es sagen müsste. Eigene Eigenschaft und nicht das `--node-color`
-         des Baums — das hängt am Kreis, und der ist hier ein Geschwister, kein
-         Vorfahr. -->
-    <span class="tt-accent" aria-hidden="true" />
+    <span class="ftip-accent" aria-hidden="true" />
 
-    <div class="tt-head">
+    <div class="ftip-head">
       <Icon
         :icon="entry.icon"
         width="20"
         height="20"
-        class="tt-icon"
+        class="ftip-ico"
         :style="{ color: entry.color }"
       />
-      <span class="tt-name" :style="{ color: entry.color }">{{ entry.name }}</span>
-      <span v-if="entry.state === 'maxed'" class="tt-max">✦ MAX</span>
+      <span class="ftip-name" :style="{ color: entry.color }">{{ entry.name }}</span>
+      <span v-if="entry.state === 'maxed'" class="ftip-chip">{{ FORGE_TIP_MAX_LABEL }}</span>
     </div>
 
-    <div class="tt-effect">{{ effectText }}</div>
+    <div class="ftip-effect">{{ effectText }}</div>
 
     <!-- Ein Knoten mit mehreren Vorgängern zeigt sie ALLE, einer mit genau
          einem zeigt ihn auch. Keine Überschrift darüber: das Schloss links sagt
          dasselbe ohne ein Wort. -->
-    <div v-if="reqs.length > 0" class="tt-reqs-block">
-      <Icon :icon="FORGE_LOCK_ICON" width="14" height="14" class="tt-reqs-lock" />
-      <ul class="tt-reqs">
-        <li v-for="req in reqs" :key="req.id" :class="{ 'tt-req--met': req.met }">
-          <span class="tt-req-mark">{{ req.met ? FORGE_REQ_MET_MARK : FORGE_REQ_OPEN_MARK }}</span>
-          <span class="tt-req-name">{{ req.name }}</span>
-          <span class="tt-req-num">{{ req.have }}/{{ req.need }}</span>
+    <div v-if="reqs.length > 0" class="ftip-block ftip-reqs-block">
+      <Icon :icon="FORGE_LOCK_ICON" width="14" height="14" class="ftip-reqs-lock" />
+      <ul class="ftip-reqs">
+        <li v-for="req in reqs" :key="req.id" :class="{ 'ftip-req--met': req.met }">
+          <span class="ftip-req-mark">{{ req.met ? FORGE_REQ_MET_MARK : FORGE_REQ_OPEN_MARK }}</span>
+          <span class="ftip-req-name">{{ req.name }}</span>
+          <span class="ftip-req-num">{{ req.have }}/{{ req.need }}</span>
         </li>
       </ul>
     </div>
     <!-- Phase, Prestige-Tor, Gleichwuchs-Deckel: gegen die hilft kein Vorgänger,
          also steht dort ein Satz statt einer Liste — derselbe, den `lockedFor()`
          ohnehin fertig liefert. -->
-    <div v-else-if="entry.lockReason !== ''" class="tt-lockchip">
-      <Icon :icon="FORGE_LOCK_ICON" width="14" height="14" class="tt-lockchip-icon" />
+    <div v-else-if="entry.lockReason !== ''" class="ftip-block ftip-lockchip">
+      <Icon :icon="FORGE_LOCK_ICON" width="14" height="14" class="ftip-lockchip-icon" />
       <span>{{ entry.lockReason }}</span>
     </div>
   </div>
@@ -66,15 +61,22 @@
  * Farbe bereits, und aus derselben Quelle: Baum und Liste bauen beide aus
  * `SOLAR_BRANCHES` und `FORGE_NODES`. Durchgereicht wird nur, was allein der
  * Baum weiss — die Aufklapprichtung.
+ *
+ * Ihre GESTALT liegt seit dem Umbau global als `.ftip-*` in `rpg-theme.css` und
+ * gehört ihr nicht allein: Zeilen- und Angebotskarte tragen dieselbe. Hier steht
+ * nur noch, was allein der Baum weiss — Lage, Breite, Gegenskalierung.
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ForgeOfferReq, ForgeUpgradeEntry } from '@/types'
+import { forgeEffectText } from '@/composables/ui/useForgeUpgrades'
 import {
   FORGE_LOCK_ICON,
   FORGE_NODE_TIP_EDGE_PAD_PX,
   FORGE_REQ_MET_MARK,
   FORGE_REQ_OPEN_MARK,
+  FORGE_TIP_MAX_LABEL,
+  FORGE_TIP_WIDTH_PX,
 } from '@/config/constants'
 
 const props = defineProps<{
@@ -83,26 +85,7 @@ const props = defineProps<{
   side: 'above' | 'below'
 }>()
 
-/**
- * Was der Satz nennt — auf Stufe 0 die Wirkung des ERSTEN Kaufs.
- *
- * `desc` setzt immer den Wert der AKTUELLEN Stufe ein, und der ist bei allem
- * Ungekauften null: „Expeditions complete 0% faster." ist die einzige Zahl auf
- * dieser Karte und sagt nichts. `nextDesc` ist derselbe Satz mit dem Wert der
- * nächsten Stufe — bei Stufe 0 also genau das, was der erste Kauf brächte.
- *
- * Gilt für ALLES auf Stufe 0, nicht nur für Gesperrtes: ein kaufbarer,
- * ungekaufter Knoten zeigt dieselbe nichtssagende Null. Ohne eigene Marke — bei
- * einem gesperrten Knoten sagen die Kreuze darunter ohnehin, dass davon nichts
- * läuft, und eine Marke wäre der vierte Textblock auf einer Karte, die gerade
- * auf drei gebracht wurde.
- *
- * Kronen tragen Klartext ohne Platzhalter; dort sind beide Sätze gleich, und
- * der Zweig fällt nicht auf.
- */
-const effectText = computed(() =>
-  props.entry.level === 0 ? props.entry.nextDesc : props.entry.desc,
-)
+const effectText = computed(() => forgeEffectText(props.entry))
 
 /**
  * Welche Vorgänger als ZEILEN erscheinen — leer heisst: ein Vorgänger ist hier
@@ -202,48 +185,27 @@ const cardStyle = computed(() => ({
   '--tip-dx': `${shift.value.x}px`,
   '--tip-dy': `${shift.value.y}px`,
 }))
+
+const tipWidth = `${FORGE_TIP_WIDTH_PX}px`
 </script>
 
 <style scoped>
-/* Drei Elemente, mehr nicht — Name, Wirkung, Voraussetzungen. Die Gestalt trägt
-   die Zugehörigkeit über die Farbe des Knotens: Akzentleiste oben, linke Kante
-   an der Wirkung. */
+/* Nur die Lage. Grund, Rahmen, Kopf, Wirkungsblock und Bedingungen stehen als
+   `.ftip-*` global in `rpg-theme.css` — dieselbe Gestalt trägt die Zeilen- und
+   die Angebotskarte. */
 .node-tooltip {
   position: absolute;
   left: 50%;
   /* Counter-scale against the stage zoom so the tooltip always renders at a
      constant, readable screen size — regardless of zoom level or resolution.
      Ein Keyframe auf `transform` überschriebe genau diese Gegenskalierung —
-     die Einblendung unten bewegt deshalb NUR die Deckkraft. */
+     die Einblendung in `.ftip` bewegt deshalb NUR die Deckkraft. */
   transform: translateX(-50%) scale(var(--inv-scale, 1))
     translate(var(--tip-dx, 0px), var(--tip-dy, 0px));
-  /* 244 statt 230: der Platz für die grössere Schrift kommt aus den drei
-     gestrichenen Blöcken, nicht aus der Breite. `.tree-viewport` schneidet mit
-     `overflow: hidden` ab, und je breiter die Karte, desto früher trifft das
-     einen Knoten am Bühnenrand. */
-  width: 244px;
-  background: #16140e;
-  border: 2px solid #5c3310;
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
-  padding: 13px 15px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
+  /* `.tree-viewport` schneidet mit `overflow: hidden` ab, und je breiter die
+     Karte, desto früher trifft das einen Knoten am Bühnenrand. */
+  width: v-bind(tipWidth);
   z-index: 30;
-  pointer-events: none;
-  /* Hält die Akzentleiste in den Ecken des Rahmens. */
-  overflow: hidden;
-  animation: forge-tip-in 90ms ease-out;
-}
-
-@keyframes forge-tip-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 .node-tooltip--below {
@@ -254,144 +216,5 @@ const cardStyle = computed(() => ({
 .node-tooltip--above {
   bottom: calc(100% + 10px);
   transform-origin: bottom center;
-}
-
-.tt-accent {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(to right, transparent, var(--tip-color, #c89040), transparent);
-}
-
-.tt-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.tt-icon {
-  flex-shrink: 0;
-}
-
-/* Umbrechen statt kürzen: bei diesem Schriftgrad ist ein abgeschnittener Name
-   unlesbarer als eine zweite Zeile. */
-.tt-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 17px;
-  font-weight: 900;
-  letter-spacing: 0.4px;
-  line-height: 1.2;
-}
-
-.tt-max {
-  flex-shrink: 0;
-  padding: 2px 6px;
-  border: 1px solid rgba(232, 192, 64, 0.45);
-  border-radius: 3px;
-  background: rgba(232, 192, 64, 0.13);
-  color: #e8c040;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-}
-
-/* Die Wirkung ist der Grund, warum die Karte überhaupt aufgeht — sie bekommt
-   die grösste Schrift und eine eigene Fläche. */
-.tt-effect {
-  padding: 9px 11px;
-  border-left: 3px solid var(--tip-color, #5c3310);
-  border-radius: 4px;
-  background: #1b180f;
-  color: #e8dcc0;
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-.tt-reqs-block {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 9px 11px;
-  border-radius: 4px;
-  background: #1b1409;
-}
-
-.tt-reqs-lock {
-  flex-shrink: 0;
-  margin-top: 1px;
-  color: #c89040;
-}
-
-.tt-reqs {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.tt-reqs li {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 16px;
-  color: rgba(255, 200, 80, 0.72);
-}
-
-.tt-req--met {
-  color: rgba(110, 192, 64, 0.9);
-}
-
-.tt-req-mark {
-  flex-shrink: 0;
-  width: 11px;
-  text-align: center;
-}
-
-.tt-req-name {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.tt-req-num {
-  flex-shrink: 0;
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Was kein Vorgänger löst — Sonnenphase, Prestige-Tor, Gleichwuchs-Deckel. */
-.tt-lockchip {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 9px 11px;
-  border-radius: 4px;
-  background: #1b1409;
-  color: rgba(255, 200, 80, 0.78);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.tt-lockchip-icon {
-  flex-shrink: 0;
-  color: #c89040;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* Die Einblendung. Nur Deckkraft, aber auch die ist eine Bewegung. */
-  .node-tooltip {
-    animation: none;
-  }
 }
 </style>

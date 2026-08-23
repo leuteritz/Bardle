@@ -1517,3 +1517,210 @@
     transition: none;
   }
 }
+
+/* ── Star Forge tooltip system (.ftip-*) ────────────────────────────────────
+   EINE Kartensprache fuer alles, was im Shop-Tab unter dem Zeiger aufgeht:
+   der Knoten im Netz, die Upgrade-Zeile der Detailspalte, das Angebot im
+   Streifen. Knoten und Zeile lesen sogar denselben `ForgeUpgradeEntry` — der
+   Kreis links und die Zeile rechts sind fuer den Spieler EIN Ding, und drei
+   Gestalten machten daraus drei.
+
+   Warum global und nicht scoped: dieselbe Begruendung wie beim .fc-Block
+   darueber — die drei Karten sind Geschwisterkomponenten, keine erbt die
+   scoped-Regeln der anderen.
+
+   Was der AUFRUFER behaelt, weil nur er es weiss: Position, Breite, z-index.
+   Der Knoten steht in einer gezoomten Buehne und gegen-skaliert per
+   `--inv-scale`; Zeile und Angebot schweben `fixed` an einem Anker, den ihre
+   Liste gemessen hat. Beides gehoert nicht hierher.
+
+   Die Zugehoerigkeit traegt `--tip-color` — Akzentleiste oben, linke Kante am
+   Wirkungsblock. So liest man Karte und Kreis als dasselbe Ding, ohne dass ein
+   Wort es sagen muesste.
+
+   Performance: animiert wird ausschliesslich die Deckkraft beim Erscheinen.
+   Eine Karte steht nie gleichzeitig mit einer zweiten.
+════════════════════════════════════════════════════════════════════════════ */
+
+.ftip {
+  background: #16140e;
+  border: 2px solid #5c3310;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  padding: 13px 15px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  pointer-events: none;
+  /* Haelt die Akzentleiste in den Ecken des Rahmens. */
+  overflow: hidden;
+  animation: forge-tip-in 90ms ease-out;
+}
+
+/* Der Keyframe steht MIT hier: in `<style scoped>` haengt Vue einen
+   Scope-Suffix an den Namen, und die Karte faende ihn von hier aus nicht. */
+@keyframes forge-tip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ftip-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(to right, transparent, var(--tip-color, #c89040), transparent);
+}
+
+.ftip-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ftip-ico {
+  flex-shrink: 0;
+}
+
+/* Umbrechen statt kuerzen: bei diesem Schriftgrad ist ein abgeschnittener Name
+   unlesbarer als eine zweite Zeile. */
+.ftip-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  line-height: 1.2;
+}
+
+.ftip-chip {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border: 1px solid rgba(232, 192, 64, 0.45);
+  border-radius: 3px;
+  background: rgba(232, 192, 64, 0.13);
+  color: #e8c040;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+/* Rang und Art sagen, wo etwas HINGEHOERT — nicht, dass etwas erreicht ist.
+   Der Goldchip bleibt dem MAX vorbehalten, sonst waere er kein Signal mehr. */
+.ftip-chip--muted {
+  border-color: transparent;
+  background: none;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 1.5px;
+}
+
+/* Stufe und Elternknoten — was in eine Zeile nie gepasst hat. */
+.ftip-meta {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(232, 220, 192, 0.45);
+}
+
+/* Die Wirkung ist der Grund, warum die Karte ueberhaupt aufgeht — sie bekommt
+   die groesste Schrift und eine eigene Flaeche. */
+.ftip-effect {
+  padding: 9px 11px;
+  border-left: 3px solid var(--tip-color, #5c3310);
+  border-radius: 4px;
+  background: #1b180f;
+  color: #e8dcc0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Grundflaeche fuer alles, was BEDINGUNG ist statt Wirkung. */
+.ftip-block {
+  padding: 9px 11px;
+  border-radius: 4px;
+  background: #1b1409;
+}
+
+.ftip-reqs-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.ftip-reqs-lock {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #c89040;
+}
+
+.ftip-reqs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ftip-reqs li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 16px;
+  color: rgba(255, 200, 80, 0.72);
+}
+
+.ftip-req--met {
+  color: rgba(110, 192, 64, 0.9);
+}
+
+.ftip-req-mark {
+  flex-shrink: 0;
+  width: 11px;
+  text-align: center;
+}
+
+.ftip-req-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ftip-req-num {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Was kein Vorgaenger loest — Sonnenphase, Prestige-Tor, Gleichwuchs-Deckel. */
+.ftip-lockchip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: rgba(255, 200, 80, 0.78);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.ftip-lockchip-icon {
+  flex-shrink: 0;
+  color: #c89040;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Die Einblendung. Nur Deckkraft, aber auch die ist eine Bewegung. */
+  .ftip {
+    animation: none;
+  }
+}

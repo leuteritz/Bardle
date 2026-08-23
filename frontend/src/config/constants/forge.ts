@@ -847,7 +847,7 @@ export const MEEP_BEST_BUY_PANEL_MAX_PX = 380
  * fehlende Weg.
  *
  * Es schwebt links NEBEN der Schiene statt in ihr — dieselbe Begründung wie
- * `FORGE_ROW_TIP_*`: alles, was im Fluss der Liste läge, verschöbe sie beim
+ * `FORGE_TIP_WIDTH_PX`: alles, was im Fluss der Liste läge, verschöbe sie beim
  * Erscheinen unter dem Zeiger.
  */
 export const MEEP_SKILL_TIP_WIDTH_PX = 268
@@ -2635,16 +2635,24 @@ export const FORGE_BUY_ALL_MAX_PASSES = 8
    nur dort lebte, war der Stapelkauf — der sitzt jetzt als schmaler `×N` IM
    Kaufknopf jeder Zeile (`FORGE_ROW_BULK_WIDTH_PX`). */
 
-// ── Schwebendes Kärtchen an der Zeile (ForgeRowTooltip) ──────────────────────
+// ── Schwebendes Kärtchen an Knoten und Zeile (.ftip in rpg-theme.css) ────────
 /**
- * Was der Zeiger in der Liste streift, GROSS — seit der Kopf darüber nicht mehr
- * dem Zeiger folgt, sondern die Empfehlung zeigt.
+ * Die Breite, die Knotenkarte und Zeilenkarte TEILEN.
  *
- * Es schwebt links NEBEN der Spalte statt in ihr: alles, was im Fluss der Liste
- * läge, verschöbe sie beim Erscheinen unter dem Zeiger, und genau daraus wurde
- * schon einmal ein selbsttragendes Flackern. `position: fixed` kann das nicht.
+ * Beide beschreiben denselben `ForgeUpgradeEntry` — der Kreis im Netz und die
+ * Zeile in der Spalte sind für den Spieler ein Ding. Zwei Breiten (244 und 250)
+ * liessen sie beim Wechsel zwischen Netz und Liste als zwei lesen.
+ *
+ * 244 und nicht mehr: `.tree-viewport` schneidet mit `overflow: hidden` ab, und
+ * je breiter die Karte, desto früher trifft das einen Knoten am Bühnenrand.
+ *
+ * Die Zeilenkarte schwebt links NEBEN der Spalte statt in ihr: alles, was im
+ * Fluss der Liste läge, verschöbe sie beim Erscheinen unter dem Zeiger, und
+ * genau daraus wurde schon einmal ein selbsttragendes Flackern.
  */
-export const FORGE_ROW_TIP_WIDTH_PX = 250
+export const FORGE_TIP_WIDTH_PX = 244
+/** Der eine Goldchip im Kopf. Rang und Art stehen daneben, aber gedämpft. */
+export const FORGE_TIP_MAX_LABEL = '✦ MAX'
 /**
  * Gemessen von der ZEILE aus, nicht von der Spaltenkante — und größer als der
  * Abstand, den man sehen will: die Zeile sitzt selbst schon 18px innerhalb der

@@ -171,6 +171,20 @@ export function forgeUpgradeMayTravel(entry: ForgeUpgradeEntry | undefined): boo
 }
 
 /**
+ * Welcher Satz die Wirkung nennt — auf Stufe 0 die des ERSTEN Kaufs.
+ *
+ * `desc` setzt immer den Wert der AKTUELLEN Stufe ein, und der ist bei allem
+ * Ungekauften null: „Expeditions complete 0% faster." sagt nichts. `nextDesc`
+ * ist derselbe Satz mit dem Wert der nächsten Stufe.
+ *
+ * Steht hier und nicht in der Karte: Baumknoten, Listenzeile und Angebot zeigen
+ * denselben Satz, und drei Kopien beantworten den nächsten Zustand verschieden.
+ */
+export function forgeEffectText(entry: ForgeUpgradeEntry): string {
+  return entry.level === 0 ? entry.nextDesc : entry.desc
+}
+
+/**
  * Welche Schriftstufe der Preis auf dem Kaufknopf bekommt.
  *
  * Auf dem Knopf steht seit dem Umbau NUR noch der Preis — kein Verb mehr, das

@@ -1,13 +1,22 @@
 <template>
-  <div v-if="entry && anchor" class="frt-card" :style="cardStyle" aria-hidden="true">
-    <div class="frt-head">
-      <Icon :icon="entry.icon" width="18" height="18" :style="{ color: entry.color }" />
-      <span class="frt-name" :style="{ color: entry.color }">{{ entry.name }}</span>
-      <span class="frt-tier">{{ entry.tierLabel }}</span>
+  <div v-if="entry && anchor" class="ftip frt-card" :style="cardStyle" aria-hidden="true">
+    <span class="ftip-accent" aria-hidden="true" />
+
+    <div class="ftip-head">
+      <Icon
+        :icon="entry.icon"
+        width="20"
+        height="20"
+        class="ftip-ico"
+        :style="{ color: entry.color }"
+      />
+      <span class="ftip-name" :style="{ color: entry.color }">{{ entry.name }}</span>
+      <span v-if="entry.state === 'maxed'" class="ftip-chip">{{ FORGE_TIP_MAX_LABEL }}</span>
+      <span v-else class="ftip-chip ftip-chip--muted">{{ entry.tierLabel }}</span>
     </div>
 
-    <div class="frt-meta">{{ metaLine }}</div>
-    <div class="frt-desc">{{ entry.desc }}</div>
+    <div class="ftip-meta">{{ metaLine }}</div>
+    <div class="ftip-effect">{{ effectText }}</div>
   </div>
 </template>
 
@@ -25,6 +34,11 @@
  * ihrem Original. Übrig bleibt, was in eine Zeile nie gepasst hat: der volle
  * Wortlaut der Wirkung, der Rang und der Knoten, an dem der Eintrag hängt.
  *
+ * Seine GESTALT teilt es mit der Knotenkarte im Netz (`.ftip-*` in
+ * `rpg-theme.css`): beide beschreiben denselben `ForgeUpgradeEntry`, und der
+ * Kreis links und die Zeile rechts sind für den Spieler ein Ding. Zwei
+ * Gestalten machten daraus zwei.
+ *
  * Zwei Regeln tragen es:
  *
  * 1. **`position: fixed`, links NEBEN der Spalte.** Alles, was im Fluss der
@@ -38,14 +52,17 @@
  * Die Ausrichtung braucht die eigene Höhe NICHT: liegt die Zeile in der oberen
  * Bildhälfte, hängt das Kärtchen an ihrer Oberkante nach unten, sonst an ihrer
  * Unterkante nach oben. So bleibt es im Bild, ohne dass ein zweiter Reflow es
- * erst ausmessen müsste.
+ * erst ausmessen müsste. Das trägt auch die gewachsene Höhe: nach unten fällt
+ * sie nur aus der oberen Bildhälfte, nach oben nur aus der unteren.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ForgeUpgradeEntry, ForgeRowTipAnchor } from '@/types'
+import { forgeEffectText } from '@/composables/ui/useForgeUpgrades'
 import {
-  FORGE_ROW_TIP_WIDTH_PX,
+  FORGE_TIP_WIDTH_PX,
   FORGE_ROW_TIP_GAP_PX,
+  FORGE_TIP_MAX_LABEL,
   FORGE_DETAIL_ENDLESS_META,
   FORGE_DETAIL_PARENT_PREFIX,
 } from '@/config/constants'
@@ -61,11 +78,14 @@ const cardStyle = computed(() => {
   if (!a) return {}
   const above = a.top > window.innerHeight / 2
   return {
-    left: `${a.left - FORGE_ROW_TIP_WIDTH_PX - FORGE_ROW_TIP_GAP_PX}px`,
+    '--tip-color': props.entry?.color ?? '',
+    left: `${a.left - FORGE_TIP_WIDTH_PX - FORGE_ROW_TIP_GAP_PX}px`,
     top: `${above ? a.bottom : a.top}px`,
     transform: above ? 'translateY(-100%)' : 'none',
   }
 })
+
+const effectText = computed(() => (props.entry ? forgeEffectText(props.entry) : ''))
 
 /** „Lv 3 / 6 · hangs on Wayfinder's Cache" — ein Bough trägt `Infinity`. */
 const metaLine = computed(() => {
@@ -80,61 +100,17 @@ const metaLine = computed(() => {
   return parts.join(' · ')
 })
 
-const tipWidth = `${FORGE_ROW_TIP_WIDTH_PX}px`
+const tipWidth = `${FORGE_TIP_WIDTH_PX}px`
 </script>
 
 <style scoped>
-/* Tooltip-Standard des Projekts. `pointer-events: none` ist nicht Kosmetik:
-   ohne es klaute das Kärtchen den Hover der Zeile, die es beschreibt. */
+/* Nur die Lage. Alles Sichtbare steht als `.ftip-*` global in `rpg-theme.css`,
+   dieselbe Gestalt wie am Knoten im Netz. `pointer-events: none` steht dort
+   mit und ist nicht Kosmetik: ohne es klaute das Kärtchen den Hover der Zeile,
+   die es beschreibt. */
 .frt-card {
   position: fixed;
   z-index: 60;
   width: v-bind(tipWidth);
-  padding: 10px 12px 11px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  background: #16140e;
-  border: 2px solid #5c3310;
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
-  pointer-events: none;
-}
-
-.frt-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.frt-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.frt-tier {
-  flex-shrink: 0;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 1.5px;
-  color: rgba(255, 255, 255, 0.35);
-}
-
-.frt-meta {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(232, 220, 192, 0.45);
-}
-
-.frt-desc {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.68);
 }
 </style>

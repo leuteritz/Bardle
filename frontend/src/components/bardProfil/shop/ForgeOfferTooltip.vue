@@ -1,15 +1,23 @@
 <template>
-  <div v-if="offer && anchor" class="fot-card" :style="cardStyle" aria-hidden="true">
-    <div class="fot-head">
-      <Icon :icon="offer.icon" width="18" height="18" :style="{ color: offer.color }" />
-      <span class="fot-name" :style="{ color: offer.color }">{{ offer.name }}</span>
-      <span class="fot-tag">{{ offer.tag }}</span>
+  <div v-if="offer && anchor" class="ftip fot-card" :style="cardStyle" aria-hidden="true">
+    <span class="ftip-accent" aria-hidden="true" />
+
+    <div class="ftip-head">
+      <Icon
+        :icon="offer.icon"
+        width="20"
+        height="20"
+        class="ftip-ico"
+        :style="{ color: offer.color }"
+      />
+      <span class="ftip-name" :style="{ color: offer.color }">{{ offer.name }}</span>
+      <span class="ftip-chip ftip-chip--muted">{{ offer.tag }}</span>
     </div>
 
-    <div class="fot-desc">{{ offer.desc }}</div>
+    <div class="ftip-effect">{{ offer.desc }}</div>
 
     <!-- ══ RELIKT — was der nächste Schlag wirklich bringt ═══════════ -->
-    <div v-if="offer.kind === 'relic'" class="fot-delta">
+    <div v-if="offer.kind === 'relic'" class="ftip-block fot-delta">
       <span class="fot-delta-cell">
         <span class="fot-delta-label">{{ FORGE_OFFER_NOW_LABEL }}</span>
         <span class="fot-delta-value">{{ offer.nowText }}</span>
@@ -22,7 +30,7 @@
     </div>
 
     <!-- ══ KONSTELLATION — beide Tore, ausgeschrieben ════════════════ -->
-    <div v-else-if="offer.reqs.length > 0" class="fot-reqs">
+    <div v-else-if="offer.reqs.length > 0" class="ftip-block fot-reqs">
       <span class="fot-block-label">{{ FORGE_OFFER_REQS_LABEL }}</span>
       <div v-for="req in offer.reqs" :key="req.id" class="fot-req">
         <span class="fot-req-name" :class="{ 'fot-req-name--met': req.met }">{{ req.name }}</span>
@@ -143,6 +151,7 @@ const cardStyle = computed(() => {
   if (!a) return {}
   const above = a.top > window.innerHeight / 2
   return {
+    '--tip-color': props.offer?.color ?? '',
     left: `${a.left - FORGE_OFFER_TIP_WIDTH_PX - FORGE_OFFER_TIP_GAP_PX}px`,
     top: `${above ? a.bottom : a.top}px`,
     transform: above ? 'translateY(-100%)' : 'none',
@@ -153,52 +162,14 @@ const tipWidth = `${FORGE_OFFER_TIP_WIDTH_PX}px`
 </script>
 
 <style scoped>
-/* Tooltip-Standard des Projekts. `pointer-events: none` ist nicht Kosmetik:
-   ohne es klaute das Kärtchen den Hover der Zeile, die es beschreibt. */
+/* Nur die Lage — sie ist breiter als ihre beiden Geschwister, weil hier
+   Materialkacheln und Fortschrittsbalken stehen. Alles Sichtbare kommt als
+   `.ftip-*` aus `rpg-theme.css`; dort steht auch `pointer-events: none`, ohne
+   das das Kärtchen den Hover der Zeile klaute, die es beschreibt. */
 .fot-card {
   position: fixed;
   z-index: 60;
   width: v-bind(tipWidth);
-  padding: 10px 12px 11px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: #16140e;
-  border: 2px solid #5c3310;
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
-  pointer-events: none;
-}
-
-.fot-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.fot-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.fot-tag {
-  flex-shrink: 0;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 1.2px;
-  color: rgba(255, 255, 255, 0.35);
-}
-
-.fot-desc {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.68);
 }
 
 .fot-block-label {
@@ -212,14 +183,12 @@ const tipWidth = `${FORGE_OFFER_TIP_WIDTH_PX}px`
 /* ══════════════════════════════════════════════════
    WIRKUNGSSPRUNG
 ══════════════════════════════════════════════════ */
+/* Grund und Polster kommen von `.ftip-block` — dieselbe Fläche, auf der die
+   Knotenkarte ihre Bedingungen zeigt. */
 .fot-delta {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 7px 9px;
-  background: #141410;
-  border: 1px solid #32210c;
-  border-radius: 4px;
 }
 
 .fot-delta-cell {
@@ -262,10 +231,6 @@ const tipWidth = `${FORGE_OFFER_TIP_WIDTH_PX}px`
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 9px;
-  background: #141410;
-  border: 1px solid #32210c;
-  border-radius: 4px;
 }
 
 .fot-req {
