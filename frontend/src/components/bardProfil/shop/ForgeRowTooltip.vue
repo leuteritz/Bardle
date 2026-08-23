@@ -12,7 +12,6 @@
       />
       <span class="ftip-name" :style="{ color: entry.color }">{{ entry.name }}</span>
       <span v-if="entry.state === 'maxed'" class="ftip-chip">{{ FORGE_TIP_MAX_LABEL }}</span>
-      <span v-else class="ftip-chip ftip-chip--muted">{{ entry.tierLabel }}</span>
     </div>
 
     <div class="ftip-meta">{{ metaLine }}</div>
@@ -32,12 +31,14 @@
  * samt Balken und die MAX-Marke. Alle vier stehen jetzt gross in der Kachel
  * selbst — hier wären sie dieselbe Zahl in kleinerer Schrift, direkt neben
  * ihrem Original. Übrig bleibt, was in eine Zeile nie gepasst hat: der volle
- * Wortlaut der Wirkung, der Rang und der Knoten, an dem der Eintrag hängt.
+ * Wortlaut der Wirkung, die Stufe und der Knoten, an dem der Eintrag hängt.
  *
  * Seine GESTALT teilt es mit der Knotenkarte im Netz (`.ftip-*` in
  * `rpg-theme.css`): beide beschreiben denselben `ForgeUpgradeEntry`, und der
  * Kreis links und die Zeile rechts sind für den Spieler ein Ding. Zwei
- * Gestalten machten daraus zwei.
+ * Gestalten machten daraus zwei. Der Kopf ist deshalb auch wortgleich — Motiv,
+ * Name, und ein Chip nur für die MAX-Marke. Der Rang stand dort einmal als
+ * zweiter Chip; er beantwortet keine Frage, die vor dem Kauf gestellt wird.
  *
  * Zwei Regeln tragen es:
  *
