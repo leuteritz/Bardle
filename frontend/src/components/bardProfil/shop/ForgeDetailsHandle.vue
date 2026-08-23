@@ -1,8 +1,8 @@
 <template>
   <!-- Die Kante, die stehen bleibt, wenn die Detailspalte weggefahren ist.
-       Drei Zonen: Chevron im Kopf, das Wort in der Mitte, die zwei Signale am
-       Fuss — eine zugeklappte Spalte, die nicht mehr meldet, dass etwas zu
-       holen wäre, wird vergessen. -->
+       EINE Gruppe: das Wort exakt in der Leistenmitte, die Signale hängen
+       absolut an seinem oberen Ende — eine zugeklappte Spalte, die nicht mehr
+       meldet, dass etwas zu holen wäre, wird vergessen. -->
   <button
     class="fdh"
     :class="{ 'fdh--open': detailsOpen }"
@@ -11,24 +11,26 @@
     :title="toggleTitle"
     @click="toggleDetails"
   >
-    <span class="fdh-head">
-      <span class="fdh-cap">
-        <Icon
-          :icon="FORGE_DETAILS_TOGGLE_ICON"
-          :width="FORGE_DETAILS_TOGGLE_ICON_PX"
-          :height="FORGE_DETAILS_TOGGLE_ICON_PX"
-          class="fdh-chevron"
+    <span class="fdh-stack">
+      <span v-if="readyCount > 0 || hasOffer" class="fdh-signals">
+        <span v-if="readyCount > 0" class="fdh-count" :title="FORGE_DETAILS_READY_TITLE">
+          {{ readyCount }}
+          <span
+            v-if="hasOffer"
+            class="fdh-offer"
+            :title="FORGE_DETAILS_OFFER_TITLE"
+            aria-hidden="true"
+          />
+        </span>
+        <span
+          v-else
+          class="fdh-offer fdh-offer--solo"
+          :title="FORGE_DETAILS_OFFER_TITLE"
+          aria-hidden="true"
         />
       </span>
-    </span>
 
-    <span class="fdh-word">{{ FORGE_DETAILS_RAIL_LABEL }}</span>
-
-    <span class="fdh-foot">
-      <span v-if="readyCount > 0" class="fdh-ready" :title="FORGE_DETAILS_READY_TITLE">
-        {{ readyCount }}
-      </span>
-      <span v-if="hasOffer" class="fdh-offer" :title="FORGE_DETAILS_OFFER_TITLE" aria-hidden="true" />
+      <span class="fdh-word">{{ FORGE_DETAILS_RAIL_LABEL }}</span>
     </span>
   </button>
 </template>
@@ -46,20 +48,17 @@
  * mehrfach, den `buyAllPlan` kumulativ abrechnet.
  */
 import { computed } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import { useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
 import { useForgeOffers } from '@/composables/ui/useForgeOffers'
 import {
+  FORGE_DETAILS_BADGE_GAP_PX,
   FORGE_DETAILS_CLOSE_TITLE,
   FORGE_DETAILS_OFFER_TITLE,
   FORGE_DETAILS_OPEN_TITLE,
-  FORGE_DETAILS_RAIL_END_PX,
   FORGE_DETAILS_RAIL_LABEL,
   FORGE_DETAILS_RAIL_PX,
   FORGE_DETAILS_READY_TITLE,
-  FORGE_DETAILS_TOGGLE_ICON,
-  FORGE_DETAILS_TOGGLE_ICON_PX,
 } from '@/config/constants'
 
 const { detailsOpen, toggleDetails } = useForgeDetailsPane()
@@ -80,7 +79,7 @@ const toggleTitle = computed(() =>
 )
 
 const railWidth = `${FORGE_DETAILS_RAIL_PX}px`
-const railEnd = `${FORGE_DETAILS_RAIL_END_PX}px`
+const badgeGap = `${FORGE_DETAILS_BADGE_GAP_PX}px`
 </script>
 
 <style scoped>
@@ -94,9 +93,11 @@ const railEnd = `${FORGE_DETAILS_RAIL_END_PX}px`
   z-index: 2;
   width: v-bind(railWidth);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 12px 0;
+  justify-content: center;
+  /* Rechts 2 px mehr — genau die Naht links, die zur Breite zaehlt: sonst saesse
+     die Gruppe um deren Haelfte neben der Leistenmitte. */
+  padding: 12px 6px 12px 4px;
   /* Dieselbe Naht wie `.sf-panel` — zwei Linien nebeneinander verdoppelten sie. */
   border: none;
   border-left: 2px solid #5c3310;
@@ -110,7 +111,8 @@ const railEnd = `${FORGE_DETAILS_RAIL_END_PX}px`
 }
 
 /* Goldfaden auf der Naht, dieselbe Rampe wie die Modal-Goldlinie. Statisch —
-   nur die Deckung wechselt. Absolut positioniert, also kein Flex-Item. */
+   nur die Deckung wechselt. Seit der Chevron weg ist, trägt er allein die
+   Richtung. Absolut positioniert, also kein Flex-Item. */
 .fdh::after {
   content: '';
   position: absolute;
@@ -129,52 +131,72 @@ const railEnd = `${FORGE_DETAILS_RAIL_END_PX}px`
   opacity: 1;
 }
 
-/* Beide Enden tragen DIESELBE reservierte Höhe: ohne sie hinge das Wort an
-   dem, was gerade darunter steht, und wanderte aus der Mitte. */
-.fdh-head,
-.fdh-foot {
-  flex: 0 0 auto;
-  min-height: v-bind(railEnd);
+/* Nur das Wort steht hier im Fluss — die Gruppe ist damit genau so hoch wie es
+   und sitzt mittig in der Leiste. */
+.fdh-stack {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
 }
 
-.fdh-cap {
+/* Am Wortende, OHNE Fluss-Platz: sonst wanderte das Wort, sobald ein Signal
+   kommt oder geht. */
+.fdh-signals {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: v-bind(badgeGap);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+}
+
+/* Wie viele Stufen der Vorrat gerade deckt — aufrecht, nicht mitgekippt: eine
+   Zahl liest man nicht seitwärts. Tabellenziffern, damit der Sprung von 9 auf
+   10 die Pille nicht springen lässt. */
+.fdh-count {
+  position: relative;
+  min-width: 24px;
+  padding: 2px 5px;
   border: 1px solid #5c3310;
   border-radius: 4px;
   background: #1c1c18;
+  color: #e8c040;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  text-align: center;
 }
 
-.fdh:hover .fdh-cap {
+.fdh:hover .fdh-count {
   border-color: #c89040;
   background: #241a0f;
 }
 
-/* EIN Glyph für beide Richtungen. Nur `transform` — Performance-Regel 1. */
-.fdh-chevron {
-  flex-shrink: 0;
-  transition: transform 0.18s ease;
+/* Ein Angebot liegt in Reichweite. Ein Punkt und keine zweite Zahl: wie viele
+   es sind, entscheidet nichts — dass überhaupt eines dasteht, schon. An der
+   Ecke der Pille, weil er sonst der 44 px breiten Leiste eine Spalte wegnähme;
+   der Ring ist die Leistenfarbe, kein Hof. */
+.fdh-offer {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: #52b830;
+  box-shadow: 0 0 0 2px #14100c;
 }
 
-.fdh--open .fdh-chevron {
-  transform: rotate(180deg);
+/* Ohne Pille steht er allein an der Wortkante und trägt wieder seinen Hof. */
+.fdh-offer--solo {
+  position: static;
+  box-shadow: 0 0 0 3px rgba(82, 184, 48, 0.18);
 }
 
-/* Gekippt und mittig: sie sagt, was hinter ihr liegt. Die gedrehte Achse macht
-   `justify-content` zur vertikalen Zentrierung. */
+/* Gekippt und mittig: sie sagt, was hinter ihr liegt. */
 .fdh-word {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   writing-mode: vertical-rl;
   text-orientation: mixed;
   transform: rotate(180deg);
@@ -190,36 +212,7 @@ const railEnd = `${FORGE_DETAILS_RAIL_END_PX}px`
   color: #e8c040;
 }
 
-/* Wie viele Stufen der Vorrat gerade deckt. Tabellenziffern, damit die Leiste
-   beim Sprung von 9 auf 10 nicht die Breite wechselt. */
-.fdh-ready {
-  flex-shrink: 0;
-  min-width: 24px;
-  padding: 3px 0;
-  border: 1px solid #5c3310;
-  border-radius: 4px;
-  background: #1c1c18;
-  color: #e8c040;
-  font-size: 12px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-}
-
-/* Ein Angebot liegt in Reichweite. Ein Punkt und keine zweite Zahl: wie viele
-   es sind, entscheidet nichts — dass überhaupt eines dasteht, schon. Der Hof
-   ist statisch, er atmet nicht. */
-.fdh-offer {
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 4px;
-  background: #52b830;
-  box-shadow: 0 0 0 3px rgba(82, 184, 48, 0.18);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .fdh-chevron,
   .fdh::after {
     transition: none;
   }

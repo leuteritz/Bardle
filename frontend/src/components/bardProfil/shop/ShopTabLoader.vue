@@ -24,7 +24,7 @@
 import { computed } from 'vue'
 import LoadingBeacon from '@/components/ui/LoadingBeacon.vue'
 import {
-  FORGE_DETAILS_RAIL_END_PX,
+  FORGE_DETAILS_BADGE_GAP_PX,
   FORGE_DETAILS_RAIL_PX,
   FORGE_KEY_HINT_ROW,
   FORGE_SHOP_LOADER_ACCENT,
@@ -68,7 +68,7 @@ const skeletonNodes = computed(() =>
 )
 
 const railWidth = `${FORGE_DETAILS_RAIL_PX}px`
-const railEnd = `${FORGE_DETAILS_RAIL_END_PX}px`
+const badgeGap = `${FORGE_DETAILS_BADGE_GAP_PX}px`
 const sunSize = `${FORGE_SHOP_SKELETON_SUN_PCT}%`
 
 // Die beiden Ecken-Platzhalter tragen die Masse dessen, was dort gleich steht
@@ -113,13 +113,9 @@ const zoomH = `${FORGE_ZOOM_BAR.h}px`
 
     <!-- Die Griffleiste, wie sie gleich dastehen wird. -->
     <div class="stl-rail" aria-hidden="true">
-      <span class="stl-rail-end">
-        <span class="stl-rail-mark stl-rail-mark--cap" />
-      </span>
-      <span class="stl-rail-mark stl-rail-mark--word" />
-      <span class="stl-rail-end">
+      <span class="stl-rail-stack">
+        <span class="stl-rail-mark stl-rail-mark--word" />
         <span class="stl-rail-mark stl-rail-mark--count" />
-        <span class="stl-rail-mark stl-rail-mark--dot" />
       </span>
     </div>
   </div>
@@ -233,25 +229,22 @@ const zoomH = `${FORGE_ZOOM_BAR.h}px`
 }
 
 /* Genau die Masse der Griffleiste, die gleich hier steht — samt ihrer Naht und
-   ihren drei Zonen. */
+   ihrer EINEN mittigen Gruppe. */
 .stl-rail {
   flex: 0 0 v-bind(railWidth);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 12px 0;
+  justify-content: center;
+  padding: 12px 6px 12px 4px;
   border-left: 2px solid #5c3310;
   background: #14100c;
 }
 
-.stl-rail-end {
-  flex: 0 0 auto;
-  min-height: v-bind(railEnd);
+/* Wie in der echten Leiste: nur das Wort steht im Fluss, die Pille hängt
+   absolut darüber — sonst sässe das Wort im Skelett tiefer als danach. */
+.stl-rail-stack {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
 }
 
 .stl-rail-mark {
@@ -259,28 +252,20 @@ const zoomH = `${FORGE_ZOOM_BAR.h}px`
   border-radius: 4px;
 }
 
-.stl-rail-mark--cap {
-  width: 28px;
-  height: 28px;
-}
-
-/* Das gekippte Wort, das gleich hier steht. `auto` oben und unten zentriert es
-   im Rest zwischen den beiden Enden — dieselbe Mitte wie in der echten Leiste. */
-.stl-rail-mark--word {
-  margin: auto 0;
-  width: 13px;
-  height: 132px;
-}
-
 .stl-rail-mark--count {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: v-bind(badgeGap);
   width: 24px;
   height: 20px;
 }
 
-.stl-rail-mark--dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+/* Das gekippte Wort, das gleich hier steht. */
+.stl-rail-mark--word {
+  width: 13px;
+  height: 132px;
 }
 
 @media (prefers-reduced-motion: reduce) {

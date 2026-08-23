@@ -3628,18 +3628,20 @@ export const MEEP_GAIN_PULSE_MS = 520
 /**
  * Breite der Griffleiste, die eingeklappt stehen bleibt.
  *
- * 44 px trägt alle drei Zonen: die 28er Chevron-Kappe, das gekippte Wort in
- * 15 px samt Sperrung und die zweistellige Zahl. Schmaler bricht eines davon um.
+ * 44 px trägt beides: das gekippte Wort in 15 px samt Sperrung und die
+ * aufrechte, zweistellige Zahl-Pille darüber. Schmaler bricht eines davon um.
  */
 export const FORGE_DETAILS_RAIL_PX = 44
 
 /**
- * Reservierte Höhe von Kopf UND Fuss — eine Zahl für beide Enden.
+ * Abstand zwischen der Zahl-Pille und dem Wortende.
  *
- * Ohne sie hinge das Wort an dem, was gerade darunter steht: im frischen
- * Spielstand fehlen Zähler und Punkt, und es wanderte nach unten aus der Mitte.
+ * Geteilt mit dem Ladeschleier: sein Skelett zeigt dieselbe Gruppe, und zwei
+ * eigene Zahlen dafür liefen still auseinander. Die Pille selbst nimmt KEINEN
+ * Fluss-Platz (`.fdh-signals` hängt absolut am Wort) — nur so steht das Wort
+ * in jedem Zustand pixelgleich in der Leistenmitte.
  */
-export const FORGE_DETAILS_RAIL_END_PX = 64
+export const FORGE_DETAILS_BADGE_GAP_PX = 10
 
 /**
  * Wie lange die Spalte fährt.
@@ -3653,14 +3655,10 @@ export const FORGE_DETAILS_RAIL_END_PX = 64
  */
 export const FORGE_DETAILS_SLIDE_MS = 220
 
-/**
- * EIN Glyph für beide Richtungen, im offenen Zustand um 180° gedreht.
- *
- * Zwei Icons (links/rechts) wären zwei Wahrheiten über dieselbe Taste, und der
- * Wechsel zwischen ihnen springt, während eine Drehung die Richtung zeigt.
- */
-export const FORGE_DETAILS_TOGGLE_ICON = 'lucide:chevron-left'
-export const FORGE_DETAILS_TOGGLE_ICON_PX = 18
+// Ein Chevron sass einmal in einer Kappe über dem Wort. Er ist gestrichen: er
+// sagte dasselbe wie das Wort und der Goldfaden auf der Naht, und seine
+// reservierte Kopfzone drückte das Wort aus der Mitte. Die Richtung tragen
+// jetzt `aria-expanded`, der Titel und die Deckung des Fadens.
 
 /** Was der Zeiger auf der Griffleiste meldet — je nach Richtung. */
 export const FORGE_DETAILS_OPEN_TITLE = 'Show forge details'
