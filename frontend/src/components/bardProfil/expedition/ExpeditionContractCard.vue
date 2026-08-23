@@ -33,10 +33,20 @@ import ExpeditionCrewPicker from './ExpeditionCrewPicker.vue'
 const props = defineProps<{
   offer: AvailableExpeditionSlot
   now: number
-  /** Auf der Sternenkarte fokussiertes Ziel — hebt die Karte hervor. */
-  focused?: boolean
+  /**
+   * `column` — die Karte FÜLLT die Detailspalte des Voyages-Reiters, statt in
+   * einem Stapel zu stehen: kein Akzentbalken, kein eigener Rahmen, und der
+   * Inhalt rollt in sich, damit ein Epic-Vertrag mit fünf Sitzen den
+   * Send-Knopf nicht aus dem Bild schiebt.
+   */
+  variant?: 'card' | 'column'
 }>()
-const emit = defineEmits<{ send: [AvailableExpeditionSlot] }>()
+const emit = defineEmits<{
+  send: [AvailableExpeditionSlot]
+  /** Solange ein Sitz-Popover offen ist, gehört Escape IHM — die Karte darüber
+   *  muss ihre eigene Escape-Stufe so lange stillhalten. */
+  'picker-open': [boolean]
+}>()
 
 const expeditionStore = useExpeditionStore()
 const battleStore = useBattleStore()
@@ -202,6 +212,7 @@ function onKeydown(e: KeyboardEvent) {
   e.stopPropagation()
 }
 watch(openSeat, (open) => {
+  emit('picker-open', open !== null)
   if (open !== null) {
     document.addEventListener('click', onDocumentClick)
     document.addEventListener('keydown', onKeydown, true)
@@ -227,10 +238,10 @@ function formatCountdown(ms: number): string {
 <template>
   <article
     class="ecc-card"
-    :class="{ 'ecc-card--expiring': expiring, 'ecc-card--focused': focused }"
+    :class="[`ecc-card--${variant ?? 'card'}`, { 'ecc-card--expiring': expiring }]"
     :style="cardStyle"
   >
-    <div class="ecc-accent" />
+    <div v-if="(variant ?? 'card') === 'card'" class="ecc-accent" />
 
     <!-- ── Title row ─────────────────────────────────────────── -->
     <header class="ecc-head">
@@ -393,12 +404,40 @@ function formatCountdown(ms: number): string {
 .ecc-card--expiring {
   border-color: rgba(204, 96, 80, 0.55);
 }
-/* Auf der Karte fokussiertes Ziel — nur ein Ring, kein zweiter Farbton: die
-   Vertragsfarbe trägt schon das Ziel. */
-.ecc-card--focused {
-  box-shadow:
-    inset 0 0 0 1px rgba(62, 32, 10, 0.6),
-    0 0 0 2px #e8c040;
+
+/* ── Als SPALTE ──
+   In der Detailspalte ist die Karte nicht eine unter vielen, sondern die
+   Fläche selbst: kein eigener Rahmen (die Spalte hat schon einen), keine
+   Rundung, und der Inhalt rollt in sich. Ohne `min-height: 0` schöbe ein
+   Epic-Vertrag mit fünf Sitzen seinen Send-Knopf aus dem Bild. */
+.ecc-card--column {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: visible;
+  padding-top: 11px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+.ecc-card--column::-webkit-scrollbar {
+  width: 4px;
+}
+.ecc-card--column::-webkit-scrollbar-track {
+  background: #111;
+}
+.ecc-card--column::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 2px;
+}
+/* Die ablaufende Spalte trägt eine Linie statt eines Rahmens — ein roter
+   Kasten um die ganze Fläche wäre lauter als die Uhr, die es meint. */
+.ecc-card--column.ecc-card--expiring {
+  border: 0;
+  border-top: 2px solid rgba(204, 96, 80, 0.55);
 }
 .ecc-dest {
   display: inline-flex;

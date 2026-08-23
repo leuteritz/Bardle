@@ -124,11 +124,29 @@ export interface GalaxyParticle {
 
 export const GALAXY_PARTICLE_COLORS = ['240, 214, 160', '255, 246, 228']
 
-let galaxyParticleCache: GalaxyParticle[] = []
-let galaxyParticleCacheKey = -1
+/**
+ * Ein kleiner LRU und kein Einzelplatz. Die Minimap fragt hier in JEDEM Frame
+ * nach dem laufenden `mapSeed`; malt daneben etwas anderes eine zweite Galaxie
+ * (das Archiv, die Karte des Voyages-Reiters), warfen beide abwechselnd den
+ * Eintrag des anderen heraus und bauten ~1200 Partikel neu — pro Frame.
+ * Derselbe Fehler stand schon einmal bei `themeAccentCache`.
+ *
+ * Eine offene Map ginge nicht: `mapSeed` ist ein Zufalls-uint32 je Durchlauf.
+ * Vier Plätze reichen — laufende Galaxie, grosse Karte, Reserve; die
+ * Rail-Miniaturen laufen über den Data-URL-Cache von `renderGalaxySnapshot`
+ * und fragen jeden Seed ohnehin nur einmal je Sitzung.
+ */
+const GALAXY_PARTICLE_CACHE_MAX = 4
+const galaxyParticleCache = new Map<number, GalaxyParticle[]>()
 
 export function getGalaxyParticles(seed: number): GalaxyParticle[] {
-  if (galaxyParticleCacheKey === seed) return galaxyParticleCache
+  const hit = galaxyParticleCache.get(seed)
+  if (hit) {
+    // Neu einsortieren, damit der Frame-Treffer der Minimap nie der Aelteste ist.
+    galaxyParticleCache.delete(seed)
+    galaxyParticleCache.set(seed, hit)
+    return hit
+  }
   const geo = galaxyGeo(seed)
   const rng = seededRng(seed * 91127 + 3)
   const gauss = () => rng() + rng() + rng() - 1.5
@@ -219,8 +237,11 @@ export function getGalaxyParticles(seed: number): GalaxyParticle[] {
     })
   }
 
-  galaxyParticleCache = parts
-  galaxyParticleCacheKey = seed
+  galaxyParticleCache.set(seed, parts)
+  if (galaxyParticleCache.size > GALAXY_PARTICLE_CACHE_MAX) {
+    const oldest = galaxyParticleCache.keys().next().value
+    if (oldest !== undefined) galaxyParticleCache.delete(oldest)
+  }
   return parts
 }
 

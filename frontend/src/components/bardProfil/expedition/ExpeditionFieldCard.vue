@@ -19,7 +19,13 @@ import { MATERIALS } from '@/config/economy/materials'
 import { EXPEDITION_COLORS, EXPEDITION_HAZARD_BY_ID } from '@/config/constants'
 import type { ExpeditionMission } from '@/types'
 
-const props = defineProps<{ mission: ExpeditionMission; now: number }>()
+const props = defineProps<{
+  mission: ExpeditionMission
+  now: number
+  /** `column` — die Karte FÜLLT die Detailspalte, statt in einem Stapel zu
+   *  stehen. Siehe dieselbe Variante in `ExpeditionContractCard`. */
+  variant?: 'card' | 'column'
+}>()
 const emit = defineEmits<{ collect: [string] }>()
 
 const battleStore = useBattleStore()
@@ -72,10 +78,13 @@ function championImage(name: string): string {
 <template>
   <article
     class="efc-card"
-    :class="done ? (success ? 'efc-card--success' : 'efc-card--failure') : 'efc-card--running'"
+    :class="[
+      done ? (success ? 'efc-card--success' : 'efc-card--failure') : 'efc-card--running',
+      `efc-card--${variant ?? 'card'}`,
+    ]"
     :style="cardStyle"
   >
-    <div class="efc-accent" />
+    <div v-if="(variant ?? 'card') === 'card'" class="efc-accent" />
 
     <header class="efc-head">
       <Icon
@@ -172,6 +181,29 @@ function championImage(name: string): string {
   border-radius: 4px;
   overflow: hidden;
 }
+/* ── Als SPALTE ── siehe ExpeditionContractCard: die Spalte trägt den Rahmen,
+   die Karte rollt in sich. */
+.efc-card--column {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 11px;
+  border: 0;
+  border-radius: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111;
+}
+.efc-card--column::-webkit-scrollbar {
+  width: 4px;
+}
+.efc-card--column::-webkit-scrollbar-track {
+  background: #111;
+}
+.efc-card--column::-webkit-scrollbar-thumb {
+  background: #5c3310;
+  border-radius: 2px;
+}
+
 .efc-card--running {
   background: #1a1008;
   border-color: rgba(92, 51, 16, 0.55);

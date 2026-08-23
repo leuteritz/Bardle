@@ -130,9 +130,14 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
         where: PROFILE_TABS,
       },
       {
-        file: 'components/bardProfil/expedition/ExpeditionBoard.vue',
+        file: 'components/bardProfil/expedition/ExpeditionCommandBar.vue',
         marker: '<RpgNotifyBadge',
-        where: 'Expedition panel header',
+        where: 'Voyages command bar',
+      },
+      {
+        file: 'components/bardProfil/expedition/ExpeditionSiteNode.vue',
+        marker: '<RpgNotifyBadge',
+        where: 'Voyages-Karte, am zurückgekehrten Hafen',
       },
     ],
     seedability: 'exact',

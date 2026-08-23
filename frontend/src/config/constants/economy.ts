@@ -696,3 +696,195 @@ export const SHOP_SCROLL_SETTLE_MS = 150
 
 // Champion Shop — Chimes cost badge icon
 export const CHIMES_COST_ICON = 'game-icons:windchimes'
+
+/* ── Voyages-Atlas: drei Zonen, ein Budget ────────────────────────────────────
+   Dieselbe Budgetrechnung wie der Shop-Atlas (siehe TEAM_SHOP_FACET_RAIL_WIDTH):
+   Seitenleiste + Karte + Detail teilen sich die Reiterbreite, und was die beiden
+   Ränder nehmen, bleibt der Karte. Der Reiter ist beidseitig um
+   `--hud-panel-size` eingerückt — die entscheidende Breite ist also die des
+   ATLAS, nicht die des Viewports (`container-type: inline-size` + ResizeObserver).
+
+   Präfix VOYAGE_ und nicht EXPEDITION_: reine Reiter-Layoutmaße, die sich von
+   den Spielkonstanten EXPEDITION_* in derselben Datei abheben sollen.
+
+   Durchgerechnet (Reiter = Modal / --team-ui-scale; Karte = Reiter − Leiste −
+   Detail; die Fit-Box verliert davon nochmal die Bühnenrinne und
+   2 × VOYAGE_MAP_INSET_PX):
+
+     Full HD 1920×1080   Reiter 1240 → Leiste 224 · Detail 368 · Karte 648
+     WUXGA   1920×1200   Reiter 1240 → Leiste 224 · Detail 368 · Karte 648
+     2K/QHD  2560×1440   Reiter 1660 → Leiste 224 · Detail 448 · Karte 988
+     4K      3840×2160   Reiter 2940 → Leiste 224 · Detail 520 · Karte 2196
+
+   Der Boden ist ein GEOMETRIE-Boden, kein Geschmacksurteil: `generateGalaxyDots`
+   strebt 0.085 Abstand im normalisierten Raum an, zwei benachbarte Häfen liegen
+   also 0.085 × Box-Höhe auseinander. Das muss über VOYAGE_SITE_HIT_PX bleiben,
+   sonst sind sie nicht mehr getrennt anklickbar. Nimmt man der Karte Breite,
+   hört sie auf zu funktionieren — `__tests__/config/voyagesAtlasLayout.spec.ts`
+   bindet das.                                                                */
+
+/** Breiter als die Facettenleiste des Shops (196), weil eine Zeile hier eine
+ *  Kartenminiatur trägt und kein Glyph: dieses Bild IST das Wiedererkennen. */
+export const VOYAGE_RAIL_WIDTH = 224
+/** Eingeklappt: Ziffern, Stufenpunkte und Zähler bleiben, die Miniaturen falten weg. */
+export const VOYAGE_RAIL_COLLAPSED = 56
+/** Reiterbreite, unter der sich die Leiste selbst einklappt — am ATLAS gemessen. */
+export const VOYAGE_RAIL_AUTOFOLD_WIDTH = 1180
+/** Untergrenze der Detailspalte: die Breite, bei der `.ecc-crew` (flex-wrap) noch
+ *  zwei Sitze je Zeile trägt, ein Epic-Vertrag mit fünf Sitzen also auf drei
+ *  Zeilen umbricht statt auf fünf. */
+export const VOYAGE_DETAIL_MIN_WIDTH = 368
+export const VOYAGE_DETAIL_PCT = 27
+export const VOYAGE_DETAIL_MAX_WIDTH = 520
+/**
+ * Harter Boden der Kartenzone. Die Zahl ist ABGELEITET, nicht gewaehlt: bei
+ * dieser Breite klemmt die Fit-Box am unteren Ende ihres Seitenverhaeltnis-
+ * Bandes, ihre Hoehe ist also `(Breite - Rinne - 2 x Einrueckung) / 1.15`, und
+ * `VOYAGE_BERTH_MIN_SEPARATION x Hoehe` muss VOYAGE_SITE_HIT_PX noch tragen.
+ * Bei 620 sind das ~35.3 px gegen 34. `voyagesAtlasLayout.spec.ts` rechnet es
+ * nach; wer an VOYAGE_SITE_HIT_PX oder am Seitenverhaeltnis-Band dreht, muss
+ * diese Zahl mitziehen.
+ */
+export const VOYAGE_MAP_MIN_WIDTH = 620
+
+/**
+ * Das Seitenverhältnis-Band, in dem die Galaxie gezeichnet wird, zentriert in
+ * der Kartenzone. Hintergrund, Dunst und Funkelsterne füllen weiterhin die GANZE
+ * Zone, die Letterbox zeigt sich also nie als Balken, sondern als Tiefraum.
+ * Über 1.75 schmiert die Scheibe zum Streifen, unter 1.15 falten sich die Arme
+ * übereinander und die Häfen drängen sich horizontal.
+ */
+export const VOYAGE_MAP_ASPECT_MIN = 1.15
+export const VOYAGE_MAP_ASPECT_MAX = 1.75
+/** Einrückung der Fit-Box in der Bühne. `generateGalaxyDots` klemmt Sterne auf
+ *  0.06..0.94; das ist der Rest an Rand, den ein Randhafen braucht, damit seine
+ *  Marke nicht halb unter der Zonenkante sitzt. */
+export const VOYAGE_MAP_INSET_PX = 18
+/** Polster zwischen Kartenzone und Bühne, beide Seiten zusammen. */
+export const VOYAGE_MAP_GUTTER_PX = 20
+/**
+ * Längste Backing-Store-Kante in Gerätepixeln. Eine 4K-Bühne bei dpr 2 belegte
+ * sonst ~58 MB für ein weiches Sternenfeld. Auf diesem Canvas ist nichts Text
+ * und nichts Haarlinie — jede Beschriftung, Uhr und Zahl der Karte ist DOM —,
+ * der Rückstand von ~1.2× in genau dieser Konstellation kostet also keine
+ * Lesbarkeit.
+ */
+export const VOYAGE_MAP_MAX_BACKING_PX = 2600
+
+/**
+ * Ankerplaetze je Galaxie — GENAU der Deckel, nicht mehr.
+ *
+ * Der hoechste Expeditionsrang gibt 5 Angebotsplaetze und 5 Missionsplaetze
+ * (EXPEDITION_LEDGER_RANKS), und ein Angebot behaelt beim Absenden seinen
+ * Schluessel. Mehr als zehn Eintraege koennen also nie in DERSELBEN Galaxie
+ * liegen, und ein Auffangfach fuer Ueberzaehlige braucht es nicht.
+ *
+ * Die Zahl ist kein Spielraum, sondern eine Grenze: jeder weitere Platz drueckt
+ * den garantierten Abstand (VOYAGE_BERTH_MIN_SEPARATION). Gemessen ueber 20
+ * Galaxien und neun Sternzahlen faellt er von 38.9 px bei zehn Plaetzen auf
+ * 34.5 px bei zwoelf — unter die Klickflaeche.
+ */
+export const VOYAGE_SITE_SLOTS = 10
+
+/**
+ * Garantierter Mindestabstand zweier Ankerplaetze im normalisierten Raum, und
+ * ebenso zwischen einem Platz und einem geretteten Stern.
+ *
+ * GEMESSEN, nicht angepeilt — das ist der Unterschied zu den 0.085, die
+ * `generateGalaxyDots` anstrebt und nach acht Versuchen aufgibt. Der Wert
+ * stammt aus dem Farthest-Point-Sampling in `voyageBerthsOf`, ueber 20 Galaxien
+ * x neun Sternzahlen (3 bis 45 Versuche): schlechtester Fall 0.0756 zwischen
+ * zwei Plaetzen und 0.0722 zu einem Stern. 0.075 mit Sicherheitsabstand
+ * darunter. `voyageSites.spec.ts` haelt die Zusage, `voyagesAtlasLayout.spec.ts`
+ * rechnet sie gegen VOYAGE_SITE_HIT_PX in Pixel um.
+ */
+export const VOYAGE_BERTH_MIN_SEPARATION = 0.072
+/**
+ * Groesse des Kandidatenpools, aus dem `voyageBerthsOf` die Plaetze WAEHLT.
+ *
+ * Die Plaetze kommen NICHT aus `generateGalaxyDots`. Der Zug strebt 0.085
+ * Abstand an, garantiert ihn aber nicht — er probiert acht Kandidaten und nimmt
+ * danach den letzten, wie er faellt. Gemessen lagen in der dichtesten Galaxie
+ * zwei Punkte 25.5 px auseinander, bei VOYAGE_SITE_HIT_PX 40 also zwei Haefen
+ * mit deckenden Klickflaechen. Mehr Punkte anzufordern half nicht: die
+ * spaeteren werden in genau die engen Luecken gedrueckt.
+ *
+ * 240 flaechengleich verteilte Kandidaten aus einem EIGENEN Seed-Strom, aus
+ * denen Farthest-Point-Sampling waehlt, loesen das — die Geschichte ist dabei
+ * die Startmenge, kein Hafen rueckt ihr also auf den Leib. Der Pool wird einmal
+ * je Galaxiewechsel aufgebaut; 240 Punkte gegen 12 Plaetze sind ~3000
+ * Abstandsvergleiche, nichts, was einen Frame kostet.
+ */
+export const VOYAGE_BERTH_CANDIDATE_POOL = 240
+/** Klickquadrat eines Hafens. Bleibt unter dem GARANTIERTEN Platzabstand
+ *  (VOYAGE_BERTH_MIN_SEPARATION x kuerzere Achse der Fit-Box), damit sich zwei
+ *  Nachbarn nie decken — auch nicht in der dichtesten Galaxie mit vollem
+ *  Rang-Deckel. */
+export const VOYAGE_SITE_HIT_PX = 34
+/** Sichtbare Platte eines Hafens, der Vertrag oder Mission traegt. Bleibt
+ *  INNERHALB der Klickflaeche: eine Platte, die groesser ist als ihr Ziel,
+ *  verspricht einen Treffer, den sie nicht einloest. */
+export const VOYAGE_SITE_MARKER_PX = 32
+/** Blanker geretteter/verlorener Hafen — ein Hover-Ring, keine Platte. */
+export const VOYAGE_SITE_DOT_PX = 22
+
+/**
+ * Wie gross die GESCHICHTE auf der grossen Karte gegenueber dem Archivstandbild
+ * gemalt wird — geflogene Route und die Koerper der besuchten Sterne.
+ *
+ * Nicht 1, obwohl `paintGalaxy` sonst alles linear mitwachsen laesst. Auf 320 px
+ * lesen sich 36 Sterne als Punkte; linear auf 592 px hochgezogen sind es
+ * 31-px-Scheiben, fast so gross wie eine Vertragsplatte (VOYAGE_SITE_MARKER_PX
+ * 38) — die Spirale verschwand unter einer Golddecke und die Marken, die man
+ * ANKLICKEN soll, standen gleichberechtigt neben Marken, die nur Vergangenheit
+ * sind. Gemessen an der dichtesten Galaxie, die das Spiel kennt
+ * (GALAXY_STARS_MAX 36 plus Fehlversuche).
+ *
+ * Das Archivstandbild ist davon nicht betroffen: es malt mit `markers: 'full'`
+ * und laesst diesen Faktor auf 1.
+ */
+export const VOYAGE_MAP_HISTORY_SCALE = 0.55
+/** Deckkraft der geflogenen Route auf der grossen Karte. Bei 36 Etappen wird
+ *  aus der Spur sonst ein Netz, das lauter ist als die Haefen darauf. */
+export const VOYAGE_MAP_ROUTE_ALPHA = 0.22
+
+/**
+ * Takt der Uhren auf der Karte. Bewusst 1000 und nicht HUD_COUNTDOWN_TICK_MS
+ * (250): die Fortschrittsspur eines Knotens laeuft ueber
+ * `transition: transform 1s linear`, ein schnellerer Takt setzte sie viermal je
+ * Sekunde neu an und sie kaeme nie an. Sekunden sind ausserdem alles, was eine
+ * mm:ss-Pille zu sagen hat.
+ */
+export const VOYAGE_CLOCK_TICK_MS = 1000
+
+export const VOYAGE_MARKER_BREATH_MS = 2600
+export const VOYAGE_MARKER_BREATH_WARN_MS = 900
+export const VOYAGE_MARKER_BOB_MS = 1100
+export const VOYAGE_MARKER_HOVER_SCALE = 1.12
+/** Ein Hafen, der den Platz wechselt, weil sein Vorgänger die Galaxie verlassen
+ *  hat, gleitet statt zu springen — der einzige Fall, in dem eine Marke nicht
+ *  dort ist, wo sie war, und die einzige Stelle im Reiter, an der etwas anderes
+ *  als transform/opacity übergeht. Die Alternative (Transform-Versatz gegen eine
+ *  wandernde Basis) bräuchte einen zweiten Layoutdurchgang je Knoten. */
+export const VOYAGE_SITE_MOVE_MS = 320
+/** Umfang der SVG-Kreislinie im Fortschrittsring eines Knotens (2π × 16).
+ *  EIGENE Konstante und nicht ABILITY_RING_CIRCUMFERENCE — die gehört zu
+ *  r = 47.5 der Fähigkeitenkacheln; ein geliehener Umfang füllt den Ring falsch. */
+export const VOYAGE_NODE_RING_CIRCUMFERENCE = 100.53
+
+/** Eine Leistenzeile: Miniatur plus Namenszeile und Kartografiebalken. */
+export const VOYAGE_RAIL_ROW_H = 96
+export const VOYAGE_RAIL_THUMB_W = 96
+export const VOYAGE_RAIL_THUMB_H = 60
+/** Crew-Streifen: eine Chipreihe, Kopfzeile, Polster. Eine Ablesung, keine
+ *  Liste — er rollt seitwärts, nie vertikal. */
+export const VOYAGE_CREW_STRIP_H = 92
+export const VOYAGE_CREW_CHIP_H = 44
+
+/* ── Voyages-Ladeschleier ─────────────────────────────────────────────────── */
+export const VOYAGE_LOADER_MIN_MS = 380
+export const VOYAGE_LOADER_SETTLE_FRAMES = 4
+export const VOYAGE_LOADER_ACCENT = '#e8c040'
+export const VOYAGE_LOADER_ICON = 'game-icons:treasure-map'
+export const VOYAGE_LOADER_TITLE = 'VOYAGES'
+export const VOYAGE_LOADER_CAPTION = 'Unrolling the chart'

@@ -340,3 +340,35 @@ export interface MaterialFlowShare {
 }
 
 // ── Universe run (header universe tooltip) ───────────────────────────────────
+
+// ── Voyages: die Karte des Expeditions-Reiters ───────────────────────────────
+
+/**
+ * Ein besetzter Ankerplatz auf der Galaxie-Karte. `berth` ist der Platz aus
+ * `assignVoyageBerths`, `pinKey` überlebt den Übergang Vertrag → Mission.
+ */
+export interface VoyagePlacedSite {
+  pinKey: string
+  berth: number
+  /** Normalisiert 0..1 in der Fit-Box. */
+  x: number
+  y: number
+  offer: AvailableExpeditionSlot | null
+  mission: ExpeditionMission | null
+}
+
+/** Eine Zeile der Galaxie-Seitenleiste. */
+export interface VoyageRailRow {
+  galaxy: number
+  name: string
+  tier: 'common' | 'rare' | 'epic'
+  /** Akzentfarbe des Themes als `"r, g, b"` — aus `minimapAccentForTheme`. */
+  accent: string
+  charted: number
+  runs: number
+  rescued: number
+  contracts: number
+  inField: number
+  ready: number
+  seen: boolean
+}
