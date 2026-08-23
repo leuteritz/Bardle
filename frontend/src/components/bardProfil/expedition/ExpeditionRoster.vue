@@ -27,10 +27,13 @@ interface RosterEntry {
   level: number
   role: ChampionRole
   away: boolean
+  /** Sitzt auf dem Sigil-Board — kämpft also und reist nicht. */
+  seated: boolean
 }
 
 const roster = computed<RosterEntry[]>(() => {
   const away = expeditionStore.championsOnExpedition
+  const seated = battleStore.assignedChampions
   return battleStore.ownedChampions
     .filter((c: string) => c !== 'Bard')
     .map((name: string) => ({
@@ -39,14 +42,21 @@ const roster = computed<RosterEntry[]>(() => {
       level: levelStore.levelOf(name),
       role: (getChampionRoles(name)[0] ?? 'mid') as ChampionRole,
       away: away.includes(name),
+      seated: seated.includes(name),
     }))
+    // Bereit zuerst, dann die Reisenden, zuletzt die Kämpfenden — die Reihenfolge
+    // beantwortet „wen kann ich jetzt schicken" von links nach rechts.
     .sort((a, b) => {
-      if (a.away !== b.away) return a.away ? 1 : -1
+      const rank = (r: RosterEntry) => (r.away ? 1 : r.seated ? 2 : 0)
+      if (rank(a) !== rank(b)) return rank(a) - rank(b)
       return b.power - a.power
     })
 })
 
-const availableCount = computed(() => roster.value.filter((r) => !r.away).length)
+const availableCount = computed(() => roster.value.filter((r) => !r.away && !r.seated).length)
+const seatedCount = computed(() => roster.value.filter((r) => r.seated).length)
+/** Jeder Champion kämpft — dann ist der Reiter nicht kaputt, sondern der Kader voll. */
+const allSeated = computed(() => roster.value.length > 0 && availableCount.value === 0)
 
 function championImage(name: string): string {
   return battleStore.getChampionImage(name, { size: 'sm' })
@@ -62,6 +72,7 @@ function roleImg(role: ChampionRole): string {
       <Icon icon="game-icons:meeple-group" width="17" height="17" class="ers-head-ico" />
       <span class="ers-head-title">Crew</span>
       <span class="ers-head-count">{{ availableCount }} ready</span>
+      <span v-if="seatedCount > 0" class="ers-head-seated">{{ seatedCount }} on the board</span>
       <span class="ers-head-hint">sorted by expedition strength</span>
     </header>
 
@@ -70,8 +81,8 @@ function roleImg(role: ChampionRole): string {
         v-for="r in roster"
         :key="r.name"
         class="ers-chip"
-        :class="{ 'ers-chip--away': r.away }"
-        :title="`${r.name} — Lv ${r.level}${r.away ? ' — in the field' : ''}`"
+        :class="{ 'ers-chip--away': r.away, 'ers-chip--seated': r.seated }"
+        :title="`${r.name} — Lv ${r.level}${r.away ? ' — in the field' : r.seated ? ' — on the board' : ''}`"
       >
         <img :src="championImage(r.name)" :alt="r.name" class="ers-img" />
         <img :src="roleImg(r.role)" :alt="r.role" class="ers-role" />
@@ -86,9 +97,19 @@ function roleImg(role: ChampionRole): string {
           height="13"
           class="ers-away-ico"
         />
+        <Icon
+          v-else-if="r.seated"
+          icon="ph:shield-fill"
+          width="13"
+          height="13"
+          class="ers-away-ico"
+        />
       </div>
 
       <div v-if="!roster.length" class="ers-empty">No champions recruited yet</div>
+      <div v-else-if="allSeated" class="ers-empty">
+        Every champion you own is on the board — free a seat or recruit another
+      </div>
     </div>
   </section>
 </template>
@@ -211,6 +232,18 @@ function roleImg(role: ChampionRole): string {
   color: rgba(200, 144, 64, 0.7);
   flex-shrink: 0;
 }
+.ers-head-seated {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(200, 144, 64, 0.45);
+  font-variant-numeric: tabular-nums;
+}
+/* Auf dem Board: leiser als „unterwegs", weil es kein Warten ist, sondern eine
+   Entscheidung, die der Spieler jederzeit zurücknehmen kann. */
+.ers-chip--seated {
+  opacity: 0.45;
+}
+
 .ers-empty {
   padding: 14px 6px;
   font-size: 12px;

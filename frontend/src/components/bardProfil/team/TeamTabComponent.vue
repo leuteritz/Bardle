@@ -15,7 +15,6 @@ import {
   SIGIL_BOARD_LOADER_MIN_MS,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_SYNERGIES_PANEL_WIDTH,
-  TEAM_EXPEDITION_PANEL_WIDTH,
   TEAM_EQUIPMENT_PANEL_WIDTH,
 } from '@/config/constants'
 import { getChampionRoles } from '@/config/champions/championData'
@@ -30,7 +29,6 @@ import TeamSidePanelShell from './TeamSidePanelShell.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import ChampionShopComponent from './championShop/ChampionShopComponent.vue'
 import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
-import ExpeditionComponent from './expedition/ExpeditionComponent.vue'
 
 /**
  * The tab has exactly ONE right rail and everything opens into it — the role
@@ -42,7 +40,7 @@ import ExpeditionComponent from './expedition/ExpeditionComponent.vue'
  * SigilDetailsPanel → swapOpen), so choosing a champion no longer covers the
  * board it is being chosen for.
  */
-type TeamDestination = 'shop' | 'expedition' | 'equipment' | null
+type TeamDestination = 'shop' | 'equipment' | null
 
 const ROLE_INDEX = Object.fromEntries(ROLES.map((r, i) => [r.key, i])) as Partial<
   Record<ChampionRole, number>
@@ -271,7 +269,7 @@ watch(
 /**
  * Which board destination owns the rail, if any.
  *
- * Shop and expeditions are destinations of their own and push the details page
+ * The shop is a destination of its own and pushes the details page
  * out of the rail. Equipment is different: it is opened FROM the details page
  * for the role that page is on, so it takes the rail WITHOUT clearing
  * `selectedRole` — closing it drops straight back onto the page it came from,
@@ -313,8 +311,6 @@ const sidePanelWidth = computed(() => {
   switch (activeDestination.value) {
     case 'shop':
       return 0
-    case 'expedition':
-      return TEAM_EXPEDITION_PANEL_WIDTH
     case 'equipment':
       return TEAM_EQUIPMENT_PANEL_WIDTH
   }
@@ -391,7 +387,7 @@ function dismissPanels() {
 }
 
 // ── Rail destinations ────────────────────────────────────────────────────────
-/** Shop and expeditions replace whatever the rail holds — see activeDestination. */
+/** The shop replaces whatever the rail holds — see activeDestination. */
 function openDestination(destination: Exclude<TeamDestination, null | 'equipment'>) {
   selectedRole.value = null
   synergiesOpen.value = false
@@ -403,9 +399,6 @@ function openShop(role: ChampionRole | 'all' = 'all') {
   openDestination('shop')
 }
 
-function openExpedition() {
-  openDestination('expedition')
-}
 
 /**
  * The board's two entrances toggle: clicking the button whose rail is already
@@ -418,17 +411,13 @@ function toggleShop() {
   else openShop('all')
 }
 
-function toggleExpedition() {
-  if (activeDestination.value === 'expedition') closeDestination()
-  else openExpedition()
-}
 
 /** True while the shop covers the tab — the board stops rendering behind it. */
 const shopFullscreen = computed(() => activeDestination.value === 'shop')
 
 /** Which board entrance is currently showing its rail — lights that button. */
-const boardActiveAction = computed<'shop' | 'expedition' | null>(() =>
-  activeDestination.value === 'shop' || activeDestination.value === 'expedition'
+const boardActiveAction = computed<'shop' | null>(() =>
+  activeDestination.value === 'shop'
     ? activeDestination.value
     : null,
 )
@@ -451,10 +440,21 @@ function closeDestination() {
 
 /** A champion picked in the details page's inline picker. */
 function assignChampion(subSlot: number, champion: string) {
-  if (subSlot === -1) {
-    battleStore.setHeaderSlot(roleIndex.value, champion)
-  } else {
-    battleStore.setSecondarySlot(roleIndex.value, subSlot, champion)
+  const seated =
+    subSlot === -1
+      ? battleStore.setHeaderSlot(roleIndex.value, champion)
+      : battleStore.setSecondarySlot(roleIndex.value, subSlot, champion)
+  // Ein Reisender wird abgelehnt — ohne diese Zeile quittierte der Herold eine
+  // Platzierung, die nicht stattgefunden hat.
+  if (!seated) {
+    announceReceipt({
+      kind: 'warning',
+      headline: `${champion} is away`,
+      subline: 'Champions in the field cannot take a seat',
+      countable: false,
+      mergeKey: 'assign/away',
+    })
+    return
   }
   announceReceipt({
     kind: 'assign',
@@ -667,7 +667,6 @@ onUnmounted(() => {
       @select-ally="selectAlly"
       @hover-ally="boardHoveredAlly = $event"
       @open-shop="toggleShop"
-      @open-expedition="toggleExpedition"
       @open-synergies="openSynergies"
       @deselect="dismissPanels"
     />
@@ -677,22 +676,7 @@ onUnmounted(() => {
          page is up is a single slide, not a close followed by an open. -->
     <Transition :name="railTransition" mode="out-in">
       <TeamSidePanelShell
-        v-if="activeDestination === 'expedition'"
-        key="expedition"
-        title="Expeditions"
-        icon="game-icons:campfire"
-        :width="TEAM_EXPEDITION_PANEL_WIDTH"
-        hide-header
-        @close="closeDestination"
-      >
-        <!-- Same deal as the shop: no title stripe and no ✕. The command bar
-             with the ledger rank is the top of the rail, and a second press on
-             the Expedition button closes it again. -->
-        <ExpeditionComponent />
-      </TeamSidePanelShell>
-
-      <TeamSidePanelShell
-        v-else-if="activeDestination === 'equipment'"
+        v-if="activeDestination === 'equipment'"
         key="equipment"
         title="Equipment"
         icon="game-icons:open-treasure-chest"
@@ -740,10 +724,8 @@ onUnmounted(() => {
 
          No loading veil, and that is a measurement, not an omission: opening
          costs 119 ms the first time (champion art decoding) and 42–50 ms every
-         time after. The expeditions rail beside it, untouched, costs 78 ms on
-         its first open — so the veil would be buying down a frame the tab
-         already pays elsewhere, and the repeat cost is the same 42 ms the board
-         itself is allowed to reveal without one. -->
+         time after — the repeat cost is the same 42 ms the board itself is
+         allowed to reveal without one. -->
 
     <Transition name="atlas-rise">
       <div v-if="activeDestination === 'shop'" class="team-shop-layer">

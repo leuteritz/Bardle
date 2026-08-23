@@ -126,6 +126,11 @@ function openTeamTab() {
   uiStore.setBardTab('team')
 }
 
+function openExpeditionTab() {
+  uiStore.openBardModal()
+  uiStore.setBardTab('expedition')
+}
+
 function openTreeTab() {
   uiStore.openBardModal()
   uiStore.setBardTab('tree')
@@ -411,7 +416,7 @@ onUnmounted(() => {
             class="header-notif-badge header-notif-badge--expedition"
             :style="expedBadgeStyle"
             :aria-label="`${expeditionBadgeCount} expedition(s) ready`"
-            @click.stop="openTeamTab"
+            @click.stop="openExpeditionTab"
           >
             {{ expeditionBadgeCount }}
           </button>

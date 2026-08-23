@@ -118,8 +118,8 @@ export const MATERIAL_SPARK_VIEW_H = 24
 // are no longer fixed — both widen with the ledger rank. See
 // EXPEDITION_LEDGER_RANKS and the store getters that read it.
 
-// Weighted tier roll (d100): r < epic → epic, r < rare → rare, else common
-export const EXPEDITION_TIER_THRESHOLDS = { epic: 10, rare: 40 }
+// Die Stufe wird nicht mehr gewürfelt — sie hängt am Ziel, siehe
+// EXPEDITION_DEST_* weiter unten und config/economy/expeditionDestinations.ts.
 export const EXPEDITION_ID_RANDOM_MAX = 9999 // random suffix range for expedition slot IDs
 
 // Item Equipment
@@ -522,6 +522,54 @@ export const EXPEDITION_SPOILS: Record<ExpeditionTier, ExpeditionSpoilsDef> = {
   rare: { materialRolls: 2, materialChance: 0.7, meep: 0 },
   epic: { materialRolls: 3, materialChance: 0.85, meep: 1 },
 }
+
+// ── Expeditionsziele ──────────────────────────────────────────────────────────
+//
+// Ein Ziel ist eine befreite Galaxie, und ihre NUMMER setzt Stufe, Lohn, Dauer
+// und Schwellen. Der frühere d100-Wurf auf die Stufe ist ersatzlos entfallen:
+// bei einem Ziel, das der Spieler ablesen kann, wäre ein verstecktes Los darüber
+// eine zweite, unlesbare Entscheidung.
+//
+// Die beiden Bandgrenzen sind nicht gegriffen — `galaxyStore.tierOf()` springt
+// bei genau 3 und 9, also wechselt die Expeditionsstufe dort, wo der Spieler den
+// Wechsel ohnehin auf der Minimap liest.
+export const EXPEDITION_DEST_RARE_FROM = 3
+export const EXPEDITION_DEST_EPIC_FROM = 9
+
+/**
+ * Über wie viele Galaxien die Tiefe von 0 auf 1 läuft.
+ *
+ * 24 und nicht 40: eine späte Galaxie dauert laut docs/balance.md rund zwei
+ * Stunden. Eine Kurve, die erst bei 40 ankommt, gäbe den letzten fünfzehn
+ * Galaxien nichts Neues mehr.
+ */
+export const EXPEDITION_DEST_DEPTH_SPAN = 24
+
+export const EXPEDITION_DEST_REWARD_SLOPE = 1.5
+export const EXPEDITION_DEST_DURATION_SLOPE = 0.6
+export const EXPEDITION_DEST_POWER_SLOPE = 1.0
+export const EXPEDITION_DEST_HAZARD_SLOPE = 0.8
+/** Ab dieser Tiefe trägt ein Ziel eine Gefahr mehr, als seine Stufe vorsieht. */
+export const EXPEDITION_DEST_HAZARD_STEP = 0.75
+
+/**
+ * Wie stark die Ziehung zur zuletzt befreiten Galaxie neigt.
+ *
+ * Ohne Gewicht läge die Hälfte aller Verträge in Galaxien, die der Spieler vor
+ * Stunden hinter sich gelassen hat; mit einem harten Fenster wären frühe Ziele
+ * am Tag ihrer Befreiung tot. Bei 30 Zielen ist das jüngste viermal so
+ * wahrscheinlich wie das erste — und das erste bleibt der billige, schnelle Lauf
+ * für einen ausgedünnten Kader.
+ */
+export const EXPEDITION_DEST_RECENCY_WEIGHT = 3
+
+/** Crew-Sitze am flachsten Ziel; wächst mit der Tiefe bis `maxRoles` der Stufe. */
+export const EXPEDITION_DEST_MIN_ROLES = 1
+
+/** Kartografiestufen je Ziel. */
+export const EXPEDITION_CHART_MAX = 5
+/** Wegmarken, die ein Champion an EINEM Ziel sammeln kann (Stufe 4). */
+export const EXPEDITION_WAYMARK_MAX = 5
 
 // ── Expedition ledger ─────────────────────────────────────────────────────────
 //

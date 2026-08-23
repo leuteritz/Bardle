@@ -80,11 +80,24 @@ export interface ExpeditionChanceBreakdown {
   total: number
 }
 
+/**
+ * Wie weit ein Ziel erschlossen ist. `runs` und `charted` sind zwei Zahlen, weil
+ * eine Etappe kartieren kann, ohne dass die Mission zurückkommt (Stufe 3).
+ */
+export interface DestinationProgress {
+  /** Hier aufgelöste Missionen, Erfolg wie Fehlschlag. */
+  runs: number
+  /** Kartografiepunkte, 0..EXPEDITION_CHART_MAX. */
+  charted: number
+}
+
 export interface AvailableExpeditionSlot {
   id: string
   colorKey: string
   availableUntil: number
   spawnedAt: number
+  /** Befreite Galaxie, in die dieser Vertrag führt — setzt Stufe und Skalierung. */
+  galaxy: number
   tier: 'common' | 'rare' | 'epic'
   name: string
   icon: string
@@ -112,6 +125,8 @@ export interface ExpeditionMission {
   status: ExpeditionStatus
   reward: number
   colorKey?: string
+  /** Zielgalaxie. Ältere Spielstände kennen sie nicht — `loadGame` füllt 1 nach. */
+  galaxy?: number
   tier?: 'common' | 'rare' | 'epic'
   hazards?: ExpeditionHazardId[]
   /** Filled in on resolve — what the run brought home besides chimes. */

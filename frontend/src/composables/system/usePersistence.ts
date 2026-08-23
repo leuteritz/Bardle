@@ -6,6 +6,7 @@ import {
   defaultChampionCareer,
 } from '@/stores/battle/battleStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useItemStore } from '@/stores/economy/itemStore'
@@ -30,6 +31,7 @@ import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import type {
   ChampionProgress,
   PendingPerkChoice,
+  DestinationProgress,
   DrifterActiveBuff,
   VoidAftermath,
   BardAbilityBuff,
@@ -110,6 +112,7 @@ export function usePersistence() {
     const shopStore = useShopStore()
     const battleStore = useBattleStore()
     const expeditionStore = useExpeditionStore()
+    const expeditionChartStore = useExpeditionChartStore()
     const inventoryStore = useInventoryStore()
     const augmentStore = useAugmentStore()
     const itemStore = useItemStore()
@@ -249,6 +252,16 @@ export function usePersistence() {
         totalExpeditionsFailed: expeditionStore.totalExpeditionsFailed,
         totalExpeditionChimes: expeditionStore.totalExpeditionChimes,
         ledgerCompleted: expeditionStore.ledgerCompleted,
+      },
+
+      // Ziele, Kartografie und was die Champions unterwegs mitgenommen haben —
+      // überdauert jeden Lauf und, weil es an den befreiten Galaxien hängt,
+      // auch jedes Prestige.
+      expeditionChart: {
+        cartography: JSON.parse(JSON.stringify(expeditionChartStore.cartography)),
+        waymarks: { ...expeditionChartStore.waymarks },
+        wearyUntil: { ...expeditionChartStore.wearyUntil },
+        seenDestinations: [...expeditionChartStore.seenDestinations],
       },
       inventory: {
         collectedMaterials: { ...inventoryStore.collectedMaterials },
@@ -696,6 +709,13 @@ export function usePersistence() {
         for (const slot of expeditionStore.availableExpeditions) {
           if (!Array.isArray(slot.hazards)) slot.hazards = []
           if (typeof slot.hazardThreshold !== 'number') slot.hazardThreshold = 0
+          // Aus derselben Klasse wie die Hazard-Nachfüllung: vor dem Zielumbau
+          // gespeicherte Verträge und Missionen kennen keine Galaxie, und die
+          // Vertragskarte liest sie unbedingt.
+          if (typeof slot.galaxy !== 'number') slot.galaxy = 1
+        }
+        for (const mission of expeditionStore.activeExpeditions) {
+          if (typeof mission.galaxy !== 'number') mission.galaxy = 1
         }
 
         const completed = expeditionStore.completedExpeditions
@@ -715,6 +735,39 @@ export function usePersistence() {
           saved.expeditions.ledgerCompleted ??
           (saved.expeditions.totalExpeditionsSucceeded ?? 0) +
             (saved.expeditions.totalExpeditionsFailed ?? 0)
+      }
+
+      // Restore expeditionChartStore — ein Spielstand von vor dem Zielumbau hat
+      // keinen Block hier und startet mit leerer Karte.
+      const expeditionChartStore = useExpeditionChartStore()
+      if (saved.expeditionChart) {
+        const ec = saved.expeditionChart
+        if (ec.cartography && typeof ec.cartography === 'object') {
+          expeditionChartStore.cartography = {}
+          for (const [key, raw] of Object.entries(
+            ec.cartography as Record<string, Partial<DestinationProgress>>,
+          )) {
+            expeditionChartStore.cartography[key] = {
+              runs: raw?.runs ?? 0,
+              charted: raw?.charted ?? 0,
+            }
+          }
+        }
+        if (ec.waymarks && typeof ec.waymarks === 'object') {
+          expeditionChartStore.waymarks = {}
+          for (const [key, raw] of Object.entries(ec.waymarks as Record<string, number>)) {
+            if (typeof raw === 'number' && raw > 0) expeditionChartStore.waymarks[key] = raw
+          }
+        }
+        if (ec.wearyUntil && typeof ec.wearyUntil === 'object') {
+          expeditionChartStore.wearyUntil = {}
+          for (const [key, raw] of Object.entries(ec.wearyUntil as Record<string, number>)) {
+            if (typeof raw === 'number') expeditionChartStore.wearyUntil[key] = raw
+          }
+        }
+        expeditionChartStore.seenDestinations = Array.isArray(ec.seenDestinations)
+          ? ec.seenDestinations.filter((g: unknown): g is number => typeof g === 'number')
+          : []
       }
 
       // Restore inventoryStore
@@ -1148,6 +1201,25 @@ export function usePersistence() {
         drifterStore.catchUpDrifter(rawSeconds)
       }
 
+      // Ein Spielstand von vor der harten Trennung KANN einen Champion gesetzt
+      // UND im Feld haben — `removeChampionFromSlots` hat das Board nie
+      // angefasst. Hier gewinnt ausnahmsweise die Mission: sie hat eine Uhr, der
+      // Sitz ist ein Klick.
+      const awayNow = expeditionStore.championsOnExpedition
+      if (awayNow.length) {
+        for (let i = 0; i < battleStore.headerSlots.length; i++) {
+          const name = battleStore.headerSlots[i]
+          if (name && awayNow.includes(name)) battleStore.clearHeaderSlot(i)
+        }
+        for (let r = 0; r < battleStore.secondarySlots.length; r++) {
+          for (let sub = 0; sub < battleStore.secondarySlots[r].length; sub++) {
+            const name = battleStore.secondarySlots[r][sub]
+            if (name && awayNow.includes(name)) battleStore.clearSecondarySlot(r, sub)
+          }
+        }
+      }
+      expeditionChartStore.prune()
+
       // Nach Page-Reload: Visibility-Listener und Simulation für laufenden Kampf wiederherstellen
       battleStore.resumeBattleAfterLoad()
 
@@ -1289,6 +1361,7 @@ export function usePersistence() {
     inventoryStore.$reset()
     const expeditionStore = useExpeditionStore()
     expeditionStore.$reset()
+    useExpeditionChartStore().$reset()
     const planetBossStore = usePlanetBossStore()
     planetBossStore.$reset()
     const galaxyStoreReset = useGalaxyStore()

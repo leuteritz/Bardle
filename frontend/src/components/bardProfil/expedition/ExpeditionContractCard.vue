@@ -13,6 +13,8 @@ import { computed, ref, watch, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { getChampionRoles } from '@/config/champions/championData'
 import { getOriginColor } from '@/config/champions/championOrigins'
 import { formatShortDuration } from '@/utils/ui/format'
@@ -28,11 +30,23 @@ import {
 import type { AvailableExpeditionSlot, ChampionRole } from '@/types'
 import ExpeditionCrewPicker from './ExpeditionCrewPicker.vue'
 
-const props = defineProps<{ offer: AvailableExpeditionSlot; now: number }>()
+const props = defineProps<{
+  offer: AvailableExpeditionSlot
+  now: number
+  /** Auf der Sternenkarte fokussiertes Ziel — hebt die Karte hervor. */
+  focused?: boolean
+}>()
 const emit = defineEmits<{ send: [AvailableExpeditionSlot] }>()
 
 const expeditionStore = useExpeditionStore()
 const battleStore = useBattleStore()
+const galaxyStore = useGalaxyStore()
+
+/** Der Galaxiename des Ziels — steht schon im Missionsnamen, aber nicht als Ort. */
+const destinationName = computed(() => {
+  const rec = galaxyStore.completedGalaxies.find((r) => r.galaxy === props.offer.galaxy)
+  return rec ? destinationFor(rec).name : `Galaxy ${props.offer.galaxy}`
+})
 
 /** Which seat has its picker open, or null. */
 const openSeat = ref<number | null>(null)
@@ -211,7 +225,11 @@ function formatCountdown(ms: number): string {
 </script>
 
 <template>
-  <article class="ecc-card" :class="{ 'ecc-card--expiring': expiring }" :style="cardStyle">
+  <article
+    class="ecc-card"
+    :class="{ 'ecc-card--expiring': expiring, 'ecc-card--focused': focused }"
+    :style="cardStyle"
+  >
     <div class="ecc-accent" />
 
     <!-- ── Title row ─────────────────────────────────────────── -->
@@ -222,6 +240,10 @@ function formatCountdown(ms: number): string {
         <span class="ecc-sub">
           <Icon icon="lucide:hourglass" width="12" height="12" />
           {{ formatShortDuration(offer.durationSeconds) }}
+          <span class="ecc-dest">
+            <Icon icon="game-icons:galaxy" width="12" height="12" />
+            {{ destinationName }}
+          </span>
         </span>
       </div>
       <span v-if="offer.tier !== 'common'" class="ecc-tier" :class="`ecc-tier--${offer.tier}`">
@@ -370,6 +392,22 @@ function formatCountdown(ms: number): string {
 }
 .ecc-card--expiring {
   border-color: rgba(204, 96, 80, 0.55);
+}
+/* Auf der Karte fokussiertes Ziel — nur ein Ring, kein zweiter Farbton: die
+   Vertragsfarbe trägt schon das Ziel. */
+.ecc-card--focused {
+  box-shadow:
+    inset 0 0 0 1px rgba(62, 32, 10, 0.6),
+    0 0 0 2px #e8c040;
+}
+.ecc-dest {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(200, 144, 64, 0.28);
+  color: rgba(200, 144, 64, 0.85);
 }
 .ecc-accent {
   height: 2px;

@@ -15,6 +15,7 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { useHerald } from '@/composables/ui/useHerald'
 import { toRoman } from '@/utils/ui/format'
@@ -53,6 +54,22 @@ const runningMissions = computed(() =>
   expeditionStore.activeExpeditions.filter((e) => e.status === 'active'),
 )
 const readyCount = useNotifyBadgeCount('expedition')
+
+// ── Kartenfokus ─────────────────────────────────────────────────────────────
+// Ein Ziel auf der Sternenkarte hebt die Verträge dorthin hervor. Es FILTERT
+// nicht — sonst verschwände die Auslage hinter einem Klick, den der Spieler
+// vielleicht gar nicht als Filter gemeint hat.
+const chartStore = useExpeditionChartStore()
+const focusedGalaxy = computed(() => chartStore.selectedGalaxy)
+const visibleOffers = computed(() => {
+  const focus = focusedGalaxy.value
+  if (!focus) return expeditionStore.availableExpeditions
+  return [...expeditionStore.availableExpeditions].sort((a, b) => {
+    const av = a.galaxy === focus ? 0 : 1
+    const bv = b.galaxy === focus ? 0 : 1
+    return av - bv
+  })
+})
 const activeCount = computed(() => expeditionStore.activeExpeditions.length)
 
 // ── Ledger ──────────────────────────────────────────────────────────────────
@@ -326,10 +343,11 @@ function formatCountdown(ms: number): string {
         <div class="ec-col-body">
           <TransitionGroup name="ec-fly" tag="div" class="ec-stack">
             <ExpeditionContractCard
-              v-for="offer in expeditionStore.availableExpeditions"
+              v-for="offer in visibleOffers"
               :key="offer.id"
               :offer="offer"
               :now="now"
+              :focused="focusedGalaxy === offer.galaxy"
               @send="sendExpedition"
             />
           </TransitionGroup>

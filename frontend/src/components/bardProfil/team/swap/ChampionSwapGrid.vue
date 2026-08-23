@@ -16,6 +16,7 @@ import { Icon } from '@iconify/vue'
 import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/champions/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/champions/championOrigins'
 import {
@@ -59,6 +60,7 @@ const cardHeightPx = `${CHAMPION_PICKER_CARD_HEIGHT}px`
 const gridGapPx = `${CHAMPION_PICKER_GRID_GAP}px`
 
 const battleStore = useBattleStore()
+const expeditionStore = useExpeditionStore()
 const levelStore = useChampionLevelStore()
 
 const searchQuery = ref('')
@@ -323,6 +325,16 @@ function isSeatedHere(champion: string): boolean {
   return (battleStore.secondarySlots[props.roleIndex] ?? [])[props.subSlot] === champion
 }
 
+/**
+ * Ist der Champion gerade unterwegs? Dann ist die Karte gesperrt und nicht nur
+ * gedimmt: „sitzt woanders" darf man anklicken und der Champion zieht um,
+ * „unterwegs" wird abgelehnt — ein still verschluckter Klick wäre schlimmer als
+ * eine graue Karte.
+ */
+function isAway(champion: string): boolean {
+  return expeditionStore.championsOnExpedition.includes(champion)
+}
+
 /** Role short label of the seat that already holds this champion, if any. */
 function takenLabel(champion: string): string | null {
   if (isSeatedHere(champion)) return null
@@ -568,7 +580,9 @@ function onImgError(e: Event) {
               :class="{
                 'csg-card--seated': isSeatedHere(champion),
                 'csg-card--taken': !!takenLabel(champion),
+                'csg-card--away': isAway(champion),
               }"
+              :disabled="isAway(champion)"
               :data-role="CHAMPION_ROLES[champion]"
               type="button"
               :title="champion"
@@ -621,6 +635,7 @@ function onImgError(e: Event) {
               </span>
 
               <span v-if="isSeatedHere(champion)" class="csg-card-band">✓ In this seat</span>
+              <span v-else-if="isAway(champion)" class="csg-card-away">Away</span>
               <span v-else-if="takenLabel(champion)" class="csg-card-taken">
                 {{ takenLabel(champion) }}
               </span>
@@ -759,6 +774,30 @@ function onImgError(e: Event) {
 .csg-card--seated {
   border-color: #e8c040;
 }
+/* Unterwegs: die Haus-Sperrschreibweise, damit die Karte nicht nur leiser,
+   sondern erkennbar zu ist. */
+.csg-card--away {
+  opacity: 0.5;
+  filter: grayscale(55%);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.csg-card-away {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2px 0;
+  background: rgba(14, 10, 4, 0.9);
+  border-top: 1px solid #5c3310;
+  color: #c89040;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
 .csg-card--taken {
   opacity: 0.5;
 }

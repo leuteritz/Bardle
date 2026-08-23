@@ -6,6 +6,7 @@ import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { gameNow } from '@/utils/game/gameClock'
 import {
@@ -324,6 +325,16 @@ describe('Neue Forge-Inhalte', () => {
     const forge = useStarForgeStore()
     const expedition = useExpeditionStore()
     expect(forge.expeditionOffersWait).toBe(false)
+
+    // Ohne befreite Galaxie gibt es kein Ziel und damit keinen Vertrag.
+    useGalaxyStore().completedGalaxies.push({
+      galaxy: 1,
+      mapSeed: 1234,
+      themeIndex: 0,
+      attemptResults: ['rescued'],
+      durationSeconds: 60,
+      completedAt: 0,
+    })
 
     expedition.forceSpawn()
     const slot = expedition.availableExpeditions[0]

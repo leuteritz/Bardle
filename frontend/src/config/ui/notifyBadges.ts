@@ -113,7 +113,7 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
     short: 'Expeditions Ready',
     accent: BADGE_HERALD_ACCENT_EXPEDITION,
     icon: 'game-icons:caravel',
-    tab: 'team',
+    tab: 'expedition',
     hasBadge: true,
     heralds: true,
     heraldEyebrow: 'EXPEDITION',
@@ -130,12 +130,7 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
         where: PROFILE_TABS,
       },
       {
-        file: 'components/bardProfil/team/sigil/SigilBoardComponent.vue',
-        marker: '<RpgNotifyBadge',
-        where: 'Expedition button on the sigil board',
-      },
-      {
-        file: 'components/bardProfil/team/expedition/ExpeditionComponent.vue',
+        file: 'components/bardProfil/expedition/ExpeditionBoard.vue',
         marker: '<RpgNotifyBadge',
         where: 'Expedition panel header',
       },

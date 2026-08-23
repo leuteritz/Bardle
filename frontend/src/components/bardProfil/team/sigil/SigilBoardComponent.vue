@@ -41,7 +41,7 @@ const props = defineProps<{
   /**
    * Width (px) the open right rail takes from the tab — 0 when none is open.
    * The tab owns it: it is the only place that knows WHICH of the rails (role
-   * details, synergies, shop, expeditions, equipment) is up, and they are not
+   * details, synergies, shop, equipment) is up, and they are not
    * equally wide. The board only needs the number, and it needs it while the
    * closing rail is still in the flex row, so open/close resolves in a single
    * camera move instead of a second, delayed one after the slide-out.
@@ -56,7 +56,7 @@ const props = defineProps<{
    * button can show it is the open one. The tab owns the answer — it is the
    * only place that knows what the rail holds.
    */
-  activeAction?: 'shop' | 'expedition' | null
+  activeAction?: 'shop' | null
 }>()
 
 const emit = defineEmits<{
@@ -65,7 +65,6 @@ const emit = defineEmits<{
   /** Hovered ally satellite of the SELECTED role (null = none). */
   'hover-ally': [subSlot: number | null]
   'open-shop': []
-  'open-expedition': []
   'open-synergies': []
   /** Empty board clicked — the tab closes whatever side panel is open. */
   deselect: []
@@ -151,7 +150,6 @@ const allyFilled = computed(() =>
 )
 
 const shopBadgeCount = useNotifyBadgeCount('champions')
-const expeditionBadgeCount = useNotifyBadgeCount('expedition')
 const activeSynergyCount = computed(
   () =>
     synergyStore.activeTraits.length +
@@ -453,23 +451,12 @@ watch(
          einem offenen Rollen-Slot der Battle-Landing aus geöffnet wurde -->
     <BattleTabReturnButton @click.stop />
 
-    <!-- ── board actions: expedition + auto level ──
-         At the board's RIGHT edge, the edge the expedition rail opens from: the
-         button and the panel it summons are the same gesture. Pressing the open
-         one closes its rail again, and while it is up the button holds a lit
-         state with a gold edge on the side the rail comes from. -->
+    <!-- ── board actions: auto level ──
+         Die Expedition ist ein eigener Reiter geworden — ein Knopf, der in
+         einen anderen Reiter springt, ist eine andere Geste als einer, der eine
+         Schiene daneben aufzieht, und die Reiterleiste steht drei Zentimeter
+         entfernt. -->
     <div class="sigil-actions">
-      <button
-        class="sigil-action sigil-action--expedition"
-        :class="{ 'sigil-action--open': activeAction === 'expedition' }"
-        :aria-expanded="activeAction === 'expedition'"
-        :title="activeAction === 'expedition' ? 'Close the expeditions' : 'Send champions out for materials'"
-        @click.stop="emit('open-expedition')"
-      >
-        <Icon icon="game-icons:campfire" width="34" height="34" class="sigil-action-icon" />
-        <span class="sigil-action-label">Expedition</span>
-        <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
-      </button>
 
       <!-- auto level-up — deliberately a notch quieter than the row above it:
            that one is a door, this is a setting, and a setting that looked like
@@ -575,7 +562,7 @@ watch(
 .sigil-board {
   position: relative;
   /* Eigener Stapelkontext — sonst schlügen die eigenen Ebenen des Boards (Shop-
-     und Expedition-Knopf, die Admin-Leiste; alle auf z-index 6) durch den
+     die Admin-Leiste; alle auf z-index 6) durch den
      Ladeschleier des Tabs hindurch, der das Board gerade abdecken soll. Nach
      innen ändert das nichts: die Ebenen ordnen sich weiterhin untereinander,
      nur eben in diesem Kontext. Nach außen auch nicht — Board und Schiene
@@ -679,7 +666,7 @@ watch(
   background: #3c1e14;
 }
 
-/* ── board actions (expedition / auto level) ──
+/* ── board actions (auto level) ──
    One column at the right edge — the edge the rail opens from, so the button
    and the panel it summons sit on the same side. `align-items: stretch` gives
    both rows the width of the longer label, so the icons line up on a common
@@ -755,21 +742,6 @@ watch(
 .sigil-action--open .sigil-action-icon {
   color: #f4d878;
 }
-/* Only the rail buttons: the edge marks the side the panel slides in from. The
-   shop has no rail — its atlas covers the board, door included.
-   Inset 6 px top and bottom so the bar stops short of the 5 px rounded corners
-   instead of cutting across them — nothing clips it, it has to keep clear. */
-.sigil-action--expedition.sigil-action--open::after {
-  content: '';
-  position: absolute;
-  top: 6px;
-  bottom: 6px;
-  right: -2px;
-  width: 4px;
-  border-radius: 2px;
-  background: linear-gradient(to bottom, #c89040, #e8c060, #c89040);
-}
-
 /* ── Compact: the board squeezed by an open rail ──
    340 px at Full HD. One step down keeps the column clear of the sigil's foot,
    and the admin strip moves above the column, since at that width nothing fits

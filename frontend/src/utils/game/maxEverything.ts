@@ -26,6 +26,7 @@ import { useSectionStore } from '@/stores/core/sectionStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useItemStore } from '@/stores/economy/itemStore'
+import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
@@ -106,6 +107,13 @@ export function fillTeamWithRandomChampions(): void {
   battleStore.headerSlots.splice(0, 5, null, null, null, null, null)
   battleStore.secondarySlots = createEmptyAllyRows()
   battleStore.syncTeam1ToSlots()
+
+  // Vor dem Besetzen das Feld räumen: die Slot-Setter lehnen einen Champion ab,
+  // der gerade unterwegs ist, und liessen sonst Lücken im Board zurück.
+  const expeditionStore = useExpeditionStore()
+  for (const mission of [...expeditionStore.activeExpeditions]) {
+    expeditionStore.collectExpedition(mission.id)
+  }
 
   roles.forEach((role, slotIndex) => {
     const roleMatch = pool.filter(

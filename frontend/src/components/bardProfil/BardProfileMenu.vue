@@ -3,6 +3,7 @@ import { watch, computed, ref, reactive, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { useGamePause } from '@/composables/system/useGamePause'
 import { onKeybinding } from '@/composables/system/useKeybindings'
 import type { BardTabId } from '@/stores/core/uiStore'
@@ -19,6 +20,7 @@ import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
 import BattleResultComponent from '@/components/bardProfil/battle/BattleResultComponent.vue'
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
+import ExpeditionTabComponent from '@/components/bardProfil/expedition/ExpeditionTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
@@ -27,6 +29,7 @@ import ProfileReadinessCluster from '@/components/bardProfil/hud/ProfileReadines
 
 const uiStore = useUiStore()
 const galaxyStore = useGalaxyStore()
+const expeditionChartStore = useExpeditionChartStore()
 const { isPaused } = useGamePause()
 // Alle Marken-Zahlen aus derselben Quelle wie Header-Bogen, Tooltip und Herold
 // — config/ui/notifyBadges.ts. Chronicle hängt am Bard-Tab, weil der Codex dort
@@ -104,20 +107,36 @@ const shopFlare = useBadgeFlare(shopFreshCount)
  * gleichzeitig auf dem Schirm. Aus demselben Grund tragen die Tastenkürzel in
  * `KEYBINDINGS` diese Namen ebenfalls.
  */
-const menuItems: {
+const allMenuItems: {
   id: BardTabId
   name: string
   icon: string
   boost?: boolean
+  /** Fehlt der Reiter noch, liefert das Tor `false` — siehe `menuItems`. */
+  gate?: () => boolean
 }[] = [
   { id: 'bard', name: 'Journey', icon: 'ph:compass-rose-fill' },
   { id: 'shop', name: 'Shop', icon: HEADER_GEM_ICONS.shop },
   { id: 'tree', name: 'Tree', icon: HEADER_GEM_ICONS.tree, boost: true },
   { id: 'team', name: 'Team', icon: 'ph:users-three-fill' },
+  {
+    id: 'expedition',
+    name: 'Chart',
+    icon: 'ph:map-trifold-fill',
+    gate: () => expeditionChartStore.isUnlocked,
+  },
   { id: 'battle', name: 'Rift', icon: 'ri:sword-fill', boost: true },
   { id: 'planets', name: 'Planets', icon: 'ph:planet-fill' },
   { id: 'admin', name: 'Admin', icon: 'ph:gear-six-fill' },
 ]
+
+/**
+ * Die sichtbare Leiste. Ein Reiter ohne Inhalt ist schlimmer als keiner: die
+ * Expedition braucht eine befreite Galaxie, sonst hätte sie kein einziges Ziel.
+ * Das Tor steht deshalb an EINER Stelle — hier und in `uiStore.setBardTab`, das
+ * denselben Getter liest.
+ */
+const menuItems = computed(() => allMenuItems.filter((i) => i.gate?.() ?? true))
 
 /**
  * Was einmal stand, bleibt stehen — Modalrahmen wie Tab-Inhalte.
@@ -315,9 +334,14 @@ onUnmounted(() => {
                       v-if="uiStore.bardActiveTab === item.id"
                       class="absolute bottom-0 rp-tab-indicator left-2 right-2"
                     />
-                    <div v-if="item.id === 'team'" class="team-badge-row">
-                      <span v-if="expeditionBadgeCount > 0" class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
-                      <span v-if="championBadgeCount > 0" class="mini-badge mini-badge--champion">{{ championBadgeCount }}</span>
+                    <div v-if="item.id === 'team' && championBadgeCount > 0" class="team-badge-row">
+                      <span class="mini-badge mini-badge--champion">{{ championBadgeCount }}</span>
+                    </div>
+                    <div
+                      v-if="item.id === 'expedition' && expeditionBadgeCount > 0"
+                      class="team-badge-row"
+                    >
+                      <span class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
                     </div>
                     <div v-if="item.id === 'tree' && skillBadgeCount > 0" class="team-badge-row">
                       <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
@@ -413,6 +437,14 @@ onUnmounted(() => {
                 class="tab-layer"
               >
                 <TeamTabComponent />
+              </div>
+
+              <div
+                v-if="mountedTabs.has('expedition')"
+                v-show="uiStore.bardActiveTab === 'expedition'"
+                class="tab-layer"
+              >
+                <ExpeditionTabComponent />
               </div>
 
               <div

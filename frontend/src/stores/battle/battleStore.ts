@@ -2,6 +2,10 @@ import { defineStore } from 'pinia'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useAugmentStore } from '@/stores/economy/augmentStore'
+// Wechselseitig mit dem Expeditions-Store: beide rufen `useX()` nur im Rumpf
+// einer Action, Pinia instanziiert faul — ein zweiter gespiegelter Zähler wäre
+// die schlechtere Lösung.
+import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
@@ -844,7 +848,15 @@ export const useBattleStore = defineStore('battle', {
       this.syncTeam1ToSlots()
     },
 
-    setHeaderSlot(slotIndex: number, champion: string) {
+    /**
+     * Gibt `false` zurück, wenn der Champion gerade unterwegs ist.
+     *
+     * Die Gegenrichtung der Expeditions-Regel: wer reist, kämpft nicht. Der
+     * Rückgabewert ist nötig, weil der Aufrufer sonst eine Quittung für eine
+     * Platzierung ausgibt, die nicht stattgefunden hat.
+     */
+    setHeaderSlot(slotIndex: number, champion: string): boolean {
+      if (useExpeditionStore().championsOnExpedition.includes(champion)) return false
       const existing = this.headerSlots.indexOf(champion)
       if (existing !== -1 && existing !== slotIndex) this.headerSlots[existing] = null
       for (let r = 0; r < this.secondarySlots.length; r++) {
@@ -854,6 +866,7 @@ export const useBattleStore = defineStore('battle', {
       }
       this.headerSlots[slotIndex] = champion
       this.syncTeam1ToSlots()
+      return true
     },
 
     clearHeaderSlot(slotIndex: number) {
@@ -861,7 +874,9 @@ export const useBattleStore = defineStore('battle', {
       this.syncTeam1ToSlots()
     },
 
-    setSecondarySlot(roleIndex: number, subIndex: number, champion: string) {
+    /** Wie `setHeaderSlot` — `false`, solange der Champion im Feld steht. */
+    setSecondarySlot(roleIndex: number, subIndex: number, champion: string): boolean {
+      if (useExpeditionStore().championsOnExpedition.includes(champion)) return false
       const mainIdx = this.headerSlots.indexOf(champion)
       if (mainIdx !== -1) this.headerSlots[mainIdx] = null
       for (let r = 0; r < this.secondarySlots.length; r++) {
@@ -873,6 +888,7 @@ export const useBattleStore = defineStore('battle', {
       }
       this.secondarySlots[roleIndex][subIndex] = champion
       this.syncTeam1ToSlots()
+      return true
     },
 
     clearSecondarySlot(roleIndex: number, subIndex: number) {

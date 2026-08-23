@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { BardTabId, ChampionRole } from '@/types'
+import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 
 // Der Typ wohnt in types/ui.ts, damit die Badge-Registry ihn nennen kann, ohne
 // an den Store zu ziehen. Re-Export, weil drei Stellen ihn von hier importieren.
@@ -54,6 +55,9 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   function setBardTab(id: BardTabId) {
+    // Dasselbe Tor wie die Reiterleiste, und zwar hier, weil auch Kopfzeilen-
+    // Marken, Tastenkürzel und das Admin-Panel hier hereinkommen.
+    if (id === 'expedition' && !useExpeditionChartStore().isUnlocked) return
     bardActiveTab.value = id
     // navigating by hand ends the offer to jump back to the battle tab
     battleTabReturnPending.value = false

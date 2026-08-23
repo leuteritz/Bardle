@@ -7,6 +7,10 @@ import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
+import { destinationFor, destinationWeight } from '@/config/economy/expeditionDestinations'
+import type { ExpeditionDestination } from '@/config/economy/expeditionDestinations'
 import { getChampionRoles } from '@/config/champions/championData'
 import { getChampionOrigin } from '@/config/champions/championOrigins'
 import { pickMaterial } from '@/config/economy/materials'
@@ -25,9 +29,8 @@ import {
   EXPEDITION_SPAWN_INTERVAL_MS,
   EXPEDITION_TIERS,
   EXPEDITION_NAME_ADJECTIVES,
-  EXPEDITION_NAME_TARGETS,
   EXPEDITION_NAME_ACTIONS,
-  EXPEDITION_TIER_THRESHOLDS,
+  EXPEDITION_DEST_RECENCY_WEIGHT,
   EXPEDITION_ID_RANDOM_MAX,
   CHAMPION_XP_EXPEDITION_PER_MINUTE,
   CHAMPION_XP_EXPEDITION_FAIL_SHARE,
@@ -38,7 +41,6 @@ import {
   EXPEDITION_POWER_MALUS_CAP,
   EXPEDITION_HAZARDS,
   EXPEDITION_HAZARD_BY_ID,
-  EXPEDITION_HAZARD_COUNT,
   EXPEDITION_HAZARD_PENALTY,
   EXPEDITION_HAZARD_STAT_PER_MEMBER,
   EXPEDITION_CREW_POWER_PER_ROLE,
@@ -97,13 +99,6 @@ function shuffle<T>(arr: T[]): T[] {
     ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a
-}
-
-function weightedTierPick(): ExpeditionTier {
-  const r = Math.random() * 100
-  if (r < EXPEDITION_TIER_THRESHOLDS.epic) return 'epic'
-  if (r < EXPEDITION_TIER_THRESHOLDS.rare) return 'rare'
-  return 'common'
 }
 
 const ALL_ROLES: ChampionRole[] = ['top', 'jungle', 'mid', 'adc', 'support']
@@ -367,8 +362,11 @@ export const useExpeditionStore = defineStore('expedition', {
       let added = 0
       for (let i = 0; i < Math.max(0, n); i++) {
         const adj = pickRandom(EXPEDITION_NAME_ADJECTIVES)
-        const target = pickRandom(EXPEDITION_NAME_TARGETS)
         const action = pickRandom(EXPEDITION_NAME_ACTIONS)
+        // Dasselbe Namensmuster wie eine echte Mission; ohne befreite Galaxie
+        // fehlt nur das Ziel darin.
+        const dest = this._pickDestination()
+        const target = dest?.name ?? 'Uncharted'
         const colorDef = pickRandom(EXPEDITION_COLORS)
         const reward = EXPEDITION_TIERS.common.rewardMin
         this.activeExpeditions.push({
@@ -386,6 +384,7 @@ export const useExpeditionStore = defineStore('expedition', {
           status: 'success',
           reward,
           colorKey: colorDef.key,
+          galaxy: dest?.galaxy ?? 1,
           tier: 'common',
           hazards: [],
           spoils: { materials: [], meep: 0 },
@@ -404,14 +403,44 @@ export const useExpeditionStore = defineStore('expedition', {
       return before - this.activeExpeditions.length
     },
 
+    /**
+     * Wohin der nächste Vertrag führt.
+     *
+     * Gewichtet zur zuletzt befreiten Galaxie hin, aber nie ausschliesslich:
+     * ein hartes Fenster machte jedes frühe Ziel am Tag seiner Befreiung tot,
+     * eine Gleichverteilung liesse die Hälfte aller Verträge dorthin laufen, wo
+     * der Spieler vor Stunden war.
+     */
+    _pickDestination(): ExpeditionDestination | null {
+      const records = useGalaxyStore().completedGalaxies
+      if (!records.length) return null
+
+      const maxFreed = records.reduce((max, r) => Math.max(max, r.galaxy), 0)
+      const weights = records.map((r) =>
+        destinationWeight(r.galaxy, maxFreed, EXPEDITION_DEST_RECENCY_WEIGHT),
+      )
+      const total = weights.reduce((sum, w) => sum + w, 0)
+      let roll = Math.random() * total
+      for (let i = 0; i < records.length; i++) {
+        roll -= weights[i]
+        if (roll <= 0) return destinationFor(records[i])
+      }
+      return destinationFor(records[records.length - 1])
+    },
+
     _spawnOneExpedition(now: number) {
-      const tier = weightedTierPick()
+      // Ohne befreite Galaxie gibt es kein Ziel und damit keinen Vertrag.
+      const dest = this._pickDestination()
+      if (!dest) return
+
+      const tier = dest.tier
       const tierDef = EXPEDITION_TIERS[tier]
 
+      // Der Zielname steht IM Missionsnamen — die drei Wortlisten von früher
+      // nannten Orte, die es im Spiel nicht gab.
       const adj = pickRandom(EXPEDITION_NAME_ADJECTIVES)
-      const target = pickRandom(EXPEDITION_NAME_TARGETS)
       const action = pickRandom(EXPEDITION_NAME_ACTIONS)
-      const name = `${adj} ${target} ${action}`
+      const name = `${adj} ${dest.name} ${action}`
 
       // Das Glyph kommt aus der Reise-Motivfamilie und wird EINMAL beim Auslegen
       // gezogen — es steht danach in der Mission und wandert mit ihr durch den
@@ -419,7 +448,8 @@ export const useExpeditionStore = defineStore('expedition', {
       // gleich aus, weil der Pool deutlich größer ist als die drei Slots.
       const icon = pickRandom(ICON_POOLS.journey as string[])
 
-      const baseReward = Math.round(randInt(tierDef.rewardMin, tierDef.rewardMax) / 10) * 10
+      const baseReward =
+        Math.round((randInt(tierDef.rewardMin, tierDef.rewardMax) * dest.rewardMult) / 10) * 10
       // Solar Sails (Star Forge) + Portal Winds (Meep Tree): expeditions complete faster
       // Swift Relay / Far Wanderer (providence) zieht an derselben Zahl — die
       // Laufzeit steht beim AUSLEGEN fest, ein Wechsel der Vorsehung rührt
@@ -430,15 +460,22 @@ export const useExpeditionStore = defineStore('expedition', {
         useProvidenceStore().expeditionSpeedMult
       const durationSeconds = Math.max(
         5,
-        Math.round((randInt(tierDef.durMin, tierDef.durMax) * speedMult) / 5) * 5,
+        Math.round((randInt(tierDef.durMin, tierDef.durMax) * dest.durationMult * speedMult) / 5) *
+          5,
       )
 
-      const roleCount = randInt(1, tierDef.maxRoles)
+      // Die Sitzzahl wächst mit der Tiefe des Ziels: eine erste befreite Galaxie
+      // verlangt einen Champion, eine späte den vollen Trupp.
+      const roleCount = randInt(1, dest.maxRoles)
       const requiredRoles = shuffle(ALL_ROLES).slice(0, roleCount) as ChampionRole[]
 
-      const minPowerThreshold =
-        EXPEDITION_CREW_POWER_PER_ROLE[tier] * roleCount + randInt(0, 20 * roleCount)
-      const hazardThreshold = EXPEDITION_HAZARD_STAT_PER_MEMBER[tier] * roleCount
+      const minPowerThreshold = Math.round(
+        EXPEDITION_CREW_POWER_PER_ROLE[tier] * roleCount * dest.powerMult +
+          randInt(0, 20 * roleCount),
+      )
+      const hazardThreshold = Math.round(
+        EXPEDITION_HAZARD_STAT_PER_MEMBER[tier] * roleCount * dest.hazardMult,
+      )
 
       // A one-champion crew cannot answer a composition hazard — kinship needs two
       // of a kind and diversity is vacuously true — so those only go on missions
@@ -446,7 +483,7 @@ export const useExpeditionStore = defineStore('expedition', {
       const hazardPool =
         roleCount >= 2 ? EXPEDITION_HAZARDS : EXPEDITION_HAZARDS.filter((h) => h.kind === 'stat')
       const hazards = shuffle([...hazardPool])
-        .slice(0, Math.min(EXPEDITION_HAZARD_COUNT[tier], hazardPool.length))
+        .slice(0, Math.min(dest.hazardCount, hazardPool.length))
         .map((h) => h.id)
 
       const lastKey = this.availableExpeditions.at(-1)?.colorKey
@@ -460,6 +497,7 @@ export const useExpeditionStore = defineStore('expedition', {
         colorKey: colorDef.key,
         spawnedAt: now,
         availableUntil: now + EXPEDITION_AVAILABILITY_DURATION_MS,
+        galaxy: dest.galaxy,
         tier,
         name,
         icon,
@@ -478,6 +516,8 @@ export const useExpeditionStore = defineStore('expedition', {
     },
 
     checkAvailability() {
+      // Ohne befreite Galaxie gibt es keine Ziele — dann liegt auch nichts aus.
+      if (!useGalaxyStore().completedGalaxies.length) return
       const now = gameNow()
       /* The Waiting Road (Konstellation): ein Angebot verfaellt nicht mehr, es
          wartet. Nur die Verfallspruefung entfaellt — die Nachschub-Schleife
@@ -501,17 +541,21 @@ export const useExpeditionStore = defineStore('expedition', {
     },
 
     /**
-     * Champions eligible for a crew seat: owned, not Bard, not already in the
-     * field. Deliberately NOT filtered by role — putting a mid into a support
-     * seat is a legitimate move that costs the role-cover penalty and may still
-     * win on raw stats. Callers that want the role-correct shortlist sort by
-     * `roleMatches` themselves.
+     * Champions eligible for a crew seat: owned, not Bard, not on the sigil
+     * board, not already in the field. Deliberately NOT filtered by role —
+     * putting a mid into a support seat is a legitimate move that costs the
+     * role-cover penalty and may still win on raw stats.
+     *
+     * Der Board-Ausschluss ist die tragende Regel des Systems: wer kämpft,
+     * reist nicht. `assignedChampions` deckt Kopfslots UND Verbündete ab.
      */
     eligibleChampions(excluding: string[] = []): string[] {
       const battleStore = useBattleStore()
       const inField = this.championsOnExpedition
+      const seated = battleStore.assignedChampions
       return battleStore.ownedChampions.filter(
-        (c: string) => c !== 'Bard' && !inField.includes(c) && !excluding.includes(c),
+        (c: string) =>
+          c !== 'Bard' && !inField.includes(c) && !seated.includes(c) && !excluding.includes(c),
       )
     },
 
@@ -533,9 +577,14 @@ export const useExpeditionStore = defineStore('expedition', {
     crewFor(slot: AvailableExpeditionSlot): (string | null)[] {
       const draft = this.draftCrews[slot.id]
       if (!draft || draft.length !== slot.requiredRoles.length) return this.autoCrewFor(slot)
-      // A drafted champion can leave for another mission between edits.
+      // A drafted champion can leave for another mission between edits — or be
+      // seated on the board, which under the hard split disqualifies them just
+      // the same.
       const inField = this.championsOnExpedition
-      return draft.map((name) => (name && inField.includes(name) ? null : name))
+      const seated = useBattleStore().assignedChampions
+      return draft.map((name) =>
+        name && (inField.includes(name) || seated.includes(name)) ? null : name,
+      )
     },
 
     setCrewMember(slot: AvailableExpeditionSlot, index: number, champion: string | null) {
@@ -572,8 +621,13 @@ export const useExpeditionStore = defineStore('expedition', {
 
       if (assignedChampions.length !== slot.requiredRoles.length) return false
 
+      const battleStore = useBattleStore()
       const onExpedition = this.championsOnExpedition
       if (assignedChampions.some((c) => onExpedition.includes(c.name))) return false
+      // Das Board gewinnt: es speist den Kampf in jedem Frame, eine Expedition
+      // die jemanden herunterzöge wäre ein stiller DPS-Verlust.
+      if (assignedChampions.some((c) => battleStore.assignedChampions.includes(c.name)))
+        return false
 
       const successChance = this.chanceBreakdownFor(assignedChampions, slot).total
 
@@ -592,6 +646,7 @@ export const useExpeditionStore = defineStore('expedition', {
         status: 'active',
         reward: 0,
         colorKey: slot.colorKey,
+        galaxy: slot.galaxy,
         tier: slot.tier,
         hazards: [...slot.hazards],
       }
@@ -604,10 +659,11 @@ export const useExpeditionStore = defineStore('expedition', {
         champions: assignedChampions.map((c) => c.name),
         successChance,
         colorKey: slot.colorKey,
+        galaxy: slot.galaxy,
       })
 
-      const battleStore = useBattleStore()
-      assignedChampions.forEach((c) => battleStore.removeChampionFromSlots(c.name))
+      // Kein Räumen von Board-Sitzen mehr: wer geschickt werden DARF, sass per
+      // Definition nicht auf dem Board.
 
       return true
     },
@@ -749,6 +805,14 @@ export const useExpeditionStore = defineStore('expedition', {
       for (const { name } of expedition.assignedChampions) {
         levelStore.grantXpWithAllies(name, xp)
       }
+
+      // Die Kartografie zählt die REISE, nicht den Erfolg: auch ein Trupp, der
+      // schlecht heimkommt, hat den Weg gesehen. Nur der Kartierungspunkt selbst
+      // hängt am Erfolg — sonst wäre der Fehlschlag folgenlos.
+      const chart = useExpeditionChartStore()
+      const galaxy = expedition.galaxy ?? 1
+      chart.recordRun(galaxy, expedition.status === 'success' ? 1 : 0)
+      chart.prune()
 
       this.activeExpeditions.splice(idx, 1)
       this.completedExpeditions.unshift(expedition)

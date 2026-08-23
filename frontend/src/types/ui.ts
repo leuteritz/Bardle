@@ -427,7 +427,15 @@ export interface PauseChampionCallout {
 // Store, zöge die Registry an `stores/` und damit config an Pinia.
 
 /** Ein Reiter des Bard-Profils. Wohnt hier, weil die Badge-Registry ihn nennt. */
-export type BardTabId = 'bard' | 'shop' | 'tree' | 'team' | 'battle' | 'admin' | 'planets'
+export type BardTabId =
+  | 'bard'
+  | 'shop'
+  | 'tree'
+  | 'team'
+  | 'expedition'
+  | 'battle'
+  | 'admin'
+  | 'planets'
 
 /** Die Marken-Art, die Tooltip, Herold und Badge Lab gemeinsam kennen. */
 export type NotifyBadgeKind =

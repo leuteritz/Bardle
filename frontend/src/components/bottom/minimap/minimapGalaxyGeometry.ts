@@ -227,20 +227,25 @@ export function getGalaxyParticles(seed: number): GalaxyParticle[] {
 // Leuchtender Minimap-Akzent aus der Akzentfarbe des aktuellen Galaxie-Themes:
 // Farbton bleibt erhalten, die (bewusst dunkle) Theme-Farbe wird für die
 // additiven Partikel auf Leuchtkraft skaliert und leicht Richtung Weiß gehoben.
-let themeAccentCache = ''
-let themeAccentCacheKey = -1
+// Eine Map und kein Einzelplatz: die Minimap fragt pro Frame nach dem laufenden
+// Thema, die Sternenkarte des Expeditions-Reiters nach zwanzig verschiedenen.
+// Mit einem Platz schrieben beide abwechselnd denselben Eintrag um. Zwanzig
+// Einträge sind dauerhaft resident und kosten nichts.
+const themeAccentCache = new Map<number, string>()
 
 export function minimapAccentForTheme(themeIndex: number): string {
-  if (themeAccentCacheKey === themeIndex) return themeAccentCache
-  const hex = GALAXY_THEMES[themeIndex % GALAXY_THEMES.length].accentColor
+  const key = themeIndex % GALAXY_THEMES.length
+  const hit = themeAccentCache.get(key)
+  if (hit !== undefined) return hit
+  const hex = GALAXY_THEMES[key].accentColor
   const r = parseInt(hex.slice(1, 3), 16)
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
   const scale = 225 / Math.max(r, g, b, 1)
   const lift = (v: number) => Math.round(v * scale + (255 - v * scale) * 0.22)
-  themeAccentCache = `${lift(r)}, ${lift(g)}, ${lift(b)}`
-  themeAccentCacheKey = themeIndex
-  return themeAccentCache
+  const accent = `${lift(r)}, ${lift(g)}, ${lift(b)}`
+  themeAccentCache.set(key, accent)
+  return accent
 }
 
 /* ── Star / planet marker rendering ──────────────────────────────────────── */
