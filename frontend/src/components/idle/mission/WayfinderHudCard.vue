@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { invalidateHudField } from '@/utils/ui/hudField'
+import { MISSION_CLAIMED_ICON } from '@/config/constants'
 import { useMissionFace } from '@/composables/ui/useMissionFace'
 import { missionObjectiveLine } from '@/config/progression/missions'
 import type { MissionDef } from '@/types'
@@ -108,18 +109,44 @@ onUnmounted(() => {
         aria-hidden="true"
       ></span>
 
+      <!-- Kopfzeile: Missions-Glyph links, Belohnung rechts. Die Höhe ist fest
+           reserviert — ein Lohn aus einem Teil und einer aus zweien dürfen die
+           Karte nicht unterschiedlich hoch machen. -->
+      <div class="wf-head">
+        <Icon
+          :icon="flashing ? MISSION_CLAIMED_ICON : face.def.icon"
+          class="wf-glyph"
+          :class="{ 'wf-glyph--done': flashing }"
+          width="20"
+          height="20"
+        />
+        <div class="wf-seal">
+          <span
+            v-for="part in face.rewardParts"
+            :key="part.unit"
+            class="wf-slot"
+            :style="{ '--slot': part.color }"
+          >
+            <img
+              v-if="part.image"
+              :src="part.image"
+              class="wf-slot__art"
+              alt=""
+              aria-hidden="true"
+            />
+            <span v-else class="wf-slot__mono" aria-hidden="true">{{ part.mono }}</span>
+            <span class="wf-slot__amount">{{ part.amount }}</span>
+            <span class="wf-slot__unit">{{ part.unit }}</span>
+          </span>
+        </div>
+      </div>
+
       <span class="wf-name">{{ face.name }}</span>
       <span class="wf-task">{{ face.task }}</span>
       <span class="wf-count">
         {{ formatNumber(face.progress) }}/{{ formatNumber(face.target) }}
       </span>
 
-      <!-- Der Lohn stand bisher nur im Tooltip — auf der einzigen dauerhaft
-           sichtbaren Karte des Spiels las man, was zu tun ist, nicht wofür. -->
-      <span class="wf-reward">
-        <Icon icon="game-icons:present" width="15" height="15" class="wf-reward__glyph" />
-        <span class="wf-reward__text">{{ flashing ? 'CLAIMED' : face.rewardLabel }}</span>
-      </span>
     </div>
   </Transition>
 </template>
@@ -220,37 +247,114 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-/* Die Belohnung, abgesetzt am Fuß. Trennlinie als `border-top` am Element
-   selbst — eine eigene Ebene wäre für eine Haarlinie zu teuer. */
-.wf-reward {
+/* ── Kopfzeile: Glyph links, Belohnungssiegel rechts ────────────────────────
+   Die Höhe steht fest, wie bei Name und Aufgabe: eine Belohnung aus einem Teil
+   und eine aus zweien sind gleich hoch, und die Karte hängt an ihrer Unterkante. */
+.wf-head {
   position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: 5px;
-  margin-top: 2px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(122, 78, 32, 0.45);
+  align-items: center;
+  height: 42px;
 }
 
-.wf-reward__glyph {
+/* Das Glyph der Mission — die Karte zeigte es bisher gar nicht. Es verankert
+   die rechtsbündige Plakette; ohne Anker stünde sie an einer leeren Zeile. */
+.wf-glyph {
   flex-shrink: 0;
-  margin-top: 1px;
-  color: #7a9a6a;
+  color: var(--accent);
+  opacity: 0.85;
 }
 
-/* Zwei Zeilen fest, aus demselben Grund wie Name und Aufgabe darüber: nach dem
-   Glyph bleiben auf Full HD 189 px, das längste Label misst 196. */
-.wf-reward__text {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+.wf-glyph--done {
+  color: #6ec040;
+  opacity: 1;
+}
+
+/* Die Plakette: eigener Grund, eingelassen in die Kartenfläche. Sie deckt die
+   Fortschrittsfüllung in ihrer Ecke ab — gewollt, sie liest sich dadurch als
+   Objekt statt als Text. */
+.wf-seal {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  margin-left: auto;
+  padding: 4px 7px;
+  background: #141410;
+  border: 1px solid #3a2c14;
+  border-radius: 4px;
+  box-shadow: inset 0 1px 0 rgba(255, 200, 80, 0.05);
+}
+
+/* Betrag und Artwork auf einer Grundlinie, die Einheit als Bildunterschrift
+   darunter — Muster der Playtime-Uhr im Stats-Panel. */
+.wf-slot {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  /* Über der Unterschrift zentriert: das Einheitswort ist fast immer breiter
+     als Artwork plus Zahl, linksbündig hinge das Feld schief. */
+  justify-content: center;
+  column-gap: 4px;
+  row-gap: 1px;
+  min-width: 0;
+}
+
+.wf-slot + .wf-slot {
+  margin-left: 7px;
+  padding-left: 7px;
+  border-left: 1px solid #2c2010;
+}
+
+.wf-slot__art {
+  grid-row: 1;
+  align-self: center;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+/* Vier Materialien haben kein Artwork — gleiche Kantenlänge wie ein Bild,
+   damit die Felder in Flucht bleiben (Muster der Header-Materialzeile). */
+.wf-slot__mono {
+  grid-row: 1;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: #241b12;
+  border: 1px solid rgba(200, 144, 64, 0.28);
+  color: var(--slot);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Die eine große Zahl der Belohnung. Sie kürzt nie — die Einheit weicht. */
+.wf-slot__amount {
+  grid-row: 1;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--slot);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wf-slot__unit {
+  grid-column: 1 / -1;
   overflow: hidden;
-  height: 2.5em;
-  font-size: 12px;
+  font-size: 8.5px;
   font-weight: 800;
-  letter-spacing: 0.3px;
-  line-height: 1.25;
-  color: #7a9a6a;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #8a7a58;
 }
 
 /* Abschlussblitz — EIN Umschlag, keine laufende Animation. Kürzer als die
@@ -261,8 +365,14 @@ onUnmounted(() => {
   transition-duration: 0.25s;
 }
 
-.wf-root--done .wf-reward__text,
-.wf-root--done .wf-reward__glyph {
+/* Kein Textwechsel auf „CLAIMED" — der ließe die Plakettenbreite springen.
+   Grün wird sie, der Haken sagt den Rest. */
+.wf-root--done .wf-seal {
+  border-color: #3f6a24;
+}
+
+.wf-root--done .wf-slot__amount,
+.wf-root--done .wf-slot__unit {
   color: #6ec040;
 }
 
@@ -312,19 +422,34 @@ onUnmounted(() => {
   .wf-count {
     font-size: 19px;
   }
-  /* Dieselbe Innenbreite trägt auch die längste Belohnung (196 px) einzeilig. */
-  .wf-reward {
-    gap: 7px;
-    padding-top: 8px;
+  .wf-head {
+    height: 52px;
   }
-  .wf-reward__glyph {
-    width: 18px;
-    height: 18px;
+  .wf-glyph {
+    width: 26px;
+    height: 26px;
   }
-  .wf-reward__text {
-    -webkit-line-clamp: 1;
-    height: 1.25em;
-    font-size: 15px;
+  .wf-seal {
+    padding: 5px 9px;
+  }
+  .wf-slot + .wf-slot {
+    margin-left: 9px;
+    padding-left: 9px;
+  }
+  .wf-slot__art,
+  .wf-slot__mono {
+    width: 20px;
+    height: 20px;
+  }
+  .wf-slot__mono {
+    font-size: 10px;
+  }
+  .wf-slot__amount {
+    font-size: 26px;
+  }
+  .wf-slot__unit {
+    font-size: 11px;
+    letter-spacing: 0.12em;
   }
 }
 
@@ -343,12 +468,29 @@ onUnmounted(() => {
   .wf-count {
     font-size: 24px;
   }
-  .wf-reward__glyph {
-    width: 21px;
-    height: 21px;
+  .wf-head {
+    height: 62px;
   }
-  .wf-reward__text {
-    font-size: 18px;
+  .wf-glyph {
+    width: 32px;
+    height: 32px;
+  }
+  .wf-seal {
+    padding: 6px 11px;
+  }
+  .wf-slot__art,
+  .wf-slot__mono {
+    width: 24px;
+    height: 24px;
+  }
+  .wf-slot__mono {
+    font-size: 12px;
+  }
+  .wf-slot__amount {
+    font-size: 32px;
+  }
+  .wf-slot__unit {
+    font-size: 13px;
   }
 }
 

@@ -6,10 +6,11 @@ import {
   missionChapterIndex,
   missionObjectiveLine,
   missionRewardLabel,
+  missionRewardParts,
 } from '@/config/progression/missions'
 import { MISSION_CLAIM_FLASH_MS } from '@/config/constants'
 import { toRoman } from '@/utils/ui/format'
-import type { MissionDef } from '@/types'
+import type { MissionDef, MissionRewardPart } from '@/types'
 
 /**
  * Was der Spieler von der Leiter sieht — die laufende Mission, und während des
@@ -39,6 +40,9 @@ export interface MissionFace {
   target: number
   ratio: number
   rewardLabel: string
+  /** Derselbe Lohn zerlegt — die Plakette der HUD-Karte setzt Betrag und
+   *  Einheit getrennt, die Pause-Zeile liest weiter das Label. */
+  rewardParts: MissionRewardPart[]
 }
 
 export function useMissionFace(): {
@@ -65,6 +69,7 @@ export function useMissionFace(): {
       target: def.target,
       ratio,
       rewardLabel: missionRewardLabel(def),
+      rewardParts: missionRewardParts(def),
     }
   }
 

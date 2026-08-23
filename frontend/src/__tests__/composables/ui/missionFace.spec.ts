@@ -3,7 +3,7 @@ import { effectScope, nextTick } from 'vue'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useMissionFace, type MissionFace } from '@/composables/ui/useMissionFace'
 import { useMissionStore } from '@/stores/progression/missionStore'
-import { MISSIONS, missionRewardLabel } from '@/config/progression/missions'
+import { MISSIONS, missionRewardLabel, missionRewardParts } from '@/config/progression/missions'
 import { MISSION_CLAIM_FLASH_MS } from '@/config/constants'
 import type { ComputedRef } from 'vue'
 
@@ -43,6 +43,8 @@ describe('useMissionFace', () => {
     expect(face.value?.id).toBe(MISSIONS[0].id)
     expect(face.value?.chapterNumeral).toBe('I')
     expect(face.value?.rewardLabel).toBe(missionRewardLabel(MISSIONS[0]))
+    // Die Plakette der HUD-Karte liest die Teile, nicht den String.
+    expect(face.value?.rewardParts).toEqual(missionRewardParts(MISSIONS[0]))
     expect(flashing.value).toBe(false)
   })
 

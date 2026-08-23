@@ -751,6 +751,22 @@ export interface MissionReward {
   materials?: { id: string; qty: number }[]
 }
 
+/**
+ * Ein Belohnungsteil, zerlegt für die Siegel-Plakette der HUD-Karte. Der
+ * Zeilen-String `missionRewardLabel()` wird daraus ABGELEITET — zwei
+ * Formatierer nebeneinander liefen früher oder später auseinander.
+ */
+export interface MissionRewardPart {
+  kind: 'chimes' | 'meeps' | 'material'
+  /** „12m", „25", „4" — ohne Vorzeichen, das setzt die Anzeige. */
+  amount: string
+  unit: string
+  color: string
+  image?: string
+  /** Zwei-Buchstaben-Ersatz für die vier Materialien ohne Artwork. */
+  mono?: string
+}
+
 /** Ein Kapitel der Leiter. Die Leitfarbe hängt am KAPITEL, nicht an der
  *  Mission — so hat die Leiter einen sichtbaren Bogen statt 41 Einzeltönen. */
 export interface MissionChapterDef {

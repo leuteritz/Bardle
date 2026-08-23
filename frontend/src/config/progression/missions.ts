@@ -1,5 +1,17 @@
-import type { MissionChapterDef, MissionDef, MissionMetricId } from '@/types'
+import type {
+  Material,
+  MissionChapterDef,
+  MissionDef,
+  MissionMetricId,
+  MissionRewardPart,
+} from '@/types'
 import { MATERIALS } from '@/config/economy/materials'
+import {
+  MATERIAL_COLOR,
+  MATERIAL_PLACEHOLDER_LABELS,
+  MISSION_REWARD_COLOR,
+  UNIVERSE_TOOLTIP_IMAGES,
+} from '@/config/constants'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // THE WAYFINDER — die Leiter, an der Bard sich orientiert
@@ -635,9 +647,14 @@ export const MISSION_RUN_SCOPED_METRICS: readonly MissionMetricId[] = [
 
 // ── Formatierer ──────────────────────────────────────────────────────────────
 
-const MATERIAL_NAME_BY_ID: Record<string, string> = Object.fromEntries(
-  MATERIALS.map((m) => [m.id, m.name]),
+const MATERIAL_BY_ID: Record<string, Material | undefined> = Object.fromEntries(
+  MATERIALS.map((m) => [m.id, m]),
 )
+
+/** Das Artwork der beiden Währungen — dieselben Bilder wie überall sonst; der
+ *  Pfad ein drittes Mal als Literal wäre eine zweite Quelle. */
+const CHIME_ART = UNIVERSE_TOOLTIP_IMAGES.chimes
+const MEEP_ART = UNIVERSE_TOOLTIP_IMAGES.meeps
 
 /** „90s" bzw. „8m" — die Karte verspricht eine DAUER an Produktion, keine
  *  Zahl, die sich unter dem Cursor bewegt. */
@@ -646,28 +663,65 @@ function productionSpan(seconds: number): string {
 }
 
 /**
- * Der Lohn in einer Zeile: „+8m PRODUCTION", „+1 MEEP", „+3 STARDUST".
+ * Der Lohn, in seine Teile zerlegt: Betrag, Einheit, Farbe, Artwork.
  *
  * Rein aus der Definition und damit statisch — die tatsächliche Menge rechnet
- * der Store im Moment der Auszahlung und trägt sie in Zeremonie und Log. Steht
- * hier und nicht in Store oder Komponente, weil DREI Stellen sie zeigen: die
- * HUD-Karte, der Tooltip der Vorschauzeile und das Stats-Panel.
+ * der Store im Moment der Auszahlung und trägt sie in Zeremonie und Log.
+ *
+ * Höchstens zwei Teile, ausgezählt über den Katalog: 31 Missionen haben einen,
+ * 10 haben zwei, keine drei. Reihenfolge immer Chimes → Meep → Material.
  */
-export function missionRewardLabel(def: MissionDef): string {
-  const parts: string[] = []
+export function missionRewardParts(def: MissionDef): MissionRewardPart[] {
+  const parts: MissionRewardPart[] = []
   const chimes = def.reward.chimes
   if (chimes) {
-    if (chimes.cpsSeconds) parts.push(`+${productionSpan(chimes.cpsSeconds)} PRODUCTION`)
-    else if (chimes.flat) parts.push(`+${chimes.flat.toLocaleString()} CHIMES`)
-    else if (chimes.clicks) parts.push(`+${chimes.clicks} CLICKS`)
+    // Artwork statt Iconify: für Chimes und Meeps ist das eine Projektregel.
+    const art = { kind: 'chimes', color: MISSION_REWARD_COLOR.chimes, image: CHIME_ART } as const
+    if (chimes.cpsSeconds) {
+      parts.push({ ...art, amount: productionSpan(chimes.cpsSeconds), unit: 'PRODUCTION' })
+    } else if (chimes.flat) {
+      parts.push({ ...art, amount: chimes.flat.toLocaleString(), unit: 'CHIMES' })
+    } else if (chimes.clicks) {
+      parts.push({ ...art, amount: `${chimes.clicks}`, unit: 'CLICKS' })
+    }
   }
   if (def.reward.meeps) {
-    parts.push(`+${def.reward.meeps} ${def.reward.meeps > 1 ? 'MEEPS' : 'MEEP'}`)
+    parts.push({
+      kind: 'meeps',
+      amount: `${def.reward.meeps}`,
+      unit: def.reward.meeps > 1 ? 'MEEPS' : 'MEEP',
+      color: MISSION_REWARD_COLOR.meeps,
+      image: MEEP_ART,
+    })
   }
   for (const mat of def.reward.materials ?? []) {
-    parts.push(`+${mat.qty} ${(MATERIAL_NAME_BY_ID[mat.id] ?? mat.id).toUpperCase()}`)
+    const known = MATERIAL_BY_ID[mat.id]
+    parts.push({
+      kind: 'material',
+      amount: `${mat.qty}`,
+      unit: (known?.name ?? mat.id).toUpperCase(),
+      color: MATERIAL_COLOR[mat.id] ?? '#c8c8c8',
+      image: known?.image,
+      // Vier Materialien haben kein Artwork — derselbe Ersatz wie im Header.
+      mono: known?.image
+        ? undefined
+        : (MATERIAL_PLACEHOLDER_LABELS[mat.id] ?? mat.id.slice(0, 2).toUpperCase()),
+    })
   }
-  return parts.join(' · ')
+  return parts
+}
+
+/**
+ * Derselbe Lohn in einer Zeile: „+8m PRODUCTION", „+1 MEEP", „+3 STARDUST".
+ *
+ * Abgeleitet, nicht zweitgeschrieben — der String hat drei Verbraucher (Tooltip
+ * der HUD-Karte, Pause-Zeile, Stats-Panel), und ein zweiter Formatter daneben
+ * liefe früher oder später von der Plakette weg.
+ */
+export function missionRewardLabel(def: MissionDef): string {
+  return missionRewardParts(def)
+    .map((p) => `+${p.amount} ${p.unit}`)
+    .join(' · ')
 }
 
 /** Die Aufgabe mit eingesetzter Menge — HUD-Karte und Stats-Panel. */

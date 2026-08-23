@@ -44,6 +44,19 @@ export const MISSION_ACCENT_HEX = '#7ad0be'
  *  Materialgutschrift. */
 export const MISSION_SYSTEM_ICON = 'game-icons:direction-signs'
 
+/**
+ * Farbe des Betrags je Belohnungsart auf der Siegel-Plakette der HUD-Karte.
+ * Material bringt seine eigene aus `MATERIAL_COLOR` mit — die Art ist dort die
+ * Information, nicht der Schmuck.
+ *
+ * `#9fe062` ist die Meep-Marke aus dem Skillbaum, `#e8c040` das Projektgold.
+ */
+export const MISSION_REWARD_COLOR = { chimes: '#e8c040', meeps: '#9fe062' } as const
+
+/** Haken über der Plakette, solange der Abschluss blitzt — dasselbe Glyph, das
+ *  das Stats-Panel für erledigte Stufen zeigt. */
+export const MISSION_CLAIMED_ICON = 'lucide:check'
+
 /** Überschrift, sobald die Leiter durch ist. Zwei Verbraucher mit
  *  verschiedener Lebensdauer: draußen stünde sie einmal und ginge wieder — ein
  *  dauerhaftes „fertig" im freien Bild wäre totes Chrome. Im Pause-Overlay

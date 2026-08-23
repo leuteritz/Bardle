@@ -8,6 +8,7 @@ import {
   MISSION_CHAPTER_SIZES,
   MISSION_RUN_SCOPED_METRICS,
   missionRewardLabel,
+  missionRewardParts,
   missionObjectiveLine,
 } from '@/config/progression/missions'
 import { OMENS } from '@/config/progression/omens'
@@ -98,9 +99,10 @@ describe('mission ladder — reachability', () => {
     for (const m of MISSIONS) {
       const ceiling = METRIC_CEILING[m.metric]
       if (ceiling === undefined) continue
-      expect(m.target, `"${m.id}" targets ${m.target} ${m.unit}, ceiling is ${ceiling}`).toBeLessThanOrEqual(
-        ceiling,
-      )
+      expect(
+        m.target,
+        `"${m.id}" targets ${m.target} ${m.unit}, ceiling is ${ceiling}`,
+      ).toBeLessThanOrEqual(ceiling)
     }
   })
 
@@ -145,7 +147,8 @@ describe('mission ladder — rewards', () => {
   it('pays something on every mission', () => {
     for (const m of MISSIONS) {
       const r = m.reward
-      const hasChimes = !!r.chimes && (!!r.chimes.cpsSeconds || !!r.chimes.flat || !!r.chimes.clicks)
+      const hasChimes =
+        !!r.chimes && (!!r.chimes.cpsSeconds || !!r.chimes.flat || !!r.chimes.clicks)
       expect(
         hasChimes || !!r.meeps || (r.materials?.length ?? 0) > 0,
         `"${m.id}" pays nothing — a dead click`,
@@ -176,6 +179,44 @@ describe('mission ladder — rewards', () => {
   it('renders a non-empty reward label for every mission', () => {
     for (const m of MISSIONS) {
       expect(missionRewardLabel(m), `"${m.id}"`).not.toBe('')
+    }
+  })
+
+  it('splits into at most two parts — the seal reserves exactly two fields', () => {
+    for (const m of MISSIONS) {
+      const parts = missionRewardParts(m)
+      expect(parts.length, `"${m.id}" has ${parts.length} reward parts`).toBeGreaterThan(0)
+      expect(parts.length, `"${m.id}" would overflow the seal`).toBeLessThanOrEqual(2)
+    }
+  })
+
+  it('gives every part an amount, a unit and a colour', () => {
+    for (const m of MISSIONS) {
+      for (const p of missionRewardParts(m)) {
+        expect(p.amount, `"${m.id}"`).not.toBe('')
+        expect(p.unit, `"${m.id}"`).not.toBe('')
+        expect(p.color, `"${m.id}" part "${p.unit}"`).toMatch(/^#[0-9a-f]{6}$/i)
+      }
+    }
+  })
+
+  it('shows artwork or a monogram for every material — never an empty box', () => {
+    for (const m of MISSIONS) {
+      for (const p of missionRewardParts(m)) {
+        expect(
+          !!p.image || !!p.mono,
+          `"${m.id}" part "${p.unit}" has neither image nor monogram`,
+        ).toBe(true)
+      }
+    }
+  })
+
+  it('keeps the label a pure derivation of the parts', () => {
+    for (const m of MISSIONS) {
+      const joined = missionRewardParts(m)
+        .map((p) => `+${p.amount} ${p.unit}`)
+        .join(' · ')
+      expect(missionRewardLabel(m), `"${m.id}"`).toBe(joined)
     }
   })
 })
