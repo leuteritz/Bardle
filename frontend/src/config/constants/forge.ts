@@ -3620,13 +3620,18 @@ export const MEEP_GAIN_PULSE_MS = 520
 /**
  * Breite der Griffleiste, die eingeklappt stehen bleibt.
  *
- * 36 px, und die Zahl kommt von ihrem Inhalt, nicht vom Gefühl: das Chevron
- * misst 18, die Zahl darunter braucht zwei Ziffern bei 12 px Schriftgrad —
- * beides passt mit je 9 px Luft an den Seiten. Schmaler wäre die Trefferfläche
- * kleiner als die 32 px, unter denen ein Klickziel unangenehm wird; breiter
- * begänne sie, wie eine eigene Spalte auszusehen, und genau das ist sie nicht.
+ * 44 px trägt alle drei Zonen: die 28er Chevron-Kappe, das gekippte Wort in
+ * 15 px samt Sperrung und die zweistellige Zahl. Schmaler bricht eines davon um.
  */
-export const FORGE_DETAILS_RAIL_PX = 36
+export const FORGE_DETAILS_RAIL_PX = 44
+
+/**
+ * Reservierte Höhe von Kopf UND Fuss — eine Zahl für beide Enden.
+ *
+ * Ohne sie hinge das Wort an dem, was gerade darunter steht: im frischen
+ * Spielstand fehlen Zähler und Punkt, und es wanderte nach unten aus der Mitte.
+ */
+export const FORGE_DETAILS_RAIL_END_PX = 64
 
 /**
  * Wie lange die Spalte fährt.
@@ -3707,14 +3712,14 @@ export const FORGE_SHOP_SKELETON_RINGS = [
 /** Durchmesser der Sonnenscheibe in der Skelettmitte, in Prozent. */
 export const FORGE_SHOP_SKELETON_SUN_PCT = 11
 /**
- * Das gekippte Wort am Fuss der Griffleiste.
+ * Das gekippte Wort in der Mitte der Griffleiste.
  *
  * Ohne es ist die Leiste eine Kante mit einem Pfeil darauf — sie sagt, dass
- * sich etwas öffnen lässt, aber nicht was. „FORGE" und nicht „DETAILS", weil
- * der Reiter Star Forge heisst, die Kaufquittung sich als `forged` meldet und
- * der Sammelkauf dasselbe Wort trägt: eine Sache, ein Name.
+ * sich etwas öffnen lässt, aber nicht was. „UPGRADES" und nicht „FORGE": der
+ * Griff soll benennen, was HINTER ihm liegt, nicht den Reiter wiederholen, auf
+ * dem er ohnehin steht.
  */
-export const FORGE_DETAILS_RAIL_LABEL = 'FORGE'
+export const FORGE_DETAILS_RAIL_LABEL = 'UPGRADES'
 
 /**
  * Klartext zu `ForgeEffectFamily`. Die Icon-Map daneben

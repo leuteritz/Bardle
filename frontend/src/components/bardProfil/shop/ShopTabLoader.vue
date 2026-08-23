@@ -24,6 +24,7 @@
 import { computed } from 'vue'
 import LoadingBeacon from '@/components/ui/LoadingBeacon.vue'
 import {
+  FORGE_DETAILS_RAIL_END_PX,
   FORGE_DETAILS_RAIL_PX,
   FORGE_KEY_HINT_ROW,
   FORGE_SHOP_LOADER_ACCENT,
@@ -67,6 +68,7 @@ const skeletonNodes = computed(() =>
 )
 
 const railWidth = `${FORGE_DETAILS_RAIL_PX}px`
+const railEnd = `${FORGE_DETAILS_RAIL_END_PX}px`
 const sunSize = `${FORGE_SHOP_SKELETON_SUN_PCT}%`
 
 // Die beiden Ecken-Platzhalter tragen die Masse dessen, was dort gleich steht
@@ -111,9 +113,14 @@ const zoomH = `${FORGE_ZOOM_BAR.h}px`
 
     <!-- Die Griffleiste, wie sie gleich dastehen wird. -->
     <div class="stl-rail" aria-hidden="true">
-      <span class="stl-rail-mark stl-rail-mark--chevron" />
-      <span class="stl-rail-mark stl-rail-mark--count" />
-      <span class="stl-rail-mark stl-rail-mark--dot" />
+      <span class="stl-rail-end">
+        <span class="stl-rail-mark stl-rail-mark--cap" />
+      </span>
+      <span class="stl-rail-mark stl-rail-mark--word" />
+      <span class="stl-rail-end">
+        <span class="stl-rail-mark stl-rail-mark--count" />
+        <span class="stl-rail-mark stl-rail-mark--dot" />
+      </span>
     </div>
   </div>
 </template>
@@ -225,16 +232,26 @@ const zoomH = `${FORGE_ZOOM_BAR.h}px`
   transform: translate(-50%, -50%);
 }
 
-/* Genau die Masse der Griffleiste, die gleich hier steht — samt ihrer Naht. */
+/* Genau die Masse der Griffleiste, die gleich hier steht — samt ihrer Naht und
+   ihren drei Zonen. */
 .stl-rail {
   flex: 0 0 v-bind(railWidth);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding-top: 14px;
+  padding: 12px 0;
   border-left: 2px solid #5c3310;
   background: #14100c;
+}
+
+.stl-rail-end {
+  flex: 0 0 auto;
+  min-height: v-bind(railEnd);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .stl-rail-mark {
@@ -242,14 +259,22 @@ const zoomH = `${FORGE_ZOOM_BAR.h}px`
   border-radius: 4px;
 }
 
-.stl-rail-mark--chevron {
-  width: 14px;
-  height: 14px;
+.stl-rail-mark--cap {
+  width: 28px;
+  height: 28px;
+}
+
+/* Das gekippte Wort, das gleich hier steht. `auto` oben und unten zentriert es
+   im Rest zwischen den beiden Enden — dieselbe Mitte wie in der echten Leiste. */
+.stl-rail-mark--word {
+  margin: auto 0;
+  width: 13px;
+  height: 132px;
 }
 
 .stl-rail-mark--count {
-  width: 20px;
-  height: 18px;
+  width: 24px;
+  height: 20px;
 }
 
 .stl-rail-mark--dot {
