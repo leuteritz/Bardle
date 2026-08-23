@@ -334,6 +334,8 @@
           :detail="detail"
           :index="selectedIndex"
           :total="visibleEntries.length"
+          :take-seat="takeSeat"
+          @update:take-seat="takeSeat = $event"
           @prev="selectPrev"
           @next="selectNext"
           @back="closeDetail"
@@ -398,7 +400,9 @@ import {
   TEAM_SHOP_CARD_MIN_WIDTH,
   TEAM_SHOP_CARD_HEIGHT,
   TEAM_SHOP_GRID_GAP,
+  ROLE_BY_KEY,
 } from '@/config/constants'
+import { recruitSeatFor, type RecruitSeat } from '@/utils/game/recruitSeat'
 import { useHerald } from '@/composables/ui/useHerald'
 import type {
   ChampionRole,
@@ -609,15 +613,37 @@ export default defineComponent({
       return 3
     }
 
+    /**
+     * Der frisch Gekaufte nimmt seinen Hauptsitz, wenn der leer ist — eine
+     * unbesetzte Rolle hat im Orbit gar kein Rollenverhalten. Einen Sitzenden
+     * verdrängt er nur, wenn `takeSeat` vor dem Kauf gesetzt wurde.
+     */
+    function seatRecruit(name: string, seat: RecruitSeat): RecruitSeat | null {
+      if (seat.kind === 'none') return null
+      if (seat.kind === 'held' && !takeSeat.value) return null
+      return battleStore.setHeaderSlot(seat.roleIndex, name) ? seat : null
+    }
+
+    function recruitSubline(name: string, seated: RecruitSeat | null): string {
+      const tier = getChampionTier(name).name
+      if (!seated || seated.kind === 'none') return tier
+      const role = ROLE_BY_KEY[seated.roleKey].label
+      return seated.kind === 'held'
+        ? `Seated as ${role} · ${seated.occupant} benched`
+        : `${tier} · Seated as ${role}`
+    }
+
     function handleBuy(name: string) {
       if (!canClickBuy(name)) return
       const idx = visibleChampionList.value.indexOf(name)
       const price = getChimesPrice(name)
+      const seat = recruitSeatFor(name, battleStore.headerSlots)
       battleStore.recruitChampion(name)
+      const seated = seatRecruit(name, seat)
       announceReceipt({
         kind: 'recruit',
         headline: name,
-        subline: getChampionTier(name).name,
+        subline: recruitSubline(name, seated),
         // `md` (256 px) wie die Zeremonie: dasselbe Portrait zweimal in
         // derselben Stufe ist ein Cache-Treffer, keine zweite Ladung.
         portraitSrc: battleStore.getChampionImage(name, { size: 'md' }),
@@ -1344,6 +1370,14 @@ const shopChampionNames = computed(() =>
     const selectedChampion = ref<string | null>(null)
     const selectedItem = ref<string | null>(null)
 
+    // Der Schalter der Sitz-Zeile gilt genau für die aktuelle Auswahl und fällt
+    // bei jedem Wechsel zurück — sonst verdrängt er beim nächsten Champion
+    // einen Sitzenden, den niemand gemeint hat.
+    const takeSeat = ref(false)
+    watch(selectedChampion, () => {
+      takeSeat.value = false
+    })
+
     // Flat, tier-ordered list of every champion currently shown in the grid
     // (unlocked tier sections first, cross-role search results appended) —
     // handleBuy re-points the detail panel through this list.
@@ -1573,6 +1607,25 @@ const shopChampionNames = computed(() =>
       }
     })
 
+    /** Die Sitz-Zeile des Detail-Panels: welche Rolle, und wer dort schon sitzt. */
+    function championSeat(name: string): ShopChampionDetail['seat'] {
+      const seat = recruitSeatFor(name, battleStore.headerSlots)
+      if (seat.kind === 'none') return null
+      const role = ROLE_BY_KEY[seat.roleKey]
+      return {
+        roleLabel: role.label,
+        roleColor: role.color,
+        roleIcon: role.icon,
+        occupant:
+          seat.kind === 'held'
+            ? {
+                name: seat.occupant,
+                image: battleStore.getChampionImage(seat.occupant, { size: 'md' }),
+              }
+            : null,
+      }
+    }
+
     // Everything the detail panel renders for the selected champion.
     const detail = computed<ShopChampionDetail | null>(() => {
       const name = selectedChampion.value
@@ -1613,6 +1666,7 @@ const shopChampionNames = computed(() =>
           ok: canAffordChimes(name),
         },
         canBuy: canClickBuy(name),
+        seat: championSeat(name),
       }
     })
 
@@ -2043,6 +2097,7 @@ const shopChampionNames = computed(() =>
       selectedIndex,
       visibleEntries,
       detail,
+      takeSeat,
       ROLE_BADGE,
       // ── Unified shop: items ──
       itemGroups,

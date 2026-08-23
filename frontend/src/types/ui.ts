@@ -176,6 +176,17 @@ export interface ShopChampionDetail {
   materials: ShopDetailMaterial[]
   chimes: { need: number; have: number; ok: boolean }
   canBuy: boolean
+  /**
+   * Der Hauptsitz, den dieser Champion beim Recruit einnimmt — trägt die
+   * Sitz-Zeile über dem Buy-Button. `occupant: null` heißt: der Sitz ist frei
+   * und der Kauf besetzt ihn ohne Rückfrage.
+   */
+  seat: {
+    roleLabel: string
+    roleColor: string
+    roleIcon: string
+    occupant: { name: string; image: string } | null
+  } | null
 }
 
 /** Everything the unified shop's item detail panel renders for one item. */

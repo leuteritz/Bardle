@@ -165,6 +165,41 @@
 
       <!-- Buy footer -->
       <div class="cs-detail-footer">
+        <!-- Seat row: which main seat this recruit takes, and who holds it now.
+             The switch is the whole replace flow — asking after the purchase
+             would break every buy that is only meant to collect. -->
+        <div
+          v-if="detail.seat"
+          class="cs-seat"
+          :class="{ 'cs-seat--open': !detail.seat.occupant, 'cs-seat--armed': armed }"
+          :style="{ '--seat-c': detail.seat.roleColor }"
+        >
+          <Icon :icon="detail.seat.roleIcon" width="20" height="20" class="cs-seat-role" />
+          <img
+            v-if="detail.seat.occupant"
+            :src="detail.seat.occupant.image"
+            :alt="detail.seat.occupant.name"
+            class="rpg-img cs-seat-face"
+            :width="SEAT_PORTRAIT"
+            :height="SEAT_PORTRAIT"
+          />
+          <span class="cs-seat-text">
+            <b class="cs-seat-role-label">{{ detail.seat.roleLabel }} seat</b>
+            <span class="cs-seat-state">{{ seatText }}</span>
+          </span>
+          <button
+            v-if="canArm"
+            type="button"
+            class="cs-seat-switch"
+            role="switch"
+            :aria-checked="takeSeat"
+            :aria-label="`Take the ${detail.seat.roleLabel} seat from ${detail.seat.occupant?.name}`"
+            @click="$emit('update:takeSeat', !takeSeat)"
+          >
+            <i class="cs-seat-knob"></i>
+            <span>Take seat</span>
+          </button>
+        </div>
         <button
           class="cs-buy-btn"
           :class="{ 'cs-buy-btn--ready': detail.canBuy }"
@@ -207,7 +242,7 @@ import { Icon } from '@iconify/vue'
 import CosmicStageBackground from '../../../ui/CosmicStageBackground.vue'
 import PlanetGlyph from '../../../ui/PlanetGlyph.vue'
 import { formatNumber } from '@/config/ui/numberFormat'
-import { SHOP_HOME_PLANET_GLYPH_SIZE } from '@/config/constants'
+import { SHOP_HOME_PLANET_GLYPH_SIZE, TEAM_SHOP_SEAT_PORTRAIT_SIZE } from '@/config/constants'
 import type { ShopChampionDetail } from '@/types'
 
 /**
@@ -228,8 +263,10 @@ export default defineComponent({
     total: { type: Number, default: 0 },
     /** Standing in the shop's own column rather than over it — shows Close. */
     wide: { type: Boolean, default: false },
+    /** Armed seat switch — the recruit replaces whoever holds the role's main seat. */
+    takeSeat: { type: Boolean, default: false },
   },
-  emits: ['prev', 'next', 'buy', 'back'],
+  emits: ['prev', 'next', 'buy', 'back', 'update:takeSeat'],
   setup(props) {
     const spawnLabel = computed(() => {
       const pct = props.detail?.spawnPercent
@@ -253,12 +290,30 @@ export default defineComponent({
       transform: `scaleX(${need > 0 ? Math.min(1, have / need) : 1})`,
     })
 
+    // Nur ein besetzter Sitz ist eine Entscheidung — ein freier wird ohne
+    // Nachfrage besetzt, und ein gesperrter Champion wird gar nicht erst gekauft.
+    const canArm = computed(() => !!props.detail?.seat?.occupant && !props.detail?.locked)
+    const armed = computed(() => canArm.value && props.takeSeat)
+
+    // Kurz gehalten: die Zeile muss auf Full HD neben dem Schalter auch einen
+    // langen Namen wie „Aurelion Sol“ ungekürzt tragen.
+    const seatText = computed(() => {
+      const seat = props.detail?.seat
+      if (!seat) return ''
+      if (!seat.occupant) return 'Open — recruit claims it'
+      return armed.value ? `${seat.occupant.name} leaves` : `${seat.occupant.name} holds it`
+    })
+
     return {
       formatNumber,
       fillStyle,
       spawnLabel,
       homeStepLabel,
       lockedButtonLabel,
+      canArm,
+      armed,
+      seatText,
+      SEAT_PORTRAIT: TEAM_SHOP_SEAT_PORTRAIT_SIZE,
       SHOP_HOME_PLANET_GLYPH_SIZE,
     }
   },
@@ -699,6 +754,104 @@ export default defineComponent({
 .cs-buy-lock {
   flex-shrink: 0;
   color: #cc6050;
+}
+
+/* Seat row — same width as the button beneath it, so both read as one block. */
+.cs-seat {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  background: #1c1c18;
+  border: 1px solid #3a3226;
+  border-left: 3px solid var(--seat-c, #7a4e20);
+}
+.cs-seat--open {
+  border-color: #3f6b28;
+  border-left-color: var(--seat-c, #7a4e20);
+}
+.cs-seat--armed {
+  background: #1a2414;
+  border-color: #6ec040;
+  border-left-color: var(--seat-c, #7a4e20);
+}
+.cs-seat-role {
+  flex-shrink: 0;
+  color: var(--seat-c, #e8c040);
+}
+.cs-seat-face {
+  flex-shrink: 0;
+  border-radius: 3px;
+  border: 1px solid var(--seat-c, #7a4e20);
+  object-fit: cover;
+}
+.cs-seat-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+.cs-seat-role-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--seat-c, #e8c040);
+}
+.cs-seat-state {
+  font-size: 12px;
+  color: #b8ab90;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-seat--open .cs-seat-state {
+  color: #a8d98a;
+}
+.cs-seat--armed .cs-seat-state {
+  color: #eaffe0;
+}
+/* The switch is the entire replace flow — off by default, one press wide. */
+.cs-seat-switch {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #141410;
+  border: 1px solid #3a3226;
+  color: #9a8f78;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.cs-seat-switch:hover {
+  border-color: #5c3310;
+  color: #c8b894;
+}
+.cs-seat-knob {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #3a3226;
+  transition: background 0.12s ease;
+}
+.cs-seat--armed .cs-seat-switch {
+  background: linear-gradient(to bottom, #52b830, #2e7a1a);
+  border-color: #6ec040;
+  color: #eaffe0;
+}
+.cs-seat--armed .cs-seat-knob {
+  background: #eaffe0;
 }
 
 /* Empty state — no champion selected yet. Sits on the shared cosmic starfield

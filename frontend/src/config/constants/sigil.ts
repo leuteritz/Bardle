@@ -293,6 +293,8 @@ export const TEAM_SHOP_FACET_AUTOFOLD_WIDTH = 1180
 export const TEAM_SHOP_CARD_MIN_WIDTH = 150
 export const TEAM_SHOP_CARD_HEIGHT = 168
 export const TEAM_SHOP_GRID_GAP = 10
+/** Portrait (px) of the champion holding the seat, in the detail panel's seat row. */
+export const TEAM_SHOP_SEAT_PORTRAIT_SIZE = 28
 /** Width (px) of the expeditions rail — same rail as the details page, so the
  *  board camera travels the same distance for either. */
 export const TEAM_EXPEDITION_PANEL_WIDTH = TEAM_SIGIL_DETAILS_PANEL_WIDTH
