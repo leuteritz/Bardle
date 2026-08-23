@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { invalidateHudField } from '@/utils/ui/hudField'
-import { MISSION_CLAIMED_ICON } from '@/config/constants'
 import { useMissionFace } from '@/composables/ui/useMissionFace'
 import { missionObjectiveLine } from '@/config/progression/missions'
 import type { MissionDef } from '@/types'
@@ -19,15 +17,12 @@ import type { MissionDef } from '@/types'
  * Minute auf und ab.
  *
  * Sie hat KEINEN eigenen Takt: der Store rechnet im Sekundentakt aus
- * `gameStore.tick()`, und ein Ziel ohne Frist braucht nichts Feineres. Ein
- * zweiter Timer neben dem Spiel-Tick wäre ein zweiter Grund, pro Sekunde zu
- * rendern.
+ * `gameStore.tick()`, und ein Ziel ohne Frist braucht nichts Feineres.
  */
 const uiStore = useUiStore()
 
 /** Gesicht und Abschlussblitz teilt die Karte mit der Wayfinder-Zeile im
- *  Pause-Overlay — beim Blitz steht der Store schon eine Stufe weiter, und
- *  diese Einsicht zweimal zu halten hiesse, zwei Zustandsmaschinen zu pflegen. */
+ *  Pause-Overlay — beim Blitz steht der Store schon eine Stufe weiter. */
 const { face, flashing } = useMissionFace()
 
 function tooltipFor(def: MissionDef, rewardLabel: string): string {
@@ -42,8 +37,7 @@ const visible = computed(() => face.value !== null && uiStore.bardActiveTab === 
 // Dieselbe Mechanik wie bei den vier Karten darunter: wer oben links steht,
 // sagt, wo er aufhört. `invalidateHudField()` kommt hier zusätzlich dazu — die
 // HUD-Kontur klemmt Drifter und Riss-Ränder gegen diese Kante, und ihr
-// Zwischenspeicher keyt nur auf Fenstermaß und Header-Bogen. Die Karte wechselt
-// ihre Höhe gar nicht mehr; der Beobachter fängt Breite und Ein-/Ausblenden.
+// Zwischenspeicher keyt nur auf Fenstermaß und Header-Bogen.
 const root = ref<HTMLElement>()
 let resizeObserver: ResizeObserver | null = null
 
@@ -109,44 +103,30 @@ onUnmounted(() => {
         aria-hidden="true"
       ></span>
 
-      <!-- Kopfzeile: Missions-Glyph links, Belohnung rechts. Die Höhe ist fest
-           reserviert — ein Lohn aus einem Teil und einer aus zweien dürfen die
-           Karte nicht unterschiedlich hoch machen. -->
-      <div class="wf-head">
-        <Icon
-          :icon="flashing ? MISSION_CLAIMED_ICON : face.def.icon"
-          class="wf-glyph"
-          :class="{ 'wf-glyph--done': flashing }"
-          width="20"
-          height="20"
-        />
-        <div class="wf-seal">
-          <span
-            v-for="part in face.rewardParts"
-            :key="part.unit"
-            class="wf-slot"
-            :style="{ '--slot': part.color }"
-          >
+      <!-- Name und Lohn teilen sich EINE Zeile; der Lohn trägt keine eigene
+           Fläche, nur die Kapitelfarbe. -->
+      <div class="wf-crown">
+        <span class="wf-name">{{ face.name }}</span>
+        <div class="wf-boon">
+          <span v-for="part in face.rewardParts" :key="part.unit" class="wf-boon__part">
             <img
               v-if="part.image"
               :src="part.image"
-              class="wf-slot__art"
+              class="wf-boon__art"
               alt=""
               aria-hidden="true"
             />
-            <span v-else class="wf-slot__mono" aria-hidden="true">{{ part.mono }}</span>
-            <span class="wf-slot__amount">{{ part.amount }}</span>
-            <span class="wf-slot__unit">{{ part.unit }}</span>
+            <span v-else class="wf-boon__mono" aria-hidden="true">{{ part.mono }}</span>
+            <span class="wf-boon__amount">{{ part.amount }}</span>
+            <span class="wf-boon__unit">{{ part.unit }}</span>
           </span>
         </div>
       </div>
 
-      <span class="wf-name">{{ face.name }}</span>
       <span class="wf-task">{{ face.task }}</span>
       <span class="wf-count">
         {{ formatNumber(face.progress) }}/{{ formatNumber(face.target) }}
       </span>
-
     </div>
   </Transition>
 </template>
@@ -156,6 +136,7 @@ onUnmounted(() => {
    vier Karten, die sich darunter einreihen — zwei Karten in einer Spalte, deren
    rechte Kanten auseinanderliegen, lesen sich als Fehler. */
 .wf-root {
+  --boon-w: 74px;
   position: fixed;
   top: 0.5rem;
   left: 0.75rem;
@@ -201,31 +182,47 @@ onUnmounted(() => {
 }
 
 /* Über der Füllung — `position` allein reicht, keine eigene Ebene nötig. */
-.wf-name,
+.wf-crown,
 .wf-task,
 .wf-count {
   position: relative;
   min-width: 0;
+}
+
+.wf-task,
+.wf-count {
   overflow: hidden;
 }
 
-/* ZWEI Zeilen, und die Höhe steht fest: auf Full HD bleiben der Karte nur 208 px
-   Innenbreite (der Header beginnt bei 265), und gemessen kürzten dort 21 der 41
-   Namen einzeilig. Die feste Höhe ist Pflicht — wechselte sie mit der Namens-
-   länge, wanderte bei jedem Missionswechsel die halbe linke Spalte mit. */
+/* Name links, Lohn rechts, gemeinsame Grundlinie. Die Höhe ist fest reserviert:
+   ein Lohn aus zwei Teilen ist höher als einer aus einem, und die Karte hängt
+   mit ihrer Unterkante an der halben linken Spalte. */
+.wf-crown {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  height: 70px;
+}
+
+/* DREI Zeilen, und die Höhe steht fest: neben dem Lohn bleiben dem Namen auf
+   Full HD nur rund 95 px, und die 41 Namen gehen bis 23 Zeichen. Wechselte die
+   Höhe mit der Namenslänge, wanderte bei jedem Missionswechsel die halbe linke
+   Spalte mit. */
 .wf-name {
+  flex: 1 1 auto;
+  min-width: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  height: 2.24em;
-  font-size: clamp(22px, 1.4vw, 27px);
+  overflow: hidden;
+  height: 3.45em;
+  font-size: clamp(16px, 1.05vw, 20px);
   font-weight: 800;
-  line-height: 1.12;
+  line-height: 1.15;
   color: #f2ead2;
 }
 
-/* Die Anweisung — was der Spieler tun soll. Zwei Zeilen fest wie der Name
-   darüber, aus demselben Grund. */
+/* Die Anweisung — was der Spieler tun soll. Zwei Zeilen fest. */
 .wf-task {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -247,67 +244,35 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Kopfzeile: Glyph links, Belohnungssiegel rechts ────────────────────────
-   Die Höhe steht fest, wie bei Name und Aufgabe: eine Belohnung aus einem Teil
-   und eine aus zweien sind gleich hoch, und die Karte hängt an ihrer Unterkante. */
-.wf-head {
-  position: relative;
+/* ── Der Lohn ───────────────────────────────────────────────────────────────
+   Feste Breite, damit die Namensspalte nicht mit der Länge der Zahl wechselt.
+   Zwei Teile stehen untereinander — nebeneinander sprengen sie die Karte. */
+.wf-boon {
+  flex: 0 0 var(--boon-w);
   display: flex;
-  align-items: center;
-  height: 42px;
-}
-
-/* Das Glyph der Mission — die Karte zeigte es bisher gar nicht. Es verankert
-   die rechtsbündige Plakette; ohne Anker stünde sie an einer leeren Zeile. */
-.wf-glyph {
-  flex-shrink: 0;
-  color: var(--accent);
-  opacity: 0.85;
-}
-
-.wf-glyph--done {
-  color: #6ec040;
-  opacity: 1;
-}
-
-/* Die Plakette: eigener Grund, eingelassen in die Kartenfläche. Sie deckt die
-   Fortschrittsfüllung in ihrer Ecke ab — gewollt, sie liest sich dadurch als
-   Objekt statt als Text. */
-.wf-seal {
-  display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
   min-width: 0;
-  margin-left: auto;
-  padding: 4px 7px;
-  background: #141410;
-  border: 1px solid #3a2c14;
-  border-radius: 4px;
-  box-shadow: inset 0 1px 0 rgba(255, 200, 80, 0.05);
 }
 
-/* Betrag und Artwork auf einer Grundlinie, die Einheit als Bildunterschrift
-   darunter — Muster der Playtime-Uhr im Stats-Panel. */
-.wf-slot {
+/* Auf Full HD steht die Einheit UNTER der Zahl: gemessen kostet
+   „5m PRODUCTION" einzeilig 124 px, und die nähme dem Namen die halbe Spalte. */
+.wf-boon__part {
   display: grid;
   grid-template-columns: auto auto;
+  justify-content: end;
   align-items: baseline;
-  /* Über der Unterschrift zentriert: das Einheitswort ist fast immer breiter
-     als Artwork plus Zahl, linksbündig hinge das Feld schief. */
-  justify-content: center;
   column-gap: 4px;
   row-gap: 1px;
+  max-width: 100%;
   min-width: 0;
 }
 
-.wf-slot + .wf-slot {
-  margin-left: 7px;
-  padding-left: 7px;
-  border-left: 1px solid #2c2010;
-}
-
-.wf-slot__art {
+.wf-boon__art {
   grid-row: 1;
   align-self: center;
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
   object-fit: contain;
@@ -315,9 +280,10 @@ onUnmounted(() => {
 
 /* Vier Materialien haben kein Artwork — gleiche Kantenlänge wie ein Bild,
    damit die Felder in Flucht bleiben (Muster der Header-Materialzeile). */
-.wf-slot__mono {
+.wf-boon__mono {
   grid-row: 1;
   align-self: center;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -326,35 +292,39 @@ onUnmounted(() => {
   border-radius: 3px;
   background: #241b12;
   border: 1px solid rgba(200, 144, 64, 0.28);
-  color: var(--slot);
+  color: var(--accent);
   font-family: ui-monospace, Menlo, monospace;
   font-size: 8px;
   font-weight: 700;
   line-height: 1;
 }
 
-/* Die eine große Zahl der Belohnung. Sie kürzt nie — die Einheit weicht. */
-.wf-slot__amount {
+/* Die eine große Zahl. Sie kürzt nie — die Einheit weicht. */
+.wf-boon__amount {
   grid-row: 1;
+  flex-shrink: 0;
   font-size: 20px;
   font-weight: 900;
   line-height: 1;
-  color: var(--slot);
+  color: var(--accent);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.wf-slot__unit {
+.wf-boon__unit {
   grid-column: 1 / -1;
+  justify-self: end;
+  min-width: 0;
   overflow: hidden;
-  font-size: 8.5px;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   line-height: 1.1;
   text-transform: uppercase;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: #8a7a58;
+  color: var(--accent);
+  opacity: 0.7;
 }
 
 /* Abschlussblitz — EIN Umschlag, keine laufende Animation. Kürzer als die
@@ -365,14 +335,9 @@ onUnmounted(() => {
   transition-duration: 0.25s;
 }
 
-/* Kein Textwechsel auf „CLAIMED" — der ließe die Plakettenbreite springen.
-   Grün wird sie, der Haken sagt den Rest. */
-.wf-root--done .wf-seal {
-  border-color: #3f6a24;
-}
-
-.wf-root--done .wf-slot__amount,
-.wf-root--done .wf-slot__unit {
+.wf-root--done .wf-boon__amount,
+.wf-root--done .wf-boon__unit,
+.wf-root--done .wf-boon__mono {
   color: #6ec040;
 }
 
@@ -401,18 +366,20 @@ onUnmounted(() => {
    proportional mitwachsend — die Karte steht dauerhaft im Bild. */
 @media (min-width: 2400px) {
   .wf-root {
+    --boon-w: 190px;
     top: 0.7rem;
     left: 1rem;
     width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 580px);
     gap: 6px;
     padding: 16px 19px;
   }
-  /* Ab hier trägt die Karte 509 px innen — gemessen passt dort jeder der 41
-     Namen und jede Anweisung einzeilig, die zweite Zeile wäre nur Leerraum. */
+  /* Ab hier bleiben dem Namen rund 305 px, und gemessen passt bei 27 px jeder
+     der 41 einzeilig (der längste misst 300). Eine reservierte zweite Zeile
+     stünde in 37 von 41 Fällen leer. */
   .wf-name {
     -webkit-line-clamp: 1;
-    height: 1.12em;
-    font-size: clamp(28px, 1.65vw, 39px);
+    height: 1.15em;
+    font-size: clamp(21px, 1.05vw, 27px);
   }
   .wf-task {
     -webkit-line-clamp: 1;
@@ -422,32 +389,30 @@ onUnmounted(() => {
   .wf-count {
     font-size: 19px;
   }
-  .wf-head {
-    height: 52px;
+  .wf-crown {
+    height: 58px;
   }
-  .wf-glyph {
-    width: 26px;
-    height: 26px;
+  .wf-boon {
+    gap: 3px;
   }
-  .wf-seal {
-    padding: 5px 9px;
+  /* Ab hier trägt die Zeile den Lohn am Stück — die Spalte ist breit genug. */
+  .wf-boon__part {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
   }
-  .wf-slot + .wf-slot {
-    margin-left: 9px;
-    padding-left: 9px;
-  }
-  .wf-slot__art,
-  .wf-slot__mono {
+  .wf-boon__art,
+  .wf-boon__mono {
     width: 20px;
     height: 20px;
   }
-  .wf-slot__mono {
+  .wf-boon__mono {
     font-size: 10px;
   }
-  .wf-slot__amount {
+  .wf-boon__amount {
     font-size: 26px;
   }
-  .wf-slot__unit {
+  .wf-boon__unit {
     font-size: 11px;
     letter-spacing: 0.12em;
   }
@@ -455,12 +420,16 @@ onUnmounted(() => {
 
 @media (min-width: 3400px) {
   .wf-root {
+    --boon-w: 250px;
     width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 700px);
     gap: 7px;
     padding: 19px 23px;
   }
+  .wf-crown {
+    height: 72px;
+  }
   .wf-name {
-    font-size: clamp(35px, 1.45vw, 50px);
+    font-size: clamp(26px, 0.9vw, 34px);
   }
   .wf-task {
     font-size: 23px;
@@ -468,28 +437,18 @@ onUnmounted(() => {
   .wf-count {
     font-size: 24px;
   }
-  .wf-head {
-    height: 62px;
-  }
-  .wf-glyph {
-    width: 32px;
-    height: 32px;
-  }
-  .wf-seal {
-    padding: 6px 11px;
-  }
-  .wf-slot__art,
-  .wf-slot__mono {
+  .wf-boon__art,
+  .wf-boon__mono {
     width: 24px;
     height: 24px;
   }
-  .wf-slot__mono {
+  .wf-boon__mono {
     font-size: 12px;
   }
-  .wf-slot__amount {
+  .wf-boon__amount {
     font-size: 32px;
   }
-  .wf-slot__unit {
+  .wf-boon__unit {
     font-size: 13px;
   }
 }
