@@ -68,9 +68,11 @@
       <div class="tribute-sub">CHIMES · HONOR TRIBUTE</div>
     </div>
 
-    <div v-if="baronBounty > 0" class="baron-bounty">
-      <img src="/img/baron.png" alt="Baron" class="bounty-img" />
-      <span class="bounty-text">BARON NASHOR · +{{ baronBounty.toLocaleString('en-US') }} CHIMES</span>
+    <div v-if="baronXpBonus > 0" class="baron-ascendance">
+      <img src="/img/baron.png" alt="Baron" class="ascendance-img" />
+      <span class="ascendance-text"
+        >BARON NASHOR · +{{ baronXpBonus.toLocaleString('en-US') }} CHAMPION XP</span
+      >
     </div>
 
     <div class="meta-row">
@@ -114,7 +116,7 @@ const mvpImage = computed(() =>
     { team: battleStore.team1.some((c) => c.name === mvpName.value) ? 1 : 2, size: 'md' },
   ),
 )
-const baronBounty = computed(() => battleStore.lastAutoBattleResult?.baronBounty ?? 0)
+const baronXpBonus = computed(() => battleStore.lastAutoBattleResult?.baronXpBonus ?? 0)
 const honorTribute = computed(() => battleStore.lastAutoBattleResult?.honorTribute ?? 0)
 const mvpBuffGranted = computed(() => battleStore.lastAutoBattleResult?.mvpBuffGranted ?? false)
 
@@ -525,8 +527,8 @@ const promoHint = computed(() => {
   100% { opacity: 1; transform: scale(1); }
 }
 
-/* ── Baron Nashor bounty ── */
-.baron-bounty {
+/* ── Baron Nashor ascendance ── */
+.baron-ascendance {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -536,13 +538,13 @@ const promoHint = computed(() => {
   border-radius: 4px;
   box-shadow: 0 0 10px rgba(168, 85, 247, 0.35);
 }
-.bounty-img {
+.ascendance-img {
   width: 26px;
   height: auto;
   display: block;
   filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.6));
 }
-.bounty-text {
+.ascendance-text {
   font-size: clamp(11px, 1.9cqh, 16px);
   font-weight: 700;
   letter-spacing: 0.08em;

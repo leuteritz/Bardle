@@ -20,8 +20,9 @@ import {
   OBJECTIVE_ABILITY_CD_S,
   DRAKE_INFERNAL_BURN_DPS,
   BARON_LP_LOSS_SHIELD_MULT,
-  BARON_BOUNTY_PRODUCTION_SECONDS,
-  BARON_BOUNTY_MIN_CLICKS,
+  BARON_XP_BONUS_MULT,
+  CHAMPION_XP_PER_BATTLE_KILL,
+  CHAMPION_XP_BATTLE_WIN,
 } from '@/config/constants'
 import { DRAKE_TYPES } from '@/config/battle/drakes'
 import { useGameStore } from '@/stores/core/gameStore'
@@ -120,7 +121,9 @@ describe('battleStore frozen-time objective damage race', () => {
     expect(store.battleSimIntervalId).toBeNull()
     // slid by the 4s gap plus whatever accrued since the last fight tick (< one tick)
     expect(store.battlePhaseStartTimestamp).toBeGreaterThanOrEqual(anchorBefore + 4000)
-    expect(store.battlePhaseStartTimestamp).toBeLessThan(anchorBefore + 4000 + OBJECTIVE_DPS_TICK_MS)
+    expect(store.battlePhaseStartTimestamp).toBeLessThan(
+      anchorBefore + 4000 + OBJECTIVE_DPS_TICK_MS,
+    )
   })
 
   it('team DPS scales with alive participants (3v5 stacks slower)', () => {
@@ -307,10 +310,18 @@ describe('battleStore frozen-time objective damage race', () => {
     setupBattle(store)
     store.drakeBuffs = ['cloud']
     // enemy (team 2) kills our champion 0 → shortened walk
-    store._applyEvent({ t: 500, type: 'kill', team: 2, killerIdx: 0, victimIdx: 0, winProbDelta: 0 }, 500)
-    expect(store.respawnUntil.t1[0]).toBe(500 + Math.round(MOVE_RESPAWN_WALK_SECONDS * DRAKE_CLOUD_RESPAWN_MULT))
+    store._applyEvent(
+      { t: 500, type: 'kill', team: 2, killerIdx: 0, victimIdx: 0, winProbDelta: 0 },
+      500,
+    )
+    expect(store.respawnUntil.t1[0]).toBe(
+      500 + Math.round(MOVE_RESPAWN_WALK_SECONDS * DRAKE_CLOUD_RESPAWN_MULT),
+    )
     // we (team 1) kill enemy champion 0 → full walk
-    store._applyEvent({ t: 600, type: 'kill', team: 1, killerIdx: 0, victimIdx: 0, winProbDelta: 0 }, 600)
+    store._applyEvent(
+      { t: 600, type: 'kill', team: 1, killerIdx: 0, victimIdx: 0, winProbDelta: 0 },
+      600,
+    )
     expect(store.respawnUntil.t2[0]).toBe(600 + MOVE_RESPAWN_WALK_SECONDS)
   })
 
@@ -374,8 +385,8 @@ describe('battleStore frozen-time objective damage race', () => {
       // Under the fixed rng both runs take identical AoE/taunt damage, so the
       // team's summed non-support HP differs by exactly the Mend heals
       const sumHp = (s: ReturnType<typeof useBattleStore>) =>
-        s.objectiveFighters!.t1
-          .filter((f) => f.alive && f.role !== 'support')
+        s
+          .objectiveFighters!.t1.filter((f) => f.alive && f.role !== 'support')
           .reduce((total, f) => total + f.fightHp, 0)
 
       const store = useBattleStore()
@@ -423,7 +434,9 @@ describe('battleStore frozen-time objective damage race', () => {
     mid.abilityCooldownUntil = Date.now()
     vi.advanceTimersByTime(200)
     expect(mid.abilityActiveUntil).toBeGreaterThan(Date.now())
-    expect(mid.abilityCooldownUntil).toBe(mid.abilityActiveUntil + OBJECTIVE_ABILITY_CD_S.mid * 1000)
+    expect(mid.abilityCooldownUntil).toBe(
+      mid.abilityActiveUntil + OBJECTIVE_ABILITY_CD_S.mid * 1000,
+    )
   })
 
   it('Wild Rally buffs a random standing ally', () => {
@@ -602,34 +615,53 @@ describe('battleStore frozen-time objective damage race', () => {
     const lossBase = store.calculateLPChange(20, false)
     store.baronKilledByTeam = 1
     expect(store.calculateLPChange(20, true)).toBe(winBase)
-    expect(store.calculateLPChange(20, false)).toBe(Math.round(lossBase * BARON_LP_LOSS_SHIELD_MULT))
+    expect(store.calculateLPChange(20, false)).toBe(
+      Math.round(lossBase * BARON_LP_LOSS_SHIELD_MULT),
+    )
     // an enemy baron grants nothing
     store.baronKilledByTeam = 2
     expect(store.calculateLPChange(20, false)).toBe(lossBase)
   })
 
-  it("baron's bounty pays chimes once at battle end and lands in the result", async () => {
+  it("baron's ascendance lifts the battle's champion XP and reports the surplus", () => {
+    const store = useBattleStore()
+    setupBattle(store)
+    store.team1[0].kills = 3
+    const plain = CHAMPION_XP_PER_BATTLE_KILL * 3 + CHAMPION_XP_BATTLE_WIN
+
+    // ohne Baron zahlt der Kampf nur seine Grundrechnung
+    store.baronKilledByTeam = null
+    expect(store.grantBattleChampionXp(true, '')).toBe(0)
+
+    // mit Baron das BARON_XP_BONUS_MULT-fache — gegen die Konstante gerechnet,
+    // nicht gegen ein Literal: sie ist eine Balance-Grösse.
+    store.baronKilledByTeam = 1
+    const perChampWin = Math.round(CHAMPION_XP_BATTLE_WIN * BARON_XP_BONUS_MULT)
+    const expected =
+      Math.round(plain * BARON_XP_BONUS_MULT) -
+      plain +
+      (perChampWin - CHAMPION_XP_BATTLE_WIN) * (store.team1.length - 1)
+    expect(store.grantBattleChampionXp(true, '')).toBe(expected)
+
+    // ein gegnerischer Baron zahlt nichts
+    store.baronKilledByTeam = 2
+    expect(store.grantBattleChampionXp(true, '')).toBe(0)
+  })
+
+  it('a battle with the baron no longer pays any chimes', async () => {
     const store = useBattleStore()
     const gameStore = useGameStore()
     setupBattle(store)
     store.baronKilledByTeam = 1
     gameStore.chimes = 0
     gameStore.chimesPerSecond = 10
-    const expected = Math.max(
-      Math.floor(10 * BARON_BOUNTY_PRODUCTION_SECONDS),
-      Math.floor(gameStore.chimesPerClick * BARON_BOUNTY_MIN_CLICKS),
-    )
-    const result = await store.simulateBattle(store.mmr)
-    expect(result.baronBounty).toBe(expected)
-    expect(gameStore.chimes).toBe(expected)
 
-    // without the baron there is no bounty
-    store.baronKilledByTeam = null
-    gameStore.chimes = 0
-    setupBattle(store)
-    const result2 = await store.simulateBattle(store.mmr)
-    expect(result2.baronBounty).toBe(0)
+    const result = await store.simulateBattle(store.mmr)
+
+    // Der Kanal vom Auto-Battle in die Wirtschaft ist zu — das ist die Zusage
+    // dieses Umbaus, und nur ein Test darauf hält sie.
     expect(gameStore.chimes).toBe(0)
+    expect(result.baronXpBonus).toBeGreaterThan(0)
   })
 
   it('does not open the modal on a hidden tab (background catch-up path)', () => {

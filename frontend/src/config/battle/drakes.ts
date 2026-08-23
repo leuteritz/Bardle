@@ -10,6 +10,7 @@ import {
   DRAKE_ELDER_LP_BONUS,
   DRAKE_INFERNAL_BURN_DPS,
   BARON_LP_LOSS_SHIELD_MULT,
+  BARON_XP_BONUS_MULT,
 } from '@/config/constants'
 
 export type DrakeTypeId =
@@ -115,7 +116,7 @@ export const BARON_BUFF = {
   color: '#a855f7',
   colorDark: '#5c2a90',
   glow: 'rgba(168, 85, 247, 0.6)',
-  effectText: `bonus chimes after the battle · defeat costs ${Math.round((1 - BARON_LP_LOSS_SHIELD_MULT) * 100)}% less LP`,
+  effectText: `+${Math.round((BARON_XP_BONUS_MULT - 1) * 100)}% champion XP from this battle · defeat costs ${Math.round((1 - BARON_LP_LOSS_SHIELD_MULT) * 100)}% less LP`,
 }
 
 /** Basic pool the timeline draws from without replacement — stable order matters for rng determinism. */

@@ -58,10 +58,19 @@ export const DRAKE_INFERNAL_BURN_DPS = 25
 // ── Baron Nashor (battle-scoped buff for the team that slays the baron) ───
 /** Baron's Aegis: a lost battle only costs this fraction of the usual LP */
 export const BARON_LP_LOSS_SHIELD_MULT = 0.5
-/** Baron's Bounty: chimes worth this many seconds of production, paid at battle end */
-export const BARON_BOUNTY_PRODUCTION_SECONDS = 120
-/** Baron's Bounty floor: never less than this many base clicks worth of chimes */
-export const BARON_BOUNTY_MIN_CLICKS = 25
+/**
+ * Baron's Ascendance: champion XP multiplier on this battle's payout.
+ *
+ * Stand einmal als „Baron's Bounty" auf Chimes — `CpS × 120 s`, ungedeckelt und
+ * damit der mit Abstand grösste Kanal vom Auto-Battle in die Wirtschaft (die
+ * ganze Ehrenzeremonie kommt auf höchstens 20 s). Ein Objective-Kill soll den
+ * KAMPF entscheiden, nicht die Klick-Wirtschaft füttern.
+ *
+ * XP und nicht wieder ein Kampfeffekt nach Drake-Muster: der Baron ist das
+ * LETZTE Objective (Spawn 2200, Nexus 3550), ein „wirkt auf spätere
+ * Objective-Kämpfe" liefe bei ihm ins Leere.
+ */
+export const BARON_XP_BONUS_MULT = 1.6
 export const OBJECTIVE_DPS_TICK_MS = 200
 /** Per-tick DPS wobble (±fraction) so the damage race stays dramatic */
 export const OBJECTIVE_DPS_VARIANCE = 0.15

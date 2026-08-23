@@ -62,8 +62,7 @@ import {
   DRAKE_ELDER_LP_BONUS,
   DRAKE_INFERNAL_BURN_DPS,
   BARON_LP_LOSS_SHIELD_MULT,
-  BARON_BOUNTY_PRODUCTION_SECONDS,
-  BARON_BOUNTY_MIN_CLICKS,
+  BARON_XP_BONUS_MULT,
   OBJECTIVE_DPS_TICK_MS,
   OBJECTIVE_DPS_VARIANCE,
   OBJECTIVE_FIGHTER_WEIGHT_MIN,
@@ -1530,29 +1529,14 @@ export const useBattleStore = defineStore('battle', {
       this.lastLpChange = actualLpChange
 
       const mvpName = this.accumulateBattleStats()
-      this.grantBattleChampionXp(battleResult, mvpName)
-
-      // Baron's Bounty (Baron Nashor): the slain worm pays out chimes at battle
-      // end — win or lose. Granted here (once per battle) instead of at the kill
-      // so a save/reload timeline replay can never pay it twice.
-      let baronBounty = 0
-      if (this.hasBaronBuff) {
-        baronBounty = Math.max(
-          Math.floor(gameStore.chimesPerSecond * BARON_BOUNTY_PRODUCTION_SECONDS),
-          Math.floor(gameStore.chimesPerClick * BARON_BOUNTY_MIN_CLICKS),
-        )
-        gameStore.chimes += baronBounty
-        gameStore.totalChimesEarned += baronBounty
-        gameStore.chimesEarnedForLevel += baronBounty
-        gameStore.calculateLevel()
-        if (gameStore.isGamePaused) gameStore.pauseStats.battleChimes += baronBounty
-      }
+      // Baron's Ascendance steckt im XP-Aufschlag, den diese Zeile zurückgibt.
+      const baronXpBonus = this.grantBattleChampionXp(battleResult, mvpName)
 
       logger.info('Battle', `Result: ${battleResult ? 'WIN' : 'LOSS'}`, {
         mmrChange: actualMmrChange,
         lpChange: actualLpChange,
         newMMR: this.mmr,
-        baronBounty,
+        baronXpBonus,
       })
       this.lastAutoBattleResult = {
         won: battleResult,
@@ -1563,7 +1547,7 @@ export const useBattleStore = defineStore('battle', {
         teamKills: this.team1Kills,
         enemyKills: this.team2Kills,
         mvpName,
-        baronBounty,
+        baronXpBonus,
       }
       this.battleHistory.push(this.lastAutoBattleResult)
       if (this.battleHistory.length > 20) {
@@ -1671,17 +1655,29 @@ export const useBattleStore = defineStore('battle', {
      * individual — each champion is paid for its own kills and assists, plus a
      * flat win and MVP bonus — and every assigned ally of that role banks its
      * share (see championLevelStore.grantXpWithAllies).
+     *
+     * Gibt zurück, wie viel davon Baron's Ascendance beigesteuert hat — der
+     * Siegesbildschirm zeigt die Zahl.
      */
-    grantBattleChampionXp(won: boolean, mvpName: string): void {
+    grantBattleChampionXp(won: boolean, mvpName: string): number {
       const levelStore = useChampionLevelStore()
+      let baronBonus = 0
       for (const champ of this.team1) {
         if (!champ.name) continue
         let xp =
           champ.kills * CHAMPION_XP_PER_BATTLE_KILL + champ.assists * CHAMPION_XP_PER_BATTLE_ASSIST
         if (won) xp += CHAMPION_XP_BATTLE_WIN
         if (champ.name === mvpName) xp += CHAMPION_XP_BATTLE_MVP
+        // Baron's Ascendance: der erlegte Wurm zahlt in Erfahrung — gewonnen wie
+        // verloren, denn Kills und Assists fallen auch in einer Niederlage an.
+        if (this.hasBaronBuff) {
+          const boosted = Math.round(xp * BARON_XP_BONUS_MULT)
+          baronBonus += boosted - xp
+          xp = boosted
+        }
         levelStore.grantXpWithAllies(champ.name, xp)
       }
+      return baronBonus
     },
 
     /** Base chime value of a single honor (production-scaled with a click floor). */

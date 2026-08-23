@@ -235,6 +235,7 @@ export function usePersistence() {
         objectiveOverrides: battleStore.objectiveOverrides.map((o) => ({ ...o })),
         drakeBuffs: [...battleStore.drakeBuffs],
         drakeBuffsT2: [...battleStore.drakeBuffsT2],
+        baronKilledByTeam: battleStore.baronKilledByTeam,
         battleTeams: {
           t1: battleStore.team1.map((c) => ({ name: c.name, role: c.role })),
           t2: battleStore.team2.map((c) => ({ name: c.name, role: c.role, skin: c.skin })),
@@ -670,6 +671,12 @@ export function usePersistence() {
               (t: unknown): t is DrakeTypeId => typeof t === 'string' && t in DRAKE_TYPES,
             )
           : []
+        // Aus demselben Grund wie die Drakes darüber: ein interaktiv erkämpfter
+        // Baron steht nicht als Event in der Timeline, `resumeBattleAfterLoad`
+        // kann ihn also nicht nachspielen. Ohne diese Zeile verliert ein Reload
+        // Baron's Aegis und Baron's Ascendance.
+        battleStore.baronKilledByTeam =
+          b.baronKilledByTeam === 1 || b.baronKilledByTeam === 2 ? b.baronKilledByTeam : null
         // Mid-battle rosters (needed for deterministic timeline resume) — the
         // loading phase needs them too: it already shows both line-ups.
         if (

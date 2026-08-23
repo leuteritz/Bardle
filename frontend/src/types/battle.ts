@@ -300,8 +300,8 @@ export interface BattleResult {
   teamKills?: number
   enemyKills?: number
   mvpName?: string
-  /** Baron Nashor: chimes paid out at battle end for slaying the baron */
-  baronBounty?: number
+  /** Baron's Ascendance: extra champion XP this battle paid for slaying the baron */
+  baronXpBonus?: number
   /** Chimes paid out by the honor ceremony (3 honors, MVP pays double) */
   honorTribute?: number
   /** True when the match MVP was an own champion and the 2× chime buff was granted */

@@ -70,6 +70,7 @@ export const battleCategory: EncyclopediaCategory = {
       formula:
         'Win swing: minor drakes +6% · Infernal +10%\n' +
         'Elder +12% · Baron +12%\n' +
+        'Baron also pays +60% champion XP for the battle\n' +
         'Fight HP: drake 3,200 · baron 4,000 · click +15 dmg',
       related: ['auto-battle', 'lp'],
     },
@@ -136,7 +137,8 @@ export const championsCategory: EncyclopediaCategory = {
         'OWN four stats, so who sits there and at what level actually matters. The remaining three ' +
         'slots stay a flat headcount bonus to orbit damage.',
       lore: 'Two blades pledged to one banner outlast three hired ones.',
-      formula: 'main stats + 25% of each sworn ally stats → orbit DPS, battle power, cooldowns, rewards',
+      formula:
+        'main stats + 25% of each sworn ally stats → orbit DPS, battle power, cooldowns, rewards',
       related: ['team-roster', 'champion-tiers', 'orbit-combat'],
     },
     {
