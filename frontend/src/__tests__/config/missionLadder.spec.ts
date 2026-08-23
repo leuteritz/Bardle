@@ -252,33 +252,43 @@ describe('mission ladder — presentation', () => {
   })
 
   /**
-   * Die Zeile im Pause-Overlay hat eine RESERVIERTE Höhe und eine reservierte
-   * Belohnungsbreite (`PAUSE_WAYFINDER_ROW_H`, `PAUSE_WAYFINDER_REWARD_W`) —
-   * jedes Feld steht dort einzeilig. Gemessen wurde im Browser in MedievalSharp
-   * bei 429 px Spaltenbreite: längster Name 181 px bei 23 Zeichen, längste
-   * Aufgabe 255 px bei 42, längste Belohnung 196 px bei 34.
+   * Das Band im Pause-Overlay hat eine RESERVIERTE Höhe und eine reservierte
+   * Belohnungsbreite (`PAUSE_WAYFINDER_BAND_H`, `PAUSE_WAYFINDER_REWARD_W`) —
+   * jedes Feld steht dort einzeilig. Es misst innen 1352 px und trägt neben
+   * Name und Aufgabe seit dem Umbau auch den Blurb; die Grenzen stammen aber
+   * weiter aus der schmalen Fassung von damals (429 px Spaltenbreite: längster
+   * Name 181 px bei 23 Zeichen, längste Aufgabe 255 px bei 42, längste
+   * Belohnung 196 px bei 34). Sie bleiben stehen — das Band ist breiter, nicht
+   * enger, und eine Grenze mitzuziehen hieße, den Puffer aufzugeben.
    *
    * Zeichen statt Pixel, weil eine Spec keine Schrift misst. Die Grenzen liegen
    * über dem heutigen Katalog und unter dem, was ellipsiert würde: eine neue
    * Mission mit doppelt so langem Namen fiele hier auf, statt im Panel still
    * abgeschnitten zu werden.
    */
-  it('fits the reserved pause row', () => {
+  it('fits the reserved pause band', () => {
     const NAME_MAX = 30
     const OBJECTIVE_MAX = 52
     const REWARD_MAX = 42
+    // Der Blurb stand bis zum Umbau nur im Stats-Panel und im Tooltip, wo er
+    // umbrechen darf. Im Band ist er einzeilig; der längste im Katalog misst
+    // 66 Zeichen, die Mittelspalte trägt 1008 px.
+    const BLURB_MAX = 80
     for (const m of MISSIONS) {
-      expect(m.name.length, `"${m.id}" name too long for the pause row`).toBeLessThanOrEqual(
+      expect(m.name.length, `"${m.id}" name too long for the pause band`).toBeLessThanOrEqual(
         NAME_MAX,
       )
       expect(
         missionObjectiveLine(m).length,
-        `"${m.id}" objective too long for the pause row`,
+        `"${m.id}" objective too long for the pause band`,
       ).toBeLessThanOrEqual(OBJECTIVE_MAX)
       expect(
         missionRewardLabel(m).length,
-        `"${m.id}" reward label too long for the pause row`,
+        `"${m.id}" reward label too long for the pause band`,
       ).toBeLessThanOrEqual(REWARD_MAX)
+      expect(m.blurb.length, `"${m.id}" blurb too long for the pause band`).toBeLessThanOrEqual(
+        BLURB_MAX,
+      )
     }
   })
 

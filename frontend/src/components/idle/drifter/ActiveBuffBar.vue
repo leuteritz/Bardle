@@ -6,8 +6,9 @@
        During a star fight the row is docked into the modal's rail instead
        (`dock: 'rail'`): at the bottom of the screen it sat on top of the sun
        horizon and the player's own health bar. While the game is paused it
-       stands in the pause overlay's kit band (`dock: 'pause'`) — in the free
-       field it sits at z-index 10001, on top of the overlay itself.
+       stands in the pause overlay's kit band (`dock: 'pause'`) as a row of
+       fixed-width plates — in the free field it sits at z-index 10001, on top
+       of the overlay itself.
        App.vue teleports the same instance — only the shape changes.
 
        Paused the `bardActiveTab` guard does not apply: it keeps the row out of
@@ -44,7 +45,7 @@
         <span class="chip-head">
           <!-- In the kit band the chip says where it CAME from. Three plates
                that only read "2× CHIMES · 38s" do not tell you which one is
-               about to run out, and the band has the width for a name. The
+               about to run out, and the plate is sized for a name. The
                multiplier moves down to join the axis, so the plate keeps its
                two text lines and its height. -->
           <span v-if="props.dock === 'pause'" class="chip-name">{{ chip.name }}</span>
@@ -71,16 +72,15 @@
       </span>
     </div>
 
-    <!-- Die Spalte im Pause-Band ist auf PAUSE_KIT_EFFECT_ROWS fest reserviert;
-         was darüber hinausgeht, steht als Zahl. Dasselbe Muster wie
-         `.mat-card--more` im Material-Raster — und aus demselben Grund: eine
-         mitwachsende Spalte ließe die Bandhöhe und damit den Fit-Scale des
-         ganzen Overlays springen, sobald ein Buff ausläuft. -->
-    <div v-if="overflowCount > 0" key="more" class="buff-chip buff-chip--more">
-      +{{ overflowCount }} more
+    <!-- Die Reihe im Pause-Band ist auf PAUSE_KIT_EFFECT_COLS fest reserviert;
+         was darüber hinausgeht, steht als Zahl auf einem eigenen Platz. Der
+         ist IMMER da, auch leer: sonst spränge die Spaltenbreite und mit ihr
+         die Breite der Kit-Zellen, sobald ein Buff dazukommt oder ausläuft. -->
+    <div v-if="props.dock === 'pause'" key="more" class="buff-chip--more">
+      <span v-if="overflowCount > 0">+{{ overflowCount }}</span>
     </div>
 
-    <!-- Nur im Band: dort ist die Spalte eine Fläche mit Überschrift, und eine
+    <!-- Nur im Band: dort ist die Reihe eine Fläche mit Überschrift, und eine
          leere Fläche unter einer Überschrift liest sich als Fehler. Im freien
          Bild verschwindet die Reihe stattdessen ganz. -->
     <div v-if="props.dock === 'pause' && chips.length === 0" key="empty" class="buff-empty">
@@ -111,7 +111,7 @@ import {
   DRIFTER_RARITY_COLOR,
   HONOR_MVP_BUFF_MULT,
   HONOR_MVP_BUFF_DURATION_S,
-  PAUSE_KIT_EFFECT_ROWS,
+  PAUSE_KIT_EFFECT_COLS,
 } from '@/config/constants'
 import type { AbilityBarDock } from '@/types'
 
@@ -211,17 +211,17 @@ const chips = computed<BuffChip[]>(() => {
 })
 
 /**
- * Im Band stehen höchstens PAUSE_KIT_EFFECT_ROWS Einträge. Läuft es über, gibt
- * der letzte Platz seine Zeile an die Zahl ab — sonst stünde die Zahl als
- * vierte Zeile in einer Spalte, die für drei reserviert ist.
+ * Im Band stehen höchstens PAUSE_KIT_EFFECT_COLS Plaketten; der Rest steht als
+ * Zahl auf einem EIGENEN, immer reservierten Platz daneben
+ * (PAUSE_KIT_EFFECT_MORE_W). Gäbe die letzte Plakette ihre Zelle an die Zahl ab
+ * — das Muster von `.mat-card--more` —, stünde bei drei laufenden Effekten nur
+ * noch einer von ihnen da.
  *
  * Überall sonst gilt kein Deckel: dort trägt die Reihe die Breite des Bildes.
  */
 const visibleChips = computed<BuffChip[]>(() => {
   if (props.dock !== 'pause') return chips.value
-  return chips.value.length > PAUSE_KIT_EFFECT_ROWS
-    ? chips.value.slice(0, PAUSE_KIT_EFFECT_ROWS - 1)
-    : chips.value
+  return chips.value.slice(0, PAUSE_KIT_EFFECT_COLS)
 })
 
 const overflowCount = computed(() => chips.value.length - visibleChips.value.length)
@@ -676,9 +676,10 @@ const overflowCount = computed(() => chips.value.length - visibleChips.value.len
    Doppelte Spezifität gegen die Auflösungsstufen weiter oben — über dem Panel
    liegt bereits useFitScale, eine zweite Staffelung skalierte doppelt. */
 .buff-bar.buff-bar--pause {
-  --chip-h: var(--pause-kit-chip-h, 58px);
+  --chip-w: var(--pause-kit-chip-w, 210px);
+  --chip-h: var(--pause-kit-chip-h, 80px);
   position: static;
-  flex-direction: column;
+  flex-direction: row;
   flex-wrap: nowrap;
   align-items: stretch;
   justify-content: flex-start;
@@ -689,52 +690,57 @@ const overflowCount = computed(() => chips.value.length - visibleChips.value.len
   z-index: auto;
 }
 
+/* Feste Breite, nicht `1fr`: die Reihe steht auch mit einem einzigen Effekt an
+   derselben Stelle, und die Kit-Zellen daneben rechnen mit dieser Spalte. */
 .buff-bar--pause .buff-chip {
-  width: 100%;
-  flex: 0 0 auto;
+  width: var(--chip-w);
+  flex: 0 0 var(--chip-w);
   height: var(--chip-h);
-  gap: 10px;
-  padding: 0 12px 0 10px;
+  gap: 8px;
+  padding: 0 10px 0 8px;
 }
 
 .buff-bar--pause .chip-icon {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
 }
 
 .buff-bar--pause .chip-icon__glyph {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 .buff-bar--pause .chip-mult {
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .buff-bar--pause .chip-seconds {
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .buff-bar--pause .chip-unit {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .buff-bar--pause .chip-label {
-  font-size: 13px;
+  font-size: 12px;
 }
 
 /* Der Rest-Zähler trägt keine Uhr und keinen Rang — er ist eine Zahl, kein
-   Effekt. Deshalb ohne Farbkante und ohne Fortschrittsschiene. */
+   Effekt. Deshalb ohne Farbkante, ohne Fortschrittsschiene und ohne Füllung:
+   sein Platz ist immer reserviert, und ein leerer Kasten läse sich als fehlende
+   Plakette. */
 .buff-chip--more {
+  flex: 0 0 var(--pause-kit-more-w, 56px);
+  width: var(--pause-kit-more-w, 56px);
+  height: var(--chip-h);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 700;
   letter-spacing: 0.06em;
   color: #8a7a62;
-  background: #16140e;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
 }
 
 /* Eine Fläche mit Überschrift, in der nichts steht, liest sich als Fehler —
@@ -742,7 +748,7 @@ const overflowCount = computed(() => chips.value.length - visibleChips.value.len
 .buff-empty {
   display: flex;
   align-items: center;
-  height: var(--pause-kit-chip-h, 58px);
+  height: var(--pause-kit-chip-h, 80px);
   padding: 0 12px;
   font-size: 14px;
   letter-spacing: 0.04em;
@@ -757,7 +763,7 @@ const overflowCount = computed(() => chips.value.length - visibleChips.value.len
 .chip-name {
   min-width: 0;
   flex: 1 1 auto;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: #e8dcc0;
   white-space: nowrap;

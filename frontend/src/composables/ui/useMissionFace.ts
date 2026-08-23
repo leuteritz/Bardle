@@ -7,6 +7,9 @@ import {
   missionObjectiveLine,
   missionRewardLabel,
   missionRewardParts,
+  MISSION_CHAPTERS,
+  MISSION_CHAPTER_SIZES,
+  MISSION_CHAPTER_STARTS,
 } from '@/config/progression/missions'
 import { MISSION_CLAIM_FLASH_MS } from '@/config/constants'
 import { toRoman } from '@/utils/ui/format'
@@ -45,12 +48,28 @@ export interface MissionFace {
   rewardParts: MissionRewardPart[]
 }
 
+/** Ein Kapitel als Etappe des Weges — sieben davon sind die ganze Leiter. */
+export interface MissionChapterView {
+  id: string
+  name: string
+  numeral: string
+  color: string
+  size: number
+  done: number
+  ratio: number
+  /** Die Leiter steht gerade darin. */
+  running: boolean
+  /** Das Kapitel ist vollständig gegangen. */
+  complete: boolean
+}
+
 export function useMissionFace(): {
   face: ComputedRef<MissionFace | null>
   flashing: ComputedRef<boolean>
+  chapters: ComputedRef<MissionChapterView[]>
 } {
   const missionStore = useMissionStore()
-  const { activeView, lastClaimed } = storeToRefs(missionStore)
+  const { activeView, index, lastClaimed } = storeToRefs(missionStore)
 
   const flashed = ref<MissionFace | null>(null)
   let flashTimer: ReturnType<typeof setTimeout> | null = null
@@ -103,5 +122,38 @@ export function useMissionFace(): {
     return faceOf(view, view.progress, view.ratio)
   })
 
-  return { face, flashing: computed(() => flashed.value !== null) }
+  /**
+   * Der Weg als sieben Etappen. Zwei Stellen zeigen ihn — das Pause-Band und
+   * das Stats-Panel —, und eine zweite, parallel gepflegte Rechnung wäre
+   * derselbe Fehler, den dieses Composable beim Gesicht schon verhindert.
+   *
+   * Gemessen gegen `index`, nicht gegen das eingefrorene Gesicht: der Weg
+   * zählt, was eingelöst IST, auch während der Blitz noch die eben gefallene
+   * Stufe zeigt.
+   */
+  const chapters = computed<MissionChapterView[]>(() => {
+    const walked = index.value
+    const runningId = MISSION_CHAPTERS.find((c) => {
+      const start = MISSION_CHAPTER_STARTS[c.id]
+      return walked >= start && walked < start + MISSION_CHAPTER_SIZES[c.id]
+    })?.id
+    return MISSION_CHAPTERS.map((chapter, i) => {
+      const start = MISSION_CHAPTER_STARTS[chapter.id]
+      const size = MISSION_CHAPTER_SIZES[chapter.id]
+      const done = Math.max(0, Math.min(walked - start, size))
+      return {
+        id: chapter.id,
+        name: chapter.name,
+        numeral: toRoman(i + 1),
+        color: chapter.color,
+        size,
+        done,
+        ratio: size > 0 ? done / size : 0,
+        running: chapter.id === runningId,
+        complete: done >= size,
+      }
+    })
+  })
+
+  return { face, flashing: computed(() => flashed.value !== null), chapters }
 }

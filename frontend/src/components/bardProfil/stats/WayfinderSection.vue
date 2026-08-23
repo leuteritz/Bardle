@@ -6,14 +6,12 @@ import {
   MISSIONS,
   MISSION_CHAPTERS,
   MISSION_COUNT,
-  MISSION_CHAPTER_STARTS,
-  MISSION_CHAPTER_SIZES,
   missionObjectiveLine,
   missionRewardLabel,
 } from '@/config/progression/missions'
+import { useMissionFace } from '@/composables/ui/useMissionFace'
 import { progressMetricValue } from '@/utils/game/progressMetrics'
 import { formatNumber } from '@/config/ui/numberFormat'
-import { toRoman } from '@/utils/ui/format'
 import StatsColumnHeader from './StatsColumnHeader.vue'
 
 /**
@@ -35,6 +33,9 @@ import StatsColumnHeader from './StatsColumnHeader.vue'
  * der es nichts zu tun gibt.
  */
 const store = useMissionStore()
+/** Die sieben Etappen kommen aus derselben Quelle wie im Pause-Band — eine
+ *  zweite Rechnung liefe beim ersten Nachjustieren auseinander. */
+const { chapters: chapterViews } = useMissionFace()
 
 /** Angeheftet per Klick; überlebt das Verlassen der Reihe. */
 const pinnedId = ref<string | null>(null)
@@ -48,40 +49,6 @@ const currentChapterId = computed(() => {
 })
 
 const focusId = computed(() => hoverId.value ?? pinnedId.value ?? currentChapterId.value)
-
-interface ChapterView {
-  id: string
-  name: string
-  color: string
-  numeral: string
-  /** Wie viele Missionen des Kapitels stehen. */
-  done: number
-  size: number
-  ratio: number
-  /** Das Kapitel ist vollständig gegangen. */
-  complete: boolean
-  /** Die Leiter steht gerade darin. */
-  running: boolean
-}
-
-const chapterViews = computed<ChapterView[]>(() =>
-  MISSION_CHAPTERS.map((chapter, i) => {
-    const start = MISSION_CHAPTER_STARTS[chapter.id]
-    const size = MISSION_CHAPTER_SIZES[chapter.id]
-    const done = Math.max(0, Math.min(store.index - start, size))
-    return {
-      id: chapter.id,
-      name: chapter.name,
-      color: chapter.color,
-      numeral: toRoman(i + 1),
-      done,
-      size,
-      ratio: size > 0 ? done / size : 0,
-      complete: done >= size,
-      running: chapter.id === currentChapterId.value,
-    }
-  }),
-)
 
 const focusChapter = computed(
   () => chapterViews.value.find((c) => c.id === focusId.value) ?? chapterViews.value[0],

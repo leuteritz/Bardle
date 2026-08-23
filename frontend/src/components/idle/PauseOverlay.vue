@@ -59,6 +59,14 @@
           </header>
           <span class="pause-head__rule" aria-hidden="true"></span>
 
+          <!-- Die Leiter steht draußen als Karte oben links bei z-index 899
+               und liegt damit unter diesem Overlay; ihr Herold (9700) ebenso.
+               Sie läuft pausiert weiter — hier ist die Stelle, an der man ihr
+               dabei zusehen kann. Ganz oben, weil sie als einziges System
+               beantwortet, was als NÄCHSTES ansteht: genau die Frage beim
+               Fortsetzen. -->
+          <PauseWayfinderBand :milestones="pauseMilestones" />
+
           <!-- Zwei Spalten statt zehn Bänder: links, was während der Pause
                hereinkam, rechts, wie es steht. Nebeneinander statt untereinander
                spart rund 200 px Höhe — und weil der Fit-Scale höhenlimitiert
@@ -76,29 +84,7 @@
           >
             <!-- ── Links: die Bilanz ─────────────────────────────────── -->
             <section class="tally-col">
-              <!-- Die Marke steht IN der vorhandenen Kopfzeile, nicht als
-                   eigener Block: die Bilanzspalte ist auf Full HD die höhere,
-                   ein vierter Abschnitt ginge dort direkt in die Panelhöhe. Sie
-                   bleibt bei null stehen und dimmt nur ab — verschwände sie,
-                   spränge die Kopfzeile, sobald der erste Meilenstein fällt. -->
-              <h2 class="col-head">
-                The tally
-                <span
-                  class="col-head__wf"
-                  :class="{ 'col-head__wf--zero': pauseMilestones === 0 }"
-                  title="Wayfinder milestones claimed during this pause"
-                >
-                  <Icon
-                    :icon="MISSION_SYSTEM_ICON"
-                    width="13"
-                    height="13"
-                    class="col-head__wf-icon"
-                    aria-hidden="true"
-                  />
-                  <span class="col-head__wf-label">Milestones</span>
-                  <span class="col-head__wf-n">{{ pauseMilestones }}</span>
-                </span>
-              </h2>
+              <h2 class="col-head">The tally</h2>
 
               <!-- Der Heiligenschein liegt als eigene Ebene hinter der Münze und
                    blendet im Takt auf; die Münze selbst trägt ihren Schatten
@@ -361,14 +347,6 @@
                   emphasis
                 />
               </div>
-
-              <!-- Die Leiter steht draußen als Karte oben links bei z-index 899
-                   und liegt damit unter diesem Overlay; ihr Herold (9700)
-                   ebenso. Sie läuft pausiert weiter — hier ist die Stelle, an
-                   der man ihr dabei zusehen kann. Geschwister von `.state-rows`,
-                   nicht Kind davon: sie ist keine vierte Journey-Achse, sondern
-                   das nächste Ziel. -->
-              <PauseWayfinderRow />
             </section>
           </div>
 
@@ -379,19 +357,22 @@
                pausiert hierher um; es ist dieselbe Instanz, nur mit anderer
                Form (`dock: 'pause'`).
 
-               Quer statt als dritte Spalte: die Kacheln sind das einzige im
-               Panel, das der Spieler wiedererkennen muss, und in einer schmalen
-               Säule blieben sie klein. Die Höhe dafür kommt aus der einzeilig
-               gewordenen Callout-Reihe und dem gekürzten Bühnenpuffer.
+               EINE Reihe, keine zwei: das Band hat Breite im Überfluss, und
+               jede Zeile Höhe geht in den Fit-Scale des ganzen Overlays. Vier
+               Fähigkeitszellen links, zwei Effekt-Plaketten rechts, alle
+               gleich hoch.
 
-               Beide Spalten sind auf PAUSE_KIT_BAND_H fest reserviert: liefe
-               die Höhe mit der Zahl der Buffs, spränge der Fit-Scale des
-               ganzen Overlays, sobald während der Pause einer ausläuft. -->
+               Beide Spalten sind fest reserviert — die Höhe auf
+               PAUSE_KIT_BAND_H, die Chip-Zahl auf PAUSE_KIT_EFFECT_COLS: liefe
+               eine von beiden mit der Zahl der Buffs, spränge das Raster,
+               sobald während der Pause einer ausläuft. -->
           <section
             class="kit-band"
             :style="{
               '--pause-kit-gap': `${PAUSE_KIT_GAP_PX}px`,
               '--pause-kit-chip-h': `${PAUSE_KIT_EFFECT_CHIP_H}px`,
+              '--pause-kit-chip-w': `${PAUSE_KIT_EFFECT_CHIP_W}px`,
+              '--pause-kit-more-w': `${PAUSE_KIT_EFFECT_MORE_W}px`,
               '--pause-kit-band-h': `${PAUSE_KIT_BAND_H}px`,
               '--pause-kit-effect-w': `${PAUSE_KIT_EFFECT_COL_W}px`,
             }"
@@ -598,6 +579,8 @@ import {
   PAUSE_READOUT_GAP_PX,
   PAUSE_KIT_GAP_PX,
   PAUSE_KIT_EFFECT_CHIP_H,
+  PAUSE_KIT_EFFECT_CHIP_W,
+  PAUSE_KIT_EFFECT_MORE_W,
   PAUSE_KIT_EFFECT_COL_W,
   PAUSE_KIT_BAND_H,
   MEEP_ART_IMAGE,
@@ -606,7 +589,6 @@ import {
   VOID_SEVERITY_COLOR,
   VOID_KIT_ACCENT,
   SCOREBOARD_STAT_COLORS,
-  MISSION_SYSTEM_ICON,
 } from '@/config/constants'
 import type { PauseChampionCallout, PlanetType } from '@/types'
 import { splitDuration, toRoman } from '@/utils/ui/format'
@@ -629,7 +611,7 @@ import PauseStarCard from './PauseStarCard.vue'
 import PauseVoidCard from './PauseVoidCard.vue'
 import SunLedger from './SunLedger.vue'
 import PauseMetaPillar from './PauseMetaPillar.vue'
-import PauseWayfinderRow from './PauseWayfinderRow.vue'
+import PauseWayfinderBand from './PauseWayfinderBand.vue'
 import { gameNow } from '@/utils/game/gameClock'
 
 // Die Pause hat zwei Quellen — Fenster ohne Fokus und das Kürzel des Spielers.
@@ -1559,42 +1541,6 @@ function particleStyle(i: number): Record<string, string> {
   color: rgba(216, 200, 160, 0.42);
 }
 
-/* Meilensteine dieser Pause, rechts in der Kopfzeile der Bilanz. Sie steht
-   IMMER — bei null gedimmt, sonst im Mint des Wayfinders. Ihre Zeilenhöhe darf
-   die der Kopfzeile nicht überschreiten: beide Spalten teilen sich `.col-head`,
-   und eine höhere Bilanz-Kopfzeile schöbe die Spalten auseinander. */
-.col-head__wf {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: auto;
-  line-height: 1;
-  color: #7ad0be;
-}
-
-.col-head__wf--zero {
-  opacity: 0.3;
-}
-
-.col-head__wf-icon {
-  flex-shrink: 0;
-}
-
-/* Das Wort dazu: ohne es sagt eine Zahl am Kopfrand nicht, was sie zählt — und
-   ein Tooltip ist keine Beschriftung. Platz ist da, die Kopfzeile trägt links
-   nur zwei Wörter. */
-.col-head__wf-label {
-  font-size: 0.86em;
-  letter-spacing: 0.16em;
-  opacity: 0.75;
-}
-
-.col-head__wf-n {
-  font-size: 1.15em;
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums;
-}
-
 .tally-block {
   display: flex;
   flex-direction: column;
@@ -1707,14 +1653,12 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* ── Die drei Achsen ──────────────────────────────────── */
-/* Die Lücke war 24 px, solange die Spalte mit drei Zeilen endete. Die
-   Wayfinder-Zeile darunter kostet Panelhöhe (die Zustandsspalte hat auf Full HD
-   gemessene 3,5 px Luft, auf QHD ist sie die höhere Spalte) — 16 px holen einen
-   Teil davon zurück, ohne dass die Zeilen aneinanderrücken. */
+/* Die Spalte endet wieder mit diesen drei Zeilen — die Wayfinder-Zeile am Fuß
+   ist ins Kopfband gewandert. Die 16 px waren ihre Gegenfinanzierung. */
 .state-rows {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
   width: 100%;
 }
 
@@ -2123,13 +2067,15 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* ── Das Kit-Band ─────────────────────────────────────────────────────────
-   Rechts eine FESTE Breite, links der Rest. Die Chips tragen einen Namen neben
-   ihrer Uhr und brauchen dafür eine verlässliche Spalte; die Fähigkeitszeilen
-   daneben vertragen jede Breite, die übrig bleibt.
+   Rechts eine FESTE Breite (zwei Plaketten, der „+N"-Zähler und ihre Lücken),
+   links der Rest. Die Plaketten tragen einen Namen neben ihrer Uhr und
+   brauchen dafür eine verlässliche Spalte; die vier Fähigkeitszellen daneben
+   vertragen jede Breite, die übrig bleibt — gemessen 840 px, also 201 je
+   Zelle.
 
    Andersherum (`auto` links) misst das Raster nur die Mindestbreite des
-   Inhalts — die Zeilen fielen dann auf gut die Hälfte zusammen, während die
-   Chips Platz bekamen, den sie nicht brauchen.
+   Inhalts — die Zellen fielen dann zusammen, während die Chips Platz bekamen,
+   den sie nicht brauchen.
 
    Die Trennlinie ist dieselbe Haarlinie wie zwischen Bilanz und Zustand: eine
    Linie, kein zweiter Kasten. */
@@ -2153,9 +2099,8 @@ function particleStyle(i: number): Record<string, string> {
 }
 
 /* Fest reserviert, nicht mitwachsend: hier hängt der Fit-Scale des ganzen
-   Overlays daran. Beide Spalten füllen ihre Höhe ganz aus — die Zeilenhöhe im
-   Kit ist aus eben dieser Bandhöhe abgeleitet (PAUSE_KIT_ROW_H), damit sie
-   bündig mit den Effekt-Chips gegenüber abschließen. */
+   Overlays daran. Beide Spalten füllen ihre Höhe ganz aus — Kit-Zelle und
+   Effekt-Chip sind gleich hoch (PAUSE_KIT_BAND_H), das Band ist EINE Zeile. */
 .kit-dock {
   display: flex;
   align-items: stretch;

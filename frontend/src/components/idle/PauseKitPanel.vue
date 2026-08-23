@@ -1,41 +1,55 @@
 <template>
   <!--
-    Die vier Fähigkeiten im Pause-Overlay — als ZEILEN, nicht als Kacheln.
+    Die vier Fähigkeiten im Pause-Overlay — EINE Reihe aus vier Zellen.
 
     Eine Kachel ist die Form eines Knopfes, und im Overlay ist nichts
-    bedienbar. Was sie zeigte (Rang, Abklingzeit), stand in Miniaturschrift auf
-    dem Bild, während Name und Kürzel nur im Tooltip auftauchten. Die Zeile
-    dreht das um: das Bild bleibt als Wiedererkennung, der Text bekommt Platz.
-
-    Zwei Spalten zu je zwei Zeilen — Q/W links, E/R rechts. In EINER Spalte
-    wären die Zeilen entweder halb so hoch oder das Band doppelt so tief.
+    bedienbar. Die Zelle dreht das um: das Bild bleibt als Wiedererkennung,
+    der Text bekommt Platz. Quer statt 2 × 2, weil das Band Breite im
+    Überfluss hat und jede Zeile Höhe in den Fit-Scale des Overlays geht.
   -->
-  <div class="kit-grid" :style="{ '--kit-row-h': `${PAUSE_KIT_ROW_H}px`, '--kit-gap': `${PAUSE_KIT_GAP_PX}px` }">
+  <div
+    class="kit-grid"
+    :style="{
+      '--kit-cell-h': `${PAUSE_KIT_CELL_H}px`,
+      '--kit-art': `${PAUSE_KIT_CELL_ART_PX}px`,
+      '--kit-gap': `${PAUSE_KIT_GAP_PX}px`,
+    }"
+  >
     <div
-      v-for="row in rows"
-      :key="row.id"
-      class="kit-row"
-      :class="{ 'kit-row--locked': row.locked, 'kit-row--cooling': row.cooling }"
-      :style="{ '--kit-color': row.color }"
+      v-for="cell in cells"
+      :key="cell.id"
+      class="kit-cell"
+      :class="{ 'kit-cell--locked': cell.locked, 'kit-cell--cooling': cell.cooling }"
+      :style="{ '--kit-color': cell.color }"
     >
-      <span class="kit-row__art">
+      <!-- Das Kürzel steht AUF der Kunst, nicht neben dem Namen: als eigene
+           Textspalte nähme es dem Namen 28 der 130 px, und „Caretaker's
+           Shrine" liefe über. Muster `.ab-key` an der Kachel draußen. -->
+      <span class="kit-cell__art">
         <img
-          :src="row.image"
-          :alt="row.name"
-          class="kit-row__img"
+          :src="cell.image"
+          :alt="cell.name"
+          class="kit-cell__img"
           draggable="false"
           @dragstart.prevent
         />
+        <span class="kit-cell__key" aria-hidden="true">{{ cell.key }}</span>
       </span>
 
-      <span class="kit-row__text">
-        <span class="kit-row__head">
-          <KeyCap :cap="row.key" size="sm" />
-          <span class="kit-row__name">{{ row.name }}</span>
-        </span>
-        <span class="kit-row__foot">
-          <span class="kit-row__rank">{{ row.rankLabel }}</span>
-          <span class="kit-row__state">{{ row.stateLabel }}</span>
+      <span class="kit-cell__text">
+        <span class="kit-cell__name">{{ cell.name }}</span>
+        <span class="kit-cell__foot">
+          <!-- Rang als Pips, nicht als „Rank 3": dieselbe Form wie `.ab-rank`
+               an der Kachel draußen, und sie kostet keine Textbreite. -->
+          <span class="kit-cell__pips" :aria-label="cell.rankLabel">
+            <span
+              v-for="n in ABILITY_MAX_RANK"
+              :key="n"
+              class="kit-pip"
+              :class="{ 'kit-pip--on': n <= cell.rank }"
+            />
+          </span>
+          <span class="kit-cell__state">{{ cell.stateLabel }}</span>
         </span>
       </span>
     </div>
@@ -44,10 +58,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import KeyCap from '@/components/keybinds/KeyCap.vue'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { BARD_ABILITIES } from '@/config/progression/bardAbilities'
-import { PAUSE_KIT_ROW_H, PAUSE_KIT_GAP_PX } from '@/config/constants'
+import {
+  ABILITY_MAX_RANK,
+  PAUSE_KIT_CELL_H,
+  PAUSE_KIT_CELL_ART_PX,
+  PAUSE_KIT_GAP_PX,
+} from '@/config/constants'
 import { gameNow } from '@/utils/game/gameClock'
 import { formatCooldownSeconds } from '@/utils/ui/format'
 
@@ -62,7 +80,7 @@ const props = defineProps<{ tick: number }>()
 
 const store = useBardAbilityStore()
 
-interface KitRow {
+interface KitCell {
   id: string
   key: string
   name: string
@@ -70,11 +88,12 @@ interface KitRow {
   color: string
   locked: boolean
   cooling: boolean
+  rank: number
   rankLabel: string
   stateLabel: string
 }
 
-const rows = computed<KitRow[]>(() => {
+const cells = computed<KitCell[]>(() => {
   // Der Tick ist der einzige Grund, warum diese Computed erneut läuft — die
   // Abklingzeit steht als Zeitstempel im Store und ändert sich nicht reaktiv.
   void props.tick
@@ -92,6 +111,7 @@ const rows = computed<KitRow[]>(() => {
       color: def.color,
       locked,
       cooling: leftMs > 0,
+      rank,
       rankLabel: locked ? 'Locked' : `Rank ${rank}`,
       // Gesperrt zählt die Stufe, die fehlt — sie ist das, was der Spieler
       // dagegen tun kann. Bereit steht als Wort da, nicht als „0s".
@@ -106,13 +126,11 @@ const rows = computed<KitRow[]>(() => {
 </script>
 
 <style scoped>
-/* Zwei Spalten zu je zwei Zeilen. Die Zeilenhöhe kommt aus den Konstanten und
-   ist dort aus der Bandhöhe abgeleitet — zwei Zeilen plus Lücke ergeben exakt
-   die Höhe der Effekt-Spalte daneben, damit beide bündig abschließen. */
+/* Vier Zellen nebeneinander, EINE Reihe. Die Zellenhöhe ist die Bandhöhe. */
 .kit-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: var(--kit-row-h);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: var(--kit-cell-h);
   gap: var(--kit-gap);
   width: 100%;
 }
@@ -120,11 +138,11 @@ const rows = computed<KitRow[]>(() => {
 /* Dieselbe Fassung wie die Effekt-Chips gegenüber: flacher dunkler Grund, eine
    Kante in der Leitfarbe, kein zweiter Rahmen. Das Band trägt zwei Sorten
    Inhalt, aber nur eine Form. */
-.kit-row {
+.kit-cell {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
   padding: 0 12px 0 10px;
   background: #16140e;
@@ -133,91 +151,111 @@ const rows = computed<KitRow[]>(() => {
   border-radius: 4px;
 }
 
-.kit-row--locked {
+.kit-cell--locked {
   opacity: 0.5;
   filter: grayscale(55%);
 }
 
-.kit-row__art {
+.kit-cell__art {
   position: relative;
   flex: 0 0 auto;
-  width: 56px;
-  height: 56px;
+  width: var(--kit-art);
+  height: var(--kit-art);
   overflow: hidden;
   border-radius: 4px;
   background: #0d0b06;
 }
 
-/* Das Motiv liegt als 512er Kunst vor und wird hier auf 56 px gebracht — das
+/* Das Motiv liegt als 512er Kunst vor und wird hier auf 44 px gebracht — das
    ist ein spürbares Herunterskalieren, und genau dafür ist `high-quality` da
    (nie `pixelated`, siehe „Bildschärfe"). */
-.kit-row__img {
+.kit-cell__img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   image-rendering: high-quality;
 }
 
-.kit-row__text {
+.kit-cell__key {
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #ded0a6;
+  opacity: 0.85;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.kit-cell__text {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 6px;
   min-width: 0;
   flex: 1 1 auto;
 }
 
-.kit-row__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+/* „Caretaker's Shrine" ist der längste Name und misst hier gemessen 129 px in
+   130; die Auslassung fängt nur den Fall ab, dass jemand einen längeren
+   nachlegt. */
+.kit-cell__name {
   min-width: 0;
-}
-
-/* „Caretaker's Shrine" ist der längste Name und passt in die Spalte; die
-   Auslassung fängt nur den Fall ab, dass jemand einen längeren nachlegt. */
-.kit-row__name {
-  min-width: 0;
-  font-size: 1.05rem;
+  font-size: 0.9rem;
   font-weight: 700;
+  line-height: 1.2;
   color: #e8dcc0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.kit-row__foot {
+.kit-cell__foot {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
   min-width: 0;
+  height: 18px;
 }
 
-.kit-row__rank {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.5);
-  white-space: nowrap;
+.kit-cell__pips {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+
+.kit-pip {
+  width: 10px;
+  height: 3px;
+  border-radius: 1px;
+  background: rgba(232, 224, 196, 0.16);
+}
+
+.kit-pip--on {
+  background: var(--kit-color, #e8c040);
+  opacity: 0.85;
 }
 
 /* Der Zustand ist das, was sich ändert, und steht deshalb in der Leitfarbe der
-   Fähigkeit — die Rangzeile daneben bleibt ruhig. */
-.kit-row__state {
+   Fähigkeit — die Pips daneben bleiben ruhig. */
+.kit-cell__state {
   flex: 0 0 auto;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
+  line-height: 1;
   color: var(--kit-color, #e8c040);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.kit-row--cooling .kit-row__state {
+.kit-cell--cooling .kit-cell__state {
   color: rgba(216, 200, 160, 0.72);
 }
 
-.kit-row--locked .kit-row__state {
+.kit-cell--locked .kit-cell__state {
   color: rgba(216, 200, 160, 0.5);
 }
 </style>

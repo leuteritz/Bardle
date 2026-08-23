@@ -477,80 +477,89 @@ export const PAUSE_READOUT_ORB_PX = 72
 /** Abstand zwischen Orb und Text, und zwischen den beiden Hälften. */
 export const PAUSE_READOUT_GAP_PX = 16
 
-// ── Die Fähigkeiten stehen hier als ZEILEN, nicht als Kacheln ─────────────
-// Eine Kachel ist die Form eines KNOPFES. Im Band ist aber nichts bedienbar,
-// und was sie zeigt — Rang und Abklingzeit — stand auf 104 px in
-// Miniaturschrift, während Name und Wirkung nur im Tooltip auftauchten.
+// ── Das Kit-Band steht EINREIHIG ──────────────────────────────────────────
+// Vier Fähigkeiten nebeneinander statt 2 × 2 untereinander. Das Band hat
+// Breite im Überfluss und zahlt jede Zeile Höhe mit dem Fit-Scale des ganzen
+// Overlays — die flache Reihe kostet 114 px statt 232.
 //
-// Die Zeile dreht das um: Kunst-Miniatur, Kürzel, Name, darunter Rang und
-// Zustand. Sie ist flacher, trägt mehr und braucht keine Auflösungsstaffelung
-// (über dem Panel liegt bereits useFitScale — eine zweite skalierte doppelt).
-//
-// Die Passive kommt hier nicht mehr vor: sie steht als zweite Ablesung oben
-// bei „Chimes gathered". Dort gehört sie hin, weil beide Füllstände während
-// der Pause weiterlaufen — die Produktion zahlt ein, auch wenn niemand klickt.
-/** Lücke zwischen den Zeilen und zwischen den Band-Spalten. */
+// Die Passive kommt hier nicht vor: sie steht als zweite Ablesung oben bei
+// „Chimes gathered", weil beide Füllstände pausiert weiterlaufen.
+/** Lücke zwischen den Zellen und zwischen den Band-Spalten. */
 export const PAUSE_KIT_GAP_PX = 12
-/** Höhe eines Effekt-Chips im Band. Zwischen der freien Reihe (84) und der
- *  Star-Fight-Schiene (50): das Band hat Breite im Überfluss, aber jede Zeile
- *  Höhe geht in den Fit-Scale des ganzen Overlays. */
-export const PAUSE_KIT_EFFECT_CHIP_H = 58
+/** Höhe einer Fähigkeitszelle: Kunst 44 mittig, daneben Name 20 + 6 + Fuß 18. */
+export const PAUSE_KIT_CELL_H = 80
+/** Reservierte Höhe des Bandinhalts. Die KIT-REIHE gibt sie jetzt vor, nicht
+ *  mehr die Effekt-Spalte — genau diese Umkehr ist der Höhengewinn. */
+export const PAUSE_KIT_BAND_H = PAUSE_KIT_CELL_H
+/** Kantenlänge der Kunst-Miniatur. Sie trägt die Wiedererkennung — dieselben
+ *  Bilder wie auf den Kacheln draußen, nur klein. Jedes Pixel hier nimmt der
+ *  Namensspalte eines: der längste Ability-Name misst gemessen 124 px, und die
+ *  Zelle trägt bei dieser Kantenlänge 129. */
+export const PAUSE_KIT_CELL_ART_PX = 40
+/** Höhe eines Effekt-Chips — gleich der Zellenhöhe, das Band ist EINE Zeile. */
+export const PAUSE_KIT_EFFECT_CHIP_H = PAUSE_KIT_BAND_H
+/** Breite eines Effekt-Chips. Hergeleitet, nicht gewählt: der Chip trägt im
+ *  Band seinen NAMEN (draußen steht nur die Achse), und der längste misst
+ *  gemessen 116 px — plus reservierte Uhr 28, Lücke 8, Icon 26 samt Lücke und
+ *  Innenabstand 18. Bei 148 blieben dem Namen 60 px, und drei gleich
+ *  abgeschnittene Plaketten sagen genau das nicht, wofür der Name da ist. */
+export const PAUSE_KIT_EFFECT_CHIP_W = 204
 /** So viele Effekt-Chips stehen einzeln, der Rest als „+N" — dasselbe Muster
  *  wie `.mat-card--more` im Material-Raster.
  *
- *  Die Zahl IST die Reservierung: die Spalte ist immer so hoch, ob null oder
- *  sechs Buffs laufen. Eine mitwachsende Spalte ließe die Bandhöhe und damit
- *  den Fit-Scale springen, sobald während der Pause ein Buff ausläuft. */
-export const PAUSE_KIT_EFFECT_ROWS = 3
-/** Höhe der Effekt-Spalte — drei Chips plus ihre Lücken. */
-export const PAUSE_KIT_EFFECT_COL_H =
-  PAUSE_KIT_EFFECT_ROWS * PAUSE_KIT_EFFECT_CHIP_H + (PAUSE_KIT_EFFECT_ROWS - 1) * PAUSE_KIT_GAP_PX
-/** Reservierte Höhe des Bandinhalts. Die Effekt-Spalte gibt sie vor: sie ist
- *  die einzige, deren Inhalt sich während der Pause ändern kann, und ihre
- *  Reservierung ist der Grund, warum der Fit-Scale nicht springt. Die
- *  Kit-Spalte richtet sich danach (PAUSE_KIT_ROW_H). */
-export const PAUSE_KIT_BAND_H = PAUSE_KIT_EFFECT_COL_H
-/** Breite der Effekt-Spalte. FEST, nicht `1fr`: die Chips tragen einen Namen
- *  neben ihrer Uhr und brauchen dafür eine verlässliche Breite. Was übrig
- *  bleibt, nehmen die beiden Fähigkeitsspalten — sie vertragen jede Breite,
- *  die Chips nicht. */
-export const PAUSE_KIT_EFFECT_COL_W = 300
-/** Höhe einer Fähigkeitszeile — zwei davon füllen die Bandhöhe. Abgeleitet,
- *  nicht gewählt: nur so schließen Kit- und Effekt-Spalte bündig ab, und das
- *  Band liest sich als eine Fläche statt als zwei verschieden hohe Blöcke. */
-export const PAUSE_KIT_ROW_H = (PAUSE_KIT_BAND_H - PAUSE_KIT_GAP_PX) / 2
-/** Kantenlänge der Kunst-Miniatur in der Zeile. Sie trägt die Wiedererkennung
- *  — dieselben Bilder wie auf den Kacheln draußen, nur klein. */
-export const PAUSE_KIT_ROW_ART_PX = 56
-
-// ── Die Wayfinder-Zeile am Fuß der Zustandsspalte ────────────────────────
-// Draußen steht die Leiter als HUD-Karte oben links bei z-index 899 — unter
-// diesem Overlay (9998) samt seiner Deckung. Sie läuft pausiert weiter
-// (`missionStore.tick()` hängt im ungebremsten Spiel-Tick), war aber nicht zu
-// sehen; dieselbe Lage, aus der heraus das Kit-Band entstanden ist.
-//
-// Die Spalte trägt innen 429 px (460 − 30 Trennabstand − 1 Haarlinie).
-// Gemessen in MedievalSharp über alle 41 Missionen: längster Name 181 px,
-// längste Aufgabe 255, längste Belohnung 196, längster Kapitelname 152.
-// Alles passt EINZEILIG — deshalb hat die Zeile keine Klammerung wie die
-// HUD-Karte draußen, wo ihr nur 208 px bleiben.
-/** Reservierte Gesamthöhe der Zeile. Hergeleitet: Kopf 18 + Name 19 +
- *  Aufgabe 16 + Messband 12 + drei Lücken 13 = 78, zwei Pixel Luft.
+ *  ZWEI, nicht drei: die Reihe teilt sich die Panelbreite mit vier
+ *  Fähigkeitszellen, und für drei lesbare Plaketten reicht sie nicht (gemessen
+ *  bliebe der Zelle dann 88 px Text gegen 124, die der längste Ability-Name
+ *  braucht). Zwei ganze Namen plus „+N" tragen mehr als drei halbe.
  *
- *  FEST, und das ist der Punkt: wächst die Zeile mit dem Zustand, springt der
+ *  Die Zahl IST zugleich die Reservierung: die Spalte ist immer so breit, ob
+ *  null oder sechs Buffs laufen. Eine mitwachsende Reihe ließe die Bandbreite
+ *  und damit die Zellenbreite springen, sobald ein Buff ausläuft. */
+export const PAUSE_KIT_EFFECT_COLS = 2
+/** Breite des „+N"-Zählers am Ende der Reihe. Er hat einen EIGENEN Platz und
+ *  nimmt keinem Chip seinen: gäbe der letzte Chip seine Zelle ab (Muster
+ *  `.mat-card--more`), stünde bei drei laufenden Effekten nur noch einer von
+ *  ihnen da. Der Platz ist immer reserviert, auch leer — sonst spränge die
+ *  Zellenbreite, sobald der dritte Buff dazukommt. */
+export const PAUSE_KIT_EFFECT_MORE_W = 56
+/** Breite der Effekt-Spalte — zwei Chips, der Zähler und ihre Lücken. FEST,
+ *  nicht `1fr`: was übrig bleibt, nimmt die Kit-Reihe. Sie verträgt jede
+ *  Breite, die Chips nicht. Gebunden in `pauseKitLayout.spec.ts`. */
+export const PAUSE_KIT_EFFECT_COL_W =
+  PAUSE_KIT_EFFECT_COLS * PAUSE_KIT_EFFECT_CHIP_W +
+  PAUSE_KIT_EFFECT_COLS * PAUSE_KIT_GAP_PX +
+  PAUSE_KIT_EFFECT_MORE_W
+
+// ── Das Wayfinder-Band unter der Kopfzeile ────────────────────────────────
+// Draußen steht die Leiter als HUD-Karte oben links bei z-index 899 — unter
+// diesem Overlay (9998) samt seiner Deckung, ihr Herold (9700) ebenso. Sie
+// läuft pausiert weiter (`missionStore.tick()` hängt im ungebremsten
+// Spiel-Tick), zu sehen war sie nicht.
+//
+// Sie stand dafür einmal als 80-px-Zeile am Fuß der Zustandsspalte, wo ihr
+// 429 px Breite blieben. Über die volle Panelbreite (1352 innen) trägt sie
+// dieselben Angaben in Lesegröße, dazu Kapitelweg, Emblem und Blurb.
+/** Reservierte Höhe des Bandkörpers, ohne die Kopfzeile.
+ *
+ *  FEST, und das ist der Punkt: wächst das Band mit dem Zustand, springt der
  *  Fit-Scale des ganzen Overlays mitten in der Pause — beim Missionswechsel,
  *  beim Abschlussblitz und beim Ende der Leiter. Dieselbe Reservierung wie
- *  PAUSE_KIT_EFFECT_ROWS und PAUSE_CALLOUT_ROWS. */
-export const PAUSE_WAYFINDER_ROW_H = 80
-/** Reservierte Breite des Belohnungslabels neben dem Namen. Der längste Fall
- *  im Katalog misst 196 px („+12m PRODUCTION · +4 SOLAR ESSENCE"); der Name
- *  weicht davor zurück, nie umgekehrt. Gebunden in `missionLadder.spec.ts`. */
+ *  PAUSE_KIT_EFFECT_COLS und PAUSE_CALLOUT_ROWS. */
+export const PAUSE_WAYFINDER_BAND_H = 120
+/** Kantenlänge des Missions-Emblems. Es zeigt das eigene Glyph der Mission —
+ *  jedes der 41 ist einmalig und kommt sonst nirgends im Overlay vor. */
+export const PAUSE_WAYFINDER_EMBLEM_PX = 72
+/** Reservierte Breite der Belohnungsplakette. Der längste Fall im Katalog
+ *  misst 196 px („+12m PRODUCTION · +4 SOLAR ESSENCE"); der Name weicht davor
+ *  zurück, nie umgekehrt. Gebunden in `missionLadder.spec.ts`. */
 export const PAUSE_WAYFINDER_REWARD_W = 200
 /** Reservierte Breite des Zählers in `ch`, dazu `tabular-nums`.
  *  `formatNumberCompact` liefert je Seite höchstens fünf Zeichen, mit
  *  Schrägstrich elf — sonst wanderte der Balken, sobald eine Zahl eine Stelle
  *  gewinnt. Dieselbe Stelle wie bei der Chime-Ablesung. */
 export const PAUSE_WAYFINDER_COUNT_CH = 12
+/** Höhe eines Kapitelbalkens in der Etappenleiste der Kopfzeile. */
+export const PAUSE_WAYFINDER_CHAPTER_BAR_H = 5
 
 // ── Star-Timer-Bars (Header) — Planeten-Kugeln mit Boss-HP-Füllstand ──────
 // Die Bars lesen die Boss-Daten NICHT reaktiv, sondern über einen Snapshot,
