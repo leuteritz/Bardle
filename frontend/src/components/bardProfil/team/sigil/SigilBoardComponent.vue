@@ -389,6 +389,27 @@ watch(
     @click="onBackgroundClick"
     @dragstart.prevent
   >
+    <!-- shop door — alone in the top-left corner. It is the one destination that
+         takes the WHOLE tab instead of a rail from the right, so it must not sit
+         in the right-edge column: the atlas rises out of this very corner. -->
+    <div class="sigil-door">
+      <button
+        class="sigil-action sigil-action--shop"
+        :class="{ 'sigil-action--open': activeAction === 'shop' }"
+        :aria-expanded="activeAction === 'shop'"
+        :title="activeAction === 'shop' ? 'Close the shop' : 'Recruit champions and buy gear'"
+        @click.stop="emit('open-shop')"
+      >
+        <Icon icon="game-icons:shop" width="34" height="34" class="sigil-action-icon" />
+        <span class="sigil-action-label">Shop</span>
+        <RpgNotifyBadge
+          :count="shopBadgeCount"
+          variant="shop"
+          label="Champions available in shop"
+        />
+      </button>
+    </div>
+
     <!-- admin: raise every team champion's level, capped. Deliberately styled
          apart from the gold game actions so it never reads as a normal button. -->
     <div class="sigil-admin" @click.stop>
@@ -432,39 +453,12 @@ watch(
          einem offenen Rollen-Slot der Battle-Landing aus geöffnet wurde -->
     <BattleTabReturnButton @click.stop />
 
-    <!-- ── board actions: shop + expedition (always reachable) ──
-         Both stand at the board's RIGHT edge, stacked, because that is the edge
-         the rail opens from: the button and the panel it summons are the same
-         gesture, so they belong on the same side. Stacked rather than side by
-         side for the room — with a rail open the board is 340 px wide at Full
-         HD, which is one big button, not two; downwards there is more space
-         than either needs.
-         The shop names what is in there instead of what it is — it is two shops
-         behind one door, champions on one tab and gear on the other, and the
-         word "Shop" said neither. The glyph carries that word now, and carries
-         it better: a shopping bag is what you take away, `shop` is the place
-         you walk into.
-         Both toggle: pressing the one that is already open closes its rail
-         again, and while it is open the button holds a lit state with a gold
-         edge on the side the rail comes from — the button and the panel read
-         as one connected piece rather than two things that happen to be up. -->
+    <!-- ── board actions: expedition + auto level ──
+         At the board's RIGHT edge, the edge the expedition rail opens from: the
+         button and the panel it summons are the same gesture. Pressing the open
+         one closes its rail again, and while it is up the button holds a lit
+         state with a gold edge on the side the rail comes from. -->
     <div class="sigil-actions">
-      <button
-        class="sigil-action sigil-action--shop"
-        :class="{ 'sigil-action--open': activeAction === 'shop' }"
-        :aria-expanded="activeAction === 'shop'"
-        :title="activeAction === 'shop' ? 'Close the shop' : 'Recruit champions and buy gear'"
-        @click.stop="emit('open-shop')"
-      >
-        <Icon icon="game-icons:shop" width="34" height="34" class="sigil-action-icon" />
-        <span class="sigil-action-label">Champions &amp; Items</span>
-        <RpgNotifyBadge
-          :count="shopBadgeCount"
-          variant="shop"
-          label="Champions available in shop"
-        />
-      </button>
-
       <button
         class="sigil-action sigil-action--expedition"
         :class="{ 'sigil-action--open': activeAction === 'expedition' }"
@@ -477,14 +471,11 @@ watch(
         <RpgNotifyBadge :count="expeditionBadgeCount" label="Expedition rewards ready" />
       </button>
 
-      <!-- auto level-up — third row of the same column, and deliberately a
-           notch quieter than the two above it: those are doors, this is a
-           setting, and a setting that looked like a door would be pressed by
-           mistake. It used to ride the STAGE under the power crest, squeezed
-           into 24 px because that was the whole gap between the synergy badge
-           and the bottom name plates. Down here it is a control at a control's
-           size, it stops zooming with the sigil, and the switch it reads
-           (roster-wide) finally sits with the other roster-wide actions. -->
+      <!-- auto level-up — deliberately a notch quieter than the row above it:
+           that one is a door, this is a setting, and a setting that looked like
+           a door would be pressed by mistake. It stops zooming with the sigil,
+           and the switch it reads (roster-wide) sits with the other
+           roster-wide actions. -->
       <button
         class="sigil-action sigil-action--auto"
         :class="{ 'sigil-action--auto-on': autoLevelEnabled }"
@@ -610,10 +601,22 @@ watch(
   transition: none;
 }
 
+/* ── shop door ──
+   Mirror of the admin strip: same 26 px inset, other corner. Alone up here
+   because the atlas it opens is the only destination that covers the whole tab,
+   and it rises out of exactly this corner. */
+.sigil-door {
+  position: absolute;
+  top: 22px;
+  left: 26px;
+  z-index: 6;
+  /* never grow into the sigil on a board an open rail has squeezed */
+  max-width: calc(100% - 52px);
+}
+
 /* ── admin strip — muted red-brown so it never competes with the gold game
-   actions. Parked directly above the Shop button rather than at the top of the
-   board: the top edge is where announcements land, and a strip up there would
-   sit under the very banner its own button triggers. ── */
+   actions. Bottom left, under the shop door rather than beside it: the strip is
+   310-344 px wide and would take the door's whole line at Full HD. ── */
 .sigil-admin {
   position: absolute;
   bottom: 82px;
@@ -676,14 +679,11 @@ watch(
   background: #3c1e14;
 }
 
-/* ── board actions (shop / expedition) ──
+/* ── board actions (expedition / auto level) ──
    One column at the right edge — the edge the rail opens from, so the button
-   and the panel it summons sit on the same side. Stacked rather than side by
-   side because of the room: with a rail open the board is 340 px wide at Full
-   HD, which is one big button, not two. `align-items: stretch` gives both the
-   width of the longer label, so the two icons line up on a common left edge and
-   the pair reads as one block instead of two chips that happen to share a
-   column. */
+   and the panel it summons sit on the same side. `align-items: stretch` gives
+   both rows the width of the longer label, so the icons line up on a common
+   left edge and the pair reads as one block. */
 .sigil-actions {
   position: absolute;
   right: 26px;
@@ -740,10 +740,8 @@ watch(
 
 /* ── Open state ──
    The button whose rail is up stops being a thing to press and becomes the
-   label of what is on screen: warmer fill, gold outline, and a solid gold edge
-   on the RIGHT — the side the rail slides in from, so the two read as one
-   connected piece instead of two things that happen to be open at once.
-   It does not lift on hover any more either; there is nothing left to open. */
+   label of what is on screen: warmer fill, gold outline, no lift on hover.
+   The gold edge below belongs to the rail buttons alone. */
 .sigil-action--open {
   background: rgba(44, 28, 10, 0.95);
   border-color: #c89040;
@@ -757,9 +755,11 @@ watch(
 .sigil-action--open .sigil-action-icon {
   color: #f4d878;
 }
-/* Inset 6 px top and bottom so the bar stops short of the 5 px rounded corners
+/* Only the rail buttons: the edge marks the side the panel slides in from. The
+   shop has no rail — its atlas covers the board, door included.
+   Inset 6 px top and bottom so the bar stops short of the 5 px rounded corners
    instead of cutting across them — nothing clips it, it has to keep clear. */
-.sigil-action--open::after {
+.sigil-action--expedition.sigil-action--open::after {
   content: '';
   position: absolute;
   top: 6px;
@@ -772,9 +772,8 @@ watch(
 
 /* ── Compact: the board squeezed by an open rail ──
    340 px at Full HD. One step down keeps the column clear of the sigil's foot,
-   and the admin strip — 310 px wide on its own — moves above the column, since
-   at that width nothing fits beside it. Still well over the size these two
-   buttons had when they sat in the bottom corners. */
+   and the admin strip moves above the column, since at that width nothing fits
+   beside it. Applies to the shop door too — it carries the same base class. */
 .sigil-board--compact-actions .sigil-actions {
   gap: 10px;
 }
@@ -789,17 +788,17 @@ watch(
 }
 /* The admin strip is 310–344 px wide on its own, so on a squeezed board nothing
    fits beside the column — it has to clear it vertically instead. Measured with
-   the column's three rows: 166 px tall from bottom 22, i.e. its top edge at 188.
-   With a battle CTA holding the baseline the column starts 70 px higher again. */
+   the column's two remaining rows: 102 px tall from bottom 22, i.e. its top edge
+   at 124. With a battle CTA holding the baseline the column starts 70 px higher. */
 .sigil-board--compact-actions .sigil-admin {
-  bottom: 200px;
+  bottom: 136px;
 }
 .sigil-board--compact-actions:has(.brb, .btrb) .sigil-admin {
-  bottom: 270px;
+  bottom: 206px;
 }
 
-/* ── auto level-up — third row of the action column ──
-   It shares the column's frame so the three read as one block, and undercuts it
+/* ── auto level-up — second row of the action column ──
+   It shares the column's frame so the two read as one block, and undercuts it
    everywhere else so nobody mistakes a setting for a door: shorter, smaller
    type, smaller glyph, and the switch pushed out to the right edge where a
    switch belongs. On is the project's green, the same one that marks anything

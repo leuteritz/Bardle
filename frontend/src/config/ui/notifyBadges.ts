@@ -233,7 +233,7 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
       {
         file: 'components/bardProfil/team/sigil/SigilBoardComponent.vue',
         marker: '<RpgNotifyBadge',
-        where: 'Champion shop button on the sigil board',
+        where: 'Shop door at the top-left corner of the sigil board',
       },
       {
         file: 'components/bardProfil/team/championShop/ChampionShopCard.vue',

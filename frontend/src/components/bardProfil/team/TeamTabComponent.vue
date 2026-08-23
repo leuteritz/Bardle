@@ -796,18 +796,57 @@ onUnmounted(() => {
   min-height: 0;
   background: #111008;
 }
-/* Only the surface holds still; the content rises into it. A fade of the layer
-   itself would show the board through it for the length of the fade. */
+/* Only the surface holds still; the content grows into it out of the shop door's
+   own corner (26/22 in the board, plus half a button) — press and result read as
+   one gesture. A fade of the layer itself would show the board through it for the
+   length of the fade. opacity and transform were animated here before, so the
+   compositor layer is not a new cost. */
 .atlas-rise-enter-active .cs-atlas,
 .atlas-rise-leave-active .cs-atlas {
+  transform-origin: 72px 48px;
   transition:
-    opacity 0.22s ease-out,
-    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 0.24s ease-out,
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .atlas-rise-enter-from .cs-atlas,
 .atlas-rise-leave-to .cs-atlas {
   opacity: 0;
-  transform: translateY(10px);
+  transform: scale(0.965);
+}
+/* Direction, on a 2 px empty strip: the seam runs out of the same corner along
+   the top edge and fades once it is across. Opening only — closing is a cut. */
+.atlas-rise-enter-active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform-origin: left center;
+  background: linear-gradient(
+    to right,
+    #5c3310,
+    #c89040,
+    #e8c060,
+    #d4a020,
+    #c89040,
+    #5c3310
+  );
+  animation: atlas-seam 0.5s ease-out;
+}
+@keyframes atlas-seam {
+  0% {
+    transform: scaleX(0);
+    opacity: 1;
+  }
+  55% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
 }
 .atlas-rise-leave-active {
   transition: opacity 0.14s ease-in;
@@ -876,6 +915,10 @@ onUnmounted(() => {
   .atlas-rise-enter-from .cs-atlas,
   .atlas-rise-leave-to .cs-atlas {
     transform: none !important;
+  }
+  /* content: none, not animation: none — a frozen seam would just stand there */
+  .atlas-rise-enter-active::after {
+    content: none;
   }
 }
 </style>
