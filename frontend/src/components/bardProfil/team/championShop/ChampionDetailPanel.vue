@@ -1,5 +1,5 @@
 <template>
-  <aside class="cs-detail" :class="{ 'cs-detail--wide': wide }">
+  <aside class="cs-detail">
     <template v-if="detail">
       <!-- Clearing the subject leaves the overview card standing in this
            column; there is no list to go BACK to, it never went away. -->
@@ -30,7 +30,9 @@
         </div>
       </div>
 
-      <!-- Hero image -->
+      <!-- Hero — art plus the WHOLE identity: name, then tier, role, traits and
+           origin as one chip run directly under it. Split across the corners and
+           a section further down, "who is this" took four separate readings. -->
       <div class="cs-detail-hero">
         <img
           :src="detail.image"
@@ -38,115 +40,88 @@
           class="cs-detail-img rpg-img"
           :class="{ grayscale: detail.locked }"
         />
-        <div class="cs-detail-hero-fade"></div>
-        <div class="role-badge-pill" :style="{ background: detail.roleColor }">
-          {{ detail.roleLabel }}
-        </div>
-        <div class="tier-badge" :style="{ '--tier-c': detail.tierColor }">
-          ★{{ detail.starLevel }}
-        </div>
-        <div class="cs-detail-name">{{ detail.name }}</div>
-      </div>
-
-      <!-- Scrollable info body -->
-      <div class="cs-detail-body rpg-scrollbar">
-        <!-- Traits & Origin -->
-        <div class="cs-detail-section">
-          <div class="cs-detail-section-title">Traits &amp; Origin</div>
-          <div class="cs-detail-badges">
-            <div
+        <div class="cs-hero-foot">
+          <div class="cs-detail-name">{{ detail.name }}</div>
+          <div class="cs-hero-chips">
+            <span class="cs-hero-chip" :style="{ '--cc': detail.tierColor }">
+              ★{{ detail.starLevel }} {{ detail.tierName }}
+            </span>
+            <span class="cs-hero-chip cs-hero-chip--role" :style="{ '--cc': detail.roleColor }">
+              {{ detail.roleLabel }}
+            </span>
+            <span
               v-for="trait in detail.traits"
               :key="trait.id"
-              class="card-trait-badge"
-              :style="{ '--tc': trait.color }"
+              class="cs-hero-chip"
+              :style="{ '--cc': trait.color }"
             >
-              <Icon :icon="trait.icon" class="card-trait-icon" />
-              <span>{{ trait.name }}</span>
-            </div>
-            <div
+              <Icon :icon="trait.icon" class="cs-hero-chip-icon" />
+              {{ trait.name }}
+            </span>
+            <!-- Runeterra carries no synergy entry, so the origin can be absent -->
+            <span
               v-if="detail.origin"
-              class="card-trait-badge"
-              :style="{ '--tc': detail.origin.color }"
+              class="cs-hero-chip"
+              :style="{ '--cc': detail.origin.color }"
             >
-              <Icon :icon="detail.origin.icon" class="card-trait-icon" />
-              <span>{{ detail.origin.origin }}</span>
-            </div>
+              <Icon :icon="detail.origin.icon" class="cs-hero-chip-icon" />
+              {{ detail.origin.origin }}
+            </span>
           </div>
         </div>
+      </div>
 
-        <!-- Champion Tier -->
-        <div class="cs-detail-section">
-          <div class="cs-detail-section-title">Champion Tier</div>
-          <div class="cs-detail-tier-card" :style="{ '--tier-c': detail.tierColor }">
-            <div class="cs-detail-tier-head">
-              <Icon :icon="detail.tierIcon" width="18" height="18" class="cs-detail-tier-icon" />
-              <span class="cs-detail-tier-name">★{{ detail.starLevel }} {{ detail.tierName }}</span>
-              <span
-                class="cs-tier-chance"
-                :class="{ 'is-locked': detail.spawnPercent == null }"
-                title="This tier's current spawn chance"
-              >
-                {{ detail.spawnPercent != null ? detail.spawnPercent + '%' : 'Locked' }}
-              </span>
-            </div>
-            <p class="cs-detail-tier-desc">{{ detail.tierDescription }}</p>
-          </div>
+      <!-- Info body. It never scrolls: it asks for the height it needs and the
+           hero above takes whatever is left. -->
+      <div class="cs-detail-body">
+        <!-- Tier — its name and stars ride in the hero chip, so what stands here
+             is only what does not fit up there. -->
+        <div class="cs-block" :style="{ '--ac': detail.tierColor }">
+          <Icon :icon="detail.tierIcon" width="22" height="22" class="cs-block-icon" />
+          <p class="cs-block-text">{{ detail.tierDescription }}</p>
+          <span
+            class="cs-spawn"
+            :class="{ 'is-locked': detail.spawnPercent == null }"
+            title="This tier's current spawn chance"
+          >
+            {{ spawnLabel }}
+          </span>
         </div>
 
         <!-- Home planet — where the champion is FROM, and for a locked one its
-             single actionable fact: that planet has to fall first. Drawn with
-             the game's own planet renderer, so the player is looking at the
-             thing they have to find in orbit rather than at a word for it. The
-             block stays in both states and only its chip flips, so the panel
-             keeps one shape whether the champion is locked or recruitable. -->
-        <div v-if="detail.homePlanet" class="cs-detail-section cs-detail-section--full">
-          <div class="cs-detail-section-title">Home Planet</div>
-          <div class="cs-home">
-            <PlanetGlyph
-              :type="detail.homePlanet.type"
-              :size="SHOP_HOME_PLANET_GLYPH_SIZE"
-              class="cs-home-glyph"
-            />
-            <div class="cs-home-text">
-              <span class="cs-home-name">{{ detail.homePlanet.name }}</span>
-              <span class="cs-home-hint">
-                {{
-                  detail.locked
-                    ? detail.lockedHint
-                    : `${detail.name} hails from a ${detail.homePlanet.name}.`
-                }}
-              </span>
-              <span v-if="detail.locked" class="cs-home-step cs-home-step--locked">
-                <Icon
-                  icon="game-icons:planet-conquest"
-                  width="14"
-                  height="14"
-                  class="cs-home-step-icon"
-                />
-                Clear its boss in the orbit to bring {{ detail.name }} into the shop.
-              </span>
-              <span v-else class="cs-home-step cs-home-step--done">
-                <Icon
-                  icon="game-icons:planet-conquest"
-                  width="14"
-                  height="14"
-                  class="cs-home-step-icon"
-                />
-                Planet rescued — {{ detail.name }} can be recruited.
-              </span>
-            </div>
+             single actionable fact: that planet has to fall first. Drawn with the
+             game's own planet renderer, so the player is looking at the thing they
+             have to find in orbit rather than at a word for it. The block's left
+             edge carries the state, which is why the step line needs no box. -->
+        <div
+          v-if="detail.homePlanet"
+          class="cs-block cs-home"
+          :class="detail.locked ? 'cs-home--locked' : 'cs-home--done'"
+        >
+          <PlanetGlyph
+            :type="detail.homePlanet.type"
+            :size="SHOP_HOME_PLANET_GLYPH_SIZE"
+            class="cs-home-glyph"
+          />
+          <div class="cs-home-text">
+            <span class="cs-home-name">{{ detail.homePlanet.name }}</span>
+            <span class="cs-home-step">
+              <Icon
+                icon="game-icons:planet-conquest"
+                width="15"
+                height="15"
+                class="cs-home-step-icon"
+              />
+              {{ homeStepLabel }}
+            </span>
           </div>
         </div>
 
-        <!-- Cost breakdown — the widest block, so it takes the whole row in the
-             two-column wide layout. A locked champion shows it too: the price is
-             fixed, so the stock counters double as a farming target long before
-             the champion becomes buyable. -->
-        <div
-          class="cs-detail-section cs-detail-section--full"
-          :class="{ 'cs-detail-section--preview': detail.locked }"
-        >
-          <div class="cs-detail-section-title">
+        <!-- Cost breakdown. A locked champion shows it too: the price is fixed, so
+             the stock counters double as a farming target long before the champion
+             becomes buyable. -->
+        <div class="cs-cost" :class="{ 'cs-cost--preview': detail.locked }">
+          <div class="cs-cost-label">
             {{ detail.locked ? 'Recruit Cost · once unlocked' : 'Recruit Cost' }}
           </div>
           <div class="cs-detail-rows">
@@ -163,6 +138,7 @@
                 {{ formatNumber(mat.have) }} / {{ formatNumber(mat.need) }}
               </span>
               <span class="cs-mat-state">{{ mat.ok ? '✓' : '✕' }}</span>
+              <i class="cs-mat-fill" :style="fillStyle(mat.have, mat.need)"></i>
             </div>
             <div
               class="cs-mat-row"
@@ -178,6 +154,10 @@
                 {{ formatNumber(detail.chimes.have) }} / {{ formatNumber(detail.chimes.need) }}
               </span>
               <span class="cs-mat-state">{{ detail.chimes.ok ? '✓' : '✕' }}</span>
+              <i
+                class="cs-mat-fill"
+                :style="fillStyle(detail.chimes.have, detail.chimes.need)"
+              ></i>
             </div>
           </div>
         </div>
@@ -193,8 +173,8 @@
         >
           <!-- the locked button names the ONE thing that changes it -->
           <span v-if="detail.locked">
-            <Icon icon="lucide:lock" width="14" height="14" class="cs-buy-lock" />
-            Locked · Rescue {{ detail.homePlanet ? `a ${detail.homePlanet.name}` : 'its planet' }}
+            <Icon icon="lucide:lock" width="15" height="15" class="cs-buy-lock" />
+            {{ lockedButtonLabel }}
           </span>
           <span v-else-if="detail.canBuy">Recruit {{ detail.name }}</span>
           <span v-else>Missing Resources</span>
@@ -205,7 +185,12 @@
       <CosmicStageBackground />
       <div class="cs-detail-empty-content">
         <div class="cs-detail-empty-box">
-          <Icon icon="lucide:mouse-pointer-click" width="38" height="38" class="cs-detail-empty-icon" />
+          <Icon
+            icon="lucide:mouse-pointer-click"
+            width="38"
+            height="38"
+            class="cs-detail-empty-icon"
+          />
         </div>
         <span class="cs-detail-empty-title">Select a Card</span>
         <span class="cs-detail-empty-text">
@@ -217,7 +202,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import CosmicStageBackground from '../../../ui/CosmicStageBackground.vue'
 import PlanetGlyph from '../../../ui/PlanetGlyph.vue'
@@ -227,8 +212,9 @@ import type { ShopChampionDetail } from '@/types'
 
 /**
  * Right-hand detail panel of the Champion Shop — purely presentational.
- * Shows everything about the selected champion (traits, origin, tier, cost
- * breakdown) and hosts the only Recruit button plus prev/next navigation.
+ * Identity (name, tier, role, traits, origin) rides on the hero; below it the
+ * tier note, the home planet and the cost breakdown, then the only Recruit
+ * button plus prev/next navigation.
  */
 export default defineComponent({
   name: 'ChampionDetailPanel',
@@ -240,41 +226,56 @@ export default defineComponent({
     },
     index: { type: Number, default: -1 },
     total: { type: Number, default: 0 },
-    /**
-     * The panel fills the whole shop rail instead of standing as a column beside
-     * the grid: hero across the full width, info in two columns, a back button
-     * in the nav row. See the shop's detail layer.
-     */
+    /** Standing in the shop's own column rather than over it — shows Close. */
     wide: { type: Boolean, default: false },
   },
   emits: ['prev', 'next', 'buy', 'back'],
-  setup() {
-    return { formatNumber, SHOP_HOME_PLANET_GLYPH_SIZE }
+  setup(props) {
+    const spawnLabel = computed(() => {
+      const pct = props.detail?.spawnPercent
+      return pct != null ? `Spawn ${pct}%` : 'Spawn — locked'
+    })
+
+    const homeStepLabel = computed(() => {
+      const d = props.detail
+      if (!d) return ''
+      return d.locked
+        ? `Clear its boss in the orbit to bring ${d.name} into the shop.`
+        : `Planet rescued — ${d.name} can be recruited.`
+    })
+
+    const lockedButtonLabel = computed(() => {
+      const planet = props.detail?.homePlanet
+      return `Locked · Rescue ${planet ? `a ${planet.name}` : 'its planet'}`
+    })
+
+    const fillStyle = (have: number, need: number) => ({
+      transform: `scaleX(${need > 0 ? Math.min(1, have / need) : 1})`,
+    })
+
+    return {
+      formatNumber,
+      fillStyle,
+      spawnLabel,
+      homeStepLabel,
+      lockedButtonLabel,
+      SHOP_HOME_PLANET_GLYPH_SIZE,
+    }
   },
 })
 </script>
 
 <style scoped>
-/* ══ Champion detail panel (right column of the shop) ══ */
+/* ══ Champion detail panel (right column of the shop) ══
+   The column swaps subjects and is never a layer over the grid, so there is one
+   width and one set of rules — the old narrow variant had no caller left. */
 .cs-detail {
-  width: clamp(320px, 30%, 400px);
-  flex-shrink: 0;
+  width: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
   background: #14100a;
-  border-left: 3px solid #5c3310;
-}
-
-/* ══ Wide variant — the panel fills its column ══
-   Everything below is the same panel at a different width; only the rules
-   here change, so the two variants can never drift into two designs. The
-   body grid is auto-fit, so the same rule that gave the 900px rail two
-   columns gives the atlas column one — without a third variant. */
-.cs-detail--wide {
-  width: 100%;
-  flex: 1;
-  border-left: none;
 }
 
 /* ── Back + prev / next navigation ── */
@@ -283,22 +284,15 @@ export default defineComponent({
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 9px 12px;
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
   flex-shrink: 0;
 }
-/* narrow: the three step controls fill the row; wide: they group to the right
-   and leave the left end to the back button */
 .cs-detail-steps {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.cs-detail--wide .cs-detail-steps {
-  flex: 0 0 auto;
   gap: 10px;
 }
 .cs-back-btn {
@@ -344,7 +338,9 @@ export default defineComponent({
   font-weight: 900;
   line-height: 1;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 .cs-nav-btn:hover:not(:disabled) {
   background: #241a0c;
@@ -355,18 +351,26 @@ export default defineComponent({
   cursor: not-allowed;
 }
 .cs-nav-pos {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: #b89a5a;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ── Hero image ── */
+/* ── Hero ──
+   The one part of the panel that gains from extra room, so it is what absorbs
+   it: the body asks for the height it needs, the hero takes the rest. The vh
+   clamp that used to stand here guessed at that and was right on the reference
+   viewport only. */
 .cs-detail-hero {
   position: relative;
-  height: clamp(170px, 24vh, 250px);
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-height: 168px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   overflow: hidden;
   border-bottom: 2px solid #5c3310;
   background: #111008;
@@ -379,282 +383,146 @@ export default defineComponent({
   object-fit: cover;
   object-position: top;
 }
-.cs-detail-hero-fade {
-  position: absolute;
-  inset: 0;
+/* Bottom-anchored, with room for two chip rows reserved: stepping the list with
+   ←/→ then keeps the same window on the art instead of resizing it under every
+   champion that carries one trait more than the last.
+   The scrim belongs to the FOOT, not to the whole hero — a full-cover gradient
+   dimmed the splash everywhere and left barely a readable strip of art in the
+   narrow column. `padding-top` is its falloff zone. */
+.cs-hero-foot {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 122px;
+  padding: 36px 18px 14px;
   background: linear-gradient(
     to top,
-    rgba(17, 16, 8, 0.95) 0%,
-    rgba(17, 16, 8, 0.3) 45%,
+    rgba(13, 11, 6, 0.96) 0%,
+    rgba(13, 11, 6, 0.9) 52%,
+    rgba(13, 11, 6, 0.55) 78%,
     transparent 100%
   );
 }
 .cs-detail-name {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 8px;
-  font-size: 22px;
+  font-size: 34px;
   font-weight: 900;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.96);
-  text-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.9),
-    0 0 14px rgba(232, 192, 64, 0.25);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.97);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.92);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* Role pill (top-right) & tier badge (top-left) on the hero */
-.role-badge-pill {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 15;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  color: #111008;
-  padding: 3px 7px;
-  border-radius: 3px;
-  line-height: 1.2;
-  pointer-events: none;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
-}
-.tier-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 15;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  color: var(--tier-c);
-  background: rgba(0, 0, 0, 0.78);
-  border: 1px solid color-mix(in srgb, var(--tier-c) 70%, #111);
-  padding: 3px 7px;
-  border-radius: 3px;
-  line-height: 1.2;
-  pointer-events: none;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7), 0 0 8px color-mix(in srgb, var(--tier-c) 25%, transparent);
-}
-
-/* ── Scrollable info body ── */
-.cs-detail-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-/* Two columns at rail width — a single 900px-wide column of short sections
-   would leave most of the row empty and push the cost list below the fold.
-   The cost block (or the locked hint that replaces it) keeps the full row: its
-   rows are horizontal and read badly at half width. */
-.cs-detail--wide .cs-detail-body {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  align-content: start;
-  gap: 14px 20px;
-  padding: 16px 20px;
-}
-.cs-detail--wide .cs-detail-section--full {
-  grid-column: 1 / -1;
-}
-/* The hero is the one thing that gains from extra room — landscape splash art,
-   shown landscape — so it is what absorbs it. The body below is a fixed stack
-   (two info cards, the home planet, the cost list); on a 1440p or 4K desktop it
-   ends well above the footer, and every pixel the poster does NOT take is a gap
-   between the last cost row and the button. A vh-driven height hands that space
-   to the splash instead. */
-.cs-detail--wide .cs-detail-hero {
-  height: clamp(210px, 30vh, 460px);
-}
-/* Full HD is the flattest desktop viewport, and a locked champion carries the
-   most below the splash (home planet + cost preview) — the poster gives room
-   back there rather than pushing the cost list out of sight. */
-@media (max-height: 1100px) {
-  .cs-detail--wide .cs-detail-hero {
-    height: 208px;
-  }
-}
-.cs-detail--wide .cs-detail-name {
-  left: 18px;
-  right: 18px;
-  bottom: 12px;
-  font-size: 30px;
-}
-/* a 900px-wide button reads as a banner, not as a press */
-.cs-detail--wide .cs-buy-btn {
-  max-width: 420px;
-  margin: 0 auto;
-}
-.cs-detail-section-title {
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #b89a5a;
-  margin-bottom: 6px;
-}
-.cs-detail-badges {
+.cs-hero-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
 }
-.cs-detail-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-/* Trait/origin badges — same look as the former on-card badges */
-.card-trait-badge {
+/* Every chip carries its own scrim, so the run holds over a bright splash
+   without a plate behind the group. */
+.cs-hero-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 8px 4px 6px;
-  border-radius: var(--bp-radius);
-  background: rgba(10, 8, 4, 0.92);
-  border: 1px solid var(--tc, #7a4e20);
-  font-size: 0.72rem;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid var(--cc, #7a4e20);
+  color: color-mix(in srgb, var(--cc, #e8c040) 55%, #fff);
+  font-size: 12.5px;
   font-weight: 700;
-  line-height: 1;
-  color: color-mix(in srgb, var(--tc, #e8c040) 60%, #fff);
+  letter-spacing: 0.06em;
+  line-height: 1.25;
   text-transform: uppercase;
   white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.65),
-    0 0 6px color-mix(in srgb, var(--tc, #7a4e20) 30%, transparent);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
-.card-trait-icon {
-  width: 15px;
-  height: 15px;
+.cs-hero-chip-icon {
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
-  color: var(--tc, #e8c040);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+  color: var(--cc, #e8c040);
+}
+/* The role reads solid everywhere else in the shop, and the filled block anchors
+   the run. */
+.cs-hero-chip--role {
+  background: var(--cc);
+  border-color: var(--cc);
+  color: #111008;
+  font-weight: 900;
+  text-shadow: none;
 }
 
-/* Tier info card: tier-tinted frame + description */
-.cs-detail-tier-card {
-  background: #1c1c18;
-  border: 1px solid color-mix(in srgb, var(--tier-c, #7a4e20) 55%, #111);
-  border-radius: 4px;
-  padding: 8px 10px;
+/* ── Info body — never a scrollport ──
+   `clip` rather than `hidden`: hidden is a scrollport and can still be moved
+   programmatically, clip cannot. */
+.cs-detail-body {
+  flex: 0 0 auto;
+  overflow: clip;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-.cs-detail-tier-head {
+
+/* Blocks carry no headline: glyph, accent edge and content say what they are.
+   The edge is also where the state lives. */
+.cs-block {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 12px;
+  padding: 11px 13px 11px 15px;
+  border-radius: 4px;
+  background: #1a170f;
+  border: 1px solid #2a2318;
+  border-left: 3px solid var(--ac, #7a4e20);
 }
-.cs-detail-tier-icon {
-  color: var(--tier-c, #e8c040);
+.cs-block-icon {
   flex-shrink: 0;
+  color: var(--ac, #e8c040);
 }
-.cs-detail-tier-name {
+.cs-block-text {
   flex: 1;
+  min-width: 0;
   font-size: 13px;
-  font-weight: 800;
-  color: var(--tier-c, #e8c040);
+  line-height: 1.42;
+  color: #b0a184;
 }
-.cs-detail-tier-desc {
-  margin-top: 5px;
-  font-size: 11.5px;
-  line-height: 1.4;
-  color: #a89878;
-}
-/* Live spawn-chance pill: solid tier color when spawning, muted outline when locked */
-.cs-tier-chance {
+.cs-spawn {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.03em;
   color: #161208;
-  background: var(--tier-c, #e8c040);
-  padding: 1px 7px;
+  background: var(--ac, #e8c040);
+  padding: 3px 9px;
   border-radius: 4px;
   line-height: 1.5;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
-.cs-tier-chance.is-locked {
+.cs-spawn.is-locked {
   color: #b89a5a;
   background: transparent;
   border: 1px solid #5c3310;
 }
 
-/* Cost rows: one row per material + one for chimes */
-.cs-mat-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #1c1c18;
-  border: 1px solid color-mix(in srgb, var(--cost-c, #e8c040) 40%, transparent);
-  border-radius: 4px;
-  padding: 6px 9px;
+/* ── Home planet ──
+   Nothing animates: the glyph is the same renderer the orbit uses, and a shop
+   panel full of spinning planets is exactly the per-element repaint the orbit
+   cannot afford. */
+.cs-home--done {
+  --ac: #6ec040;
 }
-.cs-mat-row--missing {
-  border-color: rgba(204, 96, 80, 0.5);
-}
-.cs-mat-img {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-.cs-mat-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #d8d0bc;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.cs-mat-amount {
-  font-size: 12.5px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-.cs-mat-row--ok .cs-mat-amount {
-  color: var(--cost-c, #e8c040);
-}
-.cs-mat-row--missing .cs-mat-amount {
-  color: #cc6050;
-}
-.cs-mat-state {
-  width: 14px;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 900;
-  flex-shrink: 0;
-}
-.cs-mat-row--ok .cs-mat-state {
-  color: #6ec040;
-}
-.cs-mat-row--missing .cs-mat-state {
-  color: #cc6050;
-}
-
-/* ── Home planet (locked champions) ──
-   The planet is the subject here, so it gets the room a portrait would get and
-   the text sits beside it. Nothing animates: the glyph is the same renderer the
-   orbit uses, and a shop panel full of spinning planets is exactly the kind of
-   per-element repaint the orbit cannot afford. */
-.cs-home {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 4px;
-  background: #1c1c18;
-  border: 1px solid rgba(200, 164, 90, 0.18);
+.cs-home--locked {
+  --ac: #cc6050;
 }
 .cs-home-glyph {
+  flex-shrink: 0;
   /* the planet renderer paints its own light — a plain dark well behind it
      keeps the rings readable on the card */
   border-radius: 4px;
@@ -665,72 +533,143 @@ export default defineComponent({
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 .cs-home-name {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.03em;
   color: #e8c040;
 }
-.cs-home-hint {
-  font-size: 12px;
-  line-height: 1.45;
-  color: #a89878;
-}
-/* the one line that says what to DO about this planet — red while it still has
-   to be taken, green once it has been */
 .cs-home-step {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-  padding: 5px 8px;
-  border-radius: 4px;
-  font-size: 11.5px;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 12.5px;
   line-height: 1.35;
-}
-.cs-home-step--locked {
-  background: rgba(204, 96, 80, 0.08);
-  border: 1px solid rgba(204, 96, 80, 0.35);
-  color: #d8a49a;
-}
-.cs-home-step--locked .cs-home-step-icon {
-  color: #cc6050;
-}
-.cs-home-step--done {
-  background: rgba(82, 184, 48, 0.08);
-  border: 1px solid rgba(110, 192, 64, 0.35);
-  color: #a8d890;
-}
-.cs-home-step--done .cs-home-step-icon {
-  color: #6ec040;
+  color: var(--ac);
 }
 .cs-home-step-icon {
   flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--ac);
 }
 
+/* ── Cost ── */
+.cs-cost {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+/* The one label left standing: the locked state renames it, so the words carry
+   something the rows do not. */
+.cs-cost-label {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #b89a5a;
+}
 /* Cost the player cannot pay yet — same rows, one step quieter, so it reads as
    a target rather than as a transaction. */
-.cs-detail-section--preview .cs-detail-rows {
+.cs-cost--preview .cs-detail-rows {
   opacity: 0.72;
+}
+.cs-detail-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cs-mat-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1c1c18;
+  border: 1px solid color-mix(in srgb, var(--cost-c, #e8c040) 40%, transparent);
+  border-radius: 4px;
+  padding: 8px 11px;
+  overflow: hidden;
+}
+.cs-mat-row--missing {
+  border-color: rgba(204, 96, 80, 0.5);
+}
+.cs-mat-img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.cs-mat-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #d8d0bc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cs-mat-amount {
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cs-mat-row--ok .cs-mat-amount {
+  color: var(--cost-c, #e8c040);
+}
+.cs-mat-row--missing .cs-mat-amount {
+  color: #cc6050;
+}
+.cs-mat-state {
+  width: 15px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+.cs-mat-row--ok .cs-mat-state {
+  color: #6ec040;
+}
+.cs-mat-row--missing .cs-mat-state {
+  color: #cc6050;
+}
+/* How far the stock has come. scaleX, not width — the value moves when the store
+   moves, and a width would relayout the row on every tick. */
+.cs-mat-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  transform-origin: left center;
+  background: var(--cost-c, #e8c040);
+  opacity: 0.75;
+  transition: transform 0.25s ease-out;
+}
+.cs-mat-row--missing .cs-mat-fill {
+  background: #cc6050;
 }
 
 /* Buy footer */
 .cs-detail-footer {
-  padding: 10px 12px 12px;
+  padding: 12px 18px 14px;
   border-top: 2px solid #3e200a;
   background: #16120a;
   flex-shrink: 0;
 }
+/* a full-column button reads as a banner, not as a press */
 .cs-buy-btn {
   width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 11px 12px;
-  font-size: 14px;
+  padding: 13px 14px;
+  font-size: 15px;
   font-weight: 900;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -817,7 +756,9 @@ export default defineComponent({
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
 @keyframes cs-empty-tap {
-  0%, 78%, 100% {
+  0%,
+  78%,
+  100% {
     transform: translate(0, 0) scale(1);
     filter: drop-shadow(0 0 0 rgba(232, 192, 64, 0));
   }
@@ -836,16 +777,23 @@ export default defineComponent({
   }
 }
 
-/* Compact layout on flatter viewports (Full HD) */
+/* Compact layout on flatter viewports (Full HD). The hero height is NOT here —
+   that one settles itself, see .cs-detail-hero. */
 @media (max-height: 1100px) {
-  .cs-detail-hero {
-    height: clamp(150px, 20vh, 200px);
+  .cs-detail-name {
+    font-size: 30px;
+  }
+  .cs-hero-foot {
+    min-height: 110px;
+    gap: 7px;
+    padding: 32px 16px 12px;
   }
   .cs-detail-body {
-    gap: 11px;
+    gap: 10px;
+    padding: 13px 16px;
   }
-  .cs-detail-name {
-    font-size: 19px;
+  .cs-block {
+    padding: 9px 12px 9px 14px;
   }
 }
 </style>

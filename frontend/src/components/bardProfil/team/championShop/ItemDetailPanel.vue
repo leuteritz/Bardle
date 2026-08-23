@@ -1,5 +1,5 @@
 <template>
-  <aside class="cs-detail" :class="{ 'cs-detail--wide': wide }">
+  <aside class="cs-detail">
     <!-- Clearing the subject leaves the overview card standing in this
          column; prev/next walk the same list the cards are drawn from. -->
     <div class="cs-detail-nav">
@@ -29,7 +29,9 @@
       </div>
     </div>
 
-    <!-- Hero: item icon on a rarity-tinted stage -->
+    <!-- Hero — the icon on a rarity-tinted stage, and the whole identity below
+         the name as one chip run. Mirrors ChampionDetailPanel: rarity and
+         category used to sit in the corners, split apart from the name. -->
     <div class="cs-detail-hero" :style="{ '--rar-c': detail.rarityColor }">
       <div class="hero-stage">
         <img
@@ -40,64 +42,66 @@
         />
         <Icon v-else :icon="detail.icon" class="hero-icon-gi" />
       </div>
-      <div class="cs-detail-hero-fade"></div>
-      <div class="cat-pill" :style="{ background: detail.categoryColor }">
-        <img :src="detail.categoryImage" :alt="detail.categoryLabel" class="cat-pill-img" />
-        {{ detail.categoryLabel }}
-      </div>
-      <div class="rarity-pill">{{ detail.rarityLabel }}</div>
-      <div class="cs-detail-name">{{ detail.name }}</div>
-    </div>
-
-    <!-- Scrollable info body -->
-    <div class="cs-detail-body rpg-scrollbar">
-      <!-- Effect -->
-      <div class="cs-detail-section">
-        <div class="cs-detail-section-title">Effect</div>
-        <div class="effect-card" :style="{ '--rar-c': detail.rarityColor }">
-          <p class="effect-desc">{{ detail.description }}</p>
-        </div>
-      </div>
-
-      <!-- Set bonus -->
-      <div v-if="detail.set" class="cs-detail-section">
-        <div class="cs-detail-section-title">Set Bonus</div>
-        <div class="set-card" :class="{ 'set-card--active': detail.set.active }">
-          <div class="set-card-head">
-            <Icon
-              v-if="detail.set.icon.includes(':')"
-              :icon="detail.set.icon"
-              width="18"
-              height="18"
-              class="set-card-icon"
-            />
-            <img v-else :src="detail.set.icon" :alt="detail.set.name" class="set-card-img rpg-img" />
-            <span class="set-card-name">{{ detail.set.name }}</span>
-            <span v-if="detail.set.active" class="set-card-badge">ACTIVE</span>
-          </div>
-          <p class="set-card-desc">{{ detail.set.description }}</p>
-          <p v-if="!detail.set.active" class="set-card-hint">
-            Equip weapon, armor and artefact of this set on one role to activate.
-          </p>
-        </div>
-      </div>
-
-      <!-- Owned -->
-      <div class="cs-detail-section">
-        <div class="cs-detail-section-title">Owned</div>
-        <div class="owned-row">
-          <Icon icon="game-icons:knapsack" width="17" height="17" class="owned-row-icon" />
-          <span class="owned-row-label">In inventory</span>
-          <span class="owned-row-count" :class="{ 'owned-row-count--none': detail.ownedCount === 0 }">
-            ×{{ detail.ownedCount }}
+      <div class="cs-hero-foot">
+        <div class="cs-detail-name">{{ detail.name }}</div>
+        <div class="cs-hero-chips">
+          <span class="cs-hero-chip" :style="{ '--cc': detail.rarityColor }">
+            {{ detail.rarityLabel }}
+          </span>
+          <span
+            class="cs-hero-chip cs-hero-chip--solid"
+            :style="{ '--cc': detail.categoryColor }"
+          >
+            <img :src="detail.categoryImage" :alt="detail.categoryLabel" class="cs-hero-chip-img" />
+            {{ detail.categoryLabel }}
           </span>
         </div>
       </div>
+    </div>
 
-      <!-- Cost breakdown — same rows as the champion recruit cost; the widest
-           block, so it takes the whole row in the two-column wide layout -->
-      <div class="cs-detail-section cs-detail-section--full">
-        <div class="cs-detail-section-title">Purchase Cost</div>
+    <!-- Info body. It never scrolls: it asks for the height it needs and the
+         hero above takes whatever is left. -->
+    <div class="cs-detail-body">
+      <!-- Effect — the item's whole point, so it carries no headline; the
+           rarity edge and the green reading are what mark it. -->
+      <div class="cs-block cs-block--stack" :style="{ '--ac': detail.rarityColor }">
+        <p class="effect-desc">{{ detail.description }}</p>
+      </div>
+
+      <!-- Set bonus -->
+      <div
+        v-if="detail.set"
+        class="cs-block cs-block--stack set-card"
+        :class="{ 'set-card--active': detail.set.active }"
+      >
+        <div class="set-card-head">
+          <Icon
+            v-if="detail.set.icon.includes(':')"
+            :icon="detail.set.icon"
+            width="20"
+            height="20"
+            class="set-card-icon"
+          />
+          <img v-else :src="detail.set.icon" :alt="detail.set.name" class="set-card-img rpg-img" />
+          <span class="set-card-name">{{ detail.set.name }}</span>
+          <span v-if="detail.set.active" class="set-card-badge">Active</span>
+        </div>
+        <p class="set-card-desc">{{ detail.set.description }}</p>
+        <p v-if="!detail.set.active" class="set-card-hint">
+          Equip weapon, armor and artefact of this set on one role to activate.
+        </p>
+      </div>
+
+      <!-- Cost breakdown. The stock count rides in the label row: what the
+           player owns and what it costs are the same question. -->
+      <div class="cs-cost">
+        <div class="cs-cost-label">
+          <span>Purchase Cost</span>
+          <span class="cs-owned" :class="{ 'cs-owned--none': detail.ownedCount === 0 }">
+            <Icon icon="game-icons:knapsack" width="16" height="16" class="cs-owned-icon" />
+            In inventory ×{{ detail.ownedCount }}
+          </span>
+        </div>
         <div class="cs-detail-rows">
           <div
             v-for="mat in detail.materials"
@@ -112,6 +116,7 @@
               {{ formatNumber(mat.have) }} / {{ formatNumber(mat.need) }}
             </span>
             <span class="cs-mat-state">{{ mat.ok ? '✓' : '✕' }}</span>
+            <i class="cs-mat-fill" :style="fillStyle(mat.have, mat.need)"></i>
           </div>
           <div
             class="cs-mat-row"
@@ -127,6 +132,10 @@
               {{ formatNumber(detail.chimes.have) }} / {{ formatNumber(detail.chimes.need) }}
             </span>
             <span class="cs-mat-state">{{ detail.chimes.ok ? '✓' : '✕' }}</span>
+            <i
+              class="cs-mat-fill"
+              :style="fillStyle(detail.chimes.have, detail.chimes.need)"
+            ></i>
           </div>
         </div>
       </div>
@@ -155,8 +164,8 @@ import type { ShopItemDetail } from '@/types'
 
 /**
  * Right-hand detail panel of the unified shop for items — purely presentational.
- * Mirrors ChampionDetailPanel: effect, set bonus, owned count, cost breakdown,
- * plus the only Buy button and shared prev/next navigation.
+ * Mirrors ChampionDetailPanel: identity on the hero, then effect, set bonus and
+ * cost breakdown, plus the only Buy button and shared prev/next navigation.
  */
 export default defineComponent({
   name: 'ItemDetailPanel',
@@ -168,33 +177,30 @@ export default defineComponent({
     },
     index: { type: Number, default: -1 },
     total: { type: Number, default: 0 },
-    /** Fills its column edge to edge — see ChampionDetailPanel's `wide`. */
+    /** Standing in the shop's own column rather than over it — shows Close. */
     wide: { type: Boolean, default: false },
   },
   emits: ['prev', 'next', 'buy', 'back'],
   setup() {
-    return { formatNumber }
+    const fillStyle = (have: number, need: number) => ({
+      transform: `scaleX(${need > 0 ? Math.min(1, have / need) : 1})`,
+    })
+    return { formatNumber, fillStyle }
   },
 })
 </script>
 
 <style scoped>
-/* ══ Item detail panel — same frame metrics as ChampionDetailPanel ══ */
+/* ══ Item detail panel — same frame metrics as ChampionDetailPanel ══
+   The two files share every skeleton rule below; a change to one belongs in the
+   other in the same breath. */
 .cs-detail {
-  width: clamp(320px, 30%, 400px);
-  flex-shrink: 0;
+  width: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
   background: #14100a;
-  border-left: 3px solid #5c3310;
-}
-
-/* ══ Wide variant — the panel IS the rail (mirrors ChampionDetailPanel) ══ */
-.cs-detail--wide {
-  width: 100%;
-  flex: 1;
-  border-left: none;
 }
 
 /* ── Back + prev / next navigation ── */
@@ -203,20 +209,15 @@ export default defineComponent({
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 9px 12px;
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
   flex-shrink: 0;
 }
 .cs-detail-steps {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.cs-detail--wide .cs-detail-steps {
-  flex: 0 0 auto;
   gap: 10px;
 }
 .cs-back-btn {
@@ -262,7 +263,9 @@ export default defineComponent({
   font-weight: 900;
   line-height: 1;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 .cs-nav-btn:hover:not(:disabled) {
   background: #241a0c;
@@ -273,18 +276,23 @@ export default defineComponent({
   cursor: not-allowed;
 }
 .cs-nav-pos {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
   color: #b89a5a;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ── Hero: rarity-tinted icon stage ── */
+/* ── Hero: rarity-tinted icon stage ──
+   Flexible, like the champion panel's: the body asks for the height it needs
+   and the stage takes the rest. */
 .cs-detail-hero {
   position: relative;
-  height: clamp(170px, 24vh, 250px);
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-height: 168px;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border-bottom: 2px solid #5c3310;
   background:
@@ -296,266 +304,257 @@ export default defineComponent({
     #111008;
 }
 .hero-stage {
-  position: absolute;
-  inset: 0 0 34px;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 14px;
 }
+/* The stage is what absorbs the panel's spare height, so the icon grows into it
+   instead of floating in the middle of an empty plate. 200px is the ceiling:
+   the art files are the -256 variant, and past 220 they would need the
+   original — see the resolution steps in CLAUDE.md. */
 .hero-icon-img {
-  width: clamp(88px, 14vh, 128px);
-  height: clamp(88px, 14vh, 128px);
+  width: auto;
+  height: min(100%, 200px);
+  max-width: 100%;
   object-fit: contain;
   filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.8));
 }
 .hero-icon-gi {
-  width: clamp(80px, 12vh, 112px);
-  height: clamp(80px, 12vh, 112px);
+  width: auto;
+  height: min(100%, 176px);
+  aspect-ratio: 1;
+  max-width: 100%;
   color: var(--rar-c, #c89040);
   filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.8));
 }
-.cs-detail-hero-fade {
-  position: absolute;
-  inset: 0;
+/* Bottom-anchored with room for one chip row reserved, so stepping the list
+   with ←/→ keeps the same window on the stage. The scrim belongs to the FOOT,
+   not to the whole hero — see ChampionDetailPanel. */
+.cs-hero-foot {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 88px;
+  padding: 36px 18px 14px;
   background: linear-gradient(
     to top,
-    rgba(17, 16, 8, 0.95) 0%,
-    rgba(17, 16, 8, 0.3) 45%,
+    rgba(13, 11, 6, 0.96) 0%,
+    rgba(13, 11, 6, 0.9) 52%,
+    rgba(13, 11, 6, 0.55) 78%,
     transparent 100%
   );
 }
 .cs-detail-name {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 8px;
-  font-size: 22px;
+  font-size: 34px;
   font-weight: 900;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.96);
-  text-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.9),
-    0 0 14px rgba(232, 192, 64, 0.25);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.97);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.92);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* Category pill (top-right) & rarity pill (top-left) on the hero */
-.cat-pill {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 15;
+.cs-hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.cs-hero-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #111008;
-  padding: 3px 7px;
-  border-radius: 3px;
-  line-height: 1.2;
-  pointer-events: none;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7);
-}
-.cat-pill-img {
-  width: 14px;
-  height: 14px;
-  object-fit: contain;
-}
-.rarity-pill {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 15;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rar-c, #e8c040);
-  background: rgba(0, 0, 0, 0.78);
-  border: 1px solid color-mix(in srgb, var(--rar-c, #e8c040) 70%, #111);
-  padding: 3px 7px;
-  border-radius: 3px;
-  line-height: 1.2;
-  pointer-events: none;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.7), 0 0 8px color-mix(in srgb, var(--rar-c, #e8c040) 25%, transparent);
-}
-
-/* ── Scrollable info body ── */
-.cs-detail-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-/* Two columns at rail width — see ChampionDetailPanel for the reasoning. */
-.cs-detail--wide .cs-detail-body {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  align-content: start;
-  gap: 16px 20px;
-  padding: 18px 20px;
-}
-.cs-detail--wide .cs-detail-section--full {
-  grid-column: 1 / -1;
-}
-.cs-detail--wide .cs-detail-hero {
-  height: clamp(210px, 27vh, 330px);
-}
-.cs-detail--wide .cs-detail-name {
-  left: 18px;
-  right: 18px;
-  bottom: 12px;
-  font-size: 30px;
-}
-.cs-detail--wide .cs-buy-btn {
-  max-width: 420px;
-  margin: 0 auto;
-}
-.cs-detail-section-title {
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #b89a5a;
-  margin-bottom: 6px;
-}
-.cs-detail-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-/* Effect card — rarity-tinted frame like the champion tier card */
-.effect-card {
-  background: #1c1c18;
-  border: 1px solid color-mix(in srgb, var(--rar-c, #7a4e20) 55%, #111);
+  gap: 6px;
+  padding: 4px 9px;
   border-radius: 4px;
-  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid var(--cc, #7a4e20);
+  color: color-mix(in srgb, var(--cc, #e8c040) 55%, #fff);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.cs-hero-chip-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+/* The category reads solid on the grid cards too, and the filled block anchors
+   the run — same role the champion panel gives its role chip. */
+.cs-hero-chip--solid {
+  background: var(--cc);
+  border-color: var(--cc);
+  color: #111008;
+  font-weight: 900;
+  text-shadow: none;
+}
+
+/* ── Info body — never a scrollport ──
+   `clip` rather than `hidden`: hidden is a scrollport and can still be moved
+   programmatically, clip cannot. */
+.cs-detail-body {
+  flex: 0 0 auto;
+  overflow: clip;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Blocks carry no headline: the accent edge and the content say what they are. */
+.cs-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px 11px 15px;
+  border-radius: 4px;
+  background: #1a170f;
+  border: 1px solid #2a2318;
+  border-left: 3px solid var(--ac, #7a4e20);
+}
+.cs-block--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
 }
 .effect-desc {
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.45;
   color: #b8e0a0;
 }
 
-/* Set bonus card */
+/* Set bonus */
 .set-card {
-  background: #1c1c18;
-  border: 1px solid #5c3310;
-  border-radius: 4px;
-  padding: 8px 10px;
+  --ac: #5c3310;
 }
 .set-card--active {
-  border-color: rgba(232, 192, 64, 0.55);
+  --ac: #e8c040;
   box-shadow: inset 0 0 14px rgba(232, 192, 64, 0.08);
 }
 .set-card-head {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
 }
 .set-card-icon {
   color: #e8c040;
   flex-shrink: 0;
 }
 .set-card-img {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
   flex-shrink: 0;
 }
 .set-card-name {
   flex: 1;
-  font-size: 13px;
+  min-width: 0;
+  font-size: 14.5px;
   font-weight: 800;
   color: #e8c040;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .set-card-badge {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: #e8c040;
   background: rgba(232, 192, 64, 0.15);
   border: 1px solid rgba(232, 192, 64, 0.3);
   border-radius: 4px;
-  padding: 1px 6px;
-  line-height: 1.5;
+  padding: 2px 7px;
+  line-height: 1.4;
 }
 .set-card-desc {
-  margin-top: 5px;
-  font-size: 11.5px;
-  line-height: 1.4;
-  color: #a89878;
+  font-size: 13px;
+  line-height: 1.42;
+  color: #b0a184;
 }
 .set-card-hint {
-  margin-top: 4px;
-  font-size: 10.5px;
+  font-size: 12px;
   line-height: 1.4;
   color: #7a6f58;
 }
 
-/* Owned row */
-.owned-row {
+/* ── Cost ── */
+.cs-cost {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+/* The stock count rides in the label row — what the player owns and what it
+   costs answer the same question, and a row of its own cost a block. */
+.cs-cost-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #1c1c18;
-  border: 1px solid #3a3226;
-  border-radius: 4px;
-  padding: 6px 9px;
-}
-.owned-row-icon {
-  color: #c89040;
-  flex-shrink: 0;
-}
-.owned-row-label {
-  flex: 1;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #d8d0bc;
-}
-.owned-row-count {
-  font-size: 12.5px;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11.5px;
   font-weight: 800;
-  color: #52b830;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #b89a5a;
 }
-.owned-row-count--none {
+.cs-owned {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  letter-spacing: 0.06em;
+  color: #6ec040;
+  font-variant-numeric: tabular-nums;
+}
+.cs-owned--none {
   color: #7a6f58;
 }
-
-/* Cost rows: identical look to the champion recruit cost */
+.cs-owned-icon {
+  flex-shrink: 0;
+  color: #c89040;
+}
+.cs-detail-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .cs-mat-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   background: #1c1c18;
   border: 1px solid color-mix(in srgb, var(--cost-c, #e8c040) 40%, transparent);
   border-radius: 4px;
-  padding: 6px 9px;
+  padding: 8px 11px;
+  overflow: hidden;
 }
 .cs-mat-row--missing {
   border-color: rgba(204, 96, 80, 0.5);
 }
 .cs-mat-img {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
   flex-shrink: 0;
 }
 .cs-mat-name {
   flex: 1;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 700;
   color: #d8d0bc;
   overflow: hidden;
@@ -563,9 +562,10 @@ export default defineComponent({
   white-space: nowrap;
 }
 .cs-mat-amount {
-  font-size: 12.5px;
+  font-size: 15px;
   font-weight: 800;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .cs-mat-row--ok .cs-mat-amount {
   color: var(--cost-c, #e8c040);
@@ -574,9 +574,9 @@ export default defineComponent({
   color: #cc6050;
 }
 .cs-mat-state {
-  width: 14px;
+  width: 15px;
   text-align: center;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 900;
   flex-shrink: 0;
 }
@@ -586,22 +586,41 @@ export default defineComponent({
 .cs-mat-row--missing .cs-mat-state {
   color: #cc6050;
 }
+/* How far the stock has come. scaleX, not width — the value moves when the store
+   moves, and a width would relayout the row on every tick. */
+.cs-mat-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  transform-origin: left center;
+  background: var(--cost-c, #e8c040);
+  opacity: 0.75;
+  transition: transform 0.25s ease-out;
+}
+.cs-mat-row--missing .cs-mat-fill {
+  background: #cc6050;
+}
 
 /* Buy footer */
 .cs-detail-footer {
-  padding: 10px 12px 12px;
+  padding: 12px 18px 14px;
   border-top: 2px solid #3e200a;
   background: #16120a;
   flex-shrink: 0;
 }
+/* a full-column button reads as a banner, not as a press */
 .cs-buy-btn {
   width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 11px 12px;
-  font-size: 14px;
+  padding: 13px 14px;
+  font-size: 15px;
   font-weight: 900;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -624,16 +643,23 @@ export default defineComponent({
   filter: brightness(1.12);
 }
 
-/* Compact layout on flatter viewports (Full HD) */
+/* Compact layout on flatter viewports (Full HD). The hero height is NOT here —
+   that one settles itself, see .cs-detail-hero. */
 @media (max-height: 1100px) {
-  .cs-detail-hero {
-    height: clamp(150px, 20vh, 200px);
+  .cs-detail-name {
+    font-size: 30px;
+  }
+  .cs-hero-foot {
+    min-height: 80px;
+    gap: 7px;
+    padding: 32px 16px 12px;
   }
   .cs-detail-body {
-    gap: 11px;
+    gap: 10px;
+    padding: 13px 16px;
   }
-  .cs-detail-name {
-    font-size: 19px;
+  .cs-block {
+    padding: 9px 12px 9px 14px;
   }
 }
 </style>
