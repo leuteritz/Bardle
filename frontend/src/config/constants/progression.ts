@@ -2,13 +2,13 @@
 // Meeps, Fähigkeiten-Stufen, Universen (Prestige), Galaxien und die
 // Abschnitts-Freischaltung.
 
-// Leveling formula: 2500 * level^2.2
-export const LEVEL_BASE = 2500
-export const LEVEL_EXPONENT = 2.2
+// Leveling formula: 25000 * level^3.2
+export const LEVEL_BASE = 25_000
+export const LEVEL_EXPONENT = 3.2
 // Above LEVEL_SCALING_THRESHOLD: cost *= LEVEL_SCALING_FACTOR^(level - threshold)
 // Threshold at 30 (not 200) so exponential braking keeps up with multiplicative augment CPS stacking.
 export const LEVEL_SCALING_THRESHOLD = 30
-export const LEVEL_SCALING_FACTOR = 1.1
+export const LEVEL_SCALING_FACTOR = 1.15
 
 /**
  * Der Wert, gegen den die Exponentialbremse läuft — ausgedrückt als Level.
@@ -18,28 +18,33 @@ export const LEVEL_SCALING_FACTOR = 1.1
  * threshold`. Ein harter Deckel wäre eine Klippe in den Stufenkosten (die
  * Stufe dahinter kostete ein Fünftel der davor); so gibt es keinen Sprung.
  *
- * Ohne diesen Deckel ist die Bremse der ganze Berg: bei Level 200 steuert die
- * Potenz `L^2,2` eine Differenz von 3,2e6 bei, `1,1^170` dagegen 1,1e7 — die
- * Schwelle wächst also mit `1,1^L`, während CPS bestenfalls ebenso schnell
- * wächst (über gestapelte Augments, denn Gebäude skalieren nur logarithmisch
- * mit den Ausgaben). Zwei gleich schnelle Kurven, von denen eine multiplikativ
- * vorne liegt, laufen auseinander: gemessen über 24 Spielstunden stand das
- * Bard-Level nach 40 Minuten und brauchte bei Level 217 rechnerisch 28
- * Spieljahre für die nächste Stufe.
+ * Ohne diesen Deckel ist die Bremse der ganze Berg: die Schwelle wüchse mit
+ * `LEVEL_SCALING_FACTOR^L`, während CPS bestenfalls ebenso schnell wächst (über
+ * gestapelte Augments, denn Gebäude skalieren nur logarithmisch mit den
+ * Ausgaben). Zwei gleich schnelle Kurven, von denen eine multiplikativ vorne
+ * liegt, laufen auseinander: gemessen über 24 Spielstunden stand das Bard-Level
+ * nach 40 Minuten und brauchte bei Level 217 rechnerisch 28 Spieljahre für die
+ * nächste Stufe.
  *
  * Oberhalb des Deckels wächst die Schwelle nur noch polynomial. Damit kann die
  * Wirtschaft wieder aufschliessen und Level fallen spät erneut — statt gar
  * nicht mehr. 100 liegt bewusst hinter allem, was der Level FREISCHALTET
- * (Fähigkeitsränge sind bei 65 fertig, Skillpunkte verfallen ab 40): der
+ * (Fähigkeitsränge sind bei 27 fertig, Skillpunkte verfallen ab 21): der
  * gebremste Bereich deckt die ganze Freischaltkurve ab, der freie dahinter ist
  * reiner Zahlenlauf.
- *
- * Der Preis dafür — häufigere Level und damit häufigere Augment-Wahl — wird
- * nicht in Kauf genommen, sondern getrennt bezahlt: `AUGMENT_LEVEL_INTERVAL`
- * entkoppelt die Auswahl vom einzelnen Level-Up. Ohne diese zweite Änderung
- * dreht der Deckel genau die Entscheidung um, die die Bremse begründet hat.
  */
 export const LEVEL_SCALING_CAP_LEVEL = 100
+
+/**
+ * Alle wie viel Level ein Skillpunkt fällt. Ein Universum darf ihn über
+ * `ModifierEffects.skillPointInterval` überschreiben.
+ *
+ * Stand als nacktes `?? 2` an zwei Enden des gameStore. Seit die Levelkurve
+ * jede Stufe um Grössenordnungen teurer macht, fällt der Punkt bei jedem
+ * Level: die 20 Punkte für vier Fähigkeiten auf Höchststufe sind sonst später
+ * beisammen als der ganze übrige Freischaltbaum.
+ */
+export const SKILL_POINT_LEVEL_INTERVAL = 1
 
 /**
  * Was ein Universums-Durchlauf an Meeps einbringt:

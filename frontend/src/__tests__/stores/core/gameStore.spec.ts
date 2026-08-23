@@ -26,22 +26,29 @@ describe('gameStore', () => {
       expect(store.chimesAtLevelStart).toBe(0)
     })
 
-    it('level=2 → 2500 (ceil(2500 * 1^2.2))', () => {
+    // Gegen die Formel gerechnet, nicht gegen abgeschriebene Zahlen — aus
+    // demselben Grund wie bei `MEEP_POWER_MULTIPLIER` weiter unten: `LEVEL_BASE`
+    // und `LEVEL_EXPONENT` sind Balance-Grössen und schon einmal nachgezogen
+    // worden. Ein Literal hiesse, dass jede Eichung drei Fehlschläge produziert,
+    // die nichts aussagen.
+    it('level=2 → die Schwelle der ersten Stufe', () => {
       const store = useGameStore()
       store.level = 2
-      expect(store.chimesAtLevelStart).toBe(2500)
+      expect(store.chimesAtLevelStart).toBe(LEVEL_BASE)
+      expect(store.chimesAtLevelStart).toBe(chimeThresholdForLevel(1))
     })
 
-    it('level=3 → 11487 (ceil(2500 * 2^2.2))', () => {
+    it('level=3 → die Schwelle der zweiten Stufe', () => {
       const store = useGameStore()
       store.level = 3
-      expect(store.chimesAtLevelStart).toBe(11487)
+      expect(store.chimesAtLevelStart).toBe(Math.ceil(LEVEL_BASE * Math.pow(2, LEVEL_EXPONENT)))
     })
 
-    it('level=11 → 396224 (ceil(2500 * 10^2.2))', () => {
+    it('level=11 → die Schwelle der zehnten Stufe, noch ungebremst', () => {
       const store = useGameStore()
       store.level = 11
-      expect(store.chimesAtLevelStart).toBe(396224)
+      // 10 liegt unter LEVEL_SCALING_THRESHOLD, hier greift die Bremse nicht.
+      expect(store.chimesAtLevelStart).toBe(Math.ceil(LEVEL_BASE * Math.pow(10, LEVEL_EXPONENT)))
     })
   })
 
@@ -66,8 +73,7 @@ describe('gameStore', () => {
       const store = useGameStore()
       store.chimesEarnedForLevel = LEVEL_BASE
       store.calculateLevel()
-      // chimesForNextLevel = ceil(2500 * 2^2.2) = 11487
-      expect(store.chimesForNextLevel).toBe(11487)
+      expect(store.chimesForNextLevel).toBe(chimeThresholdForLevel(2))
     })
   })
 
@@ -82,7 +88,7 @@ describe('gameStore', () => {
 
     it('halfway through level 1 → 50%', () => {
       const store = useGameStore()
-      store.chimesEarnedForLevel = 1250 // chimesForNextLevel = 2500, atLevelStart = 0
+      store.chimesEarnedForLevel = LEVEL_BASE / 2 // chimesForNextLevel = LEVEL_BASE, atLevelStart = 0
       expect(store.levelProgress).toBe(50)
     })
 

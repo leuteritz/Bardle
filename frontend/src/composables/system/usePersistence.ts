@@ -158,6 +158,7 @@ export function usePersistence() {
         runMeepCostFloor: gameStore.runMeepCostFloor,
         chimesToUniverseRescue: gameStore.chimesToUniverseRescue,
         meeps: gameStore.meeps,
+        chimesEarnedForLevel: gameStore.chimesEarnedForLevel,
         level: gameStore.level,
         skillPoints: gameStore.skillPoints,
         abilityLevels: [...gameStore.abilityLevels],
@@ -509,6 +510,7 @@ export function usePersistence() {
           g.chimesToUniverseRescue ?? gameStore.chimesToUniverseRescue
         gameStore.meeps = g.meeps ?? gameStore.meeps
         gameStore.level = g.level ?? gameStore.level
+        gameStore.chimesEarnedForLevel = g.chimesEarnedForLevel ?? 0
         gameStore.skillPoints = g.skillPoints ?? gameStore.skillPoints
         if (Array.isArray(g.abilityLevels)) gameStore.abilityLevels = g.abilityLevels
         gameStore.currentUniverse = g.currentUniverse ?? gameStore.currentUniverse

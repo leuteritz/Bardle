@@ -31,12 +31,12 @@ import type { VoidRiftSeverity } from '@/types'
 /**
  * Bard-Level, ab dem das erste Wesen aufreissen kann.
  *
- * Deutlich später als die Vorzeichen (`OMEN_UNLOCK_LEVEL` = 5), und das ist
+ * Deutlich später als die Vorzeichen (`OMEN_UNLOCK_LEVEL` = 3), und das ist
  * der Punkt: ein Void-Wesen wird von Kader und Turrets erlegt, nicht vom guten
  * Willen. Wer noch keine drei Rollen besetzt hat, könnte es nur wegklicken —
  * dann wäre die Strafe keine Entscheidung, sondern Willkür.
  */
-export const VOID_UNLOCK_LEVEL = 12
+export const VOID_UNLOCK_LEVEL = 6
 
 // ── Spawn ───────────────────────────────────────────────────────────────────
 

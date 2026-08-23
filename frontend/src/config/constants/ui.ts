@@ -897,7 +897,7 @@ export const BADGE_LAB_ICON = 'game-icons:bell-shield'
 export const ADMIN_MAX_CHIMES = 1e15
 export const ADMIN_MAX_MATERIAL_AMOUNT = 999_999
 export const ADMIN_MAX_SKILL_POINTS = 999
-/** Bard-Level. Über 65, weil R erst dort seinen fünften Rang erreicht
+/** Bard-Level. Über 27, weil R erst dort seinen fünften Rang erreicht
  *  (ABILITY_UNLOCK_LEVEL_R + 4 × ABILITY_LEVELS_PER_RANK). */
 export const ADMIN_MAX_BARD_LEVEL = 100
 /** Letztes Universum im Katalog (config/progression/universes.ts). */

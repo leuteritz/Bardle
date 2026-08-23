@@ -191,18 +191,13 @@ export const AUGMENT_ACTIVE_CAP = 10
 /**
  * Alle wie viel Level eine Augment-Wahl ausgelegt wird.
  *
- * Die Wahl hing an JEDEM Level-Up. Solange die Levelkurve exponentiell bremste,
- * war das selbstregulierend — sie war zugleich der Grund für diese Bremse
- * (siehe `LEVEL_SCALING_THRESHOLD`). Seit die Bremse bei
- * `LEVEL_SCALING_CAP_LEVEL` aufhört zu wachsen, fallen späte Level wieder
- * schnell, und ein Modal je Stufe wäre kein Angebot mehr, sondern ein Hindernis.
- *
- * Zwei Level je Wahl entkoppelt die Häufigkeit von der Kurve, ohne dem Spieler
- * etwas wegzunehmen: der Stapel ist ohnehin auf `AUGMENT_ACTIVE_CAP` gedeckelt,
- * das schwächste Augment fällt beim Nachrücken heraus. Es kommt also nicht
- * weniger an — es kommt seltener und in grösseren Schritten.
+ * Stand einmal auf zwei, weil späte Level hinter `LEVEL_SCALING_CAP_LEVEL`
+ * wieder schnell fielen und ein Modal je Stufe kein Angebot mehr war, sondern
+ * ein Hindernis. Seit `LEVEL_BASE` und `LEVEL_EXPONENT` jede Stufe um
+ * Grössenordnungen teurer machen, trägt das nicht mehr: bei zwei Leveln je Wahl
+ * füllte sich der Stapel bis `AUGMENT_ACTIVE_CAP` über die halbe Laufzeit nicht.
  */
-export const AUGMENT_LEVEL_INTERVAL = 2
+export const AUGMENT_LEVEL_INTERVAL = 1
 
 /** Wie lange die Auto-Pick-Meldung stehen bleibt, bevor sie ausblendet. */
 export const AUTO_PICK_TOAST_MS = 6500

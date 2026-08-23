@@ -35,7 +35,7 @@ export const OMEN_FIRST_OFFER_DELAY_SEC = 45
  * Spieler weder die Systeme offen, auf die die Ziele zeigen, noch einen Grund,
  * zwischen ihnen zu wählen.
  */
-export const OMEN_UNLOCK_LEVEL = 5
+export const OMEN_UNLOCK_LEVEL = 3
 
 /**
  * Faktor auf die Buff-DAUER, wenn das Vorzeichen innerhalb seiner Frist erfüllt

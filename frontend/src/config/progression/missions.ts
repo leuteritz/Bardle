@@ -138,8 +138,8 @@ export const MISSIONS: MissionDef[] = [
     objective: 'Reach Bard level {n}',
     icon: 'game-icons:upgrade',
     metric: 'bardLevel',
-    // 2 500 kumulierte Chimes — mit den zehn Gebäudestufen darüber etwa eine
-    // Minute Produktion.
+    // 25 000 kumulierte Chimes — mit den zehn Gebäudestufen darüber einige
+    // Minuten Produktion.
     target: 2,
     unit: 'level',
     reward: { chimes: { cpsSeconds: 90, flat: 400 } },
@@ -216,7 +216,7 @@ export const MISSIONS: MissionDef[] = [
     objective: 'Reach Bard level {n}',
     icon: 'game-icons:all-seeing-eye',
     metric: 'bardLevel',
-    target: 5,
+    target: 3,
     unit: 'level',
     reward: { chimes: { cpsSeconds: 240 } },
   },
@@ -351,7 +351,7 @@ export const MISSIONS: MissionDef[] = [
     chapter: 'deepField',
     name: 'The Tear in Things',
     blurb: 'Something on the other side has started pulling.',
-    // Zeigt auf `VOID_UNLOCK_LEVEL` 12 — das Tor steht in der Konstante, nicht
+    // Zeigt auf `VOID_UNLOCK_LEVEL` 6 — das Tor steht in der Konstante, nicht
     // hier.
     objective: 'Seal {n} void rift out in the orbit',
     icon: 'game-icons:vortex',

@@ -105,7 +105,7 @@ export const ABILITY_PASSIVE_RING = {
 // ── Ränge ───────────────────────────────────────────────────────────────────
 
 /** Bard-Level zwischen zwei Rängen einer bereits freigeschalteten Fähigkeit. */
-export const ABILITY_LEVELS_PER_RANK = 10
+export const ABILITY_LEVELS_PER_RANK = 4
 
 /** Höchster Rang. */
 export const ABILITY_MAX_RANK = 5
@@ -121,10 +121,10 @@ export const ABILITY_CDR_CAP = 0.6
 
 // ── Freischaltung (Bard-Level) ──────────────────────────────────────────────
 
-export const ABILITY_UNLOCK_LEVEL_Q = 3
-export const ABILITY_UNLOCK_LEVEL_W = 8
-export const ABILITY_UNLOCK_LEVEL_E = 15
-export const ABILITY_UNLOCK_LEVEL_R = 25
+export const ABILITY_UNLOCK_LEVEL_Q = 2
+export const ABILITY_UNLOCK_LEVEL_W = 4
+export const ABILITY_UNLOCK_LEVEL_E = 7
+export const ABILITY_UNLOCK_LEVEL_R = 11
 
 // ── Abklingzeiten (Sekunden, Rang 1) ────────────────────────────────────────
 

@@ -34,6 +34,7 @@ import {
   LEVEL_SCALING_THRESHOLD,
   LEVEL_SCALING_FACTOR,
   LEVEL_SCALING_CAP_LEVEL,
+  SKILL_POINT_LEVEL_INTERVAL,
   MAX_ABILITY_LEVEL,
   BOSS_CLICK_DAMAGE_BASE,
   BOSS_CLICK_DAMAGE_CPC_BONUS,
@@ -359,7 +360,7 @@ export const useGameStore = defineStore('game', {
       const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
       // Resync chimesForNextLevel from formula — handles saves made before exponential scaling was added
       this.chimesForNextLevel = chimeThresholdForLevel(this.level, exponent)
-      const spInterval = this.activeModifier.skillPointInterval ?? 2
+      const spInterval = this.activeModifier.skillPointInterval ?? SKILL_POINT_LEVEL_INTERVAL
       const oldLevel = this.level
 
       // Relative threshold: how many Chimes are needed for THIS level
@@ -596,7 +597,7 @@ export const useGameStore = defineStore('game', {
       this.pendingAugmentOptions = []
 
       const exponent = this.activeModifier.levelExponent ?? LEVEL_EXPONENT
-      const spInterval = this.activeModifier.skillPointInterval ?? 2
+      const spInterval = this.activeModifier.skillPointInterval ?? SKILL_POINT_LEVEL_INTERVAL
 
       // Beide Enden derselben Achse: die Schwelle kommt IMMER aus
       // `chimeThresholdForLevel`. Stand hier die Formel nochmal ausgeschrieben,
