@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useGamePause } from '@/composables/system/useGamePause'
 import { onKeybinding } from '@/composables/system/useKeybindings'
 import type { BardTabId } from '@/stores/core/uiStore'
@@ -30,6 +31,7 @@ import ProfileReadinessCluster from '@/components/bardProfil/hud/ProfileReadines
 const uiStore = useUiStore()
 const galaxyStore = useGalaxyStore()
 const expeditionChartStore = useExpeditionChartStore()
+const planetShopStore = usePlanetShopStore()
 const { isPaused } = useGamePause()
 // Alle Marken-Zahlen aus derselben Quelle wie Header-Bogen, Tooltip und Herold
 // — config/ui/notifyBadges.ts. Chronicle hängt am Bard-Tab, weil der Codex dort
@@ -72,15 +74,16 @@ const shopFlare = useBadgeFlare(shopFreshCount)
  *   ph:compass-rose-fill          — der Wandering Caretaker: Journey-Stats,
  *                                   Solar Evolution, Galaxy-Archiv, Chronicle
  *   ph:storefront-fill            — der Marktstand
+ *   ph:users-three-fill           — der Kader (Sigil-Board, Allies, Expeditionen)
  *   material-symbols:account-tree — verzweigte Knoten, der Meep Skill Tree
  *                                   (Phosphors `tree-structure` ist zu fein)
- *   ph:users-three-fill           — der Kader (Sigil-Board, Allies, Expeditionen)
  *   ri:sword-fill                 — gekreuzte Klingen, Auto-Battle
  *                                   (Phosphor hat nur die einzelne Klinge)
  *   ph:planet-fill                — die Planeten-Slots im Orbit
+ *   ph:map-trifold-fill           — die Sternenkarte der Voyages
  *   ph:gear-six-fill              — Admin
  *
- * Jedes Motiv steht genau einmal in der Leiste, damit die sieben Tabs
+ * Jedes Motiv steht genau einmal in der Leiste, damit die acht Tabs
  * nebeneinander unterscheidbar bleiben.
  *
  * Shop und Tree haben je eine zweite Anlaufstelle — die beiden Ecktasten im
@@ -114,36 +117,48 @@ const allMenuItems: {
   boost?: boolean
   /** Gesperrt heißt sichtbar und anklickbar — siehe `menuItems`. */
   locked?: () => boolean
+  /** Steht bei Sperre neben dem Namen — im Chip und im `aria-label`. */
+  lockNote?: string
 }[] = [
   { id: 'bard', name: 'Journey', icon: 'ph:compass-rose-fill' },
   { id: 'shop', name: 'Shop', icon: HEADER_GEM_ICONS.shop },
-  { id: 'tree', name: 'Tree', icon: HEADER_GEM_ICONS.tree, boost: true },
   { id: 'team', name: 'Team', icon: 'ph:users-three-fill' },
+  { id: 'tree', name: 'Tree', icon: HEADER_GEM_ICONS.tree, boost: true },
+  { id: 'battle', name: 'Rift', icon: 'ri:sword-fill', boost: true },
+  {
+    id: 'planets',
+    name: 'Planets',
+    icon: 'ph:planet-fill',
+    locked: () => !planetShopStore.isUnlocked,
+    lockNote: 'claim your first orbit',
+  },
   {
     id: 'expedition',
     name: 'Voyages',
     icon: 'ph:map-trifold-fill',
     locked: () => !expeditionChartStore.isUnlocked,
+    lockNote: `unlocks in Galaxy ${toRoman(EXPEDITION_UNLOCK_GALAXY)}`,
   },
-  { id: 'battle', name: 'Rift', icon: 'ri:sword-fill', boost: true },
-  { id: 'planets', name: 'Planets', icon: 'ph:planet-fill' },
   { id: 'admin', name: 'Admin', icon: 'ph:gear-six-fill' },
 ]
 
 /**
  * Die Leiste steht vollständig, vom ersten Tick an. Ein Reiter, den es noch
- * nicht gibt, ist kein Ziel, auf das man hinarbeiten kann — Voyages bleibt
- * deshalb sichtbar und anklickbar und trägt seinen Zustand selbst: gedämpft mit
- * Schloss hier, ausbuchstabiert im Reiter (`ExpeditionLockedPanel`). Aus dem
- * Grund steht in `uiStore.setBardTab` auch keine Wache mehr.
+ * nicht gibt, ist kein Ziel, auf das man hinarbeiten kann — Planets und Voyages
+ * bleiben deshalb sichtbar und anklickbar und tragen ihren Zustand selbst:
+ * gedämpft mit Schloss hier, ausbuchstabiert im Reiter (`PlanetLockedPanel`,
+ * `ExpeditionLockedPanel`). Aus dem Grund steht in `uiStore.setBardTab` auch
+ * keine Wache mehr.
+ *
+ * Die Tore selbst liegen in den Stores (`planetShopStore.isUnlocked`,
+ * `expeditionChartStore.isUnlocked`), nicht hier — die Leiste liest sie nur.
  */
 const menuItems = computed(() =>
   allMenuItems.map((i) => ({ ...i, locked: i.locked?.() ?? false })),
 )
 
-const lockedTabNote = `unlocks in Galaxy ${toRoman(EXPEDITION_UNLOCK_GALAXY)}`
-function tabLabel(item: { name: string; locked: boolean }) {
-  return item.locked ? `${item.name} — ${lockedTabNote}` : item.name
+function tabLabel(item: { name: string; locked: boolean; lockNote?: string }) {
+  return item.locked && item.lockNote ? `${item.name} — ${item.lockNote}` : item.name
 }
 
 /**
@@ -332,7 +347,7 @@ onUnmounted(() => {
                     :aria-current="uiStore.bardActiveTab === item.id ? 'page' : undefined"
                   >
                     <!-- Ein Glyph steht ALLEIN für seinen Reiter und trägt
-                         deshalb die volle Fläche — alle sieben stehen damit auf
+                         deshalb die volle Fläche — alle acht stehen damit auf
                          einer Höhe. Der Name kommt beim Überfahren, nicht als
                          Text daneben: er würde die Leiste je Reiter verschieden
                          breit machen. -->
@@ -400,7 +415,12 @@ onUnmounted(() => {
                   </button>
                   <!-- `aria-hidden`: der Name steht schon als `aria-label` am
                        Knopf, ein Screenreader würde ihn sonst zweimal lesen. -->
-                  <span class="rp-tab-tip" aria-hidden="true">{{ item.name }}</span>
+                  <span class="rp-tab-tip" aria-hidden="true">
+                    {{ item.name }}
+                    <span v-if="item.locked && item.lockNote" class="rp-tab-tip-note">
+                      {{ item.lockNote }}
+                    </span>
+                  </span>
                 </div>
               </div>
 
@@ -763,7 +783,7 @@ onUnmounted(() => {
    ═══════════════════════════════════════════ */
 /* height-aware tab art: smaller header leaves more room for tab content.
    Jedes Glyph steht allein für seinen Reiter und bekommt deshalb die volle
-   Kantenlänge — alle sieben stehen damit auf einer Höhe. */
+   Kantenlänge — alle acht stehen damit auf einer Höhe. */
 .rp-tab-icon {
   width: clamp(34px, 5vh, 48px);
   height: clamp(34px, 5vh, 48px);
@@ -896,6 +916,18 @@ onUnmounted(() => {
 
 /* Die Spitze zeigt auf den Reiter darüber. Zwei Dreiecke übereinander: das
    untere trägt die Randfarbe, das obere schließt die Fläche. */
+/* Die Freischaltbedingung, zweizeilig unter dem Namen: `nowrap` am Chip macht
+   eine einzelne Zeile sonst sehr breit. */
+.rp-tab-tip-note {
+  display: block;
+  margin-top: 3px;
+  font-size: clamp(9px, 0.5vw, 12px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: #a07a3c;
+}
+
 .rp-tab-tip::before,
 .rp-tab-tip::after {
   content: '';

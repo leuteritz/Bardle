@@ -405,3 +405,54 @@ describe('planetShopStore — Attunement leveling', () => {
     })
   })
 })
+
+describe('planetShopStore — das Tor des Reiters', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('bleibt zu, solange kein Orbit gekauft und Orbit I unbezahlbar ist', () => {
+    const store = usePlanetShopStore()
+    const solar = useSolarUpgradeStore()
+    solar.isCometState = false
+    solar.starPhase = 5
+    useGameStore().chimes = 0
+    expect(store.purchasedSlots).toHaveLength(0)
+    expect(store.isUnlocked).toBe(false)
+  })
+
+  // Der Komet ist ein eigenes Tor: er hat gar kein Planetensystem.
+  it('bleibt zu, solange der Komet nicht gezündet ist', () => {
+    const store = usePlanetShopStore()
+    const solar = useSolarUpgradeStore()
+    solar.isCometState = true
+    solar.starPhase = 5
+    useGameStore().chimes = 1e12
+    expect(store.isUnlocked).toBe(false)
+  })
+
+  // Das Schloss fällt in DEM Moment, in dem Orbit I greifbar wird — nicht erst
+  // beim Kauf.
+  it('öffnet, sobald Orbit I bezahlbar ist', () => {
+    const store = usePlanetShopStore()
+    const solar = useSolarUpgradeStore()
+    solar.isCometState = false
+    solar.starPhase = PLANET_SLOT_SUN_PHASE_REQUIREMENTS[0] ?? 0
+    useGameStore().chimes = store.getSlotCost(store.slots[0].id)
+    expect(store.canUnlockPlanetSlot(0)).toBe(true)
+    expect(store.isUnlocked).toBe(true)
+  })
+
+  it('bleibt offen, wenn ein Orbit steht und der nächste unerreichbar ist', () => {
+    const store = usePlanetShopStore()
+    const solar = useSolarUpgradeStore()
+    solar.isCometState = false
+    solar.starPhase = 5
+    const game = useGameStore()
+    game.chimes = 1e12
+    store.buySlot(store.slots[0].id)
+    game.chimes = 0
+    expect(store.canUnlockPlanetSlot(1)).toBe(false)
+    expect(store.isUnlocked).toBe(true)
+  })
+})

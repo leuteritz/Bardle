@@ -233,6 +233,11 @@ export const usePlanetShopStore = defineStore('planetShop', {
       return state.slots.filter((s) => s.purchased)
     },
 
+    /** Das Tor des Reiters: derselbe Moment, in dem Orbit I greifbar wird. */
+    isUnlocked(): boolean {
+      return this.purchasedSlots.length > 0 || this.canUnlockPlanetSlot(0)
+    },
+
     activeSlots(state): PlanetSlot[] {
       return state.slots.filter((s) => s.purchased && s.role !== null)
     },
