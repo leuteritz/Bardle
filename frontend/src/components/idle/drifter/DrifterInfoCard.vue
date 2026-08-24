@@ -16,19 +16,28 @@ import {
   DRIFTER_CARD_RESULT_MS,
   DRIFTER_CARD_TICK_MS,
   DRIFTER_CARD_URGENT_MS,
+  DRIFTER_FADE_IN_FRAC,
   DRIFTER_RARITY_COLOR,
 } from '@/config/constants'
+import {
+  drifterField,
+  drifterRevealProgress,
+  measuredFieldInsets,
+} from '@/utils/orbit/drifterPath'
 import { gameNow } from '@/utils/game/gameClock'
 
 /**
  * Was fliegt da gerade, was bringt es, und wie lange ist es noch da —
  * oben links, unter der Auto-Pick-Meldung.
  *
- * Ein Drifter ist nur Sekunden im Bild und kündigt sich sonst allein durch den
- * Randping an. Ohne diese Karte müsste man das Objekt erst finden, erkennen und
- * bewerten, bevor man weiß, ob sich der Klick lohnt — bei einem 10-Sekunden-
- * Fenster ist das zu viel verlangt. Sie hat drei Zustände und verschweigt auch
- * den unangenehmen nicht: unterwegs (mit Countdown), eingesammelt, entkommen.
+ * Ein Drifter ist nur Sekunden im Bild. Ohne diese Karte müsste man das Objekt
+ * erst finden, erkennen und bewerten, bevor man weiß, ob sich der Klick lohnt —
+ * bei einem 10-Sekunden-Fenster ist das zu viel verlangt. Sie hat drei Zustände
+ * und verschweigt auch den unangenehmen nicht: in Sicht (mit Countdown),
+ * eingesammelt, entkommen.
+ *
+ * Sie steht erst, wenn der Körper ganz im Bild ist — nicht beim Spawn. Den
+ * Anflug trägt allein der Randping, der dort steht, wo der Drifter hereinzieht.
  */
 type CardState = 'inbound' | 'collected' | 'escaped'
 
@@ -42,6 +51,8 @@ const visible = ref(false)
 /** Eigene Uhr: der Store tickt im Sekundentakt, der Countdown soll flüssig
  *  laufen und der Balken exakt beim Verschwinden ankommen. */
 const remainingMs = ref(0)
+/** Anteil der Flugzeit, der auf den Anflug außerhalb des Bildes entfällt. */
+const revealFrac = ref(0)
 
 let resultTimer: ReturnType<typeof setTimeout> | null = null
 let ticker: ReturnType<typeof setInterval> | null = null
@@ -64,11 +75,16 @@ const urgent = computed(
   () => state.value === 'inbound' && remainingMs.value > 0 && remainingMs.value <= DRIFTER_CARD_URGENT_MS,
 )
 
-/** Anteil der Flugzeit, der noch übrig ist — treibt den Balken. */
+/** Anteil des FANGFENSTERS, der noch übrig ist — treibt den Balken. Bezug ist
+ *  nicht die Flugzeit: der Anflug ist vorbei, wenn die Karte auftaucht, und ein
+ *  Balken, der bei 88 % beginnt, liest sich wie ein Fehler. Die Zahl daneben
+ *  bleibt die echte Restzeit. */
 const progress = computed(() => {
   const d = activeDrifter.value
   if (state.value !== 'inbound' || !d || d.flightMs <= 0) return state.value === 'inbound' ? 0 : 1
-  return Math.min(1, Math.max(0, remainingMs.value / d.flightMs))
+  const span = d.flightMs * (1 - revealFrac.value)
+  if (span <= 0) return 0
+  return Math.min(1, Math.max(0, remainingMs.value / span))
 })
 
 /** Wie oft noch getroffen werden muss — nur bei mehrstufigen Typen. */
@@ -92,12 +108,25 @@ const buffLine = computed(() => {
 const headline = computed(() => {
   if (state.value === 'collected') return 'Collected'
   if (state.value === 'escaped') return 'Drifted away'
-  return 'Signal detected'
+  return 'In sight'
 })
 
 // ── Zustandswechsel ────────────────────────────────────────────────────────
 
-/** Im Flug: Countdown bis zum Verschwinden, aus der Wanduhr abgeleitet. */
+/** Anteil der Flugzeit bis zum Sichtkontakt. Der Boden ist die Einblendung —
+ *  ein noch durchscheinender Körper ist auch dann nichts zum Suchen, wenn er
+ *  die Bildkante geometrisch schon überquert hat. */
+function revealFractionFor(def: DrifterDef, routeIndex: number, mirrored: boolean): number {
+  const w = window.innerWidth
+  const h = window.innerHeight
+  const field = drifterField(w, h, measuredFieldInsets())
+  const geometric = drifterRevealProgress(routeIndex, mirrored, field, def.sizePx / 2, w, h)
+  return Math.min(1, Math.max(geometric, DRIFTER_FADE_IN_FRAC))
+}
+
+/** In Sicht: Countdown bis zum Verschwinden, aus der Wanduhr abgeleitet. Der
+ *  Ticker steht ohnehin, also stellt er auch den Sichtkontakt fest — ein
+ *  eigener Timer dafür liefe an `gameSpeed` vorbei. */
 watch(
   activeDrifter,
   (d) => {
@@ -107,12 +136,16 @@ watch(
     clearTimers()
     shownDef.value = def
     state.value = 'inbound'
-    visible.value = true
+    revealFrac.value = revealFractionFor(def, d.routeIndex, d.mirrored)
+    const revealAt = d.spawnedAt + d.flightMs * revealFrac.value
     const endsAt = d.spawnedAt + d.flightMs
-    remainingMs.value = Math.max(0, endsAt - gameNow())
-    ticker = setInterval(() => {
-      remainingMs.value = Math.max(0, endsAt - gameNow())
-    }, DRIFTER_CARD_TICK_MS)
+    const read = () => {
+      const now = gameNow()
+      remainingMs.value = Math.max(0, endsAt - now)
+      visible.value = now >= revealAt
+    }
+    read()
+    ticker = setInterval(read, DRIFTER_CARD_TICK_MS)
   },
   { immediate: true },
 )

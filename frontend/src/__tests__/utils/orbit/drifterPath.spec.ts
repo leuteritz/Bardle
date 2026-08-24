@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   drifterField,
   drifterPointAt,
+  drifterRevealProgress,
   drifterEntryEdge,
   drifterLightAngleDeg,
 } from '@/utils/orbit/drifterPath'
@@ -12,6 +13,7 @@ import {
   DRIFTER_FIELD_BOTTOM_PX,
   DRIFTER_HUD_PANEL_MARGIN_PX,
   DRIFTER_LIGHT_QUANTIZE_DEG,
+  DRIFTER_REVEAL_PROBE_STEPS,
 } from '@/config/constants'
 import { DRIFTERS } from '@/config/world/drifters'
 
@@ -290,6 +292,80 @@ describe('drifterLightAngleDeg', () => {
         for (let i = 0; i <= 20; i++) {
           const p = drifterPointAt(route, false, i / 20, field, 24)
           expect(Number.isFinite(drifterLightAngleDeg(p.x, p.y, w, h))).toBe(true)
+        }
+      }
+    }
+  })
+})
+
+describe('drifterRevealProgress', () => {
+  const STEP = 1 / DRIFTER_REVEAL_PROBE_STEPS
+  const BIGGEST = Math.max(...DRIFTERS.map((d) => d.sizePx)) / 2
+  const SMALLEST = Math.min(...DRIFTERS.map((d) => d.sizePx)) / 2
+
+  const inside = (
+    route: number,
+    mirrored: boolean,
+    t: number,
+    w: number,
+    h: number,
+    r: number,
+  ): boolean => {
+    const p = drifterPointAt(route, mirrored, t, drifterField(w, h), r)
+    return p.x - r >= 0 && p.x + r <= w && p.y - r >= 0 && p.y + r <= h
+  }
+
+  it('never reports the spawn instant — every route enters from outside', () => {
+    // The counterpart to 'starts and ends outside the viewport': no route begins
+    // on screen, so every one has a real approach. A 0 here would put the info
+    // card back on the spawn instant.
+    for (const [w, h] of VIEWPORTS) {
+      const field = drifterField(w, h)
+      for (let route = 0; route < DRIFTER_ROUTES.length; route++) {
+        for (const mirrored of [false, true]) {
+          const t = drifterRevealProgress(route, mirrored, field, BIGGEST, w, h)
+          expect(t).toBeGreaterThan(0)
+          expect(t).toBeLessThan(1)
+        }
+      }
+    }
+  })
+
+  it('lands on the first step that holds the whole body, not a later one', () => {
+    for (const [w, h] of VIEWPORTS) {
+      const field = drifterField(w, h)
+      for (let route = 0; route < DRIFTER_ROUTES.length; route++) {
+        for (const mirrored of [false, true]) {
+          const t = drifterRevealProgress(route, mirrored, field, BIGGEST, w, h)
+          expect(inside(route, mirrored, t, w, h, BIGGEST)).toBe(true)
+          expect(inside(route, mirrored, t - STEP, w, h, BIGGEST)).toBe(false)
+        }
+      }
+    }
+  })
+
+  it('reveals a large body no earlier than a small one on the same route', () => {
+    for (const [w, h] of VIEWPORTS) {
+      const field = drifterField(w, h)
+      for (let route = 0; route < DRIFTER_ROUTES.length; route++) {
+        const small = drifterRevealProgress(route, false, field, SMALLEST, w, h)
+        const large = drifterRevealProgress(route, false, field, BIGGEST, w, h)
+        expect(large).toBeGreaterThanOrEqual(small)
+      }
+    }
+  })
+
+  it('leaves the shortest drifter a catchable window', () => {
+    // The card exists so the click is still makeable. A route that lets the body
+    // in late makes it worthless, so the SHORTEST flight in the catalogue is
+    // measured against the LARGEST body.
+    const shortestMs = Math.min(...DRIFTERS.map((d) => d.flightMs))
+    for (const [w, h] of VIEWPORTS) {
+      const field = drifterField(w, h)
+      for (let route = 0; route < DRIFTER_ROUTES.length; route++) {
+        for (const mirrored of [false, true]) {
+          const t = drifterRevealProgress(route, mirrored, field, BIGGEST, w, h)
+          expect(shortestMs * (1 - t)).toBeGreaterThan(5000)
         }
       }
     }

@@ -94,6 +94,10 @@ export const HINT_SPRITE_CACHE_LIMIT = 64
 /** Schrittweite, mit der die Drifter-Bahn abgetastet wird, um ihre Tangente zu bestimmen. */
 export const DRIFTER_TANGENT_PROBE_STEP = 0.01
 
+/** Abtaststufen der Suche nach dem Sichtkontakt (`drifterRevealProgress`). 1/120
+ *  der Flugzeit sind 80-215 ms — feiner als die Karte auftauchen kann. */
+export const DRIFTER_REVEAL_PROBE_STEPS = 120
+
 export const DRIFTER_BURST_ANGLE_JITTER = 0.7
 /** Flugweite der Burst-Funken, als Vielfaches der Drifter-Größe. */
 export const DRIFTER_BURST_DIST_MIN_FACTOR = 1.1
@@ -621,8 +625,9 @@ export const DRIFTER_CHIME_REWARD_CAP_SEC = 300
  *  nicht als leerer Klick endet — Vielfaches des aktuellen Klickwerts. */
 export const DRIFTER_CHIME_REWARD_MIN_CLICKS = 25
 
-/** Randmarkierung: so viele ms vor dem Erscheinen pingt der Bildschirmrand in
- *  Flugrichtung, damit ein Drifter nicht unbemerkt durchrutscht. */
+/** Randmarkierung: so lange nach dem Spawn pingt der Bildschirmrand in
+ *  Flugrichtung — das deckt genau den Anflug ab, in dem der Körper noch
+ *  außerhalb steht und die Infokarte deshalb schweigt. */
 export const DRIFTER_EDGE_PING_LEAD_MS = 1400
 
 /** Faktor auf den Vorlauf für Stufen mit `herald` (legendary): der Leviathan

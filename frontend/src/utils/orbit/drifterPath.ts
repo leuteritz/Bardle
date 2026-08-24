@@ -9,6 +9,7 @@ import {
   HUD_SCALE_REF_WIDTH_PX,
   HUD_SCALE_REF_HEIGHT_PX,
   DRIFTER_TANGENT_PROBE_STEP,
+  DRIFTER_REVEAL_PROBE_STEPS,
   DRIFTER_LIGHT_QUANTIZE_DEG,
 } from '@/config/constants'
 import { hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
@@ -311,8 +312,42 @@ export function drifterLightAngleDeg(
   return Math.round(deg / step) * step
 }
 
-/** Which viewport edge the drifter enters from — drives the pre-spawn edge ping.
- *  Derived from where the route's first point lies outside [0,1]. */
+/**
+ * Flight progress at which the whole body first stands inside the viewport —
+ * the moment the player can actually see the thing.
+ *
+ * Every route starts 12–14 % of the field width outside the picture, so a
+ * drifter is airborne for 10–13 % of its flight before it is anything to look
+ * at. `DrifterInfoCard` waits for this instead of for the spawn; during the
+ * approach only the edge ping speaks, and it stands where the body will enter.
+ *
+ * Scanned forwards from 0, never backwards: route 4 leaves through the bottom,
+ * and a reverse scan would find that exit rather than the entry. Returns 0 if
+ * no step qualifies — a card that never comes is worse than one that comes early.
+ *
+ * No `metrics` argument: the HUD contour only clamps `y` into the flight band,
+ * which lies inside the viewport anyway. Entry is a horizontal question.
+ */
+export function drifterRevealProgress(
+  routeIndex: number,
+  mirrored: boolean,
+  field: DrifterFieldRect,
+  bodyRadiusPx: number,
+  viewportW: number,
+  viewportH: number,
+): number {
+  const r = Math.max(0, bodyRadiusPx)
+  for (let step = 0; step <= DRIFTER_REVEAL_PROBE_STEPS; step++) {
+    const t = step / DRIFTER_REVEAL_PROBE_STEPS
+    const p = drifterPointAt(routeIndex, mirrored, t, field, r)
+    if (p.x - r >= 0 && p.x + r <= viewportW && p.y - r >= 0 && p.y + r <= viewportH) return t
+  }
+  return 0
+}
+
+/** Which viewport edge the drifter enters from — drives the edge ping that runs
+ *  through the approach. Derived from where the route's first point lies
+ *  outside [0,1]. */
 export function drifterEntryEdge(
   routeIndex: number,
   mirrored: boolean,
