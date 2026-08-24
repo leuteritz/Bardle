@@ -247,6 +247,19 @@ export const MINIMAP_GALAXY_BULGE_R = 0.11 // gaussian bulge radius
 export const MINIMAP_GALAXY_KNOTS = 18 // bright accent-colored knots on the arms
 export const MINIMAP_GALAXY_BRIGHT_STARS = 70 // distinct single stars along the arms
 export const MINIMAP_GALAXY_CORE_RADIUS = 0.15 // core glow radius in world coords
+// ── Tiefenfeld der grossen Voyages-Karte ────────────────────────────────────
+// Drei Ebenen statt eines Teppichs, und eine Freizone über der Scheibe. Die
+// Zahl wächst mit der KANTE (√Fläche), nicht mit der Fläche: flächentreu standen
+// auf 4K 1955 Funkelsterne gegen 1200 Galaxiepartikel.
+export const GALAXY_DEEPFIELD_FAR = 34 // feine Fernsterne, Basiszahl bei 320×200
+export const GALAXY_DEEPFIELD_MID = 9 // mittlere Ebene
+export const GALAXY_DEEPFIELD_ANCHOR = 3 // helle Ankersterne mit Glanzkreuz
+export const GALAXY_DEEPFIELD_ANCHOR_MAX = 8 // Deckel der Ankersterne
+export const GALAXY_DEEPFIELD_SIZE_DAMP = 0.35 // Dämpfung der Grössenskalierung
+export const GALAXY_DEEPFIELD_CLEAR_INNER = 0.55 // Scheibenradien: darunter fast frei
+export const GALAXY_DEEPFIELD_CLEAR_OUTER = 1.15 // darüber volle Dichte
+export const GALAXY_DEEPFIELD_CLEAR_FLOOR = 0.06 // Restdichte innerhalb der Scheibe
+export const GALAXY_DEEPFIELD_VIGNETTE = 0.36 // Randabdunklung des Tiefraums
 export const MINIMAP_ZOOM_TRIGGER_MS = 45_000 // zoom-in phase starts this long before arrival
 export const MINIMAP_ZOOM_MAX = 5.4 // camera zoom at arrival (target star grows ≈ arrival sun)
 export const MINIMAP_ZOOM_LERP = 0.06 // per-frame camera smoothing (zoom-in)

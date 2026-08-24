@@ -138,6 +138,7 @@ function paint() {
     dpr,
     routeAlpha: VOYAGE_MAP_ROUTE_ALPHA,
     historyScale: VOYAGE_MAP_HISTORY_SCALE,
+    deepField: true,
   })
   paintCount.value += 1
 }

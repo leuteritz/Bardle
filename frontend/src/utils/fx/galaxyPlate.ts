@@ -23,6 +23,7 @@ import {
   generateGalaxyDots,
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor, roundLandmarkRadius } from './galaxyLandmarks'
+import { buildDeepField, paintDeepField } from './galaxyDeepField'
 import {
   MINIMAP_TWINKLE_COUNT,
   MINIMAP_GALAXY_CORE_RADIUS,
@@ -111,6 +112,10 @@ export interface GalaxyPaintOpts {
    * Kern und Kernglut bleiben ausgenommen: sie sind der Anker der Karte.
    */
   historyScale?: number
+  /** Tiefenfeld statt flächenskaliertem Sternenteppich — nur die grosse Karte.
+   *  Standbild und Miniatur behalten die alte Schleife: dort ist die Dichte
+   *  unauffällig, und ihre Ziehreihenfolge teilen sie mit der Live-Minimap. */
+  deepField?: boolean
 }
 
 export function paintGalaxy(
@@ -141,35 +146,41 @@ export function paintGalaxy(
   ctx.fillStyle = haze
   ctx.fillRect(0, 0, w, h)
 
-  // ── Funkelsterne, mitten im Funkeln eingefroren ──
-  // Die Zahl wächst mit der FLÄCHE, sonst stünden dreissig Punkte verloren auf
-  // einer Panelfläche. Bei 320×200 ergibt das exakt MINIMAP_TWINKLE_COUNT.
-  const twinkles = Math.round(
-    (MINIMAP_TWINKLE_COUNT * (w * h)) / (GALAXY_PLATE_REF_W * GALAXY_PLATE_REF_H),
-  )
-  const twRng = seededRng(record.galaxy * 52361 + 7)
+  const geo = galaxyGeo(record.mapSeed)
   const twScale = Math.max(1, k)
-  for (let i = 0; i < twinkles; i++) {
-    const tx = twRng() * w
-    const ty = twRng() * h
-    twRng() // Phase — im Standbild ungenutzt, die Ziehreihenfolge bleibt gleich
-    twRng() // Periode
-    const size = (0.8 + twRng() * 1.0) * twScale
-    const tint = twRng()
-    const a = 0.2 + 0.55 * 0.5
-    ctx.beginPath()
-    ctx.arc(tx, ty, size, 0, Math.PI * 2)
-    ctx.fillStyle =
-      tint < 0.33
-        ? `rgba(255, 233, 176, ${a.toFixed(3)})`
-        : tint < 0.66
-          ? `rgba(207, 224, 255, ${a.toFixed(3)})`
-          : `rgba(255, 255, 255, ${a.toFixed(3)})`
-    ctx.fill()
+
+  // ── Sternenfeld ──
+  if (opts.deepField) {
+    paintDeepField(ctx, buildDeepField(w, h, k, record.galaxy, geo, box, accent), w, h)
+  } else {
+    // Funkelsterne, mitten im Funkeln eingefroren. Die Zahl wächst mit der
+    // FLÄCHE, sonst stünden dreissig Punkte verloren auf einer Panelfläche. Bei
+    // 320×200 ergibt das exakt MINIMAP_TWINKLE_COUNT.
+    const twinkles = Math.round(
+      (MINIMAP_TWINKLE_COUNT * (w * h)) / (GALAXY_PLATE_REF_W * GALAXY_PLATE_REF_H),
+    )
+    const twRng = seededRng(record.galaxy * 52361 + 7)
+    for (let i = 0; i < twinkles; i++) {
+      const tx = twRng() * w
+      const ty = twRng() * h
+      twRng() // Phase — im Standbild ungenutzt, die Ziehreihenfolge bleibt gleich
+      twRng() // Periode
+      const size = (0.8 + twRng() * 1.0) * twScale
+      const tint = twRng()
+      const a = 0.2 + 0.55 * 0.5
+      ctx.beginPath()
+      ctx.arc(tx, ty, size, 0, Math.PI * 2)
+      ctx.fillStyle =
+        tint < 0.33
+          ? `rgba(255, 233, 176, ${a.toFixed(3)})`
+          : tint < 0.66
+            ? `rgba(207, 224, 255, ${a.toFixed(3)})`
+            : `rgba(255, 255, 255, ${a.toFixed(3)})`
+      ctx.fill()
+    }
   }
 
   // ── Spiralgalaxie: Kernglut plus geseedete Partikel, additiv ──
-  const geo = galaxyGeo(record.mapSeed)
   ctx.save()
   ctx.globalCompositeOperation = 'lighter'
   const [gcx, gcy] = toC(0.5, 0.5)

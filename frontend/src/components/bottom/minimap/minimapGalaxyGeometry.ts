@@ -101,6 +101,17 @@ export function galaxyPlaneToWorld(geo: GalaxyGeo, angle: number, r: number): Do
   return { x: 0.5 + px * cosT - py * sinT, y: 0.5 + px * sinT + py * cosT }
 }
 
+/** Umkehrung von galaxyPlaneToWorld: Weltpunkt → Abstand in Scheibenradien (1 = Rand). */
+export function galaxyDiscDistance(geo: GalaxyGeo, x: number, y: number): number {
+  const dx = x - 0.5
+  const dy = y - 0.5
+  const cosT = Math.cos(geo.tilt)
+  const sinT = Math.sin(geo.tilt)
+  const px = dx * cosT + dy * sinT
+  const py = (-dx * sinT + dy * cosT) / geo.squash
+  return Math.hypot(px, py) / (MINIMAP_GALAXY_RADIUS * geo.radiusScale)
+}
+
 /** Centerline angle of a spiral arm at normalized radius t (0 core → 1 rim). */
 export function armAngle(geo: GalaxyGeo, arm: number, t: number): number {
   return geo.armPhase + (arm / geo.arms) * Math.PI * 2 + t * geo.twist * Math.PI * 2
