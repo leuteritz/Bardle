@@ -35,8 +35,8 @@ import { galaxyFitBox } from '@/utils/fx/galaxyPlate'
  * Compiler können diese Kopplung ausdrücken.
  *
  * Die Zahlen unten spiegeln, was App.vue rechnet:
- *   Full HD  →  224px 648px 368px
- *   2K       →  224px 988px 448px
+ *   Full HD  →  224px 628px 388px
+ *   2K       →  224px 955px 481px
  */
 
 /** `--bp-gap` von .rp-wrapper, beide Seiten. */
@@ -128,12 +128,12 @@ describe('voyages atlas layout', () => {
   it('trifft die im Browser gemessenen Breiten', () => {
     const fhd = zones(1920, 1080)
     expect(Math.round(fhd.rail)).toBe(224)
-    expect(Math.round(fhd.map)).toBe(648)
-    expect(Math.round(fhd.detail)).toBe(368)
+    expect(Math.round(fhd.map)).toBe(628)
+    expect(Math.round(fhd.detail)).toBe(388)
 
     const qhd = zones(2560, 1440)
-    expect(Math.round(qhd.map)).toBe(988)
-    expect(Math.round(qhd.detail)).toBe(448)
+    expect(Math.round(qhd.map)).toBe(955)
+    expect(Math.round(qhd.detail)).toBe(481)
   })
 
   it.each(DESKTOPS)('%s: Einklappen gibt der Karte genau die Leistenbreite', (_l, vw, vh) => {

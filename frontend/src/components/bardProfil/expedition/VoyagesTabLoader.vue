@@ -15,8 +15,7 @@
  *
  * Das Skelett zeigt, was kommt: die Leiste in ihrer echten Breite, in der Mitte
  * der Kasten im Seitenverhältnis der Fit-Box mit ein paar Häfen darauf, rechts
- * die Detailspalte in ihrer Untergrenze, an der Unterkante der Bühne das
- * Datenband. Ein
+ * die eingeklappte Detailspalte, an der Unterkante der Bühne das Datenband. Ein
  * Platzhalter, der etwas anderes verspricht als das, was kommt, hat den Ruckler
  * nur gegen einen Sprung getauscht.
  *
@@ -28,7 +27,7 @@
 import { computed } from 'vue'
 import LoadingBeacon from '@/components/ui/LoadingBeacon.vue'
 import {
-  VOYAGE_DETAIL_MIN_WIDTH,
+  VOYAGE_DETAIL_COLLAPSED,
   VOYAGE_LOADER_ACCENT,
   VOYAGE_LOADER_CAPTION,
   VOYAGE_LOADER_ICON,
@@ -50,7 +49,9 @@ const railWidth = `${VOYAGE_RAIL_WIDTH}px`
 const rowHeight = `${VOYAGE_RAIL_ROW_H}px`
 const thumbWidth = `${VOYAGE_RAIL_THUMB_W}px`
 const thumbHeight = `${VOYAGE_RAIL_THUMB_H}px`
-const detailWidth = `${VOYAGE_DETAIL_MIN_WIDTH}px`
+/** Die Detailspalte startet EINGEKLAPPT — der Platzhalter muss den Griff
+ *  zeigen, nicht die geöffnete Spalte, sonst springt das Layout beim Enthüllen. */
+const detailWidth = `${VOYAGE_DETAIL_COLLAPSED}px`
 const bandHeight = `${VOYAGE_MAP_STATS_BAND_H}px`
 /** Der Kasten sitzt so ueber dem Band, wie es gleich die Fit-Box tut. */
 const stagePadBottom = `${VOYAGE_MAP_STATS_BAND_H + 10}px`
@@ -124,12 +125,11 @@ const skeletonPorts = computed(() =>
     </div>
 
     <!-- Detailspalte -->
+    <!-- Nur der Griff: die Detailspalte steht eingeklappt, bis ein Hafen
+         angeklickt wird. Fünf Inhaltsbalken versprächen hier eine Spalte, die
+         gleich gar nicht kommt. -->
     <div class="vtl-detail" aria-hidden="true">
-      <span class="vtl-mark vtl-mark--head" />
-      <span class="vtl-mark vtl-mark--block" />
-      <span class="vtl-mark vtl-mark--block" />
-      <span class="vtl-mark vtl-mark--seats" />
-      <span class="vtl-mark vtl-mark--send" />
+      <span class="vtl-mark vtl-mark--grip" />
     </div>
 
     <!-- Ein einziger wandernder Glanz: eine Fläche, die verschoben wird —
@@ -280,27 +280,14 @@ const skeletonPorts = computed(() =>
   grid-row: 2;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: #14100a;
+  align-items: center;
+  padding: 12px 0;
+  background: #1e1006;
   border-left: 2px solid #5c3310;
 }
-.vtl-mark--head {
-  width: 74%;
-  height: 22px;
-}
-.vtl-mark--block {
-  width: 100%;
-  height: 54px;
-}
-.vtl-mark--seats {
-  width: 100%;
-  height: 38px;
-}
-.vtl-mark--send {
-  margin-top: auto;
-  width: 100%;
-  height: 34px;
+.vtl-mark--grip {
+  width: 16px;
+  height: 46px;
 }
 
 /* ── Crew-Streifen ──────────────────────────────────────────── */

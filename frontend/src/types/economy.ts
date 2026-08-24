@@ -371,3 +371,35 @@ export interface VoyageRailRow {
   ready: number
   seen: boolean
 }
+
+/**
+ * Ein benannter Abschnitt einer Voyage. ABGELEITET aus dem Vertrag bzw. der
+ * Mission (`utils/game/voyageLegs.ts`), nie gespeichert — `from`/`to` sind
+ * Anteile der Gesamtdauer und schliessen lückenlos aneinander an.
+ */
+export interface VoyageLeg {
+  index: number
+  name: string
+  hazards: ExpeditionHazardId[]
+  from: number
+  to: number
+}
+
+/** Ein Punkt der Reiseroute, normalisiert 0..1 in der Fit-Box der Karte. */
+export interface VoyageRoutePoint {
+  x: number
+  y: number
+}
+
+/**
+ * Eine Gefahr, wie die Etappenleiter sie zeigt. Der Vertrag füllt `requirement`
+ * und `state` (dort steht die Crew noch zur Wahl), die laufende Mission nicht.
+ */
+export interface VoyageTrackHazard {
+  id: ExpeditionHazardId
+  name: string
+  icon: string
+  requirement?: string
+  state?: 'met' | 'partial' | 'unmet' | 'open'
+  cost?: number | null
+}

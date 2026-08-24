@@ -2,14 +2,14 @@
 /**
  * A mission that has already left — running, or back and waiting to be collected.
  *
- * The returned state is where the haul is shown: chimes AND the materials the
- * run brought back, because those are now the reason the mission was worth
- * sending. A failed run shows the same frame with the spoils row absent, so the
- * gap itself reads as the loss.
+ * Die Karte trägt EINE grosse Zahl (die Restzeit) und darunter die Etappen. Der
+ * frühere Gesamtbalken samt Prozentzahl und flacher Hazard-Zeile ist entfallen:
+ * die Leiter sagt beides genauer, und jede Gefahr steht an dem Abschnitt, an dem
+ * sie wartet.
  *
- * The progress bar animates `transform: scaleX()` rather than `width` — a width
- * transition is layout work every frame, and up to five of these run at once
- * while the orbit keeps drawing behind the panel.
+ * Der zurückgekehrte Zustand ist, wo die Beute steht — Chimes UND Materialien.
+ * Ein Fehlschlag zeigt denselben Rahmen ohne Beutezeile, die Lücke selbst liest
+ * sich als Verlust.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -17,7 +17,9 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import { getOriginColor } from '@/config/champions/championOrigins'
 import { MATERIALS } from '@/config/economy/materials'
 import { EXPEDITION_COLORS, EXPEDITION_HAZARD_BY_ID } from '@/config/constants'
-import type { ExpeditionMission } from '@/types'
+import { voyageLegsOf } from '@/utils/game/voyageLegs'
+import type { ExpeditionMission, VoyageTrackHazard } from '@/types'
+import ExpeditionVoyageTrack from './ExpeditionVoyageTrack.vue'
 
 const props = defineProps<{
   mission: ExpeditionMission
@@ -58,8 +60,15 @@ const remaining = computed(() => {
   return `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, '0')}`
 })
 
-const hazards = computed(() =>
-  (props.mission.hazards ?? []).map((id) => EXPEDITION_HAZARD_BY_ID[id]).filter(Boolean),
+const legs = computed(() => voyageLegsOf(props.mission))
+
+/** Unterwegs steht die Gefahr für sich — Requirement und Verdikt gehören dem
+ *  Vertrag, hier ist die Crew längst gesetzt. */
+const hazardInfo = computed<VoyageTrackHazard[]>(() =>
+  (props.mission.hazards ?? [])
+    .map((id) => EXPEDITION_HAZARD_BY_ID[id])
+    .filter(Boolean)
+    .map((def) => ({ id: def.id, name: def.name, icon: def.icon })),
 )
 
 /** Materials brought home, resolved to their display name and icon. */
@@ -89,21 +98,31 @@ function championImage(name: string): string {
     <header class="efc-head">
       <Icon
         :icon="mission.icon || 'game-icons:rolled-cloth'"
-        width="26"
-        height="26"
+        width="28"
+        height="28"
         class="efc-head-ico"
       />
       <span class="efc-name">{{ mission.name }}</span>
       <span v-if="done" class="efc-badge" :class="success ? 'efc-badge--ok' : 'efc-badge--fail'">
         {{ success ? '✓ Returned' : '✕ Lost' }}
       </span>
-      <span v-else class="efc-time">
-        <Icon icon="lucide:timer" width="13" height="13" />
-        {{ remaining }}
-      </span>
     </header>
 
-    <!-- Crew -->
+    <!-- Die eine grosse Zahl. Reservierte Breite und tabular-nums, damit sie
+         beim Stellenwechsel nicht wandert. -->
+    <div v-if="!done" class="efc-clock">
+      <span class="efc-clock-value">{{ remaining }}</span>
+      <span class="efc-clock-unit">until they return</span>
+    </div>
+
+    <ExpeditionVoyageTrack
+      class="efc-track"
+      :legs="legs"
+      :hazard-info="hazardInfo"
+      :progress="done ? 1 : progress"
+      :outcome="done ? (success ? 'success' : 'failure') : null"
+    />
+
     <div class="efc-crew">
       <span
         v-for="c in mission.assignedChampions"
@@ -112,34 +131,17 @@ function championImage(name: string): string {
         :title="`${c.name} — ${c.role}`"
       >
         <img :src="championImage(c.name)" :alt="c.name" class="efc-member-img" />
-        <span class="efc-member-name" :style="{ color: getOriginColor(c.name) }">{{ c.name }}</span>
+        <span class="efc-member-text">
+          <span class="efc-member-name" :style="{ color: getOriginColor(c.name) }">
+            {{ c.name }}
+          </span>
+          <span class="efc-member-role">{{ c.role }}</span>
+        </span>
       </span>
     </div>
 
-    <!-- Running: progress + what it is up against -->
-    <template v-if="!done">
-      <div class="efc-progress">
-        <div class="efc-track">
-          <div class="efc-fill" :style="{ transform: `scaleX(${progress})` }" />
-        </div>
-        <div class="efc-meta">
-          <span>{{ Math.round(progress * 100) }}%</span>
-          <!-- Named, not just pictured: a bare glyph here meant nothing without
-               a hover, and the run is already underway — this is the record of
-               what it went up against. -->
-          <span class="efc-hazard-list">
-            <span v-for="h in hazards" :key="h.id" class="efc-hazard">
-              <Icon :icon="h.icon" width="13" height="13" />
-              {{ h.name }}
-            </span>
-          </span>
-          <span>{{ Math.round(mission.successChance * 100) }}% odds</span>
-        </div>
-      </div>
-    </template>
-
     <!-- Returned: the haul + collect -->
-    <template v-else>
+    <template v-if="done">
       <div class="efc-haul">
         <span class="efc-chimes" :class="{ 'efc-chimes--fail': !success }">
           <img
@@ -155,7 +157,7 @@ function championImage(name: string): string {
           ×{{ m.qty }}
         </span>
         <span v-if="mission.spoils?.meep" class="efc-mat" title="Meep">
-          <Icon icon="game-icons:meeple" width="15" height="15" />
+          <Icon icon="game-icons:meeple" width="16" height="16" />
           ×{{ mission.spoils.meep }}
         </span>
       </div>
@@ -167,6 +169,8 @@ function championImage(name: string): string {
         Collect
       </button>
     </template>
+
+    <span v-else class="efc-odds">{{ Math.round(mission.successChance * 100) }}% odds</span>
   </article>
 </template>
 
@@ -175,7 +179,7 @@ function championImage(name: string): string {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   padding: 0 0 11px;
   border: 1px solid;
   border-radius: 4px;
@@ -187,7 +191,7 @@ function championImage(name: string): string {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding-top: 11px;
+  padding-top: 13px;
   border: 0;
   border-radius: 0;
   scrollbar-width: thin;
@@ -234,8 +238,8 @@ function championImage(name: string): string {
 .efc-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px 0;
+  gap: 9px;
+  padding: 8px 13px 0;
 }
 .efc-head-ico {
   flex-shrink: 0;
@@ -244,22 +248,12 @@ function championImage(name: string): string {
 .efc-name {
   flex: 1;
   min-width: 0;
-  font-size: 14.5px;
+  font-size: 15.5px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.92);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.efc-time {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  font-size: 13px;
-  font-weight: 800;
-  color: rgba(200, 144, 64, 0.78);
-  font-variant-numeric: tabular-nums;
 }
 .efc-badge {
   flex-shrink: 0;
@@ -282,81 +276,70 @@ function championImage(name: string): string {
   background: rgba(204, 96, 80, 0.12);
 }
 
+/* ── Restzeit ─────────────────────────────────────────────── */
+.efc-clock {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 0 13px;
+}
+.efc-clock-value {
+  min-width: 3.6ch;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
+}
+.efc-clock-unit {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.34);
+}
+
+.efc-track {
+  padding: 0 13px;
+}
+
 /* ── Crew ─────────────────────────────────────────────────── */
 .efc-crew {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px 12px;
-  padding: 0 12px;
+  gap: 7px 14px;
+  padding: 0 13px;
 }
 .efc-member {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 .efc-member-img {
-  width: 25px;
-  height: 25px;
+  width: 36px;
+  height: 36px;
   object-fit: cover;
   object-position: center top;
   border-radius: 50%;
   border: 1px solid rgba(200, 144, 64, 0.4);
   flex-shrink: 0;
 }
-.efc-member-name {
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* ── Progress ─────────────────────────────────────────────── */
-.efc-progress {
+.efc-member-text {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 0 12px;
-}
-.efc-track {
-  width: 100%;
-  height: 10px;
-  background: #111008;
-  border: 1px solid rgba(92, 51, 16, 0.55);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.efc-fill {
-  height: 100%;
-  width: 100%;
-  transform-origin: left center;
-  background: linear-gradient(to right, var(--exp-d), var(--exp-p));
-  transition: transform 1s linear;
-}
-.efc-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.48);
-  font-variant-numeric: tabular-nums;
-}
-.efc-hazard-list {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
   min-width: 0;
-  overflow: hidden;
 }
-.efc-hazard {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: rgba(216, 144, 96, 0.82);
-  font-size: 11px;
+.efc-member-name {
+  font-size: 12.5px;
   font-weight: 700;
-  letter-spacing: 0.02em;
   white-space: nowrap;
+}
+.efc-member-role {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.3);
 }
 
 /* ── Haul ─────────────────────────────────────────────────── */
@@ -364,34 +347,38 @@ function championImage(name: string): string {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px 14px;
-  padding: 0 12px;
+  gap: 7px 14px;
+  padding: 0 13px;
 }
 .efc-chimes {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 800;
   color: #ffd060;
   font-variant-numeric: tabular-nums;
 }
 .efc-chimes--fail {
   color: #cc6050;
-  font-size: 15px;
+  font-size: 16px;
 }
 .efc-chime-img {
-  width: 19px;
-  height: 19px;
+  width: 21px;
+  height: 21px;
   object-fit: contain;
 }
 .efc-mat {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  padding: 3px 8px;
   font-size: 13px;
   font-weight: 800;
   color: #a0f0d0;
+  background: #141410;
+  border: 1px solid rgba(92, 51, 16, 0.5);
+  border-radius: 4px;
   font-variant-numeric: tabular-nums;
 }
 .efc-mat-img {
@@ -399,10 +386,20 @@ function championImage(name: string): string {
   height: 20px;
   object-fit: contain;
 }
+
+.efc-odds {
+  padding: 0 13px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.3);
+  font-variant-numeric: tabular-nums;
+}
+
 .efc-collect {
   align-self: stretch;
-  margin: 0 12px;
-  padding: 8px 0;
+  margin: 0 13px;
+  padding: 9px 0;
   font-size: 12.5px;
   font-weight: 800;
   letter-spacing: 0.07em;

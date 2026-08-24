@@ -82,19 +82,44 @@ const railFolded = computed(
 )
 
 /**
- * Die Detailspalte faltet NUR auf Ansage — anders als die Leiste hat sie keine
- * Breitenschwelle. Wer sie einklappt, will die Karte sehen; das ist eine
- * Absicht, keine Platznot.
+ * Die Detailspalte folgt der Auswahl: zu, bis ein Hafen angeklickt wird. Der
+ * Reiter ist eine Karte, und die soll man beim Öffnen sehen.
+ *
+ * DREI Zustände, nicht zwei. `null` heisst „zu, weil nichts gewählt ist", `true`
+ * heisst „zugeklappt, weil der Spieler die Karte sehen will" — nur das zweite
+ * ist Kartenfokus. Ohne die Unterscheidung stünde der Fokusknopf auf schmalen
+ * Fenstern ab dem ersten Frame gedrückt da (dort faltet die Leiste von selbst),
+ * und Escape verbrauchte mit einem Druck zwei Stufen.
  */
-const detailFolded = ref(false)
+const userDetailFolded = ref<boolean | null>(null)
+const detailFolded = computed(() => userDetailFolded.value ?? true)
 
-/** Beide Ränder zugleich: der eine Griff, der die Karte gross macht. */
-const chartFocus = computed(() => railFolded.value && detailFolded.value)
+const chartFocus = computed(() => railFolded.value && userDetailFolded.value === true)
 function toggleFocus() {
   const next = !chartFocus.value
   userRailFolded.value = next
-  detailFolded.value = next
+  userDetailFolded.value = next
 }
+
+/** Ein ausdrücklicher Klick auf den Bühnengrund schliesst mit. */
+function onSelect(key: string | null) {
+  selectedKey.value = key
+  if (key === null) userDetailFolded.value = null
+}
+
+/**
+ * Jede Auswahl öffnet — auch die, die nicht vom Klick kommt: eine zurückgekehrte
+ * Mission beim Betreten des Reiters, und die Marke, die gerade abgeschickt wurde.
+ * Der Watcher schliesst NIE: verschwindet ein Subjekt unter der Auswahl
+ * (eingesammelt, abgelaufen), bleibt die Spalte offen und fällt auf die
+ * Galaxie-Übersicht zurück — die Beute steht genau dort.
+ */
+watch(selectedKey, (key) => {
+  if (key !== null) userDetailFolded.value = false
+})
+watch(isVisible, (visible) => {
+  if (!visible) userDetailFolded.value = null
+})
 
 const atlasColumns = computed(() => {
   const rail = railFolded.value ? VOYAGE_RAIL_COLLAPSED : VOYAGE_RAIL_WIDTH
@@ -193,7 +218,7 @@ const pickerOpen = ref(false)
 function onKeydown(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
   if (pickerOpen.value) return
-  if (selectedKey.value) selectedKey.value = null
+  if (selectedKey.value) onSelect(null)
   else if (chartFocus.value) toggleFocus()
   else return
   e.preventDefault()
@@ -249,6 +274,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
           :now="now"
           :title="galaxyTitle"
           :tier="galaxyTier"
+          :visible="isVisible"
           @select="selectedKey = $event"
         />
       </div>
@@ -262,7 +288,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
         @send="atlas.sendExpedition"
         @collect="atlas.collectMission"
         @picker-open="pickerOpen = $event"
-        @fold="detailFolded = $event"
+        @fold="userDetailFolded = $event"
       />
 
       <!-- Nur ein LEAVE — der Schleier ist ab Frame 1 voll deckend und wird

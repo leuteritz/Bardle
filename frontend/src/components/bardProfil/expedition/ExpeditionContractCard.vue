@@ -18,6 +18,7 @@ import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { getChampionRoles } from '@/config/champions/championData'
 import { getOriginColor } from '@/config/champions/championOrigins'
 import { formatShortDuration } from '@/utils/ui/format'
+import { voyageLegsOf } from '@/utils/game/voyageLegs'
 import {
   EXPEDITION_COLORS,
   EXPEDITION_HAZARD_BY_ID,
@@ -27,8 +28,9 @@ import {
   EXPEDITION_EXPIRY_WARNING_MS,
   EXPEDITION_HAZARD_PENALTY,
 } from '@/config/constants'
-import type { AvailableExpeditionSlot, ChampionRole } from '@/types'
+import type { AvailableExpeditionSlot, ChampionRole, VoyageTrackHazard } from '@/types'
 import ExpeditionCrewPicker from './ExpeditionCrewPicker.vue'
+import ExpeditionVoyageTrack from './ExpeditionVoyageTrack.vue'
 
 const props = defineProps<{
   offer: AvailableExpeditionSlot
@@ -135,22 +137,33 @@ const chanceLines = computed(() => {
  * plus a `title` tooltip, which meant the one thing the player has to act on —
  * "bring Focus" — was the one thing they could not see.
  */
-const hazards = computed(() => {
+const hazards = computed<VoyageTrackHazard[]>(() => {
   const lines = breakdown.value?.entries ?? []
   return (props.offer.hazards ?? [])
     .map((id) => EXPEDITION_HAZARD_BY_ID[id])
     .filter(Boolean)
     .map((def) => {
       const line = lines.find((e) => e.id === `hazard:${def.id}`)
+      // No crew yet → unknown rather than failed.
+      const state: VoyageTrackHazard['state'] = !line
+        ? 'open'
+        : line.value >= -0.001
+          ? 'met'
+          : line.value > -EXPEDITION_HAZARD_PENALTY + 0.001
+            ? 'partial'
+            : 'unmet'
       return {
-        ...def,
-        // No crew yet → unknown rather than failed.
-        state: !line ? 'open' : line.value >= -0.001 ? 'met' : line.value > -EXPEDITION_HAZARD_PENALTY + 0.001 ? 'partial' : 'unmet',
+        id: def.id,
+        name: def.name,
+        icon: def.icon,
+        requirement: def.requirement,
+        state,
         cost: line ? Math.round(line.value * 100) : null,
-        detail: line?.detail ?? '',
       }
     })
 })
+
+const legs = computed(() => voyageLegsOf(props.offer))
 
 const spoils = computed(() => EXPEDITION_SPOILS[props.offer.tier])
 
@@ -279,21 +292,15 @@ function formatCountdown(ms: number): string {
       <span class="ecc-spoil-note">on success</span>
     </div>
 
-    <!-- ── Hazards ───────────────────────────────────────────── -->
-    <div v-if="hazards.length" class="ecc-hazards">
-      <div v-for="h in hazards" :key="h.id" class="ecc-hazard" :class="`is-${h.state}`">
-        <Icon :icon="h.icon" width="20" height="20" class="ecc-hazard-ico" />
-        <div class="ecc-hazard-text">
-          <span class="ecc-hazard-name">{{ h.name }}</span>
-          <span class="ecc-hazard-req">{{ h.requirement }}</span>
-        </div>
-        <span class="ecc-hazard-verdict">
-          <template v-if="h.state === 'met'">✓ met</template>
-          <template v-else-if="h.state === 'open'">—</template>
-          <template v-else>{{ h.cost }}%</template>
-        </span>
-      </div>
-    </div>
+    <!-- ── Etappen ───────────────────────────────────────────── -->
+    <!-- Die Leiter ERSETZT die frühere flache Gefahrenliste: dieselben Zeilen
+         mit Requirement und Verdikt, nur an dem Abschnitt, an dem sie warten. -->
+    <ExpeditionVoyageTrack
+      class="ecc-legs"
+      :legs="legs"
+      :hazard-info="hazards"
+      :progress="null"
+    />
 
     <!-- ── Crew seats ────────────────────────────────────────── -->
     <div class="ecc-crew">
@@ -548,97 +555,9 @@ function formatCountdown(ms: number): string {
   height: 18px;
   object-fit: contain;
 }
-
-/* ── Hazards ──────────────────────────────────────────────────
-   A full row each, not a chip. The requirement is the point of the whole
-   feature — it has to be readable at a glance, and the row has to say whether
-   the staged crew answers it. Nothing here hides behind a hover. */
-.ecc-hazards {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+/* Die Etappenleiter trägt die Gefahren — siehe ExpeditionVoyageTrack. */
+.ecc-legs {
   padding: 0 12px;
-}
-.ecc-hazard {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 6px 10px;
-  border: 1px solid;
-  border-radius: 4px;
-  transition:
-    border-color 0.18s,
-    background 0.18s;
-}
-.ecc-hazard-ico {
-  flex-shrink: 0;
-}
-.ecc-hazard-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.ecc-hazard-name {
-  font-size: 12.5px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ecc-hazard-req {
-  font-size: 11.5px;
-  font-weight: 700;
-  line-height: 1;
-  color: rgba(230, 220, 196, 0.62);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ecc-hazard-verdict {
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.03em;
-}
-
-/* Answered — the crew already covers it. */
-.ecc-hazard.is-met {
-  background: rgba(82, 184, 48, 0.1);
-  border-color: rgba(82, 184, 48, 0.4);
-}
-.ecc-hazard.is-met .ecc-hazard-ico,
-.ecc-hazard.is-met .ecc-hazard-name,
-.ecc-hazard.is-met .ecc-hazard-verdict {
-  color: #52b830;
-}
-/* Partly answered — a stat hazard mitigates on a ramp. */
-.ecc-hazard.is-partial {
-  background: rgba(200, 144, 64, 0.1);
-  border-color: rgba(200, 144, 64, 0.4);
-}
-.ecc-hazard.is-partial .ecc-hazard-ico,
-.ecc-hazard.is-partial .ecc-hazard-name,
-.ecc-hazard.is-partial .ecc-hazard-verdict {
-  color: #e8c040;
-}
-/* Not answered at all, or no crew staged yet. */
-.ecc-hazard.is-unmet,
-.ecc-hazard.is-open {
-  background: rgba(160, 72, 40, 0.12);
-  border-color: rgba(204, 96, 80, 0.4);
-}
-.ecc-hazard.is-unmet .ecc-hazard-ico,
-.ecc-hazard.is-unmet .ecc-hazard-name,
-.ecc-hazard.is-unmet .ecc-hazard-verdict,
-.ecc-hazard.is-open .ecc-hazard-ico,
-.ecc-hazard.is-open .ecc-hazard-name,
-.ecc-hazard.is-open .ecc-hazard-verdict {
-  color: #d89060;
 }
 
 /* ── Crew seats ───────────────────────────────────────────── */

@@ -37,6 +37,7 @@ import type { VoyagePlacedSite } from '@/types'
 import ExpeditionSiteNode from './ExpeditionSiteNode.vue'
 import ExpeditionMapLegend from './ExpeditionMapLegend.vue'
 import ExpeditionGalaxyStatsBand from './ExpeditionGalaxyStatsBand.vue'
+import ExpeditionCrewMarkerLayer from './ExpeditionCrewMarkerLayer.vue'
 
 const props = defineProps<{
   record: CompletedGalaxyRecord
@@ -45,6 +46,8 @@ const props = defineProps<{
   now: number
   /** Der Name, den der Spieler kennt — der Theme-Name der Galaxie. */
   title: string
+  /** Der Reiter bleibt gemountet — die Marker-Schleife hängt daran. */
+  visible: boolean
   /** Stufe des Ziels, für das Band oben links. */
   tier: 'common' | 'rare' | 'epic'
 }>()
@@ -251,6 +254,19 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, bandH })
       :record="record"
       :compact="cssW < VOYAGE_MAP_STATS_MIN_W"
       :wide="cssW >= VOYAGE_MAP_STATS_WIDE_W"
+    />
+
+    <!-- Zwischen Band und Marken: die Legende steht bei gleichem z-index früher
+         im Template und läge sonst darüber. -->
+    <ExpeditionCrewMarkerLayer
+      :record="record"
+      :sites="sites"
+      :box="box"
+      :width="cssW"
+      :height="cssH"
+      :plate="markerSize.plate"
+      :visible="visible"
+      :now="now"
     />
 
     <div class="egm-nodes" :style="nodeVars">

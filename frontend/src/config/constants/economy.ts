@@ -706,10 +706,10 @@ export const CHIMES_COST_ICON = 'game-icons:windchimes'
    Detail; die Fit-Box verliert davon nochmal die Bühnenrinne und
    2 × VOYAGE_MAP_INSET_PX):
 
-     Full HD 1920×1080   Reiter 1240 → Leiste 224 · Detail 368 · Karte 648
-     WUXGA   1920×1200   Reiter 1240 → Leiste 224 · Detail 368 · Karte 648
-     2K/QHD  2560×1440   Reiter 1660 → Leiste 224 · Detail 448 · Karte 988
-     4K      3840×2160   Reiter 2940 → Leiste 224 · Detail 520 · Karte 2196
+     Full HD 1920×1080   Reiter 1240 → Leiste 224 · Detail 388 · Karte 628
+     WUXGA   1920×1200   Reiter 1240 → Leiste 224 · Detail 388 · Karte 628
+     2K/QHD  2560×1440   Reiter 1660 → Leiste 224 · Detail 481 · Karte 955
+     4K      3840×2160   Reiter 2940 → Leiste 224 · Detail 560 · Karte 2156
 
    Der Boden ist ein GEOMETRIE-Boden, kein Geschmacksurteil: `generateGalaxyDots`
    strebt 0.085 Abstand im normalisierten Raum an, zwei benachbarte Häfen liegen
@@ -728,9 +728,9 @@ export const VOYAGE_RAIL_AUTOFOLD_WIDTH = 1180
 /** Untergrenze der Detailspalte: die Breite, bei der `.ecc-crew` (flex-wrap) noch
  *  zwei Sitze je Zeile trägt, ein Epic-Vertrag mit fünf Sitzen also auf drei
  *  Zeilen umbricht statt auf fünf. */
-export const VOYAGE_DETAIL_MIN_WIDTH = 368
-export const VOYAGE_DETAIL_PCT = 27
-export const VOYAGE_DETAIL_MAX_WIDTH = 520
+export const VOYAGE_DETAIL_MIN_WIDTH = 388
+export const VOYAGE_DETAIL_PCT = 29
+export const VOYAGE_DETAIL_MAX_WIDTH = 560
 /** Eingeklappte Detailspalte: nur der senkrechte Griff bleibt stehen. Genau wie
  *  bei der Leiste wird der Körper VERSCHOBEN, nicht abgerissen — die halb
  *  besetzte Crew eines Vertrags überlebt das Falten. */
@@ -985,3 +985,85 @@ export const VOYAGE_LOADER_ACCENT = '#e8c040'
 export const VOYAGE_LOADER_ICON = 'game-icons:treasure-map'
 export const VOYAGE_LOADER_TITLE = 'VOYAGES'
 export const VOYAGE_LOADER_CAPTION = 'Unrolling the chart'
+
+/* ── Etappen einer Voyage ─────────────────────────────────────────────────────
+   Eine Reise zerfällt in benannte Abschnitte. Sie sind ABGELEITET, nicht
+   gespeichert (`utils/game/voyageLegs.ts`) und ändern an der Auflösung nichts:
+   ein Wurf am Ende wie bisher, keine Teilauszahlung. Sie teilen die bestehende
+   `durationSeconds` auf und ordnen die bestehenden Hazards einem Abschnitt zu.
+
+   Die Zahl hängt an der STUFE, nicht an der Dauer — die kürzen Star Forge, Meep
+   Tree und Providence, eine stark gebuffte Reise verlöre sonst Etappen:
+
+     common (Galaxie 1–3)   1 Hazard   → 1 Etappe
+     rare   (4–9)           1 Hazard   → 2 Etappen
+     epic   (ab 10)         2 Hazards  → 3 Etappen
+     epic   (ab 19)         3 Hazards  → 3 Etappen, die letzte trägt zwei      */
+
+export const VOYAGE_LEG_MAX = 3
+/** Streuung der Etappenlängen um den Gleichanteil. Ohne sie liest sich die
+ *  Reise als Metronom; darüber wird eine Etappe zum Nebensatz. */
+export const VOYAGE_LEG_WEIGHT_MIN = 0.8
+export const VOYAGE_LEG_WEIGHT_MAX = 1.2
+
+/** Die Anreise — steht nur, wenn es mehr als eine Etappe gibt. */
+export const VOYAGE_LEG_APPROACH_NAMES = [
+  'Leave the portal',
+  'Cross the shallows',
+  'Set the heading',
+  'Clear the rim',
+  'Drift out',
+  'Chart the near reach',
+]
+/** Etappen, die eine Gefahr tragen. */
+export const VOYAGE_LEG_HAZARD_NAMES = [
+  'Thread the belt',
+  'Ford the rift',
+  'Breach the veil',
+  'Run the dark',
+  'Sound the deep',
+  'Weather the tide',
+  'Hold the heading',
+  'Push the current',
+]
+/** Die letzte Etappe, wenn sie keine Gefahr trägt. */
+export const VOYAGE_LEG_ARRIVAL_NAMES = [
+  'Make anchor',
+  'Reach the shrine',
+  'Come about',
+  'Sight the waypoint',
+  'Put in',
+]
+
+/* ── Reiseroute auf der Karte ─────────────────────────────────────────────── */
+
+/**
+ * Wie weit der Routenanfang vom Abflugportal zur Mitte gezogen wird.
+ *
+ * `generateGalaxyDots` setzt den Spawn auf den AUSSENRAND der Scheibe, im Winkel
+ * gleichverteilt — in etwa jeder vierten Galaxie fällt er damit in die obere
+ * linke Ecke, wo das Ribbon der Karte mit z-index 2 darüber liegt, oder in die
+ * untere linke unter die Legende. Ein Routenanfang, den man nicht sieht, ist
+ * keiner.
+ */
+export const VOYAGE_ROUTE_START_PULL = 0.14
+/** Seitliche Auslenkung eines Wegpunkts, als Anteil der Sehnenlänge. Eine
+ *  gerade Linie zwischen zwei Punkten liest sich nicht als Reise. */
+export const VOYAGE_ROUTE_BOW = 0.16
+/** Stützpunkte, in die eine Route für die SVG-Zeichnung aufgelöst wird. */
+export const VOYAGE_ROUTE_SAMPLES = 48
+
+/**
+ * Portraitgrösse des reisenden Crew-Markers, abgeleitet aus der PLATTE der
+ * Hafenmarken (`voyageMarkerSizeFor`) — derselbe Massstab, dieselbe Karte. Fest
+ * gewählt ginge die Crew auf 4K unter, wo ein Hafen bis 96 px misst.
+ *
+ * Der Anteil liegt unter 1/2: die Crew ist unterwegs, der Hafen ist das Ziel —
+ * sie darf ihn nicht überstrahlen.
+ */
+export const VOYAGE_CREW_MARKER_FACE_RATIO = 0.42
+export const VOYAGE_CREW_MARKER_FACE_MIN = 20
+export const VOYAGE_CREW_MARKER_FACE_MAX = 40
+/** Höchstens so viele Portraits am Marker, der Rest wird zu `+n`. */
+export const VOYAGE_CREW_MARKER_FACES = 3
+export const VOYAGE_CREW_MARKER_PULSE_MS = 2400

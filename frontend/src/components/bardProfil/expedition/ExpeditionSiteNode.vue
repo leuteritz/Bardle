@@ -105,8 +105,16 @@ function clock(ms: number): string {
 
 // ── Crew ────────────────────────────────────────────────────────────────────
 const crew = computed(() => mission.value?.assignedChampions ?? [])
-const crewShown = computed(() => crew.value.slice(0, 3))
-const crewOverflow = computed(() => Math.max(0, crew.value.length - crewShown.value.length))
+/**
+ * Nur die HEIMGEKEHRTE Crew steht am Hafen. Solange die Mission läuft, ist sie
+ * unterwegs und auf der Route zu sehen (`ExpeditionCrewMarkerLayer`) — sie hier
+ * ebenfalls zu zeigen hiesse dieselben Champions zweimal auf derselben Karte.
+ */
+const atPort = computed(() => state.value === 'returned')
+const crewShown = computed(() => (atPort.value ? crew.value.slice(0, 3) : []))
+const crewOverflow = computed(() =>
+  atPort.value ? Math.max(0, crew.value.length - crewShown.value.length) : 0,
+)
 
 function portrait(name: string): string {
   return battleStore.getChampionImage(name, { size: 'sm' })

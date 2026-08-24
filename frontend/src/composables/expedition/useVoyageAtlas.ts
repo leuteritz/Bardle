@@ -14,12 +14,7 @@ import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
-import {
-  voyageBerthsOf,
-  assignVoyageBerths,
-  pinKeyOf,
-  pinStampOf,
-} from '@/utils/game/voyageSites'
+import { voyageBerthsOf, assignVoyageBerths, pinKeyOf, pinStampOf } from '@/utils/game/voyageSites'
 import { gameNow } from '@/utils/game/gameClock'
 import {
   EXPEDITION_CHIME_POP_LIFETIME_MS,
@@ -90,29 +85,16 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
   }
 
   /**
-   * Das dringlichste Subjekt der Galaxie: zurückgekehrt → bald ablaufend →
-   * unterwegs. Die Spalte soll nie leer stehen, wenn es etwas zu tun gibt.
+   * NUR eine zurückgekehrte Mission wählt sich selbst — sie ist das Einzige,
+   * das eine Handlung verlangt und dafür die Detailspalte aufreissen darf.
+   *
+   * Ein bloss ausliegender Vertrag tut das nicht mehr: die Spalte steht seit
+   * dem Umbau geschlossen, und sie beim Betreten des Reiters für jedes Angebot
+   * zu öffnen hiesse, die Karte wieder zu verdecken, für die er gebaut ist.
    */
   function autoSelect() {
-    const sites = placedSites.value
-    if (!sites.length) return
-    const returned = sites.find((s) => s.mission && s.mission.status !== 'active')
-    if (returned) {
-      selectedKey.value = returned.pinKey
-      return
-    }
-    const offers = sites.filter((s) => s.offer)
-    if (offers.length) {
-      const soonest = offers.reduce((a, b) =>
-        (a.offer as AvailableExpeditionSlot).availableUntil <
-        (b.offer as AvailableExpeditionSlot).availableUntil
-          ? a
-          : b,
-      )
-      selectedKey.value = soonest.pinKey
-      return
-    }
-    selectedKey.value = sites[0].pinKey
+    const returned = placedSites.value.find((s) => s.mission && s.mission.status !== 'active')
+    if (returned) selectedKey.value = returned.pinKey
   }
 
   // ── Platzierung ───────────────────────────────────────────────────────────
@@ -177,9 +159,7 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     records.value.map((record) => {
       const dest = destinationFor(record)
       const progress = chartStore.progressOf(record.galaxy)
-      const missions = expeditionStore.activeExpeditions.filter(
-        (m) => m.galaxy === record.galaxy,
-      )
+      const missions = expeditionStore.activeExpeditions.filter((m) => m.galaxy === record.galaxy)
       return {
         galaxy: record.galaxy,
         name: dest.name,
@@ -187,9 +167,8 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
         accent: minimapAccentForTheme(record.themeIndex),
         charted: progress.charted,
         runs: progress.runs,
-        contracts: expeditionStore.availableExpeditions.filter(
-          (s) => s.galaxy === record.galaxy,
-        ).length,
+        contracts: expeditionStore.availableExpeditions.filter((s) => s.galaxy === record.galaxy)
+          .length,
         inField: missions.filter((m) => m.status === 'active').length,
         ready: missions.filter((m) => m.status !== 'active').length,
         seen: chartStore.seenDestinations.includes(record.galaxy),
