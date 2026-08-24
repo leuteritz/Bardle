@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  galaxyFitBox,
-  GALAXY_PLATE_REF_W,
-  GALAXY_PLATE_REF_H,
-} from '@/utils/fx/galaxyPlate'
+import { galaxyFitBox, GALAXY_PLATE_REF_W, GALAXY_PLATE_REF_H } from '@/utils/fx/galaxyPlate'
 import {
   VOYAGE_MAP_ASPECT_MIN,
   VOYAGE_MAP_ASPECT_MAX,
@@ -54,6 +50,15 @@ describe('galaxyFitBox — das Seitenverhältnis-Band', () => {
     const box = galaxyFitBox(900, 620)
     expect(box.w).toBeCloseTo(900 - VOYAGE_MAP_INSET_PX * 2, 6)
     expect(box.h).toBeCloseTo(620 - VOYAGE_MAP_INSET_PX * 2, 6)
+  })
+
+  it('lässt die Full-HD-Zone nicht mehr letterboxen', () => {
+    // Der Grund, aus dem VOYAGE_MAP_ASPECT_MIN geöffnet wurde: die Kartenzone
+    // misst dort 628×610, also 1.03 — bei 1.15 verlor die Box 59 px Höhe an
+    // Balken, ohne dass die Scheibe dadurch besser lag.
+    const box = galaxyFitBox(628, 609.6)
+    expect(box.h).toBeCloseTo(609.6 - VOYAGE_MAP_INSET_PX * 2, 6)
+    expect(box.w).toBeCloseTo(628 - VOYAGE_MAP_INSET_PX * 2, 6)
   })
 
   it('hält jedes Verhältnis im Band, welche Zone auch kommt', () => {

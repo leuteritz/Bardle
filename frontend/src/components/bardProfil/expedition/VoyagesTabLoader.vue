@@ -35,6 +35,8 @@ import {
   VOYAGE_LOADER_TITLE,
   VOYAGE_MAP_ASPECT_MIN,
   VOYAGE_RAIL_ROW_H,
+  VOYAGE_RAIL_THUMB_H,
+  VOYAGE_RAIL_THUMB_W,
   VOYAGE_RAIL_WIDTH,
 } from '@/config/constants'
 
@@ -45,6 +47,8 @@ defineProps<{
 
 const railWidth = `${VOYAGE_RAIL_WIDTH}px`
 const rowHeight = `${VOYAGE_RAIL_ROW_H}px`
+const thumbWidth = `${VOYAGE_RAIL_THUMB_W}px`
+const thumbHeight = `${VOYAGE_RAIL_THUMB_H}px`
 const detailWidth = `${VOYAGE_DETAIL_MIN_WIDTH}px`
 const crewHeight = `${VOYAGE_CREW_STRIP_H}px`
 const mapAspect = `${VOYAGE_MAP_ASPECT_MIN}`
@@ -197,8 +201,8 @@ const skeletonPorts = computed(() =>
   flex-shrink: 0;
 }
 .vtl-row-thumb {
-  width: 84px;
-  height: 53px;
+  width: v-bind(thumbWidth);
+  height: v-bind(thumbHeight);
   flex-shrink: 0;
   border: 1px solid #3e200a;
   border-radius: 3px;
@@ -255,9 +259,9 @@ const skeletonPorts = computed(() =>
 }
 .vtl-port {
   position: absolute;
-  width: 26px;
-  height: 26px;
-  margin: -13px 0 0 -13px;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
   border-radius: 4px;
   background: #1c1a12;
 }

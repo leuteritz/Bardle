@@ -27,6 +27,7 @@ import {
   VOYAGE_CREW_STRIP_H,
   VOYAGE_LOADER_MIN_MS,
   VOYAGE_LOADER_SETTLE_FRAMES,
+  VOYAGE_DETAIL_COLLAPSED,
   VOYAGE_DETAIL_MAX_WIDTH,
   VOYAGE_DETAIL_MIN_WIDTH,
   VOYAGE_DETAIL_PCT,
@@ -62,8 +63,13 @@ const {
   collectFlashing,
 } = atlas
 
-const galaxyTitle = computed(() =>
-  selectedRecord.value ? destinationFor(selectedRecord.value).name : '',
+const destination = computed(() =>
+  selectedRecord.value ? destinationFor(selectedRecord.value) : null,
+)
+const galaxyTitle = computed(() => destination.value?.name ?? '')
+const galaxyTier = computed(() => destination.value?.tier ?? 'common')
+const galaxyCharted = computed(() =>
+  selectedGalaxy.value ? chartStore.progressOf(selectedGalaxy.value).charted : 0,
 )
 
 // ── Zonenbudget ─────────────────────────────────────────────────────────────
@@ -80,9 +86,27 @@ const railFolded = computed(
     (atlasWidth.value > 0 && atlasWidth.value < VOYAGE_RAIL_AUTOFOLD_WIDTH),
 )
 
+/**
+ * Die Detailspalte faltet NUR auf Ansage — anders als die Leiste hat sie keine
+ * Breitenschwelle. Wer sie einklappt, will die Karte sehen; das ist eine
+ * Absicht, keine Platznot.
+ */
+const detailFolded = ref(false)
+
+/** Beide Ränder zugleich: der eine Griff, der die Karte gross macht. */
+const chartFocus = computed(() => railFolded.value && detailFolded.value)
+function toggleFocus() {
+  const next = !chartFocus.value
+  userRailFolded.value = next
+  detailFolded.value = next
+}
+
 const atlasColumns = computed(() => {
   const rail = railFolded.value ? VOYAGE_RAIL_COLLAPSED : VOYAGE_RAIL_WIDTH
-  return `${rail}px minmax(0, 1fr) clamp(${VOYAGE_DETAIL_MIN_WIDTH}px, ${VOYAGE_DETAIL_PCT}%, ${VOYAGE_DETAIL_MAX_WIDTH}px)`
+  const detail = detailFolded.value
+    ? `${VOYAGE_DETAIL_COLLAPSED}px`
+    : `clamp(${VOYAGE_DETAIL_MIN_WIDTH}px, ${VOYAGE_DETAIL_PCT}%, ${VOYAGE_DETAIL_MAX_WIDTH}px)`
+  return `${rail}px minmax(0, 1fr) ${detail}`
 })
 const crewHeight = computed(() => `${VOYAGE_CREW_STRIP_H}px`)
 const stageGutter = computed(() => `${VOYAGE_MAP_GUTTER_PX / 2}px`)
@@ -164,16 +188,20 @@ onBeforeUnmount(cancelReveal)
 
 // ── Escape-Leiter ───────────────────────────────────────────────────────────
 // Stufe 1 (Crew-Popover) gehört der Vertragskarte, sie meldet sich hier ab.
-// Stufe 2 ist die Auswahl auf der Karte. Stufe 3 — nichts gewählt — wird NICHT
-// verbraucht: die Karte zeigt immer eine Galaxie, sie zu leeren wäre kein
-// Schritt zurück, sondern ein leerer Bildschirm.
+// Stufe 2 ist die Auswahl auf der Karte. Stufe 3 ist der Kartenfokus — er kommt
+// NACH der Auswahl, weil die Auswahl das Jüngere ist: wer im Fokus einen Hafen
+// angeklickt hat, will mit Escape diesen Hafen loswerden, nicht die ganze
+// Ansicht. Stufe 4 — nichts gewählt, kein Fokus — wird NICHT verbraucht: die
+// Karte zeigt immer eine Galaxie, sie zu leeren wäre kein Schritt zurück,
+// sondern ein leerer Bildschirm.
 const pickerOpen = ref(false)
 
 function onKeydown(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
   if (pickerOpen.value) return
-  if (!selectedKey.value) return
-  selectedKey.value = null
+  if (selectedKey.value) selectedKey.value = null
+  else if (chartFocus.value) toggleFocus()
+  else return
   e.preventDefault()
   e.stopPropagation()
 }
@@ -202,8 +230,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
         class="etc-bar"
         :now="now"
         :collect-flashing="collectFlashing"
+        :chart-focus="chartFocus"
         @collect-all="atlas.collectAll"
         @send-all="atlas.sendAll"
+        @toggle-focus="toggleFocus"
       />
 
       <ExpeditionGalaxyRail
@@ -224,6 +254,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
           :selected-key="selectedKey"
           :now="now"
           :title="galaxyTitle"
+          :tier="galaxyTier"
+          :charted="galaxyCharted"
           @select="selectedKey = $event"
         />
       </div>
@@ -233,9 +265,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
         :site="selectedSite"
         :record="selectedRecord"
         :now="now"
+        :folded="detailFolded"
         @send="atlas.sendExpedition"
         @collect="atlas.collectMission"
         @picker-open="pickerOpen = $event"
+        @fold="detailFolded = $event"
       />
 
       <ExpeditionRoster

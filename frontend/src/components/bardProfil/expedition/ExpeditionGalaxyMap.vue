@@ -15,11 +15,15 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { paintGalaxy, galaxyFitBox, type FitBox } from '@/utils/fx/galaxyPlate'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
+import { voyageMarkerSizeFor } from '@/utils/game/voyageSites'
+import { toRoman } from '@/utils/ui/format'
 import {
+  EXPEDITION_CHART_MAX,
   VOYAGE_MAP_HISTORY_SCALE,
   VOYAGE_MAP_INSET_PX,
   VOYAGE_MAP_MAX_BACKING_PX,
   VOYAGE_MAP_ROUTE_ALPHA,
+  VOYAGE_SITE_INLINE_CLOCK_PX,
   VOYAGE_SITE_MOVE_MS,
 } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
@@ -33,6 +37,10 @@ const props = defineProps<{
   now: number
   /** Der Name, den der Spieler kennt — der Theme-Name der Galaxie. */
   title: string
+  /** Stufe des Ziels, für das Band oben links. */
+  tier: 'common' | 'rare' | 'epic'
+  /** Kartografiefortschritt — dieselbe Ablesung wie in der Leistenzeile. */
+  charted: number
 }>()
 const emit = defineEmits<{ select: [string | null] }>()
 
@@ -55,9 +63,31 @@ function pct(x: number, y: number): { left: number; top: number } {
   }
 }
 
-const corePos = computed(() => pct(0.5, 0.5))
-
 const rescued = computed(() => props.record.attemptResults.filter((r) => r === 'rescued').length)
+const chartPct = computed(() => props.charted / EXPEDITION_CHART_MAX)
+
+/**
+ * Wie gross ein Hafen auf DIESER Karte sein darf — aus der Enge der gerade
+ * gesetzten Plätze, nicht aus einer festen Zahl. Ein computed, kein Frame:
+ * er hängt nur an der Box und an der Menge der Häfen.
+ *
+ * Die Einrückung der Fit-Box (`VOYAGE_MAP_INSET_PX`) muss NICHT mitwachsen, und
+ * das ist kein Zufall: `voyageBerthsOf` klemmt jeden Platz auf 0.06..0.94, ein
+ * Randhafen steht also `0.06 × box.h + 18` von der Bühnenkante entfernt.
+ * `VOYAGE_SITE_MAX_SPAN_FRACTION` (0.12) deckelt die Platte auf ~`0.12 × box.h`,
+ * ihre halbe Höhe ist damit immer kleiner als dieser Rand.
+ */
+const markerSize = computed(() => voyageMarkerSizeFor(props.sites, box.value))
+
+const nodeVars = computed(() => ({
+  '--sn-hit': `${markerSize.value.hit}px`,
+  '--sn-plate': `${markerSize.value.plate}px`,
+  '--sn-dot': `${markerSize.value.dot}px`,
+  '--sn-move': `${VOYAGE_SITE_MOVE_MS}ms`,
+}))
+
+/** Ab dieser Plattengrösse trägt die Marke ihre Uhr selbst. */
+const inlineClock = computed(() => markerSize.value.plate >= VOYAGE_SITE_INLINE_CLOCK_PX)
 
 // ── Malen ───────────────────────────────────────────────────────────────────
 /** Zählt die Repaints — der Playwright-Lauf liest das, siehe docs/playwright.md. */
@@ -156,7 +186,7 @@ onBeforeUnmount(() => {
   dprQuery = null
 })
 
-defineExpose({ paintCount, box, cssW, cssH })
+defineExpose({ paintCount, box, cssW, cssH, markerSize })
 </script>
 
 <template>
@@ -165,25 +195,30 @@ defineExpose({ paintCount, box, cssW, cssH })
     class="egm"
     role="group"
     :aria-label="`${title} — voyage chart`"
-    :style="{ '--sn-move': `${VOYAGE_SITE_MOVE_MS}ms` }"
     @click="emit('select', null)"
   >
     <canvas ref="canvas" class="egm-plate" aria-hidden="true" />
 
-    <div class="egm-nodes">
-      <!-- Der befreite Kern: die Plakette benennt den Ort, sie ist nichts,
-           das man anfassen kann. -->
-      <div
-        class="egm-plaque"
-        :style="{ left: `${corePos.left}%`, top: `${corePos.top}%` }"
-        aria-hidden="true"
-      >
-        <span class="egm-plaque-name">{{ title }}</span>
-        <span class="egm-plaque-sub">
-          freed · {{ rescued }}/{{ record.attemptResults.length }} stars
+    <!-- Das Band sass einmal als Plakette unter dem Kern in der Bildmitte. Mit
+         einer Marke, die bis 96 px misst, kollidierte es dort mit dem nächsten
+         Hafen — und in der Ecke steht es ohnehin da, wo man eine Kartenlegende
+         sucht. -->
+    <div class="egm-ribbon" :class="`egm-ribbon--${tier}`" aria-hidden="true">
+      <span class="egm-ribbon-no">{{ toRoman(record.galaxy) }}</span>
+      <span class="egm-ribbon-text">
+        <span class="egm-ribbon-name">{{ title }}</span>
+        <span class="egm-ribbon-sub">
+          <span class="egm-ribbon-tier">{{ tier }}</span>
+          <span class="egm-ribbon-dot">·</span>
+          freed {{ rescued }}/{{ record.attemptResults.length }} stars
         </span>
-      </div>
+        <span class="egm-ribbon-chart">
+          <span class="egm-ribbon-fill" :style="{ transform: `scaleX(${chartPct})` }" />
+        </span>
+      </span>
+    </div>
 
+    <div class="egm-nodes" :style="nodeVars">
       <ExpeditionSiteNode
         v-for="site in sites"
         :key="site.pinKey"
@@ -192,6 +227,7 @@ defineExpose({ paintCount, box, cssW, cssH })
         :top="pct(site.x, site.y).top"
         :now="now"
         :selected="selectedKey === site.pinKey"
+        :inline-clock="inlineClock"
         @select="emit('select', $event)"
       />
 
@@ -237,32 +273,86 @@ defineExpose({ paintCount, box, cssW, cssH })
   pointer-events: auto;
 }
 
-.egm-plaque {
+/* ── Das Band oben links ────────────────────────────────────────────────── */
+.egm-ribbon {
   position: absolute;
-  transform: translate(-50%, calc(-50% + 34px));
+  left: 12px;
+  top: 12px;
+  z-index: 2;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1px;
-  text-align: center;
-  white-space: nowrap;
+  gap: 10px;
+  padding: 7px 13px 7px 9px;
+  background: rgba(11, 8, 6, 0.82);
+  border: 1px solid #3e200a;
+  border-left: 3px solid #c89040;
+  border-radius: 4px;
   pointer-events: none;
 }
-.egm-plaque-name {
-  font-family: 'MedievalSharp', Georgia, serif;
-  font-size: 15px;
-  letter-spacing: 0.06em;
-  color: #e8c040;
-  text-shadow: 0 1px 4px #000;
+.egm-ribbon--rare {
+  border-left-color: #7aa8e0;
 }
-.egm-plaque-sub {
+.egm-ribbon--epic {
+  border-left-color: #c090e0;
+}
+.egm-ribbon-no {
+  font-family: 'MedievalSharp', Georgia, serif;
+  font-size: 22px;
+  line-height: 1;
+  color: rgba(200, 144, 64, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+.egm-ribbon-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.egm-ribbon-name {
+  font-family: 'MedievalSharp', Georgia, serif;
+  font-size: 17px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: #e8c040;
+  white-space: nowrap;
+}
+.egm-ribbon-sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(200, 144, 64, 0.55);
-  text-shadow: 0 1px 3px #000;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.egm-ribbon-tier {
+  color: rgba(200, 144, 64, 0.75);
+}
+.egm-ribbon--rare .egm-ribbon-tier {
+  color: #7aa8e0;
+}
+.egm-ribbon--epic .egm-ribbon-tier {
+  color: #c090e0;
+}
+.egm-ribbon-dot {
+  color: rgba(200, 144, 64, 0.3);
+}
+.egm-ribbon-chart {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(200, 164, 90, 0.14);
+}
+.egm-ribbon-fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(to right, #8a5a1c, #e8c060);
+  transition: transform 0.35s ease;
 }
 
 .egm-quiet {

@@ -713,7 +713,7 @@ export const CHIMES_COST_ICON = 'game-icons:windchimes'
 
    Der Boden ist ein GEOMETRIE-Boden, kein Geschmacksurteil: `generateGalaxyDots`
    strebt 0.085 Abstand im normalisierten Raum an, zwei benachbarte Häfen liegen
-   also 0.085 × Box-Höhe auseinander. Das muss über VOYAGE_SITE_HIT_PX bleiben,
+   also 0.085 × Box-Höhe auseinander. Das muss über VOYAGE_SITE_HIT_MIN bleiben,
    sonst sind sie nicht mehr getrennt anklickbar. Nimmt man der Karte Breite,
    hört sie auf zu funktionieren — `__tests__/config/voyagesAtlasLayout.spec.ts`
    bindet das.                                                                */
@@ -731,13 +731,17 @@ export const VOYAGE_RAIL_AUTOFOLD_WIDTH = 1180
 export const VOYAGE_DETAIL_MIN_WIDTH = 368
 export const VOYAGE_DETAIL_PCT = 27
 export const VOYAGE_DETAIL_MAX_WIDTH = 520
+/** Eingeklappte Detailspalte: nur der senkrechte Griff bleibt stehen. Genau wie
+ *  bei der Leiste wird der Körper VERSCHOBEN, nicht abgerissen — die halb
+ *  besetzte Crew eines Vertrags überlebt das Falten. */
+export const VOYAGE_DETAIL_COLLAPSED = 44
 /**
  * Harter Boden der Kartenzone. Die Zahl ist ABGELEITET, nicht gewaehlt: bei
  * dieser Breite klemmt die Fit-Box am unteren Ende ihres Seitenverhaeltnis-
  * Bandes, ihre Hoehe ist also `(Breite - Rinne - 2 x Einrueckung) / 1.15`, und
- * `VOYAGE_BERTH_MIN_SEPARATION x Hoehe` muss VOYAGE_SITE_HIT_PX noch tragen.
+ * `VOYAGE_BERTH_MIN_SEPARATION x Hoehe` muss VOYAGE_SITE_HIT_MIN noch tragen.
  * Bei 620 sind das ~35.3 px gegen 34. `voyagesAtlasLayout.spec.ts` rechnet es
- * nach; wer an VOYAGE_SITE_HIT_PX oder am Seitenverhaeltnis-Band dreht, muss
+ * nach; wer an VOYAGE_SITE_HIT_MIN oder am Seitenverhaeltnis-Band dreht, muss
  * diese Zahl mitziehen.
  */
 export const VOYAGE_MAP_MIN_WIDTH = 620
@@ -746,10 +750,16 @@ export const VOYAGE_MAP_MIN_WIDTH = 620
  * Das Seitenverhältnis-Band, in dem die Galaxie gezeichnet wird, zentriert in
  * der Kartenzone. Hintergrund, Dunst und Funkelsterne füllen weiterhin die GANZE
  * Zone, die Letterbox zeigt sich also nie als Balken, sondern als Tiefraum.
- * Über 1.75 schmiert die Scheibe zum Streifen, unter 1.15 falten sich die Arme
- * übereinander und die Häfen drängen sich horizontal.
+ *
+ * Über VOYAGE_MAP_ASPECT_MAX schmiert die Scheibe zum Streifen.
+ *
+ * Der untere Rand stand einmal bei 1.15 und kostete auf Full HD 59 px Höhe: die
+ * Kartenzone misst dort 628×610, also 1.03 — die Box wurde auf 592×515 geklemmt,
+ * obwohl 592×574 gepasst hätten. Die Scheibe faltet dabei nicht, weil
+ * MINIMAP_GALAXY_SQUASH (0.62) sie ohnehin staucht: bei einer quadratischen Box
+ * liest sie sich als 1.6-Ellipse. Erst deutlich unter 1 stellt sie sich auf.
  */
-export const VOYAGE_MAP_ASPECT_MIN = 1.15
+export const VOYAGE_MAP_ASPECT_MIN = 1.0
 export const VOYAGE_MAP_ASPECT_MAX = 1.75
 /** Einrückung der Fit-Box in der Bühne. `generateGalaxyDots` klemmt Sterne auf
  *  0.06..0.94; das ist der Rest an Rand, den ein Randhafen braucht, damit seine
@@ -791,7 +801,7 @@ export const VOYAGE_SITE_SLOTS = 10
  * x neun Sternzahlen (3 bis 45 Versuche): schlechtester Fall 0.0756 zwischen
  * zwei Plaetzen und 0.0722 zu einem Stern. 0.075 mit Sicherheitsabstand
  * darunter. `voyageSites.spec.ts` haelt die Zusage, `voyagesAtlasLayout.spec.ts`
- * rechnet sie gegen VOYAGE_SITE_HIT_PX in Pixel um.
+ * rechnet sie gegen VOYAGE_SITE_HIT_MIN in Pixel um.
  */
 export const VOYAGE_BERTH_MIN_SEPARATION = 0.072
 /**
@@ -800,7 +810,7 @@ export const VOYAGE_BERTH_MIN_SEPARATION = 0.072
  * Die Plaetze kommen NICHT aus `generateGalaxyDots`. Der Zug strebt 0.085
  * Abstand an, garantiert ihn aber nicht — er probiert acht Kandidaten und nimmt
  * danach den letzten, wie er faellt. Gemessen lagen in der dichtesten Galaxie
- * zwei Punkte 25.5 px auseinander, bei VOYAGE_SITE_HIT_PX 40 also zwei Haefen
+ * zwei Punkte 25.5 px auseinander, bei VOYAGE_SITE_HIT_MIN 40 also zwei Haefen
  * mit deckenden Klickflaechen. Mehr Punkte anzufordern half nicht: die
  * spaeteren werden in genau die engen Luecken gedrueckt.
  *
@@ -811,17 +821,46 @@ export const VOYAGE_BERTH_MIN_SEPARATION = 0.072
  * Abstandsvergleiche, nichts, was einen Frame kostet.
  */
 export const VOYAGE_BERTH_CANDIDATE_POOL = 240
-/** Klickquadrat eines Hafens. Bleibt unter dem GARANTIERTEN Platzabstand
- *  (VOYAGE_BERTH_MIN_SEPARATION x kuerzere Achse der Fit-Box), damit sich zwei
- *  Nachbarn nie decken — auch nicht in der dichtesten Galaxie mit vollem
- *  Rang-Deckel. */
-export const VOYAGE_SITE_HIT_PX = 34
-/** Sichtbare Platte eines Hafens, der Vertrag oder Mission traegt. Bleibt
- *  INNERHALB der Klickflaeche: eine Platte, die groesser ist als ihr Ziel,
- *  verspricht einen Treffer, den sie nicht einloest. */
-export const VOYAGE_SITE_MARKER_PX = 32
-/** Blanker geretteter/verlorener Hafen — ein Hover-Ring, keine Platte. */
-export const VOYAGE_SITE_DOT_PX = 22
+/* ── Groesse eines Hafens: aus der ENGE, nicht aus dem schlimmsten Fall ───────
+   Hier stand einmal ein festes Klickquadrat von 34 px, abgeleitet aus dem
+   dichtesten denkbaren Fall — zehn Haefen in EINER Galaxie auf Full HD, wo der
+   garantierte Abstand (VOYAGE_BERTH_MIN_SEPARATION x kuerzere Achse) bei 37 px
+   liegt. Der Normalfall sind ein bis drei Vertraege; dort stehen ueber 300 px
+   zwischen zwei Haefen und die Marke blieb trotzdem 34. Auf 2K und 4K war sie
+   bei VOLLEM Deckel nur die Haelfte bzw. ein Drittel dessen, was die Geometrie
+   erlaubt (58 bzw. 112 px Abstand).
+
+   `voyageMarkerSizeFor()` in `utils/game/voyageSites.ts` rechnet die Groesse
+   jetzt aus dem kleinsten TATSAECHLICHEN Abstand der gerade gesetzten Haefen.
+   Die Regel darunter bleibt unveraendert: die Platte liegt INNERHALB der
+   Klickflaeche, und zwei Klickflaechen decken sich nie.                       */
+
+/** Boden der Klickflaeche — der bisherige feste Wert, damit die dichteste
+ *  Galaxie nirgends schlechter dasteht als vorher. `voyagesAtlasLayout.spec.ts`
+ *  bindet ihn an den garantierten Hafenabstand. */
+export const VOYAGE_SITE_HIT_MIN = 34
+/** Deckel der Klickflaeche. Auf 4K bindet er statt der Enge: dort stuenden
+ *  sonst 180-px-Marken auf der Karte. */
+export const VOYAGE_SITE_HIT_MAX = 96
+/** Luft zwischen zwei Klickflaechen. Nachbarn beruehren sich damit nie, auch
+ *  nicht bei Rundungsfehlern in der Prozentumrechnung der Bühne. */
+export const VOYAGE_SITE_HIT_GAP = 4
+/** Zweiter Deckel, an der Karte statt an der Enge: eine Marke, die mehr als
+ *  dieser Anteil der Boxhoehe misst, ist keine Marke mehr, sondern ein Motiv.
+ *  Bindet, wenn eine Galaxie nur einen einzigen Hafen traegt. */
+export const VOYAGE_SITE_MAX_SPAN_FRACTION = 0.12
+/** Die Platte bleibt INNERHALB der Klickflaeche: eine Platte, die groesser ist
+ *  als ihr Ziel, verspricht einen Treffer, den sie nicht einloest. */
+export const VOYAGE_SITE_PLATE_INSET = 2
+/** Blanker geretteter/verlorener Hafen — ein Hover-Ring, keine Platte. Anteil
+ *  an der Platte, damit er mitwaechst (frueher fest 22 zu 32). */
+export const VOYAGE_SITE_DOT_RATIO = 0.69
+/** Ab dieser Plattengroesse traegt die Marke ihre Uhr selbst, statt sie in eine
+ *  Pille darunter zu haengen. Die Ziffer misst `0.2 x Platte`; bei 48 sind das
+ *  9.6 px und damit knapp unter der Pille (10.5) — darunter kippt es, und die
+ *  Pille mit ihrem eigenen Untergrund ist dann die bessere Auskunft. Full HD
+ *  liefert in der dichtesten Galaxie 51 px, faellt also gerade nicht zurueck. */
+export const VOYAGE_SITE_INLINE_CLOCK_PX = 48
 
 /**
  * Wie gross die GESCHICHTE auf der grossen Karte gegenueber dem Archivstandbild
@@ -829,8 +868,8 @@ export const VOYAGE_SITE_DOT_PX = 22
  *
  * Nicht 1, obwohl `paintGalaxy` sonst alles linear mitwachsen laesst. Auf 320 px
  * lesen sich 36 Sterne als Punkte; linear auf 592 px hochgezogen sind es
- * 31-px-Scheiben, fast so gross wie eine Vertragsplatte (VOYAGE_SITE_MARKER_PX
- * 38) — die Spirale verschwand unter einer Golddecke und die Marken, die man
+ * 31-px-Scheiben, fast so gross wie eine Vertragsplatte (damals fest 32) — die
+ * Spirale verschwand unter einer Golddecke und die Marken, die man
  * ANKLICKEN soll, standen gleichberechtigt neben Marken, die nur Vergangenheit
  * sind. Gemessen an der dichtesten Galaxie, die das Spiel kennt
  * (GALAXY_STARS_MAX 36 plus Fehlversuche).
@@ -867,10 +906,24 @@ export const VOYAGE_SITE_MOVE_MS = 320
  *  r = 47.5 der Fähigkeitenkacheln; ein geliehener Umfang füllt den Ring falsch. */
 export const VOYAGE_NODE_RING_CIRCUMFERENCE = 100.53
 
-/** Eine Leistenzeile: Miniatur plus Namenszeile und Kartografiebalken. */
-export const VOYAGE_RAIL_ROW_H = 96
+/**
+ * Eine Leistenzeile: Miniatur plus Namenszeile und Kartografiebalken.
+ *
+ * Diese drei sind die QUELLE — Zeile und Ladeschleier lesen aus ihnen. Vorher
+ * standen sie hier, waehrend `ExpeditionGalaxyRow.vue` und `VoyagesTabLoader.vue`
+ * je 84x53 verdrahteten; drei Zahlen fuer ein Mass, von denen keine galt.
+ *
+ * Die Miniatur ist gewachsen, weil die Zaehler auf sie gewandert sind: was eine
+ * Galaxie gerade traegt, steht als Marke IM Bild statt als 10-px-Chip darunter.
+ * Die Zeile braucht daneben nur noch Namen, Stufe und Kartografiebalken.
+ */
 export const VOYAGE_RAIL_THUMB_W = 96
 export const VOYAGE_RAIL_THUMB_H = 60
+/** Miniatur plus Polsterung — nicht frei gewaehlt, sondern die Summe. */
+export const VOYAGE_RAIL_ROW_H = VOYAGE_RAIL_THUMB_H + 12
+/** Eingeklappt bleibt ein Quadrat: die Form der Galaxie ist dort nicht mehr zu
+ *  erkennen, der Zustand schon. */
+export const VOYAGE_RAIL_THUMB_FOLDED = 40
 /** Crew-Streifen: eine Chipreihe, Kopfzeile, Polster. Eine Ablesung, keine
  *  Liste — er rollt seitwärts, nie vertikal. */
 export const VOYAGE_CREW_STRIP_H = 92

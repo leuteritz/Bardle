@@ -6,10 +6,20 @@
  * Es ist derselbe Ort: `pinKeyOf` gibt Vertrag und Mission denselben
  * Schlüssel, die Marke verwandelt sich also, statt umzuziehen.
  *
- * Bewegt werden ausschliesslich `transform` und `opacity`. Der Fortschritt
- * läuft über `scaleX` einer Spur (ein Schreibvorgang je Sekunde, nicht je
- * Frame), das Atmen über die `opacity` einer eigenen Ebene mit statischem
- * Schein — kein `filter`, kein `box-shadow`, keine animierte Randfarbe.
+ * **Die Grösse kommt von aussen und wechselt.** `ExpeditionGalaxyMap` misst die
+ * Enge der gerade gesetzten Häfen und setzt `--sn-plate`/`--sn-hit` an die
+ * Knotenebene; auf einer ruhigen Galaxie ist eine Marke dreimal so gross wie in
+ * einer vollen. ALLE Innenmasse rechnen gegen `--sn-plate` — Glyph, Uhr, Ring
+ * und Crew wachsen dadurch mit, ohne dass irgendwo eine zweite Zahl steht.
+ *
+ * Das ist KEINE Pixelanimation (Performance-Regel 10): die Grösse ändert sich
+ * nur, wenn ein Vertrag kommt oder geht, und trägt ausdrücklich keinen Übergang.
+ * Was übergeht — Hover, Auswahl, Wippen — ist `transform` obendrauf.
+ *
+ * Der Fortschritt läuft über `stroke-dashoffset` einer SVG-Kreislinie (ein
+ * Schreibvorgang je Sekunde, nicht je Frame), das Atmen über die `opacity` einer
+ * eigenen Ebene mit statischem Schein — kein `filter`, kein `box-shadow`, keine
+ * animierte Randfarbe.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -21,8 +31,7 @@ import {
   VOYAGE_MARKER_BREATH_MS,
   VOYAGE_MARKER_BREATH_WARN_MS,
   VOYAGE_MARKER_BOB_MS,
-  VOYAGE_SITE_HIT_PX,
-  VOYAGE_SITE_MARKER_PX,
+  VOYAGE_NODE_RING_CIRCUMFERENCE,
 } from '@/config/constants'
 import type { VoyagePlacedSite } from '@/types'
 
@@ -33,6 +42,8 @@ const props = defineProps<{
   top: number
   now: number
   selected: boolean
+  /** Trägt die Platte ihre Uhr selbst, oder hängt sie als Pille darunter? */
+  inlineClock: boolean
 }>()
 const emit = defineEmits<{ select: [string] }>()
 
@@ -69,10 +80,22 @@ const progress = computed(() => {
   return Math.min(1, Math.max(0, elapsed / (m.durationSeconds * 1000)))
 })
 
+/** Der Ring füllt sich im Uhrzeigersinn — leer bei 0, geschlossen bei 1. */
+const ringOffset = computed(
+  () => VOYAGE_NODE_RING_CIRCUMFERENCE * (1 - (state.value === 'returned' ? 1 : progress.value)),
+)
+
 const remaining = computed(() => {
   const m = mission.value
   if (!m) return ''
   return clock(m.durationSeconds * 1000 - (props.now - m.startTime))
+})
+
+/** Die eine Zahl, die die Marke zeigt — Ablauf, Rückkehr oder Ausgang. */
+const clockText = computed(() => {
+  if (state.value === 'offer') return clock(expiresIn.value)
+  if (state.value === 'running') return remaining.value
+  return success.value ? 'Returned' : 'Lost'
 })
 
 function clock(ms: number): string {
@@ -82,7 +105,7 @@ function clock(ms: number): string {
 
 // ── Crew ────────────────────────────────────────────────────────────────────
 const crew = computed(() => mission.value?.assignedChampions ?? [])
-const crewShown = computed(() => crew.value.slice(0, 2))
+const crewShown = computed(() => crew.value.slice(0, 3))
 const crewOverflow = computed(() => Math.max(0, crew.value.length - crewShown.value.length))
 
 function portrait(name: string): string {
@@ -90,6 +113,9 @@ function portrait(name: string): string {
 }
 
 // ── Darstellung ─────────────────────────────────────────────────────────────
+/** Die Uhr steht nur IN der Platte, wenn sie dort auch lesbar ist. */
+const showInlineClock = computed(() => props.inlineClock && state.value !== 'returned')
+
 const label = computed(() => {
   const s = subject.value
   if (!s) return ''
@@ -104,8 +130,6 @@ const nodeStyle = computed(() => ({
   '--sn-c': color.value.primary,
   '--sn-d': color.value.dim,
   '--sn-glow': color.value.glowRgb,
-  '--sn-hit': `${VOYAGE_SITE_HIT_PX}px`,
-  '--sn-plate': `${VOYAGE_SITE_MARKER_PX}px`,
   '--sn-breath': `${expiring.value ? VOYAGE_MARKER_BREATH_WARN_MS : VOYAGE_MARKER_BREATH_MS}ms`,
   '--sn-bob': `${VOYAGE_MARKER_BOB_MS}ms`,
 }))
@@ -125,23 +149,25 @@ const nodeStyle = computed(() => ({
     <span class="sn-breath" aria-hidden="true" />
 
     <span class="sn-plate">
-      <Icon v-if="subject" :icon="subject.icon" width="22" height="22" class="sn-ico" />
-      <RpgNotifyBadge
-        v-if="state === 'returned'"
-        :count="1"
-        label="Expedition ready to collect"
-      />
-    </span>
+      <!-- Der Fortschritt als Kreislinie: ein `stroke-dashoffset` je Sekunde,
+           kein `conic-gradient` und keine vererbte Custom Property. -->
+      <svg v-if="state !== 'offer'" class="sn-ring" viewBox="0 0 36 36" aria-hidden="true">
+        <circle class="sn-ring-track" cx="18" cy="18" r="16" />
+        <circle
+          class="sn-ring-fill"
+          cx="18"
+          cy="18"
+          r="16"
+          :stroke-dasharray="VOYAGE_NODE_RING_CIRCUMFERENCE"
+          :stroke-dashoffset="ringOffset"
+        />
+      </svg>
 
-    <span v-if="state === 'offer'" class="sn-pill" :class="{ 'sn-pill--warn': expiring }">
-      {{ clock(expiresIn) }}
-    </span>
-
-    <template v-else-if="state === 'running'">
-      <span class="sn-track" aria-hidden="true">
-        <span class="sn-track-fill" :style="{ transform: `scaleX(${progress})` }" />
+      <span class="sn-face">
+        <Icon v-if="subject" :icon="subject.icon" width="24" height="24" class="sn-ico" />
+        <span v-if="showInlineClock" class="sn-clock">{{ clockText }}</span>
       </span>
-      <span class="sn-pill">{{ remaining }}</span>
+
       <span v-if="crewShown.length" class="sn-crew" aria-hidden="true">
         <img
           v-for="c in crewShown"
@@ -152,10 +178,18 @@ const nodeStyle = computed(() => ({
         />
         <span v-if="crewOverflow" class="sn-crew-more">+{{ crewOverflow }}</span>
       </span>
-    </template>
+    </span>
 
-    <span v-else class="sn-pill sn-pill--done">
-      {{ success ? 'Returned' : 'Lost' }}
+    <!-- Ausserhalb der Platte: die Marke hat ihre eigene Lesegrösse und darf
+         nicht mit dem Hafen schrumpfen. -->
+    <RpgNotifyBadge v-if="state === 'returned'" :count="1" label="Expedition ready to collect" />
+
+    <span
+      v-if="!showInlineClock"
+      class="sn-pill"
+      :class="{ 'sn-pill--warn': expiring, 'sn-pill--done': state === 'returned' }"
+    >
+      {{ clockText }}
     </span>
   </button>
 </template>
@@ -164,8 +198,8 @@ const nodeStyle = computed(() => ({
 .sn {
   position: absolute;
   z-index: 1;
-  width: var(--sn-hit);
-  height: var(--sn-hit);
+  width: var(--sn-hit, 34px);
+  height: var(--sn-hit, 34px);
   margin: 0;
   padding: 0;
   border: 0;
@@ -174,7 +208,8 @@ const nodeStyle = computed(() => ({
   cursor: pointer;
   transform: translate(-50%, -50%);
   /* Der EINZIGE Nicht-Transform-Übergang der Karte: ein Hafen, dessen Vorgänger
-     die Galaxie verlassen hat, gleitet auf seinen neuen Platz. */
+     die Galaxie verlassen hat, gleitet auf seinen neuen Platz. Die GRÖSSE geht
+     ausdrücklich nicht über — sie ist Layout, kein Effekt. */
   transition:
     left var(--sn-move, 320ms) ease,
     top var(--sn-move, 320ms) ease;
@@ -184,15 +219,22 @@ const nodeStyle = computed(() => ({
   outline-offset: 3px;
   border-radius: 4px;
 }
+.sn--on {
+  z-index: 3;
+}
+.sn--returned,
+.sn--lost {
+  z-index: 2;
+}
 
 /* ── Atem: statischer Schein, animierte Deckkraft ──────────────────────── */
 .sn-breath {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: calc(var(--sn-plate) * 2.1);
-  height: calc(var(--sn-plate) * 2.1);
-  margin: calc(var(--sn-plate) * -1.05) 0 0 calc(var(--sn-plate) * -1.05);
+  width: calc(var(--sn-plate, 32px) * 2.1);
+  height: calc(var(--sn-plate, 32px) * 2.1);
+  margin: calc(var(--sn-plate, 32px) * -1.05) 0 0 calc(var(--sn-plate, 32px) * -1.05);
   border-radius: 50%;
   background: radial-gradient(
     circle,
@@ -237,9 +279,9 @@ const nodeStyle = computed(() => ({
   position: absolute;
   left: 50%;
   top: 50%;
-  width: var(--sn-plate);
-  height: var(--sn-plate);
-  margin: calc(var(--sn-plate) / -2) 0 0 calc(var(--sn-plate) / -2);
+  width: var(--sn-plate, 32px);
+  height: var(--sn-plate, 32px);
+  margin: calc(var(--sn-plate, 32px) / -2) 0 0 calc(var(--sn-plate, 32px) / -2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -249,7 +291,7 @@ const nodeStyle = computed(() => ({
      Wirklichkeit die Glyphen ab: es kappt oben und unten je 26 %, und die
      detailreichen game-icons der Reise-Motivfamilie („castle-ruins",
      „cave-entrance") zerfielen darin zu Strichresten. 4 px Radius ist ohnehin
-     die Projektregel. */
+     die Projektregel — auch auf einer 90-px-Platte. */
   border-radius: 4px;
   transform: scale(1);
   transition: transform 0.14s ease;
@@ -270,7 +312,21 @@ const nodeStyle = computed(() => ({
 .sn--lost .sn-plate {
   border-color: #cc6050;
 }
+
+/* ── Gesicht: Glyph, darunter die Uhr, sobald die Platte sie trägt ──────── */
+.sn-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--sn-plate, 32px) * 0.03);
+  line-height: 1;
+  pointer-events: none;
+}
 .sn-ico {
+  /* Wächst mit der Platte statt am `width`-Attribut zu kleben. */
+  width: calc(var(--sn-plate, 32px) * 0.46);
+  height: calc(var(--sn-plate, 32px) * 0.46);
   color: var(--sn-c);
 }
 .sn--running .sn-ico {
@@ -282,27 +338,92 @@ const nodeStyle = computed(() => ({
 .sn--lost .sn-ico {
   color: #e08a7a;
 }
+.sn-clock {
+  font-size: calc(var(--sn-plate, 32px) * 0.2);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #e8dcc0;
+  font-variant-numeric: tabular-nums;
+}
+.sn--warn .sn-clock {
+  color: #ffb0a0;
+}
+
+/* ── Fortschrittsring ───────────────────────────────────────────────────── */
+.sn-ring {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.sn-ring-track,
+.sn-ring-fill {
+  fill: none;
+  stroke-width: 2.4;
+}
+.sn-ring-track {
+  stroke: rgba(11, 8, 6, 0.72);
+}
+.sn-ring-fill {
+  stroke: var(--sn-c);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+.sn--returned .sn-ring-fill {
+  stroke: #64dcb4;
+}
+.sn--lost .sn-ring-fill {
+  stroke: #cc6050;
+}
 
 /* Ein Ring statt einer animierten Randfarbe — der gewählte Zustand ist ein
    einmaliger Umschlag, kein Dauerläufer. */
-.sn--on::after {
+.sn--on .sn-plate::after {
   content: '';
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: calc(var(--sn-plate) + 12px);
-  height: calc(var(--sn-plate) + 12px);
-  margin: calc((var(--sn-plate) + 12px) / -2) 0 0 calc((var(--sn-plate) + 12px) / -2);
+  inset: calc(var(--sn-plate, 32px) * -0.19);
   border: 2px solid #e8c040;
   border-radius: 50%;
   pointer-events: none;
 }
 
-/* ── Beschriftungen unter der Platte ────────────────────────────────────── */
+/* ── Crew am Fuss der Platte ────────────────────────────────────────────── */
+.sn-crew {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--sn-plate, 32px) * 0.05);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+.sn-crew-img {
+  width: calc(var(--sn-plate, 32px) * 0.22);
+  height: calc(var(--sn-plate, 32px) * 0.22);
+  object-fit: cover;
+  object-position: center top;
+  border-radius: 50%;
+  border: 1px solid rgba(200, 144, 64, 0.55);
+  margin-left: calc(var(--sn-plate, 32px) * -0.08);
+}
+.sn-crew-img:first-child {
+  margin-left: 0;
+}
+.sn-crew-more {
+  margin-left: 3px;
+  font-size: calc(var(--sn-plate, 32px) * 0.14);
+  font-weight: 800;
+  color: rgba(232, 192, 64, 0.8);
+}
+
+/* ── Die Pille: nur, solange die Platte die Uhr nicht selbst trägt ──────── */
 .sn-pill {
   position: absolute;
   left: 50%;
-  top: calc(50% + var(--sn-plate) * 0.62);
+  top: calc(50% + var(--sn-plate, 32px) * 0.62);
   transform: translateX(-50%);
   padding: 1px 6px;
   background: rgba(11, 8, 6, 0.88);
@@ -328,60 +449,6 @@ const nodeStyle = computed(() => ({
 .sn--lost .sn-pill--done {
   border-color: #cc6050;
   color: #e08a7a;
-}
-/* Läuft eine Mission, steht die Spur zwischen Platte und Pille. */
-.sn--running .sn-pill {
-  top: calc(50% + var(--sn-plate) * 0.62 + 7px);
-}
-
-.sn-track {
-  position: absolute;
-  left: 50%;
-  top: calc(50% + var(--sn-plate) * 0.62);
-  width: 40px;
-  height: 4px;
-  margin-left: -20px;
-  overflow: hidden;
-  background: rgba(11, 8, 6, 0.85);
-  border: 1px solid #3e200a;
-  border-radius: 2px;
-  pointer-events: none;
-}
-.sn-track-fill {
-  display: block;
-  height: 100%;
-  width: 100%;
-  transform-origin: left center;
-  background: linear-gradient(to right, var(--sn-d), var(--sn-c));
-  transition: transform 1s linear;
-}
-
-.sn-crew {
-  position: absolute;
-  left: 50%;
-  bottom: calc(50% + var(--sn-plate) * 0.62);
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  pointer-events: none;
-}
-.sn-crew-img {
-  width: 16px;
-  height: 16px;
-  object-fit: cover;
-  object-position: center top;
-  border-radius: 50%;
-  border: 1px solid rgba(200, 144, 64, 0.55);
-  margin-left: -6px;
-}
-.sn-crew-img:first-child {
-  margin-left: 0;
-}
-.sn-crew-more {
-  margin-left: 3px;
-  font-size: 9.5px;
-  font-weight: 800;
-  color: rgba(232, 192, 64, 0.8);
 }
 
 /* Die zurückgekehrte Marke wippt — sie ist das Einzige auf der Karte, das der

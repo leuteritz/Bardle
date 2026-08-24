@@ -5,7 +5,18 @@
  * Das Bild IST das Wiedererkennen — eine befreite Galaxie hat keinen Namen,
  * den man vor ihrer Form behält.
  *
- * `renderGalaxyThumb` und nicht das volle Standbild: die Zeile zeigt 84×53 px,
+ * **Die Zeile hat einen Zustand, und der ist der Kanal, den man überfliegt.**
+ * Vorher stand alles, was eine Galaxie gerade trägt, in drei 10-px-Chips am Fuss
+ * der Zeile — gleiche Farbe, gleiche Grösse, gleiche Stelle wie der Rest. Bei
+ * zwanzig Galaxien musste man die Spalte LESEN. Jetzt tragen zwei Kanäle die
+ * Auskunft, bevor man liest: die farbige Kante links und ein Zähler AUF der
+ * Miniatur. Die Chips darunter bleiben für die Aufschlüsselung.
+ *
+ * Der Rang ist eindeutig: einsammelbar schlägt ausliegend schlägt unterwegs
+ * schlägt still. Nur der einsammelbare Zustand atmet — pulste jede Zeile, die
+ * irgendetwas trägt, flimmerte bei zwanzig Galaxien die halbe Spalte.
+ *
+ * `renderGalaxyThumb` und nicht das volle Standbild: die Zeile zeigt 96×60 px,
  * ein 640×400-PNG hier zu dekodieren kostete gemessen 241 ms beim
  * Wiedereinblenden des Reiters. Und es wird erst gezeichnet, wenn die Zeile ins
  * Sichtfeld kommt — der modulweite Cache macht es danach einmal je Sitzung.
@@ -14,7 +25,13 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { renderGalaxyThumb } from '@/utils/fx/galaxySnapshot'
 import { toRoman } from '@/utils/ui/format'
-import { ARCHIVE_SNAPSHOT_ROOT_MARGIN, EXPEDITION_CHART_MAX } from '@/config/constants'
+import {
+  ARCHIVE_SNAPSHOT_ROOT_MARGIN,
+  EXPEDITION_CHART_MAX,
+  VOYAGE_RAIL_THUMB_FOLDED,
+  VOYAGE_RAIL_THUMB_H,
+  VOYAGE_RAIL_THUMB_W,
+} from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageRailRow } from '@/types'
 
@@ -49,12 +66,27 @@ onBeforeUnmount(() => {
   observer = null
 })
 
+const thumbW = `${VOYAGE_RAIL_THUMB_W}px`
+const thumbH = `${VOYAGE_RAIL_THUMB_H}px`
+const thumbFolded = `${VOYAGE_RAIL_THUMB_FOLDED}px`
+
 const chartPct = computed(() => props.row.charted / EXPEDITION_CHART_MAX)
+/** Was auf den Spieler wartet — die eine Zahl, die der Zähler trägt. */
 const waiting = computed(() => props.row.contracts + props.row.ready)
+
+/** Einsammelbar > ausliegend > unterwegs > still. Ein Rang, eine Farbe. */
+type RowState = 'ready' | 'offer' | 'field' | 'quiet'
+const state = computed<RowState>(() => {
+  if (props.row.ready > 0) return 'ready'
+  if (props.row.contracts > 0) return 'offer'
+  if (props.row.inField > 0) return 'field'
+  return 'quiet'
+})
+
 const title = computed(
   () =>
     `${props.row.name} — Galaxy ${props.row.galaxy} · ${props.row.contracts} contract(s), ` +
-    `${props.row.inField} in the field`,
+    `${props.row.inField} in the field, ${props.row.ready} ready to collect`,
 )
 </script>
 
@@ -62,7 +94,11 @@ const title = computed(
   <button
     ref="root"
     class="egr"
-    :class="[`egr--${row.tier}`, { 'egr--on': selected, 'egr--folded': folded }]"
+    :class="[
+      `egr--${row.tier}`,
+      `egr--st-${state}`,
+      { 'egr--on': selected, 'egr--folded': folded },
+    ]"
     :style="{ '--gx-accent': `rgb(${row.accent})` }"
     :aria-pressed="selected"
     :aria-label="title"
@@ -72,7 +108,13 @@ const title = computed(
     <span class="egr-thumb">
       <img v-if="snapshot" :src="snapshot" class="egr-img" alt="" />
       <span v-else class="egr-img egr-img--holding" />
+
+      <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre Deckkraft.
+           Nur der einsammelbare Zustand atmet. -->
+      <span v-if="state === 'ready'" class="egr-pulse" aria-hidden="true" />
+
       <span class="egr-no">{{ toRoman(row.galaxy) }}</span>
+      <span v-if="waiting" class="egr-count">{{ waiting }}</span>
       <span v-if="!row.seen" class="egr-new">NEW</span>
     </span>
 
@@ -80,28 +122,23 @@ const title = computed(
       <span class="egr-name">{{ row.name }}</span>
       <span class="egr-meta">
         <span v-if="row.contracts" class="egr-chip egr-chip--offer">
-          <Icon icon="ph:scroll-fill" width="11" height="11" />
+          <Icon icon="ph:scroll-fill" width="12" height="12" />
           {{ row.contracts }}
         </span>
         <span v-if="row.inField" class="egr-chip egr-chip--field">
-          <Icon icon="game-icons:caravel" width="11" height="11" />
+          <Icon icon="game-icons:caravel" width="12" height="12" />
           {{ row.inField }}
         </span>
         <span v-if="row.ready" class="egr-chip egr-chip--ready">
-          <Icon icon="ph:treasure-chest-fill" width="11" height="11" />
+          <Icon icon="ph:treasure-chest-fill" width="12" height="12" />
           {{ row.ready }}
         </span>
-        <span v-if="!waiting && !row.inField" class="egr-chip egr-chip--idle">quiet</span>
         <span class="egr-tier">{{ row.tier }}</span>
       </span>
       <span class="egr-chart" :title="`Charted ${row.charted} / ${EXPEDITION_CHART_MAX}`">
         <span class="egr-chart-fill" :style="{ transform: `scaleX(${chartPct})` }" />
       </span>
     </span>
-
-    <!-- Eingeklappt bleibt die Zahl stehen: eine Spalte, die nicht mehr meldet,
-         dass dort etwas wartet, wird vergessen. -->
-    <span v-else-if="waiting" class="egr-stub-count">{{ waiting }}</span>
   </button>
 </template>
 
@@ -110,11 +147,13 @@ const title = computed(
   position: relative;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   width: 100%;
-  padding: 6px 8px;
+  padding: 6px 7px;
   background: transparent;
   border: 1px solid transparent;
+  /* Die linke Kante ist der ZUSTANDSKANAL, nicht mehr der Hover-Kanal. Hover und
+     Auswahl arbeiten über Hintergrund und Rahmen und überschreiben sie nicht. */
   border-left: 3px solid transparent;
   border-radius: 4px;
   text-align: left;
@@ -123,34 +162,60 @@ const title = computed(
     background 0.13s,
     border-color 0.13s;
 }
+.egr--st-ready {
+  border-left-color: #64dcb4;
+}
+.egr--st-offer {
+  border-left-color: #e8c040;
+}
+.egr--st-field {
+  border-left-color: rgba(230, 220, 196, 0.4);
+}
 .egr:hover {
   background: #1c1a12;
-  border-left-color: var(--gx-accent, #c89040);
 }
+/* Drei Seiten einzeln und NICHT `border-color`: die Kurzform nähme die linke
+   Kante mit und die Auswahl löschte den Zustand, den sie anzeigt. */
 .egr--on {
   background: color-mix(in srgb, var(--gx-accent, #e8c040) 20%, #12100a);
-  border-color: color-mix(in srgb, var(--gx-accent, #e8c040) 45%, transparent);
+  border-top-color: color-mix(in srgb, var(--gx-accent, #e8c040) 45%, transparent);
+  border-right-color: color-mix(in srgb, var(--gx-accent, #e8c040) 45%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--gx-accent, #e8c040) 45%, transparent);
+}
+/* Nur wo es keinen Zustand zu zeigen gibt, darf die Kante der Auswahl gehören. */
+.egr--on.egr--st-quiet {
   border-left-color: var(--gx-accent, #e8c040);
 }
 .egr:focus-visible {
   outline: 2px solid #e8c040;
   outline-offset: -2px;
 }
+/* Still heisst zurücktreten — die Miniatur bleibt hell, sie IST das Wiedererkennen. */
+.egr--st-quiet .egr-name,
+.egr--st-quiet .egr-tier {
+  color: rgba(200, 144, 64, 0.42);
+}
 
 .egr-thumb {
   position: relative;
   flex-shrink: 0;
   display: block;
-  width: 84px;
-  height: 53px;
+  width: v-bind(thumbW);
+  height: v-bind(thumbH);
   overflow: hidden;
   border: 1px solid #6b5330;
   border-radius: 3px;
   background: #0b0806;
 }
+.egr--st-ready .egr-thumb {
+  border-color: rgba(100, 220, 180, 0.65);
+}
+.egr--st-offer .egr-thumb {
+  border-color: rgba(232, 192, 64, 0.6);
+}
 .egr--folded .egr-thumb {
-  width: 34px;
-  height: 34px;
+  width: v-bind(thumbFolded);
+  height: v-bind(thumbFolded);
 }
 .egr-img {
   width: 100%;
@@ -161,20 +226,70 @@ const title = computed(
 .egr-img--holding {
   background: #0b0806;
 }
+
+/* Statischer Schein, animierte Deckkraft — Performance-Regel 11. */
+.egr-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  pointer-events: none;
+  box-shadow: inset 0 0 14px 2px rgba(100, 220, 180, 0.5);
+  animation: egr-breathe 2.4s ease-in-out infinite;
+}
+@keyframes egr-breathe {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .egr-no {
   position: absolute;
-  left: 3px;
-  bottom: 1px;
+  left: 4px;
+  top: 1px;
   font-family: 'MedievalSharp', Georgia, serif;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.1;
   color: #e8c040;
   text-shadow: 0 1px 3px #000;
 }
+
+/* Der Zähler: kein Rand, sondern eine dunkle Aussparung — dasselbe Rezept wie
+   `ShopReadyBadge`, damit er sich auf JEDEM Galaxienbild absetzt. Alle Schatten
+   stehen still. Azur bleibt der Star Forge, hier zählt Gold/Teal. */
+.egr-count {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #14100a;
+  background: linear-gradient(160deg, #f0d080, #c89040);
+  box-shadow:
+    0 0 0 1.5px rgba(10, 12, 16, 0.85),
+    0 2px 6px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.egr--st-ready .egr-count {
+  background: linear-gradient(160deg, #a8f0d8, #2e9c78);
+}
+
 .egr-new {
   position: absolute;
-  right: 2px;
-  top: 2px;
+  left: 3px;
+  bottom: 2px;
   padding: 0 3px;
   border-radius: 2px;
   background: #52b830;
@@ -189,11 +304,11 @@ const title = computed(
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 .egr-name {
   font-family: 'MedievalSharp', Georgia, serif;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.1;
   color: #e8dcc0;
   white-space: nowrap;
@@ -217,7 +332,7 @@ const title = computed(
   padding: 0 4px;
   border-radius: 3px;
   border: 1px solid #3e200a;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 800;
   line-height: 1.5;
 }
@@ -231,13 +346,6 @@ const title = computed(
 .egr-chip--ready {
   color: #a0f0d0;
   border-color: rgba(100, 220, 180, 0.5);
-}
-.egr-chip--idle {
-  color: rgba(200, 144, 64, 0.32);
-  border-color: transparent;
-  padding-left: 0;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 .egr-tier {
   margin-left: auto;
@@ -270,23 +378,18 @@ const title = computed(
   transition: transform 0.35s ease;
 }
 
+/* Eingeklappt trägt die Spalte weiter: die Kante bleibt der Zustand, der Zähler
+   sitzt schon auf der Miniatur — eine Spalte, die nicht mehr meldet, dass dort
+   etwas wartet, wird vergessen. */
 .egr--folded {
   justify-content: center;
-  padding: 6px 0;
+  padding: 6px 0 6px 3px;
 }
-.egr-stub-count {
-  position: absolute;
-  right: 4px;
-  top: 3px;
-  min-width: 14px;
-  padding: 0 3px;
-  border-radius: 3px;
-  background: #7a4e20;
-  color: #fff4dc;
-  font-size: 9.5px;
-  font-weight: 900;
-  line-height: 14px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
+
+@media (prefers-reduced-motion: reduce) {
+  .egr-pulse {
+    animation: none;
+    opacity: 0.7;
+  }
 }
 </style>

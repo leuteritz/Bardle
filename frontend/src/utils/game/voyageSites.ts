@@ -9,7 +9,16 @@ import {
   generateGalaxyDots,
   seededRng,
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
-import { VOYAGE_BERTH_CANDIDATE_POOL, VOYAGE_SITE_SLOTS } from '@/config/constants'
+import {
+  VOYAGE_BERTH_CANDIDATE_POOL,
+  VOYAGE_SITE_DOT_RATIO,
+  VOYAGE_SITE_HIT_GAP,
+  VOYAGE_SITE_HIT_MAX,
+  VOYAGE_SITE_HIT_MIN,
+  VOYAGE_SITE_MAX_SPAN_FRACTION,
+  VOYAGE_SITE_PLATE_INSET,
+  VOYAGE_SITE_SLOTS,
+} from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { AvailableExpeditionSlot, ExpeditionMission } from '@/types'
 
@@ -29,7 +38,7 @@ export interface VoyageBerth {
  * Dieser Zug strebt 0.085 Abstand an, GARANTIERT ihn aber nicht: er probiert
  * acht Kandidaten und nimmt danach den letzten, wie er fällt. In der dichtesten
  * Galaxie lagen zwei aufeinanderfolgende Punkte gemessen 25.5 px auseinander —
- * bei einer Klickfläche von VOYAGE_SITE_HIT_PX deckten sich zwei Häfen. Mehr
+ * bei einer Klickfläche von VOYAGE_SITE_HIT_MIN deckten sich zwei Häfen. Mehr
  * Punkte anzufordern half nicht: die späteren werden in genau die engen Lücken
  * gedrückt, die schon voll sind.
  *
@@ -108,6 +117,65 @@ function distSq(a: { x: number; y: number }, b: { x: number; y: number }): numbe
   const dx = a.x - b.x
   const dy = a.y - b.y
   return dx * dx + dy * dy
+}
+
+export interface VoyageMarkerSize {
+  /** Klickquadrat des Hafens in Pixeln. */
+  hit: number
+  /** Sichtbare Platte — immer INNERHALB von `hit`. */
+  plate: number
+  /** Blanker Hafen ohne Vertrag. */
+  dot: number
+}
+
+/**
+ * Wie gross ein Hafen auf DIESER Karte mit DIESEN Haefen sein darf.
+ *
+ * Vorher war das eine feste Zahl, bemessen am dichtesten denkbaren Fall — zehn
+ * Haefen in einer Galaxie auf Full HD. Der tritt fast nie ein: der Normalfall
+ * sind ein bis drei Vertraege, und dort stand die Marke mit 34 px auf einer
+ * Karte, die 300 px Platz zwischen zwei Haefen hatte. Auf 2K und 4K war sie
+ * selbst bei vollem Deckel nur die Haelfte bzw. ein Drittel des Erlaubten.
+ *
+ * Gemessen wird deshalb der kleinste TATSAECHLICHE Abstand der gesetzten
+ * Haefen. Zehn Punkte sind 45 Vergleiche, gerechnet einmal je
+ * Platzierungswechsel — nichts, was in eine Frame-Schleife gehoert.
+ *
+ * Und zwar in der MAXIMUMSNORM, nicht euklidisch: die Klickflaeche ist ein
+ * achsenparalleles Quadrat, zwei davon decken sich genau dann, wenn BEIDE
+ * Achsabstaende kleiner sind als die Seite. Gemessen auf 2K mit zehn Haefen
+ * lagen zwei Mittelpunkte 116 px auseinander (dx 80, dy 84) — euklidisch reichte
+ * das fuer 96 px Seite, in Wirklichkeit deckten sich die beiden.
+ *
+ * Zwei Deckel darueber:
+ *   • `VOYAGE_SITE_HIT_MAX` — sonst stuenden auf 4K 180-px-Marken.
+ *   • `VOYAGE_SITE_MAX_SPAN_FRACTION x box.h` — bindet, wenn nur EIN Hafen da
+ *     ist und es gar keinen Abstand zu messen gibt.
+ *
+ * Und ein Boden: `VOYAGE_SITE_HIT_MIN` ist der bisherige feste Wert. Die
+ * dichteste Galaxie steht damit nie schlechter da als vorher —
+ * `voyagesAtlasLayout.spec.ts` bindet diesen Boden an den garantierten
+ * Hafenabstand aus `voyageBerthsOf`.
+ */
+export function voyageMarkerSizeFor(
+  sites: readonly { x: number; y: number }[],
+  box: { w: number; h: number },
+): VoyageMarkerSize {
+  let closest = Number.POSITIVE_INFINITY
+  for (let i = 0; i < sites.length; i++) {
+    for (let j = i + 1; j < sites.length; j++) {
+      const dx = Math.abs(sites[i].x - sites[j].x) * box.w
+      const dy = Math.abs(sites[i].y - sites[j].y) * box.h
+      closest = Math.min(closest, Math.max(dx, dy))
+    }
+  }
+
+  const span = Math.min(closest, box.h * VOYAGE_SITE_MAX_SPAN_FRACTION)
+  const hit = Math.round(
+    Math.min(VOYAGE_SITE_HIT_MAX, Math.max(VOYAGE_SITE_HIT_MIN, span - VOYAGE_SITE_HIT_GAP)),
+  )
+  const plate = hit - VOYAGE_SITE_PLATE_INSET
+  return { hit, plate, dot: Math.round(plate * VOYAGE_SITE_DOT_RATIO) }
 }
 
 /**

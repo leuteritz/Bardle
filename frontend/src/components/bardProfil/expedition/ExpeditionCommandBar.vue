@@ -17,8 +17,8 @@ import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { toRoman } from '@/utils/ui/format'
 
-const props = defineProps<{ now: number; collectFlashing: boolean }>()
-const emit = defineEmits<{ 'collect-all': []; 'send-all': [] }>()
+const props = defineProps<{ now: number; collectFlashing: boolean; chartFocus: boolean }>()
+const emit = defineEmits<{ 'collect-all': []; 'send-all': []; 'toggle-focus': [] }>()
 
 const expeditionStore = useExpeditionStore()
 const isDev = import.meta.env.DEV
@@ -152,6 +152,22 @@ function formatCountdown(ms: number): string {
         <Icon icon="ph:treasure-chest-fill" width="14" height="14" />
         Collect all
         <RpgNotifyBadge :count="readyCount" label="Expedition rewards ready" />
+      </button>
+
+      <!-- Der eine Griff, der beide Ränder wegklappt. Escape holt sie zurück. -->
+      <button
+        class="ecb-focus"
+        :class="{ 'is-on': chartFocus }"
+        :aria-pressed="chartFocus"
+        :aria-label="chartFocus ? 'Show rail and details' : 'Focus the chart'"
+        @click.stop="emit('toggle-focus')"
+      >
+        <Icon
+          :icon="chartFocus ? 'lucide:minimize' : 'lucide:maximize'"
+          width="14"
+          height="14"
+        />
+        {{ chartFocus ? 'Exit focus' : 'Focus' }}
       </button>
 
       <button
@@ -368,6 +384,36 @@ function formatCountdown(ms: number): string {
 .ecb-bulk--collect :deep(.rpg-notify-badge) {
   top: -6px;
   right: -6px;
+}
+
+.ecb-focus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  background: transparent;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  color: rgba(200, 144, 64, 0.7);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s,
+    background 0.12s;
+}
+.ecb-focus:hover {
+  color: #e8c040;
+  border-color: #c89040;
+}
+.ecb-focus.is-on {
+  background: #2a1c0a;
+  border-color: #c89040;
+  color: #e8c040;
 }
 
 .ecb-admin {

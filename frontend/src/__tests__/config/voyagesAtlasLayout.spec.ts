@@ -3,12 +3,13 @@ import {
   VOYAGE_RAIL_WIDTH,
   VOYAGE_RAIL_COLLAPSED,
   VOYAGE_RAIL_AUTOFOLD_WIDTH,
+  VOYAGE_DETAIL_COLLAPSED,
   VOYAGE_DETAIL_MIN_WIDTH,
   VOYAGE_DETAIL_PCT,
   VOYAGE_DETAIL_MAX_WIDTH,
   VOYAGE_MAP_MIN_WIDTH,
   VOYAGE_MAP_GUTTER_PX,
-  VOYAGE_SITE_HIT_PX,
+  VOYAGE_SITE_HIT_MIN,
   VOYAGE_BERTH_MIN_SEPARATION,
   BOTTOM_BAR_SIDE_W,
 } from '@/config/constants'
@@ -22,7 +23,7 @@ import { galaxyFitBox } from '@/utils/fx/galaxyPlate'
  * Und anders als beim Shop ist der Boden hier keine Geschmacksfrage:
  * `voyageBerthsOf` garantiert zwischen zwei Ankerplätzen
  * VOYAGE_BERTH_MIN_SEPARATION im normalisierten Raum — in Pixeln also mal der
- * kürzeren Achse der Fit-Box. Bleibt das unter VOYAGE_SITE_HIT_PX, decken sich
+ * kürzeren Achse der Fit-Box. Bleibt das unter VOYAGE_SITE_HIT_MIN, decken sich
  * die Klickflächen und die Karte hört auf zu funktionieren.
  *
  * Diese Spec ist die einzige Stelle, an der die LAYOUT-Zahlen aus
@@ -55,14 +56,12 @@ function atlasWidth(vw: number, vh: number): number {
   return modal / teamUiScale(vw, vh)
 }
 
-function zones(vw: number, vh: number, folded = false) {
+function zones(vw: number, vh: number, folded = false, detailFolded = false) {
   const atlas = atlasWidth(vw, vh)
   const rail = folded ? VOYAGE_RAIL_COLLAPSED : VOYAGE_RAIL_WIDTH
-  const detail = clamp(
-    VOYAGE_DETAIL_MIN_WIDTH,
-    (atlas * VOYAGE_DETAIL_PCT) / 100,
-    VOYAGE_DETAIL_MAX_WIDTH,
-  )
+  const detail = detailFolded
+    ? VOYAGE_DETAIL_COLLAPSED
+    : clamp(VOYAGE_DETAIL_MIN_WIDTH, (atlas * VOYAGE_DETAIL_PCT) / 100, VOYAGE_DETAIL_MAX_WIDTH)
   return { atlas, rail, detail, map: atlas - rail - detail }
 }
 
@@ -127,6 +126,28 @@ describe('voyages atlas layout', () => {
     expect(folded.map - open.map).toBeCloseTo(VOYAGE_RAIL_WIDTH - VOYAGE_RAIL_COLLAPSED, 6)
   })
 
+  it.each(DESKTOPS)('%s: Falten gibt der Karte immer nur Breite dazu, nie weg', (_l, vw, vh) => {
+    const open = zones(vw, vh)
+    const focus = zones(vw, vh, true, true)
+    expect(focus.map).toBeGreaterThan(open.map)
+    expect(focus.map).toBeGreaterThanOrEqual(VOYAGE_MAP_MIN_WIDTH)
+    expect(focus.rail + focus.detail + focus.map).toBeCloseTo(focus.atlas, 6)
+  })
+
+  it('macht die Karte im Fokus auf Full HD um zwei Drittel grösser', () => {
+    // Der Grund, aus dem beide Ränder falten dürfen. Gemessen an der Fit-Box,
+    // nicht an der Zone: was zählt, ist die Fläche, auf der die Galaxie steht.
+    //
+    // 1.70 und nicht mehr, weil das geöffnete Seitenverhältnis-Band einen Teil
+    // des Gewinns schon im OFFENEN Zustand ausschüttet (592×573.6 statt
+    // 592×514.8). Gegen den Stand vor beiden Änderungen sind es 1.89.
+    const area = (z: { map: number }) => {
+      const box = galaxyFitBox(z.map - VOYAGE_MAP_GUTTER_PX, stageHeight(1080))
+      return box.w * box.h
+    }
+    expect(area(zones(1920, 1080, true, true)) / area(zones(1920, 1080))).toBeGreaterThan(1.65)
+  })
+
   it('klappt keine Referenzauflösung von selbst ein', () => {
     // Die Schwelle ist für schmale Fenster da, nicht für die Referenzen — dort
     // versteckte sie die Navigation auf einem Schirm, der sie trägt.
@@ -143,15 +164,15 @@ describe('voyages atlas layout', () => {
     const box = galaxyFitBox(zones(vw, vh).map - VOYAGE_MAP_GUTTER_PX, stageHeight(vh))
     // Die Punkte streuen in beiden Achsen; die kürzere Achse bindet.
     const gap = VOYAGE_BERTH_MIN_SEPARATION * Math.min(box.w, box.h)
-    expect(gap).toBeGreaterThanOrEqual(VOYAGE_SITE_HIT_PX)
+    expect(gap).toBeGreaterThanOrEqual(VOYAGE_SITE_HIT_MIN)
   })
 
   it('bindet den Boden an die Klickfläche und nicht an eine runde Zahl', () => {
     // Fällt die Karte auf ihren Boden, muss der Abstand noch reichen — sonst
-    // ist VOYAGE_MAP_MIN_WIDTH zu klein für VOYAGE_SITE_HIT_PX gewählt.
+    // ist VOYAGE_MAP_MIN_WIDTH zu klein für VOYAGE_SITE_HIT_MIN gewählt.
     const box = galaxyFitBox(VOYAGE_MAP_MIN_WIDTH - VOYAGE_MAP_GUTTER_PX, stageHeight(1080))
     expect(VOYAGE_BERTH_MIN_SEPARATION * Math.min(box.w, box.h)).toBeGreaterThanOrEqual(
-      VOYAGE_SITE_HIT_PX,
+      VOYAGE_SITE_HIT_MIN,
     )
   })
 })
