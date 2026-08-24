@@ -906,6 +906,19 @@ export const VOYAGE_MAP_LEGEND_R = 4.4
  * unter den Faktor, den `voyagesAtlasLayout.spec.ts` zusagt.
  */
 export const VOYAGE_MAP_STATS_BAND_H = 96
+/** Senkrechtes Polster des Textblocks: 96 - 2x10 = 76 px nutzbar. Die hoechste
+ *  Spalte (Segmente + Wert + Label) belegt davon 75,2 — daraus faellt der
+ *  Wert-Deckel, er ist nicht gewaehlt. `voyageBandFit.spec.ts` bindet es. */
+export const VOYAGE_MAP_STATS_PAD_Y = 10
+/** Boden und Deckel der grossen Zahl. Der Boden ist, was auf Full HD in sechs
+ *  Spalten passt (gemessene Textbreiten), der Deckel, was in die nutzbare
+ *  Bandhoehe passt. Die Kurve dazwischen steht als `clamp` im Band. */
+export const VOYAGE_MAP_STATS_VALUE_MIN = 37
+export const VOYAGE_MAP_STATS_VALUE_MAX = 40
+/** Deckel der Label-Schrift und der Segmentleiste — beide gehen in dieselbe
+ *  Hoehenbilanz ein wie der Wert, `voyageBandFit.spec.ts` rechnet sie zusammen. */
+export const VOYAGE_MAP_STATS_LABEL_MAX = 15
+export const VOYAGE_MAP_STATS_TICK_H_MAX = 8
 /** Nur der Verlauf. Er laeuft transparent aus und verdeckt nichts, darf also
  *  ueber den Textblock hinausragen und bleibt aus der Fit-Box heraus. */
 export const VOYAGE_MAP_STATS_SCRIM_H = 144
@@ -919,11 +932,9 @@ export const VOYAGE_MAP_STATS_MIN_H = 620
 /** Darunter faellt die Multiplikatoren-Zone weg; die Ernte-Zahlen bleiben.
  *  Wie die Legende: darunter ist das Band Unruhe statt Auskunft. */
 export const VOYAGE_MAP_STATS_MIN_W = 560
-/** Ab hier tragen alle fuenf Multiplikator-Chips, darunter die ersten drei. */
+/** Ab hier traegt die Multiplikator-Spalte auch Hazards und Seats. Darunter
+ *  draengen sie die Spalte ueber die nutzbare Bandhoehe. */
 export const VOYAGE_MAP_STATS_WIDE_W = 900
-/** Auf 4K misst die Buehne ueber 2000 px — fuenf Cluster darueber verstreut
- *  sind kein Instrument mehr. Deckelt den INHALT, nicht den Verlauf. */
-export const VOYAGE_MAP_STATS_MAX_W = 1040
 
 /**
  * Takt der Uhren auf der Karte. Bewusst 1000 und nicht HUD_COUNTDOWN_TICK_MS

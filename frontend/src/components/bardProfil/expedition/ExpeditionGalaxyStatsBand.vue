@@ -1,14 +1,21 @@
 <script setup lang="ts">
 /**
- * Was diese Galaxie gekostet hat — an der Unterkante der Karte, gross genug,
- * um es im Vorbeigehen zu lesen.
+ * Was diese Galaxie gekostet hat — an der Unterkante der Karte, über die volle
+ * Breite, gross genug, um es im Vorbeigehen zu lesen.
  *
- * Drei Zonen, durch Haarlinien getrennt statt in Kästen: die Ernte, die Zeit,
- * der Hafen. Keine Frame-Schleife — alles hängt am Datensatz, der sich nur beim
- * Galaxiewechsel ändert.
+ * Fünf Kennzahlen als gleichberechtigte Spalten, die Multiplikatoren über zwei
+ * Spuren. `minmax(min-content, 1fr)` und keine geratenen Gewichte: den Bedarf
+ * liest der Browser aus dem Inhalt, verteilt wird nur der Überschuss — auf 4K
+ * sind das über 1400 px, und genau die werden zum Abstand zwischen den Zahlen.
+ *
+ * Der Query-Container sitzt HIER und nicht weiter oben: `.etc-atlas` ist schon
+ * einer und misst 1240–2940 px, die Bühne aber nur 628–2176. Ohne eigenen
+ * Container skalierte alles gegen den falschen Massstab.
  *
  * Die Höhe ist NICHT frei: sie wird der Fit-Box abgezogen, damit kein Hafen
- * darunter gerät. Siehe `VOYAGE_MAP_STATS_BAND_H`.
+ * darunter gerät (`VOYAGE_MAP_STATS_BAND_H`) — und weil die Spalten überstehen
+ * dürfen, ohne dass ein `scrollHeight` es meldet, deckelt
+ * `voyageBandFit.spec.ts` die Schriftgrössen dagegen.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -20,16 +27,20 @@ import {
   EXPEDITION_CHART_MAX,
   MS_PER_SECOND,
   VOYAGE_MAP_STATS_BAND_H,
-  VOYAGE_MAP_STATS_MAX_W,
+  VOYAGE_MAP_STATS_LABEL_MAX,
+  VOYAGE_MAP_STATS_PAD_Y,
+  VOYAGE_MAP_STATS_TICK_H_MAX,
   VOYAGE_MAP_STATS_SCRIM_H,
+  VOYAGE_MAP_STATS_VALUE_MAX,
+  VOYAGE_MAP_STATS_VALUE_MIN,
 } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 
 const props = defineProps<{
   record: CompletedGalaxyRecord
-  /** Schmale Bühne: die Multiplikatoren treten zurück. */
+  /** Schmale Bühne: die Multiplikator-Spalte entfällt. */
   compact: boolean
-  /** Breite Bühne: alle fünf Chips statt der ersten drei. */
+  /** Breite Bühne: die Spalte trägt auch Hazards und Seats. */
   wide: boolean
 }>()
 
@@ -74,8 +85,19 @@ const mods = computed(() => {
 })
 
 const bandH = `${VOYAGE_MAP_STATS_BAND_H}px`
+const padY = `${VOYAGE_MAP_STATS_PAD_Y}px`
 const scrimH = `${VOYAGE_MAP_STATS_SCRIM_H}px`
-const maxW = `${VOYAGE_MAP_STATS_MAX_W}px`
+const valueMin = `${VOYAGE_MAP_STATS_VALUE_MIN}px`
+const valueMax = `${VOYAGE_MAP_STATS_VALUE_MAX}px`
+// Deckel, die `voyageBandFit.spec.ts` in dieselbe Hoehenbilanz einrechnet —
+// darum von dort und nicht als Zahl im clamp.
+const labelMax = `${VOYAGE_MAP_STATS_LABEL_MAX}px`
+const tickHMax = `${VOYAGE_MAP_STATS_TICK_H_MAX}px`
+/** Fuenf Kennzahlen je eine Spur, die Multiplikatoren zwei: gestapelt in einer
+ *  Spur wurde die Spalte auf QHD 125 px hoch und ragte aus dem Band. */
+const gridCols = computed(
+  () => `repeat(${props.compact ? 5 : 7}, minmax(min-content, 1fr))`,
+)
 
 const summary = computed(
   () =>
@@ -86,24 +108,21 @@ const summary = computed(
 </script>
 
 <template>
-  <div class="egsb" :class="{ 'egsb--compact': compact }" :style="{ '--egsb-accent': accent }">
+  <div class="egsb" :style="{ '--egsb-accent': accent }">
     <span class="egsb-scrim" aria-hidden="true" />
 
     <div class="egsb-row" role="group" :aria-label="summary">
-      <!-- Die Ernte -->
-      <section class="egsb-zone egsb-zone--yield">
-        <span class="egsb-stat egsb-stat--freed">
-          <span class="egsb-stat-n">{{ rescued }}</span>
-          <span class="egsb-stat-l">Freed</span>
-        </span>
-        <span class="egsb-stat egsb-stat--lost" :class="{ 'egsb-stat--nil': !lost }">
-          <span class="egsb-stat-n">{{ lost }}</span>
-          <span class="egsb-stat-l">Lost</span>
-        </span>
+      <section class="egsb-col">
+        <span class="egsb-val egsb-val--freed">{{ rescued }}</span>
+        <span class="egsb-lbl">Freed</span>
       </section>
 
-      <!-- Die Zeit -->
-      <section class="egsb-zone egsb-zone--time">
+      <section class="egsb-col" :class="{ 'egsb-col--nil': !lost }">
+        <span class="egsb-val egsb-val--lost">{{ lost }}</span>
+        <span class="egsb-lbl">Lost</span>
+      </section>
+
+      <section class="egsb-col">
         <span class="egsb-clock">
           <span
             v-for="seg in clock"
@@ -115,43 +134,37 @@ const summary = computed(
             <span class="egsb-seg-u">{{ seg.unit }}</span>
           </span>
         </span>
-        <span class="egsb-freed">
-          <Icon icon="lucide:calendar-days" width="13" height="13" class="egsb-ico" />
+        <span class="egsb-lbl egsb-lbl--date">
+          <Icon icon="lucide:calendar-days" class="egsb-ico egsb-ico--date" />
           {{ freedOn }}
         </span>
       </section>
 
-      <!-- Der Hafen -->
-      <section class="egsb-zone egsb-zone--port">
-        <span class="egsb-port-top">
-          <span class="egsb-chart">
-            <span
-              v-for="i in EXPEDITION_CHART_MAX"
-              :key="i"
-              class="egsb-tick"
-              :class="{ 'is-on': i <= progress.charted }"
-            />
-          </span>
-          <span class="egsb-read">
-            <span class="egsb-read-n">{{ progress.charted }}/{{ EXPEDITION_CHART_MAX }}</span>
-            <span class="egsb-read-l">Charted</span>
-          </span>
-          <span class="egsb-read">
-            <span class="egsb-read-n">
-              <Icon icon="game-icons:caravel" width="15" height="15" class="egsb-ico" />
-              {{ progress.runs }}
-            </span>
-            <span class="egsb-read-l">Voyages</span>
-          </span>
+      <section class="egsb-col">
+        <span class="egsb-chart" aria-hidden="true">
+          <span
+            v-for="i in EXPEDITION_CHART_MAX"
+            :key="i"
+            class="egsb-tick"
+            :class="{ 'is-on': i <= progress.charted }"
+          />
         </span>
+        <span class="egsb-val">{{ progress.charted }}/{{ EXPEDITION_CHART_MAX }}</span>
+        <span class="egsb-lbl">Charted</span>
+      </section>
 
-        <span v-if="!compact" class="egsb-mods">
-          <!-- aria-label und kein title: das Band nimmt keine Zeigerereignisse
-               entgegen, ein Tooltip erschiene hier nie. -->
-          <span v-for="m in mods" :key="m.key" class="egsb-mod" :aria-label="`${m.hint} ${m.text}`">
-            <Icon :icon="m.icon" width="14" height="14" class="egsb-ico" />
-            {{ m.text }}
-          </span>
+      <section class="egsb-col">
+        <span class="egsb-val">{{ progress.runs }}</span>
+        <span class="egsb-lbl">Voyages</span>
+      </section>
+
+      <!-- Die einzige Spalte mit mehreren Zeilen: sie fächert mit der Breite von
+           gestapelt zu nebeneinander auf. aria-label und kein title — das Band
+           nimmt keine Zeigerereignisse entgegen. -->
+      <section v-if="!compact" class="egsb-col egsb-col--mods">
+        <span v-for="m in mods" :key="m.key" class="egsb-mod" :aria-label="`${m.hint} ${m.text}`">
+          <Icon :icon="m.icon" class="egsb-ico" />
+          {{ m.text }}
         </span>
       </section>
     </div>
@@ -159,7 +172,10 @@ const summary = computed(
 </template>
 
 <style scoped>
+/* Der Massstab für alle cqw darunter. Eigene Eigenschaften dieses Elements
+   dürfen KEIN cqw benutzen — die lösen gegen den nächsten Vorfahr auf. */
 .egsb {
+  container-type: inline-size;
   position: absolute;
   left: 0;
   right: 0;
@@ -184,16 +200,16 @@ const summary = computed(
   );
 }
 
-/* Der Verlauf spannt voll, der INHALT nicht: auf 4K stuenden fuenf Cluster
-   sonst quer ueber zwei Meter Bildschirm. */
 .egsb-row {
   position: relative;
-  display: flex;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: v-bind(gridCols);
+  /* Die Labels liegen auf EINER Grundlinie — die Spalten sind verschieden hoch
+     (Segmentleiste gegen Ziffer), zentriert saessen ihre Labels auf vier
+     Hoehen. */
+  align-items: end;
   height: v-bind(bandH);
-  max-width: v-bind(maxW);
-  margin: 0 auto;
-  padding: 0 14px;
+  padding: v-bind(padY) clamp(12px, 1.5cqw, 30px);
   border-top: 1px solid rgba(122, 78, 32, 0.42);
 }
 /* Die Akzentkante der Galaxie — der einzige farbige Strich im Band. */
@@ -207,69 +223,67 @@ const summary = computed(
   background: linear-gradient(to right, var(--egsb-accent, #c89040), transparent);
 }
 
-.egsb-zone {
+.egsb-col {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
   min-width: 0;
-  padding: 0 16px;
+  padding: 0 clamp(7px, 1.1cqw, 18px);
 }
 /* Haarlinien statt Kästen. */
-.egsb-zone + .egsb-zone {
+.egsb-col + .egsb-col {
   border-left: 1px solid rgba(122, 78, 32, 0.34);
 }
-.egsb-zone--yield {
-  flex-direction: row;
-  align-items: center;
-  gap: 20px;
-  padding-left: 0;
-  flex-shrink: 0;
-}
-.egsb-zone--port {
-  flex: 1;
-  padding-right: 0;
-}
-
-/* ── Die Ernte ──────────────────────────────────────────────── */
-.egsb-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding-left: 11px;
-  border-left: 2px solid currentColor;
-}
-.egsb-stat--freed {
-  color: #e8c040;
-}
-.egsb-stat--lost {
-  color: #e08a7a;
-}
-/* Eine leere Kategorie bleibt STEHEN — die Zone darf ihre Form nicht wechseln. */
-.egsb-stat--nil {
+/* Eine leere Kategorie bleibt STEHEN — die Reihe darf ihre Form nicht wechseln. */
+.egsb-col--nil {
   opacity: 0.32;
 }
-.egsb-stat-n {
-  font-size: 1.9rem;
+
+.egsb-val {
+  font-size: clamp(v-bind(valueMin), 5.4cqw, v-bind(valueMax));
   font-weight: 800;
   line-height: 0.94;
+  color: #ece0c0;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
-.egsb-stat-l {
-  font-size: 0.62rem;
+.egsb-val--freed {
+  color: #e8c040;
+}
+.egsb-val--lost {
+  color: #e08a7a;
+}
+
+.egsb-lbl {
+  font-size: clamp(11px, 1.55cqw, v-bind(labelMax));
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(216, 200, 160, 0.52);
+  white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+/* Eigener, niedrigerer Deckel: mit der vollen Labelgrösse liefe die Zeit-Spalte
+   auf 4K über die nutzbare Bandhöhe. */
+.egsb-lbl--date {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: clamp(10px, 1.4cqw, v-bind(labelMax));
+  letter-spacing: 0.03em;
+  text-transform: none;
+  color: rgba(200, 184, 144, 0.72);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Die Zeit ───────────────────────────────────────────────── */
 .egsb-clock {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: clamp(8px, 1.1cqw, 18px);
 }
 .egsb-seg {
   display: flex;
@@ -280,7 +294,7 @@ const summary = computed(
   min-width: 2.2ch;
 }
 .egsb-seg-n {
-  font-size: 1.5rem;
+  font-size: clamp(23px, 3.1cqw, 30px);
   font-weight: 800;
   line-height: 1;
   color: #ece0c0;
@@ -288,7 +302,7 @@ const summary = computed(
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 .egsb-seg-u {
-  font-size: 0.56rem;
+  font-size: clamp(9px, 1.2cqw, 13px);
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -298,35 +312,17 @@ const summary = computed(
 .egsb-seg--nil .egsb-seg-n {
   color: rgba(236, 224, 192, 0.3);
 }
-.egsb-freed {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: rgba(200, 184, 144, 0.72);
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-  white-space: nowrap;
-}
 
-/* ── Der Hafen ──────────────────────────────────────────────── */
-.egsb-port-top {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
+/* ── Kartografie ────────────────────────────────────────────── */
 /* Fünf Segmente statt eines Balkens: bei einem Maximum von 5 ist die Stufe
    ablesbar, ein Füllstand nicht. */
 .egsb-chart {
   display: flex;
   gap: 4px;
-  flex-shrink: 0;
 }
 .egsb-tick {
-  width: 17px;
-  height: 7px;
+  width: clamp(14px, 1.95cqw, 20px);
+  height: clamp(6px, 0.7cqw, v-bind(tickHMax));
   border-radius: 2px;
   background: rgba(200, 164, 90, 0.16);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
@@ -335,70 +331,40 @@ const summary = computed(
 .egsb-tick.is-on {
   background: linear-gradient(to bottom, #f0d080, #c89040);
 }
-.egsb-read {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex-shrink: 0;
-}
-.egsb-read-n {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 1.05rem;
-  font-weight: 800;
-  line-height: 1;
-  color: #e8dcc0;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-}
-.egsb-read-l {
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.48);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-}
 
-.egsb-mods {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: nowrap;
-  overflow: hidden;
+/* ── Die Multiplikatoren ────────────────────────────────────── */
+.egsb-col--mods {
+  grid-column: span 2;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: flex-end;
+  justify-content: center;
+  gap: 4px clamp(10px, 1.3cqw, 24px);
 }
 .egsb-mod {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11.5px;
+  font-size: clamp(16px, 2.2cqw, 22px);
   font-weight: 800;
-  color: rgba(230, 220, 196, 0.66);
+  color: rgba(230, 220, 196, 0.72);
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
   white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 /* Weisses Glyph mit dunklem Hof: die kleinen Zeichen müssen sich auf JEDEM
-   Galaxienbild absetzen. Statisch, nie animiert. */
+   Galaxienbild absetzen. Statisch, nie animiert. Grösse per CSS und nicht als
+   Attribut, damit sie mitwächst. */
 .egsb-ico {
   flex-shrink: 0;
+  width: clamp(15px, 2cqw, 22px);
+  height: clamp(15px, 2cqw, 22px);
   color: #ffffff;
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 1)) drop-shadow(0 1px 2px rgba(0, 0, 0, 1));
 }
-
-/* Schmale Bühne: die Zeit rückt zusammen, die Multiplikatoren sind schon weg. */
-.egsb--compact .egsb-zone {
-  padding: 0 14px;
-}
-.egsb--compact .egsb-zone--yield {
-  gap: 18px;
-}
-.egsb--compact .egsb-clock {
-  gap: 8px;
-}
-.egsb--compact .egsb-port-top {
-  gap: 12px;
+.egsb-ico--date {
+  width: clamp(12px, 1.5cqw, 16px);
+  height: clamp(12px, 1.5cqw, 16px);
 }
 </style>
