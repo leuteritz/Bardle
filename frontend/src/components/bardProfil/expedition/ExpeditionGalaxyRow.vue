@@ -21,12 +21,11 @@
  * Wiedereinblenden des Reiters. Und es wird erst gezeichnet, wenn die Zeile ins
  * Sichtfeld kommt — der modulweite Cache macht es danach einmal je Sitzung.
  */
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { renderGalaxyThumb } from '@/utils/fx/galaxySnapshot'
+import { useLazyGalaxySnapshot } from '@/composables/ui/useLazyGalaxySnapshot'
 import { toRoman } from '@/utils/ui/format'
 import {
-  ARCHIVE_SNAPSHOT_ROOT_MARGIN,
   EXPEDITION_CHART_MAX,
   VOYAGE_RAIL_THUMB_FOLDED,
   VOYAGE_RAIL_THUMB_H,
@@ -43,28 +42,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ select: [number] }>()
 
-const root = ref<HTMLElement | null>(null)
-const painted = ref(false)
-const snapshot = computed(() => (painted.value ? renderGalaxyThumb(props.record) : ''))
-
-let observer: IntersectionObserver | null = null
-onMounted(() => {
-  if (!root.value) return
-  observer = new IntersectionObserver(
-    (entries) => {
-      if (!entries.some((e) => e.isIntersecting)) return
-      painted.value = true
-      observer?.disconnect()
-      observer = null
-    },
-    { rootMargin: ARCHIVE_SNAPSHOT_ROOT_MARGIN },
-  )
-  observer.observe(root.value)
-})
-onBeforeUnmount(() => {
-  observer?.disconnect()
-  observer = null
-})
+const { root, snapshot } = useLazyGalaxySnapshot(() => props.record, 'thumb')
 
 const thumbW = `${VOYAGE_RAIL_THUMB_W}px`
 const thumbH = `${VOYAGE_RAIL_THUMB_H}px`

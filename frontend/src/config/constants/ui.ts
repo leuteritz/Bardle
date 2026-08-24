@@ -261,6 +261,33 @@ export const MINIMAP_TARGET_BASE_R = 6 // target star radius in the far overview
 export const MINIMAP_TARGET_MAX_R = 12 // target star radius at full zoom (arrival crossfade bridges to the arrival sun)
 export const MINIMAP_WAIT_SUN_R = 26 // centered player sun on the role-selection screen
 
+// ── Galaxy landmarks (departure portal, freed star, lost star, freed core) ──
+// Vier Formen statt vier Farben: die Silhouette trägt bis in die 96×60-Miniatur,
+// der Zierrat staffelt darüber ab. Beide Schwellen sind eingeklemmt, nicht
+// gewählt — die Radien der echten Flächen liegen bei 3.5 / 4.5 (Miniatur),
+// 7 / 8.5 (Standbild, Full HD) und 11+ (2K, 4K, Live-Minimap).
+export const LANDMARK_R_ORNAMENT = 5 // ab hier Motes, Glutrisse, Chevron — Fenster (4.5, 7]
+export const LANDMARK_R_DETAIL = 9 // ab hier volle Zier — Fenster (8.5, 11]
+export const LANDMARK_VARIANTS = 3 // Mote-/Riss-Phasen je Sprite-Kind, aus dem Index
+export const LANDMARK_PAD_SPAN = 2.4 // weitester Zierrat: Funken 2.2·r, Motes 2.1·r
+// Halbe Radien × 3 Varianten × mehrere dpr — ohne Deckel zieht ein Fensterziehen
+// beliebig viele Sprites nach (bei r=9, dpr=3.1 rund 178 KB je Stück).
+export const LANDMARK_SPRITE_CACHE_MAX = 24
+export const LANDMARK_PORTAL_MIN_R = 3 // Boden, damit der Ring in der Miniatur ein Ring bleibt
+export const MINIMAP_LANDMARK_PORTAL_R = 10 // live: neben freed 11 — es ist die einzige einmalige Marke
+export const ROUTE_TRAIL_ALPHA_MIN = 0.45 // Deckkraft am Abflugpunkt, Anteil von routeAlpha
+export const ROUTE_TRAIL_WIDTH_MIN = 0.6 // Strichstärke am Abflugpunkt, Anteil der Vollstärke
+// Live-Minimap: drawRouteAndMarkers läuft während der Zoomfahrt in JEDEM Frame
+// ungecacht — 4 stroke() statt einem je Etappe.
+export const ROUTE_TRAIL_BANDS_LIVE = 4
+
+// ── Galaxy snapshot rasterization ──────────────────────────────────────────
+// Die logische Größe bleibt (sonst wandert der Maßstab k und mit ihm die ganze
+// Komposition) — nur die Gerätedichte folgt der echten Anzeigegröße.
+export const GALAXY_SNAPSHOT_DISPLAY_W = 496 // breiteste echte CSS-Anzeige (Detailspalte 520 − 24)
+export const GALAXY_SNAPSHOT_MAX_DPR = 2 // derselbe Deckel wie ExpeditionGalaxyMap.paint()
+export const GALAXY_SNAPSHOT_CACHE_MAX = 12 // Data-URLs; 20 Galaxien resident wären zu viel
+
 // ── Minimap arrival view (camera docked at the reached star system) ─────────
 // Geometry of the little star system drawn once the champion star is reached.
 // The outermost orbit plus its planet must stay inside half the 440px panel —

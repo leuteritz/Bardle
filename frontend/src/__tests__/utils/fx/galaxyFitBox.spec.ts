@@ -11,15 +11,18 @@ import {
  * geseedeten Galaxie-Geometrie und Pixeln. Zwei Dinge hängen daran, und beide
  * brechen still:
  *
- *  - Das ARCHIVBILD. `renderGalaxySnapshot` ruft `galaxyFitBox(320, 200, 0)`
- *    und verlässt sich darauf, dass die Box zur vollen Fläche entartet — sonst
- *    verschiebt sich jede archivierte Galaxiekarte rückwirkend.
+ *  - Der BEZUGSMASSSTAB der Platte. `renderGalaxySnapshot` ruft
+ *    `galaxyFitBox(320, 200, 0)` und verlässt sich darauf, dass die Box zur
+ *    vollen Fläche entartet — nur dann ist `k` dort genau 1, und nur dann sind
+ *    die festen Pixelwerte in `galaxyPlate.ts` in der Grösse gemeint, in der sie
+ *    geschrieben stehen. Wächst die logische Standbildgrösse, wandert `k` und
+ *    mit ihm jede Sternmarke, jede Strichstärke und die Funkelsternzahl.
  *  - Die KNOTEN der grossen Karte. Sie werden aus derselben Box in Prozent
  *    gesetzt; weicht sie vom Gemalten ab, schweben die Marken neben ihren
  *    Sternen.
  */
 
-describe('galaxyFitBox — das Archivbild bleibt unberührt', () => {
+describe('galaxyFitBox — der Bezugsmassstab der Platte', () => {
   it('entartet bei der Standbildgrösse ohne Einrückung zur vollen Fläche', () => {
     const box = galaxyFitBox(GALAXY_PLATE_REF_W, GALAXY_PLATE_REF_H, 0)
     expect(box).toEqual({ x: 0, y: 0, w: GALAXY_PLATE_REF_W, h: GALAXY_PLATE_REF_H })
@@ -28,6 +31,12 @@ describe('galaxyFitBox — das Archivbild bleibt unberührt', () => {
   it('lässt den Skalierungsfaktor der Standbildgrösse genau 1 werden', () => {
     const box = galaxyFitBox(GALAXY_PLATE_REF_W, GALAXY_PLATE_REF_H, 0)
     expect(box.w / GALAXY_PLATE_REF_W).toBe(1)
+  })
+
+  it('entartet auch bei der Leistenminiatur zur vollen Fläche', () => {
+    // 168×105 ist 1.6 und liegt damit mitten im Band — die Miniatur letterboxt
+    // nicht, ihr Massstab ist glatt 0.525.
+    expect(galaxyFitBox(168, 105, 0)).toEqual({ x: 0, y: 0, w: 168, h: 105 })
   })
 })
 

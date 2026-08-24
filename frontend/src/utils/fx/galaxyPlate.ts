@@ -7,9 +7,10 @@
    Pixelmaterial gespeichert; der winzige `CompletedGalaxyRecord` im Spielstand
    reicht, um die Karte nachzuzeichnen.
 
-   ALLE festen Grössen skalieren mit `box.w / GALAXY_PLATE_REF_W`. Bei 320 px
-   ist der Faktor 1 und das Archivbild bleibt Pixel für Pixel das alte; bei 950
-   sind Sterne und Route mitgewachsen statt Stecknadeln zu bleiben. */
+   ALLE festen Grössen skalieren mit `box.w / GALAXY_PLATE_REF_W`. Bei 320 px ist
+   der Faktor 1 — das ist der Bezugsmassstab, in dem die festen Zahlen hier
+   gemeint sind; bei 950 sind Sterne und Route mitgewachsen statt Stecknadeln zu
+   bleiben. */
 
 import {
   seededRng,
@@ -18,11 +19,10 @@ import {
   getGalaxyParticles,
   GALAXY_PARTICLE_COLORS,
   minimapAccentForTheme,
-  drawPlanet,
-  drawVisitedStar,
   drawRouteArrowhead,
   generateGalaxyDots,
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { drawLandmark, landmarkVariantFor, roundLandmarkRadius } from './galaxyLandmarks'
 import {
   MINIMAP_TWINKLE_COUNT,
   MINIMAP_GALAXY_CORE_RADIUS,
@@ -31,6 +31,9 @@ import {
   VOYAGE_MAP_ASPECT_MIN,
   VOYAGE_MAP_ASPECT_MAX,
   VOYAGE_MAP_INSET_PX,
+  LANDMARK_PORTAL_MIN_R,
+  ROUTE_TRAIL_ALPHA_MIN,
+  ROUTE_TRAIL_WIDTH_MIN,
 } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 
@@ -66,17 +69,37 @@ export function galaxyFitBox(w: number, h: number, inset = VOYAGE_MAP_INSET_PX):
   return { x: (w - bw) / 2, y: (h - bh) / 2, w: bw, h: bh }
 }
 
+/** Basis-Strichstärke der Route bei Massstab 1. */
+const ROUTE_BASE_WIDTH = 1.6
+
+/**
+ * Stil einer Route-Etappe. Die Spur wird zum Kern hin heller UND dicker — so
+ * liest sich die Reiserichtung, ohne Chevrons zu zählen.
+ *
+ * `bands` quantisiert den Verlauf: die Live-Minimap malt die Route während der
+ * Zoomfahrt in JEDEM Frame ungecacht, dort sind vier `stroke()` statt 37 der
+ * Unterschied.
+ */
+export function routeLegStyle(
+  i: number,
+  legs: number,
+  routeAlpha: number,
+  hk: number,
+  bands = 0,
+): { alpha: number; width: number } {
+  const span = Math.max(1, legs - 1)
+  const raw = Math.min(1, Math.max(0, i / span))
+  const t = bands > 1 ? Math.min(bands - 1, Math.floor(raw * bands)) / (bands - 1) : raw
+  return {
+    alpha: routeAlpha * (ROUTE_TRAIL_ALPHA_MIN + (1 - ROUTE_TRAIL_ALPHA_MIN) * t),
+    width: ROUTE_BASE_WIDTH * hk * (ROUTE_TRAIL_WIDTH_MIN + (1 - ROUTE_TRAIL_WIDTH_MIN) * t),
+  }
+}
+
 export interface GalaxyPaintOpts {
-  /**
-   * `full` — `drawPlanet` je Versuch: das Archivstandbild, unveränderte Bytes.
-   * `bodies` — `drawVisitedStar` aus dem Sprite-Cache: bei bis zu ~50 Häfen auf
-   * der grossen Karte ein `drawImage` statt zweier Radialverläufe je Körper.
-   * Optisch identisch, weil `drawPlanet` für `rescued`/`failed` feste Verläufe
-   * nimmt und die geseedete Palette dort ohnehin ignoriert.
-   */
-  markers: 'full' | 'bodies'
-  /** Nur für `bodies` — der Sprite-Cache ist danach geschlüsselt. */
-  dpr?: number
+  /** Backing-Dichte des Ziels — der Sprite-Cache der Landmarken hängt daran.
+   *  Pflicht, weil ein vergessener Wert nur als weiches Bild auffiele. */
+  dpr: number
   /** Die grosse Karte dämpft die Route, damit die DOM-Marken darüber das
    *  Lauteste auf der Platte bleiben. */
   routeAlpha?: number
@@ -101,7 +124,7 @@ export function paintGalaxy(
   const k = box.w / GALAXY_PLATE_REF_W
   /** Massstab der Geschichte — siehe `historyScale`. */
   const hk = k * (opts.historyScale ?? 1)
-  const dpr = opts.dpr ?? 1
+  const dpr = opts.dpr
   const routeAlpha = opts.routeAlpha ?? 0.55
   const toC = (wx: number, wy: number): [number, number] => [
     box.x + wx * box.w,
@@ -175,19 +198,24 @@ export function paintGalaxy(
   // ── Die Reise: Start → jeder versuchte Stern → der befreite Kern ──
   const attempts = record.attemptResults.length
   const { spawn, dots } = generateGalaxyDots(record.mapSeed, attempts + 1)
-  ctx.beginPath()
-  ctx.strokeStyle = `rgba(232, 192, 64, ${routeAlpha.toFixed(3)})`
-  ctx.lineWidth = 1.6 * hk
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
   const [spx, spy] = toC(spawn.x, spawn.y)
-  ctx.moveTo(spx, spy)
-  for (let i = 0; i < attempts; i++) {
-    const [sx, sy] = toC(dots[i].x, dots[i].y)
+  ctx.save()
+  ctx.lineCap = 'round'
+  let rx = spx
+  let ry = spy
+  for (let i = 0; i <= attempts; i++) {
+    const [sx, sy] = i < attempts ? toC(dots[i].x, dots[i].y) : [gcx, gcy]
+    const leg = routeLegStyle(i, attempts + 1, routeAlpha, hk)
+    ctx.beginPath()
+    ctx.strokeStyle = `rgba(232, 192, 64, ${leg.alpha.toFixed(3)})`
+    ctx.lineWidth = leg.width
+    ctx.moveTo(rx, ry)
     ctx.lineTo(sx, sy)
+    ctx.stroke()
+    rx = sx
+    ry = sy
   }
-  ctx.lineTo(gcx, gcy)
-  ctx.stroke()
+  ctx.restore()
 
   // Ein Chevron je geflogener Etappe (inklusive des letzten Anflugs auf den
   // befreiten Kern), damit die Reise als gerichtete Spur lesbar bleibt.
@@ -211,45 +239,32 @@ export function paintGalaxy(
     ay = sy
   }
 
-  // Startmarke: warmer Abflugpunkt mit Goldring
-  const spawnGlow = ctx.createRadialGradient(spx, spy, 0, spx, spy, 8 * hk)
-  spawnGlow.addColorStop(0, 'rgba(255, 214, 120, 0.6)')
-  spawnGlow.addColorStop(1, 'rgba(255, 214, 120, 0)')
-  ctx.beginPath()
-  ctx.arc(spx, spy, 8 * hk, 0, Math.PI * 2)
-  ctx.fillStyle = spawnGlow
-  ctx.fill()
-  ctx.beginPath()
-  ctx.arc(spx, spy, 2.4 * hk, 0, Math.PI * 2)
-  ctx.fillStyle = '#fff2c8'
-  ctx.fill()
-  ctx.beginPath()
-  ctx.arc(spx, spy, 4.6 * hk, 0, Math.PI * 2)
-  ctx.strokeStyle = 'rgba(232, 192, 64, 0.7)'
-  ctx.lineWidth = 1 * hk
-  ctx.stroke()
+  // Abflugportal — der Ring steht quer zur ersten Etappe, man fliegt hindurch.
+  const [fx, fy] = attempts > 0 ? toC(dots[0].x, dots[0].y) : [gcx, gcy]
+  drawLandmark(ctx, 'departure-portal', spx, spy, Math.max(LANDMARK_PORTAL_MIN_R, 9 * hk), {
+    heading: Math.atan2(fy - spy, fx - spx),
+    dpr,
+  })
 
-  // Sternmarken — gerettet / verloren, dieselben Seeds und Radien wie live.
-  // Für `bodies` werden die Radien auf ganze Pixel gerundet: `drawVisitedStar`
-  // schlüsselt seinen Sprite-Cache nach Radius, ein Zieh-Resize legte sonst je
-  // Zwischengrösse ein eigenes Sprite an.
-  const galaxySeed = record.galaxy * 10007
-  const rFailed = Math.max(2, Math.round(7 * hk))
-  const rRescued = Math.max(2, Math.round(8.5 * hk))
+  // Sternmarken — befreit / verloren, dieselben Positionen wie live. Halbe Pixel
+  // beim Runden: ganzzahlig fielen in der Leistenminiatur beide auf 4.
   for (let i = 0; i < attempts; i++) {
     const [sx, sy] = toC(dots[i].x, dots[i].y)
     const failed = record.attemptResults[i] === 'failed'
-    if (opts.markers === 'bodies') {
-      drawVisitedStar(ctx, sx, sy, failed ? rFailed : rRescued, failed ? 'failed' : 'rescued', dpr)
-    } else if (failed) {
-      drawPlanet(ctx, sx, sy, 7 * hk, galaxySeed + i, 'failed')
-    } else {
-      drawPlanet(ctx, sx, sy, 8.5 * hk, galaxySeed + i, 'rescued')
-    }
+    drawLandmark(
+      ctx,
+      failed ? 'star-lost' : 'star-freed',
+      sx,
+      sy,
+      roundLandmarkRadius((failed ? 7 : 8.5) * hk),
+      { dpr, variant: landmarkVariantFor(i) },
+    )
   }
 
-  // Befreiter Kern: der besiegte Bossstern, golden und zur Ruhe gekommen
-  const coreGlowR = 22 * k
+  // Befreiter Kern: der besiegte Bossstern, golden und zur Ruhe gekommen. Er
+  // ist mit Abstand die grösste Marke — ein befreiter Stern misst mitsamt Halo
+  // 11, und der Höhepunkt der Galaxie darf daneben nicht untergehen.
+  const coreGlowR = 30 * k
   const coreGlow = ctx.createRadialGradient(gcx, gcy, 0, gcx, gcy, coreGlowR)
   coreGlow.addColorStop(0, 'rgba(255, 220, 90, 0.55)')
   coreGlow.addColorStop(0.6, 'rgba(255, 180, 40, 0.16)')
@@ -258,5 +273,5 @@ export function paintGalaxy(
   ctx.arc(gcx, gcy, coreGlowR, 0, Math.PI * 2)
   ctx.fillStyle = coreGlow
   ctx.fill()
-  drawPlanet(ctx, gcx, gcy, 10 * k, galaxySeed + 991, 'rescued')
+  drawLandmark(ctx, 'core-freed', gcx, gcy, 13 * k, { dpr })
 }

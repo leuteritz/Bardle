@@ -43,6 +43,8 @@ import {
   MINIMAP_GALAXY_CORE_RADIUS,
   MINIMAP_ROUTE_ARROW_SIZE,
   MINIMAP_ROUTE_ARROW_GAP,
+  MINIMAP_LANDMARK_PORTAL_R,
+  ROUTE_TRAIL_BANDS_LIVE,
   MINIMAP_ARRIVAL_STAR_R,
   MINIMAP_ARRIVAL_ORBIT_GAP,
   MINIMAP_ARRIVAL_ORBIT_STEP,
@@ -73,10 +75,11 @@ import {
   minimapAccentForTheme,
   STAR_PALETTE,
   drawPlanet,
-  drawVisitedStar,
   pathRouteArrowhead,
   generateGalaxyDots,
 } from './minimapGalaxyGeometry'
+import { drawLandmark, landmarkVariantFor } from '@/utils/fx/galaxyLandmarks'
+import { routeLegStyle } from '@/utils/fx/galaxyPlate'
 
 import { hexToRgba } from '@/utils/ui/format'
 import {
@@ -462,28 +465,45 @@ export default defineComponent({
       // Das war der teuerste Posten der ganzen Leiste: eine volle Galaxie
       // bedeutete 40× zwei Radialverläufe, ein clip() und zwei Züge mit
       // shadowBlur — gemessen die halbe Framerate. Drei Hebel, alle nötig:
-      //   1. Marker aus dem Sprite-Cache (drawVisitedStar) statt neu gezeichnet
+      //   1. Marker aus dem Sprite-Cache (drawLandmark) statt neu gezeichnet
       //   2. alle Chevrons in EINEM Pfad statt einem Zug pro Etappe
       //   3. das Ganze in eine Offscreen-Ebene, solange die Kamera steht
       // Punkt 3 allein reicht nicht: die Zoomfahrt bewegt die Kamera
-      // MINIMAP_ZOOM_TRIGGER_MS lang in jedem Frame, dort tragen 1 und 2.
-      /** Randzone = größter Marker-Glow plus shadowBlur. */
+      // MINIMAP_ZOOM_TRIGGER_MS lang in jedem Frame, dort tragen 1 und 2. Aus
+      // demselben Grund läuft der Helligkeitsverlauf der Route hier in
+      // ROUTE_TRAIL_BANDS_LIVE Bändern statt Etappe für Etappe.
+      /** Randzone = weitester Landmarken-Zierrat plus shadowBlur (landmarkPad(11) = 39). */
       const inView = (sx: number, sy: number) =>
-        sx > -36 && sx < w + 36 && sy > -36 && sy < h + 36
+        sx > -40 && sx < w + 40 && sy > -40 && sy < h + 40
 
       function drawRouteAndMarkers(c: CanvasRenderingContext2D) {
-        c.beginPath()
-        c.strokeStyle = 'rgba(232, 192, 64, 0.55)'
-        c.lineWidth = 2
+        const [spx, spy] = wToC(spawnPos.value.x, spawnPos.value.y)
+        c.save()
         c.lineCap = 'round'
         c.lineJoin = 'round'
-        const [spx, spy] = wToC(spawnPos.value.x, spawnPos.value.y)
-        c.moveTo(spx, spy)
+        // Ein Zug je Helligkeitsband: die Spur wird zum Kern hin heller und
+        // dicker, ohne dass jede Etappe einen eigenen stroke() kostet.
+        let band = -1
+        let px = spx
+        let py = spy
         for (let i = 0; i < attempts; i++) {
+          const leg = routeLegStyle(i, attempts, 0.55, 1.25, ROUTE_TRAIL_BANDS_LIVE)
           const [sx, sy] = wToC(dots[i].x, dots[i].y)
+          const b = Math.round(leg.alpha * 1000)
+          if (b !== band) {
+            if (band >= 0) c.stroke()
+            c.beginPath()
+            c.strokeStyle = `rgba(232, 192, 64, ${leg.alpha.toFixed(3)})`
+            c.lineWidth = leg.width
+            band = b
+          }
+          c.moveTo(px, py)
           c.lineTo(sx, sy)
+          px = sx
+          py = sy
         }
-        c.stroke()
+        if (band >= 0) c.stroke()
+        c.restore()
 
         // One chevron per flown leg, just before its destination star —
         // the route reads as a followable trail of arrowheads.
@@ -501,16 +521,25 @@ export default defineComponent({
         }
         c.stroke()
 
+        // Abflugportal — der Punkt, an dem die Reise durch diese Galaxie begann.
+        if (inView(spx, spy)) {
+          const [hx, hy] = attempts > 0 ? wToC(dots[0].x, dots[0].y) : [spx, spy - 1]
+          drawLandmark(c, 'departure-portal', spx, spy, MINIMAP_LANDMARK_PORTAL_R, {
+            heading: Math.atan2(hy - spy, hx - spx),
+            dpr: renderDpr,
+          })
+        }
+
         for (let i = 0; i < attempts; i++) {
           const [sx, sy] = wToC(dots[i].x, dots[i].y)
           // Während der Zoomfahrt liegt der Großteil außerhalb des Fensters —
           // was nicht sichtbar ist, wird auch nicht gezeichnet.
           if (!inView(sx, sy)) continue
-          if (results[i] === 'failed') {
-            drawVisitedStar(c, sx, sy, 9, 'failed', renderDpr)
-          } else {
-            drawVisitedStar(c, sx, sy, 11, 'rescued', renderDpr)
-          }
+          const lost = results[i] === 'failed'
+          drawLandmark(c, lost ? 'star-lost' : 'star-freed', sx, sy, lost ? 9 : 11, {
+            dpr: renderDpr,
+            variant: landmarkVariantFor(i),
+          })
         }
       }
 
@@ -585,6 +614,8 @@ export default defineComponent({
         ctx.fillStyle = '#ff6040'
         ctx.fillText('☠', bx, by)
       }
+      // Kein befreiter Kern auf der LIVE-Karte: sobald `isComplete` kippt, legt
+      // sich das „Galaxy saved"-Blatt darüber. Er gehört auf die Standbilder.
 
       // Next-target star, in the color of the role chosen for it — visible
       // from the moment the role is confirmed (departure spin, flight, …).

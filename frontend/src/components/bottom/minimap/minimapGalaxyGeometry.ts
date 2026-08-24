@@ -544,63 +544,6 @@ export function drawPlanet(
   }
 }
 
-/* ── Vorgerasterte Marker der besuchten Sterne ────────────────────────────
-   Für 'rescued' und 'failed' liest drawPlanet die geseedete Palette überhaupt
-   nicht: beide Zustände zeichnen ausschließlich feste Farben, und der Ring
-   ist für sie ohnehin abgeschaltet. Jeder Marker desselben Zustands ist damit
-   pixelgleich — es gibt keinen Grund, ihn 40× pro Frame aus zwei Radial-
-   verläufen, einem clip() und zwei Zügen mit shadowBlur neu aufzubauen. Genau
-   das war der Grund, warum eine Galaxie voller gescheiterter Sterne die
-   Framerate halbiert hat.
-
-   Einmal in ein kleines Sprite rastern, danach kostet ein Marker ein
-   drawImage. Eine kamerabezogene Offscreen-Ebene wäre die naheliegendere
-   Lösung gewesen, hilft aber ausgerechnet während der MINIMAP_ZOOM_TRIGGER_MS
-   langen Zoomfahrt nicht — dort ändert sich die Kamera in jedem Frame. Ein
-   Sprite ist von der Kamera unabhängig und trägt in jedem Zustand. */
-
-const markerSprites = new Map<string, HTMLCanvasElement>()
-
-/** Randzone um den Körper: größter Glow (r × 1.9) plus shadowBlur der Kontur. */
-function markerPad(r: number) {
-  return Math.ceil(r * 1.9 + 12)
-}
-
-function getMarkerSprite(r: number, state: 'rescued' | 'failed', dpr: number): HTMLCanvasElement {
-  const key = `${state}|${r}|${dpr}`
-  const cached = markerSprites.get(key)
-  if (cached) return cached
-
-  const pad = markerPad(r)
-  const size = pad * 2
-  const sprite = document.createElement('canvas')
-  sprite.width = Math.max(1, Math.round(size * dpr))
-  sprite.height = Math.max(1, Math.round(size * dpr))
-  const sctx = sprite.getContext('2d')
-  if (sctx) {
-    sctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    drawPlanet(sctx, pad, pad, r, 0, state)
-  }
-  markerSprites.set(key, sprite)
-  return sprite
-}
-
-/**
- * Marker eines besuchten Sterns — optisch identisch zu drawPlanet(state), aber
- * aus dem Sprite-Cache statt jedes Mal neu gezeichnet.
- */
-export function drawVisitedStar(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  state: 'rescued' | 'failed',
-  dpr: number,
-) {
-  const pad = markerPad(r)
-  ctx.drawImage(getMarkerSprite(r, state, dpr), x - pad, y - pad, pad * 2, pad * 2)
-}
-
 /* ── Route arrowheads ────────────────────────────────────────────────────── */
 
 /** Chevron einer Route-Etappe in den LAUFENDEN Pfad legen, ohne ihn zu zeichnen.

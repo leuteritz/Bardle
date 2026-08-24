@@ -32,6 +32,7 @@ import {
   MEEP_RISING_HOLD_MS,
   MEEP_GAIN_PULSE_MS,
   MEEP_ART_IMAGE,
+  GALAXY_TOOLTIP_IMAGE,
 } from '@/config/constants'
 import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
 import UniverseProgressTooltip from './UniverseProgressTooltip.vue'
@@ -277,7 +278,7 @@ onUnmounted(() => {
       <div class="uni-tile uni-tile--galaxy">
         <span v-ink-center.x.y class="tile-label">{{ showFullLabels ? 'Galaxy' : 'Gal' }}</span>
         <div class="tile-row">
-          <img src="/img/galaxy-far-128.png" class="tile-icon gx-icon" alt="" aria-hidden="true" />
+          <img :src="GALAXY_TOOLTIP_IMAGE" class="tile-icon gx-icon" alt="" aria-hidden="true" />
           <span v-ink-center.x.y class="tile-value gx-value">{{ galaxyStore.currentGalaxy }}</span>
         </div>
       </div>

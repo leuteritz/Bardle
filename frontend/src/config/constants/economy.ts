@@ -874,13 +874,28 @@ export const VOYAGE_SITE_INLINE_CLOCK_PX = 48
  * sind. Gemessen an der dichtesten Galaxie, die das Spiel kennt
  * (GALAXY_STARS_MAX 36 plus Fehlversuche).
  *
- * Das Archivstandbild ist davon nicht betroffen: es malt mit `markers: 'full'`
- * und laesst diesen Faktor auf 1.
+ * Das Archivstandbild laesst diesen Faktor auf 1.
  */
 export const VOYAGE_MAP_HISTORY_SCALE = 0.55
 /** Deckkraft der geflogenen Route auf der grossen Karte. Bei 36 Etappen wird
  *  aus der Spur sonst ein Netz, das lauter ist als die Haefen darauf. */
 export const VOYAGE_MAP_ROUTE_ALPHA = 0.22
+
+/**
+ * Legende der Kartenbuehne. Die Masse sind das ~Vierfache ihrer eigenen Kontur
+ * (136 x 88) — darunter ist sie Unruhe statt Auskunft.
+ *
+ * Sie liegt UNTER den Marken (`.egm-nodes`) und ohne Zeigerereignisse: Haefen
+ * sind auf 0.06..0.94 geklemmt, ein Hafen unten links landet auf Full HD 52 px
+ * ueber der Kante — eine Buehnengroesse, auf der sich das ausschliessen liesse,
+ * gibt es nicht. Also nicht Kollision vermeiden, sondern aufloesen.
+ */
+export const VOYAGE_MAP_LEGEND_MIN_W = 560
+export const VOYAGE_MAP_LEGEND_MIN_H = 420
+/** Sondenkante; `VOYAGE_MAP_LEGEND_R * LANDMARK_PAD_SPAN` muss hineinpassen. */
+export const VOYAGE_MAP_LEGEND_ICON_PX = 22
+/** = ICON_PX / 5 → der weiteste Zierrat spannt 10.6 ≤ 11 (halbe Kante). */
+export const VOYAGE_MAP_LEGEND_R = 4.4
 
 /**
  * Takt der Uhren auf der Karte. Bewusst 1000 und nicht HUD_COUNTDOWN_TICK_MS

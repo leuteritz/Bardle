@@ -6,16 +6,15 @@
  * Sackgassenklick ist: sie zeigt, was sie WERT ist, wenn wieder etwas kommt —
  * die Multiplikatoren des Ziels — und wann das sein könnte.
  */
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
-import { renderGalaxySnapshot } from '@/utils/fx/galaxySnapshot'
+import { useLazyGalaxySnapshot } from '@/composables/ui/useLazyGalaxySnapshot'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { toRoman } from '@/utils/ui/format'
 import {
-  ARCHIVE_SNAPSHOT_ROOT_MARGIN,
   EXPEDITION_CHART_MAX,
   EXPEDITION_WAYMARK_MAX,
 } from '@/config/constants'
@@ -33,28 +32,7 @@ const progress = computed(() => chartStore.progressOf(props.record.galaxy))
 const rescued = computed(() => props.record.attemptResults.filter((r) => r === 'rescued').length)
 const lost = computed(() => props.record.attemptResults.filter((r) => r === 'failed').length)
 
-const root = ref<HTMLElement | null>(null)
-const painted = ref(false)
-const snapshot = computed(() => (painted.value ? renderGalaxySnapshot(props.record) : ''))
-
-let observer: IntersectionObserver | null = null
-onMounted(() => {
-  if (!root.value) return
-  observer = new IntersectionObserver(
-    (entries) => {
-      if (!entries.some((e) => e.isIntersecting)) return
-      painted.value = true
-      observer?.disconnect()
-      observer = null
-    },
-    { rootMargin: ARCHIVE_SNAPSHOT_ROOT_MARGIN },
-  )
-  observer.observe(root.value)
-})
-onBeforeUnmount(() => {
-  observer?.disconnect()
-  observer = null
-})
+const { root, snapshot } = useLazyGalaxySnapshot(() => props.record, 'full')
 
 const nextOffer = computed(() => {
   const ms = Math.max(0, expeditionStore.nextSpawnAt - props.now)

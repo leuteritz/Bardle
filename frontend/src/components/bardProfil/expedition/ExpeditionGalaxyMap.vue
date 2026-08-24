@@ -16,6 +16,7 @@ import { Icon } from '@iconify/vue'
 import { paintGalaxy, galaxyFitBox, type FitBox } from '@/utils/fx/galaxyPlate'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { voyageMarkerSizeFor } from '@/utils/game/voyageSites'
+import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { toRoman } from '@/utils/ui/format'
 import {
   EXPEDITION_CHART_MAX,
@@ -25,10 +26,13 @@ import {
   VOYAGE_MAP_ROUTE_ALPHA,
   VOYAGE_SITE_INLINE_CLOCK_PX,
   VOYAGE_SITE_MOVE_MS,
+  VOYAGE_MAP_LEGEND_MIN_W,
+  VOYAGE_MAP_LEGEND_MIN_H,
 } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyagePlacedSite } from '@/types'
 import ExpeditionSiteNode from './ExpeditionSiteNode.vue'
+import ExpeditionMapLegend from './ExpeditionMapLegend.vue'
 
 const props = defineProps<{
   record: CompletedGalaxyRecord
@@ -131,13 +135,24 @@ function paint() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
   paintGalaxy(ctx, props.record, w, h, galaxyFitBox(w, h, VOYAGE_MAP_INSET_PX), {
-    markers: 'bodies',
     dpr,
     routeAlpha: VOYAGE_MAP_ROUTE_ALPHA,
     historyScale: VOYAGE_MAP_HISTORY_SCALE,
   })
   paintCount.value += 1
 }
+
+/** Unter dieser Bühnengrösse ist die Legende Unruhe statt Auskunft. */
+const showLegend = computed(
+  () => cssW.value >= VOYAGE_MAP_LEGEND_MIN_W && cssH.value >= VOYAGE_MAP_LEGEND_MIN_H,
+)
+
+/** Dieselbe Richtung, in die das Portal auf der Karte zeigt. */
+const legendHeading = computed(() => {
+  const { spawn, dots } = generateGalaxyDots(props.record.mapSeed, 1)
+  const d = dots[0] ?? spawn
+  return Math.atan2(d.y - spawn.y, d.x - spawn.x)
+})
 
 watch(paintKey, schedule, { flush: 'post' })
 
@@ -217,6 +232,8 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize })
         </span>
       </span>
     </div>
+
+    <ExpeditionMapLegend v-if="showLegend" :dpr="dprNow" :heading="legendHeading" />
 
     <div class="egm-nodes" :style="nodeVars">
       <ExpeditionSiteNode

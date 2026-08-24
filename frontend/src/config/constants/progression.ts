@@ -355,7 +355,7 @@ export const UNIVERSE_RUN_HISTORY_LIMIT = 12
  * Zeilenpaare auseinander, statt als Block gelesen zu werden.
  */
 export const GALAXY_TOOLTIP_WIDTH = 'clamp(360px, 21vw, 500px)'
-/** Dasselbe Artwork wie die Galaxy-Kachel darüber — der Kopf zitiert den Anker. */
+/** Dasselbe Artwork wie die Galaxy-Kachel in UniverseStatsRow — eine Quelle. */
 export const GALAXY_TOOLTIP_IMAGE = '/img/galaxy-far-128.png'
 /**
  * Zeilen- und Statusmarken des Galaxie-Panels. Wie im Universums-Panel steht

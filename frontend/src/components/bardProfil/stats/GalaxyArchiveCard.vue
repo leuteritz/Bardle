@@ -8,37 +8,15 @@
  * wie `expedition/ExpeditionDestinationCard.vue`; der modulweite Cache im
  * Renderer macht es danach einmal je Sitzung.
  */
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { formatCompactDuration } from '@/utils/ui/format'
-import { renderGalaxySnapshot } from '@/utils/fx/galaxySnapshot'
-import { ARCHIVE_SNAPSHOT_ROOT_MARGIN } from '@/config/constants'
+import { useLazyGalaxySnapshot } from '@/composables/ui/useLazyGalaxySnapshot'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 
 const props = defineProps<{ record: CompletedGalaxyRecord }>()
 
-const root = ref<HTMLElement | null>(null)
-const painted = ref(false)
-const snapshot = computed(() => (painted.value ? renderGalaxySnapshot(props.record) : ''))
-
-let observer: IntersectionObserver | null = null
-onMounted(() => {
-  if (!root.value) return
-  observer = new IntersectionObserver(
-    (entries) => {
-      if (!entries.some((e) => e.isIntersecting)) return
-      painted.value = true
-      observer?.disconnect()
-      observer = null
-    },
-    { rootMargin: ARCHIVE_SNAPSHOT_ROOT_MARGIN },
-  )
-  observer.observe(root.value)
-})
-onUnmounted(() => {
-  observer?.disconnect()
-  observer = null
-})
+const { root, snapshot } = useLazyGalaxySnapshot(() => props.record, 'full')
 
 const rescued = computed(() => props.record.attemptResults.filter((r) => r === 'rescued').length)
 const failed = computed(() => props.record.attemptResults.filter((r) => r === 'failed').length)
