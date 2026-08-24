@@ -170,6 +170,34 @@ export const useExpeditionStore = defineStore('expedition', {
       return this.ledgerRank.offerSlots
     },
 
+    /**
+     * Der Lohnfaktor einer ERFOLGREICHEN Expedition — die EINE Stelle der Kette.
+     * Eine zweite Fassung für die Prognose auf der Karte löge, sobald jemand ein
+     * Glied ergänzt. `gameStore.expeditionRewardMultiplier` floss auch vorher
+     * nicht ein.
+     */
+    expeditionRewardMultiplier(): number {
+      return (
+        usePlanetShopStore().planetExpeditionRewardMultiplier *
+        useMeepTreeStore().fx.expeditionRewardMult *
+        useProvidenceStore().expeditionRewardMult *
+        // Star Forge zahlt hier auf die BEUTE, nicht auf das Tempo —
+        // `expeditionSpeedMult` läuft gegen einen Boden, dieser Faktor nicht.
+        useStarForgeStore().expeditionRewardMult
+      )
+    },
+
+    /** Was eine Mission bei Erfolg bzw. Fehlschlag auszahlen würde. */
+    projectedRewardFor(): (mission: Pick<ExpeditionMission, 'baseReward'>) => {
+      success: number
+      failure: number
+    } {
+      return (mission) => ({
+        success: Math.floor(mission.baseReward * this.expeditionRewardMultiplier),
+        failure: Math.floor(mission.baseReward * EXPEDITION_FAILURE_REWARD_FRACTION),
+      })
+    },
+
     canStartExpedition(): boolean {
       return (
         this.activeExpeditions.filter((e) => e.status === 'active').length <
@@ -691,22 +719,8 @@ export const useExpeditionStore = defineStore('expedition', {
         if (elapsed >= expedition.durationSeconds * 1000) {
           const success = Math.random() < expedition.successChance
           expedition.status = success ? 'success' : 'failure'
-          const relayMul = usePlanetShopStore().planetExpeditionRewardMultiplier
-          const treeRewardMul = useMeepTreeStore().fx.expeditionRewardMult
-          const providenceRewardMul = useProvidenceStore().expeditionRewardMult
-          // Wayfinder's Cache / Wayfarer's Hoard (Star Forge): der Baum zahlt
-          // auf die BEUTE, nicht auf das Tempo — `expeditionSpeedMult` läuft
-          // gegen einen Boden, dieser Faktor nicht.
-          const forgeRewardMul = useStarForgeStore().expeditionRewardMult
-          expedition.reward = success
-            ? Math.floor(
-                expedition.baseReward *
-                  relayMul *
-                  treeRewardMul *
-                  providenceRewardMul *
-                  forgeRewardMul,
-              )
-            : Math.floor(expedition.baseReward * EXPEDITION_FAILURE_REWARD_FRACTION)
+          const projected = this.projectedRewardFor(expedition)
+          expedition.reward = success ? projected.success : projected.failure
           if (success) this.totalExpeditionsSucceeded += 1
           else this.totalExpeditionsFailed += 1
           this.totalExpeditionChimes += expedition.reward

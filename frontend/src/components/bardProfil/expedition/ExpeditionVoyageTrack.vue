@@ -295,6 +295,34 @@ const lostAt = computed(() => (props.outcome === 'failure' ? props.legs.length -
   color: rgba(255, 255, 255, 0.26);
 }
 
+/* Kurze Spalte: die Leiter verdichtet, statt Zeilen zu verlieren. Trifft beide
+   Aufrufer — die Vertragskarte rollt dort heute, das hilft ihr mit. */
+@media (max-height: 1100px) {
+  .evt-leg:not(:last-child) .evt-body {
+    padding-bottom: 6px;
+  }
+  .evt-name {
+    font-size: 12px;
+  }
+  .evt-hazards {
+    gap: 3px;
+    margin-top: 4px;
+  }
+  .evt-hazard {
+    padding: 3px 6px;
+    gap: 6px;
+  }
+  .evt-hazard-name {
+    font-size: 11.5px;
+  }
+  .evt-hazard-req {
+    font-size: 10px;
+  }
+  .evt-track {
+    margin-top: 4px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .evt-fill {
     transition: none;

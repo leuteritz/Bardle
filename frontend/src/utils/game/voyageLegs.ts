@@ -62,7 +62,7 @@ function fallbackSeed(key: string): number {
  * Vier Zahlen, mit Primzahlen gemischt statt summiert: `durationSeconds` ist auf
  * 5er gerundet und `baseReward` auf 10er, eine Summe häufte gleiche Namensfolgen.
  */
-function legSeedOf(subject: VoyageSubject): number {
+export function voyageSeedOf(subject: VoyageSubject): number {
   const key = pinKeyOf(subject)
   const stamp = pinStampOf(key)
   const base = stamp === Number.MAX_SAFE_INTEGER ? fallbackSeed(key) : stamp % 1000003
@@ -77,8 +77,8 @@ function legSeedOf(subject: VoyageSubject): number {
   )
 }
 
-/** Zieht ohne Zurücklegen — zwei Etappen derselben Reise heissen nie gleich. */
-function drawName(pool: readonly string[], used: Set<string>, rng: () => number): string {
+/** Zieht ohne Zurücklegen — zwei Ziehungen derselben Reise fallen nie gleich aus. */
+export function drawUnique(pool: readonly string[], used: Set<string>, rng: () => number): string {
   const free = pool.filter((n) => !used.has(n))
   const from = free.length ? free : pool
   const name = from[Math.min(from.length - 1, Math.floor(rng() * from.length))]
@@ -90,7 +90,7 @@ export function voyageLegsOf(subject: VoyageSubject): VoyageLeg[] {
   const hazards: ExpeditionHazardId[] = subject.hazards ?? []
   const tier: ExpeditionTier = subject.tier ?? 'common'
   const count = voyageLegCountOf(hazards.length, tier)
-  const rng = seededRng(legSeedOf(subject))
+  const rng = seededRng(voyageSeedOf(subject))
 
   // Die erste Etappe ist die Anreise und trägt keine Gefahr — es sei denn, sie
   // ist die einzige. Was über die Plätze hinausgeht, nimmt die letzte mit.
@@ -121,7 +121,7 @@ export function voyageLegsOf(subject: VoyageSubject): VoyageLeg[] {
       : i === 0 && count > 1
         ? VOYAGE_LEG_APPROACH_NAMES
         : VOYAGE_LEG_ARRIVAL_NAMES
-    legs.push({ index: i, name: drawName(pool, used, rng), hazards: buckets[i], from, to: cursor })
+    legs.push({ index: i, name: drawUnique(pool, used, rng), hazards: buckets[i], from, to: cursor })
   }
   return legs
 }

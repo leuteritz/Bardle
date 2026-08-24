@@ -147,8 +147,9 @@ export const PAUSE_PANEL_MAX_SCALE = 1.3
 
 /** Breite der Zustandsspalte (Sonne, Vitalität, Universe/Galaxy/Level) rechts im
  *  Panel. Hergeleitet, nicht gewählt: die grösste Scheibe (200) samt zwei gleich
- *  breiten Ledgern muss hineinpassen, und links müssen 1052 − 460 − 30 = 562 für
- *  das 426 breite Material-Raster bleiben. */
+ *  breiten Ledgern muss hineinpassen. Links bleiben damit 1352 − 460 − 30 = 862,
+ *  reichlich für das 426 breite Material-Raster — bei der früheren Panelbreite
+ *  war dieser Rest die eigentliche Schranke, seit 1440 ist er es nicht mehr. */
 export const PAUSE_STATE_COL_WIDTH = 460
 /** Abstand zwischen Bilanz- und Zustandsspalte. */
 export const PAUSE_BODY_COL_GAP = 30
@@ -401,9 +402,9 @@ export const PAUSE_LEDGER_POP_OFFSETS = [12, 52, 30, 74]
 // dazu die Void-Karte (PAUSE_VOID_CARD_WIDTH) und die Champion-Karte
 // (PAUSE_CHAMPION_CARD_WIDTH) — in der Spitze also FÜNF.
 //
-// Die Rechnung, an der diese Werte hängen (Panelinnenraum 1200 − 2 × 44 = 1112):
+// Die Rechnung, an der diese Werte hängen (Panelinnenraum 1440 − 2 × 44 = 1352):
 //
-//   5 Karten → 5 × 208 + 4 × 6 = 1064  ≤ 1112  → eine Zeile
+//   5 Karten → 5 × 208 + 4 × 6 = 1064  ≤ 1352  → eine Zeile
 //
 // Der Drifter-Buff war einmal die sechste Karte. Er steht heute als Chip im
 // Kit-Band, zusammen mit MVP- und Omen-Buff — eine Belohnungsart, eine Form.
@@ -412,10 +413,11 @@ export const PAUSE_LEDGER_POP_OFFSETS = [12, 52, 30, 74]
 // Höhe, die mit der Zahl der Karten wächst, ließe den Fit-Scale des ganzen
 // Overlays mitten in der Pause springen.
 //
-// Wer eine SECHSTE Karte ergänzt, bricht die Reservierung und zieht die
-// Panelhöhe mit — dann muss das Panel auf mindestens 1366 mitwachsen
-// (6 × 208 + 5 × 6 + 2 × 44 = 1366), und erst danach die Bottom-Bar-Lücke
-// nachmessen (siehe PAUSE_PANEL_DESIGN_WIDTH).
+// In die BREITE passt heute auch eine sechste (6 × 208 + 5 × 6 = 1278 ≤ 1352);
+// erst die siebte (1492) bräche die Zeile, zöge die Panelhöhe mit und verlangte
+// ein breiteres Panel plus eine neue Messung der Bottom-Bar-Lücke (siehe
+// PAUSE_PANEL_DESIGN_WIDTH). Wer eine ergänzt, prüft trotzdem die Höhe nach: die
+// Reservierung steht auf EINER Zeile, und was sie sprengt, springt im Fit-Scale.
 export const PAUSE_STAR_CARD_WIDTH = 208
 export const PAUSE_STAR_CARD_HEIGHT = 96
 /** Waagerechter Innenabstand der Karte. Er steht hier und nicht nur im CSS,

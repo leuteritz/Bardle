@@ -1,36 +1,49 @@
 <script setup lang="ts">
 /**
- * A mission that has already left — running, or back and waiting to be collected.
+ * Das Dossier einer Mission, die schon unterwegs ist — laufend oder zurück und
+ * auf das Einsammeln wartend.
  *
- * Die Karte trägt EINE grosse Zahl (die Restzeit) und darunter die Etappen. Der
- * frühere Gesamtbalken samt Prozentzahl und flacher Hazard-Zeile ist entfallen:
- * die Leiter sagt beides genauer, und jede Gefahr steht an dem Abschnitt, an dem
- * sie wartet.
+ * Die Spalte ROLLT NICHT. Jeder Block trägt ein explizites `flex`, die festen
+ * wachsen aber schrumpfen nie, und die kurze Spalte verdichtet sie über die
+ * Höhen-Media-Query statt über Flex. Nachgeben darf nur das Logbuch: es ist der
+ * einzige Block, dessen Zeilen der Spieler beim Ticken schon gelesen hat. Das
+ * Budget steht in `VOYAGE_DOSSIER_*` und ist per `voyageDossierLayout.spec.ts`
+ * gebunden — ein weiterer Block bricht sie.
  *
- * Der zurückgekehrte Zustand ist, wo die Beute steht — Chimes UND Materialien.
- * Ein Fehlschlag zeigt denselben Rahmen ohne Beutezeile, die Lücke selbst liest
- * sich als Verlust.
+ * Der zurückgekehrte Zustand ist kein zweites Layout: dieselben Zonen, andere
+ * Lesart. Die grosse Zahl wird vom Countdown zur Beute.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useBattleStore } from '@/stores/battle/battleStore'
-import { getOriginColor } from '@/config/champions/championOrigins'
-import { MATERIALS } from '@/config/economy/materials'
-import { EXPEDITION_COLORS, EXPEDITION_HAZARD_BY_ID } from '@/config/constants'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
+import { destinationFor } from '@/config/economy/expeditionDestinations'
+import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { toRoman } from '@/utils/ui/format'
 import { voyageLegsOf } from '@/utils/game/voyageLegs'
+import { voyageLogOf, voyageLogVerdictOf, voyageLogRevealed } from '@/utils/game/voyageLog'
+import {
+  EXPEDITION_COLORS,
+  EXPEDITION_HAZARD_BY_ID,
+  EXPEDITION_CHART_MAX,
+  VOYAGE_DOSSIER_LOG_MIN_H,
+  VOYAGE_DOSSIER_CREW_MAX_H,
+  MS_PER_SECOND,
+} from '@/config/constants'
 import type { ExpeditionMission, VoyageTrackHazard } from '@/types'
 import ExpeditionVoyageTrack from './ExpeditionVoyageTrack.vue'
+import ExpeditionVoyageLog from './ExpeditionVoyageLog.vue'
+import ExpeditionCrewDossier from './ExpeditionCrewDossier.vue'
+import ExpeditionSpoilsForecast from './ExpeditionSpoilsForecast.vue'
+import ExpeditionSectionHead from './ExpeditionSectionHead.vue'
 
-const props = defineProps<{
-  mission: ExpeditionMission
-  now: number
-  /** `column` — die Karte FÜLLT die Detailspalte, statt in einem Stapel zu
-   *  stehen. Siehe dieselbe Variante in `ExpeditionContractCard`. */
-  variant?: 'card' | 'column'
-}>()
+const props = defineProps<{ mission: ExpeditionMission; now: number }>()
 const emit = defineEmits<{ collect: [string] }>()
 
-const battleStore = useBattleStore()
+const gameStore = useGameStore()
+const galaxyStore = useGalaxyStore()
+const chartStore = useExpeditionChartStore()
 
 const done = computed(() => props.mission.status !== 'active')
 const success = computed(() => props.mission.status === 'success')
@@ -40,30 +53,55 @@ const color = computed(
     EXPEDITION_COLORS.find((c) => c.key === (props.mission.colorKey ?? 'gold')) ??
     EXPEDITION_COLORS[0],
 )
+const record = computed(
+  () => galaxyStore.completedGalaxies.find((r) => r.galaxy === props.mission.galaxy) ?? null,
+)
+const dest = computed(() => (record.value ? destinationFor(record.value) : null))
+const chart = computed(() => chartStore.progressOf(props.mission.galaxy ?? 1))
+
 const cardStyle = computed(() => ({
   '--exp-p': color.value.primary,
   '--exp-d': color.value.dim,
-  '--exp-glow': color.value.glowRgb,
+  '--dest-accent': record.value
+    ? `rgb(${minimapAccentForTheme(record.value.themeIndex)})`
+    : '#c89040',
 }))
+const logMin = `${VOYAGE_DOSSIER_LOG_MIN_H.full}px`
+const logMinCompact = `${VOYAGE_DOSSIER_LOG_MIN_H.compact}px`
+const crewMax = `${VOYAGE_DOSSIER_CREW_MAX_H.full}px`
+const crewMaxCompact = `${VOYAGE_DOSSIER_CREW_MAX_H.compact}px`
 
 const progress = computed(() => {
   const elapsed = props.now - props.mission.startTime
-  return Math.min(1, Math.max(0, elapsed / (props.mission.durationSeconds * 1000)))
+  return Math.min(1, Math.max(0, elapsed / (props.mission.durationSeconds * MS_PER_SECOND)))
 })
-
-const remaining = computed(() => {
-  const ms = Math.max(
+const remainingMs = computed(() =>
+  Math.max(
     0,
-    props.mission.durationSeconds * 1000 - (props.now - props.mission.startTime),
-  )
-  const secs = Math.ceil(ms / 1000)
+    props.mission.durationSeconds * MS_PER_SECOND - (props.now - props.mission.startTime),
+  ),
+)
+const remaining = computed(() => {
+  const secs = Math.ceil(remainingMs.value / MS_PER_SECOND)
   return `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, '0')}`
 })
 
+/**
+ * Ankunft als WANDUHR — der benannte Ausnahmefall, in dem ein Mensch die Zahl
+ * als Datum liest. `remainingMs` ist Spielzeit, der Faktor muss deshalb heraus,
+ * bevor sie auf die echte Uhr trifft.
+ */
+const arrival = computed(() =>
+  new Date(Date.now() + remainingMs.value / gameStore.gameSpeed).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  }),
+)
+
 const legs = computed(() => voyageLegsOf(props.mission))
 
-/** Unterwegs steht die Gefahr für sich — Requirement und Verdikt gehören dem
- *  Vertrag, hier ist die Crew längst gesetzt. */
+/** Unterwegs steht die Gefahr nur mit Namen — Requirement und Verdikt gehören
+ *  dem Vertrag, und was sie unterwegs anrichtet, erzählt das Logbuch. */
 const hazardInfo = computed<VoyageTrackHazard[]>(() =>
   (props.mission.hazards ?? [])
     .map((id) => EXPEDITION_HAZARD_BY_ID[id])
@@ -71,49 +109,79 @@ const hazardInfo = computed<VoyageTrackHazard[]>(() =>
     .map((def) => ({ id: def.id, name: def.name, icon: def.icon })),
 )
 
-/** Materials brought home, resolved to their display name and icon. */
-const haul = computed(() =>
-  (props.mission.spoils?.materials ?? []).map((m) => {
-    const def = MATERIALS.find((x) => x.id === m.id)
-    return { id: m.id, qty: m.qty, name: def?.name ?? m.id, image: def?.image ?? '' }
-  }),
+const logCtx = computed(() => ({
+  crew: props.mission.assignedChampions.map((c) => c.name),
+  destination: dest.value?.name,
+}))
+const logEntries = computed(() => {
+  const script = voyageLogOf(props.mission, logCtx.value)
+  if (!done.value) return script
+  return [...script, voyageLogVerdictOf(props.mission, success.value, logCtx.value)]
+})
+const shownLog = computed(() =>
+  voyageLogRevealed(logEntries.value, done.value ? 1 : progress.value),
 )
-
-function championImage(name: string): string {
-  return battleStore.getChampionImage(name, { size: 'sm' })
-}
 </script>
 
 <template>
   <article
     class="efc-card"
-    :class="[
-      done ? (success ? 'efc-card--success' : 'efc-card--failure') : 'efc-card--running',
-      `efc-card--${variant ?? 'card'}`,
-    ]"
+    :class="done ? (success ? 'efc-card--success' : 'efc-card--failure') : 'efc-card--running'"
     :style="cardStyle"
   >
-    <div v-if="(variant ?? 'card') === 'card'" class="efc-accent" />
-
     <header class="efc-head">
-      <Icon
-        :icon="mission.icon || 'game-icons:rolled-cloth'"
-        width="28"
-        height="28"
-        class="efc-head-ico"
-      />
-      <span class="efc-name">{{ mission.name }}</span>
-      <span v-if="done" class="efc-badge" :class="success ? 'efc-badge--ok' : 'efc-badge--fail'">
-        {{ success ? '✓ Returned' : '✕ Lost' }}
-      </span>
+      <div class="efc-title">
+        <Icon
+          :icon="mission.icon || 'game-icons:rolled-cloth'"
+          width="26"
+          height="26"
+          class="efc-head-ico"
+        />
+        <span class="efc-name">{{ mission.name }}</span>
+        <span v-if="done" class="efc-badge" :class="success ? 'efc-badge--ok' : 'efc-badge--fail'">
+          {{ success ? '✓ Returned' : '✕ Lost' }}
+        </span>
+      </div>
+      <div class="efc-dest">
+        <span class="efc-dest-name">{{ dest?.name ?? 'Uncharted' }}</span>
+        <!-- Die Stufe der MISSION, nicht die der Galaxie: sie setzt Sitze,
+             Gefahren und Lohn dieser Reise. -->
+        <span class="efc-dest-tier" :class="`is-${mission.tier ?? 'common'}`">
+          {{ mission.tier ?? 'common' }}
+        </span>
+        <span class="efc-dest-galaxy">Galaxy {{ toRoman(mission.galaxy ?? 1) }}</span>
+        <span class="efc-dest-runs">run {{ chart.runs + 1 }}</span>
+        <span
+          class="efc-dest-pips"
+          :aria-label="`Charted ${chart.charted} of ${EXPEDITION_CHART_MAX}`"
+        >
+          <span
+            v-for="i in EXPEDITION_CHART_MAX"
+            :key="i"
+            class="efc-dest-pip"
+            :class="{ 'is-on': i <= chart.charted }"
+          />
+        </span>
+      </div>
     </header>
 
-    <!-- Die eine grosse Zahl. Reservierte Breite und tabular-nums, damit sie
+    <!-- Die EINE grosse Zahl. Reservierte Breite und tabular-nums, damit sie
          beim Stellenwechsel nicht wandert. -->
-    <div v-if="!done" class="efc-clock">
-      <span class="efc-clock-value">{{ remaining }}</span>
-      <span class="efc-clock-unit">until they return</span>
+    <div class="efc-figure" :title="done ? undefined : `Arrival around ${arrival}`">
+      <template v-if="!done">
+        <span class="efc-figure-value">{{ remaining }}</span>
+        <span class="efc-figure-unit">until they return</span>
+        <span class="efc-figure-eta">≈ {{ arrival }}</span>
+      </template>
+      <template v-else>
+        <span class="efc-figure-value efc-figure-value--done" :class="{ 'is-fail': !success }">
+          +{{ $formatNumber(mission.reward) }}
+        </span>
+        <span class="efc-figure-unit">{{ success ? 'brought home' : 'salvaged' }}</span>
+      </template>
     </div>
+
+    <ExpeditionSpoilsForecast class="efc-forecast" :mission="mission" />
 
     <ExpeditionVoyageTrack
       class="efc-track"
@@ -123,123 +191,89 @@ function championImage(name: string): string {
       :outcome="done ? (success ? 'success' : 'failure') : null"
     />
 
-    <div class="efc-crew">
-      <span
-        v-for="c in mission.assignedChampions"
-        :key="c.name"
-        class="efc-member"
-        :title="`${c.name} — ${c.role}`"
-      >
-        <img :src="championImage(c.name)" :alt="c.name" class="efc-member-img" />
-        <span class="efc-member-text">
-          <span class="efc-member-name" :style="{ color: getOriginColor(c.name) }">
-            {{ c.name }}
-          </span>
-          <span class="efc-member-role">{{ c.role }}</span>
-        </span>
-      </span>
-    </div>
+    <section class="efc-crew">
+      <ExpeditionSectionHead label="Crew" :readout="`${mission.assignedChampions.length} aboard`" />
+      <ExpeditionCrewDossier :crew="mission.assignedChampions" :hazards="mission.hazards ?? []" />
+    </section>
 
-    <!-- Returned: the haul + collect -->
-    <template v-if="done">
-      <div class="efc-haul">
-        <span class="efc-chimes" :class="{ 'efc-chimes--fail': !success }">
-          <img
-            src="/img/BardAbilities/BardChime-128.png"
-            class="efc-chime-img"
-            alt=""
-            aria-hidden="true"
-          />
-          +{{ $formatNumber(mission.reward) }}
-        </span>
-        <span v-for="m in haul" :key="m.id" class="efc-mat" :title="m.name">
-          <img :src="m.image" :alt="m.name" class="efc-mat-img" />
-          ×{{ m.qty }}
-        </span>
-        <span v-if="mission.spoils?.meep" class="efc-mat" title="Meep">
-          <Icon icon="game-icons:meeple" width="16" height="16" />
-          ×{{ mission.spoils.meep }}
-        </span>
-      </div>
-      <button
-        class="efc-collect"
-        :class="success ? 'efc-collect--ok' : 'efc-collect--fail'"
-        @click.stop="emit('collect', mission.id)"
-      >
-        Collect
-      </button>
-    </template>
+    <ExpeditionVoyageLog
+      class="efc-log"
+      :entries="shownLog"
+      :duration-seconds="mission.durationSeconds"
+      :done="done"
+    />
 
-    <span v-else class="efc-odds">{{ Math.round(mission.successChance * 100) }}% odds</span>
+    <button
+      v-if="done"
+      class="efc-collect"
+      :class="success ? 'efc-collect--ok' : 'efc-collect--fail'"
+      @click.stop="emit('collect', mission.id)"
+    >
+      Collect
+    </button>
   </article>
 </template>
 
 <style scoped>
+/* Die Spalte trägt den Rahmen, die Karte teilt ihre Höhe auf. `clip` und nicht
+   `hidden`: hidden wäre ein Scrollport. */
 .efc-card {
   position: relative;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 0 0 11px;
-  border: 1px solid;
-  border-radius: 4px;
-  overflow: hidden;
+  padding: 13px 13px 11px;
+  overflow: clip;
 }
-/* ── Als SPALTE ── siehe ExpeditionContractCard: die Spalte trägt den Rahmen,
-   die Karte rollt in sich. */
-.efc-card--column {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding-top: 13px;
-  border: 0;
-  border-radius: 0;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
-}
-.efc-card--column::-webkit-scrollbar {
-  width: 4px;
-}
-.efc-card--column::-webkit-scrollbar-track {
-  background: #111;
-}
-.efc-card--column::-webkit-scrollbar-thumb {
-  background: #5c3310;
-  border-radius: 2px;
-}
-
 .efc-card--running {
   background: #1a1008;
-  border-color: rgba(92, 51, 16, 0.55);
 }
 .efc-card--success {
   background: #0e1a0e;
-  border-color: rgba(82, 184, 48, 0.35);
 }
 .efc-card--failure {
   background: #1a0e0e;
-  border-color: rgba(204, 96, 80, 0.35);
-}
-.efc-accent {
-  height: 3px;
-  flex-shrink: 0;
-  opacity: 0.65;
-}
-.efc-card--running .efc-accent {
-  background: linear-gradient(to right, transparent, var(--exp-p), transparent);
-}
-.efc-card--success .efc-accent {
-  background: linear-gradient(to right, #2e7a1a, #52b830, #2e7a1a);
-}
-.efc-card--failure .efc-accent {
-  background: linear-gradient(to right, #a04030, #cc6050, #a04030);
 }
 
+/* ── Der Haushalt ─────────────────────────────────────────────
+   Fest: wachsen, aber nie schrumpfen. Elastisch ist nur das Logbuch,
+   und es startet bei `flex-basis: 0` — mit `auto` schöbe der volle
+   Eintragsstapel die festen Blöcke aus der Spalte. */
+.efc-head,
+.efc-figure,
+.efc-forecast,
+.efc-track,
+.efc-collect {
+  flex: 0 0 auto;
+}
+.efc-crew {
+  flex: 2 0 auto;
+  min-height: 0;
+  max-height: v-bind(crewMax);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.efc-log {
+  flex: 5 1 0;
+  min-height: v-bind(logMin);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* ── Kopf ─────────────────────────────────────────────────── */
 .efc-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.efc-title {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 8px 13px 0;
 }
 .efc-head-ico {
   flex-shrink: 0;
@@ -257,8 +291,8 @@ function championImage(name: string): string {
 }
 .efc-badge {
   flex-shrink: 0;
-  padding: 3px 10px;
-  font-size: 11px;
+  padding: 2px 9px;
+  font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -276,14 +310,70 @@ function championImage(name: string): string {
   background: rgba(204, 96, 80, 0.12);
 }
 
-/* ── Restzeit ─────────────────────────────────────────────── */
-.efc-clock {
+/* Was das Datenband auf der Karte nicht weiss: was DIESE Reise dem Ort antut. */
+.efc-dest {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.34);
+}
+.efc-dest-name {
+  font-weight: 700;
+  color: var(--dest-accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.efc-dest-tier {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(92, 51, 16, 0.6);
+  border-radius: 4px;
+}
+.efc-dest-tier.is-rare {
+  color: #6ab0e0;
+  border-color: rgba(106, 176, 224, 0.45);
+}
+.efc-dest-tier.is-epic {
+  color: #b080e0;
+  border-color: rgba(176, 128, 224, 0.45);
+}
+.efc-dest-galaxy,
+.efc-dest-runs {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.efc-dest-pips {
+  display: inline-flex;
+  gap: 3px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.efc-dest-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid rgba(92, 51, 16, 0.8);
+}
+.efc-dest-pip.is-on {
+  background: var(--dest-accent);
+  border-color: var(--dest-accent);
+}
+
+/* ── Die grosse Zahl ──────────────────────────────────────── */
+.efc-figure {
   display: flex;
   align-items: baseline;
   gap: 9px;
-  padding: 0 13px;
 }
-.efc-clock-value {
+.efc-figure-value {
   min-width: 3.6ch;
   font-size: 34px;
   font-weight: 800;
@@ -291,114 +381,31 @@ function championImage(name: string): string {
   color: #e8c040;
   font-variant-numeric: tabular-nums;
 }
-.efc-clock-unit {
+.efc-figure-value--done {
+  color: #ffd060;
+}
+.efc-figure-value--done.is-fail {
+  color: #cc6050;
+}
+.efc-figure-unit {
   font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.34);
 }
-
-.efc-track {
-  padding: 0 13px;
-}
-
-/* ── Crew ─────────────────────────────────────────────────── */
-.efc-crew {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px 14px;
-  padding: 0 13px;
-}
-.efc-member {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-.efc-member-img {
-  width: 36px;
-  height: 36px;
-  object-fit: cover;
-  object-position: center top;
-  border-radius: 50%;
-  border: 1px solid rgba(200, 144, 64, 0.4);
-  flex-shrink: 0;
-}
-.efc-member-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.efc-member-name {
-  font-size: 12.5px;
+.efc-figure-eta {
+  margin-left: auto;
+  font-size: 11.5px;
   font-weight: 700;
+  color: rgba(255, 255, 255, 0.26);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.efc-member-role {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.3);
-}
 
-/* ── Haul ─────────────────────────────────────────────────── */
-.efc-haul {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 7px 14px;
-  padding: 0 13px;
-}
-.efc-chimes {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 20px;
-  font-weight: 800;
-  color: #ffd060;
-  font-variant-numeric: tabular-nums;
-}
-.efc-chimes--fail {
-  color: #cc6050;
-  font-size: 16px;
-}
-.efc-chime-img {
-  width: 21px;
-  height: 21px;
-  object-fit: contain;
-}
-.efc-mat {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  font-size: 13px;
-  font-weight: 800;
-  color: #a0f0d0;
-  background: #141410;
-  border: 1px solid rgba(92, 51, 16, 0.5);
-  border-radius: 4px;
-  font-variant-numeric: tabular-nums;
-}
-.efc-mat-img {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-}
-
-.efc-odds {
-  padding: 0 13px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.3);
-  font-variant-numeric: tabular-nums;
-}
-
+/* ── Fuss ─────────────────────────────────────────────────── */
 .efc-collect {
   align-self: stretch;
-  margin: 0 13px;
   padding: 9px 0;
   font-size: 12.5px;
   font-weight: 800;
@@ -426,5 +433,50 @@ function championImage(name: string): string {
 }
 .efc-collect:active {
   transform: scale(0.98);
+}
+
+/* ── Kurze Spalte: verdichten, nicht streichen ────────────── */
+@media (max-height: 1100px) {
+  .efc-card {
+    gap: 7px;
+    padding-bottom: 9px;
+  }
+  .efc-crew {
+    max-height: v-bind(crewMaxCompact);
+    gap: 4px;
+  }
+  .efc-log {
+    min-height: v-bind(logMinCompact);
+  }
+  .efc-name {
+    font-size: 14.5px;
+  }
+  .efc-figure-value {
+    font-size: 28px;
+  }
+  .efc-figure-unit {
+    font-size: 10.5px;
+  }
+  /* Die Ankunftszeit bleibt als `title` der Uhr erreichbar. */
+  .efc-figure-eta {
+    display: none;
+  }
+  .efc-dest {
+    font-size: 10.5px;
+  }
+}
+@media (min-height: 1601px) {
+  .efc-card {
+    gap: 14px;
+  }
+  .efc-name {
+    font-size: 18px;
+  }
+  .efc-figure-value {
+    font-size: 42px;
+  }
+  .efc-dest {
+    font-size: 12.5px;
+  }
 }
 </style>

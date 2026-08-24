@@ -403,3 +403,18 @@ export interface VoyageTrackHazard {
   state?: 'met' | 'partial' | 'unmet' | 'open'
   cost?: number | null
 }
+
+/**
+ * Eine Zeile des Reise-Logbuchs. ABGELEITET wie die Etappen
+ * (`utils/game/voyageLog.ts`), nie gespeichert — `at` ist der Anteil der
+ * Gesamtdauer, ab dem die Zeile steht.
+ */
+export type VoyageLogKind = 'depart' | 'travel' | 'crew' | 'hazard' | 'arrive' | 'verdict'
+
+export interface VoyageLogEntry {
+  index: number
+  at: number
+  leg: number
+  kind: VoyageLogKind
+  text: string
+}

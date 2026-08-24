@@ -4,8 +4,8 @@
  *
  * Drei Subjekte, drei bestehende Karten — die Spalte selbst hält nur den
  * Rahmen und den Tausch. Ein Vertrag zeigt `ExpeditionContractCard` (Sitze,
- * Hazards, additive Chance, Send), eine Mission `ExpeditionFieldCard`, und ohne
- * Auswahl steht die Galaxie selbst da.
+ * Hazards, additive Chance, Send), eine Mission das vollhohe Dossier
+ * `ExpeditionFieldCard`, und ohne Auswahl steht die Galaxie selbst da.
  *
  * **Eingeklappt wird VERSCHOBEN, nicht abgerissen.** Der Körper behält seine
  * Breite und läuft aus der geklemmten Spur, `overflow: clip` schneidet ihn ab
@@ -100,7 +100,6 @@ onBeforeUnmount(() => {
           />
           <ExpeditionFieldCard
             v-else-if="site?.mission"
-            variant="column"
             :mission="site.mission"
             :now="now"
             @collect="emit('collect', $event)"

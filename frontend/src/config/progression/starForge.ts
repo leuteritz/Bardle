@@ -1187,7 +1187,7 @@ export const FORGE_BOUGHS: ForgeNodeDef[] = [
  * Zeiger darauf liegt, als eigener Ring am Voraussetzungsknoten.
  *
  * Die Stufen in `requires` sind an der ERREICHBARKEIT geeicht, nicht am Gefühl —
- * die Rechnung steht an `FORGE_CONJUNCTION_BRANCH_LEVEL`, und
+ * die Rechnung steht an `FORGE_CONJUNCTION_WARD_LEVEL`, und
  * `forgeRequirements.spec.ts` prüft sie nach.
  */
 function crown(
