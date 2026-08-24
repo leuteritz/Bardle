@@ -366,7 +366,6 @@ export interface VoyageRailRow {
   accent: string
   charted: number
   runs: number
-  rescued: number
   contracts: number
   inField: number
   ready: number

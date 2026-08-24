@@ -11,6 +11,9 @@ import {
   VOYAGE_MAP_GUTTER_PX,
   VOYAGE_SITE_HIT_MIN,
   VOYAGE_BERTH_MIN_SEPARATION,
+  VOYAGE_MAP_STATS_BAND_H,
+  VOYAGE_MAP_STATS_MIN_H,
+  VOYAGE_MAP_INSET_PX,
   BOTTOM_BAR_SIDE_W,
 } from '@/config/constants'
 import { galaxyFitBox } from '@/utils/fx/galaxyPlate'
@@ -77,16 +80,29 @@ function zones(vw: number, vh: number, folded = false, detailFolded = false) {
  * Aufgenommen mit dem Playwright-Treiber im Scratchpad, acht befreite Galaxien,
  * zwölf Verträge auf EINER von ihnen — der dichteste Fall, den der Rang-Deckel
  * (5 Angebote + 5 Missionen) zulässt, und darüber hinaus.
+ *
+ * Je 92 px höher als in der vorigen Fassung: das ist der Crew-Streifen, den der
+ * Reiter nicht mehr trägt. Die Bühne hat ihn geerbt und gibt 96 davon als
+ * Datenband wieder aus — die Fit-Box ist damit nur 4 px flacher als vorher.
  */
 const STAGE_HEIGHT: Record<number, number> = {
-  1080: 609.6,
-  1200: 710.4,
-  1440: 888,
-  2160: 1597.2,
+  1080: 701.6,
+  1200: 802.4,
+  1440: 980,
+  2160: 1689.2,
 }
 
 function stageHeight(vh: number): number {
   return STAGE_HEIGHT[vh]
+}
+
+/**
+ * Die Höhe, in die die Galaxie wirklich fällt. Das Datenband an der Unterkante
+ * legt sich NICHT über die Karte, es nimmt der Fit-Box Höhe — sonst geriete ein
+ * Hafen darunter, und der ist anklickbar.
+ */
+function fitHeight(vh: number): number {
+  return stageHeight(vh) - VOYAGE_MAP_STATS_BAND_H
 }
 
 const DESKTOPS: Array<[string, number, number]> = [
@@ -139,10 +155,10 @@ describe('voyages atlas layout', () => {
     // nicht an der Zone: was zählt, ist die Fläche, auf der die Galaxie steht.
     //
     // 1.70 und nicht mehr, weil das geöffnete Seitenverhältnis-Band einen Teil
-    // des Gewinns schon im OFFENEN Zustand ausschüttet (592×573.6 statt
+    // des Gewinns schon im OFFENEN Zustand ausschüttet (592×605.6 statt
     // 592×514.8). Gegen den Stand vor beiden Änderungen sind es 1.89.
     const area = (z: { map: number }) => {
-      const box = galaxyFitBox(z.map - VOYAGE_MAP_GUTTER_PX, stageHeight(1080))
+      const box = galaxyFitBox(z.map - VOYAGE_MAP_GUTTER_PX, fitHeight(1080))
       return box.w * box.h
     }
     expect(area(zones(1920, 1080, true, true)) / area(zones(1920, 1080))).toBeGreaterThan(1.65)
@@ -161,16 +177,43 @@ describe('voyages atlas layout', () => {
    * das hier bindet die Layoutbreite an die geseedete Sterngeometrie.
    */
   it.each(DESKTOPS)('%s: zwei Nachbarhäfen bleiben getrennt anklickbar', (_l, vw, vh) => {
-    const box = galaxyFitBox(zones(vw, vh).map - VOYAGE_MAP_GUTTER_PX, stageHeight(vh))
+    const box = galaxyFitBox(zones(vw, vh).map - VOYAGE_MAP_GUTTER_PX, fitHeight(vh))
     // Die Punkte streuen in beiden Achsen; die kürzere Achse bindet.
     const gap = VOYAGE_BERTH_MIN_SEPARATION * Math.min(box.w, box.h)
     expect(gap).toBeGreaterThanOrEqual(VOYAGE_SITE_HIT_MIN)
   })
 
+  /**
+   * Der Deckel des Datenbandes. Es nimmt der Fit-Box Höhe, und die kürzere
+   * Achse der Box trägt die Klickfläche zweier Nachbarhäfen — die Bandhöhe ist
+   * damit keine Geschmacksfrage. Full HD bindet: bei 108 kippt der Fokus-Test
+   * darüber, bei 200 dieser hier.
+   */
+  it.each(DESKTOPS)('%s: das Datenband lässt zwei Häfen getrennt anklickbar', (_l, vw, vh) => {
+    const box = galaxyFitBox(zones(vw, vh).map - VOYAGE_MAP_GUTTER_PX, fitHeight(vh))
+    expect(VOYAGE_BERTH_MIN_SEPARATION * Math.min(box.w, box.h)).toBeGreaterThanOrEqual(
+      VOYAGE_SITE_HIT_MIN,
+    )
+  })
+
+  it('leitet die Band-Schwelle her, statt sie zu wählen', () => {
+    // Unter VOYAGE_MAP_STATS_MIN_H verschwindet das Band. Die Schwelle muss so
+    // liegen, dass die Box GENAU DARÜBER noch trägt — sonst gäbe es eine
+    // Bühnenhöhe, auf der das Band steht und die Häfen sich decken.
+    const box = galaxyFitBox(
+      VOYAGE_MAP_MIN_WIDTH - VOYAGE_MAP_GUTTER_PX,
+      VOYAGE_MAP_STATS_MIN_H - VOYAGE_MAP_STATS_BAND_H,
+      VOYAGE_MAP_INSET_PX,
+    )
+    expect(VOYAGE_BERTH_MIN_SEPARATION * Math.min(box.w, box.h)).toBeGreaterThanOrEqual(
+      VOYAGE_SITE_HIT_MIN,
+    )
+  })
+
   it('bindet den Boden an die Klickfläche und nicht an eine runde Zahl', () => {
     // Fällt die Karte auf ihren Boden, muss der Abstand noch reichen — sonst
     // ist VOYAGE_MAP_MIN_WIDTH zu klein für VOYAGE_SITE_HIT_MIN gewählt.
-    const box = galaxyFitBox(VOYAGE_MAP_MIN_WIDTH - VOYAGE_MAP_GUTTER_PX, stageHeight(1080))
+    const box = galaxyFitBox(VOYAGE_MAP_MIN_WIDTH - VOYAGE_MAP_GUTTER_PX, fitHeight(1080))
     expect(VOYAGE_BERTH_MIN_SEPARATION * Math.min(box.w, box.h)).toBeGreaterThanOrEqual(
       VOYAGE_SITE_HIT_MIN,
     )

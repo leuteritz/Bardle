@@ -2,9 +2,10 @@
 /**
  * Was eine Galaxie zu sagen hat, wenn gerade kein Vertrag dorthin führt.
  *
- * Das ist der Grund, warum eine stille Galaxie in der Seitenleiste kein
- * Sackgassenklick ist: sie zeigt, was sie WERT ist, wenn wieder etwas kommt —
- * die Multiplikatoren des Ziels — und wann das sein könnte.
+ * Den Rekord — Bilanz, Dauer, Kartografie, Multiplikatoren — trägt das Band auf
+ * der Karte; es steht immer da. Hier steht, was das Band nicht kann, weil es an
+ * einem Champion oder an der Uhr hängt: wer den Weg kennt und wann der nächste
+ * Vertrag fällt.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -14,10 +15,7 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import { useLazyGalaxySnapshot } from '@/composables/ui/useLazyGalaxySnapshot'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { toRoman } from '@/utils/ui/format'
-import {
-  EXPEDITION_CHART_MAX,
-  EXPEDITION_WAYMARK_MAX,
-} from '@/config/constants'
+import { EXPEDITION_WAYMARK_MAX } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 
 const props = defineProps<{ record: CompletedGalaxyRecord; now: number }>()
@@ -27,10 +25,6 @@ const chartStore = useExpeditionChartStore()
 const battleStore = useBattleStore()
 
 const dest = computed(() => destinationFor(props.record))
-const progress = computed(() => chartStore.progressOf(props.record.galaxy))
-
-const rescued = computed(() => props.record.attemptResults.filter((r) => r === 'rescued').length)
-const lost = computed(() => props.record.attemptResults.filter((r) => r === 'failed').length)
 
 const { root, snapshot } = useLazyGalaxySnapshot(() => props.record, 'full')
 
@@ -43,15 +37,6 @@ const offersFull = computed(
   () => expeditionStore.availableExpeditions.length >= expeditionStore.maxAvailableOffers,
 )
 
-/** Was ein Vertrag hierher gegenüber der flachsten Galaxie bringt. */
-const modifiers = computed(() => [
-  { icon: 'game-icons:windchimes', label: 'Reward', value: `×${dest.value.rewardMult.toFixed(2)}` },
-  { icon: 'lucide:hourglass', label: 'Travel', value: `×${dest.value.durationMult.toFixed(2)}` },
-  { icon: 'game-icons:mighty-force', label: 'Crew needed', value: `×${dest.value.powerMult.toFixed(2)}` },
-  { icon: 'ph:warning-fill', label: 'Hazards', value: `${dest.value.hazardCount}` },
-  { icon: 'game-icons:meeple-group', label: 'Seats up to', value: `${dest.value.maxRoles}` },
-])
-
 /** Champions, die diesen Ort schon kennen. */
 const waymarked = computed(() =>
   battleStore.ownedChampions
@@ -63,8 +48,6 @@ const waymarked = computed(() =>
     .sort((a: { marks: number }, b: { marks: number }) => b.marks - a.marks)
     .slice(0, 6),
 )
-
-const freedOn = computed(() => new Date(props.record.completedAt).toLocaleDateString())
 </script>
 
 <template>
@@ -79,51 +62,10 @@ const freedOn = computed(() => new Date(props.record.completedAt).toLocaleDateSt
         <span class="eov-sub">
           Galaxy {{ toRoman(record.galaxy) }}
           <span class="eov-tier" :class="`eov-tier--${dest.tier}`">{{ dest.tier }}</span>
+          <span class="eov-seats">up to {{ dest.maxRoles }} seats</span>
         </span>
       </div>
     </header>
-
-    <section class="eov-block">
-      <h4 class="eov-h">Charted</h4>
-      <div class="eov-chart">
-        <div class="eov-chart-track">
-          <div
-            class="eov-chart-fill"
-            :style="{ transform: `scaleX(${progress.charted / EXPEDITION_CHART_MAX})` }"
-          />
-        </div>
-        <span class="eov-chart-num">{{ progress.charted }} / {{ EXPEDITION_CHART_MAX }}</span>
-      </div>
-      <div class="eov-facts">
-        <span class="eov-fact">
-          <Icon icon="game-icons:caravel" width="13" height="13" />
-          {{ progress.runs }} run{{ progress.runs === 1 ? '' : 's' }}
-        </span>
-        <span class="eov-fact">
-          <Icon icon="ph:star-fill" width="13" height="13" />
-          {{ rescued }} rescued
-        </span>
-        <span v-if="lost" class="eov-fact eov-fact--lost">
-          <Icon icon="game-icons:cracked-glass" width="13" height="13" />
-          {{ lost }} lost
-        </span>
-        <span class="eov-fact">
-          <Icon icon="lucide:calendar-days" width="13" height="13" />
-          {{ freedOn }}
-        </span>
-      </div>
-    </section>
-
-    <section class="eov-block">
-      <h4 class="eov-h">What a contract here is worth</h4>
-      <ul class="eov-mods">
-        <li v-for="m in modifiers" :key="m.label" class="eov-mod">
-          <Icon :icon="m.icon" width="14" height="14" class="eov-mod-ico" />
-          <span class="eov-mod-label">{{ m.label }}</span>
-          <span class="eov-mod-value">{{ m.value }}</span>
-        </li>
-      </ul>
-    </section>
 
     <section v-if="waymarked.length" class="eov-block">
       <h4 class="eov-h">Crews who know this road</h4>
@@ -236,6 +178,11 @@ const freedOn = computed(() => new Date(props.record.completedAt).toLocaleDateSt
   border-color: #6b3a86;
   color: #c090e0;
 }
+.eov-seats {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: rgba(200, 144, 64, 0.45);
+}
 
 .eov-block {
   display: flex;
@@ -253,80 +200,6 @@ const freedOn = computed(() => new Date(props.record.completedAt).toLocaleDateSt
   letter-spacing: 0.13em;
   text-transform: uppercase;
   color: rgba(200, 144, 64, 0.5);
-}
-
-.eov-chart {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.eov-chart-track {
-  flex: 1;
-  height: 6px;
-  border-radius: 3px;
-  overflow: hidden;
-  background: rgba(200, 164, 90, 0.14);
-}
-.eov-chart-fill {
-  height: 100%;
-  width: 100%;
-  transform-origin: left center;
-  background: linear-gradient(to right, #8a5a1c, #e8c060);
-  transition: transform 0.35s ease;
-}
-.eov-chart-num {
-  font-size: 12px;
-  font-weight: 800;
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-}
-
-.eov-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-}
-.eov-fact {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: rgba(230, 220, 196, 0.6);
-  font-variant-numeric: tabular-nums;
-}
-.eov-fact--lost {
-  color: rgba(224, 138, 122, 0.75);
-}
-
-.eov-mods {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.eov-mod {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-}
-.eov-mod-ico {
-  color: rgba(200, 144, 64, 0.6);
-  flex-shrink: 0;
-}
-.eov-mod-label {
-  flex: 1;
-  min-width: 0;
-  font-weight: 600;
-  color: rgba(230, 220, 196, 0.62);
-}
-.eov-mod-value {
-  font-weight: 800;
-  color: #e8dcc0;
-  font-variant-numeric: tabular-nums;
 }
 
 .eov-marks {

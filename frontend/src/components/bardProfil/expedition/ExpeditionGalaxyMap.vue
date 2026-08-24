@@ -19,7 +19,6 @@ import { voyageMarkerSizeFor } from '@/utils/game/voyageSites'
 import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { toRoman } from '@/utils/ui/format'
 import {
-  EXPEDITION_CHART_MAX,
   VOYAGE_MAP_HISTORY_SCALE,
   VOYAGE_MAP_INSET_PX,
   VOYAGE_MAP_MAX_BACKING_PX,
@@ -28,11 +27,16 @@ import {
   VOYAGE_SITE_MOVE_MS,
   VOYAGE_MAP_LEGEND_MIN_W,
   VOYAGE_MAP_LEGEND_MIN_H,
+  VOYAGE_MAP_STATS_BAND_H,
+  VOYAGE_MAP_STATS_MIN_H,
+  VOYAGE_MAP_STATS_MIN_W,
+  VOYAGE_MAP_STATS_WIDE_W,
 } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyagePlacedSite } from '@/types'
 import ExpeditionSiteNode from './ExpeditionSiteNode.vue'
 import ExpeditionMapLegend from './ExpeditionMapLegend.vue'
+import ExpeditionGalaxyStatsBand from './ExpeditionGalaxyStatsBand.vue'
 
 const props = defineProps<{
   record: CompletedGalaxyRecord
@@ -43,8 +47,6 @@ const props = defineProps<{
   title: string
   /** Stufe des Ziels, für das Band oben links. */
   tier: 'common' | 'rare' | 'epic'
-  /** Kartografiefortschritt — dieselbe Ablesung wie in der Leistenzeile. */
-  charted: number
 }>()
 const emit = defineEmits<{ select: [string | null] }>()
 
@@ -55,7 +57,18 @@ const cssW = ref(0)
 const cssH = ref(0)
 const dprNow = ref(1)
 
-const box = computed<FitBox>(() => galaxyFitBox(cssW.value, cssH.value, VOYAGE_MAP_INSET_PX))
+/**
+ * Das Datenband SCHRUMPFT die Fit-Box, statt sich darüberzulegen: Häfen sind
+ * anklickbar, und ein Band über die ganze Kante lässt sich nicht wie die
+ * Legende unter die Marken schieben. Die Galaxie sitzt damit mittig im freien
+ * Feld darüber — `galaxyFitBox` zentriert in dem, was es bekommt.
+ */
+const showBand = computed(() => cssH.value >= VOYAGE_MAP_STATS_MIN_H && cssW.value > 0)
+const bandH = computed(() => (showBand.value ? VOYAGE_MAP_STATS_BAND_H : 0))
+
+const box = computed<FitBox>(() =>
+  galaxyFitBox(cssW.value, cssH.value - bandH.value, VOYAGE_MAP_INSET_PX),
+)
 
 /** Normalisierte Position → Prozent der BÜHNE, nicht der Fit-Box. */
 function pct(x: number, y: number): { left: number; top: number } {
@@ -66,9 +79,6 @@ function pct(x: number, y: number): { left: number; top: number } {
     top: ((b.y + y * b.h) / cssH.value) * 100,
   }
 }
-
-const rescued = computed(() => props.record.attemptResults.filter((r) => r === 'rescued').length)
-const chartPct = computed(() => props.charted / EXPEDITION_CHART_MAX)
 
 /**
  * Wie gross ein Hafen auf DIESER Karte sein darf — aus der Enge der gerade
@@ -100,7 +110,7 @@ const paintCount = ref(0)
 const paintKey = computed(
   () =>
     `${props.record.galaxy}:${props.record.mapSeed}:${props.record.attemptResults.length}:${props.record.themeIndex}` +
-    `|${Math.round(cssW.value)}x${Math.round(cssH.value)}|${dprNow.value}`,
+    `|${Math.round(cssW.value)}x${Math.round(cssH.value)}|${bandH.value}|${dprNow.value}`,
 )
 
 let queued = false
@@ -134,7 +144,11 @@ function paint() {
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-  paintGalaxy(ctx, props.record, w, h, galaxyFitBox(w, h, VOYAGE_MAP_INSET_PX), {
+  // Volles w/h fuer den Hintergrund, `box` fuer die Galaxie: das Deep-Field ist
+  // Deko und darf hinter dem Band weiterlaufen. `box` und keine zweite Rechnung
+  // — der Observer rundet cssW/cssH schon, beide waeren sonst dieselbe Zahl aus
+  // zwei Quellen.
+  paintGalaxy(ctx, props.record, w, h, box.value, {
     dpr,
     routeAlpha: VOYAGE_MAP_ROUTE_ALPHA,
     historyScale: VOYAGE_MAP_HISTORY_SCALE,
@@ -202,7 +216,7 @@ onBeforeUnmount(() => {
   dprQuery = null
 })
 
-defineExpose({ paintCount, box, cssW, cssH, markerSize })
+defineExpose({ paintCount, box, cssW, cssH, markerSize, bandH })
 </script>
 
 <template>
@@ -210,6 +224,7 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize })
     ref="stage"
     class="egm"
     role="group"
+    :style="{ '--egm-band-h': `${bandH}px` }"
     :aria-label="`${title} — voyage chart`"
     @click="emit('select', null)"
   >
@@ -225,16 +240,18 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize })
         <span class="egm-ribbon-name">{{ title }}</span>
         <span class="egm-ribbon-sub">
           <span class="egm-ribbon-tier">{{ tier }}</span>
-          <span class="egm-ribbon-dot">·</span>
-          freed {{ rescued }}/{{ record.attemptResults.length }} stars
-        </span>
-        <span class="egm-ribbon-chart">
-          <span class="egm-ribbon-fill" :style="{ transform: `scaleX(${chartPct})` }" />
         </span>
       </span>
     </div>
 
     <ExpeditionMapLegend v-if="showLegend" :dpr="dprNow" :heading="legendHeading" />
+
+    <ExpeditionGalaxyStatsBand
+      v-if="showBand"
+      :record="record"
+      :compact="cssW < VOYAGE_MAP_STATS_MIN_W"
+      :wide="cssW >= VOYAGE_MAP_STATS_WIDE_W"
+    />
 
     <div class="egm-nodes" :style="nodeVars">
       <ExpeditionSiteNode
@@ -354,29 +371,10 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize })
 .egm-ribbon--epic .egm-ribbon-tier {
   color: #c090e0;
 }
-.egm-ribbon-dot {
-  color: rgba(200, 144, 64, 0.3);
-}
-.egm-ribbon-chart {
-  display: block;
-  height: 3px;
-  border-radius: 2px;
-  overflow: hidden;
-  background: rgba(200, 164, 90, 0.14);
-}
-.egm-ribbon-fill {
-  display: block;
-  height: 100%;
-  width: 100%;
-  transform-origin: left center;
-  background: linear-gradient(to right, #8a5a1c, #e8c060);
-  transition: transform 0.35s ease;
-}
-
 .egm-quiet {
   position: absolute;
   left: 50%;
-  bottom: 14px;
+  bottom: calc(var(--egm-band-h, 0px) + 14px);
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;

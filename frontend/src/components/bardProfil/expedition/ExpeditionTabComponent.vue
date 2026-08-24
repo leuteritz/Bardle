@@ -24,7 +24,6 @@ import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { useVoyageAtlas } from '@/composables/expedition/useVoyageAtlas'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import {
-  VOYAGE_CREW_STRIP_H,
   VOYAGE_LOADER_MIN_MS,
   VOYAGE_LOADER_SETTLE_FRAMES,
   VOYAGE_DETAIL_COLLAPSED,
@@ -41,7 +40,6 @@ import ExpeditionCommandBar from './ExpeditionCommandBar.vue'
 import ExpeditionGalaxyRail from './ExpeditionGalaxyRail.vue'
 import ExpeditionGalaxyMap from './ExpeditionGalaxyMap.vue'
 import ExpeditionDetailPanel from './ExpeditionDetailPanel.vue'
-import ExpeditionRoster from './ExpeditionRoster.vue'
 import VoyagesTabLoader from './VoyagesTabLoader.vue'
 
 const uiStore = useUiStore()
@@ -68,9 +66,6 @@ const destination = computed(() =>
 )
 const galaxyTitle = computed(() => destination.value?.name ?? '')
 const galaxyTier = computed(() => destination.value?.tier ?? 'common')
-const galaxyCharted = computed(() =>
-  selectedGalaxy.value ? chartStore.progressOf(selectedGalaxy.value).charted : 0,
-)
 
 // ── Zonenbudget ─────────────────────────────────────────────────────────────
 // Am ATLAS gemessen, nicht am Viewport: das Profilmodal ist beidseitig um
@@ -108,7 +103,6 @@ const atlasColumns = computed(() => {
     : `clamp(${VOYAGE_DETAIL_MIN_WIDTH}px, ${VOYAGE_DETAIL_PCT}%, ${VOYAGE_DETAIL_MAX_WIDTH}px)`
   return `${rail}px minmax(0, 1fr) ${detail}`
 })
-const crewHeight = computed(() => `${VOYAGE_CREW_STRIP_H}px`)
 const stageGutter = computed(() => `${VOYAGE_MAP_GUTTER_PX / 2}px`)
 
 let observer: ResizeObserver | null = null
@@ -255,7 +249,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
           :now="now"
           :title="galaxyTitle"
           :tier="galaxyTier"
-          :charted="galaxyCharted"
           @select="selectedKey = $event"
         />
       </div>
@@ -270,12 +263,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
         @collect="atlas.collectMission"
         @picker-open="pickerOpen = $event"
         @fold="detailFolded = $event"
-      />
-
-      <ExpeditionRoster
-        class="etc-crew"
-        :offer="selectedSite?.offer ?? null"
-        @assign="atlas.assignToOpenSeat"
       />
 
       <!-- Nur ein LEAVE — der Schleier ist ab Frame 1 voll deckend und wird
@@ -321,7 +308,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
   min-height: 0;
   display: grid;
   grid-template-columns: v-bind(atlasColumns);
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   background: #111008;
 }
 
@@ -345,11 +332,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
 .etc-detail {
   grid-column: 3;
   grid-row: 2;
-}
-.etc-crew {
-  grid-column: 1 / -1;
-  grid-row: 3;
-  height: v-bind(crewHeight);
 }
 
 .vtl-reveal-leave-active {

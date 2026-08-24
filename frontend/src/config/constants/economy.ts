@@ -898,6 +898,34 @@ export const VOYAGE_MAP_LEGEND_ICON_PX = 22
 export const VOYAGE_MAP_LEGEND_R = 4.4
 
 /**
+ * Das Datenband an der Unterkante der Kartenbuehne.
+ *
+ * Es SCHRUMPFT die Fit-Box, statt sich darueberzulegen: Haefen sind anklickbar,
+ * und ein Band ueber die ganze Kante laesst sich nicht wie die Legende unter die
+ * Marken schieben. Deckel 108 — darueber faellt der Fokus-Gewinn auf Full HD
+ * unter den Faktor, den `voyagesAtlasLayout.spec.ts` zusagt.
+ */
+export const VOYAGE_MAP_STATS_BAND_H = 96
+/** Nur der Verlauf. Er laeuft transparent aus und verdeckt nichts, darf also
+ *  ueber den Textblock hinausragen und bleibt aus der Fit-Box heraus. */
+export const VOYAGE_MAP_STATS_SCRIM_H = 144
+/**
+ * Untergrenze der Buehnenhoehe — HERGELEITET, nicht gewaehlt: die kuerzere
+ * Achse der Fit-Box muss VOYAGE_SITE_HIT_MIN / VOYAGE_BERTH_MIN_SEPARATION
+ * (472.2) halten, sonst decken sich zwei Nachbarhaefen. Dazu das Band und
+ * beide Insets. Darunter faellt es weg und die Box bekommt die Hoehe zurueck.
+ */
+export const VOYAGE_MAP_STATS_MIN_H = 620
+/** Darunter faellt die Multiplikatoren-Zone weg; die Ernte-Zahlen bleiben.
+ *  Wie die Legende: darunter ist das Band Unruhe statt Auskunft. */
+export const VOYAGE_MAP_STATS_MIN_W = 560
+/** Ab hier tragen alle fuenf Multiplikator-Chips, darunter die ersten drei. */
+export const VOYAGE_MAP_STATS_WIDE_W = 900
+/** Auf 4K misst die Buehne ueber 2000 px — fuenf Cluster darueber verstreut
+ *  sind kein Instrument mehr. Deckelt den INHALT, nicht den Verlauf. */
+export const VOYAGE_MAP_STATS_MAX_W = 1040
+
+/**
  * Takt der Uhren auf der Karte. Bewusst 1000 und nicht HUD_COUNTDOWN_TICK_MS
  * (250): die Fortschrittsspur eines Knotens laeuft ueber
  * `transition: transform 1s linear`, ein schnellerer Takt setzte sie viermal je
@@ -939,11 +967,6 @@ export const VOYAGE_RAIL_ROW_H = VOYAGE_RAIL_THUMB_H + 12
 /** Eingeklappt bleibt ein Quadrat: die Form der Galaxie ist dort nicht mehr zu
  *  erkennen, der Zustand schon. */
 export const VOYAGE_RAIL_THUMB_FOLDED = 40
-/** Crew-Streifen: eine Chipreihe, Kopfzeile, Polster. Eine Ablesung, keine
- *  Liste — er rollt seitwärts, nie vertikal. */
-export const VOYAGE_CREW_STRIP_H = 92
-export const VOYAGE_CREW_CHIP_H = 44
-
 /* ── Voyages-Ladeschleier ─────────────────────────────────────────────────── */
 export const VOYAGE_LOADER_MIN_MS = 380
 export const VOYAGE_LOADER_SETTLE_FRAMES = 4

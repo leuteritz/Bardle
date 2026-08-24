@@ -15,7 +15,8 @@
  *
  * Das Skelett zeigt, was kommt: die Leiste in ihrer echten Breite, in der Mitte
  * der Kasten im Seitenverhältnis der Fit-Box mit ein paar Häfen darauf, rechts
- * die Detailspalte in ihrer Untergrenze, unten der Crew-Streifen. Ein
+ * die Detailspalte in ihrer Untergrenze, an der Unterkante der Bühne das
+ * Datenband. Ein
  * Platzhalter, der etwas anderes verspricht als das, was kommt, hat den Ruckler
  * nur gegen einen Sprung getauscht.
  *
@@ -27,13 +28,13 @@
 import { computed } from 'vue'
 import LoadingBeacon from '@/components/ui/LoadingBeacon.vue'
 import {
-  VOYAGE_CREW_STRIP_H,
   VOYAGE_DETAIL_MIN_WIDTH,
   VOYAGE_LOADER_ACCENT,
   VOYAGE_LOADER_CAPTION,
   VOYAGE_LOADER_ICON,
   VOYAGE_LOADER_TITLE,
   VOYAGE_MAP_ASPECT_MIN,
+  VOYAGE_MAP_STATS_BAND_H,
   VOYAGE_RAIL_ROW_H,
   VOYAGE_RAIL_THUMB_H,
   VOYAGE_RAIL_THUMB_W,
@@ -50,7 +51,9 @@ const rowHeight = `${VOYAGE_RAIL_ROW_H}px`
 const thumbWidth = `${VOYAGE_RAIL_THUMB_W}px`
 const thumbHeight = `${VOYAGE_RAIL_THUMB_H}px`
 const detailWidth = `${VOYAGE_DETAIL_MIN_WIDTH}px`
-const crewHeight = `${VOYAGE_CREW_STRIP_H}px`
+const bandHeight = `${VOYAGE_MAP_STATS_BAND_H}px`
+/** Der Kasten sitzt so ueber dem Band, wie es gleich die Fit-Box tut. */
+const stagePadBottom = `${VOYAGE_MAP_STATS_BAND_H + 10}px`
 const mapAspect = `${VOYAGE_MAP_ASPECT_MIN}`
 
 /**
@@ -114,6 +117,10 @@ const skeletonPorts = computed(() =>
         :caption="VOYAGE_LOADER_CAPTION"
         :started-at="startedAt"
       />
+
+      <div class="vtl-band" aria-hidden="true">
+        <span v-for="i in 3" :key="i" class="vtl-mark vtl-mark--zone" />
+      </div>
     </div>
 
     <!-- Detailspalte -->
@@ -123,11 +130,6 @@ const skeletonPorts = computed(() =>
       <span class="vtl-mark vtl-mark--block" />
       <span class="vtl-mark vtl-mark--seats" />
       <span class="vtl-mark vtl-mark--send" />
-    </div>
-
-    <!-- Crew-Streifen -->
-    <div class="vtl-crew" aria-hidden="true">
-      <span v-for="i in 10" :key="i" class="vtl-chip" />
     </div>
 
     <!-- Ein einziger wandernder Glanz: eine Fläche, die verschoben wird —
@@ -143,7 +145,7 @@ const skeletonPorts = computed(() =>
   z-index: 30;
   display: grid;
   grid-template-columns: v-bind(railWidth) minmax(0, 1fr) v-bind(detailWidth);
-  grid-template-rows: 58px minmax(0, 1fr) v-bind(crewHeight);
+  grid-template-rows: 58px minmax(0, 1fr);
   overflow: hidden;
   background: #111008;
 }
@@ -234,7 +236,7 @@ const skeletonPorts = computed(() =>
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px;
+  padding: 10px 10px v-bind(stagePadBottom);
   background: #0b0806;
 }
 /* Derselbe Kasten, in den die Galaxie gleich fällt. */
@@ -302,24 +304,32 @@ const skeletonPorts = computed(() =>
 }
 
 /* ── Crew-Streifen ──────────────────────────────────────────── */
-.vtl-crew {
-  grid-column: 1 / -1;
-  grid-row: 3;
+/* Das Datenband an der Unterkante — dieselbe Hoehe und dieselbe Dreiteilung,
+   damit der Schleier nicht etwas anderes verspricht, als gleich kommt. */
+.vtl-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: v-bind(bandHeight);
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px;
-  overflow: hidden;
-  background: #16100a;
-  border-top: 2px solid #5c3310;
+  gap: 32px;
+  padding: 0 30px;
+  border-top: 1px solid rgba(122, 78, 32, 0.42);
+  background: linear-gradient(to top, rgba(8, 6, 3, 0.95), rgba(8, 6, 3, 0.82));
 }
-.vtl-chip {
-  width: 132px;
-  height: 44px;
-  flex-shrink: 0;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.32);
+.vtl-mark--zone {
+  height: 42px;
+}
+.vtl-mark--zone:nth-child(1) {
+  width: 118px;
+}
+.vtl-mark--zone:nth-child(2) {
+  width: 156px;
+}
+.vtl-mark--zone:nth-child(3) {
+  flex: 1;
 }
 
 /* ── Der eine Glanz ─────────────────────────────────────────── */

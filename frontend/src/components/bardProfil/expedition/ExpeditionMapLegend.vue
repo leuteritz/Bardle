@@ -69,7 +69,9 @@ watch(() => [props.dpr, props.heading], paint)
 .eml {
   position: absolute;
   left: 12px;
-  bottom: 12px;
+  /* Ueber dem Datenband, nicht an der Buehnenkante. Die Ecke bleibt, weil oben
+     rechts der Herold der Zeremonie steht — dort war sie nur band-frei. */
+  bottom: calc(var(--egm-band-h, 0px) + 12px);
   z-index: 1;
   display: flex;
   flex-direction: column;

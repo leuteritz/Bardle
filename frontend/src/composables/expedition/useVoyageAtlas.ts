@@ -187,7 +187,6 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
         accent: minimapAccentForTheme(record.themeIndex),
         charted: progress.charted,
         runs: progress.runs,
-        rescued: record.attemptResults.filter((r) => r === 'rescued').length,
         contracts: expeditionStore.availableExpeditions.filter(
           (s) => s.galaxy === record.galaxy,
         ).length,
@@ -265,21 +264,6 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     }, EXPEDITION_COLLECT_FLASH_MS)
   }
 
-  /** Klick im Crew-Streifen: erster passender freier Sitz des offenen Vertrags. */
-  function assignToOpenSeat(name: string) {
-    const offer = selectedSite.value?.offer
-    if (!offer) return
-    const crew = expeditionStore.crewFor(offer)
-    const seated = crew.indexOf(name)
-    if (seated !== -1) {
-      expeditionStore.setCrewMember(offer, seated, null)
-      return
-    }
-    const empty = crew.findIndex((c) => !c)
-    if (empty === -1) return
-    expeditionStore.setCrewMember(offer, empty, name)
-  }
-
   // ── Lebenszyklus ──────────────────────────────────────────────────────────
   watch(
     isVisible,
@@ -318,6 +302,5 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     sendAll,
     collectMission,
     collectAll,
-    assignToOpenSeat,
   }
 }
