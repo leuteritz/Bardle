@@ -3,10 +3,13 @@
     <!-- ══ PHASE 2 · PLANET SEARCH (warp overlay, triggers itself) ══ -->
     <PlanetSearchComponent ref="universeAnim" :variant="planetVariant" />
 
-    <!-- ══ PHASE 1 · LANDING (career stats + start) ══ -->
+    <!-- ══ PHASE 1 · LANDING (career stats + start) ══
+         `isRiftReady` ist bei laufendem Kampf immer wahr — das Sperrpanel kann
+         also nur den Landing-Screen ersetzen, nie eine Kampfphase verdecken. -->
     <Transition name="start-fade">
+      <RiftLockedPanel v-if="landingShowing && !battleStore.isRiftReady" />
       <BattleLandingScreen
-        v-if="landingShowing"
+        v-else-if="landingShowing"
         :is-starting="isStarting"
         @start="startBattle"
       />
@@ -58,6 +61,7 @@ import { defineComponent, computed, onMounted, onBeforeUnmount, ref, watch } fro
 import PlanetSearchComponent from './PlanetSearchComponent.vue'
 import PlanetBattleBackgroundComponent from './PlanetBattleBackgroundComponent.vue'
 import BattleLandingScreen from './landing/BattleLandingScreen.vue'
+import RiftLockedPanel from './landing/RiftLockedPanel.vue'
 import BattleLoadingScreen from './loading/BattleLoadingScreen.vue'
 import RiftBattleBoard from './rift/RiftBattleBoard.vue'
 import HonorResultScreen from './result/HonorResultScreen.vue'
@@ -81,6 +85,7 @@ export default defineComponent({
     PlanetSearchComponent,
     PlanetBattleBackgroundComponent,
     BattleLandingScreen,
+    RiftLockedPanel,
     BattleLoadingScreen,
     RiftBattleBoard,
     HonorResultScreen,

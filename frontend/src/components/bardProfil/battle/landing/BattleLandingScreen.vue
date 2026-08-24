@@ -26,12 +26,8 @@
         <div class="action-rule action-rule--left" />
         <button
           class="battle-btn"
-          :class="{
-            'battle-btn--locked': !hasFullTeam && !isBattleLive,
-            'battle-btn--live': isBattleLive && !isStarting,
-          }"
-          :disabled="isStarting || (!hasFullTeam && !isBattleLive)"
-          :title="!hasFullTeam && !isBattleLive ? `${5 - teamProgress} role(s) still open` : ''"
+          :class="{ 'battle-btn--live': isBattleLive && !isStarting }"
+          :disabled="isStarting"
           @click="$emit('start')"
         >
           <span class="battle-btn-edge" />
@@ -44,20 +40,11 @@
               class="battle-btn-icon"
               style="color: #e8c040"
             />
-            <img
-              v-else-if="!hasFullTeam && !isBattleLive"
-              src="/img/lock-128.png"
-              alt="Locked"
-              class="battle-btn-lock"
-            />
             <span v-else-if="isBattleLive" class="battle-btn-live-dot" />
             <img v-else src="/img/menu/BATTLE-128.png" alt="Battle" class="battle-btn-img" />
 
             <span v-if="isStarting" v-ink-center>STARTING…</span>
             <span v-else-if="isBattleLive" v-ink-center>RETURN TO LIVE BATTLE</span>
-            <span v-else-if="!hasFullTeam" v-ink-center>
-              {{ 5 - teamProgress }} SLOT{{ 5 - teamProgress !== 1 ? 'S' : '' }} OPEN
-            </span>
             <span v-else v-ink-center>START BATTLE</span>
           </span>
         </button>
@@ -84,9 +71,8 @@ defineEmits<{ start: [] }>()
 
 const battleStore = useBattleStore()
 
-// Battle action button state (mirrors headerSlots readiness)
-const teamProgress = computed(() => battleStore.headerSlots.filter((s) => s !== null).length)
-const hasFullTeam = computed(() => teamProgress.value >= 5)
+// Der gesperrte Zustand liegt nicht mehr hier: unter fünf besetzten Rollen
+// tritt `RiftLockedPanel` an die Stelle dieses Screens.
 const isBattleLive = computed(() => battleStore.isAutoBattleInitialized)
 
 /** Admin-only shortcut: force a single promotion so the rank-up herald and the
@@ -392,23 +378,6 @@ const legendGroup = computed<RankStatGroup>(() => ({
   text-shadow: 0 0 16px rgba(120, 220, 80, 0.35);
 }
 
-.battle-btn--locked {
-  background: linear-gradient(to bottom, #17100a, #0d0805) !important;
-  border-color: #3a2010 !important;
-  color: #7a5628 !important;
-  cursor: not-allowed !important;
-  box-shadow: inset 0 0 0 1px #0a0704 !important;
-  animation: none;
-}
-.battle-btn--locked .battle-btn-edge {
-  background: linear-gradient(to right, transparent, #5c3310, transparent);
-  opacity: 0.5;
-}
-.battle-btn--locked .battle-btn-face {
-  font-size: clamp(13px, 1.8cqh, 21px);
-  text-shadow: none;
-}
-
 .battle-btn--live {
   background: linear-gradient(to bottom, #392508 0%, #241704 52%, #180f03 100%);
   border-color: #c89040;
@@ -440,13 +409,6 @@ const legendGroup = computed<RankStatGroup>(() => ({
   width: clamp(16px, 2.1cqh, 23px);
   height: clamp(16px, 2.1cqh, 23px);
 }
-.battle-btn-lock {
-  width: clamp(15px, 1.9cqh, 21px);
-  height: clamp(15px, 1.9cqh, 21px);
-  object-fit: contain;
-  opacity: 0.7;
-}
-
 .battle-btn-live-dot {
   width: 11px;
   height: 11px;

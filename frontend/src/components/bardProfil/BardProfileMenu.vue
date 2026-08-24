@@ -5,6 +5,7 @@ import { useUiStore } from '@/stores/core/uiStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGamePause } from '@/composables/system/useGamePause'
 import { onKeybinding } from '@/composables/system/useKeybindings'
 import type { BardTabId } from '@/stores/core/uiStore'
@@ -32,6 +33,7 @@ const uiStore = useUiStore()
 const galaxyStore = useGalaxyStore()
 const expeditionChartStore = useExpeditionChartStore()
 const planetShopStore = usePlanetShopStore()
+const battleStore = useBattleStore()
 const { isPaused } = useGamePause()
 // Alle Marken-Zahlen aus derselben Quelle wie Header-Bogen, Tooltip und Herold
 // — config/ui/notifyBadges.ts. Chronicle hängt am Bard-Tab, weil der Codex dort
@@ -118,13 +120,29 @@ const allMenuItems: {
   /** Gesperrt heißt sichtbar und anklickbar — siehe `menuItems`. */
   locked?: () => boolean
   /** Steht bei Sperre neben dem Namen — im Chip und im `aria-label`. */
-  lockNote?: string
+  lockNote?: string | (() => string)
+  /** Zählbares Tor: die untere Schiene des Reiters wird zum Füllstand. */
+  lockMeter?: () => { filled: number; total: number }
 }[] = [
   { id: 'bard', name: 'Journey', icon: 'ph:compass-rose-fill' },
   { id: 'shop', name: 'Shop', icon: HEADER_GEM_ICONS.shop },
   { id: 'team', name: 'Team', icon: 'ph:users-three-fill' },
   { id: 'tree', name: 'Tree', icon: HEADER_GEM_ICONS.tree, boost: true },
-  { id: 'battle', name: 'Rift', icon: 'ri:sword-fill', boost: true },
+  {
+    id: 'battle',
+    name: 'Rift',
+    icon: 'ri:sword-fill',
+    boost: true,
+    locked: () => !battleStore.isRiftReady,
+    lockNote: () => {
+      const n = battleStore.openRoleSeats
+      return `${n} role${n === 1 ? '' : 's'} still open`
+    },
+    lockMeter: () => ({
+      filled: battleStore.filledRoleSeats,
+      total: battleStore.headerSlots.length,
+    }),
+  },
   {
     id: 'planets',
     name: 'Planets',
@@ -154,7 +172,15 @@ const allMenuItems: {
  * `expeditionChartStore.isUnlocked`), nicht hier — die Leiste liest sie nur.
  */
 const menuItems = computed(() =>
-  allMenuItems.map((i) => ({ ...i, locked: i.locked?.() ?? false })),
+  allMenuItems.map((i) => {
+    const locked = i.locked?.() ?? false
+    return {
+      ...i,
+      locked,
+      lockNote: typeof i.lockNote === 'function' ? i.lockNote() : i.lockNote,
+      lockMeter: locked ? i.lockMeter?.() : undefined,
+    }
+  }),
 )
 
 function tabLabel(item: { name: string; locked: boolean; lockNote?: string }) {
@@ -356,10 +382,26 @@ onUnmounted(() => {
                       class="relative z-10 rp-tab-icon"
                       :class="item.boost ? 'rp-tab-icon--boost' : ''"
                     />
+                    <!-- Eine Schiene, zwei Bedeutungen: gesperrt trägt sie den
+                         Füllstand des Tores statt der Aktiv-Marke. Gestapelt
+                         stünde sie auf Full HD im Glyph — dort misst das untere
+                         Polster nur 5px. -->
                     <span
-                      v-if="uiStore.bardActiveTab === item.id"
+                      v-if="uiStore.bardActiveTab === item.id && !item.locked"
                       class="absolute bottom-0 rp-tab-indicator left-2 right-2"
                     />
+                    <span
+                      v-else-if="item.lockMeter"
+                      class="absolute bottom-0 rp-tab-seats left-2 right-2"
+                      aria-hidden="true"
+                    >
+                      <span
+                        v-for="i in item.lockMeter.total"
+                        :key="i"
+                        class="rp-tab-seat"
+                        :class="{ 'rp-tab-seat--held': i <= item.lockMeter.filled }"
+                      />
+                    </span>
                     <span v-if="item.locked" class="rp-tab-lock" aria-hidden="true">
                       <Icon icon="lucide:lock" width="14" height="14" />
                     </span>
@@ -974,6 +1016,26 @@ onUnmounted(() => {
   background: #52b830;
   border-radius: 2px;
   box-shadow: 0 0 6px rgba(82, 184, 48, 0.7);
+}
+
+/* Fünf Sitze als Haarlinie — statisch, nur die Farbe wechselt. Der leere
+   Sitz muss auch auf dem grünen Aktiv-Grund noch stehen, sonst liest sich
+   ein frisches Board als „kein Meter“ statt als „null von fünf“. */
+.rp-tab-seats {
+  display: flex;
+  gap: 2px;
+  height: 3px;
+}
+
+.rp-tab-seat {
+  flex: 1;
+  border-radius: 1px;
+  background: #5c4620;
+}
+
+.rp-tab-seat--held {
+  background: #e8c040;
+  box-shadow: 0 0 5px rgba(232, 192, 64, 0.55);
 }
 
 /* ═══════════════════════════════════════════

@@ -513,6 +513,18 @@ export const useBattleStore = defineStore('battle', {
       }
       return out
     },
+    /** Besetzte Hauptplätze des Sigil-Boards. */
+    filledRoleSeats: (state): number => state.headerSlots.filter(Boolean).length,
+    openRoleSeats(): number {
+      return this.headerSlots.length - this.filledRoleSeats
+    },
+    /** Das Tor des Rift-Reiters. Ein LAUFENDER Kampf hält es offen — sonst
+     *  sperrte ein während des Kampfes geräumter Platz den Spieler aus. */
+    isRiftReady(): boolean {
+      return this.openRoleSeats === 0 || this.isAutoBattleInitialized
+    },
+    /** Ziel des Ausweg-Knopfes; -1 wenn die Aufstellung steht. */
+    firstOpenRoleSeat: (state): number => state.headerSlots.findIndex((s) => !s),
     /** Mountain buff: own team DPS multiplier in later objective fights. */
     objectiveOwnDpsMult: (state): number =>
       state.drakeBuffs.includes('mountain') ? DRAKE_MOUNTAIN_DPS_MULT : 1,
