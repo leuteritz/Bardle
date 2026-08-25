@@ -1,12 +1,52 @@
 <script setup lang="ts">
+import { computed, watch } from 'vue'
+import { Icon } from '@iconify/vue'
+import EventLogPanel from './EventLogPanel.vue'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useEventLog } from '@/composables/ui/useEventLog'
+import { onKeybinding } from '@/composables/system/useKeybindings'
 import { typeColor } from '@/config/ui/eventLog'
+import { formatEventClock } from '@/utils/ui/eventLogFormat'
 
-const { events } = useEventLog()
+const uiStore = useUiStore()
+const starGroupStore = useStarGroupStore()
+const { events, historySize } = useEventLog()
+
+// Diese Komponente bleibt immer montiert — das Panel hängt an v-if, und
+// onKeybinding meldet erst beim Unmount ab.
+onKeybinding('eventLog', () => uiStore.toggleEventLog())
+
+// Das Panel liegt unter Modalen und Profil-Tabs: verdeckt statt bedienbar wäre
+// ein Panel, das noch Fokus fängt.
+const covered = computed(
+  () => uiStore.bardActiveTab !== null || starGroupStore.starFightModalOpen,
+)
+
+watch(covered, (isCovered) => {
+  if (isCovered) uiStore.closeEventLog()
+})
+
+function toggle() {
+  uiStore.toggleEventLog()
+}
 </script>
 
 <template>
   <div class="event-log-overlay" aria-live="polite" aria-label="Game Events">
+    <button
+      class="el-bar"
+      type="button"
+      :aria-expanded="uiStore.isEventLogOpen"
+      aria-label="Open the full event log"
+      @click="toggle"
+    >
+      <Icon icon="ph:scroll" width="13" height="13" class="el-bar-mark" />
+      <span class="el-bar-label"><span class="el-bar-word">Event </span>Log</span>
+      <span class="el-bar-count">{{ historySize }}</span>
+      <Icon icon="lucide:chevrons-left-right" width="14" height="14" class="el-bar-open" />
+    </button>
+
     <TransitionGroup name="log-entry" tag="div" class="event-log-inner">
       <div
         v-for="evt in events"
@@ -14,11 +54,13 @@ const { events } = useEventLog()
         class="log-entry"
         :style="{ '--entry-color': typeColor[evt.type] }"
       >
-        <span class="log-time">[{{ evt.timeString }}]</span>
+        <span class="log-time">[{{ formatEventClock(evt.timestamp) }}]</span>
         <span class="log-msg">{{ evt.message }}</span>
       </div>
     </TransitionGroup>
   </div>
+
+  <EventLogPanel v-if="uiStore.isEventLogOpen" />
 </template>
 
 <style scoped>
@@ -46,6 +88,60 @@ const { events } = useEventLog()
   container-type: inline-size;
 }
 
+/* Der einzige bedienbare Teil der Spur — die Zeilen darunter bleiben
+   klickdurchlässig, damit die Bühne dahinter erreichbar ist. */
+.el-bar {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  height: 24px;
+  margin-bottom: 6px;
+  padding: 0 7px;
+  background: #1e1006;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  color: #8a6030;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.el-bar:hover {
+  background: #2a1c0c;
+  color: #e8c040;
+}
+
+.el-bar-mark,
+.el-bar-open {
+  flex-shrink: 0;
+}
+
+.el-bar-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.el-bar-count {
+  min-width: 22px;
+  margin-left: auto;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(10, 8, 4, 0.7);
+  border: 1px solid #3e200a;
+  font-size: 10px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
 .event-log-inner {
   display: flex;
   flex-direction: column;
@@ -55,7 +151,7 @@ const { events } = useEventLog()
   overflow-x: hidden;
   width: 100%;
   min-width: 0;
-  max-height: 100%;
+  min-height: 0;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
@@ -183,7 +279,7 @@ const { events } = useEventLog()
   }
 }
 
-/* schmale Spalte (≤ 240px): kompakt */
+/* schmale Spalte (≤ 240px): kompakt — das Wort „Event" fällt zuerst */
 @container (max-width: 240px) {
   .log-entry {
     padding: 4px 7px 4px 6px;
@@ -197,6 +293,10 @@ const { events } = useEventLog()
   .log-time {
     font-size: 0.58rem;
   }
+
+  .el-bar-word {
+    display: none;
+  }
 }
 
 @container (max-width: 175px) {
@@ -207,6 +307,11 @@ const { events } = useEventLog()
 
   .log-msg {
     font-size: 0.64rem;
+  }
+
+  .el-bar-label,
+  .el-bar-open {
+    display: none;
   }
 }
 </style>

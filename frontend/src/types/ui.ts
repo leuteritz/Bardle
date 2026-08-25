@@ -300,6 +300,7 @@ export type KeybindId =
   | 'shop'
   | 'road'
   | 'controls'
+  | 'eventLog'
   | 'abilityQ'
   | 'abilityW'
   | 'abilityE'

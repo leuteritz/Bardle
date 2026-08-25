@@ -647,6 +647,12 @@ export const STAR_TIMER_WIDTH_SNAP_PX = 0.5
 export const EVENT_LOG_MAX_SIZE = 12
 /** Milliseconds before an event auto-dismisses from the log */
 export const EVENT_LOG_DISMISS_MS = 7_000
+/** Ring buffer behind the floating trail — what the tabs and Copy read. */
+export const EVENT_LOG_HISTORY_MAX = 300
+/** "Copied ✓" on the panel's copy button (ms) */
+export const EVENT_LOG_COPY_FEEDBACK_MS = 1_500
+/** Within this distance from the top the list stays pinned to the newest entry */
+export const EVENT_LOG_SCROLL_TOP_STICK_PX = 24
 
 // Herald — large centered milestone announcements (HeraldOverlay / useHerald)
 /** How long a single herald banner stays on screen (ms) */

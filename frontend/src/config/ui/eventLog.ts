@@ -35,6 +35,49 @@ export const typeColor: Record<GameEventType, string> = {
   info: '#c8b89a',
 }
 
+export type EventGroupId = 'combat' | 'cosmos' | 'progress' | 'system'
+
+// Typ -> Gruppe, nicht umgekehrt: als Record prueft TypeScript die
+// Vollstaendigkeit, ein neuer Ereignistyp ohne Gruppe ist ein Compile-Fehler.
+export const GROUP_OF_TYPE: Record<GameEventType, EventGroupId> = {
+  top: 'combat',
+  jungle: 'combat',
+  mid: 'combat',
+  adc: 'combat',
+  support: 'combat',
+  combat: 'combat',
+  void: 'cosmos',
+  planet: 'cosmos',
+  chime: 'cosmos',
+  meep: 'cosmos',
+  chronicle: 'progress',
+  mission: 'progress',
+  omen: 'progress',
+  augment: 'progress',
+  prestige: 'progress',
+  info: 'system',
+}
+
+/** Reihenfolge = Reihenfolge der Tabs im Panel. `all` filtert nicht. */
+export const EVENT_GROUPS = [
+  { id: 'all', label: 'All', icon: 'ph:list-bullets' },
+  { id: 'combat', label: 'Combat', icon: 'ph:sword' },
+  { id: 'cosmos', label: 'Cosmos', icon: 'ph:planet' },
+  { id: 'progress', label: 'Progress', icon: 'ph:trend-up' },
+  { id: 'system', label: 'System', icon: 'ph:gear' },
+] as const
+
+export type EventTabId = (typeof EVENT_GROUPS)[number]['id']
+
+/** Leerzustand je Tab — der Satz sagt, was hier stuende, wenn etwas da waere. */
+export const EVENT_GROUP_EMPTY: Record<EventTabId, string> = {
+  all: 'Nothing recorded yet.',
+  combat: 'No combat yet.',
+  cosmos: 'The cosmos is quiet.',
+  progress: 'No progress logged yet.',
+  system: 'No system messages.',
+}
+
 function safeNumber(value: number) {
   return Math.round(value)
 }
@@ -49,7 +92,7 @@ export function logPlanetRestored(planetName: string) {
   addEvent(`${planetName} is back online at full HP.`, 'planet')
 }
 
-/** Auto-Pick hat gewählt — die Meldung blendet aus, das Log behält die Historie. */
+/** Auto-Pick hat gewählt — die Spur blendet aus, die Historie behält die Zeile. */
 export function logAugmentAutoPicked(name: string, effectLine: string) {
   const { addEvent } = useEventLog()
   addEvent(`Auto-picked ${name} — ${effectLine}`, 'augment')
@@ -122,7 +165,7 @@ export function logVoidBanished(planetName: string, riftName: string, seconds: n
 
 /**
  * Eine Chronicle-Stufe ist gefallen. Das Herald-Banner sagt WAS, diese Zeile
- * bleibt als Belegkopie im Log — mit der Wirkung, die ab jetzt gilt.
+ * bleibt als Belegkopie in der Historie — mit der Wirkung, die ab jetzt gilt.
  */
 export function logChronicleStage(trackName: string, numeral: string, effectLine: string) {
   const { addEvent } = useEventLog()
