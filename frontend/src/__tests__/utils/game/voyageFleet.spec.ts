@@ -45,7 +45,11 @@ function slot(galaxy: number, id: string, roles = 1): AvailableExpeditionSlot {
   }
 }
 
-function mission(galaxy: number, id: string, status: ExpeditionMission['status']): ExpeditionMission {
+function mission(
+  galaxy: number,
+  id: string,
+  status: ExpeditionMission['status'],
+): ExpeditionMission {
   return {
     id: `exp-${id}`,
     configId: id,
@@ -71,6 +75,7 @@ function mission(galaxy: number, id: string, status: ExpeditionMission['status']
 const deps = {
   projectedReward: (m: { baseReward: number }) => ({ success: m.baseReward, failure: 0 }),
   seatsOf: (o: AvailableExpeditionSlot) => o.requiredRoles.map(() => null),
+  offerOdds: () => 0.62,
 }
 
 /** Jeder Sitz besetzt. */
@@ -103,11 +108,17 @@ describe('buildVoyageFleetCards', () => {
   it('ordnet einsammelbar > unterwegs > bemannter Vertrag > unbemannter Vertrag', () => {
     const rows = [row({ galaxy: 1, contracts: 2, inField: 1, ready: 1 })]
     const offers = [slot(1, 'crewed'), slot(1, 'empty')]
-    const cards = buildVoyageFleetCards(rows, offers, [mission(1, 'field', 'active'), mission(1, 'done', 'success')], {
-      ...deps,
-      // Nur der eine Vertrag ist voll besetzt.
-      seatsOf: (o: AvailableExpeditionSlot) => o.requiredRoles.map(() => (o.id === 'crewed' ? 'Ahri' : null)),
-    })
+    const cards = buildVoyageFleetCards(
+      rows,
+      offers,
+      [mission(1, 'field', 'active'), mission(1, 'done', 'success')],
+      {
+        ...deps,
+        // Nur der eine Vertrag ist voll besetzt.
+        seatsOf: (o: AvailableExpeditionSlot) =>
+          o.requiredRoles.map(() => (o.id === 'crewed' ? 'Ahri' : null)),
+      },
+    )
     expect(cards.map((c) => c.pinKey)).toEqual(['done', 'field', 'crewed', 'empty'])
   })
 
@@ -118,7 +129,12 @@ describe('buildVoyageFleetCards', () => {
   })
 
   it('meldet einen voll besetzten Vertrag als startbar', () => {
-    const cards = buildVoyageFleetCards([row({ galaxy: 1, contracts: 1 })], [slot(1, 'a', 3)], [], crewedDeps)
+    const cards = buildVoyageFleetCards(
+      [row({ galaxy: 1, contracts: 1 })],
+      [slot(1, 'a', 3)],
+      [],
+      crewedDeps,
+    )
     expect(cards[0].sendable).toBe(true)
     expect(cards[0].seats).toEqual(['Ahri', 'Ahri', 'Ahri'])
   })
@@ -133,7 +149,12 @@ describe('buildVoyageFleetCards', () => {
   })
 
   it('trägt die Crew einer laufenden Mission, aber keine Sitze', () => {
-    const cards = buildVoyageFleetCards([row({ galaxy: 1, inField: 1 })], [], [mission(1, 'a', 'active')], deps)
+    const cards = buildVoyageFleetCards(
+      [row({ galaxy: 1, inField: 1 })],
+      [],
+      [mission(1, 'a', 'active')],
+      deps,
+    )
     expect(cards[0].crew).toEqual([{ name: 'Ahri', role: 'TOP' }])
     expect(cards[0].seats).toEqual([])
   })
@@ -145,17 +166,32 @@ describe('buildVoyageFleetCards', () => {
       [],
       deps,
     )
-    expect(cards[0]).toMatchObject({ galaxy: 4, galaxyName: 'Crimson Expanse', tier: 'epic', accent: '9, 8, 7' })
+    expect(cards[0]).toMatchObject({
+      galaxy: 4,
+      galaxyName: 'Crimson Expanse',
+      tier: 'epic',
+      accent: '9, 8, 7',
+    })
   })
 
   it('lässt eine Mission ohne Galaxie liegen, statt sie falsch einzusortieren', () => {
     const stray = { ...mission(1, 'x', 'active'), galaxy: undefined }
-    const cards = buildVoyageFleetCards([row({ galaxy: 1, contracts: 1 })], [slot(1, 'a')], [stray], deps)
+    const cards = buildVoyageFleetCards(
+      [row({ galaxy: 1, contracts: 1 })],
+      [slot(1, 'a')],
+      [stray],
+      deps,
+    )
     expect(cards.map((c) => c.pinKey)).toEqual(['a'])
   })
 
   it('lässt eine Marke ohne Leistenzeile liegen — sie hätte weder Namen noch Akzent', () => {
-    const cards = buildVoyageFleetCards([row({ galaxy: 1, contracts: 1 })], [slot(1, 'a'), slot(9, 'b')], [], deps)
+    const cards = buildVoyageFleetCards(
+      [row({ galaxy: 1, contracts: 1 })],
+      [slot(1, 'a'), slot(9, 'b')],
+      [],
+      deps,
+    )
     expect(cards.map((c) => c.pinKey)).toEqual(['a'])
   })
 

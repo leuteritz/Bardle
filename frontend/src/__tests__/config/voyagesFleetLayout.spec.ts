@@ -16,6 +16,18 @@ import {
   VOYAGE_FLEET_CARD_H,
   VOYAGE_FLEET_CARD_PAD_Y,
   VOYAGE_FLEET_CARD_MIN_VISIBLE,
+  VOYAGE_FLEET_AVATAR_PX,
+  VOYAGE_FLEET_HEAD_H,
+  VOYAGE_FLEET_FOOT_H,
+  VOYAGE_FLEET_RAIL_H,
+  VOYAGE_FLEET_CARD_ROW_GAP,
+  VOYAGE_FLEET_CARD_INSET_X,
+  VOYAGE_FLEET_CARD_INSET_Y,
+  VOYAGE_FLEET_CARD_BORDER_X,
+  VOYAGE_FLEET_CARD_BORDER_Y,
+  VOYAGE_FLEET_HEAD_ICON,
+  VOYAGE_FLEET_HEAD_GAP,
+  VOYAGE_FLEET_NAME_MAX_PX,
   VOYAGE_FLEET_RANK_W,
   VOYAGE_FLEET_ASIDE_W,
   VOYAGE_FLEET_BAND_PAD_X,
@@ -25,6 +37,7 @@ import {
   BOTTOM_BAR_SIDE_W,
 } from '@/config/constants'
 import { galaxyFitBox } from '@/utils/fx/galaxyPlate'
+import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 
 /**
  * Das Fleet-Band ist die eine Zeile der Kopfleiste, und `.etc-bar` ist eine
@@ -169,5 +182,43 @@ describe('voyages fleet strip', () => {
     expect(VOYAGE_FLEET_CARD_H + 2 * VOYAGE_FLEET_CARD_PAD_Y).toBeLessThanOrEqual(
       VOYAGE_COMMAND_BAR_H,
     )
+  })
+
+  /**
+   * VIER Zeilen, und keine fünfte. Die Karte kann nicht wachsen — 110 bräche
+   * schon die Zusicherung darüber, und danach die Kopfleiste, danach beide
+   * STAGE_HEIGHT-Tabellen. Wer eine Zeile ergänzt, bricht hier zuerst.
+   *
+   * Mit dem alten zweizeiligen Kopf (30) standen 88 von 91 px — 3 px Schlupf in
+   * der ganzen Karte. Der einzeilige Kopf ist der einzige kostenlose Platz.
+   */
+  it('trägt die vier Zeilen der Karte samt Lücken', () => {
+    const rows =
+      VOYAGE_FLEET_HEAD_H + VOYAGE_FLEET_AVATAR_PX + VOYAGE_FLEET_FOOT_H + VOYAGE_FLEET_RAIL_H
+    const gaps = 3 * VOYAGE_FLEET_CARD_ROW_GAP
+    const inner = VOYAGE_FLEET_CARD_H - 2 * VOYAGE_FLEET_CARD_INSET_Y - VOYAGE_FLEET_CARD_BORDER_Y
+    expect(rows + gaps).toBeLessThanOrEqual(inner)
+  })
+
+  /**
+   * Die Kopfzeile trägt den ZIELNAMEN. „Crimson Expanse" misst bei 13 px im
+   * Browser gemessene 101,72 px — das passt in die 125-px-Spalte NUR, weil die
+   * Chancen-Pille im Fuss steht. Holte jemand sie in den Kopf zurück, blieben
+   * dem Namen 89 px und der längste Name wäre beschnitten.
+   */
+  it('lässt den längsten Zielnamen ungekürzt in die Kopfzeile', () => {
+    const column =
+      VOYAGE_FLEET_CARD_MIN_W -
+      2 * VOYAGE_FLEET_CARD_INSET_X -
+      VOYAGE_FLEET_CARD_BORDER_X -
+      VOYAGE_FLEET_HEAD_ICON -
+      VOYAGE_FLEET_HEAD_GAP
+    expect(VOYAGE_FLEET_NAME_MAX_PX).toBeLessThanOrEqual(column)
+  })
+
+  /** Und kein Themename darf wachsen, ohne dass jemand nachmisst. */
+  it('kennt keinen Zielnamen jenseits der gemessenen Breite', () => {
+    const longest = GALAXY_THEMES.reduce((a, t) => Math.max(a, t.name.length), 0)
+    expect(longest, 'ein längerer Themename verlangt eine neue Messung').toBeLessThanOrEqual(15)
   })
 })

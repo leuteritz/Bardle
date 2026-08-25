@@ -307,6 +307,7 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
         :left="pct(0.5, 0.5).left"
         :top="pct(0.5, 0.5).top"
         :now="now"
+        :destination="title"
         :crews-out="gate.crewsOut"
         :waiting="gate.waiting"
         :next-return-at="gate.nextReturnAt"

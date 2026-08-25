@@ -12,17 +12,33 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { getOriginColor } from '@/config/champions/championOrigins'
 import { formatMinuteClock } from '@/utils/ui/format'
 import {
   EXPEDITION_AVAILABILITY_DURATION_MS,
+  EXPEDITION_CHANCE_GOOD,
+  EXPEDITION_CHANCE_MID,
   EXPEDITION_EXPIRY_WARNING_MS,
   VOYAGE_FLEET_AVATAR_PX,
   VOYAGE_FLEET_CARD_H,
+  VOYAGE_FLEET_CARD_INSET_X,
+  VOYAGE_FLEET_CARD_INSET_Y,
   VOYAGE_FLEET_CARD_MIN_W,
+  VOYAGE_FLEET_CARD_ROW_GAP,
+  VOYAGE_FLEET_FOOT_H,
+  VOYAGE_FLEET_HEAD_GAP,
+  VOYAGE_FLEET_HEAD_H,
+  VOYAGE_FLEET_HEAD_ICON,
+  VOYAGE_FLEET_ODDS_W,
+  VOYAGE_FLEET_RAIL_H,
+  VOYAGE_TIP_GAP_PX,
+  VOYAGE_TIP_OPEN_DELAY_MS,
+  VOYAGE_TIP_WIDTH,
 } from '@/config/constants'
 import type { VoyageFleetCard } from '@/types'
+import ExpeditionSubjectTooltip from './ExpeditionSubjectTooltip.vue'
 
 const props = defineProps<{ card: VoyageFleetCard; now: number; selected: boolean }>()
 const emit = defineEmits<{ open: [galaxy: number, pinKey: string] }>()
@@ -32,6 +48,14 @@ const battleStore = useBattleStore()
 const cardW = `${VOYAGE_FLEET_CARD_MIN_W}px`
 const cardH = `${VOYAGE_FLEET_CARD_H}px`
 const avatarPx = `${VOYAGE_FLEET_AVATAR_PX}px`
+const headH = `${VOYAGE_FLEET_HEAD_H}px`
+const footH = `${VOYAGE_FLEET_FOOT_H}px`
+const railH = `${VOYAGE_FLEET_RAIL_H}px`
+const rowGap = `${VOYAGE_FLEET_CARD_ROW_GAP}px`
+const inset = `${VOYAGE_FLEET_CARD_INSET_Y}px ${VOYAGE_FLEET_CARD_INSET_X}px`
+const headGap = `${VOYAGE_FLEET_HEAD_GAP}px`
+const headIcon = `${VOYAGE_FLEET_HEAD_ICON}px`
+const oddsW = `${VOYAGE_FLEET_ODDS_W}px`
 
 const row = computed(() => props.card.row)
 
@@ -75,7 +99,7 @@ const portraits = computed(() =>
 const footTail = computed(() => {
   switch (row.value.state) {
     case 'field':
-      return `${row.value.odds}%`
+      return 'in field'
     case 'offer':
       return formatMinuteClock(expiresIn.value ?? 0)
     case 'ready':
@@ -83,6 +107,17 @@ const footTail = computed(() => {
     default:
       return 'salvage'
   }
+})
+
+/** Die Chance steht nur, wo sie noch etwas ändert — nicht nach dem Wurf. */
+const odds = computed(() =>
+  row.value.state === 'offer' || row.value.state === 'field' ? row.value.odds : null,
+)
+const oddsTone = computed(() => {
+  const o = odds.value
+  if (o === null) return ''
+  if (o >= EXPEDITION_CHANCE_GOOD * 100) return 'is-good'
+  return o >= EXPEDITION_CHANCE_MID * 100 ? 'is-mid' : 'is-poor'
 })
 
 const note = computed(() => {
@@ -105,43 +140,59 @@ const aria = computed(
 </script>
 
 <template>
-  <button
-    class="vfc"
-    :class="[
-      `vfc--${row.state}`,
-      { 'vfc--sendable': card.sendable, 'vfc--on': selected, 'vfc--urgent': urgent },
-    ]"
-    :style="{ '--gx-accent': `rgb(${card.accent})` }"
-    :aria-label="aria"
-    :title="aria"
-    @click="emit('open', card.galaxy, card.pinKey)"
+  <RpgBadgeTooltip
+    passive
+    :gap="VOYAGE_TIP_GAP_PX"
+    :width="VOYAGE_TIP_WIDTH"
+    :open-delay="VOYAGE_TIP_OPEN_DELAY_MS"
   >
-    <span class="vfc-head">
-      <Icon :icon="row.icon" class="vfc-ico" />
-      <span class="vfc-name">{{ row.name }}</span>
-    </span>
-
-    <span class="vfc-crew">
-      <span v-for="p in portraits" :key="p.key" class="vfc-seat" :style="{ '--seat': p.color }">
-        <img v-if="p.image" :src="p.image" :alt="p.name" class="vfc-face" />
+    <button
+      class="vfc"
+      :class="[
+        `vfc--${row.state}`,
+        { 'vfc--sendable': card.sendable, 'vfc--on': selected, 'vfc--urgent': urgent },
+      ]"
+      :style="{ '--gx-accent': `rgb(${card.accent})` }"
+      :aria-label="aria"
+      @click="emit('open', card.galaxy, card.pinKey)"
+    >
+      <!-- Der ZIELNAME, nicht der Missionsname: der ist `Adjektiv + Ziel +
+           Aktion`, und zwei der vier Wörter sind gewürfelte Würze. Vollständig
+           steht er im Hover-Tooltip und im `aria-label`. -->
+      <span class="vfc-head">
+        <Icon :icon="row.icon" class="vfc-ico" />
+        <span class="vfc-name">{{ card.galaxyName }}</span>
       </span>
-    </span>
 
-    <span class="vfc-foot">
-      <span class="vfc-lead">
-        <template v-if="row.state === 'field'">{{ formatMinuteClock(remaining ?? 0) }}</template>
-        <template v-else-if="row.reward !== null">
-          <Icon icon="game-icons:windchimes" class="vfc-chime" />
-          {{ row.rewardPrefix }}{{ $formatNumber(row.reward) }}
-        </template>
+      <span class="vfc-crew">
+        <span v-for="p in portraits" :key="p.key" class="vfc-seat" :style="{ '--seat': p.color }">
+          <img v-if="p.image" :src="p.image" :alt="p.name" class="vfc-face" />
+        </span>
       </span>
-      <span class="vfc-tail">{{ footTail }}</span>
-    </span>
 
-    <span class="vfc-rail" aria-hidden="true">
-      <span class="vfc-rail-fill" :style="{ transform: `scaleX(${progress})` }" />
-    </span>
-  </button>
+      <span class="vfc-foot">
+        <span class="vfc-lead">
+          <template v-if="row.state === 'field'">{{ formatMinuteClock(remaining ?? 0) }}</template>
+          <template v-else-if="row.reward !== null">
+            <Icon icon="game-icons:windchimes" class="vfc-chime" />
+            {{ row.rewardPrefix }}{{ $formatNumber(row.reward) }}
+          </template>
+        </span>
+        <span class="vfc-end">
+          <span v-if="odds !== null" class="vfc-odds" :class="oddsTone">{{ odds }}%</span>
+          <span class="vfc-tail">{{ footTail }}</span>
+        </span>
+      </span>
+
+      <span class="vfc-rail" aria-hidden="true">
+        <span class="vfc-rail-fill" :style="{ transform: `scaleX(${progress})` }" />
+      </span>
+    </button>
+
+    <template #tip>
+      <ExpeditionSubjectTooltip :pin-key="card.pinKey" :now="now" />
+    </template>
+  </RpgBadgeTooltip>
 </template>
 
 <style scoped>
@@ -155,8 +206,8 @@ const aria = computed(
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 4px;
-  padding: 8px 9px;
+  gap: v-bind(rowGap);
+  padding: v-bind(inset);
   text-align: left;
   background: #1c1c18;
   border: 1px solid #3e200a;
@@ -197,36 +248,39 @@ const aria = computed(
 }
 
 /* ── Kopf ───────────────────────────────────────────────────── */
-/* ZWEIZEILIG. Der Missionsname ist `Adjektiv + Zielname + Aktion` und wird im
-   schlimmsten Fall 220 px breit („Forgotten Crimson Expanse Pilgrimage") —
-   einzeilig war JEDER Name beschnitten, im Browser an zwölf Verträgen gemessen.
-   Die Galaxie-Ziffer, die hier stand, ist dafür gefallen und war ohnehin
-   doppelt: der Zielname steht mitten IM Missionsnamen. */
+/* EINZEILIG, seit hier der ZIELNAME steht statt des Missionsnamens: alle zwanzig
+   Themennamen sind zweiwortig, der längste („Crimson Expanse") misst bei 13 px
+   gemessene 101,7 in einer 125-px-Spalte. Der volle Missionsname wäre auch
+   zweizeilig knapp — er steht im Hover-Tooltip und im `aria-label`.
+
+   Der GLYPH bleibt, und er ist mit dem Kurznamen wichtiger geworden, nicht
+   unwichtiger: drei Verträge derselben Galaxie tragen jetzt denselben Namen, und
+   er ist dann das Einzige, was sie unterscheidet. Deshalb steht die Chance im
+   FUSS und nicht hier — neben Glyph und Pille blieben dem Namen 89 px, und
+   „Crimson Expanse" wäre beschnitten. */
 .vfc-head {
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 30px;
+  gap: v-bind(headGap);
+  height: v-bind(headH);
   overflow: hidden;
 }
 .vfc-ico {
   flex-shrink: 0;
-  width: 15px;
-  height: 15px;
+  width: v-bind(headIcon);
+  height: v-bind(headIcon);
   color: #c89040;
 }
 .vfc-name {
   flex: 1;
   min-width: 0;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 800;
   line-height: 1.15;
   color: #ece0c0;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 .vfc--on .vfc-name {
   color: #fff4dc;
@@ -260,7 +314,7 @@ const aria = computed(
   align-items: baseline;
   justify-content: space-between;
   gap: 6px;
-  height: 16px;
+  height: v-bind(footH);
 }
 .vfc-lead {
   display: flex;
@@ -284,6 +338,37 @@ const aria = computed(
   height: 12px;
   color: #c89040;
 }
+/* Chance und Uhr stehen als EINE Gruppe rechts — getrennt wanderte die Chance
+   mit der Breite des Lohns. */
+.vfc-end {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+/* Reservierte Zahlenbreite, sonst wandert die Uhr, wenn 100 % auf 98 % fällt. */
+.vfc-odds {
+  flex-shrink: 0;
+  min-width: v-bind(oddsW);
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(11, 8, 6, 0.55);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  color: rgba(230, 220, 196, 0.72);
+  font-variant-numeric: tabular-nums;
+}
+.vfc-odds.is-good {
+  color: #64dcb4;
+}
+.vfc-odds.is-mid {
+  color: #e8c040;
+}
+.vfc-odds.is-poor {
+  color: #cc6050;
+}
 .vfc-tail {
   flex-shrink: 0;
   font-size: 10px;
@@ -300,7 +385,7 @@ const aria = computed(
 
 /* ── Schiene ────────────────────────────────────────────────── */
 .vfc-rail {
-  height: 4px;
+  height: v-bind(railH);
   border-radius: 2px;
   overflow: hidden;
   background: rgba(200, 164, 90, 0.14);

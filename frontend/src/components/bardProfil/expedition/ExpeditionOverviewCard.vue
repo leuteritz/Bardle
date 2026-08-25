@@ -70,6 +70,7 @@ const roster = computed(() =>
     projectedReward: expeditionStore.projectedRewardFor,
     seatsFilled: (offer: AvailableExpeditionSlot) =>
       expeditionStore.crewFor(offer).filter(Boolean).length,
+    offerOdds: expeditionStore.offerOddsFor,
   }),
 )
 

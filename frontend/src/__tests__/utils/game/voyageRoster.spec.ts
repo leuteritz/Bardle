@@ -61,6 +61,7 @@ const deps = {
     failure: Math.floor(m.baseReward * 0.1),
   }),
   seatsFilled: () => 1,
+  offerOdds: () => 0.62,
 }
 
 describe('voyageRoster', () => {
@@ -71,10 +72,7 @@ describe('voyageRoster', () => {
       status: 'success',
       reward: 900,
     })
-    const rows = buildVoyageRoster(
-      rosterSubjectsOf([offer], [running, done]),
-      deps,
-    )
+    const rows = buildVoyageRoster(rosterSubjectsOf([offer], [running, done]), deps)
     expect(rows.map((r) => r.state)).toEqual(['ready', 'offer', 'field'])
   })
 
@@ -120,6 +118,25 @@ describe('voyageRoster', () => {
     })
     expect(row.seatsFilled).toBe(0)
     expect(row.seatsTotal).toBe(2)
+  })
+
+  /**
+   * Ein Vertrag trägt kein `successChance` — die Chance hängt an der Draft-Crew
+   * und kommt deshalb aus den Deps. Ohne besetzten Sitz bleibt sie offen: eine
+   * Karte, die dort 5 % zeigte, löge über eine Crew, die es nicht gibt.
+   */
+  it('nimmt die Chance eines Vertrags aus den Deps und rundet auf Prozent', () => {
+    const [row] = buildVoyageRoster(rosterSubjectsOf([slot()], []), {
+      ...deps,
+      offerOdds: () => 0.716,
+    })
+    expect(row.odds).toBe(72)
+
+    const [blank] = buildVoyageRoster(rosterSubjectsOf([slot()], []), {
+      ...deps,
+      offerOdds: () => null,
+    })
+    expect(blank.odds).toBeNull()
   })
 
   it('überspringt ein Subjekt ohne Vertrag und ohne Mission', () => {

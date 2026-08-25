@@ -19,12 +19,22 @@
  * statischem Schein: kein `filter`, kein `box-shadow`, kein `conic-gradient`.
  */
 import { computed } from 'vue'
-import { VOYAGE_GATE_BREATH_MS, VOYAGE_NODE_RING_CIRCUMFERENCE } from '@/config/constants'
+import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
+import {
+  VOYAGE_GATE_BREATH_MS,
+  VOYAGE_NODE_RING_CIRCUMFERENCE,
+  VOYAGE_TIP_GAP_PX,
+  VOYAGE_TIP_OPEN_DELAY_MS,
+  VOYAGE_TIP_WIDTH,
+} from '@/config/constants'
+import ExpeditionGateTooltip from './ExpeditionGateTooltip.vue'
 
 const props = defineProps<{
   left: number
   top: number
   now: number
+  /** Themenname der Galaxie — nur der Tooltip nennt den Ort. */
+  destination: string
   /** Laufende Crews dieser Galaxie. */
   crewsOut: number
   /** Heimgekehrt, aber noch nicht eingesammelt. */
@@ -85,37 +95,55 @@ const breathMs = `${VOYAGE_GATE_BREATH_MS}ms`
 </script>
 
 <template>
-  <button
-    class="gt"
-    :class="`gt--${state}`"
-    :style="nodeStyle"
-    :aria-label="label"
-    :title="label"
-    @click.stop="emit('home')"
+  <RpgBadgeTooltip
+    prefer="top"
+    passive
+    :gap="VOYAGE_TIP_GAP_PX"
+    :width="VOYAGE_TIP_WIDTH"
+    :open-delay="VOYAGE_TIP_OPEN_DELAY_MS"
   >
-    <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre opacity. Sie
-         steht NUR, wenn etwas ansteht — im Ruhezustand trägt das Canvas das
-         Bild allein. -->
-    <span v-if="state === 'waiting' || state === 'arriving'" class="gt-breath" aria-hidden="true" />
-
-    <svg
-      v-if="showArc && nextReturnAt !== null"
-      class="gt-arc"
-      viewBox="0 0 36 36"
-      aria-hidden="true"
+    <button
+      class="gt"
+      :class="`gt--${state}`"
+      :style="nodeStyle"
+      :aria-label="label"
+      @click.stop="emit('home')"
     >
-      <circle
-        class="gt-arc-fill"
-        cx="18"
-        cy="18"
-        r="16"
-        :stroke-dasharray="VOYAGE_NODE_RING_CIRCUMFERENCE"
-        :stroke-dashoffset="ringOffset"
-      />
-    </svg>
+      <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre opacity. Sie
+           steht NUR, wenn etwas ansteht — im Ruhezustand trägt das Canvas das
+           Bild allein. -->
+      <span v-if="state === 'waiting' || state === 'arriving'" class="gt-breath" aria-hidden="true" />
 
-    <span class="gt-pill">{{ caption }}</span>
-  </button>
+      <svg
+        v-if="showArc && nextReturnAt !== null"
+        class="gt-arc"
+        viewBox="0 0 36 36"
+        aria-hidden="true"
+      >
+        <circle
+          class="gt-arc-fill"
+          cx="18"
+          cy="18"
+          r="16"
+          :stroke-dasharray="VOYAGE_NODE_RING_CIRCUMFERENCE"
+          :stroke-dashoffset="ringOffset"
+        />
+      </svg>
+
+      <span class="gt-pill">{{ caption }}</span>
+    </button>
+
+    <template #tip>
+      <ExpeditionGateTooltip
+        :destination="destination"
+        :now="now"
+        :crews-out="crewsOut"
+        :waiting="waiting"
+        :next-return-at="nextReturnAt"
+        :arriving="arriving"
+      />
+    </template>
+  </RpgBadgeTooltip>
 </template>
 
 <style scoped>

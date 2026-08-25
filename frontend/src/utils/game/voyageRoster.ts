@@ -16,9 +16,14 @@ import type {
 
 export interface VoyageRosterDeps {
   /** Die EINE Lohnrechnung, hereingereicht statt nachgebaut. */
-  projectedReward: (m: Pick<ExpeditionMission, 'baseReward'>) => { success: number; failure: number }
+  projectedReward: (m: Pick<ExpeditionMission, 'baseReward'>) => {
+    success: number
+    failure: number
+  }
   /** Besetzte Sitze der Draft-Crew. */
   seatsFilled: (offer: AvailableExpeditionSlot) => number
+  /** Chance 0..1 der Draft-Crew; `null` ohne besetzten Sitz. */
+  offerOdds: (offer: AvailableExpeditionSlot) => number | null
 }
 
 function accentOf(colorKey: string | undefined): string {
@@ -51,6 +56,7 @@ export function buildVoyageRoster(
     if (offer) {
       const filled = deps.seatsFilled(offer)
       const total = offer.requiredRoles.length
+      const chance = deps.offerOdds(offer)
       offers.push({
         pinKey: subject.pinKey,
         name: offer.name,
@@ -66,7 +72,7 @@ export function buildVoyageRoster(
         expiresAt: offer.availableUntil,
         endsAt: null,
         spanMs: null,
-        odds: null,
+        odds: chance === null ? null : Math.round(chance * 100),
         crewCount: null,
         ariaLead: `${offer.name}, ${offer.tier} contract, ${filled} of ${total} seats crewed`,
       })

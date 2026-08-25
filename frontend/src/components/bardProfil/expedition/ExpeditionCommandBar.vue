@@ -130,6 +130,7 @@ const cards = computed(() =>
     {
       projectedReward: expeditionStore.projectedRewardFor,
       seatsOf: (offer) => expeditionStore.crewFor(offer),
+      offerOdds: expeditionStore.offerOddsFor,
     },
   ),
 )

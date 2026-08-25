@@ -5,7 +5,11 @@
  * kennt `now` NICHT: nach Ablaufzeit zu sortieren hiesse, das Band ordnet sich
  * jede Sekunde unter dem Zeiger um. Dringlichkeit trägt die Karte, nicht der Platz.
  */
-import { buildVoyageRoster, rosterSubjectsOf, type VoyageRosterDeps } from '@/utils/game/voyageRoster'
+import {
+  buildVoyageRoster,
+  rosterSubjectsOf,
+  type VoyageRosterDeps,
+} from '@/utils/game/voyageRoster'
 import type {
   AvailableExpeditionSlot,
   ExpeditionMission,
@@ -28,6 +32,8 @@ export interface VoyageFleetDeps {
   projectedReward: VoyageRosterDeps['projectedReward']
   /** Die Draft-Crew eines Vertrags, `null` je leerem Sitz. */
   seatsOf: (offer: AvailableExpeditionSlot) => (string | null)[]
+  /** Chance 0..1 der Draft-Crew; `null` ohne besetzten Sitz. */
+  offerOdds: VoyageRosterDeps['offerOdds']
 }
 
 /**
@@ -67,6 +73,7 @@ export function buildVoyageFleetCards(
   const rosterDeps: VoyageRosterDeps = {
     projectedReward: deps.projectedReward,
     seatsFilled: (offer) => deps.seatsOf(offer).filter(Boolean).length,
+    offerOdds: deps.offerOdds,
   }
 
   const offerOf = new Map<string, AvailableExpeditionSlot>()
@@ -108,7 +115,9 @@ export function buildVoyageFleetCards(
   // zu verlassen: dieselbe Eingabe muss dieselbe Reihenfolge geben.
   cards.sort(
     (a, b) =>
-      rankOf(a) - rankOf(b) || b.galaxy - a.galaxy || (a.pinKey < b.pinKey ? -1 : a.pinKey > b.pinKey ? 1 : 0),
+      rankOf(a) - rankOf(b) ||
+      b.galaxy - a.galaxy ||
+      (a.pinKey < b.pinKey ? -1 : a.pinKey > b.pinKey ? 1 : 0),
   )
   return cards
 }

@@ -198,6 +198,20 @@ export const useExpeditionStore = defineStore('expedition', {
       })
     },
 
+    /**
+     * Die Chance der vorbemannten Crew eines Vertrags, `null` ohne besetzten
+     * Sitz. Die EINE Fassung — Vertragskarte, Fleet-Karte und Tooltip lasen den
+     * Ausdruck sonst dreimal aus.
+     */
+    offerOddsFor(): (offer: AvailableExpeditionSlot) => number | null {
+      return (offer) => {
+        const assigned = this.crewFor(offer)
+          .map((name, i) => ({ name, role: offer.requiredRoles[i] }))
+          .filter((c): c is { name: string; role: ChampionRole } => !!c.name)
+        return assigned.length ? this.chanceBreakdownFor(assigned, offer).total : null
+      }
+    },
+
     canStartExpedition(): boolean {
       return (
         this.activeExpeditions.filter((e) => e.status === 'active').length <

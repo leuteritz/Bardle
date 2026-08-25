@@ -767,6 +767,41 @@ export const VOYAGE_FLEET_CARD_MIN_VISIBLE = 5
 /** Crew-Portrait auf der Karte. ≤ 34 heißt Auflösungsstufe `-128`. */
 export const VOYAGE_FLEET_AVATAR_PX = 26
 /**
+ * Die vier Zeilen der Karte und ihr Innenmaß. Sie BESTIMMEN das CSS per
+ * `v-bind` — eine Konstante, die nur beschreibt, driftet, und die Spec merkt es
+ * nicht: sie liest Zahlen, kein DOM.
+ *
+ * Der Kopf ist EINZEILIG, seit dort der ZIELNAME steht und nicht der
+ * Missionsname (`Adjektiv + Ziel + Aktion`, vier Wörter). Alle zwanzig
+ * Themennamen sind zweiwortig und stehen dadurch vollständig UND grösser da.
+ * Mehr Zeilen gibt der Haushalt nicht her — `voyagesFleetLayout.spec.ts` bindet
+ * die Summe.
+ */
+export const VOYAGE_FLEET_HEAD_H = 18
+export const VOYAGE_FLEET_FOOT_H = 16
+export const VOYAGE_FLEET_RAIL_H = 4
+export const VOYAGE_FLEET_CARD_ROW_GAP = 4
+export const VOYAGE_FLEET_CARD_INSET_Y = 8
+export const VOYAGE_FLEET_CARD_INSET_X = 9
+/** Rahmen quer und hoch: links 3 (Zustandskante) + rechts 1, oben/unten je 1. */
+export const VOYAGE_FLEET_CARD_BORDER_X = 4
+export const VOYAGE_FLEET_CARD_BORDER_Y = 2
+/**
+ * Reservierte Breite der Chancen-Pille („100 %"), damit die Uhr daneben nicht
+ * wandert. Sie steht im FUSS und nicht im Kopf: neben Glyph und Pille blieben
+ * dem Namen 89 px, und „Crimson Expanse" misst gemessene 97,8 bei 12,5 px.
+ */
+export const VOYAGE_FLEET_ODDS_W = 30
+/** Glyph der Kopfzeile und die Lücke zwischen ihren Teilen. */
+export const VOYAGE_FLEET_HEAD_ICON = 15
+export const VOYAGE_FLEET_HEAD_GAP = 6
+/**
+ * Breiteste Zielname-Pixelbreite bei 13 px, im Browser gemessen („Crimson
+ * Expanse" 101,72). Die Spec bindet sie gegen die Spaltenbreite — ein neuer,
+ * längerer Themename verlangt eine neue Messung.
+ */
+export const VOYAGE_FLEET_NAME_MAX_PX = 102
+/**
  * Breite der Rangsäule links und der Aktionssäule rechts — die Bandbreite, die
  * der Kartenspur NICHT zur Verfügung steht. Zusammen höchstens 328, sonst trägt
  * die Spur auf Full HD keine fünf Karten mehr:
@@ -1122,6 +1157,14 @@ export const VOYAGE_SITE_MOVE_MS = 320
  *  r = 47.5 der Fähigkeitenkacheln; ein geliehener Umfang füllt den Ring falsch. */
 export const VOYAGE_NODE_RING_CIRCUMFERENCE = 100.53
 
+/* Hover-Tooltip einer Marke; die Hülle ist `RpgBadgeTooltip`. */
+export const VOYAGE_TIP_WIDTH = 'clamp(300px, 17vw, 348px)'
+export const VOYAGE_TIP_GAP_PX = 10
+/** Zehn Marken stehen dicht: ohne Verzug feuert ein Zeigerstrich fünf Tooltips. */
+export const VOYAGE_TIP_OPEN_DELAY_MS = 90
+/** So groß wie die größte Crew — es gibt deshalb nie ein „+N". */
+export const VOYAGE_TIP_CREW_MAX = 5
+
 /**
  * Eine Leistenzeile: Miniatur plus Namenszeile und Kartografiebalken.
  *
@@ -1229,8 +1272,7 @@ export const VOYAGE_LOG_AT_ARRIVE = 0.93
 /** Zeilen einer Reise: je Etappe Auftakt und Crew-Notiz, je Gefahr eine, dazu
  *  Ankunft und Verdikt. Die tiefste Stufe traegt eine Gefahr mehr
  *  (EXPEDITION_DEST_HAZARD_STEP), daher das `+ 1`. */
-export const VOYAGE_LOG_MAX =
-  2 * VOYAGE_LEG_MAX + (EXPEDITION_HAZARD_COUNT.epic + 1) + 2
+export const VOYAGE_LOG_MAX = 2 * VOYAGE_LEG_MAX + (EXPEDITION_HAZARD_COUNT.epic + 1) + 2
 
 /** Steht statt eines Namens, solange die Crew noch nicht gesetzt ist. */
 export const VOYAGE_LOG_CREW_FALLBACK = 'the crew'

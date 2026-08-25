@@ -433,6 +433,43 @@ export interface VoyageFleetCard {
 }
 
 /**
+ * Was der Hover-Tooltip einer Marke zeigt (`utils/game/voyageTip.ts`).
+ *
+ * ZEITFREI wie die Roster-Zeile: Stempel, kein fertiges Ziffernblatt — sonst
+ * baute der Tooltip sich im Sekundentakt selbst neu.
+ */
+export interface VoyageTipView {
+  pinKey: string
+  name: string
+  icon: string
+  /** Farbe der Marke auf der Karte. */
+  accent: string
+  state: VoyageRosterState
+  stateLabel: string
+  stateIcon: string
+  /** Themenname der Zielgalaxie. */
+  destination: string
+  tier: 'common' | 'rare' | 'epic'
+  /** Vertrag: Ablaufstempel. */
+  expiresAt: number | null
+  /** Laufende Mission: Ende und Gesamtspanne. */
+  endsAt: number | null
+  spanMs: number | null
+  durationSeconds: number
+  /** Erfolgschance in Prozent, `null` solange kein Sitz besetzt ist. */
+  odds: number | null
+  reward: number
+  rewardPrefix: string
+  spoils: ExpeditionSpoilsDef
+  hazards: VoyageTrackHazard[]
+  /** Vertrag: besetzte / verlangte Sitze. Sonst null. */
+  seatsFilled: number | null
+  seatsTotal: number | null
+  /** Wer draussen bzw. heimgekehrt ist. */
+  crew: string[]
+}
+
+/**
  * Ein benannter Abschnitt einer Voyage. ABGELEITET aus dem Vertrag bzw. der
  * Mission (`utils/game/voyageLegs.ts`), nie gespeichert — `from`/`to` sind
  * Anteile der Gesamtdauer und schliessen lückenlos aneinander an.

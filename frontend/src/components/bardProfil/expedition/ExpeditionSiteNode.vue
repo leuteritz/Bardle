@@ -24,6 +24,7 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
+import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import {
   EXPEDITION_COLORS,
@@ -32,8 +33,12 @@ import {
   VOYAGE_MARKER_BREATH_WARN_MS,
   VOYAGE_MARKER_BOB_MS,
   VOYAGE_NODE_RING_CIRCUMFERENCE,
+  VOYAGE_TIP_GAP_PX,
+  VOYAGE_TIP_OPEN_DELAY_MS,
+  VOYAGE_TIP_WIDTH,
 } from '@/config/constants'
 import type { VoyagePlacedSite } from '@/types'
+import ExpeditionSubjectTooltip from './ExpeditionSubjectTooltip.vue'
 
 const props = defineProps<{
   site: VoyagePlacedSite
@@ -144,62 +149,76 @@ const nodeStyle = computed(() => ({
 </script>
 
 <template>
-  <button
-    class="sn"
-    :class="[`sn--${state}`, { 'sn--on': selected, 'sn--warn': expiring, 'sn--lost': state === 'returned' && !success }]"
-    :style="nodeStyle"
-    :aria-label="label"
-    :aria-pressed="selected"
-    :title="label"
-    @click.stop="emit('select', site.pinKey)"
+  <!-- Kein `title` mehr: der Browser legte seinen grauen Kasten sonst nach einer
+       Sekunde über den Tooltip. `aria-label` trägt die Auskunft weiter, und die
+       Hülle öffnet auch auf `focusin`. -->
+  <RpgBadgeTooltip
+    prefer="top"
+    passive
+    :gap="VOYAGE_TIP_GAP_PX"
+    :width="VOYAGE_TIP_WIDTH"
+    :open-delay="VOYAGE_TIP_OPEN_DELAY_MS"
   >
-    <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre opacity. -->
-    <span class="sn-breath" aria-hidden="true" />
-
-    <span class="sn-plate">
-      <!-- Der Fortschritt als Kreislinie: ein `stroke-dashoffset` je Sekunde,
-           kein `conic-gradient` und keine vererbte Custom Property. -->
-      <svg v-if="state !== 'offer'" class="sn-ring" viewBox="0 0 36 36" aria-hidden="true">
-        <circle class="sn-ring-track" cx="18" cy="18" r="16" />
-        <circle
-          class="sn-ring-fill"
-          cx="18"
-          cy="18"
-          r="16"
-          :stroke-dasharray="VOYAGE_NODE_RING_CIRCUMFERENCE"
-          :stroke-dashoffset="ringOffset"
-        />
-      </svg>
-
-      <span class="sn-face">
-        <Icon v-if="subject" :icon="subject.icon" width="24" height="24" class="sn-ico" />
-        <span v-if="showInlineClock" class="sn-clock">{{ clockText }}</span>
-      </span>
-
-      <span v-if="crewShown.length" class="sn-crew" aria-hidden="true">
-        <img
-          v-for="c in crewShown"
-          :key="c.name"
-          :src="portrait(c.name)"
-          :alt="''"
-          class="sn-crew-img"
-        />
-        <span v-if="crewOverflow" class="sn-crew-more">+{{ crewOverflow }}</span>
-      </span>
-    </span>
-
-    <!-- Ausserhalb der Platte: die Marke hat ihre eigene Lesegrösse und darf
-         nicht mit dem Hafen schrumpfen. -->
-    <RpgNotifyBadge v-if="state === 'returned'" :count="1" label="Expedition ready to collect" />
-
-    <span
-      v-if="!showInlineClock"
-      class="sn-pill"
-      :class="{ 'sn-pill--warn': expiring, 'sn-pill--done': state === 'returned' }"
+    <button
+      class="sn"
+      :class="[`sn--${state}`, { 'sn--on': selected, 'sn--warn': expiring, 'sn--lost': state === 'returned' && !success }]"
+      :style="nodeStyle"
+      :aria-label="label"
+      :aria-pressed="selected"
+      @click.stop="emit('select', site.pinKey)"
     >
-      {{ clockText }}
-    </span>
-  </button>
+      <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre opacity. -->
+      <span class="sn-breath" aria-hidden="true" />
+
+      <span class="sn-plate">
+        <!-- Der Fortschritt als Kreislinie: ein `stroke-dashoffset` je Sekunde,
+             kein `conic-gradient` und keine vererbte Custom Property. -->
+        <svg v-if="state !== 'offer'" class="sn-ring" viewBox="0 0 36 36" aria-hidden="true">
+          <circle class="sn-ring-track" cx="18" cy="18" r="16" />
+          <circle
+            class="sn-ring-fill"
+            cx="18"
+            cy="18"
+            r="16"
+            :stroke-dasharray="VOYAGE_NODE_RING_CIRCUMFERENCE"
+            :stroke-dashoffset="ringOffset"
+          />
+        </svg>
+
+        <span class="sn-face">
+          <Icon v-if="subject" :icon="subject.icon" width="24" height="24" class="sn-ico" />
+          <span v-if="showInlineClock" class="sn-clock">{{ clockText }}</span>
+        </span>
+
+        <span v-if="crewShown.length" class="sn-crew" aria-hidden="true">
+          <img
+            v-for="c in crewShown"
+            :key="c.name"
+            :src="portrait(c.name)"
+            :alt="''"
+            class="sn-crew-img"
+          />
+          <span v-if="crewOverflow" class="sn-crew-more">+{{ crewOverflow }}</span>
+        </span>
+      </span>
+
+      <!-- Ausserhalb der Platte: die Marke hat ihre eigene Lesegrösse und darf
+           nicht mit dem Hafen schrumpfen. -->
+      <RpgNotifyBadge v-if="state === 'returned'" :count="1" label="Expedition ready to collect" />
+
+      <span
+        v-if="!showInlineClock"
+        class="sn-pill"
+        :class="{ 'sn-pill--warn': expiring, 'sn-pill--done': state === 'returned' }"
+      >
+        {{ clockText }}
+      </span>
+    </button>
+
+    <template #tip>
+      <ExpeditionSubjectTooltip :pin-key="site.pinKey" :now="now" />
+    </template>
+  </RpgBadgeTooltip>
 </template>
 
 <style scoped>

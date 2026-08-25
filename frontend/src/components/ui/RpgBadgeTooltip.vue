@@ -36,6 +36,12 @@ const props = defineProps<{
       own cell would land on top of the row below it. The caret still points
       at the anchor — only the vertical edge changes. */
   clearAncestor?: string
+  /** Vorzugsseite. Default 'bottom' — die Gegenseite nur, wenn dort Platz ist. */
+  prefer?: 'top' | 'bottom'
+  /** Das Panel fängt den Zeiger nicht: es liegt über anderen Ankern (Karte). */
+  passive?: boolean
+  /** Hover-Absicht in ms. Nur der ERSTE Tooltip wartet, der Wechsel nicht. */
+  openDelay?: number
 }>()
 
 const wrapRef = ref<HTMLElement | null>(null)
@@ -44,6 +50,7 @@ const show = ref(false)
 const placement = ref<'bottom' | 'top'>('bottom')
 const tipStyle = ref<Record<string, string>>({ left: '-9999px', top: '0px' })
 let hideTimer: ReturnType<typeof setTimeout> | null = null
+let openTimer: ReturnType<typeof setTimeout> | null = null
 
 /* Bound separately from tipStyle so the width is already applied when open()
    measures the panel — a width arriving with the final position would be
@@ -62,6 +69,30 @@ function clearHide() {
     clearTimeout(hideTimer)
     hideTimer = null
   }
+}
+
+function clearOpen() {
+  if (openTimer) {
+    clearTimeout(openTimer)
+    openTimer = null
+  }
+}
+
+/* Steht schon ein Tooltip, wird sofort umgeschaltet — die Verzögerung soll den
+   Zeigerstrich über dichte Anker abfangen, nicht den Wechsel bremsen. */
+function requestOpen() {
+  if (props.disabled) return
+  clearHide()
+  const delay = props.openDelay ?? 0
+  if (!delay || closeActiveTooltip) {
+    open()
+    return
+  }
+  clearOpen()
+  openTimer = setTimeout(() => {
+    openTimer = null
+    open()
+  }, delay)
 }
 
 function open() {
@@ -91,12 +122,14 @@ function open() {
     const clear = host ? host.getBoundingClientRect() : r
     let left = r.left + r.width / 2 - tw / 2
     left = Math.min(Math.max(left, m), window.innerWidth - tw - m)
-    let top = clear.bottom + gap
-    placement.value = 'bottom'
-    if (top + th + m > window.innerHeight && clear.top - gap - th > m) {
-      top = clear.top - gap - th
-      placement.value = 'top'
-    }
+    // Vorzugsseite zuerst, die Gegenseite nur, wenn dort Platz ist.
+    const below = clear.bottom + gap
+    const above = clear.top - gap - th
+    const fitsBelow = below + th + m <= window.innerHeight
+    const fitsAbove = above > m
+    const useTop = props.prefer === 'top' ? fitsAbove || !fitsBelow : !fitsBelow && fitsAbove
+    const top = useTop ? above : below
+    placement.value = useTop ? 'top' : 'bottom'
     const inset = BADGE_TOOLTIP_CARET_INSET_PX
     const caretX = Math.min(Math.max(r.left + r.width / 2 - left, inset), tw - inset)
     tipStyle.value = { left: `${left}px`, top: `${top}px`, '--caret-x': `${caretX}px` }
@@ -104,17 +137,29 @@ function open() {
 }
 
 function scheduleHide() {
+  clearOpen()
   clearHide()
   hideTimer = setTimeout(close, BADGE_TOOLTIP_HIDE_DELAY_MS)
 }
 
 function close() {
+  clearOpen()
   clearHide()
   show.value = false
   if (closeActiveTooltip === close) closeActiveTooltip = null
 }
 
+/* Ein passives Panel hält sich nicht selbst offen — es liegt über anderen
+   Ankern und dürfte deren Hover nicht schlucken. */
+function panelEnter() {
+  if (!props.passive) clearHide()
+}
+function panelLeave() {
+  if (!props.passive) scheduleHide()
+}
+
 onUnmounted(() => {
+  clearOpen()
   clearHide()
   if (closeActiveTooltip === close) closeActiveTooltip = null
 })
@@ -124,9 +169,9 @@ onUnmounted(() => {
   <span
     ref="wrapRef"
     class="rpg-btt-anchor"
-    @mouseenter="open"
+    @mouseenter="requestOpen"
     @mouseleave="scheduleHide"
-    @focusin="open"
+    @focusin="requestOpen"
     @focusout="scheduleHide"
   >
     <slot />
@@ -138,11 +183,11 @@ onUnmounted(() => {
         v-if="show"
         ref="tipRef"
         class="rpg-btt"
-        :class="placement === 'top' ? 'rpg-btt--top' : ''"
+        :class="[placement === 'top' ? 'rpg-btt--top' : '', { 'rpg-btt--passive': passive }]"
         :style="[tipStyle, widthStyle]"
         role="tooltip"
-        @mouseenter="clearHide"
-        @mouseleave="scheduleHide"
+        @mouseenter="panelEnter"
+        @mouseleave="panelLeave"
       >
         <div class="rpg-btt__caret" />
         <slot name="tip" :close="close" />
@@ -173,6 +218,10 @@ onUnmounted(() => {
     inset 0 0 0 1px #3e200a,
     0 12px 32px rgba(0, 0, 0, 0.9);
   pointer-events: auto;
+}
+
+.rpg-btt--passive {
+  pointer-events: none;
 }
 
 .rpg-btt__caret {
