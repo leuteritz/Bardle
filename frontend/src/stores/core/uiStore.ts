@@ -23,6 +23,10 @@ export const useUiStore = defineStore('ui', () => {
   // markiert damit dieselbe Rollenkarte, die im Modal bearbeitet wird.
   const teamActiveRoleIndex = ref<number | null>(null)
   const pendingChampionSearch = ref('')
+  // Sprungziel des Voyages-Atlas, gesetzt von ausserhalb des Reiters (Minimap).
+  // Wird EINMAL verbraucht — der Reiter bleibt gemountet, ein stehender Wert
+  // spränge bei jedem weiteren Besuch erneut.
+  const pendingVoyageTarget = ref<{ galaxy: number; pinKey: string | null } | null>(null)
   const hoveredChampionRole = ref<ChampionRole | null>(null)
   // Stern-ID des laufenden Kampfs, wenn der Team-Tab aus dem StarFight-Modal
   // heraus geöffnet wurde — solange gesetzt (und der Stern lebt), zeigt das
@@ -132,6 +136,18 @@ export const useUiStore = defineStore('ui', () => {
     pendingChampionSearch.value = ''
   }
 
+  /** Reiter auf UND scharfstellen — `openBardModal()` bleibt aussen vor, es
+   *  TOGGELT und schlösse ein bereits offenes Profil. */
+  function requestOpenVoyagesTab(galaxy: number, pinKey: string | null = null) {
+    pendingVoyageTarget.value = { galaxy, pinKey }
+    bardActiveTab.value = 'expedition'
+    clearHoverMarks()
+  }
+
+  function clearPendingVoyageTarget() {
+    pendingVoyageTarget.value = null
+  }
+
   function setBattleReturn(starId: string) {
     battleReturnStarId.value = starId
   }
@@ -197,6 +213,9 @@ export const useUiStore = defineStore('ui', () => {
     setTeamActiveRole,
     requestOpenShopTabWithSearch,
     clearPendingChampionSearch,
+    pendingVoyageTarget,
+    requestOpenVoyagesTab,
+    clearPendingVoyageTarget,
     setHoveredChampionRole,
     setHoveredChampionSlotIndex,
     setHoveredPlanetSlotId,

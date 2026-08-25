@@ -5,6 +5,24 @@
         <div class="map-canvas-wrapper">
           <MiniMapCanvas />
 
+          <!-- ── Der Weg in den Voyages-Atlas ──
+               Zwei Elemente statt eines Handlers am Wrapper: dort blubberten
+               Stern-Hit-Area, „Next Galaxy" und Skip-Knopf hinein und feuerten
+               doppelt. Die Fläche liegt unter allem Bedienbaren (z-index 1),
+               der Chip neben dem Skip-Knopf (6). -->
+          <div v-if="atlasReady" class="atlas-hit" @click="openAtlas" />
+          <button
+            v-if="atlasReady"
+            class="atlas-chip"
+            :class="{ 'atlas-chip--marked': atlasReadyCount > 0 }"
+            title="Open the Voyages atlas"
+            @click="openAtlas"
+          >
+            <Icon icon="ph:map-trifold-fill" width="18" height="18" />
+            <span class="atlas-chip-label">Voyages</span>
+            <RpgNotifyBadge :count="atlasReadyCount" label="Expedition crews ready to collect" />
+          </button>
+
           <!-- ── Waiting for role selection ── -->
           <div v-if="galaxyStore.pendingRoleSelection" class="minimap-waiting-label">
             Choose your Role
@@ -122,9 +140,14 @@
 
 <script lang="ts">
 import { defineComponent, computed, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useHerald } from '@/composables/ui/useHerald'
+import { useGamePause } from '@/composables/system/useGamePause'
+import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import {
   HUD_PANEL_ARC_R,
   SKIP_DURATION_SECONDS,
@@ -134,6 +157,7 @@ import MiniMapCanvas from './MiniMapCanvas.vue'
 import MiniMapHudPanel from './MiniMapHudPanel.vue'
 import MiniMapArrivalHud from './MiniMapArrivalHud.vue'
 import TierUnlockPanel from './TierUnlockPanel.vue'
+import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import { gameNow } from '@/utils/game/gameClock'
 
 const CORNER_R = 20
@@ -141,11 +165,21 @@ const TIER_FLASH_MS = MINIMAP_TIER_FLASH_MS
 
 export default defineComponent({
   name: 'MiniMap',
-  components: { MiniMapCanvas, MiniMapHudPanel, MiniMapArrivalHud, TierUnlockPanel },
+  components: {
+    MiniMapCanvas,
+    MiniMapHudPanel,
+    MiniMapArrivalHud,
+    TierUnlockPanel,
+    RpgNotifyBadge,
+    Icon,
+  },
   setup() {
     const galaxyStore = useGalaxyStore()
     const starGroupStore = useStarGroupStore()
+    const uiStore = useUiStore()
+    const expeditionStore = useExpeditionStore()
     const { announceReceipt } = useHerald()
+    const { isPaused } = useGamePause()
 
     // Celebrate a tier unlock: herald receipt + on-screen flash, then clear the flag.
     watch(
@@ -200,6 +234,33 @@ export default defineComponent({
       starGroupStore.openStarFightModal(championStar.value.id)
     }
 
+    /**
+     * Die kleine Karte führt in die grosse. Ein 1:1-Sprung „zeig mir DIESE
+     * Galaxie" gibt es nicht — der Atlas kennt nur befreite, die laufende ist
+     * nie dabei. Der Klick beantwortet deshalb „wo wartet etwas auf mich?",
+     * und der Store sagt wo.
+     */
+    const atlasTarget = computed(() => expeditionStore.voyageJumpTarget)
+
+    /** Rollenwahl und Pause liegen über allem — dieselbe Klausel wie die
+     *  Tab-Kürzel; die Bottom-Bar-Panels stehen ÜBER dem Pause-Overlay, der
+     *  Klick wäre sonst erreichbar. Und `isComplete` gehört „Next Galaxy". */
+    const atlasReady = computed(
+      () =>
+        !!atlasTarget.value &&
+        !galaxyStore.pendingRoleSelection &&
+        !isPaused.value &&
+        !galaxyStore.isComplete,
+    )
+
+    const atlasReadyCount = useNotifyBadgeCount('expedition')
+
+    function openAtlas() {
+      const target = atlasTarget.value
+      if (!atlasReady.value || !target) return
+      uiStore.requestOpenVoyagesTab(target.galaxy, target.pinKey)
+    }
+
     function teleportNearPlanet() {
       if (galaxyStore.championTravelState !== 'traveling') return
       galaxyStore.championTravelStartTime =
@@ -219,6 +280,9 @@ export default defineComponent({
       onMinimapStarEnter,
       onMinimapStarLeave,
       onMinimapStarClick,
+      atlasReady,
+      atlasReadyCount,
+      openAtlas,
       teleportNearPlanet,
       SKIP_DURATION_SECONDS,
     }
@@ -378,6 +442,68 @@ export default defineComponent({
   text-shadow:
     0 0 10px rgba(255, 100, 200, 0.65),
     0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* ── Weg in den Voyages-Atlas ──
+   Die Fläche trägt nur den Klick. Sie bekommt bewusst KEINEN eigenen Rand: das
+   Panel steht schon in einem goldenen Rahmen, ein zweiter daneben war im
+   Browser nicht als Zustand lesbar, nur als Rauschen. Stattdessen leuchtet der
+   Chip auf — er ist ohnehin die Stelle, die sagt, wohin der Klick führt. */
+.atlas-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* `position: relative` fehlt bewusst nicht — RpgNotifyBadge sitzt absolut auf
+   top/right 4px und braucht diesen Kasten als Bezug. */
+.atlas-chip {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background: #1e1006;
+  border: 2px solid #5c3310;
+  color: #e8c040;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+/* Die Marke sitzt absolut in der oberen rechten Ecke und deckte sonst das
+   letzte Zeichen der Beschriftung zu — der Platz wird reserviert, nicht
+   geteilt. */
+.atlas-chip--marked {
+  padding-right: 24px;
+}
+
+/* Der Chip folgt der Fläche — er steht im Markup hinter ihr, also trägt der
+   Geschwister-Selektor das ohne zweiten Zustand in JavaScript. */
+.atlas-chip:hover,
+.atlas-hit:hover ~ .atlas-chip {
+  background: #2a1808;
+  border-color: #7a4e20;
+  color: #f4d878;
+}
+
+.atlas-chip:active {
+  background: #150c04;
+}
+
+.atlas-chip-label {
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 /* ── Minimap-Stern Hit-Area (Arrival View) ── */

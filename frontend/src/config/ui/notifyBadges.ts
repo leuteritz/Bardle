@@ -148,6 +148,11 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
         marker: '<RpgNotifyBadge',
         where: 'Voyages-Karte, am zurückgekehrten Hafen',
       },
+      {
+        file: 'components/bottom/minimap/MiniMap.vue',
+        marker: '<RpgNotifyBadge',
+        where: 'Minimap, am Voyages-Chip',
+      },
     ],
     seedability: 'exact',
     reversible: 'full',

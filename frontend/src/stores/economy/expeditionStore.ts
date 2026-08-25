@@ -16,6 +16,7 @@ import { getChampionOrigin } from '@/config/champions/championOrigins'
 import { pickMaterial } from '@/config/economy/materials'
 import { getForgeNode } from '@/config/progression/starForge'
 import { useEventLog, type GameEventType } from '@/composables/ui/useEventLog'
+import { pinKeyOf } from '@/utils/game/voyageSites'
 import { formatNumber } from '@/config/ui/numberFormat'
 import {
   EXPEDITION_POWER_BONUS_CAP,
@@ -140,6 +141,31 @@ export const useExpeditionStore = defineStore('expedition', {
 
     readyExpeditionCount(): number {
       return this.readyExpeditions.length
+    },
+
+    /**
+     * Wohin ein Sprung von aussen faehrt — heute die Minimap, morgen jeder
+     * andere Aufrufer. Die Ordnung ist die des Fleet-Bands (Galaxie absteigend,
+     * dann `pinKey`), damit der Sprung auf DER Karte landet, die dort vorne
+     * steht. `buildVoyageFleetCards` selbst geht hier nicht: es verlangt Sitze,
+     * Chancen und Sendebereitschaft, die nur der Reiter kennt.
+     */
+    voyageJumpTarget(): { galaxy: number; pinKey: string | null } | null {
+      const freed = useGalaxyStore().completedGalaxies
+      if (!freed.length) return null
+      const newest = freed.reduce((max, r) => Math.max(max, r.galaxy), 0)
+
+      // flatMap statt filter: `galaxy` ist auf alten Missionen optional, und
+      // TypeScript engt das durch ein Praedikat hindurch nicht ein.
+      const waiting = this.readyExpeditions
+        .flatMap((e) =>
+          e.galaxy != null && freed.some((r) => r.galaxy === e.galaxy)
+            ? [{ galaxy: e.galaxy, pinKey: pinKeyOf(e) }]
+            : [],
+        )
+        .sort((a, b) => b.galaxy - a.galaxy || (a.pinKey < b.pinKey ? -1 : 1))[0]
+
+      return waiting ?? { galaxy: newest, pinKey: null }
     },
 
     championsOnExpedition(): string[] {

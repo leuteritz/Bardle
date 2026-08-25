@@ -164,6 +164,27 @@ watch(selectedGalaxy, () => {
   userDetailFolded.value = placedSites.value.length ? false : null
 })
 
+/**
+ * Derselbe Sprung, andere Quelle: die Minimap setzt ihr Ziel in den uiStore,
+ * hier wird es EINMAL verbraucht.
+ *
+ * Seine Stelle ist zwischen zwei Zwängen eingeklemmt, und beide sind gemessen:
+ * NACH `useVoyageAtlas`, dessen `isVisible`-Watcher `autoSelect()` ruft und eine
+ * hier gesetzte Marke überschriebe — und NACH den beiden Watchern oben, weil er
+ * beim ERSTEN Öffnen im Setup feuert. Stünde er davor, wäre `selectedKey` schon
+ * gesetzt, bevor `watch(selectedKey)` registriert ist: die Marke gewählt, das
+ * Dossier aber zugeklappt.
+ */
+watch(
+  () => uiStore.pendingVoyageTarget,
+  (target) => {
+    if (!target) return
+    jumpToMark(target.galaxy, target.pinKey)
+    uiStore.clearPendingVoyageTarget()
+  },
+  { immediate: true },
+)
+
 const atlasColumns = computed(() => {
   const rail = railFolded.value ? VOYAGE_RAIL_COLLAPSED : VOYAGE_RAIL_WIDTH
   const detail = detailFolded.value
