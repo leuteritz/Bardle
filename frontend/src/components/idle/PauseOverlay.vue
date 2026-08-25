@@ -304,6 +304,78 @@
                   <span v-else class="battle-strip__idle">No battles yet</span>
                 </div>
               </div>
+
+              <!-- Awaiting on return — immer gerendert mit fest reservierter
+                   Höhe, damit aufpoppende Karten die Panel-Höhe (und den
+                   Fit-Scale) nie ändern.
+
+                   Sie stand einmal quer unter beiden Spalten. Hier schliesst sie
+                   die Bilanz ab, wo sie hingehört: alles in dieser Säule ist
+                   etwas, das WÄHREND der Pause passiert. Zwei Reihen zu dreien —
+                   die zweite kostet nichts, weil die Zustandssäule daneben
+                   ohnehin so hoch ist. -->
+              <div
+                class="callout-section"
+                aria-label="Awaiting your return"
+                :style="{
+                  '--star-card-h': `${PAUSE_STAR_CARD_HEIGHT}px`,
+                  '--star-card-gap': `${PAUSE_STAR_CARD_GAP_PX}px`,
+                  '--star-card-rows': PAUSE_CALLOUT_ROWS,
+                }"
+              >
+                <TransitionGroup
+                  v-if="activeResourceStars.length > 0 || championCallout || voidThreat"
+                  tag="div"
+                  name="callout-pop"
+                  class="callout-row"
+                >
+                  <!-- Der Champion steht IMMER an erster Stelle, ganz oben links
+                       — auch dann, wenn sonst nichts läuft. Er ist der Höhepunkt
+                       einer Galaxierunde, und eine Karte, die je nach Lage um
+                       eine Kartenbreite wandert, muss man erst suchen. Die eine
+                       Karte deckt beide Zustände ab: gefunden-und-wartend sowie
+                       Stern-läuft-samt-Uhr. -->
+                  <PauseChampionCard
+                    v-if="championCallout"
+                    key="champion"
+                    :callout="championCallout"
+                  />
+                  <!-- Der Void läuft während der Pause weiter — Kader und
+                       Turrets feuern auch pausiert, also darf er auch pausiert
+                       verloren gehen. Er steht deshalb VOR den Stern-Karten: von
+                       allem, was hier abläuft, ist er das einzige, das der Sonne
+                       wehtut. -->
+                  <PauseVoidCard
+                    v-if="voidThreat"
+                    key="void-threat"
+                    :secs="voidThreat.secs"
+                    :ends-at="voidThreat.endsAt"
+                    :duration-ms="voidThreat.durationMs"
+                    :name="voidThreat.name"
+                    :color="voidThreat.color"
+                    :dweller="voidThreat.dweller"
+                    :count="voidThreat.count"
+                    :worn="voidThreat.worn"
+                  />
+
+                  <!-- Ein Flyby, eine Karte: Zifferblatt der Restzeit, echte
+                       Planetenkunst der Slots mit ihren Boss-HP, Akzent in der
+                       Spektralfarbe des Sterns. Höchstens
+                       RESOURCE_STAR_MAX_CONCURRENT nebeneinander. -->
+                  <PauseStarCard
+                    v-for="s in activeResourceStars"
+                    :key="s.id"
+                    :secs="s.secs"
+                    :ends-at="s.endsAt"
+                    :duration-ms="s.durationMs"
+                    :color="s.color"
+                    :planets="s.planets"
+                  />
+                </TransitionGroup>
+                <div v-else class="callout-row callout-row--empty">
+                  <span class="callout-empty">All quiet so far — the cosmos drifts on</span>
+                </div>
+              </div>
             </section>
 
             <!-- ── Rechts: der Zustand ───────────────────────────────── -->
@@ -383,114 +455,45 @@
                   emphasis
                 />
               </div>
-            </section>
-          </div>
 
-          <!-- ── Das Kit-Band ───────────────────────────────────────────────
-               Fähigkeitenleiste und Buff-Reihe stehen im freien Bild bei
-               z-index 10001 und lagen damit ÜBER diesem Overlay (9998) — nicht
-               ausgeblendet, sondern mitten auf dem Panel. App.vue hängt beide
-               pausiert hierher um; es ist dieselbe Instanz, nur mit anderer
-               Form (`dock: 'pause'`).
+              <!-- ── Der Kit-Block ────────────────────────────────────────
+                   Fähigkeitenleiste und Buff-Reihe stehen im freien Bild bei
+                   z-index 10001 und lagen damit ÜBER diesem Overlay (9998) —
+                   nicht ausgeblendet, sondern mitten auf dem Panel. App.vue
+                   hängt beide pausiert hierher um; es ist dieselbe Instanz, nur
+                   mit anderer Form (`dock: 'pause'`).
 
-               EINE Reihe, keine zwei: das Band hat Breite im Überfluss, und
-               jede Zeile Höhe geht in den Fit-Scale des ganzen Overlays. Vier
-               Fähigkeitszellen links, zwei Effekt-Plaketten rechts, alle
-               gleich hoch.
+                   Er lag einmal quer unter der Bilanz und war dort eine dritte
+                   Gliederungsebene in einem Panel aus zwei Spalten. Hier steht
+                   er als Sockel der Säule, zu der er gehört: was Bard KANN, bei
+                   dem, was er IST. Bezahlt hat den Umzug die Callout-Reihe, die
+                   im selben Zug nach links gewandert ist.
 
-               Beide Spalten sind fest reserviert — die Höhe auf
-               PAUSE_KIT_BAND_H, die Chip-Zahl auf PAUSE_KIT_EFFECT_COLS: liefe
-               eine von beiden mit der Zahl der Buffs, spränge das Raster,
-               sobald während der Pause einer ausläuft. -->
-          <section
-            class="kit-band"
-            :style="{
-              '--pause-kit-gap': `${PAUSE_KIT_GAP_PX}px`,
-              '--pause-kit-chip-h': `${PAUSE_KIT_EFFECT_CHIP_H}px`,
-              '--pause-kit-chip-w': `${PAUSE_KIT_EFFECT_CHIP_W}px`,
-              '--pause-kit-more-w': `${PAUSE_KIT_EFFECT_MORE_W}px`,
-              '--pause-kit-band-h': `${PAUSE_KIT_BAND_H}px`,
-              '--pause-kit-effect-w': `${PAUSE_KIT_EFFECT_COL_W}px`,
-            }"
-          >
-            <div class="kit-col" aria-label="Your kit">
-              <!-- Anzeige, kein Bedienfeld — deshalb Zeilen statt Kacheln.
-                   Der Tick ist derselbe, der auch die Karten unten fortschreibt:
-                   Abklingzeiten enden auch im Stillstand. -->
-              <div class="kit-dock">
-                <PauseKitPanel :tick="starTick" />
+                   Beides ist fest reserviert — die Höhe auf PAUSE_KIT_BLOCK_H,
+                   die Chip-Zahl auf PAUSE_KIT_EFFECT_COLS: liefe eine von beiden
+                   mit der Zahl der Buffs, spränge das Raster, sobald während der
+                   Pause einer ausläuft. -->
+              <span class="kit-rule" aria-hidden="true"></span>
+              <div
+                class="kit-block"
+                :style="{
+                  '--pause-kit-gap': `${PAUSE_KIT_GAP_PX}px`,
+                  '--pause-kit-tile-h': `${PAUSE_KIT_TILE_H}px`,
+                  '--pause-kit-chip-h': `${PAUSE_KIT_EFFECT_CHIP_H}px`,
+                  '--pause-kit-chip-w': `${PAUSE_KIT_EFFECT_CHIP_W}px`,
+                  '--pause-kit-more-w': `${PAUSE_KIT_EFFECT_MORE_W}px`,
+                  '--pause-kit-block-h': `${PAUSE_KIT_BLOCK_H}px`,
+                }"
+              >
+                <!-- Anzeige, kein Bedienfeld. Der Tick ist derselbe, der auch
+                     die Karten links fortschreibt: Abklingzeiten enden auch im
+                     Stillstand. -->
+                <div class="kit-dock kit-dock--tiles" aria-label="Your kit">
+                  <PauseKitPanel :tick="starTick" />
+                </div>
+                <div id="pause-buff-dock" class="kit-dock" aria-label="Active effects" />
               </div>
-            </div>
-
-            <div class="kit-col kit-col--effects" aria-label="Active effects">
-              <div id="pause-buff-dock" class="kit-dock" />
-            </div>
-          </section>
-
-          <!-- Awaiting on return — immer gerendert mit fester Zeilenhöhe, damit
-               aufpoppende Badges die Panel-Höhe (und den Fit-Scale) nie ändern -->
-          <div
-            class="callout-section"
-            aria-label="Awaiting your return"
-            :style="{
-              '--star-card-h': `${PAUSE_STAR_CARD_HEIGHT}px`,
-              '--star-card-gap': `${PAUSE_STAR_CARD_GAP_PX}px`,
-              '--star-card-rows': PAUSE_CALLOUT_ROWS,
-            }"
-          >
-            <TransitionGroup
-              v-if="
-                activeResourceStars.length > 0 || championCallout || voidThreat
-              "
-              tag="div"
-              name="callout-pop"
-              class="callout-row"
-            >
-              <!-- Der Champion steht IMMER an erster Stelle, ganz oben links —
-                   auch dann, wenn sonst nichts läuft. Er ist der Höhepunkt
-                   einer Galaxierunde, und eine Karte, die je nach Lage um eine
-                   Kartenbreite wandert, muss man erst suchen. Die eine Karte
-                   deckt beide Zustände ab: gefunden-und-wartend sowie
-                   Stern-läuft-samt-Uhr. -->
-              <PauseChampionCard
-                v-if="championCallout"
-                key="champion"
-                :callout="championCallout"
-              />
-              <!-- Der Void läuft während der Pause weiter — Kader und Turrets
-                   feuern auch pausiert, also darf er auch pausiert verloren
-                   gehen. Er steht deshalb VOR den Stern-Karten: von allem, was
-                   hier abläuft, ist er das einzige, das der Sonne wehtut. -->
-              <PauseVoidCard
-                v-if="voidThreat"
-                key="void-threat"
-                :secs="voidThreat.secs"
-                :ends-at="voidThreat.endsAt"
-                :duration-ms="voidThreat.durationMs"
-                :name="voidThreat.name"
-                :color="voidThreat.color"
-                :dweller="voidThreat.dweller"
-                :count="voidThreat.count"
-                :worn="voidThreat.worn"
-              />
-
-              <!-- Ein Flyby, eine Karte: Zifferblatt der Restzeit, echte
-                   Planetenkunst der Slots mit ihren Boss-HP, Akzent in der
-                   Spektralfarbe des Sterns. Höchstens
-                   RESOURCE_STAR_MAX_CONCURRENT nebeneinander. -->
-              <PauseStarCard
-                v-for="s in activeResourceStars"
-                :key="s.id"
-                :secs="s.secs"
-                :ends-at="s.endsAt"
-                :duration-ms="s.durationMs"
-                :color="s.color"
-                :planets="s.planets"
-              />
-            </TransitionGroup>
-            <div v-else class="callout-row callout-row--empty">
-              <span class="callout-empty">All quiet so far — the cosmos drifts on</span>
-            </div>
+            </section>
           </div>
 
           <!-- Fußzeile statt Knopf: der einzige Ausgang braucht keinen Rahmen,
@@ -578,8 +581,8 @@ import {
   PAUSE_KIT_EFFECT_CHIP_H,
   PAUSE_KIT_EFFECT_CHIP_W,
   PAUSE_KIT_EFFECT_MORE_W,
-  PAUSE_KIT_EFFECT_COL_W,
-  PAUSE_KIT_BAND_H,
+  PAUSE_KIT_TILE_H,
+  PAUSE_KIT_BLOCK_H,
   MEEP_ART_IMAGE,
   PAUSE_STAR_HP_STEPS,
   STAR_TIMER_TICK_MS,
@@ -1037,7 +1040,8 @@ function refreshVoidThreat(): void {
 // Sie zeigte nur den Buff mit der kürzesten Uhr, während MVP und Omen gar
 // nicht vorkamen — drei Belohnungen derselben Art in zwei Formen, von denen
 // eine unvollständig war. Mit der Karte fiel zugleich die sechste Spalte der
-// Reihe weg, und die passt seitdem in EINE Zeile (siehe PAUSE_CALLOUT_ROWS).
+// Reihe weg — fünf Karten auf sechs reservierten Plätzen (PAUSE_CALLOUT_ROWS
+// × PAUSE_CALLOUT_COLS).
 
 // ── Der Champion ────────────────────────────────────────────────────────────
 // EINE Karte für zwei Zustände, und sie steht immer an erster Stelle:
@@ -1497,8 +1501,14 @@ function particleStyle(i: number): Record<string, string> {
 
 /* ── Zwei Spalten ─────────────────────────────────────── */
 /* Links, was hereinkam; rechts, wie es steht. Die Zustandsspalte hat eine feste
-   Breite (PAUSE_STATE_COL_WIDTH), die Bilanzspalte nimmt den Rest — 1052 − 460
-   − 30 = 562, gerade genug für das 426 breite Material-Raster.
+   Breite (PAUSE_STATE_COL_WIDTH), die Bilanzspalte nimmt den Rest — 1352 − 530
+   − 30 = 792: genug für das 426 breite Material-Raster und für drei
+   Callout-Karten je Reihe.
+
+   Beide Spalten sind SÄULEN und laufen bis zum Fuß des Body durch: links endet
+   die Bilanz mit den Callout-Karten, rechts der Zustand mit dem Kit-Block. Die
+   beiden eigenen Zeilen, die sie früher quer unter dem Body hatten, sind
+   entfallen — das Panel wurde dabei flacher, nicht höher.
 
    Beide Spalten laufen von OBEN, mit festem Abstand zwischen den Abschnitten —
    nicht `space-between`: im frischen Spielstand ist die Bilanzspalte kurz (kein
@@ -2072,44 +2082,41 @@ function particleStyle(i: number): Record<string, string> {
   object-fit: contain;
 }
 
-/* ── Das Kit-Band ─────────────────────────────────────────────────────────
-   Rechts eine FESTE Breite (zwei Plaketten, der „+N"-Zähler und ihre Lücken),
-   links der Rest. Die Plaketten tragen einen Namen neben ihrer Uhr und
-   brauchen dafür eine verlässliche Spalte; die vier Fähigkeitszellen daneben
-   vertragen jede Breite, die übrig bleibt — gemessen 840 px, also 201 je
-   Zelle.
+/* ── Der Kit-Block ────────────────────────────────────────────────────────
+   Zwei Reihen ÜBEREINANDER am Fuß der Zustandssäule: vier Kacheln, darunter
+   die Effekt-Plaketten. Nebeneinander gingen sie nicht — die Plaketten
+   brauchen ihre 488 px allein, und das ist die ganze Spaltenbreite.
 
-   Andersherum (`auto` links) misst das Raster nur die Mindestbreite des
-   Inhalts — die Zellen fielen dann zusammen, während die Chips Platz bekamen,
-   den sie nicht brauchen.
-
-   Die Trennlinie ist dieselbe Haarlinie wie zwischen Bilanz und Zustand: eine
-   Linie, kein zweiter Kasten. */
-.kit-band {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--pause-kit-effect-w);
-  gap: var(--pause-kit-gap);
+   Die Trennlinie über dem Block ist dieselbe Haarlinie wie unter der
+   Kopfzeile: eine Linie, kein zweiter Kasten und kein Sektionswort. */
+.kit-rule {
+  height: 1px;
   width: 100%;
-}
-
-.kit-col {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.kit-col--effects {
-  padding-left: var(--pause-kit-gap);
-  border-left: 1px solid rgba(122, 78, 32, 0.35);
+  margin-top: -6px;
+  /* Durchgehend, nicht auslaufend wie unter der Kopfzeile: sie ist in dieser
+     Säule die einzige Gliederung — das Panel trägt keine Abschnittswörter. */
+  background: rgba(122, 78, 32, 0.45);
 }
 
 /* Fest reserviert, nicht mitwachsend: hier hängt der Fit-Scale des ganzen
-   Overlays daran. Beide Spalten füllen ihre Höhe ganz aus — Kit-Zelle und
-   Effekt-Chip sind gleich hoch (PAUSE_KIT_BAND_H), das Band ist EINE Zeile. */
+   Overlays daran. Die Höhe kommt aus PAUSE_KIT_BLOCK_H und nicht aus dem
+   Inhalt — ein leerer Buff-Dock darf den Block nicht schrumpfen lassen. */
+.kit-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pause-kit-gap);
+  width: 100%;
+  height: var(--pause-kit-block-h);
+}
+
 .kit-dock {
   display: flex;
   align-items: stretch;
-  height: var(--pause-kit-band-h);
+  height: var(--pause-kit-chip-h);
+}
+
+.kit-dock--tiles {
+  height: var(--pause-kit-tile-h);
 }
 
 /* ── Callouts ─────────────────────────────────────────── */
@@ -2148,13 +2155,13 @@ function particleStyle(i: number): Record<string, string> {
   text-shadow: 0 0 10px rgba(116, 212, 72, 0.55);
 }
 /* Alle Karten sind gleich gross und stehen linksbündig nebeneinander: die
-   Champion-Karte zuerst, dann der Void, dann die Flybys. Ab der fünften Karte
-   bricht die Reihe um — vier passen in den Panelinnenraum
-   (4 × 208 + 3 × 6 = 850 ≤ 872), fünf nicht mehr (1064).
+   Champion-Karte zuerst, dann der Void, dann die Flybys. Ab der vierten bricht
+   die Reihe um — drei passen in die Bilanzspalte (3 × 208 + 2 × 6 = 636 ≤ 792),
+   vier nicht mehr (850).
 
-   Feste Höhe für ZWEI Kartenzeilen: reservierter Platz, egal ob leer oder voll
-   besetzt. Eine mitwachsende Höhe liesse den Fit-Scale des ganzen Overlays
-   mitten in der Pause springen, sobald der fünfte Callout auftaucht.
+   Feste Höhe für PAUSE_CALLOUT_ROWS Kartenzeilen: reservierter Platz, egal ob
+   leer oder voll besetzt. Eine mitwachsende Höhe liesse den Fit-Scale des
+   ganzen Overlays mitten in der Pause springen, sobald eine Karte auftaucht.
 
    Die Lücke kommt inline aus PAUSE_STAR_CARD_GAP_PX — dieselbe Zahl steht in
    der Breitenrechnung und zwischen den beiden Zeilen. */
@@ -2166,8 +2173,7 @@ function particleStyle(i: number): Record<string, string> {
   justify-content: flex-start;
   gap: var(--star-card-gap);
   /* Die Reservierung steht als Zahl in PAUSE_CALLOUT_ROWS, nicht als `2 *`
-     hier — mit der Drifter-Karte ist die sechste Spalte weggefallen, und die
-     fünf verbliebenen passen in eine Zeile. */
+     hier — die Zeilenzahl hängt an der Spaltenbreite und wandert mit ihr. */
   height: calc(
     var(--star-card-rows) * var(--star-card-h) + (var(--star-card-rows) - 1) *
       var(--star-card-gap)

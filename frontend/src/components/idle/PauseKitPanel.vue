@@ -1,16 +1,17 @@
 <template>
   <!--
-    Die vier Fähigkeiten im Pause-Overlay — EINE Reihe aus vier Zellen.
+    Die vier Fähigkeiten am Fuß der Zustandssäule — EINE Reihe aus vier Kacheln.
 
-    Eine Kachel ist die Form eines Knopfes, und im Overlay ist nichts
-    bedienbar. Die Zelle dreht das um: das Bild bleibt als Wiedererkennung,
-    der Text bekommt Platz. Quer statt 2 × 2, weil das Band Breite im
-    Überfluss hat und jede Zeile Höhe in den Fit-Scale des Overlays geht.
+    Die Kachelform war einmal verworfen, weil sie die Form eines Knopfes hat und
+    im Overlay nichts bedienbar ist. Sie trägt hier, weil der NAME entfallen ist:
+    in 499 nutzbaren px bleiben je Kachel 115, ein Name braucht allein 129
+    Textbreite. Was die Kachel vom Knopf trennt, ist ihre Fassung — flache
+    Füllung, Farbe als Oberkante, kein Verlauf. Der Name steht im `title`.
   -->
   <div
     class="kit-grid"
     :style="{
-      '--kit-cell-h': `${PAUSE_KIT_CELL_H}px`,
+      '--kit-tile-h': `${PAUSE_KIT_TILE_H}px`,
       '--kit-art': `${PAUSE_KIT_CELL_ART_PX}px`,
       '--kit-gap': `${PAUSE_KIT_GAP_PX}px`,
     }"
@@ -21,36 +22,40 @@
       class="kit-cell"
       :class="{ 'kit-cell--locked': cell.locked, 'kit-cell--cooling': cell.cooling }"
       :style="{ '--kit-color': cell.color }"
+      :title="cell.name"
+      :aria-label="`${cell.name} — ${cell.rankLabel} — ${cell.stateLabel}`"
     >
-      <!-- Das Kürzel steht AUF der Kunst, nicht neben dem Namen: als eigene
-           Textspalte nähme es dem Namen 28 der 130 px, und „Caretaker's
-           Shrine" liefe über. Muster `.ab-key` an der Kachel draußen. -->
       <span class="kit-cell__art">
         <img
           :src="cell.image"
-          :alt="cell.name"
+          alt=""
           class="kit-cell__img"
           draggable="false"
           @dragstart.prevent
         />
+        <!-- Das Kürzel trägt die Zuordnung jetzt ALLEIN mit der Kunst und steht
+             deshalb als eigene Marke da, nicht mehr als Randnotiz. -->
         <span class="kit-cell__key" aria-hidden="true">{{ cell.key }}</span>
       </span>
 
-      <span class="kit-cell__text">
-        <span class="kit-cell__name">{{ cell.name }}</span>
-        <span class="kit-cell__foot">
-          <!-- Rang als Pips, nicht als „Rank 3": dieselbe Form wie `.ab-rank`
-               an der Kachel draußen, und sie kostet keine Textbreite. -->
-          <span class="kit-cell__pips" :aria-label="cell.rankLabel">
-            <span
-              v-for="n in ABILITY_MAX_RANK"
-              :key="n"
-              class="kit-pip"
-              :class="{ 'kit-pip--on': n <= cell.rank }"
-            />
-          </span>
-          <span class="kit-cell__state">{{ cell.stateLabel }}</span>
-        </span>
+      <!-- Rang als Pips, nicht als „Rank 3": dieselbe Form wie `.ab-rank` an der
+           Kachel draußen, und sie kostet keine Textbreite. -->
+      <span class="kit-cell__pips" aria-hidden="true">
+        <span
+          v-for="n in ABILITY_MAX_RANK"
+          :key="n"
+          class="kit-pip"
+          :class="{ 'kit-pip--on': n <= cell.rank }"
+        />
+      </span>
+
+      <span class="kit-cell__state">{{ cell.stateLabel }}</span>
+
+      <!-- Was der entfallene Name an Information gekostet hat, gibt der
+           Füllstand zurück: dieselbe Strecke wie im Ring der Kachel draußen,
+           geschrieben im Tick des Overlays, nicht pro Frame. -->
+      <span v-if="cell.cooling" class="kit-cell__fill" aria-hidden="true">
+        <span class="kit-cell__fill-bar" :style="{ transform: `scaleX(${cell.readyFill})` }" />
       </span>
     </div>
   </div>
@@ -62,7 +67,7 @@ import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { BARD_ABILITIES } from '@/config/progression/bardAbilities'
 import {
   ABILITY_MAX_RANK,
-  PAUSE_KIT_CELL_H,
+  PAUSE_KIT_TILE_H,
   PAUSE_KIT_CELL_ART_PX,
   PAUSE_KIT_GAP_PX,
 } from '@/config/constants'
@@ -91,6 +96,7 @@ interface KitCell {
   rank: number
   rankLabel: string
   stateLabel: string
+  readyFill: number
 }
 
 const cells = computed<KitCell[]>(() => {
@@ -103,6 +109,7 @@ const cells = computed<KitCell[]>(() => {
     const rank = store.rankOf(def.id)
     const locked = rank === 0
     const leftMs = locked ? 0 : Math.max(0, (store.cooldownReadyAt[def.id] ?? 0) - now)
+    const totalMs = store.cooldownMsOf(def.id)
     return {
       id: def.id,
       key: def.key,
@@ -120,34 +127,37 @@ const cells = computed<KitCell[]>(() => {
         : leftMs > 0
           ? `${formatCooldownSeconds(leftMs)}s`
           : 'Ready',
+      // Der Balken FÜLLT sich bis bereit, wie jeder andere Füllstand im Panel.
+      readyFill: totalMs > 0 ? 1 - leftMs / totalMs : 1,
     }
   })
 })
 </script>
 
 <style scoped>
-/* Vier Zellen nebeneinander, EINE Reihe. Die Zellenhöhe ist die Bandhöhe. */
+/* Vier Kacheln nebeneinander, EINE Reihe. */
 .kit-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: var(--kit-cell-h);
+  grid-auto-rows: var(--kit-tile-h);
   gap: var(--kit-gap);
   width: 100%;
 }
 
-/* Dieselbe Fassung wie die Effekt-Chips gegenüber: flacher dunkler Grund, eine
-   Kante in der Leitfarbe, kein zweiter Rahmen. Das Band trägt zwei Sorten
-   Inhalt, aber nur eine Form. */
+/* Flache Füllung, Farbe als Oberkante, kein Verlauf: eine Ablesung, kein Knopf. */
 .kit-cell {
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 4px;
   min-width: 0;
-  padding: 0 12px 0 10px;
+  padding: 6px 8px;
+  overflow: hidden;
   background: #16140e;
   border: 1px solid #3e200a;
-  border-left: 3px solid var(--kit-color, #c89040);
+  border-top: 2px solid var(--kit-color, #c89040);
   border-radius: 4px;
 }
 
@@ -178,46 +188,15 @@ const cells = computed<KitCell[]>(() => {
 
 .kit-cell__key {
   position: absolute;
-  top: 1px;
-  left: 4px;
-  font-size: 0.68rem;
+  top: 0;
+  left: 0;
+  padding: 0 3px 1px;
+  background: rgba(8, 6, 3, 0.72);
+  border-bottom-right-radius: 3px;
+  font-size: 0.62rem;
   font-weight: 900;
-  line-height: 1;
-  color: #ded0a6;
-  opacity: 0.85;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-}
-
-.kit-cell__text {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 6px;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-/* „Caretaker's Shrine" ist der längste Name und misst hier gemessen 129 px in
-   130; die Auslassung fängt nur den Fall ab, dass jemand einen längeren
-   nachlegt. */
-.kit-cell__name {
-  min-width: 0;
-  font-size: 0.9rem;
-  font-weight: 700;
   line-height: 1.2;
-  color: #e8dcc0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.kit-cell__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-width: 0;
-  height: 18px;
+  color: #f0e2b8;
 }
 
 .kit-cell__pips {
@@ -243,7 +222,7 @@ const cells = computed<KitCell[]>(() => {
    Fähigkeit — die Pips daneben bleiben ruhig. */
 .kit-cell__state {
   flex: 0 0 auto;
-  font-size: 0.92rem;
+  font-size: 0.78rem;
   font-weight: 700;
   line-height: 1;
   color: var(--kit-color, #e8c040);
@@ -257,5 +236,22 @@ const cells = computed<KitCell[]>(() => {
 
 .kit-cell--locked .kit-cell__state {
   color: rgba(216, 200, 160, 0.5);
+}
+
+.kit-cell__fill {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: rgba(122, 78, 32, 0.5);
+}
+
+.kit-cell__fill-bar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--kit-color, #e8c040);
+  transform-origin: left center;
 }
 </style>
