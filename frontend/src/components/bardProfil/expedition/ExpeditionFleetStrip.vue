@@ -10,8 +10,8 @@
  * Kopfleiste ändert die Bühnenhöhe und malt die Galaxie neu — bei einer Höhe an
  * der Vertragszahl bei jedem Spawn.
  *
- * Kein Standbild: bei dieser Höhe wäre die Miniatur ein Fleck, und der Streifen
- * zöge Rasterläufe in den Kopf. Die Ziffer trägt das Wiedererkennen.
+ * Kein Standbild: der Streifen zöge Rasterläufe in den Kopf, jede Pille eine.
+ * Ziffer und Name tragen das Wiedererkennen.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -20,6 +20,7 @@ import { buildVoyageFleet } from '@/utils/game/voyageFleet'
 import { formatMinuteClock, toRoman } from '@/utils/ui/format'
 import {
   VOYAGE_FLEET_PILL_GAP,
+  VOYAGE_FLEET_PILL_H,
   VOYAGE_FLEET_PILL_MIN_W,
   VOYAGE_FLEET_STRIP_H,
 } from '@/config/constants'
@@ -33,6 +34,7 @@ const expeditionStore = useExpeditionStore()
 const stripH = `${VOYAGE_FLEET_STRIP_H}px`
 const pillMinW = `${VOYAGE_FLEET_PILL_MIN_W}px`
 const pillGap = `${VOYAGE_FLEET_PILL_GAP}px`
+const pillH = `${VOYAGE_FLEET_PILL_H}px`
 
 /** Zeitfrei — feuert bei Spawn, Absenden, Auflösen, Einsammeln. Nicht im Takt. */
 const pills = computed(() =>
@@ -78,22 +80,24 @@ function ariaFor(row: VoyageRailRow): string {
         <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre Deckkraft.
              Nur der einsammelbare Zustand atmet. -->
         <span v-if="pill.state === 'ready'" class="efs-pulse" aria-hidden="true" />
-        <span class="efs-no">{{ toRoman(pill.galaxy) }}</span>
-        <span class="efs-name">{{ pill.row.name }}</span>
-        <span class="efs-counts">
-          <span v-if="pill.row.contracts" class="efs-c efs-c--offer">
-            <Icon icon="ph:scroll-fill" width="11" height="11" />
-            {{ pill.row.contracts }}
-          </span>
-          <span v-if="pill.row.inField" class="efs-c efs-c--field">
-            <Icon icon="game-icons:caravel" width="11" height="11" />
-            {{ pill.row.inField }}
-          </span>
-          <span v-if="pill.row.ready" class="efs-c efs-c--ready">
-            <Icon icon="ph:treasure-chest-fill" width="11" height="11" />
-            {{ pill.row.ready }}
+        <span class="efs-top">
+          <span class="efs-no">{{ toRoman(pill.galaxy) }}</span>
+          <span class="efs-counts">
+            <span v-if="pill.row.contracts" class="efs-c efs-c--offer">
+              <Icon icon="ph:scroll-fill" width="10" height="10" />
+              {{ pill.row.contracts }}
+            </span>
+            <span v-if="pill.row.inField" class="efs-c efs-c--field">
+              <Icon icon="game-icons:caravel" width="10" height="10" />
+              {{ pill.row.inField }}
+            </span>
+            <span v-if="pill.row.ready" class="efs-c efs-c--ready">
+              <Icon icon="ph:treasure-chest-fill" width="10" height="10" />
+              {{ pill.row.ready }}
+            </span>
           </span>
         </span>
+        <span class="efs-name">{{ pill.row.name }}</span>
       </button>
     </template>
 
@@ -135,10 +139,11 @@ function ariaFor(row: VoyageRailRow): string {
   flex: 0 1 auto;
   min-width: v-bind(pillMinW);
   display: flex;
-  align-items: center;
-  gap: 7px;
-  height: 26px;
-  padding: 0 8px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  height: v-bind(pillH);
+  padding: 4px 6px;
   background: #1c1c18;
   border: 1px solid #3e200a;
   /* Die linke Kante ist der ZUSTANDSKANAL — dieselbe Sprache wie in der Leiste. */
@@ -193,9 +198,17 @@ function ariaFor(row: VoyageRailRow): string {
   }
 }
 
+/* Zeile 1 hat kein Ventil: Ziffer und Zähler schrumpfen beide nicht. */
+.efs-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  overflow: hidden;
+}
 .efs-no {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   color: #e8c040;
 }
@@ -207,11 +220,11 @@ function ariaFor(row: VoyageRailRow): string {
 }
 
 .efs-name {
-  flex: 1 1 auto;
   min-width: 0;
-  font-size: 11.5px;
+  font-size: 12.5px;
+  line-height: 1.15;
   font-weight: 700;
-  color: rgba(230, 220, 196, 0.72);
+  color: rgba(230, 220, 196, 0.82);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -224,14 +237,14 @@ function ariaFor(row: VoyageRailRow): string {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
   font-variant-numeric: tabular-nums;
 }
 .efs-c {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 800;
   line-height: 1;
 }
@@ -250,7 +263,7 @@ function ariaFor(row: VoyageRailRow): string {
   align-items: center;
   gap: 7px;
   margin: 0;
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 700;
   color: rgba(200, 144, 64, 0.45);
   font-variant-numeric: tabular-nums;

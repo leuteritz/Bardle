@@ -729,17 +729,28 @@ export const VOYAGE_DETAIL_COLLAPSED = 44
    Bühnenhöhe, damit `paintKey`, und malt die Galaxie neu; bei einer Höhe, die an
    der Vertragszahl hinge, geschähe das bei JEDEM Spawn. Und der Streifen nimmt
    der Fit-Box Höhe, die die Klickflächen der Häfen trägt: der Spielraum über
-   VOYAGE_MAP_STATS_MIN_H ist auf Full HD 81,6 px.
+   VOYAGE_MAP_STATS_MIN_H ist auf Full HD 37,6 px.
+
+   Gebunden ist die SUMME der beiden Kopfhöhen PLUS der 3-px-Rahmen der Leiste
+   (zusammen 102) — genau sie steckt in den STAGE_HEIGHT-Tabellen beider
+   Layout-Specs. Wer eine der beiden anhebt, senkt die andere oder misst neu.
    `voyagesFleetLayout.spec.ts` bindet beides.                                 */
 
-export const VOYAGE_FLEET_STRIP_H = 44
-/** Gemessene Höhe der Hauptreihe der Kopfleiste (Rang, Ablesungen, Aktionen).
- *  Sie steht hier, weil der Ladeschleier die Maße dessen tragen muss, was kommt. */
-export const VOYAGE_COMMAND_BAR_H = 58
-/** Ziffer + drei Zähler ohne Namen — worauf eine Pille zusammenschrumpfen darf,
- *  wenn alle zehn Rang-Plätze belegt sind. */
-export const VOYAGE_FLEET_PILL_MIN_W = 112
-export const VOYAGE_FLEET_PILL_GAP = 6
+export const VOYAGE_FLEET_STRIP_H = 56
+/** GESETZTE Höhe der Hauptreihe — sie hängt per `v-bind` an `.ecb-main`, damit
+ *  die Summe nicht driften kann, und der Ladeschleier dieselben Maße kennt.
+ *  Die 58 davor waren eine falsche Ablesung: gemessen wurden real 55. */
+export const VOYAGE_COMMAND_BAR_H = 43
+/** Zweizeilige Pille: Ziffer und Zähler oben, der Galaxiename darunter. Der
+ *  Boden ist die NAMENSZEILE — worauf sie schrumpfen darf, wenn alle zehn
+ *  Rang-Plätze belegt sind. */
+export const VOYAGE_FLEET_PILL_MIN_W = 116
+export const VOYAGE_FLEET_PILL_GAP = 5
+/** Pillenhöhe. Sie steht neben der Streifenhöhe, weil beide gekoppelt sind —
+ *  eine davon frei im CSS wäre die zweite Quelle für dasselbe Budget. */
+export const VOYAGE_FLEET_PILL_H = 42
+/** Luft über und unter der Pille — bindet die Kopplung in der Spec. */
+export const VOYAGE_FLEET_PILL_PAD_Y = 7
 
 /* ── Hoehenbudget der Missionskarte ───────────────────────────────────────────
 

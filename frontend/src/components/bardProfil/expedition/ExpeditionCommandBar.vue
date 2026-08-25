@@ -1,25 +1,16 @@
 <script setup lang="ts">
 /**
  * Die Kopfleiste des Reiters — ein durchgehender Streifen, keine vier Kacheln.
- *
- * Der Rang steht links als eigener Titel, die Ablesungen sind nur durch
- * Haarlinien getrennt, und die Unterkante der Leiste IST der Rangfortschritt:
- * die Linie, die den Kopf abschliesst, misst zugleich, was sie abschliesst.
- *
- * Sammeln und Absenden liegen hier, weil es die Spaltenköpfe des alten Bretts
- * nicht mehr gibt, an denen sie hingen — und weil sie zu den Zahlen gehören,
- * die sie verändern.
- *
- * Darunter, in DERSELBEN Leiste, der Fleet-Streifen: die Ablesungen sagen „fünf
- * Verträge", er sagt WO. Ohne Umschalter — die Frage stellt sich beim Öffnen,
- * nicht auf Wunsch.
+ * Ihre Höhe ist GESETZT (`VOYAGE_COMMAND_BAR_H`): `.etc-bar` ist eine auto-Grid-
+ * Zeile, was sie nimmt, nimmt sie der Bühne. Die Unterkante IST der Rangbalken.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
-import { toRoman } from '@/utils/ui/format'
+import { formatMinuteClock, toRoman } from '@/utils/ui/format'
+import { VOYAGE_COMMAND_BAR_H } from '@/config/constants'
 import type { VoyageRailRow } from '@/types'
 import ExpeditionFleetStrip from './ExpeditionFleetStrip.vue'
 
@@ -40,6 +31,8 @@ const emit = defineEmits<{
 const expeditionStore = useExpeditionStore()
 const isDev = import.meta.env.DEV
 
+const mainH = `${VOYAGE_COMMAND_BAR_H}px`
+
 const readyCount = useNotifyBadgeCount('expedition')
 const activeCount = computed(() => expeditionStore.activeExpeditions.length)
 
@@ -55,28 +48,35 @@ const rankProgress = computed(() => {
   return Math.min(1, (expeditionStore.ledgerCompleted - rank.value.required) / span)
 })
 
-/**
- * Was der nächste Rang tatsächlich aushändigt, in den Worten des Spielers.
- * Die Rangnamen sind Beiwerk — „Pathwarden" sagt niemandem, was er kann.
- */
+/** Was der nächste Rang aushändigt. Knapp — die Zeile misst 10 px. */
 const nextRankReward = computed(() => {
   const next = nextRank.value
   if (!next) return ''
   const parts: string[] = []
   if (next.activeSlots > rank.value.activeSlots) {
-    parts.push(`+${next.activeSlots - rank.value.activeSlots} expedition slot`)
+    parts.push(`+${next.activeSlots - rank.value.activeSlots} field slot`)
   }
   if (next.offerSlots > rank.value.offerSlots) {
-    parts.push(`+${next.offerSlots - rank.value.offerSlots} contract slot`)
+    parts.push(`+${next.offerSlots - rank.value.offerSlots} contract`)
   }
   const odds = Math.round((next.chanceBonus - rank.value.chanceBonus) * 100)
   if (odds > 0) parts.push(`+${odds}% odds`)
   return parts.join(' · ')
 })
 
-const timeUntilNextSpawn = computed(() =>
-  Math.max(0, expeditionStore.nextSpawnAt - props.now),
-)
+/** Der Rangname ist aus dem Bild gefallen — hier bleibt er lesbar. */
+const rankTitle = computed(() => {
+  const next = nextRank.value
+  if (!next) {
+    return `${rank.value.name} — highest rank reached, ${expeditionStore.ledgerCompleted} runs`
+  }
+  return (
+    `${rank.value.name} — ${expeditionStore.ledgerCompleted} of ${next.required} runs ` +
+    `toward Rank ${toRoman(next.tier)}: ${nextRankReward.value}`
+  )
+})
+
+const timeUntilNextSpawn = computed(() => Math.max(0, expeditionStore.nextSpawnAt - props.now))
 const offersFull = computed(
   () => expeditionStore.availableExpeditions.length >= expeditionStore.maxAvailableOffers,
 )
@@ -88,59 +88,47 @@ const canSendAll = computed(
       expeditionStore.crewFor(o).every((c) => !!c),
     ),
 )
-
-function formatCountdown(ms: number): string {
-  const secs = Math.ceil(Math.max(0, ms) / 1000)
-  return `${Math.floor(secs / 60)}:${(secs % 60).toString().padStart(2, '0')}`
-}
 </script>
 
 <template>
   <header class="ecb">
     <div class="ecb-main">
-      <div class="ecb-rank">
-        <Icon :icon="rank.icon" width="28" height="28" class="ecb-rank-ico" />
+      <div class="ecb-rank" role="group" :aria-label="rankTitle" :title="rankTitle">
+        <Icon :icon="rank.icon" width="26" height="26" class="ecb-rank-ico" />
         <div class="ecb-rank-text">
-          <div class="ecb-rank-line">
-            <span class="ecb-rank-name">Expedition Rank {{ toRoman(rank.tier) }}</span>
-            <span class="ecb-rank-flavor">{{ rank.name }}</span>
-          </div>
+          <span class="ecb-rank-name">Rank {{ toRoman(rank.tier) }}</span>
           <span class="ecb-rank-goal">
             <template v-if="nextRank">
-              {{ expeditionStore.ledgerCompleted }} / {{ nextRank.required }} runs
+              {{ expeditionStore.ledgerCompleted }}/{{ nextRank.required }}
               <span class="ecb-rank-arrow">→</span>
               <span class="ecb-rank-reward">{{ nextRankReward }}</span>
             </template>
-            <template v-else>
-              Highest rank reached — {{ expeditionStore.ledgerCompleted }} runs
-            </template>
+            <template v-else>{{ expeditionStore.ledgerCompleted }} runs · max rank</template>
           </span>
         </div>
       </div>
 
+      <!-- Dieselben Glyphen wie die Zähler im Streifen darunter: eine Sprache. -->
       <div class="ecb-readouts">
         <div class="ecb-read" :class="{ 'ecb-read--live': activeCount > 0 }">
           <span class="ecb-read-value">
-            {{ activeCount }}<span class="ecb-read-cap">/{{ expeditionStore.maxActiveExpeditions }}</span>
+            <Icon icon="game-icons:caravel" width="18" height="18" class="ecb-read-ico" />
+            {{ activeCount
+            }}<span class="ecb-read-cap">/{{ expeditionStore.maxActiveExpeditions }}</span>
           </span>
           <span class="ecb-read-label">In field</span>
         </div>
-        <div class="ecb-read" :class="{ 'ecb-read--live': readyCount > 0 }">
-          <span class="ecb-read-value">{{ readyCount }}</span>
-          <span class="ecb-read-label">Ready</span>
-        </div>
-        <div class="ecb-read">
+
+        <div class="ecb-read ecb-read--wide">
           <span class="ecb-read-value">
+            <Icon icon="ph:scroll-fill" width="18" height="18" class="ecb-read-ico" />
             {{ expeditionStore.availableExpeditions.length
             }}<span class="ecb-read-cap">/{{ expeditionStore.maxAvailableOffers }}</span>
+            <span class="ecb-read-sub" :class="{ 'is-full': offersFull }">
+              {{ offersFull ? 'FULL' : formatMinuteClock(timeUntilNextSpawn) }}
+            </span>
           </span>
           <span class="ecb-read-label">Contracts</span>
-        </div>
-        <div class="ecb-read" :class="{ 'ecb-read--full': offersFull }">
-          <span class="ecb-read-value">
-            {{ offersFull ? 'FULL' : formatCountdown(timeUntilNextSpawn) }}
-          </span>
-          <span class="ecb-read-label">Next offer</span>
         </div>
       </div>
 
@@ -152,7 +140,7 @@ function formatCountdown(ms: number): string {
           aria-label="Send every crewed contract"
           @click.stop="emit('send-all')"
         >
-          <Icon icon="ph:tent-fill" width="14" height="14" />
+          <Icon icon="ph:tent-fill" width="15" height="15" />
           Send all
         </button>
 
@@ -167,7 +155,7 @@ function formatCountdown(ms: number): string {
           aria-label="Collect all completed expeditions"
           @click.stop="emit('collect-all')"
         >
-          <Icon icon="ph:treasure-chest-fill" width="14" height="14" />
+          <Icon icon="ph:treasure-chest-fill" width="15" height="15" />
           Collect all
           <RpgNotifyBadge :count="readyCount" label="Expedition rewards ready" />
         </button>
@@ -180,11 +168,7 @@ function formatCountdown(ms: number): string {
           :aria-label="chartFocus ? 'Show rail and details' : 'Focus the chart'"
           @click.stop="emit('toggle-focus')"
         >
-          <Icon
-            :icon="chartFocus ? 'lucide:minimize' : 'lucide:maximize'"
-            width="14"
-            height="14"
-          />
+          <Icon :icon="chartFocus ? 'lucide:minimize' : 'lucide:maximize'" width="15" height="15" />
           {{ chartFocus ? 'Exit focus' : 'Focus' }}
         </button>
 
@@ -194,7 +178,7 @@ function formatCountdown(ms: number): string {
           aria-label="Force spawn expedition (dev)"
           @click.stop="expeditionStore.forceSpawn()"
         >
-          <Icon icon="ph:lightning-fill" width="12" height="12" />
+          <Icon icon="ph:lightning-fill" width="13" height="13" />
           Spawn
         </button>
       </div>
@@ -222,19 +206,22 @@ function formatCountdown(ms: number): string {
   background: linear-gradient(180deg, #1b120a 0%, #16100a 100%);
   border-bottom: 3px solid #5c3310;
 }
+/* Gesetzte Höhe, kein Padding-Ergebnis — die Summe mit dem Streifen ist gebunden.
+   KEIN overflow: die Notify-Plakette steht über der Buttonkante. */
 .ecb-main {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 14px 11px;
+  gap: 14px;
+  height: v-bind(mainH);
+  padding: 0 14px;
 }
 
 /* ── Rang: der Titel der Leiste ─────────────────────────────── */
 .ecb-rank {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 1;
+  gap: 9px;
+  flex-shrink: 0;
   min-width: 0;
 }
 .ecb-rank-ico {
@@ -245,16 +232,11 @@ function formatCountdown(ms: number): string {
 .ecb-rank-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
-.ecb-rank-line {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
 .ecb-rank-name {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -263,20 +245,11 @@ function formatCountdown(ms: number): string {
   text-shadow: 0 0 14px rgba(232, 192, 64, 0.3);
   white-space: nowrap;
 }
-.ecb-rank-flavor {
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: rgba(200, 144, 64, 0.45);
-  line-height: 1;
-  white-space: nowrap;
-}
 .ecb-rank-goal {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
+  gap: 5px;
+  font-size: 10px;
   font-weight: 700;
   color: rgba(200, 144, 64, 0.62);
   font-variant-numeric: tabular-nums;
@@ -302,17 +275,22 @@ function formatCountdown(ms: number): string {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: flex-end;
-  gap: 4px;
-  min-width: 72px;
-  padding: 2px 13px;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 92px;
+  padding: 0 16px;
   border-left: 1px solid #402a12;
 }
-.ecb-read:first-child {
-  border-left: 0;
+/* Der Countdown gehört in die Wertzeile — seine Breite ist reserviert, sonst
+   wandert die ganze Reihe, sobald 1:40 auf 0:59 fällt. */
+.ecb-read--wide {
+  min-width: 158px;
 }
 .ecb-read-value {
-  font-size: 17px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1;
   color: #e8dcc0;
@@ -320,13 +298,26 @@ function formatCountdown(ms: number): string {
   white-space: nowrap;
   transition: color 0.2s;
 }
+.ecb-read-ico {
+  flex-shrink: 0;
+  color: rgba(200, 144, 64, 0.7);
+}
 .ecb-read-cap {
-  font-size: 12.5px;
+  font-size: 17px;
   font-weight: 700;
   color: rgba(200, 144, 64, 0.42);
 }
+.ecb-read-sub {
+  min-width: 5ch;
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(200, 144, 64, 0.55);
+}
+.ecb-read-sub.is-full {
+  color: #e8c040;
+}
 .ecb-read-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.13em;
   text-transform: uppercase;
@@ -337,11 +328,11 @@ function formatCountdown(ms: number): string {
 .ecb-read--live .ecb-read-value {
   color: #a0f0d0;
 }
+.ecb-read--live .ecb-read-ico {
+  color: rgba(160, 240, 208, 0.8);
+}
 .ecb-read--live .ecb-read-label {
   color: rgba(160, 240, 208, 0.6);
-}
-.ecb-read--full .ecb-read-value {
-  color: #e8c040;
 }
 
 /* ── Sammeln und Absenden ───────────────────────────────────── */
@@ -350,15 +341,16 @@ function formatCountdown(ms: number): string {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 .ecb-bulk {
   position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 7px 13px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -411,21 +403,23 @@ function formatCountdown(ms: number): string {
     background: linear-gradient(to bottom, #2e7a4e, #1e5433);
   }
 }
+/* Knapper als früher: der Knopf misst 34 in einer 43er Reihe, die Plakette muss
+   INNERHALB der Leiste bleiben. */
 .ecb-bulk--collect :deep(.rpg-notify-badge) {
-  top: -6px;
-  right: -6px;
+  top: -4px;
+  right: -5px;
 }
 
 .ecb-focus {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 11px;
+  padding: 7px 12px;
   background: transparent;
   border: 1px solid #5c3310;
   border-radius: 4px;
   color: rgba(200, 144, 64, 0.7);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -450,12 +444,12 @@ function formatCountdown(ms: number): string {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 10px;
+  padding: 7px 11px;
   background: transparent;
   border: 1px solid #3e200a;
   border-radius: 4px;
   color: rgba(200, 144, 64, 0.5);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.06em;
   cursor: pointer;

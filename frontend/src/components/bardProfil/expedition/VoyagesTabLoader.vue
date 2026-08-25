@@ -29,6 +29,9 @@ import LoadingBeacon from '@/components/ui/LoadingBeacon.vue'
 import {
   VOYAGE_COMMAND_BAR_H,
   VOYAGE_DETAIL_COLLAPSED,
+  VOYAGE_FLEET_PILL_GAP,
+  VOYAGE_FLEET_PILL_H,
+  VOYAGE_FLEET_PILL_MIN_W,
   VOYAGE_FLEET_STRIP_H,
   VOYAGE_LOADER_ACCENT,
   VOYAGE_LOADER_CAPTION,
@@ -54,8 +57,12 @@ const thumbHeight = `${VOYAGE_RAIL_THUMB_H}px`
 /** Die Detailspalte startet EINGEKLAPPT — der Platzhalter muss den Griff
  *  zeigen, nicht die geöffnete Spalte, sonst springt das Layout beim Enthüllen. */
 const detailWidth = `${VOYAGE_DETAIL_COLLAPSED}px`
-const headHeight = `${VOYAGE_COMMAND_BAR_H + VOYAGE_FLEET_STRIP_H}px`
+/** +3 für den eigenen `border-bottom`: `border-box` rechnet ihn in die Zeile. */
+const headHeight = `${VOYAGE_COMMAND_BAR_H + VOYAGE_FLEET_STRIP_H + 3}px`
 const stripHeight = `${VOYAGE_FLEET_STRIP_H}px`
+const pillWidth = `${VOYAGE_FLEET_PILL_MIN_W}px`
+const pillHeight = `${VOYAGE_FLEET_PILL_H}px`
+const pillGap = `${VOYAGE_FLEET_PILL_GAP}px`
 const bandHeight = `${VOYAGE_MAP_STATS_BAND_H}px`
 /** Der Kasten sitzt so ueber dem Band, wie es gleich die Fit-Box tut. */
 const stagePadBottom = `${VOYAGE_MAP_STATS_BAND_H + 10}px`
@@ -89,11 +96,10 @@ const skeletonPorts = computed(() =>
         <span class="vtl-spacer" />
         <span class="vtl-mark vtl-mark--read" />
         <span class="vtl-mark vtl-mark--read" />
-        <span class="vtl-mark vtl-mark--read" />
         <span class="vtl-mark vtl-mark--btn" />
       </div>
       <div class="vtl-strip">
-        <span v-for="i in 4" :key="i" class="vtl-mark vtl-mark--pill" />
+        <span v-for="i in 6" :key="i" class="vtl-mark vtl-mark--pill" />
       </div>
     </div>
 
@@ -185,31 +191,31 @@ const skeletonPorts = computed(() =>
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: v-bind(pillGap);
   height: v-bind(stripHeight);
   padding: 0 14px;
   border-top: 1px solid #402a12;
   background: #17100a;
 }
 .vtl-mark--pill {
-  width: 150px;
-  height: 26px;
+  width: v-bind(pillWidth);
+  height: v-bind(pillHeight);
   border-radius: 4px;
 }
 .vtl-mark--rank {
-  width: 210px;
-  height: 26px;
+  width: 110px;
+  height: 30px;
 }
 .vtl-spacer {
   flex: 1;
 }
 .vtl-mark--read {
-  width: 62px;
-  height: 22px;
+  width: 90px;
+  height: 34px;
 }
 .vtl-mark--btn {
   width: 104px;
-  height: 26px;
+  height: 32px;
 }
 
 /* ── Seitenleiste ───────────────────────────────────────────── */

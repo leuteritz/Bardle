@@ -13,6 +13,10 @@ import {
   VOYAGE_SITE_HIT_MIN,
   VOYAGE_FLEET_PILL_MIN_W,
   VOYAGE_FLEET_PILL_GAP,
+  VOYAGE_FLEET_PILL_H,
+  VOYAGE_FLEET_PILL_PAD_Y,
+  VOYAGE_FLEET_STRIP_H,
+  VOYAGE_COMMAND_BAR_H,
   EXPEDITION_LEDGER_RANKS,
   BOTTOM_BAR_SIDE_W,
 } from '@/config/constants'
@@ -95,8 +99,8 @@ describe('voyages fleet strip', () => {
 
   it('behält auf Full HD Spielraum über dem Bandboden', () => {
     // Full HD bindet: 657,6 gegen den Boden 620 sind 37,6 px. Die Zahl steht hier,
-    // damit sie jemand liest, BEVOR er dem Streifen eine zweite Zeile gibt — 44 px
-    // mehr, und das Datenband der Karte fällt weg.
+    // damit sie jemand liest, BEVOR er der Kopfleiste Höhe gibt — der Streifen
+    // allein misst 56, und das Datenband der Karte fällt weg.
     expect(STAGE_HEIGHT[1080] - VOYAGE_MAP_STATS_MIN_H).toBeGreaterThanOrEqual(30)
   })
 
@@ -112,5 +116,30 @@ describe('voyages fleet strip', () => {
     // Der Streifen läuft über die ganze Kopfleiste, also über den ganzen Atlas.
     const room = atlasWidth(1920, 1080) - 2 * 14
     expect(need).toBeLessThanOrEqual(room)
+  })
+
+  /**
+   * Der eigentliche Wächter dieser Datei. Die Kopfleiste darf INNEN umverteilen —
+   * die Hauptreihe gab 12 px an den Streifen ab, damit die Pille zweizeilig wird —
+   * aber ihre AUSSENHÖHE ist es, die in den STAGE_HEIGHT-Tabellen dieser Datei
+   * und in `voyagesAtlasLayout.spec.ts` als gemessene Bühnenhöhe steckt.
+   *
+   * Die 3 gehören dazu: `.ecb` trägt einen `border-bottom: 3px`, und
+   * `getBoundingClientRect()` misst ihn mit. Im Browser gegengeprüft — `.etc-bar`
+   * misst vorher wie nachher 102.
+   *
+   * Ändert jemand die Summe, sind beide Tabellen still falsch: die Suite bliebe
+   * grün und das Datenband verschwände trotzdem im Browser. Wer hier vorbeikommt,
+   * misst neu (`docs/playwright.md`) und führt beide Tabellen nach.
+   */
+  it('hält die Kopfleiste bei 102 — die Aussenhöhe steckt in STAGE_HEIGHT', () => {
+    expect(VOYAGE_COMMAND_BAR_H + VOYAGE_FLEET_STRIP_H + 3).toBe(102)
+  })
+
+  /** Pillen- und Streifenhöhe sind gekoppelt: die Pille muss in den Streifen passen. */
+  it('lässt die Pille samt Luft in den Streifen', () => {
+    expect(VOYAGE_FLEET_PILL_H + 2 * VOYAGE_FLEET_PILL_PAD_Y).toBeLessThanOrEqual(
+      VOYAGE_FLEET_STRIP_H,
+    )
   })
 })
