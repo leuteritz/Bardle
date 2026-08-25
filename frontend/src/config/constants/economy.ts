@@ -722,6 +722,19 @@ export const VOYAGE_DETAIL_MAX_WIDTH = 560
  *  besetzte Crew eines Vertrags überlebt das Falten. */
 export const VOYAGE_DETAIL_COLLAPSED = 44
 
+/* ── Fleet-Brett: die Bühne als Raster aller Galaxien ──────────────────────
+
+   Die Kartenbreite ist ABGELEITET, nicht gewählt: eine Fleet-Zeile IST die Zeile
+   der Detailspalte (`ExpeditionRosterRow`), und die liest dort in
+   VOYAGE_DETAIL_MIN_WIDTH minus Griff minus Innenabstand. Wählte man hier eine
+   eigene Zahl, bräche die Zeile an einem der beiden Orte um.
+   `voyagesFleetLayout.spec.ts` bindet die Herleitung.                         */
+
+export const VOYAGE_FLEET_CARD_PAD = 10
+export const VOYAGE_FLEET_CARD_MIN_W =
+  VOYAGE_DETAIL_MIN_WIDTH - VOYAGE_DETAIL_COLLAPSED - 2 * VOYAGE_FLEET_CARD_PAD
+export const VOYAGE_FLEET_CARD_GAP = 10
+
 /* ── Hoehenbudget der Missionskarte ───────────────────────────────────────────
 
    Die Detailspalte ROLLT NICHT, wenn eine laufende oder zurueckgekehrte Mission

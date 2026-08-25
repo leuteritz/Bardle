@@ -40,7 +40,9 @@ import ExpeditionCommandBar from './ExpeditionCommandBar.vue'
 import ExpeditionGalaxyRail from './ExpeditionGalaxyRail.vue'
 import ExpeditionGalaxyMap from './ExpeditionGalaxyMap.vue'
 import ExpeditionDetailPanel from './ExpeditionDetailPanel.vue'
+import ExpeditionFleetBoard from './ExpeditionFleetBoard.vue'
 import VoyagesTabLoader from './VoyagesTabLoader.vue'
+import type { VoyageStageMode } from '@/types'
 
 const uiStore = useUiStore()
 const chartStore = useExpeditionChartStore()
@@ -69,6 +71,12 @@ const destination = computed(() =>
 const galaxyTitle = computed(() => destination.value?.name ?? '')
 const galaxyTier = computed(() => destination.value?.tier ?? 'common')
 
+/**
+ * Die Bühne trägt ZWEI Modi. Der Reiter wird nach dem ersten Öffnen nie
+ * abgerissen — ein lokales Ref IST damit „für die Sitzung gemerkt".
+ */
+const stageMode = ref<VoyageStageMode>('chart')
+
 // ── Zonenbudget ─────────────────────────────────────────────────────────────
 // Am ATLAS gemessen, nicht am Viewport: das Profilmodal ist beidseitig um
 // `--hud-panel-size` eingerückt, eine Media Query klappte die Leiste auf den
@@ -77,10 +85,13 @@ const atlasEl = ref<HTMLElement | null>(null)
 const atlasWidth = ref(0)
 /** Ausdrückliche Wahl des Spielers, sonst „lass die Breite entscheiden". */
 const userRailFolded = ref<boolean | null>(null)
+/** Das Brett faltet die Leiste als VORGABE ein — 168 px sind dort eine ganze
+ *  Kartenspalte. Eine ausdrückliche Wahl des Spielers gewinnt weiter. */
 const railFolded = computed(
   () =>
     userRailFolded.value ??
-    (atlasWidth.value > 0 && atlasWidth.value < VOYAGE_RAIL_AUTOFOLD_WIDTH),
+    (stageMode.value === 'fleet' ||
+      (atlasWidth.value > 0 && atlasWidth.value < VOYAGE_RAIL_AUTOFOLD_WIDTH)),
 )
 
 /**
@@ -94,13 +105,34 @@ const railFolded = computed(
  * und Escape verbrauchte mit einem Druck zwei Stufen.
  */
 const userDetailFolded = ref<boolean | null>(null)
-const detailFolded = computed(() => userDetailFolded.value ?? true)
+/** Auf dem Brett steht kein Subjekt auf der Bühne — die Spalte hat nichts zu
+ *  zeigen. `userDetailFolded` bleibt unangetastet, der Rücksprung findet den
+ *  vorigen Zustand wieder. */
+const detailFolded = computed(() =>
+  stageMode.value === 'fleet' ? true : (userDetailFolded.value ?? true),
+)
 
-const chartFocus = computed(() => railFolded.value && userDetailFolded.value === true)
+const chartFocus = computed(
+  () => stageMode.value === 'chart' && railFolded.value && userDetailFolded.value === true,
+)
 function toggleFocus() {
   const next = !chartFocus.value
   userRailFolded.value = next
   userDetailFolded.value = next
+}
+
+/** Der Griff der Detailspalte bleibt auf dem Brett lebendig: aufklappen heisst
+ *  dort „zurück zur Karte, mit offener Spalte". */
+function onDetailFold(folded: boolean) {
+  if (stageMode.value === 'fleet') stageMode.value = 'chart'
+  userDetailFolded.value = folded
+}
+
+/** Reihenfolge ist bindend: `selectGalaxy` räumt `selectedKey` ab. */
+function jumpToMark(galaxy: number, key: string | null) {
+  atlas.selectGalaxy(galaxy)
+  if (key) selectedKey.value = key
+  stageMode.value = 'chart'
 }
 
 /** Ein ausdrücklicher Klick auf den Bühnengrund schliesst mit. */
@@ -232,7 +264,10 @@ const pickerOpen = ref(false)
 function onKeydown(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
   if (pickerOpen.value) return
-  if (selectedKey.value) onSelect(null)
+  // Der Modus ist das Jüngste und geht zuerst. Die Auswahl bleibt dabei stehen —
+  // sie ist auf dem Brett unsichtbar, wer zurückgeht will sie wiederfinden.
+  if (stageMode.value === 'fleet') stageMode.value = 'chart'
+  else if (selectedKey.value) onSelect(null)
   else if (chartFocus.value) toggleFocus()
   else return
   e.preventDefault()
@@ -264,9 +299,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
         :now="now"
         :collect-flashing="collectFlashing"
         :chart-focus="chartFocus"
+        :mode="stageMode"
         @collect-all="atlas.collectAll"
         @send-all="atlas.sendAll"
         @toggle-focus="toggleFocus"
+        @set-mode="stageMode = $event"
       />
 
       <ExpeditionGalaxyRail
@@ -280,18 +317,32 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
       />
 
       <div class="etc-stage">
+        <!-- v-show und nicht v-if: der Canvas trägt seine Platte weiter, und der
+             ResizeObserver der Karte verwirft die 0, die versteckt gemeldet wird. -->
         <ExpeditionGalaxyMap
           v-if="selectedRecord"
+          v-show="stageMode === 'chart'"
           :record="selectedRecord"
           :sites="placedSites"
           :selected-key="selectedKey"
           :now="now"
           :title="galaxyTitle"
           :tier="galaxyTier"
-          :visible="isVisible"
+          :visible="isVisible && stageMode === 'chart'"
           :gate="gateState"
           :homecomings="homecomings"
           @select="onSelect"
+        />
+
+        <!-- v-if: das Brett ist billig zu bauen (Miniaturen sind gecacht), und
+             geparkt darf es nicht im Sekundentakt weiterrechnen. -->
+        <ExpeditionFleetBoard
+          v-if="stageMode === 'fleet'"
+          :rows="railRows"
+          :records="records"
+          :selected="selectedGalaxy"
+          :now="now"
+          @open="jumpToMark"
         />
       </div>
 
@@ -306,7 +357,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
         @send="atlas.sendExpedition"
         @collect="atlas.collectMission"
         @picker-open="pickerOpen = $event"
-        @fold="userDetailFolded = $event"
+        @fold="onDetailFold"
       />
 
       <!-- Nur ein LEAVE — der Schleier ist ab Frame 1 voll deckend und wird

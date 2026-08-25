@@ -362,6 +362,62 @@ export interface VoyageRailRow {
   seen: boolean
 }
 
+/** Welche Bühne der Voyages-Reiter zeigt: die eine Karte oder das ganze Brett. */
+export type VoyageStageMode = 'chart' | 'fleet'
+
+/** Was eine Galaxie gerade trägt — derselbe Rang in Leiste und Fleet-Brett. */
+export type VoyageGalaxyState = 'ready' | 'offer' | 'field' | 'quiet'
+
+/**
+ * Ein Subjekt für den Roster-Aufbau. `VoyagePlacedSite` erfüllt ihn strukturell,
+ * die Detailspalte reicht ihre Häfen also unverändert durch.
+ */
+export interface VoyageRosterSubject {
+  pinKey: string
+  offer: AvailableExpeditionSlot | null
+  mission: ExpeditionMission | null
+}
+
+export type VoyageRosterState = 'ready' | 'failed' | 'offer' | 'field'
+
+/**
+ * Eine Marke als Zeile — ZEITFREI. Die Uhr hängt erst die Zeilenkomponente an;
+ * ein fertig formatierter Countdown hier hieße, die ganze Liste im Sekundentakt
+ * neu zu bauen.
+ */
+export interface VoyageRosterRow {
+  pinKey: string
+  name: string
+  icon: string
+  state: VoyageRosterState
+  accent: string
+  chipIcon: string
+  chip: string
+  /** Chimes der Zeile, oder null wo es keine zu zeigen gibt. */
+  reward: number | null
+  rewardPrefix: string
+  /** Vertrag: besetzte / verlangte Sitze. Sonst null. */
+  seatsFilled: number | null
+  seatsTotal: number | null
+  /** Vertrag: Ablaufstempel. */
+  expiresAt: number | null
+  /** Laufende Mission: Ende und Gesamtspanne. */
+  endsAt: number | null
+  spanMs: number | null
+  odds: number | null
+  crewCount: number | null
+  /** Der zeitfreie Teil der Vorlesung; die Uhr ergänzt den Rest. */
+  ariaLead: string
+}
+
+/** Eine Galaxie als Karte des Fleet-Bretts. */
+export interface VoyageFleetCard {
+  galaxy: number
+  row: VoyageRailRow
+  state: VoyageGalaxyState
+  roster: VoyageRosterRow[]
+}
+
 /**
  * Ein benannter Abschnitt einer Voyage. ABGELEITET aus dem Vertrag bzw. der
  * Mission (`utils/game/voyageLegs.ts`), nie gespeichert — `from`/`to` sind

@@ -16,9 +16,20 @@ import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { toRoman } from '@/utils/ui/format'
+import type { VoyageStageMode } from '@/types'
 
-const props = defineProps<{ now: number; collectFlashing: boolean; chartFocus: boolean }>()
-const emit = defineEmits<{ 'collect-all': []; 'send-all': []; 'toggle-focus': [] }>()
+const props = defineProps<{
+  now: number
+  collectFlashing: boolean
+  chartFocus: boolean
+  mode: VoyageStageMode
+}>()
+const emit = defineEmits<{
+  'collect-all': []
+  'send-all': []
+  'toggle-focus': []
+  'set-mode': [VoyageStageMode]
+}>()
 
 const expeditionStore = useExpeditionStore()
 const isDev = import.meta.env.DEV
@@ -127,6 +138,30 @@ function formatCountdown(ms: number): string {
     </div>
 
     <div class="ecb-actions">
+      <!-- Der Umschalter zuerst: er entscheidet, was die Bühne überhaupt zeigt. -->
+      <div class="ecb-seg" role="group" aria-label="Stage view">
+        <button
+          class="ecb-seg-btn"
+          :class="{ 'is-on': mode === 'chart' }"
+          :aria-pressed="mode === 'chart'"
+          aria-label="Chart one galaxy"
+          @click.stop="emit('set-mode', 'chart')"
+        >
+          <Icon icon="game-icons:treasure-map" width="13" height="13" />
+          Chart
+        </button>
+        <button
+          class="ecb-seg-btn"
+          :class="{ 'is-on': mode === 'fleet' }"
+          :aria-pressed="mode === 'fleet'"
+          aria-label="Show every reach at once"
+          @click.stop="emit('set-mode', 'fleet')"
+        >
+          <Icon icon="game-icons:galaxy" width="13" height="13" />
+          Fleet
+        </button>
+      </div>
+
       <button
         class="ecb-bulk ecb-bulk--send"
         :class="{ 'is-muted': !canSendAll }"
@@ -155,9 +190,12 @@ function formatCountdown(ms: number): string {
       </button>
 
       <!-- Der eine Griff, der beide Ränder wegklappt. Escape holt sie zurück. -->
+      <!-- Im Fleet-Modus gibt es keine Karte zu fokussieren. Stumm statt weg:
+           ein verschwindender Knopf liesse die Reihe springen. -->
       <button
         class="ecb-focus"
-        :class="{ 'is-on': chartFocus }"
+        :class="{ 'is-on': chartFocus, 'is-muted': mode === 'fleet' }"
+        :disabled="mode === 'fleet'"
         :aria-pressed="chartFocus"
         :aria-label="chartFocus ? 'Show rail and details' : 'Focus the chart'"
         @click.stop="emit('toggle-focus')"
@@ -386,6 +424,47 @@ function formatCountdown(ms: number): string {
   right: -6px;
 }
 
+/* ── Der Bühnenumschalter ───────────────────────────────────── */
+.ecb-seg {
+  display: flex;
+  flex-shrink: 0;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.ecb-seg-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: rgba(200, 144, 64, 0.62);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+.ecb-seg-btn + .ecb-seg-btn {
+  border-left: 1px solid #3e200a;
+}
+.ecb-seg-btn:hover {
+  color: #e8c040;
+}
+.ecb-seg-btn.is-on {
+  background: #2a1c0a;
+  color: #e8c040;
+}
+.ecb-seg-btn:focus-visible {
+  outline: 2px solid #e8c040;
+  outline-offset: -2px;
+}
+
 .ecb-focus {
   display: flex;
   align-items: center;
@@ -414,6 +493,10 @@ function formatCountdown(ms: number): string {
   background: #2a1c0a;
   border-color: #c89040;
   color: #e8c040;
+}
+.ecb-focus.is-muted {
+  opacity: 0.36;
+  cursor: not-allowed;
 }
 
 .ecb-admin {

@@ -25,6 +25,7 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useLazyGalaxySnapshot } from '@/composables/ui/useLazyGalaxySnapshot'
 import { toRoman } from '@/utils/ui/format'
+import { voyageGalaxyState } from '@/utils/game/voyageFleet'
 import {
   EXPEDITION_CHART_MAX,
   VOYAGE_RAIL_THUMB_FOLDED,
@@ -33,6 +34,7 @@ import {
 } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageRailRow } from '@/types'
+import ExpeditionWaitBadge from './ExpeditionWaitBadge.vue'
 
 const props = defineProps<{
   row: VoyageRailRow
@@ -52,14 +54,9 @@ const chartPct = computed(() => props.row.charted / EXPEDITION_CHART_MAX)
 /** Was auf den Spieler wartet — die eine Zahl, die der Zähler trägt. */
 const waiting = computed(() => props.row.contracts + props.row.ready)
 
-/** Einsammelbar > ausliegend > unterwegs > still. Ein Rang, eine Farbe. */
-type RowState = 'ready' | 'offer' | 'field' | 'quiet'
-const state = computed<RowState>(() => {
-  if (props.row.ready > 0) return 'ready'
-  if (props.row.contracts > 0) return 'offer'
-  if (props.row.inField > 0) return 'field'
-  return 'quiet'
-})
+/** Einsammelbar > ausliegend > unterwegs > still. Ein Rang, eine Farbe —
+ *  dieselbe Quelle, aus der auch das Fleet-Brett seinen Zustand zieht. */
+const state = computed(() => voyageGalaxyState(props.row))
 
 const title = computed(
   () =>
@@ -92,7 +89,7 @@ const title = computed(
       <span v-if="state === 'ready'" class="egr-pulse" aria-hidden="true" />
 
       <span class="egr-no">{{ toRoman(row.galaxy) }}</span>
-      <span v-if="waiting" class="egr-count">{{ waiting }}</span>
+      <ExpeditionWaitBadge v-if="waiting" :count="waiting" :ready="state === 'ready'" />
       <span v-if="!row.seen" class="egr-new">NEW</span>
     </span>
 
@@ -233,35 +230,6 @@ const title = computed(
   line-height: 1.1;
   color: #e8c040;
   text-shadow: 0 1px 3px #000;
-}
-
-/* Der Zähler: kein Rand, sondern eine dunkle Aussparung — dasselbe Rezept wie
-   `ShopReadyBadge`, damit er sich auf JEDEM Galaxienbild absetzt. Alle Schatten
-   stehen still. Azur bleibt der Star Forge, hier zählt Gold/Teal. */
-.egr-count {
-  position: absolute;
-  right: 3px;
-  top: 3px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9px;
-  font-size: 11px;
-  font-weight: 900;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: #14100a;
-  background: linear-gradient(160deg, #f0d080, #c89040);
-  box-shadow:
-    0 0 0 1.5px rgba(10, 12, 16, 0.85),
-    0 2px 6px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28);
-}
-.egr--st-ready .egr-count {
-  background: linear-gradient(160deg, #a8f0d8, #2e9c78);
 }
 
 .egr-new {
