@@ -423,8 +423,12 @@ export interface VoyageFleetCard {
   /** Akzentfarbe der Galaxie als `"r, g, b"`. */
   accent: string
   tier: 'common' | 'rare' | 'epic'
-  /** Vertrag mit allen Sitzen besetzt: er kann JETZT losgeschickt werden. */
+  /** Vertrag mit allen Sitzen besetzt. Sagt NICHT, ob ein Feldplatz frei ist. */
   sendable: boolean
+  /** Bemannt, aber kein aktiver Slot frei — startbar aussehen wäre gelogen. */
+  blocked: boolean
+  /** „The Waiting Road" steht: der Vertrag verfällt nicht, seine Uhr ist tot. */
+  noDeadline: boolean
   row: VoyageRosterRow
   /** Wer draussen ist. Leer bei einem Vertrag, der noch nicht abgereist ist. */
   crew: { name: string; role: ChampionRole }[]

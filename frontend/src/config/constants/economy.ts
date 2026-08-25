@@ -285,6 +285,29 @@ export const EXPEDITION_TIERS = {
 } as const
 export type ExpeditionTier = keyof typeof EXPEDITION_TIERS
 
+/**
+ * Die Farbe einer Stufe — die EINE Quelle, seit die Fleet-Karte sie auch braucht.
+ *
+ * Sie stand fünfmal im Voyages-Ordner und zwei Fassungen waren sich uneinig:
+ * `ExpeditionGalaxyMap`, `ExpeditionGalaxyRow` und `ExpeditionOverviewCard` nennen
+ * die Werte unten, `ExpeditionFieldCard` `#6ab0e0`/`#b080e0`, und
+ * `ExpeditionContractCard` färbt gar nicht nach Stufe, sondern nach der
+ * gewürfelten Vertragsfarbe. Die fünf sind noch nicht umgestellt — wer dort
+ * vorbeikommt, holt die Farbe von hier.
+ */
+export const EXPEDITION_TIER_COLORS: Record<ExpeditionTier, string> = {
+  common: '#c89040',
+  rare: '#7aa8e0',
+  epic: '#c090e0',
+}
+
+/** Erleuchtete Segmente des Stufenstreifens — Farbe UND Länge sagen dasselbe. */
+export const EXPEDITION_TIER_SEGMENTS: Record<ExpeditionTier, number> = {
+  common: 1,
+  rare: 2,
+  epic: 3,
+}
+
 // Expedition generation — name parts
 export const EXPEDITION_NAME_ADJECTIVES = [
   'Mystical',
@@ -795,6 +818,12 @@ export const VOYAGE_FLEET_ODDS_W = 30
 /** Glyph der Kopfzeile und die Lücke zwischen ihren Teilen. */
 export const VOYAGE_FLEET_HEAD_ICON = 15
 export const VOYAGE_FLEET_HEAD_GAP = 6
+/**
+ * Der Stufenstreifen an der Oberkante. Er liegt ABSOLUT und kostet deshalb keine
+ * Zeile — der Höhenhaushalt der Karte hat sie nicht.
+ */
+export const VOYAGE_FLEET_TIER_BAR_H = 4
+export const VOYAGE_FLEET_TIER_BAR_GAP = 2
 /**
  * Breiteste Zielname-Pixelbreite bei 13 px, im Browser gemessen („Crimson
  * Expanse" 101,72). Die Spec bindet sie gegen die Spaltenbreite — ein neuer,

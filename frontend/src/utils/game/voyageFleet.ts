@@ -34,6 +34,10 @@ export interface VoyageFleetDeps {
   seatsOf: (offer: AvailableExpeditionSlot) => (string | null)[]
   /** Chance 0..1 der Draft-Crew; `null` ohne besetzten Sitz. */
   offerOdds: VoyageRosterDeps['offerOdds']
+  /** Ist überhaupt noch ein aktiver Slot frei? Gilt für ALLE Karten gleich. */
+  canSend: boolean
+  /** „The Waiting Road": Angebote verfallen nicht, ihre Uhr ist bedeutungslos. */
+  offersWait: boolean
 }
 
 /**
@@ -98,13 +102,19 @@ export function buildVoyageFleetCards(
     if (galaxy == null || !rail) continue
     const offer = offerOf.get(row.pinKey)
     const seats = offer ? deps.seatsOf(offer) : []
+    const sendable = !!offer && seats.length > 0 && seats.every(Boolean)
     cards.push({
       pinKey: row.pinKey,
       galaxy,
       galaxyName: rail.name,
       accent: rail.accent,
       tier: rail.tier,
-      sendable: !!offer && seats.length > 0 && seats.every(Boolean),
+      sendable,
+      // `sendable` bleibt der Rang; blockiert ist eine ANSICHT davon. Kippte der
+      // Rang mit dem Feldstand, ordnete sich das Band um, sobald jemand die
+      // letzte Crew losschickt.
+      blocked: sendable && !deps.canSend,
+      noDeadline: !!offer && deps.offersWait,
       row,
       crew: missionOf.get(row.pinKey)?.assignedChampions ?? [],
       seats,

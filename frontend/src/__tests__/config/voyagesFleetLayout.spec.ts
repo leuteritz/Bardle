@@ -28,6 +28,9 @@ import {
   VOYAGE_FLEET_HEAD_ICON,
   VOYAGE_FLEET_HEAD_GAP,
   VOYAGE_FLEET_NAME_MAX_PX,
+  EXPEDITION_TIERS,
+  EXPEDITION_TIER_COLORS,
+  EXPEDITION_TIER_SEGMENTS,
   VOYAGE_FLEET_RANK_W,
   VOYAGE_FLEET_ASIDE_W,
   VOYAGE_FLEET_BAND_PAD_X,
@@ -220,5 +223,27 @@ describe('voyages fleet strip', () => {
   it('kennt keinen Zielnamen jenseits der gemessenen Breite', () => {
     const longest = GALAXY_THEMES.reduce((a, t) => Math.max(a, t.name.length), 0)
     expect(longest, 'ein längerer Themename verlangt eine neue Messung').toBeLessThanOrEqual(15)
+  })
+
+  /**
+   * Die Stufe steht auf der Karte als segmentierter Streifen. Eine neue Stufe
+   * ohne Farbe wäre auf der Karte unsichtbar, eine ohne Segmentzahl gar nicht
+   * gemalt — beide Tabellen müssen `EXPEDITION_TIERS` decken.
+   */
+  it('gibt jeder Stufe eine Farbe und eine Segmentzahl', () => {
+    const tiers = Object.keys(EXPEDITION_TIERS)
+    expect(Object.keys(EXPEDITION_TIER_COLORS).sort()).toEqual([...tiers].sort())
+    expect(Object.keys(EXPEDITION_TIER_SEGMENTS).sort()).toEqual([...tiers].sort())
+    for (const tier of tiers) {
+      const lit = EXPEDITION_TIER_SEGMENTS[tier as keyof typeof EXPEDITION_TIER_SEGMENTS]
+      expect(lit, `${tier} muss zwischen 1 und 3 Segmenten erleuchten`).toBeGreaterThanOrEqual(1)
+      expect(lit).toBeLessThanOrEqual(3)
+      expect(EXPEDITION_TIER_COLORS[tier as keyof typeof EXPEDITION_TIER_COLORS]).toMatch(
+        /^#[0-9a-f]{6}$/i,
+      )
+    }
+    // Die Segmentzahl muss die Stufen TRENNEN, sonst trägt die Länge nichts.
+    expect(new Set(Object.values(EXPEDITION_TIER_SEGMENTS)).size).toBe(tiers.length)
+    expect(new Set(Object.values(EXPEDITION_TIER_COLORS)).size).toBe(tiers.length)
   })
 })

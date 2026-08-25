@@ -76,6 +76,8 @@ const deps = {
   projectedReward: (m: { baseReward: number }) => ({ success: m.baseReward, failure: 0 }),
   seatsOf: (o: AvailableExpeditionSlot) => o.requiredRoles.map(() => null),
   offerOdds: () => 0.62,
+  canSend: true,
+  offersWait: false,
 }
 
 /** Jeder Sitz besetzt. */
@@ -193,6 +195,42 @@ describe('buildVoyageFleetCards', () => {
       deps,
     )
     expect(cards.map((c) => c.pinKey)).toEqual(['a'])
+  })
+
+  /**
+   * „Startbar" hiess bis dahin nur „alle Sitze besetzt". Bei vollem Feld leuchten
+   * sonst fünf Karten golden und keine einzige lässt sich losschicken.
+   */
+  it('markiert einen bemannten Vertrag als blockiert, wenn kein Feldplatz frei ist', () => {
+    const args = [[row({ galaxy: 1, contracts: 1 })], [slot(1, 'a')], []] as const
+
+    const [free] = buildVoyageFleetCards(...args, crewedDeps)
+    expect(free.sendable).toBe(true)
+    expect(free.blocked).toBe(false)
+
+    const [full] = buildVoyageFleetCards(...args, { ...crewedDeps, canSend: false })
+    // `sendable` bleibt der RANG — kippte er mit dem Feldstand, ordnete sich das
+    // Band um, sobald jemand die letzte Crew losschickt.
+    expect(full.sendable).toBe(true)
+    expect(full.blocked).toBe(true)
+  })
+
+  /** „The Waiting Road": das Angebot verfällt nicht, seine Uhr ist tot. */
+  it('merkt einem Vertrag an, dass er keine Frist mehr hat', () => {
+    const args = [
+      [row({ galaxy: 1, contracts: 1, inField: 1 })],
+      [slot(1, 'a')],
+      [mission(1, 'b', 'active')],
+    ] as const
+
+    const byKey = (d: typeof deps) =>
+      new Map(buildVoyageFleetCards(...args, d).map((c) => [c.pinKey, c]))
+
+    const waiting = byKey({ ...deps, offersWait: true })
+    expect(waiting.get('a')!.noDeadline).toBe(true)
+    // Eine laufende Mission hat nie eine Auslagefrist.
+    expect(waiting.get('b')!.noDeadline).toBe(false)
+    expect(byKey(deps).get('a')!.noDeadline).toBe(false)
   })
 
   it('liefert bei gleicher Eingabe zweimal dasselbe — die Reihenfolge kennt keine Uhr', () => {

@@ -26,6 +26,7 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { buildVoyageFleetCards } from '@/utils/game/voyageFleet'
 import { formatMinuteClock, toRoman } from '@/utils/ui/format'
@@ -54,6 +55,7 @@ const emit = defineEmits<{
 }>()
 
 const expeditionStore = useExpeditionStore()
+const forgeStore = useStarForgeStore()
 const isDev = import.meta.env.DEV
 
 const mainH = `${VOYAGE_COMMAND_BAR_H}px`
@@ -131,6 +133,8 @@ const cards = computed(() =>
       projectedReward: expeditionStore.projectedRewardFor,
       seatsOf: (offer) => expeditionStore.crewFor(offer),
       offerOdds: expeditionStore.offerOddsFor,
+      canSend: expeditionStore.canStartExpedition,
+      offersWait: forgeStore.expeditionOffersWait,
     },
   ),
 )
