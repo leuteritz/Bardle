@@ -86,7 +86,7 @@ function roleOf(name: string) {
 }
 
 function pickChampion(name: string) {
-  uiStore.requestOpenTeamTabWithSearch(name)
+  uiStore.requestOpenShopTabWithSearch(name)
   props.close?.()
 }
 
@@ -156,7 +156,7 @@ function openPlanetSlot(id: string) {
  *
  * Nur Zeilen mit `count > 0` — eine Abteilung mit einer Null sagt nichts, was
  * das Abzeichen nicht schon gesagt hätte. Gespeist aus demselben Store-Getter,
- * den auch die Schienen-Marken im Shop-Tab lesen; Label, Glyph und Akzent
+ * den auch die Schienen-Marken im Skill-Tree-Reiter lesen; Label, Glyph und Akzent
  * kommen aus `FORGE_PANEL_SECTIONS`, damit hier keine zweite Namensquelle
  * entsteht.
  */
@@ -334,10 +334,11 @@ function buyAllUpgrades() {
     </template>
 
     <!-- ══════════ SHOP ══════════ -->
-    <!-- „Ready to Forge" und nicht „Shop Ready": „Shop" heißt im Projekt auch
-         der Champion-Shop im Team-Tab. Die Zeilen sind bewusst NICHT klickbar —
-         die Abteilung wählt der Shop-Tab in einem lokalen Zustand, es gibt
-         keinen Weg, ihn von außen vorzuwählen. -->
+    <!-- „Ready to Forge" und nicht „Shop Ready": der Reiter „Shop" ist seit der
+         Trennung der Champion-Laden, diese Marke meint den Sternbaum. Die Zeilen
+         sind bewusst NICHT klickbar — die Abteilung wählt der Skill-Tree-Reiter
+         in einem lokalen Zustand, es gibt keinen Weg, sie von außen
+         vorzuwählen. -->
     <template v-else-if="kind === 'shop'">
       <ul class="sh-tt__list">
         <li

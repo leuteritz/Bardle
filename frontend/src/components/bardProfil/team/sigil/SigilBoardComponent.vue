@@ -3,7 +3,6 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battle/battleStore'
-import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { useSynergyStore } from '@/stores/champions/synergyStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useTeamSigil } from '@/composables/ui/useTeamSigil'
@@ -29,7 +28,6 @@ import {
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
 import SigilPowerCore from './SigilPowerCore.vue'
-import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 import BattleTabReturnButton from '@/components/bardProfil/BattleTabReturnButton.vue'
 
@@ -41,8 +39,7 @@ const props = defineProps<{
   /**
    * Width (px) the open right rail takes from the tab — 0 when none is open.
    * The tab owns it: it is the only place that knows WHICH of the rails (role
-   * details, synergies, shop, equipment) is up, and they are not
-   * equally wide. The board only needs the number, and it needs it while the
+   * details, synergies, equipment) is up, and they are not equally wide. The board only needs the number, and it needs it while the
    * closing rail is still in the flex row, so open/close resolves in a single
    * camera move instead of a second, delayed one after the slide-out.
    */
@@ -51,12 +48,6 @@ const props = defineProps<{
   searchHighlights?: string[]
   /** Ally sub-slot hovered in the details panel — spotlights that satellite of the selected role. */
   hoveredAlly?: number | null
-  /**
-   * Which of the board's two entrances currently has its rail up, so that
-   * button can show it is the open one. The tab owns the answer — it is the
-   * only place that knows what the rail holds.
-   */
-  activeAction?: 'shop' | null
 }>()
 
 const emit = defineEmits<{
@@ -64,7 +55,6 @@ const emit = defineEmits<{
   'select-ally': [roleIndex: number, subSlot: number]
   /** Hovered ally satellite of the SELECTED role (null = none). */
   'hover-ally': [subSlot: number | null]
-  'open-shop': []
   'open-synergies': []
   /** Empty board clicked — the tab closes whatever side panel is open. */
   deselect: []
@@ -149,7 +139,6 @@ const allyFilled = computed(() =>
   ROLES.map((_, i) => (secondarySlots.value[i] ?? []).map((s) => s !== null)),
 )
 
-const shopBadgeCount = useNotifyBadgeCount('champions')
 const activeSynergyCount = computed(
   () =>
     synergyStore.activeTraits.length +
@@ -387,27 +376,6 @@ watch(
     @click="onBackgroundClick"
     @dragstart.prevent
   >
-    <!-- shop door — alone in the top-left corner. It is the one destination that
-         takes the WHOLE tab instead of a rail from the right, so it must not sit
-         in the right-edge column: the atlas rises out of this very corner. -->
-    <div class="sigil-door">
-      <button
-        class="sigil-action sigil-action--shop"
-        :class="{ 'sigil-action--open': activeAction === 'shop' }"
-        :aria-expanded="activeAction === 'shop'"
-        :title="activeAction === 'shop' ? 'Close the shop' : 'Recruit champions and buy gear'"
-        @click.stop="emit('open-shop')"
-      >
-        <Icon icon="game-icons:shop" width="34" height="34" class="sigil-action-icon" />
-        <span class="sigil-action-label">Shop</span>
-        <RpgNotifyBadge
-          :count="shopBadgeCount"
-          variant="shop"
-          label="Champions available in shop"
-        />
-      </button>
-    </div>
-
     <!-- admin: raise every team champion's level, capped. Deliberately styled
          apart from the gold game actions so it never reads as a normal button. -->
     <div class="sigil-admin" @click.stop>
@@ -561,8 +529,8 @@ watch(
 <style scoped>
 .sigil-board {
   position: relative;
-  /* Eigener Stapelkontext — sonst schlügen die eigenen Ebenen des Boards (Shop-
-     die Admin-Leiste; alle auf z-index 6) durch den
+  /* Eigener Stapelkontext — sonst schlüge die eigene Ebene des Boards (die
+     Admin-Leiste auf z-index 6) durch den
      Ladeschleier des Tabs hindurch, der das Board gerade abdecken soll. Nach
      innen ändert das nichts: die Ebenen ordnen sich weiterhin untereinander,
      nur eben in diesem Kontext. Nach außen auch nicht — Board und Schiene
@@ -588,22 +556,8 @@ watch(
   transition: none;
 }
 
-/* ── shop door ──
-   Mirror of the admin strip: same 26 px inset, other corner. Alone up here
-   because the atlas it opens is the only destination that covers the whole tab,
-   and it rises out of exactly this corner. */
-.sigil-door {
-  position: absolute;
-  top: 22px;
-  left: 26px;
-  z-index: 6;
-  /* never grow into the sigil on a board an open rail has squeezed */
-  max-width: calc(100% - 52px);
-}
-
 /* ── admin strip — muted red-brown so it never competes with the gold game
-   actions. Bottom left, under the shop door rather than beside it: the strip is
-   310-344 px wide and would take the door's whole line at Full HD. ── */
+   actions. Bottom left, in the corner the shop door used to share with it. ── */
 .sigil-admin {
   position: absolute;
   bottom: 82px;
@@ -725,27 +679,10 @@ watch(
   white-space: nowrap;
 }
 
-/* ── Open state ──
-   The button whose rail is up stops being a thing to press and becomes the
-   label of what is on screen: warmer fill, gold outline, no lift on hover.
-   The gold edge below belongs to the rail buttons alone. */
-.sigil-action--open {
-  background: rgba(44, 28, 10, 0.95);
-  border-color: #c89040;
-  color: #f4d878;
-  box-shadow: 0 0 16px rgba(232, 192, 64, 0.22);
-}
-.sigil-action--open:hover {
-  border-color: #e8c060;
-  transform: none;
-}
-.sigil-action--open .sigil-action-icon {
-  color: #f4d878;
-}
 /* ── Compact: the board squeezed by an open rail ──
    340 px at Full HD. One step down keeps the column clear of the sigil's foot,
    and the admin strip moves above the column, since at that width nothing fits
-   beside it. Applies to the shop door too — it carries the same base class. */
+   beside it. */
 .sigil-board--compact-actions .sigil-actions {
   gap: 10px;
 }

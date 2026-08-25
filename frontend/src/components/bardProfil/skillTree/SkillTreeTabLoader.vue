@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Der Ladeschleier des Shop-Tabs.
+ * Der Ladeschleier des Skill-Tree-Reiters.
  *
  * Warum ausgerechnet dieser Tab einen bekommt, obwohl `docs/performance.md`
  * (Regel 9) für alle übrigen ausdrücklich abrät: gemessen am Produktionsbuild,

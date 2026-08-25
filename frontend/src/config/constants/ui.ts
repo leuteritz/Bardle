@@ -1045,10 +1045,15 @@ export const HEADER_UNIVERSE_ICON = 'game-icons:over-infinity'
 
 /**
  * Die beiden Header-Ecktasten (Shop links, Skill Tree rechts) und die
- * gleichnamigen Tabs im Bard-Profil zeigen auf dieselben zwei Ziele — sie
+ * gleichnamigen Reiter im Bard-Profil zeigen auf dieselben zwei Ziele — sie
  * tragen deshalb dasselbe Zeichen und lesen es von hier. Stünde es zweimal im
- * Code, liefen Header und Tab-Leiste beim nächsten Icon-Wechsel auseinander,
+ * Code, liefen Header und Reiterleiste beim nächsten Icon-Wechsel auseinander,
  * und der Spieler läse zwei Dinge, wo eines gemeint ist.
+ *
+ * Die Ecktasten führen an ZWEI Orte und nicht mehr beide in denselben Reiter:
+ * links der Laden, rechts der Sternbaum. Die Marke an der jeweiligen Platte
+ * meldet deshalb auch Verschiedenes — Champions links, schmiedbare Einträge
+ * rechts.
  *
  * Die optische Angleichung (`boost`) bleibt bewusst beim jeweiligen Ort: sie
  * gleicht das Glyph an SEINE Nachbarn an, nicht an das Motiv.

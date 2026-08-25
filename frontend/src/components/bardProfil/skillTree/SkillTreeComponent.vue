@@ -34,7 +34,7 @@
     <!-- Nur ein LEAVE — der Schleier ist ab Frame 1 voll deckend und wird
          weggeblendet, nie eingeblendet. -->
     <Transition name="stl-reveal">
-      <ShopTabLoader v-if="loaderVisible" :started-at="loaderStartedAt" />
+      <SkillTreeTabLoader v-if="loaderVisible" :started-at="loaderStartedAt" />
     </Transition>
   </div>
 </template>
@@ -61,7 +61,7 @@ import {
 import ForgeTreePanel from './ForgeTreePanel.vue'
 import StarForgePanel from './StarForgePanel.vue'
 import ForgeDetailsHandle from './ForgeDetailsHandle.vue'
-import ShopTabLoader from './ShopTabLoader.vue'
+import SkillTreeTabLoader from './SkillTreeTabLoader.vue'
 
 const forgeStore = useStarForgeStore()
 const uiStore = useUiStore()
@@ -114,12 +114,13 @@ watch(hoverId, (id) => {
  *
  * Steht hier und nicht im Baum, aus zwei Gründen. Erstens ist dies die einzige
  * Komponente, die beide Spalten überspannt. Zweitens — und das ist der harte
- * Grund — **wird der Shop-Tab nach dem ersten Öffnen nie mehr abgerissen**:
- * `BardProfileMenu` rendert ihn als `v-if="mountedTabs.has('shop')"` plus
- * `v-show`, und `mountedTabs` wird nur befüllt. Ein `onMounted`-Listener bliebe
- * dauerhaft am Fenster hängen und verbrauchte die Taste auch im Idle-Orbit.
+ * Grund — **wird der Skill-Tree-Reiter nach dem ersten Öffnen nie mehr
+ * abgerissen**: `BardProfileMenu` rendert ihn als `v-if="mountedTabs.has('tree')"`
+ * plus `v-show`, und `mountedTabs` wird nur befüllt. Ein `onMounted`-Listener
+ * bliebe dauerhaft am Fenster hängen und verbrauchte die Taste auch im
+ * Idle-Orbit.
  */
-const isVisible = computed(() => uiStore.bardActiveTab === 'shop')
+const isVisible = computed(() => uiStore.bardActiveTab === 'tree')
 
 /**
  * Das Recenter-Kürzel hängt aus demselben Grund hier wie Escape: der Tab bleibt
@@ -340,7 +341,7 @@ const slideMs = `${FORGE_DETAILS_SLIDE_MS}ms`
    Rahmen zu einem SCROLLPORT: er schneidet nicht nur ab, er lässt sich auch
    scrollen — nur eben ohne Leiste. Seit die Detailspalte einklappt, steht ihre
    Liste im geparkten Zustand ausserhalb dieses Rahmens, und ein
-   `scrollIntoView()` darin zog prompt den ganzen Shop-Tab seitwärts (gemessen:
+   `scrollIntoView()` darin zog prompt den ganzen Skill-Tree-Reiter seitwärts (gemessen:
    448 px, der Baum halb aus dem Bild). `clip` schneidet genauso ab, erzeugt
    aber keinen Scrollport — damit ist die Fehlerklasse ausgeschlossen und nicht
    bloss ihr erster Fall. Der Kompakt-Breakpoint unten setzt bewusst wieder

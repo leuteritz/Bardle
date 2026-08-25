@@ -47,7 +47,7 @@
 
 <script setup lang="ts">
 /**
- * Die Detailspalte des Shop-Tabs.
+ * Die Detailspalte des Skill-Tree-Reiters.
  *
  * Über dem Scrollfeld der Sammelkauf (`ForgeBuyAllBar`) — er ist mit der
  * Kopfleiste über dem Baum hierher gezogen, weil das Kaufbare in dieser Spalte

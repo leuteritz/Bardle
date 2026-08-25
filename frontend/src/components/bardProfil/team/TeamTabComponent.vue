@@ -17,34 +17,32 @@ import {
   TEAM_SIGIL_SYNERGIES_PANEL_WIDTH,
   TEAM_EQUIPMENT_PANEL_WIDTH,
 } from '@/config/constants'
-import { getChampionRoles } from '@/config/champions/championData'
 import { getItemById } from '@/config/economy/items'
 import { allySlotLabel } from '@/utils/ui/format'
-import type { ChampionRole, ItemCategory } from '@/types'
+import type { ItemCategory } from '@/types'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import SigilBoardComponent from './sigil/SigilBoardComponent.vue'
 import SigilDetailsPanel from './SigilDetailsPanel.vue'
 import TeamTabLoader from './TeamTabLoader.vue'
 import TeamSidePanelShell from './TeamSidePanelShell.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
-import ChampionShopComponent from './championShop/ChampionShopComponent.vue'
 import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
 
 /**
  * The tab has exactly ONE right rail and everything opens into it — the role
- * details page, team synergies, and the three board destinations that used to be
- * modals over the whole tab. A modal answered a question by hiding the thing the
- * question was about: the shop covered the very sigil the player recruits for.
+ * details page, team synergies and the equipment picker. A modal answered a
+ * question by hiding the thing the question was about.
+ *
+ * Only equipment is left of what were once several destinations: the shop moved
+ * out into a tab of its own, and it was the one that never fit the rail anyway
+ * (facets, grid and a card's page want to stand side by side, and 900 px only
+ * ever fit two of the three).
  *
  * The champion picker is not on this list: it lives inside the details page (see
  * SigilDetailsPanel → swapOpen), so choosing a champion no longer covers the
  * board it is being chosen for.
  */
-type TeamDestination = 'shop' | 'equipment' | null
-
-const ROLE_INDEX = Object.fromEntries(ROLES.map((r, i) => [r.key, i])) as Partial<
-  Record<ChampionRole, number>
->
+type TeamDestination = 'equipment' | null
 
 const battleStore = useBattleStore()
 const itemStore = useItemStore()
@@ -267,16 +265,14 @@ watch(
   { immediate: true },
 )
 /**
- * Which board destination owns the rail, if any.
+ * Whether the equipment picker owns the rail.
  *
- * The shop is a destination of its own and pushes the details page
- * out of the rail. Equipment is different: it is opened FROM the details page
- * for the role that page is on, so it takes the rail WITHOUT clearing
- * `selectedRole` — closing it drops straight back onto the page it came from,
- * and the board keeps its camera on that role the whole time.
+ * It is opened FROM the details page for the role that page is on, so it takes
+ * the rail WITHOUT clearing `selectedRole` — closing it drops straight back onto
+ * the page it came from, and the board keeps its camera on that role the whole
+ * time.
  */
 const activeDestination = ref<TeamDestination>(null)
-const shopRole = ref<ChampionRole | 'all'>('all')
 const equipCategory = ref<ItemCategory>('weapon')
 
 /**
@@ -301,19 +297,9 @@ const railTransition = computed(() =>
   veilCovering.value && activeDestination.value === null ? 'sdp-instant' : 'sdp-slide',
 )
 
-/**
- * Width the board has to subtract to fit itself beside the open rail. The shop
- * is not in this list on purpose: it covers the whole tab, so there is nothing
- * for the board to fit BESIDE and no camera move worth paying for behind an
- * opaque layer.
- */
+/** Width the board has to subtract to fit itself beside the open rail. */
 const sidePanelWidth = computed(() => {
-  switch (activeDestination.value) {
-    case 'shop':
-      return 0
-    case 'equipment':
-      return TEAM_EQUIPMENT_PANEL_WIDTH
-  }
+  if (activeDestination.value === 'equipment') return TEAM_EQUIPMENT_PANEL_WIDTH
   if (selectedRole.value !== null) return TEAM_SIGIL_DETAILS_PANEL_WIDTH
   return synergiesOpen.value ? TEAM_SIGIL_SYNERGIES_PANEL_WIDTH : 0
 })
@@ -381,46 +367,9 @@ function dismissPanels() {
     activeDestination.value = null
     return
   }
-  activeDestination.value = null
   selectedRole.value = null
   synergiesOpen.value = false
 }
-
-// ── Rail destinations ────────────────────────────────────────────────────────
-/** The shop replaces whatever the rail holds — see activeDestination. */
-function openDestination(destination: Exclude<TeamDestination, null | 'equipment'>) {
-  selectedRole.value = null
-  synergiesOpen.value = false
-  activeDestination.value = destination
-}
-
-function openShop(role: ChampionRole | 'all' = 'all') {
-  shopRole.value = role
-  openDestination('shop')
-}
-
-
-/**
- * The board's two entrances toggle: clicking the button whose rail is already
- * up closes it again, so the same button both opens and dismisses. Only from
- * the BOARD — openShop(role) coming from a role card is a request for a
- * specific role and must never be answered by closing anything.
- */
-function toggleShop() {
-  if (activeDestination.value === 'shop') closeDestination()
-  else openShop('all')
-}
-
-
-/** True while the shop covers the tab — the board stops rendering behind it. */
-const shopFullscreen = computed(() => activeDestination.value === 'shop')
-
-/** Which board entrance is currently showing its rail — lights that button. */
-const boardActiveAction = computed<'shop' | null>(() =>
-  activeDestination.value === 'shop'
-    ? activeDestination.value
-    : null,
-)
 
 function openSynergies() {
   activeDestination.value = null
@@ -469,6 +418,7 @@ function clearAlly(subSlot: number) {
   battleStore.clearSecondarySlot(roleIndex.value, subSlot)
 }
 
+
 /** Anlegen und Ablegen quittieren beide — ein Skin tat es längst, ein Item
  *  nicht, und es ist dieselbe Handlung am selben Champion. Gemeinsamer
  *  `mergeKey` mit den Skins: wer sein Team ausrüstet, bekommt EINE Karte. */
@@ -490,14 +440,6 @@ function handleEquipFromPicker(itemId: string, category: ItemCategory) {
     imageRound: false,
     mergeKey: 'equip',
   })
-}
-
-function handleShopRoleChange(role: ChampionRole | 'all') {
-  shopRole.value = role
-  if (role !== 'all') {
-    const idx = ROLE_INDEX[role]
-    if (idx !== undefined) uiStore.setRolesActiveSlot(idx)
-  }
 }
 
 // ── External navigation hooks ────────────────────────────────────────────────
@@ -533,30 +475,13 @@ function applyRolesOpenRequest() {
 
 watch(() => uiStore.rolesOpenToken, applyRolesOpenRequest)
 
-watch(
-  () => uiStore.pendingChampionSearch,
-  (name) => {
-    if (!name) return
-    const roles = getChampionRoles(name)
-    openShop(roles.length > 0 ? roles[0] : 'all')
-  },
-  { immediate: true },
-)
-
-/** True while a card in the shop is selected — its page fills the detail column. */
-const shopDetailOpen = ref(false)
-/** Bumped to ask the shop to drop that selection (Escape), see `closeDetailToken`. */
-const closeShopDetailToken = ref(0)
-
-// Escape unwinds one layer at a time: the shop's selection, the details page's
-// own picker, then whatever the rail is showing. Only this handler listens for
-// the key — both of those live in children, so the request travels down as a
-// token rather than as a second window listener racing this one.
+// Escape unwinds one layer at a time: the details page's own picker, then
+// whatever the rail is showing. Only this handler listens for the key — the
+// picker lives in a child, so the request travels down as a token rather than
+// as a second window listener racing this one.
 function onEsc(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
-  if (activeDestination.value === 'shop' && shopDetailOpen.value) {
-    closeShopDetailToken.value++
-  } else if (activeDestination.value !== null) {
+  if (activeDestination.value !== null) {
     closeDestination()
   } else if (swapOpen.value) {
     closeSwapToken.value++
@@ -610,7 +535,6 @@ function resetTabState() {
   focusAlly.value = null
   focusSwap.value = false
   swapOpen.value = false
-  shopDetailOpen.value = false
 }
 
 watch(isVisible, (visible) => {
@@ -649,31 +573,23 @@ onUnmounted(() => {
          beneath the sigil board and every slide-in rail. -->
     <CosmicStageBackground />
 
-    <!-- ══ LEFT — Battle Sigil ══
-         Stays mounted while the shop covers it: rebuilding the board costs 308 ms
-         against 42 ms for showing it again. `content-visibility` lets the browser
-         skip the covered subtree — measured at 2K with all 165 cards in the DOM it
-         changed nothing (longest frame 5.7 ms either way), so it is kept as the
-         cheap guarantee it is, not as a fix for a problem that showed up. -->
+    <!-- ══ LEFT — Battle Sigil ══ -->
     <SigilBoardComponent
-      :class="{ 'team-board-parked': shopFullscreen }"
       :selected-role="selectedRole"
       :mount-stage="mountStage"
       :side-panel-width="sidePanelWidth"
       :search-highlights="searchHighlights"
       :hovered-ally="spotlightAlly"
-      :active-action="boardActiveAction"
       @select-role="selectRole"
       @select-ally="selectAlly"
       @hover-ally="boardHoveredAlly = $event"
-      @open-shop="toggleShop"
       @open-synergies="openSynergies"
       @deselect="dismissPanels"
     />
 
-    <!-- ══ RIGHT — the one rail: board destination, role details or synergies ══
-         One Transition for all of them, so opening the shop while the details
-         page is up is a single slide, not a close followed by an open. -->
+    <!-- ══ RIGHT — the one rail: equipment, role details or synergies ══
+         One Transition for all of them, so swapping what the rail holds is a
+         single slide, not a close followed by an open. -->
     <Transition :name="railTransition" mode="out-in">
       <TeamSidePanelShell
         v-if="activeDestination === 'equipment'"
@@ -714,31 +630,6 @@ onUnmounted(() => {
       />
     </Transition>
 
-    <!-- ══ SHOP — the one destination that takes the whole tab ══
-         Not in the rail chain above: champions, their facets and a card's page
-         want to stand side by side, and 900 px only ever fit two of the three.
-         It lies OVER the board rather than replacing it in the flex row, so the
-         board survives the visit and closing costs nothing. Opaque from frame 1
-         — the fade is the content's, not the surface's, so the mount frame never
-         shows through.
-
-         No loading veil, and that is a measurement, not an omission: opening
-         costs 119 ms the first time (champion art decoding) and 42–50 ms every
-         time after — the repeat cost is the same 42 ms the board itself is
-         allowed to reveal without one. -->
-
-    <Transition name="atlas-rise">
-      <div v-if="activeDestination === 'shop'" class="team-shop-layer">
-        <ChampionShopComponent
-          :initial-role="shopRole"
-          :close-detail-token="closeShopDetailToken"
-          @role-change="handleShopRoleChange"
-          @detail-state="shopDetailOpen = $event"
-          @close="closeDestination"
-        />
-      </div>
-    </Transition>
-
     <!-- ══ Ladeschleier der Detailspalte ══
          Sitzt IM Flex-Fluss und belegt exakt die Breite der Seite, die gleich
          kommt: das Board rechnet seine Kamera also vom ersten Frame an mit dem
@@ -767,81 +658,8 @@ onUnmounted(() => {
   background: #111008; /* same deep-space base as Shop / Planets / Skill Tree */
 }
 
-/* ── Shop layer ──
-   Above the board (z 0–6) and below the loading veil (z 3/5, absolute z 4 on
-   leave) — the two never stand at the same time, the veil belongs to the rail. */
-.team-shop-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 8;
-  display: flex;
-  min-height: 0;
-  background: #111008;
-}
-/* Only the surface holds still; the content grows into it out of the shop door's
-   own corner (26/22 in the board, plus half a button) — press and result read as
-   one gesture. A fade of the layer itself would show the board through it for the
-   length of the fade. opacity and transform were animated here before, so the
-   compositor layer is not a new cost. */
-.atlas-rise-enter-active .cs-atlas,
-.atlas-rise-leave-active .cs-atlas {
-  transform-origin: 72px 48px;
-  transition:
-    opacity 0.24s ease-out,
-    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.atlas-rise-enter-from .cs-atlas,
-.atlas-rise-leave-to .cs-atlas {
-  opacity: 0;
-  transform: scale(0.965);
-}
-/* Direction, on a 2 px empty strip: the seam runs out of the same corner along
-   the top edge and fades once it is across. Opening only — closing is a cut. */
-.atlas-rise-enter-active::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  transform-origin: left center;
-  background: linear-gradient(
-    to right,
-    #5c3310,
-    #c89040,
-    #e8c060,
-    #d4a020,
-    #c89040,
-    #5c3310
-  );
-  animation: atlas-seam 0.5s ease-out;
-}
-@keyframes atlas-seam {
-  0% {
-    transform: scaleX(0);
-    opacity: 1;
-  }
-  55% {
-    transform: scaleX(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scaleX(1);
-    opacity: 0;
-  }
-}
-.atlas-rise-leave-active {
-  transition: opacity 0.14s ease-in;
-}
-.atlas-rise-leave-to {
-  opacity: 0;
-}
-/* A covered board keeps its box but stops rendering — see the template note. */
-.team-board-parked {
-  content-visibility: hidden;
-}
-/* rail slide-in — shared by the details page, the synergies panel and every
-   board destination, so they all enter and leave on the same motion */
+/* rail slide-in — shared by the details page, the synergies panel and the
+   equipment picker, so they all enter and leave on the same motion */
 .sdp-slide-enter-active {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -893,14 +711,6 @@ onUnmounted(() => {
   .sdp-slide-leave-to {
     transform: none !important;
     opacity: 0;
-  }
-  .atlas-rise-enter-from .cs-atlas,
-  .atlas-rise-leave-to .cs-atlas {
-    transform: none !important;
-  }
-  /* content: none, not animation: none — a frozen seam would just stand there */
-  .atlas-rise-enter-active::after {
-    content: none;
   }
 }
 </style>

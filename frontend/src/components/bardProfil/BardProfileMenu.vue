@@ -19,7 +19,8 @@ import { EXPEDITION_UNLOCK_GALAXY, HEADER_GEM_ICONS } from '@/config/constants'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import RpgBadgeTooltipBody from '@/components/ui/RpgBadgeTooltipBody.vue'
 import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
-import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
+import SkillTreeComponent from '@/components/bardProfil/skillTree/SkillTreeComponent.vue'
+import ShopTabComponent from '@/components/bardProfil/shop/ShopTabComponent.vue'
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
 import BattleResultComponent from '@/components/bardProfil/battle/BattleResultComponent.vue'
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
@@ -49,15 +50,15 @@ const forgeBadgeReady = computed(() => forgeBadgeCount.value > 0)
 // Compact label — the total can climb high, so cap the glyph.
 const planetBadgeLabel = computed(() => formatBadgeCount(planetBadgeCount.value))
 
-/** Trägt BEIDE Abzeichen: das an der Ecktaste und das am Shop-Reiter. Das
- *  Maximum ist 59, `formatBadgeCount` greift hier also nie. */
+/** Die Marke am Skill-Tree-Reiter. Das Maximum ist 59, `formatBadgeCount`
+ *  greift hier also nie. */
 const shopFreshCount = useNotifyBadgeCount('shop')
 
 /**
- * Das Shop-Abzeichen steht ruhig und blitzt nur EINMAL auf, wenn die Zahl
- * steigt — Mechanik samt Begründung in `useBadgeFlare()`. Beide Abzeichen,
- * Ecktaste und Tab-Reiter, hängen an DIESEM einen Merker: sie zeigen dieselbe
- * Zahl und dürfen nicht versetzt blitzen.
+ * Das Forge-Abzeichen steht ruhig und blitzt nur EINMAL auf, wenn die Zahl
+ * steigt — Mechanik samt Begründung in `useBadgeFlare()`. Die Ecktaste im
+ * Header führt ihren eigenen Merker auf demselben Zähler: beide scharfen im
+ * selben Takt und blitzen deshalb im selben Frame.
  */
 const shopFlare = useBadgeFlare(shopFreshCount)
 
@@ -76,22 +77,22 @@ const shopFlare = useBadgeFlare(shopFreshCount)
  *
  *   ph:compass-rose-fill          — der Wandering Caretaker: Journey-Stats,
  *                                   Solar Evolution, Galaxy-Archiv, Chronicle
- *   ph:storefront-fill            — der Marktstand
- *   ph:users-three-fill           — der Kader (Sigil-Board, Allies, Expeditionen)
- *   material-symbols:account-tree — verzweigte Knoten, der Meep Skill Tree
+ *   ph:storefront-fill            — der Marktstand: Champions und Ausrüstung
+ *   material-symbols:account-tree — verzweigte Knoten, der Skill Tree
  *                                   (Phosphors `tree-structure` ist zu fein)
+ *   ph:users-three-fill           — der Kader (Sigil-Board, Allies)
  *   ri:sword-fill                 — gekreuzte Klingen, Auto-Battle
  *                                   (Phosphor hat nur die einzelne Klinge)
  *   ph:planet-fill                — die Planeten-Slots im Orbit
  *   ph:map-trifold-fill           — die Sternenkarte der Voyages
  *   ph:gear-six-fill              — Admin
  *
- * Jedes Motiv steht genau einmal in der Leiste, damit die acht Tabs
+ * Jedes Motiv steht genau einmal in der Leiste, damit die acht Reiter
  * nebeneinander unterscheidbar bleiben.
  *
- * Shop und Tree haben je eine zweite Anlaufstelle — die beiden Ecktasten im
- * App-Header. Ihre Glyphen kommen deshalb aus `HEADER_GEM_ICONS`, damit dort
- * dasselbe Zeichen steht wie hier.
+ * Shop und Skill Tree haben je eine zweite Anlaufstelle — die Ecktaste links
+ * bzw. rechts im App-Header. Ihre Glyphen kommen deshalb aus
+ * `HEADER_GEM_ICONS`, damit dort dasselbe Zeichen steht wie hier.
  *
  * `boost` ist die optische Angleichung über Set-Grenzen hinweg: Material und
  * Remix zeichnen auf einem 24er-Raster mit mehr Rand als Phosphors 256er,
@@ -107,10 +108,11 @@ const shopFlare = useBadgeFlare(shopFreshCount)
  * Die Wörter kommen aus Bards Kosmos, nicht aus der Ordnerstruktur: `Journey`
  * für die Chronik des Wandering Caretaker, `Rift` für den Auto-Kampf.
  *
- * `Shop` und `Tree` sind gebunden, nicht gewählt: die beiden Ecktasten im
- * App-Header führen an dieselben zwei Orte und zeigen dasselbe Glyph aus
+ * `Shop` und `Skill Tree` sind gebunden, nicht gewählt: die beiden Ecktasten im
+ * App-Header führen an genau diese zwei Orte und zeigen dasselbe Glyph aus
  * `HEADER_GEM_ICONS`. Ein zweites Wort für dieselbe Sache stünde dem Spieler
- * gleichzeitig auf dem Schirm. Aus demselben Grund tragen die Tastenkürzel in
+ * gleichzeitig auf dem Schirm — die Ecktaste rechts trägt deshalb `Tree` und
+ * nicht mehr `Wander`. Aus demselben Grund tragen die Tastenkürzel in
  * `KEYBINDINGS` diese Namen ebenfalls.
  */
 const allMenuItems: {
@@ -127,6 +129,7 @@ const allMenuItems: {
 }[] = [
   { id: 'bard', name: 'Journey', icon: 'ph:compass-rose-fill' },
   { id: 'shop', name: 'Shop', icon: HEADER_GEM_ICONS.shop },
+  { id: 'tree', name: 'Skill Tree', icon: HEADER_GEM_ICONS.tree, boost: true },
   { id: 'team', name: 'Team', icon: 'ph:users-three-fill' },
   {
     id: 'battle',
@@ -261,7 +264,7 @@ bindTabShortcut('shop', 'shop')
  */
 onKeybinding('road', () => {
   if (galaxyStore.pendingRoleSelection || isPaused.value) return
-  if (uiStore.bardActiveTab !== 'shop') uiStore.setBardTab('shop')
+  if (uiStore.bardActiveTab !== 'tree') uiStore.setBardTab('tree')
   const target = meepTreeStore.roadAnchorId
   if (target) focusNode(target, { readable: true })
 })
@@ -322,9 +325,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Dasselbe Glyph wie der Shop-Tab in der Leiste unten (HEADER_GEM_ICONS) —
-       Ecktaste und Tab führen an denselben Ort. -->
-  <button class="btn-gem btn-gem--corner-left" title="Open Shop" @click="uiStore.setBardTab('shop')">
+  <!-- Dasselbe Glyph wie der Shop-Reiter in der Leiste unten
+       (HEADER_GEM_ICONS) — Ecktaste und Reiter führen an denselben Ort.
+       Die Marke daran meldet jetzt CHAMPIONS, nicht mehr die Star Forge: der
+       Reiter dahinter ist der Laden, und die Forge hat mit dem Skill Tree ihre
+       eigene Ecktaste rechts im Header bekommen. -->
+  <button
+    class="btn-gem btn-gem--corner-left"
+    title="Open the champion and item shop"
+    @click="uiStore.setBardTab('shop')"
+  >
     <Icon :icon="HEADER_GEM_ICONS.shop" width="48" height="48" class="btn-gem-icon" aria-hidden="true" />
     <span class="btn-gem-label">Shop</span>
     <!-- Ein `span`, kein zweiter Button: verschachtelte Buttons sind ungültiges
@@ -333,13 +343,12 @@ onUnmounted(() => {
          `clear-ancestor` räumt die Unterkante der ganzen PLATTE statt der des
          Abzeichens; ohne das läge das Tooltip-Feld mitten auf der Taste. -->
     <RpgBadgeTooltip clear-ancestor=".btn-gem">
-      <ShopReadyBadge
-        :count="shopFreshCount"
-        :flare="shopFlare"
-        :label="`${shopFreshCount} new Star Forge purchases within reach`"
+      <ShopReadyBadge tone="champions"
+        :count="championBadgeCount"
+        :label="`${championBadgeCount} new champions ready to recruit`"
       />
-      <template #tip>
-        <RpgBadgeTooltipBody kind="shop" />
+      <template #tip="{ close }">
+        <RpgBadgeTooltipBody kind="champions" :close="close" />
       </template>
     </RpgBadgeTooltip>
   </button>
@@ -424,7 +433,7 @@ onUnmounted(() => {
                     <span v-if="item.locked" class="rp-tab-lock" aria-hidden="true">
                       <Icon icon="lucide:lock" width="14" height="14" />
                     </span>
-                    <div v-if="item.id === 'team' && championBadgeCount > 0" class="team-badge-row">
+                    <div v-if="item.id === 'shop' && championBadgeCount > 0" class="team-badge-row">
                       <span class="mini-badge mini-badge--champion">{{ championBadgeCount }}</span>
                     </div>
                     <div
@@ -451,20 +460,19 @@ onUnmounted(() => {
                         :title="`${chronicleBadgeCount} Astral Codex ${chronicleBadgeCount === 1 ? 'track has' : 'tracks have'} a new stage`"
                       >{{ chronicleBadgeCount }}</span>
                     </div>
-                    <!-- Shop: was in der Star Forge neu erreichbar ist und noch
-                         nicht angesehen wurde. Dieselbe Marke wie an der Ecktaste
-                         und in der Schiene des Tabs — ruhig, mit einmaligem
-                         Aufblitzen, wenn die Zahl steigt. -->
-                    <!-- The Wandering wohnt seit dem Merge im Shop — seine Marke
-                         steht deshalb hier, aber als EIGENER Zaehler neben dem
-                         der Forge: „schmiedbar" und „lernbar" sind zwei
-                         Auskuenfte, und eine Summe waere keine von beiden. -->
-                    <div v-if="item.id === 'shop' && skillBadgeCount > 0" class="team-badge-row">
+                    <!-- Skill Tree: was in der Star Forge neu erreichbar ist und
+                         noch nicht angesehen wurde. Dieselbe Marke wie an der
+                         Ecktaste rechts und in der Schiene des Reiters — ruhig,
+                         mit einmaligem Aufblitzen, wenn die Zahl steigt. -->
+                    <!-- The Wandering wohnt im selben Netz — seine Marke steht
+                         deshalb hier, aber als EIGENER Zaehler neben dem der
+                         Forge: „schmiedbar" und „lernbar" sind zwei Auskuenfte,
+                         und eine Summe waere keine von beiden. -->
+                    <div v-if="item.id === 'tree' && skillBadgeCount > 0" class="team-badge-row">
                       <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
                     </div>
-                    <div v-if="item.id === 'shop' && shopFreshCount > 0" class="team-badge-row">
-                      <ShopReadyBadge
-                        place="inline"
+                    <div v-if="item.id === 'tree' && shopFreshCount > 0" class="team-badge-row">
+                      <ShopReadyBadge place="inline"
                         :count="shopFreshCount"
                         :flare="shopFlare"
                         :title="`${shopFreshCount} new Star Forge ${shopFreshCount === 1 ? 'purchase is' : 'purchases are'} within reach`"
@@ -521,9 +529,17 @@ onUnmounted(() => {
               <div
                 v-if="mountedTabs.has('shop')"
                 v-show="uiStore.bardActiveTab === 'shop'"
+                class="tab-layer"
+              >
+                <ShopTabComponent />
+              </div>
+
+              <div
+                v-if="mountedTabs.has('tree')"
+                v-show="uiStore.bardActiveTab === 'tree'"
                 class="tab-layer tab-layer--scroll rp-scrollbar"
               >
-                <ShopComponent />
+                <SkillTreeComponent />
               </div>
 
               <div
@@ -655,7 +671,7 @@ onUnmounted(() => {
 
 /* Azur fehlt in dieser Reihe: die Shop-Marke ist keine `.mini-badge` mehr,
    sondern `components/ui/ShopReadyBadge.vue` — dieselbe Komponente, die auch
-   an der Ecktaste und in der Schiene des Shop-Tabs hängt. Sie liegt als
+   an der Ecktaste rechts und in der Schiene des Skill-Tree-Reiters hängt. Sie liegt als
    `place="inline"` in derselben `.team-badge-row` wie die Marken hier. */
 .mini-badge--planet {
   background: linear-gradient(135deg, #34d399, #059669);

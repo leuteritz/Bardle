@@ -78,7 +78,7 @@ export const KEYBINDINGS: readonly KeybindDef[] = [
     cap: 'B',
     label: 'Shop',
     description:
-      'Opens the Bard profile on the shop tab. From another tab it jumps to the shop; on the shop tab it closes the profile again — as does Escape.',
+      'Opens the champion and item shop. From another tab it jumps there; on the shop tab it closes the profile again — as does Escape.',
     icon: 'lucide:store',
     category: 'interface',
     inHud: true,
@@ -89,20 +89,20 @@ export const KEYBINDINGS: readonly KeybindDef[] = [
     cap: 'K',
     label: 'The Wandering',
     description:
-      'Opens the Star Forge and takes the camera out to The Wandering. The meep road lies beyond the sun, and at full zoom-out it is too small to aim at by hand.',
+      'Opens the Skill Tree and takes the camera out to The Wandering. The meep road lies beyond the sun, and at full zoom-out it is too small to aim at by hand.',
     icon: 'game-icons:journey',
     category: 'interface',
     inHud: true,
   },
-  // `inHud: false`: das Kürzel wirkt nur im Shop-Tab und steht dort in seiner
-  // eigenen Zeile unten links im Graphen.
+  // `inHud: false`: das Kürzel wirkt nur im Skill-Tree-Reiter und steht dort in
+  // seiner eigenen Zeile unten links im Graphen.
   {
     id: 'forgeRecenter',
     keys: ['c'],
     cap: 'C',
     label: 'Center',
     description:
-      'Brings the Star Forge camera back to the heart of the net and returns the zoom to its default. Works while the shop tab is open; a pinned node stays pinned — Escape releases it.',
+      'Brings the Star Forge camera back to the heart of the net and returns the zoom to its default. Works while the Skill Tree is open; a pinned node stays pinned — Escape releases it.',
     icon: 'lucide:crosshair',
     category: 'interface',
     inHud: false,

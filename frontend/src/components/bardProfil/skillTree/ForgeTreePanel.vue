@@ -1217,7 +1217,7 @@ function isTooltipBelow(node: TreeNode): boolean {
 /*
  * Der Kaufblitz stand hier einmal als `flashSun()` samt eigenem Schleier. Er
  * gehört jetzt der Sonne selbst (`PhaseSunDisc`, `.sig-pulse`): hier blitzte
- * nur die Baum-Sonne im Shop-Tab, und dieselbe Sonne im Idle-Orbit blieb
+ * nur die Baum-Sonne im Skill-Tree-Reiter, und dieselbe Sonne im Idle-Orbit blieb
  * stumm. Ausgelöst wird er in `solarUpgradeStore.markSignaturePulse()`, also
  * an den Kaufwegen selbst — auch die, die nie durch dieses Panel laufen.
  */
@@ -1439,7 +1439,7 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(settleFrame)
   // Der Spotlight lebt auf Modulebene und überlebte diese Komponente sonst.
   //
-  // Beim TABWECHSEL greift das hier allerdings nicht: der Shop-Tab bleibt nach
+  // Beim TABWECHSEL greift das hier allerdings nicht: der Skill-Tree-Reiter bleibt nach
   // dem ersten Öffnen gemountet (`BardProfileMenu` rendert ihn als
   // `v-if="mountedTabs.has('shop')"` plus `v-show`), dieser Haken feuert also nur
   // beim echten Abriss. Den Wechselfall räumt `ShopComponent` an der
@@ -2585,7 +2585,7 @@ const nextPhasePreviewStyle = computed(() => ({
 /* ── BEREIT ───────────────────────────────────────────────────────
    Grün, nicht mehr Gold. Zwei Gründe: „Kaufbar / Aktiv → Grün" ist die
    Hausfarbe, und die Liste rechts sagt es seit jeher so (`.fut-row--ready`) —
-   im Shop-Tab stehen beide gleichzeitig im Bild. Gold gehört damit allein
+   im Skill-Tree-Reiter stehen beide gleichzeitig im Bild. Gold gehört damit allein
    `--maxed`, was den Baum ein zweites Mal entzerrt: bis dahin hiess dieselbe
    Farbe „kannst du kaufen" und „ist fertig". */
 /* Und der GRUND wechselt mit. Hier lag `#111008` wie unter jedem anderen

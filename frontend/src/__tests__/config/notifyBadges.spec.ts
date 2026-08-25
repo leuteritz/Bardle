@@ -182,13 +182,28 @@ describe('Notify-Registry ist vollständig', () => {
   })
 
   /*
-   * Beim Abriss des Tree-Reiters zeigte eine Marke noch auf `tab: 'tree'` — ein
-   * Ziel, das es nicht mehr gab. Der Compiler faengt das, solange `tab` getippt
-   * ist; diese Zusicherung faengt es auch dann, wenn jemand den Typ aufweicht,
-   * und nennt beim Bruch den Reiter statt einer Typmeldung.
+   * Eine Marke zeigte schon einmal auf einen Reiter, den es nicht mehr gab. Der
+   * Compiler faengt das, solange `tab` getippt ist; diese Zusicherung faengt es
+   * auch dann, wenn jemand den Typ aufweicht, und nennt beim Bruch den Reiter
+   * statt einer Typmeldung.
+   *
+   * Sie zaehlt doppelt, seit `shop` und `tree` die Plaetze getauscht haben: die
+   * Marken-ID `shop` meint die Star Forge und zeigt deshalb auf `tree`, waehrend
+   * der Reiter `shop` dem Champion-Laden gehoert. Wer das fuer einen Tippfehler
+   * haelt und zurueckdreht, faellt hier nicht auf — dafuer stehen die Saetze an
+   * den Eintraegen selbst.
    */
   it('nennt kein Ziel, das es als Reiter nicht gibt', () => {
-    const tabs: BardTabId[] = ['bard', 'shop', 'team', 'expedition', 'battle', 'admin', 'planets']
+    const tabs: BardTabId[] = [
+      'bard',
+      'shop',
+      'tree',
+      'team',
+      'expedition',
+      'battle',
+      'admin',
+      'planets',
+    ]
     for (const badge of NOTIFY_BADGES) {
       if (badge.tab === null) continue
       expect(tabs, `${badge.id} zeigt auf ${badge.tab}`).toContain(badge.tab)

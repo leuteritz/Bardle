@@ -67,7 +67,7 @@ export function useBadgeFlare(count: Ref<number> | (() => number)): Ref<boolean>
   })
 
   /* `onScopeDispose` und nicht `onUnmounted`: das Composable wird auch MEHRFACH je
-     Komponente aufgerufen (die Schienen-Marken im Shop-Tab rufen es je Abteilung
+     Komponente aufgerufen (die Schienen-Marken im Skill-Tree-Reiter rufen es je Abteilung
      einmal), und der Abbau muss dann für jede Instanz einzeln greifen. */
   onScopeDispose(() => {
     if (armTimer !== null) clearTimeout(armTimer)

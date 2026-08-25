@@ -52,7 +52,10 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   function openBardModal() {
-    bardActiveTab.value = bardActiveTab.value !== null ? null : 'shop'
+    // 'bard' und nicht 'shop': seit Laden und Sternbaum getrennte Reiter sind,
+    // waere 'shop' eine Zusage auf einen bestimmten Inhalt. Journey ist der
+    // Heimatreiter und traegt als einziger keinen zielabhaengigen Zustand.
+    bardActiveTab.value = bardActiveTab.value !== null ? null : 'bard'
     clearHoverMarks()
   }
 
@@ -120,9 +123,9 @@ export const useUiStore = defineStore('ui', () => {
     teamActiveRoleIndex.value = index
   }
 
-  function requestOpenTeamTabWithSearch(name: string) {
+  function requestOpenShopTabWithSearch(name: string) {
     pendingChampionSearch.value = name
-    bardActiveTab.value = 'team'
+    bardActiveTab.value = 'shop'
   }
 
   function clearPendingChampionSearch() {
@@ -192,7 +195,7 @@ export const useUiStore = defineStore('ui', () => {
     setPlanetActiveSlot,
     setRolesActiveSlot,
     setTeamActiveRole,
-    requestOpenTeamTabWithSearch,
+    requestOpenShopTabWithSearch,
     clearPendingChampionSearch,
     setHoveredChampionRole,
     setHoveredChampionSlotIndex,

@@ -628,11 +628,58 @@ export const SHOP_JUMP_EXPAND_SETTLE_MS = 350
 /** Idle time after the last scroll event before card animations resume. */
 export const SHOP_SCROLL_SETTLE_MS = 150
 
+/**
+ * ── Shop „Atlas" ──
+ *
+ * The shop owns a tab of its own and fills it. It used to be a destination of
+ * the team board, lying as a layer over it. A rail 900px wide has no room
+ * for a permanent detail column, which is why the detail used to slide OVER the
+ * grid — reading a card meant losing the list. Across the full tab (~1240px at
+ * Full HD, ~1660 at 2K) facets, grid and detail stand side by side and neither
+ * hides the other.
+ *
+ * The three widths add up: whatever the facets and the detail take, the grid
+ * gets the rest. That is why the detail is a percentage between two bounds
+ * rather than a fixed number — at Full HD it has to give the grid its four
+ * columns back, at 2K it can afford to grow with the splash art.
+ *
+ * Worked through, because the four numbers only make sense together (grid width
+ * = atlas − facets − detail, minus 28px of padding; a column costs
+ * CARD_MIN_WIDTH + GRID_GAP):
+ *   Full HD  atlas 1240 → detail 360 → grid 656 → 4 columns
+ *   2K       atlas 1660 → detail 498 → grid 938 → 5 columns
+ *   4K       atlas 2940 → detail 520 → grid 2196 → 13 columns
+ * Four at Full HD is the floor that matters: it is what the old 900px rail
+ * showed, and this layout must not buy its detail column with a narrower grid.
+ */
+export const SHOP_ATLAS_FACET_RAIL_WIDTH = 196
+/** Collapsed facet rail — the group icons stay, the chips fold away. */
+export const SHOP_ATLAS_FACET_RAIL_COLLAPSED = 52
+export const SHOP_ATLAS_DETAIL_MIN_WIDTH = 360
+export const SHOP_ATLAS_DETAIL_PCT = 30
+export const SHOP_ATLAS_DETAIL_MAX_WIDTH = 520
+/**
+ * Container width (px) below which the facet rail folds itself. Measured against
+ * the ATLAS, not the viewport — the profile modal is inset by `--hud-panel-size`
+ * on both sides, so a viewport media query would fold the rail on the wrong
+ * screens (see `container-type: inline-size` on .cs-atlas).
+ */
+export const SHOP_ATLAS_FACET_AUTOFOLD_WIDTH = 1180
+/**
+ * Card grid geometry. The min width is what `repeat(auto-fill, minmax(…))` in
+ * .cs-cards reads, so the column count follows the space the other two zones
+ * leave over instead of being fixed per breakpoint.
+ */
+export const SHOP_ATLAS_CARD_MIN_WIDTH = 150
+export const SHOP_ATLAS_CARD_HEIGHT = 168
+export const SHOP_ATLAS_GRID_GAP = 10
+/** Portrait (px) of the champion holding the seat, in the detail panel's seat row. */
+export const SHOP_SEAT_PORTRAIT_SIZE = 28
 // Champion Shop — Chimes cost badge icon
 export const CHIMES_COST_ICON = 'game-icons:windchimes'
 
 /* ── Voyages-Atlas: drei Zonen, ein Budget ────────────────────────────────────
-   Dieselbe Budgetrechnung wie der Shop-Atlas (siehe TEAM_SHOP_FACET_RAIL_WIDTH):
+   Dieselbe Budgetrechnung wie der Shop-Atlas (siehe SHOP_ATLAS_FACET_RAIL_WIDTH):
    Seitenleiste + Karte + Detail teilen sich die Reiterbreite, und was die beiden
    Ränder nehmen, bleibt der Karte. Der Reiter ist beidseitig um
    `--hud-panel-size` eingerückt — die entscheidende Breite ist also die des

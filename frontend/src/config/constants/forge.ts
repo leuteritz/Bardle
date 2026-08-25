@@ -2915,7 +2915,7 @@ export const FORGE_UPGRADE_CAPPED_REASON = 'Raise the other rays to match'
  * über der Baumbühne, 100px hoch (kompakt 86), mit einem 84px-Ring links und
  * einer Chip-Reihe je Herkunft rechts. Sie ist gefallen, und mit ihr `yieldBand
  * .ts`: die Leitzahl, um derentwillen sie existierte, steht jetzt im KERN DER
- * SONNE (`components/bardProfil/shop/SunChimeBoost.vue`), also in der Mitte
+ * SONNE (`components/bardProfil/skillTree/SunChimeBoost.vue`), also in der Mitte
  * dessen, was sie ergibt. Der Baum-Viewport bekommt die hundert Pixel zurück,
  * und `fitScale` nimmt `min(width, height)` — auf flachen Viewports ist die
  * Höhe das Knappe, der Zugewinn also echt.

@@ -8,6 +8,7 @@ import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
 import { usePersistence } from '@/composables/system/usePersistence'
 import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
+import { useBadgeFlare } from '@/composables/ui/useBadgeFlare'
 import {
   BOTTOM_FRAME_STROKE_SHADOW,
   BOTTOM_FRAME_STROKE_WOOD,
@@ -34,6 +35,7 @@ import { formatBadgeCount } from '@/utils/ui/format'
 import { Icon } from '@iconify/vue'
 import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
 import RpgBadgeTooltipBody from '../ui/RpgBadgeTooltipBody.vue'
+import ShopReadyBadge from '../ui/ShopReadyBadge.vue'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
 import HeaderMaterialsComponent from './HeaderMaterialsComponent.vue'
@@ -52,6 +54,12 @@ const skillBadgeCount = useNotifyBadgeCount('skill')
 const expeditionBadgeCount = useNotifyBadgeCount('expedition')
 // Planet tab: TOTAL affordable level-ups across all six orbit slots right now.
 const planetBadgeCount = useNotifyBadgeCount('planet')
+// Was in der Star Forge neu erreichbar ist und noch niemand angesehen hat —
+// die Marke der Ecktaste rechts. Der Skill-Tree-Reiter zeigt dieselbe Zahl mit
+// einem eigenen Merker; beide scharfen auf demselben Zähler und blitzen daher
+// im selben Frame.
+const shopFreshCount = useNotifyBadgeCount('shop')
+const shopFlare = useBadgeFlare(shopFreshCount)
 // Die ✦-Marke ist ein Ja/Nein, kein Zähler.
 const forgeBadgeCount = useNotifyBadgeCount('forge')
 const forgeBadgeReady = computed(() => forgeBadgeCount.value > 0)
@@ -127,9 +135,11 @@ function openEvolveConsole() {
   uiStore.setBardTab('bard')
 }
 
-function openTeamTab() {
+/** Die Champion-Marke meldet REKRUTIERBARE Champions — das passiert im Shop,
+ *  nicht auf dem Sigil-Board. */
+function openShopTab() {
   uiStore.openBardModal()
-  uiStore.setBardTab('team')
+  uiStore.setBardTab('shop')
 }
 
 function openExpeditionTab() {
@@ -140,14 +150,14 @@ function openExpeditionTab() {
 /**
  * Der Weg zu The Wandering — beide Aufrufer wollen dasselbe.
  *
- * Die Marke „schmiedbar" traegt der Shop-Knopf daneben; diese hier meldet
+ * Die Marke „schmiedbar" traegt die Ecktaste rechts; diese hier meldet
  * „lernbar", und ein Sprung, der nur den Reiter oeffnet, laesst den Spieler mit
  * 195 Knoten allein. Wohin es geht, entscheidet der Store — dieselbe Quelle,
  * aus der Taste K liest.
  */
 function openRoadTab() {
   uiStore.openBardModal()
-  uiStore.setBardTab('shop')
+  uiStore.setBardTab('tree')
   const target = meepTreeStore.roadAnchorId
   if (target) focusNode(target, { readable: true })
 }
@@ -468,7 +478,7 @@ onUnmounted(() => {
             class="header-notif-badge header-notif-badge--champion"
             :style="champBadgeStyle"
             :aria-label="`${championBadgeCount} new champion(s)`"
-            @click.stop="openTeamTab"
+            @click.stop="openShopTab"
           >
             {{ championBadgeCount }}
           </button>
@@ -525,15 +535,14 @@ onUnmounted(() => {
       <div class="flex-shrink-0 header-inventory-bump">
         <button
           class="btn-gem btn-gem--corner-right"
-          title="Open the Star Forge at The Wandering"
+          title="Open the Skill Tree — the camera lands on The Wandering"
           @click="openRoadTab"
         >
-          <!-- Das Glyph der Strasse (HEADER_GEM_ICONS.tree). Der Knopf traegt
-               NICHT dasselbe Ziel wie der Shop-Knopf links, obwohl beide im
-               selben Reiter landen: dieser faehrt weiter, an den aeusseren Rand
-               des Netzes. Zwei Knoepfe auf denselben Anblick waeren einer zu
-               viel.
-               OHNE den `boost` der Tab-Leiste: dort gleicht er das Motiv an
+          <!-- Das Glyph des Netzes (HEADER_GEM_ICONS.tree). Zwei Ecktasten,
+               zwei Reiter: links der Laden, hier der Sternbaum. Der Knopf
+               oeffnet ihn nicht nur, er faehrt weiter an den aeusseren Rand —
+               am Zoomboden ist ein Meep-Knoten sechs Pixel gross.
+               OHNE den `boost` der Reiterleiste: dort gleicht er das Motiv an
                schlankere Phosphor-Nachbarn in EINER Reihe an — hier steht es
                allein in seiner Platte und füllt seinen Kasten ohnehin bis an
                die Kanten, ein Aufschlag drückte es nur ans Label. -->
@@ -544,7 +553,21 @@ onUnmounted(() => {
             class="btn-gem-icon"
             aria-hidden="true"
           />
-          <span class="btn-gem-label">Wander</span>
+          <span class="btn-gem-label">Tree</span>
+          <!-- Die azurne Forge-Marke sass einmal an der Ecktaste links; sie ist
+               mit dem Sternbaum hierher gezogen. Ein `span`, kein zweiter
+               Button — verschachtelte Buttons sind ungueltiges HTML, und die
+               Platte darunter fuehrt bereits an ihr Ziel. -->
+          <RpgBadgeTooltip clear-ancestor=".btn-gem">
+            <ShopReadyBadge
+              :count="shopFreshCount"
+              :flare="shopFlare"
+              :label="`${shopFreshCount} new Star Forge purchases within reach`"
+            />
+            <template #tip>
+              <RpgBadgeTooltipBody kind="shop" />
+            </template>
+          </RpgBadgeTooltip>
         </button>
       </div>
     </div>

@@ -441,6 +441,7 @@ export interface PauseChampionCallout {
 export type BardTabId =
   | 'bard'
   | 'shop'
+  | 'tree'
   | 'team'
   | 'expedition'
   | 'battle'

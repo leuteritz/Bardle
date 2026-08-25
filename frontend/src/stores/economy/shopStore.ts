@@ -23,7 +23,7 @@ export const useShopStore = defineStore('shop', {
     /**
      * Die Multiplikatorkette aus `calculateTotalCPS()`, aufgeschlüsselt nach
      * Herkunft. Ihr PRODUKT ist die Zahl im Kern der Sonne
-     * (`components/bardProfil/shop/SunChimeBoost.vue`); die Aufschlüsselung
+     * (`components/bardProfil/skillTree/SunChimeBoost.vue`); die Aufschlüsselung
      * selbst wird derzeit nirgends gezeigt, ist aber die Rechnung, an der die
      * Spec hängt.
      *

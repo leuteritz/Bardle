@@ -63,11 +63,6 @@
       >
         <Icon :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'" width="16" height="16" />
       </button>
-      <!-- The shop covers the board it was opened from, so the button that
-           opened it is not on screen to close it again — this one is. -->
-      <button class="cs-bar-close" aria-label="Close shop" title="Close shop (Esc)" @click="emitClose">
-        &#10005;
-      </button>
     </header>
 
     <ShopFacetRail
@@ -371,7 +366,7 @@ import ChampionShopCard from './ChampionShopCard.vue'
 import ChampionDetailPanel from './ChampionDetailPanel.vue'
 import ItemShopCard from './ItemShopCard.vue'
 import ItemDetailPanel from './ItemDetailPanel.vue'
-import RpgSearchBar from '../../../ui/RpgSearchBar.vue'
+import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 import ShopFacetRail from './ShopFacetRail.vue'
 import ShopOverviewCard from './ShopOverviewCard.vue'
 import { useItemStore } from '@/stores/economy/itemStore'
@@ -391,15 +386,15 @@ import {
   SHOP_JUMP_EXPAND_SETTLE_MS,
   SHOP_SCROLL_SETTLE_MS,
   CHAMPION_NEW_BADGE_DISMISS_MS,
-  TEAM_SHOP_FACET_RAIL_WIDTH,
-  TEAM_SHOP_FACET_RAIL_COLLAPSED,
-  TEAM_SHOP_FACET_AUTOFOLD_WIDTH,
-  TEAM_SHOP_DETAIL_MIN_WIDTH,
-  TEAM_SHOP_DETAIL_PCT,
-  TEAM_SHOP_DETAIL_MAX_WIDTH,
-  TEAM_SHOP_CARD_MIN_WIDTH,
-  TEAM_SHOP_CARD_HEIGHT,
-  TEAM_SHOP_GRID_GAP,
+  SHOP_ATLAS_FACET_RAIL_WIDTH,
+  SHOP_ATLAS_FACET_RAIL_COLLAPSED,
+  SHOP_ATLAS_FACET_AUTOFOLD_WIDTH,
+  SHOP_ATLAS_DETAIL_MIN_WIDTH,
+  SHOP_ATLAS_DETAIL_PCT,
+  SHOP_ATLAS_DETAIL_MAX_WIDTH,
+  SHOP_ATLAS_CARD_MIN_WIDTH,
+  SHOP_ATLAS_CARD_HEIGHT,
+  SHOP_ATLAS_GRID_GAP,
   ROLE_BY_KEY,
 } from '@/config/constants'
 import { recruitSeatFor, type RecruitSeat } from '@/utils/game/recruitSeat'
@@ -431,15 +426,22 @@ export default defineComponent({
     ShopOverviewCard,
   },
   props: {
-    initialRole: { type: String, default: 'all' },
     /**
-     * Bumped by the team tab when Escape should leave the detail layer rather
-     * than close the whole rail. Only the tab listens for keys — see the same
+     * Bumped by the tab root when Escape should drop the selection rather than
+     * close the whole profile. Only the tab listens for keys — see the same
      * token on the details page's inline picker.
      */
     closeDetailToken: { type: Number, default: 0 },
+    /**
+     * Bumped every time the tab becomes visible. The shop is mounted once and
+     * only hidden afterwards, so `onMounted` fires a single time per session —
+     * without this the second visit would find the first one's search, selection
+     * and scroll position, and "highest recruitable tier" goes stale one galaxy
+     * later.
+     */
+    visitToken: { type: Number, default: 0 },
   },
-  emits: ['roleChange', 'detailState', 'close'],
+  emits: ['detailState'],
   setup(props, { emit }) {
     const championNames = ref<string[]>(getChampionNames())
     const battleStore = useBattleStore()
@@ -449,7 +451,7 @@ export default defineComponent({
     const galaxyStore = useGalaxyStore()
     const { announceReceipt } = useHerald()
     const itemStore = useItemStore()
-    const activeRole = ref<ChampionRole | 'all'>(props.initialRole as ChampionRole | 'all')
+    const activeRole = ref<ChampionRole | 'all'>('all')
     const searchQuery = ref('')
     const activeTraits = ref<string[]>([])
     // Active cosmic-tier filter chip — 'all' or a star level (1..MAX_STAR_LEVEL).
@@ -495,13 +497,6 @@ export default defineComponent({
       support: { label: 'SUP', color: '#b8c8d8' },
     } as const
 
-    watch(
-      () => props.initialRole,
-      (val) => {
-        activeRole.value = val as ChampionRole | 'all'
-      },
-    )
-
     watch(activeRole, () => {
       if (activeTraits.value.length === 0) return
       const filtered = activeTraits.value.filter(
@@ -512,7 +507,6 @@ export default defineComponent({
 
     function setActiveRole(role: ChampionRole | 'all') {
       activeRole.value = role
-      emit('roleChange', role)
     }
 
     function toggleTrait(id: string) {
@@ -1469,6 +1463,34 @@ const shopChampionNames = computed(() =>
       () => closeDetail(),
     )
 
+    /**
+     * Jeder Besuch faengt frisch an — nicht jede Sitzung.
+     *
+     * Der Reiter bleibt nach dem ersten Oeffnen gemountet, `onMounted` liefe
+     * also genau einmal. Was der Spieler beim letzten Mal gesucht und gewaehlt
+     * hat, ist beim naechsten Betreten kein Zustand mehr, sondern ein Rest: eine
+     * Galaxie weiter steht die hoechste rekrutierbare Stufe woanders.
+     *
+     * Zurueckgesetzt wird beim BETRETEN und nicht beim Verlassen, und das ist
+     * der Unterschied zum Team-Tab: dort raeumt der Reiter selbst auf, hier
+     * kommt der Deep-Link (`pendingChampionSearch`) im selben Flush wie der
+     * Reiterwechsel. Ein Reset beim Verlassen liefe mit ihm um die Wette,
+     * `openAtHighestTier` tritt dagegen von sich aus zurueck, sobald eine Suche
+     * oder eine Auswahl steht.
+     *
+     * `immediate` ersetzt den Mount-Aufruf: der Reiter wird DURCH das Oeffnen
+     * gemountet, sein erster Besuch beginnt also mit ihm.
+     */
+    watch(
+      () => props.visitToken,
+      () => {
+        searchQuery.value = ''
+        closeDetail()
+        nextTick(openAtHighestTier)
+      },
+      { immediate: true },
+    )
+
     // Deep-link from a notify-badge tooltip: fill the search with the champion
     // name — the search watcher below then auto-selects it (exact match) in the
     // detail panel. Placed after selectedChampion so its immediate run is safe.
@@ -1551,9 +1573,6 @@ const shopChampionNames = computed(() =>
       showDomain('champions')
     }
 
-    onMounted(() => {
-      nextTick(openAtHighestTier)
-    })
 
     function selectPrev() {
       const list = visibleEntries.value
@@ -1752,7 +1771,7 @@ const shopChampionNames = computed(() =>
     const facetsFolded = computed(
       () =>
         userFacetsFolded.value ??
-        (atlasWidth.value > 0 && atlasWidth.value < TEAM_SHOP_FACET_AUTOFOLD_WIDTH),
+        (atlasWidth.value > 0 && atlasWidth.value < SHOP_ATLAS_FACET_AUTOFOLD_WIDTH),
     )
     function setFacetsFolded(folded: boolean) {
       userFacetsFolded.value = folded
@@ -1765,19 +1784,24 @@ const shopChampionNames = computed(() =>
      * sibling.
      */
     const atlasColumns = computed(() => {
-      const facet = facetsFolded.value ? TEAM_SHOP_FACET_RAIL_COLLAPSED : TEAM_SHOP_FACET_RAIL_WIDTH
-      return `${facet}px minmax(0, 1fr) clamp(${TEAM_SHOP_DETAIL_MIN_WIDTH}px, ${TEAM_SHOP_DETAIL_PCT}%, ${TEAM_SHOP_DETAIL_MAX_WIDTH}px)`
+      const facet = facetsFolded.value ? SHOP_ATLAS_FACET_RAIL_COLLAPSED : SHOP_ATLAS_FACET_RAIL_WIDTH
+      return `${facet}px minmax(0, 1fr) clamp(${SHOP_ATLAS_DETAIL_MIN_WIDTH}px, ${SHOP_ATLAS_DETAIL_PCT}%, ${SHOP_ATLAS_DETAIL_MAX_WIDTH}px)`
     })
-    const cardMinWidthPx = computed(() => `${TEAM_SHOP_CARD_MIN_WIDTH}px`)
-    const cardHeightPx = computed(() => `${TEAM_SHOP_CARD_HEIGHT}px`)
-    const gridGapPx = computed(() => `${TEAM_SHOP_GRID_GAP}px`)
+    const cardMinWidthPx = computed(() => `${SHOP_ATLAS_CARD_MIN_WIDTH}px`)
+    const cardHeightPx = computed(() => `${SHOP_ATLAS_CARD_HEIGHT}px`)
+    const gridGapPx = computed(() => `${SHOP_ATLAS_GRID_GAP}px`)
 
     let atlasObserver: ResizeObserver | null = null
     onMounted(() => {
       const el = atlasRef.value
       if (!el || typeof ResizeObserver === 'undefined') return
       atlasObserver = new ResizeObserver((entries) => {
-        atlasWidth.value = entries[0]?.contentRect.width ?? 0
+        // Versteckt (`display: none`) meldet der Beobachter 0. Das ist keine
+        // Breite, sondern die Abwesenheit einer — uebernaehme man sie, faende
+        // `facetsFolded` beim Wiedereinblenden einen Frame lang keine Schwelle
+        // und die eingeklappte Leiste spraenge auf.
+        const w = entries[0]?.contentRect.width ?? 0
+        if (w > 0) atlasWidth.value = w
       })
       atlasObserver.observe(el)
     })
@@ -1785,10 +1809,6 @@ const shopChampionNames = computed(() =>
       atlasObserver?.disconnect()
       atlasObserver = null
     })
-
-    function emitClose() {
-      emit('close')
-    }
 
     // ── Facets ──────────────────────────────────────────────────────────────
     // Counts come from the UNFILTERED pool on purpose: a count that shrank as
@@ -2128,7 +2148,6 @@ const shopChampionNames = computed(() =>
       onFacetToggle,
       affordableOnly,
       affordableCount,
-      emitClose,
       overviewOwned,
       overviewTotal,
       overviewGalaxy,

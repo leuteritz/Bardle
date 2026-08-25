@@ -239,10 +239,10 @@
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import CosmicStageBackground from '../../../ui/CosmicStageBackground.vue'
-import PlanetGlyph from '../../../ui/PlanetGlyph.vue'
+import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
+import PlanetGlyph from '@/components/ui/PlanetGlyph.vue'
 import { formatNumber } from '@/config/ui/numberFormat'
-import { SHOP_HOME_PLANET_GLYPH_SIZE, TEAM_SHOP_SEAT_PORTRAIT_SIZE } from '@/config/constants'
+import { SHOP_HOME_PLANET_GLYPH_SIZE, SHOP_SEAT_PORTRAIT_SIZE } from '@/config/constants'
 import type { ShopChampionDetail } from '@/types'
 
 /**
@@ -313,7 +313,7 @@ export default defineComponent({
       canArm,
       armed,
       seatText,
-      SEAT_PORTRAIT: TEAM_SHOP_SEAT_PORTRAIT_SIZE,
+      SEAT_PORTRAIT: SHOP_SEAT_PORTRAIT_SIZE,
       SHOP_HOME_PLANET_GLYPH_SIZE,
     }
   },

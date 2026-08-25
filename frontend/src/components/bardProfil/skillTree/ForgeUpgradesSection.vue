@@ -532,7 +532,7 @@ function scrollToRow(id: string): void {
      * `row.scrollIntoView()` stand hier und rollte JEDEN scrollbaren Vorfahren
      * mit — `.shop-frame` ist wegen seines `overflow` einer davon. Seit die
      * Detailspalte einklappt, steht ihre Liste im geparkten Zustand ausserhalb
-     * des Rahmens; ein Hover über den Baum zog deshalb den ganzen Shop-Tab
+     * des Rahmens; ein Hover über den Baum zog deshalb den ganzen Skill-Tree-Reiter
      * seitwärts, bis die Zeile im Bild war. Gemessen: der Baum rutschte um
      * 448 px nach links aus dem Bild, und das geparkte Panel erschien, als
      * wäre es aufgeklappt — bei unverändertem `detailsOpen`.
@@ -563,7 +563,7 @@ watch(treeHoverId, (id) => {
   // und ein Archiv, das `revealForSpotlight()` dabei aufklappt, stünde beim
   // nächsten Ausfahren unerklärt offen. Die Zeilen liegen dann ausserdem
   // ausserhalb des Rahmens, und genau daraus wurde der seitwärts rutschende
-  // Shop-Tab (siehe die Herleitung in `scrollToRow`).
+  // Skill-Tree-Reiter (siehe die Herleitung in `scrollToRow`).
   if (!detailsOpen.value) return
   // Gesperrt heisst leuchten, nicht rollen. Der Filter steht HIER und nicht an
   // `setTreeHover` — der trägt auch Hervorhebung, Kranz und Bedingungskette,

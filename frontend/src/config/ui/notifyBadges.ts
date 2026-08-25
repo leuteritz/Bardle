@@ -29,12 +29,18 @@ const PROFILE_TABS = 'Profile tab strip'
 
 export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
   {
+    // ACHTUNG, und es ist kein Tippfehler: die Marken-ID heisst `shop`, ihr Ziel
+    // ist `tree`. Die ID meint die Star Forge und ist so alt wie der Reiter, in
+    // dem die Forge einmal wohnte; der Reiter `shop` gehoert seit der Trennung
+    // dem Champion-Laden. Umbenannt ist sie nicht, weil `NotifyBadgeKind` durch
+    // badgeSeed, useNotifyBadges, den Tooltip und das Badge Lab laeuft — viel
+    // Diff fuer null Wirkung im Spiel. Wer sie „geradezieht", bricht den Sprung.
     id: 'shop',
     title: NOTIFY_BADGE_TITLE.shop,
     short: 'Ready to Forge',
     accent: BADGE_HERALD_ACCENT_SHOP,
-    icon: HEADER_GEM_ICONS.shop,
-    tab: 'shop',
+    icon: HEADER_GEM_ICONS.tree,
+    tab: 'tree',
     hasBadge: true,
     heralds: true,
     heraldEyebrow: 'STAR FORGE',
@@ -42,23 +48,28 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
     sites: [
       {
         file: 'components/bardProfil/BardProfileMenu.vue',
-        marker: '<ShopReadyBadge',
-        where: 'Shop corner gem + profile tab strip',
+        marker: 'place="inline"',
+        where: 'Skill-Tree-Reiter der Profil-Leiste',
       },
       {
-        file: 'components/bardProfil/shop/ForgeUpgradeTile.vue',
+        file: 'components/header/AppHeaderComponent.vue',
         marker: '<ShopReadyBadge',
-        where: 'Upgrade row in the shop tab',
+        where: 'Ecktaste rechts im Header (Skill Tree)',
       },
       {
-        file: 'components/bardProfil/shop/ForgeOfferRow.vue',
+        file: 'components/bardProfil/skillTree/ForgeUpgradeTile.vue',
+        marker: '<ShopReadyBadge',
+        where: 'Upgrade-Zeile im Skill-Tree-Reiter',
+      },
+      {
+        file: 'components/bardProfil/skillTree/ForgeOfferRow.vue',
         marker: '<ShopReadyBadge',
         where: 'Offer strip',
       },
       {
-        file: 'components/bardProfil/shop/ForgeTreePanel.vue',
+        file: 'components/bardProfil/skillTree/ForgeTreePanel.vue',
         marker: '<ShopReadyBadge',
-        where: 'Node corner in the forge net',
+        where: 'Knotenecke im Forge-Netz',
       },
     ],
     seedability: 'exact',
@@ -71,7 +82,7 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
     short: 'Skill Ready',
     accent: BADGE_HERALD_ACCENT_SKILL,
     imageSrc: '/img/BardAbilities/BardMeep-128.png',
-    tab: 'shop',
+    tab: 'tree',
     hasBadge: true,
     heralds: true,
     heraldEyebrow: 'THE WANDERING',
@@ -214,7 +225,7 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
     short: 'New Champions',
     accent: BADGE_ACCENT_CHAMPIONS,
     icon: 'game-icons:crested-helmet',
-    tab: 'team',
+    tab: 'shop',
     hasBadge: true,
     heralds: false,
     sites: [
@@ -229,14 +240,14 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
         where: PROFILE_TABS,
       },
       {
-        file: 'components/bardProfil/team/sigil/SigilBoardComponent.vue',
-        marker: '<RpgNotifyBadge',
-        where: 'Shop door at the top-left corner of the sigil board',
+        file: 'components/bardProfil/BardProfileMenu.vue',
+        marker: 'tone="champions"',
+        where: 'Ecktaste links im Header (Shop)',
       },
       {
-        file: 'components/bardProfil/team/championShop/ChampionShopCard.vue',
+        file: 'components/bardProfil/shop/ChampionShopCard.vue',
         marker: '<RpgNotifyBadge',
-        where: 'Card in the champion shop',
+        where: 'Karte im Champion-Shop',
       },
     ],
     seedability: 'capped',

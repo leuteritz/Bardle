@@ -139,7 +139,7 @@ export interface ExpeditionMission {
  *
  * Was daraus gezeigt wird, ist DARSTELLUNG und steht bewusst nicht hier: die
  * Sonne im Shop bildet das Produkt aller Glieder
- * (`components/bardProfil/shop/SunChimeBoost.vue`), eine Aufschlüsselung nach
+ * (`components/bardProfil/skillTree/SunChimeBoost.vue`), eine Aufschlüsselung nach
  * Herkunft gibt es derzeit nirgends.
  */
 export interface CpsFactor {

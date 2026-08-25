@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
  * Die azurne Marke „Star Forge ready" — EINE Quelle für alle Stellen, an denen
- * sie erscheint: die Shop-Ecktaste im Header, der Shop-Reiter der Profil-Leiste
- * und im Shop-Tab jeder einzelne Eintrag, der seit dem letzten Blick bezahlbar
- * geworden ist — Upgrade-Zeile, Baumknoten, Angebot.
+ * sie erscheint: die beiden Ecktasten im Header, die Reiter der Profil-Leiste
+ * und im Skill-Tree-Reiter jeder einzelne Eintrag, der seit dem letzten Blick
+ * bezahlbar geworden ist — Upgrade-Zeile, Baumknoten, Angebot.
  *
  * **Sie trägt IMMER eine Zahl.** Eine Fassung ohne Ziffer stand hier einmal (ein
  * reiner Punkt, für die Stellen, an denen die Zahl stets eine Eins gewesen wäre)
@@ -17,12 +17,21 @@
  * `AppHeaderComponent.vue`, `.mini-badge--shopready` scoped in
  * `BardProfileMenu.vue`), die Schiene trug eine dritte, davon ABWEICHENDE Form
  * (grün, eckig, ohne Schein). Der Spieler folgt einem blauen Abzeichen vom
- * Header in den Shop-Tab — die Spur darf nicht genau dort abbrechen, wo sie ans
+ * Header in den Reiter — die Spur darf nicht genau dort abbrechen, wo sie ans
  * Ziel führt.
  *
- * **Azur ist im Farbkanon des Spiels für diese eine Bedeutung reserviert:**
- * Violett ist Expedition, Gold die Sonnen-Entwicklung, Cyan der Champion-Shop,
- * Smaragd die Planeten, Kupfer der Codex.
+ * **Der Farbkanon des Spiels entscheidet, welchen Ton sie trägt** — Violett ist
+ * Expedition, Gold die Sonnen-Entwicklung, Smaragd die Planeten, Kupfer der
+ * Codex. Zwei davon leben hier: Azur für die Star Forge, Cyan für den
+ * Champion-Shop. Das ist der Grund für `tone` und nicht für eine zweite
+ * Komponente — die Ecktasten links und rechts sind dieselbe Platte mit
+ * demselben Drei-Variablen-Vertrag (`--sbadge-d/-top/-right`), sie melden nur
+ * Verschiedenes. Eine zweite Form nähme dem Spieler die Spur, die er vom
+ * Header in den Reiter verfolgt.
+ *
+ * `RpgNotifyBadge` konnte diesen Platz nicht übernehmen: es steht auf
+ * `pointer-events: none`, und an der Ecktaste hängt der Hover-Tooltip am
+ * Abzeichen selbst — er ginge nie auf.
  *
  * Maße und Sitz kommen vom Aufrufer als CSS-Variablen (`--sbadge-d`,
  * `--sbadge-top`, `--sbadge-right`) — Custom Properties vererben über die
@@ -45,8 +54,10 @@ withDefaults(
      * die mehrere Marken nebeneinander legen kann.
      */
     place?: 'corner' | 'inline'
+    /** Welche Bereitschaft sie meldet — siehe den Farbkanon oben. */
+    tone?: 'forge' | 'champions'
   }>(),
-  { place: 'corner' },
+  { place: 'corner', tone: 'forge' },
 )
 </script>
 
@@ -54,7 +65,11 @@ withDefaults(
   <span
     v-if="count > 0"
     class="sbadge"
-    :class="[place === 'inline' ? 'sbadge--inline' : 'sbadge--corner', { 'sbadge--flare': flare }]"
+    :class="[
+      place === 'inline' ? 'sbadge--inline' : 'sbadge--corner',
+      `sbadge--${tone}`,
+      { 'sbadge--flare': flare },
+    ]"
     :aria-label="label"
     >{{ count }}</span
   >
@@ -80,7 +95,7 @@ withDefaults(
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   pointer-events: auto;
-  background: linear-gradient(160deg, #7cc0ff, #2563eb);
+  background: linear-gradient(160deg, var(--sb-a), var(--sb-b));
   /* ── KEIN RAND, eine AUSSPARUNG ──────────────────────────────
      Hier stand `1.5px solid #bae6fd`, und eine helle Kontur um eine helle
      Fläche liest sich als Aufkleber: sie umreisst die Marke, statt sie
@@ -121,9 +136,27 @@ withDefaults(
   border-radius: inherit;
   pointer-events: none;
   box-shadow:
-    0 0 12px rgba(59, 130, 246, 0.9),
-    0 0 20px rgba(37, 99, 235, 0.45);
+    0 0 12px var(--sb-glow-a),
+    0 0 20px var(--sb-glow-b);
   opacity: 0;
+}
+
+/* Azur — die Star Forge. */
+.sbadge--forge {
+  --sb-a: #7cc0ff;
+  --sb-b: #2563eb;
+  --sb-glow-a: rgba(59, 130, 246, 0.9);
+  --sb-glow-b: rgba(37, 99, 235, 0.45);
+}
+
+/* Cyan — der Champion-Shop. Dieselben Werte wie `.mini-badge--champion` in der
+   Reiterleiste und `RpgNotifyBadge variant="shop"` auf der Karte: der Spieler
+   folgt EINER Farbe von der Ecktaste bis zur Karte, die sie meint. */
+.sbadge--champions {
+  --sb-a: #22d3ee;
+  --sb-b: #0891b2;
+  --sb-glow-a: rgba(6, 182, 212, 0.9);
+  --sb-glow-b: rgba(8, 145, 178, 0.45);
 }
 
 /* Kein Dauertakt — die Marke steht ruhig und meldet sich nur beim Anwachsen.

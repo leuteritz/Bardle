@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import {
-  TEAM_SHOP_FACET_RAIL_WIDTH,
-  TEAM_SHOP_FACET_RAIL_COLLAPSED,
-  TEAM_SHOP_FACET_AUTOFOLD_WIDTH,
-  TEAM_SHOP_DETAIL_MIN_WIDTH,
-  TEAM_SHOP_DETAIL_PCT,
-  TEAM_SHOP_DETAIL_MAX_WIDTH,
-  TEAM_SHOP_CARD_MIN_WIDTH,
-  TEAM_SHOP_GRID_GAP,
+  SHOP_ATLAS_FACET_RAIL_WIDTH,
+  SHOP_ATLAS_FACET_RAIL_COLLAPSED,
+  SHOP_ATLAS_FACET_AUTOFOLD_WIDTH,
+  SHOP_ATLAS_DETAIL_MIN_WIDTH,
+  SHOP_ATLAS_DETAIL_PCT,
+  SHOP_ATLAS_DETAIL_MAX_WIDTH,
+  SHOP_ATLAS_CARD_MIN_WIDTH,
+  SHOP_ATLAS_GRID_GAP,
   BOTTOM_BAR_SIDE_W,
 } from '@/config/constants'
 
@@ -19,7 +19,7 @@ import {
  * column by showing fewer champions is not the trade this was made for.
  *
  * The numbers below mirror what App.vue computes and what the browser was
- * measured at (see the worked example in constants/sigil.ts):
+ * measured at (see the worked example in constants/economy.ts):
  *   Full HD  →  196px 672px 372px   4 columns
  *   2K       →  196px 966px 498px   5 columns
  */
@@ -48,11 +48,11 @@ function atlasWidth(vw: number, vh: number): number {
 
 function zones(vw: number, vh: number, folded = false) {
   const atlas = atlasWidth(vw, vh)
-  const facets = folded ? TEAM_SHOP_FACET_RAIL_COLLAPSED : TEAM_SHOP_FACET_RAIL_WIDTH
+  const facets = folded ? SHOP_ATLAS_FACET_RAIL_COLLAPSED : SHOP_ATLAS_FACET_RAIL_WIDTH
   const detail = clamp(
-    TEAM_SHOP_DETAIL_MIN_WIDTH,
-    (atlas * TEAM_SHOP_DETAIL_PCT) / 100,
-    TEAM_SHOP_DETAIL_MAX_WIDTH,
+    SHOP_ATLAS_DETAIL_MIN_WIDTH,
+    (atlas * SHOP_ATLAS_DETAIL_PCT) / 100,
+    SHOP_ATLAS_DETAIL_MAX_WIDTH,
   )
   const grid = atlas - facets - detail
   return { atlas, facets, detail, grid }
@@ -61,7 +61,7 @@ function zones(vw: number, vh: number, folded = false) {
 /** What `repeat(auto-fill, minmax(CARD_MIN, 1fr))` resolves to. */
 function columns(gridWidth: number): number {
   const usable = gridWidth - GRID_PADDING
-  return Math.floor((usable + TEAM_SHOP_GRID_GAP) / (TEAM_SHOP_CARD_MIN_WIDTH + TEAM_SHOP_GRID_GAP))
+  return Math.floor((usable + SHOP_ATLAS_GRID_GAP) / (SHOP_ATLAS_CARD_MIN_WIDTH + SHOP_ATLAS_GRID_GAP))
 }
 
 const DESKTOPS: Array<[string, number, number]> = [
@@ -100,7 +100,7 @@ describe('shop atlas layout', () => {
     const open = zones(vw, vh)
     const folded = zones(vw, vh, true)
     expect(folded.grid - open.grid).toBe(
-      TEAM_SHOP_FACET_RAIL_WIDTH - TEAM_SHOP_FACET_RAIL_COLLAPSED,
+      SHOP_ATLAS_FACET_RAIL_WIDTH - SHOP_ATLAS_FACET_RAIL_COLLAPSED,
     )
     expect(columns(folded.grid)).toBeGreaterThanOrEqual(columns(open.grid))
   })
@@ -118,7 +118,7 @@ describe('shop atlas layout', () => {
     // resolutions — folding one of those would hide the facets by default on a
     // screen that fits them.
     for (const [, vw, vh] of DESKTOPS) {
-      expect(atlasWidth(vw, vh)).toBeGreaterThan(TEAM_SHOP_FACET_AUTOFOLD_WIDTH)
+      expect(atlasWidth(vw, vh)).toBeGreaterThan(SHOP_ATLAS_FACET_AUTOFOLD_WIDTH)
     }
   })
 })

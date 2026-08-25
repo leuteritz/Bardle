@@ -69,7 +69,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import RpgNotifyBadge from '../../../ui/RpgNotifyBadge.vue'
+import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import { truncate } from '@/config/ui/numberFormat'
 
 /**
