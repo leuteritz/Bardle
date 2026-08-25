@@ -3,9 +3,9 @@ import { buildVoyageFleet, voyageGalaxyState } from '@/utils/game/voyageFleet'
 import type { AvailableExpeditionSlot, ExpeditionMission, VoyageRailRow } from '@/types'
 
 /**
- * Das Fleet-Brett beantwortet „wo liegt gerade etwas" über ALLE Galaxien. Zwei
- * Zusagen: stille Galaxien bekommen keine Karte (sonst ist das Raster zu neun
- * Zehnteln leer — die Markenzahl ist global durch den Rang gedeckelt), und die
+ * Der Fleet-Streifen beantwortet „wo liegt gerade etwas" über ALLE Galaxien. Zwei
+ * Zusagen: stille Galaxien erscheinen gar nicht (sonst wäre der Streifen zu neun
+ * Zehnteln Füllung — die Markenzahl ist global durch den Rang gedeckelt), und die
  * Reihenfolge hängt nicht an der Uhr.
  */
 
@@ -81,16 +81,9 @@ describe('voyageGalaxyState', () => {
 })
 
 describe('buildVoyageFleet', () => {
-  it('gibt stillen Galaxien keine Karte, verliert sie aber nicht', () => {
-    const rows = [
-      row({ galaxy: 3, contracts: 1 }),
-      row({ galaxy: 2 }),
-      row({ galaxy: 1 }),
-    ]
-    const board = buildVoyageFleet(rows, [slot(3, 'a')], [], deps)
-    expect(board.cards.map((c) => c.galaxy)).toEqual([3])
-    expect(board.quiet.map((r) => r.galaxy)).toEqual([2, 1])
-    expect(board.cards.length + board.quiet.length).toBe(rows.length)
+  it('lässt stille Galaxien ganz weg', () => {
+    const rows = [row({ galaxy: 3, contracts: 1 }), row({ galaxy: 2 }), row({ galaxy: 1 })]
+    expect(buildVoyageFleet(rows, [slot(3, 'a')], [], deps).map((c) => c.galaxy)).toEqual([3])
   })
 
   it('ordnet nach Rang, dann nach Galaxie absteigend', () => {
@@ -100,32 +93,43 @@ describe('buildVoyageFleet', () => {
       row({ galaxy: 2, contracts: 1 }),
       row({ galaxy: 1, ready: 1 }),
     ]
-    const board = buildVoyageFleet(
+    const cards = buildVoyageFleet(
       rows,
       [slot(2, 'c')],
       [mission(4, 'd', 'active'), mission(3, 'a', 'success'), mission(1, 'b', 'success')],
       deps,
     )
-    expect(board.cards.map((c) => c.galaxy)).toEqual([3, 1, 2, 4])
+    expect(cards.map((c) => c.galaxy)).toEqual([3, 1, 2, 4])
   })
 
-  it('legt jede Marke auf die Karte ihrer Galaxie', () => {
-    const board = buildVoyageFleet(
+  it('legt jede Marke auf die Pille ihrer Galaxie', () => {
+    const cards = buildVoyageFleet(
       [row({ galaxy: 2, contracts: 1, inField: 1 }), row({ galaxy: 1, contracts: 1 })],
       [slot(2, 'a'), slot(1, 'b')],
       [mission(2, 'c', 'active')],
       deps,
     )
-    const two = board.cards.find((c) => c.galaxy === 2)!
-    const one = board.cards.find((c) => c.galaxy === 1)!
+    const two = cards.find((c) => c.galaxy === 2)!
+    const one = cards.find((c) => c.galaxy === 1)!
     expect(two.roster.map((r) => r.pinKey).sort()).toEqual(['a', 'c'])
     expect(one.roster.map((r) => r.pinKey)).toEqual(['b'])
   })
 
   it('lässt eine Mission ohne Galaxie liegen, statt sie falsch einzusortieren', () => {
     const stray = { ...mission(1, 'x', 'active'), galaxy: undefined }
-    const board = buildVoyageFleet([row({ galaxy: 1, contracts: 1 })], [slot(1, 'a')], [stray], deps)
-    expect(board.cards[0].roster.map((r) => r.pinKey)).toEqual(['a'])
+    const cards = buildVoyageFleet([row({ galaxy: 1, contracts: 1 })], [slot(1, 'a')], [stray], deps)
+    expect(cards[0].roster.map((r) => r.pinKey)).toEqual(['a'])
+  })
+
+  /** Der Sprungpunkt einer Pille ist die erste Zeile: was am dringendsten ist. */
+  it('stellt die einsammelbare Marke einer Galaxie an den Anfang ihres Rosters', () => {
+    const cards = buildVoyageFleet(
+      [row({ galaxy: 1, contracts: 1, inField: 1, ready: 1 })],
+      [slot(1, 'a')],
+      [mission(1, 'b', 'active'), mission(1, 'c', 'success')],
+      deps,
+    )
+    expect(cards[0].roster[0].pinKey).toBe('c')
   })
 
   it('liefert bei gleichem Zustand zweimal dasselbe — die Reihenfolge kennt keine Uhr', () => {

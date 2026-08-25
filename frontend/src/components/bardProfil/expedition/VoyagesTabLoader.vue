@@ -27,7 +27,9 @@
 import { computed } from 'vue'
 import LoadingBeacon from '@/components/ui/LoadingBeacon.vue'
 import {
+  VOYAGE_COMMAND_BAR_H,
   VOYAGE_DETAIL_COLLAPSED,
+  VOYAGE_FLEET_STRIP_H,
   VOYAGE_LOADER_ACCENT,
   VOYAGE_LOADER_CAPTION,
   VOYAGE_LOADER_ICON,
@@ -52,6 +54,8 @@ const thumbHeight = `${VOYAGE_RAIL_THUMB_H}px`
 /** Die Detailspalte startet EINGEKLAPPT — der Platzhalter muss den Griff
  *  zeigen, nicht die geöffnete Spalte, sonst springt das Layout beim Enthüllen. */
 const detailWidth = `${VOYAGE_DETAIL_COLLAPSED}px`
+const headHeight = `${VOYAGE_COMMAND_BAR_H + VOYAGE_FLEET_STRIP_H}px`
+const stripHeight = `${VOYAGE_FLEET_STRIP_H}px`
 const bandHeight = `${VOYAGE_MAP_STATS_BAND_H}px`
 /** Der Kasten sitzt so ueber dem Band, wie es gleich die Fit-Box tut. */
 const stagePadBottom = `${VOYAGE_MAP_STATS_BAND_H + 10}px`
@@ -79,13 +83,18 @@ const skeletonPorts = computed(() =>
 <template>
   <div class="vtl">
     <!-- Kopfleiste -->
-    <div class="vtl-bar" aria-hidden="true">
-      <span class="vtl-mark vtl-mark--rank" />
-      <span class="vtl-spacer" />
-      <span class="vtl-mark vtl-mark--read" />
-      <span class="vtl-mark vtl-mark--read" />
-      <span class="vtl-mark vtl-mark--read" />
-      <span class="vtl-mark vtl-mark--btn" />
+    <div class="vtl-head" aria-hidden="true">
+      <div class="vtl-bar">
+        <span class="vtl-mark vtl-mark--rank" />
+        <span class="vtl-spacer" />
+        <span class="vtl-mark vtl-mark--read" />
+        <span class="vtl-mark vtl-mark--read" />
+        <span class="vtl-mark vtl-mark--read" />
+        <span class="vtl-mark vtl-mark--btn" />
+      </div>
+      <div class="vtl-strip">
+        <span v-for="i in 4" :key="i" class="vtl-mark vtl-mark--pill" />
+      </div>
     </div>
 
     <!-- Seitenleiste -->
@@ -145,7 +154,7 @@ const skeletonPorts = computed(() =>
   z-index: 30;
   display: grid;
   grid-template-columns: v-bind(railWidth) minmax(0, 1fr) v-bind(detailWidth);
-  grid-template-rows: 58px minmax(0, 1fr);
+  grid-template-rows: v-bind(headHeight) minmax(0, 1fr);
   overflow: hidden;
   background: #111008;
 }
@@ -157,15 +166,35 @@ const skeletonPorts = computed(() =>
 }
 
 /* ── Kopfleiste ─────────────────────────────────────────────── */
-.vtl-bar {
+.vtl-head {
   grid-column: 1 / -1;
   grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  background: #16100a;
+  border-bottom: 3px solid #5c3310;
+}
+.vtl-bar {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 0 14px;
-  background: #16100a;
-  border-bottom: 3px solid #5c3310;
+}
+.vtl-strip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: v-bind(stripHeight);
+  padding: 0 14px;
+  border-top: 1px solid #402a12;
+  background: #17100a;
+}
+.vtl-mark--pill {
+  width: 150px;
+  height: 26px;
+  border-radius: 4px;
 }
 .vtl-mark--rank {
   width: 210px;

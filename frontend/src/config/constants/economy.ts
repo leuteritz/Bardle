@@ -722,18 +722,24 @@ export const VOYAGE_DETAIL_MAX_WIDTH = 560
  *  besetzte Crew eines Vertrags überlebt das Falten. */
 export const VOYAGE_DETAIL_COLLAPSED = 44
 
-/* ── Fleet-Brett: die Bühne als Raster aller Galaxien ──────────────────────
+/* ── Fleet-Streifen: die zweite Zeile der Kopfleiste ───────────────────────
 
-   Die Kartenbreite ist ABGELEITET, nicht gewählt: eine Fleet-Zeile IST die Zeile
-   der Detailspalte (`ExpeditionRosterRow`), und die liest dort in
-   VOYAGE_DETAIL_MIN_WIDTH minus Griff minus Innenabstand. Wählte man hier eine
-   eigene Zahl, bräche die Zeile an einem der beiden Orte um.
-   `voyagesFleetLayout.spec.ts` bindet die Herleitung.                         */
+   Er steht IMMER und misst IMMER dasselbe. Zwei Gründe, beide zwingend:
+   `.etc-bar` ist eine auto-Grid-Zeile — eine wachsende Kopfleiste ändert die
+   Bühnenhöhe, damit `paintKey`, und malt die Galaxie neu; bei einer Höhe, die an
+   der Vertragszahl hinge, geschähe das bei JEDEM Spawn. Und der Streifen nimmt
+   der Fit-Box Höhe, die die Klickflächen der Häfen trägt: der Spielraum über
+   VOYAGE_MAP_STATS_MIN_H ist auf Full HD 81,6 px.
+   `voyagesFleetLayout.spec.ts` bindet beides.                                 */
 
-export const VOYAGE_FLEET_CARD_PAD = 10
-export const VOYAGE_FLEET_CARD_MIN_W =
-  VOYAGE_DETAIL_MIN_WIDTH - VOYAGE_DETAIL_COLLAPSED - 2 * VOYAGE_FLEET_CARD_PAD
-export const VOYAGE_FLEET_CARD_GAP = 10
+export const VOYAGE_FLEET_STRIP_H = 44
+/** Gemessene Höhe der Hauptreihe der Kopfleiste (Rang, Ablesungen, Aktionen).
+ *  Sie steht hier, weil der Ladeschleier die Maße dessen tragen muss, was kommt. */
+export const VOYAGE_COMMAND_BAR_H = 58
+/** Ziffer + drei Zähler ohne Namen — worauf eine Pille zusammenschrumpfen darf,
+ *  wenn alle zehn Rang-Plätze belegt sind. */
+export const VOYAGE_FLEET_PILL_MIN_W = 112
+export const VOYAGE_FLEET_PILL_GAP = 6
 
 /* ── Hoehenbudget der Missionskarte ───────────────────────────────────────────
 

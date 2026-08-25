@@ -94,12 +94,16 @@ function zones(vw: number, vh: number, folded = false, detailFolded = false) {
  * Je 92 px höher als in der vorigen Fassung: das ist der Crew-Streifen, den der
  * Reiter nicht mehr trägt. Die Bühne hat ihn geerbt und gibt 96 davon als
  * Datenband wieder aus — die Fit-Box ist damit nur 4 px flacher als vorher.
+ *
+ * Seit dem Fleet-Streifen je VOYAGE_FLEET_STRIP_H (44) flacher: die Kopfleiste
+ * trägt eine zweite Zeile, und `.etc-bar` ist eine auto-Grid-Zeile.
+ * `voyagesFleetLayout.spec.ts` bindet, dass das noch trägt.
  */
 const STAGE_HEIGHT: Record<number, number> = {
-  1080: 701.6,
-  1200: 802.4,
-  1440: 980,
-  2160: 1689.2,
+  1080: 657.6,
+  1200: 758.4,
+  1440: 936,
+  2160: 1645.2,
 }
 
 function stageHeight(vh: number): number {
@@ -160,18 +164,21 @@ describe('voyages atlas layout', () => {
     expect(focus.rail + focus.detail + focus.map).toBeCloseTo(focus.atlas, 6)
   })
 
-  it('macht die Karte im Fokus auf Full HD um zwei Drittel grösser', () => {
+  it('macht die Karte im Fokus auf Full HD um drei Fünftel grösser', () => {
     // Der Grund, aus dem beide Ränder falten dürfen. Gemessen an der Fit-Box,
     // nicht an der Zone: was zählt, ist die Fläche, auf der die Galaxie steht.
     //
-    // 1.70 und nicht mehr, weil das geöffnete Seitenverhältnis-Band einen Teil
-    // des Gewinns schon im OFFENEN Zustand ausschüttet (592×605.6 statt
-    // 592×514.8). Gegen den Stand vor beiden Änderungen sind es 1.89.
+    // 1.61 und nicht mehr, weil das geöffnete Seitenverhältnis-Band einen Teil
+    // des Gewinns schon im OFFENEN Zustand ausschüttet. Vor dem Fleet-Streifen
+    // waren es 1.70; die 44 px, die er der Bühne nimmt, fehlen im Fokus auf
+    // BEIDEN Seiten der Rechnung, gehen aber nur der Höhe ab — deshalb sinkt der
+    // Faktor, statt gleich zu bleiben. Wer den Streifen weiter wachsen lässt,
+    // drückt hier weiter.
     const area = (z: { map: number }) => {
       const box = galaxyFitBox(z.map - VOYAGE_MAP_GUTTER_PX, fitHeight(1080))
       return box.w * box.h
     }
-    expect(area(zones(1920, 1080, true, true)) / area(zones(1920, 1080))).toBeGreaterThan(1.65)
+    expect(area(zones(1920, 1080, true, true)) / area(zones(1920, 1080))).toBeGreaterThan(1.55)
   })
 
   it('klappt keine Referenzauflösung von selbst ein', () => {

@@ -362,9 +362,6 @@ export interface VoyageRailRow {
   seen: boolean
 }
 
-/** Welche Bühne der Voyages-Reiter zeigt: die eine Karte oder das ganze Brett. */
-export type VoyageStageMode = 'chart' | 'fleet'
-
 /** Was eine Galaxie gerade trägt — derselbe Rang in Leiste und Fleet-Brett. */
 export type VoyageGalaxyState = 'ready' | 'offer' | 'field' | 'quiet'
 
@@ -410,7 +407,7 @@ export interface VoyageRosterRow {
   ariaLead: string
 }
 
-/** Eine Galaxie als Karte des Fleet-Bretts. */
+/** Eine Galaxie mit Inhalt — eine Pille des Fleet-Streifens. */
 export interface VoyageFleetCard {
   galaxy: number
   row: VoyageRailRow

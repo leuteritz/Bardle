@@ -9,6 +9,10 @@
  * Sammeln und Absenden liegen hier, weil es die Spaltenköpfe des alten Bretts
  * nicht mehr gibt, an denen sie hingen — und weil sie zu den Zahlen gehören,
  * die sie verändern.
+ *
+ * Darunter, in DERSELBEN Leiste, der Fleet-Streifen: die Ablesungen sagen „fünf
+ * Verträge", er sagt WO. Ohne Umschalter — die Frage stellt sich beim Öffnen,
+ * nicht auf Wunsch.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -16,19 +20,21 @@ import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { toRoman } from '@/utils/ui/format'
-import type { VoyageStageMode } from '@/types'
+import type { VoyageRailRow } from '@/types'
+import ExpeditionFleetStrip from './ExpeditionFleetStrip.vue'
 
 const props = defineProps<{
   now: number
   collectFlashing: boolean
   chartFocus: boolean
-  mode: VoyageStageMode
+  selectedGalaxy: number
+  rows: VoyageRailRow[]
 }>()
 const emit = defineEmits<{
   'collect-all': []
   'send-all': []
   'toggle-focus': []
-  'set-mode': [VoyageStageMode]
+  open: [galaxy: number, pinKey: string | null]
 }>()
 
 const expeditionStore = useExpeditionStore()
@@ -91,133 +97,115 @@ function formatCountdown(ms: number): string {
 
 <template>
   <header class="ecb">
-    <div class="ecb-rank">
-      <Icon :icon="rank.icon" width="28" height="28" class="ecb-rank-ico" />
-      <div class="ecb-rank-text">
-        <div class="ecb-rank-line">
-          <span class="ecb-rank-name">Expedition Rank {{ toRoman(rank.tier) }}</span>
-          <span class="ecb-rank-flavor">{{ rank.name }}</span>
+    <div class="ecb-main">
+      <div class="ecb-rank">
+        <Icon :icon="rank.icon" width="28" height="28" class="ecb-rank-ico" />
+        <div class="ecb-rank-text">
+          <div class="ecb-rank-line">
+            <span class="ecb-rank-name">Expedition Rank {{ toRoman(rank.tier) }}</span>
+            <span class="ecb-rank-flavor">{{ rank.name }}</span>
+          </div>
+          <span class="ecb-rank-goal">
+            <template v-if="nextRank">
+              {{ expeditionStore.ledgerCompleted }} / {{ nextRank.required }} runs
+              <span class="ecb-rank-arrow">→</span>
+              <span class="ecb-rank-reward">{{ nextRankReward }}</span>
+            </template>
+            <template v-else>
+              Highest rank reached — {{ expeditionStore.ledgerCompleted }} runs
+            </template>
+          </span>
         </div>
-        <span class="ecb-rank-goal">
-          <template v-if="nextRank">
-            {{ expeditionStore.ledgerCompleted }} / {{ nextRank.required }} runs
-            <span class="ecb-rank-arrow">→</span>
-            <span class="ecb-rank-reward">{{ nextRankReward }}</span>
-          </template>
-          <template v-else>
-            Highest rank reached — {{ expeditionStore.ledgerCompleted }} runs
-          </template>
-        </span>
       </div>
-    </div>
 
-    <div class="ecb-readouts">
-      <div class="ecb-read" :class="{ 'ecb-read--live': activeCount > 0 }">
-        <span class="ecb-read-value">
-          {{ activeCount }}<span class="ecb-read-cap">/{{ expeditionStore.maxActiveExpeditions }}</span>
-        </span>
-        <span class="ecb-read-label">In field</span>
+      <div class="ecb-readouts">
+        <div class="ecb-read" :class="{ 'ecb-read--live': activeCount > 0 }">
+          <span class="ecb-read-value">
+            {{ activeCount }}<span class="ecb-read-cap">/{{ expeditionStore.maxActiveExpeditions }}</span>
+          </span>
+          <span class="ecb-read-label">In field</span>
+        </div>
+        <div class="ecb-read" :class="{ 'ecb-read--live': readyCount > 0 }">
+          <span class="ecb-read-value">{{ readyCount }}</span>
+          <span class="ecb-read-label">Ready</span>
+        </div>
+        <div class="ecb-read">
+          <span class="ecb-read-value">
+            {{ expeditionStore.availableExpeditions.length
+            }}<span class="ecb-read-cap">/{{ expeditionStore.maxAvailableOffers }}</span>
+          </span>
+          <span class="ecb-read-label">Contracts</span>
+        </div>
+        <div class="ecb-read" :class="{ 'ecb-read--full': offersFull }">
+          <span class="ecb-read-value">
+            {{ offersFull ? 'FULL' : formatCountdown(timeUntilNextSpawn) }}
+          </span>
+          <span class="ecb-read-label">Next offer</span>
+        </div>
       </div>
-      <div class="ecb-read" :class="{ 'ecb-read--live': readyCount > 0 }">
-        <span class="ecb-read-value">{{ readyCount }}</span>
-        <span class="ecb-read-label">Ready</span>
-      </div>
-      <div class="ecb-read">
-        <span class="ecb-read-value">
-          {{ expeditionStore.availableExpeditions.length
-          }}<span class="ecb-read-cap">/{{ expeditionStore.maxAvailableOffers }}</span>
-        </span>
-        <span class="ecb-read-label">Contracts</span>
-      </div>
-      <div class="ecb-read" :class="{ 'ecb-read--full': offersFull }">
-        <span class="ecb-read-value">
-          {{ offersFull ? 'FULL' : formatCountdown(timeUntilNextSpawn) }}
-        </span>
-        <span class="ecb-read-label">Next offer</span>
-      </div>
-    </div>
 
-    <div class="ecb-actions">
-      <!-- Der Umschalter zuerst: er entscheidet, was die Bühne überhaupt zeigt. -->
-      <div class="ecb-seg" role="group" aria-label="Stage view">
+      <div class="ecb-actions">
         <button
-          class="ecb-seg-btn"
-          :class="{ 'is-on': mode === 'chart' }"
-          :aria-pressed="mode === 'chart'"
-          aria-label="Chart one galaxy"
-          @click.stop="emit('set-mode', 'chart')"
+          class="ecb-bulk ecb-bulk--send"
+          :class="{ 'is-muted': !canSendAll }"
+          :disabled="!canSendAll"
+          aria-label="Send every crewed contract"
+          @click.stop="emit('send-all')"
         >
-          <Icon icon="game-icons:treasure-map" width="13" height="13" />
-          Chart
+          <Icon icon="ph:tent-fill" width="14" height="14" />
+          Send all
         </button>
+
         <button
-          class="ecb-seg-btn"
-          :class="{ 'is-on': mode === 'fleet' }"
-          :aria-pressed="mode === 'fleet'"
-          aria-label="Show every reach at once"
-          @click.stop="emit('set-mode', 'fleet')"
+          class="ecb-bulk ecb-bulk--collect"
+          :class="{
+            'is-ready': readyCount > 0,
+            'is-flashing': collectFlashing,
+            'is-muted': readyCount === 0,
+          }"
+          :disabled="readyCount === 0"
+          aria-label="Collect all completed expeditions"
+          @click.stop="emit('collect-all')"
         >
-          <Icon icon="game-icons:galaxy" width="13" height="13" />
-          Fleet
+          <Icon icon="ph:treasure-chest-fill" width="14" height="14" />
+          Collect all
+          <RpgNotifyBadge :count="readyCount" label="Expedition rewards ready" />
+        </button>
+
+        <!-- Der eine Griff, der beide Ränder wegklappt. Escape holt sie zurück. -->
+        <button
+          class="ecb-focus"
+          :class="{ 'is-on': chartFocus }"
+          :aria-pressed="chartFocus"
+          :aria-label="chartFocus ? 'Show rail and details' : 'Focus the chart'"
+          @click.stop="emit('toggle-focus')"
+        >
+          <Icon
+            :icon="chartFocus ? 'lucide:minimize' : 'lucide:maximize'"
+            width="14"
+            height="14"
+          />
+          {{ chartFocus ? 'Exit focus' : 'Focus' }}
+        </button>
+
+        <button
+          v-if="isDev"
+          class="ecb-admin"
+          aria-label="Force spawn expedition (dev)"
+          @click.stop="expeditionStore.forceSpawn()"
+        >
+          <Icon icon="ph:lightning-fill" width="12" height="12" />
+          Spawn
         </button>
       </div>
-
-      <button
-        class="ecb-bulk ecb-bulk--send"
-        :class="{ 'is-muted': !canSendAll }"
-        :disabled="!canSendAll"
-        aria-label="Send every crewed contract"
-        @click.stop="emit('send-all')"
-      >
-        <Icon icon="ph:tent-fill" width="14" height="14" />
-        Send all
-      </button>
-
-      <button
-        class="ecb-bulk ecb-bulk--collect"
-        :class="{
-          'is-ready': readyCount > 0,
-          'is-flashing': collectFlashing,
-          'is-muted': readyCount === 0,
-        }"
-        :disabled="readyCount === 0"
-        aria-label="Collect all completed expeditions"
-        @click.stop="emit('collect-all')"
-      >
-        <Icon icon="ph:treasure-chest-fill" width="14" height="14" />
-        Collect all
-        <RpgNotifyBadge :count="readyCount" label="Expedition rewards ready" />
-      </button>
-
-      <!-- Der eine Griff, der beide Ränder wegklappt. Escape holt sie zurück. -->
-      <!-- Im Fleet-Modus gibt es keine Karte zu fokussieren. Stumm statt weg:
-           ein verschwindender Knopf liesse die Reihe springen. -->
-      <button
-        class="ecb-focus"
-        :class="{ 'is-on': chartFocus, 'is-muted': mode === 'fleet' }"
-        :disabled="mode === 'fleet'"
-        :aria-pressed="chartFocus"
-        :aria-label="chartFocus ? 'Show rail and details' : 'Focus the chart'"
-        @click.stop="emit('toggle-focus')"
-      >
-        <Icon
-          :icon="chartFocus ? 'lucide:minimize' : 'lucide:maximize'"
-          width="14"
-          height="14"
-        />
-        {{ chartFocus ? 'Exit focus' : 'Focus' }}
-      </button>
-
-      <button
-        v-if="isDev"
-        class="ecb-admin"
-        aria-label="Force spawn expedition (dev)"
-        @click.stop="expeditionStore.forceSpawn()"
-      >
-        <Icon icon="ph:lightning-fill" width="12" height="12" />
-        Spawn
-      </button>
     </div>
+
+    <ExpeditionFleetStrip
+      :rows="rows"
+      :selected="selectedGalaxy"
+      :now="now"
+      @open="(galaxy, pinKey) => emit('open', galaxy, pinKey)"
+    />
 
     <div class="ecb-progress">
       <div class="ecb-progress-fill" :style="{ transform: `scaleX(${rankProgress})` }" />
@@ -230,11 +218,15 @@ function formatCountdown(ms: number): string {
   position: relative;
   flex-shrink: 0;
   display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #1b120a 0%, #16100a 100%);
+  border-bottom: 3px solid #5c3310;
+}
+.ecb-main {
+  display: flex;
   align-items: center;
   gap: 16px;
   padding: 10px 14px 11px;
-  background: linear-gradient(180deg, #1b120a 0%, #16100a 100%);
-  border-bottom: 3px solid #5c3310;
 }
 
 /* ── Rang: der Titel der Leiste ─────────────────────────────── */
@@ -424,47 +416,6 @@ function formatCountdown(ms: number): string {
   right: -6px;
 }
 
-/* ── Der Bühnenumschalter ───────────────────────────────────── */
-.ecb-seg {
-  display: flex;
-  flex-shrink: 0;
-  border: 1px solid #5c3310;
-  border-radius: 4px;
-  overflow: hidden;
-}
-.ecb-seg-btn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  background: transparent;
-  border: none;
-  color: rgba(200, 144, 64, 0.62);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    color 0.12s,
-    background 0.12s;
-}
-.ecb-seg-btn + .ecb-seg-btn {
-  border-left: 1px solid #3e200a;
-}
-.ecb-seg-btn:hover {
-  color: #e8c040;
-}
-.ecb-seg-btn.is-on {
-  background: #2a1c0a;
-  color: #e8c040;
-}
-.ecb-seg-btn:focus-visible {
-  outline: 2px solid #e8c040;
-  outline-offset: -2px;
-}
-
 .ecb-focus {
   display: flex;
   align-items: center;
@@ -493,10 +444,6 @@ function formatCountdown(ms: number): string {
   background: #2a1c0a;
   border-color: #c89040;
   color: #e8c040;
-}
-.ecb-focus.is-muted {
-  opacity: 0.36;
-  cursor: not-allowed;
 }
 
 .ecb-admin {

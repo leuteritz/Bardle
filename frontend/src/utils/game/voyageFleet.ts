@@ -1,8 +1,8 @@
 /**
- * Das Fleet-Brett: alle befreiten Galaxien auf einmal, nach Rang geordnet.
+ * Der Fleet-Streifen: jede Galaxie, die gerade etwas trägt, nach Rang geordnet.
  *
  * Eine Abbildung, keine Composable — sie braucht weder Refs noch Uhr. Und sie
- * kennt `now` NICHT: nach Ablaufzeit zu sortieren hiesse, das Raster ordnet sich
+ * kennt `now` NICHT: nach Ablaufzeit zu sortieren hiesse, der Streifen ordnet sich
  * jede Sekunde unter dem Zeiger um. Dringlichkeit trägt die Zeile, nicht der Platz.
  */
 import { buildVoyageRoster, rosterSubjectsOf, type VoyageRosterDeps } from '@/utils/game/voyageRoster'
@@ -29,18 +29,14 @@ interface GalaxyBucket {
   missions: ExpeditionMission[]
 }
 
-export interface VoyageFleetBoard {
-  cards: VoyageFleetCard[]
-  /** Galaxien ohne Vertrag und ohne Crew — sie bekommen keine Karte. */
-  quiet: VoyageRailRow[]
-}
-
+/** Stille Galaxien erscheinen NICHT — sie tragen nichts, und die Leiste links
+ *  listet sie ohnehin. */
 export function buildVoyageFleet(
   rows: readonly VoyageRailRow[],
   offers: readonly AvailableExpeditionSlot[],
   missions: readonly ExpeditionMission[],
   deps: VoyageRosterDeps,
-): VoyageFleetBoard {
+): VoyageFleetCard[] {
   // Eine Passage über beide Listen statt eines Filters je Galaxie.
   const byGalaxy = new Map<number, GalaxyBucket>()
   const bucket = (galaxy: number): GalaxyBucket => {
@@ -57,14 +53,10 @@ export function buildVoyageFleet(
   }
 
   const cards: VoyageFleetCard[] = []
-  const quiet: VoyageRailRow[] = []
 
   for (const row of rows) {
     const state = voyageGalaxyState(row)
-    if (state === 'quiet') {
-      quiet.push(row)
-      continue
-    }
+    if (state === 'quiet') continue
     const here = byGalaxy.get(row.galaxy) ?? { offers: [], missions: [] }
     cards.push({
       galaxy: row.galaxy,
@@ -76,5 +68,5 @@ export function buildVoyageFleet(
 
   // Zweitschlüssel ausdrücklich, statt sich auf die Sortierstabilität zu verlassen.
   cards.sort((a, b) => RANK[a.state] - RANK[b.state] || b.galaxy - a.galaxy)
-  return { cards, quiet }
+  return cards
 }
