@@ -96,11 +96,20 @@ const railFolded = computed(
 const userDetailFolded = ref<boolean | null>(null)
 const detailFolded = computed(() => userDetailFolded.value ?? true)
 
+/** Die Spalte öffnet nur über einer Galaxie, die etwas trägt. */
+const detailOpenable = computed(() => placedSites.value.length > 0)
+
+/** Die EINE Stelle, die aufklappt — `null` und nicht `true`, sonst stünde der
+ *  Fokusknopf über einer stillen Galaxie gedrückt da. */
+function setDetailFolded(folded: boolean) {
+  userDetailFolded.value = folded ? true : detailOpenable.value ? false : null
+}
+
 const chartFocus = computed(() => railFolded.value && userDetailFolded.value === true)
 function toggleFocus() {
   const next = !chartFocus.value
   userRailFolded.value = next
-  userDetailFolded.value = next
+  setDetailFolded(next)
 }
 
 /** Der Sprung aus dem Fleet-Streifen. Reihenfolge ist bindend: `selectGalaxy`
@@ -312,11 +321,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
         :record="selectedRecord"
         :now="now"
         :folded="detailFolded"
+        :openable="detailOpenable"
         @select="onSelect"
         @send="atlas.sendExpedition"
         @collect="atlas.collectMission"
         @picker-open="pickerOpen = $event"
-        @fold="userDetailFolded = $event"
+        @fold="setDetailFolded"
       />
 
       <!-- Nur ein LEAVE — der Schleier ist ab Frame 1 voll deckend und wird

@@ -30,6 +30,8 @@ const props = defineProps<{
   record: CompletedGalaxyRecord | null
   now: number
   folded: boolean
+  /** Trägt die Galaxie etwas? Sonst gibt es kein Detail, das die Breite lohnt. */
+  openable: boolean
 }>()
 const emit = defineEmits<{
   select: [string]
@@ -53,6 +55,14 @@ const panelMinWidth = `${VOYAGE_DETAIL_MIN_WIDTH - VOYAGE_DETAIL_COLLAPSED}px`
 const subjectIcon = computed(
   () => props.site?.offer?.icon ?? props.site?.mission?.icon ?? 'game-icons:scroll-unfurled',
 )
+
+/** Gesperrt wird nur die Öffnungsrichtung — sonst säße der Spieler nach der
+ *  letzten eingesammelten Beute in einer Spalte fest, die nicht mehr zugeht. */
+const gripLocked = computed(() => props.folded && !props.openable)
+const gripTitle = computed(() => {
+  if (gripLocked.value) return 'No contracts bound here'
+  return props.folded ? 'Show details' : 'Hide details'
+})
 
 const inert = ref(props.folded)
 let inertTimer: ReturnType<typeof setTimeout> | null = null
@@ -81,8 +91,9 @@ onBeforeUnmount(() => {
   <aside class="edp" :class="{ 'edp--folded': folded }">
     <button
       class="edp-grip"
-      :title="folded ? 'Show details' : 'Hide details'"
-      :aria-label="folded ? 'Show details' : 'Hide details'"
+      :disabled="gripLocked"
+      :title="gripTitle"
+      :aria-label="gripTitle"
       :aria-expanded="!folded"
       @click="emit('fold', !folded)"
     >
@@ -155,6 +166,13 @@ onBeforeUnmount(() => {
 }
 .edp-grip:hover {
   color: #e8c040;
+}
+.edp-grip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.edp-grip:disabled:hover {
+  color: #c89040;
 }
 .edp--folded .edp-grip {
   border-right: none;
