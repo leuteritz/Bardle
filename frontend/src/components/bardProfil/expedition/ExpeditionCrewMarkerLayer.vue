@@ -20,11 +20,15 @@
  *
  * Pausensignal ist `isRenderingPaused` und NICHT `isIdleRenderingPaused` —
  * letzteres enthält „ein Bard-Reiter ist offen" und wäre hier immer wahr.
+ *
+ * Der Heimweg läuft in DERSELBEN Schleife: eine eingesammelte Crew fliegt vom
+ * Hafen zurück ans Caretaker's Gate im Kern. Er trägt keinen Spielzustand — die
+ * Mission ist da längst aufgelöst und ausgezahlt —, sondern nur den Weg zurück.
  */
 import { computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
+import { useGameStore } from '@/stores/core/gameStore'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
-import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { setMapEl } from '@/utils/orbit/frameEls'
 import { gameNow } from '@/utils/game/gameClock'
 import {
@@ -32,7 +36,9 @@ import {
   voyageRouteNodesOf,
   voyageRoutePointAt,
   voyageRouteSamples,
+  voyageUniformLegs,
 } from '@/utils/game/voyageLegs'
+import { voyageBowSeed, voyageGateExit } from '@/utils/game/voyageSites'
 import {
   EXPEDITION_COLORS,
   VOYAGE_CREW_MARKER_FACE_RATIO,
@@ -40,11 +46,13 @@ import {
   VOYAGE_CREW_MARKER_FACE_MAX,
   VOYAGE_CREW_MARKER_FACES,
   VOYAGE_CREW_MARKER_PULSE_MS,
+  VOYAGE_GATE_DOCK_MS,
+  VOYAGE_HOMECOMING_MS,
   VOYAGE_ROUTE_SAMPLES,
 } from '@/config/constants'
 import type { FitBox } from '@/utils/fx/galaxyPlate'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
-import type { VoyageLeg, VoyagePlacedSite, VoyageRoutePoint } from '@/types'
+import type { VoyageHomecoming, VoyageLeg, VoyagePlacedSite, VoyageRoutePoint } from '@/types'
 
 const props = defineProps<{
   record: CompletedGalaxyRecord
@@ -60,13 +68,27 @@ const props = defineProps<{
   visible: boolean
   /** Sekundentakt des Atlas — der Rückfallweg bei reduzierter Bewegung. */
   now: number
+  /** Radius, auf dem eine Route das Caretaker's Gate verlässt, in Pixeln. */
+  gateExit: number
+  /** Crews auf dem Heimweg — rein darstellend, siehe `useVoyageAtlas`. */
+  homecomings: VoyageHomecoming[]
 }>()
 
 const battleStore = useBattleStore()
+const gameStore = useGameStore()
 const { isRenderingPaused } = useRenderingPaused()
 
-/** Das Abflugportal der Galaxie: alle Crews brechen von dort auf. */
-const spawn = computed<VoyageRoutePoint>(() => generateGalaxyDots(props.record.mapSeed, 1).spawn)
+/**
+ * Wo eine Route zu diesem Hafen das Tor verlässt.
+ *
+ * Vorher war der Ursprung das Abflugportal am Aussenrand der Scheibe — der
+ * Punkt, an dem Bard die Galaxie einst BETRAT. Es ist nicht der Hafen der
+ * Crews: seit der Kern befreit ist, steht dort das Caretaker's Gate, und alle
+ * Routen laufen als Speichen von ihm weg statt schräg über die Scheibe.
+ */
+function exitFor(site: { x: number; y: number }): VoyageRoutePoint {
+  return voyageGateExit(site, props.box, props.gateExit)
+}
 
 /** Nur LAUFENDE Missionen — eine zurückgekehrte Crew steht wieder am Hafen. */
 const travellers = computed(() =>
@@ -78,7 +100,7 @@ const travellers = computed(() =>
  * Hängt nicht an der Box: die Umrechnung in Bühnenpixel passiert erst dort, wo
  * sie gebraucht wird.
  */
-const voyages = computed(() =>
+const outbound = computed(() =>
   travellers.value.map((site) => {
     const mission = site.mission!
     const legs = voyageLegsOf(mission)
@@ -91,10 +113,10 @@ const voyages = computed(() =>
       // Der Seed streut die Bögen je Hafen — zwei Reisen zum selben Ziel lägen
       // sonst übereinander.
       nodes: voyageRouteNodesOf(
-        spawn.value,
+        exitFor(site),
         { x: site.x, y: site.y },
         legs.length,
-        Math.round(site.x * 9973 + site.y * 7919) + site.berth * 131,
+        voyageBowSeed(site),
       ),
       startTime: mission.startTime,
       durationMs: Math.max(1, mission.durationSeconds * 1000),
@@ -106,9 +128,49 @@ const voyages = computed(() =>
         src: battleStore.getChampionImage(c.name, { size: 'sm' }),
       })),
       more: Math.max(0, crew.length - VOYAGE_CREW_MARKER_FACES),
+      home: false,
     }
   }),
 )
+
+/**
+ * Die Heimflüge ans Tor.
+ *
+ * DIESELBE Bahn wie der Hinweg, nur rückwärts gelesen — gleicher Bogen-Seed,
+ * gleicher Torausgang. Die Crew kommt auf dem Weg zurück, auf dem sie ging.
+ * Die Etappen des Hinwegs passen dabei nicht: sie sind ungleich lang, und ein
+ * Rückweg hat keine Gefahren, an denen er sich aufhalten müsste — deshalb
+ * gleich lange Segmente (`voyageUniformLegs`).
+ */
+const homeward = computed(() =>
+  props.homecomings.map((h) => {
+    const color = EXPEDITION_COLORS.find((c) => c.key === h.colorKey) ?? EXPEDITION_COLORS[0]
+    const nodes = voyageRouteNodesOf(
+      exitFor(h),
+      { x: h.x, y: h.y },
+      h.legCount,
+      voyageBowSeed(h),
+    ).reverse()
+    return {
+      key: `home:${h.key}`,
+      legs: voyageUniformLegs(nodes.length - 1),
+      nodes,
+      startTime: h.startedAt,
+      durationMs: VOYAGE_HOMECOMING_MS,
+      color: h.success ? '#64dcb4' : color.primary,
+      line: color.dim,
+      glow: h.success ? '100, 220, 180' : color.glowRgb,
+      faces: h.crew.slice(0, VOYAGE_CREW_MARKER_FACES).map((name) => ({
+        name,
+        src: battleStore.getChampionImage(name, { size: 'sm' }),
+      })),
+      more: Math.max(0, h.crew.length - VOYAGE_CREW_MARKER_FACES),
+      home: true,
+    }
+  }),
+)
+
+const voyages = computed(() => [...outbound.value, ...homeward.value])
 
 // ── Bahn-Cache ──────────────────────────────────────────────────────────────
 // Plain, NICHT reaktiv: der rAF darf weder `box` noch `voyages` pro Frame lesen,
@@ -228,6 +290,12 @@ onBeforeUnmount(() => {
   markerEls.clear()
 })
 
+/** Reale Dauer der Heimkehr — der Zeitraffer staucht die Reise, nicht die CSS-Uhr. */
+const homeFadeMs = computed(
+  () =>
+    `${Math.round((VOYAGE_HOMECOMING_MS + VOYAGE_GATE_DOCK_MS) / Math.max(0.01, gameStore.gameSpeed))}ms`,
+)
+
 const face = computed(() =>
   Math.round(
     Math.min(
@@ -259,7 +327,8 @@ const pulseMs = `${VOYAGE_CREW_MARKER_PULSE_MS}ms`
       :key="m.key"
       :ref="(el) => setMapEl(markerEls, m.key, el as HTMLElement)"
       class="ecml-marker"
-      :style="{ '--cm-c': m.color, '--cm-glow': m.glow }"
+      :class="{ 'ecml-marker--home': m.home }"
+      :style="{ '--cm-c': m.color, '--cm-glow': m.glow, '--cm-fade': homeFadeMs }"
     >
       <span class="ecml-body">
         <span class="ecml-pulse" />
@@ -351,6 +420,21 @@ const pulseMs = `${VOYAGE_CREW_MARKER_PULSE_MS}ms`
   }
 }
 
+/* Der Heimkehrer geht am Tor ein, statt zu verschwinden. Nur `opacity`, und
+   die Dauer ist REAL gerechnet — der Flug selbst läuft auf der Spieluhr. */
+.ecml-marker--home {
+  animation: ecml-arrive var(--cm-fade, 4000ms) linear forwards;
+}
+@keyframes ecml-arrive {
+  0%,
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 .ecml-faces {
   position: relative;
   display: flex;
@@ -387,6 +471,9 @@ const pulseMs = `${VOYAGE_CREW_MARKER_PULSE_MS}ms`
   .ecml-pulse {
     animation: none;
     opacity: 0.4;
+  }
+  .ecml-marker--home {
+    animation: none;
   }
 }
 </style>

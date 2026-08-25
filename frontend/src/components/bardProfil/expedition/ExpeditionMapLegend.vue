@@ -4,8 +4,12 @@
  *
  * Ihre Symbole kommen aus DERSELBEN Routine wie die Karte — vier winzige Canvas
  * statt nachgebautem CSS, damit Legende und Karte nie auseinanderlaufen können.
- * Gemalt wird einmal beim Mount und nur bei einem Wechsel der Pixeldichte neu;
- * die Landmarken sind datensatzunabhängig.
+ * Gemalt wird einmal beim Mount und nur bei einem Wechsel von Pixeldichte,
+ * Kurswinkel oder Themenfarbe neu.
+ *
+ * Die Sonde ist der ENGSTE Fall der ganzen Karte: `VOYAGE_MAP_LEGEND_R` mal
+ * `LANDMARK_PAD_SPAN` sind 21,1 px in einer 22-px-Kachel, und `detail: 2` ist
+ * erzwungen. Wer an einem Landmarken-Radius dreht, prüft sie zuerst.
  */
 import { ref, watch, onMounted } from 'vue'
 import { drawLandmark, type LandmarkKind } from '@/utils/fx/galaxyLandmarks'
@@ -15,13 +19,20 @@ const props = defineProps<{
   dpr: number
   /** Richtung der ersten Etappe — nur die Portalsonde liest sie. */
   heading: number
+  /** Themenakzent `"r, g, b"` — nur die Torsonde liest ihn. */
+  accent: string
 }>()
 
+/**
+ * „Arrival", nicht „Departure": das Portal am Aussenrand ist der Punkt, an dem
+ * Bard die Galaxie BETRAT. Aufgebrochen wird seit dem Fall des Kerns am Tor,
+ * und zwei Zeilen mit „departure" auf einer Karte wären eine zuviel.
+ */
 const ROWS: { kind: LandmarkKind; label: string }[] = [
-  { kind: 'departure-portal', label: 'Departure portal' },
+  { kind: 'core-gate', label: "Caretaker's Gate" },
+  { kind: 'departure-portal', label: 'Arrival portal' },
   { kind: 'star-freed', label: 'Star freed' },
   { kind: 'star-lost', label: 'Star lost' },
-  { kind: 'core-freed', label: 'Core freed' },
 ]
 
 const probes = ref<(HTMLCanvasElement | null)[]>([])
@@ -43,12 +54,13 @@ function paint(): void {
       dpr,
       detail: 2,
       heading: props.heading,
+      tint: props.accent,
     })
   })
 }
 
 onMounted(paint)
-watch(() => [props.dpr, props.heading], paint)
+watch(() => [props.dpr, props.heading, props.accent], paint)
 </script>
 
 <template>

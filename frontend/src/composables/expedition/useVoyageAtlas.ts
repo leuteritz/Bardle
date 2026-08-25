@@ -15,16 +15,20 @@ import { useHerald } from '@/composables/ui/useHerald'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { voyageBerthsOf, assignVoyageBerths, pinKeyOf, pinStampOf } from '@/utils/game/voyageSites'
+import { voyageLegsOf } from '@/utils/game/voyageLegs'
 import { gameNow } from '@/utils/game/gameClock'
 import {
   EXPEDITION_CHIME_POP_LIFETIME_MS,
   EXPEDITION_CHIME_POP_SPREAD_PX,
   EXPEDITION_COLLECT_FLASH_MS,
   VOYAGE_CLOCK_TICK_MS,
+  VOYAGE_GATE_DOCK_MS,
+  VOYAGE_HOMECOMING_MS,
 } from '@/config/constants'
 import type {
   AvailableExpeditionSlot,
   ExpeditionMission,
+  VoyageHomecoming,
   VoyagePlacedSite,
   VoyageRailRow,
 } from '@/types'
@@ -81,6 +85,9 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     selectedGalaxy.value = galaxy
     chartStore.markSeen(galaxy)
     selectedKey.value = null
+    // Ein Heimflug gehört zu SEINER Galaxie — auf einer anderen Karte stünde er
+    // über fremden Häfen.
+    homecomings.value = []
     autoSelect()
   }
 
@@ -176,6 +183,41 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     }),
   )
 
+  // ── Caretaker's Gate ──────────────────────────────────────────────────────
+  /**
+   * Die Heimflüge. Kein Timer räumt sie ab und keiner soll es: die eine Uhr
+   * tickt ohnehin, und `now` entscheidet, welcher Eintrag noch lebt. Ein
+   * `setTimeout` je Rückkehr wäre ein zweiter Taktgeber für eine Zahl, die
+   * schon dasteht — und unter Zeitraffer liefe er gegen die Spieluhr.
+   */
+  const homecomings = ref<VoyageHomecoming[]>([])
+  const HOMECOMING_LIFETIME = VOYAGE_HOMECOMING_MS + VOYAGE_GATE_DOCK_MS
+
+  const liveHomecomings = computed(() =>
+    homecomings.value.filter((h) => now.value - h.startedAt < HOMECOMING_LIFETIME),
+  )
+
+  /** Was das Tor anzeigt: wie viele draussen sind und wann die nächste heimkommt. */
+  const gateState = computed(() => {
+    const running = missionsHere.value.filter((m) => m.status === 'active')
+    let nextReturnAt = Number.POSITIVE_INFINITY
+    let nextSpanMs = 1
+    for (const m of running) {
+      const due = m.startTime + m.durationSeconds * 1000
+      if (due >= nextReturnAt) continue
+      nextReturnAt = due
+      nextSpanMs = Math.max(1, m.durationSeconds * 1000)
+    }
+    return {
+      crewsOut: running.length,
+      waiting: missionsHere.value.length - running.length,
+      nextReturnAt: Number.isFinite(nextReturnAt) ? nextReturnAt : null,
+      nextSpanMs,
+      // Gelandet heisst: der Flug ist durch, die Crew steht noch am Tor.
+      arriving: liveHomecomings.value.some((h) => now.value - h.startedAt >= VOYAGE_HOMECOMING_MS),
+    }
+  })
+
   // ── Handeln ───────────────────────────────────────────────────────────────
   const chimePops = ref<{ id: number; amount: number; dx: number }[]>([])
   let popSeq = 0
@@ -222,7 +264,25 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     const mission = expeditionStore.activeExpeditions.find((e) => e.id === id)
     const status = mission?.status
     const reward = mission?.reward ?? 0
+    // VOR dem Auflösen: danach ist die Mission fort und mit ihr Hafen und Crew.
+    const site = mission ? placedSites.value.find((s) => s.mission?.id === id) : null
     expeditionStore.collectExpedition(id)
+    if (mission && site) {
+      homecomings.value = [
+        ...liveHomecomings.value,
+        {
+          key: site.pinKey,
+          x: site.x,
+          y: site.y,
+          berth: site.berth,
+          legCount: Math.max(1, voyageLegsOf(mission).length),
+          startedAt: gameNow(),
+          colorKey: mission.colorKey ?? 'gold',
+          crew: mission.assignedChampions.map((c) => c.name),
+          success: status === 'success',
+        },
+      ]
+    }
     if (reward > 0) spawnChimePop(reward)
     announceReceipt({
       kind: 'expedition',
@@ -250,6 +310,7 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
       if (!visible) {
         stopClock()
         selectedKey.value = null
+        homecomings.value = []
         return
       }
       ensureSelection()
@@ -276,6 +337,8 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     railRows,
     chimePops,
     collectFlashing,
+    homecomings: liveHomecomings,
+    gateState,
     selectGalaxy,
     sendExpedition,
     sendAll,

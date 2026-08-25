@@ -1,17 +1,20 @@
 /* ── Landmarken einer Galaxiekarte ────────────────────────────────────────────
-   Vier Orte erzählen die Geschichte einer befreiten Galaxie: von wo aufgebrochen
-   wurde, welche Sterne befreit wurden, welche verloren gingen, und wo der Boss
-   im Kern fiel.
+   Vier Orte erzählen die Geschichte einer befreiten Galaxie: wo Bard sie betrat,
+   welche Sterne befreit wurden, welche verloren gingen, und was aus dem Kern
+   geworden ist, in dem der Boss sass.
 
    Unterschieden werden sie über die FORM, nicht über Farbe oder Glyph — beides
    verschwindet als Erstes, wenn das Bild klein wird, und die Leistenminiatur
-   zeigt einen befreiten Stern bei 4,5 px Radius. Hohler Ring · Scheibe mit Halo ·
-   unrunde Hülle · Strahlenkranz halten dort noch auseinander.
+   zeigt einen befreiten Stern bei 4,5 px Radius. Hohle Ellipse · Scheibe mit
+   Halo · unrunde Hülle · hohles Achteck halten dort noch auseinander.
 
    Zwei Aufrufer: `galaxyPlate.ts` (Voyages-Karte, Archivstandbild, Übersichts-
    karte, Leistenminiatur) und `MiniMapCanvas.vue` (Live-Minimap). */
 
 import {
+  CORE_GATE_CROWN_SPAN,
+  CORE_GATE_FALLBACK_TINT,
+  CORE_GATE_POOL_SPAN,
   LANDMARK_R_ORNAMENT,
   LANDMARK_R_DETAIL,
   LANDMARK_VARIANTS,
@@ -19,7 +22,7 @@ import {
   LANDMARK_SPRITE_CACHE_MAX,
 } from '@/config/constants'
 
-export type LandmarkKind = 'departure-portal' | 'star-freed' | 'star-lost' | 'core-freed'
+export type LandmarkKind = 'departure-portal' | 'star-freed' | 'star-lost' | 'core-gate'
 
 export interface LandmarkOpts {
   /** Backing-Dichte des Ziels — der Sprite-Cache ist danach geschlüsselt. */
@@ -30,6 +33,11 @@ export interface LandmarkOpts {
   heading?: number
   /** Erzwungene Detailstufe — die Legendensonde malt immer die volle. */
   detail?: 0 | 1 | 2
+  /**
+   * Themenakzent als `"r, g, b"` — NUR `core-gate`. Der Kern trägt die Farbe
+   * SEINER Galaxie (`minimapAccentForTheme`), das Gold bleibt den Häfen.
+   */
+  tint?: string
 }
 
 /** Detailstufe aus dem Radius. Stufe 0 ist die blanke Silhouette. */
@@ -56,6 +64,12 @@ export function roundLandmarkRadius(r: number): number {
   return Math.max(2, Math.round(r * 2) / 2)
 }
 
+/**
+ * Der Schlüssel kennt `tint` NICHT — und darf es auch nicht müssen: alle Kinds
+ * mit Sprite sind farblich fix. Wer `core-gate` je auf den Sprite-Pfad legt,
+ * muss die Tönung hier aufnehmen, sonst zeigt eine Galaxie die Farbe einer
+ * anderen und niemand sieht, warum.
+ */
 export function landmarkSpriteKey(
   kind: LandmarkKind,
   r: number,
@@ -371,76 +385,129 @@ function paintLostStar(
   ctx.restore()
 }
 
-/** Befreiter Kern: STRAHLENKRANZ plus zerbrochene Krone — der besiegte Bossstern. */
-function paintFreedCore(
+/**
+ * Achteckpfad mit einer FLACHEN Kante oben (Versatz um eine halbe Ecke). `r` ist
+ * der Eckradius; die Kantenmitte liegt bei `r · cos(π/8)` ≈ 0,924 r.
+ */
+function octagonPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  rot = 0,
+): void {
+  ctx.beginPath()
+  for (let i = 0; i < 8; i++) {
+    const a = rot + (i / 8) * Math.PI * 2 - Math.PI / 8
+    const px = x + Math.cos(a) * r
+    const py = y + Math.sin(a) * r
+    if (i === 0) ctx.moveTo(px, py)
+    else ctx.lineTo(px, py)
+  }
+  ctx.closePath()
+}
+
+/**
+ * Caretaker's Gate: der befreite Kern als ÖFFNUNG, nicht als Körper.
+ *
+ * Er war eine gefüllte Goldkugel mit Strahlenkranz und las sich damit als zweite
+ * Sonne mitten in der Galaxie. Jetzt: dunkler Schlund, heller achteckiger Rand
+ * in der Farbe SEINER Galaxie, darum die zersprungene Krone des Bosses.
+ *
+ * Der Schlund ist in Hintergrundfarbe GEFÜLLT, nicht mit `destination-out`
+ * gestanzt — dieselbe Lösung wie beim Abflugportal und aus demselben Grund:
+ * `core-gate` malt auf dem Direktpfad in die echte Karte, ein Stanzen risse dort
+ * ein Loch in die Spirale dahinter.
+ *
+ * Er schluckt dabei die Kernglut des Galaxiekörpers, die an derselben Stelle
+ * liegt — genau das macht aus der Scheibe ein Auge.
+ */
+function paintCoreGate(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   r: number,
   detail: 0 | 1 | 2,
+  tint?: string,
 ): void {
+  const c = tint ?? CORE_GATE_FALLBACK_TINT
   ctx.save()
-  ctx.globalCompositeOperation = 'lighter'
-  const drawRays = (count: number, from: number, longR: number, shortR: number, alpha: number) => {
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 - Math.PI / 2
-      const len = i % 2 === 0 ? longR : shortR
-      const w = r * 0.16
-      ctx.beginPath()
-      ctx.moveTo(x + Math.cos(a) * len, y + Math.sin(a) * len)
-      ctx.lineTo(x + Math.cos(a - 0.5) * w + Math.cos(a) * from, y + Math.sin(a - 0.5) * w + Math.sin(a) * from)
-      ctx.lineTo(x + Math.cos(a + 0.5) * w + Math.cos(a) * from, y + Math.sin(a + 0.5) * w + Math.sin(a) * from)
-      ctx.closePath()
-      ctx.fillStyle = `rgba(255, 224, 140, ${alpha})`
-      ctx.fill()
-    }
-  }
-  drawRays(8, r * 1.15, r * 2.4, r * 1.75, 0.5)
-  if (detail >= 1) drawRays(4, r * 1.1, r * 1.5, r * 1.5, 0.26)
-  ctx.restore()
 
-  ctx.save()
-  const body = ctx.createRadialGradient(x - r * 0.28, y - r * 0.3, r * 0.05, x, y, r)
-  body.addColorStop(0, '#fffbe6')
-  body.addColorStop(0.38, '#ffd968')
-  body.addColorStop(0.74, '#a06818')
-  body.addColorStop(1, '#1e0e02')
+  // Schattenteich: die Kernglut des Galaxiekörpers liegt an derselben Stelle und
+  // liesse das Tor sonst in einem hellen Fleck schwimmen — ein Loch in einem
+  // Leuchten ist kein Loch. Er wird VOR der Krone gemalt, damit die auf dem
+  // gedämpften Grund steht statt darin zu verschwinden.
+  const pool = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * CORE_GATE_POOL_SPAN)
+  pool.addColorStop(0, 'rgba(6, 5, 4, 0.62)')
+  pool.addColorStop(0.55, 'rgba(6, 5, 4, 0.4)')
+  pool.addColorStop(1, 'rgba(6, 5, 4, 0)')
   ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.fillStyle = body
+  ctx.arc(x, y, r * CORE_GATE_POOL_SPAN, 0, Math.PI * 2)
+  ctx.fillStyle = pool
   ctx.fill()
 
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.strokeStyle = '#fff8d0'
-  ctx.lineWidth = Math.max(1, r * 0.12)
-  ctx.shadowColor = 'rgba(255, 220, 90, 0.9)'
-  ctx.shadowBlur = Math.max(5, r * 0.9)
+  // Zerbrochene Krone: der gesprengte Ring, den der Boss getragen hat. Zwei
+  // Bögen mit Lücken — ein geschlossener Ring läse sich als Planetenring.
+  //
+  // Zwei Züge je Bogen: erst dunkel und breiter, dann in der Themenfarbe. Ohne
+  // die dunkle Unterlage verschwand die dünne Linie über der Spirale.
+  const gap = detail >= 1 ? 0.5 : 0.32
+  const crownArc = () => {
+    for (const base of [0, Math.PI]) {
+      ctx.beginPath()
+      ctx.ellipse(
+        x,
+        y,
+        r * CORE_GATE_CROWN_SPAN,
+        r * 0.55,
+        -0.32,
+        base + gap / 2,
+        base + Math.PI - gap / 2,
+      )
+      ctx.stroke()
+    }
+  }
+  ctx.lineWidth = Math.max(2, r * 0.19)
+  ctx.strokeStyle = 'rgba(6, 5, 4, 0.7)'
+  crownArc()
+  ctx.lineWidth = Math.max(1, r * 0.1)
+  ctx.strokeStyle = `rgba(${c}, 0.85)`
+  crownArc()
+
+  // Der Schlund. Am Rand absichtlich durchlässiger als in der Mitte, sonst säße
+  // eine harte Scheibe in der Spirale statt einer Tiefe.
+  octagonPath(ctx, x, y, r)
+  const maw = ctx.createRadialGradient(x, y, r * 0.05, x, y, r)
+  maw.addColorStop(0, 'rgba(6, 5, 4, 0.92)')
+  maw.addColorStop(0.62, 'rgba(6, 5, 4, 0.8)')
+  maw.addColorStop(1, 'rgba(6, 5, 4, 0.3)')
+  ctx.fillStyle = maw
+  ctx.fill()
+
+  // Derselbe Pfad als Kontur — der Rand IST die Marke.
+  ctx.strokeStyle = `rgba(${c}, 0.95)`
+  ctx.lineWidth = Math.max(1, r * 0.15)
+  ctx.shadowColor = `rgba(${c}, 0.6)`
+  ctx.shadowBlur = Math.max(3, r * 0.5)
   ctx.stroke()
   ctx.shadowBlur = 0
 
-  if (detail >= 2) {
-    ctx.beginPath()
-    ctx.arc(x, y, r * 0.72, 0, Math.PI * 2)
-    ctx.strokeStyle = 'rgba(255, 255, 235, 0.4)'
+  // Iris, um eine halbe Ecke gedreht: ihre Ecken sitzen auf den Kanten des
+  // äusseren Achtecks, sonst läge Linie auf Linie.
+  if (detail >= 1) {
+    octagonPath(ctx, x, y, r * 0.66, Math.PI / 8)
+    ctx.strokeStyle = `rgba(${c}, 0.42)`
     ctx.lineWidth = Math.max(0.7, r * 0.07)
     ctx.stroke()
   }
 
-  // Zerbrochene Krone: der gesprengte Ring, den der Boss getragen hat. Zwei
-  // Bögen mit Lücken — ein geschlossener Ring läse sich als Planetenring.
-  const gap = detail >= 1 ? 0.5 : 0.32
-  const crown = (rx: number, ry: number, alpha: number, width: number) => {
-    ctx.lineWidth = width
-    ctx.strokeStyle = `rgba(255, 214, 120, ${alpha})`
-    for (const base of [0, Math.PI]) {
-      ctx.beginPath()
-      ctx.ellipse(x, y, rx, ry, -0.32, base + gap / 2, base + Math.PI - gap / 2)
-      ctx.stroke()
-    }
+  // Ein Funke in der Mitte — ohne ihn liest sich der Schlund als Loch im Bild.
+  if (detail >= 2) {
+    ctx.beginPath()
+    ctx.arc(x, y, Math.max(0.9, r * 0.11), 0, Math.PI * 2)
+    ctx.fillStyle = `rgba(${c}, 0.9)`
+    ctx.fill()
   }
-  crown(r * 1.5, r * 0.55, 0.7, Math.max(1, r * 0.1))
-  if (detail >= 2) crown(r * 1.95, r * 0.7, 0.28, Math.max(0.7, r * 0.07))
   ctx.restore()
 }
 
@@ -461,8 +528,8 @@ export function drawLandmark(
     paintDeparturePortal(ctx, x, y, r, opts.heading ?? 0, detail)
     return
   }
-  if (kind === 'core-freed') {
-    paintFreedCore(ctx, x, y, r, detail)
+  if (kind === 'core-gate') {
+    paintCoreGate(ctx, x, y, r, detail, opts.tint)
     return
   }
 

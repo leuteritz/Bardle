@@ -286,6 +286,34 @@ export const LANDMARK_PAD_SPAN = 2.4 // weitester Zierrat: Funken 2.2·r, Motes 
 // beliebig viele Sprites nach (bei r=9, dpr=3.1 rund 178 KB je Stück).
 export const LANDMARK_SPRITE_CACHE_MAX = 24
 export const LANDMARK_PORTAL_MIN_R = 3 // Boden, damit der Ring in der Miniatur ein Ring bleibt
+
+/* ── Caretaker's Gate: der befreite Kern ──────────────────────────────────────
+   Der Kern war einmal eine gefüllte Goldkugel mit Strahlenkranz und las sich
+   damit als zweite Sonne. Er ist jetzt eine ÖFFNUNG: dunkler Schlund, heller
+   achteckiger Rand in der Themenfarbe SEINER Galaxie, darum die zersprungene
+   Krone des Bosses. Das Gold bleibt den Häfen und dem Zustand.
+
+   Achteck und nicht Kreis, weil ein hohler Kreisring bei 4,4 px (Legendensonde)
+   nicht mehr vom `departure-portal` zu unterscheiden wäre — und die Landmarken
+   trennen sich über die FORM, nicht über die Farbe.
+
+   Alle drei Werte sind Referenzeinheiten bei GALAXY_PLATE_REF_W; gemalt wird
+   mit `× k`.                                                                 */
+export const CORE_GATE_MOUTH_R = 13 // Radius des Torschlunds
+// Aussenkante der Krone. Deckelt zwei Dinge zugleich: den Radius, den das
+// DOM-Tor freihalten muss (voyageGateSizeFor), und die Legendenkachel —
+// 4.4 × LANDMARK_PAD_SPAN sind 21,1 px in 22, die Krone bei 1.5·r braucht 13,2.
+export const CORE_GATE_CROWN_SPAN = 1.5
+export const CORE_GATE_HALO_R = 26 // Ringschein um den Mund, nicht Füllung der Mitte
+// Schattenteich um den Torschlund, als Vielfaches des Mundradius. Er dämpft die
+// Kernglut des Galaxiekörpers (MINIMAP_GALAXY_CORE_RADIUS), die an derselben
+// Stelle liegt — ohne ihn schwämme das Tor in einem hellen Fleck, und ein Loch
+// in einem Leuchten liest sich nicht als Loch. Muss über CORE_GATE_CROWN_SPAN
+// hinausreichen, sonst steht die Krone am Rand des Teichs statt darin.
+export const CORE_GATE_POOL_SPAN = 2.1
+// Notfarbe, falls kein Themenakzent durchgereicht wurde — bleich und kühl, damit
+// ein vergessener `tint` als Fehler auffällt statt als Goldton durchzugehen.
+export const CORE_GATE_FALLBACK_TINT = '210, 220, 240'
 export const MINIMAP_LANDMARK_PORTAL_R = 10 // live: neben freed 11 — es ist die einzige einmalige Marke
 export const ROUTE_TRAIL_ALPHA_MIN = 0.45 // Deckkraft am Abflugpunkt, Anteil von routeAlpha
 export const ROUTE_TRAIL_WIDTH_MIN = 0.6 // Strichstärke am Abflugpunkt, Anteil der Vollstärke

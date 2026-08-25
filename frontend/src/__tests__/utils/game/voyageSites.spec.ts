@@ -4,9 +4,22 @@ import {
   assignVoyageBerths,
   pinKeyOf,
   pinStampOf,
+  voyageBowSeed,
+  voyageGateExit,
+  voyageGateSizeFor,
+  voyageMarkerSizeFor,
+  VOYAGE_GATE_POS,
   type VoyagePinEntry,
 } from '@/utils/game/voyageSites'
-import { VOYAGE_BERTH_MIN_SEPARATION, VOYAGE_SITE_SLOTS } from '@/config/constants'
+import {
+  CORE_GATE_CROWN_SPAN,
+  CORE_GATE_MOUTH_R,
+  VOYAGE_BERTH_MIN_SEPARATION,
+  VOYAGE_GATE_GAP_PX,
+  VOYAGE_GATE_MIN_PX,
+  VOYAGE_SITE_SLOTS,
+} from '@/config/constants'
+import { GALAXY_PLATE_REF_W } from '@/utils/fx/galaxyPlate'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import type { AvailableExpeditionSlot, ExpeditionMission } from '@/types'
@@ -252,6 +265,112 @@ describe('pinKeyOf — der Vertrag und die Mission sind derselbe Ort', () => {
   it('fällt für eine Mission ohne configId auf ihre eigene ID zurück', () => {
     const seeded = { id: 'badgelab-exp-1-0', configId: '' } as ExpeditionMission
     expect(pinKeyOf(seeded)).toBe('badgelab-exp-1-0')
+  })
+})
+
+
+/**
+ * Caretaker's Gate — der befreite Kern als Hafen.
+ *
+ * Zwei Zusagen tragen es, und beide sind unsichtbar, bis sie brechen: das Tor
+ * deckt keinen Vertrag zu, und eine Route beginnt neben ihm statt in ihm. Die
+ * zweite ist der Grund, warum der Ausgang in PIXELN gerechnet wird — im
+ * normalisierten Raum waere er auf einer flachen Fit-Box in der Senkrechten
+ * fast halb so gross wie in der Waagerechten.
+ */
+describe("Caretaker's Gate", () => {
+  const BOXES = [
+    { w: 900, h: 900 },
+    { w: 900, h: 640 },
+    { w: 900, h: 515 },
+  ]
+
+  it('sitzt im Ursprung des Kartenraums', () => {
+    expect(VOYAGE_GATE_POS).toEqual({ x: 0.5, y: 0.5 })
+  })
+
+  it('deckt auf keiner Karte einen Ankerplatz zu', () => {
+    for (const box of BOXES) {
+      for (let g = 1; g <= 60; g++) {
+        const sites = voyageBerthsOf(record(g, 3 + (g % 8)))
+        const marker = voyageMarkerSizeFor(sites, box)
+        const { size } = voyageGateSizeFor(sites, box, marker)
+        for (const s of sites) {
+          // Maximumsnorm, wie bei den Haefen untereinander: beide Flaechen sind
+          // achsenparallele Quadrate.
+          const d = Math.max(Math.abs(s.x - 0.5) * box.w, Math.abs(s.y - 0.5) * box.h)
+          // Torkante + halbe Klickflaeche muessen in den Abstand passen — ausser
+          // das Tor steht schon auf seinem Boden.
+          if (size > VOYAGE_GATE_MIN_PX) expect(size / 2 + marker.hit / 2).toBeLessThanOrEqual(d)
+        }
+      }
+    }
+  })
+
+  it('umschliesst die gemalte Marke, wo kein Hafen im Weg ist', () => {
+    // Ohne Verträge gibt es keinen Deckel — dann MUSS das Tor die Marke tragen,
+    // sonst liefe sein Ring quer durch die Krone. Genau das hat ein absoluter
+    // Pixeldeckel einmal auf 2K in jeder Galaxie getan.
+    for (const box of BOXES) {
+      const k = box.w / GALAXY_PLATE_REF_W
+      const markR = CORE_GATE_MOUTH_R * CORE_GATE_CROWN_SPAN * k
+      const gate = voyageGateSizeFor([], box, voyageMarkerSizeFor([], box))
+      expect(gate.size).toBeGreaterThanOrEqual(VOYAGE_GATE_MIN_PX)
+      expect(gate.size / 2).toBeGreaterThanOrEqual(markR)
+      expect(gate.showArc).toBe(true)
+    }
+  })
+
+  it('legt den Routenanfang auf einen KREIS, nicht auf eine Ellipse', () => {
+    const box = { w: 900, h: 515 }
+    const radius = 40
+    for (const target of [
+      { x: 0.9, y: 0.5 },
+      { x: 0.5, y: 0.94 },
+      { x: 0.2, y: 0.2 },
+      { x: 0.74, y: 0.31 },
+    ]) {
+      const p = voyageGateExit(target, box, radius)
+      const d = Math.hypot((p.x - 0.5) * box.w, (p.y - 0.5) * box.h)
+      expect(d).toBeCloseTo(radius, 6)
+    }
+  })
+
+  it('zeigt vom Tor auf den Hafen', () => {
+    const box = { w: 900, h: 515 }
+    const target = { x: 0.82, y: 0.24 }
+    const p = voyageGateExit(target, box, 40)
+    const toTarget = Math.atan2((target.y - 0.5) * box.h, (target.x - 0.5) * box.w)
+    const toExit = Math.atan2((p.y - 0.5) * box.h, (p.x - 0.5) * box.w)
+    expect(toExit).toBeCloseTo(toTarget, 9)
+  })
+
+  it('laesst den Routenanfang ausserhalb der GEMALTEN Marke beginnen', () => {
+    // Nicht ausserhalb der Klickflaeche: die kann der Deckel geschrumpft haben,
+    // die Krone auf dem Canvas schrumpft dabei nicht mit.
+    const sites = voyageBerthsOf(record(7))
+    for (const box of BOXES) {
+      const k = box.w / GALAXY_PLATE_REF_W
+      const markR = CORE_GATE_MOUTH_R * CORE_GATE_CROWN_SPAN * k
+      const { exit } = voyageGateSizeFor(sites, box, voyageMarkerSizeFor(sites, box))
+      expect(exit).toBeCloseTo(markR + VOYAGE_GATE_GAP_PX, 9)
+    }
+  })
+
+  it('nimmt den Ring zurueck, wenn der Deckel ihn in die Krone druecken wuerde', () => {
+    const box = { w: 900, h: 515 }
+    const k = box.w / GALAXY_PLATE_REF_W
+    const markR = CORE_GATE_MOUTH_R * CORE_GATE_CROWN_SPAN * k
+    for (let g = 1; g <= 40; g++) {
+      const sites = voyageBerthsOf(record(g, 3 + (g % 8)))
+      const gate = voyageGateSizeFor(sites, box, voyageMarkerSizeFor(sites, box))
+      expect(gate.showArc).toBe(gate.size / 2 >= markR)
+    }
+  })
+
+  it('gibt Hin- und Rueckweg denselben Bogen', () => {
+    const site = { x: 0.71, y: 0.33, berth: 4 }
+    expect(voyageBowSeed(site)).toBe(voyageBowSeed({ ...site }))
   })
 })
 

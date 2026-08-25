@@ -326,6 +326,27 @@ export interface VoyagePlacedSite {
   mission: ExpeditionMission | null
 }
 
+/**
+ * Eine Crew auf dem Heimweg zum Caretaker's Gate.
+ *
+ * Rein darstellend und NICHT im Spielstand: die Mission ist beim Einsammeln
+ * schon aufgelöst und ausgezahlt. Was hier steht, ist nur, was die Karte zum
+ * Zeichnen des Rückwegs braucht — Ausgangshafen, Startzeit, Besatzung.
+ */
+export interface VoyageHomecoming {
+  /** `pinKey` der aufgelösten Mission; der Hafen ist da schon frei. */
+  key: string
+  x: number
+  y: number
+  berth: number
+  legCount: number
+  /** `gameNow()` beim Einsammeln — der Rückweg ist zeitraffer-treu. */
+  startedAt: number
+  colorKey: string
+  crew: string[]
+  success: boolean
+}
+
 /** Eine Zeile der Galaxie-Seitenleiste. */
 export interface VoyageRailRow {
   galaxy: number

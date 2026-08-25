@@ -7,7 +7,7 @@ import {
   voyageRoutePointAt,
   voyageRouteSamples,
 } from '@/utils/game/voyageLegs'
-import { VOYAGE_LEG_MAX, VOYAGE_ROUTE_START_PULL } from '@/config/constants'
+import { VOYAGE_LEG_MAX } from '@/config/constants'
 import type { AvailableExpeditionSlot, ExpeditionHazardId, ExpeditionMission } from '@/types'
 
 /**
@@ -175,7 +175,9 @@ describe('voyageLegAt', () => {
 })
 
 describe('voyageRoute', () => {
-  const spawn = { x: 0.06, y: 0.94 }
+  // Der Start ist der Ausgang des Caretaker's Gate im Kern, nicht mehr das
+  // Portal am Aussenrand — `voyageGateExit` rechnet ihn, die Route uebernimmt.
+  const spawn = { x: 0.53, y: 0.55 }
   const target = { x: 0.7, y: 0.3 }
 
   it('gibt einen Knoten je Etappengrenze', () => {
@@ -183,11 +185,11 @@ describe('voyageRoute', () => {
     expect(voyageRouteNodesOf(spawn, target, 1, 12345)).toHaveLength(2)
   })
 
-  it('zieht den Start aus der Ecke, in der Band und Legende liegen', () => {
-    const [start] = voyageRouteNodesOf(spawn, target, 2, 7)
-    expect(start.x).toBeGreaterThan(spawn.x)
-    expect(start.y).toBeLessThan(spawn.y)
-    expect(start.x).toBeCloseTo(spawn.x + (0.5 - spawn.x) * VOYAGE_ROUTE_START_PULL, 12)
+  it('uebernimmt den Startpunkt unveraendert', () => {
+    // Er wurde einmal zur Mitte gezogen, weil er am Aussenrand unter Band oder
+    // Legende fiel. Seit die Route im Kern beginnt, waere der Zug ein zweiter
+    // Ort fuer eine Entscheidung, die `voyageGateExit` schon getroffen hat.
+    expect(voyageRouteNodesOf(spawn, target, 2, 7)[0]).toEqual(spawn)
   })
 
   it('endet exakt am Hafen', () => {

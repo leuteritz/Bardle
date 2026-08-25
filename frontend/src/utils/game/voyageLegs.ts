@@ -20,7 +20,6 @@ import {
   VOYAGE_LEG_APPROACH_NAMES,
   VOYAGE_LEG_HAZARD_NAMES,
   VOYAGE_LEG_ARRIVAL_NAMES,
-  VOYAGE_ROUTE_START_PULL,
   VOYAGE_ROUTE_BOW,
   type ExpeditionTier,
 } from '@/config/constants'
@@ -140,24 +139,21 @@ function clamp01(v: number): number {
 }
 
 /**
- * Die Knoten der Reise: Abflugportal, eine Wende je Etappengrenze, Hafen.
+ * Die Knoten der Reise: Startpunkt, eine Wende je Etappengrenze, Hafen.
  * Normalisiert 0..1 in der Fit-Box — derselbe Raum, in dem die Ankerplätze liegen.
  *
- * Der Start wird radial zur Mitte gezogen: `generateGalaxyDots` setzt den Spawn
- * auf den Aussenrand der Scheibe, im Winkel gleichverteilt. Ungezogen läge er in
- * etwa jeder vierten Galaxie unter dem Kartenband oben links oder unter der
- * Legende unten links — beide liegen darüber.
+ * `start` wird UNVERÄNDERT übernommen. Er lag einmal am Abflugportal auf dem
+ * Aussenrand der Scheibe und musste deshalb zur Mitte gezogen werden, damit er
+ * nicht unter Kartenband oder Legende fiel. Seit die Route am Caretaker's Gate
+ * im Kern beginnt (`voyageGateExit`), ist die Mitte der Start — der Zug hätte
+ * nichts mehr zu ziehen.
  */
 export function voyageRouteNodesOf(
-  spawn: VoyageRoutePoint,
+  start: VoyageRoutePoint,
   target: VoyageRoutePoint,
   legCount: number,
   seed: number,
 ): VoyageRoutePoint[] {
-  const start = {
-    x: spawn.x + (0.5 - spawn.x) * VOYAGE_ROUTE_START_PULL,
-    y: spawn.y + (0.5 - spawn.y) * VOYAGE_ROUTE_START_PULL,
-  }
   const dx = target.x - start.x
   const dy = target.y - start.y
   const rng = seededRng(seed >>> 0)
@@ -175,6 +171,23 @@ export function voyageRouteNodesOf(
   }
   nodes.push(target)
   return nodes
+}
+
+/**
+ * Gleich lange Etappen über `count` Segmente — für Bahnen ohne eigene
+ * Etappenteilung, allen voran den Heimflug ans Tor. `voyageRoutePointAt` bildet
+ * Etappe i auf Segment i ab und braucht deshalb je Segment eine Etappe; ein
+ * einzelnes 0..1 liefe nur über das erste.
+ */
+export function voyageUniformLegs(count: number): VoyageLeg[] {
+  const n = Math.max(1, count)
+  return Array.from({ length: n }, (_, i) => ({
+    index: i,
+    name: '',
+    hazards: [] as ExpeditionHazardId[],
+    from: i / n,
+    to: (i + 1) / n,
+  }))
 }
 
 /** Catmull-Rom, Enden verdoppelt. */

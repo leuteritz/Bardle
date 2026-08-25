@@ -25,6 +25,8 @@ import {
 import { drawLandmark, landmarkVariantFor, roundLandmarkRadius } from './galaxyLandmarks'
 import { buildDeepField, paintDeepField } from './galaxyDeepField'
 import {
+  CORE_GATE_HALO_R,
+  CORE_GATE_MOUTH_R,
   MINIMAP_TWINKLE_COUNT,
   MINIMAP_GALAXY_CORE_RADIUS,
   SNAPSHOT_ROUTE_ARROW_SIZE,
@@ -272,17 +274,29 @@ export function paintGalaxy(
     )
   }
 
-  // Befreiter Kern: der besiegte Bossstern, golden und zur Ruhe gekommen. Er
-  // ist mit Abstand die grösste Marke — ein befreiter Stern misst mitsamt Halo
-  // 11, und der Höhepunkt der Galaxie darf daneben nicht untergehen.
-  const coreGlowR = 30 * k
+  // Caretaker's Gate: der befreite Kern. Er ist mit Abstand die grösste Marke —
+  // ein befreiter Stern misst mitsamt Halo 11, und der Höhepunkt der Galaxie
+  // darf daneben nicht untergehen.
+  //
+  // Der Schein ist ein RING, keine Füllung: eine in der Mitte helle Glut machte
+  // aus dem Tor wieder eine Scheibe, und genau das sollte es nicht mehr sein.
+  // Er trägt die Themenfarbe, dieselbe, die schon die Partikel färbt — das Gold
+  // bleibt den Häfen.
+  //
+  // Der Block klammert sich selbst: er ist zwar der letzte, aber `paintCoreGate`
+  // fasst `shadowBlur` und `lineWidth` an, und die Funktion gibt den Context an
+  // ihren Aufrufer zurück.
+  ctx.save()
+  const coreGlowR = CORE_GATE_HALO_R * k
   const coreGlow = ctx.createRadialGradient(gcx, gcy, 0, gcx, gcy, coreGlowR)
-  coreGlow.addColorStop(0, 'rgba(255, 220, 90, 0.55)')
-  coreGlow.addColorStop(0.6, 'rgba(255, 180, 40, 0.16)')
-  coreGlow.addColorStop(1, 'rgba(255, 160, 20, 0)')
+  coreGlow.addColorStop(0, `rgba(${accent}, 0)`)
+  coreGlow.addColorStop(0.52, `rgba(${accent}, 0)`)
+  coreGlow.addColorStop(0.8, `rgba(${accent}, 0.32)`)
+  coreGlow.addColorStop(1, `rgba(${accent}, 0)`)
   ctx.beginPath()
   ctx.arc(gcx, gcy, coreGlowR, 0, Math.PI * 2)
   ctx.fillStyle = coreGlow
   ctx.fill()
-  drawLandmark(ctx, 'core-freed', gcx, gcy, 13 * k, { dpr })
+  drawLandmark(ctx, 'core-gate', gcx, gcy, CORE_GATE_MOUTH_R * k, { dpr, tint: accent })
+  ctx.restore()
 }

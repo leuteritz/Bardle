@@ -10,7 +10,11 @@ import {
   seededRng,
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
+  CORE_GATE_CROWN_SPAN,
+  CORE_GATE_MOUTH_R,
   VOYAGE_BERTH_CANDIDATE_POOL,
+  VOYAGE_GATE_GAP_PX,
+  VOYAGE_GATE_MIN_PX,
   VOYAGE_SITE_DOT_RATIO,
   VOYAGE_SITE_HIT_GAP,
   VOYAGE_SITE_HIT_MAX,
@@ -19,8 +23,9 @@ import {
   VOYAGE_SITE_PLATE_INSET,
   VOYAGE_SITE_SLOTS,
 } from '@/config/constants'
+import { GALAXY_PLATE_REF_W } from '@/utils/fx/galaxyPlate'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
-import type { AvailableExpeditionSlot, ExpeditionMission } from '@/types'
+import type { AvailableExpeditionSlot, ExpeditionMission, VoyageRoutePoint } from '@/types'
 
 export interface VoyageBerth {
   /** Stabil über Re-Renders: `${galaxy}:${berth}`. */
@@ -126,6 +131,110 @@ export interface VoyageMarkerSize {
   plate: number
   /** Blanker Hafen ohne Vertrag. */
   dot: number
+}
+
+/* ── Caretaker's Gate ─────────────────────────────────────────────────────────
+   Der Ort, an dem der Galaxieboss sass. Ist die Galaxie befreit — und nur solche
+   zeigt der Atlas —, ist er der Hafen der Galaxie: jede Crew bricht von dort auf
+   und kehrt dorthin zurueck.
+
+   Kein eigener Seed, keine eigene Geometrie: der Kern IST der Ursprung des
+   Kartenraums (`galaxyPlaneToWorld`), und `generateGalaxyDots` haelt ihn
+   ausdruecklich frei, damit der Boss allein dort steht. */
+
+/** Der befreite Kern, normalisiert 0..1 — derselbe Punkt in jeder Galaxie. */
+export const VOYAGE_GATE_POS: VoyageRoutePoint = { x: 0.5, y: 0.5 }
+
+export interface VoyageGateSize {
+  /** Klickfläche des Tores in Pixeln. */
+  size: number
+  /** Radius, auf dem eine Route beginnt und endet — knapp ausserhalb der Marke. */
+  exit: number
+  /** Trägt das Tor seinen Rückkehr-Ring, ohne durch die Krone zu laufen? */
+  showArc: boolean
+}
+
+/**
+ * Wie gross das Tor auf DIESER Karte sein darf.
+ *
+ * Es misst sich am CANVAS, nicht mehr an der Hafenplatte: die sichtbare Marke
+ * malt `paintGalaxy` (`core-gate` samt zersprungener Krone), das DOM legt nur
+ * noch den Zustand darauf. Was das DOM beiträgt, muss die Marke also
+ * umschliessen — und die skaliert mit `k`, dem Massstab der Platte.
+ *
+ * Der Deckel kommt weiterhin vom naechsten Hafen, und das ist kein
+ * Vorsichtsmass: die Ankerplaetze halten nur `BERTH_RADIUS_MIN_T` vom Kern
+ * Abstand, in der Scheibenebene. Der Squash der Scheibe und das
+ * Seitenverhaeltnis-Band der Fit-Box druecken das in Pixeln weiter zusammen —
+ * gemessen ueber 400 Seeds liegt der naechste Platz im Median 42, im fuenften
+ * Perzentil 27 und im schlechtesten Fall 15 Referenzeinheiten entfernt.
+ *
+ * Gemessen wird in der MAXIMUMSNORM und gegen `hit`, nicht euklidisch gegen
+ * `plate` — aus demselben Grund wie bei `voyageMarkerSizeFor`: beide Flaechen
+ * sind achsenparallele Quadrate, und die decken sich genau dann, wenn BEIDE
+ * Achsabstaende kleiner sind als die halbe Summe der Seiten. Euklidisch
+ * gerechnet ging ein diagonaler Nachbar durch — im Browser gemessen deckten
+ * sich Tor und Hafen dann um 3 px.
+ *
+ * `exit` haengt bewusst NICHT an `size`: der Routenanfang muss die MARKE
+ * umgehen, nicht die Klickflaeche. Eine Linie deckt nichts zu, sie darf also
+ * auch dann aussen beginnen, wenn der Deckel die Klickflaeche geschrumpft hat.
+ */
+export function voyageGateSizeFor(
+  sites: readonly { x: number; y: number }[],
+  box: { w: number; h: number },
+  marker: VoyageMarkerSize,
+): VoyageGateSize {
+  const k = box.w / GALAXY_PLATE_REF_W
+  /** Aussenkante der gemalten Marke: der Torschlund plus die Krone darum. */
+  const markR = CORE_GATE_MOUTH_R * CORE_GATE_CROWN_SPAN * k
+
+  let nearest = Number.POSITIVE_INFINITY
+  for (const s of sites) {
+    const dx = Math.abs(s.x - 0.5) * box.w
+    const dy = Math.abs(s.y - 0.5) * box.h
+    nearest = Math.min(nearest, Math.max(dx, dy))
+  }
+  const cap = 2 * (nearest - marker.hit / 2 - VOYAGE_GATE_GAP_PX)
+  const exit = markR + VOYAGE_GATE_GAP_PX
+  // KEIN absoluter Pixeldeckel mehr. Er stammt aus der Zeit, als das Tor seinen
+  // eigenen Ring malte; jetzt umschliesst es die Canvas-Marke, und die wächst
+  // mit `k`. Ein fester Deckel schnitte auf 2K und 4K genau den Ring weg, den
+  // das Tor tragen soll — gemessen: auf 2560×1440 griff er in JEDER Galaxie.
+  const size = Math.round(Math.max(VOYAGE_GATE_MIN_PX, Math.min(2 * exit, cap)))
+  // Drueckt ein Vertrag dicht am Kern den Deckel unter die Krone, liefe der Ring
+  // quer durch sie. Dann traegt die Pille die Zeit allein.
+  return { size, exit, showArc: size / 2 >= markR }
+}
+
+/**
+ * Wo eine Route zum Hafen `target` das Tor verlaesst.
+ *
+ * Der Kreis wird in PIXELN gezogen und erst dann normalisiert zurueckgerechnet.
+ * Ein fester Abstand im 0..1-Raum waere auf einer Fit-Box mit
+ * `VOYAGE_MAP_ASPECT_MAX` in der Senkrechten fast halb so gross wie in der
+ * Waagerechten — die Route begaenne dort im Tor statt daneben.
+ */
+export function voyageGateExit(
+  target: { x: number; y: number },
+  box: { w: number; h: number },
+  radius: number,
+): VoyageRoutePoint {
+  const dx = (target.x - 0.5) * box.w
+  const dy = (target.y - 0.5) * box.h
+  const len = Math.hypot(dx, dy) || 1
+  return {
+    x: 0.5 + ((dx / len) * radius) / Math.max(1, box.w),
+    y: 0.5 + ((dy / len) * radius) / Math.max(1, box.h),
+  }
+}
+
+/**
+ * Der Seed, der den Bogen einer Route streut. Hin- und Rueckweg eines Hafens
+ * teilen ihn — die Crew kommt auf demselben Bogen heim, auf dem sie ging.
+ */
+export function voyageBowSeed(site: { x: number; y: number; berth: number }): number {
+  return Math.round(site.x * 9973 + site.y * 7919) + site.berth * 131
 }
 
 /**

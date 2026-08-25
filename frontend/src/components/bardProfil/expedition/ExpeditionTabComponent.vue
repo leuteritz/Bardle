@@ -59,6 +59,8 @@ const {
   railRows,
   chimePops,
   collectFlashing,
+  homecomings,
+  gateState,
 } = atlas
 
 const destination = computed(() =>
@@ -275,6 +277,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
           :title="galaxyTitle"
           :tier="galaxyTier"
           :visible="isVisible"
+          :gate="gateState"
+          :homecomings="homecomings"
           @select="selectedKey = $event"
         />
       </div>

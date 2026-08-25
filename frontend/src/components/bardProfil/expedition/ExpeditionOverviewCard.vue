@@ -28,6 +28,19 @@ const dest = computed(() => destinationFor(props.record))
 
 const { root, snapshot } = useLazyGalaxySnapshot(() => props.record, 'full')
 
+/**
+ * Was am Caretaker's Gate los ist. Der Kern dieser Galaxie ist befreit — sonst
+ * stünde sie nicht im Archiv —, das Tor ist also immer offen; die Zahl daneben
+ * ist das, was sich ändert.
+ */
+const gate = computed(() => {
+  const here = expeditionStore.activeExpeditions.filter(
+    (m: { galaxy?: number }) => m.galaxy === props.record.galaxy,
+  )
+  const out = here.filter((m: { status: string }) => m.status === 'active').length
+  return { out, waiting: here.length - out }
+})
+
 const nextOffer = computed(() => {
   const ms = Math.max(0, expeditionStore.nextSpawnAt - props.now)
   const secs = Math.ceil(ms / 1000)
@@ -66,6 +79,19 @@ const waymarked = computed(() =>
         </span>
       </div>
     </header>
+
+    <section class="eov-block">
+      <h4 class="eov-h">Caretaker's Gate</h4>
+      <p class="eov-gate-line">
+        The core is free — its throne is a gate now. Every crew bound for this
+        reach leaves from there and comes home to it.
+      </p>
+      <span class="eov-gate-state">
+        <template v-if="gate.out">{{ gate.out }} out in the field</template>
+        <template v-else-if="gate.waiting">{{ gate.waiting }} waiting at berth</template>
+        <template v-else>Quiet — no crew abroad</template>
+      </span>
+    </section>
 
     <section v-if="waymarked.length" class="eov-block">
       <h4 class="eov-h">Crews who know this road</h4>
@@ -200,6 +226,21 @@ const waymarked = computed(() =>
   letter-spacing: 0.13em;
   text-transform: uppercase;
   color: rgba(200, 144, 64, 0.5);
+}
+
+.eov-gate-line {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: rgba(230, 220, 196, 0.6);
+}
+.eov-gate-state {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e8c040;
+  font-variant-numeric: tabular-nums;
 }
 
 .eov-marks {

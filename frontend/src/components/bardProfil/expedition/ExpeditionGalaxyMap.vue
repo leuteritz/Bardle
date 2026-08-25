@@ -15,8 +15,11 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { paintGalaxy, galaxyFitBox, type FitBox } from '@/utils/fx/galaxyPlate'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
-import { voyageMarkerSizeFor } from '@/utils/game/voyageSites'
-import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { voyageGateSizeFor, voyageMarkerSizeFor } from '@/utils/game/voyageSites'
+import {
+  generateGalaxyDots,
+  minimapAccentForTheme,
+} from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { toRoman } from '@/utils/ui/format'
 import {
   VOYAGE_MAP_HISTORY_SCALE,
@@ -33,8 +36,9 @@ import {
   VOYAGE_MAP_STATS_WIDE_W,
 } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
-import type { VoyagePlacedSite } from '@/types'
+import type { VoyageHomecoming, VoyagePlacedSite } from '@/types'
 import ExpeditionSiteNode from './ExpeditionSiteNode.vue'
+import ExpeditionGateNode from './ExpeditionGateNode.vue'
 import ExpeditionMapLegend from './ExpeditionMapLegend.vue'
 import ExpeditionGalaxyStatsBand from './ExpeditionGalaxyStatsBand.vue'
 import ExpeditionCrewMarkerLayer from './ExpeditionCrewMarkerLayer.vue'
@@ -50,6 +54,16 @@ const props = defineProps<{
   visible: boolean
   /** Stufe des Ziels, für das Band oben links. */
   tier: 'common' | 'rare' | 'epic'
+  /** Zustand des Caretaker's Gate im Kern. */
+  gate: {
+    crewsOut: number
+    waiting: number
+    nextReturnAt: number | null
+    nextSpanMs: number
+    arriving: boolean
+  }
+  /** Crews auf dem Heimweg — rein darstellend. */
+  homecomings: VoyageHomecoming[]
 }>()
 const emit = defineEmits<{ select: [string | null] }>()
 
@@ -96,11 +110,18 @@ function pct(x: number, y: number): { left: number; top: number } {
  */
 const markerSize = computed(() => voyageMarkerSizeFor(props.sites, box.value))
 
+/**
+ * Das Tor misst sich an derselben Platte und wird am nächsten Hafen gedeckelt —
+ * ein Reifen, der einen Vertrag zudeckt, nimmt der Karte ihre Handlung.
+ */
+const gateSize = computed(() => voyageGateSizeFor(props.sites, box.value, markerSize.value))
+
 const nodeVars = computed(() => ({
   '--sn-hit': `${markerSize.value.hit}px`,
   '--sn-plate': `${markerSize.value.plate}px`,
   '--sn-dot': `${markerSize.value.dot}px`,
   '--sn-move': `${VOYAGE_SITE_MOVE_MS}ms`,
+  '--gt-size': `${gateSize.value.size}px`,
 }))
 
 /** Ab dieser Plattengrösse trägt die Marke ihre Uhr selbst. */
@@ -165,7 +186,10 @@ const showLegend = computed(
   () => cssW.value >= VOYAGE_MAP_LEGEND_MIN_W && cssH.value >= VOYAGE_MAP_LEGEND_MIN_H,
 )
 
-/** Dieselbe Richtung, in die das Portal auf der Karte zeigt. */
+/** Dieselbe Farbe, die `paintGalaxy` dem Kern und den Akzentpartikeln gibt. */
+const accent = computed(() => minimapAccentForTheme(props.record.themeIndex))
+
+/** Dieselbe Richtung, in die das Ankunftsportal auf der Karte zeigt. */
 const legendHeading = computed(() => {
   const { spawn, dots } = generateGalaxyDots(props.record.mapSeed, 1)
   const d = dots[0] ?? spawn
@@ -219,7 +243,7 @@ onBeforeUnmount(() => {
   dprQuery = null
 })
 
-defineExpose({ paintCount, box, cssW, cssH, markerSize, bandH })
+defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
 </script>
 
 <template>
@@ -247,7 +271,12 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, bandH })
       </span>
     </div>
 
-    <ExpeditionMapLegend v-if="showLegend" :dpr="dprNow" :heading="legendHeading" />
+    <ExpeditionMapLegend
+      v-if="showLegend"
+      :dpr="dprNow"
+      :heading="legendHeading"
+      :accent="accent"
+    />
 
     <ExpeditionGalaxyStatsBand
       v-if="showBand"
@@ -267,9 +296,26 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, bandH })
       :plate="markerSize.plate"
       :visible="visible"
       :now="now"
+      :gate-exit="gateSize.exit"
+      :homecomings="homecomings"
     />
 
     <div class="egm-nodes" :style="nodeVars">
+      <!-- Vor den Häfen: das Tor liegt bei gleichem z-index sonst darüber, und
+           ein Vertrag nahe am Kern verschwände unter dem Reifen. -->
+      <ExpeditionGateNode
+        :left="pct(0.5, 0.5).left"
+        :top="pct(0.5, 0.5).top"
+        :now="now"
+        :crews-out="gate.crewsOut"
+        :waiting="gate.waiting"
+        :next-return-at="gate.nextReturnAt"
+        :next-span-ms="gate.nextSpanMs"
+        :arriving="gate.arriving"
+        :show-arc="gateSize.showArc"
+        @home="emit('select', null)"
+      />
+
       <ExpeditionSiteNode
         v-for="site in sites"
         :key="site.pinKey"
@@ -320,7 +366,8 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, bandH })
   z-index: 1;
   pointer-events: none;
 }
-.egm-nodes :deep(.sn) {
+.egm-nodes :deep(.sn),
+.egm-nodes :deep(.gt) {
   pointer-events: auto;
 }
 

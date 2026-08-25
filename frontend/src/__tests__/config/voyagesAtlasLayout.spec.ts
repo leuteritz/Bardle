@@ -11,12 +11,22 @@ import {
   VOYAGE_MAP_GUTTER_PX,
   VOYAGE_SITE_HIT_MIN,
   VOYAGE_BERTH_MIN_SEPARATION,
+  CORE_GATE_CROWN_SPAN,
+  CORE_GATE_MOUTH_R,
+  LANDMARK_PAD_SPAN,
+  VOYAGE_GATE_GAP_PX,
+  VOYAGE_GATE_MIN_PX,
+  VOYAGE_MAP_LEGEND_ICON_PX,
+  VOYAGE_MAP_LEGEND_R,
+  VOYAGE_SITE_HIT_GAP,
+  VOYAGE_SITE_HIT_MAX,
   VOYAGE_MAP_STATS_BAND_H,
   VOYAGE_MAP_STATS_MIN_H,
   VOYAGE_MAP_INSET_PX,
   BOTTOM_BAR_SIDE_W,
 } from '@/config/constants'
-import { galaxyFitBox } from '@/utils/fx/galaxyPlate'
+import { galaxyFitBox, GALAXY_PLATE_REF_W } from '@/utils/fx/galaxyPlate'
+import { voyageGateSizeFor, voyageMarkerSizeFor } from '@/utils/game/voyageSites'
 
 /**
  * Der Voyages-Atlas teilt drei Zonen ein Budget: Leiste + Karte + Detail sind
@@ -218,4 +228,51 @@ describe('voyages atlas layout', () => {
       VOYAGE_SITE_HIT_MIN,
     )
   })
+
+  /**
+   * Das Caretaker's Gate steht im Kern und ist die einzige Marke ohne
+   * Ankerplatz. Seine SICHTBARE Form malt das Canvas (`core-gate`); das DOM legt
+   * nur den Zustand darauf und muss die gemalte Marke deshalb umschliessen.
+   * `voyageGateSizeFor` deckelt es trotzdem am nächsten Hafen — ausser auf
+   * seinem BODEN, den kein Deckel unterschreitet.
+   */
+  it('bindet Boden und Deckel des Tores an die Hafenmarke', () => {
+    // Boden: enger als eine Hafenmarke wird das Tor nicht. Dort, wo der Deckel
+    // greift, ist es damit nie das Grösste im Kern.
+    expect(VOYAGE_GATE_MIN_PX).toBeLessThanOrEqual(VOYAGE_SITE_HIT_MIN)
+    // Der Boden darf die kleinste Hafenmarke nicht überragen, sonst wäre er
+    // selbst der Grund, aus dem sich zwei Flächen decken.
+    expect(VOYAGE_GATE_MIN_PX).toBeLessThan(VOYAGE_SITE_HIT_MAX)
+    // Und die Luft, die das Tor lässt, ist dieselbe, die zwei Häfen sich lassen.
+    expect(VOYAGE_GATE_GAP_PX).toBeGreaterThanOrEqual(VOYAGE_SITE_HIT_GAP)
+  })
+
+  /**
+   * Die Legendensonde ist der engste Ort der ganzen Karte: sie malt mit
+   * `VOYAGE_MAP_LEGEND_R` und ERZWUNGENER voller Detailstufe in eine Kachel von
+   * `VOYAGE_MAP_LEGEND_ICON_PX`. Wer an einem Landmarken-Radius dreht, merkt es
+   * sonst erst im Browser — und dort ist die Marke dann beschnitten.
+   */
+  it('hält die weiteste Landmarke in der Legendenkachel', () => {
+    const cell = VOYAGE_MAP_LEGEND_ICON_PX
+    // Der allgemeine Rand deckt alle Kinds mit Sprite ab …
+    expect(VOYAGE_MAP_LEGEND_R * LANDMARK_PAD_SPAN * 2).toBeLessThanOrEqual(cell * 2)
+    // … und die Krone des Tores, die weiteste Zier des Kerns, passt hinein.
+    expect(VOYAGE_MAP_LEGEND_R * CORE_GATE_CROWN_SPAN * 2).toBeLessThanOrEqual(cell)
+  })
+
+  /**
+   * Der Routenanfang liegt IMMER ausserhalb der gemalten Krone — auch dort, wo
+   * ein Vertrag dicht am Kern den Deckel des Tores gedrückt hat. `exit` hängt
+   * deshalb am Massstab der Platte und nicht an der Klickfläche.
+   */
+  it('leitet den Routenanfang aus der gemalten Marke ab, nicht aus der Klickfläche', () => {
+    const box = galaxyFitBox(VOYAGE_MAP_MIN_WIDTH - VOYAGE_MAP_GUTTER_PX, fitHeight(1080))
+    const k = box.w / GALAXY_PLATE_REF_W
+    const markR = CORE_GATE_MOUTH_R * CORE_GATE_CROWN_SPAN * k
+    const gate = voyageGateSizeFor([], box, voyageMarkerSizeFor([], box))
+    expect(gate.exit).toBeCloseTo(markR + VOYAGE_GATE_GAP_PX, 9)
+    expect(gate.exit).toBeGreaterThan(markR)
+  })
+
 })

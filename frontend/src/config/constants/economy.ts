@@ -1250,16 +1250,35 @@ export const VOYAGE_LOG_ICONS: Record<VoyageLogKind, string> = {
 
 /* ── Reiseroute auf der Karte ─────────────────────────────────────────────── */
 
+/* ── Caretaker's Gate: der befreite Kern als Hafen ───────────────────────
+
+   Die SICHTBARE Marke malt das Canvas (`core-gate` in `galaxyLandmarks.ts`);
+   das DOM-Tor legt nur den Zustand darauf und muss sie deshalb umschliessen.
+   Seine Grösse kommt entsprechend aus CORE_GATE_MOUTH_R x CORE_GATE_CROWN_SPAN
+   und dem Massstab der Platte, nicht aus einer eigenen Zahl.
+
+   Gedeckelt wird sie trotzdem am nächsten Hafen. Gemessen über 400 Seeds liegt
+   der nächste Ankerplatz im Median 42, im fünften Perzentil 27 und im
+   schlechtesten Fall 15 Referenzeinheiten vom Kern entfernt (Bezug
+   GALAXY_PLATE_REF_W): eine ungedeckelte Torgrösse deckte dort jede zwanzigste
+   Galaxie einen Vertrag zu.                                                   */
+
 /**
- * Wie weit der Routenanfang vom Abflugportal zur Mitte gezogen wird.
- *
- * `generateGalaxyDots` setzt den Spawn auf den AUSSENRAND der Scheibe, im Winkel
- * gleichverteilt — in etwa jeder vierten Galaxie fällt er damit in die obere
- * linke Ecke, wo das Ribbon der Karte mit z-index 2 darüber liegt, oder in die
- * untere linke unter die Legende. Ein Routenanfang, den man nicht sieht, ist
- * keiner.
+ * Boden: derselbe wie bei einer Hafenmarke. Wo der Deckel oben greift, weil ein
+ * Vertrag dicht am Kern liegt, ist das Tor damit nie das Grösste im Kern — es
+ * fällt auf das Mass zurück, das die Karte dort ohnehin trägt.
  */
-export const VOYAGE_ROUTE_START_PULL = 0.14
+export const VOYAGE_GATE_MIN_PX = VOYAGE_SITE_HIT_MIN
+/** Luft zwischen Torkante und Hafenplatte, und zwischen Torkante und Routenanfang. */
+export const VOYAGE_GATE_GAP_PX = 6
+/** Atem des ruhenden Tores — langsamer als eine Hafenmarke, es wartet. */
+export const VOYAGE_GATE_BREATH_MS = 4200
+/** Wie lange eine heimgekehrte Crew am Tor steht, bevor sie eingeht. */
+export const VOYAGE_GATE_DOCK_MS = 1400
+/** Dauer des Heimflugs vom Hafen zum Tor — Spielzeit, nicht Wanduhr. */
+export const VOYAGE_HOMECOMING_MS = 2600
+/** Portraits am heimkehrenden Marker; dieselbe Zahl wie unterwegs. */
+export const VOYAGE_GATE_FACES = 3
 /** Seitliche Auslenkung eines Wegpunkts, als Anteil der Sehnenlänge. Eine
  *  gerade Linie zwischen zwei Punkten liest sich nicht als Reise. */
 export const VOYAGE_ROUTE_BOW = 0.16
