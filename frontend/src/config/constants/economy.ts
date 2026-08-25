@@ -766,10 +766,36 @@ export const VOYAGE_FLEET_CARD_PAD_Y = 7
 export const VOYAGE_FLEET_CARD_MIN_VISIBLE = 5
 /** Crew-Portrait auf der Karte. ≤ 34 heißt Auflösungsstufe `-128`. */
 export const VOYAGE_FLEET_AVATAR_PX = 26
-/** Breite der Rangsäule links und der Aktionssäule rechts — die Bandbreite, die
- *  der Kartenspur NICHT zur Verfügung steht. */
-export const VOYAGE_FLEET_RANK_W = 88
-export const VOYAGE_FLEET_ASIDE_W = 216
+/**
+ * Breite der Rangsäule links und der Aktionssäule rechts — die Bandbreite, die
+ * der Kartenspur NICHT zur Verfügung steht. Zusammen höchstens 328, sonst trägt
+ * die Spur auf Full HD keine fünf Karten mehr:
+ *
+ *   1212 innen = Rang 176 + 10 + Spur 874 + 10 + Aktionen 142
+ *   Spur braucht 5 x 168 + 4 x 6 = 864  →  10 px Reserve
+ *
+ * Die Aktionssäule ist zweimal geschrumpft (216 → 146 → 142), obwohl ihre
+ * Knöpfe zweimal gewachsen sind: erst fielen Focus-Knopf und Dev-Spawn aus der
+ * Reihe, dann zog der „Next contract"-Chip nach links. Sie trägt nur noch
+ * HANDLUNGEN; die Ablesungen stehen alle links beim Spielstand.
+ */
+export const VOYAGE_FLEET_RANK_W = 176
+export const VOYAGE_FLEET_ASIDE_W = 142
+/**
+ * Die beiden Aktionskacheln. Sie sind NICHT quadratisch: seit der Chip die
+ * Säule verlassen hat, steht darüber und darunter nichts mehr, und die Höhe
+ * war der einzige Platz, an dem sie ohne Kosten wachsen konnten — Breite nimmt
+ * der Kartenspur weg, Höhe niemandem.
+ *
+ *   96 + 2 x 13 Luft = 122 in ein Band von VOYAGE_COMMAND_BAR_H (123)
+ *   2 x 66 + Lücke 10 = 142 = VOYAGE_FLEET_ASIDE_W
+ *
+ * Vorher deckelte der Chip sie bei 66: `Chip 50.5 + Lücke 6 + Knopf 66 = 122.5`.
+ * Die 50.5 waren GEMESSEN — MedievalSharp überschiesst seine Zeilenbox, eine
+ * geschätzte 48 hatte die Säule schon 1.5 px über das Band gehoben.
+ */
+export const VOYAGE_FLEET_ACT_W = 66
+export const VOYAGE_FLEET_ACT_H = 96
 export const VOYAGE_FLEET_BAND_PAD_X = 14
 export const VOYAGE_FLEET_BAND_GAP = 10
 

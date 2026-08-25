@@ -100,12 +100,17 @@ const detailFolded = computed(() => userDetailFolded.value ?? true)
 /** Die Spalte öffnet nur über einer Galaxie, die etwas trägt. */
 const detailOpenable = computed(() => placedSites.value.length > 0)
 
-/** Die EINE Stelle, die aufklappt — `null` und nicht `true`, sonst stünde der
- *  Fokusknopf über einer stillen Galaxie gedrückt da. */
+/** Die EINE Stelle, die aufklappt — `null` und nicht `true`, damit eine stille
+ *  Galaxie nicht als gewollter Kartenfokus zählt. */
 function setDetailFolded(folded: boolean) {
   userDetailFolded.value = folded ? true : detailOpenable.value ? false : null
 }
 
+/**
+ * Kartenfokus: beide Ränder weggeklappt. ABGELEITET, kein eigenes Flag — der
+ * Spieler erreicht ihn über die Griffe von Leiste und Detailspalte, seit die
+ * Kopfleiste keinen Focus-Knopf mehr trägt. Nur Escape braucht beides.
+ */
 const chartFocus = computed(() => railFolded.value && userDetailFolded.value === true)
 function toggleFocus() {
   const next = !chartFocus.value
@@ -113,17 +118,24 @@ function toggleFocus() {
   setDetailFolded(next)
 }
 
-/** Der Sprung aus dem Fleet-Streifen. Reihenfolge ist bindend: `selectGalaxy`
+/** Der Sprung aus dem Fleet-Band. Reihenfolge ist bindend: `selectGalaxy`
  *  räumt `selectedKey` ab. */
 function jumpToMark(galaxy: number, key: string | null) {
   atlas.selectGalaxy(galaxy)
   if (key) selectedKey.value = key
 }
 
-/** Ein ausdrücklicher Klick auf den Bühnengrund schliesst mit. */
+/**
+ * Ein ausdrücklicher Klick auf den Bühnengrund schliesst mit — aber er hebt
+ * einen gewollten Kartenfokus NICHT auf. Dieselbe Ausnahme wie im Watcher auf
+ * die Galaxie: `true` ist die ausdrückliche Wahl des Spielers, `null` nur „zu,
+ * weil nichts gewählt ist". Ohne die Ausnahme fiele Escape-Stufe 2 aus dem
+ * Fokus, bevor Stufe 3 ihn aufwickeln kann — die Leiter hätte eine Sprosse
+ * verloren, seit die Kopfleiste keinen Focus-Knopf mehr trägt.
+ */
 function onSelect(key: string | null) {
   selectedKey.value = key
-  if (key === null) userDetailFolded.value = null
+  if (key === null && userDetailFolded.value !== true) userDetailFolded.value = null
 }
 
 /**
@@ -282,12 +294,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
         class="etc-bar"
         :now="now"
         :collect-flashing="collectFlashing"
-        :chart-focus="chartFocus"
         :rows="railRows"
         :selected-key="selectedKey"
         @collect-all="atlas.collectAll"
         @send-all="atlas.sendAll"
-        @toggle-focus="toggleFocus"
         @open="jumpToMark"
       />
 

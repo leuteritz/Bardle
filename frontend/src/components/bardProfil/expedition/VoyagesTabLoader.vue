@@ -29,6 +29,8 @@ import LoadingBeacon from '@/components/ui/LoadingBeacon.vue'
 import {
   VOYAGE_COMMAND_BAR_H,
   VOYAGE_DETAIL_COLLAPSED,
+  VOYAGE_FLEET_ACT_H,
+  VOYAGE_FLEET_ACT_W,
   VOYAGE_FLEET_ASIDE_W,
   VOYAGE_FLEET_BAND_GAP,
   VOYAGE_FLEET_BAND_PAD_X,
@@ -70,6 +72,8 @@ const asideWidth = `${VOYAGE_FLEET_ASIDE_W}px`
 const cardWidth = `${VOYAGE_FLEET_CARD_MIN_W}px`
 const cardHeight = `${VOYAGE_FLEET_CARD_H}px`
 const cardGap = `${VOYAGE_FLEET_CARD_GAP}px`
+const actW = `${VOYAGE_FLEET_ACT_W}px`
+const actH = `${VOYAGE_FLEET_ACT_H}px`
 /** So viele, wie gleich ohne Scrollen stehen — mehr verspräche eine Spur, die
  *  der Schleier nicht halten kann. */
 const cardCount = VOYAGE_FLEET_CARD_MIN_VISIBLE
@@ -107,10 +111,7 @@ const skeletonPorts = computed(() =>
           <span v-for="i in cardCount" :key="i" class="vtl-mark vtl-mark--card" />
         </div>
         <div class="vtl-aside">
-          <span class="vtl-mark vtl-mark--next" />
-          <div class="vtl-acts">
-            <span v-for="i in 3" :key="i" class="vtl-mark vtl-mark--act" />
-          </div>
+          <span v-for="i in 2" :key="i" class="vtl-mark vtl-mark--act" />
         </div>
       </div>
     </div>
@@ -203,7 +204,7 @@ const skeletonPorts = computed(() =>
 .vtl-mark--rank {
   flex: 0 0 v-bind(rankWidth);
   width: v-bind(rankWidth);
-  height: 84px;
+  height: 116px;
 }
 .vtl-lane {
   flex: 1;
@@ -223,22 +224,13 @@ const skeletonPorts = computed(() =>
   flex: 0 0 v-bind(asideWidth);
   width: v-bind(asideWidth);
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-}
-.vtl-mark--next {
-  width: 100%;
-  height: 46px;
-  border-radius: 4px;
-}
-.vtl-acts {
-  display: flex;
-  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
 }
 .vtl-mark--act {
-  width: 48px;
-  height: 48px;
+  width: v-bind(actW);
+  height: v-bind(actH);
   border-radius: 4px;
 }
 

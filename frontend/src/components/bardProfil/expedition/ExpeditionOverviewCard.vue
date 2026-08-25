@@ -18,7 +18,7 @@ import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useLazyGalaxySnapshot } from '@/composables/ui/useLazyGalaxySnapshot'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
-import { formatMinuteClock, toRoman } from '@/utils/ui/format'
+import { toRoman } from '@/utils/ui/format'
 import { buildVoyageRoster } from '@/utils/game/voyageRoster'
 import { EXPEDITION_WAYMARK_MAX } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
@@ -54,7 +54,9 @@ const gate = computed(() => {
   return { out, waiting: here.length - out }
 })
 
-const nextOffer = computed(() => formatMinuteClock(expeditionStore.nextSpawnAt - props.now))
+/** Die Uhr bis zum nächsten Vertrag stand hier ein zweites Mal — sie steht in
+ *  der Kopfleiste, und zwar immer. Hier bleibt nur der Hinweis, der etwas
+ *  ANDERES sagt als eine Zeit: dass der Platz erst frei werden muss. */
 const offersFull = computed(
   () => expeditionStore.availableExpeditions.length >= expeditionStore.maxAvailableOffers,
 )
@@ -140,10 +142,9 @@ const waymarked = computed(() =>
       </ul>
     </section>
 
-    <footer class="eov-foot">
-      <Icon icon="lucide:timer" width="14" height="14" />
-      <span v-if="offersFull">The board is full — send a crew to make room</span>
-      <span v-else>Next contract in {{ nextOffer }}</span>
+    <footer v-if="offersFull" class="eov-foot">
+      <Icon icon="ph:warning-fill" width="14" height="14" />
+      <span>The board is full — send a crew to make room</span>
     </footer>
     <p class="eov-note">
       New contracts favour the galaxies you freed most recently, but every charted

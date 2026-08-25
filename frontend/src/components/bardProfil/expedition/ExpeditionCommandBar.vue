@@ -4,10 +4,23 @@
  * Ihre Höhe ist GESETZT (`VOYAGE_COMMAND_BAR_H`): `.etc-bar` ist eine auto-Grid-
  * Zeile, was sie nimmt, nimmt sie der Bühne. Die Unterkante IST der Rangbalken.
  *
- * Drei Zonen aus einem Budget: Rangsäule · Kartenspur · Aktionssäule. Die Spur
- * trägt eine Karte je EXPEDITION — was läuft, mit wem, und was startbereit ist.
- * Die Zahlen-Ablesungen davor („In field 2/3", „Contracts 4/5") sind ersatzlos
- * entfallen: beides zählt man an den Karten ab.
+ * Drei Zonen aus einem Budget: Statussäule · Kartenspur · Aktionssäule.
+ *
+ * Der Schnitt ist ABLESUNG gegen HANDLUNG. Links steht, was der Spielstand sagt
+ * — Rang, Fortschritt, was die nächste Stufe bringt, und die Zeit bis zum
+ * nächsten Vertrag. Rechts steht nur, was man TUN kann: zwei Kacheln. Die Uhr
+ * stand einmal rechts über den Knöpfen; sie gehört zur linken Frage und
+ * deckelte dort nebenbei die Knopfhöhe.
+ *
+ * Die Spur dazwischen trägt eine Karte je EXPEDITION — was läuft, mit wem, und
+ * was startbereit ist. Die Zahlen-Ablesungen davor („In field 2/3",
+ * „Contracts 4/5") sind ersatzlos entfallen: beides zählt man an den Karten ab.
+ *
+ * Der Focus-Knopf ist gefallen — Leiste und Detailspalte haben je einen eigenen
+ * Griff, er war nur die Ein-Klick-Abkürzung für beide zusammen, und Escape
+ * steigt weiterhin aus, weil `chartFocus` im Reiter abgeleitet ist und kein
+ * eigenes Flag. Der Dev-Spawn steht absolut in der Statussäule statt im Fluss:
+ * sonst wäre die Reihe im Dev-Build 56 px breiter als beim Spieler.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -18,6 +31,8 @@ import { buildVoyageFleetCards } from '@/utils/game/voyageFleet'
 import { formatMinuteClock, toRoman } from '@/utils/ui/format'
 import {
   VOYAGE_COMMAND_BAR_H,
+  VOYAGE_FLEET_ACT_H,
+  VOYAGE_FLEET_ACT_W,
   VOYAGE_FLEET_ASIDE_W,
   VOYAGE_FLEET_BAND_GAP,
   VOYAGE_FLEET_BAND_PAD_X,
@@ -29,14 +44,12 @@ import ExpeditionFleetLane from './ExpeditionFleetLane.vue'
 const props = defineProps<{
   now: number
   collectFlashing: boolean
-  chartFocus: boolean
   selectedKey: string | null
   rows: VoyageRailRow[]
 }>()
 const emit = defineEmits<{
   'collect-all': []
   'send-all': []
-  'toggle-focus': []
   open: [galaxy: number, pinKey: string | null]
 }>()
 
@@ -48,6 +61,8 @@ const rankW = `${VOYAGE_FLEET_RANK_W}px`
 const asideW = `${VOYAGE_FLEET_ASIDE_W}px`
 const bandPadX = `${VOYAGE_FLEET_BAND_PAD_X}px`
 const bandGap = `${VOYAGE_FLEET_BAND_GAP}px`
+const actW = `${VOYAGE_FLEET_ACT_W}px`
+const actH = `${VOYAGE_FLEET_ACT_H}px`
 
 const readyCount = useNotifyBadgeCount('expedition')
 
@@ -123,19 +138,49 @@ const cards = computed(() =>
 <template>
   <header class="ecb">
     <div class="ecb-main">
-      <div class="ecb-rank" role="group" :aria-label="rankTitle" :title="rankTitle">
-        <Icon :icon="rank.icon" width="24" height="24" class="ecb-rank-ico" />
-        <span class="ecb-rank-name">Rank {{ toRoman(rank.tier) }}</span>
-        <span v-if="nextRank" class="ecb-rank-goal">
-          {{ expeditionStore.ledgerCompleted }}/{{ nextRank.required }}
-        </span>
-        <span v-else class="ecb-rank-goal">{{ expeditionStore.ledgerCompleted }} runs</span>
-        <span v-if="nextRank" class="ecb-rank-rewards">
-          <span v-for="part in nextRankRewards" :key="part" class="ecb-rank-reward">{{ part }}</span>
-        </span>
-        <span v-else class="ecb-rank-rewards">
-          <span class="ecb-rank-reward ecb-rank-reward--max">max rank</span>
-        </span>
+      <div class="ecb-rank">
+        <div class="ecb-rank-body" role="group" :aria-label="rankTitle" :title="rankTitle">
+          <!-- Zähler auf der Rangzeile, nicht darunter: das spart die Zeile, die
+               die Uhr braucht. -->
+          <span class="ecb-rank-head">
+            <Icon :icon="rank.icon" width="28" height="28" class="ecb-rank-ico" />
+            <span class="ecb-rank-name">Rank {{ toRoman(rank.tier) }}</span>
+            <span v-if="nextRank" class="ecb-rank-goal">
+              {{ expeditionStore.ledgerCompleted }}/{{ nextRank.required }}
+            </span>
+            <span v-else class="ecb-rank-goal">{{ expeditionStore.ledgerCompleted }}</span>
+          </span>
+          <!-- EINE umbrechende Zeile statt drei `nowrap`-Zeilen — der volle Satz
+               bleibt im Bild, aber er kostet höchstens zwei Zeilen. -->
+          <span class="ecb-rank-rewards">{{
+            nextRank ? nextRankRewards.join(' · ') : 'max rank'
+          }}</span>
+        </div>
+
+        <div class="ecb-next" :class="{ 'is-full': offersFull }">
+          <Icon :icon="offersFull ? 'ph:scroll-fill' : 'lucide:timer'" class="ecb-next-ico" />
+          <span class="ecb-next-body">
+            <!-- Reservierte Zahlenbreite: sonst wandert die Zeile, sobald 1:40
+                 auf 0:59 fällt. -->
+            <span class="ecb-next-value">{{
+              offersFull ? 'FULL' : formatMinuteClock(timeUntilNextSpawn)
+            }}</span>
+            <span class="ecb-next-label">Next contract</span>
+          </span>
+        </div>
+
+        <!-- Absolut: `v-if` darf keine Zone umbauen, sonst sähe die Leiste im
+             Dev-Build anders aus als beim Spieler. Rechte Ecke, weil der
+             Rangtext linksbündig steht und die Spalte nie ganz füllt. -->
+        <button
+          v-if="isDev"
+          class="ecb-admin"
+          title="Force spawn expedition (dev)"
+          aria-label="Force spawn expedition (dev)"
+          @click.stop="expeditionStore.forceSpawn()"
+        >
+          <Icon icon="ph:lightning-fill" width="15" height="15" />
+        </button>
       </div>
 
       <ExpeditionFleetLane
@@ -146,18 +191,6 @@ const cards = computed(() =>
       />
 
       <div class="ecb-aside">
-        <!-- Reservierte Zahlenbreite: sonst wandert die Säule, sobald 1:40 auf
-             0:59 fällt. -->
-        <div class="ecb-next" :class="{ 'is-full': offersFull }">
-          <Icon :icon="offersFull ? 'ph:scroll-fill' : 'lucide:timer'" class="ecb-next-ico" />
-          <span class="ecb-next-body">
-            <span class="ecb-next-value">{{
-              offersFull ? 'FULL' : formatMinuteClock(timeUntilNextSpawn)
-            }}</span>
-            <span class="ecb-next-label">Next contract</span>
-          </span>
-        </div>
-
         <div class="ecb-acts">
           <button
             class="ecb-act ecb-act--send"
@@ -167,7 +200,7 @@ const cards = computed(() =>
             aria-label="Send every crewed contract"
             @click.stop="emit('send-all')"
           >
-            <Icon icon="ph:tent-fill" width="22" height="22" />
+            <Icon icon="ph:tent-fill" width="34" height="34" />
           </button>
 
           <button
@@ -182,30 +215,8 @@ const cards = computed(() =>
             aria-label="Collect all completed expeditions"
             @click.stop="emit('collect-all')"
           >
-            <Icon icon="ph:treasure-chest-fill" width="22" height="22" />
+            <Icon icon="ph:treasure-chest-fill" width="34" height="34" />
             <RpgNotifyBadge :count="readyCount" label="Expedition rewards ready" />
-          </button>
-
-          <!-- Der eine Griff, der beide Ränder wegklappt. Escape holt sie zurück. -->
-          <button
-            class="ecb-act ecb-act--focus"
-            :class="{ 'is-on': chartFocus }"
-            :aria-pressed="chartFocus"
-            :title="chartFocus ? 'Show rail and details' : 'Focus the chart'"
-            :aria-label="chartFocus ? 'Show rail and details' : 'Focus the chart'"
-            @click.stop="emit('toggle-focus')"
-          >
-            <Icon :icon="chartFocus ? 'lucide:minimize' : 'lucide:maximize'" width="22" height="22" />
-          </button>
-
-          <button
-            v-if="isDev"
-            class="ecb-act ecb-act--admin"
-            title="Force spawn expedition (dev)"
-            aria-label="Force spawn expedition (dev)"
-            @click.stop="expeditionStore.forceSpawn()"
-          >
-            <Icon icon="ph:lightning-fill" width="20" height="20" />
           </button>
         </div>
       </div>
@@ -236,14 +247,35 @@ const cards = computed(() =>
   padding: 0 v-bind(bandPadX);
 }
 
-/* ── Rangsäule ──────────────────────────────────────────────── */
+/* ── Statussäule: Rang UND Uhr ──────────────────────────────── */
+/* Volle Bandhöhe, damit der Dev-Knopf an ihrer Unterkante sitzt; der Inhalt
+   bleibt darin senkrecht zentriert. Die Haarlinie rechts gliedert das Band —
+   links die Ablesungen, rechts die Karten und die Handlungen. */
 .ecb-rank {
+  position: relative;
   flex: 0 0 v-bind(rankW);
   width: v-bind(rankW);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 9px;
+  min-width: 0;
+  padding-right: 12px;
+  border-right: 1px solid #3e200a;
+}
+.ecb-rank-body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
+  gap: 4px;
+  min-width: 0;
+}
+.ecb-rank-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
   min-width: 0;
 }
 .ecb-rank-ico {
@@ -252,65 +284,51 @@ const cards = computed(() =>
   filter: drop-shadow(0 0 10px rgba(232, 192, 64, 0.35));
 }
 .ecb-rank-name {
-  font-size: 13px;
+  font-size: 19px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #e8c040;
   line-height: 1;
   white-space: nowrap;
+  text-shadow: 0 0 14px rgba(232, 192, 64, 0.28);
 }
+/* Rechtsbündig auf DERSELBEN Zeile — als eigene Zeile kostete der Zähler die
+   18 px, die die Uhr darunter braucht. */
 .ecb-rank-goal {
+  margin-left: auto;
+  flex-shrink: 0;
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  color: rgba(200, 144, 64, 0.62);
+  color: rgba(200, 144, 64, 0.68);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* EINE umbrechende Zeile, nicht drei `nowrap`-Zeilen: der schlimmste Satz
+   („+1 field slot · +1 contract · +7% odds") bricht auf zwei um statt auf drei. */
 .ecb-rank-rewards {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #7ad0a0;
   min-width: 0;
 }
-.ecb-rank-reward {
-  font-size: 9px;
-  font-weight: 800;
-  line-height: 1.15;
-  color: #7ad0a0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ecb-rank-reward--max {
-  color: rgba(200, 144, 64, 0.55);
-}
 
-/* ── Aktionssäule ───────────────────────────────────────────── */
-.ecb-aside {
-  flex: 0 0 v-bind(asideW);
-  width: v-bind(asideW);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-}
-
+/* ── Die Uhr: die grösste Zahl der Säule ────────────────────── */
+/* Sie läuft jede Sekunde, der Rang steht tagelang still. Kein eigener Kasten
+   mehr — die Haarlinie darüber trennt genug. */
 .ecb-next {
-  width: 100%;
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 7px 10px;
-  background: #16140e;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
+  padding-top: 9px;
+  border-top: 1px solid #3e200a;
 }
 .ecb-next-ico {
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   color: rgba(200, 144, 64, 0.7);
 }
 .ecb-next.is-full .ecb-next-ico {
@@ -319,13 +337,13 @@ const cards = computed(() =>
 .ecb-next-body {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 .ecb-next-value {
-  /* Reserviert, damit die Säule nicht wandert. */
+  /* Reserviert, damit die Zeile nicht wandert. */
   min-width: 5ch;
-  font-size: 19px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1;
   color: #e8dcc0;
@@ -343,16 +361,47 @@ const cards = computed(() =>
   white-space: nowrap;
 }
 
+/* Der Dev-Spawn. Absolut, damit `v-if` keine Zone umbaut. */
+.ecb-admin {
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(200, 144, 64, 0.55);
+  background: transparent;
+  border: 1px dashed #3e200a;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.ecb-admin:hover {
+  color: #e8c040;
+  border-color: #5c3310;
+}
+
+/* ── Aktionssäule: nur Handlungen ───────────────────────────── */
+/* Keine Stapelung mehr — die Uhr ist nach links gewandert, also steht hier nur
+   eine Reihe, senkrecht zentriert. */
+.ecb-aside {
+  flex: 0 0 v-bind(asideW);
+  width: v-bind(asideW);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
 .ecb-acts {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .ecb-act {
   position: relative;
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+  width: v-bind(actW);
+  height: v-bind(actH);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -395,30 +444,6 @@ const cards = computed(() =>
 .ecb-act--collect.is-flashing {
   animation: ecb-flash 0.55s ease;
 }
-.ecb-act--focus {
-  color: #c89040;
-  background: transparent;
-  border: 1px solid #5c3310;
-}
-.ecb-act--focus:hover {
-  color: #e8c040;
-  background: #1e1006;
-}
-.ecb-act--focus.is-on {
-  color: #e8c040;
-  background: #2a1c0a;
-  border-color: #c89040;
-}
-.ecb-act--admin {
-  width: 48px;
-  color: rgba(200, 144, 64, 0.62);
-  background: transparent;
-  border: 1px dashed #3e200a;
-}
-.ecb-act--admin:hover {
-  color: #e8c040;
-}
-
 @keyframes ecb-flash {
   0% {
     opacity: 1;
