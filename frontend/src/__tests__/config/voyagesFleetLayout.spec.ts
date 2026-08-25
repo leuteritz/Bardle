@@ -11,11 +11,15 @@ import {
   VOYAGE_MAP_STATS_MIN_H,
   VOYAGE_BERTH_MIN_SEPARATION,
   VOYAGE_SITE_HIT_MIN,
-  VOYAGE_FLEET_PILL_MIN_W,
-  VOYAGE_FLEET_PILL_GAP,
-  VOYAGE_FLEET_PILL_H,
-  VOYAGE_FLEET_PILL_PAD_Y,
-  VOYAGE_FLEET_STRIP_H,
+  VOYAGE_FLEET_CARD_MIN_W,
+  VOYAGE_FLEET_CARD_GAP,
+  VOYAGE_FLEET_CARD_H,
+  VOYAGE_FLEET_CARD_PAD_Y,
+  VOYAGE_FLEET_CARD_MIN_VISIBLE,
+  VOYAGE_FLEET_RANK_W,
+  VOYAGE_FLEET_ASIDE_W,
+  VOYAGE_FLEET_BAND_PAD_X,
+  VOYAGE_FLEET_BAND_GAP,
   VOYAGE_COMMAND_BAR_H,
   EXPEDITION_LEDGER_RANKS,
   BOTTOM_BAR_SIDE_W,
@@ -23,14 +27,14 @@ import {
 import { galaxyFitBox } from '@/utils/fx/galaxyPlate'
 
 /**
- * Der Fleet-Streifen ist eine zweite Zeile der Kopfleiste, und `.etc-bar` ist
- * eine `auto`-Grid-Zeile: was er an Höhe nimmt, nimmt er der BÜHNE. Und die
+ * Das Fleet-Band ist die eine Zeile der Kopfleiste, und `.etc-bar` ist eine
+ * `auto`-Grid-Zeile: was es an Höhe nimmt, nimmt es der BÜHNE. Und die
  * Bühnenhöhe ist keine Geschmacksfrage — die kürzere Achse der Fit-Box trägt die
  * Klickflächen zweier Nachbarhäfen (`VOYAGE_BERTH_MIN_SEPARATION`), und unter
  * `VOYAGE_MAP_STATS_MIN_H` fällt das Datenband weg.
  *
- * Diese Datei ist deshalb kein Zierrat: wer den Streifen höher macht, eine Zeile
- * hineinschreibt oder ihn umbrechen lässt, bricht hier — und das ist ihr Zweck.
+ * Diese Datei ist deshalb kein Zierrat: wer das Band höher macht, eine Zeile
+ * hineinschreibt oder es umbrechen lässt, bricht hier — und das ist ihr Zweck.
  *
  * Die Zonenrechnung steht ein zweites Mal hier (wie in `shopAtlasLayout.spec.ts`
  * gegenüber `voyagesAtlasLayout.spec.ts`), damit die Kopplung Kartenbreite ↔
@@ -59,15 +63,24 @@ function mapWidth(vw: number, vh: number, detailFolded = false): number {
 }
 
 /**
- * Bühnenhöhe MIT Streifen — im Browser gemessen, nicht gerechnet: `.rp-wrapper`
+ * Bühnenhöhe MIT dem Band — im Browser gemessen, nicht gerechnet: `.rp-wrapper`
  * hängt oben an `--level-badge-bottom`, das der Header zur Laufzeit aus einem
  * gerenderten Rechteck setzt. Dieselben Zahlen wie in `voyagesAtlasLayout.spec.ts`.
+ *
+ * Frisch aufgenommen mit dem Fleet-Band (Kopfleiste 126). Die Tabelle davor war
+ * ihrerseits veraltet: sie nannte 657,6 für Full HD, gemessen wurde jetzt ein
+ * Atlas von 779,56 — mit der alten 102er Leiste wären das 677,56 gewesen. Im
+ * Browser gegengeprüft, dass die Atlashöhe NICHT am Spielstand hängt:
+ * `--level-badge-bottom` misst 133,2 px bei Level 1 wie bei Level 100.
+ *
+ * Die Fit-Box verliert durch das Band NICHTS — `VOYAGE_MAP_STATS_BAND_H` ist um
+ * dieselben 24 gefallen, die die Kopfleiste bekommen hat.
  */
 const STAGE_HEIGHT: Record<number, number> = {
-  1080: 657.6,
-  1200: 758.4,
-  1440: 936,
-  2160: 1645.2,
+  1080: 653.6,
+  1200: 754.4,
+  1440: 932,
+  2160: 1641.2,
 }
 
 const DESKTOPS: Array<[string, number, number]> = [
@@ -98,29 +111,44 @@ describe('voyages fleet strip', () => {
   })
 
   it('behält auf Full HD Spielraum über dem Bandboden', () => {
-    // Full HD bindet: 657,6 gegen den Boden 620 sind 37,6 px. Die Zahl steht hier,
-    // damit sie jemand liest, BEVOR er der Kopfleiste Höhe gibt — der Streifen
-    // allein misst 56, und das Datenband der Karte fällt weg.
+    // Full HD bindet: 653,6 gegen den Boden 596 sind 57,6 px. Die Zahl steht
+    // hier, damit sie jemand liest, BEVOR er der Kopfleiste Höhe gibt — Bühne
+    // und Datenband sind für das Band um dieselben 24 gefallen, ein weiterer
+    // Zuschlag käme von der Galaxie.
     expect(STAGE_HEIGHT[1080] - VOYAGE_MAP_STATS_MIN_H).toBeGreaterThanOrEqual(30)
   })
 
   /**
-   * Der Streifen bricht NICHT um — er hat feste Höhe, sonst änderte sich mit
-   * jedem Spawn die Bühnenhöhe und die Galaxie würde neu gemalt. Also müssen die
-   * Pillen in eine Zeile passen, und zwar so viele, wie der Rang-Deckel zulässt.
+   * Das Band bricht NICHT um — es hat feste Höhe, sonst änderte sich mit jedem
+   * Spawn die Bühnenhöhe und die Galaxie würde neu gemalt. Anders als die Pillen
+   * davor passen NICHT mehr alle Marken nebeneinander: eine Karte trägt fünf
+   * Crew-Portraits und misst deshalb 168 statt 116. Zugesagt ist der Boden —
+   * so viele Karten stehen ohne Scrollen, und weil die Reihenfolge nach
+   * Dringlichkeit ordnet, sind es die, die etwas wollen. Der Rest scrollt und
+   * wird vom `+N`-Chip gemeldet; still verschwinden darf nichts.
    */
-  it('trägt so viele Pillen in einer Zeile, wie der Ledger-Rang Marken zulässt', () => {
+  it('trägt auf Full HD den zugesagten Boden an Karten ohne Scrollen', () => {
+    const lane =
+      atlasWidth(1920, 1080) -
+      2 * VOYAGE_FLEET_BAND_PAD_X -
+      VOYAGE_FLEET_RANK_W -
+      VOYAGE_FLEET_ASIDE_W -
+      2 * VOYAGE_FLEET_BAND_GAP
+    const need =
+      VOYAGE_FLEET_CARD_MIN_VISIBLE * VOYAGE_FLEET_CARD_MIN_W +
+      (VOYAGE_FLEET_CARD_MIN_VISIBLE - 1) * VOYAGE_FLEET_CARD_GAP
+    expect(need).toBeLessThanOrEqual(lane)
+  })
+
+  /** Und der Boden muss unter dem Deckel liegen, den der Rang überhaupt zulässt. */
+  it('sagt nicht mehr Karten zu, als der Ledger-Rang Marken erlaubt', () => {
     const top = EXPEDITION_LEDGER_RANKS[EXPEDITION_LEDGER_RANKS.length - 1]
-    const most = top.activeSlots + top.offerSlots
-    const need = most * VOYAGE_FLEET_PILL_MIN_W + (most - 1) * VOYAGE_FLEET_PILL_GAP
-    // Der Streifen läuft über die ganze Kopfleiste, also über den ganzen Atlas.
-    const room = atlasWidth(1920, 1080) - 2 * 14
-    expect(need).toBeLessThanOrEqual(room)
+    expect(VOYAGE_FLEET_CARD_MIN_VISIBLE).toBeLessThanOrEqual(top.activeSlots + top.offerSlots)
   })
 
   /**
    * Der eigentliche Wächter dieser Datei. Die Kopfleiste darf INNEN umverteilen —
-   * die Hauptreihe gab 12 px an den Streifen ab, damit die Pille zweizeilig wird —
+   * aus zwei Zeilen wurde eine, das Band trägt jetzt Karten statt Pillen —
    * aber ihre AUSSENHÖHE ist es, die in den STAGE_HEIGHT-Tabellen dieser Datei
    * und in `voyagesAtlasLayout.spec.ts` als gemessene Bühnenhöhe steckt.
    *
@@ -132,14 +160,14 @@ describe('voyages fleet strip', () => {
    * grün und das Datenband verschwände trotzdem im Browser. Wer hier vorbeikommt,
    * misst neu (`docs/playwright.md`) und führt beide Tabellen nach.
    */
-  it('hält die Kopfleiste bei 102 — die Aussenhöhe steckt in STAGE_HEIGHT', () => {
-    expect(VOYAGE_COMMAND_BAR_H + VOYAGE_FLEET_STRIP_H + 3).toBe(102)
+  it('hält die Kopfleiste bei 126 — die Aussenhöhe steckt in STAGE_HEIGHT', () => {
+    expect(VOYAGE_COMMAND_BAR_H + 3).toBe(126)
   })
 
-  /** Pillen- und Streifenhöhe sind gekoppelt: die Pille muss in den Streifen passen. */
-  it('lässt die Pille samt Luft in den Streifen', () => {
-    expect(VOYAGE_FLEET_PILL_H + 2 * VOYAGE_FLEET_PILL_PAD_Y).toBeLessThanOrEqual(
-      VOYAGE_FLEET_STRIP_H,
+  /** Karten- und Bandhöhe sind gekoppelt: die Karte muss in das Band passen. */
+  it('lässt die Karte samt Luft in das Band', () => {
+    expect(VOYAGE_FLEET_CARD_H + 2 * VOYAGE_FLEET_CARD_PAD_Y).toBeLessThanOrEqual(
+      VOYAGE_COMMAND_BAR_H,
     )
   })
 })

@@ -91,19 +91,20 @@ function zones(vw: number, vh: number, folded = false, detailFolded = false) {
  * zwölf Verträge auf EINER von ihnen — der dichteste Fall, den der Rang-Deckel
  * (5 Angebote + 5 Missionen) zulässt, und darüber hinaus.
  *
- * Je 92 px höher als in der vorigen Fassung: das ist der Crew-Streifen, den der
- * Reiter nicht mehr trägt. Die Bühne hat ihn geerbt und gibt 96 davon als
- * Datenband wieder aus — die Fit-Box ist damit nur 4 px flacher als vorher.
+ * Je 92 px höher als in der Fassung vor dem Datenband: das war der Crew-Streifen,
+ * den der Reiter nicht mehr trägt. Die Bühne hat ihn geerbt und gibt einen Teil
+ * davon als Datenband wieder aus.
  *
- * Seit dem Fleet-Streifen je VOYAGE_FLEET_STRIP_H (44) flacher: die Kopfleiste
- * trägt eine zweite Zeile, und `.etc-bar` ist eine auto-Grid-Zeile.
- * `voyagesFleetLayout.spec.ts` bindet, dass das noch trägt.
+ * Mit dem Fleet-Band neu aufgenommen (Kopfleiste 126). Die Zahlen davor waren
+ * unabhängig davon veraltet — siehe die Herleitung in
+ * `voyagesFleetLayout.spec.ts`. Die Fit-Box verliert durch das Band NICHTS:
+ * `VOYAGE_MAP_STATS_BAND_H` ist um dieselben 24 gefallen (96 → 72).
  */
 const STAGE_HEIGHT: Record<number, number> = {
-  1080: 657.6,
-  1200: 758.4,
-  1440: 936,
-  2160: 1645.2,
+  1080: 653.6,
+  1200: 754.4,
+  1440: 932,
+  2160: 1641.2,
 }
 
 function stageHeight(vh: number): number {
@@ -170,10 +171,13 @@ describe('voyages atlas layout', () => {
     //
     // 1.61 und nicht mehr, weil das geöffnete Seitenverhältnis-Band einen Teil
     // des Gewinns schon im OFFENEN Zustand ausschüttet. Vor dem Fleet-Streifen
-    // waren es 1.70; die 44 px, die er der Bühne nimmt, fehlen im Fokus auf
-    // BEIDEN Seiten der Rechnung, gehen aber nur der Höhe ab — deshalb sinkt der
-    // Faktor, statt gleich zu bleiben. Wer den Streifen weiter wachsen lässt,
-    // drückt hier weiter.
+    // waren es 1.70; die 44 px, die er der Bühne nahm, fehlen im Fokus auf
+    // BEIDEN Seiten der Rechnung, gehen aber nur der Höhe ab — deshalb sank der
+    // Faktor, statt gleich zu bleiben.
+    //
+    // Das Fleet-BAND hat ihn nicht weiter gedrückt: seine 24 px kamen aus dem
+    // Datenband, nicht aus der Fit-Box. Wer der Kopfleiste Höhe gibt, ohne sie
+    // dort zu holen, drückt hier weiter.
     const area = (z: { map: number }) => {
       const box = galaxyFitBox(z.map - VOYAGE_MAP_GUTTER_PX, fitHeight(1080))
       return box.w * box.h

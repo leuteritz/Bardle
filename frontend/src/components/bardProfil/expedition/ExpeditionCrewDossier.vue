@@ -194,27 +194,31 @@ const rows = computed(() => {
 }
 
 /* Kurze Spalte: nur der Wert, an dem diese Mission hängt. */
-@media (max-height: 1100px) {
+/* Der Kompakt-Satz ist seit dem Fleet-Band enger: die Kopfleiste hat der Spalte
+   24 px genommen, und der zurueckgekehrte Zustand traegt zusaetzlich den
+   Collect-Knopf. Fuenf Sitze mal vier Pixel sind der groesste Einzelposten, den
+   die Karte hergibt, ohne einen Block zu streichen. */
+@media (max-height: 1250px) {
   .ecd-row {
-    min-height: 32px;
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    min-height: 28px;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
     gap: 7px;
   }
   .ecd-img {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
   }
   .ecd-name {
-    font-size: 12px;
+    font-size: 11.5px;
   }
   .ecd-sub {
-    font-size: 9.5px;
+    font-size: 9px;
   }
   .ecd-stat:not(.is-key) {
     display: none;
   }
   .ecd-share {
-    left: 35px;
+    left: 31px;
   }
 }
 @media (min-height: 1601px) {

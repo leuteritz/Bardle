@@ -203,7 +203,7 @@ const haul = computed(() =>
   background: #cc6050;
 }
 
-@media (max-height: 1100px) {
+@media (max-height: 1250px) {
   .esf-body {
     flex-wrap: nowrap;
     overflow: hidden;

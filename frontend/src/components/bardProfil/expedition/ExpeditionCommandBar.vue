@@ -1,24 +1,36 @@
 <script setup lang="ts">
 /**
- * Die Kopfleiste des Reiters — ein durchgehender Streifen, keine vier Kacheln.
+ * Die Kopfleiste des Reiters — EIN durchgehendes Band, keine zwei Zeilen mehr.
  * Ihre Höhe ist GESETZT (`VOYAGE_COMMAND_BAR_H`): `.etc-bar` ist eine auto-Grid-
  * Zeile, was sie nimmt, nimmt sie der Bühne. Die Unterkante IST der Rangbalken.
+ *
+ * Drei Zonen aus einem Budget: Rangsäule · Kartenspur · Aktionssäule. Die Spur
+ * trägt eine Karte je EXPEDITION — was läuft, mit wem, und was startbereit ist.
+ * Die Zahlen-Ablesungen davor („In field 2/3", „Contracts 4/5") sind ersatzlos
+ * entfallen: beides zählt man an den Karten ab.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
+import { buildVoyageFleetCards } from '@/utils/game/voyageFleet'
 import { formatMinuteClock, toRoman } from '@/utils/ui/format'
-import { VOYAGE_COMMAND_BAR_H } from '@/config/constants'
+import {
+  VOYAGE_COMMAND_BAR_H,
+  VOYAGE_FLEET_ASIDE_W,
+  VOYAGE_FLEET_BAND_GAP,
+  VOYAGE_FLEET_BAND_PAD_X,
+  VOYAGE_FLEET_RANK_W,
+} from '@/config/constants'
 import type { VoyageRailRow } from '@/types'
-import ExpeditionFleetStrip from './ExpeditionFleetStrip.vue'
+import ExpeditionFleetLane from './ExpeditionFleetLane.vue'
 
 const props = defineProps<{
   now: number
   collectFlashing: boolean
   chartFocus: boolean
-  selectedGalaxy: number
+  selectedKey: string | null
   rows: VoyageRailRow[]
 }>()
 const emit = defineEmits<{
@@ -32,9 +44,12 @@ const expeditionStore = useExpeditionStore()
 const isDev = import.meta.env.DEV
 
 const mainH = `${VOYAGE_COMMAND_BAR_H}px`
+const rankW = `${VOYAGE_FLEET_RANK_W}px`
+const asideW = `${VOYAGE_FLEET_ASIDE_W}px`
+const bandPadX = `${VOYAGE_FLEET_BAND_PAD_X}px`
+const bandGap = `${VOYAGE_FLEET_BAND_GAP}px`
 
 const readyCount = useNotifyBadgeCount('expedition')
-const activeCount = computed(() => expeditionStore.activeExpeditions.length)
 
 const rank = computed(() => expeditionStore.ledgerRank)
 const nextRank = computed(() => expeditionStore.nextLedgerRank)
@@ -48,10 +63,14 @@ const rankProgress = computed(() => {
   return Math.min(1, (expeditionStore.ledgerCompleted - rank.value.required) / span)
 })
 
-/** Was der nächste Rang aushändigt. Knapp — die Zeile misst 10 px. */
-const nextRankReward = computed(() => {
+/**
+ * Was der nächste Rang aushändigt. Steht als Liste im Bild und NICHT nur im
+ * `title` — es ist die einzige Stelle im Spiel, die es sagt, und hover-only wäre
+ * sie für Tastatur unerreichbar.
+ */
+const nextRankRewards = computed(() => {
   const next = nextRank.value
-  if (!next) return ''
+  if (!next) return []
   const parts: string[] = []
   if (next.activeSlots > rank.value.activeSlots) {
     parts.push(`+${next.activeSlots - rank.value.activeSlots} field slot`)
@@ -61,7 +80,7 @@ const nextRankReward = computed(() => {
   }
   const odds = Math.round((next.chanceBonus - rank.value.chanceBonus) * 100)
   if (odds > 0) parts.push(`+${odds}% odds`)
-  return parts.join(' · ')
+  return parts
 })
 
 /** Der Rangname ist aus dem Bild gefallen — hier bleibt er lesbar. */
@@ -72,7 +91,7 @@ const rankTitle = computed(() => {
   }
   return (
     `${rank.value.name} — ${expeditionStore.ledgerCompleted} of ${next.required} runs ` +
-    `toward Rank ${toRoman(next.tier)}: ${nextRankReward.value}`
+    `toward Rank ${toRoman(next.tier)}: ${nextRankRewards.value.join(' · ')}`
   )
 })
 
@@ -84,9 +103,20 @@ const offersFull = computed(
 const canSendAll = computed(
   () =>
     expeditionStore.canStartExpedition &&
-    expeditionStore.availableExpeditions.some((o) =>
-      expeditionStore.crewFor(o).every((c) => !!c),
-    ),
+    expeditionStore.availableExpeditions.some((o) => expeditionStore.crewFor(o).every((c) => !!c)),
+)
+
+/** ZEITFREI — die Uhr sieht nur die Karte, nie ihr Platz. */
+const cards = computed(() =>
+  buildVoyageFleetCards(
+    props.rows,
+    expeditionStore.availableExpeditions,
+    expeditionStore.activeExpeditions,
+    {
+      projectedReward: expeditionStore.projectedRewardFor,
+      seatsOf: (offer) => expeditionStore.crewFor(offer),
+    },
+  ),
 )
 </script>
 
@@ -94,102 +124,92 @@ const canSendAll = computed(
   <header class="ecb">
     <div class="ecb-main">
       <div class="ecb-rank" role="group" :aria-label="rankTitle" :title="rankTitle">
-        <Icon :icon="rank.icon" width="26" height="26" class="ecb-rank-ico" />
-        <div class="ecb-rank-text">
-          <span class="ecb-rank-name">Rank {{ toRoman(rank.tier) }}</span>
-          <span class="ecb-rank-goal">
-            <template v-if="nextRank">
-              {{ expeditionStore.ledgerCompleted }}/{{ nextRank.required }}
-              <span class="ecb-rank-arrow">→</span>
-              <span class="ecb-rank-reward">{{ nextRankReward }}</span>
-            </template>
-            <template v-else>{{ expeditionStore.ledgerCompleted }} runs · max rank</template>
-          </span>
-        </div>
+        <Icon :icon="rank.icon" width="24" height="24" class="ecb-rank-ico" />
+        <span class="ecb-rank-name">Rank {{ toRoman(rank.tier) }}</span>
+        <span v-if="nextRank" class="ecb-rank-goal">
+          {{ expeditionStore.ledgerCompleted }}/{{ nextRank.required }}
+        </span>
+        <span v-else class="ecb-rank-goal">{{ expeditionStore.ledgerCompleted }} runs</span>
+        <span v-if="nextRank" class="ecb-rank-rewards">
+          <span v-for="part in nextRankRewards" :key="part" class="ecb-rank-reward">{{ part }}</span>
+        </span>
+        <span v-else class="ecb-rank-rewards">
+          <span class="ecb-rank-reward ecb-rank-reward--max">max rank</span>
+        </span>
       </div>
 
-      <!-- Dieselben Glyphen wie die Zähler im Streifen darunter: eine Sprache. -->
-      <div class="ecb-readouts">
-        <div class="ecb-read" :class="{ 'ecb-read--live': activeCount > 0 }">
-          <span class="ecb-read-value">
-            <Icon icon="game-icons:caravel" width="18" height="18" class="ecb-read-ico" />
-            {{ activeCount
-            }}<span class="ecb-read-cap">/{{ expeditionStore.maxActiveExpeditions }}</span>
+      <ExpeditionFleetLane
+        :cards="cards"
+        :selected-key="selectedKey"
+        :now="now"
+        @open="(galaxy, pinKey) => emit('open', galaxy, pinKey)"
+      />
+
+      <div class="ecb-aside">
+        <!-- Reservierte Zahlenbreite: sonst wandert die Säule, sobald 1:40 auf
+             0:59 fällt. -->
+        <div class="ecb-next" :class="{ 'is-full': offersFull }">
+          <Icon :icon="offersFull ? 'ph:scroll-fill' : 'lucide:timer'" class="ecb-next-ico" />
+          <span class="ecb-next-body">
+            <span class="ecb-next-value">{{
+              offersFull ? 'FULL' : formatMinuteClock(timeUntilNextSpawn)
+            }}</span>
+            <span class="ecb-next-label">Next contract</span>
           </span>
-          <span class="ecb-read-label">In field</span>
         </div>
 
-        <div class="ecb-read ecb-read--wide">
-          <span class="ecb-read-value">
-            <Icon icon="ph:scroll-fill" width="18" height="18" class="ecb-read-ico" />
-            {{ expeditionStore.availableExpeditions.length
-            }}<span class="ecb-read-cap">/{{ expeditionStore.maxAvailableOffers }}</span>
-            <span class="ecb-read-sub" :class="{ 'is-full': offersFull }">
-              {{ offersFull ? 'FULL' : formatMinuteClock(timeUntilNextSpawn) }}
-            </span>
-          </span>
-          <span class="ecb-read-label">Contracts</span>
+        <div class="ecb-acts">
+          <button
+            class="ecb-act ecb-act--send"
+            :class="{ 'is-muted': !canSendAll }"
+            :disabled="!canSendAll"
+            title="Send every crewed contract"
+            aria-label="Send every crewed contract"
+            @click.stop="emit('send-all')"
+          >
+            <Icon icon="ph:tent-fill" width="22" height="22" />
+          </button>
+
+          <button
+            class="ecb-act ecb-act--collect"
+            :class="{
+              'is-ready': readyCount > 0,
+              'is-flashing': collectFlashing,
+              'is-muted': readyCount === 0,
+            }"
+            :disabled="readyCount === 0"
+            title="Collect all completed expeditions"
+            aria-label="Collect all completed expeditions"
+            @click.stop="emit('collect-all')"
+          >
+            <Icon icon="ph:treasure-chest-fill" width="22" height="22" />
+            <RpgNotifyBadge :count="readyCount" label="Expedition rewards ready" />
+          </button>
+
+          <!-- Der eine Griff, der beide Ränder wegklappt. Escape holt sie zurück. -->
+          <button
+            class="ecb-act ecb-act--focus"
+            :class="{ 'is-on': chartFocus }"
+            :aria-pressed="chartFocus"
+            :title="chartFocus ? 'Show rail and details' : 'Focus the chart'"
+            :aria-label="chartFocus ? 'Show rail and details' : 'Focus the chart'"
+            @click.stop="emit('toggle-focus')"
+          >
+            <Icon :icon="chartFocus ? 'lucide:minimize' : 'lucide:maximize'" width="22" height="22" />
+          </button>
+
+          <button
+            v-if="isDev"
+            class="ecb-act ecb-act--admin"
+            title="Force spawn expedition (dev)"
+            aria-label="Force spawn expedition (dev)"
+            @click.stop="expeditionStore.forceSpawn()"
+          >
+            <Icon icon="ph:lightning-fill" width="20" height="20" />
+          </button>
         </div>
-      </div>
-
-      <div class="ecb-actions">
-        <button
-          class="ecb-bulk ecb-bulk--send"
-          :class="{ 'is-muted': !canSendAll }"
-          :disabled="!canSendAll"
-          aria-label="Send every crewed contract"
-          @click.stop="emit('send-all')"
-        >
-          <Icon icon="ph:tent-fill" width="15" height="15" />
-          Send all
-        </button>
-
-        <button
-          class="ecb-bulk ecb-bulk--collect"
-          :class="{
-            'is-ready': readyCount > 0,
-            'is-flashing': collectFlashing,
-            'is-muted': readyCount === 0,
-          }"
-          :disabled="readyCount === 0"
-          aria-label="Collect all completed expeditions"
-          @click.stop="emit('collect-all')"
-        >
-          <Icon icon="ph:treasure-chest-fill" width="15" height="15" />
-          Collect all
-          <RpgNotifyBadge :count="readyCount" label="Expedition rewards ready" />
-        </button>
-
-        <!-- Der eine Griff, der beide Ränder wegklappt. Escape holt sie zurück. -->
-        <button
-          class="ecb-focus"
-          :class="{ 'is-on': chartFocus }"
-          :aria-pressed="chartFocus"
-          :aria-label="chartFocus ? 'Show rail and details' : 'Focus the chart'"
-          @click.stop="emit('toggle-focus')"
-        >
-          <Icon :icon="chartFocus ? 'lucide:minimize' : 'lucide:maximize'" width="15" height="15" />
-          {{ chartFocus ? 'Exit focus' : 'Focus' }}
-        </button>
-
-        <button
-          v-if="isDev"
-          class="ecb-admin"
-          aria-label="Force spawn expedition (dev)"
-          @click.stop="expeditionStore.forceSpawn()"
-        >
-          <Icon icon="ph:lightning-fill" width="13" height="13" />
-          Spawn
-        </button>
       </div>
     </div>
-
-    <ExpeditionFleetStrip
-      :rows="rows"
-      :selected="selectedGalaxy"
-      :now="now"
-      @open="(galaxy, pinKey) => emit('open', galaxy, pinKey)"
-    />
 
     <div class="ecb-progress">
       <div class="ecb-progress-fill" :style="{ transform: `scaleX(${rankProgress})` }" />
@@ -206,22 +226,24 @@ const canSendAll = computed(
   background: linear-gradient(180deg, #1b120a 0%, #16100a 100%);
   border-bottom: 3px solid #5c3310;
 }
-/* Gesetzte Höhe, kein Padding-Ergebnis — die Summe mit dem Streifen ist gebunden.
+/* Gesetzte Höhe, kein Padding-Ergebnis — die Aussenhöhe ist gebunden.
    KEIN overflow: die Notify-Plakette steht über der Buttonkante. */
 .ecb-main {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: v-bind(bandGap);
   height: v-bind(mainH);
-  padding: 0 14px;
+  padding: 0 v-bind(bandPadX);
 }
 
-/* ── Rang: der Titel der Leiste ─────────────────────────────── */
+/* ── Rangsäule ──────────────────────────────────────────────── */
 .ecb-rank {
+  flex: 0 0 v-bind(rankW);
+  width: v-bind(rankW);
   display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
   min-width: 0;
 }
 .ecb-rank-ico {
@@ -229,240 +251,192 @@ const canSendAll = computed(
   color: #e8c040;
   filter: drop-shadow(0 0 10px rgba(232, 192, 64, 0.35));
 }
-.ecb-rank-text {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
 .ecb-rank-name {
-  font-size: 17px;
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #e8c040;
   line-height: 1;
-  text-shadow: 0 0 14px rgba(232, 192, 64, 0.3);
   white-space: nowrap;
 }
 .ecb-rank-goal {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
+  line-height: 1;
   color: rgba(200, 144, 64, 0.62);
   font-variant-numeric: tabular-nums;
-  line-height: 1;
   white-space: nowrap;
-  overflow: hidden;
 }
-.ecb-rank-arrow {
-  color: rgba(200, 144, 64, 0.35);
-}
-.ecb-rank-reward {
-  color: #7ad0a0;
-  font-weight: 800;
-}
-
-/* ── Ablesungen: nur Haarlinien, nie Kästen ─────────────────── */
-.ecb-readouts {
-  display: flex;
-  align-items: stretch;
-  flex-shrink: 0;
-}
-.ecb-read {
+.ecb-rank-rewards {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 3px;
-  min-width: 92px;
-  padding: 0 16px;
-  border-left: 1px solid #402a12;
+  gap: 2px;
+  min-width: 0;
 }
-/* Der Countdown gehört in die Wertzeile — seine Breite ist reserviert, sonst
-   wandert die ganze Reihe, sobald 1:40 auf 0:59 fällt. */
-.ecb-read--wide {
-  min-width: 158px;
+.ecb-rank-reward {
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #7ad0a0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.ecb-read-value {
+.ecb-rank-reward--max {
+  color: rgba(200, 144, 64, 0.55);
+}
+
+/* ── Aktionssäule ───────────────────────────────────────────── */
+.ecb-aside {
+  flex: 0 0 v-bind(asideW);
+  width: v-bind(asideW);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.ecb-next {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 24px;
+  gap: 9px;
+  padding: 7px 10px;
+  background: #16140e;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+}
+.ecb-next-ico {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: rgba(200, 144, 64, 0.7);
+}
+.ecb-next.is-full .ecb-next-ico {
+  color: #e8c040;
+}
+.ecb-next-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ecb-next-value {
+  /* Reserviert, damit die Säule nicht wandert. */
+  min-width: 5ch;
+  font-size: 19px;
   font-weight: 800;
   line-height: 1;
   color: #e8dcc0;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  transition: color 0.2s;
 }
-.ecb-read-ico {
-  flex-shrink: 0;
-  color: rgba(200, 144, 64, 0.7);
-}
-.ecb-read-cap {
-  font-size: 17px;
-  font-weight: 700;
-  color: rgba(200, 144, 64, 0.42);
-}
-.ecb-read-sub {
-  min-width: 5ch;
-  font-size: 13px;
-  font-weight: 800;
-  color: rgba(200, 144, 64, 0.55);
-}
-.ecb-read-sub.is-full {
+.ecb-next.is-full .ecb-next-value {
   color: #e8c040;
 }
-.ecb-read-label {
-  font-size: 10px;
-  font-weight: 700;
+.ecb-next-label {
+  font-size: 9px;
+  font-weight: 800;
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.5);
-  line-height: 1;
+  color: rgba(216, 200, 160, 0.42);
   white-space: nowrap;
 }
-.ecb-read--live .ecb-read-value {
-  color: #a0f0d0;
-}
-.ecb-read--live .ecb-read-ico {
-  color: rgba(160, 240, 208, 0.8);
-}
-.ecb-read--live .ecb-read-label {
-  color: rgba(160, 240, 208, 0.6);
-}
 
-/* ── Sammeln und Absenden ───────────────────────────────────── */
-.ecb-actions {
+.ecb-acts {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0;
-  margin-left: auto;
 }
-.ecb-bulk {
+.ecb-act {
   position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 13px;
+  justify-content: center;
   border-radius: 4px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: visible;
   cursor: pointer;
+  overflow: visible;
   transition:
-    box-shadow 0.15s,
-    opacity 0.15s;
+    background 0.16s ease,
+    opacity 0.16s ease;
 }
-.ecb-bulk.is-muted {
+.ecb-act:active {
+  transform: scale(0.96);
+}
+.ecb-act:focus-visible {
+  outline: 2px solid #e8c040;
+  outline-offset: 2px;
+}
+.ecb-act.is-muted {
   opacity: 0.36;
   cursor: not-allowed;
 }
-.ecb-bulk:not(.is-muted):active {
-  transform: scale(0.96);
-}
-.ecb-bulk--send {
+.ecb-act--send {
+  color: #f0dca0;
   background: linear-gradient(to bottom, #7a5c20, #5c3e10);
   border: 1px solid #c9a84c;
-  color: #e8c040;
 }
-.ecb-bulk--send:not(.is-muted):hover {
-  box-shadow: 0 0 12px rgba(201, 168, 76, 0.4);
+.ecb-act--send:not(.is-muted):hover {
+  background: linear-gradient(to bottom, #8e6c26, #6c4a14);
 }
-.ecb-bulk--collect {
+.ecb-act--collect {
+  color: #b8e8cc;
   background: linear-gradient(to bottom, #2a5c3a, #1a3c24);
-  border: 1px solid rgba(100, 220, 180, 0.3);
-  color: rgba(100, 220, 180, 0.6);
+  border: 1px solid #3e7a52;
 }
-.ecb-bulk--collect.is-ready {
+.ecb-act--collect.is-ready {
+  color: #d8fff0;
   background: linear-gradient(to bottom, #2e7a4e, #1e5433);
   border-color: #64dcb4;
-  color: #a0f0d0;
 }
-.ecb-bulk--collect.is-ready:hover {
-  box-shadow: 0 0 16px rgba(100, 220, 180, 0.5);
+.ecb-act--collect.is-flashing {
+  animation: ecb-flash 0.55s ease;
 }
-.ecb-bulk--collect.is-flashing {
-  animation: ecb-flash 0.55s ease forwards;
-}
-@keyframes ecb-flash {
-  0% {
-    background: linear-gradient(to bottom, #2e7a4e, #1e5433);
-  }
-  30% {
-    background: linear-gradient(to bottom, #52c890, #2e8a5a);
-  }
-  100% {
-    background: linear-gradient(to bottom, #2e7a4e, #1e5433);
-  }
-}
-/* Knapper als früher: der Knopf misst 34 in einer 43er Reihe, die Plakette muss
-   INNERHALB der Leiste bleiben. */
-.ecb-bulk--collect :deep(.rpg-notify-badge) {
-  top: -4px;
-  right: -5px;
-}
-
-.ecb-focus {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
+.ecb-act--focus {
+  color: #c89040;
   background: transparent;
   border: 1px solid #5c3310;
-  border-radius: 4px;
-  color: rgba(200, 144, 64, 0.7);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    color 0.12s,
-    border-color 0.12s,
-    background 0.12s;
 }
-.ecb-focus:hover {
+.ecb-act--focus:hover {
   color: #e8c040;
-  border-color: #c89040;
+  background: #1e1006;
 }
-.ecb-focus.is-on {
+.ecb-act--focus.is-on {
+  color: #e8c040;
   background: #2a1c0a;
   border-color: #c89040;
-  color: #e8c040;
 }
-
-.ecb-admin {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 7px 11px;
+.ecb-act--admin {
+  width: 48px;
+  color: rgba(200, 144, 64, 0.62);
   background: transparent;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-  color: rgba(200, 144, 64, 0.5);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-  transition:
-    color 0.12s,
-    border-color 0.12s;
+  border: 1px dashed #3e200a;
 }
-.ecb-admin:hover {
+.ecb-act--admin:hover {
   color: #e8c040;
-  border-color: #c89040;
 }
 
-/* ── Die Unterkante der Leiste, zugleich die Rangspur ───────── */
+@keyframes ecb-flash {
+  0% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ecb-act--collect.is-flashing {
+    animation: none;
+  }
+}
+
+/* ── Rangbalken: die Unterkante der Leiste ──────────────────── */
 .ecb-progress {
   position: absolute;
   left: 0;
@@ -473,8 +447,8 @@ const canSendAll = computed(
   pointer-events: none;
 }
 .ecb-progress-fill {
-  height: 100%;
   width: 100%;
+  height: 100%;
   transform-origin: left center;
   background: linear-gradient(to right, #8a5a1c, #c89040 45%, #e8c060);
   transition: transform 0.45s ease;

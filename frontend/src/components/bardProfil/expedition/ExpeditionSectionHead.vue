@@ -45,7 +45,7 @@ defineProps<{ label: string; readout?: string }>()
   white-space: nowrap;
 }
 
-@media (max-height: 1100px) {
+@media (max-height: 1250px) {
   .esh {
     height: 18px;
   }

@@ -16,6 +16,11 @@
  * darunter gerät (`VOYAGE_MAP_STATS_BAND_H`) — und weil die Spalten überstehen
  * dürfen, ohne dass ein `scrollHeight` es meldet, deckelt
  * `voyageBandFit.spec.ts` die Schriftgrössen dagegen.
+ *
+ * Seit dem Fleet-Band misst es 72 statt 96: die 24 px sind an die Kopfleiste
+ * gegangen, damit deren Karten Crew-Portraits tragen. Alle Grössen hier sind
+ * darauf neu gerechnet, nicht anteilig geschrumpft — die Uhr- und die
+ * Kartografie-Spalte tragen drei Elemente und binden dabei.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -258,7 +263,7 @@ const summary = computed(
 }
 
 .egsb-lbl {
-  font-size: clamp(11px, 1.55cqw, v-bind(labelMax));
+  font-size: clamp(10px, 1.35cqw, v-bind(labelMax));
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -272,7 +277,7 @@ const summary = computed(
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: clamp(10px, 1.4cqw, v-bind(labelMax));
+  font-size: clamp(9px, 1.2cqw, v-bind(labelMax));
   letter-spacing: 0.03em;
   text-transform: none;
   color: rgba(200, 184, 144, 0.72);
@@ -283,7 +288,7 @@ const summary = computed(
 .egsb-clock {
   display: flex;
   align-items: baseline;
-  gap: clamp(8px, 1.1cqw, 18px);
+  gap: clamp(6px, 0.9cqw, 14px);
 }
 .egsb-seg {
   display: flex;
@@ -294,7 +299,7 @@ const summary = computed(
   min-width: 2.2ch;
 }
 .egsb-seg-n {
-  font-size: clamp(23px, 3.1cqw, 30px);
+  font-size: clamp(16px, 2.2cqw, 21px);
   font-weight: 800;
   line-height: 1;
   color: #ece0c0;
@@ -302,7 +307,7 @@ const summary = computed(
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 .egsb-seg-u {
-  font-size: clamp(9px, 1.2cqw, 13px);
+  font-size: clamp(8px, 1cqw, 10px);
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -321,8 +326,8 @@ const summary = computed(
   gap: 4px;
 }
 .egsb-tick {
-  width: clamp(14px, 1.95cqw, 20px);
-  height: clamp(6px, 0.7cqw, v-bind(tickHMax));
+  width: clamp(12px, 1.7cqw, 17px);
+  height: clamp(5px, 0.6cqw, v-bind(tickHMax));
   border-radius: 2px;
   background: rgba(200, 164, 90, 0.16);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
@@ -345,7 +350,7 @@ const summary = computed(
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: clamp(16px, 2.2cqw, 22px);
+  font-size: clamp(13px, 1.7cqw, 18px);
   font-weight: 800;
   color: rgba(230, 220, 196, 0.72);
   font-variant-numeric: tabular-nums;
@@ -358,13 +363,13 @@ const summary = computed(
    Attribut, damit sie mitwächst. */
 .egsb-ico {
   flex-shrink: 0;
-  width: clamp(15px, 2cqw, 22px);
-  height: clamp(15px, 2cqw, 22px);
+  width: clamp(12px, 1.6cqw, 17px);
+  height: clamp(12px, 1.6cqw, 17px);
   color: #ffffff;
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 1)) drop-shadow(0 1px 2px rgba(0, 0, 0, 1));
 }
 .egsb-ico--date {
-  width: clamp(12px, 1.5cqw, 16px);
-  height: clamp(12px, 1.5cqw, 16px);
+  width: clamp(10px, 1.3cqw, 13px);
+  height: clamp(10px, 1.3cqw, 13px);
 }
 </style>

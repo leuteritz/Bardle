@@ -297,19 +297,19 @@ const lostAt = computed(() => (props.outcome === 'failure' ? props.legs.length -
 
 /* Kurze Spalte: die Leiter verdichtet, statt Zeilen zu verlieren. Trifft beide
    Aufrufer — die Vertragskarte rollt dort heute, das hilft ihr mit. */
-@media (max-height: 1100px) {
+@media (max-height: 1250px) {
   .evt-leg:not(:last-child) .evt-body {
-    padding-bottom: 6px;
+    padding-bottom: 3px;
   }
   .evt-name {
     font-size: 12px;
   }
   .evt-hazards {
-    gap: 3px;
-    margin-top: 4px;
+    gap: 2px;
+    margin-top: 3px;
   }
   .evt-hazard {
-    padding: 3px 6px;
+    padding: 2px 6px;
     gap: 6px;
   }
   .evt-hazard-name {

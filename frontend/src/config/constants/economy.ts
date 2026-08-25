@@ -722,35 +722,56 @@ export const VOYAGE_DETAIL_MAX_WIDTH = 560
  *  besetzte Crew eines Vertrags überlebt das Falten. */
 export const VOYAGE_DETAIL_COLLAPSED = 44
 
-/* ── Fleet-Streifen: die zweite Zeile der Kopfleiste ───────────────────────
+/* ── Das Fleet-Band ─ die EINE Zeile der Kopfleiste ───────────────────
 
-   Er steht IMMER und misst IMMER dasselbe. Zwei Gründe, beide zwingend:
+   Es steht IMMER und misst IMMER dasselbe. Zwei Gründe, beide zwingend:
    `.etc-bar` ist eine auto-Grid-Zeile — eine wachsende Kopfleiste ändert die
    Bühnenhöhe, damit `paintKey`, und malt die Galaxie neu; bei einer Höhe, die an
-   der Vertragszahl hinge, geschähe das bei JEDEM Spawn. Und der Streifen nimmt
-   der Fit-Box Höhe, die die Klickflächen der Häfen trägt: der Spielraum über
-   VOYAGE_MAP_STATS_MIN_H ist auf Full HD 37,6 px.
+   der Vertragszahl hinge, geschähe das bei JEDEM Spawn. Und sie nimmt der Fit-Box
+   Höhe, die die Klickflächen der Häfen trägt.
 
-   Gebunden ist die SUMME der beiden Kopfhöhen PLUS der 3-px-Rahmen der Leiste
-   (zusammen 102) — genau sie steckt in den STAGE_HEIGHT-Tabellen beider
-   Layout-Specs. Wer eine der beiden anhebt, senkt die andere oder misst neu.
-   `voyagesFleetLayout.spec.ts` bindet beides.                                 */
+   Gebunden ist die AUSSENHÖHE: `VOYAGE_COMMAND_BAR_H` plus der 3-px-Rahmen von
+   `.ecb` ergeben 126 — genau sie steckt in den STAGE_HEIGHT-Tabellen beider
+   Layout-Specs. `voyagesFleetLayout.spec.ts` bindet das.
 
-export const VOYAGE_FLEET_STRIP_H = 56
-/** GESETZTE Höhe der Hauptreihe — sie hängt per `v-bind` an `.ecb-main`, damit
- *  die Summe nicht driften kann, und der Ladeschleier dieselben Maße kennt.
- *  Die 58 davor waren eine falsche Ablesung: gemessen wurden real 55. */
-export const VOYAGE_COMMAND_BAR_H = 43
-/** Zweizeilige Pille: Ziffer und Zähler oben, der Galaxiename darunter. Der
- *  Boden ist die NAMENSZEILE — worauf sie schrumpfen darf, wenn alle zehn
- *  Rang-Plätze belegt sind. */
-export const VOYAGE_FLEET_PILL_MIN_W = 116
-export const VOYAGE_FLEET_PILL_GAP = 5
-/** Pillenhöhe. Sie steht neben der Streifenhöhe, weil beide gekoppelt sind —
- *  eine davon frei im CSS wäre die zweite Quelle für dasselbe Budget. */
-export const VOYAGE_FLEET_PILL_H = 42
-/** Luft über und unter der Pille — bindet die Kopplung in der Spec. */
-export const VOYAGE_FLEET_PILL_PAD_Y = 7
+   Woher die 24 px gegenüber der vorigen Fassung (102) kommen: NICHT von der
+   Galaxie, sondern vom Statsband der Karte (96 → 72). Weil
+   `fitHeight = Bühne − Band` und beide um dieselben 24 fallen, bleibt die Fit-Box
+   auf 561,6 px — Hafentrennung, Fokusgewinn und Kartenboden sind unverändert.
+   Mehr geht nicht: `voyageBandFit.spec.ts` bindet
+   `VOYAGE_MAP_STATS_VALUE_MIN > 30.4`, und darunter trägt kein Band mehr die
+   höchste Spalte. Die Wand liegt bei 131, und nur mit 2 px Innenabstand.        */
+
+/** GESETZTE Höhe des Bandes — sie hängt per `v-bind` an `.ecb-main`, damit die
+ *  Summe nicht driften kann, und der Ladeschleier dieselben Maße kennt. Eine
+ *  Konstante, die beschreibt statt zu bestimmen, driftet unbemerkt: die Specs
+ *  lesen Zahlen, kein DOM. */
+export const VOYAGE_COMMAND_BAR_H = 123
+
+/** Vierzeilige Karte: Kopf, Crew, Uhr, Schiene. Der Boden ist die CREW-Zeile —
+ *  fünf Portraits sind das Breiteste, was eine Karte tragen muss. */
+export const VOYAGE_FLEET_CARD_MIN_W = 168
+export const VOYAGE_FLEET_CARD_GAP = 6
+/** Kartenhöhe. Sie steht neben der Bandhöhe, weil beide gekoppelt sind — eine
+ *  davon frei im CSS wäre die zweite Quelle für dasselbe Budget. */
+export const VOYAGE_FLEET_CARD_H = 109
+/** Luft über und unter der Karte — bindet die Kopplung in der Spec. */
+export const VOYAGE_FLEET_CARD_PAD_Y = 7
+/**
+ * So viele Karten müssen auf Full HD OHNE Scrollen stehen. Der Rang-Deckel lässt
+ * bis zu zehn Marken zu, in 888 px Bandbreite passen fünf — und weil die
+ * Reihenfolge nach Dringlichkeit ordnet, sind es die fünf, die etwas wollen.
+ * Was dahinter liegt, nennt der `+N`-Chip; still verschwinden darf nichts.
+ */
+export const VOYAGE_FLEET_CARD_MIN_VISIBLE = 5
+/** Crew-Portrait auf der Karte. ≤ 34 heißt Auflösungsstufe `-128`. */
+export const VOYAGE_FLEET_AVATAR_PX = 26
+/** Breite der Rangsäule links und der Aktionssäule rechts — die Bandbreite, die
+ *  der Kartenspur NICHT zur Verfügung steht. */
+export const VOYAGE_FLEET_RANK_W = 88
+export const VOYAGE_FLEET_ASIDE_W = 216
+export const VOYAGE_FLEET_BAND_PAD_X = 14
+export const VOYAGE_FLEET_BAND_GAP = 10
 
 /* ── Hoehenbudget der Missionskarte ───────────────────────────────────────────
 
@@ -778,25 +799,25 @@ export const VOYAGE_DOSSIER_BLOCK_H = {
   /** Kopf: Glyph, Name, Status — plus die Zielzeile darunter. */
   head: { full: 50, compact: 48 },
   /** Uhrband, laufend: die grosse Zahl, ihre Einheit und die Ankunftszeile. */
-  clock: { full: 42, compact: 30 },
+  clock: { full: 42, compact: 28 },
   /** DERSELBE Platz, zurueckgekehrt: die Beutezahl statt der Restzeit. */
-  haul: { full: 42, compact: 30 },
+  haul: { full: 42, compact: 28 },
   /** Beute-Prognose bzw. die eingefahrene Beute. */
   forecast: { full: 64, compact: 56 },
   /** Eine Etappe ohne Gefahr in der Leiter. */
-  legClear: { full: 36, compact: 32 },
+  legClear: { full: 36, compact: 30 },
   /** Eine Etappe mit ihrer ersten Gefahr. */
-  legHazard: { full: 62, compact: 56 },
+  legHazard: { full: 62, compact: 53 },
   /** Jede weitere Gefahr auf derselben Etappe. */
-  hazardRow: { full: 34, compact: 30 },
+  hazardRow: { full: 34, compact: 24 },
   /** Abschnittskopf ueber der Crew. */
   crewHead: { full: 22, compact: 18 },
   /** Eine Crew-Zeile: Portraet, Name, Rolle, Statwerte. */
-  crewRow: { full: 42, compact: 32 },
+  crewRow: { full: 42, compact: 28 },
   /** Eine Logzeile — ZWEIZEILIG gerechnet, 318 px Textbreite auf Full HD. */
   logEntry: { full: 44, compact: 34 },
   /** Der Collect-Knopf, nur im zurueckgekehrten Zustand. */
-  foot: { full: 44, compact: 42 },
+  foot: { full: 44, compact: 39 },
 } as const
 
 /** `full` ist der Wert der ENGSTEN vollen Spalte (2K). Auf 4K steht mehr
@@ -810,16 +831,34 @@ export const VOYAGE_DOSSIER_LOG_MIN_H = { full: 132, compact: 84 } as const
  *  4K faellt sonst aller Leerraum dem Logbuch zu. */
 export const VOYAGE_DOSSIER_CREW_MAX_H = { full: 520, compact: 236 } as const
 
-export const VOYAGE_DOSSIER_COMPACT_MAX_H = 1100
+/**
+ * Obergrenze des Kompakt-Satzes. BESCHREIBEND — Media Queries koennen kein
+ * `v-bind`, die Zahl steht sechsmal fest im CSS der Dossier-Bausteine; wer sie
+ * hier aendert, aendert sie dort mit.
+ *
+ * 1250 und nicht mehr 1100: bei 1200 (WUXGA im Vollbild) fiel die Karte in den
+ * VOLLEN Satz, waehrend die Spalte nur 754 px misst — im Browser gemessene
+ * 53-55 px Ueberlauf, still beschnitten. Der naechste Fall darueber ist 2K mit
+ * 1440, und dort traegt der volle Satz.
+ */
+export const VOYAGE_DOSSIER_COMPACT_MAX_H = 1250
 /** Zweite Stufe nach oben, damit 4K nicht nur das Logbuch dehnt. */
 export const VOYAGE_DOSSIER_LARGE_MIN_H = 1601
-/** Kuerzeste Spalte ueberhaupt. Full HD misst je nach Kopfzustand 701.6 bis
- *  721.6 — die kleinere Zahl traegt, abgerundet. */
-export const VOYAGE_DOSSIER_COLUMN_MIN_H = 700
-/** Kuerzeste Spalte im vollen Satz (2K 980 gemessen, abgerundet). */
-export const VOYAGE_DOSSIER_COLUMN_FULL_MIN_H = 968
-/** Hoechste Spalte (4K 1689.2 gemessen). */
-export const VOYAGE_DOSSIER_COLUMN_MAX_H = 1690
+/**
+ * Kuerzeste Spalte ueberhaupt (Full HD 653.6 gemessen, abgerundet).
+ *
+ * `.etc-detail` und `.etc-stage` teilen sich Reihe 2 und messen dasselbe — die
+ * Zahl ist der STAGE_HEIGHT-Eintrag aus `voyagesAtlasLayout.spec.ts`. Die 700,
+ * die hier stand, war doppelt veraltet: sie stammte aus der Zeit vor dem
+ * Fleet-Streifen UND aus einer aelteren Kopfgeometrie. Die Karte wurde davon
+ * still beschnitten (`overflow: clip` meldet keinen Ueberlauf) — im Browser
+ * nachgewiesen, epischer Vertrag mit fuenf Sitzen und drei Gefahren.
+ */
+export const VOYAGE_DOSSIER_COLUMN_MIN_H = 653
+/** Kuerzeste Spalte im vollen Satz (2K 931.97 gemessen, abgerundet). */
+export const VOYAGE_DOSSIER_COLUMN_FULL_MIN_H = 931
+/** Hoechste Spalte (4K 1641.2 gemessen). */
+export const VOYAGE_DOSSIER_COLUMN_MAX_H = 1641
 /** Leerraum, den der Logbuch-Schweif noch als Bild traegt statt als Loch. */
 export const VOYAGE_DOSSIER_TAIL_MAX_H = 380
 /**
@@ -989,33 +1028,43 @@ export const VOYAGE_MAP_LEGEND_R = 4.4
  *
  * Es SCHRUMPFT die Fit-Box, statt sich darueberzulegen: Haefen sind anklickbar,
  * und ein Band ueber die ganze Kante laesst sich nicht wie die Legende unter die
- * Marken schieben. Deckel 108 — darueber faellt der Fokus-Gewinn auf Full HD
- * unter den Faktor, den `voyagesAtlasLayout.spec.ts` zusagt.
+ * Marken schieben.
+ *
+ * 72 und nicht mehr 96: die 24 px sind an die Kopfleiste gegangen, damit deren
+ * Karten Crew-Portraits tragen koennen. Weil die Buehne um DIESELBEN 24 faellt,
+ * bleibt `fitHeight = Buehne - Band` bei 561,6 px — die Galaxie verliert nichts.
+ * Nach unten ist hier Schluss: `voyageBandFit.spec.ts` bindet
+ * VOYAGE_MAP_STATS_VALUE_MIN > 30.4, und die hoechste Spalte samt dem
+ * 15-px-Abstand des Bodens braucht dafuer 63 px nutzbare Hoehe.
  */
-export const VOYAGE_MAP_STATS_BAND_H = 96
-/** Senkrechtes Polster des Textblocks: 96 - 2x10 = 76 px nutzbar. Die hoechste
- *  Spalte (Segmente + Wert + Label) belegt davon 75,2 — daraus faellt der
+export const VOYAGE_MAP_STATS_BAND_H = 72
+/** Senkrechtes Polster des Textblocks: 72 - 2x4 = 64 px nutzbar. Die hoechste
+ *  Spalte (Segmente + Wert + Label) belegt davon 63,3 — daraus faellt der
  *  Wert-Deckel, er ist nicht gewaehlt. `voyageBandFit.spec.ts` bindet es. */
-export const VOYAGE_MAP_STATS_PAD_Y = 10
+export const VOYAGE_MAP_STATS_PAD_Y = 4
 /** Boden und Deckel der grossen Zahl. Der Boden ist, was auf Full HD in sechs
  *  Spalten passt (gemessene Textbreiten), der Deckel, was in die nutzbare
  *  Bandhoehe passt. Die Kurve dazwischen steht als `clamp` im Band. */
-export const VOYAGE_MAP_STATS_VALUE_MIN = 37
-export const VOYAGE_MAP_STATS_VALUE_MAX = 40
+export const VOYAGE_MAP_STATS_VALUE_MIN = 31
+export const VOYAGE_MAP_STATS_VALUE_MAX = 37
 /** Deckel der Label-Schrift und der Segmentleiste — beide gehen in dieselbe
  *  Hoehenbilanz ein wie der Wert, `voyageBandFit.spec.ts` rechnet sie zusammen. */
-export const VOYAGE_MAP_STATS_LABEL_MAX = 15
-export const VOYAGE_MAP_STATS_TICK_H_MAX = 8
+export const VOYAGE_MAP_STATS_LABEL_MAX = 11
+export const VOYAGE_MAP_STATS_TICK_H_MAX = 6
 /** Nur der Verlauf. Er laeuft transparent aus und verdeckt nichts, darf also
  *  ueber den Textblock hinausragen und bleibt aus der Fit-Box heraus. */
-export const VOYAGE_MAP_STATS_SCRIM_H = 144
+export const VOYAGE_MAP_STATS_SCRIM_H = 110
 /**
  * Untergrenze der Buehnenhoehe — HERGELEITET, nicht gewaehlt: die kuerzere
  * Achse der Fit-Box muss VOYAGE_SITE_HIT_MIN / VOYAGE_BERTH_MIN_SEPARATION
  * (472.2) halten, sonst decken sich zwei Nachbarhaefen. Dazu das Band und
  * beide Insets. Darunter faellt es weg und die Box bekommt die Hoehe zurueck.
+ *
+ * 472.2 + 72 (Band) + 36 (2 x Inset) = 580.2, aufgerundet mit demselben Polster
+ * wie zuvor. Mit dem Band ist auch diese Schwelle um 24 gefallen — haette man
+ * sie stehen lassen, waere sie eine willkuerliche Zahl statt einer Herleitung.
  */
-export const VOYAGE_MAP_STATS_MIN_H = 620
+export const VOYAGE_MAP_STATS_MIN_H = 596
 /** Darunter faellt die Multiplikatoren-Zone weg; die Ernte-Zahlen bleiben.
  *  Wie die Legende: darunter ist das Band Unruhe statt Auskunft. */
 export const VOYAGE_MAP_STATS_MIN_W = 560

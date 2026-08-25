@@ -407,12 +407,29 @@ export interface VoyageRosterRow {
   ariaLead: string
 }
 
-/** Eine Galaxie mit Inhalt — eine Pille des Fleet-Streifens. */
+/**
+ * Eine EXPEDITION als Karte des Fleet-Bandes — nicht eine Galaxie. Die Frage der
+ * Kopfleiste ist „was laeuft, mit wem, und was kann ich starten"; eine Zeile je
+ * Galaxie kann sie nicht beantworten, weil sie nur Summen kennt.
+ *
+ * ZEITFREI wie die Zeile, aus der sie besteht: `row` traegt Zeitstempel, nie
+ * einen fertigen Countdown.
+ */
 export interface VoyageFleetCard {
+  pinKey: string
   galaxy: number
-  row: VoyageRailRow
-  state: VoyageGalaxyState
-  roster: VoyageRosterRow[]
+  /** Name der Zielgalaxie — die Karte nennt das Ziel, nicht nur die Ziffer. */
+  galaxyName: string
+  /** Akzentfarbe der Galaxie als `"r, g, b"`. */
+  accent: string
+  tier: 'common' | 'rare' | 'epic'
+  /** Vertrag mit allen Sitzen besetzt: er kann JETZT losgeschickt werden. */
+  sendable: boolean
+  row: VoyageRosterRow
+  /** Wer draussen ist. Leer bei einem Vertrag, der noch nicht abgereist ist. */
+  crew: { name: string; role: ChampionRole }[]
+  /** Vertrag: die Draft-Crew, `null` je leerem Sitz. Sonst leer. */
+  seats: (string | null)[]
 }
 
 /**

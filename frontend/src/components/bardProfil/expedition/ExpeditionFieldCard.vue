@@ -436,7 +436,7 @@ const shownLog = computed(() =>
 }
 
 /* ── Kurze Spalte: verdichten, nicht streichen ────────────── */
-@media (max-height: 1100px) {
+@media (max-height: 1250px) {
   .efc-card {
     gap: 7px;
     padding-bottom: 9px;

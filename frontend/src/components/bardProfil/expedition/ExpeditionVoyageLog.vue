@@ -158,7 +158,7 @@ const rows = computed(() =>
   }
 }
 
-@media (max-height: 1100px) {
+@media (max-height: 1250px) {
   .evl-list {
     gap: 5px;
   }

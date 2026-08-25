@@ -24,6 +24,7 @@ import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { useVoyageAtlas } from '@/composables/expedition/useVoyageAtlas'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import {
+  VOYAGE_COMMAND_BAR_H,
   VOYAGE_LOADER_MIN_MS,
   VOYAGE_LOADER_SETTLE_FRAMES,
   VOYAGE_DETAIL_COLLAPSED,
@@ -159,6 +160,8 @@ const atlasColumns = computed(() => {
   return `${rail}px minmax(0, 1fr) ${detail}`
 })
 const stageGutter = computed(() => `${VOYAGE_MAP_GUTTER_PX / 2}px`)
+/** Die Chime-Zahlen steigen unter der Kopfleiste auf — +3 fuer deren Rahmen. */
+const popTop = `${VOYAGE_COMMAND_BAR_H + 3 + 8}px`
 
 let observer: ResizeObserver | null = null
 watch(atlasEl, (el) => {
@@ -281,7 +284,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
         :collect-flashing="collectFlashing"
         :chart-focus="chartFocus"
         :rows="railRows"
-        :selected-galaxy="selectedGalaxy"
+        :selected-key="selectedKey"
         @collect-all="atlas.collectAll"
         @send-all="atlas.sendAll"
         @toggle-focus="toggleFocus"
@@ -406,9 +409,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
 }
 
 /* ── Sammel-Rückmeldung ───────────────────────────────────── */
+/* Direkt unter der Kopfleiste — an ihre Konstante gebunden, nicht geraten. */
 .etc-pops {
   position: absolute;
-  top: 74px;
+  top: v-bind(popTop);
   left: 42%;
   z-index: 30;
   pointer-events: none;

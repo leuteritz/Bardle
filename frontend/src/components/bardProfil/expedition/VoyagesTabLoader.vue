@@ -29,10 +29,14 @@ import LoadingBeacon from '@/components/ui/LoadingBeacon.vue'
 import {
   VOYAGE_COMMAND_BAR_H,
   VOYAGE_DETAIL_COLLAPSED,
-  VOYAGE_FLEET_PILL_GAP,
-  VOYAGE_FLEET_PILL_H,
-  VOYAGE_FLEET_PILL_MIN_W,
-  VOYAGE_FLEET_STRIP_H,
+  VOYAGE_FLEET_ASIDE_W,
+  VOYAGE_FLEET_BAND_GAP,
+  VOYAGE_FLEET_BAND_PAD_X,
+  VOYAGE_FLEET_CARD_GAP,
+  VOYAGE_FLEET_CARD_H,
+  VOYAGE_FLEET_CARD_MIN_VISIBLE,
+  VOYAGE_FLEET_CARD_MIN_W,
+  VOYAGE_FLEET_RANK_W,
   VOYAGE_LOADER_ACCENT,
   VOYAGE_LOADER_CAPTION,
   VOYAGE_LOADER_ICON,
@@ -58,11 +62,17 @@ const thumbHeight = `${VOYAGE_RAIL_THUMB_H}px`
  *  zeigen, nicht die geöffnete Spalte, sonst springt das Layout beim Enthüllen. */
 const detailWidth = `${VOYAGE_DETAIL_COLLAPSED}px`
 /** +3 für den eigenen `border-bottom`: `border-box` rechnet ihn in die Zeile. */
-const headHeight = `${VOYAGE_COMMAND_BAR_H + VOYAGE_FLEET_STRIP_H + 3}px`
-const stripHeight = `${VOYAGE_FLEET_STRIP_H}px`
-const pillWidth = `${VOYAGE_FLEET_PILL_MIN_W}px`
-const pillHeight = `${VOYAGE_FLEET_PILL_H}px`
-const pillGap = `${VOYAGE_FLEET_PILL_GAP}px`
+const headHeight = `${VOYAGE_COMMAND_BAR_H + 3}px`
+const bandPadX = `${VOYAGE_FLEET_BAND_PAD_X}px`
+const bandGap = `${VOYAGE_FLEET_BAND_GAP}px`
+const rankWidth = `${VOYAGE_FLEET_RANK_W}px`
+const asideWidth = `${VOYAGE_FLEET_ASIDE_W}px`
+const cardWidth = `${VOYAGE_FLEET_CARD_MIN_W}px`
+const cardHeight = `${VOYAGE_FLEET_CARD_H}px`
+const cardGap = `${VOYAGE_FLEET_CARD_GAP}px`
+/** So viele, wie gleich ohne Scrollen stehen — mehr verspräche eine Spur, die
+ *  der Schleier nicht halten kann. */
+const cardCount = VOYAGE_FLEET_CARD_MIN_VISIBLE
 const bandHeight = `${VOYAGE_MAP_STATS_BAND_H}px`
 /** Der Kasten sitzt so ueber dem Band, wie es gleich die Fit-Box tut. */
 const stagePadBottom = `${VOYAGE_MAP_STATS_BAND_H + 10}px`
@@ -93,13 +103,15 @@ const skeletonPorts = computed(() =>
     <div class="vtl-head" aria-hidden="true">
       <div class="vtl-bar">
         <span class="vtl-mark vtl-mark--rank" />
-        <span class="vtl-spacer" />
-        <span class="vtl-mark vtl-mark--read" />
-        <span class="vtl-mark vtl-mark--read" />
-        <span class="vtl-mark vtl-mark--btn" />
-      </div>
-      <div class="vtl-strip">
-        <span v-for="i in 6" :key="i" class="vtl-mark vtl-mark--pill" />
+        <div class="vtl-lane">
+          <span v-for="i in cardCount" :key="i" class="vtl-mark vtl-mark--card" />
+        </div>
+        <div class="vtl-aside">
+          <span class="vtl-mark vtl-mark--next" />
+          <div class="vtl-acts">
+            <span v-for="i in 3" :key="i" class="vtl-mark vtl-mark--act" />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -184,38 +196,50 @@ const skeletonPorts = computed(() =>
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 14px;
-}
-.vtl-strip {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: v-bind(pillGap);
-  height: v-bind(stripHeight);
-  padding: 0 14px;
-  border-top: 1px solid #402a12;
-  background: #17100a;
-}
-.vtl-mark--pill {
-  width: v-bind(pillWidth);
-  height: v-bind(pillHeight);
-  border-radius: 4px;
+  gap: v-bind(bandGap);
+  padding: 0 v-bind(bandPadX);
+  overflow: hidden;
 }
 .vtl-mark--rank {
-  width: 110px;
-  height: 30px;
+  flex: 0 0 v-bind(rankWidth);
+  width: v-bind(rankWidth);
+  height: 84px;
 }
-.vtl-spacer {
+.vtl-lane {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: v-bind(cardGap);
+  overflow: hidden;
 }
-.vtl-mark--read {
-  width: 90px;
-  height: 34px;
+.vtl-mark--card {
+  flex: 0 0 v-bind(cardWidth);
+  width: v-bind(cardWidth);
+  height: v-bind(cardHeight);
+  border-radius: 4px;
 }
-.vtl-mark--btn {
-  width: 104px;
-  height: 32px;
+.vtl-aside {
+  flex: 0 0 v-bind(asideWidth);
+  width: v-bind(asideWidth);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.vtl-mark--next {
+  width: 100%;
+  height: 46px;
+  border-radius: 4px;
+}
+.vtl-acts {
+  display: flex;
+  gap: 8px;
+}
+.vtl-mark--act {
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
 }
 
 /* ── Seitenleiste ───────────────────────────────────────────── */
