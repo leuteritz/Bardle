@@ -5,6 +5,7 @@ import { useShopStore } from '@/stores/economy/shopStore'
 import { useCpsStore } from '@/stores/core/cpsStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import { solarSignatureFrom } from '@/utils/game/solarSignature'
 import type { ForgeAxisId, SolarSignature } from '@/types'
@@ -104,20 +105,37 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
   }),
 
   getters: {
+    /**
+     * Was ein Resonator-Planet diesem Strahl zulegt — 1, wenn keiner auf ihn
+     * zeigt. Er greift am BONUS, nie am Ganzen: `1 + level × bonus` mit dem
+     * Faktor davor gäbe auch auf Stufe 0 einen Zuschlag.
+     */
+    rayResonance(): (id: SolarBranchId) => number {
+      return (id: SolarBranchId): number => usePlanetShopStore().resonanceRayMultipliers[id] ?? 1
+    },
+
     flightSpeedMultiplier(): number {
-      return 1 + this.flightSpeedLevel * SOLAR_CPS_FLIGHT_BONUS
+      return 1 + this.flightSpeedLevel * SOLAR_CPS_FLIGHT_BONUS * this.rayResonance('flightSpeed')
     },
     hpBonus(): number {
-      return this.maxHpLevel * SOLAR_HP_PER_LEVEL
+      return this.maxHpLevel * SOLAR_HP_PER_LEVEL * this.rayResonance('maxHp')
     },
     cpcBonus(): number {
-      return this.chimesPerClickLevel * SOLAR_CPC_PER_LEVEL
+      return this.chimesPerClickLevel * SOLAR_CPC_PER_LEVEL * this.rayResonance('chimesPerClick')
     },
+    /** Der eine Summand, aus dem die ganze CpS des Spiels wächst — plus
+     *  Founder's Pact, der als Faktor auf DIESEN Summanden liegt und deshalb
+     *  nicht in `cpsFactorBreakdown` gehört (dort stehen nur Multiplikatoren). */
     cpsBonus(): number {
-      return this.chimesPerSecondLevel * SOLAR_CPS_PER_LEVEL
+      return (
+        this.chimesPerSecondLevel *
+        SOLAR_CPS_PER_LEVEL *
+        this.rayResonance('chimesPerSecond') *
+        useStarForgeStore().solarCpsMult
+      )
     },
     dmgMultiplier(): number {
-      return 1 + this.dmgPerClickLevel * SOLAR_DMG_BONUS
+      return 1 + this.dmgPerClickLevel * SOLAR_DMG_BONUS * this.rayResonance('dmgPerClick')
     },
 
     /** 0..5 — how many of the five core rays are at Lv 1+ (drives comet growth). */
@@ -239,7 +257,9 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
     levelCost(): (id: SolarBranchId, atLevel: number) => number {
       return (id: SolarBranchId, atLevel: number): number => {
         const cfg = BRANCH_CONFIG[id]
-        return Math.ceil(cfg.baseCost * Math.pow(cfg.costMultiplier, atLevel))
+        return Math.ceil(
+          cfg.baseCost * Math.pow(cfg.costMultiplier, atLevel) * useStarForgeStore().rayCostMult,
+        )
       }
     },
 
@@ -264,7 +284,9 @@ export const useSolarUpgradeStore = defineStore('solarUpgrade', {
             level = state.dmgPerClickLevel
             break
         }
-        return Math.ceil(cfg.baseCost * Math.pow(cfg.costMultiplier, level))
+        return Math.ceil(
+          cfg.baseCost * Math.pow(cfg.costMultiplier, level) * useStarForgeStore().rayCostMult,
+        )
       }
     },
 

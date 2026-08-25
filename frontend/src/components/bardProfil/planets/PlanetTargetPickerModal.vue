@@ -2,15 +2,14 @@
 import { Icon } from '@iconify/vue'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import type { PlanetSlot } from '@/stores/world/planetShopStore'
-import { useShopStore } from '@/stores/economy/shopStore'
 import { MATERIALS } from '@/config/economy/materials'
-import { MATERIAL_RARITY_COLOR } from '@/config/constants'
+import { MATERIAL_RARITY_COLOR, SOLAR_BRANCHES } from '@/config/constants'
+import type { SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 
 const props = defineProps<{ planet: PlanetSlot }>()
 const emit = defineEmits<{ close: [] }>()
 
 const store = usePlanetShopStore()
-const shopStore = useShopStore()
 
 function rarityColorOf(rarity: string): string {
   return MATERIAL_RARITY_COLOR[rarity] ?? MATERIAL_RARITY_COLOR.common
@@ -21,8 +20,8 @@ function rarityColorOf(rarity: string): string {
 function chooseMaterial(materialId: string) {
   store.setSlotConfig(props.planet.id, { materialId })
 }
-function chooseBuilding(buildingId: string) {
-  store.setSlotConfig(props.planet.id, { buildingId })
+function chooseRay(rayId: SolarBranchId) {
+  store.setSlotConfig(props.planet.id, { rayId })
 }
 </script>
 
@@ -85,22 +84,22 @@ function chooseBuilding(buildingId: string) {
         </template>
         <template v-else>
           <button
-            v-for="bld in shopStore.cpsBuildings"
-            :key="bld.id"
+            v-for="ray in SOLAR_BRANCHES"
+            :key="ray.id"
             class="ps-pick ps-pick--building"
-            :class="{ 'ps-pick--active': planet.slotConfig?.buildingId === bld.id }"
-            :style="{ '--tc': '#e8c040' }"
-            @click="chooseBuilding(bld.id)"
+            :class="{ 'ps-pick--active': planet.slotConfig?.rayId === ray.id }"
+            :style="{ '--tc': ray.color }"
+            @click="chooseRay(ray.id as SolarBranchId)"
           >
             <span class="ps-pick-medal">
-              <img v-if="bld.icon" :src="bld.icon" class="ps-pick-icon" alt="" />
+              <Icon :icon="ray.icon" width="30" height="30" :style="{ color: ray.color }" />
             </span>
             <span class="ps-pick-body">
-              <span class="ps-pick-name">{{ bld.name }}</span>
-              <span class="ps-pick-desc">Amplifies this building's Chimes production.</span>
+              <span class="ps-pick-name">{{ ray.name }}</span>
+              <span class="ps-pick-desc">Amplifies what this Solar Ray already gives.</span>
             </span>
             <span
-              v-if="planet.slotConfig?.buildingId === bld.id"
+              v-if="planet.slotConfig?.rayId === ray.id"
               class="ps-pick-check"
               aria-hidden="true"
               >✓</span

@@ -27,7 +27,6 @@ export type IconPoolKey =
 export type StatCategoryId =
   | 'progression'
   | 'economy'
-  | 'chimeWorks'
   | 'autoBattle'
   | 'combatRecord'
   | 'objectives'
@@ -299,7 +298,7 @@ export interface ScoreboardFit {
 export type KeybindId =
   | 'pause'
   | 'shop'
-  | 'tree'
+  | 'road'
   | 'controls'
   | 'abilityQ'
   | 'abilityW'
@@ -441,7 +440,6 @@ export interface PauseChampionCallout {
 export type BardTabId =
   | 'bard'
   | 'shop'
-  | 'tree'
   | 'team'
   | 'expedition'
   | 'battle'

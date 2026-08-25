@@ -42,8 +42,7 @@
  * Warum überhaupt ausgelagert und nicht in `ForgeTreePanel.vue`: Knoten, Kanten
  * und die Specs müssen von DERSELBEN Rechnung kommen. Stünde sie in der
  * Komponente, hinge der einzige Wächter gegen Überlappung an einem
- * Vue-Renderlauf. Schwesterdatei ist `skillTreeLayout.ts`, die dasselbe für den
- * Meep-Baum tut. WIE eine Linie von hier nach dort kommt, steht nicht mehr in
+ * Vue-Renderlauf. WIE eine Linie von hier nach dort kommt, steht nicht mehr in
  * dieser Datei — das beantwortet `forgeEdgeRoute.ts`, siehe unten.
  */
 import {
@@ -64,12 +63,16 @@ import {
   FORGE_SPRING_K,
   FORGE_STAGE_SIZE,
   FORGE_SUN_EDGE_GAP,
+  FORGE_ROAD_BAND,
+  FORGE_ROAD_SECTOR_SPREAD,
   FORGE_ZONE_BAND,
   SHOP_SUN_MAX_DIAMETER,
   SOLAR_BRANCHES,
 } from '@/config/constants'
-import { FORGE_NODES, getForgeNode } from '@/config/progression/starForge'
+import { FORGE_NODES } from '@/config/progression/starForge'
 import { FORGE_BRIDGES, FORGE_CLUSTERS } from '@/config/progression/starForgeNet'
+import { forgeSeatTier, getForgeSeat } from '@/config/progression/forgeSeats'
+import { MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
 import type { ForgeClusterDef, ForgeUpgradeTier } from '@/types'
 
 export interface Point {
@@ -78,7 +81,16 @@ export interface Point {
 }
 
 /** Wozu eine Kante da ist. Die Art entscheidet, wie sie gezeichnet wird. */
-export type ForgeEdgeKind = 'parent' | 'require' | 'bridge'
+/**
+ * `path` ist die Kette von The Wandering — und bewusst NICHT `parent`.
+ *
+ * Ein `parent` ist ein UND mit Stufenforderung. Die Meep-Kette ist ein ODER:
+ * ein Knoten geht auf, sobald IRGENDEINER des Rangs darunter gelernt ist
+ * (`meepTree.ts`, `req` wird dort aus `tier` abgeleitet). Zwei Aussagen, zwei
+ * Strichbilder — dieselbe Begründung, aus der eine Bedingungskante
+ * gestrichelt läuft.
+ */
+export type ForgeEdgeKind = 'parent' | 'require' | 'bridge' | 'path'
 
 export interface ForgeEdge {
   from: string
@@ -163,12 +175,24 @@ interface Sector {
 
 /** Der Abschnitt eines Clusters: die Weite folgt aus der ANZAHL der Cluster
  *  seiner Phase, nicht aus einer Zahl in der Karte. */
+/** Der Schluessel, unter dem ein Cluster seine Nachbarn zaehlt — die Phase bei
+ *  der Sonne, der Rang auf der Strasse. Zwei Regionen teilen sich keinen Ring. */
+function zoneKeyOf(cluster: ForgeClusterDef): string {
+  return cluster.region === 'road' ? `road:${cluster.rank}` : `sun:${cluster.phase}`
+}
+
 function sectorOf(cluster: ForgeClusterDef): Sector {
-  const peers = FORGE_CLUSTERS.filter((c) => c.phase === cluster.phase).length || 1
-  const band = FORGE_ZONE_BAND[cluster.phase] ?? FORGE_ZONE_BAND[FORGE_ZONE_BAND.length - 1]
+  const key = zoneKeyOf(cluster)
+  const peers = FORGE_CLUSTERS.filter((c) => zoneKeyOf(c) === key).length || 1
+  const band =
+    cluster.region === 'road'
+      ? (FORGE_ROAD_BAND[cluster.rank] ?? FORGE_ROAD_BAND[FORGE_ROAD_BAND.length - 1])
+      : (FORGE_ZONE_BAND[cluster.phase] ?? FORGE_ZONE_BAND[FORGE_ZONE_BAND.length - 1])
+  const spread =
+    cluster.region === 'road' ? FORGE_ROAD_SECTOR_SPREAD : FORGE_CLUSTER_SECTOR_SPREAD
   return {
     angleDeg: cluster.angleDeg,
-    halfSpanDeg: (360 / peers) * FORGE_CLUSTER_SECTOR_SPREAD,
+    halfSpanDeg: (360 / peers) * spread,
     inner: band.inner,
     outer: band.outer,
   }
@@ -207,6 +231,12 @@ export function forgeEdges(): readonly ForgeEdge[] {
   for (const bridge of FORGE_BRIDGES) {
     out.push({ from: bridge.from, to: bridge.to, kind: 'bridge' })
   }
+  // Die Kette von The Wandering. `req` ist im Katalog bereits aus `tier`
+  // abgeleitet — an der Gabel auf Rang 4 bekommt der Knoten darüber deshalb
+  // ZWEI eingehende Kanten, und die Feder zieht ihn zwischen beide.
+  for (const [id, entry] of Object.entries(MEEP_TREE_NODE_INDEX)) {
+    for (const req of entry.req) out.push({ from: req, to: id, kind: 'path' })
+  }
   edgeCache = out
   return out
 }
@@ -236,11 +266,11 @@ function seatEveryone(): Seat[] {
     const count = cluster.members.length || 1
 
     cluster.members.forEach((memberId, index) => {
-      const def = getForgeNode(memberId)
-      // Ein Name in der Karte, den der Katalog nicht kennt, wäre ein Knoten
-      // ohne Wirkung. Die Spec fängt ihn; hier wird er still übergangen, damit
-      // ein Tippfehler nicht die ganze Bühne leert.
-      if (!def) return
+      const seat = getForgeSeat(memberId)
+      // Ein Name in der Karte, den KEIN Katalog kennt, wäre ein Knoten ohne
+      // Wirkung. Die Spec fängt ihn; hier wird er still übergangen, damit ein
+      // Tippfehler nicht die ganze Bühne leert.
+      if (!seat) return
       const seed = rng(`forge-seat:${memberId}`)
 
       // Der goldene Winkel bleibt — und aus demselben Grund wie immer: er
@@ -260,8 +290,8 @@ function seatEveryone(): Seat[] {
 
       seats.push({
         id: memberId,
-        tier: def.tier,
-        diameter: FORGE_NODE_DIAMETER[def.tier],
+        tier: seat.tier,
+        diameter: FORGE_NODE_DIAMETER[seat.tier],
         x: at.x,
         y: at.y,
         sector,
@@ -503,6 +533,7 @@ export function forgeTreePlacements(): ReadonlyMap<string, Point> {
  *  Zonenschleiers. */
 export interface ForgeClusterSpot {
   id: string
+  /** Sonnenphase — auf der Strasse `-1`, sie gehoert keiner. */
   phase: number
   accent: string
   x: number
@@ -545,12 +576,12 @@ export function forgeClusterSpots(): readonly ForgeClusterSpot[] {
     // Median markiert stattdessen den KERN und läuft nach aussen aus, was ein
     // Verlauf ohnehin tut.
     const reaches = seats
-      .map((m) => Math.hypot(m.at.x - x, m.at.y - y) + FORGE_NODE_DIAMETER[tierOf(m.id)] / 2)
+      .map((m) => Math.hypot(m.at.x - x, m.at.y - y) + FORGE_NODE_DIAMETER[forgeSeatTier(m.id)] / 2)
       .sort((a, b) => a - b)
     const r = reaches[Math.floor(reaches.length / 2)]
     out.push({
       id: cluster.id,
-      phase: cluster.phase,
+      phase: cluster.region === 'road' ? -1 : cluster.phase,
       accent: cluster.accent,
       x: Math.round(x),
       y: Math.round(y),
@@ -585,8 +616,8 @@ export function forgeTightestPair(): { a: string; b: string; air: number } | nul
     for (let j = i + 1; j < ids.length; j++) {
       const pa = places.get(ids[i])!
       const pb = places.get(ids[j])!
-      const da = FORGE_NODE_DIAMETER[tierOf(ids[i])]
-      const db = FORGE_NODE_DIAMETER[tierOf(ids[j])]
+      const da = FORGE_NODE_DIAMETER[forgeSeatTier(ids[i])]
+      const db = FORGE_NODE_DIAMETER[forgeSeatTier(ids[j])]
       const air = Math.hypot(pa.x - pb.x, pa.y - pb.y) - (da + db) / 2
       if (!worst || air < worst.air) worst = { a: ids[i], b: ids[j], air }
     }
@@ -649,7 +680,7 @@ export function forgeContentBounds(): ForgeContentBounds {
   let minY = Infinity
   let maxY = -Infinity
   for (const [id, at] of places) {
-    const r = FORGE_NODE_DIAMETER[tierOf(id)] / 2
+    const r = FORGE_NODE_DIAMETER[forgeSeatTier(id)] / 2
     minX = Math.min(minX, at.x - r)
     maxX = Math.max(maxX, at.x + r)
     minY = Math.min(minY, at.y - r)
@@ -659,7 +690,7 @@ export function forgeContentBounds(): ForgeContentBounds {
   const centerY = (minY + maxY) / 2
   let radius = 0
   for (const [id, at] of places) {
-    const r = FORGE_NODE_DIAMETER[tierOf(id)] / 2
+    const r = FORGE_NODE_DIAMETER[forgeSeatTier(id)] / 2
     radius = Math.max(radius, Math.hypot(at.x - centerX, at.y - centerY) + r)
   }
   boundsCache = {
@@ -674,10 +705,6 @@ export function forgeContentBounds(): ForgeContentBounds {
     radius,
   }
   return boundsCache
-}
-
-function tierOf(id: string): ForgeUpgradeTier {
-  return getForgeNode(id)?.tier ?? 'root'
 }
 
 // ── Die Äste ──────────────────────────────────────────────────────────────────

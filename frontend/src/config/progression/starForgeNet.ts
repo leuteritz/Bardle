@@ -1,4 +1,7 @@
-import type { ForgeBridgeDef, ForgeClusterDef } from '@/types'
+import type { ForgeBridgeDef, ForgeClusterDef, ForgeRoadClusterDef } from '@/types'
+import { FORGE_CONFLUENCE_ANGLES_DEG, FORGE_ROAD_LANE_ANGLES_DEG } from '@/config/constants'
+import { MEEP_TREE_BRANCHES } from '@/config/progression/meepTree'
+import { FORGE_CONFLUENCES } from '@/config/progression/starForge'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // STAR FORGE — die KARTE
@@ -80,6 +83,55 @@ import type { ForgeBridgeDef, ForgeClusterDef } from '@/types'
  * Mitgliederliste ist die EINE Stelle, an der die Zuordnung Knoten → Ort steht;
  * im Knoten geführt wäre sie dieselbe Angabe an 155 Stellen.
  */
+/**
+ * THE WANDERING — fünf Spuren jenseits der Sonnenleiter.
+ *
+ * Eine Spur ist ein Meep-Zweig, und das ist der Entwurf, nicht der Fehler: die
+ * Mischungsregel der Sonne (`forgeMixing.spec.ts`) steht gegen einen
+ * 72-Grad-Sektor, der über sechs Ringe genau eine Aussage trug. Hier IST die
+ * Spur die Aussage — sie läuft nach aussen statt im Kreis, und ihre Ordnung ist
+ * ihr Inhalt.
+ *
+ * Die Mitglieder kommen aus dem Katalog statt von Hand: seine Reihenfolge IST
+ * die Rangreihenfolge, und `seatEveryone()` staffelt Mitglieder über die TIEFE
+ * ihres Bandes. Damit fällt „Rang = Entfernung" ohne eine Zeile Layout-Code ab.
+ * Fünfunddreissig Ids hier abzuschreiben wäre dieselbe Angabe ein zweites Mal.
+ */
+export const FORGE_ROAD_LANES: readonly ForgeRoadClusterDef[] = MEEP_TREE_BRANCHES.map(
+  (branch, index) => ({
+    id: `lane_${branch.id}`,
+    title: branch.name,
+    region: 'road' as const,
+    rank: 1,
+    angleDeg: FORGE_ROAD_LANE_ANGLES_DEG[index] ?? 0,
+    accent: branch.color,
+    members: branch.nodes.map((node) => node.id),
+  }),
+)
+
+/**
+ * DIE NAHT — fünf Orte zwischen der Sonne und der Strasse, je einer pro Spur.
+ *
+ * Sie liegen sieben Grad VOR ihrer Spur und damit genau zwischen ihr und dem
+ * Kronen-Cluster daneben. Das ist die Bedingung, nicht der Geschmack: eine
+ * Confluence hängt an einem Bough und verlangt einen Knoten der Strasse, und
+ * beide Kanten müssen unter `FORGE_EDGE_MAX_PX` bleiben.
+ *
+ * Ein Cluster je Confluence und nicht einer für alle fünf: sie stehen nicht
+ * beieinander, sie stehen JE an ihrer Naht.
+ */
+export const FORGE_SEAM_CLUSTERS: readonly ForgeRoadClusterDef[] = FORGE_CONFLUENCES.map(
+  (def, index) => ({
+    id: `seam_${def.id}`,
+    title: def.name,
+    region: 'road' as const,
+    rank: 0,
+    angleDeg: FORGE_CONFLUENCE_ANGLES_DEG[index] ?? 0,
+    accent: def.color,
+    members: [def.id],
+  }),
+)
+
 export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
   // ── Zone 1 · Spark — die Zweige ────────────────────────────────────────────
   // Sie liegen ZWISCHEN zwei Solar Rays und nehmen von beiden — ausser wo die
@@ -418,8 +470,9 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
       'repriveGrain',
     ],
   },
+  ...FORGE_ROAD_LANES,
+  ...FORGE_SEAM_CLUSTERS,
 ]
-
 /**
  * Die Wege OHNE Spiellogik.
  *

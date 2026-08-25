@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { forgeSeatTier } from '@/config/progression/forgeSeats'
 import { forgeContentBounds, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
 import {
   forgeClampPan,
@@ -9,7 +10,6 @@ import {
   forgePanLimit,
 } from '@/utils/ui/forgeCameraBounds'
 import { forgeNodeInView, forgeNodeScreenPoint } from '@/utils/ui/forgeSpotlightView'
-import { getForgeNode } from '@/config/progression/starForge'
 import {
   FORGE_CONTENT_SEAM_PX,
   FORGE_NODE_DIAMETER,
@@ -19,7 +19,6 @@ import {
   FORGE_TREE_ZOOM_FLOOR,
   FORGE_TREE_ZOOM_MAX,
 } from '@/config/constants'
-import type { ForgeUpgradeTier } from '@/types'
 
 /**
  * Die GRENZEN der Baum-Kamera — wie weit gefahren und wie weit herausgezoomt
@@ -53,10 +52,6 @@ const VIEWS = [
   { name: 'QHD 2560x1440', w: 1100, h: 994 },
 ]
 
-function tierOf(id: string): ForgeUpgradeTier {
-  return getForgeNode(id)?.tier ?? 'root'
-}
-
 function zoomFloorFor(view: { w: number; h: number }): number {
   return Math.max(FORGE_TREE_ZOOM_FLOOR, Math.min(1, forgeFitScale(view)))
 }
@@ -67,7 +62,7 @@ describe('Star Forge — die Grenzen der Kamera', () => {
     const places = forgeTreePlacements()
 
     for (const [id, at] of places) {
-      const r = FORGE_NODE_DIAMETER[tierOf(id)] / 2
+      const r = FORGE_NODE_DIAMETER[forgeSeatTier(id)] / 2
       expect(at.x - r, `${id} ragt links aus der Huelle`).toBeGreaterThanOrEqual(b.minX - 0.01)
       expect(at.x + r, `${id} ragt rechts aus der Huelle`).toBeLessThanOrEqual(b.maxX + 0.01)
       expect(at.y - r, `${id} ragt oben aus der Huelle`).toBeGreaterThanOrEqual(b.minY - 0.01)
@@ -78,9 +73,14 @@ describe('Star Forge — die Grenzen der Kamera', () => {
       ).toBeLessThanOrEqual(b.radius + 0.01)
     }
 
-    // Gemessen: halfW 788,3 · halfH 816,8 · radius 847,6 gegen 1000 Buehnenhalb
-    // (davor 775,3 · 791,5 · 832,5 — die groessere Sonne hat die inneren Knoten
-    // nach aussen gedrueckt und die Zonenbaender sind ihr um 20 px gefolgt).
+    // Gemessen: halfW 1260,9 · halfH 1342,0 · radius 1590,3 gegen 1700
+    // Buehnenhalb (davor 788,3 · 816,8 · 847,6 gegen 1000 — The Wandering hat die
+    // Huelle rund verdoppelt, und die Buehne ist ihr gefolgt).
+    //
+    // Die Huellenmitte liegt seither auch in x neben der Buehnenmitte: fuenf
+    // Spuren bilden ein Fuenfeck, und ein Fuenfeck hat keine zentrierte
+    // Huellbox. Gemessen 1565,2 gegen 1700 — rund 135 px, am Zoomboden also
+    // dreissig auf dem Schirm.
     // Bricht das hier, ist der Baum gewachsen — dann sind die Zahlen in den
     // Kommentaren von `FORGE_CONTENT_SEAM_PX` und `forgeCameraBounds.ts` fällig.
     expect(b.radius, `Inhaltsradius ${b.radius.toFixed(1)}`).toBeLessThan(HALF)
@@ -147,7 +147,7 @@ describe('Star Forge — die Grenzen der Kamera', () => {
         for (const [id, at] of places) {
           const pan = forgeClampPan({ x: at.x, y: at.y }, view, zoom)
           const cam = { panX: pan.x, panY: pan.y, scale: zoom }
-          const radiusPx = forgeNodeScreenRadius(tierOf(id), zoom)
+          const radiusPx = forgeNodeScreenRadius(forgeSeatTier(id), zoom)
           expect(
             forgeNodeInView(at, radiusPx, cam, view),
             `${id} bleibt bei ${view.name} / Zoom ${zoom.toFixed(2)} ausserhalb`,

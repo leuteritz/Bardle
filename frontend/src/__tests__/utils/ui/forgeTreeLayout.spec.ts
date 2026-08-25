@@ -6,13 +6,13 @@ import {
   forgeTreePlacements,
 } from '@/utils/ui/forgeTreeLayout'
 import { FORGE_NODES } from '@/config/progression/starForge'
+import { FORGE_SEATS } from '@/config/progression/forgeSeats'
 import { FORGE_BRIDGES } from '@/config/progression/starForgeNet'
 import {
   FORGE_BRIDGE_MAX_PX,
   FORGE_EDGE_MAX_PX,
   FORGE_LIMB_WIDTH,
   FORGE_MIN_AIR_PX,
-  SOLAR_BRANCHES,
 } from '@/config/constants'
 
 /**
@@ -47,9 +47,9 @@ describe('Star Forge — der Platzierer', () => {
     expect(spy).not.toHaveBeenCalled()
   })
 
-  it('liefert für jeden Katalogknoten und jeden Strahl genau einen Punkt', () => {
+  it('liefert für jeden SITZ genau einen Punkt', () => {
     const places = forgeTreePlacements()
-    expect(places.size).toBe(FORGE_NODES.length + SOLAR_BRANCHES.length)
+    expect(places.size).toBe(FORGE_SEATS.length)
     for (const [, at] of places) {
       expect(Number.isFinite(at.x)).toBe(true)
       expect(Number.isFinite(at.y)).toBe(true)

@@ -8,6 +8,8 @@ import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGamePause } from '@/composables/system/useGamePause'
 import { onKeybinding } from '@/composables/system/useKeybindings'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import type { BardTabId } from '@/stores/core/uiStore'
 import type { KeybindId } from '@/types'
 import { formatBadgeCount, toRoman } from '@/utils/ui/format'
@@ -18,7 +20,6 @@ import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import RpgBadgeTooltipBody from '@/components/ui/RpgBadgeTooltipBody.vue'
 import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
 import ShopComponent from '@/components/bardProfil/shop/ShopComponent.vue'
-import SkillTreeComponent from '@/components/bardProfil/skill/SkillTreeComponent.vue'
 import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
 import BattleResultComponent from '@/components/bardProfil/battle/BattleResultComponent.vue'
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
@@ -127,7 +128,6 @@ const allMenuItems: {
   { id: 'bard', name: 'Journey', icon: 'ph:compass-rose-fill' },
   { id: 'shop', name: 'Shop', icon: HEADER_GEM_ICONS.shop },
   { id: 'team', name: 'Team', icon: 'ph:users-three-fill' },
-  { id: 'tree', name: 'Tree', icon: HEADER_GEM_ICONS.tree, boost: true },
   {
     id: 'battle',
     name: 'Rift',
@@ -245,8 +245,27 @@ function bindTabShortcut(id: KeybindId, tab: BardTabId) {
   })
 }
 
+const meepTreeStore = useMeepTreeStore()
+const { focusNode } = useForgeSpotlight()
+
 bindTabShortcut('shop', 'shop')
-bindTabShortcut('tree', 'tree')
+
+/**
+ * Taste K — sie hiess einmal „Tree" und öffnete einen eigenen Reiter.
+ *
+ * Sie ist NICHT gestrichen und auch nicht auf den Shop umgehängt: zwei Tasten
+ * auf denselben Reiter wären eine Lüge im Controls-Panel. Sie fährt stattdessen
+ * dorthin, wo der Reiter hingezogen ist — an den äusseren Rand des Netzes. Das
+ * ist keine Bequemlichkeit: The Wandering liegt jenseits der Sonnenleiter, und
+ * am Zoomboden ist ein Knoten dort sechs Pixel gross.
+ */
+onKeybinding('road', () => {
+  if (galaxyStore.pendingRoleSelection || isPaused.value) return
+  if (uiStore.bardActiveTab !== 'shop') uiStore.setBardTab('shop')
+  const target = meepTreeStore.roadAnchorId
+  if (target) focusNode(target, { readable: true })
+})
+
 
 /**
  * Escape schließt das Profil — aber erst, wenn niemand INNERHALB des Modals die
@@ -414,9 +433,6 @@ onUnmounted(() => {
                     >
                       <span class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
                     </div>
-                    <div v-if="item.id === 'tree' && skillBadgeCount > 0" class="team-badge-row">
-                      <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
-                    </div>
                     <!-- Bard tab carries both of its own signals: the ready
                          evolution (the sun dial lives here now, so the ✦ moved
                          off the Forge tab with it) and unseen Codex stages. -->
@@ -439,6 +455,13 @@ onUnmounted(() => {
                          nicht angesehen wurde. Dieselbe Marke wie an der Ecktaste
                          und in der Schiene des Tabs — ruhig, mit einmaligem
                          Aufblitzen, wenn die Zahl steigt. -->
+                    <!-- The Wandering wohnt seit dem Merge im Shop — seine Marke
+                         steht deshalb hier, aber als EIGENER Zaehler neben dem
+                         der Forge: „schmiedbar" und „lernbar" sind zwei
+                         Auskuenfte, und eine Summe waere keine von beiden. -->
+                    <div v-if="item.id === 'shop' && skillBadgeCount > 0" class="team-badge-row">
+                      <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
+                    </div>
                     <div v-if="item.id === 'shop' && shopFreshCount > 0" class="team-badge-row">
                       <ShopReadyBadge
                         place="inline"
@@ -485,10 +508,6 @@ onUnmounted(() => {
               <!-- Battle-Tab: von Anfang an gemountet, Watch + Simulation laufen -->
               <div v-show="uiStore.bardActiveTab === 'battle'" class="tab-layer tab-layer--scroll">
                 <BattleResultComponent />
-              </div>
-
-              <div v-show="uiStore.bardActiveTab === 'tree'" class="tab-layer">
-                <SkillTreeComponent v-if="mountedTabs.has('tree')" />
               </div>
 
               <div

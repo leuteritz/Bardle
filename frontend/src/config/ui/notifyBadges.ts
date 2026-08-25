@@ -71,10 +71,10 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
     short: 'Skill Ready',
     accent: BADGE_HERALD_ACCENT_SKILL,
     imageSrc: '/img/BardAbilities/BardMeep-128.png',
-    tab: 'tree',
+    tab: 'shop',
     hasBadge: true,
     heralds: true,
-    heraldEyebrow: 'MEEP PATH',
+    heraldEyebrow: 'THE WANDERING',
     heraldNoun: 'skill',
     sites: [
       {
@@ -87,20 +87,18 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
         marker: 'mini-badge--skill',
         where: PROFILE_TABS,
       },
-      {
-        file: 'components/bardProfil/skill/MeepSkillNode.vue',
-        marker: 'msn-notify',
-        where: 'Node in the meep tree',
-      },
-      {
-        file: 'components/bardProfil/skill/MeepSkillCard.vue',
-        marker: 'msc-tag--new',
-        where: 'Card in the skill sheet',
-      },
     ],
-    // Fällt aus allen Suchmustern der Guard-Spec — die Plakette heißt weder
-    // „notify“ noch „mini-badge“. Genau dafür gibt es dieses Feld.
-    extraMarkers: ['msc-tag--new'],
+    // KEINE eigene Marke mehr im Netz und in der Schiene: seit The Wandering
+    // im Star-Forge-Netz steht, trägt ein frischer Meep-Knoten dieselbe
+    // `ShopReadyBadge` wie jeder andere frische Eintrag. Sie gehört dem
+    // `shop`-Eintrag — zwei Registry-Einträge, die denselben Marker
+    // beanspruchen, wären durch die Guard-Spec nicht mehr trennbar.
+    //
+    // Was dieser Marke bleibt, sind ihre ZWEI eigenen Orte: der Bogen im
+    // Header und der Reiter im Profil. Beide zählen „lernbar“, nicht
+    // „schmiedbar“ — deshalb bleibt sie ein eigener Eintrag mit eigenem
+    // Herold-Kanal.
+    extraMarkers: [],
     seedability: 'capped',
     reversible: 'full',
     // Fünf Zweige mit je einem Tier-1-Knoten — das ist die Decke auf frischem Stand.

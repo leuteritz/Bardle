@@ -52,7 +52,6 @@ import { rollProvidence } from '@/config/progression/providences'
 import { getChampionSkins } from '@/utils/game/champions'
 import {
   ADMIN_MAX_BARD_LEVEL,
-  ADMIN_MAX_BUILDING_LEVEL,
   ADMIN_MAX_CHIMES,
   ADMIN_MAX_GALAXY,
   ADMIN_MAX_MATERIAL_AMOUNT,
@@ -345,9 +344,6 @@ export function maxEverything(): MaxEverythingResult {
 
   // ⑧ Wirtschaft, Forge, Baum. Die Forge steht bewusst NACH der Sonnenphase (①),
   //    sonst überspringt sie jeden Knoten mit `phase > starPhase`.
-  shopStore.shopUpgrades.forEach((_, index) =>
-    shopStore.setBuildingLevel(index, ADMIN_MAX_BUILDING_LEVEL),
-  )
   forgeStore.adminMaxAll()
   meepTreeStore.adminUnlockAll()
 
@@ -362,15 +358,14 @@ export function maxEverything(): MaxEverythingResult {
   // ⑩ Planeten. `adminFillRandomRoles` (in ⑥) kauft die Slots und verteilt
   //    Rollen, lässt aber Level, maxHp UND slotConfig unangetastet — und ohne
   //    Konfiguration produzieren zwei der sechs Rollen schlicht nichts:
-  //    ein Harvest Node ohne `materialId` erntet nicht, ein Resonance Tower
-  //    ohne `buildingId` liefert 0 CpS.
-  const firstBuilding = shopStore.cpsBuildings[0]
+  //    ein Harvest Node ohne `materialId` erntet nicht, ein Resonator ohne
+  //    `rayId` legt auf nichts zu.
   for (const slot of planetShopStore.slots) {
     if (slot.role === 'harvest_node' && !slot.slotConfig?.materialId) {
       planetShopStore.setSlotConfig(slot.id, { materialId: MATERIALS[0].id })
     }
-    if (slot.role === 'resonance_tower' && !slot.slotConfig?.buildingId && firstBuilding) {
-      planetShopStore.setSlotConfig(slot.id, { buildingId: firstBuilding.id })
+    if (slot.role === 'resonance_tower' && !slot.slotConfig?.rayId) {
+      planetShopStore.setSlotConfig(slot.id, { rayId: 'chimesPerSecond' })
     }
     // Ein zerstörter Planet zählt nirgends mit — die Sperre muss weg.
     slot.downUntilMs = 0

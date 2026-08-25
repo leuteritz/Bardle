@@ -46,7 +46,6 @@ import {
   AUGMENT_LEVEL_INTERVAL,
   ADMIN_LEVEL_AUGMENT_QUEUE_MAX,
   RARITY_WEIGHT_FALLBACK,
-  BUILDING_HISTORY_BUFFER_SIZE,
   HYPERSPACE_ANIM_START_MS,
   HYPERSPACE_ANIM_END_MS,
   UNIVERSE_RESCUE_INITIAL_COST,
@@ -70,9 +69,6 @@ import type {
   UniverseRunBaseline,
   UniverseRunRecord,
   UniverseRunStats,
-  BuildingProduction,
-  TotalBuildingProduction,
-  ShopUpgrade,
   Expedition,
   ModifierEffects,
   AugmentEffects,
@@ -207,8 +203,6 @@ export const useGameStore = defineStore('game', {
     currentUniverse: 1,
     prestigeAvailable: false,
 
-    buildingProductionHistory: {} as BuildingProduction,
-    totalBuildingProduction: {} as TotalBuildingProduction,
 
     // Modal state for UI effects
     isCPSModalOpen: false,
@@ -657,28 +651,6 @@ export const useGameStore = defineStore('game', {
       }
     },
 
-    trackBuildingProduction() {
-      const shopStore = useShopStore()
-
-      shopStore.shopUpgrades.forEach((upgrade: ShopUpgrade) => {
-        if (upgrade.baseCPS && upgrade.level > 0) {
-          const production = (upgrade.baseCPS || 0) * upgrade.level
-
-          if (!this.buildingProductionHistory[upgrade.id]) {
-            this.buildingProductionHistory[upgrade.id] = []
-            this.totalBuildingProduction[upgrade.id] = 0
-          }
-
-          this.buildingProductionHistory[upgrade.id].push(production)
-          this.totalBuildingProduction[upgrade.id] += production
-
-          if (this.buildingProductionHistory[upgrade.id].length > BUILDING_HISTORY_BUFFER_SIZE) {
-            this.buildingProductionHistory[upgrade.id].shift()
-          }
-        }
-      })
-    },
-
     /**
      * Checks if Prestige is available.
      *
@@ -789,8 +761,6 @@ export const useGameStore = defineStore('game', {
       this.pendingAugmentOptions = []
       this.pendingAugmentSelections = []
       this.isGamePaused = false
-      this.buildingProductionHistory = {}
-      this.totalBuildingProduction = {}
       // totalChimesEarned & totalClicks persist across prestiges
       //
       // Der Meep-Baum bleibt STEHEN. Er wurde einmal hier zurückgesetzt, und
@@ -807,9 +777,6 @@ export const useGameStore = defineStore('game', {
       const augmentStore = useAugmentStore()
       augmentStore.$reset()
       const shopStore = useShopStore()
-      shopStore.shopUpgrades.forEach((u) => {
-        u.level = 0
-      })
       this.chimesPerSecond = shopStore.calculateTotalCPS()
       this.chimesPerClick = shopStore.calculateTotalCPC()
       // Neue Basislinie: ab hier zählt der Tooltip wieder bei null.
@@ -891,7 +858,6 @@ export const useGameStore = defineStore('game', {
         this.totalChimesEarned += cps
         this.chimesEarnedForLevel += cps
         this.calculateLevel()
-        this.trackBuildingProduction()
       }
       this.checkPrestigeAvailability()
       // Auto level-up runs AFTER production so the chimes earned this second are
@@ -1119,7 +1085,6 @@ export const useGameStore = defineStore('game', {
         skillPointInterval: base.skillPointInterval,
         baseChimesPerClick: base.baseChimesPerClick,
         eloPowerMultiplier: base.eloPowerMultiplier,
-        buildingMultipliers: base.buildingMultipliers,
         abilityCPSPerLevel: base.abilityCPSPerLevel,
         abilityCPCPerLevel: base.abilityCPCPerLevel,
         abilityMeepCostPerLevel: base.abilityMeepCostPerLevel,
@@ -1165,7 +1130,10 @@ export const useGameStore = defineStore('game', {
       return Math.floor(
         (this.meeps * MEEP_POWER_MULTIPLIER * meepPowerMod * tree.meepPowerMult +
           this.abilityPowerBonus +
-          tree.powerBonus) *
+          tree.powerBonus +
+          // Hostcall — INNERHALB der Klammer, sonst traege er als einziger
+          // Power-Term weder Elo- noch Item- noch Synergie-Faktor.
+          useStarForgeStore().battlePowerBonus) *
           eloPowerMod *
           itemPowerMul *
           synergyPowerMul *

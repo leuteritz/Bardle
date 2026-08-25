@@ -1,6 +1,5 @@
 import { computed, type ComputedRef, type Ref } from 'vue'
 import { useGameStore } from '@/stores/core/gameStore'
-import { useShopStore } from '@/stores/economy/shopStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
@@ -34,6 +33,7 @@ import {
   FORGE_LEAVES,
   FORGE_RELICS,
   FORGE_CONSTELLATIONS,
+  FORGE_CONFLUENCES,
 } from '@/config/progression/starForge'
 import { MEEP_TREE_BRANCHES, MEEP_TREE_PATH_NODES } from '@/config/progression/meepTree'
 import { CHRONICLE_TOTAL_STAGES } from '@/config/progression/achievements'
@@ -78,7 +78,6 @@ export function useStatCatalog(query: Ref<string>): {
   matchCount: ComputedRef<number>
 } {
   const gameStore = useGameStore()
-  const shopStore = useShopStore()
   const battleStore = useBattleStore()
   const galaxyStore = useGalaxyStore()
   const starGroupStore = useStarGroupStore()
@@ -236,11 +235,6 @@ export function useStatCatalog(query: Ref<string>): {
         value: clicks > 0 ? num(gameStore.totalChimesEarned / clicks) : '—',
         hint: 'Lifetime chimes divided by every click ever made',
       },
-      {
-        key: 'lifetime-production',
-        label: 'Building Production (Lifetime)',
-        value: num(shopStore.totalLifetimeProduction),
-      },
       { key: 'meeps', label: 'Meeps Guided', value: num(gameStore.meeps), highlight: true },
       {
         key: 'meeps-earned',
@@ -278,62 +272,6 @@ export function useStatCatalog(query: Ref<string>): {
         hint: 'Current chimes per second extrapolated to one full hour',
       },
     ]
-  })
-
-  /* ── Chime Works (buildings) ──────────────────────────────────────────── */
-  const chimeWorks = computed<StatEntry[]>(() => {
-    const stats = shopStore.buildingStats
-    const totalLevels = shopStore.shopUpgrades.reduce((sum, u) => sum + u.level, 0)
-    const rows: StatEntry[] = [
-      {
-        key: 'buildings-owned',
-        label: 'Building Types Owned',
-        value: ratio(
-          shopStore.shopUpgrades.filter((u) => u.level > 0).length,
-          shopStore.shopUpgrades.length,
-        ),
-        highlight: true,
-      },
-      {
-        key: 'building-levels',
-        label: 'Total Building Levels',
-        value: num(totalLevels),
-        highlight: true,
-      },
-      {
-        key: 'top-producer',
-        label: 'Top Producer',
-        value: stats.length > 0 ? stats[0].name : '—',
-        highlight: true,
-        keywords: 'best building',
-      },
-    ]
-    for (const upgrade of shopStore.shopUpgrades) {
-      const stat = stats.find((s) => s.id === upgrade.id)
-      rows.push({
-        key: `building-${upgrade.id}-level`,
-        label: `${upgrade.name} — Level`,
-        value: int(upgrade.level),
-        keywords: 'building',
-      })
-      rows.push({
-        key: `building-${upgrade.id}-out`,
-        label: `${upgrade.name} — Output`,
-        value: upgrade.baseCPS
-          ? `${num((upgrade.baseCPS ?? 0) * upgrade.level)} CpS`
-          : `${num((upgrade.baseCPC ?? 0) * upgrade.level)} CpC`,
-        keywords: 'building production',
-      })
-      if (stat) {
-        rows.push({
-          key: `building-${upgrade.id}-share`,
-          label: `${upgrade.name} — Share`,
-          value: pct(stat.productionPercentage / 100),
-          keywords: 'building efficiency',
-        })
-      }
-    }
-    return rows
   })
 
   /* ── Auto Battle (ladder + match record) ──────────────────────────────── */
@@ -978,6 +916,15 @@ export function useStatCatalog(query: Ref<string>): {
         value: ratio(forgeStore.forgedConstellations.length, FORGE_CONSTELLATIONS.length),
         highlight: true,
       },
+      {
+        key: 'confluences',
+        label: 'Confluences Bound',
+        value: ratio(
+          FORGE_CONFLUENCES.filter((c) => (forgeStore.confluenceLevels[c.id] ?? 0) > 0).length,
+          FORGE_CONFLUENCES.length,
+        ),
+        keywords: 'wandering seam meeps',
+      },
       { key: 'branch-levels', label: 'Total Branch Levels', value: num(branchLevels) },
       {
         key: 'leaves',
@@ -1609,7 +1556,6 @@ export function useStatCatalog(query: Ref<string>): {
   const BUILDERS: Record<StatCategoryId, ComputedRef<StatEntry[]>> = {
     progression,
     economy,
-    chimeWorks,
     autoBattle,
     combatRecord,
     objectives,

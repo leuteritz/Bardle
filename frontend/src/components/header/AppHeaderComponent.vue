@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useUiStore } from '@/stores/core/uiStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
 import { usePersistence } from '@/composables/system/usePersistence'
 import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
@@ -40,6 +42,8 @@ import LevelProgressTooltip from './LevelProgressTooltip.vue'
 
 const gameStore = useGameStore()
 const uiStore = useUiStore()
+const meepTreeStore = useMeepTreeStore()
+const { focusNode } = useForgeSpotlight()
 const { resetGame } = usePersistence()
 
 // Dieselben Zähler wie Reiterleiste, Tooltip und Herold — config/ui/notifyBadges.ts.
@@ -133,9 +137,19 @@ function openExpeditionTab() {
   uiStore.setBardTab('expedition')
 }
 
-function openTreeTab() {
+/**
+ * Der Weg zu The Wandering — beide Aufrufer wollen dasselbe.
+ *
+ * Die Marke „schmiedbar" traegt der Shop-Knopf daneben; diese hier meldet
+ * „lernbar", und ein Sprung, der nur den Reiter oeffnet, laesst den Spieler mit
+ * 195 Knoten allein. Wohin es geht, entscheidet der Store — dieselbe Quelle,
+ * aus der Taste K liest.
+ */
+function openRoadTab() {
   uiStore.openBardModal()
-  uiStore.setBardTab('tree')
+  uiStore.setBardTab('shop')
+  const target = meepTreeStore.roadAnchorId
+  if (target) focusNode(target, { readable: true })
 }
 
 function openPlanetsTab() {
@@ -472,7 +486,7 @@ onUnmounted(() => {
             class="header-notif-badge header-notif-badge--skill"
             :style="skillBadgeStyle"
             :aria-label="`${skillBadgeCount} skill(s) ready to learn`"
-            @click.stop="openTreeTab"
+            @click.stop="openRoadTab"
           >
             {{ skillBadgeCount }}
           </button>
@@ -511,10 +525,14 @@ onUnmounted(() => {
       <div class="flex-shrink-0 header-inventory-bump">
         <button
           class="btn-gem btn-gem--corner-right"
-          title="Open Skill Tree"
-          @click="uiStore.setBardTab('tree')"
+          title="Open the Star Forge at The Wandering"
+          @click="openRoadTab"
         >
-          <!-- Dasselbe Glyph wie der Tree-Tab im Bard-Profil (HEADER_GEM_ICONS).
+          <!-- Das Glyph der Strasse (HEADER_GEM_ICONS.tree). Der Knopf traegt
+               NICHT dasselbe Ziel wie der Shop-Knopf links, obwohl beide im
+               selben Reiter landen: dieser faehrt weiter, an den aeusseren Rand
+               des Netzes. Zwei Knoepfe auf denselben Anblick waeren einer zu
+               viel.
                OHNE den `boost` der Tab-Leiste: dort gleicht er das Motiv an
                schlankere Phosphor-Nachbarn in EINER Reihe an — hier steht es
                allein in seiner Platte und füllt seinen Kasten ohnehin bis an
@@ -526,7 +544,7 @@ onUnmounted(() => {
             class="btn-gem-icon"
             aria-hidden="true"
           />
-          <span class="btn-gem-label">Tree</span>
+          <span class="btn-gem-label">Wander</span>
         </button>
       </div>
     </div>

@@ -168,8 +168,6 @@ export const SHOP_SUN_MAX_DIAMETER = 320
  * liegt — also in den ersten zwanzig Minuten. Das Frühspiel wird dadurch
  * schneller und zeigt in Stunde 1, worauf man in Stunde 50 spart.
  */
-export const BUILDING_MILESTONE_INTERVAL = 25
-export const BUILDING_MILESTONE_MULT = 2
 
 export const AUGMENT_CHOICE_COUNT = 3
 
@@ -239,66 +237,6 @@ export const AUGMENT_RARITY_COLOR: Record<string, string> = {
   epic: '#a855f7',
   legendary: '#e8c040',
 }
-
-// ── Shop-Katalog: Klick- und Produktionsgebäude ───────────────────────────
-// Grunddaten der sechs Gebäude. Der Store baut daraus seinen Zustand auf und
-// hängt `level` an — die Balance-Werte selbst gehören nach config/.
-// Kostenkurve: cost = baseCost * costMultiplier ^ level.
-export const SHOP_UPGRADE_CATALOG = [
-  {
-    id: 'chimeClicker',
-    name: 'Clicker',
-    baseCost: 10,
-    baseCPC: 1,
-    costMultiplier: 1.2,
-    icon: '/img/ChimesPerClick.png',
-  },
-  {
-    id: 'glockenturm',
-    name: 'Bell Tower',
-    baseCost: 5,
-    baseCPS: 1,
-    costMultiplier: 1.15,
-    icon: '/img/Glockenturm.png',
-  },
-  {
-    id: 'klanggenerator',
-    name: 'Chime Array',
-    baseCost: 20,
-    baseCPS: 3,
-    costMultiplier: 1.2,
-    icon: '/img/KlangGenerator.png',
-  },
-  {
-    id: 'harmoniewerk',
-    name: 'Chime Foundry',
-    baseCost: 100,
-    baseCPS: 5,
-    costMultiplier: 1.25,
-    icon: '/img/HarmonieWerk.png',
-  },
-  {
-    id: 'sphaerenMusik',
-    name: 'Celestial Spheres',
-    baseCost: 500,
-    baseCPS: 10,
-    costMultiplier: 1.3,
-    icon: '/img/SphaerenMusik.png',
-  },
-  {
-    id: 'zeitEcho',
-    name: 'Time Echo',
-    baseCost: 2000,
-    baseCPS: 25,
-    costMultiplier: 1.4,
-    icon: '/img/ZeitEcho.png',
-  },
-] as const
-
-// Shop / Production efficiency
-export const EFFICIENCY_STARS_DIVISOR = 20
-export const EFFICIENCY_STARS_MAX = 5
-export const EFFICIENCY_STARS_MIN = 0.5
 
 // Augments
 export const AUGMENT_CLICK_HISTORY_SIZE = 5

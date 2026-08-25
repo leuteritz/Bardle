@@ -20,7 +20,6 @@ export interface ModifierEffects {
   baseChimesPerClick?: number
   expeditionRewardMultiplier?: number
   eloPowerMultiplier?: number
-  buildingMultipliers?: Record<string, number>
   abilityCPSPerLevel?: number
   abilityCPCPerLevel?: number
   abilityPowerPerLevel?: number
@@ -327,7 +326,7 @@ export type ProgressMetricId =
   | 'clicks'
   | 'meepsEarned'
   | 'materialsCollected'
-  | 'shopBuildingLevels'
+  | 'solarRayLevels'
   // ── Bard ──
   | 'bardLevel'
   | 'abilityCasts'
@@ -359,7 +358,7 @@ export type ProgressMetricId =
  * vor dem ersten Aufbruch fällt — sonst steht er nach jedem Prestige wieder
  * offen.
  */
-export type RunScopedMetricId = Extract<ProgressMetricId, 'bardLevel' | 'shopBuildingLevels'>
+export type RunScopedMetricId = Extract<ProgressMetricId, 'bardLevel'>
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CHRONICLE — Meilensteine über alle Spielsysteme

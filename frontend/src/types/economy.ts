@@ -133,29 +133,6 @@ export interface ExpeditionMission {
   spoils?: ExpeditionSpoilsPayout
 }
 
-export interface ShopUpgrade {
-  id: string
-  name: string
-  baseCost: number
-  baseCPC?: number
-  baseCPS?: number
-  level: number
-  costMultiplier: number
-  icon: string
-}
-
-export interface BuildingStat {
-  id: string
-  name: string
-  icon: string
-  level: number
-  currentCPS: number
-  lifetimeProduction: number
-  efficiency: number
-  efficiencyStars: number
-  productionPercentage: number
-}
-
 /**
  * Ein Glied der CpS-Multiplikatorkette, so wie `shopStore.cpsFactorBreakdown`
  * es liefert: roh, ungefiltert, ungewichtet.
@@ -178,14 +155,6 @@ export interface TimePeriod {
   duration: number
   interval: number
   dataPoints: number
-}
-
-export interface BuildingProduction {
-  [key: string]: number[]
-}
-
-export interface TotalBuildingProduction {
-  [key: string]: number
 }
 
 export interface Expedition {

@@ -141,7 +141,7 @@ describe('maxEverything', () => {
       expect(slot.downUntilMs).toBe(0)
       // Diese zwei Rollen liefern ohne Konfiguration schlicht nichts.
       if (slot.role === 'harvest_node') expect(slot.slotConfig?.materialId).toBeTruthy()
-      if (slot.role === 'resonance_tower') expect(slot.slotConfig?.buildingId).toBeTruthy()
+      if (slot.role === 'resonance_tower') expect(slot.slotConfig?.rayId).toBeTruthy()
     }
   })
 

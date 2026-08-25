@@ -138,7 +138,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'vigil_1',
         name: 'Steady Watch',
-        icon: 'game-icons:lantern-flame', // a light left burning
+        icon: 'game-icons:candlebright', // a light left burning
         effect: '+25% Chimes/s',
         desc: 'A patient watch keeps the chimes ringing on their own.',
         cost: 3,
@@ -148,7 +148,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'vigil_2',
         name: 'Widening Orbit',
-        icon: 'game-icons:orbital', // the watch reaches further out
+        icon: 'game-icons:orbit', // the watch reaches further out
         effect: '+50% Chimes/s',
         desc: 'Your care reaches further across the sky.',
         cost: 10,
@@ -178,7 +178,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'vigil_4b',
         name: 'Longnight Watch',
-        icon: 'game-icons:eclipse', // the sky asleep, the watch deepening
+        icon: 'game-icons:moon-orbit', // the sky asleep, the watch deepening
         effect: '+120% Offline Earnings',
         desc: 'The watch deepens while the sky sleeps.',
         cost: 55,
@@ -195,6 +195,16 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         tier: 4,
         effects: { offlineMaxHoursBonus: 4, cpsMult: 1.5 },
       },
+      {
+        id: 'vigil_6',
+        name: 'The Long Watch',
+        icon: 'game-icons:watchtower', // a tower that keeps its own vigil
+        effect: '+6h Offline Cap \u00b7 +60% Offline Earnings',
+        desc: 'The tower keeps its light while the keeper walks.',
+        cost: 220,
+        tier: 5,
+        effects: { offlineMaxHoursBonus: 6, offlineEarningsMult: 1.6 },
+      },
     ],
   },
   {
@@ -206,7 +216,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'reso_1',
         name: 'Firm Strike',
-        icon: 'game-icons:fist', // a firm strike
+        icon: 'game-icons:punch-blast', // a firm strike
         effect: '+25% Chimes/Click',
         desc: 'Each touch of the chime rings a little louder.',
         cost: 3,
@@ -226,7 +236,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'reso_3',
         name: 'Twin Echo',
-        icon: 'game-icons:echo-ripples', // one strike ringing twice
+        icon: 'game-icons:double-ringed-orb', // one strike ringing twice
         effect: '10% Double-Strike Chance',
         desc: 'Sometimes a single strike rings twice.',
         cost: 26,
@@ -262,6 +272,16 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         cost: 110,
         tier: 4,
         effects: { cpcFromCpsPct: 0.02, cpcMult: 1.5 },
+      },
+      {
+        id: 'reso_6',
+        name: 'Hand of the Caretaker',
+        icon: 'game-icons:hand', // the keeper's own hand on the chime
+        effect: 'Clicks gain +3% of CpS \u00b7 +60% Chimes/Click',
+        desc: 'The hand that wakes the chime is the oldest instrument there is.',
+        cost: 220,
+        tier: 5,
+        effects: { cpcFromCpsPct: 0.03, cpcMult: 1.6 },
       },
     ],
   },
@@ -314,7 +334,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
       {
         id: 'cosmos_4b',
         name: 'Wandering Comet',
-        icon: 'game-icons:falling-star', // a long tail dragging spoils home
+        icon: 'game-icons:burning-meteor', // a long tail dragging spoils home
         effect: '+45% Expedition Rewards',
         desc: 'A long tail drags richer spoils home.',
         cost: 70,
@@ -330,6 +350,16 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         cost: 140,
         tier: 4,
         effects: { meepPowerMult: 1.3, meepCostMult: 0.9 },
+      },
+      {
+        id: 'cosmos_6',
+        name: 'Starcharter',
+        icon: 'game-icons:galaxy', // the whole spiral, charted
+        effect: '+60% Expedition Rewards \u00b7 +40% Meep Power',
+        desc: 'Every anchorage on every arm, and the way between them.',
+        cost: 280,
+        tier: 5,
+        effects: { expeditionRewardMult: 1.6, meepPowerMult: 1.4 },
       },
     ],
   },
@@ -399,6 +429,16 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         tier: 4,
         effects: { powerBonus: 5000 },
       },
+      {
+        id: 'battle_6',
+        name: 'Hostbearer',
+        icon: 'game-icons:war-bonnet', // the crest a host follows
+        effect: '+12000 Power',
+        desc: 'They do not follow a banner. They follow the one who carries it.',
+        cost: 280,
+        tier: 5,
+        effects: { powerBonus: 12000 },
+      },
     ],
   },
   {
@@ -467,6 +507,16 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         tier: 4,
         effects: { bossDamageMult: 1.3 },
       },
+      {
+        id: 'warden_6',
+        name: 'Sunward Aegis',
+        icon: 'game-icons:sun-priest', // the keeper standing before the star
+        effect: '+50% Boss Damage \u00b7 +2 HP/s',
+        desc: 'Nothing reaches the star that has not gone through the warden.',
+        cost: 280,
+        tier: 5,
+        effects: { bossDamageMult: 1.5, hpRegenPerSec: 2 },
+      },
     ],
   },
 ]
@@ -476,8 +526,8 @@ export const MEEP_TREE_NODES: readonly MeepTreeNodeDef[] = MEEP_TREE_BRANCHES.fl
   (branch) => branch.nodes,
 )
 
-/** Ranks per branch — the number the player reads as "Rank N of 5". */
-export const MEEP_TREE_TIERS_PER_BRANCH = 5
+/** Ranks per branch — the number the player reads as "Rank N of 6". */
+export const MEEP_TREE_TIERS_PER_BRANCH = 6
 
 /**
  * How many nodes ONE save can ever hold: one per branch and rank, so a fork

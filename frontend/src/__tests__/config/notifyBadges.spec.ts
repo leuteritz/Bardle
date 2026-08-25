@@ -3,6 +3,7 @@ import { join, relative, resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import { NOTIFY_BADGES, NOTIFY_BADGE_BY_KIND } from '@/config/ui/notifyBadges'
 import { NOTIFY_BADGE_TITLE } from '@/config/constants'
+import type { BardTabId } from '@/types'
 
 /*
  * Der Vertrag der Notify-Marken: was im Markup leuchtet, steht in der Registry —
@@ -177,6 +178,20 @@ describe('Notify-Registry ist vollständig', () => {
   it('nur Marken ohne Seed-Weg tragen seedability none', () => {
     for (const badge of NOTIFY_BADGES) {
       expect(badge.seedability === 'none', badge.id).toBe(!badge.hasBadge)
+    }
+  })
+
+  /*
+   * Beim Abriss des Tree-Reiters zeigte eine Marke noch auf `tab: 'tree'` — ein
+   * Ziel, das es nicht mehr gab. Der Compiler faengt das, solange `tab` getippt
+   * ist; diese Zusicherung faengt es auch dann, wenn jemand den Typ aufweicht,
+   * und nennt beim Bruch den Reiter statt einer Typmeldung.
+   */
+  it('nennt kein Ziel, das es als Reiter nicht gibt', () => {
+    const tabs: BardTabId[] = ['bard', 'shop', 'team', 'expedition', 'battle', 'admin', 'planets']
+    for (const badge of NOTIFY_BADGES) {
+      if (badge.tab === null) continue
+      expect(tabs, `${badge.id} zeigt auf ${badge.tab}`).toContain(badge.tab)
     }
   })
 

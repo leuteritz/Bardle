@@ -8,14 +8,17 @@ import {
   FORGE_RAY_DIST,
   FORGE_STAGE_SIZE,
   FORGE_SUN_EDGE_GAP,
+  FORGE_ROAD_BAND,
   FORGE_ZONE_BAND,
   SHOP_SUN_MAX_DIAMETER,
   SOLAR_BRANCHES,
 } from '@/config/constants'
 import { FORGE_NODES, getForgeNode } from '@/config/progression/starForge'
 import { FORGE_BRIDGES, FORGE_CLUSTERS } from '@/config/progression/starForgeNet'
+import { FORGE_SEATS, forgeSeatTier, getForgeSeat } from '@/config/progression/forgeSeats'
+import { MEEP_TREE_BRANCHES, MEEP_TREE_NODES } from '@/config/progression/meepTree'
+import { FORGE_ROAD_LANES } from '@/config/progression/starForgeNet'
 import { forgeEdges, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
-import type { ForgeUpgradeTier } from '@/types'
 
 /**
  * Die Geometrie des NETZES — Nachfolgerin von `forgeGeometry.spec.ts`.
@@ -64,20 +67,24 @@ const BAND_TOLERANCE_PX = 70
 
 const RAY_IDS = new Set<string>(SOLAR_BRANCHES.map((b) => b.id))
 
-function tierOf(id: string): ForgeUpgradeTier {
-  return getForgeNode(id)?.tier ?? 'root'
-}
-
 describe('Star Forge — das Netz steht frei', () => {
-  it('jeder Knoten hat genau einen Platz', () => {
+  it('jeder SITZ hat genau einen Platz', () => {
+    // Gemessen wird gegen `FORGE_SEATS` und nicht mehr gegen die Kataloge: die
+    // Sitzfrage ist eine eigene, und sobald ein Knoten aus einem anderen
+    // Katalog auf die Buehne kommt, muss diese Zusicherung ihn mitzaehlen,
+    // ohne dass jemand hier eine zweite Quelle nachtraegt.
     const places = forgeTreePlacements()
-    expect(places.size).toBe(FORGE_NODES.length + SOLAR_BRANCHES.length)
-    for (const def of FORGE_NODES) {
-      expect(places.get(def.id), `${def.id} steht nirgends`).toBeDefined()
+    expect(places.size).toBe(FORGE_SEATS.length)
+    for (const seat of FORGE_SEATS) {
+      expect(places.get(seat.id), `${seat.id} steht nirgends`).toBeDefined()
     }
-    for (const ray of SOLAR_BRANCHES) {
-      expect(places.get(ray.id), `${ray.id} steht nirgends`).toBeDefined()
-    }
+  })
+
+  it('die Sitz-Quelle deckt beide Kataloge und kennt keine Dublette', () => {
+    const ids = FORGE_SEATS.map((seat) => seat.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    for (const def of FORGE_NODES) expect(forgeSeatTier(def.id)).toBe(def.tier)
+    for (const ray of SOLAR_BRANCHES) expect(forgeSeatTier(ray.id)).toBe('root')
   })
 
   it('kein Knotenpaar unterschreitet die Mindestluft', () => {
@@ -94,7 +101,7 @@ describe('Star Forge — das Netz steht frei', () => {
         const pb = places.get(ids[j])!
         const air =
           Math.hypot(pa.x - pb.x, pa.y - pb.y) -
-          (FORGE_NODE_DIAMETER[tierOf(ids[i])] + FORGE_NODE_DIAMETER[tierOf(ids[j])]) / 2
+          (FORGE_NODE_DIAMETER[forgeSeatTier(ids[i])] + FORGE_NODE_DIAMETER[forgeSeatTier(ids[j])]) / 2
         if (air < worst.air) worst = { a: ids[i], b: ids[j], air }
       }
     }
@@ -145,7 +152,7 @@ describe('Star Forge — das Netz steht frei', () => {
     const half = FORGE_STAGE_SIZE / 2
     const sunEdge = SHOP_SUN_MAX_DIAMETER / 2 + FORGE_SUN_EDGE_GAP
     for (const [id, at] of places) {
-      const r = FORGE_NODE_DIAMETER[tierOf(id)] / 2
+      const r = FORGE_NODE_DIAMETER[forgeSeatTier(id)] / 2
       const dist = Math.hypot(at.x - half, at.y - half)
       expect(dist - r, `${id} steckt in der Sonne`).toBeGreaterThanOrEqual(sunEdge - 1)
       expect(dist + r, `${id} ragt über die Bühnenkante`).toBeLessThanOrEqual(half + 1)
@@ -181,8 +188,12 @@ describe('Star Forge — das Netz steht frei', () => {
     const places = forgeTreePlacements()
     const half = FORGE_STAGE_SIZE / 2
     for (const cluster of FORGE_CLUSTERS) {
-      const band = FORGE_ZONE_BAND[cluster.phase]
-      expect(band, `Phase ${cluster.phase} hat kein Band`).toBeDefined()
+      // Zwei Regionen, zwei Bänderleitern: bei der Sonne ist der Index die
+      // PHASE, auf der Strasse der RANG. Ein gemeinsames Array wäre eine
+      // Sonnenphase, die es nicht gibt.
+      const band =
+        cluster.region === 'road' ? FORGE_ROAD_BAND[cluster.rank] : FORGE_ZONE_BAND[cluster.phase]
+      expect(band, `${cluster.id} hat kein Band`).toBeDefined()
       for (const id of cluster.members) {
         const at = places.get(id)
         if (!at) continue
@@ -221,7 +232,7 @@ describe('Star Forge — das Netz steht frei', () => {
         const b = places.get(ids[j])!
         const gap =
           Math.hypot(a.x - b.x, a.y - b.y) -
-          (FORGE_NODE_DIAMETER[tierOf(ids[i])] + FORGE_NODE_DIAMETER[tierOf(ids[j])]) / 2
+          (FORGE_NODE_DIAMETER[forgeSeatTier(ids[i])] + FORGE_NODE_DIAMETER[forgeSeatTier(ids[j])]) / 2
         if (gap < nearest) nearest = gap
       }
       air.push(nearest)
@@ -242,6 +253,64 @@ describe('Star Forge — das Netz steht frei', () => {
     expect(median, `Median-Luft ${median.toFixed(0)} px`).toBeGreaterThanOrEqual(
       FORGE_COMFORT_AIR_PX * 0.7,
     )
+  })
+
+  it('die Strasse liegt jenseits der Sonnenleiter', () => {
+    // Sie überlappt mit dem letzten Sonnenband — wie jede Zone mit ihrer
+    // Nachbarin —, aber sie beginnt und endet weiter aussen. Ohne diese
+    // Zusicherung könnte eine Spur eines Tages MITTEN durch die Kronen laufen.
+    const lastSun = FORGE_ZONE_BAND[FORGE_ZONE_BAND.length - 1]
+    for (let i = 0; i < FORGE_ROAD_BAND.length; i++) {
+      expect(FORGE_ROAD_BAND[i].inner, `Strassenband ${i}`).toBeGreaterThan(lastSun.inner)
+      expect(FORGE_ROAD_BAND[i].outer, `Strassenband ${i}`).toBeGreaterThan(lastSun.outer)
+    }
+    for (let i = 1; i < FORGE_ROAD_BAND.length; i++) {
+      expect(FORGE_ROAD_BAND[i].inner).toBeGreaterThan(FORGE_ROAD_BAND[i - 1].inner)
+      expect(FORGE_ROAD_BAND[i].outer).toBeGreaterThan(FORGE_ROAD_BAND[i - 1].outer)
+    }
+  })
+
+  it('jede Spur trägt genau einen Meep-Zweig, in Rangreihenfolge', () => {
+    // Das POSITIVE Gegenstück zu `forgeMixing.spec.ts`, das die Strasse
+    // ausnimmt: dort steht gegen einen Sektor, der über sechs Ringe eine
+    // Aussage trug. Hier IST die Spur die Aussage — sie läuft nach aussen statt
+    // im Kreis, und ihre Ordnung ist ihr Inhalt. Ohne diese Zusicherung wäre
+    // die Ausnahme dort ein Loch ohne Ersatz.
+    expect(FORGE_ROAD_LANES.length).toBe(MEEP_TREE_BRANCHES.length)
+    for (const lane of FORGE_ROAD_LANES) {
+      const branch = MEEP_TREE_BRANCHES.find((b) => lane.id === `lane_${b.id}`)
+      expect(branch, `${lane.id} gehört zu keinem Zweig`).toBeDefined()
+      expect(lane.members).toEqual(branch!.nodes.map((n) => n.id))
+      const tiers = branch!.nodes.map((n) => n.tier)
+      expect([...tiers].sort((a, b) => a - b)).toEqual(tiers)
+    }
+  })
+
+  it('Rang für Rang weiter nach aussen', () => {
+    // „Rang = Entfernung" ist der ganze Grund, aus dem eine Spur ein
+    // Ringabschnitt über die volle Tiefe ist statt eines Knotens je Ring.
+    const places = forgeTreePlacements()
+    const half = FORGE_STAGE_SIZE / 2
+    const distOf = (id: string) => {
+      const at = places.get(id)!
+      return Math.hypot(at.x - half, at.y - half)
+    }
+    for (const branch of MEEP_TREE_BRANCHES) {
+      const byTier = new Map<number, number[]>()
+      for (const node of branch.nodes) {
+        const list = byTier.get(node.tier) ?? []
+        list.push(distOf(node.id))
+        byTier.set(node.tier, list)
+      }
+      const tiers = [...byTier.keys()].sort((a, b) => a - b)
+      for (let i = 1; i < tiers.length; i++) {
+        const prev = Math.max(...byTier.get(tiers[i - 1])!)
+        const here = Math.min(...byTier.get(tiers[i])!)
+        expect(here, `${branch.id}: Rang ${tiers[i] + 1} steht nicht weiter aussen`).toBeGreaterThan(
+          prev - BAND_TOLERANCE_PX,
+        )
+      }
+    }
   })
 
   it('die Bänder steigen streng, und keines beginnt vor den Strahlen', () => {
@@ -265,8 +334,14 @@ describe('Star Forge — das Netz steht frei', () => {
     for (const def of FORGE_NODES) {
       expect(mappedSet.has(def.id), `${def.id} liegt in keinem Cluster`).toBe(true)
     }
+    // Gegen die SITZ-Quelle statt gegen einen einzelnen Katalog: die Karte
+    // trägt seit The Wandering Knoten aus zwei Katalogen, und ein Ort ohne
+    // Knoten fällt sonst niemandem auf.
     for (const id of mapped) {
-      expect(getForgeNode(id), `die Karte kennt ${id}, der Katalog nicht`).toBeDefined()
+      expect(getForgeSeat(id), `die Karte kennt ${id}, kein Katalog nicht`).toBeDefined()
+    }
+    for (const def of MEEP_TREE_NODES) {
+      expect(mappedSet.has(def.id), `${def.id} liegt auf keiner Spur`).toBe(true)
     }
     // Die Strahlen gehören keinem Cluster — sie sind der Anfang, kein Ort.
     for (const rayId of RAY_IDS) {

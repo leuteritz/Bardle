@@ -14,6 +14,8 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { FORGE_NODES, getForgeNode } from '@/config/progression/starForge'
+import { FORGE_SEATS } from '@/config/progression/forgeSeats'
+import { MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
 import {
   SOLAR_BRANCHES,
   SOLAR_MAX_LEVELS,
@@ -137,14 +139,33 @@ describe('useForgeUpgrades — Bestand', () => {
     setActivePinia(createPinia())
   })
 
-  it('lists every root and every forge node exactly once', () => {
+  it('lists every SEAT exactly once — Strahl, Forge-Knoten und Wandering', () => {
+    // Gegen die Sitz-Quelle statt gegen die Kataloge: die Schiene liest seit
+    // dem Merge aus ZWEI Stores, und ein Eintrag, der in keinem von beiden
+    // steht, faellt sonst niemandem auf.
     const { upgradeEntries, entryById } = useForgeUpgrades()
-    expect(upgradeEntries.value).toHaveLength(SOLAR_BRANCHES.length + FORGE_NODES.length)
+    expect(upgradeEntries.value).toHaveLength(FORGE_SEATS.length)
     const ids = upgradeEntries.value.map((e) => e.id)
     expect(new Set(ids).size).toBe(ids.length)
     expect(entryById.value.size).toBe(ids.length)
-    for (const id of [...ROOT_IDS, ...FORGE_NODES.map((n) => n.id)]) {
-      expect(entryById.value.has(id), `missing "${id}"`).toBe(true)
+    for (const seat of FORGE_SEATS) {
+      expect(entryById.value.has(seat.id), `missing "${seat.id}"`).toBe(true)
+    }
+  })
+
+  it('kein Eintrag mit Meep-Preis landet je im Sammelkauf', () => {
+    // Der Sammelkauf ist ein CHIME-Besen. An der Gabel von The Wandering waere
+    // ein mitgenommener Knoten eine unwiderrufliche Wahl, die der Spieler nie
+    // getroffen hat — deshalb steht die Wache in `takeLevels()` und nicht nur
+    // als Kommentar.
+    const game = useGameStore()
+    game.chimes = 1e30
+    game.meeps = 1e6
+    const { affordableLevels, entryById } = useForgeUpgrades()
+    for (const id of Object.keys(MEEP_TREE_NODE_INDEX)) {
+      const entry = entryById.value.get(id)
+      if (!entry?.canBuy) continue
+      expect(affordableLevels(id), `${id} wuerde mitgenommen`).toBe(0)
     }
   })
 

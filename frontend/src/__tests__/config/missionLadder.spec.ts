@@ -129,7 +129,7 @@ describe('mission ladder — reachability', () => {
 
 describe('mission ladder — the prestige rule', () => {
   it('places no run-scoped metric after the first departure', () => {
-    // `bardLevel` und `shopBuildingLevels` fallen bei jedem Prestige auf null.
+    // `bardLevel` fällt bei jedem Prestige auf null.
     // Dahinter stünde die Mission nach jedem Aufbruch wieder offen.
     const departure = MISSION_INDEX['firstDeparture']
     expect(departure, 'firstDeparture missing — the rule has no anchor').toBeGreaterThan(0)

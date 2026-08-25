@@ -4,6 +4,7 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { gameTickPlan, resetGameClock, setGameSpeed } from '@/utils/game/gameClock'
+import { SOLAR_CPS_PER_LEVEL } from '@/config/constants'
 
 /**
  * Der tragende Test des Zeitraffers: „Speed 10 ist Speed 1, nur schneller."
@@ -21,7 +22,7 @@ import { gameTickPlan, resetGameClock, setGameSpeed } from '@/utils/game/gameClo
 const T0 = 1_700_000_000_000
 /** Eine Spielminute — lang genug für Meep-Schwellen, kurz genug für 3000 Ticks. */
 const GAME_MS = 60_000
-const BELL_TOWER_LEVEL = 5
+const RAY_LEVEL = 5
 
 type Snapshot = {
   inGameTime: number
@@ -41,7 +42,7 @@ function runAtSpeed(speed: number): Snapshot {
   const solar = useSolarUpgradeStore()
 
   // Eine Produktionsquelle, damit `chimes` überhaupt wächst.
-  shop.shopUpgrades.find((u) => u.id === 'glockenturm')!.level = BELL_TOWER_LEVEL
+  solar.chimesPerSecondLevel = RAY_LEVEL
   shop.refreshRates()
 
   const { interval, catchUp } = gameTickPlan(speed)
@@ -80,7 +81,7 @@ describe('Zeitraffer-Invarianz', () => {
     const live = runAtSpeed(1)
     expect(live.ticks).toBe(60)
     expect(live.inGameTime).toBe(60)
-    expect(live.chimes).toBe(BELL_TOWER_LEVEL * 60)
+    expect(live.chimes).toBe(RAY_LEVEL * SOLAR_CPS_PER_LEVEL * 60)
     expect(live.dwellMs).toBe(GAME_MS)
   })
 

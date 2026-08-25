@@ -63,6 +63,7 @@ import {
   SHOP_SUN_MAX_DIAMETER,
 } from '@/config/constants'
 import { getForgeNode } from '@/config/progression/starForge'
+import { forgeSeatTier } from '@/config/progression/forgeSeats'
 import { forgeEdges, forgeTreePlacements, type Point } from '@/utils/ui/forgeTreeLayout'
 
 export type { Point }
@@ -149,7 +150,7 @@ const SUN_ID = '__sun__'
 function buildBlockers(places: ReadonlyMap<string, Point>): Blocker[] {
   const all: Blocker[] = []
   for (const [id, at] of places) {
-    const tier = getForgeNode(id)?.tier ?? 'root'
+    const tier = forgeSeatTier(id)
     all.push({
       id,
       x: at.x,

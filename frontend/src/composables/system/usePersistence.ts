@@ -109,7 +109,6 @@ export function normalizeSecondarySlots(rows: unknown[]): (string | null)[][] {
 export function usePersistence() {
   function saveGame() {
     const gameStore = useGameStore()
-    const shopStore = useShopStore()
     const battleStore = useBattleStore()
     const expeditionStore = useExpeditionStore()
     const expeditionChartStore = useExpeditionChartStore()
@@ -165,8 +164,6 @@ export function usePersistence() {
         currentUniverse: gameStore.currentUniverse,
         prestigeAvailable: gameStore.prestigeAvailable,
         activeExpedition: gameStore.activeExpedition,
-        buildingProductionHistory: gameStore.buildingProductionHistory,
-        totalBuildingProduction: gameStore.totalBuildingProduction,
         activeAugments: [...gameStore.activeAugments],
         pendingAugmentChoice: gameStore.pendingAugmentChoice,
         pendingAugmentOptions: [...gameStore.pendingAugmentOptions],
@@ -181,10 +178,6 @@ export function usePersistence() {
         totalOfflineSeconds: gameStore.totalOfflineSeconds,
         universeRun: { ...gameStore.universeRun },
         universeRuns: gameStore.universeRuns.map((run) => ({ ...run })),
-      },
-      shop: {
-        buyAmount: shopStore.buyAmount,
-        shopUpgrades: shopStore.shopUpgrades.map((u) => ({ id: u.id, level: u.level })),
       },
       battle: {
         mmr: battleStore.mmr,
@@ -384,6 +377,7 @@ export function usePersistence() {
         boughLevels: { ...starForgeStore.boughLevels },
         glimmerLevels: { ...starForgeStore.glimmerLevels },
         crownLevels: { ...starForgeStore.crownLevels },
+        confluenceLevels: { ...starForgeStore.confluenceLevels },
         relicLevels: { ...starForgeStore.relicLevels },
         forgedConstellations: [...starForgeStore.forgedConstellations],
         acknowledgedShop: [...starForgeStore.acknowledgedShop],
@@ -490,7 +484,6 @@ export function usePersistence() {
       anchorGameClock(saved.gameClockOffset ?? 0)
 
       const gameStore = useGameStore()
-      const shopStore = useShopStore()
       const battleStore = useBattleStore()
       const expeditionStore = useExpeditionStore()
       const inventoryStore = useInventoryStore()
@@ -517,9 +510,6 @@ export function usePersistence() {
         gameStore.currentUniverse = g.currentUniverse ?? gameStore.currentUniverse
         gameStore.prestigeAvailable = g.prestigeAvailable ?? gameStore.prestigeAvailable
         gameStore.activeExpedition = g.activeExpedition ?? null
-        if (g.buildingProductionHistory)
-          gameStore.buildingProductionHistory = g.buildingProductionHistory
-        if (g.totalBuildingProduction) gameStore.totalBuildingProduction = g.totalBuildingProduction
         if (Array.isArray(g.activeAugments)) gameStore.activeAugments = g.activeAugments
         gameStore.pendingAugmentChoice = g.pendingAugmentChoice ?? false
         if (Array.isArray(g.pendingAugmentOptions))
@@ -564,16 +554,11 @@ export function usePersistence() {
         universeRunRestored = Boolean(g.universeRun)
       }
 
-      // Restore shopStore
-      if (saved.shop) {
-        shopStore.buyAmount = saved.shop.buyAmount ?? shopStore.buyAmount
-        if (Array.isArray(saved.shop.shopUpgrades)) {
-          for (const savedUpgrade of saved.shop.shopUpgrades) {
-            const upgrade = shopStore.shopUpgrades.find((u) => u.id === savedUpgrade.id)
-            if (upgrade) upgrade.level = savedUpgrade.level ?? 0
-          }
-        }
-      }
+      // Ein `shop`-Block aus einem alten Spielstand wird UEBERGANGEN. Er trug
+      // die sechs Chime-Gebaeude, die mit dem Star-Forge-Umbau ihre Oberflaeche
+      // verloren hatten und seither in jedem Spielstand auf Stufe 0 standen;
+      // sie sind ersatzlos gefallen. Kein Umbenennungseintrag noetig — es gibt
+      // kein Ziel, auf das die Ids zeigen koennten.
 
       // CPS/CPC recalculation deferred until after solarStore is restored (see below)
 
@@ -1058,6 +1043,7 @@ export function usePersistence() {
         // leeres Objekt zurueck.
         starForgeStore.glimmerLevels = migratedIdMap(saved.starForge.glimmerLevels)
         starForgeStore.crownLevels = migratedIdMap(saved.starForge.crownLevels)
+        starForgeStore.confluenceLevels = migratedIdMap(saved.starForge.confluenceLevels)
         starForgeStore.relicLevels = migratedIdMap(saved.starForge.relicLevels)
         starForgeStore.forgedConstellations = migratedIds(saved.starForge.forgedConstellations)
         // Gesehen bleibt gesehen — und das ist keine Kosmetik: der Offline-Ertrag
@@ -1179,7 +1165,8 @@ export function usePersistence() {
           ? { ...savedProvidence }
           : null
 
-      // Recalculate derived CPS/CPC after all levels (buildings + solar + forge) are restored
+      // Recalculate derived CPS/CPC after all levels (solar + forge) are restored
+      const shopStore = useShopStore()
       gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
       gameStore.chimesPerClick = shopStore.calculateTotalCPC()
 
@@ -1280,8 +1267,6 @@ export function usePersistence() {
     gameStore.lastAutoPick = { id: '', at: 0, seq: 0 }
     gameStore.currentUniverse = 1
     gameStore.prestigeAvailable = false
-    gameStore.buildingProductionHistory = {}
-    gameStore.totalBuildingProduction = {}
     gameStore.activeExpedition = null
     gameStore.isHyperspaceActive = false
     gameStore.showUniverseSelectModal = false
@@ -1302,13 +1287,6 @@ export function usePersistence() {
     gameStore.universeRuns = []
     // Basislinie erst am Ende von resetGame setzen — hier stehen die Zähler der
     // anderen Stores noch auf ihren alten Werten (siehe unten).
-
-    // 3. Reset shopStore
-    const shopStore = useShopStore()
-    shopStore.shopUpgrades.forEach((u) => {
-      u.level = 0
-    })
-    shopStore.buyAmount = 1
 
     // 4. Reset augmentStore
     const augmentStore = useAugmentStore()
@@ -1441,6 +1419,7 @@ export function usePersistence() {
     planetShopStoreR.activeRoleModalSlotId = null
 
     // 8. Recalculate CPS/CPC from clean state
+    const shopStore = useShopStore()
     gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
     gameStore.chimesPerClick = shopStore.calculateTotalCPC()
 

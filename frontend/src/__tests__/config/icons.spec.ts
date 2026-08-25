@@ -1,7 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
-import { MEEP_TREE_BRANCHES } from '@/config/progression/meepTree'
+import { MEEP_TREE_BRANCHES, MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
+import { FORGE_SEATS } from '@/config/progression/forgeSeats'
+import { FORGE_NODES } from '@/config/progression/starForge'
+import { SOLAR_BRANCHES } from '@/config/constants'
 import { CHAMPION_PERKS, CHAMPION_STATS } from '@/config/champions/championLevels'
 import { AUGMENTS, AUGMENT_POOL } from '@/config/economy/augments'
 import { OMENS } from '@/config/progression/omens'
@@ -175,6 +178,79 @@ describe('Icons — distinct within one list', () => {
 
   it('every augment can be rolled on level-up', () => {
     expect(AUGMENT_POOL).toHaveLength(AUGMENTS.length)
+  })
+
+  /*
+   * Seit dem Zusammenlauf stehen Sonnenleiter und The Wandering auf EINER
+   * Buehne. Was dort gleichzeitig sichtbar ist, muss unterscheidbar sein —
+   * „eindeutig innerhalb einer Liste" reicht dafuer nicht mehr.
+   *
+   * Zwei Gruppen sind ausgenommen, und beide aus einem Grund, nicht aus Nachsicht:
+   *
+   * - **Die Glimmers.** Die sechzig kleinen Knoten tragen ABSICHTLICH das Glyph
+   *   ihrer Wirkungsfamilie (`ph:sword-fill` fuer Kampf, `ph:moon-fill` fuer
+   *   Ruhe). Ihr Motiv ist die Familie, nicht der Knoten — sie einzeln
+   *   unterscheidbar zu machen hiesse, diese Auskunft zu loeschen.
+   * - **Fuenf benannte Paare der Sonnenleiter.** Sie sind AELTER als der Merge
+   *   und liegen je in verschiedenen Zonen. Sie stehen namentlich unten, damit
+   *   ein SECHSTES Paar bricht — eine offene Regel haette hier gar nichts gefangen.
+   *
+   * Relikte und Konstellationen fehlen ganz: sie stehen nie auf der Buehne,
+   * sondern im Angebotsstreifen.
+   */
+  const STAGE_ICON_LEGACY = new Set([
+    'game-icons:gold-nuggets', // chimesPerClick | midasOverflow
+    'game-icons:hourglass', // chimesPerSecond | quickening
+    'game-icons:heart-tower', // wardensVigil | wardensReprieve
+    'game-icons:laurel-crown', // wanderersCrest | steadfastTribute
+    'game-icons:anchor', // riftAnchor | stillpoint
+  ])
+
+  it('no two nodes on the forge stage share an icon', () => {
+    const seen = new Map<string, string>()
+    for (const seat of FORGE_SEATS) {
+      if (seat.tier === 'glimmer') continue
+      const icon =
+        FORGE_NODES.find((n) => n.id === seat.id)?.icon ??
+        MEEP_TREE_NODE_INDEX[seat.id]?.node.icon ??
+        SOLAR_BRANCHES.find((b) => b.id === seat.id)?.icon
+      if (!icon || STAGE_ICON_LEGACY.has(icon)) continue
+      expect(seen.get(icon), `${icon}: ${seen.get(icon)} und ${seat.id}`).toBeUndefined()
+      seen.set(icon, seat.id)
+    }
+    expect(seen.size).toBeGreaterThan(60)
+  })
+
+  /* Die Ausnahmeliste darf nicht ueberleben, was sie entschuldigt: faellt ein
+     Paar weg, faellt sein Eintrag mit — sonst deckt sie stillschweigend den
+     naechsten Fall zu. */
+  it('keeps no stale entry in the legacy list', () => {
+    const counts = new Map<string, number>()
+    for (const seat of FORGE_SEATS) {
+      if (seat.tier === 'glimmer') continue
+      const icon =
+        FORGE_NODES.find((n) => n.id === seat.id)?.icon ??
+        MEEP_TREE_NODE_INDEX[seat.id]?.node.icon ??
+        SOLAR_BRANCHES.find((b) => b.id === seat.id)?.icon
+      if (icon) counts.set(icon, (counts.get(icon) ?? 0) + 1)
+    }
+    for (const icon of STAGE_ICON_LEGACY) {
+      expect(counts.get(icon) ?? 0, `${icon} ist nicht mehr doppelt`).toBeGreaterThan(1)
+    }
+  })
+
+  /* Was auf der Strasse steht, teilt kein Motiv mit der Sonnenleiter — das ist
+     die Nachbarschaft, die der Merge NEU geschaffen hat, und sie traegt keine
+     Ausnahme. */
+  it('no wandering node borrows an icon from the sun ladder', () => {
+    const ladder = new Set([
+      ...FORGE_NODES.map((n) => n.icon),
+      ...SOLAR_BRANCHES.map((b) => b.icon),
+    ])
+    for (const id of Object.keys(MEEP_TREE_NODE_INDEX)) {
+      const icon = MEEP_TREE_NODE_INDEX[id]!.node.icon
+      expect(ladder.has(icon), `${id}: ${icon}`).toBe(false)
+    }
   })
 
   it('no two perks of the same tier share an icon', () => {

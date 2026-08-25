@@ -3,6 +3,12 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
+import {
+  MEEP_TREE_NODES,
+  MEEP_TREE_NODE_INDEX,
+  type MeepTreeNodeDef,
+} from '@/config/progression/meepTree'
 import { useForgeHerald } from '@/composables/ui/useForgeHerald'
 import { FORGE_NODES, forgeNodeName, getForgeNode } from '@/config/progression/starForge'
 import { forgeCostItems } from '@/utils/game/forgeCost'
@@ -35,6 +41,9 @@ import {
   FORGE_LEVEL_PREFIX,
   FORGE_ROW_PRICE_FIT_STEPS,
   FORGE_ROW_PRICE_FIT_FALLBACK,
+  MEEP_SKILL_ARCHIVE_SEALED_LABEL,
+  MEEP_STATE_LEARNED,
+  MEEP_STATE_OPEN,
 } from '@/config/constants'
 
 /**
@@ -103,6 +112,9 @@ export const FORGE_EMPTY_UPGRADE_ENTRY: ForgeUpgradeEntry = {
   reqs: [],
   unlockProgress: 0,
   canBuy: false,
+  meepCost: 0,
+  meepOk: true,
+  rivals: [],
 }
 
 /**
@@ -137,7 +149,11 @@ export const FORGE_EMPTY_UPGRADE_ENTRY: ForgeUpgradeEntry = {
  *     Kosten weiter zeigen.
  */
 export function forgeUpgradeBucket(entry: ForgeUpgradeEntry): ForgeUpgradeBucketId {
-  if (entry.state === 'maxed') return 'grown'
+  // `sealed` fällt zu `grown`, nicht zu `next`: an einem versiegelten
+  // Gabelknoten ist nichts mehr zu TUN. Eine Sperre ist etwas, das man
+  // angehen kann — hier ist die Entscheidung gefallen, und die Schublade ist
+  // der Ort für alles, woran nichts mehr zu entscheiden ist.
+  if (entry.state === 'maxed' || entry.state === 'sealed') return 'grown'
   if (entry.state === 'locked') return 'next'
   return entry.canBuy ? 'ready' : 'reach'
 }
@@ -167,7 +183,7 @@ export function forgeUpgradeBucket(entry: ForgeUpgradeEntry): ForgeUpgradeBucket
  * und zwei Kopien beantworten den nächsten Zustand verschieden.
  */
 export function forgeUpgradeMayTravel(entry: ForgeUpgradeEntry | undefined): boolean {
-  return entry !== undefined && entry.state !== 'locked'
+  return entry !== undefined && entry.state !== 'locked' && entry.state !== 'sealed'
 }
 
 /**
@@ -300,6 +316,7 @@ export function useForgeUpgrades(): {
   const inventoryStore = useInventoryStore()
   const solarStore = useSolarUpgradeStore()
   const forgeStore = useStarForgeStore()
+  const meepTree = useMeepTreeStore()
   const { heraldUpgrade, heraldUpgradeBulk, heraldBuyAll } = useForgeHerald()
 
   function costItems(cost: Record<string, number>): ForgeCostItem[] {
@@ -366,6 +383,9 @@ export function useForgeUpgrades(): {
       reqs: [],
       unlockProgress: 1,
       canBuy: buyable,
+      meepCost: 0,
+      meepOk: true,
+      rivals: [],
     }
   }
 
@@ -524,12 +544,96 @@ export function useForgeUpgrades(): {
       reqs: forgeStore.nodeRequirements(def),
       unlockProgress: lock.progress,
       canBuy: buyable,
+      meepCost: 0,
+      meepOk: true,
+      rivals: [],
+    }
+  }
+
+  /**
+   * Ein Knoten von The Wandering als Zeile der Schiene.
+   *
+   * Der Zustand bleibt beim `meepTreeStore` — hier wird nur PROJIZIERT. Das ist
+   * kein neues Muster, sondern dasselbe, das `rootEntry()` seit jeher für die
+   * fünf Kernstrahlen tut: der Eintrag ist die eine Sprache, die Kachel, Baum
+   * und Kärtchen sprechen, und woher seine Zahlen kommen, geht ihnen nichts an.
+   *
+   * Die Abbildung der Zustände ist die ganze Übersetzung:
+   * `bought → maxed` · `blocked → sealed` · `buyable → affordable` ·
+   * `reachable → empty` · `locked → locked`. Ein Meep-Knoten hat genau eine
+   * Stufe, also ist `maxLevel` 1 und `nowText`/`nextText` ein Zustandspaar wie
+   * bei einer Krone — „0 → 0" wäre dort wie hier die falsche Auskunft.
+   */
+  function meepEntry(def: MeepTreeNodeDef): ForgeUpgradeEntry {
+    const index = MEEP_TREE_NODE_INDEX[def.id]
+    const nodeState = meepTree.nodeState(def.id)
+    const bought = nodeState === 'bought'
+    const meepOk = gameStore.meeps >= def.cost
+
+    let state: ForgeUpgradeState
+    if (bought) state = 'maxed'
+    else if (nodeState === 'blocked') state = 'sealed'
+    else if (nodeState === 'buyable') state = 'affordable'
+    else if (nodeState === 'reachable') state = 'empty'
+    else state = 'locked'
+
+    const rivals = index.excl
+      .map((id) => MEEP_TREE_NODE_INDEX[id]?.node)
+      .filter((n): n is MeepTreeNodeDef => Boolean(n))
+      .map((n) => ({ id: n.id, name: n.name }))
+
+    const rank = def.tier + 1
+    // Der Sperrsatz nennt den RANG darunter und keinen einzelnen Knoten: die
+    // Kette ist ein ODER, „einer davon genügt" ist die ganze Bedingung.
+    const lockReason =
+      state === 'sealed'
+        ? `${MEEP_SKILL_ARCHIVE_SEALED_LABEL} by ${rivals[0]?.name ?? 'the other path'}`
+        : state === 'locked'
+          ? `Requires any ${index.branch.name} node of rank ${rank - 1}`
+          : ''
+
+    const learnedBelow = index.req.filter((id) => meepTree.isBought(id)).length
+    return {
+      id: def.id,
+      name: def.name,
+      icon: def.icon,
+      color: index.branch.color,
+      tier: 'meep',
+      tierLabel: FORGE_UPGRADE_TIER_LABELS.meep,
+      level: bought ? 1 : 0,
+      maxLevel: 1,
+      state,
+      goldCost: 0,
+      goldOk: true,
+      materials: [],
+      desc: def.effect,
+      nextDesc: def.effect,
+      nowText: bought ? MEEP_STATE_LEARNED : MEEP_STATE_OPEN,
+      nextText: MEEP_STATE_LEARNED,
+      lockReason,
+      lockKind: state === 'locked' || state === 'sealed' ? 'parent' : '',
+      lockPhase: -1,
+      parentName: `${index.branch.name} · Rank ${rank}`,
+      reqs: index.req.map((id) => ({
+        id,
+        name: MEEP_TREE_NODE_INDEX[id]?.node.name ?? id,
+        have: meepTree.isBought(id) ? 1 : 0,
+        need: 1,
+        met: meepTree.isBought(id),
+        progress: meepTree.isBought(id) ? 1 : 0,
+      })),
+      unlockProgress: index.req.length === 0 ? 1 : learnedBelow > 0 ? 1 : 0,
+      canBuy: nodeState === 'buyable',
+      meepCost: def.cost,
+      meepOk,
+      rivals,
     }
   }
 
   const upgradeEntries = computed<ForgeUpgradeEntry[]>(() => [
     ...ROOTS.map(rootEntry),
     ...FORGE_NODES.map(nodeEntry),
+    ...MEEP_TREE_NODES.map(meepEntry),
   ])
 
   const entryById = computed(() => new Map(upgradeEntries.value.map((entry) => [entry.id, entry])))
@@ -542,7 +646,9 @@ export function useForgeUpgrades(): {
    * Die Wahrheit dahinter liegt im Store (`shopFreshIds`), weil sie den Reload
    * überleben muss; hier steht nur die Umformung fürs Nachschlagen.
    */
-  const freshIds = computed(() => new Set(forgeStore.shopFreshIds))
+  const freshIds = computed(
+    () => new Set([...forgeStore.shopFreshIds, ...meepTree.notifyingNodeIds]),
+  )
 
   /**
    * Kauft eine Stufe und meldet, ob es geklappt hat. Die Rückmeldung im Bild —
@@ -565,8 +671,18 @@ export function useForgeUpgrades(): {
        oder Baumknoten", und die steht im Katalog. Dieselbe Weiche wie in
        `forgeFocusMeta()`. */
     const def = getForgeNode(id)
-    const root = def ? undefined : ROOTS.find((meta) => meta.id === id)
-    if (!def && !root) return false
+    const meep = def ? undefined : MEEP_TREE_NODE_INDEX[id]
+    const root = def || meep ? undefined : ROOTS.find((meta) => meta.id === id)
+    if (!def && !root && !meep) return false
+
+    // The Wandering. Der Kauf gehoert dem `meepTreeStore` — hier steht nur die
+    // Weiche und die Quittung, damit beide Wege gleich sprechen.
+    if (meep) {
+      meepTree.acknowledgeNode(id)
+      if (!meepTree.buyNode(id)) return false
+      if (!opts.silent) announceBought(id, 1)
+      return true
+    }
 
     /* Gekauft heißt gesehen — VOR dem Kauf quittiert, weil `acknowledgeShopEntry`
        nur greift, solange der Eintrag noch als kaufbar gilt. Für Zeile und Baum
@@ -639,6 +755,11 @@ export function useForgeUpgrades(): {
     cap: number,
   ): { levels: number; chimeCost: number } {
     if (!entry.canBuy) return { levels: 0, chimeCost: 0 }
+    // Der Sammelkauf ist ein CHIME-Besen. Ein Meep-Preis ist eine zweite
+    // Waehrung, ueber die sein Knopf nichts sagt — und an der Gabel von The
+    // Wandering waere er eine unwiderrufliche Wahl, die der Spieler nie
+    // getroffen hat. `forgeUpgrades.spec.ts` bindet das.
+    if (entry.meepCost > 0) return { levels: 0, chimeCost: 0 }
 
     const isRoot = entry.tier === 'root'
     const level = currentLevel(entry)

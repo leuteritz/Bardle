@@ -22,7 +22,24 @@ import type { IconPoolKey } from './ui'
  * bisher nichts zu sagen hatte (Void-Takt, Drifter, Vorzeichen, Ladder, Bosse,
  * Gebäudepreise, Bard-Fähigkeiten).
  */
-export type ForgeNodeTier = 'branch' | 'leaf' | 'ward' | 'pact' | 'bough' | 'crown' | 'glimmer'
+export type ForgeNodeTier =
+  | 'branch'
+  | 'leaf'
+  | 'ward'
+  | 'pact'
+  | 'bough'
+  | 'crown'
+  | 'glimmer'
+  /**
+   * Ein Knoten an der NAHT zwischen Sonne und The Wandering.
+   *
+   * Er verlangt einen Forge-Knoten UND einen Knoten der Strasse, kostet
+   * Chimes, Material UND Meeps, und seine Wirkung wächst mit dem, was auf
+   * der Strasse schon gelernt ist. Es gibt ihn erst, seit die beiden
+   * Systeme in einem Netz stehen — vorher hätte er auf nichts zeigen
+   * können.
+   */
+  | 'confluence'
 
 /**
  * Die fuenf Achsen des Baums — dieselben Ids wie die Solar Rays im
@@ -96,12 +113,10 @@ export type ForgeEffectFamily =
  * Die Mitgliedsliste ist die EINE Stelle, an der die Zuordnung Knoten -> Ort
  * steht. Sie im Knoten zu fuehren waere dieselbe Angabe an 155 Stellen.
  */
-export interface ForgeClusterDef {
+interface ForgeClusterBase {
   id: string
   /** Anzeigename — Bards Kosmos, nie musikalisch. */
   title: string
-  /** Sonnenphase, die die Mitte dieses Clusters oeffnet. */
-  phase: number
   /**
    * Die RICHTUNG des Clusters, in Grad ab 3 Uhr im Uhrzeigersinn — und das
    * einzige, was die Karte noch ueber seinen Ort sagt.
@@ -117,9 +132,37 @@ export interface ForgeClusterDef {
   angleDeg: number
   /** Leitfarbe des Zonenscheins. */
   accent: string
-  /** Mitglieder in Auslege-Reihenfolge: Knoten-Ids aus `FORGE_NODES`. */
+  /** Mitglieder in Auslege-Reihenfolge. */
   members: readonly string[]
 }
+
+/**
+ * Ein Cluster der SONNE — die fuenfundzwanzig Orte der Phasenleiter. Sein Band
+ * kommt aus `FORGE_ZONE_BAND`, und der Index dort IST die Sonnenphase.
+ */
+export interface ForgeSunClusterDef extends ForgeClusterBase {
+  region?: 'sun'
+  /** Sonnenphase, die die Mitte dieses Clusters oeffnet. */
+  phase: number
+}
+
+/**
+ * Ein Cluster der STRASSE — sie liegt jenseits der Phasenleiter und hat keine
+ * Sonnenphase. Ihr Band kommt aus `FORGE_ROAD_BAND`, und der Index dort ist ein
+ * Rang, keine Phase.
+ *
+ * Eine eigene Variante und kein weiterer `phase`-Wert: ein siebter Eintrag in
+ * `FORGE_ZONE_BAND` waere eine Sonnenphase, die es nicht gibt, und genau das
+ * prueft `forgePhaseZones.spec.ts` nach. So bekommt stattdessen jeder Leser von
+ * `cluster.phase` einen Compilerfehler, bis er die beiden Faelle trennt.
+ */
+export interface ForgeRoadClusterDef extends ForgeClusterBase {
+  region: 'road'
+  /** Index in `FORGE_ROAD_BAND`. */
+  rank: number
+}
+
+export type ForgeClusterDef = ForgeSunClusterDef | ForgeRoadClusterDef
 
 /**
  * Eine Kante OHNE Spiellogik — ein Weg, der zwei Cluster verbindet, damit das
@@ -382,7 +425,15 @@ export interface ForgeRowTipAnchor {
 // ── Kaufbares im Baum: eine Fassung für Wurzeln UND Forge-Knoten ─────────────
 
 /** Welcher Ring — Wurzeln liegen im solarUpgradeStore, der Rest im starForgeStore. */
-export type ForgeUpgradeTier = 'root' | ForgeNodeTier
+/**
+ * Jede Art von SITZ auf der Bühne — nicht dasselbe wie `ForgeNodeTier`.
+ *
+ * `root` sind die fünf Kernstrahlen, die in keinem Knotenkatalog stehen.
+ * `meep` sind die Knoten der Strasse: sie gehören dem `meepTreeStore`, stehen
+ * aber im selben Netz und brauchen deshalb einen Durchmesser, eine Strichbreite
+ * und eine Beschriftung wie jeder andere Sitz auch.
+ */
+export type ForgeUpgradeTier = 'root' | ForgeNodeTier | 'meep'
 
 /**
  * Zustand eines Knotens, wie ihn Baum und Liste gleichermaßen lesen.
@@ -391,7 +442,22 @@ export type ForgeUpgradeTier = 'root' | ForgeNodeTier
  * Ring: nur Wurzeln kennen die Gleichwuchs-Sperre (`maxAllowedLevel`), nur die
  * Ringe darüber kennen eine Freischaltung über Phase und Elternstufe.
  */
-export type ForgeUpgradeState = 'locked' | 'empty' | 'partial' | 'affordable' | 'capped' | 'maxed'
+export type ForgeUpgradeState =
+  | 'locked'
+  | 'empty'
+  | 'partial'
+  | 'affordable'
+  | 'capped'
+  | 'maxed'
+  /**
+   * Ein Gabelknoten von The Wandering, dessen Gegenstück gelernt wurde.
+   *
+   * Eigener Zustand und nicht `locked` mit Sondersatz: eine Sperre ist etwas,
+   * das man angehen kann — hier ist nichts mehr zu tun, der Knoten ist die
+   * sichtbare Spur einer Entscheidung. Die Liste legt ihn deshalb ins Archiv
+   * und nicht unter „was fehlt noch".
+   */
+  | 'sealed'
 
 /**
  * Wohin ein Eintrag in der Upgrade-LISTE fällt — nicht zu verwechseln mit
@@ -500,6 +566,22 @@ export interface ForgeUpgradeEntry {
   /** Fortschritt zur Freischaltung, 0–1 — nur bei `locked` aussagekräftig. */
   unlockProgress: number
   canBuy: boolean
+  /**
+   * Der dritte Preis. `0` heißt: dieser Eintrag kostet keine Meeps — und das
+   * ist bei hundertfünfundfünfzig von hundertfünfundachtzig Einträgen so.
+   *
+   * Er ist zugleich die Weiche des Sammelkaufs: `takeLevels()` übergeht jeden
+   * Eintrag mit `meepCost > 0`. Ein Chime-Besen darf keine zweite Währung
+   * ausgeben, über die sein Knopf nichts sagt — und an der Gabel wäre es eine
+   * unwiderrufliche Wahl, die der Spieler nie getroffen hat.
+   */
+  meepCost: number
+  meepOk: boolean
+  /**
+   * Die Geschwister desselben Rangs. Nur an der Gabel besetzt, sonst leer —
+   * sie tragen den CHOICE-Chip und den Gabelsatz im Kärtchen.
+   */
+  rivals: { id: string; name: string }[]
 }
 
 // ── Was AUSSERHALB des Baums kaufbar ist: Relikt, Konstellation, Handel ──────

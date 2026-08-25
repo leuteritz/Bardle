@@ -48,6 +48,19 @@ const pinnedId = ref<string | null>(null)
 const focusTick = ref(0)
 
 /**
+ * „Und zwar so, dass ich ihn LESEN kann" — der zweite Impuls, und der einzige,
+ * der den Zoom anfasst.
+ *
+ * Er ist nicht dasselbe wie `focusTick`. Wer eine Zeile anklickt, hat seinen
+ * Zoom bewusst gewaehlt, und eine Bühne, die ihn dabei verstellt, waere eine
+ * Bevormundung. Wer dagegen aus dem NICHTS an eine Stelle springt — Taste K auf
+ * The Wandering —, kommt am Zoomboden bei einem Knoten von sechs Pixeln an:
+ * gemessen 6,5 px in der Vollübersicht. Hinfahren allein beantwortet die Geste
+ * dort nicht.
+ */
+const readableTick = ref(0)
+
+/**
  * Anheftung schlägt Liste schlägt Baum — von der absichtlichsten Geste zur
  * billigsten.
  *
@@ -108,13 +121,14 @@ export function useForgeSpotlight(): {
   treeHoverId: Readonly<Ref<string | null>>
   pinnedId: Readonly<Ref<string | null>>
   focusTick: Readonly<Ref<number>>
+  readableTick: Readonly<Ref<number>>
   listHovering: ComputedRef<boolean>
   pinned: ComputedRef<boolean>
   setListHover: (id: string | null) => void
   setTreeHover: (id: string | null) => void
   setPin: (id: string) => void
   refocus: () => void
-  focusNode: (id: string) => void
+  focusNode: (id: string, opts?: { readable?: boolean }) => void
   clearPin: () => void
   resetForgeSpotlight: () => void
 } {
@@ -150,9 +164,10 @@ export function useForgeSpotlight(): {
    * Steht hier und nicht je Komponente — es ist EINE Regel, und Zeile wie
    * Archivzeile müssen sie gleich beantworten.
    */
-  function focusNode(id: string): void {
+  function focusNode(id: string, opts: { readable?: boolean } = {}): void {
     if (pinnedId.value === id) refocus()
     else setPin(id)
+    if (opts.readable) readableTick.value += 1
   }
 
   function clearPin(): void {
@@ -183,6 +198,7 @@ export function useForgeSpotlight(): {
     treeHoverId: readonly(treeHoverId),
     pinnedId: readonly(pinnedId),
     focusTick: readonly(focusTick),
+    readableTick: readonly(readableTick),
     listHovering,
     pinned,
     setListHover,

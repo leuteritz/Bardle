@@ -24,6 +24,7 @@ import {
   FORGE_CROWN_MAX_LEVEL,
   FORGE_VAULT_REQUIRED_LEVEL,
   SOLAR_BRANCHES,
+  FORGE_CONFLUENCE_BASE_COST,
 } from '@/config/constants'
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -612,7 +613,7 @@ export const FORGE_WARDS: ForgeNodeDef[] = [
     '#ffd0a0',
     'market',
     { nebula_quartz: 8, void_shard: 2 },
-    'Building upgrades cost {v}% less.',
+    'Solar Ray upgrades cost {v}% less.',
     4,
     { baseCost: 200_000, costMultiplier: 2.8 },
   ),
@@ -826,8 +827,8 @@ export const FORGE_PACTS: ForgeNodeDef[] = [
     '#ffd0a0',
     'market',
     { nebula_quartz: 14, dark_matter: 2 },
-    'Building milestones arrive {v} levels sooner.',
-    2,
+    'Solar Rays give {v}% more Chimes/Sec.',
+    4,
   ),
   pact(
     'augursPact',
@@ -1223,6 +1224,130 @@ function crown(
   }
 }
 
+
+/* ── DIE NAHT: Confluences ───────────────────────────────────────────────────
+ *
+ * Fuenf Knoten, die es ohne den Merge nicht geben koennte. Jeder haengt an einem
+ * Bough der Sonne UND verlangt einen Knoten von The Wandering — und seine
+ * Wirkung ist keine feste Zahl, sondern eine KOPPLUNG: sie waechst mit jedem
+ * Knoten, der auf der Strasse gelernt ist.
+ *
+ * Das ist der Grund, warum sie keine weiteren Prozente sind. Eine Krone
+ * verschiebt eine Regel, ein Bough gibt einen Betrag; eine Confluence macht aus
+ * zwei getrennten Fortschritten EINEN. Wer nur schmiedet, bekommt von ihr
+ * nichts, wer nur wandert, kann sie nicht kaufen.
+ *
+ * **Verlangt wird der ERSTE Knoten der Spur, nicht ein tiefer.** Das ist keine
+ * Milde, sondern Geometrie: eine Confluence sitzt zwischen Bough und Strasse,
+ * und ihre Bedingungskante ZIEHT im Layout. Haengt sie an Rang 2 oder 3, zerrt
+ * sie den Knoten unter seine Vorgaenger — gemessen kippte die Reihenfolge der
+ * Spur um 80 px, und `forgeNetGeometry.spec.ts` faengt genau das. An Rang 1
+ * zieht sie am innersten Knoten, und die Ordnung bleibt.
+ *
+ * Es kostet auch nichts: das TOR ist der erste Schritt auf die Strasse, die
+ * WIRKUNG kommt aus dem ganzen Weg. Ein tieferes Tor haette nur verschoben,
+ * wann man kaufen darf — nicht, was der Kauf wert ist.
+ *
+ * `maxLevel` ist 1 — dieselbe Begruendung wie bei der Krone: sie sind
+ * Entscheidungen, keine Leitern. Ihr Preis hat drei Beine (Chimes, Material,
+ * Meeps) und ist die einzige Stelle im Spiel, an der das so ist.
+ *
+ * Sie zaehlen NICHT in `progressMetrics.forgeLevels` — dieselbe Begruendung,
+ * aus der `crownLevels` dort fehlt: fuenf Einsen sind keine geschmiedete Tiefe.
+ */
+function confluence(
+  id: string,
+  name: string,
+  parentId: string,
+  requiresMeep: string,
+  icon: string,
+  color: string,
+  family: ForgeEffectFamily,
+  materialCost: Record<string, number>,
+  desc: string,
+  effectPerLevel: number,
+): ForgeNodeDef {
+  return {
+    id,
+    name,
+    parentId,
+    requires: [{ id: requiresMeep, level: 1 }],
+    tier: 'confluence',
+    phase: FORGE_BOUGH_UNLOCK_PHASE,
+    icon,
+    color,
+    family,
+    baseCost: FORGE_CONFLUENCE_BASE_COST,
+    costMultiplier: 1,
+    materialCost,
+    desc,
+    effectPerLevel,
+  }
+}
+
+export const FORGE_CONFLUENCES: ForgeNodeDef[] = [
+  confluence(
+    'tidewatch',
+    'Tidewatch',
+    'kindledVigil',
+    'vigil_1',
+    'game-icons:knot',
+    '#e8c040',
+    'idle',
+    { comet_ice: 8, star_iron: 4 },
+    'Offline earnings +{v}% for every node opened on The Wandering.',
+    3,
+  ),
+  confluence(
+    'handfast',
+    'Handfast',
+    'deepResonance',
+    'reso_1',
+    'game-icons:linked-rings',
+    '#8fe060',
+    'click',
+    { comet_ice: 8, plasma_core: 1 },
+    'Chimes per click +{v}% for every node opened on The Wandering.',
+    3,
+  ),
+  confluence(
+    'waychart',
+    'Waychart',
+    'endlessTide',
+    'cosmos_1',
+    'game-icons:stone-bridge',
+    '#58c0d0',
+    'travel',
+    { star_iron: 4, aether_dust: 1 },
+    'Expedition rewards +{v}% for every node opened on The Wandering.',
+    3,
+  ),
+  confluence(
+    'hostcall',
+    'Hostcall',
+    'undyingWrath',
+    'battle_1',
+    'game-icons:triple-gate',
+    '#e05050',
+    'ladder',
+    { star_iron: 4, plasma_core: 1 },
+    '+{v} battle power for every node opened on The Wandering.',
+    400,
+  ),
+  confluence(
+    'sunbind',
+    'Sunbind',
+    'adamantCore',
+    'warden_1',
+    'game-icons:crossed-air-flows',
+    '#c060e0',
+    'boss',
+    { comet_ice: 8, aether_dust: 1 },
+    'Damage to planet bosses +{v}% for every node opened on The Wandering.',
+    3,
+  ),
+]
+
 export const FORGE_CROWNS: ForgeNodeDef[] = [
   /* ── Die fünf ALTEN: die eigene Achse bis nach unten ───────────────────────
      Jede verlangt zusätzlich den Ward IHRER Speiche auf dessen Pyre-Deckel. Der
@@ -1536,6 +1661,7 @@ const GLIMMER_TARGETS = new Map<string, ForgeNodeDef>(
     ...FORGE_PACTS,
     ...FORGE_BOUGHS,
     ...FORGE_CROWNS,
+    ...FORGE_CONFLUENCES,
   ].map((def) => [def.id, def]),
 )
 
@@ -1649,6 +1775,10 @@ export const FORGE_NODES: ForgeNodeDef[] = [
   ...FORGE_PACTS,
   ...FORGE_CROWNS,
   ...FORGE_BOUGHS,
+  // Die Confluences NACH den Boughs: adminMaxAll() arbeitet dieses Array der
+  // Reihe nach ab und verlaesst sich darauf, dass jeder Vorgaenger schon dran
+  // war — eine Confluence haengt an einem Bough.
+  ...FORGE_CONFLUENCES,
   /*
    * Die Glimmers stehen ZULETZT, und das ist Spiellogik, keine Ordnungsliebe.
    * `starForgeStore.adminMaxAll()` arbeitet dieses Array in Reihenfolge ab und

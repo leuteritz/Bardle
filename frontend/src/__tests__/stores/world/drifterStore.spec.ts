@@ -469,7 +469,7 @@ describe('drifterStore', () => {
       const game = useGameStore()
       const shop = useShopStore()
       const store = useDrifterStore()
-      shop.shopUpgrades.find((u) => u.id === 'glockenturm')!.level = 100
+      useSolarUpgradeStore().chimesPerSecondLevel = 100
       game.chimesPerSecond = shop.calculateTotalCPS()
       const before = game.chimesPerSecond
       expect(before).toBeGreaterThan(0)
@@ -485,7 +485,7 @@ describe('drifterStore', () => {
       const game = useGameStore()
       const shop = useShopStore()
       const store = useDrifterStore()
-      shop.shopUpgrades.find((u) => u.id === 'chimeClicker')!.level = 10
+      useSolarUpgradeStore().chimesPerClickLevel = 10
       const before = shop.calculateTotalCPC()
 
       store.applyBuff(getDrifter('emberShard')!)
@@ -511,7 +511,7 @@ describe('drifterStore', () => {
       const game = useGameStore()
       const shop = useShopStore()
       const store = useDrifterStore()
-      shop.shopUpgrades.find((u) => u.id === 'glockenturm')!.level = 100
+      useSolarUpgradeStore().chimesPerSecondLevel = 100
       game.chimesPerSecond = shop.calculateTotalCPS()
       const plain = game.chimesPerSecond
 

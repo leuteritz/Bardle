@@ -3,7 +3,6 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useGameStore } from '@/stores/core/gameStore'
-import { useShopStore } from '@/stores/economy/shopStore'
 import { useItemStore } from '@/stores/economy/itemStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
@@ -19,7 +18,7 @@ import {
   FORGE_WARD_MAX_LEVEL,
   FORGE_PACT_MAX_LEVEL,
   FORGE_MIN_BARD_COOLDOWN_MULT,
-  FORGE_MIN_BUILDING_COST_MULT,
+  FORGE_MIN_RAY_COST_MULT,
   FORGE_MIN_ITEM_COST_MULT,
   FORGE_MIN_CHAMPION_LEVEL_COST_MULT,
   FORGE_MAX_VOID_SPAWN_INTERVAL_MULT,
@@ -37,9 +36,7 @@ import {
   FORGE_MIN_BARGAIN_PRICE_MULT,
   FORGE_MIN_BARGAIN_RESTOCK_MULT,
   FORGE_MIN_LP_LOSS_MULT,
-  FORGE_MIN_BUILDING_MILESTONE_INTERVAL,
   FORGE_MAX_AUGMENT_LUCK_MULT,
-  BUILDING_MILESTONE_INTERVAL,
 } from '@/config/constants'
 
 /**
@@ -279,31 +276,33 @@ describe('Ring 4 & 5 — die Wirkung kommt beim Zielsystem an', () => {
     expect(usePlanetShopStore()).toBeDefined()
   })
 
-  it('Kiln Subsidy verbilligt jede Gebäudestufe — und zwar überall gleich', () => {
-    const shop = useShopStore()
-    const upgrade = shop.shopUpgrades[0]
-    const before = shop.getUpgradeCost(upgrade)
+  it('Kiln Subsidy verbilligt jede Solar-Ray-Stufe — und zwar überall gleich', () => {
+    const solar = useSolarUpgradeStore()
+    const before = solar.branchCost('chimesPerSecond')
 
     grow('kilnSubsidy')
-    const after = shop.getUpgradeCost(upgrade)
+    const after = solar.branchCost('chimesPerSecond')
     expect(after).toBeLessThan(before)
-    expect(useStarForgeStore().buildingCostMult).toBeCloseTo(FORGE_MIN_BUILDING_COST_MULT, 10)
+    expect(useStarForgeStore().rayCostMult).toBeCloseTo(FORGE_MIN_RAY_COST_MULT, 10)
 
-    // Einzelpreis und Stapelpreis lesen denselben Getter — die Fehlerklasse,
-    // gegen die er gebaut ist, wäre ein Rabatt in nur einem der drei Wege.
-    shop.buyAmount = 1
-    expect(shop.getTotalUpgradeCost(upgrade)).toBe(after)
+    // Angezeigter und abgebuchter Preis lesen denselben Getter — die
+    // Fehlerklasse, gegen die er gebaut ist, wäre ein Rabatt in nur einem Weg.
+    expect(solar.levelCost('chimesPerSecond', solar.branchLevel('chimesPerSecond'))).toBe(after)
   })
 
-  it("Founder's Pact rückt die Gebäude-Meilensteine zusammen", () => {
+  it("Founder's Pact hebt den Chime-Ertrag der Strahlen", () => {
     const forge = useStarForgeStore()
-    expect(forge.buildingMilestoneInterval).toBe(BUILDING_MILESTONE_INTERVAL)
+    const solar = useSolarUpgradeStore()
+    solar.chimesPerSecondLevel = 4
+    expect(forge.solarCpsMult).toBe(1)
+    const before = solar.cpsBonus
+
     grow('foundersPact')
-    const interval = forge.buildingMilestoneInterval
-    expect(interval).toBeLessThan(BUILDING_MILESTONE_INTERVAL)
-    expect(interval).toBeGreaterThanOrEqual(FORGE_MIN_BUILDING_MILESTONE_INTERVAL)
-    // Eine ganze Stufenzahl — `buildingMilestoneMultiplier` teilt durch sie.
-    expect(Number.isInteger(interval)).toBe(true)
+    expect(forge.solarCpsMult).toBeGreaterThan(1)
+    expect(solar.cpsBonus).toBeGreaterThan(before)
+    // Additiv je Stufe, nicht multiplikativ — die Bedingung, unter der ein
+    // Knoten die CpS heben darf, mit der er bezahlt wird.
+    expect(solar.cpsBonus).toBeCloseTo(before * forge.solarCpsMult, 6)
   })
 
   it('Omen-Reader und Augur’s Pact drehen an Takt UND Anspruch der Vorzeichen', () => {
@@ -386,7 +385,7 @@ describe('Ring 4 & 5 — die Wirkung kommt beim Zielsystem an', () => {
 
     const floors: [string, number, number][] = [
       ['bardCooldownMult', forge.bardCooldownMult, FORGE_MIN_BARD_COOLDOWN_MULT],
-      ['buildingCostMult', forge.buildingCostMult, FORGE_MIN_BUILDING_COST_MULT],
+      ['rayCostMult', forge.rayCostMult, FORGE_MIN_RAY_COST_MULT],
       ['itemCostMult', forge.itemCostMult, FORGE_MIN_ITEM_COST_MULT],
       ['championLevelCostMult', forge.championLevelCostMult, FORGE_MIN_CHAMPION_LEVEL_COST_MULT],
       ['voidMeepLossMult', forge.voidMeepLossMult, FORGE_MIN_VOID_MEEP_LOSS_MULT],

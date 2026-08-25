@@ -22,13 +22,6 @@ export const STAT_CATEGORIES: StatCategoryDef[] = [
     accent: '#f0b040',
   },
   {
-    id: 'chimeWorks',
-    label: 'Chime Works',
-    blurb: 'Every building and what it produced',
-    icon: 'game-icons:windchimes',
-    accent: '#c89040',
-  },
-  {
     id: 'autoBattle',
     label: 'Auto Battle',
     blurb: 'Ranked ladder and match record',

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useGameStore } from '@/stores/core/gameStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
+import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
@@ -83,7 +84,7 @@ import {
   FORGE_CROWN_OMEN_HP_FLOOR_FRACTION,
   FORGE_TWINNED_SKY_EXTRA_DRIFTERS,
   FORGE_MIN_BARD_COOLDOWN_MULT,
-  FORGE_MIN_BUILDING_COST_MULT,
+  FORGE_MIN_RAY_COST_MULT,
   FORGE_MIN_ITEM_COST_MULT,
   FORGE_MIN_CHAMPION_LEVEL_COST_MULT,
   FORGE_MAX_VOID_SPAWN_INTERVAL_MULT,
@@ -101,9 +102,7 @@ import {
   FORGE_MIN_BARGAIN_PRICE_MULT,
   FORGE_MIN_BARGAIN_RESTOCK_MULT,
   FORGE_MIN_LP_LOSS_MULT,
-  FORGE_MIN_BUILDING_MILESTONE_INTERVAL,
   FORGE_MAX_AUGMENT_LUCK_MULT,
-  BUILDING_MILESTONE_INTERVAL,
   SOLAR_BRANCHES,
   SOLAR_MATERIAL_FROM_LEVEL,
 } from '@/config/constants'
@@ -172,6 +171,9 @@ const TIER_PARENT_MIN_LEVEL: Record<ForgeNodeDef['tier'], number> = {
   pact: FORGE_PACT_PARENT_MIN_LEVEL,
   crown: FORGE_CROWN_PARENT_MIN_LEVEL,
   bough: FORGE_BOUGH_PARENT_MIN_LEVEL,
+  // Eine Confluence verlangt von ihrem Bough dieselbe Stufe wie eine Krone von
+  // ihrem Ward: sie sitzt neben ihm, nicht ueber ihm.
+  confluence: FORGE_CROWN_PARENT_MIN_LEVEL,
   /*
    * Ein Glimmer verlangt von seinem Anker die ERSTE Stufe und keine zweite.
    *
@@ -228,6 +230,15 @@ export const useStarForgeStore = defineStore('starForge', {
      * `crownLevels` schon aus dem gleichen Grund meiden.
      */
     glimmerLevels: {} as Record<string, number>,
+    /**
+     * Die fünf Confluences — 0 oder 1, wie eine Krone.
+     *
+     * Eigener Beutel, und zwingend: `achievementStore.metricValue` summiert für
+     * die Codex-Bahn „Sunsmith" die gedeckelten Ringe plus Relikte. Fünf Einsen
+     * sind keine geschmiedete Tiefe — dieselbe Begründung, aus der `crownLevels`,
+     * `boughLevels` und `glimmerLevels` dort schon fehlen.
+     */
+    confluenceLevels: {} as Record<string, number>,
     /** Relic levels, keyed by ForgeRelicDef id (0/absent = not forged). */
     relicLevels: {} as Record<string, number>,
     forgedConstellations: [] as string[],
@@ -269,6 +280,7 @@ export const useStarForgeStore = defineStore('starForge', {
         state.boughLevels[id] ??
         state.crownLevels[id] ??
         state.glimmerLevels[id] ??
+        state.confluenceLevels[id] ??
         0
     },
 
@@ -591,6 +603,26 @@ export const useStarForgeStore = defineStore('starForge', {
         const def = getForgeNode(nodeId)
         if (!def || (def.tier !== 'ward' && def.tier !== 'pact')) return 0
         return this.nodeLevel(nodeId) * def.effectPerLevel + this.glimmerBoost(nodeId)
+      }
+    },
+
+    /**
+     * Was eine Confluence beiträgt — in Prozentpunkten wie jeder Forge-Effekt.
+     *
+     * Ihre Wirkung ist eine KOPPLUNG und keine Zahl: `effectPerLevel` je Knoten,
+     * der auf The Wandering gelernt ist. Gekauft, aber ohne Weg dahinter, gibt
+     * sie null — und das ist der Entwurf, nicht ein Randfall.
+     *
+     * Gezählt wird `bought.length` und NICHT ein eigener Zähler: der Meep-Baum
+     * führt seine gelernten Knoten ohnehin als Liste, und eine zweite Quelle
+     * liefe beim ersten Kauf auseinander.
+     */
+    confluenceEffect(): (nodeId: string) => number {
+      return (nodeId) => {
+        const def = getForgeNode(nodeId)
+        if (!def || def.tier !== 'confluence') return 0
+        if ((this.confluenceLevels[nodeId] ?? 0) < 1) return 0
+        return def.effectPerLevel * useMeepTreeStore().bought.length
       }
     },
 
@@ -955,6 +987,7 @@ export const useStarForgeStore = defineStore('starForge', {
         (this.branchEffect('moonOrbit') +
           this.relicEffect('echoOfTheVoid') +
           this.boughEffect('sleeplessOrbit') +
+          this.confluenceEffect('tidewatch') +
           eternal) /
           100
       )
@@ -971,6 +1004,7 @@ export const useStarForgeStore = defineStore('starForge', {
         1 +
         (this.branchEffect('wayfindersCache') +
           this.boughEffect('wayfarersHoard') +
+          this.confluenceEffect('waychart') +
           // Was `MIN_EXPEDITION_MULT` am Tempo abschneidet, kommt hier als
           // Beute wieder heraus — bei Vollausbau die grösste der vier
           // Überlaufmengen (37 Punkte).
@@ -1387,9 +1421,22 @@ export const useStarForgeStore = defineStore('starForge', {
         1 +
         (this.branchEffect('shatter') +
           this.relicEffect('emberCrown') +
-          this.boughEffect('undyingWrath')) /
+          this.boughEffect('undyingWrath') +
+          this.confluenceEffect('sunbind')) /
           100
       )
+    },
+
+    /**
+     * Flacher Power-Zuschlag der Naht (Hostcall).
+     *
+     * Ein eigener Getter und kein Summand in einem Multiplikator: die vier
+     * anderen Confluences zahlen Prozentpunkte in eine bestehende Klammer,
+     * diese zahlt einen BETRAG — und Betraege stehen im Spiel neben
+     * `abilityPowerBonus`, nicht in einem Faktor.
+     */
+    battlePowerBonus(): number {
+      return this.confluenceEffect('hostcall')
     },
 
     /** Fraction of click damage splashed to all enemies
@@ -1423,8 +1470,14 @@ export const useStarForgeStore = defineStore('starForge', {
       const tempest = this.constellationForged('goldenTempest')
         ? FORGE_CONSTELLATION_GOLDEN_TEMPEST_CPC_MULT
         : 1
+      // Handfast steht IN der Klammer und nicht daneben: seine Kopplung sind
+      // Prozentpunkte wie die zwei neben ihr, kein Faktor auf alles.
       const tree =
-        1 + (this.branchEffect('gildedHarvest') + this.boughEffect('gildedCascade')) / 100
+        1 +
+        (this.branchEffect('gildedHarvest') +
+          this.boughEffect('gildedCascade') +
+          this.confluenceEffect('handfast')) /
+          100
       return tempest * (this.buffActive('cpcX2') ? 2 : 1) * tree
     },
 
@@ -1576,9 +1629,9 @@ export const useStarForgeStore = defineStore('starForge', {
       )
     },
 
-    /** Faktor auf den Preis einer Gebäudestufe (< 1 = billiger). */
-    buildingCostMult(): number {
-      return Math.max(FORGE_MIN_BUILDING_COST_MULT, 1 - this.ringEffect('kilnSubsidy') / 100)
+    /** Faktor auf den Preis einer Solar-Ray-Stufe (< 1 = billiger). */
+    rayCostMult(): number {
+      return Math.max(FORGE_MIN_RAY_COST_MULT, 1 - this.ringEffect('kilnSubsidy') / 100)
     },
 
     /** Faktor auf den Abstand zweier Vorzeichen-Angebote (< 1 = häufiger). */
@@ -1592,17 +1645,13 @@ export const useStarForgeStore = defineStore('starForge', {
     },
 
     /**
-     * Abstand zweier Gebäude-Meilensteine in Stufen (Founder's Pact).
+     * Faktor auf den Chime-Ertrag der Solar Rays (Founder's Pact).
      *
-     * Gibt die ZAHL zurück und nicht einen Faktor: `buildingMilestoneMultiplier`
-     * teilt die Stufe durch dieses Intervall, und ein gebrochenes Intervall
-     * verschöbe die Schwellen um Bruchteile einer Stufe.
+     * Additiv je Stufe, während der Preis geometrisch steigt — dieselbe
+     * Bedingung, unter der Ring 7 offen sein darf (docs/balance.md).
      */
-    buildingMilestoneInterval(): number {
-      return Math.max(
-        FORGE_MIN_BUILDING_MILESTONE_INTERVAL,
-        BUILDING_MILESTONE_INTERVAL - Math.round(this.ringEffect('foundersPact')),
-      )
+    solarCpsMult(): number {
+      return 1 + this.ringEffect('foundersPact') / 100
     },
 
     /** Faktor auf die Zielgrösse eines Vorzeichens (< 1 = leichter). */
@@ -1756,6 +1805,8 @@ export const useStarForgeStore = defineStore('starForge', {
         this.crownLevels[id] = 1
       } else if (def.tier === 'glimmer') {
         this.glimmerLevels[id] = (this.glimmerLevels[id] ?? 0) + 1
+      } else if (def.tier === 'confluence') {
+        this.confluenceLevels[id] = 1
       } else {
         this.boughLevels[id] = (this.boughLevels[id] ?? 0) + 1
         // Max HP ist ein State-Feld und kein Faktor — es wird beim Kauf

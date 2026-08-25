@@ -359,7 +359,7 @@ describe('bardAbilityStore', () => {
       const game = useGameStore()
       const shop = useShopStore()
       unlock('w')
-      shop.shopUpgrades.find((u) => u.id === 'glockenturm')!.level = 100
+      useSolarUpgradeStore().chimesPerSecondLevel = 100
       game.chimesPerSecond = shop.calculateTotalCPS()
       const plain = game.chimesPerSecond
 
@@ -571,7 +571,7 @@ describe('bardAbilityStore', () => {
       const game = useGameStore()
       const shop = useShopStore()
       unlock('w')
-      shop.shopUpgrades.find((u) => u.id === 'glockenturm')!.level = 100
+      useSolarUpgradeStore().chimesPerSecondLevel = 100
       game.chimesPerSecond = shop.calculateTotalCPS()
       const plain = game.chimesPerSecond
 

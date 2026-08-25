@@ -1,5 +1,9 @@
 import { useGameStore } from '@/stores/core/gameStore'
-import { useShopStore } from '@/stores/economy/shopStore'
+import {
+  useSolarUpgradeStore,
+  type SolarBranchId,
+} from '@/stores/progression/solarUpgradeStore'
+import { SOLAR_BRANCHES } from '@/config/constants'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
@@ -12,7 +16,6 @@ import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
-import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import type { ProgressMetricId } from '@/types'
 
@@ -46,11 +49,16 @@ export function progressMetricValue(metric: ProgressMetricId): number {
       return useGameStore().totalMeepsEarned
     case 'materialsCollected':
       return useInventoryStore().totalMaterialsCollected
-    case 'shopBuildingLevels':
-      // Summe statt eines Kaufzählers in `buyUpgrade()`: der stünde in jedem
-      // bestehenden Spielstand auf 0 und fragte einen Spieler mit 400 Stufen,
-      // ob er sein erstes Gebäude kaufen will.
-      return useShopStore().shopUpgrades.reduce((sum, u) => sum + u.level, 0)
+    case 'solarRayLevels':
+      // Summe statt eines Kaufzählers: der stünde in jedem bestehenden
+      // Spielstand auf 0 und fragte einen Spieler mit 30 Strahlenstufen, ob er
+      // seine erste kaufen will. Vorgänger war `shopBuildingLevels` — die
+      // Gebäude hatten seit dem Forge-Umbau keine Kaufgeste mehr, und die
+      // Leiter stand deshalb bei jedem Spieler auf Mission 3 still.
+      return SOLAR_BRANCHES.reduce(
+        (sum, ray) => sum + useSolarUpgradeStore().branchLevel(ray.id as SolarBranchId),
+        0,
+      )
 
     // ── Bard ──
     case 'bardLevel':

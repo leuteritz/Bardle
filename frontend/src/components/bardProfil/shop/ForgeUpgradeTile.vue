@@ -200,9 +200,20 @@
           class="fut-buy-lock"
           aria-hidden="true"
         />
-        <span v-else class="fut-buy-price" :class="priceFitClass">
-          <img :src="FORGE_CHIME_IMAGE" class="fut-buy-chime" alt="Chimes" />
-          {{ priceText }}
+        <!-- Bis zu zwei Zeilen, Chimes oben, Meeps darunter. Gestapelt und
+             nicht nebeneinander: die Kauffläche ist FEST breit, damit die
+             Kanten über die ganze Liste fluchten — in der Höhe ist Platz, in
+             der Breite nicht. Nur die Knoten von The Wandering tragen
+             überhaupt eine zweite Zeile. -->
+        <span v-else class="fut-buy-stack">
+          <span v-if="entry.goldCost > 0" class="fut-buy-price" :class="priceFitClass">
+            <img :src="FORGE_CHIME_IMAGE" class="fut-buy-chime" alt="Chimes" />
+            {{ priceText }}
+          </span>
+          <span v-if="entry.meepCost > 0" class="fut-buy-price" :class="meepFitClass">
+            <img :src="FORGE_MEEP_IMAGE" class="fut-buy-chime" alt="Meeps" />
+            {{ meepText }}
+          </span>
         </span>
       </button>
 
@@ -308,6 +319,7 @@ import {
   FORGE_CARD_FLASH_MS,
   FORGE_SPOTLIGHT_ARRIVAL_MS,
   FORGE_CHIME_IMAGE,
+  FORGE_MEEP_IMAGE,
   FORGE_FOCUS_DIM_OPACITY,
   FORGE_FOCUS_REQ_LABEL,
   FORGE_REQ_OPEN_COLOR,
@@ -468,6 +480,10 @@ const priceText = computed(() => formatNumber(props.entry.goldCost))
  * Herleitung an `FORGE_ROW_PRICE_FIT_STEPS`.
  */
 const priceFitClass = computed(() => forgeRowPriceFit(priceText.value.length))
+
+/** Der Meep-Preis — 0 bei allem, was nicht auf der Straße steht. */
+const meepText = computed(() => formatNumber(props.entry.meepCost))
+const meepFitClass = computed(() => forgeRowPriceFit(meepText.value.length))
 
 /**
  * Der Name des Knopfes für alle, die ihn nicht sehen.
@@ -1030,6 +1046,14 @@ const buyTitle = computed(() => {
 /* KEIN `opacity` mehr: die Zahl war der Zusatz unter dem Wort, jetzt ist sie
    der Inhalt. Die Grösse steht nicht hier, sondern in den vier Stufen darunter
    — die Fläche ist fest breit, die Zahl nicht. */
+.fut-buy-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
 .fut-buy-price {
   display: flex;
   align-items: center;

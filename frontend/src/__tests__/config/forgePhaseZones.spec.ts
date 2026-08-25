@@ -12,6 +12,7 @@ import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
   SOLAR_BRANCHES,
+  FORGE_ROAD_BAND,
 } from '@/config/constants'
 import type { ForgeNodeTier } from '@/types'
 
@@ -78,6 +79,13 @@ describe('Star Forge — eine Sonnenphase, eine Zone', () => {
   it('jeder Knoten trägt die Phase seines Rangs — ausser dem Glimmer', () => {
     for (const def of FORGE_NODES) {
       if (def.tier === 'glimmer') continue
+      // Eine Confluence hat keine eigene Sprosse: ihr Tor ist der erste Schritt
+      // auf die Strasse, nicht eine Sonnenphase. Sie teilt die Phase ihres
+      // Boughs, damit sie zugleich mit ihm sichtbar wird.
+      if (def.tier === 'confluence') {
+        expect(def.phase, `${def.id} steht nicht beim Bough`).toBe(RING_PHASE.bough)
+        continue
+      }
       expect(def.phase, `${def.id} (${def.tier}) hat eine eigene Phase`).toBe(RING_PHASE[def.tier])
     }
   })
@@ -112,10 +120,22 @@ describe('Star Forge — eine Sonnenphase, eine Zone', () => {
     }
   })
 
-  it('jede Zone der Karte trägt eine Phase, die es gibt', () => {
+  it('jede Zone der SONNE trägt eine Phase, die es gibt', () => {
     for (const cluster of FORGE_CLUSTERS) {
+      if (cluster.region === 'road') continue
       expect(cluster.phase, `${cluster.id}`).toBeGreaterThanOrEqual(0)
       expect(cluster.phase, `${cluster.id}`).toBeLessThanOrEqual(STAR_PHASE_FINAL_INDEX)
+    }
+  })
+
+  it('jede Spur der STRASSE trägt einen Rang, den es gibt', () => {
+    // Die Strasse hat keine Sonnenphase — ihr Tor ist der erste Aufbruch. Ein
+    // siebter Eintrag in `FORGE_ZONE_BAND` wäre eine Phase, die es nicht gibt,
+    // und genau deshalb führt sie ihre eigene Bänderleiter.
+    const roads = FORGE_CLUSTERS.filter((c) => c.region === 'road')
+    expect(roads.length).toBeGreaterThan(0)
+    for (const lane of roads) {
+      expect(FORGE_ROAD_BAND[lane.rank], `${lane.id} hat kein Band`).toBeDefined()
     }
   })
 

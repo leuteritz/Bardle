@@ -1,6 +1,6 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useShopStore, buildingMilestoneMultiplier } from '@/stores/economy/shopStore'
+import { useShopStore } from '@/stores/economy/shopStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useAugmentStore } from '@/stores/economy/augmentStore'
@@ -37,21 +37,12 @@ describe('cpsFactorBreakdown', () => {
     useShopStore().cpsFactorBreakdown.reduce((product, entry) => product * entry.factor, 1)
 
   /**
-   * Die Kette ohne ihre Multiplikatoren: die Summe der Gebaeude plus den
-   * Solar-Sockel. Genau das, was `calculateTotalCPS()` vor der Multiplikation
-   * stehen hat — der Meilenstein-Faktor gehoert dazu, er wirkt JE GEBAEUDE und
-   * ist kein Glied der globalen Kette (und damit auch kein Bandsegment).
+   * Die Kette ohne ihre Multiplikatoren: der Solar-Sockel, und sonst nichts.
+   * Genau das, was `calculateTotalCPS()` vor der Multiplikation stehen hat.
+   * Founder's Pact und ein Resonator liegen als Faktor IN diesem Summanden und
+   * sind deshalb keine Glieder der globalen Kette — und damit kein Bandsegment.
    */
-  const baseSum = () => {
-    const shop = useShopStore()
-    const solar = useSolarUpgradeStore()
-    const base = shop.shopUpgrades.reduce(
-      (total, upgrade) =>
-        total + (upgrade.baseCPS || 0) * upgrade.level * buildingMilestoneMultiplier(upgrade.level),
-      0,
-    )
-    return base + solar.cpsBonus
-  }
+  const baseSum = () => useSolarUpgradeStore().cpsBonus
 
   // ─── Struktur ───────────────────────────────────────────────────────────────
 
@@ -78,7 +69,7 @@ describe('cpsFactorBreakdown', () => {
 
   it('stimmt mit calculateTotalCPS ueberein, solange nichts wirkt', () => {
     const shop = useShopStore()
-    shop.shopUpgrades[0].level = 10
+    useSolarUpgradeStore().chimesPerSecondLevel = 10
     expect(shop.calculateTotalCPS()).toBe(Math.floor(baseSum() * bandProduct()))
   })
 
@@ -94,10 +85,6 @@ describe('cpsFactorBreakdown', () => {
     const augments = useAugmentStore()
     const drifters = useDrifterStore()
     const chronicle = useAchievementStore()
-
-    shop.shopUpgrades.forEach((upgrade, index) => {
-      upgrade.level = index + 1
-    })
 
     // Dauerhaft: der Flugtempo-Strahl multipliziert die CpS.
     solar.flightSpeedLevel = 4
@@ -134,7 +121,7 @@ describe('cpsFactorBreakdown', () => {
   it('faengt einen ABZUG genauso ein wie einen Beitrag', () => {
     const shop = useShopStore()
     const drifters = useDrifterStore()
-    shop.shopUpgrades[0].level = 50
+    useSolarUpgradeStore().chimesPerSecondLevel = 50
 
     drifters.buffs.push({
       expiresAt: drifters.drifterNow + 1_000_000,
@@ -203,7 +190,7 @@ describe('cpsFactorBreakdown', () => {
   it('nimmt den MVP-Buff nicht ins Band auf', () => {
     const shop = useShopStore()
     const game = useGameStore()
-    shop.shopUpgrades[0].level = 20
+    useSolarUpgradeStore().chimesPerSecondLevel = 20
 
     const before = bandProduct()
     // `mvpBuffMultiplier` ist ein Getter — gesetzt wird die Restlaufzeit.

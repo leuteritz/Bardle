@@ -176,11 +176,9 @@ export const PROFILE_HUD_RING_R = 9
 export const PROFILE_HUD_RING_CIRCUMFERENCE = 56.55
 
 /* ── Detail-Schiene des Bard-Profils ──────────────────────────────────────────
- * Die rechte Spalte, in die ein Reiter seine Einzelheiten legt: im Shop die
- * Forge-Spalte (`ShopComponent.vue`), im Skill-Tree das Detail-Blatt
- * (`SkillTreeComponent.vue`). Beide lesen dieselben drei Zahlen — zwei eigene
- * Breiten liefen still auseinander, und die Reiter stehen nebeneinander in
- * derselben Leiste.
+ * Die rechte Spalte, in die ein Reiter seine Einzelheiten legt, im Shop die
+ * Forge-Spalte (`ShopComponent.vue`). Drei geteilte Zahlen statt eigener
+ * Breiten je Reiter: die liefen still auseinander.
  *
  * Gewachsen aus `clamp(340px, 32vw, 470px)`. Der alte Deckel stammt aus der
  * Zeit, in der die Shop-Spalte fünf Filterchips UND vier Reiterbeschriftungen

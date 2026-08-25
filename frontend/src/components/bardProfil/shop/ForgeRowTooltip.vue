@@ -16,6 +16,12 @@
 
     <div class="ftip-meta">{{ metaLine }}</div>
     <div class="ftip-effect">{{ effectText }}</div>
+
+    <!-- Die GABEL von The Wandering. Sie steht nur hier und nicht in der
+         Zeile: die Zeile zeigt, was ein Knoten TUT, das Kärtchen, was sein
+         Kauf nebenbei zunichtemacht. Eine unwiderrufliche Entscheidung darf
+         man nicht erst nach dem Klick erfahren. -->
+    <div v-if="forkLine" class="ftip-meta frt-fork">{{ forkLine }}</div>
   </div>
 </template>
 
@@ -66,6 +72,8 @@ import {
   FORGE_TIP_MAX_LABEL,
   FORGE_DETAIL_ENDLESS_META,
   FORGE_DETAIL_PARENT_PREFIX,
+  MEEP_FORK_SEALED_PREFIX,
+  MEEP_FORK_WARN_PREFIX,
 } from '@/config/constants'
 
 /** Die Kanten kommen fertig vom Aufrufer — gemessen wird nie hier. */
@@ -101,6 +109,16 @@ const metaLine = computed(() => {
   return parts.join(' · ')
 })
 
+/** „Learning this seals Longnight Watch“ — leer ausserhalb der Gabel. */
+const forkLine = computed(() => {
+  const rivals = props.entry?.rivals ?? []
+  if (rivals.length === 0) return ''
+  const names = rivals.map((r) => r.name).join(', ')
+  return props.entry?.state === 'sealed'
+    ? `${MEEP_FORK_SEALED_PREFIX}${names}`
+    : `${MEEP_FORK_WARN_PREFIX}${names}`
+})
+
 const tipWidth = `${FORGE_TIP_WIDTH_PX}px`
 </script>
 
@@ -109,6 +127,12 @@ const tipWidth = `${FORGE_TIP_WIDTH_PX}px`
    dieselbe Gestalt wie am Knoten im Netz. `pointer-events: none` steht dort
    mit und ist nicht Kosmetik: ohne es klaute das Kärtchen den Hover der Zeile,
    die es beschreibt. */
+/* Die Gabelzeile trägt Warnfarbe, nicht die Leitfarbe des Knotens: sie sagt,
+   was VERLOREN geht, und das ist im Projekt durchgehend rot. */
+.frt-fork {
+  color: #cc6050;
+}
+
 .frt-card {
   position: fixed;
   z-index: 60;

@@ -371,11 +371,13 @@ import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import {
   forgeClusterSpots,
   forgeEdges,
+  type ForgeEdgeKind,
   forgeTreePlacements,
   type Point,
 } from '@/utils/ui/forgeTreeLayout'
 import { forgeClusterOf } from '@/config/progression/starForgeNet'
 import { forgeRouteKey, forgeRoutes, forgeSunRoute } from '@/utils/ui/forgeEdgeRoute'
+import { MEEP_TREE_NODES, MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
 import {
   forgeCompassAt,
   forgeComfortPan,
@@ -436,6 +438,8 @@ import {
   FORGE_ICON_SIZE_PACT,
   FORGE_ICON_SIZE_CROWN,
   FORGE_ICON_SIZE_BOUGH,
+  FORGE_ICON_SIZE_MEEP,
+  FORGE_ICON_SIZE_CONFLUENCE,
   FORGE_LOCK_ICON,
   FORGE_PIN_ICON,
   FORGE_CORNER_BADGE_MIN_DIAMETER,
@@ -474,6 +478,7 @@ const {
   listHoverId,
   pinnedId,
   focusTick,
+  readableTick,
   setTreeHover,
   setPin,
   refocus,
@@ -609,6 +614,7 @@ const RING_ICON_SIZE: Record<ForgeNodeTier, number> = {
   crown: FORGE_ICON_SIZE_CROWN,
   bough: FORGE_ICON_SIZE_BOUGH,
   glimmer: FORGE_ICON_SIZE_GLIMMER,
+  confluence: FORGE_ICON_SIZE_CONFLUENCE,
 }
 
 /* Name, Glyph und Farbe der fünf Strahlen stehen als SOLAR_BRANCHES in
@@ -664,7 +670,18 @@ const allNodes = computed<TreeNode[]>(() => {
     parentId: def.parentId,
     def,
   }))
-  return [...roots, ...forge]
+  const road: TreeNode[] = MEEP_TREE_NODES.map((def) => ({
+    id: def.id,
+    name: def.name,
+    icon: def.icon,
+    color: MEEP_TREE_NODE_INDEX[def.id]?.branch.color ?? '#e8c040',
+    ...(places.get(def.id) ?? fallback),
+    tier: 'meep' as const,
+    sizeClass: 'meep' as const,
+    iconSize: FORGE_ICON_SIZE_MEEP,
+    parentId: null,
+  }))
+  return [...roots, ...forge, ...road]
 })
 
 // ── Geometry ─────────────────────────────────────────────────────
@@ -684,7 +701,7 @@ interface Limb {
    *  damit der Knoten, dessen Erfüllt-Stand sie einfärbt. */
   sourceId: string
   targetId: string
-  kind: 'parent' | 'require' | 'bridge'
+  kind: ForgeEdgeKind
 }
 
 /** Eine Brücke kennt zusätzlich die ZONE, in die sie führt. */
@@ -754,6 +771,10 @@ const limbs = computed<Limb[]>(() => {
 /** Nur die Struktur. Bedingungen hängen am Zeiger und haben ihre eigene Ebene. */
 const structureLimbs = computed(() => limbs.value.filter((l) => l.kind === 'parent'))
 
+/** Die Kette von The Wandering. Eigene Liste, weil sie ein ODER ist und kein
+ *  UND — und weil sie in der Farbe ihrer Spur läuft, nicht in der ihres Ziels. */
+const pathLimbs = computed(() => limbs.value.filter((l) => l.kind === 'path'))
+
 /** Die Wege zwischen zwei Zonen. Sie tragen die Leitfarbe ihres Ziels. */
 const bridgeLimbs = computed<BridgeLimb[]>(() =>
   limbs.value
@@ -802,6 +823,9 @@ const openLimbs = computed<DrawnLimb[]>(() => {
   for (const bridge of bridgeLimbs.value) {
     if (isOpen(bridge.targetId)) out.push({ ...bridge, tint: bridge.accent })
   }
+  // Die Strasse steht immer. Sie ist der Weg selbst — was auf ihm schon
+  // gegangen ist, sagt der Knoten, nicht die Linie.
+  for (const path of pathLimbs.value) out.push({ ...path, tint: path.color })
   return out
 })
 
@@ -1710,6 +1734,25 @@ watch(pinnedId, (id) => {
  * Komfortzone, die ihn nur bis an ihre Kante holte.
  */
 watch(focusTick, () => {
+  panToFocus()
+})
+
+/**
+ * Der Sprung von aussen — als einziger hebt er den Zoom.
+ *
+ * Taste K fuehrt auf The Wandering, und die liegt jenseits der Sonnenleiter:
+ * am Zoomboden misst ein Knoten dort gemessene 6,5 px. Hinfahren allein ist
+ * dann keine Antwort, und `FORGE_TREE_ZOOM_DEFAULT` ist die richtige — es ist
+ * die Stufe, in der sich der Baum beim Oeffnen selbst zeigt.
+ *
+ * Er hebt NUR, er senkt nie: wer naeher herangefahren ist, hat das absichtlich
+ * getan. Und der Zoom steht VOR der Fahrt, dieselbe Reihenfolge und derselbe
+ * Grund wie in `recenterCamera()` — umgekehrt klemmte die Fahrt noch gegen die
+ * engere Grenze des alten Zooms.
+ */
+watch(readableTick, () => {
+  const wanted = clampZoom(FORGE_TREE_ZOOM_DEFAULT)
+  if (zoom.value < wanted) zoom.value = wanted
   panToFocus()
 })
 

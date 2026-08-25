@@ -84,13 +84,13 @@ export const KEYBINDINGS: readonly KeybindDef[] = [
     inHud: true,
   },
   {
-    id: 'tree',
+    id: 'road',
     keys: ['k'],
     cap: 'K',
-    label: 'Tree',
+    label: 'The Wandering',
     description:
-      'Opens the Bard profile on the Meep skill tree. Same behaviour as the shop key: it jumps there from any other tab and closes the profile when the tree is already up.',
-    icon: 'lucide:network',
+      'Opens the Star Forge and takes the camera out to The Wandering. The meep road lies beyond the sun, and at full zoom-out it is too small to aim at by hand.',
+    icon: 'game-icons:journey',
     category: 'interface',
     inHud: true,
   },

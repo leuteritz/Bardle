@@ -23,7 +23,7 @@ const ALL_METRICS: readonly ProgressMetricId[] = [
   'clicks',
   'meepsEarned',
   'materialsCollected',
-  'shopBuildingLevels',
+  'solarRayLevels',
   'bardLevel',
   'abilityCasts',
   'prestiges',

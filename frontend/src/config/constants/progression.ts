@@ -114,22 +114,47 @@ export const SKILL_POINT_LEVEL_INTERVAL = 1
  * ohnehin stellt, bekommt dadurch eine zweite Seite.
  */
 export const MEEP_RUN_BASE_MIN = 256
-export const MEEP_RUN_SHARE = 0.0025
+/**
+ * **0,0025 → 0,000625**, als The Wandering einen sechsten Rang je Ast bekam.
+ *
+ * Warum AUSGERECHNET dieser Knopf: `MEEP_RUN_FACTOR` und `MEEP_RUN_BASE_MIN`
+ * sind aneinander gekettet — `(1/1,6)² × 256 = 100` macht den ersten Meep exakt
+ * 100 Chimes teuer und Meep *k* exakt `k² × 100`. Wer den Faktor anfasst,
+ * schreibt die ganze Frühspiel-Ablesung um (Passiv-Kachel, `chimesToNextMeep`,
+ * Pause-Füllstand). Der ANTEIL ist dagegen genau die Dauerrhythmus-Schraube:
+ * „welcher Bruchteil deines besten Laufs ist eine Meep-Einheit".
+ *
+ * Gerechnet: im Dauerrhythmus (2× Bestwert, weil `UNIVERSE_RESCUE_COST_MULTIPLIER`
+ * 2 ist) gilt `floor(1,6 × √(2 / SHARE))` — vorher 45, jetzt **90**. Gegen
+ * `MEEP_TREE_TOTAL_COST` 2468 sind das 27,4 Aufbrüche; vorher waren es 26,4 gegen
+ * 1188. Der Rhythmus bleibt also stehen, während der Baum um die Hälfte wuchs.
+ *
+ * Nebenwirkung, und sie ist gewollt: der Kreuzungspunkt Mindestanker ↔ Ratsche
+ * wandert von 102.400 auf 409.600 Chimes. Damit binden die ersten DREI Aufbrüche
+ * noch am Anker und ergeben eine Rampe 31 → 44 → 63 → 90, die es vorher nicht
+ * gab — der erste Aufbruch zahlt weiterhin exakt 31.
+ */
+export const MEEP_RUN_SHARE = 0.000625
 export const MEEP_RUN_FACTOR = 1.6
 
 /**
- * Was der ganze Meep-Baum kostet — die Summe seiner 25 Knoten.
+ * Was das ganze Wandering kostet — die Summe seiner 30 Pfadknoten.
  *
  * Steht hier und nicht nur im Katalog, weil sie eine BALANCE-Größe ist: sie
  * gehört neben die Ausbeute, gegen die sie geeicht wurde, nicht zwischen die
  * Icons und Beschreibungen der Knoten. Eine Spec prüft, dass der Katalog
  * dieselbe Summe ergibt.
  *
- * Bei 45 Meeps je Aufbruch im Dauerrhythmus sind das rund 26 Aufbrüche, mit dem
- * eigenen `meepCostMult`-Rabatt des Baums rund 22 — er ist also ein Ziel über
+ * Bei 90 Meeps je Aufbruch im Dauerrhythmus sind das rund 27 Aufbrüche, mit dem
+ * eigenen `meepCostMult`-Rabatt der Strasse rund 23 — sie ist also ein Ziel über
  * das ganze Spiel und kein Mitnahmekauf.
+ *
+ * **1188 → 2468**, als jeder Ast einen sechsten Rang bekam: 220 für vigil und
+ * resonance, 280 für cosmos, battle und warden — dieselbe Verdopplung, die die
+ * beiden letzten Sprünge schon tragen (55→10, 70→140). Der Zufluss ist mit
+ * `MEEP_RUN_SHARE` mitgegangen, nicht die Preise nach unten.
  */
-export const MEEP_TREE_TOTAL_COST = 1188
+export const MEEP_TREE_TOTAL_COST = 2468
 
 // Abilities
 export const MAX_ABILITY_LEVEL = 5

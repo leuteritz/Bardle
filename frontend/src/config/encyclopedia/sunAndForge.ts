@@ -126,61 +126,85 @@ export const sunForgeCategory: EncyclopediaCategory = {
 
 export const meepTreeCategory: EncyclopediaCategory = {
   id: 'meeptree',
-  title: 'Meep Skill Tree',
-  icon: 'game-icons:tree-growth',
+  title: 'The Wandering',
+  icon: 'game-icons:footsteps',
   entries: [
     {
       id: 'meep-tree',
-      name: 'Meep Skill Tree',
+      name: 'The Wandering',
       icon: 'game-icons:sprout',
       description:
-        'Spend Meeps on 25 one-time nodes across five branches. ' +
-        'Nodes unlock in order within a branch and reset on prestige.',
-      lore: 'Every Meep carries a seed of greatness.',
-      formula: 'Node costs per branch: 3 / 8 / 20 / 45 / 95 Meeps',
-      related: ['meeps', 'prestige'],
+        'Five lanes on the outer rim of the Star Forge, bought with Meeps in the Shop tab. ' +
+        'A node opens once any node of the rank below it is learned; at rank 4 two nodes ' +
+        'share a rank and seal each other, so one save can hold 30 of the 35 nodes. ' +
+        'Everything learned here survives prestige.',
+      lore: 'The road remembers every keeper who walked it.',
+      formula:
+        'Vigil & Resonance: 3 / 10 / 26 / 55 / 110 / 220 Meeps\n' +
+        'Cosmos, Battle & Warden: 4 / 14 / 32 / 70 / 140 / 280 Meeps\n' +
+        'One full path across all five lanes: 2,468 Meeps',
+      related: ['meeps', 'prestige', 'confluences'],
+    },
+    {
+      id: 'confluences',
+      name: 'Confluences',
+      icon: 'game-icons:knot',
+      description:
+        'Five nodes on the seam between the sun ladder and The Wandering — the only ' +
+        'purchases in the game that cost Chimes, materials and Meeps at once. ' +
+        'Each needs a Bough above it and the first node of one lane beside it, and each ' +
+        'is bound once, never levelled.',
+      lore: 'Two roads that never met now share a stone.',
+      formula:
+        'Effect grows with every node opened on The Wandering:\n' +
+        'Tidewatch +3% offline · Handfast +3% per click · Waychart +3% expedition spoils\n' +
+        'Hostcall +400 power · Sunbind +3% boss damage — each per learned node',
+      related: ['meep-tree', 'forge-branches', 'materials'],
     },
     {
       id: 'tree-vigil',
-      name: 'Vigil Branch',
-      icon: 'game-icons:lantern-flame',
+      name: 'Vigil Lane',
+      icon: 'game-icons:candlebright',
       description:
-        'The idle branch: up to +225% CPS, stronger offline earnings and a +4 h offline cap.',
+        'The idle lane: Chimes/s on three ranks, far richer offline earnings and a +10 h offline cap.',
       lore: 'A watch that keeps itself while you sleep.',
       related: ['meep-tree'],
     },
     {
       id: 'tree-resonance',
-      name: 'Resonance Branch',
-      icon: 'game-icons:echo-ripples',
+      name: 'Resonance Lane',
+      icon: 'game-icons:double-ringed-orb',
       description:
-        'The click branch: up to +200% CPC, a 10% double-click chance and Worldbell — clicks gain +2% of your CPS.',
+        'The click lane: Chimes/Click on three ranks, up to a 15% double-strike chance, ' +
+        'and clicks that gain +3% of your CpS.',
       lore: 'Strike once, hear it thrice.',
       related: ['meep-tree', 'clicker'],
     },
     {
       id: 'tree-cosmos',
-      name: 'Cosmos Branch',
+      name: 'Cosmos Lane',
       icon: 'game-icons:ufo',
       description:
-        'The Meep & expedition branch: −35% Meep cost, +25% expedition rewards, 20% faster expeditions and +30% Meep power.',
+        'The Meep & expedition lane: cheaper Meeps, up to +60% expedition rewards, ' +
+        '20% faster expeditions and +40% Meep power.',
       lore: 'The in-between is shorter than it looks.',
       related: ['meep-tree', 'expeditions'],
     },
     {
       id: 'tree-battle',
-      name: 'Battle Branch',
+      name: 'Battle Lane',
       icon: 'game-icons:war-axe',
-      description: 'The war branch: up to +7,000 flat combat power and +25% champion DPS.',
+      description: 'The war lane: up to +22,000 flat combat power, or champion DPS at the fork.',
       lore: 'The hush before the storm.',
       related: ['meep-tree', 'orbit-combat'],
     },
     {
       id: 'tree-warden',
-      name: 'Warden Branch',
+      name: 'Warden Lane',
       icon: 'game-icons:guards',
       description:
-        'The defense branch: +40% boss damage, +20% material drops, +1 HP regen/s and −15% damage taken.',
+        'The defense lane: up to +90% boss damage, +20% material drops, +3 HP regen/s ' +
+        'and up to −25% damage taken.',
       lore: 'A shield willed into being.',
       related: ['meep-tree', 'sun-hp'],
     },
@@ -211,7 +235,7 @@ export const planetSlotsCategory: EncyclopediaCategory = {
       icon: 'game-icons:gears',
       description:
         'Six roles: Turret (auto-attack DPS), Harvester (+1 material every 30 ticks), Relay (+30% expedition rewards), ' +
-        'Aegis (−15% boss damage), Timewarp (+25% offline earnings) and Resonator (+25% CPS for one chosen building).',
+        'Aegis (−15% boss damage), Timewarp (+25% offline earnings) and Resonator (+25% CPS for one chosen Solar Ray).',
       lore: 'Each world keeps its own hour.',
       related: ['planet-slots', 'jungle-buffs', 'turret-salvos'],
     },

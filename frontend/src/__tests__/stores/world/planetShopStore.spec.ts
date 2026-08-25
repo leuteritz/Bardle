@@ -103,15 +103,15 @@ describe('planetShopStore — Attunement leveling', () => {
       )
     })
 
-    it('resonanceTowerBuildingMultipliers scales with level', () => {
+    it('resonanceRayMultipliers scales with level', () => {
       const store = usePlanetShopStore()
       const slot = store.slots[0]
       slot.purchased = true
       slot.role = 'resonance_tower'
       slot.level = 2
-      slot.slotConfig = { buildingId: 'glockenturm' }
+      slot.slotConfig = { rayId: 'chimesPerSecond' }
       const m = planetLevelBonusMultiplier(2)
-      expect(store.resonanceTowerBuildingMultipliers['glockenturm']).toBeCloseTo(
+      expect(store.resonanceRayMultipliers['chimesPerSecond']).toBeCloseTo(
         1 + PLANET_ROLES.resonance_tower.bonusPerSlot * m,
       )
     })

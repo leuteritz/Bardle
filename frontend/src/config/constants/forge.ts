@@ -10,268 +10,6 @@ import type {
   ForgeUpgradeTier,
 } from '@/types'
 
-// ── Meep Skill Tree: die Orbit-Bühne (SkillTreeComponent / MeepOrbitStage) ──
-//
-// Ein leuchtender Kern in der Mitte, fünf Spiralarme darum — eine Galaxie von
-// oben, keine Ringscheibe. Die Bühne wird SELBST gezeichnet (kein Pan/Zoom,
-// keine Fremdbibliothek) und lebt in einem Design-Koordinatensystem, das die
-// Bühnenspalte des Tabs skaliert. Deshalb sind alle Zahlen hier Design-Pixel,
-// keine Bildschirm-Pixel.
-//
-// Skaliert wird NUR die Bühne, nicht der ganze Reiter: das Detail-Blatt daneben
-// ist eine unskalierte Schiene wie die Forge-Spalte im Shop (Breite in
-// `BARD_PROFILE_RAIL_*`, `constants/ui.ts`). Im Skalierkasten mitgeführt liefen
-// seine Schriftgrade von ~1,0 auf Full HD bis zum Deckel 1,9 auf 4K mit und
-// trafen den Shop auf keiner Auflösung.
-//
-// **Die BREITE ist fest, die HÖHE nicht.** Ein Kasten mit fixem Seitenverhältnis
-// kann nur EIN Container-Verhältnis ausfüllen; gemessen reicht das Profil-Modal
-// von 2,00 (Full HD, 1319 × 658) bis unter 1,50 — mit 1240 × 632 blieben unten
-// und oben zusammen bis zu 250 px schwarz stehen. Stattdessen: die Skalierung
-// kommt aus der BREITE, und die Design-Höhe ist das, was der Container bei
-// dieser Skalierung hergibt (`SkillTreeComponent`). Die Arme füllen sie über
-// eine mitwachsende y-Stauchung.
-//
-// **Es gibt keine gezeichneten Rang-Bahnen mehr.** Fünf konzentrische Ellipsen
-// ordneten die Ränge, lasen sich aber als Zifferblatt — was die Ränge ordnet,
-// ist jetzt der Radius selbst, und was die ARME ordnet, sind die Nebelbänder
-// (`SKILL_TREE_NEBULA_*`) samt Kernschein (`SKILL_TREE_CORE_*`).
-//
-// Die Radien und die Stauchung hängen ZUSAMMEN und tragen sich gegenseitig;
-// einzeln verstellt kleben Knoten an Nachbarn oder am Startkreis. Die drei
-// engsten Stellen, gegen die sie gerechnet sind:
-//   1. Rang 0 gegen den Startkreis — am UNTEREN Ende der Stauchung. Bei ±90°
-//      wirkt sie voll, der Abstand schrumpft auf `r₀ · Y_SQUASH`. Mit
-//      118 · 0,7 = 82,6 bleiben über halbem Startkreis (28) plus halbem Knoten
-//      (20) noch 34 px Luft.
-//   2. Der äußerste Rang gegen die Bühnenkante — ebenfalls unten. Der
-//      battle-Arm steht bei Rang 4 fast senkrecht (126° + 4·30° = 246°): bei
-//      minimaler Stauchung 314 · 0,703 · |sin| = 201, plus halber Knoten und
-//      Kostenpille bleiben 21 px Luft von 265. Deshalb liegt die Mindesthöhe
-//      bei 530, nicht tiefer.
-//   3. **Die Kostenpille gegen den FREMDEN Nachbararm** — die eigentliche
-//      Bremse der Drift, siehe `SKILL_TREE_TIER_DRIFT_DEG`. Gemessen 29,8 px
-//      bei Stauchung 0,703 (`battle` Rang 0 → `cosmos` Rang 2). Sie ist der
-//      Grund, warum die Pille von 44 auf 36 zurückging: die innere
-//      Radiuslücke der geometrischen Reihe ist nur 33 px, eine 44er-Pille an
-//      Rang 0 reichte über den Rang-1-Radius hinaus.
-//      (Die frühere Enge 3 — Gabel gegen ihren eigenen Rang 5 — stand hier mit
-//      „93 px" und war schon damals falsch: gemessen waren es 48,5. Mit der
-//      geometrischen Reihe sind es 77,6 px, sie trägt sich also von selbst.)
-/** Grundwinkel der fünf Zweige, gleichmäßig über 360°. */
-export const SKILL_TREE_BASE_ANGLES_DEG = [-90, -18, 54, 126, 198]
-/** Breite der Orbit-Bühne. Sie ist fest — nur die Höhe atmet. Zugleich die
- *  Design-Breite des Skalierkastens, seit das Detail-Blatt daneben nicht mehr
- *  mitskaliert. */
-export const SKILL_TREE_STAGE_WIDTH = 880
-/**
- * Grenzen der elastischen Design-Höhe. Unten hält die Mindesthöhe die Enge Nr. 2
- * aus dem Blockkommentar oben frei; oben endet sie dort, wo die Ellipse kippt
- * und die Arme senkrecht statt kreisend gelesen werden.
- */
-export const SKILL_TREE_STAGE_MIN_HEIGHT = 530
-export const SKILL_TREE_STAGE_MAX_HEIGHT = 900
-/**
- * Obergrenze der Fit-Skalierung. Das Modal hängt an `--hud-panel-size` und
- * wächst auf 4 K auf rund die doppelte Full-HD-Breite; ohne Deckel würde die
- * Schrift dort mitwachsen, bis sie plakativ wirkt.
- */
-export const SKILL_TREE_MAX_SCALE = 1.9
-/** x-Mitte der Bühne. Die y-Mitte ist immer die halbe (elastische) Höhe. */
-export const SKILL_TREE_CENTER_X = 440
-/**
- * Radius je Rang — eine GEOMETRISCHE Reihe (Faktor 1,2769), keine gleichmäßige.
- *
- * Zusammen mit dem konstanten Winkeldrift darunter ist das per Definition eine
- * **logarithmische Spirale**: konstantes Δln(r) bei konstantem Δθ ergibt einen
- * über den ganzen Arm gleichbleibenden Steigungswinkel, hier 25,0° — der
- * Bereich, in dem echte Spiralgalaxien liegen. Mit den früheren gleichmäßigen
- * Abständen (118/168/218/267/314) wurde der Arm nach außen immer flacher und
- * las sich als Speichenrad mit Knick.
- *
- * Innen dichter, außen weiter passt zudem zur Kostenkurve: die späten Ränge
- * kosten ein Vielfaches der frühen, und der Schritt dorthin ist jetzt auch
- * optisch der größere (33 / 41 / 54 / 68 px statt viermal 49).
- */
-export const SKILL_TREE_TIER_RADIUS = [118, 151, 192, 246, 314]
-/**
- * Grenzen der y-Stauchung. Der tatsächliche Wert kommt aus der Bühnenhöhe
- * (`skillTreeLayout`): unter 1 liegt ein Breitbild-Oval, über 1 ein
- * hochkant stehendes — beides bleibt eine lesbare Umlaufbahn.
- */
-export const SKILL_TREE_Y_SQUASH_RANGE = { min: 0.7, max: 1.25 } as const
-/**
- * Winkelversatz je Rang. Er ersetzt den früheren Zickzack: ein gleichmäßiger
- * Drift lässt jeden Arm als SPIRALE lesen statt als geknickte Kette.
- *
- * **Was ihn nach oben begrenzt, ist nicht die Lesbarkeit, sondern der
- * Nachbararm.** Die fünf Arme stehen 72° auseinander; kommt `k · DRIFT` einem
- * Vielfachen von 72° nahe, schiebt sich Rang *t* eines Arms neben Rang *t+k*
- * des Nachbarn — verschiedene Farben in wenigen Pixeln Abstand, und die
- * Kostenpille des inneren Knotens landet IM äußeren. Gemessen (Pille gegen
- * fremden Knoten, Stauchung 0,703):
- *
- *   26° → 52/78/104, Abstand zu 72/144  20/6/32   →  28,9 px
- *   30° → 60/90/120, Abstand            12/18/24  →  29,8 px  ← gewählt
- *   34° → 68/102/136, Abstand            4/30/8   →  13,7 px  ✗ Pille im Knoten
- *
- * 30° dreht jeden Arm über 120° und ist damit deutlich spiraliger als die
- * früheren 26° (104°), ohne den Seam bei 34° aufzureißen.
- */
-export const SKILL_TREE_TIER_DRIFT_DEG = 30
-/**
- * Wie weit die beiden Gabelknoten auf Rang 4 auseinanderstehen (∓ je Seite).
- * Groß genug, dass man die Wahl SIEHT, klein genug, dass beide erkennbar zum
- * selben Arm gehören: 32° belegen von den 72° je Zweig weniger als die Hälfte.
- * Sie sind damit etwa ein voller Rangschritt breit (30°) — die Gabel liest sich
- * als Verzweigung des Arms, nicht als zwei Knoten nebeneinander.
- */
-export const SKILL_TREE_FORK_OFFSET_DEG = 16
-/** Kantenlänge eines Knotens und seines Glyphs. */
-export const SKILL_TREE_NODE_SIZE = 40
-export const SKILL_TREE_NODE_ICON_SIZE = 27
-/**
- * Durchmesser des Startkreises in der Mitte. Er ist ABSICHTLICH kleiner als ein
- * Rang-0-Knoten es vermuten ließe: er ist kein Ziel, sondern der Ursprung, von
- * dem fünf Arme ausgehen. Mit 88 lag das Meep-Bild darin größer als jedes
- * Zweig-Glyph und zog das Auge in die Mitte, wo es nichts zu wählen gibt.
- */
-export const SKILL_TREE_START_SIZE = 56
-/**
- * Abstand der Kostenpille vom Knotenmittelpunkt, radial nach AUSSEN. Sie hängt
- * nur an Knoten, die gerade zählen (kaufbar, gewählt, überfahren) — 30 Pillen
- * gleichzeitig überlappten einander und den nächsten Rang, und die Kosten
- * stehen ohnehin im Detail-Blatt.
- *
- * **44 ging nicht mehr.** Die geometrische Radienreihe lässt zwischen Rang 0
- * und Rang 1 nur 33 px; eine 44er-Pille reichte über den nächsten Rang hinaus
- * und traf im engsten Seam den Knoten des NACHBARARMS (Enge 3 im Blockkommentar
- * oben). Mit 36 bleiben dort 29,8 px — mehr als die 28,9 px davor.
- */
-export const SKILL_TREE_COST_PILL_RADIUS = 36
-/**
- * Wo die fünf Zweignamen stehen. Sie sitzen NICHT auf der Achse ihres
- * äußersten Knotens: gemessen lagen sie dort über vier von fünf Rang-5-Knoten,
- * weil 26 px radialer Abstand in y-Richtung noch weiter zusammenschrumpfen. Der
- * Name läuft dem Arm deshalb ein Stück in Driftrichtung VORAUS — er liest sich
- * dadurch als Fortsetzung der Spirale statt als Etikett daneben.
- *
- * Der Vorlauf ging mit der Drift von 16 auf 28: bei 16 blieben dem Namen im
- * flachsten Viewport nur 13,9 px zum nächsten Knoten, bei 28 sind es 17,9
- * (flach) und 25,0 (hoch).
- */
-export const SKILL_TREE_ARM_TAG_RADIUS = 340
-export const SKILL_TREE_ARM_TAG_LEAD_DEG = 28
-/**
- * Luft über und unter dem äußersten Zweignamen. Sie ist der Puffer, aus dem die
- * y-Stauchung gerechnet wird: der Name ist das oberste und unterste Element der
- * Bühne, alles andere liegt innerhalb seiner Bahn.
- */
-export const SKILL_TREE_ARM_TAG_MARGIN = 26
-/** Umlaufdauer des gestrichelten Rings um den Startkreis. */
-export const SKILL_TREE_RING_SPIN_MS = 46000
-/**
- * Deckkraft der Kanten als Hex-Suffix an der Zweigfarbe (die Zweigfarben sind
- * durchweg sechsstellige Hex-Werte). Leerer String = voll deckend.
- */
-export const SKILL_TREE_EDGE_ALPHA = {
-  bought: '',
-  path: 'b0',
-  buyable: 'd0',
-  idle: '3a',
-  dimmed: '18',
-  /**
-   * Die Kette vom Zentrum zum hervorgehobenen Knoten — voll deckend, und ihre
-   * Strichstärke ist die einer gekauften Kante. Die STRICHELUNG bleibt dabei am
-   * Kaufzustand hängen: eine durchgezogene Kette sagt „bezahlt", und das wäre
-   * gelogen, solange der Weg noch offen ist.
-   */
-  spot: '',
-  /** Alles, was nicht auf dieser Kette liegt, solange sie leuchtet. */
-  spotDimmed: '14',
-} as const
-/**
- * Deckkraft je Knotenzustand. `blocked` liegt UNTER `locked`: ein versiegelter
- * Knoten ist kein Ziel mehr, sondern die sichtbare Spur einer Entscheidung —
- * er soll da sein, aber nicht mehr ziehen.
- */
-export const SKILL_TREE_NODE_OPACITY = {
-  bought: 1,
-  buyable: 1,
-  reachable: 0.86,
-  locked: 0.42,
-  blocked: 0.28,
-  dimmed: 0.2,
-} as const
-/** Strichstärke der Verbindungen, je nach Zustand des Zielknotens. */
-export const SKILL_TREE_EDGE_WIDTH_BOUGHT = 3.5
-export const SKILL_TREE_EDGE_WIDTH_BUYABLE = 2.75
-export const SKILL_TREE_EDGE_WIDTH_LOCKED = 2.25
-/**
- * Wo der Kontrollpunkt der Kante vom Zentrum zu Rang 0 liegt, als Anteil ihres
- * Radius. Der zugehörige Winkel läuft dem Ziel um einen halben Rangschritt
- * HINTERHER — der Arm entspringt dem Kern dadurch tangential statt als Speiche.
- * Alle übrigen Kanten brauchen keine solche Zahl: ihr Kontrollpunkt folgt aus
- * den beiden Endpunkten (`arcPath` in `skillTreeLayout`).
- */
-export const SKILL_TREE_CENTER_EDGE_CTRL_FRACTION = 0.5
-
-// ── Meep Skill Tree: Nebelbänder und Kern ─────────────────────────────────
-//
-// Was an die Stelle der fünf Rang-Ellipsen getreten ist. Die Ellipsen ordneten
-// nach RANG, diese beiden ordnen nach ARM und nach MITTE — dieselbe Aufgabe,
-// aber in der Sprache des Themas gestellt.
-//
-// Beide sind STATISCH: kein `filter`, kein `feGaussianBlur`, keine laufende
-// Animation. Die Weichheit kommt aus den Gradient-Stops, der niedrigen
-// Deckkraft und `stroke-linecap: round` — ein Filter über fünf 46 × 300-Bänder
-// in demselben SVG, in dem 35 Kanten bei jedem Hover ihre Attribute wechseln,
-// rasterte die Region bei jedem Zug neu (Performance-Regel 2).
-/** Breite eines Armbandes. Bei 12° Seam berühren sich benachbarte Bänder — als
- *  Nebel gewollt; breiter zöge der Zweigfokus die halbe Nachbarzone mit hoch. */
-export const SKILL_TREE_NEBULA_WIDTH = 46
-/** Wo ein Band anfängt und endet, radial. Innen knapp vor Rang 0, außen hinter
- *  Rang 4 — der Arm soll aus dem Kern kommen und ins Nichts auslaufen, nicht an
- *  einem Knoten beginnen oder enden. */
-export const SKILL_TREE_NEBULA_INNER_R = 88
-export const SKILL_TREE_NEBULA_OUTER_R = 338
-/** Quadratische Segmente je Band. Sechs halten die Abweichung von der echten
- *  logarithmischen Spirale unter 0,41 px (vier: 1,12 px, acht: 0,28 px). */
-export const SKILL_TREE_NEBULA_SEGMENTS = 6
-/**
- * Verlauf eines Bandes, als RADIEN statt als Prozentwerte — der Gradient ist
- * radial um das Bühnenzentrum, nicht linear entlang der Sehne. Ein linearer
- * Verlauf von Bandanfang zu Bandende liefe bei 120° Armdrehung quer durch die
- * Galaxie statt von innen nach außen.
- *
- * Innen gedämpft, damit das Band nicht am Kernschein klebt; außen auf null,
- * damit es ausläuft statt an der Bühnenkante abgeschnitten zu werden.
- */
-export const SKILL_TREE_NEBULA_STOPS = [
-  { r: 88, opacity: 0.3 },
-  { r: 176, opacity: 1 },
-  { r: 338, opacity: 0 },
-] as const
-/** Deckkraft im Ruhezustand und wenn der Arm gemeint ist (Zweigfokus oder ein
- *  Spotlight auf einem seiner Knoten). Umgeschaltet wird NUR die Deckkraft. */
-export const SKILL_TREE_NEBULA_OPACITY = 0.055
-export const SKILL_TREE_NEBULA_OPACITY_FOCUS = 0.15
-export const SKILL_TREE_NEBULA_FADE_MS = 220
-/**
- * Der Kernschein um den Startkreis, als x-Radius; der y-Radius folgt der
- * Stauchung. **150, nicht 200** — bei 200 läge der goldene Verlauf voll über
- * Rang 0 UND Rang 1, und die Zweigfarben der inneren zehn Knoten stünden auf
- * Goldwäsche.
- */
-export const SKILL_TREE_CORE_RADIUS = 150
-/** Stops des Kernscheins: innen sichtbar, ab der Mitte fast weg. Als Liste,
- *  damit Reihenfolge und Werte an EINER Stelle stehen. */
-export const SKILL_TREE_CORE_STOPS = [
-  { offset: 0, opacity: 0.18 },
-  { offset: 0.45, opacity: 0.07 },
-  { offset: 1, opacity: 0 },
-] as const
-
 // ── Star Forge: Baum-Darstellung (ForgeTreePanel) ─────────────────────────
 /** Winkel der fünf Wurzeln auf dem Ring, im Uhrzeigersinn ab oben. */
 export const FORGE_ROOT_ANGLES_DEG = {
@@ -312,6 +50,18 @@ export const FORGE_ICON_SIZE_CROWN = 34
  * sondern weil das die Regel für diese Grösse ist.
  */
 export const FORGE_ICON_SIZE_GLIMMER = 18
+/**
+ * Das Glyph eines Knotens von The Wandering.
+ *
+ * Sechsundzwanzig in einem 46er-Kreis — derselbe Anteil wie beim Bough, und
+ * damit deutlich über der 18-px-Grenze, ab der verschnörkelte `game-icons` zu
+ * Grau zerfallen. Auf ihrer alten Spiralbühne standen dieselben Motive bei 27
+ * in einem 40er-Kreis, auf einer Fläche, die per `fitScale` verkleinert wurde —
+ * real also kleiner als hier.
+ */
+export const FORGE_ICON_SIZE_MEEP = 26
+/** Das Glyph einer Confluence — derselbe Anteil wie bei der Krone. */
+export const FORGE_ICON_SIZE_CONFLUENCE = 30
 /**
  * Luft an JEDER Seite beim Einpassen des Baums.
  *
@@ -401,6 +151,13 @@ export const FORGE_NODE_DIAMETER: Record<ForgeUpgradeTier, number> = {
   crown: 60,
   bough: 48,
   glimmer: 34,
+  // Ein Knoten der Strasse. Blattgrösse — er ist ein Einmalkauf wie eine Krone,
+  // aber es sind dreißig, und die Spur soll als Kette lesen, nicht als Reihe
+  // von Zielen.
+  meep: 46,
+  // Zwischen Bündnis (48) und Krone (60): eine Confluence ist ein Ziel,
+  // aber fünf davon dürfen die Naht nicht zumauern.
+  confluence: 56,
 }
 
 /* ── Die WEGE: rechtwinklig, und keiner läuft durch einen Knoten ──────────────
@@ -505,6 +262,8 @@ export const FORGE_LIMB_WIDTH: Record<ForgeUpgradeTier, number> = {
   crown: 3.4,
   bough: 3,
   glimmer: 2.4,
+  meep: 3.2,
+  confluence: 3.8,
 }
 /**
  * Der EINE Kantenstrich. Es gibt keinen zweiten: die Breite sagt die Ebene, die
@@ -512,8 +271,8 @@ export const FORGE_LIMB_WIDTH: Record<ForgeUpgradeTier, number> = {
  */
 export const FORGE_LIMB_STROKE_FACTOR = 0.62
 /**
- * Der Boden in Bühnen-px. Bei `FORGE_TREE_ZOOM_FLOOR` (0,3) fiele die feinste
- * Glimmer-Kante sonst unter einen halben Geräte-Pixel. Gegengerechnet wird
+ * Der Boden in Bühnen-px. Bei `FORGE_TREE_ZOOM_FLOOR` (0,15) fiele die feinste
+ * Glimmer-Kante sonst weit unter einen halben Geräte-Pixel. Gegengerechnet wird
  * NICHT: `vector-effect: non-scaling-stroke` bräche die Verjüngung nach aussen.
  */
 export const FORGE_LIMB_MIN_WIDTH = 2
@@ -606,8 +365,22 @@ export const FORGE_REQ_OPEN_MARK = '✕'
  * von rund 7800 auf rund 1250 Meeps, also auf ein Sechstel. Geeicht ist der
  * Faktor am ZUFLUSS-Verhältnis und nicht am Endstand — der Spieler hält fast
  * durchweg Zwischenbestände zwischen zwei Baumkäufen, nicht den Rest am Ende.
+ *
+ * **600 → 300**, als `MEEP_RUN_SHARE` den Dauerertrag von 45 auf 90 hob. Der
+ * typische gehaltene Bestand verdoppelt sich damit, und `totalPower` rechnet
+ * `meeps × diese Zahl` — ohne Gegenzug hätte sich die Ladder verdoppelt, ohne
+ * dass jemand etwas anders macht. Dieselbe Bewegung wie 100 → 600 damals, nur
+ * in die andere Richtung.
+ *
+ * ACHTUNG für die Release-Notiz: das HALBIERT `totalPower` eines bestehenden
+ * Spielstands beim nächsten Laden. Der Bestand ist eine Zwischengrösse zwischen
+ * zwei Käufen und `battleStore` rechnet je Kampf neu — eine Kompensation im
+ * Ladepfad lohnt den Sonderfall nicht, das Verschweigen aber auch nicht.
+ *
+ * Beide Zahlen sind am Verhältnis ANGESETZT, nicht gemessen; ein Telemetrie-Lauf
+ * dagegen steht weiterhin aus.
  */
-export const MEEP_POWER_MULTIPLIER = 600
+export const MEEP_POWER_MULTIPLIER = 300
 
 /**
  * Wie die gefalteten Baum-Effekte im Meep-Panel des Headers gelesen werden.
@@ -704,201 +477,15 @@ export const MEEP_TREE_EFFECT_ROWS: readonly MeepTreeEffectRowDef[] = [
 ] as const
 
 // ── Skill-Tab: die Kaufliste der Detailschiene (MeepSkillList) ───────────────
-/**
- * Wonach die Skill-Liste gegliedert ist: nach dem, was der Spieler mit einem
- * Knoten ANFANGEN kann — nicht nach Zweig. Dieselbe Entscheidung wie
- * `forgeUpgradeBucket()` im Shop, aus demselben Grund: nach Zweig gegliedert stünde
- * das Kaufbare über fünf Überschriften verstreut, und der Spieler suchte es
- * unter dreißig Einträgen selbst.
- *
- * `fresh` steht VOR `ready`, obwohl beide kaufbar sind. Das ist die Umsetzung
- * von „die neusten oben": ein Knoten, der gerade erst aufgegangen ist, hat der
- * Spieler noch nie gesehen — er ist die Neuigkeit, während `ready` das ist, was
- * schon länger daliegt. Die Unterscheidung kostet kein neues Feld, sie liest
- * `meepTreeStore.acknowledged`, das die Notify-Abzeichen ohnehin schon führt.
- *
- * Grün für die kaufbaren Töpfe ist keine freie Wahl — im Projekt trägt Grün
- * durchgehend „kaufbar/aktiv" (die Knopf-Verläufe in CLAUDE.md). `fresh`
- * bekommt Gold daneben, weil es innerhalb des Kaufbaren die Auszeichnung ist.
- */
-export const MEEP_SKILL_BUCKETS = [
-  {
-    id: 'fresh' as const,
-    title: 'Newly unlocked',
-    hint: 'Never seen before',
-    icon: 'ph:sparkle-fill',
-    accent: '#e8c040',
-  },
-  {
-    id: 'ready' as const,
-    title: 'Ready to learn',
-    hint: 'Meeps are there',
-    icon: 'ph:lightning-fill',
-    accent: '#52b830',
-  },
-  {
-    id: 'reach' as const,
-    title: 'Saving up',
-    hint: 'Open, but out of reach',
-    icon: 'ph:hourglass-medium-fill',
-    accent: '#c89040',
-  },
-  {
-    id: 'locked' as const,
-    title: 'Locked',
-    hint: 'Learn the rank below first',
-    icon: 'lucide:lock',
-    accent: '#7a4e20',
-  },
-]
 
-/**
- * Beschriftung der Archiv-Schaltzeile am Listenende: „▸ 12 learned · 2 sealed".
- * EINE Zeile für beide Zustände, nicht zwei — an beiden ist nichts mehr zu
- * entscheiden, und zwei gleich aussehende Schaltzeilen untereinander lesen sich
- * als eine.
- */
-export const MEEP_SKILL_ARCHIVE_LABEL = 'learned'
 export const MEEP_SKILL_ARCHIVE_SEALED_LABEL = 'sealed'
-export const MEEP_SKILL_ARCHIVE_HINT = 'Nothing left to decide here'
-export const MEEP_SKILL_ARCHIVE_ICON = 'ph:check-circle-fill'
-/** Chevron der Schaltzeile. Schriftzeichen wie `✦` und `→`, kein Emoji. */
-export const MEEP_SKILL_ARCHIVE_CHEVRON_CLOSED = '▸'
-export const MEEP_SKILL_ARCHIVE_CHEVRON_OPEN = '▾'
 
-/** Icon-Kantenlänge auf einer Listenkarte. Größer als die 26px der Forge-Zeile:
- *  hier stehen rund zehn offene Einträge statt fünfundvierzig. */
-export const MEEP_SKILL_CARD_ICON_SIZE = 32
-/** Der Knopf an der Karte trägt ein Wort, nicht das ＋ der Forge-Zeile — auf
- *  zehn Einträgen ist die Beschriftung bezahlbar und ohne Rätsel lesbar. */
-export const MEEP_SKILL_LEARN_LABEL = 'Learn'
-/** Marke am frisch aufgegangenen Knoten. */
-export const MEEP_SKILL_FRESH_LABEL = 'NEW'
 /** Der Chip an einem Gabel-Knoten — dieselbe Aussage wie der Gabelsatz im
  *  Kärtchen, nur so kurz, dass sie auf die Karte passt. */
 export const MEEP_SKILL_FORK_LABEL = 'CHOICE'
 export const MEEP_SKILL_FORK_ICON = 'game-icons:path-distance'
-/** Was am Listenende steht, wenn der ganze Baum gelernt ist. */
-export const MEEP_SKILL_ALL_DONE = 'Every skill learned.'
-export const MEEP_SKILL_ALL_DONE_ICON = 'game-icons:laurels'
-/*
- * Eine Bedienzeile über der Liste steht hier bewusst NICHT — und seit dem
- * Kachel-Umbau im Shop dort ebenso wenig. Eine Karte, die Icon, Namen, Wirkung,
- * Preis und einen BESCHRIFTETEN Knopf trägt, erklärt sich selbst; nötig war die
- * Zeile nur, solange der Eintrag ein nacktes `＋` zeigte und seine Auskunft
- * allein am Zeiger hing. In der 499px-Schiene stand sie ausserdem neben dem
- * Topf-Hinweis und schnitt ihn ab (gemessen auf Full HD): zwei Sätze um
- * denselben Platz, von denen der eine nichts sagt.
- */
-
-// ── Skill-Tab: das Empfehlungs-Panel (MeepBestBuyPanel) ──────────────────────
-/**
- * Was als Nächstes zu lernen lohnt — EIN Knoten groß, und zwar derselbe, den
- * die Orbit-Bühne links als BEST BUY umringt.
- *
- * „Günstigster" und nicht „stärkster": die Wirkungen des Baums stehen in
- * Prozent, HP, Stunden und Chimes nebeneinander — es gibt keine Einheit, in der
- * `+6 % Expeditionsertrag` und `+1 HP Regen/s` vergleichbar wären. Der Preis ist
- * die einzige Zahl, die alle dreißig Knoten teilen. Der Store sagt dasselbe schon
- * seit jeher an `suggestedNodeIds()`; die Regel ist also nicht neu, sie wird
- * nur sichtbar.
- */
-export const MEEP_BEST_BUY_LABEL = 'BEST BUY'
-export const MEEP_BEST_BUY_TITLE = 'Best buy'
-export const MEEP_BEST_BUY_HINT = 'cheapest you can afford'
-/**
- * Dieselben zwei Glyphen wie die Töpfe der Liste (`MEEP_SKILL_BUCKETS`):
- * „kaufbar" ist überall der Blitz, „noch nicht" überall die Sanduhr. Eine
- * Bedeutung, ein Zeichen — auch über Komponentengrenzen hinweg.
- */
-export const MEEP_BEST_BUY_ICON = 'ph:lightning-fill'
-export const MEEP_BEST_BUY_IDLE_ICON = 'ph:hourglass-medium-fill'
-export const MEEP_BEST_BUY_IDLE = 'Nothing ready right now'
-/** Beschriftung des großen Knopfs im Panel. */
-export const MEEP_BEST_BUY_ACT_LABEL = 'Learn skill'
-/** Icon-Kantenlänge in der Identitätszeile des Panels. */
-export const MEEP_BEST_BUY_ICON_SIZE = 40
-
-/**
- * Die Fläche, die das Panel IMMER belegt, solange es da ist.
- *
- * Dieselbe Klammer und derselbe Grund wie `FORGE_DETAIL_PANEL_*`: ein Kopf, der
- * mit seinem Inhalt wächst, schiebt die Liste darunter — und wenn er dabei
- * unter dem Zeiger wegrutscht, geht der Hover aus, der Kopf schrumpft, die
- * Liste kommt zurück, und das Flackern trägt sich selbst.
- *
- * Kleiner als die Shop-Werte (384/45 %/440), weil dieses Panel drei Dinge NICHT
- * hat: die Materialzeile, den Stapelknopf und dessen Hinweiszeile. Es trägt
- * Kopf, Identität, einzeilige Beschreibung, die Vorher/Nachher-Zeilen und den
- * Kaufblock — auf Full HD gemessen rund 300px mit der Kompakt-Media-Query.
- *
- * Der Anteil greift, weil `.msd-root` `height: 100%` trägt und der Elternteil
- * damit eine definite Höhe hat. Ohne den Anteil bliebe auf Full HD (~950px) von
- * der Liste zu wenig und auf 4K (~2030px) stünde der Kopf verloren.
- */
-export const MEEP_BEST_BUY_PANEL_MIN_PX = 316
-export const MEEP_BEST_BUY_PANEL_FRACTION = 0.36
-export const MEEP_BEST_BUY_PANEL_MAX_PX = 380
-
-// ── Skill-Tab: schwebendes Kärtchen an der Karte (MeepSkillTooltip) ──────────
-/**
- * Was der Zeiger in der Liste streift, in voller Auskunft: alle
- * Vorher/Nachher-Zeilen, die berührten Systeme, der Gabelsatz und der noch
- * fehlende Weg.
- *
- * Es schwebt links NEBEN der Schiene statt in ihr — dieselbe Begründung wie
- * `FORGE_TIP_WIDTH_PX`: alles, was im Fluss der Liste läge, verschöbe sie beim
- * Erscheinen unter dem Zeiger.
- */
-export const MEEP_SKILL_TIP_WIDTH_PX = 268
-export const MEEP_SKILL_TIP_GAP_PX = 26
-
-/**
- * Wie lange die gelernte Karte aufleuchtet. Rein visuell, daher reale Zeit —
- * derselbe Wert wie im Shop, damit dieselbe Quittung nicht zweimal anders lang
- * dauert.
- */
-export const MEEP_SKILL_FLASH_MS = 420
 
 // ── Hover-Spotlight zwischen Orbit-Bühne und Skill-Liste ─────────────────────
-/**
- * Bühne links und Liste rechts zeigen denselben Bestand in zwei Bildern. Zeigt
- * der Zeiger auf eines von beiden, tritt das andere mit hervor — sonst sucht
- * das Auge den Kreis zur Karte unter dreißig gleich hellen selbst.
- *
- * Die Verzögerung vor dem Scrollen ist dieselbe Vorsichtsmaßnahme wie im Shop:
- * wer mit dem Zeiger über die Bühne fährt, streift dabei Knoten, die er nicht
- * meint — ohne sie sprünge die Liste bei jeder Bewegung.
- */
-export const MEEP_SPOTLIGHT_SCROLL_DELAY_MS = 120
-/**
- * Der Maßstab des hervorgehobenen Knotens. Er liegt ÜBER dem Zeige-Sprung von
- * `.msn-circle:hover` (1,14), weil er beide Gesten bedienen muss: den Zeiger auf
- * dem Kreis UND den Zeiger auf seiner Karte drüben. Zwei Größen für dieselbe
- * Bedeutung wären ein Fehler.
- *
- * Dieselbe Zahl wie `FORGE_SPOTLIGHT_NODE_SCALE` weiter unten — die Geste ist
- * dieselbe. Trotzdem eine eigene Konstante: die beiden Reiter teilen keinen
- * Zustand (siehe `useMeepSpotlight` gegen `useForgeSpotlight`), und ein Name aus
- * dem Shop im Meep-Baum läse sich als Kopplung, die es nicht gibt.
- */
-export const MEEP_SPOTLIGHT_NODE_SCALE = 1.22
-/**
- * Wie weit die übrigen neunundzwanzig zurücktreten, solange ein Spotlight liegt.
- *
- * Steht bewusst NEBEN `SKILL_TREE_NODE_OPACITY.dimmed` (0,2) und bedeutet etwas
- * anderes:
- *
- *   • 0,3 hier — „ich zeige gerade woandershin". Der Zeiger wandert weiter, die
- *     anderen bleiben lesbar.
- *   • 0,2 dort — der ZWEIGFOKUS, eine Absicht des Spielers, die stehen bleibt,
- *     bis er sie zurücknimmt. Sie darf härter zugreifen.
- *
- * Liegen beide an, gewinnt der Fokus: er ist die dauerhafte Aussage.
- */
-export const MEEP_SPOTLIGHT_DIM_OPACITY = 0.3
-/** Dauer des einmaligen Rings, der beim Erscheinen der Marke aufgeht und vergeht. */
-export const MEEP_SPOTLIGHT_PING_MS = 450
 
 // ── Star Forge (Shop tab): das NETZ ────────────────────────────────
 /*
@@ -926,20 +513,35 @@ export const MEEP_SPOTLIGHT_PING_MS = 450
  * kostet Fläche nichts mehr, und die Knoten behalten ihre echte Grösse.
  */
 /**
- * Kantenlänge der Bühne — 1040 → 2000.
+ * Kantenlänge der Bühne — 1040 → 2000 → 3600.
  *
- * Das war bis hierher ausdrücklich VERBOTEN, und der Verbotsgrund ist mit dem
- * Pan weggefallen: `fitScale` skalierte die ganze Bühne in die Spalte, ein
- * grösseres Feld hiess also kleinere Knoten (gemessen: Blattglyph 16,8 → 14,8 px
- * bei Bühne 1180, unter die 18-px-Grenze). Jetzt ist `fitScale` nur noch der
- * UNTERE Zoom-Anschlag — „ganz herausgezoomt zeigt den ganzen Baum" — und bei
- * Standardzoom gilt ein Bühnenpixel gleich ein Bildschirmpixel.
+ * Das war bis zum Pan ausdrücklich VERBOTEN, und der Verbotsgrund ist mit ihm
+ * weggefallen: `fitScale` skalierte die ganze Bühne in die Spalte, ein
+ * grösseres Feld hiess also kleinere Knoten. Jetzt ist `fitScale` nur noch der
+ * UNTERE Zoom-Anschlag, und bei Standardzoom gilt ein Bühnenpixel gleich ein
+ * Bildschirmpixel.
  *
- * 2000 × 2000 sind 4 Mio px² für rund 155 Knoten, also ein mittlerer Abstand
- * von 160 px. Ein Viewport von rund 1000 × 900 zeigt davon ein knappes Viertel,
- * also 30–40 Knoten — der Ausschnitt, den das Vorbild hat.
+ * Der Sprung auf 3400 macht Platz für The Wandering (`FORGE_ROAD_BAND`): das
+ * äusserste Band endet auf 1490, `clampToStage()` hält einen Knoten bei
+ * `1700 − 23 = 1677`.
+ *
+ * Die zusätzlichen zweihundert Pixel gegenüber 3600 sind gemessen, nicht
+ * gewählt: die Inhalts-Hülle ist mit fünf Spuren nicht mehr mittig — ein
+ * Fünfeck hat keine zentrierte Hüllbox, seine Mitte liegt rund 180 px neben der
+ * Sonne — und ihr Radius misst 1590,3. Bei Bühne 3200 läge er über der
+ * Bühnenhälfte, und `forgeCameraBounds.spec.ts` verlangt zu Recht, dass die
+ * Hülle in die Bühne passt.
+ *
+ * **Die relative Geometrie ändert sich dabei nicht.** `polar()` rechnet ab
+ * `STAGE_HALF`, alle bestehenden Sitze verschieben sich also um exakt +800 in x
+ * und y; jede abstandsbasierte Zusicherung in `forgeNetGeometry.spec.ts` misst
+ * danach dieselben Zahlen.
+ *
+ * Der Preis steht am Zoom-Boden: die Inhalts-Hülle wächst mit, und
+ * `forgeFitScale()` fällt entsprechend. Die Vollansicht dient der Orientierung,
+ * nicht dem Lesen — wer zu einem Knoten will, nimmt die Suche oder die Taste.
  */
-export const FORGE_STAGE_SIZE = 2000
+export const FORGE_STAGE_SIZE = 3400
 /**
  * Wo eine Sonnenphase ihre Knoten ablegt — ein BAND, kein Kreis.
  *
@@ -1001,6 +603,83 @@ export const FORGE_ZONE_BAND: readonly { inner: number; outer: number }[] = [
  * den Strahlen beginnen, sonst stünde ein Zweig auf seiner eigenen Wurzel.
  */
 export const FORGE_RAY_DIST = 245
+
+/**
+ * Wo THE WANDERING liegt — jenseits der Sonnenleiter, mit eigenem Tor.
+ *
+ * Eigenes Array und kein siebter Eintrag in `FORGE_ZONE_BAND`: dort ist der
+ * Index die SONNENPHASE, und die Strasse hat keine. Ein siebter Eintrag waere
+ * eine Phase, die es nicht gibt — `forgePhaseZones.spec.ts` prueft genau das.
+ *
+ * Index 0 ist die NAHT (die Confluences), Index 1 die Strasse selbst. Beide
+ * ueberlappen mit dem Bough-Band (780…960) bzw. miteinander — dieselbe Absicht
+ * wie bei den Sonnenbaendern: zwischen zwei Zonen soll keine Grenze stehen.
+ *
+ * Die Tiefe von Band 1 ist gerechnet, nicht gewaehlt: 540 px auf sieben Sitze
+ * je Spur (sechs Ränge, Rang 4 doppelt) sind 90 px rechnerischer Schritt.
+ *
+ * NACHGEMESSEN nach der Relaxation: Median-Schritt 100 px, engste Stelle
+ * innerhalb einer Spur 57,8 px — deutlich über `FORGE_MIN_AIR_PX` (44), weil
+ * die Spur tangential rund 400 px breit ist und der Trenn-Pass dort
+ * ausweichen kann, statt radial zu drücken.
+ *
+ * Sie war einmal 700 px tief und begann bei 1040 — rechnerisch bequemer, im
+ * Bild aber falsch: die Strasse belegte damit sechzig Prozent des Radius fuer
+ * dreissig von hundertfuenfundachtzig Knoten, und zwischen dem Sonnennetz
+ * (endet bei 920) und ihr stand ein leerer Ring von 120 px. In der Uebersicht
+ * las sich das nicht als zweite Region, sondern als abgetrennte Fetzen. Jetzt
+ * beginnt sie dreissig Pixel hinter der Sonne und endet, wo sie muss.
+ */
+export const FORGE_ROAD_BAND: readonly { inner: number; outer: number }[] = [
+  { inner: 900, outer: 1000 },
+  { inner: 950, outer: 1490 },
+]
+
+/**
+ * Wie schmal eine Strassenspur ist.
+ *
+ * `FORGE_CLUSTER_SECTOR_SPREAD` (0,6) ergaebe bei fuenf Nachbarn 43,2 Grad
+ * Halbweite — einen Faecher, keine Spur. 0,12 macht daraus 8,6 Grad, also ein
+ * 17-Grad-Band; bei r = 1350 sind das rund 400 px Breite: genug, dass die Gabel
+ * auf Rang 4 nebeneinander steht, zu wenig, dass die Spur als Faecher liest.
+ */
+export const FORGE_ROAD_SECTOR_SPREAD = 0.12
+
+/**
+ * Die Richtung der fünf Spuren, in Grad ab 3 Uhr im Uhrzeigersinn.
+ *
+ * Jede liegt rund vierzehn Grad neben einem der fünf Kronen-Cluster
+ * (26/95/162/232/306) — nah genug, dass die Kante von einer Confluence zu
+ * ihrem Bough unter `FORGE_EDGE_MAX_PX` bleibt (radial 100 plus tangential
+ * 14°×900×π/180 = 220, zusammen 242), weit genug, dass Spur und Krone im Bild
+ * nicht ineinanderfallen.
+ */
+export const FORGE_ROAD_LANE_ANGLES_DEG: readonly number[] = [40, 110, 176, 246, 320]
+
+/**
+ * Die Richtung der fünf Confluences — je sieben Grad VOR ihrer Spur, also
+ * genau zwischen Kronen-Cluster und Strasse.
+ *
+ * Der Ort ist keine Ästhetik, sondern die Bedingung: eine Confluence hängt
+ * an einem Bough (r ≈ 780) und verlangt einen Knoten der Strasse auf Rang 3
+ * (r ≈ 1143). Beide Kanten müssen unter `FORGE_EDGE_MAX_PX` bleiben, und das
+ * tun sie nur von hier aus — gemessen 200 px nach innen, 231 nach aussen.
+ */
+export const FORGE_CONFLUENCE_ANGLES_DEG: readonly number[] = [33, 103, 169, 239, 313]
+
+/**
+ * Was eine Confluence an Meeps kostet — die dritte Währung, und die einzige
+ * Stelle im Spiel, an der ein Preis aus drei Beinen besteht.
+ *
+ * Sechzig ist gegen die Strasse geeicht, nicht frei gewählt: fünf Stück sind
+ * 300 Meeps neben `MEEP_TREE_TOTAL_COST` (2468), also rund ein Achtel der
+ * Senke oder gut drei Aufbrüche. Genug, dass die Wahl weh tut; zu wenig, um
+ * mit dem Baum selbst zu konkurrieren — die Strasse bleibt die Meep-Senke.
+ */
+export const FORGE_CONFLUENCE_MEEP_COST = 60
+/** Chime-Grundpreis. An den Kronen orientiert; sie sind die einzigen
+ *  anderen Einmalkäufe des Netzes. */
+export const FORGE_CONFLUENCE_BASE_COST = 2.5e10
 
 /* ── Die CLUSTER: Ort und Thema statt Radius und Speiche ───────────────────
  *
@@ -1177,11 +856,22 @@ export const FORGE_TREE_ZOOM_DEFAULT = 1
 export const FORGE_TREE_ZOOM_MAX = 1.6
 /**
  * Absolute Untergrenze, unabhängig vom Fenster. Der tatsächliche Boden ist
- * `min(dieser Wert, fitScale)` — auf einem grossen Schirm passt die Bühne
- * schon bei 0,45 ganz hinein, auf einem kleinen erst bei 0,32, und in beiden
- * Fällen soll „ganz herausgezoomt" den GANZEN Baum zeigen.
+ * `max(dieser Wert, min(1, fitScale))` — er greift also nur dort, wo der Inhalt
+ * ohnehin ganz hineinpasst, und ließe sich sonst beliebig weit herauszoomen.
+ *
+ * **0,3 → 0,15, und das ist keine Kosmetik.** Mit The Wandering reicht die
+ * Inhalts-Hülle bis rund 3500 Bühnen-px; auf dem flachsten Desktop-Viewport
+ * (gemessen 741 × 720, `forgeCameraBounds.spec.ts`) fällt `forgeFitScale()`
+ * damit auf rund 0,18. Ein Boden von 0,3 läge darüber — „ganz herausgezoomt"
+ * zeigte dann NICHT mehr den ganzen Baum, und die Klemmung schaffte es nicht
+ * mehr, ihn zu zentrieren: gemessen stand der äusserste Knoten danach 0,9 px
+ * vor der Bildkante. Beides bindet `forgeCameraBounds.spec.ts`.
+ *
+ * Der Preis ist die Lesbarkeit der VOLLÜBERSICHT: dort steht ein Knoten der
+ * Strasse bei rund 7 px. Sie dient der Orientierung, nicht dem Lesen — wer zu
+ * einem Knoten will, nimmt die Suche oder die Taste.
  */
-export const FORGE_TREE_ZOOM_FLOOR = 0.3
+export const FORGE_TREE_ZOOM_FLOOR = 0.15
 /** Ein Schritt am Rad oder an den Knöpfen. Feiner als früher (0,19), weil der
  *  Bereich schmaler ist und ein Schritt sonst ein Sprung wäre. */
 export const FORGE_TREE_ZOOM_STEP = 0.08
@@ -1633,6 +1323,34 @@ export const FORGE_CROWN_BASE_COST = 2.5e10
  */
 export const FORGE_CROWN_STATE_OPEN = 'Not yet'
 export const FORGE_CROWN_STATE_FORGED = 'Forged'
+
+/**
+ * Dasselbe Zustandspaar für einen Knoten von The Wandering.
+ *
+ * Eigene Konstanten und nicht die der Krone: eine Krone wird GESCHMIEDET, ein
+ * Knoten der Straße wird GELERNT, und dieselbe Zeichenkette für zwei Verben
+ * wäre eine Behauptung, dass es dasselbe ist. Der Wert daneben ist derselbe,
+ * die Herleitung steht dort.
+ */
+/**
+ * Das Meep-Bild der Kostenzeile — neben `FORGE_CHIME_IMAGE`.
+ *
+ * Hier und nicht aus `meepTree.ts` importiert: `ForgeCostRow` ist eine
+ * Darstellung und hängt an keinem Progressions-Katalog. Es ist dieselbe Datei
+ * wie `MEEP_TREE_BADGE_ICON`, und das ist Absicht — Kostenzeile und Knoten-Marke
+ * zeigen dasselbe Bild in derselben Auflösungsstufe, also EIN Download.
+ */
+export const FORGE_MEEP_IMAGE = '/img/BardAbilities/BardMeep-64.png'
+
+/**
+ * Der Gabelsatz im Zeilen-Kärtchen. Zwei Fassungen, weil die Entscheidung
+ * zwei Zeitpunkte hat: davor eine WARNUNG, danach eine Feststellung.
+ */
+export const MEEP_FORK_WARN_PREFIX = 'Learning this seals '
+export const MEEP_FORK_SEALED_PREFIX = 'Sealed by '
+
+export const MEEP_STATE_OPEN = 'Not yet'
+export const MEEP_STATE_LEARNED = 'Learned'
 /**
  * Warum eine Krone zu ist, wenn die Sonne schon weit genug steht.
  *
@@ -2026,10 +1744,10 @@ export const FORGE_MAX_DOUBLE_CLICK_CHANCE = 0.8
  */
 /** Bard-Abklingzeiten (Chime Conduit, 4 × 5 % = 20 %). */
 export const FORGE_MIN_BARD_COOLDOWN_MULT = 0.8
-/** Gebäudepreise (Kiln Subsidy, 4 × 4 % = 16 %). Bewusst klein: die Gebäude sind
- *  eine der wenigen Chime-Senken, und ihre Kurve ist geometrisch — ein tiefer
- *  Rabatt verschöbe sie nur um wenige Stufen, ein flacher tut dasselbe billiger. */
-export const FORGE_MIN_BUILDING_COST_MULT = 0.84
+/** Preis einer Solar-Ray-Stufe (Kiln Subsidy, 4 × 4 % = 16 %). Bewusst klein:
+ *  die Strahlen sind die erste Chime-Senke des Spiels und ihre Kurve ist
+ *  geometrisch — ein tiefer Rabatt verschiebt sie nur um wenige Stufen. */
+export const FORGE_MIN_RAY_COST_MULT = 0.84
 /** Item-Preise (Merchant's Favor, 4 × 6 % = 24 %). */
 export const FORGE_MIN_ITEM_COST_MULT = 0.76
 /** Champion-Levelkosten (Alms of the Keeper, 4 × 5 % = 20 %). */
@@ -2084,16 +1802,6 @@ export const FORGE_MIN_BARGAIN_RESTOCK_MULT = 0.76
 /** LP-Verlust bei einer Niederlage (Arbiter's Pact, 3 × 10 % = 30 %). Eine
  *  Niederlage muss LP kosten, sonst ist die Ladder keine Leiter mehr. */
 export const FORGE_MIN_LP_LOSS_MULT = 0.7
-/**
- * Wie viele Stufen früher ein Gebäude-Meilenstein fällt (Founder's Pact, 3 × 2).
- *
- * `BUILDING_MILESTONE_INTERVAL` steht auf 25 und ist gewählt, weil der erste
- * Meilenstein damit in den ersten 20 Minuten liegt (docs/balance.md). Sechs
- * Stufen früher heisst 19 — derselbe Gedanke, nur enger. Der Boden ist keine
- * Kosmetik: unter etwa 15 kippt die Achse, weil die Verdopplung dann schneller
- * kommt als die geometrischen Kosten steigen.
- */
-export const FORGE_MIN_BUILDING_MILESTONE_INTERVAL = 15
 /**
  * Wie stark ein Ward das GEWICHT der seltenen Augmente hebt (Dreamer's Draw).
  *
@@ -2318,6 +2026,8 @@ export const FORGE_UPGRADE_TIER_LABELS = {
   bough: 'BOUGH',
   crown: 'CROWN',
   glimmer: 'GLIMMER',
+  meep: 'MEEP PATH',
+  confluence: 'CONFLUENCE',
 } as const
 
 /**
@@ -3680,10 +3390,14 @@ export const FORGE_DETAILS_OFFER_TITLE = 'an offer is within reach'
  *
  * Zwischen `SIGIL_BOARD_LOADER_MIN_MS` (340) und `SIGIL_DETAILS_LOADER_MIN_MS`
  * (480): der Shop baut EINE Bühne auf, nicht Bühne plus Detailseite, aber sein
- * Kantenfeld ist teurer als ein Sigil-Brett. Nach der Messung am
- * Produktionsbuild nachziehen.
+ * Kantenfeld ist teurer als ein Sigil-Brett.
+ *
+ * **410 ist gemessen, nicht geschätzt.** Produktionsbuild, Full HD, erstes
+ * Öffnen des Reiters: längster Einzelframe 403 · 400 · 386 ms bei 195 Knoten.
+ * Die 380 davor stammen aus der Zeit mit 155 Knoten (gemessen 392) und deckten
+ * den Layout-Lauf schon damals knapp nicht mehr.
  */
-export const FORGE_SHOP_LOADER_MIN_MS = 380
+export const FORGE_SHOP_LOADER_MIN_MS = 410
 /**
  * Wie viele gezeichnete Frames der Schleier abwartet, bevor er aufdeckt —
  * dieselbe Zahl wie `BATTLE_TAB_LOADER_SETTLE_FRAMES`. Ein einzelner rAF käme
@@ -3714,6 +3428,10 @@ export const FORGE_SHOP_SKELETON_RINGS = [
   { r: 20, n: 6, d: 4.2 },
   { r: 33, n: 10, d: 3.4 },
   { r: 45, n: 14, d: 2.6 },
+  // The Wandering: fuenf Spuren, also fuenf Punkte auf einem weiteren Ring.
+  // Der Schleier verspricht die Flaeche, die danach kommt — ohne ihn sprang
+  // das Bild beim ersten Oeffnen um die halbe Buehnenbreite.
+  { r: 62, n: 5, d: 2.2 },
 ] as const
 /** Durchmesser der Sonnenscheibe in der Skelettmitte, in Prozent. */
 export const FORGE_SHOP_SKELETON_SUN_PCT = 11

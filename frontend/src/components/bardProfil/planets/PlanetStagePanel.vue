@@ -9,12 +9,12 @@ import {
 } from '@/stores/world/planetShopStore'
 import type { PlanetSlot } from '@/stores/world/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
-import { useShopStore } from '@/stores/economy/shopStore'
 import { MATERIALS } from '@/config/economy/materials'
 import {
   MATERIAL_RARITY_COLOR,
   PLANET_RESPAWN_MS,
   PLANET_TAB_SUN_MAX_DIAMETER,
+  SOLAR_BRANCHES,
 } from '@/config/constants'
 import { hpTier, hpPercentOf, planetBonusTextFor } from '@/utils/orbit/planetStatus'
 import { useHerald } from '@/composables/ui/useHerald'
@@ -36,7 +36,6 @@ const props = defineProps<{
 
 const store = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
-const shopStore = useShopStore()
 const { announceReceipt } = useHerald()
 
 /** Orbit-Wrapper — der Tab-Loop setzt hier pro Frame `--orbit-delay`. */
@@ -189,19 +188,21 @@ const configTarget = computed(() => {
       name: m?.name ?? 'Pick a material',
       sub: m ? `${capitalize(m.rarity)} material` : 'No material set yet',
       icon: m?.image ?? null,
+      glyph: null,
       color: m ? (MATERIAL_RARITY_COLOR[m.rarity] ?? MATERIAL_RARITY_COLOR.common) : '#8a7a50',
       chosen: !!m,
     }
   }
   if (role.value === 'resonance_tower') {
-    const b = shopStore.cpsBuildings.find((bld) => bld.id === props.planet.slotConfig?.buildingId)
+    const r = SOLAR_BRANCHES.find((ray) => ray.id === props.planet.slotConfig?.rayId)
     return {
       kicker: 'Boosting',
-      name: b?.name ?? 'Pick a building',
-      sub: b ? 'CPS booster building' : 'No building set yet',
-      icon: b?.icon ?? null,
-      color: b ? '#e8c040' : '#8a7a50',
-      chosen: !!b,
+      name: r?.name ?? 'Pick a Solar Ray',
+      sub: r ? 'Solar Ray amplifier' : 'No ray set yet',
+      glyph: r?.icon ?? null,
+      icon: null,
+      color: r ? r.color : '#8a7a50',
+      chosen: !!r,
     }
   }
   return null
@@ -345,6 +346,12 @@ const configTarget = computed(() => {
                   :src="configTarget.icon"
                   class="ps-effect-target-icon"
                   alt=""
+                />
+                <Icon
+                  v-else-if="configTarget.glyph"
+                  :icon="configTarget.glyph"
+                  width="22"
+                  height="22"
                 />
                 <span v-else class="ps-effect-target-icon-missing">?</span>
               </span>

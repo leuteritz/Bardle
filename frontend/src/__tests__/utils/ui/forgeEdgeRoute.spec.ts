@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { forgeRouteKey, forgeRoutes, forgeSunRoute } from '@/utils/ui/forgeEdgeRoute'
 import { forgeContentBounds, forgeEdges, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
 import { getForgeNode } from '@/config/progression/starForge'
+import { forgeSeatTier } from '@/config/progression/forgeSeats'
 import {
   FORGE_CONTENT_SEAM_PX,
   FORGE_NODE_DIAMETER,
@@ -280,7 +281,7 @@ describe('Star Forge — das Routing', () => {
       const rTag = edgeRadius.toFixed(0)
       const stubs: { id: string; start: { x: number; y: number }; legs: Leg[] }[] = []
       for (const [id, at] of places) {
-        if (getForgeNode(id) !== undefined) continue // nur die fünf Strahlen
+        if (forgeSeatTier(id) !== 'root') continue // nur die fünf Strahlen
         const { legs } = legsOf(forgeSunRoute(centre, edgeRadius, id, at).d)
         stubs.push({ id, start: { x: legs[0].ax, y: legs[0].ay }, legs })
       }

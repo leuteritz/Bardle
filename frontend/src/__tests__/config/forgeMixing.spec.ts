@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { FORGE_GLIMMERS, FORGE_NODES, getForgeNode } from '@/config/progression/starForge'
 import { FORGE_CLUSTERS, forgeClusterOf } from '@/config/progression/starForgeNet'
+import { MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
 import {
   FORGE_BRANCH_MAX_LEVEL_CAP,
   FORGE_CHIME_SPLIT_MAX_PHASE,
@@ -50,16 +51,31 @@ function originOf(nodeId: string): { chain: string; ray: string } {
 const chainOf = (nodeId: string): string => originOf(nodeId).chain
 
 function membersOf(clusterId: string): ForgeNodeDef[] {
-  const cluster = FORGE_CLUSTERS.find((c) => c.id === clusterId)!
+  const cluster = SUN_CLUSTERS.find((c) => c.id === clusterId)!
   return cluster.members.map((id) => getForgeNode(id)!).filter(Boolean)
 }
+
+/**
+ * Die Strasse ist ausgenommen — und das ist kein Loch, sondern eine Grenze.
+ *
+ * Diese Datei steht gegen einen 72-Grad-Sektor der SONNE, der über sechs Ringe
+ * genau eine Aussage trug: dort lief die Kette RUND, und wer sie ansah, sah
+ * sechsmal dasselbe. Eine Spur von The Wandering läuft nach AUSSEN, und ihre
+ * Ordnung ist ihr Inhalt — „Vigil, Rang 1 bis 6" ist eine Aussage, die man
+ * nicht mischen kann, ohne sie zu zerstören.
+ *
+ * Damit die Ausnahme kein blankes `continue` bleibt, tritt an ihre Stelle eine
+ * POSITIVE Regel: `forgeNetGeometry.spec.ts` verlangt, dass jede Spur genau
+ * einen Zweig in Rangreihenfolge trägt und Rang für Rang weiter aussen liegt.
+ */
+const SUN_CLUSTERS = FORGE_CLUSTERS.filter((c) => c.region !== 'road')
 
 describe('Star Forge — kein Ort trägt nur eine Aussage', () => {
   it('jeder Cluster führt mindestens zwei Effektfamilien', () => {
     // DIE Prüfung dieser Datei. Ein Cluster ist der Ort, den der Spieler auf
     // einmal sieht — trägt er nur eine Familie, ist er derselbe Sektor wie
     // früher, nur in anderer Form.
-    for (const cluster of FORGE_CLUSTERS) {
+    for (const cluster of SUN_CLUSTERS) {
       const families = new Set(membersOf(cluster.id).map((def) => def.family))
       expect(
         families.size,
@@ -72,7 +88,7 @@ describe('Star Forge — kein Ort trägt nur eine Aussage', () => {
     // Zwei Familien allein genügen nicht: fünf Kampfknoten und ein
     // Wirtschaftsknoten wären formal gemischt und sähen aus wie vorher. Die
     // Mehrheit darf deshalb nicht mehr als zwei Drittel halten.
-    for (const cluster of FORGE_CLUSTERS) {
+    for (const cluster of SUN_CLUSTERS) {
       const members = membersOf(cluster.id)
       const count = new Map<ForgeEffectFamily, number>()
       for (const def of members) count.set(def.family, (count.get(def.family) ?? 0) + 1)
@@ -88,7 +104,7 @@ describe('Star Forge — kein Ort trägt nur eine Aussage', () => {
     // Sonst liesse sich „gemischt" erschleichen, indem man alle Kampfknoten in
     // einen Cluster legt und ihm einen einzigen fremden Knoten beistellt.
     const spread = new Map<ForgeEffectFamily, Set<string>>()
-    for (const cluster of FORGE_CLUSTERS) {
+    for (const cluster of SUN_CLUSTERS) {
       for (const def of membersOf(cluster.id)) {
         const set = spread.get(def.family) ?? new Set<string>()
         set.add(cluster.id)
@@ -110,7 +126,7 @@ describe('Star Forge — kein Ort trägt nur eine Aussage', () => {
     // Gezählt werden KETTEN, nicht Strahlen: seit der Chime-Trennung liegt im
     // Anfang mancher Strahl ganz an einem Ort, seine drei Zweige bleiben aber
     // drei Ketten.
-    for (const cluster of FORGE_CLUSTERS) {
+    for (const cluster of SUN_CLUSTERS) {
       const axes = new Set(membersOf(cluster.id).map((def) => chainOf(def.id)))
       expect(axes.size, `${cluster.id} liegt auf einer einzigen Kette`).toBeGreaterThanOrEqual(2)
     }
@@ -125,7 +141,7 @@ describe('Star Forge — kein Ort trägt nur eine Aussage', () => {
     // Nur bis `FORGE_CHIME_SPLIT_MAX_PHASE`; weiter aussen verschränken die
     // Kronen die beiden Achsen absichtlich, und die Begründung steht an der
     // Konstante.
-    for (const cluster of FORGE_CLUSTERS) {
+    for (const cluster of SUN_CLUSTERS) {
       if (cluster.phase > FORGE_CHIME_SPLIT_MAX_PHASE) continue
       const rays = new Set(membersOf(cluster.id).map((def) => originOf(def.id).ray))
       expect(
@@ -150,7 +166,10 @@ describe('Star Forge — die Array-Ordnung trägt die Abhängigkeit', () => {
     FORGE_NODES.forEach((def, i) => {
       const deps = [def.parentId, ...(def.requires ?? []).map((r) => r.id), def.boosts ?? '']
       for (const dep of deps) {
-        if (!dep || RAY_IDS.has(dep)) continue
+        // Eine Confluence nennt einen Knoten der STRASSE. Der steht in einem
+        // anderen Katalog und hat in dieser Ordnung nichts zu suchen —
+        // `adminMaxAll()` arbeitet nur `FORGE_NODES` ab.
+        if (!dep || RAY_IDS.has(dep) || MEEP_TREE_NODE_INDEX[dep]) continue
         const at = index.get(dep)
         expect(at, `${def.id} nennt ${dep} — den gibt es nicht`).toBeDefined()
         expect(at!, `${def.id} steht vor seinem Vorgänger ${dep}`).toBeLessThan(i)

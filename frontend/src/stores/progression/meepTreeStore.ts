@@ -85,6 +85,25 @@ export const useMeepTreeStore = defineStore('meepTree', {
       return this.bought.length
     },
 
+    /**
+     * Wohin ein Sprung auf The Wandering fuehrt: der billigste OFFENE Knoten,
+     * sonst der erste ueberhaupt.
+     *
+     * „Offen" und nicht „kaufbar" — wer keine Meeps hat, will trotzdem sehen,
+     * worauf er spart. Und der Getter steht hier statt in der Komponente, weil
+     * ZWEI Wege dorthin fuehren (Taste K und die Ecktaste im Header); zwei
+     * Kopien beantworteten „wohin" irgendwann verschieden.
+     */
+    roadAnchorId(): string | null {
+      let best: { id: string; cost: number } | null = null
+      for (const node of MEEP_TREE_NODES) {
+        const state = this.nodeState(node.id)
+        if (state !== 'buyable' && state !== 'reachable') continue
+        if (!best || node.cost < best.cost) best = { id: node.id, cost: node.cost }
+      }
+      return best?.id ?? MEEP_TREE_NODES[0]?.id ?? null
+    },
+
     /** Nodes the player could learn right now (prerequisite met + affordable). */
     buyableNodeCount(): number {
       return MEEP_TREE_NODES.filter((n) => this.nodeState(n.id) === 'buyable').length

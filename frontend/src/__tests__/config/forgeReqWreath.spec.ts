@@ -3,6 +3,7 @@ import {
   FORGE_NODE_DIAMETER,
   FORGE_ICON_SIZE_CROWN,
   FORGE_ICON_SIZE_BOUGH,
+  FORGE_ICON_SIZE_CONFLUENCE,
   FORGE_REQ_DOT_SIZE,
   FORGE_REQ_DOT_PITCH_DEG,
   FORGE_SPOTLIGHT_NODE_SCALE,
@@ -48,6 +49,7 @@ const WREATH_TIERS = [...new Set(FORGE_NODES.filter((n) => n.requires?.length).m
 const GLYPH_SIZE: Partial<Record<ForgeNodeTier, number>> = {
   crown: FORGE_ICON_SIZE_CROWN,
   bough: FORGE_ICON_SIZE_BOUGH,
+  confluence: FORGE_ICON_SIZE_CONFLUENCE,
 }
 
 /** Grösste Punktzahl an einem Knoten: Elternteil plus seine `requires`. */

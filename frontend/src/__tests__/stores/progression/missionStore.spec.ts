@@ -2,7 +2,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useMissionStore } from '@/stores/progression/missionStore'
 import { useGameStore } from '@/stores/core/gameStore'
-import { useShopStore } from '@/stores/economy/shopStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
@@ -55,10 +55,8 @@ function setMetric(metric: ProgressMetricId, value: number) {
     case 'materialsCollected':
       useInventoryStore().totalMaterialsCollected = value
       break
-    case 'shopBuildingLevels': {
-      const shop = useShopStore()
-      shop.shopUpgrades.forEach((u) => (u.level = 0))
-      shop.shopUpgrades[0].level = value
+    case 'solarRayLevels': {
+      useSolarUpgradeStore().chimesPerSecondLevel = value
       break
     }
     case 'bardLevel':
@@ -346,7 +344,7 @@ describe('missionStore — resilience', () => {
     // Fenster zwischen „erfüllt" und „ausgezahlt" ist einen Takt breit.
     const store = useMissionStore()
     arm('firstStone')
-    setMetric('shopBuildingLevels', 0)
+    setMetric('solarRayLevels', 0)
     store.tick()
     expect(store.index).toBe(MISSION_INDEX['firstStone'])
     expect(store.totalMissionsClaimed).toBe(0)

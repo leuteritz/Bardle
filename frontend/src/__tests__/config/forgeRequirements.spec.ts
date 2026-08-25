@@ -7,6 +7,7 @@ import {
   FORGE_CONSTELLATIONS,
   getForgeNode,
 } from '@/config/progression/starForge'
+import { getForgeSeat } from '@/config/progression/forgeSeats'
 import {
   SOLAR_BRANCHES,
   SOLAR_MAX_LEVELS,
@@ -103,7 +104,7 @@ describe('Star Forge — die Zusatz-Voraussetzungen', () => {
     for (const def of WITH_REQUIRES) {
       for (const req of def.requires ?? []) {
         expect(
-          getForgeNode(req.id) !== undefined || RAY_IDS.has(req.id),
+          getForgeSeat(req.id) !== undefined || RAY_IDS.has(req.id),
           `${def.id} verlangt ${req.id} — den gibt es nicht`,
         ).toBe(true)
       }

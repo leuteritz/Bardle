@@ -46,7 +46,7 @@ import {
 // einen einzigen Banner auf seine wirkliche Position.
 //
 // ── Lauf-lokale Metriken ────────────────────────────────────────────────────
-// `bardLevel` und `shopBuildingLevels` fallen beim Prestige auf null
+// `bardLevel` fällt beim Prestige auf null
 // (`gameStore.executePrestigeReset`). Sie stehen deshalb NUR in Kapiteln vor
 // `firstDeparture`; `missionLadder.spec.ts` bindet das.
 //
@@ -107,27 +107,27 @@ export const MISSIONS: MissionDef[] = [
   {
     id: 'firstStone',
     chapter: 'wakingOrbit',
-    name: 'The First Stone',
+    name: 'The First Ray',
     blurb: 'Nothing keeps ringing on its own. Something has to hold the note.',
-    objective: 'Raise {n} building in the shop',
-    icon: 'game-icons:stone-block',
-    // Bell Tower kostet 5 Chimes — nach „First Light" längst bezahlt, die
-    // Mission zeigt also auf den Shop, sie sperrt ihn nicht.
-    metric: 'shopBuildingLevels',
+    objective: 'Raise {n} Solar Ray in the shop',
+    icon: 'game-icons:sunbeams',
+    // Der erste Strahl kostet wenige Chimes — nach „First Light" längst
+    // bezahlt, die Mission zeigt also auf den Shop, sie sperrt ihn nicht.
+    metric: 'solarRayLevels',
     target: 1,
-    unit: 'buildings',
+    unit: 'rays',
     reward: { chimes: { flat: 80, clicks: 40 } },
   },
   {
     id: 'standingOrder',
     chapter: 'wakingOrbit',
     name: 'Standing Order',
-    blurb: 'A single tower is a curiosity. Ten are a habit.',
-    objective: 'Raise {n} building levels in the shop',
-    icon: 'game-icons:stone-pile',
-    metric: 'shopBuildingLevels',
+    blurb: 'A single ray is a curiosity. Ten are a habit.',
+    objective: 'Raise {n} Solar Ray levels in the shop',
+    icon: 'game-icons:star-swirl',
+    metric: 'solarRayLevels',
     target: 10,
-    unit: 'buildings',
+    unit: 'ray levels',
     reward: { chimes: { cpsSeconds: 60, flat: 250 } },
   },
   {
@@ -470,7 +470,7 @@ export const MISSIONS: MissionDef[] = [
     chapter: 'beyondUniverse',
     name: 'Small Voices Heard',
     blurb: 'The meeps came along, and they have opinions.',
-    objective: 'Open {n} nodes in the Tree tab',
+    objective: 'Open {n} nodes on the Long Road',
     icon: 'game-icons:meeple',
     metric: 'meepNodesBought',
     target: 3,
@@ -640,10 +640,7 @@ export const MISSION_CHAPTER_SIZES: Record<string, number> = Object.fromEntries(
  * hält sie gegen die Position von `firstDeparture` — eine dieser Metriken
  * dahinter stünde nach jedem Aufbruch wieder offen.
  */
-export const MISSION_RUN_SCOPED_METRICS: readonly MissionMetricId[] = [
-  'bardLevel',
-  'shopBuildingLevels',
-]
+export const MISSION_RUN_SCOPED_METRICS: readonly MissionMetricId[] = ['bardLevel']
 
 // ── Formatierer ──────────────────────────────────────────────────────────────
 

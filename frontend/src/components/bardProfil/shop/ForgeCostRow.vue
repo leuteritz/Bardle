@@ -24,6 +24,21 @@
         }}</span>
       </span>
 
+      <!-- Die dritte Währung. Sie steht zwischen Chimes und Material, weil das
+           die Zahlungsreihenfolge ist und weil ein Knoten von The Wandering
+           NUR sie trägt — dann ist sie die erste und einzige Position. -->
+      <span v-if="meeps > 0" class="fc-cost-pair" :class="{ 'fc-cost-pair--missing': !meepsOk }">
+        <img
+          :src="FORGE_MEEP_IMAGE"
+          class="fc-cost-img"
+          :class="{ 'fc-cost-img--big': big }"
+          alt="Meeps"
+        />
+        <span class="fc-cost-gold" :class="{ 'fc-cost-gold--big': big }">{{
+          formatNumber(meeps)
+        }}</span>
+      </span>
+
       <span
         v-for="mat in materials"
         :key="mat.id"
@@ -68,6 +83,7 @@ import {
   FORGE_COST_LABEL,
   MATERIAL_COLOR,
   MATERIAL_PLACEHOLDER_LABELS,
+  FORGE_MEEP_IMAGE,
 } from '@/config/constants'
 import type { ForgeCostItem } from '@/types'
 
@@ -76,6 +92,9 @@ const props = withDefaults(
     /** Chime-Preis. 0 lässt das Paar ganz weg — kostenlos ist keine Kostenzeile. */
     gold: number
     goldOk: boolean
+    /** Meep-Preis. 0 lässt das Paar ganz weg — dieselbe Regel wie beim Gold. */
+    meeps?: number
+    meepsOk?: boolean
     materials?: ForgeCostItem[]
     /** Größere Schrift für den einen Preis, der eine Karte allein trägt. */
     big?: boolean
@@ -103,13 +122,16 @@ const props = withDefaults(
      */
     flat?: boolean
   }>(),
-  { materials: () => [], big: false, label: true, inline: false, chips: false, flat: false },
+  { meeps: 0, meepsOk: true, materials: () => [], big: false, label: true, inline: false, chips: false, flat: false },
 )
 
 const wrapperTag = computed(() => (props.inline ? 'span' : 'div'))
 
 /** Fehlt irgendetwas, kippt die ganze Kante auf Rot — nicht nur die eine Zahl. */
 const short = computed(
-  () => (props.gold > 0 && !props.goldOk) || props.materials.some((mat) => !mat.ok),
+  () =>
+    (props.gold > 0 && !props.goldOk) ||
+    (props.meeps > 0 && !props.meepsOk) ||
+    props.materials.some((mat) => !mat.ok),
 )
 </script>

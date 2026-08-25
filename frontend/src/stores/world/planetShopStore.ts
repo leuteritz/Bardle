@@ -30,7 +30,7 @@ import {
 // Rollen- und Buff-Tabellen leben in config/constants.ts; hier nur noch
 // weitergereicht, damit die bestehenden Importpfade gültig bleiben.
 export { PLANET_ROLES, PLANET_ROLES_LIST, JUNGLE_BUFF_DEFS } from '@/config/constants'
-import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
@@ -64,7 +64,7 @@ export interface PlanetSlot {
   direction: 1 | -1
   baseCost: number
   level: number
-  slotConfig?: { materialId?: string; buildingId?: string }
+  slotConfig?: { materialId?: string; rayId?: SolarBranchId }
   currentHp: number
   maxHp: number
   healingUntilMs: number
@@ -339,16 +339,22 @@ export const usePlanetShopStore = defineStore('planetShop', {
         }, 1)
     },
 
-    resonanceTowerBuildingMultipliers(state): Record<string, number> {
-      const result: Record<string, number> = {}
+    /**
+     * Faktor je Solar Ray, den ein Resonator-Planet auf dessen eigene Wirkung
+     * legt. Er zielte einmal auf ein Chime-Gebäude; die sind gefallen, und ein
+     * Strahl ist dieselbe Art von Ziel — eine benannte Achse, die der Spieler
+     * selbst ausbaut.
+     */
+    resonanceRayMultipliers(state): Partial<Record<SolarBranchId, number>> {
+      const result: Partial<Record<SolarBranchId, number>> = {}
       for (const slot of state.slots) {
         if (
           slot.purchased &&
           slot.role === 'resonance_tower' &&
           !isPlanetDown(slot) &&
-          slot.slotConfig?.buildingId
+          slot.slotConfig?.rayId
         ) {
-          const bId = slot.slotConfig.buildingId
+          const bId = slot.slotConfig.rayId
           const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
           result[bId] =
             (result[bId] ?? 1) *
@@ -581,7 +587,7 @@ export const usePlanetShopStore = defineStore('planetShop', {
       if (role !== null && CONFIGURABLE_ROLES.includes(role)) return
     },
 
-    setSlotConfig(slotId: string, config: { materialId?: string; buildingId?: string }): void {
+    setSlotConfig(slotId: string, config: { materialId?: string; rayId?: SolarBranchId }): void {
       const slot = this.getSlot(slotId)
       if (!slot || !slot.purchased) return
 
