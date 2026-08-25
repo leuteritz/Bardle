@@ -25,11 +25,14 @@ import ExpeditionOverviewCard from './ExpeditionOverviewCard.vue'
 
 const props = defineProps<{
   site: VoyagePlacedSite | null
+  /** Alles, was in der gewaehlten Galaxie liegt — die Uebersicht listet es. */
+  sites: VoyagePlacedSite[]
   record: CompletedGalaxyRecord | null
   now: number
   folded: boolean
 }>()
 const emit = defineEmits<{
+  select: [string]
   send: [AvailableExpeditionSlot]
   collect: [string]
   'picker-open': [boolean]
@@ -104,7 +107,13 @@ onBeforeUnmount(() => {
             :now="now"
             @collect="emit('collect', $event)"
           />
-          <ExpeditionOverviewCard v-else-if="record" :record="record" :now="now" />
+          <ExpeditionOverviewCard
+            v-else-if="record"
+            :record="record"
+            :sites="sites"
+            :now="now"
+            @select="emit('select', $event)"
+          />
           <div v-else class="edp-empty">
             <Icon icon="game-icons:treasure-map" width="32" height="32" class="edp-empty-ico" />
             <span class="edp-empty-title">No destination charted</span>

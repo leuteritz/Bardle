@@ -1,11 +1,47 @@
 import { describe, it, expect } from 'vitest'
-import { durationSegments, formatPercentValue, sunVitalStage } from '@/utils/ui/format'
+import {
+  durationSegments,
+  formatMinuteClock,
+  formatPercentValue,
+  sunVitalStage,
+} from '@/utils/ui/format'
 import { HP_HEALTHY_PERCENT, HP_CRIT_PERCENT } from '@/config/constants'
 
 const S = 1000
 const M = 60 * S
 const H = 60 * M
 const D = 24 * H
+
+/**
+ * Der `m:ss`-Countdown der Expeditionen. Er stand als lokale Rechnung in vier
+ * Komponenten; die Spec hält jetzt die eine Fassung fest — vor allem die
+ * `Math.ceil`-Konvention, ohne die eine ablaufende Frist eine Sekunde zu früh
+ * auf `0:00` fällt.
+ */
+describe('formatMinuteClock', () => {
+  it('pads the seconds and drops the leading minute zero', () => {
+    expect(formatMinuteClock(0)).toBe('0:00')
+    expect(formatMinuteClock(7 * S)).toBe('0:07')
+    expect(formatMinuteClock(42 * S)).toBe('0:42')
+    expect(formatMinuteClock(4 * M + 12 * S)).toBe('4:12')
+  })
+
+  it('counts minutes past the hour instead of rolling over', () => {
+    expect(formatMinuteClock(M)).toBe('1:00')
+    expect(formatMinuteClock(H + 5 * S)).toBe('60:05')
+  })
+
+  it('rounds up to the full second, so a running deadline never reads short', () => {
+    expect(formatMinuteClock(1)).toBe('0:01')
+    expect(formatMinuteClock(1500)).toBe('0:02')
+    expect(formatMinuteClock(59_999)).toBe('1:00')
+  })
+
+  it('floors at zero instead of showing a negative clock', () => {
+    expect(formatMinuteClock(-1)).toBe('0:00')
+    expect(formatMinuteClock(-90 * S)).toBe('0:00')
+  })
+})
 
 describe('durationSegments', () => {
   it('always returns all four units, in order', () => {

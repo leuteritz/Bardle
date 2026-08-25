@@ -123,6 +123,18 @@ watch(isVisible, (visible) => {
   if (!visible) userDetailFolded.value = null
 })
 
+/**
+ * Die Spalte folgt AUCH der Galaxie, nicht nur dem Ankerplatz: eine Galaxie ohne
+ * Vertrag und ohne Crew hat kein Detail, das ihre Breite rechtfertigt.
+ *
+ * Der Watcher hängt an der GALAXIE, nicht an `placedSites` — wer den letzten
+ * Vertrag einsammelt, behält die offene Spalte samt Beute.
+ */
+watch(selectedGalaxy, () => {
+  if (userDetailFolded.value === true) return
+  userDetailFolded.value = placedSites.value.length ? false : null
+})
+
 const atlasColumns = computed(() => {
   const rail = railFolded.value ? VOYAGE_RAIL_COLLAPSED : VOYAGE_RAIL_WIDTH
   const detail = detailFolded.value
@@ -279,16 +291,18 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
           :visible="isVisible"
           :gate="gateState"
           :homecomings="homecomings"
-          @select="selectedKey = $event"
+          @select="onSelect"
         />
       </div>
 
       <ExpeditionDetailPanel
         class="etc-detail"
         :site="selectedSite"
+        :sites="placedSites"
         :record="selectedRecord"
         :now="now"
         :folded="detailFolded"
+        @select="onSelect"
         @send="atlas.sendExpedition"
         @collect="atlas.collectMission"
         @picker-open="pickerOpen = $event"

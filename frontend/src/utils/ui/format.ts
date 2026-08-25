@@ -82,6 +82,12 @@ export function formatClock(ms: number): string {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
 }
 
+/** Millisekunden als knapper Countdown: `4:12`. Negativ wird zu `0:00`. */
+export function formatMinuteClock(ms: number): string {
+  const secs = Math.max(0, Math.ceil(ms / MS_PER_SECOND))
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`
+}
+
 /** Millisekunden grob gerundet auf die zwei größten Einheiten: `2d 3h`, `7m 12s`. */
 export function formatCompactDuration(ms: number): string {
   const secs = Math.max(0, Math.ceil(ms / MS_PER_SECOND))
