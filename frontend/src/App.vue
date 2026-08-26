@@ -294,9 +294,20 @@ watch(
 
   /* Fluid scaling — no breakpoint jumps */
   /* Die Breite ist ein Rest: 808px gehen an die beiden HUD-Gassen (Kartenspalte
-     links, Eventlog rechts), der Header bekommt, was übrig bleibt. Boden 978,
+     links, Eventlog rechts), der Header bekommt, was übrig bleibt. Boden 1048,
      darunter clippt die rechte Flex-Zeile. Siehe headerWidthBudget.spec.ts. */
   --header-max-width: clamp(1048px, calc(100vw - 808px), 1400px);
+
+  /* Die EINE Breite beider HUD-Spalten. Der Header steht mittig, also ist die
+     rechte Gasse die gespiegelte linke — eine Formel trägt beide Seiten, und
+     die fünf Karten links wie die Log-Spur rechts lesen nur noch von hier.
+     Die Skalare setzt main.ts vor dem Mount; Wächter: hudColumnWidth.spec.ts. */
+  --hud-col-edge: var(--hud-col-inset);
+  --hud-col-w: clamp(
+    var(--hud-col-min),
+    calc(var(--header-vp-left, 22vw) - var(--hud-col-edge) * 2),
+    var(--hud-col-max)
+  );
   --header-height: clamp(62px, calc(30px + 2.9vw), 115px);
   --bard-avatar-radius: clamp(14px, 1.4vw, 40px);
   --avatar-circle-size: clamp(48px, calc(-5px + 4.4vw), 100px);
@@ -364,6 +375,14 @@ watch(
 @media (max-width: 1200px) {
   .credit-row {
     font-size: 1.5rem;
+  }
+}
+
+/* Ab hier rücken BEIDE HUD-Spalten gemeinsam von der Bildkante ab — dieselbe
+   Schwelle, an der die Karten links auf ihre grosse Typografie umstellen. */
+@media (min-width: 2400px) {
+  :root {
+    --hud-col-edge: var(--hud-col-inset-wide);
   }
 }
 

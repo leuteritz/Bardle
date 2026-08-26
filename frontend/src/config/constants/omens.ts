@@ -64,17 +64,10 @@ export const OMEN_DEADLINE_WARN_SEC = 30
  */
 export const OMEN_MIN_ELIGIBLE_FOR_FILTER = 3
 
-// ── HUD-Karte ────────────────────────────────────────────────────────────────
-
-/** Abstand der Karte zur linken Kante und unter den Header. Die Drifter-Karte
- *  sitzt an derselben Kante, deshalb dieselben Werte — die beiden stapeln
- *  untereinander und dürfen nicht um zwei Pixel versetzt stehen. */
-export const OMEN_HUD_LEFT_PX = 16
-export const OMEN_HUD_TOP_PX = 96
-
-/** Breite der HUD-Karte. Schmal genug, dass sie auf Full HD nichts vom Orbit
- *  verdeckt, breit genug für die längste Zielzeile im Katalog. */
-export const OMEN_HUD_WIDTH_PX = 232
+// Die drei Maße der HUD-Karte (Rand, Kopfabstand, Breite) sind entfallen: sie
+// waren seit dem Umstieg auf die geteilte Spaltenformel ohne Leser. Rand und
+// Breite kommen aus `--hud-col-edge` / `--hud-col-w`, den Kopfabstand rechnet
+// die Karte aus der Unterkante ihrer Vorgängerin.
 
 // ── Wahl-Overlay ─────────────────────────────────────────────────────────────
 

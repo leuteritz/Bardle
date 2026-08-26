@@ -8,6 +8,10 @@ import {
   BOTTOM_BAR_NOTCH_R,
   AUTO_SAVE_INTERVAL_MS,
   BATTLE_SYNC_INTERVAL_MS,
+  HUD_COLUMN_INSET,
+  HUD_COLUMN_INSET_WIDE,
+  HUD_COLUMN_MAX_W,
+  HUD_COLUMN_MIN_W,
 } from '@/config/constants'
 import { usePersistence } from '@/composables/system/usePersistence'
 import { useBattleStore } from '@/stores/battle/battleStore'
@@ -39,6 +43,14 @@ app.directive('ink-center', vInkCenter)
 // einen Frame erzwingt.
 document.documentElement.style.setProperty('--bp-radius', `${BARD_PROFILE_RADIUS}px`)
 document.documentElement.style.setProperty('--bottom-notch-r', `${BOTTOM_BAR_NOTCH_R}px`)
+
+// Die Skalare der EINEN HUD-Spaltenbreite. App.vue rechnet daraus `--hud-col-w`;
+// hierher, weil `:root` kein `v-bind` annimmt — die Variable laege am
+// Wurzelelement von App.vue und `:root` saehe sie nicht.
+document.documentElement.style.setProperty('--hud-col-min', `${HUD_COLUMN_MIN_W}px`)
+document.documentElement.style.setProperty('--hud-col-max', `${HUD_COLUMN_MAX_W}px`)
+document.documentElement.style.setProperty('--hud-col-inset', `${HUD_COLUMN_INSET}px`)
+document.documentElement.style.setProperty('--hud-col-inset-wide', `${HUD_COLUMN_INSET_WIDE}px`)
 
 app.mount('#app')
 

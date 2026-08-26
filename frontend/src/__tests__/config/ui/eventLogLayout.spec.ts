@@ -10,15 +10,26 @@ import {
   EVENT_LOG_PANEL_MAX_H,
   EVENT_LOG_PANEL_TOP_GAP,
   EVENT_LOG_BAR_H,
+  EVENT_LOG_BAR_H_MID,
+  EVENT_LOG_BAR_H_WIDE,
   EVENT_LOG_BAR_PAD,
   EVENT_LOG_BAR_GAP,
+  EVENT_LOG_BAR_MID_MIN_W,
+  EVENT_LOG_BAR_WIDE_MIN_W,
   EVENT_LOG_TAB_MIN_W,
+  EVENT_LOG_TAB_MIN_W_MID,
+  EVENT_LOG_TAB_MIN_W_WIDE,
   EVENT_LOG_TOOL_W,
+  EVENT_LOG_TOOL_W_MID,
+  EVENT_LOG_TOOL_W_WIDE,
   EVENT_LOG_TRAIL_FADE_PX,
   EVENT_LOG_TRAIL_MAX_ROWS,
   EVENT_LOG_BESIDE_HEADER_MIN_VW,
-  EVENT_LOG_PANEL_HEADER_GAP,
-  EVENT_LOG_PANEL_EDGE_GAP,
+  HUD_COLUMN_MIN_W,
+  HUD_COLUMN_MAX_W,
+  HUD_COLUMN_INSET,
+  HUD_COLUMN_INSET_WIDE,
+  HUD_COLUMN_WIDE_MIN_VW,
   HEADER_SIDE_GUTTER_TOTAL,
   HEADER_MIN_WIDTH,
   HEADER_MAX_WIDTH,
@@ -28,56 +39,33 @@ import {
 /**
  * Der Wächter über das Budget der Eventlog-Spur.
  *
- * Sie steht dauerhaft im Bild, also ist jede ihrer Zahlen eine Zusage an zwei
- * Seiten: nach unten an die Bühne (was sie deckt, ist für Spielobjekte weg) und
- * nach innen an die eine Leiste (was die nicht trägt, fällt still heraus).
- * Beides ist gerechnet, nicht gemessen — der DOM-Beleg liegt im Playwright-Lauf,
- * hier stehen die Zahlen, aus denen das CSS gebaut wird.
+ * Die BREITE steht nicht mehr hier — sie ist die gemeinsame Spaltenbreite und
+ * liegt in `hudColumnWidth.spec.ts`. Was bleibt, ist alles, was nur die Spur
+ * betrifft: ihre Höhe gegen die Bühne, die Fassung unterhalb der Schwelle (wo
+ * sie unter dem Header steht und die Gasse nicht ihre Grenze ist) und die
+ * dreistufige Leiste.
  */
 
 const clamp = (min: number, val: number, max: number) => Math.min(Math.max(val, min), max)
 
-const panelWidth = (viewportW: number) =>
-  clamp(EVENT_LOG_PANEL_MIN_W, (viewportW * EVENT_LOG_PANEL_VW) / 100, EVENT_LOG_PANEL_MAX_W)
-
 const panelHeight = (viewportH: number) =>
   clamp(EVENT_LOG_PANEL_MIN_H, (viewportH * EVENT_LOG_PANEL_VH) / 100, EVENT_LOG_PANEL_MAX_H)
 
-/**
- * Die freie Gasse neben dem Header — dieselbe Rechnung wie `--header-max-width`
- * in `App.vue`, gegen den `px-4`-Container des Seitenlayouts.
- */
-const headerWidth = (viewportW: number) =>
-  clamp(HEADER_MIN_WIDTH, viewportW - HEADER_SIDE_GUTTER_TOTAL, HEADER_MAX_WIDTH)
+/** Die Breite UNTERHALB der Schwelle — dort hängt die Spur unter dem Header. */
+const belowThresholdWidth = (viewportW: number) =>
+  clamp(EVENT_LOG_PANEL_MIN_W, (viewportW * EVENT_LOG_PANEL_VW) / 100, EVENT_LOG_PANEL_MAX_W)
 
-const gutter = (viewportW: number) =>
-  HEADER_PAGE_INSET + (viewportW - 2 * HEADER_PAGE_INSET - headerWidth(viewportW)) / 2
+const headerWidth = (W: number) =>
+  clamp(HEADER_MIN_WIDTH, W - HEADER_SIDE_GUTTER_TOTAL, HEADER_MAX_WIDTH)
 
-/** Was die Spur an Gasse braucht, um neben dem Header zu stehen. */
-const gutterNeeded = (viewportW: number) =>
-  panelWidth(viewportW) + EVENT_LOG_PANEL_EDGE_GAP + EVENT_LOG_PANEL_HEADER_GAP
+const gutter = (W: number) =>
+  HEADER_PAGE_INSET + (W - 2 * HEADER_PAGE_INSET - headerWidth(W)) / 2
 
-// Was das CSS der Leiste baut: Polster, Icon, Zahl je Tab, dazu die Lücke
-// zwischen zwei Tabs. Der aktive Tab trägt KEINEN Namen mehr — er wog 80 px in
-// einer Reihe von 352, und die drei Werkzeuge rechts wollen auch stehen.
-const TAB_PAD = 12
-const TAB_ICON = 14
-const TAB_INNER_GAP = 4
-const TAB_COUNT = 20
-const TAB_GAP = 2
+const inset = (W: number) => (W >= HUD_COLUMN_WIDE_MIN_VW ? HUD_COLUMN_INSET_WIDE : HUD_COLUMN_INSET)
 
-const idleTabWidth = () => TAB_PAD + TAB_ICON + TAB_INNER_GAP + TAB_COUNT
-
-/** Innenraum der Leiste, wenn die Spur `w` misst (1px Rahmen je Seite). */
-const barInner = (w: number) => w - 2 - 2 * EVENT_LOG_BAR_PAD
-
-/** Fünf gezählte Tabs, drei randlose Werkzeuge, die Lücken dazwischen. */
-const TOOLS = 3
-const barNeed = () =>
-  EVENT_GROUPS.length * idleTabWidth() +
-  (EVENT_GROUPS.length - 1) * TAB_GAP +
-  TOOLS * EVENT_LOG_TOOL_W +
-  TOOLS * EVENT_LOG_BAR_GAP
+/** Dieselbe Formel wie in `hudColumnWidth.spec.ts` — hier als Eingabe der Leiste. */
+const columnWidth = (W: number) =>
+  clamp(HUD_COLUMN_MIN_W, gutter(W) - 2 * inset(W), HUD_COLUMN_MAX_W)
 
 describe('event log trail — the stage it takes', () => {
   it('keeps clear of the bottom bar on the flattest reference viewport', () => {
@@ -136,52 +124,11 @@ describe('event log trail — the stage it takes', () => {
       eventLogBottom: 0,
       eventLogLeft: 0,
     }
-    expect(gutter(W)).toBeLessThan(gutterNeeded(W))
     const bottom = headerBottom + EVENT_LOG_PANEL_TOP_GAP + panelHeight(H)
     expect(bottom).toBeLessThan(hudBarTopAt(W - 1, metrics) - 40)
   })
 
-  it('never grows wider than the free column beside a 2K header', () => {
-    // Der Header ist bei 2560 auf 1400 gedeckelt, links wie rechts bleiben 580.
-    expect(Math.round(gutter(2560))).toBe(580)
-    expect(panelWidth(2560)).toBeLessThanOrEqual(580 - 12)
-    expect(panelWidth(3840)).toBe(EVENT_LOG_PANEL_MAX_W)
-  })
-
-  /**
-   * Die eigentliche Zusage des schmalen Headers: die Gasse traegt die Spur in
-   * voller Breite. Wer `--header-max-width` wieder aufweitet, bricht hier.
-   */
-  it('fits the trail beside the header at every reference resolution', () => {
-    for (const viewport of [1920, 2560, 3840]) {
-      expect(gutter(viewport), `${viewport}px`).toBeGreaterThanOrEqual(gutterNeeded(viewport))
-    }
-    // Full HD ist der enge Fall: 404 gegen 384 + 12 + 8.
-    expect(Math.round(gutter(1920))).toBe(404)
-    expect(gutterNeeded(1920)).toBe(404)
-  })
-
-  /**
-   * ...und die Gegenprobe. Ohne sie waere die Media Query im CSS blosser
-   * Zierrat: die Spur duerfte auch darunter hochruecken und laege dann auf
-   * dem Header.
-   */
-  it('keeps the trail below the header where the gutter cannot carry it', () => {
-    // Full HD bei 125 % Skalierung — 1536 CSS-Pixel, Header auf seinem Boden.
-    expect(gutter(1536)).toBeLessThan(gutterNeeded(1536))
-    expect(headerWidth(1536)).toBe(HEADER_MIN_WIDTH)
-    // Die Schwelle im CSS liegt ueber dem Punkt, an dem es gerade passt.
-    expect(gutter(EVENT_LOG_BESIDE_HEADER_MIN_VW)).toBeGreaterThanOrEqual(
-      gutterNeeded(EVENT_LOG_BESIDE_HEADER_MIN_VW),
-    )
-    expect(gutter(EVENT_LOG_BESIDE_HEADER_MIN_VW - 100)).toBeLessThan(
-      gutterNeeded(EVENT_LOG_BESIDE_HEADER_MIN_VW - 100),
-    )
-  })
-
-  it('reaches the reference resolutions at the box the CSS assumes', () => {
-    expect(Math.round(panelWidth(1920))).toBe(384)
-    expect(panelWidth(2560)).toBe(EVENT_LOG_PANEL_MAX_W)
+  it('reaches the heights the CSS assumes', () => {
     // Ein Drittel Bildhöhe, nicht die Hälfte: die rahmenlose Spur deckt
     // weiterhin, was hinter ihr steht.
     expect(Math.round(panelHeight(950))).toBe(285)
@@ -189,18 +136,144 @@ describe('event log trail — the stage it takes', () => {
     expect(panelHeight(2030)).toBe(EVENT_LOG_PANEL_MAX_H)
     expect(panelHeight(950)).toBeLessThan(950 / 3)
   })
+
+  /**
+   * Unterhalb der Schwelle trägt die Gasse die Spur nicht — sie fällt unter den
+   * Header und rechnet dort mit ihrer eigenen Fassung. Ohne diesen Fall wären
+   * die drei `EVENT_LOG_PANEL_*_W` unbelegt und die Media Query blosser Zierrat.
+   */
+  it('falls back to its own box where the gutter cannot carry it', () => {
+    const W = 1536
+    expect(W).toBeLessThan(EVENT_LOG_BESIDE_HEADER_MIN_VW)
+    expect(columnWidth(W)).toBeLessThan(belowThresholdWidth(W))
+    expect(belowThresholdWidth(W)).toBe(EVENT_LOG_PANEL_MIN_W)
+    // Und oberhalb ist die Gasse breiter als der Rückfall — sonst schrumpfte die
+    // Spur beim Überschreiten der Schwelle.
+    expect(columnWidth(1920)).toBeGreaterThanOrEqual(EVENT_LOG_PANEL_MIN_W)
+  })
 })
 
-describe('event log trail — the one bar', () => {
-  it('fits five counted tabs and three tools at the narrowest trail', () => {
-    expect(idleTabWidth()).toBeLessThanOrEqual(EVENT_LOG_TAB_MIN_W)
-    expect(barNeed()).toBeLessThanOrEqual(barInner(EVENT_LOG_PANEL_MIN_W))
+// ── Die Leiste ──────────────────────────────────────────────────────────────
+// Schriftmodell, im Browser NACHGEMESSEN: die fünf Labels wogen bei 11 px und
+// 0,09 em Sperrung zusammen 224,1 px auf 29 Zeichen — abzüglich der Sperrung
+// sind das 0,613 em Vorschub je Versalie. Ein geschätzter Faktor lag um bis zu
+// 18 % daneben und hätte „Progress" in einem randvollen Tab beschnitten.
+const ADVANCE_EM = 0.613
+const TRACKING_EM = 0.05
+const BAR_BORDER = 2
+const TAB_GAP = 2
+
+interface Step {
+  name: string
+  viewport: number
+  fontPx: number
+  barPad: number
+  barGap: number
+  tabW: number
+  toolW: number
+  named: 'none' | 'active' | 'all'
+}
+
+const STEPS: Step[] = [
+  {
+    name: 'narrow',
+    viewport: 1920,
+    fontPx: 10,
+    barPad: EVENT_LOG_BAR_PAD,
+    barGap: EVENT_LOG_BAR_GAP,
+    tabW: EVENT_LOG_TAB_MIN_W,
+    toolW: EVENT_LOG_TOOL_W,
+    named: 'none',
+  },
+  {
+    name: 'mid',
+    viewport: 2560,
+    fontPx: 11,
+    barPad: 6,
+    barGap: 4,
+    tabW: EVENT_LOG_TAB_MIN_W_MID,
+    toolW: EVENT_LOG_TOOL_W_MID,
+    named: 'active',
+  },
+  {
+    name: 'wide',
+    viewport: 3840,
+    fontPx: 12,
+    barPad: 8,
+    barGap: 5,
+    tabW: EVENT_LOG_TAB_MIN_W_WIDE,
+    toolW: EVENT_LOG_TOOL_W_WIDE,
+    named: 'all',
+  },
+]
+
+const TOOLS = 3
+
+const labelWidth = (label: string, fontPx: number) =>
+  label.length * (ADVANCE_EM * fontPx + TRACKING_EM * fontPx)
+
+/** Innenraum der Leiste bei gegebener Spurbreite. */
+const barInner = (w: number, step: Step) => w - BAR_BORDER - 2 * step.barPad
+
+/** Was die Leiste auf dieser Stufe wirklich braucht. */
+const barNeed = (step: Step) => {
+  const labels = EVENT_GROUPS.map((g) => g.label.toUpperCase())
+  const widest = labels.reduce((max, l) => Math.max(max, labelWidth(l, step.fontPx)), 0)
+  const names =
+    step.named === 'all'
+      ? labels.reduce((sum, l) => sum + labelWidth(l, step.fontPx) + step.barGap, 0)
+      : step.named === 'active'
+        ? widest + step.barGap
+        : 0
+  return (
+    EVENT_GROUPS.length * step.tabW +
+    (EVENT_GROUPS.length - 1) * TAB_GAP +
+    names +
+    TOOLS * step.toolW +
+    TOOLS * step.barGap
+  )
+}
+
+describe('event log trail — the bar in three steps', () => {
+  it('carries its content at every step', () => {
+    for (const step of STEPS) {
+      const w = columnWidth(step.viewport)
+      expect(barNeed(step), step.name).toBeLessThanOrEqual(barInner(w, step))
+    }
   })
 
-  it('keeps room to spare at the reference resolutions', () => {
-    for (const viewport of [1920, 2560, 3840]) {
-      expect(barNeed(), `${viewport}px`).toBeLessThanOrEqual(barInner(panelWidth(viewport)) - 20)
+  it('keeps room to spare, not just a fit', () => {
+    for (const step of STEPS) {
+      const w = columnWidth(step.viewport)
+      expect(barInner(w, step) - barNeed(step), step.name).toBeGreaterThanOrEqual(20)
     }
+  })
+
+  /**
+   * Die Stufen greifen erst, wenn ihre Schwelle auch WIRKLICH trägt — an der
+   * Schwelle selbst, nicht erst bei der Referenzauflösung darüber.
+   */
+  it('carries its content already at each threshold', () => {
+    const mid = STEPS[1]
+    const wide = STEPS[2]
+    expect(barNeed(mid)).toBeLessThanOrEqual(barInner(EVENT_LOG_BAR_MID_MIN_W, mid))
+    expect(barNeed(wide)).toBeLessThanOrEqual(barInner(EVENT_LOG_BAR_WIDE_MIN_W, wide))
+  })
+
+  /** Und die Referenzbreiten treffen ihre Stufe auch. */
+  it('puts every reference resolution on its own step', () => {
+    expect(columnWidth(1920)).toBeLessThan(EVENT_LOG_BAR_MID_MIN_W)
+    expect(columnWidth(2560)).toBeGreaterThanOrEqual(EVENT_LOG_BAR_MID_MIN_W)
+    expect(columnWidth(2560)).toBeLessThan(EVENT_LOG_BAR_WIDE_MIN_W)
+    expect(columnWidth(3840)).toBeGreaterThanOrEqual(EVENT_LOG_BAR_WIDE_MIN_W)
+  })
+
+  /** Die Leiste wächst mit, aber sie wächst monoton. */
+  it('grows the bar with the step', () => {
+    expect(EVENT_LOG_BAR_H).toBeLessThan(EVENT_LOG_BAR_H_MID)
+    expect(EVENT_LOG_BAR_H_MID).toBeLessThan(EVENT_LOG_BAR_H_WIDE)
+    expect(EVENT_LOG_TOOL_W).toBeLessThan(EVENT_LOG_TOOL_W_MID)
+    expect(EVENT_LOG_TOOL_W_MID).toBeLessThan(EVENT_LOG_TOOL_W_WIDE)
   })
 
   it('never spends more than a fifth of a row on the clock', () => {
@@ -220,7 +293,7 @@ describe('event log trail — what falls out of it', () => {
   it('renders more rows than the tallest trail can show', () => {
     const ROW_H = 30
     const GAP = 6
-    const trail = EVENT_LOG_PANEL_MAX_H - EVENT_LOG_BAR_H - GAP
+    const trail = EVENT_LOG_PANEL_MAX_H - EVENT_LOG_BAR_H_WIDE - GAP
     const fits = Math.ceil(trail / (ROW_H + GAP))
     expect(EVENT_LOG_TRAIL_MAX_ROWS).toBeGreaterThan(fits)
   })

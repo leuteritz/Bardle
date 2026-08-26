@@ -192,9 +192,9 @@ onUnmounted(() => {
         var(--void-card-bottom, 0px)
       ) + 0.5rem
   );
-  left: 0.75rem;
+  left: var(--hud-col-edge);
   z-index: 899;
-  width: clamp(232px, calc(var(--header-vp-left, 22vw) - 1.5rem), 460px);
+  width: var(--hud-col-w);
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -407,8 +407,6 @@ onUnmounted(() => {
           var(--void-card-bottom, 0px)
         ) + 0.7rem
     );
-    left: 1rem;
-    width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 580px);
     gap: 6px;
     padding: 10px 12px 0;
   }
@@ -447,7 +445,6 @@ onUnmounted(() => {
 
 @media (min-width: 3400px) {
   .ohc-root {
-    width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 700px);
     gap: 8px;
     padding: 13px 15px 0;
   }

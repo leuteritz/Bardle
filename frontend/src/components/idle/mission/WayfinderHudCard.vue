@@ -133,15 +133,18 @@ onUnmounted(() => {
 
 <style scoped>
 /* Ganz oben links, auf derselben Ankerlinie und in derselben Breite wie die
-   vier Karten, die sich darunter einreihen — zwei Karten in einer Spalte, deren
-   rechte Kanten auseinanderliegen, lesen sich als Fehler. */
+   vier Karten, die sich darunter einreihen. */
+/* Breite und Rand kommen aus `--hud-col-w` / `--hud-col-edge` (App.vue) — EINE
+   Formel für alle fünf Karten der Spalte und die Log-Spur gegenüber. Zwei
+   Karten in einer Spalte, deren rechte Kanten auseinanderliegen, lesen sich
+   als Fehler; deshalb rechnet hier keine mehr selbst. */
 .wf-root {
   --boon-w: 74px;
   position: fixed;
   top: 0.5rem;
-  left: 0.75rem;
+  left: var(--hud-col-edge);
   z-index: 899;
-  width: clamp(232px, calc(var(--header-vp-left, 22vw) - 1.5rem), 460px);
+  width: var(--hud-col-w);
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -362,14 +365,11 @@ onUnmounted(() => {
 }
 
 /* ── Auflösungsstufen ──────────────────────────────────────────────────────
-   Zurückhaltend wie die Nachbarkarten: lesbar auf 2K/4K, aber nicht
-   proportional mitwachsend — die Karte steht dauerhaft im Bild. */
+   Nur noch Typografie und `--boon-w`: die Breite trägt `--hud-col-w`. */
 @media (min-width: 2400px) {
   .wf-root {
     --boon-w: 190px;
     top: 0.7rem;
-    left: 1rem;
-    width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 580px);
     gap: 6px;
     padding: 16px 19px;
   }
@@ -421,7 +421,6 @@ onUnmounted(() => {
 @media (min-width: 3400px) {
   .wf-root {
     --boon-w: 250px;
-    width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 700px);
     gap: 7px;
     padding: 19px 23px;
   }

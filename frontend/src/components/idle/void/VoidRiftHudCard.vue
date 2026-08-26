@@ -254,9 +254,9 @@ onUnmounted(() => {
 .vhc-root {
   position: fixed;
   top: calc(max(var(--wayfinder-bottom, 0px), var(--autopick-bottom, 0px)) + 0.5rem);
-  left: 0.75rem;
+  left: var(--hud-col-edge);
   z-index: 899;
-  width: clamp(232px, calc(var(--header-vp-left, 22vw) - 1.5rem), 460px);
+  width: var(--hud-col-w);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -489,22 +489,14 @@ onUnmounted(() => {
 }
 
 /* ── Auflösungsstufen ──────────────────────────────────────────────────────
-   Nur Anker und Breitendeckel, keine Schriftgrade: die Karte stand als einzige
-   der Spalte ohne Media-Query da und blieb ab 2400 px bei `left: .75rem` und
-   Deckel 460 stehen, während die vier Nachbarn auf 1rem und 580/700 wechseln —
-   über hundert Pixel Versatz an den rechten Kanten, genau das Fehlerbild, das
-   der Kommentar in `OmenHudCard` beschreibt. */
+   Nur der Anker, keine Schriftgrade. Breite und Rand liegen seit dem Umbau in
+   `--hud-col-w` / `--hud-col-edge` — vorher stand diese Karte als einzige der
+   Spalte ohne Media-Query da und blieb ab 2400 px hundert Pixel hinter den
+   rechten Kanten der vier Nachbarn zurück. */
 @media (min-width: 2400px) {
   .vhc-root {
     top: calc(max(var(--wayfinder-bottom, 0px), var(--autopick-bottom, 0px)) + 0.7rem);
-    left: 1rem;
-    width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 580px);
   }
 }
 
-@media (min-width: 3400px) {
-  .vhc-root {
-    width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 700px);
-  }
-}
 </style>

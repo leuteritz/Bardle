@@ -55,6 +55,28 @@ export const HEADER_MAX_WIDTH = 1400
 /** Aussenabstand des Containers (`px-4` in App.vue) — die Gasse zaehlt ihn mit. */
 export const HEADER_PAGE_INSET = 16
 
+// Die EINE Breite beider HUD-Spalten (`--hud-col-w`, gerechnet in App.vue aus
+// den Skalaren, die main.ts vor dem Mount setzt). Der Header steht mittig, also
+// ist die rechte Gasse die gespiegelte linke — eine Formel traegt beide Seiten.
+// Auch hier leben die Zahlen im CSS, diese Konstanten sind ihr Waechter:
+// hudColumnWidth.spec.ts rechnet gegen sie.
+/**
+ * Was eine HUD-Spalte mindestens misst. Bei 1536 px (Full HD bei 125 %) steht
+ * sie damit exakt buendig an der Header-Kante — ein hoeherer Boden schoebe sie
+ * darunter.
+ */
+export const HUD_COLUMN_MIN_W = 232
+/**
+ * Deckel. 860 px tragen rund 95 Zeichen je Logzeile; darueber verliert das Auge
+ * beim Zeilenwechsel die Spur. Auf 4K bleiben damit 328 px Gasse frei.
+ */
+export const HUD_COLUMN_MAX_W = 860
+/** Abstand zur Bildkante — und, gespiegelt, zur Header-Kante. */
+export const HUD_COLUMN_INSET = 12
+export const HUD_COLUMN_INSET_WIDE = 16
+/** Ab hier der groessere Abstand, gemeinsam mit der Typografie-Stufe der Karten. */
+export const HUD_COLUMN_WIDE_MIN_VW = 2400
+
 export const HEADER_MATERIALS_GRID_COLUMNS = 5
 
 /** Dauer, über die die Offline-Bilanz ihre Chime-Summe hochzählt. */
@@ -740,9 +762,9 @@ export const EVENT_LOG_COPY_FEEDBACK_MS = 1_500
 /** localStorage key for the folded state (UI preference, not game state). */
 export const EVENT_LOG_FOLD_STORAGE_KEY = 'bardle-eventlog-fold'
 
-// Trail box. Ab EVENT_LOG_BESIDE_HEADER_MIN_VW steht die Spur NEBEN dem
-// Header statt darunter — dort ist die Gasse wieder die Grenze, und der
-// Header ist ihr gegenueber gedeckelt (HEADER_SIDE_GUTTER_TOTAL), nicht sie.
+// Trail box. Die Breite gilt nur UNTERHALB von EVENT_LOG_BESIDE_HEADER_MIN_VW
+// — dort steht die Spur unter dem Header und die Gasse ist nicht ihre Grenze.
+// Darueber traegt sie `--hud-col-w` wie die Kartenspalte links.
 export const EVENT_LOG_PANEL_MIN_W = 360
 export const EVENT_LOG_PANEL_VW = 20
 export const EVENT_LOG_PANEL_MAX_W = 500
@@ -760,21 +782,30 @@ export const EVENT_LOG_COMPACT_MAX_H = 1100
  * Unterhalb 1808 traegt die Gasse sie nicht mehr (Header auf HEADER_MIN_WIDTH).
  */
 export const EVENT_LOG_BESIDE_HEADER_MIN_VW = 1850
-/** Luecke zwischen Header-Rechtskante und Spur-Linkskante. */
-export const EVENT_LOG_PANEL_HEADER_GAP = 8
-/** Abstand der Spur zur rechten Bildkante (`right: 0.75rem`). */
-export const EVENT_LOG_PANEL_EDGE_GAP = 12
-
 // Die EINE gefasste Flaeche der Spur: fuenf gezaehlte Tabs links, drei
-// randlose Werkzeuge rechts. Ein aktiver Tab-NAME passt daneben nicht mehr
-// — er wog 80 px in einer Reihe von 352; er steht jetzt im title.
-export const EVENT_LOG_BAR_H = 28
+// randlose Werkzeuge rechts. DREI Stufen, per Container-Query an der
+// SPURBREITE gemessen, nicht am Viewport — die Spur ist die Gasse, und die
+// haengt am Header, nicht am Fenster. Was die Stufe bringt, ist Groesse UND
+// Namen: schmal traegt das Icon allein, mittel der aktive Tab seinen Namen,
+// breit alle fuenf. Eine Staffel, die etwas WEGNIMMT, waere der alte Fehler.
 export const EVENT_LOG_BAR_PAD = 4
 export const EVENT_LOG_BAR_GAP = 3
-/** Was ein Tab misst — Polster, Icon, Zahl. */
+/** Aussenhoehe der Leiste je Stufe. */
+export const EVENT_LOG_BAR_H = 28
+export const EVENT_LOG_BAR_H_MID = 32
+export const EVENT_LOG_BAR_H_WIDE = 38
+/** Was ein Tab OHNE Namen misst — Polster, Icon, Zahl. */
 export const EVENT_LOG_TAB_MIN_W = 50
+export const EVENT_LOG_TAB_MIN_W_MID = 56
+export const EVENT_LOG_TAB_MIN_W_WIDE = 68
 /** Was ein randloser Werkzeugknopf misst (Copy, Clear, Chevron). */
 export const EVENT_LOG_TOOL_W = 22
+export const EVENT_LOG_TOOL_W_MID = 26
+export const EVENT_LOG_TOOL_W_WIDE = 30
+/** Ab dieser SPURBREITE traegt der aktive Tab seinen Namen. */
+export const EVENT_LOG_BAR_MID_MIN_W = 480
+/** Ab dieser SPURBREITE tragen alle fuenf Tabs ihren Namen. */
+export const EVENT_LOG_BAR_WIDE_MIN_W = 760
 
 // Die Spur rollt NICHT — was nicht in die Hoehe passt, faellt unten heraus.
 /** Harter Deckel auf gerenderte Zeilen; 420 px tragen rund zwoelf. */

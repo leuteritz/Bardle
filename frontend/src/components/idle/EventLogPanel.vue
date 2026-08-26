@@ -19,6 +19,8 @@ import { formatEventClock, formatEventLines } from '@/utils/ui/eventLogFormat'
 import {
   EVENT_LOG_BAR_GAP,
   EVENT_LOG_BAR_H,
+  EVENT_LOG_BAR_H_MID,
+  EVENT_LOG_BAR_H_WIDE,
   EVENT_LOG_BAR_PAD,
   EVENT_LOG_COPY_FEEDBACK_MS,
   EVENT_LOG_PANEL_MAX_H,
@@ -28,18 +30,25 @@ import {
   EVENT_LOG_PANEL_VH,
   EVENT_LOG_PANEL_VW,
   EVENT_LOG_TOOL_W,
+  EVENT_LOG_TOOL_W_MID,
+  EVENT_LOG_TOOL_W_WIDE,
   EVENT_LOG_TRAIL_FADE_PX,
   EVENT_LOG_TRAIL_MAX_ROWS,
 } from '@/config/constants'
 
 // Per v-bind statt beschreibend im CSS: eine Konstante, die nur beschreibt,
-// driftet, und die Layout-Spec liest Zahlen, kein DOM.
+// driftet, und die Layout-Spec liest Zahlen, kein DOM. Die Schwellen der
+// Container-Queries stehen dagegen fest im CSS — dort nimmt `v-bind` nichts an.
 const boxW = `clamp(${EVENT_LOG_PANEL_MIN_W}px, ${EVENT_LOG_PANEL_VW}vw, ${EVENT_LOG_PANEL_MAX_W}px)`
 const boxH = `clamp(${EVENT_LOG_PANEL_MIN_H}px, ${EVENT_LOG_PANEL_VH}vh, ${EVENT_LOG_PANEL_MAX_H}px)`
 const barH = `${EVENT_LOG_BAR_H}px`
+const barHMid = `${EVENT_LOG_BAR_H_MID}px`
+const barHWide = `${EVENT_LOG_BAR_H_WIDE}px`
 const barPad = `${EVENT_LOG_BAR_PAD}px`
 const barGap = `${EVENT_LOG_BAR_GAP}px`
 const toolW = `${EVENT_LOG_TOOL_W}px`
+const toolWMid = `${EVENT_LOG_TOOL_W_MID}px`
+const toolWWide = `${EVENT_LOG_TOOL_W_WIDE}px`
 const fadeMask = `linear-gradient(to bottom, #000 calc(100% - ${EVENT_LOG_TRAIL_FADE_PX}px), transparent 100%)`
 
 const uiStore = useUiStore()
@@ -173,7 +182,8 @@ onUnmounted(() => {
           :title="`${group.label} — ${tabCounts[group.id]}`"
           @click="selectTab(group.id)"
         >
-          <Icon :icon="group.icon" width="14" height="14" />
+          <Icon :icon="group.icon" width="18" height="18" />
+          <span class="elp-tab-label">{{ group.label }}</span>
           <span class="elp-tab-count">{{ tabCounts[group.id] }}</span>
         </button>
       </div>
@@ -186,7 +196,7 @@ onUnmounted(() => {
         :title="`Copy ${rows.length} lines`"
         @click="copyRows"
       >
-        <Icon :icon="copied ? 'lucide:check' : 'lucide:copy'" width="14" height="14" />
+        <Icon :icon="copied ? 'lucide:check' : 'lucide:copy'" width="18" height="18" />
       </button>
       <button
         class="elp-tool"
@@ -195,7 +205,7 @@ onUnmounted(() => {
         title="Clear the log"
         @click="clearEvents"
       >
-        <Icon icon="lucide:eraser" width="14" height="14" />
+        <Icon icon="lucide:eraser" width="18" height="18" />
       </button>
       <button
         class="elp-tool elp-fold"
@@ -205,7 +215,7 @@ onUnmounted(() => {
         :title="folded ? 'Unfold the event log' : 'Fold the event log'"
         @click="toggleFold"
       >
-        <Icon icon="lucide:chevron-down" width="15" height="15" />
+        <Icon icon="lucide:chevron-down" width="18" height="18" />
       </button>
     </div>
 
@@ -236,7 +246,7 @@ onUnmounted(() => {
 <style scoped>
 .elp {
   position: fixed;
-  right: 0.75rem;
+  right: var(--hud-col-edge);
   top: calc(var(--header-total-height, 118px) + 8px);
   width: v-bind(boxW);
   height: v-bind(boxH);
@@ -302,6 +312,9 @@ onUnmounted(() => {
   color: #8a6030;
   font-size: 10px;
   font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background 0.15s,
@@ -322,6 +335,20 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
+/* Der Name steht IMMER im DOM — eine Container-Query kann kein `v-if`. Schmal
+   traegt das Icon allein, mittel der aktive Tab, breit alle fuenf. */
+.elp-tab-label {
+  display: none;
+}
+
+/* Icon-Groesse gehoert ins CSS: die scoped Regel gewinnt ohnehin gegen das
+   Attribut, und drei Attributwerte waeren drei Quellen. */
+.elp-tab svg,
+.elp-tool svg {
+  width: 14px;
+  height: 14px;
+}
+
 .elp-tool {
   display: inline-flex;
   flex: 0 0 auto;
@@ -329,6 +356,7 @@ onUnmounted(() => {
   justify-content: center;
   width: v-bind(toolW);
   height: 20px;
+  flex-shrink: 0;
   background: none;
   border: none;
   border-radius: 3px;
@@ -448,13 +476,10 @@ onUnmounted(() => {
 @media (min-width: 1850px) {
   .elp {
     top: 0.5rem;
+    /* Neben dem Header traegt die Spur die Spaltenbreite — dieselbe Formel wie
+       die Kartenspalte links, damit beide Kanten auf einer Linie enden. */
+    width: var(--hud-col-w);
     max-height: calc(100vh - 0.5rem - var(--hud-panel-size, 330px) - var(--kb-hud-h, 0px) - 46px);
-  }
-}
-
-@media (min-width: 2560px) {
-  .elp {
-    right: 1.5rem;
   }
 }
 
@@ -470,10 +495,87 @@ onUnmounted(() => {
   }
 }
 
-/* Breite Spur: die Nachricht darf wachsen. */
-@container (min-width: 440px) {
+/* ── Die drei Stufen ──────────────────────────────────────────────────────
+   Gemessen wird die SPURBREITE, nicht der Viewport: die Spur ist die Gasse,
+   und die haengt am Header. Full HD trifft die schmale Stufe (380), 2K die
+   mittlere (548), 4K die breite (860). Jede Stufe gibt etwas DAZU — Groesse
+   und Namen; eine Staffel, die etwas wegnimmt, waere der alte Fehler. */
+@container (min-width: 480px) {
+  .elp-bar {
+    height: v-bind(barHMid);
+    gap: 4px;
+    padding: 0 6px;
+  }
+
+  .elp-tab {
+    height: 26px;
+    padding: 0 7px;
+    gap: 5px;
+    font-size: 11px;
+  }
+
+  .elp-tab svg,
+  .elp-tool svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .elp-tool {
+    width: v-bind(toolWMid);
+    height: 26px;
+  }
+
+  .elp-tab--active .elp-tab-label {
+    display: inline;
+  }
+
   .elp-msg {
     font-size: 15px;
+  }
+
+  .elp-time {
+    font-size: 12px;
+  }
+}
+
+@container (min-width: 760px) {
+  .elp-bar {
+    height: v-bind(barHWide);
+    gap: 5px;
+    padding: 0 8px;
+  }
+
+  .elp-tab {
+    height: 30px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  .elp-tab svg,
+  .elp-tool svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .elp-tool {
+    width: v-bind(toolWWide);
+    height: 30px;
+  }
+
+  .elp-tab-label {
+    display: inline;
+  }
+
+  .elp-msg {
+    font-size: 16px;
+  }
+
+  .elp-time {
+    font-size: 12.5px;
+  }
+
+  .elp-row {
+    padding: 7px 13px 7px 10px;
   }
 }
 </style>

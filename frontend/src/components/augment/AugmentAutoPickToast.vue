@@ -165,18 +165,19 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* Ganz oben links in der Ecke. Die Breite folgt dem freien Raum neben dem
-   zentrierten Header (--header-vp-left wird dort per ResizeObserver gepflegt),
-   sodass die Leiste auf 4K mitwächst, auf Full HD aber nie unter den Header
-   läuft. */
+/* Ganz oben links in der Ecke, in der Breite der Spalte. */
+/* Breite und Rand kommen aus `--hud-col-w` / `--hud-col-edge` (App.vue) — EINE
+   Formel für alle fünf Karten der Spalte und die Log-Spur gegenüber. Zwei
+   Karten in einer Spalte, deren rechte Kanten auseinanderliegen, lesen sich
+   als Fehler; deshalb rechnet hier keine mehr selbst. */
 .apt-root {
   position: fixed;
   /* Unter dem Wayfinder — er ist das einzige dauerhafte Element der Spalte und
      steht deshalb ganz oben. */
   top: calc(var(--wayfinder-bottom, 0px) + 0.5rem);
-  left: 0.75rem;
+  left: var(--hud-col-edge);
   z-index: 900;
-  width: clamp(232px, calc(var(--header-vp-left, 22vw) - 1.5rem), 460px);
+  width: var(--hud-col-w);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -393,12 +394,10 @@ onUnmounted(() => {
 @media (min-width: 2400px) {
   .apt-root {
     top: calc(var(--wayfinder-bottom, 0px) + 0.7rem);
-    left: 1rem;
     gap: 10px;
     padding: 13px 15px 15px;
     /* Obergrenze mitziehen, sonst bleibt die Leiste auf der großen Fläche
        stehen, während ihre Schrift wächst — und wirkt gedrängt statt größer. */
-    width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 580px);
   }
   .apt-head__lbl {
     font-size: 12px;
@@ -433,9 +432,6 @@ onUnmounted(() => {
 }
 
 @media (min-width: 3400px) {
-  .apt-root {
-    width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 700px);
-  }
   .apt-head__lbl {
     font-size: 13.5px;
   }

@@ -285,9 +285,9 @@ onUnmounted(clearTimers)
         var(--void-card-bottom, 0px)
       ) + 0.5rem
   );
-  left: 0.75rem;
+  left: var(--hud-col-edge);
   z-index: 899;
-  width: clamp(232px, calc(var(--header-vp-left, 22vw) - 1.5rem), 460px);
+  width: var(--hud-col-w);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -601,10 +601,8 @@ onUnmounted(clearTimers)
           var(--void-card-bottom, 0px)
         ) + 0.7rem
     );
-    left: 1rem;
     gap: 10px;
     padding: 13px 15px 15px;
-    width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 580px);
   }
   .dic-head__lbl {
     font-size: 12px;
@@ -640,9 +638,6 @@ onUnmounted(clearTimers)
 }
 
 @media (min-width: 3400px) {
-  .dic-root {
-    width: clamp(232px, calc(var(--header-vp-left, 22vw) - 2rem), 700px);
-  }
   .dic-head__lbl {
     font-size: 13.5px;
   }
