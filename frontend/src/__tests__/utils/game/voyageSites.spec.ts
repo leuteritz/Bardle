@@ -18,10 +18,12 @@ import {
   VOYAGE_GATE_GAP_PX,
   VOYAGE_GATE_MIN_PX,
   VOYAGE_SITE_SLOTS,
+  LANDFALL_MAX,
 } from '@/config/constants'
 import { GALAXY_PLATE_REF_W } from '@/utils/fx/galaxyPlate'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { landfallsOfRun, landfallWorldPos } from '@/utils/game/landfalls'
 import type { AvailableExpeditionSlot, ExpeditionMission } from '@/types'
 
 /**
@@ -32,7 +34,7 @@ import type { AvailableExpeditionSlot, ExpeditionMission } from '@/types'
  * (Determinismus und Monotonie).
  */
 
-function record(galaxy: number, attempts = 4): CompletedGalaxyRecord {
+function record(galaxy: number, attempts = 4, landfalls = 0): CompletedGalaxyRecord {
   return {
     galaxy,
     mapSeed: galaxy * 7919 + 13,
@@ -40,6 +42,10 @@ function record(galaxy: number, attempts = 4): CompletedGalaxyRecord {
     attemptResults: Array.from({ length: attempts }, (_, i) =>
       i % 3 === 2 ? 'failed' : 'rescued',
     ),
+    landfallResults: Array.from({ length: landfalls }, (_, i) => ({
+      kind: 'chime_reef' as const,
+      cleared: i % 4 !== 3,
+    })),
     durationSeconds: 600,
     completedAt: 0,
   }
@@ -86,22 +92,28 @@ describe('voyageBerthsOf — Plätze jenseits der Geschichte', () => {
    * Pool, statt den Zug weiterzuzählen — und DIESE Auswahl garantiert einen
    * Abstand. `voyagesAtlasLayout.spec.ts` rechnet ihn in Pixel um.
    *
-   * Über 20 Galaxien und jede Sternzahl, die ein Spielstand erreicht: von drei
-   * Versuchen bis 45 (GALAXY_STARS_MAX 36 plus Fehlversuche).
+   * Über 20 Galaxien und jede Sternzahl, die ein Spielstand erreicht. Seit dem
+   * Sterndeckel (`GALAXY_STARS_MAX` 7) sind das höchstens ~11 Versuche; die
+   * Schleife läuft bewusst weiter bis 45 hoch — sie prüft damit strenger als
+   * nötig, und das kostet nichts.
    */
   it('hält jeden Platz von jedem anderen fern', () => {
     let worst = Number.POSITIVE_INFINITY
     let where = ''
     for (let g = 1; g <= 20; g++) {
       for (const attempts of [3, 4, 6, 8, 12, 20, 28, 36, 45]) {
-        const berths = voyageBerthsOf(record(g, attempts))
-        expect(berths.length).toBe(VOYAGE_SITE_SLOTS)
-        for (let i = 0; i < berths.length; i++) {
-          for (let j = i + 1; j < berths.length; j++) {
-            const d = Math.hypot(berths[i].x - berths[j].x, berths[i].y - berths[j].y)
-            if (d < worst) {
-              worst = d
-              where = `Galaxie ${g}, ${attempts} Versuche`
+        // Auch mit voller Ortsreihe: sie steht seit den Landfalls in der
+        // Startmenge des Samplings, und mehr Startpunkte heisst weniger Raum.
+        for (const landfalls of [0, LANDFALL_MAX]) {
+          const berths = voyageBerthsOf(record(g, attempts, landfalls))
+          expect(berths.length).toBe(VOYAGE_SITE_SLOTS)
+          for (let i = 0; i < berths.length; i++) {
+            for (let j = i + 1; j < berths.length; j++) {
+              const d = Math.hypot(berths[i].x - berths[j].x, berths[i].y - berths[j].y)
+              if (d < worst) {
+                worst = d
+                where = `Galaxie ${g}, ${attempts} Versuche, ${landfalls} Orte`
+              }
             }
           }
         }
@@ -110,6 +122,32 @@ describe('voyageBerthsOf — Plätze jenseits der Geschichte', () => {
     expect(worst, `engster Platzabstand ${worst} bei ${where}`).toBeGreaterThanOrEqual(
       VOYAGE_BERTH_MIN_SEPARATION,
     )
+  })
+
+  /**
+   * Die Orte stehen in der Startmenge, damit kein Hafen sich auf eine Ortsmarke
+   * setzt — `voyageMarkerSizeFor` misst nur Hafen gegen Hafen und sähe die
+   * Überdeckung nie.
+   */
+  it('weicht den Ortsmarken aus, nicht nur den Sternen', () => {
+    let worst = Number.POSITIVE_INFINITY
+    for (let g = 2; g <= 20; g++) {
+      for (const attempts of [4, 8, 11]) {
+        const rec = record(g, attempts, LANDFALL_MAX)
+        const berths = voyageBerthsOf(rec)
+        const { spawn, dots } = generateGalaxyDots(rec.mapSeed, attempts + 1)
+        const kette = [spawn, ...dots.slice(0, attempts), { x: 0.5, y: 0.5 }]
+        const orte = landfallsOfRun(rec.mapSeed, g, attempts + 1, kette.length - 1)
+          .slice(0, rec.landfallResults!.length)
+          .map((p) => landfallWorldPos(kette[p.leg], kette[p.leg + 1], p.t, p.bow))
+        for (const b of berths) {
+          for (const o of orte) worst = Math.min(worst, Math.hypot(b.x - o.x, b.y - o.y))
+        }
+      }
+    }
+    // Kein harter Vertrag wie unter den Häfen — die Orte sind kleiner und nicht
+    // anklickbar. Aber sie dürfen nicht UNTER einer Hafenplatte verschwinden.
+    expect(worst, `engster Abstand Hafen↔Ort ${worst}`).toBeGreaterThan(0.02)
   })
 
   it('hält jeden Platz von jedem geretteten Stern fern', () => {

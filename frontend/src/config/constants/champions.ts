@@ -21,8 +21,8 @@ export const CHAMPION_TRAVEL_SCALE_MS = 30_000 // +30s per galaxy
  *
  * 4 Minuten ist bei Galaxie 7 erreicht — bis dahin wächst die Reise wie bisher
  * und trägt das Gefühl wachsender Entfernungen. Danach wächst nur noch die
- * ANZAHL der Sterne je Galaxie (`starsRequired = g + 2`), was denselben Effekt
- * hat, ohne dass die einzelne Wartezeit ins Unerträgliche läuft.
+ * ANZAHL der Sterne und Galaxien, was denselben Effekt hat, ohne dass die
+ * einzelne Wartezeit ins Unerträgliche läuft.
  *
  * Zu beachten: die Reise ist zugleich das Materialfenster — Resource-Sterne
  * spawnen NUR während `championTravelState === 'traveling'`. Material je
@@ -31,7 +31,7 @@ export const CHAMPION_TRAVEL_SCALE_MS = 30_000 // +30s per galaxy
  *
  * Von 240 auf 200 Sekunden GESENKT, obwohl das Spiel insgesamt länger werden
  * soll. Das ist kein Widerspruch: die Länge kommt aus der ZAHL der Sterne und
- * Galaxien (`GALAXY_STARS_LATE_BONUS`, `CHAMPION_TIER_REQUIRED_GALAXY`), nicht
+ * Galaxien (`CHAMPION_TIER_REQUIRED_GALAXY`, `GALAXY_DEPTH_PER_GALAXY`), nicht
  * aus der Dauer einer einzelnen Reise. Ein Stern ist eine Schleife aus
  * Rollenwahl, Reise, Ankunft und Bosskampf — eine längere Reise ist nur
  * Warten. Dieselbe Wandzeit, mehr Ereignisse darin.
@@ -165,16 +165,33 @@ export const MAX_STAR_LEVEL = 6
 // auto-unlocks once the player owns/has discovered any champion of that tier, so a
 // champion found via spawning is never stranded behind a far-off lock.
 //
-// Früher `[1, 3, 6, 10, 15, 21]`. Gemessen war damit der gesamte Kader nach 7,5
-// Spielstunden vollständig, und ab Galaxie 21 gab es überhaupt keinen neuen
-// Inhalt mehr — der Rest eines Durchlaufs lief ins Leere.
+// Früher `[1, 3, 6, 10, 15, 21]`, dann `[1, 3, 6, 12, 24, 48]`. Gemessen war mit
+// der ersten Reihe der gesamte Kader nach 7,5 Spielstunden vollständig, und ab
+// Galaxie 21 gab es überhaupt keinen neuen Inhalt mehr.
 //
-// Die ersten DREI Einträge stehen bewusst still: Tier 2 (G3) und Tier 3 (G6)
-// fallen weiter nach ~30 Minuten bzw. ~2 Stunden. Gestreckt wird nur, was
-// dahinter liegt. Tier 6 wandert von Galaxie 21 auf 48, also von ~7 auf über 60
-// Spielstunden — dieselben 165 Champions, dreifache Strecke, kein einziger
-// neuer Datensatz.
-export const CHAMPION_TIER_REQUIRED_GALAXY: number[] = [1, 3, 6, 12, 24, 48]
+// Die ersten ZWEI Einträge stehen bewusst still: Tier 2 (G3) fällt weiter nach
+// ~30 Minuten. Sie dürfen es auch, denn G1–G5 sind vom Sterndeckel unberührt —
+// die Reihe 3/4/5/6/7 ist dieselbe wie vorher.
+//
+// Alles dahinter ist mit dem Deckel nach hinten gerückt: eine Galaxie trägt jetzt
+// höchstens 7 Sterne statt 36 und dauert im Modell 57 statt 168 Minuten, also
+// kommen Galaxien rund dreimal so schnell — die Tore müssen in GALAXIEN weiter
+// auseinanderstehen, um in SPIELSTUNDEN gleich weit auseinanderzuliegen.
+//
+// Gerechnet über kumulierte Wandzeit, mit demselben groben Modell für beide
+// Stände (Sterne × [Reise + Kampf] + Finale + Landfalls). Es liefert:
+// alt G3 = 0,7 h → neu G4 · alt G6 = 2,5 h → neu G7 · alt G12 = 11,6 h → neu G19
+// · alt G24 = 44,2 h → neu G55 · alt G48 = 111,2 h → neu G126. Die ersten beiden
+// Tore bleiben trotzdem stehen: G1–G5 sind vom Deckel unberührt, und ein Tor um
+// eine Galaxie zu verschieben wäre Rauschen.
+//
+// Diese sechs Zahlen sind HERGELEITET, nicht gemessen — Startwerte für den
+// Telemetrie-Lauf, nicht sein Ergebnis. Das Modell rechnet seriell und kennt
+// weder Sonnenachse noch Ladder; seine absoluten Stunden sind unzuverlässig, sein
+// VERHÄLTNIS alt zu neu ist es weniger, weil beide Stände dieselbe Formel
+// durchlaufen. Jede andere Balance-Konstante in dieser Datei trägt einen
+// Messwert; diese hier trägt ihn noch nicht.
+export const CHAMPION_TIER_REQUIRED_GALAXY: number[] = [1, 3, 7, 19, 55, 126]
 
 // Spawn probability per Champion Tier, indexed by how many tiers are currently
 // unlocked (row N-1 = N unlocked tiers). Tier 1 always has the highest share; each
@@ -218,8 +235,13 @@ export const TIER_UNLOCK_MATERIAL_BASE: Record<string, number> = {
  * Dauerlauf. `solar_essence` und `void_shard` sind seltener und zwingen zu
  * einer Entscheidung darüber, worauf die sechs Planeten-Slots stehen.
  *
- * Der späte Einstieg ist Absicht: Tier 5 liegt bei Galaxie 12, also rund vier
- * Spielstunden. Das Frühspiel sieht diese Rezeptur nie.
+ * Der späte Einstieg ist Absicht und ist mit dem Sterndeckel noch später
+ * geworden: Tier 5 beginnt jetzt bei Galaxie 30 (Spanne 9), im Modell rund 21
+ * Spielstunden statt der vier von vorher. Bewusst NICHT auf Tier 4
+ * zurückgezogen, obwohl das die alte Stelle träfe — `lateExp` hinge dann in
+ * JEDEM Tier darüber an einem um eins höheren Exponenten, und das ist eine
+ * Kostenänderung, die ohne Telemetrie niemand verantworten kann. Später ist die
+ * sichere Richtung. Das Frühspiel sieht diese Rezeptur so oder so nie.
  */
 export const TIER_UNLOCK_LATE_FROM_TIER = 5
 
@@ -235,11 +257,11 @@ export const TIER_UNLOCK_LATE_FROM_TIER = 5
  * Die 14 stammt aus dieser Messung — es ist das letzte Tor, das noch bezahlbar
  * war. Sie war ursprünglich zusätzlich damit begründet, dass 14 = tierOf(40)
  * genau das Tier des letzten Champion-Tors sei; seit
- * `CHAMPION_TIER_REQUIRED_GALAXY` auf Galaxie 48 endet (= tierOf(48) = 17),
- * stimmt das nicht mehr. Die drei Tore 15–17 laufen damit zu gedeckelten
- * Kosten, obwohl hinter dem letzten noch Tier-6-Champions stehen — wer die
- * Galaxie-Achse dort wieder straffen will, hebt DIESEN Wert auf 17 und misst
- * nach, ob die Materialkosten dann noch tragbar bleiben.
+ * `CHAMPION_TIER_REQUIRED_GALAXY` auf Galaxie 126 endet, stimmt es fast wieder:
+ * `tierOf(126) = 15` bei `GALAXIES_PER_TIER` 9. Statt drei gedeckelter Tore am
+ * Ende (15–17) ist es nur noch EINES. Der Schönheitsfehler ist damit kleiner
+ * geworden, nicht grösser — wer ihn ganz schliessen will, hebt DIESEN Wert auf
+ * 15 und misst nach, ob die Materialkosten dann noch tragbar bleiben.
  */
 export const TIER_UNLOCK_COST_CAP_TIER = 14
 export const TIER_UNLOCK_MATERIAL_LATE: Record<string, number> = {

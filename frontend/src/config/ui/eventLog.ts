@@ -3,7 +3,7 @@
 // haengen am selben useEventLog-Composable und lagen vorher als zwei
 // Ein-Zweck-Dateien nebeneinander.
 import { useEventLog, type GameEventType } from '@/composables/ui/useEventLog'
-import { ROLE_COLORS, MISSION_ACCENT_HEX } from '@/config/constants'
+import { ROLE_COLORS, MISSION_ACCENT_HEX, LANDFALL_ACCENT_HEX } from '@/config/constants'
 
 export const typeColor: Record<GameEventType, string> = {
   support: ROLE_COLORS.support,
@@ -32,6 +32,11 @@ export const typeColor: Record<GameEventType, string> = {
   // der Vorzeichen darüber — die beiden dürfen sich nicht ähneln, weil sie
   // gegensätzliche Nachrichten tragen.
   void: '#e0409f',
+  // Blasses Seegrün: ein Ort ist ein ORT, kein Ziel und kein Verlust. Er darf
+  // nicht wie die Chronicle (Gold), das Vorzeichen (Violett), der Wayfinder
+  // (Mint) oder der Void (Magenta) klingen — die vier melden alle, dass etwas
+  // ERREICHT oder VERLOREN ist. Hier ist nur etwas vorbeigekommen.
+  landfall: LANDFALL_ACCENT_HEX,
   info: '#c8b89a',
 }
 
@@ -50,6 +55,7 @@ export const GROUP_OF_TYPE: Record<GameEventType, EventGroupId> = {
   planet: 'cosmos',
   chime: 'cosmos',
   meep: 'cosmos',
+  landfall: 'cosmos',
   chronicle: 'progress',
   mission: 'progress',
   omen: 'progress',
@@ -199,4 +205,10 @@ export function logOmenCompleted(omenName: string, effectLine: string, swift: bo
 export function logMissionClaimed(missionName: string, rewardLine: string, chapterName: string) {
   const { addEvent } = useEventLog()
   addEvent(`${chapterName}: ${missionName} — ${rewardLine}`, 'mission')
+}
+
+/** Ein Ort auf der Reise ist abgehandelt — angefasst oder nur durchflogen. */
+export function logLandfallPassed(name: string, gain: string, touched: boolean) {
+  const { addEvent } = useEventLog()
+  addEvent(touched ? `${name} harvested — ${gain}` : `${name} drifted past — ${gain}`, 'landfall')
 }

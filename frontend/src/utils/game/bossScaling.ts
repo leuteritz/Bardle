@@ -6,6 +6,7 @@ import {
   BOSS_TARGET_CLICKS_MAX,
   BOSS_TARGET_CLICKS_START,
 } from '@/config/constants'
+import { galaxyDepth } from '@/utils/game/galaxyDepth'
 
 /**
  * Wie viele Klicks ein Planeten-Boss kosten soll — die entworfene Zahl hinter
@@ -38,7 +39,7 @@ import {
  */
 function rampAnchor(bossesDefeated: number, galaxy: number): number {
   const kills = Math.max(0, bossesDefeated)
-  const galaxySockel = Math.max(0, galaxy - 1) * BOSS_CLICK_RAMP_GALAXY_KILLS
+  const galaxySockel = galaxyDepth(galaxy) * BOSS_CLICK_RAMP_GALAXY_KILLS
   return kills + galaxySockel
 }
 

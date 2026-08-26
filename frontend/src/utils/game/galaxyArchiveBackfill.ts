@@ -17,7 +17,9 @@ import {
   ADMIN_ARCHIVE_SECONDS_PER_STAR,
   ADMIN_ARCHIVE_DURATION_JITTER,
 } from '@/config/constants'
+import { landfallsOfRun } from '@/utils/game/landfalls'
 import type { CompletedGalaxyRecord, StarAttemptResult } from '@/stores/world/galaxyStore'
+import type { LandfallOutcome } from '@/types'
 
 type Rng = () => number
 
@@ -60,6 +62,37 @@ function buildAttempts(rescued: number, failed: number, rng: Rng): StarAttemptRe
   return [...head, 'rescued']
 }
 
+/**
+ * Eigener rng-Strom für die Orte. Hinge ihr Ausgang am selben Strom wie die
+ * Verlustzahl, liefen Sternpech und Ortspech im Gleichschritt — derselbe Fehler,
+ * den `backfillThemeRng` schon einmal behoben hat.
+ */
+export function backfillLandfallRng(galaxy: number): Rng {
+  return seededRng(galaxy * ADMIN_ARCHIVE_SEED_SALT + 1523)
+}
+
+/**
+ * Die Orte eines nachgetragenen Laufs. LAGE und ART kommen aus derselben
+ * abgeleiteten Rechnung wie im echten Spiel (`landfallsOfRun` über `mapSeed`);
+ * gewürfelt wird hier nur der AUSGANG, mit demselben Fehlanteil wie bei den
+ * Sternen — ein Archiv, in dem jeder Ort geglückt ist, liest sich falsch.
+ */
+export function buildBackfillLandfalls(
+  galaxy: number,
+  mapSeed: number,
+  starsRequired: number,
+  actualLegs: number,
+  rng: Rng,
+): LandfallOutcome[] {
+  const geplant = starsRequired + 1
+  const ramp = Math.min(1, Math.max(0, galaxy - 1) / ADMIN_ARCHIVE_FAIL_RAMP_GALAXIES)
+  const missRate = ADMIN_ARCHIVE_FAIL_RATE_MAX * ramp
+  return landfallsOfRun(mapSeed, galaxy, geplant, actualLegs).map((p) => ({
+    kind: p.kind,
+    cleared: rng() >= missRate,
+  }))
+}
+
 export function buildBackfillRecord(
   galaxy: number,
   starsRequired: number,
@@ -70,12 +103,22 @@ export function buildBackfillRecord(
   const failed = backfillFailCount(galaxy, starsRequired, rng)
   const attemptResults = buildAttempts(starsRequired, failed, rng)
   const jitter = 1 + (rng() * 2 - 1) * ADMIN_ARCHIVE_DURATION_JITTER
+  // Die Reihenfolge der Ziehungen aus `rng` ist FEST — `mapSeed` muss vor den
+  // Orten fallen, weil ihre Lage daran hängt.
+  const mapSeed = Math.floor(rng() * 0xffffffff)
 
   return {
     galaxy,
-    mapSeed: Math.floor(rng() * 0xffffffff),
+    mapSeed,
     themeIndex,
     attemptResults,
+    landfallResults: buildBackfillLandfalls(
+      galaxy,
+      mapSeed,
+      starsRequired,
+      attemptResults.length + 1,
+      backfillLandfallRng(galaxy),
+    ),
     durationSeconds: Math.round(attemptResults.length * ADMIN_ARCHIVE_SECONDS_PER_STAR * jitter),
     completedAt,
   }

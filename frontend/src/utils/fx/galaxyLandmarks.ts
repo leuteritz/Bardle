@@ -23,6 +23,8 @@ import {
   CORE_GATE_POOL_SPAN,
   LANDMARK_FREED_CORE,
   LANDMARK_FREED_RING,
+  LANDMARK_LANDFALL_RING,
+  LANDMARK_LANDFALL_MISSED_ALPHA,
   LANDMARK_R_ORNAMENT,
   LANDMARK_R_DETAIL,
   LANDMARK_VARIANTS,
@@ -30,7 +32,32 @@ import {
   LANDMARK_SPRITE_CACHE_MAX,
 } from '@/config/constants'
 
-export type LandmarkKind = 'departure-portal' | 'star-freed' | 'star-lost' | 'core-gate'
+export type LandmarkKind =
+  | 'departure-portal'
+  | 'star-freed'
+  | 'star-lost'
+  | 'core-gate'
+  | 'landfall-reef'
+
+/**
+ * Die Landfall-FAMILIE. Alle Orte teilen EINE Silhouette — eine hohle Raute —
+ * und unterscheiden sich erst auf voller Detailstufe durch eine Binnenmarke.
+ *
+ * Sechs eigene Silhouetten wären bei 4,4 px (Legendensonde) nicht zu trennen;
+ * die vorhandenen vier Formen sind der ganze Vorrat, den diese Grösse hergibt.
+ * Bei 4 px liest man „hier lag ein Ort", auf der Grosskarte welcher — dieselbe
+ * Staffelung, die der befreite Stern für seinen Trabanten schon führt.
+ *
+ * Je Ort trotzdem ein EIGENER Kind-String: die Binnenmarke über `variant` zu
+ * führen kollidierte mit `landmarkVariantFor`, und der Sprite-Schlüssel könnte
+ * zwei Orte dann nicht trennen. Geteilt wird der CODE, nicht der Schlüssel.
+ */
+export const LANDFALL_KINDS = ['landfall-reef'] as const
+export type LandfallLandmarkKind = (typeof LANDFALL_KINDS)[number]
+
+export function isLandfallLandmark(kind: LandmarkKind): kind is LandfallLandmarkKind {
+  return (LANDFALL_KINDS as readonly string[]).includes(kind)
+}
 
 export interface LandmarkOpts {
   /** Backing-Dichte des Ziels — der Sprite-Cache ist danach geschlüsselt. */
@@ -46,6 +73,12 @@ export interface LandmarkOpts {
    * SEINER Galaxie (`minimapAccentForTheme`), das Gold bleibt den Häfen.
    */
   tint?: string
+  /**
+   * NUR Landfalls: der Ort wurde nicht angefasst. Dieselbe Form, leiser und
+   * ohne Binnenmarke — eine zweite Silhouette dafür wäre eine fünfte Form in
+   * einem Vorrat, der schon ausgereizt ist.
+   */
+  faded?: boolean
 }
 
 /** Detailstufe aus dem Radius. Stufe 0 ist die blanke Silhouette. */
@@ -83,8 +116,9 @@ export function landmarkSpriteKey(
   r: number,
   dpr: number,
   variant: number,
+  faded = false,
 ): string {
-  return `${kind}|${r}|${dpr}|${variant}`
+  return `${kind}|${r}|${dpr}|${variant}|${faded ? 'f' : 'x'}`
 }
 
 /* ── Sprite-Cache ─────────────────────────────────────────────────────────────
@@ -105,14 +139,17 @@ export function landmarkSpriteKey(
 
 const spriteCache = new Map<string, HTMLCanvasElement>()
 
+type SpriteKind = 'star-freed' | 'star-lost' | LandfallLandmarkKind
+
 function getSprite(
-  kind: 'star-freed' | 'star-lost',
+  kind: SpriteKind,
   r: number,
   dpr: number,
   variant: number,
   detail: 0 | 1 | 2,
+  faded = false,
 ): HTMLCanvasElement | null {
-  const key = landmarkSpriteKey(kind, r, dpr, variant) + `|${detail}`
+  const key = landmarkSpriteKey(kind, r, dpr, variant, faded) + `|${detail}`
   const hit = spriteCache.get(key)
   if (hit) {
     spriteCache.delete(key)
@@ -129,7 +166,8 @@ function getSprite(
   if (!sctx) return null
   sctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   if (kind === 'star-freed') paintFreedStar(sctx, pad, pad, r, variant, detail)
-  else paintLostStar(sctx, pad, pad, r, variant, detail)
+  else if (kind === 'star-lost') paintLostStar(sctx, pad, pad, r, variant, detail)
+  else paintLandfall(sctx, pad, pad, r, kind, detail, faded)
 
   spriteCache.set(key, sprite)
   if (spriteCache.size > LANDMARK_SPRITE_CACHE_MAX) {
@@ -500,6 +538,69 @@ function paintCoreGate(
   ctx.restore()
 }
 
+/**
+ * Landfall: hohle RAUTE, auf voller Stufe mit einer Binnenmarke je Ort.
+ *
+ * Die Raute ist gegen alle vier bestehenden Formen eindeutig — hohle Ellipse,
+ * hohler Kreisring, massive unrunde Hülle, hohles Achteck. Zwei Züge wie beim
+ * befreiten Stern: erst dunkel und breiter, dann hell darüber; über den hellen
+ * Armpartikeln verschwindet eine dünne Linie sonst.
+ *
+ * Verpasst wird nur LEISER gemalt, nicht anders geformt — und der dunkle Unterzug
+ * bleibt voll, sonst löst sich die Marke im Arm auf.
+ */
+function paintLandfall(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  kind: LandfallLandmarkKind,
+  detail: 0 | 1 | 2,
+  faded: boolean,
+): void {
+  const span = r * 0.92
+
+  const raute = () => {
+    ctx.beginPath()
+    ctx.moveTo(x, y - span)
+    ctx.lineTo(x + span, y)
+    ctx.lineTo(x, y + span)
+    ctx.lineTo(x - span, y)
+    ctx.closePath()
+  }
+
+  ctx.save()
+
+  raute()
+  ctx.strokeStyle = 'rgba(11, 8, 6, 0.75)'
+  ctx.lineWidth = Math.max(2, r * 0.34)
+  ctx.lineJoin = 'round'
+  ctx.stroke()
+
+  ctx.globalAlpha = faded ? LANDMARK_LANDFALL_MISSED_ALPHA : 1
+  raute()
+  ctx.strokeStyle = LANDMARK_LANDFALL_RING
+  ctx.lineWidth = Math.max(1.1, r * 0.15)
+  ctx.stroke()
+
+  // Die Binnenmarke sagt, WELCHER Ort — und nur dort, wo sie zwei Pixel hat.
+  // Im Standbild wären acht zusätzliche Punkte je Karte Rauschen.
+  if (detail >= 2 && !faded) {
+    ctx.fillStyle = LANDMARK_LANDFALL_RING
+    if (kind === 'landfall-reef') {
+      // Ein Riff: drei Körner nebeneinander.
+      const d = r * 0.34
+      for (const dx of [-d, 0, d]) {
+        ctx.beginPath()
+        ctx.arc(x + dx, y, Math.max(0.7, r * 0.11), 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+  }
+
+  ctx.restore()
+}
+
 /* ── Einstieg ─────────────────────────────────────────────────────────────── */
 
 export function drawLandmark(
@@ -523,7 +624,8 @@ export function drawLandmark(
   }
 
   const dpr = opts.dpr ?? 1
-  const sprite = getSprite(kind, r, dpr, variant, detail)
+  const faded = opts.faded ?? false
+  const sprite = getSprite(kind as SpriteKind, r, dpr, variant, detail, faded)
   if (!sprite) return
   const pad = landmarkPad(r)
   ctx.drawImage(sprite, x - pad, y - pad, pad * 2, pad * 2)

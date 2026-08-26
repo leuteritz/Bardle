@@ -40,6 +40,7 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { galaxyDepth } from '@/utils/game/galaxyDepth'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
@@ -83,7 +84,7 @@ export const useChampionLevelStore = defineStore('championLevel', {
       const galaxy = useGalaxyStore().currentGalaxy
       return Math.min(
         CHAMPION_LEVEL_MAX_CAP,
-        CHAMPION_LEVEL_START_CAP + Math.max(0, galaxy - 1) * CHAMPION_LEVEL_CAP_PER_GALAXY,
+        Math.floor(CHAMPION_LEVEL_START_CAP + galaxyDepth(galaxy) * CHAMPION_LEVEL_CAP_PER_GALAXY),
       )
     },
 

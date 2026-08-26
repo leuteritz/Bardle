@@ -11,6 +11,7 @@ import type { ChampionRole } from '@/types'
 import { VOID_RIFTS, getVoidRift, VOID_RIFT_SEVERITIES } from '@/config/world/void'
 import { logger } from '@/utils/logger'
 import { gameNow } from '@/utils/game/gameClock'
+import { galaxyDepth } from '@/utils/game/galaxyDepth'
 import { rollVoidApproach, voidPositionAt } from '@/utils/orbit/voidPath'
 import type { ContactHit } from '@/utils/orbit/voidContact'
 import {
@@ -919,7 +920,7 @@ export const useVoidStore = defineStore('void', {
       const maxHp = Math.round(
         VOID_HP_BASE *
           VOID_HP_SEVERITY_MULT[def.severity] *
-          (1 + Math.max(0, galaxy - 1) * VOID_HP_PER_GALAXY),
+          (1 + galaxyDepth(galaxy) * VOID_HP_PER_GALAXY),
       )
       const now = gameNow()
       const approach = rollVoidApproach()

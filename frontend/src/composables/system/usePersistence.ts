@@ -298,11 +298,13 @@ export function usePersistence() {
         starsRescued: galaxyStore.starsRescued,
         starsRequired: galaxyStore.starsRequired,
         attemptResults: [...galaxyStore.attemptResults],
+        landfallResults: galaxyStore.landfallResults.map((l) => ({ ...l })),
         mapSeed: galaxyStore.mapSeed,
         galaxyStartedAtInGameTime: galaxyStore.galaxyStartedAtInGameTime,
         completedGalaxies: galaxyStore.completedGalaxies.map((r) => ({
           ...r,
           attemptResults: [...r.attemptResults],
+          landfallResults: r.landfallResults?.map((l) => ({ ...l })),
         })),
         unlockedTier: galaxyStore.unlockedTier,
         galaxyBossDefeated: galaxyStore.galaxyBossDefeated,
@@ -872,6 +874,14 @@ export function usePersistence() {
         // Older saves have no attempt history → reconstruct from the rescue count
         galaxyStore.attemptResults =
           gx.attemptResults ?? Array.from({ length: galaxyStore.starsRescued }, () => 'rescued')
+        // Ein Spielstand von vor den Landfalls hat keine — und das ist wahr,
+        // nicht gelogen: es gab dort keine. Nichts wird nachgetragen.
+        galaxyStore.landfallResults = Array.isArray(gx.landfallResults) ? gx.landfallResults : []
+        // Der offene Ort wird bewusst NICHT gespeichert (dieselbe Regel wie bei
+        // Void-Wesen unterwegs). Beim Laden steht die Etappe damit wieder offen;
+        // der Etappen-Tick entscheidet neu, ob seine Stelle schon passiert ist.
+        galaxyStore.activeLandfall = null
+        galaxyStore._landfallLegDone = -1
         galaxyStore.mapSeed = gx.mapSeed ?? galaxyStore.mapSeed
         // Ältere Saves kennen die Galaxie-Historie nicht → Zeitmessung der
         // laufenden Galaxie startet ab jetzt, Archiv beginnt leer.

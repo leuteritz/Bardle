@@ -37,6 +37,7 @@ import {
 import { activeMidCurse } from '@/utils/orbit/liveState'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import { bossClickBudgetHP, bossTargetClicks } from '@/utils/game/bossScaling'
+import { galaxyDepth } from '@/utils/game/galaxyDepth'
 import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
 import { prewarmBossSprite } from '@/utils/fx/bossSprite'
 import { ROLE_MID_CURSE_DAMAGE_AMP } from '@/config/constants'
@@ -198,7 +199,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       const hpSectionMult = sectionConfig?.difficultyMultiplier ?? 1
       const enrageSectionMult = sectionConfig?.enrageMultiplier ?? 1
 
-      const galaxyMult = 1 + (galaxyStore.currentGalaxy - 1) * BOSS_HP_PER_GALAXY
+      const galaxyMult = 1 + galaxyDepth(galaxyStore.currentGalaxy) * BOSS_HP_PER_GALAXY
       const providence = useProvidenceStore()
       const forge = useStarForgeStore()
 
@@ -684,7 +685,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       // champion planets and escorts are worth a multiple of a regular boss, so
       // star fights and boss chains are the real level-up moments.
       const galaxy = useGalaxyStore().currentGalaxy
-      let xp = CHAMPION_XP_BOSS_BASE + Math.max(0, galaxy - 1) * CHAMPION_XP_BOSS_PER_GALAXY
+      let xp = CHAMPION_XP_BOSS_BASE + galaxyDepth(galaxy) * CHAMPION_XP_BOSS_PER_GALAXY
       if (boss.isGalaxyBoss) xp *= CHAMPION_XP_GALAXY_BOSS_MULT
       else if (boss.isChampionPlanet) xp *= CHAMPION_XP_CHAMPION_PLANET_MULT
       else if (boss.isBossEscort) xp *= CHAMPION_XP_BOSS_ESCORT_MULT

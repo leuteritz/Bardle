@@ -24,6 +24,7 @@ import {
   MS_PER_SECOND,
 } from '@/config/constants'
 import { splitDuration } from '@/utils/ui/format'
+import { galaxyDepth } from '@/utils/game/galaxyDepth'
 
 export default defineComponent({
   name: 'MiniMapHudPanel',
@@ -51,7 +52,10 @@ export default defineComponent({
 
     const totalDistanceLY = computed(
       () =>
-        CHAMPION_TRAVEL_BASE_LY + (galaxyStore.currentGalaxy - 1) * CHAMPION_TRAVEL_LY_PER_GALAXY,
+        Math.round(
+          CHAMPION_TRAVEL_BASE_LY +
+          galaxyDepth(galaxyStore.currentGalaxy) * CHAMPION_TRAVEL_LY_PER_GALAXY,
+        ),
     )
 
     const remainingDistanceLY = computed(

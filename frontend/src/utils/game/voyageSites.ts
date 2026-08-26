@@ -9,6 +9,7 @@ import {
   generateGalaxyDots,
   seededRng,
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { landfallsOfRun, landfallWorldPos } from '@/utils/game/landfalls'
 import {
   CORE_GATE_CROWN_SPAN,
   CORE_GATE_MOUTH_R,
@@ -60,8 +61,18 @@ export interface VoyageBerth {
 export function voyageBerthsOf(record: CompletedGalaxyRecord): VoyageBerth[] {
   const attempts = record.attemptResults.length
   const geo = galaxyGeo(record.mapSeed)
-  const { dots } = generateGalaxyDots(record.mapSeed, attempts + 1)
-  const history = dots.slice(0, attempts)
+  const { spawn, dots } = generateGalaxyDots(record.mapSeed, attempts + 1)
+  // Die Startmenge des Farthest-Point-Sampling ist die GESCHICHTE der Galaxie —
+  // seit es Landfalls gibt, gehören sie dazu. Ohne sie setzte ein Hafen sich auf
+  // eine Ortsmarke, und `voyageMarkerSizeFor` misst nur Hafen gegen Hafen.
+  const kette = [spawn, ...dots.slice(0, attempts), { x: 0.5, y: 0.5 }]
+  const ortZahl = (record.landfallResults ?? []).length
+  const orte = ortZahl
+    ? landfallsOfRun(record.mapSeed, record.galaxy, attempts + 1, kette.length - 1)
+        .slice(0, ortZahl)
+        .map((plan) => landfallWorldPos(kette[plan.leg], kette[plan.leg + 1], plan.t, plan.bow))
+    : []
+  const history = [...dots.slice(0, attempts), ...orte]
 
   // Eigener Strom, damit kein Aufruf die Ziehreihenfolge der Geschichte berührt.
   const rng = seededRng(record.mapSeed * 7717 + 101)

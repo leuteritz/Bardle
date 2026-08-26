@@ -17,6 +17,7 @@ export type GameEventType =
   | 'omen'
   | 'mission'
   | 'void'
+  | 'landfall'
   | 'info'
 
 export interface GameEvent {

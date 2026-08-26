@@ -79,6 +79,8 @@ import {
   generateGalaxyDots,
 } from './minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor } from '@/utils/fx/galaxyLandmarks'
+import { landfallsOfRun, landfallWorldPos } from '@/utils/game/landfalls'
+import { LANDFALL_LANDMARK_KIND } from '@/config/world/landfalls'
 import { routeLegStyle } from '@/utils/fx/galaxyPlate'
 
 import { hexToRgba } from '@/utils/ui/format'
@@ -541,6 +543,31 @@ export default defineComponent({
             variant: landmarkVariantFor(i),
           })
         }
+
+        // Landfalls — nur die BEREITS abgehandelten. Dieselbe Regel wie beim
+        // nächsten Stern: die Karte enthüllt nichts, was noch vor dem Schiff
+        // liegt. Der offene Ort steht in seiner HUD-Karte, nicht hier.
+        const landfalls = galaxyStore.landfallResults
+        if (landfalls.length) {
+          const kette = [spawnPos.value, ...dots.slice(0, attempts), { x: 0.5, y: 0.5 }]
+          const plaene = landfallsOfRun(
+            galaxyStore.mapSeed,
+            galaxyStore.currentGalaxy,
+            galaxyStore.plannedLegCount,
+            kette.length - 1,
+          )
+          for (let i = 0; i < plaene.length && i < landfalls.length; i++) {
+            const plan = plaene[i]
+            const pos = landfallWorldPos(kette[plan.leg], kette[plan.leg + 1], plan.t, plan.bow)
+            const [lx, ly] = wToC(pos.x, pos.y)
+            if (!inView(lx, ly)) continue
+            drawLandmark(c, LANDFALL_LANDMARK_KIND[plan.kind], lx, ly, 8, {
+              dpr: renderDpr,
+              variant: landmarkVariantFor(i),
+              faded: !landfalls[i].cleared,
+            })
+          }
+        }
       }
 
       if (attempts >= 1 && farAlpha > 0.01) {
@@ -556,6 +583,13 @@ export default defineComponent({
           let sig = attempts
           for (let i = 0; i < attempts; i++) {
             sig = (Math.imul(sig, 31) + (results[i] === 'failed' ? 1 : 2)) >>> 0
+          }
+          // Die Orte gehören in dieselbe Signatur: ein aufgelöster Landfall legt
+          // eine Marke auf die Karte, ohne dass sich `attempts` rührt. Sie
+          // ändert sich nur beim AUFLÖSEN, nicht im Sekundentakt — der offene
+          // Ort steht in seiner HUD-Karte, nicht auf der Minimap.
+          for (const l of galaxyStore.landfallResults) {
+            sig = (Math.imul(sig, 31) + (l.cleared ? 3 : 4)) >>> 0
           }
           const key = `${galaxyStore.mapSeed}|${galaxyStore.currentGalaxy}|${attempts}|${sig}|${cam.x}|${cam.y}|${cam.zoom}`
           ctx.drawImage(markerLayer.get(w, h, renderDpr, key, drawRouteAndMarkers), 0, 0, w, h)

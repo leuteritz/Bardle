@@ -6,9 +6,11 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import { unlockedChampionTierCount } from '@/config/champions/championTiers'
-import type { ChampionRole } from '@/types'
+import type { ChampionRole, ActiveLandfall, LandfallOutcome } from '@/types'
 import { clampPercent } from '@/utils/orbit/geometry'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
+import { galaxyDepth } from '@/utils/game/galaxyDepth'
+import { landfallOnLeg, landfallWindowMs } from '@/utils/game/landfalls'
 import { buildBackfillRecord, backfillThemeRng } from '@/utils/game/galaxyArchiveBackfill'
 import {
   CHAMPION_TRAVEL_BASE_MS,
@@ -16,10 +18,13 @@ import {
   CHAMPION_TRAVEL_MAX_MS,
   RESOURCE_STAR_INTERVAL_MIN_MS,
   RESOURCE_STAR_INTERVAL_MAX_MS,
+  LANDFALL_REEF_BASE_SECONDS,
+  LANDFALL_REEF_CLICK_SECONDS,
+  LANDFALL_REEF_MAX_CLICKS,
+  LANDFALL_REEF_CPS_FLOOR_CLICKS,
   GALAXY_STARS_BASE_REQUIRED,
-  GALAXY_STARS_LATE_FROM,
-  GALAXY_STARS_LATE_BONUS,
   GALAXY_STARS_MAX,
+  GALAXIES_PER_TIER,
   GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS,
   GALAXY_STAR_FAILED_SIGNAL_MS,
   GALAXY_BOSS_SPAWN_ANIM_MS,
@@ -55,6 +60,10 @@ export interface CompletedGalaxyRecord {
   mapSeed: number
   themeIndex: number
   attemptResults: StarAttemptResult[]
+  /** Die Orte, die auf den Reiseetappen lagen — in Routenreihenfolge.
+   *  OPTIONAL: Spielstände von vor den Landfalls laden ohne Migration und zeigen
+   *  keine. Das ist wahr, nicht gelogen — es gab dort keine. */
+  landfallResults?: LandfallOutcome[]
   /** In-game seconds spent from entering the galaxy until the core was freed. */
   durationSeconds: number
   /** Wall-clock timestamp of the completion. */
@@ -67,43 +76,35 @@ export interface TierUnlockCost {
 }
 
 /**
- * Sterne, die eine Galaxie verlangt.
- *
- * Bis Galaxie 6 unverändert `3 + (g−1)` — das Frühspiel soll genau so schnell
- * bleiben, wie es ist. Ab dort wächst die Zahl doppelt so schnell und läuft
- * gegen `GALAXY_STARS_MAX`.
+ * Sterne, die eine Galaxie verlangt: `3 + (g−1)`, gedeckelt bei
+ * `GALAXY_STARS_MAX` — also 3/4/5/6/7/7/7…
  *
  * Warum die Sternzahl und nicht die Reisedauer: beides streckt die Achse, aber
  * ein Stern ist eine Schleife aus Rollenwahl, Reise, Ankunft und Bosskampf,
- * eine längere Reise dagegen nichts als Warten. Der Deckel verhindert, dass
- * eine späte Galaxie zu einem Marathon aus vierzig gleichen Sternen wird.
+ * eine längere Reise dagegen nichts als Warten. Warum der Deckel dann bei 7 und
+ * nicht bei 36 steht, steht bei der Konstante.
  */
 export function computeRequired(galaxy: number): number {
-  const raw =
-    GALAXY_STARS_BASE_REQUIRED +
-    (galaxy - 1) +
-    GALAXY_STARS_LATE_BONUS * Math.max(0, galaxy - GALAXY_STARS_LATE_FROM)
-  return Math.min(raw, GALAXY_STARS_MAX)
+  return Math.min(GALAXY_STARS_BASE_REQUIRED + (galaxy - 1), GALAXY_STARS_MAX)
 }
 
 // Eskorten-Sterne, die zusammen mit dem Galaxieboss auftauchen — frühe
 // Galaxien wenige, später mehr (exportiert für Tests).
 export function computeBossEscortCount(galaxy: number): number {
   return Math.min(
-    GALAXY_BOSS_ESCORT_BASE + (galaxy - 1) * GALAXY_BOSS_ESCORT_PER_GALAXY,
+    Math.round(GALAXY_BOSS_ESCORT_BASE + galaxyDepth(galaxy) * GALAXY_BOSS_ESCORT_PER_GALAXY),
     GALAXY_BOSS_ESCORT_MAX,
   )
 }
 
 // ── Galaxy Tier helpers (pure, exported for tests) ──────────────────────────
-// Fixed grouping: Tier 1 = G1-2, then every later tier spans 3 galaxies
-// (T2 = G3-5, T3 = G6-8, …).
+// Tier 1 = G1-2, danach spannt jedes Tier GALAXIES_PER_TIER Galaxien.
 export function tierOf(galaxy: number): number {
-  return galaxy <= 2 ? 1 : 2 + Math.floor((galaxy - 3) / 3)
+  return galaxy <= 2 ? 1 : 2 + Math.floor((galaxy - 3) / GALAXIES_PER_TIER)
 }
 
 export function firstGalaxyOfTier(tier: number): number {
-  return tier <= 1 ? 1 : 3 + (tier - 2) * 3
+  return tier <= 1 ? 1 : 3 + (tier - 2) * GALAXIES_PER_TIER
 }
 
 // Galaxy N targets star level N, clamped to the finite champion pool ceiling.
@@ -211,6 +212,14 @@ export const useGalaxyStore = defineStore('galaxy', {
     // Chronological outcome of every champion-star attempt this galaxy —
     // drives the minimap (rescued ✦ / failed ✕ markers, next-target position).
     attemptResults: [] as StarAttemptResult[],
+    /** Ausgang jedes Ortes dieser Galaxie, in Routenreihenfolge — das Gegenstück
+     *  zu `attemptResults`. Lage und Art sind ABGELEITET (`utils/game/landfalls.ts`),
+     *  gespeichert wird nur, was daraus wurde. */
+    landfallResults: [] as LandfallOutcome[],
+    /** Der eine Ort, der GERADE offen steht. Nicht persistiert — dieselbe Regel
+     *  wie bei Void-Wesen unterwegs: er käme mit halb abgelaufenem Fenster
+     *  zurück, und die Zeit hat der Spieler nicht gehabt. */
+    activeLandfall: null as ActiveLandfall | null,
     starJustFailed: false, // transient → minimap "Star Lost" flash
     // Fresh random seed per galaxy run: spawn point + star placement differ
     // every playthrough (persisted so the layout survives a reload).
@@ -249,6 +258,9 @@ export const useGalaxyStore = defineStore('galaxy', {
     championTravelDurationMs: CHAMPION_TRAVEL_BASE_MS,
     championTravelBaseDurationMs: CHAMPION_TRAVEL_BASE_MS,
     _travelTickMs: 0,
+    /** Etappe, deren Ort schon abgehandelt ist (offen ODER erledigt). Verhindert,
+     *  dass derselbe Ort nach dem Schliessen sofort wieder aufgeht. −1 = keine. */
+    _landfallLegDone: -1,
     // Champion-Ankunfts-Signal
     championJustArrived: false,
     galaxyBossJustSpawned: false,
@@ -340,6 +352,48 @@ export const useGalaxyStore = defineStore('galaxy', {
       return this.isComplete && !this.nextTierLocked
     },
 
+    /** Auf welcher Etappe das Schiff gerade ist: 0 = Abflugportal → erster Stern.
+     *  Verlorene Sterne hängen Etappen an, also zählt die Versuchsreihe. */
+    currentLegIndex(): number {
+      return this.attemptResults.length
+    },
+
+    /** Die Etappenzahl, gegen die die Ortsdichte gerechnet wird — die GEPLANTE,
+     *  nicht die tatsächliche (siehe `landfallChanceFor`). */
+    plannedLegCount(): number {
+      return this.starsRequired + 1
+    },
+
+    /** Anteil des Fensters, der schon verstrichen ist (0..1). */
+    landfallProgress(): number {
+      const a = this.activeLandfall
+      if (!a) return 0
+      const spanne = landfallWindowMs(this.effectiveTravelDurationMs)
+      if (spanne <= 0) return 1
+      return clampPercent(((this._travelTickMs - a.openedAt) / spanne) * 100) / 100
+    },
+
+    /**
+     * Was der Ort einbringt, wenn er JETZT aufgelöst würde — in Chimes.
+     *
+     * Der Sockel fällt auch dem zu, der nicht hinsieht; das ist der Unterschied
+     * zum Drifter, der ungeklickt verfällt. Ein Ort ist ein ORT: man fliegt
+     * hindurch, ob man will oder nicht. Geklickt wird daraus das Vielfache.
+     */
+    landfallYield(): number {
+      const a = this.activeLandfall
+      if (!a) return 0
+      const gameStore = useGameStore()
+      // Boden an der SEKUNDE, nicht an der Summe — sonst verschwinden früh alle
+      // Griffe darunter und acht Klicks zeigen dieselbe Zahl.
+      const jeSekunde = Math.max(
+        gameStore.chimesPerSecond,
+        gameStore.chimesPerClick * LANDFALL_REEF_CPS_FLOOR_CLICKS,
+      )
+      const sekunden = LANDFALL_REEF_BASE_SECONDS + a.taps * LANDFALL_REEF_CLICK_SECONDS
+      return jeSekunde * sekunden
+    },
+
     needsFinalBoss(): boolean {
       return this.starsRescued >= this.starsRequired && !this.galaxyBossDefeated
     },
@@ -411,7 +465,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       // der Sterne je Galaxie.
       const baseDuration = Math.min(
         CHAMPION_TRAVEL_MAX_MS,
-        CHAMPION_TRAVEL_BASE_MS + (this.currentGalaxy - 1) * CHAMPION_TRAVEL_SCALE_MS,
+        CHAMPION_TRAVEL_BASE_MS + galaxyDepth(this.currentGalaxy) * CHAMPION_TRAVEL_SCALE_MS,
       )
       this.championTravelBaseDurationMs = baseDuration
       this.championTravelState = 'traveling'
@@ -439,7 +493,11 @@ export const useGalaxyStore = defineStore('galaxy', {
         return
       }
       const elapsed = now - this.championTravelStartTime
+      this._tickLandfall(now, elapsed)
       if (elapsed >= this.effectiveTravelDurationMs) {
+        // Ein Ort, der die Ankunft erlebt, wird abgerechnet — der Stern gewinnt
+        // die Aufmerksamkeit, aber der Sockel ist verdient.
+        if (this.activeLandfall) this.resolveLandfall(this.activeLandfall.taps > 0)
         if (this.travelingToGalaxyBoss) {
           // Reached the galaxy core → the boss star spawns right there
           this.travelingToGalaxyBoss = false
@@ -458,6 +516,82 @@ export const useGalaxyStore = defineStore('galaxy', {
           this.championJustArrived = false
         }, GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS)
       }
+    },
+
+    /**
+     * Öffnet den Ort dieser Etappe, sobald das Schiff seine Stelle passiert, und
+     * schliesst ihn, wenn das Fenster abläuft.
+     *
+     * KEIN eigener Timer und kein eigenes Intervall — der Etappen-Tick weiss
+     * ohnehin, wo das Schiff steht, und `gameNow()` trägt den Zeitraffer mit.
+     */
+    _tickLandfall(now: number, elapsed: number) {
+      const dauer = this.effectiveTravelDurationMs
+      if (dauer <= 0) return
+
+      if (this.activeLandfall) {
+        if (now - this.activeLandfall.openedAt >= landfallWindowMs(dauer)) {
+          // Abgelaufen: der Sockel fällt trotzdem, angefasst wurde er nicht.
+          this.resolveLandfall(this.activeLandfall.taps > 0)
+        }
+        return
+      }
+
+      // Höchstens EIN Ort je Etappe, und je Etappe genau ein Eintrag in der
+      // Ergebnisreihe — daran hängt, ob dieser hier schon abgehandelt ist.
+      const leg = this.currentLegIndex
+      if (this._landfallLegDone === leg) return
+
+      const plan = landfallOnLeg(this.mapSeed, this.currentGalaxy, leg, this.plannedLegCount)
+      if (!plan) {
+        this._landfallLegDone = leg
+        return
+      }
+      if (elapsed / dauer < plan.t) return
+
+      this.activeLandfall = { ...plan, openedAt: now, taps: 0 }
+    },
+
+    /** Schliesst den offenen Ort und schreibt seinen Ausgang in die Chronik. */
+    _closeLandfall(cleared: boolean) {
+      const a = this.activeLandfall
+      if (!a) return
+      this.landfallResults.push({ kind: a.kind, cleared })
+      this._landfallLegDone = a.leg
+      this.activeLandfall = null
+    },
+
+    /**
+     * Der Spieler fasst den Ort an. Gibt zurück, ob der Griff gezählt hat.
+     *
+     * Gedeckelt: ohne Deckel wäre ein Ort ein Autoklicker-Fenster, und der
+     * Ertrag hinge an der Mausfrequenz statt an der Aufmerksamkeit.
+     */
+    tapLandfall(): boolean {
+      const a = this.activeLandfall
+      if (!a || a.taps >= LANDFALL_REEF_MAX_CLICKS) return false
+      a.taps++
+      return true
+    },
+
+    /**
+     * Der Ort ist abgehandelt — vom Spieler oder weil das Fenster ablief.
+     *
+     * Ausgezahlt wird VOR dem Schliessen, weil `landfallYield` am offenen Ort
+     * hängt. `cleared` sagt nur, ob der Spieler ihn angefasst hat; bezahlt wird
+     * so oder so.
+     */
+    resolveLandfall(cleared: boolean) {
+      const gewinn = this.landfallYield
+      if (gewinn > 0) {
+        const gameStore = useGameStore()
+        gameStore.chimes += gewinn
+        gameStore.chimesForNextUniverse += gewinn
+        gameStore.totalChimesEarned += gewinn
+        gameStore.chimesEarnedForLevel += gewinn
+        gameStore.calculateLevel()
+      }
+      this._closeLandfall(cleared)
     },
 
     _rollResourceStarInterval(): number {
@@ -564,6 +698,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         mapSeed: this.mapSeed,
         themeIndex: this.currentThemeIndex,
         attemptResults: [...this.attemptResults],
+        landfallResults: [...this.landfallResults],
         durationSeconds: Math.max(0, inGameTime - this.galaxyStartedAtInGameTime),
         // Wanduhr: Chronikstempel, wird im Galaxy-Archiv als Datum gelesen und
         // nie gegen eine Frist geprüft.
@@ -648,6 +783,9 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.starsRescued = 0
       this.starsRequired = computeRequired(this.currentGalaxy)
       this.attemptResults = []
+      this.landfallResults = []
+      this.activeLandfall = null
+      this._landfallLegDone = -1
       this.starJustFailed = false
       this.mapSeed = Math.floor(Math.random() * 0xffffffff)
       this.galaxyBossDefeated = false

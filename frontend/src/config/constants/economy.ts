@@ -488,19 +488,29 @@ export const EXPEDITION_SPOILS: Record<ExpeditionTier, ExpeditionSpoilsDef> = {
 // eine zweite, unlesbare Entscheidung.
 //
 // Die beiden Bandgrenzen sind nicht gegriffen — `galaxyStore.tierOf()` springt
-// bei genau 3 und 9, also wechselt die Expeditionsstufe dort, wo der Spieler den
-// Wechsel ohnehin auf der Minimap liest.
+// bei genau diesen Zahlen, also wechselt die Expeditionsstufe dort, wo der
+// Spieler den Wechsel ohnehin auf der Minimap liest. Mit `GALAXIES_PER_TIER` 9
+// liegen die Sprünge bei 3, 12, 21, 30 …; die 9 von vorher ist keiner mehr und
+// wandert deshalb auf 12 mit. Wer die Spanne wieder anfasst, zieht HIER nach.
 export const EXPEDITION_DEST_RARE_FROM = 3
-export const EXPEDITION_DEST_EPIC_FROM = 9
+export const EXPEDITION_DEST_EPIC_FROM = 12
 
 /**
  * Über wie viele Galaxien die Tiefe von 0 auf 1 läuft.
  *
- * 24 und nicht 40: eine späte Galaxie dauert laut docs/balance.md rund zwei
- * Stunden. Eine Kurve, die erst bei 40 ankommt, gäbe den letzten fünfzehn
- * Galaxien nichts Neues mehr.
+ * War 24 gegen einen Durchlauf von rund 40 Galaxien — die Kurve sättigt also
+ * bei etwa 60 % der Strecke, der Rest läuft flach.
+ *
+ * Anders als alles andere in diesem Umbau ist die Spanne NICHT an der Spielzeit
+ * gemessen, sondern an der Galaxienzahl: `depthOf` beschreibt ein ZIEL, und ein
+ * Ziel IST eine Galaxie. Zeitlich gerechnet käme 55 heraus, und der flache
+ * Schwanz wüchse von 37 % auf 56 % der Strecke. Deshalb proportional zur neuen
+ * Streckenlänge (letztes Champion-Tor Galaxie 126): 24/40 × 126 ≈ 75.
+ *
+ * Hergeleitet, nicht gemessen — derselbe Vorbehalt wie bei
+ * `CHAMPION_TIER_REQUIRED_GALAXY`.
  */
-export const EXPEDITION_DEST_DEPTH_SPAN = 24
+export const EXPEDITION_DEST_DEPTH_SPAN = 75
 
 export const EXPEDITION_DEST_REWARD_SLOPE = 1.5
 export const EXPEDITION_DEST_DURATION_SLOPE = 0.6

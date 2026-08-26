@@ -10,6 +10,7 @@
 //   abilities      51 Konstanten
 //   omens          12 Konstanten
 //   missions        8 Konstanten
+//   landfalls      18 Konstanten
 //   providence      6 Konstanten
 //   economy       118 Konstanten
 //   roles          45 Konstanten
@@ -31,6 +32,7 @@ export * from '@/config/constants/progression'
 export * from '@/config/constants/abilities'
 export * from '@/config/constants/omens'
 export * from '@/config/constants/missions'
+export * from '@/config/constants/landfalls'
 export * from '@/config/constants/providence'
 export * from '@/config/constants/economy'
 export * from '@/config/constants/roles'

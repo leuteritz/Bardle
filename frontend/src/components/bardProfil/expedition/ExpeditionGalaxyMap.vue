@@ -133,7 +133,8 @@ const paintCount = ref(0)
 
 const paintKey = computed(
   () =>
-    `${props.record.galaxy}:${props.record.mapSeed}:${props.record.attemptResults.length}:${props.record.themeIndex}` +
+    `${props.record.galaxy}:${props.record.mapSeed}:${props.record.attemptResults.length}` +
+    `:${props.record.landfallResults?.length ?? 0}:${props.record.themeIndex}` +
     `|${Math.round(cssW.value)}x${Math.round(cssH.value)}|${bandH.value}|${dprNow.value}`,
 )
 

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { bossTargetClicks, bossClickBudgetHP, expectedClickDamage } from '@/utils/game/bossScaling'
+import { galaxyDepth } from '@/utils/game/galaxyDepth'
 import {
   BOSS_BASE_HP,
   BOSS_CLICK_DAMAGE_BASE,
@@ -50,8 +51,15 @@ describe('Boss-Klickrampe', () => {
   it('eine Galaxie zählt wie eine feste Zahl gefällter Bosse', () => {
     // Zwei Fortschrittsachsen, EINE Skala — sonst müssten zwei Kurven
     // zueinander passend gehalten werden.
-    expect(bossTargetClicks(0, 3)).toBe(bossTargetClicks(2 * BOSS_CLICK_RAMP_GALAXY_KILLS, 1))
-    expect(bossTargetClicks(10, 2)).toBe(bossTargetClicks(10 + BOSS_CLICK_RAMP_GALAXY_KILLS, 1))
+    //
+    // Der Sockel ist die GALAXIE-TIEFE, nicht die Galaxienummer: seit dem
+    // Sterndeckel kommen Galaxien schneller, und ein Sockel je Nummer liesse die
+    // Rampe entsprechend schneller steigen (`utils/game/galaxyDepth.ts`).
+    for (const g of [1, 2, 3, 12, 40]) {
+      const sockel = galaxyDepth(g) * BOSS_CLICK_RAMP_GALAXY_KILLS
+      expect(bossTargetClicks(0, g)).toBe(bossTargetClicks(sockel, 1))
+      expect(bossTargetClicks(10, g)).toBe(bossTargetClicks(10 + sockel, 1))
+    }
   })
 
   it('der HP-Boden liegt unter dem Startbudget', () => {

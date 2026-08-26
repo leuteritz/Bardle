@@ -413,3 +413,48 @@ export interface JungleBuffDef {
   multiplier: number
   durationMs: number
 }
+
+/* ── Landfalls — Orte auf einer Reiseetappe ───────────────────────────────── */
+
+/** Der Katalog WÄCHST; jeder neue Ort erweitert diese Union und
+ *  `config/world/landfalls.ts` gemeinsam, damit nichts halb existiert. */
+export type LandfallKindId = 'chime_reef'
+
+export interface LandfallDef {
+  id: LandfallKindId
+  name: string
+  blurb: string
+  icon: string
+  /** Ab welcher Galaxie dieser Ort in die Auswahl kommt. */
+  unlockGalaxy: number
+  /** Gewicht innerhalb der bereits freigeschalteten Menge. */
+  weight: number
+}
+
+/** Was ein Ort auf der Karte hinterlässt. Position und Art sind ABGELEITET,
+ *  nur der Ausgang wird gespeichert — parallel zu `attemptResults`. */
+export interface LandfallOutcome {
+  kind: LandfallKindId
+  cleared: boolean
+}
+
+/** Ein geplanter Ort auf einer Etappe. Rein aus `mapSeed` + Etappennummer
+ *  gerechnet, nie gespeichert (`utils/game/landfalls.ts`). */
+export interface LandfallPlan {
+  kind: LandfallKindId
+  /** Etappennummer: 0 = Abflugportal → erster Stern. */
+  leg: number
+  /** Anteil auf der Etappe, an dem der Ort fällig wird. */
+  t: number
+  /** Seitlicher Versatz von der Routenlinie, damit die Linie ihn nicht deckt. */
+  bow: number
+}
+
+/** Der eine Ort, der GERADE offen steht. Nicht persistiert — dieselbe Regel wie
+ *  bei Void-Wesen unterwegs: er käme mit halb abgelaufenem Fenster wieder. */
+export interface ActiveLandfall extends LandfallPlan {
+  /** Spielzeit-Stempel, zu dem der Ort fällig wurde. */
+  openedAt: number
+  /** Wie oft der Spieler ihn schon angefasst hat. */
+  taps: number
+}

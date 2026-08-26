@@ -9,6 +9,7 @@ import { useCombatStore } from '@/stores/battle/combatStore'
 import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { galaxyDepth } from '@/utils/game/galaxyDepth'
 import { usePlanetShopStore, isPlanetDown } from '@/stores/world/planetShopStore'
 import { getVoidRift, VOID_RIFTS } from '@/config/world/void'
 import { voidPositionAt } from '@/utils/orbit/voidPath'
@@ -152,8 +153,10 @@ describe('voidStore', () => {
       unlock()
       useGalaxyStore().currentGalaxy = 3
       const m = spawn('sunlessBreach')
+      // Gegen die GALAXIE-TIEFE, nicht die Nummer: seit dem Sterndeckel kommen
+      // Galaxien schneller, also darf die Zähigkeit je Nummer langsamer steigen.
       const expected = Math.round(
-        VOID_HP_BASE * VOID_HP_SEVERITY_MULT.lesser * (1 + 2 * VOID_HP_PER_GALAXY),
+        VOID_HP_BASE * VOID_HP_SEVERITY_MULT.lesser * (1 + galaxyDepth(3) * VOID_HP_PER_GALAXY),
       )
       expect(m.maxHp).toBe(expected)
       expect(m.currentHp).toBe(expected)

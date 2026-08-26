@@ -19,6 +19,7 @@ import {
 } from '@/config/constants'
 import { SECTIONS } from '@/config/progression/sections'
 import { bossClickBudgetHP, expectedClickDamage } from '@/utils/game/bossScaling'
+import { galaxyDepth } from '@/utils/game/galaxyDepth'
 
 /**
  * Der Bosskampf hängt NICHT am Chime-Klickwert.
@@ -239,10 +240,12 @@ describe('Boss-HP folgt der Klickrampe', () => {
     // Die Galaxie zählt bewusst DOPPELT: als Sockel auf der Klickrampe und als
     // HP-Multiplikator. Ein offener Kreis wird daraus nicht, weil die
     // Klickzahl bei BOSS_TARGET_CLICKS_MAX hart gedeckelt ist.
+    // Beide Kanäle rechnen gegen die GALAXIE-TIEFE, nicht gegen die Nummer.
+    const tiefe = galaxyDepth(3)
     expect(farGalaxy).toBe(
-      Math.floor(bossClickBudgetHP(0, 3, BOSS_CLICK_DAMAGE_BASE) * (1 + 2 * BOSS_HP_PER_GALAXY)),
+      Math.floor(bossClickBudgetHP(0, 3, BOSS_CLICK_DAMAGE_BASE) * (1 + tiefe * BOSS_HP_PER_GALAXY)),
     )
-    expect(farGalaxy).toBeGreaterThan(Math.floor(base * (1 + 2 * BOSS_HP_PER_GALAXY)))
+    expect(farGalaxy).toBeGreaterThan(Math.floor(base * (1 + tiefe * BOSS_HP_PER_GALAXY)))
 
     boss.activeBosses = []
     galaxy.currentGalaxy = 1

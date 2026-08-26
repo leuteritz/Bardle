@@ -28,11 +28,18 @@ const props = defineProps<{
  * Bard die Galaxie BETRAT. Aufgebrochen wird seit dem Fall des Kerns am Tor,
  * und zwei Zeilen mit „departure" auf einer Karte wären eine zuviel.
  */
+/*
+ * Die Landfalls stehen als EINE Zeile drin, nicht als sechs. Sie teilen sich
+ * eine Silhouette und trennen sich erst auf voller Detailstufe durch eine
+ * Binnenmarke — eine Zeile je Ort listete sechsmal dieselbe Raute. Welcher Ort
+ * es war, sagt der Hover-Tooltip der Marke.
+ */
 const ROWS: { kind: LandmarkKind; label: string }[] = [
   { kind: 'core-gate', label: "Caretaker's Gate" },
   { kind: 'departure-portal', label: 'Arrival portal' },
   { kind: 'star-freed', label: 'Star freed' },
   { kind: 'star-lost', label: 'Star lost' },
+  { kind: 'landfall-reef', label: 'Landfall' },
 ]
 
 const probes = ref<(HTMLCanvasElement | null)[]>([])

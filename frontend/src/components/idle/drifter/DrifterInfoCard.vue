@@ -282,7 +282,8 @@ onUnmounted(clearTimers)
         var(--wayfinder-bottom, 0px),
         var(--autopick-bottom, 0px),
         var(--omen-card-bottom, 0px),
-        var(--void-card-bottom, 0px)
+        var(--void-card-bottom, 0px),
+        var(--landfall-card-bottom, 0px)
       ) + 0.5rem
   );
   left: var(--hud-col-edge);
@@ -598,7 +599,8 @@ onUnmounted(clearTimers)
           var(--wayfinder-bottom, 0px),
           var(--autopick-bottom, 0px),
           var(--omen-card-bottom, 0px),
-          var(--void-card-bottom, 0px)
+          var(--void-card-bottom, 0px),
+          var(--landfall-card-bottom, 0px)
         ) + 0.7rem
     );
     gap: 10px;

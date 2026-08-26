@@ -34,21 +34,26 @@ import {
   CHAMPION_TIER_REQUIRED_GALAXY,
   TIER_SPAWN_WEIGHTS,
   GALAXY_STARS_BASE_REQUIRED,
-  GALAXY_STARS_LATE_FROM,
+  GALAXIES_PER_TIER,
+  EXPEDITION_DEST_RARE_FROM,
+  EXPEDITION_DEST_EPIC_FROM,
+  TIER_UNLOCK_COST_CAP_TIER,
   GALAXY_STARS_MAX,
 } from '@/config/constants'
 
 describe('Galaxy Tier helpers', () => {
   describe('tierOf', () => {
     it('groups galaxies into the fixed tier layout', () => {
-      // Tier 1 = G1-2, Tier 2 = G3-5, Tier 3 = G6-8, Tier 4 = G9-11
+      // Tier 1 = G1-2, danach spannt jedes Tier GALAXIES_PER_TIER Galaxien.
+      // Gegen die Konstante gerechnet, nicht gegen feste Zahlen: die Spanne ist
+      // der Ausgleichsregler für den Sterndeckel und wird sich wieder bewegen.
       expect(tierOf(1)).toBe(1)
       expect(tierOf(2)).toBe(1)
       expect(tierOf(3)).toBe(2)
-      expect(tierOf(5)).toBe(2)
-      expect(tierOf(6)).toBe(3)
-      expect(tierOf(8)).toBe(3)
-      expect(tierOf(9)).toBe(4)
+      expect(tierOf(2 + GALAXIES_PER_TIER)).toBe(2)
+      expect(tierOf(3 + GALAXIES_PER_TIER)).toBe(3)
+      expect(tierOf(2 + 2 * GALAXIES_PER_TIER)).toBe(3)
+      expect(tierOf(3 + 2 * GALAXIES_PER_TIER)).toBe(4)
     })
   })
 
@@ -56,8 +61,8 @@ describe('Galaxy Tier helpers', () => {
     it('returns the first galaxy of each tier', () => {
       expect(firstGalaxyOfTier(1)).toBe(1)
       expect(firstGalaxyOfTier(2)).toBe(3)
-      expect(firstGalaxyOfTier(3)).toBe(6)
-      expect(firstGalaxyOfTier(4)).toBe(9)
+      expect(firstGalaxyOfTier(3)).toBe(3 + GALAXIES_PER_TIER)
+      expect(firstGalaxyOfTier(4)).toBe(3 + 2 * GALAXIES_PER_TIER)
     })
 
     it('is the inverse of tierOf at tier boundaries', () => {
@@ -230,28 +235,39 @@ describe('Weighted champion-tier spawn', () => {
   })
 
   it('streckt die Tiers über die ganze Strecke, aber lässt das Frühspiel in Ruhe', () => {
-    // Die ersten drei Tore sind Frühspiel (Galaxie 1/3/6, also die erste
-    // Spielstunde) und stehen bewusst still; gestreckt wird nur, was dahinter
-    // liegt.
-    expect(CHAMPION_TIER_REQUIRED_GALAXY.slice(0, 3)).toEqual([1, 3, 6])
-    expect(CHAMPION_TIER_REQUIRED_GALAXY[5]).toBeGreaterThanOrEqual(40)
+    // Die ersten beiden Tore sind Frühspiel (Galaxie 1 und 3, also die erste
+    // halbe Stunde) und stehen bewusst still — sie dürfen es auch, denn der
+    // Sterndeckel lässt G1–G5 unberührt.
+    expect(CHAMPION_TIER_REQUIRED_GALAXY.slice(0, 2)).toEqual([1, 3])
+    // Das dritte Tor liegt noch im unveränderten Bereich oder knapp dahinter.
+    expect(CHAMPION_TIER_REQUIRED_GALAXY[2]).toBeLessThanOrEqual(8)
+    // Alles dahinter ist mit dem Deckel nach hinten gerückt.
+    expect(CHAMPION_TIER_REQUIRED_GALAXY[5]).toBeGreaterThanOrEqual(80)
+    // Streng monoton — ein Tor, das nicht weiter ist als das davor, ist keines.
+    for (let i = 1; i < CHAMPION_TIER_REQUIRED_GALAXY.length; i++) {
+      expect(CHAMPION_TIER_REQUIRED_GALAXY[i]).toBeGreaterThan(
+        CHAMPION_TIER_REQUIRED_GALAXY[i - 1],
+      )
+    }
   })
 
-  it('lässt die Sternzahl im Frühspiel unverändert und wächst erst danach', () => {
+  it('lässt die Sternzahl im Frühspiel unverändert und deckelt dann hart', () => {
     setActivePinia(createPinia())
     const store = useGalaxyStore()
-    // Bis GALAXY_STARS_LATE_FROM gilt die alte Reihe 3/4/5/6/7/8 — die erste
-    // Spielstunde soll genau so schnell bleiben, wie sie ist.
-    for (let g = 1; g <= GALAXY_STARS_LATE_FROM; g++) {
+    // Die Reihe ist `3 + (g−1)` bis zum Deckel — die erste Spielstunde soll genau
+    // so schnell bleiben, wie sie ist.
+    const letzteGewachsene = GALAXY_STARS_MAX - GALAXY_STARS_BASE_REQUIRED + 1
+    for (let g = 1; g <= letzteGewachsene; g++) {
       store.adminJumpToGalaxy(g)
       expect(store.starsRequired).toBe(GALAXY_STARS_BASE_REQUIRED + (g - 1))
     }
-    // Danach doppelt so schnell …
-    store.adminJumpToGalaxy(GALAXY_STARS_LATE_FROM + 1)
-    expect(store.starsRequired).toBe(GALAXY_STARS_BASE_REQUIRED + GALAXY_STARS_LATE_FROM + 2)
-    // … und gedeckelt, damit keine Galaxie zum Marathon aus gleichen Sternen wird.
-    store.adminJumpToGalaxy(60)
-    expect(store.starsRequired).toBe(GALAXY_STARS_MAX)
+    // Danach FLACH. Es gibt keine zweite Rampe mehr: Länge aus Wiederholung war
+    // genau der Fehler, gegen den der Deckel steht — die Achse trägt sie jetzt
+    // über Landfalls, das Kern-Finale und die Zahl der Galaxien.
+    for (const g of [letzteGewachsene + 1, 20, 60, 400]) {
+      store.adminJumpToGalaxy(g)
+      expect(store.starsRequired).toBe(GALAXY_STARS_MAX)
+    }
   })
 
   it('tierSpawnWeights returns the row for the unlocked-tier count', () => {
@@ -287,15 +303,17 @@ describe('Weighted champion-tier spawn', () => {
   })
 
   it('perChampionSpawnPercents drops empty/locked tiers and renormalizes (like the spawn pick)', () => {
-    // Galaxy 6 → [55, 30, 15], but Tier 1 is exhausted for this role:
-    // T2 and T3 renormalize over 45 → 30/45 and 15/45, split per champion.
+    // Die erste Galaxie mit DREI freigeschalteten Tiers → [55, 30, 15], aber
+    // Tier 1 ist für diese Rolle erschöpft: T2 und T3 renormalisieren über 45
+    // → 30/45 und 15/45, je Champion aufgeteilt. Gegen das Tor gerechnet, nicht
+    // gegen eine feste Galaxienummer — die Torreihe verschiebt sich.
     const g6 = perChampionSpawnPercents(
       new Map([
         [1, 0],
         [2, 3],
         [3, 1],
       ]),
-      6,
+      CHAMPION_TIER_REQUIRED_GALAXY[2],
     )
     expect(g6.has(1)).toBe(false)
     expect(g6.get(2)).toBeCloseTo(((30 / 45) * 100) / 3)
@@ -316,6 +334,35 @@ describe('Weighted champion-tier spawn', () => {
       0,
     )
     expect(total).toBeCloseTo(100)
+  })
+})
+
+/**
+ * Zwei Kopplungen, die NICHT im Code stehen, sondern zwischen zwei Konstanten in
+ * zwei verschiedenen Themendateien. Beide sind bei der Umstellung auf
+ * `GALAXIES_PER_TIER` zunächst still auseinandergelaufen — genau der Fall, für
+ * den es eine Spec braucht: eine Zahl, die eine andere BESCHREIBT statt sie zu
+ * bestimmen, driftet.
+ */
+describe('Kopplungen an die Tier-Spanne', () => {
+  it('die Expeditions-Bandgrenzen liegen auf Tier-Sprüngen', () => {
+    // Die Begründung der beiden Grenzen ist, dass der Spieler den Wechsel ohnehin
+    // auf der Minimap liest — das gilt nur, wenn dort auch wirklich ein Tier
+    // beginnt. Wer `GALAXIES_PER_TIER` anfasst, zieht sie hier nach.
+    for (const grenze of [EXPEDITION_DEST_RARE_FROM, EXPEDITION_DEST_EPIC_FROM]) {
+      expect(firstGalaxyOfTier(tierOf(grenze))).toBe(grenze)
+    }
+    expect(EXPEDITION_DEST_EPIC_FROM).toBeGreaterThan(EXPEDITION_DEST_RARE_FROM)
+  })
+
+  it('hinter dem letzten Champion-Tor stehen höchstens drei gedeckelte Tiers', () => {
+    // Ab `TIER_UNLOCK_COST_CAP_TIER` wachsen die Freischaltkosten nicht mehr.
+    // Liegt das letzte INHALTS-Tor weit darüber, laufen die Tore dazwischen
+    // gratis — der bekannte Schönheitsfehler, den die Spanne klein halten soll.
+    // Er darf schrumpfen, aber nicht wieder wachsen.
+    const letztesTor = CHAMPION_TIER_REQUIRED_GALAXY[CHAMPION_TIER_REQUIRED_GALAXY.length - 1]
+    const gedeckelt = tierOf(letztesTor) - TIER_UNLOCK_COST_CAP_TIER
+    expect(gedeckelt).toBeLessThanOrEqual(3)
   })
 })
 
@@ -389,7 +436,7 @@ describe('adminJumpToGalaxy', () => {
     store.galaxyBossDefeated = true
     store.adminJumpToGalaxy(5)
     expect(store.currentGalaxy).toBe(5)
-    expect(store.starsRequired).toBe(7) // computeRequired(5) = 5 + 2
+    expect(store.starsRequired).toBe(7) // computeRequired(5) = 3 + 4, am Deckel
     expect(store.starsRescued).toBe(0)
     expect(store.galaxyBossDefeated).toBe(false)
     expect(store.unlockedTier).toBeGreaterThanOrEqual(tierOf(5))
@@ -405,7 +452,9 @@ describe('adminJumpToGalaxy', () => {
 
   it('unlocks the matching champion tier (galaxy gate)', () => {
     const store = useGalaxyStore()
-    store.adminJumpToGalaxy(55) // max required galaxy → every tier unlocked
+    // Gegen das LETZTE Tor gerechnet, nicht gegen eine feste Zahl: die Torreihe
+    // ist mit dem Sterndeckel nach hinten gewandert und wird es wieder tun.
+    store.adminJumpToGalaxy(CHAMPION_TIER_REQUIRED_GALAXY[CHAMPION_TIER_REQUIRED_GALAXY.length - 1])
     for (const tier of CHAMPION_TIERS_BY_STAR) {
       expect(store.currentGalaxy >= requiredGalaxyForTier(tier.starLevel)).toBe(true)
     }

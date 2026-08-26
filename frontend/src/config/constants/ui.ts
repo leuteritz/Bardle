@@ -352,6 +352,22 @@ export const LANDMARK_PORTAL_MIN_R = 3 // Boden, damit der Ring in der Miniatur 
 export const LANDMARK_FREED_RING = '#eef2f8'
 export const LANDMARK_FREED_CORE = '#5ce8b4'
 
+/**
+ * Der Ring eines Landfalls — UNBUNT, und dunkler als der des befreiten Sterns.
+ *
+ * Unbunt aus demselben Grund wie dort: die zwanzig Galaxie-Themen decken den
+ * Farbkreis fast lückenlos ab, jeder gesättigte Ton kämpft in vier bis fünf
+ * Galaxien mit den Armpartikeln. Dunkler, damit der befreite Stern die hellste
+ * unbunte Marke bleibt — ein Ort ist Beiwerk der Reise, ein befreiter Stern ist
+ * ihr Ergebnis. Und Gold scheidet ohnehin aus: das gehört den Häfen.
+ */
+export const LANDMARK_LANDFALL_RING = '#aeb2b0'
+
+/** Verpasst ist dieselbe Form, nur leiser — keine zweite Silhouette. Der dunkle
+ *  Unterzug bleibt trotzdem voll, sonst verschwindet die Marke über den hellen
+ *  Armpartikeln ganz. */
+export const LANDMARK_LANDFALL_MISSED_ALPHA = 0.4
+
 /* ── Caretaker's Gate: der befreite Kern ──────────────────────────────────────
    Der Kern war einmal eine gefüllte Goldkugel mit Strahlenkranz und las sich
    damit als zweite Sonne. Er ist jetzt eine ÖFFNUNG: dunkler Schlund, heller

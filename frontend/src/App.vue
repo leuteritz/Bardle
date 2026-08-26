@@ -35,6 +35,7 @@ import VoidRiftHudCard from '@/components/idle/void/VoidRiftHudCard.vue'
 import DrifterInfoCard from '@/components/idle/drifter/DrifterInfoCard.vue'
 import ActiveBuffBar from '@/components/idle/drifter/ActiveBuffBar.vue'
 import OmenHudCard from '@/components/idle/omen/OmenHudCard.vue'
+import LandfallHudCard from '@/components/idle/landfall/LandfallHudCard.vue'
 import OmenChoiceOverlay from '@/components/idle/omen/OmenChoiceOverlay.vue'
 import BardAbilityBar from '@/components/idle/abilities/BardAbilityBar.vue'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
@@ -217,6 +218,13 @@ watch(
          ein Profil-Tab das Spielbild verdeckt. -->
     <OmenHudCard />
     <OmenChoiceOverlay />
+
+    <!-- Landfalls: der Ort, an dem das Schiff GERADE vorbeikommt. Er steht in
+         derselben Spalte, unter dem Vorzeichen und über der Drifter-Karte — die
+         drei sind nach Beständigkeit geordnet, nicht nach Wichtigkeit. Die Karte
+         IST die Interaktion: ein Landfall hat keinen Körper auf der Bühne, dort
+         steht die Sonne, nicht das Schiff. -->
+    <LandfallHudCard />
 
     <!-- Bard-Fähigkeiten: die Leiste sitzt über dem Scoreboard und schiebt die
          Buff-Reihe über sich; der Stase-Schleier liegt über dem Orbit, aber

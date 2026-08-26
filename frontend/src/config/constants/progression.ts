@@ -182,34 +182,69 @@ export const ABILITY_MEEP_COST_PER_LEVEL_DEFAULT = 0.1
 export const ABILITY_MEEP_COST_MIN_MULTIPLIER = 0.5
 export const ABILITY_CPC_PER_LEVEL_DEFAULT = 0.25
 
+/**
+ * Wie viel „Tiefe" eine Galaxie hinzufügt — die EINE Skala, gegen die jede
+ * mitwachsende Formel rechnet (`utils/game/galaxyDepth.ts`).
+ *
+ * Bei 1 ist die Tiefe identisch zu `galaxy − 1`, also exakt der Stand vor der
+ * Einführung. Sinkt der Wert, kommen Galaxien schneller und alles, was an ihrer
+ * Nummer hängt — Boss-HP, Void-HP, Reisedauer, Eskortenzahl, XP, Klick-Rampe —
+ * wächst entsprechend langsamer je Galaxie. Das ist der Ausgleich dafür, dass
+ * eine Galaxie mit gedeckelter Sternzahl weniger Inhalt trägt als früher.
+ */
+export const GALAXY_DEPTH_PER_GALAXY = 0.53
+
 // Galaxy boss search
 export const GALAXY_STARS_BASE_REQUIRED = 3
 
 /**
- * Ab welcher Galaxie die Sternzahl schneller wächst — und um wie viel.
- *
- * Bis einschliesslich `GALAXY_STARS_LATE_FROM` gilt die alte Reihe `3 + (g−1)`,
- * also 3/4/5/6/7/8. Das ist die erste Spielstunde, und die soll unverändert
- * schnell bleiben. Danach kommen `GALAXY_STARS_LATE_BONUS` Sterne je Galaxie
- * obendrauf.
- *
- * Der Grund steht in der Struktur des Spiels: Galaxien, Ladder und Sonnenphasen
- * sind drei parallel laufende Uhren, die Gesamtdauer ist also das MAXIMUM der
- * drei, nicht ihre Summe. Gemessen war die Galaxie-Achse mit ~22 h die längste;
- * sie muss mitwachsen, wenn das Spiel länger werden soll — sonst entsteht nur
- * Leerlauf auf den anderen beiden.
- */
-export const GALAXY_STARS_LATE_FROM = 6
-export const GALAXY_STARS_LATE_BONUS = 2
-
-/**
  * Höchstzahl Sterne je Galaxie.
  *
- * Ohne Deckel verlangte Galaxie 40 achtzig Sterne — dieselbe Schleife achtzig
- * Mal, das ist kein Fortschritt mehr, sondern eine Strafe. Mit 36 bleibt eine
- * späte Galaxie bei rund zwei Stunden.
+ * War 36, mit einer zweiten Rampe darüber (`GALAXY_STARS_LATE_BONUS` ab
+ * Galaxie 6). Beides ist gefallen: die Reihe lautet jetzt schlicht `3 + (g−1)`,
+ * gedeckelt bei 7 — also 3/4/5/6/7/7/7…, und die ersten fünf Galaxien sind
+ * Zeichen für Zeichen dieselben wie vorher.
+ *
+ * Zwei Gründe, und der zweite wiegt schwerer:
+ *
+ * 1. Die KARTE trug es nicht mehr. `generateGalaxyDots` strebt 0,085 Abstand an
+ *    und gibt nach acht Versuchen auf; bei 36 Sternen plus Fehlversuchen lagen
+ *    zwei Marken gemessen 25,5 px auseinander, bei 36 px Klickfläche
+ *    (`__tests__/utils/game/voyageSites.spec.ts`).
+ * 2. Länge aus Wiederholung ist keine Länge. Der Deckel bei 36 stand schon
+ *    einmal gegen 80 mit genau dieser Begründung — „dieselbe Schleife achtzig
+ *    Mal ist kein Fortschritt, sondern eine Strafe". 36 war davon nur der
+ *    Faktor 2,2 entfernt.
+ *
+ * Was die Achse stattdessen trägt, in dieser Reihenfolge: Landfalls auf der
+ * Reiseetappe · ein doppelt so grosses Kern-Finale (`GALAXY_BOSS_ESCORT_MAX` —
+ * Eskorten falten sich auf der Karte in die EINE `core-gate`-Marke und kosten
+ * damit keine) · und erst als Rest mehr Galaxien über
+ * `GALAXY_DEPTH_PER_GALAXY`.
  */
-export const GALAXY_STARS_MAX = 36
+export const GALAXY_STARS_MAX = 7
+
+/**
+ * Galaxien je Tier. Tier 1 spannt G1–G2, jedes weitere diese Zahl.
+ *
+ * War fest 3 im Rumpf von `tierOf()`. Mit dem Sterndeckel bei 7 kommen Galaxien
+ * rund dreimal so schnell — bliebe die Spanne bei 3, verdreifachte sich auch die
+ * Zahl der Tier-Tore je Stunde, und `computeTierUnlockCost` wüchse geometrisch
+ * mit. Die Spanne trägt den Ausgleich, nicht die Kostenformel: dieselbe Wand in
+ * einer anderen Farbe war hier schon einmal die falsche Antwort.
+ *
+ * Die 9 ist gegen die Tier-ZAHL gewählt, nicht gegen die Galaxienzahl. Vorher
+ * lag das letzte Champion-Tor bei Galaxie 48, also `tierOf(48) = 17` — drei
+ * Tiers ÜBER `TIER_UNLOCK_COST_CAP_TIER` (14), und diese drei liefen zu
+ * gedeckelten Kosten, obwohl dahinter noch Tier-6-Champions standen. Genau das
+ * nennt der Kommentar beim Kostendeckel als bekannten Schönheitsfehler.
+ *
+ * Mit Spanne 9 und dem neuen letzten Tor bei Galaxie 126 gilt
+ * `tierOf(126) = 15`: nur noch EIN gedeckeltes Tor am Ende statt drei. Der
+ * Kostendeckel muss deshalb nicht angefasst werden — der Fehler ist kleiner
+ * geworden, nicht grösser.
+ */
+export const GALAXIES_PER_TIER = 9
 
 /**
  * Mindest-Farbton-Abstand zur Vorgänger-Galaxie: verhindert, dass zwei
@@ -225,8 +260,8 @@ export const MIN_THEME_HUE_DISTANCE = 60
 export const ADMIN_ARCHIVE_SEED_SALT = 7919
 /** Galaxie 1 verliert keinen Stern; der Anteil steigt bis zur Rampe und sättigt. */
 export const ADMIN_ARCHIVE_FAIL_RATE_MAX = 0.3
-export const ADMIN_ARCHIVE_FAIL_RAMP_GALAXIES = 12
-/** 3 Sterne ≈ 10 min, 36 Sterne ≈ 2 h — die Zeitrechnung aus docs/balance.md. */
+export const ADMIN_ARCHIVE_FAIL_RAMP_GALAXIES = 21
+/** 3 Sterne ≈ 10 min, 7 Sterne ≈ 25 min — die Zeitrechnung aus docs/balance.md. */
 export const ADMIN_ARCHIVE_SECONDS_PER_STAR = 210
 export const ADMIN_ARCHIVE_DURATION_JITTER = 0.25
 /** Rückdatierung: der jüngste Eintrag liegt so weit zurück, dann je Lauf ein Sprung. */
@@ -247,7 +282,16 @@ export const GALAXY_BOSS_PLANET_ORBIT_TILT = 0.1
 // mehr als WAVE_SIZE Eskorten + Boss gleichzeitig im DOM (FPS-Schutz).
 export const GALAXY_BOSS_ESCORT_BASE = 2
 export const GALAXY_BOSS_ESCORT_PER_GALAXY = 1
-export const GALAXY_BOSS_ESCORT_MAX = 12
+/**
+ * Eskorten am Galaxiekern. War 12, ist 24.
+ *
+ * Sie sind die EINZIGE Inhaltsquelle, die der Galaxie-Achse Länge gibt, ohne
+ * eine Marke auf die Karte zu legen — auf jeder Galaxiefläche falten sie sich
+ * in die eine `core-gate`-Marke. Genau deshalb tragen sie den Ausgleich für den
+ * Sterndeckel mit: aus vier Wellen zu dreien werden acht, und der Kern liest
+ * sich als Finale statt als Nachklapp.
+ */
+export const GALAXY_BOSS_ESCORT_MAX = 24
 export const GALAXY_BOSS_WAVE_SIZE = 3
 /** Fächerung der Eskorten-Planetenbahnen: der äußerste liegt um diesen Anteil weiter außen. */
 export const GALAXY_BOSS_ESCORT_ORBIT_SPREAD = 0.6

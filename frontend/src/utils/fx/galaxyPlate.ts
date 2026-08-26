@@ -24,6 +24,8 @@ import {
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import type { GalaxyGeo } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor, roundLandmarkRadius } from './galaxyLandmarks'
+import { landfallsOfRun, landfallWorldPos } from '@/utils/game/landfalls'
+import { LANDFALL_LANDMARK_KIND } from '@/config/world/landfalls'
 import { buildDeepField, paintDeepField } from './galaxyDeepField'
 import {
   CORE_GATE_HALO_R,
@@ -303,6 +305,29 @@ export function paintGalaxy(
     )
     ax = sx
     ay = sy
+  }
+
+  // Landfalls — die Orte, an denen die Reise vorbeikam. VOR den Sternmarken,
+  // damit ein Stern gewinnt, wenn beide eng beieinander liegen: der Ort ist
+  // Beiwerk der Reise, der Stern ihr Ergebnis.
+  //
+  // Lage und Art sind ABGELEITET (`utils/game/landfalls.ts`), im Record steht
+  // nur der Ausgang. Ein Spielstand von vor den Landfalls hat keine Reihe und
+  // zeigt deshalb keine — das ist wahr, dort gab es keine.
+  const landfalls = record.landfallResults ?? []
+  if (landfalls.length) {
+    const kette = [spawn, ...dots.slice(0, attempts), { x: 0.5, y: 0.5 }]
+    const plaene = landfallsOfRun(record.mapSeed, record.galaxy, attempts + 1, kette.length - 1)
+    for (let i = 0; i < plaene.length && i < landfalls.length; i++) {
+      const plan = plaene[i]
+      const pos = landfallWorldPos(kette[plan.leg], kette[plan.leg + 1], plan.t, plan.bow)
+      const [lx, ly] = toC(pos.x, pos.y)
+      drawLandmark(ctx, LANDFALL_LANDMARK_KIND[plan.kind], lx, ly, roundLandmarkRadius(6 * hk), {
+        dpr,
+        variant: landmarkVariantFor(i),
+        faded: !landfalls[i].cleared,
+      })
+    }
   }
 
   // Abflugportal — der Ring steht quer zur ersten Etappe, man fliegt hindurch.

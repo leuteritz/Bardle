@@ -5,10 +5,14 @@ import {
   landmarkVariantFor,
   landmarkSpriteKey,
   roundLandmarkRadius,
+  LANDFALL_KINDS,
+  isLandfallLandmark,
 } from '@/utils/fx/galaxyLandmarks'
 import {
   LANDMARK_FREED_CORE,
   LANDMARK_FREED_RING,
+  LANDMARK_LANDFALL_RING,
+  LANDMARK_LANDFALL_MISSED_ALPHA,
   LANDMARK_PAD_SPAN,
   LANDMARK_VARIANTS,
 } from '@/config/constants'
@@ -180,6 +184,72 @@ describe('Die Marke des befreiten Sterns — unbunt im Ring, Bedeutung im Kern',
     for (let i = 0; i < GALAXY_THEMES.length; i++) {
       const accent = minimapAccentForTheme(i).split(', ').map(Number) as [number, number, number]
       expect(distance(ring, accent)).toBeGreaterThan(60)
+    }
+  })
+})
+
+/**
+ * Die Landfall-Marke. Sie ist die fünfte Form auf einer Karte, deren Vorrat an
+ * unterscheidbaren Formen bei 4,4 px praktisch ausgereizt ist — deshalb hängt an
+ * ihr mehr als an den vier davor.
+ */
+describe('Die Marke des Landfalls — eine Familie, eine Silhouette', () => {
+  it('hält den Ring unbunt, wie der befreite Stern und aus demselben Grund', () => {
+    // Zwanzig Themen decken den Farbkreis fast lückenlos ab; jeder gesättigte
+    // Ton kämpft in vier bis fünf Galaxien mit den Armpartikeln.
+    expect(chroma(LANDMARK_LANDFALL_RING)).toBeLessThan(0.06)
+  })
+
+  it('bleibt DUNKLER als der befreite Stern — ein Ort ist nicht das Ergebnis', () => {
+    // Der befreite Stern muss die hellste unbunte Marke bleiben. Ein Ort ist
+    // Beiwerk der Reise; stünde er gleich hell, zöge das Häufige die Betonung
+    // wieder an sich — genau der Fehler, den die Umkehrung befreit/verloren
+    // schon einmal behoben hat.
+    const [lr, lg, lb] = rgbOf(LANDMARK_LANDFALL_RING)
+    const [fr, fg, fb] = rgbOf(LANDMARK_FREED_RING)
+    expect(Math.max(lr, lg, lb)).toBeLessThan(Math.min(fr, fg, fb))
+  })
+
+  it('steht trotzdem hell genug über den Armpartikeln', () => {
+    const [r, g, b] = rgbOf(LANDMARK_LANDFALL_RING)
+    expect(Math.min(r, g, b)).toBeGreaterThan(140)
+  })
+
+  it('trennt sich vom Gold der Reise und vom Ember des verlorenen Sterns', () => {
+    expect(distance(rgbOf(LANDMARK_LANDFALL_RING), JOURNEY_GOLD)).toBeGreaterThan(120)
+    expect(distance(rgbOf(LANDMARK_LANDFALL_RING), LOST_EMBER)).toBeGreaterThan(60)
+  })
+
+  it('hält Abstand zu JEDEM Themenakzent', () => {
+    const ring = rgbOf(LANDMARK_LANDFALL_RING)
+    for (let i = 0; i < GALAXY_THEMES.length; i++) {
+      const accent = minimapAccentForTheme(i).split(', ').map(Number) as [number, number, number]
+      expect(distance(ring, accent)).toBeGreaterThan(60)
+    }
+  })
+
+  it('macht den verpassten Ort leiser, aber nicht unsichtbar', () => {
+    // Verpasst ist KEINE zweite Silhouette — der Formvorrat ist ausgereizt.
+    // Aber ganz verschwinden darf er auch nicht: eine Marke, die nur bei
+    // Erfolg erscheint, verschweigt die halbe Geschichte.
+    expect(LANDMARK_LANDFALL_MISSED_ALPHA).toBeGreaterThan(0.25)
+    expect(LANDMARK_LANDFALL_MISSED_ALPHA).toBeLessThan(0.7)
+  })
+
+  it('gibt jedem Ort einen eigenen Sprite-Schlüssel — auch verpasst', () => {
+    // Die Binnenmarke über `variant` zu führen kollidierte mit
+    // `landmarkVariantFor`; deshalb je Ort ein eigener Kind-String, und `faded`
+    // gehört in den Schlüssel, sonst zeigt der Cache die helle Fassung.
+    const a = landmarkSpriteKey('landfall-reef', 6, 2, 0, false)
+    const b = landmarkSpriteKey('landfall-reef', 6, 2, 0, true)
+    const c = landmarkSpriteKey('star-freed', 6, 2, 0, false)
+    expect(new Set([a, b, c]).size).toBe(3)
+  })
+
+  it('die Familienliste und die Erkennung laufen nicht auseinander', () => {
+    for (const kind of LANDFALL_KINDS) expect(isLandfallLandmark(kind)).toBe(true)
+    for (const kind of ['star-freed', 'star-lost', 'core-gate', 'departure-portal'] as const) {
+      expect(isLandfallLandmark(kind)).toBe(false)
     }
   })
 })
