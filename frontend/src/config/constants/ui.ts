@@ -340,6 +340,17 @@ export const LANDMARK_PAD_SPAN = 1.7 // weitester Zierrat: der dunkle Saum des v
 // beliebig viele Sprites nach (bei r=9, dpr=3.1 rund 178 KB je Stück).
 export const LANDMARK_SPRITE_CACHE_MAX = 24
 export const LANDMARK_PORTAL_MIN_R = 3 // Boden, damit der Ring in der Miniatur ein Ring bleibt
+// Die Marke des befreiten Sterns. Der Ring ist UNBUNT, weil die zwanzig
+// Galaxie-Themen den Farbkreis fast lückenlos abdecken (Farbtöne 0 · 8 · 16 · 27
+// · 45 · 107 · 120 · 138 · 170 · 180 · 180 · 220 · 220 · 221 · 240 · 270 · 273 ·
+// 293 · 320 · 334) — jeder gesättigte Ton kämpft in vier bis fünf Galaxien mit
+// den Armpartikeln um denselben Farbton. Die Bedeutung trägt der KERN, und der
+// misst zwei Pixel: dort kostet Farbe keine Fläche. Gold bleibt der REISE —
+// Route, Chevrons, Ankunftsportal, Hafen-Marken.
+// Beide Werte stehen auch im Datenband (`.egsb-val--freed`), das die Legende zur
+// Marke ist; ein Hex in zwei Dateien driftet, deshalb sind es Konstanten.
+export const LANDMARK_FREED_RING = '#eef2f8'
+export const LANDMARK_FREED_CORE = '#5ce8b4'
 
 /* ── Caretaker's Gate: der befreite Kern ──────────────────────────────────────
    Der Kern war einmal eine gefüllte Goldkugel mit Strahlenkranz und las sich

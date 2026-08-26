@@ -5,8 +5,8 @@
 
    Unterschieden werden sie über die FORM, nicht über Farbe oder Glyph — beides
    verschwindet als Erstes, wenn das Bild klein wird, und die Leistenminiatur
-   zeigt einen befreiten Stern bei 4,5 px Radius. Hohle Ellipse · offener Ring
-   mit Kernfunke · massive unrunde Hülle · hohles Achteck halten dort noch
+   zeigt einen befreiten Stern bei 4,5 px Radius. Hohle Ellipse · hohler Ring mit
+   Kernfunke · massive unrunde Hülle · hohles Achteck halten dort noch
    auseinander.
 
    Befreit ist HOHL, verloren ist MASSIV — und nicht umgekehrt: der befreite
@@ -21,6 +21,8 @@ import {
   CORE_GATE_CROWN_SPAN,
   CORE_GATE_FALLBACK_TINT,
   CORE_GATE_POOL_SPAN,
+  LANDMARK_FREED_CORE,
+  LANDMARK_FREED_RING,
   LANDMARK_R_ORNAMENT,
   LANDMARK_R_DETAIL,
   LANDMARK_VARIANTS,
@@ -220,8 +222,12 @@ function paintDeparturePortal(
 }
 
 /**
- * Befreiter Stern: OFFENER Goldring mit Kernfunke — die Spirale läuft sichtbar
+ * Befreiter Stern: hohler Ring mit Kernfunke — die Spirale läuft sichtbar
  * hindurch, statt unter einer Scheibe zu verschwinden.
+ *
+ * Der Ring ist UNBUNT und der Kern trägt die Bedeutung. Grund steht bei
+ * `LANDMARK_FREED_RING`: die zwanzig Themen decken den Farbkreis ab, und Gold
+ * gehört der Reise — Route, Portal und Häfen tragen es schon.
  */
 function paintFreedStar(
   ctx: CanvasRenderingContext2D,
@@ -232,47 +238,53 @@ function paintFreedStar(
   detail: 0 | 1 | 2,
 ): void {
   const ring = r * 0.86
-  // Die Lücke macht den Ring OFFEN und trägt zugleich die Variante. Erst ab der
-  // mittleren Stufe: in der Leistenminiatur misst der Ring drei Pixel, dort
-  // fräße eine Lücke die halbe Silhouette.
-  const gap = detail >= 1 ? 0.44 : 0
-  const a0 = (variant / LANDMARK_VARIANTS) * Math.PI * 2 - 0.6 + gap / 2
-  const a1 = a0 + Math.PI * 2 - gap
 
   ctx.save()
 
-  // Zwei Züge, dunkel und breiter unter Gold — dieselbe Lösung wie bei der Krone
-  // des Tors: ohne die Unterlage verschwindet die dünne Linie über den hellen
-  // Armpartikeln. Der Grund ist ein RING, keine Füllung; die Mitte muss
-  // durchsichtig bleiben, sonst ist die Marke wieder eine Scheibe.
+  // Zwei Züge, dunkel und breiter unter Hell — dieselbe Lösung wie bei der Krone
+  // des Tors, und für einen weissen Ring nötiger als für einen goldenen: die
+  // Armpartikel sind selbst weisslich. Der Grund ist ein RING, keine Füllung;
+  // die Mitte muss durchsichtig bleiben, sonst ist die Marke wieder eine Scheibe.
   ctx.beginPath()
-  ctx.arc(x, y, ring, a0, a1)
+  ctx.arc(x, y, ring, 0, Math.PI * 2)
   ctx.strokeStyle = 'rgba(11, 8, 6, 0.75)'
   ctx.lineWidth = Math.max(2, r * 0.34)
   ctx.stroke()
 
   ctx.beginPath()
-  ctx.arc(x, y, ring, a0, a1)
-  ctx.strokeStyle = '#e8c040'
+  ctx.arc(x, y, ring, 0, Math.PI * 2)
+  ctx.strokeStyle = LANDMARK_FREED_RING
   ctx.lineWidth = Math.max(1.2, r * 0.17)
-  ctx.lineCap = 'round'
   ctx.stroke()
 
   if (detail >= 2) {
     const spark = ctx.createRadialGradient(x, y, 0, x, y, r * 0.5)
-    spark.addColorStop(0, 'rgba(255, 233, 168, 0.25)')
-    spark.addColorStop(1, 'rgba(255, 233, 168, 0)')
+    spark.addColorStop(0, 'rgba(92, 232, 180, 0.25)')
+    spark.addColorStop(1, 'rgba(92, 232, 180, 0)')
     ctx.beginPath()
     ctx.arc(x, y, r * 0.5, 0, Math.PI * 2)
     ctx.fillStyle = spark
     ctx.fill()
   }
 
-  // Der Kernfunke trägt die Marke dort, wo der Ring auf zwei Pixel zusammenfällt.
+  // Der Kernfunke trägt die Marke dort, wo der Ring auf zwei Pixel zusammenfällt
+  // — und er trägt die Bedeutung: dieselbe Farbe wie „Crew zurück".
   ctx.beginPath()
   ctx.arc(x, y, Math.max(0.9, r * 0.26), 0, Math.PI * 2)
-  ctx.fillStyle = '#ffe9a8'
+  ctx.fillStyle = LANDMARK_FREED_CORE
   ctx.fill()
+
+  // Ein Trabant auf der Ringlinie — ein wieder in Bewegung geratenes System.
+  // Sein Winkel kommt aus dem INDEX, nicht aus dem Zufall: eine geseedete Lage
+  // sprengte den Sprite-Cache. Nur auf der vollen Stufe; im Standbild wären
+  // sechsunddreissig zusätzliche Punkte Rauschen.
+  if (detail >= 2) {
+    const a = (variant / LANDMARK_VARIANTS) * Math.PI * 2 - 0.6
+    ctx.beginPath()
+    ctx.arc(x + Math.cos(a) * ring, y + Math.sin(a) * ring, Math.max(1, r * 0.16), 0, Math.PI * 2)
+    ctx.fillStyle = LANDMARK_FREED_RING
+    ctx.fill()
+  }
 
   ctx.restore()
 }

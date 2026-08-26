@@ -30,6 +30,7 @@ import { durationSegments } from '@/utils/ui/format'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
   EXPEDITION_CHART_MAX,
+  LANDMARK_FREED_CORE,
   MS_PER_SECOND,
   VOYAGE_MAP_STATS_BAND_H,
   VOYAGE_MAP_STATS_LABEL_MAX,
@@ -255,8 +256,11 @@ const summary = computed(
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
+/* Die Legende zur Marke: dieselbe Konstante wie ihr Kernfunke. Weiss ginge
+   hier nicht — die Standardfarbe der Zahlen ist #ece0c0, ein weisser Wert waere
+   von einer gewoehnlichen Zahl nicht zu unterscheiden. */
 .egsb-val--freed {
-  color: #e8c040;
+  color: v-bind(LANDMARK_FREED_CORE);
 }
 .egsb-val--lost {
   color: #e08a7a;
