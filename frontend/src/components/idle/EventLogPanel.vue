@@ -385,9 +385,12 @@ onUnmounted(() => {
 }
 
 /* Die Spur rollt nicht: was nicht in die Höhe passt, fällt unten heraus, und
-   die Maske blendet die letzte Zeile aus, statt sie abzuschneiden. */
+   die Maske blendet die letzte Zeile aus, statt sie abzuschneiden. Sie füllt
+   dafür den Restraum — inhaltshoch endete die Maske am letzten Eintrag und
+   blendete ihn auch dann aus, wenn darunter noch Platz war. */
 .elp-trail {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 6px;
   /* Der Abstand haengt an der Spur, nicht an der Leiste: eingeklappt meldet die
