@@ -42,7 +42,7 @@ export const LANDFALL_BOONS: LandfallBoonDef[] = [
     id: 'longSight',
     name: 'Long Sight',
     line: `+${Math.round((LANDFALL_CAIRN_BOON_MULT - 1) * 100)}% champion XP`,
-    icon: 'game-icons:distance',
+    icon: 'game-icons:spyglass',
     axis: 'xpMult',
   },
 ]

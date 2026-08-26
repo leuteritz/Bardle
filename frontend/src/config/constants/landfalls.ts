@@ -220,3 +220,22 @@ export const LANDFALL_CAIRN_SEED_SALT = 6113
  * VERLOREN ist. Ein Ort ist keins von beidem — er ist vorbeigekommen.
  */
 export const LANDFALL_ACCENT_HEX = '#8fbfae'
+
+/**
+ * Admin-Panel: Kantenlänge der Vorschau-Sonde je Ort-Kachel.
+ *
+ * Vorbild ist `ADMIN_DRIFTER_PREVIEW_PX` (34) — dort zeigt die Kachel die echte
+ * Silhouette, weil man beim Prüfen nach der Form greift und nicht nach dem
+ * Namen. Für Landfalls gilt das doppelt: sie teilen sich EINE Raute und trennen
+ * sich nur durch die Binnenmarke.
+ */
+export const ADMIN_LANDFALL_PREVIEW_PX = 40
+
+/**
+ * Radius, mit dem `drawLandmark` in die Sonde malt.
+ *
+ * Muss über `LANDMARK_R_DETAIL` (9) liegen, sonst fällt die Binnenmarke weg und
+ * alle Kacheln zeigen dieselbe leere Raute — also genau die Verwechslung, gegen
+ * die die Vorschau überhaupt da ist.
+ */
+export const ADMIN_LANDFALL_PREVIEW_R = 13

@@ -6,7 +6,7 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import { unlockedChampionTierCount } from '@/config/champions/championTiers'
-import type { ChampionRole, ActiveLandfall, LandfallOutcome } from '@/types'
+import type { ChampionRole, ActiveLandfall, LandfallKindId, LandfallOutcome } from '@/types'
 import { clampPercent } from '@/utils/orbit/geometry'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import { galaxyDepth } from '@/utils/game/galaxyDepth'
@@ -16,15 +16,23 @@ import {
   landfallCleared,
   landfallAcceptsTap,
 } from '@/utils/game/landfalls'
-import { getLandfall } from '@/config/world/landfalls'
+import { getLandfall, LANDFALLS } from '@/config/world/landfalls'
 import { useLandfallStore } from '@/stores/world/landfallStore'
-import { buildBackfillRecord, backfillThemeRng } from '@/utils/game/galaxyArchiveBackfill'
+import {
+  buildBackfillRecord,
+  backfillThemeRng,
+  buildBackfillLandfalls,
+  backfillLandfallRng,
+} from '@/utils/game/galaxyArchiveBackfill'
 import {
   CHAMPION_TRAVEL_BASE_MS,
   CHAMPION_TRAVEL_SCALE_MS,
   CHAMPION_TRAVEL_MAX_MS,
   RESOURCE_STAR_INTERVAL_MIN_MS,
   RESOURCE_STAR_INTERVAL_MAX_MS,
+  LANDFALL_T_MIN,
+  LANDFALL_T_MAX,
+  LANDFALL_BOW_MIN,
   GALAXY_STARS_BASE_REQUIRED,
   GALAXY_STARS_MAX,
   GALAXIES_PER_TIER,
@@ -585,6 +593,86 @@ export const useGalaxyStore = defineStore('galaxy', {
       landfall.payout(a, cleared)
       landfall.toll(a, cleared)
       this._closeLandfall(cleared)
+    },
+
+    /**
+     * Admin/Test: einen Ort auf der LAUFENDEN Etappe öffnen.
+     *
+     * Ein Landfall ist der am schlechtesten erreichbare Inhalt des Spiels — er
+     * taucht nur unterwegs auf, an gewürfelter Stelle, für ein Fenster von 8 bis
+     * 30 Sekunden, und der seltenste kommt rechnerisch 0,7-mal je Galaxie.
+     *
+     * Er verhält sich danach wie jeder echte: das Fenster läuft ab, er zahlt, er
+     * landet in der Chronik. Ein Spawn, der sich anders verhielte, prüfte das
+     * Echte nicht.
+     *
+     * Gibt `false` zurück statt still nichts zu tun — das Panel nennt dem
+     * Spieler den Grund.
+     */
+    forceLandfall(kind?: LandfallKindId): boolean {
+      // Nur unterwegs: `_tickLandfall` läuft ausschliesslich aus
+      // `tickChampionTravel`, und das kehrt vorher um. Ausserhalb hätte der Ort
+      // kein Fenster, das abläuft, und einen Balken, der stillsteht.
+      if (this.championTravelState !== 'traveling') return false
+      // Einer zur Zeit — dieselbe Regel, die der Etappen-Tick selbst führt.
+      if (this.activeLandfall) return false
+
+      // Ohne Vorgabe über den GANZEN Katalog, nicht nur über das in dieser
+      // Galaxie Freigeschaltete: ein Knopf, der die Rupture in Galaxie 3
+      // verweigert, prüft genau das nicht, wofür er da ist.
+      const gewaehlt = kind ?? LANDFALLS[Math.floor(Math.random() * LANDFALLS.length)]?.id
+      if (!gewaehlt || !getLandfall(gewaehlt)) return false
+
+      const leg = this.currentLegIndex
+      // Lage aus dem Plan dieser Etappe, wenn es einen gibt. Für die Karte ohne
+      // Folge — `landfallMarks` rechnet sie ohnehin aus dem Seed —, aber es
+      // hält den Datensatz stimmig.
+      const plan = landfallOnLeg(this.mapSeed, this.currentGalaxy, leg, this.plannedLegCount)
+      this.activeLandfall = {
+        kind: gewaehlt,
+        leg,
+        t: plan?.t ?? (LANDFALL_T_MIN + LANDFALL_T_MAX) / 2,
+        bow: plan?.bow ?? LANDFALL_BOW_MIN,
+        openedAt: gameNow(),
+        taps: 0,
+        choice: null,
+      }
+      // Wie im echten Pfad — sonst zündete der Nebeldurchflug beim erzwungenen
+      // Gloaming nicht.
+      useLandfallStore().onOpen(this.activeLandfall)
+      return true
+    },
+
+    /**
+     * Admin/Test: die Ortschronik der laufenden Galaxie füllen, damit Karte und
+     * Minimap sofort Marken zeigen.
+     *
+     * Genau so viele Einträge, wie der Seed Orte zieht — `landfallMarks` paart
+     * sie eins zu eins, und eine Chronik mit mehr Einträgen als Plänen zeichnete
+     * weniger Marken, als sie behauptet.
+     *
+     * Dieselbe Rechnung wie der Archiv-Nachtrag (`buildBackfillLandfalls`), nicht
+     * eine zweite daneben: die beiden liefen auseinander, sobald jemand eine von
+     * ihnen anfasst. Dasselbe Muster führt `forceCompleteGalaxy` schon für
+     * `attemptResults`.
+     */
+    adminFillLandfallChronicle(): number {
+      const legs = this.attemptResults.length + 1
+      this.landfallResults = buildBackfillLandfalls(
+        this.currentGalaxy,
+        this.mapSeed,
+        this.starsRequired,
+        legs,
+        backfillLandfallRng(this.currentGalaxy),
+      )
+      return this.landfallResults.length
+    },
+
+    /** Admin/Test: die Ortschronik leeren — der Weg zurück auf eine saubere Karte. */
+    adminClearLandfallChronicle(): void {
+      this.landfallResults = []
+      this.activeLandfall = null
+      this._landfallLegDone = -1
     },
 
     _rollResourceStarInterval(): number {

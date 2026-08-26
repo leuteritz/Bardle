@@ -4,6 +4,7 @@ import AdminGalaxyJumpPanel from './AdminGalaxyJumpPanel.vue'
 import AdminStarPhasePanel from './AdminStarPhasePanel.vue'
 import AdminDrifterPanel from './AdminDrifterPanel.vue'
 import AdminVoidPanel from './AdminVoidPanel.vue'
+import AdminLandfallPanel from './AdminLandfallPanel.vue'
 import AdminMaxEverythingPanel from './AdminMaxEverythingPanel.vue'
 import AdminGameSpeedPanel from './AdminGameSpeedPanel.vue'
 import AdminBadgeLabPanel from './AdminBadgeLabPanel.vue'
@@ -26,7 +27,12 @@ import AdminBadgeLabPanel from './AdminBadgeLabPanel.vue'
            bequem sitzt — untereinander gestellt nahmen sie Quick Actions dagegen
            so viel Höhe weg, dass dessen Inhalt abgeschnitten wurde (gemessen:
            279 px Inhalt in 47 px Kasten). Das Dashboard hatte Breite übrig, aber
-           keine Höhe. -->
+           keine Höhe.
+           ZWEI, nicht drei: der Landfall-Spawner stand hier kurz als dritte
+           Spalte und drückte alle drei auf 199 px (Full HD) — die Kacheln auf
+           52 px, vier von fünf Segen-Knöpfen still beschnitten. Die Breite war
+           für ZWEI übrig, nicht für drei. Er steht jetzt in der rechten Spalte,
+           die ohnehin rollt. -->
       <div class="admin-dash-events">
         <AdminDrifterPanel dashboard />
         <AdminVoidPanel dashboard />
@@ -37,6 +43,9 @@ import AdminBadgeLabPanel from './AdminBadgeLabPanel.vue'
            ALLE darunter — und weil man ihn beim Messen zuerst sucht. -->
       <AdminGameSpeedPanel />
       <AdminGalaxyJumpPanel dashboard />
+      <!-- Direkt hinter dem Galaxie-Sprung: beide arbeiten an derselben
+           Galaxie, und die Ortschronik liest man gleich nach einem Sprung. -->
+      <AdminLandfallPanel dashboard />
       <AdminStarPhasePanel dashboard />
       <!-- Das Prüfwerkzeug für die Notify-Marken. -->
       <AdminBadgeLabPanel />

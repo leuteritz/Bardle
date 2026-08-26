@@ -194,6 +194,19 @@ export const useLandfallStore = defineStore('landfall', {
       return true
     },
 
+    /**
+     * Admin/Test: einen Segen setzen oder abräumen, ohne einen Stein zu suchen.
+     *
+     * `boon` direkt zu schreiben täte es NICHT: CpS und CpC liegen gecacht auf
+     * `gameStore`, der Faktor bliebe stehen, bis irgendetwas anderes ihn
+     * anfasst. Aus demselben Grund bringt `clearAll` den Refresh schon mit.
+     */
+    adminSetBoon(id: LandfallBoonId | null): void {
+      this.boon = id
+      this.boonGalaxy = id ? useGalaxyStore().currentGalaxy : 0
+      useShopStore().refreshRates()
+    },
+
     /** Der Warp räumt ihn ab — er galt für DIESE Galaxie. */
     clearAll(): void {
       if (this.boon === null) return

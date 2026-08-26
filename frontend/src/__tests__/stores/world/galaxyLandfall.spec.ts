@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { resetGameClock, gameNow } from '@/utils/game/gameClock'
-import { landfallOnLeg, landfallWindowMs } from '@/utils/game/landfalls'
+import { landfallOnLeg, landfallWindowMs, landfallsOfRun } from '@/utils/game/landfalls'
 import { getLandfall, LANDFALLS } from '@/config/world/landfalls'
 import { LANDFALL_BOONS } from '@/config/world/landfallBoons'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
@@ -540,6 +540,119 @@ describe('galaxyStore — Landfalls', () => {
       tickeAuf(store, plan.t + 0.01 + (fenster + 1000) / store.effectiveTravelDurationMs)
       expect(voidStore.active, `${def.id} hat Wesen losgelassen`).toHaveLength(0)
     }
+  })
+
+  /* ── Admin: die Knöpfe des Landfall-Panels ───────────────────────────── */
+
+  describe('forceLandfall', () => {
+    it('verweigert ausserhalb einer Reise — und sagt es', () => {
+      // `_tickLandfall` läuft ausschliesslich aus `tickChampionTravel`. Ein Ort
+      // ausserhalb hätte kein Fenster, das abläuft, und einen Balken, der
+      // stillsteht — ein Zustand, den es im echten Spiel nicht gibt.
+      const store = starteReise()
+      store.championTravelState = 'idle'
+      expect(store.forceLandfall('chime_reef')).toBe(false)
+      expect(store.activeLandfall).toBeNull()
+    })
+
+    it('verweigert, solange einer offen steht', () => {
+      const store = starteReise()
+      expect(store.forceLandfall('chime_reef')).toBe(true)
+      expect(store.forceLandfall('the_rupture')).toBe(false)
+      expect(store.activeLandfall?.kind).toBe('chime_reef')
+    })
+
+    it('öffnet JEDE Art — auch eine, die hier noch gar nicht freigeschaltet wäre', () => {
+      // Der Sinn des Knopfes. Eine Rupture (ab Galaxie 6) in Galaxie 2 zu
+      // verweigern hiesse, genau das nicht prüfen zu können, wofür er da ist.
+      const store = starteReise()
+      store.currentGalaxy = 2
+      for (const def of LANDFALLS) {
+        store.activeLandfall = null
+        expect(store.forceLandfall(def.id), def.id).toBe(true)
+        expect(store.activeLandfall?.kind).toBe(def.id)
+      }
+    })
+
+    it('ohne Vorgabe kommt irgendeiner aus dem Katalog', () => {
+      const store = starteReise()
+      const ids = new Set(LANDFALLS.map((d) => d.id))
+      for (let i = 0; i < 40; i++) {
+        store.activeLandfall = null
+        expect(store.forceLandfall()).toBe(true)
+        expect(ids.has(store.activeLandfall!.kind)).toBe(true)
+      }
+    })
+
+    it('der erzwungene Ort verhält sich wie ein echter', () => {
+      // Ein Spawn, der sich anders verhielte als das Echte, prüfte das Echte
+      // nicht: Fenster läuft ab, er zahlt, er landet in der Chronik, er zählt.
+      const store = starteReise()
+      const gameStore = useGameStore()
+      gameStore.chimes = 0
+      const vorher = store.totalLandfallsCleared
+
+      expect(store.forceLandfall('chime_reef')).toBe(true)
+      store.tapLandfall()
+
+      const fenster = landfallWindowMs(store.effectiveTravelDurationMs)
+      const auf = (store.activeLandfall!.openedAt - store.championTravelStartTime) /
+        store.effectiveTravelDurationMs
+      tickeAuf(store, auf + (fenster + 1000) / store.effectiveTravelDurationMs)
+
+      expect(store.activeLandfall).toBeNull()
+      expect(store.landfallResults.at(-1)).toEqual({ kind: 'chime_reef', cleared: true })
+      expect(store.totalLandfallsCleared).toBe(vorher + 1)
+      expect(gameStore.chimes).toBeGreaterThan(0)
+    })
+  })
+
+  describe('adminFillLandfallChronicle', () => {
+    it('erzeugt genau so viele Einträge, wie der Seed Orte zieht', () => {
+      // `landfallMarks` paart Chronik und Pläne eins zu eins. Eine Chronik mit
+      // mehr Einträgen als Plänen zeichnete weniger Marken, als sie behauptet.
+      const store = starteReise()
+      store.attemptResults = Array.from({ length: 6 }, () => 'rescued')
+      const n = store.adminFillLandfallChronicle()
+
+      const plaene = landfallsOfRun(store.mapSeed, store.currentGalaxy, store.plannedLegCount, 7)
+      expect(n).toBe(plaene.length)
+      expect(store.landfallResults).toHaveLength(plaene.length)
+      store.landfallResults.forEach((r, i) => expect(r.kind).toBe(plaene[i].kind))
+    })
+
+    it('das Leeren führt auf eine saubere Karte zurück', () => {
+      const store = starteReise()
+      store.adminFillLandfallChronicle()
+      store.forceLandfall('the_gloaming')
+      store.adminClearLandfallChronicle()
+      expect(store.landfallResults).toEqual([])
+      expect(store.activeLandfall).toBeNull()
+      expect(store._landfallLegDone).toBe(-1)
+    })
+  })
+
+  describe('adminSetBoon', () => {
+    it('bewegt genau eine Achse, und null räumt sie ab', () => {
+      const landfall = useLandfallStore()
+      for (const def of LANDFALL_BOONS) {
+        landfall.adminSetBoon(def.id)
+        const achsen = {
+          cpsMult: landfall.cpsMult,
+          cpcMult: landfall.cpcMult,
+          combatDpsMult: landfall.combatDpsMult,
+          xpMult: landfall.xpMult,
+        }
+        expect(achsen[def.axis]).toBe(LANDFALL_CAIRN_BOON_MULT)
+        for (const [k, v] of Object.entries(achsen)) {
+          if (k !== def.axis) expect(v).toBe(1)
+        }
+      }
+      landfall.adminSetBoon(null)
+      expect(landfall.boon).toBeNull()
+      expect(landfall.boonGalaxy).toBe(0)
+      expect(landfall.cpsMult).toBe(1)
+    })
   })
 
   it('jeder Ort im Katalog ist über irgendeine Etappe erreichbar', () => {
