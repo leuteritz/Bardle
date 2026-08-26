@@ -300,12 +300,19 @@ export const MINIMAP_GALAXY_CORE_RADIUS = 0.15 // core glow radius in world coor
 export const GALAXY_DEEPFIELD_FAR = 34 // feine Fernsterne, Basiszahl bei 320×200
 export const GALAXY_DEEPFIELD_MID = 9 // mittlere Ebene
 export const GALAXY_DEEPFIELD_ANCHOR = 3 // helle Ankersterne mit Glanzkreuz
-export const GALAXY_DEEPFIELD_ANCHOR_MAX = 8 // Deckel der Ankersterne
+export const GALAXY_DEEPFIELD_ANCHOR_MAX = 5 // Deckel der Ankersterne
 export const GALAXY_DEEPFIELD_SIZE_DAMP = 0.35 // Dämpfung der Grössenskalierung
 export const GALAXY_DEEPFIELD_CLEAR_INNER = 0.55 // Scheibenradien: darunter fast frei
 export const GALAXY_DEEPFIELD_CLEAR_OUTER = 1.15 // darüber volle Dichte
 export const GALAXY_DEEPFIELD_CLEAR_FLOOR = 0.06 // Restdichte innerhalb der Scheibe
 export const GALAXY_DEEPFIELD_VIGNETTE = 0.36 // Randabdunklung des Tiefraums
+
+// ── Aura der Scheibe ────────────────────────────────────────────────────────
+// Der Theme-Dunst war ein bildschirmzentrierter Kreis und beschrieb die Galaxie
+// nicht — damit hatte die Scheibe keinen ablesbaren RAND, und draussen sah aus
+// wie drinnen. Die Aura folgt jetzt der ECHTEN Scheibe, geneigt und gestaucht.
+export const GALAXY_AURA_SPAN = 1.35 // Aura-Radius in Scheibenradien
+export const GALAXY_AURA_ALPHA = 0.1 // Deckkraft in der Mitte
 export const MINIMAP_ZOOM_TRIGGER_MS = 45_000 // zoom-in phase starts this long before arrival
 export const MINIMAP_ZOOM_MAX = 5.4 // camera zoom at arrival (target star grows ≈ arrival sun)
 export const MINIMAP_ZOOM_LERP = 0.06 // per-frame camera smoothing (zoom-in)
@@ -328,7 +335,7 @@ export const MINIMAP_WAIT_SUN_R = 26 // centered player sun on the role-selectio
 export const LANDMARK_R_ORNAMENT = 5 // ab hier Motes, Glutrisse, Chevron — Fenster (4.5, 7]
 export const LANDMARK_R_DETAIL = 9 // ab hier volle Zier — Fenster (8.5, 11]
 export const LANDMARK_VARIANTS = 3 // Mote-/Riss-Phasen je Sprite-Kind, aus dem Index
-export const LANDMARK_PAD_SPAN = 2.4 // weitester Zierrat: Funken 2.2·r, Motes 2.1·r
+export const LANDMARK_PAD_SPAN = 1.7 // weitester Zierrat: der dunkle Saum des verlorenen Sterns, 1.3·r
 // Halbe Radien × 3 Varianten × mehrere dpr — ohne Deckel zieht ein Fensterziehen
 // beliebig viele Sprites nach (bei r=9, dpr=3.1 rund 178 KB je Stück).
 export const LANDMARK_SPRITE_CACHE_MAX = 24
@@ -349,7 +356,7 @@ export const LANDMARK_PORTAL_MIN_R = 3 // Boden, damit der Ring in der Miniatur 
 export const CORE_GATE_MOUTH_R = 13 // Radius des Torschlunds
 // Aussenkante der Krone. Deckelt zwei Dinge zugleich: den Radius, den das
 // DOM-Tor freihalten muss (voyageGateSizeFor), und die Legendenkachel —
-// 4.4 × LANDMARK_PAD_SPAN sind 21,1 px in 22, die Krone bei 1.5·r braucht 13,2.
+// 4.4 × LANDMARK_PAD_SPAN sind 15,0 px in 22, die Krone bei 1.5·r braucht 13,2.
 export const CORE_GATE_CROWN_SPAN = 1.5
 export const CORE_GATE_HALO_R = 26 // Ringschein um den Mund, nicht Füllung der Mitte
 // Schattenteich um den Torschlund, als Vielfaches des Mundradius. Er dämpft die

@@ -5,8 +5,14 @@
 
    Unterschieden werden sie über die FORM, nicht über Farbe oder Glyph — beides
    verschwindet als Erstes, wenn das Bild klein wird, und die Leistenminiatur
-   zeigt einen befreiten Stern bei 4,5 px Radius. Hohle Ellipse · Scheibe mit
-   Halo · unrunde Hülle · hohles Achteck halten dort noch auseinander.
+   zeigt einen befreiten Stern bei 4,5 px Radius. Hohle Ellipse · offener Ring
+   mit Kernfunke · massive unrunde Hülle · hohles Achteck halten dort noch
+   auseinander.
+
+   Befreit ist HOHL, verloren ist MASSIV — und nicht umgekehrt: der befreite
+   Stern kommt bis zu dreißigmal je Karte vor, der verlorene siebenmal. Als
+   gefüllte Goldkugel mit Schein deckte das häufige Ereignis die Spirale zu und
+   trug die Betonung, die dem seltenen gehört.
 
    Zwei Aufrufer: `galaxyPlate.ts` (Voyages-Karte, Archivstandbild, Übersichts-
    karte, Leistenminiatur) und `MiniMapCanvas.vue` (Live-Minimap). */
@@ -91,7 +97,9 @@ export function landmarkSpriteKey(
 
    LRU statt unbegrenzt: halbe Radien, drei Varianten und mehrere dpr-Werte
    ergeben genug Schlüssel, dass ein Fensterziehen sonst beliebig viele Sprites
-   nachzieht (bei r=9, dpr=3.1 rund 178 KB je Stück). */
+   nachzieht. Seit befreit ein Ring ist und die Funken des verlorenen Sterns
+   gefallen sind, reicht die halbe Randzone (LANDMARK_PAD_SPAN 2.4 → 1.7) — das
+   sind rund 40 % weniger Fläche je Sprite. */
 
 const spriteCache = new Map<string, HTMLCanvasElement>()
 
@@ -211,7 +219,10 @@ function paintDeparturePortal(
   ctx.restore()
 }
 
-/** Befreiter Stern: goldene Scheibe mit HALO-RING — der Ring ist die Identität. */
+/**
+ * Befreiter Stern: OFFENER Goldring mit Kernfunke — die Spirale läuft sichtbar
+ * hindurch, statt unter einer Scheibe zu verschwinden.
+ */
 function paintFreedStar(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -220,80 +231,57 @@ function paintFreedStar(
   variant: number,
   detail: 0 | 1 | 2,
 ): void {
+  const ring = r * 0.86
+  // Die Lücke macht den Ring OFFEN und trägt zugleich die Variante. Erst ab der
+  // mittleren Stufe: in der Leistenminiatur misst der Ring drei Pixel, dort
+  // fräße eine Lücke die halbe Silhouette.
+  const gap = detail >= 1 ? 0.44 : 0
+  const a0 = (variant / LANDMARK_VARIANTS) * Math.PI * 2 - 0.6 + gap / 2
+  const a1 = a0 + Math.PI * 2 - gap
+
   ctx.save()
-  const atmo = ctx.createRadialGradient(x, y, r * 0.7, x, y, r * 1.9)
-  atmo.addColorStop(0, 'rgba(255, 210, 50, 0.55)')
-  atmo.addColorStop(0.55, 'rgba(255, 170, 20, 0.18)')
-  atmo.addColorStop(1, 'rgba(255, 140, 0, 0)')
-  ctx.beginPath()
-  ctx.arc(x, y, r * 1.9, 0, Math.PI * 2)
-  ctx.fillStyle = atmo
-  ctx.fill()
 
-  const body = ctx.createRadialGradient(x - r * 0.3, y - r * 0.32, r * 0.05, x, y, r)
-  body.addColorStop(0, '#ffffc8')
-  body.addColorStop(0.35, '#e8c040')
-  body.addColorStop(0.72, '#8a5810')
-  body.addColorStop(1, '#1e0e02')
+  // Zwei Züge, dunkel und breiter unter Gold — dieselbe Lösung wie bei der Krone
+  // des Tors: ohne die Unterlage verschwindet die dünne Linie über den hellen
+  // Armpartikeln. Der Grund ist ein RING, keine Füllung; die Mitte muss
+  // durchsichtig bleiben, sonst ist die Marke wieder eine Scheibe.
   ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.fillStyle = body
-  ctx.fill()
-
-  if (detail >= 2) {
-    ctx.save()
-    ctx.beginPath()
-    ctx.arc(x, y, r - 0.5, 0, Math.PI * 2)
-    ctx.clip()
-    ctx.globalAlpha = 0.07
-    ctx.beginPath()
-    ctx.ellipse(x, y - r * 0.28, r * 0.88, r * 0.12, 0, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'
-    ctx.fill()
-    ctx.beginPath()
-    ctx.ellipse(x, y + r * 0.24, r * 0.82, r * 0.1, 0, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(0,0,0,0.45)'
-    ctx.fill()
-    ctx.restore()
-  }
-
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.strokeStyle = '#fff8c0'
-  ctx.lineWidth = Math.max(1, r * 0.16)
-  ctx.shadowColor = 'rgba(255, 210, 60, 0.85)'
-  ctx.shadowBlur = Math.max(4, r)
-  ctx.stroke()
-  ctx.shadowBlur = 0
-
-  // Der Halo-Ring — er trägt die Form auch dort, wo die Scheibe nur vier Pixel
-  // misst. Eng und leise gehalten: eine volle Galaxie bringt bis zu 36 davon,
-  // und ein weiter, heller Ring deckte die Spirale zu.
-  const halo = r * 1.28
-  ctx.beginPath()
-  ctx.arc(x, y, halo, 0, Math.PI * 2)
-  ctx.strokeStyle = 'rgba(255, 232, 150, 0.34)'
-  ctx.lineWidth = Math.max(0.8, r * 0.1)
+  ctx.arc(x, y, ring, a0, a1)
+  ctx.strokeStyle = 'rgba(11, 8, 6, 0.75)'
+  ctx.lineWidth = Math.max(2, r * 0.34)
   ctx.stroke()
 
-  // Motes erst auf der vollen Stufe: im Archivstandbild (r 8.5) wären 36×3
-  // Punkte Rauschen, auf der 2K-Karte tragen sie.
+  ctx.beginPath()
+  ctx.arc(x, y, ring, a0, a1)
+  ctx.strokeStyle = '#e8c040'
+  ctx.lineWidth = Math.max(1.2, r * 0.17)
+  ctx.lineCap = 'round'
+  ctx.stroke()
+
   if (detail >= 2) {
-    const count = 4
-    const mote = Math.max(0.9, r * 0.16)
-    const phase = (variant / LANDMARK_VARIANTS) * Math.PI * 2
-    for (let i = 0; i < count; i++) {
-      const a = phase + (i / count) * Math.PI * 2
-      ctx.beginPath()
-      ctx.arc(x + Math.cos(a) * halo, y + Math.sin(a) * halo, mote, 0, Math.PI * 2)
-      ctx.fillStyle = 'rgba(255, 248, 210, 0.92)'
-      ctx.fill()
-    }
+    const spark = ctx.createRadialGradient(x, y, 0, x, y, r * 0.5)
+    spark.addColorStop(0, 'rgba(255, 233, 168, 0.25)')
+    spark.addColorStop(1, 'rgba(255, 233, 168, 0)')
+    ctx.beginPath()
+    ctx.arc(x, y, r * 0.5, 0, Math.PI * 2)
+    ctx.fillStyle = spark
+    ctx.fill()
   }
+
+  // Der Kernfunke trägt die Marke dort, wo der Ring auf zwei Pixel zusammenfällt.
+  ctx.beginPath()
+  ctx.arc(x, y, Math.max(0.9, r * 0.26), 0, Math.PI * 2)
+  ctx.fillStyle = '#ffe9a8'
+  ctx.fill()
+
   ctx.restore()
 }
 
-/** Verlorener Stern: ausgebrannte Hülle mit BRUCHKEIL — eine unrunde Silhouette. */
+/**
+ * Verlorener Stern: massive ausgebrannte Hülle mit BRUCHKEIL — unrunde
+ * Silhouette, dunkler Saum. Er ist der einzige gefüllte Körper der Geschichte:
+ * die Narbe leuchtet nicht, sie verschluckt.
+ */
 function paintLostStar(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -306,13 +294,14 @@ function paintLostStar(
   const half = 0.48 // ~55° Keil
 
   ctx.save()
-  const atmo = ctx.createRadialGradient(x, y, r * 0.7, x, y, r * 1.45)
-  atmo.addColorStop(0, 'rgba(200, 60, 40, 0.28)')
-  atmo.addColorStop(0.6, 'rgba(160, 40, 25, 0.1)')
-  atmo.addColorStop(1, 'rgba(120, 30, 20, 0)')
+  // Dunkler Saum statt rotem Hof: ein Leuchten um jede Narbe war wieder
+  // Farbfläche im Bild, und es sagte das Gegenteil dessen, was hier steht.
+  const seam = ctx.createRadialGradient(x, y, r * 0.85, x, y, r * 1.3)
+  seam.addColorStop(0, 'rgba(11, 8, 6, 0.5)')
+  seam.addColorStop(1, 'rgba(11, 8, 6, 0)')
   ctx.beginPath()
-  ctx.arc(x, y, r * 1.45, 0, Math.PI * 2)
-  ctx.fillStyle = atmo
+  ctx.arc(x, y, r * 1.3, 0, Math.PI * 2)
+  ctx.fillStyle = seam
   ctx.fill()
 
   const body = ctx.createRadialGradient(x - r * 0.3, y - r * 0.32, r * 0.05, x, y, r)
@@ -370,18 +359,6 @@ function paintLostStar(
   ctx.lineJoin = 'round'
   ctx.stroke()
 
-  if (detail >= 1) {
-    const sparks = detail >= 2 ? 4 : 2
-    for (let i = 0; i < sparks; i++) {
-      const a = dir + (i / Math.max(1, sparks - 1) - 0.5) * half * 1.6
-      const d = r * (1.5 + (i % 2) * 0.7)
-      const s = Math.max(0.7, r * (0.13 - (i % 2) * 0.03))
-      ctx.beginPath()
-      ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, s, 0, Math.PI * 2)
-      ctx.fillStyle = `rgba(255, 150, 90, ${(0.55 - (i % 2) * 0.2).toFixed(2)})`
-      ctx.fill()
-    }
-  }
   ctx.restore()
 }
 

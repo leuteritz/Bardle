@@ -22,13 +22,17 @@ import {
   drawRouteArrowhead,
   generateGalaxyDots,
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import type { GalaxyGeo } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor, roundLandmarkRadius } from './galaxyLandmarks'
 import { buildDeepField, paintDeepField } from './galaxyDeepField'
 import {
   CORE_GATE_HALO_R,
   CORE_GATE_MOUTH_R,
+  GALAXY_AURA_ALPHA,
+  GALAXY_AURA_SPAN,
   MINIMAP_TWINKLE_COUNT,
   MINIMAP_GALAXY_CORE_RADIUS,
+  MINIMAP_GALAXY_RADIUS,
   SNAPSHOT_ROUTE_ARROW_SIZE,
   SNAPSHOT_ROUTE_ARROW_GAP,
   VOYAGE_MAP_ASPECT_MIN,
@@ -70,6 +74,39 @@ export function galaxyFitBox(w: number, h: number, inset = VOYAGE_MAP_INSET_PX):
   const bw = Math.min(aw, ah * aspect)
   const bh = bw / aspect
   return { x: (w - bw) / 2, y: (h - bh) / 2, w: bw, h: bh }
+}
+
+/**
+ * Die Aura der Scheibe: Mittelpunkt, Massstab und Neigung, unter denen ein
+ * KREIS vom Radius `r` genau die Galaxienscheibe umschliesst.
+ *
+ * Die Kette ist Zeichen für Zeichen die von `galaxyPlaneToWorld` — erst der
+ * anisotrope Bühnenmassstab, dann die Neigung, dann die Stauchung. Wer die
+ * beiden Skalierungen vertauscht, bekommt eine Aura, die nur bei ungeneigten
+ * Galaxien passt; im Bild fällt das erst bei starker Neigung auf, deshalb ist
+ * die Rechnung hier herausgezogen und gebunden.
+ */
+export interface GalaxyAura {
+  cx: number
+  cy: number
+  sx: number
+  sy: number
+  rot: number
+  squash: number
+  /** Radius in Scheiben-Ebeneneinheiten — 1/GALAXY_AURA_SPAN davon ist der Rand. */
+  r: number
+}
+
+export function galaxyAuraGeometry(geo: GalaxyGeo, box: FitBox): GalaxyAura {
+  return {
+    cx: box.x + 0.5 * box.w,
+    cy: box.y + 0.5 * box.h,
+    sx: box.w,
+    sy: box.h,
+    rot: geo.tilt,
+    squash: geo.squash,
+    r: MINIMAP_GALAXY_RADIUS * geo.radiusScale * GALAXY_AURA_SPAN,
+  }
 }
 
 /** Basis-Strichstärke der Route bei Massstab 1. */
@@ -138,17 +175,33 @@ export function paintGalaxy(
     box.y + wy * box.h,
   ]
 
-  // ── Tiefraum mit einem Hauch Theme-Dunst ──
+  // ── Tiefraum, darüber die Aura der Scheibe ──
   ctx.fillStyle = '#0b0806'
   ctx.fillRect(0, 0, w, h)
   const accent = minimapAccentForTheme(record.themeIndex)
-  const haze = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.6)
-  haze.addColorStop(0, `rgba(${accent}, 0.06)`)
-  haze.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.fillStyle = haze
-  ctx.fillRect(0, 0, w, h)
-
   const geo = galaxyGeo(record.mapSeed)
+
+  // Der Dunst war einmal ein bildschirmzentrierter Kreis. Er beschrieb die
+  // Galaxie nicht — die Scheibe hatte damit keinen ablesbaren RAND, und draussen
+  // sah aus wie drinnen. Jetzt folgt er der ECHTEN Scheibe; Canvas transformiert
+  // den Verlauf mit der Matrix, aus dem Kreis wird von selbst die richtige,
+  // geneigte Ellipse.
+  const aura = galaxyAuraGeometry(geo, box)
+  ctx.save()
+  ctx.translate(aura.cx, aura.cy)
+  ctx.scale(aura.sx, aura.sy)
+  ctx.rotate(aura.rot)
+  ctx.scale(1, aura.squash)
+  const haze = ctx.createRadialGradient(0, 0, 0, 0, 0, aura.r)
+  haze.addColorStop(0, `rgba(${accent}, ${GALAXY_AURA_ALPHA})`)
+  haze.addColorStop(0.62, `rgba(${accent}, ${(GALAXY_AURA_ALPHA * 0.55).toFixed(3)})`)
+  haze.addColorStop(1, `rgba(${accent}, 0)`)
+  ctx.beginPath()
+  ctx.arc(0, 0, aura.r, 0, Math.PI * 2)
+  ctx.fillStyle = haze
+  ctx.fill()
+  ctx.restore()
+
   const twScale = Math.max(1, k)
 
   // ── Sternenfeld ──
@@ -274,9 +327,9 @@ export function paintGalaxy(
     )
   }
 
-  // Caretaker's Gate: der befreite Kern. Er ist mit Abstand die grösste Marke —
-  // ein befreiter Stern misst mitsamt Halo 11, und der Höhepunkt der Galaxie
-  // darf daneben nicht untergehen.
+  // Caretaker's Gate: der befreite Kern. Er ist mit Abstand die grösste Marke,
+  // und seit der befreite Stern nur noch ein Ring ist, auch die einzige gefüllte
+  // Form der Karte ausser dem verlorenen Stern.
   //
   // Der Schein ist ein RING, keine Füllung: eine in der Mitte helle Glut machte
   // aus dem Tor wieder eine Scheibe, und genau das sollte es nicht mehr sein.

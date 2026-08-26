@@ -1094,8 +1094,10 @@ export const VOYAGE_SITE_INLINE_CLOCK_PX = 48
  */
 export const VOYAGE_MAP_HISTORY_SCALE = 0.55
 /** Deckkraft der geflogenen Route auf der grossen Karte. Bei 36 Etappen wird
- *  aus der Spur sonst ein Netz, das lauter ist als die Haefen darauf. */
-export const VOYAGE_MAP_ROUTE_ALPHA = 0.22
+ *  aus der Spur sonst ein Netz, das lauter ist als die Haefen darauf. Seit der
+ *  befreite Stern ein offener Ring ist, deckt nichts mehr die Spur zu — sie war
+ *  danach das lauteste Gold im Bild und musste um dieselbe Stufe zurueck. */
+export const VOYAGE_MAP_ROUTE_ALPHA = 0.16
 
 /**
  * Legende der Kartenbuehne. Die Masse sind das ~Vierfache ihrer eigenen Kontur
