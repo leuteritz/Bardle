@@ -20,12 +20,14 @@ import {
   EVENT_LOG_TAB_MIN_W,
   EVENT_LOG_TAB_MIN_W_MID,
   EVENT_LOG_TAB_MIN_W_WIDE,
+  EVENT_LOG_TAB_MIN_W_NAMES,
   EVENT_LOG_TAB_COUNT_W,
   EVENT_LOG_TAB_COUNT_W_MID,
   EVENT_LOG_TAB_COUNT_W_WIDE,
   EVENT_LOG_TOOL_W,
   EVENT_LOG_TOOL_W_MID,
   EVENT_LOG_TOOL_W_WIDE,
+  EVENT_LOG_HISTORY_MAX,
   EVENT_LOG_TRAIL_FADE_PX,
   EVENT_LOG_TRAIL_MAX_ROWS,
   EVENT_LOG_TRAIL_MOVE_ROWS,
@@ -166,6 +168,8 @@ describe('event log trail — the stage it takes', () => {
 const ADVANCE_EM = 0.613
 const TRACKING_EM = 0.05
 const BAR_BORDER = 2
+/** Was das Icon eines Tabs wiegt — der Posten, der auf der Namensstufe faellt. */
+const TAB_ICON_W = 16
 const TAB_GAP = 2
 
 interface Step {
@@ -176,11 +180,10 @@ interface Step {
   barGap: number
   /** Ein Tab MIT seiner Zahl. */
   tabW: number
-  /** Was die Zahl davon wiegt — sie weicht auf der Namensstufe dem Namen. */
+  /** Was die Zahl davon reserviert — sie steht auf jeder Stufe an jedem Tab. */
   countW: number
   toolW: number
   named: 'none' | 'active' | 'all'
-  counted: 'all' | 'active'
 }
 
 const STEPS: Step[] = [
@@ -194,7 +197,6 @@ const STEPS: Step[] = [
     countW: EVENT_LOG_TAB_COUNT_W,
     toolW: EVENT_LOG_TOOL_W,
     named: 'none',
-    counted: 'all',
   },
   {
     // Zwischen der Groessen- und der Namensschwelle: 2480 px Fenster tragen
@@ -208,19 +210,18 @@ const STEPS: Step[] = [
     countW: EVENT_LOG_TAB_COUNT_W_MID,
     toolW: EVENT_LOG_TOOL_W_MID,
     named: 'active',
-    counted: 'all',
   },
   {
+    // Hier weicht das ICON: der Tab traegt nur noch Polster (2x5) und Zahl.
     name: 'names',
     viewport: 2560,
     fontPx: 11,
     barPad: 6,
     barGap: 4,
-    tabW: EVENT_LOG_TAB_MIN_W_MID,
+    tabW: EVENT_LOG_TAB_MIN_W_NAMES,
     countW: EVENT_LOG_TAB_COUNT_W_MID,
     toolW: EVENT_LOG_TOOL_W_MID,
     named: 'all',
-    counted: 'active',
   },
   {
     name: 'wide',
@@ -232,7 +233,6 @@ const STEPS: Step[] = [
     countW: EVENT_LOG_TAB_COUNT_W_WIDE,
     toolW: EVENT_LOG_TOOL_W_WIDE,
     named: 'all',
-    counted: 'all',
   },
 ]
 
@@ -254,10 +254,8 @@ const barNeed = (step: Step) => {
       : step.named === 'active'
         ? widest + step.barGap
         : 0
-  const counts = step.counted === 'all' ? EVENT_GROUPS.length * step.countW : step.countW
   return (
-    EVENT_GROUPS.length * (step.tabW - step.countW) +
-    counts +
+    EVENT_GROUPS.length * step.tabW +
     (EVENT_GROUPS.length - 1) * TAB_GAP +
     names +
     TOOLS * step.toolW +
@@ -293,6 +291,26 @@ describe('event log trail — the bar in three steps', () => {
     for (const [name, threshold] of at) {
       const step = STEPS.find((s) => s.name === name)!
       expect(barNeed(step), name).toBeLessThanOrEqual(barInner(threshold, step))
+    }
+  })
+
+  /**
+   * Warum auf der Namensstufe kein Icon steht: mit ihm traegt die Reihe nicht.
+   * Bricht, sobald es jemand zurueckholt, ohne vorher Platz zu schaffen.
+   */
+  it('cannot carry the icon where every tab is named and counted', () => {
+    const step = STEPS.find((s) => s.name === 'names')!
+    const withIcon = { ...step, tabW: step.tabW + TAB_ICON_W + step.barGap }
+    expect(barNeed(withIcon)).toBeGreaterThan(barInner(columnWidth(step.viewport), step))
+  })
+
+  /** Die Zahl reicht bis zum Deckel der Historie — drei Ziffern plus Abstand. */
+  it('reserves room for the widest count on every step', () => {
+    const digits = String(EVENT_LOG_HISTORY_MAX).length
+    for (const step of STEPS) {
+      expect(step.countW, step.name).toBeGreaterThanOrEqual(
+        digits * ADVANCE_EM * step.fontPx + step.barGap,
+      )
     }
   })
 

@@ -371,14 +371,15 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 2px;
-  margin-right: auto;
+  flex: 1 0 auto;
 }
 
-/* Kein Name am aktiven Tab: er wog 80 px in einer Reihe von 352, und die drei
-   Werkzeuge rechts wollen auch stehen. Der Name steht im title. */
+/* `1 0`, nicht `1 1`: wachsen ja, schrumpfen nie — ein zu enges Budget soll
+   sichtbar ueberlaufen statt still zu beschneiden. Den Rest der Reihe teilen
+   sich die fuenf Tabs, damit rechts keine tote Flaeche steht. */
 .elp-tab {
   display: inline-flex;
-  flex: 0 0 auto;
+  flex: 1 0 auto;
   align-items: center;
   justify-content: center;
   gap: 4px;
@@ -413,8 +414,9 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-/* Der Name steht IMMER im DOM — eine Container-Query kann kein `v-if`. Schmal
-   traegt das Icon allein, ab 480 der aktive Tab seinen Namen, ab 540 alle. */
+/* Name und Icon stehen IMMER im DOM — eine Container-Query kann kein `v-if`.
+   Schmal traegt das Icon allein, ab 480 der aktive Tab seinen Namen, ab 540
+   alle, und dort weicht das Icon dem Namen. */
 .elp-tab-label {
   display: none;
 }
@@ -635,17 +637,21 @@ onUnmounted(() => {
   }
 }
 
-/* Ab hier traegt JEDER Tab seinen Namen — und die Zahl weicht ihm an den
-   inaktiven: fuenf Namen samt fuenf Zaehlern wiegen 610 px in einem Innenraum
-   von 534. Sie steht weiter im `title` und im `aria-label`, und auf der
-   breiten Stufe kommt sie zurueck. */
+/* Ab hier traegt JEDER Tab seinen Namen — und das ICON weicht ihm: Icon, Name
+   und Zahl wiegen zusammen 610 px in einem Innenraum von 534, das Icon allein
+   100 davon. Der Name sagt dasselbe; auf der breiten Stufe kommt es zurueck.
+   Das kleinere Polster holen die wachsenden Tabs selbst wieder herein. */
 @container (min-width: 540px) {
   .elp-tab-label {
     display: inline;
   }
 
-  .elp-tab:not(.elp-tab--active) .elp-tab-count {
+  .elp-tab svg {
     display: none;
+  }
+
+  .elp-tab {
+    padding: 0 5px;
   }
 }
 
@@ -673,10 +679,10 @@ onUnmounted(() => {
     height: 30px;
   }
 
-  /* Derselbe Selektor wie auf der Namensstufe, damit er ihn ueberstimmt: hier
-     ist Platz fuer Namen UND Zaehler. */
-  .elp-tab:not(.elp-tab--active) .elp-tab-count {
-    display: inline;
+  /* Hier ist Platz fuer Icon, Namen UND Zahl — der Selektor wiederholt den der
+     Namensstufe, damit er ihn ueberstimmt. */
+  .elp-tab svg {
+    display: block;
   }
 
   .elp-msg {

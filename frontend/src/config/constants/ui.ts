@@ -787,7 +787,8 @@ export const EVENT_LOG_BESIDE_HEADER_MIN_VW = 1850
 // SPURBREITE gemessen, nicht am Viewport — die Spur ist die Gasse, und die
 // haengt am Header, nicht am Fenster. Was die Stufe bringt, ist Groesse UND
 // Namen: schmal traegt das Icon allein, mittel der aktive Tab seinen Namen,
-// breit alle fuenf. Eine Staffel, die etwas WEGNIMMT, waere der alte Fehler.
+// ab 540 alle fuenf. Die Zahl steht auf JEDER Stufe an jedem Tab; was auf der
+// Namensstufe weicht, ist das Icon — der Name sagt dasselbe.
 export const EVENT_LOG_BAR_PAD = 4
 export const EVENT_LOG_BAR_GAP = 3
 /** Aussenhoehe der Leiste je Stufe. */
@@ -798,7 +799,9 @@ export const EVENT_LOG_BAR_H_WIDE = 38
 export const EVENT_LOG_TAB_MIN_W = 50
 export const EVENT_LOG_TAB_MIN_W_MID = 56
 export const EVENT_LOG_TAB_MIN_W_WIDE = 68
-/** Was davon die ZAHL wiegt (dreistellig plus Abstand) — sie weicht dem Namen. */
+/** Namensstufe: das Icon weicht — es bleiben Polster (2x5) und die Zahl. */
+export const EVENT_LOG_TAB_MIN_W_NAMES = 36
+/** Was davon die ZAHL wiegt (dreistellig plus Abstand). */
 export const EVENT_LOG_TAB_COUNT_W = 22
 export const EVENT_LOG_TAB_COUNT_W_MID = 26
 export const EVENT_LOG_TAB_COUNT_W_WIDE = 30
@@ -809,12 +812,12 @@ export const EVENT_LOG_TOOL_W_WIDE = 30
 /** Ab dieser SPURBREITE traegt der aktive Tab seinen Namen. */
 export const EVENT_LOG_BAR_MID_MIN_W = 480
 /**
- * Ab dieser SPURBREITE tragen ALLE fuenf Tabs ihren Namen — und die Zahl weicht
- * dafuer an den inaktiven: fuenf Namen samt fuenf Zaehlern wiegen 610 px in
- * einem Innenraum von 534. Zurueck kommt sie auf der breiten Stufe.
+ * Ab dieser SPURBREITE tragen ALLE fuenf Tabs Namen UND Zahl — und das ICON
+ * weicht dafuer: alle drei wiegen 610 px in einem Innenraum von 534, das Icon
+ * allein 100 davon. Zurueck kommt es auf der breiten Stufe.
  */
 export const EVENT_LOG_BAR_NAMES_MIN_W = 540
-/** Ab dieser SPURBREITE tragen alle fuenf Tabs Namen UND Zahl. */
+/** Ab dieser SPURBREITE traegt der Tab Icon, Namen UND Zahl zugleich. */
 export const EVENT_LOG_BAR_WIDE_MIN_W = 760
 
 // Die Spur rollt nicht von selbst, laesst sich aber per Mausrad durch die
