@@ -338,6 +338,8 @@ export type ProgressMetricId =
   | 'planetsCleared'
   | 'driftersCollected'
   | 'riftsSealed'
+  /** Orte auf Reiseetappen, die geschafft wurden (`utils/game/landfalls.ts`). */
+  | 'landfallsCleared'
   // ── Orbit ──
   | 'planetSlotsOwned'
   | 'planetLevels'

@@ -38,6 +38,7 @@ import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useVoidStore } from '@/stores/world/voidStore'
+import { useLandfallStore } from '@/stores/world/landfallStore'
 import { getOrbitSunRadius, getOrbitSunScale } from '@/utils/orbit/geometry'
 import { gameNow } from '@/utils/game/gameClock'
 import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
@@ -197,7 +198,8 @@ function timedVolleyMult(): number {
     useOmenStore().combatDpsMult *
     useBardAbilityStore().combatDpsMult *
     // Dimming Wound (void tide): ein offener Riss dämpft auch die Salve
-    useVoidStore().combatDpsMult
+    useVoidStore().combatDpsMult *
+    useLandfallStore().combatDpsMult
   )
 }
 

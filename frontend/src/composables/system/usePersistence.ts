@@ -12,6 +12,7 @@ import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useItemStore } from '@/stores/economy/itemStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useLandfallStore } from '@/stores/world/landfallStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useCpsStore } from '@/stores/core/cpsStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
@@ -116,6 +117,7 @@ export function usePersistence() {
     const augmentStore = useAugmentStore()
     const itemStore = useItemStore()
     const galaxyStore = useGalaxyStore()
+    const landfallStore = useLandfallStore()
     const playerStore = usePlayerStore()
     const planetShopStore = usePlanetShopStore()
     const solarStore = useSolarUpgradeStore()
@@ -299,6 +301,13 @@ export function usePersistence() {
         starsRequired: galaxyStore.starsRequired,
         attemptResults: [...galaxyStore.attemptResults],
         landfallResults: galaxyStore.landfallResults.map((l) => ({ ...l })),
+        // Der Cairn-Segen wird MIT der Galaxie gespeichert, nicht in einem
+        // eigenen Block: er gilt für genau diese eine, und `boonGalaxy` ist die
+        // Prüfgrösse beim Laden — es gibt keine Frist, gegen die man prüfen
+        // könnte.
+        landfallBoon: landfallStore.boon,
+        landfallBoonGalaxy: landfallStore.boonGalaxy,
+        totalLandfallsCleared: galaxyStore.totalLandfallsCleared,
         mapSeed: galaxyStore.mapSeed,
         galaxyStartedAtInGameTime: galaxyStore.galaxyStartedAtInGameTime,
         completedGalaxies: galaxyStore.completedGalaxies.map((r) => ({
@@ -866,6 +875,7 @@ export function usePersistence() {
 
       // Restore galaxyStore
       const galaxyStore = useGalaxyStore()
+      const landfallStore = useLandfallStore()
       if (saved.galaxy) {
         const gx = saved.galaxy
         galaxyStore.currentGalaxy = gx.currentGalaxy ?? 1
@@ -882,6 +892,17 @@ export function usePersistence() {
         // der Etappen-Tick entscheidet neu, ob seine Stelle schon passiert ist.
         galaxyStore.activeLandfall = null
         galaxyStore._landfallLegDone = -1
+        galaxyStore.totalLandfallsCleared = gx.totalLandfallsCleared ?? 0
+        // Ein Segen aus einer ANDEREN Galaxie ist keiner mehr. Ohne diese
+        // Prüfung überlebte er jeden Warp, der zwischen Speichern und Laden lag.
+        const boonG = typeof gx.landfallBoonGalaxy === 'number' ? gx.landfallBoonGalaxy : 0
+        if (gx.landfallBoon && boonG === galaxyStore.currentGalaxy) {
+          landfallStore.boon = gx.landfallBoon
+          landfallStore.boonGalaxy = boonG
+        } else {
+          landfallStore.boon = null
+          landfallStore.boonGalaxy = 0
+        }
         galaxyStore.mapSeed = gx.mapSeed ?? galaxyStore.mapSeed
         // Ältere Saves kennen die Galaxie-Historie nicht → Zeitmessung der
         // laufenden Galaxie startet ab jetzt, Archiv beginnt leer.

@@ -24,12 +24,16 @@ import {
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import type { GalaxyGeo } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor, roundLandmarkRadius } from './galaxyLandmarks'
-import { landfallsOfRun, landfallWorldPos } from '@/utils/game/landfalls'
+import { landfallMarks } from '@/utils/game/landfalls'
 import { LANDFALL_LANDMARK_KIND } from '@/config/world/landfalls'
 import { buildDeepField, paintDeepField } from './galaxyDeepField'
 import {
   CORE_GATE_HALO_R,
   CORE_GATE_MOUTH_R,
+  CORE_GATE_CROWN_SPAN,
+  VOYAGE_GATE_GAP_PX,
+  LANDFALL_MARK_R,
+  LANDFALL_CORE_GAP_PX,
   GALAXY_AURA_ALPHA,
   GALAXY_AURA_SPAN,
   MINIMAP_TWINKLE_COUNT,
@@ -97,6 +101,32 @@ export interface GalaxyAura {
   squash: number
   /** Radius in Scheiben-Ebeneneinheiten — 1/GALAXY_AURA_SPAN davon ist der Rand. */
   r: number
+}
+
+/**
+ * Die Sperrzone des Caretaker's Gate, als normalisierte HALBKANTEN.
+ *
+ * Zwei Zahlen und kein Radius, weil der 0..1-Raum der Karte ANISOTROP ist: ein
+ * Kreis darin ist in Pixeln eine Ellipse, und auf einer Fit-Box mit
+ * `VOYAGE_MAP_ASPECT_MAX` ist sie senkrecht fast halb so breit wie waagerecht.
+ * Gemessen verschwand eine Ortsmarke 58 px vom Kern noch unter einem Tor von
+ * 124 px Kantenlänge, obwohl die runde Sperrzone „0,10" hiess.
+ *
+ * Maximumsnorm, wie bei `voyageGateSizeFor`, und aus demselben Grund: das Tor
+ * ist ein achsenparalleles Quadrat.
+ */
+export function coreGateClearance(box: FitBox, hk: number): { x: number; y: number } {
+  const k = box.w / GALAXY_PLATE_REF_W
+  // Drei Terme, und jeder war einmal der fehlende:
+  //   markR  — Aussenkante der gemalten Tor-Marke (Schlund plus Krone),
+  //   GAP    — dieselbe Luft, die `voyageGateSizeFor` seiner Klickfläche gibt,
+  //            denn DIE verdeckt, nicht die Zeichnung,
+  //   Marke  — der eigene Radius des Ortes; ohne ihn rutscht seine Hälfte
+  //            unter die Torkante.
+  const markR = CORE_GATE_MOUTH_R * CORE_GATE_CROWN_SPAN * k
+  const eigen = LANDFALL_MARK_R * hk
+  const px = markR + VOYAGE_GATE_GAP_PX + eigen + LANDFALL_CORE_GAP_PX
+  return { x: px / box.w, y: px / box.h }
 }
 
 export function galaxyAuraGeometry(geo: GalaxyGeo, box: FitBox): GalaxyAura {
@@ -314,21 +344,23 @@ export function paintGalaxy(
   // Lage und Art sind ABGELEITET (`utils/game/landfalls.ts`), im Record steht
   // nur der Ausgang. Ein Spielstand von vor den Landfalls hat keine Reihe und
   // zeigt deshalb keine — das ist wahr, dort gab es keine.
-  const landfalls = record.landfallResults ?? []
-  if (landfalls.length) {
-    const kette = [spawn, ...dots.slice(0, attempts), { x: 0.5, y: 0.5 }]
-    const plaene = landfallsOfRun(record.mapSeed, record.galaxy, attempts + 1, kette.length - 1)
-    for (let i = 0; i < plaene.length && i < landfalls.length; i++) {
-      const plan = plaene[i]
-      const pos = landfallWorldPos(kette[plan.leg], kette[plan.leg + 1], plan.t, plan.bow)
-      const [lx, ly] = toC(pos.x, pos.y)
-      drawLandmark(ctx, LANDFALL_LANDMARK_KIND[plan.kind], lx, ly, roundLandmarkRadius(6 * hk), {
-        dpr,
-        variant: landmarkVariantFor(i),
-        faded: !landfalls[i].cleared,
-      })
-    }
-  }
+  const marken = landfallMarks(
+    record.mapSeed,
+    record.galaxy,
+    spawn,
+    dots,
+    attempts,
+    record.landfallResults ?? [],
+    coreGateClearance(box, hk),
+  )
+  marken.forEach((m, i) => {
+    const [lx, ly] = toC(m.x, m.y)
+    drawLandmark(ctx, LANDFALL_LANDMARK_KIND[m.kind], lx, ly, roundLandmarkRadius(LANDFALL_MARK_R * hk), {
+      dpr,
+      variant: landmarkVariantFor(i),
+      faded: !m.cleared,
+    })
+  })
 
   // Abflugportal — der Ring steht quer zur ersten Etappe, man fliegt hindurch.
   const [fx, fy] = attempts > 0 ? toC(dots[0].x, dots[0].y) : [gcx, gcy]

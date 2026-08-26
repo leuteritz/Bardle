@@ -11,6 +11,7 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useVoidStore } from '@/stores/world/voidStore'
+import { useLandfallStore } from '@/stores/world/landfallStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
@@ -77,6 +78,7 @@ export const useShopStore = defineStore('shop', {
             useDrifterStore().cpsMult *
             useOmenStore().cpsMult *
             useBardAbilityStore().cpsMult *
+            useLandfallStore().cpsMult *
             gameStore.abilityCPSMultiplier,
         },
         { id: 'void', factor: useVoidStore().cpsMult },
@@ -139,6 +141,11 @@ export const useShopStore = defineStore('shop', {
       // Sunless Breach (void tide) — the only factor here that pulls DOWNWARD,
       // and it grows the longer the rift is left standing
       const voidMul = useVoidStore().cpsMult
+      // Wayside Cairn — gilt bis zum Ende DIESER Galaxie, ohne Uhr. Er fällt in
+      // den `boons`-Eimer und braucht deshalb KEINEN eigenen
+      // FORGE_YIELD_SOURCES-Eintrag; `cpsFactorBreakdown.spec.ts` prüft die
+      // ID-Menge exakt gegen jene Liste.
+      const landfallMul = useLandfallStore().cpsMult
       return Math.floor(
         solarCPS *
           gameStore.abilityCPSMultiplier *
@@ -150,7 +157,8 @@ export const useShopStore = defineStore('shop', {
           omenMul *
           bardMul *
           chronicleMul *
-          voidMul,
+          voidMul *
+          landfallMul,
       )
     },
 
@@ -180,6 +188,9 @@ export const useShopStore = defineStore('shop', {
       // CpS-Anteil darunter trägt seine eigene Void-Drossel bereits, genau wie
       // bei den beiden Faktoren darüber.
       const voidMul = useVoidStore().cpcMult
+      // Wayside Cairn — dieselbe Begründung wie bei Drifter und Omen darüber:
+      // der CpS-Anteil trägt seinen eigenen Faktor schon.
+      const landfallMul = useLandfallStore().cpcMult
       return Math.floor(
         (baseCPC + solar.cpcBonus) *
           gameStore.abilityCPCMultiplier *
@@ -189,7 +200,8 @@ export const useShopStore = defineStore('shop', {
           drifterMul *
           omenMul *
           bardMul *
-          voidMul +
+          voidMul *
+          landfallMul +
           cpsPortion,
       )
     },

@@ -6,9 +6,11 @@ import {
   landfallsOfRun,
   landfallWorldPos,
   landfallWindowMs,
+  landfallMarks,
 } from '@/utils/game/landfalls'
 import { galaxyDepth } from '@/utils/game/galaxyDepth'
 import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { coreGateClearance, GALAXY_PLATE_REF_W } from '@/utils/fx/galaxyPlate'
 import { LANDFALLS, unlockedLandfalls } from '@/config/world/landfalls'
 import {
   LANDFALL_UNLOCK_GALAXY,
@@ -27,6 +29,11 @@ import {
   FORGE_MIN_CHAMPION_TRAVEL_MULT,
   SOLAR_MAX_LEVELS,
   SOLAR_CPS_FLIGHT_BONUS,
+  VOYAGE_MAP_HISTORY_SCALE,
+  VOYAGE_MAP_ASPECT_MAX,
+  VOYAGE_GATE_GAP_PX,
+  CORE_GATE_MOUTH_R,
+  CORE_GATE_CROWN_SPAN,
 } from '@/config/constants'
 
 /**
@@ -211,6 +218,140 @@ describe('Landfalls — Weltposition', () => {
         expect(pos.x).toBeLessThan(1)
         expect(pos.y).toBeGreaterThan(0)
         expect(pos.y).toBeLessThan(1)
+      }
+    }
+  })
+})
+
+describe('Landfalls — die Marken einer gelaufenen Galaxie', () => {
+  const SEED = 6 * 7919 + 13
+  const GALAXY = 30
+
+  function strecke() {
+    const { spawn, dots } = generateGalaxyDots(SEED, 9)
+    return { spawn, dots }
+  }
+
+  /**
+   * DIE Zusicherung, für die die Art überhaupt gespeichert wird.
+   *
+   * Zöge die Karte sie aus dem abgeleiteten Plan, verschöbe jeder neue Ort im
+   * Katalog die Ziehung — und jede archivierte Galaxie wäre rückwirkend
+   * umetikettiert: ein Riff von gestern wäre morgen ein Riss. Genau das ist
+   * beim zweiten und dritten Katalogeintrag unbemerkt passiert.
+   */
+  it('nimmt die ART aus dem gespeicherten Ausgang, nicht aus dem Plan', () => {
+    const { spawn, dots } = strecke()
+    const attempts = 8
+    // Ein Ausgang, der dem Plan ABSICHTLICH widerspricht.
+    const gespeichert = [
+      { kind: 'the_rupture' as const, cleared: true },
+      { kind: 'wayside_cairn' as const, cleared: false },
+      { kind: 'the_gloaming' as const, cleared: true },
+    ]
+    const marken = landfallMarks(SEED, GALAXY, spawn, dots, attempts, gespeichert)
+
+    expect(marken.length).toBeGreaterThan(0)
+    marken.forEach((m, i) => {
+      expect(m.kind).toBe(gespeichert[i].kind)
+      expect(m.cleared).toBe(gespeichert[i].cleared)
+    })
+  })
+
+  it('nimmt die LAGE aus dem Plan — sie ist und bleibt abgeleitet', () => {
+    const { spawn, dots } = strecke()
+    const attempts = 8
+    const kette = [spawn, ...dots.slice(0, attempts), { x: 0.5, y: 0.5 }]
+    const plaene = landfallsOfRun(SEED, GALAXY, attempts + 1, kette.length - 1)
+    const results = plaene.map(() => ({ kind: 'chime_reef' as const, cleared: true }))
+    // OHNE Sperrzone: sie ist eine zweite, später hinzugekommene Regel, und
+    // dieser Test prüft die erste — dass die Lage überhaupt aus dem Plan kommt.
+    const marken = landfallMarks(SEED, GALAXY, spawn, dots, attempts, results, { x: 0, y: 0 })
+
+    marken.forEach((m, i) => {
+      const erwartet = landfallWorldPos(
+        kette[plaene[i].leg],
+        kette[plaene[i].leg + 1],
+        plaene[i].t,
+        plaene[i].bow,
+      )
+      expect(m.x).toBeCloseTo(erwartet.x, 9)
+      expect(m.y).toBeCloseTo(erwartet.y, 9)
+    })
+  })
+
+  it('zeichnet nie mehr Marken, als es Ausgänge gibt', () => {
+    const { spawn, dots } = strecke()
+    expect(landfallMarks(SEED, GALAXY, spawn, dots, 8, [])).toEqual([])
+    const eine = landfallMarks(SEED, GALAXY, spawn, dots, 8, [
+      { kind: 'chime_reef' as const, cleared: true },
+    ])
+    expect(eine.length).toBeLessThanOrEqual(1)
+  })
+
+  /**
+   * Der Kern gehört dem Tor — dieselbe Regel, nach der `generateGalaxyDots`
+   * seine Sterne von der Mitte fernhält.
+   *
+   * Gemessen wird in der MAXIMUMSNORM gegen zwei Halbkanten, nicht euklidisch:
+   * der 0..1-Raum ist anisotrop, auf einer Fit-Box mit `VOYAGE_MAP_ASPECT_MAX`
+   * ist ein „runder" Abstand senkrecht fast halb so breit wie waagerecht.
+   * Genau daran ist der erste Anlauf gescheitert — eine Marke 58 px vom Kern lag
+   * noch unter einem Tor von 124 px Kantenlänge.
+   */
+  it('hält jede Marke aus der Sperrzone des Tores', () => {
+    // Beide Enden des Seitenverhältnis-Bandes, denn das schmale ist der Fall,
+    // der bricht.
+    for (const box of [
+      { x: 0, y: 0, w: 916, h: 561 },
+      { x: 0, y: 0, w: 916, h: 916 / VOYAGE_MAP_ASPECT_MAX },
+      { x: 0, y: 0, w: 320, h: 200 },
+    ]) {
+      const hk = (box.w / GALAXY_PLATE_REF_W) * VOYAGE_MAP_HISTORY_SCALE
+      const c = coreGateClearance(box, hk)
+      for (let seed = 1; seed <= 25; seed++) {
+        const mapSeed = seed * 977
+        const { spawn, dots } = generateGalaxyDots(mapSeed, 9)
+        const results = Array.from({ length: 8 }, () => ({
+          kind: 'chime_reef' as const,
+          cleared: true,
+        }))
+        for (const m of landfallMarks(mapSeed, 40, spawn, dots, 8, results, c)) {
+          const norm = Math.max(Math.abs(m.x - 0.5) / c.x, Math.abs(m.y - 0.5) / c.y)
+          expect(norm, `Seed ${mapSeed}, Box ${box.w}×${Math.round(box.h)}`).toBeGreaterThanOrEqual(
+            1 - 1e-9,
+          )
+        }
+      }
+    }
+  })
+
+  it('die Sperrzone deckt das TOR, nicht nur seine Zeichnung', () => {
+    // `voyageGateSizeFor` gibt der Klickfläche `markR + VOYAGE_GATE_GAP_PX` als
+    // Halbkante — und DIE verdeckt, nicht die gemalte Marke. Dazu der eigene
+    // Radius des Ortes, sonst rutscht seine Hälfte darunter.
+    const box = { x: 0, y: 0, w: 916, h: 561 }
+    const hk = (box.w / GALAXY_PLATE_REF_W) * VOYAGE_MAP_HISTORY_SCALE
+    const c = coreGateClearance(box, hk)
+    const markR = CORE_GATE_MOUTH_R * CORE_GATE_CROWN_SPAN * (box.w / GALAXY_PLATE_REF_W)
+    const torHalbkante = markR + VOYAGE_GATE_GAP_PX
+    expect(c.x * box.w).toBeGreaterThan(torHalbkante)
+    expect(c.y * box.h).toBeGreaterThan(torHalbkante)
+  })
+
+  it('bleibt mit allen Marken im Bild', () => {
+    for (let seed = 1; seed <= 30; seed++) {
+      const mapSeed = seed * 977
+      const { spawn, dots } = generateGalaxyDots(mapSeed, 9)
+      const results = Array.from({ length: 8 }, () => ({
+        kind: 'chime_reef' as const,
+        cleared: true,
+      }))
+      for (const m of landfallMarks(mapSeed, 40, spawn, dots, 8, results)) {
+        expect(m.x).toBeGreaterThan(0)
+        expect(m.x).toBeLessThan(1)
+        expect(m.y).toBeGreaterThan(0)
+        expect(m.y).toBeLessThan(1)
       }
     }
   })

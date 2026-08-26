@@ -79,7 +79,7 @@ import {
   generateGalaxyDots,
 } from './minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor } from '@/utils/fx/galaxyLandmarks'
-import { landfallsOfRun, landfallWorldPos } from '@/utils/game/landfalls'
+import { landfallMarks } from '@/utils/game/landfalls'
 import { LANDFALL_LANDMARK_KIND } from '@/config/world/landfalls'
 import { routeLegStyle } from '@/utils/fx/galaxyPlate'
 
@@ -547,27 +547,24 @@ export default defineComponent({
         // Landfalls — nur die BEREITS abgehandelten. Dieselbe Regel wie beim
         // nächsten Stern: die Karte enthüllt nichts, was noch vor dem Schiff
         // liegt. Der offene Ort steht in seiner HUD-Karte, nicht hier.
-        const landfalls = galaxyStore.landfallResults
-        if (landfalls.length) {
-          const kette = [spawnPos.value, ...dots.slice(0, attempts), { x: 0.5, y: 0.5 }]
-          const plaene = landfallsOfRun(
-            galaxyStore.mapSeed,
-            galaxyStore.currentGalaxy,
-            galaxyStore.plannedLegCount,
-            kette.length - 1,
-          )
-          for (let i = 0; i < plaene.length && i < landfalls.length; i++) {
-            const plan = plaene[i]
-            const pos = landfallWorldPos(kette[plan.leg], kette[plan.leg + 1], plan.t, plan.bow)
-            const [lx, ly] = wToC(pos.x, pos.y)
-            if (!inView(lx, ly)) continue
-            drawLandmark(c, LANDFALL_LANDMARK_KIND[plan.kind], lx, ly, 8, {
-              dpr: renderDpr,
-              variant: landmarkVariantFor(i),
-              faded: !landfalls[i].cleared,
-            })
-          }
-        }
+        // Dieselbe Paarung wie im Standbild: die ART kommt aus dem
+        // gespeicherten Ausgang, nur die LAGE aus dem abgeleiteten Plan.
+        landfallMarks(
+          galaxyStore.mapSeed,
+          galaxyStore.currentGalaxy,
+          spawnPos.value,
+          dots,
+          attempts,
+          galaxyStore.landfallResults,
+        ).forEach((m, i) => {
+          const [lx, ly] = wToC(m.x, m.y)
+          if (!inView(lx, ly)) return
+          drawLandmark(c, LANDFALL_LANDMARK_KIND[m.kind], lx, ly, 8, {
+            dpr: renderDpr,
+            variant: landmarkVariantFor(i),
+            faded: !m.cleared,
+          })
+        })
       }
 
       if (attempts >= 1 && farAlpha > 0.01) {

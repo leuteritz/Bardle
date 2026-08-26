@@ -32,6 +32,7 @@ import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useVoidStore } from '@/stores/world/voidStore'
+import { useLandfallStore } from '@/stores/world/landfallStore'
 
 let _damageFloatId = 0
 
@@ -60,7 +61,9 @@ function globalDpsMultiplier(): number {
     // orbit that is trying to close it. That feedback is the point: the answer
     // to a rift that outpaces your squad is to click it, and click damage is a
     // share of its own health, untouched by this factor.
-    useVoidStore().combatDpsMult
+    useVoidStore().combatDpsMult *
+    // Watchful Sky (Wayside Cairn) — gilt bis zum Ende dieser Galaxie
+    useLandfallStore().combatDpsMult
   )
 }
 

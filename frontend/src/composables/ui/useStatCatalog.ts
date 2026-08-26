@@ -2,6 +2,7 @@ import { computed, type ComputedRef, type Ref } from 'vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useLandfallStore } from '@/stores/world/landfallStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { usePlanetShopStore, PLANET_ROLES_LIST } from '@/stores/world/planetShopStore'
@@ -80,6 +81,7 @@ export function useStatCatalog(query: Ref<string>): {
   const gameStore = useGameStore()
   const battleStore = useBattleStore()
   const galaxyStore = useGalaxyStore()
+  const landfallStore = useLandfallStore()
   const starGroupStore = useStarGroupStore()
   const planetBossStore = usePlanetBossStore()
   const planetShopStore = usePlanetShopStore()
@@ -1384,6 +1386,36 @@ export function useStatCatalog(query: Ref<string>): {
         key: 'drifter-xp',
         label: 'Drifter XP Buff',
         value: bonus(drifterStore.xpMult),
+      },
+      // ── Landfalls ──
+      // Vier Zeilen statt fünf: der Cairn-Segen kennt keine Material-Achse, weil
+      // `materialDropMult` sättigt. Ein Faktor, den der Spieler nicht ablesen
+      // kann, ist ein versteckter Faktor — deshalb stehen sie hier, auch wenn
+      // immer nur EINER davon von 1 verschieden ist.
+      {
+        key: 'landfalls-cleared',
+        label: 'Landfalls Made',
+        value: int(galaxyStore.totalLandfallsCleared),
+      },
+      {
+        key: 'landfall-cps',
+        label: 'Cairn Production Boon',
+        value: bonus(landfallStore.cpsMult),
+      },
+      {
+        key: 'landfall-cpc',
+        label: 'Cairn Click Boon',
+        value: bonus(landfallStore.cpcMult),
+      },
+      {
+        key: 'landfall-dps',
+        label: 'Cairn Damage Boon',
+        value: bonus(landfallStore.combatDpsMult),
+      },
+      {
+        key: 'landfall-xp',
+        label: 'Cairn XP Boon',
+        value: bonus(landfallStore.xpMult),
       },
       // ── Wayfinder ──
       // Nur die Zahl der gegangenen Stufen: WELCHE offen ist, steht auf der

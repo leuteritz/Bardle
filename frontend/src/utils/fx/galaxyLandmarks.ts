@@ -38,6 +38,11 @@ export type LandmarkKind =
   | 'star-lost'
   | 'core-gate'
   | 'landfall-reef'
+  | 'landfall-gloaming'
+  | 'landfall-ossuary'
+  | 'landfall-convoy'
+  | 'landfall-cairn'
+  | 'landfall-rupture'
 
 /**
  * Die Landfall-FAMILIE. Alle Orte teilen EINE Silhouette — eine hohle Raute —
@@ -52,7 +57,14 @@ export type LandmarkKind =
  * führen kollidierte mit `landmarkVariantFor`, und der Sprite-Schlüssel könnte
  * zwei Orte dann nicht trennen. Geteilt wird der CODE, nicht der Schlüssel.
  */
-export const LANDFALL_KINDS = ['landfall-reef'] as const
+export const LANDFALL_KINDS = [
+  'landfall-reef',
+  'landfall-gloaming',
+  'landfall-ossuary',
+  'landfall-convoy',
+  'landfall-cairn',
+  'landfall-rupture',
+] as const
 export type LandfallLandmarkKind = (typeof LANDFALL_KINDS)[number]
 
 export function isLandfallLandmark(kind: LandmarkKind): kind is LandfallLandmarkKind {
@@ -587,18 +599,121 @@ function paintLandfall(
   // Im Standbild wären acht zusätzliche Punkte je Karte Rauschen.
   if (detail >= 2 && !faded) {
     ctx.fillStyle = LANDMARK_LANDFALL_RING
-    if (kind === 'landfall-reef') {
+    ctx.strokeStyle = LANDMARK_LANDFALL_RING
+    paintLandfallMark(ctx, x, y, r, kind)
+  }
+
+  ctx.restore()
+}
+
+/**
+ * Die Binnenmarke — das einzige, was die Orte auf der Karte trennt.
+ *
+ * Sie steht in einer EIGENEN Funktion, weil `paintLandfall` sonst mit jedem
+ * neuen Ort um einen Zweig wüchse und die gemeinsame Fassung (zwei Züge, dunkle
+ * Unterlage, Alpha) darin unterginge. Und weil `galaxyLandmarks.spec.ts` sie so
+ * einzeln gegen die anderen prüfen kann: es gibt hier KEINEN Compile-Zwang, ein
+ * Ort ohne Zweig malte still eine leere Raute.
+ *
+ * Alle Marken bleiben innerhalb von etwa `0,45 r` — weiter aussen berührten sie
+ * die Rautenkante und die Silhouette verlöre ihre Schärfe.
+ *
+ * EXPORTIERT allein für die Spec: jsdom gibt für `getContext('2d')` `null`
+ * zurück, ein rasternder Vergleich prüfte dort also nichts und sähe trotzdem
+ * grün aus. Geprüft werden stattdessen die ZEICHEN-AUFRUFE.
+ */
+export function paintLandfallMark(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  kind: LandfallLandmarkKind,
+): void {
+  const punkt = Math.max(0.7, r * 0.11)
+  switch (kind) {
+    case 'landfall-reef': {
       // Ein Riff: drei Körner nebeneinander.
       const d = r * 0.34
       for (const dx of [-d, 0, d]) {
         ctx.beginPath()
-        ctx.arc(x + dx, y, Math.max(0.7, r * 0.11), 0, Math.PI * 2)
+        ctx.arc(x + dx, y, punkt, 0, Math.PI * 2)
         ctx.fill()
       }
+      return
+    }
+    case 'landfall-gloaming': {
+      // Ein Nebel: zwei waagerechte Schwaden, versetzt — nichts Festes.
+      ctx.lineWidth = Math.max(0.8, r * 0.13)
+      ctx.lineCap = 'round'
+      for (const [dy, von, bis] of [
+        [-r * 0.2, -0.42, 0.18],
+        [r * 0.2, -0.18, 0.42],
+      ]) {
+        ctx.beginPath()
+        ctx.moveTo(x + r * von, y + dy)
+        ctx.lineTo(x + r * bis, y + dy)
+        ctx.stroke()
+      }
+      return
+    }
+    case 'landfall-ossuary': {
+      // Ein verschlossener Sarg: ein liegender Riegel mit einem Punkt darüber.
+      ctx.lineWidth = Math.max(0.8, r * 0.14)
+      ctx.lineCap = 'butt'
+      ctx.beginPath()
+      ctx.moveTo(x - r * 0.34, y + r * 0.18)
+      ctx.lineTo(x + r * 0.34, y + r * 0.18)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(x, y - r * 0.2, punkt * 1.15, 0, Math.PI * 2)
+      ctx.fill()
+      return
+    }
+    case 'landfall-rupture': {
+      // Ein Riss: ein schräger Schnitt quer durch die Raute, nichts sonst.
+      ctx.lineWidth = Math.max(0.9, r * 0.16)
+      ctx.lineCap = 'butt'
+      ctx.beginPath()
+      ctx.moveTo(x - r * 0.3, y + r * 0.36)
+      ctx.lineTo(x + r * 0.12, y - r * 0.06)
+      ctx.lineTo(x - r * 0.06, y + r * 0.06)
+      ctx.lineTo(x + r * 0.3, y - r * 0.36)
+      ctx.stroke()
+      return
+    }
+    case 'landfall-cairn': {
+      // Ein Steinmal: drei Körner übereinander, nach oben kleiner werdend.
+      let rad = punkt * 1.25
+      for (const dy of [r * 0.26, 0, -r * 0.26]) {
+        ctx.beginPath()
+        ctx.arc(x, y + dy, rad, 0, Math.PI * 2)
+        ctx.fill()
+        rad *= 0.72
+      }
+      return
+    }
+    case 'landfall-convoy': {
+      // Ein Zug, der stehengeblieben ist: ein Winkel in Fahrtrichtung und ein
+      // abgehängtes Korn dahinter.
+      //
+      // Erst waren es drei Körner schräg — und schräg ist gegen die drei WAAGE-
+      // RECHTEN des Riffs kein Unterschied, den man auf der Karte sieht. Der
+      // Aufruf-Wächter in der Spec merkte das nicht: er trennt Zeichenbefehle,
+      // nicht Ähnlichkeit. Das sieht man erst im Bild.
+      ctx.lineWidth = Math.max(0.8, r * 0.14)
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      ctx.beginPath()
+      ctx.moveTo(x - r * 0.04, y - r * 0.3)
+      ctx.lineTo(x + r * 0.34, y)
+      ctx.lineTo(x - r * 0.04, y + r * 0.3)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(x - r * 0.34, y, punkt, 0, Math.PI * 2)
+      ctx.fill()
+      return
     }
   }
-
-  ctx.restore()
 }
 
 /* ── Einstieg ─────────────────────────────────────────────────────────────── */

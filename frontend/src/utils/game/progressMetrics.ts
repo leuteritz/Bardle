@@ -79,6 +79,9 @@ export function progressMetricValue(metric: ProgressMetricId): number {
       return useStarGroupStore().totalPlanetsCleared
     case 'driftersCollected':
       return useDrifterStore().totalDriftersCollected
+    case 'landfallsCleared':
+      return useGalaxyStore().totalLandfallsCleared
+
     case 'riftsSealed':
       return useVoidStore().totalRiftsSealed
 

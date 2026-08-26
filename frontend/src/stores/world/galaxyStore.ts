@@ -10,7 +10,14 @@ import type { ChampionRole, ActiveLandfall, LandfallOutcome } from '@/types'
 import { clampPercent } from '@/utils/orbit/geometry'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import { galaxyDepth } from '@/utils/game/galaxyDepth'
-import { landfallOnLeg, landfallWindowMs } from '@/utils/game/landfalls'
+import {
+  landfallOnLeg,
+  landfallWindowMs,
+  landfallCleared,
+  landfallAcceptsTap,
+} from '@/utils/game/landfalls'
+import { getLandfall } from '@/config/world/landfalls'
+import { useLandfallStore } from '@/stores/world/landfallStore'
 import { buildBackfillRecord, backfillThemeRng } from '@/utils/game/galaxyArchiveBackfill'
 import {
   CHAMPION_TRAVEL_BASE_MS,
@@ -18,10 +25,6 @@ import {
   CHAMPION_TRAVEL_MAX_MS,
   RESOURCE_STAR_INTERVAL_MIN_MS,
   RESOURCE_STAR_INTERVAL_MAX_MS,
-  LANDFALL_REEF_BASE_SECONDS,
-  LANDFALL_REEF_CLICK_SECONDS,
-  LANDFALL_REEF_MAX_CLICKS,
-  LANDFALL_REEF_CPS_FLOOR_CLICKS,
   GALAXY_STARS_BASE_REQUIRED,
   GALAXY_STARS_MAX,
   GALAXIES_PER_TIER,
@@ -278,6 +281,9 @@ export const useGalaxyStore = defineStore('galaxy', {
     // ── Lifetime counters (Bard Stats catalog) ──
     // starsRescued/attemptResults reset with every galaxy; these never do.
     totalStarsRescued: 0,
+    /** Wie viele Orte je geschafft wurden. Neben `totalStarsRescued`, weil er
+     *  dieselbe Lebensdauer hat: er überlebt Prestige und Warp. */
+    totalLandfallsCleared: 0,
     totalStarsLost: 0,
     /** Galaxy bosses ever slain — one per freed galaxy, kept across prestige. */
     totalGalaxyBossesDefeated: 0,
@@ -373,25 +379,10 @@ export const useGalaxyStore = defineStore('galaxy', {
       return clampPercent(((this._travelTickMs - a.openedAt) / spanne) * 100) / 100
     },
 
-    /**
-     * Was der Ort einbringt, wenn er JETZT aufgelöst würde — in Chimes.
-     *
-     * Der Sockel fällt auch dem zu, der nicht hinsieht; das ist der Unterschied
-     * zum Drifter, der ungeklickt verfällt. Ein Ort ist ein ORT: man fliegt
-     * hindurch, ob man will oder nicht. Geklickt wird daraus das Vielfache.
-     */
+    /** Was der Ort einbringt, wenn er JETZT aufgelöst würde. Die Rechnung wohnt
+     *  im `landfallStore` — hier steht nur der Durchgriff für die HUD-Karte. */
     landfallYield(): number {
-      const a = this.activeLandfall
-      if (!a) return 0
-      const gameStore = useGameStore()
-      // Boden an der SEKUNDE, nicht an der Summe — sonst verschwinden früh alle
-      // Griffe darunter und acht Klicks zeigen dieselbe Zahl.
-      const jeSekunde = Math.max(
-        gameStore.chimesPerSecond,
-        gameStore.chimesPerClick * LANDFALL_REEF_CPS_FLOOR_CLICKS,
-      )
-      const sekunden = LANDFALL_REEF_BASE_SECONDS + a.taps * LANDFALL_REEF_CLICK_SECONDS
-      return jeSekunde * sekunden
+      return useLandfallStore().previewYield(this.activeLandfall)
     },
 
     needsFinalBoss(): boolean {
@@ -497,7 +488,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       if (elapsed >= this.effectiveTravelDurationMs) {
         // Ein Ort, der die Ankunft erlebt, wird abgerechnet — der Stern gewinnt
         // die Aufmerksamkeit, aber der Sockel ist verdient.
-        if (this.activeLandfall) this.resolveLandfall(this.activeLandfall.taps > 0)
+        if (this.activeLandfall) this.resolveLandfall(landfallCleared(this.activeLandfall))
         if (this.travelingToGalaxyBoss) {
           // Reached the galaxy core → the boss star spawns right there
           this.travelingToGalaxyBoss = false
@@ -531,8 +522,9 @@ export const useGalaxyStore = defineStore('galaxy', {
 
       if (this.activeLandfall) {
         if (now - this.activeLandfall.openedAt >= landfallWindowMs(dauer)) {
-          // Abgelaufen: der Sockel fällt trotzdem, angefasst wurde er nicht.
-          this.resolveLandfall(this.activeLandfall.taps > 0)
+          // Abgelaufen: der Sockel fällt trotzdem, die Geste entscheidet, ob er
+          // als geschafft in die Chronik geht.
+          this.resolveLandfall(landfallCleared(this.activeLandfall))
         }
         return
       }
@@ -549,7 +541,8 @@ export const useGalaxyStore = defineStore('galaxy', {
       }
       if (elapsed / dauer < plan.t) return
 
-      this.activeLandfall = { ...plan, openedAt: now, taps: 0 }
+      this.activeLandfall = { ...plan, openedAt: now, taps: 0, choice: null }
+      useLandfallStore().onOpen(this.activeLandfall)
     },
 
     /** Schliesst den offenen Ort und schreibt seinen Ausgang in die Chronik. */
@@ -557,6 +550,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       const a = this.activeLandfall
       if (!a) return
       this.landfallResults.push({ kind: a.kind, cleared })
+      if (cleared) this.totalLandfallsCleared++
       this._landfallLegDone = a.leg
       this.activeLandfall = null
     },
@@ -564,13 +558,16 @@ export const useGalaxyStore = defineStore('galaxy', {
     /**
      * Der Spieler fasst den Ort an. Gibt zurück, ob der Griff gezählt hat.
      *
-     * Gedeckelt: ohne Deckel wäre ein Ort ein Autoklicker-Fenster, und der
-     * Ertrag hinge an der Mausfrequenz statt an der Aufmerksamkeit.
+     * Der Deckel steht am Def, nicht mehr auf Modulebene — und welche Gesten
+     * überhaupt Griffe nehmen, entscheidet `landfallAcceptsTap`.
      */
     tapLandfall(): boolean {
       const a = this.activeLandfall
-      if (!a || a.taps >= LANDFALL_REEF_MAX_CLICKS) return false
+      if (!a || !landfallAcceptsTap(getLandfall(a.kind), a.taps)) return false
       a.taps++
+      // Ein einzelner Griff genügt und schliesst den Ort sofort — sonst stünde
+      // er nach der Entscheidung noch sekundenlang da und täte nichts.
+      if (getLandfall(a.kind)?.gesture === 'single') this.resolveLandfall(true)
       return true
     },
 
@@ -582,15 +579,11 @@ export const useGalaxyStore = defineStore('galaxy', {
      * so oder so.
      */
     resolveLandfall(cleared: boolean) {
-      const gewinn = this.landfallYield
-      if (gewinn > 0) {
-        const gameStore = useGameStore()
-        gameStore.chimes += gewinn
-        gameStore.chimesForNextUniverse += gewinn
-        gameStore.totalChimesEarned += gewinn
-        gameStore.chimesEarnedForLevel += gewinn
-        gameStore.calculateLevel()
-      }
+      const a = this.activeLandfall
+      if (!a) return
+      const landfall = useLandfallStore()
+      landfall.payout(a, cleared)
+      landfall.toll(a, cleared)
       this._closeLandfall(cleared)
     },
 
@@ -786,6 +779,9 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.landfallResults = []
       this.activeLandfall = null
       this._landfallLegDone = -1
+      // Der Cairn-Segen galt für DIESE Galaxie.  frischt die
+      // gecachten Raten selbst auf — ohne das bliebe der Faktor stehen.
+      useLandfallStore().clearAll()
       this.starJustFailed = false
       this.mapSeed = Math.floor(Math.random() * 0xffffffff)
       this.galaxyBossDefeated = false

@@ -283,6 +283,8 @@ export type MaterialSourceId =
   | 'click'
   /** A claimed Wayfinder mission. */
   | 'mission'
+  /** Ein Ort auf einer Reiseetappe (`utils/game/landfalls.ts`). */
+  | 'landfall'
 
 /** What a unit of material was spent on. Labels: MATERIAL_SINK_LABELS. */
 export type MaterialSinkId =

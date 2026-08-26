@@ -324,7 +324,9 @@
                 }"
               >
                 <TransitionGroup
-                  v-if="activeResourceStars.length > 0 || championCallout || voidThreat"
+                  v-if="
+                    activeResourceStars.length > 0 || championCallout || voidThreat || landfallCallout
+                  "
                   tag="div"
                   name="callout-pop"
                   class="callout-row"
@@ -356,6 +358,22 @@
                     :dweller="voidThreat.dweller"
                     :count="voidThreat.count"
                     :worn="voidThreat.worn"
+                  />
+
+                  <!-- Ein Ort auf der Reiseetappe. Der Etappen-Tick läuft
+                       pausiert weiter, ein Landfall kann also komplett hinter
+                       diesem Overlay aufgehen und ablaufen — ohne diese Karte
+                       sähe ihn niemand. Sie ist Deutung, keine Bedienung: die
+                       Griffe bleiben der HUD-Karte im freien Bild. -->
+                  <PauseLandfallCard
+                    v-if="landfallCallout"
+                    key="landfall"
+                    :name="landfallCallout.name"
+                    :icon="landfallCallout.icon"
+                    :blurb="landfallCallout.blurb"
+                    :remaining="landfallCallout.remaining"
+                    :value="landfallCallout.value"
+                    :unit="landfallCallout.unit"
                   />
 
                   <!-- Ein Flyby, eine Karte: Zifferblatt der Restzeit, echte
@@ -609,10 +627,12 @@ import KeyCap from '@/components/keybinds/KeyCap.vue'
 import PauseChampionCard from './PauseChampionCard.vue'
 import PauseStarCard from './PauseStarCard.vue'
 import PauseVoidCard from './PauseVoidCard.vue'
+import PauseLandfallCard from './PauseLandfallCard.vue'
 import SunLedger from './SunLedger.vue'
 import PauseMetaPillar from './PauseMetaPillar.vue'
 import PauseWayfinderBand from './PauseWayfinderBand.vue'
 import { gameNow } from '@/utils/game/gameClock'
+import { getLandfall } from '@/config/world/landfalls'
 
 // Die Pause hat zwei Quellen — Fenster ohne Fokus und das Kürzel des Spielers.
 // Beide laufen in useGamePause zusammen; dieses Overlay kennt nur noch das
@@ -1017,6 +1037,34 @@ function buildVoidThreat(): PauseVoidThreat | null {
 
 /** Alles, was man der Karte ansieht. Der Zeitbogen steht bewusst NICHT darin —
  *  er läuft in der Karte als eigene Animation und hängt nur am Endzeitpunkt. */
+/**
+ * Der Ort, der gerade offen steht — oder `null`.
+ *
+ * Dieselbe Ablesung wie in der HUD-Karte: wo ein Ziel steht, ist der Stand gegen
+ * das Ziel die Auskunft, sonst der Lohn. Doppelt gerechnet wird sie trotzdem
+ * nicht — beide lesen `landfallYield` aus dem Store.
+ */
+const landfallCallout = computed(() => {
+  const a = galaxyStore.activeLandfall
+  if (!a) return null
+  const def = getLandfall(a.kind)
+  if (!def) return null
+  const wert =
+    def.gesture === 'threshold' && def.tapCap
+      ? {
+          value: `${a.taps} / ${def.tapCap}`,
+          unit: def.burst ? 'to seal' : def.materials ? 'to secure' : 'to finish',
+        }
+      : { value: formatNumber(galaxyStore.landfallYield), unit: 'chimes' }
+  return {
+    name: def.name,
+    icon: def.icon,
+    blurb: def.blurb,
+    remaining: 1 - galaxyStore.landfallProgress,
+    ...wert,
+  }
+})
+
 function voidThreatKey(t: PauseVoidThreat | null): string {
   return t ? `${t.name}:${t.secs}:${t.endsAt}:${t.count}:${t.worn}` : ''
 }

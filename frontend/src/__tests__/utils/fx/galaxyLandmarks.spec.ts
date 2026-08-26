@@ -5,9 +5,45 @@ import {
   landmarkVariantFor,
   landmarkSpriteKey,
   roundLandmarkRadius,
+  paintLandfallMark,
   LANDFALL_KINDS,
   isLandfallLandmark,
 } from '@/utils/fx/galaxyLandmarks'
+import { LANDFALL_LANDMARK_KIND } from '@/config/world/landfalls'
+
+/**
+ * Ein Canvas-Kontext, der nur mitschreibt.
+ *
+ * jsdom liefert für `getContext('2d')` `null` — ein rasternder Vergleich
+ * prüfte dort nichts und sähe trotzdem grün aus. Aufgezeichnet werden Pfad- und
+ * Füllbefehle samt ihrer gerundeten Koordinaten; das trennt zwei Marken
+ * zuverlässig, ohne einen Pixel zu brauchen.
+ */
+function recordingCtx(): { ctx: CanvasRenderingContext2D; ops: string[] } {
+  const ops: string[] = []
+  const num = (v: number) => Math.round(v * 100) / 100
+  const rec =
+    (name: string) =>
+    (...args: unknown[]) => {
+      ops.push(`${name}(${args.map((a) => (typeof a === 'number' ? num(a) : String(a))).join(',')})`)
+    }
+  const ctx = {
+    beginPath: rec('beginPath'),
+    closePath: rec('closePath'),
+    moveTo: rec('moveTo'),
+    lineTo: rec('lineTo'),
+    arc: rec('arc'),
+    fill: rec('fill'),
+    stroke: rec('stroke'),
+    save: rec('save'),
+    restore: rec('restore'),
+    lineWidth: 1,
+    lineCap: 'butt',
+    fillStyle: '',
+    strokeStyle: '',
+  } as unknown as CanvasRenderingContext2D
+  return { ctx, ops }
+}
 import {
   LANDMARK_FREED_CORE,
   LANDMARK_FREED_RING,
@@ -251,5 +287,39 @@ describe('Die Marke des Landfalls — eine Familie, eine Silhouette', () => {
     for (const kind of ['star-freed', 'star-lost', 'core-gate', 'departure-portal'] as const) {
       expect(isLandfallLandmark(kind)).toBe(false)
     }
+  })
+
+  it('jeder Ort im Katalog hat eine Marke, und jede Marke gehört zur Familie', () => {
+    // `LANDFALL_LANDMARK_KIND` ist ein `Record` und damit der EINE Compile-Zwang
+    // der Kette. Diese Zusicherung schliesst den Kreis von der anderen Seite:
+    // eine Marke, die niemand zieht, wäre ebenso ein toter Datensatz.
+    const gezeichnet = new Set(Object.values(LANDFALL_LANDMARK_KIND))
+    for (const kind of LANDFALL_KINDS) expect(gezeichnet.has(kind)).toBe(true)
+    expect(gezeichnet.size).toBe(LANDFALL_KINDS.length)
+  })
+
+  /**
+   * Der Wächter gegen die STILLE RAUTE.
+   *
+   * `paintLandfall` schaltet über den Kind-String, und ein Ort ohne Zweig fällt
+   * einfach durch — kein Compile-Fehler, keine Ausnahme, nur eine leere Raute
+   * auf der Karte, die von jeder anderen leeren Raute ununterscheidbar ist.
+   * Hier wird jede Binnenmarke gegen jede andere gerastert und verglichen.
+   */
+  it('jede Binnenmarke zeichnet etwas, und jede etwas anderes', () => {
+    const R = 14
+    const spuren = new Map<string, string>()
+
+    for (const kind of LANDFALL_KINDS) {
+      const { ctx, ops } = recordingCtx()
+      paintLandfallMark(ctx, R, R, R, kind)
+      // Ein Ort ohne Zweig fällt durch die Verzweigung und malt NICHTS — genau
+      // das ist die stille Raute, gegen die dieser Test steht.
+      expect(ops.length, `${kind} zeichnet gar nichts`).toBeGreaterThan(0)
+      spuren.set(kind, ops.join('|'))
+    }
+
+    const eindeutig = new Set(spuren.values())
+    expect(eindeutig.size, `gleiche Marke bei: ${[...spuren.keys()].join(', ')}`).toBe(spuren.size)
   })
 })

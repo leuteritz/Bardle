@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useVoidStore } from '@/stores/world/voidStore'
+import { useLandfallStore } from '@/stores/world/landfallStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import type {
   ChampionProgress,
@@ -383,7 +384,9 @@ export const useChampionLevelStore = defineStore('championLevel', {
           // `fullOrbitDps()` in `otherDps` und höbe die Boss-HP gleich mit.
           useStarForgeStore().championXpMult *
           // Forgotten Path (void tide): solange der Riss steht, lernt niemand
-          useVoidStore().xpMult,
+          useVoidStore().xpMult *
+          // Long Sight (Wayside Cairn) — gilt bis zum Ende dieser Galaxie
+          useLandfallStore().xpMult,
       )
       p.xp += gain
       p.totalXp += gain

@@ -101,6 +101,117 @@ export const LANDFALL_REEF_MAX_CLICKS = 8
 export const LANDFALL_REEF_CPS_FLOOR_CLICKS = 0.25
 
 /**
+ * The Gloaming — der EINE Ort ohne Geste.
+ *
+ * Er zahlt beim Vorbeifliegen und gilt immer als geschafft. Das ist kein
+ * Notnagel: Abwechslung im TEMPO wiegt so schwer wie Abwechslung im Lohn, und
+ * sechs Orte, die alle eine Geste verlangen, wären sechs Aufgaben statt einer
+ * Reise. Sein Sockel liegt deshalb unter dem des Riffs — er kostet ja nichts.
+ */
+export const LANDFALL_GLOAMING_BASE_SECONDS = 28
+
+/**
+ * Sunken Ossuary — EIN Griff, und er ist auf.
+ *
+ * Kein Sockel: ein Sarkophag, den niemand geöffnet hat, gibt nichts her. Das ist
+ * die Gegenprobe zum Riff, dessen Sockel auch dem zufällt, der wegsieht — die
+ * Orte dürfen sich darin unterscheiden, sonst ist die Geste Zierrat.
+ *
+ * Dafür wiegt der eine Griff schwer: 110 CpS-Sekunden sind mehr als das Riff mit
+ * allen acht (45 + 8 × 12 = 141) nicht ganz erreicht, bei einem Achtel Aufwand —
+ * und er ist erst ab Galaxie 8 zu finden.
+ */
+export const LANDFALL_OSSUARY_TAP_SECONDS = 110
+export const LANDFALL_OSSUARY_MATERIALS = 2
+
+/**
+ * Adrift Convoy — Schwelle statt Verlauf.
+ *
+ * Sechs Griffe im Fenster, sonst nichts. Das ist der einzige Ort, der bei
+ * Misserfolg LEER ausgeht, und er ist damit die Gegenprobe zum Riff: dort legt
+ * jeder Griff zu, hier zählt nur, ob man fertig wird.
+ *
+ * Er zahlt MATERIAL und keine Chimes — bewusst nicht Meeps, obwohl ein
+ * geretteter Pilgerzug danach klänge. `lostMeep` ist im Drifter-Katalog
+ * ausdrücklich als „der einzige Weg an einen Meep ausserhalb des Prestige"
+ * begründet, und `meepEconomy.spec.ts` klammert den Meep-Baum auf 20 bis 32
+ * Aufbrüche bei rund 90 Meeps je Lauf. Eine zweite Quelle machte die Prämisse
+ * dieser Rechnung still ungültig.
+ *
+ * Sechs Griffe gegen die acht des Riffs: erreichbar, aber nur mit Absicht.
+ */
+export const LANDFALL_CONVOY_TAP_GOAL = 6
+export const LANDFALL_CONVOY_MATERIALS = 3
+
+/**
+ * Wie weit eine Ortsmarke dem Kern ausweicht, in Anteilen der Karte.
+ *
+ * Der Kern gehört dem Tor — dieselbe Regel, nach der `generateGalaxyDots` seine
+ * Sterne auf `t` 0,25–0,87 hält und der Bossstern allein in der Mitte steht.
+ *
+ * Ohne sie landen Orte der LETZTEN Etappe unter dem Tor: die Route läuft dort
+ * auf den Kern zu, und `LANDFALL_T_MAX` (0,68) reicht nicht, wenn die letzte
+ * Etappe kurz ist. Gemessen verschwanden zwei von sechs Marken vollständig
+ * darunter — samt ihrer Fangfläche, also auch ohne Tooltip.
+ *
+ * 0,10 deckt den gemalten Radius des Tores (`CORE_GATE_MOUTH_R` 13 ×
+ * `CORE_GATE_CROWN_SPAN` 1,5 gegen `GALAXY_PLATE_REF_W` 320 ≈ 0,061) samt
+ * seinem Schein ab.
+ */
+export const LANDFALL_CORE_CLEARANCE = 0.1
+
+/** Radius der gemalten Ortsmarke, in Referenzeinheiten gegen
+ *  `GALAXY_PLATE_REF_W`. Die Zeichenschicht und die Sperrzone müssen dieselbe
+ *  Zahl benutzen, sonst rutscht die Marke halb unter das Tor. */
+export const LANDFALL_MARK_R = 6
+
+/** Luft zwischen Ortsmarke und Torkante, in Pixeln der Karte. */
+export const LANDFALL_CORE_GAP_PX = 4
+
+/**
+ * The Rupture — der einzige Ort mit echten Kosten.
+ *
+ * Versiegelt zahlt sie wie ein erlegter Riss. Versäumt lässt sie
+ * `LANDFALL_RUPTURE_BURST` Wesen in den `voidStore` — SEINE eigenen Wesen, kein
+ * neuer Gegnertyp, kein eigener Schaden und keine zweite Ablaufuhr. Der Void
+ * bleibt das einzige System, das gegen den Spieler drängt; die Rupture ist nur
+ * seine Vokabel auf der Reiseetappe.
+ *
+ * Vier Griffe gegen die sechs des Konvois: sie will Eile, nicht Ausdauer, und
+ * das Fenster ist dasselbe.
+ *
+ * Der Ausbruch schickt ausdrücklich `lesser`. `spawnMonster()` ohne ID zöge
+ * `SEVERITIES[0]` — und die Liste ist absteigend sortiert, das wäre ABYSSAL.
+ * Drei davon auf einmal wären kein Ort, sondern ein Hinterhalt.
+ */
+export const LANDFALL_RUPTURE_TAP_GOAL = 4
+export const LANDFALL_RUPTURE_BURST = 3
+export const LANDFALL_RUPTURE_SEAL_SECONDS = 70
+export const LANDFALL_RUPTURE_BURST_DEF = 'sunlessBreach'
+
+/**
+ * Wayside Cairn — wie viele Angebote am Stein stehen, und was einer wiegt.
+ *
+ * DREI aus vier: bei vieren wäre es keine Wahl, sondern eine Liste, und bei
+ * zweien fiele die Entscheidung zu oft von selbst.
+ *
+ * EIN Betrag für alle vier Achsen. Die Wahl geht darum, welche Achse gerade
+ * zählt — nicht darum, welche Zahl grösser ist; sonst wäre es keine Abwägung,
+ * sondern Rechnen.
+ *
+ * 18 % über eine ganze Galaxie liegt bewusst zwischen den beiden vorhandenen
+ * Reichweiten: ein Drifter-Buff gibt ×2 bis ×3 für 20 bis 90 Sekunden, eine
+ * Vorsehung ±10 bis 30 % für einen ganzen Lauf. Eine späte Galaxie dauert im
+ * Modell 57 Minuten.
+ */
+export const LANDFALL_CAIRN_OFFERS = 3
+export const LANDFALL_CAIRN_BOON_MULT = 1.18
+
+/** Eigener rng-Strom für die drei Angebote — er darf die Ziehreihenfolge der
+ *  Orte nicht berühren, sonst verschöbe sich das ganze Archiv. */
+export const LANDFALL_CAIRN_SEED_SALT = 6113
+
+/**
  * Der Ton der Landfalls — Logzeile, Kartenrand, Marke auf dem Galaxiebild.
  *
  * Blasses Seegrün, und bewusst weit weg von den vier Tönen, die im Log ohnehin

@@ -418,7 +418,30 @@ export interface JungleBuffDef {
 
 /** Der Katalog WÄCHST; jeder neue Ort erweitert diese Union und
  *  `config/world/landfalls.ts` gemeinsam, damit nichts halb existiert. */
-export type LandfallKindId = 'chime_reef'
+export type LandfallKindId =
+  | 'wayside_cairn'
+  | 'chime_reef'
+  | 'the_gloaming'
+  | 'sunken_ossuary'
+  | 'adrift_convoy'
+  | 'the_rupture'
+
+/**
+ * Wie ein Ort bedient wird. Die GESTE ist das, was die Orte voneinander trennt —
+ * mehr als der Lohn: Ausdauer, eine Entscheidung, ein Endspurt, Nachdenken,
+ * Eile, oder gar nichts.
+ */
+export type LandfallGesture =
+  /** Viele Griffe, jeder legt zu (Chime Reef). */
+  | 'gradient'
+  /** Griffe bis zu `tapCap`; darunter zahlt er NICHTS (Adrift Convoy). */
+  | 'threshold'
+  /** Ein einziger Griff genügt und schliesst ihn sofort (Sunken Ossuary). */
+  | 'single'
+  /** Eine Wahl unter dreien (Wayside Cairn). */
+  | 'choice'
+  /** Keine Geste — er zahlt beim Vorbeifliegen (The Gloaming). */
+  | 'none'
 
 export interface LandfallDef {
   id: LandfallKindId
@@ -429,6 +452,50 @@ export interface LandfallDef {
   unlockGalaxy: number
   /** Gewicht innerhalb der bereits freigeschalteten Menge. */
   weight: number
+  gesture: LandfallGesture
+  /**
+   * Wie viele Griffe der Ort höchstens zählt. Bei `threshold` ist es zugleich
+   * das ZIEL: darunter gilt er als versäumt.
+   *
+   * Am DEF und nicht auf Modulebene: die vier `LANDFALL_REEF_*` standen dort,
+   * und mit sechs Orten wären daraus vierundzwanzig lose Konstanten geworden.
+   */
+  tapCap?: number
+  /** Sockel in Sekunden aktueller CpS — der Anteil, der auch ohne Griff fällt. */
+  baseSeconds?: number
+  /** Was ein einzelner Griff obendrauf legt, ebenfalls in CpS-Sekunden. */
+  tapSeconds?: number
+  /** Wie viele Materialwürfe er auslöst, wenn er gelingt. */
+  materials?: number
+  /**
+   * NUR The Rupture: so viele Void-Wesen entkommen, wenn sie nicht versiegelt
+   * wird. Die Geste bleibt `threshold` — der Unterschied zum Konvoi liegt in
+   * der FOLGE des Versäumens, nicht im Bedienen.
+   */
+  burst?: number
+}
+
+/* ── Der Segen des Wayside Cairn ──────────────────────────────────────────── */
+
+export type LandfallBoonId = 'keptChimes' | 'sureFooting' | 'watchfulSky' | 'longSight'
+
+/**
+ * Die Achse, an der ein Segen zieht.
+ *
+ * Bewusst ein Ausschnitt aus `TimedBuffEffects` und keine eigene Liste:
+ * `materialDropMult` fehlt, weil es sättigt (`tryDropMaterial` würfelt gegen
+ * `Math.random()`), und ein Segen, der ab einem Ausbaustand nichts mehr tut,
+ * wäre eine Falle.
+ */
+export type LandfallBoonAxis = 'cpsMult' | 'cpcMult' | 'combatDpsMult' | 'xpMult'
+
+export interface LandfallBoonDef {
+  id: LandfallBoonId
+  name: string
+  /** Eine Zeile, die der Spieler am Stein liest. */
+  line: string
+  icon: string
+  axis: LandfallBoonAxis
 }
 
 /** Was ein Ort auf der Karte hinterlässt. Position und Art sind ABGELEITET,
@@ -455,6 +522,10 @@ export interface LandfallPlan {
 export interface ActiveLandfall extends LandfallPlan {
   /** Spielzeit-Stempel, zu dem der Ort fällig wurde. */
   openedAt: number
-  /** Wie oft der Spieler ihn schon angefasst hat. */
+  /** Wie oft der Spieler ihn schon angefasst hat. Generisch: das Riff summiert
+   *  sie, Konvoi und Rupture messen sie gegen ein Ziel, das Ossuar braucht
+   *  genau einen, Cairn und Gloaming zählen keinen. */
   taps: number
+  /** NUR `gesture: 'choice'` — der genommene Segen. `null` heisst „noch nicht". */
+  choice?: string | null
 }

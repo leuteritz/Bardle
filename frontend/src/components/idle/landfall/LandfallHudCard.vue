@@ -3,11 +3,13 @@ import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useLandfallStore } from '@/stores/world/landfallStore'
+import { getLandfallBoon } from '@/config/world/landfallBoons'
 import { useUiStore } from '@/stores/core/uiStore'
 import { getLandfall } from '@/config/world/landfalls'
 import { logLandfallPassed } from '@/config/ui/eventLog'
 import { formatNumber } from '@/config/ui/numberFormat'
-import { LANDFALL_REEF_MAX_CLICKS } from '@/config/constants'
+import { landfallAcceptsTap } from '@/utils/game/landfalls'
 
 /**
  * Der Ort, an dem das Schiff GERADE vorbeikommt — oben links, unter dem
@@ -23,19 +25,54 @@ import { LANDFALL_REEF_MAX_CLICKS } from '@/config/constants'
  * neben dem Spiel-Tick wäre ein zweiter Grund, pro Sekunde zu rendern.
  */
 const galaxyStore = useGalaxyStore()
+const landfallStore = useLandfallStore()
 const uiStore = useUiStore()
 const { activeLandfall } = storeToRefs(galaxyStore)
 
 const visible = computed(() => activeLandfall.value !== null && uiStore.bardActiveTab === null)
 
-const def = computed(() => (activeLandfall.value ? getLandfall(activeLandfall.value.kind) : undefined))
+const def = computed(() =>
+  activeLandfall.value ? getLandfall(activeLandfall.value.kind) : undefined,
+)
 
-/** Was bis jetzt zusammengekommen ist — der Sockel plus jeder Griff. */
-const yieldLabel = computed(() => formatNumber(galaxyStore.landfallYield))
+/**
+ * Die grosse Zahl der Karte und ihre Einheit.
+ *
+ * Sie hängt an der GESTE, nicht am Ort: wo ein Ziel steht, ist der Stand gegen
+ * das Ziel die Auskunft, die zählt („3 / 6") — der Lohn wandert in die Einheit.
+ * Wo keins steht, ist der Lohn selbst die Zahl.
+ *
+ * Eine feste Zeile „<n> chimes" ginge nicht mehr: der Konvoi zahlt gar keine
+ * Chimes und stünde dauerhaft auf 0.
+ */
+const readout = computed<{ value: string; unit: string }>(() => {
+  const d = def.value
+  const a = activeLandfall.value
+  if (!d || !a) return { value: '', unit: '' }
 
-/** Wie viele Griffe noch zählen. Der Deckel steht dran, damit niemand hämmert. */
-const tapsLeft = computed(() =>
-  activeLandfall.value ? Math.max(0, LANDFALL_REEF_MAX_CLICKS - activeLandfall.value.taps) : 0,
+  if (d.gesture === 'threshold' && d.tapCap) {
+    // Was am Ende der Leiste steht, ist der Lohn — oder, wo es keinen gibt, das
+    // Abwenden der Kosten. „secured" für einen Riss wäre das falsche Wort.
+    const ziel = d.burst ? '→ seal it' : d.materials ? `→ ${d.materials} materials` : '→ secured'
+    return { value: `${a.taps} / ${d.tapCap}`, unit: ziel }
+  }
+  const chimes = galaxyStore.landfallYield
+  if (chimes > 0) return { value: formatNumber(chimes), unit: 'chimes' }
+  if (d.materials) return { value: String(d.materials), unit: 'materials' }
+  return { value: '—', unit: '' }
+})
+
+/** Wie viele Griffe noch zählen. Der Deckel steht am Def, damit niemand hämmert
+ *  — und Gesten ohne Griffe zeigen die Zahl gar nicht erst. */
+const tapsLeft = computed(() => {
+  const a = activeLandfall.value
+  if (!a || !def.value?.tapCap) return 0
+  return Math.max(0, def.value.tapCap - a.taps)
+})
+
+/** Nimmt dieser Ort überhaupt Griffe? Nur dann ist die Karte ein Knopf. */
+const takesTaps = computed(() =>
+  activeLandfall.value ? landfallAcceptsTap(def.value, activeLandfall.value.taps) : false,
 )
 
 /** Das Fenster LÄUFT AB — der Balken leert sich, wie bei der Stern-Karte. */
@@ -45,10 +82,32 @@ const fullTitle = computed(() =>
   def.value ? `${def.value.name} — ${def.value.blurb}` : '',
 )
 
+/**
+ * Die drei Angebote eines Cairn. Sie stehen IN der Karte und nicht in einem
+ * Overlay: Augment, Rollenwahl und Omen sind alle Vollbild-Overlays, und zwei
+ * davon, die gleich aussehen aber Verschiedenes bedeuten — das eine befristet
+ * mit Uhr, das andere galaxieweit ohne — wären genau die Verwechslung, gegen
+ * die die Systemgrenzen geschrieben sind. Ausserdem gilt für Landfalls: die
+ * Karte IST die Interaktion.
+ */
+const offers = computed(() =>
+  landfallStore
+    .offerFor(activeLandfall.value)
+    .map((id) => getLandfallBoon(id))
+    .filter((b): b is NonNullable<typeof b> => b != null),
+)
+
+function takeBoon(id: string) {
+  landfallStore.takeBoon(id as Parameters<typeof landfallStore.takeBoon>[0])
+}
+
 /* Ein Griff ans Riff ist bewusst KEIN Bard-Klick: über `registerClick` liefe er
    in die Passive Resonance und damit in die Abklingzeiten der Fähigkeiten. Der
    Ort zahlt Chimes, sonst nichts. */
 function harvest() {
+  // Am Cairn fängt die Karte den Klick nicht ab — dort trägt jede Zeile ihren
+  // eigenen Knopf, und ein Griff auf die Fläche daneben soll nichts tun.
+  if (offers.value.length) return
   galaxyStore.tapLandfall()
 }
 
@@ -62,7 +121,13 @@ watch(
     const letzter = galaxyStore.landfallResults[galaxyStore.landfallResults.length - 1]
     if (!letzter) return
     const eintrag = getLandfall(letzter.kind)
-    if (eintrag) logLandfallPassed(eintrag.name, `${yieldLabel.value} chimes`, letzter.cleared)
+    if (eintrag) {
+      logLandfallPassed(
+        eintrag.name,
+        readout.value.unit ? `${readout.value.value} ${readout.value.unit}` : readout.value.value,
+        letzter.cleared,
+      )
+    }
   },
 )
 
@@ -107,6 +172,7 @@ onUnmounted(() => {
       ref="root"
       type="button"
       class="lhc-root"
+      :class="{ 'lhc-root--idle': !takesTaps }"
       :title="fullTitle"
       @click="harvest"
     >
@@ -114,15 +180,36 @@ onUnmounted(() => {
       <div class="lhc-head">
         <Icon :icon="def.icon" class="lhc-glyph" width="17" height="17" />
         <span class="lhc-name">{{ def.name }}</span>
-        <span v-if="tapsLeft > 0" class="lhc-taps">{{ tapsLeft }}</span>
-        <span v-else class="lhc-taps lhc-taps--spent">✓</span>
+        <!-- Die Restgriffe nur, wo es welche gibt: eine Geste ohne Griffe (das
+             Gloaming zieht bloss vorbei) zeigte sonst dauerhaft ein Häkchen für
+             etwas, das nie zu tun war. -->
+        <span v-if="def.tapCap && tapsLeft > 0" class="lhc-taps">{{ tapsLeft }}</span>
+        <span v-else-if="def.tapCap" class="lhc-taps lhc-taps--spent">✓</span>
       </div>
 
       <!-- Zeile 2: was bis jetzt zusammengekommen ist. Der Sockel fällt auch dem
            zu, der nicht klickt — deshalb steht hier nie eine 0. -->
-      <div class="lhc-row">
-        <span class="lhc-yield">{{ yieldLabel }}</span>
-        <span class="lhc-unit">chimes</span>
+      <div v-if="!offers.length" class="lhc-row">
+        <span class="lhc-yield">{{ readout.value }}</span>
+        <span class="lhc-unit">{{ readout.unit }}</span>
+      </div>
+
+      <!-- Der Cairn: drei Zeilen, eine wird genommen. Die Karte wächst dafür
+           nach unten; die Drifter-Karte darunter weicht über
+           `--landfall-card-bottom` ohnehin schon aus. -->
+      <div v-if="offers.length" class="lhc-offers">
+        <button
+          v-for="b in offers"
+          :key="b.id"
+          type="button"
+          class="lhc-offer"
+          :title="b.line"
+          @click.stop="takeBoon(b.id)"
+        >
+          <Icon :icon="b.icon" class="lhc-offer__ico" width="14" height="14" />
+          <span class="lhc-offer__name">{{ b.name }}</span>
+          <span class="lhc-offer__line">{{ b.line }}</span>
+        </button>
       </div>
 
       <!-- Der Zeitbogen LEERT sich: hier verstreicht eine Gelegenheit. Nur
@@ -167,6 +254,12 @@ onUnmounted(() => {
   overflow: hidden;
   text-align: left;
   cursor: pointer;
+}
+
+/* Ein Ort, der keine Griffe nimmt, ist kein Knopf — der Zeiger darf das nicht
+   behaupten. Die Karte bleibt trotzdem eine, weil sie dieselbe Auskunft trägt. */
+.lhc-root--idle {
+  cursor: default;
 }
 
 .lhc-head {
@@ -231,6 +324,60 @@ onUnmounted(() => {
   color: #9a8f78;
 }
 
+/* ── Die drei Angebote des Cairn ── */
+.lhc-offers {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 6px;
+}
+
+/* Zwei Zeilen je Angebot: Name oben mit Glyph, Wirkung darunter. In 241 px
+   (`--hud-col-w` auf Full HD) trägt keine einzeilige Fassung beides. */
+.lhc-offer {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+  align-items: center;
+  padding: 4px 6px;
+  text-align: left;
+  background: #1c1c18;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.lhc-offer:hover {
+  background: #241f16;
+  border-color: #5c3310;
+}
+
+.lhc-offer__ico {
+  grid-row: 1 / span 2;
+  color: #8fbfae;
+}
+
+.lhc-offer__name {
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #f2ead2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lhc-offer__line {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #9a8f78;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Zeitbogen ── */
 .lhc-bar {
   display: block;
@@ -286,6 +433,14 @@ onUnmounted(() => {
 
   .lhc-bar {
     height: 4px;
+  }
+
+  .lhc-offer__name {
+    font-size: 14px;
+  }
+
+  .lhc-offer__line {
+    font-size: 12px;
   }
 }
 </style>

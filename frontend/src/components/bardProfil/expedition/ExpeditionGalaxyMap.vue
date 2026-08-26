@@ -13,7 +13,14 @@
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
-import { paintGalaxy, galaxyFitBox, type FitBox } from '@/utils/fx/galaxyPlate'
+import {
+  paintGalaxy,
+  galaxyFitBox,
+  coreGateClearance,
+  GALAXY_PLATE_REF_W,
+  type FitBox,
+} from '@/utils/fx/galaxyPlate'
+import { landfallMarks } from '@/utils/game/landfalls'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { voyageGateSizeFor, voyageMarkerSizeFor } from '@/utils/game/voyageSites'
 import {
@@ -23,6 +30,7 @@ import {
 import { toRoman } from '@/utils/ui/format'
 import {
   VOYAGE_MAP_HISTORY_SCALE,
+  LANDFALL_MARK_R,
   VOYAGE_MAP_INSET_PX,
   VOYAGE_MAP_MAX_BACKING_PX,
   VOYAGE_MAP_ROUTE_ALPHA,
@@ -39,6 +47,7 @@ import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageHomecoming, VoyagePlacedSite } from '@/types'
 import ExpeditionSiteNode from './ExpeditionSiteNode.vue'
 import ExpeditionGateNode from './ExpeditionGateNode.vue'
+import ExpeditionLandfallNode from './ExpeditionLandfallNode.vue'
 import ExpeditionMapLegend from './ExpeditionMapLegend.vue'
 import ExpeditionGalaxyStatsBand from './ExpeditionGalaxyStatsBand.vue'
 import ExpeditionCrewMarkerLayer from './ExpeditionCrewMarkerLayer.vue'
@@ -109,6 +118,48 @@ function pct(x: number, y: number): { left: number; top: number } {
  * ihre halbe Höhe ist damit immer kleiner als dieser Rand.
  */
 const markerSize = computed(() => voyageMarkerSizeFor(props.sites, box.value))
+
+/**
+ * Die Fangflächen über den Ortsmarken.
+ *
+ * Sie malen nichts — die Raute kommt aus dem Canvas. Sie tragen nur den
+ * Tooltip, und den brauchen sie, seit die Legende alle sechs Orte als EINE
+ * Zeile führt: sechs Silhouetten wären bei 4,4 px nicht zu trennen, also sagt
+ * die Karte ohne sie nicht mehr, WELCHER Ort hier lag.
+ *
+ * Höchstens `LANDFALL_MAX` je Galaxie, also acht durchsichtige Quadrate — das
+ * ist billiger als eine Trefferprüfung auf dem Canvas und hält die Auskunft im
+ * DOM, wo Fokus und Vorlesen sie finden.
+ */
+const landfallNodes = computed(() => {
+  const results = props.record.landfallResults ?? []
+  if (!results.length) return []
+  const attempts = props.record.attemptResults.length
+  const { spawn, dots } = generateGalaxyDots(props.record.mapSeed, attempts + 1)
+  // DIESELBE Sperrzone wie beim Malen — sonst stünde die Fangfläche woanders
+  // als die Marke.
+  return landfallMarks(
+    props.record.mapSeed,
+    props.record.galaxy,
+    spawn,
+    dots,
+    attempts,
+    results,
+    coreGateClearance(box.value, historyHk.value),
+  )
+})
+
+/** Der Massstab der HISTORIE — dieselbe Zahl, mit der `paintGalaxy` die Marken
+ *  malt. Sie steht hier einmal, damit Fangfläche und Sperrzone nicht
+ *  auseinanderlaufen. */
+const historyHk = computed(
+  () => (box.value.w / GALAXY_PLATE_REF_W) * VOYAGE_MAP_HISTORY_SCALE,
+)
+
+/** Kantenlänge der Fangfläche: sie folgt der gemalten Marke, wie beim Tor. */
+const landfallHit = computed(() =>
+  Math.max(16, Math.round(LANDFALL_MARK_R * historyHk.value * 2.4)),
+)
 
 /**
  * Das Tor misst sich an derselben Platte und wird am nächsten Hafen gedeckelt —
@@ -302,6 +353,18 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
     />
 
     <div class="egm-nodes" :style="nodeVars">
+      <!-- Zuerst die Orte: sie sind die kleinsten Marken, und ein Hafen darüber
+           soll den Zeiger bekommen, nicht umgekehrt. -->
+      <ExpeditionLandfallNode
+        v-for="(m, i) in landfallNodes"
+        :key="`lf-${i}`"
+        :kind="m.kind"
+        :cleared="m.cleared"
+        :left="pct(m.x, m.y).left"
+        :top="pct(m.x, m.y).top"
+        :hit="landfallHit"
+      />
+
       <!-- Vor den Häfen: das Tor liegt bei gleichem z-index sonst darüber, und
            ein Vertrag nahe am Kern verschwände unter dem Reifen. -->
       <ExpeditionGateNode
@@ -368,6 +431,7 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
   z-index: 1;
   pointer-events: none;
 }
+.egm-nodes :deep(.lfn),
 .egm-nodes :deep(.sn),
 .egm-nodes :deep(.gt) {
   pointer-events: auto;
