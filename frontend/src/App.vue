@@ -293,7 +293,10 @@ watch(
   --header-total-height: 50px;
 
   /* Fluid scaling — no breakpoint jumps */
-  --header-max-width: min(1400px, calc(200px + 62vw));
+  /* Die Breite ist ein Rest: 808px gehen an die beiden HUD-Gassen (Kartenspalte
+     links, Eventlog rechts), der Header bekommt, was übrig bleibt. Boden 978,
+     darunter clippt die rechte Flex-Zeile. Siehe headerWidthBudget.spec.ts. */
+  --header-max-width: clamp(1048px, calc(100vw - 808px), 1400px);
   --header-height: clamp(62px, calc(30px + 2.9vw), 115px);
   --bard-avatar-radius: clamp(14px, 1.4vw, 40px);
   --avatar-circle-size: clamp(48px, calc(-5px + 4.4vw), 100px);

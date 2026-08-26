@@ -24,21 +24,21 @@ import {
 const W = 1920
 const H = 1000
 
-/** Full HD, gemessene Werte: Header von x=265 bis 1655, Karte 12…253 × 8…209. */
+/** Full HD, gerechnet: Header von x=404 bis 1516, Karte 12…392 × 8…209. */
 const METRICS: HudFieldMetrics = {
   viewportW: W,
   viewportH: H,
   hudScale: 0.694444,
   headerBottom: 86,
-  headerLeft: 265,
-  headerRight: W - 265,
+  headerLeft: 404,
+  headerRight: W - 404,
   headerCenterBottom: 133,
-  centerArc: { cx: 695, rx: 134, ry: 106, topOffset: 84 },
+  centerArc: { cx: 556, rx: 110, ry: 106, topOffset: 84 },
   keycapBar: 30,
   abilityBarTop: 0,
   abilityBarHalfW: 0,
   wayfinderBottom: 209,
-  wayfinderRight: 253,
+  wayfinderRight: 392,
   eventLogBottom: 0,
   eventLogLeft: 0,
 }
@@ -48,13 +48,13 @@ const WITHOUT: HudFieldMetrics = { ...METRICS, wayfinderBottom: 0, wayfinderRigh
 
 describe('hudLeftColumnBottomAt', () => {
   it('covers every column the card spans', () => {
-    for (const x of [0, 12, 130, 252, 253]) {
+    for (const x of [0, 12, 200, 391, 392]) {
       expect(hudLeftColumnBottomAt(x, METRICS), `x=${x}`).toBe(METRICS.wayfinderBottom)
     }
   })
 
   it('stops at the card edge', () => {
-    expect(hudLeftColumnBottomAt(254, METRICS)).toBe(0)
+    expect(hudLeftColumnBottomAt(393, METRICS)).toBe(0)
     expect(hudLeftColumnBottomAt(W / 2, METRICS)).toBe(0)
   })
 
@@ -74,18 +74,18 @@ describe('hudFreeBandAt with the mission card', () => {
   })
 
   it('leaves the field beyond the card untouched', () => {
-    for (const x of [400, W / 2, W - 100]) {
+    for (const x of [450, W / 2, W - 100]) {
       expect(hudFreeBandAt(x, METRICS).top, `x=${x}`).toBe(hudFreeBandAt(x, WITHOUT).top)
     }
   })
 
   it('keeps the deeper of card and header where the two overlap', () => {
-    // Bei x=265 beginnt der Header (Kante 86) — die Karte reicht dort mit 209
-    // tiefer und muss gewinnen. Sie endet allerdings schon bei 253, also greift
+    // Bei x=404 beginnt der Header (Kante 86) — die Karte reicht dort mit 209
+    // tiefer und muss gewinnen. Sie endet allerdings schon bei 392, also greift
     // an dieser Spalte nur der Header.
-    expect(hudFreeBandAt(265, METRICS).top).toBe(86)
-    const wide: HudFieldMetrics = { ...METRICS, wayfinderRight: 300 }
-    expect(hudFreeBandAt(265, wide).top).toBe(209)
+    expect(hudFreeBandAt(404, METRICS).top).toBe(86)
+    const wide: HudFieldMetrics = { ...METRICS, wayfinderRight: 440 }
+    expect(hudFreeBandAt(404, wide).top).toBe(209)
   })
 
   it('makes a body dodge before its centre reaches the card', () => {
@@ -96,7 +96,7 @@ describe('hudFreeBandAt with the mission card', () => {
   })
 
   it('never reports a band that is inverted', () => {
-    for (const x of [0, 120, 253, 600, W - 1]) {
+    for (const x of [0, 120, 392, 600, W - 1]) {
       const band = hudFreeBandAt(x, METRICS)
       expect(band.bottom, `x=${x}`).toBeGreaterThan(band.top)
     }

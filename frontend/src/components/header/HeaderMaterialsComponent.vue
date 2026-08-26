@@ -70,7 +70,7 @@ const gridStyle = { gridTemplateColumns: `repeat(${HEADER_MATERIALS_GRID_COLUMNS
   display: grid;
   /* Zeilenabstand aus der Header-Höhe: auf 2K/4K wird der Header höher, ohne
      dass die Spalten breiter werden — die Luft geht also nach oben/unten. */
-  gap: min(calc(var(--header-height) * 0.15), 18px) clamp(5px, 0.6vw, 8px);
+  gap: min(calc(var(--header-height) * 0.15), 18px) clamp(4px, 0.31vw, 8px);
   padding: 6px 0;
   width: 100%;
   min-width: 0;
@@ -82,7 +82,7 @@ const gridStyle = { gridTemplateColumns: `repeat(${HEADER_MATERIALS_GRID_COLUMNS
 .mat-cell {
   display: flex;
   align-items: center;
-  gap: clamp(3px, 0.3vw, 6px);
+  gap: clamp(2px, 0.16vw, 6px);
   flex-wrap: nowrap;
   min-width: 0;
   overflow: hidden;
@@ -102,8 +102,8 @@ const gridStyle = { gridTemplateColumns: `repeat(${HEADER_MATERIALS_GRID_COLUMNS
 }
 
 .mat-icon {
-  width: min(calc(var(--header-height) * 0.34), 30px);
-  height: min(calc(var(--header-height) * 0.34), 30px);
+  width: min(calc(var(--header-height) * 0.28), 30px);
+  height: min(calc(var(--header-height) * 0.28), 30px);
   min-width: 18px;
   min-height: 18px;
   object-fit: contain;
@@ -121,8 +121,8 @@ const gridStyle = { gridTemplateColumns: `repeat(${HEADER_MATERIALS_GRID_COLUMNS
 /* Platzhalter für Materialien ohne Artwork — gleiche Kantenlänge wie ein
    Icon, damit die Spaltenflucht steht. */
 .mat-ph {
-  width: min(calc(var(--header-height) * 0.34), 30px);
-  height: min(calc(var(--header-height) * 0.34), 30px);
+  width: min(calc(var(--header-height) * 0.28), 30px);
+  height: min(calc(var(--header-height) * 0.28), 30px);
   min-width: 18px;
   min-height: 18px;
   flex-shrink: 0;
@@ -134,7 +134,7 @@ const gridStyle = { gridTemplateColumns: `repeat(${HEADER_MATERIALS_GRID_COLUMNS
   border: 1px solid rgba(200, 144, 64, 0.28);
   box-shadow: inset 0 1px 0 rgba(255, 200, 80, 0.06);
   font-family: ui-monospace, Menlo, monospace;
-  font-size: min(calc(var(--header-height) * 0.13), 13px);
+  font-size: min(calc(var(--header-height) * 0.11), 13px);
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1;
@@ -147,7 +147,7 @@ const gridStyle = { gridTemplateColumns: `repeat(${HEADER_MATERIALS_GRID_COLUMNS
 }
 
 .mat-count {
-  font-size: min(calc(var(--header-height) * 0.2), 17px);
+  font-size: min(calc(var(--header-height) * 0.165), 17px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;

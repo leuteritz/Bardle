@@ -526,7 +526,7 @@ onUnmounted(() => {
     </div>
 
     <!-- ════════ RECHTE SEITE ════════ -->
-    <div class="flex items-center gap-3 header-side header-side--right">
+    <div class="flex items-center header-side header-side--right">
       <SunPhaseIndicator />
       <div class="z-[65] header-portal-wrap" style="flex: 1">
         <UniverseRescueComponent />
@@ -582,7 +582,7 @@ onUnmounted(() => {
   /* One gap value for the corner buttons: same distance to the left/right
      edge, to the bottom edge and to the top — and it feeds the nested
      corner radius so the button arc runs parallel to the frame arc. */
-  --header-corner-gap: clamp(7px, 0.65vw, 13px);
+  --header-corner-gap: clamp(7px, 0.42vw, 13px);
   max-width: var(--header-max-width);
   height: var(--header-height);
   background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
@@ -590,7 +590,7 @@ onUnmounted(() => {
   overflow: visible;
   position: relative;
   display: grid;
-  grid-template-columns: 1fr clamp(90px, 14vw, 270px) 1fr;
+  grid-template-columns: 1fr clamp(90px, 11.5vw, 270px) 1fr;
   align-items: stretch;
 }
 
@@ -607,9 +607,9 @@ onUnmounted(() => {
 .header-portal-wrap {
   /* Cap bewusst unter 280px: der Header ist bei 1400px gedeckelt, während
      Tree-Button und Innenabstände mit vw mitwachsen — ab 2K blieben dem
-     Sun-Phase-Plate sonst nur 130px. Die Rescue-Bar verliert dadurch rund
-     20px und bleibt mit ~250px weiterhin die breiteste Zeile im Header. */
-  min-width: clamp(150px, 15vw, 258px);
+     Sun-Phase-Plate sonst nur 130px. Die min-width bindet nicht: flex 1
+     gibt dem Block auf Full HD 256,6px. */
+  min-width: clamp(150px, 13vw, 258px);
   align-self: stretch;
   overflow: hidden;
   display: flex;
@@ -626,14 +626,17 @@ onUnmounted(() => {
   justify-content: flex-start;
   padding-left: var(--header-corner-gap);
   /* symmetric inner gap towards the center teardrop (matches --right padding-left) */
-  padding-right: clamp(8px, 1vw, 16px);
+  padding-right: clamp(6px, 0.42vw, 16px);
 }
 .header-side--right {
   justify-content: flex-end;
-  gap: clamp(5px, 0.6vw, 10px);
+  /* KEIN Tailwind-gap im Template: die Zeile hat kein nachgebendes Kind
+     (der Universe-Block steht auf seiner min-width), 12px liessen sie
+     ueberlaufen und overflow:hidden schnitt die Sonnenscheibe an. */
+  gap: clamp(4px, 0.26vw, 10px);
   padding-right: var(--header-corner-gap);
   /* symmetric inner gap towards the center teardrop (matches --left padding-right) */
-  padding-left: clamp(8px, 1vw, 16px);
+  padding-left: clamp(6px, 0.42vw, 16px);
 }
 
 .header-profile-bump {
@@ -670,7 +673,8 @@ onUnmounted(() => {
   align-items: center;
   gap: 0;
   pointer-events: none;
-  width: clamp(90px, 14vw, 270px);
+  /* IDENTISCH zur mittleren Grid-Spalte der .header-bar. */
+  width: clamp(90px, 11.5vw, 270px);
   overflow: visible;
 }
 
@@ -831,7 +835,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   width: 2px;
   height: clamp(28px, calc(-1.5px + 2.6vw), 55px);
-  margin-inline: 4px;
+  margin-inline: 3px;
   align-self: center;
   border-radius: 1px;
   background: linear-gradient(
@@ -865,7 +869,7 @@ onUnmounted(() => {
   /* Die Leitzahl des Headers — alles andere im Panel ordnet sich ihr unter.
      Kein min-width mehr: 8ch waren bei 54px Schrift 288px und damit breiter
      als das 270px-Panel, das Element ragte links und rechts heraus. */
-  font-size: clamp(1.5rem, 2.4vw, 3.3rem);
+  font-size: clamp(1.5rem, 1.95vw, 3.3rem);
   font-weight: 800;
   letter-spacing: 0.02em;
   color: var(--color-chimes);
@@ -977,7 +981,9 @@ onUnmounted(() => {
      Vorher war es quadratisch und unten bündig, wodurch ab ~2345px Breite
      oben ein wachsender Rest stehenblieb (2K: 19px statt 13px, 4K: 30px). */
   --gem-plate-h: calc(var(--header-height) - 2 * var(--header-corner-gap));
-  --gem-plate-w: min(var(--gem-plate-h), 72px);
+  /* Cap fluid statt fest: der corner-gap ist geschrumpft, sonst wuechse
+     die Platte mit ihm. 48 auf Full HD, 64 auf 2K, 72 ab 2880. */
+  --gem-plate-w: min(var(--gem-plate-h), clamp(48px, 2.5vw, 72px));
   --gem-label-fs: clamp(9px, calc(var(--header-height) * 0.125), 13px);
   /* Maß und Sitz des Shop-Abzeichens (`components/ui/ShopReadyBadge.vue`, von
      BardProfileMenu in diese Platte gerendert). Der Durchmesser wächst mit der

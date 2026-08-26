@@ -681,6 +681,20 @@ onUnmounted(() => {
   color: #3e200a;
 }
 
+/* Ab hier trägt die Gasse neben dem Header das Panel (Full HD: Gasse 404
+   gegen 384 + 12 Rand + 8 Lücke) — es rückt aus der Header-Unterkante
+   heraus auf dessen Höhe. Darunter bleibt es darunter stehen: der Header
+   steht dort auf seinem Boden und die Gasse fällt mit dem Fenster. Die
+   Zahl bindet eventLogLayout.spec.ts. */
+@media (min-width: 1850px) {
+  .elp {
+    top: 0.5rem;
+    max-height: calc(
+      100vh - 0.5rem - var(--hud-panel-size, 330px) - var(--kb-hud-h, 0px) - 46px
+    );
+  }
+}
+
 @media (min-width: 2560px) {
   .elp {
     right: 1.5rem;

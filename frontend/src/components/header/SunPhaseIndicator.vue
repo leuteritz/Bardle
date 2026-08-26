@@ -147,8 +147,9 @@ const remainingText = computed(() => {
   /* Cap bei 118px statt 134px: die Restzeit braucht selbst im längsten Fall
      ("12h 34m") nur ~110px, und die frei werdende Breite geht an den
      Universe-Block nebenan, dessen drei Kacheln sich sonst auf 2K/4K
-     eine schrumpfende Zeile teilen. */
-  width: clamp(112px, 7.8vw, 118px);
+     eine schrumpfende Zeile teilen. Auf Full HD steht der Block auf seinem
+     Boden 104 — der schmalere Header hat die 14px dort geholt. */
+  width: clamp(104px, 5.4vw, 118px);
   min-width: 104px;
   background: transparent;
   border: none;

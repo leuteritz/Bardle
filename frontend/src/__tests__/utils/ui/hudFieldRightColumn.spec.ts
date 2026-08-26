@@ -24,22 +24,23 @@ import {
 const W = 1920
 const H = 1000
 
-/** Full HD: Header 265…1655, Panel ab x=1524 bis 521 px herunter (ausgeklappt). */
+/** Full HD: Header 404…1516, Panel ab x=1524 bis 458 px herunter (ausgeklappt).
+ *  Die beiden beruehren sich nicht mehr — das Panel steht NEBEN dem Header. */
 const METRICS: HudFieldMetrics = {
   viewportW: W,
   viewportH: H,
   hudScale: 0.694444,
   headerBottom: 86,
-  headerLeft: 265,
-  headerRight: W - 265,
+  headerLeft: 404,
+  headerRight: W - 404,
   headerCenterBottom: 133,
-  centerArc: { cx: 695, rx: 134, ry: 106, topOffset: 84 },
+  centerArc: { cx: 556, rx: 110, ry: 106, topOffset: 84 },
   keycapBar: 30,
   abilityBarTop: 0,
   abilityBarHalfW: 0,
   wayfinderBottom: 0,
   wayfinderRight: 0,
-  eventLogBottom: 521,
+  eventLogBottom: 458,
   eventLogLeft: 1524,
 }
 
@@ -47,7 +48,7 @@ const METRICS: HudFieldMetrics = {
 const WITHOUT: HudFieldMetrics = { ...METRICS, eventLogBottom: 0, eventLogLeft: 0 }
 
 /** Eingeklappt: die Wurzel IST die Kopfzeile, `bottom` fällt auf deren Kante. */
-const FOLDED: HudFieldMetrics = { ...METRICS, eventLogBottom: 118 }
+const FOLDED: HudFieldMetrics = { ...METRICS, eventLogBottom: 32 }
 
 describe('hudRightColumnBottomAt', () => {
   it('covers every column the panel spans', () => {
@@ -71,7 +72,7 @@ describe('hudRightColumnBottomAt', () => {
   })
 
   it('follows the panel down to its folded header', () => {
-    expect(hudRightColumnBottomAt(1700, FOLDED)).toBe(118)
+    expect(hudRightColumnBottomAt(1700, FOLDED)).toBe(32)
   })
 })
 
@@ -90,10 +91,14 @@ describe('hudFreeBandAt with the event log', () => {
   })
 
   it('keeps the deeper of panel and header where the two overlap', () => {
-    // Bei x=1600 steht noch der Header (Kante 86), und das Panel reicht mit 521
-    // tiefer — es beginnt schon bei 1524, also innerhalb der Header-Spanne.
-    expect(hudFreeBandAt(1600, WITHOUT).top).toBe(86)
-    expect(hudFreeBandAt(1600, METRICS).top).toBe(521)
+    // Auf Full HD ueberlappen sie nicht mehr: der Header endet bei 1516, das
+    // Panel beginnt bei 1524. Bei x=1600 gibt es also gar keinen Header.
+    expect(hudFreeBandAt(1600, WITHOUT).top).toBe(0)
+    // Die Regel gilt trotzdem — unterhalb der Schwelle steht das Panel wieder
+    // unter dem Header, und dann greifen beide Kanten an derselben Spalte.
+    const overlapping: HudFieldMetrics = { ...METRICS, eventLogLeft: 1450 }
+    expect(hudFreeBandAt(1500, WITHOUT).top).toBe(86)
+    expect(hudFreeBandAt(1500, overlapping).top).toBe(458)
   })
 
   it('makes a body dodge before its centre reaches the panel', () => {

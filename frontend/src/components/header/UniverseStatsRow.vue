@@ -421,16 +421,18 @@ onUnmounted(() => {
 
    Genutzt wird das für die Klammer an der Meep-Kachel: Universe zeigt nur
    eine römische Ziffer und Galaxy ein bis zwei Stellen, beide hatten Luft.
-   Galaxy darf dabei 59px nicht unterschreiten — Icon 25,7 + Abstand 3,1 +
-   zwei Ziffern 30,5 auf Full HD; das ist die Grenze für b. */
+   Galaxy darf 55,5px nicht unterschreiten — Icon 22,3 + Abstand 3,1 + zwei
+   Ziffern 30,5 auf Full HD; das ist die Grenze für b. Seit der Header auf
+   1112px steht, trägt der Block nur noch 256,6px statt 313,6 — mit den
+   früheren 1,17:0,66:1,17 bekäme Galaxy dort 53,9. */
 .uni-tile--universe,
 .uni-tile--meep {
-  flex: 1.17 1 0;
+  flex: 1 1 0;
   min-width: 0;
 }
 
 .uni-tile--galaxy {
-  flex: 0.66 1 0;
+  flex: 0.8 1 0;
   min-width: 0;
 }
 
@@ -439,10 +441,11 @@ onUnmounted(() => {
 }
 
 /* Cap bei 26px: darüber frisst das Icon genau die Breite, die "VIII" bzw.
-   die Meep-Zahl daneben zum Wachsen braucht — siehe .tile-value. */
+   die Meep-Zahl daneben zum Wachsen braucht — siehe .tile-value. Faktor
+   0,26 statt 0,3: er senkt den Galaxy-Boden mit. */
 .tile-icon {
-  width: min(calc(var(--header-height) * 0.3), 26px);
-  height: min(calc(var(--header-height) * 0.3), 26px);
+  width: min(calc(var(--header-height) * 0.26), 26px);
+  height: min(calc(var(--header-height) * 0.26), 26px);
   object-fit: contain;
   flex-shrink: 0;
   user-select: none;

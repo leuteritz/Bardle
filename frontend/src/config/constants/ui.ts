@@ -41,6 +41,20 @@ export const OFFLINE_CROSSING_VOID_DELAY_MS = 900
 export const MINIMAP_TIER_FLASH_MS = 2400
 
 // Header materials grid: fixed column count (2 rows × 5 columns = 10 materials).
+// Header-Breitenbudget. Die Zahlen leben im CSS (App.vue `--header-max-width`),
+// hier stehen sie als Waechter — headerWidthBudget.spec.ts rechnet gegen sie.
+/** Was der Header links UND rechts frei laesst: die Gasse traegt beide HUD-Spalten. */
+export const HEADER_SIDE_GUTTER_TOTAL = 808
+/**
+ * Boden der Header-Breite: darunter faellt der Universe-Block unter 250px und
+ * die Rescue-Bar wird zur schmalsten Zeile des Headers. Gerechnet gegen 1536
+ * (Full HD bei 125 %), wo der Boden zuerst greift.
+ */
+export const HEADER_MIN_WIDTH = 1048
+export const HEADER_MAX_WIDTH = 1400
+/** Aussenabstand des Containers (`px-4` in App.vue) — die Gasse zaehlt ihn mit. */
+export const HEADER_PAGE_INSET = 16
+
 export const HEADER_MATERIALS_GRID_COLUMNS = 5
 
 /** Dauer, über die die Offline-Bilanz ihre Chime-Summe hochzählt. */
@@ -730,8 +744,10 @@ export const EVENT_LOG_FOLD_STORAGE_KEY = 'bardle-eventlog-fold'
 /** A freshly arrived row glows for this long. Visual only — real time. */
 export const EVENT_LOG_FLASH_MS = 1_000
 
-// Panel box. Width is NOT tied to --header-vp-right: the panel sits BELOW the
-// header, so the gutter beside it stopped being the limit.
+// Panel box. Ab EVENT_LOG_BESIDE_HEADER_MIN_VW steht das Panel NEBEN dem
+// Header statt darunter — dort ist die Gasse wieder die Grenze, und der
+// Header ist ihr gegenueber gedeckelt (HEADER_SIDE_GUTTER_TOTAL), nicht das
+// Panel. Unterhalb der Schwelle traegt die Gasse es nicht und es bleibt unten.
 export const EVENT_LOG_PANEL_MIN_W = 360
 export const EVENT_LOG_PANEL_VW = 20
 export const EVENT_LOG_PANEL_MAX_W = 500
@@ -742,6 +758,15 @@ export const EVENT_LOG_PANEL_MAX_H = 860
 export const EVENT_LOG_PANEL_TOP_GAP = 8
 /** Beschreibt die Kompakt-Query im CSS — die Zahl steht dort fest. */
 export const EVENT_LOG_COMPACT_MAX_H = 1100
+/**
+ * Ab dieser Viewport-Breite steht das Panel neben dem Header statt darunter.
+ * Unterhalb 1808 traegt die Gasse es nicht mehr (Header auf HEADER_MIN_WIDTH).
+ */
+export const EVENT_LOG_BESIDE_HEADER_MIN_VW = 1850
+/** Luecke zwischen Header-Rechtskante und Panel-Linkskante. */
+export const EVENT_LOG_PANEL_HEADER_GAP = 8
+/** Abstand des Panels zur rechten Bildkante (`right: 0.75rem`). */
+export const EVENT_LOG_PANEL_EDGE_GAP = 12
 
 // Keine Breitenstaffel. Der Floor oben macht das Panel nie schmaler als 360,
 // und in 360 passt EINE Darstellung, die auf jeder Breite dasselbe zeigt:
