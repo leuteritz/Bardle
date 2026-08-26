@@ -732,56 +732,55 @@ export const STAR_TIMER_CENTER_OVERLAP_PX = 1
 // Subpixel-Rauschen einer Messung bei jedem Tick neue Grid-Spalten in 30 Zeilen.
 export const STAR_TIMER_WIDTH_SNAP_PX = 0.5
 
-// Event log — the permanent panel in the top-right corner (EventLogPanel.vue)
-/** Ring buffer behind the panel — what the tabs and Copy read. */
+// Event log — the free trail in the top-right corner (EventLogPanel.vue)
+/** Ring buffer behind the trail — what the tabs and Copy read. */
 export const EVENT_LOG_HISTORY_MAX = 300
-/** "Copied ✓" on the panel's copy button (ms) */
+/** "Copied ✓" on the copy button (ms) */
 export const EVENT_LOG_COPY_FEEDBACK_MS = 1_500
-/** Within this distance from the top the list stays pinned to the newest entry */
-export const EVENT_LOG_SCROLL_TOP_STICK_PX = 24
 /** localStorage key for the folded state (UI preference, not game state). */
 export const EVENT_LOG_FOLD_STORAGE_KEY = 'bardle-eventlog-fold'
-/** A freshly arrived row glows for this long. Visual only — real time. */
-export const EVENT_LOG_FLASH_MS = 1_000
 
-// Panel box. Ab EVENT_LOG_BESIDE_HEADER_MIN_VW steht das Panel NEBEN dem
+// Trail box. Ab EVENT_LOG_BESIDE_HEADER_MIN_VW steht die Spur NEBEN dem
 // Header statt darunter — dort ist die Gasse wieder die Grenze, und der
-// Header ist ihr gegenueber gedeckelt (HEADER_SIDE_GUTTER_TOTAL), nicht das
-// Panel. Unterhalb der Schwelle traegt die Gasse es nicht und es bleibt unten.
+// Header ist ihr gegenueber gedeckelt (HEADER_SIDE_GUTTER_TOTAL), nicht sie.
 export const EVENT_LOG_PANEL_MIN_W = 360
 export const EVENT_LOG_PANEL_VW = 20
 export const EVENT_LOG_PANEL_MAX_W = 500
-export const EVENT_LOG_PANEL_MIN_H = 280
-export const EVENT_LOG_PANEL_VH = 45
-export const EVENT_LOG_PANEL_MAX_H = 860
-/** Gap between header edge and panel top, and the panel's own inset. */
+// Rahmenlos und klickdurchlaessig, aber weiterhin deckend: ein Drittel
+// Bildhoehe ist der Deckel, nicht die Haelfte.
+export const EVENT_LOG_PANEL_MIN_H = 200
+export const EVENT_LOG_PANEL_VH = 30
+export const EVENT_LOG_PANEL_MAX_H = 420
+/** Gap between header edge and trail top, and the trail's own inset. */
 export const EVENT_LOG_PANEL_TOP_GAP = 8
 /** Beschreibt die Kompakt-Query im CSS — die Zahl steht dort fest. */
 export const EVENT_LOG_COMPACT_MAX_H = 1100
 /**
- * Ab dieser Viewport-Breite steht das Panel neben dem Header statt darunter.
- * Unterhalb 1808 traegt die Gasse es nicht mehr (Header auf HEADER_MIN_WIDTH).
+ * Ab dieser Viewport-Breite steht die Spur neben dem Header statt darunter.
+ * Unterhalb 1808 traegt die Gasse sie nicht mehr (Header auf HEADER_MIN_WIDTH).
  */
 export const EVENT_LOG_BESIDE_HEADER_MIN_VW = 1850
-/** Luecke zwischen Header-Rechtskante und Panel-Linkskante. */
+/** Luecke zwischen Header-Rechtskante und Spur-Linkskante. */
 export const EVENT_LOG_PANEL_HEADER_GAP = 8
-/** Abstand des Panels zur rechten Bildkante (`right: 0.75rem`). */
+/** Abstand der Spur zur rechten Bildkante (`right: 0.75rem`). */
 export const EVENT_LOG_PANEL_EDGE_GAP = 12
 
-// Keine Breitenstaffel. Der Floor oben macht das Panel nie schmaler als 360,
-// und in 360 passt EINE Darstellung, die auf jeder Breite dasselbe zeigt:
-// jeder Tab traegt seine Zahl, der aktive zusaetzlich seinen Namen. Eine
-// Staffel haette dem 2K-Schirm Zahlen weggenommen, die Full HD zeigt.
-/** Was ein Tab mindestens misst — Polster, Icon, Zahl. */
+// Die EINE gefasste Flaeche der Spur: fuenf gezaehlte Tabs links, drei
+// randlose Werkzeuge rechts. Ein aktiver Tab-NAME passt daneben nicht mehr
+// — er wog 80 px in einer Reihe von 352; er steht jetzt im title.
+export const EVENT_LOG_BAR_H = 28
+export const EVENT_LOG_BAR_PAD = 4
+export const EVENT_LOG_BAR_GAP = 3
+/** Was ein Tab misst — Polster, Icon, Zahl. */
 export const EVENT_LOG_TAB_MIN_W = 50
-/** Was der aktive Tab zusaetzlich fuer seinen Namen braucht. */
-export const EVENT_LOG_TAB_ACTIVE_W = 130
+/** Was ein randloser Werkzeugknopf misst (Copy, Clear, Chevron). */
+export const EVENT_LOG_TOOL_W = 22
 
-// Rendered window over the ring. Not useVirtualGrid: rows are one to three
-// lines tall, and that composable needs a fixed rowHeight.
-export const EVENT_LOG_RENDER_CHUNK = 60
-/** Distance from the list end at which the next chunk is appended. */
-export const EVENT_LOG_LOAD_MORE_PX = 240
+// Die Spur rollt NICHT — was nicht in die Hoehe passt, faellt unten heraus.
+/** Harter Deckel auf gerenderte Zeilen; 420 px tragen rund zwoelf. */
+export const EVENT_LOG_TRAIL_MAX_ROWS = 14
+/** Hoehe der Verlaufsmaske am Fuss der Spur. */
+export const EVENT_LOG_TRAIL_FADE_PX = 56
 
 // Herald — large centered milestone announcements (HeraldOverlay / useHerald)
 /** How long a single herald banner stays on screen (ms) */

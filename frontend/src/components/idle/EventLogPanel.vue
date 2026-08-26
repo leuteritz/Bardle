@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
@@ -18,29 +17,44 @@ import {
 } from '@/config/ui/eventLog'
 import { formatEventClock, formatEventLines } from '@/utils/ui/eventLogFormat'
 import {
+  EVENT_LOG_BAR_GAP,
+  EVENT_LOG_BAR_H,
+  EVENT_LOG_BAR_PAD,
   EVENT_LOG_COPY_FEEDBACK_MS,
-  EVENT_LOG_SCROLL_TOP_STICK_PX,
-  EVENT_LOG_FLASH_MS,
-  EVENT_LOG_RENDER_CHUNK,
-  EVENT_LOG_LOAD_MORE_PX,
+  EVENT_LOG_PANEL_MAX_H,
+  EVENT_LOG_PANEL_MAX_W,
+  EVENT_LOG_PANEL_MIN_H,
+  EVENT_LOG_PANEL_MIN_W,
+  EVENT_LOG_PANEL_VH,
+  EVENT_LOG_PANEL_VW,
+  EVENT_LOG_TOOL_W,
+  EVENT_LOG_TRAIL_FADE_PX,
+  EVENT_LOG_TRAIL_MAX_ROWS,
 } from '@/config/constants'
+
+// Per v-bind statt beschreibend im CSS: eine Konstante, die nur beschreibt,
+// driftet, und die Layout-Spec liest Zahlen, kein DOM.
+const boxW = `clamp(${EVENT_LOG_PANEL_MIN_W}px, ${EVENT_LOG_PANEL_VW}vw, ${EVENT_LOG_PANEL_MAX_W}px)`
+const boxH = `clamp(${EVENT_LOG_PANEL_MIN_H}px, ${EVENT_LOG_PANEL_VH}vh, ${EVENT_LOG_PANEL_MAX_H}px)`
+const barH = `${EVENT_LOG_BAR_H}px`
+const barPad = `${EVENT_LOG_BAR_PAD}px`
+const barGap = `${EVENT_LOG_BAR_GAP}px`
+const toolW = `${EVENT_LOG_TOOL_W}px`
+const fadeMask = `linear-gradient(to bottom, #000 calc(100% - ${EVENT_LOG_TRAIL_FADE_PX}px), transparent 100%)`
 
 const uiStore = useUiStore()
 const gameStore = useGameStore()
 const starGroupStore = useStarGroupStore()
-const { historyVersion, historySize, freshIds, readHistory, clearEvents } = useEventLog()
+const { historyVersion, readHistory, clearEvents } = useEventLog()
 const { folded, toggleFold } = useEventLogPane()
 
 const shell = ref<HTMLElement | null>(null)
-const listRef = ref<HTMLElement | null>(null)
 const activeTab = ref<EventTabId>('all')
-const query = ref('')
 const copied = ref(false)
-const visibleCount = ref(EVENT_LOG_RENDER_CHUNK)
 let copyTimer: ReturnType<typeof setTimeout> | null = null
 
-// Das Panel liegt unter Modalen und Profil-Tabs: verdeckt statt bedienbar wäre
-// ein Panel, das noch Fokus fängt.
+// Die Spur liegt unter Modalen und Profil-Tabs: verdeckt statt bedienbar wäre
+// eine Leiste, die noch Fokus fängt.
 const covered = computed(
   () =>
     uiStore.bardActiveTab !== null ||
@@ -58,68 +72,25 @@ const history = computed<GameEvent[]>(() => {
   return readHistory()
 })
 
-const matchingQuery = computed(() => {
-  const needle = query.value.trim().toLowerCase()
-  if (!needle) return history.value
-  return history.value.filter(
-    (e) => e.message.toLowerCase().includes(needle) || e.type.includes(needle),
-  )
-})
+/** Die ganze gefilterte Historie — davon liest Copy, nicht die Spur. */
+const rows = computed(() => history.value.filter((e) => inTab(e, activeTab.value)))
 
-const rows = computed(() => matchingQuery.value.filter((e) => inTab(e, activeTab.value)))
+const trailRows = computed(() => rows.value.slice(0, EVENT_LOG_TRAIL_MAX_ROWS))
 
-// Gefiltert wird über die ganze Historie, gerendert nur das Fenster: 300 Zeilen
-// dauerhaft im DOM sind der teure Teil, nicht die Rechnung darüber.
-const visibleRows = computed(() => rows.value.slice(0, visibleCount.value))
-
-// Zählt die Treffer UNTER dem laufenden Filter — sonst verspricht ein Tab
-// Zeilen, die er nach dem Wechsel nicht zeigt.
 const tabCounts = computed<Record<EventTabId, number>>(() => {
   const counts = { all: 0, combat: 0, cosmos: 0, progress: 0, system: 0 }
-  for (const event of matchingQuery.value) {
+  for (const event of history.value) {
     counts.all++
     counts[GROUP_OF_TYPE[event.type]]++
   }
   return counts
 })
 
-// ── Das Aufblitzen neuer Zeilen ─────────────────────────────────────────────
-// Ein Set statt eines Timers je Zeile: bei Kampfspam liefen sonst Dutzende
-// gleichzeitig. Der eine ausstehende Timer prunt nach Alter.
-const fresh = ref(new Set<number>())
-let freshTimer: ReturnType<typeof setTimeout> | null = null
-const freshUntil = new Map<number, number>()
-
-function pruneFresh() {
-  freshTimer = null
-  const now = performance.now()
-  let next = 0
-  for (const [id, until] of freshUntil) {
-    if (until <= now) {
-      freshUntil.delete(id)
-      fresh.value.delete(id)
-    } else if (!next || until < next) next = until
-  }
-  fresh.value = new Set(fresh.value)
-  if (next) freshTimer = setTimeout(pruneFresh, Math.max(16, next - now))
-}
-
-watch(freshIds, (ids) => {
-  if (!ids.length || folded.value || covered.value) return
-  const until = performance.now() + EVENT_LOG_FLASH_MS
-  for (const id of ids) {
-    fresh.value.add(id)
-    freshUntil.set(id, until)
-  }
-  fresh.value = new Set(fresh.value)
-  // Rein visuell, also reale Zeit — kein gameTimeout.
-  if (!freshTimer) freshTimer = setTimeout(pruneFresh, EVENT_LOG_FLASH_MS)
-})
-
 // ── Die Kanten, die die HUD-Kontur liest ────────────────────────────────────
-// Gemeldet wird die WURZEL: eingeklappt ist sie die Kopfzeile, und `bottom`
-// fällt von selbst auf deren Kante. Reine px-Zahlen, nie calc() — das löst
-// getComputedStyle nicht auf.
+// Gemeldet wird die WURZEL: eingeklappt ist sie die Leiste, und `bottom` fällt
+// von selbst auf deren Kante. Reine px-Zahlen, nie calc() — das löst
+// getComputedStyle nicht auf. Die Höhe hängt bewusst NICHT am Inhalt: sonst
+// schriebe jedes Ereignis eine Custom Property samt Style-Recalc.
 function publishEdges() {
   const root = document.documentElement.style
   const rect = covered.value ? null : shell.value?.getBoundingClientRect()
@@ -135,19 +106,7 @@ function measure() {
 }
 
 function selectTab(id: EventTabId) {
-  const list = listRef.value
-  const atTop = !list || list.scrollTop <= EVENT_LOG_SCROLL_TOP_STICK_PX
   activeTab.value = id
-  visibleCount.value = EVENT_LOG_RENDER_CHUNK
-  if (atTop && list) list.scrollTop = 0
-}
-
-function onScroll() {
-  const list = listRef.value
-  if (!list || visibleCount.value >= rows.value.length) return
-  if (list.scrollHeight - list.scrollTop - list.clientHeight < EVENT_LOG_LOAD_MORE_PX) {
-    visibleCount.value += EVENT_LOG_RENDER_CHUNK
-  }
 }
 
 function copyRows() {
@@ -164,28 +123,7 @@ function copyRows() {
   }, EVENT_LOG_COPY_FEEDBACK_MS)
 }
 
-function clearQuery() {
-  query.value = ''
-}
-
-function wipe() {
-  clearEvents()
-  visibleCount.value = EVENT_LOG_RENDER_CHUNK
-}
-
-// Escape wickelt genau EINE Stufe ab: den Filter. Die zweite (schliessen) ist
-// mit dem Dauer-HUD entfallen — Escape schliesst in diesem Spiel Overlays, und
-// das Log ist keines mehr. Bei leerem Feld läuft die Taste durch.
-function onEscape(event: KeyboardEvent) {
-  if (event.key !== 'Escape' || covered.value || !query.value) return
-  clearQuery()
-}
-
 onKeybinding('eventLog', () => toggleFold())
-
-watch(query, () => {
-  visibleCount.value = EVENT_LOG_RENDER_CHUNK
-})
 
 watch([covered, folded], () => {
   // Ein Frame später: eingeklappt hat die Wurzel ihre neue Höhe erst nach dem
@@ -194,7 +132,6 @@ watch([covered, folded], () => {
 })
 
 onMounted(() => {
-  window.addEventListener('keydown', onEscape)
   window.addEventListener('resize', measure)
   if (typeof ResizeObserver === 'function' && shell.value) {
     observer = new ResizeObserver(measure)
@@ -204,11 +141,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', onEscape)
   window.removeEventListener('resize', measure)
   observer?.disconnect()
   if (copyTimer !== null) clearTimeout(copyTimer)
-  if (freshTimer !== null) clearTimeout(freshTimer)
   const root = document.documentElement.style
   root.setProperty('--event-log-bottom', '0px')
   root.setProperty('--event-log-left', '0px')
@@ -224,92 +159,77 @@ onUnmounted(() => {
     :class="{ 'elp--folded': folded }"
     aria-label="Event log"
   >
-    <header class="elp-head">
+    <div class="elp-bar">
+      <div class="elp-tabs" role="tablist" aria-label="Event categories">
+        <button
+          v-for="group in EVENT_GROUPS"
+          :key="group.id"
+          class="elp-tab"
+          :class="{ 'elp-tab--active': activeTab === group.id }"
+          type="button"
+          role="tab"
+          :aria-selected="activeTab === group.id"
+          :aria-label="`${group.label} — ${tabCounts[group.id]}`"
+          :title="`${group.label} — ${tabCounts[group.id]}`"
+          @click="selectTab(group.id)"
+        >
+          <Icon :icon="group.icon" width="14" height="14" />
+          <span class="elp-tab-count">{{ tabCounts[group.id] }}</span>
+        </button>
+      </div>
+
       <button
-        class="elp-fold"
+        class="elp-tool"
+        :class="{ 'elp-tool--done': copied }"
+        type="button"
+        :aria-label="`Copy ${rows.length} lines to the clipboard`"
+        :title="`Copy ${rows.length} lines`"
+        @click="copyRows"
+      >
+        <Icon :icon="copied ? 'lucide:check' : 'lucide:copy'" width="14" height="14" />
+      </button>
+      <button
+        class="elp-tool"
+        type="button"
+        aria-label="Clear the log"
+        title="Clear the log"
+        @click="clearEvents"
+      >
+        <Icon icon="lucide:eraser" width="14" height="14" />
+      </button>
+      <button
+        class="elp-tool elp-fold"
         type="button"
         :aria-expanded="!folded"
-        aria-controls="event-log-body"
+        aria-controls="event-log-trail"
         :title="folded ? 'Unfold the event log' : 'Fold the event log'"
         @click="toggleFold"
       >
-        <Icon icon="game-icons:scroll-quill" width="20" height="20" class="elp-head-mark" />
-        <span class="elp-title">Event Log</span>
-        <span class="elp-total">{{ historySize }}</span>
-        <Icon icon="lucide:chevron-down" width="15" height="15" class="elp-chevron" />
+        <Icon icon="lucide:chevron-down" width="15" height="15" />
       </button>
-      <div class="elp-tools">
-        <button
-          class="elp-tool"
-          :class="{ 'elp-tool--done': copied }"
-          type="button"
-          :aria-label="`Copy ${rows.length} lines to the clipboard`"
-          @click="copyRows"
-        >
-          <Icon :icon="copied ? 'lucide:check' : 'lucide:copy'" width="15" height="15" />
-          <span class="elp-tool-word">{{ copied ? 'Copied' : 'Copy' }}</span>
-        </button>
-        <button
-          class="elp-tool elp-tool--icon"
-          type="button"
-          aria-label="Clear the log"
-          @click="wipe"
-        >
-          <Icon icon="lucide:eraser" width="15" height="15" />
-        </button>
-      </div>
-    </header>
-
-    <div v-if="!folded" id="event-log-body" class="elp-body">
-      <div class="elp-controls">
-        <div class="elp-tabs" role="tablist" aria-label="Event categories">
-          <button
-            v-for="group in EVENT_GROUPS"
-            :key="group.id"
-            class="elp-tab"
-            :class="{ 'elp-tab--active': activeTab === group.id }"
-            type="button"
-            role="tab"
-            :aria-selected="activeTab === group.id"
-            :aria-label="`${group.label} — ${tabCounts[group.id]}`"
-            :title="`${group.label} — ${tabCounts[group.id]}`"
-            @click="selectTab(group.id)"
-          >
-            <Icon :icon="group.icon" width="14" height="14" />
-            <span v-if="activeTab === group.id" class="elp-tab-label">{{ group.label }}</span>
-            <span class="elp-tab-count">{{ tabCounts[group.id] }}</span>
-          </button>
-        </div>
-        <RpgSearchBar
-          v-model="query"
-          size="sm"
-          placeholder="Filter events…"
-          aria-label="Filter events"
-          class="elp-search"
-        />
-      </div>
-
-      <div ref="listRef" class="elp-list" role="log" @scroll.passive="onScroll">
-        <p v-if="!rows.length" class="elp-empty">
-          <Icon icon="game-icons:telescope" width="30" height="30" />
-          <span>{{ query.trim() ? 'Nothing matches that.' : EVENT_GROUP_EMPTY[activeTab] }}</span>
-        </p>
-        <div
-          v-for="event in visibleRows"
-          :key="event.id"
-          class="elp-row"
-          :class="{ 'elp-row--fresh': fresh.has(event.id) }"
-          :style="{ '--row-color': typeColor[event.type] }"
-        >
-          <span class="elp-time">{{ formatEventClock(event.timestamp, true) }}</span>
-          <span class="elp-dot" :title="event.type" />
-          <span class="elp-msg">{{ event.message }}</span>
-        </div>
-        <p v-if="rows.length > visibleRows.length" class="elp-more">
-          {{ rows.length - visibleRows.length }} older
-        </p>
-      </div>
     </div>
+
+    <TransitionGroup
+      v-if="!folded"
+      id="event-log-trail"
+      name="elp-row"
+      tag="div"
+      class="elp-trail"
+      role="log"
+    >
+      <p v-if="!rows.length" key="empty" class="elp-empty">
+        {{ EVENT_GROUP_EMPTY[activeTab] }}
+      </p>
+      <div
+        v-for="event in trailRows"
+        :key="event.id"
+        class="elp-row"
+        :style="{ '--row-color': typeColor[event.type] }"
+      >
+        <span class="elp-time">{{ formatEventClock(event.timestamp, true) }}</span>
+        <span class="elp-msg">{{ event.message }}</span>
+      </div>
+    </TransitionGroup>
   </section>
 </template>
 
@@ -318,8 +238,8 @@ onUnmounted(() => {
   position: fixed;
   right: 0.75rem;
   top: calc(var(--header-total-height, 118px) + 8px);
-  width: clamp(360px, 20vw, 500px);
-  height: clamp(280px, 45vh, 860px);
+  width: v-bind(boxW);
+  height: v-bind(boxH);
   /* Nie tiefer als das freie Band zwischen Header und erhobener Bottom-Bar.
      46px = Keycap-Leiste plus der temporäre Admin-Knopf (z-index 9999). */
   max-height: calc(
@@ -331,203 +251,61 @@ onUnmounted(() => {
   z-index: 910;
   display: flex;
   flex-direction: column;
-  background: #111008;
-  border: 4px solid #7a4e20;
-  border-radius: 5px;
-  box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
-    0 14px 40px rgba(0, 0, 0, 0.7);
-  overflow: hidden;
+  /* Rahmenlos, und nur die Leiste ist bedienbar — die Zeilen bleiben
+     klickdurchlässig, damit die Bühne dahinter erreichbar ist. */
+  pointer-events: none;
+  overflow: clip;
+  container-type: inline-size;
 }
 
-/* Eingeklappt trägt die Wurzel nur die Kopfzeile — und meldet genau das an die
+/* Eingeklappt trägt die Wurzel nur die Leiste — und meldet genau das an die
    Kontur. Keine Höhenanimation: sie weckte den ResizeObserver in jedem Frame. */
 .elp--folded {
   height: auto;
   min-height: 0;
 }
 
-.elp::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
-  z-index: 2;
-}
-
-.elp-head {
+/* Die EINE gefasste Fläche des Logs. */
+.elp-bar {
+  pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: v-bind(barGap);
   flex-shrink: 0;
-  height: 34px;
-  padding: 0 8px 0 0;
-  background: #1e1006;
-  border-bottom: 3px solid #5c3310;
-}
-
-.elp-fold {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  height: 100%;
-  padding: 0 6px 0 11px;
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.elp-fold:hover {
-  background: #2a1c0c;
-}
-
-.elp-head-mark {
-  color: #e8c040;
-  flex-shrink: 0;
-}
-
-.elp-title {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #e8c040;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.elp-total {
-  min-width: 22px;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: rgba(10, 8, 4, 0.7);
-  border: 1px solid #3e200a;
-  color: #8a6030;
-  font-size: 10.5px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
-.elp-chevron {
-  margin-left: auto;
-  flex-shrink: 0;
-  color: #8a6030;
-  transition: transform 0.15s ease;
-}
-
-.elp--folded .elp-chevron {
-  transform: rotate(-90deg);
-}
-
-.elp-tools {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.elp-tool {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 9px;
+  height: v-bind(barH);
+  padding: 0 v-bind(barPad);
   background: #16120a;
   border: 1px solid #5c3310;
   border-radius: 4px;
-  color: #c89040;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-
-.elp-tool--icon {
-  padding: 5px 6px;
-}
-
-.elp-tool:hover {
-  background: #2a1c0c;
-  color: #e8c040;
-}
-
-.elp-tool--done {
-  color: #52b830;
-}
-
-.elp-body {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-
-/* Zwei Zeilen, nicht eine: fünf Tabs mit Zähler füllen die Panelbreite schon
-   allein aus — daneben bliebe dem Feld null Breite. */
-.elp-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  flex-shrink: 0;
-  padding: 8px 10px;
-  background: #16120a;
-  border-bottom: 1px solid #3e200a;
 }
 
 .elp-tabs {
   display: flex;
-  border: 1px solid #5c3310;
-  border-radius: 4px;
-  overflow: hidden;
+  align-items: center;
+  gap: 2px;
+  margin-right: auto;
 }
 
-/* Der aktive Tab NIMMT sich die Breite für seinen Namen, die vier anderen
-   geben sie her — deshalb `flex: 0 1 auto` statt gleicher Teilung. So trägt
-   jede Panelbreite dieselbe Darstellung: fünf Zahlen und ein Name. */
+/* Kein Name am aktiven Tab: er wog 80 px in einer Reihe von 352, und die drei
+   Werkzeuge rechts wollen auch stehen. Der Name steht im title. */
 .elp-tab {
   display: inline-flex;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-width: 0;
-  padding: 6px;
-  background: #16120a;
+  height: 20px;
+  padding: 0 6px;
+  background: none;
   border: none;
+  border-radius: 3px;
   color: #8a6030;
-  /* Gemessen: „Progress" wog bei 11 px und 0,09em Sperrung 57,6 px und stand in
-     einem 93-px-Tab am Anschlag. */
   font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-weight: 900;
   cursor: pointer;
   transition:
     background 0.15s,
     color 0.15s;
-}
-
-.elp-tab--active {
-  flex: 1 1 auto;
-  gap: 6px;
-  padding: 6px 8px;
-}
-
-.elp-tab + .elp-tab {
-  border-left: 1px solid #3e200a;
 }
 
 .elp-tab:hover {
@@ -540,158 +318,137 @@ onUnmounted(() => {
   color: #e8c040;
 }
 
-/* Der aktive Name darf beschnitten werden, die Zahl daneben nie. */
-.elp-tab--active .elp-tab-label {
-  min-width: 0;
-}
-
-.elp-tab-label {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .elp-tab-count {
-  flex-shrink: 0;
-  min-width: 20px;
-  padding: 1px 4px;
-  border-radius: 4px;
-  background: rgba(10, 8, 4, 0.7);
-  border: 1px solid #3e200a;
-  font-size: 10px;
-  font-weight: 900;
   font-variant-numeric: tabular-nums;
-  text-align: center;
 }
 
-.elp-tab--active .elp-tab-count {
-  border-color: #7a4e20;
-  color: #e8c060;
+.elp-tool {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: v-bind(toolW);
+  height: 20px;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  color: #8a6030;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
-.elp-search {
-  width: 100%;
+.elp-tool:hover {
+  background: #2a1c0c;
+  color: #e8c040;
 }
 
-.elp-list {
-  flex: 1;
+.elp-tool--done {
+  color: #52b830;
+}
+
+.elp-fold {
+  transition: transform 0.15s ease;
+}
+
+.elp--folded .elp-fold {
+  transform: rotate(-90deg);
+}
+
+/* Die Spur rollt nicht: was nicht in die Höhe passt, fällt unten heraus, und
+   die Maske blendet die letzte Zeile aus, statt sie abzuschneiden. */
+.elp-trail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Der Abstand haengt an der Spur, nicht an der Leiste: eingeklappt meldet die
+     Wurzel sonst 6 px Nichts an die Kontur. */
+  margin-top: 6px;
   min-height: 0;
-  overflow-y: auto;
-  padding: 4px 0 8px;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
+  overflow: clip;
+  -webkit-mask-image: v-bind(fadeMask);
+  mask-image: v-bind(fadeMask);
 }
 
 .elp-row {
-  position: relative;
-  display: grid;
-  /* 52px trägt „09:46:32" ungekürzt — die kurze Fassung sparte 20 px und
-     kostete die Sekunden, die im Kampf den Unterschied machen. */
-  grid-template-columns: 52px 8px 1fr;
-  align-items: center;
-  gap: 8px;
-  min-height: 24px;
-  padding: 3px 10px;
-  /* Die Zeilen sind nicht mehr garantiert einzeilig; `auto` merkt sich die
-     zuletzt gemessene Höhe, damit der Rollbalken nicht lügt. */
-  content-visibility: auto;
-  contain-intrinsic-size: auto 34px;
-}
-
-.elp-row:nth-child(even) {
-  background: rgba(255, 255, 255, 0.018);
-}
-
-.elp-row:hover {
-  background: rgba(232, 192, 64, 0.05);
-}
-
-/* Eigene Ebene mit statischem Schein — animiert wird allein die Deckkraft.
-   Ein box-shadow oder border-color rasterte jeden Frame die Box neu. */
-.elp-row::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  background: linear-gradient(
-    90deg,
-    color-mix(in oklab, var(--row-color, #c8b89a) 26%, transparent) 0%,
-    transparent 70%
-  );
-}
-
-.elp-row--fresh::after {
-  animation: elp-flash 1s linear forwards;
-}
-
-@keyframes elp-flash {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  flex-shrink: 0;
+  padding: 6px 11px 6px 9px;
+  background: linear-gradient(90deg, rgba(6, 4, 14, 0.92) 0%, rgba(10, 6, 2, 0.86) 100%);
+  border-left: 3px solid var(--row-color, #c8b89a);
+  border-top: 1px solid rgba(255, 200, 80, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.42);
+  border-radius: 5px;
+  line-height: 1.32;
 }
 
 .elp-time {
-  font-size: 11px;
-  color: #6d5a3a;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: rgba(200, 160, 80, 0.45);
+  font-size: 11.5px;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
-/* Die Farbe trägt der Punkt, nicht der Text: 300 farbige Zeilen liest niemand. */
-.elp-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--row-color, #c8b89a);
-}
-
+/* Die Farbe trägt hier der Text mit — es sind höchstens
+   EVENT_LOG_TRAIL_MAX_ROWS Zeilen, keine 300. */
 .elp-msg {
-  font-size: 12.5px;
-  color: #cfc0a4;
-  line-height: 1.35;
+  color: var(--row-color, #c8b89a);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow:
+    0 0 6px color-mix(in oklab, var(--row-color, #c8b89a) 55%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.8);
   overflow-wrap: anywhere;
 }
 
-.elp-more {
-  padding: 6px 12px 2px;
-  color: #6d5a3a;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  text-align: center;
-}
-
 .elp-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 160px;
+  padding: 4px 11px;
   color: #6d5a3a;
   font-size: 12px;
 }
 
-.elp-empty svg {
-  color: #3e200a;
+.elp-row-enter-active {
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Ab hier trägt die Gasse neben dem Header das Panel (Full HD: Gasse 404
-   gegen 384 + 12 Rand + 8 Lücke) — es rückt aus der Header-Unterkante
-   heraus auf dessen Höhe. Darunter bleibt es darunter stehen: der Header
+.elp-row-leave-active {
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+.elp-row-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.elp-row-leave-to {
+  opacity: 0;
+  transform: translateX(12px) scale(0.97);
+}
+
+.elp-row-move {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Ab hier trägt die Gasse neben dem Header die Spur (Full HD: Gasse 404
+   gegen 384 + 12 Rand + 8 Lücke) — sie rückt aus der Header-Unterkante
+   heraus auf dessen Höhe. Darunter bleibt sie darunter stehen: der Header
    steht dort auf seinem Boden und die Gasse fällt mit dem Fenster. Die
    Zahl bindet eventLogLayout.spec.ts. */
 @media (min-width: 1850px) {
   .elp {
     top: 0.5rem;
-    max-height: calc(
-      100vh - 0.5rem - var(--hud-panel-size, 330px) - var(--kb-hud-h, 0px) - 46px
-    );
+    max-height: calc(100vh - 0.5rem - var(--hud-panel-size, 330px) - var(--kb-hud-h, 0px) - 46px);
   }
 }
 
@@ -701,19 +458,22 @@ onUnmounted(() => {
   }
 }
 
-/* Der flache Viewport bekommt nur weniger Chrome — die Höhe selbst ist ein
+/* Der flache Viewport bekommt nur weniger Polster — die Höhe selbst ist ein
    clamp und bleibt davon unberührt. */
 @media (max-height: 1100px) {
-  .elp-head {
-    height: 30px;
-  }
-
-  .elp-controls {
-    padding: 7px 10px;
+  .elp-trail {
+    gap: 5px;
   }
 
   .elp-row {
-    min-height: 22px;
+    padding: 5px 10px 5px 8px;
+  }
+}
+
+/* Breite Spur: die Nachricht darf wachsen. */
+@container (min-width: 440px) {
+  .elp-msg {
+    font-size: 15px;
   }
 }
 </style>

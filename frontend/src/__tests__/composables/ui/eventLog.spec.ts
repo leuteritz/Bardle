@@ -101,16 +101,6 @@ describe('useEventLog', () => {
     expect(historySize.value).toBe(2)
   })
 
-  it('meldet die Ids eines Frames als frisch', () => {
-    const { addEvent, freshIds, readHistory } = useEventLog()
-    addEvent('glows')
-    runFrame()
-
-    expect(freshIds.value).toEqual([readHistory()[0].id])
-    runFrame()
-    expect(freshIds.value).toEqual([readHistory()[0].id])
-  })
-
   it('läuft ohne requestAnimationFrame synchron weiter', () => {
     vi.stubGlobal('requestAnimationFrame', undefined)
     const { addEvent, historyVersion, historySize } = useEventLog()
@@ -122,13 +112,12 @@ describe('useEventLog', () => {
   })
 
   it('leert mit clearEvents sofort, ohne auf einen Frame zu warten', () => {
-    const { addEvent, clearEvents, historySize, readHistory, freshIds } = useEventLog()
+    const { addEvent, clearEvents, historySize, readHistory } = useEventLog()
     addEvent('gone')
     runFrame()
     clearEvents()
 
     expect(historySize.value).toBe(0)
     expect(readHistory()).toHaveLength(0)
-    expect(freshIds.value).toHaveLength(0)
   })
 })

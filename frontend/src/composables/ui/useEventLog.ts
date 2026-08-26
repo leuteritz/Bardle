@@ -36,22 +36,17 @@ let ringCount = 0
 const historySize = ref(0)
 /** Steigt einmal je FRAME, nicht je Ereignis — daran haengt, wer den Inhalt liest. */
 const historyVersion = ref(0)
-/** Ids seit dem letzten Flush; das Panel laesst genau die aufblitzen. */
-let pending: number[] = []
-const freshIds = ref<readonly number[]>([])
 
 let nextId = 1
 let flushHandle = 0
 
 function flush() {
   flushHandle = 0
-  freshIds.value = pending
-  pending = []
   historySize.value = ringCount
   historyVersion.value++
 }
 
-// Das Panel steht dauerhaft, also laeuft seine ganze Rechenkette sonst je
+// Die Spur steht dauerhaft, also laeuft ihre ganze Rechenkette sonst je
 // EREIGNIS statt je Frame — im Kampf mehrmals pro Sekunde ueber 300 Eintraege.
 // Im Hintergrundtab feuert rAF gar nicht: das Pausenverhalten kommt gratis.
 function scheduleFlush() {
@@ -67,11 +62,10 @@ function pushHistory(event: GameEvent) {
   ring[ringHead] = event
   ringHead = (ringHead + 1) % EVENT_LOG_HISTORY_MAX
   if (ringCount < EVENT_LOG_HISTORY_MAX) ringCount++
-  pending.push(event.id)
   scheduleFlush()
 }
 
-/** Neueste zuerst. `limit` deckelt, was das Panel wirklich rendert. */
+/** Neueste zuerst. `limit` deckelt, was die Spur wirklich rendert. */
 function readHistory(limit = EVENT_LOG_HISTORY_MAX): GameEvent[] {
   const out: GameEvent[] = []
   const take = Math.min(limit, ringCount)
@@ -98,8 +92,6 @@ export function useEventLog() {
     ring.fill(null)
     ringHead = 0
     ringCount = 0
-    pending = []
-    freshIds.value = []
     historySize.value = 0
     historyVersion.value++
   }
@@ -107,7 +99,6 @@ export function useEventLog() {
   return {
     historyVersion,
     historySize,
-    freshIds,
     readHistory,
     addEvent,
     clearEvents,
