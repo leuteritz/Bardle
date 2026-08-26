@@ -103,10 +103,24 @@ onUnmounted(() => {
         aria-hidden="true"
       ></span>
 
-      <!-- Name und Lohn teilen sich EINE Zeile; der Lohn trägt keine eigene
-           Fläche, nur die Kapitelfarbe. -->
-      <div class="wf-crown">
-        <span class="wf-name">{{ face.name }}</span>
+      <!-- Die Front der Füllung: `translateX`, nicht `scaleX` — eine skalierte
+           Kante wüchse bei niedrigem Stand auf ein Vielfaches ihrer Stärke. -->
+      <span
+        :key="`${face.id}-edge`"
+        class="wf-edge"
+        :style="{ transform: `translateX(${face.ratio * 100}%)` }"
+        aria-hidden="true"
+      ></span>
+
+      <span class="wf-name">{{ face.name }}</span>
+      <span class="wf-task">{{ face.task }}</span>
+
+      <!-- Zähler links, Lohn rechts: der Lohn trägt keine eigene Fläche, nur die
+           Kapitelfarbe. -->
+      <div class="wf-foot">
+        <span class="wf-count">
+          {{ formatNumber(face.progress) }}/{{ formatNumber(face.target) }}
+        </span>
         <div class="wf-boon">
           <span v-for="part in face.rewardParts" :key="part.unit" class="wf-boon__part">
             <img
@@ -122,11 +136,6 @@ onUnmounted(() => {
           </span>
         </div>
       </div>
-
-      <span class="wf-task">{{ face.task }}</span>
-      <span class="wf-count">
-        {{ formatNumber(face.progress) }}/{{ formatNumber(face.target) }}
-      </span>
     </div>
   </Transition>
 </template>
@@ -138,8 +147,9 @@ onUnmounted(() => {
    Formel für alle fünf Karten der Spalte und die Log-Spur gegenüber. Zwei
    Karten in einer Spalte, deren rechte Kanten auseinanderliegen, lesen sich
    als Fehler; deshalb rechnet hier keine mehr selbst. */
+/* Jede Zeilenhöhe steht FEST: vier Karten hängen an `--wayfinder-bottom`, und
+   eine mit dem Missionsnamen wechselnde Höhe liesse die halbe Spalte wandern. */
 .wf-root {
-  --boon-w: 74px;
   position: fixed;
   top: 0.5rem;
   left: var(--hud-col-edge);
@@ -147,8 +157,8 @@ onUnmounted(() => {
   width: var(--hud-col-w);
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 14px 16px;
+  gap: 4px;
+  padding: 11px 14px;
   background: var(--rpg-bg-header);
   border: 2px solid var(--rpg-wood);
   border-left: 3px solid var(--accent);
@@ -184,59 +194,66 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
+/* Die Kante der Füllung — die Karte ist flach, der Stand muss ohne eigene Zeile
+   ablesbar bleiben. Border statisch, animiert wird nur `transform`. */
+.wf-edge {
+  position: absolute;
+  inset: 0;
+  border-left: 2px solid var(--accent);
+  opacity: 0.55;
+  transition: transform 0.4s ease-out;
+  pointer-events: none;
+}
+
 /* Über der Füllung — `position` allein reicht, keine eigene Ebene nötig. */
-.wf-crown,
+.wf-name,
 .wf-task,
-.wf-count {
+.wf-foot {
   position: relative;
   min-width: 0;
 }
 
+.wf-name,
 .wf-task,
 .wf-count {
   overflow: hidden;
 }
 
-/* Name links, Lohn rechts, gemeinsame Grundlinie. Die Höhe ist fest reserviert:
-   ein Lohn aus zwei Teilen ist höher als einer aus einem, und die Karte hängt
-   mit ihrer Unterkante an der halben linken Spalte. */
-.wf-crown {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  height: 70px;
-}
-
-/* DREI Zeilen, und die Höhe steht fest: neben dem Lohn bleiben dem Namen auf
-   Full HD nur rund 95 px, und die 41 Namen gehen bis 23 Zeichen. Wechselte die
-   Höhe mit der Namenslänge, wanderte bei jedem Missionswechsel die halbe linke
-   Spalte mit. */
+/* Eine Zeile über die volle Breite: die 41 Namen gehen bis 23 Zeichen, und die
+   Spalte trägt auf Full HD 380 px. */
 .wf-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  height: 3.45em;
+  display: block;
+  height: 1.2em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: clamp(16px, 1.05vw, 20px);
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.2;
   color: #f2ead2;
 }
 
-/* Die Anweisung — was der Spieler tun soll. Zwei Zeilen fest. */
+/* Die Anweisung — was der Spieler tun soll. */
 .wf-task {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  height: 2.6em;
+  height: 1.35em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 14px;
-  line-height: 1.3;
+  line-height: 1.35;
   color: #9a9184;
 }
 
+/* Zähler und Lohn teilen den Fuss; beide sind an ihrer Seite verankert, also
+   wandert nichts, wenn eine Zahl eine Stelle gewinnt. */
+.wf-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  height: 22px;
+}
+
 .wf-count {
+  flex: 0 0 auto;
   white-space: nowrap;
   text-overflow: ellipsis;
   font-size: 15px;
@@ -247,33 +264,24 @@ onUnmounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Der Lohn ───────────────────────────────────────────────────────────────
-   Feste Breite, damit die Namensspalte nicht mit der Länge der Zahl wechselt.
-   Zwei Teile stehen untereinander — nebeneinander sprengen sie die Karte. */
+/* ── Der Lohn ─────────────────────────────────────────────────────────────── */
 .wf-boon {
-  flex: 0 0 var(--boon-w);
+  flex: 0 1 auto;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.wf-boon__part {
+  display: flex;
+  align-items: baseline;
   gap: 4px;
   min-width: 0;
 }
 
-/* Auf Full HD steht die Einheit UNTER der Zahl: gemessen kostet
-   „5m PRODUCTION" einzeilig 124 px, und die nähme dem Namen die halbe Spalte. */
-.wf-boon__part {
-  display: grid;
-  grid-template-columns: auto auto;
-  justify-content: end;
-  align-items: baseline;
-  column-gap: 4px;
-  row-gap: 1px;
-  max-width: 100%;
-  min-width: 0;
-}
-
 .wf-boon__art {
-  grid-row: 1;
   align-self: center;
   flex-shrink: 0;
   width: 16px;
@@ -284,7 +292,6 @@ onUnmounted(() => {
 /* Vier Materialien haben kein Artwork — gleiche Kantenlänge wie ein Bild,
    damit die Felder in Flucht bleiben (Muster der Header-Materialzeile). */
 .wf-boon__mono {
-  grid-row: 1;
   align-self: center;
   flex-shrink: 0;
   display: flex;
@@ -304,7 +311,6 @@ onUnmounted(() => {
 
 /* Die eine große Zahl. Sie kürzt nie — die Einheit weicht. */
 .wf-boon__amount {
-  grid-row: 1;
   flex-shrink: 0;
   font-size: 20px;
   font-weight: 900;
@@ -315,8 +321,6 @@ onUnmounted(() => {
 }
 
 .wf-boon__unit {
-  grid-column: 1 / -1;
-  justify-self: end;
   min-width: 0;
   overflow: hidden;
   font-size: 9px;
@@ -335,6 +339,12 @@ onUnmounted(() => {
 .wf-root--done .wf-fill {
   background: #6ec040;
   opacity: 0.38;
+  transition-duration: 0.25s;
+}
+
+.wf-root--done .wf-edge {
+  border-left-color: #6ec040;
+  opacity: 0.8;
   transition-duration: 0.25s;
 }
 
@@ -365,41 +375,45 @@ onUnmounted(() => {
 }
 
 /* ── Auflösungsstufen ──────────────────────────────────────────────────────
-   Nur noch Typografie und `--boon-w`: die Breite trägt `--hud-col-w`. */
+   Unter 1800 px fällt `--hud-col-w` unter rund 350 px (bei 1536 px auf den
+   Boden 232) — dort trägt eine Zeile die längste Aufgabe nicht mehr, und die
+   Einheit des Lohns weicht ins `title`. */
+@media (max-width: 1800px) {
+  .wf-task {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    height: 2.7em;
+    white-space: normal;
+    font-size: 13px;
+  }
+  .wf-boon__unit {
+    display: none;
+  }
+}
+
+/* Ab hier nur noch Typografie und Padding: die Breite trägt `--hud-col-w`. */
 @media (min-width: 2400px) {
   .wf-root {
-    --boon-w: 190px;
     top: 0.7rem;
-    gap: 6px;
-    padding: 16px 19px;
+    gap: 5px;
+    padding: 14px 18px;
   }
-  /* Ab hier bleiben dem Namen rund 305 px, und gemessen passt bei 27 px jeder
-     der 41 einzeilig (der längste misst 300). Eine reservierte zweite Zeile
-     stünde in 37 von 41 Fällen leer. */
   .wf-name {
-    -webkit-line-clamp: 1;
-    height: 1.15em;
     font-size: clamp(21px, 1.05vw, 27px);
   }
   .wf-task {
-    -webkit-line-clamp: 1;
-    height: 1.3em;
     font-size: 18px;
+  }
+  .wf-foot {
+    height: 30px;
+    gap: 14px;
   }
   .wf-count {
     font-size: 19px;
   }
-  .wf-crown {
-    height: 58px;
-  }
   .wf-boon {
-    gap: 3px;
-  }
-  /* Ab hier trägt die Zeile den Lohn am Stück — die Spalte ist breit genug. */
-  .wf-boon__part {
-    display: flex;
-    align-items: baseline;
-    gap: 5px;
+    gap: 14px;
   }
   .wf-boon__art,
   .wf-boon__mono {
@@ -420,18 +434,17 @@ onUnmounted(() => {
 
 @media (min-width: 3400px) {
   .wf-root {
-    --boon-w: 250px;
-    gap: 7px;
-    padding: 19px 23px;
-  }
-  .wf-crown {
-    height: 72px;
+    gap: 6px;
+    padding: 17px 22px;
   }
   .wf-name {
     font-size: clamp(26px, 0.9vw, 34px);
   }
   .wf-task {
     font-size: 23px;
+  }
+  .wf-foot {
+    height: 38px;
   }
   .wf-count {
     font-size: 24px;
@@ -453,7 +466,8 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wf-fill {
+  .wf-fill,
+  .wf-edge {
     transition: none;
   }
 }
