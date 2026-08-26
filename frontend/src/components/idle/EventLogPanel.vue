@@ -33,7 +33,10 @@ import {
   EVENT_LOG_TOOL_W_MID,
   EVENT_LOG_TOOL_W_WIDE,
   EVENT_LOG_TRAIL_FADE_PX,
+  EVENT_LOG_TRAIL_FADE_TOP_PX,
   EVENT_LOG_TRAIL_MAX_ROWS,
+  EVENT_LOG_TRAIL_MOVE_ROWS,
+  EVENT_LOG_WHEEL_ANCESTOR_DEPTH,
 } from '@/config/constants'
 
 // Per v-bind statt beschreibend im CSS: eine Konstante, die nur beschreibt,
@@ -50,6 +53,9 @@ const toolW = `${EVENT_LOG_TOOL_W}px`
 const toolWMid = `${EVENT_LOG_TOOL_W_MID}px`
 const toolWWide = `${EVENT_LOG_TOOL_W_WIDE}px`
 const fadeMask = `linear-gradient(to bottom, #000 calc(100% - ${EVENT_LOG_TRAIL_FADE_PX}px), transparent 100%)`
+// Zurückgerollt blendet auch der Kopf aus: das ist das einzige Zeichen dafür,
+// dass oben Neueres steht, und es kommt ohne Beschriftung aus.
+const fadeMaskBoth = `linear-gradient(to bottom, transparent 0, #000 ${EVENT_LOG_TRAIL_FADE_TOP_PX}px, #000 calc(100% - ${EVENT_LOG_TRAIL_FADE_PX}px), transparent 100%)`
 
 const uiStore = useUiStore()
 const gameStore = useGameStore()
@@ -58,9 +64,15 @@ const { historyVersion, readHistory, clearEvents } = useEventLog()
 const { folded, toggleFold } = useEventLogPane()
 
 const shell = ref<HTMLElement | null>(null)
+const trailGroup = ref<{ $el?: HTMLElement } | null>(null)
 const activeTab = ref<EventTabId>('all')
 const copied = ref(false)
+const scrolled = ref(false)
+/** Der eingefrorene Stand, solange zurückgerollt ist — sonst `null`. */
+const frozenRows = ref<GameEvent[] | null>(null)
 let copyTimer: ReturnType<typeof setTimeout> | null = null
+
+const trailEl = () => trailGroup.value?.$el ?? null
 
 // Die Spur liegt unter Modalen und Profil-Tabs: verdeckt statt bedienbar wäre
 // eine Leiste, die noch Fokus fängt.
@@ -85,6 +97,9 @@ const history = computed<GameEvent[]>(() => {
 const rows = computed(() => history.value.filter((e) => inTab(e, activeTab.value)))
 
 const trailRows = computed(() => rows.value.slice(0, EVENT_LOG_TRAIL_MAX_ROWS))
+
+/** Was die Spur zeigt: live — oder der Stand, an dem gerade gelesen wird. */
+const displayRows = computed(() => frozenRows.value ?? trailRows.value)
 
 const tabCounts = computed<Record<EventTabId, number>>(() => {
   const counts = { all: 0, combat: 0, cosmos: 0, progress: 0, system: 0 }
@@ -114,8 +129,65 @@ function measure() {
   publishEdges()
 }
 
+// ── Rad-Scrollen durch die Historie ─────────────────────────────────────────
+// Die Spur bleibt klickdurchlässig: `pointer-events: auto` trägt allein die
+// Leiste. Das Rad findet sie deshalb über ihre KANTE, nicht über ein Element.
+
+/** Eingefroren statt nachrutschend — neue Zeilen schieben nicht unterm Zeiger. */
+function setScrolled(on: boolean) {
+  if (on === scrolled.value) return
+  scrolled.value = on
+  frozenRows.value = on ? trailRows.value : null
+}
+
+function resetScroll() {
+  const el = trailEl()
+  if (el) el.scrollTop = 0
+  setScrolled(false)
+}
+
+/** Kann etwas unter dem Zeiger selbst rollen, gehört das Rad ihm. */
+function ancestorTakesWheel(target: EventTarget | null) {
+  let el = target instanceof Element ? target : null
+  for (let depth = 0; el && depth < EVENT_LOG_WHEEL_ANCESTOR_DEPTH; depth++) {
+    if (el.scrollHeight - el.clientHeight > 1) {
+      const overflow = getComputedStyle(el).overflowY
+      if (overflow === 'auto' || overflow === 'scroll') return true
+    }
+    el = el.parentElement
+  }
+  return false
+}
+
+function onWheel(event: WheelEvent) {
+  const el = trailEl()
+  if (!el || folded.value) return
+  const box = el.getBoundingClientRect()
+  if (
+    event.clientX < box.left ||
+    event.clientX > box.right ||
+    event.clientY < box.top ||
+    event.clientY > box.bottom
+  ) {
+    return
+  }
+  const max = el.scrollHeight - el.clientHeight
+  if (max <= 0 || ancestorTakesWheel(event.target)) return
+  event.preventDefault()
+  const next = Math.min(Math.max(el.scrollTop + event.deltaY, 0), max)
+  if (next === el.scrollTop) return
+  el.scrollTop = next
+  setScrolled(next > 0)
+}
+
 function selectTab(id: EventTabId) {
   activeTab.value = id
+  resetScroll()
+}
+
+function clearAll() {
+  clearEvents()
+  resetScroll()
 }
 
 function copyRows() {
@@ -135,6 +207,7 @@ function copyRows() {
 onKeybinding('eventLog', () => toggleFold())
 
 watch([covered, folded], () => {
+  setScrolled(false)
   // Ein Frame später: eingeklappt hat die Wurzel ihre neue Höhe erst nach dem
   // Patch, und der ResizeObserver käme mit derselben Zahl ein zweites Mal.
   requestAnimationFrame(measure)
@@ -142,6 +215,7 @@ watch([covered, folded], () => {
 
 onMounted(() => {
   window.addEventListener('resize', measure)
+  window.addEventListener('wheel', onWheel, { passive: false })
   if (typeof ResizeObserver === 'function' && shell.value) {
     observer = new ResizeObserver(measure)
     observer.observe(shell.value)
@@ -151,6 +225,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', measure)
+  window.removeEventListener('wheel', onWheel)
   observer?.disconnect()
   if (copyTimer !== null) clearTimeout(copyTimer)
   const root = document.documentElement.style
@@ -203,7 +278,7 @@ onUnmounted(() => {
         type="button"
         aria-label="Clear the log"
         title="Clear the log"
-        @click="clearEvents"
+        @click="clearAll"
       >
         <Icon icon="lucide:eraser" width="18" height="18" />
       </button>
@@ -222,18 +297,21 @@ onUnmounted(() => {
     <TransitionGroup
       v-if="!folded"
       id="event-log-trail"
+      ref="trailGroup"
       name="elp-row"
       tag="div"
       class="elp-trail"
+      :class="{ 'elp-trail--scrolled': scrolled }"
       role="log"
     >
       <p v-if="!rows.length" key="empty" class="elp-empty">
         {{ EVENT_GROUP_EMPTY[activeTab] }}
       </p>
       <div
-        v-for="event in trailRows"
+        v-for="(event, index) in displayRows"
         :key="event.id"
         class="elp-row"
+        :class="{ 'elp-row--still': index >= EVENT_LOG_TRAIL_MOVE_ROWS }"
         :style="{ '--row-color': typeColor[event.type] }"
       >
         <span class="elp-time">{{ formatEventClock(event.timestamp, true) }}</span>
@@ -336,7 +414,7 @@ onUnmounted(() => {
 }
 
 /* Der Name steht IMMER im DOM — eine Container-Query kann kein `v-if`. Schmal
-   traegt das Icon allein, mittel der aktive Tab, breit alle fuenf. */
+   traegt das Icon allein, ab 480 der aktive Tab seinen Namen, ab 540 alle. */
 .elp-tab-label {
   display: none;
 }
@@ -384,10 +462,10 @@ onUnmounted(() => {
   transform: rotate(-90deg);
 }
 
-/* Die Spur rollt nicht: was nicht in die Höhe passt, fällt unten heraus, und
-   die Maske blendet die letzte Zeile aus, statt sie abzuschneiden. Sie füllt
-   dafür den Restraum — inhaltshoch endete die Maske am letzten Eintrag und
-   blendete ihn auch dann aus, wenn darunter noch Platz war. */
+/* Was nicht in die Höhe passt, fällt unten heraus, und die Maske blendet die
+   unterste Zeile aus, statt sie abzuschneiden. Die Spur füllt dafür den
+   Restraum — inhaltshoch endete die Maske am letzten Eintrag und blendete ihn
+   auch dann aus, wenn darunter noch Platz war. */
 .elp-trail {
   display: flex;
   flex: 1 1 auto;
@@ -397,9 +475,17 @@ onUnmounted(() => {
      Wurzel sonst 6 px Nichts an die Kontur. */
   margin-top: 6px;
   min-height: 0;
-  overflow: clip;
+  /* Scrollport, kein `clip`: das Rad setzt `scrollTop`, und `clip` liesse das
+     nicht zu. Keine Leiste — bedienbar wäre sie ohnehin nicht. */
+  overflow: hidden;
+  overscroll-behavior: contain;
   -webkit-mask-image: v-bind(fadeMask);
   mask-image: v-bind(fadeMask);
+}
+
+.elp-trail--scrolled {
+  -webkit-mask-image: v-bind(fadeMaskBoth);
+  mask-image: v-bind(fadeMaskBoth);
 }
 
 .elp-row {
@@ -471,6 +557,14 @@ onUnmounted(() => {
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Was unterhalb der Spur liegt, rückt ohne Animation nach — sonst trüge jede
+   der gerenderten Zeilen je Ereignis eine FLIP-Transition. Die Klasse hängt am
+   INDEX, nicht an `nth-child`: Vue prüft die Move-Transition an einem Klon des
+   ERSTEN Kindes und hängt ihn ans Ende der Liste. */
+.elp-row--still.elp-row-move {
+  transition: none;
+}
+
 /* Ab hier trägt die Gasse neben dem Header die Spur (Full HD: Gasse 404
    gegen 384 + 12 Rand + 8 Lücke) — sie rückt aus der Header-Unterkante
    heraus auf dessen Höhe. Darunter bleibt sie darunter stehen: der Header
@@ -498,11 +592,11 @@ onUnmounted(() => {
   }
 }
 
-/* ── Die drei Stufen ──────────────────────────────────────────────────────
+/* ── Die Stufen ───────────────────────────────────────────────────────────
    Gemessen wird die SPURBREITE, nicht der Viewport: die Spur ist die Gasse,
    und die haengt am Header. Full HD trifft die schmale Stufe (380), 2K die
-   mittlere (548), 4K die breite (860). Jede Stufe gibt etwas DAZU — Groesse
-   und Namen; eine Staffel, die etwas wegnimmt, waere der alte Fehler. */
+   Namensstufe (548), 4K die breite (860). Die beiden GROESSEN-Stufen liegen
+   bei 480 und 760, die NAMENS-Schwelle dazwischen bei 540. */
 @container (min-width: 480px) {
   .elp-bar {
     height: v-bind(barHMid);
@@ -541,6 +635,20 @@ onUnmounted(() => {
   }
 }
 
+/* Ab hier traegt JEDER Tab seinen Namen — und die Zahl weicht ihm an den
+   inaktiven: fuenf Namen samt fuenf Zaehlern wiegen 610 px in einem Innenraum
+   von 534. Sie steht weiter im `title` und im `aria-label`, und auf der
+   breiten Stufe kommt sie zurueck. */
+@container (min-width: 540px) {
+  .elp-tab-label {
+    display: inline;
+  }
+
+  .elp-tab:not(.elp-tab--active) .elp-tab-count {
+    display: none;
+  }
+}
+
 @container (min-width: 760px) {
   .elp-bar {
     height: v-bind(barHWide);
@@ -565,7 +673,9 @@ onUnmounted(() => {
     height: 30px;
   }
 
-  .elp-tab-label {
+  /* Derselbe Selektor wie auf der Namensstufe, damit er ihn ueberstimmt: hier
+     ist Platz fuer Namen UND Zaehler. */
+  .elp-tab:not(.elp-tab--active) .elp-tab-count {
     display: inline;
   }
 

@@ -16,14 +16,19 @@ import {
   EVENT_LOG_BAR_GAP,
   EVENT_LOG_BAR_MID_MIN_W,
   EVENT_LOG_BAR_WIDE_MIN_W,
+  EVENT_LOG_BAR_NAMES_MIN_W,
   EVENT_LOG_TAB_MIN_W,
   EVENT_LOG_TAB_MIN_W_MID,
   EVENT_LOG_TAB_MIN_W_WIDE,
+  EVENT_LOG_TAB_COUNT_W,
+  EVENT_LOG_TAB_COUNT_W_MID,
+  EVENT_LOG_TAB_COUNT_W_WIDE,
   EVENT_LOG_TOOL_W,
   EVENT_LOG_TOOL_W_MID,
   EVENT_LOG_TOOL_W_WIDE,
   EVENT_LOG_TRAIL_FADE_PX,
   EVENT_LOG_TRAIL_MAX_ROWS,
+  EVENT_LOG_TRAIL_MOVE_ROWS,
   EVENT_LOG_BESIDE_HEADER_MIN_VW,
   HUD_COLUMN_MIN_W,
   HUD_COLUMN_MAX_W,
@@ -58,10 +63,10 @@ const belowThresholdWidth = (viewportW: number) =>
 const headerWidth = (W: number) =>
   clamp(HEADER_MIN_WIDTH, W - HEADER_SIDE_GUTTER_TOTAL, HEADER_MAX_WIDTH)
 
-const gutter = (W: number) =>
-  HEADER_PAGE_INSET + (W - 2 * HEADER_PAGE_INSET - headerWidth(W)) / 2
+const gutter = (W: number) => HEADER_PAGE_INSET + (W - 2 * HEADER_PAGE_INSET - headerWidth(W)) / 2
 
-const inset = (W: number) => (W >= HUD_COLUMN_WIDE_MIN_VW ? HUD_COLUMN_INSET_WIDE : HUD_COLUMN_INSET)
+const inset = (W: number) =>
+  W >= HUD_COLUMN_WIDE_MIN_VW ? HUD_COLUMN_INSET_WIDE : HUD_COLUMN_INSET
 
 /** Dieselbe Formel wie in `hudColumnWidth.spec.ts` — hier als Eingabe der Leiste. */
 const columnWidth = (W: number) =>
@@ -169,9 +174,13 @@ interface Step {
   fontPx: number
   barPad: number
   barGap: number
+  /** Ein Tab MIT seiner Zahl. */
   tabW: number
+  /** Was die Zahl davon wiegt — sie weicht auf der Namensstufe dem Namen. */
+  countW: number
   toolW: number
   named: 'none' | 'active' | 'all'
+  counted: 'all' | 'active'
 }
 
 const STEPS: Step[] = [
@@ -182,18 +191,36 @@ const STEPS: Step[] = [
     barPad: EVENT_LOG_BAR_PAD,
     barGap: EVENT_LOG_BAR_GAP,
     tabW: EVENT_LOG_TAB_MIN_W,
+    countW: EVENT_LOG_TAB_COUNT_W,
     toolW: EVENT_LOG_TOOL_W,
     named: 'none',
+    counted: 'all',
   },
   {
+    // Zwischen der Groessen- und der Namensschwelle: 2480 px Fenster tragen
+    // eine Spur von 508 — dort steht nur der aktive Name, aber jede Zahl.
     name: 'mid',
+    viewport: 2480,
+    fontPx: 11,
+    barPad: 6,
+    barGap: 4,
+    tabW: EVENT_LOG_TAB_MIN_W_MID,
+    countW: EVENT_LOG_TAB_COUNT_W_MID,
+    toolW: EVENT_LOG_TOOL_W_MID,
+    named: 'active',
+    counted: 'all',
+  },
+  {
+    name: 'names',
     viewport: 2560,
     fontPx: 11,
     barPad: 6,
     barGap: 4,
     tabW: EVENT_LOG_TAB_MIN_W_MID,
+    countW: EVENT_LOG_TAB_COUNT_W_MID,
     toolW: EVENT_LOG_TOOL_W_MID,
-    named: 'active',
+    named: 'all',
+    counted: 'active',
   },
   {
     name: 'wide',
@@ -202,8 +229,10 @@ const STEPS: Step[] = [
     barPad: 8,
     barGap: 5,
     tabW: EVENT_LOG_TAB_MIN_W_WIDE,
+    countW: EVENT_LOG_TAB_COUNT_W_WIDE,
     toolW: EVENT_LOG_TOOL_W_WIDE,
     named: 'all',
+    counted: 'all',
   },
 ]
 
@@ -225,8 +254,10 @@ const barNeed = (step: Step) => {
       : step.named === 'active'
         ? widest + step.barGap
         : 0
+  const counts = step.counted === 'all' ? EVENT_GROUPS.length * step.countW : step.countW
   return (
-    EVENT_GROUPS.length * step.tabW +
+    EVENT_GROUPS.length * (step.tabW - step.countW) +
+    counts +
     (EVENT_GROUPS.length - 1) * TAB_GAP +
     names +
     TOOLS * step.toolW +
@@ -254,16 +285,26 @@ describe('event log trail — the bar in three steps', () => {
    * Schwelle selbst, nicht erst bei der Referenzauflösung darüber.
    */
   it('carries its content already at each threshold', () => {
-    const mid = STEPS[1]
-    const wide = STEPS[2]
-    expect(barNeed(mid)).toBeLessThanOrEqual(barInner(EVENT_LOG_BAR_MID_MIN_W, mid))
-    expect(barNeed(wide)).toBeLessThanOrEqual(barInner(EVENT_LOG_BAR_WIDE_MIN_W, wide))
+    const at: Array<[string, number]> = [
+      ['mid', EVENT_LOG_BAR_MID_MIN_W],
+      ['names', EVENT_LOG_BAR_NAMES_MIN_W],
+      ['wide', EVENT_LOG_BAR_WIDE_MIN_W],
+    ]
+    for (const [name, threshold] of at) {
+      const step = STEPS.find((s) => s.name === name)!
+      expect(barNeed(step), name).toBeLessThanOrEqual(barInner(threshold, step))
+    }
   })
 
   /** Und die Referenzbreiten treffen ihre Stufe auch. */
   it('puts every reference resolution on its own step', () => {
+    expect(EVENT_LOG_BAR_MID_MIN_W).toBeLessThan(EVENT_LOG_BAR_NAMES_MIN_W)
+    expect(EVENT_LOG_BAR_NAMES_MIN_W).toBeLessThan(EVENT_LOG_BAR_WIDE_MIN_W)
     expect(columnWidth(1920)).toBeLessThan(EVENT_LOG_BAR_MID_MIN_W)
-    expect(columnWidth(2560)).toBeGreaterThanOrEqual(EVENT_LOG_BAR_MID_MIN_W)
+    expect(columnWidth(2480)).toBeGreaterThanOrEqual(EVENT_LOG_BAR_MID_MIN_W)
+    expect(columnWidth(2480)).toBeLessThan(EVENT_LOG_BAR_NAMES_MIN_W)
+    // 2K traegt alle fuenf Namen — dafuer wurde die Schwelle gesetzt.
+    expect(columnWidth(2560)).toBeGreaterThanOrEqual(EVENT_LOG_BAR_NAMES_MIN_W)
     expect(columnWidth(2560)).toBeLessThan(EVENT_LOG_BAR_WIDE_MIN_W)
     expect(columnWidth(3840)).toBeGreaterThanOrEqual(EVENT_LOG_BAR_WIDE_MIN_W)
   })
@@ -284,18 +325,31 @@ describe('event log trail — the bar in three steps', () => {
   })
 })
 
+const ROW_H = 30
+const ROW_GAP = 6
+/** Was die hoechste Spur ueberhaupt zeigen kann. */
+const rowsInTallestTrail = Math.ceil(
+  (EVENT_LOG_PANEL_MAX_H - EVENT_LOG_BAR_H_WIDE - ROW_GAP) / (ROW_H + ROW_GAP),
+)
+
 describe('event log trail — what falls out of it', () => {
   /**
-   * Die Spur rollt nicht. Der Deckel auf gerenderte Zeilen muss deshalb die
-   * hoechste Spur ueberfuellen — sonst endet sie mitten im Bild mit einer
-   * Luecke, und die Maske blendet nichts aus.
+   * Der Deckel auf gerenderte Zeilen muss die hoechste Spur ueberfuellen —
+   * sonst endet sie mitten im Bild mit einer Luecke, und die Maske blendet
+   * nichts aus. Seit dem Rad-Scrollen ist er zugleich die Tiefe der Historie,
+   * durch die man zurueckgehen kann.
    */
   it('renders more rows than the tallest trail can show', () => {
-    const ROW_H = 30
-    const GAP = 6
-    const trail = EVENT_LOG_PANEL_MAX_H - EVENT_LOG_BAR_H_WIDE - GAP
-    const fits = Math.ceil(trail / (ROW_H + GAP))
-    expect(EVENT_LOG_TRAIL_MAX_ROWS).toBeGreaterThan(fits)
+    expect(EVENT_LOG_TRAIL_MAX_ROWS).toBeGreaterThan(rowsInTallestTrail)
+  })
+
+  /**
+   * Die Move-Transition traegt nur, was in der Spur steht: alles darunter ist
+   * unsichtbar und wuerde je Ereignis umsonst animiert.
+   */
+  it('animates the visible rows and no more', () => {
+    expect(EVENT_LOG_TRAIL_MOVE_ROWS).toBeGreaterThanOrEqual(rowsInTallestTrail)
+    expect(EVENT_LOG_TRAIL_MOVE_ROWS).toBeLessThan(EVENT_LOG_TRAIL_MAX_ROWS)
   })
 
   /** Die Maske darf nur die letzte Zeile fassen, nie zwei. */

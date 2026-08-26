@@ -798,20 +798,43 @@ export const EVENT_LOG_BAR_H_WIDE = 38
 export const EVENT_LOG_TAB_MIN_W = 50
 export const EVENT_LOG_TAB_MIN_W_MID = 56
 export const EVENT_LOG_TAB_MIN_W_WIDE = 68
+/** Was davon die ZAHL wiegt (dreistellig plus Abstand) — sie weicht dem Namen. */
+export const EVENT_LOG_TAB_COUNT_W = 22
+export const EVENT_LOG_TAB_COUNT_W_MID = 26
+export const EVENT_LOG_TAB_COUNT_W_WIDE = 30
 /** Was ein randloser Werkzeugknopf misst (Copy, Clear, Chevron). */
 export const EVENT_LOG_TOOL_W = 22
 export const EVENT_LOG_TOOL_W_MID = 26
 export const EVENT_LOG_TOOL_W_WIDE = 30
 /** Ab dieser SPURBREITE traegt der aktive Tab seinen Namen. */
 export const EVENT_LOG_BAR_MID_MIN_W = 480
-/** Ab dieser SPURBREITE tragen alle fuenf Tabs ihren Namen. */
+/**
+ * Ab dieser SPURBREITE tragen ALLE fuenf Tabs ihren Namen — und die Zahl weicht
+ * dafuer an den inaktiven: fuenf Namen samt fuenf Zaehlern wiegen 610 px in
+ * einem Innenraum von 534. Zurueck kommt sie auf der breiten Stufe.
+ */
+export const EVENT_LOG_BAR_NAMES_MIN_W = 540
+/** Ab dieser SPURBREITE tragen alle fuenf Tabs Namen UND Zahl. */
 export const EVENT_LOG_BAR_WIDE_MIN_W = 760
 
-// Die Spur rollt NICHT — was nicht in die Hoehe passt, faellt unten heraus.
-/** Harter Deckel auf gerenderte Zeilen; 420 px tragen rund zwoelf. */
-export const EVENT_LOG_TRAIL_MAX_ROWS = 14
+// Die Spur rollt nicht von selbst, laesst sich aber per Mausrad durch die
+// Historie ziehen — klickdurchlaessig bleibt sie dabei, das Rad findet sie
+// ueber ihre Kante statt ueber pointer-events.
+/** Harter Deckel auf gerenderte Zeilen — rund fuenf Bildschirme auf Full HD. */
+export const EVENT_LOG_TRAIL_MAX_ROWS = 40
+/**
+ * So viele Zeilen tragen die Move-Transition; was darunter liegt, ist
+ * ausserhalb der Spur und rueckt ohne Animation nach. Die Grenze haengt am
+ * INDEX der Zeile, nicht an `nth-child` — Vue prueft die Move-Transition an
+ * einem Klon des ERSTEN Kindes und haengt ihn ans Ende der Liste.
+ */
+export const EVENT_LOG_TRAIL_MOVE_ROWS = 14
 /** Hoehe der Verlaufsmaske am Fuss der Spur. */
 export const EVENT_LOG_TRAIL_FADE_PX = 56
+/** Und am Kopf, sobald in der Historie zurueckgerollt wurde. */
+export const EVENT_LOG_TRAIL_FADE_TOP_PX = 24
+/** Rad-Vorfahren, die bis zu dieser Tiefe selbst rollen koennen, gewinnen. */
+export const EVENT_LOG_WHEEL_ANCESTOR_DEPTH = 8
 
 // Herald — large centered milestone announcements (HeraldOverlay / useHerald)
 /** How long a single herald banner stays on screen (ms) */
