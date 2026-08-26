@@ -1,11 +1,5 @@
 import { ref } from 'vue'
-import { useUiStore } from '@/stores/core/uiStore'
-import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
-import {
-  EVENT_LOG_MAX_SIZE,
-  EVENT_LOG_DISMISS_MS,
-  EVENT_LOG_HISTORY_MAX,
-} from '@/config/constants'
+import { EVENT_LOG_HISTORY_MAX } from '@/config/constants'
 
 export type GameEventType =
   | 'support'
@@ -32,32 +26,56 @@ export interface GameEvent {
   timestamp: number
 }
 
-/** Die schwebende Spur: klein, tief reaktiv, vom Overlay direkt gerendert. */
-const events = ref<GameEvent[]>([])
-
 // Die Historie liegt in einem festen Ring und ist BEWUSST nicht reaktiv —
 // 300 Proxies wuerden bei jedem Ereignis neu getrackt. Leser haengen sich
 // stattdessen an historyVersion.
 const ring = new Array<GameEvent | null>(EVENT_LOG_HISTORY_MAX).fill(null)
 let ringHead = 0
+let ringCount = 0
 /** Zaehlt bis EVENT_LOG_HISTORY_MAX und bleibt dann stehen. */
 const historySize = ref(0)
-/** Steigt bei JEDEM Ereignis — daran haengt, wer den Inhalt liest. */
+/** Steigt einmal je FRAME, nicht je Ereignis — daran haengt, wer den Inhalt liest. */
 const historyVersion = ref(0)
+/** Ids seit dem letzten Flush; das Panel laesst genau die aufblitzen. */
+let pending: number[] = []
+const freshIds = ref<readonly number[]>([])
 
 let nextId = 1
+let flushHandle = 0
+
+function flush() {
+  flushHandle = 0
+  freshIds.value = pending
+  pending = []
+  historySize.value = ringCount
+  historyVersion.value++
+}
+
+// Das Panel steht dauerhaft, also laeuft seine ganze Rechenkette sonst je
+// EREIGNIS statt je Frame — im Kampf mehrmals pro Sekunde ueber 300 Eintraege.
+// Im Hintergrundtab feuert rAF gar nicht: das Pausenverhalten kommt gratis.
+function scheduleFlush() {
+  if (flushHandle) return
+  if (typeof requestAnimationFrame !== 'function') {
+    flush()
+    return
+  }
+  flushHandle = requestAnimationFrame(flush)
+}
 
 function pushHistory(event: GameEvent) {
   ring[ringHead] = event
   ringHead = (ringHead + 1) % EVENT_LOG_HISTORY_MAX
-  if (historySize.value < EVENT_LOG_HISTORY_MAX) historySize.value++
-  historyVersion.value++
+  if (ringCount < EVENT_LOG_HISTORY_MAX) ringCount++
+  pending.push(event.id)
+  scheduleFlush()
 }
 
-/** Neueste zuerst, wie die Spur. Nur das offene Panel ruft das auf. */
-function readHistory(): GameEvent[] {
+/** Neueste zuerst. `limit` deckelt, was das Panel wirklich rendert. */
+function readHistory(limit = EVENT_LOG_HISTORY_MAX): GameEvent[] {
   const out: GameEvent[] = []
-  for (let i = 1; i <= historySize.value; i++) {
+  const take = Math.min(limit, ringCount)
+  for (let i = 1; i <= take; i++) {
     const entry = ring[(ringHead - i + EVENT_LOG_HISTORY_MAX) % EVENT_LOG_HISTORY_MAX]
     if (entry) out.push(entry)
   }
@@ -65,44 +83,31 @@ function readHistory(): GameEvent[] {
 }
 
 export function useEventLog() {
-  const { isRenderingPaused } = useRenderingPaused()
-
   function addEvent(message: string, type: GameEventType = 'info') {
     // Wanduhrzeit: der Zeitstempel wird als Datum gelesen, nicht gegen die
     // Spieluhr gerechnet.
-     
-    const event: GameEvent = { id: nextId++, message, type, timestamp: Date.now() }
 
-    // Immer — ein Log, das im Hintergrund schweigt, ist als Log wertlos.
-    pushHistory(event)
-
-    // Keine Spur, wenn niemand hinsieht oder das Panel dieselbe Zeile zeigt.
-    // Ohne Spur auch kein Dismiss-Timer: sonst liefen bei langer Abwesenheit
-    // Tausende Waisen-Timer auf eine Liste, in der die id nie stand.
-    if (isRenderingPaused.value || useUiStore().isEventLogOpen) return
-
-    events.value.unshift(event)
-    if (events.value.length > EVENT_LOG_MAX_SIZE) {
-      events.value.length = EVENT_LOG_MAX_SIZE
-    }
-
-    window.setTimeout(() => {
-      events.value = events.value.filter((e) => e.id !== event.id)
-    }, EVENT_LOG_DISMISS_MS)
+    pushHistory({ id: nextId++, message, type, timestamp: Date.now() })
   }
 
   function clearEvents() {
-    events.value = []
+    if (flushHandle && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(flushHandle)
+    }
+    flushHandle = 0
     ring.fill(null)
     ringHead = 0
+    ringCount = 0
+    pending = []
+    freshIds.value = []
     historySize.value = 0
     historyVersion.value++
   }
 
   return {
-    events,
     historyVersion,
     historySize,
+    freshIds,
     readHistory,
     addEvent,
     clearEvents,

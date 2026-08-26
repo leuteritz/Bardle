@@ -38,9 +38,6 @@ export const useUiStore = defineStore('ui', () => {
   // Komponente, weil es aus zwei Richtungen geöffnet wird: über das Kürzel
   // selbst und über die Keycap-Leiste am unteren Bildrand.
   const isControlsOpen = ref(false)
-  // Eventlog-Vollpanel. Liegt hier, weil useEventLog beim Eintragen wissen
-  // muss, ob das Panel dieselben Zeilen bereits zeigt.
-  const isEventLogOpen = ref(false)
 
   /**
    * Rollen- und Planeten-Hover markieren dieselbe Karte bzw. Kachel im Command
@@ -176,14 +173,6 @@ export const useUiStore = defineStore('ui', () => {
     isControlsOpen.value = false
   }
 
-  function toggleEventLog() {
-    isEventLogOpen.value = !isEventLogOpen.value
-  }
-
-  function closeEventLog() {
-    isEventLogOpen.value = false
-  }
-
   return {
     bardActiveTab,
     rolesActiveSlot,
@@ -222,8 +211,5 @@ export const useUiStore = defineStore('ui', () => {
     isControlsOpen,
     toggleControls,
     closeControls,
-    isEventLogOpen,
-    toggleEventLog,
-    closeEventLog,
   }
 })

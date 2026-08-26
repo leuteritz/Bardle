@@ -23,7 +23,7 @@ import EncyclopediaPanel from '@/components/encyclopedia/EncyclopediaPanel.vue'
 import AppHeaderComponent from '@/components/header/AppHeaderComponent.vue'
 import StarTimerBarsComponent from '@/components/header/StarTimerBarsComponent.vue'
 import FpsOverlay from './components/idle/FpsOverlay.vue'
-import EventLogOverlay from '@/components/idle/EventLogOverlay.vue'
+import EventLogPanel from '@/components/idle/EventLogPanel.vue'
 import NebulaFlythroughComponent from '@/components/idle/NebulaFlythroughComponent.vue'
 import OfflineProgressModal from '@/components/idle/OfflineProgressModal.vue'
 import PauseOverlay from '@/components/idle/PauseOverlay.vue'
@@ -165,7 +165,7 @@ watch(
     <RoleSelectionModal />
     <HyperspaceOverlay />
     <UniverseSelectModal />
-    <EventLogOverlay />
+    <EventLogPanel />
     <OfflineProgressModal />
     <PauseOverlay />
     <HeraldOverlay />

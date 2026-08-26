@@ -73,6 +73,17 @@ export interface HudFieldMetrics {
    */
   wayfinderBottom: number
   wayfinderRight: number
+  /**
+   * `--event-log-bottom` / `--event-log-left`: das Eventlog-Panel oben rechts.
+   *
+   * Das Gegenstueck zur Missionskarte, und seit es dauerhaft steht gehoert es
+   * genauso in die Kontur. Gemeldet wird die WURZEL, nicht der Koerper —
+   * eingeklappt ist die Wurzel die Kopfzeile, und `bottom` faellt von selbst
+   * auf deren Kante. Ein Sonderfall dafuer waere ein zweiter Wert fuer dieselbe
+   * Form.
+   */
+  eventLogBottom: number
+  eventLogLeft: number
 }
 
 /**
@@ -181,12 +192,29 @@ export function hudLeftColumnBottomAt(x: number, m: HudFieldMetrics): number {
   return x <= m.wayfinderRight ? m.wayfinderBottom : 0
 }
 
+/**
+ * Unterkante des Eventlog-Panels an der Stelle `x` — 0 links von ihm.
+ *
+ * Spiegelbild von `hudLeftColumnBottomAt`, mit EINEM Unterschied, der ohne
+ * Riegel still zuschlaegt: dort deckelt `x <= 0` von selbst nichts ab, hier ist
+ * `x >= 0` immer wahr. Ein ungemessenes Panel klemmte damit das GANZE Bild.
+ */
+export function hudRightColumnBottomAt(x: number, m: HudFieldMetrics): number {
+  if (m.eventLogBottom <= 0 || m.eventLogLeft <= 0) return 0
+  return x >= m.eventLogLeft ? m.eventLogBottom : 0
+}
+
 /** Die freie senkrechte Spanne an der Stelle `x`. */
 export function hudFreeBandAt(x: number, m: HudFieldMetrics): { top: number; bottom: number } {
   return {
-    // Die tiefere der beiden Oberkanten gewinnt: unter dem Header ist es der
-    // Header, links davon die Missionskarte, und in der Überlappung beides.
-    top: Math.max(hudHeaderBottomAt(x, m), hudLeftColumnBottomAt(x, m)),
+    // Die tiefste der drei Oberkanten gewinnt: unter dem Header ist es der
+    // Header, links davon die Missionskarte, rechts das Eventlog-Panel — und in
+    // der Überlappung das jeweils tiefere.
+    top: Math.max(
+      hudHeaderBottomAt(x, m),
+      hudLeftColumnBottomAt(x, m),
+      hudRightColumnBottomAt(x, m),
+    ),
     // Die tiefere der beiden Unterkanten gewinnt. Über dem Mittelstreifen ist
     // das die Leiste, an den Seiten die Bar — und zwischen beiden liegt kein
     // Übergang, sondern eine Stufe: die Leiste hört seitlich einfach auf.
@@ -249,6 +277,8 @@ export function readHudFieldMetrics(centerArc: HeaderCenterArc | null): HudField
       abilityBarHalfW: 0,
       wayfinderBottom: 0,
       wayfinderRight: 0,
+      eventLogBottom: 0,
+      eventLogLeft: 0,
     }
   }
   const style = getComputedStyle(document.documentElement)
@@ -273,6 +303,8 @@ export function readHudFieldMetrics(centerArc: HeaderCenterArc | null): HudField
     abilityBarHalfW: Math.max(0, read('--ability-bar-w', 0)) / 2,
     wayfinderBottom: Math.max(0, read('--wayfinder-bottom', 0)),
     wayfinderRight: Math.max(0, read('--wayfinder-right', 0)),
+    eventLogBottom: Math.max(0, read('--event-log-bottom', 0)),
+    eventLogLeft: Math.max(0, read('--event-log-left', 0)),
   }
 }
 

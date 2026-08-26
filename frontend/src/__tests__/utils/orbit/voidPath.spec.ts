@@ -50,6 +50,10 @@ const METRICS: HudFieldMetrics = {
   // nur verschieben.
   wayfinderBottom: 0,
   wayfinderRight: 0,
+  // Ebenso ohne Eventlog-Panel: die rechte Spalte hat
+  // `hudFieldRightColumn.spec.ts`.
+  eventLogBottom: 0,
+  eventLogLeft: 0,
 }
 
 const UP = -Math.PI / 2

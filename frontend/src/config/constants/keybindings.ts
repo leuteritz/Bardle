@@ -113,7 +113,7 @@ export const KEYBINDINGS: readonly KeybindDef[] = [
     cap: 'L',
     label: 'Event Log',
     description:
-      'Opens the full log: five tabs, a filter and the last 300 things that happened out there. Copy hands the open tab to the clipboard.',
+      'Folds the event log in the top-right corner open or shut. Five tabs, a filter and the last 300 things that happened out there; Copy hands the open tab to the clipboard.',
     icon: 'lucide:scroll-text',
     category: 'interface',
     inHud: true,

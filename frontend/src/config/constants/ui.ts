@@ -718,17 +718,45 @@ export const STAR_TIMER_CENTER_OVERLAP_PX = 1
 // Subpixel-Rauschen einer Messung bei jedem Tick neue Grid-Spalten in 30 Zeilen.
 export const STAR_TIMER_WIDTH_SNAP_PX = 0.5
 
-// Event log
-/** Maximum number of events kept in the live event log before trimming */
-export const EVENT_LOG_MAX_SIZE = 12
-/** Milliseconds before an event auto-dismisses from the log */
-export const EVENT_LOG_DISMISS_MS = 7_000
-/** Ring buffer behind the floating trail — what the tabs and Copy read. */
+// Event log — the permanent panel in the top-right corner (EventLogPanel.vue)
+/** Ring buffer behind the panel — what the tabs and Copy read. */
 export const EVENT_LOG_HISTORY_MAX = 300
 /** "Copied ✓" on the panel's copy button (ms) */
 export const EVENT_LOG_COPY_FEEDBACK_MS = 1_500
 /** Within this distance from the top the list stays pinned to the newest entry */
 export const EVENT_LOG_SCROLL_TOP_STICK_PX = 24
+/** localStorage key for the folded state (UI preference, not game state). */
+export const EVENT_LOG_FOLD_STORAGE_KEY = 'bardle-eventlog-fold'
+/** A freshly arrived row glows for this long. Visual only — real time. */
+export const EVENT_LOG_FLASH_MS = 1_000
+
+// Panel box. Width is NOT tied to --header-vp-right: the panel sits BELOW the
+// header, so the gutter beside it stopped being the limit.
+export const EVENT_LOG_PANEL_MIN_W = 360
+export const EVENT_LOG_PANEL_VW = 20
+export const EVENT_LOG_PANEL_MAX_W = 500
+export const EVENT_LOG_PANEL_MIN_H = 280
+export const EVENT_LOG_PANEL_VH = 45
+export const EVENT_LOG_PANEL_MAX_H = 860
+/** Gap between header edge and panel top, and the panel's own inset. */
+export const EVENT_LOG_PANEL_TOP_GAP = 8
+/** Beschreibt die Kompakt-Query im CSS — die Zahl steht dort fest. */
+export const EVENT_LOG_COMPACT_MAX_H = 1100
+
+// Keine Breitenstaffel. Der Floor oben macht das Panel nie schmaler als 360,
+// und in 360 passt EINE Darstellung, die auf jeder Breite dasselbe zeigt:
+// jeder Tab traegt seine Zahl, der aktive zusaetzlich seinen Namen. Eine
+// Staffel haette dem 2K-Schirm Zahlen weggenommen, die Full HD zeigt.
+/** Was ein Tab mindestens misst — Polster, Icon, Zahl. */
+export const EVENT_LOG_TAB_MIN_W = 50
+/** Was der aktive Tab zusaetzlich fuer seinen Namen braucht. */
+export const EVENT_LOG_TAB_ACTIVE_W = 130
+
+// Rendered window over the ring. Not useVirtualGrid: rows are one to three
+// lines tall, and that composable needs a fixed rowHeight.
+export const EVENT_LOG_RENDER_CHUNK = 60
+/** Distance from the list end at which the next chunk is appended. */
+export const EVENT_LOG_LOAD_MORE_PX = 240
 
 // Herald — large centered milestone announcements (HeraldOverlay / useHerald)
 /** How long a single herald banner stays on screen (ms) */

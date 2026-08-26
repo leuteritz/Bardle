@@ -39,6 +39,8 @@ const METRICS: HudFieldMetrics = {
   abilityBarHalfW: 0,
   wayfinderBottom: 209,
   wayfinderRight: 253,
+  eventLogBottom: 0,
+  eventLogLeft: 0,
 }
 
 /** Dieselbe Kontur ohne Karte — der Zustand vor dem Wayfinder. */
