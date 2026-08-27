@@ -3,8 +3,6 @@ import { galaxyStarMarksOf, galaxyStarNamesOf } from '@/utils/game/starNames'
 import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import {
-  GALAXY_STAR_FREED_LINES,
-  GALAXY_STAR_LOST_LINES,
   GALAXY_STAR_NAME_ATTRIBUTES,
   GALAXY_STAR_NAME_NOUNS,
 } from '@/config/constants'
@@ -80,30 +78,12 @@ describe('galaxyStarMarksOf', () => {
     expect(a).toEqual(c)
   })
 
-  it('zieht die ZEILE aus dem Pool des Ausgangs', () => {
-    for (const m of galaxyStarMarksOf(31337, results(CHART_MAX))) {
-      const pool = m.outcome === 'failed' ? GALAXY_STAR_LOST_LINES : GALAXY_STAR_FREED_LINES
-      expect(pool).toContain(m.line)
-    }
-  })
-
-  it('ist prefix-stabil ueber Namen UND Zeilen', () => {
+  it('ist prefix-stabil', () => {
     const res = results(CHART_MAX)
     const full = galaxyStarMarksOf(8080, res)
     for (let n = 0; n <= CHART_MAX; n++) {
       expect(galaxyStarMarksOf(8080, res.slice(0, n))).toEqual(full.slice(0, n))
     }
-  })
-
-  it('deckt beide Zeilen-Pools ab', () => {
-    const freed = new Set<string>()
-    const lost = new Set<string>()
-    for (let s = 1; s <= 400; s++) {
-      freed.add(galaxyStarMarksOf(s * 6113, ['rescued'])[0].line)
-      lost.add(galaxyStarMarksOf(s * 6113, ['failed'])[0].line)
-    }
-    expect(freed.size).toBe(GALAXY_STAR_FREED_LINES.length)
-    expect(lost.size).toBe(GALAXY_STAR_LOST_LINES.length)
   })
 
   it('traegt Index und Ausgang unveraendert weiter', () => {
@@ -126,8 +106,6 @@ describe('der Wortschatz ist eine Wand', () => {
   it('haelt die Pool-Groessen', () => {
     expect(GALAXY_STAR_NAME_ATTRIBUTES).toHaveLength(24)
     expect(GALAXY_STAR_NAME_NOUNS).toHaveLength(20)
-    expect(GALAXY_STAR_FREED_LINES).toHaveLength(8)
-    expect(GALAXY_STAR_LOST_LINES).toHaveLength(8)
   })
 
   it('haelt eine goldene Fixture', () => {
@@ -160,12 +138,7 @@ describe('der Wortschatz ist eine Wand', () => {
     // CLAUDE.md: Bard ist der Wandering Caretaker, nie ein Musiker.
     const banned =
       /melod|song|chord|harmon|ballad|symphon|choir|note|octave|lute|lyre|harp|flute|stage|concert|composi/i
-    for (const w of [
-      ...GALAXY_STAR_NAME_ATTRIBUTES,
-      ...GALAXY_STAR_NAME_NOUNS,
-      ...GALAXY_STAR_FREED_LINES,
-      ...GALAXY_STAR_LOST_LINES,
-    ]) {
+    for (const w of [...GALAXY_STAR_NAME_ATTRIBUTES, ...GALAXY_STAR_NAME_NOUNS]) {
       expect(banned.test(w)).toBe(false)
     }
   })

@@ -7,7 +7,7 @@
  * sagen hat.
  */
 import { computed } from 'vue'
-import ExpeditionMarkTooltip, { type MarkReading } from './ExpeditionMarkTooltip.vue'
+import ExpeditionMarkTooltip, { type MarkChip } from './ExpeditionMarkTooltip.vue'
 import { formatMinuteClock } from '@/utils/ui/format'
 
 const props = defineProps<{
@@ -31,14 +31,13 @@ const nextHome = computed(() =>
     : formatMinuteClock(Math.max(0, props.nextReturnAt - props.now)),
 )
 
-const readings = computed<MarkReading[]>(() => [
-  { value: nextHome.value, label: 'Next home', tone: props.arriving ? 'is-good' : '' },
-  { value: `${props.crewsOut}`, label: 'In field', tone: '' },
-  {
-    value: `${props.waiting}`,
-    label: 'At berth',
-    tone: props.waiting > 0 ? 'is-good' : 'is-dim',
-  },
+const chips = computed<MarkChip[]>(() => [
+  { text: state.value, color: props.arriving ? '#64dcb4' : '#e8c040', solid: true },
+  // `numeric` nur, wenn wirklich etwas tickt: ein Gedankenstrich braucht die
+  // reservierte Breite nicht und saehe darin verloren aus.
+  { text: `Home ${nextHome.value}`, numeric: props.nextReturnAt !== null },
+  { text: `${props.crewsOut} in field` },
+  { text: `${props.waiting} at berth`, color: props.waiting > 0 ? '#64dcb4' : '#7a6f58' },
 ])
 </script>
 
@@ -46,20 +45,7 @@ const readings = computed<MarkReading[]>(() => [
   <ExpeditionMarkTooltip
     icon="game-icons:portal"
     name="Caretaker's Gate"
-    :state="state"
-    :context="destination"
-    :readings="readings"
-  >
-    <template #foot>
-      <span class="gtt-line">Every route of this galaxy departs and returns here.</span>
-    </template>
-  </ExpeditionMarkTooltip>
+    :state="destination"
+    :chips="chips"
+  />
 </template>
-
-<style scoped>
-.gtt-line {
-  font-size: 12.5px;
-  line-height: 1.3;
-  color: rgba(230, 220, 196, 0.58);
-}
-</style>

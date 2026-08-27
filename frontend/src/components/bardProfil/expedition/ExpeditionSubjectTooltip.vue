@@ -8,7 +8,7 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import ExpeditionMarkTooltip from './ExpeditionMarkTooltip.vue'
+import ExpeditionMarkTooltip, { type MarkChip } from './ExpeditionMarkTooltip.vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
@@ -66,6 +66,14 @@ const urgent = computed(
   () => expiresIn.value !== null && expiresIn.value < EXPEDITION_EXPIRY_WARNING_MS,
 )
 
+/** Die vier Tonstufen als Chipfarbe — dieselben Werte, die das Band fuehrte. */
+const ODDS_COLOR: Record<string, string> = {
+  'is-good': '#64dcb4',
+  'is-mid': '#e8c040',
+  'is-poor': '#cc6050',
+  'is-dim': '#7a6f58',
+}
+
 const oddsTone = computed(() => {
   const o = view.value?.odds
   if (o === null || o === undefined) return 'is-dim'
@@ -73,37 +81,46 @@ const oddsTone = computed(() => {
   return o >= EXPEDITION_CHANCE_MID * 100 ? 'is-mid' : 'is-poor'
 })
 
-/** Die drei grossen Ablesungen — je Zustand dieselben Plätze, andere Fragen. */
-const readings = computed(() => {
+/** Die Chip-Reihe — je Zustand dieselbe Ordnung, andere Fragen.
+ *  Der Zustand ist der gefuellte Anker, die Uhr traegt `numeric`. */
+const chips = computed<MarkChip[]>(() => {
   const v = view.value
   if (!v) return []
-  const odds = { value: v.odds === null ? '—' : `${v.odds}%`, label: 'Odds', tone: oddsTone.value }
+  const oddsChip: MarkChip = {
+    text: v.odds === null ? 'No crew' : `${v.odds}% odds`,
+    color: ODDS_COLOR[oddsTone.value],
+  }
+  const voyage: MarkChip = { text: formatShortDuration(v.durationSeconds) }
+  const anchor: MarkChip = { text: v.stateLabel, color: v.accent, solid: true }
+
   if (v.state === 'offer') {
     return [
+      anchor,
+      oddsChip,
+      voyage,
       {
-        value: formatMinuteClock(expiresIn.value ?? 0),
-        label: 'Expires in',
-        tone: urgent.value ? 'is-poor' : '',
+        text: `Ends ${formatMinuteClock(expiresIn.value ?? 0)}`,
+        color: urgent.value ? '#cc6050' : undefined,
+        numeric: true,
       },
-      odds,
-      { value: formatShortDuration(v.durationSeconds), label: 'Voyage', tone: '' },
     ]
   }
   if (v.state === 'field') {
     return [
-      { value: formatMinuteClock(remaining.value ?? 0), label: 'Returns in', tone: '' },
-      odds,
-      { value: formatShortDuration(v.durationSeconds), label: 'Voyage', tone: '' },
+      anchor,
+      oddsChip,
+      voyage,
+      { text: `Back ${formatMinuteClock(remaining.value ?? 0)}`, numeric: true },
     ]
   }
   return [
+    anchor,
+    oddsChip,
     {
-      value: `+${formatNumber(v.reward)}`,
-      label: v.state === 'ready' ? 'Spoils' : 'Salvage',
-      tone: v.state === 'ready' ? 'is-good' : 'is-poor',
+      text: `+${formatNumber(v.reward)} ${v.state === 'ready' ? 'spoils' : 'salvage'}`,
+      color: v.state === 'ready' ? '#64dcb4' : '#cc6050',
     },
-    odds,
-    { value: `${v.crew.length}`, label: 'Crew home', tone: '' },
+    { text: `${v.crew.length} home` },
   ]
 })
 
@@ -145,9 +162,8 @@ const collectable = computed(() => view.value?.state === 'ready' || view.value?.
     :icon="view.icon"
     :accent="view.accent"
     :name="view.name"
-    :state="view.stateLabel"
-    :context="view.destination"
-    :readings="readings"
+    :state="view.destination"
+    :chips="chips"
   >
     <template #foot>
       

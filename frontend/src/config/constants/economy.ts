@@ -1449,9 +1449,7 @@ export const VOYAGE_LOG_ICONS: Record<VoyageLogKind, string> = {
    Der Name haengt NICHT am Ausgang, und das ist die tragende Regel: ein Stern
    steht auf der Karte, bevor er befreit oder verloren ist. Zoege 'failed' aus
    einem anderen Vokabular, benennte sich dieselbe Marke in dem Moment um, in
-   dem ein Rettungstimer ablaeuft. Der Ton wandert deshalb in die ZEILE, die
-   allein am Ausgang haengt — dieselbe Trennung, die `voyageLogVerdictOf`
-   zwischen Verdikt und Eintraegen schon zieht.
+   dem ein Rettungstimer ablaeuft. Den Ausgang traegt der Chip daneben.
 
    Drei Bedeutungsfamilien, alle aus Bards Rolle als Caretaker heraus: das
    gehaltene Licht, ein Schuetzling in jemandes Obhut, ein kleines aufbewahrtes
@@ -1512,34 +1510,9 @@ export const GALAXY_STAR_NAME_NOUNS = [
   'Bauble',
 ]
 
-/** Die Zeile haengt am Ausgang — als einziges am Stern. */
-export const GALAXY_STAR_FREED_LINES = [
-  'The cage went slack and it walked out.',
-  'Counted, carried, and let go.',
-  'It burns where the chart said it would.',
-  'The dark had it, and gave it back.',
-  'One more light that answers to nothing.',
-  'They left it brighter than they found it.',
-  'Freed, and not asked to be grateful.',
-  'The road bends past it now, not through it.',
-]
-export const GALAXY_STAR_LOST_LINES = [
-  'The dark closed first. It always had the reach.',
-  'Logged where it went out. Nothing more to log.',
-  'They were late by the width of a heading.',
-  'It guttered while the ship was still turning.',
-  'The chart keeps the place. Nothing keeps the light.',
-  'No wreck, no signal. Only the gap.',
-  'It went quiet, and the quiet stayed.',
-  'Marked, and left marked.',
-]
-
-/** Zwei eigene Stroeme, per XOR gesalzen — `mapSeed` ist eine volle 32-Bit-
- *  Zufallszahl, eine Multiplikation braucht es nicht. Getrennt, damit ein
- *  Wachsen der Zeilen-Pools keinen archivierten Stern umbenennt und ein Wachsen
- *  der Namens-Pools keine Zeile neu schreibt. */
+/** Eigener Strom, per XOR gesalzen — `mapSeed` ist eine volle 32-Bit-
+ *  Zufallszahl, eine Multiplikation braucht es nicht. */
 export const GALAXY_STAR_NAME_SEED_SALT = 0x5eed57a1
-export const GALAXY_STAR_LINE_SEED_SALT = 0x1f3a9c7d
 
 /** Fangflaeche ueber einer gemalten Sternmarke, als Vielfaches ihres Radius.
  *  Dieselbe Zahl, mit der `landfallHit` seine Raute umfasst. */

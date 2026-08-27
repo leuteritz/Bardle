@@ -11,8 +11,9 @@
  */
 import { computed } from 'vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
-import ExpeditionMarkTooltip, { type MarkReading } from './ExpeditionMarkTooltip.vue'
+import ExpeditionMarkTooltip, { type MarkChip } from './ExpeditionMarkTooltip.vue'
 import {
+  LANDMARK_FREED_CORE,
   VOYAGE_TIP_GAP_PX,
   VOYAGE_TIP_OPEN_DELAY_MS,
   VOYAGE_TIP_WIDTH,
@@ -30,10 +31,13 @@ const props = defineProps<{
 
 const legs = computed(() => props.freed + props.lost)
 
-const readings = computed<MarkReading[]>(() => [
-  { value: `${legs.value}`, label: 'Legs flown' },
-  { value: `${props.freed}`, label: 'Freed', tone: 'is-good' },
-  { value: `${props.lost}`, label: 'Lost', tone: props.lost > 0 ? 'is-poor' : 'is-dim' },
+/* Das Ziel ist der gefüllte Chip: es ist das einzige Wort, das diese eine Marke
+   von der desselben Portals in einer anderen Galaxie unterscheidet. */
+const chips = computed<MarkChip[]>(() => [
+  { text: props.destination, solid: true },
+  { text: `${legs.value} legs` },
+  { text: `${props.freed} freed`, color: LANDMARK_FREED_CORE },
+  { text: `${props.lost} lost`, color: props.lost > 0 ? '#e08a7a' : '#7a6f58' },
 ])
 </script>
 
@@ -57,13 +61,8 @@ const readings = computed<MarkReading[]>(() => [
         icon="game-icons:portal"
         name="Arrival Portal"
         state="Where it began"
-        :context="destination"
-        :readings="readings"
-      >
-        <template #foot>
-          <span class="ptn-line">Bard stepped into this galaxy here, and walked the rest.</span>
-        </template>
-      </ExpeditionMarkTooltip>
+        :chips="chips"
+      />
     </template>
   </RpgBadgeTooltip>
 </template>
@@ -75,11 +74,5 @@ const readings = computed<MarkReading[]>(() => [
   height: var(--ptn-hit);
   transform: translate(-50%, -50%);
   pointer-events: auto;
-}
-
-.ptn-line {
-  font-size: 12.5px;
-  line-height: 1.3;
-  color: rgba(230, 220, 196, 0.58);
 }
 </style>

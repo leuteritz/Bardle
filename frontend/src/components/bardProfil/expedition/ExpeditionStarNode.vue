@@ -8,12 +8,12 @@
  * Nummer. Die Legende sagt WAS die Form bedeutet, nicht WELCHER Stern hier
  * stand und was aus ihm wurde.
  *
- * Der NAME ist abgeleitet (`utils/game/starNames.ts`) und hängt nicht am
- * Ausgang; nur die Zeile im Fuss tut das.
+ * Der NAME ist abgeleitet (`utils/game/starNames.ts`) und hängt NICHT am
+ * Ausgang — ein Stern steht auf der Karte, bevor er befreit oder verloren ist.
  */
 import { computed } from 'vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
-import ExpeditionMarkTooltip, { type MarkReading } from './ExpeditionMarkTooltip.vue'
+import ExpeditionMarkTooltip, { type MarkChip } from './ExpeditionMarkTooltip.vue'
 import {
   LANDMARK_FREED_CORE,
   VOYAGE_TIP_GAP_PX,
@@ -47,14 +47,14 @@ const ordinal = computed(() => {
   return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
 })
 
-const readings = computed<MarkReading[]>(() => [
-  { value: ordinal.value, label: 'Star' },
+const chips = computed<MarkChip[]>(() => [
   {
-    value: lost.value ? '✕' : '✦',
-    label: lost.value ? 'Lost' : 'Freed',
-    tone: lost.value ? 'is-poor' : 'is-good',
+    text: lost.value ? 'Lost' : 'Freed',
+    color: lost.value ? LOST_TONE : LANDMARK_FREED_CORE,
+    solid: true,
   },
-  { value: `${props.freedSoFar} of ${props.required}`, label: 'Charted', tone: 'is-word' },
+  { text: `${ordinal.value} star` },
+  { text: `${props.freedSoFar} of ${props.required} charted` },
 ])
 </script>
 
@@ -79,13 +79,8 @@ const readings = computed<MarkReading[]>(() => [
         :accent="lost ? LOST_TONE : LANDMARK_FREED_CORE"
         :name="mark.name"
         :state="lost ? 'Star lost' : 'Star freed'"
-        :context="`Leg ${mark.index + 1}`"
-        :readings="readings"
-      >
-        <template #foot>
-          <span class="stn-line">{{ mark.line }}</span>
-        </template>
-      </ExpeditionMarkTooltip>
+        :chips="chips"
+      />
     </template>
   </RpgBadgeTooltip>
 </template>
@@ -97,11 +92,5 @@ const readings = computed<MarkReading[]>(() => [
   height: var(--stn-hit);
   transform: translate(-50%, -50%);
   pointer-events: auto;
-}
-
-.stn-line {
-  font-size: 12.5px;
-  line-height: 1.3;
-  color: rgba(230, 220, 196, 0.58);
 }
 </style>

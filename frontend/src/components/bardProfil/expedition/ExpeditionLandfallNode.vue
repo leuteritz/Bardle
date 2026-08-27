@@ -14,7 +14,7 @@
  */
 import { computed } from 'vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
-import ExpeditionMarkTooltip, { type MarkReading } from './ExpeditionMarkTooltip.vue'
+import ExpeditionMarkTooltip, { type MarkChip } from './ExpeditionMarkTooltip.vue'
 import { getLandfall } from '@/config/world/landfalls'
 import {
   LANDFALL_PRESENCE_LABEL,
@@ -37,24 +37,21 @@ const props = defineProps<{
 const def = getLandfall(props.kind)
 
 /* Seltenheit und Geste stehen NUR hier: am Körper zeigt sich die Präsenz als
-   Raum, die Geste als Stand in der HUD-Karte — im Archiv ist beides vorbei. */
-const readings = computed<MarkReading[]>(() => [
-  {
-    value: props.cleared ? 'Made' : 'Missed',
-    label: 'Outcome',
-    tone: `is-word ${props.cleared ? 'is-good' : 'is-dim'}`,
-  },
-  {
-    value: def ? LANDFALL_PRESENCE_LABEL[def.presence] : '—',
-    label: 'Sighted',
-    tone: 'is-word',
-  },
-  {
-    value: def ? landfallGestureLabel(def.gesture, def.burst) : '—',
-    label: 'Asked of',
-    tone: 'is-word',
-  },
-])
+   Raum, die Geste als Stand in der HUD-Karte — im Archiv ist beides vorbei.
+   Der Ausgang ist der gefüllte Chip: er wird zuerst gelesen. */
+const chips = computed<MarkChip[]>(() =>
+  def
+    ? [
+        {
+          text: props.cleared ? 'Made' : 'Missed',
+          color: props.cleared ? '#64dcb4' : '#7a6f58',
+          solid: true,
+        },
+        { text: LANDFALL_PRESENCE_LABEL[def.presence] },
+        { text: landfallGestureLabel(def.gesture, def.burst) },
+      ]
+    : [],
+)
 </script>
 
 <template>
@@ -78,13 +75,8 @@ const readings = computed<MarkReading[]>(() => [
         :icon="def.icon"
         :name="def.name"
         state="Landfall"
-        :context="cleared ? 'Made' : 'Missed'"
-        :readings="readings"
-      >
-        <template #foot>
-          <span class="lfn-blurb">{{ def.blurb }}</span>
-        </template>
-      </ExpeditionMarkTooltip>
+        :chips="chips"
+      />
     </template>
   </RpgBadgeTooltip>
 </template>
@@ -98,11 +90,5 @@ const readings = computed<MarkReading[]>(() => [
   height: var(--lfn-hit);
   transform: translate(-50%, -50%);
   pointer-events: auto;
-}
-
-.lfn-blurb {
-  font-size: 12.5px;
-  line-height: 1.3;
-  color: rgba(230, 220, 196, 0.58);
 }
 </style>

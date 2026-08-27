@@ -14,16 +14,10 @@
    Der Name haengt NICHT am Ausgang. Ein Stern steht auf der Karte, bevor er
    befreit oder verloren ist; zoege 'failed' aus einem anderen Vokabular,
    benennte sich dieselbe Marke um, sobald ein Rettungstimer ablaeuft, und das
-   Archiv truege einen Namen, den es im Spiel nie gab. Der Ton liegt allein in
-   der ZEILE.
-
-   Die Ziehreihenfolge ist FEST: erst der ganze Namensdurchgang, dann der ganze
-   Zeilendurchgang, jeder auf seinem eigenen Strom. Zwei getrennte Salze, damit
-   ein Wachsen der Zeilen-Pools keinen archivierten Stern umbenennt und ein
-   Wachsen der Namens-Pools keine Zeile neu schreibt.
+   Archiv truege einen Namen, den es im Spiel nie gab.
 
    Prefix-stabil faellt dabei ab: ein verlorener Stern HAENGT AN `attemptResults`,
-   und beide Durchgaenge laufen von vorn nach hinten — Stern 0..n-1 behalten ihre
+   und der Durchgang laeuft von vorn nach hinten — Stern 0..n-1 behalten ihre
    Namen, wenn Stern n dazukommt. Dieselbe Zusage wie `generateGalaxyDots`.
 
    Die Live-Minimap haelt mit `galaxyStore.mapSeed` und `galaxyStore.attemptResults`
@@ -32,9 +26,6 @@
 import { seededRng } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { drawUnique } from '@/utils/game/voyageLegs'
 import {
-  GALAXY_STAR_FREED_LINES,
-  GALAXY_STAR_LINE_SEED_SALT,
-  GALAXY_STAR_LOST_LINES,
   GALAXY_STAR_NAME_ATTRIBUTES,
   GALAXY_STAR_NAME_NOUNS,
   GALAXY_STAR_NAME_SEED_SALT,
@@ -46,8 +37,6 @@ export interface GalaxyStarMark {
   index: number
   name: string
   outcome: StarAttemptResult
-  /** Die eine Zeile, die am Ausgang haengt. */
-  line: string
 }
 
 /**
@@ -69,23 +58,11 @@ export function galaxyStarNamesOf(mapSeed: number, count: number): string[] {
   return out
 }
 
-/** Namen plus die Zeile, die am Ausgang haengt. */
+/** Namen plus Ausgang, in Versuchsreihenfolge. */
 export function galaxyStarMarksOf(
   mapSeed: number,
   results: readonly StarAttemptResult[],
 ): GalaxyStarMark[] {
   const names = galaxyStarNamesOf(mapSeed, results.length)
-  const rngLine = seededRng((mapSeed ^ GALAXY_STAR_LINE_SEED_SALT) >>> 0)
-  return results.map((outcome, index) => {
-    // Erst ziehen, dann den Pool waehlen: so kann der Ausgang die Ziehung nicht
-    // verschieben, und eine geaenderte Historie laesst die Zeilen davor stehen.
-    const roll = rngLine()
-    const pool = outcome === 'failed' ? GALAXY_STAR_LOST_LINES : GALAXY_STAR_FREED_LINES
-    return {
-      index,
-      name: names[index],
-      outcome,
-      line: pool[Math.min(pool.length - 1, Math.floor(roll * pool.length))],
-    }
-  })
+  return results.map((outcome, index) => ({ index, name: names[index], outcome }))
 }
