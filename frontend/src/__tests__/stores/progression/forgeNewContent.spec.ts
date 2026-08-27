@@ -18,11 +18,14 @@ import {
   VOID_UNLOCK_LEVEL,
   FORGE_TWINNED_SKY_EXTRA_DRIFTERS,
   FORGE_BOUGH_PARENT_MIN_LEVEL,
+  FORGE_MASS_SEND_NODE,
   STAR_PHASE_FINAL_INDEX,
 } from '@/config/constants'
 import {
   FORGE_BARGAINS,
   FORGE_BOUGHS,
+  getForgeConstellation,
+  getForgeNode,
   getForgeRelic,
 } from '@/config/progression/starForge'
 import { DRIFTERS } from '@/config/world/drifters'
@@ -319,7 +322,7 @@ describe('Neue Forge-Inhalte', () => {
     expect(forge.championXpMult).toBeGreaterThan(1)
   })
 
-  // ── Die drei Konstellationen aus DREI Knoten ───────────────────────────────
+  // ── Die vier Konstellationen aus DREI Knoten ──────────────────────────────
 
   it('lässt ein Expeditions-Angebot warten, statt es verfallen zu lassen', () => {
     const forge = useStarForgeStore()
@@ -376,6 +379,41 @@ describe('Neue Forge-Inhalte', () => {
     expect(drifter.spawnDrifter()).not.toBeNull()
     expect(drifter.spawnDrifter()).not.toBeNull()
     expect(drifter.spawnDrifter(), 'ein dritter Drifter kam durch').toBeNull()
+  })
+
+  it('gibt die Massen-Abfahrt erst mit der Konstellation frei', () => {
+    const forge = useStarForgeStore()
+    expect(forge.expeditionsDepartTogether).toBe(false)
+    forge.forgedConstellations.push(FORGE_MASS_SEND_NODE)
+    expect(forge.expeditionsDepartTogether).toBe(true)
+  })
+
+  it('nennt den ersten noch offenen Zubringer als Sprungziel', () => {
+    // Die Konstellation hat keinen Sitz im Netz — ein Sprung von aussen kann
+    // nur auf das zeigen, was als Naechstes wachsen muss.
+    const forge = useStarForgeStore()
+    const def = getForgeConstellation(FORGE_MASS_SEND_NODE)!
+    const [first, second, third] = def.requires
+
+    expect(forge.constellationNextStep(FORGE_MASS_SEND_NODE)).toBe(first.id)
+    forge.branchLevels[first.id] = first.level
+    expect(forge.constellationNextStep(FORGE_MASS_SEND_NODE)).toBe(second.id)
+    forge.branchLevels[second.id] = second.level
+    expect(forge.constellationNextStep(FORGE_MASS_SEND_NODE)).toBe(third.id)
+    forge.leafLevels[third.id] = third.level
+    expect(forge.constellationNextStep(FORGE_MASS_SEND_NODE)).toBeNull()
+    expect(forge.constellationRequirementMet(FORGE_MASS_SEND_NODE)).toBe(true)
+  })
+
+  it('bleibt im Mittelspiel erreichbar — Zweig 3 und Blatt 2 gehen in Zenith auf', () => {
+    // Die Zusage des Eintrags: ein WARD in der Bedingung schoebe ihn auf Swell,
+    // und damit waere er kein Geschwister von „The Waiting Road" mehr, sondern
+    // dasselbe noch einmal.
+    const def = getForgeConstellation(FORGE_MASS_SEND_NODE)!
+    for (const req of def.requires) {
+      const node = getForgeNode(req.id)!
+      expect(['branch', 'leaf'], `${req.id} ist ein ${node.tier}`).toContain(node.tier)
+    }
   })
 
   // ── Die fünf Boughs mit Tor ────────────────────────────────────────────────

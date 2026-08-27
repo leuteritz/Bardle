@@ -30,6 +30,7 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { buildVoyageFleetCards } from '@/utils/game/voyageFleet'
 import { formatMinuteClock, toRoman } from '@/utils/ui/format'
+import { getForgeConstellation } from '@/config/progression/starForge'
 import {
   VOYAGE_COMMAND_BAR_H,
   VOYAGE_FLEET_ACT_H,
@@ -38,6 +39,7 @@ import {
   VOYAGE_FLEET_BAND_GAP,
   VOYAGE_FLEET_BAND_PAD_X,
   VOYAGE_FLEET_RANK_W,
+  FORGE_MASS_SEND_NODE,
 } from '@/config/constants'
 import type { VoyageRailRow } from '@/types'
 import ExpeditionFleetLane from './ExpeditionFleetLane.vue'
@@ -51,6 +53,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'collect-all': []
   'send-all': []
+  'open-upgrade': []
   open: [galaxy: number, pinKey: string | null]
 }>()
 
@@ -67,6 +70,8 @@ const actW = `${VOYAGE_FLEET_ACT_W}px`
 const actH = `${VOYAGE_FLEET_ACT_H}px`
 
 const readyCount = useNotifyBadgeCount('expedition')
+
+const ARMADA_NAME = getForgeConstellation(FORGE_MASS_SEND_NODE)?.name ?? 'The Rising Armada'
 
 const rank = computed(() => expeditionStore.ledgerRank)
 const nextRank = computed(() => expeditionStore.nextLedgerRank)
@@ -117,11 +122,29 @@ const offersFull = computed(
   () => expeditionStore.availableExpeditions.length >= expeditionStore.maxAvailableOffers,
 )
 
-const canSendAll = computed(
-  () =>
-    expeditionStore.canStartExpedition &&
-    expeditionStore.availableExpeditions.some((o) => expeditionStore.crewFor(o).every((c) => !!c)),
+/**
+ * Die Send-Kachel traegt DREI Zustaende, und der erste ist neu: bis „The Rising
+ * Armada" geschmiedet ist, gibt es die Massen-Geste nicht. Sie faellt dabei
+ * nicht weg — die Aktionssaeule ist auf 2 x 66 + 10 = VOYAGE_FLEET_ASIDE_W
+ * ausgereizt, die Sperre lebt INNERHALB der Kachel.
+ */
+const sendLocked = computed(() => !forgeStore.expeditionsDepartTogether)
+
+const hasCrewedOffer = computed(() =>
+  expeditionStore.availableExpeditions.some((o) => expeditionStore.crewFor(o).every((c) => !!c)),
 )
+
+const canSendAll = computed(
+  () => !sendLocked.value && expeditionStore.canStartExpedition && hasCrewedOffer.value,
+)
+
+/** Der Knopf sagt jetzt, WARUM er tot ist — vorher stand dort immer derselbe Satz. */
+const sendTitle = computed(() => {
+  if (sendLocked.value) return `${ARMADA_NAME} — fuse it in the Star Forge to send every crewed contract at once`
+  if (!expeditionStore.canStartExpedition) return 'No free expedition slot'
+  if (!hasCrewedOffer.value) return 'No crewed contract ready to send'
+  return 'Send every crewed contract'
+})
 
 /** ZEITFREI — die Uhr sieht nur die Karte, nie ihr Platz. */
 const cards = computed(() =>
@@ -197,15 +220,21 @@ const cards = computed(() =>
 
       <div class="ecb-aside">
         <div class="ecb-acts">
+          <!-- Gesperrt ist der Knopf NICHT `disabled`: das verschluckte Klick und
+               Titel zugleich, und beides ist hier der Inhalt. -->
           <button
             class="ecb-act ecb-act--send"
-            :class="{ 'is-muted': !canSendAll }"
-            :disabled="!canSendAll"
-            title="Send every crewed contract"
-            aria-label="Send every crewed contract"
-            @click.stop="emit('send-all')"
+            :class="{ 'is-muted': !canSendAll && !sendLocked, 'is-locked': sendLocked }"
+            :disabled="!canSendAll && !sendLocked"
+            :title="sendTitle"
+            :aria-label="sendTitle"
+            @click.stop="sendLocked ? emit('open-upgrade') : emit('send-all')"
           >
-            <Icon icon="ph:tent-fill" width="34" height="34" />
+            <Icon icon="ph:tent-fill" width="34" height="34" class="ecb-act-glyph" />
+            <template v-if="sendLocked">
+              <Icon icon="lucide:lock" width="16" height="16" class="ecb-lock" />
+              <span class="ecb-lock-label">Locked</span>
+            </template>
           </button>
 
           <button
@@ -433,8 +462,42 @@ const cards = computed(() =>
   background: linear-gradient(to bottom, #7a5c20, #5c3e10);
   border: 1px solid #c9a84c;
 }
-.ecb-act--send:not(.is-muted):hover {
+.ecb-act--send:not(.is-muted):not(.is-locked):hover {
   background: linear-gradient(to bottom, #8e6c26, #6c4a14);
+}
+
+/* Gesperrt: die geteilte Sperr-Palette des Projekts, nicht die gedaempfte
+   Goldkachel — sonst laese sich „noch nichts zu senden" wie „noch nicht
+   freigeschaltet". Die Sperre bleibt INNERHALB der 66 x 96. */
+.ecb-act--send.is-locked {
+  color: #7a6f58;
+  background: #1c1c18;
+  border: 1px solid #3a3226;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+.ecb-act--send.is-locked:hover {
+  color: #a89878;
+  border-color: #5c3310;
+}
+.ecb-act--send.is-locked .ecb-act-glyph {
+  opacity: 0.4;
+}
+/* Ueber dem Glyph, nicht auf ihm: Glyph plus Beschriftung stehen mittig im
+   Fluss (34 + 6 + 11 in 96), es bleiben oben 22 px. */
+.ecb-lock {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  color: #cc6050;
+}
+.ecb-lock-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #7a6f58;
 }
 .ecb-act--collect {
   color: #b8e8cc;

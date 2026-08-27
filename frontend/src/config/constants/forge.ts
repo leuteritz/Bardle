@@ -1724,6 +1724,11 @@ export const FORGE_CROWN_BOSS_WOUND_FLOOR = 0.15
  *  auf dem kein einzelner mehr etwas bedeutet. */
 export const FORGE_TWINNED_SKY_EXTRA_DRIFTERS = 1
 
+/** Die Konstellation, die im Voyages-Reiter die Send-All-Kachel aufschliesst.
+ *  Als Konstante, weil drei Stellen sie nennen: die Regel im Store, der Titel
+ *  der gesperrten Kachel und ihr Sprungziel. */
+export const FORGE_MASS_SEND_NODE = 'risingArmada'
+
 /** Obergrenzen, damit gestapelte Forge-Effekte den Spielablauf nicht brechen. */
 export const FORGE_MIN_DAMAGE_TAKEN_MULT = 0.25
 export const FORGE_MIN_DWELL_MULT = 0.5

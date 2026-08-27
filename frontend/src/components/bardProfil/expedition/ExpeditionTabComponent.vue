@@ -21,6 +21,8 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useVoyageAtlas } from '@/composables/expedition/useVoyageAtlas'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import {
@@ -35,6 +37,7 @@ import {
   VOYAGE_RAIL_AUTOFOLD_WIDTH,
   VOYAGE_RAIL_COLLAPSED,
   VOYAGE_RAIL_WIDTH,
+  FORGE_MASS_SEND_NODE,
 } from '@/config/constants'
 import ExpeditionLockedPanel from './ExpeditionLockedPanel.vue'
 import ExpeditionCommandBar from './ExpeditionCommandBar.vue'
@@ -45,6 +48,8 @@ import VoyagesTabLoader from './VoyagesTabLoader.vue'
 
 const uiStore = useUiStore()
 const chartStore = useExpeditionChartStore()
+const forgeStore = useStarForgeStore()
+const { focusNode } = useForgeSpotlight()
 
 const isVisible = computed(() => uiStore.bardActiveTab === 'expedition')
 
@@ -303,6 +308,19 @@ watch(
   { immediate: true },
 )
 onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
+
+/**
+ * Der Weg zur Massen-Geste. Die Konstellation hat keinen Sitz im Netz — der
+ * Sprung zeigt deshalb auf ihren ersten noch offenen Zubringer; steht die
+ * Bedingung schon, liegt sie ohnehin im Angebotsstreifen.
+ *
+ * KEIN `openBardModal()` — das toggelt und schloesse das offene Profil.
+ */
+function openMassSendUpgrade() {
+  uiStore.setBardTab('tree')
+  const step = forgeStore.constellationNextStep(FORGE_MASS_SEND_NODE)
+  if (step) focusNode(step, { readable: true })
+}
 </script>
 
 <template>
@@ -319,6 +337,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
         :selected-key="selectedKey"
         @collect-all="atlas.collectAll"
         @send-all="atlas.sendAll"
+        @open-upgrade="openMassSendUpgrade"
         @open="jumpToMark"
       />
 

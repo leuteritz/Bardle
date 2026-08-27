@@ -11,6 +11,7 @@ import { storeToRefs } from 'pinia'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
@@ -37,6 +38,7 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
   const galaxyStore = useGalaxyStore()
   const expeditionStore = useExpeditionStore()
   const chartStore = useExpeditionChartStore()
+  const forgeStore = useStarForgeStore()
   const { announceReceipt } = useHerald()
   const { selectedGalaxy } = storeToRefs(chartStore)
 
@@ -253,7 +255,9 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     selectedKey.value = offer.id
   }
 
+  /** Die Regel gehoert der Aktion, nicht dem Knopf — „The Rising Armada". */
   function sendAll() {
+    if (!forgeStore.expeditionsDepartTogether) return
     for (const offer of [...expeditionStore.availableExpeditions]) {
       if (!expeditionStore.canStartExpedition) break
       if (expeditionStore.crewFor(offer).every((c) => !!c)) sendExpedition(offer)

@@ -65,6 +65,7 @@ import {
   FORGE_LEDGER_CLICK_DROP_CHANCE,
   FORGE_VOID_RELIEF_CAP,
   FORGE_MEEP_COST_FLOOR,
+  FORGE_MASS_SEND_NODE,
   FORGE_RELIC_OFFLINE_HOURS,
   FORGE_COMPACT_OFFLINE_HOURS,
   FORGE_BARGAIN_KINDS_PAYING_MATERIALS,
@@ -718,6 +719,23 @@ export const useStarForgeStore = defineStore('starForge', {
       }
     },
 
+    /**
+     * Der erste noch offene Zubringer einer Konstellation.
+     *
+     * Sie hat keinen Sitz im Netz, ein Sprung von aussen kann also nicht auf
+     * SIE zeigen — er zeigt auf das, was als Naechstes wachsen muss.
+     */
+    constellationNextStep(): (id: string) => string | null {
+      return (id) => {
+        const def = getForgeConstellation(id)
+        if (!def) return null
+        for (const req of def.requires) {
+          if (this.anyNodeLevel(req.id) < req.level) return req.id
+        }
+        return null
+      }
+    },
+
     canForgeConstellation(): (id: string) => boolean {
       return (id) => {
         const def = getForgeConstellation(id)
@@ -1291,7 +1309,7 @@ export const useStarForgeStore = defineStore('starForge', {
       return 1 + this.boughEffect('driftersDue') / 100
     },
 
-    /* ══ Die drei DREIFACH-Konstellationen ════════════════════════════
+    /* ══ Die vier DREIFACH-Konstellationen ════════════════════════════
      * Einmalkaeufe ohne Stufe, deshalb je ein Ja/Nein und keine Zahl —
      * dieselbe Form wie bei den Kronen und aus demselben Grund: eine Regel, die
      * man ein zweites Mal kaufen kann, ist keine Regel mehr.
@@ -1299,6 +1317,11 @@ export const useStarForgeStore = defineStore('starForge', {
     /** The Waiting Road — wartet ein Expeditions-Angebot, statt zu verfallen? */
     expeditionOffersWait(): boolean {
       return this.constellationForged('waitingRoad')
+    },
+
+    /** The Rising Armada — starten alle bemannten Vertraege mit EINER Geste? */
+    expeditionsDepartTogether(): boolean {
+      return this.constellationForged(FORGE_MASS_SEND_NODE)
     },
 
     /** The Standing Vein — ernten die Harvester eines gefallenen Planeten weiter? */

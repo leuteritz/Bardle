@@ -2194,11 +2194,11 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
     sourceLabel: "Wayfinder's Cache + Moon Orbit · +8h offline cap",
   },
 
-  /* ── Drei Konstellationen aus DREI Knoten ────────────────────────────
+  /* ── Vier Konstellationen aus DREI Knoten ────────────────────────────
      Genau das, was `nodeA`/`nodeB` strukturell nie konnten — der eigentliche
      Grund fuer die Vokabular-Umstellung.
 
-     Alle drei setzen eine REGEL statt einer Zahl, die Linie, die
+     Alle vier setzen eine REGEL statt einer Zahl, die Linie, die
      `voidboundPact`, `caretakersLedger` und `starfarersCompact` eroeffnet
      haben. Eine Konstellation ist ein EINMALKAUF ohne Stufe; eine Regel passt
      dazu, ein Prozentwert mit Zwischenschritten nicht — dasselbe Argument wie
@@ -2255,6 +2255,21 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
     // zieht.
     desc: 'Two drifters may cross your sky at once.',
     sourceLabel: "Moon Orbit + Midnight Tide + Wanderer's Beacon",
+  },
+  {
+    id: 'risingArmada',
+    name: 'The Rising Armada',
+    icon: 'game-icons:starfighter',
+    color: '#ffe9a8',
+    // Geschwister von `waitingRoad`, ein Blatt statt einer Wacht: Zweig 3 und
+    // Blatt 2 gehen in Zenith auf, die Wacht erst in Swell.
+    requires: [vaultReq('solarSails'), vaultReq('wayfindersCache'), { id: 'auroraWake', level: 2 }],
+    goldCost: 19_000,
+    materialCost: { stardust: 24, solar_essence: 4 },
+    // Der Ledger-Rang kauft Breite; ohne diese Regel raeumt eine einzige Kachel
+    // sie umsonst ab.
+    desc: 'Every crewed contract can set out at once.',
+    sourceLabel: "Solar Sails + Wayfinder's Cache + Aurora Wake",
   },
 ]
 
