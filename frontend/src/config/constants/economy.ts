@@ -1438,6 +1438,117 @@ export const VOYAGE_LOG_ICONS: Record<VoyageLogKind, string> = {
   verdict: 'ph:seal-fill',
 }
 
+/* ── Die Namen der Sterne einer Galaxie ───────────────────────────────────────
+
+   Ein Stern trug bisher NICHTS als 'rescued' | 'failed' und seinen Index. Die
+   Karte konnte damit sagen, DASS dort etwas geschah, nicht WAS. Der Name ist
+   ABGELEITET wie das Logbuch — aus `mapSeed` plus eigenem Salz, kein
+   Speicherfeld, keine Migration; ein Archiv bekommt seine Namen rueckwirkend
+   und behaelt sie.
+
+   Der Name haengt NICHT am Ausgang, und das ist die tragende Regel: ein Stern
+   steht auf der Karte, bevor er befreit oder verloren ist. Zoege 'failed' aus
+   einem anderen Vokabular, benennte sich dieselbe Marke in dem Moment um, in
+   dem ein Rettungstimer ablaeuft. Der Ton wandert deshalb in die ZEILE, die
+   allein am Ausgang haengt — dieselbe Trennung, die `voyageLogVerdictOf`
+   zwischen Verdikt und Eintraegen schon zieht.
+
+   Drei Bedeutungsfamilien, alle aus Bards Rolle als Caretaker heraus: das
+   gehaltene Licht, ein Schuetzling in jemandes Obhut, ein kleines aufbewahrtes
+   Ding. Jedes Wort ist gegen den Bestand gegrept — Bardles Vokabular ist
+   gesaettigt, und `Gleam`, `Hollow`, `Watchful`, `Husk`, `Lantern` und `Debt`
+   sind an dieser Pruefung gescheitert.                                       */
+
+/** 24 x 20 = 480 Paare. Der Boden ist die dichteste Karte (rund 16 Marken):
+ *  beide Haelften muessen 16 Ziehungen tragen, ohne dass `drawUnique` in den
+ *  Wiederholungs-Fallback faellt — der letzte Stern waehlt noch aus 8 und 4. */
+export const GALAXY_STAR_NAME_ATTRIBUTES = [
+  'Nameless',
+  'Sleeping',
+  'Stubborn',
+  'Faithful',
+  'Wayward',
+  'Unquiet',
+  'Reluctant',
+  'Guttering',
+  'Threadbare',
+  'Meek',
+  'Crooked',
+  'Sullen',
+  'Grudging',
+  'Untended',
+  'Unmarked',
+  'Unspoken',
+  'Unsought',
+  'Overdue',
+  'Wintry',
+  'Truant',
+  'Smouldering',
+  'Icebound',
+  'Fallow',
+  'Uncounted',
+]
+
+export const GALAXY_STAR_NAME_NOUNS = [
+  'Hearth',
+  'Torch',
+  'Filament',
+  'Tinder',
+  'Brazier',
+  'Sconce',
+  'Censer',
+  'Cradle',
+  'Foundling',
+  'Waif',
+  'Captive',
+  'Stranger',
+  'Guest',
+  'Lodestar',
+  'Keepsake',
+  'Talisman',
+  'Marrow',
+  'Kernel',
+  'Vow',
+  'Bauble',
+]
+
+/** Die Zeile haengt am Ausgang — als einziges am Stern. */
+export const GALAXY_STAR_FREED_LINES = [
+  'The cage went slack and it walked out.',
+  'Counted, carried, and let go.',
+  'It burns where the chart said it would.',
+  'The dark had it, and gave it back.',
+  'One more light that answers to nothing.',
+  'They left it brighter than they found it.',
+  'Freed, and not asked to be grateful.',
+  'The road bends past it now, not through it.',
+]
+export const GALAXY_STAR_LOST_LINES = [
+  'The dark closed first. It always had the reach.',
+  'Logged where it went out. Nothing more to log.',
+  'They were late by the width of a heading.',
+  'It guttered while the ship was still turning.',
+  'The chart keeps the place. Nothing keeps the light.',
+  'No wreck, no signal. Only the gap.',
+  'It went quiet, and the quiet stayed.',
+  'Marked, and left marked.',
+]
+
+/** Zwei eigene Stroeme, per XOR gesalzen — `mapSeed` ist eine volle 32-Bit-
+ *  Zufallszahl, eine Multiplikation braucht es nicht. Getrennt, damit ein
+ *  Wachsen der Zeilen-Pools keinen archivierten Stern umbenennt und ein Wachsen
+ *  der Namens-Pools keine Zeile neu schreibt. */
+export const GALAXY_STAR_NAME_SEED_SALT = 0x5eed57a1
+export const GALAXY_STAR_LINE_SEED_SALT = 0x1f3a9c7d
+
+/** Fangflaeche ueber einer gemalten Sternmarke, als Vielfaches ihres Radius.
+ *  Dieselbe Zahl, mit der `landfallHit` seine Raute umfasst. */
+export const GALAXY_STAR_MARK_HIT_SCALE = 2.4
+/** Boden der Fangflaeche in px — eine Marke bleibt greifbar, auch wenn die
+ *  Buehne klein wird. Etwas ueber dem Landfall-Boden (16), weil ein Stern
+ *  groesser gemalt wird als eine Ortsraute. */
+export const GALAXY_STAR_MARK_HIT_MIN = 18
+
 /* ── Reiseroute auf der Karte ─────────────────────────────────────────────── */
 
 /* ── Caretaker's Gate: der befreite Kern als Hafen ───────────────────────

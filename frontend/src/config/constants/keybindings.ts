@@ -87,7 +87,7 @@ export const KEYBINDINGS: readonly KeybindDef[] = [
     id: 'road',
     keys: ['k'],
     cap: 'K',
-    label: 'The Wandering',
+    label: 'Tree',
     description:
       'Opens the Skill Tree and takes the camera out to The Wandering. The meep road lies beyond the sun, and at full zoom-out it is too small to aim at by hand.',
     icon: 'game-icons:journey',
@@ -111,7 +111,7 @@ export const KEYBINDINGS: readonly KeybindDef[] = [
     id: 'eventLog',
     keys: ['l'],
     cap: 'L',
-    label: 'Event Log',
+    label: 'Event',
     description:
       'Folds the event log in the top-right corner open or shut. Five tabs, a filter and the last 300 things that happened out there; Copy hands the open tab to the clipboard.',
     icon: 'lucide:scroll-text',

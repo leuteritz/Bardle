@@ -8,6 +8,7 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import ExpeditionMarkTooltip from './ExpeditionMarkTooltip.vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
@@ -139,32 +140,17 @@ const collectable = computed(() => view.value?.state === 'ready' || view.value?.
 </script>
 
 <template>
-  <div v-if="view" class="vtt" :style="{ '--vtt-accent': view.accent }">
-    <span class="vtt-gold" aria-hidden="true" />
-
-    <header class="vtt-head">
-      <span class="vtt-glyph">
-        <Icon :icon="view.icon" width="24" height="24" />
-      </span>
-      <span class="vtt-headtext">
-        <span class="vtt-state">
-          <Icon :icon="view.stateIcon" width="12" height="12" />
-          {{ view.stateLabel }}
-          <i class="vtt-dot">·</i>
-          {{ view.destination }}
-        </span>
-        <span class="vtt-name">{{ view.name }}</span>
-      </span>
-    </header>
-
-    <div class="vtt-readings">
-      <span v-for="r in readings" :key="r.label" class="vtt-read">
-        <b class="vtt-value" :class="r.tone">{{ r.value }}</b>
-        <i class="vtt-label">{{ r.label }}</i>
-      </span>
-    </div>
-
-    <div class="vtt-foot">
+  <ExpeditionMarkTooltip
+    v-if="view"
+    :icon="view.icon"
+    :accent="view.accent"
+    :name="view.name"
+    :state="view.stateLabel"
+    :context="view.destination"
+    :readings="readings"
+  >
+    <template #foot>
+      
       <span class="vtt-line vtt-pay">
         <img src="/img/BardAbilities/BardChime-128.png" class="vtt-chime" alt="" />
         <b>{{ view.rewardPrefix }}{{ $formatNumber(view.reward) }}</b>
@@ -203,129 +189,15 @@ const collectable = computed(() => view.value?.state === 'ready' || view.value?.
       </span>
 
       <span v-if="collectable" class="vtt-cta">Click the marker to collect</span>
-    </div>
-  </div>
+    </template>
+  </ExpeditionMarkTooltip>
 </template>
 
 <style scoped>
-.vtt {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  background: #16140e;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.vtt-gold {
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
-}
-
-/* ── Kopf: Zustand, Ziel, Name ───────────────────────────────────────────── */
-.vtt-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px 10px 9px;
-  background: #1e1006;
-  border-bottom: 3px solid #5c3310;
-  border-left: 3px solid var(--vtt-accent, #e8c040);
-}
-.vtt-glyph {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  background: #141410;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-  color: var(--vtt-accent, #e8c040);
-}
-.vtt-headtext {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-.vtt-state {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.72);
-}
-.vtt-dot {
-  font-style: normal;
-  color: rgba(200, 144, 64, 0.4);
-}
-.vtt-name {
-  font-size: 19px;
-  line-height: 1.14;
-  letter-spacing: 0.02em;
-  color: #e8c040;
-}
-
-/* ── Die drei grossen Zahlen ─────────────────────────────────────────────── */
-.vtt-readings {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  padding: 11px 8px 10px;
-  background: #1a1008;
-  border-bottom: 1px solid rgba(200, 164, 90, 0.16);
-}
-.vtt-read {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  min-width: 0;
-  text-align: center;
-}
-.vtt-read + .vtt-read {
-  border-left: 1px solid rgba(200, 164, 90, 0.14);
-}
-.vtt-value {
-  font-size: 26px;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  color: #e8dcc0;
-  font-variant-numeric: tabular-nums;
-}
-.vtt-value.is-good {
-  color: #64dcb4;
-}
-.vtt-value.is-mid {
-  color: #e8c040;
-}
-.vtt-value.is-poor {
-  color: #cc6050;
-}
-.vtt-value.is-dim {
-  color: rgba(230, 220, 196, 0.4);
-}
-.vtt-label {
-  font-size: 9.5px;
-  font-style: normal;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.55);
-}
+/* Gestalt, Kopf und Ablesungen liegen in `ExpeditionMarkTooltip` — hier steht
+   nur, was der Fuss dieser Karte allein braucht. */
 
 /* ── Fuss: Lohn, Gefahren, Sitze ─────────────────────────────────────────── */
-.vtt-foot {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 9px 12px 10px;
-}
 .vtt-line {
   display: flex;
   align-items: center;

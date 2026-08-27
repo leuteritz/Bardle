@@ -12,9 +12,17 @@
  * einem Ortstyp war das verschmerzbar. Mit sechs sagt die Karte sonst nicht mehr,
  * WELCHER Ort hier lag und ob er geglückt ist.
  */
-import { Icon } from '@iconify/vue'
+import { computed } from 'vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
+import ExpeditionMarkTooltip, { type MarkReading } from './ExpeditionMarkTooltip.vue'
 import { getLandfall } from '@/config/world/landfalls'
+import {
+  LANDFALL_PRESENCE_LABEL,
+  VOYAGE_TIP_GAP_PX,
+  VOYAGE_TIP_OPEN_DELAY_MS,
+  VOYAGE_TIP_WIDTH,
+  landfallGestureLabel,
+} from '@/config/constants'
 import type { LandfallKindId } from '@/types'
 
 const props = defineProps<{
@@ -27,10 +35,37 @@ const props = defineProps<{
 }>()
 
 const def = getLandfall(props.kind)
+
+/* Seltenheit und Geste stehen NUR hier: am Körper zeigt sich die Präsenz als
+   Raum, die Geste als Stand in der HUD-Karte — im Archiv ist beides vorbei. */
+const readings = computed<MarkReading[]>(() => [
+  {
+    value: props.cleared ? 'Made' : 'Missed',
+    label: 'Outcome',
+    tone: `is-word ${props.cleared ? 'is-good' : 'is-dim'}`,
+  },
+  {
+    value: def ? LANDFALL_PRESENCE_LABEL[def.presence] : '—',
+    label: 'Sighted',
+    tone: 'is-word',
+  },
+  {
+    value: def ? landfallGestureLabel(def.gesture, def.burst) : '—',
+    label: 'Asked of',
+    tone: 'is-word',
+  },
+])
 </script>
 
 <template>
-  <RpgBadgeTooltip v-if="def" prefer="top" passive :open-delay="0">
+  <RpgBadgeTooltip
+    v-if="def"
+    prefer="top"
+    passive
+    :gap="VOYAGE_TIP_GAP_PX"
+    :width="VOYAGE_TIP_WIDTH"
+    :open-delay="VOYAGE_TIP_OPEN_DELAY_MS"
+  >
     <template #default>
       <span
         class="lfn"
@@ -39,16 +74,17 @@ const def = getLandfall(props.kind)
       />
     </template>
     <template #tip>
-      <div class="lfn-tip">
-        <div class="lfn-tip__head">
-          <Icon :icon="def.icon" width="15" height="15" class="lfn-tip__ico" />
-          <span class="lfn-tip__name">{{ def.name }}</span>
-          <span class="lfn-tip__state" :class="{ 'lfn-tip__state--missed': !cleared }">
-            {{ cleared ? 'made' : 'missed' }}
-          </span>
-        </div>
-        <span class="lfn-tip__blurb">{{ def.blurb }}</span>
-      </div>
+      <ExpeditionMarkTooltip
+        :icon="def.icon"
+        :name="def.name"
+        state="Landfall"
+        :context="cleared ? 'Made' : 'Missed'"
+        :readings="readings"
+      >
+        <template #foot>
+          <span class="lfn-blurb">{{ def.blurb }}</span>
+        </template>
+      </ExpeditionMarkTooltip>
     </template>
   </RpgBadgeTooltip>
 </template>
@@ -62,5 +98,11 @@ const def = getLandfall(props.kind)
   height: var(--lfn-hit);
   transform: translate(-50%, -50%);
   pointer-events: auto;
+}
+
+.lfn-blurb {
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: rgba(230, 220, 196, 0.58);
 }
 </style>

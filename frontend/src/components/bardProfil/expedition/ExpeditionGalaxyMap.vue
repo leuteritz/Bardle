@@ -21,6 +21,7 @@ import {
   type FitBox,
 } from '@/utils/fx/galaxyPlate'
 import { landfallMarks } from '@/utils/game/landfalls'
+import { galaxyStarMarksOf } from '@/utils/game/starNames'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { voyageGateSizeFor, voyageMarkerSizeFor } from '@/utils/game/voyageSites'
 import {
@@ -31,6 +32,8 @@ import { toRoman } from '@/utils/ui/format'
 import {
   VOYAGE_MAP_HISTORY_SCALE,
   LANDFALL_MARK_R,
+  GALAXY_STAR_MARK_HIT_MIN,
+  GALAXY_STAR_MARK_HIT_SCALE,
   VOYAGE_MAP_INSET_PX,
   VOYAGE_MAP_MAX_BACKING_PX,
   VOYAGE_MAP_ROUTE_ALPHA,
@@ -43,11 +46,13 @@ import {
   VOYAGE_MAP_STATS_MIN_W,
   VOYAGE_MAP_STATS_WIDE_W,
 } from '@/config/constants'
-import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
+import { computeRequired, type CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageHomecoming, VoyagePlacedSite } from '@/types'
 import ExpeditionSiteNode from './ExpeditionSiteNode.vue'
 import ExpeditionGateNode from './ExpeditionGateNode.vue'
 import ExpeditionLandfallNode from './ExpeditionLandfallNode.vue'
+import ExpeditionStarNode from './ExpeditionStarNode.vue'
+import ExpeditionPortalNode from './ExpeditionPortalNode.vue'
 import ExpeditionMapLegend from './ExpeditionMapLegend.vue'
 import ExpeditionGalaxyStatsBand from './ExpeditionGalaxyStatsBand.vue'
 import ExpeditionCrewMarkerLayer from './ExpeditionCrewMarkerLayer.vue'
@@ -131,19 +136,30 @@ const markerSize = computed(() => voyageMarkerSizeFor(props.sites, box.value))
  * ist billiger als eine Trefferprüfung auf dem Canvas und hält die Auskunft im
  * DOM, wo Fokus und Vorlesen sie finden.
  */
+/**
+ * Die Geometrie der Historie — EIN Aufruf für alle drei Markenmengen.
+ *
+ * `generateGalaxyDots` stand vorher INNERHALB von `landfallNodes`; seit Sterne
+ * und Portal dieselben Punkte brauchen, liefe die Ableitung sonst dreimal je
+ * Neuberechnung. Die Aufrufreihenfolge ihres rng-Stroms bleibt unangetastet —
+ * archivierte Galaxien spielen sie nach.
+ */
+const chart = computed(() => {
+  const attempts = props.record.attemptResults.length
+  return { attempts, ...generateGalaxyDots(props.record.mapSeed, attempts + 1) }
+})
+
 const landfallNodes = computed(() => {
   const results = props.record.landfallResults ?? []
   if (!results.length) return []
-  const attempts = props.record.attemptResults.length
-  const { spawn, dots } = generateGalaxyDots(props.record.mapSeed, attempts + 1)
   // DIESELBE Sperrzone wie beim Malen — sonst stünde die Fangfläche woanders
   // als die Marke.
   return landfallMarks(
     props.record.mapSeed,
     props.record.galaxy,
-    spawn,
-    dots,
-    attempts,
+    chart.value.spawn,
+    chart.value.dots,
+    chart.value.attempts,
     results,
     coreGateClearance(box.value, historyHk.value),
   )
@@ -159,6 +175,52 @@ const historyHk = computed(
 /** Kantenlänge der Fangfläche: sie folgt der gemalten Marke, wie beim Tor. */
 const landfallHit = computed(() =>
   Math.max(16, Math.round(LANDFALL_MARK_R * historyHk.value * 2.4)),
+)
+
+/**
+ * Die Fangflächen über den Sternmarken.
+ *
+ * Dieselbe Trennung wie beim Ort: das Canvas malt Ring und Hülle, das DOM trägt
+ * die Auskunft. Und die gab es hier bis jetzt überhaupt nicht — ein Stern war
+ * auf der Karte nur `'rescued' | 'failed'` plus seine Nummer, die Legende sagt
+ * bloss, was die FORM bedeutet.
+ *
+ * `freedSoFar` läuft mit: die dritte Ablesung zeigt den Stand, wie er in DIESEM
+ * Moment der Galaxie war, nicht den Endstand.
+ */
+const starNodes = computed(() => {
+  const marks = galaxyStarMarksOf(props.record.mapSeed, props.record.attemptResults)
+  let freed = 0
+  return marks.map((mark) => {
+    if (mark.outcome !== 'failed') freed += 1
+    const dot = chart.value.dots[mark.index]
+    return { mark, freedSoFar: freed, x: dot.x, y: dot.y }
+  })
+})
+
+/** Das Sternsoll dieser Galaxie — dieselbe Formel, gegen die das Spiel zählt. */
+const starsRequired = computed(() => computeRequired(props.record.galaxy))
+
+const starsFreed = computed(
+  () => props.record.attemptResults.filter((r) => r !== 'failed').length,
+)
+const starsLost = computed(
+  () => props.record.attemptResults.filter((r) => r === 'failed').length,
+)
+
+/** Kantenlängen der Fangflächen — sie folgen den GEMALTEN Radien aus
+ *  `galaxyPlate` (verloren 7, befreit 8.5, Portal 9), wie beim Ort. */
+const starHit = computed(() =>
+  Math.max(
+    GALAXY_STAR_MARK_HIT_MIN,
+    Math.round(8.5 * historyHk.value * GALAXY_STAR_MARK_HIT_SCALE),
+  ),
+)
+const portalHit = computed(() =>
+  Math.max(
+    GALAXY_STAR_MARK_HIT_MIN,
+    Math.round(9 * historyHk.value * GALAXY_STAR_MARK_HIT_SCALE),
+  ),
 )
 
 /**
@@ -243,7 +305,7 @@ const accent = computed(() => minimapAccentForTheme(props.record.themeIndex))
 
 /** Dieselbe Richtung, in die das Ankunftsportal auf der Karte zeigt. */
 const legendHeading = computed(() => {
-  const { spawn, dots } = generateGalaxyDots(props.record.mapSeed, 1)
+  const { spawn, dots } = chart.value
   const d = dots[0] ?? spawn
   return Math.atan2(d.y - spawn.y, d.x - spawn.x)
 })
@@ -365,6 +427,30 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
         :hit="landfallHit"
       />
 
+      <!-- Dann die Sterne: sie liegen ÜBER den Orten, wie beim Malen. Ein Ort
+           ist Beiwerk der Reise, ein Stern ihr Ergebnis — liegen beide eng
+           beieinander, soll der Stern den Zeiger bekommen. -->
+      <ExpeditionStarNode
+        v-for="n in starNodes"
+        :key="`st-${n.mark.index}`"
+        :mark="n.mark"
+        :required="starsRequired"
+        :freed-so-far="n.freedSoFar"
+        :left="pct(n.x, n.y).left"
+        :top="pct(n.x, n.y).top"
+        :hit="starHit"
+      />
+
+      <!-- Das Ankunftsportal am Aussenrand: genau eines je Karte. -->
+      <ExpeditionPortalNode
+        :destination="title"
+        :freed="starsFreed"
+        :lost="starsLost"
+        :left="pct(chart.spawn.x, chart.spawn.y).left"
+        :top="pct(chart.spawn.x, chart.spawn.y).top"
+        :hit="portalHit"
+      />
+
       <!-- Vor den Häfen: das Tor liegt bei gleichem z-index sonst darüber, und
            ein Vertrag nahe am Kern verschwände unter dem Reifen. -->
       <ExpeditionGateNode
@@ -432,6 +518,8 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
   pointer-events: none;
 }
 .egm-nodes :deep(.lfn),
+.egm-nodes :deep(.stn),
+.egm-nodes :deep(.ptn),
 .egm-nodes :deep(.sn),
 .egm-nodes :deep(.gt) {
   pointer-events: auto;

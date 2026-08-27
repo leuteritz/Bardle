@@ -6,7 +6,13 @@
 // Orbit: Drifter und Void tragen ihre eigene Uhr und sind ORTLOS, der
 // Champion-Stern ist ein eigenes Ziel mit eigener Reise.
 
-import type { LandfallFxStage, LandfallKindId, LandfallMotif, LandfallPresence } from '@/types'
+import type {
+  LandfallFxStage,
+  LandfallGesture,
+  LandfallKindId,
+  LandfallMotif,
+  LandfallPresence,
+} from '@/types'
 
 /** Ab welcher Galaxie es überhaupt Landfalls gibt. */
 export const LANDFALL_UNLOCK_GALAXY = 2
@@ -574,3 +580,39 @@ export const LANDFALL_VEIL_OFFSET_MS = 1700
  *  Runde brauchen. Reine CSS-Rotation an einer eigenen Ebene — kein Frame-Wert. */
 export const LANDFALL_MOTE_ORBIT_SPAN = 1.24
 export const LANDFALL_MOTE_ORBIT_MS = 14_000
+
+/* ── Was die Kartenmarke im Hover sagt ────────────────────────────────────────
+
+   Seltenheit und Geste standen bisher NUR im Katalog: die Praesenz zeigt sich
+   am Koerper als RAUM (`LANDFALL_PRESENCE_STAGES`), die Geste als Stand in der
+   HUD-Karte. Im Archiv ist beides vorbei — dort ist das Wort der einzige Weg,
+   und der Tooltip ist Auskunft, kein Bild. Der Koerper bleibt unberuehrt.    */
+
+export const LANDFALL_PRESENCE_LABEL: Record<LandfallPresence, string> = {
+  common: 'Common',
+  uncommon: 'Uncommon',
+  rare: 'Rare',
+  singular: 'Singular',
+}
+
+/**
+ * Was der Ort vom Spieler VERLANGT hat, in einem Wort.
+ *
+ * Keine reine Tabelle: `threshold` traegt ZWEI Bedeutungen. Der Adrift Convoy
+ * ist der Endspurt, die Rupture die Eile — sie unterscheiden sich allein am
+ * `burst`, und ein Record ueber die Geste allein wuerde beide gleich nennen.
+ */
+export function landfallGestureLabel(gesture: LandfallGesture, burst?: number): string {
+  switch (gesture) {
+    case 'gradient':
+      return 'Endurance'
+    case 'threshold':
+      return burst ? 'Haste' : 'A last push'
+    case 'single':
+      return 'One decision'
+    case 'choice':
+      return 'Deliberation'
+    default:
+      return 'Nothing'
+  }
+}

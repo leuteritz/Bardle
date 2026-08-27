@@ -254,7 +254,7 @@ const { focusNode } = useForgeSpotlight()
 bindTabShortcut('shop', 'shop')
 
 /**
- * Taste K — sie hiess einmal „Tree" und öffnete einen eigenen Reiter.
+ * Taste K — sie öffnete einmal einen eigenen Reiter.
  *
  * Sie ist NICHT gestrichen und auch nicht auf den Shop umgehängt: zwei Tasten
  * auf denselben Reiter wären eine Lüge im Controls-Panel. Sie fährt stattdessen
