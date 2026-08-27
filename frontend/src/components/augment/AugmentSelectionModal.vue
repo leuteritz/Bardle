@@ -62,7 +62,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     >
       <div class="relative w-full max-w-3xl mx-4 overflow-hidden rpg-frame aug-modal">
         <RpgFrame />
-        <div class="rpg-accent-bar"></div>
 
         <!-- Header -->
         <div class="relative flex items-center justify-center px-5 py-4 rpg-header">

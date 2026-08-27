@@ -102,7 +102,6 @@ function claim(multiplier: number) {
     <Transition name="offline-fade">
       <div v-if="gameStore.showOfflineModal" class="offline-overlay">
         <div class="offline-modal">
-          <div class="offline-goldline"></div>
 
           <!-- Hero -->
           <div class="hero-section">
@@ -182,12 +181,6 @@ function claim(multiplier: number) {
     inset 0 0 0 2px #3e200a,
     inset 0 0 0 4px #5c3310,
     0 24px 64px rgba(0, 0, 0, 0.9);
-}
-
-.offline-goldline {
-  flex-shrink: 0;
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 /* ── Cosmic stars ──────────────────────────────────────── */

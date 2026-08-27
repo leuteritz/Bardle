@@ -16,9 +16,6 @@
       <!-- ── Modal ─────────────────────────────────────────────────────── -->
       <div class="sf-modal" :class="{ 'sf-modal--galaxy': isGalaxyBoss }">
         <RpgFrame />
-        <!-- ── Gold Topbar ─────────────────────────────────────────────── -->
-        <div class="sf-topbar" />
-
         <!-- ── Cosmic Background (shared, wie Shop/Team/Planets) ───────── -->
         <CosmicStageBackground />
 
@@ -613,15 +610,6 @@ function emberStyle(i: number): Record<string, string> {
     0 0 0 1px #2a1608;
 }
 
-/* ── Gold Topbar ──────────────────────────────────────────────────────────── */
-.sf-topbar {
-  height: 3px;
-  flex-shrink: 0;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
-  position: relative;
-  z-index: 2;
-}
-
 /* ── Planet Background — zentriert im Arena-Bereich ──────────────────────── */
 .sf-modal-planet-bg {
   position: absolute;
@@ -643,7 +631,6 @@ function emberStyle(i: number): Record<string, string> {
 }
 
 /* All modal children above the planet background ───────────────────────── */
-.sf-topbar,
 .sf-main {
   position: relative;
   z-index: 1;
@@ -793,7 +780,7 @@ function emberStyle(i: number): Record<string, string> {
   }
 }
 
-/* Trennlinie zur Bühne — das Echo der Goldlinie oben, senkrecht gestellt.
+/* Trennlinie zur Bühne — dieselbe Holzkante wie am Modalrand, senkrecht gestellt.
    Statisch, kein Keyframe: eine laufende Animation auf einem Verlauf rastert
    jede Frame neu (Performance-Regel 2). */
 .sf-rail::after {

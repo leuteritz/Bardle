@@ -957,7 +957,7 @@ onUnmounted(() => {
 }
 
 /* Vacant-Plate seitlich neben dem Slot — gestrichelte, gedimmte Karte mit
-   Goldlinien-Echo oben (wie rsq-vacant-plate, aber am Plate-Anker der HUD) */
+   grüner Oberkante (wie rsq-vacant-plate, aber am Plate-Anker der HUD) */
 .tbh-vacant-plate {
   position: relative;
   display: flex;

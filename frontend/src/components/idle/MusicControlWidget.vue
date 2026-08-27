@@ -26,7 +26,6 @@ function onSliderInput(e: Event) {
     </button>
 
     <div class="music-panel">
-      <div class="music-panel__gold-line" />
       <div class="music-panel__body">
         <span class="music-label">Music</span>
         <input
@@ -90,12 +89,6 @@ function onSliderInput(e: Event) {
 
 .music-widget:hover .music-panel {
   display: flex;
-}
-
-.music-panel__gold-line {
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
-  flex-shrink: 0;
 }
 
 .music-panel__body {

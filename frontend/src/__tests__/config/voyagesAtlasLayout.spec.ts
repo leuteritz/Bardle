@@ -98,13 +98,17 @@ function zones(vw: number, vh: number, folded = false, detailFolded = false) {
  * Mit dem Fleet-Band neu aufgenommen (Kopfleiste 126). Die Zahlen davor waren
  * unabhängig davon veraltet — siehe die Herleitung in
  * `voyagesFleetLayout.spec.ts`. Die Fit-Box verliert durch das Band NICHTS:
- * `VOYAGE_MAP_STATS_BAND_H` ist um dieselben 24 gefallen (96 → 72).
+ * `VOYAGE_MAP_STATS_BAND_H` ist um dieselben 24 gefallen (96 → 72). *
+ * Je 3 px hoeher, seit die Goldlinie des Profilmodals gefallen ist: `.rp-accent-bar`
+ * war ein Flex-Kind im Fluss, kein Pseudoelement — was sie belegte, hat die Buehne
+ * geerbt. Nachgemessen auf allen vier Aufloesungen, die Kopfleiste steht unveraendert
+ * bei 126.
  */
 const STAGE_HEIGHT: Record<number, number> = {
-  1080: 653.6,
-  1200: 754.4,
-  1440: 932,
-  2160: 1641.2,
+  1080: 656.6,
+  1200: 757.4,
+  1440: 935,
+  2160: 1644.2,
 }
 
 function stageHeight(vh: number): number {

@@ -947,7 +947,7 @@ export const VOYAGE_DOSSIER_COMPACT_MAX_H = 1250
 /** Zweite Stufe nach oben, damit 4K nicht nur das Logbuch dehnt. */
 export const VOYAGE_DOSSIER_LARGE_MIN_H = 1601
 /**
- * Kuerzeste Spalte ueberhaupt (Full HD 653.6 gemessen, abgerundet).
+ * Kuerzeste Spalte ueberhaupt (Full HD 656.6 gemessen, abgerundet).
  *
  * `.etc-detail` und `.etc-stage` teilen sich Reihe 2 und messen dasselbe — die
  * Zahl ist der STAGE_HEIGHT-Eintrag aus `voyagesAtlasLayout.spec.ts`. Die 700,
@@ -956,11 +956,11 @@ export const VOYAGE_DOSSIER_LARGE_MIN_H = 1601
  * still beschnitten (`overflow: clip` meldet keinen Ueberlauf) — im Browser
  * nachgewiesen, epischer Vertrag mit fuenf Sitzen und drei Gefahren.
  */
-export const VOYAGE_DOSSIER_COLUMN_MIN_H = 653
-/** Kuerzeste Spalte im vollen Satz (2K 931.97 gemessen, abgerundet). */
-export const VOYAGE_DOSSIER_COLUMN_FULL_MIN_H = 931
-/** Hoechste Spalte (4K 1641.2 gemessen). */
-export const VOYAGE_DOSSIER_COLUMN_MAX_H = 1641
+export const VOYAGE_DOSSIER_COLUMN_MIN_H = 656
+/** Kuerzeste Spalte im vollen Satz (2K 935 gemessen). */
+export const VOYAGE_DOSSIER_COLUMN_FULL_MIN_H = 935
+/** Hoechste Spalte (4K 1644.2 gemessen). */
+export const VOYAGE_DOSSIER_COLUMN_MAX_H = 1644
 /** Leerraum, den der Logbuch-Schweif noch als Bild traegt statt als Loch. */
 export const VOYAGE_DOSSIER_TAIL_MAX_H = 380
 /**

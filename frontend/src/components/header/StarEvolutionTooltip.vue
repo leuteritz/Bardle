@@ -301,7 +301,6 @@ const timeRows = computed<StatRow[]>(() => [
 
 <template>
   <div class="set" :style="{ '--ph-accent': accent }">
-    <div class="set-goldline" aria-hidden="true"></div>
 
     <!-- ════════ Kopf: welcher Stern, und der wievielte Zustand ════════ -->
     <header class="set-head">
@@ -489,11 +488,6 @@ const timeRows = computed<StatRow[]>(() => [
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
-}
-
-.set-goldline {
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 /* ── Kopf ──────────────────────────────────────────────────────── */

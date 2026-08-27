@@ -31,7 +31,6 @@ function chooseRay(rayId: SolarBranchId) {
        and keeps the modal open so options can be compared. -->
   <div class="ps-modal-scrim" @click.self="emit('close')">
     <div class="ps-modal">
-      <span class="ps-modal-goldline" aria-hidden="true" />
       <div class="ps-modal-head">
         <span class="ps-modal-head-icon">
           <Icon
@@ -144,21 +143,6 @@ function chooseRay(rayId: SolarBranchId) {
     inset 0 0 0 2px #3e200a,
     inset 0 0 0 4px #5c3310,
     0 16px 48px rgba(0, 0, 0, 0.85);
-}
-
-/* Gold line pinned to the very top of the modal */
-.ps-modal-goldline {
-  flex-shrink: 0;
-  height: 3px;
-  background: linear-gradient(
-    to right,
-    #5c3310,
-    #c89040,
-    #e8c060,
-    #d4a020,
-    #c89040,
-    #5c3310
-  );
 }
 
 .ps-modal-head {

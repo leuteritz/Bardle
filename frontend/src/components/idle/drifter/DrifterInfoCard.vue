@@ -304,8 +304,7 @@ onUnmounted(clearTimers)
   transition: top 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Rangstreifen über der Karte — dieselbe Rolle wie die Goldlinie an jedem
-   Modal, nur in der Farbe der Seltenheitsstufe. Bis hierher stand der Rang als
+/* Rangstreifen über der Karte, in der Farbe der Seltenheitsstufe. Bis hierher stand der Rang als
    Wort in der Fußzeile und war damit das Letzte, was man liest; als Streifen
    ist er das Erste, was man sieht, und kostet keine Zeile Höhe. Der linke
    Rahmen bleibt die EIGENfarbe des Drifters — zwei verschiedene Aussagen,

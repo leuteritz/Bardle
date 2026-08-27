@@ -181,7 +181,6 @@ function choose(role: RoleDef) {
       <div class="relative w-full mx-4 overflow-hidden role-frame">
         <RpgFrame />
         <!-- Gold accent bar -->
-        <div class="role-accent-bar"></div>
 
         <!-- Header — the title morphs into a champion search on hover/focus -->
         <div class="role-header">
@@ -362,19 +361,6 @@ function choose(role: RoleDef) {
 }
 
 /* ── Gold accent bar ─────────────────────────────────────────────────── */
-.role-accent-bar {
-  height: 3px;
-  background: linear-gradient(
-    to right,
-    #5c3310,
-    #c89040,
-    #e8c060,
-    #d4a020,
-    #c89040,
-    #5c3310
-  );
-}
-
 /* ── Header ──────────────────────────────────────────────────────────── */
 .role-header {
   background: #1e1006;

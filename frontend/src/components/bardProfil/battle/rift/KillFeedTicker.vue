@@ -3,7 +3,6 @@
     <!-- Expanded history overlay — floats above the minimap, flex layout untouched -->
     <Transition name="panel">
       <div v-if="expanded" class="feed-panel">
-        <div class="feed-panel-goldline"></div>
         <TransitionGroup name="feed" tag="div" class="feed-list">
           <div
             v-for="row in feedEntries"
@@ -432,12 +431,6 @@ function structureLabel(e: StructureFeedEntry): string {
   background: #0d0c08;
   border-top: 2px solid #3e200a;
   box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.75);
-}
-
-.feed-panel-goldline {
-  height: 2px;
-  flex-shrink: 0;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 .feed-list {

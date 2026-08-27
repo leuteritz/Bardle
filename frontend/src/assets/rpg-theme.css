@@ -114,13 +114,6 @@
   overflow: hidden;
 }
 
-/* ── Gold Accent Bar ── */
-.rpg-accent-bar {
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
-  flex-shrink: 0;
-}
-
 /* ── Header Strip ── */
 .rpg-header {
   background: var(--rpg-bg-header);

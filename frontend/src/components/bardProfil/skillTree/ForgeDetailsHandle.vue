@@ -110,9 +110,10 @@ const badgeGap = `${FORGE_DETAILS_BADGE_GAP_PX}px`
   background: #1a140d;
 }
 
-/* Goldfaden auf der Naht, dieselbe Rampe wie die Modal-Goldlinie. Statisch —
-   nur die Deckung wechselt. Seit der Chevron weg ist, trägt er allein die
-   Richtung. Absolut positioniert, also kein Flex-Item. */
+/* Goldfaden auf der Naht. Statisch — nur die DECKUNG wechselt, und das ist
+   der Punkt: seit der Chevron weg ist, trägt er allein den Zustand (matt zu,
+   hell offen oder unter dem Zeiger). Kein Zierrat, sondern die Auskunft des
+   Griffs. Absolut positioniert, also kein Flex-Item. */
 .fdh::after {
   content: '';
   position: absolute;

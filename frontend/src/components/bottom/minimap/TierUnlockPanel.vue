@@ -1,7 +1,6 @@
 <template>
   <div class="tier-unlock">
     <RpgFrame />
-    <div class="tier-gold-line" aria-hidden="true" />
 
     <div class="tier-head">
       <Icon icon="game-icons:locked-fortress" class="tier-lock-icon" width="22" height="22" />
@@ -144,23 +143,6 @@ export default defineComponent({
   align-items: center;
   gap: 9px;
   pointer-events: auto;
-}
-
-.tier-gold-line {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(
-    to right,
-    #5c3310,
-    #c89040,
-    #e8c060,
-    #d4a020,
-    #c89040,
-    #5c3310
-  );
 }
 
 .tier-head {

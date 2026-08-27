@@ -93,10 +93,10 @@ function mapWidth(vw: number, vh: number, detailFolded = false): number {
  * dieselben 24 gefallen, die die Kopfleiste bekommen hat.
  */
 const STAGE_HEIGHT: Record<number, number> = {
-  1080: 653.6,
-  1200: 754.4,
-  1440: 932,
-  2160: 1641.2,
+  1080: 656.6,
+  1200: 757.4,
+  1440: 935,
+  2160: 1644.2,
 }
 
 const DESKTOPS: Array<[string, number, number]> = [

@@ -169,8 +169,8 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* Die Goldlinie der Bottom-Bar — sie markiert das eine dauerhafte Glied der
-   Spalte. Statisch, nie animiert. */
+/* Goldene Oberkante — sie markiert das eine DAUERHAFTE Glied der Spalte
+   gegen die flüchtigen Karten darunter. Statisch, nie animiert. */
 .wf-root::after {
   content: '';
   position: absolute;

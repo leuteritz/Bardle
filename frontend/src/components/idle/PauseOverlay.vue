@@ -1431,18 +1431,6 @@ function particleStyle(i: number): Record<string, string> {
     0 25px 60px rgba(0, 0, 0, 0.95),
     0 0 0 1px #2a1608;
 }
-.pause-panel::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
-  box-shadow: 0 0 8px rgba(200, 150, 30, 0.5);
-  pointer-events: none;
-}
-
 /* Cosmic starfield sits between the flat panel fill (#111008) and the panel
    content: z-index -1 keeps it above the panel background but below every
    in-flow child (header, sun hero, stats …). The panel's overflow:hidden clips

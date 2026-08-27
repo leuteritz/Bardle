@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Die Gestalt jedes Marken-Tooltips der Galaxiekarte — Goldlinie, Kopf, Chips.
+ * Die Gestalt jedes Marken-Tooltips der Galaxiekarte — Kopf und Chip-Reihe.
  *
  * Sie stand zweimal wörtlich im Reiter (Subject und Gate, je ~90 Zeilen CSS).
  * Mit Stern, Portal und Ort wären es fünf Abschriften geworden, und eine
@@ -49,8 +49,6 @@ withDefaults(
 
 <template>
   <div class="vtt" :style="{ '--vtt-accent': accent }">
-    <span class="vtt-gold" aria-hidden="true" />
-
     <header class="vtt-head">
       <span class="vtt-glyph">
         <Icon :icon="icon" width="24" height="24" />
@@ -88,11 +86,6 @@ withDefaults(
   background: #16140e;
   border-radius: 2px;
   overflow: hidden;
-}
-
-.vtt-gold {
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 /* ── Kopf: Zustand und Name ──────────────────────────────────────────────── */

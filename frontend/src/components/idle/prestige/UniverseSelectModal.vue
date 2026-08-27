@@ -48,7 +48,6 @@ onUnmounted(() => document.removeEventListener('keydown', handleEscape))
       >
         <div class="relative w-full max-w-5xl mx-4 overflow-hidden rpg-frame">
           <RpgFrame />
-          <div class="rpg-accent-bar"></div>
 
           <!-- Header -->
           <div class="relative flex items-center justify-center p-6 rpg-header">

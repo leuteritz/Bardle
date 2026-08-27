@@ -187,7 +187,6 @@ const lifetimeRows = computed<StatRow[]>(() => [
 
 <template>
   <div class="mpt">
-    <div class="mpt-goldline" aria-hidden="true"></div>
 
     <!-- ════════ Kopf: die Meeps selbst, und wie viele bereitstehen ════════ -->
     <header class="mpt-head">
@@ -411,11 +410,6 @@ const lifetimeRows = computed<StatRow[]>(() => [
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
-}
-
-.mpt-goldline {
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 /* ── Kopf ──────────────────────────────────────────────────────── */

@@ -99,8 +99,6 @@ function swiftDurationOf(def: OmenDef): string {
       <div class="oco-scrim"></div>
 
       <div class="oco-panel">
-        <span class="oco-goldline" aria-hidden="true"></span>
-
         <div class="oco-head">
           <h2 id="oco-title" class="oco-title">{{ OMEN_CHOICE_TITLE }}</h2>
           <p class="oco-sub">{{ OMEN_CHOICE_SUBTITLE }}</p>
@@ -188,15 +186,6 @@ function swiftDurationOf(def: OmenDef): string {
     0 18px 60px rgba(0, 0, 0, 0.9);
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
-}
-
-.oco-goldline {
-  position: sticky;
-  top: 0;
-  align-self: stretch;
-  height: 3px;
-  margin: 0 -28px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 .oco-head {

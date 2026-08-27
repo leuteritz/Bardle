@@ -10,8 +10,6 @@
         @click.self="uiStore.closeControls()"
       >
         <div class="kb-panel">
-          <div class="kb-panel__gold" aria-hidden="true" />
-
           <header class="kb-panel__header">
             <Icon icon="lucide:keyboard" width="24" height="24" class="kb-panel__header-icon" aria-hidden="true" />
             <h2 class="kb-panel__title">Controls</h2>
@@ -171,12 +169,6 @@ onUnmounted(() => {
     inset 0 0 0 2px #3e200a,
     inset 0 0 0 4px #5c3310,
     0 25px 60px rgba(0, 0, 0, 0.95);
-}
-
-.kb-panel__gold {
-  height: 3px;
-  flex-shrink: 0;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 /* ── Header ───────────────────────────────────────────── */

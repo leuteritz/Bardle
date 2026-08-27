@@ -121,8 +121,8 @@ function openControls() {
 <style scoped>
 /* Spiegelbild der Signatur-Zeile unten links: gleiche Höhe über dem
    Bottom-Bar-Panel, gleicher Randabstand — die beiden Ecken tragen damit
-   dasselbe Gewicht. Und dieselbe Zurückhaltung: kein Kasten, kein Rahmen,
-   keine Goldlinie. Die Leiste steht frei über dem Command Panel und tritt erst
+   dasselbe Gewicht. Und dieselbe Zurückhaltung: kein Kasten, kein Rahmen.
+   Die Leiste steht frei über dem Command Panel und tritt erst
    beim Darüberfahren nach vorn; ein zweiter gerahmter Block direkt über der
    Bar-Silhouette hätte wie ein weiteres Panel gelesen.
 

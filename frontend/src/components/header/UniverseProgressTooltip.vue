@@ -201,7 +201,6 @@ const lifetimeRows = computed<StatRow[]>(() => [
 
 <template>
   <div class="upt">
-    <div class="upt-goldline" aria-hidden="true"></div>
 
     <!-- ════════ Kopf: welches Universum, und das wievielte ════════ -->
     <header class="upt-head">
@@ -437,11 +436,6 @@ const lifetimeRows = computed<StatRow[]>(() => [
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
-}
-
-.upt-goldline {
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 /* ── Kopf ──────────────────────────────────────────────────────── */

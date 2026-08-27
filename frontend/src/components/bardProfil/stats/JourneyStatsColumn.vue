@@ -329,7 +329,8 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
   color: #5a4c33;
 }
 
-/* The modal's signature gold line, cut to the readout's width */
+/* Gold rule under the readout, cut to its width — it separates the playtime
+   from the rows below without opening a second block. */
 .sf-pt-rule {
   width: 100%;
   height: 2px;

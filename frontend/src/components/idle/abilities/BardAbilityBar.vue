@@ -1138,9 +1138,9 @@ onUnmounted(() => {
   border-top: 7px solid #5c3310;
 }
 
-/* Die Linie oben, im Bogen der Goldlinie des Spiels — nur in der Leitfarbe der
-   Fähigkeit statt in Gold. Sie liegt ÜBER der Kopf-Bande, nicht neben ihr: der
-   Kasten fängt damit mit der Farbe an, bevor das erste Wort steht. */
+/* Die Linie oben, in der Leitfarbe der Fähigkeit. Sie liegt ÜBER der
+   Kopf-Bande, nicht neben ihr: der Kasten fängt damit mit der Farbe an,
+   bevor das erste Wort steht. */
 .ab-tip::before {
   content: '';
   position: absolute;

@@ -4,8 +4,6 @@
       <div ref="modalEl" class="objective-modal" :style="modalStyle">
         <RpgFrame />
         <!-- Gold accent bar -->
-        <div class="accent-bar" />
-
         <!-- The whole fight is unmounted once the objective resolves: the arena
              carries a blurred aura, two spinning rune rings, six embers and a
              breathing boss sprite, all infinite animations. Leaving them running
@@ -1112,13 +1110,6 @@ onUnmounted(_stopFloatScheduler)
   background: radial-gradient(circle at 50% 32%, var(--obj-glow), transparent 60%);
   opacity: 0.1;
   pointer-events: none;
-}
-
-.accent-bar {
-  width: 100%;
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
-  flex-shrink: 0;
 }
 
 /* ── Header ──────────────────────────────────────────────────────────────── */

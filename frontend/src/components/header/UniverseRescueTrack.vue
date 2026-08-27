@@ -297,9 +297,8 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
    PRESTIGE BUTTON — liegt auf demselben Feld wie der Balken, tritt aber
    bewusst nicht als weitere gefüllte Fläche auf: der Balken WAR die
    Fläche, und sie ist voll. Stattdessen eine dunkle Fassung in Amethyst
-   mit kräftiger Goldkontur und der Goldlinie, die im Projekt jedes Modal
-   eröffnet — der Header öffnet hier eine Tür, statt einen Riegel zu
-   zeigen. Die Wortmarke steht allein und weit gesperrt in der Mitte.
+   mit kräftiger Goldkontur und einer goldenen Kopfleiste — der Header
+   öffnet hier eine Tür, statt einen Riegel zu zeigen. Die Wortmarke steht allein und weit gesperrt in der Mitte.
    ================================================================ */
 .prestige-btn {
   position: absolute;
@@ -338,8 +337,8 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
     filter 0.18s ease;
 }
 
-/* Die Goldlinie des Projekts als Kopfleiste — dasselbe Verlaufsmuster wie
-   über jedem Modal, nur auf Buttonhöhe heruntergebrochen. */
+/* Goldene Kopfleiste des Knopfes — sie sitzt INNERHALB der Kontur (top/left/
+   right: 1px) und rundet mit ihr ab, liegt also auf dem Knopf statt über ihm. */
 .prestige-btn::before {
   content: '';
   position: absolute;

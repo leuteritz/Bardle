@@ -299,7 +299,6 @@ const panelFrameStyle = computed(() => ({
         </svg>
 
         <!-- Gold accent line -->
-        <div class="enc-accent shrink-0"></div>
 
         <!-- Header — Icon + Codex zentriert, Close-Button absolut rechts -->
         <div class="enc-header relative flex items-center justify-center gap-2.5 shrink-0">
@@ -513,19 +512,6 @@ const panelFrameStyle = computed(() => ({
   pointer-events: none;
   z-index: 10;
 }
-.enc-accent {
-  height: 3px;
-  background: linear-gradient(
-    to right,
-    #5c3310,
-    #c89040,
-    #e8c060,
-    #d4a020,
-    #c89040,
-    #5c3310
-  );
-}
-
 /* ── Header ── */
 .enc-header {
   padding: clamp(10px, 0.8vw, 15px) var(--enc-pad) clamp(9px, 0.7vw, 13px);

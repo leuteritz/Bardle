@@ -1,6 +1,6 @@
 <template>
-  <!-- EIN Fenster für die gesamte Belohnung: Goldlinie oben, ein Rahmen außen,
-       innen nur Trennstriche. Vorher trug jede Belohnung ihre eigene Fassung —
+  <!-- EIN Fenster für die gesamte Belohnung: ein Rahmen außen, innen nur
+       Trennstriche. Vorher trug jede Belohnung ihre eigene Fassung —
        fünf freistehende Kästchen unter einer separaten Überschrift. Jetzt ist
        es eine geschlossene Leiste, in der das Label das erste Segment ist;
        das spart die ganze Kopfzeile und lässt die Icons entsprechend größer
@@ -114,8 +114,8 @@ const stackedMaterials = computed(() => {
 
 <style scoped>
 /* ── Das Belohnungsfenster ────────────────────────────────────────────────────
-   Ein Rahmen, eine Goldlinie oben, innen nur Trennstriche — die Projektsprache
-   der Modale, auf eine Leiste eingedampft. Alle Segmente teilen sich Höhe,
+   Ein Rahmen, innen nur Trennstriche — die Projektsprache der Modale, auf eine
+   Leiste eingedampft. Alle Segmente teilen sich Höhe,
    Rahmen und Ecken; was ein Segment auszeichnet (Seltenheit, Champion), zeigt
    sich innerhalb davon, nicht als eigener Kasten drumherum.
 
@@ -138,26 +138,6 @@ const stackedMaterials = computed(() => {
     inset 0 0 0 1px rgba(232, 192, 64, 0.12),
     0 6px 18px rgba(0, 0, 0, 0.7);
   animation: loot-reveal 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
-}
-
-/* Goldlinie oben — dieselbe Verlaufsfolge wie an jedem Modal des Projekts */
-.loot::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  z-index: 1;
-  background: linear-gradient(
-    to right,
-    #5c3310,
-    #c89040,
-    #e8c060,
-    #d4a020,
-    #c89040,
-    #5c3310
-  );
 }
 
 /* Trennstriche statt Einzelrahmen — die Segmente bleiben eine Einheit */
@@ -232,8 +212,8 @@ const stackedMaterials = computed(() => {
 /* ── Belohnungs-Segment ───────────────────────────────────────────────────────
    Kein eigener Kasten mehr: die Zelle sitzt im Fenster, ihre Seltenheit zeigt
    sich als Farbschimmer im Hintergrund und als Farbkante an der UNTERKANTE.
-   Unten deshalb, weil die Oberkante des Fensters der Goldlinie gehört — so
-   stehen sich beide nie im Weg. Rein statisch, kein Filter, keine Animation. */
+   Unten deshalb, weil die Oberkante die Fensterkante ist und eine zweite Linie
+   dort mit ihr konkurrierte. Rein statisch, kein Filter, keine Animation. */
 .loot-slot {
   --rar: #c8c8c8;
   position: relative;

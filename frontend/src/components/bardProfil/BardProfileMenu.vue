@@ -371,8 +371,6 @@ onUnmounted(() => {
         <div v-show="uiStore.bardActiveTab !== null" class="rp-wrapper">
           <div class="flex flex-col rp-modal">
             <RpgFrame />
-            <div class="rp-accent-bar" />
-
             <!-- Drei Spalten, nicht ein zentriertes Flex-Kind: die Reiter
                  bleiben dadurch MATHEMATISCH mittig, egal wie breit die beiden
                  Live-Cluster gerade ausfallen. Als Geschwister eines `flex-1`
@@ -739,13 +737,6 @@ onUnmounted(() => {
     0 25px 60px rgba(0, 0, 0, 0.95),
     0 0 0 1px #2a1608;
   height: 100%;
-}
-
-.rp-accent-bar {
-  height: 3px;
-  flex-shrink: 0;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
-  box-shadow: 0 0 8px rgba(200, 150, 30, 0.5);
 }
 
 /* ═══════════════════════════════════════════

@@ -264,7 +264,6 @@ const lifetimeRows = computed<StatRow[]>(() => [
 
 <template>
   <div class="gpt">
-    <div class="gpt-goldline" aria-hidden="true"></div>
 
     <!-- ════════ Kopf: welche Galaxie, und welche Farbwelt ════════ -->
     <header class="gpt-head">
@@ -503,11 +502,6 @@ const lifetimeRows = computed<StatRow[]>(() => [
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
-}
-
-.gpt-goldline {
-  height: 3px;
-  background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 /* ── Kopf ──────────────────────────────────────────────────────── */
