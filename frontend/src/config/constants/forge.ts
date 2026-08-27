@@ -42,6 +42,31 @@ export const FORGE_ICON_SIZE_BOUGH = 26
  */
 export const FORGE_ICON_SIZE_CROWN = 34
 /**
+ * Das Glyph eines Körpers, der ein SIEGEL trägt — 28 statt 34 bzw. 30.
+ *
+ * Die Zahl ist gerechnet, nicht gewählt. Das Siegel ist ein Sechseck INNERHALB
+ * des Kreises, und seine engste Stelle ist der Inkreis; das Glyph darunter ist
+ * eine quadratische Box, deren weiteste Stelle die Halbdiagonale ist. Damit die
+ * Kante nicht durchs Motiv schneidet, muss gelten `Inkreis > Halbdiagonale`.
+ *
+ * Beim Crown (60 px Kreis, `FORGE_SEAL_INSET_PX` 5) liegt der Inkreis bei 21,7.
+ * Die bisherigen 34 px hätten eine Halbdiagonale von 24,0 — das Sechseck wäre
+ * um 2,4 px durch das Glyph gelaufen. 28 px ergeben 19,8 und damit 1,9 px Luft.
+ *
+ * Der Verlust ist nominell: 28 bleibt grösser als jedes Motiv des Netzes ausser
+ * dem Kernstrahl (32). `forgeRule.spec.ts` rechnet die Ungleichung für jeden
+ * Rang nach, der ein Siegel tragen kann.
+ */
+export const FORGE_SEAL_ICON_SIZE = 28
+/**
+ * Das Glyph eines Konstellations-Körpers ohne Siegel.
+ *
+ * Stand als Literal `width="30"` im Template — dieselbe Zahl, die auch
+ * `FORGE_ICON_SIZE_CONFLUENCE` trägt, aber aus einem anderen Grund, und damit
+ * eine Konstante, die fehlte.
+ */
+export const FORGE_FUSION_ICON_SIZE = 30
+/**
  * Das Glyph eines Glimmers — 18 px, und das ist eine GRENZE, keine Wahl.
  *
  * Bei genau 18 zerfallen verschnörkelte `game-icons` zu Grau (CLAUDE.md,
@@ -2308,6 +2333,69 @@ export const FORGE_AFFORDABLE_TOTAL_ICON = 'ph:lightning-fill'
  */
 export const FORGE_CORNER_BADGE_MIN_DIAMETER = 40
 
+// ── DAS SIEGEL — die Form derer, die eine Regel kaufen ───────────────────────
+/**
+ * Ein Knoten, der eine REGEL verschiebt, ist kein Kreis.
+ *
+ * Am Knoten war jeder andere Kanal vergeben: vier Ecken (Schloss, Anheftung,
+ * NEU-Marke, Stufen-Chip), der obere Bogen (Bedingungskranz), fünf Ringebenen
+ * (Schein, Spotlight, Voraussetzung, Suchtreffer, Weg) und jede Farbe (Gold
+ * heisst fertig, Grün/Rot Voraussetzung, Azur neu, Türkis gesucht). Frei war
+ * allein die FORM — alle hundertfünfundfünfzig Knoten und alle vierzehn
+ * Fusions-Körper sind Kreise.
+ *
+ * Form ist zugleich der einzige Kanal, der beim Herauszoomen trägt: eine
+ * Eckmarke misst 44 % des Motivs und ist bei halbem Zoom noch sechs Pixel, eine
+ * Silhouette bleibt lesbar. Deshalb kein sechstes Abzeichen, sondern ein
+ * flat-top-Sechseck, das das Motiv von innen fasst.
+ *
+ * **Es liegt INNERHALB des Kreises**, und das ist keine Sparsamkeit: der Kranz
+ * sitzt AUF dem Rand und die drei Eckmarken knapp ausserhalb — ein Siegel, das
+ * hinausragte, träfe beide, und es nähme Luft, die `FORGE_MIN_AIR_PX` gegen
+ * `FORGE_NODE_DIAMETER` misst und von einer Zierebene nichts weiss.
+ *
+ * **Gemessen ab der PADDING-Box, nicht ab der Kante.** `inset` zieht den Rand
+ * bereits ab — die Ebene misst also `Durchmesser − 2 × Rand − 2 × Einzug`, beim
+ * Crown 48 statt der 50, mit denen die erste Fassung rechnete. Dort stand 5,
+ * und das Sechseck lief um 0,75 px durch das Motiv; im Bild hätte das niemand
+ * als Fehler gelesen, sondern als Absicht. Ein zweiter Wert für den
+ * Fusions-Körper wurde damit gegenstandslos: sein Ring ist dünner, aber der
+ * Einzug rechnet ohnehin ab der Innenkante.
+ */
+export const FORGE_SEAL_INSET_PX = 3
+/**
+ * Der Rand, den ein Siegel-Knoten trägt — die dickste Fassung im Netz.
+ *
+ * Sie steht hier und nicht nur im CSS, weil `forgeRule.spec.ts` sie braucht:
+ * die Geometrie-Ungleichung rechnet gegen die Padding-Box, und die kennt man
+ * erst, wenn man den Rand kennt. Der Fusions-Ring ist mit 2 px dünner und
+ * damit der weitere Fall — geprüft wird der ENGERE.
+ */
+export const FORGE_SEAL_BORDER_PX = 3
+/** Die Strichstärke der Fassung. Feste px, kein `em` — dieselbe Auflage wie an
+ *  Radien und Rahmen überall im Projekt. */
+export const FORGE_SEAL_STROKE_PX = 2
+/**
+ * Gestrichelt heisst „gilt noch nicht", durchgezogen heisst „gilt".
+ *
+ * Keine neue Vokabel: `.pursuit-mark-ring` spricht sie seit jeher („Gestrichelt
+ * hiess von Anfang an ‚gibt es noch nicht'"). Das Siegel setzt sie fort und
+ * bringt sie erstmals auch an die Baumknoten.
+ */
+export const FORGE_SEAL_DASH = '9 6'
+/**
+ * Das Sechseck im `viewBox`-Raum 0…100, flat-top.
+ *
+ * FLACH oben und unten, Spitzen links und rechts — nicht umgekehrt. Oben sitzt
+ * der Bedingungskranz und unten der Stufen-Chip; eine Spitze zeigte in beide
+ * hinein, während die flachen Kanten dort den grössten Abstand halten.
+ */
+export const FORGE_SEAL_POINTS = '25,3 75,3 100,50 75,97 25,97 0,50'
+/** Was über dem Namen steht, wenn der Kauf eine BEDIENUNG aufschliesst. */
+export const FORGE_RULE_LABEL_GESTURE = 'UNLOCKS A CONTROL'
+/** … und wenn er eine Regel verschiebt, ohne dass ein Knopf dazukommt. */
+export const FORGE_RULE_LABEL_RULE = 'SHIFTS A RULE'
+
 // ── Stapelkauf ───────────────────────────────────────────────────────────────
 /**
  * Wie viele Stufen ein einzelner „Buy ×N" höchstens auf einmal nimmt.
@@ -3532,6 +3620,23 @@ export const FORGE_SEARCH_STATE_CHIPS = [
   { id: 'maxed', label: 'Maxed', icon: 'lucide:crown' },
 ] as const
 
+/**
+ * Die ART-Chips der Suche — die vierte Facette neben Achse, Familie und
+ * Zustand.
+ *
+ * Sie stehen NICHT bei `FORGE_SEARCH_STATE_CHIPS`, obwohl es dort nur ein
+ * Eintrag mehr wäre. Ein Zustand ist etwas, das sich ändert — kaufbar, gesperrt,
+ * fertig; eine Art ändert sich nie. Unter der Überschrift „State" wäre „Unlocks"
+ * falsch beschriftet, und die Gruppe wächst: ein Bough ist endlos, eine
+ * Confluence koppelt zwei Systeme, und beides wäre hier richtig aufgehoben.
+ *
+ * Einer reicht heute, und eine Gruppe mit einem Chip ist ehrlicher als ein Chip
+ * in der falschen Gruppe.
+ */
+export const FORGE_SEARCH_KIND_CHIPS = [
+  { id: 'rule', label: 'Unlocks', icon: 'ph:key-fill' },
+] as const
+
 /** Wie viele frühere Suchen die Vorschlagsfläche vorhält. */
 export const FORGE_SEARCH_RECENT_MAX = 5
 
@@ -3553,7 +3658,7 @@ export const FORGE_AXIS_SEARCH_ALIAS: Record<ForgeAxisId, string> = {
 
 /** Icon-Kanten der Such-Chips. Die Achsen tragen `game-icons`-Motive und
  *  brauchen ihre 20 px; Familie und Zustand sind gefüllte Geometrie. */
-export const FORGE_SEARCH_CHIP_ICON = { axis: 20, family: 16, state: 16 } as const
+export const FORGE_SEARCH_CHIP_ICON = { axis: 20, family: 16, state: 16, kind: 16 } as const
 
 /* ── DER FOKUS-SCHLEIER DER DETAILSPALTE ─────────────────────────────────────
  *

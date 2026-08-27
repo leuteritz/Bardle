@@ -264,7 +264,20 @@
           @click.stop="aimFusion(body.id)"
         >
           <span class="pursuit-mark-ring">
-            <Icon :icon="body.icon" width="30" height="30" />
+            <!-- Dasselbe Siegel wie am Baumknoten, und aus demselben Grund:
+                 sieben der vierzehn Fusionen kaufen eine Regel, die anderen
+                 sieben einen Prozentsatz. Bis hierher sahen alle vierzehn
+                 gleich aus. -->
+            <span v-if="body.rule !== null" class="node-seal" aria-hidden="true">
+              <svg viewBox="0 0 100 100">
+                <polygon :points="FORGE_SEAL_POINTS" />
+              </svg>
+            </span>
+            <Icon
+              :icon="body.icon"
+              :width="body.rule === null ? FORGE_FUSION_ICON_SIZE : FORGE_SEAL_ICON_SIZE"
+              :height="body.rule === null ? FORGE_FUSION_ICON_SIZE : FORGE_SEAL_ICON_SIZE"
+            />
           </span>
           <!-- Das Namensschild trägt NUR der Gemeinte. Die Bühne ist wortlos —
                vierzehn Schilder dauerhaft wären ein zweites Kantenfeld aus Text.
@@ -316,6 +329,12 @@
               'node-circle--trail': spotTrail.has(node.id),
               'node-circle--dim': isDimmed(node.id),
               'node-circle--hit': isSearchHit(node.id),
+              // Der Rand trägt die Fassung nach AUSSEN, wo das Sechseck darin
+              // zu klein wird. Verliert absichtlich gegen die Zustände darunter.
+              'node-circle--rule': node.rule !== null,
+              // Nicht `maxed`: das färbt den ganzen Kreis gold. Gemeint ist
+              // allein die Fassung.
+              'node-circle--forged': entryOf(node).level > 0,
             },
           ]"
           :style="{ '--node-color': node.color }"
@@ -366,6 +385,27 @@
             :style="spotTrailStyles.get(node.id)"
             aria-hidden="true"
           />
+          <!-- DAS SIEGEL — die einzige Stelle im Netz, an der die FORM etwas
+               sagt.
+
+               Ein Knoten, der eine Regel kauft, ist kein Kreis. Jeder andere
+               Kanal war vergeben (vier Ecken, der obere Bogen, fünf Ringebenen,
+               jede Farbe), und Form ist zugleich der einzige, der beim
+               Herauszoomen noch trägt: eine Eckmarke misst 44 % des Motivs und
+               ist bei halbem Zoom sechs Pixel.
+
+               Es steht VOR dem Glyph im Dokument und trägt keinen `z-index` —
+               bei gleichem Rang gewinnt damit das Motiv, und das Sechseck liegt
+               darunter statt darüber.
+
+               Gestrichelt heisst „gilt noch nicht", durchgezogen „gilt". Die
+               Vokabel ist geborgt, nicht neu: `.pursuit-mark-ring` spricht sie
+               seit jeher, und sie kommt hier erstmals an einen Baumknoten. -->
+          <span v-if="node.rule !== null" class="node-seal" aria-hidden="true">
+            <svg viewBox="0 0 100 100">
+              <polygon :points="FORGE_SEAL_POINTS" />
+            </svg>
+          </span>
           <Icon
             :icon="node.icon"
             :width="node.iconSize"
@@ -490,6 +530,7 @@ import { forgeClusterOf } from '@/config/progression/starForgeNet'
 import { forgeNodePath } from '@/utils/game/solarSignature'
 import { FORGE_CONSTELLATIONS, getForgeConstellation } from '@/config/progression/starForge'
 import { forgeRouteKey, forgeRoutes, forgeSunRoute } from '@/utils/ui/forgeEdgeRoute'
+import { forgeRuleKind } from '@/utils/game/forgeRule'
 import { MEEP_TREE_NODES, MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
 import {
   forgeCompassAt,
@@ -509,6 +550,7 @@ import {
 import type {
   ForgeNodeDef,
   ForgeNodeTier,
+  ForgeRuleKind,
   ForgeTipView,
   ForgeUpgradeEntry,
   ForgeUpgradeTier,
@@ -558,6 +600,13 @@ import {
   FORGE_ICON_SIZE_CROWN,
   FORGE_ICON_SIZE_BOUGH,
   FORGE_ICON_SIZE_MEEP,
+  FORGE_SEAL_ICON_SIZE,
+  FORGE_SEAL_INSET_PX,
+  FORGE_SEAL_BORDER_PX,
+  FORGE_SEAL_STROKE_PX,
+  FORGE_SEAL_DASH,
+  FORGE_SEAL_POINTS,
+  FORGE_FUSION_ICON_SIZE,
   FORGE_ICON_SIZE_CONFLUENCE,
   FORGE_LOCK_ICON,
   FORGE_PIN_ICON,
@@ -672,6 +721,8 @@ interface TreeNode {
   sizeClass: ForgeUpgradeTier
   iconSize: number
   parentId: string | null
+  /** Gefüllt heisst: dieser Knoten kauft eine REGEL und trägt das Siegel. */
+  rule: ForgeRuleKind | null
   def?: ForgeNodeDef
 }
 
@@ -719,6 +770,24 @@ const freshBadgePx = Object.fromEntries(
 
 const reqDotPx = `${FORGE_REQ_DOT_SIZE}px`
 const reqDotInsetPx = `${-FORGE_REQ_DOT_SIZE / 2}px`
+
+/* Das SIEGEL. Ein Anteil wäre hier falsch: die Fassung soll auf allen Rängen
+   dieselbe STRICHSTÄRKE tragen, sonst läse sie sich am kleinen Knoten als
+   Haarlinie. Der Einzug bleibt aus demselben Grund eine Pixelzahl — er ist der
+   Abstand zur Innenkante des Randes, und der ist auch überall gleich. */
+const sealInsetPx = `${FORGE_SEAL_INSET_PX}px`
+const sealBorderPx = `${FORGE_SEAL_BORDER_PX}px`
+const sealDash = FORGE_SEAL_DASH
+/* Im `viewBox`-Raum 0…100 gerechnet, nicht in px: das SVG streckt sich auf die
+   Ebene, und eine px-Angabe würde mit ihr skaliert. Der Faktor ist der Kehrwert
+   der Ebenenbreite, also der Knotendurchmesser abzüglich zweier Einzüge — für
+   die zwei Größen, die heute ein Siegel tragen (60 px), ist das dieselbe Zahl. */
+const sealStroke = String(
+  Math.round(
+    (FORGE_SEAL_STROKE_PX * 100 * 10) /
+      (FORGE_NODE_DIAMETER.crown - 2 * FORGE_SEAL_BORDER_PX - 2 * FORGE_SEAL_INSET_PX),
+  ) / 10,
+)
 
 /* Das GLYPH im Knoten hängt am `tier` und an nichts sonst. Als Tabelle statt
    als Kette von Ternären: bei sieben Ringen wäre die Kette eine Stelle, an der
@@ -780,6 +849,7 @@ const allNodes = computed<TreeNode[]>(() => {
     sizeClass: 'root' as const,
     iconSize: FORGE_ICON_SIZE_ROOT,
     parentId: null,
+    rule: null,
   }))
   const forge: TreeNode[] = FORGE_NODES.map((def) => ({
     id: def.id,
@@ -789,8 +859,9 @@ const allNodes = computed<TreeNode[]>(() => {
     ...(places.get(def.id) ?? fallback),
     tier: def.tier,
     sizeClass: def.tier,
-    iconSize: RING_ICON_SIZE[def.tier],
+    iconSize: forgeRuleKind(def.id) === null ? RING_ICON_SIZE[def.tier] : FORGE_SEAL_ICON_SIZE,
     parentId: def.parentId,
+    rule: forgeRuleKind(def.id),
     def,
   }))
   const road: TreeNode[] = MEEP_TREE_NODES.map((def) => ({
@@ -803,6 +874,7 @@ const allNodes = computed<TreeNode[]>(() => {
     sizeClass: 'meep' as const,
     iconSize: FORGE_ICON_SIZE_MEEP,
     parentId: null,
+    rule: null,
   }))
   return [...roots, ...forge, ...road]
 })
@@ -1159,6 +1231,7 @@ const fusionBodies = computed(() =>
             icon: def.icon,
             color: def.color,
             name: def.name,
+            rule: forgeRuleKind(def.id),
             forged: forgeStore.constellationForged(def.id),
           },
         ]
@@ -2762,6 +2835,10 @@ const nextPhasePreviewStyle = computed(() => ({
 /* Ruhend tritt der Körper zurück — er steht dauerhaft, und vierzehn gleich
    laute Ziele wären ein zweites Knotenfeld. Laut wird nur der Gemeinte. */
 .pursuit-mark-ring {
+  /* Erst seit dem Siegel: es ankert absolut IM Ring. Ohne dies fiele es auf den
+     Wrapper zurück, der auf seinem Bühnenpunkt zentriert ist — das Sechseck
+     läge dann um den halben Ring versetzt. */
+  position: relative;
   width: 60px;
   height: 60px;
   display: flex;
@@ -2913,6 +2990,93 @@ const nextPhasePreviewStyle = computed(() => ({
   width: v-bind("nodePx.crown");
   height: v-bind("nodePx.crown");
   border: 3px solid #6a5020;
+}
+
+/* ══════════════════════════════════════════════════
+   DAS SIEGEL — die Form derer, die eine Regel kaufen
+══════════════════════════════════════════════════ */
+/* Zweiundzwanzig von hundertfünfundfünfzig Knoten kaufen keine Zahl, sondern
+   eine REGEL — fünfzehn Kronen und sieben Fusionen. Bis hierher sahen sie aus
+   wie jeder Prozentknoten daneben, und die Upgrade-Liste rechts zeigt sie im
+   gesperrten Zustand gar nicht (`ForgeUpgradesSection` filtert `next` heraus).
+   Das Netz ist damit der EINZIGE Ort, an dem ein noch verschlossenes Upgrade
+   dieser Art überhaupt zu sehen ist.
+
+   Warum die Form und kein sechstes Abzeichen: am Knoten war alles vergeben —
+   vier Ecken, der obere Bogen, fünf Ringebenen und jede Farbe. Frei blieb
+   allein die Silhouette, und sie ist zugleich der einzige Kanal, der auf
+   Entfernung trägt: eine Eckmarke misst 44 % des Motivs und ist bei halbem
+   Zoom noch sechs Pixel.
+
+   STATISCH, ohne Ausnahme. Bis zu zweiundzwanzig stehen gleichzeitig im Bild,
+   und im Knotenfeld darf genau eine Animation laufen (`node-spot-breathe`,
+   Performance-Regel 2/7). Kein `filter`, kein `box-shadow`, kein Keyframe. */
+.node-seal {
+  position: absolute;
+  inset: v-bind(sealInsetPx);
+  pointer-events: none;
+}
+
+.node-seal svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+/* Die Strichstärke steht im `viewBox`-Raum und ist deshalb schon gegen die
+   Ebenenbreite gerechnet (`sealStroke`) — eine px-Angabe würde mit dem SVG
+   skaliert und wäre auf jedem Rang eine andere.
+
+   Die Fassung trägt die LEITFARBE des Knotens, nicht den matten Rang-Ton. Sie
+   ist damit dieselbe Farbe wie Motiv und Rand: „EIN KÖRPER, EINE FARBE" gilt
+   hier wie beim Kaufbar-Zustand. */
+.node-seal polygon {
+  fill: none;
+  stroke: var(--node-color, #e8c040);
+  stroke-width: v-bind(sealStroke);
+  stroke-linejoin: round;
+  stroke-dasharray: v-bind(sealDash);
+  opacity: 0.62;
+}
+
+
+/* GESCHMIEDET: durchgezogen und voll. Gestrichelt hiess von Anfang an „gibt es
+   noch nicht" — dieselbe Vokabel, die `.pursuit-mark-ring` seit jeher spricht;
+   das Siegel bringt sie erstmals an die Baumknoten. */
+.node-circle--forged .node-seal polygon,
+.pursuit-mark--forged .node-seal polygon {
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
+
+/* Der RAND trägt die Aussage nach aussen, wo das Sechseck zu klein wird.
+   Volle Leitfarbe statt des matten Rang-Tons `#6a5020`, und drei Pixel — das
+   liest sich schon weit herausgezoomt als „anders gefasst", während das
+   Sechseck erst beim Näherkommen erscheint. Eine Stufung über die Entfernung,
+   ohne eine Zeile Zoom-Logik.
+
+   Steht VOR den Zustandsregeln darunter und verliert damit gegen `--ready`,
+   `--maxed` und `--locked`: was der Knoten gerade IST, schlägt, was er für
+   immer ist. */
+.node-circle--rule {
+  border-width: v-bind(sealBorderPx);
+  border-color: color-mix(in srgb, var(--node-color, #e8c040) 55%, #2a1a08);
+}
+
+/* GESPERRT UND Regel — und das ist die Kombination, für die das Siegel gebaut
+   ist. `--locked` steht weiter unten und zog den Rand auf das matte `#4a3010`
+   jeder anderen Sperre zurück; die Fassung wäre damit ausgerechnet im Zustand
+   unsichtbar geworden, in dem der Spieler sie braucht — eine verschlossene
+   Krone ist das, was er MONATE vor dem Kauf im Netz stehen sieht.
+
+   Sie tritt trotzdem zurück (34 % gegen die 55 % eines offenen Regel-Knotens),
+   sonst läse sich gesperrt wie kaufbar. Die Spezifität von 0,2,0 trifft nur
+   diese eine Paarung: `--ready` und `--maxed` sind nie gleichzeitig gesperrt
+   und behalten ihren eigenen Rand. */
+.node-circle--rule.node-circle--locked {
+  border-color: color-mix(in srgb, var(--node-color, #e8c040) 34%, #2a1a08);
 }
 
 .node-level {

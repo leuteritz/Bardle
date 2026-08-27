@@ -5,11 +5,13 @@ import {
   FORGE_OFFER_TAG_CONSTELLATION,
   FORGE_SEARCH_RECENT_MAX,
   FORGE_SEARCH_STATE_CHIPS,
+  FORGE_SEARCH_KIND_CHIPS,
   FORGE_UPGRADE_TIER_LABELS,
   SOLAR_BRANCHES,
 } from '@/config/constants'
 import { FORGE_CONSTELLATIONS, FORGE_NODES } from '@/config/progression/starForge'
 import { forgeNodeAxis } from '@/utils/game/solarSignature'
+import { forgeRuleKind } from '@/utils/game/forgeRule'
 import { useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import type { ForgeAxisId, ForgeEffectFamily, ForgeUpgradeEntry } from '@/types'
@@ -27,11 +29,13 @@ import type { ForgeAxisId, ForgeEffectFamily, ForgeUpgradeEntry } from '@/types'
  */
 
 export type ForgeSearchStateId = (typeof FORGE_SEARCH_STATE_CHIPS)[number]['id']
+export type ForgeSearchKindId = (typeof FORGE_SEARCH_KIND_CHIPS)[number]['id']
 
 export interface ForgeSearchChipCounts {
   axis: Record<string, number>
   family: Record<string, number>
   state: Record<string, number>
+  kind: Record<string, number>
 }
 
 interface ForgeSearchRecord {
@@ -42,6 +46,16 @@ interface ForgeSearchRecord {
   family: ForgeEffectFamily | null
   /** Ein Vault-Eintrag: kein Sitz, kein Zustand in `entryById`. */
   vault?: boolean
+  /**
+   * Gesetzt, wenn der Eintrag eine REGEL kauft statt eines Betrags.
+   *
+   * Steht im INDEX und nicht im `ForgeUpgradeEntry`, obwohl es dort auch
+   * liegt: der Index wird einmal gebaut und nie wieder angefasst, und ein
+   * Vault-Eintrag hat gar keinen `entryById`-Zustand — die Kronen über die
+   * Einträge und die Fusionen über den Katalog zu suchen wären zwei Wege für
+   * dieselbe Frage. Die Quelle ist beidemal `forgeRuleKind()`.
+   */
+  rule?: true
 }
 
 /**
@@ -73,6 +87,7 @@ function buildIndex(): ForgeSearchRecord[] {
       axis: null,
       family: null,
       vault: true,
+      ...(forgeRuleKind(def.id) === null ? {} : { rule: true as const }),
       haystack: `${def.name} ${def.desc} ${def.sourceLabel} ${FORGE_OFFER_TAG_CONSTELLATION}`.toLowerCase(),
     })
   }
@@ -85,6 +100,7 @@ function buildIndex(): ForgeSearchRecord[] {
       id: node.id,
       axis,
       family: node.family,
+      ...(forgeRuleKind(node.id) === null ? {} : { rule: true as const }),
       haystack:
         `${node.name} ${node.desc} ${FORGE_UPGRADE_TIER_LABELS[node.tier]} ${FORGE_FAMILY_LABEL[node.family]} ${axisName} ${alias}`.toLowerCase(),
     })
@@ -103,6 +119,7 @@ const query = ref('')
 const activeAxis = ref<ForgeAxisId | null>(null)
 const activeFamily = ref<ForgeEffectFamily | null>(null)
 const activeStates = ref<Set<ForgeSearchStateId>>(new Set())
+const activeKinds = ref<Set<ForgeSearchKindId>>(new Set())
 const recent = ref<string[]>([])
 
 const normalizedQuery = computed(() => query.value.toLowerCase().trim())
@@ -112,11 +129,16 @@ const searchActive = computed(
     normalizedQuery.value !== '' ||
     activeAxis.value !== null ||
     activeFamily.value !== null ||
-    activeStates.value.size > 0,
+    activeStates.value.size > 0 ||
+    activeKinds.value.size > 0,
 )
 
 const facetActive = computed(
-  () => activeAxis.value !== null || activeFamily.value !== null || activeStates.value.size > 0,
+  () =>
+    activeAxis.value !== null ||
+    activeFamily.value !== null ||
+    activeStates.value.size > 0 ||
+    activeKinds.value.size > 0,
 )
 
 interface ForgeSearchFilter {
@@ -124,6 +146,7 @@ interface ForgeSearchFilter {
   axis: ForgeAxisId | null
   family: ForgeEffectFamily | null
   states: Set<ForgeSearchStateId>
+  kinds: Set<ForgeSearchKindId>
 }
 
 function matchesState(
@@ -153,6 +176,9 @@ function matches(
   if (f.q !== '' && !rec.haystack.includes(f.q)) return false
   if (f.axis !== null && rec.axis !== f.axis) return false
   if (f.family !== null && rec.family !== f.family) return false
+  /* Die ART fragt AM Index und nicht am Eintrag: sie ändert sich nie, und
+     ein Vault-Eintrag hat gar keinen Eintrag, an dem man fragen könnte. */
+  if (f.kinds.size > 0 && rec.rule !== true) return false
   return matchesState(rec, f.states, entries, vaultState)
 }
 
@@ -183,6 +209,7 @@ function ensureDerived(): ForgeSearchDerived {
     axis: activeAxis.value,
     family: activeFamily.value,
     states: activeStates.value,
+    kinds: activeKinds.value,
   })
 
   const matchIds = computed(() => {
@@ -216,7 +243,11 @@ function ensureDerived(): ForgeSearchDerived {
     for (const chip of FORGE_SEARCH_STATE_CHIPS) {
       state[chip.id] = count({ ...base, states: new Set([chip.id]) })
     }
-    return { axis, family, state }
+    const kind: Record<string, number> = {}
+    for (const chip of FORGE_SEARCH_KIND_CHIPS) {
+      kind[chip.id] = count({ ...base, kinds: new Set([chip.id]) })
+    }
+    return { axis, family, state, kind }
   })
 
   derived = { matchIds, chipCounts }
@@ -229,6 +260,7 @@ export function useForgeSearch(): {
   activeAxis: Readonly<Ref<ForgeAxisId | null>>
   activeFamily: Readonly<Ref<ForgeEffectFamily | null>>
   activeStates: Readonly<Ref<Set<ForgeSearchStateId>>>
+  activeKinds: Readonly<Ref<Set<ForgeSearchKindId>>>
   recent: Readonly<Ref<string[]>>
   searchActive: ComputedRef<boolean>
   facetActive: ComputedRef<boolean>
@@ -240,6 +272,7 @@ export function useForgeSearch(): {
   toggleAxis: (id: ForgeAxisId) => void
   toggleFamily: (id: ForgeEffectFamily) => void
   toggleState: (id: ForgeSearchStateId) => void
+  toggleKind: (id: ForgeSearchKindId) => void
   commitRecent: () => void
   clearSearch: () => void
   resetForgeSearch: () => void
@@ -265,6 +298,13 @@ export function useForgeSearch(): {
     activeStates.value = next
   }
 
+  function toggleKind(id: ForgeSearchKindId): void {
+    const next = new Set(activeKinds.value)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    activeKinds.value = next
+  }
+
   /** Beim Verlassen des Feldes, nicht bei jedem Tastendruck — sonst stünde jede
    *  Vorstufe eines Wortes in der Liste. */
   function commitRecent(): void {
@@ -279,6 +319,7 @@ export function useForgeSearch(): {
     activeAxis.value = null
     activeFamily.value = null
     activeStates.value = new Set()
+    activeKinds.value = new Set()
   }
 
   /* Löst auch die Store-Bindung: sie hängt an EINER Pinia, und ein Test, der
@@ -295,6 +336,7 @@ export function useForgeSearch(): {
     activeAxis,
     activeFamily,
     activeStates,
+    activeKinds,
     recent,
     searchActive,
     facetActive,
@@ -306,6 +348,7 @@ export function useForgeSearch(): {
     toggleAxis,
     toggleFamily,
     toggleState,
+    toggleKind,
     commitRecent,
     clearSearch,
     resetForgeSearch,

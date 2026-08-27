@@ -293,11 +293,38 @@ export interface ForgeRelicDef {
   sourceLabel: string
 }
 
+/**
+ * Was ein Kauf VERSCHIEBT, wenn er keine Zahl hebt.
+ *
+ * `'gesture'` heisst: danach steht eine BEDIENUNG im Spiel, die es vorher nicht
+ * gab — heute genau einmal vergeben („All Sails at Once" schaltet die
+ * Send-All-Kachel in Voyages frei). `'rule'` heisst: eine Regel gilt fortan
+ * anders, ohne dass ein Knopf dazukommt.
+ *
+ * Die Trennung kostet nichts und traegt eine echte Unterscheidung: gegen eine
+ * fehlende Bedienung kann der Spieler etwas tun (sie suchen), eine stille Regel
+ * muss ihm gesagt werden. Im Netz tragen beide dasselbe Siegel — der
+ * Unterschied steht im Wort ueber dem Namen der Karte.
+ */
+export type ForgeRuleKind = 'gesture' | 'rule'
+
 export interface ForgeConstellationDef {
   id: string
   name: string
   icon: string
   color: string
+  /**
+   * Gesetzt, wenn diese Fusion eine REGEL kauft statt eines Betrags.
+   *
+   * Beim Baumknoten folgt dieselbe Auskunft aus `tier === 'crown'` und braucht
+   * kein Feld; eine Konstellation hat keinen Rang, an dem man sie ablesen
+   * koennte — hier MUSS sie geschrieben stehen. Wer sie vergisst, bricht den
+   * Drift-Waechter in `forgeRule.spec.ts`, der die Menge gegen die
+   * Beschreibung prueft: ein `desc` ohne `{v}` und ohne dieses Feld ist
+   * entweder ein vergessener Eintrag oder ein Satz, der seine Zahl verloren
+   * hat. Gelesen wird es NIE direkt, immer ueber `forgeRuleKind()`.
+   */
+  rule?: ForgeRuleKind
   /**
    * Die Knoten, die diese Konstellation verschmilzt — dieselbe Form wie beim
    * Relikt und beim Baumknoten.
@@ -565,6 +592,16 @@ export interface ForgeUpgradeEntry {
   reqs: ForgeOfferReq[]
   /** Fortschritt zur Freischaltung, 0–1 — nur bei `locked` aussagekräftig. */
   unlockProgress: number
+  /**
+   * `null` bei allen, die einen BETRAG kaufen — das sind hundertdreiunddreissig
+   * von hundertfünfundfünfzig. Gefüllt heisst: dieser Eintrag verschiebt eine
+   * Regel, und das Netz zeichnet ihn deshalb als Siegel statt als Kreis.
+   *
+   * Steht hier und nicht nur im Katalog, weil Baum und Liste denselben Eintrag
+   * lesen — und weil die Suche danach filtert, ohne den Katalog ein zweites Mal
+   * zu befragen. Die Quelle ist immer `forgeRuleKind()`.
+   */
+  rule: ForgeRuleKind | null
   canBuy: boolean
   /**
    * Der dritte Preis. `0` heißt: dieser Eintrag kostet keine Meeps — und das
@@ -627,6 +664,16 @@ export interface ForgeTipView {
   color: string
   /** `✦ MAX` / `✦ FUSED`, sonst leer. */
   chip: string
+  /**
+   * Das Wort ÜBER dem Namen, wenn dieser Kauf eine Regel verschiebt — sonst
+   * leer.
+   *
+   * Eigenes Feld und NICHT der `chip` daneben: der trägt bereits den
+   * Fortschritt (`✦ MAX` / `✦ FUSED`), und eine Krone kann geschmiedet sein UND
+   * eine Regel tragen. Zwei Aussagen in einem Feld hiesse, dass die eine die
+   * andere verdrängt, sobald beide gelten.
+   */
+  ruleLabel: string
   effect: string
   /** Leer heißt: eine Bedingungsliste ist hier nicht die Antwort. */
   reqs: ForgeOfferReq[]

@@ -21,6 +21,7 @@ import {
   FORGE_SEARCH_PANEL_MAX_H,
   FORGE_SEARCH_PANEL_W,
   FORGE_SEARCH_STATE_CHIPS,
+  FORGE_SEARCH_KIND_CHIPS,
   FORGE_VIEWPORT_INSET_PX,
   SOLAR_BRANCHES,
 } from '@/config/constants'
@@ -32,6 +33,7 @@ const {
   activeAxis,
   activeFamily,
   activeStates,
+  activeKinds,
   recent,
   searchActive,
   facetActive,
@@ -41,6 +43,7 @@ const {
   toggleAxis,
   toggleFamily,
   toggleState,
+  toggleKind,
   commitRecent,
   clearSearch,
 } = useForgeSearch()
@@ -79,6 +82,19 @@ const stateChips = computed(() =>
   })),
 )
 
+/* Die vierte Facette: was der Kauf VERSCHIEBT, nicht was er gerade ist.
+
+   Heute genau ein Chip, und der steht bewusst nicht in der Zustandsgruppe
+   darüber — unter „State" wäre „Unlocks" falsch beschriftet. Ein Zustand
+   ändert sich, eine Art nie. */
+const kindChips = computed(() =>
+  FORGE_SEARCH_KIND_CHIPS.map((chip) => ({
+    ...chip,
+    count: chipCounts.value.kind[chip.id] ?? 0,
+    active: activeKinds.value.has(chip.id),
+  })),
+)
+
 /** Was gerade filtert, als eine Zeile — sonst schnitte etwas, das man bei
  *  geschlossener Fläche nirgends sieht. */
 const activeChipLabels = computed(() => {
@@ -89,6 +105,9 @@ const activeChipLabels = computed(() => {
   if (activeFamily.value) out.push(FORGE_FAMILY_LABEL[activeFamily.value])
   for (const chip of FORGE_SEARCH_STATE_CHIPS) {
     if (activeStates.value.has(chip.id)) out.push(chip.label)
+  }
+  for (const chip of FORGE_SEARCH_KIND_CHIPS) {
+    if (activeKinds.value.has(chip.id)) out.push(chip.label)
   }
   return out
 })
@@ -235,6 +254,35 @@ const panelW = `${FORGE_SEARCH_PANEL_W}px`
               :icon="chip.icon"
               :width="FORGE_SEARCH_CHIP_ICON.state"
               :height="FORGE_SEARCH_CHIP_ICON.state"
+              aria-hidden="true"
+            />
+            <span class="fs-chip-label">{{ chip.label }}</span>
+            <span class="fs-chip-count">{{ chip.count }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Die vierte Gruppe. Ein Klick, und die zweiundzwanzig Knoten, die eine
+           Regel kaufen, stehen türkis im Netz — alles andere tritt zurück. Es
+           ist der einzige Weg, sie AUFZUZÄHLEN: die Upgrade-Liste rechts zeigt
+           Gesperrtes nicht, und im Netz stehen sie über fünfundzwanzig Cluster
+           verstreut. -->
+      <div class="fs-group">
+        <span class="fs-group-title">Kind</span>
+        <div class="fs-chips">
+          <button
+            v-for="chip in kindChips"
+            :key="chip.id"
+            class="fs-chip fs-chip--sm"
+            :class="{ 'fs-chip--on': chip.active, 'fs-chip--void': chip.count === 0 }"
+            type="button"
+            @mousedown.prevent
+            @click="toggleKind(chip.id)"
+          >
+            <Icon
+              :icon="chip.icon"
+              :width="FORGE_SEARCH_CHIP_ICON.kind"
+              :height="FORGE_SEARCH_CHIP_ICON.kind"
               aria-hidden="true"
             />
             <span class="fs-chip-label">{{ chip.label }}</span>

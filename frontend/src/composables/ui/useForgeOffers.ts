@@ -6,6 +6,7 @@ import { useForgeHerald } from '@/composables/ui/useForgeHerald'
 import { useHerald } from '@/composables/ui/useHerald'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { forgeCostItems } from '@/utils/game/forgeCost'
+import { forgeRuleLabel } from '@/utils/game/forgeRule'
 import {
   FORGE_RELICS,
   FORGE_CONSTELLATIONS,
@@ -524,6 +525,7 @@ export function forgeFusionTipView(offer: ForgeOffer, forged: boolean): ForgeTip
     name: offer.name,
     color: offer.color,
     chip: forged ? FORGE_VAULT_FUSED_BADGE : '',
+    ruleLabel: forgeRuleLabel(offer.id),
     effect: offer.desc,
     reqs: open ? offer.reqs : [],
     lockReason: '',

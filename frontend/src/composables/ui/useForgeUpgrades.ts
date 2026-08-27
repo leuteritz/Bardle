@@ -12,6 +12,7 @@ import {
 import { useForgeHerald } from '@/composables/ui/useForgeHerald'
 import { FORGE_NODES, forgeNodeName, getForgeNode } from '@/config/progression/starForge'
 import { forgeCostItems } from '@/utils/game/forgeCost'
+import { forgeRuleKind, forgeRuleLabel } from '@/utils/game/forgeRule'
 import type {
   ForgeCostItem,
   ForgeLockKind,
@@ -113,6 +114,7 @@ export const FORGE_EMPTY_UPGRADE_ENTRY: ForgeUpgradeEntry = {
   parentName: '',
   reqs: [],
   unlockProgress: 0,
+  rule: null,
   canBuy: false,
   meepCost: 0,
   meepOk: true,
@@ -216,6 +218,7 @@ export function forgeNodeTipView(entry: ForgeUpgradeEntry): ForgeTipView {
     name: entry.name,
     color: entry.color,
     chip: entry.state === 'maxed' ? FORGE_TIP_MAX_LABEL : '',
+    ruleLabel: forgeRuleLabel(entry.id),
     effect: forgeEffectText(entry),
     reqs: entry.lockKind === 'parent' ? entry.reqs : [],
     lockReason: entry.lockReason,
@@ -404,6 +407,8 @@ export function useForgeUpgrades(): {
       // Und er hat auch keinen Vorgänger: der Wurzelring IST der Anfang.
       reqs: [],
       unlockProgress: 1,
+      // Ein Kernstrahl hebt eine Zahl — es gibt dort keine Regel zu kaufen.
+      rule: null,
       canBuy: buyable,
       meepCost: 0,
       meepOk: true,
@@ -565,6 +570,7 @@ export function useForgeUpgrades(): {
       parentName: forgeNodeName(def.parentId),
       reqs: forgeStore.nodeRequirements(def),
       unlockProgress: lock.progress,
+      rule: forgeRuleKind(def.id),
       canBuy: buyable,
       meepCost: 0,
       meepOk: true,
@@ -645,6 +651,9 @@ export function useForgeUpgrades(): {
         progress: meepTree.isBought(id) ? 1 : 0,
       })),
       unlockProgress: index.req.length === 0 ? 1 : learnedBelow > 0 ? 1 : 0,
+      // Die Strasse kann eine Regel gar nicht ausdrücken: `MeepTreeEffects` ist
+      // ein rein numerischer Beutel.
+      rule: null,
       canBuy: nodeState === 'buyable',
       meepCost: def.cost,
       meepOk,

@@ -2080,6 +2080,7 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
   },
   {
     id: 'shatteringNova',
+    rule: 'rule',
     name: 'Shattering Nova',
     icon: 'game-icons:beams-aura',
     color: '#ff9a5c',
@@ -2152,6 +2153,7 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
   // einen Satz, der vorher nicht galt.
   {
     id: 'voidboundPact',
+    rule: 'rule',
     name: 'Voidbound Pact',
     icon: 'game-icons:evil-hand',
     color: '#e0409f',
@@ -2166,6 +2168,7 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
   },
   {
     id: 'caretakersLedger',
+    rule: 'rule',
     name: "Caretaker's Ledger",
     icon: 'game-icons:scroll-quill',
     color: '#e8c040',
@@ -2206,6 +2209,7 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
      verschieben deren Maximum daher nicht. */
   {
     id: 'waitingRoad',
+    rule: 'rule',
     name: 'The Waiting Road',
     icon: 'game-icons:interstellar-path',
     color: '#e8c040',
@@ -2225,6 +2229,7 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
   },
   {
     id: 'standingVein',
+    rule: 'rule',
     name: 'The Standing Vein',
     icon: 'game-icons:ringed-planet',
     color: '#e89840',
@@ -2240,6 +2245,7 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
   },
   {
     id: 'twinnedSky',
+    rule: 'rule',
     name: 'Twinned Sky',
     icon: 'game-icons:star-satellites',
     color: '#f0d878',
@@ -2258,6 +2264,7 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
   },
   {
     id: 'risingArmada',
+    rule: 'gesture',
     // Der einzige Name, der aus dem Nomen-Register der Geschwister ausbricht —
     // die sprechen von der Welt, dieser eine schaltet eine BEDIENUNG frei. Die
     // Id bleibt: sie steht als blanker String in jedem Spielstand.

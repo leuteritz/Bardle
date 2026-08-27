@@ -8,6 +8,14 @@
   >
     <span class="tip-accent" aria-hidden="true" />
 
+    <!-- Das Wort über dem Namen — nur an den zweiundzwanzig, die eine Regel
+         kaufen. `.tip-state` ist die vorgesehene Klasse dafür („Einordnung:
+         versal darüber") und stand in dieser Karte bisher ungenutzt.
+
+         NICHT im Chip daneben: der trägt den Fortschritt (`✦ MAX` / `✦ FUSED`),
+         und eine geschmiedete Krone ist beides gleichzeitig. -->
+    <div v-if="tip.ruleLabel !== ''" class="tip-state">{{ tip.ruleLabel }}</div>
+
     <div class="tip-head">
       <Icon :icon="tip.icon" width="20" height="20" class="tip-ico" :style="{ color: tip.color }" />
       <span class="tip-name" :style="{ color: tip.color }">{{ tip.name }}</span>
@@ -41,8 +49,7 @@
 
 <script setup lang="ts">
 /**
- * Was der Zeiger im Netz berührt — und zwar in DREI Elementen: Name, Wirkung,
- * Voraussetzungen.
+ * Was der Zeiger im Netz berührt: Einordnung, Name, Wirkung, Voraussetzungen.
  *
  * Sie trug einmal sieben Dinge, darunter Preis, Materialkacheln, Tier-Chip und
  * die nächste Stufe. Alle vier stehen gleichzeitig gross in der Kachel rechts,
@@ -102,7 +109,7 @@ const props = defineProps<{
  *
  * EINE Messung je Karte, nie pro Frame: das `v-if` am Aufrufer lässt sie je
  * Knoten neu entstehen, `flush: 'post'` legt den Lauf hinter das Zeichnen. Die
- * vier Abhängigkeiten sind genau das, was ihre HÖHE ändern kann.
+ * fünf Abhängigkeiten sind genau das, was ihre HÖHE ändern kann.
  */
 const cardEl = ref<HTMLElement | null>(null)
 const shift = ref({ x: 0, y: 0 })
@@ -145,7 +152,14 @@ function measure(): void {
 // ragten wieder aus dem Fenster.
 onMounted(measure)
 watch(
-  () => [props.tip.name, props.tip.chip, props.tip.effect, props.tip.reqs.length, props.tip.lockReason],
+  () => [
+    props.tip.name,
+    props.tip.chip,
+    props.tip.ruleLabel,
+    props.tip.effect,
+    props.tip.reqs.length,
+    props.tip.lockReason,
+  ],
   measure,
   { flush: 'post' },
 )
