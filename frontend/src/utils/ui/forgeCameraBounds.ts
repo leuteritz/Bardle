@@ -1,5 +1,6 @@
 import {
   FORGE_CONTENT_SEAM_PX,
+  FORGE_TREE_ZOOM_MAX,
   FORGE_NODE_DIAMETER,
   FORGE_SPOTLIGHT_EDGE_MARGIN_PX,
   FORGE_SPOTLIGHT_NODE_SCALE,
@@ -198,4 +199,49 @@ export function forgeClampPan(pan: Point, view: ForgeViewBox, scale: number): Po
   const onDisc =
     dist <= max || dist === 0 ? pan : { x: cx + (dx * max) / dist, y: cy + (dy * max) / dist }
   return forgeClampPanBox(onDisc, view, scale)
+}
+
+/**
+ * Welche Kamera fasst DIESE Punkte — Massstab und Bildmittelpunkt in einem.
+ *
+ * Nötig geworden, weil nicht jedes Sprungziel einen Sitz im Netz hat: eine
+ * Konstellation steht in keinem Cluster. Zeigen lässt sie sich trotzdem, nämlich
+ * über ihre Bedingungs-Knoten — und die will man dann ALLE im Bild haben, nicht
+ * einen nach dem anderen. `forgeFitScale` beantwortet dieselbe Frage für den
+ * ganzen Inhalt; hier ist es eine Handvoll.
+ *
+ * Der Radius geht bei Massstab 1 in die Hülle ein, weil Bühnen- und
+ * Schirm-Pixel dort dasselbe sind. Ihn beim GEFUNDENEN Massstab zu rechnen wäre
+ * ein Zirkel — er hängt an der Zahl, die erst daraus folgt.
+ *
+ * Am Ende dieselbe `forgeClampPan` wie jede andere Fahrt: zwei Antworten auf
+ * „wie weit darf die Kamera" wären eine zu viel.
+ */
+export function forgeGroupCamera(
+  marks: readonly { at: Point; tier: ForgeUpgradeTier }[],
+  view: ForgeViewBox,
+  zoomFloor: number,
+): { pan: Point; scale: number } | null {
+  if (marks.length === 0 || view.w <= 0 || view.h <= 0) return null
+
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const mark of marks) {
+    const r = forgeNodeScreenRadius(mark.tier, 1)
+    minX = Math.min(minX, mark.at.x - r)
+    minY = Math.min(minY, mark.at.y - r)
+    maxX = Math.max(maxX, mark.at.x + r)
+    maxY = Math.max(maxY, mark.at.y + r)
+  }
+
+  const pad = FORGE_TREE_FIT_PADDING_PX * 2
+  const boxW = Math.max(1, maxX - minX)
+  const boxH = Math.max(1, maxY - minY)
+  const wanted = Math.min((view.w - pad) / boxW, (view.h - pad) / boxH)
+  const scale = Math.min(FORGE_TREE_ZOOM_MAX, Math.max(zoomFloor, wanted))
+  const center = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 }
+
+  return { pan: forgeClampPan(center, view, scale), scale }
 }

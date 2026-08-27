@@ -6,9 +6,11 @@ import {
   forgeClampPanBox,
   forgeCameraHome,
   forgeFitScale,
+  forgeGroupCamera,
   forgeNodeScreenRadius,
   forgePanLimit,
 } from '@/utils/ui/forgeCameraBounds'
+import { getForgeConstellation } from '@/config/progression/starForge'
 import { forgeNodeInView, forgeNodeScreenPoint } from '@/utils/ui/forgeSpotlightView'
 import {
   FORGE_CONTENT_SEAM_PX,
@@ -17,6 +19,7 @@ import {
   FORGE_STAGE_SIZE,
   FORGE_TREE_FIT_PADDING_PX,
   FORGE_TREE_ZOOM_FLOOR,
+  FORGE_MASS_SEND_NODE,
   FORGE_TREE_ZOOM_MAX,
 } from '@/config/constants'
 
@@ -268,5 +271,93 @@ describe('Star Forge — die Grenzen der Kamera', () => {
     const a = forgeContentBounds()
     const b = forgeContentBounds()
     expect(b).toEqual(a)
+  })
+})
+
+/**
+ * Die GRUPPEN-Kamera — „fasse diese Punkte", nicht „fasse alles".
+ *
+ * Sie ist nötig geworden, weil nicht jedes Sprungziel einen Sitz im Netz hat:
+ * eine Konstellation steht in keinem Cluster, `panToFocus()` bricht bei ihrer Id
+ * ab. Zeigen lässt sie sich über ihre BEDINGUNGS-Knoten — und die Zusage lautet,
+ * dass danach ALLE davon im Bild stehen. Nur die trägt den Sprung; eine Kamera,
+ * die zwei von dreien fasst, ist so gut wie keine.
+ */
+describe('Star Forge — die Kamera fasst eine Gruppe', () => {
+  const places = forgeTreePlacements()
+
+  /**
+   * Frisch gemessen (27.08.2026, `.tree-viewport.getBoundingClientRect()`) —
+   * NEBEN den Werten oben, nicht statt ihrer.
+   *
+   * Der Viewport ist seit der Messung von 2026-08-19 flacher geworden, und die
+   * HÖHE bindet den Einpass. Eine Gruppen-Kamera, die nur gegen die alte, höhere
+   * Zahl geprüft wäre, ginge auf Full HD durch und im Browser nicht.
+   */
+  const GROUP_VIEWS = [...VIEWS, { name: 'Full HD gemessen', w: 776, h: 661 }, { name: 'QHD gemessen', w: 1135, h: 938 }]
+
+  /** Die Tore, die der Verfolgungs-Block der Detailspalte zeigt. */
+  function pursuitMarks(id: string) {
+    const def = getForgeConstellation(id)!
+    return def.requires.flatMap((req) => {
+      const at = places.get(req.id)
+      return at ? [{ id: req.id, at, tier: forgeSeatTier(req.id) }] : []
+    })
+  }
+
+  it('holt JEDES Tor der Verfolgung vollstaendig ins Bild', () => {
+    // DIE Zusage. Sie bricht, sobald jemand eine Bedingung auf einen Knoten am
+    // anderen Ende des Netzes legt — und dann soll sie brechen.
+    const marks = pursuitMarks(FORGE_MASS_SEND_NODE)
+    expect(marks.length, 'kein Tor hat einen Sitz im Netz').toBeGreaterThan(1)
+
+    for (const view of GROUP_VIEWS) {
+      const cam = forgeGroupCamera(marks, view, zoomFloorFor(view))
+      expect(cam, view.name).not.toBeNull()
+      const camera = { panX: cam!.pan.x, panY: cam!.pan.y, scale: cam!.scale }
+      for (const mark of marks) {
+        expect(
+          forgeNodeInView(mark.at, forgeNodeScreenRadius(mark.tier, cam!.scale), camera, view),
+          `${mark.id} steht bei ${view.name} nicht im Bild`,
+        ).toBe(true)
+      }
+    }
+  })
+
+  it('bleibt zwischen Zoomboden und Zoomdeckel', () => {
+    const marks = pursuitMarks(FORGE_MASS_SEND_NODE)
+    for (const view of VIEWS) {
+      const floor = zoomFloorFor(view)
+      const cam = forgeGroupCamera(marks, view, floor)!
+      expect(cam.scale, view.name).toBeGreaterThanOrEqual(floor)
+      expect(cam.scale, view.name).toBeLessThanOrEqual(FORGE_TREE_ZOOM_MAX)
+    }
+  })
+
+  it('steht schon geklemmt — die Fahrt springt nicht nach', () => {
+    // Der Aufrufer gibt das Ergebnis direkt an `movePan()`, und das klemmt noch
+    // einmal. Wäre die Kamera nicht idempotent, ruckte sie im ersten Frame.
+    const marks = pursuitMarks(FORGE_MASS_SEND_NODE)
+    for (const view of VIEWS) {
+      const cam = forgeGroupCamera(marks, view, zoomFloorFor(view))!
+      const again = forgeClampPan(cam.pan, view, cam.scale)
+      expect(Math.hypot(again.x - cam.pan.x, again.y - cam.pan.y), view.name).toBeLessThan(0.001)
+    }
+  })
+
+  it('mit EINEM Punkt ist sie die geklemmte Einzelfahrt', () => {
+    const [first] = pursuitMarks(FORGE_MASS_SEND_NODE)
+    for (const view of VIEWS) {
+      const cam = forgeGroupCamera([first], view, zoomFloorFor(view))!
+      const single = forgeClampPan({ x: first.at.x, y: first.at.y }, view, cam.scale)
+      expect(Math.hypot(cam.pan.x - single.x, cam.pan.y - single.y), view.name).toBeLessThan(0.001)
+    }
+  })
+
+  it('ohne Punkte und ohne Viewport gibt es keine Kamera', () => {
+    const marks = pursuitMarks(FORGE_MASS_SEND_NODE)
+    expect(forgeGroupCamera([], VIEWS[0], 1)).toBeNull()
+    expect(forgeGroupCamera(marks, { w: 0, h: 720 }, 1)).toBeNull()
+    expect(forgeGroupCamera(marks, { w: 741, h: 0 }, 1)).toBeNull()
   })
 })

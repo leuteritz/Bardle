@@ -204,7 +204,7 @@
               // Was Voraussetzung IST, dämpft nicht — dieselbe Vorfahrt wie
               // `onChain()` im Meep-Baum. Eine Antwort, die auf gedimmten
               // Kreisen steht, sieht nach einem Fehler aus.
-              'node-circle--req': spotReqs.has(node.id),
+              'node-circle--req': hasReqRing(node.id),
               // Und was auf dem WEG dorthin liegt, ebenso wenig.
               'node-circle--trail': spotTrail.has(node.id),
               'node-circle--dim': isDimmed(node.id),
@@ -240,9 +240,9 @@
                Ebene neben `.node-spot`, aber nie gleichzeitig mit ihr: ein
                Knoten kann nicht seine eigene Voraussetzung sein. -->
           <span
-            v-if="spotReqs.has(node.id)"
+            v-if="hasReqRing(node.id)"
             class="node-req"
-            :class="spotReqs.get(node.id) ? 'node-req--met' : 'node-req--open'"
+            :class="reqRingMet(node.id) ? 'node-req--met' : 'node-req--open'"
             aria-hidden="true"
           />
           <!-- Der WEG-RING. Dritte Rolle neben Ziel und Voraussetzung, und die
@@ -367,6 +367,7 @@ import {
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeSearch } from '@/composables/ui/useForgeSearch'
+import { useForgeOffers } from '@/composables/ui/useForgeOffers'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import {
   forgeClusterSpots,
@@ -389,6 +390,7 @@ import {
   forgeClampPan,
   forgeCameraHome,
   forgeFitScale,
+  forgeGroupCamera,
   forgeNodeScreenRadius,
 } from '@/utils/ui/forgeCameraBounds'
 import type {
@@ -483,10 +485,12 @@ const {
   setPin,
   refocus,
   clearPin,
+  pursuitId,
   clearPursuit,
   resetForgeSpotlight,
 } = useForgeSpotlight()
 const { searchActive, matchIds } = useForgeSearch()
+const { pursuedOffer } = useForgeOffers()
 const { detailsOpen, openDetails, closeDetails } = useForgeDetailsPane()
 
 const C = FORGE_STAGE_SIZE / 2
@@ -942,6 +946,46 @@ const spotReqs = computed<Map<string, boolean>>(() => {
 })
 
 /**
+ * Die Tore der VERFOLGUNG — Id → erfüllt, dieselbe Liste, die die Karte in der
+ * Detailspalte zeigt.
+ *
+ * Schwester von `spotReqs` und nicht dieselbe Rechnung: die hängt fest am EINEN
+ * `spotlightId` und wird zusätzlich von `requireLimbs` und `spotTrail` gelesen.
+ * Das Vorbild ist `matchIds` der Suche — eine Menge von aussen, die je Knoten
+ * nur nachgeschlagen wird.
+ *
+ * Die Ids kommen aus `pursuedOffer`, nicht aus einem zweiten Griff in den
+ * Katalog: Karte und Netz müssen dieselben drei Zeilen meinen.
+ */
+const pursuitReqs = computed<Map<string, boolean>>(() => {
+  const out = new Map<string, boolean>()
+  for (const req of pursuedOffer.value?.reqs ?? []) {
+    // Eine Konstellation darf auf einen Strahl zeigen, der als Knoten nicht auf
+    // der Bühne steht — dieselbe Prüfung wie bei `spotReqs`.
+    if (nodeById.value.has(req.id)) out.set(req.id, req.met)
+  }
+  return out
+})
+
+/** Dieselbe Menge als Kamerafutter — Lage und Sitzgrösse je Marke. */
+const pursuitMarks = computed(() =>
+  [...pursuitReqs.value.keys()].flatMap((id) => {
+    const node = nodeById.value.get(id)
+    return node ? [{ at: { x: node.x, y: node.y }, tier: node.sizeClass }] : []
+  }),
+)
+
+/** Trägt dieser Kreis einen Voraussetzungs-Ring — vom Zeiger oder von der Verfolgung? */
+function hasReqRing(id: string): boolean {
+  return spotReqs.value.has(id) || pursuitReqs.value.has(id)
+}
+
+/** Und in welcher Fassung. Der Zeiger hat Vorrang: er ist die jüngere Geste. */
+function reqRingMet(id: string): boolean {
+  return spotReqs.value.get(id) ?? pursuitReqs.value.get(id) ?? false
+}
+
+/**
  * Der Kreis, den der Spieler MEINT — sein Zeiger ODER sein Fokus.
  *
  * Zwei Quellen, kein Vorrang, und das ist der Unterschied zu `spotlightId`.
@@ -968,12 +1012,11 @@ function isSpot(id: string): boolean {
  */
 function isDimmed(id: string): boolean {
   if (searchActive.value && !matchIds.value.has(id)) return true
-  return (
-    spotlightId.value !== null &&
-    !isSpot(id) &&
-    !spotReqs.value.has(id) &&
-    !spotTrail.value.has(id)
-  )
+  // Eine laufende Verfolgung zählt wie ein Fokus: drei helle Ringe in einem
+  // gedämpften Feld sind unübersehbar, dieselben drei in einem vollen Feld aus
+  // hundertsechzig Knoten nicht.
+  const aimed = spotlightId.value !== null || pursuitReqs.value.size > 0
+  return aimed && !isSpot(id) && !hasReqRing(id) && !spotTrail.value.has(id)
 }
 
 /** Nur bei laufender Suche — ohne sie trägt jeder Knoten den Ring. */
@@ -1398,6 +1441,7 @@ onMounted(() => {
     if (!paneShift || prevW === 0) {
       zoom.value = clampZoom(zoom.value)
       movePan(pan.value)
+      if (pursuitFramePending) frameToPursuit()
       return
     }
     const narrower = rect.width < prevW
@@ -1443,6 +1487,8 @@ onMounted(() => {
          seine mittige Sonne zurück — als Fahrt über die vorhandene Transition,
          nicht als Sprung, denn der Anker hängt am Layout und kann nicht fahren. */
       if (wasHome) movePan(home, panDurationFor(pan.value, home))
+      // Als LETZTES: die Verfolgung gewinnt gegen jeden Ausgleich darüber.
+      if (pursuitFramePending) frameToPursuit()
     })
   })
   resizeObserver.observe(viewportEl.value)
@@ -1684,6 +1730,56 @@ function recenterCamera(): void {
   zoom.value = clampZoom(FORGE_TREE_ZOOM_DEFAULT)
   movePan(target, panDurationFor(pan.value, target))
 }
+
+/**
+ * Die Kamera fasst die VERFOLGUNG — alle ihre Tore auf einmal.
+ *
+ * Eine Konstellation hat keinen Sitz im Netz; anzufahren gibt es sie nicht.
+ * Ihre Bedingungs-Knoten gibt es, und die will man gemeinsam sehen — sonst
+ * beantwortet der Baum die Frage „woher kommt das" mit einem Drittel.
+ *
+ * Zoom ZUERST, aus demselben Grund wie in `recenterCamera()`: umgekehrt klemmt
+ * die Fahrt noch gegen die engere alte Grenze. Kein Ankunfts-Ping — der ist auf
+ * EIN Ziel gebaut, und drei Pings wären drei Signale für eine Aussage.
+ */
+function frameToPursuit(): void {
+  const cam = forgeGroupCamera(pursuitMarks.value, viewportSize.value, zoomFloor.value)
+  if (!cam) return
+  // Steht noch eine Spaltenfahrt aus, BLEIBT der Merker: ihr Ausgleich läuft
+  // nach uns und schöbe das Bild wieder weg. Gemessen stand danach zwei von drei
+  // Toren ausserhalb des Viewports.
+  if (!paneShift) pursuitFramePending = false
+  zoom.value = clampZoom(cam.scale)
+  movePan(cam.pan, panDurationFor(pan.value, cam.pan))
+}
+
+/**
+ * Steht eine Fahrt aus?
+ *
+ * Der Sprung von aussen setzt die Verfolgung, BEVOR dieser Reiter gemessen ist
+ * (`viewportSize` startet auf 0) — und `openDetails()` daneben löst eine eigene
+ * Ausgleichsfahrt des ResizeObservers aus, die unsere überschriebe. Deshalb ein
+ * Merker statt einer sofortigen Fahrt: gefahren wird, sobald gemessen ist, und
+ * als LETZTES im Durchlauf des Beobachters.
+ */
+let pursuitFramePending = false
+
+/*
+ * `immediate`, und das ist keine Vorsicht, sondern der Regelfall: der Sprung
+ * setzt die Verfolgung, BEVOR dieser Reiter beim ersten Besuch ueberhaupt
+ * montiert ist. Ein reiner Flankenwatcher saehe nie einen Wechsel — gemessen
+ * blieb die Kamera auf `translate(0,0) scale(1)` stehen, und auf Full HD lagen
+ * zwei der drei Tore ausserhalb des Viewports.
+ */
+watch(
+  pursuitId,
+  (id) => {
+    if (id === null) return
+    pursuitFramePending = true
+    if (viewportSize.value.w > 0) frameToPursuit()
+  },
+  { immediate: true },
+)
 
 defineExpose({ recenterCamera })
 
