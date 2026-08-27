@@ -42,6 +42,7 @@ const METRICS: HudFieldMetrics = {
   headerCenterBottom: 133,
   centerArc: { cx: 695, rx: 134, ry: 106, topOffset: 84 },
   keycapBar: 30,
+  keycapBarReach: 0,
   // Ohne Fähigkeitenleiste — die Zusicherungen unten gelten der BAR-Kontur.
   abilityBarTop: 0,
   abilityBarHalfW: 0,

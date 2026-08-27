@@ -51,6 +51,16 @@ export interface HudFieldMetrics {
    */
   keycapBar: number
   /**
+   * `--kb-hud-reach`: wie weit dieselbe Leiste von der RECHTEN Bildkante nach
+   * innen reicht.
+   *
+   * Sie ist breiter als das Panel, über dem sie sitzt — gemessen 499 px gegen
+   * 330 auf Full HD. Ohne diese Zahl endete die Panel-Zone bei der
+   * Panelbreite, und der Streifen daneben meldete 300 px freies Feld, in denen
+   * die Leiste steht (gefunden, als der Landfall-Körper dort hineinfuhr).
+   */
+  keycapBarReach: number
+  /**
    * Oberkante der Fähigkeitenleiste als Bildkoordinate — 0, wenn keine im Feld
    * steht (angedockt im Star Fight, oder abgebaut, weil ein Profil-Tab offen
    * ist). Die Leiste veröffentlicht sie selbst als `--ability-bar-top`.
@@ -106,18 +116,25 @@ export function hudBarTopAt(x: number, m: HudFieldMetrics): number {
   // Die Bar ist spiegelsymmetrisch — gerechnet wird auf dem Abstand zur
   // näheren Seitenkante.
   const dx = Math.min(x, m.viewportW - x)
-  // Über dem Panel sitzt noch die Keycap-Leiste. Sie steht nur rechts, wird
-  // aber auf beiden Seiten gerechnet: die Symmetrie ist billiger als eine
-  // Sonderbehandlung, und links kostet sie 30 px in einer Ecke, in der die
-  // Minimap ohnehin steht.
+  // Über dem Panel sitzt noch die Keycap-Leiste. Ihre HÖHE wird auf beiden
+  // Seiten gerechnet: die Symmetrie ist billiger als eine Sonderbehandlung, und
+  // links kostet sie 30 px in einer Ecke, in der die Minimap ohnehin steht.
   const panelTop = barTop + inset - m.keycapBar
+
+  // Ihre REICHWEITE dagegen nicht — sie ist breiter als das Panel, und
+  // gespiegelt nähme sie links rund 300 px freies Feld in einem Streifen, in
+  // dem gar nichts steht.
+  const unterKeycaps = m.keycapBarReach > 0 && m.viewportW - x <= m.keycapBarReach
 
   if (dx <= side - arc) return panelTop
   if (dx <= side) {
-    // Außenecke des Panels: Viertelkreis um (side − arc, arc + inset).
+    // Außenecke des Panels: Viertelkreis um (side − arc, arc + inset). Unter der
+    // Leiste ist die Ecke zu — die Rundung liegt dann hinter ihr.
+    if (unterKeycaps) return panelTop
     const t = dx - (side - arc)
     return panelTop + arc - Math.sqrt(Math.max(0, arc * arc - t * t))
   }
+  if (unterKeycaps) return panelTop
   if (dx <= side + notch) {
     // Innere Kehle, wo das Panel auf den Streifen trifft.
     const t = side + notch - dx
@@ -273,6 +290,7 @@ export function readHudFieldMetrics(centerArc: HeaderCenterArc | null): HudField
       headerCenterBottom: 0,
       centerArc: null,
       keycapBar: 0,
+      keycapBarReach: 0,
       abilityBarTop: 0,
       abilityBarHalfW: 0,
       wayfinderBottom: 0,
@@ -299,6 +317,7 @@ export function readHudFieldMetrics(centerArc: HeaderCenterArc | null): HudField
     headerCenterBottom: Math.max(headerBottom, read('--level-badge-bottom', headerBottom)),
     centerArc,
     keycapBar: Math.max(0, read('--kb-hud-h', 0)),
+    keycapBarReach: Math.max(0, read('--kb-hud-reach', 0)),
     abilityBarTop: Math.max(0, read('--ability-bar-top', 0)),
     abilityBarHalfW: Math.max(0, read('--ability-bar-w', 0)) / 2,
     wayfinderBottom: Math.max(0, read('--wayfinder-bottom', 0)),

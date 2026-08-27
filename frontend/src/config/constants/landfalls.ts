@@ -239,3 +239,115 @@ export const ADMIN_LANDFALL_PREVIEW_PX = 40
  * die die Vorschau überhaupt da ist.
  */
 export const ADMIN_LANDFALL_PREVIEW_R = 13
+
+/* ── Der Körper auf der Bühne ─────────────────────────────────────────────────
+   Ein Landfall ist ein ORT, kein Wesen. Drifter und Void-Monster bewegen sich
+   aus eigenem Antrieb quer durchs Bild; ein Ort steht still, und das Schiff
+   fliegt an ihm vorbei. Genau das trägt die Bewegung hier: keine Bahnkurve,
+   sondern die Parallaxe eines Vorbeiflugs — langsam und klein an den Enden,
+   schnell und gross in der Mitte.                                            */
+
+/**
+ * Halber Öffnungswinkel des Vorbeiflugs.
+ *
+ * Die zurückgelegte Strecke läuft linear mit dem Fenster, gezeigt wird der
+ * WINKEL dazu; die Grösse ist `cos(theta)`. Bei 1,1 rad (rund 63°) steht der
+ * Ort an den Enden auf 45 % seiner Grösse und zieht dort fünfmal langsamer als
+ * querab — träge genug, dass er auftaucht statt aufzupoppen.
+ *
+ * Höher ist NICHT besser: 1,25 rad stauchte die Enden so stark, dass der Körper
+ * knapp ein Drittel des Fensters ganz ausserhalb des Bildes stand (gemessen auf
+ * Full HD, x bis −383). Die HUD-Karte meldet den Ort ab Sekunde null, und eine
+ * Meldung über etwas, das man nicht sehen kann, ist genau der Fehler, gegen den
+ * der HUD-Freiraum geschrieben ist.
+ */
+export const LANDFALL_FLYBY_THETA_MAX = 1.1
+
+/** Deckkraft an den Enden der Sehne, und die Kurve dorthin. Der Ort verschwindet
+ *  nicht ganz — er ist weit weg, nicht abwesend. */
+export const LANDFALL_BODY_ALPHA_MIN = 0.2
+export const LANDFALL_BODY_ALPHA_EASE = 2.2
+
+/**
+ * Kantenlänge der Raute, wenn der Ort querab steht — bezogen auf 1920 px
+ * Viewportbreite und von dort mitwachsend.
+ *
+ * Nicht `--hud-scale`: die deckelt bei 1 und liesse den Ort auf 4K
+ * verschwinden. Der Deckel liegt hier bei 1,7, weil die Raute sonst auf 3840
+ * die Sonne erreicht.
+ */
+export const LANDFALL_BODY_BASE_PX = 116
+export const LANDFALL_BODY_VP_REF_W = 1920
+export const LANDFALL_BODY_SCALE_MIN = 0.85
+export const LANDFALL_BODY_SCALE_MAX = 1.7
+
+/**
+ * Abstand zur Bildmitte, als Anteil der kürzeren Feldkante.
+ *
+ * Grösser als beim Drifter (0,3): der Ort wird zur Fenstermitte hin am
+ * grössten, also gerade dann, wenn er der Sonne am nächsten kommt. Dort steht
+ * die Chime-Klickfläche, bei Sonnenphase 5 volle 560 px.
+ */
+export const LANDFALL_CENTER_CLEARANCE = 0.38
+
+/** Reichweite des Scheins als Vielfaches der Rautenkante, und der Takt, in dem
+ *  er atmet. Animiert wird ausschliesslich seine Deckkraft — der Verlauf selbst
+ *  steht still (Performance-Regel 2). */
+export const LANDFALL_BODY_HALO_SPAN = 1.75
+export const LANDFALL_BODY_BREATHE_MS = 3400
+
+/** Trefferfläche über die Rautenkante hinaus. Dieselbe Zahl wie beim Drifter —
+ *  eine Raute hat spitze Ecken und trifft sich schlechter als eine Scheibe. */
+export const LANDFALL_BODY_HIT_PADDING_PX = 14
+
+/** Ringwelle auf einen Griff, und der einmalige Ring im Querab-Moment. */
+export const LANDFALL_BODY_TAP_PULSE_MS = 520
+export const LANDFALL_BODY_ABEAM_MS = 1100
+
+/**
+ * Nachlauf, wenn der Store den Ort schliesst.
+ *
+ * Ohne ihn verschwindet der Körper mitten im Bild von einem Frame auf den
+ * nächsten — und ausgerechnet der letzte Anblick ist der, den die Chronik
+ * später wiederholt: hell, wenn er angefasst wurde, sonst auf
+ * `LANDMARK_LANDFALL_MISSED_ALPHA` gedimmt.
+ */
+export const LANDFALL_BODY_EXIT_MS = 560
+export const LANDFALL_BODY_EXIT_SHRINK = 0.32
+
+/** Eigener rng-Strom für die Spur. Der Strom in `landfallOnLeg` hat eine feste
+ *  Ziehreihenfolge und wird für archivierte Galaxien nachgespielt — ein
+ *  zusätzlicher Zug dort schriebe jede Chronik um. Muster: `cairnOffer`. */
+export const LANDFALL_LANE_SEED_SALT = 4441
+
+/**
+ * Die vier Sehnen, auf denen ein Ort vorbeizieht — normierte Feldkoordinaten
+ * (0..1 zwischen Header und Bottom-Bar), gespiegelt ergibt acht Varianten.
+ *
+ * Anders als `DRIFTER_ROUTES` sind das GERADEN mit einem seitlichen Bogen, kein
+ * Spline: ein Ort weicht nicht aus, er zieht vorbei. Keine Sehne kreuzt das
+ * mittlere Drittel — dort steht die Sonne samt Klickfläche.
+ *
+ * Der Überhang über [0,1] ist mit 0,09 klein: die Winkelstauchung an den Enden
+ * dehnt ihn ohnehin auf rund ein Siebtel des Fensters. Bei 0,2 stand der Körper
+ * fast ein Drittel der Zeit ausserhalb des Bildes.
+ */
+export const LANDFALL_LANES: ReadonlyArray<{
+  from: { x: number; y: number }
+  to: { x: number; y: number }
+  /** Seitlicher Bogen quer zur Sehne, im Scheitel bei halber Strecke. */
+  bow: number
+}> = [
+  // Oberer Streifen, links nach rechts
+  { from: { x: -0.09, y: 0.34 }, to: { x: 1.09, y: 0.2 }, bow: -0.09 },
+  // Unterer Streifen, rechts nach links
+  { from: { x: 1.09, y: 0.68 }, to: { x: -0.09, y: 0.8 }, bow: 0.08 },
+  // Flache Schräge oben, steigend
+  { from: { x: -0.09, y: 0.4 }, to: { x: 1.09, y: 0.1 }, bow: 0.07 },
+  // Flache Schräge unten, fallend
+  { from: { x: 1.09, y: 0.56 }, to: { x: -0.09, y: 0.88 }, bow: -0.07 },
+]
+
+/** Der Querab-Moment — dort steht `theta` auf null, der Ort ist am nächsten und
+ *  das Erntefenster halb um. */
+export const LANDFALL_BODY_ABEAM_AT = 0.5

@@ -36,6 +36,7 @@ import DrifterInfoCard from '@/components/idle/drifter/DrifterInfoCard.vue'
 import ActiveBuffBar from '@/components/idle/drifter/ActiveBuffBar.vue'
 import OmenHudCard from '@/components/idle/omen/OmenHudCard.vue'
 import LandfallHudCard from '@/components/idle/landfall/LandfallHudCard.vue'
+import LandfallBodyLayer from '@/components/idle/landfall/LandfallBodyLayer.vue'
 import OmenChoiceOverlay from '@/components/idle/omen/OmenChoiceOverlay.vue'
 import BardAbilityBar from '@/components/idle/abilities/BardAbilityBar.vue'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
@@ -219,11 +220,14 @@ watch(
     <OmenHudCard />
     <OmenChoiceOverlay />
 
-    <!-- Landfalls: der Ort, an dem das Schiff GERADE vorbeikommt. Er steht in
-         derselben Spalte, unter dem Vorzeichen und über der Drifter-Karte — die
-         drei sind nach Beständigkeit geordnet, nicht nach Wichtigkeit. Die Karte
-         IST die Interaktion: ein Landfall hat keinen Körper auf der Bühne, dort
-         steht die Sonne, nicht das Schiff. -->
+    <!-- Landfalls: der Ort, an dem das Schiff GERADE vorbeikommt. Die Karte steht
+         in derselben Spalte, unter dem Vorzeichen und über der Drifter-Karte —
+         die drei sind nach Beständigkeit geordnet, nicht nach Wichtigkeit.
+         Der Körper liegt auf derselben Ebene wie Drifter und Void (42), verhält
+         sich dort aber anders als beide: die sind Wesen und bewegen sich selbst,
+         ein Ort steht still und das Schiff zieht an ihm vorbei. Karte UND Körper
+         nehmen den Griff, beide über `tapLandfall()`. -->
+    <LandfallBodyLayer />
     <LandfallHudCard />
 
     <!-- Bard-Fähigkeiten: die Leiste sitzt über dem Scoreboard und schiebt die

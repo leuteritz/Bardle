@@ -378,11 +378,17 @@ export const useGalaxyStore = defineStore('galaxy', {
       return this.starsRequired + 1
     },
 
+    /** Fensterlänge des offenen Ortes in ms. Der Bühnenkörper rechnet daraus
+     *  seine Lage pro Frame — `landfallProgress` tickt nur im Sekundentakt. */
+    activeLandfallWindowMs(): number {
+      return this.activeLandfall ? landfallWindowMs(this.effectiveTravelDurationMs) : 0
+    },
+
     /** Anteil des Fensters, der schon verstrichen ist (0..1). */
     landfallProgress(): number {
       const a = this.activeLandfall
       if (!a) return 0
-      const spanne = landfallWindowMs(this.effectiveTravelDurationMs)
+      const spanne = this.activeLandfallWindowMs
       if (spanne <= 0) return 1
       return clampPercent(((this._travelTickMs - a.openedAt) / spanne) * 100) / 100
     },

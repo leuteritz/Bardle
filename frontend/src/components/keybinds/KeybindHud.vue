@@ -33,6 +33,7 @@ import { useGamePause } from '@/composables/system/useGamePause'
 import { useUiStore } from '@/stores/core/uiStore'
 import { KEYBINDINGS, KEYBIND_HUD_REVEAL_MS, KEYBIND_RESUME_LABEL } from '@/config/constants'
 import type { KeybindDef, KeybindId } from '@/types'
+import { invalidateHudField } from '@/utils/ui/hudField'
 
 const uiStore = useUiStore()
 const { isPaused } = useGamePause()
@@ -67,8 +68,22 @@ let revealTimer: ReturnType<typeof setTimeout> | null = null
 const hudEl = ref<HTMLElement | null>(null)
 let sizeObserver: ResizeObserver | null = null
 
-function publishHeight(px: number) {
-  document.documentElement.style.setProperty('--kb-hud-h', `${Math.round(px)}px`)
+/**
+ * Höhe UND Reichweite. Die Leiste ist breiter als das Panel, über dem sie sitzt
+ * (gemessen 499 px gegen 330 auf Full HD) — ohne die zweite Zahl endet die
+ * Panel-Zone der Kontur an der Panelbreite und der Streifen daneben meldet
+ * freies Feld, in dem die Leiste steht.
+ */
+function publishBox() {
+  const el = hudEl.value
+  if (!el) return
+  const r = el.getBoundingClientRect()
+  const root = document.documentElement.style
+  root.setProperty('--kb-hud-h', `${Math.round(r.height)}px`)
+  root.setProperty('--kb-hud-reach', `${Math.round(Math.max(0, window.innerWidth - r.left))}px`)
+  // Die Reichweite hängt am Inhalt, nicht am Viewport — der Cache-Schlüssel der
+  // Kontur sähe eine Änderung sonst nicht.
+  invalidateHudField()
 }
 
 onMounted(() => {
@@ -78,20 +93,24 @@ onMounted(() => {
   }, KEYBIND_HUD_REVEAL_MS)
 
   if (hudEl.value) {
-    publishHeight(hudEl.value.getBoundingClientRect().height)
+    publishBox()
     // Gemessen wird die Randbox, nicht contentRect: Innenabstand und Rahmen
     // gehören zur Höhe, an der sich die Nachbarn ausrichten.
-    sizeObserver = new ResizeObserver(() => {
-      if (hudEl.value) publishHeight(hudEl.value.getBoundingClientRect().height)
-    })
+    sizeObserver = new ResizeObserver(publishBox)
     sizeObserver.observe(hudEl.value)
+    // Die Reichweite misst gegen die Bildkante — sie ändert sich auch, wenn nur
+    // das Fenster wandert.
+    window.addEventListener('resize', publishBox)
   }
 })
 
 onUnmounted(() => {
   if (revealTimer !== null) clearTimeout(revealTimer)
   sizeObserver?.disconnect()
+  window.removeEventListener('resize', publishBox)
   document.documentElement.style.removeProperty('--kb-hud-h')
+  document.documentElement.style.removeProperty('--kb-hud-reach')
+  invalidateHudField()
 })
 
 function openControls() {

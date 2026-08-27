@@ -36,6 +36,7 @@ const METRICS: HudFieldMetrics = {
   headerCenterBottom: 133,
   centerArc: { cx: 556, rx: 110, ry: 106, topOffset: 84 },
   keycapBar: 30,
+  keycapBarReach: 0,
   abilityBarTop: 0,
   abilityBarHalfW: 0,
   wayfinderBottom: 0,

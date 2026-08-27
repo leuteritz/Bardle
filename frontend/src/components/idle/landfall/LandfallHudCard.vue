@@ -15,10 +15,10 @@ import { landfallAcceptsTap } from '@/utils/game/landfalls'
  * Der Ort, an dem das Schiff GERADE vorbeikommt — oben links, unter dem
  * Vorzeichen, über der Drifter-Karte.
  *
- * Die Karte IST die Interaktion. Ein Landfall hat keinen Körper auf der Bühne:
- * das Schiff ist dort gar nicht zu sehen, der Orbit zeigt die Sonne. Was ihn
- * sichtbar macht, ist diese Karte im Bild und später die Marke auf dem
- * Galaxiebild — die eine, während er da ist, die andere, wenn er vorbei ist.
+ * Die Karte trägt die AUSKUNFT — Name, Lohn, Stand, Restzeit — und am Cairn die
+ * einzige Stelle, an der die Wahl unter dreien steht. Den Griff nimmt sie
+ * ebenso wie der Körper auf der Bühne (`LandfallBodyLayer.vue`); beide rufen
+ * dieselbe Action, damit ein erzwungener Griff wie ein geklickter aussieht.
  *
  * KEIN eigener Takt. Der Etappen-Tick des `galaxyStore` stellt `_travelTickMs`
  * ohnehin jede Sekunde, und `landfallProgress` liest daraus. Ein zweiter Timer
@@ -260,6 +260,13 @@ onUnmounted(() => {
    behaupten. Die Karte bleibt trotzdem eine, weil sie dieselbe Auskunft trägt. */
 .lhc-root--idle {
   cursor: default;
+}
+
+/* Der Zeiger steht auf dem Körper im freien Feld: Karte und Körper gehören
+   zusammen und stehen weit auseinander, also antwortet die Karte. Eine Regel,
+   kein Zustand — der Körper schaltet die Klasse am `<body>`. */
+:global(body.landfall-body-hover) .lhc-root {
+  border-left-color: #cfe6dd;
 }
 
 .lhc-head {

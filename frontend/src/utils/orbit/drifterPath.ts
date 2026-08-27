@@ -149,13 +149,21 @@ function catmullRom(
  * clear of the middle — this is the guard for extreme aspect ratios, where a
  * percentage of the field width is a very different distance than the same
  * percentage of its height.
+ *
+ * `clearance` ist ein Parameter, weil der Landfall-Körper einen weiteren Kreis
+ * braucht als ein Drifter: er wird querab am grössten, also gerade dort.
  */
-function pushOutOfCenter(x: number, y: number, field: DrifterFieldRect): { x: number; y: number } {
+export function pushOutOfCenter(
+  x: number,
+  y: number,
+  field: DrifterFieldRect,
+  clearance = DRIFTER_CENTER_CLEARANCE,
+): { x: number; y: number } {
   // Work in pixels: normalized distance is meaningless on a non-square field.
   const dxPx = (x - 0.5) * field.width
   const dyPx = (y - 0.5) * field.height
   const distPx = Math.hypot(dxPx, dyPx)
-  const clearPx = Math.min(field.width, field.height) * DRIFTER_CENTER_CLEARANCE
+  const clearPx = Math.min(field.width, field.height) * clearance
   if (distPx >= clearPx) return { x, y }
   // Straight up when the point sits dead center — any direction is as good.
   if (distPx < 0.001) return { x, y: 0.5 - clearPx / field.height }
