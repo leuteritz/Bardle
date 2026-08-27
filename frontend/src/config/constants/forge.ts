@@ -2502,6 +2502,20 @@ export const FORGE_PURSUIT_TITLE = 'Pursuing'
 export const FORGE_PURSUIT_ICON = 'game-icons:convergence-target'
 /** Was eine anklickbare Bedingungszeile meldet. */
 export const FORGE_PURSUIT_REQ_TITLE = 'Show this in the tree'
+/**
+ * Schriftgrad des Ankernamens auf der BÜHNE — und die Grösse, unter die er auf
+ * dem SCHIRM nicht fallen darf.
+ *
+ * Der Name ist die einzige Schrift im Knotenfeld, und die Kamera fährt zu ihm
+ * hin, indem sie weit herauszoomt (der ganze Kaufweg soll ins Bild). Bei
+ * Massstab 0,49 stünden 15 px als 7 px da — unlesbar genau in dem Moment, für
+ * den es ihn gibt. Gegengerechnet wird deshalb wie bei der Leitzahl im
+ * Sonnenkern (`FORGE_SUN_BOOST_MIN_SCREEN_PX`), samt Deckel: eine volle
+ * Gegenskalierung liesse ihn beim Hineinzoomen über seinen Knoten wachsen.
+ */
+export const FORGE_PURSUIT_NAME_PX = 15
+export const FORGE_PURSUIT_NAME_MIN_SCREEN_PX = 13
+export const FORGE_PURSUIT_NAME_MAX_READ_SCALE = 2.6
 /** Warum der Knopf nicht geht — ein TOR, kein Geldbeutel. Das Kostenband sagt
  *  dazu nichts, und `FORGE_OFFER_SHORT_TITLE` waere dort die falsche Auskunft. */
 export const FORGE_OFFER_LOCKED_TITLE = 'Requirements not met'

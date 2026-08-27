@@ -11,6 +11,7 @@ import {
   SOLAR_SIGNATURE_BH_MOTE_GAIN,
   SOLAR_SIGNATURE_BH_INNER_GAIN,
   SOLAR_SIGNATURE_BH_DOPPLER_GAIN,
+  FORGE_SPOTLIGHT_MAX_LIMBS,
   type SolarSignatureStage,
   type SolarSignatureBaseStage,
 } from '@/config/constants'
@@ -76,6 +77,40 @@ export const SOLAR_SIGNATURE_AXIS_BY_NODE = buildAxisMap()
 export function forgeNodeAxis(nodeId: string): ForgeAxisId | undefined {
   if (AXIS_SET.has(nodeId)) return nodeId as ForgeAxisId
   return SOLAR_SIGNATURE_AXIS_BY_NODE.get(nodeId)
+}
+
+/**
+ * Der WEG eines Knotens nach innen: er selbst, sein Elternteil, … bis zum
+ * Kernstrahl. Also genau das, was man kaufen muss, um ihn zu bekommen.
+ *
+ * `buildAxisMap()` klettert dieselbe Kette und wirft die Zwischenknoten weg —
+ * es braucht nur die Achse. Hier ist die Kette selbst die Antwort: der Baum
+ * zeichnet daraus den Kaufweg zu einem verfolgten Ziel.
+ *
+ * Eine Id ohne `parentId` — eine Konstellation, ein Relikt — liefert eine LEERE
+ * Liste. Sie hängt an `requires`, nicht am Baum, und hat deshalb keinen Weg
+ * nach innen; ihr Weg sind die Wege ihrer Tore.
+ *
+ * Der Deckel ist derselbe wie beim Scheinwerfer: die Kette ist im Katalog
+ * höchstens sieben Glieder lang (Strahl → Zweig → Blatt → Wacht → Bündnis →
+ * Krone/Ast), und ein Zyklus im Katalog darf hier nicht zur Endlosschleife
+ * werden.
+ */
+export function forgeNodePath(nodeId: string): string[] {
+  if (AXIS_SET.has(nodeId)) return [nodeId]
+  const parentOf = new Map(FORGE_NODES.map((n) => [n.id, n.parentId]))
+  if (!parentOf.has(nodeId)) return []
+
+  const out: string[] = []
+  const seen = new Set<string>()
+  let cursor: string | undefined = nodeId
+  while (cursor && out.length < FORGE_SPOTLIGHT_MAX_LIMBS && !seen.has(cursor)) {
+    seen.add(cursor)
+    out.push(cursor)
+    if (AXIS_SET.has(cursor)) break
+    cursor = parentOf.get(cursor)
+  }
+  return out
 }
 
 /**

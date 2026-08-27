@@ -1,17 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import {
-  solarSignatureFrom,
-  emptySolarSignature,
-  forgeNodeAxis,
-  SOLAR_SIGNATURE_AXIS_BY_NODE,
-  SIGNATURE_AXIS_COLOR,
-  plasmaSignatureVars,
-  blackHoleSignatureVars,
-  wakeSignatureBonus,
-  cometGoldSignatureLift,
-} from '@/utils/game/solarSignature'
+import { SIGNATURE_AXIS_COLOR, SOLAR_SIGNATURE_AXIS_BY_NODE, blackHoleSignatureVars, cometGoldSignatureLift, emptySolarSignature, forgeNodeAxis, forgeNodePath, plasmaSignatureVars, solarSignatureFrom, wakeSignatureBonus } from '@/utils/game/solarSignature'
 import { FORGE_NODES } from '@/config/progression/starForge'
-import { SOLAR_BRANCHES, SOLAR_SIGNATURE_STAGES } from '@/config/constants'
+import {
+  FORGE_SPOTLIGHT_MAX_LIMBS,
+  SOLAR_BRANCHES,
+  SOLAR_SIGNATURE_STAGES,
+} from '@/config/constants'
 import type { ForgeAxisId, SolarSignatureInput } from '@/types'
 
 /**
@@ -226,5 +220,41 @@ describe('Optik-Zuordnung', () => {
     const node = FORGE_NODES.find((n) => SOLAR_SIGNATURE_AXIS_BY_NODE.get(n.id) === 'flightSpeed')
     const sig = solarSignatureFrom(input({ nodeLevelBags: [{ [node!.id]: 90 }] }))
     expect(wakeSignatureBonus(sig)).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * Der WEG nach innen — was man kaufen muss, um an einen Knoten zu kommen.
+ *
+ * `forgeNodeAxis` beantwortet daneben nur „an welchem Strahl". Der Baum
+ * zeichnet aus dieser Kette den Kaufweg zu einem verfolgten Ziel; eine falsche
+ * Reihenfolge oder ein fehlendes Glied wäre dort ein Strich, der ins Leere
+ * zeigt.
+ */
+describe('forgeNodePath — der Weg nach innen', () => {
+  it('nennt Knoten, Elternteil und Strahl in dieser Richtung', () => {
+    expect(forgeNodePath('auroraWake')).toEqual(['auroraWake', 'solarSails', 'flightSpeed'])
+  })
+
+  it('endet für einen Kernstrahl bei ihm selbst', () => {
+    expect(forgeNodePath('flightSpeed')).toEqual(['flightSpeed'])
+  })
+
+  it('ist für eine Id ohne Elternteil leer', () => {
+    // Eine Konstellation hängt an `requires`, nicht am Baum — ihr Weg sind die
+    // Wege ihrer Tore.
+    expect(forgeNodePath('risingArmada')).toEqual([])
+    expect(forgeNodePath('gibtEsNicht')).toEqual([])
+  })
+
+  it('läuft für JEDEN Knoten in einen Strahl und bleibt unter dem Deckel', () => {
+    for (const def of FORGE_NODES) {
+      const path = forgeNodePath(def.id)
+      expect(path[0], def.id).toBe(def.id)
+      expect(path.length, `${def.id} laeuft ins Leere`).toBeGreaterThan(0)
+      expect(path.length, `${def.id} ist zu lang`).toBeLessThanOrEqual(FORGE_SPOTLIGHT_MAX_LIMBS)
+      expect(new Set(path).size, `${def.id} laeuft im Kreis`).toBe(path.length)
+      expect(forgeNodeAxis(def.id), def.id).toBe(path[path.length - 1])
+    }
   })
 })

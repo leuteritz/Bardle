@@ -648,13 +648,19 @@ export function forgeTightestPair(): { a: string; b: string; air: number } | nul
  */
 /* Der Suchlauf des Ankers: 8-px-Schritte, höchstens 60 davon (480 px) — mehr
    als die Tiefe eines Bandes, und darüber hinaus wäre er nicht mehr „nahe bei".
-   Gefächert wird bis ±60°, weil erst darüber der Punkt nicht mehr garantiert
-   weiter aussen läge als der Schwerpunkt (cos 60° = 0,5 > 0). Ein reiner Strahl
-   nach aussen findet nichts: gemessen lief er in `driftersDue` und endete mit
-   19,8 px Luft. */
+   Ein reiner Strahl nach aussen findet nichts: gemessen lief er in
+   `driftersDue` und endete mit 19,8 px Luft.
+
+   Gefächert bis ±90°, damit die Suche den NÄCHSTGELEGENEN freien Platz findet
+   statt einen weit draussen — ein gestreckter Weg sagt nichts, was ein kurzer
+   nicht auch sagt. Weiter als 90° geht nicht: dort kippt der Punkt nach innen.
+   Bei genau 90° ist der radiale Anteil null und der Abstand wächst trotzdem,
+   weil der Schub selbst quadratisch eingeht. */
 const ANCHOR_STEP_PX = 8
 const ANCHOR_STEPS = 60
-const ANCHOR_FAN_DEG = [0, 10, -10, 20, -20, 30, -30, 40, -40, 50, -50, 60, -60] as const
+const ANCHOR_FAN_DEG = [
+  0, 10, -10, 20, -20, 30, -30, 40, -40, 50, -50, 60, -60, 70, -70, 80, -80, 90, -90,
+] as const
 
 export function forgeFreeAnchor(near: readonly Point[], radius: number): Point {
   if (near.length === 0) return { x: STAGE_HALF, y: STAGE_HALF }

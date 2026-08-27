@@ -217,8 +217,20 @@ export function forgeClampPan(pan: Point, view: ForgeViewBox, scale: number): Po
  * Am Ende dieselbe `forgeClampPan` wie jede andere Fahrt: zwei Antworten auf
  * „wie weit darf die Kamera" wären eine zu viel.
  */
+/**
+ * Ein Körper, den die Kamera fassen soll — Lage und BÜHNEN-Radius.
+ *
+ * Der Radius steht am Eintrag statt als `tier`, weil nicht jeder Körper einen
+ * Sitz hat: der Ankerknoten einer Verfolgung nicht, und die Sonne schon gar
+ * nicht — ihr Radius hängt an der Sonnenphase.
+ */
+export interface ForgeCameraMark {
+  at: Point
+  radius: number
+}
+
 export function forgeGroupCamera(
-  marks: readonly { at: Point; tier: ForgeUpgradeTier }[],
+  marks: readonly ForgeCameraMark[],
   view: ForgeViewBox,
   zoomFloor: number,
 ): { pan: Point; scale: number } | null {
@@ -229,7 +241,7 @@ export function forgeGroupCamera(
   let maxX = -Infinity
   let maxY = -Infinity
   for (const mark of marks) {
-    const r = forgeNodeScreenRadius(mark.tier, 1)
+    const r = mark.radius
     minX = Math.min(minX, mark.at.x - r)
     minY = Math.min(minY, mark.at.y - r)
     maxX = Math.max(maxX, mark.at.x + r)
@@ -244,4 +256,47 @@ export function forgeGroupCamera(
   const center = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 }
 
   return { pan: forgeClampPan(center, view, scale), scale }
+}
+
+/**
+ * Dieselbe Frage, aber MITTIG auf einen bestimmten Punkt: „fasse das alles, und
+ * stell mir DAS in die Mitte."
+ *
+ * Der Unterschied zur Hüllbox-Fassung ist keine Feinheit. Wer einen Kaufweg
+ * zeigt — Sonne, Kernstrahl, Zweige, Tore, Ziel —, hat eine lange, einseitige
+ * Kette im Bild; ihre Hüllbox stellt die Mitte der KETTE ins Bild, und das Ziel
+ * steht dann am Rand. Gemeint ist aber das Ziel.
+ *
+ * Geschlossene Form, kein Suchlauf: jede Marke muss auf beiden Achsen in die
+ * halbe Sichtweite passen, also gilt
+ * `(|Δ| + radius) · scale ≤ halbe Sichtweite − Rand`. Nach `scale` aufgelöst ist
+ * das ein Minimum über Marken und Achsen.
+ *
+ * Am Ende dieselbe `forgeClampPan` wie jede andere Fahrt. Sie kann den
+ * Fokuspunkt aus der Mitte ziehen, wenn er weiter draussen liegt als der
+ * erlaubte Schwenk — das ist richtig so, die Alternative wäre ein Bild, das
+ * über den Rand des Netzes hinaussieht.
+ */
+export function forgeGroupCameraAt(
+  focus: Point,
+  marks: readonly ForgeCameraMark[],
+  view: ForgeViewBox,
+  zoomFloor: number,
+): { pan: Point; scale: number } | null {
+  if (marks.length === 0 || view.w <= 0 || view.h <= 0) return null
+
+  const halfW = view.w / 2 - FORGE_TREE_FIT_PADDING_PX
+  const halfH = view.h / 2 - FORGE_TREE_FIT_PADDING_PX
+  if (halfW <= 0 || halfH <= 0) return null
+
+  let wanted = FORGE_TREE_ZOOM_MAX
+  for (const mark of marks) {
+    const dx = Math.abs(mark.at.x - focus.x) + mark.radius
+    const dy = Math.abs(mark.at.y - focus.y) + mark.radius
+    if (dx > 0) wanted = Math.min(wanted, halfW / dx)
+    if (dy > 0) wanted = Math.min(wanted, halfH / dy)
+  }
+
+  const scale = Math.min(FORGE_TREE_ZOOM_MAX, Math.max(zoomFloor, wanted))
+  return { pan: forgeClampPan(focus, view, scale), scale }
 }

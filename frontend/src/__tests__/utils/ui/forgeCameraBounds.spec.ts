@@ -1,26 +1,20 @@
 import { describe, it, expect } from 'vitest'
 import { forgeSeatTier } from '@/config/progression/forgeSeats'
 import { forgeContentBounds, forgeFreeAnchor, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
-import {
-  forgeClampPan,
-  forgeClampPanBox,
-  forgeCameraHome,
-  forgeFitScale,
-  forgeGroupCamera,
-  forgeNodeScreenRadius,
-  forgePanLimit,
-} from '@/utils/ui/forgeCameraBounds'
+import { forgeCameraHome, forgeClampPan, forgeClampPanBox, forgeFitScale, forgeGroupCameraAt, forgeNodeScreenRadius, forgePanLimit } from '@/utils/ui/forgeCameraBounds'
 import { getForgeConstellation } from '@/config/progression/starForge'
+import { forgeNodePath } from '@/utils/game/solarSignature'
 import { forgeNodeInView, forgeNodeScreenPoint } from '@/utils/ui/forgeSpotlightView'
 import {
   FORGE_CONTENT_SEAM_PX,
+  FORGE_MASS_SEND_NODE,
   FORGE_NODE_DIAMETER,
   FORGE_SPOTLIGHT_EDGE_MARGIN_PX,
   FORGE_STAGE_SIZE,
   FORGE_TREE_FIT_PADDING_PX,
   FORGE_TREE_ZOOM_FLOOR,
-  FORGE_MASS_SEND_NODE,
   FORGE_TREE_ZOOM_MAX,
+  SHOP_SUN_MAX_DIAMETER,
 } from '@/config/constants'
 
 /**
@@ -283,7 +277,7 @@ describe('Star Forge — die Grenzen der Kamera', () => {
  * dass danach ALLE davon im Bild stehen. Nur die trägt den Sprung; eine Kamera,
  * die zwei von dreien fasst, ist so gut wie keine.
  */
-describe('Star Forge — die Kamera fasst eine Gruppe', () => {
+describe('Star Forge — die Kamera fasst den KAUFWEG', () => {
   const places = forgeTreePlacements()
 
   /**
@@ -291,83 +285,113 @@ describe('Star Forge — die Kamera fasst eine Gruppe', () => {
    * NEBEN den Werten oben, nicht statt ihrer.
    *
    * Der Viewport ist seit der Messung von 2026-08-19 flacher geworden, und die
-   * HÖHE bindet den Einpass. Eine Gruppen-Kamera, die nur gegen die alte, höhere
-   * Zahl geprüft wäre, ginge auf Full HD durch und im Browser nicht.
+   * HÖHE bindet den Einpass. Eine Kamera, die nur gegen die alte, höhere Zahl
+   * geprüft wäre, ginge auf Full HD durch und im Browser nicht.
    */
-  const GROUP_VIEWS = [...VIEWS, { name: 'Full HD gemessen', w: 776, h: 661 }, { name: 'QHD gemessen', w: 1135, h: 938 }]
+  const GROUP_VIEWS = [
+    ...VIEWS,
+    { name: 'Full HD gemessen', w: 776, h: 661 },
+    { name: 'QHD gemessen', w: 1135, h: 938 },
+  ]
 
-  /**
-   * Die Tore, die der Verfolgungs-Block zeigt — UND der Ankerknoten, der im Netz
-   * für die Konstellation selbst steht. Er gehört mit ins Bild: er ist der
-   * Körper, um den es geht.
-   */
-  function pursuitMarks(id: string) {
-    const def = getForgeConstellation(id)!
-    const gates = def.requires.flatMap((req) => {
-      const at = places.get(req.id)
-      return at ? [{ id: req.id, at, tier: forgeSeatTier(req.id) }] : []
-    })
-    const anchorTier = 'crown' as const
-    const anchor = forgeFreeAnchor(
-      gates.map((g) => g.at),
-      FORGE_NODE_DIAMETER[anchorTier] / 2,
-    )
-    return [...gates, { id: 'pursuitAnchor', at: anchor, tier: anchorTier }]
+  /** Der Sonnenrand in der grössten Fassung — dort setzt die Kette an. */
+  const SUN_EDGE = SHOP_SUN_MAX_DIAMETER / 2
+  const HALF = FORGE_STAGE_SIZE / 2
+
+  function radiusOf(id: string): number {
+    return forgeNodeScreenRadius(forgeSeatTier(id), 1)
   }
 
-  it('holt JEDES Tor der Verfolgung vollstaendig ins Bild', () => {
-    // DIE Zusage. Sie bricht, sobald jemand eine Bedingung auf einen Knoten am
-    // anderen Ende des Netzes legt — und dann soll sie brechen.
-    const marks = pursuitMarks(FORGE_MASS_SEND_NODE)
-    expect(marks.length, 'kein Tor hat einen Sitz im Netz').toBeGreaterThan(2)
+  /**
+   * Was beim Sprung ins Bild gehört: der Ankerknoten der Konstellation, ihre
+   * Tore, JEDER Knoten des Kaufwegs dorthin — und der Sonnenrand, an dem die
+   * Kette ansetzt.
+   */
+  function pursuitScene(id: string) {
+    const def = getForgeConstellation(id)!
+    const gateIds = def.requires.map((req) => req.id).filter((rid) => places.has(rid))
+    const anchor = forgeFreeAnchor(
+      gateIds.map((rid) => places.get(rid)!),
+      FORGE_NODE_DIAMETER.crown / 2,
+    )
+
+    const pathIds = new Set<string>()
+    for (const gate of gateIds) for (const step of forgeNodePath(gate)) pathIds.add(step)
+
+    const marks = [
+      ...[...pathIds].map((pid) => ({ id: pid, at: places.get(pid)!, radius: radiusOf(pid) })),
+      { id: 'pursuitAnchor', at: anchor, radius: FORGE_NODE_DIAMETER.crown / 2 },
+      { id: 'sun', at: { x: HALF, y: HALF }, radius: SUN_EDGE },
+    ]
+    return { anchor, marks, pathIds }
+  }
+
+  it('holt Anker, Tore, WEG und Sonnenrand vollstaendig ins Bild', () => {
+    // DIE Zusage. Ein Kaufweg, von dem ein Glied fehlt, beantwortet die Frage
+    // nicht, für die er gezeichnet wird.
+    const { anchor, marks, pathIds } = pursuitScene(FORGE_MASS_SEND_NODE)
+    expect(pathIds.size, 'der Weg ist leer').toBeGreaterThan(3)
 
     for (const view of GROUP_VIEWS) {
-      const cam = forgeGroupCamera(marks, view, zoomFloorFor(view))
+      const cam = forgeGroupCameraAt(anchor, marks, view, zoomFloorFor(view))
       expect(cam, view.name).not.toBeNull()
       const camera = { panX: cam!.pan.x, panY: cam!.pan.y, scale: cam!.scale }
       for (const mark of marks) {
         expect(
-          forgeNodeInView(mark.at, forgeNodeScreenRadius(mark.tier, cam!.scale), camera, view),
+          forgeNodeInView(mark.at, mark.radius * cam!.scale, camera, view),
           `${mark.id} steht bei ${view.name} nicht im Bild`,
         ).toBe(true)
       }
     }
   })
 
+  it('faehrt deutlich weiter heraus als der Zoomdeckel', () => {
+    // Der Anlass des Umbaus: gefasst wurden nur Anker und Tore, und das lief
+    // gegen `FORGE_TREE_ZOOM_MAX`. Mit der Sonne im Bild kann das nicht mehr
+    // passieren — sonst waere sie nicht drin.
+    const { anchor, marks } = pursuitScene(FORGE_MASS_SEND_NODE)
+    for (const view of GROUP_VIEWS) {
+      const cam = forgeGroupCameraAt(anchor, marks, view, zoomFloorFor(view))!
+      expect(cam.scale, `${view.name} klebt am Deckel`).toBeLessThan(1)
+    }
+  })
+
   it('bleibt zwischen Zoomboden und Zoomdeckel', () => {
-    const marks = pursuitMarks(FORGE_MASS_SEND_NODE)
-    for (const view of VIEWS) {
+    const { anchor, marks } = pursuitScene(FORGE_MASS_SEND_NODE)
+    for (const view of GROUP_VIEWS) {
       const floor = zoomFloorFor(view)
-      const cam = forgeGroupCamera(marks, view, floor)!
+      const cam = forgeGroupCameraAt(anchor, marks, view, floor)!
       expect(cam.scale, view.name).toBeGreaterThanOrEqual(floor)
       expect(cam.scale, view.name).toBeLessThanOrEqual(FORGE_TREE_ZOOM_MAX)
     }
   })
 
+  it('stellt den Anker in die Mitte, soweit die Klemmung es zulaesst', () => {
+    const { anchor, marks } = pursuitScene(FORGE_MASS_SEND_NODE)
+    for (const view of GROUP_VIEWS) {
+      const cam = forgeGroupCameraAt(anchor, marks, view, zoomFloorFor(view))!
+      // Entweder steht er genau in der Mitte — oder die Klemmung hat gezogen,
+      // und dann ist das Ergebnis trotzdem der geklemmte Fokuspunkt.
+      const clamped = forgeClampPan(anchor, view, cam.scale)
+      expect(Math.hypot(cam.pan.x - clamped.x, cam.pan.y - clamped.y), view.name).toBeLessThan(
+        0.001,
+      )
+    }
+  })
+
   it('steht schon geklemmt — die Fahrt springt nicht nach', () => {
-    // Der Aufrufer gibt das Ergebnis direkt an `movePan()`, und das klemmt noch
-    // einmal. Wäre die Kamera nicht idempotent, ruckte sie im ersten Frame.
-    const marks = pursuitMarks(FORGE_MASS_SEND_NODE)
-    for (const view of VIEWS) {
-      const cam = forgeGroupCamera(marks, view, zoomFloorFor(view))!
+    const { anchor, marks } = pursuitScene(FORGE_MASS_SEND_NODE)
+    for (const view of GROUP_VIEWS) {
+      const cam = forgeGroupCameraAt(anchor, marks, view, zoomFloorFor(view))!
       const again = forgeClampPan(cam.pan, view, cam.scale)
       expect(Math.hypot(again.x - cam.pan.x, again.y - cam.pan.y), view.name).toBeLessThan(0.001)
     }
   })
 
-  it('mit EINEM Punkt ist sie die geklemmte Einzelfahrt', () => {
-    const [first] = pursuitMarks(FORGE_MASS_SEND_NODE)
-    for (const view of VIEWS) {
-      const cam = forgeGroupCamera([first], view, zoomFloorFor(view))!
-      const single = forgeClampPan({ x: first.at.x, y: first.at.y }, view, cam.scale)
-      expect(Math.hypot(cam.pan.x - single.x, cam.pan.y - single.y), view.name).toBeLessThan(0.001)
-    }
-  })
-
-  it('ohne Punkte und ohne Viewport gibt es keine Kamera', () => {
-    const marks = pursuitMarks(FORGE_MASS_SEND_NODE)
-    expect(forgeGroupCamera([], VIEWS[0], 1)).toBeNull()
-    expect(forgeGroupCamera(marks, { w: 0, h: 720 }, 1)).toBeNull()
-    expect(forgeGroupCamera(marks, { w: 741, h: 0 }, 1)).toBeNull()
+  it('ohne Marken und ohne Viewport gibt es keine Kamera', () => {
+    const { anchor, marks } = pursuitScene(FORGE_MASS_SEND_NODE)
+    expect(forgeGroupCameraAt(anchor, [], VIEWS[0], 1)).toBeNull()
+    expect(forgeGroupCameraAt(anchor, marks, { w: 0, h: 720 }, 1)).toBeNull()
+    expect(forgeGroupCameraAt(anchor, marks, { w: 741, h: 0 }, 1)).toBeNull()
   })
 })

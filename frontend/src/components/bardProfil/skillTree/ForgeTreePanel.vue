@@ -141,6 +141,26 @@
           />
         </g>
 
+        <!-- DER KAUFWEG der Verfolgung: Sonnenrand → Kernstrahl → Zweig →
+             Blatt, also genau das, was man kaufen muss. Durchgezogen, damit die
+             Sprache eindeutig bleibt — gestrichelt sind die TORE darunter, die
+             zusammenlaufen.
+
+             OHNE Lauflicht: `.spot-limbs` marschiert, weil ein Hover Sekunden
+             dauert; eine Verfolgung steht Minuten, und ein Dauerläufer über
+             sieben Glieder wäre dann Lärm statt Auskunft. -->
+        <g
+          v-if="pursuitPath.chain.length > 0"
+          class="pursuit-limbs"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"
+          :stroke="pursuitNode?.color ?? '#e8c040'"
+        >
+          <path
+            v-for="limb in pursuitPath.chain" :key="limb.key + '-pursuit'"
+            :d="limb.d" :stroke-width="limbWidth(limb)"
+          />
+        </g>
+
         <!-- Die Tore der VERFOLGUNG. Eigene Gruppe und nicht die daneben: sie
              hat eine andere Lebensdauer als der Zeiger, und zwei `v-for` in
              einem `<g>` verbänden sie an einem Ort, an dem nichts sie
@@ -217,7 +237,7 @@
         <span class="pursuit-mark-ring">
           <Icon :icon="pursuitNode.icon" width="30" height="30" />
         </span>
-        <span class="pursuit-mark-name">{{ pursuitNode.name }}</span>
+        <span class="pursuit-mark-name" :style="pursuitNameStyle">{{ pursuitNode.name }}</span>
       </button>
 
       <!-- Nodes -->
@@ -420,6 +440,7 @@ import {
   type Point,
 } from '@/utils/ui/forgeTreeLayout'
 import { forgeClusterOf } from '@/config/progression/starForgeNet'
+import { forgeNodePath } from '@/utils/game/solarSignature'
 import { forgeRouteKey, forgeRoutes, forgeSunRoute } from '@/utils/ui/forgeEdgeRoute'
 import { MEEP_TREE_NODES, MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
 import {
@@ -433,8 +454,9 @@ import {
   forgeClampPan,
   forgeCameraHome,
   forgeFitScale,
-  forgeGroupCamera,
+  forgeGroupCameraAt,
   forgeNodeScreenRadius,
+  type ForgeCameraMark,
 } from '@/utils/ui/forgeCameraBounds'
 import type {
   ForgeNodeDef,
@@ -465,6 +487,9 @@ import {
   FORGE_ICON_SIZE_GLIMMER,
   FORGE_EDGE_REQ_DASH,
   FORGE_NODE_DIAMETER,
+  FORGE_PURSUIT_NAME_MAX_READ_SCALE,
+  FORGE_PURSUIT_NAME_MIN_SCREEN_PX,
+  FORGE_PURSUIT_NAME_PX,
   FORGE_FRESH_BADGE_NODE_PCT,
   FORGE_FRESH_TITLE,
   FORGE_LIMB_STROKE_FACTOR,
@@ -1011,11 +1036,13 @@ const pursuitReqs = computed<Map<string, boolean>>(() => {
   return out
 })
 
-/** Dieselbe Menge als Kamerafutter — Lage und Sitzgrösse je Marke. */
-const pursuitMarks = computed(() =>
+/** Dieselbe Menge als Kamerafutter — Lage und Radius je Marke. */
+const pursuitMarks = computed<ForgeCameraMark[]>(() =>
   [...pursuitReqs.value.keys()].flatMap((id) => {
     const node = nodeById.value.get(id)
-    return node ? [{ at: { x: node.x, y: node.y }, tier: node.sizeClass }] : []
+    return node
+      ? [{ at: { x: node.x, y: node.y }, radius: forgeNodeScreenRadius(node.sizeClass, 1) }]
+      : []
   }),
 )
 
@@ -1029,6 +1056,7 @@ const pursuitMarks = computed(() =>
  */
 /** Der Ankerkreis misst wie eine Krone — er ist ein Ziel, kein Zwischenschritt. */
 const PURSUIT_ANCHOR_RADIUS = FORGE_NODE_DIAMETER.crown / 2
+const pursuitNamePx = `${FORGE_PURSUIT_NAME_PX}px`
 
 const pursuitAnchor = computed(() => {
   const marks = pursuitMarks.value
@@ -1069,6 +1097,49 @@ const pursuitLimbs = computed(() => {
       },
     ]
   })
+})
+
+/**
+ * Der KAUFWEG — was man tun muss, um dorthin zu kommen.
+ *
+ * Die Vereinigung der Ketten aller Tore, von jedem über `parentId` nach innen
+ * bis zum Kernstrahl und von dort an den Sonnenrand. `solarSails` und
+ * `wayfindersCache` hängen beide an `flightSpeed`, die Ketten überlappen also —
+ * deshalb dedupliziert, sonst läge derselbe Strich zweimal übereinander und
+ * läse sich als dicker.
+ *
+ * Gebildet über das vorhandene `limbByTarget`, nicht über einen zweiten Gang
+ * durch den Baum: Kante und Kreis müssen dieselbe Kette meinen — dieselbe
+ * Begründung, aus der `spotTrail` aus `spotlightLimbs` abgeleitet wird.
+ */
+const pursuitPath = computed(() => {
+  const ids = new Set<string>()
+  const chain: Limb[] = []
+  for (const reqId of pursuitReqs.value.keys()) {
+    for (const id of forgeNodePath(reqId)) {
+      if (ids.has(id)) continue
+      ids.add(id)
+      const limb = limbByTarget.value.get(id)
+      if (limb) chain.push(limb)
+    }
+  }
+  return { ids, chain }
+})
+
+/**
+ * Der Name zoomt MIT — bis zu der Grösse, unter der er nicht mehr zu lesen ist.
+ *
+ * Dieselbe Rechnung wie bei der Leitzahl im Sonnenkern, und aus demselben
+ * Grund: die Kamera fährt zum Anker, indem sie weit herauszoomt, und ein Name,
+ * der dabei auf 7 px fällt, fehlt genau dort, wo er gebraucht wird. Kein
+ * Frame-Wert — der Massstab wechselt beim Zoomschritt, nicht pro Bild.
+ */
+const pursuitNameStyle = computed(() => {
+  const read = Math.min(
+    FORGE_PURSUIT_NAME_MAX_READ_SCALE,
+    Math.max(1, FORGE_PURSUIT_NAME_MIN_SCREEN_PX / (FORGE_PURSUIT_NAME_PX * (totalScale.value || 1))),
+  )
+  return { transform: `scale(${read.toFixed(3)})` }
 })
 
 function openPursuitCard(): void {
@@ -1117,7 +1188,15 @@ function isDimmed(id: string): boolean {
   // gedämpften Feld sind unübersehbar, dieselben drei in einem vollen Feld aus
   // hundertsechzig Knoten nicht.
   const aimed = spotlightId.value !== null || pursuitReqs.value.size > 0
-  return aimed && !isSpot(id) && !hasReqRing(id) && !spotTrail.value.has(id)
+  return (
+    aimed &&
+    !isSpot(id) &&
+    !hasReqRing(id) &&
+    !spotTrail.value.has(id) &&
+    // Was auf dem Kaufweg liegt, steht hell — sonst zeigte die Kette über
+    // Knoten, die sie selbst ausblendet.
+    !pursuitPath.value.ids.has(id)
+  )
 }
 
 /** Nur bei laufender Suche — ohne sie trägt jeder Knoten den Ring. */
@@ -1844,12 +1923,22 @@ function recenterCamera(): void {
  * EIN Ziel gebaut, und drei Pings wären drei Signale für eine Aussage.
  */
 function frameToPursuit(): void {
-  // Der Anker gehört mit ins Bild — er ist der Knoten, um den es geht.
   const anchor = pursuitAnchor.value
-  const marks = anchor
-    ? [...pursuitMarks.value, { at: anchor, tier: 'crown' as const }]
-    : pursuitMarks.value
-  const cam = forgeGroupCamera(marks, viewportSize.value, zoomFloor.value)
+  if (!anchor) return
+  /* Gefasst wird der GANZE Kaufweg: Anker, Tore, jeder Knoten dazwischen und
+     der Sonnenrand, an dem die Kette ansetzt. Zentriert auf den Anker — er ist
+     das Ziel, und die Hüllbox einer langen einseitigen Kette stellte statt
+     seiner ihre Mitte ins Bild. */
+  const marks: ForgeCameraMark[] = [
+    ...pursuitMarks.value,
+    { at: anchor, radius: PURSUIT_ANCHOR_RADIUS },
+    { at: { x: C, y: C }, radius: sunEdgeR.value },
+  ]
+  for (const id of pursuitPath.value.ids) {
+    const node = nodeById.value.get(id)
+    if (node) marks.push({ at: { x: node.x, y: node.y }, radius: forgeNodeScreenRadius(node.sizeClass, 1) })
+  }
+  const cam = forgeGroupCameraAt(anchor, marks, viewportSize.value, zoomFloor.value)
   if (!cam) return
   // Steht noch eine Spaltenfahrt aus, BLEIBT der Merker: ihr Ausgleich läuft
   // nach uns und schöbe das Bild wieder weg. Gemessen stand danach zwei von drei
@@ -2480,6 +2569,12 @@ const nextPhasePreviewStyle = computed(() => ({
 /* ══════════════════════════════════════════════════
    NODES
 ══════════════════════════════════════════════════ */
+/* Der Kaufweg. Statisch wie das ganze Kantenfeld — kein `filter`, keine
+   Animation, keine Custom Property (Performance-Regeln 2/3/11). */
+.pursuit-limbs {
+  opacity: 0.9;
+}
+
 /* ══ Der Ankerknoten der Verfolgung ══════════════════════════════════
    Dieselbe Positionierungs-Regel wie ein Knoten, und sonst nichts davon: er ist
    kein Sitz, und der gestrichelte Rand sagt genau das. Alles statisch — feste
@@ -2518,7 +2613,8 @@ const nextPhasePreviewStyle = computed(() => ({
 .pursuit-mark-name {
   max-width: 220px;
   padding: 2px 7px;
-  font-size: 15px;
+  font-size: v-bind(pursuitNamePx);
+  transform-origin: top center;
   font-weight: 800;
   line-height: 1.1;
   text-align: center;
