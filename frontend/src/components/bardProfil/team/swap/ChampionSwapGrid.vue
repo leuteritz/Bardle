@@ -390,7 +390,7 @@ function onImgError(e: Event) {
             'filter-toggle-btn--open': traitFilterOpen,
             'filter-toggle-btn--active': hasActiveFilter,
           }"
-          :title="traitFilterOpen ? 'Hide filters' : 'Show filters'"
+          v-tip="traitFilterOpen ? 'Hide filters' : 'Show filters'"
           aria-label="Toggle filters"
           @click="traitFilterOpen = !traitFilterOpen"
         >
@@ -403,7 +403,7 @@ function onImgError(e: Event) {
           v-if="tierGroups.length > 1"
           class="tier-collapse-all"
           :class="{ 'tier-collapse-all--active': allTiersCollapsed }"
-          :title="allTiersCollapsed ? 'Expand all tiers' : 'Collapse all tiers'"
+          v-tip="allTiersCollapsed ? 'Expand all tiers' : 'Collapse all tiers'"
           :aria-label="allTiersCollapsed ? 'Expand all tiers' : 'Collapse all tiers'"
           @click="toggleAllTiers"
         >
@@ -424,7 +424,7 @@ function onImgError(e: Event) {
           v-if="activeTierDef"
           class="trait-chip trait-chip--active"
           :style="`--chip-color: ${activeTierDef.color}`"
-          title="Remove tier filter"
+          v-tip="'Remove tier filter'"
           @click="activeTier = 'all'"
         >
           <Icon :icon="activeTierDef.icon" class="trait-chip-icon" />
@@ -436,7 +436,7 @@ function onImgError(e: Event) {
           :key="chip.id"
           class="trait-chip trait-chip--active"
           :style="`--chip-color: ${chip.color}`"
-          :title="`Remove ${chip.label} filter`"
+          v-tip="`Remove ${chip.label} filter`"
           @click="toggleTrait(chip.id)"
         >
           <Icon v-if="chip.icon" :icon="chip.icon" class="trait-chip-icon" />
@@ -457,7 +457,7 @@ function onImgError(e: Event) {
               class="trait-chip"
               :class="{ 'trait-chip--active': activeTier === t.starLevel }"
               :style="`--chip-color: ${t.color}`"
-              :title="`★${t.starLevel} ${t.name}`"
+              v-tip="`★${t.starLevel} ${t.name}`"
               @click="activeTier = activeTier === t.starLevel ? 'all' : t.starLevel"
             >
               <Icon :icon="t.icon" class="trait-chip-icon" />
@@ -585,7 +585,7 @@ function onImgError(e: Event) {
               :disabled="isAway(champion)"
               :data-role="CHAMPION_ROLES[champion]"
               type="button"
-              :title="champion"
+              v-tip="champion"
               @click="emit('select', champion)"
               @mouseenter="emit('preview', champion)"
               @focus="emit('preview', champion)"
@@ -603,7 +603,7 @@ function onImgError(e: Event) {
               <span
                 class="csg-card-tier"
                 :style="{ '--tier-c': getChampionTier(champion).color }"
-                :title="getChampionTier(champion).name"
+                v-tip="getChampionTier(champion).name"
               >
                 ★{{ getChampionStarLevel(champion) }}
               </span>
@@ -615,7 +615,7 @@ function onImgError(e: Event) {
                     v-for="trait in championTraits(champion)"
                     :key="trait.id"
                     class="csg-card-icon"
-                    :title="trait.name"
+                    v-tip="trait.name"
                     :style="{ color: trait.color }"
                   >
                     <Icon :icon="trait.icon" width="14" height="14" />
@@ -623,7 +623,7 @@ function onImgError(e: Event) {
                   <span
                     v-if="championOriginDef(champion)"
                     class="csg-card-icon"
-                    :title="championOriginDef(champion)!.origin"
+                    v-tip="championOriginDef(champion)!.origin"
                     :style="{ color: championOriginDef(champion)!.color }"
                   >
                     <Icon :icon="championOriginDef(champion)!.icon" width="14" height="14" />

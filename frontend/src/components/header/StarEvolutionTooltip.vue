@@ -300,10 +300,10 @@ const timeRows = computed<StatRow[]>(() => [
 </script>
 
 <template>
-  <div class="set" :style="{ '--ph-accent': accent }">
+  <div class="set" :style="{ '--ph-accent': accent, '--tip-color': accent }">
 
     <!-- ════════ Kopf: welcher Stern, und der wievielte Zustand ════════ -->
-    <header class="set-head">
+    <header class="tip-head tip-head--banded set-head">
       <div
         class="set-head-orb"
         :class="{ 'set-head-orb--collapse': isFinal }"
@@ -479,9 +479,6 @@ const timeRows = computed<StatRow[]>(() => [
    die der Orb im Header spricht.
    ================================================================ */
 .set {
-  font-size: clamp(12px, 0.63vw, 16px);
-  color: #d8cfc0;
-  line-height: 1.35;
   border-radius: 2px;
   max-height: calc(100vh - 140px);
   overflow-y: auto;
@@ -492,12 +489,7 @@ const timeRows = computed<StatRow[]>(() => [
 
 /* ── Kopf ──────────────────────────────────────────────────────── */
 .set-head {
-  display: flex;
-  align-items: center;
-  gap: 0.75em;
   padding: 0.7em 0.9em;
-  background: #1e1006;
-  border-bottom: 3px solid #5c3310;
 }
 
 /* Der Orb ist statisch: das Abzeichen daneben atmet bereits, ein zweiter

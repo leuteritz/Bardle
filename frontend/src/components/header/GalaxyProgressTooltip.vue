@@ -263,10 +263,10 @@ const lifetimeRows = computed<StatRow[]>(() => [
 </script>
 
 <template>
-  <div class="gpt">
+  <div class="gpt" style="--tip-color: #a8e878">
 
     <!-- ════════ Kopf: welche Galaxie, und welche Farbwelt ════════ -->
-    <header class="gpt-head">
+    <header class="tip-head tip-head--banded gpt-head">
       <img :src="GALAXY_TOOLTIP_IMAGE" class="gpt-head-img" alt="" aria-hidden="true" />
       <div class="gpt-head-text">
         <div class="gpt-name">Galaxy {{ galaxyStore.currentGalaxy }}</div>
@@ -406,7 +406,7 @@ const lifetimeRows = computed<StatRow[]>(() => [
             :key="m.id"
             class="gpt-gate-cost"
             :class="{ 'gpt-gate-cost--ok': m.ok }"
-            :title="m.name"
+            v-tip="m.name"
           >
             <img :src="m.image" alt="" aria-hidden="true" />
             {{ formatNumberCompact(m.required) }}
@@ -472,7 +472,7 @@ const lifetimeRows = computed<StatRow[]>(() => [
         <div v-for="row in lifetimeRows" :key="row.key" class="gpt-row">
           <Icon :icon="row.icon" class="gpt-row-icon" width="15" height="15" aria-hidden="true" />
           <span class="gpt-row-k">{{ row.label }}</span>
-          <span class="gpt-row-v" :title="row.full">{{ row.value }}</span>
+          <span class="gpt-row-v" v-tip="row.full">{{ row.value }}</span>
         </div>
       </div>
     </section>
@@ -490,9 +490,6 @@ const lifetimeRows = computed<StatRow[]>(() => [
    zweites Layout.
    ================================================================ */
 .gpt {
-  font-size: clamp(12px, 0.63vw, 16px);
-  color: #d8cfc0;
-  line-height: 1.35;
   border-radius: 2px;
   /* Sicherheitsnetz: der Endkampf-Block schaltet sich zu und macht das Panel
      im ungünstigsten Zustand am höchsten — auf dem flachsten Referenz-
@@ -506,12 +503,7 @@ const lifetimeRows = computed<StatRow[]>(() => [
 
 /* ── Kopf ──────────────────────────────────────────────────────── */
 .gpt-head {
-  display: flex;
-  align-items: center;
-  gap: 0.75em;
   padding: 0.7em 0.9em;
-  background: #1e1006;
-  border-bottom: 3px solid #5c3310;
 }
 
 .gpt-head-img {

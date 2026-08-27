@@ -13,7 +13,7 @@
           :class="{ 'cs-domain-btn--active': activeDomain === 'champions' }"
           role="tab"
           :aria-selected="activeDomain === 'champions'"
-          :title="`${reachableChampionCount} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies`"
+          v-tip="`${reachableChampionCount} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies`"
           @click="showDomain('champions')"
         >
           <Icon icon="ph:users-three-fill" width="20" height="20" class="cs-domain-icon" />
@@ -25,7 +25,7 @@
           :class="{ 'cs-domain-btn--active': activeDomain === 'items' }"
           role="tab"
           :aria-selected="activeDomain === 'items'"
-          :title="`${visibleItemsCount} item(s) on offer under the current filters`"
+          v-tip="`${visibleItemsCount} item(s) on offer under the current filters`"
           @click="showDomain('items')"
         >
           <Icon icon="ph:backpack-fill" width="20" height="20" class="cs-domain-icon" />
@@ -47,7 +47,7 @@
       <button
         v-if="hasActiveFilter"
         class="cs-bar-btn cs-bar-btn--reset"
-        title="Clear every filter"
+        v-tip="'Clear every filter'"
         @click="clearFilters"
       >
         <Icon icon="lucide:rotate-ccw" width="15" height="15" />
@@ -57,7 +57,7 @@
         v-if="canCollapseAll"
         class="cs-bar-btn"
         :class="{ 'cs-bar-btn--on': allTiersCollapsed }"
-        :title="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
+        v-tip="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
         :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
         @click="toggleAllTiers"
       >
@@ -126,7 +126,7 @@
             :tabindex="group.isGalaxyLocked ? -1 : 0"
             :aria-expanded="group.isGalaxyLocked ? false : !isTierCollapsed(group.tier)"
             :aria-disabled="group.isGalaxyLocked"
-            :title="group.isGalaxyLocked ? `Unlocked in Galaxy ${group.requiredGalaxy}` : ''"
+            v-tip="group.isGalaxyLocked ? `Unlocked in Galaxy ${group.requiredGalaxy}` : ''"
             @click="toggleTier(group.tier)"
             @keydown.enter.prevent="toggleTier(group.tier)"
             @keydown.space.prevent="toggleTier(group.tier)"
@@ -145,7 +145,7 @@
             <span
               class="tier-header-chance"
               :class="{ 'is-locked': group.spawnPercent == null }"
-              :title="
+              v-tip="
                 group.spawnPercent == null
                   ? 'Tier locked — does not spawn yet'
                   : `This tier's current spawn chance`

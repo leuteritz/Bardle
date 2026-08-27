@@ -251,6 +251,7 @@ onUnmounted(() => {
       :width="UNIVERSE_TOOLTIP_WIDTH"
       :gap="HEADER_STAT_TOOLTIP_GAP_PX"
       :clear-ancestor="HEADER_TOOLTIP_CLEAR_SELECTOR"
+      accent="#d7bcff"
     >
       <div class="uni-tile uni-tile--universe">
         <span v-ink-center.x.y class="tile-label">{{ showFullLabels ? 'Universe' : 'Uni' }}</span>
@@ -274,6 +275,7 @@ onUnmounted(() => {
       :width="GALAXY_TOOLTIP_WIDTH"
       :gap="HEADER_STAT_TOOLTIP_GAP_PX"
       :clear-ancestor="HEADER_TOOLTIP_CLEAR_SELECTOR"
+      accent="#a8e878"
     >
       <div class="uni-tile uni-tile--galaxy">
         <span v-ink-center.x.y class="tile-label">{{ showFullLabels ? 'Galaxy' : 'Gal' }}</span>
@@ -291,6 +293,7 @@ onUnmounted(() => {
       :width="MEEP_TOOLTIP_WIDTH"
       :gap="HEADER_STAT_TOOLTIP_GAP_PX"
       :clear-ancestor="HEADER_TOOLTIP_CLEAR_SELECTOR"
+      accent="#fed7aa"
     >
       <div
         class="uni-tile uni-tile--meep"

@@ -61,10 +61,10 @@ watch(isSearching, (searching, wasSearching) => {
         <template v-else>{{ totalStatCount }} stats · {{ categories.length }} categories</template>
       </span>
       <div v-if="!isSearching" class="sc-bar-actions">
-        <button class="sc-bar-btn" type="button" title="Open every category" @click="expandAll">
+        <button class="sc-bar-btn" type="button" v-tip="'Open every category'" @click="expandAll">
           Expand
         </button>
-        <button class="sc-bar-btn" type="button" title="Close every category" @click="collapseAll">
+        <button class="sc-bar-btn" type="button" v-tip="'Close every category'" @click="collapseAll">
           Collapse
         </button>
       </div>
@@ -85,7 +85,7 @@ watch(isSearching, (searching, wasSearching) => {
       <button
         class="sc-head"
         type="button"
-        :title="cat.blurb"
+        v-tip="cat.blurb"
         :aria-expanded="isOpen(cat.id)"
         @click="toggle(cat.id)"
       >
@@ -107,7 +107,7 @@ watch(isSearching, (searching, wasSearching) => {
             v-for="stat in cat.stats.filter((s) => s.highlight)"
             :key="stat.key"
             class="sc-hl"
-            :title="stat.hint ?? stat.label"
+            v-tip="stat.hint ?? stat.label"
           >
             <span class="sc-hl-val">{{ stat.value }}</span>
             <span class="sc-hl-lbl">{{ stat.label }}</span>
@@ -119,7 +119,7 @@ watch(isSearching, (searching, wasSearching) => {
             v-for="stat in cat.stats.filter((s) => !s.highlight)"
             :key="stat.key"
             class="sc-row"
-            :title="stat.hint ?? undefined"
+            v-tip="stat.hint ?? undefined"
           >
             <span class="sc-row-lbl">{{ stat.label }}</span>
             <span class="sc-row-dots" aria-hidden="true" />

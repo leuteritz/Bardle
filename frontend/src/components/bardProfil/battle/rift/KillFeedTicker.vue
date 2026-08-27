@@ -123,7 +123,12 @@
     </div>
 
     <Teleport to="body">
-      <div v-if="hoveredRow" class="feed-tooltip" :style="{ left: tipPos.x + 'px', top: tipPos.y + 'px' }">
+      <div
+        v-if="hoveredRow"
+        ref="tipEl"
+        class="feed-tooltip"
+        :style="{ left: tipPos.x + 'px', top: tipPos.y + 'px' }"
+      >
         <template v-if="hoveredRow.type === 'kill'">
           <div
             class="tip-headline"
@@ -180,10 +185,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { multikillLabel } from '@/utils/battle/movement'
+import {
+  KILL_FEED_TIP_DX_PX,
+  KILL_FEED_TIP_DY_PX,
+  KILL_FEED_TIP_MARGIN_PX,
+} from '@/config/constants'
 import type { BuffFeedEntry, KillFeedEntry, StructureFeedEntry, StructureTier } from '@/types'
 
 const battleStore = useBattleStore()
@@ -227,6 +237,25 @@ const barEntries = computed<FeedRow[]>(() => feedEntries.value)
 const expanded = ref(false)
 const hoveredRow = ref<FeedRow | null>(null)
 const tipPos = ref({ x: 0, y: 0 })
+const tipEl = ref<HTMLElement | null>(null)
+
+/**
+ * Die Karte hängt über ihrer Zeile (`translateY(-100%)`) und wuchs mit jedem
+ * Glied einer Multikill-Kette — an der oberen Bildkante lief sie hinaus, und
+ * niemand prüfte es. Gemessen wird erst NACH dem Rendern: die Höhe hängt am
+ * Inhalt und lässt sich nicht vorher wissen.
+ */
+function clampTip(): void {
+  const el = tipEl.value
+  if (!el) return
+  const m = KILL_FEED_TIP_MARGIN_PX
+  const w = el.offsetWidth
+  const h = el.offsetHeight
+  const x = Math.min(Math.max(tipPos.value.x, m), window.innerWidth - w - m)
+  // `top` ist die UNTERkante der Karte, sie wird nach oben aufgezogen.
+  const y = Math.min(Math.max(tipPos.value.y, m + h), window.innerHeight - m)
+  if (x !== tipPos.value.x || y !== tipPos.value.y) tipPos.value = { x, y }
+}
 
 function onRootLeave() {
   expanded.value = false
@@ -235,8 +264,9 @@ function onRootLeave() {
 
 function onRowEnter(row: FeedRow, event: MouseEvent) {
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  tipPos.value = { x: rect.left + 24, y: rect.top - 8 }
+  tipPos.value = { x: rect.left + KILL_FEED_TIP_DX_PX, y: rect.top - KILL_FEED_TIP_DY_PX }
   hoveredRow.value = row
+  void nextTick(clampTip)
 }
 
 function onRowLeave() {
@@ -691,10 +721,10 @@ function structureLabel(e: StructureFeedEntry): string {
   min-width: 200px;
   max-width: 320px;
   padding: 8px 12px;
-  background: #16140e;
-  border: 2px solid #5c3310;
+  background: var(--tip-surface);
+  border: 2px solid var(--tip-border);
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  box-shadow: var(--tip-shadow);
 }
 
 .feed-tooltip .tip-headline {

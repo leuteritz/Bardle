@@ -78,11 +78,11 @@ const haul = computed(() =>
         </span>
         <span
           class="esf-chip"
-          :title="`${spoilsDef.materialRolls} rolls at ${Math.round(spoilsDef.materialChance * 100)}% each`"
+          v-tip="`${spoilsDef.materialRolls} rolls at ${Math.round(spoilsDef.materialChance * 100)}% each`"
         >
           <Icon icon="ph:diamond-fill" width="15" height="15" />≈{{ expectedDrops.toFixed(1) }}
         </span>
-        <span v-if="spoilsDef.meep" class="esf-chip" title="Meep">
+        <span v-if="spoilsDef.meep" class="esf-chip" v-tip="'Meep'">
           <Icon icon="game-icons:meeple" width="15" height="15" />×{{ spoilsDef.meep }}
         </span>
         <span v-if="forgeStore.failedExpeditionKeepsMaterials" class="esf-note">
@@ -91,10 +91,10 @@ const haul = computed(() =>
       </template>
 
       <template v-else>
-        <span v-for="m in haul" :key="m.id" class="esf-chip" :title="m.name">
+        <span v-for="m in haul" :key="m.id" class="esf-chip" v-tip="m.name">
           <img :src="m.image" :alt="m.name" class="esf-chip-img" />×{{ m.qty }}
         </span>
-        <span v-if="mission.spoils?.meep" class="esf-chip" title="Meep">
+        <span v-if="mission.spoils?.meep" class="esf-chip" v-tip="'Meep'">
           <Icon icon="game-icons:meeple" width="15" height="15" />×{{ mission.spoils.meep }}
         </span>
         <span v-if="!haul.length && !mission.spoils?.meep" class="esf-note">

@@ -1,23 +1,23 @@
 <template>
-  <div v-if="offer && anchor" class="ftip fot-card" :style="cardStyle" aria-hidden="true">
-    <span class="ftip-accent" aria-hidden="true" />
+  <div v-if="offer && anchor" class="tip fot-card" :style="cardStyle" aria-hidden="true">
+    <span class="tip-accent" aria-hidden="true" />
 
-    <div class="ftip-head">
+    <div class="tip-head">
       <Icon
         :icon="offer.icon"
         width="20"
         height="20"
-        class="ftip-ico"
+        class="tip-ico"
         :style="{ color: offer.color }"
       />
-      <span class="ftip-name" :style="{ color: offer.color }">{{ offer.name }}</span>
-      <span class="ftip-chip ftip-chip--muted">{{ offer.tag }}</span>
+      <span class="tip-name" :style="{ color: offer.color }">{{ offer.name }}</span>
+      <span class="tip-chip tip-chip--muted">{{ offer.tag }}</span>
     </div>
 
-    <div class="ftip-effect">{{ offer.desc }}</div>
+    <div class="tip-effect">{{ offer.desc }}</div>
 
     <!-- ══ RELIKT — was der nächste Schlag wirklich bringt ═══════════ -->
-    <div v-if="offer.kind === 'relic'" class="ftip-block fot-delta">
+    <div v-if="offer.kind === 'relic'" class="tip-block fot-delta">
       <span class="fot-delta-cell">
         <span class="fot-delta-label">{{ FORGE_OFFER_NOW_LABEL }}</span>
         <span class="fot-delta-value">{{ offer.nowText }}</span>
@@ -30,7 +30,7 @@
     </div>
 
     <!-- ══ KONSTELLATION — beide Tore, ausgeschrieben ════════════════ -->
-    <div v-else-if="offer.reqs.length > 0" class="ftip-block fot-reqs">
+    <div v-else-if="offer.reqs.length > 0" class="tip-block fot-reqs">
       <span class="fot-block-label">{{ FORGE_OFFER_REQS_LABEL }}</span>
       <div v-for="req in offer.reqs" :key="req.id" class="fot-req">
         <span class="fot-req-name" :class="{ 'fot-req-name--met': req.met }">{{ req.name }}</span>
@@ -164,7 +164,7 @@ const tipWidth = `${FORGE_OFFER_TIP_WIDTH_PX}px`
 <style scoped>
 /* Nur die Lage — sie ist breiter als ihre beiden Geschwister, weil hier
    Materialkacheln und Fortschrittsbalken stehen. Alles Sichtbare kommt als
-   `.ftip-*` aus `rpg-theme.css`; dort steht auch `pointer-events: none`, ohne
+   `.tip-*` aus `rpg-theme.css`; dort steht auch `pointer-events: none`, ohne
    das das Kärtchen den Hover der Zeile klaute, die es beschreibt. */
 .fot-card {
   position: fixed;
@@ -183,7 +183,7 @@ const tipWidth = `${FORGE_OFFER_TIP_WIDTH_PX}px`
 /* ══════════════════════════════════════════════════
    WIRKUNGSSPRUNG
 ══════════════════════════════════════════════════ */
-/* Grund und Polster kommen von `.ftip-block` — dieselbe Fläche, auf der die
+/* Grund und Polster kommen von `.tip-block` — dieselbe Fläche, auf der die
    Knotenkarte ihre Bedingungen zeigt. */
 .fot-delta {
   display: flex;

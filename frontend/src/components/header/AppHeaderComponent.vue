@@ -35,6 +35,7 @@ import { formatBadgeCount } from '@/utils/ui/format'
 import { Icon } from '@iconify/vue'
 import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
 import RpgBadgeTooltipBody from '../ui/RpgBadgeTooltipBody.vue'
+import { NOTIFY_BADGE_TIP_COLOR } from '@/config/ui/notifyBadges'
 import ShopReadyBadge from '../ui/ShopReadyBadge.vue'
 import BardProfileMenu from '../bardProfil/BardProfileMenu.vue'
 import UniverseRescueComponent from './UniverseRescueComponent.vue'
@@ -377,7 +378,11 @@ onUnmounted(() => {
         />
       </svg>
 
-      <RpgBadgeTooltip :gap="CENTER_CHIMES_TOOLTIP_GAP_PX" :width="LEVEL_TOOLTIP_WIDTH">
+      <RpgBadgeTooltip
+        :gap="CENTER_CHIMES_TOOLTIP_GAP_PX"
+        :width="LEVEL_TOOLTIP_WIDTH"
+        accent="#e8c040"
+      >
       <div
         ref="chimesRef"
         class="center-chimes"
@@ -423,7 +428,7 @@ onUnmounted(() => {
       </template>
       </RpgBadgeTooltip>
 
-      <RpgBadgeTooltip :width="LEVEL_TOOLTIP_WIDTH">
+      <RpgBadgeTooltip :width="LEVEL_TOOLTIP_WIDTH" accent="#e8c040">
         <div class="arc-level-badge" :style="{ top: svgH - badgeOverlapPx + 'px' }">
           <span v-ink-center class="arc-level-text">{{ gameStore.level }}</span>
         </div>
@@ -434,7 +439,7 @@ onUnmounted(() => {
 
       <button class="center-reset-btn" title="Delete Save" @click.stop="handleReset">✕</button>
 
-      <RpgBadgeTooltip>
+      <RpgBadgeTooltip :accent="NOTIFY_BADGE_TIP_COLOR.expedition">
         <Transition name="header-badge">
           <button
             v-if="expeditionBadgeCount > 0"
@@ -452,7 +457,7 @@ onUnmounted(() => {
         </template>
       </RpgBadgeTooltip>
 
-      <RpgBadgeTooltip>
+      <RpgBadgeTooltip :accent="NOTIFY_BADGE_TIP_COLOR.forge">
         <Transition name="header-badge">
           <button
             v-if="forgeBadgeReady"
@@ -470,7 +475,7 @@ onUnmounted(() => {
         </template>
       </RpgBadgeTooltip>
 
-      <RpgBadgeTooltip>
+      <RpgBadgeTooltip :accent="NOTIFY_BADGE_TIP_COLOR.champions">
         <Transition name="header-badge">
           <button
             v-if="championBadgeCount > 0"
@@ -488,7 +493,7 @@ onUnmounted(() => {
         </template>
       </RpgBadgeTooltip>
 
-      <RpgBadgeTooltip>
+      <RpgBadgeTooltip :accent="NOTIFY_BADGE_TIP_COLOR.skill">
         <Transition name="header-badge">
           <button
             v-if="skillBadgeCount > 0"
@@ -506,7 +511,7 @@ onUnmounted(() => {
         </template>
       </RpgBadgeTooltip>
 
-      <RpgBadgeTooltip>
+      <RpgBadgeTooltip :accent="NOTIFY_BADGE_TIP_COLOR.planet">
         <Transition name="header-badge">
           <button
             v-if="planetBadgeCount > 0"
@@ -558,7 +563,7 @@ onUnmounted(() => {
                mit dem Sternbaum hierher gezogen. Ein `span`, kein zweiter
                Button — verschachtelte Buttons sind ungueltiges HTML, und die
                Platte darunter fuehrt bereits an ihr Ziel. -->
-          <RpgBadgeTooltip clear-ancestor=".btn-gem">
+          <RpgBadgeTooltip clear-ancestor=".btn-gem" :accent="NOTIFY_BADGE_TIP_COLOR.shop">
             <ShopReadyBadge
               :count="shopFreshCount"
               :flare="shopFlare"

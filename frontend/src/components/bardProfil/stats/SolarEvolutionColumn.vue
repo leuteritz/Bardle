@@ -289,7 +289,7 @@ function handleEvolve(): void {
              can simply take its inset. -->
         <div
           class="se-sun"
-          :title="phaseAstroName"
+          v-tip="phaseAstroName"
           :style="{ width: sunDiameter + 'px', height: sunDiameter + 'px' }"
         >
           <CometDisc v-if="isComet" :diameter="sunDiameter" />
@@ -309,7 +309,7 @@ function handleEvolve(): void {
           v-if="!isMax && !dwellMet"
           class="se-dev-skip"
           type="button"
-          title="Admin: skip the remaining dwell time of this phase"
+          v-tip="'Admin: skip the remaining dwell time of this phase'"
           @click.stop="solarStore.adminSkipDwellTime()"
         >
           DEV · Skip
@@ -330,7 +330,7 @@ function handleEvolve(): void {
           class="se-step"
           :class="{ 'is-done': step.done, 'is-current': step.current }"
           :style="{ '--step-color': step.color, '--step-glow': step.glow }"
-          :title="step.title"
+          v-tip="step.title"
         >
           <i class="se-step-dot" />
         </span>
@@ -362,7 +362,7 @@ function handleEvolve(): void {
               class="se-ray"
               :class="{ 'is-met': ray.met }"
               :style="{ '--ray': ray.color }"
-              :title="`${ray.name} — Lv ${ray.level} of ${requiredRayLevel} needed`"
+              v-tip="`${ray.name} — Lv ${ray.level} of ${requiredRayLevel} needed`"
             >
               <Icon :icon="ray.icon" class="se-ray-ico" width="22" height="22" aria-hidden="true" />
               <span class="se-ray-lv">

@@ -1,39 +1,39 @@
 <template>
   <div
     ref="cardEl"
-    class="ftip node-tooltip"
+    class="tip node-tooltip"
     :class="side === 'below' ? 'node-tooltip--below' : 'node-tooltip--above'"
     :style="cardStyle"
     aria-hidden="true"
   >
-    <span class="ftip-accent" aria-hidden="true" />
+    <span class="tip-accent" aria-hidden="true" />
 
-    <div class="ftip-head">
-      <Icon :icon="tip.icon" width="20" height="20" class="ftip-ico" :style="{ color: tip.color }" />
-      <span class="ftip-name" :style="{ color: tip.color }">{{ tip.name }}</span>
-      <span v-if="tip.chip !== ''" class="ftip-chip">{{ tip.chip }}</span>
+    <div class="tip-head">
+      <Icon :icon="tip.icon" width="20" height="20" class="tip-ico" :style="{ color: tip.color }" />
+      <span class="tip-name" :style="{ color: tip.color }">{{ tip.name }}</span>
+      <span v-if="tip.chip !== ''" class="tip-chip">{{ tip.chip }}</span>
     </div>
 
-    <div class="ftip-effect">{{ tip.effect }}</div>
+    <div class="tip-effect">{{ tip.effect }}</div>
 
     <!-- Ein Knoten mit mehreren Vorgängern zeigt sie ALLE, einer mit genau
          einem zeigt ihn auch. Keine Überschrift darüber: das Schloss links sagt
          dasselbe ohne ein Wort. -->
-    <div v-if="tip.reqs.length > 0" class="ftip-block ftip-reqs-block">
-      <Icon :icon="FORGE_LOCK_ICON" width="14" height="14" class="ftip-reqs-lock" />
-      <ul class="ftip-reqs">
-        <li v-for="req in tip.reqs" :key="req.id" :class="{ 'ftip-req--met': req.met }">
-          <span class="ftip-req-mark">{{ req.met ? FORGE_REQ_MET_MARK : FORGE_REQ_OPEN_MARK }}</span>
-          <span class="ftip-req-name">{{ req.name }}</span>
-          <span class="ftip-req-num">{{ req.have }}/{{ req.need }}</span>
+    <div v-if="tip.reqs.length > 0" class="tip-block tip-reqs-block">
+      <Icon :icon="FORGE_LOCK_ICON" width="14" height="14" class="tip-reqs-lock" />
+      <ul class="tip-reqs">
+        <li v-for="req in tip.reqs" :key="req.id" :class="{ 'tip-req--met': req.met }">
+          <span class="tip-req-mark">{{ req.met ? FORGE_REQ_MET_MARK : FORGE_REQ_OPEN_MARK }}</span>
+          <span class="tip-req-name">{{ req.name }}</span>
+          <span class="tip-req-num">{{ req.have }}/{{ req.need }}</span>
         </li>
       </ul>
     </div>
     <!-- Phase, Prestige-Tor, Gleichwuchs-Deckel: gegen die hilft kein Vorgänger,
          also steht dort ein Satz statt einer Liste — derselbe, den `lockedFor()`
          ohnehin fertig liefert. -->
-    <div v-else-if="tip.lockReason !== ''" class="ftip-block ftip-lockchip">
-      <Icon :icon="FORGE_LOCK_ICON" width="14" height="14" class="ftip-lockchip-icon" />
+    <div v-else-if="tip.lockReason !== ''" class="tip-block tip-lockchip">
+      <Icon :icon="FORGE_LOCK_ICON" width="14" height="14" class="tip-lockchip-icon" />
       <span>{{ tip.lockReason }}</span>
     </div>
   </div>
@@ -62,7 +62,7 @@
  *
  * Durchgereicht wird nur, was allein der Baum weiss — die Aufklapprichtung.
  *
- * Ihre GESTALT liegt seit dem Umbau global als `.ftip-*` in `rpg-theme.css` und
+ * Ihre GESTALT liegt seit dem Umbau global als `.tip-*` in `rpg-theme.css` und
  * gehört ihr nicht allein: Zeilen- und Angebotskarte tragen dieselbe. Hier steht
  * nur noch, was allein der Baum weiss — Lage, Breite, Gegenskalierung.
  */
@@ -166,7 +166,7 @@ const tipWidth = `${FORGE_TIP_WIDTH_PX}px`
 
 <style scoped>
 /* Nur die Lage. Grund, Rahmen, Kopf, Wirkungsblock und Bedingungen stehen als
-   `.ftip-*` global in `rpg-theme.css` — dieselbe Gestalt trägt die Zeilen- und
+   `.tip-*` global in `rpg-theme.css` — dieselbe Gestalt trägt die Zeilen- und
    die Angebotskarte. */
 .node-tooltip {
   position: absolute;
@@ -174,7 +174,7 @@ const tipWidth = `${FORGE_TIP_WIDTH_PX}px`
   /* Counter-scale against the stage zoom so the tooltip always renders at a
      constant, readable screen size — regardless of zoom level or resolution.
      Ein Keyframe auf `transform` überschriebe genau diese Gegenskalierung —
-     die Einblendung in `.ftip` bewegt deshalb NUR die Deckkraft. */
+     die Einblendung in `.tip` bewegt deshalb NUR die Deckkraft. */
   transform: translateX(-50%) scale(var(--inv-scale, 1))
     translate(var(--tip-dx, 0px), var(--tip-dy, 0px));
   /* `.tree-viewport` schneidet mit `overflow: hidden` ab, und je breiter die

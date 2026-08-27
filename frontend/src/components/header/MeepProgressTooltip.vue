@@ -186,10 +186,10 @@ const lifetimeRows = computed<StatRow[]>(() => [
 </script>
 
 <template>
-  <div class="mpt">
+  <div class="mpt" style="--tip-color: #fed7aa">
 
     <!-- ════════ Kopf: die Meeps selbst, und wie viele bereitstehen ════════ -->
-    <header class="mpt-head">
+    <header class="tip-head tip-head--banded mpt-head">
       <img
         :src="UNIVERSE_TOOLTIP_IMAGES.meeps"
         class="mpt-head-img"
@@ -201,7 +201,7 @@ const lifetimeRows = computed<StatRow[]>(() => [
         <div class="mpt-subname">Currency &amp; battle power</div>
       </div>
       <div class="mpt-head-held">
-        <span class="mpt-head-held-v" :title="formatNumber(gameStore.meeps)">
+        <span class="mpt-head-held-v" v-tip="formatNumber(gameStore.meeps)">
           {{ formatNumberCompact(gameStore.meeps) }}
         </span>
         <span class="mpt-head-held-k">in hand</span>
@@ -212,7 +212,7 @@ const lifetimeRows = computed<StatRow[]>(() => [
     <section class="mpt-block">
       <div class="mpt-block-head">
         <span class="mpt-block-title">Next meep</span>
-        <span class="mpt-count" :title="formatNumber(meepRemaining)">
+        <span class="mpt-count" v-tip="formatNumber(meepRemaining)">
           {{ formatNumberCompact(meepRemaining) }} chimes to go
         </span>
         <span class="mpt-pct">{{ meepPercent.toFixed(1) }}%</span>
@@ -251,7 +251,7 @@ const lifetimeRows = computed<StatRow[]>(() => [
             class="mpt-tile-icon"
             aria-hidden="true"
           />
-          <span class="mpt-tile-v" :title="formatNumber(gameStore.totalPower)">
+          <span class="mpt-tile-v" v-tip="formatNumber(gameStore.totalPower)">
             {{ formatNumberCompact(gameStore.totalPower) }}
           </span>
           <span class="mpt-tile-k">Battle power</span>
@@ -376,7 +376,7 @@ const lifetimeRows = computed<StatRow[]>(() => [
             aria-hidden="true"
           />
           <span class="mpt-row-k">{{ row.label }}</span>
-          <span class="mpt-row-v" :class="{ 'mpt-row-v--loss': row.loss }" :title="row.full">{{
+          <span class="mpt-row-v" :class="{ 'mpt-row-v--loss': row.loss }" v-tip="row.full">{{
             row.value
           }}</span>
         </div>
@@ -398,9 +398,6 @@ const lifetimeRows = computed<StatRow[]>(() => [
    Wurzel-font-size, die mit dem Viewport skaliert.
    ================================================================ */
 .mpt {
-  font-size: clamp(12px, 0.63vw, 16px);
-  color: #d8cfc0;
-  line-height: 1.35;
   border-radius: 2px;
   /* Sicherheitsnetz: mit allen fünf Zweigen und vollem Effektbeutel ist dies
      das höchste der drei Header-Panels — auf dem flachsten Referenz-Viewport
@@ -414,12 +411,7 @@ const lifetimeRows = computed<StatRow[]>(() => [
 
 /* ── Kopf ──────────────────────────────────────────────────────── */
 .mpt-head {
-  display: flex;
-  align-items: center;
-  gap: 0.75em;
   padding: 0.7em 0.9em;
-  background: #1e1006;
-  border-bottom: 3px solid #5c3310;
 }
 
 /* Das Meep-Sprite ist hochformatig und trägt oben wie unten einen breiten

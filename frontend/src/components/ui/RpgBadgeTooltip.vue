@@ -8,6 +8,7 @@ let closeActiveTooltip: (() => void) | null = null
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onUnmounted } from 'vue'
+import { placeTip } from '@/utils/ui/tipAnchor'
 import {
   BADGE_TOOLTIP_GAP_PX,
   BADGE_TOOLTIP_VIEWPORT_MARGIN_PX,
@@ -42,6 +43,9 @@ const props = defineProps<{
   passive?: boolean
   /** Hover-Absicht in ms. Nur der ERSTE Tooltip wartet, der Wechsel nicht. */
   openDelay?: number
+  /** Zugehörigkeitsfarbe der Sprache (`--tip-color`) — Akzentleiste und
+      Pfeil nehmen sie. Ohne sie Gold. */
+  accent?: string
 }>()
 
 const wrapRef = ref<HTMLElement | null>(null)
@@ -62,6 +66,12 @@ const widthStyle = computed<Record<string, string>>(() =>
         maxWidth: `calc(100vw - ${BADGE_TOOLTIP_VIEWPORT_MARGIN_PX * 2}px)`,
       }
     : {},
+)
+
+/* Getrennt von `tipStyle` gebunden: die Farbe steht fest, die Lage wechselt
+   bei jedem Öffnen — zusammen würde sie bei jeder Messung mitgeschrieben. */
+const accentStyle = computed<Record<string, string>>(() =>
+  props.accent ? { '--tip-color': props.accent } : {},
 )
 
 function clearHide() {
@@ -110,29 +120,23 @@ function open() {
   nextTick(() => {
     const tip = tipRef.value
     if (!tip) return
-    const tw = tip.offsetWidth
-    const th = tip.offsetHeight
-    const m = BADGE_TOOLTIP_VIEWPORT_MARGIN_PX
-    const gap = props.gap ?? BADGE_TOOLTIP_GAP_PX
-    // Horizontal placement always follows the anchor; only the edge the panel
-    // has to clear may come from an ancestor.
+    // Nur die Kante, die das Panel räumt, darf von einem Vorfahren kommen —
+    // waagerecht folgt es immer seinem eigenen Anker.
     const host = props.clearAncestor
       ? (anchor.closest(props.clearAncestor) as HTMLElement | null)
       : null
-    const clear = host ? host.getBoundingClientRect() : r
-    let left = r.left + r.width / 2 - tw / 2
-    left = Math.min(Math.max(left, m), window.innerWidth - tw - m)
-    // Vorzugsseite zuerst, die Gegenseite nur, wenn dort Platz ist.
-    const below = clear.bottom + gap
-    const above = clear.top - gap - th
-    const fitsBelow = below + th + m <= window.innerHeight
-    const fitsAbove = above > m
-    const useTop = props.prefer === 'top' ? fitsAbove || !fitsBelow : !fitsBelow && fitsAbove
-    const top = useTop ? above : below
-    placement.value = useTop ? 'top' : 'bottom'
-    const inset = BADGE_TOOLTIP_CARET_INSET_PX
-    const caretX = Math.min(Math.max(r.left + r.width / 2 - left, inset), tw - inset)
-    tipStyle.value = { left: `${left}px`, top: `${top}px`, '--caret-x': `${caretX}px` }
+    const p = placeTip({
+      anchor: r,
+      clear: host ? host.getBoundingClientRect() : undefined,
+      tipW: tip.offsetWidth,
+      tipH: tip.offsetHeight,
+      gap: props.gap ?? BADGE_TOOLTIP_GAP_PX,
+      margin: BADGE_TOOLTIP_VIEWPORT_MARGIN_PX,
+      caretInset: BADGE_TOOLTIP_CARET_INSET_PX,
+      prefer: props.prefer,
+    })
+    placement.value = p.placement
+    tipStyle.value = { left: `${p.left}px`, top: `${p.top}px`, '--caret-x': `${p.caretX}px` }
   })
 }
 
@@ -184,12 +188,13 @@ onUnmounted(() => {
         ref="tipRef"
         class="rpg-btt"
         :class="[placement === 'top' ? 'rpg-btt--top' : '', { 'rpg-btt--passive': passive }]"
-        :style="[tipStyle, widthStyle]"
+        :style="[tipStyle, widthStyle, accentStyle]"
         role="tooltip"
         @mouseenter="panelEnter"
         @mouseleave="panelLeave"
       >
         <div class="rpg-btt__caret" />
+        <span class="tip-accent" aria-hidden="true" />
         <slot name="tip" :close="close" />
       </div>
     </Transition>
@@ -201,6 +206,12 @@ onUnmounted(() => {
   display: contents;
 }
 
+/* Fläche, Rand und Schrift kommen aus der Tooltip-Sprache (`.tip-*` in
+   `rpg-theme.css`) — dieselbe Karte wie im Skill Tree. Hier steht nur, was
+   allein die Hülle weiß: Lage, Stapelhöhe, Grenzen und der Pfeil.
+
+   Die Maße hängen an `--tip-u`, damit das Panel auf 2K/4K mitwächst; die
+   Rahmenstärke und der Radius NICHT — beide sind Designkonstanten. */
 .rpg-btt {
   position: fixed;
   /* Über der Bottom-Bar (z-index 10000, dem obersten dauerhaften Layer): die
@@ -209,15 +220,23 @@ onUnmounted(() => {
      flüchtiger Zeigerzustand — er gehört immer nach ganz oben, sonst hängt
      seine Lesbarkeit davon ab, wie lang sein Inhalt gerade ist. */
   z-index: 10001;
-  min-width: 200px;
-  max-width: min(320px, calc(100vw - 16px));
-  background: #111008;
-  border: 3px solid #7a4e20;
+  font-size: var(--tip-u);
+  color: var(--tip-text);
+  line-height: 1.35;
+  min-width: 16.5em;
+  max-width: min(26.4em, calc(100vw - 16px));
+  background: var(--tip-surface);
+  border: 2px solid var(--tip-border);
   border-radius: 4px;
-  box-shadow:
-    inset 0 0 0 1px #3e200a,
-    0 12px 32px rgba(0, 0, 0, 0.9);
+  box-shadow: var(--tip-shadow);
   pointer-events: auto;
+}
+
+/* Die Leiste gehört der HÜLLE, nicht dem Inhalt — sie ist Teil des Rahmens.
+   Eigener Radius statt `overflow: hidden` am Panel: das schnitte den Pfeil ab,
+   der aussen sitzt. */
+.rpg-btt .tip-accent {
+  border-radius: 2px 2px 0 0;
 }
 
 .rpg-btt--passive {
@@ -233,14 +252,14 @@ onUnmounted(() => {
   height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-bottom: 6px solid #7a4e20;
+  border-bottom: 6px solid var(--tip-color, var(--tip-border));
 }
 
 .rpg-btt--top .rpg-btt__caret {
   top: auto;
   bottom: -6px;
   border-bottom: none;
-  border-top: 6px solid #7a4e20;
+  border-top: 6px solid var(--tip-color, var(--tip-border));
 }
 
 .rpg-btt-enter-active {

@@ -321,11 +321,12 @@ const rails = computed<Rail[]>(() => [
   position: absolute;
   top: calc(100% + 7px);
   width: max-content;
-  background: #0e0c07;
-  border: 1px solid var(--dk-dark);
-  border-radius: 5px;
+  background: var(--tip-surface);
+  border: 2px solid var(--tip-border);
+  border-left: 3px solid var(--dk-dark);
+  border-radius: 4px;
   box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.8),
+    var(--tip-shadow),
     0 0 16px var(--dk-glow);
   overflow: hidden;
   opacity: 0;

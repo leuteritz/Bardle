@@ -18,6 +18,7 @@ import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { EXPEDITION_UNLOCK_GALAXY, HEADER_GEM_ICONS } from '@/config/constants'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import RpgBadgeTooltipBody from '@/components/ui/RpgBadgeTooltipBody.vue'
+import { NOTIFY_BADGE_TIP_COLOR } from '@/config/ui/notifyBadges'
 import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
 import SkillTreeComponent from '@/components/bardProfil/skillTree/SkillTreeComponent.vue'
 import ShopTabComponent from '@/components/bardProfil/shop/ShopTabComponent.vue'
@@ -342,7 +343,7 @@ onUnmounted(() => {
          darunter führt bereits in den Shop.
          `clear-ancestor` räumt die Unterkante der ganzen PLATTE statt der des
          Abzeichens; ohne das läge das Tooltip-Feld mitten auf der Taste. -->
-    <RpgBadgeTooltip clear-ancestor=".btn-gem">
+    <RpgBadgeTooltip clear-ancestor=".btn-gem" :accent="NOTIFY_BADGE_TIP_COLOR.champions">
       <ShopReadyBadge tone="champions"
         :count="championBadgeCount"
         :label="`${championBadgeCount} new champions ready to recruit`"
@@ -968,10 +969,10 @@ onUnmounted(() => {
   text-transform: uppercase;
   white-space: nowrap;
   color: #d9c79a;
-  background: #16140e;
-  border: 1px solid #5c3310;
+  background: var(--tip-surface);
+  border: 2px solid var(--tip-border);
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  box-shadow: var(--tip-shadow);
   pointer-events: none;
   opacity: 0;
   visibility: hidden;

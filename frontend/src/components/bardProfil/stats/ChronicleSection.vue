@@ -169,7 +169,7 @@ function pin(id: string) {
       <template #meta>
         <span
           class="cr-read"
-          title="Your standing in the Codex — it rises with the number of stages written and multiplies every track bonus"
+          v-tip="'Your standing in the Codex — it rises with the number of stages written and multiplies every track bonus'"
         >
           <span class="cr-read-cap">Rank</span>
           <span class="cr-read-val">{{ store.rankTitle }}</span>
@@ -177,7 +177,7 @@ function pin(id: string) {
         <span class="cr-read-sep" aria-hidden="true"></span>
         <span
           class="cr-read"
-          title="Stages written across all eight tracks — every one of them is a permanent bonus"
+          v-tip="'Stages written across all eight tracks — every one of them is a permanent bonus'"
         >
           <span class="cr-read-cap">Stages Written</span>
           <span class="cr-read-val">
@@ -201,7 +201,7 @@ function pin(id: string) {
           class="cr-meter-mark"
           :class="{ 'is-reached': store.unlockedStageCount >= rank.min }"
           :style="{ left: (rank.min / CHRONICLE_TOTAL_STAGES) * 100 + '%' }"
-          :title="`${rank.title} — ${rank.min} stages · every track bonus ×${multLabel(rank.mult)}`"
+          v-tip="`${rank.title} — ${rank.min} stages · every track bonus ×${multLabel(rank.mult)}`"
         />
       </div>
 
@@ -234,7 +234,7 @@ function pin(id: string) {
           'is-dormant': track.stage === 0,
         }"
         :style="{ '--tc': track.color }"
-        :title="crestTitle(track)"
+        v-tip="crestTitle(track)"
         @mouseenter="hoverId = track.id"
         @mouseleave="hoverId = null"
         @focus="hoverId = track.id"
@@ -300,7 +300,7 @@ function pin(id: string) {
         <span
           v-if="shownHasShare"
           class="cr-focus-share"
-          :title="`${shown.value}% base × ${multLabel(store.rankMult)} from your ${store.rankTitle} rank = ${formatPercentValue(shownApplied)}%`"
+          v-tip="`${shown.value}% base × ${multLabel(store.rankMult)} from your ${store.rankTitle} rank = ${formatPercentValue(shownApplied)}%`"
         >
           <span class="cr-focus-share-lbl">from rank</span>
           <strong>+{{ rankShare(shown.value) }}%</strong>

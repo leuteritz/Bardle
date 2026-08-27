@@ -1059,10 +1059,10 @@ onUnmounted(() => {
   gap: 8px;
   margin-bottom: 8px;
   padding: 5px 12px 6px;
-  background: #16140e;
-  border: 2px solid #5c3310;
+  background: var(--tip-surface);
+  border: 2px solid var(--tip-border);
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  box-shadow: var(--tip-shadow);
   white-space: nowrap;
 }
 
@@ -1115,10 +1115,10 @@ onUnmounted(() => {
      am Kastenradius zu beschneiden — er schnitte den Zeiger unten (::after) ab.
      Der Kopf rundet deshalb selbst: 4px Kastenradius minus 2px Rahmen = 2px. */
   padding: 0 12px 11px;
-  background: #16140e;
-  border: 2px solid #5c3310;
+  background: var(--tip-surface);
+  border: 2px solid var(--tip-border);
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  box-shadow: var(--tip-shadow);
   text-align: left;
 }
 

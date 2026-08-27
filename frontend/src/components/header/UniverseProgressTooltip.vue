@@ -200,10 +200,10 @@ const lifetimeRows = computed<StatRow[]>(() => [
 </script>
 
 <template>
-  <div class="upt">
+  <div class="upt" style="--tip-color: #d7bcff">
 
     <!-- ════════ Kopf: welches Universum, und das wievielte ════════ -->
-    <header class="upt-head">
+    <header class="tip-head tip-head--banded upt-head">
       <Icon
         :icon="UNIVERSE_TOOLTIP_ICONS.universesRescued"
         width="24"
@@ -270,20 +270,20 @@ const lifetimeRows = computed<StatRow[]>(() => [
           <span class="upt-cell-k">Collected</span>
           <span
             class="upt-cell-v upt-cell-v--accent"
-            :title="formatNumber(gameStore.chimesForNextUniverse)"
+            v-tip="formatNumber(gameStore.chimesForNextUniverse)"
           >
             {{ formatNumberCompact(gameStore.chimesForNextUniverse) }}
           </span>
         </div>
         <div class="upt-cell">
           <span class="upt-cell-k">Needed</span>
-          <span class="upt-cell-v" :title="formatNumber(gameStore.chimesToUniverseRescue)">
+          <span class="upt-cell-v" v-tip="formatNumber(gameStore.chimesToUniverseRescue)">
             {{ formatNumberCompact(gameStore.chimesToUniverseRescue) }}
           </span>
         </div>
         <div class="upt-cell">
           <span class="upt-cell-k">Remaining</span>
-          <span class="upt-cell-v" :title="formatNumber(gameStore.universeRescueRemaining)">
+          <span class="upt-cell-v" v-tip="formatNumber(gameStore.universeRescueRemaining)">
             {{ formatNumberCompact(gameStore.universeRescueRemaining) }}
           </span>
         </div>
@@ -376,7 +376,7 @@ const lifetimeRows = computed<StatRow[]>(() => [
             aria-hidden="true"
           />
           <span class="upt-row-k">{{ row.label }}</span>
-          <span class="upt-row-v" :title="row.full">{{ row.value }}</span>
+          <span class="upt-row-v" v-tip="row.full">{{ row.value }}</span>
         </div>
       </div>
     </section>
@@ -403,7 +403,7 @@ const lifetimeRows = computed<StatRow[]>(() => [
             aria-hidden="true"
           />
           <span class="upt-row-k">{{ row.label }}</span>
-          <span class="upt-row-v" :title="row.full">{{ row.value }}</span>
+          <span class="upt-row-v" v-tip="row.full">{{ row.value }}</span>
         </div>
       </div>
     </section>
@@ -420,13 +420,6 @@ const lifetimeRows = computed<StatRow[]>(() => [
    Full HD kompakt und auf 4K großzügig, ohne zweites Layout.
    ================================================================ */
 .upt {
-  /* Eine Stufe größer als im Material-Tooltip: dort trägt eine Kachel eine
-     einzelne Zahl, hier stehen zwölf beschriftete Zeilen nebeneinander — die
-     kleinste Bezeichnung landete sonst auf Full HD bei 9,6px. Gemessen
-     kostet die Stufe rund 50px Höhe, die das Panel unter dem Header hat. */
-  font-size: clamp(12px, 0.63vw, 16px);
-  color: #d8cfc0;
-  line-height: 1.35;
   border-radius: 2px;
   /* Sicherheitsnetz: das Panel misst auf Full HD gut 540px und bleibt damit
      unter dem Header sichtbar. Die Grenze existiert, damit ein späterer
@@ -440,12 +433,7 @@ const lifetimeRows = computed<StatRow[]>(() => [
 
 /* ── Kopf ──────────────────────────────────────────────────────── */
 .upt-head {
-  display: flex;
-  align-items: center;
-  gap: 0.75em;
   padding: 0.7em 0.9em;
-  background: #1e1006;
-  border-bottom: 3px solid #5c3310;
 }
 
 /* Amethyst wie die Universe-Kachel im Header — dieselbe Sache, dieselbe Farbe. */

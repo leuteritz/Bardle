@@ -1227,6 +1227,16 @@ export const HEADER_STAT_TOOLTIP_GAP_PX = 12
 // below the chimes box and would otherwise be covered by the panel.
 export const CENTER_CHIMES_TOOLTIP_GAP_PX = 40
 
+// ── Die Kurzform der Tooltip-Sprache (`v-tip`) ─────────────────────────
+// Sie löst die nativen `title` ab, die der Browser als graue Systemblase
+// zeigt. Die Verzögerung ist kürzer als dessen halbe Sekunde, aber lang genug,
+// dass ein Zeiger, der über eine dichte Reihe streicht, nicht bei jedem Feld
+// eine Karte aufblitzen lässt.
+export const TIP_DIRECTIVE_OPEN_DELAY_MS = 260
+export const TIP_DIRECTIVE_GAP_PX = 8
+export const TIP_DIRECTIVE_VIEWPORT_MARGIN_PX = 8
+export const TIP_DIRECTIVE_CARET_INSET_PX = 12
+
 // The new-champions tooltip colors names + role tags via ROLE_BY_KEY — the
 // game-wide role palette (orbit, shop, roster).
 // Header notification badges — placed along the center-arc ellipse with a

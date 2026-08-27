@@ -8,24 +8,24 @@
     :class="{ 'fdh--open': detailsOpen }"
     :aria-expanded="detailsOpen"
     :aria-label="toggleTitle"
-    :title="toggleTitle"
+    v-tip="toggleTitle"
     @click="toggleDetails"
   >
     <span class="fdh-stack">
       <span v-if="readyCount > 0 || hasOffer" class="fdh-signals">
-        <span v-if="readyCount > 0" class="fdh-count" :title="FORGE_DETAILS_READY_TITLE">
+        <span v-if="readyCount > 0" class="fdh-count" v-tip="FORGE_DETAILS_READY_TITLE">
           {{ readyCount }}
           <span
             v-if="hasOffer"
             class="fdh-offer"
-            :title="FORGE_DETAILS_OFFER_TITLE"
+            v-tip="FORGE_DETAILS_OFFER_TITLE"
             aria-hidden="true"
           />
         </span>
         <span
           v-else
           class="fdh-offer fdh-offer--solo"
-          :title="FORGE_DETAILS_OFFER_TITLE"
+          v-tip="FORGE_DETAILS_OFFER_TITLE"
           aria-hidden="true"
         />
       </span>

@@ -12,6 +12,7 @@ import { useUiStore } from '@/stores/core/uiStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
+import { NOTIFY_BADGE_BY_KIND, NOTIFY_BADGE_TIP_COLOR } from '@/config/ui/notifyBadges'
 import {
   CHAMP_TOOLTIP_MAX_VISIBLE,
   ROLE_BY_KEY,
@@ -35,6 +36,12 @@ const props = defineProps<{
       tooltips dismiss themselves after an action */
   close?: () => void
 }>()
+
+/* Motiv und Leitfarbe kommen aus der Marken-Registry — dieselbe Quelle, aus
+   der Marke und Herold lesen. Die Farbe färbt Kopf, Kanten und Chips; die
+   Hülle bekommt sie als `accent` und trägt damit Leiste und Pfeil. */
+const badge = computed(() => NOTIFY_BADGE_BY_KIND[props.kind])
+const accent = computed(() => NOTIFY_BADGE_TIP_COLOR[props.kind])
 
 const gameStore = useGameStore()
 const meepTree = useMeepTreeStore()
@@ -197,138 +204,133 @@ function buyAllUpgrades() {
 </script>
 
 <template>
-  <div class="bt" :class="`bt--${kind}`">
-    <!-- Eine Überschriftenzeile für alle Arten: derselbe Wortlaut, den auch der
-         `ready`-Herold als Schlagzeile trägt (NOTIFY_BADGE_TITLE). -->
-    <div class="bt__title">{{ NOTIFY_BADGE_TITLE[kind] }}</div>
+  <div class="bt" :class="`bt--${kind}`" :style="{ '--tip-color': accent }">
+    <!-- Kopf der Sprache: Motiv, dann der Wortlaut, den auch der `ready`-Herold
+         als Schlagzeile trägt (NOTIFY_BADGE_TITLE). -->
+    <div class="tip-head">
+      <Icon v-if="badge.icon" :icon="badge.icon" width="20" height="20" class="tip-ico" />
+      <span class="tip-name">{{ NOTIFY_BADGE_TITLE[kind] }}</span>
+    </div>
 
     <!-- ══════════ EXPEDITION ══════════ -->
     <template v-if="kind === 'expedition'">
-      <ul class="ex-tt__list">
-        <li v-for="exp in readyExpeditions" :key="exp.id" class="ex-tt__item">
+      <ul class="tip-rows">
+        <li v-for="exp in readyExpeditions" :key="exp.id" class="tip-row">
           <Icon
             :icon="exp.icon || 'game-icons:rolled-cloth'"
-            width="24"
-            height="24"
-            class="ex-tt__ico"
+            width="22"
+            height="22"
+            class="tip-row-ico"
           />
-          <span class="ex-tt__name">{{ exp.name }}</span>
+          <span class="tip-row-name">{{ exp.name }}</span>
           <span
-            class="ex-tt__status"
-            :class="exp.status === 'success' ? 'ex-tt__status--ok' : 'ex-tt__status--fail'"
+            class="tip-chip"
+            :style="{ '--cc': exp.status === 'success' ? '#6ec040' : '#cc6050' }"
           >
             {{ exp.status === 'success' ? 'Success' : 'Failed' }}
           </span>
         </li>
       </ul>
-      <button class="ex-tt__collect" @click.stop="collectAll">
+      <button class="tip-act" @click.stop="collectAll">
         Collect
-        <span class="ex-tt__collect-count">{{ readyExpeditions.length }}</span>
+        <span class="tip-act-count">{{ readyExpeditions.length }}</span>
       </button>
     </template>
 
     <!-- ══════════ FORGE ══════════ -->
     <template v-else-if="kind === 'forge'">
-      <div class="fg-tt__body">
-        <span class="fg-tt__spark">✦</span>
-        <div class="fg-tt__lines">
-          <span v-if="nextPhase" class="fg-tt__next">
-            Next phase:
-            <strong :style="{ color: nextPhase.phasePrimary }">{{ nextPhase.name }}</strong>
-          </span>
-          <span v-else class="fg-tt__next">Your sun has reached its final phase</span>
-        </div>
+      <div class="tip-effect">
+        <template v-if="nextPhase">
+          Next phase:
+          <strong :style="{ color: nextPhase.phasePrimary }">{{ nextPhase.name }}</strong>
+        </template>
+        <template v-else>Your sun has reached its final phase</template>
       </div>
-      <div class="bt__hint">Open the Bard tab and evolve at the sun dial</div>
+      <div class="tip-hint">Open the Bard tab and evolve at the sun dial</div>
     </template>
 
     <!-- ══════════ CHAMPIONS ══════════ -->
     <template v-else-if="kind === 'champions'">
-      <ul class="nc-tt__list">
+      <ul class="tip-rows">
         <li
           v-for="name in newChampions"
           :key="name"
-          class="nc-tt__item"
+          class="tip-row bt-click"
+          :style="{ '--cc': roleOf(name).color }"
           @click.stop="pickChampion(name)"
         >
-          <img :src="battleStore.getChampionImage(name, { size: 'md' })" class="nc-tt__img" :alt="name" />
-          <span class="nc-tt__name" :style="{ color: roleOf(name).color }">{{ name }}</span>
-          <span
-            class="nc-tt__role"
-            :style="{ color: roleOf(name).color, borderColor: roleOf(name).color }"
-            >{{ roleOf(name).short }}</span
-          >
-        </li>
-        <li v-if="extraChampions > 0" class="nc-tt__item nc-tt__item--more">
-          <span class="nc-tt__more-dots">…</span>
-          <span class="nc-tt__more-count">+{{ extraChampions }} more</span>
+          <img
+            :src="battleStore.getChampionImage(name, { size: 'md' })"
+            class="bt-portrait"
+            :alt="name"
+          />
+          <span class="tip-row-name" :style="{ color: roleOf(name).color }">{{ name }}</span>
+          <span class="tip-chip">{{ roleOf(name).short }}</span>
         </li>
       </ul>
-      <div class="bt__hint">Click a champion to open the shop</div>
+      <div v-if="extraChampions > 0" class="tip-hint">+{{ extraChampions }} more</div>
+      <div class="tip-hint">Click a champion to open the shop</div>
     </template>
 
     <!-- ══════════ SKILL ══════════ -->
     <template v-else-if="kind === 'skill'">
-      <div class="sk-tt__body">
+      <div class="tip-effect bt-lead">
         <img
           src="/img/BardAbilities/BardMeep-64.png"
-          class="sk-tt__icon"
+          class="bt-lead-ico"
           alt=""
           aria-hidden="true"
         />
-        <div class="sk-tt__lines">
-          <span class="sk-tt__next">
-            <strong>{{ skillCount }}</strong> skill{{ skillCount === 1 ? '' : 's' }} ready to learn
-          </span>
-          <span class="sk-tt__meeps">
-            {{ $formatNumber(gameStore.meeps) }} Meeps · {{ skillBuyableCount }} affordable
-          </span>
-        </div>
+        <span>
+          <strong>{{ skillCount }}</strong> skill{{ skillCount === 1 ? '' : 's' }} ready to learn
+        </span>
       </div>
-      <div class="bt__hint">Open the Skill Tree to learn</div>
+      <div class="tip-meta tip-num">
+        {{ $formatNumber(gameStore.meeps) }} Meeps · {{ skillBuyableCount }} affordable
+      </div>
+      <div class="tip-hint">Open the Skill Tree to learn</div>
     </template>
 
     <!-- ══════════ PLANET ══════════ -->
     <template v-else-if="kind === 'planet'">
-      <button class="pu-tt__buyall" @click.stop="buyAllUpgrades">
+      <button class="tip-act" @click.stop="buyAllUpgrades">
         <Icon icon="ph:arrow-fat-up-fill" width="15" height="15" />
         Buy All
-        <span class="pu-tt__buyall-count">{{ planetLevelCount }}</span>
+        <span class="tip-act-count">{{ planetLevelCount }}</span>
       </button>
-      <ul class="pu-tt__list">
+      <ul class="tip-rows">
         <li
           v-for="slot in upgradeableSlots"
           :key="slot.id"
-          class="pu-tt__item"
-          :style="{ '--rc': slot.color }"
-          :title="`Open ${slot.name} in Planets`"
+          class="tip-row bt-click"
+          :style="{ '--cc': slot.color }"
           @click.stop="openPlanetSlot(slot.id)"
         >
-          <span class="pu-tt__frame">
-            <img :src="slot.image" class="pu-tt__img" :alt="slot.name" />
+          <span class="bt-frame">
+            <img :src="slot.image" class="bt-planet" :alt="slot.name" />
           </span>
-          <div class="pu-tt__meta">
-            <span class="pu-tt__name">{{ slot.name }}</span>
-            <span class="pu-tt__sub">
-              <span class="pu-tt__lv">Lv {{ slot.level }}</span>
-              <span class="pu-tt__cost">
-                <Icon :icon="CHIMES_COST_ICON" width="12" height="12" class="pu-tt__cost-ico" />
+          <div class="bt-stack">
+            <span class="tip-row-name" :style="{ color: slot.color }">{{ slot.name }}</span>
+            <span class="bt-sub">
+              <span class="tip-chip tip-chip--muted">Lv {{ slot.level }}</span>
+              <span class="bt-cost tip-num">
+                <Icon :icon="CHIMES_COST_ICON" width="12" height="12" />
                 {{ $formatNumber(slot.nextCost) }}
               </span>
             </span>
           </div>
           <button
-            class="pu-tt__buy"
+            class="tip-act bt-inline"
             :aria-label="`Level up ${slot.name} ${slot.count} time${slot.count === 1 ? '' : 's'}`"
             @click.stop="levelUpMax(slot.id)"
           >
             <Icon icon="ph:arrow-fat-up-fill" width="14" height="14" />
-            Level Up ×{{ slot.count }}
+            ×{{ slot.count }}
           </button>
         </li>
       </ul>
-      <div class="bt__hint">
-        <Icon :icon="CHIMES_COST_ICON" width="12" height="12" class="pu-tt__cost-ico" />
+      <div class="tip-hint tip-num">
+        <Icon :icon="CHIMES_COST_ICON" width="12" height="12" />
         {{ $formatNumber(gameStore.chimes) }} Chimes available
       </div>
     </template>
@@ -340,26 +342,26 @@ function buyAllUpgrades() {
          in einem lokalen Zustand, es gibt keinen Weg, sie von außen
          vorzuwählen. -->
     <template v-else-if="kind === 'shop'">
-      <ul class="sh-tt__list">
+      <ul class="tip-rows">
         <li
           v-for="sec in shopFreshSections"
           :key="sec.id"
-          class="sh-tt__item"
-          :style="{ '--sc': sec.accent }"
+          class="tip-row"
+          :style="{ '--cc': sec.accent }"
         >
-          <Icon :icon="sec.icon" width="18" height="18" class="sh-tt__ico" />
-          <span class="sh-tt__name">{{ sec.label }}</span>
-          <span class="sh-tt__count">{{ sec.count }}</span>
+          <Icon :icon="sec.icon" width="18" height="18" class="tip-row-ico" />
+          <span class="tip-row-name">{{ sec.label }}</span>
+          <span class="tip-row-val">{{ sec.count }}</span>
         </li>
       </ul>
       <!-- Steht ÜBER der Kasse: „wie viel geht überhaupt" gehört näher an die
            Zeilen als „wie viel habe ich". -->
-      <div v-if="shopShowAffordableTotal" class="bt__hint">
-        <Icon :icon="FORGE_AFFORDABLE_TOTAL_ICON" width="12" height="12" class="pu-tt__cost-ico" />
+      <div v-if="shopShowAffordableTotal" class="tip-hint tip-num">
+        <Icon :icon="FORGE_AFFORDABLE_TOTAL_ICON" width="12" height="12" />
         {{ shopAffordableTotal }} affordable in total
       </div>
-      <div class="bt__hint">
-        <Icon :icon="CHIMES_COST_ICON" width="12" height="12" class="pu-tt__cost-ico" />
+      <div class="tip-hint tip-num">
+        <Icon :icon="CHIMES_COST_ICON" width="12" height="12" />
         {{ $formatNumber(gameStore.chimes) }} Chimes available
       </div>
     </template>
@@ -367,528 +369,110 @@ function buyAllUpgrades() {
 </template>
 
 <style scoped>
-/* ── shared frame ───────────────────────────────────────────────────── */
+/* Kopf, Zeilen, Chips, Wirkungsblock, Fußzeile und Knopf stehen als `.tip-*`
+   global in `rpg-theme.css` — dieselbe Karte wie im Skill Tree. Hier bleibt
+   nur, was diese sechs Arten voneinander unterscheidet: ein Porträt, ein
+   Planetenmedaillon, eine zweizeilige Zelle. */
 .bt {
-  padding: 8px 0 7px;
-}
-
-.bt--champions {
-  min-width: 240px;
-}
-
-.bt__title {
-  padding: 0 12px 6px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #e8c040;
-  border-bottom: 1px solid #3e200a;
-}
-
-/* skill badge uses a pink accent instead of gold */
-.bt--skill .bt__title {
-  color: #ec4899;
-}
-
-/* planet badge uses an emerald accent instead of gold */
-.bt--planet .bt__title {
-  color: #34d399;
-}
-
-/* shop badge uses the azure of its own badge instead of gold */
-.bt--shop .bt__title {
-  color: #60a5fa;
-}
-
-.bt__hint {
-  padding: 5px 12px 0;
-  border-top: 1px solid #3e200a;
-  font-size: 0.72rem;
-  color: rgba(200, 200, 220, 0.45);
-  letter-spacing: 0.03em;
-}
-
-/* ── expedition ─────────────────────────────────────────────────────── */
-.ex-tt__list {
-  list-style: none;
-  margin: 0;
-  padding: 4px 0 2px;
-}
-
-.ex-tt__item {
   display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 6px 12px;
+  flex-direction: column;
+  gap: 0.74em;
+  padding: 1.07em 1.24em 1.16em;
 }
 
-.ex-tt__ico {
-  flex-shrink: 0;
-  color: #c9a0ff;
+.bt--champions,
+.bt--planet {
+  min-width: 22em;
 }
 
-.ex-tt__name {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: #e8e0cc;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ex-tt__status {
-  flex-shrink: 0;
-  font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 3px;
-}
-
-.ex-tt__status--ok {
-  color: #6ec040;
-  background: rgba(82, 184, 48, 0.12);
-  border: 1px solid rgba(110, 192, 64, 0.4);
-}
-
-.ex-tt__status--fail {
-  color: #cc6050;
-  background: rgba(204, 96, 80, 0.1);
-  border: 1px solid rgba(204, 96, 80, 0.4);
-}
-
-.ex-tt__collect {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  width: calc(100% - 24px);
-  margin: 6px 12px 3px;
-  padding: 6px 10px;
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  border: 1px solid #6ec040;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+/* Eine Zeile, die etwas öffnet, muss den Zeiger fangen — `.tip` gibt ihn
+   grundsätzlich nicht an. */
+.bt-click {
   cursor: pointer;
-  box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  transition:
-    filter 0.12s,
-    transform 0.12s;
-}
-
-.ex-tt__collect:hover {
-  filter: brightness(1.12);
-}
-
-.ex-tt__collect:active {
-  transform: scale(0.97);
-}
-
-.ex-tt__collect-count {
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  font-size: 0.68rem;
-  font-weight: 900;
-  line-height: 1;
-}
-
-/* ── forge ──────────────────────────────────────────────────────────── */
-.fg-tt__body {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-}
-
-.fg-tt__spark {
-  font-size: 1.25rem;
-  color: #f0d060;
-  text-shadow: 0 0 8px rgba(240, 208, 96, 0.7);
-  flex-shrink: 0;
-}
-
-.fg-tt__lines {
-  min-width: 0;
-}
-
-.fg-tt__next {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #e8e0cc;
-}
-
-/* ── champions ──────────────────────────────────────────────────────── */
-.nc-tt__list {
-  list-style: none;
-  margin: 0;
-  padding: 4px 0 2px;
-}
-
-.nc-tt__item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 12px;
-  cursor: pointer;
+  pointer-events: auto;
   transition: background 0.12s;
 }
 
-.nc-tt__item:hover {
-  background: rgba(255, 255, 255, 0.05);
+.bt-click:hover {
+  background: var(--rpg-bg-hover);
 }
 
-.nc-tt__img {
-  width: 36px;
-  height: 36px;
+.bt-portrait {
+  flex-shrink: 0;
+  display: block;
+  width: 2.2em;
+  height: 2.2em;
   border-radius: 4px;
   object-fit: cover;
   object-position: top;
-  flex-shrink: 0;
-  display: block;
 }
 
-.nc-tt__name {
-  font-size: 1rem;
-  font-weight: 700;
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.nc-tt__role {
-  flex-shrink: 0;
-  font-size: 0.62rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  padding: 3px 5px;
-  border: 1px solid;
-  border-radius: 3px;
-  opacity: 0.85;
-}
-
-.nc-tt__item--more {
-  cursor: default;
-  gap: 6px;
-  padding: 5px 12px 6px;
-  border-top: 1px solid #3e200a;
-}
-
-.nc-tt__item--more:hover {
-  background: none;
-}
-
-.nc-tt__more-dots {
-  font-size: 0.875rem;
-  color: rgba(200, 200, 220, 0.35);
-  font-style: italic;
-}
-
-.nc-tt__more-count {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: rgba(200, 200, 220, 0.45);
-  letter-spacing: 0.03em;
-}
-
-/* ── skill ──────────────────────────────────────────────────────────── */
-.sk-tt__body {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-}
-
-.sk-tt__icon {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  flex-shrink: 0;
-  filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.55));
-}
-
-.sk-tt__lines {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.sk-tt__next {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #e8e0cc;
-}
-
-.sk-tt__next strong {
-  color: #f9a8d4;
-}
-
-.sk-tt__meeps {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #e8c040;
-}
-
-/* ── planet — interactive orbit-upgrade list ────────────────────────── */
-.bt--planet {
-  min-width: 268px;
-}
-
-.pu-tt__list {
-  list-style: none;
-  margin: 0;
-  padding: 4px 0 2px;
-  display: flex;
-  flex-direction: column;
-}
-
-.pu-tt__item {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 7px 12px;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-
-.pu-tt__item:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.pu-tt__item + .pu-tt__item {
-  border-top: 1px solid #221a10;
-}
-
-/* role-tinted planet medallion */
-.pu-tt__frame {
+/* Medaillon in der Rollenfarbe des Slots. */
+.bt-frame {
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 2.1em;
+  height: 2.1em;
   background: radial-gradient(circle at 50% 38%, #191712 0%, #0c0a06 100%);
-  border: 1px solid var(--rc, #3a8040);
+  border: 1px solid var(--cc, #3a8040);
   border-radius: 4px;
-  box-shadow: inset 0 0 6px color-mix(in srgb, var(--rc, #3a8040) 30%, transparent);
+  box-shadow: inset 0 0 6px color-mix(in srgb, var(--cc, #3a8040) 30%, transparent);
 }
 
-.pu-tt__img {
-  width: 26px;
-  height: 26px;
+.bt-planet {
+  width: 1.6em;
+  height: 1.6em;
   object-fit: contain;
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--rc, #3a8040) 55%, transparent));
 }
 
-.pu-tt__meta {
+.bt-stack {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0.15em;
 }
 
-.pu-tt__name {
-  font-size: 0.86rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: var(--rc, #e8e0cc);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pu-tt__sub {
+.bt-sub {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 0.45em;
 }
 
-.pu-tt__lv {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: #ffe9a8;
-  background: linear-gradient(to bottom, #3a2a10, #241806);
-  border: 1px solid #5c3310;
-  border-radius: 3px;
-  padding: 1px 5px;
-  line-height: 1.4;
-}
-
-.pu-tt__cost {
+.bt-cost {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 0.74rem;
+  gap: 0.2em;
+  font-size: 0.9em;
   font-weight: 700;
-  color: #e8c040;
+  color: var(--rpg-gold);
 }
 
-.pu-tt__cost-ico {
-  color: #e8c040;
+/* Der Knopf IN einer Zeile: schmaler als der volle Balken darunter. */
+.bt-inline {
   flex-shrink: 0;
+  width: auto;
+  gap: 0.3em;
+  padding: 0.35em 0.7em;
+  font-size: 0.9em;
 }
 
-.pu-tt__buy {
+/* Ein Wirkungsblock mit Motiv davor. */
+.bt-lead {
+  display: flex;
+  align-items: center;
+  gap: 0.62em;
+}
+
+.bt-lead-ico {
   flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 5px 10px;
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  border: 1px solid #6ec040;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: pointer;
-  box-shadow:
-    0 2px 5px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  transition:
-    filter 0.12s,
-    transform 0.12s;
+  width: 1.6em;
+  height: 1.6em;
+  object-fit: contain;
 }
 
-.pu-tt__buy:hover {
-  filter: brightness(1.12);
-}
-
-.pu-tt__buy:active {
-  transform: scale(0.96);
-}
-
-/* Buy-all bar — full-width primary action beneath the list */
-.pu-tt__buyall {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  width: calc(100% - 24px);
-  margin: 6px 12px 4px;
-  padding: 7px 10px;
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  border: 1px solid #6ec040;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  transition:
-    filter 0.12s,
-    transform 0.12s;
-}
-
-.pu-tt__buyall:hover {
-  filter: brightness(1.12);
-}
-
-.pu-tt__buyall:active {
-  transform: scale(0.98);
-}
-
-.pu-tt__buyall-count {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  font-size: 0.7rem;
-  font-weight: 900;
-  line-height: 1;
-}
-
-/* ── shop ───────────────────────────────────────────────────────────── */
-.bt--shop {
-  min-width: 200px;
-}
-
-.sh-tt__list {
-  list-style: none;
-  margin: 0;
-  padding: 6px 8px 7px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-/* Jede Zeile trägt ihren Abteilungsakzent als `--sc` (aus
-   FORGE_PANEL_SECTIONS) — Glyph, Zählerrand und Kantenstrich lesen ihn, damit
-   die Zeile dieselbe Farbe hat wie ihre Zelle in der Shop-Schiene. */
-.sh-tt__item {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 7px;
-  border-radius: 4px;
-  background: #1c1c18;
-  border: 1px solid #2e2a20;
-  border-left: 3px solid var(--sc);
-}
-
-.sh-tt__ico {
-  flex-shrink: 0;
-  color: var(--sc);
-}
-
-.sh-tt__name {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: rgba(235, 230, 215, 0.85);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sh-tt__count {
-  flex-shrink: 0;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--sc);
-  color: var(--sc);
-  font-size: 0.7rem;
-  font-weight: 900;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
+.bt-lead strong {
+  color: var(--tip-color);
 }
 </style>

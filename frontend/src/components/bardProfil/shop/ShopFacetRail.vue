@@ -39,7 +39,7 @@ const emit = defineEmits<{
   <aside class="cs-facets" :class="{ 'cs-facets--folded': folded }">
     <button
       class="cs-facets-grip"
-      :title="folded ? 'Show filters' : 'Hide filters'"
+      v-tip="folded ? 'Show filters' : 'Hide filters'"
       :aria-label="folded ? 'Show filters' : 'Hide filters'"
       :aria-expanded="!folded"
       @click="emit('fold', !folded)"
@@ -56,7 +56,7 @@ const emit = defineEmits<{
       <button
         class="cs-facet-row cs-facet-row--afford"
         :class="{ 'cs-facet-row--active': affordableOnly }"
-        :title="`${affordableCount} affordable right now`"
+        v-tip="`${affordableCount} affordable right now`"
         @click="emit('update:affordableOnly', !affordableOnly)"
       >
         <Icon icon="game-icons:coins" width="18" height="18" class="cs-facet-icon" />
@@ -79,7 +79,7 @@ const emit = defineEmits<{
           }"
           :style="{ '--chip-color': chip.color ?? '#c89040' }"
           :disabled="chip.disabled"
-          :title="chip.title ?? chip.label"
+          v-tip="chip.title ?? chip.label"
           @click="emit('toggle', group.id, chip.id)"
         >
           <img v-if="chip.image" :src="chip.image" :alt="chip.label" class="cs-facet-img" />
@@ -105,7 +105,7 @@ const emit = defineEmits<{
         :key="'stub-' + group.id"
         class="cs-facet-stub"
         :class="{ 'cs-facet-stub--set': group.chips.some((c) => c.active) }"
-        :title="group.label"
+        v-tip="group.label"
         :aria-label="`Show ${group.label} filters`"
         @click="emit('fold', false)"
       >

@@ -62,6 +62,7 @@ const chips = computed<MarkChip[]>(() =>
     :gap="VOYAGE_TIP_GAP_PX"
     :width="VOYAGE_TIP_WIDTH"
     :open-delay="VOYAGE_TIP_OPEN_DELAY_MS"
+    accent="#e8c040"
   >
     <template #default>
       <span

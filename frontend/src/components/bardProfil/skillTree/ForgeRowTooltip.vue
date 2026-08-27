@@ -1,27 +1,27 @@
 <template>
-  <div v-if="entry && anchor" class="ftip frt-card" :style="cardStyle" aria-hidden="true">
-    <span class="ftip-accent" aria-hidden="true" />
+  <div v-if="entry && anchor" class="tip frt-card" :style="cardStyle" aria-hidden="true">
+    <span class="tip-accent" aria-hidden="true" />
 
-    <div class="ftip-head">
+    <div class="tip-head">
       <Icon
         :icon="entry.icon"
         width="20"
         height="20"
-        class="ftip-ico"
+        class="tip-ico"
         :style="{ color: entry.color }"
       />
-      <span class="ftip-name" :style="{ color: entry.color }">{{ entry.name }}</span>
-      <span v-if="entry.state === 'maxed'" class="ftip-chip">{{ FORGE_TIP_MAX_LABEL }}</span>
+      <span class="tip-name" :style="{ color: entry.color }">{{ entry.name }}</span>
+      <span v-if="entry.state === 'maxed'" class="tip-chip">{{ FORGE_TIP_MAX_LABEL }}</span>
     </div>
 
-    <div class="ftip-meta">{{ metaLine }}</div>
-    <div class="ftip-effect">{{ effectText }}</div>
+    <div class="tip-meta">{{ metaLine }}</div>
+    <div class="tip-effect">{{ effectText }}</div>
 
     <!-- Die GABEL von The Wandering. Sie steht nur hier und nicht in der
          Zeile: die Zeile zeigt, was ein Knoten TUT, das Kärtchen, was sein
          Kauf nebenbei zunichtemacht. Eine unwiderrufliche Entscheidung darf
          man nicht erst nach dem Klick erfahren. -->
-    <div v-if="forkLine" class="ftip-meta frt-fork">{{ forkLine }}</div>
+    <div v-if="forkLine" class="tip-meta frt-fork">{{ forkLine }}</div>
   </div>
 </template>
 
@@ -39,7 +39,7 @@
  * ihrem Original. Übrig bleibt, was in eine Zeile nie gepasst hat: der volle
  * Wortlaut der Wirkung, die Stufe und der Knoten, an dem der Eintrag hängt.
  *
- * Seine GESTALT teilt es mit der Knotenkarte im Netz (`.ftip-*` in
+ * Seine GESTALT teilt es mit der Knotenkarte im Netz (`.tip-*` in
  * `rpg-theme.css`): beide beschreiben denselben `ForgeUpgradeEntry`, und der
  * Kreis links und die Zeile rechts sind für den Spieler ein Ding. Zwei
  * Gestalten machten daraus zwei. Der Kopf ist deshalb auch wortgleich — Motiv,
@@ -123,7 +123,7 @@ const tipWidth = `${FORGE_TIP_WIDTH_PX}px`
 </script>
 
 <style scoped>
-/* Nur die Lage. Alles Sichtbare steht als `.ftip-*` global in `rpg-theme.css`,
+/* Nur die Lage. Alles Sichtbare steht als `.tip-*` global in `rpg-theme.css`,
    dieselbe Gestalt wie am Knoten im Netz. `pointer-events: none` steht dort
    mit und ist nicht Kosmetik: ohne es klaute das Kärtchen den Hover der Zeile,
    die es beschreibt. */

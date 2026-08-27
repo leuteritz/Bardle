@@ -749,7 +749,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
           'sdp-chip--dimmed': boardSpotlight,
         }"
         type="button"
-        :title="main ? `${main} — ${roleDef.label}` : `Assign ${roleDef.label}`"
+        v-tip="main ? `${main} — ${roleDef.label}` : `Assign ${roleDef.label}`"
         @click="selectSubject(MAIN_SUBJECT)"
         @mouseenter="emit('hover-ally', null)"
       >
@@ -799,7 +799,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               'sdp-chip--dimmed': boardSpotlight && highlightedAlly !== slot.sub,
             }"
             type="button"
-            :title="
+            v-tip="
               slot.name
                 ? `${slot.name} — ${slot.label}, lends ${swornSharePct}% of its stats`
                 : `Assign ${slot.label} — lends ${swornSharePct}% of its stats to the main`
@@ -851,7 +851,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               v-if="slot.name"
               class="sdp-chip-clear"
               role="button"
-              title="Remove ally"
+              v-tip="'Remove ally'"
               @click.stop="emit('clear-ally', slot.sub)"
             >
               ✕
@@ -880,7 +880,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               'sdp-chip--dimmed': boardSpotlight && highlightedAlly !== slot.sub,
             }"
             type="button"
-            :title="slot.name ? `${slot.name} — ${slot.label}` : `Assign ${slot.label}`"
+            v-tip="slot.name ? `${slot.name} — ${slot.label}` : `Assign ${slot.label}`"
             @click="selectSubject(slot.sub)"
             @mouseenter="emit('hover-ally', slot.sub)"
           >
@@ -921,7 +921,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               v-if="slot.name"
               class="sdp-chip-clear"
               role="button"
-              title="Remove ally"
+              v-tip="'Remove ally'"
               @click.stop="emit('clear-ally', slot.sub)"
             >
               ✕
@@ -949,7 +949,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
         <button
           class="sdp-rail-subject"
           type="button"
-          title="Unfold the roster"
+          v-tip="'Unfold the roster'"
           @click="rosterOpen = true"
         >
           <span class="sdp-rail-seat">{{ subjectSeatLabel }}</span>
@@ -970,7 +970,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 'sdp-rail-dot--dimmed': boardSpotlight && highlightedAlly !== seat.sub,
               }"
               type="button"
-              :title="seat.name ? `${seat.name} — ${seat.label}` : `Assign ${seat.label}`"
+              v-tip="seat.name ? `${seat.name} — ${seat.label}` : `Assign ${seat.label}`"
               @click="selectSubject(seat.sub)"
               @mouseenter="emit('hover-ally', seat.sub === MAIN_SUBJECT ? null : seat.sub)"
             >
@@ -1001,7 +1001,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
         class="sdp-fold"
         type="button"
         :aria-expanded="rosterOpen"
-        :title="rosterOpen ? 'Fold the roster away' : 'Unfold the roster'"
+        v-tip="rosterOpen ? 'Fold the roster away' : 'Unfold the roster'"
         @click="rosterOpen = !rosterOpen"
       >
         <Icon icon="lucide:chevron-up" width="26" height="26" class="sdp-fold-chevron" />
@@ -1113,7 +1113,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                  where the lit card is the answer. -->
             <div class="sdp-name-row">
               <div class="sdp-name">{{ champion ?? 'No Champion' }}</div>
-              <span v-if="champion" class="sdp-xp-value" title="Experience">
+              <span v-if="champion" class="sdp-xp-value" v-tip="'Experience'">
                 <template v-if="xpBar.capped">Banked {{ $formatNumber(xpBar.current) }}</template>
                 <template v-else>
                   {{ $formatNumber(xpBar.current) }} / {{ $formatNumber(xpBar.needed) }}
@@ -1204,7 +1204,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
             class="sdp-level-btn"
             :class="{ 'sdp-level-btn--locked': !canLevel, 'sdp-level-btn--bare': atCap }"
             :disabled="!canLevel"
-            :title="atCap ? 'This champion is at the level cap' : `Cost of level ${nextLevel}`"
+            v-tip="atCap ? 'This champion is at the level cap' : `Cost of level ${nextLevel}`"
             @click="doLevelUp"
           >
             <span class="sdp-level-btn-main">
@@ -1228,7 +1228,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 :key="mat.id"
                 class="sdp-cost"
                 :class="{ 'sdp-cost--short': mat.owned < mat.qty }"
-                :title="`${mat.def?.name ?? mat.id} — ${mat.owned} in stock`"
+                v-tip="`${mat.def?.name ?? mat.id} — ${mat.owned} in stock`"
               >
                 <img v-if="mat.def" :src="mat.def.image" :alt="mat.def.name" class="sdp-cost-img" />
                 <span>{{ mat.qty }}</span>
@@ -1262,7 +1262,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                   'sdp-equip--filled': !!equippedItem(cat),
                   'sdp-equip--empty': !equippedItem(cat),
                 }"
-                :title="equippedItem(cat)?.name ?? `Equip ${CAT_LABELS[cat]}`"
+                v-tip="equippedItem(cat)?.name ?? `Equip ${CAT_LABELS[cat]}`"
                 @click="emit('pick-equipment', cat)"
               >
                 <template v-if="equippedItem(cat)">
@@ -1330,7 +1330,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               class="sdp-skin"
               :class="{ 'sdp-skin--on': entry.id === equippedSkin }"
               type="button"
-              :title="entry.label"
+              v-tip="entry.label"
               :aria-pressed="entry.id === equippedSkin"
               @click="equipSkin(entry.id, entry.label)"
             >
@@ -1367,7 +1367,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
               :key="stat.key"
               class="sdp-stat"
               :style="{ '--sc': stat.color }"
-              :title="stat.desc"
+              v-tip="stat.desc"
             >
               <Icon :icon="stat.icon" width="30" height="30" class="sdp-stat-icon" />
               <div class="sdp-stat-body">
@@ -1434,7 +1434,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 ]"
                 :style="slot.perk ? { '--pc': slot.perk.color } : undefined"
                 type="button"
-                :title="slot.perk ? `${slot.perk.name} — ${slot.perk.desc}` : `Level ${slot.level}`"
+                v-tip="slot.perk ? `${slot.perk.name} — ${slot.perk.desc}` : `Level ${slot.level}`"
                 @click="clickedPerkLevel = slot.level"
               >
                 <span class="sdp-pnode-bead">
@@ -1548,7 +1548,7 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
                 class="sdp-choice-card"
                 :style="{ '--pc': perk.color }"
                 type="button"
-                :title="perk.desc"
+                v-tip="perk.desc"
                 @click="pickPerk(perk.id)"
               >
                 <Icon :icon="perk.icon" width="26" height="26" class="sdp-choice-icon" />
@@ -2915,10 +2915,10 @@ const equippedCount = computed(() => CATEGORIES.filter((cat) => equipment.value[
   gap: 4px;
   padding: 9px 12px;
   border-radius: 4px;
-  background: #16140e;
-  border: 2px solid #5c3310;
+  background: var(--tip-surface);
+  border: 2px solid var(--tip-border);
   border-left: 3px solid var(--kc);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  box-shadow: var(--tip-shadow);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease-out;

@@ -935,3 +935,11 @@ export const BATTLE_PHASES: Record<BattlePhaseKey, BattlePhaseConfig> = {
 // Battle — initial state
 export const BATTLE_INITIAL_MMR = 1000
 export const BATTLE_DEFAULT_RANK_TIER = 'Silver'
+
+// ── Kill-Feed: die Hover-Karte an einer Zeile ────────────────────────────
+// Sie hängt über ihrer Zeile und leicht nach rechts versetzt, damit der Zeiger
+// die Zeile nicht verdeckt. Der Rand ist derselbe, den die Tooltip-Hülle zur
+// Bildkante hält.
+export const KILL_FEED_TIP_DX_PX = 24
+export const KILL_FEED_TIP_DY_PX = 8
+export const KILL_FEED_TIP_MARGIN_PX = 8

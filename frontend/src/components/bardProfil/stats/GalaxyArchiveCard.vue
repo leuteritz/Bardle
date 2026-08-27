@@ -27,7 +27,7 @@ const date = computed(() => new Date(props.record.completedAt).toLocaleDateStrin
   <div
     ref="root"
     class="sf-arch-card"
-    :title="`Galaxy ${record.galaxy} — freed ${date}`"
+    v-tip="`Galaxy ${record.galaxy} — freed ${date}`"
   >
     <div class="sf-arch-imgwrap">
       <img
@@ -40,22 +40,22 @@ const date = computed(() => new Date(props.record.completedAt).toLocaleDateStrin
       <span class="sf-arch-badge">Galaxy {{ record.galaxy }}</span>
       <!-- Stars rescued / lost, top-right over the map -->
       <span class="sf-arch-stars">
-        <span class="sf-arch-star sf-arch-star--won" title="Stars rescued">
+        <span class="sf-arch-star sf-arch-star--won" v-tip="'Stars rescued'">
           <Icon class="sf-arch-star-ico" icon="ph:star-fill" width="15" height="15" />
           <span class="sf-arch-star-n">{{ rescued }}</span>
         </span>
-        <span class="sf-arch-star sf-arch-star--lost" title="Stars lost">
+        <span class="sf-arch-star sf-arch-star--lost" v-tip="'Stars lost'">
           <Icon class="sf-arch-star-ico" icon="game-icons:cracked-glass" width="15" height="15" />
           <span class="sf-arch-star-n">{{ failed }}</span>
         </span>
       </span>
       <!-- Time spent + date freed, over the map's lower edge -->
       <div class="sf-arch-info">
-        <span class="sf-arch-info-item sf-arch-info-time" title="Time spent in this galaxy">
+        <span class="sf-arch-info-item sf-arch-info-time" v-tip="'Time spent in this galaxy'">
           <Icon class="sf-arch-info-ico" icon="lucide:timer" width="15" height="15" />
           {{ formatCompactDuration(record.durationSeconds * 1000) }}
         </span>
-        <span class="sf-arch-info-item sf-arch-info-date" title="Date this galaxy was freed">
+        <span class="sf-arch-info-item sf-arch-info-date" v-tip="'Date this galaxy was freed'">
           <Icon class="sf-arch-info-ico" icon="lucide:calendar-days" width="15" height="15" />
           {{ date }}
         </span>

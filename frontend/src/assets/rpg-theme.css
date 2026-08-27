@@ -47,6 +47,24 @@
   --rpg-danger-dark: #ff1500;
   --rpg-green-light: #7ac060;
 
+  /* ── Tooltip-Sprache (.tip-*) ────────────────────────────────────────────
+     Fläche und Rand teilen sich die vorhandenen Token; einen eigenen Namen
+     bekommt nur, was es sonst nirgends gibt. Der Aufrufer setzt allein
+     `--tip-color` — sie trägt Akzentleiste, Effektkante und Pfeil. */
+  --tip-surface: var(--rpg-bg-tooltip);
+  --tip-border: var(--rpg-wood-mid);
+  --tip-effect-bg: #1b180f;
+  --tip-block-bg: #1b1409;
+  --tip-head-bg: var(--rpg-bg-header);
+  --tip-text: #e8dcc0;
+  --tip-accent: #c89040;
+  --tip-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+
+  /* Die EINE Schriftskala aller Tooltips, Muster von `--sip-u`/`--loot-u`.
+     Auf Full HD misst 0.63vw 12.1px — die em-Maße der Sprache ergeben dort
+     exakt die Pixel, die die Vorbildkarte im Skill Tree schon hatte. */
+  --tip-u: clamp(12px, 0.63vw, 16px);
+
   /* Panel system — Header / BottomStats / CommandPanel share one background */
   --color-panel-bg: var(--rpg-bg-header);
 
@@ -1511,48 +1529,50 @@
   }
 }
 
-/* ── Star Forge tooltip system (.ftip-*) ────────────────────────────────────
-   EINE Kartensprache fuer alles, was im Shop-Tab unter dem Zeiger aufgeht:
-   der Knoten im Netz, die Upgrade-Zeile der Detailspalte, das Angebot im
-   Streifen. Knoten und Zeile lesen sogar denselben `ForgeUpgradeEntry` — der
-   Kreis links und die Zeile rechts sind fuer den Spieler EIN Ding, und drei
-   Gestalten machten daraus drei.
+/* ── Tooltip-Sprache (.tip-*) ──────────────────────────────────────
+   EINE Kartensprache für alles, was im Spiel unter dem Zeiger aufgeht — der
+   Knoten im Netz, die Kachel im Header, die Marke der Galaxiekarte, das
+   Abzeichen. Sie stammt aus der Star Forge und hieß dort `.ftip`; der Name
+   hielt jeden neuen Verwender davon ab, sie zu nehmen.
 
-   Warum global und nicht scoped: dieselbe Begruendung wie beim .fc-Block
-   darueber — die drei Karten sind Geschwisterkomponenten, keine erbt die
-   scoped-Regeln der anderen.
+   Warum global und nicht scoped: die Verwender sind Geschwister, keiner erbt
+   die scoped-Regeln des anderen.
 
-   Was der AUFRUFER behaelt, weil nur er es weiss: Position, Breite, z-index.
-   Der Knoten steht in einer gezoomten Buehne und gegen-skaliert per
-   `--inv-scale`; Zeile und Angebot schweben `fixed` an einem Anker, den ihre
-   Liste gemessen hat. Beides gehoert nicht hierher.
+   Was der AUFRUFER behält, weil nur er es weiß: Position, Breite, z-index.
 
-   Die Zugehoerigkeit traegt `--tip-color` — Akzentleiste oben, linke Kante am
-   Wirkungsblock. So liest man Karte und Kreis als dasselbe Ding, ohne dass ein
-   Wort es sagen muesste.
+   Die Zugehörigkeit trägt `--tip-color` — Akzentleiste, linke Kante am
+   Wirkungsblock, Pfeil zum Anker. So liest man Karte und Anker als dasselbe
+   Ding, ohne dass ein Wort es sagen müsste.
 
-   Performance: animiert wird ausschliesslich die Deckkraft beim Erscheinen.
-   Eine Karte steht nie gleichzeitig mit einer zweiten.
-════════════════════════════════════════════════════════════════════════════ */
+   Alle Maße in `em` gegen `--tip-u`, damit die Karte mit der Auflösung
+   wächst. NICHT in em: Rahmenstärken und Radien — ein mitwachsender Radius
+   risse auf 4K die 4–5-px-Grenze.
 
-.ftip {
-  background: #16140e;
-  border: 2px solid #5c3310;
+   Performance: animiert wird ausschließlich die Deckkraft. Ein Keyframe auf
+   `transform` überschriebe die Gegenskalierung `--inv-scale` im Skill Tree.
+═══════════════════════════════════════════════════════════════════════════ */
+
+.tip {
+  background: var(--tip-surface);
+  border: 2px solid var(--tip-border);
   border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
-  padding: 13px 15px 14px;
+  box-shadow: var(--tip-shadow);
+  padding: 1.07em 1.24em 1.16em;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 0.74em;
+  font-size: var(--tip-u);
+  color: var(--tip-text);
+  line-height: 1.35;
   pointer-events: none;
-  /* Haelt die Akzentleiste in den Ecken des Rahmens. */
+  /* Hält die Akzentleiste in den Ecken des Rahmens. */
   overflow: hidden;
-  animation: forge-tip-in 90ms ease-out;
+  animation: tip-in 90ms ease-out;
 }
 
-/* Der Keyframe steht MIT hier: in `<style scoped>` haengt Vue einen
-   Scope-Suffix an den Namen, und die Karte faende ihn von hier aus nicht. */
-@keyframes forge-tip-in {
+/* Der Keyframe steht MIT hier: in `<style scoped>` hängt Vue einen
+   Scope-Suffix an den Namen, und die Karte fände ihn von hier aus nicht. */
+@keyframes tip-in {
   from {
     opacity: 0;
   }
@@ -1561,159 +1581,456 @@
   }
 }
 
-.ftip-accent {
+.tip-accent {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
-  background: linear-gradient(to right, transparent, var(--tip-color, #c89040), transparent);
+  height: 0.25em;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--tip-color, var(--tip-accent)),
+    transparent
+  );
 }
 
-.ftip-head {
+.tip-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.66em;
 }
 
-.ftip-ico {
+/* Kopf mit eigenem Streifen — wo eine Karte Zustand UND Namen trägt und der
+   Rest darunter eine eigene Fläche bekommt (Marken, Header-Panels). */
+.tip-head--banded {
+  padding: 0.83em 1em 0.83em 0.75em;
+  background: var(--tip-head-bg);
+  border-bottom: 3px solid var(--tip-border);
+  border-left: 3px solid var(--tip-color, var(--tip-accent));
+}
+
+.tip-ico {
   flex-shrink: 0;
+  color: var(--tip-color, var(--tip-accent));
 }
 
-/* Umbrechen statt kuerzen: bei diesem Schriftgrad ist ein abgeschnittener Name
+/* Umbrechen statt kürzen: bei diesem Schriftgrad ist ein abgeschnittener Name
    unlesbarer als eine zweite Zeile. */
-.ftip-name {
+.tip-name {
   flex: 1;
   min-width: 0;
-  font-size: 17px;
+  font-size: 1.4em;
   font-weight: 900;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.033em;
   line-height: 1.2;
 }
 
-.ftip-chip {
-  flex-shrink: 0;
-  padding: 2px 6px;
-  border: 1px solid rgba(232, 192, 64, 0.45);
-  border-radius: 3px;
-  background: rgba(232, 192, 64, 0.13);
-  color: #e8c040;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+/* Die einzige Beschriftung der Sprache: eine Zeile ÜBER dem Namen. */
+.tip-state {
+  font-size: 0.83em;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.72);
 }
 
-/* Rang und Art sagen, wo etwas HINGEHOERT — nicht, dass etwas erreicht ist.
-   Der Goldchip bleibt dem MAX vorbehalten, sonst waere er kein Signal mehr. */
-.ftip-chip--muted {
+.tip-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.17em 0.5em;
+  border: 1px solid color-mix(in srgb, var(--cc, var(--rpg-gold)) 45%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--cc, var(--rpg-gold)) 13%, transparent);
+  color: var(--cc, var(--rpg-gold));
+  font-size: 0.9em;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+/* Rang und Art sagen, wo etwas HINGEHÖRT — nicht, dass etwas erreicht ist.
+   Der Goldchip bleibt dem MAX vorbehalten, sonst wäre er kein Signal mehr. */
+.tip-chip--muted {
   border-color: transparent;
   background: none;
   padding: 0;
   color: rgba(255, 255, 255, 0.35);
-  letter-spacing: 1.5px;
+  letter-spacing: 0.12em;
 }
 
-/* Stufe und Elternknoten — was in eine Zeile nie gepasst hat. */
-.ftip-meta {
-  font-size: 11px;
+/* Genau EINER je Reihe: der gefüllte Block verankert den Lauf. */
+.tip-chip--solid {
+  background: var(--cc, var(--rpg-gold));
+  border-color: var(--cc, var(--rpg-gold));
+  color: #111008;
+  text-shadow: none;
+}
+
+/* Laufende Zahl: die BREITE ist reserviert, sonst wandert die Chipkante im
+   Sekundentakt und die Reihe bricht unter dem Zeiger um. `tabular-nums` allein
+   trägt das NICHT — MedievalSharp hat keine Tabellenziffern. */
+.tip-chip--num {
+  font-variant-numeric: tabular-nums;
+  min-width: 12ch;
+  justify-content: center;
+}
+
+.tip-chip-ico {
+  flex-shrink: 0;
+  color: var(--cc, var(--rpg-gold));
+}
+
+/* Die umbruchfähige Chip-Reihe auf eigener Fläche. Darin sitzen die Chips
+   großzügiger als im Kopf — dort zählt Dichte, hier Lesbarkeit. */
+.tip-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.41em;
+  padding: 0.83em 1em;
+  background: var(--rpg-bg-dark);
+}
+
+.tip-chips .tip-chip {
+  padding: 0.33em 0.74em;
+  text-transform: uppercase;
+}
+
+/* Stufe, Elternknoten, Herkunft — was in eine Zeile nie gepasst hat. */
+.tip-meta {
+  font-size: 0.9em;
   font-weight: 700;
   color: rgba(232, 220, 192, 0.45);
 }
 
-/* Die Wirkung ist der Grund, warum die Karte ueberhaupt aufgeht — sie bekommt
-   die groesste Schrift und eine eigene Flaeche. */
-.ftip-effect {
-  padding: 9px 11px;
-  border-left: 3px solid var(--tip-color, #5c3310);
+/* Die Wirkung ist der Grund, warum die Karte überhaupt aufgeht — sie bekommt
+   die größte Schrift und eine eigene Fläche. */
+.tip-effect {
+  padding: 0.74em 0.91em;
+  border-left: 3px solid var(--tip-color, var(--tip-border));
   border-radius: 4px;
-  background: #1b180f;
-  color: #e8dcc0;
-  font-size: 15px;
+  background: var(--tip-effect-bg);
+  color: var(--tip-text);
+  font-size: 1.24em;
   line-height: 1.5;
 }
 
-/* Grundflaeche fuer alles, was BEDINGUNG ist statt Wirkung. */
-.ftip-block {
-  padding: 9px 11px;
+/* Grundfläche für alles, was BEDINGUNG ist statt Wirkung. */
+.tip-block {
+  padding: 0.74em 0.91em;
   border-radius: 4px;
-  background: #1b1409;
+  background: var(--tip-block-bg);
 }
 
-.ftip-reqs-block {
+.tip-reqs-block {
   display: flex;
   align-items: flex-start;
-  gap: 9px;
+  gap: 0.74em;
 }
 
-.ftip-reqs-lock {
+.tip-reqs-lock {
   flex-shrink: 0;
   margin-top: 1px;
-  color: #c89040;
+  color: var(--tip-accent);
 }
 
-.ftip-reqs {
+.tip-reqs {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 0.41em;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.ftip-reqs li {
+.tip-reqs li {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 13px;
+  gap: 0.58em;
+  font-size: 1.07em;
   font-weight: 700;
-  line-height: 16px;
+  line-height: 1.23;
   color: rgba(255, 200, 80, 0.72);
 }
 
-.ftip-req--met {
+.tip-req--met {
   color: rgba(110, 192, 64, 0.9);
 }
 
-.ftip-req-mark {
+.tip-req-mark {
   flex-shrink: 0;
-  width: 11px;
+  width: 0.91em;
   text-align: center;
 }
 
-.ftip-req-name {
+.tip-req-name {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.ftip-req-num {
+.tip-req-num {
   flex-shrink: 0;
   margin-left: auto;
   font-variant-numeric: tabular-nums;
 }
 
-/* Was kein Vorgaenger loest — Sonnenphase, Prestige-Tor, Gleichwuchs-Deckel. */
-.ftip-lockchip {
+/* Was kein Vorgänger löst — Sonnenphase, Prestige-Tor, Gleichwuchs-Deckel. */
+.tip-lockchip {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 0.74em;
   color: rgba(255, 200, 80, 0.78);
-  font-size: 13px;
+  font-size: 1.07em;
   font-weight: 700;
   line-height: 1.35;
 }
 
-.ftip-lockchip-icon {
+.tip-lockchip-icon {
   flex-shrink: 0;
-  color: #c89040;
+  color: var(--tip-accent);
+}
+
+/* ── Ablesung: Ist-Zahl, Soll-Zahl, Anteil ────────────────────────── */
+.tip-figures {
+  display: flex;
+  align-items: baseline;
+  gap: 0.23em;
+}
+
+.tip-have {
+  font-size: 1.6em;
+  font-weight: 900;
+  color: var(--tip-color, var(--rpg-gold));
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.tip-sep {
+  font-size: 1.05em;
+  color: rgba(255, 255, 255, 0.24);
+}
+
+.tip-need {
+  font-size: 1.05em;
+  font-weight: 700;
+  color: rgba(232, 220, 192, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+
+.tip-pct {
+  margin-left: auto;
+  font-size: 1.6em;
+  font-weight: 900;
+  color: #f0d870;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Statisch: kein Schimmer, kein Puls — die Karte steht über dem laufenden
+   Orbit. `scaleX` statt `width`, der Füllstand wandert jede Sekunde weiter. */
+.tip-bar {
+  position: relative;
+  height: 0.72em;
+  border-radius: 4px;
+  background: #0d0904;
+  border: 1px solid rgba(200, 144, 64, 0.42);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+}
+
+.tip-bar-fill {
+  position: absolute;
+  inset: 1px;
+  transform-origin: left center;
+  border-radius: 3px;
+  background: linear-gradient(to right, #c89040, #f0d060);
+  transition: transform 0.4s ease-out;
+}
+
+/* ── Listenzeilen ─────────────────────────────────────────── */
+.tip-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0.42em 0.6em;
+  border-radius: 4px;
+  background: var(--rpg-bg-row);
+  border: 1px solid #2e2a20;
+  border-left: 3px solid var(--cc, var(--tip-color, var(--tip-accent)));
+}
+
+.tip-row-ico {
+  flex-shrink: 0;
+  color: var(--cc, var(--tip-color, var(--tip-accent)));
+}
+
+.tip-row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95em;
+  font-weight: 600;
+  color: rgba(235, 230, 215, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tip-row-val {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  padding: 0 0.4em;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--cc, var(--tip-color, var(--tip-accent)));
+  color: var(--cc, var(--tip-color, var(--tip-accent)));
+  font-size: 0.9em;
+  font-weight: 900;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Fußzeile und Handlung ──────────────────────────────────── */
+.tip-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  padding-top: 0.42em;
+  border-top: 1px solid var(--rpg-wood-inner);
+  font-size: 0.9em;
+  color: rgba(200, 200, 220, 0.45);
+  letter-spacing: 0.03em;
+}
+
+/* Der EINE Knopf der Sprache. Er hebt `pointer-events` auf — eine Karte, die
+   etwas tun lässt, muss den Zeiger fangen. */
+.tip-act {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.58em;
+  width: 100%;
+  padding: 0.5em 0.83em;
+  background: linear-gradient(to bottom, var(--rpg-green-top), var(--rpg-green-bottom));
+  border: 1px solid var(--rpg-green-border);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.97em;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition:
+    filter 0.12s,
+    transform 0.12s;
+}
+
+.tip-act:hover {
+  filter: brightness(1.12);
+}
+
+.tip-act:active {
+  transform: scale(0.97);
+}
+
+.tip-act-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  padding: 0 0.4em;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+
+/* Jede laufende Zahl der Sprache. */
+.tip-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Der Pfeil zum Anker ───────────────────────────────────────
+   Er sagt, WORAUF sich die Karte bezieht — nötig überall dort, wo Anker dicht
+   beieinander stehen. Feste Pixel: eine mitwachsende Pfeilspitze sähe auf 4K
+   wie ein Keil aus. */
+.tip-caret {
+  position: absolute;
+  left: var(--caret-x, 20px);
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+}
+
+/* Karte UNTER dem Anker — der Pfeil zeigt nach oben. */
+.tip-caret--up {
+  top: -6px;
+  border-bottom: 6px solid var(--tip-color, var(--tip-border));
+}
+
+.tip-caret--down {
+  bottom: -6px;
+  border-top: 6px solid var(--tip-color, var(--tip-border));
+}
+
+/* ── Die Kurzform (`v-tip`) ─────────────────────────────────────
+   Was früher ein natives `title` war: ein Satz, keine Karte. Enger gepolstert
+   und schmaler gedeckelt als die grossen Panels — sonst stünde um vier Wörter
+   ein Rahmen von Handbreite. */
+.tip--v {
+  position: fixed;
+  z-index: 10002;
+  max-width: 22em;
+  padding: 0.66em 0.83em 0.7em;
+  gap: 0.25em;
+}
+
+.tip-v-label {
+  font-size: 0.83em;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(200, 144, 64, 0.72);
+}
+
+.tip-v-text {
+  font-size: 1.07em;
+  font-weight: 700;
+  color: var(--tip-text);
 }
 
 @media (prefers-reduced-motion: reduce) {
   /* Die Einblendung. Nur Deckkraft, aber auch die ist eine Bewegung. */
-  .ftip {
+  .tip {
     animation: none;
+  }
+
+  .tip-bar-fill {
+    transition: none;
   }
 }

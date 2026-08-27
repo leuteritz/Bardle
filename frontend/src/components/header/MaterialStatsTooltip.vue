@@ -199,10 +199,14 @@ const windowLabel = computed(() =>
 </script>
 
 <template>
-  <div v-if="material" class="mst" :style="{ '--accent': accent, '--rarity': rarityColor }">
+  <div
+    v-if="material"
+    class="mst"
+    :style="{ '--accent': accent, '--rarity': rarityColor, '--tip-color': accent }"
+  >
 
     <!-- ════════ Kopf: Icon, Name, Seltenheit ════════ -->
-    <header class="mst-head">
+    <header class="tip-head tip-head--banded mst-head">
       <img v-if="material.image" :src="material.image" class="mst-art" :alt="material.name" />
       <span v-else class="mst-art mst-art--ph">{{ placeholder }}</span>
       <div class="mst-head-text">
@@ -228,19 +232,19 @@ const windowLabel = computed(() =>
       <div class="mst-tiles">
         <div class="mst-tile">
           <span class="mst-tile-k">In stock</span>
-          <span class="mst-tile-v mst-tile-v--accent" :title="formatNumber(stock)">
+          <span class="mst-tile-v mst-tile-v--accent" v-tip="formatNumber(stock)">
             {{ formatNumberCompact(stock) }}
           </span>
         </div>
         <div class="mst-tile">
           <span class="mst-tile-k">Collected</span>
-          <span class="mst-tile-v" :title="formatNumber(collected)">
+          <span class="mst-tile-v" v-tip="formatNumber(collected)">
             {{ formatNumberCompact(collected) }}
           </span>
         </div>
         <div class="mst-tile">
           <span class="mst-tile-k">Spent</span>
-          <span class="mst-tile-v" :title="formatNumber(spent)">
+          <span class="mst-tile-v" v-tip="formatNumber(spent)">
             {{ formatNumberCompact(spent) }}
           </span>
         </div>
@@ -284,7 +288,7 @@ const windowLabel = computed(() =>
         </div>
         <div class="mst-row">
           <dt>Peak stock</dt>
-          <dd :title="formatNumber(peak)">{{ formatNumberCompact(peak) }}</dd>
+          <dd v-tip="formatNumber(peak)">{{ formatNumberCompact(peak) }}</dd>
         </div>
         <div class="mst-row">
           <dt>Last found</dt>
@@ -309,7 +313,7 @@ const windowLabel = computed(() =>
           <span class="mst-flow-track">
             <span class="mst-flow-bar" :style="{ transform: `scaleX(${row.fraction})` }"></span>
           </span>
-          <span class="mst-flow-value" :title="`${formatNumber(row.amount)} collected`">
+          <span class="mst-flow-value" v-tip="`${formatNumber(row.amount)} collected`">
             {{ pct(row.share) }}
           </span>
         </div>
@@ -327,7 +331,7 @@ const windowLabel = computed(() =>
               :style="{ transform: `scaleX(${row.fraction})` }"
             ></span>
           </span>
-          <span class="mst-flow-value" :title="`${formatNumber(row.amount)} spent`">
+          <span class="mst-flow-value" v-tip="`${formatNumber(row.amount)} spent`">
             {{ formatNumberCompact(row.amount) }}
           </span>
         </div>
@@ -348,9 +352,6 @@ const windowLabel = computed(() =>
    und auf 4K großzügig, ohne zweites Layout.
    ================================================================ */
 .mst {
-  font-size: clamp(11px, 0.58vw, 15px);
-  color: #d8cfc0;
-  line-height: 1.35;
   border-radius: 2px;
   /* Safety net only: the tallest panel measures ~570px on Full HD and clears
      the header with room to spare. It exists so a future extra section can
@@ -364,12 +365,7 @@ const windowLabel = computed(() =>
 
 /* ── Kopf ──────────────────────────────────────────────────────── */
 .mst-head {
-  display: flex;
-  align-items: center;
-  gap: 0.75em;
   padding: 0.75em 0.9em;
-  background: #1e1006;
-  border-bottom: 3px solid #5c3310;
 }
 
 .mst-art {

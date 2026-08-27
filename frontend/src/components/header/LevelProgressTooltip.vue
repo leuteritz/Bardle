@@ -5,8 +5,8 @@
  * Zwei Anker öffnen sie — der Chimes-Tropfen und der Level-Badge darunter.
  * Für den Spieler sind beide dasselbe Ding, also tragen sie dieselbe Karte.
  *
- * Die Gestalt kommt aus der Shop-Kartensprache (`.ftip-*` in `rpg-theme.css`).
- * `.ftip` selbst steht NICHT hier: Rahmen und Schatten liefert schon
+ * Die Gestalt kommt aus der Shop-Kartensprache (`.tip-*` in `rpg-theme.css`).
+ * `.tip` selbst steht NICHT hier: Rahmen und Schatten liefert schon
  * `RpgBadgeTooltip`, ein zweiter läge darin.
  *
  * Die Karte existiert nur im geöffneten Zustand (v-if hinter dem Teleport),
@@ -76,36 +76,34 @@ const grants = computed<GrantRow[]>(() => {
 
 <template>
   <div class="lvt">
-    <span class="ftip-accent" aria-hidden="true" />
-
-    <div class="ftip-head lvt-head">
+    <div class="tip-head lvt-head">
       <span class="lvt-emblem">{{ gameStore.level }}</span>
-      <span class="ftip-name lvt-name">{{ NOTIFY_BADGE_TITLE.level }}</span>
-      <span class="ftip-chip lvt-chip">→ {{ nextLevel }}</span>
+      <span class="tip-name lvt-name">{{ NOTIFY_BADGE_TITLE.level }}</span>
+      <span class="tip-chip lvt-chip">→ {{ nextLevel }}</span>
     </div>
 
     <div class="lvt-body">
-      <div class="lvt-figures">
-        <span class="lvt-have">{{ formatNumberCompact(gameStore.currentLevelChimes) }}</span>
-        <span class="lvt-sep">/</span>
-        <span class="lvt-need">{{ formatNumberCompact(gameStore.totalChimesThisLevel) }}</span>
-        <span class="lvt-pct">{{ percent }}%</span>
+      <div class="tip-figures">
+        <span class="tip-have">{{ formatNumberCompact(gameStore.currentLevelChimes) }}</span>
+        <span class="tip-sep">/</span>
+        <span class="tip-need">{{ formatNumberCompact(gameStore.totalChimesThisLevel) }}</span>
+        <span class="tip-pct">{{ percent }}%</span>
       </div>
 
-      <div class="lvt-bar">
+      <div class="tip-bar">
         <i
-          class="lvt-bar-fill"
+          class="tip-bar-fill"
           :style="{ transform: `scaleX(${gameStore.levelProgress / 100})` }"
         />
       </div>
 
-      <div class="ftip-meta lvt-meta">
+      <div class="tip-meta lvt-meta">
         {{ formatNumberCompact(remaining) }} Chimes to go<template v-if="etaText">
           · ~{{ etaText }}</template
         >
       </div>
 
-      <div v-if="grants.length > 0" class="ftip-block lvt-grants">
+      <div v-if="grants.length > 0" class="tip-block lvt-grants">
         <div class="lvt-grants-label">Next level grants</div>
         <div v-for="g in grants" :key="g.id" class="lvt-grant">
           <Icon v-if="g.icon" :icon="g.icon" width="18" height="18" class="lvt-grant-ico" />
@@ -118,17 +116,12 @@ const grants = computed<GrantRow[]>(() => {
 </template>
 
 <style scoped>
-/* Nur was die `.ftip-*`-Skala nicht schon sagt. Maßsystem wie bei den
+/* Nur was die `.tip-*`-Skala nicht schon sagt. Maßsystem wie bei den
    Nachbar-Panels: alles hängt an der Wurzel-font-size. */
 .lvt {
   position: relative;
-  /* Hält die Akzentleiste in den Ecken des geerbten Rahmens. */
-  overflow: hidden;
   border-radius: 2px;
   --tip-color: #e8c040;
-  font-size: clamp(13px, 0.72vw, 17px);
-  color: #d8cfc0;
-  line-height: 1.35;
 }
 
 .lvt-head {
@@ -175,63 +168,7 @@ const grants = computed<GrantRow[]>(() => {
   padding: 0.8em 0.85em 0.85em;
 }
 
-.lvt-figures {
-  display: flex;
-  align-items: baseline;
-  gap: 0.28em;
-}
-
-.lvt-have {
-  font-size: 1.6em;
-  font-weight: 900;
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.lvt-sep {
-  font-size: 1.05em;
-  color: rgba(255, 255, 255, 0.24);
-}
-
-.lvt-need {
-  font-size: 1.05em;
-  font-weight: 700;
-  color: rgba(232, 220, 192, 0.55);
-  font-variant-numeric: tabular-nums;
-}
-
-.lvt-pct {
-  margin-left: auto;
-  font-size: 1.6em;
-  font-weight: 900;
-  color: #f0d870;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-/* Statisch: kein Schimmer, kein Puls — die Karte steht über dem laufenden Orbit. */
-.lvt-bar {
-  position: relative;
-  height: 0.72em;
-  border-radius: 4px;
-  background: #0d0904;
-  border: 1px solid rgba(200, 144, 64, 0.42);
-  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.8);
-  overflow: hidden;
-}
-
-/* scaleX statt width: der Füllstand wandert jede Sekunde weiter. */
-.lvt-bar-fill {
-  position: absolute;
-  inset: 1px;
-  transform-origin: left center;
-  border-radius: 3px;
-  background: linear-gradient(to right, #c89040, #f0d060);
-  transition: transform 0.4s ease-out;
-}
-
-/* Kräftiger als `.ftip-meta`: dort steht eine Herkunftsangabe, hier die
+/* Kräftiger als `.tip-meta`: dort steht eine Herkunftsangabe, hier die
    Restrechnung — die liest man. */
 .lvt-meta {
   font-size: 1em;
@@ -281,11 +218,5 @@ const grants = computed<GrantRow[]>(() => {
   font-size: 0.82em;
   font-weight: 900;
   line-height: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lvt-bar-fill {
-    transition: none;
-  }
 }
 </style>

@@ -65,6 +65,7 @@ onUnmounted(() => {
       :width="UNIVERSE_TOOLTIP_WIDTH"
       :gap="HEADER_STAT_TOOLTIP_GAP_PX"
       :clear-ancestor="HEADER_TOOLTIP_CLEAR_SELECTOR"
+      accent="#d7bcff"
     >
       <div
         class="rescue-row"

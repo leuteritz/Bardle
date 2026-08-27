@@ -16,6 +16,7 @@ import {
 import { usePersistence } from '@/composables/system/usePersistence'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { vInkCenter } from '@/utils/ui/textInkOffset'
+import { vTip } from '@/utils/ui/tipDirective'
 import { useGameStore } from '@/stores/core/gameStore'
 import { gameIntervalMs, getGameSpeed, onGameSpeedChange } from '@/utils/game/gameClock'
 import {
@@ -35,6 +36,9 @@ app.config.globalProperties.$formatNumber = formatNumber
 // v-ink-center: rückt zentrierten Text auf seine optische Achse — MedievalSharp
 // setzt die Glyphen asymmetrisch in ihre Boxen (siehe utils/ui/textInkOffset.ts).
 app.directive('ink-center', vInkCenter)
+// v-tip: die Kurzform der Tooltip-Sprache anstelle eines nativen `title` —
+// eine Instanz für das ganze Dokument (siehe utils/ui/tipDirective.ts).
+app.directive('tip', vTip)
 
 // Vor dem Mount: `var(--bp-radius)` hat an seinen 40+ Fundstellen bewusst KEINEN
 // Fallback, damit der Wert nur einmal existiert. Wird die Variable erst nach dem

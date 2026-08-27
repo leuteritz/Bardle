@@ -1,24 +1,24 @@
 <template>
   <div
     class="score-bar score-bar--clickable"
-    title="View career stats"
+    v-tip="'View career stats'"
     @click="battleStore.isViewingLanding = true"
   >
     <!-- Blue side -->
     <div class="side side--blue">
       <div class="side-stats">
-        <span class="stat stat--obj" title="Turrets destroyed"><Icon :icon="BATTLE_STAT_GAME_ICONS.turrets" width="17" height="17" class="stat-icon" /> <span v-ink-center.y class="stat-value">{{ battleStore.team1Turrets }}</span></span>
-        <span class="stat stat--obj" title="Inhibitors destroyed"><Icon :icon="BATTLE_STAT_GAME_ICONS.inhibitors" width="17" height="17" class="stat-icon stat-icon--inhib" /> <span v-ink-center.y class="stat-value">{{ battleStore.team1Inhibs }}</span></span>
-        <span class="stat stat--obj" title="Drakes secured"><img :src="BATTLE_STAT_IMAGES.dragons" alt="Drakes" class="stat-img" /> <span v-ink-center.y class="stat-value">{{ battleStore.team1Drakes }}</span></span>
-        <span class="stat stat--obj" title="Barons secured"><img :src="BATTLE_STAT_IMAGES.barons" alt="Barons" class="stat-img" /> <span v-ink-center.y class="stat-value">{{ battleStore.team1Barons }}</span></span>
+        <span class="stat stat--obj" v-tip="'Turrets destroyed'"><Icon :icon="BATTLE_STAT_GAME_ICONS.turrets" width="17" height="17" class="stat-icon" /> <span v-ink-center.y class="stat-value">{{ battleStore.team1Turrets }}</span></span>
+        <span class="stat stat--obj" v-tip="'Inhibitors destroyed'"><Icon :icon="BATTLE_STAT_GAME_ICONS.inhibitors" width="17" height="17" class="stat-icon stat-icon--inhib" /> <span v-ink-center.y class="stat-value">{{ battleStore.team1Inhibs }}</span></span>
+        <span class="stat stat--obj" v-tip="'Drakes secured'"><img :src="BATTLE_STAT_IMAGES.dragons" alt="Drakes" class="stat-img" /> <span v-ink-center.y class="stat-value">{{ battleStore.team1Drakes }}</span></span>
+        <span class="stat stat--obj" v-tip="'Barons secured'"><img :src="BATTLE_STAT_IMAGES.barons" alt="Barons" class="stat-img" /> <span v-ink-center.y class="stat-value">{{ battleStore.team1Barons }}</span></span>
         <span class="stat-divider" />
-        <span class="stat stat--cs" title="Team creep score"><Icon :icon="BATTLE_STAT_GAME_ICONS.cs" width="17" height="17" class="stat-icon stat-icon--cs" /> <span v-ink-center.y class="stat-value">{{ formatNumber(team1CS) }}</span></span>
-        <span class="stat stat--dmg" title="Total damage dealt"><Icon :icon="BATTLE_STAT_GAME_ICONS.damage" width="17" height="17" class="stat-icon stat-icon--dmg" /> <span v-ink-center.y class="stat-value">{{ formatNumber(team1Damage) }}</span></span>
+        <span class="stat stat--cs" v-tip="'Team creep score'"><Icon :icon="BATTLE_STAT_GAME_ICONS.cs" width="17" height="17" class="stat-icon stat-icon--cs" /> <span v-ink-center.y class="stat-value">{{ formatNumber(team1CS) }}</span></span>
+        <span class="stat stat--dmg" v-tip="'Total damage dealt'"><Icon :icon="BATTLE_STAT_GAME_ICONS.damage" width="17" height="17" class="stat-icon stat-icon--dmg" /> <span v-ink-center.y class="stat-value">{{ formatNumber(team1Damage) }}</span></span>
         <span class="stat-divider" />
-        <span class="stat stat--gold" title="Team gold"><Icon :icon="BATTLE_STAT_GAME_ICONS.gold" width="17" height="17" class="stat-icon stat-icon--gold" /> <span v-ink-center.y class="stat-value">{{ formatNumber(battleStore.team1Gold) }}</span></span>
+        <span class="stat stat--gold" v-tip="'Team gold'"><Icon :icon="BATTLE_STAT_GAME_ICONS.gold" width="17" height="17" class="stat-icon stat-icon--gold" /> <span v-ink-center.y class="stat-value">{{ formatNumber(battleStore.team1Gold) }}</span></span>
         <span class="stat-divider" />
         <span class="stat stat--level"><span v-ink-center.y class="stat-value">Lv {{ battleStore.team1AvgLevel }}</span></span>
-        <span class="alive-pips" title="Champions alive">
+        <span class="alive-pips" v-tip="'Champions alive'">
           <span
             v-for="(alive, i) in team1Alive"
             :key="i"
@@ -32,7 +32,7 @@
     <!-- Center: kills + timer -->
     <div class="center">
       <span v-ink-center.y class="kills kills--blue">{{ battleStore.team1Kills }}</span>
-      <div class="timer-block" title="Game time">
+      <div class="timer-block" v-tip="'Game time'">
         <div v-ink-center.y class="timer-value">{{ battleStore.formatTime(battleStore.battleTime) }}</div>
       </div>
       <span v-ink-center.y class="kills kills--red">{{ battleStore.team2Kills }}</span>
@@ -41,7 +41,7 @@
     <!-- Red side -->
     <div class="side side--red">
       <div class="side-stats side-stats--red">
-        <span class="alive-pips" title="Champions alive">
+        <span class="alive-pips" v-tip="'Champions alive'">
           <span
             v-for="(alive, i) in team2Alive"
             :key="i"
@@ -51,15 +51,15 @@
         </span>
         <span class="stat stat--level"><span v-ink-center.y class="stat-value">Lv {{ battleStore.team2AvgLevel }}</span></span>
         <span class="stat-divider" />
-        <span class="stat stat--gold" title="Team gold"><span v-ink-center.y class="stat-value">{{ formatNumber(battleStore.team2Gold) }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.gold" width="17" height="17" class="stat-icon stat-icon--gold" /></span>
+        <span class="stat stat--gold" v-tip="'Team gold'"><span v-ink-center.y class="stat-value">{{ formatNumber(battleStore.team2Gold) }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.gold" width="17" height="17" class="stat-icon stat-icon--gold" /></span>
         <span class="stat-divider" />
-        <span class="stat stat--dmg" title="Total damage dealt"><span v-ink-center.y class="stat-value">{{ formatNumber(team2Damage) }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.damage" width="17" height="17" class="stat-icon stat-icon--dmg" /></span>
-        <span class="stat stat--cs" title="Team creep score"><span v-ink-center.y class="stat-value">{{ formatNumber(team2CS) }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.cs" width="17" height="17" class="stat-icon stat-icon--cs" /></span>
+        <span class="stat stat--dmg" v-tip="'Total damage dealt'"><span v-ink-center.y class="stat-value">{{ formatNumber(team2Damage) }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.damage" width="17" height="17" class="stat-icon stat-icon--dmg" /></span>
+        <span class="stat stat--cs" v-tip="'Team creep score'"><span v-ink-center.y class="stat-value">{{ formatNumber(team2CS) }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.cs" width="17" height="17" class="stat-icon stat-icon--cs" /></span>
         <span class="stat-divider" />
-        <span class="stat stat--obj" title="Barons secured"><span v-ink-center.y class="stat-value">{{ battleStore.team2Barons }}</span> <img :src="BATTLE_STAT_IMAGES.barons" alt="Barons" class="stat-img" /></span>
-        <span class="stat stat--obj" title="Drakes secured"><span v-ink-center.y class="stat-value">{{ battleStore.team2Drakes }}</span> <img :src="BATTLE_STAT_IMAGES.dragons" alt="Drakes" class="stat-img" /></span>
-        <span class="stat stat--obj" title="Inhibitors destroyed"><span v-ink-center.y class="stat-value">{{ battleStore.team2Inhibs }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.inhibitors" width="17" height="17" class="stat-icon stat-icon--inhib" /></span>
-        <span class="stat stat--obj" title="Turrets destroyed"><span v-ink-center.y class="stat-value">{{ battleStore.team2Turrets }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.turrets" width="17" height="17" class="stat-icon" /></span>
+        <span class="stat stat--obj" v-tip="'Barons secured'"><span v-ink-center.y class="stat-value">{{ battleStore.team2Barons }}</span> <img :src="BATTLE_STAT_IMAGES.barons" alt="Barons" class="stat-img" /></span>
+        <span class="stat stat--obj" v-tip="'Drakes secured'"><span v-ink-center.y class="stat-value">{{ battleStore.team2Drakes }}</span> <img :src="BATTLE_STAT_IMAGES.dragons" alt="Drakes" class="stat-img" /></span>
+        <span class="stat stat--obj" v-tip="'Inhibitors destroyed'"><span v-ink-center.y class="stat-value">{{ battleStore.team2Inhibs }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.inhibitors" width="17" height="17" class="stat-icon stat-icon--inhib" /></span>
+        <span class="stat stat--obj" v-tip="'Turrets destroyed'"><span v-ink-center.y class="stat-value">{{ battleStore.team2Turrets }}</span> <Icon :icon="BATTLE_STAT_GAME_ICONS.turrets" width="17" height="17" class="stat-icon" /></span>
       </div>
     </div>
   </div>

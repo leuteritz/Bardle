@@ -302,6 +302,18 @@ export const NOTIFY_BADGE_BY_KIND = Object.fromEntries(
   NOTIFY_BADGES.map((b) => [b.id, b]),
 ) as Record<NotifyBadgeKind, NotifyBadgeDef>
 
+/**
+ * Die Leitfarbe einer Marke als CSS-Farbe, für `--tip-color` der
+ * Tooltip-Sprache — Akzentleiste, Pfeil und Kartenkopf lesen dieselbe.
+ *
+ * Die Registry führt sie als „r, g, b" für `rgba()`; hier steht die EINE
+ * Umwandlung, damit die Farbe nicht neben ihrem Herold ein zweites Mal
+ * gepflegt wird.
+ */
+export const NOTIFY_BADGE_TIP_COLOR = Object.fromEntries(
+  NOTIFY_BADGES.map((b) => [b.id, `rgb(${b.accent})`]),
+) as Record<NotifyBadgeKind, string>
+
 /** Die Marken, für die der Herold sich meldet — Reihenfolge wie oben. */
 export const HERALDING_BADGE_KINDS: readonly NotifyBadgeKind[] = NOTIFY_BADGES.filter(
   (b) => b.heralds,

@@ -14,7 +14,7 @@
           <button
             class="force-btn force-btn--ally"
             :disabled="battleStore.objectiveResult !== null"
-            title="Instantly slay — your team takes it"
+            v-tip="'Instantly slay — your team takes it'"
             @click="battleStore.forceResolveObjective(1)"
           >
             SECURE ✦
@@ -28,14 +28,14 @@
               <span class="reward reward--enemy">Enemy +{{ loseBonusPercent }}%</span>
               <template v-if="effectText">
                 <span class="reward-divider">·</span>
-                <span class="reward-effect" :title="effectText">{{ effectText }}</span>
+                <span class="reward-effect" v-tip="effectText">{{ effectText }}</span>
               </template>
             </div>
           </div>
           <button
             class="force-btn force-btn--enemy"
             :disabled="battleStore.objectiveResult !== null"
-            title="Instantly slay — enemy team takes it"
+            v-tip="'Instantly slay — enemy team takes it'"
             @click="battleStore.forceResolveObjective(2)"
           >
             ✦ CONCEDE
@@ -145,7 +145,7 @@
                       'skill-btn--cooling': !isAbilityActive(f) && abilityCdLeft(f) > 0,
                       'skill-btn--off': f.down,
                     }"
-                    :title="abilityTooltip(f)"
+                    v-tip="abilityTooltip(f)"
                   >
                     <img :src="roleImage(f)" class="skill-img" :alt="abilityOf(f).name" />
                     <span v-if="!isAbilityActive(f) && abilityCdLeft(f) > 0" class="skill-cd-text">
@@ -197,7 +197,7 @@
           </div>
 
           <!-- The boss claws every standing fighter each second -->
-          <div class="boss-aoe" title="The objective strikes every standing fighter each second">
+          <div class="boss-aoe" v-tip="'The objective strikes every standing fighter each second'">
             <Icon icon="ph:asterisk-bold" width="12" height="12" class="boss-aoe-icon" />
             <span class="boss-aoe-dps">{{ aoeDps }}/s</span>
             <span class="boss-aoe-label">to every fighter</span>
@@ -319,7 +319,7 @@
                       'skill-btn--cooling': !isAbilityActive(f) && abilityCdLeft(f) > 0,
                       'skill-btn--off': f.down,
                     }"
-                    :title="abilityTooltip(f)"
+                    v-tip="abilityTooltip(f)"
                   >
                     <img :src="roleImage(f)" class="skill-img" :alt="abilityOf(f).name" />
                     <span v-if="!isAbilityActive(f) && abilityCdLeft(f) > 0" class="skill-cd-text">

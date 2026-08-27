@@ -167,7 +167,7 @@ const cards = computed(() =>
   <header class="ecb">
     <div class="ecb-main">
       <div class="ecb-rank">
-        <div class="ecb-rank-body" role="group" :aria-label="rankTitle" :title="rankTitle">
+        <div class="ecb-rank-body" role="group" :aria-label="rankTitle" v-tip="rankTitle">
           <!-- Zähler auf der Rangzeile, nicht darunter: das spart die Zeile, die
                die Uhr braucht. -->
           <span class="ecb-rank-head">
@@ -203,7 +203,7 @@ const cards = computed(() =>
         <button
           v-if="isDev"
           class="ecb-admin"
-          title="Force spawn expedition (dev)"
+          v-tip="'Force spawn expedition (dev)'"
           aria-label="Force spawn expedition (dev)"
           @click.stop="expeditionStore.forceSpawn()"
         >
@@ -226,7 +226,7 @@ const cards = computed(() =>
             class="ecb-act ecb-act--send"
             :class="{ 'is-muted': !canSendAll && !sendLocked, 'is-locked': sendLocked }"
             :disabled="!canSendAll && !sendLocked"
-            :title="sendTitle"
+            v-tip="sendTitle"
             :aria-label="sendTitle"
             @click.stop="sendLocked ? emit('open-upgrade') : emit('send-all')"
           >
@@ -245,7 +245,7 @@ const cards = computed(() =>
               'is-muted': readyCount === 0,
             }"
             :disabled="readyCount === 0"
-            title="Collect all completed expeditions"
+            v-tip="'Collect all completed expeditions'"
             aria-label="Collect all completed expeditions"
             @click.stop="emit('collect-all')"
           >

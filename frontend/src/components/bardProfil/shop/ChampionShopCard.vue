@@ -369,9 +369,9 @@ export default defineComponent({
   left: 50%;
   transform: translateX(-50%);
   padding: 0.4rem 0.75rem;
-  background: var(--rpg-bg-tooltip);
-  border: 2px solid var(--rpg-wood-mid);
-  border-radius: var(--bp-radius);
+  background: var(--tip-surface);
+  border: 2px solid var(--tip-border);
+  border-radius: 4px;
   font-size: 0.6rem;
   color: var(--rpg-text-muted);
   white-space: nowrap;
@@ -379,7 +379,7 @@ export default defineComponent({
   opacity: 0;
   transition: opacity 0.15s ease;
   z-index: 10;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  box-shadow: var(--tip-shadow);
 }
 .card-inner:hover .locked-tooltip {
   opacity: 1;

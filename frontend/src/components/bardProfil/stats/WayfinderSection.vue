@@ -109,13 +109,13 @@ function toggle(id: string) {
       <template #meta>
         <span
           class="wfs-read"
-          title="The chapter the ladder currently stands in — it advances as milestones are claimed"
+          v-tip="'The chapter the ladder currently stands in — it advances as milestones are claimed'"
         >
           <span class="wfs-read-cap">Chapter</span>
           <span class="wfs-read-val">{{ focusChapter?.name }} {{ focusChapter?.numeral }}</span>
         </span>
         <span class="wfs-read-sep" aria-hidden="true"></span>
-        <span class="wfs-read" title="Milestones claimed across the whole ladder">
+        <span class="wfs-read" v-tip="'Milestones claimed across the whole ladder'">
           <span class="wfs-read-cap">Walked</span>
           <span class="wfs-read-val">
             {{ store.claimedCount }}<span class="wfs-read-of">/{{ MISSION_COUNT }}</span>
@@ -143,7 +143,7 @@ function toggle(id: string) {
           'is-ahead': chapter.done === 0 && !chapter.running,
         }"
         :style="{ '--accent': chapter.color }"
-        :title="`${chapter.name} ${chapter.numeral} — ${chapter.done}/${chapter.size} claimed`"
+        v-tip="`${chapter.name} ${chapter.numeral} — ${chapter.done}/${chapter.size} claimed`"
         @mouseenter="hoverId = chapter.id"
         @mouseleave="hoverId = null"
         @click="toggle(chapter.id)"
@@ -165,7 +165,7 @@ function toggle(id: string) {
         :key="rung.id"
         class="wfs-rung"
         :class="`is-${rung.state}`"
-        :title="rung.blurb"
+        v-tip="rung.blurb"
       >
         <span class="wfs-rung__mark">
           <Icon v-if="rung.state === 'done'" icon="lucide:check" width="13" height="13" />
