@@ -15,6 +15,7 @@ import { FORGE_BRIDGES } from '@/config/progression/starForgeNet'
 import {
   FORGE_BRIDGE_MAX_PX,
   FORGE_EDGE_MAX_PX,
+  FORGE_FUSION_AIR_PX,
   FORGE_LIMB_WIDTH,
   FORGE_MASS_SEND_NODE,
   FORGE_MIN_AIR_PX,
@@ -232,10 +233,10 @@ describe('Star Forge — wo die Konstellationen wohnen', () => {
     }
   })
 
-  it('hält die Mindestluft zu jedem Sitz UND zu jedem anderen Koerper', () => {
-    // DIE Zusage. Ein Körper, der einen Knoten verdeckt, nimmt dem Netz einen
-    // weg, um einen dazuzustellen — und zwei Fusionen aufeinander sind ein
-    // Körper, den niemand anklicken kann.
+  it('hält die volle Mindestluft zu jedem SITZ', () => {
+    // Ein Körper, der einen Knoten verdeckt, nimmt dem Netz einen weg, um einen
+    // dazuzustellen. Gegen einen Sitz gilt die volle Zahl: der trägt Schloss,
+    // Kranz und Stufenchip, und die ragen über seinen Kreis hinaus.
     const anchors = forgeFusionAnchors()
     const places = forgeTreePlacements()
     let tightest = Infinity
@@ -250,6 +251,22 @@ describe('Star Forge — wo die Konstellationen wohnen', () => {
           where = `${id} ↔ ${seatId}`
         }
       }
+    }
+
+    expect(tightest, `engste Stelle ${tightest.toFixed(1)} px: ${where}`).toBeGreaterThanOrEqual(
+      FORGE_MIN_AIR_PX,
+    )
+  })
+
+  it('hält untereinander die kleinere Luft — und die wirklich', () => {
+    // Weniger, weil ein Fusions-Körper nichts über seinen Kreis hinausragen
+    // lässt. Der Grund für die kleinere Zahl ist gemessen: mit 44 px wurde die
+    // dritte Konstellation der Reise-Achse 570 px von ihren Toren weggedrückt,
+    // und die Kamera zahlt diese Strecke mit Zoom.
+    const anchors = forgeFusionAnchors()
+    let tightest = Infinity
+    let where = ''
+    for (const [id, at] of anchors) {
       for (const [otherId, other] of anchors) {
         if (otherId === id) continue
         const air = Math.hypot(other.x - at.x, other.y - at.y) - 2 * FORGE_FUSION_RADIUS
@@ -259,10 +276,11 @@ describe('Star Forge — wo die Konstellationen wohnen', () => {
         }
       }
     }
-
     expect(tightest, `engste Stelle ${tightest.toFixed(1)} px: ${where}`).toBeGreaterThanOrEqual(
-      FORGE_MIN_AIR_PX,
+      FORGE_FUSION_AIR_PX,
     )
+    // Und sie bleibt eine LUFT, keine Berührung.
+    expect(FORGE_FUSION_AIR_PX).toBeGreaterThan(0)
   })
 
   it('liegt jeder im Netz und weiter aussen als seine Tore', () => {

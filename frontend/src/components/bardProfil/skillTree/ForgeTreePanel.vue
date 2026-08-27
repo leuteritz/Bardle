@@ -242,6 +242,7 @@
         :class="{
           'pursuit-mark--aimed': aimedFusionId === body.id,
           'pursuit-mark--forged': body.forged,
+          'pursuit-mark--hit': isSearchHit(body.id),
           'pursuit-mark--dim': isDimmed(body.id),
         }"
         type="button"
@@ -1272,6 +1273,12 @@ function isSpot(id: string): boolean {
  */
 function isDimmed(id: string): boolean {
   if (searchActive.value && !matchIds.value.has(id)) return true
+  // Was gemeint ist, tritt nie zurück — dieselbe Regel wie `isSpot`. Eine
+  // Konstellations-Id steht in KEINER der vier Ausnahmen darunter und dämpfte
+  // sich sonst mit ihrer eigenen Hervorhebung weg; gemessen stand der Ring des
+  // Gemeinten auf 0,16, während sein Namensschild hell darunter hing. Hinter
+  // dem Suchfilter, denn was der Chip wegschneidet, bleibt weggeschnitten.
+  if (id === aimedFusionId.value) return false
   // Eine laufende Verfolgung zählt wie ein Fokus: drei helle Ringe in einem
   // gedämpften Feld sind unübersehbar, dieselben drei in einem vollen Feld aus
   // hundertsechzig Knoten nicht.
@@ -2013,14 +2020,17 @@ function recenterCamera(): void {
 function frameToPursuit(): void {
   const anchor = pursuitAnchor.value
   if (!anchor) return
-  /* Gefasst wird der GANZE Kaufweg: Anker, Tore, jeder Knoten dazwischen und
-     der Sonnenrand, an dem die Kette ansetzt. Zentriert auf den Anker — er ist
-     das Ziel, und die Hüllbox einer langen einseitigen Kette stellte statt
-     seiner ihre Mitte ins Bild. */
+  /* Gefasst wird der KAUFBARE Teil der Kette: Anker, Tore und jeder Knoten
+     dazwischen. Zentriert auf den Anker — er ist das Ziel, und die Hüllbox
+     einer langen einseitigen Kette stellte statt seiner ihre Mitte ins Bild.
+
+     Die SONNE ist bewusst NICHT dabei. Sie liegt dem Anker genau gegenüber und
+     war damit die bindende Marke: ihr Rand kostete den grössten Teil des Zooms.
+     Wo die Kette herkommt, sagt sie selbst, indem sie dorthin läuft — und der
+     Kernstrahl, der innerste Knoten, den man wirklich kauft, steht im Bild. */
   const marks: ForgeCameraMark[] = [
     ...pursuitMarks.value,
     { at: anchor, radius: FORGE_FUSION_RADIUS },
-    { at: { x: C, y: C }, radius: sunEdgeR.value },
   ]
   for (const id of pursuitPath.value.ids) {
     const node = nodeById.value.get(id)
@@ -2719,6 +2729,18 @@ const nextPhasePreviewStyle = computed(() => ({
   opacity: 0.16;
 }
 
+/* Gesucht. Derselbe Ton und derselbe statische Schein wie `.node-hit` am
+   Knoten: Gold heisst „kaufbar", Grün/Rot heissen „Voraussetzung", Azur heisst
+   „gesucht" — an beiden Körperarten gleich. */
+.pursuit-mark--hit .pursuit-mark-ring {
+  color: #40c8e0;
+  border-color: #40c8e0;
+  opacity: 1;
+  box-shadow:
+    0 0 12px rgba(64, 200, 224, 0.5),
+    inset 0 0 6px rgba(64, 200, 224, 0.25);
+}
+
 /* ABSOLUT unter dem Ring, nicht im Fluss.
    Der Wrapper ist per `translate(-50%, -50%)` auf seinem Bühnenpunkt zentriert;
    ein Schild im Fluss änderte seine Höhe, und der Ring sprang beim Erscheinen
@@ -2732,7 +2754,6 @@ const nextPhasePreviewStyle = computed(() => ({
   max-width: 220px;
   padding: 2px 7px;
   font-size: v-bind(pursuitNamePx);
-  transform-origin: top center;
   font-weight: 800;
   line-height: 1.1;
   text-align: center;

@@ -6,7 +6,11 @@ import { useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { FORGE_CONSTELLATIONS, FORGE_NODES } from '@/config/progression/starForge'
 import { forgeNodeAxis } from '@/utils/game/solarSignature'
-import { SOLAR_BRANCHES, FORGE_FAMILY_LABEL } from '@/config/constants'
+import {
+  FORGE_FAMILY_LABEL,
+  FORGE_MASS_SEND_NODE,
+  SOLAR_BRANCHES,
+} from '@/config/constants'
 
 /**
  * Die Suche filtert BEIDE Spalten des Shop-Tabs — Netz und Liste lesen dieselbe
@@ -127,6 +131,15 @@ describe('Star Forge — die Suche über das Netz', () => {
       query.value = def.name.toLowerCase()
       expect(matchIds.value.has(def.id), `${def.name} ist nicht zu finden`).toBe(true)
     }
+  })
+
+  it('„send" findet die Fusion, die den Send-All-Knopf freischaltet', () => {
+    // Die Zusage hinter ihrer Beschreibung: sie nennt als einzige Konstellation
+    // eine Bedienung beim Namen, und genau deshalb ist sie zu finden. Nimmt
+    // jemand den Knopfnamen wieder heraus, bricht das hier.
+    const { query, matchIds } = useForgeSearch()
+    query.value = 'send'
+    expect(matchIds.value.has(FORGE_MASS_SEND_NODE)).toBe(true)
   })
 
   it('Achsen- und Familien-Chips lassen keine Fusion durch', () => {

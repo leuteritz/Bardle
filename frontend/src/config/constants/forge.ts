@@ -834,6 +834,21 @@ export const FORGE_MIN_AIR_PX = 44
  * bei einem Variationskoeffizienten von 0,56.
  */
 export const FORGE_COMFORT_AIR_PX = 65
+
+/**
+ * Luft zwischen ZWEI Fusions-Körpern — weniger als zwischen zwei Sitzen.
+ *
+ * `FORGE_MIN_AIR_PX` (44) ist an einem Knotenkreis geeicht: der trägt
+ * Schloss-Plakette, Bedingungskranz, Stufenchip und Notify-Marke, und die
+ * ragen über den Kreis hinaus. Ein Fusions-Körper trägt nichts davon — ein
+ * Kreis mit einem Glyph darin.
+ *
+ * Die Zahl ist nicht Geschmack: drei Konstellationen teilen sich die Tore der
+ * Reise-Achse, und mit 44 px wurde die dritte 570 px von ihren Toren
+ * weggedrückt. Die Kamera muss diese Strecke fassen, also zahlt der Zoom sie
+ * mit.
+ */
+export const FORGE_FUSION_AIR_PX = 24
 /** Federstärke entlang einer Kante, Abstossung, und der Zug zurück in den
  *  eigenen Sektor. Der Zug ist der schwächste — er ordnet, er zwingt nicht. */
 export const FORGE_SPRING_K = 0.18

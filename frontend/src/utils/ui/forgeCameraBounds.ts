@@ -285,6 +285,10 @@ export function forgeGroupCameraAt(
 ): { pan: Point; scale: number } | null {
   if (marks.length === 0 || view.w <= 0 || view.h <= 0) return null
 
+  /* Der volle Rand, nicht `FORGE_SPOTLIGHT_EDGE_MARGIN_PX` (24). Der wäre die
+     Zahl, ab der `forgeNodeInView()` einen Körper als gesehen zählt — aber
+     dieselbe Funktion schneidet zusätzlich die drei Chrome-Ecken weg, und
+     gemessen fiel `solarSails` bei 24 px hinter die Suchleiste. */
   const halfW = view.w / 2 - FORGE_TREE_FIT_PADDING_PX
   const halfH = view.h / 2 - FORGE_TREE_FIT_PADDING_PX
   if (halfW <= 0 || halfH <= 0) return null

@@ -2268,7 +2268,13 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
     materialCost: { stardust: 24, solar_essence: 4 },
     // Der Ledger-Rang kauft Breite; ohne diese Regel raeumt eine einzige Kachel
     // sie umsonst ab.
-    desc: 'Every crewed contract can set out at once.',
+    //
+    // Nennt als EINZIGE Konstellation eine Bedienung beim Namen. Die anderen
+    // sprechen von der Welt („A returning expedition opens the next passage at
+    // once."), aber dieses Upgrade verschiebt keine Zahl, es schaltet einen
+    // Knopf frei — und derselbe Satz ist der Heuhaufen der Suche. Ohne den
+    // Knopfnamen findet ihn niemand, der „send" eintippt.
+    desc: 'Unlocks Send All in Voyages — every crewed contract departs at once.',
     sourceLabel: "Solar Sails + Wayfinder's Cache + Aurora Wake",
   },
 ]

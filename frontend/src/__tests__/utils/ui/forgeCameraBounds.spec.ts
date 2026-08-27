@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { forgeSeatTier } from '@/config/progression/forgeSeats'
-import { forgeContentBounds, forgeFreeAnchor, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
+import { forgeContentBounds, forgeFusionAnchors, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
 import { forgeCameraHome, forgeClampPan, forgeClampPanBox, forgeFitScale, forgeGroupCameraAt, forgeNodeScreenRadius, forgePanLimit } from '@/utils/ui/forgeCameraBounds'
 import { getForgeConstellation } from '@/config/progression/starForge'
 import { forgeNodePath } from '@/utils/game/solarSignature'
@@ -14,7 +14,6 @@ import {
   FORGE_TREE_FIT_PADDING_PX,
   FORGE_TREE_ZOOM_FLOOR,
   FORGE_TREE_ZOOM_MAX,
-  SHOP_SUN_MAX_DIAMETER,
 } from '@/config/constants'
 
 /**
@@ -294,9 +293,6 @@ describe('Star Forge — die Kamera fasst den KAUFWEG', () => {
     { name: 'QHD gemessen', w: 1135, h: 938 },
   ]
 
-  /** Der Sonnenrand in der grössten Fassung — dort setzt die Kette an. */
-  const SUN_EDGE = SHOP_SUN_MAX_DIAMETER / 2
-  const HALF = FORGE_STAGE_SIZE / 2
 
   function radiusOf(id: string): number {
     return forgeNodeScreenRadius(forgeSeatTier(id), 1)
@@ -310,23 +306,25 @@ describe('Star Forge — die Kamera fasst den KAUFWEG', () => {
   function pursuitScene(id: string) {
     const def = getForgeConstellation(id)!
     const gateIds = def.requires.map((req) => req.id).filter((rid) => places.has(rid))
-    const anchor = forgeFreeAnchor(
-      gateIds.map((rid) => places.get(rid)!),
-      FORGE_NODE_DIAMETER.crown / 2,
-    )
+    /* Der ECHTE Platz, nicht der eines einzeln gesuchten Ankers: seit alle
+       vierzehn gegeneinander suchen, steht dieser hier weiter draussen — und
+       die Kamera muss die echte Szene fassen, nicht eine gedachte. */
+    const anchor = forgeFusionAnchors().get(id)!
 
     const pathIds = new Set<string>()
     for (const gate of gateIds) for (const step of forgeNodePath(gate)) pathIds.add(step)
 
+    /* Die SONNE ist bewusst NICHT dabei — sie liegt dem Anker gegenüber und war
+       die bindende Marke: ihr Rand kostete den grössten Teil des Zooms. Im Bild
+       bleibt der kaufbare Teil der Kette. */
     const marks = [
       ...[...pathIds].map((pid) => ({ id: pid, at: places.get(pid)!, radius: radiusOf(pid) })),
       { id: 'pursuitAnchor', at: anchor, radius: FORGE_NODE_DIAMETER.crown / 2 },
-      { id: 'sun', at: { x: HALF, y: HALF }, radius: SUN_EDGE },
     ]
     return { anchor, marks, pathIds }
   }
 
-  it('holt Anker, Tore, WEG und Sonnenrand vollstaendig ins Bild', () => {
+  it('holt Anker, Tore und den ganzen WEG vollstaendig ins Bild', () => {
     // DIE Zusage. Ein Kaufweg, von dem ein Glied fehlt, beantwortet die Frage
     // nicht, für die er gezeichnet wird.
     const { anchor, marks, pathIds } = pursuitScene(FORGE_MASS_SEND_NODE)
@@ -345,14 +343,26 @@ describe('Star Forge — die Kamera fasst den KAUFWEG', () => {
     }
   })
 
-  it('faehrt deutlich weiter heraus als der Zoomdeckel', () => {
-    // Der Anlass des Umbaus: gefasst wurden nur Anker und Tore, und das lief
-    // gegen `FORGE_TREE_ZOOM_MAX`. Mit der Sonne im Bild kann das nicht mehr
-    // passieren — sonst waere sie nicht drin.
+  it('steht zwischen zu nah und zu weit', () => {
+    // ZWEI Schranken, und beide sind gemessen.
+    //
+    // Oben: gefasst wurden einmal nur Anker und Tore, und das lief gegen
+    // `FORGE_TREE_ZOOM_MAX` — man klebte am Bild und sah den Zusammenhang
+    // nicht. Der Weg im Bild verhindert das.
+    //
+    // Unten: die SONNE war einmal mit gefasst, und weil sie dem Anker
+    // gegenüberliegt, drückte ihr Rand den Massstab. Sie ist draussen, und der
+    // Fusions-Körper ist von Kron- auf Blattgrösse gefallen — beides bringt
+    // Zoom. Wer eines davon zurücknimmt, faellt hier auf.
+    //
+    // Weiter geht es nicht: was den Ausschnitt jetzt bindet, sind die TORE
+    // selbst (gemessen 570 Bühnen-px unter dem Anker). Näher hiesse, eines
+    // davon aus dem Bild zu lassen oder das Upgrade aus der Mitte zu nehmen.
     const { anchor, marks } = pursuitScene(FORGE_MASS_SEND_NODE)
     for (const view of GROUP_VIEWS) {
       const cam = forgeGroupCameraAt(anchor, marks, view, zoomFloorFor(view))!
-      expect(cam.scale, `${view.name} klebt am Deckel`).toBeLessThan(1)
+      expect(cam.scale, `${view.name} klebt am Deckel`).toBeLessThan(FORGE_TREE_ZOOM_MAX)
+      expect(cam.scale, `${view.name} steht zu weit weg`).toBeGreaterThan(0.46)
     }
   })
 

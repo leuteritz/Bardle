@@ -53,6 +53,7 @@ import {
   FORGE_CLUSTER_SECTOR_SPREAD,
   FORGE_COMFORT_AIR_PX,
   FORGE_EDGE_TARGET_PX,
+  FORGE_FUSION_AIR_PX,
   FORGE_MIN_AIR_PX,
   FORGE_NODE_DIAMETER,
   FORGE_RAY_DIST,
@@ -700,9 +701,14 @@ export function forgeFreeAnchor(
       if (Math.hypot(at.x - x, at.y - y) - (r + radius) < FORGE_MIN_AIR_PX) return false
     }
     // Und den anderen Körpern OHNE Sitz ebenso ausweichen — sie stehen in
-    // keiner Platzierung, wären also sonst füreinander unsichtbar.
+    // keiner Platzierung, wären also sonst füreinander unsichtbar. Untereinander
+    // reicht ihnen WENIGER Luft: sie tragen weder Schloss noch Kranz noch
+    // Stufenchip (`FORGE_FUSION_AIR_PX`).
     for (const other of avoid) {
-      if (Math.hypot(other.at.x - x, other.at.y - y) - (other.radius + radius) < FORGE_MIN_AIR_PX) {
+      if (
+        Math.hypot(other.at.x - x, other.at.y - y) - (other.radius + radius) <
+        FORGE_FUSION_AIR_PX
+      ) {
         return false
       }
     }
@@ -742,7 +748,16 @@ export function forgeFreeAnchor(
 
 /** Der Kreis, den ein Fusions-Körper im Netz einnimmt. Krongrösse — er ist ein
  *  Ziel, kein Zwischenschritt. */
-export const FORGE_FUSION_RADIUS = FORGE_NODE_DIAMETER.crown / 2
+/**
+ * Der Kreis, den ein Fusions-Körper einnimmt — BLATTgross, nicht krongross.
+ *
+ * Er war einmal so gross wie eine Krone (60), und das kostete doppelt: ein
+ * 60-px-Körper findet in den dichten Bändern erst weit draussen eine Lücke von
+ * 44 px, und die Kamera zahlt jeden dieser Pixel mit Zoom. Vierzehn dauerhafte
+ * Körper sollen ausserdem nicht schwerer wiegen als die Knoten, zwischen denen
+ * sie stehen.
+ */
+export const FORGE_FUSION_RADIUS = FORGE_NODE_DIAMETER.leaf / 2
 
 let fusionCache: Map<string, Point> | null = null
 
