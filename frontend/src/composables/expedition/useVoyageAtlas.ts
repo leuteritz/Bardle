@@ -255,7 +255,7 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     selectedKey.value = offer.id
   }
 
-  /** Die Regel gehoert der Aktion, nicht dem Knopf — „The Rising Armada". */
+  /** Die Regel gehoert der Aktion, nicht dem Knopf — „All Sails at Once". */
   function sendAll() {
     if (!forgeStore.expeditionsDepartTogether) return
     for (const offer of [...expeditionStore.availableExpeditions]) {

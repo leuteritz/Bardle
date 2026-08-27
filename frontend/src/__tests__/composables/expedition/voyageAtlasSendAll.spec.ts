@@ -30,7 +30,7 @@ function mountAtlas() {
   return out!
 }
 
-describe('useVoyageAtlas.sendAll — hinter „The Rising Armada"', () => {
+describe('useVoyageAtlas.sendAll — hinter „All Sails at Once"', () => {
   afterEach(() => {
     app?.unmount()
     app = null

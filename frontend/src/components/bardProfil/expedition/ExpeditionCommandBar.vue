@@ -71,7 +71,7 @@ const actH = `${VOYAGE_FLEET_ACT_H}px`
 
 const readyCount = useNotifyBadgeCount('expedition')
 
-const ARMADA_NAME = getForgeConstellation(FORGE_MASS_SEND_NODE)?.name ?? 'The Rising Armada'
+const ARMADA_NAME = getForgeConstellation(FORGE_MASS_SEND_NODE)?.name ?? 'All Sails at Once'
 
 const rank = computed(() => expeditionStore.ledgerRank)
 const nextRank = computed(() => expeditionStore.nextLedgerRank)

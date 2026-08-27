@@ -9,26 +9,20 @@
     <span class="ftip-accent" aria-hidden="true" />
 
     <div class="ftip-head">
-      <Icon
-        :icon="entry.icon"
-        width="20"
-        height="20"
-        class="ftip-ico"
-        :style="{ color: entry.color }"
-      />
-      <span class="ftip-name" :style="{ color: entry.color }">{{ entry.name }}</span>
-      <span v-if="entry.state === 'maxed'" class="ftip-chip">{{ FORGE_TIP_MAX_LABEL }}</span>
+      <Icon :icon="tip.icon" width="20" height="20" class="ftip-ico" :style="{ color: tip.color }" />
+      <span class="ftip-name" :style="{ color: tip.color }">{{ tip.name }}</span>
+      <span v-if="tip.chip !== ''" class="ftip-chip">{{ tip.chip }}</span>
     </div>
 
-    <div class="ftip-effect">{{ effectText }}</div>
+    <div class="ftip-effect">{{ tip.effect }}</div>
 
     <!-- Ein Knoten mit mehreren Vorgängern zeigt sie ALLE, einer mit genau
          einem zeigt ihn auch. Keine Überschrift darüber: das Schloss links sagt
          dasselbe ohne ein Wort. -->
-    <div v-if="reqs.length > 0" class="ftip-block ftip-reqs-block">
+    <div v-if="tip.reqs.length > 0" class="ftip-block ftip-reqs-block">
       <Icon :icon="FORGE_LOCK_ICON" width="14" height="14" class="ftip-reqs-lock" />
       <ul class="ftip-reqs">
-        <li v-for="req in reqs" :key="req.id" :class="{ 'ftip-req--met': req.met }">
+        <li v-for="req in tip.reqs" :key="req.id" :class="{ 'ftip-req--met': req.met }">
           <span class="ftip-req-mark">{{ req.met ? FORGE_REQ_MET_MARK : FORGE_REQ_OPEN_MARK }}</span>
           <span class="ftip-req-name">{{ req.name }}</span>
           <span class="ftip-req-num">{{ req.have }}/{{ req.need }}</span>
@@ -38,17 +32,17 @@
     <!-- Phase, Prestige-Tor, Gleichwuchs-Deckel: gegen die hilft kein Vorgänger,
          also steht dort ein Satz statt einer Liste — derselbe, den `lockedFor()`
          ohnehin fertig liefert. -->
-    <div v-else-if="entry.lockReason !== ''" class="ftip-block ftip-lockchip">
+    <div v-else-if="tip.lockReason !== ''" class="ftip-block ftip-lockchip">
       <Icon :icon="FORGE_LOCK_ICON" width="14" height="14" class="ftip-lockchip-icon" />
-      <span>{{ entry.lockReason }}</span>
+      <span>{{ tip.lockReason }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 /**
- * Was der Zeiger im Sternbaum berührt — und zwar in DREI Elementen: Name,
- * Wirkung, Voraussetzungen.
+ * Was der Zeiger im Netz berührt — und zwar in DREI Elementen: Name, Wirkung,
+ * Voraussetzungen.
  *
  * Sie trug einmal sieben Dinge, darunter Preis, Materialkacheln, Tier-Chip und
  * die nächste Stufe. Alle vier stehen gleichzeitig gross in der Kachel rechts,
@@ -57,10 +51,16 @@
  * einem GESPERRTEN Knoten rollt nichts, und dort ist der Preis auch nicht die
  * Frage, sondern was noch fehlt.
  *
- * Sie braucht KEINEN Baumknoten. `ForgeUpgradeEntry` trägt Name, Motiv und
- * Farbe bereits, und aus derselben Quelle: Baum und Liste bauen beide aus
- * `SOLAR_BRANCHES` und `FORGE_NODES`. Durchgereicht wird nur, was allein der
- * Baum weiss — die Aufklapprichtung.
+ * **Sie beschreibt BEIDE Körperarten der Bühne.** Ein Baumknoten und eine
+ * Konstellation haben keine gemeinsame Katalogform — die Fusion hat weder
+ * `parentId` noch `tier`, `phase` oder Ränge. Sie in einen `ForgeUpgradeEntry`
+ * zu zwingen hiesse, vier Felder zu erfinden, von denen drei falsch wären;
+ * stattdessen füllen beide Seiten `ForgeTipView` (`forgeNodeTipView` /
+ * `forgeFusionTipView`). Vorher trug der Fusionskörper ein natives `title` mit
+ * blossem Namen, und dasselbe Netz antwortete auf denselben Zeiger in zwei
+ * Sprachen.
+ *
+ * Durchgereicht wird nur, was allein der Baum weiss — die Aufklapprichtung.
  *
  * Ihre GESTALT liegt seit dem Umbau global als `.ftip-*` in `rpg-theme.css` und
  * gehört ihr nicht allein: Zeilen- und Angebotskarte tragen dieselbe. Hier steht
@@ -68,45 +68,20 @@
  */
 import { computed, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import type { ForgeOfferReq, ForgeUpgradeEntry } from '@/types'
-import { forgeEffectText } from '@/composables/ui/useForgeUpgrades'
+import type { ForgeTipView } from '@/types'
 import {
   FORGE_LOCK_ICON,
   FORGE_NODE_TIP_EDGE_PAD_PX,
   FORGE_REQ_MET_MARK,
   FORGE_REQ_OPEN_MARK,
-  FORGE_TIP_MAX_LABEL,
   FORGE_TIP_WIDTH_PX,
 } from '@/config/constants'
 
 const props = defineProps<{
-  entry: ForgeUpgradeEntry
+  tip: ForgeTipView
   /** Aus `isTooltipBelow()` — Bühnengeometrie, die nur der Baum kennt. */
   side: 'above' | 'below'
 }>()
-
-const effectText = computed(() => forgeEffectText(props.entry))
-
-/**
- * Welche Vorgänger als ZEILEN erscheinen — leer heisst: ein Vorgänger ist hier
- * nicht die Antwort.
- *
- * Die Frage war einmal wortgleich mit „trägt dieser Knoten einen Kranz", und
- * beide wurden deshalb im Baum an EINER Stelle beantwortet (`reqWreaths`). Sie
- * sind es nicht mehr, und das mit Absicht: der Kranz ist eine Marke am Kreis,
- * und ein Fächer aus EINEM Punkt ist keiner — er bleibt bei zwei Bedingungen.
- * Diese Karte dagegen IST die Antwort und zeigt schon die erste, weil die Zeile
- * „✕ Verdant Bough 0/1" kürzer ist als der Satz „Requires Verdant Bough Lv 3",
- * den sie ersetzt.
- *
- * Ausgenommen bleiben Phasen- und Prestige-Sperre — gegen die hilft kein
- * Vorgänger, und beim Prestige-Tor stünde die Liste sogar vollständig auf
- * Häkchen. Beide fallen auf den Sperr-Chip zurück, ebenso der
- * Gleichwuchs-Deckel eines Kernstrahls (`lockKind: ''` samt Sperrsatz).
- */
-const reqs = computed<ForgeOfferReq[]>(() =>
-  props.entry.lockKind === 'parent' ? props.entry.reqs : [],
-)
 
 /**
  * Wie weit die Karte zurückgeschoben werden muss, damit das Baumfenster sie ganz
@@ -170,7 +145,7 @@ function measure(): void {
 // ragten wieder aus dem Fenster.
 onMounted(measure)
 watch(
-  () => [props.entry.id, props.entry.state, reqs.value.length, effectText.value],
+  () => [props.tip.name, props.tip.chip, props.tip.effect, props.tip.reqs.length, props.tip.lockReason],
   measure,
   { flush: 'post' },
 )
@@ -181,7 +156,7 @@ watch(
  * Karte. Kein laufender Wert: beide stehen fest, solange der Zeiger steht.
  */
 const cardStyle = computed(() => ({
-  '--tip-color': props.entry.color,
+  '--tip-color': props.tip.color,
   '--tip-dx': `${shift.value.x}px`,
   '--tip-dy': `${shift.value.y}px`,
 }))

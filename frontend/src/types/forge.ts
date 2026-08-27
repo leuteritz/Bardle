@@ -613,6 +613,28 @@ export interface ForgeOfferReq {
 }
 
 /**
+ * Was die Karte am Zeiger im NETZ zeigt — drei Blöcke, eine Gestalt.
+ *
+ * Baumknoten und Konstellation beantworten dieselbe Frage, haben aber keine
+ * gemeinsame Katalogform: eine Fusion hat weder `parentId` noch `tier`, `phase`
+ * oder Ränge. Statt ihr vier Felder zu erfinden, von denen drei falsch wären,
+ * füllen beide Seiten dieses Sichtmodell — und `ForgeNodeTooltip` bleibt EINE
+ * Karte mit EINER Kantenmessung.
+ */
+export interface ForgeTipView {
+  icon: string
+  name: string
+  color: string
+  /** `✦ MAX` / `✦ FUSED`, sonst leer. */
+  chip: string
+  effect: string
+  /** Leer heißt: eine Bedingungsliste ist hier nicht die Antwort. */
+  reqs: ForgeOfferReq[]
+  /** Ein Satz statt einer Liste — Phase, Prestige-Tor, Gleichwuchs-Deckel. */
+  lockReason: string
+}
+
+/**
  * Ein Angebot, fertig zum Anzeigen — dieselbe Rolle wie `ForgeUpgradeEntry` für
  * den Baum.
  *

@@ -1302,7 +1302,7 @@ export const useStarForgeStore = defineStore('starForge', {
       return this.constellationForged('waitingRoad')
     },
 
-    /** The Rising Armada — starten alle bemannten Vertraege mit EINER Geste? */
+    /** All Sails at Once — starten alle bemannten Vertraege mit EINER Geste? */
     expeditionsDepartTogether(): boolean {
       return this.constellationForged(FORGE_MASS_SEND_NODE)
     },

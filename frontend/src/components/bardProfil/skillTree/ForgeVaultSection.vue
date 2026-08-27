@@ -18,7 +18,6 @@
         v-for="entry in vaultEntries"
         :key="entry.id"
         class="fc-row fv-row fc-row--done"
-        :title="entry.desc"
       >
         <Icon :icon="entry.icon" width="27" height="27" :style="{ color: entry.color }" />
 
@@ -75,9 +74,10 @@ const chevron = computed(() =>
   open.value ? FORGE_UPGRADE_ARCHIVE_CHEVRON_OPEN : FORGE_UPGRADE_ARCHIVE_CHEVRON_CLOSED,
 )
 
-/* Was am Zeiger steht, ist der Wirkungssatz selbst (`:title="entry.desc"`).
-   Hier stand dafuer eine Funktion, solange eine gesperrte Zeile zusaetzlich
-   ihre Bedingungen ins Attribut haengte — mit ihnen ist sie gefallen. */
+/* Kein Tooltip mehr: der Wirkungssatz steht vollstaendig in der Zeile (siehe
+   `.fv-row .fc-row-meta` unten). Ein natives `title` war hier der Ersatz fuer
+   den Ueberlauf — und der einzige graue OS-Kasten, der im Reiter noch ueber
+   einem Upgrade stand. */
 </script>
 
 <style scoped>
@@ -92,6 +92,15 @@ const chevron = computed(() =>
 .fv-row {
   position: relative;
   padding-bottom: 13px;
+}
+
+/* Der Satz bricht um statt abzuschneiden. Die Schublade ist zugeklappt
+   voreingestellt und haengt an keinem Fit-Scale — Hoehe ist hier billig, und
+   ein halber Satz braeuchte sonst wieder ein Attribut, das ihn ganz zeigt. */
+.fv-row .fc-row-meta {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 @media (max-height: 1100px) {

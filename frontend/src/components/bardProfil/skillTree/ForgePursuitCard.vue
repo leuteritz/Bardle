@@ -5,6 +5,7 @@
     class="fp"
     :class="{ 'fp--ping': pinged }"
     :style="{ '--node-c': offer.color }"
+    @mouseleave="tipAnchor = null"
   >
     <header class="fp-head">
       <Icon :icon="FORGE_PURSUIT_ICON" width="17" height="17" class="fp-head-ico" />
@@ -15,9 +16,9 @@
       </button>
     </header>
 
-    <!-- Der Wirkungssatz steht hier im Fluss und nicht im schwebenden Kärtchen:
-         der Block hat nur EINE Zeile, es gibt nichts, was er verschieben
-         könnte, und ohne ihn sagt die Karte nie, wofür man das alles tut. -->
+    <!-- Der Wirkungssatz steht hier im Fluss und nicht nur im schwebenden
+         Kärtchen: der Block ist ein STEHENDER Ort und muss ohne jede Geste
+         sagen, wofür man das alles tut. -->
     <p class="fp-desc">{{ offer.desc }}</p>
 
     <ForgeOfferRow
@@ -50,6 +51,11 @@
         </span>
       </button>
     </div>
+
+    <!-- Dasselbe Kärtchen, das der Angebotsstreifen führt. `position: fixed`
+         und links NEBEN der Spalte: im Fluss schöbe sein Erscheinen die Zeile
+         unter dem Zeiger weg, und der Hover ginge im selben Zug wieder aus. -->
+    <ForgeOfferTooltip :offer="offer" :anchor="tipAnchor" />
   </section>
 </template>
 
@@ -76,10 +82,12 @@
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import ForgeOfferRow from './ForgeOfferRow.vue'
+import ForgeOfferTooltip from './ForgeOfferTooltip.vue'
 import { useForgeOffers } from '@/composables/ui/useForgeOffers'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import type { ForgeRowTipAnchor } from '@/types'
 import {
   FORGE_CARD_FLASH_MS,
   FORGE_FOCUS_NOTE_CLEAR,
@@ -129,8 +137,21 @@ function handleBuy(id: string): void {
   if (buyOffer(id)) clearPursuit()
 }
 
+/**
+ * Wo das Kärtchen hängt. Gemessen bei jedem Hover-Wechsel, nie pro Frame — und
+ * nur die drei Kanten, die es braucht. Dasselbe Muster wie im Streifen.
+ */
+const tipAnchor = ref<ForgeRowTipAnchor | null>(null)
+
 function handleHover(id: string): void {
   forgeStore.acknowledgeShopEntry(id)
+  const row = rootEl.value?.querySelector<HTMLElement>(`[data-offer-id="${id}"]`)
+  if (!row) {
+    tipAnchor.value = null
+    return
+  }
+  const rect = row.getBoundingClientRect()
+  tipAnchor.value = { top: rect.top, bottom: rect.bottom, left: rect.left }
 }
 
 /**

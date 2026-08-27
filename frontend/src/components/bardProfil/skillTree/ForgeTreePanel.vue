@@ -11,7 +11,8 @@
       class="tree-viewport"
       :class="{ 'tree-viewport--dragging': isDragging }"
       @wheel.prevent="onWheel"
-      @mouseleave="setTreeHover(null)"
+      @mouseover="onFusionOver"
+      @mouseleave="setTreeHover(null); fusionHoverId = null"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerEnd"
@@ -234,8 +235,11 @@
            Eigene Klassen, NICHT `.tree-node`/`.node-circle`: die tragen
            Zustand, Kranz und Kaufgeste, und ein Körper ohne Sitz, der sie erbt,
            ist ein Sitz, der nur so tut. Übernommen ist allein die
-           Positionierungs-Regel. -->
-      <button
+           Positionierungs-Regel.
+
+           Wrapper trägt die Bühnenlage, der Knopf die Geste: die Karte am
+           Zeiger enthält eine Liste und kann nicht in einen `<button>`. -->
+      <div
         v-for="body in fusionBodies"
         :key="body.id"
         class="pursuit-mark"
@@ -244,31 +248,42 @@
           'pursuit-mark--forged': body.forged,
           'pursuit-mark--hit': isSearchHit(body.id),
           'pursuit-mark--dim': isDimmed(body.id),
+          'pursuit-mark--tipped': fusionHoverId === body.id,
         }"
-        type="button"
         :style="{
           left: `${Math.round(body.at.x)}px`,
           top: `${Math.round(body.at.y)}px`,
           '--pursuit-c': body.color,
         }"
-        :title="body.name"
-        :aria-label="body.name"
-        @click.stop="aimFusion(body.id)"
-        @mouseenter="fusionHoverId = body.id"
-        @mouseleave="fusionHoverId = null"
       >
-        <span class="pursuit-mark-ring">
-          <Icon :icon="body.icon" width="30" height="30" />
-        </span>
-        <!-- Das Namensschild trägt NUR der Gemeinte. Die Bühne ist wortlos —
-             vierzehn Schilder dauerhaft wären ein zweites Kantenfeld aus Text. -->
-        <span
-          v-if="aimedFusionId === body.id"
-          class="pursuit-mark-name"
-          :style="pursuitNameStyle"
-          >{{ body.name }}</span
+        <button
+          class="pursuit-mark-btn"
+          type="button"
+          :data-fusion="body.id"
+          :aria-label="body.name"
+          @click.stop="aimFusion(body.id)"
         >
-      </button>
+          <span class="pursuit-mark-ring">
+            <Icon :icon="body.icon" width="30" height="30" />
+          </span>
+          <!-- Das Namensschild trägt NUR der Gemeinte. Die Bühne ist wortlos —
+               vierzehn Schilder dauerhaft wären ein zweites Kantenfeld aus Text.
+               Steht die Karte, nennt sie ihn schon; dann tritt es zurück. -->
+          <span
+            v-if="aimedFusionId === body.id && fusionHoverId !== body.id"
+            class="pursuit-mark-name"
+            :style="pursuitNameStyle"
+            >{{ body.name }}</span
+          >
+        </button>
+
+        <!-- Dieselbe Karte wie am Baumknoten, aus derselben Komponente. -->
+        <ForgeNodeTooltip
+          v-if="fusionHoverId === body.id && fusionTip !== null"
+          :tip="fusionTip"
+          :side="body.at.y >= C ? 'below' : 'above'"
+        />
+      </div>
 
       <!-- Nodes -->
       <div
@@ -437,7 +452,7 @@
              im Eintrag, und der ist für Baum und Liste derselbe. -->
         <ForgeNodeTooltip
           v-if="treeHoverId === node.id"
-          :entry="entryOf(node)"
+          :tip="forgeNodeTipView(entryOf(node))"
           :side="isTooltipBelow(node) ? 'below' : 'above'"
         />
       </div>
@@ -454,9 +469,11 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { FORGE_NODES } from '@/config/progression/starForge'
 import {
   useForgeUpgrades,
+  forgeNodeTipView,
   forgeUpgradeMayTravel,
   FORGE_EMPTY_UPGRADE_ENTRY,
 } from '@/composables/ui/useForgeUpgrades'
+import { useForgeOffers, forgeFusionTipView } from '@/composables/ui/useForgeOffers'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeSearch } from '@/composables/ui/useForgeSearch'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
@@ -492,6 +509,7 @@ import {
 import type {
   ForgeNodeDef,
   ForgeNodeTier,
+  ForgeTipView,
   ForgeUpgradeEntry,
   ForgeUpgradeTier,
 } from '@/types'
@@ -1065,6 +1083,21 @@ const spotReqs = computed<Map<string, boolean>>(() => {
  * stünde — dieser Fehler ist hier schon einmal aufgetreten.
  */
 const fusionHoverId = ref<string | null>(null)
+
+/**
+ * Welchen Fusionskörper der Zeiger berührt — EIN delegierter Beobachter am
+ * Fenster statt `mouseenter`/`mouseleave` an vierzehn Körpern.
+ *
+ * Nicht Geschmackssache: der Körper WANDERT unter dem Zeiger, sobald die
+ * Kamera zum Anker fährt. Chrome meldet dabei zwei `mouseover` ohne das
+ * `mouseout` dazwischen (gemessen), und die Karte blieb stehen, bis der Zeiger
+ * das Fenster verliess. `mouseover` blubbert und nennt bei JEDEM Wechsel das
+ * neue Ziel; das Fenster selbst steht still, sein `mouseleave` trägt.
+ */
+function onFusionOver(e: MouseEvent): void {
+  const btn = (e.target as HTMLElement | null)?.closest?.('.pursuit-mark-btn')
+  fusionHoverId.value = btn?.getAttribute('data-fusion') ?? null
+}
 const aimedFusionId = computed(() => pursuitId.value ?? fusionHoverId.value)
 
 /**
@@ -1132,6 +1165,21 @@ const fusionBodies = computed(() =>
       : []
   }),
 )
+
+/**
+ * Die Karte des überfahrenen Körpers — genau EINE, nie vierzehn.
+ *
+ * Sie hängt am Zeiger und nicht am Gemeinten: eine Verfolgung steht Minuten,
+ * und eine Karte, die so lange stünde, wäre ein Schild.
+ */
+const { offerForConstellation } = useForgeOffers()
+
+const fusionTip = computed<ForgeTipView | null>(() => {
+  const id = fusionHoverId.value
+  if (id === null) return null
+  const offer = offerForConstellation(id)
+  return offer === null ? null : forgeFusionTipView(offer, forgeStore.constellationForged(id))
+})
 
 const pursuitAnchor = computed(() => fusionAnchors.get(aimedFusionId.value ?? '') ?? null)
 
@@ -2692,6 +2740,19 @@ const nextPhasePreviewStyle = computed(() => ({
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+/* Steht die Karte, muss sie über die Knotenkreise: die Körper stehen VOR den
+   Knoten im DOM, und `.tree-node--spot` hebt den überfahrenen Knoten auf 6. */
+.pursuit-mark--tipped {
+  z-index: 7;
+}
+
+.pursuit-mark-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 0;
   background: transparent;
   border: none;
@@ -2713,7 +2774,7 @@ const nextPhasePreviewStyle = computed(() => ({
   opacity: 0.55;
 }
 
-.pursuit-mark:hover .pursuit-mark-ring,
+.pursuit-mark-btn:hover .pursuit-mark-ring,
 .pursuit-mark--aimed .pursuit-mark-ring {
   background: #1c1c18;
   opacity: 1;

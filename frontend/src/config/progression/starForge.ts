@@ -2258,7 +2258,10 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
   },
   {
     id: 'risingArmada',
-    name: 'The Rising Armada',
+    // Der einzige Name, der aus dem Nomen-Register der Geschwister ausbricht —
+    // die sprechen von der Welt, dieser eine schaltet eine BEDIENUNG frei. Die
+    // Id bleibt: sie steht als blanker String in jedem Spielstand.
+    name: 'All Sails at Once',
     icon: 'game-icons:starfighter',
     color: '#ffe9a8',
     // Geschwister von `waitingRoad`, ein Blatt statt einer Wacht: Zweig 3 und

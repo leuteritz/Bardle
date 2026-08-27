@@ -19,6 +19,7 @@ import type {
   ForgeCostItem,
   ForgeOffer,
   ForgeOfferReq,
+  ForgeTipView,
   ForgeNodeRequirement,
   ForgeVaultEntry,
 } from '@/types'
@@ -131,6 +132,7 @@ export function useForgeOffers(): {
   offerById: ComputedRef<Map<string, ForgeOffer>>
   pursuedOffer: ComputedRef<ForgeOffer | null>
   pursuedId: ComputedRef<string | null>
+  offerForConstellation: (id: string) => ForgeOffer | null
   vaultEntries: ComputedRef<ForgeVaultEntry[]>
   bargainOffer: ComputedRef<ForgeOffer | null>
   bargainExtras: ComputedRef<ForgeBargainExtras>
@@ -280,12 +282,22 @@ export function useForgeOffers(): {
    */
   const pursuedOffer = computed<ForgeOffer | null>(() => {
     const id = pursuitId.value
-    if (id === null) return null
-    const def = getForgeConstellation(id)
     // Fusioniertes wird nicht verfolgt — es liegt im Archiv.
-    if (!def || forgeStore.constellationForged(id)) return null
-    return constellationOffer(def)
+    if (id === null || forgeStore.constellationForged(id)) return null
+    return offerForConstellation(id)
   })
+
+  /**
+   * Ein Katalogeintrag als Zeile, nach Id — auch fusioniert und auch gesperrt.
+   *
+   * Der Fusionskörper im Netz baut daraus seine Karte am Zeiger; er zeigt sie
+   * für alle vierzehn, in jedem Zustand. Gebaut wird immer nur EINE, die des
+   * überfahrenen Körpers.
+   */
+  function offerForConstellation(id: string): ForgeOffer | null {
+    const def = getForgeConstellation(id)
+    return def ? constellationOffer(def) : null
+  }
 
   /** Wen der Streifen deshalb NICHT zeigen darf — zweimal in einer Spalte wäre ein Fehler. */
   const pursuedId = computed(() => pursuedOffer.value?.id ?? null)
@@ -485,6 +497,7 @@ export function useForgeOffers(): {
     offerById,
     pursuedOffer,
     pursuedId,
+    offerForConstellation,
     vaultEntries,
     bargainOffer,
     bargainExtras,
@@ -492,5 +505,27 @@ export function useForgeOffers(): {
     buyOffer,
     rerollBargain,
     canReroll,
+  }
+}
+
+/**
+ * Eine Konstellation als Karte am Zeiger — dieselbe Gestalt, die ein Baumknoten
+ * über `forgeNodeTipView` bekommt.
+ *
+ * Die Bedingungsliste steht nur, solange sie die Antwort ist: sind alle Tore
+ * offen — oder ist sie ohnehin geschmiedet —, sagt sie nichts mehr, das der
+ * Chip nicht schon sagt. Dieselbe Regel wie am kaufbaren und am ausgewachsenen
+ * Knoten.
+ */
+export function forgeFusionTipView(offer: ForgeOffer, forged: boolean): ForgeTipView {
+  const open = !forged && offer.reqs.some((req) => !req.met)
+  return {
+    icon: offer.icon,
+    name: offer.name,
+    color: offer.color,
+    chip: forged ? FORGE_VAULT_FUSED_BADGE : '',
+    effect: offer.desc,
+    reqs: open ? offer.reqs : [],
+    lockReason: '',
   }
 }

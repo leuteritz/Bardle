@@ -16,6 +16,7 @@ import type {
   ForgeCostItem,
   ForgeLockKind,
   ForgeNodeDef,
+  ForgeTipView,
   ForgeUpgradeBucketId,
   ForgeUpgradeEntry,
   ForgeUpgradeState,
@@ -40,6 +41,7 @@ import {
   FORGE_ENDLESS_SYMBOL,
   FORGE_LEVEL_PREFIX,
   FORGE_ROW_PRICE_FIT_STEPS,
+  FORGE_TIP_MAX_LABEL,
   FORGE_ROW_PRICE_FIT_FALLBACK,
   MEEP_SKILL_ARCHIVE_SEALED_LABEL,
   MEEP_STATE_LEARNED,
@@ -198,6 +200,26 @@ export function forgeUpgradeMayTravel(entry: ForgeUpgradeEntry | undefined): boo
  */
 export function forgeEffectText(entry: ForgeUpgradeEntry): string {
   return entry.level === 0 ? entry.nextDesc : entry.desc
+}
+
+/**
+ * Ein Baumknoten als Karte am Zeiger.
+ *
+ * Die Bedingungsliste steht nur, solange sie die Antwort ist: gegen Phase,
+ * Prestige-Tor und Gleichwuchs-Deckel hilft kein Vorgänger, dort trägt der
+ * Sperrsatz. Die Fusion füllt dasselbe Modell aus ihrem eigenen Katalog
+ * (`forgeFusionTipView`).
+ */
+export function forgeNodeTipView(entry: ForgeUpgradeEntry): ForgeTipView {
+  return {
+    icon: entry.icon,
+    name: entry.name,
+    color: entry.color,
+    chip: entry.state === 'maxed' ? FORGE_TIP_MAX_LABEL : '',
+    effect: forgeEffectText(entry),
+    reqs: entry.lockKind === 'parent' ? entry.reqs : [],
+    lockReason: entry.lockReason,
+  }
 }
 
 /**
