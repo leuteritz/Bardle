@@ -387,7 +387,7 @@ import {
 } from '@/utils/ui/forgeSpotlightView'
 import {
   forgeClampPan,
-  forgeContentCenter,
+  forgeCameraHome,
   forgeFitScale,
   forgeNodeScreenRadius,
 } from '@/utils/ui/forgeCameraBounds'
@@ -1312,11 +1312,10 @@ const viewportSize = ref({ w: 0, h: 0 })
  * Zoomschritt den Versatz umrechnen, und es gäbe zwei Zahlen für dieselbe
  * Stelle.
  *
- * Er startet auf der Mitte des NETZES, nicht der Bühne. Die beiden liegen
- * 32 px auseinander, und das ist gemessen: um die Bühnenmitte geklemmt bliebe
- * am oberen Anschlag ein leeres Band, das unten fehlt.
+ * Er startet auf der Bühnenmitte — dort sitzt die Sonne, und damit steht sie
+ * mittig im Bild. Warum nicht auf der Mitte des Netzes: `forgeCameraBounds.ts`.
  */
-const pan = ref(forgeContentCenter())
+const pan = ref(forgeCameraHome())
 
 let resizeObserver: ResizeObserver | null = null
 
@@ -1402,6 +1401,10 @@ onMounted(() => {
     }
     const narrower = rect.width < prevW
     paneShift = false
+    // VOR dem Ausgleich gefragt, sonst ist die Antwort immer „nein".
+    const home = forgeCameraHome()
+    const wasHome =
+      Math.hypot(pan.value.x - home.x, pan.value.y - home.y) < FORGE_RECENTER_AT_REST_PX
 
     panInstant.value = true
     pan.value = {
@@ -1411,7 +1414,7 @@ onMounted(() => {
 
     /* Erst im NÄCHSTEN Frame Transition zurück und klemmen. Was `forgePanLimit`
        und `zoomFloor` danach noch verschieben — bei breiterem Bild zieht der
-       Anschlag zur Hüllenmitte, bei schmalerem hebt sich ggf. der Zoomboden —
+       Anschlag zur Bühnenmitte, bei schmalerem hebt sich ggf. der Zoomboden —
        gleitet dann über die vorhandene Transition der Bühne. */
     settleFrame = requestAnimationFrame(() => {
       panInstant.value = false
@@ -1428,7 +1431,17 @@ onMounted(() => {
          Nur beim SCHMALER-Werden. Klappt die Spalte zu, wird Fläche frei; was
          vorher bequem stand, steht danach erst recht bequem, und eine Fahrt
          wäre reine Bewegung ohne Anlass. */
-      if (narrower) comfortToFocus(pinnedId.value)
+      if (narrower) {
+        comfortToFocus(pinnedId.value)
+        return
+      }
+      /* Und beim BREITER-Werden zurück nach Hause — aber nur für den, der gar
+         nicht geschwenkt hat. Der Ausgleich oben hält das Bild still und lässt
+         die Sonne dabei um die halbe Spaltenbreite aus der neuen Mitte laufen;
+         wer selbst am Rand des Netzes steht, will genau das. Wer nicht, bekommt
+         seine mittige Sonne zurück — als Fahrt über die vorhandene Transition,
+         nicht als Sprung, denn der Anker hängt am Layout und kann nicht fahren. */
+      if (wasHome) movePan(home, panDurationFor(pan.value, home))
     })
   })
   resizeObserver.observe(viewportEl.value)
@@ -1655,7 +1668,7 @@ function panToFocus(): void {
  *
  * Bisher gab es ihn nur als Nebenwirkung: ganz herauszoomen macht
  * `forgePanLimit()` zu null, und `clampPan()` zieht die Kamera dann zwangsweise
- * auf `forgeContentCenter()`. Neun Klicks auf „−" sind aber keine Geste.
+ * auf `forgeCameraHome()`. Neun Klicks auf „−" sind aber keine Geste.
  *
  * Der Zoom wird ZUERST gesetzt: `clampPan()` klemmt gegen `forgePanLimit(view,
  * scale)`, und in umgekehrter Reihenfolge klemmte die Fahrt noch gegen die
@@ -1665,7 +1678,7 @@ function panToFocus(): void {
  * Zustände in einem Tastendruck wären ein Zufallsergebnis.
  */
 function recenterCamera(): void {
-  const target = forgeContentCenter()
+  const target = forgeCameraHome()
   zoom.value = clampZoom(FORGE_TREE_ZOOM_DEFAULT)
   movePan(target, panDurationFor(pan.value, target))
 }
@@ -1675,7 +1688,7 @@ defineExpose({ recenterCamera })
 /** Steht die Kamera zu Hause? Speist das Leuchten der Kürzel-Zeile — sie zeigt
  *  das Kürzel erst dann hervorgehoben, wenn es etwas zu tun gibt. */
 const recenterAtRest = computed(() => {
-  const home = forgeContentCenter()
+  const home = forgeCameraHome()
   const off = Math.hypot(pan.value.x - home.x, pan.value.y - home.y)
   return off < FORGE_RECENTER_AT_REST_PX && zoom.value === clampZoom(FORGE_TREE_ZOOM_DEFAULT)
 })

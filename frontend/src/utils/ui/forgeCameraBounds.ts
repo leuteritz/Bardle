@@ -4,6 +4,7 @@ import {
   FORGE_SPOTLIGHT_EDGE_MARGIN_PX,
   FORGE_SPOTLIGHT_NODE_SCALE,
   FORGE_SPOTLIGHT_RING_INSET_PX,
+  FORGE_STAGE_SIZE,
   FORGE_TREE_FIT_PADDING_PX,
   FORGE_TREE_ZOOM_FLOOR,
 } from '@/config/constants'
@@ -20,6 +21,9 @@ import type { ForgeUpgradeTier } from '@/types'
  * gemessen reicht er bis r = 833, die Bühnenkante liegt bei 1000, ihre Ecke bei
  * 1414. Man konnte also eine halbe Bildbreite über den letzten Knoten
  * hinausfahren und stand vor Nichts. Hier steht, was stattdessen gilt.
+ *
+ * Zwei Fragen, zwei Antworten: der ANKER ist die Bühnenmitte (dort steht die
+ * Sonne), die AUSDEHNUNG kommt aus den gemessenen Knotenrändern. Siehe `reach()`.
  *
  * Eigene Datei und nicht in `ForgeTreePanel.vue`: es gibt in diesem Projekt
  * keine Komponententests, und genau diese Rechnung will man prüfen können
@@ -40,31 +44,55 @@ interface Reach {
   radius: number
 }
 
+const STAGE_HALF = FORGE_STAGE_SIZE / 2
+
 /** Inhalt plus Saum — einmal gerechnet wie die Hülle selbst. */
 let reachCache: Reach | null = null
 
+/**
+ * Der Ankerpunkt ist die BÜHNENMITTE — dort steht die Sonne.
+ *
+ * Hier stand die Mitte der Knoten-HÜLLE, und das war einmal der bessere Handel:
+ * um sie herum ist der Rand auf allen vier Seiten derselbe, während die
+ * Bühnenmitte oben ein leeres Band einhandelt (gemessen 109 gegen 46 px). Der
+ * Preis war ein Sonnenversatz von 26 px.
+ *
+ * The Wandering hat den Preis vervielfacht. Fünf Spuren bilden ein FÜNFECK, und
+ * ein Fünfeck hat keine zentrierte Hüllbox: gemessen liegt `centerX` bei 1544,5
+ * gegen 1700 — bei Standardzoom 155 Bildschirm-Pixel, um die die Sonne samt
+ * ihrer Leitzahl aus der Bildmitte rutschte. Das ist keine Feinheit mehr,
+ * sondern das Auffälligste am ganzen Reiter.
+ *
+ * Umgedreht kostet es fast nichts. Das RECHTECK zahlt drauf, weil die grössere
+ * der beiden Hälften gilt (`halfW` 1273,9 → 1429,4; `halfH` 1353,5 → 1378,4) —
+ * auf beiden Referenzauflösungen bindet aber die HÖHE den Einpass, der Zoomboden
+ * fällt also nur um rund 3,7 % (Full HD 0,2305 → 0,2219, QHD 0,3317 → 0,3202).
+ * Die SCHEIBE gewinnt sogar: das Netz liegt radial um die Sonne, ihr Mittelpunkt
+ * ist damit der bessere — `stageRadius` misst 1459,8 gegen 1593,9.
+ */
 function reach(): Reach {
   if (reachCache !== null) return reachCache
   const bounds = forgeContentBounds()
   reachCache = {
-    cx: bounds.centerX,
-    cy: bounds.centerY,
-    halfW: bounds.halfW + FORGE_CONTENT_SEAM_PX,
-    halfH: bounds.halfH + FORGE_CONTENT_SEAM_PX,
-    radius: bounds.radius + FORGE_CONTENT_SEAM_PX,
+    cx: STAGE_HALF,
+    cy: STAGE_HALF,
+    halfW: Math.max(STAGE_HALF - bounds.minX, bounds.maxX - STAGE_HALF) + FORGE_CONTENT_SEAM_PX,
+    halfH: Math.max(STAGE_HALF - bounds.minY, bounds.maxY - STAGE_HALF) + FORGE_CONTENT_SEAM_PX,
+    radius: bounds.stageRadius + FORGE_CONTENT_SEAM_PX,
   }
   return reachCache
 }
 
 /**
- * Der Punkt, auf den die Kamera zurückfällt, wenn alles ins Bild passt.
+ * Der Punkt, auf den die Kamera zurückfällt, wenn alles ins Bild passt — und
+ * damit die Stelle, die im Bild mittig steht.
  *
- * Die Mitte des NETZES, nicht die der Bühne: das Netz sitzt 32 px tiefer als
- * die Sonne, und um die Bühnenmitte geklemmt bliebe oben ein leeres Band, das
- * unten fehlt (gemessen 109 gegen 18 px). `ForgeTreePanel.vue` startet `pan`
- * hier, damit der erste Blick derselbe ist wie der am Zoomboden.
+ * Es ist die Bühnenmitte, also der Sitz von `.sun-wrapper`: die Sonne mit der
+ * Leitzahl in ihrem Kern steht zentriert, sobald niemand geschwenkt hat.
+ * `ForgeTreePanel.vue` startet `pan` hier, `recenterCamera()` fährt hierher
+ * zurück, und am Zoomboden zwingt `forgePanLimit()` ohnehin hierhin.
  */
-export function forgeContentCenter(): Point {
+export function forgeCameraHome(): Point {
   const { cx, cy } = reach()
   return { x: cx, y: cy }
 }

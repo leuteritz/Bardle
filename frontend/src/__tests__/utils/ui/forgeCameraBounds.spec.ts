@@ -4,7 +4,7 @@ import { forgeContentBounds, forgeTreePlacements } from '@/utils/ui/forgeTreeLay
 import {
   forgeClampPan,
   forgeClampPanBox,
-  forgeContentCenter,
+  forgeCameraHome,
   forgeFitScale,
   forgeNodeScreenRadius,
   forgePanLimit,
@@ -73,22 +73,41 @@ describe('Star Forge — die Grenzen der Kamera', () => {
       ).toBeLessThanOrEqual(b.radius + 0.01)
     }
 
-    // Gemessen: halfW 1260,9 · halfH 1342,0 · radius 1590,3 gegen 1700
+    // Gemessen: halfW 1273,9 · halfH 1353,5 · radius 1593,9 gegen 1700
     // Buehnenhalb (davor 788,3 · 816,8 · 847,6 gegen 1000 — The Wandering hat die
     // Huelle rund verdoppelt, und die Buehne ist ihr gefolgt).
     //
     // Die Huellenmitte liegt seither auch in x neben der Buehnenmitte: fuenf
     // Spuren bilden ein Fuenfeck, und ein Fuenfeck hat keine zentrierte
-    // Huellbox. Gemessen 1565,2 gegen 1700 — rund 135 px, am Zoomboden also
-    // dreissig auf dem Schirm.
+    // Huellbox. Gemessen 1544,5 gegen 1700 — rund 155 px, und weil die Sonne
+    // auf der BUEHNENmitte sitzt, war das der Versatz, mit dem sie aus der
+    // Bildmitte rutschte. Der Anker haengt deshalb an 1700, nicht an ihr.
     // Bricht das hier, ist der Baum gewachsen — dann sind die Zahlen in den
     // Kommentaren von `FORGE_CONTENT_SEAM_PX` und `forgeCameraBounds.ts` fällig.
     expect(b.radius, `Inhaltsradius ${b.radius.toFixed(1)}`).toBeLessThan(HALF)
     expect(b.halfW, `halfW ${b.halfW.toFixed(1)}`).toBeLessThan(HALF)
     expect(b.halfH, `halfH ${b.halfH.toFixed(1)}`).toBeLessThan(HALF)
-    // Die Huellenmitte ist NICHT die Buehnenmitte — das Netz sitzt tiefer, und
-    // genau deshalb klemmt alles gegen sie und nicht gegen 1000.
+    // Die Huellenmitte ist NICHT die Buehnenmitte — sie ist der Grund fuer die
+    // GEWACHSENEN Halbmasse der Kamera, nicht mehr ihr Ankerpunkt.
     expect(Math.abs(b.centerY - HALF), 'Hoehenversatz der Huelle').toBeGreaterThan(10)
+    expect(Math.abs(b.centerX - HALF), 'Breitenversatz der Huelle').toBeGreaterThan(10)
+    // In der BREITE zahlt der Buehnenanker den Versatz drauf — in der SCHEIBE
+    // bekommt er ihn zurueck: das Netz liegt radial um die Sonne, also ist die
+    // Buehnenmitte ihr natuerlicher Mittelpunkt und die Huellenmitte der
+    // schlechtere. Gemessen 1459,8 gegen 1593,9 — die radiale Klemmung wurde
+    // durch den Umbau enger, nicht weiter.
+    expect(b.stageRadius, `Buehnenradius ${b.stageRadius.toFixed(1)}`).toBeLessThan(b.radius)
+  })
+
+  it('die Kamera steht zu Hause auf der SONNE', () => {
+    // Der Wächter für „die Sonne steht mittig im Reiter". `.sun-wrapper` sitzt
+    // in `ForgeTreePanel.vue` auf `top/left: 50 %` der `.tree-stage`, also auf
+    // `FORGE_STAGE_SIZE / 2` — und `stageTransform` legt genau den Punkt `pan`
+    // auf die Bildmitte. Beide Zahlen muessen dieselbe sein, sonst rutscht die
+    // Leitzahl im Kern der Sonne aus der Mitte.
+    const home = forgeCameraHome()
+    expect(home.x, 'Kamera-Heimat x').toBe(HALF)
+    expect(home.y, 'Kamera-Heimat y').toBe(HALF)
   })
 
   it('bei fitScale steht die Buehne still', () => {
@@ -114,7 +133,7 @@ describe('Star Forge — die Grenzen der Kamera', () => {
         { x: HALF, y: 0 },
       ]) {
         const out = forgeClampPan(pan, view, s)
-        const c = forgeContentCenter()
+        const c = forgeCameraHome()
         expect(out.x, `${view.name}: x wandert am Zoomboden`).toBeCloseTo(c.x, 6)
         expect(out.y, `${view.name}: y wandert am Zoomboden`).toBeCloseTo(c.y, 6)
       }
@@ -182,7 +201,7 @@ describe('Star Forge — die Grenzen der Kamera', () => {
     // liegt das Netz am weitesten aussen, und dort muss man hinkommen.
     for (const view of VIEWS) {
       for (const zoom of [zoomFloorFor(view), 1, FORGE_TREE_ZOOM_MAX]) {
-        const c = forgeContentCenter()
+        const c = forgeCameraHome()
         for (let dx = -1200; dx <= 1200; dx += 100) {
           for (let dy = -1200; dy <= 1200; dy += 100) {
             const pan = { x: c.x + dx, y: c.y + dy }
@@ -210,7 +229,13 @@ describe('Star Forge — die Grenzen der Kamera', () => {
     // Die Zusage in ihrer wörtlichen Form: die Bildkante endet am Netz. Geprüft
     // wird der am weitesten aussen liegende Punkt des Ausschnitts gegen die
     // Hülle plus Saum plus Kantensaum — mehr darf nirgends sichtbar werden.
+    //
+    // Gemessen wird von der BUEHNENmitte aus, weil die Kamera dort verankert
+    // ist: `halfW` der Huelle taugt dafuer nicht, es gilt die groessere der
+    // beiden Haelften (`forgeCameraBounds.reach()` rechnet genauso).
     const b = forgeContentBounds()
+    const stageHalfW = Math.max(HALF - b.minX, b.maxX - HALF)
+    const stageHalfH = Math.max(HALF - b.minY, b.maxY - HALF)
     for (const view of VIEWS) {
       for (const zoom of [zoomFloorFor(view), 1, FORGE_TREE_ZOOM_MAX]) {
         const margin = FORGE_SPOTLIGHT_EDGE_MARGIN_PX / zoom
@@ -220,12 +245,12 @@ describe('Star Forge — die Grenzen der Kamera', () => {
           { x: 0, y: 1 },
           { x: 0, y: -1 },
         ]) {
-          const c = forgeContentCenter()
+          const c = forgeCameraHome()
           const pan = forgeClampPan({ x: c.x + dir.x * 5000, y: c.y + dir.y * 5000 }, view, zoom)
           const edgeX = Math.abs(pan.x - c.x) + view.w / 2 / zoom
           const edgeY = Math.abs(pan.y - c.y) + view.h / 2 / zoom
-          const reachX = b.halfW + FORGE_CONTENT_SEAM_PX + margin
-          const reachY = b.halfH + FORGE_CONTENT_SEAM_PX + margin
+          const reachX = stageHalfW + FORGE_CONTENT_SEAM_PX + margin
+          const reachY = stageHalfH + FORGE_CONTENT_SEAM_PX + margin
           expect(
             edgeX,
             `${view.name}/${zoom.toFixed(2)}: Bildkante ${edgeX.toFixed(0)} ueber x-Huelle`,

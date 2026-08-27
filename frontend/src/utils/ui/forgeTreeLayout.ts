@@ -188,8 +188,7 @@ function sectorOf(cluster: ForgeClusterDef): Sector {
     cluster.region === 'road'
       ? (FORGE_ROAD_BAND[cluster.rank] ?? FORGE_ROAD_BAND[FORGE_ROAD_BAND.length - 1])
       : (FORGE_ZONE_BAND[cluster.phase] ?? FORGE_ZONE_BAND[FORGE_ZONE_BAND.length - 1])
-  const spread =
-    cluster.region === 'road' ? FORGE_ROAD_SECTOR_SPREAD : FORGE_CLUSTER_SECTOR_SPREAD
+  const spread = cluster.region === 'road' ? FORGE_ROAD_SECTOR_SPREAD : FORGE_CLUSTER_SECTOR_SPREAD
   return {
     angleDeg: cluster.angleDeg,
     halfSpanDeg: (360 / peers) * spread,
@@ -639,6 +638,9 @@ export interface ForgeContentBounds {
   halfH: number
   /** Der weiteste Knotenrand, von der Hüllenmitte aus gemessen. */
   radius: number
+  /** Derselbe Rand, aber von der BÜHNENmitte aus — dort, wo die Sonne steht.
+   *  Die Kamera verankert auf ihr, siehe `forgeCameraBounds.ts`. */
+  stageRadius: number
 }
 
 let boundsCache: ForgeContentBounds | null = null
@@ -654,17 +656,15 @@ let boundsCache: ForgeContentBounds | null = null
  * Wer die Klemmung gegen diese Hülle rechnet statt gegen `FORGE_STAGE_SIZE`,
  * bekommt genau das zurück.
  *
- * Die Mitte ist die der HÜLLE und nicht die der Bühne, und das ist gemessen
- * entschieden: das Netz sitzt tiefer, als die Sonne steht. Wer um die
- * Bühnenmitte klemmt, muss die grössere der beiden Hälften nehmen und handelt
- * sich oben ein leeres Band ein — im Browser nachgemessen 109 px statt 46. Um
- * die Hüllenmitte ist der Rand auf allen vier Seiten derselbe. Der Preis ist
- * ein Versatz der Sonne aus der Bildmitte von 26 Bühnen-Pixeln (vor dem
- * Wachstum der Sonne 32), am Zoomboden also acht auf dem Schirm.
+ * Diese Datei MISST nur, sie entscheidet nicht, wohin die Kamera sieht. Die
+ * Hüllenmitte war einmal auch der Ankerpunkt der Klemmung — sie ist es nicht
+ * mehr: mit The Wandering wuchs ihr Abstand zur Sonne auf 135 px, und die
+ * Kamera hängt seither an der Bühnenmitte (`forgeCameraBounds.ts`). `centerX`
+ * bleibt trotzdem hier, denn es ist die Zahl, aus der die Kamera ihre
+ * gewachsenen Halbmasse bezieht.
  *
- * `radius` misst von derselben Mitte — EIN Bezugspunkt für Rechteck und
- * Scheibe, sonst klemmten die beiden Fassungen in `forgeCameraBounds.ts`
- * gegeneinander.
+ * `radius` misst von der Hüllenmitte, `stageRadius` von der Bühnenmitte —
+ * je Bezugspunkt einer, sonst klemmten Rechteck und Scheibe gegeneinander.
  *
  * Knotenrein, ohne die WEGE: `forgeEdgeRoute.ts` importiert diese Datei, der
  * umgekehrte Weg wäre ein Zyklus. Was ein Weg darüber hinaus ausholt, trägt
@@ -689,9 +689,11 @@ export function forgeContentBounds(): ForgeContentBounds {
   const centerX = (minX + maxX) / 2
   const centerY = (minY + maxY) / 2
   let radius = 0
+  let stageRadius = 0
   for (const [id, at] of places) {
     const r = FORGE_NODE_DIAMETER[forgeSeatTier(id)] / 2
     radius = Math.max(radius, Math.hypot(at.x - centerX, at.y - centerY) + r)
+    stageRadius = Math.max(stageRadius, Math.hypot(at.x - STAGE_HALF, at.y - STAGE_HALF) + r)
   }
   boundsCache = {
     minX,
@@ -703,6 +705,7 @@ export function forgeContentBounds(): ForgeContentBounds {
     halfW: (maxX - minX) / 2,
     halfH: (maxY - minY) / 2,
     radius,
+    stageRadius,
   }
   return boundsCache
 }
