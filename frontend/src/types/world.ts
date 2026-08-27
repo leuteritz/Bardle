@@ -443,6 +443,66 @@ export type LandfallGesture =
   /** Keine Geste — er zahlt beim Vorbeifliegen (The Gloaming). */
   | 'none'
 
+/**
+ * Wie selten ein Ort ist — und damit, wie viel Raum sein Körper auf der Bühne
+ * einnimmt. Vorbild ist `DrifterRarity`, und der Grund ist derselbe: die
+ * Wertigkeit stand als `weight` schon im Katalog, war aber nirgends zu sehen.
+ *
+ * EXPLIZIT am Def, nicht aus `weight` gerechnet: eine abgeleitete Stufe spränge,
+ * sobald jemand ein Gewicht um zwei Punkte verschiebt. Die Monotonie gegen die
+ * Gewichtsfolge bindet stattdessen eine Spec.
+ */
+export type LandfallPresence = 'common' | 'uncommon' | 'rare' | 'singular'
+
+/**
+ * Was für ein Objekt der Körper auf der Bühne IST.
+ *
+ * Jeder Ort hat seine eigene Silhouette, und jede ist etwas, das man so auch im
+ * echten Weltall fände: ein Trümmerschwarm, eine Dunkelwolke, eine Kette
+ * Havaristen, ein totes Habitat, ein Planetoid mit Landmarke, eine
+ * Gravitationslinse. Die 4-px-Marke der Karte teilt sich weiterhin EINE Raute —
+ * dort trägt keine Textur, hier stehen 53 bis 197 px zur Verfügung.
+ *
+ * Getrennt von `LandfallKindId` geführt wie `DrifterBodyKind` von `DrifterId`:
+ * ein siebter Ort darf sich ein Motiv leihen, ohne dass es dafür einen zweiten
+ * Zeichenzweig braucht.
+ */
+export type LandfallMotif =
+  /** Chime Reef — ein Schwarm Eistrümmer auf einer flachen Ellipse. */
+  | 'shoal'
+  /** The Gloaming — eine Dunkelwolke ohne Kante, die nur Dichte hat. */
+  | 'darkcloud'
+  /** Adrift Convoy — drei gestaffelte Rümpfe, einer mit Notsignal. */
+  | 'derelicts'
+  /** Sunken Ossuary — ein gekippter Zylinder unter Regolith, Luke versiegelt. */
+  | 'hulk'
+  /** Wayside Cairn — ein Planetoid, darauf ein gestapelter Steinturm. */
+  | 'planetoid'
+  /** The Rupture — kein Körper: Sichelbögen gelinsten Sternlichts. */
+  | 'lens'
+
+/**
+ * Wie viel Zierrat eine Präsenzstufe trägt. Wie `DrifterFxStage` gebaut: jede
+ * Stufe legt GENAU EINE Ebene dazu, statt die vorige neu zu formulieren.
+ *
+ * Jeder Wert wird zusammen mit `LANDFALL_ORNAMENT_MIN_PX` gelesen, nie allein
+ * (Performance-Regel 7): an den Enden der Sehne steht der Körper auf 45 % seiner
+ * Grösse, und eine Ebene von zwei Pixeln ist unsichtbar und trotzdem voll bezahlt.
+ */
+export interface LandfallFxStage {
+  presence: LandfallPresence
+  /** Staubschleier um den Körper, 0–2 — jeder atmet auf eigenem Versatz. */
+  veilLayers: number
+  /** Deckkraft des innersten Schleiers. */
+  veilAlpha: number
+  /** Begleitsplitter, die mit dem Körper ziehen. */
+  motes: number
+  /** Zusätzliche Sprite-Pässe: mehr Krater, mehr Plattenfugen, Begleitkörner. */
+  detail: 0 | 1 | 2
+  /** Eine einmalige Welle beim Auftauchen — nur der seltenste Ort meldet sich an. */
+  herald: boolean
+}
+
 export interface LandfallDef {
   id: LandfallKindId
   name: string
@@ -452,6 +512,8 @@ export interface LandfallDef {
   unlockGalaxy: number
   /** Gewicht innerhalb der bereits freigeschalteten Menge. */
   weight: number
+  /** Wie selten er ist — steuert allein den Zierrat des Körpers, nie den Lohn. */
+  presence: LandfallPresence
   gesture: LandfallGesture
   /**
    * Wie viele Griffe der Ort höchstens zählt. Bei `threshold` ist es zugleich

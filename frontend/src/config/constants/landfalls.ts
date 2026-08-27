@@ -6,6 +6,8 @@
 // Orbit: Drifter und Void tragen ihre eigene Uhr und sind ORTLOS, der
 // Champion-Stern ist ein eigenes Ziel mit eigener Reise.
 
+import type { LandfallFxStage, LandfallKindId, LandfallMotif, LandfallPresence } from '@/types'
+
 /** Ab welcher Galaxie es überhaupt Landfalls gibt. */
 export const LANDFALL_UNLOCK_GALAXY = 2
 
@@ -351,3 +353,224 @@ export const LANDFALL_LANES: ReadonlyArray<{
 /** Der Querab-Moment — dort steht `theta` auf null, der Ort ist am nächsten und
  *  das Erntefenster halb um. */
 export const LANDFALL_BODY_ABEAM_AT = 0.5
+
+/* ── Der Körper als OBJEKT ────────────────────────────────────────────────────
+   Ein Landfall war auf der Bühne bis hierher dieselbe hohle Raute wie auf dem
+   Galaxiebild, mit einem Iconify-Glyph in der Mitte — ein ZEICHEN am Himmel.
+
+   Er ist jetzt ein KÖRPER IM LICHT DER SONNE. Das ist wörtlich der Satz, auf dem
+   `DrifterBody.vue` gebaut ist, und er gilt hier aus demselben Grund: die Bühne
+   hat genau eine Lichtquelle, sie steht in der Mitte, und ein Ding, das ihr eine
+   helle Seite zuwendet, liest sich als Ding statt als Symbol.
+
+   Die 4-px-Marke auf der Karte bleibt die Raute — dort trägt keine Textur, und
+   die Begründung dafür (der Formvorrat ist bei 4,4 px ausgereizt) steht
+   unverändert in `galaxyLandmarks.ts`.                                        */
+
+/**
+ * Was jeder der sechs Orte für ein Objekt IST.
+ *
+ * Als `Record` plus erschöpfender `switch` in `landfallSprite.ts`: ein siebter
+ * Ort ohne Zeichenzweig COMPILIERT NICHT. Genau das fehlte `paintLandfallMark` —
+ * dort fällt ein neuer Ort still durch die Verzweigung und malt eine leere Raute.
+ */
+export const LANDFALL_BODY_MOTIF: Record<LandfallKindId, LandfallMotif> = {
+  chime_reef: 'shoal',
+  the_gloaming: 'darkcloud',
+  adrift_convoy: 'derelicts',
+  sunken_ossuary: 'hulk',
+  wayside_cairn: 'planetoid',
+  the_rupture: 'lens',
+}
+
+/**
+ * Wer eine Sonnenseite hat — und wer nicht.
+ *
+ * Dieselbe Unterscheidung, die `DrifterBody.vue` schon führt: Plasma, ein Pulsar
+ * und eine Gravitationslinse werden nicht von aussen beleuchtet. Ein Nebel
+ * STREUT das Licht, das durch ihn hindurchgeht, und eine Linse trägt fremdes
+ * Licht statt einer Oberfläche. Beiden einen Terminator zu geben wäre eine
+ * Ebene, die das Falsche behauptet — und sie kostet dann auch noch.
+ */
+export const LANDFALL_BODY_LIT: Record<LandfallKindId, boolean> = {
+  chime_reef: true,
+  the_gloaming: false,
+  adrift_convoy: true,
+  sunken_ossuary: true,
+  wayside_cairn: true,
+  the_rupture: false,
+}
+
+/**
+ * Wie viel Zierrat eine Präsenzstufe trägt.
+ *
+ * Gebaut wie `DRIFTER_FX_STAGES`, und aus demselben Grund: jede Stufe legt GENAU
+ * EINE Ebene dazu. Die Seltenheit zeigt sich darin, wie viel RAUM ein Objekt
+ * einnimmt — Schleier, Begleitsplitter, eine Ankunftswelle — nicht in einer
+ * Rahmenfarbe. Ein goldener Rand um einen Asteroiden wäre wieder ein Zeichen.
+ */
+export const LANDFALL_PRESENCE_STAGES: Record<LandfallPresence, LandfallFxStage> = {
+  common: { presence: 'common', veilLayers: 0, veilAlpha: 0, motes: 0, detail: 0, herald: false },
+  uncommon: {
+    presence: 'uncommon',
+    veilLayers: 1,
+    veilAlpha: 0.2,
+    motes: 0,
+    detail: 1,
+    herald: false,
+  },
+  rare: { presence: 'rare', veilLayers: 1, veilAlpha: 0.28, motes: 3, detail: 2, herald: false },
+  singular: {
+    presence: 'singular',
+    veilLayers: 2,
+    veilAlpha: 0.36,
+    motes: 5,
+    detail: 2,
+    herald: true,
+  },
+}
+
+/**
+ * Ab welcher ECHTEN Kantenlänge eine Zierebene überhaupt gezeigt wird.
+ *
+ * Performance-Regel 7, und hier besonders nötig: an den Enden der Sehne steht
+ * der Körper auf `cos(1,1)` — rund 45 %, auf Full HD also 53 px. Drei
+ * Begleitsplitter messen dort je zwei Pixel: unsichtbar und voll bezahlt.
+ * Vorbild ist `DRIFTER_ORNAMENT_MIN_SIZE`.
+ */
+export const LANDFALL_ORNAMENT_MIN_PX = 72
+
+/**
+ * Wie weit der Sprite über die Körperkante hinausreicht.
+ *
+ * Nicht jedes Motiv endet an seiner Kernkontur: der Trümmerschwarm streut nach
+ * aussen, die Dunkelwolke hat gar keine Kante, die Linse trägt ihre Bögen im
+ * Aussenfeld. 1,42 fängt den weitesten davon — den Schwarm, dessen äusserster
+ * Brocken samt eigenem Radius bei rund 0,7 der halben Kante endet.
+ */
+export const LANDFALL_SPRITE_SPAN = 1.42
+
+/**
+ * Wie viele Sprites gleichzeitig im Speicher liegen.
+ *
+ * Es steht immer nur EIN Ort im Bild, aber ein Fensterziehen ändert `--lfb-px`
+ * und damit den Schlüssel. Vier reichen für den laufenden plus eine
+ * Vorgängergrösse — und der Konvoi belegt ZWEI: Körper und Notsignal liegen als
+ * getrennte Ebenen im selben Cache. Einer misst bei 197 px Körperkante, Span
+ * 1,42 und dpr 2 rund 560 px im Quadrat.
+ */
+export const LANDFALL_SPRITE_CACHE_MAX = 4
+
+/** Über dpr 2 hinaus rastert niemand einen Unterschied, den man sieht — die
+ *  Fläche wächst aber quadratisch. Dieselbe Deckelung wie im Admin-Panel. */
+export const LANDFALL_SPRITE_MAX_DPR = 2
+
+/**
+ * Wie weit sich der Körper über sein ganzes Fenster ZUSÄTZLICH dreht.
+ *
+ * Zusätzlich, weil die Hauptdrehung geschenkt kommt: die Sonnenseite ist im
+ * Sprite eingebacken, der Aufrufer dreht ihn auf `drifterLightAngleDeg`, und
+ * dieser Winkel wandert über einen Vorbeiflug um bis zu 150 Grad. Der Körper
+ * dreht sich davon schon sichtbar.
+ *
+ * Deshalb ist die Zahl KLEIN, und das ist keine Zurückhaltung, sondern eine
+ * Grenze: die Eigendrehung verdreht das eingebackene Licht um genau ihren
+ * Betrag. Bis etwa 40 Grad verschluckt das der weiche Terminator; darüber
+ * wandert die Sonne sichtbar von der Bildmitte weg. Der erste Entwurf stand auf
+ * 210 und hatte den Terminator noch als eigene DOM-Ebene — die lag bei den drei
+ * offenen Motiven als dunkle Scheibe im leeren Raum.
+ *
+ * An den FENSTERFORTSCHRITT gehängt, nicht an eine eigene Uhr: dann dreht sich
+ * jeder Ort über seinen Auftritt gleich weit, ob sein Fenster 8 oder 30 Sekunden
+ * misst — und bei `gameSpeed` 20 dreht er mit, wie alles andere auch.
+ */
+export const LANDFALL_SPIN_TURN_DEG = 40
+
+/**
+ * Startwinkel je Spur, damit nicht jeder Ort in derselben Lage auftaucht.
+ *
+ * Aus der SPUR abgeleitet, nicht gewürfelt: ein eigener rng-Strom wäre ein
+ * zusätzlicher Zug in einer Ziehreihenfolge, die für jede archivierte Galaxie
+ * nachgespielt wird.
+ */
+export const LANDFALL_SPIN_PHASE_DEG = 47
+
+/** Drehung auf ganze Grad. Der Compositor bewegt gratis, ein GEÄNDERTER
+ *  `transform` kann rastern — dieselbe Überlegung wie
+ *  `ORBIT_SCALE_QUANTIZE_STEPS` und `DRIFTER_LIGHT_QUANTIZE_DEG`. */
+export const LANDFALL_SPIN_QUANTIZE_DEG = 1
+
+/** Kantenlänge der Rauschkachel, die alle Motive teilen. Sie wird EINMAL je
+ *  Sitzung gebaut und per `createPattern` gefüllt; ein `putImageData` je Sprite
+ *  wäre der teuerste Einzelschritt des Baus. */
+export const LANDFALL_NOISE_TILE_PX = 96
+
+/**
+ * Wie viele Teile jedes Motiv trägt — Grundzahl, `detail` legt zu.
+ *
+ * Alle Lagen und Grössen werden aus dem INDEX abgeleitet, nie gewürfelt: ein
+ * `Math.random()` im Sprite-Bau liesse den Körper bei jedem Cache-Miss anders
+ * aussehen. Dieselbe Regel, aus der `voidSprite` seine Zacken und
+ * `paintFreedStar` seinen Trabanten aus dem Index nehmen.
+ */
+export const LANDFALL_SHOAL_SHARDS = 7
+export const LANDFALL_CLOUD_LOBES = 4
+export const LANDFALL_DERELICT_HULLS = 3
+export const LANDFALL_CAIRN_STONES = 4
+export const LANDFALL_LENS_ARCS = 3
+export const LANDFALL_HULK_RIBS = 5
+
+/**
+ * Wie unrund eine Silhouette höchstens wird, als Anteil des Radius.
+ *
+ * Ein Asteroid ist eine Kartoffel, kein Kreis — das ist der halbe Unterschied
+ * zwischen einem Körper und einem Symbol. Der Deckel steht trotzdem: die
+ * Trefferfläche ist rund (`border-radius: 50%`), und was weiter aussteht als
+ * `WOBBLE`, ragt aus ihr heraus und nimmt keinen Griff mehr an.
+ */
+export const LANDFALL_SILHOUETTE_WOBBLE = 0.16
+
+/**
+ * Die Farben der sechs Körper — Fels, Eis, Metall, Nebel.
+ *
+ * `LANDFALL_ACCENT_HEX` steht hier ausdrücklich NICHT: das blasse Seegrün bleibt
+ * ZUSTANDSFARBE (Griff-Marken, Ringwellen, Kartenkante, Logzeile) und ist keine
+ * Körperfarbe. Ein Fels, der mint leuchtet, ist genau das, was hier weg sollte.
+ *
+ * Jedes Motiv nennt vier Töne: Lichtseite, Mitte, Schattenseite, Kante. Alle
+ * sind gedämpft — die zwanzig Galaxie-Themen decken den Farbkreis fast lückenlos
+ * ab, und ein gesättigter Körper kämpfte in vier bis fünf Galaxien mit dem Grund.
+ */
+export const LANDFALL_BODY_PALETTE: Record<
+  LandfallKindId,
+  { hi: string; mid: string; low: string; edge: string }
+> = {
+  // Eis mit Chime-Einschlüssen: bläulich-weiss, kalt.
+  chime_reef: { hi: '#d3dee4', mid: '#8b9aa4', low: '#2f3941', edge: '#eef4f7' },
+  // Eine Dunkelwolke ist kein Körper — sie hat nur Dichte.
+  the_gloaming: { hi: '#4a3f52', mid: '#2e2733', low: '#120f16', edge: '#6b5c74' },
+  // Gebrauchtes Hüllenmetall, seit langem ohne Wartung.
+  adrift_convoy: { hi: '#9a9184', mid: '#5f5850', low: '#241f1a', edge: '#c3b7a4' },
+  // Kalter Fels über Metall, vereist an den Kanten.
+  sunken_ossuary: { hi: '#7d7264', mid: '#4b4238', low: '#1c1712', edge: '#a9b6bb' },
+  // Ein Planetoid: Regolith, nichts weiter.
+  wayside_cairn: { hi: '#8a7a66', mid: '#564a3c', low: '#201a14', edge: '#a6957c' },
+  // Gelinstes Sternlicht um ein Loch — die einzige Farbe ist fremde.
+  the_rupture: { hi: '#e6e2f2', mid: '#8f86ad', low: '#07060c', edge: '#c9bff0' },
+}
+
+/** Das Notsignal des Konvois — die EINZIGE eigene Lichtquelle unter den sechs
+ *  Körpern. Es blinkt als DOM-Ebene, nicht im Sprite: ein Blinken gehört zur
+ *  Zeit, und Zeit gehört nicht in ein einmal gerastertes Bild. */
+export const LANDFALL_DISTRESS_HEX = '#e8a24a'
+export const LANDFALL_DISTRESS_MS = 1600
+
+/** Takt der Staubschleier. Zwei Ebenen atmen auf VERSETZTEN Takten, sonst liest
+ *  sich der Schleier als ein flacher Ring. Muster: `pulse` beim Drifter. */
+export const LANDFALL_VEIL_BREATHE_MS = 5200
+export const LANDFALL_VEIL_OFFSET_MS = 1700
+
+/** Wie weit die Begleitsplitter um den Körper stehen und wie lange sie für eine
+ *  Runde brauchen. Reine CSS-Rotation an einer eigenen Ebene — kein Frame-Wert. */
+export const LANDFALL_MOTE_ORBIT_SPAN = 1.24
+export const LANDFALL_MOTE_ORBIT_MS = 14_000

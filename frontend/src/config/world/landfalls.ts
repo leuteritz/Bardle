@@ -12,6 +12,12 @@
 // - Ein Landfall erzeugt keine zweite Drohung. Der Void ist das einzige System,
 //   das gegen den Spieler drängt; ein Ort, der bedroht, tut das MIT dem Void und
 //   dessen eigenen Wesen, nicht neben ihm.
+//
+// `presence` steht NEBEN `weight`, nicht statt seiner: das Gewicht entscheidet,
+// wie oft ein Ort gezogen wird, die Präsenz nur, wie viel Zierrat sein Körper auf
+// der Bühne trägt. Ein Feld statt einer Rechnung auf `weight`, damit eine
+// Verschiebung um zwei Punkte nicht still den Look umstellt — die Monotonie
+// zwischen beiden bindet `landfalls.spec.ts`.
 
 import {
   LANDFALL_REEF_BASE_SECONDS,
@@ -38,6 +44,7 @@ export const LANDFALLS: LandfallDef[] = [
     icon: 'game-icons:coral',
     unlockGalaxy: 2,
     weight: 100,
+    presence: 'common',
     // Ausdauer: viele Griffe, jeder legt zu. Die Zahlen wohnen weiter in
     // `constants/landfalls.ts` — hier steht nur, welcher Ort sie trägt.
     gesture: 'gradient',
@@ -52,6 +59,7 @@ export const LANDFALLS: LandfallDef[] = [
     icon: 'game-icons:fog',
     unlockGalaxy: 5,
     weight: 75,
+    presence: 'uncommon',
     // Keine Geste. Er löst den vorhandenen Nebeldurchflug aus — nur diesmal,
     // weil das Schiff HIER ist, statt alle 30 bis 90 Sekunden aus dem Nichts.
     gesture: 'none',
@@ -64,6 +72,7 @@ export const LANDFALLS: LandfallDef[] = [
     icon: 'game-icons:sarcophagus',
     unlockGalaxy: 8,
     weight: 45,
+    presence: 'rare',
     // Eine Entscheidung, kein Ausdauerspiel: ein Griff öffnet ihn und schliesst
     // den Ort sofort. Ungeöffnet gibt er NICHTS — kein Sockel.
     gesture: 'single',
@@ -78,6 +87,7 @@ export const LANDFALLS: LandfallDef[] = [
     icon: 'game-icons:distress-signal',
     unlockGalaxy: 3,
     weight: 55,
+    presence: 'uncommon',
     // Endspurt: die Leiste muss VOLL werden. Halb geschafft ist gar nicht
     // geschafft — der einzige Ort, der bei Misserfolg leer ausgeht.
     gesture: 'threshold',
@@ -91,6 +101,7 @@ export const LANDFALLS: LandfallDef[] = [
     icon: 'game-icons:menhir',
     unlockGalaxy: 4,
     weight: 35,
+    presence: 'rare',
     // Nachdenken: drei Angebote, eines wird genommen, und es trägt bis zum Ende
     // DIESER Galaxie. Kein Griff, keine Uhr über den Segen.
     gesture: 'choice',
@@ -104,6 +115,7 @@ export const LANDFALLS: LandfallDef[] = [
     icon: 'game-icons:vortex',
     unlockGalaxy: 6,
     weight: 30,
+    presence: 'singular',
     // Eile: dieselbe Schwelle wie beim Konvoi, aber weniger Griffe — und die
     // Folge des Versäumens ist eine andere.
     gesture: 'threshold',
