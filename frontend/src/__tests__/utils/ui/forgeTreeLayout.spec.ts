@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
+  forgeContentBounds,
   forgeEdges,
+  forgeFreeAnchor,
   forgeLongestEdge,
   forgeTightestPair,
   forgeTreePlacements,
@@ -12,8 +14,13 @@ import {
   FORGE_BRIDGE_MAX_PX,
   FORGE_EDGE_MAX_PX,
   FORGE_LIMB_WIDTH,
+  FORGE_MASS_SEND_NODE,
   FORGE_MIN_AIR_PX,
+  FORGE_NODE_DIAMETER,
+  FORGE_STAGE_SIZE,
 } from '@/config/constants'
+import { getForgeConstellation } from '@/config/progression/starForge'
+import { forgeSeatTier } from '@/config/progression/forgeSeats'
 
 /**
  * Der PLATZIERER — was `forgeTreeLayout.ts` aus der Karte macht.
@@ -134,5 +141,72 @@ describe('Star Forge — der Platzierer', () => {
     expect(FORGE_LIMB_WIDTH.root).toBeGreaterThan(FORGE_LIMB_WIDTH.branch)
     expect(FORGE_LIMB_WIDTH.branch).toBeGreaterThan(FORGE_LIMB_WIDTH.leaf)
     expect(FORGE_LIMB_WIDTH.bough).toBeGreaterThan(FORGE_LIMB_WIDTH.glimmer)
+  })
+})
+
+/**
+ * Der ANKER für einen Körper OHNE Sitz.
+ *
+ * Es gibt genau einen: die verfolgte Konstellation. Sie soll im Netz zu sehen
+ * sein, damit die Ringe an ihren Toren nicht als drei beliebige Knoten gelesen
+ * werden — und dafür braucht sie eine Stelle, an der sie keinen echten Knoten
+ * verdeckt. Verdeckte sie einen, wäre die Markierung schlimmer als keine: sie
+ * nähme dem Netz einen Knoten weg, um einen dazuzustellen.
+ */
+describe('Star Forge — der Anker ohne Sitz', () => {
+  const HALF = FORGE_STAGE_SIZE / 2
+  const RADIUS = FORGE_NODE_DIAMETER.crown / 2
+
+  /** Die drei Tore, die auch die Karte in der Detailspalte zeigt. */
+  function gates() {
+    const def = getForgeConstellation(FORGE_MASS_SEND_NODE)!
+    const places = forgeTreePlacements()
+    return def.requires.flatMap((req) => {
+      const at = places.get(req.id)
+      return at ? [at] : []
+    })
+  }
+
+  it('hält zu JEDEM Sitz die Mindestluft', () => {
+    // DIE Zusage. Sie bricht, sobald das Netz an dieser Stelle dichter wird —
+    // und dann soll sie brechen.
+    const at = forgeFreeAnchor(gates(), RADIUS)
+    const places = forgeTreePlacements()
+    let tightest = Infinity
+    let where = ''
+    for (const [id, seat] of places) {
+      const r = FORGE_NODE_DIAMETER[forgeSeatTier(id)] / 2
+      const air = Math.hypot(seat.x - at.x, seat.y - at.y) - (r + RADIUS)
+      if (air < tightest) {
+        tightest = air
+        where = id
+      }
+    }
+    expect(tightest, `engste Stelle ${tightest.toFixed(1)} px bei ${where}`).toBeGreaterThanOrEqual(
+      FORGE_MIN_AIR_PX,
+    )
+  })
+
+  it('weicht nach AUSSEN aus und bleibt im Netz', () => {
+    // Nach aussen, weil das Netz nach aussen wächst: „diese drei führen
+    // dorthin" liest sich dann von selbst statt „dorthin und wieder zurück".
+    const near = gates()
+    const cx = near.reduce((sum, p) => sum + p.x, 0) / near.length
+    const cy = near.reduce((sum, p) => sum + p.y, 0) / near.length
+    const at = forgeFreeAnchor(near, RADIUS)
+
+    const centroidReach = Math.hypot(cx - HALF, cy - HALF)
+    const anchorReach = Math.hypot(at.x - HALF, at.y - HALF)
+    expect(anchorReach).toBeGreaterThan(centroidReach)
+    expect(anchorReach + RADIUS).toBeLessThanOrEqual(forgeContentBounds().stageRadius)
+  })
+
+  it('würfelt nicht', () => {
+    const near = gates()
+    expect(forgeFreeAnchor(near, RADIUS)).toEqual(forgeFreeAnchor(near, RADIUS))
+  })
+
+  it('fällt ohne Tore auf die Bühnenmitte', () => {
+    expect(forgeFreeAnchor([], RADIUS)).toEqual({ x: HALF, y: HALF })
   })
 })

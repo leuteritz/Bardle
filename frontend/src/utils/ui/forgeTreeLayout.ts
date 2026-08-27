@@ -624,6 +624,97 @@ export function forgeTightestPair(): { a: string; b: string; air: number } | nul
   return worst
 }
 
+/**
+ * Ein freier Platz auf der Bühne, nahe bei diesen Punkten — für einen Körper,
+ * der KEINEN Sitz hat.
+ *
+ * Es gibt genau einen solchen Körper: die verfolgte Konstellation. Sie steht in
+ * keinem Cluster und hat keine Koordinate, soll aber im Netz zu sehen sein, mit
+ * Linien zu ihren Toren. Dafür braucht sie eine Stelle, an der sie keinen
+ * echten Knoten verdeckt.
+ *
+ * **Vom Schwerpunkt NACH AUSSEN.** Der Schwerpunkt der Tore ist der Ort, den
+ * eine Fusion meint — dort liegen aber gerade die Knoten, um die es geht. Das
+ * Netz wächst nach aussen, also weicht sie in dieselbe Richtung aus: „diese
+ * drei führen dorthin" liest sich dann von selbst, statt „dorthin und wieder
+ * zurück".
+ *
+ * Gemessen wird RAND gegen RAND, dieselbe Formel wie `forgeTightestPair()` —
+ * `airBetween()` und `separate()` arbeiten auf dem internen Sitz-Typ und taugen
+ * hier nicht.
+ *
+ * Fester Schrittzahl und keine Konvergenz: die Laufzeit ist beschränkt und das
+ * Ergebnis exakt reproduzierbar, dieselbe Zusage wie bei den Sitzen selbst.
+ */
+/* Der Suchlauf des Ankers: 8-px-Schritte, höchstens 60 davon (480 px) — mehr
+   als die Tiefe eines Bandes, und darüber hinaus wäre er nicht mehr „nahe bei".
+   Gefächert wird bis ±60°, weil erst darüber der Punkt nicht mehr garantiert
+   weiter aussen läge als der Schwerpunkt (cos 60° = 0,5 > 0). Ein reiner Strahl
+   nach aussen findet nichts: gemessen lief er in `driftersDue` und endete mit
+   19,8 px Luft. */
+const ANCHOR_STEP_PX = 8
+const ANCHOR_STEPS = 60
+const ANCHOR_FAN_DEG = [0, 10, -10, 20, -20, 30, -30, 40, -40, 50, -50, 60, -60] as const
+
+export function forgeFreeAnchor(near: readonly Point[], radius: number): Point {
+  if (near.length === 0) return { x: STAGE_HALF, y: STAGE_HALF }
+
+  const cx = near.reduce((sum, p) => sum + p.x, 0) / near.length
+  const cy = near.reduce((sum, p) => sum + p.y, 0) / near.length
+
+  // Die Richtung nach aussen. Steht der Schwerpunkt zufällig auf der Sonne,
+  // taugt kein Strahl — dann nach oben, das ist die einzige Wahl ohne Vorzug.
+  let dx = cx - STAGE_HALF
+  let dy = cy - STAGE_HALF
+  const dist = Math.hypot(dx, dy)
+  if (dist < 1) {
+    dx = 0
+    dy = -1
+  } else {
+    dx /= dist
+    dy /= dist
+  }
+
+  const places = forgeTreePlacements()
+  const clear = (x: number, y: number): boolean => {
+    for (const [id, at] of places) {
+      const r = FORGE_NODE_DIAMETER[forgeSeatTier(id)] / 2
+      if (Math.hypot(at.x - x, at.y - y) - (r + radius) < FORGE_MIN_AIR_PX) return false
+    }
+    return true
+  }
+
+  const { stageRadius } = forgeContentBounds()
+  const snap = (x: number, y: number): Point => ({
+    x: Math.round(x * 10) / 10,
+    y: Math.round(y * 10) / 10,
+  })
+
+  // Erst die Entfernung, dann der Winkel: der nächstgelegene freie Platz
+  // gewinnt, und unter gleich weiten der geradeste. Die Reihenfolge IST das
+  // Ergebnis — sie macht die Suche reproduzierbar.
+  let fallback: Point | null = null
+  for (let step = 1; step <= ANCHOR_STEPS; step++) {
+    const push = step * ANCHOR_STEP_PX
+    for (const deg of ANCHOR_FAN_DEG) {
+      const rad = (deg * Math.PI) / 180
+      const ux = dx * Math.cos(rad) - dy * Math.sin(rad)
+      const uy = dx * Math.sin(rad) + dy * Math.cos(rad)
+      const x = cx + ux * push
+      const y = cy + uy * push
+      // Nicht über den Rand des Netzes hinaus — dort stünde er im Leeren, und
+      // die Kamera käme ohnehin nicht mehr hin.
+      if (Math.hypot(x - STAGE_HALF, y - STAGE_HALF) + radius > stageRadius) continue
+      fallback ??= snap(x, y)
+      if (clear(x, y)) return snap(x, y)
+    }
+  }
+
+  // Nichts frei: der erste geprüfte Punkt im Netz. Ein Körper, der einen
+  // anderen streift, ist besser als keiner — er trägt seinen Namen darunter.
+  return fallback ?? snap(cx, cy)
+}
+
 /** Wie weit das Netz WIRKLICH reicht — die Hülle um alle Knotenränder. */
 export interface ForgeContentBounds {
   minX: number

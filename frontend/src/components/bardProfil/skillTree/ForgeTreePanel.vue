@@ -141,6 +141,24 @@
           />
         </g>
 
+        <!-- Die Tore der VERFOLGUNG. Eigene Gruppe und nicht die daneben: sie
+             hat eine andere Lebensdauer als der Zeiger, und zwei `v-for` in
+             einem `<g>` verbänden sie an einem Ort, an dem nichts sie
+             verbindet. Ebenfalls AUSSERHALB von `.limb-field` — die Antwort auf
+             ein Ziel darf nie mitgedimmt werden. -->
+        <g
+          v-if="pursuitLimbs.length > 0"
+          class="req-limbs"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"
+          :stroke-dasharray="FORGE_EDGE_REQ_DASH"
+        >
+          <path
+            v-for="limb in pursuitLimbs" :key="limb.key"
+            :d="limb.d" :stroke-width="limb.width"
+            :class="limb.met ? 'req-limb--met' : 'req-limb--open'"
+          />
+        </g>
+
         <!-- Spotlight chain: star edge → … → the node being pointed at. Exists
              only while something is hovered, seven links at most. -->
         <g
@@ -177,6 +195,30 @@
         />
         <SunChimeBoost :diameter="bodyDiameter" :scale="totalScale" />
       </div>
+
+      <!-- DER ANKERKNOTEN der Verfolgung — die Konstellation selbst.
+           Eigene Klassen, NICHT `.tree-node`/`.node-circle`: die tragen
+           Zustand, Kranz und Kaufgeste, und ein Körper ohne Sitz, der sie erbt,
+           ist ein Sitz, der nur so tut. Übernommen ist allein die
+           Positionierungs-Regel. -->
+      <button
+        v-if="pursuitNode"
+        class="pursuit-mark"
+        type="button"
+        :style="{
+          left: `${Math.round(pursuitNode.at.x)}px`,
+          top: `${Math.round(pursuitNode.at.y)}px`,
+          '--pursuit-c': pursuitNode.color,
+        }"
+        :title="pursuitNode.name"
+        :aria-label="pursuitNode.name"
+        @click.stop="openPursuitCard"
+      >
+        <span class="pursuit-mark-ring">
+          <Icon :icon="pursuitNode.icon" width="30" height="30" />
+        </span>
+        <span class="pursuit-mark-name">{{ pursuitNode.name }}</span>
+      </button>
 
       <!-- Nodes -->
       <div
@@ -373,6 +415,7 @@ import {
   forgeClusterSpots,
   forgeEdges,
   type ForgeEdgeKind,
+  forgeFreeAnchor,
   forgeTreePlacements,
   type Point,
 } from '@/utils/ui/forgeTreeLayout'
@@ -486,6 +529,7 @@ const {
   refocus,
   clearPin,
   pursuitId,
+  pingPursuit,
   clearPursuit,
   resetForgeSpotlight,
 } = useForgeSpotlight()
@@ -974,6 +1018,63 @@ const pursuitMarks = computed(() =>
     return node ? [{ at: { x: node.x, y: node.y }, tier: node.sizeClass }] : []
   }),
 )
+
+/**
+ * Der Ankerknoten der Verfolgung — die Konstellation SELBST, auf der Bühne.
+ *
+ * Sie hat keinen Sitz, und genau deshalb steht sie hier: drei umringte Knoten
+ * ohne den Körper, zu dem sie führen, lesen sich als drei beliebige Knoten.
+ * `forgeFreeAnchor` sucht ihr eine Stelle, an der sie keinen echten Knoten
+ * verdeckt; sie erscheint mit der Verfolgung und verschwindet mit ihr.
+ */
+/** Der Ankerkreis misst wie eine Krone — er ist ein Ziel, kein Zwischenschritt. */
+const PURSUIT_ANCHOR_RADIUS = FORGE_NODE_DIAMETER.crown / 2
+
+const pursuitAnchor = computed(() => {
+  const marks = pursuitMarks.value
+  if (marks.length === 0) return null
+  return forgeFreeAnchor(
+    marks.map((m) => m.at),
+    PURSUIT_ANCHOR_RADIUS,
+  )
+})
+
+const pursuitNode = computed(() => {
+  const at = pursuitAnchor.value
+  const offer = pursuedOffer.value
+  if (!at || !offer) return null
+  return { at, icon: offer.icon, color: offer.color, name: offer.name }
+})
+
+/**
+ * Die Linien vom Anker zu seinen Toren.
+ *
+ * `forgeSunRoute` routet von einem runden Körper an beliebiger Bühnenstelle zu
+ * einem Knoten — genau die Form, die der Anker hat. Gerechnet im `computed` und
+ * nie pro Frame: die Route bucht Kanäle und prüft gegen alle Sitze.
+ */
+const pursuitLimbs = computed(() => {
+  const at = pursuitAnchor.value
+  if (!at) return []
+  return [...pursuitReqs.value.entries()].flatMap(([id, met]) => {
+    const node = nodeById.value.get(id)
+    if (!node) return []
+    const route = forgeSunRoute(at, PURSUIT_ANCHOR_RADIUS, id, { x: node.x, y: node.y })
+    return [
+      {
+        key: `pursuit>${id}`,
+        d: route.d,
+        width: Math.max(FORGE_LIMB_MIN_WIDTH, route.width - 1),
+        met,
+      },
+    ]
+  })
+})
+
+function openPursuitCard(): void {
+  openDetails()
+  pingPursuit()
+}
 
 /** Trägt dieser Kreis einen Voraussetzungs-Ring — vom Zeiger oder von der Verfolgung? */
 function hasReqRing(id: string): boolean {
@@ -1743,7 +1844,12 @@ function recenterCamera(): void {
  * EIN Ziel gebaut, und drei Pings wären drei Signale für eine Aussage.
  */
 function frameToPursuit(): void {
-  const cam = forgeGroupCamera(pursuitMarks.value, viewportSize.value, zoomFloor.value)
+  // Der Anker gehört mit ins Bild — er ist der Knoten, um den es geht.
+  const anchor = pursuitAnchor.value
+  const marks = anchor
+    ? [...pursuitMarks.value, { at: anchor, tier: 'crown' as const }]
+    : pursuitMarks.value
+  const cam = forgeGroupCamera(marks, viewportSize.value, zoomFloor.value)
   if (!cam) return
   // Steht noch eine Spaltenfahrt aus, BLEIBT der Merker: ihr Ausgleich läuft
   // nach uns und schöbe das Bild wieder weg. Gemessen stand danach zwei von drei
@@ -2374,6 +2480,55 @@ const nextPhasePreviewStyle = computed(() => ({
 /* ══════════════════════════════════════════════════
    NODES
 ══════════════════════════════════════════════════ */
+/* ══ Der Ankerknoten der Verfolgung ══════════════════════════════════
+   Dieselbe Positionierungs-Regel wie ein Knoten, und sonst nichts davon: er ist
+   kein Sitz, und der gestrichelte Rand sagt genau das. Alles statisch — feste
+   Farben, kein `filter`, keine Custom Property an der Bühnenwurzel
+   (Performance-Regeln 2/3). */
+.pursuit-mark {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.pursuit-mark-ring {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pursuit-c, #e8c040);
+  background: #111008;
+  border: 2px dashed var(--pursuit-c, #e8c040);
+  border-radius: 50%;
+}
+
+.pursuit-mark:hover .pursuit-mark-ring {
+  background: #1c1c18;
+}
+
+.pursuit-mark-name {
+  max-width: 220px;
+  padding: 2px 7px;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  color: var(--pursuit-c, #e8c040);
+  background: #111008;
+  border: 1px solid #3e200a;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
 .tree-node {
   position: absolute;
   transform: translate(-50%, -50%);

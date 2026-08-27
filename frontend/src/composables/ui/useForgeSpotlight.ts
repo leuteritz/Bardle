@@ -61,6 +61,16 @@ const pinnedId = ref<string | null>(null)
  */
 const pursuitId = ref<string | null>(null)
 
+/**
+ * „Zeig mir die Karte dazu" — der Impuls des Ankerknotens im Netz.
+ *
+ * Ein Zähler ohne Wert, dasselbe Muster wie `focusTick`: der Knoten im Netz und
+ * die Karte in der Spalte meinen dieselbe Sache, und ein Klick auf den einen
+ * soll die andere holen, ohne dass er dafür einen Zustand setzt, den jemand
+ * wieder abräumen müsste.
+ */
+const pursuitPingTick = ref(0)
+
 const focusTick = ref(0)
 
 /**
@@ -137,6 +147,7 @@ export function useForgeSpotlight(): {
   treeHoverId: Readonly<Ref<string | null>>
   pinnedId: Readonly<Ref<string | null>>
   pursuitId: Readonly<Ref<string | null>>
+  pursuitPingTick: Readonly<Ref<number>>
   focusTick: Readonly<Ref<number>>
   readableTick: Readonly<Ref<number>>
   listHovering: ComputedRef<boolean>
@@ -148,6 +159,7 @@ export function useForgeSpotlight(): {
   focusNode: (id: string, opts?: { readable?: boolean }) => void
   clearPin: () => void
   setPursuit: (id: string) => void
+  pingPursuit: () => void
   clearPursuit: () => void
   resetForgeSpotlight: () => void
 } {
@@ -198,6 +210,11 @@ export function useForgeSpotlight(): {
     pursuitId.value = id
   }
 
+  /** Den Ankerknoten angeklickt — die Karte soll sich melden. */
+  function pingPursuit(): void {
+    pursuitPingTick.value += 1
+  }
+
   function clearPursuit(): void {
     pursuitId.value = null
   }
@@ -227,6 +244,7 @@ export function useForgeSpotlight(): {
     treeHoverId: readonly(treeHoverId),
     pinnedId: readonly(pinnedId),
     pursuitId: readonly(pursuitId),
+    pursuitPingTick: readonly(pursuitPingTick),
     focusTick: readonly(focusTick),
     readableTick: readonly(readableTick),
     listHovering,
@@ -238,6 +256,7 @@ export function useForgeSpotlight(): {
     focusNode,
     clearPin,
     setPursuit,
+    pingPursuit,
     clearPursuit,
     resetForgeSpotlight,
   }

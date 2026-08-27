@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { forgeSeatTier } from '@/config/progression/forgeSeats'
-import { forgeContentBounds, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
+import { forgeContentBounds, forgeFreeAnchor, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
 import {
   forgeClampPan,
   forgeClampPanBox,
@@ -296,20 +296,30 @@ describe('Star Forge — die Kamera fasst eine Gruppe', () => {
    */
   const GROUP_VIEWS = [...VIEWS, { name: 'Full HD gemessen', w: 776, h: 661 }, { name: 'QHD gemessen', w: 1135, h: 938 }]
 
-  /** Die Tore, die der Verfolgungs-Block der Detailspalte zeigt. */
+  /**
+   * Die Tore, die der Verfolgungs-Block zeigt — UND der Ankerknoten, der im Netz
+   * für die Konstellation selbst steht. Er gehört mit ins Bild: er ist der
+   * Körper, um den es geht.
+   */
   function pursuitMarks(id: string) {
     const def = getForgeConstellation(id)!
-    return def.requires.flatMap((req) => {
+    const gates = def.requires.flatMap((req) => {
       const at = places.get(req.id)
       return at ? [{ id: req.id, at, tier: forgeSeatTier(req.id) }] : []
     })
+    const anchorTier = 'crown' as const
+    const anchor = forgeFreeAnchor(
+      gates.map((g) => g.at),
+      FORGE_NODE_DIAMETER[anchorTier] / 2,
+    )
+    return [...gates, { id: 'pursuitAnchor', at: anchor, tier: anchorTier }]
   }
 
   it('holt JEDES Tor der Verfolgung vollstaendig ins Bild', () => {
     // DIE Zusage. Sie bricht, sobald jemand eine Bedingung auf einen Knoten am
     // anderen Ende des Netzes legt — und dann soll sie brechen.
     const marks = pursuitMarks(FORGE_MASS_SEND_NODE)
-    expect(marks.length, 'kein Tor hat einen Sitz im Netz').toBeGreaterThan(1)
+    expect(marks.length, 'kein Tor hat einen Sitz im Netz').toBeGreaterThan(2)
 
     for (const view of GROUP_VIEWS) {
       const cam = forgeGroupCamera(marks, view, zoomFloorFor(view))

@@ -1,5 +1,11 @@
 <template>
-  <section v-if="offer" ref="rootEl" class="fp" :style="{ '--node-c': offer.color }">
+  <section
+    v-if="offer"
+    ref="rootEl"
+    class="fp"
+    :class="{ 'fp--ping': pinged }"
+    :style="{ '--node-c': offer.color }"
+  >
     <header class="fp-head">
       <Icon :icon="FORGE_PURSUIT_ICON" width="17" height="17" class="fp-head-ico" />
       <span class="fp-head-label">{{ FORGE_PURSUIT_TITLE }}</span>
@@ -67,7 +73,7 @@
  * liegt in `useForgeSpotlight`, aber in zwei Feldern, sonst löschte die Karte
  * sich mit ihrem eigenen Knopf.
  */
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import ForgeOfferRow from './ForgeOfferRow.vue'
 import { useForgeOffers } from '@/composables/ui/useForgeOffers'
@@ -75,6 +81,7 @@ import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import {
+  FORGE_CARD_FLASH_MS,
   FORGE_FOCUS_NOTE_CLEAR,
   FORGE_OFFER_REQS_LABEL,
   FORGE_PURSUIT_ICON,
@@ -83,11 +90,39 @@ import {
 } from '@/config/constants'
 
 const { pursuedOffer: offer, buyOffer } = useForgeOffers()
-const { clearPursuit, focusNode } = useForgeSpotlight()
+const { clearPursuit, focusNode, pursuitPingTick } = useForgeSpotlight()
 const { detailsOpen } = useForgeDetailsPane()
 const forgeStore = useStarForgeStore()
 
+const flashMs = `${FORGE_CARD_FLASH_MS}ms`
+
 const rootEl = ref<HTMLElement | null>(null)
+
+/**
+ * Der Ankerknoten im Netz wurde angeklickt — die Karte meldet sich.
+ *
+ * Rein visuell, daher reale Zeit und nur `opacity` (Performance-Regel 2). Sie
+ * rollt dabei zurück nach oben: der Klick kam von der anderen Spalte, und wer
+ * dort auf den Körper zeigt, will hier den Text dazu.
+ */
+const pinged = ref(false)
+let pingTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(pursuitPingTick, async () => {
+  if (!offer.value) return
+  await nextTick()
+  rootEl.value?.closest<HTMLElement>('[data-forge-scroll]')?.scrollTo({ top: 0 })
+  if (pingTimer !== null) clearTimeout(pingTimer)
+  pinged.value = true
+  pingTimer = setTimeout(() => {
+    pingTimer = null
+    pinged.value = false
+  }, FORGE_CARD_FLASH_MS)
+})
+
+onBeforeUnmount(() => {
+  if (pingTimer !== null) clearTimeout(pingTimer)
+})
 
 function handleBuy(id: string): void {
   // Was fusioniert ist, ist entschieden — dieselbe Regel wie beim Fokus der Liste.
@@ -127,6 +162,29 @@ watch(
   border: 1px solid #3e200a;
   border-left: 3px solid var(--node-c, #e8c040);
   border-radius: 4px;
+}
+
+/* Die Quittung auf den Klick im Netz. Nur `opacity`, einmal, kein Dauerläufer. */
+.fp--ping {
+  animation: fp-ping v-bind(flashMs) ease;
+}
+
+@keyframes fp-ping {
+  0% {
+    opacity: 1;
+  }
+  35% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fp--ping {
+    animation: none;
+  }
 }
 
 /* ══ Kopfzeile — Etikett links, Linie nach rechts auslaufend.
