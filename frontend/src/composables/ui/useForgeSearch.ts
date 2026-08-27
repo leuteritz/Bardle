@@ -2,14 +2,16 @@ import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import {
   FORGE_AXIS_SEARCH_ALIAS,
   FORGE_FAMILY_LABEL,
+  FORGE_OFFER_TAG_CONSTELLATION,
   FORGE_SEARCH_RECENT_MAX,
   FORGE_SEARCH_STATE_CHIPS,
   FORGE_UPGRADE_TIER_LABELS,
   SOLAR_BRANCHES,
 } from '@/config/constants'
-import { FORGE_NODES } from '@/config/progression/starForge'
+import { FORGE_CONSTELLATIONS, FORGE_NODES } from '@/config/progression/starForge'
 import { forgeNodeAxis } from '@/utils/game/solarSignature'
 import { useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import type { ForgeAxisId, ForgeEffectFamily, ForgeUpgradeEntry } from '@/types'
 
 /**
@@ -38,6 +40,8 @@ interface ForgeSearchRecord {
   haystack: string
   axis: ForgeAxisId | null
   family: ForgeEffectFamily | null
+  /** Ein Vault-Eintrag: kein Sitz, kein Zustand in `entryById`. */
+  vault?: boolean
 }
 
 /**
@@ -58,6 +62,20 @@ function buildIndex(): ForgeSearchRecord[] {
     haystack:
       `${b.name} ${FORGE_AXIS_SEARCH_ALIAS[b.id as ForgeAxisId]} ${FORGE_UPGRADE_TIER_LABELS.root}`.toLowerCase(),
   }))
+
+  /* Die Konstellationen wohnen seit dem Umbau IM Netz — sie müssen also auch
+     dort zu finden sein. Achse und Familie bleiben leer, und das ist keine
+     Lücke: eine Fusion von `solarSails` UND `wayfindersCache` hängt an zwei
+     Achsen, und eine erfundene wäre eine Behauptung. */
+  for (const def of FORGE_CONSTELLATIONS) {
+    out.push({
+      id: def.id,
+      axis: null,
+      family: null,
+      vault: true,
+      haystack: `${def.name} ${def.desc} ${def.sourceLabel} ${FORGE_OFFER_TAG_CONSTELLATION}`.toLowerCase(),
+    })
+  }
 
   for (const node of FORGE_NODES) {
     const axis = forgeNodeAxis(node.id) ?? null
@@ -109,12 +127,16 @@ interface ForgeSearchFilter {
 }
 
 function matchesState(
-  id: string,
+  rec: ForgeSearchRecord,
   states: Set<ForgeSearchStateId>,
   entries: Map<string, ForgeUpgradeEntry>,
+  vaultState: (id: string) => ForgeSearchStateId,
 ): boolean {
   if (states.size === 0) return true
-  const entry = entries.get(id)
+  // Ein Vault-Eintrag steht in keinem `entryById` — sein Zustand kommt aus dem
+  // Store, sonst liesse ihn jeder Zustands-Chip verschwinden.
+  if (rec.vault) return states.has(vaultState(rec.id))
+  const entry = entries.get(rec.id)
   if (!entry) return false
   if (states.has('ready') && entry.canBuy) return true
   if (states.has('locked') && entry.state === 'locked') return true
@@ -126,11 +148,12 @@ function matches(
   rec: ForgeSearchRecord,
   f: ForgeSearchFilter,
   entries: Map<string, ForgeUpgradeEntry>,
+  vaultState: (id: string) => ForgeSearchStateId,
 ): boolean {
   if (f.q !== '' && !rec.haystack.includes(f.q)) return false
   if (f.axis !== null && rec.axis !== f.axis) return false
   if (f.family !== null && rec.family !== f.family) return false
-  return matchesState(rec.id, f.states, entries)
+  return matchesState(rec, f.states, entries, vaultState)
 }
 
 interface ForgeSearchDerived {
@@ -146,6 +169,14 @@ let derived: ForgeSearchDerived | null = null
 function ensureDerived(): ForgeSearchDerived {
   if (derived) return derived
   const { entryById } = useForgeUpgrades()
+  const forgeStore = useStarForgeStore()
+
+  /** Der Zustand eines Vault-Eintrags — dieselben drei Worte wie am Knoten. */
+  const vaultState = (id: string): ForgeSearchStateId => {
+    if (forgeStore.constellationForged(id)) return 'maxed'
+    if (forgeStore.canForgeConstellation(id)) return 'ready'
+    return 'locked'
+  }
 
   const currentFilter = (): ForgeSearchFilter => ({
     q: normalizedQuery.value,
@@ -160,7 +191,7 @@ function ensureDerived(): ForgeSearchDerived {
     const f = currentFilter()
     const entries = entryById.value
     const out = new Set<string>()
-    for (const rec of records) if (matches(rec, f, entries)) out.add(rec.id)
+    for (const rec of records) if (matches(rec, f, entries, vaultState)) out.add(rec.id)
     return out
   })
 
@@ -172,7 +203,7 @@ function ensureDerived(): ForgeSearchDerived {
     const base = currentFilter()
     const count = (f: ForgeSearchFilter): number => {
       let n = 0
-      for (const rec of records) if (matches(rec, f, entries)) n++
+      for (const rec of records) if (matches(rec, f, entries, vaultState)) n++
       return n
     }
     const axis: Record<string, number> = {}

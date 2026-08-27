@@ -58,18 +58,18 @@ import {
   FORGE_RAY_DIST,
   FORGE_RELAX_ITERATIONS,
   FORGE_REPULSE_K,
+  FORGE_ROAD_BAND,
+  FORGE_ROAD_SECTOR_SPREAD,
   FORGE_ROOT_ANGLES_DEG,
   FORGE_SEPARATE_ITERATIONS,
   FORGE_SPRING_K,
   FORGE_STAGE_SIZE,
   FORGE_SUN_EDGE_GAP,
-  FORGE_ROAD_BAND,
-  FORGE_ROAD_SECTOR_SPREAD,
   FORGE_ZONE_BAND,
   SHOP_SUN_MAX_DIAMETER,
   SOLAR_BRANCHES,
 } from '@/config/constants'
-import { FORGE_NODES } from '@/config/progression/starForge'
+import { FORGE_CONSTELLATIONS, FORGE_NODES } from '@/config/progression/starForge'
 import { FORGE_BRIDGES, FORGE_CLUSTERS } from '@/config/progression/starForgeNet'
 import { forgeSeatTier, getForgeSeat } from '@/config/progression/forgeSeats'
 import { MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
@@ -99,6 +99,8 @@ export interface ForgeEdge {
 }
 
 const STAGE_HALF = FORGE_STAGE_SIZE / 2
+/** Der grösste Sonnenkörper — der Anker muss jeder Phase ausweichen. */
+const SUN_MAX_R = SHOP_SUN_MAX_DIAMETER / 2
 /** Innenrand: der Körper in seiner GRÖSSTEN Phase plus der Abstand, hinter dem
  *  die Wurzeläste ansetzen. Kein Knoten darf davor stehen. */
 const SUN_EDGE = SHOP_SUN_MAX_DIAMETER / 2 + FORGE_SUN_EDGE_GAP
@@ -646,7 +648,7 @@ export function forgeTightestPair(): { a: string; b: string; air: number } | nul
  * Fester Schrittzahl und keine Konvergenz: die Laufzeit ist beschränkt und das
  * Ergebnis exakt reproduzierbar, dieselbe Zusage wie bei den Sitzen selbst.
  */
-/* Der Suchlauf des Ankers: 8-px-Schritte, höchstens 60 davon (480 px) — mehr
+/* Der Suchlauf des Ankers: 8-px-Schritte, höchstens 140 davon (1120 px) — mehr
    als die Tiefe eines Bandes, und darüber hinaus wäre er nicht mehr „nahe bei".
    Ein reiner Strahl nach aussen findet nichts: gemessen lief er in
    `driftersDue` und endete mit 19,8 px Luft.
@@ -657,12 +659,16 @@ export function forgeTightestPair(): { a: string; b: string; air: number } | nul
    Bei genau 90° ist der radiale Anteil null und der Abstand wächst trotzdem,
    weil der Schub selbst quadratisch eingeht. */
 const ANCHOR_STEP_PX = 8
-const ANCHOR_STEPS = 60
+const ANCHOR_STEPS = 140
 const ANCHOR_FAN_DEG = [
   0, 10, -10, 20, -20, 30, -30, 40, -40, 50, -50, 60, -60, 70, -70, 80, -80, 90, -90,
 ] as const
 
-export function forgeFreeAnchor(near: readonly Point[], radius: number): Point {
+export function forgeFreeAnchor(
+  near: readonly Point[],
+  radius: number,
+  avoid: readonly { at: Point; radius: number }[] = [],
+): Point {
   if (near.length === 0) return { x: STAGE_HALF, y: STAGE_HALF }
 
   const cx = near.reduce((sum, p) => sum + p.x, 0) / near.length
@@ -683,9 +689,22 @@ export function forgeFreeAnchor(near: readonly Point[], radius: number): Point {
 
   const places = forgeTreePlacements()
   const clear = (x: number, y: number): boolean => {
+    // Die SONNE ist kein Sitz und stünde deshalb in keiner Prüfung — gemessen
+    // landeten zwei Körper auf ihrer Scheibe. Gerechnet gegen den GRÖSSTEN
+    // Durchmesser, damit keine Sonnenphase sie später verschluckt.
+    if (Math.hypot(x - STAGE_HALF, y - STAGE_HALF) - (SUN_MAX_R + radius) < FORGE_MIN_AIR_PX) {
+      return false
+    }
     for (const [id, at] of places) {
       const r = FORGE_NODE_DIAMETER[forgeSeatTier(id)] / 2
       if (Math.hypot(at.x - x, at.y - y) - (r + radius) < FORGE_MIN_AIR_PX) return false
+    }
+    // Und den anderen Körpern OHNE Sitz ebenso ausweichen — sie stehen in
+    // keiner Platzierung, wären also sonst füreinander unsichtbar.
+    for (const other of avoid) {
+      if (Math.hypot(other.at.x - x, other.at.y - y) - (other.radius + radius) < FORGE_MIN_AIR_PX) {
+        return false
+      }
     }
     return true
   }
@@ -719,6 +738,47 @@ export function forgeFreeAnchor(near: readonly Point[], radius: number): Point {
   // Nichts frei: der erste geprüfte Punkt im Netz. Ein Körper, der einen
   // anderen streift, ist besser als keiner — er trägt seinen Namen darunter.
   return fallback ?? snap(cx, cy)
+}
+
+/** Der Kreis, den ein Fusions-Körper im Netz einnimmt. Krongrösse — er ist ein
+ *  Ziel, kein Zwischenschritt. */
+export const FORGE_FUSION_RADIUS = FORGE_NODE_DIAMETER.crown / 2
+
+let fusionCache: Map<string, Point> | null = null
+
+/**
+ * Wo jede Konstellation im Netz WOHNT.
+ *
+ * Sie hat keinen Sitz — sie steht in keinem Cluster und hat keine `parentId`.
+ * Sichtbar sein muss sie trotzdem, und zwar dauerhaft und immer an derselben
+ * Stelle: ein Upgrade ist ein Ort, kein Zustand einer Navigation.
+ *
+ * Katalogreihenfolge, und die ist das Ergebnis: jeder Anker weicht den Sitzen
+ * UND allen vorher gesetzten Ankern aus. Ohne das Zweite stünden zwei Fusionen
+ * mit denselben Toren aufeinander.
+ *
+ * Einmal gerechnet und modulweit gecacht wie alles hier — die Eingabe ist
+ * statisch, es gibt keinen Wert, der sich ändern könnte.
+ */
+export function forgeFusionAnchors(): ReadonlyMap<string, Point> {
+  if (fusionCache !== null) return fusionCache
+  const places = forgeTreePlacements()
+  const set = new Map<string, Point>()
+  const avoid: { at: Point; radius: number }[] = []
+
+  for (const def of FORGE_CONSTELLATIONS) {
+    const gates = def.requires.flatMap((req) => {
+      const at = places.get(req.id)
+      return at ? [at] : []
+    })
+    if (gates.length === 0) continue
+    const at = forgeFreeAnchor(gates, FORGE_FUSION_RADIUS, avoid)
+    set.set(def.id, at)
+    avoid.push({ at, radius: FORGE_FUSION_RADIUS })
+  }
+
+  fusionCache = set
+  return fusionCache
 }
 
 /** Wie weit das Netz WIRKLICH reicht — die Hülle um alle Knotenränder. */

@@ -3,7 +3,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useForgeSearch } from '@/composables/ui/useForgeSearch'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
-import { FORGE_NODES } from '@/config/progression/starForge'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { FORGE_CONSTELLATIONS, FORGE_NODES } from '@/config/progression/starForge'
 import { forgeNodeAxis } from '@/utils/game/solarSignature'
 import { SOLAR_BRANCHES, FORGE_FAMILY_LABEL } from '@/config/constants'
 
@@ -26,8 +27,11 @@ describe('Star Forge — die Suche über das Netz', () => {
     const { searchActive, matchIds, matchCount, totalCount } = useForgeSearch()
     expect(searchActive.value).toBe(false)
     expect(matchCount.value).toBe(totalCount)
-    // Fünf Kernstrahlen plus der Katalog.
-    expect(totalCount).toBe(SOLAR_BRANCHES.length + FORGE_NODES.length)
+    // Fünf Kernstrahlen, der Katalog und die Fusionen — die wohnen seit dem
+    // Umbau im Netz und müssen dort auch zu finden sein.
+    expect(totalCount).toBe(
+      SOLAR_BRANCHES.length + FORGE_NODES.length + FORGE_CONSTELLATIONS.length,
+    )
     for (const node of FORGE_NODES) expect(matchIds.value.has(node.id)).toBe(true)
   })
 
@@ -40,7 +44,11 @@ describe('Star Forge — die Suche über das Netz', () => {
     // die Aliase nicht aus dem Statlabel abgeleitet werden.
     expect(matchIds.value.has('flightSpeed')).toBe(false)
 
+    const fusions = new Set(FORGE_CONSTELLATIONS.map((def) => def.id))
     for (const id of matchIds.value) {
+      // Eine Fusion hängt an KEINER Achse — sie verschmilzt zwei. Die Zusage
+      // dahinter („kein Treffer aus einer fremden Achse") gilt den Knoten.
+      if (fusions.has(id)) continue
       const axis = forgeNodeAxis(id)
       expect(axis, `${id} hängt an keiner Achse, trifft aber „cps"`).toBe('chimesPerSecond')
     }
@@ -96,10 +104,43 @@ describe('Star Forge — die Suche über das Netz', () => {
   it('was der Zustands-Chip durchlässt, trägt den Zustand auch wirklich', () => {
     const { toggleState, matchIds } = useForgeSearch()
     const { entryById } = useForgeUpgrades()
+    const forge = useStarForgeStore()
+    const fusions = new Set(FORGE_CONSTELLATIONS.map((def) => def.id))
     toggleState('locked')
     for (const id of matchIds.value) {
+      // Eine Fusion steht in keinem `entryById` — ihr Zustand kommt aus dem
+      // Store, und genau den muss der Chip getroffen haben.
+      if (fusions.has(id)) {
+        expect(forge.constellationRequirementMet(id), `${id} ist nicht gesperrt`).toBe(false)
+        continue
+      }
       expect(entryById.value.get(id)?.state, `${id} ist nicht gesperrt`).toBe('locked')
     }
+  })
+
+  it('findet jede Fusion über ihren Namen', () => {
+    // Der Anlass: die Konstellationen wohnen im Netz, und was dort steht, muss
+    // die Suche finden — sonst ist ein Körper sichtbar und unauffindbar.
+    const { query, matchIds, resetForgeSearch } = useForgeSearch()
+    for (const def of FORGE_CONSTELLATIONS) {
+      resetForgeSearch()
+      query.value = def.name.toLowerCase()
+      expect(matchIds.value.has(def.id), `${def.name} ist nicht zu finden`).toBe(true)
+    }
+  })
+
+  it('Achsen- und Familien-Chips lassen keine Fusion durch', () => {
+    // Sie hat weder das eine noch das andere, und eine erfundene Zuordnung wäre
+    // eine Behauptung: `risingArmada` verschmilzt ZWEI Achsen.
+    const { toggleAxis, toggleFamily, matchIds, resetForgeSearch } = useForgeSearch()
+    const fusions = FORGE_CONSTELLATIONS.map((def) => def.id)
+
+    toggleAxis('flightSpeed')
+    for (const id of fusions) expect(matchIds.value.has(id), id).toBe(false)
+
+    resetForgeSearch()
+    toggleFamily('travel')
+    for (const id of fusions) expect(matchIds.value.has(id), id).toBe(false)
   })
 
   it('zwei Zustands-Chips verknüpfen sich mit ODER', () => {

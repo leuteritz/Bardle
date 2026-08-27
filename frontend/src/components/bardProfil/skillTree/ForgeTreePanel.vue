@@ -153,7 +153,7 @@
           v-if="pursuitPath.chain.length > 0"
           class="pursuit-limbs"
           stroke-linecap="round" stroke-linejoin="round" fill="none"
-          :stroke="pursuitNode?.color ?? '#e8c040'"
+          :stroke="aimedFusionColor"
         >
           <path
             v-for="limb in pursuitPath.chain" :key="limb.key + '-pursuit'"
@@ -161,7 +161,21 @@
           />
         </g>
 
-        <!-- Die Tore der VERFOLGUNG. Eigene Gruppe und nicht die daneben: sie
+        <!-- Die Tore ALLER Fusions-Körper, blass. Sie stehen dauerhaft, damit
+             kein Körper unverbunden im Feld schwebt — laut wird immer nur der,
+             den der Spieler gerade meint. -->
+        <g
+          class="fusion-limbs"
+          stroke-linecap="round" stroke-linejoin="round" fill="none"
+          :stroke-dasharray="FORGE_EDGE_REQ_DASH"
+        >
+          <path
+            v-for="limb in fusionLimbs" :key="limb.key"
+            :d="limb.d" :stroke-width="limb.width"
+          />
+        </g>
+
+        <!-- Die Tore des GEMEINTEN. Eigene Gruppe und nicht die daneben: sie
              hat eine andere Lebensdauer als der Zeiger, und zwei `v-for` in
              einem `<g>` verbänden sie an einem Ort, an dem nichts sie
              verbindet. Ebenfalls AUSSERHALB von `.limb-field` — die Antwort auf
@@ -222,22 +236,37 @@
            ist ein Sitz, der nur so tut. Übernommen ist allein die
            Positionierungs-Regel. -->
       <button
-        v-if="pursuitNode"
+        v-for="body in fusionBodies"
+        :key="body.id"
         class="pursuit-mark"
+        :class="{
+          'pursuit-mark--aimed': aimedFusionId === body.id,
+          'pursuit-mark--forged': body.forged,
+          'pursuit-mark--dim': isDimmed(body.id),
+        }"
         type="button"
         :style="{
-          left: `${Math.round(pursuitNode.at.x)}px`,
-          top: `${Math.round(pursuitNode.at.y)}px`,
-          '--pursuit-c': pursuitNode.color,
+          left: `${Math.round(body.at.x)}px`,
+          top: `${Math.round(body.at.y)}px`,
+          '--pursuit-c': body.color,
         }"
-        :title="pursuitNode.name"
-        :aria-label="pursuitNode.name"
-        @click.stop="openPursuitCard"
+        :title="body.name"
+        :aria-label="body.name"
+        @click.stop="aimFusion(body.id)"
+        @mouseenter="fusionHoverId = body.id"
+        @mouseleave="fusionHoverId = null"
       >
         <span class="pursuit-mark-ring">
-          <Icon :icon="pursuitNode.icon" width="30" height="30" />
+          <Icon :icon="body.icon" width="30" height="30" />
         </span>
-        <span class="pursuit-mark-name" :style="pursuitNameStyle">{{ pursuitNode.name }}</span>
+        <!-- Das Namensschild trägt NUR der Gemeinte. Die Bühne ist wortlos —
+             vierzehn Schilder dauerhaft wären ein zweites Kantenfeld aus Text. -->
+        <span
+          v-if="aimedFusionId === body.id"
+          class="pursuit-mark-name"
+          :style="pursuitNameStyle"
+          >{{ body.name }}</span
+        >
       </button>
 
       <!-- Nodes -->
@@ -429,18 +458,19 @@ import {
 } from '@/composables/ui/useForgeUpgrades'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeSearch } from '@/composables/ui/useForgeSearch'
-import { useForgeOffers } from '@/composables/ui/useForgeOffers'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import {
   forgeClusterSpots,
   forgeEdges,
   type ForgeEdgeKind,
-  forgeFreeAnchor,
+  FORGE_FUSION_RADIUS,
+  forgeFusionAnchors,
   forgeTreePlacements,
   type Point,
 } from '@/utils/ui/forgeTreeLayout'
 import { forgeClusterOf } from '@/config/progression/starForgeNet'
 import { forgeNodePath } from '@/utils/game/solarSignature'
+import { FORGE_CONSTELLATIONS, getForgeConstellation } from '@/config/progression/starForge'
 import { forgeRouteKey, forgeRoutes, forgeSunRoute } from '@/utils/ui/forgeEdgeRoute'
 import { MEEP_TREE_NODES, MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
 import {
@@ -554,12 +584,12 @@ const {
   refocus,
   clearPin,
   pursuitId,
+  setPursuit,
   pingPursuit,
   clearPursuit,
   resetForgeSpotlight,
 } = useForgeSpotlight()
 const { searchActive, matchIds } = useForgeSearch()
-const { pursuedOffer } = useForgeOffers()
 const { detailsOpen, openDetails, closeDetails } = useForgeDetailsPane()
 
 const C = FORGE_STAGE_SIZE / 2
@@ -1023,15 +1053,33 @@ const spotReqs = computed<Map<string, boolean>>(() => {
  * Das Vorbild ist `matchIds` der Suche — eine Menge von aussen, die je Knoten
  * nur nachgeschlagen wird.
  *
- * Die Ids kommen aus `pursuedOffer`, nicht aus einem zweiten Griff in den
- * Katalog: Karte und Netz müssen dieselben drei Zeilen meinen.
+ * Aus dem Katalog: Karte und Netz lesen dieselben `requires`, also meinen sie
+ * dieselben Zeilen.
+ */
+/**
+ * Welcher Fusions-Körper gerade GEMEINT ist.
+ *
+ * Eigener Zeiger und ausdrücklich NICHT `setTreeHover()`: ein `spotlightId` ohne
+ * Sitz dämpft über `isDimmed` das ganze Feld, ohne dass irgendetwas hell darin
+ * stünde — dieser Fehler ist hier schon einmal aufgetreten.
+ */
+const fusionHoverId = ref<string | null>(null)
+const aimedFusionId = computed(() => pursuitId.value ?? fusionHoverId.value)
+
+/**
+ * Die Tore des GEMEINTEN Körpers — Id → erfüllt.
+ *
+ * Aus dem Katalog und nicht aus `pursuedOffer`: gemeint sein kann auch einer,
+ * den der Zeiger nur streift, und den kennt die Detailspalte nicht.
  */
 const pursuitReqs = computed<Map<string, boolean>>(() => {
   const out = new Map<string, boolean>()
-  for (const req of pursuedOffer.value?.reqs ?? []) {
+  const id = aimedFusionId.value
+  if (id === null) return out
+  for (const req of getForgeConstellation(id)?.requires ?? []) {
     // Eine Konstellation darf auf einen Strahl zeigen, der als Knoten nicht auf
     // der Bühne steht — dieselbe Prüfung wie bei `spotReqs`.
-    if (nodeById.value.has(req.id)) out.set(req.id, req.met)
+    if (nodeById.value.has(req.id)) out.set(req.id, forgeStore.anyNodeLevel(req.id) >= req.level)
   }
   return out
 })
@@ -1054,25 +1102,37 @@ const pursuitMarks = computed<ForgeCameraMark[]>(() =>
  * `forgeFreeAnchor` sucht ihr eine Stelle, an der sie keinen echten Knoten
  * verdeckt; sie erscheint mit der Verfolgung und verschwindet mit ihr.
  */
-/** Der Ankerkreis misst wie eine Krone — er ist ein Ziel, kein Zwischenschritt. */
-const PURSUIT_ANCHOR_RADIUS = FORGE_NODE_DIAMETER.crown / 2
 const pursuitNamePx = `${FORGE_PURSUIT_NAME_PX}px`
 
-const pursuitAnchor = computed(() => {
-  const marks = pursuitMarks.value
-  if (marks.length === 0) return null
-  return forgeFreeAnchor(
-    marks.map((m) => m.at),
-    PURSUIT_ANCHOR_RADIUS,
-  )
-})
+/** Einmal geholt — die Karte ist modulweit gecacht und aendert sich nie. */
+const fusionAnchors = forgeFusionAnchors()
 
-const pursuitNode = computed(() => {
-  const at = pursuitAnchor.value
-  const offer = pursuedOffer.value
-  if (!at || !offer) return null
-  return { at, icon: offer.icon, color: offer.color, name: offer.name }
-})
+/**
+ * Die vierzehn Fusions-Körper. Sie WOHNEN im Netz — dauerhaft und immer an
+ * derselben Stelle, `forgeFusionAnchors()` rechnet die Plätze einmal aus.
+ *
+ * Ein Upgrade ist ein Ort, kein Zustand einer Navigation: dass einer nur zu
+ * sehen war, solange man ihn verfolgt, war der Fehler.
+ */
+const fusionBodies = computed(() =>
+  FORGE_CONSTELLATIONS.flatMap((def) => {
+    const at = fusionAnchors.get(def.id)
+    return at
+      ? [
+          {
+            id: def.id,
+            at,
+            icon: def.icon,
+            color: def.color,
+            name: def.name,
+            forged: forgeStore.constellationForged(def.id),
+          },
+        ]
+      : []
+  }),
+)
+
+const pursuitAnchor = computed(() => fusionAnchors.get(aimedFusionId.value ?? '') ?? null)
 
 /**
  * Die Linien vom Anker zu seinen Toren.
@@ -1081,22 +1141,41 @@ const pursuitNode = computed(() => {
  * einem Knoten — genau die Form, die der Anker hat. Gerechnet im `computed` und
  * nie pro Frame: die Route bucht Kanäle und prüft gegen alle Sitze.
  */
+/**
+ * Die Linien von jedem Körper zu seinen Toren — EINMAL für alle vierzehn.
+ *
+ * Kein dynamischer Anteil: Plätze und Tore stehen fest, also rechnet dieses
+ * `computed` genau einmal. Die 36 Routen buchen Kanäle und prüfen gegen alle
+ * Sitze; pro Frame wäre das nicht zu bezahlen.
+ */
+const fusionLimbs = computed(() =>
+  fusionBodies.value.flatMap((body) =>
+    (getForgeConstellation(body.id)?.requires ?? []).flatMap((req) => {
+      const node = nodeById.value.get(req.id)
+      if (!node) return []
+      const route = forgeSunRoute(body.at, FORGE_FUSION_RADIUS, req.id, { x: node.x, y: node.y })
+      return [
+        {
+          key: `fusion:${body.id}>${req.id}`,
+          owner: body.id,
+          d: route.d,
+          width: Math.max(FORGE_LIMB_MIN_WIDTH, route.width - 1),
+        },
+      ]
+    }),
+  ),
+)
+
+/** Nur die des GEMEINTEN — sie tragen zusätzlich den Zustand als Farbe. */
 const pursuitLimbs = computed(() => {
-  const at = pursuitAnchor.value
-  if (!at) return []
-  return [...pursuitReqs.value.entries()].flatMap(([id, met]) => {
-    const node = nodeById.value.get(id)
-    if (!node) return []
-    const route = forgeSunRoute(at, PURSUIT_ANCHOR_RADIUS, id, { x: node.x, y: node.y })
-    return [
-      {
-        key: `pursuit>${id}`,
-        d: route.d,
-        width: Math.max(FORGE_LIMB_MIN_WIDTH, route.width - 1),
-        met,
-      },
-    ]
-  })
+  const id = aimedFusionId.value
+  if (id === null) return []
+  return fusionLimbs.value
+    .filter((limb) => limb.owner === id)
+    .map((limb) => ({
+      ...limb,
+      met: pursuitReqs.value.get(limb.key.split('>')[1]) ?? false,
+    }))
 })
 
 /**
@@ -1115,6 +1194,8 @@ const pursuitLimbs = computed(() => {
 const pursuitPath = computed(() => {
   const ids = new Set<string>()
   const chain: Limb[] = []
+  // NUR bei echter Verfolgung — der Kaufweg ist die lauteste Stufe.
+  if (pursuitId.value === null) return { ids, chain }
   for (const reqId of pursuitReqs.value.keys()) {
     for (const id of forgeNodePath(reqId)) {
       if (ids.has(id)) continue
@@ -1134,17 +1215,24 @@ const pursuitPath = computed(() => {
  * der dabei auf 7 px fällt, fehlt genau dort, wo er gebraucht wird. Kein
  * Frame-Wert — der Massstab wechselt beim Zoomschritt, nicht pro Bild.
  */
+/** Die Farbe des Gemeinten — sie trägt Kaufweg und Torlinien. */
+const aimedFusionColor = computed(
+  () => fusionBodies.value.find((b) => b.id === aimedFusionId.value)?.color ?? '#e8c040',
+)
+
 const pursuitNameStyle = computed(() => {
   const read = Math.min(
     FORGE_PURSUIT_NAME_MAX_READ_SCALE,
     Math.max(1, FORGE_PURSUIT_NAME_MIN_SCREEN_PX / (FORGE_PURSUIT_NAME_PX * (totalScale.value || 1))),
   )
-  return { transform: `scale(${read.toFixed(3)})` }
+  return { transform: `translateX(-50%) scale(${read.toFixed(3)})` }
 })
 
-function openPursuitCard(): void {
+/** Ein Klick im Netz ist dieselbe Geste wie der Sprung aus dem Voyages-Reiter. */
+function aimFusion(id: string): void {
   openDetails()
-  pingPursuit()
+  if (pursuitId.value === id) pingPursuit()
+  else setPursuit(id)
 }
 
 /** Trägt dieser Kreis einen Voraussetzungs-Ring — vom Zeiger oder von der Verfolgung? */
@@ -1187,7 +1275,7 @@ function isDimmed(id: string): boolean {
   // Eine laufende Verfolgung zählt wie ein Fokus: drei helle Ringe in einem
   // gedämpften Feld sind unübersehbar, dieselben drei in einem vollen Feld aus
   // hundertsechzig Knoten nicht.
-  const aimed = spotlightId.value !== null || pursuitReqs.value.size > 0
+  const aimed = spotlightId.value !== null || aimedFusionId.value !== null
   return (
     aimed &&
     !isSpot(id) &&
@@ -1931,7 +2019,7 @@ function frameToPursuit(): void {
      seiner ihre Mitte ins Bild. */
   const marks: ForgeCameraMark[] = [
     ...pursuitMarks.value,
-    { at: anchor, radius: PURSUIT_ANCHOR_RADIUS },
+    { at: anchor, radius: FORGE_FUSION_RADIUS },
     { at: { x: C, y: C }, radius: sunEdgeR.value },
   ]
   for (const id of pursuitPath.value.ids) {
@@ -2575,6 +2663,13 @@ const nextPhasePreviewStyle = computed(() => ({
   opacity: 0.9;
 }
 
+/* Die Torlinien ALLER Körper, blass. Sechsunddreissig Pfade, die dauerhaft
+   stehen — deshalb so leise wie möglich und statisch wie das ganze Feld. */
+.fusion-limbs {
+  opacity: 0.075;
+  stroke: #7a6f58;
+}
+
 /* ══ Der Ankerknoten der Verfolgung ══════════════════════════════════
    Dieselbe Positionierungs-Regel wie ein Knoten, und sonst nichts davon: er ist
    kein Sitz, und der gestrichelte Rand sagt genau das. Alles statisch — feste
@@ -2587,13 +2682,14 @@ const nextPhasePreviewStyle = computed(() => ({
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
   padding: 0;
   background: transparent;
   border: none;
   cursor: pointer;
 }
 
+/* Ruhend tritt der Körper zurück — er steht dauerhaft, und vierzehn gleich
+   laute Ziele wären ein zweites Knotenfeld. Laut wird nur der Gemeinte. */
 .pursuit-mark-ring {
   width: 60px;
   height: 60px;
@@ -2604,13 +2700,35 @@ const nextPhasePreviewStyle = computed(() => ({
   background: #111008;
   border: 2px dashed var(--pursuit-c, #e8c040);
   border-radius: 50%;
+  opacity: 0.55;
 }
 
-.pursuit-mark:hover .pursuit-mark-ring {
+.pursuit-mark:hover .pursuit-mark-ring,
+.pursuit-mark--aimed .pursuit-mark-ring {
   background: #1c1c18;
+  opacity: 1;
 }
 
+/* Fusioniert: durchgezogen. Gestrichelt hiess von Anfang an „gibt es noch
+   nicht" — jetzt gibt es ihn. */
+.pursuit-mark--forged .pursuit-mark-ring {
+  border-style: solid;
+}
+
+.pursuit-mark--dim .pursuit-mark-ring {
+  opacity: 0.16;
+}
+
+/* ABSOLUT unter dem Ring, nicht im Fluss.
+   Der Wrapper ist per `translate(-50%, -50%)` auf seinem Bühnenpunkt zentriert;
+   ein Schild im Fluss änderte seine Höhe, und der Ring sprang beim Erscheinen
+   des Namens um die halbe Schildhöhe. Gemessen: ein Körper verschob sich beim
+   Abräumen der Verfolgung. */
 .pursuit-mark-name {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform-origin: top center;
   max-width: 220px;
   padding: 2px 7px;
   font-size: v-bind(pursuitNamePx);

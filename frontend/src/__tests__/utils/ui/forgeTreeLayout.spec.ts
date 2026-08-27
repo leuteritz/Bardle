@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
+  FORGE_FUSION_RADIUS,
   forgeContentBounds,
   forgeEdges,
   forgeFreeAnchor,
+  forgeFusionAnchors,
   forgeLongestEdge,
   forgeTightestPair,
   forgeTreePlacements,
 } from '@/utils/ui/forgeTreeLayout'
-import { FORGE_NODES } from '@/config/progression/starForge'
+import { FORGE_CONSTELLATIONS, FORGE_NODES } from '@/config/progression/starForge'
 import { FORGE_SEATS } from '@/config/progression/forgeSeats'
 import { FORGE_BRIDGES } from '@/config/progression/starForgeNet'
 import {
@@ -18,8 +20,9 @@ import {
   FORGE_MIN_AIR_PX,
   FORGE_NODE_DIAMETER,
   FORGE_STAGE_SIZE,
+  SHOP_SUN_MAX_DIAMETER,
 } from '@/config/constants'
-import { getForgeConstellation } from '@/config/progression/starForge'
+import { FORGE_CONSTELLATIONS, getForgeConstellation } from '@/config/progression/starForge'
 import { forgeSeatTier } from '@/config/progression/forgeSeats'
 
 /**
@@ -208,5 +211,99 @@ describe('Star Forge — der Anker ohne Sitz', () => {
 
   it('fällt ohne Tore auf die Bühnenmitte', () => {
     expect(forgeFreeAnchor([], RADIUS)).toEqual({ x: HALF, y: HALF })
+  })
+})
+
+/**
+ * Wo die KONSTELLATIONEN wohnen.
+ *
+ * Sie haben keinen Sitz — kein Cluster, keine `parentId`, keine Phase. Sichtbar
+ * sein müssen sie trotzdem, dauerhaft und immer an derselben Stelle: ein
+ * Upgrade ist ein Ort, kein Zustand einer Navigation. Diese Spec ist der
+ * Wächter der einzigen Zahl, die das tragen kann — der Luft.
+ */
+describe('Star Forge — wo die Konstellationen wohnen', () => {
+  const HALF = FORGE_STAGE_SIZE / 2
+
+  it('gibt JEDER einen Platz', () => {
+    expect(forgeFusionAnchors().size).toBe(FORGE_CONSTELLATIONS.length)
+    for (const def of FORGE_CONSTELLATIONS) {
+      expect(forgeFusionAnchors().get(def.id), `${def.id} steht nirgends`).toBeDefined()
+    }
+  })
+
+  it('hält die Mindestluft zu jedem Sitz UND zu jedem anderen Koerper', () => {
+    // DIE Zusage. Ein Körper, der einen Knoten verdeckt, nimmt dem Netz einen
+    // weg, um einen dazuzustellen — und zwei Fusionen aufeinander sind ein
+    // Körper, den niemand anklicken kann.
+    const anchors = forgeFusionAnchors()
+    const places = forgeTreePlacements()
+    let tightest = Infinity
+    let where = ''
+
+    for (const [id, at] of anchors) {
+      for (const [seatId, seat] of places) {
+        const r = FORGE_NODE_DIAMETER[forgeSeatTier(seatId)] / 2
+        const air = Math.hypot(seat.x - at.x, seat.y - at.y) - (r + FORGE_FUSION_RADIUS)
+        if (air < tightest) {
+          tightest = air
+          where = `${id} ↔ ${seatId}`
+        }
+      }
+      for (const [otherId, other] of anchors) {
+        if (otherId === id) continue
+        const air = Math.hypot(other.x - at.x, other.y - at.y) - 2 * FORGE_FUSION_RADIUS
+        if (air < tightest) {
+          tightest = air
+          where = `${id} ↔ ${otherId}`
+        }
+      }
+    }
+
+    expect(tightest, `engste Stelle ${tightest.toFixed(1)} px: ${where}`).toBeGreaterThanOrEqual(
+      FORGE_MIN_AIR_PX,
+    )
+  })
+
+  it('liegt jeder im Netz und weiter aussen als seine Tore', () => {
+    const anchors = forgeFusionAnchors()
+    const places = forgeTreePlacements()
+    const { stageRadius } = forgeContentBounds()
+
+    for (const def of FORGE_CONSTELLATIONS) {
+      const at = anchors.get(def.id)!
+      const gates = def.requires.flatMap((req) => {
+        const seat = places.get(req.id)
+        return seat ? [seat] : []
+      })
+      const cx = gates.reduce((sum, g) => sum + g.x, 0) / gates.length
+      const cy = gates.reduce((sum, g) => sum + g.y, 0) / gates.length
+
+      expect(
+        Math.hypot(at.x - HALF, at.y - HALF),
+        `${def.id} liegt nicht weiter aussen als seine Tore`,
+      ).toBeGreaterThan(Math.hypot(cx - HALF, cy - HALF))
+      expect(
+        Math.hypot(at.x - HALF, at.y - HALF) + FORGE_FUSION_RADIUS,
+        `${def.id} steht ausserhalb des Netzes`,
+      ).toBeLessThanOrEqual(stageRadius)
+    }
+  })
+
+  it('steht keiner auf der SONNE', () => {
+    // Sie ist kein Sitz und stünde damit in keiner Prüfung — gemessen landeten
+    // zwei Körper auf ihrer Scheibe. Gerechnet gegen den grössten Durchmesser,
+    // damit keine Sonnenphase sie später verschluckt.
+    const sunR = SHOP_SUN_MAX_DIAMETER / 2
+    for (const [id, at] of forgeFusionAnchors()) {
+      const air = Math.hypot(at.x - HALF, at.y - HALF) - (sunR + FORGE_FUSION_RADIUS)
+      expect(air, `${id} steht auf der Sonne (${air.toFixed(1)} px)`).toBeGreaterThanOrEqual(
+        FORGE_MIN_AIR_PX,
+      )
+    }
+  })
+
+  it('würfelt nicht und rechnet nur einmal', () => {
+    expect(forgeFusionAnchors()).toBe(forgeFusionAnchors())
   })
 })
