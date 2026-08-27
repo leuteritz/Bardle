@@ -45,6 +45,22 @@ const pinnedId = ref<string | null>(null)
  * Zähler ist die kleinste Form dafür: er trägt keinen Wert,
  * nur ein Ereignis, und jeder Leser entscheidet selbst, was er damit tut.
  */
+/**
+ * Was der Spieler VERFOLGT — ein Vault-Eintrag, auf den von aussen gezeigt
+ * wurde (heute die gesperrte Send-All-Kachel des Voyages-Reiters).
+ *
+ * Eigener Zustand und NICHT `pinnedId`, obwohl beides „das meine ich" heisst:
+ * die Verfolgungs-Karte bietet als Hauptgeste einen Sprung auf ihre eigenen
+ * Bedingungen an, und der setzt den Fokus. Laege beides im selben Feld, loeschte
+ * die Karte sich mit ihrem eigenen Knopf. Zwei Felder, zwei Lebensdauern: der
+ * Fokus wandert mit dem Blick, die Verfolgung bleibt, bis sie erledigt oder
+ * abgeraeumt ist.
+ *
+ * Eine Konstellation hat keinen Sitz im Netz — `pinnedId` waere fuer sie
+ * ohnehin ein stummer Wert, der nur eine Escape-Stufe frisst.
+ */
+const pursuitId = ref<string | null>(null)
+
 const focusTick = ref(0)
 
 /**
@@ -120,6 +136,7 @@ export function useForgeSpotlight(): {
   listHoverId: Readonly<Ref<string | null>>
   treeHoverId: Readonly<Ref<string | null>>
   pinnedId: Readonly<Ref<string | null>>
+  pursuitId: Readonly<Ref<string | null>>
   focusTick: Readonly<Ref<number>>
   readableTick: Readonly<Ref<number>>
   listHovering: ComputedRef<boolean>
@@ -130,6 +147,8 @@ export function useForgeSpotlight(): {
   refocus: () => void
   focusNode: (id: string, opts?: { readable?: boolean }) => void
   clearPin: () => void
+  setPursuit: (id: string) => void
+  clearPursuit: () => void
   resetForgeSpotlight: () => void
 } {
   function setListHover(id: string | null): void {
@@ -174,6 +193,15 @@ export function useForgeSpotlight(): {
     pinnedId.value = null
   }
 
+  /** Von aussen auf einen Vault-Eintrag zeigen. */
+  function setPursuit(id: string): void {
+    pursuitId.value = id
+  }
+
+  function clearPursuit(): void {
+    pursuitId.value = null
+  }
+
   /**
    * Alle drei Quellen löschen. Der Shop-Tab bleibt nach dem ersten Öffnen
    * GEMOUNTET (`BardProfileMenu` rendert ihn als `v-if` auf `mountedTabs` plus
@@ -189,6 +217,7 @@ export function useForgeSpotlight(): {
     listHoverId.value = null
     treeHoverId.value = null
     pinnedId.value = null
+    pursuitId.value = null
   }
 
   return {
@@ -197,6 +226,7 @@ export function useForgeSpotlight(): {
     listHoverId: readonly(listHoverId),
     treeHoverId: readonly(treeHoverId),
     pinnedId: readonly(pinnedId),
+    pursuitId: readonly(pursuitId),
     focusTick: readonly(focusTick),
     readableTick: readonly(readableTick),
     listHovering,
@@ -207,6 +237,8 @@ export function useForgeSpotlight(): {
     refocus,
     focusNode,
     clearPin,
+    setPursuit,
+    clearPursuit,
     resetForgeSpotlight,
   }
 }

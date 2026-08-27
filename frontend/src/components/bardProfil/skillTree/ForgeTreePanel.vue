@@ -483,6 +483,7 @@ const {
   setPin,
   refocus,
   clearPin,
+  clearPursuit,
   resetForgeSpotlight,
 } = useForgeSpotlight()
 const { searchActive, matchIds } = useForgeSearch()
@@ -1634,11 +1635,12 @@ function onClickCapture(event: MouseEvent): void {
   didDrag = false
 }
 
-/** Klick auf den freien Grund löst Anheftung und Detailspalte — aber nur, wenn
- *  es wirklich ein Klick war. */
+/** Klick auf den freien Grund löst Anheftung, Verfolgung und Detailspalte —
+ *  aber nur, wenn es wirklich ein Klick war. */
 function onBackgroundClick(): void {
   if (didDrag) return
   clearPin()
+  clearPursuit()
   closeDetails()
 }
 

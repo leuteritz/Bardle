@@ -719,23 +719,6 @@ export const useStarForgeStore = defineStore('starForge', {
       }
     },
 
-    /**
-     * Der erste noch offene Zubringer einer Konstellation.
-     *
-     * Sie hat keinen Sitz im Netz, ein Sprung von aussen kann also nicht auf
-     * SIE zeigen — er zeigt auf das, was als Naechstes wachsen muss.
-     */
-    constellationNextStep(): (id: string) => string | null {
-      return (id) => {
-        const def = getForgeConstellation(id)
-        if (!def) return null
-        for (const req of def.requires) {
-          if (this.anyNodeLevel(req.id) < req.level) return req.id
-        }
-        return null
-      }
-    },
-
     canForgeConstellation(): (id: string) => boolean {
       return (id) => {
         const def = getForgeConstellation(id)

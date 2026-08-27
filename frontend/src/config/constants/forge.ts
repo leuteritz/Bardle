@@ -2487,6 +2487,24 @@ export const FORGE_OFFER_NEXT_LABEL = 'After forging'
  * dann zweimal gelogen.
  */
 export const FORGE_OFFER_REQS_LABEL = 'Requires'
+
+// ── Der Verfolgungs-Block (ForgePursuitCard) ────────────────────────────────
+/*
+ * Ein Vault-Eintrag steht in dieser Spalte erst, wenn seine Tore offen sind —
+ * der Streifen darunter fuehrt ausdruecklich nur Kaufbares. Wer von aussen auf
+ * ein noch gesperrtes Upgrade zeigt (die Send-All-Kachel im Voyages-Reiter),
+ * braucht trotzdem einen Ort dafuer. Das ist dieser Block: EIN Eintrag, der
+ * gerade verfolgt wird, mit seinen Toren als Balken.
+ */
+/** Kopf-Etikett. „Within reach" sagt, was GEHT; das hier, was gewollt ist. */
+export const FORGE_PURSUIT_TITLE = 'Pursuing'
+/** Vier Pfeile auf einen Punkt — nicht der Amboss, der heisst „erreichbar". */
+export const FORGE_PURSUIT_ICON = 'game-icons:convergence-target'
+/** Was eine anklickbare Bedingungszeile meldet. */
+export const FORGE_PURSUIT_REQ_TITLE = 'Show this in the tree'
+/** Warum der Knopf nicht geht — ein TOR, kein Geldbeutel. Das Kostenband sagt
+ *  dazu nichts, und `FORGE_OFFER_SHORT_TITLE` waere dort die falsche Auskunft. */
+export const FORGE_OFFER_LOCKED_TITLE = 'Requirements not met'
 /**
  * Wie weit das Kärtchen von der Zeile absteht und wie breit es ist.
  *

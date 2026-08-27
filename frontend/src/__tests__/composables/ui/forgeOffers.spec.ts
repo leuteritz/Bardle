@@ -2,12 +2,17 @@ import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useForgeOffers } from '@/composables/ui/useForgeOffers'
 import { useHerald } from '@/composables/ui/useHerald'
+import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useGameStore } from '@/stores/core/gameStore'
 import { meetForgeRequirements, setForgeLevel } from '@/__tests__/forgeTestUtils'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { FORGE_RELICS, FORGE_CONSTELLATIONS, FORGE_BARGAINS } from '@/config/progression/starForge'
-import { FORGE_VAULT_FUSED_BADGE, FORGE_VAULT_MAX_BADGE } from '@/config/constants'
+import {
+  FORGE_MASS_SEND_NODE,
+  FORGE_VAULT_FUSED_BADGE,
+  FORGE_VAULT_MAX_BADGE,
+} from '@/config/constants'
 
 /**
  * `useForgeOffers` entscheidet, was der Spieler von Relikten, Konstellationen
@@ -32,6 +37,9 @@ import { FORGE_VAULT_FUSED_BADGE, FORGE_VAULT_MAX_BADGE } from '@/config/constan
 beforeEach(() => {
   setActivePinia(createPinia())
   useHerald().reset()
+  // Der Scheinwerfer ist ebenfalls ein Modul-Singleton, und `pursuedOffer` liest
+  // ihn: ohne Aufräumen verfolgte ein Test das Ziel des vorigen.
+  useForgeSpotlight().resetForgeSpotlight()
 })
 
 /** Ein Relikt mit seinem Tor — dasselbe Muster für alle sechs. */
@@ -363,5 +371,100 @@ describe('useForgeOffers — Kaufen', () => {
 
     expect(buyOffer(RELIC.id)).toBe(false)
     expect(forge.relicLevel(RELIC.id)).toBe(0)
+  })
+})
+
+/**
+ * Der Verfolgungs-Block — der EINE Vault-Eintrag, auf den von aussen gezeigt
+ * wurde.
+ *
+ * Er ist die Ausnahme von der Regel, die diese Datei sonst bindet: der Streifen
+ * zeigt nur Freigeschaltetes, dieser eine Eintrag aber gerade dann, wenn seine
+ * Tore noch ZU sind. Ohne ihn führte der Sprung von der gesperrten
+ * Send-All-Kachel ins Leere — das Upgrade stünde nirgends in der Spalte.
+ */
+describe('useForgeOffers — die Verfolgung', () => {
+  const { setPursuit } = useForgeSpotlight()
+
+  it('ist ohne Ziel leer', () => {
+    const { pursuedOffer, pursuedId } = useForgeOffers()
+    expect(pursuedOffer.value).toBeNull()
+    expect(pursuedId.value).toBeNull()
+  })
+
+  it('baut die Zeile AUCH bei geschlossenen Toren', () => {
+    // Die Kernzusage: beim Sprung von der gesperrten Kachel ist genau das der
+    // Fall, und eine Zeile, die dann fehlt, macht den ganzen Weg wertlos.
+    const { pursuedOffer, pursuedId } = useForgeOffers()
+    setPursuit(FORGE_MASS_SEND_NODE)
+
+    const offer = pursuedOffer.value
+    expect(offer).not.toBeNull()
+    expect(offer!.id).toBe(FORGE_MASS_SEND_NODE)
+    expect(offer!.kind).toBe('constellation')
+    expect(offer!.ready).toBe(false)
+    expect(offer!.reqs.some((req) => !req.met)).toBe(true)
+    expect(pursuedId.value).toBe(FORGE_MASS_SEND_NODE)
+  })
+
+  it('nennt jedes Tor mit Fortschritt, in Katalogreihenfolge', () => {
+    const def = FORGE_CONSTELLATIONS.find((con) => con.id === FORGE_MASS_SEND_NODE)!
+    const { pursuedOffer } = useForgeOffers()
+    setPursuit(FORGE_MASS_SEND_NODE)
+
+    expect(pursuedOffer.value!.reqs.map((req) => req.id)).toEqual(def.requires.map((r) => r.id))
+    for (const req of pursuedOffer.value!.reqs) {
+      expect(req.have).toBe(0)
+      expect(req.progress).toBe(0)
+      expect(req.met).toBe(false)
+    }
+
+    // Ein Tor halb offen: der Balken steht dazwischen, das Tor bleibt zu.
+    const first = def.requires[0]
+    setForgeLevel(first.id, first.level - 1)
+    const half = useForgeOffers().pursuedOffer.value!.reqs[0]
+    expect(half.have).toBe(first.level - 1)
+    expect(half.progress).toBeGreaterThan(0)
+    expect(half.progress).toBeLessThan(1)
+    expect(half.met).toBe(false)
+
+    setForgeLevel(first.id, first.level)
+    const full = useForgeOffers().pursuedOffer.value!.reqs[0]
+    expect(full.progress).toBe(1)
+    expect(full.met).toBe(true)
+  })
+
+  it('verfolgt nur Konstellationen — Relikt, Knoten und Unsinn bleiben stumm', () => {
+    // Der Baum und die Upgrade-Liste verlassen sich darauf, dass eine fremde Id
+    // ueberall folgenlos bleibt; hier steht die Gegenprobe.
+    const { pursuedOffer } = useForgeOffers()
+    for (const id of [RELIC.id, 'moonOrbit', 'gibtEsNicht']) {
+      setPursuit(id)
+      expect(pursuedOffer.value, id).toBeNull()
+    }
+  })
+
+  it('verfolgt nichts, was schon fusioniert ist', () => {
+    const { pursuedOffer, vaultEntries } = useForgeOffers()
+    useStarForgeStore().forgedConstellations.push(FORGE_MASS_SEND_NODE)
+    setPursuit(FORGE_MASS_SEND_NODE)
+
+    expect(pursuedOffer.value).toBeNull()
+    expect(vaultEntries.value.some((entry) => entry.id === FORGE_MASS_SEND_NODE)).toBe(true)
+  })
+
+  it('nimmt dem Streifen und dem Kaufweg nichts weg', () => {
+    // Die Entdoppelung ist Sache der KOMPONENTE. `offers` und `offerById` bleiben
+    // unberuehrt, sonst faende `buyOffer()` den Eintrag nicht mehr, sobald seine
+    // Tore offen sind.
+    const def = FORGE_CONSTELLATIONS.find((con) => con.id === FORGE_MASS_SEND_NODE)!
+    meetForgeRequirements(def.requires)
+    emptyPurse()
+    setPursuit(FORGE_MASS_SEND_NODE)
+
+    const { offers, offerById, pursuedOffer } = useForgeOffers()
+    expect(pursuedOffer.value).not.toBeNull()
+    expect(offers.value.some((offer) => offer.id === FORGE_MASS_SEND_NODE)).toBe(true)
+    expect(offerById.value.has(FORGE_MASS_SEND_NODE)).toBe(true)
   })
 })

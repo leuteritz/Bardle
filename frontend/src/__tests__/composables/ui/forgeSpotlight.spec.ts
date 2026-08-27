@@ -288,3 +288,39 @@ describe('useForgeSpotlight', () => {
     expect(list.spotlightId.value).toBe('shared_node')
   })
 })
+
+/**
+ * Die VERFOLGUNG — der zweite Zeiger, und der Grund, warum es zwei sind.
+ *
+ * Der Fokus wandert mit dem Blick; die Verfolgung bleibt, bis sie erledigt oder
+ * abgeraeumt ist. Laege beides im selben Feld, loeschte die Verfolgungs-Karte
+ * sich mit ihrem eigenen Knopf: ihre Hauptgeste ist ein Sprung auf eine ihrer
+ * Bedingungen, und der setzt den Fokus.
+ */
+describe('useForgeSpotlight — die Verfolgung', () => {
+  it('nimmt eine Id ohne Sitz im Netz an', () => {
+    const { pursuitId, setPursuit } = useForgeSpotlight()
+    setPursuit('risingArmada')
+    expect(pursuitId.value).toBe('risingArmada')
+  })
+
+  it('ueberlebt einen Fokuswechsel', () => {
+    // Genau der Fall: Klick auf eine Bedingung der Karte.
+    const { pursuitId, pinnedId, setPursuit, focusNode } = useForgeSpotlight()
+    setPursuit('risingArmada')
+    focusNode('solarSails')
+    expect(pinnedId.value).toBe('solarSails')
+    expect(pursuitId.value).toBe('risingArmada')
+  })
+
+  it('faellt mit clearPursuit und mit dem Aufraeumen des Reiters', () => {
+    const { pursuitId, setPursuit, clearPursuit, resetForgeSpotlight } = useForgeSpotlight()
+    setPursuit('risingArmada')
+    clearPursuit()
+    expect(pursuitId.value).toBeNull()
+
+    setPursuit('risingArmada')
+    resetForgeSpotlight()
+    expect(pursuitId.value).toBeNull()
+  })
+})

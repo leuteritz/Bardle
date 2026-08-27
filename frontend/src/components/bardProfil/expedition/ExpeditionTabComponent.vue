@@ -21,8 +21,8 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
-import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import { useVoyageAtlas } from '@/composables/expedition/useVoyageAtlas'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import {
@@ -48,8 +48,8 @@ import VoyagesTabLoader from './VoyagesTabLoader.vue'
 
 const uiStore = useUiStore()
 const chartStore = useExpeditionChartStore()
-const forgeStore = useStarForgeStore()
-const { focusNode } = useForgeSpotlight()
+const { setPursuit } = useForgeSpotlight()
+const { openDetails } = useForgeDetailsPane()
 
 const isVisible = computed(() => uiStore.bardActiveTab === 'expedition')
 
@@ -310,16 +310,19 @@ watch(
 onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true))
 
 /**
- * Der Weg zur Massen-Geste. Die Konstellation hat keinen Sitz im Netz — der
- * Sprung zeigt deshalb auf ihren ersten noch offenen Zubringer; steht die
- * Bedingung schon, liegt sie ohnehin im Angebotsstreifen.
+ * Der Weg zur Massen-Geste — auf das Upgrade SELBST, nicht auf einen seiner
+ * Zubringer: die Detailspalte trägt es als Verfolgungs-Block, samt seinen Toren.
  *
- * KEIN `openBardModal()` — das toggelt und schloesse das offene Profil.
+ * KEIN `openBardModal()` — das toggelt und schlösse das offene Profil.
+ * KEIN `focusNode(..., { readable: true })` — dessen Impuls liest allein der
+ * Baum und höbe den Zoom für eine Id, die dort keinen Sitz hat.
+ * `openDetails()` VOR `setPursuit`: die Spalte startet eingeklappt, und der
+ * Block rollt sie nur zurück, wenn sie offen ist.
  */
 function openMassSendUpgrade() {
   uiStore.setBardTab('tree')
-  const step = forgeStore.constellationNextStep(FORGE_MASS_SEND_NODE)
-  if (step) focusNode(step, { readable: true })
+  openDetails()
+  setPursuit(FORGE_MASS_SEND_NODE)
 }
 </script>
 

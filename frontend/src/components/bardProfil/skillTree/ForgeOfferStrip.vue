@@ -80,7 +80,7 @@ import {
 } from '@/config/constants'
 
 const forgeStore = useStarForgeStore()
-const { offers, offerById, freshIds, buyOffer } = useForgeOffers()
+const { offers, offerById, freshIds, buyOffer, pursuedId } = useForgeOffers()
 
 // ── Eingefrorene Reihenfolge ─────────────────────────────────────────────────
 const frozenIds = ref<string[] | null>(null)
@@ -96,13 +96,23 @@ const frozenIds = ref<string[] | null>(null)
  */
 const shown = computed<ForgeOffer[]>(() => {
   const frozen = frozenIds.value
-  if (frozen === null) return offers.value
   const byId = offerById.value
-  return frozen.map((id) => byId.get(id)).filter((offer): offer is ForgeOffer => offer !== undefined)
+  const list =
+    frozen === null
+      ? offers.value
+      : frozen
+          .map((id) => byId.get(id))
+          .filter((offer): offer is ForgeOffer => offer !== undefined)
+  // Verfolgtes steht im Block DARÜBER — zweimal in einer Spalte wäre ein
+  // Fehler. Gefiltert wird am Ergebnis, nicht in `frozenIds`: die Klammer
+  // friert die Reihenfolge ein, nicht den Bestand.
+  return pursuedId.value === null ? list : list.filter((offer) => offer.id !== pursuedId.value)
 })
 
 /** Die Zahl in der Kopfzeile — wie viele davon gerade wirklich gehen. */
-const readyCount = computed(() => offers.value.filter((offer) => offer.ready).length)
+const readyCount = computed(
+  () => offers.value.filter((offer) => offer.ready && offer.id !== pursuedId.value).length,
+)
 
 const wrapEl = ref<HTMLElement | null>(null)
 const hoverId = ref<string | null>(null)

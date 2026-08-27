@@ -28,9 +28,9 @@
     <ForgeBuyAllBar />
 
     <!-- ══ Scrolling body ════════════════════════════════════════
-         Drei Blöcke, in der Reihenfolge, in der der Spieler sie braucht: was
-         gerade erreichbar ist, dann der Baum als Liste, zuletzt die Schublade
-         mit Gesperrtem und Fertigem. -->
+         Vier Blöcke, in der Reihenfolge, in der der Spieler sie braucht: was
+         er verfolgt, dann was gerade erreichbar ist, dann der Baum als Liste,
+         zuletzt die Schublade mit Gesperrtem und Fertigem. -->
     <!-- `data-forge-scroll` markiert den EINEN Rollkasten dieser Spalte.
          `ForgeUpgradesSection` muss ihn finden, um zu messen, ob eine Zeile
          schon im Bild stand, bevor sie hereingerollt wird — ein
@@ -38,6 +38,7 @@
          CSS-Klasse, die hier jederzeit umbenannt werden dürfte. Ein Attribut
          ist eine Zusage, ein Klassenname ist es nicht. -->
     <div class="sf-body" data-forge-scroll>
+      <ForgePursuitCard />
       <ForgeOfferStrip />
       <ForgeUpgradesSection />
       <ForgeVaultSection />
@@ -77,6 +78,7 @@ import { formatClock } from '@/utils/ui/format'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import ForgeBargainBar from './ForgeBargainBar.vue'
 import ForgeBuyAllBar from './ForgeBuyAllBar.vue'
+import ForgePursuitCard from './ForgePursuitCard.vue'
 import ForgeOfferStrip from './ForgeOfferStrip.vue'
 import ForgeUpgradesSection from './ForgeUpgradesSection.vue'
 import ForgeVaultSection from './ForgeVaultSection.vue'

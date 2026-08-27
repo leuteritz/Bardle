@@ -102,7 +102,7 @@
       class="fc-act fo-act"
       :class="{ 'fc-act--gold': offer.kind === 'bargain' }"
       :disabled="!offer.ready"
-      :title="offer.ready ? `${offer.verb} ${offer.name}` : FORGE_OFFER_SHORT_TITLE"
+      :title="offer.ready ? `${offer.verb} ${offer.name}` : gated ? FORGE_OFFER_LOCKED_TITLE : FORGE_OFFER_SHORT_TITLE"
       @click="$emit('buy', offer.id)"
     >
       {{ offer.verb }}
@@ -144,6 +144,7 @@
  * der Zeile verschöben sie beim Erscheinen die Reihe unter dem Zeiger, und der
  * Hover ginge im selben Frame wieder aus.
  */
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import ForgeCostRow from './ForgeCostRow.vue'
 import ShopReadyBadge from '@/components/ui/ShopReadyBadge.vue'
@@ -160,16 +161,26 @@ import {
   FORGE_OFFER_SHINE_MS,
   FORGE_OFFER_REROLL_ICON,
   FORGE_OFFER_REROLL_TITLE,
+  FORGE_OFFER_LOCKED_TITLE,
   FORGE_OFFER_SHORT_TITLE,
   FORGE_OFFER_SOLD_LABEL,
 } from '@/config/constants'
 
-defineProps<{
+const props = defineProps<{
   offer: ForgeOffer
   /** Seit dem letzten Blick des Spielers erreichbar geworden. */
   fresh: boolean
   canReroll: boolean
 }>()
+
+/**
+ * Ein TOR, kein Geldbeutel — dann sagt das Kostenband nichts dazu, und „Not
+ * enough yet" waere die falsche Auskunft.
+ *
+ * Im Streifen kann das nie eintreten (dort steht nur, was freigeschaltet ist);
+ * im Verfolgungs-Block ist es der Normalfall.
+ */
+const gated = computed(() => props.offer.reqs.some((req) => !req.met))
 
 defineEmits<{
   (e: 'buy', id: string): void

@@ -78,7 +78,8 @@ const { announceReceipt } = useHerald()
  * verschwände er beim Abteilungswechsel mitsamt seinem `v-if`, obwohl der Baum
  * daneben weiterhin bedienbar ist.
  */
-const { spotlightId, hoverId, pinned, clearPin, resetForgeSpotlight } = useForgeSpotlight()
+const { spotlightId, hoverId, pinned, pursuitId, clearPin, clearPursuit, resetForgeSpotlight } =
+  useForgeSpotlight()
 const { searchActive, clearSearch } = useForgeSearch()
 const { detailsOpen, closeDetails } = useForgeDetailsPane()
 
@@ -152,6 +153,13 @@ function onEsc(event: KeyboardEvent): void {
     event.preventDefault()
     return
   }
+  // NACH dem Fokus: die Verfolgung ist der ÄLTERE Zustand — der Fokus entstand
+  // erst durch einen Klick auf eine ihrer Bedingungen. Das Jüngere zuerst.
+  if (pursuitId.value !== null) {
+    clearPursuit()
+    event.preventDefault()
+    return
+  }
   if (detailsOpen.value) {
     closeDetails()
     event.preventDefault()
@@ -181,13 +189,25 @@ function onEsc(event: KeyboardEvent): void {
 const paneInert = ref(true)
 let inertTimer: ReturnType<typeof setTimeout> | null = null
 
-watch(detailsOpen, (open) => {
-  if (inertTimer !== null) clearTimeout(inertTimer)
-  inertTimer = setTimeout(() => {
-    inertTimer = null
-    paneInert.value = !open
-  }, FORGE_DETAILS_SLIDE_MS)
-})
+/*
+ * `immediate`, weil die Spalte auch von AUSSEN aufgehen kann: der Sprung aus dem
+ * Voyages-Reiter ruft `openDetails()`, bevor dieser Reiter ueberhaupt montiert
+ * ist — der Wechsel liegt dann vor dem Watcher, und ein reiner Flankenwatcher
+ * liesse `paneInert` auf seinem Startwert `true` stehen. Gemessen: die
+ * ausgefahrene Spalte war vollstaendig unbedienbar, `elementFromPoint` meldete
+ * ueberall `.shop-forge-col`.
+ */
+watch(
+  detailsOpen,
+  (open) => {
+    if (inertTimer !== null) clearTimeout(inertTimer)
+    inertTimer = setTimeout(() => {
+      inertTimer = null
+      paneInert.value = !open
+    }, FORGE_DETAILS_SLIDE_MS)
+  },
+  { immediate: true },
+)
 
 /* ── Der Ladeschleier ──────────────────────────────────────────────────────
  *

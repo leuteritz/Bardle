@@ -388,21 +388,30 @@ describe('Neue Forge-Inhalte', () => {
     expect(forge.expeditionsDepartTogether).toBe(true)
   })
 
-  it('nennt den ersten noch offenen Zubringer als Sprungziel', () => {
-    // Die Konstellation hat keinen Sitz im Netz — ein Sprung von aussen kann
-    // nur auf das zeigen, was als Naechstes wachsen muss.
+  it('quittiert die Verfolgung erst, wenn sie wirklich schmiedbar ist', () => {
+    // Der Sprung von der gesperrten Kachel setzt den Scheinwerfer, und der
+    // meldet den Eintrag als GESEHEN. Waere das schon bei geschlossenen Toren
+    // wirksam, verbrennte er die azurne Marke fuer etwas, das der Spieler noch
+    // gar nicht kaufen kann.
     const forge = useStarForgeStore()
     const def = getForgeConstellation(FORGE_MASS_SEND_NODE)!
-    const [first, second, third] = def.requires
 
-    expect(forge.constellationNextStep(FORGE_MASS_SEND_NODE)).toBe(first.id)
-    forge.branchLevels[first.id] = first.level
-    expect(forge.constellationNextStep(FORGE_MASS_SEND_NODE)).toBe(second.id)
-    forge.branchLevels[second.id] = second.level
-    expect(forge.constellationNextStep(FORGE_MASS_SEND_NODE)).toBe(third.id)
-    forge.leafLevels[third.id] = third.level
-    expect(forge.constellationNextStep(FORGE_MASS_SEND_NODE)).toBeNull()
-    expect(forge.constellationRequirementMet(FORGE_MASS_SEND_NODE)).toBe(true)
+    forge.acknowledgeShopEntry(FORGE_MASS_SEND_NODE)
+    expect(forge.shopFreshIds).not.toContain(FORGE_MASS_SEND_NODE)
+    expect(forge.acknowledgedShop).not.toContain(FORGE_MASS_SEND_NODE)
+
+    for (const req of def.requires) {
+      const node = getForgeNode(req.id)!
+      if (node.tier === 'branch') forge.branchLevels[req.id] = req.level
+      else forge.leafLevels[req.id] = req.level
+    }
+    useGameStore().chimes = 1e12
+    useInventoryStore().collectedMaterials = { stardust: 999, solar_essence: 999 }
+    expect(forge.canForgeConstellation(FORGE_MASS_SEND_NODE)).toBe(true)
+    expect(forge.shopFreshIds).toContain(FORGE_MASS_SEND_NODE)
+
+    forge.acknowledgeShopEntry(FORGE_MASS_SEND_NODE)
+    expect(forge.shopFreshIds).not.toContain(FORGE_MASS_SEND_NODE)
   })
 
   it('bleibt im Mittelspiel erreichbar — Zweig 3 und Blatt 2 gehen in Zenith auf', () => {

@@ -4,15 +4,18 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useForgeHerald } from '@/composables/ui/useForgeHerald'
 import { useHerald } from '@/composables/ui/useHerald'
+import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { forgeCostItems } from '@/utils/game/forgeCost'
 import {
   FORGE_RELICS,
   FORGE_CONSTELLATIONS,
   FORGE_BARGAINS,
   forgeNodeName,
+  getForgeConstellation,
 } from '@/config/progression/starForge'
 import type {
   ForgeBargainDef,
+  ForgeConstellationDef,
   ForgeCostItem,
   ForgeOffer,
   ForgeOfferReq,
@@ -126,6 +129,8 @@ export interface ForgeBargainExtras {
 export function useForgeOffers(): {
   offers: ComputedRef<ForgeOffer[]>
   offerById: ComputedRef<Map<string, ForgeOffer>>
+  pursuedOffer: ComputedRef<ForgeOffer | null>
+  pursuedId: ComputedRef<string | null>
   vaultEntries: ComputedRef<ForgeVaultEntry[]>
   bargainOffer: ComputedRef<ForgeOffer | null>
   bargainExtras: ComputedRef<ForgeBargainExtras>
@@ -139,6 +144,7 @@ export function useForgeOffers(): {
   const forgeStore = useStarForgeStore()
   const { heraldRelic, heraldConstellation, heraldBargain } = useForgeHerald()
   const { announceReceipt } = useHerald()
+  const { pursuitId } = useForgeSpotlight()
 
   function costItems(cost: Record<string, number>): ForgeCostItem[] {
     return forgeCostItems(cost, inventoryStore.collectedMaterials)
@@ -216,11 +222,15 @@ export function useForgeOffers(): {
     }
   }
 
-  const constellationOffers = computed<ForgeOffer[]>(() =>
-    FORGE_CONSTELLATIONS.filter(
-      (def) =>
-        forgeStore.constellationRequirementMet(def.id) && !forgeStore.constellationForged(def.id),
-    ).map((def) => ({
+  /**
+   * Ein Katalogeintrag als Zeile — OHNE Rueckfrage, ob seine Tore offen sind.
+   *
+   * Herausgezogen, weil der Verfolgungs-Block dieselbe Zeile fuer ein noch
+   * gesperrtes Upgrade braucht. Die Freischaltung entscheidet weiter darueber,
+   * wer im STREIFEN steht; sie gehoert damit in den Filter und nicht hierher.
+   */
+  function constellationOffer(def: ForgeConstellationDef): ForgeOffer {
+    return {
       id: def.id,
       kind: 'constellation' as const,
       name: def.name,
@@ -239,15 +249,46 @@ export function useForgeOffers(): {
       goldOk: gameStore.chimes >= def.goldCost,
       materials: costItems(def.materialCost),
       ready: forgeStore.canForgeConstellation(def.id),
-      // Beide Tore stehen am Eintrag, obwohl er nur erscheint, wenn sie erfüllt
-      // sind: das Kärtchen zeigt sie als bestandene Bedingung — der Beleg
-      // dafür, dass diese Zeile wirklich freigeschaltet ist.
+      // Im Streifen sind sie der Beleg, dass die Zeile freigeschaltet ist; im
+      // Verfolgungs-Block sind sie der Weg dorthin.
       reqs: def.requires.map(vaultReq),
       restockMs: null,
       sold: false,
       discountPct: 0,
-    })),
+    }
+  }
+
+  const constellationOffers = computed<ForgeOffer[]>(() =>
+    FORGE_CONSTELLATIONS.filter(
+      (def) =>
+        forgeStore.constellationRequirementMet(def.id) && !forgeStore.constellationForged(def.id),
+    ).map(constellationOffer),
   )
+
+  /**
+   * Was gerade VERFOLGT wird — der eine Vault-Eintrag, auf den von aussen
+   * gezeigt wurde.
+   *
+   * Ohne den Freischaltungs-Filter: beim Sprung von der gesperrten
+   * Send-All-Kachel sind die Tore per Definition noch zu, und genau dann muss
+   * die Zeile stehen. `ready` bleibt `canForgeConstellation` und ist damit
+   * `false` — die Zeile zeigt, sie kauft nicht.
+   *
+   * `offers` und `offerById` bleiben unberuehrt: der Streifen fuehrt weiter nur
+   * Kaufbares, und `buyOffer()` schlaegt in `offerById` nach — ein gesperrter
+   * Eintrag steht dort nicht und kann deshalb gar nicht durchrutschen.
+   */
+  const pursuedOffer = computed<ForgeOffer | null>(() => {
+    const id = pursuitId.value
+    if (id === null) return null
+    const def = getForgeConstellation(id)
+    // Fusioniertes wird nicht verfolgt — es liegt im Archiv.
+    if (!def || forgeStore.constellationForged(id)) return null
+    return constellationOffer(def)
+  })
+
+  /** Wen der Streifen deshalb NICHT zeigen darf — zweimal in einer Spalte wäre ein Fehler. */
+  const pursuedId = computed(() => pursuedOffer.value?.id ?? null)
 
   // ── Der kosmische Handel ───────────────────────────────────────────────────
   /**
@@ -442,6 +483,8 @@ export function useForgeOffers(): {
   return {
     offers,
     offerById,
+    pursuedOffer,
+    pursuedId,
     vaultEntries,
     bargainOffer,
     bargainExtras,
