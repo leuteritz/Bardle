@@ -14,8 +14,7 @@ import StarBackgroundComponent from '@/components/idle/StarBackgroundComponent.v
 import PlanetRescueOverlay from '@/components/idle/planet/PlanetRescueOverlay.vue'
 import StarFightModal from '@/components/idle/planet/StarFightModal.vue'
 import AugmentSelectionModal from '@/components/augment/AugmentSelectionModal.vue'
-import AugmentAutoPickToast from '@/components/augment/AugmentAutoPickToast.vue'
-import WayfinderHudCard from '@/components/idle/mission/WayfinderHudCard.vue'
+import HudCardColumn from '@/components/idle/hud/HudCardColumn.vue'
 import RoleSelectionModal from '@/components/roleSelection/RoleSelectionModal.vue'
 import HyperspaceOverlay from '@/components/idle/prestige/HyperspaceOverlay.vue'
 import UniverseSelectModal from '@/components/idle/prestige/UniverseSelectModal.vue'
@@ -31,11 +30,7 @@ import HeraldOverlay from '@/components/idle/HeraldOverlay.vue'
 import SupernovaTransition from '@/components/idle/sun/SupernovaTransition.vue'
 import DrifterLayer from '@/components/idle/drifter/DrifterLayer.vue'
 import VoidLayer from '@/components/idle/void/VoidLayer.vue'
-import VoidRiftHudCard from '@/components/idle/void/VoidRiftHudCard.vue'
-import DrifterInfoCard from '@/components/idle/drifter/DrifterInfoCard.vue'
 import ActiveBuffBar from '@/components/idle/drifter/ActiveBuffBar.vue'
-import OmenHudCard from '@/components/idle/omen/OmenHudCard.vue'
-import LandfallHudCard from '@/components/idle/landfall/LandfallHudCard.vue'
 import LandfallBodyLayer from '@/components/idle/landfall/LandfallBodyLayer.vue'
 import OmenChoiceOverlay from '@/components/idle/omen/OmenChoiceOverlay.vue'
 import BardAbilityBar from '@/components/idle/abilities/BardAbilityBar.vue'
@@ -157,13 +152,14 @@ watch(
     <NebulaFlythroughComponent />
     <StarFightModal />
     <AugmentSelectionModal />
-    <!-- Wayfinder: das oberste und einzige DAUERHAFTE Glied der linken
-         Kartenspalte. Alles darunter — Auto-Pick, Riss, Vorzeichen, Drifter —
-         ist flüchtig und würde eine ständig sichtbare Karte sonst mehrmals pro
-         Minute auf und ab schieben. Ein Element, das immer da ist, darf sich
-         nicht bewegen. -->
-    <WayfinderHudCard />
-    <AugmentAutoPickToast />
+    <!-- Die Kartenspalte oben links — EIN Container fuer alle sechs. Vorher
+         hingen sie einzeln hier und teilten sich die Ecke ueber eine
+         `max()`-Kette aus Custom Properties, die jede Karte samt ihrem
+         2400er Media-Block wiederholte; ihre Kuerzung ist zweimal als Bug
+         aufgeschlagen. Es steht jetzt genau EINE Karte aufgerissen, alles
+         andere als Zeile — der Wayfinder immer zuoberst, weil er als einziges
+         dauerhaftes Glied in der HUD-Kontur steht und sich nie bewegen darf. -->
+    <HudCardColumn />
     <RoleSelectionModal />
     <HyperspaceOverlay />
     <UniverseSelectModal />
@@ -195,40 +191,36 @@ watch(
       </div>
     </div>
 
-    <!-- Drifters fly over the idle orbit, below every modal. The info card sits
-         top-left under the auto-pick message and says what is out there and how
-         long; the buff bar above the scoreboard collects every timed effect. -->
+    <!-- Drifters fly over the idle orbit, below every modal. Their card lives in
+         `HudCardColumn`; the buff bar above the scoreboard collects every timed
+         effect. -->
     <DrifterLayer />
-    <DrifterInfoCard />
     <div id="orbit-buff-dock" class="bard-dock" />
     <Teleport defer :to="BUFF_DOCK_IDS[buffDock]">
       <ActiveBuffBar :dock="buffDock" />
     </Teleport>
 
-    <!-- The Void: der Riss steht im Orbit auf derselben Ebene wie die Drifter,
-         seine Karte an der SPITZE des Stapels oben links — sie meldet als
-         einzige der drei eine Frist, die etwas kostet. Beide hängen hier und
-         nicht im Idle-Layer, damit ein Riss auch weiterläuft (und kollabiert),
-         während das Bard-Profil offen steht. -->
+    <!-- The Void: der Riss steht im Orbit auf derselben Ebene wie die Drifter.
+         Er haengt hier und nicht im Idle-Layer, damit er auch weiterlaeuft (und
+         kollabiert), waehrend das Bard-Profil offen steht. Seine Karte wohnt in
+         `HudCardColumn` und faltet dort zur Zeile, sobald etwas Fluechtigeres
+         auftaucht — bei 26–44 s Nachschub ist fast immer etwas unterwegs. -->
     <VoidLayer />
-    <VoidRiftHudCard />
 
-    <!-- Omens: die HUD-Karte teilt sich die linke Ecke mit der Drifter-Karte und
-         steht über ihr (sie ist dauerhaft da, die andere nur Sekunden). Das
-         Wahl-Overlay erscheint nur, wenn ein Trio ansteht, und wartet, solange
-         ein Profil-Tab das Spielbild verdeckt. -->
-    <OmenHudCard />
+    <!-- Omens: die HUD-Karte wohnt in `HudCardColumn`. Das Wahl-Overlay erscheint
+         nur, wenn ein Trio ansteht, und wartet, solange ein Profil-Tab das
+         Spielbild verdeckt. -->
     <OmenChoiceOverlay />
 
-    <!-- Landfalls: der Ort, an dem das Schiff GERADE vorbeikommt. Die Karte steht
-         in derselben Spalte, unter dem Vorzeichen und über der Drifter-Karte —
-         die drei sind nach Beständigkeit geordnet, nicht nach Wichtigkeit.
+    <!-- Landfalls: der Ort, an dem das Schiff GERADE vorbeikommt. Seine Karte
+         steht in `HudCardColumn` ganz oben im Rang — am Cairn traegt sie die
+         Wahl unter dreien, sonst ist sie selbst der Griff.
          Der Körper liegt auf derselben Ebene wie Drifter und Void (42), verhält
          sich dort aber anders als beide: die sind Wesen und bewegen sich selbst,
          ein Ort steht still und das Schiff zieht an ihm vorbei. Karte UND Körper
-         nehmen den Griff, beide über `tapLandfall()`. -->
+         nehmen den Griff, beide über `tapLandfall()` — und die Karte tut das
+         auch gefaltet, denn ihre Fläche IST der Griff. -->
     <LandfallBodyLayer />
-    <LandfallHudCard />
 
     <!-- Bard-Fähigkeiten: die Leiste sitzt über dem Scoreboard und schiebt die
          Buff-Reihe über sich; der Stase-Schleier liegt über dem Orbit, aber

@@ -65,6 +65,43 @@
      exakt die Pixel, die die Vorbildkarte im Skill Tree schon hatte. */
   --tip-u: clamp(12px, 0.63vw, 16px);
 
+  /* ── HUD-Kartensprache (.hc-*) ───────────────────────────────────
+     Die sechs Karten der Spalte oben links. Wie bei `--tip-*` teilen sich
+     Fläche und Rand die vorhandenen Token; der Aufrufer setzt allein
+     `--hc-color` — sie trägt Kante, Glyph, Zahl und Balken. */
+  --hc-surface: var(--rpg-bg-header);
+  --hc-border: var(--rpg-wood);
+  --hc-inner: var(--rpg-wood-inner);
+  --hc-shadow: 0 6px 18px rgba(0, 0, 0, 0.8);
+  --hc-text: #f2ead2;
+  --hc-dim: #9a9184;
+  --hc-mute: #8a7a52;
+  --hc-well: #100e08;
+  --hc-well-border: #3a2c14;
+  --hc-warn: #ff8a72;
+  --hc-warn-bg: #2a0e0c;
+  --hc-warn-border: #8a3020;
+
+  /* Die EINE Schriftskala der Karten, Muster von `--tip-u`. Auf Full HD misst
+     0.69vw 13.25px — die em-Maße ergeben dort die Grade, die die sechs Karten
+     vorher als feste Pixel trugen. Bei 1536 (Full HD @125 %) greift der Boden;
+     dort ist die Auflösung kein Maß für den verfügbaren Platz. */
+  --hc-u-base: clamp(12px, 0.69vw, 19px);
+  --hc-u: var(--hc-u-base);
+
+  /* Die Maszahlen der Grundstufe. Sie stehen als `-base` daneben, weil der
+     Wayfinder sie zurueckholen muss: er haengt in der HUD-Kontur, und eine
+     Karte, die mit der Dichte mitwaechst, verschoebe das freie Feld jedes Mal,
+     wenn ein Drifter auftaucht. */
+  --hc-gap-base: 0.5em;
+  --hc-pad-y-base: 0.62em;
+  --hc-pad-x-base: 0.78em;
+  --hc-stage-base: 2.9em;
+  --hc-gap: var(--hc-gap-base);
+  --hc-pad-y: var(--hc-pad-y-base);
+  --hc-pad-x: var(--hc-pad-x-base);
+  --hc-stage: var(--hc-stage-base);
+
   /* Panel system — Header / BottomStats / CommandPanel share one background */
   --color-panel-bg: var(--rpg-bg-header);
 
@@ -2031,6 +2068,557 @@
   }
 
   .tip-bar-fill {
+    transition: none;
+  }
+}
+
+/* ── HUD-Kartensprache (.hc-*) ──────────────────────────────────────
+   EINE Gestalt für die sechs Karten der Spalte oben links — Wayfinder,
+   Landfall, Drifter, Void, Omen und die Auto-Pick-Quittung. Vorher stand das
+   Flächenrezept sechsmal wörtlich im scoped CSS, und vier Stellen waren schon
+   auseinandergelaufen: zwei Außenschatten, drei Polsterungen, vier Abstände,
+   `transition: top` bei zwei von sechs.
+
+   Warum global und nicht scoped: die Verwender sind Geschwister, keiner erbt
+   die scoped-Regeln des anderen. Dieselbe Begründung wie bei `.tip-*`.
+
+   Was der AUFRUFER behält, weil nur er es weiß: die Farbe (`--hc-color`) und
+   sein eigener Inhalt. Position, Breite und Stapelung gehören dem Container
+   `HudCardColumn.vue` — es gibt keine `position: fixed` mehr in einer Karte.
+
+   Alle Maße in `em` gegen `--hc-u`. NICHT in em: Rahmenstärken und Radien —
+   ein mitwachsender Radius risse auf 4K die 4–5-px-Grenze.
+
+   Es steht genau EINE Karte aufgerissen (`.hc`), alle anderen als Zeile
+   (`.hc.hc--folded`). Die Dichtestufen sind reine Token-Überschreibungen am
+   Container, Muster `.hb` / `.hb.hb--receipt` in `HeraldBanner.vue`.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Der Container ─────────────────────────────────────────────────── */
+/* Die Maße stehen HIER und nicht an der Karte: eine Dichtestufe soll EINE
+   Zeile ändern, nicht sechs Kartenblöcke. */
+/* Die Grundstufe steht im `:root`-Block als `--hc-*-base`; hier stehen nur die
+   Abweichungen davon. */
+
+/* Der Fokus ist die einzige Karte — dann gehört ihr der Platz. Hier bekommen
+   zwei Dinge zurück, was sie vorher nur aus Platznot verloren: die Zielzeile
+   des Omens (stand unter 2400 px auf `display: none`) und die Einheit des
+   Wayfinder-Lohns. */
+/* `.hc-col.hc-col--roomy` statt `.hc-col--roomy`: Spezifität 0,2,0 gegen
+   0,1,0, damit der Modifier in JEDEM Media-Block gewinnt. */
+.hc-col.hc-col--roomy {
+  --hc-u: clamp(13px, 0.78vw, 21px);
+  --hc-gap: 0.58em;
+  --hc-pad-y: 0.72em;
+  --hc-pad-x: 0.88em;
+  --hc-stage: 3.3em;
+}
+
+.hc-col.hc-col--tight {
+  --hc-u: clamp(11.5px, 0.62vw, 17px);
+  --hc-gap: 0.42em;
+  --hc-pad-y: 0.5em;
+  --hc-pad-x: 0.68em;
+  --hc-stage: 2.5em;
+}
+
+/* ── Die Fläche ────────────────────────────────────────────────────── */
+/* Unten kein Padding: der Balken sitzt bündig auf der Kante. */
+.hc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hc-gap);
+  padding: var(--hc-pad-y) var(--hc-pad-x) 0;
+  background: var(--hc-surface);
+  border: 2px solid var(--hc-border);
+  border-left: 3px solid var(--hc-color, var(--rpg-gold));
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px var(--hc-inner),
+    var(--hc-shadow);
+  overflow: hidden;
+  font-size: var(--hc-u);
+  line-height: 1.3;
+  color: var(--hc-text);
+  text-align: left;
+  /* Der Container ist durchlässig, damit seine Lücken keine Klicks fangen —
+     die Karte selbst muss den Zeiger wieder annehmen. */
+  pointer-events: auto;
+}
+
+/* Karten ohne Fußbalken schließen selbst ab. */
+.hc--padded {
+  padding-bottom: var(--hc-pad-y);
+}
+
+/* Der Wayfinder nimmt an den Dichtestufen NICHT teil.
+   Er ist das einzige Element der Spalte, das in der HUD-Kontur steht
+   (`--wayfinder-bottom`), und Void- wie Drifter-Bahnen klemmen gegen seine
+   Kante. Waechst er mit, sobald eine zweite Karte auftaucht, verschiebt sich
+   das freie Feld im Sekundentakt — genau das, wogegen „HUD-Freiraum"
+   geschrieben ist. Er holt sich deshalb die Grundstufe zurueck. */
+.hc.hc--anchored {
+  --hc-u: var(--hc-u-base);
+  --hc-gap: var(--hc-gap-base);
+  --hc-pad-y: var(--hc-pad-y-base);
+  --hc-pad-x: var(--hc-pad-x-base);
+  --hc-stage: var(--hc-stage-base);
+}
+
+/* ── Die gefaltete Zeile ───────────────────────────────────────────── */
+/* Glyph, Name, die EINE Zahl, eine Haarlinie. Was sonst in der Karte steht,
+   trägt ihr Tooltip — die Sprache dafür ist schon da, und sie dafür zu nehmen
+   ist keine siebte Gestalt, sondern genau ihr Zweck. */
+.hc.hc--folded {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.3em 0.62em 0.4em;
+}
+
+.hc-fold-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.98em;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-fold-val {
+  flex-shrink: 0;
+  font-size: 1.02em;
+  font-weight: 900;
+  line-height: 1.2;
+  color: var(--hc-color, var(--rpg-gold));
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-fold-val--urgent {
+  color: var(--hc-warn);
+}
+
+.hc-fold-val--good {
+  color: #6ec040;
+}
+
+.hc-fold-val--bad {
+  color: #cc6050;
+}
+
+/* Die Haarlinie der gefalteten Zeile — sie ersetzt den Fußbalken der
+   aufgerissenen Karte, in halber Stärke. */
+.hc-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.hc-line__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--hc-color, var(--rpg-gold));
+  opacity: 0.75;
+}
+
+/* ── Kopfzeile ─────────────────────────────────────────────────────── */
+.hc-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  min-width: 0;
+}
+
+.hc-glyph {
+  flex-shrink: 0;
+  color: var(--hc-color, var(--rpg-gold));
+}
+
+/* Das Gattungswort — versal, klein, gedämpft. Es sagt, WELCHE ART Meldung das
+   ist, nicht welche Sache. */
+.hc-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.76em;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--hc-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Wo der Name selbst die Kopfzeile trägt (Omen, Landfall). */
+.hc-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.06em;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Die Uhr ───────────────────────────────────────────────────────── */
+/* Große Ziffer, kleines Suffix: die Restzeit ist die zweite Aussage der
+   Kopfzeile und soll aus dem Augenwinkel lesbar sein. */
+.hc-clock {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.1em;
+  padding: 0.08em 0.4em 0.14em;
+  border: 1px solid var(--hc-well-border);
+  border-radius: 3px;
+  background: var(--hc-well);
+  color: var(--rpg-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-clock__num {
+  font-size: 1.32em;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.hc-clock__unit {
+  font-size: 0.74em;
+  font-weight: 800;
+  opacity: 0.72;
+}
+
+.hc-clock--urgent {
+  color: var(--hc-warn);
+  background: var(--hc-warn-bg);
+  border-color: var(--hc-warn-border);
+}
+
+/* Das Ergebniszeichen an derselben Stelle wie die Uhr. */
+.hc-mark {
+  flex-shrink: 0;
+  font-size: 1.2em;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.hc-mark--good {
+  color: #6ec040;
+}
+
+.hc-mark--bad {
+  color: #cc6050;
+}
+
+/* Ein Zähler neben dem Gattungswort — sieben Wesen unterwegs, nicht eines. */
+.hc-chip {
+  flex-shrink: 0;
+  padding: 0.06em 0.36em 0.12em;
+  border: 1px solid var(--hc-color, var(--rpg-gold));
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--hc-color, var(--rpg-gold)) 16%, transparent);
+  color: var(--hc-color, var(--rpg-gold));
+  font-size: 0.8em;
+  font-weight: 900;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Bühne und Rumpf ───────────────────────────────────────────────── */
+.hc-main {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  min-width: 0;
+}
+
+.hc-stage {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hc-stage);
+  height: var(--hc-stage);
+  border: 1px solid var(--hc-well-border);
+  border-radius: 4px;
+  background: var(--hc-well);
+  color: var(--hc-color, var(--rpg-gold));
+}
+
+/* Der Drifter zeigt seinen Körper, nicht sein Glyph — dafür ist die Bühne
+   rund wie der Himmel dahinter. */
+.hc-stage--round {
+  border-radius: 50%;
+  border-color: color-mix(in srgb, var(--hc-color, var(--rpg-gold)) 55%, transparent);
+  background: radial-gradient(
+    circle at 50% 45%,
+    color-mix(in srgb, var(--hc-color, var(--rpg-gold)) 20%, transparent),
+    var(--hc-well) 70%
+  );
+}
+
+.hc-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1em;
+}
+
+.hc-name {
+  font-size: 1.08em;
+  font-weight: 700;
+  color: var(--hc-color, var(--hc-text));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Die Wirkung ist der Grund, warum die Karte aufgerissen steht — sie darf
+   umbrechen, aber niemals abgeschnitten werden. */
+.hc-effect {
+  font-size: 0.94em;
+  font-weight: 700;
+  line-height: 1.32;
+  color: var(--rpg-gold);
+  overflow-wrap: anywhere;
+}
+
+.hc-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.34em;
+  font-size: 0.76em;
+  font-weight: 700;
+  color: rgba(232, 220, 192, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Die Ablesung ──────────────────────────────────────────────────── */
+/* Stand links, Nebenaussage rechts; beide an ihrer Seite verankert, also
+   wandert nichts, wenn eine Zahl eine Stelle gewinnt. */
+.hc-read {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
+  min-width: 0;
+}
+
+.hc-read__val {
+  flex-shrink: 0;
+  font-size: 1.28em;
+  font-weight: 900;
+  line-height: 1.15;
+  color: var(--hc-color, var(--rpg-gold));
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-read__goal {
+  flex-shrink: 0;
+  font-size: 0.86em;
+  font-weight: 700;
+  color: var(--hc-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-read__unit {
+  min-width: 0;
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hc-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hc-read__side {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 0.8em;
+  font-weight: 800;
+  color: #7a9a6a;
+  white-space: nowrap;
+}
+
+/* Eine beschriftete Ablesung mit eigenem Band. */
+.hc-gauge {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.16em 0.5em;
+  align-items: baseline;
+}
+
+.hc-gauge__lbl {
+  font-size: 0.74em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hc-mute);
+}
+
+.hc-gauge__pct {
+  font-size: 0.92em;
+  font-weight: 800;
+  color: var(--rpg-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-gauge__track {
+  position: relative;
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 2px;
+  background: #241c12;
+  overflow: hidden;
+}
+
+.hc-gauge__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: linear-gradient(to right, var(--rpg-green-top), var(--rpg-green-bottom));
+}
+
+/* ── Der Fußbalken ─────────────────────────────────────────────────── */
+/* Bündig auf der Kante, über die volle Breite. `scaleX` am Balken selbst,
+   damit pro Sekunde kein Layout anfällt. */
+.hc-bar {
+  position: relative;
+  height: 3px;
+  margin: 0 calc(var(--hc-pad-x) * -1);
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.hc-bar__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--hc-color, var(--rpg-gold));
+}
+
+/* ── Die Fläche IST der Balken (Wayfinder) ─────────────────────────── */
+/* Eigene Ebene, damit nur ihr `transform` animiert wird und der Text darüber
+   unberührt bleibt. */
+.hc-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--hc-color, var(--rpg-gold));
+  opacity: 0.22;
+  transition: transform 0.4s ease-out;
+  pointer-events: none;
+}
+
+/* Die Front der Füllung: `translateX`, nicht `scaleX` — eine skalierte Kante
+   wüchse bei niedrigem Stand auf ein Vielfaches ihrer Stärke. */
+.hc-edge {
+  position: absolute;
+  inset: 0;
+  border-left: 2px solid var(--hc-color, var(--rpg-gold));
+  opacity: 0.55;
+  transition: transform 0.4s ease-out;
+  pointer-events: none;
+}
+
+/* Was über der Füllung steht, braucht nur `position` — keine eigene Ebene. */
+.hc-over {
+  position: relative;
+  min-width: 0;
+}
+
+/* ── Angebote (Wayside Cairn) ──────────────────────────────────────── */
+/* Drei Zeilen, eine wird genommen. Sie stehen IN der Karte und nicht in einem
+   Overlay: Augment, Rollenwahl und Omen sind alle Vollbild-Overlays, und zwei
+   davon, die gleich aussehen aber Verschiedenes bedeuten, wären genau die
+   Verwechslung, gegen die die Systemgrenzen geschrieben sind. */
+.hc-offers {
+  display: grid;
+  gap: 0.28em;
+}
+
+.hc-offer {
+  display: grid;
+  grid-template-columns: 1.15em minmax(0, 1fr);
+  column-gap: 0.5em;
+  align-items: center;
+  padding: 0.34em 0.5em 0.4em;
+  border: 1px solid var(--hc-inner);
+  border-left: 2px solid var(--hc-color, var(--rpg-gold));
+  border-radius: 4px;
+  background: var(--rpg-bg-row);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.hc-offer:hover {
+  background: #262620;
+}
+
+.hc-offer__ico {
+  grid-row: 1 / span 2;
+  color: var(--hc-color, var(--rpg-gold));
+}
+
+.hc-offer__name {
+  font-size: 0.9em;
+  font-weight: 800;
+  color: var(--hc-text);
+}
+
+.hc-offer__line {
+  font-size: 0.78em;
+  font-weight: 700;
+  color: var(--hc-dim);
+}
+
+/* ── Bewegung ──────────────────────────────────────────────────────── */
+/* Nur `transform` und `opacity`. Das Nachrücken der Karten übernimmt der
+   FLIP der TransitionGroup im Container — deshalb hat hier keine Karte mehr
+   eine `transition` auf `top`, und keine springt. */
+.hc-enter-active {
+  transition:
+    opacity 0.22s ease,
+    transform 0.26s cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+.hc-leave-active {
+  /* Pflicht: ohne das bleibt die abgehende Karte im Fluss und die
+     Move-Animation der übrigen läuft ins Leere. */
+  position: absolute;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.hc-enter-from,
+.hc-leave-to {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+
+.hc-move {
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-enter-active,
+  .hc-leave-active,
+  .hc-move,
+  .hc-fill,
+  .hc-edge {
     transition: none;
   }
 }

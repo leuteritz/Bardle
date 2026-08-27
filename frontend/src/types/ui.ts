@@ -22,6 +22,44 @@ export type IconPoolKey =
   | 'forge'
   | 'roster'
 
+// ── Die HUD-Kartenspalte oben links ──────────────────────────────────────────
+/**
+ * Die sechs Karten der Spalte. Der Wayfinder steht immer und faltet nie; die
+ * fuenf anderen kommen und gehen, und genau eine davon ist der Fokus.
+ */
+export type HudCardId = 'wayfinder' | 'landfall' | 'drifter' | 'void' | 'omen' | 'autopick'
+
+/** Was die Rangfunktion ueber eine anwesende Karte wissen muss. */
+export interface HudCardCandidate {
+  id: HudCardId
+  /** Kleiner ist dringlicher. Die Leiter steht in `utils/ui/hudCardFocus.ts`. */
+  rank: number
+  /** Restzeit in ms; `Infinity`, wo keine Uhr laeuft. Bricht den Gleichstand. */
+  remainingMs: number
+}
+
+/**
+ * Die gefaltete Fassung einer Karte: Akzent, Glyph, Name, die EINE Zahl und
+ * eine Haarlinie. Was sonst darin steht, traegt ihr Tooltip.
+ */
+export interface HudCardFold {
+  id: HudCardId
+  color: string
+  icon: string
+  name: string
+  /** Die eine Zahl — Sekunden, Stand, Restgriffe, oder ✓ / ✕. */
+  value: string
+  /** Ausrufezeichen: die Zahl schlaegt auf Warnfarbe um. */
+  urgent: boolean
+  /** Ergebniszustand — die Zahl ist ein Zeichen, kein Wert. */
+  mark: 'none' | 'good' | 'bad'
+  /** 0..1, treibt die Haarlinie. */
+  ratio: number
+  /** Gattungswort und Volltext fuer den Tooltip. */
+  tipLabel: string
+  tipText: string
+}
+
 // ── Bard Stats catalog (stats tab, left column) ──────────────────────────────
 /** Identifier of a stat category — the accordion sections in the Journey column. */
 export type StatCategoryId =

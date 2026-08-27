@@ -77,6 +77,49 @@ export const HUD_COLUMN_INSET_WIDE = 16
 /** Ab hier der groessere Abstand, gemeinsam mit der Typografie-Stufe der Karten. */
 export const HUD_COLUMN_WIDE_MIN_VW = 2400
 
+// ── Die HUD-Kartenspalte oben links ───────────────────────────────────────
+// Wayfinder, Landfall, Drifter, Void, Omen und die Auto-Pick-Quittung teilen
+// sich EINEN Container (`HudCardColumn.vue`) und EINE Gestalt (`.hc-*` in
+// rpg-theme.css). Wie bei HUD_COLUMN_* leben die Zahlen im CSS und diese
+// Konstanten sind ihr Waechter: hudColumnBudget.spec.ts rechnet gegen sie.
+
+/** Abstand zwischen zwei Karten der Spalte. */
+export const HUD_CARD_GAP = 8
+/** Abstand der Spalte zur Bildoberkante. */
+export const HUD_CARD_TOP = 8
+/**
+ * Die EINE Uhr der Spalte. Vorher liefen zwei (Void 100 ms, Drifter 100 ms)
+ * und die Auto-Pick-Quittung eine dritte auf 200 ms.
+ */
+export const HUD_CARD_TICK_MS = 100
+/**
+ * Ab so vielen gefalteten Zeilen schaltet die Spalte auf die enge Stufe. Der
+ * Fokus zaehlt nicht mit — er ist immer genau einer.
+ */
+export const HUD_CARD_TIGHT_MIN_FOLDED = 3
+
+// Gemessene Hoehen (Full HD, Playwright, alle Karten gleichzeitig erzwungen).
+// Sie stehen als Deckel, nicht als Vorgabe: das CSS setzt sie nicht, die Spec
+// prueft gegen sie. Wer eine Karte hoeher macht, misst nach und zieht sie nach —
+// eine Konstante, die BESCHREIBT statt zu bestimmen, driftet sonst unbemerkt.
+/** Die gefaltete Zeile — Glyph, Name, EINE Zahl, Haarlinie. Gemessen 27,5. */
+export const HUD_CARD_FOLDED_H = 28
+/** Die hoechste aufgerissene Karte: der Cairn mit drei Angeboten. Gemessen 156,3. */
+export const HUD_CARD_FOCUS_MAX_H = 158
+/** Der Wayfinder, dessen Hoehe fest reserviert ist. Gemessen 94,9. */
+export const HUD_CARD_WAYFINDER_H = 96
+/**
+ * Was die ganze Spalte im schlimmsten Fall misst — Wayfinder, ein aufgerissener
+ * Fokus, vier gefaltete Zeilen und die Abstaende dazwischen. Vor dem Umbau auf
+ * Fokus + Faltung waren es rund 774 px, also ueber zwei Drittel der Buehne.
+ */
+export const HUD_CARD_COLUMN_MAX_H = 420
+/**
+ * Und was davon hoechstens auf die Buehne fallen darf. Gerechnet gegen die
+ * flachste Referenz (Full HD, ~1000 px Viewport).
+ */
+export const HUD_CARD_COLUMN_MAX_STAGE_FRAC = 0.45
+
 export const HEADER_MATERIALS_GRID_COLUMNS = 5
 
 /** Dauer, über die die Offline-Bilanz ihre Chime-Summe hochzählt. */

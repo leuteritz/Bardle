@@ -202,8 +202,6 @@ export const AUGMENT_LEVEL_INTERVAL = 1
 
 /** Wie lange die Auto-Pick-Meldung stehen bleibt, bevor sie ausblendet. */
 export const AUTO_PICK_TOAST_MS = 6500
-/** Taktung der Restsekunden-Anzeige in dieser Meldung. */
-export const AUTO_PICK_TICK_MS = 200
 /** Ab dieser Restzeit färbt sich die Uhr warnend — „gleich ist sie weg". */
 export const AUTO_PICK_URGENT_MS = 2000
 /** Icon des Auto-Picks — Modal-Button, Panel-Zeile und Meldung teilen es sich. */

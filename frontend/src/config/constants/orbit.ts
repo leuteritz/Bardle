@@ -875,9 +875,6 @@ export const DRIFTER_TUMBLE_TILT = 0.78
  *  einem verpassten Drifter noch stehen bleibt, bevor sie ausblendet. */
 export const DRIFTER_CARD_RESULT_MS = 3200
 
-/** Taktrate des Countdowns auf der Infokarte. Bewusst gröber als ein Frame —
- *  die Karte zeigt Sekunden, ein 60-Hz-Update wäre reine Verschwendung. */
-export const DRIFTER_CARD_TICK_MS = 100
 
 /** Ab dieser Restflugzeit schlägt die Uhr der Infokarte auf Warnrot um. */
 export const DRIFTER_CARD_URGENT_MS = 4000

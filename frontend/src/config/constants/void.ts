@@ -616,9 +616,6 @@ export const VOID_SEAL_BURST_PARTICLES = 12
  *  dann auf Warnrot um und der Körper pulst schneller. */
 export const VOID_URGENT_FRAC = 0.72
 
-/** Taktrate des Countdowns auf der HUD-Karte. Bewusst gröber als ein Frame —
- *  die Karte zeigt Sekunden, ein 60-Hz-Update wäre reine Verschwendung. */
-export const VOID_CARD_TICK_MS = 100
 
 /** Wie lange die Karte nach dem Ausgang noch stehen bleibt. */
 export const VOID_CARD_RESULT_MS = 3200

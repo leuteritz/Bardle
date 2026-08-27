@@ -71,8 +71,8 @@ export interface HudFieldMetrics {
   /**
    * `--wayfinder-bottom` / `--wayfinder-right`: die Missionskarte oben links.
    *
-   * Von den fünf Karten dieser Spalte ist sie die einzige, die IMMER steht —
-   * und nur deshalb steht sie überhaupt in der Kontur. Die vier flüchtigen
+   * Von den sechs Karten dieser Spalte ist sie die einzige, die IMMER steht —
+   * und nur deshalb steht sie überhaupt in der Kontur. Die fünf flüchtigen
    * darunter aufzunehmen hiesse, das freie Feld im Sekundentakt zu verschieben:
    * ein Drifter, der eine Bahn geplant hat, müsste sie mitten im Flug
    * aufgeben, weil ein Vorzeichen erschienen ist. Konservativ ist hier das
