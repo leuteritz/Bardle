@@ -25,8 +25,8 @@ const props = withDefaults(
     /** v-model — the current query. */
     modelValue: string
     placeholder?: string
-    /** `md` = the 46px Champion-Shop bar, `sm` = the 34px compact one. */
-    size?: 'md' | 'sm'
+    /** `lg` = the 56px hero field, `md` = the 46px bar, `sm` = the 34px one. */
+    size?: 'lg' | 'md' | 'sm'
     /** Falls back to the placeholder, which already describes the field. */
     ariaLabel?: string
     /** Set where the field toggles a filter panel below it. */
@@ -221,6 +221,21 @@ defineExpose({
   width: 28px;
   height: 28px;
   font-size: 13px;
+}
+
+/* ─── Hero size: the head of the shop's grid column ─── */
+.sb--lg {
+  height: 56px;
+  gap: 11px;
+  padding: 0 10px 0 16px;
+}
+.sb--lg .sb-input {
+  font-size: 18px;
+}
+.sb--lg .sb-clear {
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
 }
 
 /* ─── Compact size: Bard Stats column headers, Champion Picker ─── */

@@ -42,6 +42,8 @@ export const ROSTER_LEVEL_PLATE_FACETS = 6
  *  size variant. The icon is an Iconify component, so the value has to come
  *  from script — it cannot live in the stylesheet with the rest of the sizing. */
 export const SEARCH_BAR_ICON_PX = {
+  /** hero bar (56px tall) — the head of the shop's grid column */
+  lg: 22,
   /** default bar (46px tall) — Champion Shop, Champion Select, Synergies, … */
   md: 18,
   /** compact bar (34px tall) — Bard Stats column headers, Champion Picker */

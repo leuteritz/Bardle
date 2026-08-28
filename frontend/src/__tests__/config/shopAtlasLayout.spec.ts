@@ -8,6 +8,9 @@ import {
   SHOP_ATLAS_DETAIL_MAX_WIDTH,
   SHOP_ATLAS_CARD_MIN_WIDTH,
   SHOP_ATLAS_GRID_GAP,
+  SHOP_HERO_FIELD_MAX_W,
+  SHOP_HERO_FOLD_H,
+  SHOP_HERO_PINNED_H,
   BOTTOM_BAR_SIDE_W,
 } from '@/config/constants'
 
@@ -109,6 +112,23 @@ describe('shop atlas layout', () => {
     // With the wider rail the 180px it frees are worth a column everywhere — at
     // Full HD too, where the old 144px only bought reading room.
     expect(columns(zones(vw, vh, true).grid)).toBeGreaterThan(columns(zones(vw, vh).grid))
+  })
+
+  it.each(DESKTOPS)('%s: the search field fits the grid column', (_l, vw, vh) => {
+    // The field heads the grid column, centred. Wider than the column it would
+    // either overflow the zone or silently shrink below the width it was
+    // measured readable at.
+    expect(zones(vw, vh).grid - GRID_PADDING).toBeGreaterThanOrEqual(SHOP_HERO_FIELD_MAX_W)
+  })
+
+  it('the search block costs the grid its two heights and nothing more', () => {
+    // Both halves are positive and the pinned one is the larger: it holds the
+    // 56px field, the fold only a 28px control row. Reversed, scrolling would
+    // hide the field and keep the buttons.
+    expect(SHOP_HERO_FOLD_H).toBeGreaterThan(0)
+    expect(SHOP_HERO_PINNED_H).toBeGreaterThan(SHOP_HERO_FOLD_H)
+    // Resting height of the block — what the first section header starts below.
+    expect(SHOP_HERO_FOLD_H + SHOP_HERO_PINNED_H).toBe(127)
   })
 
   it('never auto-folds a desktop that has room for the rail', () => {

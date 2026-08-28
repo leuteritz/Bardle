@@ -657,11 +657,20 @@ export const SHOP_HOME_PLANET_GLYPH_SIZE = 84
 /** Gap kept above a section header after the tab's landing scroll (px). */
 export const SHOP_JUMP_SCROLL_OFFSET_PX = 8
 /**
- * Height (px) of the sticky bar above the grid's sections. It SETS the height via
- * `v-bind` and goes into the jump scroll as well — a described height would drift,
- * and a section header jumped to would land underneath the bar.
+ * The search block at the head of the grid column, in two parts. Both SET their
+ * height via `v-bind` — a described height would drift, and the pinned one goes
+ * into the jump scroll as well, or a section header jumped to lands under it.
+ *
+ * The block is sticky at `-(12 + FOLD)`, so the fold scrolls away and the plinth
+ * stays. That the control row sits ABOVE the field follows from it: a sticky box
+ * leaves its BOTTOM part standing.
  */
-export const SHOP_GRID_BAR_H = 34
+/** Scrolls away: 12 inset + 28 control row + 10 gap. */
+export const SHOP_HERO_FOLD_H = 50
+/** Stays pinned: 10 + 56 field + 10 + 1 rule. */
+export const SHOP_HERO_PINNED_H = 77
+/** Field width (px). Past this the field only gets longer, not more readable. */
+export const SHOP_HERO_FIELD_MAX_W = 560
 /** Corrective scroll runs after the section expand animation (0.28s) settles. */
 export const SHOP_JUMP_EXPAND_SETTLE_MS = 350
 /** Idle time after the last scroll event before card animations resume. */

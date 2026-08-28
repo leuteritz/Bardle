@@ -1,37 +1,5 @@
 <template>
   <div ref="atlasRef" class="cs-atlas">
-    <!-- ══ Command bar: how to narrow what the rail decided to show ══
-         Spans all three zones because the search reads both halves and can send
-         the player to the other one. The domain switch itself lives at the top
-         of the facet rail — it is the first filter, not a second search. -->
-    <header class="cs-atlas-bar">
-      <RpgSearchBar
-        ref="searchInputRef"
-        v-model="searchQuery"
-        class="cs-atlas-search"
-        size="md"
-        placeholder="Search champions, traits or items..."
-        aria-label="Search champions, traits and items"
-        @clear="resetSearch"
-      >
-        <template #trailing>
-          <span class="cs-hits" :class="{ 'cs-hits--empty': domainHitCount === 0 }">
-            {{ domainHitCount }}
-          </span>
-        </template>
-      </RpgSearchBar>
-
-      <button
-        v-if="hasActiveFilter"
-        class="cs-bar-btn cs-bar-btn--reset"
-        v-tip="'Clear every filter'"
-        @click="clearFilters"
-      >
-        <Icon icon="lucide:rotate-ccw" width="17" height="17" />
-        Reset
-      </button>
-    </header>
-
     <ShopFacetRail
       class="cs-atlas-facets"
       :groups="facetGroups"
@@ -54,27 +22,59 @@
       :class="{ 'is-scrolling': gridScrolling }"
       @scroll.passive="onGridScroll"
     >
-      <!-- Sits at the top of the SCROLLER, above the sections it folds. Outside
-           the transition below: that one is `out-in`, and a sticky bar that
-           unmounts on every domain swap jumps. -->
-      <div v-if="sectionCount > 0" class="cs-grid-bar">
-        <span class="cs-grid-bar-count">
-          {{ sectionCount }} section{{ sectionCount === 1 ? '' : 's' }}
-        </span>
-        <button
-          v-if="canCollapseAll && !domainNarrowed"
-          class="cs-grid-bar-btn"
-          :class="{ 'cs-grid-bar-btn--on': allTiersCollapsed }"
-          :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
-          @click="toggleAllTiers"
-        >
-          <Icon
-            :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'"
-            width="16"
-            height="16"
-          />
-          {{ allTiersCollapsed ? 'Expand all' : 'Collapse all' }}
-        </button>
+      <!-- ══ The head of the column: the search ══
+           It reads BOTH halves and can send the player to the other one, so it
+           belongs to no single zone — it stands over the sections it filters.
+           Outside the transition below (`out-in`: what unmounts on every domain
+           swap jumps) and without a `v-if`: the field has to stand exactly when
+           nothing was found. The control row sits ABOVE the field because a
+           sticky box leaves its BOTTOM part standing. -->
+      <div class="cs-search-hero" role="search" aria-label="Search the shop">
+        <!-- Holds its height even empty — it IS the fold. -->
+        <div class="cs-hero-acts">
+          <button
+            v-if="hasActiveFilter"
+            class="cs-hero-btn cs-hero-btn--reset"
+            v-tip="'Clear every filter'"
+            @click="clearFilters"
+          >
+            <Icon icon="lucide:rotate-ccw" width="15" height="15" />
+            Reset
+          </button>
+          <span v-else class="cs-hero-gap" />
+          <button
+            v-if="canCollapseAll && !domainNarrowed"
+            class="cs-hero-btn"
+            :class="{ 'cs-hero-btn--on': allTiersCollapsed }"
+            :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
+            @click="toggleAllTiers"
+          >
+            <Icon
+              :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'"
+              width="15"
+              height="15"
+            />
+            {{ allTiersCollapsed ? 'Expand all' : 'Collapse all' }}
+          </button>
+        </div>
+
+        <div class="cs-hero-plinth">
+          <RpgSearchBar
+            ref="searchInputRef"
+            v-model="searchQuery"
+            class="cs-hero-field"
+            size="lg"
+            placeholder="Search champions, traits or items..."
+            aria-label="Search champions, traits and items"
+            @clear="resetSearch"
+          >
+            <template #trailing>
+              <span class="cs-hits" :class="{ 'cs-hits--empty': domainHitCount === 0 }">
+                {{ domainHitCount }}
+              </span>
+            </template>
+          </RpgSearchBar>
+        </div>
       </div>
 
     <Transition name="cs-domain-swap" mode="out-in">
@@ -377,7 +377,9 @@ import {
   ROLES,
   MATERIAL_COLOR,
   SHOP_JUMP_SCROLL_OFFSET_PX,
-  SHOP_GRID_BAR_H,
+  SHOP_HERO_FOLD_H,
+  SHOP_HERO_PINNED_H,
+  SHOP_HERO_FIELD_MAX_W,
   SHOP_JUMP_EXPAND_SETTLE_MS,
   SHOP_SCROLL_SETTLE_MS,
   CHAMPION_NEW_BADGE_DISMISS_MS,
@@ -1015,17 +1017,15 @@ const shopChampionNames = computed(() =>
     const canCollapseAll = computed(() =>
       activeDomain.value === 'items' ? itemGroups.value.length > 1 : tierGroups.value.length > 1,
     )
-    /** Sections the open half is showing — the bar's own count. */
-    const sectionCount = computed(() =>
-      activeDomain.value === 'items' ? itemGroups.value.length : tierGroups.value.length,
-    )
     /* A narrowed list forces every section open (isTierCollapsed), so folding
        means nothing there — the button used to stand and write into a set
        nobody could see. */
     const domainNarrowed = computed(() =>
       activeDomain.value === 'items' ? itemNarrowed.value : championNarrowed.value,
     )
-    const gridBarHeightPx = computed(() => `${SHOP_GRID_BAR_H}px`)
+    const heroFoldPx = computed(() => `${SHOP_HERO_FOLD_H}px`)
+    const heroPinnedPx = computed(() => `${SHOP_HERO_PINNED_H}px`)
+    const heroFieldMaxPx = computed(() => `${SHOP_HERO_FIELD_MAX_W}px`)
 
     // Tier expand/collapse animation — animate height 0 ↔ scrollHeight, then clear
     // inline styles so an open tier is overflow:visible (hover-expanded cards spill out).
@@ -1267,13 +1267,16 @@ const shopChampionNames = computed(() =>
       if (!grid) return
       const section = grid.querySelector<HTMLElement>(`[data-tier-section="${tier}"]`)
       if (!section) return
-      const top =
+      const raw =
         section.getBoundingClientRect().top -
         grid.getBoundingClientRect().top +
         grid.scrollTop -
-        // the sticky bar covers the top edge, so the header has to clear it too
-        (SHOP_JUMP_SCROLL_OFFSET_PX + SHOP_GRID_BAR_H)
-      grid.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+        // the pinned search field covers the top edge, so the header clears it too
+        (SHOP_JUMP_SCROLL_OFFSET_PX + SHOP_HERO_PINNED_H)
+      // Short of the fold the field is not pinned yet and the header stands clear
+      // of the whole block anyway — scrolling that hair would only fold the
+      // control row away on arrival, for nothing.
+      grid.scrollTo({ top: raw <= SHOP_HERO_FOLD_H ? 0 : raw, behavior: 'smooth' })
     }
 
     /**
@@ -2158,9 +2161,10 @@ const shopChampionNames = computed(() =>
       activeDomain,
       showDomain,
       canCollapseAll,
-      sectionCount,
       domainNarrowed,
-      gridBarHeightPx,
+      heroFoldPx,
+      heroPinnedPx,
+      heroFieldMaxPx,
       onGridScroll,
       // ── Atlas ──
       atlasRef,
@@ -2189,8 +2193,10 @@ const shopChampionNames = computed(() =>
 
 <style scoped>
 /* ══ Atlas ══════════════════════════════════════════════════════════════════
-   Three zones under one bar. The shop covers the whole tab now, so this is the
-   frame — nothing else draws a border around it.
+   Three zones, no bar over them. The shop covers the whole tab now, so this is
+   the frame — nothing else draws a border around it. The search that used to
+   head all three now stands at the top of the grid column, over the sections it
+   filters.
 
    `container-type` and not a media query: the profile modal is inset by
    `--hud-panel-size` on both sides, so the width that decides whether the facet
@@ -2209,7 +2215,7 @@ const shopChampionNames = computed(() =>
   min-height: 0;
   display: grid;
   grid-template-columns: v-bind(atlasColumns);
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   /* No surface of its own: the tab's shared starfield lies behind the atlas. */
   background: transparent;
   --text-transition-dur: 0.22s;
@@ -2220,38 +2226,12 @@ const shopChampionNames = computed(() =>
   --cs-block: 0.76;
 }
 
-/* ── Command bar ──
-   Spans all three columns: the search reads both halves of the shop, so it
-   cannot belong to one of them. The domain switch that used to stand here now
-   heads the facet rail. */
-.cs-atlas-bar {
-  grid-column: 1 / -1;
-  display: grid;
-  /* Paired outer tracks keep the field centred with or without the reset
-     button; their floor is that button's width. Past 760 the field only gets
-     longer, not more readable. */
-  grid-template-columns: minmax(120px, 1fr) minmax(0, 760px) minmax(120px, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background: rgba(30, 16, 6, var(--cs-veil));
-  border-bottom: 3px solid #5c3310;
-}
-
-.cs-atlas-search {
-  grid-column: 2;
-  min-width: 0;
-}
-.cs-atlas-bar > .cs-bar-btn {
-  grid-column: 3;
-  justify-self: start;
-}
 /* How many cards the open half is holding, inside the field. Red at zero, which
    is the moment the other tab is worth a look. */
 .cs-hits {
-  min-width: 24px;
+  min-width: 26px;
   padding: 0 6px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 900;
   color: #e8c040;
   text-align: right;
@@ -2261,83 +2241,14 @@ const shopChampionNames = computed(() =>
   color: #cc6050;
 }
 
-.cs-bar-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  flex-shrink: 0;
-  height: 38px;
-  padding: 0 13px;
-  border: 1px solid #5c3310;
-  border-radius: var(--bp-radius);
-  background: #16120a;
-  color: #c89040;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    color 0.15s,
-    background 0.15s,
-    border-color 0.15s;
-}
-.cs-bar-btn:hover {
-  color: #e8c060;
-  background: #221408;
-  border-color: #7a4e20;
-}
-.cs-bar-btn--on {
-  color: #e8c040;
-  border-color: #7a4e20;
-}
-.cs-bar-btn--reset {
-  color: #cc8070;
-  border-color: #6a3020;
-}
-.cs-bar-btn--reset:hover {
-  color: #ffdddd;
-  border-color: #cc6050;
-  background: rgba(60, 20, 14, 0.7);
-}
-.cs-bar-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  margin-left: auto;
-  padding: 0;
-  border-radius: 4px;
-  background: rgba(14, 10, 4, 0.85);
-  border: 1px solid #5c3310;
-  color: #c89040;
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
-  transition:
-    color 0.15s,
-    border-color 0.15s,
-    background 0.15s;
-}
-.cs-bar-close:hover {
-  color: #ffdddd;
-  border-color: #cc6050;
-  background: rgba(60, 20, 14, 0.7);
-}
-
 /* ── The three zones ── */
 .cs-atlas-facets {
-  grid-row: 2;
   min-height: 0;
 }
 /* The starfield IS the grid's surface — the one zone that opens onto it, the
-   way the stage does in the planets tab. `.cs-grid-bar` stays opaque: cards
+   way the stage does in the planets tab. `.cs-hero-plinth` stays opaque: cards
    scroll under it. */
 .cs-atlas-grid {
-  grid-row: 2;
   position: relative;
   z-index: 1;
   min-width: 0;
@@ -2346,7 +2257,6 @@ const shopChampionNames = computed(() =>
   background: transparent;
 }
 .cs-atlas-detail {
-  grid-row: 2;
   position: relative;
   z-index: 1;
   min-width: 0;
@@ -2475,37 +2385,50 @@ const shopChampionNames = computed(() =>
   padding: 12px 14px;
 }
 
-/* ── Grid bar ──
-   Stands at the top of the SCROLLER, not of the tab: it folds the sections
-   below it, and a long list is exactly when one goes looking for it. The
-   negative margins cancel the scroller's own padding so the opaque strip
-   reaches both edges, and `top: -12px` pins it flush with the border box —
-   at `top: 0` the padding strip above would show scrolled cards. */
-.cs-grid-bar {
+/* ── Search hero ──
+   Stands at the top of the SCROLLER, not of the tab. The negative margins
+   cancel the scroller's own padding so the plinth reaches both edges, and the
+   sticky offset is that padding PLUS the fold: the block rides up by exactly
+   the control row before it pins, which leaves the field standing and the row
+   gone. No scroll listener and no height transition — a height that changed per
+   frame would reflow every card below it. */
+.cs-search-hero {
   position: sticky;
-  top: -12px;
+  top: calc(-12px - v-bind(heroFoldPx));
   z-index: 3;
+  margin: -12px -14px 12px;
+  padding-top: 12px;
+}
+.cs-hero-acts {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  height: v-bind(gridBarHeightPx);
-  margin: -12px -14px 10px;
+  width: min(v-bind(heroFieldMaxPx), calc(100% - 28px));
+  height: 28px;
+  margin: 0 auto 10px;
+}
+/* Holds the space when there is no reset button, so `space-between` keeps
+   Collapse all on the right instead of dropping it to the left. */
+.cs-hero-gap {
+  flex: 1;
+}
+/* The one opaque strip of the column — the rest of it opens onto the starfield.
+   Its height is the pinned one: cards scroll under exactly this. */
+.cs-hero-plinth {
+  display: flex;
+  align-items: center;
+  height: v-bind(heroPinnedPx);
   padding: 0 14px;
   background: #111008;
   border-bottom: 1px solid #3e200a;
 }
-.cs-grid-bar-count {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #7a6848;
-  font-variant-numeric: tabular-nums;
+.cs-hero-field {
+  width: 100%;
+  max-width: v-bind(heroFieldMaxPx);
+  margin: 0 auto;
 }
-/* Same family as the command bar's buttons, two sizes down so the strip stays
-   thin. */
-.cs-grid-bar-btn {
+.cs-hero-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2526,14 +2449,23 @@ const shopChampionNames = computed(() =>
     background 0.15s,
     border-color 0.15s;
 }
-.cs-grid-bar-btn:hover {
+.cs-hero-btn:hover {
   color: #e8c060;
   background: #221408;
   border-color: #7a4e20;
 }
-.cs-grid-bar-btn--on {
+.cs-hero-btn--on {
   color: #e8c040;
   border-color: #7a4e20;
+}
+.cs-hero-btn--reset {
+  color: #cc8070;
+  border-color: #6a3020;
+}
+.cs-hero-btn--reset:hover {
+  color: #ffdddd;
+  border-color: #cc6050;
+  background: rgba(60, 20, 14, 0.7);
 }
 
 /* ── Card grid ──
