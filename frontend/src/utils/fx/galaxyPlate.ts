@@ -47,8 +47,10 @@ import {
   LANDMARK_PORTAL_MIN_R,
   ROUTE_TRAIL_ALPHA_MIN,
   ROUTE_TRAIL_WIDTH_MIN,
+  LANDMARK_ROLE_CORE,
 } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
+import type { StarManifest } from '@/types'
 
 /** Bezugsgrösse aller festen Pixelwerte hier — die Grösse des Archivstandbilds. */
 export const GALAXY_PLATE_REF_W = 320
@@ -73,6 +75,37 @@ export interface FitBox {
  * Hintergrund, Dunst und Funkelsterne malt `paintGalaxy` über die VOLLE Fläche,
  * die Letterbox zeigt sich also nie als Balken, sondern als Tiefraum.
  */
+/**
+ * Die Kernfarbe einer Sternmarke: die Rolle des Champions, den sie hergab.
+ *
+ * `undefined` — kein Manifest, keine Rolle — lässt `drawLandmark` auf
+ * `LANDMARK_FREED_CORE` zurückfallen. Der verlorene Stern liest das nie.
+ */
+export function starCoreTint(manifest: StarManifest | undefined): string | undefined {
+  return manifest?.role ? LANDMARK_ROLE_CORE[manifest.role] : undefined
+}
+
+/**
+ * Fingerabdruck der Sternfarben eines Laufs — für die Cache-Schlüssel.
+ *
+ * Die drei Schlüssel (Snapshot, `paintKey` der Voyages-Karte, Markerebene der
+ * Minimap) kennen sonst nur die LÄNGE von `attemptResults`. Manifeste werden
+ * aber NACHTRÄGLICH gefüllt — vom Archiv-Nachtrag und beim Laden —, und dann
+ * ändert sich die Farbe, ohne dass sich eine Länge rührt: die Karte bliebe für
+ * immer in der alten Fassung stehen. Beim Thumb-Cache wäre das endgültig, der
+ * läuft ohne Deckel.
+ *
+ * EINE Funktion für alle drei, damit sie nicht auseinanderlaufen.
+ */
+export function starRoleSignature(manifests: readonly StarManifest[] | undefined): string {
+  if (!manifests?.length) return '-'
+  let sig = manifests.length
+  for (const m of manifests) {
+    sig = (Math.imul(sig, 31) + (m.role ? m.role.charCodeAt(0) + m.role.length : 0)) >>> 0
+  }
+  return sig.toString(36)
+}
+
 export function galaxyFitBox(w: number, h: number, inset = VOYAGE_MAP_INSET_PX): FitBox {
   const aw = Math.max(1, w - inset * 2)
   const ah = Math.max(1, h - inset * 2)
@@ -380,7 +413,11 @@ export function paintGalaxy(
       sx,
       sy,
       roundLandmarkRadius((failed ? 7 : 8.5) * hk),
-      { dpr, variant: landmarkVariantFor(i) },
+      {
+        dpr,
+        variant: landmarkVariantFor(i),
+        coreTint: starCoreTint(record.starManifests?.[i]),
+      },
     )
   }
 

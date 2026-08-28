@@ -6,6 +6,7 @@ import {
   landmarkSpriteKey,
   roundLandmarkRadius,
   paintLandfallMark,
+  paintFreedStarCore,
   LANDFALL_KINDS,
   isLandfallLandmark,
 } from '@/utils/fx/galaxyLandmarks'
@@ -46,7 +47,10 @@ function recordingCtx(): { ctx: CanvasRenderingContext2D; ops: string[] } {
 }
 import {
   LANDMARK_FREED_CORE,
+  LANDMARK_FREED_CORE_R_RATIO,
   LANDMARK_FREED_RING,
+  LANDMARK_ROLE_CORE,
+  ROLE_COLORS,
   LANDMARK_LANDFALL_RING,
   LANDMARK_LANDFALL_MISSED_ALPHA,
   LANDMARK_PAD_SPAN,
@@ -221,6 +225,107 @@ describe('Die Marke des befreiten Sterns — unbunt im Ring, Bedeutung im Kern',
       const accent = minimapAccentForTheme(i).split(', ').map(Number) as [number, number, number]
       expect(distance(ring, accent)).toBeGreaterThan(60)
     }
+  })
+})
+
+/* ── Der Kern nennt die Rolle ─────────────────────────────────────────────────
+   Seit ein Stern ein Manifest hat, trägt sein Kern die ROLLE des Champions, den
+   er hergab. Der Ring bleibt unbunt — die fünf Tests darüber gelten unverändert
+   weiter, `LANDMARK_FREED_CORE` ist unangetastet und bleibt der Fallback.
+
+   Was hier gebunden wird, ist das, was diese Palette überhaupt tragfähig macht:
+   sie muss sich vom Ring absetzen, in sich trennbar sein und ihren Rollenfarben
+   nahe genug bleiben. Was sie NICHT halten kann, sind die 120er-Abstände zu Gold
+   und Ember von oben — die galten einem einzigen mint Ton. Systematisch
+   abgesucht: jeder Ton, der beide hält und dabei rot oder orange bleibt, landet
+   bei #fa0000 bzw. #fa3600; dann sind Top und ADC nicht mehr zu trennen und ADC
+   hat kein Orange mehr. Die Trennung leistet dort die FORM — Gold ist auf der
+   Karte eine Linie und eine Hafenmarke, der verlorene Stern eine dunkle massive
+   Hülle ohne Ring. */
+
+/** Farbton in Grad, für den Abstand zur echten Rollenfarbe. */
+function hueOf(hex: string): number {
+  const [r, g, b] = rgbOf(hex).map((v) => v / 255)
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  if (max === min) return 0
+  const d = max - min
+  const h =
+    max === r ? ((g - b) / d + (g < b ? 6 : 0)) : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return h * 60
+}
+
+function hueDistance(a: string, b: string): number {
+  const d = Math.abs(hueOf(a) - hueOf(b))
+  return Math.min(d, 360 - d)
+}
+
+describe('Der Kern eines befreiten Sterns nennt die Rolle', () => {
+  const roles = Object.keys(LANDMARK_ROLE_CORE) as (keyof typeof LANDMARK_ROLE_CORE)[]
+
+  it('trägt jede Rolle — und `LANDMARK_FREED_CORE` bleibt der Fallback', () => {
+    expect(roles).toHaveLength(5)
+    for (const r of roles) expect(LANDMARK_ROLE_CORE[r]).toMatch(/^#[0-9a-f]{6}$/)
+    // Der Fallback ist keine Rollenfarbe: ein Stern ohne Champion ist etwas
+    // anderes als einer, dessen Champion zufällig mint wäre.
+    expect(Object.values(LANDMARK_ROLE_CORE)).not.toContain(LANDMARK_FREED_CORE)
+  })
+
+  it('setzt jede Rollenfarbe vom weissen Ring ab — sonst sieht man den Kern nicht', () => {
+    const ring = rgbOf(LANDMARK_FREED_RING)
+    for (const r of roles) {
+      expect(distance(rgbOf(LANDMARK_ROLE_CORE[r]), ring)).toBeGreaterThan(60)
+    }
+  })
+
+  it('hält die fünf untereinander auseinander', () => {
+    for (let i = 0; i < roles.length; i++) {
+      for (let j = i + 1; j < roles.length; j++) {
+        const d = distance(rgbOf(LANDMARK_ROLE_CORE[roles[i]]), rgbOf(LANDMARK_ROLE_CORE[roles[j]]))
+        expect(d, `${roles[i]} vs ${roles[j]}`).toBeGreaterThan(70)
+      }
+    }
+  })
+
+  it('bleibt jeder echten Rollenfarbe nahe — sonst ist die Wiedererkennung weg', () => {
+    // Die Zusicherung gegen ein „Aufräumen" der Palette: verschoben werden darf
+    // sie, aber nicht so weit, dass ein Jungle-Stern nicht mehr grün ist.
+    for (const r of roles) {
+      expect(hueDistance(LANDMARK_ROLE_CORE[r], ROLE_COLORS[r]), r).toBeLessThanOrEqual(25)
+    }
+  })
+
+  it('lässt den Kern kleiner als den halben Innenraum — sonst ist die Marke wieder eine Scheibe', () => {
+    // Innere Ringkante: Ring `r*0.86` minus halbe Ringstärke (`r*0.17`/2).
+    const innerEdge = 0.86 - 0.17 / 2
+    expect(LANDMARK_FREED_CORE_R_RATIO).toBeLessThan(innerEdge / 2)
+    // Und gross genug, um auf der Live-Minimap (r = 11) über drei Pixel zu kommen.
+    expect(11 * LANDMARK_FREED_CORE_R_RATIO).toBeGreaterThan(3)
+  })
+
+  it('malt den Kern in der ÜBERGEBENEN Farbe, nicht im Fallback', () => {
+    // Der Kern liegt bewusst NICHT im Sprite — sonst trügen alle Sterne die
+    // Farbe des zuerst gerasterten, und der Cache-Schlüssel sähe das nicht.
+    const fills: string[] = []
+    const ctx = {
+      save() {},
+      restore() {},
+      beginPath() {},
+      arc() {},
+      fill() {
+        fills.push(String(this.fillStyle))
+      },
+      createRadialGradient: () => ({ addColorStop() {} }),
+      fillStyle: '' as string | CanvasGradient,
+    } as unknown as CanvasRenderingContext2D
+
+    paintFreedStarCore(ctx, 20, 20, 11, LANDMARK_ROLE_CORE.jungle, 2)
+    expect(fills).toContain(LANDMARK_ROLE_CORE.jungle)
+    expect(fills).not.toContain(LANDMARK_FREED_CORE)
+
+    fills.length = 0
+    paintFreedStarCore(ctx, 20, 20, 11, LANDMARK_FREED_CORE, 0)
+    expect(fills).toEqual([LANDMARK_FREED_CORE])
   })
 })
 

@@ -22,6 +22,7 @@ import {
   CORE_GATE_FALLBACK_TINT,
   CORE_GATE_POOL_SPAN,
   LANDMARK_FREED_CORE,
+  LANDMARK_FREED_CORE_R_RATIO,
   LANDMARK_FREED_RING,
   LANDMARK_LANDFALL_RING,
   LANDMARK_LANDFALL_MISSED_ALPHA,
@@ -31,6 +32,7 @@ import {
   LANDMARK_PAD_SPAN,
   LANDMARK_SPRITE_CACHE_MAX,
 } from '@/config/constants'
+import { hexToRgbTriple } from '@/utils/ui/format'
 
 export type LandmarkKind =
   | 'departure-portal'
@@ -85,6 +87,15 @@ export interface LandmarkOpts {
    * SEINER Galaxie (`minimapAccentForTheme`), das Gold bleibt den Häfen.
    */
   tint?: string
+  /**
+   * NUR `star-freed`: die Farbe des Kernfunkens, fertig aufgelöst.
+   *
+   * Ein EIGENES Feld und nicht `tint`: die Kartenlegende reicht `tint` ihrem
+   * Themenakzent unkonditioniert an JEDE Zeile durch — der befreite Stern
+   * bekäme dort sonst die Farbe der Galaxie statt der Rolle. Ohne Angabe
+   * bleibt es `LANDMARK_FREED_CORE`.
+   */
+  coreTint?: string
   /**
    * NUR Landfalls: der Ort wurde nicht angefasst. Dieselbe Form, leiser und
    * ohne Binnenmarke — eine zweite Silhouette dafür wäre eine fünfte Form in
@@ -307,22 +318,8 @@ function paintFreedStar(
   ctx.lineWidth = Math.max(1.2, r * 0.17)
   ctx.stroke()
 
-  if (detail >= 2) {
-    const spark = ctx.createRadialGradient(x, y, 0, x, y, r * 0.5)
-    spark.addColorStop(0, 'rgba(92, 232, 180, 0.25)')
-    spark.addColorStop(1, 'rgba(92, 232, 180, 0)')
-    ctx.beginPath()
-    ctx.arc(x, y, r * 0.5, 0, Math.PI * 2)
-    ctx.fillStyle = spark
-    ctx.fill()
-  }
-
-  // Der Kernfunke trägt die Marke dort, wo der Ring auf zwei Pixel zusammenfällt
-  // — und er trägt die Bedeutung: dieselbe Farbe wie „Crew zurück".
-  ctx.beginPath()
-  ctx.arc(x, y, Math.max(0.9, r * 0.26), 0, Math.PI * 2)
-  ctx.fillStyle = LANDMARK_FREED_CORE
-  ctx.fill()
+  // Kern und Halo fehlen hier ABSICHTLICH — sie kommen aus `paintFreedStarCore`
+  // direkt auf die Zielfläche, weil ihre Farbe je Stern verschieden ist.
 
   // Ein Trabant auf der Ringlinie — ein wieder in Bewegung geratenes System.
   // Sein Winkel kommt aus dem INDEX, nicht aus dem Zufall: eine geseedete Lage
@@ -335,6 +332,50 @@ function paintFreedStar(
     ctx.fillStyle = LANDMARK_FREED_RING
     ctx.fill()
   }
+
+  ctx.restore()
+}
+
+/**
+ * Der Kernfunke eines befreiten Sterns — samt seinem Hof.
+ *
+ * Steht NICHT im Sprite, und das ist der ganze Kniff: seine Farbe nennt die
+ * Rolle des Champions, den der Stern hergab, ist also je Marke verschieden.
+ * Im Sprite gebacken bräuchte `landmarkSpriteKey` ein Farbfeld (der Kommentar
+ * dort schliesst das ausdrücklich aus) und `star-freed` ginge von drei auf bis
+ * zu achtzehn Cache-Einträge je Fläche — bei 4K-Radien zweistellige Megabyte.
+ * Zwei Zeichenbefehle je Stern sind billiger, und sie fallen nur beim Repaint
+ * an: die Galaxiekarte ist ein Standbild, die Markerebene der Minimap gecacht.
+ *
+ * Exportiert für die Spec — in jsdom ist `getContext('2d')` null, geprüft
+ * werden die ZEICHENBEFEHLE, dasselbe Muster wie bei `paintLandfallMark`.
+ */
+export function paintFreedStarCore(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  color: string,
+  detail: 0 | 1 | 2,
+): void {
+  ctx.save()
+
+  if (detail >= 2) {
+    const halo = hexToRgbTriple(color)
+    const spark = ctx.createRadialGradient(x, y, 0, x, y, r * 0.5)
+    spark.addColorStop(0, `rgba(${halo}, 0.25)`)
+    spark.addColorStop(1, `rgba(${halo}, 0)`)
+    ctx.beginPath()
+    ctx.arc(x, y, r * 0.5, 0, Math.PI * 2)
+    ctx.fillStyle = spark
+    ctx.fill()
+  }
+
+  // Der Kernfunke trägt die Marke dort, wo der Ring auf zwei Pixel zusammenfällt.
+  ctx.beginPath()
+  ctx.arc(x, y, Math.max(0.9, r * LANDMARK_FREED_CORE_R_RATIO), 0, Math.PI * 2)
+  ctx.fillStyle = color
+  ctx.fill()
 
   ctx.restore()
 }
@@ -744,4 +785,9 @@ export function drawLandmark(
   if (!sprite) return
   const pad = landmarkPad(r)
   ctx.drawImage(sprite, x - pad, y - pad, pad * 2, pad * 2)
+  // Der Kern liegt ÜBER dem farbneutralen Sprite — Begründung bei
+  // `paintFreedStarCore`.
+  if (kind === 'star-freed') {
+    paintFreedStarCore(ctx, x, y, r, opts.coreTint ?? LANDMARK_FREED_CORE, detail)
+  }
 }

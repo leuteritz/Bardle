@@ -81,7 +81,7 @@ import {
 import { drawLandmark, landmarkVariantFor } from '@/utils/fx/galaxyLandmarks'
 import { landfallMarks } from '@/utils/game/landfalls'
 import { LANDFALL_LANDMARK_KIND } from '@/config/world/landfalls'
-import { routeLegStyle } from '@/utils/fx/galaxyPlate'
+import { routeLegStyle, starCoreTint, starRoleSignature } from '@/utils/fx/galaxyPlate'
 
 import { hexToRgba } from '@/utils/ui/format'
 import {
@@ -244,6 +244,9 @@ export default defineComponent({
     function drawNormalMap(ctx: CanvasRenderingContext2D, w: number, h: number) {
       const dots = dotPositions.value
       const results = galaxyStore.attemptResults
+      // Parallel zu `results`, gleicher Index — die Rolle färbt den Kern des
+      // befreiten Sterns. Darf kürzer sein oder fehlen; dann bleibt er mint.
+      const manifests = galaxyStore.starManifests
       const attempts = Math.min(results.length, dots.length)
       const isTraveling = galaxyStore.championTravelState === 'traveling'
       const nowMs = Date.now()
@@ -541,6 +544,7 @@ export default defineComponent({
           drawLandmark(c, lost ? 'star-lost' : 'star-freed', sx, sy, lost ? 9 : 11, {
             dpr: renderDpr,
             variant: landmarkVariantFor(i),
+            coreTint: starCoreTint(manifests[i]),
           })
         }
 
@@ -588,7 +592,10 @@ export default defineComponent({
           for (const l of galaxyStore.landfallResults) {
             sig = (Math.imul(sig, 31) + (l.cleared ? 3 : 4)) >>> 0
           }
-          const key = `${galaxyStore.mapSeed}|${galaxyStore.currentGalaxy}|${attempts}|${sig}|${cam.x}|${cam.y}|${cam.zoom}`
+          // Und die Rollen dazu: ein nachgetragenes Manifest ändert die
+          // Kernfarbe, ohne dass sich `attempts` oder ein Ausgang rührt.
+          const roles = starRoleSignature(manifests)
+          const key = `${galaxyStore.mapSeed}|${galaxyStore.currentGalaxy}|${attempts}|${sig}|${roles}|${cam.x}|${cam.y}|${cam.zoom}`
           ctx.drawImage(markerLayer.get(w, h, renderDpr, key, drawRouteAndMarkers), 0, 0, w, h)
         }
         ctx.restore()

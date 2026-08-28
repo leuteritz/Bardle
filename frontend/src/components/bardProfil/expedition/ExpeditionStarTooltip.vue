@@ -21,7 +21,12 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { getChampionIconPath } from '@/utils/game/champions'
 import { formatMinuteClock } from '@/utils/ui/format'
-import { MS_PER_SECOND, ROLE_BY_KEY, STAR_MANIFEST_ART_SIZE } from '@/config/constants'
+import {
+  MS_PER_SECOND,
+  ROLE_BY_KEY,
+  STAR_MANIFEST_ART_SIZE,
+  UNIVERSE_TOOLTIP_IMAGES,
+} from '@/config/constants'
 import type { StarManifest } from '@/types'
 
 const props = defineProps<{
@@ -85,7 +90,7 @@ const spent = computed(() => {
       <span class="tip-read-cell">
         <span class="tip-read-k">Chimes</span>
         <span class="tip-read-v">
-          <Icon icon="game-icons:windchimes" width="16" height="16" class="stt-chime" />
+          <img class="stt-chime" :src="UNIVERSE_TOOLTIP_IMAGES.chimes" alt="" aria-hidden="true" />
           {{ $formatNumber(manifest.chimes) }}
         </span>
       </span>
@@ -162,8 +167,15 @@ const spent = computed(() => {
   font-weight: 700;
 }
 
+/* Das ECHTE Chime-Artwork, nicht ein Iconify-Ersatz — dieselbe Währung soll
+   überall gleich aussehen, und die drei Nachbarn im Reiter zeigen es schon.
+   Die Grösse in `em`, damit sie neben der 1.7em-Zahl mitwächst: gemessen 17,5 px
+   auf Full HD und 23 px auf 2K, beides unter der 34-px-Schwelle der 128er-Stufe. */
 .stt-chime {
-  color: var(--rpg-gold);
+  flex-shrink: 0;
+  width: 0.85em;
+  height: 0.85em;
+  object-fit: contain;
 }
 
 .stt-clock {

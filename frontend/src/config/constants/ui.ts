@@ -2,7 +2,12 @@
 // Pause- und Offline-Overlay, Tooltips, Ton und die Timings, mit denen das
 // alles ein- und ausblendet.
 
-import type { HeraldReceiptKind, HeraldReceiptKindDef, NotifyBadgeKind } from '@/types'
+import type {
+  ChampionRole,
+  HeraldReceiptKind,
+  HeraldReceiptKindDef,
+  NotifyBadgeKind,
+} from '@/types'
 
 // ── Idle-Layer hinter einem Overlay: Anhalten und Wiederanlaufen ───────────
 /**
@@ -394,6 +399,46 @@ export const LANDMARK_PORTAL_MIN_R = 3 // Boden, damit der Ring in der Miniatur 
 // Marke ist; ein Hex in zwei Dateien driftet, deshalb sind es Konstanten.
 export const LANDMARK_FREED_RING = '#eef2f8'
 export const LANDMARK_FREED_CORE = '#5ce8b4'
+
+/**
+ * Der Kernfunke als Anteil des Sternradius.
+ *
+ * Die innere Ringkante liegt bei `r * 0.775` (Ring `r * 0.86` minus halbe
+ * Ringstärke). Der Kern füllt davon 44 % — die Mitte bleibt überwiegend leer,
+ * und genau daran hängt die ganze Marke: „füllte man die Mitte, wäre sie wieder
+ * eine Scheibe", und die Umkehrung gegen den massiven verlorenen Stern wäre
+ * dahin. Wer den Wert anhebt, muss diese Grenze im Kopf haben —
+ * `galaxyLandmarks.spec.ts` bindet sie.
+ */
+export const LANDMARK_FREED_CORE_R_RATIO = 0.34
+
+/**
+ * Der Kern eines befreiten Sterns nennt die ROLLE des Champions, den er hergab.
+ *
+ * Warum im Kern und nicht am Ring: der Ring ist unbunt und muss es bleiben (die
+ * Begründung steht oben), der Kern dagegen trug schon immer die Bedeutung —
+ * dort kostet Farbe keine Fläche. Ohne Champion oder ohne Manifest bleibt es
+ * `LANDMARK_FREED_CORE`.
+ *
+ * Warum die Töne von `ROLE_COLORS` ABWEICHEN: die rohen Rollenfarben tragen auf
+ * dieser Karte nicht. Gemessen im RGB-Abstand liegt `adc` `#e89840` nur 40 vom
+ * Reisegold `#e8c040` (gleiche Sättigung), `top` `#e05050` nur 26 vom Ember des
+ * VERLORENEN Sterns — befreit sähe aus wie verloren —, und `support`
+ * `#b8c8d8` hat Chroma 32 und verschwindet im weissen Ring. Verschoben ist
+ * höchstens um 21° Farbton, die Rolle bleibt also erkennbar. Der Rest der
+ * Trennung leistet die FORM: Gold erscheint als Linie und als Hafenmarke, der
+ * verlorene Stern als dunkle massive Hülle ohne Ring.
+ *
+ * Zweite Rollenpalette neben `ROLE_COLORS` — im Muster von `ROLES[].orbit.color`,
+ * das aus demselben Grund existiert (dort kollidierte Mids Blau mit dem Orbit).
+ */
+export const LANDMARK_ROLE_CORE: Record<ChampionRole, string> = {
+  top: '#ff4f78',
+  jungle: '#5ce66a',
+  mid: '#4aa3ff',
+  adc: '#ff6a00',
+  support: '#7fd8e8',
+}
 
 /**
  * Der Ring eines Landfalls — UNBUNT, und dunkler als der des befreiten Sterns.

@@ -9,7 +9,13 @@
    Voyages-Reiters dieselbe Reihenfolge in Panelgrösse braucht. Hier bleibt, was
    nur das STANDBILD betrifft: die Grösse, die Rasterdichte und der Cache. */
 
-import { paintGalaxy, galaxyFitBox, GALAXY_PLATE_REF_W, GALAXY_PLATE_REF_H } from './galaxyPlate'
+import {
+  paintGalaxy,
+  galaxyFitBox,
+  starRoleSignature,
+  GALAXY_PLATE_REF_W,
+  GALAXY_PLATE_REF_H,
+} from './galaxyPlate'
 import {
   GALAXY_SNAPSHOT_DISPLAY_W,
   GALAXY_SNAPSHOT_MAX_DPR,
@@ -57,7 +63,14 @@ const snapshotCache = new Map<string, string>()
 const thumbCache = new Map<string, string>()
 
 function cacheKey(record: CompletedGalaxyRecord, deviceW: number): string {
-  return `${deviceW}:${record.galaxy}:${record.mapSeed}:${record.attemptResults.length}:${record.themeIndex}`
+  // Die Rollen gehören dazu: sie färben die Sternkerne und werden NACHTRÄGLICH
+  // gefüllt (Archiv-Nachtrag, Lade-Nachtrag). Ohne sie bliebe ein einmal
+  // gerendertes Bild fuer immer in der alten Fassung — und `thumbCache` läuft
+  // ohne Deckel, dort wäre es endgültig.
+  return (
+    `${deviceW}:${record.galaxy}:${record.mapSeed}:${record.attemptResults.length}` +
+    `:${record.themeIndex}:${starRoleSignature(record.starManifests)}`
+  )
 }
 
 function render(

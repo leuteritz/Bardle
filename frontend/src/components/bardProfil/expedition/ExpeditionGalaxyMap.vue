@@ -17,6 +17,7 @@ import {
   paintGalaxy,
   galaxyFitBox,
   coreGateClearance,
+  starRoleSignature,
   GALAXY_PLATE_REF_W,
   type FitBox,
 } from '@/utils/fx/galaxyPlate'
@@ -251,6 +252,9 @@ const paintKey = computed(
   () =>
     `${props.record.galaxy}:${props.record.mapSeed}:${props.record.attemptResults.length}` +
     `:${props.record.landfallResults?.length ?? 0}:${props.record.themeIndex}` +
+    // Die Rollen färben die Sternkerne und werden nachträglich gefüllt — ohne
+    // sie malte die Karte nach einem Nachtrag nie wieder neu.
+    `:${starRoleSignature(props.record.starManifests)}` +
     `|${Math.round(cssW.value)}x${Math.round(cssH.value)}|${bandH.value}|${dprNow.value}`,
 )
 
