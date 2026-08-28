@@ -20,8 +20,8 @@ import {
  *
  * The numbers below mirror what App.vue computes and what the browser was
  * measured at (see the worked example in constants/economy.ts):
- *   Full HD  →  196px 672px 372px   4 columns
- *   2K       →  196px 966px 498px   5 columns
+ *   Full HD  →  232px 636px 372px   4 columns
+ *   2K       →  232px 930px 498px   6 columns
  */
 
 /** Horizontal padding of .cs-atlas-grid, both sides. */
@@ -86,14 +86,14 @@ describe('shop atlas layout', () => {
 
   it('matches the two widths measured in the browser', () => {
     const fhd = zones(1920, 1080)
-    expect(Math.round(fhd.grid)).toBe(672)
+    expect(Math.round(fhd.grid)).toBe(636)
     expect(Math.round(fhd.detail)).toBe(372)
     expect(columns(fhd.grid)).toBe(4)
 
     const qhd = zones(2560, 1440)
-    expect(Math.round(qhd.grid)).toBe(966)
+    expect(Math.round(qhd.grid)).toBe(930)
     expect(Math.round(qhd.detail)).toBe(498)
-    expect(columns(qhd.grid)).toBe(5)
+    expect(columns(qhd.grid)).toBe(6)
   })
 
   it.each(DESKTOPS)('%s: folding the facet rail never costs the grid a column', (_l, vw, vh) => {
@@ -105,12 +105,10 @@ describe('shop atlas layout', () => {
     expect(columns(folded.grid)).toBeGreaterThanOrEqual(columns(open.grid))
   })
 
-  it('turns the folded rail into a whole extra column from 2K up', () => {
-    // At Full HD the 144px it frees go into wider cards rather than a fifth
-    // column — the fold is worth pressing there for the reading room, not for
-    // the count. From 2K on it buys a column outright.
-    expect(columns(zones(1920, 1080, true).grid)).toBe(columns(zones(1920, 1080).grid))
-    expect(columns(zones(2560, 1440, true).grid)).toBeGreaterThan(columns(zones(2560, 1440).grid))
+  it.each(DESKTOPS)('%s: folding the rail buys a whole extra column', (_l, vw, vh) => {
+    // With the wider rail the 180px it frees are worth a column everywhere — at
+    // Full HD too, where the old 144px only bought reading room.
+    expect(columns(zones(vw, vh, true).grid)).toBeGreaterThan(columns(zones(vw, vh).grid))
   })
 
   it('never auto-folds a desktop that has room for the rail', () => {

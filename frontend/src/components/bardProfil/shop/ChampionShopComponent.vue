@@ -1,48 +1,25 @@
 <template>
   <div ref="atlasRef" class="cs-atlas">
-    <!-- ══ Command bar: what to browse, and how to narrow it ══
-         Spans all three zones because it governs all three: the domain decides
-         what the facets mean and what the grid holds, and the search reads both
-         halves. The counts are what keeps the split honest — each tab carries
-         how many cards it holds under the current search and facets, so the
-         other half can never quietly swallow a hit. -->
+    <!-- ══ Command bar: how to narrow what the rail decided to show ══
+         Spans all three zones because the search reads both halves and can send
+         the player to the other one. The domain switch itself lives at the top
+         of the facet rail — it is the first filter, not a second search. -->
     <header class="cs-atlas-bar">
-      <div class="cs-domain" role="tablist" aria-label="Shop domain">
-        <button
-          class="cs-domain-btn"
-          :class="{ 'cs-domain-btn--active': activeDomain === 'champions' }"
-          role="tab"
-          :aria-selected="activeDomain === 'champions'"
-          v-tip="`${reachableChampionCount} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies`"
-          @click="showDomain('champions')"
-        >
-          <Icon icon="ph:users-three-fill" width="20" height="20" class="cs-domain-icon" />
-          Champions
-          <span class="cs-domain-count">{{ reachableChampionCount }}</span>
-        </button>
-        <button
-          class="cs-domain-btn"
-          :class="{ 'cs-domain-btn--active': activeDomain === 'items' }"
-          role="tab"
-          :aria-selected="activeDomain === 'items'"
-          v-tip="`${visibleItemsCount} item(s) on offer under the current filters`"
-          @click="showDomain('items')"
-        >
-          <Icon icon="ph:backpack-fill" width="20" height="20" class="cs-domain-icon" />
-          Items
-          <span class="cs-domain-count">{{ visibleItemsCount }}</span>
-        </button>
-      </div>
-
       <RpgSearchBar
         ref="searchInputRef"
         v-model="searchQuery"
         class="cs-atlas-search"
-        size="sm"
+        size="md"
         placeholder="Search champions, traits or items..."
         aria-label="Search champions, traits and items"
         @clear="resetSearch"
-      />
+      >
+        <template #trailing>
+          <span class="cs-hits" :class="{ 'cs-hits--empty': domainHitCount === 0 }">
+            {{ domainHitCount }}
+          </span>
+        </template>
+      </RpgSearchBar>
 
       <button
         v-if="hasActiveFilter"
@@ -50,18 +27,18 @@
         v-tip="'Clear every filter'"
         @click="clearFilters"
       >
-        <Icon icon="lucide:rotate-ccw" width="15" height="15" />
+        <Icon icon="lucide:rotate-ccw" width="17" height="17" />
         Reset
       </button>
       <button
         v-if="canCollapseAll"
-        class="cs-bar-btn"
+        class="cs-bar-btn cs-bar-btn--icon"
         :class="{ 'cs-bar-btn--on': allTiersCollapsed }"
         v-tip="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
         :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
         @click="toggleAllTiers"
       >
-        <Icon :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'" width="16" height="16" />
+        <Icon :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'" width="18" height="18" />
       </button>
     </header>
 
@@ -71,9 +48,13 @@
       :folded="facetsFolded"
       :affordable-only="affordableOnly"
       :affordable-count="affordableCount"
+      :domain="activeDomain"
+      :domain-counts="domainCounts"
+      :query="normalizedQuery"
       @toggle="onFacetToggle"
       @fold="setFacetsFolded"
       @update:affordable-only="affordableOnly = $event"
+      @update:domain="showDomain"
     />
 
     <!-- ── Grid: the open tab, and nothing else ── -->
@@ -1214,6 +1195,19 @@ const shopChampionNames = computed(() =>
       tierGroups.value.reduce((sum, g) => (g.isGalaxyLocked ? sum : sum + g.champions.length), 0),
     )
 
+    /** Both halves at once — the rail shows them side by side, so the split
+     *  stays honest without the player having to switch to find out. */
+    const domainCounts = computed(() => ({
+      champions: reachableChampionCount.value,
+      items: visibleItemsCount.value,
+    }))
+    /** What the open half is holding — the number inside the search field. */
+    const domainHitCount = computed(() =>
+      activeDomain.value === 'items' ? visibleItemsCount.value : reachableChampionCount.value,
+    )
+    /** `highlightSegments` expects it lowercased and trimmed. */
+    const normalizedQuery = computed(() => searchQuery.value.toLowerCase().trim())
+
     // ── Grid empty states, one per tab ──
     // tierGroups / itemGroups only drop sections while the domain is narrowed;
     // unnarrowed they always list every tier and category (with "All recruited ✓"
@@ -2125,6 +2119,9 @@ const shopChampionNames = computed(() =>
       noChampionsFound,
       noItemsFound,
       reachableChampionCount,
+      domainCounts,
+      domainHitCount,
+      normalizedQuery,
       isItemCatCollapsed,
       toggleItemCatSection,
       selectedItem,
@@ -2190,90 +2187,54 @@ const shopChampionNames = computed(() =>
 }
 
 /* ── Command bar ──
-   Spans all three columns: the domain it names decides what the facets mean
-   AND what the grid holds, so it cannot belong to one of them. */
+   Spans all three columns: the search reads both halves of the shop, so it
+   cannot belong to one of them. The domain switch that used to stand here now
+   heads the facet rail. */
 .cs-atlas-bar {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 12px;
+  padding: 10px 14px;
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
-}
-.cs-domain {
-  display: flex;
-  flex-shrink: 0;
-  border: 1px solid #5c3310;
-  border-radius: 4px;
-  overflow: hidden;
-}
-.cs-domain-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  background: #16120a;
-  border: none;
-  color: #8a6030;
-  font-size: 12.5px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-.cs-domain-btn + .cs-domain-btn {
-  border-left: 1px solid #3e200a;
-}
-.cs-domain-btn:hover {
-  color: #c89040;
-  background: #201a10;
-}
-.cs-domain-btn--active {
-  background: #2a1c0c;
-  color: #e8c040;
-}
-.cs-domain-icon {
-  flex-shrink: 0;
-}
-/* The count is what keeps the split honest — it says how many cards the OTHER
-   half is holding, so a search can never quietly land out of sight. */
-.cs-domain-count {
-  min-width: 22px;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: rgba(10, 8, 4, 0.7);
-  border: 1px solid #3e200a;
-  font-size: 10.5px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-.cs-domain-btn--active .cs-domain-count {
-  border-color: #7a4e20;
-  color: #e8c060;
 }
 
 .cs-atlas-search {
   flex: 1;
   min-width: 0;
-  max-width: 420px;
+  /* Past this the field stops being more readable and only gets longer — on 4K
+     the bar would otherwise run the whole tab. */
+  max-width: 760px;
+}
+/* How many cards the open half is holding, inside the field. Red at zero, which
+   is the moment the other tab is worth a look. */
+.cs-hits {
+  min-width: 24px;
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #e8c040;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cs-hits--empty {
+  color: #cc6050;
 }
 
 .cs-bar-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 7px;
   flex-shrink: 0;
-  padding: 6px 10px;
+  height: 38px;
+  padding: 0 13px;
   border: 1px solid #5c3310;
-  border-radius: 4px;
+  border-radius: var(--bp-radius);
   background: #16120a;
   color: #c89040;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2282,6 +2243,10 @@ const shopChampionNames = computed(() =>
     color 0.15s,
     background 0.15s,
     border-color 0.15s;
+}
+.cs-bar-btn--icon {
+  width: 38px;
+  padding: 0;
 }
 .cs-bar-btn:hover {
   color: #e8c060;

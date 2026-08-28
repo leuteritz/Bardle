@@ -679,13 +679,18 @@ export const SHOP_SCROLL_SETTLE_MS = 150
  * Worked through, because the four numbers only make sense together (grid width
  * = atlas − facets − detail, minus 28px of padding; a column costs
  * CARD_MIN_WIDTH + GRID_GAP):
- *   Full HD  atlas 1240 → detail 360 → grid 656 → 4 columns
- *   2K       atlas 1660 → detail 498 → grid 938 → 5 columns
- *   4K       atlas 2940 → detail 520 → grid 2196 → 13 columns
+ *   Full HD  atlas 1240 → detail 372 → grid 636 → 4 columns → card 144px
+ *   2K       atlas 1660 → detail 498 → grid 930 → 6 columns → card 142px
+ *   4K       atlas 2940 → detail 520 → grid 2188 → 14 columns → card 144px
  * Four at Full HD is the floor that matters: it is what the old 900px rail
  * showed, and this layout must not buy its detail column with a narrower grid.
+ *
+ * The rail grew from 196 to 232 so the domain switch could move into it out of
+ * the command bar; the 36px came off CARD_MIN_WIDTH, not off the column count.
+ * That the card lands near 144px on all three screens instead of 154/180/167 is
+ * the second gain — one card size everywhere.
  */
-export const SHOP_ATLAS_FACET_RAIL_WIDTH = 196
+export const SHOP_ATLAS_FACET_RAIL_WIDTH = 232
 /** Collapsed facet rail — the group icons stay, the chips fold away. */
 export const SHOP_ATLAS_FACET_RAIL_COLLAPSED = 52
 export const SHOP_ATLAS_DETAIL_MIN_WIDTH = 360
@@ -703,7 +708,7 @@ export const SHOP_ATLAS_FACET_AUTOFOLD_WIDTH = 1180
  * .cs-cards reads, so the column count follows the space the other two zones
  * leave over instead of being fixed per breakpoint.
  */
-export const SHOP_ATLAS_CARD_MIN_WIDTH = 150
+export const SHOP_ATLAS_CARD_MIN_WIDTH = 140
 export const SHOP_ATLAS_CARD_HEIGHT = 168
 export const SHOP_ATLAS_GRID_GAP = 10
 /** Portrait (px) of the champion holding the seat, in the detail panel's seat row. */
