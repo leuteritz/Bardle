@@ -13,6 +13,10 @@ import type { UniverseConfig } from '@/types'
  * Was bleibt, ist das, was ein Universum immer schon war: ein Ort mit Namen und
  * Wappen. Genau deshalb stehen sie weiter hier und werden nicht generiert —
  * Shurima und Freljord sind Herkünfte, keine Zahlen.
+ *
+ * Dazu der `tint`: der Farbton der Scheibe, die das Universum im Firmament IST.
+ * Er liegt nur im Inneren der Scheibe — Staub und Galaxien —, nie auf einer
+ * Kante, sonst spraeche er dieselbe Sprache wie die Zustandsfarben der Karte.
  */
 export const universes: UniverseConfig[] = [
   {
@@ -20,60 +24,70 @@ export const universes: UniverseConfig[] = [
     name: 'Runeterra Prime',
     description: 'The original universe',
     icon: 'game-icons:ringed-planet',
+    tint: '#4fa85e', // lebendes Gruen — die Welt, aus der alles kam
   },
   {
     id: 2,
     name: 'Void Nexus',
     description: 'Dimension of the Void',
     icon: 'game-icons:vortex',
+    tint: '#a84ce0', // Violett
   },
   {
     id: 3,
     name: 'Celestial Realm',
     description: 'Where the stars keep their own counsel',
     icon: 'game-icons:star-swirl',
+    tint: '#9a90f8', // Sternenviolett
   },
   {
     id: 4,
     name: 'Shadow Isles',
     description: 'Islands of Shadow',
     icon: 'game-icons:spectre',
+    tint: '#3fe8c8', // Spektralgruen
   },
   {
     id: 5,
     name: 'Freljord',
     description: 'Eternal Ice Wasteland',
     icon: 'game-icons:icicles-aura',
+    tint: '#a8e8f8', // blasses Eis
   },
   {
     id: 6,
     name: 'Shurima',
     description: 'Ancient Desert Civilization',
     icon: 'game-icons:solar-system',
+    tint: '#e08a30', // Wuestenkupfer
   },
   {
     id: 7,
     name: 'Ionia',
     description: 'Land of Harmony',
     icon: 'game-icons:yin-yang',
+    tint: '#f08cb8', // Bluete
   },
   {
     id: 8,
     name: 'Noxus',
     description: 'Empire of Strength',
     icon: 'game-icons:sword-altar',
+    tint: '#e02828', // Blut
   },
   {
     id: 9,
     name: 'Demacia',
     description: 'Kingdom of Justice',
     icon: 'game-icons:crested-helmet',
+    tint: '#dcd8b0', // Petrichor
   },
   {
     id: 10,
     name: 'Piltover',
     description: 'City of Progress',
     icon: 'game-icons:gear-hammer',
+    tint: '#4ea8c8', // Hextech
   },
 ]
 

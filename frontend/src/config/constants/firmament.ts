@@ -92,3 +92,48 @@ export const FIRMAMENT_LANDFALL_COLOR = '#68c0a8'
 export const FIRMAMENT_GATE_COLOR = '#7ab8f0'
 /** Ein verlorener Stern. */
 export const FIRMAMENT_LOST_COLOR = '#cc6050'
+
+// ── Universumsscheibe ───────────────────────────────────────────────────────
+/* Ein Universum ist im Firmament eine SCHEIBE, kein Glyph: Kern in der Mitte,
+   Galaxienfeld darum, gluehender Wall am Rand. Gerastert wird sie einmal je
+   (Universum, Zustand, Groesse, dpr) — `utils/fx/universeDisc.ts`. */
+
+/** Kachel in der Universumsleiste. NICHT groesser: bei 40 rollt die Leiste auf
+ *  Full HD, `firmamentLayout.spec.ts` bindet den Haushalt. */
+export const UNIVERSE_DISC_RAIL_PX = 34
+/** Wappen im Kopfband — dieselbe Scheibe, nur gross. */
+export const UNIVERSE_DISC_CREST_PX = 46
+export const UNIVERSE_DISC_MAX_DPR = 2
+export const UNIVERSE_DISC_CACHE_MAX = 24
+/** Galaxien im Feld. Bei 34 px ist darueber kein Fleck mehr zu trennen. */
+export const UNIVERSE_DISC_GALAXIES = 18
+/** Boegen des Walls. Die grosse Platte nimmt 190 (`FIRMAMENT_RIM_ARCS`); hier
+ *  waeren sie ein geschlossener Strich statt eines Geflechts. */
+export const UNIVERSE_DISC_RIM_ARCS = 64
+/** Anteile des Radius: wo der Wall beginnt und endet. Eng am Rand — mit 0,80
+ *  lag ein drei Pixel breites Band aus Boegen um die Scheibe und las sich als
+ *  Zackenkranz, nicht als Geflecht. */
+export const UNIVERSE_DISC_RIM_INNER = 0.87
+export const UNIVERSE_DISC_RIM_OUTER = 0.99
+/** Strichstaerke der Boegen als Anteil des Radius. Bewusst unter einem Pixel:
+ *  ein Netz ist fein, und was darueber liegt, wird zur Umrandung. */
+export const UNIVERSE_DISC_RIM_W_MIN = 0.018
+export const UNIVERSE_DISC_RIM_W_MAX = 0.042
+/** Reichweite des Staubschleiers und Radius des Kerns. */
+export const UNIVERSE_DISC_DUST_R = 0.72
+export const UNIVERSE_DISC_CORE_R = 0.09
+/** Unterlinear, wie die Bahn selbst: sonst haengen alle Galaxien am Rand. */
+export const UNIVERSE_DISC_FIELD_EXP = 0.6
+
+/** Zeilenhoehe der Leiste: Scheibe plus 2x5 Polsterung plus 2 Rahmen.
+ *
+ *  Die SCHEIBE treibt sie, nicht der Text — dafuer tragen Namenszeile und Notiz
+ *  feste Zeilenkaesten (18/14 px). Vorher hing die Hoehe an der Schriftmetrik
+ *  von MedievalSharp, war gemessen 53,5 statt der gerechneten 48, und die Liste
+ *  rollte auf Full HD, waehrend die Konstante das Gegenteil behauptete. */
+export const UNIVERSE_RAIL_ROW_H = UNIVERSE_DISC_RAIL_PX + 12
+/** Kopf, Fuss und Listenpolsterung der Leiste — GEMESSEN auf Full HD. */
+export const UNIVERSE_RAIL_HEAD_H = 38
+export const UNIVERSE_RAIL_CARRY_H = 140
+export const UNIVERSE_RAIL_LIST_PAD = 12
+export const UNIVERSE_RAIL_ROW_GAP = 4

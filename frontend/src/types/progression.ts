@@ -44,6 +44,9 @@ export interface UniverseConfig {
   description: string
   /** Wappen des Universums auf der Prestige-Karte. */
   icon: string
+  /** Der Farbton seiner Scheibe im Firmament — Staub und Galaxien, NIE eine
+   *  Kante: als Rahmen konkurrierte er mit den Zustandsfarben der Karte. */
+  tint: string
 }
 
 // ── Providence (chosen at prestige, runs for the whole universe) ─────────────

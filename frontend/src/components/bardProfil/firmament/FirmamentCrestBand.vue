@@ -23,7 +23,13 @@ import { formatNumber } from '@/config/ui/numberFormat'
 import { formatCompactDuration, formatShortDuration, toRoman } from '@/utils/ui/format'
 import { MISSION_COUNT } from '@/config/progression/missions'
 import { CHRONICLE_TOTAL_STAGES } from '@/config/progression/achievements'
-import { FIRMAMENT_CREST_BAND_H, FIRMAMENT_CREST_ID_W, MS_PER_SECOND } from '@/config/constants'
+import {
+  FIRMAMENT_CREST_BAND_H,
+  FIRMAMENT_CREST_ID_W,
+  MS_PER_SECOND,
+  UNIVERSE_DISC_CREST_PX,
+} from '@/config/constants'
+import UniverseDisc from './UniverseDisc.vue'
 import type { FirmamentGate, FirmamentNode } from '@/utils/ui/firmamentLayout'
 
 const props = defineProps<{ nodes: FirmamentNode[]; gates: FirmamentGate[] }>()
@@ -61,7 +67,11 @@ const idW = `${FIRMAMENT_CREST_ID_W}px`
     <!-- Wappen: wo der Bard gerade steht. -->
     <div class="fm-crest-id">
       <span class="fm-crest-medal">
-        <Icon :icon="universe.icon" width="34" height="34" />
+        <UniverseDisc
+          :universe="gameStore.currentUniverse"
+          state="current"
+          :px="UNIVERSE_DISC_CREST_PX"
+        />
         <span class="fm-crest-roman">{{ toRoman(gameStore.currentUniverse) }}</span>
       </span>
       <span class="fm-crest-name-box">
@@ -162,28 +172,24 @@ const idW = `${FIRMAMENT_CREST_ID_W}px`
   padding: 0 16px;
 }
 
+/* Dieselbe Scheibe wie in der Leiste, nur gross — das Heldenbild des Reiters.
+   Kein Teller darunter: sie ist rund und braucht keinen Kasten. */
 .fm-crest-medal {
   position: relative;
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
   flex-shrink: 0;
-  color: #c9a8f0;
-  background: #100e08;
-  border: 1px solid #3a2c14;
-  border-radius: 5px;
 }
 
 .fm-crest-roman {
   position: absolute;
-  right: -1px;
-  bottom: -1px;
+  right: -4px;
+  bottom: -2px;
   padding: 1px 5px;
   font-size: 10.5px;
   font-weight: 900;
   color: #0c0a06;
-  background: #c9a8f0;
+  background: #c8b890;
   border-radius: 3px;
 }
 

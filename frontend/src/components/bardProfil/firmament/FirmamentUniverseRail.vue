@@ -20,7 +20,14 @@ import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { universes } from '@/config/progression/universes'
 import { progressMetricValue } from '@/utils/game/progressMetrics'
 import { formatCompactDuration, toRoman } from '@/utils/ui/format'
-import { FIRMAMENT_GATE_COLOR, FIRMAMENT_HERE_COLOR, MS_PER_SECOND } from '@/config/constants'
+import {
+  FIRMAMENT_GATE_COLOR,
+  FIRMAMENT_HERE_COLOR,
+  MS_PER_SECOND,
+  UNIVERSE_DISC_RAIL_PX,
+} from '@/config/constants'
+import UniverseDisc from './UniverseDisc.vue'
+import type { UniverseDiscState } from '@/utils/fx/universeDisc'
 import type { FirmamentGate } from '@/utils/ui/firmamentLayout'
 import type { FirmamentSelection } from '@/types'
 
@@ -71,7 +78,6 @@ const rows = computed(() =>
     return {
       id: u.id,
       name: u.name,
-      icon: u.icon,
       roman: toRoman(u.id),
       walked,
       current,
@@ -84,6 +90,8 @@ const rows = computed(() =>
           ? `${past.galaxiesFreed} freed · ${formatCompactDuration(past.durationSeconds * MS_PER_SECOND)}`
           : 'not yet walked',
       stateIcon: current ? 'lucide:crosshair' : walked ? 'lucide:check' : 'lucide:lock',
+      /** Die Scheibe traegt den Zustand selbst — leer heisst nie betreten. */
+      discState: (current ? 'current' : walked ? 'walked' : 'unlit') as UniverseDiscState,
     }
   }),
 )
@@ -169,9 +177,7 @@ const gateColor = FIRMAMENT_GATE_COLOR
         :title="folded ? `${row.roman} · ${row.name} — ${row.note}` : undefined"
         @click="pick(row)"
       >
-        <span class="fm-rail-medal">
-          <Icon :icon="row.icon" width="20" height="20" />
-        </span>
+        <UniverseDisc :universe="row.id" :state="row.discState" :px="UNIVERSE_DISC_RAIL_PX" />
         <span v-if="!folded" class="fm-rail-body">
           <span class="fm-rail-name-line">
             <span class="fm-rail-roman">{{ row.roman }}</span>
@@ -274,7 +280,7 @@ const gateColor = FIRMAMENT_GATE_COLOR
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 7px 8px;
+  padding: 5px 8px;
   text-align: left;
   color: inherit;
   background: #151109;
@@ -295,11 +301,10 @@ const gateColor = FIRMAMENT_GATE_COLOR
   cursor: default;
 }
 
-.fm-rail-row.is-dim {
-  opacity: 0.55;
-}
-
+/* KEIN pauschales `opacity` mehr: die leere Scheibe sagt „nie betreten", und
+   eine Deckkraftstufe daempfte auch den Text, statt ihn einzuordnen. */
 .fm-rail-row.is-current {
+  background: linear-gradient(90deg, #1b1a10, #151109);
   border-left-color: v-bind(hereColor);
 }
 
@@ -309,26 +314,11 @@ const gateColor = FIRMAMENT_GATE_COLOR
   border-left-color: v-bind(gateColor);
 }
 
-.fm-rail-medal {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
-  color: #c9a8f0;
-  background: #100e08;
-  border: 1px solid #3a2c14;
-  border-radius: 4px;
-}
-
-.fm-rail-row.is-dim .fm-rail-medal {
-  color: #5c4a30;
-}
-
+/* Feste Zeilenkaesten, kein Zwischenraum: so treibt die SCHEIBE die Zeilenhoehe
+   und nicht die Schriftmetrik — nur dann sagt `UNIVERSE_RAIL_ROW_H` die Wahrheit. */
 .fm-rail-body {
   display: flex;
   flex-direction: column;
-  gap: 2px;
   min-width: 0;
   flex: 1;
 }
@@ -338,6 +328,7 @@ const gateColor = FIRMAMENT_GATE_COLOR
   align-items: baseline;
   gap: 6px;
   min-width: 0;
+  line-height: 18px;
 }
 
 .fm-rail-roman {
@@ -358,11 +349,18 @@ const gateColor = FIRMAMENT_GATE_COLOR
 }
 
 .fm-rail-row.is-dim .fm-rail-name {
-  color: #8a7a52;
+  color: #7a6a46;
+}
+
+.fm-rail-row.is-dim .fm-rail-roman,
+.fm-rail-row.is-dim .fm-rail-note,
+.fm-rail-row.is-dim .fm-rail-state {
+  color: #5c4e34;
 }
 
 .fm-rail-note {
   font-size: 11px;
+  line-height: 14px;
   color: #7a6c50;
   white-space: nowrap;
   overflow: hidden;
@@ -442,9 +440,12 @@ const gateColor = FIRMAMENT_GATE_COLOR
   border-left-width: 2px;
 }
 
+/* Einzeilig, nicht gestapelt: gestapelt kostet der Fuss 60 px mehr, und die
+   zehnte Scheibe faellt unter die Kante — die Leiste rollte, obwohl sie
+   eingeklappt genau dafuer da ist, alles auf einen Blick zu zeigen. */
 .fm-rail--folded .fm-rail-carry-row {
-  flex-direction: column;
-  gap: 1px;
+  justify-content: center;
+  gap: 4px;
   font-size: 10px;
 }
 </style>

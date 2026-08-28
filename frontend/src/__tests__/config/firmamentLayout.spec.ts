@@ -12,7 +12,13 @@ import {
   FIRMAMENT_STAGE_MIN_W,
   FIRMAMENT_UNLIT_AHEAD,
   FIRMAMENT_ZOOM_STEPS,
+  UNIVERSE_RAIL_CARRY_H,
+  UNIVERSE_RAIL_HEAD_H,
+  UNIVERSE_RAIL_LIST_PAD,
+  UNIVERSE_RAIL_ROW_GAP,
+  UNIVERSE_RAIL_ROW_H,
 } from '@/config/constants'
+import { universes } from '@/config/progression/universes'
 import { firmamentFitBox, firmamentPointAt } from '@/utils/ui/firmamentLayout'
 
 /**
@@ -114,6 +120,16 @@ describe('Firmament — das Zonenbudget', () => {
   it('haelt das Wappen im Kopfband schmaler als die halbe Breite', () => {
     // Sonst bliebe der Fortschrittsleiste daneben kein lesbarer Rest.
     expect(FIRMAMENT_CREST_ID_W).toBeLessThan(tabWidth(1920, 1080) / 2)
+  })
+
+  it('traegt alle zehn Universumsscheiben ohne zu rollen', () => {
+    // Die Leiste ist so hoch wie die Buehne. Zehn Zeilen, Kopf und Fuss muessen
+    // auf Full HD hineinpassen — wer die Scheibe groesser macht, laesst die
+    // Leiste rollen, und genau das soll hier auffallen.
+    const rows = universes.length
+    const list = rows * UNIVERSE_RAIL_ROW_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP
+    const needed = UNIVERSE_RAIL_HEAD_H + list + UNIVERSE_RAIL_LIST_PAD + UNIVERSE_RAIL_CARRY_H
+    expect(needed).toBeLessThanOrEqual(zones(1920, 1080).stageH)
   })
 })
 
