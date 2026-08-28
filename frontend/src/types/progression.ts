@@ -236,6 +236,11 @@ export interface UniverseRunRecord {
   galaxiesFreed: number
   /** Chimes, die die Rettung dieses Universums gekostet hat. */
   chimes: number
+  /** Die Vorsehung, unter der dieser Lauf stand.
+   *  OPTIONAL, und zwar dauerhaft: Spielstaende von vor diesem Feld laden ohne
+   *  Migration und zeigen keine — dort wurde nie eine mitgeschrieben. Das ist
+   *  wahr, nicht gelogen. */
+  providence?: string
   completedAt: number
 }
 

@@ -709,6 +709,9 @@ export const useGameStore = defineStore('game', {
         starsRescued: stats.starsRescued,
         galaxiesFreed: stats.galaxiesFreed,
         chimes: this.chimesForNextUniverse,
+        // Die Vorsehung gehoert zum verlassenen Lauf — sie wird beim naechsten
+        // Aufbruch neu gezogen und waere danach nicht mehr zu erfahren.
+        providence: useProvidenceStore().active?.name,
         // Wanduhr: Chronikstempel eines abgeschlossenen Universums-Durchlaufs.
         // eslint-disable-next-line no-restricted-syntax
         completedAt: Date.now(),

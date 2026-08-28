@@ -248,7 +248,7 @@ export const MEEP_TREE_BRANCHES: MeepTreeBranchDef[] = [
         name: 'Thunder Chime',
         icon: 'game-icons:thunder-struck', // strikes that shake the sky
         effect: '+100% Chimes/Click',
-        desc: 'Your strikes shake the firmament.',
+        desc: 'Your strikes shake the sky itself.',
         cost: 55,
         tier: 3,
         effects: { cpcMult: 2 },

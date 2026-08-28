@@ -26,6 +26,7 @@ import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
 import BattleResultComponent from '@/components/bardProfil/battle/BattleResultComponent.vue'
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import ExpeditionTabComponent from '@/components/bardProfil/expedition/ExpeditionTabComponent.vue'
+import FirmamentTabComponent from '@/components/bardProfil/firmament/FirmamentTabComponent.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
@@ -86,9 +87,11 @@ const shopFlare = useBadgeFlare(shopFreshCount)
  *                                   (Phosphor hat nur die einzelne Klinge)
  *   ph:planet-fill                — die Planeten-Slots im Orbit
  *   ph:map-trifold-fill           — die Sternenkarte der Voyages
+ *   ph:globe-hemisphere-west-fill — das Firmament: der ganze Weg als EINE
+ *                                   Karte, Galaxien und Universumstore
  *   ph:gear-six-fill              — Admin
  *
- * Jedes Motiv steht genau einmal in der Leiste, damit die acht Reiter
+ * Jedes Motiv steht genau einmal in der Leiste, damit die neun Reiter
  * nebeneinander unterscheidbar bleiben.
  *
  * Shop und Skill Tree haben je eine zweite Anlaufstelle — die Ecktaste links
@@ -160,6 +163,13 @@ const allMenuItems: {
     icon: 'ph:map-trifold-fill',
     locked: () => !expeditionChartStore.isUnlocked,
     lockNote: `unlocks in Galaxy ${toRoman(EXPEDITION_UNLOCK_GALAXY)}`,
+  },
+  {
+    id: 'firmament',
+    name: 'Firmament',
+    icon: 'ph:globe-hemisphere-west-fill',
+    locked: () => galaxyStore.completedGalaxies.length === 0,
+    lockNote: 'free your first galaxy',
   },
   { id: 'admin', name: 'Admin', icon: 'ph:gear-six-fill' },
 ]
@@ -400,7 +410,7 @@ onUnmounted(() => {
                     :aria-current="uiStore.bardActiveTab === item.id ? 'page' : undefined"
                   >
                     <!-- Ein Glyph steht ALLEIN für seinen Reiter und trägt
-                         deshalb die volle Fläche — alle acht stehen damit auf
+                         deshalb die volle Fläche — alle neun stehen damit auf
                          einer Höhe. Der Name kommt beim Überfahren, nicht als
                          Text daneben: er würde die Leiste je Reiter verschieden
                          breit machen. -->
@@ -555,6 +565,14 @@ onUnmounted(() => {
                 class="tab-layer"
               >
                 <ExpeditionTabComponent />
+              </div>
+
+              <div
+                v-if="mountedTabs.has('firmament')"
+                v-show="uiStore.bardActiveTab === 'firmament'"
+                class="tab-layer"
+              >
+                <FirmamentTabComponent />
               </div>
 
               <div
@@ -852,7 +870,7 @@ onUnmounted(() => {
    ═══════════════════════════════════════════ */
 /* height-aware tab art: smaller header leaves more room for tab content.
    Jedes Glyph steht allein für seinen Reiter und bekommt deshalb die volle
-   Kantenlänge — alle acht stehen damit auf einer Höhe. */
+   Kantenlänge — alle neun stehen damit auf einer Höhe. */
 .rp-tab-icon {
   width: clamp(34px, 5vh, 48px);
   height: clamp(34px, 5vh, 48px);
@@ -935,7 +953,7 @@ onUnmounted(() => {
 }
 
 /* ── Namenschip ──────────────────────────────────────────────────────────
-   Sieben Glyphen ohne Text: wer die Ikonografie nicht kennt, klickt sich
+   Neun Glyphen ohne Text: wer die Ikonografie nicht kennt, klickt sich
    durch. Der Name kommt deshalb beim Überfahren — als Chip, der UNTER die
    Kopfkante fällt statt in die Leiste hinein.
 
