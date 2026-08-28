@@ -656,6 +656,12 @@ export const SHOP_HOME_PLANET_GLYPH_SIZE = 84
 // ── Shop domain tabs (ChampionShopComponent) ─────────────────────────────────
 /** Gap kept above a section header after the tab's landing scroll (px). */
 export const SHOP_JUMP_SCROLL_OFFSET_PX = 8
+/**
+ * Height (px) of the sticky bar above the grid's sections. It SETS the height via
+ * `v-bind` and goes into the jump scroll as well — a described height would drift,
+ * and a section header jumped to would land underneath the bar.
+ */
+export const SHOP_GRID_BAR_H = 34
 /** Corrective scroll runs after the section expand animation (0.28s) settles. */
 export const SHOP_JUMP_EXPAND_SETTLE_MS = 350
 /** Idle time after the last scroll event before card animations resume. */

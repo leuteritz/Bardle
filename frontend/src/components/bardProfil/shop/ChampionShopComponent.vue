@@ -30,16 +30,6 @@
         <Icon icon="lucide:rotate-ccw" width="17" height="17" />
         Reset
       </button>
-      <button
-        v-if="canCollapseAll"
-        class="cs-bar-btn cs-bar-btn--icon"
-        :class="{ 'cs-bar-btn--on': allTiersCollapsed }"
-        v-tip="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
-        :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
-        @click="toggleAllTiers"
-      >
-        <Icon :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'" width="18" height="18" />
-      </button>
     </header>
 
     <ShopFacetRail
@@ -64,6 +54,29 @@
       :class="{ 'is-scrolling': gridScrolling }"
       @scroll.passive="onGridScroll"
     >
+      <!-- Sits at the top of the SCROLLER, above the sections it folds. Outside
+           the transition below: that one is `out-in`, and a sticky bar that
+           unmounts on every domain swap jumps. -->
+      <div v-if="sectionCount > 0" class="cs-grid-bar">
+        <span class="cs-grid-bar-count">
+          {{ sectionCount }} section{{ sectionCount === 1 ? '' : 's' }}
+        </span>
+        <button
+          v-if="canCollapseAll && !domainNarrowed"
+          class="cs-grid-bar-btn"
+          :class="{ 'cs-grid-bar-btn--on': allTiersCollapsed }"
+          :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
+          @click="toggleAllTiers"
+        >
+          <Icon
+            :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'"
+            width="16"
+            height="16"
+          />
+          {{ allTiersCollapsed ? 'Expand all' : 'Collapse all' }}
+        </button>
+      </div>
+
     <Transition name="cs-domain-swap" mode="out-in">
 
     <!-- ══ Champions ══ -->
@@ -364,6 +377,7 @@ import {
   ROLES,
   MATERIAL_COLOR,
   SHOP_JUMP_SCROLL_OFFSET_PX,
+  SHOP_GRID_BAR_H,
   SHOP_JUMP_EXPAND_SETTLE_MS,
   SHOP_SCROLL_SETTLE_MS,
   CHAMPION_NEW_BADGE_DISMISS_MS,
@@ -1001,6 +1015,17 @@ const shopChampionNames = computed(() =>
     const canCollapseAll = computed(() =>
       activeDomain.value === 'items' ? itemGroups.value.length > 1 : tierGroups.value.length > 1,
     )
+    /** Sections the open half is showing — the bar's own count. */
+    const sectionCount = computed(() =>
+      activeDomain.value === 'items' ? itemGroups.value.length : tierGroups.value.length,
+    )
+    /* A narrowed list forces every section open (isTierCollapsed), so folding
+       means nothing there — the button used to stand and write into a set
+       nobody could see. */
+    const domainNarrowed = computed(() =>
+      activeDomain.value === 'items' ? itemNarrowed.value : championNarrowed.value,
+    )
+    const gridBarHeightPx = computed(() => `${SHOP_GRID_BAR_H}px`)
 
     // Tier expand/collapse animation — animate height 0 ↔ scrollHeight, then clear
     // inline styles so an open tier is overflow:visible (hover-expanded cards spill out).
@@ -1246,7 +1271,8 @@ const shopChampionNames = computed(() =>
         section.getBoundingClientRect().top -
         grid.getBoundingClientRect().top +
         grid.scrollTop -
-        SHOP_JUMP_SCROLL_OFFSET_PX
+        // the sticky bar covers the top edge, so the header has to clear it too
+        (SHOP_JUMP_SCROLL_OFFSET_PX + SHOP_GRID_BAR_H)
       grid.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
     }
 
@@ -2132,6 +2158,9 @@ const shopChampionNames = computed(() =>
       activeDomain,
       showDomain,
       canCollapseAll,
+      sectionCount,
+      domainNarrowed,
+      gridBarHeightPx,
       onGridScroll,
       // ── Atlas ──
       atlasRef,
@@ -2243,10 +2272,6 @@ const shopChampionNames = computed(() =>
     color 0.15s,
     background 0.15s,
     border-color 0.15s;
-}
-.cs-bar-btn--icon {
-  width: 38px;
-  padding: 0;
 }
 .cs-bar-btn:hover {
   color: #e8c060;
@@ -2435,6 +2460,67 @@ const shopChampionNames = computed(() =>
    one left edge. */
 .cs-atlas-grid {
   padding: 12px 14px;
+}
+
+/* ── Grid bar ──
+   Stands at the top of the SCROLLER, not of the tab: it folds the sections
+   below it, and a long list is exactly when one goes looking for it. The
+   negative margins cancel the scroller's own padding so the opaque strip
+   reaches both edges, and `top: -12px` pins it flush with the border box —
+   at `top: 0` the padding strip above would show scrolled cards. */
+.cs-grid-bar {
+  position: sticky;
+  top: -12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: v-bind(gridBarHeightPx);
+  margin: -12px -14px 10px;
+  padding: 0 14px;
+  background: #111008;
+  border-bottom: 1px solid #3e200a;
+}
+.cs-grid-bar-count {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #7a6848;
+  font-variant-numeric: tabular-nums;
+}
+/* Same family as the command bar's buttons, two sizes down so the strip stays
+   thin. */
+.cs-grid-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid #5c3310;
+  border-radius: var(--bp-radius);
+  background: #16120a;
+  color: #c89040;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s;
+}
+.cs-grid-bar-btn:hover {
+  color: #e8c060;
+  background: #221408;
+  border-color: #7a4e20;
+}
+.cs-grid-bar-btn--on {
+  color: #e8c040;
+  border-color: #7a4e20;
 }
 
 /* ── Card grid ──
