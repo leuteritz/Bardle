@@ -192,9 +192,9 @@ describe('galaxy archive backfill', () => {
     for (const m of record.starManifests!) {
       expect(m.champion).toBeTruthy()
       expect(m.role).toBeTruthy()
-      expect(m.worlds).toBeGreaterThanOrEqual(3)
+      expect(m.planets).toBeGreaterThanOrEqual(3)
       expect(m.cleared).toBeGreaterThanOrEqual(1)
-      expect(m.cleared).toBeLessThanOrEqual(m.worlds)
+      expect(m.cleared).toBeLessThanOrEqual(m.planets)
       expect(m.chimes).toBeGreaterThan(0)
       expect(m.windowSec).toBe(CHAMPION_STAR_DURATION_MS / MS_PER_SECOND)
     }
@@ -210,11 +210,11 @@ describe('galaxy archive backfill', () => {
     expect(lost.length).toBeGreaterThan(0)
     for (const [, m] of lost) {
       expect(m.heldSec).toBe(m.windowSec)
-      expect(m.cleared).toBeLessThan(m.worlds)
+      expect(m.cleared).toBeLessThan(m.planets)
     }
     for (const [, m] of pairs.filter(([r]) => r === 'rescued')) {
       expect(m.heldSec).toBeLessThan(m.windowSec)
-      expect(m.cleared).toBe(m.worlds)
+      expect(m.cleared).toBe(m.planets)
     }
   })
 

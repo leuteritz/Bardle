@@ -33,7 +33,7 @@ function makeLocalStorageStub() {
 }
 
 function manifest(over: Partial<StarManifest> = {}): StarManifest {
-  return { worlds: 4, cleared: 4, chimes: 1000, heldSec: 30, windowSec: 60, ...over }
+  return { planets: 4, cleared: 4, chimes: 1000, heldSec: 30, windowSec: 60, ...over }
 }
 
 /** Ein Champion-Stern, direkt gestellt: die Spawn-Action zöge Sonnenphase,
@@ -162,7 +162,7 @@ describe('Sternmanifest: was der Stern sammelt', () => {
 
       expect(galaxy.attemptResults).toEqual(['failed'])
       const m = galaxy.starManifests[0]
-      expect(m.worlds).toBe(3)
+      expect(m.planets).toBe(3)
       expect(m.cleared).toBe(1)
       expect(m.chimes).toBe(4200)
       expect(m.heldSec).toBe(CHAMPION_STAR_DURATION_MS / 1000)
@@ -257,6 +257,49 @@ describe('Sternmanifest: Altbestand', () => {
     expect(reloaded.starManifests).toHaveLength(1)
     expect(reloaded.starManifests[0].champion).toBe('Bard')
     expect(reloaded.starManifests[0].role).toBe('adc')
+  })
+
+  it('bringt ein Manifest mit dem ALTEN Feldnamen `worlds` auf `planets`', () => {
+    // `planets` hiess kurzzeitig `worlds`. Ohne die Migration läse der Tooltip
+    // `undefined` und zeigte eine leere Zahl — sichtbar kaputt, aber nur in
+    // einem Spielstand, den kein Test sonst anfasst.
+    const galaxy = useGalaxyStore()
+    galaxy.starsRequired = 2
+    galaxy.nextStarRole = 'top'
+    galaxy.onChampionStarRescued(manifest({ champion: 'Bard', planets: 3, cleared: 3 }))
+    usePersistence().saveGame()
+
+    // Den gespeicherten Block auf die alte Form zurückdrehen — laufende Galaxie
+    // UND Archiv, denn beide Ladestellen müssen heilen.
+    const saved = JSON.parse(localStorage.getItem(SAVE_KEY)!)
+    const toLegacy = (m: Record<string, unknown>) => {
+      const { planets, ...rest } = m
+      return { ...rest, worlds: planets }
+    }
+    saved.galaxy.starManifests = saved.galaxy.starManifests.map(toLegacy)
+    saved.galaxy.completedGalaxies = [
+      {
+        galaxy: 1,
+        mapSeed: 4711,
+        themeIndex: 0,
+        attemptResults: ['rescued'],
+        durationSeconds: 300,
+        completedAt: 1_700_000_000_000,
+        starManifests: [toLegacy({ ...manifest({ champion: 'Kayn', planets: 4, cleared: 4 }) })],
+      },
+    ]
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saved))
+
+    setActivePinia(createPinia())
+    const reloaded = useGalaxyStore()
+    usePersistence().loadGame()
+
+    expect(reloaded.starManifests[0].planets).toBe(3)
+    expect(reloaded.starManifests[0].champion).toBe('Bard')
+    const record = reloaded.completedGalaxies.find((r) => r.galaxy === 1)
+    expect(record?.starManifests?.[0].planets).toBe(4)
+    // Der Rest des Eintrags überlebt — die Migration ist kein Nachtrag.
+    expect(record?.starManifests?.[0].champion).toBe('Kayn')
   })
 
   it('trägt einem Archiv ohne Manifeste beim Laden welche nach', () => {

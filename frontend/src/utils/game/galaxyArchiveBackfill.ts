@@ -155,14 +155,14 @@ export function buildBackfillManifests(
 
   return results.map((outcome) => {
     const champion = drawUnique(pool, used, rng)
-    const worlds = 1 + STAR_EXTRA_PLANET_MIN + Math.floor(rng() * STAR_EXTRA_PLANET_RANGE)
+    const planets = 1 + STAR_EXTRA_PLANET_MIN + Math.floor(rng() * STAR_EXTRA_PLANET_RANGE)
     const lost = outcome === 'failed'
-    const cleared = lost ? 1 + Math.floor(rng() * (worlds - 1)) : worlds
+    const cleared = lost ? 1 + Math.floor(rng() * (planets - 1)) : planets
     const jitter = 1 + (rng() * 2 - 1) * ADMIN_ARCHIVE_DURATION_JITTER
     return {
       champion,
       role: CHAMPION_ROLES[champion],
-      worlds,
+      planets,
       cleared,
       chimes: Math.max(
         1,

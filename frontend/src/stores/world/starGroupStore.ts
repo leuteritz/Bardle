@@ -136,7 +136,7 @@ function manifestOf(star: StarGroup): StarManifest {
   return {
     ...(star.champion && { champion: star.champion }),
     ...(star.role && { role: star.role }),
-    worlds: star.planetSlots.length,
+    planets: star.planetSlots.length,
     cleared: star.planetSlots.filter((p) => p.cleared).length,
     chimes: star.chimes ?? 0,
     heldSec: Math.round(held / MS_PER_SECOND),

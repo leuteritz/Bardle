@@ -71,7 +71,7 @@ const label = computed(() => {
   const m = props.manifest
   if (!m) return base
   const who = m.champion ? `, ${m.champion} ${lost.value ? 'never reached' : 'unlocked'}` : ''
-  return `${base}${who}, ${m.cleared} of ${m.worlds} worlds cleared`
+  return `${base}${who}, ${m.cleared} of ${m.planets} planets cleared`
 })
 </script>
 

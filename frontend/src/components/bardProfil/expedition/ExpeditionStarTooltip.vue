@@ -82,9 +82,9 @@ const spent = computed(() => {
 
     <div class="tip-read tip-read--lg">
       <span class="tip-read-cell">
-        <span class="tip-read-k">Worlds</span>
+        <span class="tip-read-k">Planets</span>
         <span class="tip-read-v">
-          {{ manifest.cleared }}<span class="tip-read-sep">/</span>{{ manifest.worlds }}
+          {{ manifest.cleared }}<span class="tip-read-sep">/</span>{{ manifest.planets }}
         </span>
       </span>
       <span class="tip-read-cell">

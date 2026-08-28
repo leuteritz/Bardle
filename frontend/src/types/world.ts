@@ -575,8 +575,9 @@ export interface StarManifest {
   champion?: string
   /** Die Rolle, für die er geflogen wurde. */
   role?: ChampionRole
-  /** Planetenslots des Sterns … */
-  worlds: number
+  /** Planetenslots des Sterns — das Spiel nennt sie durchweg PLANETEN
+   *  (`planetSlots`, `totalPlanetsCleared`), nicht Welten … */
+  planets: number
   /** … und davon geräumt, als er abging. */
   cleared: number
   /** Chimes, die seine Bosse zusammen zahlten — nach Fortune, wie gebucht. */

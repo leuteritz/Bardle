@@ -17,6 +17,21 @@ import {
   backfillManifestRng,
   buildBackfillManifests,
 } from '@/utils/game/galaxyArchiveBackfill'
+import type { StarManifest } from '@/types'
+
+/**
+ * Ein Sternmanifest aus dem Spielstand, auf den heutigen Feldnamen gebracht.
+ *
+ * `planets` hiess kurzzeitig `worlds` — ein Wort, das sonst nirgends im Spiel
+ * vorkommt (überall `planetSlots`, `totalPlanetsCleared`). Ohne diese Zeile
+ * läse ein älterer Save das Feld als `undefined`, und der Tooltip zeigte eine
+ * leere Zahl. Darf weg, sobald kein Spielstand von davor mehr im Umlauf ist.
+ */
+function migrateManifest(m: StarManifest & { worlds?: number }): StarManifest {
+  if (typeof m.planets === 'number') return m
+  const { worlds, ...rest } = m
+  return { ...rest, planets: worlds ?? 0 }
+}
 import { useLandfallStore } from '@/stores/world/landfallStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useCpsStore } from '@/stores/core/cpsStore'
@@ -894,7 +909,9 @@ export function usePersistence() {
         // Ein Spielstand von vor den Landfalls hat keine — und das ist wahr,
         // nicht gelogen: es gab dort keine. Nichts wird nachgetragen.
         galaxyStore.landfallResults = Array.isArray(gx.landfallResults) ? gx.landfallResults : []
-        galaxyStore.starManifests = Array.isArray(gx.starManifests) ? gx.starManifests : []
+        galaxyStore.starManifests = Array.isArray(gx.starManifests)
+          ? gx.starManifests.map(migrateManifest)
+          : []
         // Der offene Ort wird bewusst NICHT gespeichert (dieselbe Regel wie bei
         // Void-Wesen unterwegs). Beim Laden steht die Etappe damit wieder offen;
         // der Etappen-Tick entscheidet neu, ob seine Stelle schon passiert ist.
@@ -922,14 +939,15 @@ export function usePersistence() {
         galaxyStore.completedGalaxies = (
           Array.isArray(gx.completedGalaxies) ? gx.completedGalaxies : []
         ).map((r: CompletedGalaxyRecord) => {
-          const have = r.starManifests?.length ?? 0
-          if (have >= r.attemptResults.length) return r
+          const kept = r.starManifests?.map(migrateManifest)
+          const have = kept?.length ?? 0
+          if (have >= r.attemptResults.length) return { ...r, ...(kept && { starManifests: kept }) }
           const filled = buildBackfillManifests(
             r.galaxy,
             r.attemptResults,
             backfillManifestRng(r.galaxy),
           )
-          return { ...r, starManifests: [...(r.starManifests ?? []), ...filled.slice(have)] }
+          return { ...r, starManifests: [...(kept ?? []), ...filled.slice(have)] }
         })
         galaxyStore.unlockedTier = gx.unlockedTier ?? galaxyStore.currentTier
         galaxyStore.galaxyBossDefeated = gx.galaxyBossDefeated ?? false
