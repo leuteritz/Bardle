@@ -104,7 +104,7 @@ export const UNIVERSE_DISC_RAIL_PX = 34
 /** Wappen im Kopfband — dieselbe Scheibe, nur gross. */
 export const UNIVERSE_DISC_CREST_PX = 46
 export const UNIVERSE_DISC_MAX_DPR = 2
-export const UNIVERSE_DISC_CACHE_MAX = 24
+export const UNIVERSE_DISC_CACHE_MAX = 48
 /** Galaxien im Feld. Bei 34 px ist darueber kein Fleck mehr zu trennen. */
 export const UNIVERSE_DISC_GALAXIES = 18
 /** Boegen des Walls. Die grosse Platte nimmt 190 (`FIRMAMENT_RIM_ARCS`); hier
@@ -137,3 +137,31 @@ export const UNIVERSE_RAIL_HEAD_H = 38
 export const UNIVERSE_RAIL_CARRY_H = 140
 export const UNIVERSE_RAIL_LIST_PAD = 12
 export const UNIVERSE_RAIL_ROW_GAP = 4
+
+// ── Drehung der Scheibe ─────────────────────────────────────────────────────
+/* Feld und Wall drehen GLEICHSINNIG, der Wall mit halbem Tempo. Das Verhaeltnis
+   ist die ganze Wirkung: gleich schnell liest sich die Scheibe als Rad, das sich
+   dreht — verschieden schnell als Raum mit Tiefe.
+
+   Gedreht wird das FERTIGE Sprite per CSS `rotate()` am Compositor, nicht neu
+   gemalt: `paintCount` bleibt bei null, es gibt keine Frame-Schleife. Der
+   ❌-Eintrag gegen die driftende Drehung gilt der KARTE und ihrem Neuzeichnen. */
+
+/** Ein Umlauf des Galaxienfeldes.
+ *
+ *  NICHT die Rate des Entwurfs (0,012 rad/s, also 524 s): der dreht eine Karte
+ *  mit Radius 286, hier eine Scheibe mit Radius 17 — dieselbe Winkelrate ergaebe
+ *  am Rand 0,17 px/s.
+ *
+ *  Und NICHT die 210 s, die einmal hier standen. Sie kamen aus einer geschaetzten
+ *  Wahrnehmungsschwelle von 0,5 px/s; die war zu niedrig, und der Nutzer meldete
+ *  die Scheibe als stillstehend. GEMESSEN gilt: 0,5 px/s sieht niemand, 1,8 px/s
+ *  schon — 60 s ergeben 18° in drei Sekunden Hinsehen. Wer die Dauer wieder
+ *  hochzieht, macht denselben Fehler; `firmamentLayout.spec.ts` haelt dagegen. */
+export const UNIVERSE_DISC_SPIN_SEC = 60
+/** Der Wall braucht das Doppelte. Aus dem Entwurf uebernommen (`drift * 0.5`).
+ *
+ *  Das Verhaeltnis erzeugt PARALLAXE zwischen zwei bewegten Ebenen. Steht das
+ *  Feld still (unbetretene Scheibe), gibt es keine zu wahren — dann traegt der
+ *  Wall die volle Rate, sonst waere die einzige sichtbare Bewegung halbiert. */
+export const UNIVERSE_DISC_RIM_SPIN_RATIO = 2

@@ -17,6 +17,9 @@ import {
   UNIVERSE_RAIL_LIST_PAD,
   UNIVERSE_RAIL_ROW_GAP,
   UNIVERSE_RAIL_ROW_H,
+  UNIVERSE_DISC_RAIL_PX,
+  UNIVERSE_DISC_RIM_SPIN_RATIO,
+  UNIVERSE_DISC_SPIN_SEC,
 } from '@/config/constants'
 import { universes } from '@/config/progression/universes'
 import { firmamentFitBox, firmamentPointAt } from '@/utils/ui/firmamentLayout'
@@ -130,6 +133,30 @@ describe('Firmament — das Zonenbudget', () => {
     const list = rows * UNIVERSE_RAIL_ROW_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP
     const needed = UNIVERSE_RAIL_HEAD_H + list + UNIVERSE_RAIL_LIST_PAD + UNIVERSE_RAIL_CARRY_H
     expect(needed).toBeLessThanOrEqual(zones(1920, 1080).stageH)
+  })
+
+  it('dreht Feld und Wall verschieden schnell', () => {
+    // Das VERHAELTNIS ist die Entwurfsentscheidung, nicht die absolute Rate:
+    // gleich schnell liest sich die Scheibe als Rad, verschieden schnell als
+    // Raum mit Tiefe. Wer beide gleichzieht, nimmt ihr genau das.
+    expect(UNIVERSE_DISC_RIM_SPIN_RATIO).toBeGreaterThan(1)
+  })
+
+  it('dreht schnell genug, dass man es sieht', () => {
+    // Hier stand einmal `> 90` unter der Ueberschrift „langsamer als alles
+    // andere im Spiel". Das war die falsche Groesse: 210 s ergaben 0,51 px/s am
+    // Scheibenrand, und der Nutzer meldete die Scheibe als stillstehend. Gebunden
+    // wird deshalb die RANDGESCHWINDIGKEIT, nicht die Dauer — sie ist das, was
+    // ein Auge sieht, und sie haengt an beidem: Dauer UND Scheibengroesse.
+    const edge = (2 * Math.PI * (UNIVERSE_DISC_RAIL_PX / 2)) / UNIVERSE_DISC_SPIN_SEC
+    expect(edge).toBeGreaterThan(1)
+    expect(edge).toBeLessThan(4)
+  })
+
+  it('laesst den Wall hinter dem Feld zurueck', () => {
+    expect(UNIVERSE_DISC_SPIN_SEC * UNIVERSE_DISC_RIM_SPIN_RATIO).toBeGreaterThan(
+      UNIVERSE_DISC_SPIN_SEC,
+    )
   })
 })
 

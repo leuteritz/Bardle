@@ -175,6 +175,42 @@ describe('Universumsscheibe — die Ebenen', () => {
   })
 })
 
+describe('Universumsscheibe — die zwei Ebenen', () => {
+  /* Die Trennung ist der ganze Grund, warum es zwei Canvas gibt: Feld und Wall
+     drehen sich verschieden schnell, und eine Textur hat nur eine Drehung.
+     Rutscht eine Ebene in die falsche Haelfte, dreht sie mit dem falschen Tempo
+     — und das faellt am Bild nicht auf, weil beide sehr langsam sind. */
+
+  it('das Feld malt keinen Wallbogen', () => {
+    const { ctx, ops } = recordingCtx()
+    paintVoid(ctx, R, R, R)
+    paintDustVeil(ctx, R, R, R, '#9b5cd6')
+    paintGalaxyField(ctx, R, R, R, '#9b5cd6', 3)
+    paintCore(ctx, R, R, R, 'current')
+    // Der Wall setzt als einziger Striche.
+    expect(ops.filter((o) => o.startsWith('stroke('))).toHaveLength(0)
+  })
+
+  it('der Wall malt keine Galaxie und keinen Kern', () => {
+    const { ctx, ops } = recordingCtx()
+    paintWebRim(ctx, R, R, R, 'current')
+    // Galaxien sind das einzige, was als Ellipse gesetzt wird.
+    expect(ops.filter((o) => o.startsWith('ellipse('))).toHaveLength(0)
+    // Und der Kern ist der einzige, der die Hier-Farbe traegt.
+    const n = parseInt(FIRMAMENT_HERE_COLOR.slice(1), 16)
+    expect(ops.join('|')).not.toContain(`${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`)
+  })
+
+  it('der Wall füllt die Scheibe nicht deckend — sonst verdeckt er das Feld', () => {
+    // Er liegt OBEN. Jede seiner Flaechen muss durchscheinen.
+    const { ctx, ops } = recordingCtx()
+    paintWebRim(ctx, R, R, R, 'walked')
+    for (const op of ops.filter((o) => o.startsWith('addColorStop('))) {
+      expect(op).toMatch(/rgba\(/)
+    }
+  })
+})
+
 describe('Universumsscheibe — Determinismus und Schlüssel', () => {
   it('dieselbe ID malt dasselbe Feld', () => {
     const a = recordingCtx()
@@ -201,12 +237,13 @@ describe('Universumsscheibe — Determinismus und Schlüssel', () => {
     expect(shuffled).toEqual([straight[3], straight[1], straight[0], straight[2]])
   })
 
-  it('der Schlüssel trennt Universum, Zustand, Größe und dpr', () => {
-    const base = universeDiscKey(3, 'current', 34, 2)
-    expect(universeDiscKey(4, 'current', 34, 2)).not.toBe(base)
-    expect(universeDiscKey(3, 'walked', 34, 2)).not.toBe(base)
-    expect(universeDiscKey(3, 'current', 46, 2)).not.toBe(base)
-    expect(universeDiscKey(3, 'current', 34, 1)).not.toBe(base)
-    expect(universeDiscKey(3, 'current', 34, 2)).toBe(base)
+  it('der Schlüssel trennt Universum, Zustand, Ebene, Größe und dpr', () => {
+    const base = universeDiscKey(3, 'current', 'field', 34, 2)
+    expect(universeDiscKey(4, 'current', 'field', 34, 2)).not.toBe(base)
+    expect(universeDiscKey(3, 'walked', 'field', 34, 2)).not.toBe(base)
+    expect(universeDiscKey(3, 'current', 'rim', 34, 2)).not.toBe(base)
+    expect(universeDiscKey(3, 'current', 'field', 46, 2)).not.toBe(base)
+    expect(universeDiscKey(3, 'current', 'field', 34, 1)).not.toBe(base)
+    expect(universeDiscKey(3, 'current', 'field', 34, 2)).toBe(base)
   })
 })

@@ -44,6 +44,20 @@ import { getUniverse } from '@/config/progression/universes'
 /** Hier stehe ich · hier war ich · hier war ich nie. */
 export type UniverseDiscState = 'current' | 'walked' | 'unlit'
 
+/**
+ * Die zwei Ebenen der Scheibe — und der Grund, warum es zwei sind.
+ *
+ * Sie drehen sich GLEICHSINNIG, aber der Wall mit halbem Tempo. Als EIN Sprite
+ * ginge das nicht: eine Textur hat eine Drehung. Der Schnitt liegt deshalb da,
+ * wo der Entwurf ihn zieht — `a + drift` fuer die Koerper, `rotate(drift * 0.5)`
+ * fuer den Wall.
+ *
+ * Was rotationssymmetrisch ist (Grund, Staubschleier, Kern), faehrt beim Feld
+ * mit; man sieht es nicht, und eine dritte Ebene dafuer waere eine Ebene mehr
+ * je Scheibe fuer nichts.
+ */
+export type UniverseDiscLayer = 'field' | 'rim'
+
 const TAU = Math.PI * 2
 
 /* ── Determinismus ────────────────────────────────────────────────────────────
@@ -238,34 +252,39 @@ export function paintWebRim(
 }
 
 /* ── Cache ────────────────────────────────────────────────────────────────────
-   Zehn Universen mal drei Zustaende mal zwei Groessen sind sechzig moegliche
-   Schluessel; gleichzeitig im Bild stehen elf — zehn Zeilen und das Wappen. LRU wie beim Landfall-Sprite.  */
+   Zehn Universen mal drei Zustaende mal zwei Groessen mal zwei EBENEN sind
+   hundertzwanzig moegliche Schluessel; gleichzeitig im Bild stehen zweiund-
+   zwanzig — zehn Zeilen und das Wappen, je zweimal. LRU wie beim
+   Landfall-Sprite.                                                            */
 
 const cache = new Map<string, HTMLCanvasElement>()
 
 export function universeDiscKey(
   id: number,
   state: UniverseDiscState,
+  layer: UniverseDiscLayer,
   px: number,
   dpr: number,
 ): string {
-  return `${id}|${state}|${px}|${dpr}`
+  return `${id}|${state}|${layer}|${px}|${dpr}`
 }
 
 /**
- * Die Scheibe eines Universums in der Kantenlaenge, in der sie steht.
+ * EINE Ebene der Scheibe, in der Kantenlaenge, in der sie steht.
  *
- * Die Mitte des Canvas ist die Mitte der Scheibe; der Aufrufer zeichnet es
- * unveraendert, es gibt nichts zu drehen und nichts zu skalieren.
+ * Die Mitte des Canvas ist die Mitte der Scheibe — und damit zugleich der
+ * Drehpunkt, den das CSS als `transform-origin: 50% 50%` annimmt. Der Aufrufer
+ * zeichnet unveraendert und skaliert nicht.
  */
 export function buildUniverseDisc(
   id: number,
   state: UniverseDiscState,
+  layer: UniverseDiscLayer,
   px: number,
   dpr: number,
 ): HTMLCanvasElement | null {
   const d = Math.max(1, Math.min(dpr, UNIVERSE_DISC_MAX_DPR))
-  const key = universeDiscKey(id, state, px, d)
+  const key = universeDiscKey(id, state, layer, px, d)
   const hit = cache.get(key)
   if (hit) {
     cache.delete(key)
@@ -288,13 +307,18 @@ export function buildUniverseDisc(
   ctx.beginPath()
   ctx.arc(c, c, r, 0, TAU)
   ctx.clip()
-  paintVoid(ctx, c, c, r)
-  if (state !== 'unlit') {
-    paintDustVeil(ctx, c, c, r, tint)
-    paintGalaxyField(ctx, c, c, r, tint, id)
-    paintCore(ctx, c, c, r, state)
+  if (layer === 'field') {
+    // Der Grund ist DECKEND und muss unten liegen.
+    paintVoid(ctx, c, c, r)
+    if (state !== 'unlit') {
+      paintDustVeil(ctx, c, c, r, tint)
+      paintGalaxyField(ctx, c, c, r, tint, id)
+      paintCore(ctx, c, c, r, state)
+    }
+  } else {
+    // Glutverlauf und Boegen sind durchscheinend und komponieren ueber dem Feld.
+    paintWebRim(ctx, c, c, r, state)
   }
-  paintWebRim(ctx, c, c, r, state)
   ctx.restore()
 
   cache.set(key, cv)
