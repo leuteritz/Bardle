@@ -29,6 +29,8 @@ import {
   backfillThemeRng,
   buildBackfillLandfalls,
   backfillLandfallRng,
+  buildBackfillManifests,
+  backfillManifestRng,
 } from '@/utils/game/galaxyArchiveBackfill'
 import {
   CHAMPION_TRAVEL_BASE_MS,
@@ -803,13 +805,39 @@ export const useGalaxyStore = defineStore('galaxy', {
         themeIndex: this.currentThemeIndex,
         attemptResults: [...this.attemptResults],
         landfallResults: [...this.landfallResults],
-        starManifests: [...this.starManifests],
+        starManifests: this._manifestsForArchive(),
         durationSeconds: Math.max(0, inGameTime - this.galaxyStartedAtInGameTime),
         // Wanduhr: Chronikstempel, wird im Galaxy-Archiv als Datum gelesen und
         // nie gegen eine Frist geprüft.
         // eslint-disable-next-line no-restricted-syntax
         completedAt: Date.now(),
       })
+    },
+
+    /**
+     * Die Manifeste, wie sie ins Archiv gehen — der EINE Ort, an dem eine
+     * gebrochene Index-Gleichheit geheilt wird.
+     *
+     * In einem echt gespielten Lauf sind beide Arrays immer gleich lang, und
+     * das hier ist ein No-op. Zwei Admin-Knöpfe schreiben `attemptResults`
+     * aber von aussen voll (`forceCompleteGalaxy`, `startBossPhase` in
+     * `AdminQuickActionsPanel`), ohne die Manifeste mitzuziehen — der Rest
+     * kommt dann aus demselben Nachtrag, der auch übersprungene Galaxien füllt.
+     *
+     * Es wird nur ERGÄNZT, nie überschrieben: was wirklich geflogen wurde,
+     * bleibt stehen. Und es steht hier statt an den beiden Knöpfen, weil sonst
+     * der nächste Schreiber von `attemptResults` dieselbe Lücke wieder aufreisst.
+     */
+    _manifestsForArchive(): StarManifest[] {
+      const real = [...this.starManifests]
+      const missing = this.attemptResults.length - real.length
+      if (missing <= 0) return real
+      const filled = buildBackfillManifests(
+        this.currentGalaxy,
+        this.attemptResults,
+        backfillManifestRng(this.currentGalaxy),
+      )
+      return [...real, ...filled.slice(real.length)]
     },
 
     initBossWave() {

@@ -1911,6 +1911,21 @@
   color: rgba(255, 255, 255, 0.24);
 }
 
+/* Weniger Zellen, dafür grösser: sie teilen sich die Breite gleichmässig,
+   statt am linken Rand zu kleben. Für Karten, die nur noch Ablesungen tragen
+   — dort ist die Zahl der Inhalt, nicht ihre Beschriftung. */
+.tip-read--lg {
+  gap: 1.24em;
+}
+
+.tip-read--lg .tip-read-cell {
+  flex: 1;
+}
+
+.tip-read--lg .tip-read-v {
+  font-size: 1.7em;
+}
+
 /* Statisch: kein Schimmer, kein Puls — die Karte steht über dem laufenden
    Orbit. `scaleX` statt `width`, der Füllstand wandert jede Sekunde weiter. */
 .tip-bar {
@@ -1930,6 +1945,14 @@
   border-radius: 3px;
   background: linear-gradient(to right, #c89040, #f0d060);
   transition: transform 0.4s ease-out;
+}
+
+/* Füllstand in der Zugehörigkeitsfarbe statt Gold. Für einen Balken, der einen
+   ZUSTAND zeigt statt Fortschritt zu einem Ziel: ein voller Balken heisst dort
+   nicht „geschafft", sondern „abgelaufen", und Gold behauptete das Gegenteil.
+   Flach, kein Verlauf — die Farbe kommt schon aus `--tip-color`. */
+.tip-bar-fill--tinted {
+  background: var(--tip-color, var(--tip-accent));
 }
 
 /* ── Listenzeilen ─────────────────────────────────────────── */

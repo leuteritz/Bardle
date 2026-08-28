@@ -264,6 +264,21 @@ export const ADMIN_ARCHIVE_FAIL_RAMP_GALAXIES = 21
 /** 3 Sterne ≈ 10 min, 7 Sterne ≈ 25 min — die Zeitrechnung aus docs/balance.md. */
 export const ADMIN_ARCHIVE_SECONDS_PER_STAR = 210
 export const ADMIN_ARCHIVE_DURATION_JITTER = 0.25
+/**
+ * Chimes, die ein nachgetragener Stern je geräumter Welt gezahlt haben soll.
+ *
+ * Aus der echten Rechnung zurückgerechnet: ein Boss trägt drei Belohnungsfächer,
+ * das erste immer Chimes, die beiden anderen je zur Hälfte
+ * (`BOSS_REWARD_MATERIAL_CHANCE`), jedes 1…`BOSS_REWARD_CHIMES_MAX`+1 — also
+ * zwei Chime-Fächer à 3,5 im Mittel.
+ */
+export const ADMIN_ARCHIVE_CHIMES_PER_WORLD = 7
+/**
+ * Wachstum je Galaxietiefe. Gegen `galaxyDepth()` gerechnet, nie gegen
+ * `galaxy - 1`: die Providence- und Forge-Multiplikatoren, die im echten Spiel
+ * auf die Bossbelohnung gehen, wachsen mit dem Fortschritt, nicht mit der Nummer.
+ */
+export const ADMIN_ARCHIVE_CHIMES_PER_DEPTH = 0.55
 /** Rückdatierung: der jüngste Eintrag liegt so weit zurück, dann je Lauf ein Sprung. */
 export const ADMIN_ARCHIVE_RECENT_GAP_MS = 5 * 60_000
 export const ADMIN_ARCHIVE_GAP_MS = 12 * 60_000

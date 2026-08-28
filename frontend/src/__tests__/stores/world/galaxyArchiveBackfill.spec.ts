@@ -2,6 +2,11 @@ import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
 
 import { useGalaxyStore, computeRequired } from '@/stores/world/galaxyStore'
+import { CHAMPION_STAR_DURATION_MS, MS_PER_SECOND } from '@/config/constants'
+import {
+  getChampionStarLevel,
+  unlockedChampionTierCount,
+} from '@/config/champions/championTiers'
 import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import {
   buildBackfillRecord,
@@ -180,13 +185,51 @@ describe('galaxy archive backfill', () => {
     expect(backfillFailCount(30, 36, backfillRng(30))).toBeLessThanOrEqual(36)
   })
 
-  it('trägt KEIN Sternmanifest nach — das ist die Aussage, nicht die Lücke', () => {
-    // Ein erfundener Champion an einem Stern, den nie jemand geflogen ist, wäre
-    // keine fehlende Angabe, sondern eine falsche: der Spieler suchte ihn im
-    // Shop. Nachgetragene Galaxien fallen deshalb auf Kopf und Chips zurück.
+  it('trägt je Versuch ein Sternmanifest nach, index-gleich', () => {
     const record = buildBackfillRecord(7, computeRequired(7), 3, 1000)
-    expect(record.starManifests).toBeUndefined()
-    // Die Orte dagegen SIND nachgetragen — sie erfinden niemanden.
-    expect(record.landfallResults).toBeDefined()
+    // Die Index-Gleichheit ist der Vertrag des Manifests — auch im Nachtrag.
+    expect(record.starManifests).toHaveLength(record.attemptResults.length)
+    for (const m of record.starManifests!) {
+      expect(m.champion).toBeTruthy()
+      expect(m.role).toBeTruthy()
+      expect(m.worlds).toBeGreaterThanOrEqual(3)
+      expect(m.cleared).toBeGreaterThanOrEqual(1)
+      expect(m.cleared).toBeLessThanOrEqual(m.worlds)
+      expect(m.chimes).toBeGreaterThan(0)
+      expect(m.windowSec).toBe(CHAMPION_STAR_DURATION_MS / MS_PER_SECOND)
+    }
+  })
+
+  it('ein verlorener Stern hat die Uhr voll und nicht alle Welten geräumt', () => {
+    // Das ist keine gewürfelte Zahl, sondern die Definition: ein Stern geht
+    // verloren, WEIL sein Fenster abläuft. Eine gerettete Uhr, die auch voll
+    // liefe, wäre ein Widerspruch zum Balken, den die Karte daneben zeichnet.
+    const record = buildBackfillRecord(20, computeRequired(20), 3, 1000)
+    const pairs = record.attemptResults.map((r, i) => [r, record.starManifests![i]] as const)
+    const lost = pairs.filter(([r]) => r === 'failed')
+    expect(lost.length).toBeGreaterThan(0)
+    for (const [, m] of lost) {
+      expect(m.heldSec).toBe(m.windowSec)
+      expect(m.cleared).toBeLessThan(m.worlds)
+    }
+    for (const [, m] of pairs.filter(([r]) => r === 'rescued')) {
+      expect(m.heldSec).toBeLessThan(m.windowSec)
+      expect(m.cleared).toBe(m.worlds)
+    }
+  })
+
+  it('zieht innerhalb EINES Laufs keinen Champion doppelt', () => {
+    const record = buildBackfillRecord(30, computeRequired(30), 3, 1000)
+    const names = record.starManifests!.map((m) => m.champion)
+    expect(new Set(names).size).toBe(names.length)
+  })
+
+  it('nennt nur Champions, die die Galaxie damals hergegeben hätte', () => {
+    // Ein Tier-6-Name in Galaxie 1 fällt sofort als erfunden auf.
+    const record = buildBackfillRecord(1, computeRequired(1), 0, 1000)
+    const unlocked = unlockedChampionTierCount(1)
+    for (const m of record.starManifests!) {
+      expect(getChampionStarLevel(m.champion!)).toBeLessThanOrEqual(unlocked)
+    }
   })
 })

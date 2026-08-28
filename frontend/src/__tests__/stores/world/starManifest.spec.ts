@@ -196,6 +196,47 @@ describe('Sternmanifest: was der Stern sammelt', () => {
   })
 })
 
+describe('Sternmanifest: der Choke-Point beim Archivieren', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+
+  function completeGalaxy(galaxy: ReturnType<typeof useGalaxyStore>) {
+    galaxy.galaxyBossDefeated = true
+    galaxy.bossEscortsTotal = 0
+    galaxy.bossEscortsDefeated = 0
+    galaxy.maybeRecordCompletion()
+    return galaxy.completedGalaxies.find((r) => r.galaxy === galaxy.currentGalaxy)
+  }
+
+  it('füllt auf, wenn attemptResults von aussen voll geschrieben wurde', () => {
+    // Genau das tun `forceCompleteGalaxy` und `startBossPhase` im Admin-Panel:
+    // volle Versuchsreihe, keine Manifeste. Ohne die Heilung hätte der
+    // Archiveintrag weniger Manifeste als Marken, und jede Sternkarte ab dem
+    // ersten fehlenden Index trüge die Geschichte eines anderen Sterns.
+    const galaxy = useGalaxyStore()
+    galaxy.starsRequired = 4
+    galaxy.starsRescued = 4
+    galaxy.attemptResults = ['rescued', 'rescued', 'rescued', 'rescued']
+
+    const record = completeGalaxy(galaxy)
+    expect(record?.starManifests).toHaveLength(4)
+    expect(record?.starManifests?.every((m) => !!m.champion)).toBe(true)
+  })
+
+  it('ergänzt nur — was wirklich geflogen wurde, bleibt stehen', () => {
+    const galaxy = useGalaxyStore()
+    galaxy.starsRequired = 3
+    galaxy.nextStarRole = 'mid'
+    galaxy.onChampionStarRescued(manifest({ champion: 'Bard', chimes: 99 }))
+    // Danach von aussen aufgefüllt, wie es der Admin-Knopf täte.
+    galaxy.starsRescued = 3
+    galaxy.attemptResults = ['rescued', 'rescued', 'rescued']
+
+    const record = completeGalaxy(galaxy)
+    expect(record?.starManifests).toHaveLength(3)
+    expect(record?.starManifests?.[0]).toMatchObject({ champion: 'Bard', chimes: 99 })
+  })
+})
+
 describe('Sternmanifest: Altbestand', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -218,7 +259,7 @@ describe('Sternmanifest: Altbestand', () => {
     expect(reloaded.starManifests[0].role).toBe('adc')
   })
 
-  it('lädt einen Spielstand ohne Manifeste, statt daran zu scheitern', () => {
+  it('trägt einem Archiv ohne Manifeste beim Laden welche nach', () => {
     const galaxy = useGalaxyStore()
     galaxy.starsRequired = 2
     galaxy.nextStarRole = 'support'
@@ -247,8 +288,11 @@ describe('Sternmanifest: Altbestand', () => {
     expect(reloaded.starManifests).toEqual([])
     const record = reloaded.completedGalaxies.find((r) => r.galaxy === 1)
     expect(record).toBeDefined()
-    expect(record?.starManifests).toBeUndefined()
-    // Der Ausgang bleibt lesbar — die Karte fällt auf Kopf und Chips zurück.
     expect(record?.attemptResults).toEqual(['rescued', 'failed'])
+    // Nachgetragen statt stumm: sonst blätterte der Spieler durch Galaxien,
+    // deren Sternkarten schweigen, während die daneben sprechen.
+    expect(record?.starManifests).toHaveLength(2)
+    expect(record?.starManifests?.[0].champion).toBeTruthy()
+    expect(record?.starManifests?.[1].heldSec).toBe(record?.starManifests?.[1].windowSec)
   })
 })

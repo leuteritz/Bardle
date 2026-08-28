@@ -12,6 +12,11 @@ import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useItemStore } from '@/stores/economy/itemStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
+import {
+  backfillManifestRng,
+  buildBackfillManifests,
+} from '@/utils/game/galaxyArchiveBackfill'
 import { useLandfallStore } from '@/stores/world/landfallStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useCpsStore } from '@/stores/core/cpsStore'
@@ -910,9 +915,22 @@ export function usePersistence() {
         // Ältere Saves kennen die Galaxie-Historie nicht → Zeitmessung der
         // laufenden Galaxie startet ab jetzt, Archiv beginnt leer.
         galaxyStore.galaxyStartedAtInGameTime = gx.galaxyStartedAtInGameTime ?? gameStore.inGameTime
-        galaxyStore.completedGalaxies = Array.isArray(gx.completedGalaxies)
-          ? gx.completedGalaxies
-          : []
+        // Archive von vor dem Sternmanifest bekommen es nachgetragen — sonst
+        // blättert der Spieler durch Galaxien, deren Sternkarten stumm sind,
+        // während die daneben sprechen. Dieselbe Rechnung wie beim Admin-Sprung
+        // und beim Archivieren, nicht eine dritte daneben.
+        galaxyStore.completedGalaxies = (
+          Array.isArray(gx.completedGalaxies) ? gx.completedGalaxies : []
+        ).map((r: CompletedGalaxyRecord) => {
+          const have = r.starManifests?.length ?? 0
+          if (have >= r.attemptResults.length) return r
+          const filled = buildBackfillManifests(
+            r.galaxy,
+            r.attemptResults,
+            backfillManifestRng(r.galaxy),
+          )
+          return { ...r, starManifests: [...(r.starManifests ?? []), ...filled.slice(have)] }
+        })
         galaxyStore.unlockedTier = gx.unlockedTier ?? galaxyStore.currentTier
         galaxyStore.galaxyBossDefeated = gx.galaxyBossDefeated ?? false
         // Boss-Eskorten-Wellen: alte Saves ohne die Felder → 0/0, damit ist
