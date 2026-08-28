@@ -14,6 +14,7 @@
  */
 import { computed, ref, watch, onUnmounted } from 'vue'
 import { useUiStore } from '@/stores/core/uiStore'
+import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import ChampionShopComponent from './ChampionShopComponent.vue'
 
 const uiStore = useUiStore()
@@ -78,6 +79,12 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
        `.tab-layer` ist `position: absolute` ohne Flex. Ohne sie fiele das Grid
        auf Inhaltsgröße zusammen. -->
   <div class="shop-tab">
+    <!-- Der geteilte Sternenhimmel der Profil-Reiter. Er hängt HIER und nicht
+         im Atlas: `.cs-atlas` trägt `zoom`, das die festen Sternkacheln
+         mitskalieren und dem Shop als einzigem Reiter eine andere Sterndichte
+         geben würde. -->
+    <CosmicStageBackground />
+
     <ChampionShopComponent
       :close-detail-token="closeDetailToken"
       :visit-token="visitToken"
@@ -93,5 +100,18 @@ onUnmounted(() => window.removeEventListener('keydown', onEsc))
   display: flex;
   min-height: 0;
   background: #111008;
+}
+
+/* Depth-Wash über dem Sternfeld, damit die Karten das Hellste im Reiter
+   bleiben. Flache Radialtöne wie `.ps-tab::after`, kein Blur, einmal Paint. */
+.shop-tab::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(100% 70% at 42% 6%, rgba(92, 51, 16, 0.2) 0%, transparent 60%),
+    radial-gradient(80% 70% at 100% 100%, rgba(46, 34, 96, 0.2) 0%, transparent 64%);
 }
 </style>

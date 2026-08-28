@@ -229,7 +229,7 @@ const activeTotal = computed(
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: #12100a;
+  background: rgba(18, 16, 10, var(--cs-veil, 1));
   border-right: 2px solid #5c3310;
 }
 .cs-facets-grip {
@@ -239,7 +239,7 @@ const activeTotal = computed(
   flex-shrink: 0;
   height: 36px;
   padding: 0 11px;
-  background: #1e1006;
+  background: rgba(30, 16, 6, var(--cs-veil, 1));
   border: none;
   border-bottom: 2px solid #5c3310;
   color: #c89040;
@@ -464,7 +464,7 @@ const activeTotal = computed(
   border-left-color: var(--chip-color, #c89040);
 }
 .cs-facet-row--active {
-  background: color-mix(in srgb, var(--chip-color, #e8c040) 26%, #12100a);
+  background: color-mix(in srgb, var(--chip-color, #e8c040) 26%, rgba(18, 16, 10, var(--cs-veil, 1)));
   border-color: color-mix(in srgb, var(--chip-color, #e8c040) 50%, transparent);
   border-left-color: var(--chip-color, #e8c040);
   color: #fff4dc;

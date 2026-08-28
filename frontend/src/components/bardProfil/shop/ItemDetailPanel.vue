@@ -200,7 +200,8 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: #14100a;
+  /* No veil here: .cs-atlas-detail carries it — a second one would close it. */
+  background: transparent;
 }
 
 /* ── Back + prev / next navigation ── */
@@ -210,7 +211,7 @@ export default defineComponent({
   justify-content: space-between;
   gap: 8px;
   padding: 9px 12px;
-  background: #1e1006;
+  background: rgba(30, 16, 6, var(--cs-veil, 1));
   border-bottom: 3px solid #5c3310;
   flex-shrink: 0;
 }
@@ -301,7 +302,7 @@ export default defineComponent({
       color-mix(in srgb, var(--rar-c, #7a4e20) 20%, transparent),
       transparent 72%
     ),
-    #111008;
+    rgba(17, 16, 8, var(--cs-veil, 1));
 }
 .hero-stage {
   flex: 1 1 auto;
@@ -419,7 +420,7 @@ export default defineComponent({
   gap: 12px;
   padding: 11px 13px 11px 15px;
   border-radius: 4px;
-  background: #1a170f;
+  background: rgba(26, 23, 15, var(--cs-block, 1));
   border: 1px solid #2a2318;
   border-left: 3px solid var(--ac, #7a4e20);
 }
@@ -536,7 +537,7 @@ export default defineComponent({
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #1c1c18;
+  background: rgba(28, 28, 24, var(--cs-block, 1));
   border: 1px solid color-mix(in srgb, var(--cost-c, #e8c040) 40%, transparent);
   border-radius: 4px;
   padding: 8px 11px;
@@ -607,7 +608,7 @@ export default defineComponent({
 .cs-detail-footer {
   padding: 12px 18px 14px;
   border-top: 2px solid #3e200a;
-  background: #16120a;
+  background: rgba(22, 18, 10, var(--cs-veil, 1));
   flex-shrink: 0;
 }
 /* a full-column button reads as a banner, not as a press */

@@ -2210,9 +2210,14 @@ const shopChampionNames = computed(() =>
   display: grid;
   grid-template-columns: v-bind(atlasColumns);
   grid-template-rows: auto minmax(0, 1fr);
-  background: #111008;
+  /* No surface of its own: the tab's shared starfield lies behind the atlas. */
+  background: transparent;
   --text-transition-dur: 0.22s;
   --cs-card-h: v-bind(cardHeightPx);
+  /* Deckung über dem Sternfeld: --cs-veil trägt die Zonenflächen,
+     --cs-block die Karten darauf. Höher = ruhiger, niedriger = mehr Himmel. */
+  --cs-veil: 0.55;
+  --cs-block: 0.76;
 }
 
 /* ── Command bar ──
@@ -2229,7 +2234,7 @@ const shopChampionNames = computed(() =>
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: #1e1006;
+  background: rgba(30, 16, 6, var(--cs-veil));
   border-bottom: 3px solid #5c3310;
 }
 
@@ -2328,6 +2333,9 @@ const shopChampionNames = computed(() =>
   grid-row: 2;
   min-height: 0;
 }
+/* The starfield IS the grid's surface — the one zone that opens onto it, the
+   way the stage does in the planets tab. `.cs-grid-bar` stays opaque: cards
+   scroll under it. */
 .cs-atlas-grid {
   grid-row: 2;
   position: relative;
@@ -2335,7 +2343,7 @@ const shopChampionNames = computed(() =>
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
-  background: #111008;
+  background: transparent;
 }
 .cs-atlas-detail {
   grid-row: 2;
@@ -2345,7 +2353,7 @@ const shopChampionNames = computed(() =>
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: #14100a;
+  background: rgba(20, 16, 10, var(--cs-veil));
   border-left: 2px solid #5c3310;
 }
 /* The column swaps subjects, it does not slide in and out — only its content

@@ -160,7 +160,7 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
 .cs-ov-progress {
   flex-shrink: 0;
   padding: 10px 11px;
-  background: #1a1008;
+  background: rgba(26, 16, 8, var(--cs-block, 1));
   border: 1px solid #3e200a;
   border-radius: 4px;
 }
@@ -236,7 +236,7 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
   gap: 8px;
   flex-wrap: wrap;
   padding: 8px 10px;
-  background: #16140e;
+  background: rgba(22, 20, 14, var(--cs-block, 1));
   border: 1px solid #3e200a;
   border-radius: 4px;
 }
@@ -279,13 +279,13 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
   align-items: center;
   gap: 9px;
   padding: 7px 9px;
-  background: #16140e;
+  background: rgba(22, 20, 14, var(--cs-block, 1));
   border: 1px solid #3e200a;
   border-radius: 4px;
 }
 .cs-ov-set--active {
   border-color: #52b830;
-  background: #12180e;
+  background: rgba(18, 24, 14, var(--cs-block, 1));
 }
 .cs-ov-set-icon {
   flex-shrink: 0;
@@ -334,7 +334,7 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
   gap: 9px;
   width: 100%;
   padding: 6px 9px 6px 6px;
-  background: #1a1810;
+  background: rgba(26, 24, 16, var(--cs-block, 1));
   border: 1px solid #3e200a;
   border-left: 3px solid var(--pick-c, #c89040);
   border-radius: 4px;
