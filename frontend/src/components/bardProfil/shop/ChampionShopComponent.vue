@@ -2221,7 +2221,11 @@ const shopChampionNames = computed(() =>
    heads the facet rail. */
 .cs-atlas-bar {
   grid-column: 1 / -1;
-  display: flex;
+  display: grid;
+  /* Paired outer tracks keep the field centred with or without the reset
+     button; their floor is that button's width. Past 760 the field only gets
+     longer, not more readable. */
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 760px) minmax(120px, 1fr);
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
@@ -2230,11 +2234,12 @@ const shopChampionNames = computed(() =>
 }
 
 .cs-atlas-search {
-  flex: 1;
+  grid-column: 2;
   min-width: 0;
-  /* Past this the field stops being more readable and only gets longer — on 4K
-     the bar would otherwise run the whole tab. */
-  max-width: 760px;
+}
+.cs-atlas-bar > .cs-bar-btn {
+  grid-column: 3;
+  justify-self: start;
 }
 /* How many cards the open half is holding, inside the field. Red at zero, which
    is the moment the other tab is worth a look. */
