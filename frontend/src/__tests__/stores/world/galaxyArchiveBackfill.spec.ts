@@ -179,4 +179,14 @@ describe('galaxy archive backfill', () => {
     expect(backfillFailCount(1, 3, backfillRng(1))).toBe(0)
     expect(backfillFailCount(30, 36, backfillRng(30))).toBeLessThanOrEqual(36)
   })
+
+  it('trägt KEIN Sternmanifest nach — das ist die Aussage, nicht die Lücke', () => {
+    // Ein erfundener Champion an einem Stern, den nie jemand geflogen ist, wäre
+    // keine fehlende Angabe, sondern eine falsche: der Spieler suchte ihn im
+    // Shop. Nachgetragene Galaxien fallen deshalb auf Kopf und Chips zurück.
+    const record = buildBackfillRecord(7, computeRequired(7), 3, 1000)
+    expect(record.starManifests).toBeUndefined()
+    // Die Orte dagegen SIND nachgetragen — sie erfinden niemanden.
+    expect(record.landfallResults).toBeDefined()
+  })
 })

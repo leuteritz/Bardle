@@ -656,6 +656,10 @@ export const usePlanetBossStore = defineStore('planetBoss', {
       gameStore.chimesForNextUniverse += Math.floor(totalChimes * BOSS_UNIVERSE_PROGRESS_FRACTION)
       gameStore.calculateLevel()
 
+      // Auf den Stern buchen, dem der Planet gehört — sein Manifest liest die
+      // Summe beim Abgang.
+      useStarGroupStore().creditStarChimes(boss.planetId, totalChimes)
+
       if (boss.homePlanetChampion) {
         const battleStore = useBattleStore()
         const config = CHAMPION_HOME_PLANETS.find((c) => c.championName === boss.homePlanetChampion)

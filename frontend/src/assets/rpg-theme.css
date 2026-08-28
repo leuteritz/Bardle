@@ -1870,6 +1870,47 @@
   line-height: 1;
 }
 
+/* Mehrere beschriftete Ablesungen nebeneinander.
+
+   `.tip-figures` darüber trägt EINE Ablesung als Satz — haben, Trenner,
+   brauchen, Anteil. Das hier trägt drei gleichberechtigte mit je eigener
+   Beschriftung, wie sie eine Chronikkarte braucht. Beides in eine Klasse zu
+   zwingen hätte die eine Ablesung um Spalten erweitert, die sie nicht hat. */
+.tip-read {
+  display: flex;
+  gap: 0.9em;
+}
+
+.tip-read-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12em;
+  min-width: 0;
+}
+
+.tip-read-k {
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(200, 144, 90, 0.7);
+}
+
+.tip-read-v {
+  display: flex;
+  align-items: center;
+  gap: 0.28em;
+  font-size: 1.12em;
+  font-weight: 800;
+  color: var(--tip-text);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.tip-read-sep {
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.24);
+}
+
 /* Statisch: kein Schimmer, kein Puls — die Karte steht über dem laufenden
    Orbit. `scaleX` statt `width`, der Füllstand wandert jede Sekunde weiter. */
 .tip-bar {

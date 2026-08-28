@@ -1,6 +1,6 @@
 // Welt: Planeten, Sterne, Boss-Events, Drifter, Planeten-Slots.
 
-import type { TimedBuffEffects } from './core'
+import type { ChampionRole, TimedBuffEffects } from './core'
 
 export type PlanetType =
   | 'rocky'
@@ -558,6 +558,35 @@ export interface LandfallBoonDef {
   line: string
   icon: string
   axis: LandfallBoonAxis
+}
+
+/**
+ * Was ein Stern hergab — mitgeschrieben, weil nichts davon abzuleiten ist.
+ *
+ * Lage, Name und Sprite-Variante eines Sterns kommen aus `mapSeed` plus Index;
+ * der Champion dagegen wird beim Boss-Spawn gegen den LEBENDEN Kader gezogen
+ * (`planetBossStore`), und die Bilanz seiner Planeten ist mit `activeStars`
+ * weg. Steht parallel zu `attemptResults`: gleiche Länge, gleicher Index,
+ * derselbe Stern.
+ */
+export interface StarManifest {
+  /** Champion des Heimatplaneten. Fehlt, wenn kein freigeschaltetes Tier mehr
+   *  einen ungeworbenen hergab — der Stern gilt trotzdem als befreit. */
+  champion?: string
+  /** Die Rolle, für die er geflogen wurde. */
+  role?: ChampionRole
+  /** Planetenslots des Sterns … */
+  worlds: number
+  /** … und davon geräumt, als er abging. */
+  cleared: number
+  /** Chimes, die seine Bosse zusammen zahlten — nach Fortune, wie gebucht. */
+  chimes: number
+  /** Spielzeit-Sekunden von Spawn bis Abgang … */
+  heldSec: number
+  /** … gegen das Fenster, das er hatte. MITGESCHRIEBEN statt aus
+   *  `CHAMPION_STAR_DURATION_MS` gelesen: die Konstante darf sich ändern, ein
+   *  Archiv nicht rückwirkend lügen. */
+  windowSec: number
 }
 
 /** Was ein Ort auf der Karte hinterlässt. Position und Art sind ABGELEITET,

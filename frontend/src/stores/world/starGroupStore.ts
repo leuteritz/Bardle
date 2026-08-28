@@ -1,7 +1,7 @@
 import { hexToRgb } from '@/utils/ui/format'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import { defineStore } from 'pinia'
-import type { PlanetType, StarType } from '@/types'
+import type { ChampionRole, PlanetType, StarManifest, StarType } from '@/types'
 import { pickConfig } from '@/utils/planetDraw'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
@@ -66,6 +66,7 @@ import {
   RESOURCE_STAR_COLORS,
   ROLE_COLORS,
   GALAXY_BOSS_ESCORT_ORBIT_SPREAD,
+  MS_PER_SECOND,
 } from '@/config/constants'
 
 let starIdCounter = 0
@@ -98,6 +99,21 @@ export interface StarGroup {
   durationMs?: number
   starColor: [number, number, number]
   /**
+   * Champion des Heimatplaneten und dessen Rolle — beim SPAWN gemerkt.
+   *
+   * Beides steht nur im `PlanetBossEvent`, und der ist beim Abgang des Sterns
+   * längst aus `activeBosses` entfernt. Die Sternfarbe zieht die Rolle ohnehin
+   * schon hier heraus; das Manifest nimmt dieselben zwei Werte mit.
+   */
+  champion?: string
+  role?: ChampionRole
+  /**
+   * Was seine Bosse bis jetzt gezahlt haben. OPTIONAL, weil nur der
+   * Champion-Stern sie je liest — gutgeschrieben wird sie trotzdem jedem, ein
+   * Filter davor sparte nichts.
+   */
+  chimes?: number
+  /**
    * Warum der Stern das Bild verlässt — steuert die Abgangs-Animation im
    * Idle-Orbit (`utils/fx/starVanishFx.ts`). `'rescued'` heisst: alle Planeten
    * wurden im Zeitlimit befreit. `'expired'` deckt Timer-Ablauf UND gescheiterte
@@ -105,6 +121,27 @@ export interface StarGroup {
    * macht aus dem Stern also keine Rettung mehr.
    */
   despawnReason?: 'rescued' | 'expired'
+}
+
+/**
+ * Das Manifest eines Sterns, wie er GERADE dasteht.
+ *
+ * Muss VOR dem Räumen gerufen werden: `clearChampionStar` setzt jeden offenen
+ * Slot auf `cleared`, damit der Vanish-Effekt zündet — danach meldete jeder
+ * verlorene Stern volle Ausbeute.
+ */
+function manifestOf(star: StarGroup): StarManifest {
+  const window = star.durationMs ?? 0
+  const held = star.spawnedAt === undefined ? 0 : Math.min(gameNow() - star.spawnedAt, window)
+  return {
+    ...(star.champion && { champion: star.champion }),
+    ...(star.role && { role: star.role }),
+    worlds: star.planetSlots.length,
+    cleared: star.planetSlots.filter((p) => p.cleared).length,
+    chimes: star.chimes ?? 0,
+    heldSec: Math.round(held / MS_PER_SECOND),
+    windowSec: Math.round(window / MS_PER_SECOND),
+  }
 }
 
 function pickResourceStarColor(): [number, number, number] {
@@ -375,6 +412,12 @@ export const useStarGroupStore = defineStore('starGroup', {
         spawnedAt: gameNow(),
         durationMs: CHAMPION_STAR_DURATION_MS,
         starColor: champStarColor,
+        ...(champName && { champion: champName }),
+        // Die Rolle des gefundenen Champions, nicht die gewählte: der zweite
+        // Griff in `spawnBoss` ignoriert die Rollenwahl, und die Sternfarbe
+        // darunter zeigt ebenfalls den Champion. Ohne ihn bleibt die Wahl.
+        role: role ?? galaxyStore.nextStarRole ?? undefined,
+        chimes: 0,
       }
 
       this.activeStars.push(star)
@@ -507,6 +550,23 @@ export const useStarGroupStore = defineStore('starGroup', {
     },
 
     /**
+     * Bucht die Chimes eines gefallenen Bosses auf seinen Stern.
+     *
+     * Gerufen aus `planetBossStore.grantBossRewards`, also SYNCHRON beim Kill —
+     * `onBossResult` kommt aus einem Watcher und damit erst nach dem Flush. Die
+     * Bilanz ist beim Abschluss des Sterns deshalb vollständig, auch die des
+     * letzten und grössten Bosses.
+     */
+    creditStarChimes(planetId: string, amount: number) {
+      if (amount <= 0) return
+      for (const star of this.activeStars) {
+        if (!star.planetSlots.some((p) => p.planetId === planetId)) continue
+        star.chimes = (star.chimes ?? 0) + amount
+        return
+      }
+    },
+
+    /**
      * @param success `false`, wenn der Boss dieses Planeten abgelaufen ist statt
      *   besiegt zu werden — der Stern gilt dann nicht mehr als gerettet.
      */
@@ -540,7 +600,7 @@ export const useStarGroupStore = defineStore('starGroup', {
           }, STAR_REMOVAL_DELAY_MS)
           if (star.starType === 'champion') {
             const galaxyStore = useGalaxyStore()
-            galaxyStore.onChampionStarRescued()
+            galaxyStore.onChampionStarRescued(manifestOf(star))
           }
           if (star.starType === 'boss_escort') {
             // Eskorten sind enrage-frei → hier zählt immer ein echter Sieg
@@ -624,6 +684,8 @@ export const useStarGroupStore = defineStore('starGroup', {
       const galaxyStore = useGalaxyStore()
       const toRemove = this.activeStars.filter((s) => s.starType === 'champion')
       if (toRemove.length === 0) return
+      // Vor der Schleife: ihr `gameTimeout`-Rumpf räumt jeden offenen Slot.
+      const manifest = manifestOf(toRemove[0])
 
       for (const star of toRemove) {
         if (this.activeFightStarId === star.id) this.closeStarFightModal()
@@ -644,7 +706,7 @@ export const useStarGroupStore = defineStore('starGroup', {
         }, STAR_DESPAWN_DELAY_MS)
       }
 
-      galaxyStore.onChampionStarExpired()
+      galaxyStore.onChampionStarExpired(manifest)
     },
 
     clearAll() {

@@ -93,6 +93,14 @@ export function buildBackfillLandfalls(
   }))
 }
 
+/**
+ * KEIN `starManifests` — und das ist die Aussage, nicht die Lücke.
+ *
+ * Der Nachtrag erfindet plausible Läufe. Ein erfundener Champion an einem Stern,
+ * den nie jemand geflogen ist, wäre keine fehlende Angabe, sondern eine falsche:
+ * der Spieler suchte ihn im Shop. Nachgetragene Galaxien fallen deshalb auf
+ * dieselbe Karte zurück wie jeder Altbestand — Kopf und Chips, kein Manifest.
+ */
 export function buildBackfillRecord(
   galaxy: number,
   starsRequired: number,

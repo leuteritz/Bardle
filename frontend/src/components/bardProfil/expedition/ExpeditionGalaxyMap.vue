@@ -194,7 +194,10 @@ const starNodes = computed(() => {
   return marks.map((mark) => {
     if (mark.outcome !== 'failed') freed += 1
     const dot = chart.value.dots[mark.index]
-    return { mark, freedSoFar: freed, x: dot.x, y: dot.y }
+    // Das Manifest darf fehlen — Altbestand und nachgetragene Galaxien
+    // tragen keines, und die Karte fällt dann auf Kopf und Chips zurück.
+    const manifest = props.record.starManifests?.[mark.index]
+    return { mark, freedSoFar: freed, manifest, x: dot.x, y: dot.y }
   })
 })
 
@@ -436,6 +439,7 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
         :mark="n.mark"
         :required="starsRequired"
         :freed-so-far="n.freedSoFar"
+        :manifest="n.manifest"
         :left="pct(n.x, n.y).left"
         :top="pct(n.x, n.y).top"
         :hit="starHit"

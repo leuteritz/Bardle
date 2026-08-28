@@ -301,6 +301,7 @@ export function usePersistence() {
         starsRequired: galaxyStore.starsRequired,
         attemptResults: [...galaxyStore.attemptResults],
         landfallResults: galaxyStore.landfallResults.map((l) => ({ ...l })),
+        starManifests: galaxyStore.starManifests.map((m) => ({ ...m })),
         // Der Cairn-Segen wird MIT der Galaxie gespeichert, nicht in einem
         // eigenen Block: er gilt für genau diese eine, und `boonGalaxy` ist die
         // Prüfgrösse beim Laden — es gibt keine Frist, gegen die man prüfen
@@ -314,6 +315,7 @@ export function usePersistence() {
           ...r,
           attemptResults: [...r.attemptResults],
           landfallResults: r.landfallResults?.map((l) => ({ ...l })),
+          starManifests: r.starManifests?.map((m) => ({ ...m })),
         })),
         unlockedTier: galaxyStore.unlockedTier,
         galaxyBossDefeated: galaxyStore.galaxyBossDefeated,
@@ -887,6 +889,7 @@ export function usePersistence() {
         // Ein Spielstand von vor den Landfalls hat keine — und das ist wahr,
         // nicht gelogen: es gab dort keine. Nichts wird nachgetragen.
         galaxyStore.landfallResults = Array.isArray(gx.landfallResults) ? gx.landfallResults : []
+        galaxyStore.starManifests = Array.isArray(gx.starManifests) ? gx.starManifests : []
         // Der offene Ort wird bewusst NICHT gespeichert (dieselbe Regel wie bei
         // Void-Wesen unterwegs). Beim Laden steht die Etappe damit wieder offen;
         // der Etappen-Tick entscheidet neu, ob seine Stelle schon passiert ist.

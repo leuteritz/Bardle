@@ -2,7 +2,7 @@
 // Regalia-Stufen, Tiers und Rekrutierungskosten, Skins und Bildgrößen sowie
 // die verbündeten Slots (Sworn Allies + Bank).
 
-import type { ChampionRegaliaStage, ChampionRole } from '@/types'
+import type { ChampionArtSize, ChampionRegaliaStage, ChampionRole } from '@/types'
 import { ROLES } from '@/config/constants/roles'
 
 // Champion travel timing
@@ -372,6 +372,16 @@ export const CHAMPION_ART_VARIANT_PX = { sm: 128, md: 256, lg: 512, full: 0 } as
 export const CHAMPION_ART_SM_MAX_EDGE = 34
 export const CHAMPION_ART_MD_MAX_EDGE = 110
 export const CHAMPION_ART_LG_MAX_EDGE = 220
+
+/**
+ * Portrait im Sternmanifest der Galaxiekarte.
+ *
+ * 2.6em gegen die Schrift von `.tip-effect` (1.24em auf `--tip-u`), gemessen
+ * also 39 px auf Full HD und 51,6 px ab 2K — die clamp-Obergrenze der
+ * Tooltip-Skala deckelt es dort, 4K wird nicht grösser. Damit liegt es im Band
+ * 35–110 und braucht die 256er-Stufe; die 128er wäre bei DPR 2 hochskaliert.
+ */
+export const STAR_MANIFEST_ART_SIZE: ChampionArtSize = 'md'
 
 // Champion badge tooltip — max visible entries before "+N more" overflow
 export const CHAMP_TOOLTIP_MAX_VISIBLE = 5

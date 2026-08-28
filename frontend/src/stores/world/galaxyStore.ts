@@ -6,7 +6,13 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import { unlockedChampionTierCount } from '@/config/champions/championTiers'
-import type { ChampionRole, ActiveLandfall, LandfallKindId, LandfallOutcome } from '@/types'
+import type {
+  ChampionRole,
+  ActiveLandfall,
+  LandfallKindId,
+  LandfallOutcome,
+  StarManifest,
+} from '@/types'
 import { clampPercent } from '@/utils/orbit/geometry'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import { galaxyDepth } from '@/utils/game/galaxyDepth'
@@ -75,6 +81,11 @@ export interface CompletedGalaxyRecord {
    *  OPTIONAL: Spielstände von vor den Landfalls laden ohne Migration und zeigen
    *  keine. Das ist wahr, nicht gelogen — es gab dort keine. */
   landfallResults?: LandfallOutcome[]
+  /** Was jeder Rettungsversuch hergab — Champion, Welten, Chimes, Uhr.
+   *  OPTIONAL, und zwar dauerhaft: Spielstände von vor dem Manifest laden ohne
+   *  Migration, und der Archiv-Nachtrag lässt es bewusst leer. Beides ist wahr,
+   *  nicht gelogen — dort hat nie jemand geflogen. */
+  starManifests?: StarManifest[]
   /** In-game seconds spent from entering the galaxy until the core was freed. */
   durationSeconds: number
   /** Wall-clock timestamp of the completion. */
@@ -227,6 +238,8 @@ export const useGalaxyStore = defineStore('galaxy', {
      *  zu `attemptResults`. Lage und Art sind ABGELEITET (`utils/game/landfalls.ts`),
      *  gespeichert wird nur, was daraus wurde. */
     landfallResults: [] as LandfallOutcome[],
+    /** Parallel zu `attemptResults` — gleiche Länge, gleicher Index. */
+    starManifests: [] as StarManifest[],
     /** Der eine Ort, der GERADE offen steht. Nicht persistiert — dieselbe Regel
      *  wie bei Void-Wesen unterwegs: er käme mit halb abgelaufenem Fenster
      *  zurück, und die Zeit hat der Spieler nicht gehabt. */
@@ -726,11 +739,14 @@ export const useGalaxyStore = defineStore('galaxy', {
       }
     },
 
-    onChampionStarRescued() {
+    onChampionStarRescued(manifest: StarManifest) {
       if (this.starsRescued >= this.starsRequired) return
       this.starsRescued++
       this.totalStarsRescued++
       this.attemptResults.push('rescued')
+      // Immer im selben Atemzug wie `attemptResults` — die Index-Gleichheit ist
+      // der ganze Vertrag des Manifests.
+      this.starManifests.push(manifest)
       if (this.starsRescued >= this.starsRequired && !this.galaxyBossDefeated) {
         // Last star saved → fly to the boss star waiting at the galaxy core,
         // with the same travel flow as a champion star (route, comet, zoom).
@@ -741,7 +757,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       }
     },
 
-    onChampionStarExpired() {
+    onChampionStarExpired(manifest: StarManifest) {
       // Failed rescue: the chosen role stays locked in — no new role selection.
       // A fresh star with the same role appears and the ship departs for it;
       // the lost star stays on the minimap as a failed marker.
@@ -750,6 +766,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         return
       }
       this.attemptResults.push('failed')
+      this.starManifests.push(manifest)
       this.totalStarsLost++
       this.starJustFailed = true
       gameTimeout(() => {
@@ -786,6 +803,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         themeIndex: this.currentThemeIndex,
         attemptResults: [...this.attemptResults],
         landfallResults: [...this.landfallResults],
+        starManifests: [...this.starManifests],
         durationSeconds: Math.max(0, inGameTime - this.galaxyStartedAtInGameTime),
         // Wanduhr: Chronikstempel, wird im Galaxy-Archiv als Datum gelesen und
         // nie gegen eine Frist geprüft.
@@ -870,6 +888,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.starsRescued = 0
       this.starsRequired = computeRequired(this.currentGalaxy)
       this.attemptResults = []
+      this.starManifests = []
       this.landfallResults = []
       this.activeLandfall = null
       this._landfallLegDone = -1
