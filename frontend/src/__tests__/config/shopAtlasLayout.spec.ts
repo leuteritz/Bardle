@@ -8,9 +8,10 @@ import {
   SHOP_ATLAS_DETAIL_MAX_WIDTH,
   SHOP_ATLAS_CARD_MIN_WIDTH,
   SHOP_ATLAS_GRID_GAP,
-  SHOP_HERO_FIELD_MAX_W,
-  SHOP_HERO_FOLD_H,
-  SHOP_HERO_PINNED_H,
+  SHOP_HERO_ACTIONS_W,
+  SHOP_HERO_ACTIONS_ICON_W,
+  SHOP_HERO_FIELD_MIN_W,
+  SHOP_HERO_LABEL_MIN_W,
   BOTTOM_BAR_SIDE_W,
 } from '@/config/constants'
 
@@ -114,21 +115,25 @@ describe('shop atlas layout', () => {
     expect(columns(zones(vw, vh, true).grid)).toBeGreaterThan(columns(zones(vw, vh).grid))
   })
 
-  it.each(DESKTOPS)('%s: the search field fits the grid column', (_l, vw, vh) => {
-    // The field heads the grid column, centred. Wider than the column it would
-    // either overflow the zone or silently shrink below the width it was
-    // measured readable at.
-    expect(zones(vw, vh).grid - GRID_PADDING).toBeGreaterThanOrEqual(SHOP_HERO_FIELD_MAX_W)
+  /** What the search row leaves the field once its two buttons took their share. */
+  function searchFieldWidth(gridWidth: number): number {
+    const actions =
+      gridWidth >= SHOP_HERO_LABEL_MIN_W ? SHOP_HERO_ACTIONS_W : SHOP_HERO_ACTIONS_ICON_W
+    return gridWidth - GRID_PADDING - actions
+  }
+
+  it.each(DESKTOPS)('%s: the search row leaves the field its floor', (_l, vw, vh) => {
+    // The field takes what reset and collapse-all leave over. Widen a button or a
+    // zone and the field is what pays for it — silently, until it is unreadable.
+    expect(searchFieldWidth(zones(vw, vh).grid)).toBeGreaterThanOrEqual(SHOP_HERO_FIELD_MIN_W)
   })
 
-  it('the search block costs the grid its two heights and nothing more', () => {
-    // Both halves are positive and the pinned one is the larger: it holds the
-    // 56px field, the fold only a 28px control row. Reversed, scrolling would
-    // hide the field and keep the buttons.
-    expect(SHOP_HERO_FOLD_H).toBeGreaterThan(0)
-    expect(SHOP_HERO_PINNED_H).toBeGreaterThan(SHOP_HERO_FOLD_H)
-    // Resting height of the block — what the first section header starts below.
-    expect(SHOP_HERO_FOLD_H + SHOP_HERO_PINNED_H).toBe(127)
+  it('labels stand at 2K and fold away at Full HD', () => {
+    // The threshold is the decision, not a round number: spelled out the buttons
+    // cost 264px, which the Full HD column cannot pay and the 2K one can.
+    expect(zones(1920, 1080).grid).toBeLessThan(SHOP_HERO_LABEL_MIN_W)
+    expect(zones(2560, 1440).grid).toBeGreaterThanOrEqual(SHOP_HERO_LABEL_MIN_W)
+    expect(SHOP_HERO_ACTIONS_ICON_W).toBeLessThan(SHOP_HERO_ACTIONS_W)
   })
 
   it('never auto-folds a desktop that has room for the rail', () => {

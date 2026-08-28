@@ -27,54 +27,55 @@
            belongs to no single zone — it stands over the sections it filters.
            Outside the transition below (`out-in`: what unmounts on every domain
            swap jumps) and without a `v-if`: the field has to stand exactly when
-           nothing was found. The control row sits ABOVE the field because a
-           sticky box leaves its BOTTOM part standing. -->
+           nothing was found. One row — the field takes what the two buttons
+           leave over, and below SHOP_HERO_LABEL_MIN_W they leave more by
+           dropping their labels. -->
       <div class="cs-search-hero" role="search" aria-label="Search the shop">
-        <!-- Holds its height even empty — it IS the fold. -->
-        <div class="cs-hero-acts">
-          <button
-            v-if="hasActiveFilter"
-            class="cs-hero-btn cs-hero-btn--reset"
-            v-tip="'Clear every filter'"
-            @click="clearFilters"
-          >
-            <Icon icon="lucide:rotate-ccw" width="15" height="15" />
-            Reset
-          </button>
-          <span v-else class="cs-hero-gap" />
-          <button
-            v-if="canCollapseAll && !domainNarrowed"
-            class="cs-hero-btn"
-            :class="{ 'cs-hero-btn--on': allTiersCollapsed }"
-            :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
-            @click="toggleAllTiers"
-          >
-            <Icon
-              :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'"
-              width="15"
-              height="15"
-            />
-            {{ allTiersCollapsed ? 'Expand all' : 'Collapse all' }}
-          </button>
-        </div>
+        <RpgSearchBar
+          ref="searchInputRef"
+          v-model="searchQuery"
+          class="cs-hero-field"
+          size="lg"
+          placeholder="Search champions, traits or items..."
+          aria-label="Search champions, traits and items"
+          @clear="resetSearch"
+        >
+          <template #trailing>
+            <span class="cs-hits" :class="{ 'cs-hits--empty': domainHitCount === 0 }">
+              {{ domainHitCount }}
+            </span>
+          </template>
+        </RpgSearchBar>
 
-        <div class="cs-hero-plinth">
-          <RpgSearchBar
-            ref="searchInputRef"
-            v-model="searchQuery"
-            class="cs-hero-field"
-            size="lg"
-            placeholder="Search champions, traits or items..."
-            aria-label="Search champions, traits and items"
-            @clear="resetSearch"
-          >
-            <template #trailing>
-              <span class="cs-hits" :class="{ 'cs-hits--empty': domainHitCount === 0 }">
-                {{ domainHitCount }}
-              </span>
-            </template>
-          </RpgSearchBar>
-        </div>
+        <!-- Both carry a `v-tip`: labelless they have nothing else to say what
+             they do. -->
+        <button
+          v-if="hasActiveFilter"
+          class="cs-hero-btn cs-hero-btn--reset"
+          v-tip="'Clear every filter'"
+          aria-label="Clear every filter"
+          @click="clearFilters"
+        >
+          <Icon icon="lucide:rotate-ccw" width="17" height="17" />
+          <span class="cs-hero-btn-label">Reset</span>
+        </button>
+        <button
+          v-if="canCollapseAll && !domainNarrowed"
+          class="cs-hero-btn"
+          :class="{ 'cs-hero-btn--on': allTiersCollapsed }"
+          v-tip="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
+          :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
+          @click="toggleAllTiers"
+        >
+          <Icon
+            :icon="allTiersCollapsed ? 'lucide:list-tree' : 'lucide:list-collapse'"
+            width="17"
+            height="17"
+          />
+          <span class="cs-hero-btn-label">
+            {{ allTiersCollapsed ? 'Expand all' : 'Collapse all' }}
+          </span>
+        </button>
       </div>
 
     <Transition name="cs-domain-swap" mode="out-in">
@@ -377,9 +378,7 @@ import {
   ROLES,
   MATERIAL_COLOR,
   SHOP_JUMP_SCROLL_OFFSET_PX,
-  SHOP_HERO_FOLD_H,
-  SHOP_HERO_PINNED_H,
-  SHOP_HERO_FIELD_MAX_W,
+  SHOP_HERO_BAR_H,
   SHOP_JUMP_EXPAND_SETTLE_MS,
   SHOP_SCROLL_SETTLE_MS,
   CHAMPION_NEW_BADGE_DISMISS_MS,
@@ -1023,9 +1022,7 @@ const shopChampionNames = computed(() =>
     const domainNarrowed = computed(() =>
       activeDomain.value === 'items' ? itemNarrowed.value : championNarrowed.value,
     )
-    const heroFoldPx = computed(() => `${SHOP_HERO_FOLD_H}px`)
-    const heroPinnedPx = computed(() => `${SHOP_HERO_PINNED_H}px`)
-    const heroFieldMaxPx = computed(() => `${SHOP_HERO_FIELD_MAX_W}px`)
+    const heroBarHeightPx = computed(() => `${SHOP_HERO_BAR_H}px`)
 
     // Tier expand/collapse animation — animate height 0 ↔ scrollHeight, then clear
     // inline styles so an open tier is overflow:visible (hover-expanded cards spill out).
@@ -1267,16 +1264,13 @@ const shopChampionNames = computed(() =>
       if (!grid) return
       const section = grid.querySelector<HTMLElement>(`[data-tier-section="${tier}"]`)
       if (!section) return
-      const raw =
+      const top =
         section.getBoundingClientRect().top -
         grid.getBoundingClientRect().top +
         grid.scrollTop -
-        // the pinned search field covers the top edge, so the header clears it too
-        (SHOP_JUMP_SCROLL_OFFSET_PX + SHOP_HERO_PINNED_H)
-      // Short of the fold the field is not pinned yet and the header stands clear
-      // of the whole block anyway — scrolling that hair would only fold the
-      // control row away on arrival, for nothing.
-      grid.scrollTo({ top: raw <= SHOP_HERO_FOLD_H ? 0 : raw, behavior: 'smooth' })
+        // the pinned search row covers the top edge, so the header clears it too
+        (SHOP_JUMP_SCROLL_OFFSET_PX + SHOP_HERO_BAR_H)
+      grid.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
     }
 
     /**
@@ -2162,9 +2156,7 @@ const shopChampionNames = computed(() =>
       showDomain,
       canCollapseAll,
       domainNarrowed,
-      heroFoldPx,
-      heroPinnedPx,
-      heroFieldMaxPx,
+      heroBarHeightPx,
       onGridScroll,
       // ── Atlas ──
       atlasRef,
@@ -2246,9 +2238,14 @@ const shopChampionNames = computed(() =>
   min-height: 0;
 }
 /* The starfield IS the grid's surface — the one zone that opens onto it, the
-   way the stage does in the planets tab. `.cs-hero-plinth` stays opaque: cards
-   scroll under it. */
+   way the stage does in the planets tab. `.cs-search-hero` stays opaque: cards
+   scroll under it.
+
+   Its own container: the search row's buttons drop their labels by the width of
+   THIS column, and the column gains 180px whenever the facet rail folds — the
+   atlas never sees that. */
 .cs-atlas-grid {
+  container: cs-grid / inline-size;
   position: relative;
   z-index: 1;
   min-width: 0;
@@ -2385,69 +2382,81 @@ const shopChampionNames = computed(() =>
   padding: 12px 14px;
 }
 
-/* ── Search hero ──
-   Stands at the top of the SCROLLER, not of the tab. The negative margins
-   cancel the scroller's own padding so the plinth reaches both edges, and the
-   sticky offset is that padding PLUS the fold: the block rides up by exactly
-   the control row before it pins, which leaves the field standing and the row
-   gone. No scroll listener and no height transition — a height that changed per
-   frame would reflow every card below it. */
+/* ── Search row ──
+   Stands at the top of the SCROLLER, not of the tab: one row, and it pins whole.
+   The negative margins cancel the scroller's own padding so the opaque strip
+   reaches both edges, and `top: -12px` pins it flush with the border box — at
+   `top: 0` the padding strip above would show scrolled cards. It is also the one
+   opaque strip of the column; the rest opens onto the starfield. */
 .cs-search-hero {
   position: sticky;
-  top: calc(-12px - v-bind(heroFoldPx));
+  top: -12px;
   z-index: 3;
-  margin: -12px -14px 12px;
-  padding-top: 12px;
-}
-.cs-hero-acts {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
-  width: min(v-bind(heroFieldMaxPx), calc(100% - 28px));
-  height: 28px;
-  margin: 0 auto 10px;
-}
-/* Holds the space when there is no reset button, so `space-between` keeps
-   Collapse all on the right instead of dropping it to the left. */
-.cs-hero-gap {
-  flex: 1;
-}
-/* The one opaque strip of the column — the rest of it opens onto the starfield.
-   Its height is the pinned one: cards scroll under exactly this. */
-.cs-hero-plinth {
-  display: flex;
-  align-items: center;
-  height: v-bind(heroPinnedPx);
+  height: v-bind(heroBarHeightPx);
+  margin: -12px -14px 12px;
   padding: 0 14px;
   background: #111008;
   border-bottom: 1px solid #3e200a;
 }
+/* Takes whatever the two buttons leave over — that is the point of the row. */
 .cs-hero-field {
-  width: 100%;
-  max-width: v-bind(heroFieldMaxPx);
-  margin: 0 auto;
+  flex: 1;
+  min-width: 0;
 }
+/* Square and labelless by default: a label costs ~78px a button, which the Full
+   HD column (636) cannot pay and the 2K one (930) can. Lower than the field so
+   the search stays the subject of the row. */
 .cs-hero-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 7px;
   flex-shrink: 0;
-  height: 26px;
-  padding: 0 10px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: 1px solid #5c3310;
   border-radius: var(--bp-radius);
   background: #16120a;
   color: #c89040;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     color 0.15s,
     background 0.15s,
     border-color 0.15s;
+}
+.cs-hero-btn-label {
+  display: none;
+}
+/* Labelless the glyph carries the whole button on its own, so it gets the size
+   of one. (The chevron pair this used to draw collapsed into a cross at that
+   size — next to the field's own clear button that read as a second X.) */
+.cs-hero-btn svg {
+  width: 22px;
+  height: 22px;
+}
+/* 760 = SHOP_HERO_LABEL_MIN_W, which only MIRRORS this number: a container query
+   condition takes no custom property, so the literal is the source. */
+@container cs-grid (min-width: 760px) {
+  .cs-hero-btn {
+    width: auto;
+    padding: 0 13px;
+  }
+  .cs-hero-btn svg {
+    width: 17px;
+    height: 17px;
+  }
+  .cs-hero-btn-label {
+    display: inline;
+  }
 }
 .cs-hero-btn:hover {
   color: #e8c060;

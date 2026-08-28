@@ -408,7 +408,7 @@ function onImgError(e: Event) {
           @click="toggleAllTiers"
         >
           <Icon
-            :icon="allTiersCollapsed ? 'lucide:chevrons-up-down' : 'lucide:chevrons-down-up'"
+            :icon="allTiersCollapsed ? 'lucide:list-tree' : 'lucide:list-collapse'"
             width="18"
             height="18"
           />

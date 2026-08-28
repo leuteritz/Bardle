@@ -657,20 +657,31 @@ export const SHOP_HOME_PLANET_GLYPH_SIZE = 84
 /** Gap kept above a section header after the tab's landing scroll (px). */
 export const SHOP_JUMP_SCROLL_OFFSET_PX = 8
 /**
- * The search block at the head of the grid column, in two parts. Both SET their
- * height via `v-bind` — a described height would drift, and the pinned one goes
- * into the jump scroll as well, or a section header jumped to lands under it.
+ * The search row at the head of the grid column: field, reset, collapse-all —
+ * one row, pinned whole. It SETS its height via `v-bind` (a described height
+ * would drift) and that height goes into the jump scroll as well, or a section
+ * header jumped to lands underneath it.
  *
- * The block is sticky at `-(12 + FOLD)`, so the fold scrolls away and the plinth
- * stays. That the control row sits ABOVE the field follows from it: a sticky box
- * leaves its BOTTOM part standing.
+ * The field takes whatever the two buttons leave over, so the row's budget is
+ * the one number that can break: spelled out the buttons cost ~260px, and the
+ * Full HD grid column is 636 wide. Below LABEL_MIN they drop their labels and
+ * stand as squares, which hands the field ~150px back.
  */
-/** Scrolls away: 12 inset + 28 control row + 10 gap. */
-export const SHOP_HERO_FOLD_H = 50
-/** Stays pinned: 10 + 56 field + 10 + 1 rule. */
-export const SHOP_HERO_PINNED_H = 77
-/** Field width (px). Past this the field only gets longer, not more readable. */
-export const SHOP_HERO_FIELD_MAX_W = 560
+/** Row height: 10 + 56 field + 10 + 1 rule. */
+export const SHOP_HERO_BAR_H = 77
+/** Both buttons WITH labels, including the two 10px gaps: 89 reset + 138
+ *  collapse-all + 20, measured in the browser at 2K. */
+export const SHOP_HERO_ACTIONS_W = 248
+/** Both buttons as 44px squares, including the two 10px gaps. */
+export const SHOP_HERO_ACTIONS_ICON_W = 108
+/** Floor of the field. Narrower, a query stops being readable while typed. */
+export const SHOP_HERO_FIELD_MIN_W = 320
+/**
+ * Grid-column width (px) from which the buttons carry their labels. Not a round
+ * number: Full HD (636) falls below it and 2K (930) above, which is the whole
+ * decision — labels where the column can pay for them, squares where it cannot.
+ */
+export const SHOP_HERO_LABEL_MIN_W = 760
 /** Corrective scroll runs after the section expand animation (0.28s) settles. */
 export const SHOP_JUMP_EXPAND_SETTLE_MS = 350
 /** Idle time after the last scroll event before card animations resume. */
