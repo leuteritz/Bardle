@@ -395,6 +395,13 @@ export interface VoyageRosterRow {
   /** Chimes der Zeile, oder null wo es keine zu zeigen gibt. */
   reward: number | null
   rewardPrefix: string
+  /** Reisedauer — was die Crew an ZEIT kostet, nicht wann sie zurück ist. */
+  durationSeconds: number
+  /** Erwarteter Beuteertrag aus der Stufe. */
+  spoils: ExpeditionSpoilsDef
+  /** Was WIRKLICH bereitliegt — erst nach der Auflösung, sonst `null`. Bis
+   *  dahin gilt die Erwartung aus `spoils`; danach wäre sie eine Lüge. */
+  payout: ExpeditionSpoilsPayout | null
   /** Vertrag: besetzte / verlangte Sitze. Sonst null. */
   seatsFilled: number | null
   seatsTotal: number | null

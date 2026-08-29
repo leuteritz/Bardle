@@ -5,7 +5,12 @@
  * ZEITFREI: keine Zeile trägt einen fertigen Countdown, nur Zeitstempel. Sonst
  * hinge die ganze Liste an der Sekunde und würde bei jedem Takt neu gebaut.
  */
-import { EXPEDITION_COLORS, MS_PER_SECOND } from '@/config/constants'
+import {
+  EXPEDITION_COLORS,
+  EXPEDITION_SPOILS,
+  MS_PER_SECOND,
+  type ExpeditionTier,
+} from '@/config/constants'
 import { pinKeyOf } from '@/utils/game/voyageSites'
 import type {
   AvailableExpeditionSlot,
@@ -67,6 +72,9 @@ export function buildVoyageRoster(
         chip: offer.tier,
         reward: deps.projectedReward(offer).success,
         rewardPrefix: '',
+        durationSeconds: offer.durationSeconds,
+        spoils: EXPEDITION_SPOILS[offer.tier],
+        payout: null,
         seatsFilled: filled,
         seatsTotal: total,
         expiresAt: offer.availableUntil,
@@ -93,8 +101,14 @@ export function buildVoyageRoster(
         accent: accentOf(mission.colorKey),
         chipIcon: 'game-icons:caravel',
         chip: 'in field',
-        reward: null,
+        // Die laufende Mission zeigt die PROGNOSE, die aufgelöste den Betrag,
+        // der schon auf dem Konto liegt — dieselbe Regel wie in `buildVoyageTip`.
+        reward: deps.projectedReward(mission).success,
         rewardPrefix: '',
+        durationSeconds: mission.durationSeconds,
+        spoils: EXPEDITION_SPOILS[mission.tier ?? 'common'],
+        // Gewürfelt wird erst bei der Auflösung; solange gilt die Erwartung.
+        payout: null,
         seatsFilled: null,
         seatsTotal: null,
         expiresAt: null,
@@ -108,6 +122,7 @@ export function buildVoyageRoster(
     }
 
     const won = mission.status === 'success'
+    const tier: ExpeditionTier = mission.tier ?? 'common'
     ready.push({
       pinKey: subject.pinKey,
       name: mission.name,
@@ -118,6 +133,9 @@ export function buildVoyageRoster(
       chip: won ? 'ready' : 'failed',
       reward: mission.reward,
       rewardPrefix: '+',
+      durationSeconds: mission.durationSeconds,
+      spoils: EXPEDITION_SPOILS[tier],
+      payout: mission.spoils ?? null,
       seatsFilled: null,
       seatsTotal: null,
       expiresAt: null,
