@@ -45,6 +45,7 @@ import ExpeditionGalaxyRail from './ExpeditionGalaxyRail.vue'
 import ExpeditionGalaxyMap from './ExpeditionGalaxyMap.vue'
 import ExpeditionDetailPanel from './ExpeditionDetailPanel.vue'
 import VoyagesTabLoader from './VoyagesTabLoader.vue'
+import FirmamentReturnButton from '@/components/bardProfil/FirmamentReturnButton.vue'
 
 const uiStore = useUiStore()
 const chartStore = useExpeditionChartStore()
@@ -368,6 +369,10 @@ function openMassSendUpgrade() {
           :homecomings="homecomings"
           @select="onSelect"
         />
+
+        <!-- Nur da, wenn man aus dem Firmament kam. Ueberlagerung, KEINE
+             Gridzeile: jede Hoehe in der Spalte ginge der Galaxie ab. -->
+        <FirmamentReturnButton />
       </div>
 
       <ExpeditionDetailPanel
@@ -442,6 +447,7 @@ function openMassSendUpgrade() {
   min-height: 0;
 }
 .etc-stage {
+  position: relative;
   grid-column: 2;
   grid-row: 2;
   min-width: 0;

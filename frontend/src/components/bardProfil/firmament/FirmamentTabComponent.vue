@@ -71,6 +71,12 @@ function select(next: FirmamentSelection) {
   selection.value = next
 }
 
+/** Ein befreiter Knoten ist eine TUER, keine Auswahl: er fuehrt in den Atlas,
+ *  in dem man mit dieser Galaxie etwas tun kann. */
+function openInVoyages(galaxy: number) {
+  uiStore.requestOpenVoyagesFromFirmament(galaxy)
+}
+
 // ── Leiste ──────────────────────────────────────────────────────────────────
 /** `null` = der Reiter entscheidet nach Breite, sonst hat es der Spieler gesagt. */
 const railChoice = ref<boolean | null>(null)
@@ -130,6 +136,23 @@ onBeforeUnmount(() => {
   observer?.disconnect()
 })
 
+/**
+ * Der Rueckweg aus dem Voyages-Atlas. EINMAL verbrauchen — und NACH dem
+ * `isVisible`-Watcher, der die Auswahl beim Verlassen leert.
+ *
+ * `immediate: true` ist Pflicht: der Reiter wird lazy gemountet, beim
+ * allerersten Ruecksprung laeuft sein Setup erst NACH dem Setzen des Zeigers.
+ */
+watch(
+  () => uiStore.pendingFirmamentSelection,
+  (sel) => {
+    if (!sel) return
+    select(sel)
+    uiStore.clearPendingFirmamentSelection()
+  },
+  { immediate: true },
+)
+
 const railW = computed(() =>
   railFolded.value ? `${FIRMAMENT_RAIL_FOLDED_W}px` : `${FIRMAMENT_RAIL_W}px`,
 )
@@ -158,6 +181,7 @@ const railW = computed(() =>
           :selection="selection"
           :visible="isVisible"
           @select="select"
+          @open="openInVoyages"
         />
       </div>
     </template>

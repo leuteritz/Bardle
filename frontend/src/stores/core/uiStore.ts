@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { BardTabId, ChampionRole } from '@/types'
+import type { BardTabId, ChampionRole, FirmamentSelection } from '@/types'
 
 // Der Typ wohnt in types/ui.ts, damit die Badge-Registry ihn nennen kann, ohne
 // an den Store zu ziehen. Re-Export, weil drei Stellen ihn von hier importieren.
@@ -27,6 +27,12 @@ export const useUiStore = defineStore('ui', () => {
   // Wird EINMAL verbraucht — der Reiter bleibt gemountet, ein stehender Wert
   // spränge bei jedem weiteren Besuch erneut.
   const pendingVoyageTarget = ref<{ galaxy: number; pinKey: string | null } | null>(null)
+  // true, solange der Voyages-Reiter aus dem Firmament heraus betreten wurde
+  const firmamentTabReturnPending = ref(false)
+  // Auswahl, die das Firmament beim Zurueckkommen wiederherstellt — es raeumt
+  // seine eigene beim Verlassen ab, ohne diesen Zeiger kaeme man auf eine leere
+  // Bahn zurueck.
+  const pendingFirmamentSelection = ref<FirmamentSelection>(null)
   const hoveredChampionRole = ref<ChampionRole | null>(null)
   // Stern-ID des laufenden Kampfs, wenn der Team-Tab aus dem StarFight-Modal
   // heraus geöffnet wurde — solange gesetzt (und der Stern lebt), zeigt das
@@ -57,6 +63,9 @@ export const useUiStore = defineStore('ui', () => {
     // waere 'shop' eine Zusage auf einen bestimmten Inhalt. Journey ist der
     // Heimatreiter und traegt als einziger keinen zielabhaengigen Zustand.
     bardActiveTab.value = bardActiveTab.value !== null ? null : 'bard'
+    // Zugeklappt endet auch hier das Rueckweg-Angebot — sonst stuende die Pille
+    // nach Profil-zu-und-wieder-auf weiter da.
+    if (bardActiveTab.value === null) firmamentTabReturnPending.value = false
     clearHoverMarks()
   }
 
@@ -64,12 +73,14 @@ export const useUiStore = defineStore('ui', () => {
     bardActiveTab.value = id
     // navigating by hand ends the offer to jump back to the battle tab
     battleTabReturnPending.value = false
+    firmamentTabReturnPending.value = false
     clearHoverMarks()
   }
 
   function closeBardModal() {
     bardActiveTab.value = null
     battleTabReturnPending.value = false
+    firmamentTabReturnPending.value = false
     clearHoverMarks()
   }
 
@@ -145,6 +156,26 @@ export const useUiStore = defineStore('ui', () => {
     pendingVoyageTarget.value = null
   }
 
+  /** Der Sprung von der Firmament-Bahn auf die Karte. Setzt NUR die Flagge dazu
+   *  — das Sprungziel besorgt derselbe Weg, den die Minimap schon geht. */
+  function requestOpenVoyagesFromFirmament(galaxy: number) {
+    requestOpenVoyagesTab(galaxy)
+    firmamentTabReturnPending.value = true
+  }
+
+  /** Der Rueckweg. `galaxy` ist die GERADE im Atlas gewaehlte, nicht die, mit
+   *  der man kam: wer dort weitergeklickt hat, soll im Firmament dort stehen. */
+  function returnToFirmamentTab(galaxy: number | null) {
+    firmamentTabReturnPending.value = false
+    pendingFirmamentSelection.value = galaxy ? { kind: 'galaxy', galaxy } : null
+    bardActiveTab.value = 'firmament'
+    clearHoverMarks()
+  }
+
+  function clearPendingFirmamentSelection() {
+    pendingFirmamentSelection.value = null
+  }
+
   function setBattleReturn(starId: string) {
     battleReturnStarId.value = starId
   }
@@ -205,6 +236,11 @@ export const useUiStore = defineStore('ui', () => {
     pendingVoyageTarget,
     requestOpenVoyagesTab,
     clearPendingVoyageTarget,
+    firmamentTabReturnPending,
+    pendingFirmamentSelection,
+    requestOpenVoyagesFromFirmament,
+    returnToFirmamentTab,
+    clearPendingFirmamentSelection,
     setHoveredChampionRole,
     setHoveredChampionSlotIndex,
     setHoveredPlanetSlotId,

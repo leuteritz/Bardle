@@ -775,6 +775,9 @@ export const VOYAGE_RAIL_WIDTH = 224
 export const VOYAGE_RAIL_COLLAPSED = 56
 /** Reiterbreite, unter der sich die Leiste selbst einklappt — am ATLAS gemessen. */
 export const VOYAGE_RAIL_AUTOFOLD_WIDTH = 1180
+/** Luft ueber bzw. unter der Zeile, die ein Sprung von aussen ins Sichtfeld
+ *  rollt — bündig an der Kante läse sie sich als abgeschnitten. */
+export const VOYAGE_RAIL_REVEAL_PAD = 8
 /** Untergrenze der Detailspalte: die Breite, bei der `.ecc-crew` (flex-wrap) noch
  *  zwei Sitze je Zeile trägt, ein Epic-Vertrag mit fünf Sitzen also auf drei
  *  Zeilen umbricht statt auf fünf. */
@@ -1171,6 +1174,13 @@ export const VOYAGE_MAP_LEGEND_R = 4.4
  * 15-px-Abstand des Bodens braucht dafuer 63 px nutzbare Hoehe.
  */
 export const VOYAGE_MAP_STATS_BAND_H = 72
+/** Luft zwischen Datenband und der Ruecksprung-Pille ins Firmament. Auf dem
+ *  Band stuende sie ueber den Zahlen, die die Galaxie ausmachen. */
+export const VOYAGE_RETURN_PILL_CLEARANCE = 14
+/** Ihre Aussenhoehe, im Browser GEMESSEN (2x12 Polster + 24 Glyph + 2x2 Rahmen)
+ *  — gebunden, damit sie den Kartenrand nicht verlaesst.
+ *  `voyagesAtlasLayout.spec.ts` rechnet sie gegen die Buehnenhoehe. */
+export const VOYAGE_RETURN_PILL_H = 52
 /** Senkrechtes Polster des Textblocks: 72 - 2x4 = 64 px nutzbar. Die hoechste
  *  Spalte (Segmente + Wert + Label) belegt davon 63,3 — daraus faellt der
  *  Wert-Deckel, er ist nicht gewaehlt. `voyageBandFit.spec.ts` bindet es. */

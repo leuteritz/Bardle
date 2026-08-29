@@ -23,6 +23,8 @@ import {
   VOYAGE_MAP_STATS_BAND_H,
   VOYAGE_MAP_STATS_MIN_H,
   VOYAGE_MAP_INSET_PX,
+  VOYAGE_RETURN_PILL_CLEARANCE,
+  VOYAGE_RETURN_PILL_H,
   BOTTOM_BAR_SIDE_W,
 } from '@/config/constants'
 import { galaxyFitBox, GALAXY_PLATE_REF_W } from '@/utils/fx/galaxyPlate'
@@ -290,4 +292,19 @@ describe('voyages atlas layout', () => {
     expect(gate.exit).toBeGreaterThan(markR)
   })
 
+  /**
+   * Die Ruecksprung-Pille ins Firmament ist eine UEBERLAGERUNG — sie nimmt der
+   * Buehne keine Hoehe, muss also selbst ausweichen. Ihr `bottom` misst ab der
+   * Buehnenkante, das Datenband sitzt am Fuss der KARTE: eine halbe Rinne
+   * tiefer. Waechst eine der drei Zahlen, steht sie auf den Zahlen der Galaxie
+   * oder oben aus der Buehne heraus, und beides faellt sonst erst im Browser
+   * auf.
+   */
+  it('haelt die Ruecksprung-Pille ueber dem Datenband und in der Buehne', () => {
+    const bandTop = VOYAGE_MAP_GUTTER_PX / 2 + VOYAGE_MAP_STATS_BAND_H
+    const pillBottom = bandTop + VOYAGE_RETURN_PILL_CLEARANCE
+    expect(pillBottom).toBeGreaterThan(bandTop)
+    // Flachste Referenzaufloesung — passt sie dort, passt sie ueberall.
+    expect(pillBottom + VOYAGE_RETURN_PILL_H).toBeLessThan(stageHeight(1080))
+  })
 })

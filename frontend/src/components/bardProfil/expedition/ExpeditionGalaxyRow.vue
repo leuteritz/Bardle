@@ -74,6 +74,7 @@ const title = computed(
       `egr--st-${state}`,
       { 'egr--on': selected, 'egr--folded': folded },
     ]"
+    :data-galaxy="row.galaxy"
     :style="{ '--gx-accent': `rgb(${row.accent})` }"
     :aria-pressed="selected"
     :aria-label="title"

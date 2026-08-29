@@ -10,12 +10,14 @@
  * etwas". Ohne sie wäre die Leiste eine Liste ohne Auskunft, und der Spieler
  * müsste jede Galaxie durchklicken, um eine leere Karte zu finden.
  */
+import { onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageRailRow } from '@/types'
+import { VOYAGE_RAIL_REVEAL_PAD } from '@/config/constants'
 import ExpeditionGalaxyRow from './ExpeditionGalaxyRow.vue'
 
-defineProps<{
+const props = defineProps<{
   rows: VoyageRailRow[]
   records: CompletedGalaxyRecord[]
   selected: number
@@ -26,6 +28,35 @@ const emit = defineEmits<{ select: [galaxy: number]; fold: [folded: boolean] }>(
 function recordFor(records: CompletedGalaxyRecord[], galaxy: number) {
   return records.find((r) => r.galaxy === galaxy)
 }
+
+/**
+ * Ein Sprung von aussen (Firmament, Minimap, Fleet-Band) markiert eine Zeile,
+ * die weit unten liegen kann — unsichtbar markiert saehe der Sprung aus, als
+ * haette er nichts getroffen.
+ *
+ * Gerollt wird der gemeinte Kasten SELBST, nie per `scrollIntoView()`: das
+ * zieht jeden scrollbaren Vorfahren mit und riss den Reiter schon zweimal
+ * seitwaerts.
+ */
+const scroll = ref<HTMLElement | null>(null)
+
+function revealSelected() {
+  const box = scroll.value
+  const el = box?.querySelector<HTMLElement>(`[data-galaxy="${props.selected}"]`)
+  // Ein versteckter Reiter meldet 0 — dann traegt die Rechnung nichts.
+  if (!box || !el || box.clientHeight === 0) return
+  const r = el.getBoundingClientRect()
+  const c = box.getBoundingClientRect()
+  if (r.top < c.top) box.scrollTop -= c.top - r.top + VOYAGE_RAIL_REVEAL_PAD
+  else if (r.bottom > c.bottom) box.scrollTop += r.bottom - c.bottom + VOYAGE_RAIL_REVEAL_PAD
+}
+
+// `post`: der Deep-Link-Watcher laeuft `pre`, und der Reiter haengt an
+// `v-show` — vor dem DOM-Update misst der Rollkasten 0.
+watch(() => props.selected, revealSelected, { flush: 'post' })
+// Deckt das ALLERERSTE Oeffnen ab: da waehlt der Sprung, bevor es die Leiste
+// gibt, es gaebe also keinen Wechsel, auf den ein Watcher anspringen koennte.
+onMounted(revealSelected)
 </script>
 
 <template>
@@ -43,7 +74,7 @@ function recordFor(records: CompletedGalaxyRecord[], galaxy: number) {
       <span class="egl-grip-arrow">{{ folded ? '›' : '‹' }}</span>
     </button>
 
-    <div class="egl-scroll rpg-scrollbar">
+    <div ref="scroll" class="egl-scroll rpg-scrollbar">
       <template v-for="row in rows" :key="row.galaxy">
         <ExpeditionGalaxyRow
           v-if="recordFor(records, row.galaxy)"

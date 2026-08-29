@@ -82,6 +82,10 @@ const day = computed(() =>
       <span v-else-if="node.state === 'current'">· core gate sealed</span>
       <span v-else>· the Bard has not been here yet</span>
     </div>
+
+    <!-- Kein `.tip-act`: die Karte traegt `pointer-events: none`, ein Knopf
+         waere darin nicht zu treffen. Die Geste sitzt am Knoten selbst. -->
+    <div v-if="node.record" class="tip-hint fgt-cta">↗ Click to open in Voyages</div>
   </div>
 </template>
 
@@ -111,5 +115,12 @@ const day = computed(() =>
 
 .fgt-theme {
   color: var(--tip-color);
+}
+
+/* Die einzige Zeile der Karte, die eine HANDLUNG nennt — Gold, damit sie sich
+   von den Ablesungen darueber trennt. Der Abstand kommt von der Karte. */
+.fgt-cta {
+  margin-top: -0.36em;
+  color: #e8c040;
 }
 </style>

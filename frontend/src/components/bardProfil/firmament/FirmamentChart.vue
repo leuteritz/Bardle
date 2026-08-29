@@ -89,7 +89,10 @@ const props = defineProps<{
   visible: boolean
 }>()
 
-const emit = defineEmits<{ (e: 'select', value: FirmamentSelection): void }>()
+const emit = defineEmits<{
+  (e: 'select', value: FirmamentSelection): void
+  (e: 'open', galaxy: number): void
+}>()
 
 const galaxyStore = useGalaxyStore()
 const gameStore = useGameStore()
@@ -332,6 +335,13 @@ const rimSpinDir = FIRMAMENT_RIM_SPIN_REVERSE ? 'reverse' : 'normal'
 const heroOpacity = String(UNIVERSE_DISC_HERO_OPACITY)
 
 function pickNode(node: FirmamentNode, picked: boolean) {
+  // `record` ist der Beleg, dass die Galaxie im Voyages-Atlas liegt — dort sind
+  // die Datensaetze genau `completedGalaxies`. Laufende und unbeleuchtete
+  // Knoten haben keinen und bleiben eine reine Auswahl.
+  if (node.record) {
+    emit('open', node.galaxy)
+    return
+  }
   emit('select', picked ? null : { kind: 'galaxy', galaxy: node.galaxy })
 }
 
@@ -560,6 +570,7 @@ const LEGEND = [
               'is-picked': mark.picked,
               'is-lit': mark.inSpan,
               'is-labelled': showLabels,
+              'is-open': !!mark.node.record,
             }"
             :style="{
               left: `${mark.x}px`,
@@ -568,8 +579,12 @@ const LEGEND = [
               height: `${mark.size}px`,
               '--fm-node-accent': mark.accent,
             }"
-            :aria-label="`Galaxy ${toRoman(mark.node.galaxy)}`"
-            :aria-pressed="mark.picked"
+            :aria-label="
+              mark.node.record
+                ? `Galaxy ${toRoman(mark.node.galaxy)} — open in Voyages`
+                : `Galaxy ${toRoman(mark.node.galaxy)}`
+            "
+            :aria-pressed="mark.node.record ? undefined : mark.picked"
             @click="pickNode(mark.node, mark.picked)"
           >
             <span class="fm-node-ring" aria-hidden="true" />
@@ -881,6 +896,15 @@ const LEGEND = [
 
 .fm-node:hover .fm-node-ring {
   border-color: rgba(232, 220, 192, 0.55);
+}
+
+/* Ein befreiter Knoten FUEHRT irgendwohin — sein Hover traegt deshalb die
+   Goldkante, die im Spiel „bedienbar" heisst, statt der neutralen. Statischer
+   Zustand, kein Keyframe. */
+.fm-node.is-open:hover .fm-node-ring,
+.fm-node.is-open:focus-visible .fm-node-ring {
+  border-color: rgba(232, 192, 64, 0.85);
+  box-shadow: 0 0 7px rgba(232, 192, 64, 0.35);
 }
 
 .fm-node.is-lit .fm-node-ring {
