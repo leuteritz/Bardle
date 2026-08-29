@@ -40,9 +40,10 @@ withDefaults(
     /** Die einzige Beschriftung: eine Zeile über dem Namen, klein und versal. */
     state: string
     accent?: string
-    chips: MarkChip[]
+    /** Ohne Reihe kein Streifen — die Missionskarte traegt ihren Zustand im Kopf. */
+    chips?: MarkChip[]
   }>(),
-  { accent: '#e8c040' },
+  { accent: '#e8c040', chips: () => [] },
 )
 </script>
 

@@ -85,6 +85,7 @@ export function buildVoyageTip(
       reward: deps.projectedReward(offer).success,
       rewardPrefix: '',
       spoils: EXPEDITION_SPOILS[offer.tier],
+      payout: null,
       hazards: hazardsOf(offer.hazards),
       seatsFilled: seats.filter(Boolean).length,
       seatsTotal: offer.requiredRoles.length,
@@ -121,6 +122,8 @@ export function buildVoyageTip(
     reward: running ? deps.projectedReward(mission).success : mission.reward,
     rewardPrefix: running ? '' : '+',
     spoils: EXPEDITION_SPOILS[tier],
+    // Gewuerfelt wird erst bei der Aufloesung; solange laeuft, gilt die Erwartung.
+    payout: running ? null : (mission.spoils ?? null),
     hazards: hazardsOf(mission.hazards),
     seatsFilled: null,
     seatsTotal: null,

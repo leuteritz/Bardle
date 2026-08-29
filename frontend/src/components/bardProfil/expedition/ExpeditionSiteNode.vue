@@ -37,7 +37,7 @@ import {
   VOYAGE_NODE_RING_CIRCUMFERENCE,
   VOYAGE_TIP_GAP_PX,
   VOYAGE_TIP_OPEN_DELAY_MS,
-  VOYAGE_TIP_WIDTH,
+  VOYAGE_TIP_MISSION_WIDTH,
 } from '@/config/constants'
 import type { VoyageMarkAction, VoyagePlacedSite } from '@/types'
 import ExpeditionSubjectTooltip from './ExpeditionSubjectTooltip.vue'
@@ -194,7 +194,7 @@ const nodeStyle = computed(() => ({
     prefer="top"
     passive
     :gap="VOYAGE_TIP_GAP_PX"
-    :width="VOYAGE_TIP_WIDTH"
+    :width="VOYAGE_TIP_MISSION_WIDTH"
     :open-delay="VOYAGE_TIP_OPEN_DELAY_MS"
     accent="#e8c040"
   >

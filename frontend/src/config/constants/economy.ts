@@ -787,8 +787,8 @@ export const VOYAGE_ACTION_BLOCK_EXPIRED = 'This contract has lapsed'
 
 export const VOYAGE_ACTION_SEND_LABEL = 'Click to send'
 export const VOYAGE_ACTION_COLLECT_LABEL = 'Click to collect'
-/** Keine zweite Uhr: die Restzeit steht schon als Chip in derselben Karte. */
-export const VOYAGE_ACTION_WAITING_LABEL = 'Still in the field'
+/** Die Uhr steht IN dieser Zeile — sie ist der Grund, warum nichts zu tun ist. */
+export const VOYAGE_ACTION_WAITING_LABEL = 'Back in'
 
 /** Ein Glyph je Ausgang — dieselbe Familie, die schon die Zustandschips führen. */
 export const VOYAGE_ACTION_ICONS = {
@@ -796,6 +796,25 @@ export const VOYAGE_ACTION_ICONS = {
   collect: 'ph:treasure-chest-fill',
   waiting: 'ph:hourglass-medium-fill',
   blocked: 'ph:prohibit-fill',
+} as const
+
+/** Die Farbe des Verdikt-Bandes je Ausgang; `lost` ist der eingesammelte
+ *  FEHLSCHLAG — derselbe Klick, anderer Ausgang. */
+export const VOYAGE_VERDICT_COLORS = {
+  send: '#64dcb4',
+  collect: '#64dcb4',
+  lost: '#cc6050',
+  waiting: '#e8c040',
+  blocked: '#cc6050',
+} as const
+
+/** Die vier Tonstufen der Erfolgsaussicht, gegen EXPEDITION_CHANCE_GOOD/_MID.
+ *  `dim` trägt den Vertrag ohne besetzten Sitz — dort gibt es keine Chance. */
+export const VOYAGE_ODDS_COLORS = {
+  good: '#64dcb4',
+  mid: '#e8c040',
+  poor: '#cc6050',
+  dim: '#7a6f58',
 } as const
 
 /** Wie lange eine abgewiesene Marke wackelt. Rein visuell, deshalb real. */
@@ -1165,6 +1184,10 @@ export const VOYAGE_NODE_RING_CIRCUMFERENCE = 100.53
 
 /* Hover-Tooltip einer Marke; die Hülle ist `RpgBadgeTooltip`. */
 export const VOYAGE_TIP_WIDTH = 'clamp(300px, 17vw, 348px)'
+/** Nur die MISSIONSKARTE. Sie trägt Kopf, Verdikt-Band, zwei 1.7em-Ablesungen
+ *  und die Crewreihe; Tor, Portal, Ort und Stern bleiben bei `VOYAGE_TIP_WIDTH`
+ *  — um deren drei Zeilen stünde sonst ein Rahmen von Handbreite. */
+export const VOYAGE_TIP_MISSION_WIDTH = 'clamp(324px, 18.5vw, 384px)'
 export const VOYAGE_TIP_GAP_PX = 10
 /** Zehn Marken stehen dicht: ohne Verzug feuert ein Zeigerstrich fünf Tooltips. */
 export const VOYAGE_TIP_OPEN_DELAY_MS = 90

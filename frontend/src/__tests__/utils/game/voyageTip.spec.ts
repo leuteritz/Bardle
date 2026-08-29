@@ -57,7 +57,10 @@ function missionFrom(
 
 function deps(over: Partial<VoyageTipDeps> = {}): VoyageTipDeps {
   return {
-    projectedReward: (m) => ({ success: m.baseReward * 2, failure: Math.floor(m.baseReward * 0.1) }),
+    projectedReward: (m) => ({
+      success: m.baseReward * 2,
+      failure: Math.floor(m.baseReward * 0.1),
+    }),
     seatsOf: () => ['Ahri', null],
     offerOdds: () => 0.71,
     destinationName: (galaxy) => `Theme ${galaxy}`,
@@ -124,6 +127,31 @@ describe('voyageTip', () => {
     )
     expect(lost!.state).toBe('failed')
     expect(lost!.stateLabel).toBe('Lost')
+  })
+
+  it('nennt die Beute erst, wenn sie gewürfelt ist', () => {
+    /* Solange nichts aufgelöst ist, gilt die Erwartung aus `spoils`. Danach
+       wäre sie eine Lüge — die Karte zeigt dann, was WIRKLICH bereitliegt. */
+    const s = slot()
+    const spoils = { materials: [{ id: 'stardust', qty: 2 }], meep: 1 }
+
+    expect(buildVoyageTip({ pinKey: 'k', offer: s, mission: null }, deps())!.payout).toBeNull()
+    expect(
+      buildVoyageTip({ pinKey: 'k', offer: null, mission: missionFrom(s) }, deps())!.payout,
+    ).toBeNull()
+
+    const done = buildVoyageTip(
+      { pinKey: 'k', offer: null, mission: missionFrom(s, { status: 'success', spoils }) },
+      deps(),
+    )
+    expect(done!.payout).toEqual(spoils)
+
+    // Ein Fehlschlag ohne Bergung liefert kein Feld — daraus wird `null`.
+    const bare = buildVoyageTip(
+      { pinKey: 'k', offer: null, mission: missionFrom(s, { status: 'failed' }) },
+      deps(),
+    )
+    expect(bare!.payout).toBeNull()
   })
 
   it('ist ZEITFREI — kein `now`, nur Stempel', () => {

@@ -467,6 +467,9 @@ export interface VoyageTipView {
   reward: number
   rewardPrefix: string
   spoils: ExpeditionSpoilsDef
+  /** Was WIRKLICH bereitliegt — erst nach der Auflösung, sonst `null`. Bis
+   *  dahin gilt die Erwartung aus `spoils`; danach wäre sie eine Lüge. */
+  payout: ExpeditionSpoilsPayout | null
   hazards: VoyageTrackHazard[]
   /** Vertrag: besetzte / verlangte Sitze. Sonst null. */
   seatsFilled: number | null
