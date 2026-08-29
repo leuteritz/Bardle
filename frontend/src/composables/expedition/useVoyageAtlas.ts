@@ -2,9 +2,9 @@
  * Der Voyages-Atlas ohne Markup: Takt, Auswahl, Platzierung, Absenden und
  * Einsammeln.
  *
- * Das lag vorher im Vertragsbrett. Hier steht es, weil sich drei Komponenten
- * dieselbe Uhr und dieselbe Auswahl teilen — Karte, Detailspalte und
- * Kopfleiste. Ein Timer je Komponente hiesse drei Uhren, die auseinanderlaufen.
+ * Das lag vorher im Vertragsbrett. Hier steht es, weil sich Karte und
+ * Kopfleiste dieselbe Uhr und dieselbe Auswahl teilen — ein Timer je Komponente
+ * hiesse zwei Uhren, die auseinanderlaufen.
  */
 import { ref, computed, watch, onBeforeUnmount, type Ref } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -17,6 +17,7 @@ import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { voyageBerthsOf, assignVoyageBerths, pinKeyOf, pinStampOf } from '@/utils/game/voyageSites'
 import { voyageLegsOf } from '@/utils/game/voyageLegs'
+import { voyageMarkAction } from '@/utils/game/voyageAction'
 import { gameNow } from '@/utils/game/gameClock'
 import {
   EXPEDITION_CHIME_POP_LIFETIME_MS,
@@ -30,6 +31,7 @@ import type {
   AvailableExpeditionSlot,
   ExpeditionMission,
   VoyageHomecoming,
+  VoyageMarkAction,
   VoyagePlacedSite,
   VoyageRailRow,
 } from '@/types'
@@ -94,12 +96,10 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
   }
 
   /**
-   * NUR eine zurückgekehrte Mission wählt sich selbst — sie ist das Einzige,
-   * das eine Handlung verlangt und dafür die Detailspalte aufreissen darf.
-   *
-   * Ein bloss ausliegender Vertrag tut das nicht mehr: die Spalte steht seit
-   * dem Umbau geschlossen, und sie beim Betreten des Reiters für jedes Angebot
-   * zu öffnen hiesse, die Karte wieder zu verdecken, für die er gebaut ist.
+   * NUR eine zurückgekehrte Mission hebt sich selbst hervor — sie ist das
+   * Einzige, das eine Handlung verlangt. Ein bloss ausliegender Vertrag tut es
+   * nicht: bei fünf Angeboten trüge jede Marke einen Ring, und der Zeiger
+   * fände die eine nicht mehr, die zählt.
    */
   function autoSelect() {
     const returned = placedSites.value.find((s) => s.mission && s.mission.status !== 'active')
@@ -151,12 +151,8 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     })
   })
 
-  const selectedSite = computed(
-    () => placedSites.value.find((s) => s.pinKey === selectedKey.value) ?? null,
-  )
-
-  // Ein Subjekt, das die Galaxie verlässt (abgelaufen, eingesammelt), darf die
-  // Spalte nicht auf eine tote Auswahl zeigen lassen.
+  // Ein Subjekt, das die Galaxie verlässt (abgelaufen, eingesammelt), lässt
+  // keinen Ring über einem leeren Ankerplatz zurück.
   watch(placedSites, (sites) => {
     if (selectedKey.value && !sites.some((s) => s.pinKey === selectedKey.value)) {
       selectedKey.value = null
@@ -297,6 +293,35 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     })
   }
 
+  /**
+   * Was ein Klick auf eine Marke tut. Die Karte reicht das Ergebnis an die
+   * Marke durch (Affordanz), die Hover-Karte ruft dieselbe Funktion selbst —
+   * eine zweite Regel daneben liesse Ansage und Wirkung auseinanderlaufen.
+   */
+  function actionFor(site: VoyagePlacedSite): VoyageMarkAction {
+    return voyageMarkAction(site, {
+      crewFor: (offer) => expeditionStore.crewFor(offer),
+      canStart: expeditionStore.canStartExpedition,
+      offersWait: forgeStore.expeditionOffersWait,
+      now: now.value,
+    })
+  }
+
+  const actions = computed(() => {
+    const map = new Map<string, VoyageMarkAction>()
+    for (const site of placedSites.value) map.set(site.pinKey, actionFor(site))
+    return map
+  })
+
+  /** `blocked` und `waiting` bleiben hier folgenlos — die Marke wackelt selbst. */
+  function runMarkAction(pinKey: string) {
+    const site = placedSites.value.find((s) => s.pinKey === pinKey)
+    if (!site) return
+    const action = actionFor(site)
+    if (action.kind === 'send' && site.offer) sendExpedition(site.offer)
+    else if (action.kind === 'collect') collectMission(action.missionId)
+  }
+
   function collectAll() {
     const ready = [...expeditionStore.readyExpeditions]
     if (!ready.length) return
@@ -336,14 +361,15 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     selectedGalaxy,
     selectedRecord,
     selectedKey,
-    selectedSite,
     placedSites,
+    actions,
     railRows,
     chimePops,
     collectFlashing,
     homecomings: liveHomecomings,
     gateState,
     selectGalaxy,
+    runMarkAction,
     sendExpedition,
     sendAll,
     collectMission,

@@ -13,11 +13,11 @@
  * ganze Platte in 14–34 ms neu, ein Wiedereinblenden kostet 28 ms. Deshalb
  * läuft er GENAU EINMAL je Sitzung (`atlasBuilt` in `ExpeditionTabComponent`).
  *
- * Das Skelett zeigt, was kommt: die Leiste in ihrer echten Breite, in der Mitte
- * der Kasten im Seitenverhältnis der Fit-Box mit ein paar Häfen darauf, rechts
- * die eingeklappte Detailspalte, an der Unterkante der Bühne das Datenband. Ein
- * Platzhalter, der etwas anderes verspricht als das, was kommt, hat den Ruckler
- * nur gegen einen Sprung getauscht.
+ * Das Skelett zeigt, was kommt: die Leiste in ihrer echten Breite, daneben der
+ * Kasten im Seitenverhältnis der Fit-Box mit ein paar Häfen darauf und an
+ * dessen Unterkante das Datenband. Ein Platzhalter, der etwas anderes
+ * verspricht als das, was kommt, hat den Ruckler nur gegen einen Sprung
+ * getauscht.
  *
  * Bewegt wird ausschliesslich `transform` — der Schleier steht per Definition
  * in den Frames, in denen der Hauptthread blockiert ist. Eine Animation auf
@@ -28,7 +28,6 @@ import { computed } from 'vue'
 import LoadingBeacon from '@/components/ui/LoadingBeacon.vue'
 import {
   VOYAGE_COMMAND_BAR_H,
-  VOYAGE_DETAIL_COLLAPSED,
   VOYAGE_FLEET_ACT_H,
   VOYAGE_FLEET_ACT_W,
   VOYAGE_FLEET_ASIDE_W,
@@ -60,9 +59,6 @@ const railWidth = `${VOYAGE_RAIL_WIDTH}px`
 const rowHeight = `${VOYAGE_RAIL_ROW_H}px`
 const thumbWidth = `${VOYAGE_RAIL_THUMB_W}px`
 const thumbHeight = `${VOYAGE_RAIL_THUMB_H}px`
-/** Die Detailspalte startet EINGEKLAPPT — der Platzhalter muss den Griff
- *  zeigen, nicht die geöffnete Spalte, sonst springt das Layout beim Enthüllen. */
-const detailWidth = `${VOYAGE_DETAIL_COLLAPSED}px`
 /** +3 für den eigenen `border-bottom`: `border-box` rechnet ihn in die Zeile. */
 const headHeight = `${VOYAGE_COMMAND_BAR_H + 3}px`
 const bandPadX = `${VOYAGE_FLEET_BAND_PAD_X}px`
@@ -152,14 +148,6 @@ const skeletonPorts = computed(() =>
       </div>
     </div>
 
-    <!-- Detailspalte -->
-    <!-- Nur der Griff: die Detailspalte steht eingeklappt, bis ein Hafen
-         angeklickt wird. Fünf Inhaltsbalken versprächen hier eine Spalte, die
-         gleich gar nicht kommt. -->
-    <div class="vtl-detail" aria-hidden="true">
-      <span class="vtl-mark vtl-mark--grip" />
-    </div>
-
     <!-- Ein einziger wandernder Glanz: eine Fläche, die verschoben wird —
          kein Verlauf, der pro Frame neu entsteht. -->
     <span class="vtl-sheen" aria-hidden="true" />
@@ -172,7 +160,7 @@ const skeletonPorts = computed(() =>
   inset: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: v-bind(railWidth) minmax(0, 1fr) v-bind(detailWidth);
+  grid-template-columns: v-bind(railWidth) minmax(0, 1fr);
   grid-template-rows: v-bind(headHeight) minmax(0, 1fr);
   overflow: hidden;
   background: #111008;
@@ -323,22 +311,6 @@ const skeletonPorts = computed(() =>
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-}
-
-/* ── Detailspalte ───────────────────────────────────────────── */
-.vtl-detail {
-  grid-column: 3;
-  grid-row: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12px 0;
-  background: #1e1006;
-  border-left: 2px solid #5c3310;
-}
-.vtl-mark--grip {
-  width: 16px;
-  height: 46px;
 }
 
 /* ── Crew-Streifen ──────────────────────────────────────────── */

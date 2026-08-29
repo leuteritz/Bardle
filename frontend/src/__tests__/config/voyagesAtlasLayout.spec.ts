@@ -3,10 +3,6 @@ import {
   VOYAGE_RAIL_WIDTH,
   VOYAGE_RAIL_COLLAPSED,
   VOYAGE_RAIL_AUTOFOLD_WIDTH,
-  VOYAGE_DETAIL_COLLAPSED,
-  VOYAGE_DETAIL_MIN_WIDTH,
-  VOYAGE_DETAIL_PCT,
-  VOYAGE_DETAIL_MAX_WIDTH,
   VOYAGE_MAP_MIN_WIDTH,
   VOYAGE_MAP_GUTTER_PX,
   VOYAGE_SITE_HIT_MIN,
@@ -31,9 +27,14 @@ import { galaxyFitBox, GALAXY_PLATE_REF_W } from '@/utils/fx/galaxyPlate'
 import { voyageGateSizeFor, voyageMarkerSizeFor } from '@/utils/game/voyageSites'
 
 /**
- * Der Voyages-Atlas teilt drei Zonen ein Budget: Leiste + Karte + Detail sind
- * der ganze Reiter. Nichts im CSS sagt, wie gross die Karte davon bleibt — wer
- * eine der beiden Ränder verbreitert, nimmt sie ihr still weg.
+ * Der Voyages-Atlas teilt ZWEI Zonen ein Budget: Leiste + Karte sind der ganze
+ * Reiter. Nichts im CSS sagt, wie gross die Karte davon bleibt — wer die Leiste
+ * verbreitert, nimmt sie ihr still weg.
+ *
+ * Die dritte Zone ist gefallen. Sie trug das Missions-Dossier und war zugleich
+ * der einzige Weg, eine Expedition loszuschicken; beides liegt jetzt an der
+ * Marke (Hover-Karte plus `utils/game/voyageAction.ts`). Die Karte hat ihre
+ * Breite geerbt — auf Full HD 628 → 1016.
  *
  * Und anders als beim Shop ist der Boden hier keine Geschmacksfrage:
  * `voyageBerthsOf` garantiert zwischen zwei Ankerplätzen
@@ -47,8 +48,8 @@ import { voyageGateSizeFor, voyageMarkerSizeFor } from '@/utils/game/voyageSites
  * Compiler können diese Kopplung ausdrücken.
  *
  * Die Zahlen unten spiegeln, was App.vue rechnet:
- *   Full HD  →  224px 628px 388px
- *   2K       →  224px 955px 481px
+ *   Full HD  →  224px 1016px
+ *   2K       →  224px 1436px
  */
 
 /** `--bp-gap` von .rp-wrapper, beide Seiten. */
@@ -71,13 +72,10 @@ function atlasWidth(vw: number, vh: number): number {
   return modal / teamUiScale(vw, vh)
 }
 
-function zones(vw: number, vh: number, folded = false, detailFolded = false) {
+function zones(vw: number, vh: number, folded = false) {
   const atlas = atlasWidth(vw, vh)
   const rail = folded ? VOYAGE_RAIL_COLLAPSED : VOYAGE_RAIL_WIDTH
-  const detail = detailFolded
-    ? VOYAGE_DETAIL_COLLAPSED
-    : clamp(VOYAGE_DETAIL_MIN_WIDTH, (atlas * VOYAGE_DETAIL_PCT) / 100, VOYAGE_DETAIL_MAX_WIDTH)
-  return { atlas, rail, detail, map: atlas - rail - detail }
+  return { atlas, rail, map: atlas - rail }
 }
 
 /**
@@ -137,9 +135,8 @@ describe('voyages atlas layout', () => {
   it.each(DESKTOPS)('%s lässt jeder Zone eine positive Breite', (_label, vw, vh) => {
     const z = zones(vw, vh)
     expect(z.rail).toBeGreaterThan(0)
-    expect(z.detail).toBeGreaterThan(0)
     expect(z.map).toBeGreaterThan(0)
-    expect(z.rail + z.detail + z.map).toBeCloseTo(z.atlas, 6)
+    expect(z.rail + z.map).toBeCloseTo(z.atlas, 6)
   })
 
   it.each(DESKTOPS)('%s hält den Kartenboden', (_label, vw, vh) => {
@@ -149,12 +146,9 @@ describe('voyages atlas layout', () => {
   it('trifft die im Browser gemessenen Breiten', () => {
     const fhd = zones(1920, 1080)
     expect(Math.round(fhd.rail)).toBe(224)
-    expect(Math.round(fhd.map)).toBe(628)
-    expect(Math.round(fhd.detail)).toBe(388)
+    expect(Math.round(fhd.map)).toBe(1016)
 
-    const qhd = zones(2560, 1440)
-    expect(Math.round(qhd.map)).toBe(955)
-    expect(Math.round(qhd.detail)).toBe(481)
+    expect(Math.round(zones(2560, 1440).map)).toBe(1436)
   })
 
   it.each(DESKTOPS)('%s: Einklappen gibt der Karte genau die Leistenbreite', (_l, vw, vh) => {
@@ -165,30 +159,28 @@ describe('voyages atlas layout', () => {
 
   it.each(DESKTOPS)('%s: Falten gibt der Karte immer nur Breite dazu, nie weg', (_l, vw, vh) => {
     const open = zones(vw, vh)
-    const focus = zones(vw, vh, true, true)
+    const focus = zones(vw, vh, true)
     expect(focus.map).toBeGreaterThan(open.map)
     expect(focus.map).toBeGreaterThanOrEqual(VOYAGE_MAP_MIN_WIDTH)
-    expect(focus.rail + focus.detail + focus.map).toBeCloseTo(focus.atlas, 6)
+    expect(focus.rail + focus.map).toBeCloseTo(focus.atlas, 6)
   })
 
-  it('macht die Karte im Fokus auf Full HD um drei Fünftel grösser', () => {
-    // Der Grund, aus dem beide Ränder falten dürfen. Gemessen an der Fit-Box,
-    // nicht an der Zone: was zählt, ist die Fläche, auf der die Galaxie steht.
-    //
-    // 1.61 und nicht mehr, weil das geöffnete Seitenverhältnis-Band einen Teil
-    // des Gewinns schon im OFFENEN Zustand ausschüttet. Vor dem Fleet-Streifen
-    // waren es 1.70; die 44 px, die er der Bühne nahm, fehlen im Fokus auf
-    // BEIDEN Seiten der Rechnung, gehen aber nur der Höhe ab — deshalb sank der
-    // Faktor, statt gleich zu bleiben.
-    //
-    // Das Fleet-BAND hat ihn nicht weiter gedrückt: seine 24 px kamen aus dem
-    // Datenband, nicht aus der Fit-Box. Wer der Kopfleiste Höhe gibt, ohne sie
-    // dort zu holen, drückt hier weiter.
-    const area = (z: { map: number }) => {
-      const box = galaxyFitBox(z.map - VOYAGE_MAP_GUTTER_PX, fitHeight(1080))
-      return box.w * box.h
-    }
-    expect(area(zones(1920, 1080, true, true)) / area(zones(1920, 1080))).toBeGreaterThan(1.55)
+  it.each(DESKTOPS)('%s: die Galaxie nutzt die volle Kartenbreite', (_l, vw, vh) => {
+    // Der Grund, aus dem der Wegfall der Detailspalte der Galaxie WIRKLICH
+    // zugutekommt: die Fit-Box klemmt an der Breite, nicht am oberen Rand ihres
+    // Seitenverhältnis-Bandes. Erst wenn sie dort anschlägt, verpufft jeder
+    // weitere Breitengewinn in Letterbox — wer die Leiste schmaler macht oder am
+    // Band dreht, soll das hier merken.
+    const avail = zones(vw, vh).map - VOYAGE_MAP_GUTTER_PX
+    const box = galaxyFitBox(avail, fitHeight(vh))
+    expect(box.w).toBeCloseTo(avail - 2 * VOYAGE_MAP_INSET_PX, 6)
+  })
+
+  it('gibt der Galaxie zurück, was die Detailspalte kostete', () => {
+    // Full HD: die Spalte mass 388 px, die Karte 628. Beides gemessen, bevor sie
+    // fiel — die Zahl steht hier, damit der Gewinn nicht stillschweigend wieder
+    // an einen dritten Rand geht.
+    expect(Math.round(zones(1920, 1080).map)).toBe(628 + 388)
   })
 
   it('klappt keine Referenzauflösung von selbst ein', () => {

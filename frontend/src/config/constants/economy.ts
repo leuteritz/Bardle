@@ -6,7 +6,6 @@ import type {
   ExpeditionHazardId,
   ExpeditionLedgerRankDef,
   ExpeditionSpoilsDef,
-  VoyageLogKind,
 } from '@/types'
 
 /** Aufsammel-Blitz und Lebensdauer eines Chime-Pops im Expeditions-Panel. */
@@ -742,24 +741,24 @@ export const SHOP_SEAT_PORTRAIT_SIZE = 28
 // Champion Shop — Chimes cost badge icon
 export const CHIMES_COST_ICON = 'game-icons:windchimes'
 
-/* ── Voyages-Atlas: drei Zonen, ein Budget ────────────────────────────────────
-   Dieselbe Budgetrechnung wie der Shop-Atlas (siehe SHOP_ATLAS_FACET_RAIL_WIDTH):
-   Seitenleiste + Karte + Detail teilen sich die Reiterbreite, und was die beiden
-   Ränder nehmen, bleibt der Karte. Der Reiter ist beidseitig um
-   `--hud-panel-size` eingerückt — die entscheidende Breite ist also die des
-   ATLAS, nicht die des Viewports (`container-type: inline-size` + ResizeObserver).
+/* ── Voyages-Atlas: zwei Zonen, ein Budget ────────────────────────────────────
+   Seitenleiste + Karte teilen sich die Reiterbreite, und was die Leiste nimmt,
+   bleibt der Karte. Der Reiter ist beidseitig um `--hud-panel-size` eingerückt —
+   die entscheidende Breite ist also die des ATLAS, nicht die des Viewports
+   (`container-type: inline-size` + ResizeObserver).
 
    Präfix VOYAGE_ und nicht EXPEDITION_: reine Reiter-Layoutmaße, die sich von
    den Spielkonstanten EXPEDITION_* in derselben Datei abheben sollen.
 
-   Durchgerechnet (Reiter = Modal / --team-ui-scale; Karte = Reiter − Leiste −
-   Detail; die Fit-Box verliert davon nochmal die Bühnenrinne und
-   2 × VOYAGE_MAP_INSET_PX):
+   Die DRITTE Zone ist gefallen. Sie trug das Missions-Dossier und war zugleich
+   der einzige Weg, eine Expedition loszuschicken — beides liegt jetzt an der
+   Marke selbst: die Hover-Karte ist die Auskunft, ein Klick die Geste
+   (`utils/game/voyageAction.ts`). Was sie kostete, hat die Galaxie geerbt:
 
-     Full HD 1920×1080   Reiter 1240 → Leiste 224 · Detail 388 · Karte 628
-     WUXGA   1920×1200   Reiter 1240 → Leiste 224 · Detail 388 · Karte 628
-     2K/QHD  2560×1440   Reiter 1660 → Leiste 224 · Detail 481 · Karte 955
-     4K      3840×2160   Reiter 2940 → Leiste 224 · Detail 560 · Karte 2156
+     Full HD 1920×1080   Reiter 1240 → Leiste 224 · Karte 1016  (vorher 628)
+     WUXGA   1920×1200   Reiter 1240 → Leiste 224 · Karte 1016  (vorher 628)
+     2K/QHD  2560×1440   Reiter 1660 → Leiste 224 · Karte 1436  (vorher 955)
+     4K      3840×2160   Reiter 2940 → Leiste 224 · Karte 2716  (vorher 2156)
 
    Der Boden ist ein GEOMETRIE-Boden, kein Geschmacksurteil: `generateGalaxyDots`
    strebt 0.085 Abstand im normalisierten Raum an, zwei benachbarte Häfen liegen
@@ -778,16 +777,29 @@ export const VOYAGE_RAIL_AUTOFOLD_WIDTH = 1180
 /** Luft ueber bzw. unter der Zeile, die ein Sprung von aussen ins Sichtfeld
  *  rollt — bündig an der Kante läse sie sich als abgeschnitten. */
 export const VOYAGE_RAIL_REVEAL_PAD = 8
-/** Untergrenze der Detailspalte: die Breite, bei der `.ecc-crew` (flex-wrap) noch
- *  zwei Sitze je Zeile trägt, ein Epic-Vertrag mit fünf Sitzen also auf drei
- *  Zeilen umbricht statt auf fünf. */
-export const VOYAGE_DETAIL_MIN_WIDTH = 388
-export const VOYAGE_DETAIL_PCT = 29
-export const VOYAGE_DETAIL_MAX_WIDTH = 560
-/** Eingeklappte Detailspalte: nur der senkrechte Griff bleibt stehen. Genau wie
- *  bei der Leiste wird der Körper VERSCHOBEN, nicht abgerissen — die halb
- *  besetzte Crew eines Vertrags überlebt das Falten. */
-export const VOYAGE_DETAIL_COLLAPSED = 44
+/* ── Die Geste an der Marke ───────────────────────────────────────────────────
+   Die Gründe stehen wörtlich so in den Wachen von `startExpedition` — sie sind
+   die Ansage der Hover-Karte UND die Bedingung des Klicks, und ein zweiter
+   Wortlaut daneben liefe auseinander.                                        */
+export const VOYAGE_ACTION_BLOCK_NO_SLOT = 'No free expedition slot'
+export const VOYAGE_ACTION_BLOCK_NO_CREW = 'Every seat needs a champion'
+export const VOYAGE_ACTION_BLOCK_EXPIRED = 'This contract has lapsed'
+
+export const VOYAGE_ACTION_SEND_LABEL = 'Click to send'
+export const VOYAGE_ACTION_COLLECT_LABEL = 'Click to collect'
+/** Keine zweite Uhr: die Restzeit steht schon als Chip in derselben Karte. */
+export const VOYAGE_ACTION_WAITING_LABEL = 'Still in the field'
+
+/** Ein Glyph je Ausgang — dieselbe Familie, die schon die Zustandschips führen. */
+export const VOYAGE_ACTION_ICONS = {
+  send: 'ph:paper-plane-tilt-fill',
+  collect: 'ph:treasure-chest-fill',
+  waiting: 'ph:hourglass-medium-fill',
+  blocked: 'ph:prohibit-fill',
+} as const
+
+/** Wie lange eine abgewiesene Marke wackelt. Rein visuell, deshalb real. */
+export const VOYAGE_MARK_REFUSE_MS = 420
 
 /* ── Das Fleet-Band ─ die EINE Zeile der Kopfleiste ───────────────────
 
@@ -907,94 +919,6 @@ export const VOYAGE_FLEET_ACT_H = 96
 export const VOYAGE_FLEET_BAND_PAD_X = 14
 export const VOYAGE_FLEET_BAND_GAP = 10
 
-/* ── Hoehenbudget der Missionskarte ───────────────────────────────────────────
-
-   Die Detailspalte ROLLT NICHT, wenn eine laufende oder zurueckgekehrte Mission
-   darin steht. Was die Karte an Hoehe reserviert, steht hier und nirgends
-   sonst — `voyageDossierLayout.spec.ts` summiert es gegen die gemessene
-   Spaltenhoehe und bricht, sobald jemand einen Block ergaenzt.
-
-   ZWEI Saetze, weil `@media (max-height: 1100px)` tragend ist und nicht
-   Zierrat: Full HD (Viewport ~950) und WUXGA (~1070) fallen darunter, 2K
-   (~1310) und 4K (~2030) darueber. Im vollen Satz passt das Schlimmste NICHT in
-   die Full-HD-Spalte — genau das prueft die Spec, damit niemand die Query fuer
-   entbehrlich haelt.
-
-   Die Spaltenhoehen sind GEMESSEN, nicht gerechnet: `.etc-detail` und
-   `.etc-stage` teilen sich Reihe 2 des Atlas-Rasters, die Zahlen stehen als
-   STAGE_HEIGHT in `voyagesAtlasLayout.spec.ts` (Full HD 701.6 · WUXGA 802.4 ·
-   2K 980 · 4K 1689.2). Hier stehen sie abgerundet, der Rest ist Sicherheit.
-
-   Der schlimmste Fall, gegen den gerechnet wird: ein epischer Vertrag in der
-   Tiefe — fuenf Sitze, drei Etappen, drei Gefahren.                          */
-
-/** Blockhoehen der Missionskarte, je `full` (2K/4K) und `compact` (Full HD/WUXGA). */
-export const VOYAGE_DOSSIER_BLOCK_H = {
-  /** Kopf: Glyph, Name, Status — plus die Zielzeile darunter. */
-  head: { full: 50, compact: 48 },
-  /** Uhrband, laufend: die grosse Zahl, ihre Einheit und die Ankunftszeile. */
-  clock: { full: 42, compact: 28 },
-  /** DERSELBE Platz, zurueckgekehrt: die Beutezahl statt der Restzeit. */
-  haul: { full: 42, compact: 28 },
-  /** Beute-Prognose bzw. die eingefahrene Beute. */
-  forecast: { full: 64, compact: 56 },
-  /** Eine Etappe ohne Gefahr in der Leiter. */
-  legClear: { full: 36, compact: 30 },
-  /** Eine Etappe mit ihrer ersten Gefahr. */
-  legHazard: { full: 62, compact: 53 },
-  /** Jede weitere Gefahr auf derselben Etappe. */
-  hazardRow: { full: 34, compact: 24 },
-  /** Abschnittskopf ueber der Crew. */
-  crewHead: { full: 22, compact: 18 },
-  /** Eine Crew-Zeile: Portraet, Name, Rolle, Statwerte. */
-  crewRow: { full: 42, compact: 28 },
-  /** Eine Logzeile — ZWEIZEILIG gerechnet, 318 px Textbreite auf Full HD. */
-  logEntry: { full: 44, compact: 34 },
-  /** Der Collect-Knopf, nur im zurueckgekehrten Zustand. */
-  foot: { full: 44, compact: 39 },
-} as const
-
-/** `full` ist der Wert der ENGSTEN vollen Spalte (2K). Auf 4K steht mehr
- *  Zwischenraum, dort ist Hoehe aber im Ueberfluss da. */
-export const VOYAGE_DOSSIER_GAP = { full: 10, compact: 7 } as const
-/** Oberer PLUS unterer Innenabstand der Karte. */
-export const VOYAGE_DOSSIER_PAD_Y = { full: 24, compact: 22 } as const
-/** So viel behaelt das Logbuch in jedem Fall — der einzige Block, der nachgibt. */
-export const VOYAGE_DOSSIER_LOG_MIN_H = { full: 132, compact: 84 } as const
-/** Deckel der Crew-Spalte: EIN Sitz darf auf 4K keine Platte werden, aber auf
- *  4K faellt sonst aller Leerraum dem Logbuch zu. */
-export const VOYAGE_DOSSIER_CREW_MAX_H = { full: 520, compact: 236 } as const
-
-/**
- * Obergrenze des Kompakt-Satzes. BESCHREIBEND — Media Queries koennen kein
- * `v-bind`, die Zahl steht sechsmal fest im CSS der Dossier-Bausteine; wer sie
- * hier aendert, aendert sie dort mit.
- *
- * 1250 und nicht mehr 1100: bei 1200 (WUXGA im Vollbild) fiel die Karte in den
- * VOLLEN Satz, waehrend die Spalte nur 754 px misst — im Browser gemessene
- * 53-55 px Ueberlauf, still beschnitten. Der naechste Fall darueber ist 2K mit
- * 1440, und dort traegt der volle Satz.
- */
-export const VOYAGE_DOSSIER_COMPACT_MAX_H = 1250
-/** Zweite Stufe nach oben, damit 4K nicht nur das Logbuch dehnt. */
-export const VOYAGE_DOSSIER_LARGE_MIN_H = 1601
-/**
- * Kuerzeste Spalte ueberhaupt (Full HD 656.6 gemessen, abgerundet).
- *
- * `.etc-detail` und `.etc-stage` teilen sich Reihe 2 und messen dasselbe — die
- * Zahl ist der STAGE_HEIGHT-Eintrag aus `voyagesAtlasLayout.spec.ts`. Die 700,
- * die hier stand, war doppelt veraltet: sie stammte aus der Zeit vor dem
- * Fleet-Streifen UND aus einer aelteren Kopfgeometrie. Die Karte wurde davon
- * still beschnitten (`overflow: clip` meldet keinen Ueberlauf) — im Browser
- * nachgewiesen, epischer Vertrag mit fuenf Sitzen und drei Gefahren.
- */
-export const VOYAGE_DOSSIER_COLUMN_MIN_H = 656
-/** Kuerzeste Spalte im vollen Satz (2K 935 gemessen). */
-export const VOYAGE_DOSSIER_COLUMN_FULL_MIN_H = 935
-/** Hoechste Spalte (4K 1644.2 gemessen). */
-export const VOYAGE_DOSSIER_COLUMN_MAX_H = 1644
-/** Leerraum, den der Logbuch-Schweif noch als Bild traegt statt als Loch. */
-export const VOYAGE_DOSSIER_TAIL_MAX_H = 380
 /**
  * Harter Boden der Kartenzone. Die Zahl ist ABGELEITET, nicht gewaehlt: bei
  * dieser Breite klemmt die Fit-Box am unteren Ende ihres Seitenverhaeltnis-
@@ -1321,161 +1245,6 @@ export const VOYAGE_LEG_ARRIVAL_NAMES = [
   'Sight the waypoint',
   'Put in',
 ]
-
-/* ── Das Reise-Logbuch ────────────────────────────────────────────────────────
-
-   Was die Missionskarte erzaehlt, waehrend die Crew unterwegs ist. ABGELEITET
-   wie die Etappen (`utils/game/voyageLog.ts`), aus demselben Seed plus Salz —
-   Vertrag und die daraus entstandene Mission schreiben dasselbe Buch, ohne ein
-   Speicherfeld. Es fuellt die Luecke, die `ExpeditionMission.description`
-   offenlaesst: `startExpedition` setzt das Feld auf '' und niemand schreibt je
-   hinein.
-
-   Vorlagen mit `{crew}`, `{hazard}`, `{leg}` und `{dest}`, gezogen ohne
-   Zuruecklegen. Die Pools sind groesser als die 11 Zeilen, die eine dreietappige
-   Reise mit drei Gefahren hoechstens braucht.
-
-   Ton wie die Etappennamen: Kosmos, Portale, Chimes, Meeps, Drifter, Waechter,
-   Leere — nie musikalisch (siehe „Thema" in CLAUDE.md).                       */
-
-/** Salz gegen den Etappen-Seed: ungesalzen liefe die Zeilenwahl mit den
- *  Etappennamen im Gleichschritt. */
-export const VOYAGE_LOG_SEED_SALT = 0x9e3779b1
-
-/* Wo in ihrer Etappe eine Zeile steht, als Anteil der Etappenspanne. Die
-   Ankunft liegt bei 0.93 und nicht bei 1: sonst faellt sie mit der Aufloesung
-   zusammen und niemand liest sie je. */
-export const VOYAGE_LOG_AT_OPEN = 0.08
-export const VOYAGE_LOG_AT_CREW = 0.45
-export const VOYAGE_LOG_AT_HAZARD = 0.62
-export const VOYAGE_LOG_AT_HAZARD_STEP = 0.16
-export const VOYAGE_LOG_AT_ARRIVE = 0.93
-
-/** Zeilen einer Reise: je Etappe Auftakt und Crew-Notiz, je Gefahr eine, dazu
- *  Ankunft und Verdikt. Die tiefste Stufe traegt eine Gefahr mehr
- *  (EXPEDITION_DEST_HAZARD_STEP), daher das `+ 1`. */
-export const VOYAGE_LOG_MAX = 2 * VOYAGE_LEG_MAX + (EXPEDITION_HAZARD_COUNT.epic + 1) + 2
-
-/** Steht statt eines Namens, solange die Crew noch nicht gesetzt ist. */
-export const VOYAGE_LOG_CREW_FALLBACK = 'the crew'
-export const VOYAGE_LOG_DEST_FALLBACK = 'the reach'
-
-export const VOYAGE_LOG_DEPART_LINES = [
-  'The portal folds shut behind them.',
-  'Chimes thin out as the rim falls away.',
-  'The meeps swarm the hull once and settle.',
-  'Last waymark logged. The reach opens.',
-  'They slip the mooring and take the dark.',
-  'A drifter walks them past the shallows, then goes.',
-  'The shrine light drops astern.',
-  'Heading set. Nothing behind them but the gate.',
-]
-
-export const VOYAGE_LOG_TRAVEL_LINES = [
-  'Nothing out here but cold and old light.',
-  '{leg} — the reach runs quiet.',
-  'A drifter shadows them a while, then peels off.',
-  'Dust chimes off the hull, one grain at a time.',
-  'The meeps go still. That is never nothing.',
-  'The star count comes up short against the chart.',
-  'They pass a dead warden, still at its post.',
-  'The void leans on the heading and is refused.',
-  'A cluster of chimes hangs unclaimed and untouched.',
-  'They log a portal that answers no key.',
-  'Hours of nothing. The chart is redrawn twice.',
-  'Something old drifts past and does not look back.',
-]
-
-export const VOYAGE_LOG_CREW_LINES = [
-  '{crew} takes the watch and keeps it long.',
-  '{crew} counts the chimes twice and gets two answers.',
-  '{crew} feeds the meeps and buys an hour of quiet.',
-  '{crew} swears the dark blinked first.',
-  '{crew} finds a waymark nobody carved.',
-  '{crew} patches the hull with a relic and apologises to it.',
-  '{crew} sleeps. The others let them.',
-  '{crew} argues with the chart and loses.',
-  '{crew} names the reach. It does not stick.',
-  '{crew} keeps one chime in a pocket, for luck.',
-  '{crew} spots the drifter first. Again.',
-  '{crew} refuses to say what they saw.',
-  '{crew} cuts a passage mark into the hull beside the others.',
-  '{crew} holds the heading while the rest hold their breath.',
-]
-
-/** Je Gefahr ein eigener Pool — „{hazard} closes in" dreimal hintereinander
- *  waere dieselbe Zeile mit ausgetauschtem Namen. */
-export const VOYAGE_LOG_HAZARD_LINES: Record<ExpeditionHazardId, string[]> = {
-  voidStatic: [
-    'The scream comes up out of nowhere; {crew} holds the heading.',
-    'Void static eats the chart. They fly on memory.',
-    'Every chime rings wrong at once.',
-  ],
-  crushingGravity: [
-    'The well takes hold. The hull complains, and holds.',
-    '{crew} counts their own heartbeat and loses the count.',
-    'They fall for a long time before they choose to.',
-  ],
-  hostileWardens: [
-    'A warden wakes and does not ask questions.',
-    '{crew} meets it head on. It was not expecting that.',
-    'Old armour, older orders. They go through.',
-  ],
-  sealedVault: [
-    'The lock has no keyhole. {crew} tries anyway.',
-    'The vault opens for luck and for nothing else.',
-    'Seals older than the galaxy — and one of them gives.',
-  ],
-  ancientSeals: [
-    'The seals wake to a shared bloodline and settle.',
-    '{crew} speaks a name the stone remembers.',
-    'Kin answers kin. The door thinks about it.',
-  ],
-  shiftingPaths: [
-    'The road lies, and it lies differently to each of them.',
-    '{crew} walks a path nobody else can see.',
-    'Two turns in, the maze runs out of tricks.',
-  ],
-}
-
-export const VOYAGE_LOG_ARRIVE_LINES = [
-  'The waypoint resolves out of the dark.',
-  '{leg} — anchor set.',
-  'The shrine stands where the chart promised.',
-  'Portals bloom ahead, and they are the right ones.',
-  'The meeps go loud. They are close.',
-  '{dest} gives up its last mile.',
-  'They put in. The chimes are counted.',
-  'Ground, or something willing to be called it.',
-]
-
-export const VOYAGE_LOG_VERDICT_SUCCESS = [
-  'Home. Full holds and a longer chart.',
-  'The gate opens for them. For all of them.',
-  'Everything they carried out, they carried back.',
-  'The waymark is theirs now.',
-  'They came back richer, and quieter.',
-  'Logged, sealed, and worth the going.',
-]
-export const VOYAGE_LOG_VERDICT_FAILURE = [
-  'They came back. Not all of it did.',
-  '{dest} kept most of what they went for.',
-  'The chart gains a warning, not a road.',
-  'Salvage, and the long way home.',
-  'What returned was less than what left.',
-  'The gate held. Little else did.',
-]
-
-/** Ein festes Glyph je ART — die Art muss wiedererkannt werden.
- *  Ueberwiegend gefuellte Sets: bei 16 px zerfallen verschnoerkelte Linien. */
-export const VOYAGE_LOG_ICONS: Record<VoyageLogKind, string> = {
-  depart: 'game-icons:portal',
-  travel: 'material-symbols:orbit',
-  crew: 'game-icons:meeple',
-  hazard: 'ph:warning-fill',
-  arrive: 'ph:anchor-fill',
-  verdict: 'ph:seal-fill',
-}
 
 /* ── Die Namen der Sterne einer Galaxie ───────────────────────────────────────
 

@@ -277,7 +277,7 @@ const aria = computed(
   /* Der ZUSTAND läuft über DREI Kanäle — Grund, linke Kante, Wort im Fuss —
      damit er auch ohne Farbsehen trägt und in einer Reihe von zehn Karten nicht
      erst gesucht werden muss. Die drei Gründe sind dieselben, mit denen das
-     Missions-Dossier arbeitet (`ExpeditionFieldCard.vue`): Karte und Dossier
+     die Hover-Karte der Marke arbeitet: Karte und Blase
      sprechen so dieselbe Sprache. */
   background: var(--vfc-bg, #1c1c18);
   border: 1px solid #3e200a;
@@ -492,7 +492,7 @@ const aria = computed(
   color: #e08a7a;
 }
 /* Was eine Handlung oder eine Sperre meint, wird zur Plakette — dieselbe Formel
-   wie „✓ Returned" im Dossier: Farbe, Rand auf 40 %, Grund auf 12 %. KEIN
+   wie „✓ Returned": Farbe, Rand auf 40 %, Grund auf 12 %. KEIN
    gefüllter Knopf: der Klick wählt die Karte, er sammelt nicht ein. */
 .vfc-tail--badge {
   padding: 1px 5px;

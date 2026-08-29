@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   VOYAGE_RAIL_WIDTH,
-  VOYAGE_DETAIL_COLLAPSED,
-  VOYAGE_DETAIL_MIN_WIDTH,
-  VOYAGE_DETAIL_PCT,
-  VOYAGE_DETAIL_MAX_WIDTH,
   VOYAGE_MAP_GUTTER_PX,
   VOYAGE_MAP_INSET_PX,
   VOYAGE_MAP_STATS_BAND_H,
@@ -67,15 +63,8 @@ function atlasWidth(vw: number, vh: number): number {
   return (vw - 2 * (panel + MODAL_GAP)) / teamUiScale(vw, vh)
 }
 
-function mapWidth(vw: number, vh: number, detailFolded = false): number {
-  const detail = detailFolded
-    ? VOYAGE_DETAIL_COLLAPSED
-    : clamp(
-        VOYAGE_DETAIL_MIN_WIDTH,
-        (atlasWidth(vw, vh) * VOYAGE_DETAIL_PCT) / 100,
-        VOYAGE_DETAIL_MAX_WIDTH,
-      )
-  return atlasWidth(vw, vh) - VOYAGE_RAIL_WIDTH - detail
+function mapWidth(vw: number, vh: number): number {
+  return atlasWidth(vw, vh) - VOYAGE_RAIL_WIDTH
 }
 
 /**

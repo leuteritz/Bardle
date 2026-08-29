@@ -12,16 +12,22 @@ import ExpeditionMarkTooltip, { type MarkChip } from './ExpeditionMarkTooltip.vu
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { getOriginColor } from '@/config/champions/championOrigins'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { formatMinuteClock, formatShortDuration } from '@/utils/ui/format'
 import { buildVoyageTip } from '@/utils/game/voyageTip'
+import { voyageMarkAction } from '@/utils/game/voyageAction'
 import { pinKeyOf } from '@/utils/game/voyageSites'
 import {
   EXPEDITION_CHANCE_GOOD,
   EXPEDITION_CHANCE_MID,
   EXPEDITION_EXPIRY_WARNING_MS,
+  VOYAGE_ACTION_COLLECT_LABEL,
+  VOYAGE_ACTION_ICONS,
+  VOYAGE_ACTION_SEND_LABEL,
+  VOYAGE_ACTION_WAITING_LABEL,
   VOYAGE_TIP_CREW_MAX,
 } from '@/config/constants'
 import type { VoyageRosterSubject } from '@/types'
@@ -31,6 +37,7 @@ const props = defineProps<{ pinKey: string; now: number }>()
 const expeditionStore = useExpeditionStore()
 const galaxyStore = useGalaxyStore()
 const battleStore = useBattleStore()
+const forgeStore = useStarForgeStore()
 
 /** Der Schlüssel überlebt den Übergang Vertrag → Mission, die Suche findet beides. */
 const subject = computed<VoyageRosterSubject | null>(() => {
@@ -148,12 +155,36 @@ const seats = computed(() => {
 const seatNote = computed(() => {
   const v = view.value
   if (!v) return ''
-  if (v.state === 'offer') return `${v.seatsFilled} / ${v.seatsTotal} seats crewed`
+  if (v.state === 'offer') {
+    // Voll besetzt heisst hier: die Auto-Crew steht schon in den Ringen daneben.
+    return v.seatsFilled === v.seatsTotal
+      ? `${v.seatsFilled} crew standing by`
+      : `${v.seatsFilled} / ${v.seatsTotal} seats crewed`
+  }
   const n = v.crew.length
   return v.state === 'field' ? `${n} crew in the field` : `${n} crew home`
 })
 
-const collectable = computed(() => view.value?.state === 'ready' || view.value?.state === 'failed')
+/** Dieselbe Regel, die der Klick auf die Marke ausführt — nur benannt. */
+const action = computed(() =>
+  subject.value
+    ? voyageMarkAction(subject.value, {
+        crewFor: (offer) => expeditionStore.crewFor(offer),
+        canStart: expeditionStore.canStartExpedition,
+        offersWait: forgeStore.expeditionOffersWait,
+        now: props.now,
+      })
+    : null,
+)
+
+const actionText = computed(() => {
+  const a = action.value
+  if (!a) return ''
+  if (a.kind === 'send') return VOYAGE_ACTION_SEND_LABEL
+  if (a.kind === 'collect') return `${VOYAGE_ACTION_COLLECT_LABEL} +${formatNumber(a.reward)}`
+  if (a.kind === 'waiting') return VOYAGE_ACTION_WAITING_LABEL
+  return a.reason
+})
 </script>
 
 <template>
@@ -204,7 +235,16 @@ const collectable = computed(() => view.value?.state === 'ready' || view.value?.
         <span>{{ seatNote }}</span>
       </span>
 
-      <span v-if="collectable" class="vtt-cta">Click the marker to collect</span>
+      <!-- Die Ansage der Geste. Kein Knopf: die Karte ist `passive`, getroffen
+           wird die Marke selbst. -->
+      <span
+        v-if="action"
+        class="vtt-line vtt-act"
+        :class="[`is-${action.kind}`, { 'is-lost': action.kind === 'collect' && !action.success }]"
+      >
+        <Icon :icon="VOYAGE_ACTION_ICONS[action.kind]" width="14" height="14" />
+        <b>{{ actionText }}</b>
+      </span>
     </template>
   </ExpeditionMarkTooltip>
 </template>
@@ -282,12 +322,30 @@ const collectable = computed(() => view.value?.state === 'ready' || view.value?.
   display: block;
 }
 
-.vtt-cta {
-  margin-top: 1px;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.07em;
+/* ── Die Aktionszeile ────────────────────────────────────────────────────── */
+.vtt-act {
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(200, 164, 90, 0.14);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+.vtt-act b {
+  font-weight: 800;
+}
+.vtt-act > svg {
+  flex-shrink: 0;
+}
+.vtt-act.is-send,
+.vtt-act.is-collect {
   color: #64dcb4;
+}
+.vtt-act.is-waiting {
+  color: rgba(230, 220, 196, 0.5);
+}
+.vtt-act.is-blocked,
+.vtt-act.is-lost {
+  color: #cc6050;
 }
 </style>

@@ -47,7 +47,7 @@ import {
   VOYAGE_MAP_STATS_WIDE_W,
 } from '@/config/constants'
 import { computeRequired, type CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
-import type { VoyageHomecoming, VoyagePlacedSite } from '@/types'
+import type { VoyageHomecoming, VoyageMarkAction, VoyagePlacedSite } from '@/types'
 import ExpeditionSiteNode from './ExpeditionSiteNode.vue'
 import ExpeditionGateNode from './ExpeditionGateNode.vue'
 import ExpeditionLandfallNode from './ExpeditionLandfallNode.vue'
@@ -78,8 +78,13 @@ const props = defineProps<{
   }
   /** Crews auf dem Heimweg — rein darstellend. */
   homecomings: VoyageHomecoming[]
+  /** Was ein Klick je Marke tut, nach pinKey. */
+  actions: Map<string, VoyageMarkAction>
 }>()
-const emit = defineEmits<{ select: [string | null] }>()
+const emit = defineEmits<{ select: [string | null]; act: [string] }>()
+
+/** Eine platzierte Marke hat immer einen Eintrag — der Rückfall hält nur den Typ dicht. */
+const ACTION_FALLBACK: VoyageMarkAction = { kind: 'waiting', endsAt: 0 }
 
 const stage = ref<HTMLElement | null>(null)
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -483,7 +488,8 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
         :now="now"
         :selected="selectedKey === site.pinKey"
         :inline-clock="inlineClock"
-        @select="emit('select', $event)"
+        :action="actions.get(site.pinKey) ?? ACTION_FALLBACK"
+        @act="emit('act', $event)"
       />
     </div>
   </div>

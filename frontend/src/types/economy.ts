@@ -476,6 +476,18 @@ export interface VoyageTipView {
 }
 
 /**
+ * Was ein Klick auf eine Marke tut (`utils/game/voyageAction.ts`).
+ *
+ * Die Marke führt sie aus, die Hover-Karte nennt sie vorher — beide lesen
+ * dieselbe Funktion, damit die Ansage nicht von der Wirkung abweichen kann.
+ */
+export type VoyageMarkAction =
+  | { kind: 'send'; offerId: string; crew: string[] }
+  | { kind: 'collect'; missionId: string; reward: number; success: boolean }
+  | { kind: 'waiting'; endsAt: number }
+  | { kind: 'blocked'; reason: string }
+
+/**
  * Ein benannter Abschnitt einer Voyage. ABGELEITET aus dem Vertrag bzw. der
  * Mission (`utils/game/voyageLegs.ts`), nie gespeichert — `from`/`to` sind
  * Anteile der Gesamtdauer und schliessen lückenlos aneinander an.
@@ -505,19 +517,4 @@ export interface VoyageTrackHazard {
   requirement?: string
   state?: 'met' | 'partial' | 'unmet' | 'open'
   cost?: number | null
-}
-
-/**
- * Eine Zeile des Reise-Logbuchs. ABGELEITET wie die Etappen
- * (`utils/game/voyageLog.ts`), nie gespeichert — `at` ist der Anteil der
- * Gesamtdauer, ab dem die Zeile steht.
- */
-export type VoyageLogKind = 'depart' | 'travel' | 'crew' | 'hazard' | 'arrive' | 'verdict'
-
-export interface VoyageLogEntry {
-  index: number
-  at: number
-  leg: number
-  kind: VoyageLogKind
-  text: string
 }

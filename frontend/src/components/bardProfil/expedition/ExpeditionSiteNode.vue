@@ -21,7 +21,7 @@
  * eigenen Ebene mit statischem Schein — kein `filter`, kein `box-shadow`, keine
  * animierte Randfarbe.
  */
-import { computed } from 'vue'
+import { computed, ref, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
@@ -29,6 +29,8 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import {
   EXPEDITION_COLORS,
   EXPEDITION_EXPIRY_WARNING_MS,
+  VOYAGE_ACTION_ICONS,
+  VOYAGE_MARK_REFUSE_MS,
   VOYAGE_MARKER_BREATH_MS,
   VOYAGE_MARKER_BREATH_WARN_MS,
   VOYAGE_MARKER_BOB_MS,
@@ -37,7 +39,7 @@ import {
   VOYAGE_TIP_OPEN_DELAY_MS,
   VOYAGE_TIP_WIDTH,
 } from '@/config/constants'
-import type { VoyagePlacedSite } from '@/types'
+import type { VoyageMarkAction, VoyagePlacedSite } from '@/types'
 import ExpeditionSubjectTooltip from './ExpeditionSubjectTooltip.vue'
 
 const props = defineProps<{
@@ -49,8 +51,10 @@ const props = defineProps<{
   selected: boolean
   /** Trägt die Platte ihre Uhr selbst, oder hängt sie als Pille darunter? */
   inlineClock: boolean
+  /** Was ein Klick hier tut — dieselbe Regel, die die Hover-Karte ansagt. */
+  action: VoyageMarkAction
 }>()
-const emit = defineEmits<{ select: [string] }>()
+const emit = defineEmits<{ act: [string] }>()
 
 const battleStore = useBattleStore()
 
@@ -132,9 +136,42 @@ const showInlineClock = computed(() => props.inlineClock && state.value !== 'ret
 const label = computed(() => {
   const s = subject.value
   if (!s) return ''
-  if (state.value === 'offer') return `${s.name} — expires in ${clock(expiresIn.value)}`
+  const a = props.action
+  const gesture =
+    a.kind === 'send'
+      ? ' — click to send'
+      : a.kind === 'collect'
+        ? ' — click to collect'
+        : a.kind === 'blocked'
+          ? ` — ${a.reason}`
+          : ''
+  if (state.value === 'offer') return `${s.name} — expires in ${clock(expiresIn.value)}${gesture}`
   if (state.value === 'running') return `${s.name} — returns in ${remaining.value}`
-  return `${s.name} — ${success.value ? 'returned' : 'lost'}, ready to collect`
+  return `${s.name} — ${success.value ? 'returned' : 'lost'}${gesture}`
+})
+
+// ── Die Geste ───────────────────────────────────────────────────────────────
+/** Eine abgewiesene Marke wackelt einmal — die Begründung steht in der Karte. */
+const refusing = ref(false)
+let refuseTimer: ReturnType<typeof setTimeout> | null = null
+
+function onClick() {
+  if (props.action.kind === 'waiting') return
+  if (props.action.kind === 'blocked') {
+    if (refuseTimer) clearTimeout(refuseTimer)
+    refusing.value = true
+    // Rein visuell, deshalb setTimeout und nicht gameTimeout().
+    refuseTimer = setTimeout(() => {
+      refusing.value = false
+      refuseTimer = null
+    }, VOYAGE_MARK_REFUSE_MS)
+    return
+  }
+  emit('act', props.site.pinKey)
+}
+
+onBeforeUnmount(() => {
+  if (refuseTimer) clearTimeout(refuseTimer)
 })
 
 const nodeStyle = computed(() => ({
@@ -145,6 +182,7 @@ const nodeStyle = computed(() => ({
   '--sn-glow': color.value.glowRgb,
   '--sn-breath': `${expiring.value ? VOYAGE_MARKER_BREATH_WARN_MS : VOYAGE_MARKER_BREATH_MS}ms`,
   '--sn-bob': `${VOYAGE_MARKER_BOB_MS}ms`,
+  '--sn-refuse': `${VOYAGE_MARK_REFUSE_MS}ms`,
 }))
 </script>
 
@@ -162,11 +200,19 @@ const nodeStyle = computed(() => ({
   >
     <button
       class="sn"
-      :class="[`sn--${state}`, { 'sn--on': selected, 'sn--warn': expiring, 'sn--lost': state === 'returned' && !success }]"
+      :class="[
+        `sn--${state}`,
+        `sn--act-${action.kind}`,
+        {
+          'sn--on': selected,
+          'sn--warn': expiring,
+          'sn--lost': state === 'returned' && !success,
+          'sn--refuse': refusing,
+        },
+      ]"
       :style="nodeStyle"
       :aria-label="label"
-      :aria-pressed="selected"
-      @click.stop="emit('select', site.pinKey)"
+      @click.stop="onClick"
     >
       <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre opacity. -->
       <span class="sn-breath" aria-hidden="true" />
@@ -189,6 +235,13 @@ const nodeStyle = computed(() => ({
         <span class="sn-face">
           <Icon v-if="subject" :icon="subject.icon" width="24" height="24" class="sn-ico" />
           <span v-if="showInlineClock" class="sn-clock">{{ clockText }}</span>
+        </span>
+
+        <!-- Die Affordanz: erst beim Überfahren, und nur wo der Klick etwas
+             tut. Sie DECKT den Glyph, statt neben ihm zu stehen — auf einer
+             34-px-Platte ist kein Platz für beides. -->
+        <span v-if="action.kind === 'send'" class="sn-go" aria-hidden="true">
+          <Icon :icon="VOYAGE_ACTION_ICONS.send" width="24" height="24" />
         </span>
 
         <span v-if="crewShown.length" class="sn-crew" aria-hidden="true">
@@ -331,6 +384,79 @@ const nodeStyle = computed(() => ({
 .sn--on .sn-plate {
   transform: scale(1.16);
 }
+
+/* ── Was der Klick tut, steht am Zeiger ─────────────────────────────────── */
+.sn--act-waiting {
+  cursor: default;
+}
+.sn--act-waiting:hover .sn-plate {
+  transform: scale(1);
+}
+.sn--act-blocked {
+  cursor: not-allowed;
+}
+.sn--act-blocked .sn-plate {
+  border-color: var(--sn-d);
+}
+.sn--act-blocked .sn-ico {
+  color: rgba(232, 220, 192, 0.5);
+}
+.sn--act-send:hover .sn-plate,
+.sn--act-send:focus-visible .sn-plate {
+  border-color: #e8c040;
+}
+
+/* Der Absende-Wimpel deckt den Glyph beim Überfahren. Nur `opacity` — die
+   Platte darunter skaliert ohnehin schon. */
+.sn-go {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--sn-plate, 32px) * 0.52);
+  height: calc(var(--sn-plate, 32px) * 0.52);
+  margin: calc(var(--sn-plate, 32px) * -0.26) 0 0 calc(var(--sn-plate, 32px) * -0.26);
+  color: #e8c040;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease;
+}
+.sn-go > svg {
+  width: 100%;
+  height: 100%;
+}
+.sn:hover .sn-go,
+.sn:focus-visible .sn-go {
+  opacity: 1;
+}
+.sn--act-send:hover .sn-ico,
+.sn--act-send:focus-visible .sn-ico {
+  opacity: 0;
+}
+
+/* Abgewiesen: ein einmaliges Wackeln, reiner `transform`. */
+.sn--refuse .sn-plate {
+  animation: sn-refuse var(--sn-refuse, 420ms) ease-in-out;
+}
+/* Der Endzustand ist die Hover-Skalierung, nicht 1: geklickt wird nur, was
+   unter dem Zeiger steht, und ein Rücksprung auf 1 läse sich als Fehler. */
+@keyframes sn-refuse {
+  0%,
+  100% {
+    transform: translateX(0) scale(1.12);
+  }
+  20% {
+    transform: translateX(-3px) scale(1.12);
+  }
+  45% {
+    transform: translateX(3px) scale(1.12);
+  }
+  70% {
+    transform: translateX(-2px) scale(1.12);
+  }
+}
 .sn--running .sn-plate {
   border-color: var(--sn-d);
 }
@@ -356,6 +482,7 @@ const nodeStyle = computed(() => ({
   width: calc(var(--sn-plate, 32px) * 0.46);
   height: calc(var(--sn-plate, 32px) * 0.46);
   color: var(--sn-c);
+  transition: opacity 0.14s ease;
 }
 .sn--running .sn-ico {
   color: rgba(232, 220, 192, 0.72);
@@ -504,7 +631,8 @@ const nodeStyle = computed(() => ({
 @media (prefers-reduced-motion: reduce) {
   .sn-breath,
   .sn--returned .sn-plate,
-  .sn--lost .sn-plate {
+  .sn--lost .sn-plate,
+  .sn--refuse .sn-plate {
     animation: none;
   }
 }

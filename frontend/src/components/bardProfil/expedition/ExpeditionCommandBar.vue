@@ -16,10 +16,9 @@
  * was startbereit ist. Die Zahlen-Ablesungen davor („In field 2/3",
  * „Contracts 4/5") sind ersatzlos entfallen: beides zählt man an den Karten ab.
  *
- * Der Focus-Knopf ist gefallen — Leiste und Detailspalte haben je einen eigenen
- * Griff, er war nur die Ein-Klick-Abkürzung für beide zusammen, und Escape
- * steigt weiterhin aus, weil `chartFocus` im Reiter abgeleitet ist und kein
- * eigenes Flag. Der Dev-Spawn steht absolut in der Statussäule statt im Fluss:
+ * Der Focus-Knopf ist gefallen — die Leiste hat ihren eigenen Griff, und seit
+ * die Detailspalte fort ist, ist sie der einzige Rand, den es zu falten gibt.
+ * Der Dev-Spawn steht absolut in der Statussäule statt im Fluss:
  * sonst wäre die Reihe im Dev-Build 56 px breiter als beim Spieler.
  */
 import { computed } from 'vue'
