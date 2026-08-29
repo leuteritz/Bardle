@@ -3,9 +3,15 @@
  * Die Scheibe eines Universums — zwei gebackene Ebenen, die sich verschieden
  * schnell drehen.
  *
- * Sie steht zweimal im Reiter: zehnmal klein in der Leiste und einmal gross im
- * Kopfband. Die Zeichenarbeit liegt ganz in `utils/fx/universeDisc.ts`; hier
- * bleiben die zwei `drawImage`, die sonst zweimal geschrieben stuenden.
+ * Sie steht DREIMAL im Reiter: zehnmal klein in der Leiste (34), einmal im
+ * Kopfband (46) und einmal gross als Herz der Buehne (bis 420). Die
+ * Zeichenarbeit liegt ganz in `utils/fx/universeDisc.ts`; hier bleiben die zwei
+ * `drawImage`, die sonst dreimal geschrieben stuenden.
+ *
+ * Tempo UND Dichte haengen an der Kantenlaenge, nicht an festen Zahlen —
+ * `universeDiscSpinSec` und `universeDiscDetail`. Bei 34 px ist beides
+ * unveraendert; ohne sie waere die grosse Scheibe die kleine, 5,3-fach
+ * vergroessert, und drehte am Rand mit 9,4 px/s.
  *
  * Die Drehung ist KEINE Frame-Schleife: das Sprite ist fertig, das CSS dreht
  * eine Textur am Compositor. `paintCount` der Karte ruehrt sich nicht, und
@@ -14,15 +20,12 @@
 import { computed, ref, watchEffect } from 'vue'
 import {
   buildUniverseDisc,
+  universeDiscSpinSec,
   type UniverseDiscLayer,
   type UniverseDiscState,
 } from '@/utils/fx/universeDisc'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
-import {
-  UNIVERSE_DISC_MAX_DPR,
-  UNIVERSE_DISC_RIM_SPIN_RATIO,
-  UNIVERSE_DISC_SPIN_SEC,
-} from '@/config/constants'
+import { UNIVERSE_DISC_MAX_DPR, UNIVERSE_DISC_RIM_SPIN_RATIO } from '@/config/constants'
 
 const props = defineProps<{
   universe: number
@@ -66,8 +69,13 @@ watchEffect(() => {
 const fieldTurns = computed(() => props.state !== 'unlit')
 
 const sizePx = computed(() => `${props.px}px`)
-const fieldDur = `${UNIVERSE_DISC_SPIN_SEC}s`
-const rimDur = `${UNIVERSE_DISC_SPIN_SEC * UNIVERSE_DISC_RIM_SPIN_RATIO}s`
+
+/* Die Dauer haengt an der KANTENLAENGE, nicht an einer festen Zahl: dieselbe
+   Scheibe steht mit 34, 46 und bis 420 px im Bild. */
+const fieldDur = computed(() => `${universeDiscSpinSec(props.px)}s`)
+const rimDur = computed(
+  () => `${universeDiscSpinSec(props.px) * UNIVERSE_DISC_RIM_SPIN_RATIO}s`,
+)
 </script>
 
 <template>

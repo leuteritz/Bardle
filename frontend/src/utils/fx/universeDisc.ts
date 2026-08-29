@@ -38,6 +38,8 @@ import {
   UNIVERSE_DISC_RIM_OUTER,
   UNIVERSE_DISC_RIM_W_MAX,
   UNIVERSE_DISC_RIM_W_MIN,
+  UNIVERSE_DISC_RAIL_PX,
+  UNIVERSE_DISC_SPIN_SEC,
 } from '@/config/constants'
 import { getUniverse } from '@/config/progression/universes'
 
@@ -59,6 +61,40 @@ export type UniverseDiscState = 'current' | 'walked' | 'unlit'
 export type UniverseDiscLayer = 'field' | 'rim'
 
 const TAU = Math.PI * 2
+
+/* -- Das Tempo jeder Drehung im Firmament ------------------------------------
+   Die Wahrnehmung einer Drehung haengt an ZWEI Groessen, und die beiden reinen
+   Formen sind beide falsch:
+
+   - gleiche Winkelrate (Dauer konstant) laesst die 180-px-Scheibe mit 9,4 px/s
+     am Rand kreiseln;
+   - gleiche Randgeschwindigkeit (Dauer proportional zu px) laesst sie 3,4 Grad
+     in drei Sekunden drehen, also stillstehen.
+
+   Genommen wird das geometrische Mittel: die Dauer waechst mit der WURZEL des
+   Durchmessers. Doppelt so gross ist 1,41 mal so lang. Die Basis bleibt die
+   gemessene Rail-Scheibe (34 px, 60 s, 1,78 px/s).                            */
+
+/** Umlaufdauer in Sekunden fuer eine Scheibe dieser Kantenlaenge. */
+export function universeDiscSpinSec(px: number): number {
+  return UNIVERSE_DISC_SPIN_SEC * Math.sqrt(Math.max(1, px) / UNIVERSE_DISC_RAIL_PX)
+}
+
+/**
+ * Wie fein die Scheibe bei dieser Kantenlaenge gezeichnet wird.
+ *
+ * Ohne das waere die grosse Scheibe die kleine, 5,3-fach vergroessert: achtzehn
+ * Galaxien mit 5,8 bis 13,5 px Halbachse. Das liest sich als Kleckse, nicht als
+ * Universum — und ausgerechnet in der Mitte der Buehne, wo man hinsieht.
+ *
+ * Die ZAHL waechst mit der Flaeche (d²), die GROESSE der einzelnen Marke faellt
+ * mit d. Beides zusammen haelt die Dichte konstant und die Marke bei ihrer
+ * gemessenen Kantenlaenge. Bei `UNIVERSE_DISC_RAIL_PX` ist d gleich 1 und alles
+ * bitgleich zu vorher — die Leiste aendert sich nicht.
+ */
+export function universeDiscDetail(px: number): number {
+  return Math.sqrt(Math.max(1, px) / UNIVERSE_DISC_RAIL_PX)
+}
 
 /* ── Determinismus ────────────────────────────────────────────────────────────
    Eine Hash-Folge statt eines rng: sie braucht keinen Zustand und ist von der
@@ -130,6 +166,9 @@ export function paintDustVeil(
 /**
  * Das Galaxienfeld.
  *
+ * `UNIVERSE_DISC_GALAXIES` gilt bei der Kantenlaenge der Leiste; groessere
+ * Scheiben tragen mehr und kleinere Marken (`universeDiscDetail`).
+ *
  * Die Radien sind unterlinear verteilt (`UNIVERSE_DISC_FIELD_EXP`) — dieselbe
  * Ueberlegung wie bei der Spirale des Firmaments: gleichverteilt haengen zwei
  * Drittel am Rand und der Kern steht leer. Gemalt werden ELLIPSEN mit Winkel,
@@ -145,11 +184,13 @@ export function paintGalaxyField(
   seed: number,
 ): void {
   const reach = r * (UNIVERSE_DISC_RIM_INNER - 0.07)
-  for (let i = 0; i < UNIVERSE_DISC_GALAXIES; i++) {
-    const t = (i + 0.5) / UNIVERSE_DISC_GALAXIES
+  const d = universeDiscDetail(r * 2)
+  const count = Math.round(UNIVERSE_DISC_GALAXIES * d * d)
+  for (let i = 0; i < count; i++) {
+    const t = (i + 0.5) / count
     const rad = reach * Math.pow(t * span(seed, i, 0.75, 1.12), UNIVERSE_DISC_FIELD_EXP)
     const ang = jitter(seed * 7 + 3, i) * TAU
-    const rx = r * span(seed, i + 41, 0.032, 0.075)
+    const rx = (r * span(seed, i + 41, 0.032, 0.075)) / d
     const ry = rx * span(seed, i + 83, 0.34, 0.92)
     ctx.beginPath()
     ctx.ellipse(
@@ -235,14 +276,16 @@ export function paintWebRim(
   ctx.fill()
 
   ctx.lineCap = 'round'
-  const step = TAU / UNIVERSE_DISC_RIM_ARCS
-  for (let i = 0; i < UNIVERSE_DISC_RIM_ARCS; i++) {
+  const d = universeDiscDetail(r * 2)
+  const arcs = Math.round(UNIVERSE_DISC_RIM_ARCS * d * d)
+  const step = TAU / arcs
+  for (let i = 0; i < arcs; i++) {
     const a0 = i * step + span(i, 1, -0.4, 0.4) * step
     const arc = step * span(i, 2, 0.45, 1.5)
     const rad = r * span(i, 3, UNIVERSE_DISC_RIM_INNER, UNIVERSE_DISC_RIM_OUTER)
     ctx.beginPath()
     ctx.arc(cx, cy, rad, a0, a0 + arc)
-    ctx.lineWidth = r * span(i, 4, UNIVERSE_DISC_RIM_W_MIN, UNIVERSE_DISC_RIM_W_MAX)
+    ctx.lineWidth = (r * span(i, 4, UNIVERSE_DISC_RIM_W_MIN, UNIVERSE_DISC_RIM_W_MAX)) / d
     ctx.strokeStyle = rgba(
       tones[Math.floor(jitter(i, 5) * tones.length)] ?? tones[0],
       span(i, 6, peak * 0.3, peak),

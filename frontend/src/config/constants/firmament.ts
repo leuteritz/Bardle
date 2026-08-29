@@ -165,3 +165,50 @@ export const UNIVERSE_DISC_SPIN_SEC = 60
  *  Feld still (unbetretene Scheibe), gibt es keine zu wahren — dann traegt der
  *  Wall die volle Rate, sonst waere die einzige sichtbare Bewegung halbiert. */
 export const UNIVERSE_DISC_RIM_SPIN_RATIO = 2
+
+/** Die Basis der Wurzelregel: `UNIVERSE_DISC_SPIN_SEC` gilt bei
+ *  `UNIVERSE_DISC_RAIL_PX`, jede andere Groesse leitet daraus ab
+ *  (`universeDiscSpinSec`). Eine feste Dauer fuer alle machte die grosse Scheibe
+ *  zum Kreisel (9,4 px/s bei 180 px) und eine feste Randrate die kleine zum
+ *  Stillstand (3,4 Grad in drei Sekunden). */
+
+// ── Die Heldenscheibe in der Mitte der Buehne ───────────────────────────────
+/* Das beobachtete Universum, gross. Sie ist dieselbe `UniverseDisc` wie in der
+   Leiste — kein zweites Zeichenrezept, nur eine andere Kantenlaenge. */
+
+/** Anteil des Bahnradius. 0,286 ergibt 180 px auf Full HD; darueber deckt sie
+ *  die zweite Windung mit ab, darunter traegt die Drehung nicht mehr. */
+export const UNIVERSE_DISC_HERO_R_RATIO = 0.286
+export const UNIVERSE_DISC_HERO_MIN_PX = 140
+/** Deckel: auf 4K ergaebe der Anteil 463 px und die Scheibe fraesse die halbe Bahn. */
+export const UNIVERSE_DISC_HERO_MAX_PX = 420
+/** Stufung der Kantenlaenge. `px` steht im Cache-Schluessel — stufenlos an
+ *  `box.r` gehaengt riebe jeder Resize-Frame ein neues Sprite. Dieselbe
+ *  Ueberlegung wie `ORBIT_SCALE_QUANTIZE_STEPS`. */
+export const UNIVERSE_DISC_HERO_QUANT_PX = 20
+/** Deckkraft der Heldenscheibe. Die drei innersten Knoten liegen auf ihr, der
+ *  dritte auf Anteil 0,94 — also im warmen Glutring. Gedaempft wird die ganze
+ *  Ebene, NICHT per Vignette im Sprite: die muesste aussen daempfen und traefe
+ *  den Wall, der die Drehung ueberhaupt sichtbar macht. */
+export const UNIVERSE_DISC_HERO_OPACITY = 0.7
+
+// ── Der Wall der Karte ──────────────────────────────────────────────────────
+/** Er dreht GEGEN die Heldenscheibe. Er ist nicht der Wall einer Scheibe (dort
+ *  gilt weiter gleichsinnig, halbes Tempo), sondern die Grenze des Bekannten um
+ *  die ganze Bahn — gleichsinnig verschmolze er mit ihr optisch zu einem Rad. */
+export const FIRMAMENT_RIM_SPIN_REVERSE = true
+/** Zuschlag der Sprite-Kante ueber `box.r` hinaus: der aeusserste Bogen reicht
+ *  bis 1,02 r, dazu die halbe Strichstaerke. */
+export const FIRMAMENT_RIM_SPRITE_MARGIN = 1.06
+/** Deckel der Wall-Rasterflaeche. EIGEN, nicht `FIRMAMENT_MAX_BACKING_PX`: die
+ *  Ebene ist quadratisch und waechst mit dem Zoom, bei 2,4 auf 2K waeren es
+ *  sonst 27 MB fuer ein Band aus Haarlinien. Bei Zoom 1 greift er auf keiner
+ *  Zielaufloesung — dort steht dpr 2 und das Bild ist das von vorher. */
+export const FIRMAMENT_WALL_MAX_BACKING_PX = 2048
+/** Dunkle Kontur unter der Bahn, in Referenzpixeln. Sie kreuzt jetzt das
+ *  Galaxienfeld der Heldenscheibe; Gold bei Alpha 0,45 verschwand darauf. */
+export const FIRMAMENT_ROAD_CASING_W = 2.6
+/** Schattenteich unter jedem Knoten, als Vielfaches seines Koerperradius. Ohne
+ *  ihn schwimmt der Knoten im Galaxienfeld der Heldenscheibe — dieselbe Lehre
+ *  wie `CORE_GATE_POOL_SPAN`: ein Loch in einem Leuchten ist kein Loch. */
+export const FIRMAMENT_NODE_POOL_SPAN = 3.4

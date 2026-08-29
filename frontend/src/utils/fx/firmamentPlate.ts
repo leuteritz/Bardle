@@ -1,12 +1,22 @@
 /* ── Firmament-Platte ─────────────────────────────────────────────────────────
-   Die EINE Zeichenreihenfolge der Firmament-Karte — und sie ist ein STANDBILD.
+   Die EINE Zeichenreihenfolge der Firmament-Karte. Sie zerfaellt in DREI Zuege,
+   und der Schnitt ist der Grund, warum der Reiter auf Grundlast steht:
 
-   Es gibt hier keine Zeit und keinen Frame: `paintFirmament` malt genau dann,
-   wenn sich Bestand, Groesse, Pixeldichte oder Zoomstufe geaendert haben. Was
-   atmet — der Ring der laufenden Galaxie, der Auswahlring — liegt als DOM
-   darueber und bewegt allein seine `opacity`. Der Entwurf hatte eine
-   rAF-Schleife mit 520 Sternen und 220 Boegen je Frame; das ist genau die Art
-   Dauerlast, gegen die `docs/performance.md` geschrieben ist.
+   - `paintFirmamentGround` — Grund und Sternfeld. Haengt weder an Zoom noch an
+     Fahrt noch am Bestand; ein eigenes Canvas, das dabei fast nie neu malt.
+   - `paintFirmamentRimArcs` — die 190 Boegen des Walls, um den Mittelpunkt des
+     Kontexts. Ein eigenes, quadratisches Sprite, das das CSS am Compositor
+     dreht.
+   - `paintFirmament` — Bahn, Ringe, Tore, Koerper. DAS ist das Standbild: es
+     malt genau dann, wenn Bestand, Groesse, Pixeldichte oder Zoomstufe sich
+     geaendert haben, und es malt TRANSPARENT ueber die beiden anderen.
+
+   Es gibt in keinem der drei eine Zeit und keinen Frame. Was sich dreht, ist
+   ein fertiges Sprite; was atmet — der Ring der laufenden Galaxie, der
+   Auswahlring — liegt als DOM darueber und bewegt allein seine `opacity`. Der
+   Entwurf hatte eine rAF-Schleife mit 520 Sternen und 220 Boegen je Frame; das
+   ist genau die Art Dauerlast, gegen die `docs/performance.md` geschrieben
+   ist.
 
    Alle festen Pixelwerte sind im Massstab `k = box.r / FIRMAMENT_PLATE_REF_R`
    gemeint, damit dieselbe Reihenfolge auf 240 px Radius traegt wie auf 900.
@@ -24,9 +34,11 @@ import {
   FIRMAMENT_LANDFALL_ORBIT,
   FIRMAMENT_LANDFALL_R,
   FIRMAMENT_LOST_COLOR,
+  FIRMAMENT_NODE_POOL_SPAN,
   FIRMAMENT_PIP_ORBIT,
   FIRMAMENT_PIP_R,
   FIRMAMENT_PLATE_REF_R,
+  FIRMAMENT_ROAD_CASING_W,
   FIRMAMENT_RIM_ARCS,
   FIRMAMENT_STAR_DENSITY,
   FIRMAMENT_STAR_MAX,
@@ -34,11 +46,8 @@ import {
 } from '@/config/constants'
 import type { FirmamentFitBox, FirmamentGate, FirmamentNode } from '@/utils/ui/firmamentLayout'
 
-export interface FirmamentPaintOpts {
-  /** Seed des Sternfelds. FEST, nie eine Zufallszahl — sonst saehe die Karte
-   *  nach jedem Repaint anders aus. */
-  seed: number
-}
+/** Seed des Sternfelds. FEST, nie eine Zufallszahl — sonst saehe der Grund nach
+ *  jedem Repaint anders aus. Er gehoert `paintFirmamentGround`. */
 
 /* Die roemischen Ziffern malt die Platte NICHT. Sie haengen als DOM an den
    Knoten: dort blenden Hover und Auswahl sie per CSS ein, ohne dass die ganze
@@ -67,7 +76,19 @@ function nodeColor(node: FirmamentNode): string {
   return `rgb(${minimapAccentForTheme(node.themeIndex)})`
 }
 
-function paintBackdrop(ctx: CanvasRenderingContext2D, w: number, h: number, seed: number): void {
+/**
+ * Grund und Sternfeld — der RAUM, nicht die Karte.
+ *
+ * Eigenes Canvas, eigener Schluessel: er kennt weder Zoom noch Fahrt. Im alten
+ * Zuschnitt malte dieses Feld bei jedem Zoomschritt mit, obwohl sich an ihm
+ * nichts aendern konnte.
+ */
+export function paintFirmamentGround(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  seed: number,
+): void {
   const bg = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.75)
   bg.addColorStop(0, '#0a0a14')
   bg.addColorStop(0.55, '#06060c')
@@ -89,15 +110,29 @@ function paintBackdrop(ctx: CanvasRenderingContext2D, w: number, h: number, seed
   }
 }
 
-/** Der aeussere Wall — das Ende dessen, was bekannt ist. */
-function paintRim(ctx: CanvasRenderingContext2D, box: FirmamentFitBox, k: number): void {
+/**
+ * Die Boegen des aeusseren Walls — das Ende dessen, was bekannt ist, und die
+ * einzige Ebene der Kartenflaeche, die sich bewegt.
+ *
+ * Gemalt wird um `cx/cy` des uebergebenen Kontexts, damit dasselbe Rezept in
+ * ein eigenes quadratisches Sprite passt, dessen Mitte der Drehpunkt ist. Der
+ * Seed bleibt 19: das Aussehen ist byte-identisch zu dem, was frueher im
+ * Standbild stand.
+ */
+export function paintFirmamentRimArcs(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  k: number,
+): void {
   const rng = seededRng(19)
   ctx.save()
-  ctx.translate(box.cx, box.cy)
+  ctx.translate(cx, cy)
   for (let i = 0; i < FIRMAMENT_RIM_ARCS; i++) {
     const a0 = rng() * Math.PI * 2
     const len = 0.06 + rng() * 0.2
-    const r0 = box.r * (0.9 + rng() * 0.09)
+    const r0 = r * (0.9 + rng() * 0.09)
     const r1 = r0 * (0.96 + rng() * 0.07)
     ctx.beginPath()
     ctx.moveTo(Math.cos(a0) * r0, Math.sin(a0) * r0)
@@ -111,6 +146,19 @@ function paintRim(ctx: CanvasRenderingContext2D, box: FirmamentFitBox, k: number
     ctx.lineWidth = (0.6 + rng() * 1.1) * k
     ctx.stroke()
   }
+  ctx.restore()
+}
+
+/**
+ * Die zwei geschlossenen Ringe des Walls.
+ *
+ * Sie bleiben im STANDBILD. Ein rotationssymmetrischer Kreis traegt keine
+ * Drehung — im Sprite kostete er nur Flaeche, und das Sprite muesste fuer ihn
+ * bis an seine Kante decken.
+ */
+function paintRimRings(ctx: CanvasRenderingContext2D, box: FirmamentFitBox, k: number): void {
+  ctx.save()
+  ctx.translate(box.cx, box.cy)
   ctx.beginPath()
   ctx.arc(0, 0, box.r * 0.985, 0, Math.PI * 2)
   ctx.strokeStyle = 'rgba(255, 120, 40, 0.45)'
@@ -122,6 +170,23 @@ function paintRim(ctx: CanvasRenderingContext2D, box: FirmamentFitBox, k: number
   ctx.lineWidth = 8 * k
   ctx.stroke()
   ctx.restore()
+}
+
+/**
+ * Ein Zug der Bahn, zweimal gestrichen: erst dunkel und breiter, dann in seiner
+ * Farbe.
+ *
+ * Die Kontur ist keine Zier. Die Bahn laeuft durch den Kern der Heldenscheibe,
+ * und Gold bei Alpha 0,45 verschwindet auf deren Galaxienfeld. Dasselbe Mittel
+ * wie unter der zerbrochenen Krone der Galaxiekarte.
+ */
+function strokeRoad(ctx: CanvasRenderingContext2D, color: string, w: number, k: number): void {
+  ctx.strokeStyle = 'rgba(4, 3, 6, 0.62)'
+  ctx.lineWidth = w + FIRMAMENT_ROAD_CASING_W * k
+  ctx.stroke()
+  ctx.strokeStyle = color
+  ctx.lineWidth = w
+  ctx.stroke()
 }
 
 /** Die Bahn selbst: eine durchgezogene Linie durch alles Befreite, eine
@@ -146,9 +211,7 @@ function paintRoad(
       const p = pt(nodes[i])
       ctx.lineTo(p.x, p.y)
     }
-    ctx.strokeStyle = fade(FIRMAMENT_FREED_COLOR, 0.45)
-    ctx.lineWidth = 1.6 * k
-    ctx.stroke()
+    strokeRoad(ctx, fade(FIRMAMENT_FREED_COLOR, 0.45), 1.6 * k, k)
   }
 
   // Die Ueberfahrt: gestrichelt, weil sie noch nicht abgeschlossen ist. Das
@@ -162,9 +225,7 @@ function paintRoad(
     ctx.beginPath()
     ctx.moveTo(from.x, from.y)
     ctx.lineTo(to.x, to.y)
-    ctx.strokeStyle = fade(FIRMAMENT_HERE_COLOR, 0.75)
-    ctx.lineWidth = 1.6 * k
-    ctx.stroke()
+    strokeRoad(ctx, fade(FIRMAMENT_HERE_COLOR, 0.75), 1.6 * k, k)
     ctx.restore()
   }
 
@@ -180,29 +241,15 @@ function paintRoad(
       const p = pt(nodes[i])
       ctx.lineTo(p.x, p.y)
     }
-    ctx.strokeStyle = fade(FIRMAMENT_UNLIT_COLOR, 0.3)
-    ctx.lineWidth = 1.1 * k
-    ctx.stroke()
+    strokeRoad(ctx, fade(FIRMAMENT_UNLIT_COLOR, 0.3), 1.1 * k, k)
     ctx.restore()
   }
 }
 
-/** Der Ursprung: die erste Sonne, an der alles anfing. */
-function paintOrigin(ctx: CanvasRenderingContext2D, box: FirmamentFitBox, k: number): void {
-  const r = 26 * k
-  const g = ctx.createRadialGradient(box.cx, box.cy, 0, box.cx, box.cy, r)
-  g.addColorStop(0, 'rgba(255, 246, 214, 0.95)')
-  g.addColorStop(0.35, 'rgba(255, 200, 90, 0.6)')
-  g.addColorStop(1, 'rgba(255, 140, 40, 0)')
-  ctx.fillStyle = g
-  ctx.beginPath()
-  ctx.arc(box.cx, box.cy, r, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = '#fff6d6'
-  ctx.beginPath()
-  ctx.arc(box.cx, box.cy, 4.2 * k, 0, Math.PI * 2)
-  ctx.fill()
-}
+/* Der Ursprung ist ENTFALLEN. An seiner Stelle steht die Heldenscheibe, und die
+   bringt mit `paintCore` denselben Ort schon mit — zwei Sonnen an derselben
+   Stelle waeren eine doppelte Aussage. Die Bahn setzt weiter an `box.cx/cy` an
+   und endet damit im Kern der Scheibe. */
 
 /** Ein Universumstor: zwei Boegen quer zur Bahn, dazwischen die Ziffer. */
 function paintGates(
@@ -250,6 +297,19 @@ function paintNode(
     ctx.restore()
     return
   }
+
+  // Schattenteich: die innersten Knoten liegen auf dem Galaxienfeld der
+  // Heldenscheibe, der dritte sogar in ihrem Glutring. Dieselbe Lehre wie bei
+  // `core-gate` — ein Leuchten auf einem Leuchten ist kein Leuchten. Er steht
+  // VOR Schein und Kern, damit die auf dem gedaempften Grund stehen.
+  const pool = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * FIRMAMENT_NODE_POOL_SPAN)
+  pool.addColorStop(0, 'rgba(6, 5, 4, 0.72)')
+  pool.addColorStop(0.5, 'rgba(6, 5, 4, 0.44)')
+  pool.addColorStop(1, 'rgba(6, 5, 4, 0)')
+  ctx.beginPath()
+  ctx.arc(p.x, p.y, r * FIRMAMENT_NODE_POOL_SPAN, 0, Math.PI * 2)
+  ctx.fillStyle = pool
+  ctx.fill()
 
   const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.6)
   glow.addColorStop(0, color)
@@ -299,8 +359,11 @@ function paintNode(
 }
 
 /**
- * Die ganze Platte in einem Zug. Reihenfolge ist Bedeutung: Hintergrund, Wall,
- * Bahn, Ursprung, Tore, Koerper — was spaeter kommt, liegt oben.
+ * Die Karte ueber Grund, Wall und Heldenscheibe. Reihenfolge ist Bedeutung:
+ * Wallringe, Bahn, Tore, Koerper — was spaeter kommt, liegt oben.
+ *
+ * Sie malt TRANSPARENT. Ein deckender Grund hier legte sich ueber die beiden
+ * drehenden Ebenen darunter, und die waeren nicht mehr zu sehen.
  */
 export function paintFirmament(
   ctx: CanvasRenderingContext2D,
@@ -309,15 +372,12 @@ export function paintFirmament(
   w: number,
   h: number,
   box: FirmamentFitBox,
-  opts: FirmamentPaintOpts,
 ): void {
   const k = box.r / FIRMAMENT_PLATE_REF_R
 
   ctx.clearRect(0, 0, w, h)
-  paintBackdrop(ctx, w, h, opts.seed)
-  paintRim(ctx, box, k)
+  paintRimRings(ctx, box, k)
   paintRoad(ctx, nodes, box, k)
-  paintOrigin(ctx, box, k)
   paintGates(ctx, gates, box, k)
   for (const node of nodes) paintNode(ctx, node, box, k)
 }

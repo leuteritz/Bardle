@@ -1,18 +1,27 @@
 <script setup lang="ts">
 /**
- * Die Karte — ein STANDBILD mit ein paar Trefferflaechen darueber.
+ * Die Karte — VIER Ebenen, und der Schnitt ist der Grund, warum der Reiter auf
+ * Grundlast steht.
  *
- * Zwei Ebenen, und der Schnitt ist der Grund, warum der Reiter auf Grundlast
- * steht: das Canvas traegt alles Stillstehende (Sternfeld, Wall, Bahn, Tore,
- * Koerper samt Pips und Ortsrauten) und malt nur, wenn `paintKey` sich aendert.
- * Darueber liegt je Knoten EIN durchsichtiger Knopf — Hover, Klick, Fokus und
- * Hover-Karte. Die Trefferschleife des Entwurfs (`pick()` ueber alle Knoten je
- * Mausbewegung) entfaellt damit ersatzlos.
+ * | Ebene | was | malt neu, wenn |
+ * | --- | --- | --- |
+ * | Grund | Sternfeld | Buehne oder Pixeldichte sich aendern |
+ * | Wall | die 190 Boegen | der Bahnradius sich aendert |
+ * | Herz | das beobachtete Universum | seine Kantenstufe sich aendert |
+ * | Karte | Bahn, Tore, Koerper | `paintKey` sich aendert |
  *
- * Bewegt wird ausschliesslich per CSS und nur `opacity`/`transform`: der
- * Atemring der laufenden Galaxie und der Auswahlring. Keine Frame-Schleife,
- * keine driftende Drehung, kein Komet — beide traegen keine Auskunft und
- * kosteten Dauerlast in einem Reiter, der nie abgerissen wird.
+ * Wall und Herz DREHEN sich, und zwar gegeneinander — aber ohne einen einzigen
+ * Repaint: es sind fertig gebackene Sprites, die das CSS am Compositor dreht.
+ * Verboten ist die Frame-SCHLEIFE, nicht die Bewegung. `paintCount` zaehlt die
+ * Karte und muss in Ruhe stehenbleiben.
+ *
+ * Der Grund liegt AUSSERHALB der fahrenden Ebene: das Sternfeld ist der Raum,
+ * nicht die Karte. Vorher fuhr es mit und wurde bei jedem Zoomschritt
+ * mitgemalt, obwohl an ihm nichts von Zoom oder Fahrt abhaengt.
+ *
+ * Ueber allem liegt je Knoten EIN durchsichtiger Knopf — Hover, Klick, Fokus
+ * und Hover-Karte. Die Trefferschleife des Entwurfs (`pick()` ueber alle Knoten
+ * je Mausbewegung) entfaellt damit ersatzlos.
  *
  * Zoom faehrt in DREI Stufen statt stufenlos: jede Stufe ist EIN Repaint. Beim
  * Ziehen faehrt die ganze Ebene per `transform` (Compositor), der Repaint kommt
@@ -22,14 +31,22 @@ import { computed, ref, watch, onBeforeUnmount, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useGameStore } from '@/stores/core/gameStore'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { firmamentFitBox, firmamentGateSignature } from '@/utils/ui/firmamentLayout'
-import { firmamentScreenPos, paintFirmament } from '@/utils/fx/firmamentPlate'
+import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
+import {
+  firmamentScreenPos,
+  paintFirmament,
+  paintFirmamentGround,
+  paintFirmamentRimArcs,
+} from '@/utils/fx/firmamentPlate'
 import { toRoman } from '@/utils/ui/format'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import FirmamentGalaxyTip from './FirmamentGalaxyTip.vue'
 import FirmamentSelectionCard from './FirmamentSelectionCard.vue'
+import UniverseDisc from './UniverseDisc.vue'
 import {
   FIRMAMENT_FREED_COLOR,
   FIRMAMENT_GATE_COLOR,
@@ -39,9 +56,18 @@ import {
   FIRMAMENT_MAX_BACKING_PX,
   FIRMAMENT_MAX_DPR,
   FIRMAMENT_NODE_HIT_MIN,
+  FIRMAMENT_PLATE_REF_R,
+  FIRMAMENT_RIM_SPIN_REVERSE,
+  FIRMAMENT_RIM_SPRITE_MARGIN,
   FIRMAMENT_STAR_SEED,
+  FIRMAMENT_WALL_MAX_BACKING_PX,
   FIRMAMENT_UNLIT_COLOR,
   FIRMAMENT_ZOOM_STEPS,
+  UNIVERSE_DISC_HERO_MAX_PX,
+  UNIVERSE_DISC_HERO_MIN_PX,
+  UNIVERSE_DISC_HERO_OPACITY,
+  UNIVERSE_DISC_HERO_QUANT_PX,
+  UNIVERSE_DISC_HERO_R_RATIO,
 } from '@/config/constants'
 import type { FirmamentGate, FirmamentNode } from '@/utils/ui/firmamentLayout'
 import type { FirmamentSelection } from '@/types'
@@ -56,10 +82,13 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'select', value: FirmamentSelection): void }>()
 
 const galaxyStore = useGalaxyStore()
+const gameStore = useGameStore()
 const { completedGalaxies } = storeToRefs(galaxyStore)
 
 const stage = ref<HTMLElement | null>(null)
 const canvas = ref<HTMLCanvasElement | null>(null)
+const groundEl = ref<HTMLCanvasElement | null>(null)
+const rimEl = ref<HTMLCanvasElement | null>(null)
 const cssW = ref(0)
 const cssH = ref(0)
 const dprNow = ref(1)
@@ -198,6 +227,32 @@ const gateMarks = computed(() =>
   }),
 )
 
+/**
+ * Die Heldenscheibe: das beobachtete Universum, in der Mitte der Bahn.
+ *
+ * Ihre Kante haengt am Bahnradius, ist aber GESTUFT — `px` steht im
+ * Sprite-Schluessel, und ein stufenlos mitlaufender Wert riebe bei jedem
+ * Resize-Frame ein neues Sprite.
+ */
+const heroPx = computed(() => {
+  const raw = 2 * box.value.r * UNIVERSE_DISC_HERO_R_RATIO
+  const stepped = Math.round(raw / UNIVERSE_DISC_HERO_QUANT_PX) * UNIVERSE_DISC_HERO_QUANT_PX
+  return Math.min(UNIVERSE_DISC_HERO_MAX_PX, Math.max(UNIVERSE_DISC_HERO_MIN_PX, stepped))
+})
+
+/** Kante des Wall-Sprites. Quadratisch, die Mitte ist der Drehpunkt. */
+const rimSide = computed(() =>
+  Math.max(1, Math.round(box.value.r * 2 * FIRMAMENT_RIM_SPRITE_MARGIN)),
+)
+
+/* Dieselbe Wurzelregel wie die Scheiben: die Dauer waechst mit der Wurzel des
+   Durchmessers. Der Wall ist der groesste Koerper im Reiter und dreht damit von
+   selbst am traegsten — die Parallaxe zur Heldenscheibe kostet keine zweite
+   Zahl. */
+const rimSpinDur = computed(() => `${universeDiscSpinSec(rimSide.value)}s`)
+const rimSpinDir = FIRMAMENT_RIM_SPIN_REVERSE ? 'reverse' : 'normal'
+const heroOpacity = String(UNIVERSE_DISC_HERO_OPACITY)
+
 function pickNode(node: FirmamentNode, picked: boolean) {
   emit('select', picked ? null : { kind: 'galaxy', galaxy: node.galaxy })
 }
@@ -217,6 +272,51 @@ const paintKey = computed(
     `|${Math.round(cssW.value)}x${Math.round(cssH.value)}|${dprNow.value}` +
     `|${zoomStep.value}|${Math.round(pan.value.x)},${Math.round(pan.value.y)}`,
 )
+
+/** Der Grund kennt weder Zoom noch Fahrt — deshalb ein eigener, groberer
+ *  Schluessel. Er feuert beim Zoomschritt NICHT. */
+const groundKey = computed(
+  () => `${Math.round(cssW.value)}x${Math.round(cssH.value)}|${dprNow.value}`,
+)
+
+/** Der Wall haengt allein am Bahnradius. */
+const rimKey = computed(() => `${rimSide.value}|${dprNow.value}`)
+
+function backingDpr(w: number, h: number, cap = FIRMAMENT_MAX_BACKING_PX): number {
+  return Math.min(window.devicePixelRatio || 1, FIRMAMENT_MAX_DPR, cap / Math.max(w, h))
+}
+
+function paintGround() {
+  const el = groundEl.value
+  const w = Math.round(cssW.value)
+  const h = Math.round(cssH.value)
+  if (!el || w <= 0 || h <= 0) return
+  resetCanvasIfContextLost(el)
+  const dpr = backingDpr(w, h)
+  el.width = Math.max(1, Math.round(w * dpr))
+  el.height = Math.max(1, Math.round(h * dpr))
+  const ctx = el.getContext('2d')
+  if (!ctx) return
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  paintFirmamentGround(ctx, w, h, FIRMAMENT_STAR_SEED)
+}
+
+function paintRim() {
+  const el = rimEl.value
+  const side = rimSide.value
+  if (!el || side <= 1) return
+  resetCanvasIfContextLost(el)
+  // Eigener, engerer Deckel: die Ebene ist quadratisch und waechst mit dem
+  // Zoom. Bei Zoom 1 greift er nicht.
+  const dpr = backingDpr(side, side, FIRMAMENT_WALL_MAX_BACKING_PX)
+  el.width = Math.max(1, Math.round(side * dpr))
+  el.height = Math.max(1, Math.round(side * dpr))
+  const ctx = el.getContext('2d')
+  if (!ctx) return
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  const r = box.value.r
+  paintFirmamentRimArcs(ctx, side / 2, side / 2, r, r / FIRMAMENT_PLATE_REF_R)
+}
 
 let queued = false
 function schedule() {
@@ -249,11 +349,13 @@ function paint() {
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-  paintFirmament(ctx, props.nodes, props.gates, w, h, box.value, { seed: FIRMAMENT_STAR_SEED })
+  paintFirmament(ctx, props.nodes, props.gates, w, h, box.value)
   paintCount.value += 1
 }
 
 watch(paintKey, schedule, { flush: 'post' })
+watch(groundKey, () => requestAnimationFrame(paintGround), { flush: 'post' })
+watch(rimKey, () => requestAnimationFrame(paintRim), { flush: 'post' })
 
 // ── Groesse und Pixeldichte — beide haengen an der SICHTBARKEIT ─────────────
 let observer: ResizeObserver | null = null
@@ -282,6 +384,12 @@ function attach() {
   })
   observer.observe(el)
   readDpr()
+  // Die beiden Watcher feuern nur auf AENDERUNG; beim Wiedereinblenden steht
+  // ihr Schluessel schon richtig, das Canvas aber leer.
+  requestAnimationFrame(() => {
+    paintGround()
+    paintRim()
+  })
 }
 
 function detach() {
@@ -323,8 +431,36 @@ const LEGEND = [
     :class="{ 'is-pannable': canPan, 'is-dragging': dragging }"
     @pointerdown="onPointerDown"
   >
+    <!-- Der Raum. Er faehrt NICHT mit: die Bahn wandert durch die Sterne,
+         statt sie mitzuschleppen. -->
+    <canvas ref="groundEl" class="fm-ground" aria-hidden="true" />
+
     <div class="fm-layer" :style="layerStyle">
-      <canvas ref="canvas" class="fm-canvas" />
+      <!-- Die zwei Ebenen, die sich drehen. Beide sind fertige Sprites; das CSS
+           dreht sie am Compositor, kein Repaint. Gegenlaeufig, damit sie nicht
+           als EIN Rad zusammenfallen. -->
+      <canvas
+        ref="rimEl"
+        class="fm-rim"
+        aria-hidden="true"
+        :style="{
+          width: `${rimSide}px`,
+          height: `${rimSide}px`,
+          animationDuration: rimSpinDur,
+          animationDirection: rimSpinDir,
+        }"
+      />
+      <UniverseDisc
+        class="fm-hero"
+        :universe="gameStore.currentUniverse"
+        state="current"
+        :px="heroPx"
+      />
+
+      <!-- `data-paints` ist der Beleg, nicht Zierrat: der Playwright-Lauf liest
+           ihn und darf ihn in Ruhe nicht wachsen sehen. Er wird nur
+           geschrieben, wenn ohnehin gemalt wurde. -->
+      <canvas ref="canvas" class="fm-canvas" :data-paints="paintCount" />
 
       <!-- Ein Knopf je Knoten. Kein Schein, kein Zierrat — den malt das Canvas
            darunter; hier liegt nur, was auf Zeiger und Tastatur antwortet. -->
@@ -431,11 +567,63 @@ const LEGEND = [
   cursor: grabbing;
 }
 
+/* Der Raum, unter allem. */
+.fm-ground {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 /* Die ganze Ebene faehrt beim Ziehen als EIN transform — Canvas und Knoten
    bleiben dabei zwangslaeufig deckungsgleich. */
 .fm-layer {
   position: absolute;
   inset: 0;
+}
+
+/* Wall und Herz. Beide zentriert auf der Mitte der Bahn, beide ohne
+   `will-change`: Chrome promotet die laufende Animation ohnehin, und der
+   Hinweis legte die Ebene schon beim Mount an — im teuersten Frame des
+   Reiters. Dieselbe Begruendung wie in `UniverseDisc.vue`. */
+.fm-rim,
+.fm-hero {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+}
+
+/* Die Zentrierung steht IM Keyframe: eine Drehung ueberschriebe ein separates
+   `transform` sonst. Die Richtung setzt der Aufrufer. */
+.fm-rim {
+  display: block;
+  transform: translate(-50%, -50%);
+  transform-origin: 50% 50%;
+  animation: fm-rim-turn 260s linear infinite;
+}
+
+@keyframes fm-rim-turn {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Die Heldenscheibe dreht in sich selbst (ihre zwei Ebenen); hier haelt nur die
+   Zentrierung. Gedaempft, weil die drei innersten Knoten auf ihr liegen. */
+.fm-hero {
+  transform: translate(-50%, -50%);
+  opacity: v-bind(heroOpacity);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-rim {
+    animation: none;
+  }
 }
 
 .fm-canvas {

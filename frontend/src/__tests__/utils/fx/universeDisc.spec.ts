@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   jitter,
+  universeDiscDetail,
+  universeDiscSpinSec,
   paintCore,
   paintDustVeil,
   paintGalaxyField,
@@ -16,6 +18,8 @@ import {
   UNIVERSE_DISC_RIM_ARCS,
   UNIVERSE_DISC_RIM_INNER,
   UNIVERSE_DISC_RIM_OUTER,
+  UNIVERSE_DISC_RAIL_PX,
+  UNIVERSE_DISC_SPIN_SEC,
 } from '@/config/constants'
 
 /**
@@ -245,5 +249,55 @@ describe('Universumsscheibe — Determinismus und Schlüssel', () => {
     expect(universeDiscKey(3, 'current', 'field', 46, 2)).not.toBe(base)
     expect(universeDiscKey(3, 'current', 'field', 34, 1)).not.toBe(base)
     expect(universeDiscKey(3, 'current', 'field', 34, 2)).toBe(base)
+  })
+})
+
+describe('Universumsscheibe — Tempo und Dichte haengen an der KANTENLAENGE', () => {
+  it('haelt die Leiste als Basis beider Regeln', () => {
+    // Bei der gemessenen Rail-Scheibe ist alles unveraendert: dieselbe Dauer,
+    // dieselbe Zahl Galaxien, dieselben Marken. Waere das nicht so, aenderte
+    // sich mit der Heldenscheibe still auch die Leiste.
+    expect(universeDiscSpinSec(UNIVERSE_DISC_RAIL_PX)).toBe(UNIVERSE_DISC_SPIN_SEC)
+    expect(universeDiscDetail(UNIVERSE_DISC_RAIL_PX)).toBe(1)
+  })
+
+  it('traegt auf der grossen Scheibe mehr und KLEINERE Marken', () => {
+    // Ohne das waere die 180-px-Scheibe die 34-px-Scheibe, 5,3-fach
+    // vergroessert: achtzehn Galaxien mit 5,8 bis 13,5 px Halbachse. Das liest
+    // sich als Kleckse, und zwar in der Mitte der Buehne.
+    const small = recordingCtx()
+    const big = recordingCtx()
+    paintGalaxyField(small.ctx, 17, 17, 17, '#c8b890', 3)
+    paintGalaxyField(big.ctx, 90, 90, 90, '#c8b890', 3)
+
+    const rx = (ops: string[]) =>
+      ops.filter((o) => o.startsWith('ellipse(')).map((o) => Number(o.split(',')[2]))
+    const a = rx(small.ops)
+    const b = rx(big.ops)
+
+    // Die Scheibe ist 5,3-mal so gross, traegt aber mehr als dreimal so viele
+    // Galaxien — und jede einzelne misst hoechstens das Dreifache statt des
+    // 5,3-fachen.
+    expect(b.length).toBeGreaterThan(a.length * 3)
+    expect(Math.max(...b)).toBeLessThan(Math.max(...a) * 3.5)
+  })
+
+  it('verdichtet den Wall genauso', () => {
+    const small = recordingCtx()
+    const big = recordingCtx()
+    paintWebRim(small.ctx, 17, 17, 17, 'walked')
+    paintWebRim(big.ctx, 90, 90, 90, 'walked')
+    const arcs = (ops: string[]) => ops.filter((o) => o.startsWith('arc(')).length
+    expect(arcs(big.ops)).toBeGreaterThan(arcs(small.ops) * 3)
+  })
+
+  it('bleibt deterministisch, auch verdichtet', () => {
+    // Der Hash haengt am INDEX, nicht an einem Strom — eine andere Zahl Marken
+    // verschiebt also keine bestehende.
+    const a = recordingCtx()
+    const b = recordingCtx()
+    paintGalaxyField(a.ctx, 90, 90, 90, '#c8b890', 5)
+    paintGalaxyField(b.ctx, 90, 90, 90, '#c8b890', 5)
+    expect(a.ops).toEqual(b.ops)
   })
 })
