@@ -20,7 +20,6 @@ import ExpeditionMarkTooltip from './ExpeditionMarkTooltip.vue'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
-import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { getOriginColor } from '@/config/champions/championOrigins'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { formatNumber } from '@/config/ui/numberFormat'
@@ -54,7 +53,6 @@ const props = defineProps<{ pinKey: string; now: number }>()
 const expeditionStore = useExpeditionStore()
 const galaxyStore = useGalaxyStore()
 const battleStore = useBattleStore()
-const forgeStore = useStarForgeStore()
 
 /** Der Schlüssel überlebt den Übergang Vertrag → Mission, die Suche findet beides. */
 const subject = computed<VoyageRosterSubject | null>(() => {
@@ -93,7 +91,6 @@ const action = computed(() =>
     ? voyageMarkAction(subject.value, {
         crewFor: (offer) => expeditionStore.crewFor(offer),
         canStart: expeditionStore.canStartExpedition,
-        offersWait: forgeStore.expeditionOffersWait,
         now: props.now,
       })
     : null,
@@ -136,14 +133,12 @@ const voyageLength = computed(() =>
  *
  * Das Fenster LEERT sich und ist deshalb `--tinted` — ein voller Balken heisst
  * dort nicht „geschafft". Die Reise FÜLLT sich auf ihr Ziel zu und behält den
- * Goldverlauf. Cartographer's Pact nimmt dem Vertrag die Frist ganz, dann wäre
- * jeder Balken die Behauptung einer Frist, die nicht gilt.
+ * Goldverlauf.
  */
 const bar = computed(() => {
   const v = view.value
   if (!v) return null
   if (v.state === 'offer') {
-    if (forgeStore.expeditionOffersWait) return null
     const left = Math.max(0, expiresIn.value ?? 0)
     return {
       fill: Math.min(1, left / EXPEDITION_AVAILABILITY_DURATION_MS),

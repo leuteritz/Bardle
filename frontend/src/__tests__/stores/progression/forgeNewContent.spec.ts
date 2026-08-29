@@ -324,10 +324,10 @@ describe('Neue Forge-Inhalte', () => {
 
   // ── Die vier Konstellationen aus DREI Knoten ──────────────────────────────
 
-  it('lässt ein Expeditions-Angebot warten, statt es verfallen zu lassen', () => {
+  it('haelt die Auslage-Uhr an, solange der Tab zu war — verfallen laesst sie sie trotzdem', () => {
     const forge = useStarForgeStore()
     const expedition = useExpeditionStore()
-    expect(forge.expeditionOffersWait).toBe(false)
+    expect(forge.expeditionOffersHoldOffline).toBe(false)
 
     // Ohne befreite Galaxie gibt es kein Ziel und damit keinen Vertrag.
     useGalaxyStore().completedGalaxies.push({
@@ -348,14 +348,67 @@ describe('Neue Forge-Inhalte', () => {
     expedition.checkAvailability()
     expect(expedition.availableExpeditions.some((e) => e.id === slot.id)).toBe(false)
 
-    // Mit der Konstellation bleibt dasselbe Angebot liegen.
+    // Auch MIT der Konstellation verfaellt ein Vertrag im laufenden Spiel: nur
+    // so kann keine tote 0:00-Uhr auf der Karte stehenbleiben.
     forge.forgedConstellations.push('waitingRoad')
-    expect(forge.expeditionOffersWait).toBe(true)
+    expect(forge.expeditionOffersHoldOffline).toBe(true)
     expedition.forceSpawn()
-    const kept = expedition.availableExpeditions[0]
-    kept.availableUntil = gameNow() - 1
+    const lapsed = expedition.availableExpeditions[0]
+    lapsed.availableUntil = gameNow() - 1
     expedition.checkAvailability()
-    expect(expedition.availableExpeditions.some((e) => e.id === kept.id)).toBe(true)
+    expect(expedition.availableExpeditions.some((e) => e.id === lapsed.id)).toBe(false)
+  })
+
+  it('schiebt die Frist eines Vertrags um die Abwesenheit vor', () => {
+    const forge = useStarForgeStore()
+    const expedition = useExpeditionStore()
+    useGalaxyStore().completedGalaxies.push({
+      galaxy: 1,
+      mapSeed: 1234,
+      themeIndex: 0,
+      attemptResults: ['rescued'],
+      durationSeconds: 60,
+      completedAt: 0,
+    })
+
+    expedition.forceSpawn()
+    const slot = expedition.availableExpeditions[0]
+    const before = slot.availableUntil
+
+    // Ohne die Konstellation ruehrt sich nichts.
+    expect(expedition.holdOfferWindows(120)).toBe(0)
+    expect(slot.availableUntil).toBe(before)
+
+    forge.forgedConstellations.push('waitingRoad')
+    expect(expedition.holdOfferWindows(0)).toBe(0)
+    expect(slot.availableUntil).toBe(before)
+
+    expect(expedition.holdOfferWindows(120)).toBe(1)
+    expect(slot.availableUntil).toBe(before + 120_000)
+  })
+
+  it('belebt einen Stempel nicht wieder, der schon beim Speichern tot war', () => {
+    const forge = useStarForgeStore()
+    const expedition = useExpeditionStore()
+    forge.forgedConstellations.push('waitingRoad')
+    useGalaxyStore().completedGalaxies.push({
+      galaxy: 1,
+      mapSeed: 1234,
+      themeIndex: 0,
+      attemptResults: ['rescued'],
+      durationSeconds: 60,
+      completedAt: 0,
+    })
+
+    expedition.forceSpawn()
+    const slot = expedition.availableExpeditions[0]
+    // Aus der alten Regel: das Fenster war ganz aufgehoben, der Stempel liegt
+    // weiter zurueck als die Abwesenheit.
+    const dead = gameNow() - 10 * 60_000
+    slot.availableUntil = dead
+
+    expect(expedition.holdOfferWindows(120)).toBe(0)
+    expect(slot.availableUntil).toBe(dead)
   })
 
   it('lässt die Harvester eines gefallenen Planeten weiterarbeiten', () => {

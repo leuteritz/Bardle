@@ -85,16 +85,8 @@ const state = computed<CardState>(() => {
   return props.card.sendable ? 'sendable' : 'offer'
 })
 
-/**
- * Steht „The Waiting Road", verfällt ein Angebot nicht mehr — `availableUntil`
- * bleibt als toter Stempel liegen. Ohne diese Klemmung alarmiert die Karte für
- * immer rot und die Schiene steht für immer leer.
- */
 const urgent = computed(
-  () =>
-    !props.card.noDeadline &&
-    expiresIn.value !== null &&
-    expiresIn.value < EXPEDITION_EXPIRY_WARNING_MS,
+  () => expiresIn.value !== null && expiresIn.value < EXPEDITION_EXPIRY_WARNING_MS,
 )
 
 /** Laufend: der zurückgelegte Weg. Ausliegend: was von der Auslage übrig ist. */
@@ -103,8 +95,6 @@ const progress = computed(() => {
   if (endsAt !== null && spanMs !== null) {
     return Math.min(1, Math.max(0, (props.now - (endsAt - spanMs)) / spanMs))
   }
-  // Ohne Frist misst die Schiene keine Restzeit mehr, sondern Bereitschaft.
-  if (props.card.noDeadline) return 1
   if (expiresIn.value !== null) {
     return Math.min(1, Math.max(0, expiresIn.value / EXPEDITION_AVAILABILITY_DURATION_MS))
   }
@@ -147,11 +137,11 @@ const footTail = computed(() => {
     case 'blocked':
       return 'field full'
     case 'sendable':
-      return props.card.noDeadline ? 'send' : formatMinuteClock(expiresIn.value ?? 0)
+      return formatMinuteClock(expiresIn.value ?? 0)
     default:
       // Unbemannt heisst hier: es ist kein Champion mehr frei — `crewFor`
       // bemannt sonst automatisch vor.
-      return props.card.noDeadline ? 'no crew' : formatMinuteClock(expiresIn.value ?? 0)
+      return formatMinuteClock(expiresIn.value ?? 0)
   }
 })
 
@@ -175,9 +165,7 @@ const note = computed(() => {
   const r = row.value
   if (r.state === 'offer') {
     const seats = `${r.seatsFilled} of ${r.seatsTotal} seats crewed`
-    const when = props.card.noDeadline
-      ? 'no deadline'
-      : `expires ${formatMinuteClock(expiresIn.value ?? 0)}`
+    const when = `expires ${formatMinuteClock(expiresIn.value ?? 0)}`
     const gate = state.value === 'blocked' ? ', no free expedition slot' : ''
     return `${props.card.tier} contract, ${seats}, ${when}${gate}`
   }

@@ -1297,8 +1297,8 @@ export const useStarForgeStore = defineStore('starForge', {
      * dieselbe Form wie bei den Kronen und aus demselben Grund: eine Regel, die
      * man ein zweites Mal kaufen kann, ist keine Regel mehr.
      */
-    /** The Waiting Road — wartet ein Expeditions-Angebot, statt zu verfallen? */
-    expeditionOffersWait(): boolean {
+    /** The Waiting Road — steht die Auslage-Uhr still, solange der Tab zu ist? */
+    expeditionOffersHoldOffline(): boolean {
       return this.constellationForged('waitingRoad')
     },
 

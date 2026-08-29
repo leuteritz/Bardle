@@ -48,6 +48,7 @@ import {
   EXPEDITION_SPOILS,
   EXPEDITION_LEDGER_RANKS,
   EXPEDITION_LEDGER_HISTORY_MAX,
+  MS_PER_SECOND,
 } from '@/config/constants'
 import type {
   ExpeditionMission,
@@ -587,15 +588,9 @@ export const useExpeditionStore = defineStore('expedition', {
       // Ohne befreite Galaxie gibt es keine Ziele — dann liegt auch nichts aus.
       if (!useGalaxyStore().completedGalaxies.length) return
       const now = gameNow()
-      /* The Waiting Road (Konstellation): ein Angebot verfaellt nicht mehr, es
-         wartet. Nur die Verfallspruefung entfaellt — die Nachschub-Schleife
-         darunter bleibt unangetastet, `maxAvailableOffers` deckelt die Auslage
-         weiterhin, und der Spieler sitzt nicht auf einem wachsenden Berg. */
-      if (!useStarForgeStore().expeditionOffersWait) {
-        const expired = this.availableExpeditions.filter((s) => s.availableUntil <= now)
-        for (const slot of expired) delete this.draftCrews[slot.id]
-        this.availableExpeditions = this.availableExpeditions.filter((s) => s.availableUntil > now)
-      }
+      const expired = this.availableExpeditions.filter((s) => s.availableUntil <= now)
+      for (const slot of expired) delete this.draftCrews[slot.id]
+      this.availableExpeditions = this.availableExpeditions.filter((s) => s.availableUntil > now)
 
       while (
         this.availableExpeditions.length < this.maxAvailableOffers &&
@@ -606,6 +601,32 @@ export const useExpeditionStore = defineStore('expedition', {
         this.nextSpawnAt =
           now + EXPEDITION_SPAWN_INTERVAL_MS * useStarForgeStore().expeditionSpawnMult
       }
+    },
+
+    /**
+     * The Waiting Road (Konstellation): die Auslage-Uhr laeuft nicht, solange
+     * der Tab zu war. Dasselbe Muster wie `drifterStore.catchUpDrifter` und
+     * `planetShopStore.catchUpHarvest`, die eine Zeile daneben gerufen werden —
+     * ohne den Knoten liefert sie 0.
+     *
+     * Nur Stempel, die beim Speichern noch liefen: einer aus der alten Regel
+     * (das Fenster war ganz aufgehoben) liegt beliebig weit zurueck und wuerde
+     * sonst wiederbelebt.
+     *
+     * @param awaySeconds wie lange der Tab zu war.
+     * @returns wie viele Vertraege ihre Frist behalten haben.
+     */
+    holdOfferWindows(awaySeconds: number): number {
+      if (!useStarForgeStore().expeditionOffersHoldOffline || awaySeconds <= 0) return 0
+      const awayMs = awaySeconds * MS_PER_SECOND
+      const atSave = gameNow() - awayMs
+      let held = 0
+      for (const slot of this.availableExpeditions) {
+        if (slot.availableUntil <= atSave) continue
+        slot.availableUntil += awayMs
+        held++
+      }
+      return held
     },
 
     /**
@@ -682,10 +703,7 @@ export const useExpeditionStore = defineStore('expedition', {
       if (slotIdx === -1) return false
 
       const slot = this.availableExpeditions[slotIdx]
-      // Dieselbe Regel wie in `checkAvailability`: waehrend die Konstellation
-      // steht, ist das Zeitfenster kein Tor mehr. Ohne diese Zeile laege ein
-      // Angebot ewig aus und liesse sich trotzdem nicht annehmen.
-      if (!useStarForgeStore().expeditionOffersWait && slot.availableUntil < gameNow()) return false
+      if (slot.availableUntil < gameNow()) return false
 
       if (assignedChampions.length !== slot.requiredRoles.length) return false
 

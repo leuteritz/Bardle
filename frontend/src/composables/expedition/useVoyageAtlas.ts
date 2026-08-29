@@ -302,7 +302,6 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
     return voyageMarkAction(site, {
       crewFor: (offer) => expeditionStore.crewFor(offer),
       canStart: expeditionStore.canStartExpedition,
-      offersWait: forgeStore.expeditionOffersWait,
       now: now.value,
     })
   }

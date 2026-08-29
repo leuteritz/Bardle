@@ -19,8 +19,6 @@ export interface VoyageActionDeps {
   crewFor: (offer: AvailableExpeditionSlot) => (string | null)[]
   /** Ist noch ein Missionsplatz frei? */
   canStart: boolean
-  /** Cartographer's Pact: dann ist das Zeitfenster kein Tor mehr. */
-  offersWait: boolean
   now: number
 }
 
@@ -45,7 +43,7 @@ export function voyageMarkAction(
   if (!offer) return { kind: 'blocked', reason: VOYAGE_ACTION_BLOCK_EXPIRED }
 
   if (!deps.canStart) return { kind: 'blocked', reason: VOYAGE_ACTION_BLOCK_NO_SLOT }
-  if (!deps.offersWait && offer.availableUntil < deps.now) {
+  if (offer.availableUntil < deps.now) {
     return { kind: 'blocked', reason: VOYAGE_ACTION_BLOCK_EXPIRED }
   }
 

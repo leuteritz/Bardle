@@ -77,7 +77,6 @@ const deps = {
   seatsOf: (o: AvailableExpeditionSlot) => o.requiredRoles.map(() => null),
   offerOdds: () => 0.62,
   canSend: true,
-  offersWait: false,
 }
 
 /** Jeder Sitz besetzt. */
@@ -213,24 +212,6 @@ describe('buildVoyageFleetCards', () => {
     // Band um, sobald jemand die letzte Crew losschickt.
     expect(full.sendable).toBe(true)
     expect(full.blocked).toBe(true)
-  })
-
-  /** „The Waiting Road": das Angebot verfällt nicht, seine Uhr ist tot. */
-  it('merkt einem Vertrag an, dass er keine Frist mehr hat', () => {
-    const args = [
-      [row({ galaxy: 1, contracts: 1, inField: 1 })],
-      [slot(1, 'a')],
-      [mission(1, 'b', 'active')],
-    ] as const
-
-    const byKey = (d: typeof deps) =>
-      new Map(buildVoyageFleetCards(...args, d).map((c) => [c.pinKey, c]))
-
-    const waiting = byKey({ ...deps, offersWait: true })
-    expect(waiting.get('a')!.noDeadline).toBe(true)
-    // Eine laufende Mission hat nie eine Auslagefrist.
-    expect(waiting.get('b')!.noDeadline).toBe(false)
-    expect(byKey(deps).get('a')!.noDeadline).toBe(false)
   })
 
   it('liefert bei gleicher Eingabe zweimal dasselbe — die Reihenfolge kennt keine Uhr', () => {

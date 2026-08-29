@@ -156,7 +156,6 @@ const cards = computed(() =>
       seatsOf: (offer) => expeditionStore.crewFor(offer),
       offerOdds: expeditionStore.offerOddsFor,
       canSend: expeditionStore.canStartExpedition,
-      offersWait: forgeStore.expeditionOffersWait,
     },
   ),
 )

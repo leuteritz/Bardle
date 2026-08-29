@@ -77,7 +77,6 @@ function deps(over: Partial<VoyageActionDeps> = {}): VoyageActionDeps {
   return {
     crewFor: () => ['Ahri', 'Garen'],
     canStart: true,
-    offersWait: false,
     now: NOW,
     ...over,
   }
@@ -105,14 +104,6 @@ describe('voyageMarkAction', () => {
     expect(voyageMarkAction(offerSubject(s), deps())).toEqual({
       kind: 'blocked',
       reason: VOYAGE_ACTION_BLOCK_EXPIRED,
-    })
-  })
-
-  it('haelt einen abgelaufenen Vertrag offen, solange die Konstellation steht', () => {
-    // Cartographer's Pact — dieselbe Ausnahme wie in `startExpedition`.
-    const s = slot({ availableUntil: NOW - 1 })
-    expect(voyageMarkAction(offerSubject(s), deps({ offersWait: true }))).toMatchObject({
-      kind: 'send',
     })
   })
 

@@ -36,8 +36,6 @@ export interface VoyageFleetDeps {
   offerOdds: VoyageRosterDeps['offerOdds']
   /** Ist überhaupt noch ein aktiver Slot frei? Gilt für ALLE Karten gleich. */
   canSend: boolean
-  /** „The Waiting Road": Angebote verfallen nicht, ihre Uhr ist bedeutungslos. */
-  offersWait: boolean
 }
 
 /**
@@ -114,7 +112,6 @@ export function buildVoyageFleetCards(
       // Rang mit dem Feldstand, ordnete sich das Band um, sobald jemand die
       // letzte Crew losschickt.
       blocked: sendable && !deps.canSend,
-      noDeadline: !!offer && deps.offersWait,
       row,
       crew: missionOf.get(row.pinKey)?.assignedChampions ?? [],
       seats,

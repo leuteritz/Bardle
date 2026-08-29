@@ -429,8 +429,6 @@ export interface VoyageFleetCard {
   sendable: boolean
   /** Bemannt, aber kein aktiver Slot frei — startbar aussehen wäre gelogen. */
   blocked: boolean
-  /** „The Waiting Road" steht: der Vertrag verfällt nicht, seine Uhr ist tot. */
-  noDeadline: boolean
   row: VoyageRosterRow
   /** Wer draussen ist. Leer bei einem Vertrag, der noch nicht abgereist ist. */
   crew: { name: string; role: ChampionRole }[]

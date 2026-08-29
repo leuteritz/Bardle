@@ -1265,6 +1265,10 @@ export function usePersistence() {
         // ein Drifter wartet am Himmel. Ebenfalls `rawSeconds` und ebenfalls
         // ein Fenster: der Getter liefert 0, solange die Krone nicht steht.
         drifterStore.catchUpDrifter(rawSeconds)
+        // The Waiting Road (Konstellation): die Auslage-Uhr eines Vertrags lief
+        // nicht, solange der Tab zu war. Ebenfalls `rawSeconds`, ebenfalls 0,
+        // solange die Konstellation nicht steht.
+        expeditionStore.holdOfferWindows(rawSeconds)
       }
 
       // Ein Spielstand von vor der harten Trennung KANN einen Champion gesetzt

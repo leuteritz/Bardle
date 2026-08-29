@@ -2221,10 +2221,9 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
     goldCost: 30_000,
     materialCost: { comet_ice: 6, solar_essence: 4 },
     // Die Uhr des ANGEBOTS, nicht die der Reise: das Tempo traegt
-    // `stellarCompass` und laeuft gegen `FORGE_MIN_EXPEDITION_MULT`. Ein
-    // Angebot, das wartet, nimmt dem Spieler nur die Strafe dafür, dass er
-    // gerade woanders war.
-    desc: 'An expedition offer no longer expires — it waits until you answer it.',
+    // `stellarCompass`. Sie STEHT nur offline — laufend aufgehoben liess sie
+    // jede Marke mit einer toten 0:00 auf der Karte stehen.
+    desc: "An expedition offer's window does not run while you are away.",
     sourceLabel: "Solar Sails + Wayfinder's Cache + Pathfinder's Oath",
   },
   {
