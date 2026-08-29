@@ -83,9 +83,6 @@ export const FIRMAMENT_STAR_SEED = 7
  *  helle Sterne lesen sich als Luecken; gleich viele, blassere als Ferne. */
 export const FIRMAMENT_STAR_ALPHA_MIN = 0.03
 export const FIRMAMENT_STAR_ALPHA_MAX = 0.2
-/** Boegen des aeusseren Walls. */
-export const FIRMAMENT_RIM_ARCS = 190
-
 // ── Farben ──────────────────────────────────────────────────────────────────
 /** Befreit — dieselbe Goldkante, die die Reise im ganzen Spiel traegt. */
 export const FIRMAMENT_FREED_COLOR = '#e8c040'
@@ -114,8 +111,8 @@ export const UNIVERSE_DISC_MAX_DPR = 2
 export const UNIVERSE_DISC_CACHE_MAX = 48
 /** Galaxien im Feld. Bei 34 px ist darueber kein Fleck mehr zu trennen. */
 export const UNIVERSE_DISC_GALAXIES = 18
-/** Boegen des Walls. Die grosse Platte nimmt 190 (`FIRMAMENT_RIM_ARCS`); hier
- *  waeren sie ein geschlossener Strich statt eines Geflechts. */
+/** Boegen des Walls. Die grosse Platte webt statt zu streichen
+ *  (`FIRMAMENT_WEB_NODES`); hier waere ein Geflecht bei 34 px ein grauer Ring. */
 export const UNIVERSE_DISC_RIM_ARCS = 64
 /** Anteile des Radius: wo der Wall beginnt und endet. Eng am Rand — mit 0,80
  *  lag ein drei Pixel breites Band aus Boegen um die Scheibe und las sich als
@@ -277,6 +274,78 @@ export const FIRMAMENT_RIM_SPIN_REVERSE = true
 /** Zuschlag der Sprite-Kante ueber `box.r` hinaus: der aeusserste Bogen reicht
  *  bis 1,02 r, dazu die halbe Strichstaerke. */
 export const FIRMAMENT_RIM_SPRITE_MARGIN = 1.06
+/* -- Das Filamentgewebe ------------------------------------------------------
+   Der Wall ist ein NETZ, kein Bogenkranz: Knoten, die Straenge tragen, und
+   Ranken, die nach innen ausfransen. Vorher lagen 190 einzelne Boegen in einem
+   Band von 0,90 bis 0,99 r — jeder fuer sich, keine Kreuzung, zwei harte
+   Kanten. Das las sich als Zackenkranz um eine Kachel.                        */
+
+/** Kreuzungen je Schale. Sie tragen ALLES weitere — Straenge, Ranken und
+ *  Lichtpunkte haengen an ihnen, die Strichzahl ist ein Vielfaches davon.
+ *  FEST, nicht mit dem Radius wachsend: die Strichstaerke skaliert mit `k`, die
+ *  Zahl bleibt, sonst kostete ein Zoomschritt auf 4K das Dreifache. */
+export const FIRMAMENT_WEB_NODES = 120
+/** SCHALEN, und das ist der Kern des Rezepts.
+ *
+ *  Eine einzige Knotenreihe ergibt keine Masche, sondern eine Zickzacklinie:
+ *  jeder Knoten hat genau zwei Nachbarn, es gibt keine Zelle. Erst mehrere
+ *  ineinandergreifende Schalen, tangential UND radial verbunden, schliessen
+ *  Zellen — und Zellen sind das, was ein kosmisches Netz ausmacht. Drei sind
+ *  das Minimum: bei zweien ist die Masche eine Leiter. */
+export const FIRMAMENT_WEB_RINGS = 3
+/** Wo die Schalen im Band sitzen und wie weit ihr Radius streut. Die Streuung
+ *  ist etwas kleiner als ihr Abstand — so greifen sie ineinander, ohne dass
+ *  eine als Kreis lesbar wird. */
+export const FIRMAMENT_WEB_SHELL_LO = 0.88
+export const FIRMAMENT_WEB_SHELL_HI = 0.99
+export const FIRMAMENT_WEB_SHELL_JITTER = 0.4
+/** Anteile des Radius: wo das Gewebe liegt.
+ *
+ *  Innen 0,84 — der Saum soll AUSFRANSEN, nicht an einer Kante enden. Die
+ *  aeussersten Bahnknoten stehen bei 0,96 r und damit mitten darin; sie bleiben
+ *  lesbar, weil die Karte darueber liegt und jeder Knoten seinen Schattenteich
+ *  traegt.
+ *
+ *  Aussen 1,01 — HARTE Grenze: der aeusserste Strang plus halbe Strichstaerke
+ *  muss innerhalb `FIRMAMENT_RIM_SPRITE_MARGIN` liegen. Wer sie anhebt, muss die
+ *  Margin mitziehen, sonst wandert beim Drehen eine abgeschnittene Kante durchs
+ *  Bild — und das sieht man erst nach einer halben Umdrehung. */
+export const FIRMAMENT_WEB_INNER = 0.84
+export const FIRMAMENT_WEB_OUTER = 1.01
+/** Anteil der Knoten, der eine ZWEITE radiale Verbindung zur naechsten Schale
+ *  bekommt. Genau diese zweite Strebe schliesst aus einer Leiter ein Netz: sie
+ *  macht aus je zwei Vierecken drei Zellen. */
+export const FIRMAMENT_WEB_LINK_SHARE = 0.7
+/** Anteil der Knoten mit Ranke nach innen, ihre Gabelung und ihre Reichweite
+ *  als Anteil des PLATZES bis zum Innenrand — nicht der Bandbreite: eine feste
+ *  Laenge liefe bei der Haelfte in die Klemmung, und deren Spitzen laegen dann
+ *  alle auf demselben Kreis. Die Ranken haengen an der INNERSTEN Schale und
+ *  tragen den Saum: ohne sie endet das Gewebe an einer Linie. */
+export const FIRMAMENT_WEB_TENDRIL_SHARE = 0.42
+export const FIRMAMENT_WEB_TENDRIL_FORKS = 2
+export const FIRMAMENT_WEB_TENDRIL_REACH = 0.9
+/** Strichstaerke in Referenzpixeln, mit `k` skaliert. Fein und nahezu gleich —
+ *  die Tiefe traegt die HELLIGKEIT, nicht die Staerke; ein Netz aus dickeren
+ *  Linien wird zur Umrandung. */
+export const FIRMAMENT_WEB_W_MIN = 0.4
+export const FIRMAMENT_WEB_W_MAX = 0.95
+/** Deckkraft am Innen- und am Aussenrand. Das Gefaelle macht den Auslauf; eine
+ *  Vignette darueber waere eine zweite Quelle fuer dieselbe Aussage. */
+export const FIRMAMENT_WEB_ALPHA_IN = 0.1
+export const FIRMAMENT_WEB_ALPHA_OUT = 0.55
+/** Lichtpunkte an den Kreuzungen: Anteil der Knoten und ihr Radius in
+ *  Referenzpixeln. Ohne sie ist ein Netz aus Haarlinien nur Griess. */
+export const FIRMAMENT_WEB_SPARK_SHARE = 0.22
+export const FIRMAMENT_WEB_SPARK_R = 1.1
+/** Die Glut UNTER dem Gewebe. Sie steht im STANDBILD, nicht im drehenden
+ *  Sprite: ein rotationssymmetrischer Verlauf traegt keine Drehung, und im
+ *  Sprite muesste er bis an dessen Kante decken.
+ *
+ *  KLEIN, und das ist der Punkt: bei 0,14 fuellte sie das ganze Band und der
+ *  Wall las sich als brauner Reifen, auf dem das Gewebe kaum noch auffiel. Die
+ *  Vorlage ist dunkel — das LICHT kommt aus den Filamenten, nicht aus der
+ *  Flaeche hinter ihnen. */
+export const FIRMAMENT_WEB_GLOW_ALPHA = 0.05
 /** Deckel der Wall-Rasterflaeche. EIGEN, nicht `FIRMAMENT_MAX_BACKING_PX`: die
  *  Ebene ist quadratisch und waechst mit dem Zoom, bei 2,4 auf 2K waeren es
  *  sonst 27 MB fuer ein Band aus Haarlinien. Bei Zoom 1 greift er auf keiner

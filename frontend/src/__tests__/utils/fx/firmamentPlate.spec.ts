@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest'
+import { paintFirmament, paintFirmamentGround, paintFirmamentWeb } from '@/utils/fx/firmamentPlate'
 import {
-  paintFirmament,
-  paintFirmamentGround,
-  paintFirmamentRimArcs,
-} from '@/utils/fx/firmamentPlate'
-import { FIRMAMENT_RIM_ARCS, FIRMAMENT_STAR_SEED } from '@/config/constants'
+  FIRMAMENT_RIM_SPRITE_MARGIN,
+  FIRMAMENT_STAR_SEED,
+  FIRMAMENT_WEB_INNER,
+  FIRMAMENT_WEB_NODES,
+  FIRMAMENT_WEB_OUTER,
+} from '@/config/constants'
 import { firmamentPointAt } from '@/utils/ui/firmamentLayout'
 import type { FirmamentGate, FirmamentNode } from '@/utils/ui/firmamentLayout'
 
@@ -92,8 +94,7 @@ const GATES: FirmamentGate[] = [
   { universe: 2, afterIndex: 1, nx: NODES[1].nx, ny: NODES[1].ny, angle: 0 } as FirmamentGate,
 ]
 
-const count = (ops: string[], name: string) =>
-  ops.filter((o) => o.startsWith(`${name}(`)).length
+const count = (ops: string[], name: string) => ops.filter((o) => o.startsWith(`${name}(`)).length
 
 describe('Firmament-Platte — der Grund', () => {
   it('malt Flaeche und Sternfeld', () => {
@@ -120,27 +121,80 @@ describe('Firmament-Platte — der Grund', () => {
   })
 })
 
+/** Jeder gemalte Punkt, relativ zur Mitte — der Zug `translate`t als Erstes,
+ *  also ist jede folgende Koordinate direkt ein Radius. */
+function points(ops: string[]): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = []
+  for (const op of ops) {
+    const m = /^(moveTo|lineTo|quadraticCurveTo|arc)\((.+)\)$/.exec(op)
+    if (!m) continue
+    const n = m[2].split(',').map(Number)
+    if (m[1] === 'quadraticCurveTo') out.push({ x: n[0], y: n[1] }, { x: n[2], y: n[3] })
+    else out.push({ x: n[0], y: n[1] })
+  }
+  return out
+}
+
+const radii = (ops: string[]) => points(ops).map((p) => Math.hypot(p.x, p.y))
+
 describe('Firmament-Platte — der drehende Wall', () => {
-  it('malt genau die Boegen', () => {
+  it('webt ein NETZ: Straenge, Ranken und Lichtpunkte aus einem Knotensatz', () => {
     const { ctx, ops } = recordingCtx()
-    paintFirmamentRimArcs(ctx, 334, 334, BOX.r, 1.05)
-    expect(count(ops, 'quadraticCurveTo')).toBe(FIRMAMENT_RIM_ARCS)
-    expect(count(ops, 'stroke')).toBe(FIRMAMENT_RIM_ARCS)
+    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05)
+    // Ein Strang je Knoten ist der Boden; dazu die zweiten Straenge und die
+    // Ranken. Der alte Bogenkranz hatte genau einen Zug je Bogen.
+    expect(count(ops, 'quadraticCurveTo')).toBeGreaterThanOrEqual(FIRMAMENT_WEB_NODES)
+    expect(count(ops, 'stroke')).toBeGreaterThan(FIRMAMENT_WEB_NODES)
+    expect(count(ops, 'fill')).toBeGreaterThan(0)
   })
 
-  it('malt die zwei geschlossenen Ringe NICHT mit', () => {
+  it('malt keinen geschlossenen Ring mit', () => {
     // Ein rotationssymmetrischer Kreis traegt keine Drehung — im Sprite kostete
     // er nur Flaeche, und das Sprite muesste fuer ihn bis an seine Kante decken.
+    // Geprueft wird der RADIUS: die Lichtpunkte sind auch `arc`.
     const { ctx, ops } = recordingCtx()
-    paintFirmamentRimArcs(ctx, 334, 334, BOX.r, 1.05)
-    expect(count(ops, 'arc')).toBe(0)
+    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05)
+    const rings = ops
+      .filter((o) => o.startsWith('arc('))
+      .map((o) => Number(o.slice(4, -1).split(',')[2]))
+    expect(rings.every((r) => r < BOX.r * 0.5)).toBe(true)
+  })
+
+  it('bleibt innerhalb der Sprite-Kante', () => {
+    // DIE Wand: das Sprite reicht bis `FIRMAMENT_RIM_SPRITE_MARGIN`. Ein Faden
+    // darueber hinaus wandert beim Drehen als abgeschnittene Kante durchs Bild
+    // — und das sieht man erst nach einer halben Umdrehung.
+    const { ctx, ops } = recordingCtx()
+    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05)
+    const max = Math.max(...radii(ops))
+    expect(max).toBeLessThanOrEqual(BOX.r * FIRMAMENT_WEB_OUTER + 0.01)
+    expect(BOX.r * FIRMAMENT_WEB_OUTER).toBeLessThan(BOX.r * FIRMAMENT_RIM_SPRITE_MARGIN)
+  })
+
+  it('kriecht nicht unter den Innenrand des Bandes', () => {
+    // Die aeussersten Bahnknoten stehen bei 0,96 r. Ein Saum, der tiefer geht,
+    // legt sich ueber sie.
+    const { ctx, ops } = recordingCtx()
+    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05)
+    expect(Math.min(...radii(ops))).toBeGreaterThanOrEqual(BOX.r * FIRMAMENT_WEB_INNER - 0.01)
+  })
+
+  it('franst nach innen aus statt an einer Kante zu enden', () => {
+    // Die Mehrzahl der Knoten liegt aussen, nur wenige reichen tief hinein —
+    // gleichverteilt waere es wieder ein Band mit zwei Kanten.
+    const { ctx, ops } = recordingCtx()
+    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05)
+    const rs = radii(ops)
+    const inner = rs.filter((r) => r < BOX.r * 0.9).length
+    expect(inner).toBeGreaterThan(0)
+    expect(inner / rs.length).toBeLessThan(0.5)
   })
 
   it('dreht um die MITTE des Kontexts, nicht um die Buehnenmitte', () => {
     // Der `transform-origin` des CSS ist die Mitte des Sprites; malte der Zug
     // um `box.cx/cy`, taumelte der Wall statt zu drehen.
     const { ctx, ops } = recordingCtx()
-    paintFirmamentRimArcs(ctx, 334, 334, BOX.r, 1.05)
+    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05)
     expect(ops[0]).toBe('save()')
     expect(ops[1]).toBe('translate(334,334)')
   })
@@ -148,8 +202,8 @@ describe('Firmament-Platte — der drehende Wall', () => {
   it('bleibt bei gleichem Radius byte-gleich', () => {
     const a = recordingCtx()
     const b = recordingCtx()
-    paintFirmamentRimArcs(a.ctx, 334, 334, BOX.r, 1.05)
-    paintFirmamentRimArcs(b.ctx, 334, 334, BOX.r, 1.05)
+    paintFirmamentWeb(a.ctx, 334, 334, BOX.r, 1.05)
+    paintFirmamentWeb(b.ctx, 334, 334, BOX.r, 1.05)
     expect(a.ops).toEqual(b.ops)
   })
 })

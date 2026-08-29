@@ -6,7 +6,7 @@
  * | Ebene | was | malt neu, wenn |
  * | --- | --- | --- |
  * | Grund | Sternfeld | Buehne oder Pixeldichte sich aendern |
- * | Wall | die 190 Boegen | der Bahnradius sich aendert |
+ * | Wall | das Filamentgewebe | der Bahnradius sich aendert |
  * | Herz | das beobachtete Universum | seine Kantenstufe sich aendert |
  * | Karte | Bahn, Tore, Koerper | `paintKey` sich aendert |
  *
@@ -40,7 +40,7 @@ import {
   firmamentScreenPos,
   paintFirmament,
   paintFirmamentGround,
-  paintFirmamentRimArcs,
+  paintFirmamentWeb,
 } from '@/utils/fx/firmamentPlate'
 import { toRoman } from '@/utils/ui/format'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
@@ -316,7 +316,7 @@ function paintRim() {
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   const r = box.value.r
-  paintFirmamentRimArcs(ctx, side / 2, side / 2, r, r / FIRMAMENT_PLATE_REF_R)
+  paintFirmamentWeb(ctx, side / 2, side / 2, r, r / FIRMAMENT_PLATE_REF_R)
 }
 
 let queued = false

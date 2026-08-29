@@ -4,7 +4,7 @@
 
    - `paintFirmamentGround` — Grund und Sternfeld. Haengt weder an Zoom noch an
      Fahrt noch am Bestand; ein eigenes Canvas, das dabei fast nie neu malt.
-   - `paintFirmamentRimArcs` — die 190 Boegen des Walls, um den Mittelpunkt des
+   - `paintFirmamentWeb` — das Filamentgewebe des Walls, um den Mittelpunkt des
      Kontexts. Ein eigenes, quadratisches Sprite, das das CSS am Compositor
      dreht.
    - `paintFirmament` — Bahn, Ringe, Tore, Koerper. DAS ist das Standbild: es
@@ -39,7 +39,24 @@ import {
   FIRMAMENT_PIP_R,
   FIRMAMENT_PLATE_REF_R,
   FIRMAMENT_ROAD_CASING_W,
-  FIRMAMENT_RIM_ARCS,
+  FIRMAMENT_WEB_ALPHA_IN,
+  FIRMAMENT_WEB_ALPHA_OUT,
+  FIRMAMENT_WEB_GLOW_ALPHA,
+  FIRMAMENT_WEB_INNER,
+  FIRMAMENT_WEB_LINK_SHARE,
+  FIRMAMENT_WEB_RINGS,
+  FIRMAMENT_WEB_SHELL_HI,
+  FIRMAMENT_WEB_SHELL_JITTER,
+  FIRMAMENT_WEB_SHELL_LO,
+  FIRMAMENT_WEB_NODES,
+  FIRMAMENT_WEB_OUTER,
+  FIRMAMENT_WEB_SPARK_R,
+  FIRMAMENT_WEB_SPARK_SHARE,
+  FIRMAMENT_WEB_TENDRIL_FORKS,
+  FIRMAMENT_WEB_TENDRIL_REACH,
+  FIRMAMENT_WEB_TENDRIL_SHARE,
+  FIRMAMENT_WEB_W_MAX,
+  FIRMAMENT_WEB_W_MIN,
   FIRMAMENT_STAR_ALPHA_MAX,
   FIRMAMENT_STAR_ALPHA_MIN,
   FIRMAMENT_STAR_DENSITY,
@@ -105,23 +122,109 @@ export function paintFirmamentGround(
   for (let i = 0; i < count; i++) {
     const x = rng() * w
     const y = rng() * h
-    const a = FIRMAMENT_STAR_ALPHA_MIN + rng() * (FIRMAMENT_STAR_ALPHA_MAX - FIRMAMENT_STAR_ALPHA_MIN)
+    const a =
+      FIRMAMENT_STAR_ALPHA_MIN + rng() * (FIRMAMENT_STAR_ALPHA_MAX - FIRMAMENT_STAR_ALPHA_MIN)
     const s = rng() < 0.9 ? 0.7 : 1.4
     ctx.fillStyle = `rgba(220, 230, 255, ${a.toFixed(2)})`
     ctx.fillRect(x, y, s, s)
   }
 }
 
+/* ── Das Filamentgewebe ───────────────────────────────────────────────────────
+   Der Rampenverlauf des Walls: innen tiefe Glut, aussen helles Licht. Er wird
+   ueber den RADIUS gelesen, nicht gewuerfelt — darin liegt der Unterschied zu
+   den vier Toenen der kleinen Scheibe (`RIM_TONES` in `universeDisc.ts`), die
+   einzeln gezogen werden. Hier traegt die Farbe die Tiefe.
+
+   Die Richtung ist nicht beliebig: das tiefe Rot gehoert der GLUT hinter dem
+   Gewebe, die Filamente werden nach aussen HELLER. Andersherum verschwanden
+   ausgerechnet die aeussersten Faeden — die hellsten der Vorlage — im
+   dunklen Grund.                                                              */
+const WEB_RAMP = [
+  [206, 82, 28],
+  [255, 138, 52],
+  [255, 190, 112],
+  [255, 238, 208],
+] as const
+
+function webInk(t: number, alpha: number): string {
+  const x = Math.min(0.999, Math.max(0, t)) * (WEB_RAMP.length - 1)
+  const i = Math.floor(x)
+  const f = x - i
+  const a = WEB_RAMP[i]
+  const b = WEB_RAMP[i + 1] ?? a
+  const mix = (c: 0 | 1 | 2) => Math.round(a[c] + (b[c] - a[c]) * f)
+  return `rgba(${mix(0)}, ${mix(1)}, ${mix(2)}, ${alpha.toFixed(3)})`
+}
+
+/** Jeder Punkt des Gewebes liegt IM Band — auch die Kontrollpunkte.
+ *
+ *  Aussen ist das die Sprite-Kante: eine quadratische Kurve bleibt in der
+ *  konvexen Huelle ihrer drei Punkte, also genuegt es, jeden einzelnen zu
+ *  klemmen. Innen ist es die Bahn: ein Faden, der tiefer kriecht, legt sich
+ *  ueber die aeussersten Knoten. */
+function inBand(x: number, y: number, r: number): { x: number; y: number } {
+  const d = Math.hypot(x, y)
+  if (d === 0) return { x, y }
+  const clamped = Math.min(r * FIRMAMENT_WEB_OUTER, Math.max(r * FIRMAMENT_WEB_INNER, d))
+  const s = clamped / d
+  return { x: x * s, y: y * s }
+}
+
+/** Lage im Band, 0 am Innenrand, 1 an der Kante. */
+function bandT(x: number, y: number, r: number): number {
+  const d = Math.hypot(x, y) / r
+  return Math.min(
+    1,
+    Math.max(0, (d - FIRMAMENT_WEB_INNER) / (FIRMAMENT_WEB_OUTER - FIRMAMENT_WEB_INNER)),
+  )
+}
+
+type WebNode = { x: number; y: number; t: number }
+
+/** Deckkraft an einer Stelle des Bandes. */
+function webAlpha(t: number): number {
+  return FIRMAMENT_WEB_ALPHA_IN + (FIRMAMENT_WEB_ALPHA_OUT - FIRMAMENT_WEB_ALPHA_IN) * t
+}
+
+/** Ein Strang zwischen zwei Kreuzungen: nie gerade, der Kontrollpunkt wandert
+ *  radial. Er verbindet entweder zwei Nachbarn EINER Schale oder zwei Schalen
+ *  miteinander — beide Richtungen zusammen schliessen die Zellen, aus denen
+ *  ein Netz besteht. Nur tangential waere es eine Zickzacklinie, nur radial
+ *  ein Kamm. */
+function strand(
+  ctx: CanvasRenderingContext2D,
+  a: WebNode,
+  b: WebNode,
+  r: number,
+  k: number,
+  rng: () => number,
+  dim = 1,
+): void {
+  const bow = 1 + (rng() < 0.5 ? -1 : 1) * (0.008 + rng() * 0.035)
+  const ctrl = inBand(((a.x + b.x) / 2) * bow, ((a.y + b.y) / 2) * bow, r)
+  const t = (a.t + b.t) / 2
+  ctx.beginPath()
+  ctx.moveTo(a.x, a.y)
+  ctx.quadraticCurveTo(ctrl.x, ctrl.y, b.x, b.y)
+  ctx.strokeStyle = webInk(t, webAlpha(t) * (0.55 + rng() * 0.7) * dim)
+  ctx.lineWidth = (FIRMAMENT_WEB_W_MIN + (FIRMAMENT_WEB_W_MAX - FIRMAMENT_WEB_W_MIN) * t) * k
+  ctx.stroke()
+}
+
 /**
- * Die Boegen des aeusseren Walls — das Ende dessen, was bekannt ist, und die
- * einzige Ebene der Kartenflaeche, die sich bewegt.
+ * Das Filamentgewebe des aeusseren Walls — das Ende dessen, was bekannt ist,
+ * und die einzige Ebene der Kartenflaeche, die sich bewegt.
+ *
+ * Vier Zuege, alle aus DEMSELBEN Knotensatz: Kreuzungen, Straenge zwischen
+ * ihnen, Ranken nach innen, Lichtpunkte darauf. Vorher lagen hier 190 einzelne
+ * Boegen nebeneinander — kein Treffpunkt, keine Verzweigung, zwei harte Kanten.
  *
  * Gemalt wird um `cx/cy` des uebergebenen Kontexts, damit dasselbe Rezept in
  * ein eigenes quadratisches Sprite passt, dessen Mitte der Drehpunkt ist. Der
- * Seed bleibt 19: das Aussehen ist byte-identisch zu dem, was frueher im
- * Standbild stand.
+ * Seed bleibt 19.
  */
-export function paintFirmamentRimArcs(
+export function paintFirmamentWeb(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
@@ -131,44 +234,144 @@ export function paintFirmamentRimArcs(
   const rng = seededRng(19)
   ctx.save()
   ctx.translate(cx, cy)
-  for (let i = 0; i < FIRMAMENT_RIM_ARCS; i++) {
-    const a0 = rng() * Math.PI * 2
-    const len = 0.06 + rng() * 0.2
-    const r0 = r * (0.9 + rng() * 0.09)
-    const r1 = r0 * (0.96 + rng() * 0.07)
-    ctx.beginPath()
-    ctx.moveTo(Math.cos(a0) * r0, Math.sin(a0) * r0)
-    ctx.quadraticCurveTo(
-      Math.cos(a0 + len * 0.5) * r1 * 1.02,
-      Math.sin(a0 + len * 0.5) * r1 * 1.02,
-      Math.cos(a0 + len) * r0,
-      Math.sin(a0 + len) * r0,
+  ctx.lineCap = 'round'
+
+  // Die Schalen. Aussen stehen mehr Knoten als innen — sonst waeren die Zellen
+  // am Rand so breit wie die Bandbreite selbst.
+  const gap = FIRMAMENT_WEB_SHELL_HI - FIRMAMENT_WEB_SHELL_LO
+  const spread = (gap / Math.max(1, FIRMAMENT_WEB_RINGS - 1)) * FIRMAMENT_WEB_SHELL_JITTER
+  const shells: WebNode[][] = []
+  for (let s = 0; s < FIRMAMENT_WEB_RINGS; s++) {
+    const u = FIRMAMENT_WEB_RINGS > 1 ? s / (FIRMAMENT_WEB_RINGS - 1) : 1
+    const n = Math.round(FIRMAMENT_WEB_NODES * (0.7 + 0.5 * u))
+    const step = (Math.PI * 2) / n
+    const shell: WebNode[] = []
+    for (let i = 0; i < n; i++) {
+      const ang = i * step + (rng() - 0.5) * step * 0.9 + s * 0.37
+      const rad = r * (FIRMAMENT_WEB_SHELL_LO + gap * u + (rng() - 0.5) * 2 * spread)
+      const p = inBand(Math.cos(ang) * rad, Math.sin(ang) * rad, r)
+      shell.push({ x: p.x, y: p.y, t: bandT(p.x, p.y, r) })
+    }
+    shells.push(shell)
+  }
+
+  // Tangential: der Ring jeder Schale.
+  for (const shell of shells) {
+    for (let i = 0; i < shell.length; i++) {
+      strand(ctx, shell[i], shell[(i + 1) % shell.length], r, k, rng)
+    }
+  }
+
+  // Radial: jede Schale an die naechste. Die zweite Strebe macht aus je zwei
+  // Vierecken drei Zellen — ohne sie bliebe eine Leiter.
+  for (let s = 0; s < shells.length - 1; s++) {
+    const from = shells[s]
+    const to = shells[s + 1]
+    for (let i = 0; i < from.length; i++) {
+      const j = Math.round((i / from.length) * to.length) % to.length
+      strand(ctx, from[i], to[j], r, k, rng)
+      if (rng() < FIRMAMENT_WEB_LINK_SHARE) {
+        strand(ctx, from[i], to[(j + 1) % to.length], r, k, rng, 0.8)
+      }
+    }
+  }
+
+  // Die Ranken haengen an der INNERSTEN Schale: ein Stamm nach innen, der sich
+  // einmal gabelt. Sie tragen den Saum und LOESEN ihn auf — ohne sie endete
+  // das Gewebe an einer Linie.
+  for (const node of shells[0]) {
+    if (rng() >= FIRMAMENT_WEB_TENDRIL_SHARE) continue
+    const d = Math.hypot(node.x, node.y) || 1
+    // Die Laenge kommt aus dem PLATZ bis zum Innenrand, nicht aus der
+    // Bandbreite: eine feste Laenge liefe bei der Haelfte der Ranken in die
+    // Klemmung, und deren Spitzen laegen dann alle auf demselben Kreis — genau
+    // die Kante, die der Saum aufloesen soll.
+    const room = Math.max(0, d - r * FIRMAMENT_WEB_INNER)
+    const len = room * FIRMAMENT_WEB_TENDRIL_REACH * (0.45 + rng() * 0.55)
+    const ux = -node.x / d
+    const uy = -node.y / d
+    const stem = inBand(
+      node.x + ux * len + -uy * (rng() - 0.5) * len,
+      node.y + uy * len + ux * (rng() - 0.5) * len,
+      r,
     )
-    ctx.strokeStyle = rng() < 0.35 ? 'rgba(255, 196, 120, 0.32)' : 'rgba(255, 140, 60, 0.2)'
-    ctx.lineWidth = (0.6 + rng() * 1.1) * k
+    const stemT = bandT(stem.x, stem.y, r)
+    ctx.beginPath()
+    ctx.moveTo(node.x, node.y)
+    ctx.lineTo(stem.x, stem.y)
+    ctx.strokeStyle = webInk(stemT, webAlpha(stemT))
+    ctx.lineWidth =
+      (FIRMAMENT_WEB_W_MIN + (FIRMAMENT_WEB_W_MAX - FIRMAMENT_WEB_W_MIN) * stemT) * k * 0.8
     ctx.stroke()
+
+    for (let f = 0; f < FIRMAMENT_WEB_TENDRIL_FORKS; f++) {
+      const swing = (f - (FIRMAMENT_WEB_TENDRIL_FORKS - 1) / 2) * 0.9 + (rng() - 0.5) * 0.5
+      const fl = len * (0.35 + rng() * 0.4)
+      const fx = ux * Math.cos(swing) - uy * Math.sin(swing)
+      const fy = ux * Math.sin(swing) + uy * Math.cos(swing)
+      const tip = inBand(stem.x + fx * fl, stem.y + fy * fl, r)
+      const tipT = bandT(tip.x, tip.y, r)
+      ctx.beginPath()
+      ctx.moveTo(stem.x, stem.y)
+      ctx.lineTo(tip.x, tip.y)
+      ctx.strokeStyle = webInk(tipT, webAlpha(tipT) * 0.7)
+      ctx.lineWidth = FIRMAMENT_WEB_W_MIN * k
+      ctx.stroke()
+    }
+  }
+
+  // Die Lichtpunkte auf den Kreuzungen. Ohne sie ist ein Netz aus Haarlinien
+  // nur Griess — sie sind es, die es als Gewebe lesbar machen.
+  for (const shell of shells) {
+    for (const node of shell) {
+      if (rng() >= FIRMAMENT_WEB_SPARK_SHARE) continue
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, FIRMAMENT_WEB_SPARK_R * k * (0.5 + rng() * 0.8), 0, Math.PI * 2)
+      ctx.fillStyle = webInk(Math.min(1, node.t + 0.25), Math.min(0.9, webAlpha(node.t) * 1.7))
+      ctx.fill()
+    }
   }
   ctx.restore()
 }
 
 /**
- * Die zwei geschlossenen Ringe des Walls.
+ * Die Glut und die zwei geschlossenen Ringe des Walls.
  *
- * Sie bleiben im STANDBILD. Ein rotationssymmetrischer Kreis traegt keine
+ * Sie bleiben im STANDBILD. Ein rotationssymmetrischer Verlauf traegt keine
  * Drehung — im Sprite kostete er nur Flaeche, und das Sprite muesste fuer ihn
  * bis an seine Kante decken.
  */
 function paintRimRings(ctx: CanvasRenderingContext2D, box: FirmamentFitBox, k: number): void {
   ctx.save()
   ctx.translate(box.cx, box.cy)
+
+  // Die Glut, in der das Gewebe steht. Sie reicht so weit wie das Band selbst:
+  // endete sie frueher, saessen die inneren Ranken im Dunkeln und der Saum
+  // fiele wieder an einer Kante ab.
+  const glow = ctx.createRadialGradient(0, 0, box.r * FIRMAMENT_WEB_INNER, 0, 0, box.r * 1.03)
+  glow.addColorStop(0, `rgba(255, 146, 72, 0)`)
+  glow.addColorStop(0.62, `rgba(255, 128, 52, ${FIRMAMENT_WEB_GLOW_ALPHA})`)
+  glow.addColorStop(0.92, `rgba(226, 78, 26, ${FIRMAMENT_WEB_GLOW_ALPHA * 1.5})`)
+  glow.addColorStop(1, 'rgba(140, 34, 10, 0)')
+  ctx.beginPath()
+  ctx.arc(0, 0, box.r * 1.03, 0, Math.PI * 2)
+  ctx.fillStyle = glow
+  ctx.fill()
+
+  // Blass: sie ist die Fassung, nicht die Kante, gegen die das Gewebe stossen
+  // soll. Bei Alpha 0,45 las sie sich als Rand einer Kachel.
   ctx.beginPath()
   ctx.arc(0, 0, box.r * 0.985, 0, Math.PI * 2)
-  ctx.strokeStyle = 'rgba(255, 120, 40, 0.45)'
+  ctx.strokeStyle = 'rgba(255, 120, 40, 0.22)'
   ctx.lineWidth = 2 * k
   ctx.stroke()
+  // Die aeussere Fassung. DUNKEL, nicht braun: bei `rgba(90, 40, 20, 0.8)` lag
+  // ein holzfarbener Reifen um das Gewebe und schnitt es ab. Der Rand der
+  // Vorlage ist fast schwarz — er soll das Licht der Filamente begrenzen, nicht
+  // mit ihm konkurrieren.
   ctx.beginPath()
   ctx.arc(0, 0, box.r * 1.02, 0, Math.PI * 2)
-  ctx.strokeStyle = 'rgba(90, 40, 20, 0.8)'
+  ctx.strokeStyle = 'rgba(44, 17, 9, 0.88)'
   ctx.lineWidth = 8 * k
   ctx.stroke()
   ctx.restore()
