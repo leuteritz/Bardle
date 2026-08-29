@@ -122,8 +122,40 @@ export const UNIVERSE_DISC_RIM_W_MAX = 0.042
 /** Reichweite des Staubschleiers und Radius des Kerns. */
 export const UNIVERSE_DISC_DUST_R = 0.72
 export const UNIVERSE_DISC_CORE_R = 0.09
-/** Unterlinear, wie die Bahn selbst: sonst haengen alle Galaxien am Rand. */
-export const UNIVERSE_DISC_FIELD_EXP = 0.6
+/** Der goldene Winkel — die Vogel-Spirale, nach der Sonnenblumenkerne sitzen.
+ *
+ *  Er ist die EINZIGE Anordnung, die auf einer Scheibe weder Luecken noch
+ *  Speichen erzeugt. Davor kam der Winkel aus einer Hash-Folge und klumpte
+ *  sichtbar, und der Radius aus `t^0,6` — der zog 32 % der Koerper in den halben
+ *  Radius statt der 25 %, die flaechengleich waeren. Beides zusammen war die
+ *  gemeldete Ballung. Als ABLEITUNG, nicht als Dezimalzahl. */
+export const UNIVERSE_DISC_GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
+
+// ── Die Wolke: die grosse Scheibe in der Mitte der Buehne ───────────────────
+/* Sie hat KEINEN Glutring und KEINE Kante. Der Ring ist braun-orange wie der
+   aeussere Karten-Wall — zwei konzentrische Ringe derselben Farbe lasen sich als
+   Rahmen um eine Kachel statt als Blick in den Raum. Die Parallaxe, die er trug,
+   wandert dafuer in die TIEFE des Feldes: nahe Koerper ueber fernen. */
+
+/** Wie weit die Koerper reichen. UNTER 1: sie muessen im Inkreis des
+ *  quadratischen Sprites liegen, sonst wanderte beim Drehen eine Ecke ins Bild. */
+export const UNIVERSE_DISC_CLOUD_REACH = 0.92
+/** Ab hier loesen sie sich auf. Das ist es, was „randlos" herstellt — nicht das
+ *  Fehlen einer Kante, sondern eine Dichte, die vorher endet.
+ *
+ *  NICHT frueher: bei 0,55 war die aeussere Haelfte der Wolke aufgezehrt und sie
+ *  las sich wieder als Fleck in der Mitte — gemessen fiel die Helligkeit schon
+ *  auf halbem Radius unter ein Drittel. Der Auslauf soll den RAND nehmen, nicht
+ *  das Feld. */
+export const UNIVERSE_DISC_CLOUD_FADE_FROM = 0.7
+/** Anteil der NAHEN Schicht. Wenige grosse vor vielen kleinen. */
+export const UNIVERSE_DISC_CLOUD_NEAR_SHARE = 0.35
+/** Nah ist groesser, fern kleiner — beide ueber den vollen Radius. Nah/fern ist
+ *  eine Tiefen-, keine Radiusfrage. */
+export const UNIVERSE_DISC_CLOUD_NEAR_SCALE = 1.35
+export const UNIVERSE_DISC_CLOUD_FAR_SCALE = 0.7
+/** Deckkraft der fernen Schicht gegen die nahe. */
+export const UNIVERSE_DISC_CLOUD_FAR_ALPHA = 0.62
 
 /** Zeilenhoehe der Leiste: Scheibe plus 2x5 Polsterung plus 2 Rahmen.
  *
@@ -190,7 +222,7 @@ export const UNIVERSE_DISC_HERO_QUANT_PX = 20
  *  dritte auf Anteil 0,94 — also im warmen Glutring. Gedaempft wird die ganze
  *  Ebene, NICHT per Vignette im Sprite: die muesste aussen daempfen und traefe
  *  den Wall, der die Drehung ueberhaupt sichtbar macht. */
-export const UNIVERSE_DISC_HERO_OPACITY = 0.7
+export const UNIVERSE_DISC_HERO_OPACITY = 0.85
 
 // ── Der Wall der Karte ──────────────────────────────────────────────────────
 /** Er dreht GEGEN die Heldenscheibe. Er ist nicht der Wall einer Scheibe (dort

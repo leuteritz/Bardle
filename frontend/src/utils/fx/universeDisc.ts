@@ -18,6 +18,11 @@
      Wall. Ein Universum, das noch niemand betreten hat, hat noch kein Sternenfeld
      — das ist die Auskunft, und sie ist auf 34 px lesbar, eine Deckkraftstufe
      nicht.
+   - **Zwei VARIANTEN, ein Rezept.** `orb` ist die Kachel der Leiste: Grund, Feld,
+     Glutring, harte Kante. `cloud` ist das Herz der Buehne: dieselben Koerper,
+     aber ohne Ring, ohne Grund und ohne Clip — sie loest sich nach aussen auf.
+     Der Ring ist braun-orange wie der aeussere Karten-Wall, und zwei
+     konzentrische Ringe derselben Farbe lasen sich als Rahmen.
    - **Der Tint bleibt drinnen.** Er faerbt Staub und Galaxien, nie eine Kante:
      als Ring konkurrierte er mit den fuenf Zustandsfarben der Firmament-Karte.
 
@@ -30,7 +35,13 @@ import {
   UNIVERSE_DISC_CACHE_MAX,
   UNIVERSE_DISC_CORE_R,
   UNIVERSE_DISC_DUST_R,
-  UNIVERSE_DISC_FIELD_EXP,
+  UNIVERSE_DISC_CLOUD_FADE_FROM,
+  UNIVERSE_DISC_CLOUD_FAR_ALPHA,
+  UNIVERSE_DISC_CLOUD_FAR_SCALE,
+  UNIVERSE_DISC_CLOUD_NEAR_SCALE,
+  UNIVERSE_DISC_CLOUD_NEAR_SHARE,
+  UNIVERSE_DISC_CLOUD_REACH,
+  UNIVERSE_DISC_GOLDEN_ANGLE,
   UNIVERSE_DISC_GALAXIES,
   UNIVERSE_DISC_MAX_DPR,
   UNIVERSE_DISC_RIM_ARCS,
@@ -54,11 +65,28 @@ export type UniverseDiscState = 'current' | 'walked' | 'unlit'
  * wo der Entwurf ihn zieht — `a + drift` fuer die Koerper, `rotate(drift * 0.5)`
  * fuer den Wall.
  *
- * Was rotationssymmetrisch ist (Grund, Staubschleier, Kern), faehrt beim Feld
- * mit; man sieht es nicht, und eine dritte Ebene dafuer waere eine Ebene mehr
- * je Scheibe fuer nichts.
+ * Was rotationssymmetrisch ist (Grund, Staubschleier), faehrt mit; man sieht es
+ * nicht, und eine dritte Ebene dafuer waere eine Ebene mehr je Scheibe fuer
+ * nichts.
+ *
+ * Bei der WOLKE bedeuten dieselben zwei Namen etwas anderes: `field` ist die
+ * NAHE Schicht (weniger, groesser, schneller), `rim` die FERNE (mehr, kleiner,
+ * halbes Tempo). Die Parallaxe bleibt, sie wandert nur vom Ring in die Tiefe.
  */
 export type UniverseDiscLayer = 'field' | 'rim'
+
+/**
+ * Die zwei Gestalten derselben Scheibe.
+ *
+ * `orb` — Kachel mit Grund, Glutring und Kante. Leiste (34) und Wappen (46):
+ * dort MACHT der Ring die Scheibe lesbar, und auf einer unbetretenen ist er die
+ * einzige bewegte Ebene.
+ *
+ * `cloud` — das Herz der Buehne. Kein Ring, kein Grund, kein Clip; die Koerper
+ * duennen nach aussen aus, bis nichts mehr da ist. Die Parallaxe, die beim `orb`
+ * zwischen Feld und Ring liegt, liegt hier zwischen NAHEN und FERNEN Koerpern.
+ */
+export type UniverseDiscVariant = 'orb' | 'cloud'
 
 const TAU = Math.PI * 2
 
@@ -152,15 +180,29 @@ export function paintDustVeil(
   cy: number,
   r: number,
   tint: string,
+  span = UNIVERSE_DISC_DUST_R,
 ): void {
-  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * UNIVERSE_DISC_DUST_R)
+  const reach = r * span
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach)
   g.addColorStop(0, rgba(tint, 0.34))
   g.addColorStop(0.5, rgba(tint, 0.15))
   g.addColorStop(1, rgba(tint, 0))
   ctx.beginPath()
-  ctx.arc(cx, cy, r * UNIVERSE_DISC_DUST_R, 0, TAU)
+  ctx.arc(cx, cy, reach, 0, TAU)
   ctx.fillStyle = g
   ctx.fill()
+}
+
+/** Die Lage eines Koerpers im Feld — EINE Rechnung fuer beide Varianten.
+ *
+ *  Wurzel plus goldener Winkel: die Wurzel macht die Dichte flaechengleich (25 %
+ *  der Koerper im halben Radius statt 32 %), der goldene Winkel laesst weder
+ *  Luecken noch Speichen. Der Versatz haelt die Spirale unlesbar und kommt aus
+ *  demselben Hash wie alles andere — nie `Math.random()`. */
+function fieldSpot(i: number, n: number, reach: number, seed: number) {
+  const rad = reach * Math.sqrt((i + 0.5) / n) * span(seed, i, 0.92, 1.08)
+  const ang = i * UNIVERSE_DISC_GOLDEN_ANGLE + (jitter(seed * 7 + 3, i) - 0.5) * 0.35
+  return { x: Math.cos(ang) * rad, y: Math.sin(ang) * rad, rad }
 }
 
 /**
@@ -169,11 +211,12 @@ export function paintDustVeil(
  * `UNIVERSE_DISC_GALAXIES` gilt bei der Kantenlaenge der Leiste; groessere
  * Scheiben tragen mehr und kleinere Marken (`universeDiscDetail`).
  *
- * Die Radien sind unterlinear verteilt (`UNIVERSE_DISC_FIELD_EXP`) — dieselbe
- * Ueberlegung wie bei der Spirale des Firmaments: gleichverteilt haengen zwei
- * Drittel am Rand und der Kern steht leer. Gemalt werden ELLIPSEN mit Winkel,
- * keine Punkte: ein Punktfeld liest sich als Sternenhimmel, und das ist eine
- * andere Groessenordnung.
+ * Gemalt werden ELLIPSEN mit Winkel, keine Punkte: ein Punktfeld liest sich als
+ * Sternenhimmel, und das ist eine andere Groessenordnung.
+ *
+ * `layer` teilt die Koerper bei der Wolke in NAH und FERN. Beide bedecken den
+ * vollen Radius — nah/fern ist eine Tiefen-, keine Radiusfrage; die Parallaxe
+ * entsteht daraus, dass die nahe Ebene doppelt so schnell dreht.
  */
 export function paintGalaxyField(
   ctx: CanvasRenderingContext2D,
@@ -182,29 +225,66 @@ export function paintGalaxyField(
   r: number,
   tint: string,
   seed: number,
+  variant: UniverseDiscVariant = 'orb',
+  layer: UniverseDiscLayer = 'field',
 ): void {
-  const reach = r * (UNIVERSE_DISC_RIM_INNER - 0.07)
+  const cloud = variant === 'cloud'
+  const reach = r * (cloud ? UNIVERSE_DISC_CLOUD_REACH : UNIVERSE_DISC_RIM_INNER - 0.07)
   const d = universeDiscDetail(r * 2)
   const count = Math.round(UNIVERSE_DISC_GALAXIES * d * d)
+  const near = layer === 'field'
+  const scale = !cloud ? 1 : near ? UNIVERSE_DISC_CLOUD_NEAR_SCALE : UNIVERSE_DISC_CLOUD_FAR_SCALE
+
   for (let i = 0; i < count; i++) {
-    const t = (i + 0.5) / count
-    const rad = reach * Math.pow(t * span(seed, i, 0.75, 1.12), UNIVERSE_DISC_FIELD_EXP)
-    const ang = jitter(seed * 7 + 3, i) * TAU
-    const rx = (r * span(seed, i + 41, 0.032, 0.075)) / d
+    // Die Schichten teilen sich EINE Folge: so sitzt kein Koerper zweimal, und
+    // die Verteilung bleibt ueber beide zusammen gleichmaessig.
+    //
+    // Geteilt wird per HASH, nicht nach `i`: der Radius kommt aus demselben
+    // Index, ein Schnitt bei `i / count` legte also alle nahen Koerper nach
+    // innen und alle fernen nach aussen. Das waere eine Radius-, keine
+    // Tiefenteilung — beide Schichten sollen den VOLLEN Radius bedecken.
+    if (cloud && (jitter(seed + 907, i) < UNIVERSE_DISC_CLOUD_NEAR_SHARE) !== near) continue
+
+    const spot = fieldSpot(i, count, reach, seed)
+    // Auslauf: ab `_FADE_FROM` faellt beides auf null, und genau das ersetzt die
+    // Kante. Beim `orb` traegt sie der Glutring, dort bleibt alles voll.
+    const out = Math.max(0, (spot.rad / reach - UNIVERSE_DISC_CLOUD_FADE_FROM))
+    const fade = cloud ? Math.max(0, 1 - out / (1 - UNIVERSE_DISC_CLOUD_FADE_FROM)) : 1
+    if (fade <= 0.02) continue
+
+    const rx = ((r * span(seed, i + 41, 0.032, 0.075)) / d) * scale * (cloud ? 0.72 + 0.28 * fade : 1)
     const ry = rx * span(seed, i + 83, 0.34, 0.92)
+    let alpha = span(seed, i + 127, 0.5, 0.95) * fade
+    if (cloud && !near) alpha *= UNIVERSE_DISC_CLOUD_FAR_ALPHA
+
     ctx.beginPath()
-    ctx.ellipse(
-      cx + Math.cos(ang) * rad,
-      cy + Math.sin(ang) * rad,
-      rx,
-      ry,
-      jitter(seed + 11, i) * Math.PI,
-      0,
-      TAU,
-    )
-    ctx.fillStyle = rgba(i % 3 === 0 ? GALAXY_WHITE : tint, span(seed, i + 127, 0.5, 0.95))
+    ctx.ellipse(cx + spot.x, cy + spot.y, rx, ry, jitter(seed + 11, i) * Math.PI, 0, TAU)
+    ctx.fillStyle = rgba(i % 3 === 0 ? GALAXY_WHITE : tint, alpha)
     ctx.fill()
   }
+}
+
+/**
+ * Der Grund der Wolke — ein Hauch, keine Scheibe.
+ *
+ * `paintVoid` waere hier falsch: sein deckender Kreis IST die Kante, die weg
+ * soll. Dieser Verlauf dunkelt nur die Mitte leicht ab, damit die Koerper
+ * Kontrast haben, und laeuft auf `alpha 0` aus.
+ */
+export function paintCloudGround(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+): void {
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * UNIVERSE_DISC_CLOUD_REACH)
+  g.addColorStop(0, 'rgba(9, 8, 5, 0.72)')
+  g.addColorStop(0.55, 'rgba(7, 6, 4, 0.44)')
+  g.addColorStop(1, 'rgba(5, 4, 3, 0)')
+  ctx.beginPath()
+  ctx.arc(cx, cy, r * UNIVERSE_DISC_CLOUD_REACH, 0, TAU)
+  ctx.fillStyle = g
+  ctx.fill()
 }
 
 /**
@@ -305,11 +385,15 @@ const cache = new Map<string, HTMLCanvasElement>()
 export function universeDiscKey(
   id: number,
   state: UniverseDiscState,
+  variant: UniverseDiscVariant,
   layer: UniverseDiscLayer,
   px: number,
   dpr: number,
 ): string {
-  return `${id}|${state}|${layer}|${px}|${dpr}`
+  // Die VARIANTE gehoert hinein: ohne sie bekaeme die Wolke das Sprite der
+  // Kachel, sobald beide dieselbe Kantenlaenge tragen — und nichts daran saehe
+  // im Code falsch aus.
+  return `${id}|${state}|${variant}|${layer}|${px}|${dpr}`
 }
 
 /**
@@ -325,9 +409,10 @@ export function buildUniverseDisc(
   layer: UniverseDiscLayer,
   px: number,
   dpr: number,
+  variant: UniverseDiscVariant = 'orb',
 ): HTMLCanvasElement | null {
   const d = Math.max(1, Math.min(dpr, UNIVERSE_DISC_MAX_DPR))
-  const key = universeDiscKey(id, state, layer, px, d)
+  const key = universeDiscKey(id, state, variant, layer, px, d)
   const hit = cache.get(key)
   if (hit) {
     cache.delete(key)
@@ -347,20 +432,41 @@ export function buildUniverseDisc(
   const tint = getUniverse(id)?.tint ?? '#c8b890'
 
   ctx.save()
-  ctx.beginPath()
-  ctx.arc(c, c, r, 0, TAU)
-  ctx.clip()
-  if (layer === 'field') {
-    // Der Grund ist DECKEND und muss unten liegen.
-    paintVoid(ctx, c, c, r)
+  if (variant === 'cloud') {
+    // KEIN Clip. Die Koerper enden bei `_CLOUD_REACH`, also im Inkreis des
+    // Quadrats — eine Clipkante waere genau der Rand, der weg soll, und beim
+    // Drehen wanderte sonst eine Ecke ins Bild.
     if (state !== 'unlit') {
-      paintDustVeil(ctx, c, c, r, tint)
-      paintGalaxyField(ctx, c, c, r, tint, id)
-      paintCore(ctx, c, c, r, state)
+      if (layer === 'rim') {
+        // Die FERNE Ebene traegt den Grund: er ist rotationssymmetrisch, man
+        // sieht seine Drehung nicht, und er muss unter beiden Schichten liegen.
+        paintCloudGround(ctx, c, c, r)
+        // So weit wie die Koerper: endete er bei `_DUST_R`, staenden die
+        // aeusseren Galaxien ohne Nebel und die Wolke zerfiele in hellen Kern
+        // plus lose Punkte.
+        paintDustVeil(ctx, c, c, r, tint, UNIVERSE_DISC_CLOUD_REACH)
+      }
+      paintGalaxyField(ctx, c, c, r, tint, id, 'cloud', layer)
+      // Der Kern sitzt NAH: er ist der Ort, an dem der Bard steht, und darf
+      // nicht mit der Ferne wegdriften.
+      if (layer === 'field') paintCore(ctx, c, c, r, state)
     }
   } else {
-    // Glutverlauf und Boegen sind durchscheinend und komponieren ueber dem Feld.
-    paintWebRim(ctx, c, c, r, state)
+    ctx.beginPath()
+    ctx.arc(c, c, r, 0, TAU)
+    ctx.clip()
+    if (layer === 'field') {
+      // Der Grund ist DECKEND und muss unten liegen.
+      paintVoid(ctx, c, c, r)
+      if (state !== 'unlit') {
+        paintDustVeil(ctx, c, c, r, tint)
+        paintGalaxyField(ctx, c, c, r, tint, id)
+        paintCore(ctx, c, c, r, state)
+      }
+    } else {
+      // Glutverlauf und Boegen sind durchscheinend und komponieren ueber dem Feld.
+      paintWebRim(ctx, c, c, r, state)
+    }
   }
   ctx.restore()
 

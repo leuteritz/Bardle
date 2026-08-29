@@ -23,15 +23,21 @@ import {
   universeDiscSpinSec,
   type UniverseDiscLayer,
   type UniverseDiscState,
+  type UniverseDiscVariant,
 } from '@/utils/fx/universeDisc'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { UNIVERSE_DISC_MAX_DPR, UNIVERSE_DISC_RIM_SPIN_RATIO } from '@/config/constants'
 
-const props = defineProps<{
-  universe: number
-  state: UniverseDiscState
-  px: number
-}>()
+const props = withDefaults(
+  defineProps<{
+    universe: number
+    state: UniverseDiscState
+    px: number
+    /** `orb` = Kachel mit Glutring (Leiste, Wappen). `cloud` = randlose Wolke. */
+    variant?: UniverseDiscVariant
+  }>(),
+  { variant: 'orb' },
+)
 
 const fieldEl = ref<HTMLCanvasElement | null>(null)
 const rimEl = ref<HTMLCanvasElement | null>(null)
@@ -48,7 +54,14 @@ function paint(cv: HTMLCanvasElement | null, layer: UniverseDiscLayer) {
     cv.height = side
   }
   const ctx = cv.getContext('2d')
-  const sprite = buildUniverseDisc(props.universe, props.state, layer, props.px, dpr)
+  const sprite = buildUniverseDisc(
+    props.universe,
+    props.state,
+    layer,
+    props.px,
+    dpr,
+    props.variant,
+  )
   if (!ctx || !sprite) return
   ctx.clearRect(0, 0, side, side)
   ctx.drawImage(sprite, 0, 0, side, side)
@@ -68,6 +81,11 @@ watchEffect(() => {
  *  der Wall die volle Rate (`--rim-solo`). */
 const fieldTurns = computed(() => props.state !== 'unlit')
 
+/** Bei der Wolke traegt die zweite Ebene das FERNE Feld, nicht den Wall — sie
+ *  muss deshalb UNTER der nahen liegen. Beim `orb` komponiert der Glutring
+ *  darueber. */
+const farBelow = computed(() => props.variant === 'cloud')
+
 const sizePx = computed(() => `${props.px}px`)
 
 /* Die Dauer haengt an der KANTENLAENGE, nicht an einer festen Zahl: dieselbe
@@ -79,7 +97,12 @@ const rimDur = computed(
 </script>
 
 <template>
-  <span class="uni-disc" aria-hidden="true" :style="{ width: sizePx, height: sizePx }">
+  <span
+    class="uni-disc"
+    :class="{ 'uni-disc--cloud': farBelow }"
+    aria-hidden="true"
+    :style="{ width: sizePx, height: sizePx }"
+  >
     <canvas
       ref="fieldEl"
       class="uni-disc-l uni-disc-l--field"
@@ -139,6 +162,16 @@ const rimDur = computed(
 
 .uni-disc-l--still {
   animation: none;
+}
+
+/* Die Wolke stapelt umgekehrt: fern unten, nah oben. Ueber `order` statt ueber
+   die DOM-Reihenfolge, damit beide Varianten dasselbe Markup tragen. */
+.uni-disc--cloud .uni-disc-l--rim {
+  z-index: 0;
+}
+
+.uni-disc--cloud .uni-disc-l--field {
+  z-index: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

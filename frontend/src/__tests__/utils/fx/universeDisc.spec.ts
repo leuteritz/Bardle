@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   jitter,
+  paintCloudGround,
   universeDiscDetail,
   universeDiscSpinSec,
   paintCore,
@@ -18,6 +19,8 @@ import {
   UNIVERSE_DISC_RIM_ARCS,
   UNIVERSE_DISC_RIM_INNER,
   UNIVERSE_DISC_RIM_OUTER,
+  UNIVERSE_DISC_CLOUD_FADE_FROM,
+  UNIVERSE_DISC_CLOUD_REACH,
   UNIVERSE_DISC_RAIL_PX,
   UNIVERSE_DISC_SPIN_SEC,
 } from '@/config/constants'
@@ -242,13 +245,16 @@ describe('Universumsscheibe — Determinismus und Schlüssel', () => {
   })
 
   it('der Schlüssel trennt Universum, Zustand, Ebene, Größe und dpr', () => {
-    const base = universeDiscKey(3, 'current', 'field', 34, 2)
-    expect(universeDiscKey(4, 'current', 'field', 34, 2)).not.toBe(base)
-    expect(universeDiscKey(3, 'walked', 'field', 34, 2)).not.toBe(base)
-    expect(universeDiscKey(3, 'current', 'rim', 34, 2)).not.toBe(base)
-    expect(universeDiscKey(3, 'current', 'field', 46, 2)).not.toBe(base)
-    expect(universeDiscKey(3, 'current', 'field', 34, 1)).not.toBe(base)
-    expect(universeDiscKey(3, 'current', 'field', 34, 2)).toBe(base)
+    const base = universeDiscKey(3, 'current', 'orb', 'field', 34, 2)
+    expect(universeDiscKey(4, 'current', 'orb', 'field', 34, 2)).not.toBe(base)
+    expect(universeDiscKey(3, 'walked', 'orb', 'field', 34, 2)).not.toBe(base)
+    expect(universeDiscKey(3, 'current', 'orb', 'rim', 34, 2)).not.toBe(base)
+    expect(universeDiscKey(3, 'current', 'orb', 'field', 46, 2)).not.toBe(base)
+    expect(universeDiscKey(3, 'current', 'orb', 'field', 34, 1)).not.toBe(base)
+    // Die VARIANTE trennt: ohne sie bekaeme die Wolke bei gleicher Kantenlaenge
+    // das Sprite der Kachel, und nichts daran saehe falsch aus.
+    expect(universeDiscKey(3, 'current', 'cloud', 'field', 34, 2)).not.toBe(base)
+    expect(universeDiscKey(3, 'current', 'orb', 'field', 34, 2)).toBe(base)
   })
 })
 
@@ -299,5 +305,143 @@ describe('Universumsscheibe — Tempo und Dichte haengen an der KANTENLAENGE', (
     paintGalaxyField(a.ctx, 90, 90, 90, '#c8b890', 5)
     paintGalaxyField(b.ctx, 90, 90, 90, '#c8b890', 5)
     expect(a.ops).toEqual(b.ops)
+  })
+})
+
+/**
+ * Die Wolke — die grosse Scheibe in der Mitte der Buehne.
+ *
+ * Sie war einmal die Kachel der Leiste, nur gross: mit Glutring, deckendem Grund
+ * und harter Clipkante. Der Nutzer hat auf zwei Dinge gezeigt — die Koerper
+ * klumpten und endeten bei 80 % des Radius, und der Ring las sich als Kruste um
+ * eine Kachel. Beides bindet dieser Block.
+ */
+describe('Universumsscheibe — die Wolke hat keinen Rand', () => {
+  const R = 90
+  const fieldOf = (id: number, layer: 'field' | 'rim') => {
+    const { ctx, ops } = recordingCtx()
+    paintGalaxyField(ctx, R, R, R, '#c8b890', id, 'cloud', layer)
+    return ops
+  }
+  const field = (layer: 'field' | 'rim' = 'field') => fieldOf(3, layer)
+  /** Die Ellipsen als Punkte relativ zur Mitte. */
+  const bodies = (ops: string[]) =>
+    ops
+      .filter((o) => o.startsWith('ellipse('))
+      .map((o) => {
+        const n = o.slice(8, -1).split(',').map(Number)
+        return { x: n[0] - R, y: n[1] - R, rx: n[2], rad: Math.hypot(n[0] - R, n[1] - R) }
+      })
+
+  it('malt keinen Glutring', () => {
+    // Er ist braun-orange wie der aeussere Karten-Wall; zwei konzentrische Ringe
+    // derselben Farbe lasen sich als Rahmen statt als Blick in den Raum.
+    const ops = [...field('field'), ...field('rim')]
+    expect(ops.filter((o) => o === 'stroke()')).toHaveLength(0)
+    expect(ops.join('|')).not.toContain('255, 180, 94')
+  })
+
+  it('malt einen Grund, der auf null auslaeuft', () => {
+    // `paintVoid` waere hier falsch: sein deckender Kreis IST die Kante.
+    const { ctx, ops } = recordingCtx()
+    paintCloudGround(ctx, R, R, R)
+    expect(ops.some((o) => o.endsWith('0))'))).toBe(true)
+    expect(ops.join('|')).not.toContain('#14110a')
+  })
+
+  it('verteilt die Koerper gleichmaessig ueber alle acht Sektoren', () => {
+    // DAS war die Beschwerde. Gebunden wird die SPANNE zwischen vollstem und
+    // leerstem Sektor, nicht bloss „keiner leer": ueber die zehn Universen
+    // gemessen lag sie mit dem alten Hash-Winkel bei 1,89 bis 5,00, mit dem
+    // goldenen bei 1,27 bis 1,67. Ein Test auf „hoechstens doppelt" haette den
+    // alten Zustand durchgelassen — genau den, den der Nutzer gemeldet hat.
+    for (const id of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+      const both = [
+        ...bodies(fieldOf(id, 'field')),
+        ...bodies(fieldOf(id, 'rim')),
+      ]
+      const sectors = new Array(8).fill(0)
+      for (const b of both) {
+        const a = Math.atan2(b.y, b.x) + Math.PI
+        sectors[Math.min(7, Math.floor((a / (2 * Math.PI)) * 8))]++
+      }
+      expect(Math.min(...sectors), `Universum ${id}: leerer Sektor`).toBeGreaterThan(0)
+      expect(Math.max(...sectors) / Math.min(...sectors), `Universum ${id}`).toBeLessThan(1.9)
+    }
+  })
+
+  it('verteilt sie FLAECHENgleich, nicht zur Mitte gezogen', () => {
+    // Mit dem alten `t^0,6` lagen ueber alle Universen 34 bis 38 % im halben
+    // Radius, mit der Wurzel 23 bis 26 % — flaechengleich waeren es genau 25.
+    // Die Schranke liegt zwischen den beiden Messreihen, nicht darum herum.
+    for (const id of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+      const both = [
+        ...bodies(fieldOf(id, 'field')),
+        ...bodies(fieldOf(id, 'rim')),
+      ]
+      const inner = both.filter((b) => b.rad < (R * UNIVERSE_DISC_CLOUD_REACH) / 2).length
+      const share = inner / both.length
+      expect(share, `Universum ${id}`).toBeGreaterThan(0.19)
+      expect(share, `Universum ${id}`).toBeLessThan(0.3)
+    }
+  })
+
+  it('reicht weiter als die Kachel und bleibt im Inkreis', () => {
+    // Weiter, weil kein Ring mehr im Weg ist — aber unter 1, sonst wanderte beim
+    // Drehen eine Ecke des Quadrats ins Bild.
+    const all = [...bodies(field('field')), ...bodies(field('rim'))]
+    const far = Math.max(...all.map((b) => b.rad))
+    expect(far).toBeGreaterThan(R * (UNIVERSE_DISC_RIM_INNER - 0.07))
+    expect(far).toBeLessThan(R * UNIVERSE_DISC_CLOUD_REACH * 1.09)
+    expect(far).toBeLessThan(R)
+  })
+
+  it('blendet nach aussen aus, statt an einer Kante zu enden', () => {
+    // Das ist es, was „randlos" herstellt: nicht das Fehlen einer Linie, sondern
+    // eine Dichte, die vorher endet.
+    const ops = field('field')
+    const alpha = ops
+      .filter((o) => o.startsWith('ellipse(') || o.startsWith('addColorStop('))
+      .join('|')
+    const all = bodies(ops)
+    const reach = R * UNIVERSE_DISC_CLOUD_REACH
+    const fadeAt = reach * UNIVERSE_DISC_CLOUD_FADE_FROM
+    const outer = all.filter((b) => b.rad > fadeAt)
+    const innerBodies = all.filter((b) => b.rad <= fadeAt)
+    expect(outer.length).toBeGreaterThan(0)
+    // Die aeusseren Koerper sind kleiner als die inneren.
+    const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length
+    expect(avg(outer.map((b) => b.rx))).toBeLessThan(avg(innerBodies.map((b) => b.rx)))
+    expect(alpha.length).toBeGreaterThan(0)
+  })
+
+  it('teilt sich in eine nahe und eine ferne Schicht', () => {
+    // Die Parallaxe wandert vom Ring in die Tiefe: wenige grosse nah, viele
+    // kleine fern. Kein Koerper sitzt zweimal.
+    const near = bodies(field('field'))
+    const far = bodies(field('rim'))
+    expect(near.length).toBeGreaterThan(0)
+    expect(far.length).toBeGreaterThan(near.length)
+    const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length
+    expect(avg(near.map((b) => b.rx))).toBeGreaterThan(avg(far.map((b) => b.rx)))
+  })
+
+  it('mischt beide Schichten ueber den VOLLEN Radius', () => {
+    // Der Fehler, den diese Zusicherung faengt: `fieldSpot` leitet den Radius
+    // aus dem Index ab. Wer die Schichten bei `i / count` schneidet, legt damit
+    // alle nahen Koerper nach innen und alle fernen nach aussen — eine Radius-
+    // statt einer Tiefenteilung, und die Parallaxe waere keine.
+    const reach = R * UNIVERSE_DISC_CLOUD_REACH
+    for (const layer of ['field', 'rim'] as const) {
+      const b = bodies(field(layer))
+      const inner = b.filter((x) => x.rad < reach * 0.4).length
+      const outer = b.filter((x) => x.rad > reach * 0.7).length
+      expect(inner, `${layer}: nichts innen`).toBeGreaterThan(0)
+      expect(outer, `${layer}: nichts aussen`).toBeGreaterThan(0)
+    }
+  })
+
+  it('bleibt deterministisch', () => {
+    expect(field('field')).toEqual(field('field'))
   })
 })

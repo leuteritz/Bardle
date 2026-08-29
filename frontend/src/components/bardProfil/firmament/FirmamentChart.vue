@@ -452,6 +452,7 @@ const LEGEND = [
       />
       <UniverseDisc
         class="fm-hero"
+        variant="cloud"
         :universe="gameStore.currentUniverse"
         state="current"
         :px="heroPx"
