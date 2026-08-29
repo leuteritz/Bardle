@@ -22,6 +22,7 @@ import { computed } from 'vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import ExpeditionMarkTooltip, { type MarkChip } from './ExpeditionMarkTooltip.vue'
 import ExpeditionStarTooltip from './ExpeditionStarTooltip.vue'
+import { starCoreTint } from '@/utils/fx/galaxyPlate'
 import {
   LANDMARK_FREED_CORE,
   VOYAGE_TIP_GAP_PX,
@@ -46,11 +47,14 @@ const props = defineProps<{
 
 const lost = computed(() => props.mark.outcome === 'failed')
 
-/* Dieselben zwei Farben, die das Datenband unter der Karte führt — es ist die
-   Legende zur Marke, und zwei Töne für dieselbe Sache wären einer zuviel. */
+/* Der Ton, den das Datenband unter der Karte für verlorene Sterne führt. */
 const LOST_TONE = '#e08a7a'
 
-const accent = computed(() => (lost.value ? LOST_TONE : LANDMARK_FREED_CORE))
+/* Dieselbe Quelle wie der KERN der Marke auf dem Canvas — die Karte trägt den
+   Ton des Punktes, auf den sie zeigt. Der verlorene Stern hat keinen Kern. */
+const accent = computed(() =>
+  lost.value ? LOST_TONE : (starCoreTint(props.manifest) ?? LANDMARK_FREED_CORE),
+)
 
 /** 1st, 2nd, 3rd, 4th … — die Nummer ist alles, was ein Stern an Ordnung hat. */
 const ordinal = computed(() => {

@@ -20,6 +20,7 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { getChampionIconPath } from '@/utils/game/champions'
+import { starCoreTint } from '@/utils/fx/galaxyPlate'
 import { formatMinuteClock } from '@/utils/ui/format'
 import {
   MS_PER_SECOND,
@@ -36,6 +37,11 @@ const props = defineProps<{
 }>()
 
 const role = computed(() => (props.manifest.role ? ROLE_BY_KEY[props.manifest.role] : null))
+
+/* Der Kartenton, nicht das rohe ROLE_COLORS — sonst stünden zwei Rot für
+   dieselbe Rolle nebeneinander. Eigene computed, weil der verlorene Stern
+   Ember trägt und sein Label trotzdem die Rolle. */
+const roleTint = computed(() => starCoreTint(props.manifest) ?? role.value?.color)
 
 /**
  * Wer an diesem Stern hing.
@@ -73,7 +79,7 @@ const spent = computed(() => {
         <b class="stt-name">{{ champion.name }}</b>
         <span class="tip-meta stt-note">
           <template v-if="role"
-            ><span class="stt-role" :style="{ color: role.color }">{{ role.label }}</span> ·
+            ><span class="stt-role" :style="{ color: roleTint }">{{ role.label }}</span> ·
           </template>
           {{ champion.note }}
         </span>
@@ -126,6 +132,7 @@ const spent = computed(() => {
   display: flex;
   align-items: center;
   gap: 0.66em;
+  background: color-mix(in srgb, var(--tip-color) 7%, var(--tip-effect-bg));
 }
 
 .stt-art,
@@ -133,7 +140,7 @@ const spent = computed(() => {
   flex-shrink: 0;
   width: 3.4em;
   height: 3.4em;
-  border: 1px solid var(--rpg-wood-inner);
+  border: 1px solid color-mix(in srgb, var(--tip-color) 55%, var(--rpg-wood-inner));
   border-radius: 4px;
 }
 
