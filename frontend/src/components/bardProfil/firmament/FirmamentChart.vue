@@ -45,6 +45,7 @@ import {
 import { toRoman } from '@/utils/ui/format'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import FirmamentGalaxyTip from './FirmamentGalaxyTip.vue'
+import FirmamentOriginTip from './FirmamentOriginTip.vue'
 import FirmamentSelectionCard from './FirmamentSelectionCard.vue'
 import UniverseDisc from './UniverseDisc.vue'
 import {
@@ -57,6 +58,11 @@ import {
   FIRMAMENT_MAX_DPR,
   FIRMAMENT_NODE_HIT_MIN,
   FIRMAMENT_PLATE_REF_R,
+  FIRMAMENT_START_LABEL_MAX_PX,
+  FIRMAMENT_START_LABEL_MIN_PX,
+  FIRMAMENT_START_LABEL_OFFSET,
+  FIRMAMENT_START_LABEL_PX,
+  FIRMAMENT_START_TICK_PX,
   FIRMAMENT_RIM_SPIN_REVERSE,
   FIRMAMENT_RIM_SPRITE_MARGIN,
   FIRMAMENT_STAR_SEED,
@@ -225,6 +231,29 @@ const gateMarks = computed(() =>
     }
   }),
 )
+
+/**
+ * Der Startpunkt — die Benennung des Ursprungs, an dem die Bahn ansetzt.
+ *
+ * Er haengt am DOM wie die roemischen Ziffern: ein Hover auf dem Canvas kostete
+ * einen Repaint der ganzen Platte, und den Text gaebe es zweimal. Er liegt in
+ * `.fm-layer`, faehrt also mit und waechst ueber `box.r` mit dem Zoom.
+ *
+ * Unter der Mitte ist Platz: `firmamentPointAt(0)` setzt den ersten Knoten
+ * senkrecht nach OBEN.
+ */
+const startMark = computed(() => {
+  const k = box.value.r / FIRMAMENT_PLATE_REF_R
+  return {
+    x: box.value.cx,
+    y: box.value.cy + box.value.r * FIRMAMENT_START_LABEL_OFFSET,
+    size: Math.min(
+      FIRMAMENT_START_LABEL_MAX_PX,
+      Math.max(FIRMAMENT_START_LABEL_MIN_PX, FIRMAMENT_START_LABEL_PX * k),
+    ),
+    tick: FIRMAMENT_START_TICK_PX * k,
+  }
+})
 
 /**
  * Das beobachtete Universum — es FUELLT die Kartenscheibe.
@@ -509,6 +538,30 @@ const LEGEND = [
       >
         {{ toRoman(g.gate.universe) }}
       </button>
+
+      <!-- Der Startpunkt. KEIN Knopf: er fuehrt keine Aktion aus, und „zurueck
+           zur Mitte" gaebe es zweimal — den Werkzeugknopf gibt es schon. Er ist
+           trotzdem fokussierbar, damit die Karte auch per Tastatur aufgeht. -->
+      <RpgBadgeTooltip passive :accent="FIRMAMENT_FREED_COLOR">
+        <div
+          class="fm-start"
+          tabindex="0"
+          role="img"
+          :aria-label="`Start — where the road begins, ${nodes.length} galaxies on the chain`"
+          :style="{
+            left: `${startMark.x}px`,
+            top: `${startMark.y}px`,
+            fontSize: `${startMark.size}px`,
+            '--fm-start-tick': `${startMark.tick}px`,
+          }"
+        >
+          <span class="fm-start-tick" aria-hidden="true" />
+          <span class="fm-start-word">Start</span>
+        </div>
+        <template #tip>
+          <FirmamentOriginTip :nodes="nodes" :universe="gameStore.currentUniverse" />
+        </template>
+      </RpgBadgeTooltip>
     </div>
 
     <!-- Bedienung: drei Zoomstufen und zurueck zur Mitte. -->
@@ -637,6 +690,51 @@ const LEGEND = [
 }
 
 /* ── Knoten ───────────────────────────────────────────────────────────── */
+/* Der Startpunkt. Er steht auf dem Galaxienfeld der Heldenscheibe — ohne den
+   Schatten verschwindet versale Goldschrift dort zwischen den Marken. Die
+   Haarlinie bindet ihn an den Kern, den er meint. */
+.fm-start {
+  position: absolute;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.28em;
+  line-height: 1;
+  cursor: default;
+}
+
+.fm-start:focus-visible {
+  outline: 2px solid #e8c040;
+  outline-offset: 4px;
+}
+
+.fm-start-tick {
+  width: 1px;
+  height: var(--fm-start-tick);
+  background: linear-gradient(to bottom, rgba(232, 192, 64, 0), rgba(232, 192, 64, 0.7));
+  /* Die Linie sitzt UEBER dem Wort und reicht zum Kern hinauf. */
+  margin-top: calc(-1 * var(--fm-start-tick));
+}
+
+.fm-start-word {
+  color: #e8c040;
+  font-size: 1em;
+  letter-spacing: 0.34em;
+  /* Die Laufweite haengt rechts an — sonst steht das Wort aus der Mitte. */
+  text-indent: 0.34em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 10px rgba(0, 0, 0, 0.95),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+  transition: color 0.16s ease;
+}
+
+.fm-start:hover .fm-start-word,
+.fm-start:focus-visible .fm-start-word {
+  color: #fdf0c4;
+}
+
 .fm-node {
   position: absolute;
   transform: translate(-50%, -50%);

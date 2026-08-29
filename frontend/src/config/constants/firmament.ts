@@ -61,6 +61,37 @@ export const FIRMAMENT_LANDFALL_R = 2.1
 /** Mehr Orte als das zeigt kein Knoten — darueber sagt die Hover-Karte die Zahl. */
 export const FIRMAMENT_LANDFALL_MAX_MARKS = 4
 
+// ── Der Startpunkt ──────────────────────────────────────────────────────────
+/* Die Bahn setzt in der Mitte an — `paintRoad` zieht ihre erste Linie von
+   `box.cx/cy` zum ersten Knoten. Der Punkt trug bisher keine Benennung, und ein
+   heller Fleck mit einer Linie daran sagt niemandem, dass dort die Strasse
+   beginnt.
+
+   Das Label haengt am DOM, nicht am Canvas: dieselbe Begruendung wie bei den
+   roemischen Ziffern — ein Hover kostete sonst einen Repaint der ganzen Platte,
+   und den Text gaebe es zweimal. Es liegt IN `.fm-layer`, faehrt also mit und
+   waechst mit dem Zoom; es beschriftet einen Ort auf der Karte, keine Stelle des
+   Bildschirms.
+
+   Unter der Mitte ist Platz: `firmamentPointAt(0)` setzt den ersten Knoten
+   senkrecht nach OBEN, und bis rund 0,5 r nach unten liegt weder Knoten noch
+   Strasse.                                                                    */
+
+/** Abstand der Label-Oberkante unter der Mitte, als Anteil des Bahnradius.
+ *  Der Halo des Kerns misst `2 · box.r · UNIVERSE_DISC_HERO_R_RATIO ·
+ *  UNIVERSE_DISC_CLOUD_HALO_R` — auf Full HD 25 px; das Label steht bei 36 und
+ *  laesst ihm Luft. */
+export const FIRMAMENT_START_LABEL_OFFSET = 0.115
+/** Schriftgrad in Referenzpixeln, mit `k` skaliert, samt Boden und Deckel. Auf
+ *  Zoomstufe 2,4 waeren es sonst 50 px — die Marke soll gross sein, nicht die
+ *  Karte beherrschen. */
+export const FIRMAMENT_START_LABEL_PX = 20
+export const FIRMAMENT_START_LABEL_MIN_PX = 13
+export const FIRMAMENT_START_LABEL_MAX_PX = 34
+/** Laenge der Haarlinie vom Kern zum Label, ebenfalls in Referenzpixeln. Sie
+ *  bindet die Beschriftung an den Punkt, den sie meint. */
+export const FIRMAMENT_START_TICK_PX = 16
+
 // ── Zoom und Fahrt ──────────────────────────────────────────────────────────
 /** Drei Stufen statt stufenlosem Rad: jede Stufe ist EIN Repaint. */
 export const FIRMAMENT_ZOOM_STEPS = [1, 1.6, 2.4] as const

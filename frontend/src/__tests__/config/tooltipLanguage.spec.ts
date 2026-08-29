@@ -30,6 +30,8 @@ const EXTRA_TIP_FILES = [
   'components/bardProfil/shop/ChampionShopCard.vue',
   'components/bardProfil/team/SigilDetailsPanel.vue',
   'components/bardProfil/BardProfileMenu.vue',
+  'components/bardProfil/firmament/FirmamentGalaxyTip.vue',
+  'components/bardProfil/firmament/FirmamentOriginTip.vue',
 ]
 
 function vueFiles(dir: string, out: string[] = []): string[] {
