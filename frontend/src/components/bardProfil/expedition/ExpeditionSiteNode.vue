@@ -233,15 +233,15 @@ const nodeStyle = computed(() => ({
         </svg>
 
         <span class="sn-face">
-          <Icon v-if="subject" :icon="subject.icon" width="24" height="24" class="sn-ico" />
+          <span v-if="subject" class="sn-glyph">
+            <Icon :icon="subject.icon" width="24" height="24" class="sn-ico" />
+            <!-- Die Affordanz: erst beim Überfahren, und nur wo der Klick etwas
+                 tut. Sie liegt IM Glyph-Platz — die Uhr darunter bleibt frei. -->
+            <span v-if="action.kind === 'send'" class="sn-go" aria-hidden="true">
+              <Icon :icon="VOYAGE_ACTION_ICONS.send" width="24" height="24" />
+            </span>
+          </span>
           <span v-if="showInlineClock" class="sn-clock">{{ clockText }}</span>
-        </span>
-
-        <!-- Die Affordanz: erst beim Überfahren, und nur wo der Klick etwas
-             tut. Sie DECKT den Glyph, statt neben ihm zu stehen — auf einer
-             34-px-Platte ist kein Platz für beides. -->
-        <span v-if="action.kind === 'send'" class="sn-go" aria-hidden="true">
-          <Icon :icon="VOYAGE_ACTION_ICONS.send" width="24" height="24" />
         </span>
 
         <span v-if="crewShown.length" class="sn-crew" aria-hidden="true">
@@ -410,14 +410,10 @@ const nodeStyle = computed(() => ({
    Platte darunter skaliert ohnehin schon. */
 .sn-go {
   position: absolute;
-  left: 50%;
-  top: 50%;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(var(--sn-plate, 32px) * 0.52);
-  height: calc(var(--sn-plate, 32px) * 0.52);
-  margin: calc(var(--sn-plate, 32px) * -0.26) 0 0 calc(var(--sn-plate, 32px) * -0.26);
   color: #e8c040;
   opacity: 0;
   pointer-events: none;
@@ -477,10 +473,19 @@ const nodeStyle = computed(() => ({
   line-height: 1;
   pointer-events: none;
 }
-.sn-ico {
+/* Der Platz des Motivs — Glyph und Wimpel liegen darin übereinander. */
+.sn-glyph {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   /* Wächst mit der Platte statt am `width`-Attribut zu kleben. */
   width: calc(var(--sn-plate, 32px) * 0.46);
   height: calc(var(--sn-plate, 32px) * 0.46);
+}
+.sn-ico {
+  width: 100%;
+  height: 100%;
   color: var(--sn-c);
   transition: opacity 0.14s ease;
 }
