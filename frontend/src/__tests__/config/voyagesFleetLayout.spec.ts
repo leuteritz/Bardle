@@ -13,17 +13,13 @@ import {
   VOYAGE_FLEET_CARD_PAD_Y,
   VOYAGE_FLEET_CARD_MIN_VISIBLE,
   VOYAGE_FLEET_AVATAR_PX,
-  VOYAGE_FLEET_HEAD_H,
-  VOYAGE_FLEET_FOOT_H,
-  VOYAGE_FLEET_RAIL_H,
+  VOYAGE_FLEET_PAY_H,
+  VOYAGE_FLEET_READ_H,
   VOYAGE_FLEET_CARD_ROW_GAP,
   VOYAGE_FLEET_CARD_INSET_X,
   VOYAGE_FLEET_CARD_INSET_Y,
   VOYAGE_FLEET_CARD_BORDER_X,
   VOYAGE_FLEET_CARD_BORDER_Y,
-  VOYAGE_FLEET_HEAD_ICON,
-  VOYAGE_FLEET_HEAD_GAP,
-  VOYAGE_FLEET_NAME_MAX_PX,
   VOYAGE_FLEET_ODDS_W,
   VOYAGE_FLEET_TIME_W,
   VOYAGE_FLEET_DUR_W,
@@ -34,6 +30,7 @@ import {
   VOYAGE_FLEET_EARN_GAP,
   VOYAGE_FLEET_EARN_TIGHT,
   VOYAGE_FLEET_SEAT_GAP,
+  VOYAGE_FLEET_MARK_MAX_PX,
   EXPEDITION_TIERS,
   EXPEDITION_TIER_COLORS,
   EXPEDITION_TIER_SEGMENTS,
@@ -46,7 +43,6 @@ import {
   BOTTOM_BAR_SIDE_W,
 } from '@/config/constants'
 import { galaxyFitBox } from '@/utils/fx/galaxyPlate'
-import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 
 /**
  * Das Fleet-Band ist die eine Zeile der Kopfleiste, und `.etc-bar` ist eine
@@ -66,6 +62,19 @@ import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 /** Was einer Karte innen bleibt — dreimal dieselbe Rechnung wäre drei Quellen. */
 const CARD_INNER_W =
   VOYAGE_FLEET_CARD_MIN_W - 2 * VOYAGE_FLEET_CARD_INSET_X - VOYAGE_FLEET_CARD_BORDER_X
+
+/**
+ * Die Loot-Zelle im schlimmsten Fall: Glyph, Beutezahl, Meep-Glyph, Meep-Zahl.
+ * Die Meep-Eins misst gemessene 3,94 bei 12 px — 6 ist die aufgerundete Wand.
+ */
+const LOOT_W =
+  VOYAGE_FLEET_LOOT_ICON +
+  VOYAGE_FLEET_EARN_TIGHT +
+  VOYAGE_FLEET_LOOT_MAX_PX +
+  VOYAGE_FLEET_EARN_TIGHT +
+  VOYAGE_FLEET_LOOT_ICON +
+  VOYAGE_FLEET_EARN_TIGHT +
+  6
 
 const MODAL_GAP = 10
 const clamp = (lo: number, v: number, hi: number) => Math.min(hi, Math.max(lo, v))
@@ -195,88 +204,89 @@ describe('voyages fleet strip', () => {
   })
 
   /**
-   * VIER Zeilen, und keine fünfte. Die Karte kann in der HÖHE nicht wachsen —
+   * DREI Zeilen, und keine vierte. Die Karte kann in der HÖHE nicht wachsen —
    * 110 bräche schon die Zusicherung darüber, und danach die Kopfleiste, danach
    * beide STAGE_HEIGHT-Tabellen. Wer eine Zeile ergänzt, bricht hier zuerst.
    *
-   * Kopf 17 + Crew 32 + Ertrag 20 + Schiene 4 + 3 x 5 Lücke = 88 von 91 px.
-   * Die Portraits sind von 26 auf 32 gewachsen; bezahlt hat es der Kopf (18 auf
-   * 17, der Name fällt von 13 px fett auf 11 px gedämpft) und der Schlupf.
+   * Crew 34 + Lohn 28 + Ablesung 20 + 2 x 4 Lücke = 90 von 91 px. Vier waren es
+   * einmal: die Kopfzeile (Glyph + Zielname) und die Fortschrittsschiene sind
+   * gefallen und haben ihre 31 px an die Portraits und die beiden Zahlenzeilen
+   * abgegeben.
    */
-  it('trägt die vier Zeilen der Karte samt Lücken', () => {
-    const rows =
-      VOYAGE_FLEET_HEAD_H + VOYAGE_FLEET_AVATAR_PX + VOYAGE_FLEET_FOOT_H + VOYAGE_FLEET_RAIL_H
-    const gaps = 3 * VOYAGE_FLEET_CARD_ROW_GAP
+  it('trägt die drei Zeilen der Karte samt Lücken', () => {
+    const rows = VOYAGE_FLEET_AVATAR_PX + VOYAGE_FLEET_PAY_H + VOYAGE_FLEET_READ_H
+    const gaps = 2 * VOYAGE_FLEET_CARD_ROW_GAP
     const inner = VOYAGE_FLEET_CARD_H - 2 * VOYAGE_FLEET_CARD_INSET_Y - VOYAGE_FLEET_CARD_BORDER_Y
     expect(rows + gaps).toBeLessThanOrEqual(inner)
   })
 
   /**
-   * Die Kopfzeile trägt Name, Chancen-Pille UND Uhr — beide sind aus dem Fuss
-   * hierher gewandert, damit die Ertragszeile darunter Lohn, Dauer und Loot
-   * tragen kann. Dem Namen bleiben davon 89 px, und die 210er Karte ist genau
-   * deshalb breiter geworden: in der alten 168er hätte er 47 gehabt.
-   */
-  it('lässt den längsten Zielnamen ungekürzt in die Kopfzeile', () => {
-    const column =
-      CARD_INNER_W -
-      VOYAGE_FLEET_HEAD_ICON -
-      VOYAGE_FLEET_ODDS_W -
-      VOYAGE_FLEET_TIME_W -
-      3 * VOYAGE_FLEET_HEAD_GAP
-    expect(VOYAGE_FLEET_NAME_MAX_PX).toBeLessThanOrEqual(column)
-  })
-
-  /**
-   * Die ERTRAGSZEILE und ihr schlimmster Fall: ein epic-VERTRAG. Nur dort stehen
-   * Reisedauer und Meep gleichzeitig — unterwegs fällt die Dauer weg (die Uhr
-   * im Kopf zählt sie herunter), heimgekehrt ebenso.
+   * Die LOHNZEILE: Chime-Artwork, der Lohn in 24 px, die Chancen-Pille rechts.
+   * Der Lohn gibt nie nach — kürzte er sich weg, verschwände die eine Zahl,
+   * wegen der die Zeile da ist.
    *
-   * ZWEI Zusicherungen, weil die Zellen NICHT gleich viel wert sind: Lohn und
-   * Loot sind die Auskunft und geben nie nach, die Dauer ist Beiwerk und ist
-   * die einzige Zelle mit `max-width` statt `min-width`. Bricht die erste, kürzt
-   * sich der Lohn selbst weg — also die eine Zahl, wegen der die Zeile da ist.
-   *
-   * Alle Textbreiten sind im Browser GEMESSEN, nicht gerechnet (MedievalSharp,
-   * `docs/playwright.md`): Lohn „999.99M" 63,75 bei 15 px fett, Beutezahl
-   * „2.6" 16,83 und die Meep-Eins 5 bei 11 px, Dauer „12m 30s" 39,36 bei 10 px.
+   * Alle Textbreiten sind im Browser GEMESSEN, nicht gerechnet (MedievalSharp
+   * hat keine Tabellenziffern, `docs/playwright.md`): Lohn „999.99M" bei 24 px
+   * fett, „100 %" bei 13 px, Uhr „12:00" bei 17 px, Beutezahl „2.6" bei 12 px,
+   * Dauer „12m 30s" bei 11 px.
    */
-  it('trägt Lohn und Loot der Ertragszeile in jedem Fall', () => {
-    const MEEP_TEXT_PX = 6
-    const fixed =
+  it('trägt die Lohnzeile samt Chancen-Pille', () => {
+    const row =
       VOYAGE_FLEET_CHIME_PX +
       VOYAGE_FLEET_EARN_TIGHT +
       VOYAGE_FLEET_PAY_MAX_PX +
-      VOYAGE_FLEET_EARN_GAP +
-      // Loot: Glyph, Zahl, dann Meep-Glyph und Meep-Zahl
-      VOYAGE_FLEET_LOOT_ICON +
       VOYAGE_FLEET_EARN_TIGHT +
-      VOYAGE_FLEET_LOOT_MAX_PX +
-      VOYAGE_FLEET_EARN_TIGHT +
-      VOYAGE_FLEET_LOOT_ICON +
-      VOYAGE_FLEET_EARN_TIGHT +
-      MEEP_TEXT_PX
-    expect(fixed).toBeLessThanOrEqual(CARD_INNER_W)
-    // Und die Dauer bekommt, was übrig bleibt — auch die längste passt hinein.
-    expect(fixed + VOYAGE_FLEET_EARN_GAP + VOYAGE_FLEET_DUR_W).toBeLessThanOrEqual(CARD_INNER_W)
+      VOYAGE_FLEET_ODDS_W
+    expect(row).toBeLessThanOrEqual(CARD_INNER_W)
   })
 
   /**
-   * Die CREW-Zeile, seit die Portraits von 26 auf 32 px gewachsen sind. Der
-   * Boden ist der volle Trupp: `EXPEDITION_TIERS.epic.maxRoles` Sitze
-   * nebeneinander. Wächst dort jemals eine Stufe, bricht dieser Test — und das
-   * ist sein Zweck, denn die Reihe hat weder Umbruch noch Scrollen.
+   * Die ABLESEZEILE und ihr schlimmster Fall: ein epic-VERTRAG. Nur dort stehen
+   * Reisedauer und Meep gleichzeitig — unterwegs fällt die Dauer weg (die Uhr
+   * zählt sie herunter), heimgekehrt ebenso.
+   *
+   * ZWEI Zusicherungen, weil die Zellen NICHT gleich viel wert sind: Uhr und
+   * Loot sind die Auskunft und geben nie nach, die Dauer ist Beiwerk und die
+   * einzige Zelle der Karte, die schrumpfen darf.
+   */
+  it('trägt Uhr und Loot der Ablesezeile in jedem Fall', () => {
+    expect(LOOT_W + VOYAGE_FLEET_TIME_W + VOYAGE_FLEET_EARN_GAP).toBeLessThanOrEqual(CARD_INNER_W)
+    // Und die Dauer bekommt, was übrig bleibt — auch die längste passt hinein.
+    expect(
+      VOYAGE_FLEET_TIME_W + VOYAGE_FLEET_EARN_GAP + LOOT_W + VOYAGE_FLEET_EARN_GAP + VOYAGE_FLEET_DUR_W,
+    ).toBeLessThanOrEqual(CARD_INNER_W)
+  })
+
+  /**
+   * Die Plakette nimmt das Ende, das der Zustand frei lässt, und muss an BEIDEN
+   * passen: heimgekehrt links statt der Uhr, blockiert rechts statt der Dauer.
+   * Der zweite Fall ist der engere — dort steht die Uhr noch daneben.
+   */
+  it('trägt die Plakette an beiden Enden der Ablesezeile', () => {
+    const home = VOYAGE_FLEET_MARK_MAX_PX + VOYAGE_FLEET_EARN_GAP + LOOT_W
+    const blocked =
+      VOYAGE_FLEET_TIME_W +
+      VOYAGE_FLEET_EARN_GAP +
+      LOOT_W +
+      VOYAGE_FLEET_EARN_GAP +
+      VOYAGE_FLEET_MARK_MAX_PX
+    expect(home).toBeLessThanOrEqual(CARD_INNER_W)
+    expect(blocked).toBeLessThanOrEqual(CARD_INNER_W)
+  })
+
+  /**
+   * Die CREW-Zeile, seit die Portraits auf 34 px gewachsen sind. Der Boden ist
+   * der volle Trupp: `EXPEDITION_TIERS.epic.maxRoles` Sitze nebeneinander.
+   * Wächst dort jemals eine Stufe, bricht dieser Test — und das ist sein Zweck,
+   * denn die Reihe hat weder Umbruch noch Scrollen.
+   *
+   * Die 34 sind gleich zweimal die Wand: mehr passt hier nicht, und darüber
+   * trägt die 128er-Auflösungsstufe des Portraits nicht mehr.
    */
   it('trägt den vollen Trupp in einer Reihe', () => {
     const seats = Math.max(...Object.values(EXPEDITION_TIERS).map((t) => t.maxRoles))
     const row = seats * VOYAGE_FLEET_AVATAR_PX + (seats - 1) * VOYAGE_FLEET_SEAT_GAP
     expect(row).toBeLessThanOrEqual(CARD_INNER_W)
-  })
-
-  /** Und kein Themename darf wachsen, ohne dass jemand nachmisst. */
-  it('kennt keinen Zielnamen jenseits der gemessenen Breite', () => {
-    const longest = GALAXY_THEMES.reduce((a, t) => Math.max(a, t.name.length), 0)
-    expect(longest, 'ein längerer Themename verlangt eine neue Messung').toBeLessThanOrEqual(15)
   })
 
   /**

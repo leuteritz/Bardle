@@ -5,9 +5,9 @@
  * Sie ist der EINZIGE Ort hier, der die Uhr liest: `VoyageFleetCard` trägt
  * Zeitstempel, kein fertiges Ziffernblatt.
  *
- * Vier Zeilen, jede für eine Frage: WER fährt (Crew), WAS es bringt (Lohn,
- * Loot), WIE LANGE und WIE WAHRSCHEINLICH. Der Zielname ist Kontext und steht
- * klein — der volle Missionsname im Tooltip und im `aria-label`.
+ * DREI Zeilen für drei Fragen: WER fährt, WAS es bringt, WIE LANGE noch. Der
+ * Zielname und die Fortschrittsschiene sind dafür gefallen — der Name steht im
+ * Tooltip und im `aria-label`, die Schiene maß dieselbe Spanne wie die Uhr.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -16,7 +16,6 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import { getOriginColor } from '@/config/champions/championOrigins'
 import { formatMinuteClock, formatShortDuration } from '@/utils/ui/format'
 import {
-  EXPEDITION_AVAILABILITY_DURATION_MS,
   EXPEDITION_CHANCE_GOOD,
   EXPEDITION_CHANCE_MID,
   EXPEDITION_EXPIRY_WARNING_MS,
@@ -31,13 +30,10 @@ import {
   VOYAGE_FLEET_CHIME_PX,
   VOYAGE_FLEET_EARN_GAP,
   VOYAGE_FLEET_EARN_TIGHT,
-  VOYAGE_FLEET_FOOT_H,
-  VOYAGE_FLEET_HEAD_GAP,
-  VOYAGE_FLEET_HEAD_H,
-  VOYAGE_FLEET_HEAD_ICON,
   VOYAGE_FLEET_LOOT_ICON,
   VOYAGE_FLEET_ODDS_W,
-  VOYAGE_FLEET_RAIL_H,
+  VOYAGE_FLEET_PAY_H,
+  VOYAGE_FLEET_READ_H,
   VOYAGE_FLEET_SEAT_GAP,
   VOYAGE_FLEET_TIER_BAR_GAP,
   VOYAGE_FLEET_TIER_BAR_H,
@@ -64,13 +60,10 @@ const cardW = `${VOYAGE_FLEET_CARD_MIN_W}px`
 const cardH = `${VOYAGE_FLEET_CARD_H}px`
 const avatarPx = `${VOYAGE_FLEET_AVATAR_PX}px`
 const seatGap = `${VOYAGE_FLEET_SEAT_GAP}px`
-const headH = `${VOYAGE_FLEET_HEAD_H}px`
-const earnH = `${VOYAGE_FLEET_FOOT_H}px`
-const railH = `${VOYAGE_FLEET_RAIL_H}px`
+const payH = `${VOYAGE_FLEET_PAY_H}px`
+const readH = `${VOYAGE_FLEET_READ_H}px`
 const rowGap = `${VOYAGE_FLEET_CARD_ROW_GAP}px`
 const inset = `${VOYAGE_FLEET_CARD_INSET_Y}px ${VOYAGE_FLEET_CARD_INSET_X}px`
-const headGap = `${VOYAGE_FLEET_HEAD_GAP}px`
-const headIcon = `${VOYAGE_FLEET_HEAD_ICON}px`
 const oddsW = `${VOYAGE_FLEET_ODDS_W}px`
 const timeW = `${VOYAGE_FLEET_TIME_W}px`
 const earnGap = `${VOYAGE_FLEET_EARN_GAP}px`
@@ -106,18 +99,6 @@ const urgent = computed(
   () => expiresIn.value !== null && expiresIn.value < EXPEDITION_EXPIRY_WARNING_MS,
 )
 
-/** Laufend: der zurückgelegte Weg. Ausliegend: was von der Auslage übrig ist. */
-const progress = computed(() => {
-  const { endsAt, spanMs } = row.value
-  if (endsAt !== null && spanMs !== null) {
-    return Math.min(1, Math.max(0, (props.now - (endsAt - spanMs)) / spanMs))
-  }
-  if (expiresIn.value !== null) {
-    return Math.min(1, Math.max(0, expiresIn.value / EXPEDITION_AVAILABILITY_DURATION_MS))
-  }
-  return 1
-})
-
 /** Erleuchtete von drei Segmenten — Farbe UND Länge sagen dieselbe Stufe. */
 const tierLit = computed(() => EXPEDITION_TIER_SEGMENTS[props.card.tier])
 const tierColor = computed(() => EXPEDITION_TIER_COLORS[props.card.tier])
@@ -139,33 +120,7 @@ const portraits = computed(() =>
   })),
 )
 
-/* ── Kopf: Name · Chance · Uhr ──────────────────────────────────────────────
-   Die Uhr misst, was gerade läuft — Auslagefenster oder Reise. Nach der
-   Rückkehr misst nichts mehr, dort steht die Plakette. */
-
-/**
- * Was eine Handlung oder eine Sperre meint, steht als Plakette — und zwar an
- * der Stelle der UHR, nicht der Chance. Ein Raster für alle sechs Zustände:
- * die Namensspalte springt nicht, wenn ein Vertrag blockiert.
- */
-const badge = computed(() => {
-  switch (state.value) {
-    case 'ready':
-      return 'collect'
-    case 'failed':
-      return 'salvage'
-    case 'blocked':
-      return 'full'
-    default:
-      return ''
-  }
-})
-
-const clock = computed(() => {
-  if (badge.value) return ''
-  if (state.value === 'field') return formatMinuteClock(remaining.value ?? 0)
-  return formatMinuteClock(expiresIn.value ?? 0)
-})
+/* ── Lohnzeile: was es bringt ─────────────────────────────────────────────── */
 
 /** Die Chance steht nur, wo sie noch etwas ändert — nach dem Wurf nicht mehr. */
 const odds = computed(() =>
@@ -177,14 +132,6 @@ const oddsTone = computed(() => {
   if (o >= EXPEDITION_CHANCE_GOOD * 100) return 'is-good'
   return o >= EXPEDITION_CHANCE_MID * 100 ? 'is-mid' : 'is-poor'
 })
-
-/* ── Ertrag: Lohn · Dauer · Loot ────────────────────────────────────────────
-   Die Reisedauer steht nur beim Vertrag: unterwegs zählt die Uhr im Kopf sie
-   ohnehin herunter, und nach der Rückkehr entscheidet sie nichts mehr. */
-
-const duration = computed(() =>
-  row.value.state === 'offer' ? formatShortDuration(row.value.durationSeconds) : '',
-)
 
 /**
  * Erwartung, solange nichts gewürfelt ist — danach die Stücke, die WIRKLICH
@@ -207,6 +154,42 @@ const loot = computed(() => {
   }
 })
 
+/* ── Ablesezeile: wie lange noch ──────────────────────────────────────────── */
+
+/** Was eine Handlung oder eine Sperre meint, steht als Plakette statt als Zahl. */
+const badge = computed(() => {
+  switch (state.value) {
+    case 'ready':
+      return 'collect'
+    case 'failed':
+      return 'salvage'
+    case 'blocked':
+      return 'full'
+    default:
+      return ''
+  }
+})
+
+/** Nach der Rückkehr misst nichts mehr — dort steht die Plakette. */
+const clock = computed(() => {
+  if (state.value === 'ready' || state.value === 'failed') return ''
+  if (state.value === 'field') return formatMinuteClock(remaining.value ?? 0)
+  return formatMinuteClock(expiresIn.value ?? 0)
+})
+
+/** Nur beim Vertrag: was die Fahrt an ZEIT kostet. Unterwegs zählt die Uhr. */
+const duration = computed(() =>
+  row.value.state === 'offer' ? formatShortDuration(row.value.durationSeconds) : '',
+)
+
+/**
+ * Die Plakette nimmt das Ende, das der Zustand frei lässt: heimgekehrt steht sie
+ * links statt der Uhr, blockiert rechts statt der Reisedauer.
+ */
+const lead = computed(() => clock.value || badge.value)
+const tail = computed(() => (clock.value && badge.value ? badge.value : duration.value))
+const tailIsBadge = computed(() => !!clock.value && !!badge.value)
+
 const lootAria = computed(
   () =>
     `${loot.value.exact ? '' : 'about '}${loot.value.materials} materials` +
@@ -227,6 +210,7 @@ const note = computed(() => {
   return r.state === 'ready' ? 'ready to collect' : 'failed, salvage only'
 })
 
+/** Der Name steht nicht mehr im Bild — hier ist er der einzige Ort neben dem Tooltip. */
 const crewNames = computed(() => slots.value.filter(Boolean).join(', '))
 const aria = computed(
   () =>
@@ -261,26 +245,20 @@ const aria = computed(
         />
       </span>
 
-      <span class="vfc-head">
-        <Icon :icon="row.icon" class="vfc-ico" />
-        <span class="vfc-name">{{ card.galaxyName }}</span>
-        <span v-if="odds !== null" class="vfc-odds" :class="oddsTone">{{ odds }}%</span>
-        <span v-if="clock" class="vfc-clock">{{ clock }}</span>
-        <span v-else-if="badge" class="vfc-badge">{{ badge }}</span>
-      </span>
-
       <span class="vfc-crew">
         <span v-for="p in portraits" :key="p.key" class="vfc-seat" :style="{ '--seat': p.color }">
           <img v-if="p.image" :src="p.image" :alt="p.name" class="vfc-face" />
         </span>
       </span>
 
-      <span class="vfc-earn">
-        <span class="vfc-pay">
-          <img class="vfc-chime" :src="CHIME_IMG" alt="" aria-hidden="true" />
-          <span class="vfc-pay-n">{{ row.rewardPrefix }}{{ $formatNumber(row.reward ?? 0) }}</span>
-        </span>
-        <span v-if="duration" class="vfc-dur">{{ duration }}</span>
+      <span class="vfc-pay-row">
+        <img class="vfc-chime" :src="CHIME_IMG" alt="" aria-hidden="true" />
+        <span class="vfc-pay">{{ row.rewardPrefix }}{{ $formatNumber(row.reward ?? 0) }}</span>
+        <span v-if="odds !== null" class="vfc-odds" :class="oddsTone">{{ odds }}%</span>
+      </span>
+
+      <span class="vfc-read">
+        <span class="vfc-lead" :class="{ 'vfc-mark': !clock }">{{ lead }}</span>
         <span class="vfc-loot" aria-hidden="true">
           <Icon icon="ph:diamond-fill" class="vfc-mat" />
           <span>{{ loot.materials }}</span>
@@ -289,10 +267,7 @@ const aria = computed(
             <span>{{ loot.meep }}</span>
           </template>
         </span>
-      </span>
-
-      <span class="vfc-rail" aria-hidden="true">
-        <span class="vfc-rail-fill" :style="{ transform: `scaleX(${progress})` }" />
+        <span v-if="tail" class="vfc-tail" :class="{ 'vfc-mark': tailIsBadge }">{{ tail }}</span>
       </span>
     </button>
 
@@ -316,8 +291,8 @@ const aria = computed(
   gap: v-bind(rowGap);
   padding: v-bind(inset);
   text-align: left;
-  /* Der ZUSTAND läuft über DREI Kanäle — Grund, linke Kante, Wort im Kopf —
-     damit er auch ohne Farbsehen trägt. */
+  /* Der ZUSTAND läuft über DREI Kanäle — Grund, linke Kante, Wort der
+     Ablesezeile — damit er auch ohne Farbsehen trägt. */
   background: var(--vfc-bg, #1c1c18);
   border: 1px solid #3e200a;
   border-left: 3px solid var(--vfc-edge, rgba(230, 220, 196, 0.4));
@@ -392,108 +367,9 @@ const aria = computed(
   background: var(--tier, #c89040);
 }
 
-/* ── Kopf: Name · Chance · Uhr ──────────────────────────────── */
-/* Der Name ist Kontext und trägt die kleinste Schrift der Karte; die Auskunft
-   steht darunter. Von 188 px Innenbreite bleiben ihm 89, und
-   `VOYAGE_FLEET_NAME_MAX_PX` bindet, dass der längste Themename hineinpasst. */
-.vfc-head {
-  display: flex;
-  align-items: center;
-  gap: v-bind(headGap);
-  height: v-bind(headH);
-  overflow: hidden;
-}
-.vfc-ico {
-  flex-shrink: 0;
-  width: v-bind(headIcon);
-  height: v-bind(headIcon);
-  color: #c89040;
-}
-.vfc-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.15;
-  color: rgba(236, 224, 192, 0.55);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.vfc--on .vfc-name {
-  color: rgba(255, 244, 220, 0.82);
-}
-/* Reservierte Zahlenbreite, sonst wandert die Uhr, wenn 100 % auf 98 % fällt. */
-.vfc-odds {
-  flex-shrink: 0;
-  min-width: v-bind(oddsW);
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: rgba(11, 8, 6, 0.55);
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.2;
-  text-align: center;
-  color: rgba(230, 220, 196, 0.72);
-}
-.vfc-odds.is-good {
-  color: #64dcb4;
-}
-.vfc-odds.is-mid {
-  color: #e8c040;
-}
-.vfc-odds.is-poor {
-  color: #cc6050;
-}
-/* Dieselbe Formel wie „✓ Returned": Farbe, Rand auf 40 %, Grund auf 12 %. KEIN
-   gefüllter Knopf — der Klick wählt die Karte, er sammelt nicht ein. */
-/* Sie steht an der Stelle der Uhr und misst mindestens deren reservierte
-   Breite — sonst wanderte die Namensspalte beim Zustandswechsel. */
-.vfc-badge {
-  flex-shrink: 0;
-  min-width: v-bind(timeW);
-  padding: 1px 5px;
-  border: 1px solid;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  line-height: 1.2;
-  text-align: center;
-  text-transform: uppercase;
-}
-.vfc--ready .vfc-badge {
-  color: #52b830;
-  border-color: rgba(82, 184, 48, 0.4);
-  background: rgba(82, 184, 48, 0.12);
-}
-.vfc--failed .vfc-badge {
-  color: #cc6050;
-  border-color: rgba(204, 96, 80, 0.4);
-  background: rgba(204, 96, 80, 0.12);
-}
-.vfc--blocked .vfc-badge {
-  color: #c08a50;
-  border-color: rgba(192, 138, 80, 0.4);
-  background: rgba(192, 138, 80, 0.12);
-}
-/* Die laufende Zahl der Karte — reservierte Breite, weil MedievalSharp keine
-   Tabellenziffern hat und `tabular-nums` hier nichts ausrichtet. */
-.vfc-clock {
-  flex-shrink: 0;
-  min-width: v-bind(timeW);
-  text-align: right;
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1;
-  color: #e8dcc0;
-  white-space: nowrap;
-}
-.vfc--urgent .vfc-clock {
-  color: #e08a7a;
-}
-
 /* ── Crew: die breiteste Aussage der Karte ──────────────────── */
+/* 34 px sind das Maximum, das fünf Sitze nebeneinander zulassen — und zugleich
+   die Schwelle, bis zu der die 128er-Auflösungsstufe trägt. */
 .vfc-crew {
   display: flex;
   align-items: center;
@@ -517,56 +393,81 @@ const aria = computed(
   object-position: center top;
 }
 
-/* ── Ertrag: Lohn · Dauer · Loot ────────────────────────────── */
-.vfc-earn {
-  display: flex;
-  align-items: center;
-  gap: v-bind(earnGap);
-  height: v-bind(earnH);
-}
-/* Lohn und Loot geben NICHT nach — sie sind die Auskunft der Zeile. Weichen
-   darf allein die Dauer; kürzte sich der Lohn selbst weg, verschwände die eine
-   Zahl, wegen der die Zeile da ist. */
-.vfc-pay {
-  flex-shrink: 0;
+/* ── Lohnzeile: die grösste Zahl der Karte ──────────────────── */
+.vfc-pay-row {
   display: flex;
   align-items: center;
   gap: v-bind(earnTight);
-}
-.vfc-pay-n {
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1;
-  color: #e8dcc0;
-  white-space: nowrap;
-}
-.vfc--ready .vfc-pay-n {
-  color: #64dcb4;
-}
-.vfc--failed .vfc-pay-n {
-  color: #e08a7a;
+  height: v-bind(payH);
 }
 /* Das ECHTE Artwork, kein Iconify-Ersatz — dieselbe Währung sieht überall
-   gleich aus. 16 px bleiben unter der 34-px-Schwelle der 128er-Stufe. */
+   gleich aus. 18 px bleiben unter der 34-px-Schwelle der 128er-Stufe. */
 .vfc-chime {
   flex-shrink: 0;
   width: v-bind(chimePx);
   height: v-bind(chimePx);
   object-fit: contain;
 }
-/* Was die Reise an ZEIT kostet — untergeordnet durch Grösse, nicht durch eine
-   eigene Zeile, und als EINZIGE Zelle der Zeile nachgebend. Keine reservierte
-   Breite: sie steht statisch am Vertrag und wandert nicht im Takt. */
-.vfc-dur {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-align: right;
-  font-size: 10px;
-  font-weight: 700;
+/* Sie gibt nie nach: kürzte sie sich weg, verschwände die eine Zahl, wegen der
+   die Zeile da ist. */
+.vfc-pay {
+  flex-shrink: 0;
+  font-size: 24px;
+  font-weight: 800;
   line-height: 1;
-  color: rgba(216, 200, 160, 0.5);
+  color: #e8dcc0;
   white-space: nowrap;
+}
+.vfc--ready .vfc-pay {
+  color: #64dcb4;
+}
+.vfc--failed .vfc-pay {
+  color: #e08a7a;
+}
+/* Reservierte Zahlenbreite, sonst wandert die Pille, wenn 100 % auf 98 % fällt. */
+.vfc-odds {
+  flex-shrink: 0;
+  min-width: v-bind(oddsW);
+  margin-left: auto;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: rgba(11, 8, 6, 0.55);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  color: rgba(230, 220, 196, 0.72);
+}
+.vfc-odds.is-good {
+  color: #64dcb4;
+}
+.vfc-odds.is-mid {
+  color: #e8c040;
+}
+.vfc-odds.is-poor {
+  color: #cc6050;
+}
+
+/* ── Ablesezeile: Uhr · Loot · Dauer ────────────────────────── */
+.vfc-read {
+  display: flex;
+  align-items: center;
+  gap: v-bind(earnGap);
+  height: v-bind(readH);
+}
+/* Die laufende Zahl — reservierte Breite, weil MedievalSharp keine
+   Tabellenziffern hat und `tabular-nums` hier nichts ausrichtet. */
+.vfc-lead {
+  flex-shrink: 0;
+  min-width: v-bind(timeW);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1;
+  color: #e8dcc0;
+  white-space: nowrap;
+}
+.vfc--urgent .vfc-lead {
+  color: #e08a7a;
 }
 .vfc-loot {
   flex-shrink: 0;
@@ -574,7 +475,7 @@ const aria = computed(
   align-items: center;
   gap: v-bind(earnTight);
   margin-left: auto;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
   color: rgba(232, 220, 192, 0.68);
@@ -596,36 +497,45 @@ const aria = computed(
   object-fit: contain;
   transform: scale(v-bind(UNIVERSE_TOOLTIP_MEEP_SCALE));
 }
-
-/* ── Schiene ────────────────────────────────────────────────── */
-.vfc-rail {
-  height: v-bind(railH);
-  border-radius: 2px;
+/* Die einzige Zelle der Zeile, die nachgeben darf. */
+.vfc-tail {
+  flex: 0 1 auto;
+  min-width: 0;
   overflow: hidden;
-  background: rgba(200, 164, 90, 0.14);
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(216, 200, 160, 0.5);
+  white-space: nowrap;
 }
-.vfc-rail-fill {
-  display: block;
-  width: 100%;
-  height: 100%;
-  transform-origin: left center;
-  background: linear-gradient(to right, #8a5a1c, #c89040);
+
+/* Dieselbe Formel wie „✓ Returned": Farbe, Rand auf 40 %, Grund auf 12 %. KEIN
+   gefüllter Knopf — der Klick wählt die Karte, er sammelt nicht ein. */
+.vfc-mark {
+  padding: 2px 5px;
+  border: 1px solid;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
 }
-.vfc--ready .vfc-rail-fill {
-  background: linear-gradient(to right, #2e7a4e, #64dcb4);
+.vfc--ready .vfc-mark {
+  color: #52b830;
+  border-color: rgba(82, 184, 48, 0.4);
+  background: rgba(82, 184, 48, 0.12);
 }
-/* Eine gescheiterte Karte trug einmal die goldene Standardschiene und sah damit
-   aus wie eine gelungene. */
-.vfc--failed .vfc-rail-fill {
-  background: linear-gradient(to right, #7a2c1c, #cc6050);
+.vfc--failed .vfc-mark {
+  color: #cc6050;
+  border-color: rgba(204, 96, 80, 0.4);
+  background: rgba(204, 96, 80, 0.12);
 }
-.vfc--sendable .vfc-rail-fill {
-  background: linear-gradient(to right, #8a5a1c, #e8c060);
-}
-.vfc--blocked .vfc-rail-fill {
-  background: linear-gradient(to right, #4a3416, #8a5a1c);
-}
-.vfc--urgent .vfc-rail-fill {
-  background: linear-gradient(to right, #7a2c1c, #cc6050);
+.vfc--blocked .vfc-mark {
+  color: #c08a50;
+  border-color: rgba(192, 138, 80, 0.4);
+  background: rgba(192, 138, 80, 0.12);
 }
 </style>

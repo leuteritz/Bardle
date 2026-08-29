@@ -846,9 +846,9 @@ export const VOYAGE_MARK_REFUSE_MS = 420
  *  lesen Zahlen, kein DOM. */
 export const VOYAGE_COMMAND_BAR_H = 123
 
-/** Vierzeilige Karte: Kopf, Crew, Ertrag, Schiene. Sie ist von 168 auf 210
- *  gewachsen, damit Lohn, Loot, Dauer und Chance nebeneinander stehen statt um
- *  eine Fußzeile zu streiten — bezahlt mit einer Karte weniger ohne Scrollen.
+/** DREIzeilige Karte: Crew, Lohn, Ablesung. Sie ist von 168 auf 210 gewachsen,
+ *  damit Lohn, Loot, Dauer und Chance nebeneinander stehen statt um eine
+ *  Fußzeile zu streiten — bezahlt mit einer Karte weniger ohne Scrollen.
  *  Die HÖHE bleibt unberührt: sie steckt in beiden STAGE_HEIGHT-Tabellen. */
 export const VOYAGE_FLEET_CARD_MIN_W = 210
 export const VOYAGE_FLEET_CARD_GAP = 6
@@ -864,49 +864,63 @@ export const VOYAGE_FLEET_CARD_PAD_Y = 7
  * was dahinter liegt, nennt der `+N`-Chip. Still verschwinden darf nichts.
  */
 export const VOYAGE_FLEET_CARD_MIN_VISIBLE = 4
-/** Crew-Portrait auf der Karte und die Lücke dazwischen. ≤ 34 heißt
- *  Auflösungsstufe `-128`; die Reihe trägt den vollen Trupp ohne Umbruch, und
- *  `voyagesFleetLayout.spec.ts` bindet das gegen `EXPEDITION_TIERS`. */
-export const VOYAGE_FLEET_AVATAR_PX = 32
+/**
+ * Crew-Portrait auf der Karte und die Lücke dazwischen. Die 34 sind KEIN
+ * gewählter Wert, sondern zweimal dieselbe Wand: mehr passt bei fünf Sitzen
+ * nicht nebeneinander (5 x 34 + 4 x 4 = 186 von 188), und darüber trägt die
+ * `-128`-Auflösungsstufe nicht mehr. `voyagesFleetLayout.spec.ts` bindet die
+ * Reihe gegen `EXPEDITION_TIERS`.
+ */
+export const VOYAGE_FLEET_AVATAR_PX = 34
 export const VOYAGE_FLEET_SEAT_GAP = 4
 /**
- * Die vier Zeilen der Karte und ihr Innenmaß. Sie BESTIMMEN das CSS per
+ * Die DREI Zeilen der Karte und ihr Innenmaß. Sie BESTIMMEN das CSS per
  * `v-bind` — eine Konstante, die nur beschreibt, driftet, und die Spec merkt es
  * nicht: sie liest Zahlen, kein DOM.
  *
- * Der Kopf ist EINZEILIG und trägt Name, Chance und Uhr; die dritte Zeile ist
- * seit dem Umbau der ERTRAG (Lohn, Dauer, Loot) statt einer Fußzeile. Mehr
- * Zeilen gibt der Haushalt nicht her — `voyagesFleetLayout.spec.ts` bindet die
- * Summe: 17 + 32 + 20 + 4 + 3 x 5 = 88 in 91 px Innenmaß.
+ * Vier waren es einmal: Kopfzeile (Glyph + Zielname) und Fortschrittsschiene
+ * sind gefallen und haben 31 px an die Zahlen abgegeben. Der Name war das
+ * Unwichtigste auf der Karte und steht weiter im Tooltip; die Schiene maß
+ * dieselbe Spanne wie die Uhr, nur ungenauer.
+ *
+ * `voyagesFleetLayout.spec.ts` bindet die Summe: 34 + 28 + 20 + 2 x 4 = 90 in
+ * 91 px Innenmaß.
  */
-export const VOYAGE_FLEET_HEAD_H = 17
-/** Die ERTRAGSZEILE — sie trägt Chime-Lohn, Reisedauer und Loot. */
-export const VOYAGE_FLEET_FOOT_H = 20
-export const VOYAGE_FLEET_RAIL_H = 4
-export const VOYAGE_FLEET_CARD_ROW_GAP = 5
+export const VOYAGE_FLEET_PAY_H = 28
+export const VOYAGE_FLEET_READ_H = 20
+export const VOYAGE_FLEET_CARD_ROW_GAP = 4
 export const VOYAGE_FLEET_CARD_INSET_Y = 8
 export const VOYAGE_FLEET_CARD_INSET_X = 9
 /** Rahmen quer und hoch: links 3 (Zustandskante) + rechts 1, oben/unten je 1. */
 export const VOYAGE_FLEET_CARD_BORDER_X = 4
 export const VOYAGE_FLEET_CARD_BORDER_Y = 2
 /**
- * Reservierte Breiten der drei laufenden Zahlen im Kopf und im Ertrag. Sie sind
- * Pflicht, nicht Kosmetik: MedievalSharp hat keine Tabellenziffern,
- * `font-variant-numeric: tabular-nums` ist im Projekt wirkungslos, und Chance,
- * Uhr und Dauer wanderten sonst im Sekundentakt unter dem Zeiger.
+ * Reservierte Breiten der beiden laufenden Zahlen. Sie sind Pflicht, nicht
+ * Kosmetik: MedievalSharp hat keine Tabellenziffern,
+ * `font-variant-numeric: tabular-nums` ist im Projekt wirkungslos, und Chance
+ * wie Uhr wanderten sonst im Sekundentakt unter dem Zeiger.
  *
- * Chance und Uhr stehen jetzt im KOPF neben dem Namen — der Ertrag darunter
- * bräuchte sie sonst zusätzlich zu Lohn und Loot und liefe über.
+ * Beide im Browser GEMESSEN, in der Schriftgröße ihrer Zelle, und BEIDE als
+ * Aussenmaß: „100 %" misst bei 13 px 31,45 plus 10 px Innenabstand der Pille,
+ * „12:00" bei 17 px 43,39. Wer nur den Text misst, setzt die Pille zu schmal
+ * und ihre `min-width` ist wirkungslos — genau das war sie eine Runde lang.
  */
-export const VOYAGE_FLEET_ODDS_W = 30
-export const VOYAGE_FLEET_TIME_W = 36
+export const VOYAGE_FLEET_ODDS_W = 42
+export const VOYAGE_FLEET_TIME_W = 46
 /**
- * Die längste Reisedauer, gemessen: „12m 30s" bei 10 px = 39,36. KEIN
- * CSS-Deckel — die Zelle ist die einzige der Ertragszeile, die nachgeben darf,
- * und Flexbox lässt sie das von selbst. Die Zahl steht hier, damit die Spec
- * prüfen kann, dass ihr auch im schlimmsten Fall so viel übrig bleibt.
+ * Die breiteste Plakette als Aussenmaß: „salvage" 50,7 bei 11 px versal plus
+ * 12 px Innenabstand und Rahmen. Sie nimmt in der Ablesezeile das Ende, das der
+ * Zustand frei lässt — links statt der Uhr, blockiert rechts statt der Dauer —
+ * und muss dort in beiden Fällen neben den Loot passen.
  */
-export const VOYAGE_FLEET_DUR_W = 40
+export const VOYAGE_FLEET_MARK_MAX_PX = 63
+/**
+ * Die längste Reisedauer, gemessen: „12m 30s" bei 11 px. KEIN CSS-Deckel — die
+ * Zelle ist die einzige der Ablesezeile, die nachgeben darf, und Flexbox lässt
+ * sie das von selbst. Die Zahl steht hier, damit die Spec prüfen kann, dass ihr
+ * auch im schlimmsten Fall so viel übrig bleibt.
+ */
+export const VOYAGE_FLEET_DUR_W = 44
 /** Lücke zwischen den drei Zellen der Ertragszeile, und die engere innerhalb
  *  einer Zelle (Glyph gegen Zahl). Die Spec rechnet die Zeile daraus. */
 export const VOYAGE_FLEET_EARN_GAP = 4
@@ -914,36 +928,25 @@ export const VOYAGE_FLEET_EARN_TIGHT = 3
 /**
  * Chime- und Meep-Artwork auf der Karte, dazu das Material-Glyph. Das ECHTE
  * Artwork, kein Iconify-Ersatz — dieselbe Währung sieht überall gleich aus.
- * 16 px liegen unter der 34-px-Schwelle, also trägt die `-128`-Stufe.
+ * 18 px liegen unter der 34-px-Schwelle, also trägt die `-128`-Stufe.
  */
-export const VOYAGE_FLEET_CHIME_PX = 16
-export const VOYAGE_FLEET_LOOT_ICON = 12
+export const VOYAGE_FLEET_CHIME_PX = 18
+export const VOYAGE_FLEET_LOOT_ICON = 14
 /**
- * Die beiden Textbreiten der Ertragszeile, im Browser GEMESSEN: der längste
- * Lohn „999.99M" bei 15 px fett (63,75) und die längste Beutezahl „2.6" bei
- * 11 px (16,83). Sie sind die Wand, gegen die `voyagesFleetLayout.spec.ts` die
- * Zeile rechnet — läuft sie über, kürzt sich der Lohn selbst weg, also genau
- * die Zahl, wegen der die Zeile da ist.
+ * Die beiden Textbreiten der Zahlenzeilen, im Browser GEMESSEN: der längste
+ * Lohn „999.99M" bei 24 px fett und die längste Beutezahl „2.6" bei 12 px.
+ * Sie sind die Wand, gegen die `voyagesFleetLayout.spec.ts` die Zeilen rechnet
+ * — läuft eine über, kürzt sich der Lohn selbst weg, also genau die Zahl,
+ * wegen der die Zeile da ist.
  */
-export const VOYAGE_FLEET_PAY_MAX_PX = 64
-export const VOYAGE_FLEET_LOOT_MAX_PX = 17
-/** Glyph der Kopfzeile und die Lücke zwischen ihren Teilen. */
-export const VOYAGE_FLEET_HEAD_ICON = 15
-export const VOYAGE_FLEET_HEAD_GAP = 6
+export const VOYAGE_FLEET_PAY_MAX_PX = 102
+export const VOYAGE_FLEET_LOOT_MAX_PX = 19
 /**
  * Der Stufenstreifen an der Oberkante. Er liegt ABSOLUT und kostet deshalb keine
  * Zeile — der Höhenhaushalt der Karte hat sie nicht.
  */
 export const VOYAGE_FLEET_TIER_BAR_H = 4
 export const VOYAGE_FLEET_TIER_BAR_GAP = 2
-/**
- * Breiteste Zielname-Pixelbreite bei 11 px, im Browser gemessen („Crimson
- * Expanse"). Der Name ist von 13 px fett auf 11 px gedämpft gefallen — er ist
- * Kontext, nicht die Auskunft. Die Spec bindet ihn gegen die Spalte, die nach
- * Glyph, Chancen-Pille und Uhr übrig bleibt; ein längerer Themename oder eine
- * andere Schriftgröße verlangt eine neue MESSUNG, keine Rechnung.
- */
-export const VOYAGE_FLEET_NAME_MAX_PX = 87
 /**
  * Breite der Rangsäule links und der Aktionssäule rechts — die Bandbreite, die
  * der Kartenspur NICHT zur Verfügung steht. Zusammen höchstens 328, sonst trägt
