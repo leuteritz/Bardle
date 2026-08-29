@@ -31,6 +31,7 @@ import {
   UNIVERSE_DISC_SPIN_SEC,
   FIRMAMENT_RIM_SPRITE_MARGIN,
   FIRMAMENT_MAX_DPR,
+  FIRMAMENT_SPIRAL_R1,
   FIRMAMENT_WALL_MAX_BACKING_PX,
 } from '@/config/constants'
 import { universes } from '@/config/progression/universes'
@@ -380,5 +381,63 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
     // Haelfte der Karte ist Versprechen statt Weg.
     expect(FIRMAMENT_UNLIT_AHEAD).toBeGreaterThan(0)
     expect(FIRMAMENT_UNLIT_AHEAD).toBeLessThanOrEqual(6)
+  })
+})
+
+/**
+ * Die Bahn liegt IN der Galaxienwolke, nicht darauf.
+ *
+ * Stillstehende Knoten auf einem drehenden Feld lasen sich als Aufkleber. Die
+ * Karte dreht deshalb im GLEICHTAKT mit der nahen Ebene der Wolke — und beide
+ * Zahlen kommen aus derselben Funktion mit demselben Argument. Wer der Karte
+ * eine eigene Dauer gibt, laesst die Bahn aus dem Universum wandern, in dem sie
+ * liegt, und niemand sieht es sofort.
+ */
+describe('Firmament — die Bahn dreht mit der Wolke', () => {
+  const SCREENS: [number, number][] = [
+    [1920, 1080],
+    [1920, 1200],
+    [2560, 1440],
+    [3840, 2160],
+  ]
+
+  it('bleibt in der Dauer der NAHEN Wolkenebene sichtbar, ohne zu kreiseln', () => {
+    // `FirmamentChart` reicht `universeDiscSpinSec(heroPx)` an beide weiter —
+    // an die drehende Gruppe und an `UniverseDisc`, das intern dasselbe
+    // rechnet. Gebunden wird hier, dass diese EINE Dauer auf jeder
+    // Zielaufloesung im sichtbaren Band liegt: dieselbe Ablesung wie beim Wall,
+    // Grad in drei Sekunden Hinsehen.
+    for (const [vw, vh] of SCREENS) {
+      const deg3 = (3 / universeDiscSpinSec(heroPx(radiusAt(vw, vh)))) * 360
+      expect(deg3, `${vw}x${vh}`).toBeGreaterThan(2.4)
+      expect(deg3, `${vw}x${vh}`).toBeLessThan(18)
+    }
+  })
+
+  it('laeuft nicht im Gleichschritt mit dem Wall', () => {
+    // Der Wall dreht gegen die Karte UND langsamer. Gleich schnell verschmoelzen
+    // beide optisch zu einem Rad, und die Tiefe des Reiters waere weg.
+    for (const [vw, vh] of SCREENS) {
+      const r = radiusAt(vw, vh)
+      expect(universeDiscSpinSec(rimPx(r)), `${vw}x${vh}`).toBeGreaterThan(
+        universeDiscSpinSec(heroPx(r)),
+      )
+    }
+  })
+
+  it('nennt die Wand, wegen der beim Ueberfahren alles anhaelt', () => {
+    // Der aeusserste Knoten sitzt auf `FIRMAMENT_SPIRAL_R1`. Verlaesst er seine
+    // halbe Trefferflaeche in wenigen Sekunden, reisst die Hover-Karte mitten
+    // im Lesen ab — deshalb pausiert `:has(.fm-node:hover)` Bahn, Wolke und
+    // Wall gemeinsam. Wer die Pause herausnimmt, bricht das hier.
+    for (const [vw, vh] of SCREENS) {
+      const r = radiusAt(vw, vh)
+      const omega = (Math.PI * 2) / universeDiscSpinSec(heroPx(r))
+      const edgePxPerSec = omega * r * FIRMAMENT_SPIRAL_R1
+      const secondsToLeave = FIRMAMENT_NODE_HIT_MIN / 2 / edgePxPerSec
+      expect(secondsToLeave, `${vw}x${vh}`).toBeLessThan(4)
+      // Und sie kriecht auch nicht: unter 0,5 px/s saehe niemand die Drehung.
+      expect(edgePxPerSec, `${vw}x${vh}`).toBeGreaterThan(0.5)
+    }
   })
 })

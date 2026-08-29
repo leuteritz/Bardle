@@ -25,6 +25,7 @@
    `Math.random()` — sonst saehe die Karte nach jedem Repaint anders aus. */
 
 import { seededRng, minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { jitter } from '@/utils/fx/universeDisc'
 import {
   FIRMAMENT_FREED_COLOR,
   FIRMAMENT_GATE_COLOR,
@@ -34,9 +35,17 @@ import {
   FIRMAMENT_LANDFALL_ORBIT,
   FIRMAMENT_LANDFALL_R,
   FIRMAMENT_LOST_COLOR,
+  FIRMAMENT_NODE_BODY_RATIO_MAX,
+  FIRMAMENT_NODE_BODY_RATIO_MIN,
+  FIRMAMENT_NODE_BODY_RX,
+  FIRMAMENT_NODE_CORE_R,
+  FIRMAMENT_NODE_HALO_ALPHA,
+  FIRMAMENT_NODE_HALO_SPAN,
   FIRMAMENT_NODE_POOL_SPAN,
-  FIRMAMENT_PIP_ORBIT,
-  FIRMAMENT_PIP_R,
+  FIRMAMENT_STAR_ARC_ALPHA,
+  FIRMAMENT_STAR_ARC_LOST_ALPHA,
+  FIRMAMENT_STAR_ARC_ORBIT,
+  FIRMAMENT_STAR_ARC_W,
   FIRMAMENT_PLATE_REF_R,
   FIRMAMENT_ROAD_CASING_W,
   FIRMAMENT_WEB_ALPHA_IN,
@@ -480,7 +489,35 @@ function paintGates(
   }
 }
 
-/** Ein Knoten: Schein, Kern, Sternpips, Ortsrauten — alles statisch. */
+/** `rgb(...)` mit Deckkraft — die Themenfarbe kommt als `rgb()`, nicht als Hex. */
+function tone(color: string, alpha: number): string {
+  return color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`)
+}
+
+/**
+ * Achsen und Neigung eines Knotenkoerpers.
+ *
+ * Aus der GALAXIENUMMER, ueber denselben Hash, aus dem die Wolke ihre Koerper
+ * zieht (`jitter` in `universeDisc.ts`) — nie `Math.random()`, sonst saehe die
+ * Karte nach jedem Repaint anders aus, und nie ein zweiter Generator daneben.
+ */
+function bodyShape(node: FirmamentNode, r: number): { rx: number; ry: number; tilt: number } {
+  const rx = r * FIRMAMENT_NODE_BODY_RX
+  const ratio =
+    FIRMAMENT_NODE_BODY_RATIO_MIN +
+    jitter(node.galaxy, 17) * (FIRMAMENT_NODE_BODY_RATIO_MAX - FIRMAMENT_NODE_BODY_RATIO_MIN)
+  return { rx, ry: rx * ratio, tilt: jitter(node.galaxy, 29) * Math.PI }
+}
+
+/**
+ * Ein Knoten: Teich, Schein, Koerper, Kern, Sternbogen, Ortsrauten — alles
+ * statisch.
+ *
+ * Er ist ein KOERPER DESSELBEN FELDES, kein Zeichen darauf: dieselbe geneigte
+ * Ellipse wie die Galaxien der Wolke, nur groesser und heller. Was ihn abhebt,
+ * ist der Sternbogen — bei einer voll befreiten Galaxie ein geschlossener
+ * Goldring.
+ */
 function paintNode(
   ctx: CanvasRenderingContext2D,
   node: FirmamentNode,
@@ -490,12 +527,15 @@ function paintNode(
   const p = firmamentScreenPos(box, node.nx, node.ny)
   const r = node.bodyR * k
   const color = nodeColor(node)
+  const shape = bodyShape(node, r)
 
   if (node.state === 'unlit') {
     ctx.save()
     ctx.setLineDash([2 * k, 3 * k])
     ctx.beginPath()
-    ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
+    // Auch das Leere traegt die Formsprache — ein gestrichelter KREIS waere die
+    // einzige runde Marke auf einer Karte aus Ellipsen.
+    ctx.ellipse(p.x, p.y, shape.rx, shape.ry, shape.tilt, 0, Math.PI * 2)
     ctx.strokeStyle = 'rgba(160, 146, 114, 0.45)'
     ctx.lineWidth = 1 * k
     ctx.stroke()
@@ -516,35 +556,55 @@ function paintNode(
   ctx.fillStyle = pool
   ctx.fill()
 
-  const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.6)
-  glow.addColorStop(0, color)
-  glow.addColorStop(0.35, color.replace('rgb(', 'rgba(').replace(')', ', 0.5)'))
-  glow.addColorStop(1, color.replace('rgb(', 'rgba(').replace(')', ', 0)'))
-  ctx.fillStyle = glow
+  // Der Schein traegt die Neigung des Koerpers: ein Radialverlauf ist rund, die
+  // Ellipse entsteht aus der Stauchung des Kontexts. Rund ueberrundete er die
+  // Form, die er umgeben soll — genau das machte aus dem Knoten eine Bake.
+  const reach = r * FIRMAMENT_NODE_HALO_SPAN
+  ctx.save()
+  ctx.translate(p.x, p.y)
+  ctx.rotate(shape.tilt)
+  ctx.scale(1, shape.ry / shape.rx)
+  const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, reach)
+  glow.addColorStop(0, tone(color, FIRMAMENT_NODE_HALO_ALPHA))
+  glow.addColorStop(0.45, tone(color, FIRMAMENT_NODE_HALO_ALPHA * 0.42))
+  glow.addColorStop(1, tone(color, 0))
   ctx.beginPath()
-  ctx.arc(p.x, p.y, r * 2.6, 0, Math.PI * 2)
+  ctx.arc(0, 0, reach, 0, Math.PI * 2)
+  ctx.fillStyle = glow
+  ctx.fill()
+  ctx.restore()
+
+  ctx.beginPath()
+  ctx.ellipse(p.x, p.y, shape.rx, shape.ry, shape.tilt, 0, Math.PI * 2)
+  ctx.fillStyle = color
   ctx.fill()
 
   ctx.fillStyle = '#fdf6e0'
   ctx.beginPath()
-  ctx.arc(p.x, p.y, Math.max(1.4 * k, r * 0.32), 0, Math.PI * 2)
+  ctx.arc(p.x, p.y, Math.max(1.2 * k, r * FIRMAMENT_NODE_CORE_R), 0, Math.PI * 2)
   ctx.fill()
 
-  // Ein Pip je verlangtem Stern: gold gerettet, rot verloren, blass offen.
-  // Sie sind der Grund, warum die Koerper aufs Canvas gehoeren — dreissig
-  // Knoten mal sieben Pips waeren 210 DOM-Elemente fuer etwas Stillstehendes.
-  for (let s = 0; s < node.stars; s++) {
-    const a = -Math.PI / 2 + s * ((Math.PI * 2) / node.stars)
-    const rr = r * FIRMAMENT_PIP_ORBIT
+  // Der Sternstand als EIN Bogen: gold, was gerettet wurde, rot anschliessend,
+  // was verloren ging, der Rest bleibt leer. Die Anteile sind die der sieben
+  // Pips, die hier standen — nur eine Form statt sieben je Knoten.
+  const stars = Math.max(1, node.stars)
+  const gold = Math.min(node.rescued, stars) / stars
+  const lost = Math.min(node.lost, Math.max(0, stars - node.rescued)) / stars
+  const arcR = r * FIRMAMENT_STAR_ARC_ORBIT
+  const top = -Math.PI / 2
+  ctx.lineCap = 'butt'
+  ctx.lineWidth = FIRMAMENT_STAR_ARC_W * k
+  if (gold > 0) {
     ctx.beginPath()
-    ctx.arc(p.x + Math.cos(a) * rr, p.y + Math.sin(a) * rr, FIRMAMENT_PIP_R * k, 0, Math.PI * 2)
-    ctx.fillStyle =
-      s < node.rescued
-        ? FIRMAMENT_FREED_COLOR
-        : s < node.rescued + node.lost
-          ? FIRMAMENT_LOST_COLOR
-          : 'rgba(200, 184, 144, 0.3)'
-    ctx.fill()
+    ctx.arc(p.x, p.y, arcR, top, top + gold * Math.PI * 2)
+    ctx.strokeStyle = fade(FIRMAMENT_FREED_COLOR, FIRMAMENT_STAR_ARC_ALPHA)
+    ctx.stroke()
+  }
+  if (lost > 0) {
+    ctx.beginPath()
+    ctx.arc(p.x, p.y, arcR, top + gold * Math.PI * 2, top + (gold + lost) * Math.PI * 2)
+    ctx.strokeStyle = fade(FIRMAMENT_LOST_COLOR, FIRMAMENT_STAR_ARC_LOST_ALPHA)
+    ctx.stroke()
   }
 
   // Orte auf den Etappen — dieselbe hohle Raute wie auf der Galaxiekarte.
@@ -569,6 +629,11 @@ function paintNode(
  *
  * Sie malt TRANSPARENT. Ein deckender Grund hier legte sich ueber die beiden
  * drehenden Ebenen darunter, und die waeren nicht mehr zu sehen.
+ *
+ * Sie geht in ein QUADRATISCHES Sprite um `box.cx/cy`, wie der Wall: die Karte
+ * dreht mit der Wolke, und buehnenfuellend schwenkte alles, was bei Zoom und
+ * Fahrt ausserhalb der Buehne liegt, als leere Flaeche ins Bild. Kein Zug darf
+ * `FIRMAMENT_PLATE_SPRITE_MARGIN · box.r` verlassen.
  */
 export function paintFirmament(
   ctx: CanvasRenderingContext2D,

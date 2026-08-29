@@ -40,6 +40,15 @@ export const FIRMAMENT_SPIRAL_RADIUS_EXP = 0.58
  *  Massstab 1. Darueber wachsen Koerper, Linien und Schrift mit, statt
  *  Stecknadeln zu bleiben — dieselbe Mechanik wie `GALAXY_PLATE_REF_W`. */
 export const FIRMAMENT_PLATE_REF_R = 300
+/** Zuschlag der Karten-Sprite-Kante ueber `box.r` hinaus.
+ *
+ *  Die Karte ist ein QUADRATISCHES Sprite um `box.cx/cy`, wie der Wall — sie
+ *  dreht mit der Wolke, und buehnenfuellend schwenkte alles, was bei Zoom und
+ *  Fahrt ausserhalb der Buehne liegt, als leere Flaeche ins Bild.
+ *
+ *  Der Teich unter dem groessten Knoten ist der weiteste Zug: 0,96 r plus
+ *  `3,4 · 9,94 / 300` sind 1,073 r. `firmamentPlate.spec.ts` bindet die Wand. */
+export const FIRMAMENT_PLATE_SPRITE_MARGIN = 1.1
 /** Abstand der Bahn zur Buehnenkante. */
 export const FIRMAMENT_MAP_INSET_PX = 30
 
@@ -52,9 +61,43 @@ export const FIRMAMENT_NODE_HIT_MIN = 26
 /** Ab dieser Knotenzahl faellt die roemische Ziffer unter jedem Knoten weg und
  *  steht nur noch an Auswahl, Hover und den Toren. */
 export const FIRMAMENT_LABEL_MAX_NODES = 22
-/** Sternpips sitzen auf diesem Vielfachen des Knotenradius. */
-export const FIRMAMENT_PIP_ORBIT = 1.85
-export const FIRMAMENT_PIP_R = 1.5
+/* Ein Knoten ist ein KOERPER DESSELBEN FELDES, kein Zeichen darauf. Er wird
+   deshalb gemalt wie die Galaxien der Wolke — eine geneigte Ellipse — nur
+   groesser, heller und mit einem Kern. Der leuchtende Punkt mit 2,6-fachem
+   runden Halo, der einmal hier stand, las sich daneben als Aufkleber. */
+
+/** Grosse Halbachse als Vielfaches des Knotenradius. */
+export const FIRMAMENT_NODE_BODY_RX = 1.15
+/** Achsverhaeltnis, je Galaxie aus `jitter()` gezogen. Nie rund und nie flach:
+ *  eine Kreisscheibe waere wieder der Punkt, unter 0,4 ein Strich. */
+export const FIRMAMENT_NODE_BODY_RATIO_MIN = 0.42
+export const FIRMAMENT_NODE_BODY_RATIO_MAX = 0.78
+/** Der Schein um den Koerper — ELLIPTISCH und in seiner Neigung, sonst ueberrundet
+ *  er die Form, die er umgeben soll. Vielfaches des Knotenradius. */
+export const FIRMAMENT_NODE_HALO_SPAN = 2.4
+export const FIRMAMENT_NODE_HALO_ALPHA = 0.34
+/** Der helle Kern, als Anteil des Knotenradius. Ohne ihn ist die Marke bei zwoelf
+ *  Pixeln ein Fleck. */
+export const FIRMAMENT_NODE_CORE_R = 0.34
+
+/** Der Sternstand ist EIN Bogen, kein Punktkranz: gold, was gerettet wurde, rot
+ *  anschliessend, was verloren ging, der Rest bleibt LEER.
+ *
+ *  Sieben Pips je Knoten waren bei vierzig Knoten 280 Marken. Ein voll befreiter
+ *  Knoten traegt so einen geschlossenen Goldring — und genau der ist die Marke,
+ *  die ihn vom Feld abhebt. Eine blasse Restspur gaebe jedem Knoten wieder eine
+ *  geschlossene Kontur, also genau das, was verschwinden soll. */
+/** Eng am Koerper, fein und gedaempft — sonst ist die Marke eine MEDAILLE.
+ *
+ *  Gemessen bei 1,95 · 1,9 px · voller Deckkraft: ein satter Goldreif mit
+ *  sichtbarer Luecke zum Koerper, sechsundzwanzigmal auf der Karte. Das las sich
+ *  als Rahmen um eine Kachel — dieselbe Falle, in die schon der Glutring der
+ *  Wolke lief. Dicht am Koerper und fein ist es ein Ring UM eine Galaxie. */
+export const FIRMAMENT_STAR_ARC_ORBIT = 1.6
+export const FIRMAMENT_STAR_ARC_W = 1.25
+export const FIRMAMENT_STAR_ARC_ALPHA = 0.62
+/** Verlorenes steht hoeher: es ist selten, und man soll es sehen. */
+export const FIRMAMENT_STAR_ARC_LOST_ALPHA = 0.9
 /** Landfall-Rauten auf diesem Vielfachen, im Bogen unter dem Koerper. */
 export const FIRMAMENT_LANDFALL_ORBIT = 2.5
 export const FIRMAMENT_LANDFALL_R = 2.1

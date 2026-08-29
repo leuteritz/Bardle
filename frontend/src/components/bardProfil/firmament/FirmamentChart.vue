@@ -10,10 +10,15 @@
  * | Herz | das beobachtete Universum | seine Kantenstufe sich aendert |
  * | Karte | Bahn, Tore, Koerper | `paintKey` sich aendert |
  *
- * Wall und Herz DREHEN sich, und zwar gegeneinander — aber ohne einen einzigen
- * Repaint: es sind fertig gebackene Sprites, die das CSS am Compositor dreht.
- * Verboten ist die Frame-SCHLEIFE, nicht die Bewegung. `paintCount` zaehlt die
- * Karte und muss in Ruhe stehenbleiben.
+ * Wall, Herz und Karte DREHEN sich — aber ohne einen einzigen Repaint: es sind
+ * fertig gebackene Sprites, die das CSS am Compositor dreht. Verboten ist die
+ * Frame-SCHLEIFE, nicht die Bewegung. `paintCount` zaehlt die Karte und muss in
+ * Ruhe stehenbleiben.
+ *
+ * Die KARTE laeuft dabei im Gleichtakt mit dem Herzen — die Bahn liegt IN der
+ * Galaxienwolke, nicht darauf, und stillstehende Knoten auf einem drehenden Feld
+ * lasen sich als Aufkleber. Der Wall dreht gegen beide. Die Knoten sind deshalb
+ * KEINE Baken mehr, sondern Koerper desselben Feldes (`paintNode`).
  *
  * Der Grund liegt AUSSERHALB der fahrenden Ebene: das Sternfeld ist der Raum,
  * nicht die Karte. Vorher fuhr es mit und wurde bei jedem Zoomschritt
@@ -23,9 +28,8 @@
  * und Hover-Karte. Die Trefferschleife des Entwurfs (`pick()` ueber alle Knoten
  * je Mausbewegung) entfaellt damit ersatzlos.
  *
- * Zoom faehrt in DREI Stufen statt stufenlos: jede Stufe ist EIN Repaint. Beim
- * Ziehen faehrt die ganze Ebene per `transform` (Compositor), der Repaint kommt
- * einmal beim Loslassen.
+ * Zoom faehrt in DREI Stufen statt stufenlos: jede Stufe ist EIN Repaint. Die
+ * Fahrt kostet keinen — sie verschiebt nur Sprites.
  */
 import { computed, ref, watch, onBeforeUnmount, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -58,6 +62,7 @@ import {
   FIRMAMENT_MAX_DPR,
   FIRMAMENT_NODE_HIT_MIN,
   FIRMAMENT_PLATE_REF_R,
+  FIRMAMENT_PLATE_SPRITE_MARGIN,
   FIRMAMENT_START_LABEL_MAX_PX,
   FIRMAMENT_START_LABEL_MIN_PX,
   FIRMAMENT_START_LABEL_OFFSET,
@@ -172,7 +177,8 @@ function onPointerDown(e: PointerEvent) {
     window.removeEventListener('pointermove', move)
     window.removeEventListener('pointerup', up)
     dragging.value = false
-    // EIN Repaint, am Ende der Fahrt — nicht je Bewegung.
+    // KEIN Repaint: die Karte ist ein Sprite um ihre eigene Mitte, die Fahrt
+    // verschiebt es nur.
     if (moved) pan.value = clampPan(pan.value.x + drag.value.x, pan.value.y + drag.value.y)
     drag.value = { x: 0, y: 0 }
   }
@@ -275,6 +281,48 @@ const rimSide = computed(() =>
   Math.max(1, Math.round(box.value.r * 2 * FIRMAMENT_RIM_SPRITE_MARGIN)),
 )
 
+/**
+ * Kante des Karten-Sprites — dieselbe Bauart wie der Wall.
+ *
+ * Die Karte dreht mit der Wolke. Buehnenfuellend schwenkte dabei alles, was bei
+ * Zoom und Fahrt ausserhalb der Buehne liegt, als LEERE Flaeche ins Bild: die
+ * Knoepfe stuenden da, ihre Koerper nicht.
+ */
+const plateSide = computed(() =>
+  Math.max(1, Math.round(box.value.r * 2 * FIRMAMENT_PLATE_SPRITE_MARGIN)),
+)
+
+/** Die Karte malt in ihre EIGENE Mitte; die Lage besorgt das CSS. */
+const plateBox = computed(() => ({
+  cx: plateSide.value / 2,
+  cy: plateSide.value / 2,
+  r: box.value.r,
+}))
+
+/* Wall, Wolke und Karte haengen an der Mitte der BAHN, nicht an der der Buehne:
+   `box.cx` traegt die Fahrt. Auf `left: 50%` liefen sie nach jedem Zug
+   auseinander — und die Bahn liegt jetzt IN der Wolke, dort faellt das sofort
+   auf. */
+const centerStyle = computed(() => ({
+  left: `${box.value.cx}px`,
+  top: `${box.value.cy}px`,
+}))
+
+/**
+ * Die drehende Gruppe — Karte, Knoten und Tore in EINEM `transform`.
+ *
+ * Die Dauer ist `universeDiscSpinSec(heroPx)`: dieselbe Funktion mit demselben
+ * Argument, aus dem `UniverseDisc` die Dauer ihrer NAHEN Ebene zieht. Das IST
+ * die Verriegelung — eine eigene Zahl liefe von der Wolke weg. Gedreht wird ein
+ * fertiges Sprite am Compositor, `paintCount` ruehrt sich nicht.
+ */
+const spinStyle = computed(() => ({
+  transformOrigin: `${box.value.cx}px ${box.value.cy}px`,
+}))
+
+/** EINE Dauer fuer die Gruppe und fuer die Gegendrehung der Schrift darin. */
+const spinDur = computed(() => `${universeDiscSpinSec(heroPx.value)}s`)
+
 /* Dieselbe Wurzelregel wie die Scheiben: die Dauer waechst mit der Wurzel des
    Durchmessers. Der Wall ist der groesste Koerper im Reiter und dreht damit von
    selbst am traegsten — die Parallaxe zur Heldenscheibe kostet keine zweite
@@ -293,14 +341,16 @@ function pickGate(gate: FirmamentGate, picked: boolean) {
 
 // ── Malen ───────────────────────────────────────────────────────────────────
 /** Nur LAENGEN und Formzahlen — nie ein Wert, der tickt. Eine Zahl aus dem
- *  Sekundentakt hier malte die ganze Platte jede Sekunde neu. */
+ *  Sekundentakt hier malte die ganze Platte jede Sekunde neu.
+ *
+ *  Die FAHRT steht nicht mehr darin: die Karte malt in ihre eigene Mitte, ein
+ *  Zug verschiebt nur noch das Sprite. Panning kostet damit null Repaints. */
 const paintKey = computed(
   () =>
     `${props.nodes.length}:${completedGalaxies.value.length}` +
     `:${props.nodes.map((n) => `${n.galaxy}${n.state[0]}${n.rescued}${n.lost}${n.landfalls}`).join(',')}` +
     `|${firmamentGateSignature(props.gates)}` +
-    `|${Math.round(cssW.value)}x${Math.round(cssH.value)}|${dprNow.value}` +
-    `|${zoomStep.value}|${Math.round(pan.value.x)},${Math.round(pan.value.y)}`,
+    `|${plateSide.value}|${dprNow.value}`,
 )
 
 /** Der Grund kennt weder Zoom noch Fahrt — deshalb ein eigener, groberer
@@ -360,26 +410,21 @@ function schedule() {
 
 function paint() {
   const el = canvas.value
-  const w = Math.round(cssW.value)
-  const h = Math.round(cssH.value)
-  if (!el || w <= 0 || h <= 0) return
+  const side = plateSide.value
+  if (!el || side <= 1) return
 
   // Das Canvas wird nicht pro Frame gezeichnet — ein von Chrome verworfener
   // Backing-Store bliebe sonst bis zur naechsten Aenderung leer.
   resetCanvasIfContextLost(el)
 
-  const dpr = Math.min(
-    window.devicePixelRatio || 1,
-    FIRMAMENT_MAX_DPR,
-    FIRMAMENT_MAX_BACKING_PX / Math.max(w, h),
-  )
-  el.width = Math.max(1, Math.round(w * dpr))
-  el.height = Math.max(1, Math.round(h * dpr))
+  const dpr = backingDpr(side, side)
+  el.width = Math.max(1, Math.round(side * dpr))
+  el.height = Math.max(1, Math.round(side * dpr))
   const ctx = el.getContext('2d')
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-  paintFirmament(ctx, props.nodes, props.gates, w, h, box.value)
+  paintFirmament(ctx, props.nodes, props.gates, side, side, plateBox.value)
   paintCount.value += 1
 }
 
@@ -474,6 +519,7 @@ const LEGEND = [
         class="fm-rim"
         aria-hidden="true"
         :style="{
+          ...centerStyle,
           width: `${rimSide}px`,
           height: `${rimSide}px`,
           animationDuration: rimSpinDur,
@@ -486,58 +532,69 @@ const LEGEND = [
         :universe="gameStore.currentUniverse"
         state="current"
         :px="heroPx"
+        :style="centerStyle"
       />
 
-      <!-- `data-paints` ist der Beleg, nicht Zierrat: der Playwright-Lauf liest
-           ihn und darf ihn in Ruhe nicht wachsen sehen. Er wird nur
-           geschrieben, wenn ohnehin gemalt wurde. -->
-      <canvas ref="canvas" class="fm-canvas" :data-paints="paintCount" />
+      <!-- Die Bahn dreht im Gleichtakt mit der Wolke — Karte, Knoten und Tore
+           in EINEM `transform` um die Mitte der Bahn. Der Startpunkt bleibt
+           draussen: er BENENNT diesen Drehpunkt und kreiste sonst um ihn. -->
+      <div class="fm-spin" :style="spinStyle">
+        <!-- `data-paints` ist der Beleg, nicht Zierrat: der Playwright-Lauf liest
+             ihn und darf ihn in Ruhe nicht wachsen sehen. Er wird nur
+             geschrieben, wenn ohnehin gemalt wurde. -->
+        <canvas
+          ref="canvas"
+          class="fm-canvas"
+          :data-paints="paintCount"
+          :style="{ ...centerStyle, width: `${plateSide}px`, height: `${plateSide}px` }"
+        />
 
-      <!-- Ein Knopf je Knoten. Kein Schein, kein Zierrat — den malt das Canvas
-           darunter; hier liegt nur, was auf Zeiger und Tastatur antwortet. -->
-      <RpgBadgeTooltip v-for="mark in marks" :key="mark.node.galaxy" passive :accent="mark.accent">
+        <!-- Ein Knopf je Knoten. Kein Schein, kein Zierrat — den malt das Canvas
+             darunter; hier liegt nur, was auf Zeiger und Tastatur antwortet. -->
+        <RpgBadgeTooltip v-for="mark in marks" :key="mark.node.galaxy" passive :accent="mark.accent">
+          <button
+            class="fm-node"
+            :class="{
+              'is-current': mark.node.state === 'current',
+              'is-unlit': mark.node.state === 'unlit',
+              'is-picked': mark.picked,
+              'is-lit': mark.inSpan,
+              'is-labelled': showLabels,
+            }"
+            :style="{
+              left: `${mark.x}px`,
+              top: `${mark.y}px`,
+              width: `${mark.size}px`,
+              height: `${mark.size}px`,
+              '--fm-node-accent': mark.accent,
+            }"
+            :aria-label="`Galaxy ${toRoman(mark.node.galaxy)}`"
+            :aria-pressed="mark.picked"
+            @click="pickNode(mark.node, mark.picked)"
+          >
+            <span class="fm-node-ring" aria-hidden="true" />
+            <span class="fm-node-tag" aria-hidden="true">{{ toRoman(mark.node.galaxy) }}</span>
+          </button>
+          <template #tip>
+            <FirmamentGalaxyTip :node="mark.node" />
+          </template>
+        </RpgBadgeTooltip>
+
+        <!-- Die Tore. Sie tragen ihre Ziffer selbst — die Bahn ist sonst nicht
+             lesbar, wo ein Universum endete. -->
         <button
-          class="fm-node"
-          :class="{
-            'is-current': mark.node.state === 'current',
-            'is-unlit': mark.node.state === 'unlit',
-            'is-picked': mark.picked,
-            'is-lit': mark.inSpan,
-            'is-labelled': showLabels,
-          }"
-          :style="{
-            left: `${mark.x}px`,
-            top: `${mark.y}px`,
-            width: `${mark.size}px`,
-            height: `${mark.size}px`,
-            '--fm-node-accent': mark.accent,
-          }"
-          :aria-label="`Galaxy ${toRoman(mark.node.galaxy)}`"
-          :aria-pressed="mark.picked"
-          @click="pickNode(mark.node, mark.picked)"
+          v-for="g in gateMarks"
+          :key="`gate-${g.gate.universe}-${g.gate.afterIndex}`"
+          class="fm-gate"
+          :class="{ 'is-picked': g.picked }"
+          :style="{ left: `${g.x}px`, top: `${g.y}px` }"
+          :aria-label="`Departure to Universe ${toRoman(g.gate.universe)}`"
+          :aria-pressed="g.picked"
+          @click="pickGate(g.gate, g.picked)"
         >
-          <span class="fm-node-ring" aria-hidden="true" />
-          <span class="fm-node-tag" aria-hidden="true">{{ toRoman(mark.node.galaxy) }}</span>
+          {{ toRoman(g.gate.universe) }}
         </button>
-        <template #tip>
-          <FirmamentGalaxyTip :node="mark.node" />
-        </template>
-      </RpgBadgeTooltip>
-
-      <!-- Die Tore. Sie tragen ihre Ziffer selbst — die Bahn ist sonst nicht
-           lesbar, wo ein Universum endete. -->
-      <button
-        v-for="g in gateMarks"
-        :key="`gate-${g.gate.universe}-${g.gate.afterIndex}`"
-        class="fm-gate"
-        :class="{ 'is-picked': g.picked }"
-        :style="{ left: `${g.x}px`, top: `${g.y}px` }"
-        :aria-label="`Departure to Universe ${toRoman(g.gate.universe)}`"
-        :aria-pressed="g.picked"
-        @click="pickGate(g.gate, g.picked)"
-      >
-        {{ toRoman(g.gate.universe) }}
-      </button>
+      </div>
 
       <!-- Der Startpunkt. KEIN Knopf: er fuehrt keine Aktion aus, und „zurueck
            zur Mitte" gaebe es zweimal — den Werkzeugknopf gibt es schon. Er ist
@@ -645,8 +702,6 @@ const LEGEND = [
 .fm-rim,
 .fm-hero {
   position: absolute;
-  left: 50%;
-  top: 50%;
   pointer-events: none;
 }
 
@@ -675,18 +730,81 @@ const LEGEND = [
   opacity: v-bind(heroOpacity);
 }
 
+/* ── Die drehende Gruppe ──────────────────────────────────────────────────
+   Karte, Knoten und Tore laufen im Gleichtakt mit dem Galaxienfeld der Wolke:
+   die Bahn liegt IN ihr, nicht darauf. Der Drehpunkt ist die Mitte der BAHN
+   (`transform-origin` inline), nicht die der Buehne — sonst kreiste die Karte
+   nach einer Fahrt um einen fremden Punkt.
+
+   Ein `transform` fuer alles darin, ein fertiges Sprite plus Knoepfe: kein
+   Repaint, `paintCount` bleibt stehen. Bewusst OHNE `will-change` — Chrome
+   promotet die laufende Animation ohnehin, dieselbe Begruendung wie beim
+   Wall. */
+.fm-spin {
+  position: absolute;
+  inset: 0;
+  animation: fm-spin-turn v-bind(spinDur) linear infinite;
+}
+
+@keyframes fm-spin-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Was Schrift traegt, dreht gegen — sonst stuende die Ziffer nach zwei Minuten
+   auf dem Kopf. Der Fixpunkt der Abbildung ist bei beiden genau die
+   Bildschirmmitte des Knotens: beim Tor die eigene Mitte, bei der Ziffer ihre
+   Unterkante, die auf der Oberkante des Knopfes sitzt. */
+@keyframes fm-tag-counter {
+  from {
+    transform: translateX(-50%) rotate(0deg);
+  }
+  to {
+    transform: translateX(-50%) rotate(-360deg);
+  }
+}
+
+@keyframes fm-gate-counter {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(-360deg);
+  }
+}
+
+/* Beim Ueberfahren haelt ALLES an — Bahn, Wolke und Wall gemeinsam.
+   Am aeusseren Rand wandert ein Knoten mit 7,4 px/s und verlaesst seine
+   26-px-Trefferflaeche in 1,75 s: die Hover-Karte risse mitten im Lesen ab.
+   Nur die Bahn anzuhalten liesse sie fuer die Dauer des Hoverns aus der Wolke
+   herauslaufen. Reines CSS — kein Zustand, kein Re-Render. */
+.fm-stage:has(.fm-node:hover, .fm-node:focus-visible, .fm-gate:hover, .fm-gate:focus-visible)
+  :is(.fm-spin, .fm-rim, .fm-node-tag, .fm-gate) {
+  animation-play-state: paused;
+}
+
+.fm-stage:has(.fm-node:hover, .fm-node:focus-visible, .fm-gate:hover, .fm-gate:focus-visible)
+  :deep(.fm-hero .uni-disc-l) {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .fm-rim {
+  .fm-rim,
+  .fm-spin,
+  .fm-node-tag,
+  .fm-gate {
     animation: none;
   }
 }
 
+/* Quadratisches Sprite um die Mitte der Bahn — dieselbe Bauart wie der Wall.
+   Buehnenfuellend schwenkte beim Drehen leere Flaeche ins Bild, sobald Zoom
+   und Fahrt einen Teil der Karte nach draussen geschoben haben. */
 .fm-canvas {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
   display: block;
+  transform: translate(-50%, -50%);
 }
 
 /* ── Knoten ───────────────────────────────────────────────────────────── */
@@ -775,12 +893,22 @@ const LEGEND = [
 }
 
 /* Die Ziffer. Ruhend malt sie nichts (`visibility: hidden`), und sie faengt
-   den Zeiger nicht ab — der gehoert der Trefferflaeche darunter. */
+   den Zeiger nicht ab — der gehoert der Trefferflaeche darunter.
+
+   Der Drehpunkt ist ihre UNTERKANTE: die sitzt auf der Oberkante des Knopfes,
+   und damit faellt der Fixpunkt der Gegendrehung genau auf die Mitte des
+   Knotens. */
 .fm-node-tag {
   position: absolute;
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
+  transform-origin: 50% 100%;
+  /* Die Gegendrehung laeuft IMMER, auch ruhend. Erst beim Hover gestartet
+     begaenne sie bei Phase null, waehrend die Gruppe laengst weitergedreht ist
+     — die Ziffer stuende dann genau schief. Unsichtbar kostet sie nichts: die
+     Uhr laeuft, gemalt wird sie nicht. */
+  animation: fm-tag-counter v-bind(spinDur) linear infinite;
   padding-bottom: 2px;
   font-size: 12px;
   line-height: 1;
@@ -837,6 +965,7 @@ const LEGEND = [
 .fm-gate {
   position: absolute;
   transform: translate(-50%, -50%);
+  animation: fm-gate-counter v-bind(spinDur) linear infinite;
   min-width: 22px;
   height: 18px;
   padding: 0 5px;
