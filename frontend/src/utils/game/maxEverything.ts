@@ -14,12 +14,15 @@
  *   - die Galaxie muss VOR den Champions stehen, sie bestimmt `levelCap`
  *   - die Augment-Automatik muss GANZ vorn stehen, sonst legt `adminSetLevel`
  *     ein blockierendes Auswahl-Modal über das Spiel
+ *   - der Aufbruch-Nachtrag muss NACH dem Galaxiesprung stehen, seine Tore
+ *     sitzen auf den Stempeln, die der Archiv-Nachtrag gerade vergeben hat
  *
  * Bewusst NICHT enthalten: `executePrestigeReset()` (setzt alles zurück — das
  * genaue Gegenteil), Auto-Battle und Auto-Level (laufende Automatiken, die jede
- * Messung verrauschen) und jedes Spawnen von Sternen, Driftern oder Void — dafür
- * stehen die eigenen Panels daneben im selben Tab. Ein Endzustand ist ein
- * Ausgangspunkt, keine laufende Szene.
+ * Messung verrauschen), jedes Spawnen von Sternen, Driftern oder Void — dafür
+ * stehen die eigenen Panels daneben im selben Tab — und die Ortschronik, das
+ * Omen und die Bossuhr, die alle drei eine laufende Szene sind, keinen Zustand.
+ * Ein Endzustand ist ein Ausgangspunkt, keine laufende Szene.
  */
 import { useGameStore } from '@/stores/core/gameStore'
 import { useSectionStore } from '@/stores/core/sectionStore'
@@ -27,6 +30,7 @@ import { useShopStore } from '@/stores/economy/shopStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useItemStore } from '@/stores/economy/itemStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
+import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
@@ -39,6 +43,7 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { useMissionStore } from '@/stores/progression/missionStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 
 import { MATERIALS } from '@/config/economy/materials'
@@ -207,6 +212,8 @@ export interface MaxEverythingResult {
   perks: number
   rank: string
   galaxy: number
+  /** Universen mit einem Lauf im Archiv — die Tore auf der Firmament-Bahn. */
+  universes: number
 }
 
 export function maxEverything(): MaxEverythingResult {
@@ -225,6 +232,7 @@ export function maxEverything(): MaxEverythingResult {
   const meepTreeStore = useMeepTreeStore()
   const bardAbilityStore = useBardAbilityStore()
   const achievementStore = useAchievementStore()
+  const missionStore = useMissionStore()
 
   // ① Sonne auf die Endphase — das Gate für Forge UND Planeten-Level, und
   //    zugleich die Zeile, ohne die gar nichts mehr rendert: bei `isCometState`
@@ -307,6 +315,16 @@ export function maxEverything(): MaxEverythingResult {
   // auf dem regulären Weg beantwortet statt bloß weggeschaltet.
   if (galaxyStore.pendingRoleSelection) galaxyStore.confirmRoleSelection(ROLES[0].key)
 
+  // Die neun Aufbrüche, die der Sprung überspringt. MUSS hier stehen und nicht
+  // oben bei `currentUniverse`: die Tore der Firmament-Bahn hängen an den
+  // Stempeln, die `adminJumpToGalaxy` eine Zeile darüber vergeben hat. Ohne sie
+  // steht das Firmament auf fünfzig Galaxien und NULL Toren — jede Zeile der
+  // Universumsleiste ausser der laufenden liest „not yet walked" und ist nicht
+  // anklickbar.
+  gameStore.adminBackfillUniverseRuns()
+  // Die Ziele, die dieses Archiv eröffnet.
+  useExpeditionChartStore().adminChartAll()
+
   sectionStore.highestUnlockedSectionId = TOTAL_SECTIONS
   for (const section of SECTIONS) {
     const progress = sectionStore.sectionProgress[section.id]
@@ -384,6 +402,10 @@ export function maxEverything(): MaxEverythingResult {
   //    vierzig Stufen ein Herald-Banner über den Bildschirm.
   for (const track of CHRONICLE_TRACKS) achievementStore.stages[track.id] = track.stages.length
   achievementStore.markSeen()
+  // …und die zweite stille Leiter. Sie stünde sonst TOT bei Stufe eins: der
+  // Wayfinder rückt nur bei erfüllter Metrik vor, und die erste verlangt zehn
+  // Klicks, die dieser Knopf nicht tut.
+  missionStore.adminCompleteLadder()
 
   // ⑫ Ladder bis Challenger — adminPromoteRank steigt nur EINE Stufe je Aufruf.
   let rankGuard = ADMIN_RANK_PROMOTE_GUARD
@@ -418,6 +440,7 @@ export function maxEverything(): MaxEverythingResult {
     perks: resolvedPerks,
     rank: battleStore.currentRank.tier,
     galaxy: galaxyStore.currentGalaxy,
+    universes: gameStore.universeRuns.length,
   }
   logger.info('System', 'Max Everything applied', result)
   return result

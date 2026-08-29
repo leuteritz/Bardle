@@ -32,7 +32,7 @@ function onMaxEverything() {
     kind: 'unlock',
     eyebrow: 'ADMIN',
     headline: 'Max Everything',
-    subline: `${result.champions} champions maxed · ${result.rank} · Galaxy ${result.galaxy}`,
+    subline: `${result.champions} champions · ${result.universes} universes walked · ${result.rank}`,
   })
 }
 </script>
@@ -46,7 +46,8 @@ function onMaxEverything() {
     <span class="me-text">
       <span class="me-title">Max Everything</span>
       <span class="me-sub">
-        Every system to its end state — roster, forge, tree, planets, codex, Challenger
+        Every system to its end state — roster, forge, tree, planets, codex, wayfinder,
+        firmament, Challenger
       </span>
     </span>
 

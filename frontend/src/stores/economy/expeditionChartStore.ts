@@ -89,6 +89,25 @@ export const useExpeditionChartStore = defineStore('expeditionChart', {
       if (!this.seenDestinations.includes(galaxy)) this.seenDestinations.push(galaxy)
     },
 
+    /**
+     * Admin: jedes befreite Ziel kartiert und gesehen. Ohne das steht neben
+     * fünfzig befreiten Galaxien fünfzigmal Kartografie 0 und eine „NEW"-Marke.
+     *
+     * Die Wegmarken bleiben bewusst leer: sie sind ein Paar aus Champion UND
+     * Ziel, und 170 × 50 erfundene Schlüssel blähten den Spielstand um
+     * Grössenordnungen — `prune()` lässt sie genau deshalb ungedeckelt.
+     */
+    adminChartAll(): number {
+      const freed = useGalaxyStore().completedGalaxies
+      for (const record of freed) {
+        const entry = this._entry(record.galaxy)
+        entry.runs = Math.max(entry.runs, EXPEDITION_CHART_MAX)
+        entry.charted = EXPEDITION_CHART_MAX
+        this.markSeen(record.galaxy)
+      }
+      return freed.length
+    },
+
     addWaymark(champion: string, galaxy: number) {
       const key = `${champion}|${galaxy}`
       this.waymarks[key] = Math.min(EXPEDITION_WAYMARK_MAX, (this.waymarks[key] ?? 0) + 1)

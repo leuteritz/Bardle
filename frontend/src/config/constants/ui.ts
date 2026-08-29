@@ -1256,8 +1256,6 @@ export const ADMIN_MAX_BARD_LEVEL = 100
 /** Letztes Universum im Katalog (config/progression/universes.ts). */
 export const ADMIN_MAX_UNIVERSE = 10
 export const ADMIN_MAX_GALAXY = 50
-/** Gebäudestufen kennen kein Cap — dieser Wert ist die gewählte Testhöhe. */
-export const ADMIN_MAX_BUILDING_LEVEL = 500
 /**
  * Dasselbe für die Boughs des Sternbaums (Ring 4). `nodeMaxLevel` gibt dort
  * `Infinity` zurück — eine Schleife bis zum Maximum liefe endlos, `adminMaxAll`

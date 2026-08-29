@@ -16,6 +16,13 @@ import { FORGE_BOUGHS } from '@/config/progression/starForge'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
+import { useMissionStore } from '@/stores/progression/missionStore'
+import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
+import { computeRequired } from '@/stores/world/galaxyStore'
+import { buildFirmamentGates, buildFirmamentNodes } from '@/utils/ui/firmamentLayout'
+import { universes } from '@/config/progression/universes'
+import { FORGE_CONFLUENCES } from '@/config/progression/starForge'
+import { MISSION_COUNT } from '@/config/progression/missions'
 import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
 import { SHOP_ITEMS } from '@/config/economy/items'
 import {
@@ -24,8 +31,11 @@ import {
   ADMIN_MAX_GALAXY,
   ADMIN_MAX_PLANET_LEVEL,
   ADMIN_MAX_UNIVERSE,
+  EXPEDITION_CHART_MAX,
   FORGE_YIELD_SOURCES,
   ITEM_SLOT_COUNT,
+  UNIVERSE_RESCUE_COST_MULTIPLIER,
+  UNIVERSE_RESCUE_INITIAL_COST,
   STAR_PHASE_FINAL_INDEX,
   TOTAL_SECTIONS,
   SOLAR_BRANCHES,
@@ -75,6 +85,11 @@ describe('maxEverything', () => {
         // Universum, und ohne diese Zeile fehlte ausgerechnet der Ring, den es
         // nur ganz am Ende gibt, im „alles gemaxt".
         expect(forge.crownLevels[def.id], def.id).toBe(FORGE_CROWN_MAX_LEVEL)
+      } else if (def.tier === 'confluence') {
+        // Die Naht steht auf derselben Endphase wie die Boughs. Der Zweig
+        // fehlte hier ebenso wie in `adminMaxAll` — und ein `else`, das jeden
+        // Rest für einen Bough hält, hat den Fehler mit festgeschrieben.
+        expect(forge.confluenceLevels[def.id], def.id).toBe(1)
       } else {
         // Ring 4 hat kein Maximum — `adminMaxAll` setzt dort die gewählte
         // Testhöhe. Ein `toBe(nodeMaxLevel(...))` verlangte hier `Infinity`.
@@ -245,10 +260,123 @@ describe('maxEverything', () => {
     expect(sig.base.stage).toBe(SOLAR_SIGNATURE_BASE_STAGES.length - 1)
   })
 
+  /**
+   * Der Befund, der diesen Block ausgelöst hat: nach „Max Everything" stand das
+   * Firmament auf fünfzig Galaxien und NULL Toren. `universeRuns` wird nur beim
+   * echten Prestige geschrieben, und das rührt der Knopf bewusst nicht an — also
+   * las jede Zeile der Universumsleiste ausser der laufenden „not yet walked"
+   * und war nicht anklickbar.
+   */
+  it('lässt kein Universum auf „not yet walked" stehen', () => {
+    maxEverything()
+    const game = useGameStore()
+
+    for (const u of universes) {
+      const walked =
+        u.id === game.currentUniverse || game.universeRuns.some((r) => r.universe === u.id)
+      expect(walked, `Universum ${u.id} nie betreten`).toBe(true)
+    }
+  })
+
+  it('gibt jedem verlassenen Universum ein Tor auf der Bahn', () => {
+    maxEverything()
+    const game = useGameStore()
+    const galaxy = useGalaxyStore()
+
+    const nodes = buildFirmamentNodes({
+      completed: galaxy.completedGalaxies,
+      currentGalaxy: galaxy.currentGalaxy,
+      currentRescued: 0,
+      currentLost: 0,
+      currentLandfalls: 0,
+      currentThemeIndex: galaxy.currentThemeIndex,
+      starsOf: computeRequired,
+    })
+    const gates = buildFirmamentGates(nodes, game.universeRuns)
+
+    // Gleich `untoldRuns === 0` im Wappenband — kein Lauf bleibt „unmarked".
+    expect(gates).toHaveLength(game.universeRuns.length)
+    expect(new Set(gates.map((g) => g.afterIndex)).size).toBe(gates.length)
+  })
+
+  it('stellt den Rettungsbalken auf den Stand, den die Aufbrüche verlangen', () => {
+    maxEverything()
+    const game = useGameStore()
+
+    expect(game.chimesToUniverseRescue).toBe(
+      UNIVERSE_RESCUE_INITIAL_COST * UNIVERSE_RESCUE_COST_MULTIPLIER ** game.totalPrestiges,
+    )
+    expect(game.chimesForNextUniverse).toBeGreaterThanOrEqual(game.chimesToUniverseRescue)
+    expect(game.universeRescueProgress).toBe(100)
+  })
+
+  /**
+   * Die Meep-Ratsche steigt nur beim Aufbruch. Bliebe sie bei nachgetragenen
+   * Läufen auf null, fiele der Anker auf `MEEP_RUN_BASE_MIN` — und der Knopf
+   * schenkte fünfstellig Meeps, wo der Entwurf rund neunzig je Aufbruch vorsieht.
+   */
+  it('hebt die Meep-Ratsche auf den besten archivierten Lauf', () => {
+    maxEverything()
+    const game = useGameStore()
+
+    expect(game.bestUniverseRunChimes).toBe(Math.max(...game.universeRuns.map((r) => r.chimes)))
+    expect(game.pendingMeeps).toBeLessThan(1000)
+  })
+
+  it('zählt „in diesem Universum" ab dem Ankommen, nicht ab dem Archiv', () => {
+    maxEverything()
+    expect(useGameStore().universeRunStats.galaxiesFreed).toBe(0)
+  })
+
+  /**
+   * `adminMaxAll` hatte keinen `confluence`-Zweig: die fünf fielen in den
+   * `else` und landeten als Fremd-IDs in `boughLevels`, während
+   * `confluenceEffect` weiter null zurückgab. Keiner der Yield-Tests fing das —
+   * keine Confluence zahlt auf CpS.
+   */
+  it('setzt jede Confluence auf ihre eine Stufe, nicht in den Bough-Record', () => {
+    maxEverything()
+    const forge = useStarForgeStore()
+
+    for (const def of FORGE_CONFLUENCES) {
+      expect(forge.confluenceLevels[def.id], def.id).toBe(1)
+      expect(forge.boughLevels[def.id], def.id).toBeUndefined()
+      expect(forge.confluenceEffect(def.id), def.id).toBeGreaterThan(0)
+    }
+  })
+
+  /* Der Wayfinder stünde sonst TOT bei Stufe eins: er rückt nur bei erfüllter
+     Metrik vor, und die erste verlangt zehn Klicks. */
+  it('stellt die zweite stille Leiter ebenfalls voll', () => {
+    maxEverything()
+    const mission = useMissionStore()
+
+    expect(mission.isComplete).toBe(true)
+    expect(mission.claimedCount).toBe(MISSION_COUNT)
+    expect(mission.caughtUp).toBe(0)
+  })
+
+  it('lässt kein befreites Ziel unkartiert und keine „NEW"-Marke stehen', () => {
+    maxEverything()
+    const chart = useExpeditionChartStore()
+    const freed = useGalaxyStore().completedGalaxies
+
+    expect(freed.length).toBeGreaterThan(0)
+    for (const record of freed) {
+      expect(chart.progressOf(record.galaxy).charted, `Galaxie ${record.galaxy}`).toBe(
+        EXPEDITION_CHART_MAX,
+      )
+      expect(chart.seenDestinations).toContain(record.galaxy)
+    }
+    expect(chart.chartedCount).toBe(freed.length)
+  })
+
   it('ist idempotent: ein zweiter Druck verändert den Endzustand nicht mehr', () => {
     const first = maxEverything()
     const game = useGameStore()
     const chimesAfterFirst = game.chimes
+    const runsAfterFirst = game.universeRuns.length
+    const costAfterFirst = game.chimesToUniverseRescue
 
     const second = maxEverything()
 
@@ -257,5 +385,11 @@ describe('maxEverything', () => {
     expect(game.chimes).toBe(chimesAfterFirst)
     expect(useChampionLevelStore().pendingPerks).toHaveLength(0)
     expect(game.activeAugments).toHaveLength(new Set(game.activeAugments).size)
+    // Die nachgetragenen Aufbrüche dürfen sich nicht verdoppeln, und
+    // `caughtUp` wird in `catchUpSilently` ABSOLUT geschrieben — der Grund,
+    // warum der Wayfinder eine eigene Admin-Aktion hat.
+    expect(game.universeRuns).toHaveLength(runsAfterFirst)
+    expect(game.chimesToUniverseRescue).toBe(costAfterFirst)
+    expect(useMissionStore().caughtUp).toBe(0)
   })
 })

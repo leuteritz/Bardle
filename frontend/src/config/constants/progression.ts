@@ -283,6 +283,18 @@ export const ADMIN_ARCHIVE_CHIMES_PER_DEPTH = 0.55
 export const ADMIN_ARCHIVE_RECENT_GAP_MS = 5 * 60_000
 export const ADMIN_ARCHIVE_GAP_MS = 12 * 60_000
 
+// ── Aufbruch-Nachtrag beim Sprung ins letzte Universum ────────────────────
+// Ein Sprung setzt `currentUniverse`, lässt `universeRuns` aber leer — dann
+// steht das Firmament ohne Tore da. Der Nachtrag rechnet die Rettungskosten
+// nach (Anfangskosten mal Multiplikator hoch Aufbruch), plus diesen Überschuss:
+// exakt auf der Schwelle bricht kein Spieler auf.
+export const ADMIN_UNIVERSE_OVERSHOOT = 0.35
+/** Eigene rng-Ströme, damit Reihenfolge, Kosten und Vorsehung nicht im
+ *  Gleichschritt laufen — dieselbe Trennung wie bei den Archiv-Salzen. */
+export const ADMIN_UNIVERSE_ORDER_SALT = 3617
+export const ADMIN_UNIVERSE_CHIMES_SALT = 4133
+export const ADMIN_UNIVERSE_PROVIDENCE_SALT = 4649
+
 export const GALAXY_CHAMPION_ARRIVAL_SIGNAL_MS = 4000
 export const GALAXY_STAR_FAILED_SIGNAL_MS = 2600 // "Star Lost" flash on the minimap
 export const GALAXY_BOSS_SPAWN_ANIM_MS = 5_000

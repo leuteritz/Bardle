@@ -235,5 +235,22 @@ export const useMissionStore = defineStore('mission', {
       this.index = 0
       this.caughtUp = 0
     },
+
+    /**
+     * Admin: die Leiter still auf Vollstand — kein Banner, keine Auszahlung.
+     * Dasselbe Muster wie der Astral Codex im selben Knopf, der seine Stufen
+     * direkt setzt statt über `evaluate(true)`.
+     *
+     * `catchUpSilently()` taugt dafür nicht: sie bricht beim ersten
+     * unerfüllten Ziel ab, und das ist gleich Stufe eins („zehn Klicks"), die
+     * kein Admin-Knopf erfüllt. `caughtUp` bleibt 0 — übersprungen wurde
+     * nichts, gesetzt wurde; und weil sie dort ABSOLUT geschrieben wird,
+     * schriebe ein zweiter Druck sie ohnehin auf null zurück.
+     */
+    adminCompleteLadder(): void {
+      this.totalMissionsClaimed = Math.max(this.totalMissionsClaimed, MISSION_COUNT)
+      this.index = MISSION_COUNT
+      this.caughtUp = 0
+    },
   },
 })

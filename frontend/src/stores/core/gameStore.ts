@@ -22,6 +22,7 @@ import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { buildBackfillUniverseRuns } from '@/utils/game/universeRunBackfill'
 import { universes } from '@/config/progression/universes'
 import { clampPercent } from '@/utils/orbit/geometry'
 import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
@@ -202,7 +203,6 @@ export const useGameStore = defineStore('game', {
 
     currentUniverse: 1,
     prestigeAvailable: false,
-
 
     // Modal state for UI effects
     isCPSModalOpen: false,
@@ -723,6 +723,49 @@ export const useGameStore = defineStore('game', {
       // Der Aufrufer muss den Lohn VORHER gelesen haben — ab dieser Zeile gilt
       // die neue Anforderung.
       this.bestUniverseRunChimes = Math.max(this.bestUniverseRunChimes, this.chimesForNextUniverse)
+    },
+
+    /**
+     * Admin: die Aufbrüche nachtragen, die ein Sprung ins letzte Universum
+     * überspringt — das Gegenstück zu `galaxyStore.adminBackfillArchive()` und
+     * zwingend NACH ihm: die Tore der Firmament-Bahn sitzen auf den Stempeln,
+     * die der Archiv-Nachtrag gerade vergeben hat.
+     *
+     * Sie steht hier und nicht in `maxEverything`, weil die fünf Felder EIN
+     * Invariant sind: `finishUniverseRun` und `executePrestigeReset` setzen sie
+     * zusammen, und wer ein sechstes an den Aufbruch hängt, fände sonst nur den
+     * einen der beiden Orte.
+     *
+     * Jede Zuweisung über `Math.max` — der Knopf ist idempotent.
+     */
+    adminBackfillUniverseRuns(): number {
+      const records = [...useGalaxyStore().completedGalaxies].sort((a, b) => a.galaxy - b.galaxy)
+      const added = buildBackfillUniverseRuns(records, this.currentUniverse, this.universeRuns)
+      if (added.length > 0) {
+        this.universeRuns.push(...added)
+        this.universeRuns.sort((a, b) => a.completedAt - b.completedAt)
+      }
+      this.totalPrestiges = Math.max(this.totalPrestiges, this.universeRuns.length)
+      // Ohne die drei Zahlen behauptet das Wappenband „0 / 100k" neben neun
+      // Aufbrüchen, während `prestigeAvailable` längst steht.
+      this.chimesToUniverseRescue = Math.max(
+        this.chimesToUniverseRescue,
+        UNIVERSE_RESCUE_INITIAL_COST * UNIVERSE_RESCUE_COST_MULTIPLIER ** this.totalPrestiges,
+      )
+      this.chimesForNextUniverse = Math.max(this.chimesForNextUniverse, this.chimesToUniverseRescue)
+      // Die Ratsche steigt NUR aus abgeschlossenen Läufen — `chimesForNextUniverse`
+      // gehört dem laufenden und ist noch nicht gebucht. Sie muss aber stehen:
+      // auf null bliebe der Anker `MEEP_RUN_BASE_MIN`, und der Nachtrag
+      // verschenkte fünfstellig Meeps.
+      this.bestUniverseRunChimes = Math.max(
+        this.bestUniverseRunChimes,
+        ...this.universeRuns.map((run) => run.chimes),
+      )
+      // Hier wird gerade angekommen, nicht gespielt: ohne diese Zeile misst
+      // `universeRunStats` das ganze nachgetragene Archiv als „in diesem
+      // Universum".
+      this.beginUniverseRun()
+      return added.length
     },
 
     // Executes the actual Prestige reset

@@ -1989,6 +1989,12 @@ export const useStarForgeStore = defineStore('starForge', {
           if (this.crownsUnlocked) this.crownLevels[def.id] = FORGE_CROWN_MAX_LEVEL
         } else if (def.tier === 'glimmer') {
           this.glimmerLevels[def.id] = FORGE_GLIMMER_MAX_LEVEL
+        } else if (def.tier === 'confluence') {
+          // Wie eine Krone: genau EINE Stufe. Ohne diesen Zweig fielen die fünf
+          // in den `else` darunter und stünden als Fremd-IDs in `boughLevels` —
+          // `confluenceEffect` liest `confluenceLevels` und gäbe 0 zurück.
+          // Feste 1 statt `nodeMaxLevel`: TIER_MAX_LEVEL_CAP kennt sie nicht.
+          this.confluenceLevels[def.id] = 1
         } else {
           // `nodeMaxLevel` gibt für einen Bough `Infinity` — eine gewählte
           // Testhöhe muss her, sonst stünde im Baum eine Stufe, die es im Spiel
