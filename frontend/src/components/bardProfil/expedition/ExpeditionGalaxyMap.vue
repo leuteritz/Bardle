@@ -12,7 +12,6 @@
  * Klick auf den Bühnengrund überall durchkommt ausser auf den Marken selbst.
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { Icon } from '@iconify/vue'
 import {
   paintGalaxy,
   galaxyFitBox,
@@ -486,12 +485,6 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
         :inline-clock="inlineClock"
         @select="emit('select', $event)"
       />
-
-      <div v-if="!sites.length" class="egm-quiet">
-        <Icon icon="game-icons:treasure-map" width="26" height="26" class="egm-quiet-ico" />
-        <span class="egm-quiet-title">No contracts bound here</span>
-        <span class="egm-quiet-sub">The chart stays — a crew will be called this way again</span>
-      </div>
     </div>
   </div>
 </template>
@@ -595,36 +588,5 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
 }
 .egm-ribbon--epic .egm-ribbon-tier {
   color: #c090e0;
-}
-.egm-quiet {
-  position: absolute;
-  left: 50%;
-  bottom: calc(var(--egm-band-h, 0px) + 14px);
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 8px 16px;
-  background: rgba(11, 8, 6, 0.82);
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-  text-align: center;
-  pointer-events: none;
-}
-.egm-quiet-ico {
-  color: rgba(200, 144, 64, 0.34);
-}
-.egm-quiet-title {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.55);
-}
-.egm-quiet-sub {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: rgba(200, 144, 64, 0.38);
 }
 </style>
