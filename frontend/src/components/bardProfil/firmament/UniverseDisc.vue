@@ -26,7 +26,11 @@ import {
   type UniverseDiscVariant,
 } from '@/utils/fx/universeDisc'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
-import { UNIVERSE_DISC_MAX_DPR, UNIVERSE_DISC_RIM_SPIN_RATIO } from '@/config/constants'
+import {
+  UNIVERSE_DISC_CLOUD_MAX_BACKING_PX,
+  UNIVERSE_DISC_MAX_DPR,
+  UNIVERSE_DISC_RIM_SPIN_RATIO,
+} from '@/config/constants'
 
 const props = withDefaults(
   defineProps<{
@@ -47,7 +51,11 @@ const rimEl = ref<HTMLCanvasElement | null>(null)
 function paint(cv: HTMLCanvasElement | null, layer: UniverseDiscLayer) {
   if (!cv) return
   resetCanvasIfContextLost(cv)
-  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, UNIVERSE_DISC_MAX_DPR))
+  // Die Wolke misst die halbe Buehne — ohne eigenen Deckel verlangte sie auf 4K
+  // bei dpr 2 ein 3160er Backing, also 76 MB fuer ihre zwei Ebenen.
+  const cap =
+    props.variant === 'cloud' ? UNIVERSE_DISC_CLOUD_MAX_BACKING_PX / props.px : Infinity
+  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, UNIVERSE_DISC_MAX_DPR, cap))
   const side = Math.max(1, Math.round(props.px * dpr))
   if (cv.width !== side || cv.height !== side) {
     cv.width = side

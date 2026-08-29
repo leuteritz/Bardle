@@ -76,6 +76,13 @@ export const FIRMAMENT_STAR_MAX = 520
 /** Seed des Sternfelds. FEST, nicht der `mapSeed`: das Feld ist der Hintergrund
  *  des ganzen Firmaments und darf beim Warp nicht umspringen. */
 export const FIRMAMENT_STAR_SEED = 7
+/** Deckkraft der Sterne. Gedaempft, seit das Universum die ganze Scheibe fuellt:
+ *  daneben waeren es zwei konkurrierende Punktfelder.
+ *
+ *  Gedaempft, nicht AUSGEDUENNT — die Dichte traegt die Tiefe. Weniger, gleich
+ *  helle Sterne lesen sich als Luecken; gleich viele, blassere als Ferne. */
+export const FIRMAMENT_STAR_ALPHA_MIN = 0.03
+export const FIRMAMENT_STAR_ALPHA_MAX = 0.2
 /** Boegen des aeusseren Walls. */
 export const FIRMAMENT_RIM_ARCS = 190
 
@@ -157,6 +164,31 @@ export const UNIVERSE_DISC_CLOUD_FAR_SCALE = 0.7
 /** Deckkraft der fernen Schicht gegen die nahe. */
 export const UNIVERSE_DISC_CLOUD_FAR_ALPHA = 0.62
 
+/** Kern und Halo der Wolke — ABSOLUT, nicht als Anteil des Radius.
+ *
+ *  Er markiert „du bist hier" und ist der Nachfolger des entfallenen
+ *  `paintOrigin`. Mit `UNIVERSE_DISC_CORE_R` (0,09) mitgewachsen waere er auf
+ *  Full HD ein 28-px-Punkt mit 93-px-Halo und auf 4K 71 und 237 — eine Sonne,
+ *  die ein Sechstel der Buehne deckt. Die Zahlen reproduzieren den alten
+ *  Ursprung: er malte `26 k` Halo und `4,2 k` Punkt bei `k = box.r / 300`, und
+ *  die Wolke misst rund `2 box.r`. */
+export const UNIVERSE_DISC_CLOUD_CORE_R = 0.0071
+export const UNIVERSE_DISC_CLOUD_HALO_R = 0.044
+/** Die Wolke traegt DREIMAL so viele Koerper wie die Kachel — und entsprechend
+ *  kleinere, die Bedeckung bleibt bei 3,3 %.
+ *
+ *  Die Grunddichte gilt fuer eine 34-px-Kachel. Ueber die ganze Kartenscheibe
+ *  gezogen ergab sie 328 Marken zu 2,3 bis 5,4 px: das las sich als Konfetti,
+ *  nicht als Galaxienfeld. Mit dem Faktor sind es 985 zu 1,3 bis 3,1 px. */
+export const UNIVERSE_DISC_CLOUD_DENSITY = 3
+/** Deckel der Koerperzahl. Auf 4K waeren es sonst 2500 Ellipsen in EINEM
+ *  Sprite-Bau — im teuersten Frame des Reiters. */
+export const UNIVERSE_DISC_CLOUD_MAX_BODIES = 2000
+/** Der Staub der Wolke liegt ueber der ganzen Buehne. Mit den 0,34 der Kachel
+ *  toente er alles gruen und schluckte die Knotenfarben — er soll Tiefe geben,
+ *  nicht faerben. */
+export const UNIVERSE_DISC_CLOUD_DUST_ALPHA = 0.16
+
 /** Zeilenhoehe der Leiste: Scheibe plus 2x5 Polsterung plus 2 Rahmen.
  *
  *  Die SCHEIBE treibt sie, nicht der Text — dafuer tragen Namenszeile und Notiz
@@ -208,12 +240,25 @@ export const UNIVERSE_DISC_RIM_SPIN_RATIO = 2
 /* Das beobachtete Universum, gross. Sie ist dieselbe `UniverseDisc` wie in der
    Leiste — kein zweites Zeichenrezept, nur eine andere Kantenlaenge. */
 
-/** Anteil des Bahnradius. 0,286 ergibt 180 px auf Full HD; darueber deckt sie
- *  die zweite Windung mit ab, darunter traegt die Drehung nicht mehr. */
-export const UNIVERSE_DISC_HERO_R_RATIO = 0.286
+/** Anteil des Bahnradius.
+ *
+ *  0,98 — die Wolke IST die Kartenscheibe, nicht ein Koerper darauf. Zusammen
+ *  mit `_CLOUD_REACH` enden die Galaxien bei 0,90 r, also genau dort, wo der
+ *  Wall beginnt.
+ *
+ *  Sie stand einmal auf 0,286 (180 px auf Full HD). Das war als Herzstueck
+ *  gedacht und las sich als handtellergrosser Fleck in der Mitte, waehrend die
+ *  Flaeche, auf der die Bahn liegt, leer blieb. Die Bahn soll IM Universum
+ *  liegen, nicht daneben. */
+export const UNIVERSE_DISC_HERO_R_RATIO = 0.98
 export const UNIVERSE_DISC_HERO_MIN_PX = 140
-/** Deckel: auf 4K ergaebe der Anteil 463 px und die Scheibe fraesse die halbe Bahn. */
-export const UNIVERSE_DISC_HERO_MAX_PX = 420
+/** Deckel der Rasterflaeche — NICHT der Kantenlaenge.
+ *
+ *  Ein Deckel auf `px` machte die Wolke auf grossen Buehnen wieder zum Fleck.
+ *  Gedeckelt gehoert der Speicher: auf 4K verlangt sie bei dpr 2 ein
+ *  3160er Backing, also 76 MB fuer zwei Ebenen. Bei Full HD und 2K greift er
+ *  nicht — dort steht dpr 2. Dieselbe Mechanik wie `FIRMAMENT_WALL_MAX_BACKING_PX`. */
+export const UNIVERSE_DISC_CLOUD_MAX_BACKING_PX = 2048
 /** Stufung der Kantenlaenge. `px` steht im Cache-Schluessel — stufenlos an
  *  `box.r` gehaengt riebe jeder Resize-Frame ein neues Sprite. Dieselbe
  *  Ueberlegung wie `ORBIT_SCALE_QUANTIZE_STEPS`. */

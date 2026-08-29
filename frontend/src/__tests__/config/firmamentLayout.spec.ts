@@ -19,7 +19,10 @@ import {
   UNIVERSE_RAIL_ROW_GAP,
   UNIVERSE_RAIL_ROW_H,
   UNIVERSE_DISC_CREST_PX,
-  UNIVERSE_DISC_HERO_MAX_PX,
+  UNIVERSE_DISC_CLOUD_MAX_BACKING_PX,
+  UNIVERSE_DISC_CLOUD_REACH,
+  UNIVERSE_DISC_CLOUD_HALO_R,
+  UNIVERSE_DISC_MAX_DPR,
   UNIVERSE_DISC_HERO_MIN_PX,
   UNIVERSE_DISC_HERO_QUANT_PX,
   UNIVERSE_DISC_HERO_R_RATIO,
@@ -91,12 +94,12 @@ function zones(vw: number, vh: number, folded = false) {
   }
 }
 
-/** Kantenlaenge der Heldenscheibe — dieselbe Rechnung wie `FirmamentChart`. */
+/** Kantenlaenge der Wolke — dieselbe Rechnung wie `FirmamentChart`. */
 function heroPx(r: number): number {
   const stepped =
     Math.round((2 * r * UNIVERSE_DISC_HERO_R_RATIO) / UNIVERSE_DISC_HERO_QUANT_PX) *
     UNIVERSE_DISC_HERO_QUANT_PX
-  return Math.min(UNIVERSE_DISC_HERO_MAX_PX, Math.max(UNIVERSE_DISC_HERO_MIN_PX, stepped))
+  return Math.max(UNIVERSE_DISC_HERO_MIN_PX, stepped)
 }
 
 /** Kantenlaenge des Wall-Sprites. */
@@ -311,17 +314,65 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
     expect(firmamentPointAt(0).radius * r).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
   })
 
-  it('legt die Heldenscheibe UNTER die inneren Knoten, nicht neben sie', () => {
-    // Das ist gewollt und wird festgeschrieben: die Scheibe ist das Herzstueck,
-    // die innersten Knoten liegen auf ihr. Wer sie kleiner macht, bis sie in
-    // den knotenfreien Kern passt, nimmt ihr genau das — und die Drehung waere
-    // auf 75 px wieder unsichtbar.
-    const r = fullHd().r
-    const innermost = firmamentPointAt(0).radius * r
-    expect(heroPx(r) / 2).toBeGreaterThan(innermost)
-    // Aber sie bleibt deutlich innerhalb der Bahn: sie deckt die aeusseren
-    // Windungen nicht mit ab.
-    expect(heroPx(r) / 2).toBeLessThan(r * 0.4)
+  it('laesst das Universum die GANZE Kartenscheibe fuellen', () => {
+    // Hier stand einmal, die Scheibe muesse „deutlich innerhalb der Bahn"
+    // bleiben — sie lag bei 0,286 r und las sich als Fleck in der Mitte,
+    // waehrend die Flaeche, auf der die Bahn liegt, leer blieb. Die Bahn soll IM
+    // Universum liegen. Gebunden wird deshalb das Gegenteil: die Koerper reichen
+    // bis an den Wall, aber nicht darueber.
+    for (const [vw, vh] of [
+      [1920, 1080],
+      [2560, 1440],
+      [3840, 2160],
+    ]) {
+      const r = radiusAt(vw, vh)
+      const reach = (heroPx(r) / 2) * UNIVERSE_DISC_CLOUD_REACH
+      // Der Wall der KARTE beginnt bei 0,9 r — bis dahin, nicht darueber.
+      expect(reach / r, `${vw}x${vh} zu klein`).toBeGreaterThan(0.85)
+      expect(reach / r, `${vw}x${vh} unter dem Wall hervor`).toBeLessThan(0.93)
+      // Und jeder Knoten der Bahn liegt darin, nicht nur die innersten.
+      expect(firmamentPointAt(1).radius * r, `${vw}x${vh} aeusserster Knoten`).toBeLessThan(
+        (heroPx(r) / 2) * 1.02,
+      )
+    }
+  })
+
+  it('deckelt die Wolke ueber die RASTERFLAECHE, nicht die Kante', () => {
+    // Ein Kantendeckel machte sie auf grossen Buehnen wieder zum Fleck. Gedeckelt
+    // gehoert der Speicher — und bei Zoom 1 darf er auf Full HD und 2K NICHT
+    // greifen, dort soll sie so scharf sein wie jede andere Scheibe.
+    const mb = (px: number, dpr: number) => ((px * dpr) ** 2 * 4 * 2) / 1024 / 1024
+    for (const [vw, vh] of [
+      [1920, 1080],
+      [2560, 1440],
+    ]) {
+      const px = heroPx(radiusAt(vw, vh))
+      expect(UNIVERSE_DISC_CLOUD_MAX_BACKING_PX / px, `${vw}x${vh}`).toBeGreaterThanOrEqual(
+        UNIVERSE_DISC_MAX_DPR,
+      )
+    }
+    // Auf 4K und im Zoom greift er und haelt beide Ebenen zusammen unter 40 MB.
+    const px4k = heroPx(radiusAt(3840, 2160))
+    const dpr = Math.min(UNIVERSE_DISC_MAX_DPR, UNIVERSE_DISC_CLOUD_MAX_BACKING_PX / px4k)
+    expect(mb(px4k, dpr)).toBeLessThan(40)
+  })
+
+  it('laesst den Kern der Wolke NICHT mitwachsen', () => {
+    // Er markiert „du bist hier" und ist der Nachfolger des entfallenen
+    // `paintOrigin`. Mit `UNIVERSE_DISC_CORE_R` mitgewachsen deckte sein Halo auf
+    // 4K 237 px — eine Sonne ueber einem Sechstel der Buehne. Die Zahl
+    // reproduziert den alten Ursprung: 26 k bei k = box.r / 300.
+    for (const [vw, vh] of [
+      [1920, 1080],
+      [2560, 1440],
+      [3840, 2160],
+    ]) {
+      const r = radiusAt(vw, vh)
+      const halo = heroPx(r) * UNIVERSE_DISC_CLOUD_HALO_R
+      const origin = 26 * (r / 300)
+      expect(halo, `${vw}x${vh}`).toBeGreaterThan(origin * 0.9)
+      expect(halo, `${vw}x${vh}`).toBeLessThan(origin * 1.1)
+    }
   })
 
   it('haengt vier unbeleuchtete Plaetze an, nicht null und nicht zehn', () => {

@@ -40,6 +40,8 @@ import {
   FIRMAMENT_PLATE_REF_R,
   FIRMAMENT_ROAD_CASING_W,
   FIRMAMENT_RIM_ARCS,
+  FIRMAMENT_STAR_ALPHA_MAX,
+  FIRMAMENT_STAR_ALPHA_MIN,
   FIRMAMENT_STAR_DENSITY,
   FIRMAMENT_STAR_MAX,
   FIRMAMENT_UNLIT_COLOR,
@@ -103,7 +105,7 @@ export function paintFirmamentGround(
   for (let i = 0; i < count; i++) {
     const x = rng() * w
     const y = rng() * h
-    const a = 0.06 + rng() * 0.38
+    const a = FIRMAMENT_STAR_ALPHA_MIN + rng() * (FIRMAMENT_STAR_ALPHA_MAX - FIRMAMENT_STAR_ALPHA_MIN)
     const s = rng() < 0.9 ? 0.7 : 1.4
     ctx.fillStyle = `rgba(220, 230, 255, ${a.toFixed(2)})`
     ctx.fillRect(x, y, s, s)

@@ -63,7 +63,6 @@ import {
   FIRMAMENT_WALL_MAX_BACKING_PX,
   FIRMAMENT_UNLIT_COLOR,
   FIRMAMENT_ZOOM_STEPS,
-  UNIVERSE_DISC_HERO_MAX_PX,
   UNIVERSE_DISC_HERO_MIN_PX,
   UNIVERSE_DISC_HERO_OPACITY,
   UNIVERSE_DISC_HERO_QUANT_PX,
@@ -228,16 +227,18 @@ const gateMarks = computed(() =>
 )
 
 /**
- * Die Heldenscheibe: das beobachtete Universum, in der Mitte der Bahn.
+ * Das beobachtete Universum — es FUELLT die Kartenscheibe.
  *
- * Ihre Kante haengt am Bahnradius, ist aber GESTUFT — `px` steht im
+ * Ihre Kante haengt am Bahnradius, ist aber GESTUFT: `px` steht im
  * Sprite-Schluessel, und ein stufenlos mitlaufender Wert riebe bei jedem
- * Resize-Frame ein neues Sprite.
+ * Resize-Frame ein neues Sprite. Gedeckelt wird die Rasterflaeche, nicht die
+ * Kante (`UNIVERSE_DISC_CLOUD_MAX_BACKING_PX`) — ein Kantendeckel machte sie auf
+ * grossen Buehnen wieder zum Fleck in der Mitte.
  */
 const heroPx = computed(() => {
   const raw = 2 * box.value.r * UNIVERSE_DISC_HERO_R_RATIO
   const stepped = Math.round(raw / UNIVERSE_DISC_HERO_QUANT_PX) * UNIVERSE_DISC_HERO_QUANT_PX
-  return Math.min(UNIVERSE_DISC_HERO_MAX_PX, Math.max(UNIVERSE_DISC_HERO_MIN_PX, stepped))
+  return Math.max(UNIVERSE_DISC_HERO_MIN_PX, stepped)
 })
 
 /** Kante des Wall-Sprites. Quadratisch, die Mitte ist der Drehpunkt. */

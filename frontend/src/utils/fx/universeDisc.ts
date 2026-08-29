@@ -35,7 +35,12 @@ import {
   UNIVERSE_DISC_CACHE_MAX,
   UNIVERSE_DISC_CORE_R,
   UNIVERSE_DISC_DUST_R,
+  UNIVERSE_DISC_CLOUD_CORE_R,
+  UNIVERSE_DISC_CLOUD_DENSITY,
+  UNIVERSE_DISC_CLOUD_DUST_ALPHA,
+  UNIVERSE_DISC_CLOUD_MAX_BODIES,
   UNIVERSE_DISC_CLOUD_FADE_FROM,
+  UNIVERSE_DISC_CLOUD_HALO_R,
   UNIVERSE_DISC_CLOUD_FAR_ALPHA,
   UNIVERSE_DISC_CLOUD_FAR_SCALE,
   UNIVERSE_DISC_CLOUD_NEAR_SCALE,
@@ -181,11 +186,12 @@ export function paintDustVeil(
   r: number,
   tint: string,
   span = UNIVERSE_DISC_DUST_R,
+  peak = 0.34,
 ): void {
   const reach = r * span
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach)
-  g.addColorStop(0, rgba(tint, 0.34))
-  g.addColorStop(0.5, rgba(tint, 0.15))
+  g.addColorStop(0, rgba(tint, peak))
+  g.addColorStop(0.5, rgba(tint, peak * 0.44))
   g.addColorStop(1, rgba(tint, 0))
   ctx.beginPath()
   ctx.arc(cx, cy, reach, 0, TAU)
@@ -231,7 +237,15 @@ export function paintGalaxyField(
   const cloud = variant === 'cloud'
   const reach = r * (cloud ? UNIVERSE_DISC_CLOUD_REACH : UNIVERSE_DISC_RIM_INNER - 0.07)
   const d = universeDiscDetail(r * 2)
-  const count = Math.round(UNIVERSE_DISC_GALAXIES * d * d)
+  // Die Wolke steht auf der ganzen Kartenscheibe: mit der Kacheldichte waeren
+  // ihre Marken so gross, dass sie als Konfetti lesen. Mehr und kleinere, die
+  // Bedeckung bleibt gleich.
+  const mult = cloud ? UNIVERSE_DISC_CLOUD_DENSITY : 1
+  const shrink = Math.sqrt(mult)
+  const count = Math.min(
+    UNIVERSE_DISC_CLOUD_MAX_BODIES,
+    Math.round(UNIVERSE_DISC_GALAXIES * d * d * mult),
+  )
   const near = layer === 'field'
   const scale = !cloud ? 1 : near ? UNIVERSE_DISC_CLOUD_NEAR_SCALE : UNIVERSE_DISC_CLOUD_FAR_SCALE
 
@@ -252,7 +266,10 @@ export function paintGalaxyField(
     const fade = cloud ? Math.max(0, 1 - out / (1 - UNIVERSE_DISC_CLOUD_FADE_FROM)) : 1
     if (fade <= 0.02) continue
 
-    const rx = ((r * span(seed, i + 41, 0.032, 0.075)) / d) * scale * (cloud ? 0.72 + 0.28 * fade : 1)
+    const rx =
+      ((r * span(seed, i + 41, 0.032, 0.075)) / d / shrink) *
+      scale *
+      (cloud ? 0.72 + 0.28 * fade : 1)
     const ry = rx * span(seed, i + 83, 0.34, 0.92)
     let alpha = span(seed, i + 127, 0.5, 0.95) * fade
     if (cloud && !near) alpha *= UNIVERSE_DISC_CLOUD_FAR_ALPHA
@@ -300,9 +317,14 @@ export function paintCore(
   cy: number,
   r: number,
   state: Exclude<UniverseDiscState, 'unlit'>,
+  variant: UniverseDiscVariant = 'orb',
 ): void {
   const tone = state === 'current' ? FIRMAMENT_HERE_COLOR : FIRMAMENT_FREED_COLOR
-  const halo = r * 0.3
+  // Bei der Wolke ABSOLUT: sie misst rund `2 box.r`, ein Anteil des Radius
+  // ergaebe auf Full HD einen 93-px-Halo und auf 4K 237. Die Zahlen sind die
+  // des entfallenen `paintOrigin`, dessen Nachfolger dieser Kern ist.
+  const cloud = variant === 'cloud'
+  const halo = cloud ? r * 2 * UNIVERSE_DISC_CLOUD_HALO_R : r * 0.3
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, halo)
   g.addColorStop(0, rgba(tone, 0.55))
   g.addColorStop(0.45, rgba(tone, 0.18))
@@ -313,7 +335,7 @@ export function paintCore(
   ctx.fill()
 
   ctx.beginPath()
-  ctx.arc(cx, cy, r * UNIVERSE_DISC_CORE_R, 0, TAU)
+  ctx.arc(cx, cy, r * 2 * (cloud ? UNIVERSE_DISC_CLOUD_CORE_R : UNIVERSE_DISC_CORE_R / 2), 0, TAU)
   ctx.fillStyle = state === 'current' ? '#ffffff' : rgba(tone, 0.9)
   ctx.fill()
 }
@@ -444,12 +466,12 @@ export function buildUniverseDisc(
         // So weit wie die Koerper: endete er bei `_DUST_R`, staenden die
         // aeusseren Galaxien ohne Nebel und die Wolke zerfiele in hellen Kern
         // plus lose Punkte.
-        paintDustVeil(ctx, c, c, r, tint, UNIVERSE_DISC_CLOUD_REACH)
+        paintDustVeil(ctx, c, c, r, tint, UNIVERSE_DISC_CLOUD_REACH, UNIVERSE_DISC_CLOUD_DUST_ALPHA)
       }
       paintGalaxyField(ctx, c, c, r, tint, id, 'cloud', layer)
       // Der Kern sitzt NAH: er ist der Ort, an dem der Bard steht, und darf
       // nicht mit der Ferne wegdriften.
-      if (layer === 'field') paintCore(ctx, c, c, r, state)
+      if (layer === 'field') paintCore(ctx, c, c, r, state, 'cloud')
     }
   } else {
     ctx.beginPath()
