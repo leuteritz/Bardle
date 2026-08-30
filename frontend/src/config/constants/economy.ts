@@ -1129,27 +1129,16 @@ export const VOYAGE_MAP_HISTORY_SCALE = 0.55
 export const VOYAGE_MAP_ROUTE_ALPHA = 0.16
 
 /**
- * Legende der Kartenbuehne. Die Masse sind das ~Vierfache ihrer eigenen Kontur
- * (136 x 88) — darunter ist sie Unruhe statt Auskunft.
- *
- * Sie liegt UNTER den Marken (`.egm-nodes`) und ohne Zeigerereignisse: Haefen
- * sind auf 0.06..0.94 geklemmt, ein Hafen unten links landet auf Full HD 52 px
- * ueber der Kante — eine Buehnengroesse, auf der sich das ausschliessen liesse,
- * gibt es nicht. Also nicht Kollision vermeiden, sondern aufloesen.
- */
-export const VOYAGE_MAP_LEGEND_MIN_W = 560
-export const VOYAGE_MAP_LEGEND_MIN_H = 420
-/** Sondenkante; `VOYAGE_MAP_LEGEND_R * LANDMARK_PAD_SPAN` muss hineinpassen. */
-export const VOYAGE_MAP_LEGEND_ICON_PX = 22
-/** = ICON_PX / 5 → der weiteste Zierrat spannt 10.6 ≤ 11 (halbe Kante). */
-export const VOYAGE_MAP_LEGEND_R = 4.4
-
-/**
  * Das Datenband an der Unterkante der Kartenbuehne.
  *
  * Es SCHRUMPFT die Fit-Box, statt sich darueberzulegen: Haefen sind anklickbar,
- * und ein Band ueber die ganze Kante laesst sich nicht wie die Legende unter die
- * Marken schieben.
+ * und ein Band ueber die ganze Kante laege sonst auf ihren Klickflaechen.
+ *
+ * DREI Zonen, und die Leserichtung ist WER - WIE GELAUFEN - WAS ES BRINGT:
+ * Identitaet (Ziffer, Name, Stufe, Meta) | Ablesungen | Modifikatoren. Die
+ * Identitaet stand einmal als eigenes Overlay oben links auf der Karte, die
+ * Formlegende unten links; beide belegten dauerhaft eine Ecke der Buehne fuer
+ * etwas, das hier in eine Zeile passt.
  *
  * 72 und nicht mehr 96: die 24 px sind an die Kopfleiste gegangen, damit deren
  * Karten Crew-Portraits tragen koennen. Weil die Buehne um DIESELBEN 24 faellt,
@@ -1179,6 +1168,13 @@ export const VOYAGE_MAP_STATS_VALUE_MAX = 37
  *  Hoehenbilanz ein wie der Wert, `voyageBandFit.spec.ts` rechnet sie zusammen. */
 export const VOYAGE_MAP_STATS_LABEL_MAX = 11
 export const VOYAGE_MAP_STATS_TICK_H_MAX = 6
+/** Deckel der Ziffern- und der Namensschrift der Identitaetszone. Die Ziffer
+ *  steht NEBEN dem Namensstapel, es bindet also der hoehere von beiden: 21 + 3
+ *  + 16,5 (Meta auf `normal`) = 40,5 gegen 24. Dieselbe Hoehenbilanz wie oben,
+ *  `voyageBandFit.spec.ts` rechnet sie mit; die Faktoren dort sind GEMESSEN,
+ *  weil MedievalSharp seine Zeilenbox ueberschiesst. */
+export const VOYAGE_MAP_STATS_NO_MAX = 24
+export const VOYAGE_MAP_STATS_NAME_MAX = 21
 /** Nur der Verlauf. Er laeuft transparent aus und verdeckt nichts, darf also
  *  ueber den Textblock hinausragen und bleibt aus der Fit-Box heraus. */
 export const VOYAGE_MAP_STATS_SCRIM_H = 110
@@ -1193,8 +1189,8 @@ export const VOYAGE_MAP_STATS_SCRIM_H = 110
  * sie stehen lassen, waere sie eine willkuerliche Zahl statt einer Herleitung.
  */
 export const VOYAGE_MAP_STATS_MIN_H = 596
-/** Darunter faellt die Multiplikatoren-Zone weg; die Ernte-Zahlen bleiben.
- *  Wie die Legende: darunter ist das Band Unruhe statt Auskunft. */
+/** Darunter faellt die Multiplikatoren-Zone weg und die Meta-Zeile ihr Datum;
+ *  die Ernte-Zahlen bleiben. Darunter ist das Band Unruhe statt Auskunft. */
 export const VOYAGE_MAP_STATS_MIN_W = 560
 /** Ab hier traegt die Multiplikator-Spalte auch Hazards und Seats. Darunter
  *  draengen sie die Spalte ueber die nutzbare Bandhoehe. */

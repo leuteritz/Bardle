@@ -24,8 +24,8 @@ const chartStore = useExpeditionChartStore()
 
 /** Sie steht UEBER dem Datenband, nicht darauf: `bottom` misst ab der
  *  Buehnenkante, das Band sitzt am Fuss der KARTE — also eine halbe Rinne
- *  hoeher. An die Konstanten gebunden statt geraten; `--egm-band-h` steht am
- *  Wurzelelement der Karte und ist fuer ein Geschwister nicht lesbar. */
+ *  hoeher. An die Konstante gebunden statt geraten — die Karte gibt ihre
+ *  Bandhoehe nicht mehr als Custom Property heraus. */
 const bottom = `${VOYAGE_MAP_GUTTER_PX / 2 + VOYAGE_MAP_STATS_BAND_H + VOYAGE_RETURN_PILL_CLEARANCE}px`
 
 const visible = computed(() => uiStore.firmamentTabReturnPending)

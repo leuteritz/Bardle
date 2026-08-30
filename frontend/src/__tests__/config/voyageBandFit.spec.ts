@@ -8,6 +8,8 @@ import {
   VOYAGE_MAP_STATS_VALUE_MIN,
   VOYAGE_MAP_STATS_MIN_W,
   VOYAGE_MAP_STATS_WIDE_W,
+  VOYAGE_MAP_STATS_NAME_MAX,
+  VOYAGE_MAP_STATS_NO_MAX,
 } from '@/config/constants'
 
 /**
@@ -30,6 +32,17 @@ import {
  */
 const VALUE_FACTOR = 1.07
 const LABEL_FACTOR = 1.34
+/**
+ * Die Identitätszone, ebenfalls GEMESSEN und nicht gerechnet.
+ *
+ * Ziffer und Name tragen `line-height: 1`, ihre Zeilenbox IST damit die
+ * Schriftgrösse — gemessen 21,0 px bei 21 und 24,0 bei 24, der Faktor ist
+ * exakt 1. Die Meta-Zeile darunter läuft auf `normal`, und dort überschiesst
+ * MedievalSharp: 16,5 px bei 11. Sie teilt sich den Deckel mit den Labels,
+ * NICHT deren Faktor.
+ */
+const TITLE_FACTOR = 1.0
+const META_FACTOR = 1.5
 
 const STACK_GAP = 3
 
@@ -44,6 +57,23 @@ function twoLine(value: number, label = VOYAGE_MAP_STATS_LABEL_MAX): number {
 /** Die höchste Spalte des Bandes: Segmentleiste, Zahl, Label. */
 function chartedColumn(value: number): number {
   return twoLine(value) + VOYAGE_MAP_STATS_TICK_H_MAX + STACK_GAP
+}
+
+/**
+ * Die Identitätszone. Die Ziffer steht NEBEN dem Namensstapel, sitzt aber auf
+ * dessen erster Grundlinie (`align-items: baseline`) — ist sie grösser als der
+ * Name, ragt sie um genau die Differenz nach oben und addiert sie damit zum
+ * Stapel. Deshalb bindet hier `max` und nicht der Name.
+ *
+ * Im Browser bestätigt: 24 + 16,5 + 3 = 43,5 px auf 2K, 41,4 auf Full HD (dort
+ * greift der `clamp` und beide Schriften fallen gemeinsam).
+ */
+function idColumn(): number {
+  return (
+    TITLE_FACTOR * Math.max(VOYAGE_MAP_STATS_NAME_MAX, VOYAGE_MAP_STATS_NO_MAX) +
+    META_FACTOR * VOYAGE_MAP_STATS_LABEL_MAX +
+    STACK_GAP
+  )
 }
 
 describe('voyage stats band fit', () => {
@@ -69,6 +99,17 @@ describe('voyage stats band fit', () => {
     // 30.4 px war die feste Größe vor dem Umbau — das Band darf auf keiner
     // Auflösung dahinter zurückfallen.
     expect(VOYAGE_MAP_STATS_VALUE_MIN).toBeGreaterThan(30.4)
+  })
+
+  it('lässt die Identitätszone in die Bandhöhe passen', () => {
+    expect(idColumn()).toBeLessThanOrEqual(usable)
+  })
+
+  it('lässt die Kartografie die bindende Spalte bleiben', () => {
+    // Der Grund, aus dem der Wert-Deckel oben gerechnet werden DARF: es gibt
+    // genau eine höchste Spalte. Wächst die Identität an ihr vorbei, sind die
+    // beiden Tests darüber die falsche Wand und niemand merkt es.
+    expect(idColumn()).toBeLessThan(chartedColumn(VOYAGE_MAP_STATS_VALUE_MAX))
   })
 
   it('staffelt die Schwellen aufsteigend', () => {

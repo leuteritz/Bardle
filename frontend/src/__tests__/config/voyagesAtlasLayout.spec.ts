@@ -9,11 +9,8 @@ import {
   VOYAGE_BERTH_MIN_SEPARATION,
   CORE_GATE_CROWN_SPAN,
   CORE_GATE_MOUTH_R,
-  LANDMARK_PAD_SPAN,
   VOYAGE_GATE_GAP_PX,
   VOYAGE_GATE_MIN_PX,
-  VOYAGE_MAP_LEGEND_ICON_PX,
-  VOYAGE_MAP_LEGEND_R,
   VOYAGE_SITE_HIT_GAP,
   VOYAGE_SITE_HIT_MAX,
   VOYAGE_MAP_STATS_BAND_H,
@@ -254,20 +251,6 @@ describe('voyages atlas layout', () => {
     expect(VOYAGE_GATE_MIN_PX).toBeLessThan(VOYAGE_SITE_HIT_MAX)
     // Und die Luft, die das Tor lässt, ist dieselbe, die zwei Häfen sich lassen.
     expect(VOYAGE_GATE_GAP_PX).toBeGreaterThanOrEqual(VOYAGE_SITE_HIT_GAP)
-  })
-
-  /**
-   * Die Legendensonde ist der engste Ort der ganzen Karte: sie malt mit
-   * `VOYAGE_MAP_LEGEND_R` und ERZWUNGENER voller Detailstufe in eine Kachel von
-   * `VOYAGE_MAP_LEGEND_ICON_PX`. Wer an einem Landmarken-Radius dreht, merkt es
-   * sonst erst im Browser — und dort ist die Marke dann beschnitten.
-   */
-  it('hält die weiteste Landmarke in der Legendenkachel', () => {
-    const cell = VOYAGE_MAP_LEGEND_ICON_PX
-    // Der allgemeine Rand deckt alle Kinds mit Sprite ab …
-    expect(VOYAGE_MAP_LEGEND_R * LANDMARK_PAD_SPAN * 2).toBeLessThanOrEqual(cell * 2)
-    // … und die Krone des Tores, die weiteste Zier des Kerns, passt hinein.
-    expect(VOYAGE_MAP_LEGEND_R * CORE_GATE_CROWN_SPAN * 2).toBeLessThanOrEqual(cell)
   })
 
   /**

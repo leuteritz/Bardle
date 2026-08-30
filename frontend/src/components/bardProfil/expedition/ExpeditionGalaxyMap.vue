@@ -24,11 +24,7 @@ import { landfallMarks } from '@/utils/game/landfalls'
 import { galaxyStarMarksOf } from '@/utils/game/starNames'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { voyageGateSizeFor, voyageMarkerSizeFor } from '@/utils/game/voyageSites'
-import {
-  generateGalaxyDots,
-  minimapAccentForTheme,
-} from '@/components/bottom/minimap/minimapGalaxyGeometry'
-import { toRoman } from '@/utils/ui/format'
+import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
   VOYAGE_MAP_HISTORY_SCALE,
   LANDFALL_MARK_R,
@@ -39,8 +35,6 @@ import {
   VOYAGE_MAP_ROUTE_ALPHA,
   VOYAGE_SITE_INLINE_CLOCK_PX,
   VOYAGE_SITE_MOVE_MS,
-  VOYAGE_MAP_LEGEND_MIN_W,
-  VOYAGE_MAP_LEGEND_MIN_H,
   VOYAGE_MAP_STATS_BAND_H,
   VOYAGE_MAP_STATS_MIN_H,
   VOYAGE_MAP_STATS_MIN_W,
@@ -53,7 +47,6 @@ import ExpeditionGateNode from './ExpeditionGateNode.vue'
 import ExpeditionLandfallNode from './ExpeditionLandfallNode.vue'
 import ExpeditionStarNode from './ExpeditionStarNode.vue'
 import ExpeditionPortalNode from './ExpeditionPortalNode.vue'
-import ExpeditionMapLegend from './ExpeditionMapLegend.vue'
 import ExpeditionGalaxyStatsBand from './ExpeditionGalaxyStatsBand.vue'
 import ExpeditionCrewMarkerLayer from './ExpeditionCrewMarkerLayer.vue'
 
@@ -66,7 +59,7 @@ const props = defineProps<{
   title: string
   /** Der Reiter bleibt gemountet — die Marker-Schleife hängt daran. */
   visible: boolean
-  /** Stufe des Ziels, für das Band oben links. */
+  /** Stufe des Ziels — sie färbt die Kante der Identitätszone im Datenband. */
   tier: 'common' | 'rare' | 'epic'
   /** Zustand des Caretaker's Gate im Kern. */
   gate: {
@@ -306,21 +299,6 @@ function paint() {
   paintCount.value += 1
 }
 
-/** Unter dieser Bühnengrösse ist die Legende Unruhe statt Auskunft. */
-const showLegend = computed(
-  () => cssW.value >= VOYAGE_MAP_LEGEND_MIN_W && cssH.value >= VOYAGE_MAP_LEGEND_MIN_H,
-)
-
-/** Dieselbe Farbe, die `paintGalaxy` dem Kern und den Akzentpartikeln gibt. */
-const accent = computed(() => minimapAccentForTheme(props.record.themeIndex))
-
-/** Dieselbe Richtung, in die das Ankunftsportal auf der Karte zeigt. */
-const legendHeading = computed(() => {
-  const { spawn, dots } = chart.value
-  const d = dots[0] ?? spawn
-  return Math.atan2(d.y - spawn.y, d.x - spawn.x)
-})
-
 watch(paintKey, schedule, { flush: 'post' })
 
 // ── Grösse und Pixeldichte ──────────────────────────────────────────────────
@@ -376,42 +354,24 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
     ref="stage"
     class="egm"
     role="group"
-    :style="{ '--egm-band-h': `${bandH}px` }"
     :aria-label="`${title} — voyage chart`"
     @click="emit('select', null)"
   >
     <canvas ref="canvas" class="egm-plate" aria-hidden="true" />
 
-    <!-- Das Band sass einmal als Plakette unter dem Kern in der Bildmitte. Mit
-         einer Marke, die bis 96 px misst, kollidierte es dort mit dem nächsten
-         Hafen — und in der Ecke steht es ohnehin da, wo man eine Kartenlegende
-         sucht. -->
-    <div class="egm-ribbon" :class="`egm-ribbon--${tier}`" aria-hidden="true">
-      <span class="egm-ribbon-no">{{ toRoman(record.galaxy) }}</span>
-      <span class="egm-ribbon-text">
-        <span class="egm-ribbon-name">{{ title }}</span>
-        <span class="egm-ribbon-sub">
-          <span class="egm-ribbon-tier">{{ tier }}</span>
-        </span>
-      </span>
-    </div>
-
-    <ExpeditionMapLegend
-      v-if="showLegend"
-      :dpr="dprNow"
-      :heading="legendHeading"
-      :accent="accent"
-    />
-
+    <!-- Identität UND Bilanz sitzen im Fuss der Bühne. Sie sassen einmal als
+         zwei eigene Overlays in den beiden linken Ecken: eine Plakette oben
+         (Ziffer, Name, Stufe) und die Formlegende unten. Beide belegten
+         dauerhaft Kartenfläche für etwas, das in eine Zeile passt. -->
     <ExpeditionGalaxyStatsBand
       v-if="showBand"
       :record="record"
+      :title="title"
+      :tier="tier"
       :compact="cssW < VOYAGE_MAP_STATS_MIN_W"
       :wide="cssW >= VOYAGE_MAP_STATS_WIDE_W"
     />
 
-    <!-- Zwischen Band und Marken: die Legende steht bei gleichem z-index früher
-         im Template und läge sonst darüber. -->
     <ExpeditionCrewMarkerLayer
       :record="record"
       :sites="sites"
@@ -530,69 +490,5 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
 .egm-nodes :deep(.sn),
 .egm-nodes :deep(.gt) {
   pointer-events: auto;
-}
-
-/* ── Das Band oben links ────────────────────────────────────────────────── */
-.egm-ribbon {
-  position: absolute;
-  left: 12px;
-  top: 12px;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 13px 7px 9px;
-  background: rgba(11, 8, 6, 0.82);
-  border: 1px solid #3e200a;
-  border-left: 3px solid #c89040;
-  border-radius: 4px;
-  pointer-events: none;
-}
-.egm-ribbon--rare {
-  border-left-color: #7aa8e0;
-}
-.egm-ribbon--epic {
-  border-left-color: #c090e0;
-}
-.egm-ribbon-no {
-  font-family: 'MedievalSharp', Georgia, serif;
-  font-size: 22px;
-  line-height: 1;
-  color: rgba(200, 144, 64, 0.5);
-  font-variant-numeric: tabular-nums;
-}
-.egm-ribbon-text {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.egm-ribbon-name {
-  font-family: 'MedievalSharp', Georgia, serif;
-  font-size: 17px;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  color: #e8c040;
-  white-space: nowrap;
-}
-.egm-ribbon-sub {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(200, 144, 64, 0.55);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.egm-ribbon-tier {
-  color: rgba(200, 144, 64, 0.75);
-}
-.egm-ribbon--rare .egm-ribbon-tier {
-  color: #7aa8e0;
-}
-.egm-ribbon--epic .egm-ribbon-tier {
-  color: #c090e0;
 }
 </style>

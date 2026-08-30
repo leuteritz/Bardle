@@ -68,10 +68,11 @@ function clearChronicle(): void {
 }
 
 // ── Vorschau: jede Kachel zeigt die ECHTE Marke ──────────────────────────────
-// Dasselbe `drawLandmark` mit erzwungener Detailstufe, mit dem auch
-// `ExpeditionMapLegend` seine Sonden malt. Riff und Konvoi haben sich beim Bauen
-// genau hier verwechselt — eine Kachel, die nur den Namen zeigt, deckt das nicht
-// auf.
+// Dasselbe `drawLandmark`, das auch die Karte malt, mit erzwungener voller
+// Detailstufe. Seit dem Fall der Kartenlegende ist das die EINZIGE Sonde, die
+// so malt — `galaxyLandmarks.spec.ts` haelt ihre Kachel deshalb gegen
+// `LANDMARK_PAD_SPAN`. Riff und Konvoi haben sich beim Bauen genau hier
+// verwechselt; eine Kachel, die nur den Namen zeigt, deckt das nicht auf.
 const probes = ref<(HTMLCanvasElement | null)[]>([])
 
 /** Die Sonde trägt ihre CSS-Grösse fest; die Backing-Auflösung setzt `paint`. */

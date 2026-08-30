@@ -55,6 +55,8 @@ import {
   LANDMARK_LANDFALL_MISSED_ALPHA,
   LANDMARK_PAD_SPAN,
   LANDMARK_VARIANTS,
+  ADMIN_LANDFALL_PREVIEW_PX,
+  ADMIN_LANDFALL_PREVIEW_R,
 } from '@/config/constants'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
@@ -107,6 +109,20 @@ describe('landmarkPad — die Randzone deckt den weitesten Zierrat', () => {
     for (const r of [2, 3.5, 4.5, 7, 8.5, 11, 31.5, 67]) {
       expect(landmarkPad(r)).toBeGreaterThanOrEqual(r * LANDMARK_PAD_SPAN)
     }
+  })
+
+  /**
+   * Die EINZIGE Sonde, die volle Detailstufe ERZWINGT, statt sie aus dem Radius
+   * zu bekommen: die Vorschaukachel des Landfall-Admin-Panels. Die Kartenlegende
+   * tat das vorher bei Radius 4,4 in einer 22-px-Kachel und war damit der engste
+   * Ort des ganzen Spiels; sie ist gefallen, die Zusicherung nicht. Wer an einem
+   * Landmarken-Radius dreht, merkt es sonst erst im Browser — und dort ist die
+   * Marke dann beschnitten.
+   */
+  it('hält die weiteste Landmarke in der Admin-Vorschaukachel', () => {
+    expect(ADMIN_LANDFALL_PREVIEW_R * LANDMARK_PAD_SPAN * 2).toBeLessThanOrEqual(
+      ADMIN_LANDFALL_PREVIEW_PX * 2,
+    )
   })
 
   it('bleibt beim grössten Live-Radius in der inView-Randzone der Minimap', () => {
