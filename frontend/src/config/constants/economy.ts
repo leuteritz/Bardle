@@ -1157,17 +1157,27 @@ export const VOYAGE_RETURN_PILL_CLEARANCE = 14
 export const VOYAGE_RETURN_PILL_H = 52
 /** Senkrechtes Polster des Textblocks: 72 - 2x4 = 64 px nutzbar. Die hoechste
  *  Spalte (Segmente + Wert + Label) belegt davon 63,3 — daraus faellt der
- *  Wert-Deckel, er ist nicht gewaehlt. `voyageBandFit.spec.ts` bindet es. */
+ *  Wert-Deckel, er ist nicht gewaehlt. Der 1-px-`border-top` von `.egsb-row`
+ *  geht zusaetzlich ab: nutzbar sind 63. `voyageBandFit.spec.ts` bindet es. */
 export const VOYAGE_MAP_STATS_PAD_Y = 4
 /** Boden und Deckel der grossen Zahl. Der Boden ist, was auf Full HD in sechs
- *  Spalten passt (gemessene Textbreiten), der Deckel, was in die nutzbare
- *  Bandhoehe passt. Die Kurve dazwischen steht als `clamp` im Band. */
+ *  Spalten passt (gemessene Textbreiten). Der Deckel ist GERECHNET und nicht
+ *  gewaehlt: das Band steht vertikal MITTIG, oben wie unten muss also Luft
+ *  bleiben. 37 x 1,07 + 11 x 1,5 = 54,3 in 63 nutzbaren (72 minus 2x4 Polster
+ *  minus der 1-px-Rahmen) laesst je 4,4 px — im Browser gemessen 4,36 / 4,38.
+ *  Schon 38 faellt unter die zugesagte Mindestluft; der Deckel ist damit der
+ *  groesstmoegliche Wert, nicht ein gewaehlter. `voyageBandFit.spec.ts` bindet
+ *  beides. Die Kurve dazwischen steht als `clamp` im Band. */
 export const VOYAGE_MAP_STATS_VALUE_MIN = 31
 export const VOYAGE_MAP_STATS_VALUE_MAX = 37
-/** Deckel der Label-Schrift und der Segmentleiste — beide gehen in dieselbe
- *  Hoehenbilanz ein wie der Wert, `voyageBandFit.spec.ts` rechnet sie zusammen. */
+/** Deckel der Label-Schrift — sie steht unter JEDEM Wert des Bandes, unter der
+ *  grossen Ablesung wie unter einem Modifikator-Chip, und geht in dieselbe
+ *  Hoehenbilanz ein wie er. `voyageBandFit.spec.ts` rechnet sie zusammen. */
 export const VOYAGE_MAP_STATS_LABEL_MAX = 11
-export const VOYAGE_MAP_STATS_TICK_H_MAX = 6
+/** Deckel der Chip-Zahl. Kleiner als die grosse Ablesung, weil ein Modifikator
+ *  ein Merkmal des ZIELS ist und keine Bilanz des Laufs — und weil fuenf davon
+ *  auf Full HD nebeneinander passen muessen, ohne umzubrechen. */
+export const VOYAGE_MAP_STATS_CHIP_MAX = 16
 /** Deckel der Ziffern- und der Namensschrift der Identitaetszone. Die Ziffer
  *  steht NEBEN dem Namensstapel, es bindet also der hoehere von beiden: 21 + 3
  *  + 16,5 (Meta auf `normal`) = 40,5 gegen 24. Dieselbe Hoehenbilanz wie oben,

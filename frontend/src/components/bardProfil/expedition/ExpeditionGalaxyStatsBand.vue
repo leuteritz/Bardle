@@ -15,9 +15,18 @@
  * gegen rot ist dieselbe Paarung wie Kernfunke gegen Hülle auf der Karte.
  *
  * Befreit und verloren sind EINE Ablesung. Zwei Türme für zwei Zahlen, die man
- * nie einzeln liest, waren zwei Spalten zuviel; und das vierteilige
- * days/hrs/min/sec-Uhrwerk davor waren acht Elemente für eine Zahl, die sich
- * nie wieder ändert — sie steht jetzt als `27m 42s` in der Meta-Zeile.
+ * nie einzeln liest, waren zwei Spalten zuviel.
+ *
+ * **Die Kartografie ist gefallen, und sie war das Hindernis.** `charted` (0..5)
+ * wird von keiner Formel des Spiels gelesen — nur angezeigt und gespeichert,
+ * eine angekündigte Stufe wie `waymarks` und `wearyUntil` daneben. Mit ihrer
+ * Segmentleiste war sie zugleich die höchste Zone (63,3 von 64 nutzbaren px),
+ * es gab also gar keinen Raum, in dem sich das Band hätte zentrieren lassen.
+ *
+ * **Ein Modifikator trägt sein WORT.** `×1,37` ist eine Rechnung, `+37% travel`
+ * eine Aussage; `+X%` ist ausserdem die Hausform des Spiels für Wirkungen (rund
+ * zwanzig Fundstellen, `useStatCatalog` führt beide Schreibweisen nebeneinander),
+ * während `×N` meist ein Stückzähler ist.
  *
  * `minmax(min-content, 1fr)` in der Ablesungszone und keine geratenen Gewichte:
  * den Bedarf liest der Browser aus dem Inhalt, verteilt wird nur der Überschuss.
@@ -30,25 +39,25 @@
  * Die Höhe ist NICHT frei: sie wird der Fit-Box abgezogen, damit kein Hafen
  * darunter gerät (`VOYAGE_MAP_STATS_BAND_H`) — und weil die Zonen überstehen
  * dürfen, ohne dass ein `scrollHeight` es meldet, deckelt
- * `voyageBandFit.spec.ts` die Schriftgrössen dagegen. Bindend ist die
- * Kartografie-Spalte: 63,3 von 64 nutzbaren Pixeln.
+ * `voyageBandFit.spec.ts` die Schriftgrössen dagegen — und dass oben wie unten
+ * Luft bleibt, sonst wäre „mittig" nur nominal. Bindend ist die Ablesungszone:
+ * 54,3 von 64 nutzbaren Pixeln.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
-import { formatCompactDuration, toRoman } from '@/utils/ui/format'
+import { toRoman } from '@/utils/ui/format'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
-  EXPEDITION_CHART_MAX,
   LANDMARK_FREED_CORE,
-  MS_PER_SECOND,
+  UNIVERSE_TOOLTIP_IMAGES,
   VOYAGE_MAP_STATS_BAND_H,
+  VOYAGE_MAP_STATS_CHIP_MAX,
   VOYAGE_MAP_STATS_LABEL_MAX,
   VOYAGE_MAP_STATS_NAME_MAX,
   VOYAGE_MAP_STATS_NO_MAX,
   VOYAGE_MAP_STATS_PAD_Y,
-  VOYAGE_MAP_STATS_TICK_H_MAX,
   VOYAGE_MAP_STATS_SCRIM_H,
   VOYAGE_MAP_STATS_VALUE_MAX,
   VOYAGE_MAP_STATS_VALUE_MIN,
@@ -71,37 +80,44 @@ const chartStore = useExpeditionChartStore()
 const rescued = computed(() => props.record.attemptResults.filter((r) => r === 'rescued').length)
 const lost = computed(() => props.record.attemptResults.filter((r) => r === 'failed').length)
 
-const held = computed(() => formatCompactDuration(props.record.durationSeconds * MS_PER_SECOND))
+/** Nur noch fürs `aria-label` — im Bild trägt die Meta-Zeile allein die Stufe. */
 const freedOn = computed(() => new Date(props.record.completedAt).toLocaleDateString())
+
+/** Eigenes Artwork statt eines Iconify-Ersatzes: dieselbe Währung, dasselbe Bild. */
+const CHIME_IMG = UNIVERSE_TOOLTIP_IMAGES.chimes
 
 const progress = computed(() => chartStore.progressOf(props.record.galaxy))
 const dest = computed(() => destinationFor(props.record))
 const accent = computed(() => `rgb(${minimapAccentForTheme(props.record.themeIndex)})`)
 
+/** Ein Faktor als Aussage statt als Rechnung — dasselbe `Math.round((m - 1) * 100)`,
+ *  mit dem das ganze Spiel eine Wirkung schreibt. */
+const asBonus = (m: number) => `${m >= 1 ? '+' : ''}${Math.round((m - 1) * 100)}%`
+
 /** Die ersten drei tragen die Rechnung, die letzten zwei den Zuschnitt. */
 const mods = computed(() => {
   const d = dest.value
   const all = [
-    {
-      key: 'reward',
-      icon: 'game-icons:windchimes',
-      text: `×${d.rewardMult.toFixed(2)}`,
-      hint: 'Reward',
-    },
-    {
-      key: 'travel',
-      icon: 'lucide:hourglass',
-      text: `×${d.durationMult.toFixed(2)}`,
-      hint: 'Travel time',
-    },
+    { key: 'reward', img: CHIME_IMG, value: asBonus(d.rewardMult), label: 'Chimes' },
+    { key: 'travel', icon: 'lucide:hourglass', value: asBonus(d.durationMult), label: 'Travel' },
     {
       key: 'power',
       icon: 'game-icons:mighty-force',
-      text: `×${d.powerMult.toFixed(2)}`,
-      hint: 'Crew power needed',
+      value: asBonus(d.powerMult),
+      label: 'Power',
     },
-    { key: 'hazard', icon: 'ph:warning-fill', text: `${d.hazardCount}`, hint: 'Hazards' },
-    { key: 'seats', icon: 'game-icons:meeple-group', text: `${d.maxRoles}`, hint: 'Seats up to' },
+    {
+      key: 'hazard',
+      icon: 'ph:warning-fill',
+      value: `${d.hazardCount}`,
+      label: 'Hazards',
+    },
+    {
+      key: 'seats',
+      icon: 'game-icons:meeple-group',
+      value: `${d.maxRoles}`,
+      label: 'Seats',
+    },
   ]
   return props.wide ? all : all.slice(0, 3)
 })
@@ -114,16 +130,15 @@ const valueMax = `${VOYAGE_MAP_STATS_VALUE_MAX}px`
 // Deckel, die `voyageBandFit.spec.ts` in dieselbe Hoehenbilanz einrechnet —
 // darum von dort und nicht als Zahl im clamp.
 const labelMax = `${VOYAGE_MAP_STATS_LABEL_MAX}px`
-const tickHMax = `${VOYAGE_MAP_STATS_TICK_H_MAX}px`
+const chipMax = `${VOYAGE_MAP_STATS_CHIP_MAX}px`
 const noMax = `${VOYAGE_MAP_STATS_NO_MAX}px`
 const nameMax = `${VOYAGE_MAP_STATS_NAME_MAX}px`
 
 const summary = computed(
   () =>
     `${toRoman(props.record.galaxy)} ${props.title}, ${props.tier} destination · ` +
-    `${rescued.value} stars freed, ${lost.value} lost · charted ` +
-    `${progress.value.charted} of ${EXPEDITION_CHART_MAX} · ` +
-    `${progress.value.runs} voyages sent · freed ${freedOn.value} in ${held.value}`,
+    `${rescued.value} stars freed, ${lost.value} lost · ` +
+    `${progress.value.runs} voyages sent · freed ${freedOn.value}`,
 )
 </script>
 
@@ -138,16 +153,7 @@ const summary = computed(
         <span class="egsb-id-no">{{ toRoman(record.galaxy) }}</span>
         <span class="egsb-id-text">
           <span class="egsb-id-name">{{ title }}</span>
-          <span class="egsb-id-meta">
-            <span class="egsb-id-tier">{{ tier }}</span>
-            <span class="egsb-id-dot">·</span>
-            {{ held }}
-            <template v-if="!compact">
-              <span class="egsb-id-dot">·</span>
-              <Icon icon="lucide:calendar-days" class="egsb-ico egsb-ico--date" />
-              {{ freedOn }}
-            </template>
-          </span>
+          <span class="egsb-id-meta">{{ tier }}</span>
         </span>
       </div>
 
@@ -165,32 +171,27 @@ const summary = computed(
         </section>
 
         <section class="egsb-col">
-          <span class="egsb-chart" aria-hidden="true">
-            <span
-              v-for="i in EXPEDITION_CHART_MAX"
-              :key="i"
-              class="egsb-tick"
-              :class="{ 'is-on': i <= progress.charted }"
-            />
-          </span>
-          <span class="egsb-val">{{ progress.charted }}/{{ EXPEDITION_CHART_MAX }}</span>
-          <span class="egsb-lbl">Charted</span>
-        </section>
-
-        <section class="egsb-col">
           <span class="egsb-val">{{ progress.runs }}</span>
           <span class="egsb-lbl">Voyages</span>
         </section>
       </div>
 
       <!-- WAS ES BRINGT ───────────────────────────────────────────────────── -->
-      <!-- Die einzige Zone mit mehreren Zeilen: sie fächert mit der Breite von
-           gestapelt zu nebeneinander auf. aria-label und kein title — das Band
-           nimmt keine Zeigerereignisse entgegen. -->
+<!-- Jeder Chip trägt sein WORT: ein Prozentwert ohne Bezug ist keine Auskunft.
+           aria-label und kein title — das Band nimmt keine Zeigerereignisse entgegen. -->
       <div v-if="!compact" class="egsb-mods">
-        <span v-for="m in mods" :key="m.key" class="egsb-mod" :aria-label="`${m.hint} ${m.text}`">
-          <Icon :icon="m.icon" class="egsb-ico" />
-          {{ m.text }}
+        <span
+          v-for="m in mods"
+          :key="m.key"
+          class="egsb-mod"
+          :aria-label="`${m.label} ${m.value}`"
+        >
+          <span class="egsb-mod-top">
+            <img v-if="m.img" class="egsb-ico egsb-ico--art" :src="m.img" alt="" aria-hidden="true" />
+            <Icon v-else :icon="m.icon" class="egsb-ico" />
+            {{ m.value }}
+          </span>
+          <span class="egsb-lbl egsb-lbl--chip">{{ m.label }}</span>
         </span>
       </div>
     </div>
@@ -233,10 +234,11 @@ const summary = computed(
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, auto) 1fr auto;
-  /* Die Labels liegen auf EINER Grundlinie — die Zonen sind verschieden hoch
-     (Segmentleiste gegen Ziffer), zentriert saessen ihre Labels auf drei
-     Hoehen. */
-  align-items: end;
+  /* Die gemeinsame Bezugslinie ist die MITTE, und das traegt erst, seit alle
+     drei Zonen dieselbe zweizeilige Form haben: Wert ueber Wort. Solange die
+     Kartografie mit ihrer Segmentleiste 63,3 der 64 nutzbaren Pixel belegte,
+     gab es keinen Raum, in dem sich irgendetwas zentrieren liess. */
+  align-items: center;
   height: v-bind(bandH);
   padding: v-bind(padY) clamp(12px, 1.5cqw, 30px);
   border-top: 1px solid rgba(122, 78, 32, 0.42);
@@ -302,38 +304,29 @@ const summary = computed(
   text-overflow: ellipsis;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
+/* Nur die Stufe. Rekordzeit und Datum standen hier und sind Chronik ohne
+   Handlungswert — sie leben im `aria-label` und im Firmament-Reiter weiter. */
 .egsb-id-meta {
-  display: flex;
-  align-items: center;
-  gap: 5px;
   font-size: clamp(9px, 1.2cqw, v-bind(labelMax));
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: rgba(200, 184, 144, 0.62);
-  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--egsb-tier);
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-}
-.egsb-id-tier {
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--egsb-tier);
-}
-.egsb-id-dot {
-  color: rgba(200, 184, 144, 0.3);
 }
 
 /* ── WIE GELAUFEN ────────────────────────────────────────────────────────── */
 .egsb-read {
   display: grid;
-  grid-template-columns: repeat(3, minmax(min-content, 1fr));
-  align-items: end;
+  grid-template-columns: repeat(2, minmax(min-content, 1fr));
+  align-items: center;
 }
 .egsb-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 3px;
   min-width: 0;
   padding: 0 clamp(7px, 1.1cqw, 18px);
@@ -378,6 +371,12 @@ const summary = computed(
   color: rgba(236, 224, 192, 0.32);
 }
 
+.egsb-lbl--chip {
+  font-size: clamp(8px, 1.1cqw, 10px);
+  letter-spacing: 0.1em;
+  color: rgba(216, 200, 160, 0.42);
+}
+
 .egsb-lbl {
   font-size: clamp(10px, 1.35cqw, v-bind(labelMax));
   font-weight: 800;
@@ -388,40 +387,31 @@ const summary = computed(
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
-/* Fünf Segmente statt eines Balkens: bei einem Maximum von 5 ist die Stufe
-   ablesbar, ein Füllstand nicht. */
-.egsb-chart {
-  display: flex;
-  gap: 4px;
-}
-.egsb-tick {
-  width: clamp(12px, 1.7cqw, 17px);
-  height: clamp(5px, 0.6cqw, v-bind(tickHMax));
-  border-radius: 2px;
-  background: rgba(200, 164, 90, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
-  transition: background 0.3s ease;
-}
-.egsb-tick.is-on {
-  background: linear-gradient(to bottom, #f0d080, #c89040);
-}
-
 /* ── WAS ES BRINGT ───────────────────────────────────────────────────────── */
+/* `nowrap`: fünf Chips müssen auf Full HD nebeneinander bleiben — umgebrochen
+   wäre die Zone 87 px hoch und spränge aus dem Band. */
 .egsb-mods {
   display: flex;
-  flex-wrap: wrap;
-  align-content: flex-end;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: flex-end;
-  gap: 4px clamp(10px, 1.3cqw, 24px);
+  gap: clamp(9px, 1.2cqw, 22px);
   padding-left: clamp(10px, 1.4cqw, 22px);
 }
 .egsb-mod {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+.egsb-mod-top {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: clamp(13px, 1.7cqw, 18px);
+  font-size: clamp(12px, 1.5cqw, v-bind(chipMax));
   font-weight: 800;
-  color: rgba(230, 220, 196, 0.72);
+  color: rgba(230, 220, 196, 0.82);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
@@ -437,9 +427,10 @@ const summary = computed(
   color: #ffffff;
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 1)) drop-shadow(0 1px 2px rgba(0, 0, 0, 1));
 }
-.egsb-ico--date {
-  width: clamp(10px, 1.3cqw, 13px);
-  height: clamp(10px, 1.3cqw, 13px);
-  color: rgba(200, 184, 144, 0.8);
+/* Das Chime-Artwork trägt seine eigene Farbe und braucht den Hof nicht — der
+   Glyph-Filter würde es nur zumatschen. */
+.egsb-ico--art {
+  filter: none;
+  object-fit: contain;
 }
 </style>

@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   VOYAGE_MAP_STATS_BAND_H,
   VOYAGE_MAP_STATS_PAD_Y,
+  VOYAGE_MAP_STATS_CHIP_MAX,
   VOYAGE_MAP_STATS_LABEL_MAX,
-  VOYAGE_MAP_STATS_TICK_H_MAX,
   VOYAGE_MAP_STATS_VALUE_MAX,
   VOYAGE_MAP_STATS_VALUE_MIN,
   VOYAGE_MAP_STATS_MIN_W,
@@ -29,6 +29,12 @@ import {
  * Referenzauflösungen, aus zwei Stützstellen aufgelöst:
  *
  *   Wert 37 / Label 11  →  54.3 px      Wert 42 / Label 15  →  65.0 px
+ *
+ * Seit das Band vertikal MITTIG steht, ist „passt hinein" zu wenig: es muss
+ * oben WIE unten Luft bleiben, sonst ist die Zentrierung nur nominal. Die
+ * bindende Zone ist dabei nicht mehr die Kartografie — sie ist gefallen, weil
+ * `charted` von keiner Formel des Spiels gelesen wird —, sondern die grosse
+ * Ablesung.
  */
 const VALUE_FACTOR = 1.07
 const LABEL_FACTOR = 1.34
@@ -46,17 +52,42 @@ const META_FACTOR = 1.5
 
 const STACK_GAP = 3
 
+/**
+ * Luft über UND unter der höchsten Zone. Der Wert ist kein Geschmack: bei
+ * weniger als vier Pixeln je Seite berührt die Zeile die Bandkanten, und dann
+ * sieht die Zentrierung wieder aus wie das bündige Kleben, das sie ersetzt hat.
+ */
+const BREATH_MIN = 4
+
+/**
+ * Der `border-top` von `.egsb-row` gehört NICHT zur Content-Box und ist der
+ * Grund, warum hier 63 und nicht 64 nutzbar sind. Er stand einmal nicht in
+ * dieser Rechnung, und die Bilanz lag um genau ihn daneben — dieselbe Klasse
+ * Fehler wie die 3 px `gap`, die als `STACK_GAP` daneben stehen: das CSS
+ * bestimmt, die Spec spiegelt.
+ */
+const BORDER_T = 1
+
 /** Was zwischen Ober- und Unterkante des Textblocks Platz hat. */
-const usable = VOYAGE_MAP_STATS_BAND_H - 2 * VOYAGE_MAP_STATS_PAD_Y
+const usable = VOYAGE_MAP_STATS_BAND_H - 2 * VOYAGE_MAP_STATS_PAD_Y - BORDER_T
 
 /** Die zweizeilige Grundform: grosse Zahl über ihrem Label. */
 function twoLine(value: number, label = VOYAGE_MAP_STATS_LABEL_MAX): number {
   return VALUE_FACTOR * value + LABEL_FACTOR * label
 }
 
-/** Die höchste Spalte des Bandes: Segmentleiste, Zahl, Label. */
-function chartedColumn(value: number): number {
-  return twoLine(value) + VOYAGE_MAP_STATS_TICK_H_MAX + STACK_GAP
+/** Die höchste Zone: die grosse Ablesung, Zahl über Wort. */
+function readColumn(value: number): number {
+  return twoLine(value)
+}
+
+/** Ein Modifikator-Chip — dieselbe Form, eine Stufe kleiner. */
+function modsColumn(): number {
+  return (
+    META_FACTOR * VOYAGE_MAP_STATS_CHIP_MAX +
+    META_FACTOR * VOYAGE_MAP_STATS_LABEL_MAX +
+    STACK_GAP
+  )
 }
 
 /**
@@ -77,15 +108,31 @@ function idColumn(): number {
 }
 
 describe('voyage stats band fit', () => {
-  it('lässt die höchste Spalte in die Bandhöhe passen', () => {
-    expect(chartedColumn(VOYAGE_MAP_STATS_VALUE_MAX)).toBeLessThanOrEqual(usable)
+  it('lässt jede der drei Zonen in die Bandhöhe passen', () => {
+    for (const h of [idColumn(), readColumn(VOYAGE_MAP_STATS_VALUE_MAX), modsColumn()]) {
+      expect(h).toBeLessThanOrEqual(usable)
+    }
   })
 
-  it('kippt, sobald der Wert-Deckel steigt', () => {
-    // Der eigentliche Zweck der Datei. Der Deckel ist nicht gewählt, sondern
-    // gerechnet — wer ihn anhebt, schneidet auf 2K die Labels ab, ohne dass
-    // ein Test oder ein Screenshot es zeigt.
-    expect(chartedColumn(VOYAGE_MAP_STATS_VALUE_MAX + 2)).toBeGreaterThan(usable)
+  it('lässt der höchsten Zone oben wie unten Luft', () => {
+    expect(readColumn(VOYAGE_MAP_STATS_VALUE_MAX)).toBeLessThanOrEqual(usable - 2 * BREATH_MIN)
+  })
+
+  it('kippt schon bei EINEM Punkt mehr', () => {
+    // Der eigentliche Zweck der Datei, und die Wand ist scharf: 37 ergibt 54,33
+    // in 55 erlaubten, 38 schon 55,40. Der Deckel ist damit nicht gewählt,
+    // sondern der grösstmögliche Wert — wer ihn anhebt, drückt die Zeile an die
+    // Bandkanten, und weder ein Test noch ein Screenshot zeigt das von selbst.
+    expect(readColumn(VOYAGE_MAP_STATS_VALUE_MAX + 1)).toBeGreaterThan(usable - 2 * BREATH_MIN)
+  })
+
+  it('lässt die grosse Ablesung die höchste Zone bleiben', () => {
+    // Der Grund, aus dem der Wert-Deckel oben überhaupt gerechnet werden DARF:
+    // es gibt genau eine höchste Zone. Wächst eine andere an ihr vorbei, ist der
+    // Test darüber die falsche Wand und niemand merkt es.
+    const read = readColumn(VOYAGE_MAP_STATS_VALUE_MAX)
+    expect(read).toBeGreaterThan(idColumn())
+    expect(read).toBeGreaterThan(modsColumn())
   })
 
   it('hält auch die Grundform am Boden mit Abstand', () => {
@@ -99,17 +146,6 @@ describe('voyage stats band fit', () => {
     // 30.4 px war die feste Größe vor dem Umbau — das Band darf auf keiner
     // Auflösung dahinter zurückfallen.
     expect(VOYAGE_MAP_STATS_VALUE_MIN).toBeGreaterThan(30.4)
-  })
-
-  it('lässt die Identitätszone in die Bandhöhe passen', () => {
-    expect(idColumn()).toBeLessThanOrEqual(usable)
-  })
-
-  it('lässt die Kartografie die bindende Spalte bleiben', () => {
-    // Der Grund, aus dem der Wert-Deckel oben gerechnet werden DARF: es gibt
-    // genau eine höchste Spalte. Wächst die Identität an ihr vorbei, sind die
-    // beiden Tests darüber die falsche Wand und niemand merkt es.
-    expect(idColumn()).toBeLessThan(chartedColumn(VOYAGE_MAP_STATS_VALUE_MAX))
   })
 
   it('staffelt die Schwellen aufsteigend', () => {

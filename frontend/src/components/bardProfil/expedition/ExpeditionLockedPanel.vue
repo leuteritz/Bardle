@@ -17,7 +17,7 @@ const PREVIEW = [
   {
     icon: 'game-icons:treasure-map',
     title: 'Charted Destinations',
-    text: 'Every galaxy you free stays on the chart as a place to send crews — and charts deeper each time they return.',
+    text: 'Every galaxy you free stays on the chart as a place to send crews.',
   },
   {
     icon: 'ph:users-three-fill',
