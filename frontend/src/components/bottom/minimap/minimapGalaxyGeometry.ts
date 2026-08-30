@@ -560,7 +560,10 @@ export function drawPlanet(
 /** Chevron einer Route-Etappe in den LAUFENDEN Pfad legen, ohne ihn zu zeichnen.
  *  Alle Chevrons einer Route teilen sich Farbe und Strichstärke — als ein
  *  einziger Pfad gestrichen kostet eine lange Route einen Zug statt einen pro
- *  Etappe. Etappen, die zu kurz für das Zeichen sind, werden übersprungen. */
+ *  Etappe. Etappen, die zu kurz für das Zeichen sind, werden übersprungen.
+ *
+ *  Das Dreieck wird GESCHLOSSEN: `fill()` täte das von selbst, `stroke()` nicht
+ *  — und ohne die Basis fehlte der dunklen Saumkontur die Kante zur Linie hin. */
 export function pathRouteArrowhead(
   ctx: CanvasRenderingContext2D,
   x0: number,
@@ -586,30 +589,7 @@ export function pathRouteArrowhead(
     tipX - size * Math.cos(ang + MINIMAP_ROUTE_ARROW_SPREAD),
     tipY - size * Math.sin(ang + MINIMAP_ROUTE_ARROW_SPREAD),
   )
-}
-
-/** Open chevron on a route segment, tip placed `gap` px before the endpoint
- *  so it never overlaps the star marker. Skips segments too short to fit it. */
-export function drawRouteArrowhead(
-  ctx: CanvasRenderingContext2D,
-  x0: number,
-  y0: number,
-  x1: number,
-  y1: number,
-  gap: number,
-  size: number,
-  strokeStyle: string,
-  lineWidth: number,
-) {
-  ctx.save()
-  ctx.beginPath()
-  ctx.strokeStyle = strokeStyle
-  ctx.lineWidth = lineWidth
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-  pathRouteArrowhead(ctx, x0, y0, x1, y1, gap, size)
-  ctx.stroke()
-  ctx.restore()
+  ctx.closePath()
 }
 
 /* ── Seeded star placement ───────────────────────────────────────────────── */

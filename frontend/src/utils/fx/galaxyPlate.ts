@@ -19,7 +19,7 @@ import {
   getGalaxyParticles,
   GALAXY_PARTICLE_COLORS,
   minimapAccentForTheme,
-  drawRouteArrowhead,
+  pathRouteArrowhead,
   generateGalaxyDots,
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import type { GalaxyGeo } from '@/components/bottom/minimap/minimapGalaxyGeometry'
@@ -47,6 +47,14 @@ import {
   LANDMARK_PORTAL_MIN_R,
   ROUTE_TRAIL_ALPHA_MIN,
   ROUTE_TRAIL_WIDTH_MIN,
+  ROUTE_SEAM_COLOR,
+  ROUTE_TRAIL_COLOR,
+  ROUTE_ARROW_COLOR,
+  ROUTE_SEAM_ALPHA,
+  ROUTE_SEAM_WIDTH_MULT,
+  ROUTE_ARROW_ALPHA_GAIN,
+  ROUTE_ARROW_ALPHA_MAX,
+  ROUTE_ARROW_SEAM_W_MULT,
   LANDMARK_ROLE_CORE,
 } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
@@ -201,6 +209,100 @@ export function routeLegStyle(
   }
 }
 
+/** Punktzug der geflogenen Route in Canvas-Koordinaten. */
+export type RoutePoints = readonly (readonly [number, number])[]
+
+/**
+ * Die geflogene Spur: EIN dunkler Saum über den ganzen Zug, darüber das Gold je
+ * Etappe aus `routeLegStyle`.
+ *
+ * Der Saum ist der Grund, warum die Spur überhaupt lesbar ist — bei 0,10 bis
+ * 0,16 Deckkraft verschwindet eine dünne Goldlinie über den hellen Armpartikeln.
+ * Dasselbe Mittel trägt schon den Ring des befreiten Sterns und die Krone des
+ * Tors. Er kommt VOLLSTÄNDIG vor dem Gold: paarweise gezogen deckte der Saum
+ * der Etappe i+1 das Gold der Etappe i an ihrer Nahtstelle zu.
+ *
+ * Seine Breite ist fest, nicht der Rampe folgend — damit bekommt die blasse
+ * erste Etappe relativ mehr Rand als die kräftige letzte, und der Zug kostet
+ * EIN `stroke()` statt eines je Band.
+ */
+export function paintRouteTrail(
+  ctx: CanvasRenderingContext2D,
+  pts: RoutePoints,
+  o: { alpha: number; hk: number; bands?: number },
+): void {
+  if (pts.length < 2) return
+  const legs = pts.length - 1
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+
+  ctx.beginPath()
+  ctx.strokeStyle = `rgba(${ROUTE_SEAM_COLOR}, ${ROUTE_SEAM_ALPHA})`
+  ctx.lineWidth = ROUTE_BASE_WIDTH * o.hk * ROUTE_SEAM_WIDTH_MULT
+  ctx.moveTo(pts[0][0], pts[0][1])
+  for (let i = 1; i <= legs; i++) ctx.lineTo(pts[i][0], pts[i][1])
+  ctx.stroke()
+
+  // Ein Zug je Helligkeitsband statt je Etappe: die Live-Minimap malt hier
+  // während der Zoomfahrt in JEDEM Frame ungecacht.
+  let band = -1
+  for (let i = 0; i < legs; i++) {
+    const leg = routeLegStyle(i, legs, o.alpha, o.hk, o.bands)
+    const b = Math.round(leg.alpha * 1000)
+    if (b !== band) {
+      if (band >= 0) ctx.stroke()
+      ctx.beginPath()
+      ctx.strokeStyle = `rgba(${ROUTE_TRAIL_COLOR}, ${leg.alpha.toFixed(3)})`
+      ctx.lineWidth = leg.width
+      band = b
+    }
+    ctx.moveTo(pts[i][0], pts[i][1])
+    ctx.lineTo(pts[i + 1][0], pts[i + 1][1])
+  }
+  if (band >= 0) ctx.stroke()
+  ctx.restore()
+}
+
+/**
+ * Ein Chevron je Etappe, kurz vor ihrem Ziel — die Spur wird als gerichteter
+ * Weg lesbar, ohne dass die Linie heller werden muss.
+ *
+ * Gefüllt statt offener Strichwinkel: das Dreieck belegt bei gleicher
+ * Kantenlänge weniger Fläche als die zwei Striche, die es ersetzt, und trägt
+ * bei 6 px seine Form deutlicher. EIN Pfad, zwei Züge — dunkle Kontur, dann
+ * Gold darüber.
+ */
+export function paintRouteChevrons(
+  ctx: CanvasRenderingContext2D,
+  pts: RoutePoints,
+  o: {
+    alpha: number
+    hk: number
+    gap: number
+    size: number
+    cull?: (x: number, y: number) => boolean
+  },
+): void {
+  if (pts.length < 2) return
+  const gold = Math.min(ROUTE_ARROW_ALPHA_MAX, o.alpha * ROUTE_ARROW_ALPHA_GAIN)
+  ctx.save()
+  ctx.lineJoin = 'round'
+  ctx.beginPath()
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [ax, ay] = pts[i]
+    const [sx, sy] = pts[i + 1]
+    if (o.cull && !o.cull(sx, sy)) continue
+    pathRouteArrowhead(ctx, ax, ay, sx, sy, o.gap, o.size)
+  }
+  ctx.strokeStyle = `rgba(${ROUTE_SEAM_COLOR}, ${ROUTE_SEAM_ALPHA})`
+  ctx.lineWidth = ROUTE_BASE_WIDTH * o.hk * ROUTE_ARROW_SEAM_W_MULT
+  ctx.stroke()
+  ctx.fillStyle = `rgba(${ROUTE_ARROW_COLOR}, ${gold.toFixed(3)})`
+  ctx.fill()
+  ctx.restore()
+}
+
 export interface GalaxyPaintOpts {
   /** Backing-Dichte des Ziels — der Sprite-Cache der Landmarken hängt daran.
    *  Pflicht, weil ein vergessener Wert nur als weiches Bild auffiele. */
@@ -235,10 +337,7 @@ export function paintGalaxy(
   const hk = k * (opts.historyScale ?? 1)
   const dpr = opts.dpr
   const routeAlpha = opts.routeAlpha ?? 0.55
-  const toC = (wx: number, wy: number): [number, number] => [
-    box.x + wx * box.w,
-    box.y + wy * box.h,
-  ]
+  const toC = (wx: number, wy: number): [number, number] => [box.x + wx * box.w, box.y + wy * box.h]
 
   // ── Tiefraum, darüber die Aura der Scheibe ──
   ctx.fillStyle = '#0b0806'
@@ -330,45 +429,20 @@ export function paintGalaxy(
   const attempts = record.attemptResults.length
   const { spawn, dots } = generateGalaxyDots(record.mapSeed, attempts + 1)
   const [spx, spy] = toC(spawn.x, spawn.y)
-  ctx.save()
-  ctx.lineCap = 'round'
-  let rx = spx
-  let ry = spy
-  for (let i = 0; i <= attempts; i++) {
-    const [sx, sy] = i < attempts ? toC(dots[i].x, dots[i].y) : [gcx, gcy]
-    const leg = routeLegStyle(i, attempts + 1, routeAlpha, hk)
-    ctx.beginPath()
-    ctx.strokeStyle = `rgba(232, 192, 64, ${leg.alpha.toFixed(3)})`
-    ctx.lineWidth = leg.width
-    ctx.moveTo(rx, ry)
-    ctx.lineTo(sx, sy)
-    ctx.stroke()
-    rx = sx
-    ry = sy
-  }
-  ctx.restore()
-
-  // Ein Chevron je geflogener Etappe (inklusive des letzten Anflugs auf den
-  // befreiten Kern), damit die Reise als gerichtete Spur lesbar bleibt.
-  const arrowAlpha = Math.min(1, routeAlpha * 1.545)
-  let ax = spx
-  let ay = spy
-  for (let i = 0; i <= attempts; i++) {
-    const [sx, sy] = i < attempts ? toC(dots[i].x, dots[i].y) : [gcx, gcy]
-    drawRouteArrowhead(
-      ctx,
-      ax,
-      ay,
-      sx,
-      sy,
-      SNAPSHOT_ROUTE_ARROW_GAP * hk,
-      SNAPSHOT_ROUTE_ARROW_SIZE * hk,
-      `rgba(240, 205, 96, ${arrowAlpha.toFixed(3)})`,
-      1.6 * hk,
-    )
-    ax = sx
-    ay = sy
-  }
+  // Der Zug endet im Kern — anders als live, wo die Reise am letzten besuchten
+  // Stern aufhört, weil es dort noch kein Tor gibt.
+  const routePts: RoutePoints = [
+    [spx, spy],
+    ...dots.slice(0, attempts).map((d) => toC(d.x, d.y)),
+    [gcx, gcy],
+  ]
+  paintRouteTrail(ctx, routePts, { alpha: routeAlpha, hk })
+  paintRouteChevrons(ctx, routePts, {
+    alpha: routeAlpha,
+    hk,
+    gap: SNAPSHOT_ROUTE_ARROW_GAP * hk,
+    size: SNAPSHOT_ROUTE_ARROW_SIZE * hk,
+  })
 
   // Landfalls — die Orte, an denen die Reise vorbeikam. VOR den Sternmarken,
   // damit ein Stern gewinnt, wenn beide eng beieinander liegen: der Ort ist
@@ -388,11 +462,18 @@ export function paintGalaxy(
   )
   marken.forEach((m, i) => {
     const [lx, ly] = toC(m.x, m.y)
-    drawLandmark(ctx, LANDFALL_LANDMARK_KIND[m.kind], lx, ly, roundLandmarkRadius(LANDFALL_MARK_R * hk), {
-      dpr,
-      variant: landmarkVariantFor(i),
-      faded: !m.cleared,
-    })
+    drawLandmark(
+      ctx,
+      LANDFALL_LANDMARK_KIND[m.kind],
+      lx,
+      ly,
+      roundLandmarkRadius(LANDFALL_MARK_R * hk),
+      {
+        dpr,
+        variant: landmarkVariantFor(i),
+        faded: !m.cleared,
+      },
+    )
   })
 
   // Abflugportal — der Ring steht quer zur ersten Etappe, man fliegt hindurch.

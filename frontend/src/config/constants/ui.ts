@@ -319,7 +319,9 @@ export const MINIMAP_FLIGHTPATH_BEND = 0.18 // quadratic ctrl-point offset (frac
 export const MINIMAP_ROUTE_ARROW_SIZE = 5 // chevron wing length on flown-route segments (live map)
 export const MINIMAP_ROUTE_ARROW_GAP = 14 // chevron tip distance before the segment endpoint (clears the star marker)
 export const MINIMAP_ROUTE_ARROW_SPREAD = 0.48 // half-opening angle of the chevron in radians (~27°)
-export const SNAPSHOT_ROUTE_ARROW_SIZE = 3.5 // chevron wing length in the archive snapshot (smaller canvas)
+// Gewachsen von 3.5: das gefüllte Dreieck belegt weniger Fläche als der offene
+// Strichwinkel, den es ersetzt (15 px² gegen 34 auf der grossen Karte).
+export const SNAPSHOT_ROUTE_ARROW_SIZE = 4.6 // chevron wing length in the archive snapshot (smaller canvas)
 export const SNAPSHOT_ROUTE_ARROW_GAP = 12 // chevron tip distance before the endpoint in the snapshot
 // Vorlauf des IntersectionObserver, der einen Archiv-Snapshot zeichnen lässt —
 // renderGalaxySnapshot rastert synchron, Dutzende in einem Frame sind teuer.
@@ -484,11 +486,35 @@ export const CORE_GATE_POOL_SPAN = 2.1
 // ein vergessener `tint` als Fehler auffällt statt als Goldton durchzugehen.
 export const CORE_GATE_FALLBACK_TINT = '210, 220, 240'
 export const MINIMAP_LANDMARK_PORTAL_R = 10 // live: neben freed 11 — es ist die einzige einmalige Marke
-export const ROUTE_TRAIL_ALPHA_MIN = 0.45 // Deckkraft am Abflugpunkt, Anteil von routeAlpha
+// Von 0.45 angehoben: der Saum trägt nur dort, wo die Spur über hellen
+// Armpartikeln liegt — über dem Tiefraum sind beide dunkel, und 0.072 Gold war
+// dort unsichtbar. Die Rampe wird FLACHER, ihr oberes Ende rührt sich nicht.
+export const ROUTE_TRAIL_ALPHA_MIN = 0.62 // Deckkraft am Abflugpunkt, Anteil von routeAlpha
 export const ROUTE_TRAIL_WIDTH_MIN = 0.6 // Strichstärke am Abflugpunkt, Anteil der Vollstärke
 // Live-Minimap: drawRouteAndMarkers läuft während der Zoomfahrt in JEDEM Frame
 // ungecacht — 4 stroke() statt einem je Etappe.
 export const ROUTE_TRAIL_BANDS_LIVE = 4
+
+// Dunkler Saum unter der geflogenen Route. Dasselbe Mittel, mit dem der Ring des
+// befreiten Sterns und die Krone des Tors lesbar bleiben: erst dunkel und breit,
+// dann hell darüber. Er fügt der Karte KEIN Gold hinzu — die gemessenen 0,03 %
+// Goldanteil bleiben stehen.
+export const ROUTE_SEAM_COLOR = '11, 8, 6' // der Tiefraum #0b0806
+// Gold gehört der REISE. Beide Töne standen je zweimal ausgeschrieben, in
+// galaxyPlate und in MiniMapCanvas.
+export const ROUTE_TRAIL_COLOR = '232, 192, 64'
+export const ROUTE_ARROW_COLOR = '240, 205, 96'
+// Fest, nicht der Verlaufsrampe folgend: der Saum ist dunkel, ein
+// Helligkeitsverlauf trüge dort nichts.
+export const ROUTE_SEAM_ALPHA = 0.7
+// × volle Goldbreite. Feste Breite über den ganzen Zug, dadurch bekommt die
+// blasse erste Etappe relativ mehr Rand als die kräftige letzte.
+export const ROUTE_SEAM_WIDTH_MULT = 1.7
+export const ROUTE_ARROW_ALPHA_GAIN = 3.1 // Chevron-Deckkraft, × routeAlpha
+// Deckel, damit das Archivstandbild (routeAlpha 0.55) bei seinen bisherigen 0.85
+// bleibt statt auf volle Deckkraft zu springen.
+export const ROUTE_ARROW_ALPHA_MAX = 0.85
+export const ROUTE_ARROW_SEAM_W_MULT = 1.5 // Saumkontur um das Chevron, × Goldbreite
 
 // ── Galaxy snapshot rasterization ──────────────────────────────────────────
 // Die logische Größe bleibt (sonst wandert der Maßstab k und mit ihm die ganze

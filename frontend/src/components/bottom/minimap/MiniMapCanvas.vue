@@ -75,13 +75,18 @@ import {
   minimapAccentForTheme,
   STAR_PALETTE,
   drawPlanet,
-  pathRouteArrowhead,
   generateGalaxyDots,
 } from './minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor } from '@/utils/fx/galaxyLandmarks'
 import { landfallMarks } from '@/utils/game/landfalls'
 import { LANDFALL_LANDMARK_KIND } from '@/config/world/landfalls'
-import { routeLegStyle, starCoreTint, starRoleSignature } from '@/utils/fx/galaxyPlate'
+import {
+  paintRouteTrail,
+  paintRouteChevrons,
+  starCoreTint,
+  starRoleSignature,
+  type RoutePoints,
+} from '@/utils/fx/galaxyPlate'
 
 import { hexToRgba } from '@/utils/ui/format'
 import {
@@ -483,48 +488,20 @@ export default defineComponent({
 
       function drawRouteAndMarkers(c: CanvasRenderingContext2D) {
         const [spx, spy] = wToC(spawnPos.value.x, spawnPos.value.y)
-        c.save()
-        c.lineCap = 'round'
-        c.lineJoin = 'round'
-        // Ein Zug je Helligkeitsband: die Spur wird zum Kern hin heller und
-        // dicker, ohne dass jede Etappe einen eigenen stroke() kostet.
-        let band = -1
-        let px = spx
-        let py = spy
-        for (let i = 0; i < attempts; i++) {
-          const leg = routeLegStyle(i, attempts, 0.55, 1.25, ROUTE_TRAIL_BANDS_LIVE)
-          const [sx, sy] = wToC(dots[i].x, dots[i].y)
-          const b = Math.round(leg.alpha * 1000)
-          if (b !== band) {
-            if (band >= 0) c.stroke()
-            c.beginPath()
-            c.strokeStyle = `rgba(232, 192, 64, ${leg.alpha.toFixed(3)})`
-            c.lineWidth = leg.width
-            band = b
-          }
-          c.moveTo(px, py)
-          c.lineTo(sx, sy)
-          px = sx
-          py = sy
-        }
-        if (band >= 0) c.stroke()
-        c.restore()
-
-        // One chevron per flown leg, just before its destination star —
-        // the route reads as a followable trail of arrowheads.
-        c.beginPath()
-        c.strokeStyle = 'rgba(240, 205, 96, 0.85)'
-        let ax = spx
-        let ay = spy
-        for (let i = 0; i < attempts; i++) {
-          const [sx, sy] = wToC(dots[i].x, dots[i].y)
-          if (inView(sx, sy)) {
-            pathRouteArrowhead(c, ax, ay, sx, sy, MINIMAP_ROUTE_ARROW_GAP, MINIMAP_ROUTE_ARROW_SIZE)
-          }
-          ax = sx
-          ay = sy
-        }
-        c.stroke()
+        // Dieselbe Spur wie auf den Standbildern — nur endet sie hier am letzten
+        // besuchten Stern: einen befreiten Kern gibt es live noch nicht.
+        const routePts: RoutePoints = [
+          [spx, spy],
+          ...dots.slice(0, attempts).map((d) => wToC(d.x, d.y)),
+        ]
+        paintRouteTrail(c, routePts, { alpha: 0.55, hk: 1.25, bands: ROUTE_TRAIL_BANDS_LIVE })
+        paintRouteChevrons(c, routePts, {
+          alpha: 0.55,
+          hk: 1.25,
+          gap: MINIMAP_ROUTE_ARROW_GAP,
+          size: MINIMAP_ROUTE_ARROW_SIZE,
+          cull: inView,
+        })
 
         // Abflugportal — der Punkt, an dem die Reise durch diese Galaxie begann.
         if (inView(spx, spy)) {
