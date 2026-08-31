@@ -452,3 +452,111 @@ export const FIRMAMENT_ROAD_CASING_W = 2.6
  *  ihn schwimmt der Knoten im Galaxienfeld der Heldenscheibe — dieselbe Lehre
  *  wie `CORE_GATE_POOL_SPAN`: ein Loch in einem Leuchten ist kein Loch. */
 export const FIRMAMENT_NODE_POOL_SPAN = 3.4
+
+// ── Das Abflugportal ────────────────────────────────────────────────────────
+/* Der Ausgang eines Universums steht im SCHWARZEN Raum ausserhalb der
+   Galaxienscheibe — an einer je Universum anderen Stelle, gross und
+   angeschnitten. Er war einmal ein 22x18-px-Chip am Ende der Bahn, mitten in
+   der Wolke: der groesste Uebergang, den ein Spielstand kennt, erzaehlt von
+   einer Marke, die kleiner ist als eine Galaxie. */
+
+/** Ringradius, am BUEHNENBILD gerechnet statt am schwarzen Seitenband. Das Band
+ *  schwankt ueber die vier Zielaufloesungen um Faktor 4 (135 bis 542 px), die
+ *  Hoehe nur um 2,4 — ein Portal, das dem Band folgt, waere auf WUXGA halb so
+ *  gross wie auf Full HD bei derselben Bildschirmbreite. */
+export const FIRMAMENT_PORTAL_RING_H_RATIO = 0.19
+export const FIRMAMENT_PORTAL_RING_MIN_PX = 88
+export const FIRMAMENT_PORTAL_RING_MAX_PX = 260
+
+/** Wie weit draussen der Ring fruehestens beginnt — als ABLEITUNG, nicht als
+ *  glatte Zahl: genau dort enden die Koerper der Galaxienwolke. Ein strengeres
+ *  „ganz jenseits des Walls" (1,0) macht die Menge zulaessiger Stellen auf
+ *  WUXGA LEER; unter dem durchscheinenden Filamentsaum zu stehen ist richtig —
+ *  ein Portal, das dahinter hervorsieht, liest sich als „jenseits der Wand". */
+export const FIRMAMENT_PORTAL_DISC_CLEAR = UNIVERSE_DISC_HERO_R_RATIO * UNIVERSE_DISC_CLOUD_REACH
+
+/** Kantenlaenge der Sprites als Vielfaches des Ringdurchmessers — DREI Werte,
+ *  weil die drei Ebenen verschieden weit reichen. Das stehende Sprite muss den
+ *  Schattenteich fassen (`_POOL_SPAN`), die drehende endet kurz hinter den
+ *  Armen, und der Halo reicht am weitesten. Ein gemeinsamer Wert schnitte
+ *  entweder den Teich ab oder draehte leere Flaeche mit. */
+export const FIRMAMENT_PORTAL_SPRITE_SPAN = 1.6
+export const FIRMAMENT_PORTAL_SWIRL_SPAN = 1.15
+/** Die Fassung traegt den  des Rings: r + halbe Strichbreite +
+ *  0,3 r Streuung sind 1,34 r. */
+export const FIRMAMENT_PORTAL_RIM_SPAN = 1.45
+export const FIRMAMENT_PORTAL_AURA_SPAN = 1.9
+
+/** Die Ebenen des stehenden Sprites, als Anteil des Ringradius. Die Reihenfolge
+ *  IST die Bedeutung — Schattenteich, Krone, Schlund, Ring, Iris, Photonenkante,
+ *  Kernfunke (siehe `portalSprite.ts`). */
+export const FIRMAMENT_PORTAL_POOL_SPAN = 1.5
+export const FIRMAMENT_PORTAL_CROWN_SPAN = 1.18
+export const FIRMAMENT_PORTAL_CROWN_GAP = 0.5
+/** Halbachsenverhaeltnis des Schlunds. NICHT die 0,42 der kleinen Landmarke auf
+ *  der Galaxiekarte: dort fliegt man hindurch, hier sieht man hinein. */
+export const FIRMAMENT_PORTAL_RY = 0.86
+/** Der Schwellensaum, knapp INNEN am Ring — dort, wo das Licht des Ziels die
+ *  Kante trifft. Bei einem halben Radius war er ein zweiter Ring in der Mitte
+ *  und machte aus dem Durchgang eine Zielscheibe. */
+export const FIRMAMENT_PORTAL_PHOTON_R = 0.9
+/** Sterne des anderen Universums IM Schlund. Sie sind der Beleg, dass man
+ *  hindurchsieht — ohne sie ist der Verlauf ein Farbfleck. */
+export const FIRMAMENT_PORTAL_FAR_STARS = 14
+export const FIRMAMENT_PORTAL_CORE_R = 0.07
+export const FIRMAMENT_PORTAL_HALO_ALPHA = 0.42
+
+/** Die drehende Ebene. Nur was seine Drehung ZEIGT gehoert hinein — die Motes
+ *  machen sie ueberhaupt erst ablesbar. */
+export const FIRMAMENT_PORTAL_ARMS = 5
+export const FIRMAMENT_PORTAL_ARM_IN = 0.3
+export const FIRMAMENT_PORTAL_ARM_OUT = 0.98
+export const FIRMAMENT_PORTAL_MOTES = 7
+
+/** Die Spur, als Anteil des Ringradius. Sie laeuft vom Portal nach INNEN und
+ *  loest sich vor der Scheibe auf — so behauptet sie keinen Ansatzpunkt, den
+ *  die drehende Bahn ihr ohnehin wegdrehen wuerde. */
+export const FIRMAMENT_PORTAL_TRAIL_LEN = 2.6
+export const FIRMAMENT_PORTAL_TRAIL_W = 0.34
+export const FIRMAMENT_PORTAL_TRAIL_START = 0.95
+export const FIRMAMENT_PORTAL_TRAIL_STRANDS = 3
+export const FIRMAMENT_PORTAL_TRAIL_ALPHA = 0.42
+export const FIRMAMENT_PORTAL_TRAIL_DASH = 0.1
+export const FIRMAMENT_PORTAL_TRAIL_GAP = 0.13
+
+/** Teiler auf die Wurzelregel `universeDiscSpinSec`. Roh waeren es 166 s und
+ *  4,9 px/s an der Armspitze — die Rate eines Galaxienfeldes. Ein Portal ist
+ *  eine offene Maschine, kein Feld. Mit dem Teiler: 33 s und 25 px/s. */
+export const FIRMAMENT_PORTAL_SPIN_RATIO = 5
+/** Der Halo atmet langsamer als eine Knotenmarke (2,4 s) — er ist zehnmal so
+ *  gross. `_HALO_REST` ist die Ruhedeckkraft, damit `animation: none` unter
+ *  Reduced Motion nicht auf einem Extremwert stehenbleibt. */
+export const FIRMAMENT_PORTAL_PULSE_SEC = 3.6
+export const FIRMAMENT_PORTAL_PULSE_MIN = 0.45
+export const FIRMAMENT_PORTAL_HALO_REST = 0.72
+
+/** Die Suche nach der Stelle: 24 Winkel im 15-Grad-Raster. */
+export const FIRMAMENT_PORTAL_ANGLE_TRIES = 24
+/** Angeschnitten ja, verschwunden nein. ZWEI Riegel, weil einer nicht traegt:
+ *  die Ringmitte bleibt im Bild (an EINER Kante hoechstens ~46 % weg), UND der
+ *  Flaechenanteil haelt — der zweite faengt die Ecklagen, wo zwei Kanten
+ *  schneiden. */
+export const FIRMAMENT_PORTAL_EDGE_KEEP = 0.06
+export const FIRMAMENT_PORTAL_MIN_VISIBLE = 0.55
+export const FIRMAMENT_PORTAL_VIS_SAMPLES = 64
+
+/** Sperrzonen: die Bedienflaechen der Buehne, in Buehnenkoordinaten. Gemessen
+ *  aus ihrem CSS — Werkzeugkasten oben links, Legende unten links (zweireihig
+ *  auf dem Buehnenboden), Auswahlkarte unten rechts. */
+export const FIRMAMENT_PORTAL_KEEPOUT_PAD = 12
+export const FIRMAMENT_TOOLS_BOX_W = 108
+export const FIRMAMENT_TOOLS_BOX_H = 52
+export const FIRMAMENT_LEGEND_BOX_H = 62
+export const FIRMAMENT_LEGEND_MAX_SHARE = 0.6
+export const FIRMAMENT_SEL_BOX_W = 400
+export const FIRMAMENT_SEL_BOX_H = 82
+
+/** Deckel der Portal-Rasterflaeche je Ebene. Er greift ab 2K am Halo und ab 4K
+ *  an allen — ohne ihn baute 4K ein 988er-Quadrat fuer ein Leuchten. */
+export const FIRMAMENT_PORTAL_MAX_BACKING_PX = 1024
+export const FIRMAMENT_PORTAL_CACHE_MAX = 12

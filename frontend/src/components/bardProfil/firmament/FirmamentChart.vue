@@ -40,6 +40,7 @@ import { getUniverse } from '@/config/progression/universes'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
+import { firmamentPortalSpot } from '@/utils/ui/firmamentPortalSpot'
 import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
 import {
   firmamentScreenPos,
@@ -52,6 +53,8 @@ import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import FirmamentGalaxyTip from './FirmamentGalaxyTip.vue'
 import FirmamentOriginTip from './FirmamentOriginTip.vue'
 import FirmamentSelectionCard from './FirmamentSelectionCard.vue'
+import FirmamentPortal from './FirmamentPortal.vue'
+import FirmamentDepartureTip from './FirmamentDepartureTip.vue'
 import UniverseDisc from './UniverseDisc.vue'
 import {
   FIRMAMENT_FREED_COLOR,
@@ -227,14 +230,18 @@ const viewTint = computed(
   () => getUniverse(props.selection.universe)?.tint ?? FIRMAMENT_UNLIT_COLOR,
 )
 
-/** Das Tor am Ende einer vergangenen Bahn — hoechstens EINES, und es ist die
- *  Fortsetzung des Weges: der Klick geht dorthin weiter. */
-const departureMark = computed(() => {
-  const d = props.departure
-  if (!d) return null
-  const p = firmamentScreenPos(box.value, d.nx, d.ny)
-  return { departure: d, x: p.x, y: p.y, roman: toRoman(d.toUniverse) }
-})
+/** Wo das Abflugportal steht. Es kennt weder Zoom noch Fahrt — sonst malte der
+ *  Reiter bei jedem Zoomschritt ein Sprite neu, das sich nicht bewegt hat. */
+const portalSpot = computed(() =>
+  props.departure ? firmamentPortalSpot(props.selection.universe, cssW.value, cssH.value) : null,
+)
+
+/** Der Ton des ZIELS, nicht der gezeigten Bahn: Wall und Wolke sprechen deren
+ *  Ton schon, und ein Portal in der Farbe der Wand, jenseits derer es steht,
+ *  sagt nicht „woanders hin". */
+const portalTint = computed(
+  () => getUniverse(props.departure?.toUniverse ?? 0)?.tint ?? FIRMAMENT_GATE_COLOR,
+)
 
 /**
  * Der Startpunkt — die Benennung des Ursprungs, an dem die Bahn ansetzt.
@@ -432,7 +439,7 @@ function paint() {
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-  paintFirmament(ctx, props.nodes, props.departure, side, side, plateBox.value, viewTint.value)
+  paintFirmament(ctx, props.nodes, side, side, plateBox.value, viewTint.value)
   paintCount.value += 1
 }
 
@@ -518,6 +525,31 @@ const LEGEND = [
          statt sie mitzuschleppen. -->
     <canvas ref="groundEl" class="fm-ground" aria-hidden="true" />
 
+    <!-- Das Abflugportal steht im schwarzen Raum jenseits der Scheibe. Es liegt
+         AUSSERHALB `.fm-layer`: es faehrt nicht mit und waechst nicht mit dem
+         Zoom — beim Hineinzoomen schiebt sich die Karte davor, auch fuer den
+         Zeiger. Kein `z-index`, die DOM-Reihenfolge entscheidet. -->
+    <template v-if="portalSpot && departure">
+      <FirmamentPortal :spot="portalSpot" :seed="selection.universe" :tint="portalTint" />
+      <RpgBadgeTooltip passive :accent="portalTint">
+        <button
+          class="fm-portal-hit"
+          :style="{
+            left: `${portalSpot.x}px`,
+            top: `${portalSpot.y}px`,
+            width: `${portalSpot.r * 2}px`,
+            height: `${portalSpot.r * 2}px`,
+          }"
+          :aria-label="`Departure portal — the road went on to Universe ${toRoman(departure.toUniverse)}`"
+          @pointerdown.stop
+          @click="pickDeparture(departure)"
+        />
+        <template #tip>
+          <FirmamentDepartureTip :departure="departure" :tint="portalTint" />
+        </template>
+      </RpgBadgeTooltip>
+    </template>
+
     <div class="fm-layer" :style="layerStyle">
       <!-- Die zwei Ebenen, die sich drehen. Beide sind fertige Sprites; das CSS
            dreht sie am Compositor, kein Repaint. Gegenlaeufig, damit sie nicht
@@ -591,18 +623,6 @@ const LEGEND = [
             <FirmamentGalaxyTip :node="mark.node" />
           </template>
         </RpgBadgeTooltip>
-
-        <!-- Das Tor am Ende der Bahn. Es traegt die Ziffer des Universums, in
-             das der Weg weiterging, und fuehrt auf dessen Bahn. -->
-        <button
-          v-if="departureMark"
-          class="fm-gate"
-          :style="{ left: `${departureMark.x}px`, top: `${departureMark.y}px` }"
-          :aria-label="`Departure — the road went on to Universe ${departureMark.roman}`"
-          @click="pickDeparture(departureMark.departure)"
-        >
-          {{ departureMark.roman }}
-        </button>
       </div>
 
       <!-- Der Startpunkt. KEIN Knopf: er fuehrt keine Aktion aus, und „zurueck
@@ -699,9 +719,14 @@ const LEGEND = [
 
 /* Die ganze Ebene faehrt beim Ziehen als EIN transform — Canvas und Knoten
    bleiben dabei zwangslaeufig deckungsgleich. */
+/* Auch die fahrende Ebene ist ein RAHMEN und buehnenfuellend: sie traegt die
+   Fahrt, keinen Inhalt. Als Trefferziel deckte sie alles ab, was unter ihr
+   liegt — das Portal steht dort. Wer hier etwas Klickbares einhaengt, gibt ihm
+   `pointer-events: auto`; das Panning laeuft ueber `.fm-stage` weiter. */
 .fm-layer {
   position: absolute;
   inset: 0;
+  pointer-events: none;
 }
 
 /* Wall und Herz. Beide zentriert auf der Mitte der Bahn, beide ohne
@@ -749,9 +774,14 @@ const LEGEND = [
    Repaint, `paintCount` bleibt stehen. Bewusst OHNE `will-change` — Chrome
    promotet die laufende Animation ohnehin, dieselbe Begruendung wie beim
    Wall. */
+/* Die Gruppe ist ein DREHRAHMEN, kein Inhalt — und sie ist buehnenfuellend
+   (`inset: 0`). Ohne `pointer-events: none` faengt sie jeden Klick auf der
+   ganzen Buehne ab, auch die auf das Portal, das UNTER ihr liegt. Ihre Kinder
+   holen sich die Trefferflaeche einzeln zurueck. */
 .fm-spin {
   position: absolute;
   inset: 0;
+  pointer-events: none;
   animation: fm-spin-turn v-bind(spinDur) linear infinite;
 }
 
@@ -774,35 +804,57 @@ const LEGEND = [
   }
 }
 
-@keyframes fm-gate-counter {
-  from {
-    transform: translate(-50%, -50%) rotate(0deg);
-  }
-  to {
-    transform: translate(-50%, -50%) rotate(-360deg);
-  }
-}
 
 /* Beim Ueberfahren haelt ALLES an — Bahn, Wolke und Wall gemeinsam.
    Am aeusseren Rand wandert ein Knoten mit 7,4 px/s und verlaesst seine
    26-px-Trefferflaeche in 1,75 s: die Hover-Karte risse mitten im Lesen ab.
    Nur die Bahn anzuhalten liesse sie fuer die Dauer des Hoverns aus der Wolke
    herauslaufen. Reines CSS — kein Zustand, kein Re-Render. */
-.fm-stage:has(.fm-node:hover, .fm-node:focus-visible, .fm-gate:hover, .fm-gate:focus-visible)
-  :is(.fm-spin, .fm-rim, .fm-node-tag, .fm-gate) {
+.fm-stage:has(
+    .fm-node:hover,
+    .fm-node:focus-visible,
+    .fm-portal-hit:hover,
+    .fm-portal-hit:focus-visible
+  )
+  :is(.fm-spin, .fm-rim, .fm-node-tag) {
   animation-play-state: paused;
 }
 
-.fm-stage:has(.fm-node:hover, .fm-node:focus-visible, .fm-gate:hover, .fm-gate:focus-visible)
-  :deep(.fm-hero .uni-disc-l) {
+/* Das Portal haelt mit an. Es wandert dem Zeiger zwar nicht davon — aber wenn
+   beim Ueberfahren alles andere steht, ist ein einzeln weiterdrehendes Objekt
+   eine sichtbare Inkonsistenz, und es kostet nichts. */
+.fm-stage:has(
+    .fm-node:hover,
+    .fm-node:focus-visible,
+    .fm-portal-hit:hover,
+    .fm-portal-hit:focus-visible
+  )
+  :deep(:is(.fm-hero .uni-disc-l, .fm-portal-l)) {
   animation-play-state: paused;
+}
+
+/* Die Trefferflaeche des Portals. `@pointerdown.stop` haengt am Element, nicht
+   hier: `onPointerDown` sitzt ohne `.self` an der Buehne, und ohne den Stopper
+   begaenne jeder Portalklick eine Fahrt. */
+.fm-portal-hit {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.fm-portal-hit:focus-visible {
+  outline: 2px solid #e8c040;
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .fm-rim,
   .fm-spin,
-  .fm-node-tag,
-  .fm-gate {
+  .fm-node-tag {
     animation: none;
   }
 }
@@ -810,9 +862,13 @@ const LEGEND = [
 /* Quadratisches Sprite um die Mitte der Bahn — dieselbe Bauart wie der Wall.
    Buehnenfuellend schwenkte beim Drehen leere Flaeche ins Bild, sobald Zoom
    und Fahrt einen Teil der Karte nach draussen geschoben haben. */
+/* Die Platte holt sich die Trefferflaeche zurueck, und das ist Absicht: beim
+   Hineinzoomen waechst sie ueber das Portal und verdeckt es dann auch fuer den
+   Zeiger. Ohne das laege dort ein unsichtbarer Klickkreis auf der Galaxie. */
 .fm-canvas {
   position: absolute;
   display: block;
+  pointer-events: auto;
   transform: translate(-50%, -50%);
 }
 
@@ -822,6 +878,7 @@ const LEGEND = [
    Haarlinie bindet ihn an den Kern, den er meint. */
 .fm-start {
   position: absolute;
+  pointer-events: auto;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -864,6 +921,7 @@ const LEGEND = [
 
 .fm-node {
   position: absolute;
+  pointer-events: auto;
   transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
@@ -973,33 +1031,6 @@ const LEGEND = [
   50% {
     opacity: 1;
   }
-}
-
-/* ── Tore ─────────────────────────────────────────────────────────────── */
-.fm-gate {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  animation: fm-gate-counter v-bind(spinDur) linear infinite;
-  min-width: 22px;
-  height: 18px;
-  padding: 0 5px;
-  font-size: 10.5px;
-  font-weight: 900;
-  line-height: 1;
-  color: #7ab8f0;
-  background: rgba(10, 12, 18, 0.9);
-  border: 1px solid rgba(122, 184, 240, 0.45);
-  border-radius: 3px;
-  cursor: pointer;
-  transition:
-    color 0.12s,
-    border-color 0.12s;
-}
-
-.fm-gate:hover,
-.fm-gate.is-picked {
-  color: #c9e4ff;
-  border-color: #7ab8f0;
 }
 
 /* ── Bedienung ────────────────────────────────────────────────────────── */

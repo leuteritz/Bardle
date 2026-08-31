@@ -1,0 +1,360 @@
+import { describe, it, expect } from 'vitest'
+import {
+  paintPortalHalo,
+  paintPortalMaw,
+  paintPortalRim,
+  paintPortalSwirl,
+  paintPortalTrail,
+  portalSpriteKey,
+  portalSpriteSpan,
+} from '@/utils/fx/portalSprite'
+import {
+  FIRMAMENT_PORTAL_ARMS,
+  FIRMAMENT_PORTAL_AURA_SPAN,
+  FIRMAMENT_PORTAL_CROWN_SPAN,
+  FIRMAMENT_PORTAL_FAR_STARS,
+  FIRMAMENT_PORTAL_MOTES,
+  FIRMAMENT_PORTAL_PHOTON_R,
+  FIRMAMENT_PORTAL_POOL_SPAN,
+  FIRMAMENT_PORTAL_SPRITE_SPAN,
+  FIRMAMENT_PORTAL_SWIRL_SPAN,
+  FIRMAMENT_PORTAL_TRAIL_STRANDS,
+} from '@/config/constants'
+
+/**
+ * Gebunden werden ZEICHENBEFEHLE, nicht Pixel: `getContext('2d')` ist in jsdom
+ * `null`, ein rasternder Vergleich pruefte hier nichts und saehe gruen aus.
+ *
+ * Was diese Datei wirklich faengt: die Reihenfolge. Ein Ring, der vor seinem
+ * Schlund gestrichen wird, liest sich als Scheibe statt als Durchgang — und das
+ * sieht man im Code nicht, nur im Bild.
+ */
+function recordingCtx(): { ctx: CanvasRenderingContext2D; ops: string[] } {
+  const ops: string[] = []
+  const num = (v: number) => Math.round(v * 100) / 100
+  const rec =
+    (name: string) =>
+    (...args: unknown[]) => {
+      ops.push(
+        `${name}(${args.map((a) => (typeof a === 'number' ? num(a) : String(a))).join(',')})`,
+      )
+    }
+  const gradient = { addColorStop: rec('addColorStop') }
+  const style = (name: string) => ({
+    get: () => '',
+    set: (v: unknown) => void ops.push(`${name}=${String(v)}`),
+  })
+  const ctx = {
+    beginPath: rec('beginPath'),
+    arc: rec('arc'),
+    ellipse: rec('ellipse'),
+    moveTo: rec('moveTo'),
+    quadraticCurveTo: rec('quadraticCurveTo'),
+    fill: rec('fill'),
+    stroke: rec('stroke'),
+    clip: rec('clip'),
+    save: rec('save'),
+    restore: rec('restore'),
+    translate: rec('translate'),
+    setLineDash: rec('setLineDash'),
+    createRadialGradient: (...a: unknown[]) => {
+      rec('createRadialGradient')(...a)
+      return gradient
+    },
+    createLinearGradient: (...a: unknown[]) => {
+      rec('createLinearGradient')(...a)
+      return gradient
+    },
+    lineWidth: 1,
+    lineCap: 'butt',
+  } as unknown as CanvasRenderingContext2D
+  Object.defineProperties(ctx, {
+    fillStyle: style('fillStyle'),
+    strokeStyle: style('strokeStyle'),
+    shadowColor: style('shadowColor'),
+    shadowBlur: style('shadowBlur'),
+  })
+  return { ctx, ops }
+}
+
+const R = 130
+const TINT = '#a84ce0'
+const SEED = 3
+
+const count = (ops: string[], name: string) => ops.filter((o) => o.startsWith(`${name}(`)).length
+const at = (ops: string[], needle: string) => ops.findIndex((o) => o.includes(needle))
+
+/** Alles, was FARBE sagt — `addColorStop` gehoert dazu, sonst zaehlte ein
+ *  Verlaufston als Formunterschied. */
+const isInk = (o: string) =>
+  o.startsWith('strokeStyle=') ||
+  o.startsWith('fillStyle=') ||
+  o.startsWith('shadowColor=') ||
+  o.startsWith('addColorStop(')
+
+function maw(tint = TINT, seed = SEED) {
+  const { ctx, ops } = recordingCtx()
+  paintPortalMaw(ctx, 200, 200, R, tint, seed)
+  return ops
+}
+
+function swirl(tint = TINT, seed = SEED) {
+  const { ctx, ops } = recordingCtx()
+  paintPortalSwirl(ctx, 200, 200, R, tint, seed)
+  return ops
+}
+
+function rim(tint = TINT) {
+  const { ctx, ops } = recordingCtx()
+  paintPortalRim(ctx, 200, 200, R, tint)
+  return ops
+}
+
+describe('Portal — der Durchgang', () => {
+  /*
+   * DER Test dieser Datei. `paintDeparturePortal` traegt denselben Satz seit es
+   * sie gibt: „Dunkler Innenraum: erst dadurch liest sich der Ring als Durchgang
+   * und nicht als Scheibe." Wer die Zuege umsortiert, bricht hier.
+   */
+  it('malt in der Reihenfolge, die die Bedeutung traegt', () => {
+    const ops = maw()
+    const pool = at(ops, 'rgba(6, 5, 4, 0.62)')
+    const crown = at(ops, `ellipse(0,0,${Math.round(R * FIRMAMENT_PORTAL_CROWN_SPAN * 100) / 100}`)
+    const throat = at(ops, 'rgba(3, 2, 6, 0.94)')
+
+    expect(pool).toBeGreaterThanOrEqual(0)
+    expect(crown).toBeGreaterThan(pool)
+    expect(throat).toBeGreaterThan(crown)
+  })
+
+  /*
+   * Der Schnitt zwischen Schlund und Fassung ist der Grund, warum es zwei
+   * Sprites sind: die drehenden Arme liegen DAZWISCHEN. In einem Sprite deckte
+   * der fast undurchsichtige Schlund sie zu — ein Wirbel, den man nicht sieht,
+   * ist kein Wirbel.
+   */
+  it('laesst den Ring aus dem Durchgang heraus', () => {
+    expect(maw().some((o) => o === `strokeStyle=${TINT}`)).toBe(false)
+    expect(rim().some((o) => o === `strokeStyle=${TINT}`)).toBe(true)
+  })
+
+  /*
+   * Der Schlund ist ein DURCHGANG, kein Loch. Schwarz auf dem schwarzen
+   * Sternfeld ist keine Tiefe, sondern nichts — innen leuchtet das Ziel, zum
+   * Rand hin wird die Schwelle dunkel. Genau diese Richtung wird gebunden.
+   */
+  it('laesst durch den Schlund hindurchsehen', () => {
+    const ops = maw()
+    const stops = ops
+      .filter((o) => o.startsWith('addColorStop('))
+      .map((o) => o.slice('addColorStop('.length, -1))
+    // Innen der Ton des Ziels, aussen die dunkle Schwelle.
+    const inner = stops.findIndex((s) => s.startsWith('0,rgba(168, 76, 224, 0.32)'))
+    const outer = stops.findIndex((s) => s.startsWith('1,rgba(3, 2, 6, 0.94)'))
+    expect(inner).toBeGreaterThanOrEqual(0)
+    expect(outer).toBeGreaterThan(inner)
+
+    // Und die Sterne des anderen Universums liegen GECLIPPT darin — sonst
+    // saessen sie auf dem Ring statt dahinter.
+    expect(count(ops, 'clip')).toBe(1)
+    const clipAt = ops.indexOf('clip()')
+    const farStars = ops.filter(
+      (o, i) => i > clipAt && o.startsWith('fillStyle=rgba(236, 243, 255,'),
+    )
+    expect(farStars).toHaveLength(FIRMAMENT_PORTAL_FAR_STARS)
+  })
+
+  it('gibt der Krone eine Luecke und streicht sie zweimal', () => {
+    const ops = maw()
+    const crownRx = Math.round(R * FIRMAMENT_PORTAL_CROWN_SPAN * 100) / 100
+    const arcs = ops.filter((o) => o.startsWith(`ellipse(0,0,${crownRx},`))
+    // Zwei Boegen, zweimal gestrichen — ein geschlossener Ring laese sich als
+    // Planetenring.
+    expect(arcs).toHaveLength(4)
+    for (const a of arcs) {
+      const nums = a
+        .slice(a.indexOf('(') + 1, -1)
+        .split(',')
+        .map(Number)
+      const sweep = nums[6] - nums[5]
+      expect(sweep).toBeLessThan(Math.PI)
+      expect(sweep).toBeGreaterThan(0)
+    }
+    // Erst dunkel und breiter, dann der Ton: ohne die Unterlage verschwindet die
+    // duenne Linie ueber dem Sternfeld.
+    expect(at(ops, 'strokeStyle=rgba(6, 5, 4, 0.7)')).toBeLessThan(
+      ops.findIndex((o) => o === `strokeStyle=rgba(168, 76, 224, 0.85)`),
+    )
+  })
+
+  /* `shadowBlur` ist erlaubt, WEIL er gebacken wird. Bliebe er stehen, truege
+     ihn jeder folgende Zug mit — und irgendwann einer in einer Animation. */
+  it('setzt shadowBlur und nimmt ihn wieder zurueck', () => {
+    const ops = rim()
+    const on = ops.findIndex((o) => o.startsWith('shadowBlur=') && o !== 'shadowBlur=0')
+    const off = ops.indexOf('shadowBlur=0')
+    expect(on).toBeGreaterThanOrEqual(0)
+    expect(off).toBeGreaterThan(on)
+  })
+
+  it('traegt Schwellensaum, Kernfunke und die zwei Ankerfunken', () => {
+    const ops = rim()
+    expect(at(ops, 'strokeStyle=rgba(168, 76, 224, 0.5)')).toBeGreaterThanOrEqual(0)
+    expect(at(ops, 'fillStyle=rgba(168, 76, 224, 0.9)')).toBeGreaterThanOrEqual(0)
+    expect(ops.filter((o) => o === 'fillStyle=rgba(255, 244, 200, 0.9)')).toHaveLength(2)
+  })
+
+  /* Der Saum sitzt knapp INNEN am Ring. Bei einem halben Radius war er ein
+     zweiter Ring in der Mitte und machte aus dem Durchgang eine Zielscheibe. */
+  it('legt den Schwellensaum an die Kante, nicht in die Mitte', () => {
+    expect(FIRMAMENT_PORTAL_PHOTON_R).toBeGreaterThan(0.8)
+    expect(FIRMAMENT_PORTAL_PHOTON_R).toBeLessThan(1)
+  })
+
+  it('aendert mit dem Ton die FARBE, nicht die Form', () => {
+    const a = maw('#a84ce0')
+    const b = maw('#4fa85e')
+    expect(a.filter((o) => !isInk(o))).toEqual(b.filter((o) => !isInk(o)))
+    expect(a.filter(isInk)).not.toEqual(b.filter(isInk))
+  })
+
+  it('ist bei gleichen Argumenten byte-gleich — kein Math.random()', () => {
+    expect(maw()).toEqual(maw())
+    expect(swirl()).toEqual(swirl())
+  })
+})
+
+describe('Portal — die drehende Ebene', () => {
+  /*
+   * DER Fehler, den diese Datei fangen soll: eine rotationssymmetrische Ebene im
+   * drehenden Sprite dreht sichtbar NICHT und kostet trotzdem eine
+   * Compositor-Ebene. Ein Vollkreis auf der Sprite-Mitte ist genau das.
+   */
+  it('traegt nichts Rotationssymmetrisches', () => {
+    const ops = swirl()
+    for (const op of ops) {
+      if (!op.startsWith('arc(') && !op.startsWith('ellipse(')) continue
+      const nums = op
+        .slice(op.indexOf('(') + 1, -1)
+        .split(',')
+        .map(Number)
+      const onCentre = Math.abs(nums[0]) < 0.01 && Math.abs(nums[1]) < 0.01
+      const full =
+        Math.abs((op.startsWith('arc(') ? nums[4] - nums[3] : nums[6] - nums[5]) - Math.PI * 2) <
+        0.01
+      expect(onCentre && full, op).toBe(false)
+    }
+  })
+
+  it('malt jeden Arm als auslaufende Kurve, nicht als Speiche', () => {
+    const ops = swirl()
+    expect(count(ops, 'quadraticCurveTo')).toBe(FIRMAMENT_PORTAL_ARMS)
+    expect(count(ops, 'createLinearGradient')).toBe(FIRMAMENT_PORTAL_ARMS)
+    // Beide Enden transparent — sonst hat der Arm eine harte Kante.
+    const stops = ops.filter((o) => o.startsWith('addColorStop('))
+    expect(stops.filter((o) => o.includes(', 0)')).length).toBeGreaterThanOrEqual(
+      FIRMAMENT_PORTAL_ARMS * 2,
+    )
+  })
+
+  it('setzt die Motes, die die Drehung ablesbar machen', () => {
+    expect(count(swirl(), 'arc')).toBe(FIRMAMENT_PORTAL_MOTES)
+  })
+
+  it('aendert mit dem Seed die Arme, nicht den Ring', () => {
+    expect(swirl(TINT, 1)).not.toEqual(swirl(TINT, 2))
+    // Ring, Schwellensaum und Kernfunke gehoeren dem stehenden Sprite und
+    // haengen nicht am Seed — nur Kronenneigung und Fernsterne tun das.
+    for (const fixed of [
+      `strokeStyle=${TINT}`,
+      'strokeStyle=rgba(168, 76, 224, 0.5)',
+      'fillStyle=rgba(168, 76, 224, 0.9)',
+    ]) {
+      expect(maw(TINT, 1).filter((o) => o === fixed)).toEqual(
+        maw(TINT, 2).filter((o) => o === fixed),
+      )
+    }
+  })
+})
+
+describe('Portal — Halo und Spur', () => {
+  it('legt den Gipfel des Halos auf den Ring, nicht in die Mitte', () => {
+    const { ctx, ops } = recordingCtx()
+    const outer = 200
+    paintPortalHalo(ctx, outer, outer, outer, R, TINT)
+    const stops = ops
+      .filter((o) => o.startsWith('addColorStop('))
+      .map((o) => Number(o.slice(13, o.indexOf(','))))
+    const peak = R / outer
+    expect(stops).toContain(0)
+    expect(stops.some((s) => Math.abs(s - peak) < 0.001)).toBe(true)
+    expect(stops[stops.length - 1]).toBe(1)
+  })
+
+  it('faechert die Spur auf und laesst sie ausblenden', () => {
+    const { ctx, ops } = recordingCtx()
+    paintPortalTrail(ctx, 20, R, TINT, SEED)
+    expect(count(ops, 'quadraticCurveTo')).toBe(FIRMAMENT_PORTAL_TRAIL_STRANDS)
+    // STEHENDES Muster: ein laufender Offset waere eine Frame-Schleife.
+    expect(count(ops, 'setLineDash')).toBe(1)
+    const stops = ops.filter((o) => o.startsWith('addColorStop('))
+    expect(stops[stops.length - 1]).toContain(', 0)')
+  })
+})
+
+describe('Portal — Schluessel und Kante', () => {
+  it('trennt Ebene, Seed, Ton, Groesse und Pixeldichte', () => {
+    expect(portalSpriteKey('maw', 3, '#a84ce0', 260, 2)).toBe('maw|3|#a84ce0|260|2')
+    const keys = new Set([
+      portalSpriteKey('maw', 3, '#a84ce0', 260, 2),
+      portalSpriteKey('swirl', 3, '#a84ce0', 260, 2),
+      portalSpriteKey('halo', 3, '#a84ce0', 260, 2),
+      portalSpriteKey('maw', 4, '#a84ce0', 260, 2),
+      portalSpriteKey('maw', 3, '#4fa85e', 260, 2),
+      portalSpriteKey('maw', 3, '#a84ce0', 300, 2),
+      portalSpriteKey('maw', 3, '#a84ce0', 260, 1),
+    ])
+    expect(keys.size).toBe(7)
+  })
+
+  it('nennt keine Zoomstufe im Schluessel', () => {
+    // Sonst malte das Portal bei jedem Zoomschritt neu — es steht aber fest.
+    expect(portalSpriteKey('maw', 3, '#a84ce0', 260, 2)).not.toContain('1.6')
+  })
+
+  /* Drei Kanten, weil die drei Ebenen verschieden weit reichen: das stehende
+     Sprite muss den Schattenteich fassen, das drehende nur die Arme — ein
+     gemeinsamer Wert schnitte entweder den Teich ab oder draehte leere Flaeche
+     mit. Der Halo reicht am weitesten. */
+  it('gibt jeder Ebene die Kante, die sie braucht', () => {
+    expect(portalSpriteSpan('halo', 260)).toBe(Math.round(260 * FIRMAMENT_PORTAL_AURA_SPAN))
+    expect(portalSpriteSpan('maw', 260)).toBe(Math.round(260 * FIRMAMENT_PORTAL_SPRITE_SPAN))
+    expect(portalSpriteSpan('swirl', 260)).toBe(Math.round(260 * FIRMAMENT_PORTAL_SWIRL_SPAN))
+
+    expect(portalSpriteSpan('halo', 260)).toBeGreaterThan(portalSpriteSpan('maw', 260))
+    expect(portalSpriteSpan('maw', 260)).toBeGreaterThan(portalSpriteSpan('swirl', 260))
+    // Der Teich ist die bindende Zone des stehenden Sprites.
+    expect(FIRMAMENT_PORTAL_SPRITE_SPAN).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_POOL_SPAN)
+  })
+
+  /* Was uebersteht, wandert als abgeschnittene Ecke durchs Bild — und man sieht
+     es erst nach einer halben Umdrehung. Gemessen wird ab dem `translate`, denn
+     danach ist (0,0) die Sprite-Mitte. */
+  it('haelt jeden Zug innerhalb der Sprite-Kante', () => {
+    for (const [ops, span] of [
+      [maw(), portalSpriteSpan('maw', R * 2)],
+      [swirl(), portalSpriteSpan('swirl', R * 2)],
+    ] as const) {
+      const half = span / 2
+      for (const op of ops) {
+        if (!op.startsWith('arc(') && !op.startsWith('ellipse(')) continue
+        const n = op
+          .slice(op.indexOf('(') + 1, -1)
+          .split(',')
+          .map(Number)
+        const rr = op.startsWith('ellipse(') ? Math.max(n[2], n[3]) : n[2]
+        expect(Math.hypot(n[0], n[1]) + rr, op).toBeLessThanOrEqual(half + 0.01)
+      }
+    }
+  })
+})

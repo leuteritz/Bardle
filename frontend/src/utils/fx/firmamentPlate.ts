@@ -7,7 +7,7 @@
    - `paintFirmamentWeb` — das Filamentgewebe des Walls, um den Mittelpunkt des
      Kontexts. Ein eigenes, quadratisches Sprite, das das CSS am Compositor
      dreht.
-   - `paintFirmament` — Bahn, Ringe, Tore, Koerper. DAS ist das Standbild: es
+   - `paintFirmament` — Bahn, Ringe, Koerper. DAS ist das Standbild: es
      malt genau dann, wenn Bestand, Groesse, Pixeldichte oder Zoomstufe sich
      geaendert haben, und es malt TRANSPARENT ueber die beiden anderen.
 
@@ -28,7 +28,6 @@ import { seededRng, minimapAccentForTheme } from '@/components/bottom/minimap/mi
 import { jitter } from '@/utils/fx/universeDisc'
 import {
   FIRMAMENT_FREED_COLOR,
-  FIRMAMENT_GATE_COLOR,
   FIRMAMENT_HERE_COLOR,
   FIRMAMENT_LANDFALL_COLOR,
   FIRMAMENT_LANDFALL_MAX_MARKS,
@@ -74,7 +73,7 @@ import {
   FIRMAMENT_UNLIT_COLOR,
 } from '@/config/constants'
 import { hexToRgb } from '@/utils/ui/format'
-import type { FirmamentDeparture, FirmamentFitBox, FirmamentNode } from '@/utils/ui/firmamentLayout'
+import type { FirmamentFitBox, FirmamentNode } from '@/utils/ui/firmamentLayout'
 
 /** Seed des Sternfelds. FEST, nie eine Zufallszahl — sonst saehe der Grund nach
  *  jedem Repaint anders aus. Er gehoert `paintFirmamentGround`. */
@@ -489,28 +488,10 @@ function paintRoad(
    Stelle waeren eine doppelte Aussage. Die Bahn setzt weiter an `box.cx/cy` an
    und endet damit im Kern der Scheibe. */
 
-/** Das Tor am Ende der Bahn: zwei Boegen quer zu ihr, dazwischen die Ziffer.
- *  Hoechstens EINES — dorthin ging der Weg weiter. */
-function paintDeparture(
-  ctx: CanvasRenderingContext2D,
-  departure: FirmamentDeparture,
-  box: FirmamentFitBox,
-  k: number,
-): void {
-  const p = firmamentScreenPos(box, departure.nx, departure.ny)
-  const span = 9 * k
-  ctx.save()
-  ctx.translate(p.x, p.y)
-  ctx.rotate(departure.angle)
-  ctx.strokeStyle = fade(FIRMAMENT_GATE_COLOR, 0.85)
-  ctx.lineWidth = 1.6 * k
-  for (const side of [-1, 1]) {
-    ctx.beginPath()
-    ctx.arc(0, 0, span, side * 0.5 - Math.PI / 2, side * 0.5 + Math.PI / 2, side < 0)
-    ctx.stroke()
-  }
-  ctx.restore()
-}
+/* Das Tor malt die Platte NICHT mehr. Der Ausgang eines Universums steht als
+   grosses Portal im schwarzen Raum ausserhalb der Scheibe (`portalSprite.ts`) —
+   auf der Bahn war er ein 22-px-Chip fuer das groesste Ereignis, das ein
+   Spielstand kennt. */
 
 /** `rgb(...)` mit Deckkraft — die Themenfarbe kommt als `rgb()`, nicht als Hex. */
 function tone(color: string, alpha: number): string {
@@ -661,7 +642,6 @@ function paintNode(
 export function paintFirmament(
   ctx: CanvasRenderingContext2D,
   nodes: readonly FirmamentNode[],
-  departure: FirmamentDeparture | null,
   w: number,
   h: number,
   box: FirmamentFitBox,
@@ -672,6 +652,5 @@ export function paintFirmament(
   ctx.clearRect(0, 0, w, h)
   paintRimRings(ctx, box, k, tint)
   paintRoad(ctx, nodes, box, k)
-  if (departure) paintDeparture(ctx, departure, box, k)
   for (const node of nodes) paintNode(ctx, node, box, k)
 }

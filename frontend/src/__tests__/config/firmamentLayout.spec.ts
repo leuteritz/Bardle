@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
   BOTTOM_BAR_SIDE_W,
   FIRMAMENT_CREST_BAND_H,
@@ -7,6 +9,7 @@ import {
   FIRMAMENT_NODE_HIT_MIN,
   FIRMAMENT_PATH_MIN_SPAN,
   FIRMAMENT_PLATE_REF_R,
+  FIRMAMENT_PORTAL_RING_MIN_PX,
   FIRMAMENT_RAIL_AUTOFOLD_W,
   FIRMAMENT_RAIL_FOLDED_W,
   FIRMAMENT_RAIL_W,
@@ -39,6 +42,7 @@ import {
 } from '@/config/constants'
 import { universes } from '@/config/progression/universes'
 import { firmamentFitBox, firmamentPointAt, firmamentSpiralTurns } from '@/utils/ui/firmamentLayout'
+import { firmamentPortalRingR } from '@/utils/ui/firmamentPortalSpot'
 import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
 
 /**
@@ -490,6 +494,60 @@ describe('Firmament — die Bahn dreht mit der Wolke', () => {
       expect(secondsToLeave, `${vw}x${vh}`).toBeLessThan(4)
       // Und sie kriecht auch nicht: unter 0,5 px/s saehe niemand die Drehung.
       expect(edgePxPerSec, `${vw}x${vh}`).toBeGreaterThan(0.5)
+    }
+  })
+})
+
+/**
+ * Das Abflugportal steht im schwarzen Raum ausserhalb der Scheibe. Zwei Dinge
+ * daran gehoeren gebunden, weil man beide im Code nicht sieht: dass es auf jeder
+ * Zielaufloesung eine brauchbare Groesse bekommt, und dass es keine
+ * Frame-Schleife mitbringt.
+ */
+describe('Firmament — das Abflugportal', () => {
+  /* Gemessen wie `CONTENT_HEIGHT`: wer `_RING_H_RATIO` anfasst, sieht hier
+     sofort, was er allen vier Aufloesungen antut. */
+  it('haelt die Ringgroesse je Zielaufloesung', () => {
+    const table: Array<[string, number, number]> = [
+      ['Full HD', 1080, 131],
+      ['WUXGA', 1200, 150],
+      ['2K', 1440, 184],
+      ['4K', 2160, 260],
+    ]
+    for (const [name, vh, want] of table) {
+      const r = firmamentPortalRingR(zones(vh === 2160 ? 3840 : vh === 1440 ? 2560 : 1920, vh).stageH)
+      expect(Math.round(r), name).toBe(want)
+    }
+  })
+
+  /* WUXGA ist der ENGE Fall, nicht Full HD: gleiche Breite, 100 px mehr Hoehe —
+     die Bahn waechst mit der Hoehe, und das schwarze Seitenband schrumpft von
+     186 auf 135 px. Wer das naechste Mal gegen Full HD rechnet, sieht es hier. */
+  it('nennt WUXGA als den engen Fall', () => {
+    const band = (vw: number, vh: number) => {
+      const z = zones(vw, vh)
+      return (z.stageW - firmamentFitBox(z.stageW, z.stageH, FIRMAMENT_MAP_INSET_PX).r * 2) / 2
+    }
+    expect(band(1920, 1200)).toBeLessThan(band(1920, 1080))
+    expect(band(1920, 1200)).toBeGreaterThan(FIRMAMENT_PORTAL_RING_MIN_PX / 2)
+  })
+
+  /* Der Reiter steht auf Grundlast: bewegt wird per CSS an fertigen Sprites,
+     nie in einer Schleife. Das faengt genau den Rueckfall, der hier naheliegt —
+     ein „nur ganz kurz" pulsendes `box-shadow` oder ein rAF fuer den Wirbel. */
+  it('bringt keine Frame-Schleife und keine verbotene Animation mit', () => {
+    const src = readFileSync(
+      resolve(__dirname, '../../components/bardProfil/firmament/FirmamentPortal.vue'),
+      'utf8',
+    )
+    for (const forbidden of ['requestAnimationFrame', 'setInterval', 'setTimeout', 'Date.now']) {
+      expect(src.includes(forbidden), forbidden).toBe(false)
+    }
+    // Jeder Keyframe bewegt ausschliesslich `transform` oder `opacity`.
+    for (const body of src.matchAll(/@keyframes[^{]+\{([\s\S]*?)\n\}/g)) {
+      const props = [...body[1].matchAll(/^\s{4}([a-z-]+):/gm)].map((m) => m[1])
+      expect(props.length).toBeGreaterThan(0)
+      for (const p of props) expect(['transform', 'opacity'], `${p} im Keyframe`).toContain(p)
     }
   })
 })

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { paintFirmament, paintFirmamentGround, paintFirmamentWeb } from '@/utils/fx/firmamentPlate'
 import {
+  FIRMAMENT_GATE_COLOR,
   FIRMAMENT_NODE_R_BASE,
   FIRMAMENT_NODE_R_PER_STAR,
   FIRMAMENT_PLATE_REF_R,
@@ -15,7 +16,8 @@ import {
   FIRMAMENT_WEB_OUTER,
 } from '@/config/constants'
 import { firmamentPointAt } from '@/utils/ui/firmamentLayout'
-import type { FirmamentDeparture, FirmamentNode } from '@/utils/ui/firmamentLayout'
+import { hexToRgb } from '@/utils/ui/format'
+import type { FirmamentNode } from '@/utils/ui/firmamentLayout'
 
 /**
  * Der Schnitt der Firmament-Karte in drei Zuege — und warum er gebunden gehoert.
@@ -116,14 +118,6 @@ const NODES: FirmamentNode[] = [
   nodeAt(2, 4, 'current'),
   nodeAt(3, 4, 'unlit'),
 ]
-
-const DEPARTURE = {
-  toUniverse: 2,
-  visits: 1,
-  nx: NODES[1].nx,
-  ny: NODES[1].ny,
-  angle: 0,
-} as FirmamentDeparture
 
 const count = (ops: string[], name: string) => ops.filter((o) => o.startsWith(`${name}(`)).length
 
@@ -266,14 +260,14 @@ describe('Firmament-Platte — die Karte liegt DARUEBER', () => {
     // DER Fehler, den diese Spec fangen soll: ein `fillRect` ueber die volle
     // Buehne legte sich ueber Wall und Heldenscheibe, und beide waeren weg.
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(ctx, NODES, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(count(ops, 'fillRect')).toBe(0)
     expect(ops[0]).toBe(`clearRect(0,0,${PLATE_SIDE},${PLATE_SIDE})`)
   })
 
   it('malt kein zweites Sternfeld', () => {
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(ctx, NODES, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     // Das Sternfeld waeren hunderte Marken; die Karte hat nur ihre Koerper.
     // Gezaehlt werden ZUEGE, nicht Zeilen — die Stilzeilen tragen keine Marke.
     expect(count(ops, 'fill') + count(ops, 'stroke')).toBeLessThan(60)
@@ -281,7 +275,7 @@ describe('Firmament-Platte — die Karte liegt DARUEBER', () => {
 
   it('behaelt die zwei geschlossenen Wallringe', () => {
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(ctx, NODES, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(ops.some((o) => o.startsWith(`arc(0,0,${Math.round(BOX.r * 0.985 * 100) / 100}`))).toBe(
       true,
     )
@@ -292,7 +286,7 @@ describe('Firmament-Platte — die Karte liegt DARUEBER', () => {
     // dritte sogar in ihrem Glutring — ein Leuchten auf einem Leuchten ist kein
     // Leuchten. Der Teich steht VOR Schein und Kern.
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(ctx, NODES, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     const pools = ops.filter((o) => o === 'addColorStop(0,rgba(6, 5, 4, 0.72))')
     const lit = NODES.filter((n) => n.state !== 'unlit').length
     expect(pools.length).toBe(lit)
@@ -302,8 +296,19 @@ describe('Firmament-Platte — die Karte liegt DARUEBER', () => {
     // Er ist entfallen: die Heldenscheibe bringt mit ihrem Kern denselben Ort
     // mit, und zwei Sonnen an derselben Stelle waeren eine doppelte Aussage.
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(ctx, NODES, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(ops).not.toContain('addColorStop(0,rgba(255, 246, 214, 0.95))')
+  })
+
+  /* Der Ausgang eines Universums steht als grosses Portal im schwarzen Raum
+     ausserhalb der Scheibe. Auf der Bahn war er ein 22-px-Chip fuer das
+     groesste Ereignis, das ein Spielstand kennt — er darf nicht unbemerkt
+     zurueckkehren, und die Torfarbe ist der Beleg. */
+  it('malt kein Tor mehr auf die Bahn', () => {
+    const { ctx, ops } = recordingCtx()
+    paintFirmament(ctx, NODES, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    const gate = hexToRgb(FIRMAMENT_GATE_COLOR).join(', ')
+    expect(ops.some((o) => o.includes(gate))).toBe(false)
   })
 })
 
@@ -344,13 +349,13 @@ describe('Firmament-Platte — die Knoten', () => {
     // nicht falsch aus, nur auf der Karte. Auch der unbeleuchtete traegt die
     // Form: ein gestrichelter Kreis waere die einzige runde Marke.
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(ctx, NODES, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(count(ops, 'ellipse')).toBe(NODES.length)
   })
 
   it('sagt den Sternstand mit EINEM Bogen je Knoten, nicht mit sieben Pips', () => {
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(ctx, NODES, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     const arcs = starArcs(ops, 6, K)
     // Zwei voll befreite Knoten plus die laufende Galaxie — drei Boegen, nicht
     // dreimal drei Punkte.
@@ -366,7 +371,7 @@ describe('Firmament-Platte — die Knoten', () => {
   it('haengt Verlorenes ROT an, statt es dazuzurechnen', () => {
     const node = { ...nodeAt(0, 2, 'freed'), stars: 4, rescued: 2, lost: 1 }
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, [node], null, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(ctx, [node], PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     const arcs = starArcs(ops, node.bodyR, K)
     expect(arcs).toHaveLength(2)
     // Gedaempftes Gold, damit sechsundzwanzig Ringe keine Medaillen werden —
@@ -385,7 +390,7 @@ describe('Firmament-Platte — die Knoten', () => {
     // also genau den Aufkleber, der verschwinden soll.
     const node = { ...nodeAt(0, 2, 'freed'), stars: 5, rescued: 1, lost: 0 }
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, [node], null, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(ctx, [node], PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(starArcs(ops, node.bodyR, K)).toHaveLength(1)
   })
 
@@ -394,8 +399,8 @@ describe('Firmament-Platte — die Knoten', () => {
     // sonst saehe die Karte nach jedem Repaint anders aus.
     const a = recordingCtx()
     const b = recordingCtx()
-    paintFirmament(a.ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
-    paintFirmament(b.ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(a.ctx, NODES, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(b.ctx, NODES, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(a.ops).toEqual(b.ops)
   })
 })
@@ -473,7 +478,7 @@ describe('Firmament-Platte — die Sprite-Kante', () => {
     // als abgeschnittener Rand durchs Bild — und das sieht man erst nach einer
     // halben Umdrehung.
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, WORST, null, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(ctx, WORST, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(maxReach(ops, BOX)).toBeLessThanOrEqual(BOX.r * FIRMAMENT_PLATE_SPRITE_MARGIN)
   })
 

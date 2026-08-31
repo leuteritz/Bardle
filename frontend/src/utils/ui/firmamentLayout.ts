@@ -9,8 +9,9 @@
  * EINE Bahn je Universum. Die Galaxienkette selbst laeuft ueber das Prestige
  * hinweg durch (`executePrestigeReset` fasst `completedGalaxies` nicht an) —
  * geschnitten wird sie erst hier, am Feld `record.universe`. Jede Bahn beginnt
- * wieder bei Start; wo ein Universum endete, steht ein Tor hinter seiner letzten
- * Galaxie.
+ * wieder bei Start; wo ein Universum endete, steht ein Portal — aber nicht auf
+ * der Bahn, sondern im schwarzen Raum ausserhalb der Scheibe
+ * (`firmamentPortalSpot`). Diese Datei sagt nur, DASS es eines gibt.
  *
  * Der Nenner ist dabei fuer ALLE Bahnen derselbe: der Knotenabstand bleibt
  * ueber einen Universumswechsel hinweg gleich, und wer weiter kam, kommt weiter
@@ -61,16 +62,19 @@ export interface FirmamentNode {
   record: CompletedGalaxyRecord | null
 }
 
-/** Wo ein Universum endete — EIN Tor am Ende seiner Bahn, kein Zwischenstop. */
+/**
+ * Wo ein Universum endete — hoechstens EINES je Bahn.
+ *
+ * Ohne Lage: der Ausgang steht als grosses Portal im schwarzen Raum ausserhalb
+ * der Scheibe, und dessen Stelle rechnet `firmamentPortalSpot` aus den
+ * Buehnenmassen. Die Bahn sagt nur noch, DASS es einen gibt und wohin er fuehrt.
+ */
 export interface FirmamentDeparture {
   /** Das Universum, in das es weiterging. */
   toUniverse: number
   /** Wie oft dieses Universum betreten wurde — die Bahn traegt alle Besuche. */
   visits: number
   run: UniverseRunRecord
-  nx: number
-  ny: number
-  angle: number
 }
 
 export interface FirmamentPath {
@@ -158,7 +162,8 @@ function runsOfUniverse(runs: readonly UniverseRunRecord[], universe: number): U
   return runs.filter((r) => r.universe === universe).sort((a, b) => a.completedAt - b.completedAt)
 }
 
-/** Plaetze, die eine Bahn belegt — Knoten plus, falls vorhanden, ihr Tor. */
+/** Plaetze, die eine Bahn auf der Spirale belegt. Nur Knoten — das Portal steht
+ *  nicht darauf und braucht deshalb auch keinen reservierten Platz. */
 function slotsOf(input: FirmamentInput, universe: number): number {
   let n = 0
   let hasCurrent = false
@@ -171,9 +176,7 @@ function slotsOf(input: FirmamentInput, universe: number): number {
     if (!hasCurrent) n++
     return n + FIRMAMENT_UNLIT_AHEAD
   }
-  // Das Tor zaehlt mit, sonst saesse ausgerechnet das der laengsten Bahn auf
-  // ihrem letzten Knoten.
-  return n && runsOfUniverse(input.runs, universe).length ? n + 1 : n
+  return n
 }
 
 /** Der gemeinsame Nenner: die laengste Bahn ueber alle Universen. */
@@ -267,7 +270,7 @@ export function buildFirmamentPath(input: FirmamentInput): FirmamentPath {
     }
   })
 
-  return { nodes, departure: buildDeparture(input, nodes.length, at) }
+  return { nodes, departure: buildDeparture(input, nodes.length) }
 }
 
 /**
@@ -281,12 +284,8 @@ export function buildFirmamentPath(input: FirmamentInput): FirmamentPath {
  * Kein Tor bekommt, wer keinen Lauf mehr im Archiv hat — `UNIVERSE_RUN_HISTORY_LIMIT`
  * schiebt alte hinaus. Dort ist die Auskunft verloren, nicht falsch.
  */
-function buildDeparture(
-  input: FirmamentInput,
-  slot: number,
-  at: (i: number) => { nx: number; ny: number; angle: number },
-): FirmamentDeparture | null {
-  if (input.universe === input.currentUniverse || slot === 0) return null
+function buildDeparture(input: FirmamentInput, nodeCount: number): FirmamentDeparture | null {
+  if (input.universe === input.currentUniverse || nodeCount === 0) return null
   const mine = runsOfUniverse(input.runs, input.universe)
   if (!mine.length) return null
 
@@ -294,13 +293,9 @@ function buildDeparture(
   const later = input.runs
     .filter((r) => r.completedAt > run.completedAt)
     .sort((a, b) => a.completedAt - b.completedAt)
-  const p = at(slot)
   return {
     toUniverse: later.length ? later[0].universe : input.currentUniverse,
     visits: mine.length,
     run,
-    nx: p.nx,
-    ny: p.ny,
-    angle: p.angle,
   }
 }

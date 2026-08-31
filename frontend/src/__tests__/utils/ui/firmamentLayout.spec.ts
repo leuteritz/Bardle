@@ -154,7 +154,9 @@ describe('buildFirmamentPath — die Bahn eines Universums', () => {
 
   it('ordnet nach Galaxienummer, nicht nach Zeitstempel', () => {
     const archive = [rec(9, 1, 10), rec(2, 1, 999), rec(5, 1, 500)]
-    expect(buildFirmamentPath(base(archive, 1, 5, 20)).nodes.map((n) => n.galaxy)).toEqual([2, 5, 9])
+    expect(buildFirmamentPath(base(archive, 1, 5, 20)).nodes.map((n) => n.galaxy)).toEqual([
+      2, 5, 9,
+    ])
   })
 
   it('zaehlt gerettete und verlorene Sterne getrennt', () => {
@@ -189,7 +191,8 @@ describe('buildFirmamentPath — der gemeinsame Massstab', () => {
   it('haelt den Knotenabstand ueber einen Universumswechsel hinweg gleich', () => {
     const a = buildFirmamentPath(base(ARCHIVE, 1, 5, 6, RUNS)).nodes
     const b = buildFirmamentPath(base(ARCHIVE, 2, 5, 6, RUNS)).nodes
-    const step = (n: (typeof a)[number], m: (typeof a)[number]) => Math.hypot(n.nx - m.nx, n.ny - m.ny)
+    const step = (n: (typeof a)[number], m: (typeof a)[number]) =>
+      Math.hypot(n.nx - m.nx, n.ny - m.ny)
     expect(step(a[0], a[1])).toBeCloseTo(step(b[0], b[1]), 10)
   })
 
@@ -216,13 +219,16 @@ describe('buildFirmamentPath — das Tor am Bahnende', () => {
     expect(buildFirmamentPath(base(ARCHIVE, 2, 5, 6, RUNS)).departure?.toUniverse).toBe(5)
   })
 
-  it('sitzt HINTER dem letzten Knoten, nicht auf ihm', () => {
-    const path = buildFirmamentPath(base(ARCHIVE, 1, 5, 6, RUNS))
-    const last = path.nodes[path.nodes.length - 1]
-    expect(path.departure!.nx).not.toBeCloseTo(last.nx, 6)
-    expect(Math.hypot(path.departure!.nx, path.departure!.ny)).toBeGreaterThan(
-      Math.hypot(last.nx, last.ny),
-    )
+  /* Das Tor traegt KEINE Lage mehr: der Ausgang steht als Portal im schwarzen
+     Raum ausserhalb der Scheibe, und wo genau, rechnet `firmamentPortalSpot`
+     aus den Buehnenmassen. Diese Datei sagt nur, DASS es eines gibt. */
+  it('nimmt der Bahn keinen Spiralplatz weg', () => {
+    const withGate = buildFirmamentPath(base(ARCHIVE, 1, 5, 6, RUNS))
+    const withoutGate = buildFirmamentPath(base(ARCHIVE, 1, 5, 6, []))
+    expect(withGate.departure).not.toBeNull()
+    expect(withoutGate.departure).toBeNull()
+    // Dieselben Knoten an denselben Stellen — das Portal steht nicht auf der Bahn.
+    expect(withGate.nodes).toEqual(withoutGate.nodes)
   })
 
   /* Ein Universum kann mehrfach besucht werden — die Bahn traegt alle Besuche,
