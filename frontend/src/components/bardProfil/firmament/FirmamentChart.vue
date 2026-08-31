@@ -40,7 +40,11 @@ import { getUniverse } from '@/config/progression/universes'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
-import { firmamentPortalLabelSpot, firmamentPortalSpot } from '@/utils/ui/firmamentPortalSpot'
+import {
+  firmamentPortalHitBox,
+  firmamentPortalLabelSpot,
+  firmamentPortalSpot,
+} from '@/utils/ui/firmamentPortalSpot'
 import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
 import {
   firmamentScreenPos,
@@ -230,10 +234,11 @@ const viewTint = computed(
   () => getUniverse(props.selection.universe)?.tint ?? FIRMAMENT_UNLIT_COLOR,
 )
 
-/** Wo das Abflugportal steht. Es kennt weder Zoom noch Fahrt — sonst malte der
- *  Reiter bei jedem Zoomschritt ein Sprite neu, das sich nicht bewegt hat. */
+/** Wo das Abflugportal steht — in jedem Universum dieselbe Stelle. Es kennt
+ *  weder Zoom noch Fahrt, sonst malte der Reiter bei jedem Zoomschritt ein
+ *  Sprite neu, das sich nicht bewegt hat. */
 const portalSpot = computed(() =>
-  props.departure ? firmamentPortalSpot(props.selection.universe, cssW.value, cssH.value) : null,
+  props.departure ? firmamentPortalSpot(cssW.value, cssH.value) : null,
 )
 
 /** Der Ton des ZIELS, nicht der gezeigten Bahn: Wall und Wolke sprechen deren
@@ -243,21 +248,41 @@ const portalTint = computed(
   () => getUniverse(props.departure?.toUniverse ?? 0)?.tint ?? FIRMAMENT_GATE_COLOR,
 )
 
-/** Wohin das Portal fuehrt — als Schrift neben dem Ring, nicht erst im Hover.
- *  Die Seite sucht sich die Rechnung selbst; sie kennt Zoom und Fahrt genauso
- *  wenig wie die Stelle des Rings. Die Lage kommt als Versatz zur RINGMITTE,
- *  denn die ist der Bezugspunkt der Trefferflaeche, an der das Label haengt. */
+/** Wohin das Portal fuehrt — als Schrift unter dem Ring, nicht erst im Hover.
+ *  Rechtsbuendig auf derselben Linie wie Werkzeugkasten, Legende und
+ *  Auswahlkarte; sie kennt Zoom und Fahrt genauso wenig wie der Ring. */
 const portalLabel = computed(() =>
   portalSpot.value ? firmamentPortalLabelSpot(portalSpot.value, cssW.value, cssH.value) : null,
 )
 
+/** Ring UND Beschriftung als EIN Rechteck: es ist die Trefferflaeche und
+ *  zugleich der Anker der Hover-Karte, die sonst auf der Beschriftung aufginge. */
+const portalHit = computed(() =>
+  portalSpot.value && portalLabel.value
+    ? firmamentPortalHitBox(portalSpot.value, portalLabel.value, cssW.value)
+    : null,
+)
+
+const portalHitStyle = computed(() => {
+  const b = portalHit.value
+  if (!b) return undefined
+  return {
+    left: `${b.x0}px`,
+    top: `${b.y0}px`,
+    width: `${b.x1 - b.x0}px`,
+    height: `${b.y1 - b.y0}px`,
+  }
+})
+
+/* Die Lage kommt als Versatz zur ECKE der Trefferflaeche — die ist seit dem
+   Rechteck der Bezugspunkt, an dem das Label haengt. */
 const portalLabelStyle = computed(() => {
   const l = portalLabel.value
-  const s = portalSpot.value
-  if (!l || !s) return undefined
+  const b = portalHit.value
+  if (!l || !b) return undefined
   return {
-    left: `calc(50% + ${l.cx - s.x}px)`,
-    top: `calc(50% + ${l.cy - s.y}px)`,
+    left: `${l.cx - b.x0}px`,
+    top: `${l.cy - b.y0}px`,
     width: `${l.w}px`,
     height: `${l.h}px`,
     fontSize: `${l.size}px`,
@@ -665,15 +690,10 @@ const LEGEND = [
          Nur auf Zoomstufe 0 — darueber waechst die Platte ohnehin darueber und
          das Portal ist nicht mehr zu sehen; ein Knopf auf einem unsichtbaren
          Objekt waere ein Klickkreis mitten auf der Galaxie. -->
-    <RpgBadgeTooltip v-if="portalSpot && departure && zoomStep === 0" passive :accent="portalTint">
+    <RpgBadgeTooltip v-if="portalHit && departure && zoomStep === 0" passive :accent="portalTint">
       <button
         class="fm-portal-hit"
-        :style="{
-          left: `${portalSpot.x}px`,
-          top: `${portalSpot.y}px`,
-          width: `${portalSpot.r * 2}px`,
-          height: `${portalSpot.r * 2}px`,
-        }"
+        :style="portalHitStyle"
         :aria-label="`Departure portal — the road went on to ${portalTargetName}, Universe ${toRoman(departure.toUniverse)}`"
         @pointerdown.stop
         @click="pickDeparture(departure)"
@@ -682,13 +702,7 @@ const LEGEND = [
              Hover-Karte und die Hover-Pause der drehenden Ebenen mit dem Ring,
              ohne eine zweite Trefferflaeche zu sein. `aria-hidden`, weil der
              Knopf den Namen im Label schon traegt. -->
-        <span
-          v-if="portalLabel"
-          class="fm-portal-label"
-          :class="`is-${portalLabel.side}`"
-          aria-hidden="true"
-          :style="portalLabelStyle"
-        >
+        <span v-if="portalLabel" class="fm-portal-label" aria-hidden="true" :style="portalLabelStyle">
           <span class="fm-portal-eyebrow">↗ Onward to</span>
           <span class="fm-portal-name">
             {{ portalTargetName }}
@@ -889,14 +903,16 @@ const LEGEND = [
    begaenne jeder Portalklick eine Fahrt. */
 /* Zwischen der Karte und den drei Bedienflaechen (4/5): der Knopf muss ueber
    die Platte, aber unter Werkzeugleiste, Legende und Auswahlkarte. */
+/* Er ist ein RECHTECK um Ring UND Beschriftung, kein Kreis um den Ring: als
+   Kreis ging die Hover-Karte unter ihm auf — also genau auf der Beschriftung —
+   und deckte sie zu. Als ein Ziel gehoert auch die Zeile zum Portal. */
 .fm-portal-hit {
   position: absolute;
   z-index: 3;
-  transform: translate(-50%, -50%);
   padding: 0;
   background: none;
   border: none;
-  border-radius: 50%;
+  border-radius: 4px;
   cursor: pointer;
 }
 
@@ -905,9 +921,12 @@ const LEGEND = [
   outline-offset: 2px;
 }
 
-/* Die Beschriftung. Sie liegt ausserhalb des runden Knopfes und misst GENAU das
-   Kaestchen, gegen das `firmamentPortalLabelSpot` geprueft hat — Breite, Hoehe
-   und Schriftgrad kommen von dort. Alles darin haengt in `em` daran. */
+/* Die Beschriftung. Sie misst GENAU das Kaestchen, gegen das
+   `firmamentPortalLabelSpot` geprueft hat — Breite, Hoehe und Schriftgrad
+   kommen von dort. Alles darin haengt in `em` daran.
+
+   RECHTSBUENDIG, und das ist keine Geschmacksfrage: ihre rechte Kante liegt auf
+   denselben 10 px wie Werkzeugkasten, Legende und Auswahlkarte. */
 .fm-portal-label {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -916,7 +935,7 @@ const LEGEND = [
   justify-content: center;
   gap: 0.16em;
   line-height: 1.05;
-  text-align: center;
+  text-align: right;
   /* Lieber ueberstehen als umbrechen: die Hoehe des Kaestchens ist gemessen und
      steht in der Spec — eine dritte Zeile spraenge sie. Gemessen bleibt der
      laengste Fall („Runeterra Prime VIII", 9,08 em) unter der Breite. */
@@ -924,20 +943,13 @@ const LEGEND = [
   pointer-events: none;
 }
 
-/* Der Text haengt am Ring, statt von ihm wegzulaufen. */
-.fm-portal-label.is-left {
-  text-align: right;
-}
-
-.fm-portal-label.is-right {
-  text-align: left;
-}
-
 .fm-portal-eyebrow {
   font-size: 0.68em;
   letter-spacing: 0.22em;
-  /* Die Laufweite haengt rechts an — derselbe Ausgleich wie am Startwort. */
-  text-indent: 0.22em;
+  /* Die Laufweite haengt rechts an. Bei rechtsbuendigem Satz zieht `text-indent`
+     dort nichts gerade — es wirkt auf die Startkante —, und die beiden Zeilen
+     lagen um 0,22 em auseinander. Der negative Rand nimmt sie zurueck. */
+  margin-right: -0.22em;
   text-transform: uppercase;
   color: #8a8172;
   text-shadow: 0 0 8px rgba(0, 0, 0, 0.95);

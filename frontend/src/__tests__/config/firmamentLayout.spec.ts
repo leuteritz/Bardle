@@ -10,7 +10,7 @@ import {
   FIRMAMENT_PATH_MIN_SPAN,
   FIRMAMENT_PLATE_REF_R,
   FIRMAMENT_PORTAL_RING_MIN_PX,
-  FIRMAMENT_PORTAL_SHRINK_STEPS,
+  FIRMAMENT_PORTAL_DISC_CLEAR,
   FIRMAMENT_RAIL_AUTOFOLD_W,
   FIRMAMENT_RAIL_FOLDED_W,
   FIRMAMENT_RAIL_W,
@@ -509,17 +509,15 @@ describe('Firmament — das Abflugportal', () => {
   /* Gemessen wie `CONTENT_HEIGHT`: wer `_RING_H_RATIO` anfasst, sieht hier
      sofort, was er allen vier Aufloesungen antut. */
   it('haelt die Ringgroesse je Zielaufloesung', () => {
-    const table: Array<[string, number, number]> = [
-      ['Full HD', 1080, 131],
-      ['WUXGA', 1200, 150],
-      ['2K', 1440, 184],
-      ['4K', 2160, 260],
+    const table: Array<[string, number, number, number]> = [
+      ['Full HD', 1920, 1080, 131],
+      ['WUXGA', 1920, 1200, 99],
+      ['2K', 2560, 1440, 184],
+      ['4K', 3840, 2160, 260],
     ]
-    for (const [name, vh, want] of table) {
-      const r = firmamentPortalRingR(
-        zones(vh === 2160 ? 3840 : vh === 1440 ? 2560 : 1920, vh).stageH,
-      )
-      expect(Math.round(r), name).toBe(want)
+    for (const [name, vw, vh, want] of table) {
+      const z = zones(vw, vh)
+      expect(Math.round(firmamentPortalRingR(z.stageW, z.stageH)), name).toBe(want)
     }
   })
 
@@ -535,18 +533,27 @@ describe('Firmament — das Abflugportal', () => {
     expect(band(1920, 1200)).toBeGreaterThan(FIRMAMENT_PORTAL_RING_MIN_PX / 2)
   })
 
-  /* Die Leiter greift, wenn die volle Groesse nirgends jenseits der Kartenkante
-     passt. Sie muss bei der vollen Groesse beginnen und fallen — eine Stufe
-     ueber 1 vergroesserte das Portal heimlich, eine steigende Folge liesse die
-     Suche die kleinste zuerst nehmen. */
-  it('faengt die Schrumpfleiter bei voller Groesse an und laesst sie fallen', () => {
-    expect(FIRMAMENT_PORTAL_SHRINK_STEPS[0]).toBe(1)
-    for (let i = 1; i < FIRMAMENT_PORTAL_SHRINK_STEPS.length; i++) {
-      expect(FIRMAMENT_PORTAL_SHRINK_STEPS[i]).toBeLessThan(FIRMAMENT_PORTAL_SHRINK_STEPS[i - 1])
+  /* Der Ring darf die Kartenplatte nicht beruehren — sie wird UEBER ihm gemalt
+     und dunkelte seine Innenkante ab. Diesen Deckel gibt es, seit die Stelle
+     fest ist: vorher schob eine Winkelsuche das Portal irgendwohin, wo es
+     passte, und eine Schrumpfleiter aus vier Stufen fing den Rest. */
+  it('haelt den Ring aus der Kartenplatte heraus und bleibt ein Portal', () => {
+    for (const [vw, vh] of [
+      [1920, 1080],
+      [1920, 1200],
+      [2560, 1440],
+      [3840, 2160],
+    ] as const) {
+      const z = zones(vw, vh)
+      const fit = firmamentFitBox(z.stageW, z.stageH, FIRMAMENT_MAP_INSET_PX)
+      const r = firmamentPortalRingR(z.stageW, z.stageH)
+      expect(z.stageW - r - fit.cx, `${vw}x${vh}`).toBeGreaterThanOrEqual(
+        fit.r * FIRMAMENT_PORTAL_DISC_CLEAR - 0.001,
+      )
+      // Auch der gedeckelte Ring bleibt ein Portal und wird keine Marke.
+      expect(r, `${vw}x${vh}`).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
+      expect(r, `${vw}x${vh}`).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_RING_MIN_PX)
     }
-    // Auch die kleinste Stufe bleibt ein Portal und wird keine Marke.
-    const smallest = FIRMAMENT_PORTAL_RING_MIN_PX * FIRMAMENT_PORTAL_SHRINK_STEPS.at(-1)!
-    expect(smallest).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
   })
 
   /* Der Reiter steht auf Grundlast: bewegt wird per CSS an fertigen Sprites,
