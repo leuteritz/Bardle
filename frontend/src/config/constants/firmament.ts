@@ -455,21 +455,15 @@ export const FIRMAMENT_NODE_POOL_SPAN = 3.4
 
 // ── Das Abflugportal ────────────────────────────────────────────────────────
 /* Der Ausgang eines Universums steht im SCHWARZEN Raum ausserhalb der
-   Galaxienscheibe — auf der rechten Buehnenkante, in jedem Universum an
-   DERSELBEN Stelle und exakt zur Haelfte angeschnitten. Er war einmal ein
-   22x18-px-Chip am Ende der Bahn, mitten in der Wolke: der groesste Uebergang,
-   den ein Spielstand kennt, erzaehlt von einer Marke, die kleiner ist als eine
-   Galaxie. Und er stand einmal je Universum woanders — siehe
-   `firmamentPortalSpot.ts`, warum das nicht wiederkommt. */
+   Galaxienscheibe — an einer je Universum anderen Stelle, gross und
+   angeschnitten. Er war einmal ein 22x18-px-Chip am Ende der Bahn, mitten in
+   der Wolke: der groesste Uebergang, den ein Spielstand kennt, erzaehlt von
+   einer Marke, die kleiner ist als eine Galaxie. */
 
-/** Ringradius: der WUNSCH, am BUEHNENBILD gerechnet statt am schwarzen
- *  Seitenband. Das Band schwankt ueber die vier Zielaufloesungen um Faktor 4
- *  (135 bis 542 px), die Hoehe nur um 2,4 — ein Portal, das dem Band folgt,
- *  waere auf WUXGA halb so gross wie auf Full HD bei derselben Bildschirmbreite.
- *
- *  Der DECKEL kennt das Band trotzdem, denn der Ring darf die Kartenplatte
- *  nicht beruehren: `firmamentPortalRingR` klemmt den Wunsch an die Gasse.
- *  Gemessen greift das allein auf WUXGA (150 auf 99). */
+/** Ringradius, am BUEHNENBILD gerechnet statt am schwarzen Seitenband. Das Band
+ *  schwankt ueber die vier Zielaufloesungen um Faktor 4 (135 bis 542 px), die
+ *  Hoehe nur um 2,4 — ein Portal, das dem Band folgt, waere auf WUXGA halb so
+ *  gross wie auf Full HD bei derselben Bildschirmbreite. */
 export const FIRMAMENT_PORTAL_RING_H_RATIO = 0.19
 export const FIRMAMENT_PORTAL_RING_MIN_PX = 88
 export const FIRMAMENT_PORTAL_RING_MAX_PX = 260
@@ -483,12 +477,15 @@ export const FIRMAMENT_PORTAL_RING_MAX_PX = 260
  *  Portal mitten darin und wurde zur Haelfte verdeckt.
  *
  *  Und es ist die einzige dieser Kanten, die schon eine Spec verriegelt:
- *  `firmamentPlate.spec.ts` bindet, dass kein Zug sie verlaesst.
- *
- *  EINE Kante fuer das ganze Portal: Ring und Beschriftung messen gegen sie.
- *  Die Beschriftung hatte einmal eine eigene Leiter aus drei Stufen — die
- *  brauchte sie, solange sie sich ihre Seite selbst suchen musste. */
+ *  `firmamentPlate.spec.ts` bindet, dass kein Zug sie verlaesst. */
 export const FIRMAMENT_PORTAL_DISC_CLEAR = FIRMAMENT_PLATE_SPRITE_MARGIN
+
+/** Findet sich fuer die volle Groesse keine Stelle, wird der Ring KLEINER statt
+ *  das Portal zu verschwinden — ohne die Leiter faende die Winkelsuche in sieben
+ *  von fuenfzig Faellen nichts mehr, und mit dem Portal waere die Weiterreise
+ *  weg. Nachgemessen greift sie nur auf WUXGA (dem engen Fall): Full HD, 2K, 4K
+ *  und der Buehnenboden behalten ueberall die volle Groesse. */
+export const FIRMAMENT_PORTAL_SHRINK_STEPS = [1, 0.86, 0.72, 0.58] as const
 
 /** Kantenlaenge der Sprites als Vielfaches des Ringdurchmessers — DREI Werte,
  *  weil die drei Ebenen verschieden weit reichen. Das stehende Sprite muss den
@@ -503,11 +500,69 @@ export const FIRMAMENT_PORTAL_RIM_SPAN = 1.45
 export const FIRMAMENT_PORTAL_AURA_SPAN = 1.9
 
 /** Die Ebenen des stehenden Sprites, als Anteil des Ringradius. Die Reihenfolge
- *  IST die Bedeutung — Schattenteich, Krone, Schlund, Ring, Iris, Photonenkante,
- *  Kernfunke (siehe `portalSprite.ts`). */
+ *  IST die Bedeutung — Schattenteich, Mandala, Schlund, Ring, Iris,
+ *  Photonenkante, Kernfunke (siehe `portalSprite.ts`). */
 export const FIRMAMENT_PORTAL_POOL_SPAN = 1.5
-export const FIRMAMENT_PORTAL_CROWN_SPAN = 1.18
-export const FIRMAMENT_PORTAL_CROWN_GAP = 0.5
+
+/** Die FASSUNG des Portals: ein Filamentgewebe, wie es der aeussere Wall der
+ *  Karte traegt (`paintFirmamentWeb`). Sie liegt in DERSELBEN Ellipse wie der
+ *  Schlund (`_RY`) — dieselbe Neigung macht aus Kranz und Portal EIN Objekt.
+ *
+ *  Zwei Fassungen davor, und beide Gruende gelten weiter:
+ *
+ *  Eine „zersprungene Krone" (zwei Bogensegmente bei 1,18 r, auf 0,55
+ *  plattgedrueckt und gekippt) sollte kein Planetenring sein und war einer —
+ *  angeschnitten am Bildrand blieb ein LOSES Stueck davon neben dem Portal
+ *  stehen statt eines Rahmens darum.
+ *
+ *  Danach ein Astrolabium: 24 gleiche Zaehne, 8 Speichen, vier Rautenknoten auf
+ *  den Achsen. Das ging ganz herum, las sich aber als KOMPASS — und was den
+ *  Kompass macht, ist die GLEICHVERTEILUNG. Jedes Element mit N gleichen
+ *  Teilungen und Marken auf den Achsen ist ein Zifferblatt, egal wie man es
+ *  einfaerbt. Das Gewebe ist unregelmaessig by construction, und es ist die
+ *  Materie, aus der in diesem Reiter der Rand des Bekannten besteht. */
+export const FIRMAMENT_PORTAL_WEB_IN = 1.08
+export const FIRMAMENT_PORTAL_WEB_OUT = 1.26
+/** Drei Schalen wie am Wall. Zwei ergaeben eine Leiter statt Zellen. */
+export const FIRMAMENT_PORTAL_WEB_SHELLS = 3
+/** Basiszahl der Knoten je Schale; aussen stehen mehr (`0,7 + 0,5 u`), sonst
+ *  waeren die Zellen am Rand so breit wie das Band selbst. */
+export const FIRMAMENT_PORTAL_WEB_NODES = 34
+/** Wie weit ein Knoten aus seiner Schale wandern darf, als Anteil des
+ *  Schalenabstands. Ohne den Wurf laegen alle Knoten einer Schale auf einem
+ *  Kreis — und der Kreis ist genau der Kompass. */
+export const FIRMAMENT_PORTAL_WEB_JITTER = 0.45
+/** Anteil der Knoten, die eine zweite, schraege Strebe zur naechsten Schale
+ *  bekommen. Sie macht aus je zwei Vierecken drei Zellen. */
+export const FIRMAMENT_PORTAL_WEB_LINK_SHARE = 0.7
+/** Die Ranken an der innersten Schale, ein Stamm mit einer Gabelung: sie loesen
+ *  die Innenkante auf, damit das Gewebe nicht an einer Linie endet. */
+export const FIRMAMENT_PORTAL_WEB_TENDRIL_SHARE = 0.34
+export const FIRMAMENT_PORTAL_WEB_TENDRIL_FORKS = 2
+/** Lichtpunkte auf den Kreuzungen. Ohne sie ist ein Netz aus Haarlinien nur
+ *  Griess — dieselbe Begruendung wie am Wall. */
+export const FIRMAMENT_PORTAL_WEB_SPARK_SHARE = 0.26
+export const FIRMAMENT_PORTAL_WEB_SPARK_R = 0.012
+/** Deckkraft mit Gipfel in der BANDMITTE, an beiden Raendern auf null: so hat
+ *  das Gewebe weder zum Ring hin noch nach aussen eine Kante. */
+export const FIRMAMENT_PORTAL_WEB_ALPHA = 0.42
+export const FIRMAMENT_PORTAL_WEB_W_MIN = 0.006
+export const FIRMAMENT_PORTAL_WEB_W_MAX = 0.014
+
+/** Das BAND — das eine durchgehende Element, das ganz um das Portal herumgeht.
+ *
+ *  Es bleibt, weil das die Zusage war; es ist aber kein sauberer Kreis mehr.
+ *  Ein perfekter duenner Kreis um einen dicken Ring ist wieder ein Instrument,
+ *  also schwankt der Radius ueber zwei Harmonische und die Deckkraft ueber den
+ *  Umlauf. Gezeichnet wird in Segmenten, damit die Deckkraft ueberhaupt wandern
+ *  kann.
+ *
+ *  Es ist das KRAEFTIGSTE der feinen Elemente: bei 0,34 lag es im `shadowBlur`
+ *  des Rings (0,3 r, reicht bis 1,3 r) und war im Bild nicht mehr da. */
+export const FIRMAMENT_PORTAL_BAND_R = 1.15
+export const FIRMAMENT_PORTAL_BAND_SEGMENTS = 72
+export const FIRMAMENT_PORTAL_BAND_WOBBLE = 0.022
+export const FIRMAMENT_PORTAL_BAND_ALPHA = 0.62
 /** Halbachsenverhaeltnis des Schlunds. NICHT die 0,42 der kleinen Landmarke auf
  *  der Galaxiekarte: dort fliegt man hindurch, hier sieht man hinein. */
 export const FIRMAMENT_PORTAL_RY = 0.86
@@ -539,6 +594,16 @@ export const FIRMAMENT_PORTAL_PULSE_SEC = 3.6
 export const FIRMAMENT_PORTAL_PULSE_MIN = 0.45
 export const FIRMAMENT_PORTAL_HALO_REST = 0.72
 
+/** Die Suche nach der Stelle: 24 Winkel im 15-Grad-Raster. */
+export const FIRMAMENT_PORTAL_ANGLE_TRIES = 24
+/** Angeschnitten ja, verschwunden nein. ZWEI Riegel, weil einer nicht traegt:
+ *  die Ringmitte bleibt im Bild (an EINER Kante hoechstens ~46 % weg), UND der
+ *  Flaechenanteil haelt — der zweite faengt die Ecklagen, wo zwei Kanten
+ *  schneiden. */
+export const FIRMAMENT_PORTAL_EDGE_KEEP = 0.06
+export const FIRMAMENT_PORTAL_MIN_VISIBLE = 0.55
+export const FIRMAMENT_PORTAL_VIS_SAMPLES = 64
+
 /** Sperrzonen: die Bedienflaechen der Buehne, in Buehnenkoordinaten. Gemessen
  *  aus ihrem CSS — Werkzeugkasten oben links, Legende unten links (zweireihig
  *  auf dem Buehnenboden), Auswahlkarte unten rechts. */
@@ -550,8 +615,8 @@ export const FIRMAMENT_LEGEND_MAX_SHARE = 0.6
 export const FIRMAMENT_SEL_BOX_W = 400
 export const FIRMAMENT_SEL_BOX_H = 82
 
-/** Die Beschriftung am Portal: ein FESTES Kaestchen. Die Platzrechnung braucht
- *  eine Zahl statt einer gemessenen Textbreite — sonst waere sie unrein und ihr
+/** Die Beschriftung am Portal: ein FESTES Kaestchen. Die Platzsuche braucht eine
+ *  Zahl statt einer gemessenen Textbreite — sonst waere sie unrein und ihr
  *  Waechter blind. Das CSS baut genau dieses Kaestchen, also misst die Spec, was
  *  wirklich im Bild steht. Kanten in `em`, damit die Box auf 4K mitwaechst.
  *
@@ -559,11 +624,7 @@ export const FIRMAMENT_SEL_BOX_H = 82
  *  „Runeterra Prime VIII" mit 9,08 em (Augenbraue 6,12), die Hoehe zweier Zeilen
  *  1,92 em. Geschaetzte 12 em waren ein Viertel zu breit — und genau diese
  *  Breite entscheidet, ob das Kaestchen noch in die schwarze Gasse zwischen
- *  Scheibe und Bildkante passt (auf Full HD sind das 154 px).
- *
- *  `_EDGE_PAD` ist nicht nur ein Sicherheitsabstand: es sind dieselben 10 px,
- *  an denen Werkzeugkasten, Legende und Auswahlkarte haengen. Die Beschriftung
- *  steht rechtsbuendig darauf, also hat die Buehne EINE rechte Kante. */
+ *  Scheibe und Bildkante passt (auf Full HD sind das 154 px). */
 export const FIRMAMENT_PORTAL_LABEL_R_RATIO = 0.11
 export const FIRMAMENT_PORTAL_LABEL_MIN_PX = 13
 export const FIRMAMENT_PORTAL_LABEL_MAX_PX = 19
@@ -571,6 +632,26 @@ export const FIRMAMENT_PORTAL_LABEL_W_EM = 9.4
 export const FIRMAMENT_PORTAL_LABEL_H_EM = 2
 export const FIRMAMENT_PORTAL_LABEL_GAP_EM = 0.95
 export const FIRMAMENT_PORTAL_LABEL_EDGE_PAD = 10
+
+/** Wie nah die Beschriftung an die Karte darf — eine LEITER, keine Zahl.
+ *
+ *  Zuerst gilt dieselbe Kante wie fuer den Ring (die Sprite-Kante). Findet sich
+ *  dort keine Seite, rueckt sie naeher: hinter das Filamentgewebe (1,0148 — die
+ *  letzte Ebene der Karte, die Struktur traegt) und notfalls knapp hinter die
+ *  Galaxienkoerper (0,907). Schrift ist kein leuchtender Koerper: sie traegt
+ *  eine Schattenkante, und was zwischen Gewebe und Sprite-Kante liegt, ist der
+ *  deckende dunkle Reifen samt auslaufendem Schattenteich — die ruhigste
+ *  Flaeche des ganzen Reiters. Darauf steht sie BESSER als auf dem Sternfeld.
+ *
+ *  Was NICHT nachgibt, sind Bildkante und Bedienflaechen: eine Beschriftung
+ *  unter der Legende ist keine. Ohne die Leiter blieb auf Full HD fuer zwei der
+ *  zehn Universen keine Seite uebrig — das Kaestchen ist 12 em breit, und in der
+ *  Gasse zwischen Bildkante und Scheibe ist das mehr, als der Ring braucht. */
+export const FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS = [
+  FIRMAMENT_PLATE_SPRITE_MARGIN,
+  1.015,
+  0.93,
+] as const
 
 /** Deckel der Portal-Rasterflaeche je Ebene. Er greift ab 2K am Halo und ab 4K
  *  an allen — ohne ihn baute 4K ein 988er-Quadrat fuer ein Leuchten. */

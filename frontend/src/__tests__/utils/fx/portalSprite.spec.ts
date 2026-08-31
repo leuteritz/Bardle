@@ -10,7 +10,14 @@ import {
 import {
   FIRMAMENT_PORTAL_ARMS,
   FIRMAMENT_PORTAL_AURA_SPAN,
-  FIRMAMENT_PORTAL_CROWN_SPAN,
+  FIRMAMENT_PORTAL_BAND_ALPHA,
+  FIRMAMENT_PORTAL_BAND_R,
+  FIRMAMENT_PORTAL_BAND_SEGMENTS,
+  FIRMAMENT_PORTAL_BAND_WOBBLE,
+  FIRMAMENT_PORTAL_WEB_JITTER,
+  FIRMAMENT_PORTAL_WEB_OUT,
+  FIRMAMENT_PORTAL_WEB_SHELLS,
+  FIRMAMENT_PORTAL_RY,
   FIRMAMENT_PORTAL_FAR_STARS,
   FIRMAMENT_PORTAL_MOTES,
   FIRMAMENT_PORTAL_PHOTON_R,
@@ -30,7 +37,7 @@ import {
 function recordingCtx(): { ctx: CanvasRenderingContext2D; ops: string[] } {
   const ops: string[] = []
   const num = (v: number) => Math.round(v * 100) / 100
-  const rec =
+    const rec =
     (name: string) =>
     (...args: unknown[]) => {
       ops.push(
@@ -47,6 +54,8 @@ function recordingCtx(): { ctx: CanvasRenderingContext2D; ops: string[] } {
     arc: rec('arc'),
     ellipse: rec('ellipse'),
     moveTo: rec('moveTo'),
+    lineTo: rec('lineTo'),
+    closePath: rec('closePath'),
     quadraticCurveTo: rec('quadraticCurveTo'),
     fill: rec('fill'),
     stroke: rec('stroke'),
@@ -117,12 +126,14 @@ describe('Portal — der Durchgang', () => {
   it('malt in der Reihenfolge, die die Bedeutung traegt', () => {
     const ops = maw()
     const pool = at(ops, 'rgba(6, 5, 4, 0.62)')
-    const crown = at(ops, `ellipse(0,0,${Math.round(R * FIRMAMENT_PORTAL_CROWN_SPAN * 100) / 100}`)
+    // Die dunkle Unterlage des Bandes ist der einzige Zug im Schlund-Sprite mit
+    // genau diesem Ton — sie markiert die Fassung.
+    const band = at(ops, 'strokeStyle=rgba(6, 5, 4, 0.7)')
     const throat = at(ops, 'rgba(3, 2, 6, 0.94)')
 
     expect(pool).toBeGreaterThanOrEqual(0)
-    expect(crown).toBeGreaterThan(pool)
-    expect(throat).toBeGreaterThan(crown)
+    expect(band).toBeGreaterThan(pool)
+    expect(throat).toBeGreaterThan(band)
   })
 
   /*
@@ -162,27 +173,102 @@ describe('Portal — der Durchgang', () => {
     expect(farStars).toHaveLength(FIRMAMENT_PORTAL_FAR_STARS)
   })
 
-  it('gibt der Krone eine Luecke und streicht sie zweimal', () => {
-    const ops = maw()
-    const crownRx = Math.round(R * FIRMAMENT_PORTAL_CROWN_SPAN * 100) / 100
-    const arcs = ops.filter((o) => o.startsWith(`ellipse(0,0,${crownRx},`))
-    // Zwei Boegen, zweimal gestrichen — ein geschlossener Ring laese sich als
-    // Planetenring.
-    expect(arcs).toHaveLength(4)
-    for (const a of arcs) {
-      const nums = a
-        .slice(a.indexOf('(') + 1, -1)
-        .split(',')
-        .map(Number)
-      const sweep = nums[6] - nums[5]
-      expect(sweep).toBeLessThan(Math.PI)
-      expect(sweep).toBeGreaterThan(0)
-    }
-    // Erst dunkel und breiter, dann der Ton: ohne die Unterlage verschwindet die
-    // duenne Linie ueber dem Sternfeld.
-    expect(at(ops, 'strokeStyle=rgba(6, 5, 4, 0.7)')).toBeLessThan(
-      ops.findIndex((o) => o === `strokeStyle=rgba(168, 76, 224, 0.85)`),
+  /**
+   * Die Punkte des Bandes: `lineTo` gehoert im Schlund-Sprite allein ihm — die
+   * Straenge des Gewebes laufen ueber `quadraticCurveTo`.
+   */
+  function bandPoints(ops: string[]) {
+    return ops
+      .filter((o) => o.startsWith('lineTo('))
+      .map((o) => o.slice(7, -1).split(',').map(Number))
+      .map(([x, y]) => ({ x, y, ang: Math.atan2(y / FIRMAMENT_PORTAL_RY, x) }))
+  }
+
+  /** Alles vor dem ersten Zug des Bandes ist das Gewebe. */
+  function webOps(ops: string[]) {
+    return ops.slice(0, at(ops, 'strokeStyle=rgba(6, 5, 4, 0.7)'))
+  }
+
+  /*
+   * Das Band geht ganz um das Portal herum — die Zusage, wegen der es das Band
+   * ueberhaupt gibt. Hier lag einmal eine „zersprungene Krone": zwei
+   * plattgedrueckte Boegen mit Luecke, angeschnitten am Bildrand ein LOSES
+   * Stueck Planetenring neben dem Portal. Wer dem Band eine Luecke gibt, hat sie
+   * zurueck.
+   */
+  it('schliesst das Band zum vollen Umlauf', () => {
+    const ops0 = maw()
+    const pts = bandPoints(ops0)
+    // Zwei Durchgaenge zu je einem Segment pro Schritt.
+    expect(pts).toHaveLength(FIRMAMENT_PORTAL_BAND_SEGMENTS * 2)
+    // Und sie decken JEDEN Oktanten ab — eine Luecke faellt hier auf, egal wo.
+    const octants = new Set(pts.map((p) => Math.floor(((p.ang + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4))))
+    expect(octants.size).toBe(8)
+
+    // Erst der ganze dunkle Durchgang, dann der Ton: ohne die Unterlage
+    // verschwindet die duenne Linie ueber dem Sternfeld.
+    const lastDark = ops0.lastIndexOf('strokeStyle=rgba(6, 5, 4, 0.7)')
+    expect(lastDark).toBeGreaterThanOrEqual(0)
+    expect(
+      ops0.slice(lastDark).some((o) => o.startsWith('strokeStyle=rgba(168, 76, 224,')),
+    ).toBe(true)
+  })
+
+  /*
+   * DER Test dieser Runde. Nach der Krone stand hier ein Astrolabium: 24 gleiche
+   * Zaehne, 8 Speichen, vier Rauten auf den Achsen. Es ging ganz herum und las
+   * sich trotzdem falsch — als KOMPASS. Was den Kompass macht, ist die
+   * GLEICHVERTEILUNG, nicht die Farbe: N gleiche Teilungen auf gemeinsamen
+   * Kreisen sind ein Zifferblatt.
+   */
+  it('haelt die Fassung unregelmaessig — kein Zifferblatt', () => {
+    const ops = webOps(maw())
+    const nodes = ops
+      .filter((o) => o.startsWith('moveTo('))
+      .map((o) => o.slice(7, -1).split(',').map(Number))
+      .map(([x, y]) => ({ ang: Math.atan2(y / FIRMAMENT_PORTAL_RY, x), rad: Math.hypot(x, y / FIRMAMENT_PORTAL_RY) }))
+    expect(nodes.length).toBeGreaterThan(80)
+
+    // Die Knoten liegen NICHT auf gemeinsamen Kreisen — ein Kompass haette drei
+    // oder vier Radien (Zahn innen/aussen, Speiche innen/aussen), das Gewebe hat
+    // fast so viele wie Knoten. Gemessen auf Zehntelpixel, sonst deckelt schon
+    // die Rundung: die ganze Fassung ist nur 24 px breit.
+    const radii = new Set(nodes.map((n) => n.rad.toFixed(1)))
+    expect(radii.size).toBeGreaterThan(60)
+
+    // Und die Winkelabstaende sind ungleich: bei gleicher Teilung waere die
+    // Streuung null.
+    const angs = nodes.map((n) => (n.ang + Math.PI * 2) % (Math.PI * 2)).sort((a, b) => a - b)
+    const gaps = angs.slice(1).map((v, i) => v - angs[i])
+    const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length
+    const sd = Math.sqrt(gaps.reduce((a, g) => a + (g - mean) ** 2, 0) / gaps.length)
+    expect(sd / mean).toBeGreaterThan(0.3)
+
+    // Die vier Rautenknoten auf den Achsen sind weg — sie waren die einzigen
+    // geschlossenen Flaechen im Sprite.
+    expect(count(maw(), 'closePath')).toBe(0)
+  })
+
+  /* Lichtpunkte auf den Kreuzungen: ohne sie ist ein Netz aus Haarlinien nur
+     Griess — dieselbe Begruendung wie am Wall der Karte. */
+  it('setzt Lichtpunkte auf das Gewebe', () => {
+    const ops = webOps(maw())
+    expect(count(ops, 'arc')).toBeGreaterThan(4)
+  })
+
+  /* Das Gewebe steht auf dem Schattenteich. Reichte es darueber hinaus, stuende
+     sein aeusserer Saum ohne Unterlage auf dem Sternfeld. */
+  it('bleibt mit der ganzen Fassung auf dem Schattenteich', () => {
+    const spread =
+      ((FIRMAMENT_PORTAL_WEB_OUT - 1) / Math.max(1, FIRMAMENT_PORTAL_WEB_SHELLS - 1)) *
+      FIRMAMENT_PORTAL_WEB_JITTER
+    expect(FIRMAMENT_PORTAL_WEB_OUT + spread).toBeLessThan(FIRMAMENT_PORTAL_POOL_SPAN)
+    expect(FIRMAMENT_PORTAL_WEB_OUT).toBeLessThan(FIRMAMENT_PORTAL_SPRITE_SPAN)
+    // Das Band liegt IM Gewebe, nicht daneben.
+    expect(FIRMAMENT_PORTAL_BAND_R * (1 + FIRMAMENT_PORTAL_BAND_WOBBLE)).toBeLessThan(
+      FIRMAMENT_PORTAL_WEB_OUT,
     )
+    expect(FIRMAMENT_PORTAL_BAND_ALPHA).toBeGreaterThan(0.3)
   })
 
   /* `shadowBlur` ist erlaubt, WEIL er gebacken wird. Bliebe er stehen, truege

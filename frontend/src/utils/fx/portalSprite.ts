@@ -5,8 +5,8 @@
    aendert, gehoert nicht ins drehende Sprite, und was pulst, gehoert in ein
    eigenes Canvas mit derselben Geometrie (Muster `buildLandfallBeacon`).
 
-   - `maw` — Teich, Krone, Schlund (ein DURCHGANG: innen leuchtet das Ziel),
-     Fernsterne. Steht, und liegt HINTER dem Wirbel.
+   - `maw` — Teich, Filamentgewebe, Schlund (ein DURCHGANG: innen leuchtet das
+     Ziel), Fernsterne. Steht, und liegt HINTER dem Wirbel.
    - `rim` — Ring, Schwellensaum, Kernfunke, Ankerfunken. Steht, liegt DAVOR.
    - `swirl` — Wirbelarme und Motes. Dreht per CSS. Nichts Rotationssymmetrisches
      hier hinein: das draehte sichtbar nicht und kostete trotzdem eine Ebene.
@@ -25,8 +25,23 @@ import {
   FIRMAMENT_PORTAL_AURA_SPAN,
   FIRMAMENT_PORTAL_CACHE_MAX,
   FIRMAMENT_PORTAL_CORE_R,
-  FIRMAMENT_PORTAL_CROWN_GAP,
-  FIRMAMENT_PORTAL_CROWN_SPAN,
+  FIRMAMENT_PORTAL_BAND_ALPHA,
+  FIRMAMENT_PORTAL_BAND_R,
+  FIRMAMENT_PORTAL_BAND_SEGMENTS,
+  FIRMAMENT_PORTAL_BAND_WOBBLE,
+  FIRMAMENT_PORTAL_WEB_ALPHA,
+  FIRMAMENT_PORTAL_WEB_IN,
+  FIRMAMENT_PORTAL_WEB_JITTER,
+  FIRMAMENT_PORTAL_WEB_LINK_SHARE,
+  FIRMAMENT_PORTAL_WEB_NODES,
+  FIRMAMENT_PORTAL_WEB_OUT,
+  FIRMAMENT_PORTAL_WEB_SHELLS,
+  FIRMAMENT_PORTAL_WEB_SPARK_R,
+  FIRMAMENT_PORTAL_WEB_SPARK_SHARE,
+  FIRMAMENT_PORTAL_WEB_TENDRIL_FORKS,
+  FIRMAMENT_PORTAL_WEB_TENDRIL_SHARE,
+  FIRMAMENT_PORTAL_WEB_W_MAX,
+  FIRMAMENT_PORTAL_WEB_W_MIN,
   FIRMAMENT_PORTAL_FAR_STARS,
   FIRMAMENT_PORTAL_HALO_ALPHA,
   FIRMAMENT_PORTAL_MAX_BACKING_PX,
@@ -39,6 +54,7 @@ import {
   FIRMAMENT_PORTAL_SWIRL_SPAN,
   FIRMAMENT_MAX_DPR,
 } from '@/config/constants'
+import { seededRng } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { jitter } from '@/utils/fx/universeDisc'
 
 export type PortalLayer = 'maw' | 'swirl' | 'rim' | 'halo'
@@ -50,10 +66,182 @@ function ink(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
 }
 
-/** −1..1 aus zwei Zahlen, zustandslos: ein Zweig, der einen Zug mehr tut,
- *  verschoebe sonst jeden folgenden. */
-function sway(a: number, b: number): number {
-  return jitter(a, b) * 2 - 1
+interface WebNode {
+  /** Winkel und Radius (als Anteil von `r`) — der Radius traegt die Deckkraft. */
+  a: number
+  k: number
+  x: number
+  y: number
+}
+
+/**
+ * Die FASSUNG: ein Filamentgewebe im Idiom des aeusseren Walls
+ * (`paintFirmamentWeb` in `firmamentPlate.ts`).
+ *
+ * Zwei Fassungen lagen hier vorher, und beide sind an derselben Sache
+ * gescheitert. Eine „zersprungene Krone" sollte kein Planetenring sein und war
+ * einer. Danach ein Astrolabium — 24 gleiche Zaehne, 8 Speichen, vier Rauten auf
+ * den Achsen: das ging ganz herum, las sich aber als KOMPASS. Was den Kompass
+ * macht, ist die GLEICHVERTEILUNG; jedes Element mit N gleichen Teilungen ist
+ * ein Zifferblatt, egal wie man es einfaerbt.
+ *
+ * Das Gewebe ist unregelmaessig by construction — und es ist die Materie, aus
+ * der in diesem Reiter der Rand des Bekannten besteht. Vier Zuege aus DEMSELBEN
+ * Knotensatz: Straenge, Ranken, Lichtpunkte, darueber das Band.
+ *
+ * Die Bandrechnung ist eine eigene, nicht die des Walls: dessen `bandT`/
+ * `webAlpha` haengen an `FIRMAMENT_WEB_INNER/OUTER`, und zwei verschiedene
+ * Baender an einem Konstantensatz waeren eine Kopplung, die niemand sucht.
+ * Uebernommen ist das Idiom, nicht der Code.
+ */
+function paintPortalWeb(
+  ctx: CanvasRenderingContext2D,
+  r: number,
+  ry: number,
+  tint: string,
+  seed: number,
+): void {
+  // EIN Strom fuer den ganzen Kranz: `seededRng` ist ein LCG, ein Seed je Knoten
+  // kollabiert. Dieselbe Regel wie beim Wall.
+  const rng = seededRng(seed + 1)
+  ctx.lineCap = 'round'
+
+  const lo = FIRMAMENT_PORTAL_WEB_IN
+  const hi = FIRMAMENT_PORTAL_WEB_OUT
+  const shellGap = hi - lo
+  const spread =
+    (shellGap / Math.max(1, FIRMAMENT_PORTAL_WEB_SHELLS - 1)) * FIRMAMENT_PORTAL_WEB_JITTER
+  const at = (a: number, k: number) => ({ x: Math.cos(a) * r * k, y: Math.sin(a) * ry * k })
+
+  /** Deckkraft nach der Lage IM Band: Gipfel in der Mitte, an beiden Raendern
+   *  auf null. So hat das Gewebe weder zum Ring hin noch nach aussen eine Kante,
+   *  und es steht nicht im `shadowBlur` des Rings. Gemessen wird gegen die um
+   *  den Wurf GEWEITETE Spanne, sonst waeren die aeussersten Knoten unsichtbar. */
+  const half = shellGap / 2 + spread
+  const mid = (lo + hi) / 2
+  const share = (k: number) => {
+    const t = 1 - Math.abs(k - mid) / half
+    return t <= 0 ? 0 : t * t * (3 - 2 * t)
+  }
+
+  // Die Schalen. Aussen stehen mehr Knoten als innen — sonst waeren die Zellen
+  // am Rand so breit wie das Band selbst.
+  const shells: WebNode[][] = []
+  for (let s = 0; s < FIRMAMENT_PORTAL_WEB_SHELLS; s++) {
+    const u = FIRMAMENT_PORTAL_WEB_SHELLS > 1 ? s / (FIRMAMENT_PORTAL_WEB_SHELLS - 1) : 1
+    const n = Math.round(FIRMAMENT_PORTAL_WEB_NODES * (0.7 + 0.5 * u))
+    const step = (Math.PI * 2) / n
+    const shell: WebNode[] = []
+    for (let i = 0; i < n; i++) {
+      const a = i * step + (rng() - 0.5) * step * 0.9 + s * 0.37
+      const k = lo + shellGap * u + (rng() - 0.5) * 2 * spread
+      shell.push({ a, k, ...at(a, k) })
+    }
+    shells.push(shell)
+  }
+
+  /** Ein Strang. Der Kontrollpunkt liegt nach aussen versetzt — daraus wird die
+   *  Kruemmung, die einen Faden von einer Sehne unterscheidet. */
+  const strand = (p: WebNode, q: WebNode, dim = 1) => {
+    const bow = 1 + (rng() < 0.5 ? -1 : 1) * (0.01 + rng() * 0.05)
+    const jitterAlpha = 0.55 + rng() * 0.7
+    const t = share((p.k + q.k) / 2)
+    ctx.beginPath()
+    ctx.moveTo(p.x, p.y)
+    ctx.quadraticCurveTo(((p.x + q.x) / 2) * bow, ((p.y + q.y) / 2) * bow, q.x, q.y)
+    ctx.strokeStyle = ink(tint, Math.min(0.9, FIRMAMENT_PORTAL_WEB_ALPHA * t * jitterAlpha * dim))
+    ctx.lineWidth =
+      r *
+      (FIRMAMENT_PORTAL_WEB_W_MIN + (FIRMAMENT_PORTAL_WEB_W_MAX - FIRMAMENT_PORTAL_WEB_W_MIN) * t)
+    ctx.stroke()
+  }
+
+  // Tangential: der Ring jeder Schale.
+  for (const shell of shells) {
+    for (let i = 0; i < shell.length; i++) strand(shell[i], shell[(i + 1) % shell.length])
+  }
+
+  // Radial: jede Schale an die naechste. Die zweite Strebe macht aus je zwei
+  // Vierecken drei Zellen — ohne sie bliebe eine Leiter.
+  for (let s = 0; s < shells.length - 1; s++) {
+    const from = shells[s]
+    const to = shells[s + 1]
+    for (let i = 0; i < from.length; i++) {
+      const j = Math.round((i / from.length) * to.length) % to.length
+      strand(from[i], to[j])
+      if (rng() < FIRMAMENT_PORTAL_WEB_LINK_SHARE) strand(from[i], to[(j + 1) % to.length], 0.8)
+    }
+  }
+
+  // Die Ranken haengen an der INNERSTEN Schale: ein Stamm zum Ring hin, der sich
+  // einmal gabelt. Sie loesen die Innenkante auf — ohne sie endete das Gewebe an
+  // einer Linie, und eine Linie ist wieder ein Reif.
+  for (const node of shells[0]) {
+    const roll = rng()
+    const len = 0.03 + rng() * 0.05
+    const swingBase = (rng() - 0.5) * 0.5
+    if (roll >= FIRMAMENT_PORTAL_WEB_TENDRIL_SHARE) continue
+    const stemK = node.k - len
+    const stemA = node.a + swingBase * 0.4
+    const stem = { a: stemA, k: stemK, ...at(stemA, stemK) }
+    strand(node, stem, 0.9)
+    for (let f = 0; f < FIRMAMENT_PORTAL_WEB_TENDRIL_FORKS; f++) {
+      const swing = (f - (FIRMAMENT_PORTAL_WEB_TENDRIL_FORKS - 1) / 2) * 0.24 + swingBase * 0.3
+      const tipK = stemK - len * (0.35 + rng() * 0.4)
+      const tipA = stemA + swing
+      strand(stem, { a: tipA, k: tipK, ...at(tipA, tipK) }, 0.7)
+    }
+  }
+
+  // Die Lichtpunkte auf den Kreuzungen. Ohne sie ist ein Netz aus Haarlinien nur
+  // Griess — sie sind es, die es als Gewebe lesbar machen.
+  for (const shell of shells) {
+    for (const node of shell) {
+      const roll = rng()
+      const size = 0.5 + rng() * 0.8
+      if (roll >= FIRMAMENT_PORTAL_WEB_SPARK_SHARE) continue
+      ctx.beginPath()
+      ctx.arc(node.x, node.y, r * FIRMAMENT_PORTAL_WEB_SPARK_R * size, 0, Math.PI * 2)
+      ctx.fillStyle = ink(tint, Math.min(0.9, FIRMAMENT_PORTAL_WEB_ALPHA * share(node.k) * 1.7))
+      ctx.fill()
+    }
+  }
+
+  // Das BAND — das eine durchgehende Element, das ganz um das Portal herumgeht.
+  // Es liegt zuletzt und damit oben: es ist das, was gelesen werden MUSS.
+  //
+  // Kein sauberer Kreis: ein perfekter duenner Reif um einen dicken Ring ist
+  // wieder ein Instrument. Der Radius schwankt ueber zwei Harmonische, die
+  // Deckkraft ueber den Umlauf — gezeichnet in Segmenten, damit sie das kann.
+  const p1 = rng() * Math.PI * 2
+  const p2 = rng() * Math.PI * 2
+  const segs = FIRMAMENT_PORTAL_BAND_SEGMENTS
+  const bandK = (a: number) =>
+    FIRMAMENT_PORTAL_BAND_R *
+    (1 + FIRMAMENT_PORTAL_BAND_WOBBLE * (Math.sin(a * 2 + p1) * 0.6 + Math.sin(a * 3 + p2) * 0.4))
+
+  // Zwei Durchgaenge, erst dunkel und breiter: ohne die Unterlage verschwindet
+  // die duenne Linie ueber dem Sternfeld.
+  for (const pass of [0, 1]) {
+    const dark = pass === 0
+    // Deutlich staerker als ein Gewebefaden: das Band ist das eine Element, das
+    // gelesen werden MUSS, und im Geflecht verschwindet sonst genau das.
+    ctx.lineWidth = Math.max(dark ? 1.6 : 0.9, r * (dark ? 0.03 : 0.016))
+    for (let i = 0; i < segs; i++) {
+      const a0 = (i * Math.PI * 2) / segs
+      const a1 = ((i + 1) * Math.PI * 2) / segs
+      const p = at(a0, bandK(a0))
+      const q = at(a1, bandK(a1))
+      const breath = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(a0 * 3 + p2))
+      ctx.beginPath()
+      ctx.moveTo(p.x, p.y)
+      ctx.lineTo(q.x, q.y)
+      ctx.strokeStyle = dark
+        ? 'rgba(6, 5, 4, 0.7)'
+        : ink(tint, FIRMAMENT_PORTAL_BAND_ALPHA * breath)
+      ctx.stroke()
+    }
+  }
 }
 
 /**
@@ -74,7 +262,7 @@ export function paintPortalMaw(
   ctx.translate(cx, cy)
 
   // Schattenteich. Das Portal steht auf dem Sternfeld des Grundes — ein Loch in
-  // einem Leuchten ist kein Loch. Er kommt VOR der Krone, damit die auf
+  // einem Leuchten ist kein Loch. Er kommt VOR dem Gewebe, damit der Kranz auf
   // gedaempftem Grund steht statt darin zu verschwinden.
   const span = r * FIRMAMENT_PORTAL_POOL_SPAN
   const pool = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, span)
@@ -86,30 +274,17 @@ export function paintPortalMaw(
   ctx.fillStyle = pool
   ctx.fill()
 
-  // Zersprungene Krone: zwei Boegen mit Luecke — ein GESCHLOSSENER Ring laese
-  // sich als Planetenring. Zweimal gestrichen, erst dunkel und breiter: ohne die
-  // Unterlage verschwindet die duenne Linie ueber dem Sternfeld.
-  const crownRx = r * FIRMAMENT_PORTAL_CROWN_SPAN
-  const gap = FIRMAMENT_PORTAL_CROWN_GAP
-  const tilt = sway(seed, 139) * 0.4
-  for (const pass of [0, 1]) {
-    ctx.strokeStyle = pass === 0 ? 'rgba(6, 5, 4, 0.7)' : ink(tint, 0.85)
-    ctx.lineWidth = r * (pass === 0 ? 0.06 : 0.032)
-    for (const base of [0, Math.PI]) {
-      ctx.beginPath()
-      ctx.ellipse(0, 0, crownRx, crownRx * 0.55, tilt, base + gap / 2, base + Math.PI - gap / 2)
-      ctx.stroke()
-    }
-  }
+  // `_RY` ist nicht die flache 0,42 der Landmarke auf der Galaxiekarte: dort
+  // fliegt man hindurch, hier sieht man hinein. Die Fassung teilt sie sich mit
+  // dem Schlund — dieselbe Ellipse macht aus beiden EIN Objekt.
+  const ry = r * FIRMAMENT_PORTAL_RY
+
+  paintPortalWeb(ctx, r, ry, tint, seed)
 
   // Der Schlund ist ein DURCHGANG, kein Loch: innen leuchtet das Zieluniversum,
   // zum Rand hin wird die Schwelle dunkel. Ein schwarzer Schlund funktioniert
   // im Galaxiekern, wo Glut dahinterliegt — hier steht er auf dem schwarzen
   // Sternfeld, und Schwarz auf Schwarz ist keine Tiefe, sondern nichts.
-  //
-  // `_RY` ist nicht die flache 0,42 der Landmarke auf der Galaxiekarte: dort
-  // fliegt man hindurch, hier sieht man hinein.
-  const ry = r * FIRMAMENT_PORTAL_RY
   const maw = ctx.createRadialGradient(0, 0, 0, 0, 0, r)
   maw.addColorStop(0, ink(tint, 0.32))
   maw.addColorStop(0.4, ink(tint, 0.14))

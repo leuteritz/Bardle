@@ -6,35 +6,38 @@ import {
   firmamentPortalLabelSpot,
   firmamentPortalRingR,
   firmamentPortalSpot,
+  firmamentPortalVisibleShare,
 } from '@/utils/ui/firmamentPortalSpot'
 import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
+import { universes } from '@/config/progression/universes'
 import {
   FIRMAMENT_PLATE_SPRITE_MARGIN,
   FIRMAMENT_PORTAL_DISC_CLEAR,
   FIRMAMENT_PORTAL_KEEPOUT_PAD,
+  FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS,
   FIRMAMENT_PORTAL_LABEL_EDGE_PAD,
   FIRMAMENT_PORTAL_LABEL_H_EM,
   FIRMAMENT_PORTAL_LABEL_MAX_PX,
   FIRMAMENT_PORTAL_LABEL_MIN_PX,
   FIRMAMENT_PORTAL_LABEL_W_EM,
+  FIRMAMENT_PORTAL_MIN_VISIBLE,
   FIRMAMENT_PORTAL_RING_MAX_PX,
   FIRMAMENT_PORTAL_RING_MIN_PX,
+  FIRMAMENT_PORTAL_SHRINK_STEPS,
   FIRMAMENT_STAGE_MIN_H,
   FIRMAMENT_STAGE_MIN_W,
 } from '@/config/constants'
 
 /**
- * Das Portal steht im schwarzen Raum ausserhalb der Galaxienscheibe, und zwar
- * in JEDEM Universum an derselben Stelle: Ringmitte auf der rechten
- * Buehnenkante, auf der Mittellinie der Scheibe.
+ * Das Portal steht im schwarzen Raum ausserhalb der Galaxienscheibe, an einer je
+ * Universum anderen Stelle. Drei Dinge muessen dabei immer gelten, und keines
+ * davon sieht man im Code: es liegt wirklich draussen, es ist wirklich zu sehen,
+ * und es liegt nicht unter einer Bedienflaeche.
  *
- * Es stand einmal je Universum woanders. Das las sich als Unfall statt als
- * Absicht — der Ring ist auf jeder Zielaufloesung breiter als die schwarze
- * Gasse, also blieb der Winkelsuche ohnehin nur ein duenner Kranz von Lagen
- * dicht an der Kante, und gewuerfelt wurde faktisch die HOEHE des Anschnitts.
- * Diese Datei bindet, was seither gilt und was man im Code nicht sieht: der
- * Ring liegt wirklich draussen, er ist wirklich zur Haelfte zu sehen, und
- * weder er noch seine Beschriftung liegen unter einer Bedienflaeche.
+ * Die Streuung war einmal weg — ein fester Anker auf der rechten Buehnenkante,
+ * gebaut auf ein Missverstaendnis („der Rand des Portals" meinte die FASSUNG,
+ * nicht die Bildkante). Sie ist zurueck, und der Streuungstest unten ist der
+ * Waechter dagegen, dass sie es nochmal wird.
  */
 
 /** Die gemessenen Buehnenmasse — dieselbe Quelle wie `firmamentLayout.spec.ts`. */
@@ -46,8 +49,11 @@ const STAGES: Array<{ name: string; w: number; h: number }> = [
   { name: 'Boden', w: FIRMAMENT_STAGE_MIN_W, h: FIRMAMENT_STAGE_MIN_H },
 ]
 
+const IDS = universes.map((u) => u.id)
+
 /** Sichtbarer Anteil, UNABHAENGIG nachgerechnet: ein dichtes Punktraster statt
- *  einer Formel. Sonst prueft die Spec die Funktion gegen sich selbst. */
+ *  der Streifenintegration der Funktion selbst. Sonst prueft die Spec die
+ *  Funktion gegen sich selbst. */
 function visibleByGrid(x: number, y: number, r: number, w: number, h: number): number {
   const n = 400
   let hit = 0
@@ -68,13 +74,13 @@ function rectDist(x: number, y: number, k: { x0: number; y0: number; x1: number;
   return Math.hypot(Math.max(k.x0 - x, 0, x - k.x1), Math.max(k.y0 - y, 0, y - k.y1))
 }
 
-/** Abstand der Scheibenmitte zur naechsten Ecke eines Kaestchens. */
+/** Abstand eines Punktes zur naechsten Ecke eines Kaestchens. */
 function boxDist(
-  cx: number,
-  cy: number,
+  x: number,
+  y: number,
   box: { cx: number; cy: number; w: number; h: number },
 ): number {
-  return rectDist(cx, cy, {
+  return rectDist(x, y, {
     x0: box.cx - box.w / 2,
     y0: box.cy - box.h / 2,
     x1: box.cx + box.w / 2,
@@ -83,66 +89,45 @@ function boxDist(
 }
 
 describe('firmamentPortalRingR', () => {
-  it('bleibt auf jeder Buehne zwischen Boden und Deckel', () => {
-    for (const s of STAGES) {
-      const r = firmamentPortalRingR(s.w, s.h)
+  it('waechst mit der Buehnenhoehe und bleibt in seinen Grenzen', () => {
+    let last = 0
+    for (const s of STAGES.filter((v) => v.name !== 'Boden')) {
+      const r = firmamentPortalRingR(s.h)
       expect(r, s.name).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_RING_MIN_PX)
       expect(r, s.name).toBeLessThanOrEqual(FIRMAMENT_PORTAL_RING_MAX_PX)
+      expect(r, s.name).toBeGreaterThanOrEqual(last)
+      last = r
     }
   })
 
-  /*
-   * Die Gasse ist der Deckel, und sie ist NICHT dort am engsten, wo der
-   * Bildschirm am kleinsten ist: WUXGA hat Full HDs Breite und 100 px mehr
-   * Hoehe, also waechst die Scheibe und die Gasse faellt von 186 auf 135 px.
-   */
-  it('deckelt allein auf WUXGA und laesst alle anderen den vollen Wunsch', () => {
-    for (const s of STAGES) {
-      const lane = s.w / 2 - firmamentFitBox(s.w, s.h).r * FIRMAMENT_PORTAL_DISC_CLEAR
-      const capped = firmamentPortalRingR(s.w, s.h) < lane + 0.001 && lane < s.h * 0.19
-      expect(capped, s.name).toBe(s.name === 'WUXGA')
-    }
-    expect(Math.round(firmamentPortalRingR(1002, 690.6))).toBe(131)
-    expect(Math.round(firmamentPortalRingR(1002, 791.4))).toBe(99)
-    expect(Math.round(firmamentPortalRingR(1422, 969))).toBe(184)
-    expect(Math.round(firmamentPortalRingR(2702, 1678.2))).toBe(260)
-  })
-
-  /* Boden und Deckel sind zwei Regeln fuer dieselbe Zahl. Kaemen sie sich in
-     die Quere, gewaenne still der Boden — und der Ring liefe in die Platte. */
-  it('laesst den Gassendeckel nirgends unter den Boden fallen', () => {
-    for (const s of STAGES) {
-      const lane = s.w / 2 - firmamentFitBox(s.w, s.h).r * FIRMAMENT_PORTAL_DISC_CLEAR
-      expect(lane, s.name).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_RING_MIN_PX)
-    }
+  it('haelt den Boden auf der kleinsten Buehne und den Deckel auf 4K', () => {
+    expect(firmamentPortalRingR(FIRMAMENT_STAGE_MIN_H)).toBe(FIRMAMENT_PORTAL_RING_MIN_PX)
+    expect(firmamentPortalRingR(1678.2)).toBe(FIRMAMENT_PORTAL_RING_MAX_PX)
   })
 })
 
 describe('firmamentPortalSpot — wo das Portal steht', () => {
-  it('steht auf der rechten Kante, auf der Mittellinie der Scheibe', () => {
+  it('ist deterministisch und unabhaengig von der Aufrufreihenfolge', () => {
     for (const s of STAGES) {
-      const fit = firmamentFitBox(s.w, s.h)
-      const spot = firmamentPortalSpot(s.w, s.h)!
-      expect(spot.x, s.name).toBe(s.w)
-      expect(spot.y, s.name).toBeCloseTo(fit.cy, 6)
-      expect(spot.r, s.name).toBeCloseTo(firmamentPortalRingR(s.w, s.h), 6)
+      const forward = IDS.map((id) => firmamentPortalSpot(id, s.w, s.h))
+      const backward = [...IDS].reverse().map((id) => firmamentPortalSpot(id, s.w, s.h))
+      expect(forward, s.name).toEqual([...backward].reverse())
     }
   })
 
-  /* Nur eine Buehne ohne Mass gibt `null`. Ein Portal, das je nach Zustand da
-     ist oder nicht, waere die Weiterreise ohne Weg. */
-  it('gibt allein auf einer Buehne ohne Mass nichts zurueck', () => {
-    expect(firmamentPortalSpot(0, 690)).toBeNull()
-    expect(firmamentPortalSpot(1002, 0)).toBeNull()
-    expect(firmamentPortalSpot(1002, 690.6)).not.toBeNull()
-  })
-
-  /* Angeschnitten ja, verschwunden nein — und der Anschnitt ist jetzt EXAKT die
-     Haelfte statt eines je Universum anderen Bruchteils. */
-  it('liegt genau zur Haelfte im Bild', () => {
-    for (const s of STAGES) {
-      const spot = firmamentPortalSpot(s.w, s.h)!
-      expect(visibleByGrid(spot.x, spot.y, spot.r, s.w, s.h), s.name).toBeCloseTo(0.5, 2)
+  /* Der Test, wegen dem es die Streuung ueberhaupt gibt: stuenden alle zehn
+     Portale an derselben Stelle, waere „zufaellig" eine Behauptung. Genau das
+     war einmal der Fall — ein fester Anker auf der rechten Kante. */
+  it('stellt die zehn Universen an spuerbar verschiedene Stellen', () => {
+    for (const s of STAGES.filter((v) => v.name !== 'Boden')) {
+      const spots = IDS.map((id) => firmamentPortalSpot(id, s.w, s.h)!)
+      let apart = 0
+      for (let i = 0; i < spots.length; i++) {
+        for (let j = i + 1; j < spots.length; j++) {
+          if (Math.hypot(spots[i].x - spots[j].x, spots[i].y - spots[j].y) > spots[i].r) apart++
+        }
+      }
+      expect(apart, s.name).toBeGreaterThanOrEqual(6)
     }
   })
 
@@ -156,82 +141,157 @@ describe('firmamentPortalSpot — wo das Portal steht', () => {
   it('liegt IMMER jenseits der Kartenkante, nicht nur jenseits der Wolke', () => {
     for (const s of STAGES) {
       const fit = firmamentFitBox(s.w, s.h)
-      const spot = firmamentPortalSpot(s.w, s.h)!
-      const gap = Math.hypot(spot.x - fit.cx, spot.y - fit.cy) - spot.r
-      expect(gap, s.name).toBeGreaterThanOrEqual(fit.r * FIRMAMENT_PORTAL_DISC_CLEAR - 0.001)
+      for (const id of IDS) {
+        const spot = firmamentPortalSpot(id, s.w, s.h)!
+        const gap = Math.hypot(spot.x - fit.cx, spot.y - fit.cy) - spot.r
+        expect(gap, `${s.name} U${id}`).toBeGreaterThanOrEqual(
+          fit.r * FIRMAMENT_PORTAL_DISC_CLEAR - 0.001,
+        )
+      }
     }
     // Die Ableitung selbst: alles, was die Karte malt, liegt darunter.
     expect(FIRMAMENT_PORTAL_DISC_CLEAR).toBe(FIRMAMENT_PLATE_SPRITE_MARGIN)
   })
 
-  it('liegt auf keiner Bedienflaeche', () => {
+  /*
+   * Der groessere Abstand macht die Menge zulaessiger Stellen kleiner. Ohne die
+   * Schrumpfleiter faende die Winkelsuche in sieben von fuenfzig Faellen nichts
+   * mehr und gaebe `null` — das Portal verschwaende, und mit ihm die
+   * Weiterreise. Kleiner ist besser als weg.
+   */
+  it('wird kleiner, statt zu verschwinden — aber nie unter den Boden', () => {
     for (const s of STAGES) {
-      const spot = firmamentPortalSpot(s.w, s.h)!
-      for (const k of firmamentPortalKeepOuts(s.w, s.h)) {
-        expect(rectDist(spot.x, spot.y, k), s.name).toBeGreaterThanOrEqual(
-          spot.r + FIRMAMENT_PORTAL_KEEPOUT_PAD,
+      for (const id of IDS) {
+        const spot = firmamentPortalSpot(id, s.w, s.h)
+        expect(spot, `${s.name} U${id}`).not.toBeNull()
+        expect(spot!.r, `${s.name} U${id}`).toBeGreaterThanOrEqual(
+          FIRMAMENT_PORTAL_RING_MIN_PX * FIRMAMENT_PORTAL_SHRINK_STEPS.at(-1)!,
         )
+        expect(spot!.r, `${s.name} U${id}`).toBeLessThanOrEqual(firmamentPortalRingR(s.h))
       }
     }
+  })
+
+  /* Geschrumpft wird nur, wo es sein muss: auf den anderen Buehnen behaelt jedes
+     Universum die volle Groesse. */
+  it('schrumpft nur auf der engen Buehne', () => {
+    for (const s of STAGES.filter((v) => v.name !== 'WUXGA')) {
+      const full = firmamentPortalRingR(s.h)
+      for (const id of IDS) {
+        expect(firmamentPortalSpot(id, s.w, s.h)!.r, `${s.name} U${id}`).toBeCloseTo(full, 6)
+      }
+    }
+  })
+
+  it('bleibt zu mehr als der Haelfte im Bild', () => {
+    for (const s of STAGES) {
+      for (const id of IDS) {
+        const spot = firmamentPortalSpot(id, s.w, s.h)!
+        const share = visibleByGrid(spot.x, spot.y, spot.r, s.w, s.h)
+        expect(share, `${s.name} U${id}`).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_MIN_VISIBLE - 0.02)
+        // Und die Streifenintegration der Funktion trifft dasselbe Ergebnis.
+        expect(
+          firmamentPortalVisibleShare(spot.x, spot.y, spot.r, s.w, s.h),
+          `${s.name} U${id}`,
+        ).toBeCloseTo(share, 1)
+      }
+    }
+  })
+
+  it('liegt auf keiner Bedienflaeche', () => {
+    for (const s of STAGES) {
+      for (const id of IDS) {
+        const spot = firmamentPortalSpot(id, s.w, s.h)!
+        for (const k of firmamentPortalKeepOuts(s.w, s.h)) {
+          expect(rectDist(spot.x, spot.y, k), `${s.name} U${id}`).toBeGreaterThanOrEqual(
+            spot.r + FIRMAMENT_PORTAL_KEEPOUT_PAD,
+          )
+        }
+      }
+    }
+  })
+
+  it('gibt allein auf einer Buehne ohne Mass nichts zurueck', () => {
+    expect(firmamentPortalSpot(1, 0, 690)).toBeNull()
+    expect(firmamentPortalSpot(1, 1002, 0)).toBeNull()
+    expect(firmamentPortalSpot(1, 1002, 690.6)).not.toBeNull()
   })
 })
 
 describe('firmamentPortalLabelSpot — wohin es fuehrt', () => {
-  it('haelt den Schriftgrad zwischen seinen Grenzen', () => {
+  it('haelt den Schriftgrad zwischen seinen Grenzen und baut das feste Kaestchen', () => {
     for (const s of STAGES) {
-      const size = firmamentPortalLabelSize(firmamentPortalRingR(s.w, s.h))
-      expect(size, s.name).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_LABEL_MIN_PX)
-      expect(size, s.name).toBeLessThanOrEqual(FIRMAMENT_PORTAL_LABEL_MAX_PX)
-    }
-  })
-
-  /* Die rechte Kante ist die ganze Harmonie: Werkzeugkasten, Legende und
-     Auswahlkarte haengen an denselben 10 px. */
-  it('steht rechtsbuendig auf derselben Kante wie die Bedienflaechen', () => {
-    for (const s of STAGES) {
-      const spot = firmamentPortalSpot(s.w, s.h)!
-      const l = firmamentPortalLabelSpot(spot, s.w, s.h)
-      expect(l.cx + l.w / 2, s.name).toBeCloseTo(s.w - FIRMAMENT_PORTAL_LABEL_EDGE_PAD, 6)
-      // Das CSS baut GENAU dieses Kaestchen — deshalb steht es hier.
-      expect(l.w, s.name).toBeCloseTo(FIRMAMENT_PORTAL_LABEL_W_EM * l.size, 6)
-      expect(l.h, s.name).toBeCloseTo(FIRMAMENT_PORTAL_LABEL_H_EM * l.size, 6)
-    }
-  })
-
-  it('bleibt im Bild, von der Scheibe und von jeder Bedienflaeche frei', () => {
-    for (const s of STAGES) {
-      const fit = firmamentFitBox(s.w, s.h)
-      const spot = firmamentPortalSpot(s.w, s.h)!
-      const l = firmamentPortalLabelSpot(spot, s.w, s.h)
-      const pad = FIRMAMENT_PORTAL_LABEL_EDGE_PAD
-
-      expect(l.cy - l.h / 2, s.name).toBeGreaterThanOrEqual(pad)
-      expect(l.cy + l.h / 2, s.name).toBeLessThanOrEqual(s.h - pad)
-      expect(boxDist(fit.cx, fit.cy, l), s.name).toBeGreaterThanOrEqual(
-        fit.r * FIRMAMENT_PORTAL_DISC_CLEAR - 0.001,
-      )
-      for (const k of firmamentPortalKeepOuts(s.w, s.h)) {
-        const hits =
-          l.cx - l.w / 2 - FIRMAMENT_PORTAL_KEEPOUT_PAD < k.x1 &&
-          l.cx + l.w / 2 + FIRMAMENT_PORTAL_KEEPOUT_PAD > k.x0 &&
-          l.cy - l.h / 2 - FIRMAMENT_PORTAL_KEEPOUT_PAD < k.y1 &&
-          l.cy + l.h / 2 + FIRMAMENT_PORTAL_KEEPOUT_PAD > k.y0
-        expect(hits, s.name).toBe(false)
+      for (const id of IDS) {
+        const spot = firmamentPortalSpot(id, s.w, s.h)!
+        const l = firmamentPortalLabelSpot(spot, s.w, s.h)
+        expect(l.size, s.name).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_LABEL_MIN_PX)
+        expect(l.size, s.name).toBeLessThanOrEqual(FIRMAMENT_PORTAL_LABEL_MAX_PX)
+        expect(l.size, s.name).toBe(firmamentPortalLabelSize(spot.r))
+        // Das CSS baut GENAU dieses Kaestchen — deshalb steht es hier.
+        expect(l.w, s.name).toBeCloseTo(FIRMAMENT_PORTAL_LABEL_W_EM * l.size, 6)
+        expect(l.h, s.name).toBeCloseTo(FIRMAMENT_PORTAL_LABEL_H_EM * l.size, 6)
       }
     }
   })
 
-  /*
-   * Sie steht UNTER dem Ring — auf jeder Zielaufloesung. Die Klapp-Ausnahme ist
-   * kein Geschmack, sondern der Fluchtweg der kleinsten Buehne: dort blieben
-   * unter dem Ring nur 6,65 px bis zur Auswahlkarte statt der zugesagten zehn.
-   */
-  it('steht unter dem Ring und klappt allein auf der kleinsten Buehne darueber', () => {
+  it('bleibt im Bild und frei von jeder Bedienflaeche', () => {
+    const pad = FIRMAMENT_PORTAL_LABEL_EDGE_PAD
     for (const s of STAGES) {
-      const spot = firmamentPortalSpot(s.w, s.h)!
-      const l = firmamentPortalLabelSpot(spot, s.w, s.h)
-      expect(l.cy > spot.y, s.name).toBe(s.name !== 'Boden')
+      for (const id of IDS) {
+        const spot = firmamentPortalSpot(id, s.w, s.h)!
+        const l = firmamentPortalLabelSpot(spot, s.w, s.h)
+        expect(l.cx - l.w / 2, `${s.name} U${id}`).toBeGreaterThanOrEqual(pad - 0.001)
+        expect(l.cx + l.w / 2, `${s.name} U${id}`).toBeLessThanOrEqual(s.w - pad + 0.001)
+        expect(l.cy - l.h / 2, `${s.name} U${id}`).toBeGreaterThanOrEqual(pad - 0.001)
+        expect(l.cy + l.h / 2, `${s.name} U${id}`).toBeLessThanOrEqual(s.h - pad + 0.001)
+        for (const k of firmamentPortalKeepOuts(s.w, s.h)) {
+          const hits =
+            l.cx - l.w / 2 - FIRMAMENT_PORTAL_KEEPOUT_PAD < k.x1 - 0.001 &&
+            l.cx + l.w / 2 + FIRMAMENT_PORTAL_KEEPOUT_PAD > k.x0 + 0.001 &&
+            l.cy - l.h / 2 - FIRMAMENT_PORTAL_KEEPOUT_PAD < k.y1 - 0.001 &&
+            l.cy + l.h / 2 + FIRMAMENT_PORTAL_KEEPOUT_PAD > k.y0 + 0.001
+          expect(hits, `${s.name} U${id}`).toBe(false)
+        }
+      }
     }
+  })
+
+  /* Sie haengt am Ring: die GEBUNDENE Achse steht auf `_GAP_EM` von seiner
+     Kante, sonst liefe die Beschriftung von dem weg, was sie benennt. */
+  it('haelt den Abstand zum Ring auf der gebundenen Achse', () => {
+    for (const s of STAGES) {
+      for (const id of IDS) {
+        const spot = firmamentPortalSpot(id, s.w, s.h)!
+        const l = firmamentPortalLabelSpot(spot, s.w, s.h)
+        const bound =
+          l.side === 'below' || l.side === 'above'
+            ? Math.abs(l.cy - spot.y) - l.h / 2
+            : Math.abs(l.cx - spot.x) - l.w / 2
+        expect(bound, `${s.name} U${id} ${l.side}`).toBeGreaterThanOrEqual(spot.r - 0.001)
+      }
+    }
+  })
+
+  /* Die Leiter darf nur greifen, wo sie muss: Schrift auf dem Schattenteich der
+     Platte ist gut lesbar, Schrift MITTEN auf den Galaxienkoerpern nicht. Die
+     unterste Stufe ist der Notausgang, kein Normalfall. */
+  it('bleibt fast immer jenseits der Kartenkante und nie hinter der letzten Stufe', () => {
+    const outer = FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS[0]
+    const last = FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS.at(-1)!
+    let tight = 0
+    let total = 0
+    for (const s of STAGES) {
+      const fit = firmamentFitBox(s.w, s.h)
+      for (const id of IDS) {
+        const spot = firmamentPortalSpot(id, s.w, s.h)!
+        const l = firmamentPortalLabelSpot(spot, s.w, s.h)
+        const d = boxDist(fit.cx, fit.cy, l)
+        total++
+        if (d < fit.r * outer - 0.001) tight++
+        expect(d, `${s.name} U${id}`).toBeGreaterThanOrEqual(fit.r * last - 0.001)
+      }
+    }
+    expect(tight / total).toBeLessThan(0.25)
   })
 })
 
@@ -241,32 +301,42 @@ describe('firmamentPortalHitBox — ein Ziel fuer Ring und Schrift', () => {
    * das erste Kind seines Slots und legt die Karte unter dessen Unterkante. Am
    * runden Knopf allein ging sie genau dort auf, wo die Beschriftung steht.
    */
-  it('umschliesst Ringhaelfte und Beschriftung und endet an der Buehnenkante', () => {
+  it('umschliesst Ring und Beschriftung, soweit beide im Bild liegen', () => {
     for (const s of STAGES) {
-      const spot = firmamentPortalSpot(s.w, s.h)!
-      const l = firmamentPortalLabelSpot(spot, s.w, s.h)
-      const box = firmamentPortalHitBox(spot, l, s.w)
-
-      expect(box.x1, s.name).toBe(s.w)
-      expect(box.x0, s.name).toBeLessThanOrEqual(l.cx - l.w / 2 + 0.001)
-      expect(box.x0, s.name).toBeLessThanOrEqual(spot.x - spot.r + 0.001)
-      expect(box.y0, s.name).toBeLessThanOrEqual(Math.min(spot.y - spot.r, l.cy - l.h / 2) + 0.001)
-      expect(box.y1, s.name).toBeGreaterThanOrEqual(
-        Math.max(spot.y + spot.r, l.cy + l.h / 2) - 0.001,
-      )
+      for (const id of IDS) {
+        const spot = firmamentPortalSpot(id, s.w, s.h)!
+        const l = firmamentPortalLabelSpot(spot, s.w, s.h)
+        const box = firmamentPortalHitBox(spot, l, s.w, s.h)
+        const want = {
+          x0: Math.min(spot.x - spot.r, l.cx - l.w / 2),
+          y0: Math.min(spot.y - spot.r, l.cy - l.h / 2),
+          x1: Math.max(spot.x + spot.r, l.cx + l.w / 2),
+          y1: Math.max(spot.y + spot.r, l.cy + l.h / 2),
+        }
+        expect(box.x0, `${s.name} U${id}`).toBeCloseTo(Math.max(0, want.x0), 6)
+        expect(box.y0, `${s.name} U${id}`).toBeCloseTo(Math.max(0, want.y0), 6)
+        expect(box.x1, `${s.name} U${id}`).toBeCloseTo(Math.min(s.w, want.x1), 6)
+        expect(box.y1, `${s.name} U${id}`).toBeCloseTo(Math.min(s.h, want.y1), 6)
+      }
     }
   })
 
-  it('bleibt vollstaendig im Bild', () => {
+  /* Auf ALLEN vier Seiten geklemmt: die Stelle ist je Universum eine andere,
+     jede Kante kann die angeschnittene sein. Ein Anker, der ueber den Rand
+     hinausreicht, zoege die Karte samt Pfeil aus dem Reiter heraus. */
+  it('bleibt vollstaendig im Bild und behaelt eine Flaeche', () => {
     for (const s of STAGES) {
-      const spot = firmamentPortalSpot(s.w, s.h)!
-      const l = firmamentPortalLabelSpot(spot, s.w, s.h)
-      const box = firmamentPortalHitBox(spot, l, s.w)
-      expect(box.x0, s.name).toBeGreaterThanOrEqual(0)
-      expect(box.y0, s.name).toBeGreaterThanOrEqual(0)
-      expect(box.y1, s.name).toBeLessThanOrEqual(s.h)
-      expect(box.x1 - box.x0, s.name).toBeGreaterThan(0)
-      expect(box.y1 - box.y0, s.name).toBeGreaterThan(0)
+      for (const id of IDS) {
+        const spot = firmamentPortalSpot(id, s.w, s.h)!
+        const l = firmamentPortalLabelSpot(spot, s.w, s.h)
+        const box = firmamentPortalHitBox(spot, l, s.w, s.h)
+        expect(box.x0, `${s.name} U${id}`).toBeGreaterThanOrEqual(0)
+        expect(box.y0, `${s.name} U${id}`).toBeGreaterThanOrEqual(0)
+        expect(box.x1, `${s.name} U${id}`).toBeLessThanOrEqual(s.w)
+        expect(box.y1, `${s.name} U${id}`).toBeLessThanOrEqual(s.h)
+        expect(box.x1 - box.x0, `${s.name} U${id}`).toBeGreaterThan(spot.r)
+        expect(box.y1 - box.y0, `${s.name} U${id}`).toBeGreaterThan(spot.r)
+      }
     }
   })
 })

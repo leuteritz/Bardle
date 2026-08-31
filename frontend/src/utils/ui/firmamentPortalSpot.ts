@@ -7,17 +7,6 @@
  * dagegen Wissen ueber die BEDIENFLAECHEN der Buehne. Der Import laeuft nur in
  * eine Richtung.
  *
- * **Die Stelle ist in jedem Universum DIESELBE**: Ringmitte auf der rechten
- * Buehnenkante, auf der Mittellinie der Scheibe. Sie war einmal je Universum
- * gewuerfelt, und das las sich als Unfall statt als Absicht — der Ring ist auf
- * JEDER Zielaufloesung breiter als die schwarze Gasse (Full HD 262 zu 186 px),
- * also blieb der Suche ohnehin nur ein duenner Kranz von Lagen dicht an der
- * Kante: gewuerfelt wurde faktisch die HOEHE des Anschnitts. Angeschnitten ist
- * das Portal weiterhin — aber jetzt exakt zur Haelfte und ueberall gleich.
- *
- * Verschieden bleibt, was verschieden sein SOLL: der Ton des Zieluniversums und
- * der Sprite-Wurf des Rings (`seed` in `FirmamentPortal.vue`).
- *
  * **Weder Zoom noch Fahrt sind Argumente.** Das ist die Verriegelung, nicht
  * Bequemlichkeit: was diese Funktion nicht sehen kann, kann keinen Repaint
  * ausloesen. Das Portal steht fest im Bild, und die Karte schiebt sich beim
@@ -27,8 +16,11 @@
 import {
   FIRMAMENT_LEGEND_BOX_H,
   FIRMAMENT_LEGEND_MAX_SHARE,
+  FIRMAMENT_PORTAL_ANGLE_TRIES,
   FIRMAMENT_PORTAL_DISC_CLEAR,
+  FIRMAMENT_PORTAL_EDGE_KEEP,
   FIRMAMENT_PORTAL_KEEPOUT_PAD,
+  FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS,
   FIRMAMENT_PORTAL_LABEL_EDGE_PAD,
   FIRMAMENT_PORTAL_LABEL_GAP_EM,
   FIRMAMENT_PORTAL_LABEL_H_EM,
@@ -36,18 +28,22 @@ import {
   FIRMAMENT_PORTAL_LABEL_MIN_PX,
   FIRMAMENT_PORTAL_LABEL_R_RATIO,
   FIRMAMENT_PORTAL_LABEL_W_EM,
+  FIRMAMENT_PORTAL_MIN_VISIBLE,
   FIRMAMENT_PORTAL_RING_H_RATIO,
   FIRMAMENT_PORTAL_RING_MAX_PX,
   FIRMAMENT_PORTAL_RING_MIN_PX,
+  FIRMAMENT_PORTAL_SHRINK_STEPS,
+  FIRMAMENT_PORTAL_VIS_SAMPLES,
   FIRMAMENT_SEL_BOX_H,
   FIRMAMENT_SEL_BOX_W,
   FIRMAMENT_TOOLS_BOX_H,
   FIRMAMENT_TOOLS_BOX_W,
 } from '@/config/constants'
+import { jitter } from '@/utils/fx/universeDisc'
 import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
 
 export interface FirmamentPortalSpot {
-  /** Mitte des RINGS in Buehnenkoordinaten. Sie liegt AUF der rechten Kante. */
+  /** Mitte des RINGS in Buehnenkoordinaten. */
   x: number
   y: number
   /** Ringradius in px. Der Halo reicht darueber hinaus. */
@@ -61,27 +57,15 @@ export interface FirmamentRect {
   y1: number
 }
 
-/**
- * Der Ringradius: Wunsch aus der BUEHNENHOEHE, gedeckelt an der schwarzen GASSE.
- *
- * Der Wunsch haengt an der Hoehe, nicht am Seitenband: das Band schwankt ueber
- * die Zielaufloesungen um Faktor 4, die Hoehe nur um 2,4 — am Band gemessen
- * waere das Portal auf WUXGA halb so gross wie auf Full HD bei derselben
- * Bildschirmbreite.
- *
- * Der DECKEL dagegen muss die Gasse kennen, sonst laeuft der Ring in die
- * Kartenplatte, die ueber ihm gemalt wird und seine Innenkante abdunkelt.
- * Gemessen greift er allein auf WUXGA (dem engen Fall, 150 auf 99): Full HD,
- * 2K, 4K und der Buehnenboden behalten den vollen Wunsch. Er loest die
- * Schrumpfleiter ab, die dasselbe in vier Stufen und mit einer Suche tat.
- */
-export function firmamentPortalRingR(w: number, h: number): number {
-  const wish = Math.min(
+/** Der Ringradius haengt an der BUEHNENHOEHE, nicht am schwarzen Seitenband:
+ *  das Band schwankt ueber die Zielaufloesungen um Faktor 4, die Hoehe nur um
+ *  2,4. Am Band gemessen waere das Portal auf WUXGA halb so gross wie auf
+ *  Full HD — bei derselben Bildschirmbreite. */
+export function firmamentPortalRingR(h: number): number {
+  return Math.min(
     FIRMAMENT_PORTAL_RING_MAX_PX,
     Math.max(FIRMAMENT_PORTAL_RING_MIN_PX, h * FIRMAMENT_PORTAL_RING_H_RATIO),
   )
-  const lane = w / 2 - firmamentFitBox(w, h).r * FIRMAMENT_PORTAL_DISC_CLEAR
-  return Math.max(FIRMAMENT_PORTAL_RING_MIN_PX, Math.min(wish, lane))
 }
 
 /** Die Bedienflaechen der Buehne. Ihre Masse stehen in Konstanten, weil das CSS
@@ -99,18 +83,118 @@ export function firmamentPortalKeepOuts(w: number, h: number): FirmamentRect[] {
   ]
 }
 
-/**
- * Die Stelle des Portals — dieselbe fuer jedes Universum.
- *
- * `null` allein fuer eine Buehne ohne Mass: der Aufrufer haengt sein `v-if`
- * daran, und ein Portal auf einer 0x0-Buehne waere ein Knopf auf nichts.
- */
-export function firmamentPortalSpot(w: number, h: number): FirmamentPortalSpot | null {
-  if (w <= 0 || h <= 0) return null
-  return { x: w, y: firmamentFitBox(w, h).cy, r: firmamentPortalRingR(w, h) }
+/** Kreis gegen Rechteck — NICHT Bounding-Box gegen Rechteck. Der Unterschied
+ *  traegt: ein Quadrat um einen 150-px-Ring schlaegt auf WUXGA fast jede Ecke
+ *  aus, der Kreistest laesst die diagonalen Lagen stehen. */
+function circleHitsRect(x: number, y: number, r: number, k: FirmamentRect): boolean {
+  const dx = Math.max(k.x0 - x, 0, x - k.x1)
+  const dy = Math.max(k.y0 - y, 0, y - k.y1)
+  return Math.hypot(dx, dy) < r
 }
 
-// -- Die Beschriftung -------------------------------------------------------
+/** Wie weit ein Strahl aus der Mitte reicht, bis er das eingerueckte Rechteck
+ *  verlaesst. Slab-Clip, zwei Achsen. */
+function rayToRect(cx: number, cy: number, a: number, inset: number, w: number, h: number): number {
+  const dx = Math.cos(a)
+  const dy = Math.sin(a)
+  let t = Infinity
+  if (dx > 1e-9) t = Math.min(t, (w - inset - cx) / dx)
+  else if (dx < -1e-9) t = Math.min(t, (inset - cx) / dx)
+  if (dy > 1e-9) t = Math.min(t, (h - inset - cy) / dy)
+  else if (dy < -1e-9) t = Math.min(t, (inset - cy) / dy)
+  return Math.max(0, t)
+}
+
+/** Welcher Anteil der Ringscheibe im Bild liegt — Streifenintegration, weil ein
+ *  Kreis-Rechteck-Schnitt an zwei Kanten keine geschlossene Formel hat. */
+export function firmamentPortalVisibleShare(
+  x: number,
+  y: number,
+  r: number,
+  w: number,
+  h: number,
+): number {
+  if (r <= 0) return 0
+  const n = FIRMAMENT_PORTAL_VIS_SAMPLES
+  const band = (2 * r) / n
+  let inside = 0
+  for (let i = 0; i < n; i++) {
+    const yy = y - r + (i + 0.5) * band
+    if (yy < 0 || yy > h) continue
+    const half = Math.sqrt(Math.max(0, r * r - (yy - y) * (yy - y)))
+    const lo = Math.max(0, x - half)
+    const hi = Math.min(w, x + half)
+    if (hi > lo) inside += hi - lo
+  }
+  return (inside * band) / (Math.PI * r * r)
+}
+
+/**
+ * Die Stelle des Portals — deterministisch aus der Universumsnummer.
+ *
+ * Der Seed ist die BAHN, an deren Ende das Portal steht, nie ihr Ziel:
+ * `toUniverse` faellt auf `currentUniverse` zurueck, sobald
+ * `UNIVERSE_RUN_HISTORY_LIMIT` einen Lauf aus dem Archiv schiebt. Ein Portal,
+ * das seinen Platz wechselt, weil ein alter Lauf verfiel, ist ein Fehler, den
+ * niemand als Fehler erkennt — er sieht nur falsch aus. Die FARBE darf am Ziel
+ * haengen, der Ort nicht.
+ *
+ * Gesucht wird im 15-Grad-Raster; der erste Winkel, der jenseits der KARTE
+ * liegt, genug Flaeche im Bild laesst und keine Bedienflaeche trifft, gewinnt.
+ * Findet sich nichts, wird der Ring kleiner statt zu verschwinden.
+ */
+export function firmamentPortalSpot(
+  universe: number,
+  w: number,
+  h: number,
+): FirmamentPortalSpot | null {
+  if (w <= 0 || h <= 0) return null
+
+  const fit = firmamentFitBox(w, h)
+  const full = firmamentPortalRingR(h)
+  const keep = firmamentPortalKeepOuts(w, h)
+  const clear = fit.r * FIRMAMENT_PORTAL_DISC_CLEAR
+
+  // Eigene Primzahl je Aspekt, ab 131 aufwaerts — die Kanaele darunter gehoeren
+  // der Galaxienwolke, und zwei Aspekte auf einem Kanal laufen im Gleichschritt.
+  const base = jitter(universe, 131) * Math.PI * 2
+  const frac = jitter(universe, 137)
+
+  let fallback: FirmamentPortalSpot | null = null
+
+  // Aeussere Schleife ueber die GROESSE: passt die volle nirgends hin, wird der
+  // Ring kleiner. Ein verschwundenes Portal waere die Weiterreise ohne Weg.
+  for (const step of FIRMAMENT_PORTAL_SHRINK_STEPS) {
+    const r = full * step
+    const dMin = clear + r
+    const inset = r * FIRMAMENT_PORTAL_EDGE_KEEP
+
+    for (let i = 0; i < FIRMAMENT_PORTAL_ANGLE_TRIES; i++) {
+      const angle = base + (i * Math.PI * 2) / FIRMAMENT_PORTAL_ANGLE_TRIES
+      const dMax = rayToRect(fit.cx, fit.cy, angle, inset, w, h)
+      if (dMax < dMin) continue
+
+      const d = dMin + frac * (dMax - dMin)
+      const x = fit.cx + Math.cos(angle) * d
+      const y = fit.cy + Math.sin(angle) * d
+      if (firmamentPortalVisibleShare(x, y, r, w, h) < FIRMAMENT_PORTAL_MIN_VISIBLE) continue
+
+      const spot = { x, y, r }
+      // Geometrisch gueltig reicht als Fluchtweg: eine Buehne, auf der jede Lage
+      // eine Bedienflaeche traefe, gibt es rechnerisch nicht — aber ein `null`
+      // liesse das Portal still verschwinden.
+      fallback ??= spot
+      if (keep.some((k) => circleHitsRect(x, y, r + FIRMAMENT_PORTAL_KEEPOUT_PAD, k))) continue
+      return spot
+    }
+  }
+
+  return fallback
+}
+
+// ── Die Beschriftung ────────────────────────────────────────────────────────
+
+export type FirmamentPortalLabelSide = 'below' | 'above' | 'right' | 'left'
 
 export interface FirmamentPortalLabelSpot {
   /** Mitte des Kaestchens in Buehnenkoordinaten. */
@@ -121,6 +205,7 @@ export interface FirmamentPortalLabelSpot {
   h: number
   /** Schriftgrad der Namenszeile in px; alles andere haengt in `em` daran. */
   size: number
+  side: FirmamentPortalLabelSide
 }
 
 /** Der Schriftgrad haengt am RING, nicht an der Buehne: die Beschriftung gehoert
@@ -132,40 +217,44 @@ export function firmamentPortalLabelSize(r: number): number {
   )
 }
 
-/** Kaestchen gegen Bedienflaeche, beide achsenparallel. */
-function boxHitsRect(
-  cx: number,
-  cy: number,
-  bw: number,
-  bh: number,
-  k: FirmamentRect,
-  pad: number,
-): boolean {
-  return (
-    cx - bw / 2 - pad < k.x1 &&
-    cx + bw / 2 + pad > k.x0 &&
-    cy - bh / 2 - pad < k.y1 &&
-    cy + bh / 2 + pad > k.y0
-  )
+/** Ein Punkt auf einer Achse, moeglichst nah an `want`, innerhalb `[lo, hi]` und
+ *  ausserhalb aller `blocked`-Spannen. Kandidaten sind `want` selbst und die
+ *  Raender aller Spannen — dazwischen kann kein besserer liegen. */
+function nearestFree(
+  want: number,
+  lo: number,
+  hi: number,
+  blocked: Array<[number, number]>,
+): number | null {
+  if (lo > hi) return null
+  const free = (t: number) => blocked.every(([a, b]) => t <= a + 1e-6 || t >= b - 1e-6)
+  let best: number | null = null
+  for (const raw of [want, lo, hi, ...blocked.flat()]) {
+    const t = Math.min(hi, Math.max(lo, raw))
+    if (!free(t)) continue
+    if (best === null || Math.abs(t - want) < Math.abs(best - want)) best = t
+  }
+  return best
 }
 
 /**
  * Wo die Beschriftung des Portals steht.
  *
- * Seit der Ring fest steht, steht auch sie fest: UNTER ihm, rechtsbuendig auf
- * `w - FIRMAMENT_PORTAL_LABEL_EDGE_PAD` — derselben 10-px-Linie, an der auch
- * Auswahlkarte, Legende und Werkzeugkasten haengen. Das ist die ganze Harmonie:
- * EINE rechte Kante fuer alles, was auf der Buehne liegt.
+ * Sie sucht sich die Seite, weil die Portalstelle je Universum eine andere ist:
+ * `below` → `above` → auswaerts → einwaerts. Unter und ueber dem Ring liegt das
+ * leere Sternfeld; die einwaertige Seite liegt ueber dem Schattenteich der
+ * Platte und ist die schlechteste Leseflaeche, also zuletzt.
  *
- * Die einzige Unbekannte ist ihr `y`, und die hat eine geschlossene Form statt
- * einer Leiter: das Kaestchen steht fest in `x`, die Scheibe ist ein Kreis,
- * also sagt Pythagoras, wie weit es hinunter muss, um an ihr vorbeizukommen.
- * Gemessen schiebt das nur auf WUXGA, und dort um 49 px.
+ * Die GEBUNDENE Achse traegt den Abstand zum Ring und ruehrt sich nie — sonst
+ * liefe die Beschriftung von dem weg, was sie benennt. Auf der FREIEN Achse ist
+ * es dagegen eine Rechnung mit einer Unbekannten: Bildkante als Spanne,
+ * Kartenscheibe und Bedienflaechen als Sperren, gesucht ist der Punkt am
+ * naechsten an der Ringmitte. Ein „schieb sie halt weg" fand dabei nur die
+ * Scheibe und lief in die Legende.
  *
- * Bleibt es dabei der Auswahlkarte zu nahe, klappt es UEBER den Ring — das
- * tritt allein auf der Bodenbuehne ein. Sie gibt nie `null`: gedraengt ist
- * besser als weg, eine verschwundene Beschriftung waere eine Weiterreise ohne
- * Ziel.
+ * Sie gibt nie `null`: dieselbe Regel wie die Schrumpfleiter des Rings —
+ * gedraengt ist besser als weg, eine verschwundene Beschriftung waere eine
+ * Weiterreise ohne Ziel.
  */
 export function firmamentPortalLabelSpot(
   spot: FirmamentPortalSpot,
@@ -177,32 +266,82 @@ export function firmamentPortalLabelSpot(
   const bh = FIRMAMENT_PORTAL_LABEL_H_EM * size
   const gap = FIRMAMENT_PORTAL_LABEL_GAP_EM * size
   const pad = FIRMAMENT_PORTAL_LABEL_EDGE_PAD
+  const kpad = FIRMAMENT_PORTAL_KEEPOUT_PAD
 
   const fit = firmamentFitBox(w, h)
-  const clear = fit.r * FIRMAMENT_PORTAL_DISC_CLEAR
-  const cx = w - pad - bw / 2
-
-  // Wie weit die Scheibe auf der Zeile des Kaestchens reicht. Gemessen an
-  // seiner LINKEN Kante — die ist der Scheibe am naechsten.
-  const dx = cx - bw / 2 - fit.cx
-  const push = dx >= clear ? 0 : Math.sqrt(Math.max(0, clear * clear - dx * dx))
-
-  const below = Math.max(spot.y + spot.r + gap + bh / 2, fit.cy + push + bh / 2)
-  const above = Math.min(spot.y - spot.r - gap - bh / 2, fit.cy - push - bh / 2)
-
   const keep = firmamentPortalKeepOuts(w, h)
-  const free = (cy: number) =>
-    cy - bh / 2 >= pad &&
-    cy + bh / 2 <= h - pad &&
-    !keep.some((k) => boxHitsRect(cx, cy, bw, bh, k, FIRMAMENT_PORTAL_KEEPOUT_PAD))
 
-  const cy = free(below)
-    ? below
-    : free(above)
-      ? above
-      : Math.min(h - pad - bh / 2, Math.max(pad + bh / 2, below))
+  const outward: FirmamentPortalLabelSide = spot.x >= fit.cx ? 'right' : 'left'
+  const inward: FirmamentPortalLabelSide = outward === 'right' ? 'left' : 'right'
+  const order: FirmamentPortalLabelSide[] = ['below', 'above', outward, inward]
 
-  return { cx, cy, w: bw, h: bh, size }
+  /** Die feste Achse einer Seite: Kastenmitte und ihr halbes Mass. */
+  function bound(side: FirmamentPortalLabelSide): { mid: number; half: number } {
+    const half = side === 'below' || side === 'above' ? bh / 2 : bw / 2
+    const off = spot.r + gap + half
+    if (side === 'below') return { mid: spot.y + off, half }
+    if (side === 'above') return { mid: spot.y - off, half }
+    if (side === 'right') return { mid: spot.x + off, half }
+    return { mid: spot.x - off, half }
+  }
+
+  function place(side: FirmamentPortalLabelSide, clear: number): FirmamentPortalLabelSpot | null {
+    const vertical = side === 'below' || side === 'above'
+    const { mid, half: bHalf } = bound(side)
+    const span = vertical ? w : h
+    const fHalf = vertical ? bw / 2 : bh / 2
+    // Die gebundene Achse kann nicht ausweichen — passt sie nicht, faellt die
+    // Seite ganz.
+    if (mid - bHalf < pad || mid + bHalf > (vertical ? h : w) - pad) return null
+
+    const fitBound = vertical ? fit.cy : fit.cx
+    const fitFree = vertical ? fit.cx : fit.cy
+    const blocked: Array<[number, number]> = []
+
+    // Die Scheibe als Sperre auf der freien Achse — wie weit sie reicht, haengt
+    // davon ab, wie nah die feste Achse ihr schon kommt.
+    const d = Math.max(mid - bHalf - fitBound, fitBound - (mid + bHalf), 0)
+    if (d < clear) {
+      const need = Math.sqrt(clear * clear - d * d) + fHalf
+      blocked.push([fitFree - need, fitFree + need])
+    }
+
+    // Bedienflaechen zaehlen nur, solange die feste Achse sie ueberhaupt trifft.
+    for (const k of keep) {
+      const kb = vertical ? [k.y0, k.y1] : [k.x0, k.x1]
+      const kf = vertical ? [k.x0, k.x1] : [k.y0, k.y1]
+      if (mid - bHalf - kpad >= kb[1] || mid + bHalf + kpad <= kb[0]) continue
+      blocked.push([kf[0] - fHalf - kpad, kf[1] + fHalf + kpad])
+    }
+
+    const t = nearestFree(vertical ? spot.x : spot.y, pad + fHalf, span - pad - fHalf, blocked)
+    if (t === null) return null
+    return vertical
+      ? { cx: t, cy: mid, w: bw, h: bh, size, side }
+      : { cx: mid, cy: t, w: bw, h: bh, size, side }
+  }
+
+  // Aeussere Schleife ueber die NAEHE zur Karte, innere ueber die Seiten: eine
+  // Seite in der schwarzen Flaeche schlaegt jede naehere, egal welche.
+  for (const step of FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS) {
+    for (const side of order) {
+      const cand = place(side, fit.r * step)
+      if (cand) return cand
+    }
+  }
+
+  // Fluchtweg: unter dem Ring, auf BEIDEN Achsen in die Buehne geklemmt.
+  const { mid } = bound('below')
+  const clampTo = (v: number, lo: number, hi: number) =>
+    lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v))
+  return {
+    cx: clampTo(spot.x, pad + bw / 2, w - pad - bw / 2),
+    cy: clampTo(mid, pad + bh / 2, h - pad - bh / 2),
+    w: bw,
+    h: bh,
+    size,
+    side: 'below',
+  }
 }
 
 /**
@@ -213,19 +352,21 @@ export function firmamentPortalLabelSpot(
  * unter dessen Unterkante. Am runden Knopf allein ging sie genau dort auf, wo
  * die Beschriftung steht, und deckte sie zu.
  *
- * Rechts endet es an der Buehnenkante — die abgeschnittene Haelfte des Rings
- * ist nicht zu treffen, und ein Anker, der ueber den Rand hinausreicht, zoege
- * die Karte samt Pfeil aus dem Reiter heraus.
+ * Geklemmt wird auf ALLEN vier Seiten: die Stelle ist je Universum eine andere,
+ * jede Kante kann die angeschnittene sein. Was draussen liegt, ist ohnehin nicht
+ * zu treffen — und ein Anker, der ueber den Rand hinausreicht, zoege die Karte
+ * samt Pfeil aus dem Reiter heraus.
  */
 export function firmamentPortalHitBox(
   spot: FirmamentPortalSpot,
   label: FirmamentPortalLabelSpot,
   w: number,
+  h: number,
 ): FirmamentRect {
   return {
-    x0: Math.min(spot.x - spot.r, label.cx - label.w / 2),
-    y0: Math.min(spot.y - spot.r, label.cy - label.h / 2),
-    x1: Math.min(w, spot.x + spot.r),
-    y1: Math.max(spot.y + spot.r, label.cy + label.h / 2),
+    x0: Math.max(0, Math.min(spot.x - spot.r, label.cx - label.w / 2)),
+    y0: Math.max(0, Math.min(spot.y - spot.r, label.cy - label.h / 2)),
+    x1: Math.min(w, Math.max(spot.x + spot.r, label.cx + label.w / 2)),
+    y1: Math.min(h, Math.max(spot.y + spot.r, label.cy + label.h / 2)),
   }
 }
