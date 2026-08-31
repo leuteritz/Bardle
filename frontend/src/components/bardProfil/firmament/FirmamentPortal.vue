@@ -3,14 +3,23 @@
  * Das Abflugportal — der Ausgang eines Universums, im schwarzen Raum jenseits
  * der Galaxienscheibe.
  *
- * VIER Canvas auf EINEM Ankerpunkt: Halo, Schlund, Wirbel, stehender Ring. Der
- * Anker misst 0 x 0 und jede Ebene zentriert sich per `translate(-50%,-50%)`
- * darauf — so gibt es trotz verschiedener Kantenlaengen keine Ausrichtung und
- * damit keine ganze Klasse von Fehlern.
+ * SECHS Ebenen auf EINEM Ankerpunkt: Halo, Schlund, Schwellenlicht, Wirbel,
+ * stehender Ring, Ringwelle. Der Anker misst 0 x 0 und jede Ebene zentriert
+ * sich per `translate(-50%,-50%)` darauf — so gibt es trotz verschiedener
+ * Kantenlaengen keine Ausrichtung und damit keine ganze Klasse von Fehlern.
  *
  * Bewegt wird ausschliesslich per CSS an FERTIG GEBACKENEN Sprites: der Wirbel
  * dreht, der Halo atmet. Keine Frame-Schleife, kein `data-paints` — der Zaehler
  * gehoert der Karte.
+ *
+ * Beim Ueberfahren WACHT DIE SCHWELLE AUF: der Wirbel zieht an, die Ebenen
+ * staffeln sich in die Tiefe, das Schwellenlicht blueht auf, eine Welle
+ * quittiert. Ausgeloest wird das vom Knopf im Chart — die Regeln stehen
+ * trotzdem HIER, weil Vue Keyframe-Namen in `<style scoped>` einen
+ * Scope-Suffix anhaengt: eine Animation und die Regel, die ihre Phasen nennt,
+ * muessen im selben Block liegen. Vorfahren aus einer fremden Komponente darf
+ * ein scoped Selektor nennen, das Scope-Attribut landet nur am letzten
+ * Compound.
  *
  * Diese Komponente traegt KEINE Bedienung. Der Knopf sitzt im Chart, damit
  * dessen Hover-Pause-Regel (`.fm-stage:has(…)`) ihn ohne Scope-Trickserei
@@ -22,10 +31,24 @@ import { buildPortalSprite, portalSpriteSpan, type PortalLayer } from '@/utils/f
 import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
 import {
   FIRMAMENT_MAX_DPR,
+  FIRMAMENT_PORTAL_BLOOM_ALPHA,
+  FIRMAMENT_PORTAL_BLOOM_REST_K,
+  FIRMAMENT_PORTAL_BLOOM_SPAN,
   FIRMAMENT_PORTAL_HALO_REST,
+  FIRMAMENT_PORTAL_HOVER_BOOST_RATIO,
+  FIRMAMENT_PORTAL_HOVER_HALO_K,
+  FIRMAMENT_PORTAL_HOVER_MAW_K,
+  FIRMAMENT_PORTAL_HOVER_MS,
+  FIRMAMENT_PORTAL_HOVER_RIM_K,
+  FIRMAMENT_PORTAL_HOVER_SWIRL_K,
   FIRMAMENT_PORTAL_MAX_BACKING_PX,
   FIRMAMENT_PORTAL_PULSE_MIN,
   FIRMAMENT_PORTAL_PULSE_SEC,
+  FIRMAMENT_PORTAL_RIPPLE_ALPHA,
+  FIRMAMENT_PORTAL_RIPPLE_FROM,
+  FIRMAMENT_PORTAL_RIPPLE_MS,
+  FIRMAMENT_PORTAL_RIPPLE_TO,
+  FIRMAMENT_PORTAL_RY,
   FIRMAMENT_PORTAL_SPIN_RATIO,
 } from '@/config/constants'
 import type { FirmamentPortalSpot } from '@/utils/ui/firmamentPortalSpot'
@@ -89,15 +112,40 @@ const rimPx = computed(() => `${portalSpriteSpan('rim', ringPx.value)}px`)
 const swirlPx = computed(() => `${portalSpriteSpan('swirl', ringPx.value)}px`)
 const haloPx = computed(() => `${portalSpriteSpan('halo', ringPx.value)}px`)
 
+/* Schwellenlicht und Welle sind DOM, kein Sprite: das Licht braucht nur einen
+   Verlauf, und `portalSprite.spec.ts` verriegelt die Zugzahlen der vier
+   Malfunktionen zu eng fuer einen fuenften Zug. Der Durchmesser der Welle IST
+   der Ringdurchmesser — deshalb lesen sich ihre Skalen als Ringradien. */
+const bloomPx = computed(() => `${Math.round(ringPx.value * FIRMAMENT_PORTAL_BLOOM_SPAN)}px`)
+const ripplePx = computed(() => `${ringPx.value}px`)
+
 /* Dieselbe Wurzelregel wie alles im Reiter, nur mit einem eigenen, BENANNTEN
    Teiler: roh waeren es 166 s und 4,9 px/s an der Armspitze — die Rate eines
    Galaxienfeldes. Ein Portal ist eine offene Maschine, kein Feld. */
-const spinDur = computed(
-  () => `${universeDiscSpinSec(ringPx.value) / FIRMAMENT_PORTAL_SPIN_RATIO}s`,
-)
+const spinSec = computed(() => universeDiscSpinSec(ringPx.value) / FIRMAMENT_PORTAL_SPIN_RATIO)
+const spinDur = computed(() => `${spinSec.value}s`)
+/* Die Zusatzdrehung ADDIERT sich zur Grunddrehung, statt sie umzustellen: eine
+   neue `animation-duration` liesse Chrome den Fortschritt umrechnen, und die
+   sieben Motes zeigten den Sprung. */
+const boostDur = computed(() => `${spinSec.value / FIRMAMENT_PORTAL_HOVER_BOOST_RATIO}s`)
+
 const pulseDur = `${FIRMAMENT_PORTAL_PULSE_SEC}s`
 const pulseMin = String(FIRMAMENT_PORTAL_PULSE_MIN)
 const haloRest = String(FIRMAMENT_PORTAL_HALO_REST)
+
+const tintColor = computed(() => props.tint)
+const portalRy = String(FIRMAMENT_PORTAL_RY)
+const hoverDur = `${FIRMAMENT_PORTAL_HOVER_MS}ms`
+const haloK = String(FIRMAMENT_PORTAL_HOVER_HALO_K)
+const rimK = String(FIRMAMENT_PORTAL_HOVER_RIM_K)
+const mawK = String(FIRMAMENT_PORTAL_HOVER_MAW_K)
+const swirlK = String(FIRMAMENT_PORTAL_HOVER_SWIRL_K)
+const bloomAlpha = String(FIRMAMENT_PORTAL_BLOOM_ALPHA)
+const bloomRestK = String(FIRMAMENT_PORTAL_BLOOM_REST_K)
+const rippleAlpha = String(FIRMAMENT_PORTAL_RIPPLE_ALPHA)
+const rippleFrom = String(FIRMAMENT_PORTAL_RIPPLE_FROM)
+const rippleTo = String(FIRMAMENT_PORTAL_RIPPLE_TO)
+const rippleDur = `${FIRMAMENT_PORTAL_RIPPLE_MS}ms`
 
 const left = computed(() => `${props.spot.x}px`)
 const top = computed(() => `${props.spot.y}px`)
@@ -107,8 +155,18 @@ const top = computed(() => `${props.spot.y}px`)
   <span class="fm-portal" aria-hidden="true">
     <canvas ref="haloEl" class="fm-portal-l fm-portal-l--halo" />
     <canvas ref="mawEl" class="fm-portal-l fm-portal-l--maw" />
-    <canvas ref="swirlEl" class="fm-portal-l fm-portal-l--swirl" />
+    <!-- Das Licht kommt AUS der Oeffnung: es liegt auf dem Schlund und unter
+         Wirbel und Ring, damit die Fassung die scharfe oberste Kante bleibt. -->
+    <span class="fm-portal-fx fm-portal-fx--bloom" />
+    <!-- Der Drehrahmen der Zusatzdrehung. 0 x 0 auf dem Anker, also dreht und
+         skaliert er um genau den Punkt, um den auch der Wirbel dreht. -->
+    <span class="fm-portal-boost">
+      <canvas ref="swirlEl" class="fm-portal-l fm-portal-l--swirl" />
+    </span>
     <canvas ref="rimEl" class="fm-portal-l fm-portal-l--rim" />
+    <!-- Die Welle laeuft UEBER die Fassung hinaus: sie verlaesst die Schwelle,
+         statt ein zweiter Ring darauf zu sein. -->
+    <span class="fm-portal-fx fm-portal-fx--ripple" />
   </span>
 </template>
 
@@ -131,6 +189,7 @@ const top = computed(() => `${props.spot.y}px`)
   display: block;
   transform: translate(-50%, -50%);
   transform-origin: 50% 50%;
+  transition: transform v-bind(hoverDur) cubic-bezier(0.22, 0.68, 0.24, 1);
 }
 
 .fm-portal-l--maw {
@@ -156,6 +215,68 @@ const top = computed(() => `${props.spot.y}px`)
   animation: fm-portal-pulse v-bind(pulseDur) ease-in-out infinite;
 }
 
+/* Der Wirbel bekommt seinen Hover-Massstab HIER und nicht am Canvas: dessen
+   `transform` gehoert den Keyframes, und die Einzeleigenschaft `scale` liegt in
+   der Matrixkette AUSSERHALB von `translate(-50%,-50%)` — sie zoege ihn aus der
+   Mitte. Am 0-x-0-Rahmen stimmt beides.
+
+   Ruhend PAUSIERT, beim Hover laufend: eine pausierte Animation friert ein und
+   laeuft weiter, wo sie stand. Ein blosses Umstellen von `animation-duration`
+   liesse Chrome den Fortschritt umrechnen, und die sieben Motes zeigten den
+   Sprung. */
+.fm-portal-boost {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  animation: fm-portal-boost v-bind(boostDur) linear infinite;
+  animation-play-state: paused;
+  transition: scale v-bind(hoverDur) cubic-bezier(0.22, 0.68, 0.24, 1);
+}
+
+/* Ruhend malen beide nichts. Sie kosten erst etwas, wenn sie etwas sagen —
+   dasselbe Muster wie `.fm-node-ring` und `.node-glow`. */
+.fm-portal-fx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  transition:
+    opacity v-bind(hoverDur) ease,
+    transform v-bind(hoverDur) cubic-bezier(0.22, 0.68, 0.24, 1);
+}
+
+/* HOHL. Eine gefuellte Mitte waere der Aufkleber auf dem Durchgang, gegen den
+   schon der Punkt und die Ringscheitel gefallen sind. Der Gipfel liegt dicht am
+   Ring, die Ellipse ist die des Schlunds — dieselbe Neigung macht aus Licht und
+   Portal EIN Objekt. */
+.fm-portal-fx--bloom {
+  width: v-bind(bloomPx);
+  height: v-bind(bloomPx);
+  transform: translate(-50%, -50%) scaleY(v-bind(portalRy)) scale(v-bind(bloomRestK));
+  background: radial-gradient(
+    closest-side,
+    transparent 0 34%,
+    color-mix(in srgb, v-bind(tintColor) 34%, transparent) 50%,
+    color-mix(in srgb, v-bind(tintColor) 82%, transparent) 60%,
+    color-mix(in srgb, v-bind(tintColor) 26%, transparent) 76%,
+    transparent 95%
+  );
+}
+
+/* Ihr Durchmesser IST der Ringdurchmesser: die Skalen der Keyframes lesen sich
+   damit direkt als Ringradien. */
+.fm-portal-fx--ripple {
+  width: v-bind(ripplePx);
+  height: v-bind(ripplePx);
+  border: 1.4px solid v-bind(tintColor);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scaleY(v-bind(portalRy)) scale(v-bind(rippleFrom));
+}
+
 /* Die Zentrierung steht IM Keyframe: eine Drehung ueberschriebe ein separates
    `transform` sonst — dieselbe Falle, gegen die `fm-rim-turn` gebaut ist. */
 @keyframes fm-portal-turn {
@@ -177,8 +298,69 @@ const top = computed(() => `${props.spot.y}px`)
   }
 }
 
+/* Der Rahmen misst 0 x 0, sein Drehpunkt IST der Anker — hier braucht es keine
+   Zentrierung im Keyframe. */
+@keyframes fm-portal-boost {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fm-portal-ripple {
+  from {
+    transform: translate(-50%, -50%) scaleY(v-bind(portalRy)) scale(v-bind(rippleFrom));
+    opacity: v-bind(rippleAlpha);
+  }
+  to {
+    transform: translate(-50%, -50%) scaleY(v-bind(portalRy)) scale(v-bind(rippleTo));
+    opacity: 0;
+  }
+}
+
+/* ── Der Hover ───────────────────────────────────────────────────────────
+   Die BEDEUTUNG steckt in der Ordnung der Massstaebe, nicht in ihren Betraegen:
+   Fassung vor, Schlund zurueck, Wirbel hinein — man sieht tiefer in den
+   Durchgang, statt dass er nur groesser wird. Der Versatz zwischen Ring und
+   Schlundkante bleibt unter dem `shadowBlur` des Rings, sonst risse zwischen
+   beiden eine Fuge auf. */
+.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-l--halo {
+  transform: translate(-50%, -50%) scale(v-bind(haloK));
+}
+
+.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-l--rim {
+  transform: translate(-50%, -50%) scale(v-bind(rimK));
+}
+
+.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-l--maw {
+  transform: translate(-50%, -50%) scale(v-bind(mawK));
+}
+
+.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-boost {
+  animation-play-state: running;
+  scale: v-bind(swirlK);
+}
+
+.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-fx--bloom {
+  opacity: v-bind(bloomAlpha);
+  transform: translate(-50%, -50%) scaleY(v-bind(portalRy)) scale(1);
+}
+
+/* EINE Welle je Beruehrung, kein Dauerlaeufer. Danach steht das Element wieder
+   auf null — `animation-fill-mode` bleibt bewusst aus. */
+.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-fx--ripple {
+  animation: fm-portal-ripple v-bind(rippleDur) ease-out 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .fm-portal-l {
+  .fm-portal-l,
+  .fm-portal-boost,
+  .fm-portal-fx {
+    animation: none;
+    transition: none;
+  }
+
+  /* Das Schwellenlicht bleibt: es ist Auskunft, keine Bewegung. */
+  .fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-fx--ripple {
     animation: none;
   }
 }

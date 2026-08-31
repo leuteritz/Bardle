@@ -615,6 +615,59 @@ export const FIRMAMENT_PORTAL_PULSE_SEC = 3.6
 export const FIRMAMENT_PORTAL_PULSE_MIN = 0.45
 export const FIRMAMENT_PORTAL_HALO_REST = 0.72
 
+/* ── Der Hover: die Schwelle wacht auf ──────────────────────────────────
+   Ruhend hielt beim Ueberfahren auch das Portal an — es war damit im Moment
+   der Absicht toter als davor. Es haelt jetzt NUR bei Knoten-Hover mit an:
+   die Pause gibt es, damit ein wandernder Knoten dem Zeiger nicht davonlaeuft,
+   und das Portal steht fest. Bahn, Wolke und Wall halten weiter an. */
+
+/** Teiler der ZWEITEN, additiven Drehung (`.fm-portal-boost`) auf dieselbe
+ *  Wurzelregel. Gemeinsam mit der Grunddrehung: 33 / (1 + 1,4) = 13,8 s.
+ *
+ *  Additiv, weil ein blosses Umstellen von `animation-duration` SPRINGT: Chrome
+ *  rechnet den Fortschritt auf die neue Dauer um (bei 20 s Laufzeit 60 % → 43 %,
+ *  rund 61 Grad), und die sieben Motes sind Landmarken, die das zeigen. Der Wall
+ *  darf springen — ein Haarlinienfeld hat keine. Eine pausierte Animation friert
+ *  ein und laeuft weiter, wo sie stand: in keiner Richtung ein Sprung. */
+export const FIRMAMENT_PORTAL_HOVER_BOOST_RATIO = 1.4
+
+/** Die Tiefenstaffelung. Die BEDEUTUNG steckt in der Ordnung, nicht in den
+ *  Betraegen: Fassung vor, Schlund zurueck, Wirbel hinein — man sieht tiefer in
+ *  den Durchgang, statt dass er nur groesser wird. Der Versatz zwischen Ring und
+ *  Schlundkante bleibt unter dem `shadowBlur` des Rings (0,3 r), sonst risse
+ *  zwischen beiden eine Fuge auf. */
+export const FIRMAMENT_PORTAL_HOVER_HALO_K = 1.12
+export const FIRMAMENT_PORTAL_HOVER_RIM_K = 1.025
+export const FIRMAMENT_PORTAL_HOVER_MAW_K = 0.985
+export const FIRMAMENT_PORTAL_HOVER_SWIRL_K = 0.94
+export const FIRMAMENT_PORTAL_HOVER_MS = 260
+
+/** Das SCHWELLENLICHT — ein hohler Verlauf im Ton des Ziels, Gipfel dicht am
+ *  Ring, in derselben Ellipse wie der Schlund (`_RY`). Hohl ist keine
+ *  Geschmacksfrage: eine gefuellte Mitte ist der Aufkleber auf dem Durchgang,
+ *  gegen den schon der Punkt und die Ringscheitel gefallen sind.
+ *
+ *  Kein fuenftes Sprite — `portalSprite.spec.ts` verriegelt die Zugzahlen der
+ *  vier Malfunktionen, und ein Verlauf braucht kein Canvas. Die Kante liegt
+ *  zwischen Fassung (1,45) und Aura (1,9). */
+export const FIRMAMENT_PORTAL_BLOOM_SPAN = 1.72
+export const FIRMAMENT_PORTAL_BLOOM_ALPHA = 0.58
+export const FIRMAMENT_PORTAL_BLOOM_REST_K = 0.92
+
+/** Die EINE Ringwelle als Quittung. Sie beginnt INNEN am Ring und laeuft nach
+ *  aussen aus — eine Welle, die die Schwelle verlaesst, statt ein zweiter Ring
+ *  zu sein (der bei halbem Radius machte aus dem Durchgang eine Zielscheibe).
+ *
+ *  Sie ist ein DOM-Element und hat deshalb KEINE Sprite-Kante: ihr Durchmesser
+ *  IST der Ringdurchmesser, also lesen sich `_FROM` und `_TO` direkt als
+ *  Ringradien. `_TO` bleibt unter `_AURA_SPAN` (1,9 — Spannen sind zugleich die
+ *  Reichweite in r), damit die Welle innerhalb des Halos stirbt, statt als
+ *  wachsender Reif ueber die Karte zu laufen. */
+export const FIRMAMENT_PORTAL_RIPPLE_FROM = 0.92
+export const FIRMAMENT_PORTAL_RIPPLE_TO = 1.55
+export const FIRMAMENT_PORTAL_RIPPLE_ALPHA = 0.65
+export const FIRMAMENT_PORTAL_RIPPLE_MS = 900
+
 /** Die Suche nach der Stelle: 24 Winkel im 15-Grad-Raster. */
 export const FIRMAMENT_PORTAL_ANGLE_TRIES = 24
 /** Angeschnitten ja, verschwunden nein. ZWEI Riegel, weil einer nicht traegt:

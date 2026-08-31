@@ -891,16 +891,22 @@ const LEGEND = [
   animation-play-state: paused;
 }
 
-/* Das Portal haelt mit an. Es wandert dem Zeiger zwar nicht davon — aber wenn
-   beim Ueberfahren alles andere steht, ist ein einzeln weiterdrehendes Objekt
-   eine sichtbare Inkonsistenz, und es kostet nichts. */
-.fm-stage:has(
-    .fm-node:hover,
-    .fm-node:focus-visible,
-    .fm-portal-hit:hover,
-    .fm-portal-hit:focus-visible
-  )
-  :deep(:is(.fm-hero .uni-disc-l, .fm-portal-l)) {
+/* Ueber einem KNOTEN haelt auch das Portal an: es wandert dem Zeiger zwar nicht
+   davon, aber wenn alles andere steht, ist ein einzeln weiterdrehendes Objekt
+   eine sichtbare Inkonsistenz. */
+.fm-stage:has(.fm-node:hover, .fm-node:focus-visible)
+  :deep(:is(.fm-hero .uni-disc-l, .fm-portal-l, .fm-portal-boost)) {
+  animation-play-state: paused;
+}
+
+/* Ueber dem PORTAL haelt nur die Wolke an — es LEBT. Die Pause gibt es, damit
+   ein wandernder Knoten dem Zeiger nicht aus seiner Trefferflaeche laeuft; das
+   Portal steht fest, und ein Durchgang, der auf den Blick hin anzieht, ist
+   selbst die Auskunft: hier geht es weiter. Was es beim Ueberfahren tut, steht
+   in `FirmamentPortal.vue` — Animation und Keyframe muessen in denselben
+   scoped Block. */
+.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible)
+  :deep(.fm-hero .uni-disc-l) {
   animation-play-state: paused;
 }
 
@@ -963,6 +969,7 @@ const LEGEND = [
   text-transform: uppercase;
   color: #8a8172;
   text-shadow: 0 0 8px rgba(0, 0, 0, 0.95);
+  transition: color 0.16s ease;
 }
 
 .fm-portal-name {
@@ -985,6 +992,13 @@ const LEGEND = [
 .fm-portal-hit:hover .fm-portal-name,
 .fm-portal-hit:focus-visible .fm-portal-name {
   color: #fdf0c4;
+}
+
+/* Die Augenbraue gehoert zum selben Knopf. Ohne sie reagierte die Zeile nur zur
+   Haelfte. */
+.fm-portal-hit:hover .fm-portal-eyebrow,
+.fm-portal-hit:focus-visible .fm-portal-eyebrow {
+  color: #c8bda4;
 }
 
 @media (prefers-reduced-motion: reduce) {

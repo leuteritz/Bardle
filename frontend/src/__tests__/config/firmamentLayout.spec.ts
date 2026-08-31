@@ -9,7 +9,15 @@ import {
   FIRMAMENT_NODE_HIT_MIN,
   FIRMAMENT_PATH_MIN_SPAN,
   FIRMAMENT_PLATE_REF_R,
+  FIRMAMENT_PORTAL_AURA_SPAN,
+  FIRMAMENT_PORTAL_HOVER_BOOST_RATIO,
+  FIRMAMENT_PORTAL_HOVER_HALO_K,
+  FIRMAMENT_PORTAL_HOVER_MAW_K,
+  FIRMAMENT_PORTAL_HOVER_RIM_K,
+  FIRMAMENT_PORTAL_HOVER_SWIRL_K,
   FIRMAMENT_PORTAL_RING_MIN_PX,
+  FIRMAMENT_PORTAL_RIPPLE_FROM,
+  FIRMAMENT_PORTAL_RIPPLE_TO,
   FIRMAMENT_PORTAL_SHRINK_STEPS,
   FIRMAMENT_RAIL_AUTOFOLD_W,
   FIRMAMENT_RAIL_FOLDED_W,
@@ -566,5 +574,68 @@ describe('Firmament — das Abflugportal', () => {
       expect(props.length).toBeGreaterThan(0)
       for (const p of props) expect(['transform', 'opacity'], `${p} im Keyframe`).toContain(p)
     }
+  })
+
+  /* Die Tiefenstaffelung des Hovers. Gebunden ist die ORDNUNG, nicht der
+     Betrag: Fassung vor, Schlund zurueck, Wirbel hinein — daraus entsteht der
+     Blick IN den Durchgang. Zieht jemand den Schlund nach vorn oder den Wirbel
+     hinaus, wird das Portal beim Ueberfahren nur groesser. */
+  it('staffelt die Hover-Ebenen in die Tiefe', () => {
+    expect(FIRMAMENT_PORTAL_HOVER_SWIRL_K).toBeLessThan(FIRMAMENT_PORTAL_HOVER_MAW_K)
+    expect(FIRMAMENT_PORTAL_HOVER_MAW_K).toBeLessThan(1)
+    expect(FIRMAMENT_PORTAL_HOVER_RIM_K).toBeGreaterThan(1)
+    expect(FIRMAMENT_PORTAL_HOVER_HALO_K).toBeGreaterThan(FIRMAMENT_PORTAL_HOVER_RIM_K)
+  })
+
+  /* Die Zusatzdrehung ADDIERT sich, also zieht jeder positive Teiler an. Sie
+     darf den Wirbel aber nicht zum Kreisel machen — bei doppelter Grundrate
+     waere die Anzeige eine Maschine im Leerlauf, kein Sog. */
+  it('laesst den Wirbel anziehen, ohne ihn zum Kreisel zu machen', () => {
+    expect(FIRMAMENT_PORTAL_HOVER_BOOST_RATIO).toBeGreaterThan(0)
+    expect(FIRMAMENT_PORTAL_HOVER_BOOST_RATIO).toBeLessThanOrEqual(2)
+  })
+
+  /* Die Welle beginnt INNEN am Ring und stirbt innerhalb des Halos. Ein Start
+     ausserhalb machte sie zum zweiten Ring, ein Ende jenseits der Aura zu einem
+     Reif, der ueber die Karte laeuft. Spannen sind zugleich die Reichweite in
+     Ringradien, deshalb ist der Vergleich mit `_AURA_SPAN` einer. */
+  it('laesst die Ringwelle innen beginnen und im Halo sterben', () => {
+    expect(FIRMAMENT_PORTAL_RIPPLE_FROM).toBeLessThan(1)
+    expect(FIRMAMENT_PORTAL_RIPPLE_TO).toBeGreaterThan(1)
+    expect(FIRMAMENT_PORTAL_RIPPLE_TO).toBeLessThan(FIRMAMENT_PORTAL_AURA_SPAN)
+  })
+
+  /* `will-change` legt die Ebene schon beim Mount an — im teuersten Frame des
+     Reiters — und Chrome promotet eine laufende Animation ohnehin. Dieselbe
+     Begruendung wie am Wall und an der Universumsscheibe. */
+  it('promotet keine Portal-Ebene von Hand', () => {
+    const src = readFileSync(
+      resolve(__dirname, '../../components/bardProfil/firmament/FirmamentPortal.vue'),
+      'utf8',
+    )
+    expect(src.includes('will-change')).toBe(false)
+    // Der Hover LEBT: der Zusatzdrehrahmen laeuft an, statt zu pausieren.
+    expect(src.includes('animation-play-state: running')).toBe(true)
+  })
+
+  /* Ueber dem PORTAL haelt es selbst NICHT an — es steht fest, dem Zeiger kann
+     es nicht aus der Trefferflaeche laufen, und ein Durchgang, der auf den Blick
+     hin anzieht, ist die Auskunft. Genau diese Entscheidung wird beim naechsten
+     Anfassen still zurueckgedreht, indem jemand den Ausloeser wieder in die eine
+     grosse Pause-Regel schreibt. */
+  it('nimmt das Portal von seiner eigenen Hover-Pause aus', () => {
+    const src = readFileSync(
+      resolve(__dirname, '../../components/bardProfil/firmament/FirmamentChart.vue'),
+      'utf8',
+    )
+    const rules = [...src.matchAll(/([^{}]*)\{\s*animation-play-state:\s*paused;\s*\}/g)].map(
+      (m) => m[1],
+    )
+    expect(rules.length).toBeGreaterThan(0)
+    for (const sel of rules) {
+      if (sel.includes('.fm-portal-l')) expect(sel.includes('.fm-portal-hit')).toBe(false)
+    }
+    // Die Wolke haelt weiterhin an — der Ausloeser ist also nicht bloss entfallen.
+    expect(rules.some((sel) => sel.includes('.fm-portal-hit'))).toBe(true)
   })
 })
