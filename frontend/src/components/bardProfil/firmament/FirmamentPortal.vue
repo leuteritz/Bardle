@@ -3,7 +3,7 @@
  * Das Abflugportal — der Ausgang eines Universums, im schwarzen Raum jenseits
  * der Galaxienscheibe.
  *
- * VIER Canvas auf EINEM Ankerpunkt: Spur, Halo, Wirbel, stehender Ring. Der
+ * VIER Canvas auf EINEM Ankerpunkt: Halo, Schlund, Wirbel, stehender Ring. Der
  * Anker misst 0 x 0 und jede Ebene zentriert sich per `translate(-50%,-50%)`
  * darauf — so gibt es trotz verschiedener Kantenlaengen keine Ausrichtung und
  * damit keine ganze Klasse von Fehlern.
@@ -18,12 +18,7 @@
  */
 import { computed, ref, watchEffect } from 'vue'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
-import {
-  buildPortalSprite,
-  buildPortalTrail,
-  portalSpriteSpan,
-  type PortalLayer,
-} from '@/utils/fx/portalSprite'
+import { buildPortalSprite, portalSpriteSpan, type PortalLayer } from '@/utils/fx/portalSprite'
 import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
 import {
   FIRMAMENT_MAX_DPR,
@@ -32,8 +27,6 @@ import {
   FIRMAMENT_PORTAL_PULSE_MIN,
   FIRMAMENT_PORTAL_PULSE_SEC,
   FIRMAMENT_PORTAL_SPIN_RATIO,
-  FIRMAMENT_PORTAL_TRAIL_LEN,
-  FIRMAMENT_PORTAL_TRAIL_W,
 } from '@/config/constants'
 import type { FirmamentPortalSpot } from '@/utils/ui/firmamentPortalSpot'
 
@@ -49,7 +42,6 @@ const mawEl = ref<HTMLCanvasElement | null>(null)
 const rimEl = ref<HTMLCanvasElement | null>(null)
 const swirlEl = ref<HTMLCanvasElement | null>(null)
 const haloEl = ref<HTMLCanvasElement | null>(null)
-const trailEl = ref<HTMLCanvasElement | null>(null)
 
 const ringPx = computed(() => Math.round(props.spot.r * 2))
 
@@ -83,44 +75,17 @@ function paintLayer(cv: HTMLCanvasElement | null, layer: PortalLayer) {
   ctx.drawImage(sprite, 0, 0, side, side)
 }
 
-function paintTrail() {
-  const cv = trailEl.value
-  if (!cv) return
-  resetCanvasIfContextLost(cv)
-  const dpr = dprFor(trailW.value)
-  const w = Math.max(1, Math.round(trailW.value * dpr))
-  const h = Math.max(1, Math.round(trailH.value * dpr))
-  if (cv.width !== w || cv.height !== h) {
-    cv.width = w
-    cv.height = h
-  }
-  const ctx = cv.getContext('2d')
-  const sprite = buildPortalTrail(props.seed, props.tint, ringPx.value, dpr)
-  if (!ctx || !sprite) return
-  ctx.clearRect(0, 0, w, h)
-  ctx.drawImage(sprite, 0, 0, w, h)
-}
-
 watchEffect(() => {
   paintLayer(mawEl.value, 'maw')
   paintLayer(swirlEl.value, 'swirl')
   paintLayer(rimEl.value, 'rim')
   paintLayer(haloEl.value, 'halo')
-  paintTrail()
 })
 
 const mawPx = computed(() => `${portalSpriteSpan('maw', ringPx.value)}px`)
 const rimPx = computed(() => `${portalSpriteSpan('rim', ringPx.value)}px`)
 const swirlPx = computed(() => `${portalSpriteSpan('swirl', ringPx.value)}px`)
 const haloPx = computed(() => `${portalSpriteSpan('halo', ringPx.value)}px`)
-const trailW = computed(() => Math.round(props.spot.r * FIRMAMENT_PORTAL_TRAIL_LEN))
-const trailH = computed(() => Math.max(1, Math.round(props.spot.r * FIRMAMENT_PORTAL_TRAIL_W)))
-const trailWpx = computed(() => `${trailW.value}px`)
-const trailHpx = computed(() => `${trailH.value}px`)
-
-/** Die Spur zeigt zurueck zur Buehnenmitte — ein einmaliges `rotate`, keine
- *  Animation. */
-const trailDeg = computed(() => `${(props.spot.angle * 180) / Math.PI + 180}deg`)
 
 /* Dieselbe Wurzelregel wie alles im Reiter, nur mit einem eigenen, BENANNTEN
    Teiler: roh waeren es 166 s und 4,9 px/s an der Armspitze — die Rate eines
@@ -138,7 +103,6 @@ const top = computed(() => `${props.spot.y}px`)
 
 <template>
   <span class="fm-portal" aria-hidden="true">
-    <canvas ref="trailEl" class="fm-portal-l fm-portal-l--trail" />
     <canvas ref="haloEl" class="fm-portal-l fm-portal-l--halo" />
     <canvas ref="mawEl" class="fm-portal-l fm-portal-l--maw" />
     <canvas ref="swirlEl" class="fm-portal-l fm-portal-l--swirl" />
@@ -188,15 +152,6 @@ const top = computed(() => `${props.spot.y}px`)
   height: v-bind(haloPx);
   opacity: v-bind(haloRest);
   animation: fm-portal-pulse v-bind(pulseDur) ease-in-out infinite;
-}
-
-/* Die Spur dreht NICHT — sie zeigt fest zur Buehnenmitte. Ihr Drehpunkt ist die
-   Portalmitte, also ihre linke Kante. */
-.fm-portal-l--trail {
-  width: v-bind(trailWpx);
-  height: v-bind(trailHpx);
-  transform-origin: 0 50%;
-  transform: translate(0, -50%) rotate(v-bind(trailDeg));
 }
 
 /* Die Zentrierung steht IM Keyframe: eine Drehung ueberschriebe ein separates

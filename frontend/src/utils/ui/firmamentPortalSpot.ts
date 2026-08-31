@@ -38,10 +38,8 @@ export interface FirmamentPortalSpot {
   /** Mitte des RINGS in Buehnenkoordinaten. */
   x: number
   y: number
-  /** Ringradius in px. Halo und Spur reichen darueber hinaus. */
+  /** Ringradius in px. Der Halo reicht darueber hinaus. */
   r: number
-  /** Winkel Buehnenmitte zum Portal, rad. Die Spur laeuft auf ihm zurueck. */
-  angle: number
 }
 
 export interface FirmamentRect {
@@ -173,7 +171,7 @@ export function firmamentPortalSpot(
       const y = fit.cy + Math.sin(angle) * d
       if (firmamentPortalVisibleShare(x, y, r, w, h) < FIRMAMENT_PORTAL_MIN_VISIBLE) continue
 
-      const spot = { x, y, r, angle }
+      const spot = { x, y, r }
       // Geometrisch gueltig reicht als Fluchtweg: eine Buehne, auf der jede Lage
       // eine Bedienflaeche traefe, gibt es rechnerisch nicht — aber ein `null`
       // liesse das Portal still verschwinden.

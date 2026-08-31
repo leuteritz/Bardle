@@ -525,17 +525,6 @@ export const FIRMAMENT_PORTAL_ARM_IN = 0.3
 export const FIRMAMENT_PORTAL_ARM_OUT = 0.98
 export const FIRMAMENT_PORTAL_MOTES = 7
 
-/** Die Spur, als Anteil des Ringradius. Sie laeuft vom Portal nach INNEN und
- *  loest sich vor der Scheibe auf — so behauptet sie keinen Ansatzpunkt, den
- *  die drehende Bahn ihr ohnehin wegdrehen wuerde. */
-export const FIRMAMENT_PORTAL_TRAIL_LEN = 2.6
-export const FIRMAMENT_PORTAL_TRAIL_W = 0.34
-export const FIRMAMENT_PORTAL_TRAIL_START = 0.95
-export const FIRMAMENT_PORTAL_TRAIL_STRANDS = 3
-export const FIRMAMENT_PORTAL_TRAIL_ALPHA = 0.42
-export const FIRMAMENT_PORTAL_TRAIL_DASH = 0.1
-export const FIRMAMENT_PORTAL_TRAIL_GAP = 0.13
-
 /** Teiler auf die Wurzelregel `universeDiscSpinSec`. Roh waeren es 166 s und
  *  4,9 px/s an der Armspitze — die Rate eines Galaxienfeldes. Ein Portal ist
  *  eine offene Maschine, kein Feld. Mit dem Teiler: 33 s und 25 px/s. */

@@ -4,7 +4,6 @@ import {
   paintPortalMaw,
   paintPortalRim,
   paintPortalSwirl,
-  paintPortalTrail,
   portalSpriteKey,
   portalSpriteSpan,
 } from '@/utils/fx/portalSprite'
@@ -18,7 +17,6 @@ import {
   FIRMAMENT_PORTAL_POOL_SPAN,
   FIRMAMENT_PORTAL_SPRITE_SPAN,
   FIRMAMENT_PORTAL_SWIRL_SPAN,
-  FIRMAMENT_PORTAL_TRAIL_STRANDS,
 } from '@/config/constants'
 
 /**
@@ -277,7 +275,7 @@ describe('Portal — die drehende Ebene', () => {
   })
 })
 
-describe('Portal — Halo und Spur', () => {
+describe('Portal — Halo', () => {
   it('legt den Gipfel des Halos auf den Ring, nicht in die Mitte', () => {
     const { ctx, ops } = recordingCtx()
     const outer = 200
@@ -289,16 +287,6 @@ describe('Portal — Halo und Spur', () => {
     expect(stops).toContain(0)
     expect(stops.some((s) => Math.abs(s - peak) < 0.001)).toBe(true)
     expect(stops[stops.length - 1]).toBe(1)
-  })
-
-  it('faechert die Spur auf und laesst sie ausblenden', () => {
-    const { ctx, ops } = recordingCtx()
-    paintPortalTrail(ctx, 20, R, TINT, SEED)
-    expect(count(ops, 'quadraticCurveTo')).toBe(FIRMAMENT_PORTAL_TRAIL_STRANDS)
-    // STEHENDES Muster: ein laufender Offset waere eine Frame-Schleife.
-    expect(count(ops, 'setLineDash')).toBe(1)
-    const stops = ops.filter((o) => o.startsWith('addColorStop('))
-    expect(stops[stops.length - 1]).toContain(', 0)')
   })
 })
 

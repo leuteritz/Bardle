@@ -12,9 +12,8 @@
      hier hinein: das draehte sichtbar nicht und kostete trotzdem eine Ebene.
    - `halo` — EIN Verlauf, dessen Gipfel auf dem Ring liegt. Pulst per `opacity`.
 
-   Dazu die Spur als eigener Streifen. Kein Frame, keine Uhr, kein
-   `Math.random()` — alles aus `seed` und Index, sonst saehe das Portal nach
-   jedem Cache-Verwurf anders aus.
+   Kein Frame, keine Uhr, kein `Math.random()` — alles aus `seed` und Index,
+   sonst saehe das Portal nach jedem Cache-Verwurf anders aus.
 
    Vorlage der Anatomie ist `paintCoreGate` in `galaxyLandmarks.ts`; ihre
    Begruendungen gelten hier unveraendert und stehen an den Ebenen. */
@@ -38,13 +37,6 @@ import {
   FIRMAMENT_PORTAL_RIM_SPAN,
   FIRMAMENT_PORTAL_SPRITE_SPAN,
   FIRMAMENT_PORTAL_SWIRL_SPAN,
-  FIRMAMENT_PORTAL_TRAIL_ALPHA,
-  FIRMAMENT_PORTAL_TRAIL_DASH,
-  FIRMAMENT_PORTAL_TRAIL_GAP,
-  FIRMAMENT_PORTAL_TRAIL_LEN,
-  FIRMAMENT_PORTAL_TRAIL_START,
-  FIRMAMENT_PORTAL_TRAIL_STRANDS,
-  FIRMAMENT_PORTAL_TRAIL_W,
   FIRMAMENT_MAX_DPR,
 } from '@/config/constants'
 import { jitter } from '@/utils/fx/universeDisc'
@@ -294,52 +286,6 @@ export function paintPortalHalo(
   ctx.fill()
 }
 
-/**
- * Die Spur: vom Portal nach INNEN, und sie loest sich vor der Scheibe auf.
- *
- * Sie setzt bewusst an nichts an. Die Bahn dreht, das Portal steht — ein
- * Ansatzpunkt am Bahnende waere in Sekunden woanders. Und der Scheibenrand
- * taugt auch nicht: `box.r` springt mit jeder Zoomstufe, und eine stehende
- * Linie, die den drehenden Filamentsaum beruehrt, zieht eine Naht, die man erst
- * nach einer halben Umdrehung sieht.
- *
- * Lokale Koordinaten: `x = 0` ist die Portalmitte, `y` ist zentriert.
- */
-export function paintPortalTrail(
-  ctx: CanvasRenderingContext2D,
-  cy: number,
-  r: number,
-  tint: string,
-  seed: number,
-): void {
-  const from = r * FIRMAMENT_PORTAL_TRAIL_START
-  const to = r * FIRMAMENT_PORTAL_TRAIL_LEN
-  const wide = r * FIRMAMENT_PORTAL_TRAIL_W
-
-  const g = ctx.createLinearGradient(from, 0, to, 0)
-  g.addColorStop(0, ink(tint, FIRMAMENT_PORTAL_TRAIL_ALPHA))
-  g.addColorStop(0.45, ink(tint, 0.16))
-  g.addColorStop(1, ink(tint, 0))
-
-  // STEHENDES Strichmuster: ein laufender `lineDashOffset` waere eine
-  // Frame-Schleife fuer eine Auskunft, die die Form schon traegt.
-  ctx.save()
-  ctx.setLineDash([r * FIRMAMENT_PORTAL_TRAIL_DASH, r * FIRMAMENT_PORTAL_TRAIL_GAP])
-  ctx.lineCap = 'round'
-  ctx.strokeStyle = g
-
-  for (let i = 0; i < FIRMAMENT_PORTAL_TRAIL_STRANDS; i++) {
-    const drift = sway(i + seed, 179) * wide * 0.4
-    ctx.beginPath()
-    ctx.moveTo(from, cy)
-    ctx.quadraticCurveTo((from + to) / 2, cy + drift * 0.5, to, cy + drift)
-    ctx.lineWidth = Math.max(0.9, r * (0.016 + jitter(i + seed, 181) * 0.014))
-    ctx.stroke()
-  }
-
-  ctx.restore()
-}
-
 const cache = new Map<string, HTMLCanvasElement>()
 
 /** `seed` und `tint` sind GETRENNT: der Ort haengt an der Bahn, die Farbe am
@@ -416,33 +362,6 @@ export function buildPortalSprite(
   else if (layer === 'rim') paintPortalRim(ctx, mid, mid, r, tint)
   else paintPortalHalo(ctx, mid, mid, mid, r, tint)
 
-  return keep(key, cv)
-}
-
-/** Die Spur ist ein STREIFEN, kein Quadrat: zentriert braeuchte sie die
- *  vierfache Flaeche fuer eine Linie. */
-export function buildPortalTrail(
-  seed: number,
-  tint: string,
-  px: number,
-  dpr: number,
-): HTMLCanvasElement | null {
-  const r = px / 2
-  const w = Math.round(r * FIRMAMENT_PORTAL_TRAIL_LEN)
-  const h = Math.max(1, Math.round(r * FIRMAMENT_PORTAL_TRAIL_W))
-  const d = backingDpr(w, dpr)
-  const key = portalSpriteKey('maw', seed, `trail-`, px, d)
-  const hit = touch(key)
-  if (hit) return hit
-
-  const cv = document.createElement('canvas')
-  cv.width = Math.max(1, Math.round(w * d))
-  cv.height = Math.max(1, Math.round(h * d))
-  const ctx = cv.getContext('2d')
-  if (!ctx) return null
-  ctx.setTransform(d, 0, 0, d, 0, 0)
-
-  paintPortalTrail(ctx, h / 2, r, tint, seed)
   return keep(key, cv)
 }
 
