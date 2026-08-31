@@ -580,6 +580,7 @@ const LEGEND = [
       v-if="portalSpot && departure"
       :spot="portalSpot"
       :seed="selection.universe"
+      :target="departure.toUniverse"
       :tint="portalTint"
     />
 

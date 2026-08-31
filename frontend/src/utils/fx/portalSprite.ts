@@ -6,11 +6,16 @@
    eigenes Canvas mit derselben Geometrie (Muster `buildLandfallBeacon`).
 
    - `maw` — Teich, Filamentgewebe, Schlund (ein DURCHGANG: innen leuchtet das
-     Ziel), Fernsterne. Steht, und liegt HINTER dem Wirbel.
-   - `rim` — Ring, Schwellensaum, Kernfunke, Ankerfunken. Steht, liegt DAVOR.
+     Ziel) und das GALAXIENFELD des Ziels darin. Steht, liegt HINTER dem Wirbel.
+   - `rim` — Ring und Schwellensaum, sonst nichts. Steht, liegt DAVOR.
    - `swirl` — Wirbelarme und Motes. Dreht per CSS. Nichts Rotationssymmetrisches
      hier hinein: das draehte sichtbar nicht und kostete trotzdem eine Ebene.
    - `halo` — EIN Verlauf, dessen Gipfel auf dem Ring liegt. Pulst per `opacity`.
+
+   KEIN runder Punkt im ganzen Portal — nicht in der Mitte, nicht auf den
+   Ringscheiteln, nicht im Schlund. Man sieht HINDURCH, und was man sieht, ist
+   ein Universum; ein Punkt darauf ist ein Aufkleber auf dem Durchgang. Dieselbe
+   Lektion, die der Firmament-Knoten schon gelernt hat.
 
    Kein Frame, keine Uhr, kein `Math.random()` — alles aus `seed` und Index,
    sonst saehe das Portal nach jedem Cache-Verwurf anders aus.
@@ -24,7 +29,6 @@ import {
   FIRMAMENT_PORTAL_ARM_OUT,
   FIRMAMENT_PORTAL_AURA_SPAN,
   FIRMAMENT_PORTAL_CACHE_MAX,
-  FIRMAMENT_PORTAL_CORE_R,
   FIRMAMENT_PORTAL_BAND_ALPHA,
   FIRMAMENT_PORTAL_BAND_R,
   FIRMAMENT_PORTAL_BAND_SEGMENTS,
@@ -42,10 +46,12 @@ import {
   FIRMAMENT_PORTAL_WEB_TENDRIL_SHARE,
   FIRMAMENT_PORTAL_WEB_W_MAX,
   FIRMAMENT_PORTAL_WEB_W_MIN,
-  FIRMAMENT_PORTAL_FAR_STARS,
+  FIRMAMENT_PORTAL_FIELD_R,
+  FIRMAMENT_PORTAL_FIELD_ZOOM,
   FIRMAMENT_PORTAL_HALO_ALPHA,
   FIRMAMENT_PORTAL_MAX_BACKING_PX,
   FIRMAMENT_PORTAL_MOTES,
+  FIRMAMENT_PORTAL_MOTE_R,
   FIRMAMENT_PORTAL_PHOTON_R,
   FIRMAMENT_PORTAL_POOL_SPAN,
   FIRMAMENT_PORTAL_RY,
@@ -53,9 +59,11 @@ import {
   FIRMAMENT_PORTAL_SPRITE_SPAN,
   FIRMAMENT_PORTAL_SWIRL_SPAN,
   FIRMAMENT_MAX_DPR,
+  UNIVERSE_DISC_CLOUD_DUST_ALPHA,
+  UNIVERSE_DISC_CLOUD_REACH,
 } from '@/config/constants'
 import { seededRng } from '@/components/bottom/minimap/minimapGalaxyGeometry'
-import { jitter } from '@/utils/fx/universeDisc'
+import { GALAXY_WHITE, jitter, paintDustVeil, paintGalaxyField } from '@/utils/fx/universeDisc'
 
 export type PortalLayer = 'maw' | 'swirl' | 'rim' | 'halo'
 
@@ -249,6 +257,9 @@ function paintPortalWeb(
  *
  * Die Reihenfolge traegt die Aussage: der Schlund kommt VOR dem Ring, sonst
  * liest sich der Ring als Scheibe statt als Durchgang.
+ *
+ * `seed` ist die BAHN, `target` das Ziel: der Ort haengt an der einen, Farbe
+ * und Feld am anderen. Ein Argument fuer beides waere die Falle.
  */
 export function paintPortalMaw(
   ctx: CanvasRenderingContext2D,
@@ -257,6 +268,7 @@ export function paintPortalMaw(
   r: number,
   tint: string,
   seed: number,
+  target: number,
 ): void {
   ctx.save()
   ctx.translate(cx, cy)
@@ -295,20 +307,32 @@ export function paintPortalMaw(
   ctx.fillStyle = maw
   ctx.fill()
 
-  // Die Sterne des anderen Universums. Sie sind der Beleg, dass man HINDURCH
-  // sieht — ohne sie ist der Verlauf nur ein Farbfleck.
+  // Das andere Universum. Es ist der Beleg, dass man HINDURCH sieht — ohne es
+  // ist der Verlauf nur ein Farbfleck.
+  //
+  // Gemalt wird DASSELBE Feld wie auf der Kartenscheibe (`paintGalaxyField`,
+  // Variante `cloud`), nicht ein eigenes Punktfeld: vierzehn weisse Kreise
+  // lasen sich als Sternenhimmel, und das ist eine andere Groessenordnung. Die
+  // Wolke duennt nach aussen aus, also braucht sie an der Schwelle keine Kante.
+  //
+  // Beide Ebenen, FERN zuerst: im Schlund gibt es keine Ebenen-Parallaxe, ein
+  // Sprite hat eine Drehung. Zusammen ergeben sie die ganze Wolke, und die
+  // nahen, groesseren Koerper liegen oben.
   ctx.save()
   ctx.beginPath()
   ctx.ellipse(0, 0, r, ry, 0, 0, Math.PI * 2)
   ctx.clip()
-  for (let i = 0; i < FIRMAMENT_PORTAL_FAR_STARS; i++) {
-    const a = jitter(i + seed, 191) * Math.PI * 2
-    const rr = Math.sqrt(jitter(i + seed, 193)) * r * 0.82
-    ctx.beginPath()
-    ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr * FIRMAMENT_PORTAL_RY, r * 0.009, 0, Math.PI * 2)
-    ctx.fillStyle = `rgba(236, 243, 255, ${(0.45 + jitter(i + seed, 197) * 0.45).toFixed(2)})`
-    ctx.fill()
-  }
+  // Zoom und Stauchung in EINEM Zug: das Achsverhaeltnis bleibt `_RY`, also die
+  // Ellipse des Schlunds.
+  const z = FIRMAMENT_PORTAL_FIELD_ZOOM
+  ctx.scale(z, z * FIRMAMENT_PORTAL_RY)
+  const fieldR = (r * FIRMAMENT_PORTAL_FIELD_R) / z
+  // Der Nebel zwischen den Galaxien, mit denselben Zahlen wie die Wolke der
+  // Karte: ohne ihn zerfaellt das Feld in lose Marken. Er kommt VOR den
+  // Koerpern und ist der einzige Kreis hinter der Schwelle.
+  paintDustVeil(ctx, 0, 0, fieldR, tint, UNIVERSE_DISC_CLOUD_REACH, UNIVERSE_DISC_CLOUD_DUST_ALPHA)
+  paintGalaxyField(ctx, 0, 0, fieldR, tint, target, 'cloud', 'rim')
+  paintGalaxyField(ctx, 0, 0, fieldR, tint, target, 'cloud', 'field')
   ctx.restore()
 
   ctx.restore()
@@ -360,19 +384,11 @@ export function paintPortalRim(
   ctx.lineWidth = Math.max(0.8, r * 0.016)
   ctx.stroke()
 
-  // Kernfunke: ohne ihn liest sich der Schlund als Loch IM BILD statt als Tiefe.
-  ctx.beginPath()
-  ctx.arc(0, 0, r * FIRMAMENT_PORTAL_CORE_R, 0, Math.PI * 2)
-  ctx.fillStyle = ink(tint, 0.9)
-  ctx.fill()
-
-  // Zwei Ankerfunken auf den Scheiteln — sie geben dem Ring seine Achse.
-  for (const side of [-1, 1]) {
-    ctx.beginPath()
-    ctx.arc(side * r, 0, r * 0.035, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(255, 244, 200, 0.9)'
-    ctx.fill()
-  }
+  // Hier standen ein Kernfunke und zwei Ankerfunken auf den Scheiteln. Beide
+  // sind gefallen, und zwar aus DEMSELBEN Grund: die Tiefe traegt jetzt das
+  // Galaxienfeld im Schlund, die Achse die Ellipse samt Saum — ein gefuellter
+  // Kreis darauf war ein Aufkleber auf dem Durchgang. Die Mittelglut bleibt,
+  // sie steckt im Verlauf des Schlunds (`ink(tint, 0.32)` innen).
 
   ctx.restore()
 }
@@ -425,12 +441,25 @@ export function paintPortalSwirl(
     ctx.stroke()
   }
 
+  // Die Motes sind KOERPER, keine Punkte: dieselben geneigten Ellipsen wie das
+  // Feld im Schlund, nur naeher. Damit tragen die beiden Sprites zusammen die
+  // Parallaxe der Wolke — nahe Galaxien wandern vor einem stehenden fernen
+  // Feld, wo vorher zwei Punktsorten uebereinander lagen.
   for (let i = 0; i < FIRMAMENT_PORTAL_MOTES; i++) {
     const a = start + jitter(i + seed, 167) * Math.PI * 2
     const rr = r * (0.5 + jitter(i + seed, 173) * 0.45)
+    const rx = r * FIRMAMENT_PORTAL_MOTE_R * (0.7 + jitter(i + seed, 179) * 0.7)
     ctx.beginPath()
-    ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr, r * 0.014, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(255, 244, 200, 0.85)'
+    ctx.ellipse(
+      Math.cos(a) * rr,
+      Math.sin(a) * rr,
+      rx,
+      rx * (0.34 + jitter(i + seed, 181) * 0.58),
+      jitter(i + seed, 187) * Math.PI,
+      0,
+      Math.PI * 2,
+    )
+    ctx.fillStyle = ink(i % 3 === 0 ? tint : GALAXY_WHITE, 0.85)
     ctx.fill()
   }
 
@@ -463,16 +492,22 @@ export function paintPortalHalo(
 
 const cache = new Map<string, HTMLCanvasElement>()
 
-/** `seed` und `tint` sind GETRENNT: der Ort haengt an der Bahn, die Farbe am
- *  Ziel. Ein `universe`-Argument allein waere die Falle. */
+/** `seed` und das ZIEL sind GETRENNT: der Ort haengt an der Bahn, Farbe und
+ *  Galaxienfeld am Ziel. Ein `universe`-Argument allein waere die Falle.
+ *
+ *  `target` gehoert in den Schluessel — ohne ihn zeigte das Portal nach einem
+ *  Universumswechsel das Feld des vorigen Ziels weiter, und nichts daran saehe
+ *  im Code falsch aus. Dieselbe Falle, wegen der `variant` im
+ *  `universeDiscKey` steht. */
 export function portalSpriteKey(
   layer: PortalLayer,
   seed: number,
   tint: string,
+  target: number,
   px: number,
   dpr: number,
 ): string {
-  return `${layer}|${seed}|${tint}|${px}|${dpr}`
+  return `${layer}|${seed}|${tint}|${target}|${px}|${dpr}`
 }
 
 /** Kantenlaenge des Sprites zu einem Ringdurchmesser `px`. Je Ebene eigen: das
@@ -514,12 +549,13 @@ export function buildPortalSprite(
   layer: PortalLayer,
   seed: number,
   tint: string,
+  target: number,
   px: number,
   dpr: number,
 ): HTMLCanvasElement | null {
   const span = portalSpriteSpan(layer, px)
   const d = backingDpr(span, dpr)
-  const key = portalSpriteKey(layer, seed, tint, px, d)
+  const key = portalSpriteKey(layer, seed, tint, target, px, d)
   const hit = touch(key)
   if (hit) return hit
 
@@ -532,7 +568,7 @@ export function buildPortalSprite(
 
   const mid = span / 2
   const r = px / 2
-  if (layer === 'maw') paintPortalMaw(ctx, mid, mid, r, tint, seed)
+  if (layer === 'maw') paintPortalMaw(ctx, mid, mid, r, tint, seed, target)
   else if (layer === 'swirl') paintPortalSwirl(ctx, mid, mid, r, tint, seed)
   else if (layer === 'rim') paintPortalRim(ctx, mid, mid, r, tint)
   else paintPortalHalo(ctx, mid, mid, mid, r, tint)

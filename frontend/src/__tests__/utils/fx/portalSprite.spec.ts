@@ -17,8 +17,8 @@ import {
   FIRMAMENT_PORTAL_WEB_JITTER,
   FIRMAMENT_PORTAL_WEB_OUT,
   FIRMAMENT_PORTAL_WEB_SHELLS,
+  FIRMAMENT_PORTAL_FIELD_ZOOM,
   FIRMAMENT_PORTAL_RY,
-  FIRMAMENT_PORTAL_FAR_STARS,
   FIRMAMENT_PORTAL_MOTES,
   FIRMAMENT_PORTAL_PHOTON_R,
   FIRMAMENT_PORTAL_POOL_SPAN,
@@ -37,7 +37,7 @@ import {
 function recordingCtx(): { ctx: CanvasRenderingContext2D; ops: string[] } {
   const ops: string[] = []
   const num = (v: number) => Math.round(v * 100) / 100
-    const rec =
+  const rec =
     (name: string) =>
     (...args: unknown[]) => {
       ops.push(
@@ -63,6 +63,7 @@ function recordingCtx(): { ctx: CanvasRenderingContext2D; ops: string[] } {
     save: rec('save'),
     restore: rec('restore'),
     translate: rec('translate'),
+    scale: rec('scale'),
     setLineDash: rec('setLineDash'),
     createRadialGradient: (...a: unknown[]) => {
       rec('createRadialGradient')(...a)
@@ -87,6 +88,9 @@ function recordingCtx(): { ctx: CanvasRenderingContext2D; ops: string[] } {
 const R = 130
 const TINT = '#a84ce0'
 const SEED = 3
+/** Das ZIEL — sein Galaxienfeld steht im Schlund. Nicht der Seed: der ist die
+ *  Bahn, an deren Ende das Portal steht. */
+const TARGET = 7
 
 const count = (ops: string[], name: string) => ops.filter((o) => o.startsWith(`${name}(`)).length
 const at = (ops: string[], needle: string) => ops.findIndex((o) => o.includes(needle))
@@ -99,10 +103,15 @@ const isInk = (o: string) =>
   o.startsWith('shadowColor=') ||
   o.startsWith('addColorStop(')
 
-function maw(tint = TINT, seed = SEED) {
+function maw(tint = TINT, seed = SEED, target = TARGET) {
   const { ctx, ops } = recordingCtx()
-  paintPortalMaw(ctx, 200, 200, R, tint, seed)
+  paintPortalMaw(ctx, 200, 200, R, tint, seed, target)
   return ops
+}
+
+/** Alles ab dem Clip ist das Feld des ZIELS, alles davor die Fassung. */
+function fieldOps(ops: string[]) {
+  return ops.slice(ops.indexOf('clip()'))
 }
 
 function swirl(tint = TINT, seed = SEED) {
@@ -163,14 +172,57 @@ describe('Portal — der Durchgang', () => {
     expect(inner).toBeGreaterThanOrEqual(0)
     expect(outer).toBeGreaterThan(inner)
 
-    // Und die Sterne des anderen Universums liegen GECLIPPT darin — sonst
-    // saessen sie auf dem Ring statt dahinter.
+    // Und das andere Universum liegt GECLIPPT darin — sonst saesse es auf dem
+    // Ring statt dahinter.
     expect(count(ops, 'clip')).toBe(1)
-    const clipAt = ops.indexOf('clip()')
-    const farStars = ops.filter(
-      (o, i) => i > clipAt && o.startsWith('fillStyle=rgba(236, 243, 255,'),
-    )
-    expect(farStars).toHaveLength(FIRMAMENT_PORTAL_FAR_STARS)
+  })
+
+  /*
+   * DER Test dieser Runde. Im Schlund standen vierzehn weisse KREISE: ein
+   * Punktfeld liest sich als Sternenhimmel, und das ist eine andere
+   * Groessenordnung als ein Universum. Was man durch das Portal sieht, ist
+   * dieselbe Materie wie auf der Kartenscheibe — geneigte Ellipsen aus
+   * `paintGalaxyField`.
+   */
+  it('malt das Ziel als Galaxienfeld, nicht als Punktfeld', () => {
+    const ops = fieldOps(maw())
+    // Hinter der Schwelle steht genau EIN Kreis, und der ist kein Koerper: der
+    // Staubschleier, ein Verlauf. Jede Marke ist eine Ellipse.
+    expect(count(ops, 'arc')).toBe(1)
+    expect(count(ops, 'createRadialGradient')).toBe(1)
+
+    const bodies = ops
+      .filter((o) => o.startsWith('ellipse('))
+      .map((o) => o.slice(8, -1).split(',').map(Number))
+    expect(bodies.length).toBeGreaterThan(40)
+    // Jeder Koerper ist GENEIGT und hat zwei verschiedene Halbachsen — ein
+    // Kreis mit Winkel null waere wieder der Punkt.
+    expect(bodies.every(([, , rx, ry]) => rx !== ry)).toBe(true)
+    expect(bodies.some(([, , , , rot]) => rot > 0.01)).toBe(true)
+
+    // Und die Stauchung ist die des Schlunds: EIN `scale`, Verhaeltnis `_RY`.
+    // Gegen die GERUNDETEN Sollwerte, weil der Rekorder auf zwei Stellen
+    // rundet — eine Toleranz laege hier genau auf der Kante.
+    const round2 = (v: number) => Math.round(v * 100) / 100
+    const scales = ops
+      .filter((o) => o.startsWith('scale('))
+      .map((o) => o.slice(6, -1).split(',').map(Number))
+    expect(scales).toEqual([
+      [
+        round2(FIRMAMENT_PORTAL_FIELD_ZOOM),
+        round2(FIRMAMENT_PORTAL_FIELD_ZOOM * FIRMAMENT_PORTAL_RY),
+      ],
+    ])
+  })
+
+  /*
+   * Das Feld haengt am ZIEL, nicht an der Bahn — dieselbe Trennung, die fuer
+   * den Ton schon gilt. Zoege es den Seed, zeigte das Portal das Universum, aus
+   * dem man kommt, statt des Universums, in das es fuehrt.
+   */
+  it('nimmt das Feld aus dem ZIEL, nicht aus der Bahn', () => {
+    expect(fieldOps(maw(TINT, SEED, 3))).not.toEqual(fieldOps(maw(TINT, SEED, 4)))
+    expect(fieldOps(maw(TINT, 1, 3))).toEqual(fieldOps(maw(TINT, 2, 3)))
   })
 
   /**
@@ -202,16 +254,18 @@ describe('Portal — der Durchgang', () => {
     // Zwei Durchgaenge zu je einem Segment pro Schritt.
     expect(pts).toHaveLength(FIRMAMENT_PORTAL_BAND_SEGMENTS * 2)
     // Und sie decken JEDEN Oktanten ab — eine Luecke faellt hier auf, egal wo.
-    const octants = new Set(pts.map((p) => Math.floor(((p.ang + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4))))
+    const octants = new Set(
+      pts.map((p) => Math.floor(((p.ang + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4))),
+    )
     expect(octants.size).toBe(8)
 
     // Erst der ganze dunkle Durchgang, dann der Ton: ohne die Unterlage
     // verschwindet die duenne Linie ueber dem Sternfeld.
     const lastDark = ops0.lastIndexOf('strokeStyle=rgba(6, 5, 4, 0.7)')
     expect(lastDark).toBeGreaterThanOrEqual(0)
-    expect(
-      ops0.slice(lastDark).some((o) => o.startsWith('strokeStyle=rgba(168, 76, 224,')),
-    ).toBe(true)
+    expect(ops0.slice(lastDark).some((o) => o.startsWith('strokeStyle=rgba(168, 76, 224,'))).toBe(
+      true,
+    )
   })
 
   /*
@@ -226,7 +280,10 @@ describe('Portal — der Durchgang', () => {
     const nodes = ops
       .filter((o) => o.startsWith('moveTo('))
       .map((o) => o.slice(7, -1).split(',').map(Number))
-      .map(([x, y]) => ({ ang: Math.atan2(y / FIRMAMENT_PORTAL_RY, x), rad: Math.hypot(x, y / FIRMAMENT_PORTAL_RY) }))
+      .map(([x, y]) => ({
+        ang: Math.atan2(y / FIRMAMENT_PORTAL_RY, x),
+        rad: Math.hypot(x, y / FIRMAMENT_PORTAL_RY),
+      }))
     expect(nodes.length).toBeGreaterThan(80)
 
     // Die Knoten liegen NICHT auf gemeinsamen Kreisen — ein Kompass haette drei
@@ -281,11 +338,19 @@ describe('Portal — der Durchgang', () => {
     expect(off).toBeGreaterThan(on)
   })
 
-  it('traegt Schwellensaum, Kernfunke und die zwei Ankerfunken', () => {
+  /*
+   * Die Fassung traegt den Saum — und KEINEN Punkt. Hier standen einmal ein
+   * gefuellter Kernfunke auf der Mitte und zwei Kugeln auf den Ringscheiteln;
+   * beide lasen sich als Aufkleber auf dem Durchgang, dieselbe Lektion wie beim
+   * Firmament-Knoten. Die Tiefe traegt jetzt das Feld im Schlund, die Achse die
+   * Ellipse samt Saum.
+   */
+  it('traegt den Schwellensaum und keinen Punkt', () => {
     const ops = rim()
     expect(at(ops, 'strokeStyle=rgba(168, 76, 224, 0.5)')).toBeGreaterThanOrEqual(0)
-    expect(at(ops, 'fillStyle=rgba(168, 76, 224, 0.9)')).toBeGreaterThanOrEqual(0)
-    expect(ops.filter((o) => o === 'fillStyle=rgba(255, 244, 200, 0.9)')).toHaveLength(2)
+    // Nichts wird gefuellt: die Fassung besteht aus Zuegen.
+    expect(count(ops, 'fill')).toBe(0)
+    expect(ops.some((o) => o.startsWith('fillStyle='))).toBe(false)
   })
 
   /* Der Saum sitzt knapp INNEN am Ring. Bei einem halben Radius war er ein
@@ -341,19 +406,19 @@ describe('Portal — die drehende Ebene', () => {
     )
   })
 
-  it('setzt die Motes, die die Drehung ablesbar machen', () => {
-    expect(count(swirl(), 'arc')).toBe(FIRMAMENT_PORTAL_MOTES)
+  /* Die Motes machen die Drehung ablesbar — als KOERPER, nicht als Punkte:
+     dieselben geneigten Ellipsen wie das Feld dahinter, nur naeher. */
+  it('setzt die Motes als Koerper, die die Drehung ablesbar machen', () => {
+    const ops = swirl()
+    expect(count(ops, 'arc')).toBe(0)
+    expect(count(ops, 'ellipse')).toBe(FIRMAMENT_PORTAL_MOTES)
   })
 
   it('aendert mit dem Seed die Arme, nicht den Ring', () => {
     expect(swirl(TINT, 1)).not.toEqual(swirl(TINT, 2))
-    // Ring, Schwellensaum und Kernfunke gehoeren dem stehenden Sprite und
-    // haengen nicht am Seed — nur Kronenneigung und Fernsterne tun das.
-    for (const fixed of [
-      `strokeStyle=${TINT}`,
-      'strokeStyle=rgba(168, 76, 224, 0.5)',
-      'fillStyle=rgba(168, 76, 224, 0.9)',
-    ]) {
+    // Ring und Schwellensaum gehoeren dem stehenden Sprite und haengen nicht am
+    // Seed — nur das Gewebe tut das.
+    for (const fixed of [`strokeStyle=${TINT}`, 'strokeStyle=rgba(168, 76, 224, 0.5)']) {
       expect(maw(TINT, 1).filter((o) => o === fixed)).toEqual(
         maw(TINT, 2).filter((o) => o === fixed),
       )
@@ -377,23 +442,26 @@ describe('Portal — Halo', () => {
 })
 
 describe('Portal — Schluessel und Kante', () => {
-  it('trennt Ebene, Seed, Ton, Groesse und Pixeldichte', () => {
-    expect(portalSpriteKey('maw', 3, '#a84ce0', 260, 2)).toBe('maw|3|#a84ce0|260|2')
+  it('trennt Ebene, Seed, Ton, Ziel, Groesse und Pixeldichte', () => {
+    expect(portalSpriteKey('maw', 3, '#a84ce0', 7, 260, 2)).toBe('maw|3|#a84ce0|7|260|2')
     const keys = new Set([
-      portalSpriteKey('maw', 3, '#a84ce0', 260, 2),
-      portalSpriteKey('swirl', 3, '#a84ce0', 260, 2),
-      portalSpriteKey('halo', 3, '#a84ce0', 260, 2),
-      portalSpriteKey('maw', 4, '#a84ce0', 260, 2),
-      portalSpriteKey('maw', 3, '#4fa85e', 260, 2),
-      portalSpriteKey('maw', 3, '#a84ce0', 300, 2),
-      portalSpriteKey('maw', 3, '#a84ce0', 260, 1),
+      portalSpriteKey('maw', 3, '#a84ce0', 7, 260, 2),
+      portalSpriteKey('swirl', 3, '#a84ce0', 7, 260, 2),
+      portalSpriteKey('halo', 3, '#a84ce0', 7, 260, 2),
+      portalSpriteKey('maw', 4, '#a84ce0', 7, 260, 2),
+      portalSpriteKey('maw', 3, '#4fa85e', 7, 260, 2),
+      // Ohne das Ziel im Schluessel zeigte das Portal nach einem Wechsel das
+      // Feld des vorigen Ziels weiter.
+      portalSpriteKey('maw', 3, '#a84ce0', 8, 260, 2),
+      portalSpriteKey('maw', 3, '#a84ce0', 7, 300, 2),
+      portalSpriteKey('maw', 3, '#a84ce0', 7, 260, 1),
     ])
-    expect(keys.size).toBe(7)
+    expect(keys.size).toBe(8)
   })
 
   it('nennt keine Zoomstufe im Schluessel', () => {
     // Sonst malte das Portal bei jedem Zoomschritt neu — es steht aber fest.
-    expect(portalSpriteKey('maw', 3, '#a84ce0', 260, 2)).not.toContain('1.6')
+    expect(portalSpriteKey('maw', 3, '#a84ce0', 7, 260, 2)).not.toContain('1.6')
   })
 
   /* Drei Kanten, weil die drei Ebenen verschieden weit reichen: das stehende

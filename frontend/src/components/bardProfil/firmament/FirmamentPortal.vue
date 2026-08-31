@@ -36,6 +36,8 @@ const props = defineProps<{
   seed: number
   /** Der Ton des ZIELS: das Portal sagt, wohin es geht. */
   tint: string
+  /** Das ZIEL selbst — sein Galaxienfeld steht im Schlund. */
+  target: number
 }>()
 
 const mawEl = ref<HTMLCanvasElement | null>(null)
@@ -69,7 +71,7 @@ function paintLayer(cv: HTMLCanvasElement | null, layer: PortalLayer) {
     cv.height = side
   }
   const ctx = cv.getContext('2d')
-  const sprite = buildPortalSprite(layer, props.seed, props.tint, ringPx.value, dpr)
+  const sprite = buildPortalSprite(layer, props.seed, props.tint, props.target, ringPx.value, dpr)
   if (!ctx || !sprite) return
   ctx.clearRect(0, 0, side, side)
   ctx.drawImage(sprite, 0, 0, side, side)

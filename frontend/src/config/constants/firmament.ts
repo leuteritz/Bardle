@@ -500,8 +500,8 @@ export const FIRMAMENT_PORTAL_RIM_SPAN = 1.45
 export const FIRMAMENT_PORTAL_AURA_SPAN = 1.9
 
 /** Die Ebenen des stehenden Sprites, als Anteil des Ringradius. Die Reihenfolge
- *  IST die Bedeutung — Schattenteich, Mandala, Schlund, Ring, Iris,
- *  Photonenkante, Kernfunke (siehe `portalSprite.ts`). */
+ *  IST die Bedeutung — Schattenteich, Filamentgewebe, Schlund, das Feld des
+ *  ZIELS darin, Ring, Photonenkante (siehe `portalSprite.ts`). */
 export const FIRMAMENT_PORTAL_POOL_SPAN = 1.5
 
 /** Die FASSUNG des Portals: ein Filamentgewebe, wie es der aeussere Wall der
@@ -570,18 +570,39 @@ export const FIRMAMENT_PORTAL_RY = 0.86
  *  Kante trifft. Bei einem halben Radius war er ein zweiter Ring in der Mitte
  *  und machte aus dem Durchgang eine Zielscheibe. */
 export const FIRMAMENT_PORTAL_PHOTON_R = 0.9
-/** Sterne des anderen Universums IM Schlund. Sie sind der Beleg, dass man
- *  hindurchsieht — ohne sie ist der Verlauf ein Farbfleck. */
-export const FIRMAMENT_PORTAL_FAR_STARS = 14
-export const FIRMAMENT_PORTAL_CORE_R = 0.07
+/** Das andere Universum IM Schlund — der Beleg, dass man hindurchsieht.
+ *
+ *  Es waren einmal vierzehn weisse Kreise; ein Punktfeld liest sich als
+ *  Sternenhimmel, und das ist eine andere Groessenordnung als ein Universum.
+ *  Gemalt wird jetzt `paintGalaxyField` in der `cloud`-Variante — dieselben
+ *  Koerper wie auf der Kartenscheibe, nur klein und in die Schlund-Ellipse
+ *  gestaucht. Die Wolke laeuft nach aussen auf null aus und braucht deshalb an
+ *  der Schwelle keine Kante.
+ *
+ *  `_ZOOM` holt das Feld naeher heran: er staucht und vergroessert in EINEM
+ *  Zug, denn `paintGalaxyField` leitet Zahl UND Groesse der Koerper aus der
+ *  Kantenlaenge ab — ein kleineres Argument bei groesserem Canvas-Massstab
+ *  ergibt weniger und groessere Marken bei gleicher Bedeckung.
+ *
+ *  Er stand einmal auf 1,25: gemessen waren das 304 Koerper zu 0,7 bis 3,0 px,
+ *  und unter zwei Pixeln traegt keine Ellipse mehr ihre Neigung — im Bild war
+ *  das wieder ein Punktfeld, nur mit kleineren Punkten. Bei 3 sind es 126 zu
+ *  1,0 bis 4,6 px, und man sieht Galaxien. */
+export const FIRMAMENT_PORTAL_FIELD_R = 0.92
+export const FIRMAMENT_PORTAL_FIELD_ZOOM = 3
 export const FIRMAMENT_PORTAL_HALO_ALPHA = 0.42
 
 /** Die drehende Ebene. Nur was seine Drehung ZEIGT gehoert hinein — die Motes
- *  machen sie ueberhaupt erst ablesbar. */
+ *  machen sie ueberhaupt erst ablesbar.
+ *
+ *  Sie sind KOERPER, keine Punkte: dieselben geneigten Ellipsen wie im Feld
+ *  dahinter, nur naeher. Damit tragen Schlund und Wirbel zusammen die Parallaxe
+ *  der Wolke — nahe Galaxien wandern vor einem stehenden fernen Feld. */
 export const FIRMAMENT_PORTAL_ARMS = 5
 export const FIRMAMENT_PORTAL_ARM_IN = 0.3
 export const FIRMAMENT_PORTAL_ARM_OUT = 0.98
 export const FIRMAMENT_PORTAL_MOTES = 7
+export const FIRMAMENT_PORTAL_MOTE_R = 0.016
 
 /** Teiler auf die Wurzelregel `universeDiscSpinSec`. Roh waeren es 166 s und
  *  4,9 px/s an der Armspitze — die Rate eines Galaxienfeldes. Ein Portal ist

@@ -26,8 +26,9 @@
    - **Der Tint bleibt drinnen.** Er faerbt Staub und Galaxien, nie eine Kante:
      als Ring konkurrierte er mit den fuenf Zustandsfarben der Firmament-Karte.
 
-   Aufrufer: `components/bardProfil/firmament/UniverseDisc.vue`, und sonst
-   niemand.                                                                    */
+   Aufrufer: `components/bardProfil/firmament/UniverseDisc.vue` — und
+   `paintPortalMaw`, das `paintGalaxyField` fuer den Blick durch das Abflug-
+   portal borgt: was man dort sieht, ist dasselbe Universum, nur klein.        */
 
 import {
   FIRMAMENT_FREED_COLOR,
@@ -154,7 +155,7 @@ const RIM_TONES = ['#ffe6bc', '#ffb45e', '#ff7a34', '#e8501c'] as const
 const RIM_TONES_UNLIT = ['#6a5c44', '#544732', '#403626', '#2e2718'] as const
 
 /** Warmes Licht neben dem Tint — sonst ist das Feld einfarbig und tot. */
-const GALAXY_WHITE = '#f4ecd8'
+export const GALAXY_WHITE = '#f4ecd8'
 
 function rgba(hex: string, alpha: number): string {
   const n = parseInt(hex.slice(1), 16)
