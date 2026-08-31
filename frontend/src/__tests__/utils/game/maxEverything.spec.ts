@@ -18,8 +18,6 @@ import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useMissionStore } from '@/stores/progression/missionStore'
 import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
-import { computeRequired } from '@/stores/world/galaxyStore'
-import { buildFirmamentGates, buildFirmamentNodes } from '@/utils/ui/firmamentLayout'
 import { universes } from '@/config/progression/universes'
 import { FORGE_CONFLUENCES } from '@/config/progression/starForge'
 import { MISSION_COUNT } from '@/config/progression/missions'
@@ -278,25 +276,26 @@ describe('maxEverything', () => {
     }
   })
 
-  it('gibt jedem verlassenen Universum ein Tor auf der Bahn', () => {
+  /**
+   * Die Bahnen des Firmaments schneiden an `record.universe`. Ohne den Stempel
+   * läge nach „Max Everything" der ganze Bestand auf der Bahn von Universum 1,
+   * und neun Leistenzeilen wären trotz ihres Laufs nicht anklickbar.
+   */
+  it('stempelt jeden Datensatz auf ein Universum', () => {
     maxEverything()
     const game = useGameStore()
     const galaxy = useGalaxyStore()
 
-    const nodes = buildFirmamentNodes({
-      completed: galaxy.completedGalaxies,
-      currentGalaxy: galaxy.currentGalaxy,
-      currentRescued: 0,
-      currentLost: 0,
-      currentLandfalls: 0,
-      currentThemeIndex: galaxy.currentThemeIndex,
-      starsOf: computeRequired,
-    })
-    const gates = buildFirmamentGates(nodes, game.universeRuns)
+    for (const r of galaxy.completedGalaxies) {
+      expect(r.universe, `Galaxie ${r.galaxy} ohne Universum`).toBeGreaterThan(0)
+    }
 
-    // Gleich `untoldRuns === 0` im Wappenband — kein Lauf bleibt „unmarked".
-    expect(gates).toHaveLength(game.universeRuns.length)
-    expect(new Set(gates.map((g) => g.afterIndex)).size).toBe(gates.length)
+    // Jedes Universum mit Lauf hat auch etwas zu zeigen — sonst ist seine
+    // Leistenzeile inert.
+    const onPath = new Set(galaxy.completedGalaxies.map((r) => r.universe))
+    for (const run of game.universeRuns) {
+      expect(onPath.has(run.universe), `Universum ${run.universe} ohne Galaxie`).toBe(true)
+    }
   })
 
   it('stellt den Rettungsbalken auf den Stand, den die Aufbrüche verlangen', () => {

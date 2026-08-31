@@ -39,19 +39,19 @@ describe('Firmament-Sprung in den Voyages-Atlas', () => {
 
     expect(ui.bardActiveTab).toBe('firmament')
     expect(ui.firmamentTabReturnPending).toBe(false)
-    expect(ui.pendingFirmamentSelection).toEqual({ kind: 'galaxy', galaxy: 3 })
+    expect(ui.pendingFirmamentGalaxy).toBe(3)
 
-    ui.clearPendingFirmamentSelection()
-    expect(ui.pendingFirmamentSelection).toBeNull()
+    ui.clearPendingFirmamentGalaxy()
+    expect(ui.pendingFirmamentGalaxy).toBeNull()
   })
 
-  it('gibt ohne Galaxie keine Auswahl zurueck', () => {
+  it('gibt ohne Galaxie keinen Zeiger zurueck', () => {
     const ui = useUiStore()
     ui.requestOpenVoyagesFromFirmament(7)
     ui.returnToFirmamentTab(null)
 
     expect(ui.bardActiveTab).toBe('firmament')
-    expect(ui.pendingFirmamentSelection).toBeNull()
+    expect(ui.pendingFirmamentGalaxy).toBeNull()
   })
 
   it.each([

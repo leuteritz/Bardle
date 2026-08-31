@@ -13,10 +13,8 @@ import { useItemStore } from '@/stores/economy/itemStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
-import {
-  backfillManifestRng,
-  buildBackfillManifests,
-} from '@/utils/game/galaxyArchiveBackfill'
+import { backfillManifestRng, buildBackfillManifests } from '@/utils/game/galaxyArchiveBackfill'
+import { assignRecordUniverses } from '@/utils/game/galaxyUniverseBackfill'
 import type { StarManifest } from '@/types'
 
 /**
@@ -949,6 +947,15 @@ export function usePersistence() {
           )
           return { ...r, starManifests: [...(kept ?? []), ...filled.slice(have)] }
         })
+        // Und dasselbe für das Universum: Archive von vor den Firmament-Bahnen
+        // wissen nicht, wo sie befreit wurden. Der Lauf-Block steht weiter oben,
+        // `universeRuns` und `currentUniverse` liegen hier also schon vor.
+        galaxyStore.completedGalaxies = assignRecordUniverses(
+          galaxyStore.completedGalaxies,
+          gameStore.universeRuns,
+          gameStore.currentUniverse,
+          gameStore.totalPrestiges,
+        )
         galaxyStore.unlockedTier = gx.unlockedTier ?? galaxyStore.currentTier
         galaxyStore.galaxyBossDefeated = gx.galaxyBossDefeated ?? false
         // Boss-Eskorten-Wellen: alte Saves ohne die Felder → 0/0, damit ist

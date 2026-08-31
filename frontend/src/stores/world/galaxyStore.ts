@@ -78,6 +78,10 @@ export interface CompletedGalaxyRecord {
   galaxy: number
   mapSeed: number
   themeIndex: number
+  /** In welchem Universum die Galaxie befreit wurde — die Schnittkante der
+   *  Firmament-Bahnen. OPTIONAL nur für den Altbestand: `assignRecordUniverses`
+   *  trägt es beim Laden einmalig nach, danach stempelt jeder Abschluss selbst. */
+  universe?: number
   attemptResults: StarAttemptResult[]
   /** Die Orte, die auf den Reiseetappen lagen — in Routenreihenfolge.
    *  OPTIONAL: Spielstände von vor den Landfalls laden ohne Migration und zeigen
@@ -797,12 +801,14 @@ export const useGalaxyStore = defineStore('galaxy', {
       // record, an admin-replay of the galaxy replaces it with the fresh run.
       const existing = this.completedGalaxies.findIndex((r) => r.galaxy === this.currentGalaxy)
       if (existing >= 0 && this.completedGalaxies[existing].mapSeed === this.mapSeed) return
-      const inGameTime = useGameStore().inGameTime
+      const gameStore = useGameStore()
+      const inGameTime = gameStore.inGameTime
       if (existing >= 0) this.completedGalaxies.splice(existing, 1)
       this.completedGalaxies.push({
         galaxy: this.currentGalaxy,
         mapSeed: this.mapSeed,
         themeIndex: this.currentThemeIndex,
+        universe: gameStore.currentUniverse,
         attemptResults: [...this.attemptResults],
         landfallResults: [...this.landfallResults],
         starManifests: this._manifestsForArchive(),

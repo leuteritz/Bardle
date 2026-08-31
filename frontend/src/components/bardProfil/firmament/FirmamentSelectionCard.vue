@@ -3,9 +3,10 @@
  * Was gerade gewaehlt ist — eine Ueberlagerung unten rechts, die der Buehne
  * keine Layoutbreite nimmt.
  *
- * Drei Zustaende, EINE Karte: eine Galaxie, ein Universumstor, oder nichts.
- * „Nichts" ist kein Leerzustand — dann steht dort, wo der Bard gerade ist. Eine
- * Karte, die verschwindet, liesse die Ecke bei jeder Abwahl springen.
+ * Zwei Zustaende, EINE Karte: eine gewaehlte Galaxie, oder die BAHN selbst —
+ * auf der eigenen die laufende Galaxie, auf einer vergangenen ihr Lauf. Keine
+ * Auswahl ist kein Leerzustand; eine Karte, die verschwindet, liesse die Ecke
+ * bei jeder Abwahl springen.
  *
  * Die Galaxie zeigt ihre ECHTE Platte als Miniatur (`renderGalaxyThumb`, derselbe
  * Cache wie Archiv und Voyages-Leiste) — derselbe Datensatz traegt im ganzen
@@ -21,59 +22,63 @@ import { getUniverse } from '@/config/progression/universes'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { formatCompactDuration, toRoman } from '@/utils/ui/format'
 import { FIRMAMENT_GATE_COLOR, FIRMAMENT_HERE_COLOR, MS_PER_SECOND } from '@/config/constants'
-import type { FirmamentGate, FirmamentNode } from '@/utils/ui/firmamentLayout'
+import type { FirmamentDeparture, FirmamentNode } from '@/utils/ui/firmamentLayout'
 import type { FirmamentSelection } from '@/types'
 
 const props = defineProps<{
   nodes: FirmamentNode[]
-  gates: FirmamentGate[]
+  departure: FirmamentDeparture | null
   selection: FirmamentSelection
 }>()
 
 const gameStore = useGameStore()
 
+const isHere = computed(() => props.selection.universe === gameStore.currentUniverse)
+
 const node = computed(() => {
-  const sel = props.selection
-  if (sel?.kind === 'galaxy') {
-    return props.nodes.find((n) => n.galaxy === sel.galaxy) ?? null
-  }
-  return sel === null ? (props.nodes.find((n) => n.state === 'current') ?? null) : null
+  const { galaxy } = props.selection
+  if (galaxy !== null) return props.nodes.find((n) => n.galaxy === galaxy) ?? null
+  return isHere.value ? (props.nodes.find((n) => n.state === 'current') ?? null) : null
 })
 
-const gate = computed(() => {
-  const sel = props.selection
-  if (sel?.kind !== 'universe') return null
-  return props.gates.find((g) => g.universe === sel.universe) ?? null
-})
+/** Ohne gewaehlte Galaxie steht auf einer vergangenen Bahn ihr Lauf. */
+const run = computed(() =>
+  props.selection.galaxy === null && !isHere.value ? props.departure : null,
+)
 
 /** Die Platte rastert SYNCHRON — hier genau eine, beim Auswahlwechsel. Zwanzig
  *  auf einmal waeren das Problem, gegen das `useLazyGalaxySnapshot` gebaut ist. */
 const thumb = computed(() => (node.value?.record ? renderGalaxyThumb(node.value.record) : null))
 
 const accent = computed(() => {
-  if (gate.value) return FIRMAMENT_GATE_COLOR
+  if (run.value) return FIRMAMENT_GATE_COLOR
   const t = node.value?.themeIndex ?? -1
   if (t < 0) return FIRMAMENT_HERE_COLOR
   return `rgb(${minimapAccentForTheme(t)})`
 })
 
 const title = computed(() => {
-  if (gate.value) return `Universe ${toRoman(gate.value.universe)}`
+  if (run.value) return `Universe ${toRoman(props.selection.universe)}`
   return node.value ? `Galaxy ${toRoman(node.value.galaxy)}` : ''
 })
 
 const subtitle = computed(() => {
-  if (gate.value) return getUniverse(gate.value.universe).name
+  if (run.value) {
+    const name = getUniverse(props.selection.universe).name
+    return run.value.visits > 1 ? `${name} · ${run.value.visits} visits` : name
+  }
   const t = node.value?.themeIndex ?? -1
   return t >= 0 ? GALAXY_THEMES[t % GALAXY_THEMES.length].name : 'uncharted'
 })
 
 const line = computed(() => {
-  const g = gate.value
-  if (g) {
+  const d = run.value
+  if (d) {
+    // Die Chimes MEHRERER Besuche werden nicht summiert — das waere keine Zahl,
+    // die etwas bedeutet. Genannt wird der letzte Lauf.
     return (
-      `${g.run.galaxiesFreed} galaxies · ${g.run.starsRescued} stars · ` +
-      `${formatCompactDuration(g.run.durationSeconds * MS_PER_SECOND)} · ${formatNumber(g.run.chimes)} chimes`
+      `${d.run.galaxiesFreed} galaxies · ${d.run.starsRescued} stars · ` +
+      `${formatCompactDuration(d.run.durationSeconds * MS_PER_SECOND)} · ${formatNumber(d.run.chimes)} chimes`
     )
   }
   const n = node.value
@@ -88,14 +93,14 @@ const line = computed(() => {
   return parts.join(' · ')
 })
 
-const providence = computed(() => (gate.value?.run.providence ? gate.value.run.providence : null))
+const providence = computed(() => run.value?.run.providence ?? null)
 </script>
 
 <template>
-  <div v-if="node || gate" class="fm-sel" :style="{ '--fm-sel-accent': accent }">
+  <div v-if="node || run" class="fm-sel" :style="{ '--fm-sel-accent': accent }">
     <span class="fm-sel-face">
       <img v-if="thumb" class="fm-sel-thumb" :src="thumb" alt="" />
-      <Icon v-else-if="gate" icon="game-icons:portal" width="26" height="26" />
+      <Icon v-else-if="run" icon="game-icons:portal" width="26" height="26" />
       <Icon v-else icon="lucide:crosshair" width="26" height="26" />
     </span>
     <span class="fm-sel-body">

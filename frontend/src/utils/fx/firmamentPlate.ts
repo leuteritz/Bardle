@@ -64,6 +64,7 @@ import {
   FIRMAMENT_WEB_TENDRIL_FORKS,
   FIRMAMENT_WEB_TENDRIL_REACH,
   FIRMAMENT_WEB_TENDRIL_SHARE,
+  FIRMAMENT_WEB_TINT_STOPS,
   FIRMAMENT_WEB_W_MAX,
   FIRMAMENT_WEB_W_MIN,
   FIRMAMENT_STAR_ALPHA_MAX,
@@ -72,7 +73,8 @@ import {
   FIRMAMENT_STAR_MAX,
   FIRMAMENT_UNLIT_COLOR,
 } from '@/config/constants'
-import type { FirmamentFitBox, FirmamentGate, FirmamentNode } from '@/utils/ui/firmamentLayout'
+import { hexToRgb } from '@/utils/ui/format'
+import type { FirmamentDeparture, FirmamentFitBox, FirmamentNode } from '@/utils/ui/firmamentLayout'
 
 /** Seed des Sternfelds. FEST, nie eine Zufallszahl — sonst saehe der Grund nach
  *  jedem Repaint anders aus. Er gehoert `paintFirmamentGround`. */
@@ -145,23 +147,31 @@ export function paintFirmamentGround(
    den vier Toenen der kleinen Scheibe (`RIM_TONES` in `universeDisc.ts`), die
    einzeln gezogen werden. Hier traegt die Farbe die Tiefe.
 
-   Die Richtung ist nicht beliebig: das tiefe Rot gehoert der GLUT hinter dem
+   Die Richtung ist nicht beliebig: der tiefe Ton gehoert der GLUT hinter dem
    Gewebe, die Filamente werden nach aussen HELLER. Andersherum verschwanden
    ausgerechnet die aeussersten Faeden — die hellsten der Vorlage — im
-   dunklen Grund.                                                              */
-const WEB_RAMP = [
-  [206, 82, 28],
-  [255, 138, 52],
-  [255, 190, 112],
-  [255, 238, 208],
-] as const
+   dunklen Grund.
 
-function webInk(t: number, alpha: number): string {
-  const x = Math.min(0.999, Math.max(0, t)) * (WEB_RAMP.length - 1)
+   Der TON kommt vom gezeigten Universum, die Folge bleibt. Gebaut wird die
+   Rampe EINMAL am Kopf von `paintFirmamentWeb` und dann durchgereicht — vier
+   Multiplikationen, und die Funktion laeuft ohnehin nur bei `rimKey`-Wechsel. */
+type WebRamp = readonly (readonly [number, number, number])[]
+
+function webRamp(tint: string): WebRamp {
+  const base = hexToRgb(tint)
+  return FIRMAMENT_WEB_TINT_STOPS.map((stop) => {
+    const target = stop < 0 ? 0 : 255
+    const f = Math.abs(stop)
+    return base.map((c) => Math.round(c + (target - c) * f)) as [number, number, number]
+  })
+}
+
+function webInk(ramp: WebRamp, t: number, alpha: number): string {
+  const x = Math.min(0.999, Math.max(0, t)) * (ramp.length - 1)
   const i = Math.floor(x)
   const f = x - i
-  const a = WEB_RAMP[i]
-  const b = WEB_RAMP[i + 1] ?? a
+  const a = ramp[i]
+  const b = ramp[i + 1] ?? a
   const mix = (c: 0 | 1 | 2) => Math.round(a[c] + (b[c] - a[c]) * f)
   return `rgba(${mix(0)}, ${mix(1)}, ${mix(2)}, ${alpha.toFixed(3)})`
 }
@@ -203,6 +213,7 @@ function webAlpha(t: number): number {
  *  ein Kamm. */
 function strand(
   ctx: CanvasRenderingContext2D,
+  ramp: WebRamp,
   a: WebNode,
   b: WebNode,
   r: number,
@@ -216,7 +227,7 @@ function strand(
   ctx.beginPath()
   ctx.moveTo(a.x, a.y)
   ctx.quadraticCurveTo(ctrl.x, ctrl.y, b.x, b.y)
-  ctx.strokeStyle = webInk(t, webAlpha(t) * (0.55 + rng() * 0.7) * dim)
+  ctx.strokeStyle = webInk(ramp, t, webAlpha(t) * (0.55 + rng() * 0.7) * dim)
   ctx.lineWidth = (FIRMAMENT_WEB_W_MIN + (FIRMAMENT_WEB_W_MAX - FIRMAMENT_WEB_W_MIN) * t) * k
   ctx.stroke()
 }
@@ -239,8 +250,10 @@ export function paintFirmamentWeb(
   cy: number,
   r: number,
   k: number,
+  tint: string,
 ): void {
   const rng = seededRng(19)
+  const ramp = webRamp(tint)
   ctx.save()
   ctx.translate(cx, cy)
   ctx.lineCap = 'round'
@@ -267,7 +280,7 @@ export function paintFirmamentWeb(
   // Tangential: der Ring jeder Schale.
   for (const shell of shells) {
     for (let i = 0; i < shell.length; i++) {
-      strand(ctx, shell[i], shell[(i + 1) % shell.length], r, k, rng)
+      strand(ctx, ramp, shell[i], shell[(i + 1) % shell.length], r, k, rng)
     }
   }
 
@@ -278,9 +291,9 @@ export function paintFirmamentWeb(
     const to = shells[s + 1]
     for (let i = 0; i < from.length; i++) {
       const j = Math.round((i / from.length) * to.length) % to.length
-      strand(ctx, from[i], to[j], r, k, rng)
+      strand(ctx, ramp, from[i], to[j], r, k, rng)
       if (rng() < FIRMAMENT_WEB_LINK_SHARE) {
-        strand(ctx, from[i], to[(j + 1) % to.length], r, k, rng, 0.8)
+        strand(ctx, ramp, from[i], to[(j + 1) % to.length], r, k, rng, 0.8)
       }
     }
   }
@@ -308,7 +321,7 @@ export function paintFirmamentWeb(
     ctx.beginPath()
     ctx.moveTo(node.x, node.y)
     ctx.lineTo(stem.x, stem.y)
-    ctx.strokeStyle = webInk(stemT, webAlpha(stemT))
+    ctx.strokeStyle = webInk(ramp, stemT, webAlpha(stemT))
     ctx.lineWidth =
       (FIRMAMENT_WEB_W_MIN + (FIRMAMENT_WEB_W_MAX - FIRMAMENT_WEB_W_MIN) * stemT) * k * 0.8
     ctx.stroke()
@@ -323,7 +336,7 @@ export function paintFirmamentWeb(
       ctx.beginPath()
       ctx.moveTo(stem.x, stem.y)
       ctx.lineTo(tip.x, tip.y)
-      ctx.strokeStyle = webInk(tipT, webAlpha(tipT) * 0.7)
+      ctx.strokeStyle = webInk(ramp, tipT, webAlpha(tipT) * 0.7)
       ctx.lineWidth = FIRMAMENT_WEB_W_MIN * k
       ctx.stroke()
     }
@@ -336,7 +349,11 @@ export function paintFirmamentWeb(
       if (rng() >= FIRMAMENT_WEB_SPARK_SHARE) continue
       ctx.beginPath()
       ctx.arc(node.x, node.y, FIRMAMENT_WEB_SPARK_R * k * (0.5 + rng() * 0.8), 0, Math.PI * 2)
-      ctx.fillStyle = webInk(Math.min(1, node.t + 0.25), Math.min(0.9, webAlpha(node.t) * 1.7))
+      ctx.fillStyle = webInk(
+        ramp,
+        Math.min(1, node.t + 0.25),
+        Math.min(0.9, webAlpha(node.t) * 1.7),
+      )
       ctx.fill()
     }
   }
@@ -350,18 +367,25 @@ export function paintFirmamentWeb(
  * Drehung — im Sprite kostete er nur Flaeche, und das Sprite muesste fuer ihn
  * bis an seine Kante decken.
  */
-function paintRimRings(ctx: CanvasRenderingContext2D, box: FirmamentFitBox, k: number): void {
+function paintRimRings(
+  ctx: CanvasRenderingContext2D,
+  box: FirmamentFitBox,
+  k: number,
+  tint: string,
+): void {
+  const ramp = webRamp(tint)
   ctx.save()
   ctx.translate(box.cx, box.cy)
 
   // Die Glut, in der das Gewebe steht. Sie reicht so weit wie das Band selbst:
   // endete sie frueher, saessen die inneren Ranken im Dunkeln und der Saum
-  // fiele wieder an einer Kante ab.
+  // fiele wieder an einer Kante ab. Sie liest DIESELBE Rampe wie die Filamente
+  // — zwei Toene nebeneinander laesen sich als zwei Ringe.
   const glow = ctx.createRadialGradient(0, 0, box.r * FIRMAMENT_WEB_INNER, 0, 0, box.r * 1.03)
-  glow.addColorStop(0, `rgba(255, 146, 72, 0)`)
-  glow.addColorStop(0.62, `rgba(255, 128, 52, ${FIRMAMENT_WEB_GLOW_ALPHA})`)
-  glow.addColorStop(0.92, `rgba(226, 78, 26, ${FIRMAMENT_WEB_GLOW_ALPHA * 1.5})`)
-  glow.addColorStop(1, 'rgba(140, 34, 10, 0)')
+  glow.addColorStop(0, webInk(ramp, 0.7, 0))
+  glow.addColorStop(0.62, webInk(ramp, 0.45, FIRMAMENT_WEB_GLOW_ALPHA))
+  glow.addColorStop(0.92, webInk(ramp, 0.15, FIRMAMENT_WEB_GLOW_ALPHA * 1.5))
+  glow.addColorStop(1, webInk(ramp, 0, 0))
   ctx.beginPath()
   ctx.arc(0, 0, box.r * 1.03, 0, Math.PI * 2)
   ctx.fillStyle = glow
@@ -371,7 +395,7 @@ function paintRimRings(ctx: CanvasRenderingContext2D, box: FirmamentFitBox, k: n
   // soll. Bei Alpha 0,45 las sie sich als Rand einer Kachel.
   ctx.beginPath()
   ctx.arc(0, 0, box.r * 0.985, 0, Math.PI * 2)
-  ctx.strokeStyle = 'rgba(255, 120, 40, 0.22)'
+  ctx.strokeStyle = webInk(ramp, 0.42, 0.22)
   ctx.lineWidth = 2 * k
   ctx.stroke()
   // Die aeussere Fassung. DUNKEL, nicht braun: bei `rgba(90, 40, 20, 0.8)` lag
@@ -465,28 +489,27 @@ function paintRoad(
    Stelle waeren eine doppelte Aussage. Die Bahn setzt weiter an `box.cx/cy` an
    und endet damit im Kern der Scheibe. */
 
-/** Ein Universumstor: zwei Boegen quer zur Bahn, dazwischen die Ziffer. */
-function paintGates(
+/** Das Tor am Ende der Bahn: zwei Boegen quer zu ihr, dazwischen die Ziffer.
+ *  Hoechstens EINES — dorthin ging der Weg weiter. */
+function paintDeparture(
   ctx: CanvasRenderingContext2D,
-  gates: readonly FirmamentGate[],
+  departure: FirmamentDeparture,
   box: FirmamentFitBox,
   k: number,
 ): void {
-  for (const gate of gates) {
-    const p = firmamentScreenPos(box, gate.nx, gate.ny)
-    const span = 9 * k
-    ctx.save()
-    ctx.translate(p.x, p.y)
-    ctx.rotate(gate.angle)
-    ctx.strokeStyle = fade(FIRMAMENT_GATE_COLOR, 0.85)
-    ctx.lineWidth = 1.6 * k
-    for (const side of [-1, 1]) {
-      ctx.beginPath()
-      ctx.arc(0, 0, span, side * 0.5 - Math.PI / 2, side * 0.5 + Math.PI / 2, side < 0)
-      ctx.stroke()
-    }
-    ctx.restore()
+  const p = firmamentScreenPos(box, departure.nx, departure.ny)
+  const span = 9 * k
+  ctx.save()
+  ctx.translate(p.x, p.y)
+  ctx.rotate(departure.angle)
+  ctx.strokeStyle = fade(FIRMAMENT_GATE_COLOR, 0.85)
+  ctx.lineWidth = 1.6 * k
+  for (const side of [-1, 1]) {
+    ctx.beginPath()
+    ctx.arc(0, 0, span, side * 0.5 - Math.PI / 2, side * 0.5 + Math.PI / 2, side < 0)
+    ctx.stroke()
   }
+  ctx.restore()
 }
 
 /** `rgb(...)` mit Deckkraft — die Themenfarbe kommt als `rgb()`, nicht als Hex. */
@@ -638,16 +661,17 @@ function paintNode(
 export function paintFirmament(
   ctx: CanvasRenderingContext2D,
   nodes: readonly FirmamentNode[],
-  gates: readonly FirmamentGate[],
+  departure: FirmamentDeparture | null,
   w: number,
   h: number,
   box: FirmamentFitBox,
+  tint: string,
 ): void {
   const k = box.r / FIRMAMENT_PLATE_REF_R
 
   ctx.clearRect(0, 0, w, h)
-  paintRimRings(ctx, box, k)
+  paintRimRings(ctx, box, k, tint)
   paintRoad(ctx, nodes, box, k)
-  paintGates(ctx, gates, box, k)
+  if (departure) paintDeparture(ctx, departure, box, k)
   for (const node of nodes) paintNode(ctx, node, box, k)
 }

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { BardTabId, ChampionRole, FirmamentSelection } from '@/types'
+import type { BardTabId, ChampionRole } from '@/types'
 
 // Der Typ wohnt in types/ui.ts, damit die Badge-Registry ihn nennen kann, ohne
 // an den Store zu ziehen. Re-Export, weil drei Stellen ihn von hier importieren.
@@ -29,10 +29,11 @@ export const useUiStore = defineStore('ui', () => {
   const pendingVoyageTarget = ref<{ galaxy: number; pinKey: string | null } | null>(null)
   // true, solange der Voyages-Reiter aus dem Firmament heraus betreten wurde
   const firmamentTabReturnPending = ref(false)
-  // Auswahl, die das Firmament beim Zurueckkommen wiederherstellt — es raeumt
-  // seine eigene beim Verlassen ab, ohne diesen Zeiger kaeme man auf eine leere
-  // Bahn zurueck.
-  const pendingFirmamentSelection = ref<FirmamentSelection>(null)
+  // Galaxie, auf die das Firmament beim Zurueckkommen zeigt — es raeumt seine
+  // eigene Auswahl beim Verlassen ab, ohne diesen Zeiger kaeme man auf eine
+  // leere Bahn zurueck. Nur die NUMMER: auf welcher Bahn sie liegt, steht im
+  // Archiv, und dorthin greift der uiStore nicht.
+  const pendingFirmamentGalaxy = ref<number | null>(null)
   const hoveredChampionRole = ref<ChampionRole | null>(null)
   // Stern-ID des laufenden Kampfs, wenn der Team-Tab aus dem StarFight-Modal
   // heraus geöffnet wurde — solange gesetzt (und der Stern lebt), zeigt das
@@ -167,13 +168,13 @@ export const useUiStore = defineStore('ui', () => {
    *  der man kam: wer dort weitergeklickt hat, soll im Firmament dort stehen. */
   function returnToFirmamentTab(galaxy: number | null) {
     firmamentTabReturnPending.value = false
-    pendingFirmamentSelection.value = galaxy ? { kind: 'galaxy', galaxy } : null
+    pendingFirmamentGalaxy.value = galaxy
     bardActiveTab.value = 'firmament'
     clearHoverMarks()
   }
 
-  function clearPendingFirmamentSelection() {
-    pendingFirmamentSelection.value = null
+  function clearPendingFirmamentGalaxy() {
+    pendingFirmamentGalaxy.value = null
   }
 
   function setBattleReturn(starId: string) {
@@ -237,10 +238,10 @@ export const useUiStore = defineStore('ui', () => {
     requestOpenVoyagesTab,
     clearPendingVoyageTarget,
     firmamentTabReturnPending,
-    pendingFirmamentSelection,
+    pendingFirmamentGalaxy,
     requestOpenVoyagesFromFirmament,
     returnToFirmamentTab,
-    clearPendingFirmamentSelection,
+    clearPendingFirmamentGalaxy,
     setHoveredChampionRole,
     setHoveredChampionSlotIndex,
     setHoveredPlanetSlotId,

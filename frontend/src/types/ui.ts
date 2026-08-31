@@ -488,16 +488,16 @@ export type BardTabId =
   | 'planets'
 
 /**
- * Was im Firmament-Reiter gerade gewählt ist.
+ * Was der Firmament-Reiter zeigt.
  *
- * Zwei Arten auf EINER Karte: eine Galaxie (ein Knoten der Bahn) oder ein
- * Universum (ein Tor darauf). `null` heisst „nichts gewählt" — die Auswahlkarte
- * zeigt dann den laufenden Stand, sie verschwindet nicht.
+ * Das Universum ist der ANSICHTSZUSTAND und nie leer — jede Bahn gehört einem,
+ * eine Gesamtansicht gibt es nicht. Die Galaxie ist die Hervorhebung darauf;
+ * ohne sie zeigt die Auswahlkarte die Bahn selbst.
  */
-export type FirmamentSelection =
-  | { kind: 'galaxy'; galaxy: number }
-  | { kind: 'universe'; universe: number }
-  | null
+export interface FirmamentSelection {
+  universe: number
+  galaxy: number | null
+}
 
 /** Die Marken-Art, die Tooltip, Herold und Badge Lab gemeinsam kennen. */
 export type NotifyBadgeKind =

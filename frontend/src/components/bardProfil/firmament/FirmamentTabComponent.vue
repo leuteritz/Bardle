@@ -6,13 +6,13 @@
  * ist der Wandering Caretaker INSGESAMT gekommen. Journey zählt Zahlen, das
  * Archiv listet Galaxien, der Codex misst Bahnen — hier steht der Weg als Bild.
  *
- * **Die Kette ist durchgehend.** Galaxien laufen über das Prestige hinweg
- * weiter (`executePrestigeReset` fasst `completedGalaxies` nicht an); Universen
- * sind eine PARALLELE Achse und sitzen als Tore auf der Bahn, nicht als eigene
- * Abschnitte. Die Leiste links ist deshalb Sprung und Auskunft, kein Behälter.
+ * **EINE Bahn je Universum.** Die Galaxienkette selbst läuft über das Prestige
+ * hinweg durch (`executePrestigeReset` fasst `completedGalaxies` nicht an) —
+ * geschnitten wird sie am Feld `record.universe`. Die Leiste links wählt die
+ * Bahn, und diese Wahl ist der ANSICHTSZUSTAND: sie ist nie leer.
  *
- * Die Wurzel hält, was beide Kinder teilen: die Knotenkette, die Tore und die
- * Auswahl. Eine zweite Kette in der Karte liefe gegen die der Leiste.
+ * Die Wurzel hält, was beide Kinder teilen: die Bahn und die Auswahl. Eine
+ * zweite Kette in der Karte liefe gegen die der Leiste.
  */
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -24,12 +24,7 @@ import FirmamentLockedPanel from './FirmamentLockedPanel.vue'
 import FirmamentCrestBand from './FirmamentCrestBand.vue'
 import FirmamentUniverseRail from './FirmamentUniverseRail.vue'
 import FirmamentChart from './FirmamentChart.vue'
-import {
-  buildFirmamentGates,
-  buildFirmamentNodes,
-  type FirmamentGate,
-  type FirmamentNode,
-} from '@/utils/ui/firmamentLayout'
+import { buildFirmamentPath, type FirmamentPath } from '@/utils/ui/firmamentLayout'
 import {
   FIRMAMENT_RAIL_AUTOFOLD_W,
   FIRMAMENT_RAIL_FOLDED_W,
@@ -47,10 +42,31 @@ const { completedGalaxies, currentGalaxy, currentThemeIndex, attemptResults, lan
 const isVisible = computed(() => uiStore.bardActiveTab === 'firmament')
 const isUnlocked = computed(() => completedGalaxies.value.length > 0)
 
-// ── Die EINE Kette ──────────────────────────────────────────────────────────
-const nodes = computed<FirmamentNode[]>(() =>
-  buildFirmamentNodes({
+// ── Auswahl: der Ansichtszustand, nie leer ──────────────────────────────────
+const selection = ref<FirmamentSelection>({
+  universe: gameStore.currentUniverse,
+  galaxy: null,
+})
+
+function select(next: FirmamentSelection) {
+  selection.value = next
+}
+
+function resetSelection() {
+  selection.value = { universe: gameStore.currentUniverse, galaxy: null }
+}
+
+/** Ein Prestige bei offenem Profil macht die gezeigte Bahn zur Vergangenheit —
+ *  ohne das stünde die Karte darauf, während die Wolke „hier bin ich" sagt. */
+watch(() => gameStore.currentUniverse, resetSelection)
+
+// ── Die EINE Bahn ───────────────────────────────────────────────────────────
+const path = computed<FirmamentPath>(() =>
+  buildFirmamentPath({
     completed: completedGalaxies.value,
+    runs: gameStore.universeRuns,
+    universe: selection.value.universe,
+    currentUniverse: gameStore.currentUniverse,
     currentGalaxy: currentGalaxy.value,
     currentRescued: attemptResults.value.filter((a) => a !== 'failed').length,
     currentLost: attemptResults.value.filter((a) => a === 'failed').length,
@@ -59,17 +75,6 @@ const nodes = computed<FirmamentNode[]>(() =>
     starsOf: computeRequired,
   }),
 )
-
-const gates = computed<FirmamentGate[]>(() =>
-  buildFirmamentGates(nodes.value, gameStore.universeRuns),
-)
-
-// ── Auswahl ─────────────────────────────────────────────────────────────────
-const selection = ref<FirmamentSelection>(null)
-
-function select(next: FirmamentSelection) {
-  selection.value = next
-}
 
 /** Ein befreiter Knoten ist eine TUER, keine Auswahl: er fuehrt in den Atlas,
  *  in dem man mit dieser Galaxie etwas tun kann. */
@@ -99,7 +104,8 @@ function observe(el: HTMLElement) {
 // ── Sichtbarkeit: Escape-Leiter und Beobachter hängen daran, nicht am Leben ──
 function onKeydown(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
-  if (selection.value) select(null)
+  if (selection.value.galaxy !== null) select({ ...selection.value, galaxy: null })
+  else if (selection.value.universe !== gameStore.currentUniverse) resetSelection()
   else if (railChoice.value === true) railChoice.value = null
   // Nicht verbraucht: die Taste gehört dem Profil, es macht zu.
   else return
@@ -118,7 +124,7 @@ watch(
       }
       // Beim VERLASSEN zurücksetzen, nicht beim Betreten: ein Reset im selben
       // Flush wie eine Öffnungs-Anfrage löschte, was gerade gezeigt werden soll.
-      selection.value = null
+      resetSelection()
       return
     }
     document.addEventListener('keydown', onKeydown, true)
@@ -144,11 +150,14 @@ onBeforeUnmount(() => {
  * allerersten Ruecksprung laeuft sein Setup erst NACH dem Setzen des Zeigers.
  */
 watch(
-  () => uiStore.pendingFirmamentSelection,
-  (sel) => {
-    if (!sel) return
-    select(sel)
-    uiStore.clearPendingFirmamentSelection()
+  () => uiStore.pendingFirmamentGalaxy,
+  (galaxy) => {
+    if (galaxy === null) return
+    // Der Atlas kennt kein Universum — auf welcher Bahn die Galaxie liegt,
+    // steht in ihrem Datensatz.
+    const record = completedGalaxies.value.find((r) => r.galaxy === galaxy)
+    select({ universe: record?.universe ?? gameStore.currentUniverse, galaxy })
+    uiStore.clearPendingFirmamentGalaxy()
   },
   { immediate: true },
 )
@@ -165,19 +174,18 @@ const railW = computed(() =>
     <FirmamentLockedPanel v-if="!isUnlocked" />
 
     <template v-else>
-      <FirmamentCrestBand :gates="gates" :nodes="nodes" />
+      <FirmamentCrestBand :universe="selection.universe" />
 
       <div class="fm-body">
         <FirmamentUniverseRail
-          :gates="gates"
           :folded="railFolded"
           :selection="selection"
           @select="select"
           @toggle="railChoice = !railFolded"
         />
         <FirmamentChart
-          :nodes="nodes"
-          :gates="gates"
+          :nodes="path.nodes"
+          :departure="path.departure"
           :selection="selection"
           :visible="isVisible"
           @select="select"

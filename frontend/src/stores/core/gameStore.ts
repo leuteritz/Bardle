@@ -23,6 +23,7 @@ import { useVoidStore } from '@/stores/world/voidStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { buildBackfillUniverseRuns } from '@/utils/game/universeRunBackfill'
+import { assignRecordUniverses } from '@/utils/game/galaxyUniverseBackfill'
 import { universes } from '@/config/progression/universes'
 import { clampPercent } from '@/utils/orbit/geometry'
 import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
@@ -739,13 +740,23 @@ export const useGameStore = defineStore('game', {
      * Jede Zuweisung über `Math.max` — der Knopf ist idempotent.
      */
     adminBackfillUniverseRuns(): number {
-      const records = [...useGalaxyStore().completedGalaxies].sort((a, b) => a.galaxy - b.galaxy)
+      const galaxyStore = useGalaxyStore()
+      const records = [...galaxyStore.completedGalaxies].sort((a, b) => a.galaxy - b.galaxy)
       const added = buildBackfillUniverseRuns(records, this.currentUniverse, this.universeRuns)
       if (added.length > 0) {
         this.universeRuns.push(...added)
         this.universeRuns.sort((a, b) => a.completedAt - b.completedAt)
       }
       this.totalPrestiges = Math.max(this.totalPrestiges, this.universeRuns.length)
+      // `overwrite`, weil die Grenzen gerade erst entstanden sind: ein Stempel
+      // von vorher stünde quer zu Läufen, die es beim Setzen nicht gab.
+      galaxyStore.completedGalaxies = assignRecordUniverses(
+        galaxyStore.completedGalaxies,
+        this.universeRuns,
+        this.currentUniverse,
+        this.totalPrestiges,
+        { overwrite: true },
+      )
       // Ohne die drei Zahlen behauptet das Wappenband „0 / 100k" neben neun
       // Aufbrüchen, während `prestigeAvailable` längst steht.
       this.chimesToUniverseRescue = Math.max(

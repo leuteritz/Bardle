@@ -1,15 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import {
-  buildBackfillUniverseRuns,
-  gateRecordIndex,
-} from '@/utils/game/universeRunBackfill'
-import { buildFirmamentGates, buildFirmamentNodes } from '@/utils/ui/firmamentLayout'
+import { buildBackfillUniverseRuns, gateRecordIndex } from '@/utils/game/universeRunBackfill'
+import { assignRecordUniverses } from '@/utils/game/galaxyUniverseBackfill'
 import { universes } from '@/config/progression/universes'
 import { UNIVERSE_RUN_HISTORY_LIMIT } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { UniverseRunRecord } from '@/types'
-
-const starsOf = (g: number) => Math.min(3 + (g - 1), 7)
 
 /** Stempel wie beim Archiv-Nachtrag: aufsteigend mit Abstand, ältester zuerst. */
 function rec(galaxy: number, rescued = 3, lost = 1): CompletedGalaxyRecord {
@@ -29,35 +24,27 @@ function rec(galaxy: number, rescued = 3, lost = 1): CompletedGalaxyRecord {
 
 const archive = (n: number) => Array.from({ length: n }, (_, i) => rec(i + 1))
 
-function nodesOf(records: CompletedGalaxyRecord[], currentGalaxy: number) {
-  return buildFirmamentNodes({
-    completed: records,
-    currentGalaxy,
-    currentRescued: 0,
-    currentLost: 0,
-    currentLandfalls: 0,
-    currentThemeIndex: 3,
-    starsOf,
-  })
-}
-
 describe('universeRunBackfill', () => {
   /*
    * Der Test, an dem der ganze Nachtrag hängt: `gateRecordIndex` und
-   * `buildFirmamentGates` sind zwei Rechnungen für dieselbe Marke. Laufen sie
-   * auseinander, sitzt ein Tor auf dem falschen Knoten — und nichts daran sähe
-   * im Code falsch aus.
+   * `assignRecordUniverses` sind zwei Rechnungen für dieselbe Kante. Laufen sie
+   * auseinander, bekommt ein Lauf eine leere Bahn — und nichts daran sähe im
+   * Code falsch aus.
    */
-  it('gibt jedem nachgetragenen Lauf ein Tor auf der Bahn', () => {
+  it('gibt jedem nachgetragenen Lauf ein eigenes Stück der Bahn', () => {
     const records = archive(50)
     const runs = buildBackfillUniverseRuns(records, 10, [])
-    const gates = buildFirmamentGates(nodesOf(records, 50), runs)
+    const stamped = assignRecordUniverses(records, runs, 10, runs.length)
 
     expect(runs).toHaveLength(universes.length - 1)
-    expect(gates).toHaveLength(runs.length)
-    expect(gates.map((g) => g.universe)).toEqual(runs.map((r) => r.universe))
-    // Kein Tor teilt sich einen Platz — sonst verwirft buildFirmamentGates still.
-    expect(new Set(gates.map((g) => g.afterIndex)).size).toBe(gates.length)
+    for (const run of runs) {
+      expect(
+        stamped.some((r) => r.universe === run.universe),
+        `Universum ${run.universe} ohne Galaxie`,
+      ).toBe(true)
+    }
+    // Kein Lauf teilt sich einen Platz — sonst verschluckt der Nachtrag einen.
+    expect(new Set(runs.map((r) => gateRecordIndex(records, r.completedAt))).size).toBe(runs.length)
   })
 
   it('lässt das laufende Universum ohne Lauf — ein Tor ist ein Aufbruch', () => {
@@ -106,11 +93,13 @@ describe('universeRunBackfill', () => {
     }
     const runs = buildBackfillUniverseRuns(records, 10, [mine])
     const all = [mine, ...runs].sort((a, b) => a.completedAt - b.completedAt)
-    const gates = buildFirmamentGates(nodesOf(records, 50), all)
+    const stamped = assignRecordUniverses(records, all, 10, all.length)
 
     expect(runs.some((r) => r.universe === 7)).toBe(false)
     expect(runs.some((r) => gateRecordIndex(records, r.completedAt) === 20)).toBe(false)
-    expect(gates).toHaveLength(all.length)
+    expect(new Set(all.map((r) => gateRecordIndex(records, r.completedAt))).size).toBe(all.length)
+    // Der bestehende Lauf behält seine Bahn, nicht nur seinen Platz.
+    expect(stamped.some((r) => r.universe === 7)).toBe(true)
     expect(mine.chimes).toBe(999)
   })
 

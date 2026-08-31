@@ -15,7 +15,7 @@ import {
   FIRMAMENT_WEB_OUTER,
 } from '@/config/constants'
 import { firmamentPointAt } from '@/utils/ui/firmamentLayout'
-import type { FirmamentGate, FirmamentNode } from '@/utils/ui/firmamentLayout'
+import type { FirmamentDeparture, FirmamentNode } from '@/utils/ui/firmamentLayout'
 
 /**
  * Der Schnitt der Firmament-Karte in drei Zuege — und warum er gebunden gehoert.
@@ -89,6 +89,9 @@ function recordingCtx(): { ctx: CanvasRenderingContext2D; ops: string[] } {
 const PLATE_R = 315
 const PLATE_SIDE = Math.round(PLATE_R * 2 * FIRMAMENT_PLATE_SPRITE_MARGIN)
 const BOX = { cx: PLATE_SIDE / 2, cy: PLATE_SIDE / 2, r: PLATE_R }
+/** Der Ton des gezeigten Universums. Er steuert die Farbe des Walls, nie seine
+ *  Geometrie — genau das binden die Zuege unten. */
+const TINT = '#ff8a34'
 
 function nodeAt(i: number, count: number, state: FirmamentNode['state']): FirmamentNode {
   const p = firmamentPointAt(count > 1 ? i / (count - 1) : 0)
@@ -114,9 +117,13 @@ const NODES: FirmamentNode[] = [
   nodeAt(3, 4, 'unlit'),
 ]
 
-const GATES: FirmamentGate[] = [
-  { universe: 2, afterIndex: 1, nx: NODES[1].nx, ny: NODES[1].ny, angle: 0 } as FirmamentGate,
-]
+const DEPARTURE = {
+  toUniverse: 2,
+  visits: 1,
+  nx: NODES[1].nx,
+  ny: NODES[1].ny,
+  angle: 0,
+} as FirmamentDeparture
 
 const count = (ops: string[], name: string) => ops.filter((o) => o.startsWith(`${name}(`)).length
 
@@ -164,7 +171,7 @@ const radii = (ops: string[]) => points(ops).map((p) => Math.hypot(p.x, p.y))
 describe('Firmament-Platte — der drehende Wall', () => {
   it('webt ein NETZ: Straenge, Ranken und Lichtpunkte aus einem Knotensatz', () => {
     const { ctx, ops } = recordingCtx()
-    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05)
+    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05, TINT)
     // Ein Strang je Knoten ist der Boden; dazu die zweiten Straenge und die
     // Ranken. Der alte Bogenkranz hatte genau einen Zug je Bogen.
     expect(count(ops, 'quadraticCurveTo')).toBeGreaterThanOrEqual(FIRMAMENT_WEB_NODES)
@@ -177,7 +184,7 @@ describe('Firmament-Platte — der drehende Wall', () => {
     // er nur Flaeche, und das Sprite muesste fuer ihn bis an seine Kante decken.
     // Geprueft wird der RADIUS: die Lichtpunkte sind auch `arc`.
     const { ctx, ops } = recordingCtx()
-    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05)
+    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05, TINT)
     const rings = ops
       .filter((o) => o.startsWith('arc('))
       .map((o) => Number(o.slice(4, -1).split(',')[2]))
@@ -189,7 +196,7 @@ describe('Firmament-Platte — der drehende Wall', () => {
     // darueber hinaus wandert beim Drehen als abgeschnittene Kante durchs Bild
     // — und das sieht man erst nach einer halben Umdrehung.
     const { ctx, ops } = recordingCtx()
-    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05)
+    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05, TINT)
     const max = Math.max(...radii(ops))
     expect(max).toBeLessThanOrEqual(BOX.r * FIRMAMENT_WEB_OUTER + 0.01)
     expect(BOX.r * FIRMAMENT_WEB_OUTER).toBeLessThan(BOX.r * FIRMAMENT_RIM_SPRITE_MARGIN)
@@ -199,7 +206,7 @@ describe('Firmament-Platte — der drehende Wall', () => {
     // Die aeussersten Bahnknoten stehen bei 0,96 r. Ein Saum, der tiefer geht,
     // legt sich ueber sie.
     const { ctx, ops } = recordingCtx()
-    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05)
+    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05, TINT)
     expect(Math.min(...radii(ops))).toBeGreaterThanOrEqual(BOX.r * FIRMAMENT_WEB_INNER - 0.01)
   })
 
@@ -207,7 +214,7 @@ describe('Firmament-Platte — der drehende Wall', () => {
     // Die Mehrzahl der Knoten liegt aussen, nur wenige reichen tief hinein —
     // gleichverteilt waere es wieder ein Band mit zwei Kanten.
     const { ctx, ops } = recordingCtx()
-    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05)
+    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05, TINT)
     const rs = radii(ops)
     const inner = rs.filter((r) => r < BOX.r * 0.9).length
     expect(inner).toBeGreaterThan(0)
@@ -218,7 +225,7 @@ describe('Firmament-Platte — der drehende Wall', () => {
     // Der `transform-origin` des CSS ist die Mitte des Sprites; malte der Zug
     // um `box.cx/cy`, taumelte der Wall statt zu drehen.
     const { ctx, ops } = recordingCtx()
-    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05)
+    paintFirmamentWeb(ctx, 334, 334, BOX.r, 1.05, TINT)
     expect(ops[0]).toBe('save()')
     expect(ops[1]).toBe('translate(334,334)')
   })
@@ -226,9 +233,31 @@ describe('Firmament-Platte — der drehende Wall', () => {
   it('bleibt bei gleichem Radius byte-gleich', () => {
     const a = recordingCtx()
     const b = recordingCtx()
-    paintFirmamentWeb(a.ctx, 334, 334, BOX.r, 1.05)
-    paintFirmamentWeb(b.ctx, 334, 334, BOX.r, 1.05)
+    paintFirmamentWeb(a.ctx, 334, 334, BOX.r, 1.05, TINT)
+    paintFirmamentWeb(b.ctx, 334, 334, BOX.r, 1.05, TINT)
     expect(a.ops).toEqual(b.ops)
+  })
+
+  /*
+   * Der Ton sagt, WELCHES Universum — er darf nichts an der Form aendern. Zwei
+   * Laeufe mit verschiedenem Tint muessen deshalb dieselbe Geometrie zeichnen
+   * und sich ausschliesslich in den Farben unterscheiden. Waere es andersherum,
+   * spraenge beim Universumswechsel das Gewebe.
+   */
+  it('aendert am Gewebe die FARBE, nie die Form', () => {
+    // Auch die Lichtpunkte tragen den Ton — sie kommen als `fillStyle`.
+    const isInk = (o: string) => o.startsWith('strokeStyle=') || o.startsWith('fillStyle=')
+    const shape = (ops: string[]) => ops.filter((o) => !isInk(o))
+    const ink = (ops: string[]) => ops.filter(isInk)
+
+    const warm = recordingCtx()
+    const cold = recordingCtx()
+    paintFirmamentWeb(warm.ctx, 334, 334, BOX.r, 1.05, '#ff8a34')
+    paintFirmamentWeb(cold.ctx, 334, 334, BOX.r, 1.05, '#4ea8c8')
+
+    expect(shape(warm.ops)).toEqual(shape(cold.ops))
+    expect(ink(warm.ops)).not.toEqual(ink(cold.ops))
+    expect(ink(warm.ops).length).toBe(ink(cold.ops).length)
   })
 })
 
@@ -237,14 +266,14 @@ describe('Firmament-Platte — die Karte liegt DARUEBER', () => {
     // DER Fehler, den diese Spec fangen soll: ein `fillRect` ueber die volle
     // Buehne legte sich ueber Wall und Heldenscheibe, und beide waeren weg.
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, GATES, PLATE_SIDE, PLATE_SIDE, BOX)
+    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(count(ops, 'fillRect')).toBe(0)
     expect(ops[0]).toBe(`clearRect(0,0,${PLATE_SIDE},${PLATE_SIDE})`)
   })
 
   it('malt kein zweites Sternfeld', () => {
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, GATES, PLATE_SIDE, PLATE_SIDE, BOX)
+    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     // Das Sternfeld waeren hunderte Marken; die Karte hat nur ihre Koerper.
     // Gezaehlt werden ZUEGE, nicht Zeilen — die Stilzeilen tragen keine Marke.
     expect(count(ops, 'fill') + count(ops, 'stroke')).toBeLessThan(60)
@@ -252,7 +281,7 @@ describe('Firmament-Platte — die Karte liegt DARUEBER', () => {
 
   it('behaelt die zwei geschlossenen Wallringe', () => {
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, GATES, PLATE_SIDE, PLATE_SIDE, BOX)
+    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(ops.some((o) => o.startsWith(`arc(0,0,${Math.round(BOX.r * 0.985 * 100) / 100}`))).toBe(
       true,
     )
@@ -263,7 +292,7 @@ describe('Firmament-Platte — die Karte liegt DARUEBER', () => {
     // dritte sogar in ihrem Glutring — ein Leuchten auf einem Leuchten ist kein
     // Leuchten. Der Teich steht VOR Schein und Kern.
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, GATES, PLATE_SIDE, PLATE_SIDE, BOX)
+    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     const pools = ops.filter((o) => o === 'addColorStop(0,rgba(6, 5, 4, 0.72))')
     const lit = NODES.filter((n) => n.state !== 'unlit').length
     expect(pools.length).toBe(lit)
@@ -273,7 +302,7 @@ describe('Firmament-Platte — die Karte liegt DARUEBER', () => {
     // Er ist entfallen: die Heldenscheibe bringt mit ihrem Kern denselben Ort
     // mit, und zwei Sonnen an derselben Stelle waeren eine doppelte Aussage.
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, GATES, PLATE_SIDE, PLATE_SIDE, BOX)
+    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(ops).not.toContain('addColorStop(0,rgba(255, 246, 214, 0.95))')
   })
 })
@@ -315,13 +344,13 @@ describe('Firmament-Platte — die Knoten', () => {
     // nicht falsch aus, nur auf der Karte. Auch der unbeleuchtete traegt die
     // Form: ein gestrichelter Kreis waere die einzige runde Marke.
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, GATES, PLATE_SIDE, PLATE_SIDE, BOX)
+    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(count(ops, 'ellipse')).toBe(NODES.length)
   })
 
   it('sagt den Sternstand mit EINEM Bogen je Knoten, nicht mit sieben Pips', () => {
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, NODES, GATES, PLATE_SIDE, PLATE_SIDE, BOX)
+    paintFirmament(ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     const arcs = starArcs(ops, 6, K)
     // Zwei voll befreite Knoten plus die laufende Galaxie — drei Boegen, nicht
     // dreimal drei Punkte.
@@ -337,7 +366,7 @@ describe('Firmament-Platte — die Knoten', () => {
   it('haengt Verlorenes ROT an, statt es dazuzurechnen', () => {
     const node = { ...nodeAt(0, 2, 'freed'), stars: 4, rescued: 2, lost: 1 }
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, [node], [], PLATE_SIDE, PLATE_SIDE, BOX)
+    paintFirmament(ctx, [node], null, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     const arcs = starArcs(ops, node.bodyR, K)
     expect(arcs).toHaveLength(2)
     // Gedaempftes Gold, damit sechsundzwanzig Ringe keine Medaillen werden —
@@ -356,7 +385,7 @@ describe('Firmament-Platte — die Knoten', () => {
     // also genau den Aufkleber, der verschwinden soll.
     const node = { ...nodeAt(0, 2, 'freed'), stars: 5, rescued: 1, lost: 0 }
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, [node], [], PLATE_SIDE, PLATE_SIDE, BOX)
+    paintFirmament(ctx, [node], null, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(starArcs(ops, node.bodyR, K)).toHaveLength(1)
   })
 
@@ -365,8 +394,8 @@ describe('Firmament-Platte — die Knoten', () => {
     // sonst saehe die Karte nach jedem Repaint anders aus.
     const a = recordingCtx()
     const b = recordingCtx()
-    paintFirmament(a.ctx, NODES, GATES, PLATE_SIDE, PLATE_SIDE, BOX)
-    paintFirmament(b.ctx, NODES, GATES, PLATE_SIDE, PLATE_SIDE, BOX)
+    paintFirmament(a.ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    paintFirmament(b.ctx, NODES, DEPARTURE, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(a.ops).toEqual(b.ops)
   })
 })
@@ -444,7 +473,7 @@ describe('Firmament-Platte — die Sprite-Kante', () => {
     // als abgeschnittener Rand durchs Bild — und das sieht man erst nach einer
     // halben Umdrehung.
     const { ctx, ops } = recordingCtx()
-    paintFirmament(ctx, WORST, [], PLATE_SIDE, PLATE_SIDE, BOX)
+    paintFirmament(ctx, WORST, null, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
     expect(maxReach(ops, BOX)).toBeLessThanOrEqual(BOX.r * FIRMAMENT_PLATE_SPRITE_MARGIN)
   })
 

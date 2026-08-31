@@ -5,6 +5,7 @@ import {
   FIRMAMENT_CREST_ID_W,
   FIRMAMENT_MAP_INSET_PX,
   FIRMAMENT_NODE_HIT_MIN,
+  FIRMAMENT_PATH_MIN_SPAN,
   FIRMAMENT_PLATE_REF_R,
   FIRMAMENT_RAIL_AUTOFOLD_W,
   FIRMAMENT_RAIL_FOLDED_W,
@@ -32,10 +33,12 @@ import {
   FIRMAMENT_RIM_SPRITE_MARGIN,
   FIRMAMENT_MAX_DPR,
   FIRMAMENT_SPIRAL_R1,
+  FIRMAMENT_SPIRAL_STEP_TURNS,
+  FIRMAMENT_SPIRAL_TURNS,
   FIRMAMENT_WALL_MAX_BACKING_PX,
 } from '@/config/constants'
 import { universes } from '@/config/progression/universes'
-import { firmamentFitBox, firmamentPointAt } from '@/utils/ui/firmamentLayout'
+import { firmamentFitBox, firmamentPointAt, firmamentSpiralTurns } from '@/utils/ui/firmamentLayout'
 import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
 
 /**
@@ -44,11 +47,12 @@ import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
  * bleibt — wer die Leiste verbreitert oder das Band hoeher macht, nimmt es ihr
  * still weg.
  *
- * Und der Boden ist hier keine Geschmacksfrage: die Bahn ist eine Spirale mit
- * FESTEM Windungsvorrat. Je mehr Galaxien, desto enger stehen die Knoten — faellt
- * ihr Abstand unter `FIRMAMENT_NODE_HIT_MIN`, decken sich die Klickflaechen und
- * die Karte hoert auf zu funktionieren. Diese Spec sagt, bis zu welcher Zahl das
- * OHNE Zoom traegt, und bindet die Zahl an die Konstanten.
+ * Und der Boden ist hier keine Geschmacksfrage: die Bahn waechst mit festem
+ * WINKELSCHRITT, bis `FIRMAMENT_SPIRAL_TURNS` sie deckelt. Ab dort stehen die
+ * Knoten mit jeder Galaxie enger — faellt ihr Abstand unter
+ * `FIRMAMENT_NODE_HIT_MIN`, decken sich die Klickflaechen und die Karte hoert
+ * auf zu funktionieren. Diese Spec sagt, bis zu welcher Zahl das OHNE Zoom
+ * traegt, und bindet die Zahl an die Konstanten.
  */
 
 /** `--bp-gap` von `.rp-wrapper`, beide Seiten. */
@@ -116,8 +120,11 @@ function radiusAt(vw: number, vh: number): number {
 
 /** Der engste Abstand zweier Knoten auf der Bahn, in Pixeln. */
 function minSeparation(count: number, radius: number): number {
+  // MIT dem Windungsvorrat, den eine Bahn dieser Laenge wirklich bekommt — der
+  // ist nicht mehr fest, und mit dem Default gemessen loege die Wand.
+  const turns = firmamentSpiralTurns(count)
   const pts = Array.from({ length: count }, (_, i) =>
-    firmamentPointAt(count > 1 ? i / (count - 1) : 0),
+    firmamentPointAt(count > 1 ? i / (count - 1) : 0, turns),
   )
   let min = Infinity
   for (let i = 0; i < pts.length; i++) {
@@ -381,6 +388,51 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
     // Haelfte der Karte ist Versprechen statt Weg.
     expect(FIRMAMENT_UNLIT_AHEAD).toBeGreaterThan(0)
     expect(FIRMAMENT_UNLIT_AHEAD).toBeLessThanOrEqual(6)
+  })
+
+  /*
+   * Seit die Bahn je Universum schneidet, rechnen ALLE gegen denselben Nenner —
+   * geteilt wird der Zaehler, nicht die Spirale. Die Wand oben gilt damit
+   * unveraendert weiter: eine Teilbahn hat hoechstens so viele Knoten wie der
+   * Nenner, also nie einen engeren Abstand.
+   */
+  /*
+   * Der Winkelschritt ist die FESTE Groesse, nicht die Windungszahl. Fest
+   * gesetzt waren zwei Windungen auf fuenf Knoten 180 Grad je Schritt: die Bahn
+   * sprang quer ueber die Scheibe und las sich als Zickzack. Gedeckelt bleibt
+   * sie trotzdem — jenseits davon ruecken die Knoten wieder zusammen, und die
+   * Wand oben gilt.
+   */
+  it('haelt den Winkelschritt konstant, bis der Deckel greift', () => {
+    const stepDeg = (span: number) => {
+      const turns = firmamentSpiralTurns(span)
+      return ((turns * 360) / (span - 1)) | 0
+    }
+    expect(stepDeg(6)).toBe(FIRMAMENT_SPIRAL_STEP_TURNS * 360)
+    expect(stepDeg(20)).toBe(FIRMAMENT_SPIRAL_STEP_TURNS * 360)
+    // Ab dem Deckel wird er kleiner, nie groesser.
+    expect(stepDeg(80)).toBeLessThan(FIRMAMENT_SPIRAL_STEP_TURNS * 360)
+    expect(firmamentSpiralTurns(200)).toBe(FIRMAMENT_SPIRAL_TURNS)
+  })
+
+  it('haelt die Trefferflaeche auf jeder Bahnlaenge', () => {
+    const r = fullHd().r
+    // Der Abstand haengt am NENNER, nicht an der Zahl der gezeigten Knoten —
+    // eine kurze Bahn nimmt nur die inneren Plaetze desselben Rasters.
+    for (const span of [FIRMAMENT_PATH_MIN_SPAN, 20, 40]) {
+      expect(minSeparation(span, r), `${span} Plaetze`).toBeGreaterThanOrEqual(
+        FIRMAMENT_NODE_HIT_MIN,
+      )
+    }
+  })
+
+  it('setzt den Bahnboden zwischen eine Marke und die Wand', () => {
+    // Darunter saesse eine Zwei-Galaxien-Bahn am Wall, darueber verschenkte die
+    // laengste Bahn ihre Reichweite.
+    expect(FIRMAMENT_PATH_MIN_SPAN).toBeGreaterThan(1)
+    expect(minSeparation(FIRMAMENT_PATH_MIN_SPAN, fullHd().r)).toBeGreaterThanOrEqual(
+      FIRMAMENT_NODE_HIT_MIN,
+    )
   })
 })
 

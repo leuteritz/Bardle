@@ -6,22 +6,36 @@
  * Fit-Box, damit dieselbe Bahn auf jeder Buehnengroesse dieselbe Form hat —
  * dieselbe Trennung wie `galaxyPlaneToWorld` und die Galaxieplatte.
  *
- * Der Vertrag, an dem alles haengt: **eine durchgehende Kette**. Galaxien
- * laufen ueber das Prestige hinweg weiter (`executePrestigeReset` fasst
- * `completedGalaxies` nicht an), Universen sind eine PARALLELE Achse. Ein
- * Universumswechsel ist deshalb ein TOR auf der Bahn, kein eigener Abschnitt.
+ * EINE Bahn je Universum. Die Galaxienkette selbst laeuft ueber das Prestige
+ * hinweg durch (`executePrestigeReset` fasst `completedGalaxies` nicht an) —
+ * geschnitten wird sie erst hier, am Feld `record.universe`. Jede Bahn beginnt
+ * wieder bei Start; wo ein Universum endete, steht ein Tor hinter seiner letzten
+ * Galaxie.
+ *
+ * Der Nenner ist dabei fuer ALLE Bahnen derselbe: der Knotenabstand bleibt
+ * ueber einen Universumswechsel hinweg gleich, und wer weiter kam, kommt weiter
+ * nach aussen. Eine Bahn, die ihre Scheibe selbst ausfuellte, saehe mit fuenf
+ * Galaxien aus wie eine mit dreissig.
+ *
+ * Und der Windungsvorrat haengt AM Nenner statt fest zu stehen: der
+ * Winkelschritt ist die Groesse, die gleich bleibt. Zwei feste Windungen sind
+ * auf fuenf Knoten 180 Grad je Schritt — die Bahn sprang quer ueber die Scheibe
+ * und las sich als Zickzack.
  */
 
 import {
   FIRMAMENT_MAP_INSET_PX,
   FIRMAMENT_NODE_R_BASE,
   FIRMAMENT_NODE_R_PER_STAR,
+  FIRMAMENT_PATH_MIN_SPAN,
   FIRMAMENT_SPIRAL_R0,
   FIRMAMENT_SPIRAL_R1,
   FIRMAMENT_SPIRAL_RADIUS_EXP,
+  FIRMAMENT_SPIRAL_STEP_TURNS,
   FIRMAMENT_SPIRAL_TURNS,
   FIRMAMENT_UNLIT_AHEAD,
 } from '@/config/constants'
+import { universes } from '@/config/progression/universes'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { UniverseRunRecord } from '@/types'
 
@@ -47,14 +61,21 @@ export interface FirmamentNode {
   record: CompletedGalaxyRecord | null
 }
 
-export interface FirmamentGate {
-  universe: number
-  /** Index des letzten Knotens VOR dem Tor. */
-  afterIndex: number
+/** Wo ein Universum endete — EIN Tor am Ende seiner Bahn, kein Zwischenstop. */
+export interface FirmamentDeparture {
+  /** Das Universum, in das es weiterging. */
+  toUniverse: number
+  /** Wie oft dieses Universum betreten wurde — die Bahn traegt alle Besuche. */
+  visits: number
+  run: UniverseRunRecord
   nx: number
   ny: number
   angle: number
-  run: UniverseRunRecord
+}
+
+export interface FirmamentPath {
+  nodes: FirmamentNode[]
+  departure: FirmamentDeparture | null
 }
 
 export interface FirmamentFitBox {
@@ -66,6 +87,11 @@ export interface FirmamentFitBox {
 
 export interface FirmamentInput {
   completed: readonly CompletedGalaxyRecord[]
+  runs: readonly UniverseRunRecord[]
+  /** Die Bahn, die gezeigt wird. */
+  universe: number
+  /** Wo der Bard steht — nur DORT haengen laufende Galaxie und Vorausplaetze an. */
+  currentUniverse: number
   currentGalaxy: number
   /** Sterne, die die laufende Galaxie schon hergab. */
   currentRescued: number
@@ -91,31 +117,91 @@ export function firmamentFitBox(
   }
 }
 
+/**
+ * Der Windungsvorrat einer Bahn mit `span` Plaetzen.
+ *
+ * Der Winkelschritt ist die feste Groesse, nicht die Windungszahl: zwei
+ * Windungen auf fuenf Knoten sind 180 Grad je Schritt, und die Bahn springt
+ * quer ueber die Scheibe. Gedeckelt bleibt sie bei `FIRMAMENT_SPIRAL_TURNS` —
+ * ab dort ruecken die Knoten wieder zusammen, und die Trefferflaechen-Wand aus
+ * `firmamentLayout.spec.ts` gilt unveraendert.
+ */
+export function firmamentSpiralTurns(span: number): number {
+  return Math.min(FIRMAMENT_SPIRAL_TURNS, Math.max(1, span - 1) * FIRMAMENT_SPIRAL_STEP_TURNS)
+}
+
 /** Ein Punkt der Bahn bei `t` (0 = Kern, 1 = Rand). */
-export function firmamentPointAt(t: number): {
+export function firmamentPointAt(
+  t: number,
+  turns: number = FIRMAMENT_SPIRAL_TURNS,
+): {
   nx: number
   ny: number
   angle: number
   radius: number
 } {
   const f = Math.min(1, Math.max(0, t))
-  const angle = f * FIRMAMENT_SPIRAL_TURNS * Math.PI * 2 - Math.PI / 2
+  const angle = f * turns * Math.PI * 2 - Math.PI / 2
   const radius =
     FIRMAMENT_SPIRAL_R0 +
     (FIRMAMENT_SPIRAL_R1 - FIRMAMENT_SPIRAL_R0) * Math.pow(f, FIRMAMENT_SPIRAL_RADIUS_EXP)
   return { nx: Math.cos(angle) * radius, ny: Math.sin(angle) * radius, angle, radius }
 }
 
+/** Der Boden fuer einen Datensatz ohne Feld. Nach der Migration kann er nicht
+ *  greifen — aber ein Datensatz, dem sie fehlte, darf auf KEINER Bahn fehlen. */
+function universeOf(record: CompletedGalaxyRecord): number {
+  return record.universe ?? universes[0].id
+}
+
+function runsOfUniverse(runs: readonly UniverseRunRecord[], universe: number): UniverseRunRecord[] {
+  return runs.filter((r) => r.universe === universe).sort((a, b) => a.completedAt - b.completedAt)
+}
+
+/** Plaetze, die eine Bahn belegt — Knoten plus, falls vorhanden, ihr Tor. */
+function slotsOf(input: FirmamentInput, universe: number): number {
+  let n = 0
+  let hasCurrent = false
+  for (const r of input.completed) {
+    if (universeOf(r) !== universe) continue
+    n++
+    if (r.galaxy === input.currentGalaxy) hasCurrent = true
+  }
+  if (universe === input.currentUniverse) {
+    if (!hasCurrent) n++
+    return n + FIRMAMENT_UNLIT_AHEAD
+  }
+  // Das Tor zaehlt mit, sonst saesse ausgerechnet das der laengsten Bahn auf
+  // ihrem letzten Knoten.
+  return n && runsOfUniverse(input.runs, universe).length ? n + 1 : n
+}
+
+/** Der gemeinsame Nenner: die laengste Bahn ueber alle Universen. */
+function spanOf(input: FirmamentInput): number {
+  const seen = new Set<number>([input.currentUniverse, input.universe])
+  for (const r of input.completed) seen.add(universeOf(r))
+  let max = 0
+  for (const u of seen) max = Math.max(max, slotsOf(input, u))
+  return Math.max(FIRMAMENT_PATH_MIN_SPAN, max)
+}
+
 /**
- * Die Knotenkette: alles Befreite, die laufende Galaxie, dann
- * `FIRMAMENT_UNLIT_AHEAD` unbeleuchtete Plaetze.
+ * Die Bahn eines Universums: was darin befreit wurde, dahinter — nur im
+ * laufenden — die aktuelle Galaxie und `FIRMAMENT_UNLIT_AHEAD` unbeleuchtete
+ * Plaetze.
  *
  * Die Kette ist nach GALAXIENUMMER geordnet, nicht nach Zeitstempel — ein
  * Admin-Sprung traegt einen spaeteren Stempel als eine hoehere Nummer, und die
  * Bahn ist der Weg, nicht das Tagebuch.
+ *
+ * Eine vergangene Bahn endet, wo sie endete: dort gibt es kein „davor", also
+ * auch keine Vorausplaetze.
  */
-export function buildFirmamentNodes(input: FirmamentInput): FirmamentNode[] {
-  const freed = [...input.completed].sort((a, b) => a.galaxy - b.galaxy)
+export function buildFirmamentPath(input: FirmamentInput): FirmamentPath {
+  const isHere = input.universe === input.currentUniverse
+  const freed = input.completed
+    .filter((r) => universeOf(r) === input.universe)
+    .sort((a, b) => a.galaxy - b.galaxy)
   const seen = new Set(freed.map((r) => r.galaxy))
 
   const rows: Array<Omit<FirmamentNode, 'nx' | 'ny' | 'angle' | 'radius' | 'bodyR'>> = freed.map(
@@ -131,38 +217,43 @@ export function buildFirmamentNodes(input: FirmamentInput): FirmamentNode[] {
     }),
   )
 
-  // Die laufende Galaxie steht nur dann eigens da, wenn sie nicht schon
-  // archiviert ist — ein Admin-Replay legt beides gleichzeitig vor.
-  if (!seen.has(input.currentGalaxy)) {
-    rows.push({
-      galaxy: input.currentGalaxy,
-      state: 'current',
-      stars: input.starsOf(input.currentGalaxy),
-      rescued: input.currentRescued,
-      lost: input.currentLost,
-      landfalls: input.currentLandfalls,
-      themeIndex: input.currentThemeIndex,
-      record: null,
-    })
+  if (isHere) {
+    // Die laufende Galaxie steht nur dann eigens da, wenn sie nicht schon
+    // archiviert ist — ein Admin-Replay legt beides gleichzeitig vor.
+    if (!seen.has(input.currentGalaxy)) {
+      rows.push({
+        galaxy: input.currentGalaxy,
+        state: 'current',
+        stars: input.starsOf(input.currentGalaxy),
+        rescued: input.currentRescued,
+        lost: input.currentLost,
+        landfalls: input.currentLandfalls,
+        themeIndex: input.currentThemeIndex,
+        record: null,
+      })
+    }
+
+    const last = rows.length ? rows[rows.length - 1].galaxy : input.currentGalaxy
+    for (let i = 1; i <= FIRMAMENT_UNLIT_AHEAD; i++) {
+      rows.push({
+        galaxy: last + i,
+        state: 'unlit',
+        stars: input.starsOf(last + i),
+        rescued: 0,
+        lost: 0,
+        landfalls: 0,
+        themeIndex: -1,
+        record: null,
+      })
+    }
   }
 
-  const last = rows.length ? rows[rows.length - 1].galaxy : input.currentGalaxy
-  for (let i = 1; i <= FIRMAMENT_UNLIT_AHEAD; i++) {
-    rows.push({
-      galaxy: last + i,
-      state: 'unlit',
-      stars: input.starsOf(last + i),
-      rescued: 0,
-      lost: 0,
-      landfalls: 0,
-      themeIndex: -1,
-      record: null,
-    })
-  }
+  const span = spanOf(input)
+  const turns = firmamentSpiralTurns(span)
+  const at = (i: number) => firmamentPointAt(i / (span - 1), turns)
 
-  const n = rows.length
-  return rows.map((row, i) => {
-    const p = firmamentPointAt(n > 1 ? i / (n - 1) : 0)
+  const nodes = rows.map((row, i) => {
+    const p = at(i)
     return {
       ...row,
       nx: p.nx,
@@ -175,54 +266,41 @@ export function buildFirmamentNodes(input: FirmamentInput): FirmamentNode[] {
           : FIRMAMENT_NODE_R_BASE + row.stars * FIRMAMENT_NODE_R_PER_STAR,
     }
   })
+
+  return { nodes, departure: buildDeparture(input, nodes.length, at) }
 }
 
 /**
- * Wo ein Universum endete.
+ * Das Tor am Ende einer vergangenen Bahn.
  *
- * Der Lauf traegt einen Wanduhr-Stempel, jede befreite Galaxie auch. Das Tor
- * sitzt hinter der letzten Galaxie, die VOR dem Aufbruch befreit wurde.
+ * Genommen wird der SPAETESTE Lauf des Universums — ein Ort kann mehrfach
+ * besucht werden, und die Bahn traegt alle Besuche; `visits` zaehlt sie.
+ * `toUniverse` ist das Universum des chronologisch naechsten Laufs, sonst das
+ * laufende: dorthin ging der Weg weiter.
  *
- * Zwei Faelle liefern bewusst kein Tor, statt eines zu erfinden:
- * ein Lauf, der `UNIVERSE_RUN_HISTORY_LIMIT` aus dem Archiv geschoben hat, und
- * ein Lauf, dessen Galaxien in keinem Datensatz mehr stehen. Beides ist wahr —
- * dort ist die Auskunft verloren, nicht falsch.
+ * Kein Tor bekommt, wer keinen Lauf mehr im Archiv hat — `UNIVERSE_RUN_HISTORY_LIMIT`
+ * schiebt alte hinaus. Dort ist die Auskunft verloren, nicht falsch.
  */
-export function buildFirmamentGates(
-  nodes: readonly FirmamentNode[],
-  runs: readonly UniverseRunRecord[],
-): FirmamentGate[] {
-  if (!nodes.length || !runs.length) return []
-  const out: FirmamentGate[] = []
-  const used = new Set<number>()
+function buildDeparture(
+  input: FirmamentInput,
+  slot: number,
+  at: (i: number) => { nx: number; ny: number; angle: number },
+): FirmamentDeparture | null {
+  if (input.universe === input.currentUniverse || slot === 0) return null
+  const mine = runsOfUniverse(input.runs, input.universe)
+  if (!mine.length) return null
 
-  for (const run of [...runs].sort((a, b) => a.completedAt - b.completedAt)) {
-    let idx = -1
-    for (let i = 0; i < nodes.length; i++) {
-      const rec = nodes[i].record
-      if (rec && rec.completedAt <= run.completedAt) idx = i
-    }
-    // Kein Knoten davor, oder das Tor stuende auf demselben Platz wie ein
-    // frueheres: zwei Universen auf einer Marke waeren nicht mehr zu trennen.
-    if (idx < 0 || idx >= nodes.length - 1 || used.has(idx)) continue
-    used.add(idx)
-    const a = nodes[idx]
-    const b = nodes[idx + 1]
-    out.push({
-      universe: run.universe,
-      afterIndex: idx,
-      nx: (a.nx + b.nx) / 2,
-      ny: (a.ny + b.ny) / 2,
-      angle: (a.angle + b.angle) / 2,
-      run,
-    })
+  const run = mine[mine.length - 1]
+  const later = input.runs
+    .filter((r) => r.completedAt > run.completedAt)
+    .sort((a, b) => a.completedAt - b.completedAt)
+  const p = at(slot)
+  return {
+    toUniverse: later.length ? later[0].universe : input.currentUniverse,
+    visits: mine.length,
+    run,
+    nx: p.nx,
+    ny: p.ny,
+    angle: p.angle,
   }
-  return out
-}
-
-/** Signatur der Tore — sie gehoert in den `paintKey`, und sie kennt nur
- *  LAENGEN und Nummern: ein nachgetragener Lauf aendert die Kette, nicht die
- *  Farbe, und ein Zeitstempel taugt nicht als Schluessel. */
-export function firmamentGateSignature(gates: readonly FirmamentGate[]): string {
-  return gates.length ? gates.map((g) => `${g.universe}@${g.afterIndex}`).join('.') : '-'
 }

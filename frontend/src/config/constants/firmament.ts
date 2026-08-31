@@ -25,6 +25,26 @@ export const FIRMAMENT_STAGE_MIN_H = 430
 /** Unbeleuchtete Plaetze vor der laufenden Galaxie: die Bahn muss weitergehen,
  *  sonst endet das Firmament dort, wo der Spieler gerade steht. */
 export const FIRMAMENT_UNLIT_AHEAD = 4
+/** Boden des Bahn-Nenners. Alle Universen rechnen gegen DENSELBEN Nenner, damit
+ *  der Knotenabstand ueberall gleich bleibt und man zwei Bahnen vergleichen
+ *  kann. Ohne den Boden saesse eine Zwei-Galaxien-Bahn am Wall, und der Anfang
+ *  eines Universums saehe aus wie sein Ende. */
+export const FIRMAMENT_PATH_MIN_SPAN = 8
+/** Windungsanteil JE Knotenschritt — 18 Grad. Der Windungsvorrat ist damit
+ *  nicht mehr fest, sondern waechst mit der Bahn (gedeckelt bei
+ *  `FIRMAMENT_SPIRAL_TURNS`, erreicht bei 41 Knoten). Fest waren zwei Windungen
+ *  auf FUENF Knoten 180 Grad je Schritt: die Bahn sprang quer ueber die Scheibe
+ *  und las sich als Zickzack statt als Spirale. */
+export const FIRMAMENT_SPIRAL_STEP_TURNS = 0.05
+/** Die vier Stufen des Wall-Verlaufs, als Abstand vom Universumston: negativ
+ *  gegen Schwarz (die Glut hinter dem Gewebe), positiv gegen Weiss (die
+ *  aeussersten Faeden). Was den Wall traegt, ist nicht die Farbe, sondern die
+ *  HELLIGKEITSFOLGE — der Ton sagt nur, WELCHES Universum.
+ *
+ *  An der alten festen Glutrampe kalibriert: aus `#ff8a34` liegen sie nahe bei
+ *  (206,82,28) … (255,238,208), nicht identisch — die alte hielt ihre
+ *  Saettigung laenger, was sich mit einem Ton allein nicht nachbauen laesst. */
+export const FIRMAMENT_WEB_TINT_STOPS = [-0.2, 0, 0.38, 0.78] as const
 /** Volle Umlaeufe vom Kern bis zum Rand. ZWEI, nicht anderthalb: mit 1,55 las
  *  sich die Bahn als Ring mit ein paar Punkten in der Mitte, nicht als Weg. */
 export const FIRMAMENT_SPIRAL_TURNS = 2.0

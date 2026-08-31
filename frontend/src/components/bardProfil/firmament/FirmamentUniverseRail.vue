@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
- * Die Universumsleiste — Sprung und Auskunft, KEIN Behaelter.
+ * Die Universumsleiste — sie waehlt die BAHN, die die Karte zeigt.
  *
- * Galaxien laufen ueber das Prestige hinweg durch; ein Universum ist deshalb
- * kein Abschnitt der Karte, sondern ein Tor darauf. Ein Klick waehlt dieses Tor
- * und hebt den Abschnitt hervor, den der Lauf zurueckgelegt hat — er versteckt
- * nichts. Das Firmament bleibt immer vollstaendig.
+ * Waehlbar ist, was Inhalt hat, nicht was Auskunft hat: `pickable` haengt an den
+ * Galaxien des Universums. Damit gibt es keinen leeren Buehnenzustand — eine
+ * Bahn ohne Knoten kann gar nicht erst gewaehlt werden, und das ist billiger als
+ * jeder Leerzustand.
  *
  * Am Fuss steht die eine Auskunft, die es sonst nirgends gibt: was einen
  * Aufbruch ueberlebt. Alle fuenf Zahlen kommen aus der EINEN Metrik-Registry
@@ -15,24 +15,22 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useMissionStore } from '@/stores/progression/missionStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { universes } from '@/config/progression/universes'
 import { progressMetricValue } from '@/utils/game/progressMetrics'
 import { formatCompactDuration, toRoman } from '@/utils/ui/format'
 import {
-  FIRMAMENT_GATE_COLOR,
   FIRMAMENT_HERE_COLOR,
   MS_PER_SECOND,
   UNIVERSE_DISC_RAIL_PX,
 } from '@/config/constants'
 import UniverseDisc from './UniverseDisc.vue'
 import type { UniverseDiscState } from '@/utils/fx/universeDisc'
-import type { FirmamentGate } from '@/utils/ui/firmamentLayout'
 import type { FirmamentSelection } from '@/types'
 
 const props = defineProps<{
-  gates: FirmamentGate[]
   folded: boolean
   selection: FirmamentSelection
 }>()
@@ -43,6 +41,7 @@ const emit = defineEmits<{
 }>()
 
 const gameStore = useGameStore()
+const galaxyStore = useGalaxyStore()
 const missionStore = useMissionStore()
 const achievementStore = useAchievementStore()
 
@@ -61,10 +60,14 @@ const runByUniverse = computed(() => {
   return map
 })
 
-/** Ein Tor auf der Bahn je Universum — nur was gezeigt wird, ist auch waehlbar. */
-const gateByUniverse = computed(() => {
-  const map = new Map<number, FirmamentGate>()
-  for (const gate of props.gates) map.set(gate.universe, gate)
+/** Die Galaxien, die auf der Bahn eines Universums liegen — dieselbe Zaehlung
+ *  wie `buildFirmamentPath`, samt Boden fuer einen Datensatz ohne Feld. */
+const galaxiesByUniverse = computed(() => {
+  const map = new Map<number, number>()
+  for (const r of galaxyStore.completedGalaxies) {
+    const u = r.universe ?? universes[0].id
+    map.set(u, (map.get(u) ?? 0) + 1)
+  }
   return map
 })
 
@@ -72,23 +75,25 @@ const rows = computed(() =>
   universes.map((u) => {
     const current = u.id === gameStore.currentUniverse
     const past = runByUniverse.value.get(u.id)
-    const walked = current || past !== undefined
-    const gate = gateByUniverse.value.get(u.id)
-    const picked = props.selection?.kind === 'universe' && props.selection.universe === u.id
+    const galaxies = galaxiesByUniverse.value.get(u.id) ?? 0
+    const walked = current || past !== undefined || galaxies > 0
     return {
       id: u.id,
       name: u.name,
       roman: toRoman(u.id),
+      tint: u.tint,
       walked,
       current,
-      picked,
-      /** Waehlbar ist nur, was auch ein Tor auf der Bahn hat. */
-      pickable: gate !== undefined,
+      picked: props.selection.universe === u.id,
+      /** Waehlbar ist, was etwas zu zeigen hat. */
+      pickable: current || galaxies > 0,
       note: current
-        ? 'you are here'
-        : past
-          ? `${past.galaxiesFreed} freed · ${formatCompactDuration(past.durationSeconds * MS_PER_SECOND)}`
-          : 'not yet walked',
+        ? `you are here · ${galaxies} freed`
+        : galaxies > 0
+          ? `${galaxies} freed${past ? ` · ${formatCompactDuration(past.durationSeconds * MS_PER_SECOND)}` : ''}`
+          : past
+            ? 'walked · no galaxies freed'
+            : 'not yet walked',
       stateIcon: current ? 'lucide:crosshair' : walked ? 'lucide:check' : 'lucide:lock',
       /** Die Scheibe traegt den Zustand selbst — leer heisst nie betreten. */
       discState: (current ? 'current' : walked ? 'walked' : 'unlit') as UniverseDiscState,
@@ -133,13 +138,13 @@ const carryOver = computed(() => [
   },
 ])
 
+/** Kein Toggle: die Bahn ist der Ansichtszustand, es gibt kein Nichts. */
 function pick(row: { id: number; pickable: boolean; picked: boolean }) {
-  if (!row.pickable) return
-  emit('select', row.picked ? null : { kind: 'universe', universe: row.id })
+  if (!row.pickable || row.picked) return
+  emit('select', { universe: row.id, galaxy: null })
 }
 
 const hereColor = FIRMAMENT_HERE_COLOR
-const gateColor = FIRMAMENT_GATE_COLOR
 </script>
 
 <template>
@@ -172,6 +177,7 @@ const gateColor = FIRMAMENT_GATE_COLOR
           'is-dim': !row.walked,
           'is-inert': !row.pickable,
         }"
+        :style="{ '--fm-row-tint': row.tint }"
         :aria-label="`Universe ${row.roman} — ${row.name}, ${row.note}`"
         :aria-pressed="row.picked"
         :title="folded ? `${row.roman} · ${row.name} — ${row.note}` : undefined"
@@ -293,8 +299,14 @@ const gateColor = FIRMAMENT_GATE_COLOR
     background-color 0.12s;
 }
 
+/* Die LINKE Kante bleibt aussen vor: sie traegt die Bedeutung (Ton des
+   Universums, „du bist hier"), der Hover meint die Fassung. Ein `border-color`
+   hier gewinnt gegen `.is-picked` und schluckte den Ton genau dann, wenn der
+   Zeiger daraufsteht. */
 .fm-rail-row:hover:not(.is-inert) {
-  border-color: #7a4e20;
+  border-top-color: #7a4e20;
+  border-right-color: #7a4e20;
+  border-bottom-color: #7a4e20;
 }
 
 .fm-rail-row.is-inert {
@@ -308,10 +320,12 @@ const gateColor = FIRMAMENT_GATE_COLOR
   border-left-color: v-bind(hereColor);
 }
 
+/* Die Kante traegt den Ton DIESES Universums, nicht den einer Zustandsfarbe —
+   `universeTint.spec.ts` haelt beide auseinander. */
 .fm-rail-row.is-picked {
   background: #2a2010;
   border-color: #7a4e20;
-  border-left-color: v-bind(gateColor);
+  border-left-color: var(--fm-row-tint);
 }
 
 /* Feste Zeilenkaesten, kein Zwischenraum: so treibt die SCHEIBE die Zeilenhoehe

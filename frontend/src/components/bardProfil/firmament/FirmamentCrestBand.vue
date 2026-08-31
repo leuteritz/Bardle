@@ -30,9 +30,10 @@ import {
   UNIVERSE_DISC_CREST_PX,
 } from '@/config/constants'
 import UniverseDisc from './UniverseDisc.vue'
-import type { FirmamentGate, FirmamentNode } from '@/utils/ui/firmamentLayout'
 
-const props = defineProps<{ nodes: FirmamentNode[]; gates: FirmamentGate[] }>()
+/** Das GEZEIGTE Universum — Wappen, Ziffer und Name benennen die Bahn, auf die
+ *  man gerade sieht. Die drei Leitern darunter bleiben global. */
+const props = defineProps<{ universe: number }>()
 
 const gameStore = useGameStore()
 const galaxyStore = useGalaxyStore()
@@ -40,8 +41,24 @@ const providenceStore = useProvidenceStore()
 const missionStore = useMissionStore()
 const achievementStore = useAchievementStore()
 
-const universe = computed(() => getUniverse(gameStore.currentUniverse))
+const universe = computed(() => getUniverse(props.universe))
+const isHere = computed(() => props.universe === gameStore.currentUniverse)
 const progress = computed(() => gameStore.universeRescueProgress)
+
+/** Der letzte Lauf DIESES Universums — bei einer vergangenen Bahn ist er die
+ *  einzige Stelle, an der seine Vorsehung noch zu erfahren ist. */
+const pastRun = computed(() => {
+  const mine = gameStore.universeRuns
+    .filter((r) => r.universe === props.universe)
+    .sort((a, b) => a.completedAt - b.completedAt)
+  return mine.length ? mine[mine.length - 1] : null
+})
+
+const providence = computed(() =>
+  isHere.value
+    ? (providenceStore.active?.name ?? 'no providence drawn')
+    : (pastRun.value?.providence ?? 'no providence recorded'),
+)
 
 /** Die Uhr bis zum Aufbruch in SPIELsekunden — dieselbe Zeitrechnung wie CpS.
  *  Ohne Produktion gibt es keine Ankunft, dann steht ein Strich. */
@@ -52,11 +69,19 @@ const eta = computed(() => {
   return cps > 0 ? `~${formatShortDuration(left / cps)}` : '—'
 })
 
-/** Laeufe ohne Tor auf der Bahn: aus dem Archiv geschoben, oder ihre Galaxien
- *  stehen nicht mehr im Bestand. Das Band nennt sie, statt sie zu verschweigen. */
-const untoldRuns = computed(() => Math.max(0, gameStore.universeRuns.length - props.gates.length))
+/** Aufbrueche, von denen kein Lauf mehr zeugt — `UNIVERSE_RUN_HISTORY_LIMIT`
+ *  hat sie aus dem Archiv geschoben. Das Band nennt sie, statt sie zu
+ *  verschweigen. */
+const untoldRuns = computed(() =>
+  Math.max(0, gameStore.totalPrestiges - gameStore.universeRuns.length),
+)
 
-const freedCount = computed(() => props.nodes.filter((n) => n.state === 'freed').length)
+/** Die ganze Reise, nicht die gezeigte Bahn — die Kachel heisst „Galaxies". */
+const freedCount = computed(() => galaxyStore.completedGalaxies.length)
+
+/** Die Unterkante traegt den Ton der gezeigten Bahn — dieselbe Ansage wie Wolke
+ *  und Wall, nur da, wo das Auge beim Wechseln ohnehin hinsieht. */
+const tint = computed(() => universe.value.tint)
 
 const bandH = `${FIRMAMENT_CREST_BAND_H}px`
 const idW = `${FIRMAMENT_CREST_ID_W}px`
@@ -64,26 +89,24 @@ const idW = `${FIRMAMENT_CREST_ID_W}px`
 
 <template>
   <div class="fm-crest">
-    <!-- Wappen: wo der Bard gerade steht. -->
+    <!-- Wappen: die Bahn, die die Karte gerade zeigt. -->
     <div class="fm-crest-id">
       <span class="fm-crest-medal">
         <UniverseDisc
-          :universe="gameStore.currentUniverse"
-          state="current"
+          :universe="props.universe"
+          :state="isHere ? 'current' : 'walked'"
           :px="UNIVERSE_DISC_CREST_PX"
         />
-        <span class="fm-crest-roman">{{ toRoman(gameStore.currentUniverse) }}</span>
+        <span class="fm-crest-roman">{{ toRoman(props.universe) }}</span>
       </span>
       <span class="fm-crest-name-box">
         <span class="fm-crest-kicker">
-          Firmament · Universe {{ toRoman(gameStore.currentUniverse) }}
+          Universe {{ toRoman(props.universe) }} · {{ isHere ? 'you are here' : 'visited' }}
         </span>
         <span class="fm-crest-name">{{ universe.name }}</span>
         <span class="fm-crest-prov">
           <Icon icon="game-icons:eye-of-horus" width="13" height="13" />
-          <span class="fm-crest-prov-text">
-            {{ providenceStore.active?.name ?? 'no providence drawn' }}
-          </span>
+          <span class="fm-crest-prov-text">{{ providence }}</span>
         </span>
       </span>
     </div>
@@ -159,7 +182,7 @@ const idW = `${FIRMAMENT_CREST_ID_W}px`
   display: flex;
   align-items: stretch;
   background: #16120a;
-  border-bottom: 2px solid #3e200a;
+  border-bottom: 2px solid v-bind(tint);
 }
 
 /* Wappen */

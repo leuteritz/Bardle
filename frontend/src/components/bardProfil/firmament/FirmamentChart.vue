@@ -36,9 +36,10 @@ import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
+import { getUniverse } from '@/config/progression/universes'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
-import { firmamentFitBox, firmamentGateSignature } from '@/utils/ui/firmamentLayout'
+import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
 import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
 import {
   firmamentScreenPos,
@@ -79,12 +80,12 @@ import {
   UNIVERSE_DISC_HERO_QUANT_PX,
   UNIVERSE_DISC_HERO_R_RATIO,
 } from '@/config/constants'
-import type { FirmamentGate, FirmamentNode } from '@/utils/ui/firmamentLayout'
+import type { FirmamentDeparture, FirmamentNode } from '@/utils/ui/firmamentLayout'
 import type { FirmamentSelection } from '@/types'
 
 const props = defineProps<{
   nodes: FirmamentNode[]
-  gates: FirmamentGate[]
+  departure: FirmamentDeparture | null
   selection: FirmamentSelection
   visible: boolean
 }>()
@@ -198,29 +199,16 @@ function onPointerDown(e: PointerEvent) {
  */
 const showLabels = computed(() => props.nodes.length <= FIRMAMENT_LABEL_MAX_NODES)
 
-/** Die Bahn eines Universums: von seinem Tor zurueck bis zum vorigen. So sieht
- *  man, was der Lauf zurueckgelegt hat, ohne dass etwas verschwindet. */
-const litSpan = computed<{ from: number; to: number } | null>(() => {
-  const sel = props.selection
-  if (sel?.kind !== 'universe') return null
-  const idx = props.gates.findIndex((g) => g.universe === sel.universe)
-  if (idx < 0) return null
-  const prev = idx > 0 ? props.gates[idx - 1].afterIndex + 1 : 0
-  return { from: prev, to: props.gates[idx].afterIndex }
-})
-
 const marks = computed(() =>
   props.nodes.map((node, i) => {
     const p = firmamentScreenPos(box.value, node.nx, node.ny)
-    const span = litSpan.value
     return {
       node,
       index: i,
       x: p.x,
       y: p.y,
       size: Math.max(FIRMAMENT_NODE_HIT_MIN, node.bodyR * (box.value.r / 300) * 3.2),
-      picked: props.selection?.kind === 'galaxy' && props.selection.galaxy === node.galaxy,
-      inSpan: span !== null && i >= span.from && i <= span.to,
+      picked: props.selection.galaxy === node.galaxy,
       accent:
         node.state === 'unlit' || node.themeIndex < 0
           ? FIRMAMENT_UNLIT_COLOR
@@ -229,17 +217,24 @@ const marks = computed(() =>
   }),
 )
 
-const gateMarks = computed(() =>
-  props.gates.map((gate) => {
-    const p = firmamentScreenPos(box.value, gate.nx, gate.ny)
-    return {
-      gate,
-      x: p.x,
-      y: p.y,
-      picked: props.selection?.kind === 'universe' && props.selection.universe === gate.universe,
-    }
-  }),
+/** Ob die gezeigte Bahn die eigene ist — sonst behauptete die Wolke „hier bin
+ *  ich" ueber einer vergangenen. */
+const isHere = computed(() => props.selection.universe === gameStore.currentUniverse)
+
+/** Der Ton der gezeigten Bahn: Wolke, Wall und Glutringe sprechen ihn gemeinsam,
+ *  die Zustandsfarben der Marken bleiben davon unberuehrt. */
+const viewTint = computed(
+  () => getUniverse(props.selection.universe)?.tint ?? FIRMAMENT_UNLIT_COLOR,
 )
+
+/** Das Tor am Ende einer vergangenen Bahn — hoechstens EINES, und es ist die
+ *  Fortsetzung des Weges: der Klick geht dorthin weiter. */
+const departureMark = computed(() => {
+  const d = props.departure
+  if (!d) return null
+  const p = firmamentScreenPos(box.value, d.nx, d.ny)
+  return { departure: d, x: p.x, y: p.y, roman: toRoman(d.toUniverse) }
+})
 
 /**
  * Der Startpunkt — die Benennung des Ursprungs, an dem die Bahn ansetzt.
@@ -342,11 +337,13 @@ function pickNode(node: FirmamentNode, picked: boolean) {
     emit('open', node.galaxy)
     return
   }
-  emit('select', picked ? null : { kind: 'galaxy', galaxy: node.galaxy })
+  emit('select', { ...props.selection, galaxy: picked ? null : node.galaxy })
 }
 
-function pickGate(gate: FirmamentGate, picked: boolean) {
-  emit('select', picked ? null : { kind: 'universe', universe: gate.universe })
+/** Weiterreisen: das Tor ist die Fortsetzung des Weges, nicht eine zweite
+ *  Leiste. So geht man den ganzen Weg der Reihe nach ab. */
+function pickDeparture(departure: FirmamentDeparture) {
+  emit('select', { universe: departure.toUniverse, galaxy: null })
 }
 
 // ── Malen ───────────────────────────────────────────────────────────────────
@@ -359,7 +356,7 @@ const paintKey = computed(
   () =>
     `${props.nodes.length}:${completedGalaxies.value.length}` +
     `:${props.nodes.map((n) => `${n.galaxy}${n.state[0]}${n.rescued}${n.lost}${n.landfalls}`).join(',')}` +
-    `|${firmamentGateSignature(props.gates)}` +
+    `|${props.selection.universe}|${props.departure?.toUniverse ?? '-'}` +
     `|${plateSide.value}|${dprNow.value}`,
 )
 
@@ -369,8 +366,9 @@ const groundKey = computed(
   () => `${Math.round(cssW.value)}x${Math.round(cssH.value)}|${dprNow.value}`,
 )
 
-/** Der Wall haengt allein am Bahnradius. */
-const rimKey = computed(() => `${rimSide.value}|${dprNow.value}`)
+/** Der Wall haengt am Bahnradius — und am Ton der gezeigten Bahn. Die NUMMER,
+ *  nicht der Hex-Wert: kuerzer, und sie tickt genauso wenig. */
+const rimKey = computed(() => `${rimSide.value}|${dprNow.value}|${props.selection.universe}`)
 
 function backingDpr(w: number, h: number, cap = FIRMAMENT_MAX_BACKING_PX): number {
   return Math.min(window.devicePixelRatio || 1, FIRMAMENT_MAX_DPR, cap / Math.max(w, h))
@@ -405,7 +403,7 @@ function paintRim() {
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   const r = box.value.r
-  paintFirmamentWeb(ctx, side / 2, side / 2, r, r / FIRMAMENT_PLATE_REF_R)
+  paintFirmamentWeb(ctx, side / 2, side / 2, r, r / FIRMAMENT_PLATE_REF_R, viewTint.value)
 }
 
 let queued = false
@@ -434,7 +432,7 @@ function paint() {
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-  paintFirmament(ctx, props.nodes, props.gates, side, side, plateBox.value)
+  paintFirmament(ctx, props.nodes, props.departure, side, side, plateBox.value, viewTint.value)
   paintCount.value += 1
 }
 
@@ -539,8 +537,8 @@ const LEGEND = [
       <UniverseDisc
         class="fm-hero"
         variant="cloud"
-        :universe="gameStore.currentUniverse"
-        state="current"
+        :universe="selection.universe"
+        :state="isHere ? 'current' : 'walked'"
         :px="heroPx"
         :style="centerStyle"
       />
@@ -568,7 +566,6 @@ const LEGEND = [
               'is-current': mark.node.state === 'current',
               'is-unlit': mark.node.state === 'unlit',
               'is-picked': mark.picked,
-              'is-lit': mark.inSpan,
               'is-labelled': showLabels,
               'is-open': !!mark.node.record,
             }"
@@ -595,19 +592,16 @@ const LEGEND = [
           </template>
         </RpgBadgeTooltip>
 
-        <!-- Die Tore. Sie tragen ihre Ziffer selbst — die Bahn ist sonst nicht
-             lesbar, wo ein Universum endete. -->
+        <!-- Das Tor am Ende der Bahn. Es traegt die Ziffer des Universums, in
+             das der Weg weiterging, und fuehrt auf dessen Bahn. -->
         <button
-          v-for="g in gateMarks"
-          :key="`gate-${g.gate.universe}-${g.gate.afterIndex}`"
+          v-if="departureMark"
           class="fm-gate"
-          :class="{ 'is-picked': g.picked }"
-          :style="{ left: `${g.x}px`, top: `${g.y}px` }"
-          :aria-label="`Departure to Universe ${toRoman(g.gate.universe)}`"
-          :aria-pressed="g.picked"
-          @click="pickGate(g.gate, g.picked)"
+          :style="{ left: `${departureMark.x}px`, top: `${departureMark.y}px` }"
+          :aria-label="`Departure — the road went on to Universe ${departureMark.roman}`"
+          @click="pickDeparture(departureMark.departure)"
         >
-          {{ toRoman(g.gate.universe) }}
+          {{ departureMark.roman }}
         </button>
       </div>
 
@@ -631,7 +625,7 @@ const LEGEND = [
           <span class="fm-start-word">Start</span>
         </div>
         <template #tip>
-          <FirmamentOriginTip :nodes="nodes" :universe="gameStore.currentUniverse" />
+          <FirmamentOriginTip :nodes="nodes" :universe="selection.universe" />
         </template>
       </RpgBadgeTooltip>
     </div>
@@ -673,7 +667,7 @@ const LEGEND = [
       </span>
     </div>
 
-    <FirmamentSelectionCard :nodes="nodes" :gates="gates" :selection="selection" />
+    <FirmamentSelectionCard :nodes="nodes" :departure="departure" :selection="selection" />
   </div>
 </template>
 
@@ -905,10 +899,6 @@ const LEGEND = [
 .fm-node.is-open:focus-visible .fm-node-ring {
   border-color: rgba(232, 192, 64, 0.85);
   box-shadow: 0 0 7px rgba(232, 192, 64, 0.35);
-}
-
-.fm-node.is-lit .fm-node-ring {
-  border-color: rgba(122, 184, 240, 0.75);
 }
 
 .fm-node.is-picked .fm-node-ring {
