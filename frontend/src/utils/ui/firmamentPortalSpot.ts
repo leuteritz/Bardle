@@ -20,6 +20,14 @@ import {
   FIRMAMENT_PORTAL_DISC_CLEAR,
   FIRMAMENT_PORTAL_EDGE_KEEP,
   FIRMAMENT_PORTAL_KEEPOUT_PAD,
+  FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS,
+  FIRMAMENT_PORTAL_LABEL_EDGE_PAD,
+  FIRMAMENT_PORTAL_LABEL_GAP_EM,
+  FIRMAMENT_PORTAL_LABEL_H_EM,
+  FIRMAMENT_PORTAL_LABEL_MAX_PX,
+  FIRMAMENT_PORTAL_LABEL_MIN_PX,
+  FIRMAMENT_PORTAL_LABEL_R_RATIO,
+  FIRMAMENT_PORTAL_LABEL_W_EM,
   FIRMAMENT_PORTAL_MIN_VISIBLE,
   FIRMAMENT_PORTAL_RING_H_RATIO,
   FIRMAMENT_PORTAL_RING_MAX_PX,
@@ -182,4 +190,161 @@ export function firmamentPortalSpot(
   }
 
   return fallback
+}
+
+// ── Die Beschriftung ────────────────────────────────────────────────────────
+
+export type FirmamentPortalLabelSide = 'below' | 'above' | 'right' | 'left'
+
+export interface FirmamentPortalLabelSpot {
+  /** Mitte des Kaestchens in Buehnenkoordinaten. */
+  cx: number
+  cy: number
+  /** Die Zeichenschicht baut GENAU dieses Kaestchen — deshalb steht es hier. */
+  w: number
+  h: number
+  /** Schriftgrad der Namenszeile in px; alles andere haengt in `em` daran. */
+  size: number
+  side: FirmamentPortalLabelSide
+}
+
+/** Der Schriftgrad haengt am RING, nicht an der Buehne: die Beschriftung gehoert
+ *  dem Portal, und auf WUXGA schrumpft der Ring als einziger Fall. */
+export function firmamentPortalLabelSize(r: number): number {
+  return Math.min(
+    FIRMAMENT_PORTAL_LABEL_MAX_PX,
+    Math.max(FIRMAMENT_PORTAL_LABEL_MIN_PX, r * FIRMAMENT_PORTAL_LABEL_R_RATIO),
+  )
+}
+
+/** Ein Punkt auf einer Achse, moeglichst nah an `want`, innerhalb `[lo, hi]` und
+ *  ausserhalb aller `blocked`-Spannen. Kandidaten sind `want` selbst und die
+ *  Raender aller Spannen — dazwischen kann kein besserer liegen. */
+function nearestFree(
+  want: number,
+  lo: number,
+  hi: number,
+  blocked: Array<[number, number]>,
+): number | null {
+  if (lo > hi) return null
+  const free = (t: number) => blocked.every(([a, b]) => t <= a + 1e-6 || t >= b - 1e-6)
+  let best: number | null = null
+  for (const raw of [want, lo, hi, ...blocked.flat()]) {
+    const t = Math.min(hi, Math.max(lo, raw))
+    if (!free(t)) continue
+    if (best === null || Math.abs(t - want) < Math.abs(best - want)) best = t
+  }
+  return best
+}
+
+/**
+ * Wo die Beschriftung des Portals steht.
+ *
+ * Sie sucht sich die Seite, weil die Portalstelle je Universum eine andere ist:
+ * `below` → `above` → auswaerts → einwaerts. Unter und ueber dem Ring liegt das
+ * leere Sternfeld; die einwaertige Seite liegt ueber dem Schattenteich der
+ * Platte und ist die schlechteste Leseflaeche, also zuletzt.
+ *
+ * Die GEBUNDENE Achse traegt den Abstand zum Ring und ruehrt sich nie — sonst
+ * liefe die Beschriftung von dem weg, was sie benennt. Auf der FREIEN Achse ist
+ * es dagegen eine Rechnung mit einer Unbekannten: Bildkante als Spanne,
+ * Kartenscheibe und Bedienflaechen als Sperren, gesucht ist der Punkt am
+ * naechsten an der Ringmitte. Ein „schieb sie halt weg" fand dabei nur die
+ * Scheibe und lief in die Legende.
+ *
+ * Sie gibt nie `null`: dieselbe Regel wie die Schrumpfleiter des Rings —
+ * gedraengt ist besser als weg, eine verschwundene Beschriftung waere eine
+ * Weiterreise ohne Ziel.
+ */
+export function firmamentPortalLabelSpot(
+  spot: FirmamentPortalSpot,
+  w: number,
+  h: number,
+): FirmamentPortalLabelSpot {
+  const size = firmamentPortalLabelSize(spot.r)
+  const bw = FIRMAMENT_PORTAL_LABEL_W_EM * size
+  const bh = FIRMAMENT_PORTAL_LABEL_H_EM * size
+  const gap = FIRMAMENT_PORTAL_LABEL_GAP_EM * size
+  const pad = FIRMAMENT_PORTAL_LABEL_EDGE_PAD
+  const kpad = FIRMAMENT_PORTAL_KEEPOUT_PAD
+
+  const fit = firmamentFitBox(w, h)
+  const keep = firmamentPortalKeepOuts(w, h)
+
+  const outward: FirmamentPortalLabelSide = spot.x >= fit.cx ? 'right' : 'left'
+  const inward: FirmamentPortalLabelSide = outward === 'right' ? 'left' : 'right'
+  const order: FirmamentPortalLabelSide[] = ['below', 'above', outward, inward]
+
+  /** Die feste Achse einer Seite: Kastenmitte und ihr halbes Mass. */
+  function bound(side: FirmamentPortalLabelSide): { mid: number; half: number } {
+    const half = side === 'below' || side === 'above' ? bh / 2 : bw / 2
+    const off = spot.r + gap + half
+    if (side === 'below') return { mid: spot.y + off, half }
+    if (side === 'above') return { mid: spot.y - off, half }
+    if (side === 'right') return { mid: spot.x + off, half }
+    return { mid: spot.x - off, half }
+  }
+
+  function place(side: FirmamentPortalLabelSide, clear: number): FirmamentPortalLabelSpot | null {
+    const vertical = side === 'below' || side === 'above'
+    const { mid, half: bHalf } = bound(side)
+    const span = vertical ? w : h
+    const fHalf = vertical ? bw / 2 : bh / 2
+    // Die gebundene Achse kann nicht ausweichen — passt sie nicht, faellt die
+    // Seite ganz.
+    if (mid - bHalf < pad || mid + bHalf > (vertical ? h : w) - pad) return null
+
+    const fitBound = vertical ? fit.cy : fit.cx
+    const fitFree = vertical ? fit.cx : fit.cy
+    const blocked: Array<[number, number]> = []
+
+    // Die Scheibe als Sperre auf der freien Achse — wie weit sie reicht, haengt
+    // davon ab, wie nah die feste Achse ihr schon kommt.
+    const d = Math.max(mid - bHalf - fitBound, fitBound - (mid + bHalf), 0)
+    if (d < clear) {
+      const need = Math.sqrt(clear * clear - d * d) + fHalf
+      blocked.push([fitFree - need, fitFree + need])
+    }
+
+    // Bedienflaechen zaehlen nur, solange die feste Achse sie ueberhaupt trifft.
+    for (const k of keep) {
+      const kb = vertical ? [k.y0, k.y1] : [k.x0, k.x1]
+      const kf = vertical ? [k.x0, k.x1] : [k.y0, k.y1]
+      if (mid - bHalf - kpad >= kb[1] || mid + bHalf + kpad <= kb[0]) continue
+      blocked.push([kf[0] - fHalf - kpad, kf[1] + fHalf + kpad])
+    }
+
+    const t = nearestFree(
+      vertical ? spot.x : spot.y,
+      pad + fHalf,
+      span - pad - fHalf,
+      blocked,
+    )
+    if (t === null) return null
+    return vertical
+      ? { cx: t, cy: mid, w: bw, h: bh, size, side }
+      : { cx: mid, cy: t, w: bw, h: bh, size, side }
+  }
+
+  // Aeussere Schleife ueber die NAEHE zur Karte, innere ueber die Seiten: eine
+  // Seite in der schwarzen Flaeche schlaegt jede naehere, egal welche.
+  for (const step of FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS) {
+    for (const side of order) {
+      const cand = place(side, fit.r * step)
+      if (cand) return cand
+    }
+  }
+
+  // Fluchtweg: unter dem Ring, auf BEIDEN Achsen in die Buehne geklemmt.
+  const { mid } = bound('below')
+  const clampTo = (v: number, lo: number, hi: number) =>
+    lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v))
+  return {
+    cx: clampTo(spot.x, pad + bw / 2, w - pad - bw / 2),
+    cy: clampTo(mid, pad + bh / 2, h - pad - bh / 2),
+    w: bw,
+    h: bh,
+    size,
+    side: 'below',
+  }
 }

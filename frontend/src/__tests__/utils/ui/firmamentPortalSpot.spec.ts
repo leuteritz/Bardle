@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   firmamentPortalKeepOuts,
+  firmamentPortalLabelSize,
+  firmamentPortalLabelSpot,
   firmamentPortalRingR,
   firmamentPortalSpot,
   firmamentPortalVisibleShare,
@@ -11,6 +13,14 @@ import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
 import { universes } from '@/config/progression/universes'
 import {
   FIRMAMENT_PORTAL_DISC_CLEAR,
+  FIRMAMENT_PORTAL_KEEPOUT_PAD,
+  FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS,
+  FIRMAMENT_PORTAL_LABEL_EDGE_PAD,
+  FIRMAMENT_PORTAL_LABEL_GAP_EM,
+  FIRMAMENT_PORTAL_LABEL_H_EM,
+  FIRMAMENT_PORTAL_LABEL_MAX_PX,
+  FIRMAMENT_PORTAL_LABEL_MIN_PX,
+  FIRMAMENT_PORTAL_LABEL_W_EM,
   FIRMAMENT_PORTAL_MIN_VISIBLE,
   FIRMAMENT_PORTAL_RING_MAX_PX,
   FIRMAMENT_PORTAL_RING_MIN_PX,
@@ -209,6 +219,165 @@ describe('firmamentPortalSpot — wo das Portal steht', () => {
     for (const forbidden of ['zoom', 'ZOOM', 'pan.', 'panLimit', 'drag']) {
       expect(code.includes(forbidden), forbidden).toBe(false)
     }
+  })
+})
+
+/**
+ * Die Beschriftung sagt, WOHIN das Portal fuehrt. Sie steht fest im Bild und
+ * muss deshalb dasselbe leisten wie der Ring: drinnen bleiben, keine
+ * Bedienflaeche verdecken, nicht in die Kartenplatte greifen — und zusaetzlich
+ * neben dem Ring stehen statt darauf.
+ *
+ * Geprueft wird das KAESTCHEN, das die Funktion zurueckgibt, und das CSS baut
+ * genau dieses: Breite, Hoehe und Schriftgrad kommen aus demselben Ergebnis.
+ * Eine gemessene Textbreite gaebe es hier nicht, und die Spec pruefte dann eine
+ * Schaetzung.
+ */
+describe('firmamentPortalLabelSpot — wo die Beschriftung steht', () => {
+  function labelBox(l: { cx: number; cy: number; w: number; h: number }) {
+    return { x0: l.cx - l.w / 2, y0: l.cy - l.h / 2, x1: l.cx + l.w / 2, y1: l.cy + l.h / 2 }
+  }
+
+  /** Jede Buehne, jedes Universum — das Kaestchen dazu. */
+  function all() {
+    const out: Array<{
+      name: string
+      w: number
+      h: number
+      id: number
+      spot: NonNullable<ReturnType<typeof firmamentPortalSpot>>
+      label: ReturnType<typeof firmamentPortalLabelSpot>
+    }> = []
+    for (const s of STAGES) {
+      for (const id of IDS) {
+        const spot = firmamentPortalSpot(id, s.w, s.h)!
+        out.push({ name: s.name, w: s.w, h: s.h, id, spot, label: firmamentPortalLabelSpot(spot, s.w, s.h) })
+      }
+    }
+    return out
+  }
+
+  it('ist deterministisch', () => {
+    for (const c of all()) {
+      expect(firmamentPortalLabelSpot(c.spot, c.w, c.h), `${c.name} U${c.id}`).toEqual(c.label)
+    }
+  })
+
+  it('haelt Schriftgrad und Kaestchen in ihren Grenzen', () => {
+    for (const c of all()) {
+      const tag = `${c.name} U${c.id}`
+      expect(c.label.size, tag).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_LABEL_MIN_PX)
+      expect(c.label.size, tag).toBeLessThanOrEqual(FIRMAMENT_PORTAL_LABEL_MAX_PX)
+      expect(c.label.size, tag).toBe(firmamentPortalLabelSize(c.spot.r))
+      // Das Kaestchen ist der Schriftgrad — sonst laege die Spec neben dem Bild.
+      expect(c.label.w, tag).toBeCloseTo(FIRMAMENT_PORTAL_LABEL_W_EM * c.label.size, 6)
+      expect(c.label.h, tag).toBeCloseTo(FIRMAMENT_PORTAL_LABEL_H_EM * c.label.size, 6)
+    }
+  })
+
+  it('liegt vollstaendig in der Buehne', () => {
+    for (const c of all()) {
+      const b = labelBox(c.label)
+      const tag = `${c.name} U${c.id} (${c.label.side})`
+      expect(b.x0, tag).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_LABEL_EDGE_PAD - 0.001)
+      expect(b.y0, tag).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_LABEL_EDGE_PAD - 0.001)
+      expect(b.x1, tag).toBeLessThanOrEqual(c.w - FIRMAMENT_PORTAL_LABEL_EDGE_PAD + 0.001)
+      expect(b.y1, tag).toBeLessThanOrEqual(c.h - FIRMAMENT_PORTAL_LABEL_EDGE_PAD + 0.001)
+    }
+  })
+
+  /* Sie steht NEBEN dem Ring, nicht darauf: sonst laege Schrift auf dem
+     Schlund, und der ist die einzige Stelle des Reiters, durch die man
+     hindurchsieht. */
+  it('schneidet den Portalring nicht', () => {
+    for (const c of all()) {
+      const b = labelBox(c.label)
+      expect(
+        rectDist(c.spot.x, c.spot.y, b),
+        `${c.name} U${c.id} (${c.label.side})`,
+      ).toBeGreaterThanOrEqual(c.spot.r - 0.001)
+    }
+  })
+
+  /*
+   * Die Naehe zur Karte ist eine LEITER, und der Boden darunter ist hart: hinter
+   * den Galaxienkoerpern. Ueber ihnen faende Schrift keine ruhige Flaeche mehr —
+   * darunter liegt der deckende dunkle Reifen samt Schattenteich, auf dem sie
+   * BESSER steht als auf dem Sternfeld.
+   */
+  it('bleibt hinter den Galaxienkoerpern — der Boden der Leiter', () => {
+    const floor = FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS.at(-1)!
+    for (const c of all()) {
+      const fit = firmamentFitBox(c.w, c.h)
+      expect(
+        rectDist(fit.cx, fit.cy, labelBox(c.label)),
+        `${c.name} U${c.id} (${c.label.side})`,
+      ).toBeGreaterThanOrEqual(fit.r * floor - 0.001)
+    }
+  })
+
+  /*
+   * Und die Leiter greift nur, wo sie MUSS. Auf den drei weiten Buehnen steht
+   * jede Beschriftung ganz im schwarzen Raum jenseits der Kartenkante — dieselbe
+   * Zusage, die auch der Ring haelt. Nachgeben muessen nur WUXGA (dort schrumpft
+   * schon der Ring) und der Buehnenboden, auf dem die Scheibe fast das ganze
+   * Bild fuellt. Faellt diese Spec, ist entweder das Kaestchen gewachsen oder
+   * eine Bedienflaeche — beides nimmt der Beschriftung ihren Platz.
+   */
+  it('haelt auf den weiten Buehnen die volle Kante des Rings', () => {
+    for (const c of all()) {
+      if (c.name === 'WUXGA' || c.name === 'Boden') continue
+      const fit = firmamentFitBox(c.w, c.h)
+      expect(
+        rectDist(fit.cx, fit.cy, labelBox(c.label)),
+        `${c.name} U${c.id} (${c.label.side})`,
+      ).toBeGreaterThanOrEqual(fit.r * FIRMAMENT_PORTAL_DISC_CLEAR - 0.001)
+    }
+  })
+
+  it('legt sich auf keine Bedienflaeche der Buehne', () => {
+    for (const c of all()) {
+      const b = labelBox(c.label)
+      for (const k of firmamentPortalKeepOuts(c.w, c.h)) {
+        const overlap =
+          b.x0 - FIRMAMENT_PORTAL_KEEPOUT_PAD < k.x1 &&
+          b.x1 + FIRMAMENT_PORTAL_KEEPOUT_PAD > k.x0 &&
+          b.y0 - FIRMAMENT_PORTAL_KEEPOUT_PAD < k.y1 &&
+          b.y1 + FIRMAMENT_PORTAL_KEEPOUT_PAD > k.y0
+        expect(overlap, `${c.name} U${c.id} (${c.label.side})`).toBe(false)
+      }
+    }
+  })
+
+  /* Der Abstand zum Ring ist die eine Groesse, die NICHT geklemmt wird — auf der
+     gebundenen Achse steht das Kaestchen immer genau `gap` von der Ringkante. */
+  it('haelt auf der gebundenen Achse genau den vorgesehenen Abstand', () => {
+    for (const c of all()) {
+      const l = c.label
+      const gap = FIRMAMENT_PORTAL_LABEL_GAP_EM * l.size
+      const tag = `${c.name} U${c.id} (${l.side})`
+      if (l.side === 'below') {
+        expect(l.cy - l.h / 2 - (c.spot.y + c.spot.r), tag).toBeCloseTo(gap, 6)
+      } else if (l.side === 'above') {
+        expect(c.spot.y - c.spot.r - (l.cy + l.h / 2), tag).toBeCloseTo(gap, 6)
+      } else if (l.side === 'right') {
+        expect(l.cx - l.w / 2 - (c.spot.x + c.spot.r), tag).toBeCloseTo(gap, 6)
+      } else {
+        expect(c.spot.x - c.spot.r - (l.cx + l.w / 2), tag).toBeCloseTo(gap, 6)
+      }
+    }
+  })
+
+  /* Gemessen: 42 der 50 Faelle stehen ganz draussen, sechs ruecken hinter das
+     Gewebe, zwei hinter die Koerper — und keiner faellt durch. Der Fluchtweg am
+     Ende der Funktion ist da, damit die Beschriftung nie verschwindet, nicht als
+     Regelfall; greift er, bricht schon eine der Zusagen oben. */
+  it('steht in vier von fuenf Faellen ganz im schwarzen Raum', () => {
+    const strict = all().filter((c) => {
+      const fit = firmamentFitBox(c.w, c.h)
+      return rectDist(fit.cx, fit.cy, labelBox(c.label)) >= fit.r * FIRMAMENT_PORTAL_DISC_CLEAR
+    })
+    expect(strict.length / (STAGES.length * IDS.length)).toBeGreaterThanOrEqual(0.8)
   })
 })
 

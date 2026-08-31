@@ -40,7 +40,7 @@ import { getUniverse } from '@/config/progression/universes'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
-import { firmamentPortalSpot } from '@/utils/ui/firmamentPortalSpot'
+import { firmamentPortalLabelSpot, firmamentPortalSpot } from '@/utils/ui/firmamentPortalSpot'
 import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
 import {
   firmamentScreenPos,
@@ -242,6 +242,30 @@ const portalSpot = computed(() =>
 const portalTint = computed(
   () => getUniverse(props.departure?.toUniverse ?? 0)?.tint ?? FIRMAMENT_GATE_COLOR,
 )
+
+/** Wohin das Portal fuehrt — als Schrift neben dem Ring, nicht erst im Hover.
+ *  Die Seite sucht sich die Rechnung selbst; sie kennt Zoom und Fahrt genauso
+ *  wenig wie die Stelle des Rings. Die Lage kommt als Versatz zur RINGMITTE,
+ *  denn die ist der Bezugspunkt der Trefferflaeche, an der das Label haengt. */
+const portalLabel = computed(() =>
+  portalSpot.value ? firmamentPortalLabelSpot(portalSpot.value, cssW.value, cssH.value) : null,
+)
+
+const portalLabelStyle = computed(() => {
+  const l = portalLabel.value
+  const s = portalSpot.value
+  if (!l || !s) return undefined
+  return {
+    left: `calc(50% + ${l.cx - s.x}px)`,
+    top: `calc(50% + ${l.cy - s.y}px)`,
+    width: `${l.w}px`,
+    height: `${l.h}px`,
+    fontSize: `${l.size}px`,
+    '--fm-portal-tint': portalTint.value,
+  }
+})
+
+const portalTargetName = computed(() => getUniverse(props.departure?.toUniverse ?? 0)?.name ?? '')
 
 /**
  * Der Startpunkt — die Benennung des Ursprungs, an dem die Bahn ansetzt.
@@ -650,10 +674,28 @@ const LEGEND = [
           width: `${portalSpot.r * 2}px`,
           height: `${portalSpot.r * 2}px`,
         }"
-        :aria-label="`Departure portal — the road went on to Universe ${toRoman(departure.toUniverse)}`"
+        :aria-label="`Departure portal — the road went on to ${portalTargetName}, Universe ${toRoman(departure.toUniverse)}`"
         @pointerdown.stop
         @click="pickDeparture(departure)"
-      />
+      >
+        <!-- Die Beschriftung haengt IM Knopf, nicht daneben: so teilt sie Klick,
+             Hover-Karte und die Hover-Pause der drehenden Ebenen mit dem Ring,
+             ohne eine zweite Trefferflaeche zu sein. `aria-hidden`, weil der
+             Knopf den Namen im Label schon traegt. -->
+        <span
+          v-if="portalLabel"
+          class="fm-portal-label"
+          :class="`is-${portalLabel.side}`"
+          aria-hidden="true"
+          :style="portalLabelStyle"
+        >
+          <span class="fm-portal-eyebrow">↗ Onward to</span>
+          <span class="fm-portal-name">
+            {{ portalTargetName }}
+            <span class="fm-portal-num">{{ toRoman(departure.toUniverse) }}</span>
+          </span>
+        </span>
+      </button>
       <template #tip>
         <FirmamentDepartureTip :departure="departure" :tint="portalTint" />
       </template>
@@ -861,6 +903,66 @@ const LEGEND = [
 .fm-portal-hit:focus-visible {
   outline: 2px solid #e8c040;
   outline-offset: 2px;
+}
+
+/* Die Beschriftung. Sie liegt ausserhalb des runden Knopfes und misst GENAU das
+   Kaestchen, gegen das `firmamentPortalLabelSpot` geprueft hat — Breite, Hoehe
+   und Schriftgrad kommen von dort. Alles darin haengt in `em` daran. */
+.fm-portal-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.16em;
+  line-height: 1.05;
+  text-align: center;
+  /* Lieber ueberstehen als umbrechen: die Hoehe des Kaestchens ist gemessen und
+     steht in der Spec — eine dritte Zeile spraenge sie. Gemessen bleibt der
+     laengste Fall („Runeterra Prime VIII", 9,08 em) unter der Breite. */
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Der Text haengt am Ring, statt von ihm wegzulaufen. */
+.fm-portal-label.is-left {
+  text-align: right;
+}
+
+.fm-portal-label.is-right {
+  text-align: left;
+}
+
+.fm-portal-eyebrow {
+  font-size: 0.68em;
+  letter-spacing: 0.22em;
+  /* Die Laufweite haengt rechts an — derselbe Ausgleich wie am Startwort. */
+  text-indent: 0.22em;
+  text-transform: uppercase;
+  color: #8a8172;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.95);
+}
+
+.fm-portal-name {
+  font-size: 1em;
+  color: var(--fm-portal-tint);
+  text-shadow:
+    0 0 10px rgba(0, 0, 0, 0.95),
+    0 1px 3px rgba(0, 0, 0, 0.95);
+  transition: color 0.16s ease;
+}
+
+.fm-portal-num {
+  font-size: 0.78em;
+  color: rgba(232, 220, 192, 0.55);
+}
+
+/* Statischer Umschlag, kein Dauerlaeufer — die Farbe wechselt einmal. Der
+   Ziel-Ton steht als VARIABLE am Kaestchen, nicht als `color` am Namen: inline
+   gesetzt braeuchte dieser Hover ein `!important`. */
+.fm-portal-hit:hover .fm-portal-name,
+.fm-portal-hit:focus-visible .fm-portal-name {
+  color: #fdf0c4;
 }
 
 @media (prefers-reduced-motion: reduce) {

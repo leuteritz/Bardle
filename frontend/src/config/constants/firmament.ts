@@ -557,6 +557,44 @@ export const FIRMAMENT_LEGEND_MAX_SHARE = 0.6
 export const FIRMAMENT_SEL_BOX_W = 400
 export const FIRMAMENT_SEL_BOX_H = 82
 
+/** Die Beschriftung am Portal: ein FESTES Kaestchen. Die Platzsuche braucht eine
+ *  Zahl statt einer gemessenen Textbreite — sonst waere sie unrein und ihr
+ *  Waechter blind. Das CSS baut genau dieses Kaestchen, also misst die Spec, was
+ *  wirklich im Bild steht. Kanten in `em`, damit die Box auf 4K mitwaechst.
+ *
+ *  Die Breite ist IM BROWSER gemessen, nicht geschaetzt: der laengste Fall ist
+ *  „Runeterra Prime VIII" mit 9,08 em (Augenbraue 6,12), die Hoehe zweier Zeilen
+ *  1,92 em. Geschaetzte 12 em waren ein Viertel zu breit — und genau diese
+ *  Breite entscheidet, ob das Kaestchen noch in die schwarze Gasse zwischen
+ *  Scheibe und Bildkante passt (auf Full HD sind das 154 px). */
+export const FIRMAMENT_PORTAL_LABEL_R_RATIO = 0.11
+export const FIRMAMENT_PORTAL_LABEL_MIN_PX = 13
+export const FIRMAMENT_PORTAL_LABEL_MAX_PX = 19
+export const FIRMAMENT_PORTAL_LABEL_W_EM = 9.4
+export const FIRMAMENT_PORTAL_LABEL_H_EM = 2
+export const FIRMAMENT_PORTAL_LABEL_GAP_EM = 0.95
+export const FIRMAMENT_PORTAL_LABEL_EDGE_PAD = 10
+
+/** Wie nah die Beschriftung an die Karte darf — eine LEITER, keine Zahl.
+ *
+ *  Zuerst gilt dieselbe Kante wie fuer den Ring (die Sprite-Kante). Findet sich
+ *  dort keine Seite, rueckt sie naeher: hinter das Filamentgewebe (1,0148 — die
+ *  letzte Ebene der Karte, die Struktur traegt) und notfalls knapp hinter die
+ *  Galaxienkoerper (0,907). Schrift ist kein leuchtender Koerper: sie traegt
+ *  eine Schattenkante, und was zwischen Gewebe und Sprite-Kante liegt, ist der
+ *  deckende dunkle Reifen samt auslaufendem Schattenteich — die ruhigste
+ *  Flaeche des ganzen Reiters. Darauf steht sie BESSER als auf dem Sternfeld.
+ *
+ *  Was NICHT nachgibt, sind Bildkante und Bedienflaechen: eine Beschriftung
+ *  unter der Legende ist keine. Ohne die Leiter blieb auf Full HD fuer zwei der
+ *  zehn Universen keine Seite uebrig — das Kaestchen ist 12 em breit, und in der
+ *  Gasse zwischen Bildkante und Scheibe ist das mehr, als der Ring braucht. */
+export const FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS = [
+  FIRMAMENT_PLATE_SPRITE_MARGIN,
+  1.015,
+  0.93,
+] as const
+
 /** Deckel der Portal-Rasterflaeche je Ebene. Er greift ab 2K am Halo und ab 4K
  *  an allen — ohne ihn baute 4K ein 988er-Quadrat fuer ein Leuchten. */
 export const FIRMAMENT_PORTAL_MAX_BACKING_PX = 1024
