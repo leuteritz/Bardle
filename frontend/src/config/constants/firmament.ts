@@ -468,12 +468,24 @@ export const FIRMAMENT_PORTAL_RING_H_RATIO = 0.19
 export const FIRMAMENT_PORTAL_RING_MIN_PX = 88
 export const FIRMAMENT_PORTAL_RING_MAX_PX = 260
 
-/** Wie weit draussen der Ring fruehestens beginnt — als ABLEITUNG, nicht als
- *  glatte Zahl: genau dort enden die Koerper der Galaxienwolke. Ein strengeres
- *  „ganz jenseits des Walls" (1,0) macht die Menge zulaessiger Stellen auf
- *  WUXGA LEER; unter dem durchscheinenden Filamentsaum zu stehen ist richtig —
- *  ein Portal, das dahinter hervorsieht, liest sich als „jenseits der Wand". */
-export const FIRMAMENT_PORTAL_DISC_CLEAR = UNIVERSE_DISC_HERO_R_RATIO * UNIVERSE_DISC_CLOUD_REACH
+/** Wie weit draussen der Ring fruehestens beginnt — an der SPRITE-KANTE der
+ *  Platte gemessen, nicht an den Galaxienkoerpern.
+ *
+ *  Die Wolke endet zwar bei 0,907 r, aber darueber liegen noch das
+ *  Filamentgewebe (1,0148), der DECKENDE dunkle Reifen (1,02 + 4/300 = 1,0333,
+ *  Alpha 0,88) und der auslaufende Schattenteich (1,0727). Bei 0,9016 sass das
+ *  Portal mitten darin und wurde zur Haelfte verdeckt.
+ *
+ *  Und es ist die einzige dieser Kanten, die schon eine Spec verriegelt:
+ *  `firmamentPlate.spec.ts` bindet, dass kein Zug sie verlaesst. */
+export const FIRMAMENT_PORTAL_DISC_CLEAR = FIRMAMENT_PLATE_SPRITE_MARGIN
+
+/** Findet sich fuer die volle Groesse keine Stelle, wird der Ring KLEINER statt
+ *  das Portal zu verschwinden — ohne die Leiter faende die Winkelsuche in sieben
+ *  von fuenfzig Faellen nichts mehr, und mit dem Portal waere die Weiterreise
+ *  weg. Nachgemessen greift sie nur auf WUXGA (dem engen Fall): Full HD, 2K, 4K
+ *  und der Buehnenboden behalten ueberall die volle Groesse. */
+export const FIRMAMENT_PORTAL_SHRINK_STEPS = [1, 0.86, 0.72, 0.58] as const
 
 /** Kantenlaenge der Sprites als Vielfaches des Ringdurchmessers — DREI Werte,
  *  weil die drei Ebenen verschieden weit reichen. Das stehende Sprite muss den

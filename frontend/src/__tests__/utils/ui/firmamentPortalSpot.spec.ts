@@ -14,6 +14,8 @@ import {
   FIRMAMENT_PORTAL_MIN_VISIBLE,
   FIRMAMENT_PORTAL_RING_MAX_PX,
   FIRMAMENT_PORTAL_RING_MIN_PX,
+  FIRMAMENT_PORTAL_SHRINK_STEPS,
+  FIRMAMENT_PLATE_SPRITE_MARGIN,
   FIRMAMENT_STAGE_MIN_H,
   FIRMAMENT_STAGE_MIN_W,
 } from '@/config/constants'
@@ -101,7 +103,14 @@ describe('firmamentPortalSpot — wo das Portal steht', () => {
     }
   })
 
-  it('liegt IMMER jenseits der Galaxienwolke', () => {
+  /*
+   * DER Test dieser Datei. Gemessen wird gegen die SPRITE-KANTE der Platte, nicht
+   * gegen die Galaxienkoerper: die Wolke endet bei 0,907 r, aber darueber liegen
+   * Filamentgewebe (1,0148), der deckende dunkle Reifen (1,0333) und der
+   * auslaufende Schattenteich (1,0727). Mit dem Wolkenmass sass das Portal
+   * mitten darin und wurde zur Haelfte verdeckt.
+   */
+  it('liegt IMMER jenseits der Kartenkante, nicht nur jenseits der Wolke', () => {
     for (const s of STAGES) {
       const fit = firmamentFitBox(s.w, s.h)
       for (const id of IDS) {
@@ -112,6 +121,38 @@ describe('firmamentPortalSpot — wo das Portal steht', () => {
         )
       }
     }
+    // Die Ableitung selbst: alles, was die Karte malt, liegt darunter.
+    expect(FIRMAMENT_PORTAL_DISC_CLEAR).toBe(FIRMAMENT_PLATE_SPRITE_MARGIN)
+  })
+
+  /*
+   * Der groessere Abstand macht die Menge zulaessiger Stellen kleiner. Ohne die
+   * Schrumpfleiter faende die Winkelsuche in sieben von fuenfzig Faellen nichts
+   * mehr und gaebe `null` — das Portal verschwaende, und mit ihm die
+   * Weiterreise. Kleiner ist besser als weg.
+   */
+  it('wird kleiner, statt zu verschwinden — aber nie unter den Boden', () => {
+    for (const s of STAGES) {
+      for (const id of IDS) {
+        const spot = firmamentPortalSpot(id, s.w, s.h)
+        expect(spot, `${s.name} U${id}`).not.toBeNull()
+        expect(spot!.r, `${s.name} U${id}`).toBeGreaterThanOrEqual(
+          FIRMAMENT_PORTAL_RING_MIN_PX * FIRMAMENT_PORTAL_SHRINK_STEPS.at(-1)!,
+        )
+        expect(spot!.r, `${s.name} U${id}`).toBeLessThanOrEqual(firmamentPortalRingR(s.h))
+      }
+    }
+  })
+
+  /* Geschrumpft wird nur, wo es sein muss: auf den anderen Buehnen behaelt jedes
+     Universum die volle Groesse. */
+  it('schrumpft nur auf der engen Buehne', () => {
+    for (const s of STAGES.filter((v) => v.name !== 'WUXGA')) {
+      const full = firmamentPortalRingR(s.h)
+      for (const id of IDS) {
+        expect(firmamentPortalSpot(id, s.w, s.h)!.r, `${s.name} U${id}`).toBeCloseTo(full, 6)
+      }
+    }
   })
 
   it('bleibt zu mehr als der Haelfte im Bild', () => {
@@ -119,7 +160,9 @@ describe('firmamentPortalSpot — wo das Portal steht', () => {
       for (const id of IDS) {
         const spot = firmamentPortalSpot(id, s.w, s.h)!
         const share = visibleByGrid(spot.x, spot.y, spot.r, s.w, s.h)
-        expect(share, `${s.name} U${id}`).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_MIN_VISIBLE - 0.02)
+        expect(share, `${s.name} U${id}`).toBeGreaterThanOrEqual(
+          FIRMAMENT_PORTAL_MIN_VISIBLE - 0.02,
+        )
         // Die Ringmitte selbst liegt im Bild — sonst haengt das Portal nur mit
         // einer Sichel herein.
         expect(spot.x, `${s.name} U${id} x`).toBeGreaterThan(0)
@@ -161,10 +204,7 @@ describe('firmamentPortalSpot — wo das Portal steht', () => {
    * braucht.
    */
   it('kennt weder Zoom noch Fahrt', () => {
-    const src = readFileSync(
-      resolve(__dirname, '../../../utils/ui/firmamentPortalSpot.ts'),
-      'utf8',
-    )
+    const src = readFileSync(resolve(__dirname, '../../../utils/ui/firmamentPortalSpot.ts'), 'utf8')
     const code = src.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
     for (const forbidden of ['zoom', 'ZOOM', 'pan.', 'panLimit', 'drag']) {
       expect(code.includes(forbidden), forbidden).toBe(false)

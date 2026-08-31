@@ -24,6 +24,7 @@ import {
   FIRMAMENT_PORTAL_RING_H_RATIO,
   FIRMAMENT_PORTAL_RING_MAX_PX,
   FIRMAMENT_PORTAL_RING_MIN_PX,
+  FIRMAMENT_PORTAL_SHRINK_STEPS,
   FIRMAMENT_PORTAL_VIS_SAMPLES,
   FIRMAMENT_SEL_BOX_H,
   FIRMAMENT_SEL_BOX_W,
@@ -132,8 +133,9 @@ export function firmamentPortalVisibleShare(
  * niemand als Fehler erkennt — er sieht nur falsch aus. Die FARBE darf am Ziel
  * haengen, der Ort nicht.
  *
- * Gesucht wird im 15-Grad-Raster; der erste Winkel, der jenseits der Wolke
+ * Gesucht wird im 15-Grad-Raster; der erste Winkel, der jenseits der KARTE
  * liegt, genug Flaeche im Bild laesst und keine Bedienflaeche trifft, gewinnt.
+ * Findet sich nichts, wird der Ring kleiner statt zu verschwinden.
  */
 export function firmamentPortalSpot(
   universe: number,
@@ -143,10 +145,9 @@ export function firmamentPortalSpot(
   if (w <= 0 || h <= 0) return null
 
   const fit = firmamentFitBox(w, h)
-  const r = firmamentPortalRingR(h)
+  const full = firmamentPortalRingR(h)
   const keep = firmamentPortalKeepOuts(w, h)
-  const dMin = fit.r * FIRMAMENT_PORTAL_DISC_CLEAR + r
-  const inset = r * FIRMAMENT_PORTAL_EDGE_KEEP
+  const clear = fit.r * FIRMAMENT_PORTAL_DISC_CLEAR
 
   // Eigene Primzahl je Aspekt, ab 131 aufwaerts — die Kanaele darunter gehoeren
   // der Galaxienwolke, und zwei Aspekte auf einem Kanal laufen im Gleichschritt.
@@ -155,23 +156,31 @@ export function firmamentPortalSpot(
 
   let fallback: FirmamentPortalSpot | null = null
 
-  for (let i = 0; i < FIRMAMENT_PORTAL_ANGLE_TRIES; i++) {
-    const angle = base + (i * Math.PI * 2) / FIRMAMENT_PORTAL_ANGLE_TRIES
-    const dMax = rayToRect(fit.cx, fit.cy, angle, inset, w, h)
-    if (dMax < dMin) continue
+  // Aeussere Schleife ueber die GROESSE: passt die volle nirgends hin, wird der
+  // Ring kleiner. Ein verschwundenes Portal waere die Weiterreise ohne Weg.
+  for (const step of FIRMAMENT_PORTAL_SHRINK_STEPS) {
+    const r = full * step
+    const dMin = clear + r
+    const inset = r * FIRMAMENT_PORTAL_EDGE_KEEP
 
-    const d = dMin + frac * (dMax - dMin)
-    const x = fit.cx + Math.cos(angle) * d
-    const y = fit.cy + Math.sin(angle) * d
-    if (firmamentPortalVisibleShare(x, y, r, w, h) < FIRMAMENT_PORTAL_MIN_VISIBLE) continue
+    for (let i = 0; i < FIRMAMENT_PORTAL_ANGLE_TRIES; i++) {
+      const angle = base + (i * Math.PI * 2) / FIRMAMENT_PORTAL_ANGLE_TRIES
+      const dMax = rayToRect(fit.cx, fit.cy, angle, inset, w, h)
+      if (dMax < dMin) continue
 
-    const spot = { x, y, r, angle }
-    // Geometrisch gueltig reicht als Fluchtweg: eine Buehne, auf der jede Lage
-    // eine Bedienflaeche traefe, gibt es rechnerisch nicht — aber ein `null`
-    // liesse das Portal still verschwinden und die Weiterreise unerreichbar.
-    fallback ??= spot
-    if (keep.some((k) => circleHitsRect(x, y, r + FIRMAMENT_PORTAL_KEEPOUT_PAD, k))) continue
-    return spot
+      const d = dMin + frac * (dMax - dMin)
+      const x = fit.cx + Math.cos(angle) * d
+      const y = fit.cy + Math.sin(angle) * d
+      if (firmamentPortalVisibleShare(x, y, r, w, h) < FIRMAMENT_PORTAL_MIN_VISIBLE) continue
+
+      const spot = { x, y, r, angle }
+      // Geometrisch gueltig reicht als Fluchtweg: eine Buehne, auf der jede Lage
+      // eine Bedienflaeche traefe, gibt es rechnerisch nicht — aber ein `null`
+      // liesse das Portal still verschwinden.
+      fallback ??= spot
+      if (keep.some((k) => circleHitsRect(x, y, r + FIRMAMENT_PORTAL_KEEPOUT_PAD, k))) continue
+      return spot
+    }
   }
 
   return fallback

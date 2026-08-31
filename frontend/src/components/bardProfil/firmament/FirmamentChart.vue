@@ -525,30 +525,15 @@ const LEGEND = [
          statt sie mitzuschleppen. -->
     <canvas ref="groundEl" class="fm-ground" aria-hidden="true" />
 
-    <!-- Das Abflugportal steht im schwarzen Raum jenseits der Scheibe. Es liegt
-         AUSSERHALB `.fm-layer`: es faehrt nicht mit und waechst nicht mit dem
-         Zoom — beim Hineinzoomen schiebt sich die Karte davor, auch fuer den
-         Zeiger. Kein `z-index`, die DOM-Reihenfolge entscheidet. -->
-    <template v-if="portalSpot && departure">
-      <FirmamentPortal :spot="portalSpot" :seed="selection.universe" :tint="portalTint" />
-      <RpgBadgeTooltip passive :accent="portalTint">
-        <button
-          class="fm-portal-hit"
-          :style="{
-            left: `${portalSpot.x}px`,
-            top: `${portalSpot.y}px`,
-            width: `${portalSpot.r * 2}px`,
-            height: `${portalSpot.r * 2}px`,
-          }"
-          :aria-label="`Departure portal — the road went on to Universe ${toRoman(departure.toUniverse)}`"
-          @pointerdown.stop
-          @click="pickDeparture(departure)"
-        />
-        <template #tip>
-          <FirmamentDepartureTip :departure="departure" :tint="portalTint" />
-        </template>
-      </RpgBadgeTooltip>
-    </template>
+    <!-- Das Abflugportal steht im schwarzen Raum jenseits der Karte. Sein BILD
+         liegt AUSSERHALB `.fm-layer`: es faehrt nicht mit und waechst nicht mit
+         dem Zoom — beim Hineinzoomen schiebt sich die Karte davor. -->
+    <FirmamentPortal
+      v-if="portalSpot && departure"
+      :spot="portalSpot"
+      :seed="selection.universe"
+      :tint="portalTint"
+    />
 
     <div class="fm-layer" :style="layerStyle">
       <!-- Die zwei Ebenen, die sich drehen. Beide sind fertige Sprites; das CSS
@@ -649,6 +634,30 @@ const LEGEND = [
         </template>
       </RpgBadgeTooltip>
     </div>
+
+    <!-- Die Trefferflaeche des Portals liegt NACH der fahrenden Ebene, also
+         ueber der Kartenplatte: die faengt Klicks ueber ihr ganzes Quadrat, und
+         in den Ecken reicht das weiter als das Portal steht.
+         Nur auf Zoomstufe 0 — darueber waechst die Platte ohnehin darueber und
+         das Portal ist nicht mehr zu sehen; ein Knopf auf einem unsichtbaren
+         Objekt waere ein Klickkreis mitten auf der Galaxie. -->
+    <RpgBadgeTooltip v-if="portalSpot && departure && zoomStep === 0" passive :accent="portalTint">
+      <button
+        class="fm-portal-hit"
+        :style="{
+          left: `${portalSpot.x}px`,
+          top: `${portalSpot.y}px`,
+          width: `${portalSpot.r * 2}px`,
+          height: `${portalSpot.r * 2}px`,
+        }"
+        :aria-label="`Departure portal — the road went on to Universe ${toRoman(departure.toUniverse)}`"
+        @pointerdown.stop
+        @click="pickDeparture(departure)"
+      />
+      <template #tip>
+        <FirmamentDepartureTip :departure="departure" :tint="portalTint" />
+      </template>
+    </RpgBadgeTooltip>
 
     <!-- Bedienung: drei Zoomstufen und zurueck zur Mitte. -->
     <div class="fm-tools">
@@ -836,8 +845,11 @@ const LEGEND = [
 /* Die Trefferflaeche des Portals. `@pointerdown.stop` haengt am Element, nicht
    hier: `onPointerDown` sitzt ohne `.self` an der Buehne, und ohne den Stopper
    begaenne jeder Portalklick eine Fahrt. */
+/* Zwischen der Karte und den drei Bedienflaechen (4/5): der Knopf muss ueber
+   die Platte, aber unter Werkzeugleiste, Legende und Auswahlkarte. */
 .fm-portal-hit {
   position: absolute;
+  z-index: 3;
   transform: translate(-50%, -50%);
   padding: 0;
   background: none;

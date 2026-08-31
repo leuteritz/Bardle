@@ -10,6 +10,7 @@ import {
   FIRMAMENT_PATH_MIN_SPAN,
   FIRMAMENT_PLATE_REF_R,
   FIRMAMENT_PORTAL_RING_MIN_PX,
+  FIRMAMENT_PORTAL_SHRINK_STEPS,
   FIRMAMENT_RAIL_AUTOFOLD_W,
   FIRMAMENT_RAIL_FOLDED_W,
   FIRMAMENT_RAIL_W,
@@ -515,7 +516,9 @@ describe('Firmament — das Abflugportal', () => {
       ['4K', 2160, 260],
     ]
     for (const [name, vh, want] of table) {
-      const r = firmamentPortalRingR(zones(vh === 2160 ? 3840 : vh === 1440 ? 2560 : 1920, vh).stageH)
+      const r = firmamentPortalRingR(
+        zones(vh === 2160 ? 3840 : vh === 1440 ? 2560 : 1920, vh).stageH,
+      )
       expect(Math.round(r), name).toBe(want)
     }
   })
@@ -530,6 +533,20 @@ describe('Firmament — das Abflugportal', () => {
     }
     expect(band(1920, 1200)).toBeLessThan(band(1920, 1080))
     expect(band(1920, 1200)).toBeGreaterThan(FIRMAMENT_PORTAL_RING_MIN_PX / 2)
+  })
+
+  /* Die Leiter greift, wenn die volle Groesse nirgends jenseits der Kartenkante
+     passt. Sie muss bei der vollen Groesse beginnen und fallen — eine Stufe
+     ueber 1 vergroesserte das Portal heimlich, eine steigende Folge liesse die
+     Suche die kleinste zuerst nehmen. */
+  it('faengt die Schrumpfleiter bei voller Groesse an und laesst sie fallen', () => {
+    expect(FIRMAMENT_PORTAL_SHRINK_STEPS[0]).toBe(1)
+    for (let i = 1; i < FIRMAMENT_PORTAL_SHRINK_STEPS.length; i++) {
+      expect(FIRMAMENT_PORTAL_SHRINK_STEPS[i]).toBeLessThan(FIRMAMENT_PORTAL_SHRINK_STEPS[i - 1])
+    }
+    // Auch die kleinste Stufe bleibt ein Portal und wird keine Marke.
+    const smallest = FIRMAMENT_PORTAL_RING_MIN_PX * FIRMAMENT_PORTAL_SHRINK_STEPS.at(-1)!
+    expect(smallest).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
   })
 
   /* Der Reiter steht auf Grundlast: bewegt wird per CSS an fertigen Sprites,
