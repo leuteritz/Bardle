@@ -47,7 +47,7 @@ describe('DRIFTER_FX_STAGES', () => {
     // The whole point of the table: common is plain, legendary is loud. Every
     // continuous value climbs monotonically, and none of them may stall the
     // whole way — a column of identical numbers is a column that says nothing.
-    const columns = ['auraAlpha', 'auraLayers', 'motion', 'motes', 'flow'] as const
+    const columns = ['auraAlpha', 'auraLayers', 'motion', 'detail', 'motes', 'flow'] as const
     for (const key of columns) {
       const values = BY_RANK.map((r) => DRIFTER_FX_STAGES[r][key])
       for (let i = 1; i < values.length; i++) {

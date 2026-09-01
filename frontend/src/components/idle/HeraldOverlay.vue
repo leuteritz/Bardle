@@ -23,7 +23,24 @@
           :image-src="current.imageSrc"
           :icon="current.icon"
           :round="current.round"
-        />
+          :wide="hasReadouts"
+        >
+          <!-- Die Ankunft zeigt statt eines Medaillons die Scheibe, die das
+               Universum im Firmament IST — dasselbe Bild, das im Portal stand,
+               durch das man gerade gereist ist. Sie dreht per CSS an einem
+               fertigen Sprite, ohne einen einzigen Repaint. -->
+          <template v-if="current.universe !== undefined" #visual>
+            <UniverseDisc
+              :universe="current.universe"
+              state="current"
+              :px="HERALD_ARRIVAL_DISC_PX"
+            />
+          </template>
+
+          <template v-if="hasReadouts" #meta>
+            <HeraldReadouts :readouts="current!.readouts!" />
+          </template>
+        </HeraldBanner>
       </Transition>
     </div>
 
@@ -37,9 +54,15 @@ import { useHerald } from '@/composables/ui/useHerald'
 import { useBadgeHeralds } from '@/composables/ui/useBadgeHeralds'
 import HeraldBanner from './HeraldBanner.vue'
 import HeraldReceiptStack from './HeraldReceiptStack.vue'
+import HeraldReadouts from './HeraldReadouts.vue'
+import UniverseDisc from '@/components/bardProfil/firmament/UniverseDisc.vue'
 import { hexToRgbTriple } from '@/utils/ui/format'
+import { buildArrivalHerald } from '@/utils/ui/arrivalHerald'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { useUiStore } from '@/stores/core/uiStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import {
   RANK_TIERS,
@@ -49,11 +72,24 @@ import {
   HERALD_ACCENT_WARP,
   HERALD_ACCENT_CHAMPION,
   HERALD_ARM_DELAY_MS,
+  HERALD_ARRIVAL_DISC_PX,
+  HYPERSPACE_ARRIVAL_HERALD_DELAY_MS,
+  MEEP_ACCENT_HEX,
+  UNIVERSE_TOOLTIP_IMAGES,
 } from '@/config/constants'
+import type { ArrivalNotice } from '@/types'
 
-const { current, announce, reset } = useHerald()
+const { current, announce, announceReceipt, reset } = useHerald()
 const galaxyStore = useGalaxyStore()
 const battleStore = useBattleStore()
+const gameStore = useGameStore()
+const uiStore = useUiStore()
+const providenceStore = useProvidenceStore()
+
+/** Nur die Ankunft trägt Ablesungen — und nur sie bekommt den breiten
+ *  Zuschnitt. Ohne sie nimmt die Spalte keine Breite und die Karte bleibt die,
+ *  die sie für Warp, Champion und Rangaufstieg immer war. */
+const hasReadouts = computed(() => (current.value?.readouts?.length ?? 0) > 0)
 
 // Die Notify-Marken melden sich über die kompakte `ready`-Fassung. Eigene Datei,
 // aber derselbe Ort der Anmeldung wie die Meilensteine unten.
@@ -73,6 +109,10 @@ const pendingChampions: string[] = []
 // A completed warp waiting to be heralded — likewise deferred to the first
 // champion-star approach of the new galaxy (after its role selection).
 let pendingWarp: { headline: string; subline: string } | null = null
+/* Die Ankunft in einem neuen Universum wartet, bis das Bild frei ist. Der
+   Timer MUSS gehalten werden — dieselbe Falle, die das Hyperspace-Overlay
+   einen weissen Vollbild-Blitz ins laufende Spiel zuenden liess. */
+let arrivalTimer: ReturnType<typeof setTimeout> | null = null
 
 function canAnnounce(): boolean {
   return armed && document.visibilityState === 'visible'
@@ -91,6 +131,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (armTimer) clearTimeout(armTimer)
+  if (arrivalTimer) clearTimeout(arrivalTimer)
   reset()
 })
 
@@ -110,6 +151,71 @@ watch(
     }
   },
 )
+
+// ── Ankunft in einem neuen Universum ──
+//
+// Der Ausloeser ist die Notiz aus `executePrestigeReset` und NICHT
+// `isHyperspaceActive`: dieses Flag wird bei `prefers-reduced-motion` nie
+// gesetzt (die Ansage entfiele ganz) und faellt auf der SPIELUHR, waehrend das
+// Overlay auf der Wanduhr laeuft — bei zehnfacher Geschwindigkeit spielte die
+// Zeremonie hinter einem noch stehenden Weissblitz ab.
+//
+// Die Verzoegerung haengt deshalb an der Wanduhr und daran, OB ueberhaupt ein
+// Overlay im Weg steht. Damit deckt derselbe Pfad beide Faelle: der
+// Reduced-Motion-Sprung sagt sofort an, der animierte wartet, bis die Buehne
+// frei ist. Kein `gameTimeout()` — der Rueckruf aendert keinen Spielzustand, er
+// schuetzt die Lesezeit des Spielers, und die vergeht real (dieselbe
+// Begruendung wie bei `armReceipt` in useHerald).
+watch(
+  () => uiStore.pendingArrival,
+  (notice) => {
+    if (!notice) return
+    // Sofort verbrauchen: die Notiz ist ein Signal, kein Zustand. Bliebe sie
+    // stehen, feuerte jeder weitere Lauf dieses Watchers sie erneut.
+    uiStore.clearPendingArrival()
+    if (arrivalTimer) clearTimeout(arrivalTimer)
+    const delay = gameStore.isHyperspaceActive ? HYPERSPACE_ARRIVAL_HERALD_DELAY_MS : 0
+    arrivalTimer = setTimeout(() => {
+      arrivalTimer = null
+      flushArrival(notice)
+    }, delay)
+  },
+)
+
+function flushArrival(notice: ArrivalNotice) {
+  if (!canAnnounce()) return
+  // Die Vorsehung wird HIER gelesen, nicht in der Notiz mitgefuehrt: sie gilt
+  // seit dem Portalklick und steht noch. Eine zweite Kopie liefe auseinander.
+  announce(buildArrivalHerald(notice.universe, providenceStore.active))
+
+  // Was der Durchlauf eingebracht hat, gehoert in die NEBENSPUR: es ist ein
+  // Ertrag, kein Ort. `grantMeeps` zahlt beim Aufbruch die Ausbeute des ganzen
+  // Laufs aus und war dabei bisher voellig lautlos.
+  if (notice.meeps <= 0) return
+  announceReceipt({
+    kind: 'event',
+    // NICHT 'THE WANDERING': das traegt die Skill-Marke des Meep-Baums
+    // (`notifyBadges.ts`), und sie zeigt dasselbe Meep-Artwork. Im Browser
+    // standen beide Karten uebereinander — gleiches Wort, gleiches Bild, nur
+    // die Akzentfarbe verschieden, und das las sich als dieselbe Meldung
+    // zweimal. 'DEPARTURE' sagt zudem, WOHER die Meeps kommen.
+    eyebrow: 'DEPARTURE',
+    headline: `${notice.meeps} Meeps`,
+    subline: 'Carried over',
+    // Kein Iconify-Glyph: Meeps haben ein eigenes Artwork, und dieselbe Sache
+    // saehe sonst an zwei Stellen verschieden aus.
+    portraitSrc: UNIVERSE_TOOLTIP_IMAGES.meeps,
+    imageRound: false,
+    accent: hexToRgbTriple(MEEP_ACCENT_HEX),
+    // Ein Aufbruch faellt nie zweimal in ein Verdichtungsfenster — ein Zaehler
+    // koennte hier nur falsch sein.
+    countable: false,
+    // Eigener Schluessel statt des blanken `kind`: sonst verdichtet sich der
+    // Ertrag mit einem beliebigen anderen 'event' im selben Fenster, und die
+    // Zahl des ganzen Durchlaufs verschwaende hinter einem fremden Wortlaut.
+    mergeKey: 'arrival/meeps',
+  })
+}
 
 // ── New champion available in the shop ──
 // Don't herald at unlock time (home-planet boss defeat). Buffer the champion and

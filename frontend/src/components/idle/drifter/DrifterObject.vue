@@ -60,11 +60,17 @@
         <i class="drifter-ring"></i>
       </span>
 
-      <!-- The silhouette is pure CSS, one shape per drifter type — see
-           DrifterBody.vue. Nothing in here paints per frame; the body carries
-           its own idle motion while the shell does the travelling. -->
+      <!-- The body is a sprite — see DrifterBody.vue. Nothing in here paints
+           per frame; the frame loop only turns it to the sun. -->
       <span ref="bodyBox" class="drifter-body" :style="bodyStyle">
-        <DrifterBody :kind="def.body" :color="def.color" :motion="stage.motion" />
+        <DrifterBody
+          :kind="def.body"
+          :color="def.color"
+          :motion="stage.motion"
+          :px="def.sizePx"
+          :detail="stage.detail"
+          live
+        />
       </span>
 
       <!-- Debris motes. Two turning planes carry all of them, rather than one
@@ -141,6 +147,10 @@ import {
   DRIFTER_RING_SPIN_MS,
   DRIFTER_DUST_LENGTH_SCALE,
   DRIFTER_DUST_WIDTH_SCALE,
+  DRIFTER_BODY_LIT,
+  DRIFTER_ROCK_DEG,
+  DRIFTER_ROCK_MS,
+  DRIFTER_TURN_QUANTIZE_DEG,
   HEADING_FLIP_DEADZONE,
 } from '@/config/constants'
 
@@ -154,6 +164,11 @@ const emit = defineEmits<{ hit: [x: number, y: number] }>()
 const shell = ref<HTMLElement>()
 const trail = ref<HTMLElement>()
 const bodyBox = ref<HTMLElement>()
+
+const reducedMotion =
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null
 
 /** Hat dieser Körper ein Vorn? Nur der Leviathan — siehe die Begründung an
  *  `DRIFTER_DIRECTIONAL_BODIES`. */
@@ -371,12 +386,11 @@ const dustStyle = computed(() => ({
 // All values are written straight to element.style; routing them through Vue
 // would re-render the subtree 60×/s.
 
-/**
- * The terminator layers, collected once. There are at most two per body and
- * they never change during a flight, so a query at mount is cheaper and far
- * simpler than threading refs up through DrifterBody.
- */
-let litEls: HTMLElement[] = []
+/** The one element that turns to the sun — collected once at mount. */
+let turnEl: HTMLElement | null = null
+/** Only lit bodies turn per frame; the sun side is baked into their sprite. */
+const lit = computed(() => DRIFTER_BODY_LIT[props.def.body])
+const rockMs = computed(() => DRIFTER_ROCK_MS / Math.max(0.2, stage.value.motion))
 
 /** Zeigt der Körper gerade nach links? Wird nur ausserhalb der Totzone neu
  *  gesetzt, damit ein fast senkrechter Flug ihn nicht flattern lässt. Die
@@ -435,7 +449,16 @@ function renderFrame(
   // 180 − θ. Ohne das fällt der Schatten auf der falschen Seite, sobald das
   // Wesen die Richtung wechselt.
   const litDeg = directional.value && !faceLeft ? 180 - light : light
-  for (const lit of litEls) lit.style.transform = `rotate(${litDeg}deg)`
+  if (lit.value && turnEl) {
+    // Ein kleines Wiegen obendrauf; gedeckelt, weil es das eingebackene Licht
+    // um genau seinen Betrag verdreht. Auf 1° gerastert wie beim Landfall.
+    const rock = reducedMotion?.matches
+      ? 0
+      : Math.sin(((now - props.drifter.spawnedAt) / rockMs.value) * Math.PI * 2) *
+        DRIFTER_ROCK_DEG
+    const q = DRIFTER_TURN_QUANTIZE_DEG
+    turnEl.style.transform = `rotate(${Math.round((litDeg + rock) / q) * q}deg)`
+  }
 
   if (trail.value) {
     // The wake follows the HEADING, so it always lies behind the body. The
@@ -454,7 +477,7 @@ function onHit(event: MouseEvent): void {
 }
 
 onMounted(() => {
-  litEls = shell.value ? Array.from(shell.value.querySelectorAll<HTMLElement>('.db-lit')) : []
+  turnEl = shell.value?.querySelector<HTMLElement>('.db-turn') ?? null
 })
 
 defineExpose({ renderFrame })

@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useHudCardColumn } from '@/composables/ui/useHudCardColumn'
+import { useBodyPortrait } from '@/composables/ui/useBodyPortrait'
 import { getVoidRift } from '@/config/world/void'
-import { VOID_CARD_ICON } from '@/config/constants'
+import { buildVoidPortrait } from '@/utils/fx/voidSprite'
+import { HUD_CARD_PORTRAIT_PX, VOID_CARD_ICON } from '@/config/constants'
 
 /**
  * Die Bedrohungslage — als Fokus der Kartenspalte.
@@ -37,6 +39,18 @@ const headline = computed(() => {
 
 /** Wie weit das Wesen schon heruntergeprügelt ist. */
 const slainPct = computed(() => Math.round((1 - (voidCard.value?.hpRatio ?? 1)) * 100))
+
+// Die Bühne zeigt den Riss selbst, nicht sein Glyph — dasselbe Bild, das
+// draussen auf die Sonne zukriecht.
+const stageEl = ref<HTMLElement | null>(null)
+useBodyPortrait(
+  stageEl,
+  () =>
+    def.value
+      ? buildVoidPortrait(def.value, HUD_CARD_PORTRAIT_PX, window.devicePixelRatio || 1)
+      : null,
+  () => def.value?.id,
+)
 </script>
 
 <template>
@@ -76,9 +90,7 @@ const slainPct = computed(() => Math.round((1 - (voidCard.value?.hpRatio ?? 1)) 
     </div>
 
     <div class="hc-main">
-      <span class="hc-stage vhc-stage">
-        <Icon :icon="def.icon" width="1.9em" height="1.9em" />
-      </span>
+      <span ref="stageEl" class="hc-stage vhc-stage" aria-hidden="true"></span>
 
       <span class="hc-body">
         <span class="hc-name vhc-name">{{ def.name }}</span>
@@ -121,6 +133,13 @@ const slainPct = computed(() => Math.round((1 - (voidCard.value?.hpRatio ?? 1)) 
 .vhc-stage {
   color: var(--vhc-body);
   border-color: color-mix(in srgb, var(--vhc-body) 45%, var(--hc-well-border));
+  overflow: hidden;
+}
+
+.vhc-stage :deep(canvas) {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .vhc-name {

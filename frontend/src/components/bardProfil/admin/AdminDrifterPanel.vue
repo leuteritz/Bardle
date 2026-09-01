@@ -51,7 +51,7 @@ function clearField(): void {
       </template>
     </template>
 
-    <!-- One tile per type, each showing the CSS body it actually spawns —
+    <!-- One tile per type, each showing the body it actually spawns —
          picking by silhouette beats picking by name when the point of the
          test is the silhouette. -->
     <div class="dr-grid">
@@ -64,7 +64,13 @@ function clearField(): void {
         @click="spawn(def.id)"
       >
         <span class="dr-preview" :style="{ '--drifter-size': `${ADMIN_DRIFTER_PREVIEW_PX}px` }">
-          <DrifterBody :kind="def.body" :color="def.color" :motion="drifterFxStage(def.rarity).motion" />
+          <DrifterBody
+            :kind="def.body"
+            :color="def.color"
+            :motion="drifterFxStage(def.rarity).motion"
+            :px="ADMIN_DRIFTER_PREVIEW_PX"
+            :detail="drifterFxStage(def.rarity).detail"
+          />
         </span>
         <span class="dr-name">{{ def.name }}</span>
         <span class="dr-rarity" :style="{ color: DRIFTER_RARITY_COLOR[def.rarity] }">

@@ -27,9 +27,10 @@ import { buildBackfillUniverseRuns } from '@/utils/game/universeRunBackfill'
 import { assignRecordUniverses } from '@/utils/game/galaxyUniverseBackfill'
 import { universes } from '@/config/progression/universes'
 import { clampPercent } from '@/utils/orbit/geometry'
+import { universeLabel } from '@/utils/ui/format'
 import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
 import { AUGMENTS, AUGMENT_POOL, RARITY_WEIGHTS } from '@/config/economy/augments'
-import { logAugmentAutoPicked } from '@/config/ui/eventLog'
+import { logAugmentAutoPicked, logUniverseReached } from '@/config/ui/eventLog'
 import { useAugmentStore } from '@/stores/economy/augmentStore'
 import {
   LEVEL_BASE,
@@ -854,6 +855,19 @@ export const useGameStore = defineStore('game', {
       this.chimesPerClick = shopStore.calculateTotalCPC()
       // Neue Basislinie: ab hier zählt der Tooltip wieder bei null.
       this.beginUniverseRun()
+
+      // Die Ankunft ansagen lassen. Hier und nur hier ist `owed` noch bekannt —
+      // `pendingMeeps` hängt an `chimesForNextUniverse`, und das steht seit
+      // dreissig Zeilen auf null. Der Herold spielt es aus, sobald das Bild frei
+      // ist: bei laufender Animation liegt sein Layer (9700) unter dem
+      // Hyperspace (9999), eine Ansage von hier aus liefe im Weissblitz ab.
+      //
+      // Die Logzeile dagegen geht SOFORT — sie ist die Aufzeichnung, nicht der
+      // Blitz, und dasselbe Muster („erst loggen, dann ansagen") tragen
+      // missionStore, omenStore und achievementStore.
+      const providence = useProvidenceStore().active
+      logUniverseReached(universeLabel(nextUniverse), providence?.name ?? null)
+      useUiStore().noteArrival(nextUniverse, owed)
     },
 
     /**

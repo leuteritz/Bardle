@@ -1,5 +1,3 @@
-import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { useVoidStore } from '@/stores/world/voidStore'
@@ -47,6 +45,7 @@ import {
   ROLES,
   PLANET_ROLES_LIST,
   GAME_TICK_INTERVAL_MS,
+  VOID_DWELLER_MOTIFS,
 } from '@/config/constants'
 
 /** Hebt das Bard-Level über die Freischaltschwelle. */
@@ -952,13 +951,10 @@ describe('voidStore', () => {
       expect(severities.size).toBeGreaterThanOrEqual(3)
     })
 
-    it('verweist nur auf Bewohner-Bilder, die es wirklich gibt', () => {
-      const publicDir = resolve(__dirname, '../../../../public')
+    it('nennt als Bewohner nur gezeichnete Motive', () => {
       for (const def of VOID_RIFTS) {
         if (!def.dweller) continue
-        expect(existsSync(join(publicDir, def.dweller)), `${def.id} → ${def.dweller} fehlt`).toBe(
-          true,
-        )
+        expect(VOID_DWELLER_MOTIFS, `${def.id} → ${def.dweller}`).toContain(def.dweller)
       }
     })
 

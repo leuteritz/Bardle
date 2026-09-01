@@ -18,6 +18,9 @@
  * und damit an der Uhr des Browsers statt am Abtasttakt des Overlays.
  */
 import { computed, ref, watch, onMounted } from 'vue'
+import { useBodyPortrait } from '@/composables/ui/useBodyPortrait'
+import { getVoidRift } from '@/config/world/void'
+import { buildVoidPortrait } from '@/utils/fx/voidSprite'
 import {
   PAUSE_STAR_CARD_HEIGHT,
   PAUSE_STAR_CARD_PAD_X,
@@ -29,6 +32,7 @@ import {
   PAUSE_VOID_CARD_WIDTH,
   PAUSE_VOID_URGENT_SECS,
   PAUSE_VOID_PIPS_MAX,
+  PAUSE_VOID_PORTRAIT_PX,
 } from '@/config/constants'
 import { gameNow } from '@/utils/game/gameClock'
 
@@ -43,8 +47,8 @@ const props = defineProps<{
   name: string
   /** Farbe seiner Schwere. */
   color: string
-  /** Bild des Bewohners — fehlt bei den kleinen, gestaltlosen Wesen. */
-  dweller?: string
+  /** Welcher Typ — daraus baut die Karte ihr Porträt. */
+  defId: string
   /** Wie viele insgesamt unterwegs sind. */
   count: number
   /** Wie weit das vorderste heruntergeprügelt ist (0..1). */
@@ -52,6 +56,17 @@ const props = defineProps<{
 }>()
 
 const isUrgent = computed(() => props.secs <= PAUSE_VOID_URGENT_SECS)
+
+// Das Wesen selbst, gezeichnet — dasselbe Bild wie draussen im Feld.
+const artEl = ref<HTMLElement | null>(null)
+useBodyPortrait(
+  artEl,
+  () => {
+    const def = getVoidRift(props.defId)
+    return def ? buildVoidPortrait(def, PAUSE_VOID_PORTRAIT_PX, window.devicePixelRatio || 1) : null
+  },
+  () => props.defId,
+)
 const wornPct = computed(() => Math.round(props.worn * 100))
 
 /** Punkte für die Wesen dahinter, gedeckelt — bei zwei Dutzend wäre eine volle
@@ -114,6 +129,7 @@ const dashOffset = computed(() => {
       '--pvc-dial': `${PAUSE_STAR_DIAL_PX}px`,
       '--pvc-gap': `${PAUSE_STAR_DIAL_GAP_PX}px`,
       '--pvc-circ': PAUSE_STAR_RING_CIRCUMFERENCE,
+      '--pvc-portrait': `${PAUSE_VOID_PORTRAIT_PX}px`,
     }"
     :title="`${name} — ${secs}s until it reaches the sun`"
   >
@@ -143,23 +159,11 @@ const dashOffset = computed(() => {
 
     <!-- Was kommt -->
     <div class="pvc-body">
-      <!-- Das Wesen selbst — kein Icon, sondern dasselbe Bild, das draussen im
-           Schlund steht. Es liegt HINTER dem Text und läuft nach links ins
-           Dunkel aus, statt als eigene Spalte neben ihm zu stehen: nebeneinander
-           blieben von 208 px nur 56 für die Schrift, und „The Unmaking" wurde
-           zu „The Un…". So bekommt das Bild mehr Fläche als vorher UND der Name
-           seine volle Breite. Die kleinen Wesen haben kein Bild (sie sind
-           gestaltlos), für sie steht der gezeichnete Schlund. -->
+      <!-- Der Riss selbst, HINTER dem Text und nach links ins Dunkel
+           auslaufend: als eigene Spalte blieben von 208 px nur 56 für die
+           Schrift, und „The Unmaking" wurde zu „The Un…". -->
       <div class="pvc-art" aria-hidden="true">
-        <img
-          v-if="dweller"
-          :src="dweller"
-          alt=""
-          class="pvc-art__img"
-          draggable="false"
-          @dragstart.prevent
-        />
-        <span v-else class="pvc-art__maw"></span>
+        <span ref="artEl" class="pvc-art__body"></span>
         <span class="pvc-art__veil"></span>
       </div>
 
@@ -322,28 +326,19 @@ const dashOffset = computed(() => {
   pointer-events: none;
 }
 
-.pvc-art__img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 62% 30%;
-  transform: scale(1.12);
-  opacity: 0.9;
-}
-
-/* Die kleinen Wesen sind gestaltlos — für sie steht der Schlund selbst. */
-.pvc-art__maw {
+.pvc-art__body {
   position: absolute;
   top: 50%;
-  right: 14%;
-  width: 54%;
-  height: 62%;
-  border-radius: 50%;
-  transform: translateY(-50%) rotate(-14deg);
-  background: radial-gradient(ellipse, #05030a 0%, #0b0616 55%, transparent 100%);
-  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--pvc-color) 65%, transparent);
+  right: 6%;
+  width: var(--pvc-portrait);
+  height: var(--pvc-portrait);
+  transform: translateY(-50%);
+}
+
+.pvc-art__body :deep(canvas) {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* Der Verlauf nach links ist der Grund, warum der Text lesbar bleibt: er ist

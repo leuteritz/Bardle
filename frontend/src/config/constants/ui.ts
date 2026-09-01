@@ -124,6 +124,9 @@ export const HUD_CARD_COLUMN_MAX_H = 420
  * flachste Referenz (Full HD, ~1000 px Viewport).
  */
 export const HUD_CARD_COLUMN_MAX_STAGE_FRAC = 0.45
+/** Kantenlänge, in der ein Körperporträt für die Bühne einer Karte gebaut wird —
+ *  die Bühne misst 35–55 px, es wird immer herunterskaliert. */
+export const HUD_CARD_PORTRAIT_PX = 56
 
 export const HEADER_MATERIALS_GRID_COLUMNS = 5
 
@@ -998,6 +1001,46 @@ export const HERALD_ARM_DELAY_MS = 1_500
 /** Accent color (r,g,b) per herald kind; rank-ups pull from RANK_TIER_COLORS. */
 export const HERALD_ACCENT_WARP = '150, 120, 255'
 export const HERALD_ACCENT_CHAMPION = '232, 192, 64'
+
+// ── Die Ankunft in einem neuen Universum ────────────────────────────────
+// Die einzige Zeremonie, die vier Ablesungen neben zwei Textzeilen traegt.
+// Sie ist deshalb die laengste und die breiteste — beides in Zahlen hier,
+// die Form bleibt die eine `.hb` aus HeraldBanner.
+
+/**
+ * Standzeit der Ankunft.
+ *
+ * Deutlich ueber HERALD_DISPLAY_MS (2000): dort steht eine Zeile, hier stehen
+ * Universumsnummer, Vorsehungsname samt Domaene und zwei Ablesungen mit
+ * Beschriftung. Wer weniger gibt, zeigt vier Zahlen, die niemand liest.
+ */
+export const HERALD_ARRIVAL_HOLD_MS = 5200
+
+/**
+ * Die Breite der Ankunft, je Groessenstufe — dieselben drei Staende, die
+ * `.hb` ohnehin fuehrt (Standard, `max-height: 1100px`, `min-height: 1600px`).
+ *
+ * Sie steht als Konstante und nicht bloss im CSS, weil sie ZWEI Zonen teilt:
+ * links Medaillon und Text, rechts die Ablesungen. Gegenueber der normalen
+ * Zeremonie kommt genau deren Spalte dazu.
+ */
+/**
+ * Kantenlaenge der Universumsscheibe im Medaillonplatz der Ankunft.
+ *
+ * Sie liegt zwischen den beiden Staenden, die der Firmament-Reiter fuehrt (34
+ * in der Leiste, 46 im Kopfband) und dem Herzstueck der Buehne — gross genug,
+ * dass ihre Drehung sichtbar ist, klein genug, dass die Karte nicht kippt.
+ * `--hb-visual` deckelt sie im flachen Viewport ohnehin nicht: die Scheibe ist
+ * ein Canvas mit fester Kante, kein mitwachsender Kasten.
+ */
+export const HERALD_ARRIVAL_DISC_PX = 72
+
+export const HERALD_ARRIVAL_MIN_W = 'clamp(420px, 38vw, 680px)'
+export const HERALD_ARRIVAL_MAX_W = 'min(820px, 56vw)'
+export const HERALD_ARRIVAL_MIN_W_FLAT = 'clamp(360px, 32vw, 540px)'
+export const HERALD_ARRIVAL_MAX_W_FLAT = 'min(660px, 50vw)'
+export const HERALD_ARRIVAL_MIN_W_TALL = 'clamp(680px, 38vw, 860px)'
+export const HERALD_ARRIVAL_MAX_W_TALL = 'min(980px, 56vw)'
 
 // ── Herold-Quittungen: die Nebenspur ──────────────────────────────────────────
 // Alles, was der Spieler AUSGELÖST hat, statt es erreicht zu haben. Kompakte

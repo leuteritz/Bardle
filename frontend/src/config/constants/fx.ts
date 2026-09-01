@@ -60,6 +60,16 @@ export const HYPERSPACE_FLASH_AT_MS = 2000
 export const HYPERSPACE_FADEOUT_AT_MS = 2500
 /** Alles zurück auf Ruhezustand. */
 export const HYPERSPACE_END_AT_MS = 3500
+/**
+ * Abstand zwischen dem Reset (bei HYPERSPACE_ANIM_START_MS) und der
+ * Ankunfts-Zeremonie des Herolds.
+ *
+ * Der Herold liegt auf z-index 9700, dieses Overlay auf 9999 mit deckendem
+ * Grund — eine Ansage im Weissblitz laeuft unsichtbar ab. 1000 ms decken die
+ * Strecke bis HYPERSPACE_END_AT_MS, die restlichen 400 zeigen die nackte
+ * Buehne, bevor die Karte aufgeht.
+ */
+export const HYPERSPACE_ARRIVAL_HERALD_DELAY_MS = 1400
 
 /** Streuung der Chime-Funken um ihren Sollwinkel, als Anteil des Winkelschritts. */
 export const CHIME_BURST_ANGLE_JITTER = 0.6
@@ -387,3 +397,17 @@ export const CHIME_BURST_DURATION_MS = 650 // burst fly-out + fade (also cleanup
 export const CHIME_BURST_DIST_MIN_FACTOR = 1.1 // min travel distance (× sun radius)
 export const CHIME_BURST_DIST_MAX_FACTOR = 2.0 // max travel distance (× sun radius)
 export const CHIME_BURST_SIZE_FACTOR = 0.45 // mini-chime size (× sun radius)
+
+// ── Körper im Sonnenlicht (utils/fx/spaceBody.ts) ───────────────────────────
+// Die EINE Werkzeugkiste, mit der Drifter, Landfall und Void ihre Körper
+// rastern.
+/** Kantenlänge der Rauschkachel, die alle Motive teilen — EINMAL je Sitzung. */
+export const SPACE_BODY_NOISE_TILE_PX = 96
+/** Über dpr 2 hinaus rastert niemand einen Unterschied, den man sieht — die
+ *  Fläche wächst aber quadratisch. */
+export const SPACE_BODY_SPRITE_MAX_DPR = 2
+/** Stützpunkte einer unrunden Silhouette. */
+export const SPACE_BODY_LUMPY_POINTS = 13
+/** Kühle Gegenfüllung der Schattenseite: Sternenlicht, kein reines Schwarz. */
+export const SPACE_BODY_AMBIENT_RGB = '88, 112, 160'
+export const SPACE_BODY_AMBIENT_ALPHA = 0.14

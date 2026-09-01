@@ -36,148 +36,25 @@ import {
   LANDFALL_DISTRESS_HEX,
   LANDFALL_HULK_RIBS,
   LANDFALL_LENS_ARCS,
-  LANDFALL_NOISE_TILE_PX,
   LANDFALL_SHOAL_SHARDS,
   LANDFALL_SILHOUETTE_WOBBLE,
   LANDFALL_SPRITE_CACHE_MAX,
-  LANDFALL_SPRITE_MAX_DPR,
   LANDFALL_SPRITE_SPAN,
 } from '@/config/constants'
 import type { LandfallKindId, LandfallMotif } from '@/types'
-
-/* ── Determinismus ────────────────────────────────────────────────────────────
-   Eine Hash-Folge statt eines rng: sie braucht keinen Zustand, ist von der
-   AUFRUFREIHENFOLGE unabhängig und liefert für denselben Index immer dasselbe.
-   Genau darauf kommt es an — ein Zweig, der einen Zug mehr oder weniger tut,
-   verschöbe sonst jeden folgenden Körper.                                     */
-
-/** 0..1 aus zwei ganzen Zahlen. Kein Zustand, keine Reihenfolge. */
-function jitter(a: number, b: number): number {
-  const h = Math.sin(a * 127.1 + b * 311.7) * 43758.5453
-  return h - Math.floor(h)
-}
-
-/** −1..1 — der übliche Fall, wenn etwas um eine Mittellage streuen soll. */
-function sway(a: number, b: number): number {
-  return jitter(a, b) * 2 - 1
-}
-
-/* ── Rauschkachel ─────────────────────────────────────────────────────────────
-   EINMAL je Sitzung gebaut und von allen Motiven geteilt. Ein `putImageData` je
-   Sprite wäre der teuerste Einzelschritt des ganzen Baus; als Muster gefüllt
-   kostet dasselbe Rauschen einen `fill`.                                      */
-
-let noiseTile: HTMLCanvasElement | null = null
-
-function getNoiseTile(): HTMLCanvasElement | null {
-  if (noiseTile) return noiseTile
-  const size = LANDFALL_NOISE_TILE_PX
-  const cv = document.createElement('canvas')
-  cv.width = size
-  cv.height = size
-  const ctx = cv.getContext('2d')
-  if (!ctx) return null
-  const img = ctx.createImageData(size, size)
-  for (let i = 0; i < size * size; i++) {
-    const v = Math.round(jitter(i % size, Math.floor(i / size)) * 255)
-    img.data[i * 4] = v
-    img.data[i * 4 + 1] = v
-    img.data[i * 4 + 2] = v
-    img.data[i * 4 + 3] = 255
-  }
-  ctx.putImageData(img, 0, 0)
-  noiseTile = cv
-  return cv
-}
-
-/** Rauschen über den zuletzt gelegten Pfad — `source-atop`, damit es die
- *  Silhouette nie verlässt. */
-function grain(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  alpha: number,
-): void {
-  const tile = getNoiseTile()
-  if (!tile) return
-  const pattern = ctx.createPattern(tile, 'repeat')
-  if (!pattern) return
-  ctx.save()
-  ctx.globalCompositeOperation = 'source-atop'
-  ctx.globalAlpha = alpha
-  ctx.fillStyle = pattern
-  ctx.fillRect(x - r, y - r, r * 2, r * 2)
-  ctx.restore()
-}
-
-/* ── Silhouetten-Bausteine ──────────────────────────────────────────────────── */
-
-/**
- * Ein unrunder Körper — eine Kartoffel, kein Kreis.
- *
- * Die Unrundheit ist auf `LANDFALL_SILHOUETTE_WOBBLE` gedeckelt: die
- * Trefferfläche ist rund, und was weiter aussteht, nimmt keinen Griff mehr an.
- */
-function lumpyPath(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  seed: number,
-  points = 13,
-): void {
-  ctx.beginPath()
-  for (let i = 0; i <= points; i++) {
-    const a = (i / points) * Math.PI * 2
-    const rr = r * (1 + sway(seed, i) * LANDFALL_SILHOUETTE_WOBBLE)
-    const px = x + Math.cos(a) * rr
-    const py = y + Math.sin(a) * rr
-    if (i === 0) ctx.moveTo(px, py)
-    else ctx.lineTo(px, py)
-  }
-  ctx.closePath()
-}
-
-/** Grundfüllung eines festen Körpers: hell oben links, dunkel unten rechts.
- *  Das ist FORM, nicht Licht — die Sonnenseite macht der Terminator. */
-function bodyFill(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  hi: string,
-  mid: string,
-  low: string,
-): CanvasGradient {
-  const g = ctx.createRadialGradient(x - r * 0.34, y - r * 0.36, r * 0.06, x, y, r * 1.04)
-  g.addColorStop(0, hi)
-  g.addColorStop(0.46, mid)
-  g.addColorStop(1, low)
-  return g
-}
-
-/** Krater: eine dunkle Schale mit hellem Gegenrand. Zwei Bögen, kein Kreis —
- *  eine gefüllte Scheibe läse sich als Fleck, nicht als Vertiefung. */
-function crater(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  edge: string,
-): void {
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.fillStyle = 'rgba(8, 6, 4, 0.42)'
-  ctx.fill()
-  ctx.beginPath()
-  ctx.arc(x, y, r, Math.PI * 0.9, Math.PI * 1.9)
-  ctx.strokeStyle = edge
-  ctx.globalAlpha = 0.34
-  ctx.lineWidth = Math.max(0.6, r * 0.3)
-  ctx.stroke()
-  ctx.globalAlpha = 1
-}
+import {
+  bodyFill,
+  clampSpriteDpr,
+  crater,
+  createSpriteCache,
+  grain,
+  jitter,
+  lumpyPath,
+  newSpriteCanvas,
+  paintTerminator,
+  sway,
+  type BodyPaint,
+} from '@/utils/fx/spaceBody'
 
 /* ── Die sechs Motive ─────────────────────────────────────────────────────────
    Jedes einzeln exportiert, und zwar allein für die Spec: `getContext('2d')`
@@ -185,14 +62,7 @@ function crater(
    und sähe trotzdem grün aus. Geprüft werden stattdessen die ZEICHENBEFEHLE —
    dieselbe Lösung, aus der `paintLandfallMark` exportiert ist.               */
 
-type Paint = (
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  pal: (typeof LANDFALL_BODY_PALETTE)[LandfallKindId],
-  detail: 0 | 1 | 2,
-) => void
+type Paint = BodyPaint<(typeof LANDFALL_BODY_PALETTE)[LandfallKindId]>
 
 /**
  * Chime Reef — ein Schwarm Eistrümmer.
@@ -429,6 +299,16 @@ export const paintDerelicts: Paint = (ctx, x, y, r, pal, detail) => {
     nase()
     ctx.stroke()
 
+    // Albedo-Kante: ohne sie sind drei Rümpfe auf 106 px drei graue Striche.
+    ctx.beginPath()
+    ctx.moveTo(-hl * 0.9, -hw * 0.62)
+    ctx.lineTo(hl * 0.5, -hw * 0.86)
+    ctx.strokeStyle = pal.edge
+    ctx.globalAlpha = 0.55
+    ctx.lineWidth = Math.max(0.6, hw * 0.16)
+    ctx.stroke()
+    ctx.globalAlpha = 1
+
     ctx.restore()
   }
 }
@@ -469,22 +349,15 @@ export function buildLandfallBeacon(
   dpr: number,
 ): HTMLCanvasElement | null {
   if (LANDFALL_BODY_MOTIF[kind] !== 'derelicts') return null
-  const d = Math.max(1, Math.min(dpr, LANDFALL_SPRITE_MAX_DPR))
+  const d = clampSpriteDpr(dpr)
   const key = `beacon|${kind}|${px}|${d}`
   const hit = cache.get(key)
-  if (hit) {
-    cache.delete(key)
-    cache.set(key, hit)
-    return hit
-  }
+  if (hit) return hit
 
   const span = Math.round(px * LANDFALL_SPRITE_SPAN)
-  const cv = document.createElement('canvas')
-  cv.width = Math.max(1, Math.round(span * d))
-  cv.height = Math.max(1, Math.round(span * d))
-  const ctx = cv.getContext('2d')
-  if (!ctx) return null
-  ctx.setTransform(d, 0, 0, d, 0, 0)
+  const made = newSpriteCanvas(span, d)
+  if (!made) return null
+  const { cv, ctx } = made
 
   const at = derelictBeaconAt(px / 2)
   const cx = span / 2 + at.x
@@ -507,10 +380,6 @@ export function buildLandfallBeacon(
   ctx.fill()
 
   cache.set(key, cv)
-  if (cache.size > LANDFALL_SPRITE_CACHE_MAX) {
-    const oldest = cache.keys().next().value
-    if (oldest !== undefined) cache.delete(oldest)
-  }
   return cv
 }
 
@@ -595,7 +464,7 @@ export const paintHulk: Paint = (ctx, x, y, r, pal, detail) => {
 export const paintPlanetoid: Paint = (ctx, x, y, r, pal, detail) => {
   const br = r * 0.72
 
-  lumpyPath(ctx, x, y, br, 5)
+  lumpyPath(ctx, x, y, br, 5, LANDFALL_SILHOUETTE_WOBBLE)
   ctx.fillStyle = bodyFill(ctx, x, y, br, pal.hi, pal.mid, pal.low)
   ctx.fill()
   grain(ctx, x, y, br, 0.13)
@@ -634,7 +503,7 @@ export const paintPlanetoid: Paint = (ctx, x, y, r, pal, detail) => {
 
   // Der geworfene Schatten, gegen die Oberfläche geclippt.
   ctx.save()
-  lumpyPath(ctx, x, y, br, 5)
+  lumpyPath(ctx, x, y, br, 5, LANDFALL_SILHOUETTE_WOBBLE)
   ctx.clip()
   ctx.beginPath()
   ctx.moveTo(x - br * 0.14, baseY)
@@ -704,37 +573,6 @@ export const paintLens: Paint = (ctx, x, y, r, pal, detail) => {
 }
 
 /**
- * Die Sonnenseite — als LETZTER Pass über alles, was das Motiv gemalt hat.
- *
- * `source-atop` ist der Kern der Sache: der Verlauf trifft nur Pixel, die schon
- * da sind. Ein Trümmerschwarm bekommt damit dieselbe Lichtrichtung über elf
- * einzelne Brocken, ohne dass zwischen ihnen etwas dunkler würde — genau das
- * ging schief, solange der Terminator eine runde DOM-Ebene war.
- *
- * Das Licht kommt aus Richtung 0 Grad, also von LINKS. Der Aufrufer dreht den
- * ganzen Sprite auf den Lichtwinkel, den `drifterLightAngleDeg` liefert; damit
- * zeigt die helle Seite immer zur Bühnenmitte, wo die Sonne steht.
- */
-export function paintTerminator(ctx: CanvasRenderingContext2D, span: number, r: number): void {
-  const cx = span / 2
-  const cy = span / 2
-  ctx.save()
-  ctx.globalCompositeOperation = 'source-atop'
-  const g = ctx.createLinearGradient(cx - r, cy, cx + r, cy)
-  // Die Glanzkante liegt schmal am Rand, der Schatten breit dahinter: so sieht
-  // Streiflicht auf einem Körper aus, dessen Sonne weit weg steht.
-  g.addColorStop(0, 'rgba(255, 250, 236, 0.4)')
-  g.addColorStop(0.12, 'rgba(255, 250, 236, 0.12)')
-  g.addColorStop(0.28, 'rgba(255, 250, 236, 0)')
-  g.addColorStop(0.46, 'rgba(4, 3, 2, 0)')
-  g.addColorStop(0.7, 'rgba(4, 3, 2, 0.48)')
-  g.addColorStop(1, 'rgba(4, 3, 2, 0.84)')
-  ctx.fillStyle = g
-  ctx.fillRect(0, 0, span, span)
-  ctx.restore()
-}
-
-/**
  * Motiv → Zeichenzweig, mit Erschöpfungsprüfung.
  *
  * Der `never`-Rest ist der Compile-Zwang, den `paintLandfallMark` NICHT hat:
@@ -766,7 +604,7 @@ export function paintForMotif(motif: LandfallMotif): Paint {
    LRU wie in `galaxyLandmarks.ts`. Es steht immer nur EIN Ort im Bild, aber ein
    Fensterziehen ändert `--lfb-px` und damit den Schlüssel.                    */
 
-const cache = new Map<string, HTMLCanvasElement>()
+const cache = createSpriteCache(LANDFALL_SPRITE_CACHE_MAX)
 
 export function landfallSpriteKey(
   kind: LandfallKindId,
@@ -790,22 +628,15 @@ export function buildLandfallSprite(
   dpr: number,
   detail: 0 | 1 | 2,
 ): HTMLCanvasElement | null {
-  const d = Math.max(1, Math.min(dpr, LANDFALL_SPRITE_MAX_DPR))
+  const d = clampSpriteDpr(dpr)
   const key = landfallSpriteKey(kind, px, d, detail)
   const hit = cache.get(key)
-  if (hit) {
-    cache.delete(key)
-    cache.set(key, hit)
-    return hit
-  }
+  if (hit) return hit
 
   const span = Math.round(px * LANDFALL_SPRITE_SPAN)
-  const cv = document.createElement('canvas')
-  cv.width = Math.max(1, Math.round(span * d))
-  cv.height = Math.max(1, Math.round(span * d))
-  const ctx = cv.getContext('2d')
-  if (!ctx) return null
-  ctx.setTransform(d, 0, 0, d, 0, 0)
+  const made = newSpriteCanvas(span, d)
+  if (!made) return null
+  const { cv, ctx } = made
 
   paintForMotif(LANDFALL_BODY_MOTIF[kind])(
     ctx,
@@ -818,9 +649,5 @@ export function buildLandfallSprite(
   if (LANDFALL_BODY_LIT[kind]) paintTerminator(ctx, span, px / 2)
 
   cache.set(key, cv)
-  if (cache.size > LANDFALL_SPRITE_CACHE_MAX) {
-    const oldest = cache.keys().next().value
-    if (oldest !== undefined) cache.delete(oldest)
-  }
   return cv
 }

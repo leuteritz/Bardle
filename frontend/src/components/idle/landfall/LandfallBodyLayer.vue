@@ -2,7 +2,12 @@
   <div
     v-if="shown"
     class="lfb-layer"
-    :style="{ '--lfb-px': `${bodyPx}px`, '--lfb-span': `${bodyPx * LANDFALL_SPRITE_SPAN}px` }"
+    :style="{
+      '--lfb-px': `${bodyPx}px`,
+      '--lfb-span': `${bodyPx * LANDFALL_SPRITE_SPAN}px`,
+      '--lfb-veil-alpha': stage.veilAlpha,
+      '--lfb-veil-low': stage.veilAlpha * LANDFALL_VEIL_BREATHE_LOW,
+    }"
   >
     <div
       ref="shell"
@@ -100,6 +105,7 @@ import {
 } from '@/utils/orbit/drifterPath'
 import { landfallFlyPointAt, landfallLaneFor, landfallBodyPx } from '@/utils/orbit/landfallPath'
 import { buildLandfallBeacon, buildLandfallSprite } from '@/utils/fx/landfallSprite'
+import { clampSpriteDpr } from '@/utils/fx/spaceBody'
 import {
   LANDFALL_BODY_ABEAM_AT,
   LANDFALL_BODY_ABEAM_MS,
@@ -116,8 +122,8 @@ import {
   LANDFALL_SPIN_PHASE_DEG,
   LANDFALL_SPIN_QUANTIZE_DEG,
   LANDFALL_SPIN_TURN_DEG,
-  LANDFALL_SPRITE_MAX_DPR,
   LANDFALL_SPRITE_SPAN,
+  LANDFALL_VEIL_BREATHE_LOW,
   LANDFALL_VEIL_BREATHE_MS,
   LANDFALL_VEIL_OFFSET_MS,
   ORBIT_SCALE_QUANTIZE_STEPS,
@@ -313,7 +319,7 @@ function refreshField(): void {
 function mountSprite(): void {
   const s = shown.value
   if (!s) return
-  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, LANDFALL_SPRITE_MAX_DPR))
+  const dpr = clampSpriteDpr(window.devicePixelRatio || 1)
   const box = albedoEl.value
   if (box) {
     const sprite = buildLandfallSprite(s.kind, bodyPx.value, dpr, stage.value.detail)
@@ -568,7 +574,7 @@ onUnmounted(() => {
     rgba(150, 142, 128, 0.06) 68%,
     transparent 90%
   );
-  opacity: 0.5;
+  opacity: var(--lfb-veil-alpha);
   animation: lfb-breathe v-bind(veilMs) ease-in-out infinite;
   pointer-events: none;
 }
@@ -704,10 +710,10 @@ onUnmounted(() => {
 @keyframes lfb-breathe {
   0%,
   100% {
-    opacity: 0.36;
+    opacity: var(--lfb-veil-low);
   }
   50% {
-    opacity: 0.7;
+    opacity: var(--lfb-veil-alpha);
   }
 }
 

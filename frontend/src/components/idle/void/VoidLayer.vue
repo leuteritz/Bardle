@@ -66,14 +66,25 @@ import { hexToRgbTriple } from '@/utils/ui/format'
 import { voidPositionAt, voidHitRadius } from '@/utils/orbit/voidPath'
 import { hudFieldMetrics } from '@/utils/ui/hudField'
 import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
-import { getVoidSprite, voidSpriteDrawSize } from '@/utils/fx/voidSprite'
 import {
+  getVoidSpriteSet,
+  voidFlareAlpha,
+  voidSpriteDrawSize,
+  voidWakeEchoes,
+  voidWhorlAngle,
+} from '@/utils/fx/voidSprite'
+import {
+  SPACE_BODY_SPRITE_MAX_DPR,
   VOID_SEAL_BURST_PARTICLES,
   VOID_SEAL_FX_MS,
+  VOID_HIT_FLASH_MS,
   VOID_IMPACT_FX_MS,
   VOID_SEVERITY_COLOR,
   VOID_CONTACT_FLASH_MS,
   VOID_CONTACT_STATE_COLOR,
+  VOID_WAKE_ECHO_ALPHA,
+  VOID_WAKE_ECHO_LAG_MS,
+  VOID_WAKE_ECHO_SCALE,
 } from '@/config/constants'
 import type { VoidContactState, VoidMonster } from '@/types'
 import { gameNow } from '@/utils/game/gameClock'
@@ -89,6 +100,11 @@ const { announce, announceReceipt } = useHerald()
 
 const canvasEl = ref<HTMLCanvasElement>()
 const hasActive = computed(() => active.value.length > 0)
+
+const reducedMotion =
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null
 
 // Kein Aufreissen, solange das Bard-Profil oder ein Star Fight den Idle-Layer
 // deckt: ein Wesen, das niemand sehen kann, liefe ungesehen bis zur Sonne.
@@ -120,7 +136,7 @@ function contactStateOf(m: VoidMonster, now: number): VoidContactState | null {
 function resize(): void {
   const el = canvasEl.value
   if (!el) return
-  dpr = Math.min(2, window.devicePixelRatio || 1)
+  dpr = Math.min(SPACE_BODY_SPRITE_MAX_DPR, window.devicePixelRatio || 1)
   cssW = window.innerWidth
   cssH = window.innerHeight
   el.width = Math.round(cssW * dpr)
@@ -186,13 +202,47 @@ function draw(): void {
     const def = getVoidRift(m.defId)
     if (!def) continue
 
+    const set = getVoidSpriteSet(def, dpr)
+    if (!set) continue
     const pos = voidPositionAt(m, def.sizePx, sunRadius, now, cssW, cssH, insets)
     const size = voidSpriteDrawSize(def.sizePx) * pos.scale
     const half = size / 2
+    const reduced = reducedMotion?.matches ?? false
 
-    // Ein `drawImage` je Wesen — der ganze Körper samt Aura, Zacken und
-    // Bewohner steckt im vorgerenderten Sprite.
-    ctx.drawImage(getVoidSprite(def, dpr), pos.x - half, pos.y - half, size, size)
+    // Spur: Echos des Kerns an früheren Punkten der Bahn — kein Zustand, die
+    // Bahn ist eine reine Funktion der Zeit.
+    const echoes = voidWakeEchoes(def.severity)
+    for (let i = echoes; i >= 1; i--) {
+      const back = voidPositionAt(
+        m,
+        def.sizePx,
+        sunRadius,
+        now - VOID_WAKE_ECHO_LAG_MS * i,
+        cssW,
+        cssH,
+        insets,
+      )
+      const es = voidSpriteDrawSize(def.sizePx) * back.scale * VOID_WAKE_ECHO_SCALE
+      ctx.globalAlpha = VOID_WAKE_ECHO_ALPHA * (1 - i / (echoes + 1))
+      ctx.drawImage(set.core, back.x - es / 2, back.y - es / 2, es, es)
+    }
+    ctx.globalAlpha = 1
+
+    // Kern steht, Wirbel dreht, das Aufflammen kommt erst nahe der Sonne.
+    ctx.drawImage(set.core, pos.x - half, pos.y - half, size, size)
+    ctx.save()
+    ctx.translate(pos.x, pos.y)
+    ctx.rotate(voidWhorlAngle(m, def.severity, now, reduced))
+    ctx.drawImage(set.whorl, -half, -half, size, size)
+    ctx.restore()
+    const flare = voidFlareAlpha(pos.t, now, reduced)
+    if (flare > 0) {
+      ctx.save()
+      ctx.globalAlpha = flare
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.drawImage(set.flare, pos.x - half, pos.y - half, size, size)
+      ctx.restore()
+    }
 
     // Trefferblitz: kurz nach einem Klick liegt ein heller Schleier darüber.
     const hit = lastHits.get(m.uid)
@@ -203,11 +253,11 @@ function draw(): void {
       lastHits.set(m.uid, { hits: m.hitsLanded, at: 0 })
     }
     const flashAge = hit ? now - hit.at : Infinity
-    if (flashAge < 160) {
+    if (flashAge < VOID_HIT_FLASH_MS) {
       ctx.save()
-      ctx.globalAlpha = (1 - flashAge / 160) * 0.55
+      ctx.globalAlpha = (1 - flashAge / VOID_HIT_FLASH_MS) * 0.55
       ctx.globalCompositeOperation = 'lighter'
-      ctx.drawImage(getVoidSprite(def, dpr), pos.x - half, pos.y - half, size, size)
+      ctx.drawImage(set.flare, pos.x - half, pos.y - half, size, size)
       ctx.restore()
     }
 

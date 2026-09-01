@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { BardTabId, ChampionRole } from '@/types'
+import type { ArrivalNotice, BardTabId, ChampionRole } from '@/types'
 
 // Der Typ wohnt in types/ui.ts, damit die Badge-Registry ihn nennen kann, ohne
 // an den Store zu ziehen. Re-Export, weil drei Stellen ihn von hier importieren.
@@ -34,6 +34,11 @@ export const useUiStore = defineStore('ui', () => {
   // leere Bahn zurueck. Nur die NUMMER: auf welcher Bahn sie liegt, steht im
   // Archiv, und dorthin greift der uiStore nicht.
   const pendingFirmamentGalaxy = ref<number | null>(null)
+  // Was der Aufbruch hinterlaesst, bis der Herold es ansagen kann. Es liegt
+  // HIER und nicht im gameStore, weil dieser Store nicht persistiert wird: ein
+  // Reload kann damit keinen Sprung feiern, der lange vorbei ist — derselbe
+  // Fall, gegen den HERALD_ARM_DELAY_MS mit einer Frist arbeitet.
+  const pendingArrival = ref<ArrivalNotice | null>(null)
   const hoveredChampionRole = ref<ChampionRole | null>(null)
   // Stern-ID des laufenden Kampfs, wenn der Team-Tab aus dem StarFight-Modal
   // heraus geöffnet wurde — solange gesetzt (und der Stern lebt), zeigt das
@@ -178,6 +183,21 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   /**
+   * Der Aufbruch ist vollzogen — die Ankunft darf angesagt werden.
+   *
+   * Gesetzt in `executePrestigeReset`, weil dort und nur dort der Ertrag des
+   * beendeten Durchlaufs noch bekannt ist: `pendingMeeps` haengt an
+   * `chimesForNextUniverse`, und das steht eine Zeile spaeter auf null.
+   */
+  function noteArrival(universe: number, meeps: number) {
+    pendingArrival.value = { universe, meeps }
+  }
+
+  function clearPendingArrival() {
+    pendingArrival.value = null
+  }
+
+  /**
    * Der Weg vom Prestige-Knopf im Header ins Firmament — dorthin, wo der
    * Aufbruch als BILD steht.
    *
@@ -253,6 +273,9 @@ export const useUiStore = defineStore('ui', () => {
     clearPendingVoyageTarget,
     firmamentTabReturnPending,
     pendingFirmamentGalaxy,
+    pendingArrival,
+    noteArrival,
+    clearPendingArrival,
     requestOpenVoyagesFromFirmament,
     returnToFirmamentTab,
     clearPendingFirmamentGalaxy,

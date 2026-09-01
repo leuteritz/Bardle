@@ -20,7 +20,34 @@ import type { HeraldDelta, HeraldReceiptKind } from '@/types'
  * konstruktiv nie überlappen. Sie wissen im Code nichts voneinander: eine
  * Quittung fasst `queue`/`current` nie an, eine Zeremonie `receipts` nie.
  */
-export type HeraldKind = 'warp' | 'champion' | 'rankup' | 'chronicle' | 'omen' | 'mission'
+export type HeraldKind =
+  | 'warp'
+  | 'champion'
+  | 'rankup'
+  | 'chronicle'
+  | 'omen'
+  | 'mission'
+  /** Ankunft in einem neuen Universum — die einzige Zeremonie mit Ablesungen. */
+  | 'universe'
+
+/**
+ * Eine Ablesung neben dem Text, mit Richtung.
+ *
+ * Bewusst generisch getypt und nicht als `ProvidenceEffectLine`: der Herold
+ * kennt „zwei Zahlen mit Richtung“, nicht „Vorsehung“. Sonst haenge eine
+ * Anzeigemechanik an einem Progression-Typ.
+ *
+ * `positive` kommt aus der QUELLE, nie aus dem Vorzeichen — eine Achse mit
+ * `higherIsBetter: false` (Building cost, Expedition time) traegt als Gewinn
+ * ein Minus.
+ */
+export interface HeraldReadout {
+  /** Die Zahl, gross: `+145%`. */
+  value: string
+  /** Wovon sie handelt, klein darunter: `Champion DPS`. */
+  label: string
+  positive: boolean
+}
 
 /** Fully-resolved presentation payload — the composable stays purely mechanical
  *  (queue + preempt + timer); the caller supplies everything the banner shows. */
@@ -42,6 +69,16 @@ export interface HeraldPayload {
   round?: boolean
   /** How long this banner holds, in ms. Defaults to HERALD_DISPLAY_MS. */
   holdMs?: number
+  /**
+   * Die Scheibe DIESES Universums als Bild statt Medaillon oder Portrait.
+   *
+   * Nur die Nummer, nicht die Komponente: `HeraldBanner` liegt unter `idle/`
+   * und soll nicht in den Firmament-Ordner greifen. Wer sie zeichnet, ist
+   * `HeraldOverlay` über den `visual`-Slot.
+   */
+  universe?: number
+  /** Zwei Ablesungen rechts vom Text. Ohne sie nimmt die Spalte keine Breite. */
+  readouts?: HeraldReadout[]
 }
 
 /**

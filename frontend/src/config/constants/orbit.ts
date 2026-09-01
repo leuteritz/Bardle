@@ -2,7 +2,7 @@
 // Sterne, ihr Verhalten hinter der Sonne, die Cooldown-Ringe und die Drifter,
 // die durch das Bild fliegen.
 
-import type { ChampionRole, RoleAbilityMetric, RoleKitAbility } from '@/types'
+import type { ChampionRole, DrifterBodyKind, RoleAbilityMetric, RoleKitAbility } from '@/types'
 import { SUN_RADIUS } from '@/config/constants/sun'
 import {
   ROLE_TOP_SHIELD_REBUILD_MS,
@@ -862,14 +862,71 @@ export const DRIFTER_RING_SPIN_MS = 9000
 export const DRIFTER_DUST_LENGTH_SCALE = 1.5
 export const DRIFTER_DUST_WIDTH_SCALE = 2.4
 
-/** Grundtakt der Eigendrehung eines Körpers in ms, bei `motion` = 1. Kleinere
- *  Rangstufen drehen langsamer: die Dauer wird durch `motion` geteilt. */
+/** Umlaufzeit der freien Eigendrehung eines SELBSTLEUCHTENDEN Körpers in ms,
+ *  bei `motion` = 1. Kleinere Rangstufen drehen langsamer. */
 export const DRIFTER_TUMBLE_MS = 14_000
 
-/** Neigung der Taumelachse als statisches `scaleY` am Elternteil. Ein Körper,
- *  der sich um die Bildachse dreht, sieht aus wie ein Zeiger; erst die
- *  Verkürzung macht daraus eine Achse, die schräg im Raum steht. */
-export const DRIFTER_TUMBLE_TILT = 0.78
+// ── Der Körper als Sprite (utils/fx/drifterSprite.ts) ─────────────────────────
+/** Kantenlänge des Sprites als Vielfaches von `sizePx` — Finnen, Jets und
+ *  Solarflügel ragen über den Körper hinaus. */
+export const DRIFTER_SPRITE_SPAN = 1.5
+/** Neun Typen in Flug-, Karten- und Admin-Grösse. */
+export const DRIFTER_SPRITE_CACHE_MAX = 24
+/** Wiegen eines beleuchteten Körpers um den Lichtwinkel, in Grad. Gedeckelt wie
+ *  `LANDFALL_SPIN_TURN_DEG`: die Sonnenseite ist im Sprite eingebacken, jede
+ *  Eigendrehung verdreht sie um genau ihren Betrag. */
+export const DRIFTER_ROCK_DEG = 16
+/** Takt des Wiegens bei `motion` = 1. */
+export const DRIFTER_ROCK_MS = 5200
+/** Rasterung der Sprite-Drehung in Grad. */
+export const DRIFTER_TURN_QUANTIZE_DEG = 1
+/** Unrundheit des Meteoroiden. */
+export const DRIFTER_SILHOUETTE_WOBBLE = 0.14
+/** Das echte Meep-Artwork, und wie gross es in seiner Blase steht. */
+export const DRIFTER_MEEP_ART = '/img/BardAbilities/BardMeep-128.png'
+export const DRIFTER_MEEP_ART_SCALE = 0.74
+/** Wer eine Oberfläche hat, trägt einen Terminator. Plasma, Linse und Magnetar
+ *  leuchten selbst; das Meep-Artwork wird nicht angeschnitten. */
+/* prettier-ignore */
+export const DRIFTER_BODY_LIT: Record<DrifterBodyKind, boolean> = {
+  chime: true, shard: true, meep: false, probe: true, surge: false,
+  vortex: false, beacon: true, pulse: false, leviathan: true,
+}
+/** Wer frei dreht — nur Selbstleuchter, ein eingebackenes Licht drehte mit. */
+/* prettier-ignore */
+export const DRIFTER_BODY_SPIN: Record<DrifterBodyKind, boolean> = {
+  chime: false, shard: false, meep: false, probe: false, surge: false,
+  vortex: true, beacon: false, pulse: true, leviathan: false,
+}
+/** Materialtöne je Körper — unbunt, die Signaturfarbe bleibt der Akzent. */
+/* prettier-ignore */
+export const DRIFTER_BODY_PALETTE: Record<
+  DrifterBodyKind,
+  { hi: string; mid: string; low: string; edge: string }
+> = {
+  chime:     { hi: '#e9dcb4', mid: '#b8a478', low: '#3a3020', edge: '#f2ecd6' },
+  shard:     { hi: '#8a7a6a', mid: '#524638', low: '#1c1610', edge: '#a89888' },
+  meep:      { hi: '#dbe6f0', mid: '#8fa3b8', low: '#2e3a48', edge: '#eef4fa' },
+  probe:     { hi: '#c8cdd2', mid: '#7c848c', low: '#2a2e34', edge: '#e8ecf0' },
+  surge:     { hi: '#fff4d6', mid: '#d6c09a', low: '#5a4626', edge: '#fff8e8' },
+  vortex:    { hi: '#e6e2f2', mid: '#8f86ad', low: '#07060c', edge: '#c9bff0' },
+  beacon:    { hi: '#d2c8b8', mid: '#7a6e60', low: '#2a2420', edge: '#ece4d6' },
+  pulse:     { hi: '#fbeaf0', mid: '#c9a0b4', low: '#3a2030', edge: '#ffffff' },
+  leviathan: { hi: '#a6bcb8', mid: '#4f6864', low: '#182220', edge: '#c4d6d2' },
+}
+/** Teile je Motiv — Grundzahl, `detail` legt zu. */
+export const DRIFTER_CHIME_FACETS = 5
+export const DRIFTER_SHARD_CRATERS = 3
+export const DRIFTER_SHARD_VEINS = 3
+export const DRIFTER_PROBE_CELLS = 4
+export const DRIFTER_SURGE_LOOPS = 2
+export const DRIFTER_VORTEX_ARCS = 3
+export const DRIFTER_LEVIATHAN_RIBS = 5
+/** Länge einer Keule des Bojen-Leuchtfeuers als Vielfaches der Körperkante. */
+export const DRIFTER_BEACON_LOBE_LEN = 1.35
+/** Goldfolie und Solarzellen der Sonde — Materialfarben, kein Akzent. */
+export const DRIFTER_PROBE_FOIL_HEX = '#c9a34e'
+export const DRIFTER_PROBE_CELL_HEX = '#243a66'
 
 /** Infokarte oben links: wie lange die Meldung nach dem Einsammeln bzw. nach
  *  einem verpassten Drifter noch stehen bleibt, bevor sie ausblendet. */

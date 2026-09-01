@@ -412,6 +412,16 @@ export const UNIVERSE_TOOLTIP_IMAGES = {
 } as const
 
 /**
+ * Der Ton, in dem ein Meep im Log und auf einer Quittung steht.
+ *
+ * Er stand als blanker Hexwert in `config/ui/eventLog.ts` und wurde gebraucht,
+ * sobald der Aufbruch seinen Ertrag quittiert — zwei Fassungen derselben Farbe
+ * laufen auseinander, ohne dass es jemandem auffaellt. Dasselbe Muster wie
+ * MISSION_ACCENT_HEX und LANDFALL_ACCENT_HEX.
+ */
+export const MEEP_ACCENT_HEX = '#6ee7b7'
+
+/**
  * Das volle Meep-Artwork — für die beiden Stellen, an denen es GROSS steht:
  * die Header-Kachel und die Passive-Kachel der Fähigkeitenleiste (dort auf 4K
  * über 70px hoch). Für die 256er-Stufe gibt es keine Datei, und beide Stellen

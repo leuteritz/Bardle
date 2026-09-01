@@ -1,5 +1,13 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import {
+  HERALD_ARRIVAL_MIN_W,
+  HERALD_ARRIVAL_MAX_W,
+  HERALD_ARRIVAL_MIN_W_FLAT,
+  HERALD_ARRIVAL_MAX_W_FLAT,
+  HERALD_ARRIVAL_MIN_W_TALL,
+  HERALD_ARRIVAL_MAX_W_TALL,
+} from '@/config/constants'
 
 /**
  * Die EINE Form, in der sich der Herold meldet.
@@ -35,28 +43,43 @@ defineProps<{
   holdMs?: number
   /** Neustart-Schlüssel der Uhr; bei einer Quittung `receipt.seq`. */
   lineKey?: number
+  /**
+   * Breiter Zuschnitt für eine Zeremonie, die neben dem Text eine
+   * Ablesungsspalte trägt (die Ankunft in einem Universum).
+   *
+   * Ein PROP und kein Inline-Style von außen: `--hb-min-w`/`--hb-max-w` stehen
+   * in beiden Media-Blöcken, und ein Inline-Wert überstimmt sie alle — die
+   * Karte spränge auf Full HD über den Viewport hinaus.
+   */
+  wide?: boolean
 }>()
 </script>
 
 <template>
-  <div class="hb" :class="`hb--${size}`" :style="{ '--ac': accent }">
+  <div class="hb" :class="[`hb--${size}`, { 'hb--wide': wide }]" :style="{ '--ac': accent }">
     <div class="hb-rule hb-rule--top" />
     <div class="hb-sweep" />
 
     <div class="hb-visual">
-      <img
-        v-if="imageSrc"
-        :src="imageSrc"
-        alt=""
-        class="hb-img"
-        :class="round ? 'hb-img--round' : 'hb-img--emblem'"
-      />
-      <span v-else-if="icon" class="hb-medallion">
-        <!-- Größe kommt aus dem CSS, nicht aus diesen Attributen: `--hb-visual`
-             skaliert das Medaillon, das Glyph folgt ihm anteilig. Die Attribute
-             sind nur der Wert, den Iconify vor dem ersten Layout einsetzt. -->
-        <Icon :icon="icon" width="40" height="40" class="hb-icon" />
-      </span>
+      <!-- Ein Slot MIT Fallback, kein Import: die Universumsscheibe wohnt unter
+           `bardProfil/firmament/`, und diese Karte soll nicht dorthin greifen.
+           Wer sie zeichnet, ist der Aufrufer — für alle anderen bleibt alles,
+           wie es war. `--hb-visual` gilt in beiden Fällen. -->
+      <slot name="visual">
+        <img
+          v-if="imageSrc"
+          :src="imageSrc"
+          alt=""
+          class="hb-img"
+          :class="round ? 'hb-img--round' : 'hb-img--emblem'"
+        />
+        <span v-else-if="icon" class="hb-medallion">
+          <!-- Größe kommt aus dem CSS, nicht aus diesen Attributen: `--hb-visual`
+               skaliert das Medaillon, das Glyph folgt ihm anteilig. Die Attribute
+               sind nur der Wert, den Iconify vor dem ersten Layout einsetzt. -->
+          <Icon :icon="icon" width="40" height="40" class="hb-icon" />
+        </span>
+      </slot>
     </div>
 
     <div class="hb-text">
@@ -169,6 +192,20 @@ defineProps<{
   --hb-alpha: 0.985;
   --hb-rule-h: 2px;
   --hb-lines: 2;
+}
+
+/* Der breite Zuschnitt. Er verstellt AUSSCHLIESSLICH die Breite — Polsterung,
+ * Medaillon und Schriftgrößen bleiben die der Zeremonie, sonst wären es drei
+ * Maßstäbe statt zweier. Was er kauft, ist die Ablesungsspalte rechts.
+ *
+ * `.hb.hb--wide` statt `.hb--wide`: Spezifität 0,2,0 gegen 0,1,0, damit der
+ * Modifier in JEDEM Media-Block gewinnt, unabhängig von der Reihenfolge —
+ * dieselbe Vorsichtsmaßnahme wie beim `--receipt` darüber. Und die Werte
+ * kommen per `v-bind` aus den Konstanten, nicht als Literale: sie stehen in
+ * drei Blöcken, und eine vergessene Stelle fällt nur im Browser auf. */
+.hb.hb--wide {
+  --hb-min-w: v-bind(HERALD_ARRIVAL_MIN_W);
+  --hb-max-w: v-bind(HERALD_ARRIVAL_MAX_W);
 }
 
 /* ── Die beiden Haarlinien ───────────────────────────────────────────────────
@@ -395,6 +432,11 @@ defineProps<{
     --hb-max-w: min(520px, 40vw);
   }
 
+  .hb.hb--wide {
+    --hb-min-w: v-bind(HERALD_ARRIVAL_MIN_W_FLAT);
+    --hb-max-w: v-bind(HERALD_ARRIVAL_MAX_W_FLAT);
+  }
+
   /* Enger als im großen Maßstab — bei 32 px reißt 2 px die Wörter auseinander. */
   .hb .hb-headline {
     letter-spacing: 1.5px;
@@ -422,6 +464,11 @@ defineProps<{
     --hb-eyebrow: clamp(14px, 0.85vw, 18px);
     --hb-sub: clamp(17px, 1.05vw, 22px);
     --hb-min-w: clamp(560px, 30vw, 720px);
+  }
+
+  .hb.hb--wide {
+    --hb-min-w: v-bind(HERALD_ARRIVAL_MIN_W_TALL);
+    --hb-max-w: v-bind(HERALD_ARRIVAL_MAX_W_TALL);
   }
 
   .hb.hb--receipt {

@@ -108,6 +108,8 @@ export interface DrifterFxStage {
   auraLayers: number
   /** Amplitude of the body's own motion, 0..1. Scales durations and travel. */
   motion: number
+  /** Extra sprite passes the body is rastered with. */
+  detail: 0 | 1 | 2
   /** Debris motes orbiting the body. */
   motes: number
   /** Grazing highlight along the sunlit limb. */
@@ -131,9 +133,8 @@ export interface DrifterFxStage {
   herald: boolean
 }
 
-/** Which CSS body `DrifterBody.vue` builds for a drifter in flight. Every type
- *  has its own silhouette — the flying object is drawn entirely in CSS, the
- *  icon/artwork only ever shows up in the HUD (info card, buff chip, herald). */
+/** Which sprite motif `drifterSprite.ts` paints for a drifter in flight. Every
+ *  type has its own body; the icon only ever shows up in the HUD chips. */
 export type DrifterBodyKind =
   | 'chime'
   | 'shard'
@@ -155,7 +156,7 @@ export interface DrifterDef {
   weight: number
   /** Iconify `game-icons:*` name — the chip/card icon. NOT the flying body. */
   icon: string
-  /** CSS silhouette drawn while the drifter crosses the orbit view. */
+  /** Sprite motif drawn while the drifter crosses the orbit view. */
   body: DrifterBodyKind
   /** Optional image shown instead of the icon in the HUD (chime / meep art). */
   image?: string
@@ -229,6 +230,10 @@ export interface DrifterOrbitStrike {
 /** Wie schwer ein Wesen wiegt — steuert Spawn-Uhr, Grösse, Tempo und Einschlag. */
 export type VoidRiftSeverity = 'lesser' | 'greater' | 'abyssal'
 
+/** Was im Schlund gezeichnet wird: Glutpunkte tief drin, oder Kristallspitzen,
+ *  die herausragen. Gezeichnet, kein Bild — der Void hat keine Gestalt. */
+export type VoidDwellerMotif = 'embers' | 'spires'
+
 /**
  * Die Achsen, an denen der Void zieht bzw. seine Beute zahlt. Bewusst DIESELBE
  * Liste wie bei Drifter und Omen — der Void ist ein Multiplikator wie jeder
@@ -255,14 +260,12 @@ export interface VoidRiftDef {
   /** Kantenlänge des Wesens in px, wenn es an der Sonne ankommt. */
   sizePx: number
   /**
-   * Das Bild im Schlund — oder `undefined` für ein blosses Loch.
+   * Das Motiv im Schlund — oder `undefined` für ein blosses Loch.
    *
    * Bewusst nicht für jeden Typ: die kleinen Wesen bleiben gestaltlose Risse,
-   * und genau dadurch heisst „da ist etwas drin" etwas. Der Void bekommt so
-   * eine Eskalation, ohne seine Gestaltlosigkeit ganz aufzugeben — man sieht
-   * nie das ganze Wesen, immer nur den Ausschnitt, den der Riss freigibt.
+   * und genau dadurch heisst „da ist etwas drin" etwas.
    */
-  dweller?: string
+  dweller?: VoidDwellerMotif
   /** Eine Zeile, die sagt, was es kostet — steht auf der HUD-Karte. */
   drainLine: string
   /** Eine Zeile, die sagt, was das Erlegen einbringt. */

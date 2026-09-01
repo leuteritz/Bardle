@@ -24,7 +24,7 @@ import type {
   VoidContactState,
   VoidPlanetRider,
 } from '@/types'
-import type { VoidRiftSeverity } from '@/types'
+import type { VoidDwellerMotif, VoidRiftSeverity } from '@/types'
 
 // ── Freischaltung ───────────────────────────────────────────────────────────
 
@@ -601,9 +601,57 @@ export const VOID_BOON_CHIME_MIN_CLICKS = 40
 export const VOID_FIELD_TOP_PX = 130
 export const VOID_FIELD_BOTTOM_PX = 165
 
-/** Zacken des Körpers. Ungerade, damit die Silhouette nicht spiegelsymmetrisch
- *  wird und sich als Bruch statt als Ornament liest. */
-export const VOID_TENDRIL_COUNT = 7
+// ── Der Körper: ein Gravitationsriss in drei Ebenen (utils/fx/voidSprite.ts) ──
+// `core` steht, `whorl` dreht, `flare` kommt erst nahe der Sonne dazu.
+/** Kantenlänge des Sprites als Vielfaches von `sizePx` — Hof und Arme ragen über
+ *  den Körper hinaus. */
+export const VOID_SPRITE_SPAN = 2.15
+/** Fünf Typen mal drei Ebenen plus Porträts in zwei Grössen. */
+export const VOID_SPRITE_CACHE_MAX = 32
+/** Die gezeichneten Bewohner-Motive — lesser trägt keines. */
+export const VOID_DWELLER_MOTIFS: readonly VoidDwellerMotif[] = ['embers', 'spires']
+/** Einfall-Filamente je Schwere, und wie viele Umläufe ein Arm macht. */
+export const VOID_WHORL_ARMS: Record<VoidRiftSeverity, number> = {
+  lesser: 2,
+  greater: 3,
+  abyssal: 3,
+}
+export const VOID_WHORL_TURNS = 0.7
+/** Umlaufzeit des Wirbels in Spielzeit — die schweren drehen träger. */
+export const VOID_WHORL_SPIN_MS: Record<VoidRiftSeverity, number> = {
+  lesser: 9_000,
+  greater: 12_000,
+  abyssal: 16_000,
+}
+/** Gezeitentrümmer auf den Armen — erst ab greater. */
+export const VOID_DEBRIS_CHUNKS: Record<VoidRiftSeverity, number> = {
+  lesser: 0,
+  greater: 4,
+  abyssal: 7,
+}
+/** Spur aus Echos des Kerns hinter dem Wesen. Der Abstand muss zur
+ *  Anfluggeschwindigkeit passen (rund 13 px/s auf Full HD). */
+export const VOID_WAKE_ECHOES: Record<VoidRiftSeverity, number> = {
+  lesser: 0,
+  greater: 3,
+  abyssal: 3,
+}
+export const VOID_WAKE_ECHO_LAG_MS = 1100
+export const VOID_WAKE_ECHO_SCALE = 0.55
+export const VOID_WAKE_ECHO_ALPHA = 0.22
+/** Photonenring: hell auf der zugewandten, dunkel auf der abgewandten Seite. */
+export const VOID_RING_DOPPLER_BRIGHT = 0.95
+export const VOID_RING_DOPPLER_DIM = 0.3
+/** Das Aufflammen nahe der Sonne: Deckel, und die Pulsperiode von weit nach nah. */
+export const VOID_FLARE_ALPHA_MAX = 0.6
+export const VOID_FLARE_PULSE_MS_FAR = 1400
+export const VOID_FLARE_PULSE_MS_NEAR = 520
+/** Wie lange der helle Schleier nach einem Klick steht. */
+export const VOID_HIT_FLASH_MS = 160
+/** Winkel des Wirbels im stehenden Porträt (Karten), und wie viel Aufflammen es
+ *  mitbekommt — auf 35 px ist ein schwarzer Kreis sonst nur ein Loch. */
+export const VOID_PORTRAIT_WHORL_RAD = 0.6
+export const VOID_PORTRAIT_FLARE_ALPHA = 0.55
 
 /** Nachlaufzeiten der beiden Ausgänge, bevor der Effekt endet. */
 export const VOID_SEAL_FX_MS = 900
@@ -639,6 +687,8 @@ export const ADMIN_VOID_SWARM_SIZE = VOID_MAX_CONCURRENT
 /** Breite der Void-Karte in der „Awaiting your return"-Reihe. Etwas schmaler
  *  als eine Stern-Karte: sie trägt eine Zeile weniger. */
 export const PAUSE_VOID_CARD_WIDTH = 208
+/** Kantenlänge des Porträts hinter dem Text der Pause-Karte. */
+export const PAUSE_VOID_PORTRAIT_PX = 96
 
 /** Ab so vielen Restsekunden bis zum Einschlag schlägt die Karte auf Warnrot
  *  um. Grosszügiger als bei den Sternen (dort 10 s), weil hier nicht ein

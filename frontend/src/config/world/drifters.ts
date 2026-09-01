@@ -5,8 +5,8 @@ import type { DrifterBuffEffects, DrifterDef, DrifterFxStage, DrifterRarity } fr
  * clicked. Everything about a type lives here: silhouette, flight behavior,
  * instant reward and timed buff. The store only rolls, flies and settles them.
  *
- * `body` picks the CSS silhouette DrifterBody.vue draws in flight — the icon
- * below it is the HUD glyph (info card, buff chip, herald), never the object.
+ * `body` picks the sprite motif drifterSprite.ts paints in flight — the icon
+ * below it is the HUD glyph (buff chip, herald), never the object.
  *
  * Balance intent, cheapest to richest:
  *  - common    → keeps the screen alive, small but always welcome
@@ -201,10 +201,10 @@ export function getDrifter(id: string): DrifterDef | undefined {
  */
 /* prettier-ignore */
 export const DRIFTER_FX_STAGES: Record<DrifterRarity, DrifterFxStage> = {
-  common:    { rarity: 'common',    auraAlpha: 0.30, auraLayers: 1, motion: 0.35, motes: 0, flow: 0, rim: true, pulse: false, dust: false, ring: false, herald: false },
-  uncommon:  { rarity: 'uncommon',  auraAlpha: 0.40, auraLayers: 1, motion: 0.50, motes: 2, flow: 1, rim: true, pulse: true,  dust: false, ring: false, herald: false },
-  rare:      { rarity: 'rare',      auraAlpha: 0.55, auraLayers: 2, motion: 0.70, motes: 4, flow: 2, rim: true, pulse: true,  dust: true,  ring: false, herald: false },
-  legendary: { rarity: 'legendary', auraAlpha: 0.75, auraLayers: 3, motion: 1.00, motes: 7, flow: 3, rim: true, pulse: true,  dust: true,  ring: true,  herald: true  },
+  common:    { rarity: 'common',    auraAlpha: 0.30, auraLayers: 1, motion: 0.35, detail: 0, motes: 0, flow: 0, rim: true, pulse: false, dust: false, ring: false, herald: false },
+  uncommon:  { rarity: 'uncommon',  auraAlpha: 0.40, auraLayers: 1, motion: 0.50, detail: 1, motes: 2, flow: 1, rim: true, pulse: true,  dust: false, ring: false, herald: false },
+  rare:      { rarity: 'rare',      auraAlpha: 0.55, auraLayers: 2, motion: 0.70, detail: 1, motes: 4, flow: 2, rim: true, pulse: true,  dust: true,  ring: false, herald: false },
+  legendary: { rarity: 'legendary', auraAlpha: 0.75, auraLayers: 3, motion: 1.00, detail: 2, motes: 7, flow: 3, rim: true, pulse: true,  dust: true,  ring: true,  herald: true  },
 }
 
 /** The stage a drifter flies at. */

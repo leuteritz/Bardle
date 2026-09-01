@@ -273,7 +273,7 @@ export const LANDFALL_FLYBY_THETA_MAX = 1.1
 
 /** Deckkraft an den Enden der Sehne, und die Kurve dorthin. Der Ort verschwindet
  *  nicht ganz — er ist weit weg, nicht abwesend. */
-export const LANDFALL_BODY_ALPHA_MIN = 0.2
+export const LANDFALL_BODY_ALPHA_MIN = 0.32
 export const LANDFALL_BODY_ALPHA_EASE = 2.2
 
 /**
@@ -297,12 +297,6 @@ export const LANDFALL_BODY_SCALE_MAX = 1.7
  * die Chime-Klickfläche, bei Sonnenphase 5 volle 560 px.
  */
 export const LANDFALL_CENTER_CLEARANCE = 0.38
-
-/** Reichweite des Scheins als Vielfaches der Rautenkante, und der Takt, in dem
- *  er atmet. Animiert wird ausschliesslich seine Deckkraft — der Verlauf selbst
- *  steht still (Performance-Regel 2). */
-export const LANDFALL_BODY_HALO_SPAN = 1.75
-export const LANDFALL_BODY_BREATHE_MS = 3400
 
 /** Trefferfläche über die Rautenkante hinaus. Dieselbe Zahl wie beim Drifter —
  *  eine Raute hat spitze Ecken und trifft sich schlechter als eine Scheibe. */
@@ -420,21 +414,24 @@ export const LANDFALL_PRESENCE_STAGES: Record<LandfallPresence, LandfallFxStage>
   uncommon: {
     presence: 'uncommon',
     veilLayers: 1,
-    veilAlpha: 0.2,
+    veilAlpha: 0.5,
     motes: 0,
     detail: 1,
     herald: false,
   },
-  rare: { presence: 'rare', veilLayers: 1, veilAlpha: 0.28, motes: 3, detail: 2, herald: false },
+  rare: { presence: 'rare', veilLayers: 1, veilAlpha: 0.6, motes: 3, detail: 2, herald: false },
   singular: {
     presence: 'singular',
     veilLayers: 2,
-    veilAlpha: 0.36,
+    veilAlpha: 0.7,
     motes: 5,
     detail: 2,
     herald: true,
   },
 }
+
+/** Tiefpunkt der Schleier-Atmung als Anteil von `veilAlpha`. */
+export const LANDFALL_VEIL_BREATHE_LOW = 0.5
 
 /**
  * Ab welcher ECHTEN Kantenlänge eine Zierebene überhaupt gezeigt wird.
@@ -466,10 +463,6 @@ export const LANDFALL_SPRITE_SPAN = 1.42
  * 1,42 und dpr 2 rund 560 px im Quadrat.
  */
 export const LANDFALL_SPRITE_CACHE_MAX = 4
-
-/** Über dpr 2 hinaus rastert niemand einen Unterschied, den man sieht — die
- *  Fläche wächst aber quadratisch. Dieselbe Deckelung wie im Admin-Panel. */
-export const LANDFALL_SPRITE_MAX_DPR = 2
 
 /**
  * Wie weit sich der Körper über sein ganzes Fenster ZUSÄTZLICH dreht.
@@ -505,11 +498,6 @@ export const LANDFALL_SPIN_PHASE_DEG = 47
  *  `transform` kann rastern — dieselbe Überlegung wie
  *  `ORBIT_SCALE_QUANTIZE_STEPS` und `DRIFTER_LIGHT_QUANTIZE_DEG`. */
 export const LANDFALL_SPIN_QUANTIZE_DEG = 1
-
-/** Kantenlänge der Rauschkachel, die alle Motive teilen. Sie wird EINMAL je
- *  Sitzung gebaut und per `createPattern` gefüllt; ein `putImageData` je Sprite
- *  wäre der teuerste Einzelschritt des Baus. */
-export const LANDFALL_NOISE_TILE_PX = 96
 
 /**
  * Wie viele Teile jedes Motiv trägt — Grundzahl, `detail` legt zu.

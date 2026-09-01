@@ -3,7 +3,12 @@
 // haengen am selben useEventLog-Composable und lagen vorher als zwei
 // Ein-Zweck-Dateien nebeneinander.
 import { useEventLog, type GameEventType } from '@/composables/ui/useEventLog'
-import { ROLE_COLORS, MISSION_ACCENT_HEX, LANDFALL_ACCENT_HEX } from '@/config/constants'
+import {
+  ROLE_COLORS,
+  MISSION_ACCENT_HEX,
+  LANDFALL_ACCENT_HEX,
+  MEEP_ACCENT_HEX,
+} from '@/config/constants'
 
 export const typeColor: Record<GameEventType, string> = {
   support: ROLE_COLORS.support,
@@ -13,7 +18,7 @@ export const typeColor: Record<GameEventType, string> = {
   jungle: ROLE_COLORS.jungle,
   planet: '#7ec8e3',
   augment: '#c084fc',
-  meep: '#6ee7b7',
+  meep: MEEP_ACCENT_HEX,
   chime: '#fde68a',
   combat: '#fb923c',
   prestige: '#818cf8',
@@ -211,4 +216,23 @@ export function logMissionClaimed(missionName: string, rewardLine: string, chapt
 export function logLandfallPassed(name: string, gain: string, touched: boolean) {
   const { addEvent } = useEventLog()
   addEvent(touched ? `${name} harvested — ${gain}` : `${name} drifted past — ${gain}`, 'landfall')
+}
+
+/**
+ * Ein Durchlauf ist zu Ende, der naechste beginnt — die einzige Zeile im Spiel,
+ * die den Typ `prestige` benutzt. Er stand seit jeher in der Union und in der
+ * Farbtabelle und war nie geschrieben: das groesste Ereignis eines Spielstands
+ * hinterliess keine Spur im Log.
+ *
+ * Die Vorsehung steht MIT in der Zeile, nicht in einer zweiten daneben. Sie ist
+ * keine eigene Nachricht — sie sagt, unter welchen Vorzeichen genau dieser
+ * Aufbruch steht, und getrennt haette man zwei Zeilen, deren Zusammenhang man
+ * sich merken muss.
+ */
+export function logUniverseReached(label: string, providenceName: string | null) {
+  const { addEvent } = useEventLog()
+  addEvent(
+    providenceName ? `Departed to ${label} — under ${providenceName}` : `Departed to ${label}`,
+    'prestige',
+  )
 }

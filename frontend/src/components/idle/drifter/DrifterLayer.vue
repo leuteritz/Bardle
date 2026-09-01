@@ -73,6 +73,7 @@ import {
 import { hudFieldMetrics } from '@/utils/ui/hudField'
 import { hexToRgbTriple, hexToRgba } from '@/utils/ui/format'
 import DrifterObject from './DrifterObject.vue'
+import { prewarmDrifterArt } from '@/utils/fx/drifterSprite'
 import OrbitStrikeWave from './OrbitStrikeWave.vue'
 import {
   DRIFTER_EDGE_PING_LEAD_MS,
@@ -356,6 +357,7 @@ watch(
 )
 
 onMounted(() => {
+  prewarmDrifterArt()
   refreshField()
   window.addEventListener('resize', refreshField)
   frame = requestAnimationFrame(tick)

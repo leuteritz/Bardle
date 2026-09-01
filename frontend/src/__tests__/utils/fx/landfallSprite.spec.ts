@@ -9,7 +9,6 @@ import {
   paintPlanetoid,
   paintShoal,
   landfallSpriteKey,
-  paintTerminator,
 } from '@/utils/fx/landfallSprite'
 import { LANDFALLS } from '@/config/world/landfalls'
 import {
@@ -24,66 +23,7 @@ import {
 } from '@/config/constants'
 import type { LandfallKindId, LandfallMotif } from '@/types'
 
-/**
- * Ein Canvas-Kontext, der nur mitschreibt.
- *
- * jsdom liefert für `getContext('2d')` `null` — ein rasternder Vergleich prüfte
- * dort nichts und sähe trotzdem grün aus. Dieselbe Lösung wie in
- * `galaxyLandmarks.spec.ts`, nur um die Befehle erweitert, die ein Körper
- * braucht: Verläufe, Muster, Transformationen, Clip.
- *
- * Aufgezeichnet werden Befehl und gerundete Koordinaten. Das trennt zwei Motive
- * zuverlässig, ohne einen Pixel zu brauchen — und es fängt genau den Fehler, den
- * es hier zu fangen gibt: ein Motiv ohne Zeichenzweig malt nichts und fällt sonst
- * niemandem auf.
- */
-function recordingCtx(): { ctx: CanvasRenderingContext2D; ops: string[] } {
-  const ops: string[] = []
-  const num = (v: number) => Math.round(v * 100) / 100
-  const rec =
-    (name: string) =>
-    (...args: unknown[]) => {
-      ops.push(
-        `${name}(${args.map((a) => (typeof a === 'number' ? num(a) : String(a))).join(',')})`,
-      )
-    }
-  const gradient = { addColorStop: rec('addColorStop') }
-  const ctx = {
-    beginPath: rec('beginPath'),
-    closePath: rec('closePath'),
-    moveTo: rec('moveTo'),
-    lineTo: rec('lineTo'),
-    arc: rec('arc'),
-    ellipse: rec('ellipse'),
-    rect: rec('rect'),
-    fillRect: rec('fillRect'),
-    quadraticCurveTo: rec('quadraticCurveTo'),
-    fill: rec('fill'),
-    stroke: rec('stroke'),
-    clip: rec('clip'),
-    save: rec('save'),
-    restore: rec('restore'),
-    translate: rec('translate'),
-    rotate: rec('rotate'),
-    createLinearGradient: (...a: unknown[]) => {
-      rec('createLinearGradient')(...a)
-      return gradient
-    },
-    createRadialGradient: (...a: unknown[]) => {
-      rec('createRadialGradient')(...a)
-      return gradient
-    },
-    createPattern: () => null,
-    lineWidth: 1,
-    lineCap: 'butt',
-    lineJoin: 'miter',
-    globalAlpha: 1,
-    globalCompositeOperation: 'source-over',
-    fillStyle: '',
-    strokeStyle: '',
-  } as unknown as CanvasRenderingContext2D
-  return { ctx, ops }
-}
+import { recordingCtx } from '../../helpers/recordingCtx'
 
 const MOTIFS: { motif: LandfallMotif; paint: ReturnType<typeof paintForMotif> }[] = [
   { motif: 'shoal', paint: paintShoal },
@@ -330,19 +270,4 @@ describe('Landfall-Körper — die Präsenzleiter', () => {
     expect(LANDFALL_SPIN_TURN_DEG).toBeLessThanOrEqual(40)
   })
 
-  it('der Terminator trifft nur, was schon gemalt ist', () => {
-    // `source-atop` ist der Kern: über den Lücken eines Trümmerschwarms darf
-    // nichts liegen. Als runde DOM-Ebene lag dort eine dunkle SCHEIBE im leeren
-    // Raum — der Grund, aus dem der Terminator ins Sprite gewandert ist.
-    const { ctx, ops } = recordingCtx()
-    const span = 200
-    paintTerminator(ctx, span, 58)
-    expect(ops.some((o) => o.startsWith('createLinearGradient('))).toBe(true)
-    expect(ops.some((o) => o.startsWith('fillRect('))).toBe(true)
-    // Der Verlauf trägt beide Enden: Glanzkante und Kernschatten.
-    const stops = ops.filter((o) => o.startsWith('addColorStop('))
-    expect(stops.length).toBeGreaterThanOrEqual(4)
-    expect(stops.some((s) => s.includes('255, 250, 236'))).toBe(true)
-    expect(stops.some((s) => s.includes('4, 3, 2'))).toBe(true)
-  })
 })

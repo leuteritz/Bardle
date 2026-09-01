@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
@@ -9,7 +9,13 @@ import { getLandfall } from '@/config/world/landfalls'
 import { logLandfallPassed } from '@/config/ui/eventLog'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { landfallAcceptsTap } from '@/utils/game/landfalls'
-import { LANDFALL_ACCENT_HEX } from '@/config/constants'
+import { useBodyPortrait } from '@/composables/ui/useBodyPortrait'
+import { buildLandfallSprite } from '@/utils/fx/landfallSprite'
+import {
+  HUD_CARD_PORTRAIT_PX,
+  LANDFALL_ACCENT_HEX,
+  LANDFALL_PRESENCE_STAGES,
+} from '@/config/constants'
 
 /**
  * Der Ort, an dem das Schiff GERADE vorbeikommt — als Fokus der Kartenspalte.
@@ -76,6 +82,22 @@ const takesTaps = computed(() =>
 const remaining = computed(() => 1 - galaxyStore.landfallProgress)
 
 const fullTitle = computed(() => (def.value ? `${def.value.name} — ${def.value.blurb}` : ''))
+
+// Die Bühne zeigt den Ort selbst — derselbe Sprite, der draussen vorbeizieht.
+const stageEl = ref<HTMLElement | null>(null)
+useBodyPortrait(
+  stageEl,
+  () =>
+    def.value
+      ? buildLandfallSprite(
+          def.value.id,
+          HUD_CARD_PORTRAIT_PX,
+          window.devicePixelRatio || 1,
+          LANDFALL_PRESENCE_STAGES[def.value.presence].detail,
+        )
+      : null,
+  () => def.value?.id,
+)
 
 /**
  * Die drei Angebote eines Cairn. Sie stehen IN der Karte und nicht in einem
@@ -147,11 +169,17 @@ watch(
       <span v-else-if="def.tapCap" class="lhc-taps lhc-taps--spent">✓</span>
     </div>
 
-    <!-- Zeile 2: was bis jetzt zusammengekommen ist. Der Sockel fällt auch dem
-         zu, der nicht klickt — deshalb steht hier nie eine 0. -->
-    <div v-if="!offers.length" class="hc-read">
-      <span class="hc-read__val">{{ readout.value }}</span>
-      <span class="hc-read__unit">{{ readout.unit }}</span>
+    <!-- Zeile 2: der Ort als Porträt, daneben was bis jetzt zusammengekommen
+         ist. Der Sockel fällt auch dem zu, der nicht klickt — deshalb steht
+         hier nie eine 0. Am Cairn weicht die Zeile den drei Angeboten. -->
+    <div v-if="!offers.length" class="hc-main">
+      <span ref="stageEl" class="hc-stage lhc-stage" aria-hidden="true"></span>
+      <span class="hc-body">
+        <span class="hc-read">
+          <span class="hc-read__val">{{ readout.value }}</span>
+          <span class="hc-read__unit">{{ readout.unit }}</span>
+        </span>
+      </span>
     </div>
 
     <!-- Der Cairn: drei Zeilen, eine wird genommen. -->
@@ -192,6 +220,16 @@ watch(
    überfährt, sieht es an der anderen. */
 :global(body.landfall-body-hover) .lhc {
   border-left-color: #cfe6dd;
+}
+
+.lhc-stage {
+  overflow: hidden;
+}
+
+.lhc-stage :deep(canvas) {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .lhc-taps {

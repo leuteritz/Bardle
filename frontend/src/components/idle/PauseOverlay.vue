@@ -355,7 +355,7 @@
                     :duration-ms="voidThreat.durationMs"
                     :name="voidThreat.name"
                     :color="voidThreat.color"
-                    :dweller="voidThreat.dweller"
+                    :def-id="voidThreat.defId"
                     :count="voidThreat.count"
                     :worn="voidThreat.worn"
                   />
@@ -1003,8 +1003,8 @@ interface PauseVoidThreat {
   durationMs: number
   name: string
   color: string
-  /** Bild des Bewohners — fehlt bei den kleinen, gestaltlosen Wesen. */
-  dweller?: string
+  /** Welcher Typ — die Karte baut daraus ihr Porträt. */
+  defId: string
   count: number
   worn: number
 }
@@ -1023,7 +1023,7 @@ function buildVoidThreat(): PauseVoidThreat | null {
     durationMs: lead.travelMs,
     name: def.name,
     color: VOID_SEVERITY_COLOR[def.severity] ?? def.color,
-    dweller: def.dweller,
+    defId: def.id,
     count: voidStore.active.length,
     // Auf ganze Prozent gerundet: der Balken ist wenige Pixel breit, und der
     // Schlüssel unten schlüge sonst bei jedem Abtasttakt an.

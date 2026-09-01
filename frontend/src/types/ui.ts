@@ -593,3 +593,17 @@ export interface BadgeSeedResult {
  * nicht gibt.
  */
 export type AbilityBarDock = 'free' | 'rail' | 'pause'
+
+/**
+ * Was ein Aufbruch hinterlässt, damit die Ankunft ihn ansagen kann.
+ *
+ * Sie liegt im uiStore, weil der NICHT persistiert wird: ein Reload kann damit
+ * keine Zeremonie für einen Sprung feiern, der Stunden her ist. Die Vorsehung
+ * steht bewusst nicht darin — `providenceStore.active` gilt schon seit dem
+ * Klick und liefe als zweite Kopie auseinander.
+ */
+export interface ArrivalNotice {
+  universe: number
+  /** Der Ertrag des beendeten Durchlaufs, ausgezahlt in `executePrestigeReset`. */
+  meeps: number
+}
