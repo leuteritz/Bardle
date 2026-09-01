@@ -103,20 +103,21 @@ function mapWidth(vw: number, vh: number): number {
  * hängt oben an `--level-badge-bottom`, das der Header zur Laufzeit aus einem
  * gerenderten Rechteck setzt. Dieselben Zahlen wie in `voyagesAtlasLayout.spec.ts`.
  *
- * Frisch aufgenommen mit dem Fleet-Band (Kopfleiste 126). Die Tabelle davor war
- * ihrerseits veraltet: sie nannte 657,6 für Full HD, gemessen wurde jetzt ein
- * Atlas von 779,56 — mit der alten 102er Leiste wären das 677,56 gewesen. Im
- * Browser gegengeprüft, dass die Atlashöhe NICHT am Spielstand hängt:
+ * Neu aufgenommen, seit die Kopfleiste mit dem Firmament-Band auf EINE Aussenhöhe
+ * gebunden ist (126 → 112): je 14 px mehr Bühne, und die Galaxie hat sie geerbt.
+ * Gegengeprüft ist dabei mehr als die Zahl — der Firmament-Reiter misst auf allen
+ * vier Auflösungen DIESELBE Bühnenhöhe, was beide Bänder als gleich hoch belegt.
+ * Im Browser gegengeprüft, dass die Atlashöhe NICHT am Spielstand hängt:
  * `--level-badge-bottom` misst 133,2 px bei Level 1 wie bei Level 100.
  *
  * Die Fit-Box verliert durch das Band NICHTS — `VOYAGE_MAP_STATS_BAND_H` ist um
  * dieselben 24 gefallen, die die Kopfleiste bekommen hat.
  */
 const STAGE_HEIGHT: Record<number, number> = {
-  1080: 656.6,
-  1200: 757.4,
-  1440: 935,
-  2160: 1644.2,
+  1080: 670.6,
+  1200: 771.4,
+  1440: 949,
+  2160: 1658.2,
 }
 
 const DESKTOPS: Array<[string, number, number]> = [
@@ -147,9 +148,8 @@ describe('voyages fleet strip', () => {
   })
 
   it('behält auf Full HD Spielraum über dem Bandboden', () => {
-    // Full HD bindet: 653,6 gegen den Boden 596 sind 57,6 px. Die Zahl steht
-    // hier, damit sie jemand liest, BEVOR er der Kopfleiste Höhe gibt — Bühne
-    // und Datenband sind für das Band um dieselben 24 gefallen, ein weiterer
+    // Full HD bindet: 670,6 gegen den Boden 596 sind 74,6 px. Die Zahl steht
+    // hier, damit sie jemand liest, BEVOR er der Kopfleiste Höhe gibt — ein
     // Zuschlag käme von der Galaxie.
     expect(STAGE_HEIGHT[1080] - VOYAGE_MAP_STATS_MIN_H).toBeGreaterThanOrEqual(30)
   })
@@ -193,15 +193,19 @@ describe('voyages fleet strip', () => {
    * und in `voyagesAtlasLayout.spec.ts` als gemessene Bühnenhöhe steckt.
    *
    * Die 3 gehören dazu: `.ecb` trägt einen `border-bottom: 3px`, und
-   * `getBoundingClientRect()` misst ihn mit. Im Browser gegengeprüft — `.etc-bar`
-   * misst vorher wie nachher 102.
+   * `getBoundingClientRect()` misst ihn mit.
+   *
+   * Und die 112 gehören nicht diesem Reiter allein: `FIRMAMENT_CREST_BAND_H`
+   * trägt dieselbe Zahl. Beide Reiter legen ein Band über eine grosse Bühne,
+   * und bei 126 gegen 108 sprang deren Oberkante beim Wechsel um 18 px. Wer
+   * eine der beiden anfasst, fasst beide an.
    *
    * Ändert jemand die Summe, sind beide Tabellen still falsch: die Suite bliebe
    * grün und das Datenband verschwände trotzdem im Browser. Wer hier vorbeikommt,
    * misst neu (`docs/playwright.md`) und führt beide Tabellen nach.
    */
-  it('hält die Kopfleiste bei 126 — die Aussenhöhe steckt in STAGE_HEIGHT', () => {
-    expect(VOYAGE_COMMAND_BAR_H + 3).toBe(126)
+  it('hält die Kopfleiste bei 112 — die Aussenhöhe steckt in STAGE_HEIGHT', () => {
+    expect(VOYAGE_COMMAND_BAR_H + 3).toBe(112)
   })
 
   /**

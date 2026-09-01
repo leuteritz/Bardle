@@ -893,8 +893,13 @@ export const VOYAGE_MARK_REFUSE_MS = 420
    Höhe, die die Klickflächen der Häfen trägt.
 
    Gebunden ist die AUSSENHÖHE: `VOYAGE_COMMAND_BAR_H` plus der 3-px-Rahmen von
-   `.ecb` ergeben 126 — genau sie steckt in den STAGE_HEIGHT-Tabellen beider
+   `.ecb` ergeben 112 — genau sie steckt in den STAGE_HEIGHT-Tabellen beider
    Layout-Specs. `voyagesFleetLayout.spec.ts` bindet das.
+
+   Und 112 ist keine Zahl dieses Reiters allein: das Kopfband des Firmaments
+   misst dieselbe (`FIRMAMENT_CREST_BAND_H`). Beide Reiter legen ein Band über
+   eine grosse Bühne, und bei 126 gegen 108 sprang deren Oberkante beim Wechsel
+   um 18 px. Wer eine der beiden anfasst, fasst beide an.
 
    Woher die 24 px gegenüber der vorigen Fassung (102) kommen: NICHT von der
    Galaxie, sondern vom Statsband der Karte (96 → 72). Weil
@@ -907,8 +912,13 @@ export const VOYAGE_MARK_REFUSE_MS = 420
 /** GESETZTE Höhe des Bandes — sie hängt per `v-bind` an `.ecb-main`, damit die
  *  Summe nicht driften kann, und der Ladeschleier dieselben Maße kennt. Eine
  *  Konstante, die beschreibt statt zu bestimmen, driftet unbemerkt: die Specs
- *  lesen Zahlen, kein DOM. */
-export const VOYAGE_COMMAND_BAR_H = 123
+ *  lesen Zahlen, kein DOM.
+ *
+ *  109 + 3 Rahmen = 112, dieselbe Aussenhöhe wie das Firmament-Band. Die 14 px
+ *  gegenüber der vorigen Fassung (123) zahlt NICHT der Inhalt der Karte — ihre
+ *  drei Zeilen stehen unverändert —, sondern ihre Polsterung: `_CARD_PAD_Y`
+ *  7 → 2 und `_CARD_INSET_Y` 8 → 6. Die Galaxie GEWINNT die 14. */
+export const VOYAGE_COMMAND_BAR_H = 109
 
 /** DREIzeilige Karte: Crew, Lohn, Ablesung. Sie ist von 168 auf 210 gewachsen,
  *  damit Lohn, Loot, Dauer und Chance nebeneinander stehen statt um eine
@@ -917,10 +927,13 @@ export const VOYAGE_COMMAND_BAR_H = 123
 export const VOYAGE_FLEET_CARD_MIN_W = 210
 export const VOYAGE_FLEET_CARD_GAP = 6
 /** Kartenhöhe. Sie steht neben der Bandhöhe, weil beide gekoppelt sind — eine
- *  davon frei im CSS wäre die zweite Quelle für dasselbe Budget. */
-export const VOYAGE_FLEET_CARD_H = 109
+ *  davon frei im CSS wäre die zweite Quelle für dasselbe Budget.
+ *
+ *  105 + 2 x 2 = 109 füllt das Band wieder exakt; die Karte ist die BINDENDE
+ *  Last darin, nicht die Aktionskachel (96). */
+export const VOYAGE_FLEET_CARD_H = 105
 /** Luft über und unter der Karte — bindet die Kopplung in der Spec. */
-export const VOYAGE_FLEET_CARD_PAD_Y = 7
+export const VOYAGE_FLEET_CARD_PAD_Y = 2
 /**
  * So viele Karten müssen auf Full HD OHNE Scrollen stehen — der Preis der
  * breiteren Karte: 4 x 210 + 3 x 6 = 858 in 874 px Bandbreite. Weil die
@@ -948,12 +961,17 @@ export const VOYAGE_FLEET_SEAT_GAP = 4
  * dieselbe Spanne wie die Uhr, nur ungenauer.
  *
  * `voyagesFleetLayout.spec.ts` bindet die Summe: 34 + 28 + 20 + 2 x 4 = 90 in
- * 91 px Innenmaß.
+ * 91 px Innenmaß. Die 91 kommen seit dem Gleichstand der beiden Kopfleisten aus
+ * `105 − 2 x 6 − 2` statt aus `109 − 2 x 8 − 2` — dieselbe eine Reserve, nur
+ * anders bezahlt: die Karte gab 4 px Höhe ab und holte sie sich aus ihrem
+ * eigenen senkrechten Innenabstand zurück. Keine der drei Zeilen hat nachgegeben,
+ * und keine kann es: Portrait 34 ist zweimal dieselbe Wand, die Lohnzeile trägt
+ * 24-px-Schrift, die Ablesung 17.
  */
 export const VOYAGE_FLEET_PAY_H = 28
 export const VOYAGE_FLEET_READ_H = 20
 export const VOYAGE_FLEET_CARD_ROW_GAP = 4
-export const VOYAGE_FLEET_CARD_INSET_Y = 8
+export const VOYAGE_FLEET_CARD_INSET_Y = 6
 export const VOYAGE_FLEET_CARD_INSET_X = 9
 /** Rahmen quer und hoch: links 3 (Zustandskante) + rechts 1, oben/unten je 1. */
 export const VOYAGE_FLEET_CARD_BORDER_X = 4
@@ -1065,7 +1083,7 @@ export const VOYAGE_RANK_CLOCK_W = 103
  * war der einzige Platz, an dem sie ohne Kosten wachsen konnten — Breite nimmt
  * der Kartenspur weg, Höhe niemandem.
  *
- *   96 + 2 x 13 Luft = 122 in ein Band von VOYAGE_COMMAND_BAR_H (123)
+ *   96 + 2 x 6.5 Luft = 109 in ein Band von VOYAGE_COMMAND_BAR_H (109)
  *   2 x 66 + Lücke 10 = 142 = VOYAGE_FLEET_ASIDE_W
  *
  * Vorher deckelte der Chip sie bei 66: `Chip 50.5 + Lücke 6 + Knopf 66 = 122.5`.

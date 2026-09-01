@@ -570,13 +570,13 @@ describe('Firmament — das Abflugportal', () => {
   /* Gemessen wie `CONTENT_HEIGHT`: wer `_RING_H_RATIO` anfasst, sieht hier
      sofort, was er allen vier Aufloesungen antut — und wer das KOPFBAND hoeher
      macht ebenso, denn der Ring haengt an der Buehnenhoehe. Die Tabelle stand
-     einmal auf 131/150/184/260; die 16 px, die das Band von 92 auf 108 gewachsen
-     ist, kosten sie genau diese drei Pixel. Auf 4K greift ohnehin der Deckel. */
+     einmal auf 131/150/184/260; die 20 px, die das Band von 92 auf 112 gewachsen
+     ist, kosten sie diese vier. Auf 4K greift ohnehin der Deckel. */
   it('haelt die Ringgroesse je Zielaufloesung', () => {
     const table: Array<[string, number, number]> = [
-      ['Full HD', 1080, 128],
+      ['Full HD', 1080, 127],
       ['WUXGA', 1200, 147],
-      ['2K', 1440, 181],
+      ['2K', 1440, 180],
       ['4K', 2160, 260],
     ]
     for (const [name, vh, want] of table) {

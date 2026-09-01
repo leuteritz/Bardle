@@ -106,20 +106,19 @@ function zones(vw: number, vh: number, folded = false) {
  * den der Reiter nicht mehr trägt. Die Bühne hat ihn geerbt und gibt einen Teil
  * davon als Datenband wieder aus.
  *
- * Mit dem Fleet-Band neu aufgenommen (Kopfleiste 126). Die Zahlen davor waren
- * unabhängig davon veraltet — siehe die Herleitung in
- * `voyagesFleetLayout.spec.ts`. Die Fit-Box verliert durch das Band NICHTS:
- * `VOYAGE_MAP_STATS_BAND_H` ist um dieselben 24 gefallen (96 → 72). *
+ * Neu aufgenommen, seit die Kopfleiste mit dem Firmament-Band auf EINE Aussenhöhe
+ * gebunden ist (126 → 112): je 14 px mehr Bühne für die Galaxie. Die Herleitung
+ * steht in `voyagesFleetLayout.spec.ts`.
  * Je 3 px hoeher, seit die Goldlinie des Profilmodals gefallen ist: `.rp-accent-bar`
  * war ein Flex-Kind im Fluss, kein Pseudoelement — was sie belegte, hat die Buehne
- * geerbt. Nachgemessen auf allen vier Aufloesungen, die Kopfleiste steht unveraendert
- * bei 126.
+ * geerbt. Nachgemessen auf allen vier Aufloesungen, und der Firmament-Reiter meldet
+ * dieselben Zahlen — der Beleg, dass beide Baender gleich hoch sind.
  */
 const STAGE_HEIGHT: Record<number, number> = {
-  1080: 656.6,
-  1200: 757.4,
-  1440: 935,
-  2160: 1644.2,
+  1080: 670.6,
+  1200: 771.4,
+  1440: 949,
+  2160: 1658.2,
 }
 
 function stageHeight(vh: number): number {

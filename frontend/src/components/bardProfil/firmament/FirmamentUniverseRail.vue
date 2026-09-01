@@ -156,9 +156,9 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  /* Seitlich an die Konstante gebunden — `UNIVERSE_RAIL_LIST_PAD` (24) spiegelt
-     die 10 oben und 14 unten, und die Spec rechnet mit genau diesen Zahlen. */
-  padding: 10px v-bind(padX) 14px;
+  /* Seitlich an die Konstante gebunden — `UNIVERSE_RAIL_LIST_PAD` (20) spiegelt
+     die 8 oben und 12 unten, und die Spec rechnet mit genau diesen Zahlen. */
+  padding: 8px v-bind(padX) 12px;
   display: flex;
   flex-direction: column;
   gap: v-bind(rowGap);

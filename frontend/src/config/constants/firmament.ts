@@ -12,15 +12,25 @@
 /**
  * Aussenhoehe des Kopfbands. Haengt per `v-bind` am Element, nicht nur im CSS.
  *
- * 108, nicht mehr: Band, Leiste und Buehne teilen EIN Budget, und auf Full HD
- * misst der Reiterinhalt 782,6 px, von denen die grosse Stufe der Leiste 669
- * braucht. Bei 92 lagen 21,6 px Luft dazwischen, bei 108 noch 5,6 — wer weiter
- * anhebt, laesst die zehn Universumszeilen rollen. Und die Fit-Box der Bahn
- * klemmt auf allen vier Zielaufloesungen an der HOEHE: die 16 px kosten sie
- * 8 px Radius (315,3 -> 307,3), womit der Knotenabstand bei vierzig Knoten von
- * 29,2 auf 28,5 faellt — die Trefferflaeche misst 26.
+ * 112, und die Zahl gehoert nicht diesem Reiter allein: die Voyages-Kopfleiste
+ * misst dieselbe (`VOYAGE_COMMAND_BAR_H` 109 + 3 Rahmen). Beide legen ein Band
+ * ueber eine grosse Buehne, und bei 108 gegen 126 sprang deren Oberkante beim
+ * Reiterwechsel um 18 px. 112 ist der einzige Treffpunkt, an dem beide ohne
+ * Substanzverlust ankommen — tiefer traegt die Voyages-Leiste ihre Fleet-Karte
+ * nicht, hoeher rollt hier die Universumsleiste.
+ *
+ * Denn Band, Leiste und Buehne teilen EIN Budget: auf Full HD misst der
+ * Reiterinhalt 782,6 px, von denen die grosse Stufe der Leiste 665 braucht. Es
+ * bleiben 5,6 px Luft — dieselben wie bei 108, weil `UNIVERSE_RAIL_LIST_PAD`
+ * die vier Pixel bezahlt hat (24 -> 20). Wer weiter anhebt, laesst die zehn
+ * Universumszeilen rollen.
+ *
+ * Und die Fit-Box der Bahn klemmt auf allen vier Zielaufloesungen an der HOEHE:
+ * die 20 px, um die das Band seit seiner 92er Fassung gewachsen ist, kosten sie
+ * 10 px Radius (315,3 -> 305,3), womit der Knotenabstand bei vierzig Knoten von
+ * 29,2 auf 28,3 faellt — die Trefferflaeche misst 26.
  */
-export const FIRMAMENT_CREST_BAND_H = 108
+export const FIRMAMENT_CREST_BAND_H = 112
 /** BASIS der Wappenzone im Kopfband, nicht ihre Breite: sie waechst in den
  *  Rest, den die vier Ablesungen uebriglassen. Als feste Breite ellipsierte
  *  „Runeterra Prime" auf Full HD, waehrend daneben 314 px leer standen. Als
@@ -250,7 +260,7 @@ export const FIRMAMENT_LOST_COLOR = '#cc6050'
 export const UNIVERSE_DISC_SPIN_BASE_PX = 34
 /** Kachel in der Universumsleiste. Der Deckel ist der Haushalt der Leiste, den
  *  `firmamentLayout.spec.ts` bindet: bei 10 Zeilen sind auf Full HD im Vollbild
- *  674,6 px zu haben, belegt sind 669. */
+ *  670,6 px zu haben, belegt sind 665. */
 export const UNIVERSE_DISC_RAIL_PX = 46
 /** Dieselbe Kachel im FLACHEN Fenster. Das Canvas wird per CSS herunterskaliert
  *  — es traegt seine volle Aufloesung und bleibt scharf. */
@@ -343,10 +353,12 @@ export const UNIVERSE_DISC_CLOUD_DUST_ALPHA = 0.16
  *  von MedievalSharp, war gemessen 53,5 statt der gerechneten 48, und die Liste
  *  rollte auf Full HD, waehrend die Konstante das Gegenteil behauptete. */
 export const UNIVERSE_RAIL_ROW_H = UNIVERSE_DISC_RAIL_PX + 14
-/** Listenpolsterung der Leiste (10 oben, 14 unten) — sie ist alles, was neben
+/** Listenpolsterung der Leiste (8 oben, 12 unten) — sie ist alles, was neben
  *  den zehn Zeilen noch Hoehe kostet: Kopfzeile und Carry-over-Fuss sind
- *  gefallen. */
-export const UNIVERSE_RAIL_LIST_PAD = 24
+ *  gefallen. Es waren 10/14, bis das Kopfband auf die gemeinsame Hoehe mit der
+ *  Voyages-Leiste wuchs; die vier Pixel kommen von hier und NICHT von der
+ *  Scheibe — sie treibt die Zeilenhoehe. */
+export const UNIVERSE_RAIL_LIST_PAD = 20
 export const UNIVERSE_RAIL_ROW_GAP = 5
 
 /**
@@ -354,7 +366,7 @@ export const UNIVERSE_RAIL_ROW_GAP = 5
  *
  * Die Layout-Specs rechnen mit „Viewport == Bildschirmhoehe"; real nimmt der
  * Browser rund 130 px. GEMESSEN bleiben dem Reiter auf Full HD im Vollbild
- * 674,6 px, im Fenster nur 569,1 — und zehn grosse Zeilen brauchen 669. Ohne
+ * 670,6 px, im Fenster nur 549,1 — und zehn grosse Zeilen brauchen 669. Ohne
  * diese Stufe rollte ausgerechnet der flachste Referenzfall.
  *
  * Die Schwelle ist keine runde Zahl, sondern der Punkt, an dem die grosse Stufe
@@ -368,11 +380,12 @@ export const UNIVERSE_RAIL_ROW_GAP_COMPACT = 3
 /** Was dem Reiter im flachsten Referenzfall bleibt — GEMESSEN (Full HD, 950 px
  *  Viewport), wie `CONTENT_HEIGHT` in der Spec.
  *
- *  Es waren 569,1, solange das Kopfband 92 px mass; die 16, um die es gewachsen
- *  ist, gehen hier eins zu eins ab. Die kompakte Stufe brauchte davor 556 und
- *  passte damit nicht mehr — Polsterung und Zeilenabstand haben die Differenz
- *  bezahlt (auf 543), nicht die Scheibe: sie traegt die Zeile. */
-export const UNIVERSE_RAIL_COMPACT_STAGE_H = 553.1
+ *  Es waren 569,1, solange das Kopfband 92 px mass; jede Bandhoehe darueber geht
+ *  hier eins zu eins ab. Die kompakte Stufe brauchte davor 556 und passte damit
+ *  nicht mehr — Polsterung und Zeilenabstand haben die Differenz bezahlt (auf
+ *  543), nicht die Scheibe: sie traegt die Zeile. Bei 112 bleiben 6,1 px Luft,
+ *  die kompakte Stufe musste dafuer nichts weiter abgeben. */
+export const UNIVERSE_RAIL_COMPACT_STAGE_H = 549.1
 
 // ── Drehung der Scheibe ─────────────────────────────────────────────────────
 /* Feld und Wall drehen GLEICHSINNIG, der Wall mit halbem Tempo. Das Verhaeltnis

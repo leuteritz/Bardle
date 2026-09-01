@@ -207,10 +207,12 @@ const skeletonPorts = computed(() =>
   padding: 0 v-bind(bandPadX);
   overflow: hidden;
 }
+/* Die Rangsäule füllt das Band, wie `.ecb-rank` im echten Kopf — eine geratene
+   Pixelhöhe stand hier und überragte das Band, sobald es schrumpfte. */
 .vtl-mark--rank {
   flex: 0 0 v-bind(rankWidth);
   width: v-bind(rankWidth);
-  height: 116px;
+  height: 100%;
 }
 .vtl-lane {
   flex: 1;
