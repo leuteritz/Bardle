@@ -20,17 +20,21 @@ import {
   FIRMAMENT_PORTAL_RIPPLE_TO,
   FIRMAMENT_PORTAL_SHRINK_STEPS,
   FIRMAMENT_RAIL_AUTOFOLD_W,
-  FIRMAMENT_RAIL_FOLDED_W,
-  FIRMAMENT_RAIL_W,
+  FIRMAMENT_RAIL_HANDLE_PX,
+  FIRMAMENT_RAIL_PANEL_W,
+  FIRMAMENT_RAIL_ZONE_W,
   FIRMAMENT_STAGE_MIN_H,
   FIRMAMENT_STAGE_MIN_W,
   FIRMAMENT_UNLIT_AHEAD,
   FIRMAMENT_ZOOM_STEPS,
-  UNIVERSE_RAIL_CARRY_H,
-  UNIVERSE_RAIL_HEAD_H,
+  UNIVERSE_RAIL_COMPACT_MAX_VH,
+  UNIVERSE_RAIL_COMPACT_STAGE_H,
   UNIVERSE_RAIL_LIST_PAD,
+  UNIVERSE_RAIL_LIST_PAD_COMPACT,
   UNIVERSE_RAIL_ROW_GAP,
+  UNIVERSE_RAIL_ROW_GAP_COMPACT,
   UNIVERSE_RAIL_ROW_H,
+  UNIVERSE_RAIL_ROW_H_COMPACT,
   UNIVERSE_DISC_CREST_PX,
   UNIVERSE_DISC_CLOUD_MAX_BACKING_PX,
   UNIVERSE_DISC_CLOUD_REACH,
@@ -40,6 +44,7 @@ import {
   UNIVERSE_DISC_HERO_QUANT_PX,
   UNIVERSE_DISC_HERO_R_RATIO,
   UNIVERSE_DISC_RAIL_PX,
+  UNIVERSE_DISC_SPIN_BASE_PX,
   UNIVERSE_DISC_RIM_SPIN_RATIO,
   UNIVERSE_DISC_SPIN_SEC,
   FIRMAMENT_RIM_SPRITE_MARGIN,
@@ -103,7 +108,7 @@ const CONTENT_HEIGHT: Record<number, number> = {
 
 function zones(vw: number, vh: number, folded = false) {
   const tab = tabWidth(vw, vh)
-  const rail = folded ? FIRMAMENT_RAIL_FOLDED_W : FIRMAMENT_RAIL_W
+  const rail = folded ? FIRMAMENT_RAIL_HANDLE_PX : FIRMAMENT_RAIL_ZONE_W
   return {
     tab,
     rail,
@@ -165,12 +170,12 @@ describe('Firmament — das Zonenbudget', () => {
   it('klappt die Leiste ein, bevor die Buehne unter ihren Boden faellt', () => {
     // Unterhalb der Klappschwelle darf die eingeklappte Leiste den Boden noch
     // halten — genau dafuer ist sie da.
-    const stageW = FIRMAMENT_RAIL_AUTOFOLD_W - FIRMAMENT_RAIL_FOLDED_W
+    const stageW = FIRMAMENT_RAIL_AUTOFOLD_W - FIRMAMENT_RAIL_HANDLE_PX
     expect(stageW).toBeGreaterThanOrEqual(FIRMAMENT_STAGE_MIN_W)
   })
 
   it('spart mit dem Einklappen mehr als die Haelfte der Leiste', () => {
-    expect(FIRMAMENT_RAIL_FOLDED_W).toBeLessThan(FIRMAMENT_RAIL_W / 2)
+    expect(FIRMAMENT_RAIL_HANDLE_PX).toBeLessThan(FIRMAMENT_RAIL_ZONE_W / 2)
   })
 
   it('haelt das Wappen im Kopfband schmaler als die halbe Breite', () => {
@@ -178,14 +183,52 @@ describe('Firmament — das Zonenbudget', () => {
     expect(FIRMAMENT_CREST_ID_W).toBeLessThan(tabWidth(1920, 1080) / 2)
   })
 
+  it('ist die Zone der Leiste Liste PLUS Griff', () => {
+    // Die Griffleiste bleibt stehen, wenn die Liste weggefahren ist — sie gehoert
+    // deshalb in dieselbe Spalte. Wer nur die Liste in die Spaltenbreite
+    // schriebe, saehe den Griff ueber der Karte liegen.
+    expect(FIRMAMENT_RAIL_ZONE_W).toBe(FIRMAMENT_RAIL_PANEL_W + FIRMAMENT_RAIL_HANDLE_PX)
+  })
+
   it('traegt alle zehn Universumsscheiben ohne zu rollen', () => {
-    // Die Leiste ist so hoch wie die Buehne. Zehn Zeilen, Kopf und Fuss muessen
-    // auf Full HD hineinpassen — wer die Scheibe groesser macht, laesst die
-    // Leiste rollen, und genau das soll hier auffallen.
+    // Die Leiste ist so hoch wie die Buehne. Zehn Zeilen und die Polsterung
+    // muessen auf Full HD hineinpassen — wer die Scheibe groesser macht, laesst
+    // die Leiste rollen, und genau das soll hier auffallen. Kopfzeile und
+    // Carry-over-Fuss sind gefallen; ihre 178 px stecken in der Zeilenhoehe.
     const rows = universes.length
     const list = rows * UNIVERSE_RAIL_ROW_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP
-    const needed = UNIVERSE_RAIL_HEAD_H + list + UNIVERSE_RAIL_LIST_PAD + UNIVERSE_RAIL_CARRY_H
-    expect(needed).toBeLessThanOrEqual(zones(1920, 1080).stageH)
+    expect(list + UNIVERSE_RAIL_LIST_PAD).toBeLessThanOrEqual(zones(1920, 1080).stageH)
+  })
+
+  /*
+   * Und derselbe Haushalt im FLACHEN Fenster.
+   *
+   * Die Tabelle oben rechnet mit „Viewport == Bildschirmhoehe", wie jede
+   * Layout-Spec des Projekts; real nimmt der Browser rund 130 px. GEMESSEN
+   * bleiben dem Reiter auf Full HD im Fenster 569,1 statt 690,6 px — die grosse
+   * Stufe rollte dort um genau 100. Wer die kompakte Stufe anfasst, sieht es
+   * hier statt im Spiel.
+   */
+  it('traegt sie auch im flachsten Fenster, dann kompakt', () => {
+    const rows = universes.length
+    const list = rows * UNIVERSE_RAIL_ROW_H_COMPACT + (rows - 1) * UNIVERSE_RAIL_ROW_GAP_COMPACT
+    expect(list + UNIVERSE_RAIL_LIST_PAD_COMPACT).toBeLessThanOrEqual(UNIVERSE_RAIL_COMPACT_STAGE_H)
+    // Und die grosse Stufe passt dort NICHT — sonst waere die kompakte umsonst.
+    const big = rows * UNIVERSE_RAIL_ROW_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP
+    expect(big + UNIVERSE_RAIL_LIST_PAD).toBeGreaterThan(UNIVERSE_RAIL_COMPACT_STAGE_H)
+  })
+
+  it('schaltet die kompakte Stufe genau dort, wo die grosse aufhoert zu passen', () => {
+    // Der Reiterinhalt misst rund `Viewport − 388` (gemessen 1080 → 690,6 und
+    // 950 → 569,1). Die Schwelle muss also ueber der Viewport-Hoehe liegen, bei
+    // der die grosse Stufe kippt — sonst gibt es ein Fenster dazwischen, in dem
+    // gerollt wird und die Media Query noch nicht greift.
+    const rows = universes.length
+    const big = rows * UNIVERSE_RAIL_ROW_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP
+    const kippt = big + UNIVERSE_RAIL_LIST_PAD + 388
+    expect(UNIVERSE_RAIL_COMPACT_MAX_VH).toBeGreaterThanOrEqual(kippt)
+    // Aber nicht so hoch, dass sie im Vollbild-Referenzfall schon greift.
+    expect(UNIVERSE_RAIL_COMPACT_MAX_VH).toBeLessThan(1080)
   })
 
   it('dreht Feld und Wall verschieden schnell', () => {
@@ -195,14 +238,16 @@ describe('Firmament — das Zonenbudget', () => {
     expect(UNIVERSE_DISC_RIM_SPIN_RATIO).toBeGreaterThan(1)
   })
 
-  it('haelt die Rail-Scheibe als Basis der Wurzelregel', () => {
+  it('haelt die gemessene Basis der Wurzelregel', () => {
     // Hier stand einmal `> 90` unter der Ueberschrift „langsamer als alles
     // andere im Spiel". Das war die falsche Groesse: 210 s ergaben 0,51 px/s am
     // Scheibenrand, und der Nutzer meldete die Scheibe als stillstehend.
     // Gemessen gilt: 0,5 px/s sieht niemand, 1,78 px/s schon. Diese eine Zahl
-    // ist die BASIS, aus der jede andere Groesse ableitet.
-    expect(universeDiscSpinSec(UNIVERSE_DISC_RAIL_PX)).toBe(UNIVERSE_DISC_SPIN_SEC)
-    const edge = (Math.PI * UNIVERSE_DISC_RAIL_PX) / UNIVERSE_DISC_SPIN_SEC
+    // ist die BASIS, aus der jede andere Groesse ableitet — und sie haengt an
+    // KEINER Anzeigegroesse: als die Rail-Kachel auf 46 px wuchs, waere sonst
+    // die Drehdauer jeder Scheibe im Spiel mitgewandert.
+    expect(universeDiscSpinSec(UNIVERSE_DISC_SPIN_BASE_PX)).toBe(UNIVERSE_DISC_SPIN_SEC)
+    const edge = (Math.PI * UNIVERSE_DISC_SPIN_BASE_PX) / UNIVERSE_DISC_SPIN_SEC
     expect(edge).toBeGreaterThan(1.5)
     expect(edge).toBeLessThan(2.2)
   })
@@ -212,8 +257,8 @@ describe('Firmament — das Zonenbudget', () => {
     // Dauer laesst die 420-px-Scheibe mit 22 px/s kreiseln, proportionale laesst
     // sie mit 3 Grad in drei Sekunden stillstehen. Wer eine der beiden wieder
     // einsetzt, bricht genau diese Zusicherung.
-    const a = universeDiscSpinSec(UNIVERSE_DISC_RAIL_PX)
-    const b = universeDiscSpinSec(UNIVERSE_DISC_RAIL_PX * 4)
+    const a = universeDiscSpinSec(UNIVERSE_DISC_SPIN_BASE_PX)
+    const b = universeDiscSpinSec(UNIVERSE_DISC_SPIN_BASE_PX * 4)
     expect(b).toBeGreaterThan(a) // nicht konstant
     expect(b).toBeLessThan(a * 4) // nicht proportional
     expect(b).toBeCloseTo(a * 2, 6) // Wurzel: viermal so gross ist zweimal so lang

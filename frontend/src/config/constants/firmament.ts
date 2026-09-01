@@ -1,10 +1,11 @@
 /**
  * Der Firmament-Reiter — die eine Karte, auf der der ganze Weg steht.
  *
- * Drei Zonen teilen sich EIN Budget: `FIRMAMENT_RAIL_W` links, das Kopfband
- * oben (`FIRMAMENT_CREST_BAND_H`) und der Rest ist Buehne. Wer eine der beiden
- * ersten anhebt, nimmt es der Karte — `__tests__/config/firmamentLayout.spec.ts`
- * bindet den Boden.
+ * Drei Zonen teilen sich EIN Budget: die Universumsleiste RECHTS
+ * (`FIRMAMENT_RAIL_ZONE_W` — Liste plus Griff, wie im Voyages-Atlas), das
+ * Kopfband oben (`FIRMAMENT_CREST_BAND_H`) und der Rest ist Buehne. Wer eine der
+ * beiden ersten anhebt, nimmt es der Karte —
+ * `__tests__/config/firmamentLayout.spec.ts` bindet den Boden.
  */
 
 // ── Zonen ───────────────────────────────────────────────────────────────────
@@ -12,11 +13,26 @@
 export const FIRMAMENT_CREST_BAND_H = 92
 /** Breite der Wappenzone im Kopfband. */
 export const FIRMAMENT_CREST_ID_W = 300
-export const FIRMAMENT_RAIL_W = 238
-export const FIRMAMENT_RAIL_FOLDED_W = 56
+
+/* Die Universumsleiste steht RECHTS und traegt das Rezept der Forge-Detailspalte:
+   Liste plus Griffleiste, und die ZONE ist beides zusammen. Dieselben Zahlen wie
+   die Voyages-Zielliste — eine Seitenleiste ist in diesem Spiel EIN Ort. */
+export const FIRMAMENT_RAIL_PANEL_W = 224
+export const FIRMAMENT_RAIL_HANDLE_PX = 44
+export const FIRMAMENT_RAIL_ZONE_W = FIRMAMENT_RAIL_PANEL_W + FIRMAMENT_RAIL_HANDLE_PX
 /** Unter dieser Reiterbreite klappt die Leiste selbst ein. Gemessen per
- *  `container-type: inline-size` am Reiter, NICHT am Viewport. */
+ *  ResizeObserver am Reiter, NICHT am Viewport. */
 export const FIRMAMENT_RAIL_AUTOFOLD_W = 1080
+/** Nur das PANEL faehrt; die Zonenbreite wechselt hart in einem Frame — sie
+ *  steht ueber den ResizeObserver in `paintKey` UND `groundKey` der Karte. */
+export const FIRMAMENT_RAIL_SLIDE_MS = 220
+/** Polsterung des Rollkastens, beide Seiten. */
+export const FIRMAMENT_RAIL_PAD_X = 7
+/** Luft, die `revealSelected` ueber der gewaehlten Zeile stehen laesst. */
+export const FIRMAMENT_RAIL_REVEAL_PAD = 8
+export const FIRMAMENT_RAIL_HANDLE_LABEL = 'UNIVERSES'
+export const FIRMAMENT_RAIL_OPEN_TITLE = 'Show universes'
+export const FIRMAMENT_RAIL_CLOSE_TITLE = 'Hide universes'
 /** Boden der Buehne auf Full HD — die Spec rechnet dagegen. */
 export const FIRMAMENT_STAGE_MIN_W = 700
 export const FIRMAMENT_STAGE_MIN_H = 430
@@ -196,9 +212,19 @@ export const FIRMAMENT_LOST_COLOR = '#cc6050'
    Galaxienfeld darum, gluehender Wall am Rand. Gerastert wird sie einmal je
    (Universum, Zustand, Groesse, dpr) — `utils/fx/universeDisc.ts`. */
 
-/** Kachel in der Universumsleiste. NICHT groesser: bei 40 rollt die Leiste auf
- *  Full HD, `firmamentLayout.spec.ts` bindet den Haushalt. */
-export const UNIVERSE_DISC_RAIL_PX = 34
+/** Die BASIS der Wurzelregel — 34 px, 60 s, 1,78 px/s am Rand. GEMESSEN, nicht
+ *  gewaehlt: jede andere Scheibengroesse leitet daraus ab (`universeDiscSpinSec`,
+ *  `universeDiscDetail`). Sie ist deshalb von der Anzeigegroesse der Leiste
+ *  GETRENNT — waechst die Leiste, duerfen die Drehdauern aller Scheiben im Spiel
+ *  nicht mitwandern. */
+export const UNIVERSE_DISC_SPIN_BASE_PX = 34
+/** Kachel in der Universumsleiste. Der Deckel ist der Haushalt der Leiste, den
+ *  `firmamentLayout.spec.ts` bindet: bei 10 Zeilen sind auf Full HD im Vollbild
+ *  690,6 px zu haben, belegt sind 669. */
+export const UNIVERSE_DISC_RAIL_PX = 46
+/** Dieselbe Kachel im FLACHEN Fenster. Das Canvas wird per CSS herunterskaliert
+ *  — es traegt seine volle Aufloesung und bleibt scharf. */
+export const UNIVERSE_DISC_RAIL_COMPACT_PX = 36
 /** Wappen im Kopfband — dieselbe Scheibe, nur gross. */
 export const UNIVERSE_DISC_CREST_PX = 46
 export const UNIVERSE_DISC_MAX_DPR = 2
@@ -280,18 +306,38 @@ export const UNIVERSE_DISC_CLOUD_MAX_BODIES = 2000
  *  nicht faerben. */
 export const UNIVERSE_DISC_CLOUD_DUST_ALPHA = 0.16
 
-/** Zeilenhoehe der Leiste: Scheibe plus 2x5 Polsterung plus 2 Rahmen.
+/** Zeilenhoehe der Leiste: Scheibe plus 2x6 Polsterung plus 2 Rahmen.
  *
  *  Die SCHEIBE treibt sie, nicht der Text — dafuer tragen Namenszeile und Notiz
- *  feste Zeilenkaesten (18/14 px). Vorher hing die Hoehe an der Schriftmetrik
+ *  feste Zeilenkaesten (20/16 px). Vorher hing die Hoehe an der Schriftmetrik
  *  von MedievalSharp, war gemessen 53,5 statt der gerechneten 48, und die Liste
  *  rollte auf Full HD, waehrend die Konstante das Gegenteil behauptete. */
-export const UNIVERSE_RAIL_ROW_H = UNIVERSE_DISC_RAIL_PX + 12
-/** Kopf, Fuss und Listenpolsterung der Leiste — GEMESSEN auf Full HD. */
-export const UNIVERSE_RAIL_HEAD_H = 38
-export const UNIVERSE_RAIL_CARRY_H = 140
-export const UNIVERSE_RAIL_LIST_PAD = 12
-export const UNIVERSE_RAIL_ROW_GAP = 4
+export const UNIVERSE_RAIL_ROW_H = UNIVERSE_DISC_RAIL_PX + 14
+/** Listenpolsterung der Leiste (10 oben, 14 unten) — sie ist alles, was neben
+ *  den zehn Zeilen noch Hoehe kostet: Kopfzeile und Carry-over-Fuss sind
+ *  gefallen. */
+export const UNIVERSE_RAIL_LIST_PAD = 24
+export const UNIVERSE_RAIL_ROW_GAP = 5
+
+/**
+ * Die KOMPAKTE Stufe — Hoehen-Media-Query, kein vh-Rechnen.
+ *
+ * Die Layout-Specs rechnen mit „Viewport == Bildschirmhoehe"; real nimmt der
+ * Browser rund 130 px. GEMESSEN bleiben dem Reiter auf Full HD im Vollbild
+ * 690,6 px, im Fenster nur 569,1 — und zehn grosse Zeilen brauchen 669. Ohne
+ * diese Stufe rollte ausgerechnet der flachste Referenzfall.
+ *
+ * Die Schwelle ist keine runde Zahl, sondern der Punkt, an dem die grosse Stufe
+ * aufhoert zu passen: der Reiterinhalt misst rund `Viewport − 388`, und
+ * 669 + 388 = 1057.
+ */
+export const UNIVERSE_RAIL_COMPACT_MAX_VH = 1060
+export const UNIVERSE_RAIL_ROW_H_COMPACT = UNIVERSE_DISC_RAIL_COMPACT_PX + 14
+export const UNIVERSE_RAIL_LIST_PAD_COMPACT = 20
+export const UNIVERSE_RAIL_ROW_GAP_COMPACT = 4
+/** Was dem Reiter im flachsten Referenzfall bleibt — GEMESSEN (Full HD, 950 px
+ *  Viewport), wie `CONTENT_HEIGHT` in der Spec. */
+export const UNIVERSE_RAIL_COMPACT_STAGE_H = 569.1
 
 // ── Drehung der Scheibe ─────────────────────────────────────────────────────
 /* Feld und Wall drehen GLEICHSINNIG, der Wall mit halbem Tempo. Das Verhaeltnis
@@ -322,7 +368,7 @@ export const UNIVERSE_DISC_SPIN_SEC = 60
 export const UNIVERSE_DISC_RIM_SPIN_RATIO = 2
 
 /** Die Basis der Wurzelregel: `UNIVERSE_DISC_SPIN_SEC` gilt bei
- *  `UNIVERSE_DISC_RAIL_PX`, jede andere Groesse leitet daraus ab
+ *  `UNIVERSE_DISC_SPIN_BASE_PX`, jede andere Groesse leitet daraus ab
  *  (`universeDiscSpinSec`). Eine feste Dauer fuer alle machte die grosse Scheibe
  *  zum Kreisel (9,4 px/s bei 180 px) und eine feste Randrate die kleine zum
  *  Stillstand (3,4 Grad in drei Sekunden). */

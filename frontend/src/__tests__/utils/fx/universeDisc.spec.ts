@@ -21,7 +21,7 @@ import {
   UNIVERSE_DISC_RIM_OUTER,
   UNIVERSE_DISC_CLOUD_FADE_FROM,
   UNIVERSE_DISC_CLOUD_REACH,
-  UNIVERSE_DISC_RAIL_PX,
+  UNIVERSE_DISC_SPIN_BASE_PX,
   UNIVERSE_DISC_SPIN_SEC,
 } from '@/config/constants'
 
@@ -259,12 +259,12 @@ describe('Universumsscheibe — Determinismus und Schlüssel', () => {
 })
 
 describe('Universumsscheibe — Tempo und Dichte haengen an der KANTENLAENGE', () => {
-  it('haelt die Leiste als Basis beider Regeln', () => {
-    // Bei der gemessenen Rail-Scheibe ist alles unveraendert: dieselbe Dauer,
-    // dieselbe Zahl Galaxien, dieselben Marken. Waere das nicht so, aenderte
-    // sich mit der Heldenscheibe still auch die Leiste.
-    expect(universeDiscSpinSec(UNIVERSE_DISC_RAIL_PX)).toBe(UNIVERSE_DISC_SPIN_SEC)
-    expect(universeDiscDetail(UNIVERSE_DISC_RAIL_PX)).toBe(1)
+  it('haelt die gemessene Basis beider Regeln', () => {
+    // Bei der Basis ist alles unveraendert: dieselbe Dauer, dieselbe Zahl
+    // Galaxien, dieselben Marken. Sie ist von jeder Anzeigegroesse GETRENNT —
+    // sonst verschoebe eine groessere Rail-Kachel beides fuer jede Scheibe.
+    expect(universeDiscSpinSec(UNIVERSE_DISC_SPIN_BASE_PX)).toBe(UNIVERSE_DISC_SPIN_SEC)
+    expect(universeDiscDetail(UNIVERSE_DISC_SPIN_BASE_PX)).toBe(1)
   })
 
   it('traegt auf der grossen Scheibe mehr und KLEINERE Marken', () => {

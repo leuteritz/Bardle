@@ -55,7 +55,7 @@ import {
   UNIVERSE_DISC_RIM_OUTER,
   UNIVERSE_DISC_RIM_W_MAX,
   UNIVERSE_DISC_RIM_W_MIN,
-  UNIVERSE_DISC_RAIL_PX,
+  UNIVERSE_DISC_SPIN_BASE_PX,
   UNIVERSE_DISC_SPIN_SEC,
 } from '@/config/constants'
 import { getUniverse } from '@/config/progression/universes'
@@ -106,12 +106,14 @@ const TAU = Math.PI * 2
      in drei Sekunden drehen, also stillstehen.
 
    Genommen wird das geometrische Mittel: die Dauer waechst mit der WURZEL des
-   Durchmessers. Doppelt so gross ist 1,41 mal so lang. Die Basis bleibt die
-   gemessene Rail-Scheibe (34 px, 60 s, 1,78 px/s).                            */
+   Durchmessers. Doppelt so gross ist 1,41 mal so lang. Die Basis ist gemessen
+   und steht fuer sich (`UNIVERSE_DISC_SPIN_BASE_PX`, 34 px, 60 s, 1,78 px/s) —
+   sie haengt bewusst an KEINER Anzeigegroesse, sonst verschoebe eine groessere
+   Kachel die Drehdauer jeder Scheibe im Spiel.                                */
 
 /** Umlaufdauer in Sekunden fuer eine Scheibe dieser Kantenlaenge. */
 export function universeDiscSpinSec(px: number): number {
-  return UNIVERSE_DISC_SPIN_SEC * Math.sqrt(Math.max(1, px) / UNIVERSE_DISC_RAIL_PX)
+  return UNIVERSE_DISC_SPIN_SEC * Math.sqrt(Math.max(1, px) / UNIVERSE_DISC_SPIN_BASE_PX)
 }
 
 /**
@@ -123,11 +125,11 @@ export function universeDiscSpinSec(px: number): number {
  *
  * Die ZAHL waechst mit der Flaeche (d²), die GROESSE der einzelnen Marke faellt
  * mit d. Beides zusammen haelt die Dichte konstant und die Marke bei ihrer
- * gemessenen Kantenlaenge. Bei `UNIVERSE_DISC_RAIL_PX` ist d gleich 1 und alles
- * bitgleich zu vorher — die Leiste aendert sich nicht.
+ * gemessenen Kantenlaenge. Bei `UNIVERSE_DISC_SPIN_BASE_PX` ist d gleich 1 und
+ * alles bitgleich zur gemessenen Fassung.
  */
 export function universeDiscDetail(px: number): number {
-  return Math.sqrt(Math.max(1, px) / UNIVERSE_DISC_RAIL_PX)
+  return Math.sqrt(Math.max(1, px) / UNIVERSE_DISC_SPIN_BASE_PX)
 }
 
 /* ── Determinismus ────────────────────────────────────────────────────────────
@@ -258,12 +260,12 @@ export function paintGalaxyField(
     // Index, ein Schnitt bei `i / count` legte also alle nahen Koerper nach
     // innen und alle fernen nach aussen. Das waere eine Radius-, keine
     // Tiefenteilung — beide Schichten sollen den VOLLEN Radius bedecken.
-    if (cloud && (jitter(seed + 907, i) < UNIVERSE_DISC_CLOUD_NEAR_SHARE) !== near) continue
+    if (cloud && jitter(seed + 907, i) < UNIVERSE_DISC_CLOUD_NEAR_SHARE !== near) continue
 
     const spot = fieldSpot(i, count, reach, seed)
     // Auslauf: ab `_FADE_FROM` faellt beides auf null, und genau das ersetzt die
     // Kante. Beim `orb` traegt sie der Glutring, dort bleibt alles voll.
-    const out = Math.max(0, (spot.rad / reach - UNIVERSE_DISC_CLOUD_FADE_FROM))
+    const out = Math.max(0, spot.rad / reach - UNIVERSE_DISC_CLOUD_FADE_FROM)
     const fade = cloud ? Math.max(0, 1 - out / (1 - UNIVERSE_DISC_CLOUD_FADE_FROM)) : 1
     if (fade <= 0.02) continue
 

@@ -8,11 +8,12 @@
  *
  * **EINE Bahn je Universum.** Die Galaxienkette selbst läuft über das Prestige
  * hinweg durch (`executePrestigeReset` fasst `completedGalaxies` nicht an) —
- * geschnitten wird sie am Feld `record.universe`. Die Leiste links wählt die
+ * geschnitten wird sie am Feld `record.universe`. Die Leiste rechts wählt die
  * Bahn, und diese Wahl ist der ANSICHTSZUSTAND: sie ist nie leer.
  *
- * Die Wurzel hält, was beide Kinder teilen: die Bahn und die Auswahl. Eine
- * zweite Kette in der Karte liefe gegen die der Leiste.
+ * Die Wurzel hält, was die Kinder teilen: die Bahn, die Auswahl und die
+ * Leistenzeilen. Eine zweite Kette in der Karte liefe gegen die der Leiste, und
+ * eine zweite Zählung im Griff gegen die der Liste.
  */
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -23,12 +24,16 @@ import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import FirmamentLockedPanel from './FirmamentLockedPanel.vue'
 import FirmamentCrestBand from './FirmamentCrestBand.vue'
 import FirmamentUniverseRail from './FirmamentUniverseRail.vue'
+import FirmamentRailHandle from './FirmamentRailHandle.vue'
 import FirmamentChart from './FirmamentChart.vue'
 import { buildFirmamentPath, type FirmamentPath } from '@/utils/ui/firmamentLayout'
+import { buildFirmamentRailRows } from '@/utils/ui/firmamentRail'
 import {
   FIRMAMENT_RAIL_AUTOFOLD_W,
-  FIRMAMENT_RAIL_FOLDED_W,
-  FIRMAMENT_RAIL_W,
+  FIRMAMENT_RAIL_HANDLE_PX,
+  FIRMAMENT_RAIL_PANEL_W,
+  FIRMAMENT_RAIL_SLIDE_MS,
+  FIRMAMENT_RAIL_ZONE_W,
 } from '@/config/constants'
 import type { FirmamentSelection } from '@/types'
 
@@ -83,6 +88,17 @@ function openInVoyages(galaxy: number) {
 }
 
 // ── Leiste ──────────────────────────────────────────────────────────────────
+/** Die EINE Zeilenrechnung — Liste und Griff lesen dieselbe. */
+const railRows = computed(() =>
+  buildFirmamentRailRows({
+    completed: completedGalaxies.value,
+    runs: gameStore.universeRuns,
+    currentUniverse: gameStore.currentUniverse,
+    selectedUniverse: selection.value.universe,
+  }),
+)
+const walkedCount = computed(() => railRows.value.filter((r) => r.walked).length)
+
 /** `null` = der Reiter entscheidet nach Breite, sonst hat es der Spieler gesagt. */
 const railChoice = ref<boolean | null>(null)
 const narrow = ref(false)
@@ -162,9 +178,38 @@ watch(
   { immediate: true },
 )
 
-const railW = computed(() =>
-  railFolded.value ? `${FIRMAMENT_RAIL_FOLDED_W}px` : `${FIRMAMENT_RAIL_W}px`,
+/**
+ * Die Buehne links, die Universumsleiste rechts.
+ *
+ * Die Zonenbreite wechselt HART, ohne Transition — sie steht ueber den
+ * ResizeObserver der Karte in deren `paintKey` UND `groundKey`, und ueber die
+ * Fahrt animiert malte sie je Umschaltung Sternfeld, Wall und Bahn wieder und
+ * wieder statt einmal. Was man WANDERN sieht, ist das Panel darin.
+ */
+const bodyColumns = computed(
+  () =>
+    `minmax(0, 1fr) ${railFolded.value ? FIRMAMENT_RAIL_HANDLE_PX : FIRMAMENT_RAIL_ZONE_W}px`,
 )
+const railPanelWidth = `${FIRMAMENT_RAIL_PANEL_W}px`
+const handleWidth = `${FIRMAMENT_RAIL_HANDLE_PX}px`
+const slideMs = `${FIRMAMENT_RAIL_SLIDE_MS}ms`
+
+/**
+ * Den Fokus nimmt `inert`, aber VERZOEGERT: synchron gesetzt liegt seine Arbeit
+ * im ersten Frame der Fahrt, und dort ist der Ruck am sichtbarsten.
+ */
+const railInert = ref(false)
+let inertTimer: ReturnType<typeof setTimeout> | null = null
+watch(railFolded, (folded) => {
+  if (inertTimer !== null) clearTimeout(inertTimer)
+  inertTimer = setTimeout(() => {
+    inertTimer = null
+    railInert.value = folded
+  }, FIRMAMENT_RAIL_SLIDE_MS)
+})
+onBeforeUnmount(() => {
+  if (inertTimer !== null) clearTimeout(inertTimer)
+})
 </script>
 
 <template>
@@ -177,12 +222,6 @@ const railW = computed(() =>
       <FirmamentCrestBand :universe="selection.universe" />
 
       <div class="fm-body">
-        <FirmamentUniverseRail
-          :folded="railFolded"
-          :selection="selection"
-          @select="select"
-          @toggle="railChoice = !railFolded"
-        />
         <FirmamentChart
           :nodes="path.nodes"
           :departure="path.departure"
@@ -191,6 +230,26 @@ const railW = computed(() =>
           @select="select"
           @open="openInVoyages"
         />
+
+        <!-- Die Leiste faehrt als EIN Stueck seitlich hinaus; stehen bleibt die
+             Griffleiste. Sie steht im DOM HINTER der Karte, damit Tabulator und
+             Screenreader dem Bild folgen. -->
+        <div class="fm-rail-zone">
+          <div
+            class="fm-rail-slide"
+            :class="{ 'fm-rail-slide--parked': railFolded }"
+            :inert="railInert"
+          >
+            <FirmamentUniverseRail :rows="railRows" :selection="selection" @select="select" />
+          </div>
+
+          <FirmamentRailHandle
+            :walked="walkedCount"
+            :total="railRows.length"
+            :open="!railFolded"
+            @toggle="railChoice = !railFolded"
+          />
+        </div>
       </div>
     </template>
   </div>
@@ -221,16 +280,53 @@ const railW = computed(() =>
     radial-gradient(80% 70% at 100% 100%, rgba(46, 34, 96, 0.2) 0%, transparent 64%);
 }
 
-/* Zwei Zonen, EIN Budget: was die Leiste nimmt, nimmt sie der Karte. */
+/* Zwei Zonen, EIN Budget: was die Leiste nimmt, nimmt sie der Karte. Die
+   Spaltenbreite wechselt HART — sie steht in `paintKey` und `groundKey` der
+   Karte, animiert malte jede Umschaltung die ganze Platte mehrfach neu. */
 .fm-body {
   position: relative;
   z-index: 1;
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: v-bind(railW) minmax(0, 1fr);
-  /* Die Breite fährt, die Leiste wird VERSCHOBEN statt abgerissen — `clip`,
-     nicht `hidden`: ein Scrollport liesse sich verschieben. */
-  transition: grid-template-columns 0.18s ease;
+  grid-template-columns: v-bind(bodyColumns);
+  /* `clip` und NICHT `hidden`: die geparkte Leiste steht ausserhalb dieses
+     Rahmens, und `hidden` machte ihn zum Scrollport — er schneidet dann nicht
+     nur ab, er laesst sich auch verschieben. */
+  overflow: clip;
+}
+
+/* Die Huelle traegt beide Kinder absolut — die Spaltenbreite wechselt hart, das
+   Panel darin faehrt. */
+.fm-rail-zone {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Die Liste behaelt ihre Breite IMMER — genau deshalb ueberlebt die
+   Rollposition das Zuklappen, ohne dass jemand sie sichert: sie wird nie neu
+   umbrochen, nur verschoben.
+
+   Hier steht bewusst KEIN `transform: translateX(0)` und kein `will-change`:
+   beides machte dieses Element zum Containing Block fuer `position: fixed`, und
+   die Hover-Karten des Reiters teleportieren nach `<body>`. */
+.fm-rail-slide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: v-bind(handleWidth);
+  width: v-bind(railPanelWidth);
+  z-index: 1;
+  transition: transform v-bind(slideMs) ease;
+}
+.fm-rail-slide--parked {
+  transform: translateX(100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .fm-rail-slide,
+  .fm-rail-slide--parked {
+    transition: none;
+  }
 }
 </style>
