@@ -674,12 +674,19 @@ describe('Firmament — das Abflugportal', () => {
     expect(src.includes('animation-play-state: running')).toBe(true)
   })
 
-  /* Ueber dem PORTAL haelt es selbst NICHT an — es steht fest, dem Zeiger kann
+  /* Ueber dem PORTAL haelt es SELBST nicht an — es steht fest, dem Zeiger kann
      es nicht aus der Trefferflaeche laufen, und ein Durchgang, der auf den Blick
      hin anzieht, ist die Auskunft. Genau diese Entscheidung wird beim naechsten
-     Anfassen still zurueckgedreht, indem jemand den Ausloeser wieder in die eine
-     grosse Pause-Regel schreibt. */
-  it('nimmt das Portal von seiner eigenen Hover-Pause aus', () => {
+     Anfassen still zurueckgedreht, indem jemand den Ausloeser in die eine grosse
+     Pause-Regel schreibt.
+
+     Seit auf der laufenden Bahn DREI Portale stehen, ist „es selbst" nicht mehr
+     dasselbe wie „alle": die NACHBARN halten sehr wohl an — zwei weiterdrehende
+     neben einem aufgewachten waeren dieselbe Inkonsistenz wie ein einzeln
+     drehendes Portal ueber einem gehoverten Knoten. Gebunden ist deshalb nicht
+     mehr die Abwesenheit der Regel, sondern ihre AUSNAHME: wer `.fm-portal-l`
+     per `.fm-portal-hit` pausiert, muss das aufgewachte ausnehmen. */
+  it('nimmt das aufgewachte Portal von seiner eigenen Hover-Pause aus', () => {
     const src = readFileSync(
       resolve(__dirname, '../../components/bardProfil/firmament/FirmamentChart.vue'),
       'utf8',
@@ -689,9 +696,24 @@ describe('Firmament — das Abflugportal', () => {
     )
     expect(rules.length).toBeGreaterThan(0)
     for (const sel of rules) {
-      if (sel.includes('.fm-portal-l')) expect(sel.includes('.fm-portal-hit')).toBe(false)
+      if (sel.includes('.fm-portal-l') && sel.includes('.fm-portal-hit')) {
+        expect(sel.includes(':not(.is-awake)')).toBe(true)
+      }
     }
     // Die Wolke haelt weiterhin an — der Ausloeser ist also nicht bloss entfallen.
     expect(rules.some((sel) => sel.includes('.fm-portal-hit'))).toBe(true)
+  })
+
+  /* Das Aufwachen selbst haengt NICHT mehr an `.fm-stage:has(...)`: der fremde
+     Vorfahre war buehnenweit und weckte alle drei Portale zugleich. Es kommt als
+     Prop herein und schaltet eine Klasse an der eigenen Wurzel. */
+  it('weckt ein Portal ueber seine eigene Klasse, nicht ueber die Buehne', () => {
+    const src = readFileSync(
+      resolve(__dirname, '../../components/bardProfil/firmament/FirmamentPortal.vue'),
+      'utf8',
+    )
+    const style = src.slice(src.indexOf('<style'))
+    expect(style.includes('.fm-stage:has')).toBe(false)
+    expect(style.includes('.fm-portal.is-awake')).toBe(true)
   })
 })

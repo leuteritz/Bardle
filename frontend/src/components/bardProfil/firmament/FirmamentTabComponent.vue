@@ -20,6 +20,7 @@ import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore, computeRequired } from '@/stores/world/galaxyStore'
+import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import FirmamentLockedPanel from './FirmamentLockedPanel.vue'
 import FirmamentCrestBand from './FirmamentCrestBand.vue'
@@ -41,12 +42,31 @@ import type { FirmamentSelection } from '@/types'
 const uiStore = useUiStore()
 const gameStore = useGameStore()
 const galaxyStore = useGalaxyStore()
+const providenceStore = useProvidenceStore()
 
 const { completedGalaxies, currentGalaxy, currentThemeIndex, attemptResults, landfallResults } =
   storeToRefs(galaxyStore)
 
 const isVisible = computed(() => uiStore.bardActiveTab === 'firmament')
-const isUnlocked = computed(() => completedGalaxies.value.length > 0)
+/* Das Schloss weicht auch, wenn ein Aufbruch ansteht: der Prestige-Knopf im
+   Header fuehrt hierher, und die Chimes-Schwelle und die erste befreite Galaxie
+   sind zwei verschiedene Uhren. Die laufende Bahn traegt auch ohne Archiv immer
+   den `current`-Knoten samt seinen Vorausplaetzen. */
+const isUnlocked = computed(
+  () => completedGalaxies.value.length > 0 || gameStore.prestigeAvailable,
+)
+
+/**
+ * Die Karten des Aufbruchs — aber nur auf der LAUFENDEN Bahn.
+ *
+ * Auf einer vergangenen haette ein Angebot nichts zu suchen: dort steht das
+ * Abflugportal, das dokumentiert, wohin der Weg damals ging. Auf einer Bahn
+ * steht immer genau EINE Art Portal, und `buildDeparture` haelt die andere
+ * Haelfte dieser Zusage (es gibt auf der laufenden Bahn nie eine `departure`).
+ */
+const offers = computed(() =>
+  selection.value.universe === gameStore.currentUniverse ? providenceStore.offerCards : [],
+)
 
 // ── Auswahl: der Ansichtszustand, nie leer ──────────────────────────────────
 const selection = ref<FirmamentSelection>({
@@ -137,9 +157,15 @@ function observe(el: HTMLElement) {
 }
 
 // ── Sichtbarkeit: Escape-Leiter und Beobachter hängen daran, nicht am Leben ──
+const chart = ref<{ disarmOffer: () => boolean } | null>(null)
+
 function onKeydown(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
-  if (selection.value.galaxy !== null) select({ ...selection.value, galaxy: null })
+  // Zuerst das geschaerfte Portal: es ist die einzige Stufe, hinter der eine
+  // Geste steht, die einen ganzen Durchlauf beendet.
+  if (chart.value?.disarmOffer()) {
+    /* verbraucht */
+  } else if (selection.value.galaxy !== null) select({ ...selection.value, galaxy: null })
   else if (selection.value.universe !== gameStore.currentUniverse) resetSelection()
   else if (railChoice.value === true) railChoice.value = null
   // Nicht verbraucht: die Taste gehört dem Profil, es macht zu.
@@ -242,8 +268,10 @@ onBeforeUnmount(() => {
 
       <div class="fm-body">
         <FirmamentChart
+          ref="chart"
           :nodes="path.nodes"
           :departure="path.departure"
+          :offers="offers"
           :selection="selection"
           :visible="isVisible"
           @select="select"

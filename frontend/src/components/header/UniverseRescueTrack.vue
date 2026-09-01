@@ -12,9 +12,14 @@
  *
  * Die Meilenstein-Rauten bleiben bewusst außerhalb: sie stehen auch dann
  * noch, wenn der Button den Balken abgelöst hat.
+ *
+ * Der Button öffnet KEINEN Kasten mehr. Er führt ins Firmament, wo die drei
+ * Wege als Portale im schwarzen Raum stehen — der Reiter zeigt denselben
+ * Übergang für jede vergangene Bahn ohnehin schon als Bild.
  */
 import { ref, computed } from 'vue'
 import { useGameStore } from '@/stores/core/gameStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { UNIVERSE_BAR_TICK_PERCENTS, UNIVERSE_BAR_FILL_INSET_PX } from '@/config/constants'
 
@@ -24,6 +29,7 @@ const props = defineProps<{
 }>()
 
 const gameStore = useGameStore()
+const uiStore = useUiStore()
 
 const progress = computed(() => gameStore.universeRescueProgress)
 
@@ -103,8 +109,8 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
         key="prestige"
         class="prestige-btn"
         :class="glowClass"
-        aria-label="Universe rescued — prestige into the next universe"
-        @click.stop="gameStore.openPrestigeModal()"
+        aria-label="Universe rescued — open the Firmament and choose a way on"
+        @click.stop="uiStore.requestOpenFirmamentDeparture()"
       >
         <span class="prestige-shine" aria-hidden="true" />
         <span v-ink-center.x.y class="prestige-label">Prestige</span>

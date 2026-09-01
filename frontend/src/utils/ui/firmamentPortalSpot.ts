@@ -17,6 +17,10 @@
  */
 
 import {
+  FIRMAMENT_OFFER_PORTAL_ANGLE_TRIES,
+  FIRMAMENT_OFFER_PORTAL_GAP,
+  FIRMAMENT_OFFER_PORTAL_RADIAL_STEPS,
+  FIRMAMENT_OFFER_PORTAL_RING_K,
   FIRMAMENT_PORTAL_ANGLE_TRIES,
   FIRMAMENT_PORTAL_DISC_CLEAR,
   FIRMAMENT_PORTAL_EDGE_KEEP,
@@ -155,6 +159,103 @@ export function firmamentPortalSpot(
   return null
 }
 
+/**
+ * Die Stellen der DREI Angebotsportale auf der LAUFENDEN Bahn.
+ *
+ * Sie erbt jede Regel der Einzelfassung — jenseits der Kartenkante, ueber
+ * `MIN_VISIBLE`, kein Zoom und keine Fahrt als Argument, lieber kleiner als weg
+ * — und legt drei Dinge dazu:
+ *
+ * **Eine GEMEINSAME Schrumpfstufe.** Drei verschieden grosse Portale
+ * nebeneinander lesen sich als Rangfolge, die es nicht gibt.
+ *
+ * **GESPREIZTE Startwinkel.** Ziel `k` beginnt bei `base + k * 360/n` und weicht
+ * von dort abwechselnd nach beiden Seiten aus. Das ist der Unterschied zwischen
+ * "geht meistens" und "geht immer": mit drei unabhaengig gewuerfelten Winkeln —
+ * der direkten Uebertragung der Einzelfassung — faellt WUXGA in zwei von zehn
+ * Faellen bis auf die kleinste Stufe durch.
+ *
+ * **Ein gegenseitiger Abstandstest.** Er ist die Zusicherung, nicht der Treiber:
+ * gemessen liegt der engste Fall bei 2,87 Radiensummen.
+ *
+ * Der Seed ist die laufende BAHN, nicht das Ziel — dieselbe Trennung wie beim
+ * Abflugportal: der Ort haengt an der Bahn, Farbe und Feld am Ziel. Die Ziele
+ * gehen nur in die Streuung ein, damit zwei Angebote am selben Ort verschiedene
+ * Abstaende zur Mitte bekommen.
+ */
+export function firmamentOfferPortalSpots(
+  seed: number,
+  targets: readonly number[],
+  w: number,
+  h: number,
+): FirmamentPortalSpot[] {
+  if (w <= 0 || h <= 0 || targets.length === 0) return []
+
+  const fit = firmamentFitBox(w, h)
+  const full = firmamentPortalRingR(h) * FIRMAMENT_OFFER_PORTAL_RING_K
+  const clear = fit.r * FIRMAMENT_PORTAL_DISC_CLEAR
+  const tries = FIRMAMENT_OFFER_PORTAL_ANGLE_TRIES
+
+  // Eigene Kanaele, ab 157 aufwaerts: 131/137 gehoeren dem Abflugportal, 149
+  // dem Wirbel. Zwei Aspekte auf einem Kanal laufen im Gleichschritt.
+  const base = jitter(seed, 157) * Math.PI * 2
+
+  for (const step of FIRMAMENT_PORTAL_SHRINK_STEPS) {
+    const r = full * step
+    const dMin = clear + r
+    const inset = r * FIRMAMENT_PORTAL_EDGE_KEEP
+    const spots: FirmamentPortalSpot[] = []
+
+    for (const target of targets) {
+      const k = spots.length
+      const start = base + (k * Math.PI * 2) / targets.length
+      const frac = jitter(seed * 10 + target, 163)
+      let found: FirmamentPortalSpot | null = null
+
+      // Von der Sollrichtung aus abwechselnd nach beiden Seiten: der erste
+      // Treffer liegt damit so nah wie moeglich an der gespreizten Lage.
+      for (let i = 0; i < tries && !found; i++) {
+        const off = ((i % 2 ? 1 : -1) * Math.ceil(i / 2) * Math.PI * 2) / tries
+        const angle = start + off
+        const dMax = rayToRect(fit.cx, fit.cy, angle, inset, w, h)
+        if (dMax < dMin) continue
+
+        // Die RADIALE Leiter — der zweite Freiheitsgrad, den die Einzelfassung
+        // nicht braucht: eine Speiche, die beim gewuerfelten Anteil im
+        // Abstandskreis des Nachbarn liegt, ist weiter draussen oder weiter
+        // drinnen oft frei.
+        for (const f of [frac, ...FIRMAMENT_OFFER_PORTAL_RADIAL_STEPS]) {
+          const d = dMin + f * (dMax - dMin)
+          const x = fit.cx + Math.cos(angle) * d
+          const y = fit.cy + Math.sin(angle) * d
+          if (firmamentPortalVisibleShare(x, y, r, w, h) < FIRMAMENT_PORTAL_MIN_VISIBLE) continue
+          if (
+            spots.some((p) => Math.hypot(p.x - x, p.y - y) < (p.r + r) * FIRMAMENT_OFFER_PORTAL_GAP)
+          )
+            continue
+
+          found = { x, y, r }
+          break
+        }
+      }
+
+      if (!found) break
+      spots.push(found)
+    }
+
+    if (spots.length === targets.length) return spots
+  }
+
+  // Kein Fluchtweg mit Ueberlappung: eher enger gestellt als eines verschwunden.
+  // Die kleinste Stufe auf gleichmaessig verteilten Winkeln, ohne Abstandstest.
+  const r = full * FIRMAMENT_PORTAL_SHRINK_STEPS[FIRMAMENT_PORTAL_SHRINK_STEPS.length - 1]
+  return targets.map((_, k) => {
+    const angle = base + (k * Math.PI * 2) / targets.length
+    const d = Math.max(clear + r, rayToRect(fit.cx, fit.cy, angle, r * FIRMAMENT_PORTAL_EDGE_KEEP, w, h))
+    return { x: fit.cx + Math.cos(angle) * d, y: fit.cy + Math.sin(angle) * d, r }
+  })
+}
+
 // ── Die Beschriftung ────────────────────────────────────────────────────────
 
 export type FirmamentPortalLabelSide = 'below' | 'above' | 'right' | 'left'
@@ -221,6 +322,7 @@ export function firmamentPortalLabelSpot(
   spot: FirmamentPortalSpot,
   w: number,
   h: number,
+  neighbours: readonly FirmamentPortalSpot[] = [],
 ): FirmamentPortalLabelSpot {
   const size = firmamentPortalLabelSize(spot.r)
   const bw = FIRMAMENT_PORTAL_LABEL_W_EM * size
@@ -253,17 +355,22 @@ export function firmamentPortalLabelSpot(
     // Seite ganz.
     if (mid - bHalf < pad || mid + bHalf > (vertical ? h : w) - pad) return null
 
-    const fitBound = vertical ? fit.cy : fit.cx
-    const fitFree = vertical ? fit.cx : fit.cy
     const blocked: Array<[number, number]> = []
 
-    // Die Scheibe als Sperre auf der freien Achse — wie weit sie reicht, haengt
-    // davon ab, wie nah die feste Achse ihr schon kommt.
-    const d = Math.max(mid - bHalf - fitBound, fitBound - (mid + bHalf), 0)
-    if (d < clear) {
-      const need = Math.sqrt(clear * clear - d * d) + fHalf
-      blocked.push([fitFree - need, fitFree + need])
+    /** Ein runder Koerper als Sperrspanne auf der freien Achse — wie weit er
+     *  reicht, haengt davon ab, wie nah die feste Achse ihm schon kommt. */
+    function block(cxBound: number, cxFree: number, radius: number) {
+      const d = Math.max(mid - bHalf - cxBound, cxBound - (mid + bHalf), 0)
+      if (d >= radius) return
+      const need = Math.sqrt(radius * radius - d * d) + fHalf
+      blocked.push([cxFree - need, cxFree + need])
     }
+
+    // Die Kartenscheibe, und — sofern es welche gibt — die Nachbarportale. Die
+    // Scheibe gibt ueber die Leiter nach, ein Nachbar nie: er ist ein Koerper,
+    // keine Naehe.
+    block(vertical ? fit.cy : fit.cx, vertical ? fit.cx : fit.cy, clear)
+    for (const n of neighbours) block(vertical ? n.y : n.x, vertical ? n.x : n.y, n.r)
 
     const t = nearestFree(vertical ? spot.x : spot.y, pad + fHalf, span - pad - fHalf, blocked)
     if (t === null) return null

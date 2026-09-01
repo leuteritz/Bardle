@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  firmamentOfferPortalSpots,
   firmamentPortalHitBox,
   firmamentPortalLabelSize,
   firmamentPortalLabelSpot,
@@ -22,8 +23,11 @@ import {
   FIRMAMENT_PORTAL_RING_MAX_PX,
   FIRMAMENT_PORTAL_RING_MIN_PX,
   FIRMAMENT_PORTAL_SHRINK_STEPS,
+  FIRMAMENT_OFFER_PORTAL_GAP,
+  FIRMAMENT_OFFER_PORTAL_RING_K,
   FIRMAMENT_STAGE_MIN_H,
   FIRMAMENT_STAGE_MIN_W,
+  PROVIDENCE_OFFER_SIZE,
 } from '@/config/constants'
 
 /**
@@ -39,12 +43,17 @@ import {
  * Waechter dagegen, dass sie es nochmal wird.
  */
 
-/** Die gemessenen Buehnenmasse — dieselbe Quelle wie `firmamentLayout.spec.ts`. */
+/** Die gemessenen Buehnenmasse — dieselbe Quelle wie `firmamentLayout.spec.ts`:
+ *  `CONTENT_HEIGHT` minus `FIRMAMENT_CREST_BAND_H` (112), Breite minus
+ *  `FIRMAMENT_RAIL_ZONE_W` (268). Sie standen hier einmal 30 px breiter und
+ *  20 px hoeher — die Zahlen von vor dem Wachstum des Kopfbands und der
+ *  Leistenzone, und niemandem faellt so etwas auf: die Portale sassen weiter
+ *  richtig, nur gegen eine Buehne, die es nicht mehr gab. */
 const STAGES: Array<{ name: string; w: number; h: number }> = [
-  { name: 'Full HD', w: 1002, h: 690.6 },
-  { name: 'WUXGA', w: 1002, h: 791.4 },
-  { name: '2K', w: 1422, h: 969 },
-  { name: '4K', w: 2702, h: 1678.2 },
+  { name: 'Full HD', w: 972, h: 670.6 },
+  { name: 'WUXGA', w: 972, h: 771.4 },
+  { name: '2K', w: 1392, h: 949 },
+  { name: '4K', w: 2672, h: 1658.2 },
   { name: 'Boden', w: FIRMAMENT_STAGE_MIN_W, h: FIRMAMENT_STAGE_MIN_H },
 ]
 
@@ -316,6 +325,200 @@ describe('firmamentPortalHitBox — ein Ziel fuer Ring und Schrift', () => {
         expect(box.y1, `${s.name} U${id}`).toBeLessThanOrEqual(s.h)
         expect(box.x1 - box.x0, `${s.name} U${id}`).toBeGreaterThan(spot.r)
         expect(box.y1 - box.y0, `${s.name} U${id}`).toBeGreaterThan(spot.r)
+      }
+    }
+  })
+})
+
+/**
+ * DIE DREI ANGEBOTSPORTALE
+ *
+ * Auf der laufenden Bahn steht kein Abflugportal, sondern das Angebot des
+ * Aufbruchs — ein Portal je gezogener Karte. Sie teilen sich denselben schwarzen
+ * Raum, den sonst eines allein hat, und damit kommt eine dritte Sperre dazu, die
+ * die Einzelfassung nicht kennt: sie selbst.
+ *
+ * Der wichtigste Test hier ist der letzte: dass die VOLLE Groesse ueberall
+ * traegt. Er ist der Waechter gegen ein Anheben von `_RING_K` — genau die
+ * Aenderung, die im Bild gut aussieht und auf WUXGA reihenweise Portale
+ * schrumpfen laesst, ohne dass es jemand bemerkt.
+ */
+describe('firmamentOfferPortalSpots — die drei Wege des Aufbruchs', () => {
+  /** Drei verschiedene Ziele, so wie `rollOffer` sie zieht: nie das laufende. */
+  const targetsFor = (universe: number) =>
+    IDS.filter((id) => id !== universe).slice(0, PROVIDENCE_OFFER_SIZE)
+
+  it('ist deterministisch und unabhaengig von der Aufrufreihenfolge', () => {
+    for (const s of STAGES) {
+      const forward = IDS.map((id) => firmamentOfferPortalSpots(id, targetsFor(id), s.w, s.h))
+      const backward = [...IDS]
+        .reverse()
+        .map((id) => firmamentOfferPortalSpots(id, targetsFor(id), s.w, s.h))
+      expect(forward, s.name).toEqual([...backward].reverse())
+    }
+  })
+
+  /* Lieber gedraengt als eines weniger: eine Karte ohne Tuer waere ein Angebot,
+     das man nicht annehmen kann. Dieselbe Regel, aus der die Schrumpfleiter der
+     Einzelfassung entstand. */
+  it('liefert nie weniger Stellen als Ziele', () => {
+    for (const s of STAGES) {
+      for (const id of IDS) {
+        const targets = targetsFor(id)
+        expect(
+          firmamentOfferPortalSpots(id, targets, s.w, s.h),
+          `${s.name} U${id}`,
+        ).toHaveLength(targets.length)
+      }
+    }
+  })
+
+  it('legt jedes jenseits der Kartenkante ab', () => {
+    for (const s of STAGES) {
+      const fit = firmamentFitBox(s.w, s.h)
+      for (const id of IDS) {
+        for (const spot of firmamentOfferPortalSpots(id, targetsFor(id), s.w, s.h)) {
+          const gap = Math.hypot(spot.x - fit.cx, spot.y - fit.cy) - spot.r
+          expect(gap, `${s.name} U${id}`).toBeGreaterThanOrEqual(
+            fit.r * FIRMAMENT_PORTAL_DISC_CLEAR - 0.001,
+          )
+        }
+      }
+    }
+  })
+
+  it('haelt jedes zu mehr als der Haelfte im Bild', () => {
+    for (const s of STAGES) {
+      for (const id of IDS) {
+        for (const spot of firmamentOfferPortalSpots(id, targetsFor(id), s.w, s.h)) {
+          // Unabhaengig nachgerechnet, nicht mit der Streifenintegration der
+          // Funktion selbst — sonst prueft die Spec sie gegen sich.
+          expect(
+            visibleByGrid(spot.x, spot.y, spot.r, s.w, s.h),
+            `${s.name} U${id}`,
+          ).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_MIN_VISIBLE - 0.02)
+        }
+      }
+    }
+  })
+
+  it('haelt sie voneinander weg', () => {
+    for (const s of STAGES) {
+      for (const id of IDS) {
+        const spots = firmamentOfferPortalSpots(id, targetsFor(id), s.w, s.h)
+        for (let i = 0; i < spots.length; i++) {
+          for (let j = i + 1; j < spots.length; j++) {
+            const d = Math.hypot(spots[i].x - spots[j].x, spots[i].y - spots[j].y)
+            expect(d, `${s.name} U${id}`).toBeGreaterThanOrEqual(
+              (spots[i].r + spots[j].r) * FIRMAMENT_OFFER_PORTAL_GAP - 0.001,
+            )
+          }
+        }
+      }
+    }
+  })
+
+  /* Alle drei tragen dieselbe Groesse: drei verschieden grosse Portale
+     nebeneinander lesen sich als Rangfolge, die es nicht gibt. */
+  it('gibt allen dieselbe Groesse', () => {
+    for (const s of STAGES) {
+      for (const id of IDS) {
+        const spots = firmamentOfferPortalSpots(id, targetsFor(id), s.w, s.h)
+        for (const spot of spots) expect(spot.r, `${s.name} U${id}`).toBeCloseTo(spots[0].r, 6)
+      }
+    }
+  })
+
+  /*
+   * DER Test dieses Blocks. `_RING_K` ist die groesste Stufe, die auf ALLEN
+   * Buehnen und allen zehn Universen drei Stellen findet, ohne dass die
+   * Schrumpfleiter greift — gemessen kippt es zwischen 0,92 und 1,00, und zwar
+   * auf WUXGA. Wer die Zahl anhebt, weil die Portale groesser schoener waeren,
+   * bricht hier; im Bild faellt es nicht auf, weil ein geschrumpftes Portal
+   * genauso aussieht wie ein kleines.
+   */
+  it('behaelt ueberall die volle Groesse — die Schrumpfleiter greift nie', () => {
+    for (const s of STAGES) {
+      const full = firmamentPortalRingR(s.h) * FIRMAMENT_OFFER_PORTAL_RING_K
+      for (const id of IDS) {
+        const spots = firmamentOfferPortalSpots(id, targetsFor(id), s.w, s.h)
+        expect(spots[0].r, `${s.name} U${id}`).toBeCloseTo(full, 6)
+      }
+    }
+  })
+
+  /* Und sie sind KLEINER als das eine Abflugportal — sie teilen sich den Raum,
+     den es allein hat. */
+  it('bleibt unter der Groesse des Abflugportals', () => {
+    for (const s of STAGES) {
+      const spots = firmamentOfferPortalSpots(1, targetsFor(1), s.w, s.h)
+      expect(spots[0].r, s.name).toBeLessThan(firmamentPortalRingR(s.h))
+    }
+  })
+})
+
+/**
+ * Die Beschriftungen der drei — sie weichen jetzt auch den NACHBARN aus.
+ *
+ * Die Kartenscheibe war bisher die einzige Sperre auf der freien Achse; ein
+ * Kaestchen auf einem Nachbarring waere Schrift auf einem leuchtenden Koerper.
+ * Und die Trefferflaechen duerfen sich nicht ueberschneiden: sie sind zugleich
+ * die Anker der Hover-Karten, und zwei ueberlappende Anker sind zwei Karten am
+ * falschen Ort.
+ */
+describe('firmamentPortalLabelSpot — mit Nachbarn', () => {
+  const targetsFor = (universe: number) =>
+    IDS.filter((id) => id !== universe).slice(0, PROVIDENCE_OFFER_SIZE)
+
+  it('legt keine Beschriftung auf einen Nachbarring', () => {
+    for (const s of STAGES) {
+      for (const id of IDS) {
+        const spots = firmamentOfferPortalSpots(id, targetsFor(id), s.w, s.h)
+        const labels = spots.map((spot, i) =>
+          firmamentPortalLabelSpot(
+            spot,
+            s.w,
+            s.h,
+            spots.filter((_, j) => j !== i),
+          ),
+        )
+        for (let i = 0; i < spots.length; i++) {
+          for (let j = 0; j < spots.length; j++) {
+            if (i === j) continue
+            expect(boxDist(spots[j].x, spots[j].y, labels[i]), `${s.name} U${id}`).toBeGreaterThan(
+              0,
+            )
+          }
+        }
+      }
+    }
+  })
+
+  it('haelt die drei Trefferflaechen disjunkt', () => {
+    for (const s of STAGES) {
+      for (const id of IDS) {
+        const spots = firmamentOfferPortalSpots(id, targetsFor(id), s.w, s.h)
+        const boxes = spots.map((spot, i) =>
+          firmamentPortalHitBox(
+            spot,
+            firmamentPortalLabelSpot(
+              spot,
+              s.w,
+              s.h,
+              spots.filter((_, j) => j !== i),
+            ),
+            s.w,
+            s.h,
+          ),
+        )
+        for (let i = 0; i < boxes.length; i++) {
+          for (let j = i + 1; j < boxes.length; j++) {
+            const a = boxes[i]
+            const b = boxes[j]
+            const overlaps = a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1
+            expect(overlaps, `${s.name} U${id} ${i}/${j}`).toBe(false)
+          }
+        }
       }
     }
   })

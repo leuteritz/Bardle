@@ -820,6 +820,47 @@ export const FIRMAMENT_PORTAL_EDGE_KEEP = 0.06
 export const FIRMAMENT_PORTAL_MIN_VISIBLE = 0.55
 export const FIRMAMENT_PORTAL_VIS_SAMPLES = 64
 
+// ── Die DREI Angebotsportale ────────────────────────────────────────────────
+/* Auf der LAUFENDEN Bahn steht kein Abflugportal (`buildDeparture` gibt dort
+   `null`), sondern das Angebot des Aufbruchs: ein Portal je gezogener Karte,
+   alle im schwarzen Raum jenseits der Kartenscheibe. Sie teilen sich denselben
+   Raum, den sonst eines allein hat — und der ist schmaler, als er aussieht. */
+
+/** Ringgroesse als Anteil der Einzelgroesse. GEMESSEN, nicht geschaetzt: der
+ *  Algorithmus wurde ueber alle zehn Universen und sieben Buehnenmasse gefahren
+ *  (die vier Zielaufloesungen, beide mit eingeklappter Leiste, und der
+ *  Buehnenboden) und gezaehlt, in wie vielen Faellen die VOLLE Stufe traegt —
+ *  die Schrumpfleiter also gar nicht erst greift:
+ *
+ *    0,86 → 10/10 ueberall   ·   0,92 → 10/10   ·   1,00 → WUXGA nur 4/10
+ *
+ *  Genommen ist 0,86 und nicht 0,92: die Kippstelle liegt zwischen 0,92 und
+ *  1,00, und ein Wert unmittelbar davor haette keine Reserve fuer den Tag, an
+ *  dem jemand das Kopfband oder die Rail-Zone anfasst. Bei 0,86 bleiben auf der
+ *  engsten Buehne 2,46 Radiensummen zwischen zwei Portalen.
+ *
+ *  Der enge Fall ist WUXGA und nicht Full HD: gleiche Breite, 100 px mehr
+ *  Hoehe, dadurch waechst die Scheibe und das schwarze Band schrumpft. Bei
+ *  voller Groesse tragen dort nur 68 von 360 Grad — vier Eckkeile zu je 17,
+ *  schmaler als ein Portal breit ist. */
+export const FIRMAMENT_OFFER_PORTAL_RING_K = 0.86
+
+/** Mittelpunktabstand als Vielfaches der Radiensumme. Reine ZUSICHERUNG: durch
+ *  die gespreizten Startwinkel liegt der engste gemessene Fall bei 2,87, der
+ *  Test greift auf keiner Zielaufloesung. Er steht fuer den Tag, an dem jemand
+ *  `_RING_K` anhebt oder `PROVIDENCE_OFFER_SIZE` auf vier stellt. */
+export const FIRMAMENT_OFFER_PORTAL_GAP = 1.12
+
+/** 36 Winkel im 10-Grad-Raster statt der 24 der Einzelfassung: drei Portale
+ *  muessen einander ausweichen und brauchen dafuer ein feineres Raster. */
+export const FIRMAMENT_OFFER_PORTAL_ANGLE_TRIES = 36
+
+/** Die radiale Leiter je Speiche, NACH dem gewuerfelten Anteil: ganz aussen,
+ *  Mitte, ganz innen. Der zweite Freiheitsgrad, den ein einzelnes Portal nicht
+ *  braucht — eine Speiche, die beim gewuerfelten Anteil im Abstandskreis des
+ *  Nachbarn liegt, ist weiter draussen oder weiter drinnen oft frei. */
+export const FIRMAMENT_OFFER_PORTAL_RADIAL_STEPS = [1, 0.5, 0] as const
+
 /* Sperrzonen fuer Bedienflaechen gibt es hier KEINE: die Buehne traegt kein HUD
    mehr — Werkzeugleiste, Legende und Auswahlkarte sind gefallen, gezoomt wird
    mit dem Rad. Das Portal weicht nur noch Bildkante und Kartenscheibe aus. */
@@ -866,4 +907,8 @@ export const FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS = [
 /** Deckel der Portal-Rasterflaeche je Ebene. Er greift ab 2K am Halo und ab 4K
  *  an allen — ohne ihn baute 4K ein 988er-Quadrat fuer ein Leuchten. */
 export const FIRMAMENT_PORTAL_MAX_BACKING_PX = 1024
-export const FIRMAMENT_PORTAL_CACHE_MAX = 12
+/* DREI Portale mal VIER Ebenen sind exakt zwoelf — bei 12 stuende der LRU
+   randvoll und wuerfe bei jedem Resize- oder DPR-Wechsel alles weg, um es im
+   selben Frame neu zu backen. 24 laesst eine vollstaendige zweite Garnitur
+   stehen. */
+export const FIRMAMENT_PORTAL_CACHE_MAX = 24

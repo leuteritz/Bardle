@@ -57,14 +57,18 @@ export const useProvidenceStore = defineStore('providence', {
      */
     active: null as RolledProvidence | null,
     /**
-     * Die Karten, die im Prestige-Modal zur Wahl stehen — je ein Universum mit
-     * der Vorsehung, die über ihm steht.
+     * Die Karten, die zur Wahl stehen — je ein Universum mit der Vorsehung, die
+     * über ihm steht. Im Firmament ist jede davon ein PORTAL im schwarzen Raum
+     * jenseits der Kartenscheibe.
      *
-     * Leer ausserhalb der Wahl: das Angebot wird beim Öffnen gewürfelt und beim
-     * Wählen verbraucht, es überlebt das Modal nicht und muss darum nie
-     * gespeichert werden. Ein neues Öffnen würfelt neu — das ist gewollt, sonst
-     * liesse sich durch Schliessen und Wiederöffnen nichts anderes erhoffen,
-     * und die Ziehung wäre eine Formalie.
+     * Es STEHT, und zwar im Spielstand: gewürfelt, sobald das Universum
+     * gerettet ist, verbraucht beim Aufbruch. Das war einmal anders — es lebte
+     * nur, solange das Prestige-Modal offen war, und jedes Wiederöffnen würfelte
+     * neu, damit die Ziehung keine Formalie ist. Diese Begründung ist mit dem
+     * Modal gefallen: es gibt keinen Öffnen-Schritt mehr, an den ein Reroll
+     * hängen könnte, und die Stelle eines Portals hängt am Zieluniversum. Ein
+     * Angebot, das bei jedem Blick neu fällt, liesse die drei Portale über die
+     * Bühne springen — und ein Ort, der nicht bleibt, ist keiner.
      */
     offer: [] as PrestigeOffer[],
   }),
@@ -159,8 +163,8 @@ export const useProvidenceStore = defineStore('providence', {
      * dieselbe Frage zur Wahl, nur unter anderem Namen; ohne die erste zweimal
      * derselbe Ort.
      *
-     * Das aktuelle Universum bleibt aussen vor: `selectPrestigeUniverse` lehnt
-     * es ohnehin ab, und eine Karte anzubieten, die beim Klick nichts tut, wäre
+     * Das aktuelle Universum bleibt aussen vor: `travelToUniverse` lehnt es
+     * ohnehin ab, und eine Karte anzubieten, die beim Klick nichts tut, wäre
      * schlimmer als eine Karte weniger.
      *
      * Die laufende Vorsehung bleibt unangetastet — gewechselt wird erst beim
@@ -168,6 +172,11 @@ export const useProvidenceStore = defineStore('providence', {
      * Vorsehung zurücklassen.
      */
     rollOffer(currentUniverseId: number): void {
+      // Steht schon eines, bleibt es stehen. Der Riegel ist Pflicht, seit der
+      // Aufrufer im Sekundentakt fragt (`checkPrestigeAvailability`) statt
+      // einmal beim Öffnen eines Modals.
+      if (this.offer.length) return
+
       const pickedUniverses = shuffled(universes.filter((u) => u.id !== currentUniverseId)).slice(
         0,
         PROVIDENCE_OFFER_SIZE,
@@ -209,8 +218,16 @@ export const useProvidenceStore = defineStore('providence', {
       return true
     },
 
-    /** Das Angebot verwerfen, ohne die laufende Vorsehung anzutasten — der
-     *  Spieler hat das Prestige-Modal geschlossen. */
+    /**
+     * Das Angebot verwerfen, ohne die laufende Vorsehung anzutasten.
+     *
+     * Aufgerufen von `executePrestigeReset`. `choose()` leert es zwar selbst,
+     * und solange nur der Modalweg dorthin führte, genügte das — ein Angebot
+     * ist jetzt aber gespeichert und überlebt alles. Ein Reset, der nicht über
+     * `choose` lief (Admin-Sprung, künftige Aufrufer), liesse sonst eine Karte
+     * für das Universum stehen, in dem man gerade angekommen ist: `rollOffer`
+     * schliesst das laufende Universum aus, prüft ein STEHENDES aber nicht nach.
+     */
     clearOffer(): void {
       this.offer = []
     },

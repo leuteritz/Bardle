@@ -490,10 +490,14 @@ export function usePersistence() {
       // keinem Katalog mehr und liesse sich aus einer ID nicht rekonstruieren.
       // Damit sind die Achsen-Schlüssel in `effects` der Save-Vertrag, den
       // früher die ID war — wer `xpMult` umbenennt, macht laufende Läufe
-      // wirkungslos. Das Angebot wird bewusst NICHT gespeichert: ein
-      // ungewähltes Trio darf beim nächsten Öffnen neu gewürfelt werden.
+      // wirkungslos. Das ANGEBOT erbt denselben Vertrag: es speichert dieselben
+      // Objekte plus eine Universumsnummer. Es liegt hier, seit aus den drei
+      // Karten drei Portale im Firmament wurden — die Stelle eines Portals
+      // haengt am Zieluniversum, und ein Angebot, das jeder Ladevorgang neu
+      // wuerfelt, liesse die Portale ueber die Buehne springen.
       providence: {
         active: providenceStore.active ? { ...providenceStore.active } : null,
+        offer: providenceStore.offer.map((o) => ({ ...o })),
       },
     }
 
@@ -1241,6 +1245,20 @@ export function usePersistence() {
         savedProvidence && typeof savedProvidence === 'object' && savedProvidence.effects
           ? { ...savedProvidence }
           : null
+      // Das Angebot, gleich defensiv: was keine Universumsnummer und keine
+      // Effekte traegt, faellt still heraus. Fehlt es ganz (Spielstand von vor
+      // dem Feld), rollt der erste Tick nach — `checkPrestigeAvailability`
+      // fragt als Bedingung, nicht im Moment des Kippens, und braucht deshalb
+      // hier keinen Migrationszweig.
+      const savedOffer = saved.providence?.offer
+      providenceStoreLoad.offer = Array.isArray(savedOffer)
+        ? savedOffer
+            .filter(
+              (o) =>
+                o && typeof o.universeId === 'number' && o.providence && o.providence.effects,
+            )
+            .map((o) => ({ ...o }))
+        : []
 
       // Recalculate derived CPS/CPC after all levels (solar + forge) are restored
       const shopStore = useShopStore()
@@ -1350,7 +1368,6 @@ export function usePersistence() {
     gameStore.prestigeAvailable = false
     gameStore.activeExpedition = null
     gameStore.isHyperspaceActive = false
-    gameStore.showUniverseSelectModal = false
     gameStore.isCPSModalOpen = false
     gameStore.isExpeditionModalOpen = false
     gameStore.isEncyclopediaOpen = false

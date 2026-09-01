@@ -14,12 +14,12 @@
  *
  * Beim Ueberfahren WACHT DIE SCHWELLE AUF: der Wirbel zieht an, die Ebenen
  * staffeln sich in die Tiefe, das Schwellenlicht blueht auf, eine Welle
- * quittiert. Ausgeloest wird das vom Knopf im Chart — die Regeln stehen
- * trotzdem HIER, weil Vue Keyframe-Namen in `<style scoped>` einen
- * Scope-Suffix anhaengt: eine Animation und die Regel, die ihre Phasen nennt,
- * muessen im selben Block liegen. Vorfahren aus einer fremden Komponente darf
- * ein scoped Selektor nennen, das Scope-Attribut landet nur am letzten
- * Compound.
+ * quittiert. Ausgeloest wird das vom Knopf im Chart, aber der Zustand kommt als
+ * PROP herein und schaltet eine Klasse an der EIGENEN Wurzel — nicht mehr ueber
+ * `.fm-stage:has(.fm-portal-hit:hover)`. Der fremde Vorfahre war buehnenweit,
+ * und auf der laufenden Bahn stehen DREI Portale: ein Hover haette alle drei
+ * geweckt. Nebenbei liegen Animation und Regel damit ohnehin im selben scoped
+ * Block, was Vues Keyframe-Suffix ohne Trickserei aufloest.
  *
  * Diese Komponente traegt KEINE Bedienung. Der Knopf sitzt im Chart, damit
  * dessen Hover-Pause-Regel (`.fm-stage:has(…)`) ihn ohne Scope-Trickserei
@@ -61,6 +61,14 @@ const props = defineProps<{
   tint: string
   /** Das ZIEL selbst — sein Galaxienfeld steht im Schlund. */
   target: number
+  /** Ueberfahren: die Schwelle wacht auf. Der Zustand kommt von AUSSEN, weil
+   *  der Knopf dazu im Chart sitzt — und weil auf der laufenden Bahn DREI
+   *  Portale nebeneinander stehen. Eine Regel an `.fm-stage:has(…)` weckte
+   *  alle drei, egal welches man ueberfaehrt. */
+  awake?: boolean
+  /** Geschaerft: der erste Klick hat gewaehlt, der zweite reist. Der
+   *  Wachzustand bleibt dann stehen, auch wenn der Zeiger weiterzieht. */
+  armed?: boolean
 }>()
 
 const mawEl = ref<HTMLCanvasElement | null>(null)
@@ -152,7 +160,11 @@ const top = computed(() => `${props.spot.y}px`)
 </script>
 
 <template>
-  <span class="fm-portal" aria-hidden="true">
+  <span
+    class="fm-portal"
+    :class="{ 'is-awake': awake || armed, 'is-armed': armed }"
+    aria-hidden="true"
+  >
     <canvas ref="haloEl" class="fm-portal-l fm-portal-l--halo" />
     <canvas ref="mawEl" class="fm-portal-l fm-portal-l--maw" />
     <!-- Das Licht kommt AUS der Oeffnung: es liegt auf dem Schlund und unter
@@ -323,32 +335,46 @@ const top = computed(() => `${props.spot.y}px`)
    Durchgang, statt dass er nur groesser wird. Der Versatz zwischen Ring und
    Schlundkante bleibt unter dem `shadowBlur` des Rings, sonst risse zwischen
    beiden eine Fuge auf. */
-.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-l--halo {
+.fm-portal.is-awake .fm-portal-l--halo {
   transform: translate(-50%, -50%) scale(v-bind(haloK));
 }
 
-.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-l--rim {
+.fm-portal.is-awake .fm-portal-l--rim {
   transform: translate(-50%, -50%) scale(v-bind(rimK));
 }
 
-.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-l--maw {
+.fm-portal.is-awake .fm-portal-l--maw {
   transform: translate(-50%, -50%) scale(v-bind(mawK));
 }
 
-.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-boost {
+.fm-portal.is-awake .fm-portal-boost {
   animation-play-state: running;
   scale: v-bind(swirlK);
 }
 
-.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-fx--bloom {
+.fm-portal.is-awake .fm-portal-fx--bloom {
   opacity: v-bind(bloomAlpha);
   transform: translate(-50%, -50%) scaleY(v-bind(portalRy)) scale(1);
 }
 
 /* EINE Welle je Beruehrung, kein Dauerlaeufer. Danach steht das Element wieder
    auf null — `animation-fill-mode` bleibt bewusst aus. */
-.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-fx--ripple {
+.fm-portal.is-awake .fm-portal-fx--ripple {
   animation: fm-portal-ripple v-bind(rippleDur) ease-out 1;
+}
+
+/* GESCHAERFT — der erste Klick hat gewaehlt, der zweite reist.
+   Es ist der Wachzustand PLUS einer Zusage: der Halo bleibt oben statt zu
+   atmen, und die Zusatzdrehung laeuft weiter, obwohl der Zeiger schon fort
+   sein kann. Nur `opacity` und `animation-play-state` — beide kosten keinen
+   Repaint, und das Portal steht dann oft minutenlang so da. */
+.fm-portal.is-armed .fm-portal-l--halo {
+  opacity: 1;
+  animation: none;
+}
+
+.fm-portal.is-armed .fm-portal-boost {
+  animation-play-state: running;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -360,7 +386,7 @@ const top = computed(() => `${props.spot.y}px`)
   }
 
   /* Das Schwellenlicht bleibt: es ist Auskunft, keine Bewegung. */
-  .fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible) .fm-portal-fx--ripple {
+  .fm-portal.is-awake .fm-portal-fx--ripple {
     animation: none;
   }
 }

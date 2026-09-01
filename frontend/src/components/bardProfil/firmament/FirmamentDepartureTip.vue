@@ -29,6 +29,15 @@ const day = computed(() => new Date(props.departure.run.completedAt).toLocaleDat
       The road went on to {{ universeLabel(departure.toUniverse) }}
     </div>
 
+    <!-- Die Vorsehung, unter der dieser Lauf stand. Sie steht hier und nicht
+         mehr nur als vierter Halbsatz im Fuss: auf der laufenden Bahn wiegt
+         genau diese Zeile die Wahl zwischen drei Portalen auf, und die
+         vergangene ist die Antwort darauf. Was das Archiv haelt, ist der NAME —
+         die Achsen bringt der Lauf nicht mit. -->
+    <div v-if="departure.run.providence" class="tip-meta fdt-prov">
+      under {{ departure.run.providence }}
+    </div>
+
     <div class="tip-read tip-read--lg">
       <span class="tip-read-cell">
         <span class="tip-read-k">Freed here</span>
@@ -47,7 +56,6 @@ const day = computed(() => new Date(props.departure.run.completedAt).toLocaleDat
     <div class="tip-hint fdt-foot">
       {{ formatCompactDuration(departure.run.durationSeconds * MS_PER_SECOND) }} · {{ day }}
       <span v-if="departure.visits > 1"> · {{ departure.visits }} visits</span>
-      <span v-if="departure.run.providence"> · {{ departure.run.providence }}</span>
     </div>
 
     <!-- Kein `.tip-act`: die Karte traegt `pointer-events: none`. Die Geste
@@ -67,6 +75,10 @@ const day = computed(() => new Date(props.departure.run.completedAt).toLocaleDat
 
 .fdt-line {
   line-height: 1.2;
+}
+
+.fdt-prov {
+  color: var(--tip-color);
 }
 
 .fdt-foot {

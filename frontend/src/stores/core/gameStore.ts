@@ -18,6 +18,7 @@ import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useMissionStore } from '@/stores/progression/missionStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
@@ -213,7 +214,6 @@ export const useGameStore = defineStore('game', {
     activeExpedition: null as Expedition | null,
 
     isHyperspaceActive: false,
-    showUniverseSelectModal: false,
 
     // ── Expedition Tracking ──────────────────────
     totalChimesEarned: 0,
@@ -662,6 +662,15 @@ export const useGameStore = defineStore('game', {
      * zuliess. Die Universen sind keine Leiter, sondern eine Auswahl — und seit
      * der Vorsehung gibt es einen Grund, dasselbe Universum ein zweites Mal zu
      * bereisen: gleiche Wirtschaft, anderer Kosmos.
+     *
+     * Sie zieht ausserdem das Angebot, aus dem im Firmament die drei Portale
+     * werden — und zwar als BEDINGUNG, nicht im Moment des Kippens. Der
+     * Unterschied traegt: das Admin-Panel setzt `prestigeAvailable` direkt und
+     * liefe an einem Kipp-Zeitpunkt vorbei, der Spieler saesse dann vor einem
+     * verfuegbaren Prestige ohne ein einziges Portal. So heilt sich jeder Pfad
+     * von selbst — Admin-Sprung, Altstand, ein Reset, der das Angebot geraeumt
+     * hat. `rollOffer` traegt den Riegel gegen das Neuwuerfeln, also ist das
+     * hier ein `if` und keine Ziehung je Sekunde.
      */
     checkPrestigeAvailability() {
       if (
@@ -670,6 +679,9 @@ export const useGameStore = defineStore('game', {
         this.totalUniverses > 1
       ) {
         this.prestigeAvailable = true
+      }
+      if (this.prestigeAvailable && this.totalUniverses > 1) {
+        useProvidenceStore().rollOffer(this.currentUniverse)
       }
     },
 
@@ -805,6 +817,10 @@ export const useGameStore = defineStore('game', {
       // Frass. `totalMeepsDevoured` bleibt stehen, es ist ein Lebenszeit-Zähler.
       this.meepsDevoured = 0
       this.prestigeAvailable = false
+      // Das Angebot ist verbraucht. `choose()` leert es zwar selbst, aber es
+      // liegt seit dem Fall des Modals im Spielstand und ueberlebt jeden Weg,
+      // der nicht ueber `travelToUniverse` lief.
+      useProvidenceStore().clearOffer()
       this.chimes = 0
       this.level = 1
       this.chimesForNextLevel = LEVEL_BASE
@@ -840,31 +856,27 @@ export const useGameStore = defineStore('game', {
       this.beginUniverseRun()
     },
 
-    // Opens the Universe selection modal
-    openPrestigeModal() {
-      if (!this.prestigeAvailable || this.totalUniverses <= 1) return
-      if (this.isHyperspaceActive) return
-      // Das Angebot wird EINMAL beim Öffnen gezogen, nicht beim Rendern der
-      // Karten: sonst würfelte jedes Re-Render neue Karten unter dem Cursor des
-      // Spielers. Das laufende Universum kommt nicht ins Angebot.
-      useProvidenceStore().rollOffer(this.currentUniverse)
-      this.showUniverseSelectModal = true
-    },
-
-    // Closes the Universe selection modal
-    closePrestigeModal() {
-      this.showUniverseSelectModal = false
-      // Nur das Angebot verwerfen — die laufende Vorsehung bleibt. Ein
-      // abgebrochenes Prestige darf den Spieler nicht ohne sie zurücklassen.
-      useProvidenceStore().clearOffer()
-    },
-
-    // Selects a universe and starts the Hyperspace animation + reset
-    selectPrestigeUniverse(targetUniverse: number) {
+    /**
+     * AUFBRECHEN — die eine Geste, die einen Durchlauf beendet.
+     *
+     * Sie sitzt an einem Portal im Firmament, und sie ist die EINZIGE Stelle,
+     * an der die Reihenfolge steht: erst die Vorsehung antreten, dann reisen.
+     * Andersherum liefe der neue Durchlauf fuer die Dauer der
+     * Hyperspace-Animation noch unter der alten. Eine zweite Fassung dieser
+     * Reihenfolge irgendwo anders ist genau der Fehler, gegen den sie hier
+     * gebuendelt ist.
+     *
+     * Das Profil macht dabei zu: der Blitz gehoert auf die BUEHNE, und wer
+     * gereist ist, will nicht im Reiter aufwachen. Dasselbe tut der galaxyStore
+     * beim Galaxienwechsel, aus demselben Grund.
+     */
+    travelToUniverse(targetUniverse: number) {
       if (targetUniverse === this.currentUniverse) return
       if (this.isHyperspaceActive) return
+      if (!useProvidenceStore().choose(targetUniverse)) return
 
-      this.showUniverseSelectModal = false
+      const ui = useUiStore()
+      if (ui.bardActiveTab !== null) ui.closeBardModal()
 
       if (
         typeof window !== 'undefined' &&

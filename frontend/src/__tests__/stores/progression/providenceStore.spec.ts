@@ -171,6 +171,9 @@ describe('providenceStore', () => {
     it('bietet nie das laufende Universum an und nie eines doppelt', () => {
       const store = useProvidenceStore()
       for (const current of universes.map((u) => u.id)) {
+        // Geleert, weil `rollOffer` ueber ein STEHENDES Angebot nicht mehr
+        // wuerfelt — im Spiel gibt es je Universum genau eines.
+        store.clearOffer()
         store.rollOffer(current)
         const ids = store.offer.map((o) => o.universeId)
         expect(ids).not.toContain(current)
@@ -181,18 +184,34 @@ describe('providenceStore', () => {
     it('zieht die drei Karten aus verschiedenen Domänen', () => {
       const store = useProvidenceStore()
       for (let i = 0; i < 200; i++) {
+        store.clearOffer()
         store.rollOffer(1)
         const domains = store.offerCards.map((c) => c.providence.domain)
         expect(new Set(domains).size).toBe(domains.length)
       }
     })
 
-    it('würfelt bei jedem Öffnen neu', () => {
-      // Sonst liesse sich durch Schliessen und Wiederöffnen nichts anderes
-      // erhoffen, und die Ziehung wäre eine Formalie.
+    it('würfelt NICHT über ein stehendes Angebot', () => {
+      // Die umgekehrte Zusicherung von früher („jedes Öffnen würfelt neu"), und
+      // sie ist mit dem Prestige-Modal gekippt: es gibt keinen Öffnen-Schritt
+      // mehr, an dem ein Reroll hängen könnte. Aus den drei Karten sind drei
+      // PORTALE im Firmament geworden, und die Stelle eines Portals hängt am
+      // Zieluniversum — ein Angebot, das bei jedem Blick neu fällt, liesse sie
+      // über die Bühne springen. Der Aufrufer fragt jetzt im Sekundentakt.
+      const store = useProvidenceStore()
+      store.rollOffer(1)
+      const first = store.offer.map((o) => `${o.universeId}:${o.providence.name}`).join('|')
+      for (let i = 0; i < 40; i++) store.rollOffer(1)
+      expect(store.offer.map((o) => `${o.universeId}:${o.providence.name}`).join('|')).toBe(first)
+    })
+
+    it('würfelt neu, sobald das Angebot verbraucht ist', () => {
+      // Der Riegel darf kein Schloss werden: nach `clearOffer` — also nach dem
+      // Aufbruch — muss der nächste Tick wieder eines legen.
       const store = useProvidenceStore()
       const seen = new Set<string>()
       for (let i = 0; i < 40; i++) {
+        store.clearOffer()
         store.rollOffer(1)
         seen.add(store.offer.map((o) => `${o.universeId}:${o.providence.name}`).join('|'))
       }

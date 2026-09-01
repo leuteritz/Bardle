@@ -17,7 +17,6 @@ import AugmentSelectionModal from '@/components/augment/AugmentSelectionModal.vu
 import HudCardColumn from '@/components/idle/hud/HudCardColumn.vue'
 import RoleSelectionModal from '@/components/roleSelection/RoleSelectionModal.vue'
 import HyperspaceOverlay from '@/components/idle/prestige/HyperspaceOverlay.vue'
-import UniverseSelectModal from '@/components/idle/prestige/UniverseSelectModal.vue'
 import EncyclopediaPanel from '@/components/encyclopedia/EncyclopediaPanel.vue'
 import AppHeaderComponent from '@/components/header/AppHeaderComponent.vue'
 import StarTimerBarsComponent from '@/components/header/StarTimerBarsComponent.vue'
@@ -162,7 +161,6 @@ watch(
     <HudCardColumn />
     <RoleSelectionModal />
     <HyperspaceOverlay />
-    <UniverseSelectModal />
     <EventLogPanel />
     <OfflineProgressModal />
     <PauseOverlay />

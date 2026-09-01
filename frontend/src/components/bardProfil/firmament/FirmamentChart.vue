@@ -42,6 +42,7 @@ import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxy
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
 import {
+  firmamentOfferPortalSpots,
   firmamentPortalHitBox,
   firmamentPortalLabelSpot,
   firmamentPortalSpot,
@@ -87,10 +88,16 @@ import {
 } from '@/config/constants'
 import type { FirmamentDeparture, FirmamentNode } from '@/utils/ui/firmamentLayout'
 import type { FirmamentSelection } from '@/types'
+import type { PrestigeOfferCard } from '@/stores/progression/providenceStore'
+import FirmamentOfferTip from './FirmamentOfferTip.vue'
 
 const props = defineProps<{
   nodes: FirmamentNode[]
   departure: FirmamentDeparture | null
+  /** Die Karten des Aufbruchs — je eine wird zu einem Portal im schwarzen Raum.
+   *  Leer auf jeder Bahn, auf der nichts ansteht; die VERGANGENE bekommt nie
+   *  welche, sie traegt ihr Abflugportal. */
+  offers: PrestigeOfferCard[]
   selection: FirmamentSelection
   visible: boolean
 }>()
@@ -115,7 +122,6 @@ const dprNow = ref(1)
 /** Zaehlt die Repaints. Der Playwright-Lauf liest das: bleibt die Zahl in Ruhe
  *  stehen, laeuft keine Frame-Schleife. */
 const paintCount = ref(0)
-defineExpose({ paintCount })
 
 // ── Zoom und Fahrt ──────────────────────────────────────────────────────────
 const zoomStep = ref(0)
@@ -317,6 +323,99 @@ const portalLabelStyle = computed(() => {
   }
 })
 
+
+// ── Die Angebotsportale ─────────────────────────────────────────────────────
+/**
+ * Die DREI Wege, die offenstehen, wenn das Universum gerettet ist.
+ *
+ * Sie stehen im selben schwarzen Raum wie das Abflugportal und nach denselben
+ * Regeln — nur eben zu dritt, und deshalb kleiner und mit einem gegenseitigen
+ * Abstand. Weder Zoom noch Fahrt gehen ein: was die Rechnung nicht sieht, kann
+ * keinen Repaint ausloesen.
+ *
+ * Die Zeitform trennt sie vom Abflugportal, nicht eine Fallunterscheidung:
+ * `buildDeparture` gibt auf der LAUFENDEN Bahn immer `null`, ein Angebot gibt
+ * es nur DORT. Auf einer Bahn steht damit immer genau eine Art Portal.
+ */
+const offerSpots = computed(() =>
+  props.offers.length
+    ? firmamentOfferPortalSpots(
+        props.selection.universe,
+        props.offers.map((o) => o.universe.id),
+        cssW.value,
+        cssH.value,
+      )
+    : [],
+)
+
+/** Ein Portal, fertig zum Zeichnen: Stelle, Beschriftung, Trefferflaeche.
+ *  Die Beschriftung weicht dabei den NACHBARN aus — die Kartenscheibe war
+ *  bisher die einzige Sperre, jetzt sind es drei mehr. */
+const offerMarks = computed(() => {
+  const spots = offerSpots.value
+  return props.offers.slice(0, spots.length).map((card, i) => {
+    const spot = spots[i]
+    const label = firmamentPortalLabelSpot(
+      spot,
+      cssW.value,
+      cssH.value,
+      spots.filter((_, j) => j !== i),
+    )
+    const hit = firmamentPortalHitBox(spot, label, cssW.value, cssH.value)
+    return {
+      card,
+      spot,
+      label,
+      hit,
+      tint: getUniverse(card.universe.id)?.tint ?? FIRMAMENT_GATE_COLOR,
+    }
+  })
+})
+
+/** Welches Portal gerade unter dem Zeiger liegt und welches geschaerft ist.
+ *
+ *  Der Zustand liegt HIER und nicht als `:has`-Regel in der Buehne: der fremde
+ *  Vorfahre weckte alle drei zugleich. Die Handler haengen am stillstehenden
+ *  Knopf, nicht an einem wandernden Koerper — Chrome liefert bei
+ *  transformierten Elementen `mouseover` ohne `mouseout`. */
+const hoveredOffer = ref<number | null>(null)
+const armedOffer = ref<number | null>(null)
+
+/**
+ * Der Klick auf ein Portal — ZWEISTUFIG.
+ *
+ * Erster Klick schaerft, zweiter reist. Der Modalweg hatte auch zwei Stufen
+ * (oeffnen, waehlen); faellt der Kasten, muss die zweite an die Geste. Das ist
+ * die einzige Flaeche im Spiel, auf der ein Fehlklick einen ganzen Durchlauf
+ * beendet — die Voyages-Marke, deren „die Marke IST der Knopf" hier Pate steht,
+ * kostet schlimmstenfalls eine Expedition.
+ */
+function tapOffer(universeId: number) {
+  if (armedOffer.value !== universeId) {
+    armedOffer.value = universeId
+    return
+  }
+  gameStore.travelToUniverse(universeId)
+}
+
+/** Entwaffnen — die oberste Sprosse der Escape-Leiter des Reiters. */
+function disarmOffer(): boolean {
+  if (armedOffer.value === null) return false
+  armedOffer.value = null
+  return true
+}
+
+/* Nach dem Aufbruch steht man auf einer neuen Bahn; ein geschaerftes Portal von
+   vorhin waere ein Knopf auf einem Angebot, das es nicht mehr gibt. */
+watch(
+  () => props.offers.map((o) => o.universe.id).join(','),
+  () => {
+    armedOffer.value = null
+    hoveredOffer.value = null
+  },
+)
+
+defineExpose({ paintCount, disarmOffer })
 
 /**
  * Der Startpunkt — die Benennung des Ursprungs, an dem die Bahn ansetzt.
@@ -604,6 +703,20 @@ const layerStyle = computed(() => ({
       :seed="selection.universe"
       :target="departure.toUniverse"
       :tint="portalTint"
+      :awake="hoveredOffer === -1"
+    />
+
+    <!-- Die Angebotsportale der LAUFENDEN Bahn. Dieselbe Schichtung wie oben:
+         das BILD vor der fahrenden Ebene, der Knopf dahinter. -->
+    <FirmamentPortal
+      v-for="mark in offerMarks"
+      :key="mark.card.universe.id"
+      :spot="mark.spot"
+      :seed="selection.universe"
+      :target="mark.card.universe.id"
+      :tint="mark.tint"
+      :awake="hoveredOffer === mark.card.universe.id"
+      :armed="armedOffer === mark.card.universe.id"
     />
 
     <div class="fm-layer" :style="layerStyle">
@@ -719,6 +832,10 @@ const layerStyle = computed(() => ({
         :aria-label="`Departure portal — the road went on to ${universeLabel(departure.toUniverse)}`"
         @pointerdown.stop
         @click="pickDeparture(departure)"
+        @pointerenter="hoveredOffer = -1"
+        @pointerleave="hoveredOffer = null"
+        @focus="hoveredOffer = -1"
+        @blur="hoveredOffer = null"
       >
         <!-- Die Beschriftung haengt IM Knopf, nicht daneben: so teilt sie Klick,
              Hover-Karte und die Hover-Pause der drehenden Ebenen mit dem Ring,
@@ -739,6 +856,66 @@ const layerStyle = computed(() => ({
       </button>
       <template #tip>
         <FirmamentDepartureTip :departure="departure" :tint="portalTint" />
+      </template>
+    </RpgBadgeTooltip>
+
+    <!-- Die Knoepfe der Angebotsportale. Wie beim Abflugportal NACH der
+         fahrenden Ebene, und nur auf Zoomstufe 0: darueber waechst die Platte
+         davor, und ein Knopf auf einem unsichtbaren Objekt ist ein Klickkreis
+         mitten auf der Galaxie. -->
+    <RpgBadgeTooltip
+      v-for="mark in offerMarks"
+      v-show="zoomStep === 0"
+      :key="`offer-${mark.card.universe.id}`"
+      passive
+      :accent="mark.tint"
+    >
+      <button
+        class="fm-portal-hit"
+        :class="{ 'is-armed': armedOffer === mark.card.universe.id }"
+        :style="{
+          left: `${mark.hit.x0}px`,
+          top: `${mark.hit.y0}px`,
+          width: `${mark.hit.x1 - mark.hit.x0}px`,
+          height: `${mark.hit.y1 - mark.hit.y0}px`,
+        }"
+        :aria-label="`Depart to ${universeLabel(mark.card.universe.id)} under ${mark.card.providence.name}`"
+        @pointerdown.stop
+        @click="tapOffer(mark.card.universe.id)"
+        @pointerenter="hoveredOffer = mark.card.universe.id"
+        @pointerleave="hoveredOffer = null"
+        @focus="hoveredOffer = mark.card.universe.id"
+        @blur="hoveredOffer = null"
+      >
+        <span
+          class="fm-portal-label"
+          :class="`is-${mark.label.side}`"
+          aria-hidden="true"
+          :style="{
+            left: `${mark.label.cx - mark.hit.x0}px`,
+            top: `${mark.label.cy - mark.hit.y0}px`,
+            width: `${mark.label.w}px`,
+            height: `${mark.label.h}px`,
+            fontSize: `${mark.label.size}px`,
+            '--fm-portal-tint': mark.tint,
+          }"
+        >
+          <span class="fm-portal-name">
+            <template v-if="armedOffer === mark.card.universe.id">Depart ▸</template>
+            <template v-else>
+              Universe
+              <span class="fm-portal-num">{{ toRoman(mark.card.universe.id) }}</span>
+            </template>
+          </span>
+        </span>
+      </button>
+      <template #tip>
+        <FirmamentOfferTip
+          :universe="mark.card.universe"
+          :providence="mark.card.providence"
+          :armed="armedOffer === mark.card.universe.id"
+          :tint="mark.tint"
+        />
       </template>
     </RpgBadgeTooltip>
 
@@ -884,14 +1061,23 @@ const layerStyle = computed(() => ({
   animation-play-state: paused;
 }
 
-/* Ueber dem PORTAL haelt nur die Wolke an — es LEBT. Die Pause gibt es, damit
-   ein wandernder Knoten dem Zeiger nicht aus seiner Trefferflaeche laeuft; das
-   Portal steht fest, und ein Durchgang, der auf den Blick hin anzieht, ist
-   selbst die Auskunft: hier geht es weiter. Was es beim Ueberfahren tut, steht
-   in `FirmamentPortal.vue` — Animation und Keyframe muessen in denselben
-   scoped Block. */
+/* Ueber dem PORTAL haelt die Wolke an — das ueberfahrene Portal selbst LEBT.
+   Die Pause gibt es, damit ein wandernder Knoten dem Zeiger nicht aus seiner
+   Trefferflaeche laeuft; das Portal steht fest, und ein Durchgang, der auf den
+   Blick hin anzieht, ist selbst die Auskunft: hier geht es weiter. Was es beim
+   Ueberfahren tut, steht in `FirmamentPortal.vue`. */
 .fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible)
   :deep(.fm-hero .uni-disc-l) {
+  animation-play-state: paused;
+}
+
+/* Und die ANDEREN Portale halten mit an. Auf der laufenden Bahn stehen drei
+   nebeneinander; sobald eines aufwacht, waeren zwei weiterdrehende Nachbarn
+   dieselbe Inkonsistenz wie ein einzeln drehendes Portal ueber einem
+   gehoverten Knoten. Ein geschaerftes bleibt davon ausgenommen — es hat eine
+   Zusage abgegeben und darf sie zeigen. */
+.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible)
+  :deep(.fm-portal:not(.is-awake) :is(.fm-portal-l, .fm-portal-boost)) {
   animation-play-state: paused;
 }
 
@@ -916,6 +1102,15 @@ const layerStyle = computed(() => ({
 .fm-portal-hit:focus-visible {
   outline: 2px solid #e8c040;
   outline-offset: 2px;
+}
+
+/* GESCHAERFT — der Knopf sagt es mit, nicht nur das Portal darunter: die
+   Trefferflaeche umfasst Ring UND Beschriftung, und die Beschriftung ist es,
+   die dann „Depart" liest. Eine Kontur, kein Fuellton: darunter liegt das
+   Sternfeld, und eine Flaeche daraufzulegen naehme dem Portal seine Tiefe. */
+.fm-portal-hit.is-armed {
+  outline: 1px solid rgba(232, 192, 64, 0.55);
+  outline-offset: 3px;
 }
 
 /* Die Beschriftung. Sie misst GENAU das Kaestchen, gegen das

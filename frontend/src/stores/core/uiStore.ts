@@ -177,6 +177,20 @@ export const useUiStore = defineStore('ui', () => {
     pendingFirmamentGalaxy.value = null
   }
 
+  /**
+   * Der Weg vom Prestige-Knopf im Header ins Firmament — dorthin, wo der
+   * Aufbruch als BILD steht.
+   *
+   * Kein `openBardModal()`: das TOGGELT und schloesse ein bereits offenes
+   * Profil. Und keine Auswahl mitzugeben ist Absicht — der Reiter steht beim
+   * Betreten ohnehin auf der laufenden Bahn, und genau dort haengen die drei
+   * Portale.
+   */
+  function requestOpenFirmamentDeparture() {
+    bardActiveTab.value = 'firmament'
+    clearHoverMarks()
+  }
+
   function setBattleReturn(starId: string) {
     battleReturnStarId.value = starId
   }
@@ -242,6 +256,7 @@ export const useUiStore = defineStore('ui', () => {
     requestOpenVoyagesFromFirmament,
     returnToFirmamentTab,
     clearPendingFirmamentGalaxy,
+    requestOpenFirmamentDeparture,
     setHoveredChampionRole,
     setHoveredChampionSlotIndex,
     setHoveredPlanetSlotId,
