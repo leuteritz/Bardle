@@ -1,15 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import {
+  VOYAGE_MAP_STATS_ART_MAX,
   VOYAGE_MAP_STATS_BAND_H,
-  VOYAGE_MAP_STATS_PAD_Y,
+  VOYAGE_MAP_STATS_CHIP_LABEL_MAX,
   VOYAGE_MAP_STATS_CHIP_MAX,
+  VOYAGE_MAP_STATS_ICON_MAX,
   VOYAGE_MAP_STATS_LABEL_MAX,
+  VOYAGE_MAP_STATS_MIN_W,
+  VOYAGE_MAP_STATS_PAD_Y,
+  VOYAGE_MAP_STATS_ROW_NEED_MIN,
   VOYAGE_MAP_STATS_VALUE_MAX,
   VOYAGE_MAP_STATS_VALUE_MIN,
-  VOYAGE_MAP_STATS_MIN_W,
-  VOYAGE_MAP_STATS_WIDE_W,
-  VOYAGE_MAP_STATS_NAME_MAX,
-  VOYAGE_MAP_STATS_NO_MAX,
 } from '@/config/constants'
 
 /**
@@ -23,33 +24,39 @@ import {
  * Genau das ist beim Bau einmal passiert, auf 2K, unbemerkt von zwei
  * Browsermessungen.
  *
- * Die Faktoren unten sind GEMESSEN, nicht gerechnet: MedievalSharp überschiesst
- * seine Zeilenbox, eine Formel aus `font-size × line-height` läge daneben.
- * Aufgenommen mit dem Playwright-Treiber im Scratchpad an den vier
- * Referenzauflösungen, aus zwei Stützstellen aufgelöst:
+ * **Die Faktoren unten sind nicht mehr gemessene Überschüsse, sondern die
+ * Zeilenhöhen aus dem CSS** — und das ist der eigentliche Gewinn des Umbaus.
+ * Vorher liefen Wert und Label auf `line-height: normal`, wo MedievalSharp
+ * seine Zeilenbox um die Hälfte überschiesst (16,5 px bei 11); die Bilanz
+ * musste diesen Überschuss als gemessene Konstante mitschleppen. Jetzt tragen
+ * beide eine gesetzte Zeilenhöhe, die Box hugt die Tinte, und die Spec spiegelt
+ * schlicht das CSS. Im Browser gegengeprüft, gleich auf Full HD, 2K UND 4K:
  *
- *   Wert 37 / Label 11  →  54.3 px      Wert 42 / Label 15  →  65.0 px
+ *   Wert 37 → 34,77 (Faktor 0,9396)   ·   Label 11 → 11,00 (Faktor 1,0)
+ *   Ablesungsspalte 48,77             ·   Chipspalte 30,92 (FHD) / 32,00 (2K+)
  *
- * Seit das Band vertikal MITTIG steht, ist „passt hinein" zu wenig: es muss
- * oben WIE unten Luft bleiben, sonst ist die Zentrierung nur nominal. Die
- * bindende Zone ist dabei nicht mehr die Kartografie — sie ist gefallen, weil
- * `charted` von keiner Formel des Spiels gelesen wird —, sondern die grosse
- * Ablesung.
+ * Die Identitätszone (Ziffer, Name, Stufe) ist gefallen — sie stand vollständig
+ * ein zweites Mal in der markierten Leistenzeile. Ihre Deckel
+ * `VOYAGE_MAP_STATS_NAME_MAX` / `_NO_MAX` sind damit aus dieser Bilanz
+ * verschwunden. Der PAYOUT ist an ihre Stelle getreten, aber als zweite
+ * `readColumn` und nicht als eigene Form: er teilt die Wand der grossen
+ * Ablesung, statt eine neue zu setzen.
  */
-const VALUE_FACTOR = 1.07
-const LABEL_FACTOR = 1.34
-/**
- * Die Identitätszone, ebenfalls GEMESSEN und nicht gerechnet.
- *
- * Ziffer und Name tragen `line-height: 1`, ihre Zeilenbox IST damit die
- * Schriftgrösse — gemessen 21,0 px bei 21 und 24,0 bei 24, der Faktor ist
- * exakt 1. Die Meta-Zeile darunter läuft auf `normal`, und dort überschiesst
- * MedievalSharp: 16,5 px bei 11. Sie teilt sich den Deckel mit den Labels,
- * NICHT deren Faktor.
- */
-const TITLE_FACTOR = 1.0
-const META_FACTOR = 1.5
 
+/** `line-height` von `.egsb-val`. Das CSS bestimmt, die Spec spiegelt. */
+const VALUE_LINE = 0.94
+/** `line-height` von `.egsb-lbl`. */
+const LABEL_LINE = 1.0
+/** `line-height` von `.egsb-mod-top`. */
+const CHIP_LINE = 1.0
+/**
+ * `.egsb-lbl--chip` läuft als EINZIGE noch auf `normal` — mit `line-height: 1`
+ * stand der Chip-Stapel im Browser gemessen 2,31 px zu tief. Der Faktor ist
+ * dort gemessen: 12,0 px bei 10.
+ */
+const CHIP_LABEL_FACTOR = 1.2
+
+/** `gap` der Stapel im CSS. */
 const STACK_GAP = 3
 
 /**
@@ -60,6 +67,13 @@ const STACK_GAP = 3
 const BREATH_MIN = 4
 
 /**
+ * Die Luft, die der Umbau tatsächlich gebracht hat und die gehalten werden
+ * soll — im Browser gemessen 7,11 oben und 7,13 unten. Sie ist der Grund, aus
+ * dem `VALUE_MAX` UNTER seiner Wand bleibt (siehe dort).
+ */
+const BREATH_TARGET = 7
+
+/**
  * Der `border-top` von `.egsb-row` gehört NICHT zur Content-Box und ist der
  * Grund, warum hier 63 und nicht 64 nutzbar sind. Er stand einmal nicht in
  * dieser Rechnung, und die Bilanz lag um genau ihn daneben — dieselbe Klasse
@@ -68,77 +82,93 @@ const BREATH_MIN = 4
  */
 const BORDER_T = 1
 
+/**
+ * Waagerechtes Polster von `.egsb-row` — `clamp(12px, 1.5cqw, 30px)`; auf der
+ * schmalsten gezeigten Zeile greift der BODEN.
+ */
+const ROW_PAD_X = 12
+
 /** Was zwischen Ober- und Unterkante des Textblocks Platz hat. */
 const usable = VOYAGE_MAP_STATS_BAND_H - 2 * VOYAGE_MAP_STATS_PAD_Y - BORDER_T
 
-/** Die zweizeilige Grundform: grosse Zahl über ihrem Label. */
-function twoLine(value: number, label = VOYAGE_MAP_STATS_LABEL_MAX): number {
-  return VALUE_FACTOR * value + LABEL_FACTOR * label
-}
-
-/** Die höchste Zone: die grosse Ablesung, Zahl über Wort. */
+/**
+ * Die höchste Zone: die grosse Ablesung, Zahl über Wort. Es gibt DREI davon —
+ * Sterne, Fahrten und seit dem Fall der Identität auch der Payout. Alle drei
+ * tragen `VOYAGE_MAP_STATS_VALUE_MAX`, also rechnet eine Formel für alle.
+ */
 function readColumn(value: number): number {
-  return twoLine(value)
+  return VALUE_LINE * value + STACK_GAP + LABEL_LINE * VOYAGE_MAP_STATS_LABEL_MAX
 }
 
-/** Ein Modifikator-Chip — dieselbe Form, eine Stufe kleiner. */
+/**
+ * Ein Kosten-Chip. Seine erste Zeile ist NICHT die Zahl, sondern das HÖHERE von
+ * Zahl und Glyph: das Icon misst 17 gegen 16 und bestimmt damit die Zeile — im
+ * Browser gemessen 17,0. Wer das Glyph anhebt, hebt die ganze Zone.
+ */
 function modsColumn(): number {
   return (
-    META_FACTOR * VOYAGE_MAP_STATS_CHIP_MAX +
-    META_FACTOR * VOYAGE_MAP_STATS_LABEL_MAX +
-    STACK_GAP
+    Math.max(CHIP_LINE * VOYAGE_MAP_STATS_CHIP_MAX, VOYAGE_MAP_STATS_ICON_MAX) +
+    STACK_GAP +
+    CHIP_LABEL_FACTOR * VOYAGE_MAP_STATS_CHIP_LABEL_MAX
   )
 }
 
 /**
- * Die Identitätszone. Die Ziffer steht NEBEN dem Namensstapel, sitzt aber auf
- * dessen erster Grundlinie (`align-items: baseline`) — ist sie grösser als der
- * Name, ragt sie um genau die Differenz nach oben und addiert sie damit zum
- * Stapel. Deshalb bindet hier `max` und nicht der Name.
- *
- * Im Browser bestätigt: 24 + 16,5 + 3 = 43,5 px auf 2K, 41,4 auf Full HD (dort
- * greift der `clamp` und beide Schriften fallen gemeinsam).
+ * Der grösstmögliche Wert-Deckel: `0,94 v + 14 <= 55`. Er lag vor dem Umbau bei
+ * 37 und ist mit der gesetzten Zeilenhöhe der Beschriftung auf 43 gestiegen.
+ * `VALUE_MAX` folgt ihm bewusst NICHT — die gewonnenen Pixel gehen an die Luft,
+ * nicht an die Schrift, sonst wäre das Band wieder so eng wie zuvor.
  */
-function idColumn(): number {
-  return (
-    TITLE_FACTOR * Math.max(VOYAGE_MAP_STATS_NAME_MAX, VOYAGE_MAP_STATS_NO_MAX) +
-    META_FACTOR * VOYAGE_MAP_STATS_LABEL_MAX +
-    STACK_GAP
-  )
-}
+const VALUE_WALL = 43
 
 describe('voyage stats band fit', () => {
-  it('lässt jede der drei Zonen in die Bandhöhe passen', () => {
-    for (const h of [idColumn(), readColumn(VOYAGE_MAP_STATS_VALUE_MAX), modsColumn()]) {
+  it('lässt jede Zone in die Bandhöhe passen', () => {
+    for (const h of [readColumn(VOYAGE_MAP_STATS_VALUE_MAX), modsColumn()]) {
       expect(h).toBeLessThanOrEqual(usable)
     }
   })
 
-  it('lässt der höchsten Zone oben wie unten Luft', () => {
-    expect(readColumn(VOYAGE_MAP_STATS_VALUE_MAX)).toBeLessThanOrEqual(usable - 2 * BREATH_MIN)
+  it('lässt der höchsten Zone oben wie unten die zugesagte Luft', () => {
+    // Nicht mehr nur BREATH_MIN: der Umbau hat 7,1 px je Seite gebracht, und
+    // genau die sind der Grund, warum das Band nicht mehr klemmt. Wer sie
+    // wieder verfrühstückt, nimmt dem Umbau seinen Zweck.
+    expect(readColumn(VOYAGE_MAP_STATS_VALUE_MAX)).toBeLessThanOrEqual(
+      usable - 2 * BREATH_TARGET,
+    )
   })
 
-  it('kippt schon bei EINEM Punkt mehr', () => {
-    // Der eigentliche Zweck der Datei, und die Wand ist scharf: 37 ergibt 54,33
-    // in 55 erlaubten, 38 schon 55,40. Der Deckel ist damit nicht gewählt,
-    // sondern der grösstmögliche Wert — wer ihn anhebt, drückt die Zeile an die
-    // Bandkanten, und weder ein Test noch ein Screenshot zeigt das von selbst.
-    expect(readColumn(VOYAGE_MAP_STATS_VALUE_MAX + 1)).toBeGreaterThan(usable - 2 * BREATH_MIN)
+  it('nennt die Wand, und der Deckel bleibt darunter', () => {
+    // Die Wand ist scharf und gerechnet, nicht gewählt: 43 ergibt 54,42 in 55
+    // erlaubten, 44 schon 55,36. `VALUE_MAX` darf bis dorthin, muss aber nicht
+    // — und solange es darunter bleibt, hält der Test darüber die grössere
+    // Zusage.
+    expect(readColumn(VALUE_WALL)).toBeLessThanOrEqual(usable - 2 * BREATH_MIN)
+    expect(readColumn(VALUE_WALL + 1)).toBeGreaterThan(usable - 2 * BREATH_MIN)
+    expect(VOYAGE_MAP_STATS_VALUE_MAX).toBeLessThanOrEqual(VALUE_WALL)
   })
 
   it('lässt die grosse Ablesung die höchste Zone bleiben', () => {
     // Der Grund, aus dem der Wert-Deckel oben überhaupt gerechnet werden DARF:
-    // es gibt genau eine höchste Zone. Wächst eine andere an ihr vorbei, ist der
-    // Test darüber die falsche Wand und niemand merkt es.
-    const read = readColumn(VOYAGE_MAP_STATS_VALUE_MAX)
-    expect(read).toBeGreaterThan(idColumn())
-    expect(read).toBeGreaterThan(modsColumn())
+    // es gibt genau eine höchste Form. Wächst eine andere an ihr vorbei, ist der
+    // Test darüber die falsche Wand und niemand merkt es. Der Payout ist keine
+    // andere — er IST eine `readColumn`, und genau das hält die Bilanz bei einer
+    // einzigen Wand statt bei zweien.
+    expect(readColumn(VOYAGE_MAP_STATS_VALUE_MAX)).toBeGreaterThan(modsColumn())
+  })
+
+  it('hält das Chime-Artwork unter der Zeilenbox seiner Zahl', () => {
+    // Der Payout stellt ein Bild neben seine Zahl. Wird es höher als deren
+    // Zeilenbox, bestimmt AB DANN das Bild die Spaltenhöhe — und die Rechnung
+    // oben, die nur Schriftgrössen kennt, ginge still daneben. Dieselbe Falle
+    // wie beim Chip-Glyph, nur dort ist sie schon eingetreten und steht in
+    // `modsColumn` als `Math.max`.
+    expect(VOYAGE_MAP_STATS_ART_MAX).toBeLessThan(VALUE_LINE * VOYAGE_MAP_STATS_VALUE_MAX)
   })
 
   it('hält auch die Grundform am Boden mit Abstand', () => {
     // Auf der schmalsten Bühne greift der Boden; dort muss Luft bleiben, sonst
     // gäbe es keine Bühnengrösse, auf der das Band entspannt sitzt.
-    expect(twoLine(VOYAGE_MAP_STATS_VALUE_MIN, 11)).toBeLessThan(usable - 15)
+    expect(readColumn(VOYAGE_MAP_STATS_VALUE_MIN)).toBeLessThan(usable - 15)
   })
 
   it('hat einen Boden unter dem Deckel und beide über der heutigen Größe', () => {
@@ -148,7 +178,24 @@ describe('voyage stats band fit', () => {
     expect(VOYAGE_MAP_STATS_VALUE_MIN).toBeGreaterThan(30.4)
   })
 
-  it('staffelt die Schwellen aufsteigend', () => {
-    expect(VOYAGE_MAP_STATS_MIN_W).toBeLessThan(VOYAGE_MAP_STATS_WIDE_W)
+  it('hält die Chip-Beschriftung unter der grossen', () => {
+    // Eine Koste ist ein Merkmal des Ziels, keine Bilanz des Laufs — sie bleibt
+    // auch im Wort kleiner. Gleich gross gesetzt wären die beiden Ebenen des
+    // Bandes nicht mehr auseinanderzuhalten, und genau das war der Zustand,
+    // bevor die Quellreihenfolge von `.egsb-lbl--chip` korrigiert wurde: der
+    // Block stand VOR `.egsb-lbl`, bei gleicher Spezifität, und griff nie.
+    expect(VOYAGE_MAP_STATS_CHIP_LABEL_MAX).toBeLessThan(VOYAGE_MAP_STATS_LABEL_MAX)
+    expect(VOYAGE_MAP_STATS_CHIP_MAX).toBeLessThan(VOYAGE_MAP_STATS_VALUE_MIN)
+  })
+
+  it('laesst alle vier Kosten auf der schmalsten gezeigten Zeile stehen', () => {
+    // Es gab hier einmal eine zweite Schwelle (`_WIDE_W`, 900), unter der
+    // Hazards und Crew wegfielen — eine Folge der Identitätszone, deren rund
+    // 195 px der Reihe fehlten. Ohne sie passen alle vier überall, wo die Zone
+    // überhaupt steht (gemessen 494 px Bedarf in einer Zeile von 566), und eine
+    // Schwelle, die nie greift, ist keine Zusicherung. Was bleibt, ist der
+    // Deckel: die Reihe steht auf `nowrap`, ihr Überlauf wird STILL
+    // abgeschnitten — hier bricht, wer einen fünften Chip anhängt.
+    expect(VOYAGE_MAP_STATS_ROW_NEED_MIN).toBeLessThan(VOYAGE_MAP_STATS_MIN_W - 2 * ROW_PAD_X)
   })
 })

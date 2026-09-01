@@ -1167,11 +1167,14 @@ export const VOYAGE_MAP_ROUTE_ALPHA = 0.16
  * Es SCHRUMPFT die Fit-Box, statt sich darueberzulegen: Haefen sind anklickbar,
  * und ein Band ueber die ganze Kante laege sonst auf ihren Klickflaechen.
  *
- * DREI Zonen, und die Leserichtung ist WER - WIE GELAUFEN - WAS ES BRINGT:
- * Identitaet (Ziffer, Name, Stufe, Meta) | Ablesungen | Modifikatoren. Die
- * Identitaet stand einmal als eigenes Overlay oben links auf der Karte, die
- * Formlegende unten links; beide belegten dauerhaft eine Ecke der Buehne fuer
- * etwas, das hier in eine Zeile passt.
+ * ZWEI Gruppen, und die Leserichtung ist WAS WAR | WAS EIN VERTRAG HIER BIETET:
+ * Chronik (Sterne, Fahrten) | Payout | die vier Kosten. Die Identitaetszone
+ * davor (Ziffer, Name, Stufe) ist GEFALLEN — sie stand vollstaendig ein zweites
+ * Mal in der markierten Leistenzeile, bis hin zu denselben Stufen-Hexwerten.
+ *
+ * Der elastische Ueberschuss liegt auf der Naht zwischen Chronik und Deal, also
+ * dort, wo die Gruppen ohnehin auseinandergehen; Payout und Kosten bleiben
+ * beieinander, weil sie ZUSAMMEN der Deal sind.
  *
  * 72 und nicht mehr 96: die 24 px sind an die Kopfleiste gegangen, damit deren
  * Karten Crew-Portraits tragen koennen. Weil die Buehne um DIESELBEN 24 faellt,
@@ -1207,17 +1210,23 @@ export const VOYAGE_MAP_STATS_VALUE_MAX = 37
  *  grossen Ablesung wie unter einem Modifikator-Chip, und geht in dieselbe
  *  Hoehenbilanz ein wie er. `voyageBandFit.spec.ts` rechnet sie zusammen. */
 export const VOYAGE_MAP_STATS_LABEL_MAX = 11
-/** Deckel der Chip-Zahl. Kleiner als die grosse Ablesung, weil ein Modifikator
- *  ein Merkmal des ZIELS ist und keine Bilanz des Laufs — und weil fuenf davon
- *  auf Full HD nebeneinander passen muessen, ohne umzubrechen. */
+/** Deckel der Chip-Zahl. Kleiner als die grosse Ablesung, weil eine KOSTE ein
+ *  Merkmal des Ziels ist und keine Bilanz des Laufs — und weil vier davon auf
+ *  Full HD nebeneinander passen muessen, ohne umzubrechen. Der Payout traegt
+ *  dagegen VALUE_MAX: er ist der einzige Gewinn und die dritte grosse Zahl. */
 export const VOYAGE_MAP_STATS_CHIP_MAX = 16
-/** Deckel der Ziffern- und der Namensschrift der Identitaetszone. Die Ziffer
- *  steht NEBEN dem Namensstapel, es bindet also der hoehere von beiden: 21 + 3
- *  + 16,5 (Meta auf `normal`) = 40,5 gegen 24. Dieselbe Hoehenbilanz wie oben,
- *  `voyageBandFit.spec.ts` rechnet sie mit; die Faktoren dort sind GEMESSEN,
- *  weil MedievalSharp seine Zeilenbox ueberschiesst. */
-export const VOYAGE_MAP_STATS_NO_MAX = 24
-export const VOYAGE_MAP_STATS_NAME_MAX = 21
+/** Deckel der Chip-Beschriftung. Kleiner als `_LABEL_MAX`, damit eine Koste
+ *  auch im Wort unter der grossen Ablesung bleibt. Steht per `v-bind` im CSS
+ *  und nicht als Literal: `voyageBandFit.spec.ts` rechnet damit. */
+export const VOYAGE_MAP_STATS_CHIP_LABEL_MAX = 10
+/** Deckel des Chip-Glyphs. Es ist HOEHER als die Chip-Zahl (17 gegen 16) und
+ *  bestimmt damit die Zeilenhoehe des Chips — im Browser gemessen 17,0 gegen
+ *  16,0. Wer es anhebt, hebt die ganze Chip-Zone. */
+export const VOYAGE_MAP_STATS_ICON_MAX = 17
+/** Deckel des Chime-Artworks neben dem Payout. Es steht neben einer 37-px-Zahl
+ *  und muss unter DEREN Zeilenbox bleiben (37 x 0,94 = 34,78), sonst waechst
+ *  die Payout-Spalte an der Ablesung vorbei. `voyageBandFit.spec.ts` bindet es. */
+export const VOYAGE_MAP_STATS_ART_MAX = 26
 /** Nur der Verlauf. Er laeuft transparent aus und verdeckt nichts, darf also
  *  ueber den Textblock hinausragen und bleibt aus der Fit-Box heraus. */
 export const VOYAGE_MAP_STATS_SCRIM_H = 110
@@ -1232,12 +1241,70 @@ export const VOYAGE_MAP_STATS_SCRIM_H = 110
  * sie stehen lassen, waere sie eine willkuerliche Zahl statt einer Herleitung.
  */
 export const VOYAGE_MAP_STATS_MIN_H = 596
-/** Darunter faellt die Multiplikatoren-Zone weg und die Meta-Zeile ihr Datum;
- *  die Ernte-Zahlen bleiben. Darunter ist das Band Unruhe statt Auskunft. */
+/** Darunter fallen die vier Kosten weg; Chronik und Payout bleiben. Der Payout
+ *  ist der Grund, ueberhaupt hierhin zu schicken — er geht als LETZTES. */
 export const VOYAGE_MAP_STATS_MIN_W = 560
-/** Ab hier traegt die Multiplikator-Spalte auch Hazards und Seats. Darunter
- *  draengen sie die Spalte ueber die nutzbare Bandhoehe. */
-export const VOYAGE_MAP_STATS_WIDE_W = 900
+/**
+ * Was Chronik, Payout und alle VIER Kosten zusammen brauchen, wenn jeder
+ * `clamp` auf seinem Boden steht — im Browser GEMESSEN, nicht gerechnet: 494 px
+ * in einer Zeile von 566, also 72 px Reserve.
+ *
+ * Es gab hier einmal eine zweite Schwelle (`_WIDE_W`, 900), unter der Hazards
+ * und Crew wegfielen. Sie war eine Folge der Identitaetszone: deren rund 195 px
+ * fehlten der Reihe. Ohne sie passen alle vier ueberall dort, wo die Zone
+ * ueberhaupt gezeigt wird — eine Schwelle, die nie mehr greift, ist keine
+ * Zusicherung, sondern ein Irrtum in Wartestellung.
+ *
+ * Der Deckel bleibt trotzdem gebunden, denn die Reihe steht auf `nowrap` und
+ * ihr Ueberlauf wird STILL abgeschnitten (`voyageBandFit.spec.ts` nennt den
+ * Fall): wer einen fuenften Chip anhaengt oder ein Wort verbreitert, bricht die
+ * Spec statt des Bildes.
+ */
+export const VOYAGE_MAP_STATS_ROW_NEED_MIN = 494
+
+/**
+ * Die fuenf Ablesungen des Bandes, die am ZIEL haengen — Wort und Erklaersatz.
+ *
+ * Das Wort traegt die RICHTUNG, nicht die Farbe und nicht der Tooltip: `TRAVEL`
+ * und `POWER` standen hier einmal und lasen sich beide als Gewinn, obwohl nur
+ * der Chime-Ertrag einer ist. `+64% POWER` neben `game-icons:mighty-force` ist
+ * eine FORDERUNG an die eigene Crew, kein Buff auf sie.
+ *
+ * Der Satz nennt die Mechanik, nicht die Zahl — die steht daneben.
+ */
+export const VOYAGE_DEST_MODS = {
+  payout: {
+    label: 'Payout',
+    tip: 'Every contract that leads here pays this much more in chimes.',
+  },
+  longer: { label: 'Longer', tip: 'Crews sent here stay away this much longer.' },
+  tougher: {
+    label: 'Tougher',
+    tip:
+      'The crew-strength bar a contract here sets is this much higher. ' +
+      'Beat it and the odds rise, fall short and they drop.',
+  },
+  hazards: {
+    label: 'Hazards',
+    tip:
+      'Every contract from here carries this many hazards. Each one the crew cannot ' +
+      `answer costs ${Math.round(EXPEDITION_HAZARD_PENALTY * 100)} points of success chance.`,
+  },
+  // „Max crew" und nicht „≤4 Crew": MedievalSharp hat kein U+2264, und der
+  // Browser holt es sich dann aus der Standardschrift — im Canvas nachgemessen
+  // ist die Breite dort identisch zu serif UND sans, waehrend `A`, `4` und `%`
+  // sich in allen dreien unterscheiden. Das Zeichen stuende also in einer
+  // fremden Schrift neben einer MedievalSharp-Ziffer. Das Wort traegt den
+  // Deckel genauso gut.
+  crew: { label: 'Max crew', tip: 'The largest crew a contract from here can ask for.' },
+} as const
+
+/** Die beiden Ablesungen der Chronik — dieselbe Sprache, aber sie haengen am
+ *  gespielten LAUF und nicht am Ziel, deshalb eine eigene Liste. */
+export const VOYAGE_MAP_STATS_RECORD_TIPS = {
+  stars: 'Stars freed here against stars lost on the way.',
+  voyages: 'Expeditions that have come back from this destination.',
+} as const
 
 /**
  * Takt der Uhren auf der Karte. Bewusst 1000 und nicht HUD_COUNTDOWN_TICK_MS

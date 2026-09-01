@@ -1,47 +1,45 @@
 <script setup lang="ts">
 /**
- * Der Fuss der Kartenbühne — was diese Galaxie IST und was sie gekostet hat, in
- * einer Zeile über die volle Breite.
+ * Der Fuss der Kartenbühne — was hier war und was ein Vertrag von hier bietet,
+ * in einer Zeile über die volle Breite.
  *
- * DREI Zonen, und die Leserichtung ist der ganze Entwurf:
- * **WER** (Ziffer, Name, Stufe, Meta) · **WIE GELAUFEN** (Sterne, Kartografie,
- * Fahrten) · **WAS ES BRINGT** (die Modifikatoren des Ziels).
+ * **WAS WAR ‖ WAS EIN VERTRAG HIER BIETET.** Chronik (Sterne, Fahrten) | Payout
+ * | die vier Kosten. Der elastische Überschuss liegt auf der Naht zwischen
+ * Chronik und Deal; Payout und Kosten bleiben beieinander, weil sie ZUSAMMEN
+ * der Deal sind.
  *
- * Die Identität stand einmal als eigenes Overlay oben links auf der Karte, die
- * Formlegende unten links. Beide belegten dauerhaft eine Ecke der Bühne für
- * etwas, das hier in eine Zeile passt — und die Legende erklärte eine
- * Formsprache, die man nach der ersten Galaxie kennt. Was eine Marke IST, sagt
- * seither ihr Hover-Tooltip; was die FARBEN bedeuten, sagt diese Zeile: mint
- * gegen rot ist dieselbe Paarung wie Kernfunke gegen Hülle auf der Karte.
+ * **Die Identitätszone ist gefallen.** Ziffer, Name und Stufe standen
+ * vollständig ein zweites Mal in der markierten Leistenzeile, bis hin zu
+ * denselben Stufen-Hexwerten. Sie leben im `aria-label` der Gruppe weiter.
  *
- * Befreit und verloren sind EINE Ablesung. Zwei Türme für zwei Zahlen, die man
- * nie einzeln liest, waren zwei Spalten zuviel.
+ * **Das Wort trägt die Richtung.** `TRAVEL` und `POWER` standen hier einmal und
+ * lasen sich beide als Gewinn, obwohl nur der Chime-Ertrag einer ist: `+64%
+ * POWER` neben `mighty-force` ist eine FORDERUNG an die eigene Crew. Farbe
+ * trägt deshalb genau eine Aussage — den Gewinn; mint gegen rot bleibt der
+ * Sterne-Ablesung vorbehalten, es ist seit dem Fall der Kartenlegende die
+ * einzige verbliebene Farblegende.
  *
- * **Die Kartografie ist gefallen, und sie war das Hindernis.** `charted` (0..5)
- * wird von keiner Formel des Spiels gelesen — nur angezeigt und gespeichert,
- * eine angekündigte Stufe wie `waymarks` und `wearyUntil` daneben. Mit ihrer
- * Segmentleiste war sie zugleich die höchste Zone (63,3 von 64 nutzbaren px),
- * es gab also gar keinen Raum, in dem sich das Band hätte zentrieren lassen.
+ * **Der Payout ist die dritte grosse Zahl.** Er ist der einzige Grund, hierhin
+ * zu schicken, und steht deshalb in `VALUE_MAX` statt in `CHIP_MAX` — als
+ * zweite `readColumn` teilt er die Wand der Ablesung, ohne sie zu heben.
  *
- * **Ein Modifikator trägt sein WORT.** `×1,37` ist eine Rechnung, `+37% travel`
- * eine Aussage; `+X%` ist ausserdem die Hausform des Spiels für Wirkungen (rund
- * zwanzig Fundstellen, `useStatCatalog` führt beide Schreibweisen nebeneinander),
- * während `×N` meist ein Stückzähler ist.
+ * **Jede Ablesung erklärt sich selbst.** `.egsb` bleibt zeigerdurchlässig, nur
+ * die Ablesungen holen sich `pointer-events` zurück: das Band SCHRUMPFT die
+ * Fit-Box, unter ihm liegt keine Hafen- oder Sternmarke, nur das dekorative
+ * Deep-Field. Ein Klick blubbert wie zuvor an `.egm`.
  *
- * `minmax(min-content, 1fr)` in der Ablesungszone und keine geratenen Gewichte:
- * den Bedarf liest der Browser aus dem Inhalt, verteilt wird nur der Überschuss.
- * Läge das `1fr` nur aussen, driftete die Gruppe auf 4K auseinander.
+ * `v-ink-center.y` an jeder Zahl und jedem Wort: `.egsb-val` hat
+ * `line-height: 0.94`, eine Zeilenbox KLEINER als die Schriftgrösse, und
+ * MedievalSharp setzt Ziffern fast vollständig über die Baseline — metrisch
+ * mittig, optisch zu hoch. Ein fester em-Wert träfe nur eine Auflösung.
  *
  * Der Query-Container sitzt HIER und nicht weiter oben: `.etc-atlas` ist schon
- * einer und misst 1240–2940 px, die Bühne aber nur 628–2176. Ohne eigenen
- * Container skalierte alles gegen den falschen Massstab.
+ * einer und misst 1240–2940 px, die Bühne aber nur 628–2176.
  *
  * Die Höhe ist NICHT frei: sie wird der Fit-Box abgezogen, damit kein Hafen
  * darunter gerät (`VOYAGE_MAP_STATS_BAND_H`) — und weil die Zonen überstehen
  * dürfen, ohne dass ein `scrollHeight` es meldet, deckelt
- * `voyageBandFit.spec.ts` die Schriftgrössen dagegen — und dass oben wie unten
- * Luft bleibt, sonst wäre „mittig" nur nominal. Bindend ist die Ablesungszone:
- * 54,3 von 64 nutzbaren Pixeln.
+ * `voyageBandFit.spec.ts` die Schriftgrössen dagegen.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -52,12 +50,15 @@ import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxy
 import {
   LANDMARK_FREED_CORE,
   UNIVERSE_TOOLTIP_IMAGES,
+  VOYAGE_DEST_MODS,
+  VOYAGE_MAP_STATS_ART_MAX,
   VOYAGE_MAP_STATS_BAND_H,
+  VOYAGE_MAP_STATS_CHIP_LABEL_MAX,
   VOYAGE_MAP_STATS_CHIP_MAX,
+  VOYAGE_MAP_STATS_ICON_MAX,
   VOYAGE_MAP_STATS_LABEL_MAX,
-  VOYAGE_MAP_STATS_NAME_MAX,
-  VOYAGE_MAP_STATS_NO_MAX,
   VOYAGE_MAP_STATS_PAD_Y,
+  VOYAGE_MAP_STATS_RECORD_TIPS,
   VOYAGE_MAP_STATS_SCRIM_H,
   VOYAGE_MAP_STATS_VALUE_MAX,
   VOYAGE_MAP_STATS_VALUE_MIN,
@@ -66,13 +67,11 @@ import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 
 const props = defineProps<{
   record: CompletedGalaxyRecord
-  /** Der Name, den der Spieler kennt — der Theme-Name der Galaxie. */
+  /** Der Name, den der Spieler kennt — nur noch für das `aria-label`. */
   title: string
   tier: 'common' | 'rare' | 'epic'
-  /** Schmale Bühne: die Modifikatoren entfallen, die Meta verliert ihr Datum. */
+  /** Schmale Bühne: die vier Kosten entfallen, Chronik und Payout bleiben. */
   compact: boolean
-  /** Breite Bühne: die Zone trägt auch Hazards und Seats. */
-  wide: boolean
 }>()
 
 const chartStore = useExpeditionChartStore()
@@ -80,11 +79,12 @@ const chartStore = useExpeditionChartStore()
 const rescued = computed(() => props.record.attemptResults.filter((r) => r === 'rescued').length)
 const lost = computed(() => props.record.attemptResults.filter((r) => r === 'failed').length)
 
-/** Nur noch fürs `aria-label` — im Bild trägt die Meta-Zeile allein die Stufe. */
+/** Nur noch fürs `aria-label` — im Bild trägt die Leistenzeile die Identität. */
 const freedOn = computed(() => new Date(props.record.completedAt).toLocaleDateString())
 
 /** Eigenes Artwork statt eines Iconify-Ersatzes: dieselbe Währung, dasselbe Bild. */
 const CHIME_IMG = UNIVERSE_TOOLTIP_IMAGES.chimes
+const RECORD_TIPS = VOYAGE_MAP_STATS_RECORD_TIPS
 
 const progress = computed(() => chartStore.progressOf(props.record.galaxy))
 const dest = computed(() => destinationFor(props.record))
@@ -94,32 +94,37 @@ const accent = computed(() => `rgb(${minimapAccentForTheme(props.record.themeInd
  *  mit dem das ganze Spiel eine Wirkung schreibt. */
 const asBonus = (m: number) => `${m >= 1 ? '+' : ''}${Math.round((m - 1) * 100)}%`
 
-/** Die ersten drei tragen die Rechnung, die letzten zwei den Zuschnitt. */
-const mods = computed(() => {
+const payout = computed(() => ({ ...VOYAGE_DEST_MODS.payout, value: asBonus(dest.value.rewardMult) }))
+
+/** Die ersten beiden tragen die Rechnung, die letzten zwei den Zuschnitt.
+ *  Alle VIER stehen immer — sie passen bei jeder Breite, auf der die Zone
+ *  überhaupt gezeigt wird (`VOYAGE_MAP_STATS_ROW_NEED_MIN`). */
+const costs = computed(() => {
   const d = dest.value
-  const all = [
-    { key: 'reward', img: CHIME_IMG, value: asBonus(d.rewardMult), label: 'Chimes' },
-    { key: 'travel', icon: 'lucide:hourglass', value: asBonus(d.durationMult), label: 'Travel' },
+  return [
+    { key: 'longer', icon: 'lucide:hourglass', value: asBonus(d.durationMult), ...VOYAGE_DEST_MODS.longer },
     {
-      key: 'power',
+      key: 'tougher',
       icon: 'game-icons:mighty-force',
       value: asBonus(d.powerMult),
-      label: 'Power',
+      ...VOYAGE_DEST_MODS.tougher,
     },
     {
-      key: 'hazard',
+      key: 'hazards',
       icon: 'ph:warning-fill',
       value: `${d.hazardCount}`,
-      label: 'Hazards',
+      ...VOYAGE_DEST_MODS.hazards,
     },
     {
-      key: 'seats',
+      key: 'crew',
       icon: 'game-icons:meeple-group',
+      // Der Sitzwert ist ein DECKEL, kein Sollwert — ein Vertrag hier würfelt
+      // zwischen einem Sitz und diesem. Das sagt das WORT, nicht ein ≤: das
+      // hat MedievalSharp nicht.
       value: `${d.maxRoles}`,
-      label: 'Seats',
+      ...VOYAGE_DEST_MODS.crew,
     },
   ]
-  return props.wide ? all : all.slice(0, 3)
 })
 
 const bandH = `${VOYAGE_MAP_STATS_BAND_H}px`
@@ -131,8 +136,9 @@ const valueMax = `${VOYAGE_MAP_STATS_VALUE_MAX}px`
 // darum von dort und nicht als Zahl im clamp.
 const labelMax = `${VOYAGE_MAP_STATS_LABEL_MAX}px`
 const chipMax = `${VOYAGE_MAP_STATS_CHIP_MAX}px`
-const noMax = `${VOYAGE_MAP_STATS_NO_MAX}px`
-const nameMax = `${VOYAGE_MAP_STATS_NAME_MAX}px`
+const chipLabelMax = `${VOYAGE_MAP_STATS_CHIP_LABEL_MAX}px`
+const iconMax = `${VOYAGE_MAP_STATS_ICON_MAX}px`
+const artMax = `${VOYAGE_MAP_STATS_ART_MAX}px`
 
 const summary = computed(
   () =>
@@ -146,52 +152,53 @@ const summary = computed(
   <div class="egsb" :style="{ '--egsb-accent': accent }">
     <span class="egsb-scrim" aria-hidden="true" />
 
-    <div class="egsb-row" :class="`egsb-row--${tier}`" role="group" :aria-label="summary">
-      <!-- WER ─────────────────────────────────────────────────────────────── -->
-      <div class="egsb-id">
-        <span class="egsb-id-rule" aria-hidden="true" />
-        <span class="egsb-id-no">{{ toRoman(record.galaxy) }}</span>
-        <span class="egsb-id-text">
-          <span class="egsb-id-name">{{ title }}</span>
-          <span class="egsb-id-meta">{{ tier }}</span>
-        </span>
-      </div>
-
-      <!-- WIE GELAUFEN ────────────────────────────────────────────────────── -->
+    <div class="egsb-row" role="group" :aria-label="summary">
+      <!-- WAS WAR ─────────────────────────────────────────────────────────── -->
       <div class="egsb-read">
         <!-- Befreit und verloren sind EINE Ablesung: die Null bleibt STEHEN und
              wird gedämpft, damit die Reihe ihre Form nie wechselt. -->
-        <section class="egsb-col">
-          <span class="egsb-val">
+        <section class="egsb-col" v-tip="{ label: 'Stars', text: RECORD_TIPS.stars }">
+          <span v-ink-center.y class="egsb-val">
             <span class="egsb-val--freed">{{ rescued }}</span>
             <span class="egsb-slash">/</span>
             <span class="egsb-val--lost" :class="{ 'egsb-nil': !lost }">{{ lost }}</span>
           </span>
-          <span class="egsb-lbl">Stars</span>
+          <span v-ink-center.y class="egsb-lbl">Stars</span>
         </section>
 
-        <section class="egsb-col">
-          <span class="egsb-val">{{ progress.runs }}</span>
-          <span class="egsb-lbl">Voyages</span>
+        <section class="egsb-col" v-tip="{ label: 'Voyages', text: RECORD_TIPS.voyages }">
+          <span v-ink-center.y class="egsb-val">{{ progress.runs }}</span>
+          <span v-ink-center.y class="egsb-lbl">Voyages</span>
         </section>
       </div>
 
-      <!-- WAS ES BRINGT ───────────────────────────────────────────────────── -->
-<!-- Jeder Chip trägt sein WORT: ein Prozentwert ohne Bezug ist keine Auskunft.
-           aria-label und kein title — das Band nimmt keine Zeigerereignisse entgegen. -->
+      <!-- DER GEWINN ──────────────────────────────────────────────────────── -->
+      <!-- Die einzige farbige Ablesung des Bandes: alles andere hier ist Preis. -->
+      <div class="egsb-deal">
+        <section class="egsb-col" v-tip="{ label: payout.label, text: payout.tip }">
+          <span class="egsb-val egsb-val--payout">
+            <img class="egsb-ico egsb-ico--art" :src="CHIME_IMG" alt="" aria-hidden="true" />
+            <span v-ink-center.y class="egsb-num">{{ payout.value }}</span>
+          </span>
+          <span v-ink-center.y class="egsb-lbl">{{ payout.label }}</span>
+        </section>
+      </div>
+
+      <!-- WAS ES KOSTET ───────────────────────────────────────────────────── -->
+      <!-- Jeder Chip trägt sein WORT, und das Wort trägt die Richtung: ein
+           Prozentwert ohne Vorzeichen im Wortlaut ist keine Auskunft. -->
       <div v-if="!compact" class="egsb-mods">
         <span
-          v-for="m in mods"
+          v-for="m in costs"
           :key="m.key"
           class="egsb-mod"
-          :aria-label="`${m.label} ${m.value}`"
+          v-tip="{ label: m.label, text: m.tip }"
         >
           <span class="egsb-mod-top">
-            <img v-if="m.img" class="egsb-ico egsb-ico--art" :src="m.img" alt="" aria-hidden="true" />
-            <Icon v-else :icon="m.icon" class="egsb-ico" />
-            {{ m.value }}
+            <Icon :icon="m.icon" class="egsb-ico" />
+            <span v-ink-center.y class="egsb-num">{{ m.value }}</span>
           </span>
-          <span class="egsb-lbl egsb-lbl--chip">{{ m.label }}</span>
+          <span v-ink-center.y class="egsb-lbl egsb-lbl--chip">{{ m.label }}</span>
         </span>
       </div>
     </div>
@@ -227,27 +234,19 @@ const summary = computed(
   );
 }
 
-/* Die Identität nimmt, was sie braucht, und gibt als EINZIGE nach; die
-   Ablesungen bekommen den Überschuss, die Modifikatoren wieder ihren Bedarf. */
+/* Die Chronik hugt links, die Kosten rechts; der Überschuss liegt dazwischen,
+   also auf der Naht. Der Payout wird ans Ende SEINER Spur gedrückt und bleibt
+   damit an den Kosten, mit denen er zusammen den Deal ergibt. */
 .egsb-row {
-  --egsb-tier: #c89040;
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, auto) 1fr auto;
+  grid-template-columns: auto 1fr auto;
   /* Die gemeinsame Bezugslinie ist die MITTE, und das traegt erst, seit alle
-     drei Zonen dieselbe zweizeilige Form haben: Wert ueber Wort. Solange die
-     Kartografie mit ihrer Segmentleiste 63,3 der 64 nutzbaren Pixel belegte,
-     gab es keinen Raum, in dem sich irgendetwas zentrieren liess. */
+     Zonen dieselbe zweizeilige Form haben: Wert ueber Wort. */
   align-items: center;
   height: v-bind(bandH);
   padding: v-bind(padY) clamp(12px, 1.5cqw, 30px);
   border-top: 1px solid rgba(122, 78, 32, 0.42);
-}
-.egsb-row--rare {
-  --egsb-tier: #7aa8e0;
-}
-.egsb-row--epic {
-  --egsb-tier: #c090e0;
 }
 /* Die Akzentkante der Galaxie — der einzige farbige Strich im Band. */
 .egsb-row::before {
@@ -260,66 +259,9 @@ const summary = computed(
   background: linear-gradient(to right, var(--egsb-accent, #c89040), transparent);
 }
 
-/* ── WER ─────────────────────────────────────────────────────────────────── */
-/* `baseline` und nicht `flex-end`: die Ziffer soll auf der Grundlinie des
-   NAMENS sitzen, nicht auf der der Meta-Zeile — unten ausgerichtet stand sie
-   eine Zeile zu tief und las sich als Fussnote statt als Nummer. */
-.egsb-id {
-  display: flex;
-  align-items: baseline;
-  gap: clamp(7px, 0.9cqw, 13px);
-  min-width: 0;
-  padding-right: clamp(10px, 1.4cqw, 22px);
-}
-/* Die Stufe als Kante statt als Kasten — sie steht neben dem Namen und braucht
-   dafür keinen zweiten Rahmen im Bild. */
-.egsb-id-rule {
-  align-self: stretch;
-  flex: none;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--egsb-tier);
-}
-.egsb-id-no {
-  flex: none;
-  font-size: clamp(18px, 2.2cqw, v-bind(noMax));
-  line-height: 1;
-  color: rgba(200, 144, 64, 0.5);
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-}
-.egsb-id-text {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 3px;
-}
-.egsb-id-name {
-  font-size: clamp(15px, 1.9cqw, v-bind(nameMax));
-  line-height: 1;
-  letter-spacing: 0.04em;
-  color: #e8c040;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-}
-/* Nur die Stufe. Rekordzeit und Datum standen hier und sind Chronik ohne
-   Handlungswert — sie leben im `aria-label` und im Firmament-Reiter weiter. */
-.egsb-id-meta {
-  font-size: clamp(9px, 1.2cqw, v-bind(labelMax));
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--egsb-tier);
-  white-space: nowrap;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-}
-
-/* ── WIE GELAUFEN ────────────────────────────────────────────────────────── */
+/* ── WAS WAR ─────────────────────────────────────────────────────────────── */
 .egsb-read {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(min-content, 1fr));
+  display: flex;
   align-items: center;
 }
 .egsb-col {
@@ -330,12 +272,27 @@ const summary = computed(
   gap: 3px;
   min-width: 0;
   padding: 0 clamp(7px, 1.1cqw, 18px);
+  /* Die Ablesung holt sich den Zeiger zurück, den `.egsb` abgibt — das Band
+     schrumpft die Fit-Box, darunter liegt keine Marke. */
+  pointer-events: auto;
 }
-/* Haarlinien statt Kästen — zwischen den Zonen wie zwischen den Ablesungen. */
+/* Haarlinien statt Kästen. Die Naht zwischen Chronik und Deal trägt die
+   kräftigere — sie trennt zwei Aussagen, nicht zwei Zahlen. */
 .egsb-col + .egsb-col,
-.egsb-read,
 .egsb-mods {
   border-left: 1px solid rgba(122, 78, 32, 0.34);
+}
+/* Die Naht traegt die PAYOUT-SPALTE, nicht ihre Gridbahn: die Bahn ist die
+   elastische, ihre linke Kante steht am Ende der Chronik und damit bis zu
+   400 px vor dem, was sie abtrennt. Im Browser war das eine Haarlinie im
+   Nichts. Kraeftiger als die uebrigen, weil sie zwei Aussagen trennt und nicht
+   zwei Zahlen. */
+.egsb-deal {
+  display: flex;
+  justify-content: flex-end;
+}
+.egsb-deal > .egsb-col {
+  border-left: 1px solid rgba(122, 78, 32, 0.62);
 }
 
 .egsb-val {
@@ -348,6 +305,12 @@ const summary = computed(
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+/* Der Payout stellt seine Zahl NEBEN ein Artwork, nicht auf dessen Grundlinie. */
+.egsb-val--payout {
+  align-items: center;
+  gap: 0.22em;
+  color: #e8c040;
 }
 /* Die Legende zur Marke: dieselbe Konstante wie ihr Kernfunke. Weiss ginge
    hier nicht — die Standardfarbe der Zahlen ist #ece0c0, ein weisser Wert waere
@@ -371,14 +334,16 @@ const summary = computed(
   color: rgba(236, 224, 192, 0.32);
 }
 
-.egsb-lbl--chip {
-  font-size: clamp(8px, 1.1cqw, 10px);
-  letter-spacing: 0.1em;
-  color: rgba(216, 200, 160, 0.42);
-}
-
+/* `line-height: 1` an der Beschriftung der grossen Ablesung, und das ist kein
+   Geschmack: auf `normal` ueberschiesst MedievalSharp seine Zeilenbox um die
+   Haelfte (16,5 px bei 11), und dieser Vorlauf sitzt UNTER der Tinte. Der
+   Stapel stand dadurch zu hoch, obwohl seine Boxen exakt mittig sassen.
+   Gemessen ueber alle Zonen, schlechteste Abweichung von der Bandmitte:
+   2,76 px roh, 1,75 mit `v-ink-center.y` allein, 1,00 mit beidem — und die
+   Sterne, um die es ging, auf 0,00. */
 .egsb-lbl {
   font-size: clamp(10px, 1.35cqw, v-bind(labelMax));
+  line-height: 1;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -386,9 +351,22 @@ const summary = computed(
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
+/* NACH `.egsb-lbl`, nicht davor: beide haben eine Klasse Spezifitaet, also
+   entscheidet die Reihenfolge. Oberhalb stehend hat dieser Block nie gegriffen
+   — die Chip-Beschriftung rannte im Browser gemessen mit 11 px statt 10 und
+   war von der grossen Ablesung nicht zu unterscheiden.
+   `normal` bleibt hier bewusst: bei `line-height: 1` steht der Chip-Stapel
+   gemessen 2,31 px zu tief, weil die kleine Zahl darueber kaum Vorlauf hat,
+   den das Label ausgleichen koennte. */
+.egsb-lbl--chip {
+  font-size: clamp(8px, 1.1cqw, v-bind(chipLabelMax));
+  line-height: normal;
+  letter-spacing: 0.1em;
+  color: rgba(216, 200, 160, 0.42);
+}
 
-/* ── WAS ES BRINGT ───────────────────────────────────────────────────────── */
-/* `nowrap`: fünf Chips müssen auf Full HD nebeneinander bleiben — umgebrochen
+/* ── WAS ES KOSTET ───────────────────────────────────────────────────────── */
+/* `nowrap`: vier Chips müssen auf Full HD nebeneinander bleiben — umgebrochen
    wäre die Zone 87 px hoch und spränge aus dem Band. */
 .egsb-mods {
   display: flex;
@@ -404,14 +382,22 @@ const summary = computed(
   align-items: center;
   gap: 3px;
   min-width: 0;
+  pointer-events: auto;
 }
+/* Wärmer als die Zahlen der Chronik, aber KEIN eigener Legendenton: Farbe trägt
+   in diesem Band genau eine Aussage, und das ist der Gewinn. */
 .egsb-mod-top {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   font-size: clamp(12px, 1.5cqw, v-bind(chipMax));
+  /* Dieselbe Rechnung wie bei `.egsb-lbl`: auf `normal` ist die Zeilenbox der
+     Chip-Zahl 22,4 px bei 14,9 px Schrift, und der Vorlauf sitzt unter der
+     Tinte. Gemessen fiel der Chip-Stapel damit von +1,56 / +2,00 auf −0,21 /
+     +0,25 — die letzte Zone, die noch sichtbar aus der Mitte lag. */
+  line-height: 1;
   font-weight: 800;
-  color: rgba(230, 220, 196, 0.82);
+  color: rgba(230, 200, 170, 0.78);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
@@ -422,14 +408,17 @@ const summary = computed(
    Attribut, damit sie mitwächst. */
 .egsb-ico {
   flex-shrink: 0;
-  width: clamp(12px, 1.6cqw, 17px);
-  height: clamp(12px, 1.6cqw, 17px);
+  width: clamp(12px, 1.6cqw, v-bind(iconMax));
+  height: clamp(12px, 1.6cqw, v-bind(iconMax));
   color: #ffffff;
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 1)) drop-shadow(0 1px 2px rgba(0, 0, 0, 1));
 }
 /* Das Chime-Artwork trägt seine eigene Farbe und braucht den Hof nicht — der
-   Glyph-Filter würde es nur zumatschen. */
+   Glyph-Filter würde es nur zumatschen. Es steht neben einer 37-px-Zahl und
+   bleibt trotzdem unter deren Zeilenbox (34,8), damit die Spalte nicht wächst. */
 .egsb-ico--art {
+  width: clamp(17px, 2.4cqw, v-bind(artMax));
+  height: clamp(17px, 2.4cqw, v-bind(artMax));
   filter: none;
   object-fit: contain;
 }

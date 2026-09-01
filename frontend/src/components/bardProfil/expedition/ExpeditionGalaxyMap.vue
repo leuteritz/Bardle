@@ -38,7 +38,6 @@ import {
   VOYAGE_MAP_STATS_BAND_H,
   VOYAGE_MAP_STATS_MIN_H,
   VOYAGE_MAP_STATS_MIN_W,
-  VOYAGE_MAP_STATS_WIDE_W,
 } from '@/config/constants'
 import { computeRequired, type CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageHomecoming, VoyageMarkAction, VoyagePlacedSite } from '@/types'
@@ -369,7 +368,6 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
       :title="title"
       :tier="tier"
       :compact="cssW < VOYAGE_MAP_STATS_MIN_W"
-      :wide="cssW >= VOYAGE_MAP_STATS_WIDE_W"
     />
 
     <ExpeditionCrewMarkerLayer
