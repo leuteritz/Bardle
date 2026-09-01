@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useUiStore } from '@/stores/core/uiStore'
+import { useGameStore } from '@/stores/core/gameStore'
 import {
   omenRewardLine,
   OMEN_CHOICE_TITLE,
@@ -28,14 +29,24 @@ import type { OmenDef } from '@/types'
  */
 const omenStore = useOmenStore()
 const uiStore = useUiStore()
+const gameStore = useGameStore()
 const { offerCards } = storeToRefs(omenStore)
 
 /**
  * Unter einem offenen Profil-Tab wartet das Angebot, statt sich darüberzulegen:
  * wer gerade seinen Kader sortiert, will nicht aus dem Tab geworfen werden. Das
  * Angebot bleibt im Store stehen und erscheint, sobald das Spielbild frei ist.
+ *
+ * Und es wartet auch den SPRUNG ab. Ohne diese dritte Bedingung war das Warten
+ * selbst die Falle: `travelToUniverse` schliesst das Profil und setzt
+ * `isHyperspaceActive` im selben Tick — ein wartendes Vorzeichen ginge damit
+ * GENAU DANN auf, wenn der Universumswechsel beginnt, und legte sich mit
+ * z-index 10050 und 82 % Deckkraft über eine Animation, die auf 9999 liegt. Der
+ * Spieler klickt ein Portal und sieht statt des Sprungs eine Kartenwahl.
  */
-const visible = computed(() => omenStore.hasOffer && uiStore.bardActiveTab === null)
+const visible = computed(
+  () => omenStore.hasOffer && uiStore.bardActiveTab === null && !gameStore.isHyperspaceActive,
+)
 
 /**
  * Kurz gesperrt, damit der laufende Klick-Takt des Spielers nicht die erste

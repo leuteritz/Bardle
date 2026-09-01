@@ -157,15 +157,9 @@ function observe(el: HTMLElement) {
 }
 
 // ── Sichtbarkeit: Escape-Leiter und Beobachter hängen daran, nicht am Leben ──
-const chart = ref<{ disarmOffer: () => boolean } | null>(null)
-
 function onKeydown(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
-  // Zuerst das geschaerfte Portal: es ist die einzige Stufe, hinter der eine
-  // Geste steht, die einen ganzen Durchlauf beendet.
-  if (chart.value?.disarmOffer()) {
-    /* verbraucht */
-  } else if (selection.value.galaxy !== null) select({ ...selection.value, galaxy: null })
+  if (selection.value.galaxy !== null) select({ ...selection.value, galaxy: null })
   else if (selection.value.universe !== gameStore.currentUniverse) resetSelection()
   else if (railChoice.value === true) railChoice.value = null
   // Nicht verbraucht: die Taste gehört dem Profil, es macht zu.
@@ -268,7 +262,6 @@ onBeforeUnmount(() => {
 
       <div class="fm-body">
         <FirmamentChart
-          ref="chart"
           :nodes="path.nodes"
           :departure="path.departure"
           :offers="offers"

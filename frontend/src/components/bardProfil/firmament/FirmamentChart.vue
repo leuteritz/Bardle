@@ -379,43 +379,29 @@ const offerMarks = computed(() => {
  *  Knopf, nicht an einem wandernden Koerper — Chrome liefert bei
  *  transformierten Elementen `mouseover` ohne `mouseout`. */
 const hoveredOffer = ref<number | null>(null)
-const armedOffer = ref<number | null>(null)
 
 /**
- * Der Klick auf ein Portal — ZWEISTUFIG.
+ * Der Klick auf ein Portal — er REIST, sofort.
  *
- * Erster Klick schaerft, zweiter reist. Der Modalweg hatte auch zwei Stufen
- * (oeffnen, waehlen); faellt der Kasten, muss die zweite an die Geste. Das ist
- * die einzige Flaeche im Spiel, auf der ein Fehlklick einen ganzen Durchlauf
- * beendet — die Voyages-Marke, deren „die Marke IST der Knopf" hier Pate steht,
- * kostet schlimmstenfalls eine Expedition.
+ * Es war einmal zweistufig (erster Klick schaerft, zweiter reist), als Sicherung
+ * gegen einen Fehlklick, der einen ganzen Durchlauf beendet. Zurueckgenommen:
+ * ein Portal, das auf den ersten Klick nichts tut, liest sich als kaputt, und
+ * die Ansage gehoert ohnehin VOR den Klick — sie steht in der Hover-Karte.
  */
 function tapOffer(universeId: number) {
-  if (armedOffer.value !== universeId) {
-    armedOffer.value = universeId
-    return
-  }
   gameStore.travelToUniverse(universeId)
 }
 
-/** Entwaffnen — die oberste Sprosse der Escape-Leiter des Reiters. */
-function disarmOffer(): boolean {
-  if (armedOffer.value === null) return false
-  armedOffer.value = null
-  return true
-}
-
-/* Nach dem Aufbruch steht man auf einer neuen Bahn; ein geschaerftes Portal von
-   vorhin waere ein Knopf auf einem Angebot, das es nicht mehr gibt. */
+/* Nach dem Aufbruch steht man auf einer neuen Bahn — der Zeiger haengt dann
+   ueber einem Portal, das es nicht mehr gibt. */
 watch(
   () => props.offers.map((o) => o.universe.id).join(','),
   () => {
-    armedOffer.value = null
     hoveredOffer.value = null
   },
 )
 
-defineExpose({ paintCount, disarmOffer })
+defineExpose({ paintCount })
 
 /**
  * Der Startpunkt — die Benennung des Ursprungs, an dem die Bahn ansetzt.
@@ -716,7 +702,6 @@ const layerStyle = computed(() => ({
       :target="mark.card.universe.id"
       :tint="mark.tint"
       :awake="hoveredOffer === mark.card.universe.id"
-      :armed="armedOffer === mark.card.universe.id"
     />
 
     <div class="fm-layer" :style="layerStyle">
@@ -872,7 +857,6 @@ const layerStyle = computed(() => ({
     >
       <button
         class="fm-portal-hit"
-        :class="{ 'is-armed': armedOffer === mark.card.universe.id }"
         :style="{
           left: `${mark.hit.x0}px`,
           top: `${mark.hit.y0}px`,
@@ -901,11 +885,8 @@ const layerStyle = computed(() => ({
           }"
         >
           <span class="fm-portal-name">
-            <template v-if="armedOffer === mark.card.universe.id">Depart ▸</template>
-            <template v-else>
-              Universe
-              <span class="fm-portal-num">{{ toRoman(mark.card.universe.id) }}</span>
-            </template>
+            Universe
+            <span class="fm-portal-num">{{ toRoman(mark.card.universe.id) }}</span>
           </span>
         </span>
       </button>
@@ -913,7 +894,6 @@ const layerStyle = computed(() => ({
         <FirmamentOfferTip
           :universe="mark.card.universe"
           :providence="mark.card.providence"
-          :armed="armedOffer === mark.card.universe.id"
           :tint="mark.tint"
         />
       </template>
@@ -1102,15 +1082,6 @@ const layerStyle = computed(() => ({
 .fm-portal-hit:focus-visible {
   outline: 2px solid #e8c040;
   outline-offset: 2px;
-}
-
-/* GESCHAERFT — der Knopf sagt es mit, nicht nur das Portal darunter: die
-   Trefferflaeche umfasst Ring UND Beschriftung, und die Beschriftung ist es,
-   die dann „Depart" liest. Eine Kontur, kein Fuellton: darunter liegt das
-   Sternfeld, und eine Flaeche daraufzulegen naehme dem Portal seine Tiefe. */
-.fm-portal-hit.is-armed {
-  outline: 1px solid rgba(232, 192, 64, 0.55);
-  outline-offset: 3px;
 }
 
 /* Die Beschriftung. Sie misst GENAU das Kaestchen, gegen das

@@ -15,8 +15,8 @@
  *
  * Was die Karte NICHT mehr traegt: den Universumsnamen (es gibt keinen, siehe
  * `universeLabel`) und eine Beschreibung. Was das Portal tut, sagt der letzte
- * Satz — und der ist zweistufig, weil ein Fehlklick hier einen ganzen Durchlauf
- * beendet.
+ * Satz — und weil der Klick SOFORT reist, ist dieser Satz die einzige Ansage,
+ * die es davor gibt.
  */
 import { Icon } from '@iconify/vue'
 import { providenceEffectLines, PROVIDENCE_DOMAIN_LABELS } from '@/config/progression/providences'
@@ -29,8 +29,6 @@ defineProps<{
   /** Frisch gewuerfelt, nicht aus einem Katalog: Achse, Richtung und Hoehe
    *  entstehen im Moment, in dem das Universum gerettet ist. */
   providence: RolledProvidence
-  /** Geschaerft — dann sagt der Fuss, was der naechste Klick tut. */
-  armed?: boolean
   tint: string
 }>()
 </script>
@@ -68,12 +66,11 @@ defineProps<{
       </div>
     </div>
 
-    <!-- Kein `.tip-act`: die Karte traegt `pointer-events: none`. Die Geste
-         sitzt am Portal, und sie hat ZWEI Stufen — ein Fehlklick beendet hier
-         einen ganzen Durchlauf. -->
-    <div class="tip-hint fot-cta">
-      {{ armed ? '↗ Click again to depart' : 'Click to arm this gate' }}
-    </div>
+    <!-- Kein `.tip-act`: die Karte traegt `pointer-events: none`, die Geste
+         sitzt am Portal. Dieser Satz ist die EINZIGE Ansage vor dem Klick —
+         der reist sofort, es gibt keine zweite Stufe, die noch etwas sagen
+         koennte. -->
+    <div class="tip-hint fot-cta">↗ Click to depart</div>
   </div>
 </template>
 

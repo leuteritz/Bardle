@@ -66,9 +66,6 @@ const props = defineProps<{
    *  Portale nebeneinander stehen. Eine Regel an `.fm-stage:has(…)` weckte
    *  alle drei, egal welches man ueberfaehrt. */
   awake?: boolean
-  /** Geschaerft: der erste Klick hat gewaehlt, der zweite reist. Der
-   *  Wachzustand bleibt dann stehen, auch wenn der Zeiger weiterzieht. */
-  armed?: boolean
 }>()
 
 const mawEl = ref<HTMLCanvasElement | null>(null)
@@ -162,7 +159,7 @@ const top = computed(() => `${props.spot.y}px`)
 <template>
   <span
     class="fm-portal"
-    :class="{ 'is-awake': awake || armed, 'is-armed': armed }"
+    :class="{ 'is-awake': awake }"
     aria-hidden="true"
   >
     <canvas ref="haloEl" class="fm-portal-l fm-portal-l--halo" />
@@ -361,20 +358,6 @@ const top = computed(() => `${props.spot.y}px`)
    auf null — `animation-fill-mode` bleibt bewusst aus. */
 .fm-portal.is-awake .fm-portal-fx--ripple {
   animation: fm-portal-ripple v-bind(rippleDur) ease-out 1;
-}
-
-/* GESCHAERFT — der erste Klick hat gewaehlt, der zweite reist.
-   Es ist der Wachzustand PLUS einer Zusage: der Halo bleibt oben statt zu
-   atmen, und die Zusatzdrehung laeuft weiter, obwohl der Zeiger schon fort
-   sein kann. Nur `opacity` und `animation-play-state` — beide kosten keinen
-   Repaint, und das Portal steht dann oft minutenlang so da. */
-.fm-portal.is-armed .fm-portal-l--halo {
-  opacity: 1;
-  animation: none;
-}
-
-.fm-portal.is-armed .fm-portal-boost {
-  animation-play-state: running;
 }
 
 @media (prefers-reduced-motion: reduce) {

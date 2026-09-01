@@ -475,12 +475,40 @@ watch(
      Chime-Münze bis zum Staub im Hintergrund. Sichtbar wurde das an den
      Flyby-Karten: ihr Zeitbogen soll stetig abbrennen, stand aber still und
      ruckte einmal je Sekunde auf den nächsten gebundenen Wert. Was hier läuft,
-     ist genau das, worauf der Spieler gerade schaut. */
-.rendering-paused *:not(.bottom-bar-shell, .bottom-bar-shell *, .pause-overlay, .pause-overlay *),
+     ist genau das, worauf der Spieler gerade schaut.
+
+     Ebenso der HYPERSPACE: er ist eine ZEREMONIE mit einem Ende, keine
+     Dauerschleife. Der Selektor greift auch nach `body` teleportierte Ebenen —
+     ein Alt-Tab mitten im Sprung machte aus Blitz und Ausblenden zwei harte
+     Schnitte, und danach stand die Choreografie schief. Sein rAF-Feld drosselt
+     der Browser im Hintergrund ohnehin selbst. */
 .rendering-paused
-  *:not(.bottom-bar-shell, .bottom-bar-shell *, .pause-overlay, .pause-overlay *)::before,
+  *:not(
+    .bottom-bar-shell,
+    .bottom-bar-shell *,
+    .pause-overlay,
+    .pause-overlay *,
+    .hyperspace-overlay,
+    .hyperspace-overlay *
+  ),
 .rendering-paused
-  *:not(.bottom-bar-shell, .bottom-bar-shell *, .pause-overlay, .pause-overlay *)::after {
+  *:not(
+    .bottom-bar-shell,
+    .bottom-bar-shell *,
+    .pause-overlay,
+    .pause-overlay *,
+    .hyperspace-overlay,
+    .hyperspace-overlay *
+  )::before,
+.rendering-paused
+  *:not(
+    .bottom-bar-shell,
+    .bottom-bar-shell *,
+    .pause-overlay,
+    .pause-overlay *,
+    .hyperspace-overlay,
+    .hyperspace-overlay *
+  )::after {
   animation-play-state: paused !important;
   transition: none !important;
 }

@@ -19,6 +19,12 @@ const phase = ref<'idle' | 'streaks' | 'flash' | 'fadeout'>('idle')
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
 let rafId: number | null = null
+/* Die Phasen-Timer. Sie MUESSEN gehalten werden: `isHyperspaceActive` kann
+   frueher fallen, als sie feuern (bei `gameSpeed > 1` taktet der Store mit der
+   Spieluhr, dieses Overlay mit der Wanduhr). Ungeloescht zuendete der
+   Flash-Timer danach einen weissen Vollbild-Blitz ins laufende Spiel — der
+   Sprung war laengst vorbei. Die Minimap haelt ihre Timer aus demselben Grund. */
+let phaseTimers: ReturnType<typeof setTimeout>[] = []
 let stars: HyperStar[] = []
 let startTime: number | null = null
 let maxDist = 1000
@@ -132,24 +138,34 @@ function stopAnimation(clearCanvas = false) {
   startTime = null
 }
 
+function clearPhaseTimers() {
+  for (const t of phaseTimers) clearTimeout(t)
+  phaseTimers = []
+}
+
 watch(
   () => gameStore.isHyperspaceActive,
   async (active) => {
+    // Auch beim START zuerst raeumen: ein zweiter Aufbruch, waehrend noch Timer
+    // des ersten laufen, mischte sonst zwei Choreografien.
+    clearPhaseTimers()
     if (active) {
       phase.value = 'streaks'
       await nextTick() // ← Canvas is now in the DOM, canvasRef.value is no longer null
       startAnimation()
 
-      setTimeout(() => {
-        phase.value = 'flash'
-        stopAnimation(true)
-      }, HYPERSPACE_FLASH_AT_MS)
-      setTimeout(() => {
-        phase.value = 'fadeout'
-      }, HYPERSPACE_FADEOUT_AT_MS)
-      setTimeout(() => {
-        phase.value = 'idle'
-      }, HYPERSPACE_END_AT_MS)
+      phaseTimers.push(
+        setTimeout(() => {
+          phase.value = 'flash'
+          stopAnimation(true)
+        }, HYPERSPACE_FLASH_AT_MS),
+        setTimeout(() => {
+          phase.value = 'fadeout'
+        }, HYPERSPACE_FADEOUT_AT_MS),
+        setTimeout(() => {
+          phase.value = 'idle'
+        }, HYPERSPACE_END_AT_MS),
+      )
     } else {
       phase.value = 'idle'
       stopAnimation(true)
@@ -158,6 +174,7 @@ watch(
 )
 
 onUnmounted(() => {
+  clearPhaseTimers()
   stopAnimation()
 })
 </script>
