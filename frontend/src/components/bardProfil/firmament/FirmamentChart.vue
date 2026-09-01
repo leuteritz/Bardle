@@ -732,7 +732,6 @@ const layerStyle = computed(() => ({
           aria-hidden="true"
           :style="portalLabelStyle"
         >
-          <span class="fm-portal-eyebrow">↗ Onward to</span>
           <span class="fm-portal-name">
             {{ portalTargetName }}
             <span class="fm-portal-num">{{ toRoman(departure.toUniverse) }}</span>
@@ -926,14 +925,10 @@ const layerStyle = computed(() => ({
 .fm-portal-label {
   position: absolute;
   transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.16em;
   line-height: 1.05;
   text-align: center;
   /* Lieber ueberstehen als umbrechen: die Hoehe des Kaestchens ist gemessen und
-     steht in der Spec — eine dritte Zeile spraenge sie. Gemessen bleibt der
+     steht in der Spec — eine zweite Zeile spraenge sie. Gemessen bleibt der
      laengste Fall („Runeterra Prime VIII", 9,08 em) unter der Breite. */
   white-space: nowrap;
   pointer-events: none;
@@ -946,17 +941,6 @@ const layerStyle = computed(() => ({
 
 .fm-portal-label.is-right {
   text-align: left;
-}
-
-.fm-portal-eyebrow {
-  font-size: 0.68em;
-  letter-spacing: 0.22em;
-  /* Die Laufweite haengt rechts an — derselbe Ausgleich wie am Startwort. */
-  text-indent: 0.22em;
-  text-transform: uppercase;
-  color: #8a8172;
-  text-shadow: 0 0 8px rgba(0, 0, 0, 0.95);
-  transition: color 0.16s ease;
 }
 
 .fm-portal-name {
@@ -979,13 +963,6 @@ const layerStyle = computed(() => ({
 .fm-portal-hit:hover .fm-portal-name,
 .fm-portal-hit:focus-visible .fm-portal-name {
   color: #fdf0c4;
-}
-
-/* Die Augenbraue gehoert zum selben Knopf. Ohne sie reagierte die Zeile nur zur
-   Haelfte. */
-.fm-portal-hit:hover .fm-portal-eyebrow,
-.fm-portal-hit:focus-visible .fm-portal-eyebrow {
-  color: #c8bda4;
 }
 
 @media (prefers-reduced-motion: reduce) {

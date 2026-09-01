@@ -734,15 +734,14 @@ export const FIRMAMENT_PORTAL_VIS_SAMPLES = 64
  *  wirklich im Bild steht. Kanten in `em`, damit die Box auf 4K mitwaechst.
  *
  *  Die Breite ist IM BROWSER gemessen, nicht geschaetzt: der laengste Fall ist
- *  „Runeterra Prime VIII" mit 9,08 em (Augenbraue 6,12), die Hoehe zweier Zeilen
- *  1,92 em. Geschaetzte 12 em waren ein Viertel zu breit — und genau diese
+ *  „Runeterra Prime VIII" mit 9,08 em, die Hoehe der EINEN Zeile 1,05 em. Geschaetzte 12 em waren ein Viertel zu breit — und genau diese
  *  Breite entscheidet, ob das Kaestchen noch in die schwarze Gasse zwischen
  *  Scheibe und Bildkante passt (auf Full HD sind das 154 px). */
 export const FIRMAMENT_PORTAL_LABEL_R_RATIO = 0.11
 export const FIRMAMENT_PORTAL_LABEL_MIN_PX = 13
 export const FIRMAMENT_PORTAL_LABEL_MAX_PX = 19
 export const FIRMAMENT_PORTAL_LABEL_W_EM = 9.4
-export const FIRMAMENT_PORTAL_LABEL_H_EM = 2
+export const FIRMAMENT_PORTAL_LABEL_H_EM = 1.2
 export const FIRMAMENT_PORTAL_LABEL_GAP_EM = 0.95
 export const FIRMAMENT_PORTAL_LABEL_EDGE_PAD = 10
 
