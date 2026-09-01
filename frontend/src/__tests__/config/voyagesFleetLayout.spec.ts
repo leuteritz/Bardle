@@ -38,6 +38,13 @@ import {
   VOYAGE_FLEET_ASIDE_W,
   VOYAGE_FLEET_BAND_PAD_X,
   VOYAGE_FLEET_BAND_GAP,
+  VOYAGE_RANK_MEDAL_PX,
+  VOYAGE_RANK_MEDAL_GAP,
+  VOYAGE_RANK_PAD_R,
+  VOYAGE_RANK_RING_R,
+  VOYAGE_RANK_RING_STROKE,
+  VOYAGE_RANK_RING_CIRCUMFERENCE,
+  VOYAGE_RANK_CLOCK_W,
   VOYAGE_COMMAND_BAR_H,
   EXPEDITION_LEDGER_RANKS,
   BOTTOM_BAR_SIDE_W,
@@ -196,6 +203,31 @@ describe('voyages fleet strip', () => {
     expect(VOYAGE_COMMAND_BAR_H + 3).toBe(126)
   })
 
+  /**
+   * Die Statussäule links: Siegel, Lücke und Uhrzelle teilen sich, was von den
+   * 176 px nach Polster und Haarlinie bleibt. Wächst eines davon über die
+   * Summe, ist der einzige verbleibende Platz die Kartenspur — und die hat auf
+   * Full HD nur 16 px Reserve.
+   */
+  it('trägt Rangsiegel und Uhr nebeneinander in der Statussäule', () => {
+    const inner = VOYAGE_FLEET_RANK_W - VOYAGE_RANK_PAD_R - 1
+    const used = VOYAGE_RANK_MEDAL_PX + VOYAGE_RANK_MEDAL_GAP + VOYAGE_RANK_CLOCK_W
+    expect(used).toBeLessThanOrEqual(inner)
+  })
+
+  /**
+   * Ein geliehener Umfang füllt den Ring falsch — dieselbe Hausregel, die
+   * `VOYAGE_NODE_RING_CIRCUMFERENCE` schon einmal nötig gemacht hat. Und der
+   * Ring samt Strichbreite muss in das Siegel passen, sonst schneidet die
+   * viewBox ihn an.
+   */
+  it('bindet den Ring des Siegels an seinen eigenen Radius', () => {
+    expect(VOYAGE_RANK_RING_CIRCUMFERENCE).toBeCloseTo(2 * Math.PI * VOYAGE_RANK_RING_R, 6)
+    expect(2 * VOYAGE_RANK_RING_R + VOYAGE_RANK_RING_STROKE).toBeLessThanOrEqual(
+      VOYAGE_RANK_MEDAL_PX,
+    )
+  })
+
   /** Karten- und Bandhöhe sind gekoppelt: die Karte muss in das Band passen. */
   it('lässt die Karte samt Luft in das Band', () => {
     expect(VOYAGE_FLEET_CARD_H + 2 * VOYAGE_FLEET_CARD_PAD_Y).toBeLessThanOrEqual(
@@ -253,7 +285,11 @@ describe('voyages fleet strip', () => {
     expect(LOOT_W + VOYAGE_FLEET_TIME_W + VOYAGE_FLEET_EARN_GAP).toBeLessThanOrEqual(CARD_INNER_W)
     // Und die Dauer bekommt, was übrig bleibt — auch die längste passt hinein.
     expect(
-      VOYAGE_FLEET_TIME_W + VOYAGE_FLEET_EARN_GAP + LOOT_W + VOYAGE_FLEET_EARN_GAP + VOYAGE_FLEET_DUR_W,
+      VOYAGE_FLEET_TIME_W +
+        VOYAGE_FLEET_EARN_GAP +
+        LOOT_W +
+        VOYAGE_FLEET_EARN_GAP +
+        VOYAGE_FLEET_DUR_W,
     ).toBeLessThanOrEqual(CARD_INNER_W)
   })
 

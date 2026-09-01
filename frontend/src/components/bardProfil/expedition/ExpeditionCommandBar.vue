@@ -7,10 +7,11 @@
  * Drei Zonen aus einem Budget: Statussäule · Kartenspur · Aktionssäule.
  *
  * Der Schnitt ist ABLESUNG gegen HANDLUNG. Links steht, was der Spielstand sagt
- * — Rang, Fortschritt, was die nächste Stufe bringt, und die Zeit bis zum
- * nächsten Vertrag. Rechts steht nur, was man TUN kann: zwei Kacheln. Die Uhr
- * stand einmal rechts über den Knöpfen; sie gehört zur linken Frage und
- * deckelte dort nebenbei die Knopfhöhe.
+ * — Rang und die Zeit bis zum nächsten Vertrag, als EIN Objekt: das Siegel
+ * trägt den Fortschritt als Ring, die Ziffer und das Rang-Icon; die Uhr steht
+ * daneben als grösste Zahl. Zähler, Belohnungssatz und die Haarlinie dazwischen
+ * sind gefallen — die beiden ersten leben in `rankTitle` weiter, erreichbar per
+ * Maus UND per Tab. Rechts steht nur, was man TUN kann: zwei Kacheln.
  *
  * Die Spur dazwischen trägt eine Karte je EXPEDITION — was läuft, mit wem, und
  * was startbereit ist. Die Zahlen-Ablesungen davor („In field 2/3",
@@ -38,6 +39,13 @@ import {
   VOYAGE_FLEET_BAND_GAP,
   VOYAGE_FLEET_BAND_PAD_X,
   VOYAGE_FLEET_RANK_W,
+  VOYAGE_RANK_CLOCK_W,
+  VOYAGE_RANK_MEDAL_GAP,
+  VOYAGE_RANK_MEDAL_PX,
+  VOYAGE_RANK_PAD_R,
+  VOYAGE_RANK_RING_CIRCUMFERENCE,
+  VOYAGE_RANK_RING_R,
+  VOYAGE_RANK_RING_STROKE,
   FORGE_MASS_SEND_NODE,
 } from '@/config/constants'
 import type { VoyageRailRow } from '@/types'
@@ -67,6 +75,14 @@ const bandPadX = `${VOYAGE_FLEET_BAND_PAD_X}px`
 const bandGap = `${VOYAGE_FLEET_BAND_GAP}px`
 const actW = `${VOYAGE_FLEET_ACT_W}px`
 const actH = `${VOYAGE_FLEET_ACT_H}px`
+const medalPx = `${VOYAGE_RANK_MEDAL_PX}px`
+const medalGap = `${VOYAGE_RANK_MEDAL_GAP}px`
+const rankPadR = `${VOYAGE_RANK_PAD_R}px`
+const clockW = `${VOYAGE_RANK_CLOCK_W}px`
+const ringCirc = `${VOYAGE_RANK_RING_CIRCUMFERENCE}`
+const ringStroke = `${VOYAGE_RANK_RING_STROKE}`
+const ringBox = `0 0 ${VOYAGE_RANK_MEDAL_PX} ${VOYAGE_RANK_MEDAL_PX}`
+const ringMid = VOYAGE_RANK_MEDAL_PX / 2
 
 const readyCount = useNotifyBadgeCount('expedition')
 
@@ -84,10 +100,11 @@ const rankProgress = computed(() => {
   return Math.min(1, (expeditionStore.ledgerCompleted - rank.value.required) / span)
 })
 
+const ringOffset = computed(() => VOYAGE_RANK_RING_CIRCUMFERENCE * (1 - rankProgress.value))
+
 /**
- * Was der nächste Rang aushändigt. Steht als Liste im Bild und NICHT nur im
- * `title` — es ist die einzige Stelle im Spiel, die es sagt, und hover-only wäre
- * sie für Tastatur unerreichbar.
+ * Was der nächste Rang aushändigt — nur noch in `rankTitle`. Das Siegel trägt
+ * `tabindex`, und `v-tip` hängt an `focusin`: die Karte ist per Tab erreichbar.
  */
 const nextRankRewards = computed(() => {
   const next = nextRank.value
@@ -165,34 +182,38 @@ const cards = computed(() =>
   <header class="ecb">
     <div class="ecb-main">
       <div class="ecb-rank">
-        <div class="ecb-rank-body" role="group" :aria-label="rankTitle" v-tip="rankTitle">
-          <!-- Zähler auf der Rangzeile, nicht darunter: das spart die Zeile, die
-               die Uhr braucht. -->
-          <span class="ecb-rank-head">
-            <Icon :icon="rank.icon" width="28" height="28" class="ecb-rank-ico" />
-            <span class="ecb-rank-name">Rank {{ toRoman(rank.tier) }}</span>
-            <span v-if="nextRank" class="ecb-rank-goal">
-              {{ expeditionStore.ledgerCompleted }}/{{ nextRank.required }}
-            </span>
-            <span v-else class="ecb-rank-goal">{{ expeditionStore.ledgerCompleted }}</span>
-          </span>
-          <!-- EINE umbrechende Zeile statt drei `nowrap`-Zeilen — der volle Satz
-               bleibt im Bild, aber er kostet höchstens zwei Zeilen. -->
-          <span class="ecb-rank-rewards">{{
-            nextRank ? nextRankRewards.join(' · ') : 'max rank'
-          }}</span>
+        <!-- EIN Objekt: Ring, Rang-Icon und Ziffer liegen übereinander, nichts
+             davon steht im Fluss. `tabindex`, damit die Karte samt dem
+             Belohnungssatz per Tab aufgeht — `v-tip` hört auf `focusin`. -->
+        <div
+          class="ecb-seal"
+          role="img"
+          tabindex="0"
+          :aria-label="rankTitle"
+          v-tip="rankTitle"
+        >
+          <svg class="ecb-seal-ring" :viewBox="ringBox" aria-hidden="true">
+            <circle class="ecb-seal-track" :cx="ringMid" :cy="ringMid" :r="VOYAGE_RANK_RING_R" />
+            <circle
+              class="ecb-seal-fill"
+              :cx="ringMid"
+              :cy="ringMid"
+              :r="VOYAGE_RANK_RING_R"
+              :transform="`rotate(-90 ${ringMid} ${ringMid})`"
+              :style="{ strokeDashoffset: ringOffset }"
+            />
+          </svg>
+          <Icon :icon="rank.icon" width="40" height="40" class="ecb-seal-ico" aria-hidden="true" />
+          <span class="ecb-seal-num" aria-hidden="true">{{ toRoman(rank.tier) }}</span>
         </div>
 
+        <!-- Die Zelle hängt am LABEL, nicht an der Zahl: es ist das breitere
+             von beiden, also kann die Uhr die Zeile nicht verschieben. -->
         <div class="ecb-next" :class="{ 'is-full': offersFull }">
-          <Icon :icon="offersFull ? 'ph:scroll-fill' : 'lucide:timer'" class="ecb-next-ico" />
-          <span class="ecb-next-body">
-            <!-- Reservierte Zahlenbreite: sonst wandert die Zeile, sobald 1:40
-                 auf 0:59 fällt. -->
-            <span class="ecb-next-value">{{
-              offersFull ? 'FULL' : formatMinuteClock(timeUntilNextSpawn)
-            }}</span>
-            <span class="ecb-next-label">Next contract</span>
-          </span>
+          <span class="ecb-next-value">{{
+            offersFull ? 'FULL' : formatMinuteClock(timeUntilNextSpawn)
+          }}</span>
+          <span class="ecb-next-label">Next contract</span>
         </div>
 
         <!-- Absolut: `v-if` darf keine Zone umbauen, sonst sähe die Leiste im
@@ -279,107 +300,95 @@ const cards = computed(() =>
   padding: 0 v-bind(bandPadX);
 }
 
-/* ── Statussäule: Rang UND Uhr ──────────────────────────────── */
-/* Volle Bandhöhe, damit der Dev-Knopf an ihrer Unterkante sitzt; der Inhalt
-   bleibt darin senkrecht zentriert. Die Haarlinie rechts gliedert das Band —
-   links die Ablesungen, rechts die Karten und die Handlungen. */
+/* ── Statussäule: Siegel UND Uhr, EINE Zeile ────────────────── */
+/* Volle Bandhöhe, damit der Dev-Knopf an ihrer Unterkante sitzt. Waagerecht,
+   nicht gestapelt: die Haarlinie zwischen Rang und Uhr ist gefallen — sie las
+   die beiden als zwei Blöcke, obwohl sie eine Ecke teilen. Die Haarlinie RECHTS
+   bleibt, sie gliedert das Band in Ablesung gegen Handlung. */
 .ecb-rank {
   position: relative;
   flex: 0 0 v-bind(rankW);
   width: v-bind(rankW);
   height: 100%;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 9px;
+  align-items: center;
+  gap: v-bind(medalGap);
   min-width: 0;
-  padding-right: 12px;
+  padding-right: v-bind(rankPadR);
   border-right: 1px solid #3e200a;
 }
-.ecb-rank-body {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-width: 0;
-}
-.ecb-rank-head {
+
+/* ── Das Rangsiegel ─────────────────────────────────────────── */
+/* Drei Ebenen auf einer Fläche: Ring, Icon als gedämpfte Rückschicht, Ziffer.
+   Fokussierbar, weil daran die einzige Auskunft über den nächsten Rang hängt. */
+.ecb-seal {
+  position: relative;
+  flex-shrink: 0;
+  width: v-bind(medalPx);
+  height: v-bind(medalPx);
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  border-radius: 50%;
+  background: #1a1208;
+  cursor: default;
+}
+.ecb-seal:focus-visible {
+  outline: 2px solid #e8c040;
+  outline-offset: 2px;
+}
+/* Fortschrittsring über `stroke-dashoffset`, nie über `conic-gradient`
+   (Performance-Regel 11). */
+.ecb-seal-ring {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  min-width: 0;
+  height: 100%;
 }
-.ecb-rank-ico {
-  flex-shrink: 0;
+.ecb-seal-track {
+  fill: none;
+  stroke: #2a1c0e;
+  stroke-width: v-bind(ringStroke);
+}
+.ecb-seal-fill {
+  fill: none;
+  stroke: #e8c040;
+  stroke-width: v-bind(ringStroke);
+  stroke-linecap: round;
+  stroke-dasharray: v-bind(ringCirc);
+  transition: stroke-dashoffset 0.45s ease;
+}
+/* Es trägt keine Auskunft, die die Ziffer nicht schon trägt — es ist das
+   Gesicht des Ranges und wechselt mit ihm. */
+.ecb-seal-ico {
+  position: absolute;
   color: #e8c040;
-  filter: drop-shadow(0 0 10px rgba(232, 192, 64, 0.35));
+  opacity: 0.16;
 }
-.ecb-rank-name {
-  font-size: 19px;
+.ecb-seal-num {
+  position: relative;
+  font-size: 32px;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #e8c040;
   line-height: 1;
-  white-space: nowrap;
+  color: #e8c040;
   text-shadow: 0 0 14px rgba(232, 192, 64, 0.28);
-}
-/* Rechtsbündig auf DERSELBEN Zeile — als eigene Zeile kostete der Zähler die
-   18 px, die die Uhr darunter braucht. */
-.ecb-rank-goal {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  color: rgba(200, 144, 64, 0.68);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-/* EINE umbrechende Zeile, nicht drei `nowrap`-Zeilen: der schlimmste Satz
-   („+1 field slot · +1 contract · +7% odds") bricht auf zwei um statt auf drei. */
-.ecb-rank-rewards {
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1.2;
-  color: #7ad0a0;
-  min-width: 0;
 }
 
 /* ── Die Uhr: die grösste Zahl der Säule ────────────────────── */
-/* Sie läuft jede Sekunde, der Rang steht tagelang still. Kein eigener Kasten
-   mehr — die Haarlinie darüber trennt genug. */
+/* Sie läuft jede Sekunde, der Rang steht tagelang still. Kein Icon mehr — das
+   Label sagt dasselbe und steht ohnehin da. */
 .ecb-next {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding-top: 9px;
-  border-top: 1px solid #3e200a;
-}
-.ecb-next-ico {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  color: rgba(200, 144, 64, 0.7);
-}
-.ecb-next.is-full .ecb-next-ico {
-  color: #e8c040;
-}
-.ecb-next-body {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  width: v-bind(clockW);
   min-width: 0;
 }
 .ecb-next-value {
-  /* Reserviert, damit die Zeile nicht wandert. */
-  min-width: 5ch;
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 800;
   line-height: 1;
   color: #e8dcc0;
-  font-variant-numeric: tabular-nums;
 }
 .ecb-next.is-full .ecb-next-value {
   color: #e8c040;
@@ -387,7 +396,7 @@ const cards = computed(() =>
 .ecb-next-label {
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(216, 200, 160, 0.42);
   white-space: nowrap;
