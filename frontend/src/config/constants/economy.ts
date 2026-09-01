@@ -964,30 +964,37 @@ export const VOYAGE_FLEET_RANK_W = 176
 export const VOYAGE_FLEET_ASIDE_W = 142
 /**
  * Das Rangsiegel und die Uhr daneben — EIN Objekt, keine zwei Blöcke mit
- * Haarlinie dazwischen. Sie teilen die 163 px, die von der Säule bleiben:
+ * Haarlinie dazwischen. Sie teilen die 165 px, die von der Säule bleiben:
  *
- *   176 − VOYAGE_RANK_PAD_R − 1 (Haarlinie rechts) = 163
- *   Siegel 66 + Lücke 10 + Uhrzelle 84 = 160
+ *   176 − VOYAGE_RANK_PAD_R − 1 (Haarlinie rechts) = 165
+ *   Siegel 52 + Lücke 8 + Uhrzelle 103 = 163
  *
- * Gewachsen ist alles INNERHALB der 176: die Säule zu verbreitern ginge nur
+ * Die Uhr hat den grösseren Teil, und das ist die Rangordnung, nicht Geschmack:
+ * sie läuft jede Sekunde, der Rang steht tagelang still. Das Siegel ist von 66
+ * auf 52 gefallen, damit sie 45 px tragen kann.
+ *
+ * Alles davon spielt INNERHALB der 176: die Säule zu verbreitern ginge nur
  * gegen die 16 px Reserve der Kartenspur, und bei 190 blieben davon zwei.
  */
-export const VOYAGE_RANK_MEDAL_PX = 66
-export const VOYAGE_RANK_MEDAL_GAP = 10
-export const VOYAGE_RANK_PAD_R = 12
-export const VOYAGE_RANK_RING_R = 30
+export const VOYAGE_RANK_MEDAL_PX = 52
+export const VOYAGE_RANK_MEDAL_GAP = 8
+export const VOYAGE_RANK_PAD_R = 10
+export const VOYAGE_RANK_RING_R = 24
 export const VOYAGE_RANK_RING_STROKE = 3
 /** EIGENER Umfang, kein geliehener — ein fremder füllt den Ring falsch. */
 export const VOYAGE_RANK_RING_CIRCUMFERENCE = 2 * Math.PI * VOYAGE_RANK_RING_R
 /**
- * Breite der Uhrzelle — sie ist die des LABELS, nicht der Zahl: „NEXT CONTRACT"
- * misst GEMESSEN 75,34 px bei 9 px versal, „2:00" bei 30 px nur 66,75. Damit
- * pinnt das Label die Zelle und die laufende Zahl kann das Layout gar nicht
- * erst verschieben; ein `min-width` an der Zahl wäre auf MedievalSharp ohnehin
- * unzuverlässig. Was über 75,34 hinausgeht, ist Reserve — sie kleiner zu machen
- * gäbe dem Siegel Breite, die es in der HÖHE ohnehin nicht mehr braucht.
+ * Breite der Uhrzelle — die reservierte Breite der ZAHL. „2:00" ist ihr
+ * breitester Zustand (das Intervall sind zwei Minuten, Cartographer's Pact
+ * verkürzt es nur) und misst bei 45 px 100,1; GEMESSEN sind 66,75 bei 30 px,
+ * die Breite skaliert linear mit 2,225 px je Schriftpunkt.
+ *
+ * Bei 30 px pinnte noch das LABEL („NEXT CONTRACT", gemessen 75,34 bei 9 px
+ * versal). Ab 40 px überholt die Zahl es, und reserviert bleiben muss die Zelle
+ * ohnehin: der Wert wechselt zwischen „2:00", „0:59" und „FULL", und
+ * MedievalSharp hat keine Tabellenziffern.
  */
-export const VOYAGE_RANK_CLOCK_W = 84
+export const VOYAGE_RANK_CLOCK_W = 103
 /**
  * Die beiden Aktionskacheln. Sie sind NICHT quadratisch: seit der Chip die
  * Säule verlassen hat, steht darüber und darunter nichts mehr, und die Höhe

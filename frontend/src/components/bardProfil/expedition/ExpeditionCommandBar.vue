@@ -203,7 +203,7 @@ const cards = computed(() =>
               :style="{ strokeDashoffset: ringOffset }"
             />
           </svg>
-          <Icon :icon="rank.icon" width="40" height="40" class="ecb-seal-ico" aria-hidden="true" />
+          <Icon :icon="rank.icon" width="32" height="32" class="ecb-seal-ico" aria-hidden="true" />
           <span class="ecb-seal-num" aria-hidden="true">{{ toRoman(rank.tier) }}</span>
         </div>
 
@@ -367,7 +367,7 @@ const cards = computed(() =>
 }
 .ecb-seal-num {
   position: relative;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   line-height: 1;
   color: #e8c040;
@@ -385,7 +385,7 @@ const cards = computed(() =>
   min-width: 0;
 }
 .ecb-next-value {
-  font-size: 30px;
+  font-size: 45px;
   font-weight: 800;
   line-height: 1;
   color: #e8dcc0;
