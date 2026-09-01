@@ -28,7 +28,11 @@ import { toRoman } from '@/utils/ui/format'
 import { voyageGalaxyState } from '@/utils/game/voyageFleet'
 import {
   EXPEDITION_CHART_MAX,
-  VOYAGE_RAIL_THUMB_FOLDED,
+  VOYAGE_RAIL_ROW_GAP,
+  VOYAGE_RAIL_ROW_PAD_L,
+  VOYAGE_RAIL_ROW_PAD_R,
+  VOYAGE_RAIL_ROW_PAD_Y,
+  VOYAGE_RAIL_STATE_BAR_PX,
   VOYAGE_RAIL_THUMB_H,
   VOYAGE_RAIL_THUMB_W,
 } from '@/config/constants'
@@ -40,7 +44,6 @@ const props = defineProps<{
   row: VoyageRailRow
   record: CompletedGalaxyRecord
   selected: boolean
-  folded: boolean
 }>()
 const emit = defineEmits<{ select: [number] }>()
 
@@ -48,7 +51,9 @@ const { root, snapshot } = useLazyGalaxySnapshot(() => props.record, 'thumb')
 
 const thumbW = `${VOYAGE_RAIL_THUMB_W}px`
 const thumbH = `${VOYAGE_RAIL_THUMB_H}px`
-const thumbFolded = `${VOYAGE_RAIL_THUMB_FOLDED}px`
+const rowPad = `${VOYAGE_RAIL_ROW_PAD_Y}px ${VOYAGE_RAIL_ROW_PAD_R}px ${VOYAGE_RAIL_ROW_PAD_Y}px ${VOYAGE_RAIL_ROW_PAD_L}px`
+const rowGap = `${VOYAGE_RAIL_ROW_GAP}px`
+const stateBar = `${VOYAGE_RAIL_STATE_BAR_PX}px`
 
 const chartPct = computed(() => props.row.charted / EXPEDITION_CHART_MAX)
 /** Was auf den Spieler wartet — die eine Zahl, die der Zähler trägt. */
@@ -69,11 +74,7 @@ const title = computed(
   <button
     ref="root"
     class="egr"
-    :class="[
-      `egr--${row.tier}`,
-      `egr--st-${state}`,
-      { 'egr--on': selected, 'egr--folded': folded },
-    ]"
+    :class="[`egr--${row.tier}`, `egr--st-${state}`, { 'egr--on': selected }]"
     :data-galaxy="row.galaxy"
     :style="{ '--gx-accent': `rgb(${row.accent})` }"
     :aria-pressed="selected"
@@ -94,7 +95,7 @@ const title = computed(
       <span v-if="!row.seen" class="egr-new">NEW</span>
     </span>
 
-    <span v-if="!folded" class="egr-body">
+    <span class="egr-body">
       <span class="egr-name">{{ row.name }}</span>
       <span class="egr-meta">
         <span v-if="row.contracts" class="egr-chip egr-chip--offer">
@@ -119,48 +120,64 @@ const title = computed(
 </template>
 
 <style scoped>
+/* Eine Karte im Rezept der Forge-Liste (`.fut-row`): eigene Fläche, eigener
+   Rahmen, Radius 4. Randlos stand die Zeile zuvor auf der Leistenfläche und
+   trennte sich nur durch ihren Hover. */
 .egr {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: v-bind(rowGap);
   width: 100%;
-  padding: 6px 7px;
-  background: transparent;
-  border: 1px solid transparent;
-  /* Die linke Kante ist der ZUSTANDSKANAL, nicht mehr der Hover-Kanal. Hover und
-     Auswahl arbeiten über Hintergrund und Rahmen und überschreiben sie nicht. */
-  border-left: 3px solid transparent;
+  /* Der Rollkasten ist eine Flex-Spalte: ohne das stauchen zwölf Zeilen sich
+     gegenseitig, statt zu rollen — auf Full HD gemessen 45,2 px statt 76, und
+     die Miniatur, die das Wiedererkennen TRÄGT, war darin unkenntlich. */
+  flex-shrink: 0;
+  /* Hergeleitet, nicht von `.fut-row` geliehen — siehe die Rechnung an
+     VOYAGE_RAIL_ROW_PAD_L in `constants/economy.ts`. */
+  padding: v-bind(rowPad);
+  background: #1c1c18;
+  border: 1px solid #32210c;
   border-radius: 4px;
+  overflow: hidden;
   text-align: left;
   cursor: pointer;
   transition:
-    background 0.13s,
-    border-color 0.13s;
+    background-color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+/* Der ZUSTANDSKANAL, und zwar als eigene Ebene statt als `border-left`. Damit
+   ist er vom Rahmen entkoppelt, den Hover und Auswahl färben — die Kurzform
+   `border-color` löschte sonst genau die Auskunft, neben der sie steht, und
+   `.egr--on` musste drei Seiten einzeln setzen. Dieselbe Trennung führt
+   `.fut-row::before`. */
+.egr::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: v-bind(stateBar);
+  background: var(--st-c, transparent);
+  pointer-events: none;
+  z-index: 1;
 }
 .egr--st-ready {
-  border-left-color: #64dcb4;
+  --st-c: #64dcb4;
 }
 .egr--st-offer {
-  border-left-color: #e8c040;
+  --st-c: #e8c040;
 }
 .egr--st-field {
-  border-left-color: rgba(230, 220, 196, 0.4);
+  --st-c: rgba(230, 220, 196, 0.4);
 }
 .egr:hover {
-  background: #1c1a12;
+  border-color: #7a4e20;
 }
-/* Drei Seiten einzeln und NICHT `border-color`: die Kurzform nähme die linke
-   Kante mit und die Auswahl löschte den Zustand, den sie anzeigt. */
 .egr--on {
-  background: color-mix(in srgb, var(--gx-accent, #e8c040) 20%, #12100a);
-  border-top-color: color-mix(in srgb, var(--gx-accent, #e8c040) 45%, transparent);
-  border-right-color: color-mix(in srgb, var(--gx-accent, #e8c040) 45%, transparent);
-  border-bottom-color: color-mix(in srgb, var(--gx-accent, #e8c040) 45%, transparent);
-}
-/* Nur wo es keinen Zustand zu zeigen gibt, darf die Kante der Auswahl gehören. */
-.egr--on.egr--st-quiet {
-  border-left-color: var(--gx-accent, #e8c040);
+  background: color-mix(in srgb, var(--gx-accent, #e8c040) 20%, #1c1c18);
+  border-color: var(--gx-accent, #e8c040);
 }
 .egr:focus-visible {
   outline: 2px solid #e8c040;
@@ -188,10 +205,6 @@ const title = computed(
 }
 .egr--st-offer .egr-thumb {
   border-color: rgba(232, 192, 64, 0.6);
-}
-.egr--folded .egr-thumb {
-  width: v-bind(thumbFolded);
-  height: v-bind(thumbFolded);
 }
 .egr-img {
   width: 100%;
@@ -323,14 +336,6 @@ const title = computed(
   transform-origin: left center;
   background: linear-gradient(to right, #8a5a1c, #e8c060);
   transition: transform 0.35s ease;
-}
-
-/* Eingeklappt trägt die Spalte weiter: die Kante bleibt der Zustand, der Zähler
-   sitzt schon auf der Miniatur — eine Spalte, die nicht mehr meldet, dass dort
-   etwas wartet, wird vergessen. */
-.egr--folded {
-  justify-content: center;
-  padding: 6px 0 6px 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {

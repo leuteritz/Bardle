@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Die linke Spalte: jede befreite Galaxie, jüngste zuerst.
+ * Die rechte Spalte: jede befreite Galaxie, jüngste zuerst.
  *
  * Gesteuert und dumm, wie `ShopFacetRail` — sie rendert die Zeilen, die man ihr
  * gibt, und meldet zurück, welche getroffen wurde. Was eine Galaxie BEDEUTET,
@@ -9,21 +9,29 @@
  * Die Zähler sind nicht Zierrat: sie sind die Antwort auf „wo liegt gerade
  * etwas". Ohne sie wäre die Leiste eine Liste ohne Auskunft, und der Spieler
  * müsste jede Galaxie durchklicken, um eine leere Karte zu finden.
+ *
+ * Sie kennt ihren Klappzustand NICHT mehr: sie fährt als ganzes Stück hinaus,
+ * und die Geste gehört dem Griff daneben (`ExpeditionRailHandle`). Ihr Kopf ist
+ * deshalb kein Knopf mehr, sondern eine Beschriftung — zwei Stellen für dieselbe
+ * Geste sind eine zu viel.
  */
 import { onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageRailRow } from '@/types'
-import { VOYAGE_RAIL_REVEAL_PAD } from '@/config/constants'
+import {
+  VOYAGE_RAIL_HANDLE_LABEL,
+  VOYAGE_RAIL_PAD_X,
+  VOYAGE_RAIL_REVEAL_PAD,
+} from '@/config/constants'
 import ExpeditionGalaxyRow from './ExpeditionGalaxyRow.vue'
 
 const props = defineProps<{
   rows: VoyageRailRow[]
   records: CompletedGalaxyRecord[]
   selected: number
-  folded: boolean
 }>()
-const emit = defineEmits<{ select: [galaxy: number]; fold: [folded: boolean] }>()
+const emit = defineEmits<{ select: [galaxy: number] }>()
 
 function recordFor(records: CompletedGalaxyRecord[], galaxy: number) {
   return records.find((r) => r.galaxy === galaxy)
@@ -57,22 +65,17 @@ watch(() => props.selected, revealSelected, { flush: 'post' })
 // Deckt das ALLERERSTE Oeffnen ab: da waehlt der Sprung, bevor es die Leiste
 // gibt, es gaebe also keinen Wechsel, auf den ein Watcher anspringen koennte.
 onMounted(revealSelected)
+
+const padX = `${VOYAGE_RAIL_PAD_X}px`
 </script>
 
 <template>
-  <aside class="egl" :class="{ 'egl--folded': folded }">
-    <button
-      class="egl-grip"
-      :title="folded ? 'Show destinations' : 'Hide destinations'"
-      :aria-label="folded ? 'Show destinations' : 'Hide destinations'"
-      :aria-expanded="!folded"
-      @click="emit('fold', !folded)"
-    >
+  <aside class="egl">
+    <div class="egl-head">
       <Icon icon="game-icons:treasure-map" width="16" height="16" />
-      <span v-if="!folded" class="egl-grip-label">Destinations</span>
-      <span v-if="!folded" class="egl-grip-count">{{ rows.length }}</span>
-      <span class="egl-grip-arrow">{{ folded ? '›' : '‹' }}</span>
-    </button>
+      <span class="egl-head-label">{{ VOYAGE_RAIL_HANDLE_LABEL }}</span>
+      <span class="egl-head-count">{{ rows.length }}</span>
+    </div>
 
     <div ref="scroll" class="egl-scroll rpg-scrollbar">
       <template v-for="row in rows" :key="row.galaxy">
@@ -81,7 +84,6 @@ onMounted(revealSelected)
           :row="row"
           :record="recordFor(records, row.galaxy)!"
           :selected="selected === row.galaxy"
-          :folded="folded"
           @select="emit('select', $event)"
         />
       </template>
@@ -94,50 +96,41 @@ onMounted(revealSelected)
 </template>
 
 <style scoped>
+/* Dieselbe Fläche und dieselbe Naht wie die Forge-Detailspalte (`.sf-panel`):
+   eine Seitenleiste liest sich in diesem Spiel als EIN Ort, nicht als einer je
+   Reiter. Die Naht gehört immer der rechten Zone — eine zweite Linie am
+   Nachbarn verdoppelte sie. */
 .egl {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
+  height: 100%;
   min-height: 0;
-  background: #12100a;
-  border-right: 2px solid #5c3310;
+  background: #111008;
+  border-left: 2px solid #5c3310;
 }
 
-.egl-grip {
+/* Kopfband im Rezept der Forge-Kopfleisten (`.fbb`), nur enger gepolstert:
+   deren 18 px gelten für eine 400–560 px breite Spalte. Kein Knopf — das
+   Klappen gehört dem Griff. */
+.egl-head {
   display: flex;
   align-items: center;
   gap: 7px;
   flex-shrink: 0;
-  padding: 9px 10px;
-  background: #1e1006;
-  border: none;
-  border-bottom: 2px solid #5c3310;
+  padding: 10px 12px;
+  background: #14100c;
+  border-bottom: 1px solid #2a1a08;
   color: #c89040;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  cursor: pointer;
 }
-.egl-grip:hover {
-  color: #e8c040;
-}
-.egl--folded .egl-grip {
-  justify-content: center;
-  padding: 9px 0;
-}
-.egl-grip-count {
-  color: rgba(200, 144, 64, 0.5);
-  font-variant-numeric: tabular-nums;
-}
-.egl-grip-arrow {
+.egl-head-count {
   margin-left: auto;
-  font-size: 13px;
-  line-height: 1;
-}
-.egl--folded .egl-grip-arrow {
-  display: none;
+  color: rgba(200, 144, 64, 0.5);
 }
 
 .egl-scroll {
@@ -145,15 +138,15 @@ onMounted(revealSelected)
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 6px 7px 12px;
+  /* Seitlich an die Konstante gebunden — der Ladeschleier baut dieselbe Zone,
+     und zwei Zahlen dafuer liefen still auseinander. Karten brauchen mehr Luft
+     ZUEINANDER als randlose Zeilen, deshalb der groessere `gap`. */
+  padding: 8px v-bind(padX) 14px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
-}
-.egl--folded .egl-scroll {
-  padding: 6px 4px 12px;
 }
 .egl-scroll::-webkit-scrollbar {
   width: 4px;
@@ -172,8 +165,5 @@ onMounted(revealSelected)
   font-weight: 600;
   line-height: 1.45;
   color: rgba(200, 144, 64, 0.4);
-}
-.egl--folded .egl-empty {
-  display: none;
 }
 </style>

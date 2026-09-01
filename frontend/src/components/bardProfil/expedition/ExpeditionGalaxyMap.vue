@@ -356,7 +356,10 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
     :aria-label="`${title} — voyage chart`"
     @click="emit('select', null)"
   >
-    <canvas ref="canvas" class="egm-plate" aria-hidden="true" />
+    <!-- `data-paints` ist der Beleg, nicht Zierrat: der Playwright-Lauf liest
+         ihn und darf beim Auf- und Zuklappen der Zielliste genau EINEN Zuwachs
+         sehen. Steht dort mehr, ist eine Breite in eine Transition geraten. -->
+    <canvas ref="canvas" class="egm-plate" :data-paints="paintCount" aria-hidden="true" />
 
     <!-- Identität UND Bilanz sitzen im Fuss der Bühne. Sie sassen einmal als
          zwei eigene Overlays in den beiden linken Ecken: eine Plakette oben

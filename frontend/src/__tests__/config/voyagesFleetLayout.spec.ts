@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  VOYAGE_RAIL_WIDTH,
+  VOYAGE_RAIL_ZONE_W,
   VOYAGE_MAP_GUTTER_PX,
   VOYAGE_MAP_INSET_PX,
   VOYAGE_MAP_STATS_BAND_H,
@@ -94,7 +94,8 @@ function atlasWidth(vw: number, vh: number): number {
 }
 
 function mapWidth(vw: number, vh: number): number {
-  return atlasWidth(vw, vh) - VOYAGE_RAIL_WIDTH
+  // Die ZONE, nicht die Liste: der Griff bleibt in beiden Zustaenden bezahlt.
+  return atlasWidth(vw, vh) - VOYAGE_RAIL_ZONE_W
 }
 
 /**

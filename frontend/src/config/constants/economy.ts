@@ -753,12 +753,17 @@ export const CHIMES_COST_ICON = 'game-icons:windchimes'
    Die DRITTE Zone ist gefallen. Sie trug das Missions-Dossier und war zugleich
    der einzige Weg, eine Expedition loszuschicken — beides liegt jetzt an der
    Marke selbst: die Hover-Karte ist die Auskunft, ein Klick die Geste
-   (`utils/game/voyageAction.ts`). Was sie kostete, hat die Galaxie geerbt:
+   (`utils/game/voyageAction.ts`). Was sie kostete, hat die Galaxie geerbt.
 
-     Full HD 1920×1080   Reiter 1240 → Leiste 224 · Karte 1016  (vorher 628)
-     WUXGA   1920×1200   Reiter 1240 → Leiste 224 · Karte 1016  (vorher 628)
-     2K/QHD  2560×1440   Reiter 1660 → Leiste 224 · Karte 1436  (vorher 955)
-     4K      3840×2160   Reiter 2940 → Leiste 224 · Karte 2716  (vorher 2156)
+   Die Leiste steht RECHTS, im Rezept der Forge-Detailspalte, und trägt deren
+   Griffleiste: 44 px, die auch eingeklappt stehen bleiben. Diese 44 gehen der
+   Karte ab — der eine bewusst zugestandene dritte Rand. Eingeklappt gibt die
+   Zone dafür die vollen 224 zurück statt der 168 der alten Miniaturspalte:
+
+     Full HD 1920×1080   Reiter 1240 → Zone 268 · Karte  972  (zu: 44 · 1196)
+     WUXGA   1920×1200   Reiter 1240 → Zone 268 · Karte  972  (zu: 44 · 1196)
+     2K/QHD  2560×1440   Reiter 1660 → Zone 268 · Karte 1392  (zu: 44 · 1616)
+     4K      3840×2160   Reiter 2940 → Zone 268 · Karte 2672  (zu: 44 · 2896)
 
    Der Boden ist ein GEOMETRIE-Boden, kein Geschmacksurteil: `generateGalaxyDots`
    strebt 0.085 Abstand im normalisierten Raum an, zwei benachbarte Häfen liegen
@@ -768,10 +773,65 @@ export const CHIMES_COST_ICON = 'game-icons:windchimes'
    bindet das.                                                                */
 
 /** Breiter als die Facettenleiste des Shops (196), weil eine Zeile hier eine
- *  Kartenminiatur trägt und kein Glyph: dieses Bild IST das Wiedererkennen. */
+ *  Kartenminiatur trägt und kein Glyph: dieses Bild IST das Wiedererkennen.
+ *  Die LISTE allein — der Griff daneben zählt extra. */
 export const VOYAGE_RAIL_WIDTH = 224
-/** Eingeklappt: Ziffern, Stufenpunkte und Zähler bleiben, die Miniaturen falten weg. */
-export const VOYAGE_RAIL_COLLAPSED = 56
+/**
+ * Die Griffleiste, die eingeklappt stehen bleibt.
+ *
+ * Eigene Zahl statt `FORGE_DETAILS_RAIL_PX`: übernommen ist das Idiom der
+ * Forge-Detailspalte, nicht ihr Wert — eine Forge-Konstante in einem
+ * Voyages-Bauteil wäre eine Kopplung, die niemand sucht. 44 px tragen beides,
+ * das gekippte Wort samt Sperrung und die aufrechte zweistellige Pille darüber.
+ *
+ * Sie ersetzt die alte 56-px-Miniaturspalte. Deren Auskunft — Zustandskante und
+ * Wartezähler JE Galaxie — trägt jetzt der Griff als EINE Summe plus einen
+ * Punkt; eine Spalte, die nicht mehr meldet, dass irgendwo etwas wartet, wird
+ * vergessen.
+ */
+export const VOYAGE_RAIL_HANDLE_PX = 44
+/**
+ * Was die Zone AUSSEN misst — Liste plus Griff.
+ *
+ * Die Zahl, die der Karte abgeht, und deshalb die, mit der die Specs rechnen.
+ * Die Fit-Box klemmt auf allen vier Referenzauflösungen an der BREITE: der
+ * Griff geht damit 1:1 von der gemalten Platte ab (Full HD box.w 960 → 916).
+ * Eingeklappt gibt die Zone genau `VOYAGE_RAIL_WIDTH` zurück.
+ */
+export const VOYAGE_RAIL_ZONE_W = VOYAGE_RAIL_WIDTH + VOYAGE_RAIL_HANDLE_PX
+/**
+ * Das Wort auf dem Griff.
+ *
+ * Der Name dessen, was HINTER ihm liegt, nicht die Geste und nicht der Reiter,
+ * auf dem er ohnehin steht — dieselbe Regel wie `FORGE_DETAILS_RAIL_LABEL`.
+ */
+export const VOYAGE_RAIL_HANDLE_LABEL = 'DESTINATIONS'
+export const VOYAGE_RAIL_OPEN_TITLE = 'Show destinations'
+export const VOYAGE_RAIL_CLOSE_TITLE = 'Hide destinations'
+/** Die beiden Signale des zugeklappten Griffs — Ziele, nicht Missionen. */
+export const VOYAGE_RAIL_WAITING_TITLE = 'destinations with something waiting'
+export const VOYAGE_RAIL_READY_TITLE = 'a crew is home and waiting'
+/** Abstand zwischen Zähler-Pille und Wortende. Die Pille nimmt KEINEN
+ *  Fluss-Platz, sonst wanderte das Wort, sobald ein Signal kommt oder geht. */
+export const VOYAGE_RAIL_HANDLE_BADGE_GAP = 10
+/**
+ * Höhe des gekippten Wortes.
+ *
+ * Nur der Ladeschleier braucht sie — der Griff selbst setzt sie nie, dort
+ * ergibt sie sich aus der Schrift. Sie steht hier, damit sein Platzhalter
+ * dieselbe Marke zeigt und das Wort beim Aufdecken nicht hereinspringt.
+ * Im Browser gemessen, nicht gerechnet.
+ */
+export const VOYAGE_RAIL_WORD_H = 148
+/**
+ * Wie lange die Leiste fährt.
+ *
+ * Bewegt wird ausschliesslich `transform`; die ZONENBREITE wechselt in EINEM
+ * Frame. Sie steht in `paintKey` der Galaxie (`ExpeditionGalaxyMap`) — über die
+ * Fahrt animiert malte die Karte bei jedem Auf und Zu rund dreizehnmal neu statt
+ * einmal.
+ */
+export const VOYAGE_RAIL_SLIDE_MS = 220
 /** Reiterbreite, unter der sich die Leiste selbst einklappt — am ATLAS gemessen. */
 export const VOYAGE_RAIL_AUTOFOLD_WIDTH = 1180
 /** Luft ueber bzw. unter der Zeile, die ein Sprung von aussen ins Sichtfeld
@@ -1355,11 +1415,39 @@ export const VOYAGE_TIP_CREW_MAX = 5
  */
 export const VOYAGE_RAIL_THUMB_W = 96
 export const VOYAGE_RAIL_THUMB_H = 60
-/** Miniatur plus Polsterung — nicht frei gewaehlt, sondern die Summe. */
-export const VOYAGE_RAIL_ROW_H = VOYAGE_RAIL_THUMB_H + 12
-/** Eingeklappt bleibt ein Quadrat: die Form der Galaxie ist dort nicht mehr zu
- *  erkennen, der Zustand schon. */
-export const VOYAGE_RAIL_THUMB_FOLDED = 40
+
+/* Die Zeile ist eine KARTE im Rezept der Forge-Liste (`.fut-row`) — eigene
+   Fläche, eigener Rahmen, Radius 4. Ihre Polsterung ist NICHT geliehen:
+   `.fut-row` steht in einer 400–560 px breiten Spalte und darf dort 17 links
+   und 14 rechts. Hier misst die Zeile aussen 208 px
+   (224 − 2 Naht − 2 x VOYAGE_RAIL_PAD_X) und trägt eine 96er Miniatur; mit
+   17/14 blieben dem Textblock 73 statt 86 px, und dort stehen bereits drei
+   Zustandschips UND die Stufe. Der Umbau darf ihm nichts wegnehmen. */
+/** Links mehr: 3 px Zustandsstreifen plus 6 px Luft. */
+export const VOYAGE_RAIL_ROW_PAD_L = 9
+export const VOYAGE_RAIL_ROW_PAD_R = 7
+export const VOYAGE_RAIL_ROW_PAD_Y = 7
+export const VOYAGE_RAIL_ROW_GAP = 8
+/** Der Zustandskanal — eine eigene Ebene, kein `border-left` mehr. */
+export const VOYAGE_RAIL_STATE_BAR_PX = 3
+/** Polsterung des Rollkastens, beide Seiten. */
+export const VOYAGE_RAIL_PAD_X = 7
+/**
+ * Miniatur plus Polsterung plus die beiden Kanten der Karte — die Summe, nicht
+ * eine Wahl. Der Ladeschleier liest sie; verspräche er 72 und die Zeile misst
+ * 76, drifteten sechs Skelettzeilen um 24 px.
+ */
+export const VOYAGE_RAIL_ROW_H = VOYAGE_RAIL_THUMB_H + 2 * VOYAGE_RAIL_ROW_PAD_Y + 2
+/**
+ * Was dem Textblock neben der Miniatur bleibt — die Zahl, gegen die die
+ * Polsterung oben hergeleitet ist, gebunden in `voyagesAtlasLayout.spec.ts`.
+ *
+ * Genau so viel wie VOR dem Kartenrezept: die Zeile trug damals 3 px
+ * Zustandskante plus 1 px Rahmen statt 1 + 1, und 9/7 Polsterung ergibt
+ * dieselbe Summe. Der Umbau nimmt dem Textblock also nichts. Im Browser
+ * nachgemessen.
+ */
+export const VOYAGE_RAIL_BODY_MIN = 86
 /* ── Voyages-Ladeschleier ─────────────────────────────────────────────────── */
 export const VOYAGE_LOADER_MIN_MS = 380
 export const VOYAGE_LOADER_SETTLE_FRAMES = 4

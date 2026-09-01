@@ -13,11 +13,15 @@
  * ganze Platte in 14–34 ms neu, ein Wiedereinblenden kostet 28 ms. Deshalb
  * läuft er GENAU EINMAL je Sitzung (`atlasBuilt` in `ExpeditionTabComponent`).
  *
- * Das Skelett zeigt, was kommt: die Leiste in ihrer echten Breite, daneben der
- * Kasten im Seitenverhältnis der Fit-Box mit ein paar Häfen darauf und an
- * dessen Unterkante das Datenband. Ein Platzhalter, der etwas anderes
- * verspricht als das, was kommt, hat den Ruckler nur gegen einen Sprung
- * getauscht.
+ * Das Skelett zeigt, was kommt: rechts die Zielliste in ihrer echten Breite
+ * SAMT Griffleiste, links der Kasten im Seitenverhältnis der Fit-Box mit ein
+ * paar Häfen darauf und an dessen Unterkante das Datenband. Ein Platzhalter,
+ * der etwas anderes verspricht als das, was kommt, hat den Ruckler nur gegen
+ * einen Sprung getauscht.
+ *
+ * Der Griff steht mit, weil die Liste OFFEN startet — er ist ab Frame 1 im
+ * Bild. (Das Skelett des Skill-Tree-Reiters zeigt nur ihn, weil dessen Spalte
+ * zugeklappt startet: dieselbe Regel, andere Voraussetzung.)
  *
  * Bewegt wird ausschliesslich `transform` — der Schleier steht per Definition
  * in den Frames, in denen der Hauptthread blockiert ist. Eine Animation auf
@@ -44,10 +48,14 @@ import {
   VOYAGE_LOADER_TITLE,
   VOYAGE_MAP_ASPECT_MIN,
   VOYAGE_MAP_STATS_BAND_H,
+  VOYAGE_RAIL_HANDLE_PX,
+  VOYAGE_RAIL_PAD_X,
   VOYAGE_RAIL_ROW_H,
   VOYAGE_RAIL_THUMB_H,
   VOYAGE_RAIL_THUMB_W,
   VOYAGE_RAIL_WIDTH,
+  VOYAGE_RAIL_WORD_H,
+  VOYAGE_RAIL_ZONE_W,
 } from '@/config/constants'
 
 defineProps<{
@@ -55,7 +63,11 @@ defineProps<{
   startedAt: number
 }>()
 
+const railZone = `${VOYAGE_RAIL_ZONE_W}px`
 const railWidth = `${VOYAGE_RAIL_WIDTH}px`
+const railPadX = `${VOYAGE_RAIL_PAD_X}px`
+const handleWidth = `${VOYAGE_RAIL_HANDLE_PX}px`
+const wordHeight = `${VOYAGE_RAIL_WORD_H}px`
 const rowHeight = `${VOYAGE_RAIL_ROW_H}px`
 const thumbWidth = `${VOYAGE_RAIL_THUMB_W}px`
 const thumbHeight = `${VOYAGE_RAIL_THUMB_H}px`
@@ -112,17 +124,6 @@ const skeletonPorts = computed(() =>
       </div>
     </div>
 
-    <!-- Seitenleiste -->
-    <div class="vtl-rail" aria-hidden="true">
-      <span v-for="i in 6" :key="i" class="vtl-row">
-        <span class="vtl-row-thumb" />
-        <span class="vtl-row-lines">
-          <span class="vtl-mark vtl-mark--name" />
-          <span class="vtl-mark vtl-mark--meta" />
-        </span>
-      </span>
-    </div>
-
     <!-- Bühne -->
     <div class="vtl-stage">
       <div class="vtl-box" aria-hidden="true">
@@ -148,6 +149,27 @@ const skeletonPorts = computed(() =>
       </div>
     </div>
 
+    <!-- Zielliste samt Griff -->
+    <div class="vtl-railzone" aria-hidden="true">
+      <div class="vtl-rail">
+        <!-- Dieselbe Polsterung wie `.egl-head` — so ergibt sich die Höhe aus
+             derselben Rechnung statt aus einer zweiten, gemessenen Zahl. -->
+        <div class="vtl-rail-head"><span class="vtl-mark vtl-mark--head" /></div>
+
+        <div class="vtl-rail-list">
+          <span v-for="i in 6" :key="i" class="vtl-row">
+            <span class="vtl-row-thumb" />
+            <span class="vtl-row-lines">
+              <span class="vtl-mark vtl-mark--name" />
+              <span class="vtl-mark vtl-mark--meta" />
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <div class="vtl-grip"><span class="vtl-grip-word" /></div>
+    </div>
+
     <!-- Ein einziger wandernder Glanz: eine Fläche, die verschoben wird —
          kein Verlauf, der pro Frame neu entsteht. -->
     <span class="vtl-sheen" aria-hidden="true" />
@@ -160,7 +182,7 @@ const skeletonPorts = computed(() =>
   inset: 0;
   z-index: 30;
   display: grid;
-  grid-template-columns: v-bind(railWidth) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) v-bind(railZone);
   grid-template-rows: v-bind(headHeight) minmax(0, 1fr);
   overflow: hidden;
   background: #111008;
@@ -222,24 +244,76 @@ const skeletonPorts = computed(() =>
   border-radius: 4px;
 }
 
-/* ── Seitenleiste ───────────────────────────────────────────── */
-.vtl-rail {
-  grid-column: 1;
+/* ── Zielliste samt Griff ───────────────────────────────────── */
+.vtl-railzone {
+  grid-column: 2;
   grid-row: 2;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 6px 7px;
   overflow: hidden;
-  background: #12100a;
-  border-right: 2px solid #5c3310;
 }
+.vtl-rail {
+  flex: 0 0 v-bind(railWidth);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #111008;
+  border-left: 2px solid #5c3310;
+}
+.vtl-rail-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: #14100c;
+  border-bottom: 1px solid #2a1a08;
+}
+.vtl-mark--head {
+  width: 62%;
+  height: 16px;
+}
+.vtl-rail-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px v-bind(railPadX) 14px;
+  overflow: hidden;
+}
+
+/* Genau die Masse des Griffs, der gleich hier steht — samt Naht und der EINEN
+   mittigen Gruppe. */
+.vtl-grip {
+  flex: 0 0 v-bind(handleWidth);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 6px 12px 4px;
+  background: #14100c;
+  border-left: 2px solid #5c3310;
+}
+/* Mittig wie das Wort selbst. Die Pille darüber zeichnet der Schleier nicht —
+   sie steht nur eingeklappt, und eingeklappt startet die Liste nicht. */
+.vtl-grip-word {
+  display: block;
+  width: 13px;
+  height: v-bind(wordHeight);
+  border-radius: 4px;
+  background: #241a0e;
+}
+
+/* Dieselbe Karte, die gleich kommt: Fläche, Rahmen, Radius. */
 .vtl-row {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   height: v-bind(rowHeight);
   flex-shrink: 0;
+  padding: 7px 7px 7px 9px;
+  background: #1c1c18;
+  border: 1px solid #32210c;
+  border-radius: 4px;
 }
 .vtl-row-thumb {
   width: v-bind(thumbWidth);
@@ -268,7 +342,7 @@ const skeletonPorts = computed(() =>
 /* ── Bühne ──────────────────────────────────────────────────── */
 .vtl-stage {
   position: relative;
-  grid-column: 2;
+  grid-column: 1;
   grid-row: 2;
   min-width: 0;
   min-height: 0;

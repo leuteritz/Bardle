@@ -35,13 +35,16 @@ import {
   VOYAGE_LOADER_SETTLE_FRAMES,
   VOYAGE_MAP_GUTTER_PX,
   VOYAGE_RAIL_AUTOFOLD_WIDTH,
-  VOYAGE_RAIL_COLLAPSED,
+  VOYAGE_RAIL_HANDLE_PX,
+  VOYAGE_RAIL_SLIDE_MS,
   VOYAGE_RAIL_WIDTH,
+  VOYAGE_RAIL_ZONE_W,
   FORGE_MASS_SEND_NODE,
 } from '@/config/constants'
 import ExpeditionLockedPanel from './ExpeditionLockedPanel.vue'
 import ExpeditionCommandBar from './ExpeditionCommandBar.vue'
 import ExpeditionGalaxyRail from './ExpeditionGalaxyRail.vue'
+import ExpeditionRailHandle from './ExpeditionRailHandle.vue'
 import ExpeditionGalaxyMap from './ExpeditionGalaxyMap.vue'
 import VoyagesTabLoader from './VoyagesTabLoader.vue'
 import FirmamentReturnButton from '@/components/bardProfil/FirmamentReturnButton.vue'
@@ -124,9 +127,39 @@ watch(
   { immediate: true },
 )
 
+/**
+ * Die Bühne links, die Zielliste rechts.
+ *
+ * Die Zonenbreite wechselt HART, ohne Transition — sie steht über den
+ * ResizeObserver der Karte in deren `paintKey`, und über die Fahrt animiert
+ * malte die Galaxie je Umschaltung rund dreizehn volle Platten statt einer
+ * (14–34 ms je Lauf). Was man WANDERN sieht, ist das Panel darin.
+ */
 const atlasColumns = computed(
-  () => `${railFolded.value ? VOYAGE_RAIL_COLLAPSED : VOYAGE_RAIL_WIDTH}px minmax(0, 1fr)`,
+  () => `minmax(0, 1fr) ${railFolded.value ? VOYAGE_RAIL_HANDLE_PX : VOYAGE_RAIL_ZONE_W}px`,
 )
+const railPanelWidth = `${VOYAGE_RAIL_WIDTH}px`
+const handleWidth = `${VOYAGE_RAIL_HANDLE_PX}px`
+const slideMs = `${VOYAGE_RAIL_SLIDE_MS}ms`
+
+/**
+ * Den Fokus nimmt `inert`, aber VERZÖGERT: synchron gesetzt liegt seine Arbeit
+ * im ersten Frame der Fahrt, und dort ist der Ruck am sichtbarsten (im Skill
+ * Tree gemessen 39 gegen 25 ms längster Einzelframe).
+ */
+const railInert = ref(false)
+let inertTimer: ReturnType<typeof setTimeout> | null = null
+watch(railFolded, (folded) => {
+  if (inertTimer !== null) clearTimeout(inertTimer)
+  inertTimer = setTimeout(() => {
+    inertTimer = null
+    railInert.value = folded
+  }, VOYAGE_RAIL_SLIDE_MS)
+})
+onBeforeUnmount(() => {
+  if (inertTimer !== null) clearTimeout(inertTimer)
+})
+
 const stageGutter = computed(() => `${VOYAGE_MAP_GUTTER_PX / 2}px`)
 /** Die Chime-Zahlen steigen unter der Kopfleiste auf — +3 fuer deren Rahmen. */
 const popTop = `${VOYAGE_COMMAND_BAR_H + 3 + 8}px`
@@ -267,16 +300,6 @@ function openMassSendUpgrade() {
         @open="jumpToMark"
       />
 
-      <ExpeditionGalaxyRail
-        class="etc-rail"
-        :rows="railRows"
-        :records="records"
-        :selected="selectedGalaxy"
-        :folded="railFolded"
-        @select="atlas.selectGalaxy"
-        @fold="userRailFolded = $event"
-      />
-
       <div class="etc-stage">
         <ExpeditionGalaxyMap
           v-if="selectedRecord"
@@ -297,6 +320,31 @@ function openMassSendUpgrade() {
         <!-- Nur da, wenn man aus dem Firmament kam. Ueberlagerung, KEINE
              Gridzeile: jede Hoehe in der Spalte ginge der Galaxie ab. -->
         <FirmamentReturnButton />
+      </div>
+
+      <!-- Die Zielliste faehrt als EIN Stueck seitlich hinaus; stehen bleibt
+           die Griffleiste. Sie steht im DOM HINTER der Buehne, damit Tabulator
+           und Screenreader dem Bild folgen — ein gegenlaeufiges `grid-column`
+           liesse beide von rechts nach links zuruecklaufen. -->
+      <div class="etc-rail">
+        <div
+          class="etc-rail-slide"
+          :class="{ 'etc-rail-slide--parked': railFolded }"
+          :inert="railInert"
+        >
+          <ExpeditionGalaxyRail
+            :rows="railRows"
+            :records="records"
+            :selected="selectedGalaxy"
+            @select="atlas.selectGalaxy"
+          />
+        </div>
+
+        <ExpeditionRailHandle
+          :rows="railRows"
+          :open="!railFolded"
+          @toggle="userRailFolded = !railFolded"
+        />
       </div>
 
       <!-- Nur ein LEAVE — der Schleier ist ab Frame 1 voll deckend und wird
@@ -344,25 +392,61 @@ function openMassSendUpgrade() {
   grid-template-columns: v-bind(atlasColumns);
   grid-template-rows: auto minmax(0, 1fr);
   background: #111008;
+  /* `clip` und NICHT `hidden`: die geparkte Liste steht ausserhalb dieses
+     Rahmens, und `hidden` machte ihn zum Scrollport — er schneidet dann nicht
+     nur ab, er laesst sich auch verschieben. Genau das zog den Skill-Tree-
+     Reiter schon einmal 448 px seitwaerts. */
+  overflow: clip;
 }
 
 .etc-bar {
   grid-column: 1 / -1;
   grid-row: 1;
 }
-.etc-rail {
-  grid-column: 1;
-  grid-row: 2;
-  min-height: 0;
-}
 .etc-stage {
   position: relative;
-  grid-column: 2;
+  grid-column: 1;
   grid-row: 2;
   min-width: 0;
   min-height: 0;
   padding: v-bind(stageGutter);
   background: #0b0806;
+}
+
+/* Die Huelle traegt beide Kinder absolut — die Spaltenbreite wechselt hart,
+   das Panel darin faehrt. */
+.etc-rail {
+  position: relative;
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Die Liste behaelt ihre Breite IMMER — genau deshalb ueberlebt die
+   Rollposition das Zuklappen, ohne dass jemand sie sichert: sie wird nie neu
+   umbrochen, nur verschoben.
+
+   Hier steht bewusst KEIN `transform: translateX(0)` und kein `will-change`:
+   beides machte dieses Element zum Containing Block fuer `position: fixed`,
+   und die Hover-Karten des Reiters teleportieren nach `<body>`. */
+.etc-rail-slide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: v-bind(handleWidth);
+  width: v-bind(railPanelWidth);
+  z-index: 1;
+  transition: transform v-bind(slideMs) ease;
+}
+.etc-rail-slide--parked {
+  transform: translateX(100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .etc-rail-slide,
+  .etc-rail-slide--parked {
+    transition: none;
+  }
 }
 .vtl-reveal-leave-active {
   transition: opacity 0.3s ease;
