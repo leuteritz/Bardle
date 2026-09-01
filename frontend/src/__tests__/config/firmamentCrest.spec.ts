@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import {
   BOTTOM_BAR_SIDE_W,
@@ -172,6 +174,46 @@ const BASE = {
   liveSeconds: 0,
   chimesPerSecond: 0,
 }
+
+describe('Firmament-Kopfband — jede Ablesung steht auf ihrer TINTE', () => {
+  // Die Tinte selbst laesst sich hier nicht messen: jsdom hat weder Canvas noch
+  // Layout, und `textInkOffset.ts` gibt dort in beiden Messfunktionen 0 zurueck.
+  // Gebunden wird deshalb die QUELLE — eine siebte Ablesung, die `v-ink-center.y`
+  // vergisst, stuende 1 bis 2 px neben den anderen, und im Bild faellt das erst
+  // im Nebeneinander auf.
+  const SFC = readFileSync(
+    resolve(process.cwd(), 'src/components/bardProfil/firmament/FirmamentCrestBand.vue'),
+    'utf8',
+  )
+
+  it('haengt v-ink-center.y an jede Zahl und jede Beschriftung', () => {
+    // Jedes Vorkommen der beiden Klassen — ausser der Flex-Zeile mit dem
+    // Chime-Artwork, wo die Direktive den inneren Textspan traegt: an der Zeile
+    // verschoebe sie das BILD mit.
+    // `(?=["\s]|--)` haelt `fm-crest-kicker` heraus — es faengt mit derselben
+    // Zeichenfolge an wie die Beschriftung.
+    for (const m of SFC.matchAll(/<span([^>]*?)class="fm-crest-[vk](?=["\s]|--)[^"]*"/g)) {
+      const tag = m[0]
+      if (tag.includes('fm-crest-v--art')) continue
+      expect(m[1], tag).toContain('v-ink-center.y')
+    }
+  })
+
+  it('haengt sie bei der Chimes-Ablesung an den inneren Textspan', () => {
+    // `.fm-crest-v--art` ist eine Flex-Zeile aus Bild und Zahl. An der Zeile
+    // verschoebe die Direktive das Chime-Artwork mit; sie gehoert an die Zahl,
+    // und danach sitzen Bild und Zahl auf derselben optischen Mitte.
+    const art = SFC.slice(SFC.indexOf('fm-crest-v--art'))
+    expect(art.slice(0, art.indexOf('</span'))).toContain('v-ink-center.y')
+  })
+
+  it('laesst die Kennzeile bewusst aus', () => {
+    // Sie ist eine Zeile aus ZWEI Schriftgraden; die Direktive misst mit der
+    // Schrift des Elements und laege dort daneben.
+    const kicker = SFC.match(/<span[^>]*class="fm-crest-kicker"/)
+    expect(kicker?.[0]).not.toContain('v-ink-center')
+  })
+})
 
 describe('Firmament-Kopfband — die Chronik der gezeigten Bahn', () => {
   it('zaehlt die laufende Galaxie bei den STERNEN, aber nicht bei den GALAXIEN', () => {

@@ -201,13 +201,14 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
                 class="fm-crest-read fm-crest-read--prov"
               >
                 <span
+                  v-ink-center.y
                   class="fm-crest-v"
                   :class="line.positive ? 'fm-crest-v--up' : 'fm-crest-v--down'"
                 >
                   <span class="fm-crest-dir">{{ line.positive ? '▲' : '▼' }}</span
                   >{{ line.value }}
                 </span>
-                <span class="fm-crest-k">{{ line.label }}</span>
+                <span v-ink-center.y class="fm-crest-k">{{ line.label }}</span>
               </span>
             </template>
             <span
@@ -215,8 +216,10 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
               v-tip="{ label: 'Providence', text: PROV_TIP }"
               class="fm-crest-read fm-crest-read--provwide"
             >
-              <span class="fm-crest-v fm-crest-v--name">{{ provFallback.value }}</span>
-              <span class="fm-crest-k">{{ provFallback.key }}</span>
+              <span v-ink-center.y class="fm-crest-v fm-crest-v--name">{{
+                provFallback.value
+              }}</span>
+              <span v-ink-center.y class="fm-crest-k">{{ provFallback.key }}</span>
             </span>
           </span>
         </span>
@@ -228,18 +231,20 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
           v-tip="{ label: 'Galaxies', text: READ_TIPS.galaxies }"
           class="fm-crest-read fm-crest-read--galaxies"
         >
-          <span class="fm-crest-v fm-crest-v--gold">{{ props.chronicle.galaxies }}</span>
-          <span class="fm-crest-k">Galaxies</span>
+          <span v-ink-center.y class="fm-crest-v fm-crest-v--gold">{{
+            props.chronicle.galaxies
+          }}</span>
+          <span v-ink-center.y class="fm-crest-k">Galaxies</span>
         </div>
         <div
           v-tip="{ label: 'Stars', text: READ_TIPS.stars }"
           class="fm-crest-read fm-crest-read--stars"
         >
-          <span class="fm-crest-v fm-crest-v--gold">
+          <span v-ink-center.y class="fm-crest-v fm-crest-v--gold">
             {{ props.chronicle.rescued }}<span class="fm-crest-sep"> / </span
             ><span class="fm-crest-lost">{{ props.chronicle.lost }}</span>
           </span>
-          <span class="fm-crest-k">Stars</span>
+          <span v-ink-center.y class="fm-crest-k">Stars</span>
         </div>
         <div
           v-tip="{ label: 'Chimes', text: chimesTip }"
@@ -247,12 +252,16 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
         >
           <span class="fm-crest-v fm-crest-v--gold fm-crest-v--art">
             <img class="fm-crest-chime" :src="CHIME_IMG" alt="" aria-hidden="true" />
-            <span
+            <span v-ink-center.y
               >{{ chimesText
               }}<span v-if="dep" class="fm-crest-goal"> / {{ formatNumber(dep.goal) }}</span></span
             >
           </span>
-          <span class="fm-crest-k" :class="{ 'fm-crest-k--ready': dep?.etaSeconds === 0 }">
+          <span
+            v-ink-center.y
+            class="fm-crest-k"
+            :class="{ 'fm-crest-k--ready': dep?.etaSeconds === 0 }"
+          >
             {{ chimesKey }}
           </span>
         </div>
@@ -260,8 +269,8 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
           v-tip="{ label: 'Elapsed', text: elapsedTip }"
           class="fm-crest-read fm-crest-read--elapsed"
         >
-          <span class="fm-crest-v fm-crest-v--time">{{ elapsedText }}</span>
-          <span class="fm-crest-k">{{ elapsedKey }}</span>
+          <span v-ink-center.y class="fm-crest-v fm-crest-v--time">{{ elapsedText }}</span>
+          <span v-ink-center.y class="fm-crest-k">{{ elapsedKey }}</span>
         </div>
       </div>
     </div>
@@ -424,6 +433,23 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
   width: v-bind(wProvWide);
 }
 
+/* `v-ink-center.y` an JEDER Zahl und JEDER Beschriftung des Bandes — dasselbe
+   Rezept wie im Voyages-Datenband: MedievalSharp setzt Ziffern fast vollstaendig
+   ueber die Baseline, metrisch mittig heisst damit optisch zu hoch, und wie weit
+   haengt an den Zeichen selbst („18 / 0" reicht hoeher als „6").
+
+   Am Pixel gemessen (Screenshot des Bandes, Tintenzeilen je Ablesungsspalte
+   gescannt), schlechteste Abweichung von der Bandmitte ueber alle sechs:
+
+     1536   1,50 px -> 1,00     1920   2,00 -> 1,50     2560   2,00 -> 1,50
+
+   `line-height: 1` an der Beschriftung — im Voyages-Band der zweite Schritt —
+   ist hier GEMESSEN und VERWORFEN: es verbessert 1920/2560 auf 1,00, macht
+   1536 aber auf 2,00 schlechter, und das Band muss auf allen drei stehen.
+
+   Die Kennzeile bleibt ohne Direktive: ihr Versatz ist der kleinste im Band,
+   und sie ist eine Zeile aus ZWEI Schriftgraden — die Direktive misst mit der
+   Schrift des Elements und laege bei einer gemischten Zeile daneben. */
 .fm-crest-v {
   font-size: clamp(v-bind(valueMinPx), 1.9vw, 34px);
   line-height: 1;
