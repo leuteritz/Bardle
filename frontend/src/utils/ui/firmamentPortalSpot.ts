@@ -3,9 +3,12 @@
  *
  * Reine Rechnung, kein DOM, kein Store — die Buehnenmasse kommen herein, eine
  * Stelle kommt heraus. Sie liegt bewusst NICHT in `firmamentLayout.ts`: die
- * Bahndatei traegt einen engen Vertrag (reine Bahngeometrie), hier braucht es
- * dagegen Wissen ueber die BEDIENFLAECHEN der Buehne. Der Import laeuft nur in
- * eine Richtung.
+ * Bahndatei traegt einen engen Vertrag (reine Bahngeometrie), hier kommen
+ * Bildkante und Kartenscheibe dazu. Der Import laeuft nur in eine Richtung.
+ *
+ * Sperrzonen fuer Bedienflaechen gibt es KEINE mehr — die Buehne traegt seit dem
+ * Fall von Werkzeugleiste, Legende und Auswahlkarte kein HUD, und das Portal ist
+ * das einzige Bedienelement darauf.
  *
  * **Weder Zoom noch Fahrt sind Argumente.** Das ist die Verriegelung, nicht
  * Bequemlichkeit: was diese Funktion nicht sehen kann, kann keinen Repaint
@@ -14,12 +17,9 @@
  */
 
 import {
-  FIRMAMENT_LEGEND_BOX_H,
-  FIRMAMENT_LEGEND_MAX_SHARE,
   FIRMAMENT_PORTAL_ANGLE_TRIES,
   FIRMAMENT_PORTAL_DISC_CLEAR,
   FIRMAMENT_PORTAL_EDGE_KEEP,
-  FIRMAMENT_PORTAL_KEEPOUT_PAD,
   FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS,
   FIRMAMENT_PORTAL_LABEL_EDGE_PAD,
   FIRMAMENT_PORTAL_LABEL_GAP_EM,
@@ -34,10 +34,6 @@ import {
   FIRMAMENT_PORTAL_RING_MIN_PX,
   FIRMAMENT_PORTAL_SHRINK_STEPS,
   FIRMAMENT_PORTAL_VIS_SAMPLES,
-  FIRMAMENT_SEL_BOX_H,
-  FIRMAMENT_SEL_BOX_W,
-  FIRMAMENT_TOOLS_BOX_H,
-  FIRMAMENT_TOOLS_BOX_W,
 } from '@/config/constants'
 import { jitter } from '@/utils/fx/universeDisc'
 import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
@@ -66,30 +62,6 @@ export function firmamentPortalRingR(h: number): number {
     FIRMAMENT_PORTAL_RING_MAX_PX,
     Math.max(FIRMAMENT_PORTAL_RING_MIN_PX, h * FIRMAMENT_PORTAL_RING_H_RATIO),
   )
-}
-
-/** Die Bedienflaechen der Buehne. Ihre Masse stehen in Konstanten, weil das CSS
- *  sie nicht hergibt und eine geschaetzte Zahl hier still danebenliegt. */
-export function firmamentPortalKeepOuts(w: number, h: number): FirmamentRect[] {
-  return [
-    { x0: 0, y0: 0, x1: FIRMAMENT_TOOLS_BOX_W, y1: FIRMAMENT_TOOLS_BOX_H },
-    {
-      x0: 0,
-      y0: h - FIRMAMENT_LEGEND_BOX_H,
-      x1: w * FIRMAMENT_LEGEND_MAX_SHARE,
-      y1: h,
-    },
-    { x0: w - FIRMAMENT_SEL_BOX_W, y0: h - FIRMAMENT_SEL_BOX_H, x1: w, y1: h },
-  ]
-}
-
-/** Kreis gegen Rechteck — NICHT Bounding-Box gegen Rechteck. Der Unterschied
- *  traegt: ein Quadrat um einen 150-px-Ring schlaegt auf WUXGA fast jede Ecke
- *  aus, der Kreistest laesst die diagonalen Lagen stehen. */
-function circleHitsRect(x: number, y: number, r: number, k: FirmamentRect): boolean {
-  const dx = Math.max(k.x0 - x, 0, x - k.x1)
-  const dy = Math.max(k.y0 - y, 0, y - k.y1)
-  return Math.hypot(dx, dy) < r
 }
 
 /** Wie weit ein Strahl aus der Mitte reicht, bis er das eingerueckte Rechteck
@@ -139,9 +111,9 @@ export function firmamentPortalVisibleShare(
  * niemand als Fehler erkennt — er sieht nur falsch aus. Die FARBE darf am Ziel
  * haengen, der Ort nicht.
  *
- * Gesucht wird im 15-Grad-Raster; der erste Winkel, der jenseits der KARTE
- * liegt, genug Flaeche im Bild laesst und keine Bedienflaeche trifft, gewinnt.
- * Findet sich nichts, wird der Ring kleiner statt zu verschwinden.
+ * Gesucht wird im 15-Grad-Raster; der erste Winkel, der jenseits der KARTE liegt
+ * und genug Flaeche im Bild laesst, gewinnt. Findet sich nichts, wird der Ring
+ * kleiner statt zu verschwinden.
  */
 export function firmamentPortalSpot(
   universe: number,
@@ -152,15 +124,12 @@ export function firmamentPortalSpot(
 
   const fit = firmamentFitBox(w, h)
   const full = firmamentPortalRingR(h)
-  const keep = firmamentPortalKeepOuts(w, h)
   const clear = fit.r * FIRMAMENT_PORTAL_DISC_CLEAR
 
   // Eigene Primzahl je Aspekt, ab 131 aufwaerts — die Kanaele darunter gehoeren
   // der Galaxienwolke, und zwei Aspekte auf einem Kanal laufen im Gleichschritt.
   const base = jitter(universe, 131) * Math.PI * 2
   const frac = jitter(universe, 137)
-
-  let fallback: FirmamentPortalSpot | null = null
 
   // Aeussere Schleife ueber die GROESSE: passt die volle nirgends hin, wird der
   // Ring kleiner. Ein verschwundenes Portal waere die Weiterreise ohne Weg.
@@ -179,17 +148,11 @@ export function firmamentPortalSpot(
       const y = fit.cy + Math.sin(angle) * d
       if (firmamentPortalVisibleShare(x, y, r, w, h) < FIRMAMENT_PORTAL_MIN_VISIBLE) continue
 
-      const spot = { x, y, r }
-      // Geometrisch gueltig reicht als Fluchtweg: eine Buehne, auf der jede Lage
-      // eine Bedienflaeche traefe, gibt es rechnerisch nicht — aber ein `null`
-      // liesse das Portal still verschwinden.
-      fallback ??= spot
-      if (keep.some((k) => circleHitsRect(x, y, r + FIRMAMENT_PORTAL_KEEPOUT_PAD, k))) continue
-      return spot
+      return { x, y, r }
     }
   }
 
-  return fallback
+  return null
 }
 
 // ── Die Beschriftung ────────────────────────────────────────────────────────
@@ -248,9 +211,7 @@ function nearestFree(
  * Die GEBUNDENE Achse traegt den Abstand zum Ring und ruehrt sich nie — sonst
  * liefe die Beschriftung von dem weg, was sie benennt. Auf der FREIEN Achse ist
  * es dagegen eine Rechnung mit einer Unbekannten: Bildkante als Spanne,
- * Kartenscheibe und Bedienflaechen als Sperren, gesucht ist der Punkt am
- * naechsten an der Ringmitte. Ein „schieb sie halt weg" fand dabei nur die
- * Scheibe und lief in die Legende.
+ * Kartenscheibe als Sperre, gesucht ist der Punkt am naechsten an der Ringmitte.
  *
  * Sie gibt nie `null`: dieselbe Regel wie die Schrumpfleiter des Rings —
  * gedraengt ist besser als weg, eine verschwundene Beschriftung waere eine
@@ -266,10 +227,8 @@ export function firmamentPortalLabelSpot(
   const bh = FIRMAMENT_PORTAL_LABEL_H_EM * size
   const gap = FIRMAMENT_PORTAL_LABEL_GAP_EM * size
   const pad = FIRMAMENT_PORTAL_LABEL_EDGE_PAD
-  const kpad = FIRMAMENT_PORTAL_KEEPOUT_PAD
 
   const fit = firmamentFitBox(w, h)
-  const keep = firmamentPortalKeepOuts(w, h)
 
   const outward: FirmamentPortalLabelSide = spot.x >= fit.cx ? 'right' : 'left'
   const inward: FirmamentPortalLabelSide = outward === 'right' ? 'left' : 'right'
@@ -304,14 +263,6 @@ export function firmamentPortalLabelSpot(
     if (d < clear) {
       const need = Math.sqrt(clear * clear - d * d) + fHalf
       blocked.push([fitFree - need, fitFree + need])
-    }
-
-    // Bedienflaechen zaehlen nur, solange die feste Achse sie ueberhaupt trifft.
-    for (const k of keep) {
-      const kb = vertical ? [k.y0, k.y1] : [k.x0, k.x1]
-      const kf = vertical ? [k.x0, k.x1] : [k.y0, k.y1]
-      if (mid - bHalf - kpad >= kb[1] || mid + bHalf + kpad <= kb[0]) continue
-      blocked.push([kf[0] - fHalf - kpad, kf[1] + fHalf + kpad])
     }
 
     const t = nearestFree(vertical ? spot.x : spot.y, pad + fHalf, span - pad - fHalf, blocked)

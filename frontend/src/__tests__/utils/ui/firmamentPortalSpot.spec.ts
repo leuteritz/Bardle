@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   firmamentPortalHitBox,
-  firmamentPortalKeepOuts,
   firmamentPortalLabelSize,
   firmamentPortalLabelSpot,
   firmamentPortalRingR,
@@ -13,7 +12,6 @@ import { universes } from '@/config/progression/universes'
 import {
   FIRMAMENT_PLATE_SPRITE_MARGIN,
   FIRMAMENT_PORTAL_DISC_CLEAR,
-  FIRMAMENT_PORTAL_KEEPOUT_PAD,
   FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS,
   FIRMAMENT_PORTAL_LABEL_EDGE_PAD,
   FIRMAMENT_PORTAL_LABEL_H_EM,
@@ -30,9 +28,10 @@ import {
 
 /**
  * Das Portal steht im schwarzen Raum ausserhalb der Galaxienscheibe, an einer je
- * Universum anderen Stelle. Drei Dinge muessen dabei immer gelten, und keines
- * davon sieht man im Code: es liegt wirklich draussen, es ist wirklich zu sehen,
- * und es liegt nicht unter einer Bedienflaeche.
+ * Universum anderen Stelle. Zwei Dinge muessen dabei immer gelten, und keines
+ * davon sieht man im Code: es liegt wirklich draussen, und es ist wirklich zu
+ * sehen. Die dritte Zusicherung — nicht unter einer Bedienflaeche — ist mit dem
+ * HUD der Buehne entfallen.
  *
  * Die Streuung war einmal weg — ein fester Anker auf der rechten Buehnenkante,
  * gebaut auf ein Missverstaendnis („der Rand des Portals" meinte die FASSUNG,
@@ -188,25 +187,14 @@ describe('firmamentPortalSpot — wo das Portal steht', () => {
       for (const id of IDS) {
         const spot = firmamentPortalSpot(id, s.w, s.h)!
         const share = visibleByGrid(spot.x, spot.y, spot.r, s.w, s.h)
-        expect(share, `${s.name} U${id}`).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_MIN_VISIBLE - 0.02)
+        expect(share, `${s.name} U${id}`).toBeGreaterThanOrEqual(
+          FIRMAMENT_PORTAL_MIN_VISIBLE - 0.02,
+        )
         // Und die Streifenintegration der Funktion trifft dasselbe Ergebnis.
         expect(
           firmamentPortalVisibleShare(spot.x, spot.y, spot.r, s.w, s.h),
           `${s.name} U${id}`,
         ).toBeCloseTo(share, 1)
-      }
-    }
-  })
-
-  it('liegt auf keiner Bedienflaeche', () => {
-    for (const s of STAGES) {
-      for (const id of IDS) {
-        const spot = firmamentPortalSpot(id, s.w, s.h)!
-        for (const k of firmamentPortalKeepOuts(s.w, s.h)) {
-          expect(rectDist(spot.x, spot.y, k), `${s.name} U${id}`).toBeGreaterThanOrEqual(
-            spot.r + FIRMAMENT_PORTAL_KEEPOUT_PAD,
-          )
-        }
       }
     }
   })
@@ -234,7 +222,7 @@ describe('firmamentPortalLabelSpot — wohin es fuehrt', () => {
     }
   })
 
-  it('bleibt im Bild und frei von jeder Bedienflaeche', () => {
+  it('bleibt vollstaendig im Bild', () => {
     const pad = FIRMAMENT_PORTAL_LABEL_EDGE_PAD
     for (const s of STAGES) {
       for (const id of IDS) {
@@ -244,14 +232,6 @@ describe('firmamentPortalLabelSpot — wohin es fuehrt', () => {
         expect(l.cx + l.w / 2, `${s.name} U${id}`).toBeLessThanOrEqual(s.w - pad + 0.001)
         expect(l.cy - l.h / 2, `${s.name} U${id}`).toBeGreaterThanOrEqual(pad - 0.001)
         expect(l.cy + l.h / 2, `${s.name} U${id}`).toBeLessThanOrEqual(s.h - pad + 0.001)
-        for (const k of firmamentPortalKeepOuts(s.w, s.h)) {
-          const hits =
-            l.cx - l.w / 2 - FIRMAMENT_PORTAL_KEEPOUT_PAD < k.x1 - 0.001 &&
-            l.cx + l.w / 2 + FIRMAMENT_PORTAL_KEEPOUT_PAD > k.x0 + 0.001 &&
-            l.cy - l.h / 2 - FIRMAMENT_PORTAL_KEEPOUT_PAD < k.y1 - 0.001 &&
-            l.cy + l.h / 2 + FIRMAMENT_PORTAL_KEEPOUT_PAD > k.y0 + 0.001
-          expect(hits, `${s.name} U${id}`).toBe(false)
-        }
       }
     }
   })

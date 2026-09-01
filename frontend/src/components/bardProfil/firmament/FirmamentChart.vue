@@ -29,10 +29,11 @@
  * je Mausbewegung) entfaellt damit ersatzlos.
  *
  * Zoom faehrt in DREI Stufen statt stufenlos: jede Stufe ist EIN Repaint. Die
- * Fahrt kostet keinen — sie verschiebt nur Sprites.
+ * Fahrt kostet keinen — sie verschiebt nur Sprites. Bedient wird beides mit der
+ * Maus: das Rad schaltet die Stufen, ein Doppelklick auf die freie Flaeche holt
+ * die ganze Bahn zurueck. Die Buehne traegt kein Bedienelement.
  */
 import { computed, ref, watch, onBeforeUnmount, nextTick } from 'vue'
-import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
@@ -56,16 +57,13 @@ import { toRoman } from '@/utils/ui/format'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import FirmamentGalaxyTip from './FirmamentGalaxyTip.vue'
 import FirmamentOriginTip from './FirmamentOriginTip.vue'
-import FirmamentSelectionCard from './FirmamentSelectionCard.vue'
 import FirmamentPortal from './FirmamentPortal.vue'
 import FirmamentDepartureTip from './FirmamentDepartureTip.vue'
 import UniverseDisc from './UniverseDisc.vue'
 import {
   FIRMAMENT_FREED_COLOR,
   FIRMAMENT_GATE_COLOR,
-  FIRMAMENT_HERE_COLOR,
   FIRMAMENT_LABEL_MAX_NODES,
-  FIRMAMENT_LANDFALL_COLOR,
   FIRMAMENT_MAX_BACKING_PX,
   FIRMAMENT_MAX_DPR,
   FIRMAMENT_NODE_HIT_MIN,
@@ -159,18 +157,48 @@ function clampPan(x: number, y: number): { x: number; y: number } {
   }
 }
 
-function zoomBy(delta: number) {
-  const next = Math.min(FIRMAMENT_ZOOM_STEPS.length - 1, Math.max(0, zoomStep.value + delta))
+/**
+ * Das Rad schaltet die STUFEN, und es zoomt auf den Punkt unter dem Zeiger.
+ *
+ * Stufenlos malte die Platte je Radtick neu — `plateSide` haengt an `box.r` und
+ * steht im `paintKey`. Ohne den Fixpunkt wanderte der betrachtete Ausschnitt bei
+ * jedem Schritt weg; die Klemmung kommt deshalb zuletzt, umgekehrt zoege sie den
+ * Fixpunkt mit und das Bild verschoebe sich doppelt (Muster: `ForgeTreePanel`).
+ */
+function onWheel(e: WheelEvent) {
+  const el = stage.value
+  if (!el) return
+  const next = Math.min(
+    FIRMAMENT_ZOOM_STEPS.length - 1,
+    Math.max(0, zoomStep.value + (e.deltaY < 0 ? 1 : -1)),
+  )
   if (next === zoomStep.value) return
+
+  const rect = el.getBoundingClientRect()
+  const fit = firmamentFitBox(cssW.value, cssH.value)
+  const mx = e.clientX - rect.left
+  const my = e.clientY - rect.top
+  const nx = (mx - (fit.cx + pan.value.x)) / (fit.r * zoom.value)
+  const ny = (my - (fit.cy + pan.value.y)) / (fit.r * zoom.value)
+  const after = fit.r * FIRMAMENT_ZOOM_STEPS[next]
+
   zoomStep.value = next
   // Herauszoomen zieht die Fahrt mit zurueck in ihre neue, engere Reichweite.
-  pan.value = next === 0 ? { x: 0, y: 0 } : clampPan(pan.value.x, pan.value.y)
+  pan.value =
+    next === 0 ? { x: 0, y: 0 } : clampPan(mx - nx * after - fit.cx, my - ny * after - fit.cy)
 }
 
 function recenter() {
   zoomStep.value = 0
   pan.value = { x: 0, y: 0 }
   drag.value = { x: 0, y: 0 }
+}
+
+/** Zurueck zur ganzen Bahn. Auf einem Knopf gehoert der Klick dem Knoten bzw.
+ *  dem Portal — dort waere ein Reset die zweite Wirkung derselben Geste. */
+function onDblClick(e: MouseEvent) {
+  if ((e.target as HTMLElement).closest('button')) return
+  recenter()
 }
 
 function onPointerDown(e: PointerEvent) {
@@ -553,13 +581,6 @@ const layerStyle = computed(() => ({
   transform: `translate3d(${drag.value.x}px, ${drag.value.y}px, 0)`,
 }))
 
-const LEGEND = [
-  { key: 'freed', label: 'Freed', color: FIRMAMENT_FREED_COLOR, shape: 'dot' },
-  { key: 'here', label: 'You are here', color: FIRMAMENT_HERE_COLOR, shape: 'dot' },
-  { key: 'unlit', label: 'Unlit', color: FIRMAMENT_UNLIT_COLOR, shape: 'ring' },
-  { key: 'land', label: 'Landfall', color: FIRMAMENT_LANDFALL_COLOR, shape: 'diamond' },
-  { key: 'gate', label: 'Departure', color: FIRMAMENT_GATE_COLOR, shape: 'gate' },
-] as const
 </script>
 
 <template>
@@ -568,6 +589,8 @@ const LEGEND = [
     class="fm-stage"
     :class="{ 'is-pannable': canPan, 'is-dragging': dragging }"
     @pointerdown="onPointerDown"
+    @wheel.prevent="onWheel"
+    @dblclick="onDblClick"
   >
     <!-- Der Raum. Er faehrt NICHT mit: die Bahn wandert durch die Sterne,
          statt sie mitzuschleppen. -->
@@ -660,7 +683,7 @@ const LEGEND = [
       </div>
 
       <!-- Der Startpunkt. KEIN Knopf: er fuehrt keine Aktion aus, und „zurueck
-           zur Mitte" gaebe es zweimal — den Werkzeugknopf gibt es schon. Er ist
+           zur Mitte" liegt auf dem Doppelklick der freien Flaeche. Er ist
            trotzdem fokussierbar, damit die Karte auch per Tastatur aufgeht. -->
       <RpgBadgeTooltip passive :accent="FIRMAMENT_FREED_COLOR">
         <div
@@ -721,44 +744,6 @@ const LEGEND = [
       </template>
     </RpgBadgeTooltip>
 
-    <!-- Bedienung: drei Zoomstufen und zurueck zur Mitte. -->
-    <div class="fm-tools">
-      <button
-        class="fm-tool"
-        title="Zoom out"
-        aria-label="Zoom out"
-        :disabled="zoomStep === 0"
-        @click="zoomBy(-1)"
-      >
-        <Icon icon="lucide:minus" width="14" height="14" />
-      </button>
-      <button
-        class="fm-tool"
-        title="Zoom in"
-        aria-label="Zoom in"
-        :disabled="zoomStep === FIRMAMENT_ZOOM_STEPS.length - 1"
-        @click="zoomBy(1)"
-      >
-        <Icon icon="lucide:plus" width="14" height="14" />
-      </button>
-      <button
-        class="fm-tool fm-tool--home"
-        title="Fit the whole road"
-        aria-label="Fit the whole road"
-        @click="recenter"
-      >
-        <Icon icon="lucide:crosshair" width="14" height="14" />
-      </button>
-    </div>
-
-    <div class="fm-legend">
-      <span v-for="l in LEGEND" :key="l.key" class="fm-legend-chip" :style="{ color: l.color }">
-        <span class="fm-legend-mark" :class="`is-${l.shape}`" :style="{ '--fm-l': l.color }" />
-        {{ l.label }}
-      </span>
-    </div>
-
-    <FirmamentSelectionCard :nodes="nodes" :departure="departure" :selection="selection" />
   </div>
 </template>
 
@@ -769,6 +754,8 @@ const LEGEND = [
   min-height: 0;
   overflow: hidden;
   background: #0b0806;
+  /* Die Buehne kennt Doppelklick UND Ziehen — beides markierte sonst Schrift. */
+  user-select: none;
 }
 
 .fm-stage.is-pannable {
@@ -1181,103 +1168,5 @@ const LEGEND = [
   50% {
     opacity: 1;
   }
-}
-
-/* ── Bedienung ────────────────────────────────────────────────────────── */
-.fm-tools {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 4;
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  background: rgba(12, 10, 6, 0.86);
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-}
-
-.fm-tool {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  color: #c8b890;
-  background: #151109;
-  border: 1px solid #3a2c14;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: color 0.12s;
-}
-
-.fm-tool:hover:not(:disabled) {
-  color: #e8c040;
-}
-
-.fm-tool:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.fm-tool--home {
-  color: #9fe062;
-}
-
-.fm-tool--home:hover {
-  color: #c9f08c;
-}
-
-/* ── Legende ──────────────────────────────────────────────────────────── */
-.fm-legend {
-  position: absolute;
-  left: 10px;
-  bottom: 10px;
-  z-index: 4;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  max-width: 60%;
-  pointer-events: none;
-}
-
-.fm-legend-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  font-size: 11.5px;
-  white-space: nowrap;
-  background: rgba(12, 10, 6, 0.86);
-  border: 1px solid #3a2c14;
-  border-radius: 3px;
-}
-
-.fm-legend-mark {
-  width: 8px;
-  height: 8px;
-}
-
-.fm-legend-mark.is-dot {
-  border-radius: 50%;
-  background: var(--fm-l);
-}
-
-.fm-legend-mark.is-ring {
-  border-radius: 50%;
-  border: 1px dashed var(--fm-l);
-}
-
-.fm-legend-mark.is-diamond {
-  width: 7px;
-  height: 7px;
-  transform: rotate(45deg);
-  border: 1px solid var(--fm-l);
-}
-
-.fm-legend-mark.is-gate {
-  width: 4px;
-  height: 9px;
-  border-left: 1px solid var(--fm-l);
-  border-right: 1px solid var(--fm-l);
 }
 </style>

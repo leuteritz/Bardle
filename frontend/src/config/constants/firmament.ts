@@ -724,16 +724,9 @@ export const FIRMAMENT_PORTAL_EDGE_KEEP = 0.06
 export const FIRMAMENT_PORTAL_MIN_VISIBLE = 0.55
 export const FIRMAMENT_PORTAL_VIS_SAMPLES = 64
 
-/** Sperrzonen: die Bedienflaechen der Buehne, in Buehnenkoordinaten. Gemessen
- *  aus ihrem CSS — Werkzeugkasten oben links, Legende unten links (zweireihig
- *  auf dem Buehnenboden), Auswahlkarte unten rechts. */
-export const FIRMAMENT_PORTAL_KEEPOUT_PAD = 12
-export const FIRMAMENT_TOOLS_BOX_W = 108
-export const FIRMAMENT_TOOLS_BOX_H = 52
-export const FIRMAMENT_LEGEND_BOX_H = 62
-export const FIRMAMENT_LEGEND_MAX_SHARE = 0.6
-export const FIRMAMENT_SEL_BOX_W = 400
-export const FIRMAMENT_SEL_BOX_H = 82
+/* Sperrzonen fuer Bedienflaechen gibt es hier KEINE: die Buehne traegt kein HUD
+   mehr — Werkzeugleiste, Legende und Auswahlkarte sind gefallen, gezoomt wird
+   mit dem Rad. Das Portal weicht nur noch Bildkante und Kartenscheibe aus. */
 
 /** Die Beschriftung am Portal: ein FESTES Kaestchen. Die Platzsuche braucht eine
  *  Zahl statt einer gemessenen Textbreite — sonst waere sie unrein und ihr
