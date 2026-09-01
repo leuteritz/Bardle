@@ -2,12 +2,16 @@
 import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
-import { formatCompactDuration, durationSegments, toRoman } from '@/utils/ui/format'
+import {
+  formatCompactDuration,
+  durationSegments,
+  toRoman,
+  universeLabel,
+} from '@/utils/ui/format'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { JOURNEY_AXIS_COLORS, STATS_TAB_GAUGE } from '@/config/constants'
-import { universes } from '@/config/progression/universes'
 import StatsColumnHeader from './StatsColumnHeader.vue'
 import StatCategoryAccordion from './StatCategoryAccordion.vue'
 import WayfinderSection from './WayfinderSection.vue'
@@ -66,7 +70,6 @@ function gaugeOffset(pct: number): number {
 }
 
 const journeyGauges = computed<JourneyGauge[]>(() => {
-  const universeName = universes[currentUniverse.value - 1]?.name ?? 'Unknown universe'
   const galaxyDone = starsRescued.value >= starsRequired.value
   const universePct = (currentUniverse.value / Math.max(1, totalUniverses.value)) * 100
   return [
@@ -105,7 +108,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
       pct: universePct,
       color: JOURNEY_AXIS_COLORS.universe,
       full: currentUniverse.value >= totalUniverses.value,
-      tip: `${universeName} — universe ${currentUniverse.value} of ${totalUniverses.value}`,
+      tip: `${universeLabel(currentUniverse.value)} — ${currentUniverse.value} of ${totalUniverses.value}`,
     },
   ]
 })

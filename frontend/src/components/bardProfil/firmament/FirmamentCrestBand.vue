@@ -18,25 +18,38 @@
  * Unterkante traegt jetzt dieselbe Naht wie die Voyages-Kopfleiste.
  *
  * Was ein Universum BEDEUTET, bringt die beim Prestige gezogene Vorsehung mit —
- * das Band nennt sie mit ihren zwei Wirkungen. Nur auf der laufenden Bahn: ein
- * Archiveintrag traegt ihren Namen, nicht ihre Achsen.
+ * und ihre zwei Wirkungen stehen als ABLESUNGEN da, in derselben Gestalt und
+ * derselben Schriftskala wie die vier der Chronik. Sie waren einmal zwei
+ * 11-px-Chips unter einem lila Namen, also die kleinste Zeile des Bandes fuer
+ * das einzige, was JETZT gilt; darueber stand der Universumsname in 30 px,
+ * obwohl die Kennzeile schon „Universe VI" sagte. Beides ist gefallen: der Name
+ * ganz, der Vorsehungsname bis auf die vergangene Bahn, wo er das einzige
+ * Ueberlieferte ist — ein Archiveintrag traegt ihren Namen, nicht ihre Achsen.
  *
  * Die Hoehe ist FEST und haengt per `v-bind` an ihrer Konstante — was das Band
  * nimmt, nimmt es der Karte UND der Leiste.
  */
 import { computed } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
-import { getUniverse } from '@/config/progression/universes'
 import { providenceEffectLines } from '@/config/progression/providences'
 import { formatNumber } from '@/config/ui/numberFormat'
-import { formatCompactDuration, formatShortDuration, toRoman } from '@/utils/ui/format'
+import {
+  formatCompactDuration,
+  formatShortDuration,
+  toRoman,
+  universeLabel,
+} from '@/utils/ui/format'
 import {
   FIRMAMENT_CREST_BAND_H,
   FIRMAMENT_CREST_CHIME_ART_PX,
+  FIRMAMENT_CREST_ID_GAP,
+  FIRMAMENT_CREST_ID_PAD_X,
   FIRMAMENT_CREST_ID_W,
+  FIRMAMENT_CREST_PROV_NAME_PX,
+  FIRMAMENT_CREST_READ_PAD_X,
   FIRMAMENT_CREST_READ_W_CHIMES,
+  FIRMAMENT_CREST_READ_W_PROV,
   FIRMAMENT_CREST_READ_W_ELAPSED,
   FIRMAMENT_CREST_READ_W_GALAXIES,
   FIRMAMENT_CREST_READ_W_STARS,
@@ -55,7 +68,6 @@ const props = defineProps<{ universe: number; chronicle: FirmamentChronicle }>()
 const gameStore = useGameStore()
 const providenceStore = useProvidenceStore()
 
-const universe = computed(() => getUniverse(props.universe))
 const isHere = computed(() => props.universe === gameStore.currentUniverse)
 const dep = computed(() => props.chronicle.departure)
 
@@ -68,12 +80,6 @@ const pastRun = computed(() => {
   return mine.length ? mine[mine.length - 1] : null
 })
 
-const providence = computed(() =>
-  isHere.value
-    ? (providenceStore.active?.name ?? 'no providence drawn')
-    : (pastRun.value?.providence ?? 'no providence recorded'),
-)
-
 /** Was in diesem Universum GILT. Nur auf der laufenden Bahn: ein vergangener
  *  Lauf speichert den Namen seiner Vorsehung, nicht ihre Achsen — dort waere
  *  jede Zahl erfunden. */
@@ -81,7 +87,18 @@ const provLines = computed(() =>
   isHere.value && providenceStore.active ? providenceEffectLines(providenceStore.active) : [],
 )
 
+/** Ohne Achsen bleibt EINE Ablesung ueber die Breite der beiden. Ihr Wert ist
+ *  dann ein Name statt einer Zahl — und wo auch der fehlt, ein „—" mit dem
+ *  Grund als Beschriftung, wie bei Chimes und Elapsed. */
+const provFallback = computed(() => {
+  const name = isHere.value ? providenceStore.active?.name : pastRun.value?.providence
+  if (name) return { value: name, key: 'Providence' }
+  return { value: '—', key: isHere.value ? 'No providence drawn' : 'No providence recorded' }
+})
+
 const PROV_TIP = 'The providence drawn on entering this universe — it rules the whole run.'
+const PROV_TIP_UP = `What this universe's providence grants for the whole run.`
+const PROV_TIP_DOWN = `What this universe's providence costs for the whole run.`
 
 /** Wie oft man hier war — nur, wenn es mehr als einmal war. Ein "x1" traegt
  *  nichts und stuende auf neun von zehn Bahnen. */
@@ -137,8 +154,14 @@ const CHIME_IMG = UNIVERSE_TOOLTIP_IMAGES.chimes
 
 const bandH = `${FIRMAMENT_CREST_BAND_H}px`
 const idW = `${FIRMAMENT_CREST_ID_W}px`
+const idPadX = `${FIRMAMENT_CREST_ID_PAD_X}px`
+const idGap = `${FIRMAMENT_CREST_ID_GAP}px`
+const readPadX = `${FIRMAMENT_CREST_READ_PAD_X}px`
 const valueMinPx = `${FIRMAMENT_CREST_VALUE_MIN_PX}px`
+const provNamePx = `${FIRMAMENT_CREST_PROV_NAME_PX}px`
 const chimeArtPx = `${FIRMAMENT_CREST_CHIME_ART_PX}px`
+const wProv = `${FIRMAMENT_CREST_READ_W_PROV}px`
+const wProvWide = `${2 * FIRMAMENT_CREST_READ_W_PROV}px`
 const wGalaxies = `${FIRMAMENT_CREST_READ_W_GALAXIES}px`
 const wStars = `${FIRMAMENT_CREST_READ_W_STARS}px`
 const wChimes = `${FIRMAMENT_CREST_READ_W_CHIMES}px`
@@ -160,24 +183,40 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
         </span>
         <span class="fm-crest-name-box">
           <span class="fm-crest-kicker">
-            Universe {{ toRoman(props.universe) }} ·
+            <span class="fm-crest-kicker-id">{{ universeLabel(props.universe) }}</span> ·
             {{ isHere ? 'you are here' : 'visited' }}{{ visitNote }}
           </span>
-          <span class="fm-crest-name">{{ universe.name }}</span>
-          <!-- Die Vorsehung IST das Gesetz dieses Universums — der Name allein
-               sagte nicht, was sie tut. Die zwei Zeilen gibt es nur auf der
-               laufenden Bahn; ein Archiveintrag traegt bloss ihren Namen. -->
-          <span v-tip="{ label: 'Providence', text: PROV_TIP }" class="fm-crest-prov">
-            <Icon icon="game-icons:eye-of-horus" width="13" height="13" />
-            <span class="fm-crest-prov-text">{{ providence }}</span>
-            <span v-if="provLines.length" class="fm-crest-prov-lines">
+
+          <!-- Die Vorsehung IST das Gesetz dieses Universums, also steht sie in
+               der Gestalt der Chronik-Ablesungen — nicht als Chipzeile unter
+               einem Namen. Die Richtung haengt an `line.positive`, NIE am
+               Vorzeichen: eine Achse mit `higherIsBetter: false` (Building cost)
+               traegt als BUFF ein Minus. -->
+          <span class="fm-crest-prov-reads">
+            <template v-if="provLines.length">
               <span
                 v-for="(line, i) in provLines"
                 :key="i"
-                class="fm-crest-prov-line"
-                :class="line.positive ? 'fm-crest-prov-up' : 'fm-crest-prov-down'"
-                >{{ line.positive ? '▲' : '▼' }} {{ line.text }}</span
+                v-tip="{ label: line.label, text: line.positive ? PROV_TIP_UP : PROV_TIP_DOWN }"
+                class="fm-crest-read fm-crest-read--prov"
               >
+                <span
+                  class="fm-crest-v"
+                  :class="line.positive ? 'fm-crest-v--up' : 'fm-crest-v--down'"
+                >
+                  <span class="fm-crest-dir">{{ line.positive ? '▲' : '▼' }}</span
+                  >{{ line.value }}
+                </span>
+                <span class="fm-crest-k">{{ line.label }}</span>
+              </span>
+            </template>
+            <span
+              v-else
+              v-tip="{ label: 'Providence', text: PROV_TIP }"
+              class="fm-crest-read fm-crest-read--provwide"
+            >
+              <span class="fm-crest-v fm-crest-v--name">{{ provFallback.value }}</span>
+              <span class="fm-crest-k">{{ provFallback.key }}</span>
             </span>
           </span>
         </span>
@@ -255,14 +294,14 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
 .fm-crest-id {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: v-bind(idGap);
   /* Sie WAECHST in den freien Rest und gibt nach unten nach — die Ablesungen
-     tun weder das eine noch das andere. Starr auf ihrer Basis liess sie
-     „Runeterra Prime" ellipsieren, waehrend rechts daneben 314 px leer standen;
-     die Konstante ist die BASIS, nicht die Breite. */
+     tun weder das eine noch das andere. Die Konstante ist die BASIS, nicht die
+     Breite; sie ist aus Polsterung, Scheibe, Luecke und den zwei
+     Vorsehungs-Ablesungen gerechnet, und `firmamentCrest.spec.ts` rechnet nach. */
   flex: 1 1 v-bind(idW);
   min-width: 0;
-  padding: 0 18px;
+  padding: 0 v-bind(idPadX);
 }
 
 /* Dieselbe Scheibe wie in der Leiste, nur gross — das Heldenbild des Reiters.
@@ -286,15 +325,23 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
   border-radius: 3px;
 }
 
+/* Drei Zeilen, aussen zwei gleiche Reste: so stehen die Vorsehungs-Ablesungen
+   auf DERSELBEN Mitte wie die vier der Chronik, obwohl die Kennzeile darueber
+   liegt. Gestapelt und mittig gesetzt sassen sie 10 px tiefer — im Bild las
+   sich das als Versehen, und eine Ausgleichspolsterung waere eine Zahl, die
+   der Zeilenhoehe hinterherliefe. */
 .fm-crest-name-box {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-self: stretch;
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  align-items: center;
   min-width: 0;
   flex: 1;
 }
 
 .fm-crest-kicker {
+  align-self: end;
+  padding-bottom: 3px;
   font-size: 11.5px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -304,57 +351,23 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
   text-overflow: ellipsis;
 }
 
-.fm-crest-name {
-  font-size: clamp(22px, 1.55vw, 30px);
-  line-height: 1.05;
-  color: #f2ead2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Die Kennung etwas groesser und heller als der Rest der Zeile: sie ist alles,
+   was von der Identitaet uebrig ist, seit der Name gefallen ist. Gemessen
+   braucht der laengste Fall („Universe VIII · you are here · x12") 255,3 px in
+   einer Box, die im schmalsten Zielband 289 misst. */
+.fm-crest-kicker-id {
+  font-size: 13px;
+  color: #c8b890;
 }
 
-/* Name und Wirkung in EINER Zeile, solange das Band sie hergibt — im schmalsten
-   Zielband bleiben der Namensbox 288 px, dort wickelt die Wirkung um. */
-.fm-crest-prov {
+/* Die zwei Wirkungen der Vorsehung, in der Gestalt der Chronik-Ablesungen. Sie
+   stehen in der Wappenzone, weil sie zum UNIVERSUM gehoeren und nicht zur
+   Chronik — die Trennlinie rechts scheidet beides. */
+.fm-crest-prov-reads {
+  grid-row: 2;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px 9px;
+  align-items: stretch;
   min-width: 0;
-  font-size: 12px;
-  color: #c9a8f0;
-}
-
-.fm-crest-prov-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 11 px und 10 px Luecke sind GEMESSEN: bei 11,5/12 brauchte die laengste
-   Achsenpaarung („Expedition rewards" gegen „Expedition time") 293,7 px, brach
-   auf 1536 in zwei Zeilen und stellte die Namensbox 104,75 px hoch in ein
-   Bandinneres von 109. So sind es 279,5 und 84,75. */
-.fm-crest-prov-lines {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 10px;
-  min-width: 0;
-  font-size: 11px;
-}
-
-/* Die Richtung traegt das ZEICHEN, die Farbe verstaerkt sie nur — dieselben
-   Toene wie im Header-Tooltip und auf der Prestige-Karte. */
-.fm-crest-prov-line {
-  white-space: nowrap;
-}
-
-.fm-crest-prov-up {
-  color: #7fc95e;
-}
-
-.fm-crest-prov-down {
-  color: #cc6050;
 }
 
 /* Ablesungen */
@@ -374,7 +387,7 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 0 4px;
+  padding: 0 v-bind(readPadX);
   border-right: 1px solid #3e200a;
 }
 
@@ -398,6 +411,17 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
 
 .fm-crest-read--elapsed {
   width: v-bind(wElapsed);
+}
+
+/* Gebunden ist hier die BESCHRIFTUNG, nicht die Zahl: `.fm-crest-k` ist `nowrap`
+   ohne Ellipse und schneidet still ab. Ohne Achsen nimmt EINE Ablesung die
+   Breite der beiden. */
+.fm-crest-read--prov {
+  width: v-bind(wProv);
+}
+
+.fm-crest-read--provwide {
+  width: v-bind(wProvWide);
 }
 
 .fm-crest-v {
@@ -424,6 +448,30 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
 
 .fm-crest-v--gold {
   color: #e8c040;
+}
+
+/* Dieselben Toene wie im Header-Tooltip und auf der Prestige-Karte. Die
+   Richtung kommt aus dem Roll, nicht aus dem Vorzeichen — eine senkende Achse
+   (Building cost) traegt als BUFF ein Minus. */
+.fm-crest-v--up {
+  color: #7fc95e;
+}
+
+.fm-crest-v--down {
+  color: #cc6050;
+}
+
+/* Ein Name ist kein Zaehler: fester Grad statt der Skala der Zahlen, sonst
+   liefe der laengste aus seiner Ablesung heraus. */
+.fm-crest-v--name {
+  font-size: v-bind(provNamePx);
+  font-weight: 700;
+  color: #c8b890;
+}
+
+.fm-crest-dir {
+  font-size: 0.5em;
+  padding-right: 0.16em;
 }
 
 .fm-crest-v--time {

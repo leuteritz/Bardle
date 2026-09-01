@@ -46,7 +46,7 @@ function chroma(hex: string): number {
 describe('Universumsfarben', () => {
   it('jedes Universum trägt einen Ton', () => {
     for (const u of universes) {
-      expect(u.tint, u.name).toMatch(/^#[0-9a-f]{6}$/)
+      expect(u.tint, `Universe ${u.id}`).toMatch(/^#[0-9a-f]{6}$/)
     }
   })
 
@@ -54,7 +54,7 @@ describe('Universumsfarben', () => {
     for (const a of universes) {
       for (const b of universes) {
         if (a.id >= b.id) continue
-        expect(distance(a.tint, b.tint), `${a.name} vs ${b.name}`).toBeGreaterThan(60)
+        expect(distance(a.tint, b.tint), `Universe ${a.id} vs ${b.id}`).toBeGreaterThan(60)
       }
     }
   })
@@ -64,7 +64,7 @@ describe('Universumsfarben', () => {
     // Dekoration — und die Karte liest sich dann in jeder Zeile anders.
     for (const u of universes) {
       for (const [key, color] of Object.entries(STATE_COLORS)) {
-        expect(distance(u.tint, color), `${u.name} vs ${key}`).toBeGreaterThan(40)
+        expect(distance(u.tint, color), `Universe ${u.id} vs ${key}`).toBeGreaterThan(40)
       }
     }
   })
@@ -73,14 +73,14 @@ describe('Universumsfarben', () => {
     // Der Tint liegt bei 15–34 % Deckkraft über einem fast schwarzen Grund;
     // ohne Buntheit bleibt davon nur Grau übrig.
     for (const u of universes) {
-      expect(chroma(u.tint), u.name).toBeGreaterThan(0.1)
+      expect(chroma(u.tint), `Universe ${u.id}`).toBeGreaterThan(0.1)
     }
   })
 
   it('kein Ton ist so dunkel, dass die Scheibe leer wirkt', () => {
     for (const u of universes) {
       const [r, g, b] = rgb(u.tint)
-      expect(Math.max(r, g, b), u.name).toBeGreaterThan(150)
+      expect(Math.max(r, g, b), `Universe ${u.id}`).toBeGreaterThan(150)
     }
   })
 })

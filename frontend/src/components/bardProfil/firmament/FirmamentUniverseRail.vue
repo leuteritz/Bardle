@@ -115,7 +115,7 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
         }"
         :style="{ '--fm-row-tint': row.tint }"
         :data-universe="row.id"
-        :aria-label="`Universe ${row.roman} — ${row.name}, ${row.note}`"
+        :aria-label="`Universe ${row.roman}, ${row.note}`"
         :aria-pressed="row.picked"
         @click="pick(row)"
       >
@@ -128,7 +128,7 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
         </span>
 
         <span class="fm-rail-body">
-          <span class="fm-rail-name">{{ row.name }}</span>
+          <span class="fm-rail-name">Universe {{ row.roman }}</span>
           <span class="fm-rail-note">{{ row.note }}</span>
         </span>
       </button>

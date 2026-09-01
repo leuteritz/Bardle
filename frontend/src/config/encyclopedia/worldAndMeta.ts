@@ -146,8 +146,8 @@ export const prestigeCategory: EncyclopediaCategory = {
       name: 'Universes',
       icon: 'game-icons:andromeda-chain',
       description:
-        'Ten universes, each with its own laws — Void Nexus doubles CPS but raises building costs, ' +
-        'Freljord triples clicks but quarters CPS, Piltover triples nearly everything.',
+        'Ten universes, numbered I through X. A universe carries no law of its own — the providence ' +
+        'drawn on entering it does, one boon against one toll for the whole run.',
       lore: 'Same journey, different sky.',
       related: ['prestige'],
     },

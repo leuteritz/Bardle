@@ -7,15 +7,12 @@
  * Karte vom Rest unterscheidet.
  */
 import { computed } from 'vue'
-import { getUniverse } from '@/config/progression/universes'
 import { formatNumber } from '@/config/ui/numberFormat'
-import { formatCompactDuration, toRoman } from '@/utils/ui/format'
+import { formatCompactDuration, universeLabel } from '@/utils/ui/format'
 import { MS_PER_SECOND } from '@/config/constants'
 import type { FirmamentDeparture } from '@/utils/ui/firmamentLayout'
 
 const props = defineProps<{ departure: FirmamentDeparture; tint: string }>()
-
-const target = computed(() => getUniverse(props.departure.toUniverse))
 
 /** Chronikstempel — als Datum gelesen, nie gegen eine Frist geprueft. */
 const day = computed(() => new Date(props.departure.run.completedAt).toLocaleDateString())
@@ -24,11 +21,13 @@ const day = computed(() => new Date(props.departure.run.completedAt).toLocaleDat
 <template>
   <div class="fdt" :style="{ '--tip-color': tint }">
     <header class="tip-head tip-head--banded">
-      <span class="tip-name">Universe {{ toRoman(departure.toUniverse) }}</span>
-      <span class="tip-state">departure</span>
+      <span class="tip-name">Departure</span>
+      <span class="tip-state">onward</span>
     </header>
 
-    <div class="tip-effect fdt-line">The road went on to {{ target.name }}</div>
+    <div class="tip-effect fdt-line">
+      The road went on to {{ universeLabel(departure.toUniverse) }}
+    </div>
 
     <div class="tip-read tip-read--lg">
       <span class="tip-read-cell">

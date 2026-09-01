@@ -2,12 +2,20 @@ import { describe, it, expect } from 'vitest'
 import {
   BOTTOM_BAR_SIDE_W,
   FIRMAMENT_CREST_CHIME_ART_PX,
+  FIRMAMENT_CREST_ID_GAP,
+  FIRMAMENT_CREST_ID_PAD_X,
   FIRMAMENT_CREST_ID_W,
+  FIRMAMENT_CREST_PROV_LABEL_MAX_PX,
+  FIRMAMENT_CREST_PROV_NAME_PX,
+  FIRMAMENT_CREST_PROV_WIDE_MAX_PX,
+  FIRMAMENT_CREST_READ_PAD_X,
   FIRMAMENT_CREST_READ_W_CHIMES,
   FIRMAMENT_CREST_READ_W_ELAPSED,
   FIRMAMENT_CREST_READ_W_GALAXIES,
+  FIRMAMENT_CREST_READ_W_PROV,
   FIRMAMENT_CREST_READ_W_STARS,
   FIRMAMENT_CREST_VALUE_MIN_PX,
+  UNIVERSE_DISC_CREST_PX,
 } from '@/config/constants'
 import { buildFirmamentChronicle } from '@/utils/ui/firmamentChronicle'
 import type { FirmamentNode } from '@/utils/ui/firmamentLayout'
@@ -20,7 +28,9 @@ import type { UniverseRunRecord } from '@/types'
  * DIE ERSTE ist die Bilanz: Wappenzone plus vier Ablesungen muessen in das
  * SCHMALSTE Zielband passen. Die Ablesungen sind `flex-shrink: 0`, die
  * Wappenzone gibt nach — laeuft die Reihe trotzdem ueber, schneidet sie still
- * ab, und eine `scrollWidth`-Pruefung findet das nicht.
+ * ab, und eine `scrollWidth`-Pruefung findet das nicht. Seit die zwei Wirkungen
+ * der Vorsehung als ABLESUNGEN in der Wappenzone stehen, haengt an derselben
+ * Bilanz auch, ob die laengste Achsenbeschriftung noch hineinpasst.
  *
  * DIE ZWEITE ist die Chronik selbst: sie ist der ganze Grund, warum das Band
  * umgebaut wurde. Vorher standen dort Lebenszeit-Zaehler, und wer auf Universum
@@ -74,6 +84,39 @@ describe('Firmament-Kopfband — das Breitenbudget', () => {
     ]) {
       expect(FIRMAMENT_CREST_READ_W_CHIMES).toBeGreaterThan(w)
     }
+  })
+
+  it('traegt in der Wappenzone Scheibe UND beide Vorsehungs-Ablesungen', () => {
+    // Das ist die Herleitung der 390: Polsterung, Scheibe, Luecke und die zwei
+    // Ablesungen. Sie stehen in der Zone, die NACHGIBT — laeuft die Rechnung
+    // ueber, schneidet die Reihe still ab, statt zu rollen.
+    expect(FIRMAMENT_CREST_ID_W).toBeGreaterThanOrEqual(
+      2 * FIRMAMENT_CREST_ID_PAD_X +
+        UNIVERSE_DISC_CREST_PX +
+        FIRMAMENT_CREST_ID_GAP +
+        2 * FIRMAMENT_CREST_READ_W_PROV,
+    )
+  })
+
+  it('laesst die laengste Achsenbeschriftung in ihre Ablesung passen', () => {
+    // `.fm-crest-k` ist `nowrap` OHNE Ellipse: zu lang heisst still
+    // abgeschnitten, und eine `scrollWidth`-Pruefung findet das nicht. Die Zahl
+    // ist im Browser gemessen („Expedition rewards", 10,5 px versal, 0,1 em
+    // Sperrung).
+    expect(FIRMAMENT_CREST_PROV_LABEL_MAX_PX + 2 * FIRMAMENT_CREST_READ_PAD_X).toBeLessThanOrEqual(
+      FIRMAMENT_CREST_READ_W_PROV,
+    )
+  })
+
+  it('laesst den laengsten Vorsehungsnamen in die EINE breite Ablesung passen', () => {
+    // Ohne Achsen (vergangene Bahn, oder nie geprestiged) steht dort ein Name
+    // statt zweier Zahlen, ueber die Breite der beiden.
+    expect(FIRMAMENT_CREST_PROV_WIDE_MAX_PX + 2 * FIRMAMENT_CREST_READ_PAD_X).toBeLessThanOrEqual(
+      2 * FIRMAMENT_CREST_READ_W_PROV,
+    )
+    // Und er laeuft NICHT auf der Skala der Zahlen: dort waere er breiter als
+    // seine Ablesung.
+    expect(FIRMAMENT_CREST_PROV_NAME_PX).toBeLessThan(FIRMAMENT_CREST_VALUE_MIN_PX)
   })
 
   it('laesst das Chime-Artwork die Ablesung nicht hoeher machen', () => {

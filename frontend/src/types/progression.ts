@@ -30,18 +30,20 @@ export interface ModifierEffects {
 }
 
 /**
- * Ein Universum — nur noch Identität.
+ * Ein Universum — Nummer, Wappen, Farbe. Sonst nichts.
  *
  * Seine Effekte trug es früher als fester `modifier` mit sich; das hiess zehn
- * feste Kombinationen, und der zweite Besuch von Void Nexus war Zeile für Zeile
- * der erste. Heute bringt die beim Prestige GEZOGENE Vorsehung die Effekte mit
- * (`ProvidenceDef.effects` → `gameStore.activeModifier`), und das Universum
- * steuert bei, was es immer schon ausgemacht hat: Name, Farbe, Herkunft.
+ * feste Kombinationen, und der zweite Besuch war Zeile für Zeile der erste.
+ * Heute bringt die beim Prestige GEZOGENE Vorsehung die Effekte mit
+ * (`ProvidenceDef.effects` → `gameStore.activeModifier`).
+ *
+ * Seinen NAMEN hat es danach auch verloren. Er stand als grösster Text im
+ * Firmament-Kopfband, während die Zeile darüber schon „Universe VI" sagte — die
+ * grösste Schrift für die geringste Auskunft, und genau der Platz, den die
+ * Vorsehung braucht. Wie es heisst, sagt jetzt `universeLabel(id)`.
  */
 export interface UniverseConfig {
   id: number
-  name: string
-  description: string
   /** Wappen des Universums auf der Prestige-Karte. */
   icon: string
   /** Der Farbton seiner Scheibe im Firmament — Staub und Galaxien, NIE eine

@@ -20,6 +20,7 @@
 import { Icon } from '@iconify/vue'
 import { providenceEffectLines, PROVIDENCE_DOMAIN_LABELS } from '@/config/progression/providences'
 import { PRESTIGE_CARD_UNIVERSE_ICON_PX } from '@/config/constants'
+import { universeLabel } from '@/utils/ui/format'
 import type { RolledProvidence, UniverseConfig } from '@/types'
 
 defineProps<{
@@ -44,7 +45,7 @@ const emit = defineEmits<{ pick: [] }>()
       class="po-universe-icon"
       aria-hidden="true"
     />
-    <h3 class="po-universe-name">{{ universe.name }}</h3>
+    <h3 class="po-universe-name">{{ universeLabel(universe.id) }}</h3>
 
     <!-- WORUNTER — schmale Zwischenzeile mit Zierstrichen, damit sie den Namen
          darüber nicht bedrängt und trotzdem als eigene Ebene lesbar bleibt. -->

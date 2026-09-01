@@ -75,6 +75,13 @@ export function toRoman(value: number): string {
   return out
 }
 
+/** Wie ein Universum heisst — es hat keinen Namen mehr, nur seine Nummer.
+ *  EINE Schreibweise fuer alle acht Anzeigestellen; getrennt geschrieben liefen
+ *  „Universe VI" und „Universe 6" nebeneinander her. */
+export function universeLabel(id: number): string {
+  return `Universe ${toRoman(id)}`
+}
+
 /** Millisekunden als Uhrzeit-Countdown: `02:07:45`. */
 export function formatClock(ms: number): string {
   const { hours, minutes, seconds } = splitDuration(ms / MS_PER_SECOND)

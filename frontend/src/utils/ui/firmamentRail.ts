@@ -21,7 +21,7 @@ import type { UniverseRunRecord } from '@/types'
 
 export interface FirmamentRailRow {
   id: number
-  name: string
+  /** Wie es heisst, ist seine Nummer — `universeLabel(id)` baut die Zeile. */
   roman: string
   tint: string
   walked: boolean
@@ -66,7 +66,6 @@ export function buildFirmamentRailRows(input: FirmamentRailInput): FirmamentRail
     const walked = current || past !== undefined || galaxies > 0
     return {
       id: u.id,
-      name: u.name,
       roman: toRoman(u.id),
       tint: u.tint,
       walked,

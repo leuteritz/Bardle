@@ -450,7 +450,6 @@
                 <PauseMetaPillar
                   label="Universe"
                   :value="toRoman(gameStore.currentUniverse)"
-                  :sub="universeName"
                   :pct="universePct"
                   :meter="`${gameStore.currentUniverse} / ${gameStore.totalUniverses}`"
                   :color="JOURNEY_AXIS_COLORS.universe"
@@ -561,7 +560,6 @@ import { useUiStore } from '@/stores/core/uiStore'
 import { useMissionStore } from '@/stores/progression/missionStore'
 import { getVoidRift } from '@/config/world/void'
 import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
-import { universes } from '@/config/progression/universes'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import { MATERIALS, materialIconMd } from '@/config/economy/materials'
 import {
@@ -696,7 +694,6 @@ const sunPhaseLabelColor = computed(() => {
 // ── Standtafel neben der Scheibe: links der Ort, rechts der Bard ────────────
 // Namen und Brüche stammen aus denselben Quellen wie die Header-Tooltips und die
 // Journey-Ringe des Stats-Tabs — hier wird nichts zum zweiten Mal aufgelöst.
-const universeName = computed(() => universes[gameStore.currentUniverse - 1]?.name ?? 'Uncharted')
 const universePct = computed(
   () => (gameStore.currentUniverse / Math.max(1, gameStore.totalUniverses)) * 100,
 )

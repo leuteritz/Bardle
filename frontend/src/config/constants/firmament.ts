@@ -32,11 +32,19 @@
  */
 export const FIRMAMENT_CREST_BAND_H = 112
 /** BASIS der Wappenzone im Kopfband, nicht ihre Breite: sie waechst in den
- *  Rest, den die vier Ablesungen uebriglassen. Als feste Breite ellipsierte
- *  „Runeterra Prime" auf Full HD, waehrend daneben 314 px leer standen. Als
- *  Untergrenze steht sie trotzdem im Budget, das `firmamentCrest.spec.ts`
- *  bindet. */
-export const FIRMAMENT_CREST_ID_W = 340
+ *  Rest, den die vier Ablesungen uebriglassen. Als Untergrenze steht sie
+ *  trotzdem im Budget, das `firmamentCrest.spec.ts` bindet.
+ *
+ *  390 ist eine Rechnung, kein runder Wert — Polsterung 2x18, Scheibe 64,
+ *  Luecke 14 und die ZWEI Vorsehungs-Ablesungen zu 138. Im schmalsten Zielband
+ *  (988) bleiben der Zone 988 - 585 = 403 px, also 13 px Luft.
+ *  `firmamentCrest.spec.ts` rechnet die Summe nach. */
+export const FIRMAMENT_CREST_ID_W = 390
+/** Polsterung und Luecke der Wappenzone. Sie haengen per `v-bind` am Element,
+ *  denn die Spec rechnet mit genau diesen beiden Zahlen — eine Konstante, die
+ *  das CSS nur spiegelt, driftet unbemerkt. */
+export const FIRMAMENT_CREST_ID_PAD_X = 18
+export const FIRMAMENT_CREST_ID_GAP = 14
 
 /* Die Unterkante war einmal die Fortschrittsschiene bis zum Aufbruch und lief
    auf der laufenden Bahn als Goldverlauf voll. Sie ist gefallen: das Band traegt
@@ -54,6 +62,34 @@ export const FIRMAMENT_CREST_READ_W_STARS = 145
 /** Die breiteste: sie traegt auf der laufenden Bahn `5.74B / 51.2M`. */
 export const FIRMAMENT_CREST_READ_W_CHIMES = 200
 export const FIRMAMENT_CREST_READ_W_ELAPSED = 135
+/** Seitliche Polsterung EINER Ablesung, beidseitig — `v-bind`, weil die
+ *  Textbreiten unten dagegen gerechnet werden. */
+export const FIRMAMENT_CREST_READ_PAD_X = 4
+
+/* Die ZWEI Ablesungen der Vorsehung. Sie stehen in der Wappenzone und tragen
+   dieselbe Gestalt wie die vier oben — dieselbe Schriftskala, Zahl oben,
+   Beschriftung versal darunter. Vorher waren sie zwei 11-px-Chips unter einem
+   lila Namen, also die KLEINSTE Zeile des Bandes fuer das Gesetz des ganzen
+   Durchlaufs.
+
+   Gebunden wird die BESCHRIFTUNG, nicht die Zahl: `.fm-crest-k` ist `nowrap`
+   ohne Ellipse und schneidet still ab. Die laengste Achse („Expedition
+   rewards") misst versal bei 10,5 px mit 0,1 em Sperrung 125,64 px — im
+   Browser gemessen, nicht geschaetzt. Die breiteste Zahl ist dagegen harmlos:
+   der hoechste Buff ist +250 %, also 86,4 px bei 34 px plus 16,8 px Pfeil. */
+export const FIRMAMENT_CREST_READ_W_PROV = 138
+export const FIRMAMENT_CREST_PROV_LABEL_MAX_PX = 126
+
+/** Eine VERGANGENE Bahn speichert nur den Namen ihrer Vorsehung, nie ihre
+ *  Achsen — dort steht EINE Ablesung ueber die Breite der beiden, und ihr Wert
+ *  ist ein Name statt einer Zahl. 24 px, weil ein Name kein Zaehler ist; auf
+ *  der Schriftskala der Zahlen (bis 34) liefe „Struck Resonance" mit 276,6 px
+ *  aus den 268 nutzbaren heraus. */
+export const FIRMAMENT_CREST_PROV_NAME_PX = 24
+/** Das Breiteste in dieser einen Ablesung: der laengste Vorsehungsname bei
+ *  `_PROV_NAME_PX` (195,2 — „Struck Resonance"). Er schlaegt die laengste
+ *  Beschriftung dieses Falls („No providence recorded", 156,4). */
+export const FIRMAMENT_CREST_PROV_WIDE_MAX_PX = 196
 
 /** Schriftboden der grossen Ablesung — und zugleich der Deckel des
  *  Chime-Artworks: darueber bestimmte das BILD die Zeilenhoehe, und die Bilanz,
@@ -794,13 +830,15 @@ export const FIRMAMENT_PORTAL_VIS_SAMPLES = 64
  *  wirklich im Bild steht. Kanten in `em`, damit die Box auf 4K mitwaechst.
  *
  *  Die Breite ist IM BROWSER gemessen, nicht geschaetzt: der laengste Fall ist
- *  „Runeterra Prime VIII" mit 9,08 em, die Hoehe der EINEN Zeile 1,05 em. Geschaetzte 12 em waren ein Viertel zu breit — und genau diese
- *  Breite entscheidet, ob das Kaestchen noch in die schwarze Gasse zwischen
- *  Scheibe und Bildkante passt (auf Full HD sind das 154 px). */
+ *  „Universe VIII" mit 5,10 em (Wort 1 em, Ziffer 0,78 em), die Hoehe der EINEN
+ *  Zeile 1,05 em. Sie stand einmal bei 9,4 — da trugen die Universen noch
+ *  Namen, und „Runeterra Prime VIII" mass 8,79 em. Genau diese Breite
+ *  entscheidet, ob das Kaestchen noch in die schwarze Gasse zwischen Scheibe
+ *  und Bildkante passt (auf Full HD sind das 154 px). */
 export const FIRMAMENT_PORTAL_LABEL_R_RATIO = 0.11
 export const FIRMAMENT_PORTAL_LABEL_MIN_PX = 13
 export const FIRMAMENT_PORTAL_LABEL_MAX_PX = 19
-export const FIRMAMENT_PORTAL_LABEL_W_EM = 9.4
+export const FIRMAMENT_PORTAL_LABEL_W_EM = 5.5
 export const FIRMAMENT_PORTAL_LABEL_H_EM = 1.2
 export const FIRMAMENT_PORTAL_LABEL_GAP_EM = 0.95
 export const FIRMAMENT_PORTAL_LABEL_EDGE_PAD = 10
@@ -817,8 +855,8 @@ export const FIRMAMENT_PORTAL_LABEL_EDGE_PAD = 10
  *
  *  Was NICHT nachgibt, sind Bildkante und Bedienflaechen: eine Beschriftung
  *  unter der Legende ist keine. Ohne die Leiter blieb auf Full HD fuer zwei der
- *  zehn Universen keine Seite uebrig — das Kaestchen ist 12 em breit, und in der
- *  Gasse zwischen Bildkante und Scheibe ist das mehr, als der Ring braucht. */
+ *  zehn Universen keine Seite uebrig — das Kaestchen ist breiter als der Ring
+ *  hoch ist, und in der Gasse zwischen Bildkante und Scheibe zaehlt das. */
 export const FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS = [
   FIRMAMENT_PLATE_SPRITE_MARGIN,
   1.015,

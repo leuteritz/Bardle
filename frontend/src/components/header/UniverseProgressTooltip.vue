@@ -17,7 +17,6 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
-import { universes } from '@/config/progression/universes'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { providenceEffectLines } from '@/config/progression/providences'
 import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
@@ -38,7 +37,6 @@ const providenceStore = useProvidenceStore()
 
 /* ── Identität des Universums ────────────────────────────────────────────── */
 
-const universe = computed(() => universes[gameStore.currentUniverse - 1])
 const universeRoman = computed(() => toRoman(gameStore.currentUniverse))
 /** Die gewählte Vorsehung dieses Durchlaufs — `null` im ersten Lauf. */
 const providence = computed(() => providenceStore.active)
@@ -213,11 +211,8 @@ const lifetimeRows = computed<StatRow[]>(() => [
       />
       <div class="upt-head-text">
         <div class="upt-name">Universe {{ universeRoman }}</div>
-        <div class="upt-subname">{{ universe?.name ?? 'Uncharted' }}</div>
       </div>
     </header>
-
-    <p v-if="universe?.description" class="upt-desc">{{ universe.description }}</p>
 
     <!-- ════════ Die Vorsehung, unter der Bard dieses Universum bereist ════════
          Das einzige Gesetz des Durchlaufs. Bis das Universum seinen festen
@@ -455,23 +450,6 @@ const lifetimeRows = computed<StatRow[]>(() => [
   color: #d7bcff;
   letter-spacing: 0.03em;
   line-height: 1.15;
-}
-
-.upt-subname {
-  font-size: 0.95em;
-  color: #9b8461;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.upt-desc {
-  padding: 0.55em 0.9em;
-  margin: 0;
-  font-size: 0.98em;
-  color: #a99b83;
-  font-style: italic;
-  background: #1a1008;
-  border-bottom: 1px solid #33220e;
 }
 
 /* ── Blöcke ────────────────────────────────────────────────────── */

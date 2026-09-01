@@ -53,7 +53,7 @@ import {
   paintFirmamentGround,
   paintFirmamentWeb,
 } from '@/utils/fx/firmamentPlate'
-import { toRoman } from '@/utils/ui/format'
+import { toRoman, universeLabel } from '@/utils/ui/format'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import FirmamentGalaxyTip from './FirmamentGalaxyTip.vue'
 import FirmamentOriginTip from './FirmamentOriginTip.vue'
@@ -317,7 +317,6 @@ const portalLabelStyle = computed(() => {
   }
 })
 
-const portalTargetName = computed(() => getUniverse(props.departure?.toUniverse ?? 0)?.name ?? '')
 
 /**
  * Der Startpunkt — die Benennung des Ursprungs, an dem die Bahn ansetzt.
@@ -717,7 +716,7 @@ const layerStyle = computed(() => ({
       <button
         class="fm-portal-hit"
         :style="portalHitStyle"
-        :aria-label="`Departure portal — the road went on to ${portalTargetName}, Universe ${toRoman(departure.toUniverse)}`"
+        :aria-label="`Departure portal — the road went on to ${universeLabel(departure.toUniverse)}`"
         @pointerdown.stop
         @click="pickDeparture(departure)"
       >
@@ -733,7 +732,7 @@ const layerStyle = computed(() => ({
           :style="portalLabelStyle"
         >
           <span class="fm-portal-name">
-            {{ portalTargetName }}
+            Universe
             <span class="fm-portal-num">{{ toRoman(departure.toUniverse) }}</span>
           </span>
         </span>
@@ -929,7 +928,7 @@ const layerStyle = computed(() => ({
   text-align: center;
   /* Lieber ueberstehen als umbrechen: die Hoehe des Kaestchens ist gemessen und
      steht in der Spec — eine zweite Zeile spraenge sie. Gemessen bleibt der
-     laengste Fall („Runeterra Prime VIII", 9,08 em) unter der Breite. */
+     laengste Fall („Universe VIII", 5,10 em) unter der Breite. */
   white-space: nowrap;
   pointer-events: none;
 }

@@ -17,8 +17,9 @@ const props = defineProps<{
   label: string
   /** Die Schlagzahl — römisch beim Universum, sonst arabisch. */
   value: string
-  /** Name des Universums bzw. der Galaxie, beim Level der Rest zum nächsten. */
-  sub: string
+  /** Name der Galaxie, beim Level der Rest zum nächsten. Das Universum hat
+   *  keinen Namen mehr und laesst ihn weg. */
+  sub?: string
   /** 0–100. */
   pct: number
   /** Beschriftung am Balken — der Bruch, den er zeigt. */
@@ -35,7 +36,7 @@ const fill = computed(() => Math.min(100, Math.max(0, props.pct)) / 100)
   <div class="pillar" :class="{ 'pillar--emphasis': emphasis }" :style="{ '--pillar-color': color }">
     <span class="pillar__head">
       <span class="pillar__label">{{ label }}</span>
-      <span class="pillar__sub">{{ sub }}</span>
+      <span v-if="sub" class="pillar__sub">{{ sub }}</span>
       <span class="pillar__value">{{ value }}</span>
     </span>
     <span class="pillar__meter">
