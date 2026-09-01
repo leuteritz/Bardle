@@ -219,14 +219,22 @@ describe('Firmament — das Zonenbudget', () => {
   })
 
   it('schaltet die kompakte Stufe genau dort, wo die grosse aufhoert zu passen', () => {
-    // Der Reiterinhalt misst rund `Viewport − 388` (gemessen 1080 → 690,6 und
-    // 950 → 569,1). Die Schwelle muss also ueber der Viewport-Hoehe liegen, bei
-    // der die grosse Stufe kippt — sonst gibt es ein Fenster dazwischen, in dem
-    // gerollt wird und die Media Query noch nicht greift.
+    // Hier stand einmal `Viewport − 388`. Der Abstand ist keine Konstante: der
+    // App-Header haengt an `--hud-scale`, und die skaliert mit der HOEHE — von
+    // 950 auf 1080 waechst die Buehne nur um 0,93 px je Viewport-Pixel. Und die
+    // 388 waren an das 92-px-Kopfband gebunden, also still falsch, sobald es
+    // wuchs. Interpoliert wird jetzt zwischen den ZWEI gemessenen Staenden.
     const rows = universes.length
-    const big = rows * UNIVERSE_RAIL_ROW_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP
-    const kippt = big + UNIVERSE_RAIL_LIST_PAD + 388
-    expect(UNIVERSE_RAIL_COMPACT_MAX_VH).toBeGreaterThanOrEqual(kippt)
+    const big = rows * UNIVERSE_RAIL_ROW_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP + UNIVERSE_RAIL_LIST_PAD
+    const loVh = 950
+    const hiVh = 1080
+    const loH = UNIVERSE_RAIL_COMPACT_STAGE_H
+    const hiH = CONTENT_HEIGHT[1080] - FIRMAMENT_CREST_BAND_H
+    const kippt = loVh + ((big - loH) * (hiVh - loVh)) / (hiH - loH)
+    // Die Schwelle muss ueber der Viewport-Hoehe liegen, bei der die grosse
+    // Stufe kippt — sonst gibt es ein Fenster dazwischen, in dem gerollt wird
+    // und die Media Query noch nicht greift.
+    expect(UNIVERSE_RAIL_COMPACT_MAX_VH).toBeGreaterThanOrEqual(Math.ceil(kippt))
     // Aber nicht so hoch, dass sie im Vollbild-Referenzfall schon greift.
     expect(UNIVERSE_RAIL_COMPACT_MAX_VH).toBeLessThan(1080)
   })
@@ -560,12 +568,15 @@ describe('Firmament — die Bahn dreht mit der Wolke', () => {
  */
 describe('Firmament — das Abflugportal', () => {
   /* Gemessen wie `CONTENT_HEIGHT`: wer `_RING_H_RATIO` anfasst, sieht hier
-     sofort, was er allen vier Aufloesungen antut. */
+     sofort, was er allen vier Aufloesungen antut — und wer das KOPFBAND hoeher
+     macht ebenso, denn der Ring haengt an der Buehnenhoehe. Die Tabelle stand
+     einmal auf 131/150/184/260; die 16 px, die das Band von 92 auf 108 gewachsen
+     ist, kosten sie genau diese drei Pixel. Auf 4K greift ohnehin der Deckel. */
   it('haelt die Ringgroesse je Zielaufloesung', () => {
     const table: Array<[string, number, number]> = [
-      ['Full HD', 1080, 131],
-      ['WUXGA', 1200, 150],
-      ['2K', 1440, 184],
+      ['Full HD', 1080, 128],
+      ['WUXGA', 1200, 147],
+      ['2K', 1440, 181],
       ['4K', 2160, 260],
     ]
     for (const [name, vh, want] of table) {

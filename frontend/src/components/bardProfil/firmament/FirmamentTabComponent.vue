@@ -28,6 +28,7 @@ import FirmamentRailHandle from './FirmamentRailHandle.vue'
 import FirmamentChart from './FirmamentChart.vue'
 import { buildFirmamentPath, type FirmamentPath } from '@/utils/ui/firmamentLayout'
 import { buildFirmamentRailRows } from '@/utils/ui/firmamentRail'
+import { buildFirmamentChronicle } from '@/utils/ui/firmamentChronicle'
 import {
   FIRMAMENT_RAIL_AUTOFOLD_W,
   FIRMAMENT_RAIL_HANDLE_PX,
@@ -78,6 +79,24 @@ const path = computed<FirmamentPath>(() =>
     currentLandfalls: landfallResults.value.filter((l) => l.cleared).length,
     currentThemeIndex: currentThemeIndex.value,
     starsOf: computeRequired,
+  }),
+)
+
+/** Was die gezeigte Bahn hergab — die vier Ablesungen des Kopfbands.
+ *
+ *  Sie haengt am PFAD, nicht an den Lebenszeit-Zaehlern: der ist schon nach
+ *  `record.universe` geschnitten und traegt die laufende Galaxie mit. Die Uhr
+ *  bleibt draussen, gerechnet wird nur, wenn sich der Bestand aendert. */
+const chronicle = computed(() =>
+  buildFirmamentChronicle({
+    nodes: path.value.nodes,
+    runs: gameStore.universeRuns,
+    universe: selection.value.universe,
+    currentUniverse: gameStore.currentUniverse,
+    liveChimes: gameStore.chimesForNextUniverse,
+    liveGoal: gameStore.chimesToUniverseRescue,
+    liveSeconds: gameStore.universeRunStats.playedSeconds,
+    chimesPerSecond: gameStore.chimesPerSecond,
   }),
 )
 
@@ -219,7 +238,7 @@ onBeforeUnmount(() => {
     <FirmamentLockedPanel v-if="!isUnlocked" />
 
     <template v-else>
-      <FirmamentCrestBand :universe="selection.universe" />
+      <FirmamentCrestBand :universe="selection.universe" :chronicle="chronicle" />
 
       <div class="fm-body">
         <FirmamentChart

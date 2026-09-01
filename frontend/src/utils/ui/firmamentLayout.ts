@@ -158,7 +158,13 @@ function universeOf(record: CompletedGalaxyRecord): number {
   return record.universe ?? universes[0].id
 }
 
-function runsOfUniverse(runs: readonly UniverseRunRecord[], universe: number): UniverseRunRecord[] {
+/** Alle Besuche eines Universums, aelteste zuerst. Exportiert, weil die Chronik
+ *  des Kopfbands ueber dieselben Laeufe summiert — zwei Filter, die dasselbe
+ *  meinen, laufen still auseinander. */
+export function runsOfUniverse(
+  runs: readonly UniverseRunRecord[],
+  universe: number,
+): UniverseRunRecord[] {
   return runs.filter((r) => r.universe === universe).sort((a, b) => a.completedAt - b.completedAt)
 }
 

@@ -328,10 +328,13 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
 /* ══ Kompakte Stufe ══
    Nur Polsterung und Schrift; die Zeilenhoehe faellt von selbst, weil die
    SCHEIBE sie treibt und `discPx` mitgeschaltet hat. Gemessen passen damit zehn
-   Zeilen in 556 von 569 px — dem flachsten Referenzfall (Full HD im Fenster).
+   Zeilen in 543 von 553 px — dem flachsten Referenzfall (Full HD im Fenster).
+   Es waren 556 von 569, bis das Kopfband um 16 px wuchs; die Differenz zahlen
+   Polsterung (6/10 statt 8/12) und Zeilenabstand, NICHT die Scheibe — sie
+   traegt die Zeile, und kleiner waere die Drehung wieder unsichtbar.
    Die Schwelle steht in `UNIVERSE_RAIL_COMPACT_MAX_VH`. */
 .fm-rail--compact .fm-rail-list {
-  padding: 8px v-bind(padX) 12px;
+  padding: 6px v-bind(padX) 10px;
 }
 .fm-rail--compact .fm-rail-row {
   padding: 6px 6px 6px 8px;
