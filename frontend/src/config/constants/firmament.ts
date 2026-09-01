@@ -38,10 +38,11 @@ export const FIRMAMENT_CREST_BAND_H = 112
  *  bindet. */
 export const FIRMAMENT_CREST_ID_W = 340
 
-/** Die Unterkante des Bands IST die Fortschrittsschiene bis zum Aufbruch — sie
- *  fuellt nur auf der LAUFENDEN Bahn, sonst steht sie flach im Universumston.
- *  Als `border-bottom` koennte sie nicht fuellen, also ist sie ein Kind. */
-export const FIRMAMENT_CREST_RAIL_H = 5
+/* Die Unterkante war einmal die Fortschrittsschiene bis zum Aufbruch und lief
+   auf der laufenden Bahn als Goldverlauf voll. Sie ist gefallen: das Band traegt
+   jetzt dieselbe Kante wie die Voyages-Kopfleiste (`border-bottom: 3px #5c3310`),
+   damit die beiden Reiterkoepfe nicht nur gleich HOCH, sondern gleich sind. Der
+   Fortschritt steht weiter als Zahl in der Chimes-Ablesung.                    */
 
 /* Die vier Ablesungen des Kopfbands. AUSSENMASSE, aus den Schriftboeden
    hergeleitet: die Zahl laeuft bis clamp(26px, 1.9vw, 34px), die Beschriftung
@@ -53,6 +54,17 @@ export const FIRMAMENT_CREST_READ_W_STARS = 145
 /** Die breiteste: sie traegt auf der laufenden Bahn `5.74B / 51.2M`. */
 export const FIRMAMENT_CREST_READ_W_CHIMES = 200
 export const FIRMAMENT_CREST_READ_W_ELAPSED = 135
+
+/** Schriftboden der grossen Ablesung — und zugleich der Deckel des
+ *  Chime-Artworks: darueber bestimmte das BILD die Zeilenhoehe, und die Bilanz,
+ *  die nur Schriftgroessen kennt, ginge still daneben. Dieselbe Regel wie
+ *  `VOYAGE_MAP_STATS_ART_MAX`. Er BESTIMMT den clamp-Boden per `v-bind`, statt
+ *  ihn zu beschreiben. */
+export const FIRMAMENT_CREST_VALUE_MIN_PX = 26
+/** Das echte Chime-Artwork neben der Chimes-Ablesung — dieselbe Waehrung,
+ *  dasselbe Bild wie auf der Fleet-Karte. Unter dem Schriftboden, und unter der
+ *  34-px-Schwelle der `-128`-Aufloesungsstufe. */
+export const FIRMAMENT_CREST_CHIME_ART_PX = 24
 
 /* Die Universumsleiste steht RECHTS und traegt das Rezept der Forge-Detailspalte:
    Liste plus Griffleiste, und die ZONE ist beides zusammen. Dieselben Zahlen wie

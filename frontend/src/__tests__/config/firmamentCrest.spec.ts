@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import {
   BOTTOM_BAR_SIDE_W,
+  FIRMAMENT_CREST_CHIME_ART_PX,
   FIRMAMENT_CREST_ID_W,
   FIRMAMENT_CREST_READ_W_CHIMES,
   FIRMAMENT_CREST_READ_W_ELAPSED,
   FIRMAMENT_CREST_READ_W_GALAXIES,
   FIRMAMENT_CREST_READ_W_STARS,
+  FIRMAMENT_CREST_VALUE_MIN_PX,
 } from '@/config/constants'
 import { buildFirmamentChronicle } from '@/utils/ui/firmamentChronicle'
 import type { FirmamentNode } from '@/utils/ui/firmamentLayout'
@@ -72,6 +74,13 @@ describe('Firmament-Kopfband — das Breitenbudget', () => {
     ]) {
       expect(FIRMAMENT_CREST_READ_W_CHIMES).toBeGreaterThan(w)
     }
+  })
+
+  it('laesst das Chime-Artwork die Ablesung nicht hoeher machen', () => {
+    // Ueber dem Schriftboden bestimmt das BILD die Zeilenhoehe, und eine
+    // Bilanz, die nur Schriftgroessen kennt, geht dann still daneben —
+    // dieselbe Wand wie `VOYAGE_MAP_STATS_ART_MAX` im Voyages-Datenband.
+    expect(FIRMAMENT_CREST_CHIME_ART_PX).toBeLessThanOrEqual(FIRMAMENT_CREST_VALUE_MIN_PX)
   })
 })
 

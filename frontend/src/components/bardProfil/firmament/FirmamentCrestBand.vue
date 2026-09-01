@@ -13,10 +13,13 @@
  * `ChronicleSection.vue`. Sie hier zu wiederholen war genau die Doppelung,
  * gegen die dieser Reiter geschrieben ist.
  *
- * Der Fortschritt bis zum Aufbruch ist die UNTERKANTE, keine eigene Zeile — und
- * sie fuellt nur auf der laufenden Bahn. Eine vergangene ist aufgebrochen, ihr
- * Fortschritt ist kein Fortschritt mehr, sondern ein Ergebnis; das steht in der
- * Chimes-Ablesung.
+ * Der Fortschritt bis zum Aufbruch steht in der Chimes-Ablesung, und nur dort:
+ * die Goldschiene, die ihn einmal als Unterkante zeigte, ist gefallen. Die
+ * Unterkante traegt jetzt dieselbe Naht wie die Voyages-Kopfleiste.
+ *
+ * Was ein Universum BEDEUTET, bringt die beim Prestige gezogene Vorsehung mit —
+ * das Band nennt sie mit ihren zwei Wirkungen. Nur auf der laufenden Bahn: ein
+ * Archiveintrag traegt ihren Namen, nicht ihre Achsen.
  *
  * Die Hoehe ist FEST und haengt per `v-bind` an ihrer Konstante — was das Band
  * nimmt, nimmt es der Karte UND der Leiste.
@@ -26,18 +29,21 @@ import { Icon } from '@iconify/vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { getUniverse } from '@/config/progression/universes'
+import { providenceEffectLines } from '@/config/progression/providences'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { formatCompactDuration, formatShortDuration, toRoman } from '@/utils/ui/format'
 import {
   FIRMAMENT_CREST_BAND_H,
+  FIRMAMENT_CREST_CHIME_ART_PX,
   FIRMAMENT_CREST_ID_W,
-  FIRMAMENT_CREST_RAIL_H,
   FIRMAMENT_CREST_READ_W_CHIMES,
   FIRMAMENT_CREST_READ_W_ELAPSED,
   FIRMAMENT_CREST_READ_W_GALAXIES,
   FIRMAMENT_CREST_READ_W_STARS,
+  FIRMAMENT_CREST_VALUE_MIN_PX,
   MS_PER_SECOND,
   UNIVERSE_DISC_CREST_PX,
+  UNIVERSE_TOOLTIP_IMAGES,
 } from '@/config/constants'
 import type { FirmamentChronicle } from '@/utils/ui/firmamentChronicle'
 import UniverseDisc from './UniverseDisc.vue'
@@ -67,6 +73,15 @@ const providence = computed(() =>
     ? (providenceStore.active?.name ?? 'no providence drawn')
     : (pastRun.value?.providence ?? 'no providence recorded'),
 )
+
+/** Was in diesem Universum GILT. Nur auf der laufenden Bahn: ein vergangener
+ *  Lauf speichert den Namen seiner Vorsehung, nicht ihre Achsen — dort waere
+ *  jede Zahl erfunden. */
+const provLines = computed(() =>
+  isHere.value && providenceStore.active ? providenceEffectLines(providenceStore.active) : [],
+)
+
+const PROV_TIP = 'The providence drawn on entering this universe — it rules the whole run.'
 
 /** Wie oft man hier war — nur, wenn es mehr als einmal war. Ein "x1" traegt
  *  nichts und stuende auf neun von zehn Bahnen. */
@@ -117,12 +132,13 @@ const elapsedTip = computed(() =>
   props.chronicle.seconds === null ? READ_TIPS.elapsedGone : READ_TIPS.elapsed,
 )
 
-const tint = computed(() => universe.value.tint)
-const railFill = computed(() => `${dep.value?.percent ?? 0}%`)
+/** Dieselbe Waehrung, dasselbe Bild wie auf der Fleet-Karte — kein Iconify-Ersatz. */
+const CHIME_IMG = UNIVERSE_TOOLTIP_IMAGES.chimes
 
 const bandH = `${FIRMAMENT_CREST_BAND_H}px`
 const idW = `${FIRMAMENT_CREST_ID_W}px`
-const railH = `${FIRMAMENT_CREST_RAIL_H}px`
+const valueMinPx = `${FIRMAMENT_CREST_VALUE_MIN_PX}px`
+const chimeArtPx = `${FIRMAMENT_CREST_CHIME_ART_PX}px`
 const wGalaxies = `${FIRMAMENT_CREST_READ_W_GALAXIES}px`
 const wStars = `${FIRMAMENT_CREST_READ_W_STARS}px`
 const wChimes = `${FIRMAMENT_CREST_READ_W_CHIMES}px`
@@ -148,9 +164,21 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
             {{ isHere ? 'you are here' : 'visited' }}{{ visitNote }}
           </span>
           <span class="fm-crest-name">{{ universe.name }}</span>
-          <span class="fm-crest-prov">
+          <!-- Die Vorsehung IST das Gesetz dieses Universums — der Name allein
+               sagte nicht, was sie tut. Die zwei Zeilen gibt es nur auf der
+               laufenden Bahn; ein Archiveintrag traegt bloss ihren Namen. -->
+          <span v-tip="{ label: 'Providence', text: PROV_TIP }" class="fm-crest-prov">
             <Icon icon="game-icons:eye-of-horus" width="13" height="13" />
             <span class="fm-crest-prov-text">{{ providence }}</span>
+            <span v-if="provLines.length" class="fm-crest-prov-lines">
+              <span
+                v-for="(line, i) in provLines"
+                :key="i"
+                class="fm-crest-prov-line"
+                :class="line.positive ? 'fm-crest-prov-up' : 'fm-crest-prov-down'"
+                >{{ line.positive ? '▲' : '▼' }} {{ line.text }}</span
+              >
+            </span>
           </span>
         </span>
       </div>
@@ -178,9 +206,12 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
           v-tip="{ label: 'Chimes', text: chimesTip }"
           class="fm-crest-read fm-crest-read--chimes"
         >
-          <span class="fm-crest-v fm-crest-v--gold">
-            {{ chimesText
-            }}<span v-if="dep" class="fm-crest-goal"> / {{ formatNumber(dep.goal) }}</span>
+          <span class="fm-crest-v fm-crest-v--gold fm-crest-v--art">
+            <img class="fm-crest-chime" :src="CHIME_IMG" alt="" aria-hidden="true" />
+            <span
+              >{{ chimesText
+              }}<span v-if="dep" class="fm-crest-goal"> / {{ formatNumber(dep.goal) }}</span></span
+            >
           </span>
           <span class="fm-crest-k" :class="{ 'fm-crest-k--ready': dep?.etaSeconds === 0 }">
             {{ chimesKey }}
@@ -195,12 +226,6 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
         </div>
       </div>
     </div>
-
-    <!-- Die Unterkante IST die Schiene bis zum Aufbruch. Auf einer vergangenen
-         Bahn steht sie flach im Ton des Universums. -->
-    <div class="fm-crest-rail">
-      <span v-if="dep" class="fm-crest-rail-fill" :style="{ width: railFill }" />
-    </div>
   </div>
 </template>
 
@@ -213,6 +238,10 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
   display: flex;
   flex-direction: column;
   background: #16120a;
+  /* Dieselbe Kante wie unter der Voyages-Kopfleiste (`.ecb`) — die beiden
+     Reiterkoepfe sind gleich hoch UND gleich abgeschlossen. `box-sizing:
+     border-box` (Tailwind-Preflight) haelt die Aussenhoehe bei 112. */
+  border-bottom: 3px solid #5c3310;
 }
 
 .fm-crest-body {
@@ -284,10 +313,13 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
   text-overflow: ellipsis;
 }
 
+/* Name und Wirkung in EINER Zeile, solange das Band sie hergibt — im schmalsten
+   Zielband bleiben der Namensbox 288 px, dort wickelt die Wirkung um. */
 .fm-crest-prov {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
+  gap: 2px 9px;
   min-width: 0;
   font-size: 12px;
   color: #c9a8f0;
@@ -299,13 +331,41 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
   text-overflow: ellipsis;
 }
 
+/* 11 px und 10 px Luecke sind GEMESSEN: bei 11,5/12 brauchte die laengste
+   Achsenpaarung („Expedition rewards" gegen „Expedition time") 293,7 px, brach
+   auf 1536 in zwei Zeilen und stellte die Namensbox 104,75 px hoch in ein
+   Bandinneres von 109. So sind es 279,5 und 84,75. */
+.fm-crest-prov-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  min-width: 0;
+  font-size: 11px;
+}
+
+/* Die Richtung traegt das ZEICHEN, die Farbe verstaerkt sie nur — dieselben
+   Toene wie im Header-Tooltip und auf der Prestige-Karte. */
+.fm-crest-prov-line {
+  white-space: nowrap;
+}
+
+.fm-crest-prov-up {
+  color: #7fc95e;
+}
+
+.fm-crest-prov-down {
+  color: #cc6050;
+}
+
 /* Ablesungen */
 .fm-crest-reads {
   display: flex;
   align-items: stretch;
   margin-left: auto;
   flex-shrink: 0;
-  border-left: 1px solid #2a1c0c;
+  /* Derselbe Trennstrich, mit dem die Voyages-Kopfleiste ihre Zonen gliedert
+     (`.ecb-rank`) — EIN Ton fuer dieselbe Aufgabe, statt zweier. */
+  border-left: 1px solid #3e200a;
 }
 
 .fm-crest-read {
@@ -315,7 +375,7 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
   justify-content: center;
   gap: 4px;
   padding: 0 4px;
-  border-right: 1px solid #241806;
+  border-right: 1px solid #3e200a;
 }
 
 .fm-crest-read:last-child {
@@ -341,10 +401,25 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
 }
 
 .fm-crest-v {
-  font-size: clamp(26px, 1.9vw, 34px);
+  font-size: clamp(v-bind(valueMinPx), 1.9vw, 34px);
   line-height: 1;
   font-weight: 900;
   white-space: nowrap;
+}
+
+.fm-crest-v--art {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Unter dem Schriftboden der Ablesung: darueber bestimmte das BILD die
+   Zeilenhoehe. Die `-128`-Stufe traegt bis 34 px. */
+.fm-crest-chime {
+  flex-shrink: 0;
+  width: v-bind(chimeArtPx);
+  height: v-bind(chimeArtPx);
+  object-fit: contain;
 }
 
 .fm-crest-v--gold {
@@ -381,20 +456,5 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
 
 .fm-crest-k--ready {
   color: #e8c040;
-}
-
-/* Unterkante */
-.fm-crest-rail {
-  flex-shrink: 0;
-  height: v-bind(railH);
-  background: v-bind(tint);
-}
-
-/* KEINE Transition: die Breite aendert sich einmal pro Sekunde, und eine
-   laufende Transition auf `width` rastert das Band in jedem Frame neu. */
-.fm-crest-rail-fill {
-  display: block;
-  height: 100%;
-  background: linear-gradient(to bottom, #e8c060, #a87418);
 }
 </style>
