@@ -11,12 +11,14 @@
  * müsste jede Galaxie durchklicken, um eine leere Karte zu finden.
  *
  * Sie kennt ihren Klappzustand NICHT mehr: sie fährt als ganzes Stück hinaus,
- * und die Geste gehört dem Griff daneben (`ExpeditionRailHandle`). Ihr Kopf ist
- * deshalb kein Knopf mehr, sondern eine Beschriftung — zwei Stellen für dieselbe
- * Geste sind eine zu viel.
+ * und die Geste gehört dem Griff daneben (`ExpeditionRailHandle`).
+ *
+ * Sie hat auch KEINE eigene Überschrift mehr. Ihr Kopfband zeigte dasselbe Wort,
+ * das senkrecht auf dem Griff steht, und nahm ihr dafür 37,5 px Höhe; die Zahl
+ * daneben ist mit ihm an den Griff gewandert. Dieselbe Aufteilung wie im Skill
+ * Tree, wo `StarForgePanel` titellos ist.
  */
 import { onMounted, ref, watch } from 'vue'
-import { Icon } from '@iconify/vue'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageRailRow } from '@/types'
 import {
@@ -70,13 +72,9 @@ const padX = `${VOYAGE_RAIL_PAD_X}px`
 </script>
 
 <template>
-  <aside class="egl">
-    <div class="egl-head">
-      <Icon icon="game-icons:treasure-map" width="16" height="16" />
-      <span class="egl-head-label">{{ VOYAGE_RAIL_HANDLE_LABEL }}</span>
-      <span class="egl-head-count">{{ rows.length }}</span>
-    </div>
-
+  <!-- Ohne Kopfband ist der Griff daneben die einzige Beschriftung, und der
+       steht in einem Knopf — ohne das `aria-label` waere die Region namenlos. -->
+  <aside class="egl" :aria-label="VOYAGE_RAIL_HANDLE_LABEL">
     <div ref="scroll" class="egl-scroll rpg-scrollbar">
       <template v-for="row in rows" :key="row.galaxy">
         <ExpeditionGalaxyRow
@@ -111,28 +109,6 @@ const padX = `${VOYAGE_RAIL_PAD_X}px`
   border-left: 2px solid #5c3310;
 }
 
-/* Kopfband im Rezept der Forge-Kopfleisten (`.fbb`), nur enger gepolstert:
-   deren 18 px gelten für eine 400–560 px breite Spalte. Kein Knopf — das
-   Klappen gehört dem Griff. */
-.egl-head {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-shrink: 0;
-  padding: 10px 12px;
-  background: #14100c;
-  border-bottom: 1px solid #2a1a08;
-  color: #c89040;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.egl-head-count {
-  margin-left: auto;
-  color: rgba(200, 144, 64, 0.5);
-}
-
 .egl-scroll {
   flex: 1;
   min-height: 0;
@@ -141,7 +117,7 @@ const padX = `${VOYAGE_RAIL_PAD_X}px`
   /* Seitlich an die Konstante gebunden — der Ladeschleier baut dieselbe Zone,
      und zwei Zahlen dafuer liefen still auseinander. Karten brauchen mehr Luft
      ZUEINANDER als randlose Zeilen, deshalb der groessere `gap`. */
-  padding: 8px v-bind(padX) 14px;
+  padding: 10px v-bind(padX) 14px;
   display: flex;
   flex-direction: column;
   gap: 5px;

@@ -152,10 +152,6 @@ const skeletonPorts = computed(() =>
     <!-- Zielliste samt Griff -->
     <div class="vtl-railzone" aria-hidden="true">
       <div class="vtl-rail">
-        <!-- Dieselbe Polsterung wie `.egl-head` — so ergibt sich die Höhe aus
-             derselben Rechnung statt aus einer zweiten, gemessenen Zahl. -->
-        <div class="vtl-rail-head"><span class="vtl-mark vtl-mark--head" /></div>
-
         <div class="vtl-rail-list">
           <span v-for="i in 6" :key="i" class="vtl-row">
             <span class="vtl-row-thumb" />
@@ -259,25 +255,13 @@ const skeletonPorts = computed(() =>
   background: #111008;
   border-left: 2px solid #5c3310;
 }
-.vtl-rail-head {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  padding: 10px 12px;
-  background: #14100c;
-  border-bottom: 1px solid #2a1a08;
-}
-.vtl-mark--head {
-  width: 62%;
-  height: 16px;
-}
 .vtl-rail-list {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 5px;
-  padding: 8px v-bind(railPadX) 14px;
+  padding: 10px v-bind(railPadX) 14px;
   overflow: hidden;
 }
 

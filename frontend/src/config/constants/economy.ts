@@ -804,12 +804,16 @@ export const VOYAGE_RAIL_ZONE_W = VOYAGE_RAIL_WIDTH + VOYAGE_RAIL_HANDLE_PX
  *
  * Der Name dessen, was HINTER ihm liegt, nicht die Geste und nicht der Reiter,
  * auf dem er ohnehin steht — dieselbe Regel wie `FORGE_DETAILS_RAIL_LABEL`.
+ *
+ * Er steht seit dem Fall des Kopfbands ALLEIN: die Liste trägt keine eigene
+ * Überschrift mehr, weil sie hier schon stand. Dieselbe Aufteilung wie im
+ * Skill Tree, wo `StarForgePanel` ebenfalls titellos ist.
  */
-export const VOYAGE_RAIL_HANDLE_LABEL = 'DESTINATIONS'
-export const VOYAGE_RAIL_OPEN_TITLE = 'Show destinations'
-export const VOYAGE_RAIL_CLOSE_TITLE = 'Hide destinations'
-/** Die beiden Signale des zugeklappten Griffs — Ziele, nicht Missionen. */
-export const VOYAGE_RAIL_WAITING_TITLE = 'destinations with something waiting'
+export const VOYAGE_RAIL_HANDLE_LABEL = 'GALAXIES'
+export const VOYAGE_RAIL_OPEN_TITLE = 'Show galaxies'
+export const VOYAGE_RAIL_CLOSE_TITLE = 'Hide galaxies'
+/** Die beiden Signale des zugeklappten Griffs — Galaxien, nicht Missionen. */
+export const VOYAGE_RAIL_WAITING_TITLE = 'galaxies with something waiting'
 export const VOYAGE_RAIL_READY_TITLE = 'a crew is home and waiting'
 /** Abstand zwischen Zähler-Pille und Wortende. Die Pille nimmt KEINEN
  *  Fluss-Platz, sonst wanderte das Wort, sobald ein Signal kommt oder geht. */
@@ -820,9 +824,9 @@ export const VOYAGE_RAIL_HANDLE_BADGE_GAP = 10
  * Nur der Ladeschleier braucht sie — der Griff selbst setzt sie nie, dort
  * ergibt sie sich aus der Schrift. Sie steht hier, damit sein Platzhalter
  * dieselbe Marke zeigt und das Wort beim Aufdecken nicht hereinspringt.
- * Im Browser gemessen, nicht gerechnet.
+ * Im Browser gemessen, nicht gerechnet: das WORT samt der Zahl dahinter.
  */
-export const VOYAGE_RAIL_WORD_H = 148
+export const VOYAGE_RAIL_WORD_H = 125
 /**
  * Wie lange die Leiste fährt.
  *

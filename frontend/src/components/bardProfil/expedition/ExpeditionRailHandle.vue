@@ -3,6 +3,11 @@
  * Griffleiste der Zielliste — die Kante, die stehen bleibt, wenn die Leiste
  * weggefahren ist.
  *
+ * Sie traegt das Wort ALLEIN: die Liste hat kein Kopfband mehr, weil es dasselbe
+ * Wort ein zweites Mal zeigte und ihr dafuer 37,5 px Hoehe nahm. Dieselbe
+ * Aufteilung wie im Skill Tree, wo `StarForgePanel` titellos ist. Die Zahl aus
+ * dem gefallenen Band steht jetzt hinter dem Wort.
+ *
  * Idiom der Forge-Detailspalte (`skillTree/ForgeDetailsHandle.vue`), eigene
  * Konstanten: eine Seitenleiste ist in diesem Spiel EIN Ort, nicht einer je
  * Reiter.
@@ -81,7 +86,13 @@ const badgeGap = `${VOYAGE_RAIL_HANDLE_BADGE_GAP}px`
         />
       </span>
 
-      <span class="erh-word">{{ VOYAGE_RAIL_HANDLE_LABEL }}</span>
+      <!-- Die Zahl steht IM gekippten Element, nicht daneben: `.erh-stack` ist
+           eine waagerechte Zeile, ein zweites Kind darin staende NEBEN dem Wort
+           statt dahinter. So folgt sie ihm im senkrechten Fluss. -->
+      <span class="erh-word">
+        {{ VOYAGE_RAIL_HANDLE_LABEL }}
+        <span class="erh-total">{{ rows.length }}</span>
+      </span>
     </span>
   </button>
 </template>
@@ -208,6 +219,19 @@ const badgeGap = `${VOYAGE_RAIL_HANDLE_BADGE_GAP}px`
 .erh:hover .erh-word,
 .erh--open .erh-word {
   color: #e8c040;
+}
+
+/* Was es ueberhaupt gibt — die ruhige Zahl, die vor dem Fall des Kopfbands dort
+   stand. Gedaempft wie damals: die gerahmte Pille darueber ist das SIGNAL,
+   diese hier ist Auskunft. Ziffern brauchen die Sperrung des Wortes nicht,
+   gesperrt saessen sie als lose Punkte darueber. */
+.erh-total {
+  color: rgba(200, 144, 64, 0.5);
+  letter-spacing: 0.1em;
+}
+.erh:hover .erh-total,
+.erh--open .erh-total {
+  color: rgba(232, 192, 64, 0.62);
 }
 
 @media (prefers-reduced-motion: reduce) {
