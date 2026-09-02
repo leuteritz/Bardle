@@ -222,7 +222,7 @@ watch(
  *
  * Die Zonenbreite wechselt HART, ohne Transition — sie steht ueber den
  * ResizeObserver der Karte in deren `paintKey` UND `groundKey`, und ueber die
- * Fahrt animiert malte sie je Umschaltung Sternfeld, Wall und Bahn wieder und
+ * Fahrt animiert malte sie je Umschaltung Grund, Wall und Bahn wieder und
  * wieder statt einmal. Was man WANDERN sieht, ist das Panel darin.
  */
 const bodyColumns = computed(
@@ -308,7 +308,7 @@ onBeforeUnmount(() => {
   background: #111008;
 }
 
-/* Depth-Wash über dem Sternfeld — flache Radialtöne, kein Blur, einmal Paint. */
+/* Depth-Wash über dem Grund — flache Radialtöne, kein Blur, einmal Paint. */
 .fm-tab::after {
   content: '';
   position: absolute;

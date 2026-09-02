@@ -5,7 +5,7 @@
  *
  * | Ebene | was | malt neu, wenn |
  * | --- | --- | --- |
- * | Grund | Sternfeld | Buehne oder Pixeldichte sich aendern |
+ * | Grund | Penumbra | Buehne oder Pixeldichte sich aendern |
  * | Wall | das Filamentgewebe | der Bahnradius sich aendert |
  * | Herz | das beobachtete Universum | seine Kantenstufe sich aendert |
  * | Karte | Bahn, Tore, Koerper | `paintKey` sich aendert |
@@ -20,9 +20,8 @@
  * lasen sich als Aufkleber. Der Wall dreht gegen beide. Die Knoten sind deshalb
  * KEINE Baken mehr, sondern Koerper desselben Feldes (`paintNode`).
  *
- * Der Grund liegt AUSSERHALB der fahrenden Ebene: das Sternfeld ist der Raum,
- * nicht die Karte. Vorher fuhr es mit und wurde bei jedem Zoomschritt
- * mitgemalt, obwohl an ihm nichts von Zoom oder Fahrt abhaengt.
+ * Der Grund liegt AUSSERHALB der fahrenden Ebene: die Penumbra ist der Raum,
+ * nicht die Karte — an ihr haengt nichts von Zoom oder Fahrt.
  *
  * Ueber allem liegt je Knoten EIN durchsichtiger Knopf — Hover, Klick, Fokus
  * und Hover-Karte. Die Trefferschleife des Entwurfs (`pick()` ueber alle Knoten
@@ -78,7 +77,7 @@ import {
   FIRMAMENT_START_TICK_PX,
   FIRMAMENT_RIM_SPIN_REVERSE,
   FIRMAMENT_RIM_SPRITE_MARGIN,
-  FIRMAMENT_STAR_SEED,
+  FIRMAMENT_PENUMBRA_SEED,
   FIRMAMENT_WALL_MAX_BACKING_PX,
   FIRMAMENT_UNLIT_COLOR,
   FIRMAMENT_ZOOM_STEPS,
@@ -556,7 +555,7 @@ function paintGround() {
   const ctx = el.getContext('2d')
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  paintFirmamentGround(ctx, w, h, FIRMAMENT_STAR_SEED)
+  paintFirmamentGround(ctx, w, h, FIRMAMENT_PENUMBRA_SEED)
 }
 
 function paintRim() {
@@ -679,7 +678,7 @@ const layerStyle = computed(() => ({
     @wheel.prevent="onWheel"
     @dblclick="onDblClick"
   >
-    <!-- Der Raum. Er faehrt NICHT mit: die Bahn wandert durch die Sterne,
+    <!-- Der Raum. Er faehrt NICHT mit: die Bahn wandert durch die Stroemung,
          statt sie mitzuschleppen. -->
     <canvas ref="groundEl" class="fm-ground" aria-hidden="true" />
 

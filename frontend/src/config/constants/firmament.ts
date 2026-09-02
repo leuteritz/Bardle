@@ -295,21 +295,79 @@ export const FIRMAMENT_ZOOM_STEPS = [1, 1.6, 2.4] as const
 export const FIRMAMENT_MAX_BACKING_PX = 2600
 export const FIRMAMENT_MAX_DPR = 2
 
-// ── Deko ────────────────────────────────────────────────────────────────────
-/** Sterne je 100000 px² Buehnenflaeche — die Dichte folgt der FLAECHE, aber
- *  gedeckelt, damit 4K nicht in Rauschen ertrinkt. */
-export const FIRMAMENT_STAR_DENSITY = 26
-export const FIRMAMENT_STAR_MAX = 520
-/** Seed des Sternfelds. FEST, nicht der `mapSeed`: das Feld ist der Hintergrund
- *  des ganzen Firmaments und darf beim Warp nicht umspringen. */
-export const FIRMAMENT_STAR_SEED = 7
-/** Deckkraft der Sterne. Gedaempft, seit das Universum die ganze Scheibe fuellt:
- *  daneben waeren es zwei konkurrierende Punktfelder.
- *
- *  Gedaempft, nicht AUSGEDUENNT — die Dichte traegt die Tiefe. Weniger, gleich
- *  helle Sterne lesen sich als Luecken; gleich viele, blassere als Ferne. */
-export const FIRMAMENT_STAR_ALPHA_MIN = 0.03
-export const FIRMAMENT_STAR_ALPHA_MAX = 0.2
+// ── Penumbra — der Raum jenseits der Scheibe ────────────────────────────────
+/* Kein Sternfeld: ausserhalb des beobachteten Universums ist kein Universum.
+   Der Grund sind STROEME in einer Richtung, hinter der Scheibe hindurch —
+   `utils/fx/firmamentPenumbra.ts`. Referenz-px skalieren mit
+   `k = r / FIRMAMENT_PLATE_REF_R`. */
+
+/** FEST, nicht der `mapSeed`: der Raum springt beim Warp nicht um. */
+export const FIRMAMENT_PENUMBRA_SEED = 7
+/** Deckender Grund unter allem. */
+export const FIRMAMENT_PENUMBRA_GROUND = '#05050b'
+/** Kalte und warme Tinte — Indigo und Pflaume. Kein Gold (Reise), kein Teal
+ *  (einsammelbar), kein Torblau. */
+export const FIRMAMENT_PENUMBRA_INK_COLD = '#5658b8'
+export const FIRMAMENT_PENUMBRA_INK_WARM = '#7a4e9a'
+/** Anteil warmer Baender. */
+export const FIRMAMENT_PENUMBRA_WARM_SHARE = 0.3
+/** Hauptrichtung in Bildschirmgrad (y nach unten): links-unten nach rechts-oben. */
+export const FIRMAMENT_PENUMBRA_FLOW_DEG = -28
+/** Wellen des Feldes: [Wellenlaenge als Anteil von min(w,h), Amplitude relativ
+ *  zur Hauptgeschwindigkeit, Normalenwinkel zur Stroemung in Grad].
+ *  Die Summe der Amplituden muss unter 1 bleiben — sonst kann ein Band kehrt
+ *  machen, und die Richtungs-Spec faellt. */
+export const FIRMAMENT_PENUMBRA_WAVES = [
+  [0.9, 0.38, 62],
+  [0.55, 0.22, -47],
+  [0.33, 0.12, 101],
+] as const
+/** Saatabstand quer zur Stroemung, Referenz-px; die Zahl der Baender folgt
+ *  daraus und bleibt ueber alle Aufloesungen bei 9–10. Bei 190 standen auf
+ *  Full HD nur drei, vier Baender im Bild. */
+export const FIRMAMENT_PENUMBRA_BAND_GAP = 150
+export const FIRMAMENT_PENUMBRA_BANDS_MIN = 5
+export const FIRMAMENT_PENUMBRA_BANDS_MAX = 10
+/** Streuung der Saat als Anteil eines Abstands. Nicht hoeher: zwei Baender
+ *  uebereinander verdoppeln die Tinte. */
+export const FIRMAMENT_PENUMBRA_SEED_JITTER = 0.6
+/** Kernbreite eines Bands, Referenz-px. */
+export const FIRMAMENT_PENUMBRA_BAND_W_MIN = 28
+export const FIRMAMENT_PENUMBRA_BAND_W_MAX = 70
+/** Kern-Deckkraft. `_MAX` ist die harte Decke JEDES Strichs: die Portalschrift
+ *  steht auf dem Grund. Indigo hebt ~93/255 je Alpha-Einheit; 0,10 mal
+ *  Zugstapel 1,65 sind +15 im Kern, ~+6 am Saum. */
+export const FIRMAMENT_PENUMBRA_ALPHA_MIN = 0.05
+export const FIRMAMENT_PENUMBRA_ALPHA_MAX = 0.1
+/** Drei Zuege je Band [Breite×, Alpha×], AUSSEN zuerst — Weichheit ohne
+ *  `ctx.filter`. */
+export const FIRMAMENT_PENUMBRA_BLUR_PASSES = [
+  [2.8, 0.2],
+  [1.8, 0.45],
+  [1, 1],
+] as const
+/** Euler-Schritt der Stromlinie, Referenz-px. */
+export const FIRMAMENT_PENUMBRA_STEP = 18
+/** Ueberstand je Kante als Anteil von min(w,h): Baender beginnen und enden
+ *  ausserhalb der Buehne. */
+export const FIRMAMENT_PENUMBRA_OVERSCAN = 0.25
+/** Schritte je Richtung — Kostendeckel. */
+export const FIRMAMENT_PENUMBRA_MAX_STEPS = 400
+/** Auslauf zur Platte: von `_DAMP_IN` (dieselbe Kante wie
+ *  `FIRMAMENT_PORTAL_DISC_CLEAR`) bis `_DAMP_OUT` laeuft ein Schatten mit
+ *  `_DISC_DAMP` auf null aus. MILD: die Portalringe stehen am Buehnenrand,
+ *  ein starker Teich leerte die Lobe, ohne die Schrift zu schuetzen. */
+export const FIRMAMENT_PENUMBRA_DAMP_IN = FIRMAMENT_PLATE_SPRITE_MARGIN
+export const FIRMAMENT_PENUMBRA_DAMP_OUT = 1.35
+export const FIRMAMENT_PENUMBRA_DISC_DAMP = 0.45
+/** Motes: Koerper auf den Baendern, nie rund, nur jenseits `_DAMP_OUT`. */
+export const FIRMAMENT_PENUMBRA_MOTES_PER_BAND = 2
+export const FIRMAMENT_PENUMBRA_MOTES_MAX = 20
+export const FIRMAMENT_PENUMBRA_MOTE_RX = 3.4
+export const FIRMAMENT_PENUMBRA_MOTE_RATIO_MIN = 0.28
+export const FIRMAMENT_PENUMBRA_MOTE_RATIO_MAX = 0.5
+export const FIRMAMENT_PENUMBRA_MOTE_ALPHA = 0.22
+export const FIRMAMENT_PENUMBRA_MOTE_INK = '#c4bae8'
 // ── Farben ──────────────────────────────────────────────────────────────────
 /** Befreit — dieselbe Goldkante, die die Reise im ganzen Spiel traegt. */
 export const FIRMAMENT_FREED_COLOR = '#e8c040'

@@ -10,7 +10,7 @@ import {
   FIRMAMENT_STAR_ARC_ALPHA,
   FIRMAMENT_STAR_ARC_LOST_ALPHA,
   FIRMAMENT_STAR_ARC_ORBIT,
-  FIRMAMENT_STAR_SEED,
+  FIRMAMENT_PENUMBRA_SEED,
   FIRMAMENT_WEB_INNER,
   FIRMAMENT_WEB_NODES,
   FIRMAMENT_WEB_OUTER,
@@ -122,26 +122,27 @@ const NODES: FirmamentNode[] = [
 const count = (ops: string[], name: string) => ops.filter((o) => o.startsWith(`${name}(`)).length
 
 describe('Firmament-Platte — der Grund', () => {
-  it('malt Flaeche und Sternfeld', () => {
+  it('malt Flaeche und Penumbra', () => {
     const { ctx, ops } = recordingCtx()
-    paintFirmamentGround(ctx, 1002, 690, FIRMAMENT_STAR_SEED)
-    // Ein deckendes Rechteck plus viele kleine Sternmarken.
-    expect(count(ops, 'fillRect')).toBeGreaterThan(50)
+    paintFirmamentGround(ctx, 1002, 690, FIRMAMENT_PENUMBRA_SEED)
+    // EIN deckendes Rechteck, darauf die Stroeme; der Auslauf ist der eine Verlauf.
+    expect(count(ops, 'fillRect')).toBe(1)
+    expect(count(ops, 'stroke')).toBeGreaterThan(0)
     expect(count(ops, 'createRadialGradient')).toBe(1)
   })
 
-  it('malt KEINE Bahn und keine Koerper', () => {
+  it('malt KEINE Sterne, keine Bahn und keine Koerper', () => {
     const { ctx, ops } = recordingCtx()
-    paintFirmamentGround(ctx, 1002, 690, FIRMAMENT_STAR_SEED)
-    expect(count(ops, 'lineTo')).toBe(0)
+    paintFirmamentGround(ctx, 1002, 690, FIRMAMENT_PENUMBRA_SEED)
     expect(count(ops, 'arc')).toBe(0)
+    expect(count(ops, 'quadraticCurveTo')).toBe(0)
   })
 
   it('haengt am Seed, nicht am Zufall', () => {
     const a = recordingCtx()
     const b = recordingCtx()
-    paintFirmamentGround(a.ctx, 1002, 690, FIRMAMENT_STAR_SEED)
-    paintFirmamentGround(b.ctx, 1002, 690, FIRMAMENT_STAR_SEED)
+    paintFirmamentGround(a.ctx, 1002, 690, FIRMAMENT_PENUMBRA_SEED)
+    paintFirmamentGround(b.ctx, 1002, 690, FIRMAMENT_PENUMBRA_SEED)
     expect(a.ops).toEqual(b.ops)
   })
 })

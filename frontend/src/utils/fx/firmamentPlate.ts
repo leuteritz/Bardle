@@ -2,8 +2,9 @@
    Die EINE Zeichenreihenfolge der Firmament-Karte. Sie zerfaellt in DREI Zuege,
    und der Schnitt ist der Grund, warum der Reiter auf Grundlast steht:
 
-   - `paintFirmamentGround` — Grund und Sternfeld. Haengt weder an Zoom noch an
-     Fahrt noch am Bestand; ein eigenes Canvas, das dabei fast nie neu malt.
+   - `paintFirmamentGround` — Grund und Penumbra (`firmamentPenumbra.ts`).
+     Haengt weder an Zoom noch an Fahrt noch am Bestand; ein eigenes Canvas,
+     das dabei fast nie neu malt.
    - `paintFirmamentWeb` — das Filamentgewebe des Walls, um den Mittelpunkt des
      Kontexts. Ein eigenes, quadratisches Sprite, das das CSS am Compositor
      dreht.
@@ -21,11 +22,12 @@
    Alle festen Pixelwerte sind im Massstab `k = box.r / FIRMAMENT_PLATE_REF_R`
    gemeint, damit dieselbe Reihenfolge auf 240 px Radius traegt wie auf 900.
 
-   Deterministisch: das Sternfeld haengt an einem uebergebenen Seed, nie an
+   Deterministisch: der Grund haengt an einem uebergebenen Seed, nie an
    `Math.random()` — sonst saehe die Karte nach jedem Repaint anders aus. */
 
 import { seededRng, minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { jitter } from '@/utils/fx/universeDisc'
+import { paintFirmamentPenumbra } from '@/utils/fx/firmamentPenumbra'
 import {
   FIRMAMENT_FREED_COLOR,
   FIRMAMENT_HERE_COLOR,
@@ -66,18 +68,12 @@ import {
   FIRMAMENT_WEB_TINT_STOPS,
   FIRMAMENT_WEB_W_MAX,
   FIRMAMENT_WEB_W_MIN,
-  FIRMAMENT_STAR_ALPHA_MAX,
-  FIRMAMENT_STAR_ALPHA_MIN,
-  FIRMAMENT_STAR_DENSITY,
-  FIRMAMENT_STAR_MAX,
+  FIRMAMENT_PENUMBRA_GROUND,
   FIRMAMENT_UNLIT_COLOR,
 } from '@/config/constants'
 import { hexToRgb } from '@/utils/ui/format'
 import { firmamentRoadCtrl } from '@/utils/ui/firmamentLayout'
 import type { FirmamentFitBox, FirmamentNode } from '@/utils/ui/firmamentLayout'
-
-/** Seed des Sternfelds. FEST, nie eine Zufallszahl — sonst saehe der Grund nach
- *  jedem Repaint anders aus. Er gehoert `paintFirmamentGround`. */
 
 /* Die roemischen Ziffern malt die Platte NICHT. Sie haengen als DOM an den
    Knoten: dort blenden Hover und Auswahl sie per CSS ein, ohne dass die ganze
@@ -106,39 +102,17 @@ function nodeColor(node: FirmamentNode): string {
   return `rgb(${minimapAccentForTheme(node.themeIndex)})`
 }
 
-/**
- * Grund und Sternfeld — der RAUM, nicht die Karte.
- *
- * Eigenes Canvas, eigener Schluessel: er kennt weder Zoom noch Fahrt. Im alten
- * Zuschnitt malte dieses Feld bei jedem Zoomschritt mit, obwohl sich an ihm
- * nichts aendern konnte.
- */
+/** Grund und Penumbra — der RAUM, nicht die Karte. Eigenes Canvas, eigener
+ *  Schluessel: er kennt weder Zoom noch Fahrt. */
 export function paintFirmamentGround(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
   seed: number,
 ): void {
-  const bg = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.75)
-  bg.addColorStop(0, '#0a0a14')
-  bg.addColorStop(0.55, '#06060c')
-  bg.addColorStop(1, '#030305')
-  ctx.fillStyle = bg
+  ctx.fillStyle = FIRMAMENT_PENUMBRA_GROUND
   ctx.fillRect(0, 0, w, h)
-
-  // Die Dichte folgt der FLAECHE, aber gedeckelt: nach Flaeche allein ertrank
-  // die Bahn auf 4K im Rauschen — dieselbe Lehre wie beim Tiefenfeld.
-  const count = Math.min(FIRMAMENT_STAR_MAX, Math.round((w * h * FIRMAMENT_STAR_DENSITY) / 100000))
-  const rng = seededRng(seed)
-  for (let i = 0; i < count; i++) {
-    const x = rng() * w
-    const y = rng() * h
-    const a =
-      FIRMAMENT_STAR_ALPHA_MIN + rng() * (FIRMAMENT_STAR_ALPHA_MAX - FIRMAMENT_STAR_ALPHA_MIN)
-    const s = rng() < 0.9 ? 0.7 : 1.4
-    ctx.fillStyle = `rgba(220, 230, 255, ${a.toFixed(2)})`
-    ctx.fillRect(x, y, s, s)
-  }
+  paintFirmamentPenumbra(ctx, w, h, seed)
 }
 
 /* ── Das Filamentgewebe ───────────────────────────────────────────────────────
