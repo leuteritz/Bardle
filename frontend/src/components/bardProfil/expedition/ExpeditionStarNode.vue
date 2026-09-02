@@ -44,7 +44,17 @@ const props = defineProps<{
   left: number
   top: number
   hit: number
+  /** Der GEMALTE Radius dieser Marke — nicht aus `hit` zurueckgerechnet.
+   *  `starHit` nimmt fuer beide Ausgaenge den Radius des befreiten Sterns und
+   *  hat ausserdem einen Boden; ein daraus gerechneter Ring saesse beim
+   *  verlorenen Stern 18 % zu weit aussen. */
+  markR: number
+  /** Von der Manifestreihe gezeigt: Ring, Schein und die eigene Karte. */
+  highlight?: boolean
 }>()
+
+/** Der Flugindex dieser Marke, damit die Reihe oben mitleuchten kann. */
+const emit = defineEmits<{ hover: [number | null] }>()
 
 const lost = computed(() => props.mark.outcome === 'failed')
 
@@ -83,13 +93,29 @@ const label = computed(() => {
     :width="VOYAGE_TIP_WIDTH"
     :open-delay="VOYAGE_TIP_OPEN_DELAY_MS"
     :accent="accent"
+    :force-open="highlight"
   >
     <template #default>
       <span
         class="stn"
-        :style="{ left: `${left}%`, top: `${top}%`, '--stn-hit': `${hit}px` }"
+        :class="{ 'stn--on': highlight }"
+        :style="{
+          left: `${left}%`,
+          top: `${top}%`,
+          '--stn-hit': `${hit}px`,
+          '--stn-r': `${markR}px`,
+          '--stn-ink': accent,
+        }"
         :aria-label="label"
-      />
+        @mouseenter="emit('hover', mark.index)"
+        @mouseleave="emit('hover', null)"
+      >
+        <!-- Eigene Ebene mit statischem Schein; eingeblendet wird nur ihre
+             opacity. Bauform von `.sn-breath`, aber OHNE dessen Keyframes —
+             der hervorgehobene Zustand ist ein einmaliger Umschlag. -->
+        <span class="stn-glow" aria-hidden="true" />
+        <span class="stn-ring" aria-hidden="true" />
+      </span>
     </template>
     <template #tip>
       <ExpeditionStarTooltip v-if="manifest" :manifest="manifest" :lost="lost" :accent="accent" />
@@ -112,5 +138,66 @@ const label = computed(() => {
   height: var(--stn-hit);
   transform: translate(-50%, -50%);
   pointer-events: auto;
+}
+/* Wie `.sn--on`: der gezeigte Stern liegt ueber seinen Nachbarn. Ueber die
+   Manifestreihe hebt ihn das nicht — `.egm-nodes` ist ein eigener
+   Stapelkontext, und die Reihe liegt daneben auf z-index 2. */
+.stn--on {
+  z-index: 3;
+}
+
+/* Beide Ebenen ruhen unsichtbar und kosten nichts: kein Keyframe, kein
+   `will-change`, und `paintKey` sieht sie nicht — die Platte wird beim Hovern
+   NICHT neu gemalt. */
+.stn-glow,
+.stn-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
+}
+
+.stn-glow {
+  width: calc(var(--stn-r) * 4.2);
+  height: calc(var(--stn-r) * 4.2);
+  margin: calc(var(--stn-r) * -2.1) 0 0 calc(var(--stn-r) * -2.1);
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--stn-ink) 42%, transparent) 0%,
+    color-mix(in srgb, var(--stn-ink) 13%, transparent) 45%,
+    transparent 72%
+  );
+  transform: scale(0.86);
+}
+
+/* Ein Ring statt einer animierten Randfarbe — dieselbe Regel wie beim Hafen.
+   Er sitzt auf dem GEMALTEN Radius, 19 % nach aussen versetzt wie `.sn--on`. */
+.stn-ring {
+  width: calc(var(--stn-r) * 2.38);
+  height: calc(var(--stn-r) * 2.38);
+  margin: calc(var(--stn-r) * -1.19) 0 0 calc(var(--stn-r) * -1.19);
+  border: 2px solid var(--stn-ink);
+  transform: scale(0.88);
+}
+
+.stn--on .stn-glow {
+  opacity: 1;
+  transform: scale(1);
+}
+.stn--on .stn-ring {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stn-glow,
+  .stn-ring {
+    transition: none;
+  }
 }
 </style>

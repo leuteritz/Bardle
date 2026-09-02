@@ -25,15 +25,13 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { starSeatsFreedFirst, type StarSeat } from '@/utils/ui/starSeats'
+import { starSeatsFreedFirst } from '@/utils/ui/starSeats'
 import { voyageManifestRow } from '@/utils/ui/voyageManifestRow'
 import { getChampionIconPath } from '@/utils/game/champions'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
-import { ordinalOf } from '@/utils/ui/format'
 import {
   FIRMAMENT_FREED_COLOR,
   FIRMAMENT_LOST_COLOR,
-  ROLE_BY_KEY,
   STAR_MANIFEST_ART_SIZE,
   VOYAGE_MANIFEST_ACCENT_BAR_PX,
   VOYAGE_MANIFEST_LABEL,
@@ -44,7 +42,26 @@ const props = defineProps<{
   record: CompletedGalaxyRecord
   /** Breite der Buehne — dieselbe, die die Karte per ResizeObserver misst. */
   width: number
+  /** Flugindex des gezeigten Sterns, oder null. Kommt zurueck, wenn der Zeiger
+   *  auf der MARKE steht — die Verbindung gilt in beide Richtungen. */
+  highlight: number | null
 }>()
+
+const emit = defineEmits<{ hover: [number | null] }>()
+
+/**
+ * EIN delegierter Listener statt einem je Kachel.
+ *
+ * `mouseover` blubbert und nennt bei jedem Wechsel das neue Ziel; `mouseenter`
+ * an sieben Kacheln waere sieben Listener fuer dieselbe Auskunft. Das Ziel
+ * traegt seinen Flugindex als `data-star` — der LISTENindex taugt nicht, weil
+ * der Deckel Sitze wegwirft und die Liste Luecken hat.
+ */
+function onOver(e: MouseEvent) {
+  const tile = (e.target as HTMLElement | null)?.closest<HTMLElement>('.esm-tile')
+  const idx = tile?.dataset.star
+  emit('hover', idx == null ? null : Number(idx))
+}
 
 /* EIN Deckel, und er liegt im Layout: `voyageManifestRow` weiss, wie viele
    Kacheln die Buehne traegt und ob ein Ueberlaufchip dazwischenmuss. */
@@ -63,29 +80,6 @@ const hidden = computed(() => (seats.value.length ? row.value.hidden : 0))
 const accent = computed(() => `rgb(${minimapAccentForTheme(props.record.themeIndex)})`)
 
 const art = (champion: string) => getChampionIconPath(champion, STAR_MANIFEST_ART_SIZE)
-
-/**
- * Die Rolle lebt auf dem Tooltip und nirgends sonst.
- *
- * Die Kante ist vergeben — Gold gegen Rot heisst befreit gegen verloren, eine
- * zweite Bedeutung darauf gibt es nicht. Ein Rollenpunkt auf dem Portrait
- * braeuchte einen Hof, um sich auf jedem Galaxienbild abzusetzen, und ein
- * umhofter Punkt auf einem Gesicht ist ein Abzeichen statt einer Legende.
- * Derselbe Tooltip traegt ausserdem den vollen Namen, wenn die Ellipsis
- * zuschlaegt.
- */
-function tipFor(seat: StarSeat) {
-  const role = seat.role ? ROLE_BY_KEY[seat.role] : null
-  // `seat.index` und nicht der Listenindex: der Deckel verschiebt die Liste,
-  // „der dritte Stern" meint trotzdem weiter den dritten.
-  const where = `${ordinalOf(seat.index + 1)} star`
-  const state = seat.lost ? 'lost' : 'freed'
-  return {
-    label: seat.champion ?? 'No champion aboard',
-    text: role ? `${role.label} · ${state} at the ${where}` : `${state} at the ${where}`,
-    color: seat.lost ? FIRMAMENT_LOST_COLOR : FIRMAMENT_FREED_COLOR,
-  }
-}
 
 const u = computed(() => `${row.value.tile}px`)
 const cellW = computed(() => `${row.value.cell}px`)
@@ -111,14 +105,14 @@ const barPx = `${VOYAGE_MANIFEST_ACCENT_BAR_PX}px`
     <div class="esm-body">
       <span class="esm-head">{{ VOYAGE_MANIFEST_LABEL }}</span>
 
-      <ul class="esm-seats">
+      <ul class="esm-seats" @mouseover="onOver" @mouseleave="emit('hover', null)">
         <li
           v-for="(seat, i) in seats"
           :key="i"
           class="esm-tile"
-          :class="{ 'esm-tile--lost': seat.lost }"
+          :class="{ 'esm-tile--lost': seat.lost, 'esm-tile--on': seat.index === highlight }"
+          :data-star="seat.index"
           :style="{ '--esm-ink': seat.lost ? FIRMAMENT_LOST_COLOR : FIRMAMENT_FREED_COLOR }"
-          v-tip="tipFor(seat)"
         >
           <span class="esm-art">
             <img v-if="seat.champion" :src="art(seat.champion)" :alt="seat.champion" />
@@ -247,6 +241,28 @@ const barPx = `${VOYAGE_MANIFEST_ACCENT_BAR_PX}px`
 .esm-tile--lost .esm-art img {
   filter: grayscale(70%);
   opacity: 0.62;
+}
+
+/* Die Gegenrichtung: der Zeiger steht auf der MARKE, das Gesicht antwortet.
+   Dieselbe Geste wie am Stern — kraeftigere Kante und ein Schritt nach vorn,
+   kein Dauerlaeufer. Nicht `:hover`, weil die Klasse auch von aussen kommt. */
+.esm-art {
+  transition: transform 0.14s ease;
+}
+.esm-tile--on .esm-art {
+  transform: scale(1.08);
+  border-color: var(--esm-ink);
+}
+.esm-tile--on .esm-name {
+  color: #f2e2b0;
+}
+/* Die Graustufe des verlorenen Sterns bleibt AUCH hervorgehoben — sie ist seine
+   Bedeutung, nicht seine Ruhestellung. */
+
+@media (prefers-reduced-motion: reduce) {
+  .esm-art {
+    transition: none;
+  }
 }
 
 .esm-name {

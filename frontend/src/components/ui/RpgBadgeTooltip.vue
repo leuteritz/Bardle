@@ -7,7 +7,7 @@ let closeActiveTooltip: (() => void) | null = null
 </script>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onUnmounted, watch } from 'vue'
 import { placeTip } from '@/utils/ui/tipAnchor'
 import {
   BADGE_TOOLTIP_GAP_PX,
@@ -46,6 +46,16 @@ const props = defineProps<{
   /** Zugehörigkeitsfarbe der Sprache (`--tip-color`) — Akzentleiste und
       Pfeil nehmen sie. Ohne sie Gold. */
   accent?: string
+  /** Von AUSSEN geöffnet, zusätzlich zum eigenen Hover.
+   *
+   *  Gebraucht, seit die Manifestreihe des Voyages-Atlas die Karte ihrer
+   *  Sternmarke aufzieht, ohne dass der Zeiger auf der Marke steht. Es gab
+   *  dafür keinen Weg: die Blase ging ausschliesslich über eigenen
+   *  `mouseenter`/`focusin` auf, und `closeActiveTooltip` ist modulprivat.
+   *
+   *  Heisst `forceOpen` und nicht `open`: die interne Funktion `open()` traegt
+   *  den Namen schon, und Vue meldet die Kollision als `vue/no-dupe-keys`. */
+  forceOpen?: boolean
 }>()
 
 const wrapRef = ref<HTMLElement | null>(null)
@@ -161,6 +171,14 @@ function panelEnter() {
 function panelLeave() {
   if (!props.passive) scheduleHide()
 }
+
+/* `scheduleHide` und nicht `close`: die 80 ms Verzug sind es, die den Wechsel
+   von Kachel zu Kachel flackerfrei machen. Der eigene Hover bleibt unberührt —
+   der Watcher feuert nur, wenn sich die Prop ändert. */
+watch(
+  () => props.forceOpen,
+  (on) => (on ? requestOpen() : scheduleHide()),
+)
 
 onUnmounted(() => {
   clearOpen()

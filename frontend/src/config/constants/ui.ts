@@ -393,6 +393,11 @@ export const LANDMARK_PAD_SPAN = 1.7 // weitester Zierrat: der dunkle Saum des v
 // beliebig viele Sprites nach (bei r=9, dpr=3.1 rund 178 KB je Stück).
 export const LANDMARK_SPRITE_CACHE_MAX = 24
 export const LANDMARK_PORTAL_MIN_R = 3 // Boden, damit der Ring in der Miniatur ein Ring bleibt
+/** Die Bezugsradien der beiden Sternmarken, vor `hk`. Sie standen als Literale
+ *  mitten im Zeichencode, seit die Manifestreihe einen DOM-Ring auf dieselbe
+ *  Marke legt, hat die Zahl zwei Leser — `starMarkRadius` ist die eine Quelle. */
+export const LANDMARK_STAR_R_FREED = 8.5
+export const LANDMARK_STAR_R_LOST = 7
 // Die Marke des befreiten Sterns. Der Ring ist UNBUNT, weil die zwanzig
 // Galaxie-Themen den Farbkreis fast lückenlos abdecken (Farbtöne 0 · 8 · 16 · 27
 // · 45 · 107 · 120 · 138 · 170 · 180 · 180 · 220 · 220 · 221 · 240 · 270 · 273 ·

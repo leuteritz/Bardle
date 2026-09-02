@@ -45,6 +45,8 @@ import {
   VOYAGE_MAP_ASPECT_MAX,
   VOYAGE_MAP_INSET_PX,
   LANDMARK_PORTAL_MIN_R,
+  LANDMARK_STAR_R_FREED,
+  LANDMARK_STAR_R_LOST,
   ROUTE_TRAIL_ALPHA_MIN,
   ROUTE_TRAIL_WIDTH_MIN,
   ROUTE_SEAM_COLOR,
@@ -91,6 +93,21 @@ export interface FitBox {
  */
 export function starCoreTint(manifest: StarManifest | undefined): string | undefined {
   return manifest?.role ? LANDMARK_ROLE_CORE[manifest.role] : undefined
+}
+
+/**
+ * Der gemalte Radius einer Sternmarke — die EINE Quelle.
+ *
+ * Zwei Leser: `paintGalaxy` malt damit, und die Manifestreihe legt darauf ihren
+ * Hervorhebungsring. Aus der Fangflaeche zurueckrechnen ginge zweimal daneben —
+ * `starHit` rechnet fuer BEIDE Ausgaenge mit dem Radius des befreiten Sterns,
+ * und ihr Boden (`GALAXY_STAR_MARK_HIT_MIN`) klemmt auf kleinen Buehnen.
+ *
+ * Halbe Pixel beim Runden: ganzzahlig fielen 7 und 8.5 in der Leistenminiatur
+ * beide auf 4.
+ */
+export function starMarkRadius(lost: boolean, hk: number): number {
+  return roundLandmarkRadius((lost ? LANDMARK_STAR_R_LOST : LANDMARK_STAR_R_FREED) * hk)
 }
 
 /**
@@ -493,7 +510,7 @@ export function paintGalaxy(
       failed ? 'star-lost' : 'star-freed',
       sx,
       sy,
-      roundLandmarkRadius((failed ? 7 : 8.5) * hk),
+      starMarkRadius(failed, hk),
       {
         dpr,
         variant: landmarkVariantFor(i),

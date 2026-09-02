@@ -22,6 +22,7 @@ import {
   galaxyFitBox,
   coreGateClearance,
   starRoleSignature,
+  starMarkRadius,
   GALAXY_PLATE_REF_W,
   type FitBox,
 } from '@/utils/fx/galaxyPlate'
@@ -204,6 +205,17 @@ const starNodes = computed(() => {
   })
 })
 
+/**
+ * Welcher Stern gerade gezeigt wird — der Knotenpunkt zwischen Manifestreihe
+ * und Karte.
+ *
+ * Der Wert ist der FLUGINDEX (`mark.index` === Index in `attemptResults` ===
+ * `seat.index`), nicht die Position in irgendeiner Liste: die Reihe deckelt und
+ * hat Luecken. Er lebt hier, weil beide Beteiligten Kinder dieser Karte sind —
+ * ein Store waere ein Umweg ueber das halbe Projekt.
+ */
+const hoveredStar = ref<number | null>(null)
+
 /** Das Sternsoll dieser Galaxie — dieselbe Formel, gegen die das Spiel zählt. */
 const starsRequired = computed(() => computeRequired(props.record.galaxy))
 
@@ -384,7 +396,13 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
          ihr können Marken liegen, deshalb ist sie ein Scrim und kein Kasten.
          Das Tor ist ein DATEN-Tor: Altbestand ohne Manifest führt hier nie
          jemanden, und ein Maßtor greift nachgerechnet auf keiner Breite. -->
-    <ExpeditionStarManifest v-if="cssW > 0" :record="record" :width="cssW" />
+    <ExpeditionStarManifest
+      v-if="cssW > 0"
+      :record="record"
+      :width="cssW"
+      :highlight="hoveredStar"
+      @hover="hoveredStar = $event"
+    />
 
     <ExpeditionCrewMarkerLayer
       :record="record"
@@ -425,6 +443,9 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
         :left="pct(n.x, n.y).left"
         :top="pct(n.x, n.y).top"
         :hit="starHit"
+        :mark-r="starMarkRadius(n.mark.outcome === 'failed', historyHk)"
+        :highlight="hoveredStar === n.mark.index"
+        @hover="hoveredStar = $event"
       />
 
       <!-- Das Ankunftsportal am Aussenrand: genau eines je Karte. -->
