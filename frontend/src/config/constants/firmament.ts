@@ -125,7 +125,7 @@ export const FIRMAMENT_RAIL_CLOSE_TITLE = 'Hide universes'
 export const FIRMAMENT_STAGE_MIN_W = 700
 export const FIRMAMENT_STAGE_MIN_H = 430
 
-// ── Spirale ─────────────────────────────────────────────────────────────────
+// ── Die Bahn ─────────────────────────────────────────────────────────────────
 /** Unbeleuchtete Plaetze vor der laufenden Galaxie: die Bahn muss weitergehen,
  *  sonst endet das Firmament dort, wo der Spieler gerade steht. */
 export const FIRMAMENT_UNLIT_AHEAD = 4
@@ -134,12 +134,6 @@ export const FIRMAMENT_UNLIT_AHEAD = 4
  *  kann. Ohne den Boden saesse eine Zwei-Galaxien-Bahn am Wall, und der Anfang
  *  eines Universums saehe aus wie sein Ende. */
 export const FIRMAMENT_PATH_MIN_SPAN = 8
-/** Windungsanteil JE Knotenschritt — 18 Grad. Der Windungsvorrat ist damit
- *  nicht mehr fest, sondern waechst mit der Bahn (gedeckelt bei
- *  `FIRMAMENT_SPIRAL_TURNS`, erreicht bei 41 Knoten). Fest waren zwei Windungen
- *  auf FUENF Knoten 180 Grad je Schritt: die Bahn sprang quer ueber die Scheibe
- *  und las sich als Zickzack statt als Spirale. */
-export const FIRMAMENT_SPIRAL_STEP_TURNS = 0.05
 /** Die vier Stufen des Wall-Verlaufs, als Abstand vom Universumston: negativ
  *  gegen Schwarz (die Glut hinter dem Gewebe), positiv gegen Weiss (die
  *  aeussersten Faeden). Was den Wall traegt, ist nicht die Farbe, sondern die
@@ -149,17 +143,48 @@ export const FIRMAMENT_SPIRAL_STEP_TURNS = 0.05
  *  (206,82,28) … (255,238,208), nicht identisch — die alte hielt ihre
  *  Saettigung laenger, was sich mit einem Ton allein nicht nachbauen laesst. */
 export const FIRMAMENT_WEB_TINT_STOPS = [-0.2, 0, 0.38, 0.78] as const
-/** Volle Umlaeufe vom Kern bis zum Rand. ZWEI, nicht anderthalb: mit 1,55 las
- *  sich die Bahn als Ring mit ein paar Punkten in der Mitte, nicht als Weg. */
-export const FIRMAMENT_SPIRAL_TURNS = 2.0
 /** Radius des innersten Knotens, normiert auf den Bahnradius. */
-export const FIRMAMENT_SPIRAL_R0 = 0.12
+export const FIRMAMENT_PATH_R0 = 0.12
 /** Radius des aeussersten. UNTER 1, sonst saesse er auf dem Wall. */
-export const FIRMAMENT_SPIRAL_R1 = 0.96
-/** Unterlinear, aber nicht `sqrt`: bei 0,5 lagen zwei Drittel der Knoten in der
- *  aeusseren Windung und der Kern stand leer. Gemessen bei 40 Knoten und
- *  Full-HD-Buehne — Abstand 29,2 px gegen 26 px Trefferflaeche. */
-export const FIRMAMENT_SPIRAL_RADIUS_EXP = 0.58
+export const FIRMAMENT_PATH_R1 = 0.96
+/** Unterlinear, aber nicht `sqrt`: bei 0,5 lag der Bestand aussen und der Kern
+ *  stand leer. */
+export const FIRMAMENT_PATH_RADIUS_EXP = 0.58
+
+/* Der Winkel ist GEWUERFELT, nicht gezaehlt. Ein fester Schritt legte die
+   Knoten auf eine Spirale — jeder sass dort, wo man ihn nach dem vorigen
+   erwartet, und der Reiter zeigte ein Diagramm statt einer Sternkarte. Der
+   Radius waechst weiter monoton mit dem Index: der Fortschritt bleibt nach
+   aussen ablesbar, und der Weg verknotet sich nicht.                          */
+
+/** Auslenkung im PARAMETER der Radiuskurve, nicht im Radius. Unter 0,5, damit
+ *  der Radius monoton bleibt; ohne sie liegen die Knoten auf Ringen. */
+export const FIRMAMENT_SCATTER_T_WOBBLE = 0.34
+/** Weite eines Winkelschritts in Radiant. Der Boden haelt den Weg davor, auf
+ *  der Stelle zu treten, der Deckel davor, quer ueber die Scheibe zu springen —
+ *  das war die verworfene Zickzack-Fassung. 24,1 bis 131,8 Grad. */
+export const FIRMAMENT_SCATTER_STEP_MIN = 0.42
+export const FIRMAMENT_SCATTER_STEP_MAX = 2.3
+/** Normierter Mindestabstand zweier Knoten. Gemessen gegen die ECHTE
+ *  Trefferflaeche (`max(26, bodyR * k * 3.2)`, bei sieben Sternen 32,4 px), nicht
+ *  gegen den Boden 26: bei 0,091 standen zwei Sieben-Sterne-Knoten 29 px
+ *  auseinander und ihre Klickflaechen ueberlappten. Er ist ERZWUNGEN, nicht mehr
+ *  eine Folge der Regelmaessigkeit. */
+export const FIRMAMENT_SCATTER_MIN_SEP = 0.115
+/** Kandidaten je Knoten. Greift keiner, gewinnt der weiteste — und genau dort
+ *  bricht der Boden ein: mit 12 Versuchen fiel er bei 120 Plaetzen auf 19,1 px. */
+export const FIRMAMENT_SCATTER_TRIES = 20
+/** Das Feld, das dem START-Label gehoert: normiertes Rechteck unter der Mitte,
+ *  samt halber Trefferflaeche als Saum. Weder ein Knoten noch eine Bahnsehne
+ *  darf hinein. Ein groesserer Saum wurde gemessen und verworfen — er erzwang
+ *  so viele Ausweichfaelle, dass der Mindestabstand auf 23,2 px fiel. */
+export const FIRMAMENT_START_CLEAR_X = 0.19
+export const FIRMAMENT_START_CLEAR_Y0 = 0.06
+export const FIRMAMENT_START_CLEAR_Y1 = 0.26
+/** Radiale Auslenkung des Kontrollpunkts je Bahnabschnitt. Gerade Sehnen
+ *  zwischen gewuerfelten Knoten lesen sich als Zickzack. Sie steht HIER und
+ *  nicht beim Zeichnen: der Ablehnungspass haelt frei, was gemalt wird. */
+export const FIRMAMENT_ROAD_BOW = 0.1
 /** Bezugsradius aller festen Pixelwerte der Platte: bei `box.r` == 300 ist der
  *  Massstab 1. Darueber wachsen Koerper, Linien und Schrift mit, statt
  *  Stecknadeln zu bleiben — dieselbe Mechanik wie `GALAXY_PLATE_REF_W`. */
@@ -180,8 +205,12 @@ export const FIRMAMENT_MAP_INSET_PX = 30
 /** Gemalter Grundradius eines Knotens plus Zuschlag je Stern der Galaxie. */
 export const FIRMAMENT_NODE_R_BASE = 4.2
 export const FIRMAMENT_NODE_R_PER_STAR = 0.82
-/** Kantenlaenge der Trefferflaeche — nie kleiner, egal wie klein der Koerper. */
+/** Kantenlaenge der Trefferflaeche — nie kleiner, egal wie klein der Koerper.
+ *  Darueber waechst sie mit dem Koerper: `bodyR * k * _HIT_BODY_K`, bei sieben
+ *  Sternen 32,4 px auf Full HD. DAS ist die Zahl, gegen die der Knotenabstand
+ *  steht — nicht der Boden. */
 export const FIRMAMENT_NODE_HIT_MIN = 26
+export const FIRMAMENT_NODE_HIT_BODY_K = 3.2
 /** Ab dieser Knotenzahl faellt die roemische Ziffer unter jedem Knoten weg und
  *  steht nur noch an Auswahl, Hover und den Toren. */
 export const FIRMAMENT_LABEL_MAX_NODES = 22
@@ -240,9 +269,9 @@ export const FIRMAMENT_LANDFALL_MAX_MARKS = 4
    waechst mit dem Zoom; es beschriftet einen Ort auf der Karte, keine Stelle des
    Bildschirms.
 
-   Unter der Mitte ist Platz: `firmamentPointAt(0)` setzt den ersten Knoten
-   senkrecht nach OBEN, und bis rund 0,5 r nach unten liegt weder Knoten noch
-   Strasse.                                                                    */
+   Unter der Mitte ist Platz, und zwar ERZWUNGEN: Platz 0 steht senkrecht nach
+   oben, und `firmamentSpots` haelt das Feld darunter
+   (`FIRMAMENT_START_CLEAR_*`) von Knoten UND Sehnen frei.                     */
 
 /** Abstand der Label-Oberkante unter der Mitte, als Anteil des Bahnradius.
  *  Der Halo des Kerns misst `2 · box.r · UNIVERSE_DISC_HERO_R_RATIO ·

@@ -1,11 +1,19 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildFirmamentPath,
+  firmamentChordHitsStart,
   firmamentFitBox,
-  firmamentPointAt,
+  firmamentInStartField,
+  firmamentRoadCtrl,
+  firmamentSpots,
   type FirmamentInput,
 } from '@/utils/ui/firmamentLayout'
-import { FIRMAMENT_SPIRAL_R0, FIRMAMENT_UNLIT_AHEAD } from '@/config/constants'
+import {
+  FIRMAMENT_PATH_MIN_SPAN,
+  FIRMAMENT_PATH_R0,
+  FIRMAMENT_PLATE_SPRITE_MARGIN,
+  FIRMAMENT_UNLIT_AHEAD,
+} from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { UniverseRunRecord } from '@/types'
 
@@ -69,23 +77,78 @@ function base(
 const ARCHIVE = [rec(1, 1), rec(2, 1), rec(3, 1), rec(4, 2), rec(5, 2)]
 const RUNS = [run(1, 350), run(2, 550)]
 
-describe('firmamentPointAt', () => {
+describe('firmamentSpots — die Streuung', () => {
   it('waechst monoton nach aussen', () => {
-    let last = -1
-    for (let i = 0; i <= 20; i++) {
-      const p = firmamentPointAt(i / 20)
-      expect(p.radius).toBeGreaterThan(last)
-      last = p.radius
+    for (const span of [8, 20, 40]) {
+      let last = -1
+      for (const p of firmamentSpots(span)) {
+        expect(p.radius, `span ${span}`).toBeGreaterThan(last)
+        last = p.radius
+      }
     }
   })
 
-  it('bleibt im Einheitskreis und klemmt ausserhalb 0..1', () => {
-    for (const t of [-1, 0, 0.37, 1, 2]) {
-      const p = firmamentPointAt(t)
-      expect(Math.hypot(p.nx, p.ny)).toBeLessThanOrEqual(1.0000001)
+  it('bleibt im Einheitskreis', () => {
+    for (const span of [8, 20, 40, 120]) {
+      for (const p of firmamentSpots(span)) {
+        expect(Math.hypot(p.nx, p.ny), `span ${span}`).toBeLessThanOrEqual(1.0000001)
+      }
     }
-    expect(firmamentPointAt(-1)).toEqual(firmamentPointAt(0))
-    expect(firmamentPointAt(2)).toEqual(firmamentPointAt(1))
+  })
+
+  /* EINE Streuung fuer alle Universen: der Platz haengt am Index und am
+     Nenner, an nichts sonst. Sonst floete die Karte beim Repaint. */
+  it('liefert bei gleicher Spanne bitgleiche Plaetze', () => {
+    expect(firmamentSpots(23)).toEqual(firmamentSpots(23))
+  })
+
+  /* Die Forderung, wegen der der Umbau stattfand. Bei einem festen
+     Winkelschritt ist die Streuung null — die alte Spirale faellt hier durch.
+     Dieselbe Ablesung, mit der `portalSprite.spec.ts` das Zifferblatt
+     ausschliesst. */
+  it('wuerfelt den Winkelschritt, statt ihn zu zaehlen', () => {
+    for (const span of [12, 20, 40]) {
+      const spots = firmamentSpots(span)
+      const gaps = spots.slice(1).map((p, i) => Math.abs(p.angle - spots[i].angle))
+      const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length
+      const sd = Math.sqrt(gaps.reduce((a, g) => a + (g - mean) ** 2, 0) / gaps.length)
+      expect(sd / mean, `span ${span}`).toBeGreaterThan(0.25)
+    }
+  })
+
+  /* Unter der Mitte steht das START-Label. Gebunden wird der GEMALTE Bogen:
+     gegen die gerade Sehne geprueft blieben 229 Kurvenpunkte in 24 Spannen im
+     Feld stehen, darunter die Alltagsspannen 11 und 19. Eine quadratische
+     Bezier liegt in der Huelle ihrer drei Punkte. */
+  it('haelt das Feld des START-Labels frei — Knoten UND Boegen', () => {
+    for (let span = FIRMAMENT_PATH_MIN_SPAN; span <= 120; span++) {
+      let prev = { nx: 0, ny: 0 }
+      firmamentSpots(span).forEach((p, i) => {
+        expect(firmamentInStartField(p.nx, p.ny), `span ${span} Knoten`).toBe(false)
+        const c = firmamentRoadCtrl(prev.nx, prev.ny, p.nx, p.ny, i)
+        for (const [ax, ay, bx, by] of [
+          [prev.nx, prev.ny, c.x, c.y],
+          [c.x, c.y, p.nx, p.ny],
+          [prev.nx, prev.ny, p.nx, p.ny],
+        ]) {
+          expect(firmamentChordHitsStart(ax, ay, bx, by), `span ${span} Bogen ${i}`).toBe(false)
+        }
+        prev = p
+      })
+    }
+  })
+
+  /* Der Kontrollpunkt liegt weiter aussen als die Sehne — gebunden gegen die
+     Sprite-Kante, sonst wandert ein abgeschnittener Rand durchs Bild. */
+  it('haelt den Kontrollpunkt innerhalb der Sprite-Kante', () => {
+    for (let span = FIRMAMENT_PATH_MIN_SPAN; span <= 120; span++) {
+      let prev = { nx: 0, ny: 0 }
+      firmamentSpots(span).forEach((p, i) => {
+        const c = firmamentRoadCtrl(prev.nx, prev.ny, p.nx, p.ny, i)
+        expect(Math.hypot(c.x, c.y), `span ${span}`).toBeLessThan(FIRMAMENT_PLATE_SPRITE_MARGIN)
+        prev = p
+      })
+    }
   })
 })
 
@@ -129,9 +192,9 @@ describe('buildFirmamentPath — die Bahn eines Universums', () => {
   it('beginnt JEDE Bahn im Kern', () => {
     for (const u of [1, 2, 5]) {
       const first = buildFirmamentPath(base(ARCHIVE, u, 5, 6, RUNS)).nodes[0]
-      expect(first.radius).toBeCloseTo(FIRMAMENT_SPIRAL_R0, 10)
+      expect(first.radius).toBeCloseTo(FIRMAMENT_PATH_R0, 10)
       expect(first.nx).toBeCloseTo(0, 10)
-      expect(first.ny).toBeCloseTo(-FIRMAMENT_SPIRAL_R0, 10)
+      expect(first.ny).toBeCloseTo(-FIRMAMENT_PATH_R0, 10)
     }
   })
 
@@ -222,7 +285,7 @@ describe('buildFirmamentPath — das Tor am Bahnende', () => {
   /* Das Tor traegt KEINE Lage mehr: der Ausgang steht als Portal im schwarzen
      Raum ausserhalb der Scheibe, und wo genau, rechnet `firmamentPortalSpot`
      aus den Buehnenmassen. Diese Datei sagt nur, DASS es eines gibt. */
-  it('nimmt der Bahn keinen Spiralplatz weg', () => {
+  it('nimmt der Bahn keinen Platz weg', () => {
     const withGate = buildFirmamentPath(base(ARCHIVE, 1, 5, 6, RUNS))
     const withoutGate = buildFirmamentPath(base(ARCHIVE, 1, 5, 6, []))
     expect(withGate.departure).not.toBeNull()

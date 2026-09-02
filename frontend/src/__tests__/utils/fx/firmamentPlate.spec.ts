@@ -15,7 +15,7 @@ import {
   FIRMAMENT_WEB_NODES,
   FIRMAMENT_WEB_OUTER,
 } from '@/config/constants'
-import { firmamentPointAt } from '@/utils/ui/firmamentLayout'
+import { firmamentSpots } from '@/utils/ui/firmamentLayout'
 import { hexToRgb } from '@/utils/ui/format'
 import type { FirmamentNode } from '@/utils/ui/firmamentLayout'
 
@@ -96,7 +96,7 @@ const BOX = { cx: PLATE_SIDE / 2, cy: PLATE_SIDE / 2, r: PLATE_R }
 const TINT = '#ff8a34'
 
 function nodeAt(i: number, count: number, state: FirmamentNode['state']): FirmamentNode {
-  const p = firmamentPointAt(count > 1 ? i / (count - 1) : 0)
+  const p = firmamentSpots(count)[i]
   return {
     galaxy: i + 1,
     state,
@@ -304,6 +304,17 @@ describe('Firmament-Platte — die Karte liegt DARUEBER', () => {
      ausserhalb der Scheibe. Auf der Bahn war er ein 22-px-Chip fuer das
      groesste Ereignis, das ein Spielstand kennt — er darf nicht unbemerkt
      zurueckkehren, und die Torfarbe ist der Beleg. */
+  /* Die Knoten liegen gestreut; ein Polygonzug daraus liest sich als Zickzack.
+     Gerade bleibt nur der erste Abschnitt — er benennt den START. */
+  it('zieht die Bahn in Boegen, den ersten Abschnitt gerade', () => {
+    const { ctx, ops } = recordingCtx()
+    paintFirmament(ctx, NODES, PLATE_SIDE, PLATE_SIDE, BOX, TINT)
+    expect(count(ops, 'quadraticCurveTo')).toBeGreaterThan(0)
+    const i0 = ops.findIndex((o) => o.startsWith('moveTo('))
+    expect(ops[i0]).toBe(`moveTo(${BOX.cx},${BOX.cy})`)
+    expect(ops[i0 + 1].startsWith('lineTo(')).toBe(true)
+  })
+
   it('malt kein Tor mehr auf die Bahn', () => {
     const { ctx, ops } = recordingCtx()
     paintFirmament(ctx, NODES, PLATE_SIDE, PLATE_SIDE, BOX, TINT)

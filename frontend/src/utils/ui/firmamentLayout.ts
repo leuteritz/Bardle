@@ -18,10 +18,9 @@
  * nach aussen. Eine Bahn, die ihre Scheibe selbst ausfuellte, saehe mit fuenf
  * Galaxien aus wie eine mit dreissig.
  *
- * Und der Windungsvorrat haengt AM Nenner statt fest zu stehen: der
- * Winkelschritt ist die Groesse, die gleich bleibt. Zwei feste Windungen sind
- * auf fuenf Knoten 180 Grad je Schritt — die Bahn sprang quer ueber die Scheibe
- * und las sich als Zickzack.
+ * Der Winkel ist dabei GEWUERFELT, nicht gezaehlt: ein fester Schritt legte die
+ * Knoten auf eine Spirale, und jeder sass dort, wo man ihn nach dem vorigen
+ * erwartet. Der Radius waechst weiter monoton mit dem Index.
  */
 
 import {
@@ -29,13 +28,21 @@ import {
   FIRMAMENT_NODE_R_BASE,
   FIRMAMENT_NODE_R_PER_STAR,
   FIRMAMENT_PATH_MIN_SPAN,
-  FIRMAMENT_SPIRAL_R0,
-  FIRMAMENT_SPIRAL_R1,
-  FIRMAMENT_SPIRAL_RADIUS_EXP,
-  FIRMAMENT_SPIRAL_STEP_TURNS,
-  FIRMAMENT_SPIRAL_TURNS,
+  FIRMAMENT_PATH_R0,
+  FIRMAMENT_PATH_R1,
+  FIRMAMENT_PATH_RADIUS_EXP,
+  FIRMAMENT_ROAD_BOW,
+  FIRMAMENT_SCATTER_MIN_SEP,
+  FIRMAMENT_SCATTER_STEP_MAX,
+  FIRMAMENT_SCATTER_STEP_MIN,
+  FIRMAMENT_SCATTER_TRIES,
+  FIRMAMENT_SCATTER_T_WOBBLE,
+  FIRMAMENT_START_CLEAR_X,
+  FIRMAMENT_START_CLEAR_Y0,
+  FIRMAMENT_START_CLEAR_Y1,
   FIRMAMENT_UNLIT_AHEAD,
 } from '@/config/constants'
+import { jitter } from '@/utils/fx/universeDisc'
 import { universes } from '@/config/progression/universes'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { UniverseRunRecord } from '@/types'
@@ -121,35 +128,152 @@ export function firmamentFitBox(
   }
 }
 
-/**
- * Der Windungsvorrat einer Bahn mit `span` Plaetzen.
- *
- * Der Winkelschritt ist die feste Groesse, nicht die Windungszahl: zwei
- * Windungen auf fuenf Knoten sind 180 Grad je Schritt, und die Bahn springt
- * quer ueber die Scheibe. Gedeckelt bleibt sie bei `FIRMAMENT_SPIRAL_TURNS` —
- * ab dort ruecken die Knoten wieder zusammen, und die Trefferflaechen-Wand aus
- * `firmamentLayout.spec.ts` gilt unveraendert.
- */
-export function firmamentSpiralTurns(span: number): number {
-  return Math.min(FIRMAMENT_SPIRAL_TURNS, Math.max(1, span - 1) * FIRMAMENT_SPIRAL_STEP_TURNS)
-}
-
-/** Ein Punkt der Bahn bei `t` (0 = Kern, 1 = Rand). */
-export function firmamentPointAt(
-  t: number,
-  turns: number = FIRMAMENT_SPIRAL_TURNS,
-): {
+export interface FirmamentSpot {
   nx: number
   ny: number
   angle: number
   radius: number
-} {
-  const f = Math.min(1, Math.max(0, t))
-  const angle = f * turns * Math.PI * 2 - Math.PI / 2
-  const radius =
-    FIRMAMENT_SPIRAL_R0 +
-    (FIRMAMENT_SPIRAL_R1 - FIRMAMENT_SPIRAL_R0) * Math.pow(f, FIRMAMENT_SPIRAL_RADIUS_EXP)
-  return { nx: Math.cos(angle) * radius, ny: Math.sin(angle) * radius, angle, radius }
+}
+
+/* Kanaele des Hashes — getrennt, damit Radius, Weite und Richtung nicht
+   aneinanderhaengen. Dasselbe Mittel wie in `firmamentPortalSpot`.            */
+const RADIUS_SALT = 3
+const STEP_SALT = 11
+const SIGN_SALT = 23
+const BOW_SALT = 37
+
+/** Radius des `i`-ten Platzes. Die Auslenkung sitzt im PARAMETER und bleibt
+ *  unter dem halben Platzabstand: der Radius ist monoton, Platz 0 liegt exakt
+ *  auf `_R0`. Ohne sie laegen die Knoten auf Ringen. */
+function spotRadius(i: number, span: number): number {
+  if (span <= 1) return FIRMAMENT_PATH_R0
+  const w = i === 0 ? 0 : (jitter(i, RADIUS_SALT) * 2 - 1) * FIRMAMENT_SCATTER_T_WOBBLE
+  const t = Math.min(1, Math.max(0, (i + w) / (span - 1)))
+  return (
+    FIRMAMENT_PATH_R0 +
+    (FIRMAMENT_PATH_R1 - FIRMAMENT_PATH_R0) * Math.pow(t, FIRMAMENT_PATH_RADIUS_EXP)
+  )
+}
+
+/** Das Feld, das dem START-Label gehoert. */
+export function firmamentInStartField(nx: number, ny: number): boolean {
+  return (
+    Math.abs(nx) < FIRMAMENT_START_CLEAR_X &&
+    ny > FIRMAMENT_START_CLEAR_Y0 &&
+    ny < FIRMAMENT_START_CLEAR_Y1
+  )
+}
+
+/** Schneidet die Sehne zwischen zwei Plaetzen das Feld des Labels? Slab-
+ *  Verfahren statt Abtastung — eine Abtastung uebersieht den flachen Schnitt. */
+export function firmamentChordHitsStart(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): boolean {
+  const d = [bx - ax, by - ay]
+  const p = [ax, ay]
+  const lo = [-FIRMAMENT_START_CLEAR_X, FIRMAMENT_START_CLEAR_Y0]
+  const hi = [FIRMAMENT_START_CLEAR_X, FIRMAMENT_START_CLEAR_Y1]
+  let t0 = 0
+  let t1 = 1
+  for (let k = 0; k < 2; k++) {
+    if (Math.abs(d[k]) < 1e-12) {
+      if (p[k] < lo[k] || p[k] > hi[k]) return false
+      continue
+    }
+    const a = (lo[k] - p[k]) / d[k]
+    const b = (hi[k] - p[k]) / d[k]
+    t0 = Math.max(t0, Math.min(a, b))
+    t1 = Math.min(t1, Math.max(a, b))
+    if (t0 > t1) return false
+  }
+  return true
+}
+
+/**
+ * Der Kontrollpunkt eines Bahnabschnitts: die Sehnenmitte, radial ausgelenkt.
+ *
+ * Die Skalierung ist massstabsfrei — die Platte rechnet dieselbe Formel in
+ * Bildschirmkoordinaten um `box.cx/cy`. Sie steht hier, weil der Ablehnungspass
+ * den GEMALTEN Bogen freihalten muss und nicht die gerade Sehne.
+ */
+export function firmamentRoadCtrl(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  i: number,
+): { x: number; y: number } {
+  const bow = 1 + (jitter(i, BOW_SALT) * 2 - 1) * FIRMAMENT_ROAD_BOW
+  return { x: ((ax + bx) / 2) * bow, y: ((ay + by) / 2) * bow }
+}
+
+/**
+ * Die Plaetze einer Bahn mit `span` Knoten — EINE Streuung fuer alle Universen.
+ *
+ * Platz 0 steht senkrecht ueber der Mitte, danach wandert der Winkel in
+ * gewuerfelter Weite und Richtung. Der Mindestabstand ist deshalb ERZWUNGEN und
+ * nicht mehr eine Folge der Regelmaessigkeit: ein Kandidat faellt durch, wenn er
+ * einem gesetzten Knoten zu nahe kommt, im Feld des START-Labels liegt oder
+ * sein BOGEN hindurchlaeuft. Ohne die dritte Bedingung liefen ueber alle Spannen
+ * 571 Bahnzuege quer ueber das Wort; gegen die gerade Sehne gepruaeft blieben
+ * 229 Kurvenpunkte in 24 Spannen uebrig, darunter 11 und 19.
+ */
+export function firmamentSpots(span: number): FirmamentSpot[] {
+  const out: FirmamentSpot[] = []
+  let prev = -Math.PI / 2
+  for (let i = 0; i < span; i++) {
+    const radius = spotRadius(i, span)
+    if (i === 0) {
+      out.push({ nx: 0, ny: -radius, angle: prev, radius })
+      continue
+    }
+
+    let best: FirmamentSpot | null = null
+    let bestGap = -1
+    for (let k = 0; k < FIRMAMENT_SCATTER_TRIES; k++) {
+      const step =
+        FIRMAMENT_SCATTER_STEP_MIN +
+        jitter(i * 2 + 1, STEP_SALT + k) *
+          (FIRMAMENT_SCATTER_STEP_MAX - FIRMAMENT_SCATTER_STEP_MIN)
+      const angle = prev + (jitter(i * 2 + 1, SIGN_SALT + k) < 0.5 ? -step : step)
+      const nx = Math.cos(angle) * radius
+      const ny = Math.sin(angle) * radius
+      if (firmamentInStartField(nx, ny)) continue
+      // Eine quadratische Bezier liegt in der Huelle von Anfang, Kontrollpunkt
+      // und Ende — drei Sehnen genuegen fuer den ganzen Bogen.
+      const a = out[i - 1]
+      const c = firmamentRoadCtrl(a.nx, a.ny, nx, ny, i)
+      if (
+        firmamentChordHitsStart(a.nx, a.ny, c.x, c.y) ||
+        firmamentChordHitsStart(c.x, c.y, nx, ny) ||
+        firmamentChordHitsStart(a.nx, a.ny, nx, ny)
+      ) {
+        continue
+      }
+
+      let gap = Infinity
+      for (const o of out) gap = Math.min(gap, Math.hypot(nx - o.nx, ny - o.ny))
+      if (gap >= FIRMAMENT_SCATTER_MIN_SEP) {
+        best = { nx, ny, angle, radius }
+        break
+      }
+      if (gap > bestGap) {
+        bestGap = gap
+        best = { nx, ny, angle, radius }
+      }
+    }
+
+    if (!best) {
+      const angle = prev + FIRMAMENT_SCATTER_STEP_MIN
+      best = { nx: Math.cos(angle) * radius, ny: Math.sin(angle) * radius, angle, radius }
+    }
+    out.push(best)
+    prev = best.angle
+  }
+  return out
 }
 
 /** Der Boden fuer einen Datensatz ohne Feld. Nach der Migration kann er nicht
@@ -257,12 +381,10 @@ export function buildFirmamentPath(input: FirmamentInput): FirmamentPath {
     }
   }
 
-  const span = spanOf(input)
-  const turns = firmamentSpiralTurns(span)
-  const at = (i: number) => firmamentPointAt(i / (span - 1), turns)
+  const spots = firmamentSpots(spanOf(input))
 
   const nodes = rows.map((row, i) => {
-    const p = at(i)
+    const p = spots[i]
     return {
       ...row,
       nx: p.nx,

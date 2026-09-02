@@ -67,6 +67,7 @@ import {
   FIRMAMENT_LABEL_MAX_NODES,
   FIRMAMENT_MAX_BACKING_PX,
   FIRMAMENT_MAX_DPR,
+  FIRMAMENT_NODE_HIT_BODY_K,
   FIRMAMENT_NODE_HIT_MIN,
   FIRMAMENT_PLATE_REF_R,
   FIRMAMENT_PLATE_SPRITE_MARGIN,
@@ -248,7 +249,10 @@ const marks = computed(() =>
       index: i,
       x: p.x,
       y: p.y,
-      size: Math.max(FIRMAMENT_NODE_HIT_MIN, node.bodyR * (box.value.r / 300) * 3.2),
+      size: Math.max(
+        FIRMAMENT_NODE_HIT_MIN,
+        node.bodyR * (box.value.r / FIRMAMENT_PLATE_REF_R) * FIRMAMENT_NODE_HIT_BODY_K,
+      ),
       picked: props.selection.galaxy === node.galaxy,
       accent:
         node.state === 'unlit' || node.themeIndex < 0
@@ -410,8 +414,7 @@ defineExpose({ paintCount })
  * einen Repaint der ganzen Platte, und den Text gaebe es zweimal. Er liegt in
  * `.fm-layer`, faehrt also mit und waechst ueber `box.r` mit dem Zoom.
  *
- * Unter der Mitte ist Platz: `firmamentPointAt(0)` setzt den ersten Knoten
- * senkrecht nach OBEN.
+ * Unter der Mitte ist Platz: `firmamentSpots` haelt das Feld dort frei.
  */
 const startMark = computed(() => {
   const k = box.value.r / FIRMAMENT_PLATE_REF_R

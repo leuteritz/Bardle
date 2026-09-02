@@ -73,6 +73,7 @@ import {
   FIRMAMENT_UNLIT_COLOR,
 } from '@/config/constants'
 import { hexToRgb } from '@/utils/ui/format'
+import { firmamentRoadCtrl } from '@/utils/ui/firmamentLayout'
 import type { FirmamentFitBox, FirmamentNode } from '@/utils/ui/firmamentLayout'
 
 /** Seed des Sternfelds. FEST, nie eine Zufallszahl — sonst saehe der Grund nach
@@ -426,6 +427,21 @@ function strokeRoad(ctx: CanvasRenderingContext2D, color: string, w: number, k: 
   ctx.stroke()
 }
 
+/** Ein Abschnitt der Bahn — nie gerade; dasselbe Mittel wie `strand()` am Wall.
+ *  Den Kontrollpunkt rechnet `firmamentRoadCtrl`, weil der Ablehnungspass der
+ *  Bahn ihn ebenfalls braucht. Auswaerts bleibt er bei 1,025 r, die Sprite-Kante
+ *  liegt bei 1,10. */
+function bowTo(
+  ctx: CanvasRenderingContext2D,
+  box: FirmamentFitBox,
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  i: number,
+): void {
+  const c = firmamentRoadCtrl(a.x - box.cx, a.y - box.cy, b.x - box.cx, b.y - box.cy, i)
+  ctx.quadraticCurveTo(box.cx + c.x, box.cy + c.y, b.x, b.y)
+}
+
 /** Die Bahn selbst: eine durchgezogene Linie durch alles Befreite, eine
  *  gestrichelte zur laufenden Galaxie, eine gedaempfte ins Unbeleuchtete. */
 function paintRoad(
@@ -444,9 +460,14 @@ function paintRoad(
   if (lastFreed >= 0) {
     ctx.beginPath()
     ctx.moveTo(box.cx, box.cy)
+    // Der erste Abschnitt bleibt gerade: er benennt den START, eine Kurve dort
+    // liefe durch den Kern der Heldenscheibe.
+    let prev = { x: box.cx, y: box.cy }
     for (let i = 0; i <= lastFreed; i++) {
       const p = pt(nodes[i])
-      ctx.lineTo(p.x, p.y)
+      if (i === 0) ctx.lineTo(p.x, p.y)
+      else bowTo(ctx, box, prev, p, i)
+      prev = p
     }
     strokeRoad(ctx, fade(FIRMAMENT_FREED_COLOR, 0.45), 1.6 * k, k)
   }
@@ -461,7 +482,8 @@ function paintRoad(
     ctx.setLineDash([5 * k, 6 * k])
     ctx.beginPath()
     ctx.moveTo(from.x, from.y)
-    ctx.lineTo(to.x, to.y)
+    if (lastFreed < 0) ctx.lineTo(to.x, to.y)
+    else bowTo(ctx, box, from, to, currentIdx)
     strokeRoad(ctx, fade(FIRMAMENT_HERE_COLOR, 0.75), 1.6 * k, k)
     ctx.restore()
   }
@@ -472,11 +494,12 @@ function paintRoad(
     ctx.save()
     ctx.setLineDash([2 * k, 5 * k])
     ctx.beginPath()
-    const head = pt(nodes[tailStart])
+    let head = pt(nodes[tailStart])
     ctx.moveTo(head.x, head.y)
     for (let i = tailStart + 1; i < nodes.length; i++) {
       const p = pt(nodes[i])
-      ctx.lineTo(p.x, p.y)
+      bowTo(ctx, box, head, p, i)
+      head = p
     }
     strokeRoad(ctx, fade(FIRMAMENT_UNLIT_COLOR, 0.3), 1.1 * k, k)
     ctx.restore()

@@ -49,13 +49,21 @@ import {
   UNIVERSE_DISC_SPIN_SEC,
   FIRMAMENT_RIM_SPRITE_MARGIN,
   FIRMAMENT_MAX_DPR,
-  FIRMAMENT_SPIRAL_R1,
-  FIRMAMENT_SPIRAL_STEP_TURNS,
-  FIRMAMENT_SPIRAL_TURNS,
+  GALAXY_STARS_MAX,
+  FIRMAMENT_NODE_HIT_BODY_K,
+  FIRMAMENT_NODE_R_BASE,
+  FIRMAMENT_NODE_R_PER_STAR,
+  FIRMAMENT_PATH_R1,
+  FIRMAMENT_SCATTER_STEP_MAX,
+  FIRMAMENT_SCATTER_STEP_MIN,
+  FIRMAMENT_START_CLEAR_X,
+  FIRMAMENT_START_CLEAR_Y0,
+  FIRMAMENT_START_CLEAR_Y1,
+  FIRMAMENT_START_LABEL_OFFSET,
   FIRMAMENT_WALL_MAX_BACKING_PX,
 } from '@/config/constants'
 import { universes } from '@/config/progression/universes'
-import { firmamentFitBox, firmamentPointAt, firmamentSpiralTurns } from '@/utils/ui/firmamentLayout'
+import { firmamentFitBox, firmamentSpots } from '@/utils/ui/firmamentLayout'
 import { firmamentPortalRingR } from '@/utils/ui/firmamentPortalSpot'
 import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
 
@@ -65,12 +73,10 @@ import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
  * bleibt — wer die Leiste verbreitert oder das Band hoeher macht, nimmt es ihr
  * still weg.
  *
- * Und der Boden ist hier keine Geschmacksfrage: die Bahn waechst mit festem
- * WINKELSCHRITT, bis `FIRMAMENT_SPIRAL_TURNS` sie deckelt. Ab dort stehen die
- * Knoten mit jeder Galaxie enger — faellt ihr Abstand unter
- * `FIRMAMENT_NODE_HIT_MIN`, decken sich die Klickflaechen und die Karte hoert
- * auf zu funktionieren. Diese Spec sagt, bis zu welcher Zahl das OHNE Zoom
- * traegt, und bindet die Zahl an die Konstanten.
+ * Und der Boden ist hier keine Geschmacksfrage: die Knoten liegen GESTREUT,
+ * ihr Mindestabstand ist erzwungen. Faellt er unter `FIRMAMENT_NODE_HIT_MIN`,
+ * decken sich die Klickflaechen und die Karte hoert auf zu funktionieren.
+ * Diese Spec bindet den Boden an den Bahnradius jeder Zielaufloesung.
  */
 
 /** `--bp-gap` von `.rp-wrapper`, beide Seiten. */
@@ -138,12 +144,7 @@ function radiusAt(vw: number, vh: number): number {
 
 /** Der engste Abstand zweier Knoten auf der Bahn, in Pixeln. */
 function minSeparation(count: number, radius: number): number {
-  // MIT dem Windungsvorrat, den eine Bahn dieser Laenge wirklich bekommt — der
-  // ist nicht mehr fest, und mit dem Default gemessen loege die Wand.
-  const turns = firmamentSpiralTurns(count)
-  const pts = Array.from({ length: count }, (_, i) =>
-    firmamentPointAt(count > 1 ? i / (count - 1) : 0, turns),
-  )
+  const pts = firmamentSpots(count)
   let min = Infinity
   for (let i = 0; i < pts.length; i++) {
     for (let j = i + 1; j < pts.length; j++) {
@@ -362,22 +363,44 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
     expect(sep).toBeGreaterThanOrEqual(FIRMAMENT_NODE_HIT_MIN)
   })
 
-  it('nennt die Wand, an der der Zoom gebraucht wird', () => {
-    // Bei welcher Knotenzahl der Abstand unter die Trefferflaeche faellt. Wer
-    // Windungen, Innenradius oder Trefferflaeche aendert, verschiebt sie — und
-    // soll das hier sehen, statt es im Spiel zu entdecken.
+  /* Die 26 sind nur der BODEN der Trefferflaeche. Ein Sieben-Sterne-Knoten
+     traegt 32,4 px, und zwei davon nebeneinander sind der Fall, den der Spieler
+     sieht — gemessen im Browser, als der Abstand bei 29 px lag. Gebunden wird
+     die Spanne, die ein Lauf wirklich erreicht. */
+  it('haelt den Abstand ueber der ECHTEN Trefferflaeche einer vollen Galaxie', () => {
     const r = fullHd().r
-    let wall = 0
+    const hit = Math.max(
+      FIRMAMENT_NODE_HIT_MIN,
+      (FIRMAMENT_NODE_R_BASE + GALAXY_STARS_MAX * FIRMAMENT_NODE_R_PER_STAR) *
+        (r / FIRMAMENT_PLATE_REF_R) *
+        FIRMAMENT_NODE_HIT_BODY_K,
+    )
+    for (let n = FIRMAMENT_PATH_MIN_SPAN; n <= 44; n++) {
+      expect(minSeparation(n, r), `${n} Plaetze`).toBeGreaterThanOrEqual(hit)
+    }
+  })
+
+  it('haelt den Boden ohne Wand — auch bei 120 Knoten', () => {
+    // Die Spirale hatte eine Wand: ab 44 Knoten deckten sich die Klickflaechen.
+    // Bei der Streuung ist der Abstand ERZWUNGEN, nicht mehr eine Folge der
+    // Regelmaessigkeit. Wer den Ablehnungspass ausbaut, sieht es hier.
+    const r = fullHd().r
+    let worst = Infinity
+    let worstAt = 0
     for (let n = 8; n <= 120; n++) {
-      if (minSeparation(n, r) < FIRMAMENT_NODE_HIT_MIN) {
-        wall = n
-        break
+      const sep = minSeparation(n, r)
+      if (sep < worst) {
+        worst = sep
+        worstAt = n
       }
     }
-    expect(wall).toBeGreaterThan(40)
-    // Und der Zoom holt die Wand deutlich weiter hinaus.
-    const zoomed = minSeparation(wall, r * FIRMAMENT_ZOOM_STEPS[FIRMAMENT_ZOOM_STEPS.length - 1])
-    expect(zoomed).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
+    expect(worst, `engster Fall bei ${worstAt} Knoten`).toBeGreaterThanOrEqual(
+      FIRMAMENT_NODE_HIT_MIN,
+    )
+    // Und der Zoom haelt ihn erst recht.
+    expect(
+      minSeparation(worstAt, r * FIRMAMENT_ZOOM_STEPS[FIRMAMENT_ZOOM_STEPS.length - 1]),
+    ).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
   })
 
   it('haelt den innersten Knoten von der Mitte frei', () => {
@@ -385,7 +408,9 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
     // seiner Stelle steht der Kern der Heldenscheibe, und der ist dieselbe
     // Marke: ein Knoten darauf waere nicht mehr von ihm zu trennen.
     const r = fullHd().r
-    expect(firmamentPointAt(0).radius * r).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
+    expect(firmamentSpots(FIRMAMENT_PATH_MIN_SPAN)[0].radius * r).toBeGreaterThan(
+      FIRMAMENT_NODE_HIT_MIN,
+    )
   })
 
   it('laesst das Universum die GANZE Kartenscheibe fuellen', () => {
@@ -405,9 +430,8 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
       expect(reach / r, `${vw}x${vh} zu klein`).toBeGreaterThan(0.85)
       expect(reach / r, `${vw}x${vh} unter dem Wall hervor`).toBeLessThan(0.93)
       // Und jeder Knoten der Bahn liegt darin, nicht nur die innersten.
-      expect(firmamentPointAt(1).radius * r, `${vw}x${vh} aeusserster Knoten`).toBeLessThan(
-        (heroPx(r) / 2) * 1.02,
-      )
+      const outer = Math.max(...firmamentSpots(40).map((p) => p.radius))
+      expect(outer * r, `${vw}x${vh} aeusserster Knoten`).toBeLessThan((heroPx(r) / 2) * 1.02)
     }
   })
 
@@ -463,22 +487,25 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
    * Nenner, also nie einen engeren Abstand.
    */
   /*
-   * Der Winkelschritt ist die FESTE Groesse, nicht die Windungszahl. Fest
-   * gesetzt waren zwei Windungen auf fuenf Knoten 180 Grad je Schritt: die Bahn
-   * sprang quer ueber die Scheibe und las sich als Zickzack. Gedeckelt bleibt
-   * sie trotzdem — jenseits davon ruecken die Knoten wieder zusammen, und die
-   * Wand oben gilt.
+   * Der Winkelschritt ist gewuerfelt, aber nicht frei: der Boden haelt den Weg
+   * davor, auf der Stelle zu treten, der Deckel davor, quer ueber die Scheibe
+   * zu springen — das war die verworfene Zickzack-Fassung.
    */
-  it('haelt den Winkelschritt konstant, bis der Deckel greift', () => {
-    const stepDeg = (span: number) => {
-      const turns = firmamentSpiralTurns(span)
-      return ((turns * 360) / (span - 1)) | 0
-    }
-    expect(stepDeg(6)).toBe(FIRMAMENT_SPIRAL_STEP_TURNS * 360)
-    expect(stepDeg(20)).toBe(FIRMAMENT_SPIRAL_STEP_TURNS * 360)
-    // Ab dem Deckel wird er kleiner, nie groesser.
-    expect(stepDeg(80)).toBeLessThan(FIRMAMENT_SPIRAL_STEP_TURNS * 360)
-    expect(firmamentSpiralTurns(200)).toBe(FIRMAMENT_SPIRAL_TURNS)
+  it('haelt den Winkelschritt zwischen Boden und Deckel', () => {
+    expect(FIRMAMENT_SCATTER_STEP_MIN).toBeGreaterThan(0)
+    expect(FIRMAMENT_SCATTER_STEP_MIN).toBeLessThan(FIRMAMENT_SCATTER_STEP_MAX)
+    // Kein voller Umlauf in einem Schritt, und keine halbe Kehrtwende.
+    expect(FIRMAMENT_SCATTER_STEP_MAX).toBeLessThan(Math.PI * 2)
+    expect(FIRMAMENT_SCATTER_STEP_MAX).toBeGreaterThan(Math.PI / 2)
+  })
+
+  /* Das Feld, das dem START-Label gehoert, muss das Label auch WIRKLICH
+     enthalten — sonst haelt der Ablehnungspass etwas frei, wo nichts steht. */
+  it('legt das freie Feld um das START-Label', () => {
+    expect(FIRMAMENT_START_CLEAR_Y0).toBeLessThan(FIRMAMENT_START_LABEL_OFFSET)
+    expect(FIRMAMENT_START_CLEAR_Y1).toBeGreaterThan(FIRMAMENT_START_LABEL_OFFSET)
+    // Breit genug fuer das Wort samt halber Trefferflaeche.
+    expect(FIRMAMENT_START_CLEAR_X * fullHd().r).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
   })
 
   it('haelt die Trefferflaeche auf jeder Bahnlaenge', () => {
@@ -544,14 +571,14 @@ describe('Firmament — die Bahn dreht mit der Wolke', () => {
   })
 
   it('nennt die Wand, wegen der beim Ueberfahren alles anhaelt', () => {
-    // Der aeusserste Knoten sitzt auf `FIRMAMENT_SPIRAL_R1`. Verlaesst er seine
+    // Der aeusserste Knoten sitzt auf `FIRMAMENT_PATH_R1`. Verlaesst er seine
     // halbe Trefferflaeche in wenigen Sekunden, reisst die Hover-Karte mitten
     // im Lesen ab — deshalb pausiert `:has(.fm-node:hover)` Bahn, Wolke und
     // Wall gemeinsam. Wer die Pause herausnimmt, bricht das hier.
     for (const [vw, vh] of SCREENS) {
       const r = radiusAt(vw, vh)
       const omega = (Math.PI * 2) / universeDiscSpinSec(heroPx(r))
-      const edgePxPerSec = omega * r * FIRMAMENT_SPIRAL_R1
+      const edgePxPerSec = omega * r * FIRMAMENT_PATH_R1
       const secondsToLeave = FIRMAMENT_NODE_HIT_MIN / 2 / edgePxPerSec
       expect(secondsToLeave, `${vw}x${vh}`).toBeLessThan(4)
       // Und sie kriecht auch nicht: unter 0,5 px/s saehe niemand die Drehung.
