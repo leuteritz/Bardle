@@ -9,14 +9,28 @@
  * `tooltipLanguage.spec.ts`, und das ist sein Zweck.
  */
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
-import { tierOf } from '@/stores/world/galaxyStore'
+import { tierOf, useGalaxyStore } from '@/stores/world/galaxyStore'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { formatCompactDuration, toRoman } from '@/utils/ui/format'
-import { MS_PER_SECOND } from '@/config/constants'
+import { firmamentStarSeats } from '@/utils/ui/firmamentManifest'
+import { getChampionIconPath } from '@/utils/game/champions'
+import {
+  FIRMAMENT_FREED_COLOR,
+  FIRMAMENT_LOST_COLOR,
+  FIRMAMENT_TIP_SEAT_COLS,
+  FIRMAMENT_TIP_SEAT_EM,
+  FIRMAMENT_TIP_SEAT_GAP_EM,
+  FIRMAMENT_TIP_SEAT_MAX,
+  MS_PER_SECOND,
+  STAR_MANIFEST_ART_SIZE,
+} from '@/config/constants'
 import type { FirmamentNode } from '@/utils/ui/firmamentLayout'
 
 const props = defineProps<{ node: FirmamentNode }>()
+
+const galaxyStore = useGalaxyStore()
 
 const accent = computed(() =>
   props.node.themeIndex >= 0 ? `rgb(${minimapAccentForTheme(props.node.themeIndex)})` : '#8a7a52',
@@ -44,10 +58,38 @@ const headline = computed(() => {
   return `${n.rescued} rescued${n.lost > 0 ? ` · ${n.lost} lost` : ''}`
 })
 
+/** Wer geflogen ist, in FLUGREIHENFOLGE — der Sternbogen am Knoten gruppiert
+ *  (gold, dann rot), die Reihe erzaehlt die Chronologie des Laufs.
+ *  Der `freed`-Knoten traegt sein Archiv am Record; die LAUFENDE Galaxie hat
+ *  noch keins, ihre Sitze stehen live im Store. */
+const seats = computed(() =>
+  props.node.state === 'current'
+    ? firmamentStarSeats(
+        galaxyStore.attemptResults,
+        galaxyStore.starManifests,
+        FIRMAMENT_TIP_SEAT_MAX,
+      )
+    : firmamentStarSeats(
+        props.node.record?.attemptResults,
+        props.node.record?.starManifests,
+        FIRMAMENT_TIP_SEAT_MAX,
+      ),
+)
+
+const seatArt = (champion: string) => getChampionIconPath(champion, STAR_MANIFEST_ART_SIZE)
+
 /** Chronikstempel — als Datum gelesen, nie gegen eine Frist geprueft. */
 const day = computed(() =>
   props.node.record ? new Date(props.node.record.completedAt).toLocaleDateString() : null,
 )
+
+// Masse der Reihe: die Breite deckelt sie auf genau eine Galaxie je Zeile.
+const seatSize = `${FIRMAMENT_TIP_SEAT_EM}em`
+const seatGap = `${FIRMAMENT_TIP_SEAT_GAP_EM}em`
+const seatRowW = `${(
+  FIRMAMENT_TIP_SEAT_COLS * FIRMAMENT_TIP_SEAT_EM +
+  (FIRMAMENT_TIP_SEAT_COLS - 1) * FIRMAMENT_TIP_SEAT_GAP_EM
+).toFixed(2)}em`
 </script>
 
 <template>
@@ -58,6 +100,23 @@ const day = computed(() =>
     </header>
 
     <div class="tip-effect fgt-line">{{ headline }}</div>
+
+    <!-- Wer, nicht wie viele: die Zahl steht darueber, hier stehen die
+         Gesichter. Kein Name und kein Knopf — die Karte ist
+         `pointer-events: none`, und Namen traegt die Galaxie in Voyages. -->
+    <ul v-if="seats.seats.length" class="fgt-seats">
+      <li
+        v-for="(seat, i) in seats.seats"
+        :key="i"
+        class="fgt-seat"
+        :class="{ 'fgt-seat--lost': seat.lost }"
+        :style="{ '--fgt-ink': seat.lost ? FIRMAMENT_LOST_COLOR : FIRMAMENT_FREED_COLOR }"
+      >
+        <img v-if="seat.champion" :src="seatArt(seat.champion)" :alt="seat.champion" />
+        <Icon v-else icon="lucide:lock" width="16" height="16" aria-hidden="true" />
+      </li>
+    </ul>
+    <div v-if="seats.hidden > 0" class="tip-hint fgt-more">+{{ seats.hidden }} more</div>
 
     <div class="tip-read tip-read--lg">
       <span class="tip-read-cell">
@@ -105,6 +164,49 @@ const day = computed(() =>
 
 .fgt-line {
   text-transform: none;
+}
+
+.fgt-seats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: v-bind(seatGap);
+  max-width: v-bind(seatRowW);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fgt-seat {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: v-bind(seatSize);
+  height: v-bind(seatSize);
+  border: 1px solid color-mix(in srgb, var(--fgt-ink) 55%, var(--rpg-wood-inner));
+  border-radius: 4px;
+  background: var(--rpg-bg-icon);
+  overflow: hidden;
+  color: rgba(232, 220, 192, 0.5);
+}
+
+.fgt-seat img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Statischer Zustand, keine laufende Animation — dieselbe Behandlung wie der
+   verschluckte Champion im Sternmanifest. */
+.fgt-seat--lost img {
+  filter: grayscale(70%);
+  opacity: 0.62;
+}
+
+.fgt-more {
+  margin-top: -0.36em;
+  border-top: none;
+  padding-top: 0;
 }
 
 .fgt-foot {

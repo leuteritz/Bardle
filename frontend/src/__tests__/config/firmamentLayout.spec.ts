@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
   BOTTOM_BAR_SIDE_W,
+  CHAMPION_ART_MD_MAX_EDGE,
+  CHAMPION_ART_SM_MAX_EDGE,
   FIRMAMENT_CREST_BAND_H,
   FIRMAMENT_CREST_ID_W,
   FIRMAMENT_MAP_INSET_PX,
@@ -25,8 +27,13 @@ import {
   FIRMAMENT_RAIL_ZONE_W,
   FIRMAMENT_STAGE_MIN_H,
   FIRMAMENT_STAGE_MIN_W,
+  FIRMAMENT_TIP_SEAT_COLS,
+  FIRMAMENT_TIP_SEAT_EM,
+  FIRMAMENT_TIP_SEAT_GAP_EM,
+  FIRMAMENT_TIP_SEAT_MAX,
   FIRMAMENT_UNLIT_AHEAD,
   FIRMAMENT_ZOOM_STEPS,
+  STAR_MANIFEST_ART_SIZE,
   UNIVERSE_RAIL_COMPACT_MAX_VH,
   UNIVERSE_RAIL_COMPACT_STAGE_H,
   UNIVERSE_RAIL_LIST_PAD,
@@ -62,6 +69,7 @@ import {
   FIRMAMENT_START_LABEL_OFFSET,
   FIRMAMENT_WALL_MAX_BACKING_PX,
 } from '@/config/constants'
+import { championArtSizeFor } from '@/utils/game/champions'
 import { universes } from '@/config/progression/universes'
 import { firmamentFitBox, firmamentSpots } from '@/utils/ui/firmamentLayout'
 import { firmamentPortalRingR } from '@/utils/ui/firmamentPortalSpot'
@@ -742,5 +750,59 @@ describe('Firmament — das Abflugportal', () => {
     const style = src.slice(src.indexOf('<style'))
     expect(style.includes('.fm-stage:has')).toBe(false)
     expect(style.includes('.fm-portal.is-awake')).toBe(true)
+  })
+})
+
+/*
+ * Die Portraitreihe der Knotenkarte.
+ *
+ * Sie ist der einzige Block der Karte, dessen Breite am INHALT haengt: sieben
+ * Gesichter nebeneinander sind eine volle Galaxie. Passt die Zeile nicht mehr
+ * in die Karte, bricht sie still um und die Reihe steht drei Zeilen hoch ueber
+ * einer Bahn, die sich weiterdreht.
+ *
+ * Die zweite Zusicherung ist die BILDSCHAERFE: die Kante entscheidet ueber die
+ * Aufloesungsvariante, und sie ist so gewaehlt, dass sie im selben Band liegt
+ * wie das Sternmanifest im Voyages-Atlas — dieselben Gesichter, dieselbe Datei,
+ * ein Cache-Treffer statt eines zweiten Downloads.
+ */
+describe('Firmament — die Portraitreihe der Knotenkarte', () => {
+  const TIP = readFileSync(resolve(__dirname, '../../components/ui/RpgBadgeTooltip.vue'), 'utf8')
+  const THEME = readFileSync(resolve(__dirname, '../../assets/rpg-theme.css'), 'utf8')
+  const CARD = readFileSync(
+    resolve(__dirname, '../../components/bardProfil/firmament/FirmamentGalaxyTip.vue'),
+    'utf8',
+  )
+
+  /** `max-width: min(26.4em, …)` an `.tip` — die Wand, gegen die gerechnet wird. */
+  const cardMaxEm = Number(/max-width:\s*min\(([\d.]+)em/.exec(TIP)![1])
+  /** Die Obergrenze der EINEN Schriftskala: `--tip-u: clamp(12px, 0.63vw, 16px)`. */
+  const tipUMaxPx = Number(/--tip-u:\s*clamp\([^,]+,[^,]+,\s*([\d.]+)px/.exec(THEME)![1])
+  /** Das Polster von `.fgt`, beide Seiten. */
+  const padEm = 2 * Number(/\.fgt \{[^}]*padding: 0 ([\d.]+)em/.exec(CARD)![1])
+
+  const rowEm =
+    FIRMAMENT_TIP_SEAT_COLS * FIRMAMENT_TIP_SEAT_EM +
+    (FIRMAMENT_TIP_SEAT_COLS - 1) * FIRMAMENT_TIP_SEAT_GAP_EM
+
+  it('eine volle Galaxie steht in EINER Zeile', () => {
+    expect(rowEm + padEm).toBeLessThanOrEqual(cardMaxEm)
+    // Der Deckel sind ganze Zeilen — eine halbe letzte Reihe liest sich als
+    // Fehler statt als Deckel.
+    expect(FIRMAMENT_TIP_SEAT_MAX % FIRMAMENT_TIP_SEAT_COLS).toBe(0)
+  })
+
+  it('die Portraitkante liegt im Band der gewaehlten Kunststufe', () => {
+    // Gemessen wird die GROESSTE Anzeige: die clamp-Obergrenze von `--tip-u`.
+    const edgePx = FIRMAMENT_TIP_SEAT_EM * tipUMaxPx
+    expect(championArtSizeFor(edgePx)).toBe(STAR_MANIFEST_ART_SIZE)
+    expect(edgePx).toBeGreaterThan(CHAMPION_ART_SM_MAX_EDGE)
+    expect(edgePx).toBeLessThanOrEqual(CHAMPION_ART_MD_MAX_EDGE)
+  })
+
+  it('die Karte laedt die Gesichter auf genau dieser Stufe', () => {
+    expect(CARD).toContain('getChampionIconPath(champion, STAR_MANIFEST_ART_SIZE)')
+    // Bardle hat keine Pixel-Art — eine „Schaerfe"-Regel waere der Rueckfall.
+    expect(CARD).not.toMatch(/image-rendering/)
   })
 })

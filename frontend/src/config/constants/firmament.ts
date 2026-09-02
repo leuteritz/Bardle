@@ -8,6 +8,8 @@
  * `__tests__/config/firmamentLayout.spec.ts` bindet den Boden.
  */
 
+import { GALAXY_STARS_MAX } from '@/config/constants/progression'
+
 // ── Zonen ───────────────────────────────────────────────────────────────────
 /**
  * Aussenhoehe des Kopfbands. Haengt per `v-bind` am Element, nicht nur im CSS.
@@ -256,6 +258,18 @@ export const FIRMAMENT_LANDFALL_ORBIT = 2.5
 export const FIRMAMENT_LANDFALL_R = 2.1
 /** Mehr Orte als das zeigt kein Knoten — darueber sagt die Hover-Karte die Zahl. */
 export const FIRMAMENT_LANDFALL_MAX_MARKS = 4
+
+// ── Die Portraitreihe der Knotenkarte ───────────────────────────────────────
+/** Eine volle Galaxie steht in EINER Zeile — mehr Sterne gibt es nicht. */
+export const FIRMAMENT_TIP_SEAT_COLS = GALAXY_STARS_MAX
+/** Portraitkante in `em` gegen `--tip-u`: 28,5 px auf Full HD, 37,8 px ab 2K.
+ *  Damit im Band 35-110 und auf derselben Kunststufe wie das Sternmanifest im
+ *  Voyages-Atlas (`STAR_MANIFEST_ART_SIZE`) — ein Cache-Treffer statt eines
+ *  zweiten Downloads derselben Gesichter. */
+export const FIRMAMENT_TIP_SEAT_EM = 2.36
+export const FIRMAMENT_TIP_SEAT_GAP_EM = 0.33
+/** Zwei volle Zeilen; darueber sagt die Karte die Zahl, wie bei den Rauten. */
+export const FIRMAMENT_TIP_SEAT_MAX = 2 * FIRMAMENT_TIP_SEAT_COLS
 
 // ── Der Startpunkt ──────────────────────────────────────────────────────────
 /* Die Bahn setzt in der Mitte an — `paintRoad` zieht ihre erste Linie von
