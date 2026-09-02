@@ -3,6 +3,7 @@ import {
   durationSegments,
   formatMinuteClock,
   formatPercentValue,
+  shiftHue,
   sunVitalStage,
 } from '@/utils/ui/format'
 import { HP_HEALTHY_PERCENT, HP_CRIT_PERCENT } from '@/config/constants'
@@ -155,5 +156,23 @@ describe('sunVitalStage', () => {
   it('stays in the outer bands past the ends of the scale', () => {
     expect(sunVitalStage(140)).toBe('green')
     expect(sunVitalStage(-20)).toBe('red')
+  })
+})
+
+describe('shiftHue', () => {
+  it('leaves the colour alone at 0 and 360 degrees', () => {
+    expect(shiftHue('#4fa85e', 0)).toBe('#4fa85e')
+    expect(shiftHue('#4fa85e', 360)).toBe('#4fa85e')
+    expect(shiftHue('#4fa85e', -360)).toBe('#4fa85e')
+  })
+
+  it('walks the primaries around the wheel', () => {
+    expect(shiftHue('#ff0000', 120)).toBe('#00ff00')
+    expect(shiftHue('#ff0000', 240)).toBe('#0000ff')
+    expect(shiftHue('#00ff00', -120)).toBe('#ff0000')
+  })
+
+  it('keeps greys grey', () => {
+    expect(shiftHue('#808080', 90)).toBe('#808080')
   })
 })

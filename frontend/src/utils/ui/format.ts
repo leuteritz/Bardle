@@ -262,3 +262,43 @@ export function hexToRgba(hex: string, alpha: number): string {
 export function hexToRgbTriple(hex: string): string {
   return hexToRgb(hex).join(', ')
 }
+
+function rgbToHsl([r, g, b]: [number, number, number]): [number, number, number] {
+  const R = r / 255
+  const G = g / 255
+  const B = b / 255
+  const max = Math.max(R, G, B)
+  const min = Math.min(R, G, B)
+  const l = (max + min) / 2
+  const d = max - min
+  if (d === 0) return [0, 0, l]
+  const sat = d / (1 - Math.abs(2 * l - 1))
+  let h: number
+  if (max === R) h = ((G - B) / d) % 6
+  else if (max === G) h = (B - R) / d + 2
+  else h = (R - G) / d + 4
+  return [((h * 60 + 360) % 360), sat, l]
+}
+
+function hslToRgb([h, s, l]: [number, number, number]): [number, number, number] {
+  const c = (1 - Math.abs(2 * l - 1)) * s
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
+  const m = l - c / 2
+  const sector = Math.floor(h / 60) % 6
+  const [R, G, B] = [
+    [c, x, 0],
+    [x, c, 0],
+    [0, c, x],
+    [0, x, c],
+    [x, 0, c],
+    [c, 0, x],
+  ][sector]
+  return [R, G, B].map((v) => Math.round((v + m) * 255)) as [number, number, number]
+}
+
+/** Den Farbton um `deg` drehen, Saettigung und Helligkeit bleiben. */
+export function shiftHue(hex: string, deg: number): string {
+  const [h, s, l] = rgbToHsl(hexToRgb(hex))
+  const rgb = hslToRgb([(((h + deg) % 360) + 360) % 360, s, l])
+  return '#' + rgb.map((c) => c.toString(16).padStart(2, '0')).join('')
+}

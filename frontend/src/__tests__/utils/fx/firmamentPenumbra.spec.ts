@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { paintFirmamentGround } from '@/utils/fx/firmamentPlate'
+import { penumbraFlowDeg } from '@/utils/fx/firmamentPenumbra'
 import {
   FIRMAMENT_GATE_COLOR,
   FIRMAMENT_PENUMBRA_ALPHA_MAX,
@@ -10,7 +11,9 @@ import {
   FIRMAMENT_PENUMBRA_DAMP_OUT,
   FIRMAMENT_PENUMBRA_FLOW_DEG,
   FIRMAMENT_PENUMBRA_GROUND,
+  FIRMAMENT_PENUMBRA_INK_LUMA,
   FIRMAMENT_PENUMBRA_MOTE_ALPHA,
+  FIRMAMENT_PENUMBRA_MOTE_LUMA,
   FIRMAMENT_PENUMBRA_MOTE_RATIO_MAX,
   FIRMAMENT_PENUMBRA_MOTES_MAX,
   FIRMAMENT_PENUMBRA_SEED,
@@ -18,14 +21,15 @@ import {
   FIRMAMENT_PENUMBRA_WAVES,
   FIRMAMENT_PLATE_SPRITE_MARGIN,
 } from '@/config/constants'
+import { universes } from '@/config/progression/universes'
 import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
 import { hexToRgb } from '@/utils/ui/format'
 
 /**
  * Der Grund des Firmaments ist die Penumbra: Stroeme in EINER Richtung, hinter
  * der Scheibe hindurch, leise genug fuer die Portalschrift, ohne Sterne und ohne
- * Ring. jsdom rastert nicht — aufgezeichnet werden ZEICHENBEFEHLE, wie in
- * `firmamentPlate.spec.ts`.
+ * Ring. Ton und Richtung folgen dem gezeigten Universum. jsdom rastert nicht —
+ * aufgezeichnet werden ZEICHENBEFEHLE, wie in `firmamentPlate.spec.ts`.
  */
 function recordingCtx(): { ctx: CanvasRenderingContext2D; ops: string[] } {
   const ops: string[] = []
@@ -75,13 +79,16 @@ function recordingCtx(): { ctx: CanvasRenderingContext2D; ops: string[] } {
 const W = 1002
 const H = 690
 const FIT = firmamentFitBox(W, H)
+const TINT_I = universes[0].tint
 
 const count = (ops: string[], name: string) => ops.filter((o) => o.startsWith(`${name}(`)).length
 const args = (op: string) => op.slice(op.indexOf('(') + 1, -1).split(',').map(Number)
-const alphaOf = (style: string) => {
-  const m = /rgba\([^)]*,\s*([\d.]+)\)/.exec(style)
-  return m ? Number(m[1]) : 1
+const rgbaOf = (style: string): [number, number, number, number] => {
+  const m = /rgba\((\d+), (\d+), (\d+), ([\d.]+)\)/.exec(style)
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])] : [0, 0, 0, 1]
 }
+const alphaOf = (style: string) => rgbaOf(style)[3]
+const lumaOf = ([r, g, b]: number[]) => 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 /** Jede Polyline: `moveTo` beginnt, `lineTo` haengt an. */
 function polylines(ops: string[]): { x: number; y: number }[][] {
@@ -118,11 +125,35 @@ const angleDiff = (a: number, b: number) => {
   while (d < -180) d += 360
   return d
 }
+/** Orientierung ohne Vorzeichen: ±180° sehen gleich aus. */
+const orientDiff = (a: number, b: number) => {
+  const d = Math.abs(angleDiff(a, b))
+  return Math.min(d, 180 - d)
+}
 
-function paint(w = W, h = H, seed = FIRMAMENT_PENUMBRA_SEED): string[] {
+function paint(
+  w = W,
+  h = H,
+  seed = FIRMAMENT_PENUMBRA_SEED,
+  universe = 1,
+  tint = TINT_I,
+): string[] {
   const { ctx, ops } = recordingCtx()
-  paintFirmamentGround(ctx, w, h, seed)
+  paintFirmamentGround(ctx, w, h, seed, universe, tint)
   return ops
+}
+
+function directionHolds(ops: string[], flowDeg: number) {
+  const segs = segments(ops)
+  const sumA = FIRMAMENT_PENUMBRA_WAVES.reduce((s, w) => s + w[1], 0)
+  const reach = deg(Math.atan(sumA)) + 2
+  const diffs = segs.map((s) => angleDiff(deg(Math.atan2(s.dy, s.dx)), flowDeg))
+  const within = diffs.filter((d) => Math.abs(d) <= reach).length / diffs.length
+  expect(within).toBeGreaterThanOrEqual(0.95)
+  const mean = diffs.reduce((a, b) => a + b, 0) / diffs.length
+  expect(Math.abs(mean)).toBeLessThan(8)
+  const bent = diffs.filter((d) => Math.abs(d) > 5).length / diffs.length
+  expect(bent).toBeGreaterThanOrEqual(0.1)
 }
 
 describe('Penumbra — deckt und stroemt', () => {
@@ -161,43 +192,87 @@ describe('Penumbra — deckt und stroemt', () => {
   })
 
   it('folgt EINER Richtung, aber nicht als Gerade', () => {
-    const segs = segments(paint())
-    const sumA = FIRMAMENT_PENUMBRA_WAVES.reduce((s, w) => s + w[1], 0)
-    const reach = deg(Math.atan(sumA)) + 2
-    const diffs = segs.map((s) => angleDiff(deg(Math.atan2(s.dy, s.dx)), FIRMAMENT_PENUMBRA_FLOW_DEG))
-    const within = diffs.filter((d) => Math.abs(d) <= reach).length / diffs.length
-    expect(within).toBeGreaterThanOrEqual(0.95)
-    const mean = diffs.reduce((a, b) => a + b, 0) / diffs.length
-    expect(Math.abs(mean)).toBeLessThan(8)
-    const bent = diffs.filter((d) => Math.abs(d) > 5).length / diffs.length
-    expect(bent).toBeGreaterThanOrEqual(0.1)
+    directionHolds(paint(), penumbraFlowDeg(1))
+    directionHolds(paint(W, H, FIRMAMENT_PENUMBRA_SEED, 6, universes[5].tint), penumbraFlowDeg(6))
   })
 
   it('jedes Band beginnt und endet ausserhalb der Buehne', () => {
     const outside = (p: { x: number; y: number }) => p.x < 0 || p.x > W || p.y < 0 || p.y > H
-    for (const line of polylines(paint())) {
-      expect(line.length).toBeGreaterThan(10)
-      expect(outside(line[0])).toBe(true)
-      expect(outside(line[line.length - 1])).toBe(true)
+    for (const u of [1, 3, 8]) {
+      for (const line of polylines(paint(W, H, FIRMAMENT_PENUMBRA_SEED, u, universes[u - 1].tint))) {
+        expect(line.length).toBeGreaterThan(10)
+        expect(outside(line[0])).toBe(true)
+        expect(outside(line[line.length - 1])).toBe(true)
+      }
     }
+  })
+})
+
+describe('Penumbra — je Universum', () => {
+  it('Universum I traegt die Basis, alle zehn Orientierungen liegen auseinander', () => {
+    expect(penumbraFlowDeg(1)).toBe(FIRMAMENT_PENUMBRA_FLOW_DEG)
+    const degs = universes.map((u) => penumbraFlowDeg(u.id))
+    for (const d of degs) {
+      expect(d).toBeGreaterThan(-180)
+      expect(d).toBeLessThanOrEqual(180)
+    }
+    for (let i = 0; i < degs.length; i++)
+      for (let j = i + 1; j < degs.length; j++) expect(orientDiff(degs[i], degs[j])).toBeGreaterThanOrEqual(8)
+  })
+
+  it('die Tinte ist der Ton, auf feste Luminanz normiert', () => {
+    for (const u of universes) {
+      const ops = paint(W, H, FIRMAMENT_PENUMBRA_SEED, u.id, u.tint)
+      const strokes = ops.filter((o) => o.startsWith('strokeStyle='))
+      expect(strokes.length).toBeGreaterThan(0)
+      for (const s of strokes) {
+        const y = lumaOf(rgbaOf(s))
+        expect(y).toBeGreaterThanOrEqual(FIRMAMENT_PENUMBRA_INK_LUMA * 0.8)
+        expect(y).toBeLessThanOrEqual(FIRMAMENT_PENUMBRA_INK_LUMA * 1.05)
+      }
+      const motes = ops.filter((o) => o.startsWith('fillStyle=rgba'))
+      for (const m of motes) {
+        const y = lumaOf(rgbaOf(m))
+        expect(y).toBeGreaterThan(FIRMAMENT_PENUMBRA_INK_LUMA)
+        expect(y).toBeLessThanOrEqual(FIRMAMENT_PENUMBRA_MOTE_LUMA * 1.05)
+      }
+      // Der Ton kommt an: der staerkste Kanal des Tons bleibt der staerkste der Tinte.
+      const tint = hexToRgb(u.tint)
+      const lead = tint.indexOf(Math.max(...tint))
+      const cold = rgbaOf(strokes[strokes.length - 1]).slice(0, 3)
+      const leads = strokes.filter((s) => {
+        const c = rgbaOf(s).slice(0, 3)
+        return c.indexOf(Math.max(...c)) === lead
+      })
+      expect(leads.length).toBeGreaterThan(0)
+      expect(cold.length).toBe(3)
+    }
+  })
+
+  it('zwei Universen zeigen zwei Raeume', () => {
+    expect(paint(W, H, FIRMAMENT_PENUMBRA_SEED, 2, universes[1].tint)).not.toEqual(paint())
   })
 })
 
 describe('Penumbra — leise Tinte', () => {
   it('kein Strich ueber der Decke, keine Mote ueber ihrer', () => {
-    const ops = paint()
-    const strokes = ops.filter((o) => o.startsWith('strokeStyle='))
-    expect(strokes.length).toBeGreaterThan(0)
-    for (const s of strokes) expect(alphaOf(s)).toBeLessThanOrEqual(FIRMAMENT_PENUMBRA_ALPHA_MAX)
-    const fills = ops.filter((o) => o.startsWith('fillStyle=rgba'))
-    for (const f of fills) expect(alphaOf(f)).toBeLessThanOrEqual(FIRMAMENT_PENUMBRA_MOTE_ALPHA)
+    for (const u of universes) {
+      const ops = paint(W, H, FIRMAMENT_PENUMBRA_SEED, u.id, u.tint)
+      const strokes = ops.filter((o) => o.startsWith('strokeStyle='))
+      expect(strokes.length).toBeGreaterThan(0)
+      for (const s of strokes) expect(alphaOf(s)).toBeLessThanOrEqual(FIRMAMENT_PENUMBRA_ALPHA_MAX)
+      const fills = ops.filter((o) => o.startsWith('fillStyle=rgba'))
+      for (const f of fills) expect(alphaOf(f)).toBeLessThanOrEqual(FIRMAMENT_PENUMBRA_MOTE_ALPHA)
+    }
   })
 
   it('traegt keine Farbe mit Bedeutung', () => {
-    const ops = paint().join('\n')
-    expect(ops.includes('232, 192, 64')).toBe(false)
-    expect(ops.includes('104, 192, 168')).toBe(false)
-    expect(ops.includes(hexToRgb(FIRMAMENT_GATE_COLOR).join(', '))).toBe(false)
+    for (const u of universes) {
+      const ops = paint(W, H, FIRMAMENT_PENUMBRA_SEED, u.id, u.tint).join('\n')
+      expect(ops.includes('232, 192, 64')).toBe(false)
+      expect(ops.includes('104, 192, 168')).toBe(false)
+      expect(ops.includes(hexToRgb(FIRMAMENT_GATE_COLOR).join(', '))).toBe(false)
+    }
   })
 
   it('der Auslauf zur Platte laeuft auf null aus', () => {
@@ -260,5 +335,6 @@ describe('Penumbra — Konstanten', () => {
     expect(FIRMAMENT_PENUMBRA_DAMP_OUT).toBeGreaterThan(FIRMAMENT_PENUMBRA_DAMP_IN)
     expect(FIRMAMENT_PENUMBRA_ALPHA_MAX).toBeLessThanOrEqual(0.12)
     expect(FIRMAMENT_PENUMBRA_SEED_JITTER).toBeLessThanOrEqual(0.6)
+    expect(FIRMAMENT_PENUMBRA_MOTE_LUMA).toBeGreaterThan(FIRMAMENT_PENUMBRA_INK_LUMA)
   })
 })

@@ -103,16 +103,18 @@ function nodeColor(node: FirmamentNode): string {
 }
 
 /** Grund und Penumbra — der RAUM, nicht die Karte. Eigenes Canvas, eigener
- *  Schluessel: er kennt weder Zoom noch Fahrt. */
+ *  Schluessel: er kennt weder Zoom noch Fahrt, nur die gezeigte Bahn. */
 export function paintFirmamentGround(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
   seed: number,
+  universe: number,
+  tint: string,
 ): void {
   ctx.fillStyle = FIRMAMENT_PENUMBRA_GROUND
   ctx.fillRect(0, 0, w, h)
-  paintFirmamentPenumbra(ctx, w, h, seed)
+  paintFirmamentPenumbra(ctx, w, h, seed, universe, tint)
 }
 
 /* ── Das Filamentgewebe ───────────────────────────────────────────────────────

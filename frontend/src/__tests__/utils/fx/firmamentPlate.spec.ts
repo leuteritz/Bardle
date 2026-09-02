@@ -124,7 +124,7 @@ const count = (ops: string[], name: string) => ops.filter((o) => o.startsWith(`$
 describe('Firmament-Platte — der Grund', () => {
   it('malt Flaeche und Penumbra', () => {
     const { ctx, ops } = recordingCtx()
-    paintFirmamentGround(ctx, 1002, 690, FIRMAMENT_PENUMBRA_SEED)
+    paintFirmamentGround(ctx, 1002, 690, FIRMAMENT_PENUMBRA_SEED, 1, '#4fa85e')
     // EIN deckendes Rechteck, darauf die Stroeme; der Auslauf ist der eine Verlauf.
     expect(count(ops, 'fillRect')).toBe(1)
     expect(count(ops, 'stroke')).toBeGreaterThan(0)
@@ -133,7 +133,7 @@ describe('Firmament-Platte — der Grund', () => {
 
   it('malt KEINE Sterne, keine Bahn und keine Koerper', () => {
     const { ctx, ops } = recordingCtx()
-    paintFirmamentGround(ctx, 1002, 690, FIRMAMENT_PENUMBRA_SEED)
+    paintFirmamentGround(ctx, 1002, 690, FIRMAMENT_PENUMBRA_SEED, 1, '#4fa85e')
     expect(count(ops, 'arc')).toBe(0)
     expect(count(ops, 'quadraticCurveTo')).toBe(0)
   })
@@ -141,8 +141,8 @@ describe('Firmament-Platte — der Grund', () => {
   it('haengt am Seed, nicht am Zufall', () => {
     const a = recordingCtx()
     const b = recordingCtx()
-    paintFirmamentGround(a.ctx, 1002, 690, FIRMAMENT_PENUMBRA_SEED)
-    paintFirmamentGround(b.ctx, 1002, 690, FIRMAMENT_PENUMBRA_SEED)
+    paintFirmamentGround(a.ctx, 1002, 690, FIRMAMENT_PENUMBRA_SEED, 1, '#4fa85e')
+    paintFirmamentGround(b.ctx, 1002, 690, FIRMAMENT_PENUMBRA_SEED, 1, '#4fa85e')
     expect(a.ops).toEqual(b.ops)
   })
 })

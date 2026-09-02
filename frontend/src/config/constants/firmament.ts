@@ -301,17 +301,20 @@ export const FIRMAMENT_MAX_DPR = 2
    `utils/fx/firmamentPenumbra.ts`. Referenz-px skalieren mit
    `k = r / FIRMAMENT_PLATE_REF_R`. */
 
-/** FEST, nicht der `mapSeed`: der Raum springt beim Warp nicht um. */
+/** FEST, nicht der `mapSeed`: dasselbe Universum zeigt immer denselben Raum. */
 export const FIRMAMENT_PENUMBRA_SEED = 7
 /** Deckender Grund unter allem. */
 export const FIRMAMENT_PENUMBRA_GROUND = '#05050b'
-/** Kalte und warme Tinte — Indigo und Pflaume. Kein Gold (Reise), kein Teal
- *  (einsammelbar), kein Torblau. */
-export const FIRMAMENT_PENUMBRA_INK_COLD = '#5658b8'
-export const FIRMAMENT_PENUMBRA_INK_WARM = '#7a4e9a'
-/** Anteil warmer Baender. */
+/** Die Tinte ist der Ton der GEZEIGTEN Bahn, auf diese Luminanz normiert (die
+ *  des frueheren Indigos). Roh hebt Eis `#a8e8f8` 219 je Alpha-Einheit statt 95
+ *  — der Ton sagt WELCHES Universum, die Helligkeit bleibt die der Penumbra. */
+export const FIRMAMENT_PENUMBRA_INK_LUMA = 95
+/** Zweite Stimme: der Ton um diesen Winkel gedreht, gleiche Luminanz. */
+export const FIRMAMENT_PENUMBRA_INK_HUE_SHIFT_DEG = 34
+/** Anteil der Baender in der zweiten Stimme. */
 export const FIRMAMENT_PENUMBRA_WARM_SHARE = 0.3
-/** Hauptrichtung in Bildschirmgrad (y nach unten): links-unten nach rechts-oben. */
+/** BASIS der Richtung in Bildschirmgrad (y nach unten), Universum I; jedes
+ *  weitere schreitet um den goldenen Winkel (`penumbraFlowDeg`). */
 export const FIRMAMENT_PENUMBRA_FLOW_DEG = -28
 /** Wellen des Feldes: [Wellenlaenge als Anteil von min(w,h), Amplitude relativ
  *  zur Hauptgeschwindigkeit, Normalenwinkel zur Stroemung in Grad].
@@ -335,8 +338,8 @@ export const FIRMAMENT_PENUMBRA_SEED_JITTER = 0.6
 export const FIRMAMENT_PENUMBRA_BAND_W_MIN = 28
 export const FIRMAMENT_PENUMBRA_BAND_W_MAX = 70
 /** Kern-Deckkraft. `_MAX` ist die harte Decke JEDES Strichs: die Portalschrift
- *  steht auf dem Grund. Indigo hebt ~93/255 je Alpha-Einheit; 0,10 mal
- *  Zugstapel 1,65 sind +15 im Kern, ~+6 am Saum. */
+ *  steht auf dem Grund. Tinte mit Luminanz 95 hebt 0,10 mal Zugstapel 1,65
+ *  = +15 im Kern, ~+6 am Saum. */
 export const FIRMAMENT_PENUMBRA_ALPHA_MIN = 0.05
 export const FIRMAMENT_PENUMBRA_ALPHA_MAX = 0.1
 /** Drei Zuege je Band [Breite×, Alpha×], AUSSEN zuerst — Weichheit ohne
@@ -367,7 +370,8 @@ export const FIRMAMENT_PENUMBRA_MOTE_RX = 3.4
 export const FIRMAMENT_PENUMBRA_MOTE_RATIO_MIN = 0.28
 export const FIRMAMENT_PENUMBRA_MOTE_RATIO_MAX = 0.5
 export const FIRMAMENT_PENUMBRA_MOTE_ALPHA = 0.22
-export const FIRMAMENT_PENUMBRA_MOTE_INK = '#c4bae8'
+/** Motes im Ton, aber heller als die Baender. */
+export const FIRMAMENT_PENUMBRA_MOTE_LUMA = 190
 // ── Farben ──────────────────────────────────────────────────────────────────
 /** Befreit — dieselbe Goldkante, die die Reise im ganzen Spiel traegt. */
 export const FIRMAMENT_FREED_COLOR = '#e8c040'

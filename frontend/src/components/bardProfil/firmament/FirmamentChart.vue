@@ -5,7 +5,7 @@
  *
  * | Ebene | was | malt neu, wenn |
  * | --- | --- | --- |
- * | Grund | Penumbra | Buehne oder Pixeldichte sich aendern |
+ * | Grund | Penumbra | Buehne, Pixeldichte oder gezeigte Bahn sich aendern |
  * | Wall | das Filamentgewebe | der Bahnradius sich aendert |
  * | Herz | das beobachtete Universum | seine Kantenstufe sich aendert |
  * | Karte | Bahn, Tore, Koerper | `paintKey` sich aendert |
@@ -530,9 +530,11 @@ const paintKey = computed(
 )
 
 /** Der Grund kennt weder Zoom noch Fahrt — deshalb ein eigener, groberer
- *  Schluessel. Er feuert beim Zoomschritt NICHT. */
+ *  Schluessel. Er feuert beim Zoomschritt NICHT; die gezeigte Bahn traegt er
+ *  wie der Wall, als NUMMER. */
 const groundKey = computed(
-  () => `${Math.round(cssW.value)}x${Math.round(cssH.value)}|${dprNow.value}`,
+  () =>
+    `${Math.round(cssW.value)}x${Math.round(cssH.value)}|${dprNow.value}|${props.selection.universe}`,
 )
 
 /** Der Wall haengt am Bahnradius — und am Ton der gezeigten Bahn. Die NUMMER,
@@ -555,7 +557,7 @@ function paintGround() {
   const ctx = el.getContext('2d')
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  paintFirmamentGround(ctx, w, h, FIRMAMENT_PENUMBRA_SEED)
+  paintFirmamentGround(ctx, w, h, FIRMAMENT_PENUMBRA_SEED, props.selection.universe, viewTint.value)
 }
 
 function paintRim() {

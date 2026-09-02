@@ -1,7 +1,12 @@
 /* ── Penumbra ─────────────────────────────────────────────────────────────────
    Der Raum jenseits der Scheibe: Stroeme in EINER Hauptrichtung, hinter der
    Scheibe hindurch, dazu wenige Motes, die darauf reiten. Keine Sterne — dort
-   ist kein Universum. Ein Bake je Buehnengroesse, kein Frame.
+   ist kein Universum. Ein Bake je Buehnengroesse und gezeigtem Universum, kein
+   Frame.
+
+   Ton und Richtung folgen der GEZEIGTEN Bahn wie der Wall: die Tinte ist der
+   Universumston auf feste Luminanz normiert, die Richtung schreitet je
+   Universum um den goldenen Winkel.
 
    EIN `seededRng`-Strom, feste Ziehreihenfolge: drei Phasen, dann je Band
    (Quer-Jitter, Laengsversatz, Breite, Alpha, warm/kalt), dann je Mote
@@ -22,11 +27,11 @@ import {
   FIRMAMENT_PENUMBRA_DISC_DAMP,
   FIRMAMENT_PENUMBRA_FLOW_DEG,
   FIRMAMENT_PENUMBRA_GROUND,
-  FIRMAMENT_PENUMBRA_INK_COLD,
-  FIRMAMENT_PENUMBRA_INK_WARM,
+  FIRMAMENT_PENUMBRA_INK_HUE_SHIFT_DEG,
+  FIRMAMENT_PENUMBRA_INK_LUMA,
   FIRMAMENT_PENUMBRA_MAX_STEPS,
   FIRMAMENT_PENUMBRA_MOTE_ALPHA,
-  FIRMAMENT_PENUMBRA_MOTE_INK,
+  FIRMAMENT_PENUMBRA_MOTE_LUMA,
   FIRMAMENT_PENUMBRA_MOTE_RATIO_MAX,
   FIRMAMENT_PENUMBRA_MOTE_RATIO_MIN,
   FIRMAMENT_PENUMBRA_MOTE_RX,
@@ -38,25 +43,42 @@ import {
   FIRMAMENT_PENUMBRA_WARM_SHARE,
   FIRMAMENT_PENUMBRA_WAVES,
   FIRMAMENT_PLATE_REF_R,
+  UNIVERSE_DISC_GOLDEN_ANGLE,
 } from '@/config/constants'
 import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
-import { hexToRgb } from '@/utils/ui/format'
+import { hexToRgb, shiftHue } from '@/utils/ui/format'
 
 type Vec = { x: number; y: number }
+type Rgb = [number, number, number]
 type Flow = (x: number, y: number) => Vec
 type Bounds = { x0: number; y0: number; x1: number; y1: number }
 
-function ink(hex: string, alpha: number): string {
-  const [r, g, b] = hexToRgb(hex)
-  return `rgba(${r}, ${g}, ${b}, ${+alpha.toFixed(3)})`
+const rgba = ([r, g, b]: Rgb, alpha: number): string =>
+  `rgba(${r}, ${g}, ${b}, ${+alpha.toFixed(3)})`
+
+const luma = ([r, g, b]: Rgb) => 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+/** Der Ton sagt WELCHES Universum, die Luminanz bleibt die der Penumbra. */
+function inkFromTint(hex: string, target: number): Rgb {
+  const base = hexToRgb(hex)
+  const y = luma(base) || 1
+  return base.map((c) => Math.min(255, Math.round((c * target) / y))) as Rgb
 }
 
 const lerp = (lo: number, hi: number, t: number) => lo + (hi - lo) * t
 
+/** Richtung je Universum: Basis plus goldener Winkel je Schritt, in (-180, 180]. */
+export function penumbraFlowDeg(universe: number): number {
+  const golden = (UNIVERSE_DISC_GOLDEN_ANGLE * 180) / Math.PI
+  const raw = FIRMAMENT_PENUMBRA_FLOW_DEG + (Math.max(1, Math.floor(universe)) - 1) * golden
+  const wrapped = ((((raw + 180) % 360) + 360) % 360) - 180
+  return wrapped === -180 ? 180 : wrapped
+}
+
 /** Hauptrichtung plus Rotation eines Skalarpotentials — divergenzfrei, und
  *  mit Summe der Amplituden < 1 weicht kein Punkt weiter als atan(ΣA) ab. */
-function penumbraFlow(w: number, h: number, phases: readonly number[]): Flow {
-  const a = (FIRMAMENT_PENUMBRA_FLOW_DEG * Math.PI) / 180
+function penumbraFlow(w: number, h: number, flowDeg: number, phases: readonly number[]): Flow {
+  const a = (flowDeg * Math.PI) / 180
   const dx = Math.cos(a)
   const dy = Math.sin(a)
   const L = Math.min(w, h)
@@ -111,14 +133,14 @@ function strokeBand(
   ctx: CanvasRenderingContext2D,
   pts: Vec[],
   coreW: number,
-  hex: string,
+  ink: Rgb,
   coreAlpha: number,
 ): void {
   for (const [wMul, aMul] of FIRMAMENT_PENUMBRA_BLUR_PASSES) {
     ctx.beginPath()
     ctx.moveTo(pts[0].x, pts[0].y)
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y)
-    ctx.strokeStyle = ink(hex, coreAlpha * aMul)
+    ctx.strokeStyle = rgba(ink, coreAlpha * aMul)
     ctx.lineWidth = coreW * wMul
     ctx.stroke()
   }
@@ -129,6 +151,8 @@ export function paintFirmamentPenumbra(
   w: number,
   h: number,
   seed: number,
+  universe: number,
+  tint: string,
 ): void {
   const fit = firmamentFitBox(w, h)
   const k = fit.r / FIRMAMENT_PLATE_REF_R
@@ -137,9 +161,12 @@ export function paintFirmamentPenumbra(
   const bounds: Bounds = { x0: -ov, y0: -ov, x1: w + ov, y1: h + ov }
   const rng = seededRng(seed)
 
-  const flow = penumbraFlow(w, h, [rng(), rng(), rng()].map((p) => p * Math.PI * 2))
+  const flowDeg = penumbraFlowDeg(universe)
+  const flow = penumbraFlow(w, h, flowDeg, [rng(), rng(), rng()].map((p) => p * Math.PI * 2))
+  const cold = inkFromTint(tint, FIRMAMENT_PENUMBRA_INK_LUMA)
+  const warm = inkFromTint(shiftHue(tint, FIRMAMENT_PENUMBRA_INK_HUE_SHIFT_DEG), FIRMAMENT_PENUMBRA_INK_LUMA)
 
-  const a = (FIRMAMENT_PENUMBRA_FLOW_DEG * Math.PI) / 180
+  const a = (flowDeg * Math.PI) / 180
   const d: Vec = { x: Math.cos(a), y: Math.sin(a) }
   const perp: Vec = { x: -d.y, y: d.x }
   // Die Sehne der Senkrechten im Ueberstand: daran haengt die Zahl, und jede
@@ -161,22 +188,20 @@ export function paintFirmamentPenumbra(
     const along = (rng() - 0.5) * L * 0.5
     const coreW = lerp(FIRMAMENT_PENUMBRA_BAND_W_MIN, FIRMAMENT_PENUMBRA_BAND_W_MAX, rng()) * k
     const alpha = lerp(FIRMAMENT_PENUMBRA_ALPHA_MIN, FIRMAMENT_PENUMBRA_ALPHA_MAX, rng())
-    const hex = rng() < FIRMAMENT_PENUMBRA_WARM_SHARE
-      ? FIRMAMENT_PENUMBRA_INK_WARM
-      : FIRMAMENT_PENUMBRA_INK_COLD
+    const ink = rng() < FIRMAMENT_PENUMBRA_WARM_SHARE ? warm : cold
     const seedPt: Vec = {
       x: fit.cx + perp.x * u + d.x * along,
       y: fit.cy + perp.y * u + d.y * along,
     }
     const pts = streamline(flow, seedPt, step, bounds)
-    strokeBand(ctx, pts, coreW, hex, alpha)
+    strokeBand(ctx, pts, coreW, ink, alpha)
     bands.push({ pts, w: coreW })
   }
 
   // Motes reiten den Strom: Neigung = das Segment, auf dem sie sitzen.
   const clear = fit.r * FIRMAMENT_PENUMBRA_DAMP_OUT
   const motes = Math.min(FIRMAMENT_PENUMBRA_MOTES_MAX, n * FIRMAMENT_PENUMBRA_MOTES_PER_BAND)
-  ctx.fillStyle = ink(FIRMAMENT_PENUMBRA_MOTE_INK, FIRMAMENT_PENUMBRA_MOTE_ALPHA)
+  ctx.fillStyle = rgba(inkFromTint(tint, FIRMAMENT_PENUMBRA_MOTE_LUMA), FIRMAMENT_PENUMBRA_MOTE_ALPHA)
   for (let j = 0; j < motes; j++) {
     const band = bands[Math.min(n - 1, Math.floor(rng() * n))]
     const idx = Math.min(band.pts.length - 2, Math.floor(rng() * (band.pts.length - 1)))
@@ -204,8 +229,9 @@ export function paintFirmamentPenumbra(
     fit.cy,
     fit.r * FIRMAMENT_PENUMBRA_DAMP_OUT,
   )
-  pool.addColorStop(0, ink(FIRMAMENT_PENUMBRA_GROUND, FIRMAMENT_PENUMBRA_DISC_DAMP))
-  pool.addColorStop(1, ink(FIRMAMENT_PENUMBRA_GROUND, 0))
+  const ground = hexToRgb(FIRMAMENT_PENUMBRA_GROUND)
+  pool.addColorStop(0, rgba(ground, FIRMAMENT_PENUMBRA_DISC_DAMP))
+  pool.addColorStop(1, rgba(ground, 0))
   ctx.fillStyle = pool
   ctx.beginPath()
   ctx.rect(0, 0, w, h)
