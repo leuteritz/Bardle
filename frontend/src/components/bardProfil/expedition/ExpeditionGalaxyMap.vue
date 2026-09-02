@@ -10,6 +10,11 @@
  *
  * Darüber liegt eine reine Positionsebene ohne Zeigerereignisse, damit der
  * Klick auf den Bühnengrund überall durchkommt ausser auf den Marken selbst.
+ *
+ * Zwei Overlays teilen sich die Bühne, und sie tun es UNGLEICH: das Datenband
+ * am Fuss SCHRUMPFT die Fit-Box (unter ihm liegt keine Marke), die
+ * Manifestreihe oben links ÜBERLAGERT sie. Unter der Ecke können deshalb Marken
+ * liegen — sie stehen abgedunkelt weiter da, weil die Reihe ein Scrim ist.
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import {
@@ -47,6 +52,7 @@ import ExpeditionLandfallNode from './ExpeditionLandfallNode.vue'
 import ExpeditionStarNode from './ExpeditionStarNode.vue'
 import ExpeditionPortalNode from './ExpeditionPortalNode.vue'
 import ExpeditionGalaxyStatsBand from './ExpeditionGalaxyStatsBand.vue'
+import ExpeditionStarManifest from './ExpeditionStarManifest.vue'
 import ExpeditionCrewMarkerLayer from './ExpeditionCrewMarkerLayer.vue'
 
 const props = defineProps<{
@@ -372,6 +378,13 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
       :tier="tier"
       :compact="cssW < VOYAGE_MAP_STATS_MIN_W"
     />
+
+    <!-- Der Zwilling des Bandes in der gegenüberliegenden Ecke: das Band sagt
+         WIE VIELE, die Reihe sagt WER. Sie schrumpft die Fit-Box NICHT — unter
+         ihr können Marken liegen, deshalb ist sie ein Scrim und kein Kasten.
+         Das Tor ist ein DATEN-Tor: Altbestand ohne Manifest führt hier nie
+         jemanden, und ein Maßtor greift nachgerechnet auf keiner Breite. -->
+    <ExpeditionStarManifest v-if="cssW > 0" :record="record" :width="cssW" />
 
     <ExpeditionCrewMarkerLayer
       :record="record"

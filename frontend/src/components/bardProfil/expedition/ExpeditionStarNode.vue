@@ -23,6 +23,7 @@ import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import ExpeditionMarkTooltip, { type MarkChip } from './ExpeditionMarkTooltip.vue'
 import ExpeditionStarTooltip from './ExpeditionStarTooltip.vue'
 import { starCoreTint } from '@/utils/fx/galaxyPlate'
+import { ordinalOf } from '@/utils/ui/format'
 import {
   LANDMARK_FREED_CORE,
   VOYAGE_TIP_GAP_PX,
@@ -56,13 +57,8 @@ const accent = computed(() =>
   lost.value ? LOST_TONE : (starCoreTint(props.manifest) ?? LANDMARK_FREED_CORE),
 )
 
-/** 1st, 2nd, 3rd, 4th … — die Nummer ist alles, was ein Stern an Ordnung hat. */
-const ordinal = computed(() => {
-  const n = props.mark.index + 1
-  const rest = n % 100
-  if (rest >= 11 && rest <= 13) return `${n}th`
-  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
-})
+/* Dieselbe Ordnung nennt die Kachel der Manifestreihe — deshalb `format.ts`. */
+const ordinal = computed(() => ordinalOf(props.mark.index + 1))
 
 const chips = computed<MarkChip[]>(() => [
   { text: lost.value ? 'Lost' : 'Freed', color: accent.value, solid: true },

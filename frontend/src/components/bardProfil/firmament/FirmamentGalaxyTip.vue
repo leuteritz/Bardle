@@ -14,7 +14,7 @@ import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import { tierOf, useGalaxyStore } from '@/stores/world/galaxyStore'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { formatCompactDuration, toRoman } from '@/utils/ui/format'
-import { firmamentStarSeats } from '@/utils/ui/firmamentManifest'
+import { starSeats } from '@/utils/ui/starSeats'
 import { getChampionIconPath } from '@/utils/game/champions'
 import {
   FIRMAMENT_FREED_COLOR,
@@ -64,12 +64,12 @@ const headline = computed(() => {
  *  noch keins, ihre Sitze stehen live im Store. */
 const seats = computed(() =>
   props.node.state === 'current'
-    ? firmamentStarSeats(
+    ? starSeats(
         galaxyStore.attemptResults,
         galaxyStore.starManifests,
         FIRMAMENT_TIP_SEAT_MAX,
       )
-    : firmamentStarSeats(
+    : starSeats(
         props.node.record?.attemptResults,
         props.node.record?.starManifests,
         FIRMAMENT_TIP_SEAT_MAX,

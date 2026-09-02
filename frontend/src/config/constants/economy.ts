@@ -7,6 +7,9 @@ import type {
   ExpeditionLedgerRankDef,
   ExpeditionSpoilsDef,
 } from '@/types'
+// Wie `firmament.ts`: das Sternsoll ist eine Progressionszahl, die Reihe darf
+// sie nur LESEN. Direkt aus der Themendatei, nicht ueber das Barrel.
+import { GALAXY_STARS_MAX } from '@/config/constants/progression'
 
 /** Aufsammel-Blitz und Lebensdauer eines Chime-Pops im Expeditions-Panel. */
 export const EXPEDITION_COLLECT_FLASH_MS = 600
@@ -1387,6 +1390,83 @@ export const VOYAGE_MAP_STATS_RECORD_TIPS = {
   stars: 'Stars freed here against stars lost on the way.',
   voyages: 'Expeditions that have come back from this destination.',
 } as const
+
+/* ── Die Manifestreihe — der Zwilling des Datenbands, oben links ──────────────
+   Das Band sagt WIE VIELE (`STARS 7/2`), die Reihe sagt WER. Deshalb traegt sie
+   keinen Zaehler: dieselbe Zahl zweimal auf einem Bild war schon der Grund,
+   aus dem die Identitaetsplakette in dieser Ecke gefallen ist.
+
+   Anders als das Band schrumpft sie die Fit-Box NICHT — unter ihr liegen echte
+   Marken. Sie ist deshalb ein Scrim wie der Fuss des Bandes, kein Kasten: was
+   darunter liegt, steht abgedunkelt weiter da statt zu verschwinden.
+
+   Alle Masse haengen an der KACHEL, die Kachel an der Buehnenbreite — Muster
+   `voyageMarkerSizeFor`. Der Anteil, den die Reihe von der Buehne nimmt, bleibt
+   damit ueber alle Aufloesungen derselbe, statt auf 4K zum Streifen zu
+   schrumpfen. `voyageManifestFit.spec.ts` bindet die Kette.                  */
+
+/** Portraitkante, Boden und Deckel. Der DECKEL ist die eigentliche Zusicherung:
+ *  er haelt die Kachel unter `CHAMPION_ART_MD_MAX_EDGE` (110), damit ueberall
+ *  die 256er-Stufe gilt — dieselbe, die Sternmanifest-Tooltip und
+ *  Firmament-Knotenkarte laden. Darueber holte der Reiter dieselben Gesichter
+ *  ein zweites Mal, und im Bild saehe man nichts davon. */
+export const VOYAGE_MANIFEST_TILE_MIN = 56
+export const VOYAGE_MANIFEST_TILE_MAX = 96
+/** Kachelkante je Pixel Buehnenbreite — 56 px auf Full HD, 81 auf 2K. */
+export const VOYAGE_MANIFEST_TILE_SHARE = 0.0588
+/** Die Zelle ist breiter als das Bild: darunter steht ein Name, und die
+ *  laengsten haben zwoelf Zeichen (`Heimerdinger`, `Aurelion Sol`). Jedes
+ *  weitere Pixel kostet siebenfach im Reihenbudget. */
+export const VOYAGE_MANIFEST_CELL_RATIO = 1.107
+export const VOYAGE_MANIFEST_GAP_RATIO = 0.09
+export const VOYAGE_MANIFEST_PAD_RATIO = 0.16
+/** Schrift des Namens und des Kopfworts, beide aus der Kachel. Die Boeden sind
+ *  die des Datenbands (`.egsb-lbl` 11, Chip-Label 10) — eine Buehne, eine
+ *  Stimme. */
+export const VOYAGE_MANIFEST_NAME_RATIO = 0.196
+export const VOYAGE_MANIFEST_NAME_MAX = 18
+export const VOYAGE_MANIFEST_HEAD_RATIO = 0.82
+export const VOYAGE_MANIFEST_HEAD_MAX = 12
+/** `line-height` von Kopf und Name. Das CSS bestimmt, die Hoehenrechnung
+ *  spiegelt — dieselbe Regel wie in `voyageBandFit.spec.ts`. */
+export const VOYAGE_MANIFEST_LINE = 1.15
+/**
+ * Hoechster Anteil der Buehne, den die Reihe belegen darf.
+ *
+ * Die Zahl ist NICHT gewaehlt, sie folgt aus einer Zusicherung: auf Full HD —
+ * der haeufigsten Aufloesung — soll eine volle Galaxie (`GALAXY_STARS_MAX`) in
+ * die Reihe passen, ohne dass ab Galaxie 5 dauerhaft ein „+2 more" danebensteht.
+ * Bei 0,50 fielen dort sechs Kacheln heraus, bei 0,52 sieben (gemessen 482 von
+ * 952 px, also 0,506).
+ */
+export const VOYAGE_MANIFEST_MAX_SHARE = 0.52
+/** Boden der Sitze. Er greift nie — am schmalsten zulaessigen Punkt
+ *  (`VOYAGE_MAP_MIN_WIDTH`) fallen vier heraus. Die Spec schreibt genau das aus. */
+export const VOYAGE_MANIFEST_SEATS_MIN = 3
+/** Verlustzuschlag ueber das Sternsoll hinaus: `attemptResults` waechst mit
+ *  jedem verlorenen Stern ungedeckelt weiter, und der Lauf, der diese Reihe
+ *  ausgeloest hat, stand auf 7/2. */
+export const VOYAGE_MANIFEST_LOSS_SEATS = 2
+export const VOYAGE_MANIFEST_SEATS_MAX = GALAXY_STARS_MAX + VOYAGE_MANIFEST_LOSS_SEATS
+/** Wie weit der Scrim unter die Reihe und ueber sie hinaus laeuft, in Kacheln.
+ *  Er muss AUSLAUFEN statt zu enden — eine harte Kante waere der Kasten, den
+ *  diese Ecke ausdruecklich nicht bekommt. */
+export const VOYAGE_MANIFEST_SCRIM_FALL_RATIO = 0.7
+export const VOYAGE_MANIFEST_SCRIM_FADE_RATIO = 1.2
+/** Die Akzentleiste am Kopfwort, im Ton der Galaxie — im Idiom von
+ *  `.tip-accent`: Zugehoerigkeit als Leiste. */
+export const VOYAGE_MANIFEST_ACCENT_BAR_PX = 2
+/**
+ * Das Kopfwort.
+ *
+ * `MANIFEST` ist der Name, den der Code diesen Daten ohnehin gibt
+ * (`starManifests`, `STAR_MANIFEST_ART_SIZE`) und kam bisher nie an die
+ * Oberflaeche — Code-Wort und Sicht-Wort fallen hier zum ersten Mal zusammen.
+ * `RESCUED` und `FREED` sind im Reiter belegt (Datenband, Ankunftsportal),
+ * `ROSTER` heisst hier schon die Vertragszeilenquelle (`voyageRoster.ts`),
+ * `CREW` die Besatzung. Thema: Passagierliste eines Schiffs.
+ */
+export const VOYAGE_MANIFEST_LABEL = 'Star manifest'
 
 /**
  * Takt der Uhren auf der Karte. Bewusst 1000 und nicht HUD_COUNTDOWN_TICK_MS

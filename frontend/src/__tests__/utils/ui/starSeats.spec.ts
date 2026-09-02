@@ -80,15 +80,33 @@ describe('starSeats — wer in einer Galaxie geflogen ist', () => {
  * „+N" — die Aussage, wegen der die Reihe da ist.
  */
 describe('starSeatsFreedFirst — der Deckel wirft Verlorene zuerst weg', () => {
-  it('behaelt die Geretteten, wenn der Deckel greift', () => {
+  it('wirft Verluste zuerst weg — bis auf den letzten', () => {
     const { seats, hidden } = starSeatsFreedFirst(
       outcomes('rescued', 'failed', 'rescued', 'failed', 'rescued'),
       [man('Ahri'), man('Braum'), man('Kayn'), man('Sett'), man('Vi')],
       3,
     )
-    expect(seats.map((s) => s.champion)).toEqual(['Ahri', 'Kayn', 'Vi'])
-    expect(seats.every((s) => !s.lost)).toBe(true)
+    // Von den beiden Verlusten faellt der SPAETERE; der fruehere bleibt als
+    // Beleg stehen und kostet dafuer den letzten Geretteten.
+    expect(seats.map((s) => s.champion)).toEqual(['Ahri', 'Braum', 'Kayn'])
+    expect(seats.map((s) => s.lost)).toEqual([false, true, false])
     expect(hidden).toBe(2)
+  })
+
+  it('laesst den einzigen Verlust stehen, statt einen makellosen Lauf zu behaupten', () => {
+    // Gemessener Fall: 7/1 auf sechs Plaetzen zeigte sechs goldene Kacheln,
+    // waehrend das Datenband darunter `7/1` meldete.
+    const o = outcomes(
+      'rescued', 'failed', 'rescued', 'rescued', 'rescued', 'rescued', 'rescued', 'rescued',
+    )
+    const { seats } = starSeatsFreedFirst(
+      o,
+      o.map((_, i) => man(`C${i}`)),
+      6,
+    )
+    expect(seats).toHaveLength(6)
+    expect(seats.filter((s) => s.lost)).toHaveLength(1)
+    expect(seats[1].champion).toBe('C1')
   })
 
   it('haelt die Flugreihenfolge der uebrigen', () => {
@@ -100,6 +118,16 @@ describe('starSeatsFreedFirst — der Deckel wirft Verlorene zuerst weg', () => 
     // Der SPAETERE Verlust faellt, der fruehere bleibt an seinem Platz.
     expect(seats.map((s) => s.champion)).toEqual(['Ahri', 'Braum', 'Kayn', 'Vi'])
     expect(seats.map((s) => s.lost)).toEqual([false, true, false, false])
+  })
+
+  it('gibt auch den letzten Verlust her, wenn der Platz nicht reicht', () => {
+    const { seats } = starSeatsFreedFirst(
+      outcomes('failed', 'rescued', 'rescued'),
+      [man('Ahri'), man('Braum'), man('Kayn')],
+      2,
+    )
+    // Zwei Plaetze, ein Verlust ganz vorn: er steht, der letzte Gerettete faellt.
+    expect(seats.map((s) => s.champion)).toEqual(['Ahri', 'Braum'])
   })
 
   it('deckelt auch, wenn nichts verloren ging', () => {

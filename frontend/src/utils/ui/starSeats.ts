@@ -64,13 +64,21 @@ export function starSeats(
 }
 
 /**
- * Dieselben Sitze, aber der Deckel wirft VERLORENE zuerst weg — von hinten.
+ * Dieselben Sitze, aber der Deckel wirft VERLORENE zuerst weg — von hinten,
+ * und nie den letzten.
  *
  * `starSeats` schneidet vorn ab. Ein Lauf mit drei fruehen Verlusten zeigte
  * damit drei rote Kacheln und versteckte drei gerettete Champions hinter dem
  * „+N" — auf einer Reihe, deren ganze Aussage ist, WEN der Bard hier rausgeholt
- * hat. Die Reihenfolge der behaltenen Sitze bleibt die des Fluges: die
- * Chronologie ist ihr Eigenwert.
+ * hat.
+ *
+ * Der letzte Verlust bleibt aber STEHEN. Im Browser gemessen: eine 7/1-Galaxie
+ * auf sechs Plaetzen zeigte sechs goldene Kacheln, waehrend das Datenband
+ * darunter `7/1` meldete — die Reihe behauptete einen makellosen Lauf. Ein
+ * Beleg, dass hier etwas schiefging, kostet genau eine Kachel.
+ *
+ * Die Reihenfolge der behaltenen Sitze bleibt die des Fluges: die Chronologie
+ * ist ihr Eigenwert.
  */
 export function starSeatsFreedFirst(
   outcomes: readonly StarAttemptResult[] | undefined,
@@ -80,9 +88,14 @@ export function starSeatsFreedFirst(
   if (!outcomes?.length || !manifests?.length) return { seats: [], hidden: 0 }
 
   const keep = new Set(outcomes.map((_, i) => i))
-  for (let i = outcomes.length - 1; i >= 0 && keep.size > max; i--) {
-    if (outcomes[i] === 'failed') keep.delete(i)
+  let lostLeft = outcomes.filter((o) => o === 'failed').length
+  for (let i = outcomes.length - 1; i >= 0 && keep.size > max && lostLeft > 1; i--) {
+    if (outcomes[i] === 'failed') {
+      keep.delete(i)
+      lostLeft--
+    }
   }
+  // Reicht das nicht, faellt von hinten alles — auch der letzte Verlust.
   for (let i = outcomes.length - 1; i >= 0 && keep.size > max; i--) {
     keep.delete(i)
   }

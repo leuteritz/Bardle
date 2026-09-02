@@ -302,3 +302,11 @@ export function shiftHue(hex: string, deg: number): string {
   const rgb = hslToRgb([(((h + deg) % 360) + 360) % 360, s, l])
   return '#' + rgb.map((c) => c.toString(16).padStart(2, '0')).join('')
 }
+
+/** 1st, 2nd, 3rd, 4th — die Nummer ist alles, was ein Stern an Ordnung hat.
+ *  Zwei Leser: die Marke auf der Karte und die Kachel der Manifestreihe. */
+export function ordinalOf(n: number): string {
+  const rest = n % 100
+  if (rest >= 11 && rest <= 13) return `${n}th`
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
+}

@@ -1,6 +1,7 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
+import { FORGE_BARGAINS } from '@/config/progression/starForge'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useItemStore } from '@/stores/economy/itemStore'
@@ -256,9 +257,15 @@ describe('Ring 4 & 5 — die Wirkung kommt beim Zielsystem an', () => {
 
   it("Haggler's Pact und Merchant's Pact greifen an Preis und Takt des Bargains", () => {
     const forge = useStarForgeStore()
-    forge.restockBargain()
+    // Das Angebot wird GESETZT, nicht gewuerfelt: `restockBargain()` zieht per
+    // `Math.random()` aus dem ganzen Katalog, und `goldRush` kostet keine
+    // Chimes (`basePrice: 0`, bezahlt wird in void_shard). Wurde das gezogen,
+    // war `listed` 0 und der Rabatt darauf ebenfalls — der Test fiel dann mit
+    // „expected 0 to be less than 0", etwa bei jedem zehnten Lauf.
+    forge.bargainDealId = FORGE_BARGAINS.find((b) => b.basePrice > 0)!.id
     const def = forge.activeDeal!
     const listed = forge.bargainPrice(def)
+    expect(listed).toBeGreaterThan(0)
 
     grow('hagglersPact')
     expect(forge.bargainPrice(def)).toBeLessThan(listed)
