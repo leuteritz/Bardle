@@ -1456,8 +1456,10 @@ export const VOYAGE_MANIFEST_SCRIM_FADE_RATIO = 1.2
 /** Die Akzentleiste am Kopfwort, im Ton der Galaxie — im Idiom von
  *  `.tip-accent`: Zugehoerigkeit als Leiste. */
 export const VOYAGE_MANIFEST_ACCENT_BAR_PX = 2
-/** Das Kopfwort der Manifestreihe. */
+/** Die beiden Kopfworte der Manifestreihe. Sie unterscheiden sich im LETZTEN
+ *  Wort — dort landet das Auge, wenn zwei Baender uebereinanderstehen. */
 export const VOYAGE_MANIFEST_LABEL = 'Champions saved'
+export const VOYAGE_MANIFEST_LOST_LABEL = 'Champions lost'
 
 /**
  * Takt der Uhren auf der Karte. Bewusst 1000 und nicht HUD_COUNTDOWN_TICK_MS

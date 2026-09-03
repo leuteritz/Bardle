@@ -1,9 +1,12 @@
 <script setup lang="ts">
 /**
- * Wer hier rausgeholt wurde — die Gesichter, oben links auf der Buehne.
+ * Wer hier rausgeholt wurde und wer nicht — die Gesichter, oben links auf der
+ * Buehne, in ZWEI Baendern.
  *
  * Der Zwilling des Datenbands: das Band am Fuss sagt WIE VIELE (`STARS 7/2`),
- * diese Reihe sagt WER. Sie traegt deshalb KEINEN Zaehler — dieselbe Zahl
+ * diese Reihe sagt WER. Getrennt, weil EIN Kopfwort ueber gemischten Kacheln
+ * fuer die Haelfte von ihnen nicht stimmt; das zweite Band steht nur da, wenn
+ * etwas verloren ging. Sie traegt deshalb KEINEN Zaehler — dieselbe Zahl
  * zweimal auf einem Bild war der Grund, aus dem die Identitaetsplakette in
  * genau dieser Ecke gefallen ist. Gesichter wiederholen nichts: sie stehen
  * sonst nirgends im Reiter, und `FirmamentGalaxyTip` verweist fuer die NAMEN
@@ -25,7 +28,7 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { starSeatsFreedFirst } from '@/utils/ui/starSeats'
+import { starSeatsSplit } from '@/utils/ui/starSeats'
 import { voyageManifestRow } from '@/utils/ui/voyageManifestRow'
 import { getChampionIconPath } from '@/utils/game/champions'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
@@ -35,6 +38,7 @@ import {
   STAR_MANIFEST_ART_SIZE,
   VOYAGE_MANIFEST_ACCENT_BAR_PX,
   VOYAGE_MANIFEST_LABEL,
+  VOYAGE_MANIFEST_LOST_LABEL,
 } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 
@@ -53,7 +57,8 @@ const emit = defineEmits<{ hover: [number | null] }>()
  * EIN delegierter Listener statt einem je Kachel.
  *
  * `mouseover` blubbert und nennt bei jedem Wechsel das neue Ziel; `mouseenter`
- * an sieben Kacheln waere sieben Listener fuer dieselbe Auskunft. Das Ziel
+ * an sieben Kacheln waere sieben Listener fuer dieselbe Auskunft. Er haengt am
+ * KOERPER, nicht an einer Sitzliste: beide Baender melden ueber denselben. Das Ziel
  * traegt seinen Flugindex als `data-star` — der LISTENindex taugt nicht, weil
  * der Deckel Sitze wegwirft und die Liste Luecken hat.
  */
@@ -63,18 +68,42 @@ function onOver(e: MouseEvent) {
   emit('hover', idx == null ? null : Number(idx))
 }
 
-/* EIN Deckel, und er liegt im Layout: `voyageManifestRow` weiss, wie viele
-   Kacheln die Buehne traegt und ob ein Ueberlaufchip dazwischenmuss. */
-const row = computed(() => voyageManifestRow(props.width, props.record.attemptResults.length))
-
-/* Er wirft VERLORENE zuerst weg. Ein Schnitt von vorn versteckte bei fruehen
-   Verlusten ausgerechnet die Geretteten hinter dem „+N". */
-const seats = computed(
-  () =>
-    starSeatsFreedFirst(props.record.attemptResults, props.record.starManifests, row.value.seats)
-      .seats,
+const lostCount = computed(
+  () => props.record.attemptResults.filter((o) => o === 'failed').length,
 )
-const hidden = computed(() => (seats.value.length ? row.value.hidden : 0))
+
+/* EIN Deckel je Band, und er liegt im Layout: `voyageManifestRow` weiss, wie
+   viele Kacheln die Buehne traegt und ob ein Ueberlaufchip dazwischenmuss. */
+const row = computed(() =>
+  voyageManifestRow(
+    props.width,
+    props.record.attemptResults.length - lostCount.value,
+    lostCount.value,
+  ),
+)
+
+const split = computed(() =>
+  starSeatsSplit(
+    props.record.attemptResults,
+    props.record.starManifests,
+    row.value.freed.seats,
+    row.value.lost.seats,
+  ),
+)
+
+/* Beide Baender in EINER Liste: das Template unterscheidet sie nur noch am
+   Kopfwort und am Ton der Leiste. */
+const bands = computed(() =>
+  [
+    { key: 'freed', label: VOYAGE_MANIFEST_LABEL, ink: null, ...split.value.freed },
+    {
+      key: 'lost',
+      label: VOYAGE_MANIFEST_LOST_LABEL,
+      ink: FIRMAMENT_LOST_COLOR,
+      ...split.value.lost,
+    },
+  ].filter((b) => b.seats.length),
+)
 
 /** Derselbe Ton wie `--egsb-accent`: eine Buehne, ein Galaxieton. */
 const accent = computed(() => `rgb(${minimapAccentForTheme(props.record.themeIndex)})`)
@@ -95,34 +124,44 @@ const barPx = `${VOYAGE_MANIFEST_ACCENT_BAR_PX}px`
 
 <template>
   <div
+    v-if="bands.length"
     class="esm"
     :style="{ '--esm-accent': accent }"
     role="group"
-    :aria-label="`Champions saved — galaxy ${record.galaxy}`"
+    :aria-label="`Champions of galaxy ${record.galaxy}`"
   >
     <span class="esm-scrim" aria-hidden="true" />
 
-    <div class="esm-body">
-      <span class="esm-head">{{ VOYAGE_MANIFEST_LABEL }}</span>
+    <div class="esm-body" @mouseover="onOver" @mouseleave="emit('hover', null)">
+      <section
+        v-for="band in bands"
+        :key="band.key"
+        class="esm-band"
+        role="group"
+        :aria-label="band.label"
+        :style="band.ink ? { '--esm-accent': band.ink } : undefined"
+      >
+        <span class="esm-head">{{ band.label }}</span>
 
-      <ul class="esm-seats" @mouseover="onOver" @mouseleave="emit('hover', null)">
-        <li
-          v-for="(seat, i) in seats"
-          :key="i"
-          class="esm-tile"
-          :class="{ 'esm-tile--lost': seat.lost, 'esm-tile--on': seat.index === highlight }"
-          :data-star="seat.index"
-          :style="{ '--esm-ink': seat.lost ? FIRMAMENT_LOST_COLOR : FIRMAMENT_FREED_COLOR }"
-        >
-          <span class="esm-art">
-            <img v-if="seat.champion" :src="art(seat.champion)" :alt="seat.champion" />
-            <Icon v-else icon="lucide:lock" width="24" height="24" aria-hidden="true" />
-          </span>
-          <span class="esm-name">{{ seat.champion ?? 'No champion' }}</span>
-        </li>
+        <ul class="esm-seats">
+          <li
+            v-for="(seat, i) in band.seats"
+            :key="i"
+            class="esm-tile"
+            :class="{ 'esm-tile--lost': seat.lost, 'esm-tile--on': seat.index === highlight }"
+            :data-star="seat.index"
+            :style="{ '--esm-ink': seat.lost ? FIRMAMENT_LOST_COLOR : FIRMAMENT_FREED_COLOR }"
+          >
+            <span class="esm-art">
+              <img v-if="seat.champion" :src="art(seat.champion)" :alt="seat.champion" />
+              <Icon v-else icon="lucide:lock" width="24" height="24" aria-hidden="true" />
+            </span>
+            <span class="esm-name">{{ seat.champion ?? 'No champion' }}</span>
+          </li>
 
-        <li v-if="hidden > 0" class="esm-more">+{{ hidden }} more</li>
-      </ul>
+          <li v-if="band.hidden > 0" class="esm-more">+{{ band.hidden }} more</li>
+        </ul>
+      </section>
     </div>
   </div>
 </template>
@@ -164,6 +203,14 @@ const barPx = `${VOYAGE_MANIFEST_ACCENT_BAR_PX}px`
   flex-direction: column;
   gap: v-bind(gapPx);
   padding: v-bind(padPx);
+}
+
+/* Derselbe Abstand INNERHALB eines Bandes wie ZWISCHEN beiden — die
+   Hoehenformel in `voyageManifestRow` rechnet mit genau diesem einen `gap`. */
+.esm-band {
+  display: flex;
+  flex-direction: column;
+  gap: v-bind(gapPx);
 }
 
 /* Ton und Sperrung von `.egsb-lbl` — eine Buehne, eine Stimme. Der Schatten ist

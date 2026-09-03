@@ -29,6 +29,15 @@ import {
   VOYAGE_MANIFEST_TILE_SHARE,
 } from '@/config/constants'
 
+/** Ein Band der Reihe — die Geretteten, die Verlorenen. */
+export interface VoyageManifestBand {
+  /** Wie viele Gesichter das Band traegt. */
+  seats: number
+  /** Was der Deckel abschneidet — die Zahl, die der Chip nennt. */
+  hidden: number
+  width: number
+}
+
 export interface VoyageManifestRow {
   /** Portraitkante — immer im `md`-Band, siehe Deckel. */
   tile: number
@@ -36,12 +45,12 @@ export interface VoyageManifestRow {
   cell: number
   gap: number
   pad: number
-  /** Wie viele Gesichter die Reihe traegt. */
-  seats: number
-  /** Was der Deckel abschneidet — die Zahl, die der Chip nennt. */
-  hidden: number
+  freed: VoyageManifestBand
+  /** `seats` 0, wenn nichts verloren ging — dann steht das Band gar nicht. */
+  lost: VoyageManifestBand
   headPx: number
   namePx: number
+  /** Die BREITERE der beiden — sie traegt Maske und Scrim. */
   width: number
   height: number
   scrimW: number
@@ -51,11 +60,16 @@ export interface VoyageManifestRow {
 const clamp = (lo: number, v: number, hi: number) => Math.min(hi, Math.max(lo, v))
 
 /**
- * @param stageW Breite der Kartenbuehne (`.egm`) in CSS-Pixeln.
- * @param total  Wie viele Sitze der Datensatz hergibt. Ohne Angabe: kein
- *               Ueberlauf, die Reihe rechnet ihre reinen Masse.
+ * @param stageW     Breite der Kartenbuehne (`.egm`) in CSS-Pixeln.
+ * @param freedTotal Wie viele gerettete Sitze der Datensatz hergibt. Ohne
+ *                   Angabe: kein Ueberlauf, die Reihe rechnet ihre reinen Masse.
+ * @param lostTotal  Dasselbe fuer die verlorenen. 0 heisst: kein zweites Band.
  */
-export function voyageManifestRow(stageW: number, total = 0): VoyageManifestRow {
+export function voyageManifestRow(
+  stageW: number,
+  freedTotal = 0,
+  lostTotal = 0,
+): VoyageManifestRow {
   const tile = Math.round(
     clamp(VOYAGE_MANIFEST_TILE_MIN, stageW * VOYAGE_MANIFEST_TILE_SHARE, VOYAGE_MANIFEST_TILE_MAX),
   )
@@ -74,8 +88,17 @@ export function voyageManifestRow(stageW: number, total = 0): VoyageManifestRow 
   // und damit ihren zugesagten Anteil. Er ist schmaler als eine Kachel, aber
   // sein Text waechst mit der Zahl („+12 more") — eine ganze Zelle ist die
   // Reserve, die keine zweite Messung braucht.
-  const seats = total > cells ? Math.max(VOYAGE_MANIFEST_SEATS_MIN, cells - 1) : cells
-  const lanes = total > seats ? seats + 1 : seats
+  const band = (total: number): VoyageManifestBand => {
+    const seats = total > cells ? Math.max(VOYAGE_MANIFEST_SEATS_MIN, cells - 1) : cells
+    const lanes = total > seats ? seats + 1 : seats
+    return {
+      seats,
+      hidden: Math.max(0, total - seats),
+      width: 2 * pad + lanes * cell + (lanes - 1) * gap,
+    }
+  }
+  const freed = band(freedTotal)
+  const lost = band(lostTotal)
 
   const namePx = Math.min(VOYAGE_MANIFEST_NAME_MAX, Math.round(tile * VOYAGE_MANIFEST_NAME_RATIO))
   const headPx = Math.min(
@@ -83,22 +106,26 @@ export function voyageManifestRow(stageW: number, total = 0): VoyageManifestRow 
     Math.round(namePx * VOYAGE_MANIFEST_HEAD_RATIO),
   )
 
-  const width = 2 * pad + lanes * cell + (lanes - 1) * gap
-  const height =
-    2 * pad +
+  // Ein Band: Kopfwort, Kacheln, Namen. Zwei stehen mit `gap` uebereinander,
+  // und der Scrim faellt ueber beide.
+  const bandH =
     Math.round(headPx * VOYAGE_MANIFEST_LINE) +
     gap +
     tile +
     gap +
     Math.round(namePx * VOYAGE_MANIFEST_LINE)
+  const bands = lostTotal > 0 ? 2 : 1
+
+  const width = Math.max(freed.width, lostTotal > 0 ? lost.width : 0)
+  const height = 2 * pad + bands * bandH + (bands - 1) * gap
 
   return {
     tile,
     cell,
     gap,
     pad,
-    seats,
-    hidden: Math.max(0, total - seats),
+    freed,
+    lost: lostTotal > 0 ? lost : { seats: 0, hidden: 0, width: 0 },
     headPx,
     namePx,
     width,

@@ -36,7 +36,10 @@ import { voyageManifestRow } from '@/utils/ui/voyageManifestRow'
  *    Reisst jemand `TILE_MAX` hoch, ist die Stufe zu klein gewaehlt und der
  *    Reiter laedt dieselben Gesichter ein ZWEITES Mal vom Server — im Bild
  *    sieht man davon nichts.
- * 2. **Full HD traegt eine volle Galaxie.** Bei `MAX_SHARE` 0,50 fielen dort
+ * 2. **Die Reihe bleibt oberhalb der Scheibenmitte — auch mit ZWEI Baendern.**
+ *    Seit die Verlorenen ein eigenes Band bekommen, kann die Reihe doppelt so
+ *    hoch werden; der engste Fall (Full HD, gefaltete Zielliste) hat 23 px Luft.
+ * 3. **Full HD traegt eine volle Galaxie.** Bei `MAX_SHARE` 0,50 fielen dort
  *    sechs Kacheln heraus, und ab Galaxie 5 stuende dauerhaft ein „+1 more"
  *    neben einer Reihe, die Platz gehabt haette. 0,52 ist deshalb keine
  *    Geschmacksfrage, sondern das Ergebnis dieser Zusicherung.
@@ -112,20 +115,39 @@ describe('voyage star manifest fit', () => {
     // und riss den Anteil auf Full HD von 0,506 auf 0,557.
     for (const w of ALL_WIDTHS()) {
       for (const total of [1, GALAXY_STARS_MAX, VOYAGE_MANIFEST_SEATS_MAX, 40]) {
-        expect(voyageManifestRow(w, total).width).toBeLessThanOrEqual(
-          w * VOYAGE_MANIFEST_MAX_SHARE,
-        )
+        // Beide Baender, einzeln und gemeinsam: die Breite ist die BREITERE.
+        for (const lost of [0, 1, total]) {
+          expect(voyageManifestRow(w, total, lost).width).toBeLessThanOrEqual(
+            w * VOYAGE_MANIFEST_MAX_SHARE,
+          )
+        }
       }
     }
   })
 
-  it('zaehlt jeden Sitz — gezeigt oder im Chip', () => {
+  it('zaehlt jeden Sitz — gezeigt oder im Chip, je Band', () => {
     for (const w of ALL_WIDTHS()) {
       for (const total of [1, 5, GALAXY_STARS_MAX, 40]) {
-        const { seats, hidden } = voyageManifestRow(w, total)
-        expect(hidden).toBeGreaterThanOrEqual(0)
-        expect(Math.min(seats, total) + hidden).toBe(total)
+        const { freed, lost } = voyageManifestRow(w, total, total)
+        for (const band of [freed, lost]) {
+          expect(band.hidden).toBeGreaterThanOrEqual(0)
+          expect(Math.min(band.seats, total) + band.hidden).toBe(total)
+        }
       }
+    }
+  })
+
+  it('stellt das zweite Band nur auf, wenn etwas verloren ging', () => {
+    for (const w of ALL_WIDTHS()) {
+      const clean = voyageManifestRow(w, GALAXY_STARS_MAX)
+      expect(clean.lost.seats).toBe(0)
+      const withLoss = voyageManifestRow(w, GALAXY_STARS_MAX, 1)
+      expect(withLoss.lost.seats).toBeGreaterThan(0)
+      // Das Band kostet Hoehe, aber keine Breite: die Reihe ist so breit wie
+      // ihr breiteres Band.
+      expect(withLoss.height).toBeGreaterThan(clean.height)
+      expect(withLoss.width).toBe(clean.width)
+      expect(withLoss.scrimH).toBeGreaterThan(clean.scrimH)
     }
   })
 
@@ -133,9 +155,9 @@ describe('voyage star manifest fit', () => {
     // Sieben Sterne, keiner verloren: das ist der Fall, der VOLLSTAENDIG
     // dastehen muss — sonst stuende ab Galaxie 5 dauerhaft ein „+1 more"
     // neben einer Reihe, die Platz gehabt haette.
-    const { seats, hidden } = voyageManifestRow(stageW(vw, vh), GALAXY_STARS_MAX)
-    expect(seats).toBeGreaterThanOrEqual(GALAXY_STARS_MAX)
-    expect(hidden).toBe(0)
+    const { freed } = voyageManifestRow(stageW(vw, vh), GALAXY_STARS_MAX)
+    expect(freed.seats).toBeGreaterThanOrEqual(GALAXY_STARS_MAX)
+    expect(freed.hidden).toBe(0)
   })
 
   it('laesst den Sitzboden nur im Ueberlauf greifen', () => {
@@ -143,10 +165,12 @@ describe('voyage star manifest fit', () => {
       // Die reine KAPAZITAET (ohne Ueberlaufchip) liegt auch am schmalsten
       // zulaessigen Punkt ueber dem Boden — er ist eine Zusicherung, keine
       // Betriebsgroesse.
-      expect(voyageManifestRow(w).seats).toBeGreaterThan(VOYAGE_MANIFEST_SEATS_MIN)
+      expect(voyageManifestRow(w).freed.seats).toBeGreaterThan(VOYAGE_MANIFEST_SEATS_MIN)
       // Mit Ueberlauf kostet der Chip eine Zelle, und DANN ist der Boden das,
       // was uebrig bleibt — nie weniger.
-      expect(voyageManifestRow(w, 40).seats).toBeGreaterThanOrEqual(VOYAGE_MANIFEST_SEATS_MIN)
+      expect(voyageManifestRow(w, 40).freed.seats).toBeGreaterThanOrEqual(
+        VOYAGE_MANIFEST_SEATS_MIN,
+      )
     }
   })
 
@@ -154,10 +178,11 @@ describe('voyage star manifest fit', () => {
     for (const folded of [false, true]) {
       const w = stageW(vw, vh, folded)
       const box = galaxyFitBox(w, stageH(vh) - VOYAGE_MAP_STATS_BAND_H, VOYAGE_MAP_INSET_PX)
-      // Ab der Mittellinie liegen Kern, Arme und jede geflogene Route.
-      expect(voyageManifestRow(w).height).toBeLessThanOrEqual(
-        box.y + box.h / 2 - VOYAGE_MAP_INSET_PX,
-      )
+      // Ab der Mittellinie liegen Kern, Arme und jede geflogene Route. Geprueft
+      // wird der TEURE Fall: beide Baender stehen.
+      const limit = box.y + box.h / 2 - VOYAGE_MAP_INSET_PX
+      expect(voyageManifestRow(w).height).toBeLessThanOrEqual(limit)
+      expect(voyageManifestRow(w, GALAXY_STARS_MAX, 40).height).toBeLessThanOrEqual(limit)
     }
   })
 
@@ -167,9 +192,10 @@ describe('voyage star manifest fit', () => {
 
   it('laesst den Scrim immer groesser sein als das, was er traegt', () => {
     for (const w of ALL_WIDTHS()) {
-      const row = voyageManifestRow(w)
-      expect(row.scrimW).toBeGreaterThan(row.width)
-      expect(row.scrimH).toBeGreaterThan(row.height)
+      for (const row of [voyageManifestRow(w), voyageManifestRow(w, GALAXY_STARS_MAX, 40)]) {
+        expect(row.scrimW).toBeGreaterThan(row.width)
+        expect(row.scrimH).toBeGreaterThan(row.height)
+      }
     }
   })
 })

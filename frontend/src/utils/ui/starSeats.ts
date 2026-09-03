@@ -64,44 +64,36 @@ export function starSeats(
 }
 
 /**
- * Dieselben Sitze, aber der Deckel wirft VERLORENE zuerst weg — von hinten,
- * und nie den letzten.
+ * Dieselben Sitze, nach dem AUSGANG getrennt — die zwei Baender der
+ * Manifestreihe im Voyages-Atlas.
  *
- * `starSeats` schneidet vorn ab. Ein Lauf mit drei fruehen Verlusten zeigte
- * damit drei rote Kacheln und versteckte drei gerettete Champions hinter dem
- * „+N" — auf einer Reihe, deren ganze Aussage ist, WEN der Bard hier rausgeholt
- * hat.
- *
- * Der letzte Verlust bleibt aber STEHEN. Im Browser gemessen: eine 7/1-Galaxie
- * auf sechs Plaetzen zeigte sechs goldene Kacheln, waehrend das Datenband
- * darunter `7/1` meldete — die Reihe behauptete einen makellosen Lauf. Ein
- * Beleg, dass hier etwas schiefging, kostet genau eine Kachel.
- *
- * Die Reihenfolge der behaltenen Sitze bleibt die des Fluges: die Chronologie
- * ist ihr Eigenwert.
+ * Ein gemeinsamer Deckel ueber beide Gruppen hat hier einmal die Geretteten
+ * hinter das „+N" geschoben; getrennte Baender haben getrennte Deckel, und die
+ * Frage stellt sich nicht mehr. Die Reihenfolge innerhalb einer Gruppe bleibt
+ * die des Fluges: die Chronologie ist ihr Eigenwert.
  */
-export function starSeatsFreedFirst(
+export function starSeatsSplit(
   outcomes: readonly StarAttemptResult[] | undefined,
   manifests: readonly StarManifest[] | undefined,
-  max: number,
-): StarSeats {
-  if (!outcomes?.length || !manifests?.length) return { seats: [], hidden: 0 }
+  maxFreed: number,
+  maxLost: number = maxFreed,
+): { freed: StarSeats; lost: StarSeats } {
+  const empty = (): StarSeats => ({ seats: [], hidden: 0 })
+  if (!outcomes?.length || !manifests?.length) return { freed: empty(), lost: empty() }
 
-  const keep = new Set(outcomes.map((_, i) => i))
-  let lostLeft = outcomes.filter((o) => o === 'failed').length
-  for (let i = outcomes.length - 1; i >= 0 && keep.size > max && lostLeft > 1; i--) {
-    if (outcomes[i] === 'failed') {
-      keep.delete(i)
-      lostLeft--
-    }
-  }
-  // Reicht das nicht, faellt von hinten alles — auch der letzte Verlust.
-  for (let i = outcomes.length - 1; i >= 0 && keep.size > max; i--) {
-    keep.delete(i)
-  }
-
+  const all = outcomes.map((_, i) => seatAt(outcomes, manifests, i))
+  const cap = (group: StarSeat[], max: number): StarSeats => ({
+    seats: group.slice(0, max),
+    hidden: Math.max(0, group.length - max),
+  })
   return {
-    seats: [...keep].sort((a, b) => a - b).map((i) => seatAt(outcomes, manifests, i)),
-    hidden: Math.max(0, outcomes.length - keep.size),
+    freed: cap(
+      all.filter((s) => !s.lost),
+      maxFreed,
+    ),
+    lost: cap(
+      all.filter((s) => s.lost),
+      maxLost,
+    ),
   }
 }
