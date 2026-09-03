@@ -47,6 +47,7 @@ import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { toRoman } from '@/utils/ui/format'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import ExpeditionMapLegend from './ExpeditionMapLegend.vue'
 import {
   LANDMARK_FREED_CORE,
   UNIVERSE_TOOLTIP_IMAGES,
@@ -72,6 +73,9 @@ const props = defineProps<{
   tier: 'common' | 'rare' | 'epic'
   /** Schmale Bühne: die vier Kosten entfallen, Chronik und Payout bleiben. */
   compact: boolean
+  /** Stufe der Formlegende: mit Wörtern, nur Sonden, oder gar nicht. */
+  legendMode: 'full' | 'icons' | 'off'
+  dpr: number
 }>()
 
 const chartStore = useExpeditionChartStore()
@@ -152,7 +156,12 @@ const summary = computed(
   <div class="egsb" :style="{ '--egsb-accent': accent }">
     <span class="egsb-scrim" aria-hidden="true" />
 
-    <div class="egsb-row" role="group" :aria-label="summary">
+    <div
+      class="egsb-row"
+      :class="{ 'egsb-row--legend': legendMode !== 'off' }"
+      role="group"
+      :aria-label="summary"
+    >
       <!-- WAS WAR ─────────────────────────────────────────────────────────── -->
       <div class="egsb-read">
         <!-- Befreit und verloren sind EINE Ablesung: die Null bleibt STEHEN und
@@ -171,6 +180,17 @@ const summary = computed(
           <span v-ink-center.y class="egsb-lbl">Voyages</span>
         </section>
       </div>
+
+      <!-- WAS AUF DER KARTE LIEGT ─────────────────────────────────────────── -->
+      <!-- Eigene Bahn LINKS der Fuge, nicht in ihr: der elastische Überschuss
+           bleibt damit auf der Naht zwischen Chronik und Deal. `key` mountet
+           neu, wenn die Stufe wechselt — `v-tip` bindet nur beim Mount. -->
+      <ExpeditionMapLegend
+        v-if="legendMode !== 'off'"
+        :key="legendMode"
+        :mode="legendMode"
+        :dpr="dpr"
+      />
 
       <!-- DER GEWINN ──────────────────────────────────────────────────────── -->
       <!-- Die einzige farbige Ablesung des Bandes: alles andere hier ist Preis. -->
@@ -247,6 +267,11 @@ const summary = computed(
   height: v-bind(bandH);
   padding: v-bind(padY) clamp(12px, 1.5cqw, 30px);
   border-top: 1px solid rgba(122, 78, 32, 0.42);
+}
+/* Die Legende bekommt eine EIGENE `auto`-Bahn links der Fuge. Ohne sie fiele
+   die Zuordnung um eine Bahn und der Payout landete in einer starren. */
+.egsb-row--legend {
+  grid-template-columns: auto auto 1fr auto;
 }
 /* Die Akzentkante der Galaxie — der einzige farbige Strich im Band. */
 .egsb-row::before {

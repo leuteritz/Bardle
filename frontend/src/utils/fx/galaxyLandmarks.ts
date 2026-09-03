@@ -100,10 +100,12 @@ export interface LandmarkOpts {
   /**
    * `star-freed` und `void-impact`: die Farbe des Kernfunkens, fertig aufgelöst.
    *
-   * Ein EIGENES Feld und nicht `tint`: die Kartenlegende reicht `tint` ihrem
-   * Themenakzent unkonditioniert an JEDE Zeile durch — der befreite Stern
-   * bekäme dort sonst die Farbe der Galaxie statt der Rolle. Ohne Angabe
-   * bleibt es `LANDMARK_FREED_CORE`.
+   * Ein EIGENES Feld und nicht `tint`: die gefallene Kartenlegende reichte
+   * `tint` ihren Themenakzent unkonditioniert an JEDE Zeile durch — der
+   * befreite Stern bekam dort die Farbe der Galaxie statt der Rolle. Die
+   * Legende im Datenband setzt deshalb KEINS von beiden: ohne Angabe bleibt
+   * der Kern `LANDMARK_FREED_CORE`, und `void-impact` malt seinen nur MIT
+   * gesetztem `coreTint` — sein violetter Ton entsteht dort gar nicht erst.
    */
   coreTint?: string
   /**

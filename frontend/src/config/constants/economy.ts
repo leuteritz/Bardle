@@ -1391,6 +1391,90 @@ export const VOYAGE_MAP_STATS_RECORD_TIPS = {
   voyages: 'Expeditions that have come back from this destination.',
 } as const
 
+/* ── Die Formlegende — eine dritte Bahn im Band ───────────────────────────────
+   Sie stand einmal als Overlay UNTEN LINKS auf der Buehne und ist genau daran
+   gestorben: eine dauerhaft belegte Ecke, eine Sperrzone, die Portal und Marken
+   verschob, und `tint` unkonditioniert an jede Zeile. Im Band trifft nichts
+   davon zu — es schrumpft die Fit-Box ohnehin, unter ihm liegt keine Marke.
+
+   Sie fuellt die Fuge NICHT, sondern steht als eigene `auto`-Bahn LINKS davon:
+   der elastische Ueberschuss bleibt damit auf der Bedeutungsnaht zwischen
+   Chronik und Deal, wo er hingehoert. */
+
+/** Kachelkante einer Sonde. 22 wie in der gefallenen Fassung, und das haelt die
+ *  Klemmung in `ui.ts` gueltig: `VOYAGE_MAP_LEGEND_R x LANDMARK_PAD_SPAN` sind
+ *  15,0 px in 22, die Krone bei `1,5 r` braucht 13,2. */
+export const VOYAGE_MAP_LEGEND_ICON_PX = 22
+/** Sondenradius — der ENGSTE Fall der ganzen Karte. Wer an einem
+ *  Landmarken-Radius dreht, prueft ihn zuerst. */
+export const VOYAGE_MAP_LEGEND_R = 4.4
+/** Deckel des Wortes. Unter `VOYAGE_MAP_STATS_CHIP_LABEL_MAX` (10): eine Koste
+ *  ist ein Merkmal des Ziels, eine Legende nur die Lesehilfe zur Form — sie
+ *  bleibt die leiseste Schrift des Bandes. `voyageBandFit.spec.ts` bindet es. */
+export const VOYAGE_MAP_LEGEND_LABEL_MAX = 9
+
+/**
+ * Die fuenf Chronikmarken — was ein gespielter Lauf auf der Karte hinterlaesst.
+ *
+ * Tor und Ankunftsportal stehen NICHT drin: beide sind gross, einmalig je Karte
+ * und tragen ohnehin eine Pille bzw. eine Beschriftung. Route und Haefen auch
+ * nicht — eine Linie hat keine Silhouette, und ein Hafen ist der Knopf, den man
+ * ohnehin anklickt.
+ *
+ * Landfall ist EINE Zeile fuer alle sechs Orte: sie teilen sich die Raute und
+ * trennen sich erst auf voller Detailstufe durch eine Binnenmarke. Welcher Ort
+ * es war, sagt der Hover-Tooltip der Marke.
+ *
+ * Die Woerter sind die `state`-Zeilen der Marken-Tooltips, gekuerzt — kein
+ * zweites Vokabular fuer dieselbe Sache.
+ */
+export const VOYAGE_MAP_LEGEND_ROWS = [
+  { kind: 'star-freed', label: 'Freed' },
+  { kind: 'star-lost', label: 'Lost' },
+  { kind: 'landfall-reef', label: 'Landfall' },
+  { kind: 'void-impact', label: 'Void' },
+  { kind: 'drifter-trace', label: 'Drifter' },
+] as const
+
+/**
+ * Eigenbedarf der Legende AN IHRER SCHWELLE, im Browser gemessen (Sonden,
+ * Woerter, Abstaende, Polster, Haarlinie). Kein fester Wert ueber alle Breiten:
+ * die `clamp` der Zone wachsen mit, gemessen 327,9 px bei einer Buehne von 608
+ * bis 378,1 bei 1182.
+ */
+export const VOYAGE_MAP_LEGEND_NEED_FULL = 370
+/** Dasselbe fuer die Sondenreihe allein — fuenf Kacheln und ihre Abstaende;
+ *  gemessen 149,0 auf der schmalsten Buehne bis 166,7 bei 1032. */
+export const VOYAGE_MAP_LEGEND_NEED_ICONS = 152
+
+/**
+ * Ab dieser BUEHNENbreite traegt die Legende ihre Woerter, darunter nur noch
+ * die Sonden.
+ *
+ * Die Zahl ist gemessen und HERGELEITET, nicht gewaehlt: sie ist die schmalste
+ * Buehne, auf der nach der vollen Legende noch `VOYAGE_MAP_STATS_BAND_H` an
+ * Fuge bleibt. Die Naht zwischen Chronik und Deal ist Bedeutung — eine Fuge,
+ * die schmaler ist als das Band hoch, liest sich nicht mehr als Trennung
+ * zweier Gruppen, sondern als Abstand innerhalb einer.
+ *
+ * Gemessen (Buehne → Fuge nach der vollen Legende): 966 → 15,5 · 1031,7 → 61,0
+ * · 1064,4 → 83,3 · 1097,3 → 108,5. Unterhalb 966 faellt sie auf NULL, und der
+ * Ueberlauf einer `nowrap`-Zeile wird hier STILL abgeschnitten.
+ *
+ * Praktisch heisst das: Full HD mit ausgeklappter Zielliste (Buehne 952) traegt
+ * die Sonden, eingeklappt (1176) die Woerter; 2K und 4K immer die Woerter.
+ */
+export const VOYAGE_MAP_LEGEND_MIN_W = 1048
+/**
+ * Ab hier steht die Sondenreihe, darunter faellt die Legende ganz weg —
+ * dieselbe Herleitung, dieselbe Fuge: gemessen 608,4 → 0 · 658,4 → 15,9 ·
+ * 708,4 → 55,5 · 758,4 → 92,5.
+ *
+ * Anders als das gefallene `_WIDE_W` greifen beide Schwellen nachweislich —
+ * darum sind sie eine Zusicherung und kein Irrtum in Wartestellung.
+ */
+export const VOYAGE_MAP_LEGEND_ICONS_MIN_W = 733
+
 /* ── Die Manifestreihe — der Zwilling des Datenbands, oben links ──────────────
    Das Band sagt WIE VIELE (`STARS 7/2`), die Reihe sagt WER. Deshalb traegt sie
    keinen Zaehler: dieselbe Zahl zweimal auf einem Bild war schon der Grund,

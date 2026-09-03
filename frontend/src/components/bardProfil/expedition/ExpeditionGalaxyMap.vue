@@ -43,6 +43,8 @@ import {
   VOYAGE_MAP_ROUTE_ALPHA,
   VOYAGE_SITE_INLINE_CLOCK_PX,
   VOYAGE_SITE_MOVE_MS,
+  VOYAGE_MAP_LEGEND_ICONS_MIN_W,
+  VOYAGE_MAP_LEGEND_MIN_W,
   VOYAGE_MAP_STATS_BAND_H,
   VOYAGE_MAP_STATS_MIN_H,
   VOYAGE_MAP_STATS_MIN_W,
@@ -103,6 +105,19 @@ const dprNow = ref(1)
  */
 const showBand = computed(() => cssH.value >= VOYAGE_MAP_STATS_MIN_H && cssW.value > 0)
 const bandH = computed(() => (showBand.value ? VOYAGE_MAP_STATS_BAND_H : 0))
+
+/**
+ * Die Formlegende weicht in ZWEI Stufen, statt hart zu verschwinden: erst
+ * fallen die Wörter, dann die Sonden. Die Schwellen sind gemessen und stehen
+ * als Konstanten — `@container`-Bedingungen können kein `v-bind` lesen, und
+ * gebunden werden muss die Zahl trotzdem: die Zeile steht auf `nowrap` und ihr
+ * Überlauf wird STILL abgeschnitten.
+ */
+const legendMode = computed<'full' | 'icons' | 'off'>(() => {
+  if (cssW.value >= VOYAGE_MAP_LEGEND_MIN_W) return 'full'
+  if (cssW.value >= VOYAGE_MAP_LEGEND_ICONS_MIN_W) return 'icons'
+  return 'off'
+})
 
 const box = computed<FitBox>(() =>
   galaxyFitBox(cssW.value, cssH.value - bandH.value, VOYAGE_MAP_INSET_PX),
@@ -424,6 +439,8 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
       :title="title"
       :tier="tier"
       :compact="cssW < VOYAGE_MAP_STATS_MIN_W"
+      :legend-mode="legendMode"
+      :dpr="dprNow"
     />
 
     <!-- Der Zwilling des Bandes in der gegenüberliegenden Ecke: das Band sagt
