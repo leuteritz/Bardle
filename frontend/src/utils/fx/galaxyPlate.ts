@@ -25,6 +25,7 @@ import {
 import type { GalaxyGeo } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor, roundLandmarkRadius } from './galaxyLandmarks'
 import { landfallMarks } from '@/utils/game/landfalls'
+import { incidentMarkRadius, incidentMarks, incidentPaint } from '@/utils/game/galaxyIncidents'
 import { LANDFALL_LANDMARK_KIND } from '@/config/world/landfalls'
 import { buildDeepField, paintDeepField } from './galaxyDeepField'
 import {
@@ -33,6 +34,7 @@ import {
   CORE_GATE_CROWN_SPAN,
   VOYAGE_GATE_GAP_PX,
   LANDFALL_MARK_R,
+  GALAXY_INCIDENT_MARK_R,
   LANDFALL_CORE_GAP_PX,
   GALAXY_AURA_ALPHA,
   GALAXY_AURA_SPAN,
@@ -492,6 +494,31 @@ export function paintGalaxy(
       },
     )
   })
+
+  // Die Ereignis-Chronik: wo ein Void durchkam und wo ein seltener Drifter fiel.
+  // Zwischen Orten und Sternen, aus demselben Grund — ein Stern gewinnt, wenn
+  // beide eng liegen. Sie weicht Sternen und Orten aus, deshalb bekommt sie
+  // beide als belegte Punkte mit.
+  for (const m of incidentMarks(
+    record.mapSeed,
+    spawn,
+    dots,
+    attempts,
+    record.incidentResults ?? [],
+    [...dots.slice(0, attempts), ...marken],
+    coreGateClearance(box, hk),
+  )) {
+    const [ix, iy] = toC(m.x, m.y)
+    const wie = incidentPaint(m)
+    drawLandmark(
+      ctx,
+      wie.kind,
+      ix,
+      iy,
+      roundLandmarkRadius(incidentMarkRadius(m.rank, GALAXY_INCIDENT_MARK_R * hk)),
+      { dpr, faded: wie.faded, coreTint: m.coreTint },
+    )
+  }
 
   // Abflugportal — der Ring steht quer zur ersten Etappe, man fliegt hindurch.
   const [fx, fy] = attempts > 0 ? toC(dots[0].x, dots[0].y) : [gcx, gcy]

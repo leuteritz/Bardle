@@ -24,6 +24,9 @@ import { GALAXY_PLATE_REF_W } from '@/utils/fx/galaxyPlate'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { landfallsOfRun, landfallWorldPos } from '@/utils/game/landfalls'
+import { incidentMarks } from '@/utils/game/galaxyIncidents'
+import { VOID_RIFTS } from '@/config/world/void'
+import type { GalaxyIncident } from '@/types'
 import type { AvailableExpeditionSlot, ExpeditionMission } from '@/types'
 
 /**
@@ -34,7 +37,12 @@ import type { AvailableExpeditionSlot, ExpeditionMission } from '@/types'
  * (Determinismus und Monotonie).
  */
 
-function record(galaxy: number, attempts = 4, landfalls = 0): CompletedGalaxyRecord {
+function record(
+  galaxy: number,
+  attempts = 4,
+  landfalls = 0,
+  incidents = 0,
+): CompletedGalaxyRecord {
   return {
     galaxy,
     mapSeed: galaxy * 7919 + 13,
@@ -46,6 +54,11 @@ function record(galaxy: number, attempts = 4, landfalls = 0): CompletedGalaxyRec
       kind: 'chime_reef' as const,
       cleared: i % 4 !== 3,
     })),
+    incidentResults: Array.from({ length: incidents }, (_, i) => ({
+      kind: 'void-impact' as const,
+      leg: i % (attempts + 1),
+      id: VOID_RIFTS[i % VOID_RIFTS.length].id,
+    })) as GalaxyIncident[],
     durationSeconds: 600,
     completedAt: 0,
   }
@@ -148,6 +161,30 @@ describe('voyageBerthsOf — Plätze jenseits der Geschichte', () => {
     // Kein harter Vertrag wie unter den Häfen — die Orte sind kleiner und nicht
     // anklickbar. Aber sie dürfen nicht UNTER einer Hafenplatte verschwinden.
     expect(worst, `engster Abstand Hafen↔Ort ${worst}`).toBeGreaterThan(0.02)
+  })
+
+  /** Dieselbe Begründung wie bei den Orten: die Ereignis-Chronik gehört zur
+   *  Geschichte, sonst setzt sich ein Hafen auf einen Einschlag. */
+  it('weicht auch den Ereignismarken aus', () => {
+    let worst = Number.POSITIVE_INFINITY
+    for (let g = 2; g <= 20; g++) {
+      for (const attempts of [4, 8, 11]) {
+        const rec = record(g, attempts, LANDFALL_MAX, 6)
+        const berths = voyageBerthsOf(rec)
+        const { spawn, dots } = generateGalaxyDots(rec.mapSeed, attempts + 1)
+        const ereignisse = incidentMarks(
+          rec.mapSeed,
+          spawn,
+          dots,
+          attempts,
+          rec.incidentResults ?? [],
+        )
+        for (const b of berths) {
+          for (const e of ereignisse) worst = Math.min(worst, Math.hypot(b.x - e.x, b.y - e.y))
+        }
+      }
+    }
+    expect(worst, `engster Abstand Hafen↔Ereignis ${worst}`).toBeGreaterThan(0.02)
   })
 
   it('hält jeden Platz von jedem geretteten Stern fern', () => {

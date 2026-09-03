@@ -9,6 +9,7 @@ import { unlockedChampionTierCount } from '@/config/champions/championTiers'
 import type {
   ChampionRole,
   ActiveLandfall,
+  GalaxyIncident,
   LandfallKindId,
   LandfallOutcome,
   StarManifest,
@@ -23,6 +24,7 @@ import {
   landfallAcceptsTap,
 } from '@/utils/game/landfalls'
 import { getLandfall, LANDFALLS } from '@/config/world/landfalls'
+import { incidentRank } from '@/utils/game/galaxyIncidents'
 import { useLandfallStore } from '@/stores/world/landfallStore'
 import {
   buildBackfillRecord,
@@ -33,6 +35,7 @@ import {
   backfillManifestRng,
 } from '@/utils/game/galaxyArchiveBackfill'
 import {
+  GALAXY_INCIDENT_MAX,
   CHAMPION_TRAVEL_BASE_MS,
   CHAMPION_TRAVEL_SCALE_MS,
   CHAMPION_TRAVEL_MAX_MS,
@@ -92,6 +95,10 @@ export interface CompletedGalaxyRecord {
    *  Migration, und der Archiv-Nachtrag lässt es bewusst leer. Beides ist wahr,
    *  nicht gelogen — dort hat nie jemand geflogen. */
   starManifests?: StarManifest[]
+  /** Void-Einschläge und seltene Drifter dieser Galaxie, in Buchungsreihenfolge.
+   *  OPTIONAL, und zwar dauerhaft: Altbestand lädt ohne Migration und zeigt
+   *  keine — dort ist nie eine gebucht worden, ein Nachtrag erfände sie. */
+  incidentResults?: GalaxyIncident[]
   /** In-game seconds spent from entering the galaxy until the core was freed. */
   durationSeconds: number
   /** Wall-clock timestamp of the completion. */
@@ -244,6 +251,9 @@ export const useGalaxyStore = defineStore('galaxy', {
      *  zu `attemptResults`. Lage und Art sind ABGELEITET (`utils/game/landfalls.ts`),
      *  gespeichert wird nur, was daraus wurde. */
     landfallResults: [] as LandfallOutcome[],
+    /** Was in dieser Galaxie passiert ist, ohne einen Ort zu haben. Die LAGE der
+     *  Marken ist ABGELEITET (`utils/game/galaxyIncidents.ts`). */
+    incidentResults: [] as GalaxyIncident[],
     /** Parallel zu `attemptResults` — gleiche Länge, gleicher Index. */
     starManifests: [] as StarManifest[],
     /** Der eine Ort, der GERADE offen steht. Nicht persistiert — dieselbe Regel
@@ -700,6 +710,39 @@ export const useGalaxyStore = defineStore('galaxy', {
       this._landfallLegDone = -1
     },
 
+    /**
+     * Ein Ereignis in die Chronik der laufenden Galaxie — ein Void-Einschlag
+     * oder ein seltener Drifter.
+     *
+     * Die Etappe kommt von HIER: nur dieser Store weiss, auf welcher Sehne das
+     * Schiff gerade steht. Dieselbe Trennung wie zwischen `starGroupStore` (der
+     * Stern SAMMELT) und der Chronik hier (sie LEGT AB).
+     *
+     * Gedeckelt wird je ART. Läuft eine über, gewinnt der höhere Rang und
+     * verdrängt den niedrigsten gebuchten; bei Gleichstand bleibt der ältere.
+     * Ein Deckel, der stumpf vorne abschneidet, liesse eine Galaxie voller
+     * abyssaler Einschläge am Ende makellos aussehen.
+     */
+    recordIncident(e: Omit<GalaxyIncident, 'leg'>): void {
+      const eintrag: GalaxyIncident = { ...e, leg: this.currentLegIndex }
+      const istVoid = e.kind === 'void-impact'
+      const gleiche = this.incidentResults.filter((x) => (x.kind === 'void-impact') === istVoid)
+      if (gleiche.length < GALAXY_INCIDENT_MAX) {
+        this.incidentResults.push(eintrag)
+        return
+      }
+      const rang = incidentRank(eintrag.kind, eintrag.id)
+      let schwaechster = gleiche[0]
+      for (const x of gleiche) {
+        if (incidentRank(x.kind, x.id) < incidentRank(schwaechster.kind, schwaechster.id)) {
+          schwaechster = x
+        }
+      }
+      if (incidentRank(schwaechster.kind, schwaechster.id) >= rang) return
+      const i = this.incidentResults.indexOf(schwaechster)
+      if (i >= 0) this.incidentResults.splice(i, 1, eintrag)
+    },
+
     _rollResourceStarInterval(): number {
       // Starwarden's Lantern kürzt den Abstand. Er ist der ehrliche Weg zu mehr
       // Material: die FALLCHANCE sättigt (`tryDropMaterial` vergleicht gegen
@@ -811,6 +854,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         universe: gameStore.currentUniverse,
         attemptResults: [...this.attemptResults],
         landfallResults: [...this.landfallResults],
+        incidentResults: this.incidentResults.map((e) => ({ ...e })),
         starManifests: this._manifestsForArchive(),
         durationSeconds: Math.max(0, inGameTime - this.galaxyStartedAtInGameTime),
         // Wanduhr: Chronikstempel, wird im Galaxy-Archiv als Datum gelesen und
@@ -924,6 +968,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.attemptResults = []
       this.starManifests = []
       this.landfallResults = []
+      this.incidentResults = []
       this.activeLandfall = null
       this._landfallLegDone = -1
       // Der Cairn-Segen galt für DIESE Galaxie.  frischt die

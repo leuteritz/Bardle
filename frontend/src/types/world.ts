@@ -600,6 +600,23 @@ export interface LandfallOutcome {
   cleared: boolean
 }
 
+/** Die Ereignis-Chronik einer Galaxie: was passiert ist, ohne einen Ort zu
+ *  haben. Drifter und Void-Wesen sind ORTLOS — die LAGE der Marke ist deshalb
+ *  abgeleitet (`utils/game/galaxyIncidents.ts`), gespeichert wird das Ereignis. */
+export type GalaxyIncidentKind = 'void-impact' | 'drifter-caught' | 'drifter-missed'
+
+export interface GalaxyIncident {
+  kind: GalaxyIncidentKind
+  /** Etappe, auf deren Sehne die Marke liegt. 0 = Abflugportal zum ersten Stern. */
+  leg: number
+  /** Katalog-ID (`VoidRiftDef.id` / `DrifterDef.id`) — sie trägt Name, Icon und Rang.
+   *  Der Rang steht nicht daneben: zwei Quellen laufen auseinander. */
+  id: string
+  /** Nur beim Einschlag: was er gekostet hat. */
+  hp?: number
+  meeps?: number
+}
+
 /** Ein geplanter Ort auf einer Etappe. Rein aus `mapSeed` + Etappennummer
  *  gerechnet, nie gespeichert (`utils/game/landfalls.ts`). */
 export interface LandfallPlan {

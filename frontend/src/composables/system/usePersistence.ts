@@ -319,6 +319,7 @@ export function usePersistence() {
         starsRequired: galaxyStore.starsRequired,
         attemptResults: [...galaxyStore.attemptResults],
         landfallResults: galaxyStore.landfallResults.map((l) => ({ ...l })),
+        incidentResults: galaxyStore.incidentResults.map((e) => ({ ...e })),
         starManifests: galaxyStore.starManifests.map((m) => ({ ...m })),
         // Der Cairn-Segen wird MIT der Galaxie gespeichert, nicht in einem
         // eigenen Block: er gilt für genau diese eine, und `boonGalaxy` ist die
@@ -333,6 +334,7 @@ export function usePersistence() {
           ...r,
           attemptResults: [...r.attemptResults],
           landfallResults: r.landfallResults?.map((l) => ({ ...l })),
+          incidentResults: r.incidentResults?.map((e) => ({ ...e })),
           starManifests: r.starManifests?.map((m) => ({ ...m })),
         })),
         unlockedTier: galaxyStore.unlockedTier,
@@ -911,6 +913,9 @@ export function usePersistence() {
         // Ein Spielstand von vor den Landfalls hat keine — und das ist wahr,
         // nicht gelogen: es gab dort keine. Nichts wird nachgetragen.
         galaxyStore.landfallResults = Array.isArray(gx.landfallResults) ? gx.landfallResults : []
+        // Dieselbe Regel für die Ereignis-Chronik: kein Nachtrag. Ein erfundener
+        // Einschlag wäre eine Falschaussage, nicht eine Lücke.
+        galaxyStore.incidentResults = Array.isArray(gx.incidentResults) ? gx.incidentResults : []
         galaxyStore.starManifests = Array.isArray(gx.starManifests)
           ? gx.starManifests.map(migrateManifest)
           : []

@@ -7,6 +7,7 @@ import type {
   DrifterRarity,
 } from '@/types'
 import { DRIFTERS, getDrifter } from '@/config/world/drifters'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { logger } from '@/utils/logger'
 import { gameNow } from '@/utils/game/gameClock'
 import {
@@ -15,6 +16,7 @@ import {
   DRIFTER_SPAWN_RETRY_SEC,
   DRIFTER_RARITY_ORDER,
   DRIFTER_MAX_CONCURRENT,
+  GALAXY_INCIDENT_DRIFTER_MIN_RANK,
   DRIFTER_CHIME_REWARD_CAP_SEC,
   DRIFTER_CHIME_REWARD_MIN_CLICKS,
   DRIFTER_ROUTES,
@@ -94,6 +96,16 @@ function rollAnyDrifter(): DrifterDef {
     if (roll <= 0) return def
   }
   return DRIFTERS[0]
+}
+
+/** In die Chronik der Galaxie — aber nur ab `rare`. `common` allein bringt
+ *  rechnerisch rund fünfzig Objekte je Galaxie, und die Karte trägt neben
+ *  Sternen, Orten, Häfen und Tor keine dritte Menge. */
+function noteDrifterOnMap(defId: string, kind: 'drifter-caught' | 'drifter-missed'): void {
+  const def = getDrifter(defId)
+  if (!def) return
+  if ((DRIFTER_RARITY_ORDER[def.rarity] ?? 0) < GALAXY_INCIDENT_DRIFTER_MIN_RANK) return
+  useGalaxyStore().recordIncident({ kind, id: def.id })
 }
 
 /**
@@ -235,6 +247,7 @@ export const useDrifterStore = defineStore('drifter', {
       const gone = this.active.filter((d) => now >= d.spawnedAt + d.flightMs)
       if (gone.length === 0) return
       this.totalDriftersMissed += gone.length
+      for (const d of gone) noteDrifterOnMap(d.defId, 'drifter-missed')
       this.active = this.active.filter((d) => now < d.spawnedAt + d.flightMs)
       const last = gone[gone.length - 1]
       this.lastExpired = {
@@ -311,6 +324,7 @@ export const useDrifterStore = defineStore('drifter', {
 
       this.active = this.active.filter((d) => d.uid !== uid)
       this.totalDriftersCollected++
+      noteDrifterOnMap(def.id, 'drifter-caught')
       this._applyReward(def)
       this.lastCollect = {
         defId: def.id,

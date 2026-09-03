@@ -264,7 +264,7 @@ export function landfallMarks(
  * GENAU in der Mitte bekommt eine feste Richtung, sonst teilte die Rechnung
  * durch null.
  */
-function clearCore(p: LandfallPoint, c: LandfallPoint): LandfallPoint {
+export function clearCore(p: LandfallPoint, c: LandfallPoint): LandfallPoint {
   // Halbkante 0 heisst „keine Sperrzone" — die Live-Minimap malt kein Tor.
   if (c.x <= 0 || c.y <= 0) return p
   const dx = p.x - 0.5

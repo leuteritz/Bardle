@@ -69,7 +69,10 @@ function cacheKey(record: CompletedGalaxyRecord, deviceW: number): string {
   // ohne Deckel, dort wäre es endgültig.
   return (
     `${deviceW}:${record.galaxy}:${record.mapSeed}:${record.attemptResults.length}` +
-    `:${record.themeIndex}:${starRoleSignature(record.starManifests)}`
+    `:${record.themeIndex}:${starRoleSignature(record.starManifests)}` +
+    // Die Ereignis-Chronik gehört dazu: sie legt Marken auf die Karte, ohne dass
+    // sich eine der anderen Zahlen rührt.
+    `:${record.incidentResults?.length ?? 0}`
   )
 }
 

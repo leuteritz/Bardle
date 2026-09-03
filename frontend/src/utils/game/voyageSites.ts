@@ -10,6 +10,7 @@ import {
   seededRng,
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { landfallMarks } from '@/utils/game/landfalls'
+import { incidentMarks } from '@/utils/game/galaxyIncidents'
 import {
   CORE_GATE_CROWN_SPAN,
   CORE_GATE_MOUTH_R,
@@ -75,7 +76,18 @@ export function voyageBerthsOf(record: CompletedGalaxyRecord): VoyageBerth[] {
     attempts,
     record.landfallResults ?? [],
   )
-  const history = [...dots.slice(0, attempts), ...orte]
+  // Die Ereignis-Chronik gehört zur Geschichte wie die Orte: ohne sie setzte
+  // sich ein Hafen auf einen Einschlag, und `voyageMarkerSizeFor` misst nur
+  // Hafen gegen Hafen — die Überdeckung sähe niemand.
+  const ereignisse = incidentMarks(
+    record.mapSeed,
+    spawn,
+    dots,
+    attempts,
+    record.incidentResults ?? [],
+    [...dots.slice(0, attempts), ...orte],
+  )
+  const history = [...dots.slice(0, attempts), ...orte, ...ereignisse]
 
   // Eigener Strom, damit kein Aufruf die Ziehreihenfolge der Geschichte berührt.
   const rng = seededRng(record.mapSeed * 7717 + 101)

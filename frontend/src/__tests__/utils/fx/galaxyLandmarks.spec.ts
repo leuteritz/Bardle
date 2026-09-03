@@ -7,6 +7,9 @@ import {
   roundLandmarkRadius,
   paintLandfallMark,
   paintFreedStarCore,
+  paintVoidImpact,
+  paintDrifterTrace,
+  paintIncidentCore,
   LANDFALL_KINDS,
   isLandfallLandmark,
 } from '@/utils/fx/galaxyLandmarks'
@@ -53,6 +56,10 @@ import {
   ROLE_COLORS,
   LANDMARK_LANDFALL_RING,
   LANDMARK_LANDFALL_MISSED_ALPHA,
+  LANDMARK_VOID_TRACE,
+  LANDMARK_DRIFTER_TRACE,
+  GALAXY_INCIDENT_VOID_CORE,
+  GALAXY_INCIDENT_RANK_SCALE,
   LANDMARK_PAD_SPAN,
   LANDMARK_VARIANTS,
   ADMIN_LANDFALL_PREVIEW_PX,
@@ -442,5 +449,135 @@ describe('Die Marke des Landfalls — eine Familie, eine Silhouette', () => {
 
     const eindeutig = new Set(spuren.values())
     expect(eindeutig.size, `gleiche Marke bei: ${[...spuren.keys()].join(', ')}`).toBe(spuren.size)
+  })
+})
+
+/**
+ * Die Ereignis-Chronik. Sie ist die erste Markenart, die KEIN Körper ist — und
+ * daran hängt alles: der Vorrat geschlossener Silhouetten war mit Ellipse, Ring,
+ * Hülle, Achteck und Raute ausgereizt, eine sechste wäre bei 6 px von der Raute
+ * nicht mehr zu trennen. Ein offener Zug ist es immer.
+ */
+describe('Die Marken der Ereignis-Chronik — Striche, keine Körper', () => {
+  it('malt den Einschlag als offenen Zug: kein closePath, keine Fläche', () => {
+    const { ctx, ops } = recordingCtx()
+    paintVoidImpact(ctx, 20, 20, 14)
+    expect(ops.length).toBeGreaterThan(0)
+    expect(ops.some((o) => o.startsWith('closePath'))).toBe(false)
+    expect(ops.some((o) => o.startsWith('fill('))).toBe(false)
+  })
+
+  it('malt die Bahnspur als offenen Zug — nur der Kopfpunkt ist gefüllt', () => {
+    const { ctx, ops } = recordingCtx()
+    paintDrifterTrace(ctx, 20, 20, 14, 2, false)
+    expect(ops.some((o) => o.startsWith('closePath'))).toBe(false)
+    // Genau EIN gefüllter Kopf, nicht mehr: zwei Punkte lesen sich als Kette.
+    expect(ops.filter((o) => o.startsWith('arc(')).length).toBe(1)
+  })
+
+  it('trennt Einschlag und Bahnspur schon in den Zeichenbefehlen', () => {
+    const a = recordingCtx()
+    paintVoidImpact(a.ctx, 20, 20, 14)
+    const b = recordingCtx()
+    paintDrifterTrace(b.ctx, 20, 20, 14, 2, false)
+    expect(a.ops.join('|')).not.toBe(b.ops.join('|'))
+  })
+
+  it('nimmt der verpassten Bahnspur den Kopf, nicht den dunklen Unterzug', () => {
+    const { ctx, ops } = recordingCtx()
+    paintDrifterTrace(ctx, 20, 20, 14, 2, true)
+    expect(ops.some((o) => o.startsWith('arc('))).toBe(false)
+    // Zwei Züge bleiben: Saum und heller Strich. Ohne den Saum löst sich die
+    // Marke über den hellen Armpartikeln auf.
+    expect(ops.filter((o) => o.startsWith('stroke')).length).toBe(2)
+  })
+
+  it('hält beide Konturen unbunt, wie Ring und Raute', () => {
+    expect(chroma(LANDMARK_VOID_TRACE)).toBeLessThan(0.06)
+    expect(chroma(LANDMARK_DRIFTER_TRACE)).toBeLessThan(0.06)
+  })
+
+  it('hält sie DUNKLER als den befreiten Stern — er bleibt die hellste Marke', () => {
+    const [fr, fg, fb] = rgbOf(LANDMARK_FREED_RING)
+    for (const hex of [LANDMARK_VOID_TRACE, LANDMARK_DRIFTER_TRACE]) {
+      const [r, g, b] = rgbOf(hex)
+      expect(Math.max(r, g, b), hex).toBeLessThan(Math.min(fr, fg, fb))
+      // Aber hell genug, um über den Armpartikeln zu stehen.
+      expect(Math.min(r, g, b), hex).toBeGreaterThan(140)
+    }
+  })
+
+  it('trennt beide vom Gold der Reise und vom Ember des verlorenen Sterns', () => {
+    for (const hex of [LANDMARK_VOID_TRACE, LANDMARK_DRIFTER_TRACE]) {
+      expect(distance(rgbOf(hex), JOURNEY_GOLD), hex).toBeGreaterThan(100)
+      expect(distance(rgbOf(hex), LOST_EMBER), hex).toBeGreaterThan(60)
+    }
+  })
+
+  it('hält beide von JEDEM Themenakzent fern', () => {
+    for (let i = 0; i < GALAXY_THEMES.length; i++) {
+      const accent = minimapAccentForTheme(i).split(', ').map(Number) as [number, number, number]
+      for (const hex of [LANDMARK_VOID_TRACE, LANDMARK_DRIFTER_TRACE]) {
+        expect(distance(rgbOf(hex), accent), `${hex} vs Thema ${i}`).toBeGreaterThan(45)
+      }
+    }
+  })
+
+  it('gibt jeder Schwere einen eigenen Kernfunken — die Bedeutung sitzt im Kern', () => {
+    const werte = Object.values(GALAXY_INCIDENT_VOID_CORE)
+    expect(new Set(werte).size).toBe(werte.length)
+    for (const hex of werte) {
+      // Der Funke DARF bunt sein: er misst zwei Pixel und kostet keine Fläche —
+      // dasselbe Argument wie bei `LANDMARK_ROLE_CORE`.
+      expect(chroma(hex)).toBeGreaterThan(0.15)
+      expect(distance(rgbOf(hex), JOURNEY_GOLD), hex).toBeGreaterThan(120)
+    }
+  })
+
+  it('malt den Kernfunken in der Farbe der Schwere, den Hof erst auf voller Stufe', () => {
+    const fills: string[] = []
+    let hoefe = 0
+    const ctx = {
+      save() {},
+      restore() {},
+      beginPath() {},
+      arc() {},
+      fill() {
+        fills.push(String(this.fillStyle))
+      },
+      createRadialGradient: () => {
+        hoefe++
+        return { addColorStop() {} }
+      },
+      fillStyle: '' as string | CanvasGradient,
+    } as unknown as CanvasRenderingContext2D
+
+    paintIncidentCore(ctx, 20, 20, 14, GALAXY_INCIDENT_VOID_CORE.abyssal, 0)
+    expect(fills).toEqual([GALAXY_INCIDENT_VOID_CORE.abyssal])
+    expect(hoefe).toBe(0)
+
+    paintIncidentCore(ctx, 20, 20, 14, GALAXY_INCIDENT_VOID_CORE.abyssal, 2)
+    expect(hoefe).toBe(1)
+  })
+
+  it('lässt den Rang in die GRÖSSE wachsen, monoton', () => {
+    for (let i = 1; i < GALAXY_INCIDENT_RANK_SCALE.length; i++) {
+      expect(GALAXY_INCIDENT_RANK_SCALE[i]).toBeGreaterThan(GALAXY_INCIDENT_RANK_SCALE[i - 1])
+    }
+    expect(GALAXY_INCIDENT_RANK_SCALE[0]).toBe(1)
+  })
+
+  it('zählt die beiden nicht zur Landfall-Familie', () => {
+    expect(isLandfallLandmark('void-impact')).toBe(false)
+    expect(isLandfallLandmark('drifter-trace')).toBe(false)
+  })
+
+  it('trennt sie im Sprite-Schlüssel — auch verpasst', () => {
+    expect(landmarkSpriteKey('void-impact', 6, 2, 0)).not.toBe(
+      landmarkSpriteKey('drifter-trace', 6, 2, 0),
+    )
+    expect(landmarkSpriteKey('drifter-trace', 6, 2, 0, false)).not.toBe(
+      landmarkSpriteKey('drifter-trace', 6, 2, 0, true),
+    )
   })
 })

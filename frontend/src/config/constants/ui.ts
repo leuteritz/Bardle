@@ -466,6 +466,24 @@ export const LANDMARK_LANDFALL_RING = '#aeb2b0'
  *  Armpartikeln ganz. */
 export const LANDMARK_LANDFALL_MISSED_ALPHA = 0.4
 
+/**
+ * Die Züge der Ereignis-Chronik — Void-Einschlag und Drifter-Bahnspur.
+ *
+ * Beide sind OFFENE Züge, keine geschlossenen Körper: der Formvorrat der
+ * Silhouetten ist mit Ellipse, Ring, Hülle, Achteck und Raute ausgereizt, eine
+ * sechste geschlossene Form wäre bei 6 px von der Raute nicht mehr zu trennen.
+ * Ein Strich dagegen trennt sich von jedem Körper auf einen Blick — und trennt
+ * damit die Chronik der EREIGNISSE von der Chronik der ORTE.
+ *
+ * Unbunt aus demselben Grund wie Ring und Raute, und dunkler als
+ * `LANDMARK_FREED_RING`: der befreite Stern bleibt die hellste unbunte Marke.
+ * Die Bedeutung trägt beim Einschlag der Kernfunke
+ * (`GALAXY_INCIDENT_VOID_CORE`), bei der Bahnspur ihre LÄNGE — zwei Codierungen
+ * auf einer 5-px-Marke wären eine zu viel.
+ */
+export const LANDMARK_VOID_TRACE = '#9ba1a6'
+export const LANDMARK_DRIFTER_TRACE = '#b4b2ac'
+
 /* ── Caretaker's Gate: der befreite Kern ──────────────────────────────────────
    Der Kern war einmal eine gefüllte Goldkugel mit Strahlenkranz und las sich
    damit als zweite Sonne. Er ist jetzt eine ÖFFNUNG: dunkler Schlund, heller
@@ -494,6 +512,8 @@ export const CORE_GATE_POOL_SPAN = 2.1
 // ein vergessener `tint` als Fehler auffällt statt als Goldton durchzugehen.
 export const CORE_GATE_FALLBACK_TINT = '210, 220, 240'
 export const MINIMAP_LANDMARK_PORTAL_R = 10 // live: neben freed 11 — es ist die einzige einmalige Marke
+// live: unter dem Ort (8), wie im Standbild — ein Ereignis kommt häufiger.
+export const MINIMAP_INCIDENT_R = 7
 // Von 0.45 angehoben: der Saum trägt nur dort, wo die Spur über hellen
 // Armpartikeln liegt — über dem Tiefraum sind beide dunkel, und 0.072 Gold war
 // dort unsichtbar. Die Rampe wird FLACHER, ihr oberes Ende rührt sich nicht.

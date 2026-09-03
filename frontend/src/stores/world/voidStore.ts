@@ -1060,6 +1060,15 @@ export const useVoidStore = defineStore('void', {
       this.refreshRates()
 
       this._recordOutcome(monster, def, false, hpLost, meepsLost)
+      // In die Chronik der Galaxie. Nur der EINSCHLAG, nicht der Spawn: bei
+      // `VOID_MAX_CONCURRENT` 24 wären es hunderte Marken je Galaxie, und
+      // erlegt hat der Orbit ein Wesen ohne Folge für den Lauf.
+      useGalaxyStore().recordIncident({
+        kind: 'void-impact',
+        id: def.id,
+        hp: hpLost,
+        meeps: meepsLost,
+      })
       logger.warn('Void', `${def.name} reached the sun`, {
         hpLost,
         meepsLost,

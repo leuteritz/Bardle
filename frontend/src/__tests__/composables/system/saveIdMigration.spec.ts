@@ -9,6 +9,8 @@ import {
   FORGE_BARGAINS,
 } from '@/config/progression/starForge'
 import { CHAMPION_PERKS } from '@/config/champions/championLevels'
+import { VOID_RIFTS } from '@/config/world/void'
+import { DRIFTERS } from '@/config/world/drifters'
 
 /* Die Musik-Entfernung hat Inhalts-IDs umbenannt, die ein Spielstand wörtlich
    speichert. Ohne die Übersetzung beim Laden wäre jeder betroffene Kauf still
@@ -21,6 +23,11 @@ describe('SAVE_ID_RENAMES', () => {
     ...FORGE_CONSTELLATIONS.map((c) => c.id),
     ...FORGE_BARGAINS.map((b) => b.id),
     ...CHAMPION_PERKS.map((p) => p.id),
+    // Seit die Ereignis-Chronik einer Galaxie Void- und Drifter-IDs wörtlich
+    // speichert, gehören auch diese beiden Kataloge in den Vertrag: eine
+    // Umbenennung ohne Eintrag hier liesse jede Marke ihren Namen verlieren.
+    ...VOID_RIFTS.map((r) => r.id),
+    ...DRIFTERS.map((d) => d.id),
   ])
 
   it('maps every old id onto an id the current catalog actually has', () => {

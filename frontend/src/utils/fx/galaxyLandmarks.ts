@@ -1,7 +1,11 @@
 /* ── Landmarken einer Galaxiekarte ────────────────────────────────────────────
-   Vier Orte erzählen die Geschichte einer befreiten Galaxie: wo Bard sie betrat,
-   welche Sterne befreit wurden, welche verloren gingen, und was aus dem Kern
-   geworden ist, in dem der Boss sass.
+   Sie erzählen die Geschichte einer befreiten Galaxie: wo Bard sie betrat,
+   welche Sterne befreit wurden, welche verloren gingen, was aus dem Kern
+   geworden ist — und was unterwegs passiert ist.
+
+   KÖRPER sind die Orte und Sterne, STRICHE die Ereignisse (Void-Einschlag,
+   Drifter-Bahnspur): der Vorrat geschlossener Silhouetten ist ausgereizt, ein
+   offener Zug trennt sich von jeder von ihnen auch bei 6 px.
 
    Unterschieden werden sie über die FORM, nicht über Farbe oder Glyph — beides
    verschwindet als Erstes, wenn das Bild klein wird, und die Leistenminiatur
@@ -26,6 +30,10 @@ import {
   LANDMARK_FREED_RING,
   LANDMARK_LANDFALL_RING,
   LANDMARK_LANDFALL_MISSED_ALPHA,
+  LANDMARK_VOID_TRACE,
+  LANDMARK_DRIFTER_TRACE,
+  GALAXY_INCIDENT_CORE_R_RATIO,
+  GALAXY_INCIDENT_MIN_R,
   LANDMARK_R_ORNAMENT,
   LANDMARK_R_DETAIL,
   LANDMARK_VARIANTS,
@@ -45,6 +53,8 @@ export type LandmarkKind =
   | 'landfall-convoy'
   | 'landfall-cairn'
   | 'landfall-rupture'
+  | 'void-impact'
+  | 'drifter-trace'
 
 /**
  * Die Landfall-FAMILIE. Alle Orte teilen EINE Silhouette — eine hohle Raute —
@@ -88,7 +98,7 @@ export interface LandmarkOpts {
    */
   tint?: string
   /**
-   * NUR `star-freed`: die Farbe des Kernfunkens, fertig aufgelöst.
+   * `star-freed` und `void-impact`: die Farbe des Kernfunkens, fertig aufgelöst.
    *
    * Ein EIGENES Feld und nicht `tint`: die Kartenlegende reicht `tint` ihrem
    * Themenakzent unkonditioniert an JEDE Zeile durch — der befreite Stern
@@ -162,7 +172,7 @@ export function landmarkSpriteKey(
 
 const spriteCache = new Map<string, HTMLCanvasElement>()
 
-type SpriteKind = 'star-freed' | 'star-lost' | LandfallLandmarkKind
+type SpriteKind = 'star-freed' | 'star-lost' | 'void-impact' | 'drifter-trace' | LandfallLandmarkKind
 
 function getSprite(
   kind: SpriteKind,
@@ -190,6 +200,8 @@ function getSprite(
   sctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   if (kind === 'star-freed') paintFreedStar(sctx, pad, pad, r, variant, detail)
   else if (kind === 'star-lost') paintLostStar(sctx, pad, pad, r, variant, detail)
+  else if (kind === 'void-impact') paintVoidImpact(sctx, pad, pad, r)
+  else if (kind === 'drifter-trace') paintDrifterTrace(sctx, pad, pad, r, detail, faded)
   else paintLandfall(sctx, pad, pad, r, kind, detail, faded)
 
   spriteCache.set(key, sprite)
@@ -757,6 +769,148 @@ export function paintLandfallMark(
   }
 }
 
+/**
+ * Void-Einschlag: ein Bruchkreuz aus zwei Zügen.
+ *
+ * Ein OFFENER Zug und kein Körper — der Vorrat der Silhouetten ist mit Ellipse,
+ * Ring, Hülle, Achteck und Raute ausgereizt, und ein Strich trennt sich von
+ * jedem von ihnen auch dort noch, wo eine sechste geschlossene Form längst
+ * Matsch wäre. Er trennt damit die Chronik der EREIGNISSE von der der ORTE.
+ *
+ * Dunkler Saum zuerst, hell darüber: dieselbe Lösung wie beim Ring des befreiten
+ * Sterns, der Krone des Tors und dem Routen-Saum.
+ *
+ * Der Kernfunke fehlt hier ABSICHTLICH — er nennt die Schwere und kommt aus
+ * `paintIncidentCore` direkt auf die Zielfläche, weil seine Farbe je Marke
+ * verschieden ist (Begründung bei `paintFreedStarCore`).
+ */
+export function paintVoidImpact(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  const span = r * 0.95
+  // Die beiden Züge stehen NICHT im rechten Winkel zueinander: ein sauberes X
+  // liest sich als Bedienzeichen, ein Bruch ist schief.
+  const arme: [number, number][] = [
+    [-0.72, 0.68],
+    [0.66, 0.74],
+  ]
+
+  const zug = () => {
+    ctx.beginPath()
+    for (const [ax, ay] of arme) {
+      ctx.moveTo(x - span * ax, y - span * ay)
+      ctx.lineTo(x + span * ax, y + span * ay)
+    }
+  }
+
+  ctx.save()
+  ctx.lineCap = 'round'
+
+  zug()
+  ctx.strokeStyle = 'rgba(11, 8, 6, 0.75)'
+  ctx.lineWidth = Math.max(2, r * 0.36)
+  ctx.stroke()
+
+  zug()
+  ctx.strokeStyle = LANDMARK_VOID_TRACE
+  ctx.lineWidth = Math.max(1.1, r * 0.16)
+  ctx.stroke()
+
+  ctx.restore()
+}
+
+/**
+ * Drifter: eine Bahnspur — ein schräger Zug mit Kopfpunkt am vorderen Ende.
+ *
+ * Die SELTENHEIT steckt in der Länge, nicht in der Farbe: `incidentMarkRadius`
+ * skaliert den Radius nach Rang, und ein zweiter Code auf einer 5-px-Marke wäre
+ * einer zu viel. Verpasst ist dieselbe Form, nur leiser und ohne Kopf —
+ * dieselbe Staffelung wie beim verpassten Ort.
+ */
+export function paintDrifterTrace(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  detail: 0 | 1 | 2,
+  faded: boolean,
+): void {
+  const span = r * 0.95
+  const von = { x: x - span * 0.9, y: y + span * 0.52 }
+  const bis = { x: x + span * 0.62, y: y - span * 0.36 }
+
+  const zug = () => {
+    ctx.beginPath()
+    ctx.moveTo(von.x, von.y)
+    ctx.lineTo(bis.x, bis.y)
+  }
+
+  ctx.save()
+  ctx.lineCap = 'round'
+
+  // Der dunkle Unterzug bleibt voll, auch verpasst — sonst löst sich die Marke
+  // über den hellen Armpartikeln auf.
+  zug()
+  ctx.strokeStyle = 'rgba(11, 8, 6, 0.75)'
+  ctx.lineWidth = Math.max(2, r * 0.34)
+  ctx.stroke()
+
+  ctx.globalAlpha = faded ? LANDMARK_LANDFALL_MISSED_ALPHA : 1
+  zug()
+  ctx.strokeStyle = LANDMARK_DRIFTER_TRACE
+  ctx.lineWidth = Math.max(1.2, r * 0.18)
+  ctx.stroke()
+
+  // Der Kopf trägt die Marke: ein blosser Strich ist auf der Spirale von einem
+  // Armpartikel nicht zu trennen — er sagt, dass da etwas FLOG.
+  if (detail >= 1 && !faded) {
+    ctx.beginPath()
+    ctx.arc(bis.x, bis.y, Math.max(1.2, r * 0.28), 0, Math.PI * 2)
+    ctx.fillStyle = LANDMARK_DRIFTER_TRACE
+    ctx.fill()
+  }
+
+  ctx.restore()
+}
+
+/**
+ * Der Kernfunke eines Einschlags — die SCHWERE, dort wo die beiden Züge sich
+ * kreuzen.
+ *
+ * Wie `paintFreedStarCore` NICHT im Sprite: die Farbe ist je Marke verschieden,
+ * im Sprite gebacken bräuchte `landmarkSpriteKey` ein Farbfeld und alle
+ * Einschläge trügen die Farbe des zuerst gerasterten.
+ *
+ * Exportiert für die Spec — in jsdom ist `getContext('2d')` null, geprüft werden
+ * die ZEICHENBEFEHLE.
+ */
+export function paintIncidentCore(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  color: string,
+  detail: 0 | 1 | 2,
+): void {
+  ctx.save()
+
+  if (detail >= 2) {
+    const halo = hexToRgbTriple(color)
+    const hof = ctx.createRadialGradient(x, y, 0, x, y, r * 0.55)
+    hof.addColorStop(0, `rgba(${halo}, 0.28)`)
+    hof.addColorStop(1, `rgba(${halo}, 0)`)
+    ctx.beginPath()
+    ctx.arc(x, y, r * 0.55, 0, Math.PI * 2)
+    ctx.fillStyle = hof
+    ctx.fill()
+  }
+
+  ctx.beginPath()
+  ctx.arc(x, y, Math.max(0.9, r * GALAXY_INCIDENT_CORE_R_RATIO), 0, Math.PI * 2)
+  ctx.fillStyle = color
+  ctx.fill()
+
+  ctx.restore()
+}
+
 /* ── Einstieg ─────────────────────────────────────────────────────────────── */
 
 export function drawLandmark(
@@ -789,5 +943,8 @@ export function drawLandmark(
   // `paintFreedStarCore`.
   if (kind === 'star-freed') {
     paintFreedStarCore(ctx, x, y, r, opts.coreTint ?? LANDMARK_FREED_CORE, detail)
+  }
+  if (kind === 'void-impact' && opts.coreTint && r >= GALAXY_INCIDENT_MIN_R) {
+    paintIncidentCore(ctx, x, y, r, opts.coreTint, detail)
   }
 }

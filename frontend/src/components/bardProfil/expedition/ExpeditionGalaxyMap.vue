@@ -27,6 +27,7 @@ import {
   type FitBox,
 } from '@/utils/fx/galaxyPlate'
 import { landfallMarks } from '@/utils/game/landfalls'
+import { incidentMarkRadius, incidentMarks } from '@/utils/game/galaxyIncidents'
 import { galaxyStarMarksOf } from '@/utils/game/starNames'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { voyageGateSizeFor, voyageMarkerSizeFor } from '@/utils/game/voyageSites'
@@ -34,6 +35,7 @@ import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeo
 import {
   VOYAGE_MAP_HISTORY_SCALE,
   LANDFALL_MARK_R,
+  GALAXY_INCIDENT_MARK_R,
   GALAXY_STAR_MARK_HIT_MIN,
   GALAXY_STAR_MARK_HIT_SCALE,
   VOYAGE_MAP_INSET_PX,
@@ -50,6 +52,7 @@ import type { VoyageHomecoming, VoyageMarkAction, VoyagePlacedSite } from '@/typ
 import ExpeditionSiteNode from './ExpeditionSiteNode.vue'
 import ExpeditionGateNode from './ExpeditionGateNode.vue'
 import ExpeditionLandfallNode from './ExpeditionLandfallNode.vue'
+import ExpeditionIncidentNode from './ExpeditionIncidentNode.vue'
 import ExpeditionStarNode from './ExpeditionStarNode.vue'
 import ExpeditionPortalNode from './ExpeditionPortalNode.vue'
 import ExpeditionGalaxyStatsBand from './ExpeditionGalaxyStatsBand.vue'
@@ -169,6 +172,35 @@ const landfallNodes = computed(() => {
   )
 })
 
+/**
+ * Die Fangflächen über den Ereignismarken — Void-Einschläge und seltene Drifter.
+ *
+ * DIESELBE Ableitung wie beim Malen, samt derselben belegten Punkte: rechnete
+ * eine der beiden Seiten anders, stünde die Fangfläche neben ihrer Marke.
+ */
+const incidentNodes = computed(() => {
+  const results = props.record.incidentResults ?? []
+  if (!results.length) return []
+  return incidentMarks(
+    props.record.mapSeed,
+    chart.value.spawn,
+    chart.value.dots,
+    chart.value.attempts,
+    results,
+    [...chart.value.dots.slice(0, chart.value.attempts), ...landfallNodes.value],
+    coreGateClearance(box.value, historyHk.value),
+  )
+})
+
+/** Kantenlänge der Fangfläche: sie folgt dem gemalten Zug, wie beim Ort. Der
+ *  Rang wächst in die Grösse, also wächst sie mit. */
+function incidentHit(rank: number): number {
+  return Math.max(
+    16,
+    Math.round(incidentMarkRadius(rank, GALAXY_INCIDENT_MARK_R * historyHk.value) * 2.4),
+  )
+}
+
 /** Der Massstab der HISTORIE — dieselbe Zahl, mit der `paintGalaxy` die Marken
  *  malt. Sie steht hier einmal, damit Fangfläche und Sperrzone nicht
  *  auseinanderlaufen. */
@@ -266,6 +298,9 @@ const paintKey = computed(
   () =>
     `${props.record.galaxy}:${props.record.mapSeed}:${props.record.attemptResults.length}` +
     `:${props.record.landfallResults?.length ?? 0}:${props.record.themeIndex}` +
+    // Eine Buchung legt eine Marke auf die Karte, ohne dass sich eine der
+    // anderen Zahlen rührt.
+    `:${props.record.incidentResults?.length ?? 0}` +
     // Die Rollen färben die Sternkerne und werden nachträglich gefüllt — ohne
     // sie malte die Karte nach einem Nachtrag nie wieder neu.
     `:${starRoleSignature(props.record.starManifests)}` +
@@ -428,6 +463,18 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
         :left="pct(m.x, m.y).left"
         :top="pct(m.x, m.y).top"
         :hit="landfallHit"
+      />
+
+      <ExpeditionIncidentNode
+        v-for="(m, i) in incidentNodes"
+        :key="`in-${i}`"
+        :kind="m.kind"
+        :def-id="m.id"
+        :hp="m.hp"
+        :meeps="m.meeps"
+        :left="pct(m.x, m.y).left"
+        :top="pct(m.x, m.y).top"
+        :hit="incidentHit(m.rank)"
       />
 
       <!-- Dann die Sterne: sie liegen ÜBER den Orten, wie beim Malen. Ein Ort

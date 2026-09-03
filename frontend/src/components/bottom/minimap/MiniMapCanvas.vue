@@ -44,6 +44,7 @@ import {
   MINIMAP_ROUTE_ARROW_SIZE,
   MINIMAP_ROUTE_ARROW_GAP,
   MINIMAP_LANDMARK_PORTAL_R,
+  MINIMAP_INCIDENT_R,
   ROUTE_TRAIL_BANDS_LIVE,
   MINIMAP_ARRIVAL_STAR_R,
   MINIMAP_ARRIVAL_ORBIT_GAP,
@@ -79,6 +80,7 @@ import {
 } from './minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor } from '@/utils/fx/galaxyLandmarks'
 import { landfallMarks } from '@/utils/game/landfalls'
+import { incidentMarkRadius, incidentMarks, incidentPaint } from '@/utils/game/galaxyIncidents'
 import { LANDFALL_LANDMARK_KIND } from '@/config/world/landfalls'
 import {
   paintRouteTrail,
@@ -530,14 +532,15 @@ export default defineComponent({
         // liegt. Der offene Ort steht in seiner HUD-Karte, nicht hier.
         // Dieselbe Paarung wie im Standbild: die ART kommt aus dem
         // gespeicherten Ausgang, nur die LAGE aus dem abgeleiteten Plan.
-        landfallMarks(
+        const orte = landfallMarks(
           galaxyStore.mapSeed,
           galaxyStore.currentGalaxy,
           spawnPos.value,
           dots,
           attempts,
           galaxyStore.landfallResults,
-        ).forEach((m, i) => {
+        )
+        orte.forEach((m, i) => {
           const [lx, ly] = wToC(m.x, m.y)
           if (!inView(lx, ly)) return
           drawLandmark(c, LANDFALL_LANDMARK_KIND[m.kind], lx, ly, 8, {
@@ -546,6 +549,27 @@ export default defineComponent({
             faded: !m.cleared,
           })
         })
+
+        // Die Ereignis-Chronik — dieselbe abgeleitete Lage wie im Standbild.
+        // Ein Ereignis ist vergangen, wenn es gebucht wird; die Regel „die Karte
+        // enthüllt nichts, was noch vor dem Schiff liegt" bleibt unberührt.
+        for (const m of incidentMarks(
+          galaxyStore.mapSeed,
+          spawnPos.value,
+          dots,
+          attempts,
+          galaxyStore.incidentResults,
+          [...dots.slice(0, attempts), ...orte],
+        )) {
+          const [ix, iy] = wToC(m.x, m.y)
+          if (!inView(ix, iy)) continue
+          const wie = incidentPaint(m)
+          drawLandmark(c, wie.kind, ix, iy, incidentMarkRadius(m.rank, MINIMAP_INCIDENT_R), {
+            dpr: renderDpr,
+            faded: wie.faded,
+            coreTint: m.coreTint,
+          })
+        }
       }
 
       if (attempts >= 1 && farAlpha > 0.01) {
@@ -568,6 +592,11 @@ export default defineComponent({
           // Ort steht in seiner HUD-Karte, nicht auf der Minimap.
           for (const l of galaxyStore.landfallResults) {
             sig = (Math.imul(sig, 31) + (l.cleared ? 3 : 4)) >>> 0
+          }
+          // Und die Ereignisse: eine Buchung legt eine Marke auf die Karte, ohne
+          // dass sich `attempts` oder ein Ausgang rührt.
+          for (const e of galaxyStore.incidentResults) {
+            sig = (Math.imul(sig, 31) + e.leg * 7 + e.kind.length) >>> 0
           }
           // Und die Rollen dazu: ein nachgetragenes Manifest ändert die
           // Kernfarbe, ohne dass sich `attempts` oder ein Ausgang rührt.
