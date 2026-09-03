@@ -98,7 +98,7 @@ const barPx = `${VOYAGE_MANIFEST_ACCENT_BAR_PX}px`
     class="esm"
     :style="{ '--esm-accent': accent }"
     role="group"
-    :aria-label="`Star manifest — champions of galaxy ${record.galaxy}`"
+    :aria-label="`Champions saved — galaxy ${record.galaxy}`"
   >
     <span class="esm-scrim" aria-hidden="true" />
 

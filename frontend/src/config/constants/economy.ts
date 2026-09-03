@@ -1456,17 +1456,8 @@ export const VOYAGE_MANIFEST_SCRIM_FADE_RATIO = 1.2
 /** Die Akzentleiste am Kopfwort, im Ton der Galaxie — im Idiom von
  *  `.tip-accent`: Zugehoerigkeit als Leiste. */
 export const VOYAGE_MANIFEST_ACCENT_BAR_PX = 2
-/**
- * Das Kopfwort.
- *
- * `MANIFEST` ist der Name, den der Code diesen Daten ohnehin gibt
- * (`starManifests`, `STAR_MANIFEST_ART_SIZE`) und kam bisher nie an die
- * Oberflaeche — Code-Wort und Sicht-Wort fallen hier zum ersten Mal zusammen.
- * `RESCUED` und `FREED` sind im Reiter belegt (Datenband, Ankunftsportal),
- * `ROSTER` heisst hier schon die Vertragszeilenquelle (`voyageRoster.ts`),
- * `CREW` die Besatzung. Thema: Passagierliste eines Schiffs.
- */
-export const VOYAGE_MANIFEST_LABEL = 'Star manifest'
+/** Das Kopfwort der Manifestreihe. */
+export const VOYAGE_MANIFEST_LABEL = 'Champions saved'
 
 /**
  * Takt der Uhren auf der Karte. Bewusst 1000 und nicht HUD_COUNTDOWN_TICK_MS
