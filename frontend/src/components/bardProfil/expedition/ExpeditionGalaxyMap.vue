@@ -48,6 +48,11 @@ import {
   VOYAGE_MAP_STATS_BAND_H,
   VOYAGE_MAP_STATS_MIN_H,
   VOYAGE_MAP_STATS_MIN_W,
+  FIRMAMENT_DIVE_ARRIVE_MS,
+  FIRMAMENT_DIVE_ARRIVE_SCALE,
+  FIRMAMENT_DIVE_EASE_ARRIVE,
+  FIRMAMENT_DIVE_EASE_LEAVE,
+  FIRMAMENT_DIVE_LEAVE_MS,
 } from '@/config/constants'
 import { computeRequired, type CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageHomecoming, VoyageMarkAction, VoyagePlacedSite } from '@/types'
@@ -84,6 +89,11 @@ const props = defineProps<{
   homecomings: VoyageHomecoming[]
   /** Was ein Klick je Marke tut, nach pinKey. */
   actions: Map<string, VoyageMarkAction>
+  /** Kamerafahrt aus dem Firmament: die Platte setzt sich aus leichter
+   *  Vergroesserung. */
+  arriving: boolean
+  /** Kamerafahrt zurueck ins Firmament: die Platte zieht sich zurueck. */
+  leaving: boolean
 }>()
 const emit = defineEmits<{ select: [string | null]; act: [string] }>()
 
@@ -305,6 +315,28 @@ const nodeVars = computed(() => ({
 /** Ab dieser Plattengrösse trägt die Marke ihre Uhr selbst. */
 const inlineClock = computed(() => markerSize.value.plate >= VOYAGE_SITE_INLINE_CLOCK_PX)
 
+// ── Kamerafahrt ─────────────────────────────────────────────────────────────
+/** Drehpunkt der Fahrt: der Galaxiekern, in % der Bühne wie jede Marke. */
+const diveOrigin = computed(() => {
+  const p = pct(0.5, 0.5)
+  return `${p.left}% ${p.top}%`
+})
+const diveArriveDur = `${FIRMAMENT_DIVE_ARRIVE_MS}ms`
+const diveLeaveDur = `${FIRMAMENT_DIVE_LEAVE_MS}ms`
+const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
+const diveEaseLeave = FIRMAMENT_DIVE_EASE_LEAVE
+const diveScale = String(FIRMAMENT_DIVE_ARRIVE_SCALE)
+const diveScaleInv = String(1 / FIRMAMENT_DIVE_ARRIVE_SCALE)
+
+/** Der Galaxiekern in Viewport-Koordinaten — der Fahrtpunkt des Rückwegs. */
+function diveAnchor(): { x: number; y: number } | null {
+  const el = stage.value
+  if (!el || cssW.value <= 0) return null
+  const r = el.getBoundingClientRect()
+  const b = box.value
+  return { x: r.left + b.x + 0.5 * b.w, y: r.top + b.y + 0.5 * b.h }
+}
+
 // ── Malen ───────────────────────────────────────────────────────────────────
 /** Zählt die Repaints — der Playwright-Lauf liest das, siehe docs/playwright.md. */
 const paintCount = ref(0)
@@ -413,13 +445,15 @@ onBeforeUnmount(() => {
   dprQuery = null
 })
 
-defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
+defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnchor })
 </script>
 
 <template>
   <div
     ref="stage"
     class="egm"
+    :class="{ 'egm--arrive': arriving, 'egm--leave': leaving }"
+    :style="{ '--egm-dive-origin': diveOrigin }"
     role="group"
     :aria-label="`${title} — voyage chart`"
     @click="emit('select', null)"
@@ -589,5 +623,44 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH })
 .egm-nodes :deep(.sn),
 .egm-nodes :deep(.gt) {
   pointer-events: auto;
+}
+
+/* ── Kamerafahrt ───────────────────────────────────────────────────────────
+   Platte, Marken und Crew-Ebene setzen sich GEMEINSAM um den Galaxiekern;
+   Datenband und Manifestreihe sind Chrome und bleiben stehen. Die Klasse
+   haengt am Store, kein Timer hier. Waehrend der Fahrt sind die Marken taub —
+   ein Tooltip misst seinen Anker einmal, ein wanderndes Ziel stuende daneben. */
+.egm--arrive :is(.egm-plate, .egm-nodes, .ecml) {
+  transform-origin: var(--egm-dive-origin, 50% 50%);
+  animation: egm-dive-arrive v-bind(diveArriveDur) v-bind(diveEaseArrive) both;
+}
+.egm--leave :is(.egm-plate, .egm-nodes, .ecml) {
+  transform-origin: var(--egm-dive-origin, 50% 50%);
+  animation: egm-dive-leave v-bind(diveLeaveDur) v-bind(diveEaseLeave) forwards;
+}
+.egm:is(.egm--arrive, .egm--leave) :deep(:is(.egm-nodes, .ecml) *) {
+  pointer-events: none;
+}
+@keyframes egm-dive-arrive {
+  from {
+    transform: scale(v-bind(diveScale));
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes egm-dive-leave {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(v-bind(diveScaleInv));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .egm--arrive :is(.egm-plate, .egm-nodes, .ecml),
+  .egm--leave :is(.egm-plate, .egm-nodes, .ecml) {
+    animation: none;
+  }
 }
 </style>

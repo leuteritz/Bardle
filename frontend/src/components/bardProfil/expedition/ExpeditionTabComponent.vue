@@ -29,6 +29,7 @@ import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import { useVoyageAtlas } from '@/composables/expedition/useVoyageAtlas'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
+import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
   VOYAGE_COMMAND_BAR_H,
   VOYAGE_LOADER_MIN_MS,
@@ -77,6 +78,41 @@ const destination = computed(() =>
 )
 const galaxyTitle = computed(() => destination.value?.name ?? '')
 const galaxyTier = computed(() => destination.value?.tier ?? 'common')
+
+// ── Kamerafahrt Firmament ⇄ Atlas ───────────────────────────────────────────
+const mapEl = ref<InstanceType<typeof ExpeditionGalaxyMap> | null>(null)
+const arriving = computed(
+  () => uiStore.firmamentDive?.toward === 'atlas' && uiStore.firmamentDive.phase === 'in',
+)
+const leaving = computed(
+  () => uiStore.firmamentDive?.toward === 'firmament' && uiStore.firmamentDive.phase === 'out',
+)
+
+/**
+ * Der Rueckweg. Die GERADE gewaehlte Galaxie, nicht die, mit der man kam — wer
+ * im Atlas weitergeklickt hat, soll im Firmament dort stehen. Ohne Kern (keine
+ * Karte) oder bei reduced-motion der harte Schnitt wie bisher.
+ */
+function backToFirmament() {
+  const galaxy = chartStore.selectedGalaxy || null
+  const anchor = mapEl.value?.diveAnchor()
+  const record = selectedRecord.value
+  if (
+    galaxy === null ||
+    !anchor ||
+    !record ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    uiStore.returnToFirmamentTab(galaxy)
+    return
+  }
+  uiStore.requestFirmamentDive({
+    toward: 'firmament',
+    galaxy,
+    ...anchor,
+    accent: `rgb(${minimapAccentForTheme(record.themeIndex)})`,
+  })
+}
 
 // ── Zonenbudget ─────────────────────────────────────────────────────────────
 // Am ATLAS gemessen, nicht am Viewport: das Profilmodal ist beidseitig um
@@ -225,6 +261,12 @@ watch(
   (visible) => {
     if (visible) {
       if (atlasBuilt.value || loaderVisible.value) return
+      // Der Schleier der Kamerafahrt deckt den teuren ersten Frame schon; ein
+      // zweiter darunter kaeme NACH dem ersten zum Vorschein.
+      if (uiStore.firmamentDive) {
+        atlasBuilt.value = true
+        return
+      }
       loaderStartedAt.value = performance.now()
       loaderVisible.value = true
       revealWhenPainted()
@@ -303,6 +345,7 @@ function openMassSendUpgrade() {
       <div class="etc-stage">
         <ExpeditionGalaxyMap
           v-if="selectedRecord"
+          ref="mapEl"
           :record="selectedRecord"
           :sites="placedSites"
           :selected-key="selectedKey"
@@ -313,13 +356,15 @@ function openMassSendUpgrade() {
           :gate="gateState"
           :homecomings="homecomings"
           :actions="actions"
+          :arriving="arriving"
+          :leaving="leaving"
           @select="onSelect"
           @act="atlas.runMarkAction"
         />
 
         <!-- Nur da, wenn man aus dem Firmament kam. Ueberlagerung, KEINE
              Gridzeile: jede Hoehe in der Spalte ginge der Galaxie ab. -->
-        <FirmamentReturnButton />
+        <FirmamentReturnButton @back="backToFirmament" />
       </div>
 
       <!-- Die Zielliste faehrt als EIN Stueck seitlich hinaus; stehen bleibt

@@ -499,6 +499,24 @@ export interface FirmamentSelection {
   galaxy: number | null
 }
 
+/**
+ * Der Sprung zwischen Firmament und Voyages-Atlas als Kamerafahrt.
+ *
+ * `x`/`y` sind Viewport-Koordinaten des Fahrtpunkts (Knotenmitte bzw.
+ * Galaxiekern); `phase` schaltet der Schleier: `out` zoomt den Quellreiter,
+ * `in` setzt den Zielreiter.
+ */
+export interface FirmamentDive {
+  toward: 'atlas' | 'firmament'
+  galaxy: number
+  x: number
+  y: number
+  accent: string
+  phase: 'out' | 'in'
+}
+
+export type FirmamentDiveRequest = Omit<FirmamentDive, 'phase'>
+
 /** Die Marken-Art, die Tooltip, Herold und Badge Lab gemeinsam kennen. */
 export type NotifyBadgeKind =
   | 'level'

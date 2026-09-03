@@ -66,3 +66,69 @@ describe('Firmament-Sprung in den Voyages-Atlas', () => {
     expect(ui.firmamentTabReturnPending).toBe(false)
   })
 })
+
+/**
+ * Der Sprung als Kamerafahrt. Den Reiter schaltet der Schleier SELBST, wenn er
+ * deckt — die Fahrt darf ihn also nie vorwegnehmen, und wer von Hand
+ * weiternavigiert oder das Profil schliesst, muss sie abraeumen: sonst
+ * schaltete ihr Timer 380 ms spaeter ein geschlossenes Profil wieder auf.
+ */
+describe('Der Sprung als Kamerafahrt', () => {
+  const req = { toward: 'atlas' as const, galaxy: 7, x: 120, y: 80, accent: 'rgb(1, 2, 3)' }
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('beginnt in Phase out und laesst den Reiter stehen', () => {
+    const ui = useUiStore()
+    ui.setBardTab('firmament')
+    ui.requestFirmamentDive(req)
+
+    expect(ui.firmamentDive).toEqual({ ...req, phase: 'out' })
+    expect(ui.bardActiveTab).toBe('firmament')
+    expect(ui.pendingVoyageTarget).toBeNull()
+  })
+
+  it('ankert nach, setzt sich und raeumt ab', () => {
+    const ui = useUiStore()
+    ui.requestFirmamentDive(req)
+    ui.anchorFirmamentDive(5, 6)
+    expect(ui.firmamentDive).toMatchObject({ x: 5, y: 6, phase: 'out' })
+
+    ui.settleFirmamentDive()
+    expect(ui.firmamentDive?.phase).toBe('in')
+
+    ui.clearFirmamentDive()
+    expect(ui.firmamentDive).toBeNull()
+    ui.anchorFirmamentDive(1, 1)
+    ui.settleFirmamentDive()
+    expect(ui.firmamentDive).toBeNull()
+  })
+
+  it('ueberlebt den Reiterwechsel, den der Schleier selbst ausloest', () => {
+    const ui = useUiStore()
+    ui.requestFirmamentDive(req)
+    ui.requestOpenVoyagesFromFirmament(7)
+    expect(ui.firmamentDive).not.toBeNull()
+    expect(ui.bardActiveTab).toBe('expedition')
+
+    ui.requestFirmamentDive({ ...req, toward: 'firmament' })
+    ui.returnToFirmamentTab(7)
+    expect(ui.firmamentDive).not.toBeNull()
+    expect(ui.bardActiveTab).toBe('firmament')
+  })
+
+  it.each([
+    ['setBardTab', (ui: ReturnType<typeof useUiStore>) => ui.setBardTab('team')],
+    ['closeBardModal', (ui: ReturnType<typeof useUiStore>) => ui.closeBardModal()],
+    ['openBardModal (zuklappen)', (ui: ReturnType<typeof useUiStore>) => ui.openBardModal()],
+  ])('endet, wenn der Spieler per %s weiternavigiert', (_name, navigate) => {
+    const ui = useUiStore()
+    ui.setBardTab('firmament')
+    ui.requestFirmamentDive(req)
+    navigate(ui)
+
+    expect(ui.firmamentDive).toBeNull()
+  })
+})

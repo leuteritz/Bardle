@@ -1,6 +1,6 @@
 <template>
   <Transition name="frb-slide">
-    <button v-if="visible" type="button" class="frb" @click="backToFirmament">
+    <button v-if="visible" type="button" class="frb" @click="emit('back')">
       <Icon icon="lucide:arrow-left" width="16" height="16" class="frb-arrow" />
       <Icon icon="ph:globe-hemisphere-west-fill" width="24" height="24" class="frb-icon" />
       <span class="frb-title">Back to Firmament</span>
@@ -12,15 +12,16 @@
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useUiStore } from '@/stores/core/uiStore'
-import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import {
   VOYAGE_MAP_GUTTER_PX,
   VOYAGE_MAP_STATS_BAND_H,
   VOYAGE_RETURN_PILL_CLEARANCE,
 } from '@/config/constants'
 
+/** Den Weg zurueck geht der Reiter — er kennt die Karte und ihren Kern. */
+const emit = defineEmits<{ back: [] }>()
+
 const uiStore = useUiStore()
-const chartStore = useExpeditionChartStore()
 
 /** Sie steht UEBER dem Datenband, nicht darauf: `bottom` misst ab der
  *  Buehnenkante, das Band sitzt am Fuss der KARTE — also eine halbe Rinne
@@ -29,12 +30,6 @@ const chartStore = useExpeditionChartStore()
 const bottom = `${VOYAGE_MAP_GUTTER_PX / 2 + VOYAGE_MAP_STATS_BAND_H + VOYAGE_RETURN_PILL_CLEARANCE}px`
 
 const visible = computed(() => uiStore.firmamentTabReturnPending)
-
-/** Die GERADE gewaehlte Galaxie, nicht die, mit der man kam — wer im Atlas
- *  weitergeklickt hat, soll im Firmament dort stehen. */
-function backToFirmament() {
-  uiStore.returnToFirmamentTab(chartStore.selectedGalaxy || null)
-}
 </script>
 
 <style scoped>

@@ -309,6 +309,28 @@ export const FIRMAMENT_ZOOM_STEPS = [1, 1.6, 2.4] as const
 export const FIRMAMENT_MAX_BACKING_PX = 2600
 export const FIRMAMENT_MAX_DPR = 2
 
+// ── Der Sprung in die Galaxie — Kamerafahrt Firmament ⇄ Voyages ─────────────
+/** Hineinzoomen im Quellreiter, dann Setzen im Zielreiter. Zusammen 900 ms —
+ *  dieselbe Spanne wie MINIMAP_DEPARTURE_TRANSITION_MS, gebunden in
+ *  `firmamentDive.spec.ts`. */
+export const FIRMAMENT_DIVE_LEAVE_MS = 380
+export const FIRMAMENT_DIVE_ARRIVE_MS = 520
+/** Endmassstab der fahrenden Firmament-Ebene. Nicht hoeher: ab ~60 % Schleier
+ *  ist die Platte unsichtbar, und 5x liesse Chrome die 2600-px-Platte fuer
+ *  nichts neu rastern. */
+export const FIRMAMENT_DIVE_SCALE = 3.2
+/** Massstab der Voyages-Platte: Start beim Ankommen, Ziel (1/x) beim Verlassen. */
+export const FIRMAMENT_DIVE_ARRIVE_SCALE = 1.28
+/** Grundkante der Lichtscheibe; sie skaliert bis zur fernsten Ecke. */
+export const FIRMAMENT_DIVE_GLOW_PX = 240
+export const FIRMAMENT_DIVE_GLOW_ALPHA = 0.55
+/** Startmassstab der Lichtscheibe — ein Funke am Knoten, kein Fleck. */
+export const FIRMAMENT_DIVE_GLOW_SEED = 0.15
+/** Ueberschuss beim Weiterwachsen nach dem Durchgang. */
+export const FIRMAMENT_DIVE_GLOW_PAST = 1.3
+export const FIRMAMENT_DIVE_EASE_LEAVE = 'cubic-bezier(0.6, 0, 1, 0.5)'
+export const FIRMAMENT_DIVE_EASE_ARRIVE = 'cubic-bezier(0.16, 1, 0.3, 1)'
+
 // ── Penumbra — der Raum jenseits der Scheibe ────────────────────────────────
 /* Kein Sternfeld: ausserhalb des beobachteten Universums ist kein Universum.
    Der Grund sind STROEME in einer Richtung, hinter der Scheibe hindurch —

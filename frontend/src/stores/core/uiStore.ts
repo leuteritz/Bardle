@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { ArrivalNotice, BardTabId, ChampionRole } from '@/types'
+import type {
+  ArrivalNotice,
+  BardTabId,
+  ChampionRole,
+  FirmamentDive,
+  FirmamentDiveRequest,
+} from '@/types'
 
 // Der Typ wohnt in types/ui.ts, damit die Badge-Registry ihn nennen kann, ohne
 // an den Store zu ziehen. Re-Export, weil drei Stellen ihn von hier importieren.
@@ -34,6 +40,10 @@ export const useUiStore = defineStore('ui', () => {
   // leere Bahn zurueck. Nur die NUMMER: auf welcher Bahn sie liegt, steht im
   // Archiv, und dorthin greift der uiStore nicht.
   const pendingFirmamentGalaxy = ref<number | null>(null)
+  // Die laufende Kamerafahrt zwischen Firmament und Atlas. Liegt HIER, damit
+  // ein Escape oder Reiterwechsel sie abraeumt — sonst schaltete ihr Timer
+  // 380 ms spaeter ein geschlossenes Profil wieder auf.
+  const firmamentDive = ref<FirmamentDive | null>(null)
   // Was der Aufbruch hinterlaesst, bis der Herold es ansagen kann. Es liegt
   // HIER und nicht im gameStore, weil dieser Store nicht persistiert wird: ein
   // Reload kann damit keinen Sprung feiern, der lange vorbei ist — derselbe
@@ -71,7 +81,10 @@ export const useUiStore = defineStore('ui', () => {
     bardActiveTab.value = bardActiveTab.value !== null ? null : 'bard'
     // Zugeklappt endet auch hier das Rueckweg-Angebot — sonst stuende die Pille
     // nach Profil-zu-und-wieder-auf weiter da.
-    if (bardActiveTab.value === null) firmamentTabReturnPending.value = false
+    if (bardActiveTab.value === null) {
+      firmamentTabReturnPending.value = false
+      firmamentDive.value = null
+    }
     clearHoverMarks()
   }
 
@@ -80,6 +93,7 @@ export const useUiStore = defineStore('ui', () => {
     // navigating by hand ends the offer to jump back to the battle tab
     battleTabReturnPending.value = false
     firmamentTabReturnPending.value = false
+    firmamentDive.value = null
     clearHoverMarks()
   }
 
@@ -87,6 +101,7 @@ export const useUiStore = defineStore('ui', () => {
     bardActiveTab.value = null
     battleTabReturnPending.value = false
     firmamentTabReturnPending.value = false
+    firmamentDive.value = null
     clearHoverMarks()
   }
 
@@ -180,6 +195,27 @@ export const useUiStore = defineStore('ui', () => {
 
   function clearPendingFirmamentGalaxy() {
     pendingFirmamentGalaxy.value = null
+  }
+
+  /** Die Kamerafahrt beginnt. Den Reiter schaltet der Schleier selbst, wenn er
+   *  deckt — ueber `requestOpenVoyagesFromFirmament` bzw. `returnToFirmamentTab`. */
+  function requestFirmamentDive(req: FirmamentDiveRequest) {
+    firmamentDive.value = { ...req, phase: 'out' }
+  }
+
+  /** Der Zielreiter meldet den echten Fahrtpunkt nach — beim Rueckweg kennt
+   *  erst das sichtbare Firmament die Knotenmitte. */
+  function anchorFirmamentDive(x: number, y: number) {
+    if (firmamentDive.value) firmamentDive.value = { ...firmamentDive.value, x, y }
+  }
+
+  /** Die Zielplatte steht — der Schleier darf fallen. */
+  function settleFirmamentDive() {
+    if (firmamentDive.value) firmamentDive.value = { ...firmamentDive.value, phase: 'in' }
+  }
+
+  function clearFirmamentDive() {
+    firmamentDive.value = null
   }
 
   /**
@@ -279,6 +315,11 @@ export const useUiStore = defineStore('ui', () => {
     requestOpenVoyagesFromFirmament,
     returnToFirmamentTab,
     clearPendingFirmamentGalaxy,
+    firmamentDive,
+    requestFirmamentDive,
+    anchorFirmamentDive,
+    settleFirmamentDive,
+    clearFirmamentDive,
     requestOpenFirmamentDeparture,
     setHoveredChampionRole,
     setHoveredChampionSlotIndex,

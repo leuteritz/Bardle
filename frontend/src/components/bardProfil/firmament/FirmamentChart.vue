@@ -36,6 +36,7 @@ import { computed, ref, watch, onBeforeUnmount, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import { getUniverse } from '@/config/progression/universes'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
@@ -61,6 +62,11 @@ import FirmamentPortal from './FirmamentPortal.vue'
 import FirmamentDepartureTip from './FirmamentDepartureTip.vue'
 import UniverseDisc from './UniverseDisc.vue'
 import {
+  FIRMAMENT_DIVE_ARRIVE_MS,
+  FIRMAMENT_DIVE_EASE_ARRIVE,
+  FIRMAMENT_DIVE_EASE_LEAVE,
+  FIRMAMENT_DIVE_LEAVE_MS,
+  FIRMAMENT_DIVE_SCALE,
   FIRMAMENT_FREED_COLOR,
   FIRMAMENT_GATE_COLOR,
   FIRMAMENT_LABEL_MAX_NODES,
@@ -87,7 +93,7 @@ import {
   UNIVERSE_DISC_HERO_R_RATIO,
 } from '@/config/constants'
 import type { FirmamentDeparture, FirmamentNode } from '@/utils/ui/firmamentLayout'
-import type { FirmamentSelection } from '@/types'
+import type { FirmamentDiveRequest, FirmamentSelection } from '@/types'
 import type { PrestigeOfferCard } from '@/stores/progression/providenceStore'
 import FirmamentOfferTip from './FirmamentOfferTip.vue'
 
@@ -100,15 +106,20 @@ const props = defineProps<{
   offers: PrestigeOfferCard[]
   selection: FirmamentSelection
   visible: boolean
+  /** Rueckweg aus dem Atlas als Kamerafahrt: die Ebene setzt sich aus dem
+   *  Knoten der genannten Galaxie heraus. `null` = keine Fahrt. */
+  arriving: number | null
 }>()
 
 const emit = defineEmits<{
   (e: 'select', value: FirmamentSelection): void
   (e: 'open', galaxy: number): void
+  (e: 'dive', req: FirmamentDiveRequest): void
 }>()
 
 const galaxyStore = useGalaxyStore()
 const gameStore = useGameStore()
+const uiStore = useUiStore()
 const { completedGalaxies } = storeToRefs(galaxyStore)
 
 const stage = ref<HTMLElement | null>(null)
@@ -129,6 +140,8 @@ const pan = ref({ x: 0, y: 0 })
 /** Waehrend des Ziehens: reine Compositor-Fahrt, noch nicht im `paintKey`. */
 const drag = ref({ x: 0, y: 0 })
 const dragging = ref(false)
+/** Die laufende Kamerafahrt — siehe „Die Kamerafahrt" unten. */
+const dive = ref<{ ox: number; oy: number; way: 'leave' | 'arrive' } | null>(null)
 
 const zoom = computed(() => FIRMAMENT_ZOOM_STEPS[zoomStep.value] ?? 1)
 const canPan = computed(() => zoomStep.value > 0)
@@ -173,7 +186,7 @@ function clampPan(x: number, y: number): { x: number; y: number } {
  */
 function onWheel(e: WheelEvent) {
   const el = stage.value
-  if (!el) return
+  if (!el || dive.value) return
   const next = Math.min(
     FIRMAMENT_ZOOM_STEPS.length - 1,
     Math.max(0, zoomStep.value + (e.deltaY < 0 ? 1 : -1)),
@@ -203,12 +216,12 @@ function recenter() {
 /** Zurueck zur ganzen Bahn. Auf einem Knopf gehoert der Klick dem Knoten bzw.
  *  dem Portal — dort waere ein Reset die zweite Wirkung derselben Geste. */
 function onDblClick(e: MouseEvent) {
-  if ((e.target as HTMLElement).closest('button')) return
+  if (dive.value || (e.target as HTMLElement).closest('button')) return
   recenter()
 }
 
 function onPointerDown(e: PointerEvent) {
-  if (!canPan.value || e.button !== 0) return
+  if (!canPan.value || e.button !== 0 || dive.value) return
   const sx = e.clientX
   const sy = e.clientY
   dragging.value = true
@@ -498,16 +511,58 @@ const rimSpinDur = computed(() => `${universeDiscSpinSec(rimSide.value)}s`)
 const rimSpinDir = FIRMAMENT_RIM_SPIN_REVERSE ? 'reverse' : 'normal'
 const heroOpacity = String(UNIVERSE_DISC_HERO_OPACITY)
 
-function pickNode(node: FirmamentNode, picked: boolean) {
+// ── Die Kamerafahrt ─────────────────────────────────────────────────────────
+/**
+ * Hin: die Ebene zoomt in den geklickten Knoten (`leave`). Zurueck: sie setzt
+ * sich aus ihm heraus (`arrive`). Der Fahrtpunkt ist die Knopfmitte — der
+ * Knopf steht in der drehenden Gruppe, sein Rechteck traegt die Drehung mit.
+ * Waehrend der Fahrt ist die Buehne taub: Rad, Doppelklick und Zug wuerden
+ * `box` unter der laufenden Animation verschieben.
+ */
+function nodeCenter(el: Element): { x: number; y: number } {
+  const r = el.getBoundingClientRect()
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+}
+
+function pickNode(mark: (typeof marks.value)[number], e: MouseEvent) {
+  if (dive.value) return
+  const { node, picked, accent } = mark
   // `record` ist der Beleg, dass die Galaxie im Voyages-Atlas liegt — dort sind
   // die Datensaetze genau `completedGalaxies`. Laufende und unbeleuchtete
   // Knoten haben keinen und bleiben eine reine Auswahl.
-  if (node.record) {
+  if (!node.record) {
+    emit('select', { ...props.selection, galaxy: picked ? null : node.galaxy })
+    return
+  }
+  const s = stage.value?.getBoundingClientRect()
+  if (!s || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     emit('open', node.galaxy)
     return
   }
-  emit('select', { ...props.selection, galaxy: picked ? null : node.galaxy })
+  const { x, y } = nodeCenter(e.currentTarget as HTMLElement)
+  dive.value = { ox: x - s.left, oy: y - s.top, way: 'leave' }
+  emit('dive', { toward: 'atlas', galaxy: node.galaxy, x, y, accent })
 }
+
+/* Der Rueckweg: erst das SICHTBARE Firmament kennt die Knotenmitte — es meldet
+   sie dem Schleier nach, das Licht faellt dorthin. Ohne Knoten (Galaxie nicht
+   auf der gezeigten Bahn) faellt nur der Schleier. */
+watch(
+  () => props.arriving,
+  (galaxy) => {
+    if (galaxy === null) {
+      dive.value = null
+      return
+    }
+    const s = stage.value?.getBoundingClientRect()
+    const el = stage.value?.querySelector(`.fm-node[data-galaxy="${galaxy}"]`)
+    if (!s || !el) return
+    const { x, y } = nodeCenter(el)
+    dive.value = { ox: x - s.left, oy: y - s.top, way: 'arrive' }
+    uiStore.anchorFirmamentDive(x, y)
+  },
+  { flush: 'post' },
+)
 
 /** Weiterreisen: das Tor ist die Fortsetzung des Weges, nicht eine zweite
  *  Leiste. So geht man den ganzen Weg der Reihe nach ab. */
@@ -657,7 +712,12 @@ watch(
   () => props.visible,
   (visible) => {
     if (visible) nextTick(attach)
-    else detach()
+    else {
+      detach()
+      // `display: none` bricht die Fahrt ab; stehen bliebe sie, spielte sie
+      // beim Zurueckkommen von vorn.
+      dive.value = null
+    }
   },
   { immediate: true },
 )
@@ -667,7 +727,15 @@ onBeforeUnmount(detach)
 // ── Ebene ───────────────────────────────────────────────────────────────────
 const layerStyle = computed(() => ({
   transform: `translate3d(${drag.value.x}px, ${drag.value.y}px, 0)`,
+  ...(dive.value && {
+    transformOrigin: `${dive.value.ox}px ${dive.value.oy}px`,
+    '--fm-dive-scale': String(FIRMAMENT_DIVE_SCALE),
+  }),
 }))
+const diveLeaveDur = `${FIRMAMENT_DIVE_LEAVE_MS}ms`
+const diveArriveDur = `${FIRMAMENT_DIVE_ARRIVE_MS}ms`
+const diveEaseLeave = FIRMAMENT_DIVE_EASE_LEAVE
+const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 
 </script>
 
@@ -675,7 +743,7 @@ const layerStyle = computed(() => ({
   <div
     ref="stage"
     class="fm-stage"
-    :class="{ 'is-pannable': canPan, 'is-dragging': dragging }"
+    :class="{ 'is-pannable': canPan, 'is-dragging': dragging, 'is-diving': !!dive }"
     @pointerdown="onPointerDown"
     @wheel.prevent="onWheel"
     @dblclick="onDblClick"
@@ -708,7 +776,7 @@ const layerStyle = computed(() => ({
       :awake="hoveredOffer === mark.card.universe.id"
     />
 
-    <div class="fm-layer" :style="layerStyle">
+    <div class="fm-layer" :class="dive && `fm-layer--${dive.way}`" :style="layerStyle">
       <!-- Die zwei Ebenen, die sich drehen. Beide sind fertige Sprites; das CSS
            dreht sie am Compositor, kein Repaint. Gegenlaeufig, damit sie nicht
            als EIN Rad zusammenfallen. -->
@@ -766,13 +834,14 @@ const layerStyle = computed(() => ({
               height: `${mark.size}px`,
               '--fm-node-accent': mark.accent,
             }"
+            :data-galaxy="mark.node.galaxy"
             :aria-label="
               mark.node.record
                 ? `Galaxy ${toRoman(mark.node.galaxy)} — open in Voyages`
                 : `Galaxy ${toRoman(mark.node.galaxy)}`
             "
             :aria-pressed="mark.node.record ? undefined : mark.picked"
-            @click="pickNode(mark.node, mark.picked)"
+            @click="pickNode(mark, $event)"
           >
             <span class="fm-node-ring" aria-hidden="true" />
             <span class="fm-node-tag" aria-hidden="true">{{ toRoman(mark.node.galaxy) }}</span>
@@ -944,6 +1013,59 @@ const layerStyle = computed(() => ({
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+/* ── Die Kamerafahrt ──────────────────────────────────────────────────────
+   Hin zoomt die Ebene in den Knoten, zurueck setzt sie sich aus ihm heraus —
+   ein `transform` auf fertigen Sprites, kein Repaint. `translate3d(0,0,0)`
+   steht in beiden Keyframes: die Animation ueberstimmt das inline transform,
+   und eine Fahrt (`drag`) ist beim Klick immer schon geflusht. */
+.fm-layer--leave {
+  animation: fm-dive-leave v-bind(diveLeaveDur) v-bind(diveEaseLeave) forwards;
+}
+.fm-layer--arrive {
+  animation: fm-dive-arrive v-bind(diveArriveDur) v-bind(diveEaseArrive) forwards;
+}
+@keyframes fm-dive-leave {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(0, 0, 0) scale(var(--fm-dive-scale, 1));
+  }
+}
+@keyframes fm-dive-arrive {
+  from {
+    transform: translate3d(0, 0, 0) scale(var(--fm-dive-scale, 1));
+  }
+  to {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* Die Kinder holen sich `pointer-events: auto` einzeln zurueck — nur der Stern
+   trifft sie alle. */
+.fm-stage.is-diving,
+.fm-stage.is-diving * {
+  pointer-events: none;
+}
+
+/* Mit `pointer-events: none` endet die Hover-Pause, und die Bahn draengte
+   unter dem Drehpunkt weg. Also stehen bleiben — der Klick ist die
+   Fortsetzung des Ueberfahrens. */
+.fm-stage.is-diving :is(.fm-spin, .fm-rim, .fm-node-tag) {
+  animation-play-state: paused;
+}
+.fm-stage.is-diving :deep(:is(.fm-hero .uni-disc-l, .fm-portal-l, .fm-portal-boost)) {
+  animation-play-state: paused;
+}
+
+/* Die Portale stehen AUSSERHALB der fahrenden Ebene und blieben sonst scharf
+   ueber dem Zoom stehen. Statischer Umschlag, kein Dauerlaeufer. */
+.fm-stage.is-diving .fm-portal-hit,
+.fm-stage.is-diving :deep(.fm-portal) {
+  opacity: 0;
+  transition: opacity 0.16s ease;
 }
 
 /* Wall und Herz. Beide zentriert auf der Mitte der Bahn, beide ohne
@@ -1137,7 +1259,9 @@ const layerStyle = computed(() => ({
 @media (prefers-reduced-motion: reduce) {
   .fm-rim,
   .fm-spin,
-  .fm-node-tag {
+  .fm-node-tag,
+  .fm-layer--leave,
+  .fm-layer--arrive {
     animation: none;
   }
 }

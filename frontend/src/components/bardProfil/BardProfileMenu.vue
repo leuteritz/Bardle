@@ -28,6 +28,7 @@ import BattleResultComponent from '@/components/bardProfil/battle/BattleResultCo
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import ExpeditionTabComponent from '@/components/bardProfil/expedition/ExpeditionTabComponent.vue'
 import FirmamentTabComponent from '@/components/bardProfil/firmament/FirmamentTabComponent.vue'
+import FirmamentDiveVeil from '@/components/bardProfil/FirmamentDiveVeil.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
@@ -596,6 +597,10 @@ onUnmounted(() => {
               >
                 <AdminDashboard />
               </div>
+
+              <!-- Die Kamerafahrt Firmament ⇄ Voyages: ein Geschwister ueber
+                   allen Tab-Layern, kein Kind eines Reiters. -->
+              <FirmamentDiveVeil v-if="uiStore.firmamentDive" />
             </div>
           </div>
         </div>

@@ -37,7 +37,7 @@ import {
   FIRMAMENT_RAIL_SLIDE_MS,
   FIRMAMENT_RAIL_ZONE_W,
 } from '@/config/constants'
-import type { FirmamentSelection } from '@/types'
+import type { FirmamentDiveRequest, FirmamentSelection } from '@/types'
 
 const uiStore = useUiStore()
 const gameStore = useGameStore()
@@ -125,6 +125,18 @@ const chronicle = computed(() =>
 function openInVoyages(galaxy: number) {
   uiStore.requestOpenVoyagesFromFirmament(galaxy)
 }
+
+/** Dieselbe Tuer als Kamerafahrt — den Reiter schaltet der Schleier. */
+function diveInto(req: FirmamentDiveRequest) {
+  uiStore.requestFirmamentDive(req)
+}
+
+/** Der Rueckweg aus dem Atlas kommt als Fahrt an: die Karte setzt sich aus dem
+ *  Knoten dieser Galaxie heraus, sobald der Schleier faellt. */
+const arriving = computed(() => {
+  const d = uiStore.firmamentDive
+  return d && d.toward === 'firmament' && d.phase === 'in' ? d.galaxy : null
+})
 
 // ── Leiste ──────────────────────────────────────────────────────────────────
 /** Die EINE Zeilenrechnung — Liste und Griff lesen dieselbe. */
@@ -267,8 +279,10 @@ onBeforeUnmount(() => {
           :offers="offers"
           :selection="selection"
           :visible="isVisible"
+          :arriving="arriving"
           @select="select"
           @open="openInVoyages"
+          @dive="diveInto"
         />
 
         <!-- Die Leiste faehrt als EIN Stueck seitlich hinaus; stehen bleibt die
