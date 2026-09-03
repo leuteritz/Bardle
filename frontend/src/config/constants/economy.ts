@@ -1404,40 +1404,55 @@ export const VOYAGE_MAP_STATS_RECORD_TIPS = {
 /**
  * Kachelkante einer Sonde.
  *
- * 30 und nicht mehr 22: mit Woertern daneben war die Reihe auf 2K 390 px lang —
- * ein Viertel des Bandes fuer eine Nebenauskunft — und die Marke darin fuellte
- * ihre Kachel nur zur Haelfte. Beides zusammen war in EINER Zeile nicht zu
- * beheben, denn groessere Woerter machen die Reihe laenger. Also fielen die
- * Woerter, und die Kachel bekam ihren Platz.
+ * Sie SKALIERT mit der Buehne, wie jede andere Zone des Bandes auch
+ * (`.egsb-val` laeuft auf `clamp(31px, 5.4cqw, 37px)`). Vorher stand sie fest
+ * auf 30 — damit blieb auf 4K fast der ganze Fuss leer, und auf Full HD passten
+ * die Woerter nicht daneben.
  *
- * 30 ist zugleich die Grenze: darueber waechst die Zone an `modsColumn` (32)
- * vorbei und die Hoehenbilanz des Bandes bekaeme eine andere Wand.
+ * Der Boden ist GEMESSEN und knapp: auf Full HD mit ausgeklappter Zielliste
+ * (Buehne 952) stehen der Zone 329 px zur Verfuegung, und die Reihe mit
+ * Woertern braucht bei einer 24er-Kachel 393. Erst bei 20 passt sie — mit rund
+ * 8 px Reserve. Grosse Sonden UND Woerter gibt der Platz dort nicht her; das
+ * ist keine Wahl, sondern die Rechnung.
+ *
+ * Der Deckel ist die HOEHE, nicht der Wille: die Zone darf nicht an
+ * `readColumn(VALUE_MAX)` (48,77) vorbeiwachsen, sonst ist die Wand, gegen die
+ * alle Schriftdeckel des Bandes gerechnet sind, die falsche. Sie ist damit
+ * nicht mehr die flachste Zone des Bandes — `modsColumn` (32) liegt in der
+ * Spanne —, aber die grosse Ablesung bleibt die hoechste.
  */
-export const VOYAGE_MAP_LEGEND_ICON_PX = 30
+export const VOYAGE_MAP_LEGEND_ICON_MIN = 20
+export const VOYAGE_MAP_LEGEND_ICON_MAX = 44
 /**
- * Sondenradius — HERGELEITET, nicht gewaehlt: der weiteste Ausschlag der fuenf
- * Marken ist `r x 1,3` (der Saum des verlorenen Sterns), also `2,6 x 9 = 23,4`
- * in 30 px. Der Rest ist Blur-Rand, der wie zuvor beschnitten werden darf —
- * `landmarkPad` rechnet mit `LANDMARK_PAD_SPAN` plus 12 px und lag auch bei
- * 4,4 in 22 schon darueber.
+ * Der Sondenradius FOLGT der Kachel: `r = Kachel / 3.06`.
  *
- * Wer hier dreht, prueft die Reihe in der Nahaufnahme nach: sichtbar hart
- * abgeschnittener Schein ist das Abbruchkriterium.
+ * HERGELEITET, nicht gewaehlt: der weiteste Ausschlag der fuenf Marken ist
+ * `r x 1,3` (der Saum des verlorenen Sterns), die Marke belegt also `2,6 r`.
+ * 3,06 haelt sie damit auf konstant 85 % der Kachel — genug, dass sie diese
+ * fuellt, und genug Rand, dass ihr `shadowBlur` nicht sichtbar hart abreisst.
+ * Der Rest ist Blur, der wie zuvor beschnitten werden darf: `landmarkPad`
+ * rechnet mit `LANDMARK_PAD_SPAN` plus 12 px und lag auch bei 4,4 in 22 schon
+ * darueber.
+ *
+ * Der gerechnete Radius wird per `roundLandmarkRadius()` auf halbe Pixel
+ * quantisiert — sonst zoege jede Zwischenbreite eigene Sprite-Cache-Eintraege
+ * und `LANDMARK_SPRITE_CACHE_MAX` (24) kippte in Thrashing.
  */
-export const VOYAGE_MAP_LEGEND_R = 9
+export const VOYAGE_MAP_LEGEND_R_RATIO = 3.06
 /**
- * Deckel des Wortes — GLEICHAUF mit `VOYAGE_MAP_STATS_LABEL_MAX`, also der
- * Groesse von STARS, VOYAGES und PAYOUT.
+ * Spanne des Wortes. Es stand einmal fest auf 9 und war damit die leiseste
+ * Schrift des Bandes — eine Lesehilfe, die man nicht lesen kann, ist keine.
  *
- * Er stand einmal auf 9 und war damit die leiseste Schrift des Bandes; genau
- * das war der Fehler. Eine Lesehilfe, die man nicht lesen kann, ist keine.
- * Die Nachrangigkeit traegt seither die DECKKRAFT (0,38 gegen 0,52 der
- * Ablesungen), nicht die Groesse.
- *
- * Groesser darf er nicht werden: `voyageBandFit.spec.ts` haelt ihn gegen die
- * groesste Beschriftung des Bandes.
+ * Der Boden ist der des ganzen Bandes — `.egsb-lbl--chip` steht auf demselben
+ * und ist die kleinste Schrift im Fuss. Er greift auf Full HD, wo die Woerter
+ * neben die Sonden muessen; der
+ * Deckel liegt UEBER `VOYAGE_MAP_STATS_LABEL_MAX` (11), und das ist Absicht:
+ * dort ist 11 der Deckel einer Zone, die selbst mitwaechst. Die Rangordnung
+ * traegt hier die DECKKRAFT (0,42 gegen 0,52 der Ablesungen), nicht die
+ * Groesse.
  */
-export const VOYAGE_MAP_LEGEND_LABEL_MAX = 11
+export const VOYAGE_MAP_LEGEND_LABEL_MIN = 8
+export const VOYAGE_MAP_LEGEND_LABEL_MAX = 14
 
 /**
  * Die fuenf Chronikmarken — was ein gespielter Lauf auf der Karte hinterlaesst.
@@ -1475,10 +1490,24 @@ export const VOYAGE_MAP_LEGEND_ROWS = [
 /** Eigenbedarf der Reihe MIT Woertern, an ihrer Schwelle gemessen. Kein fester
  *  Wert ueber alle Breiten: die `clamp` der Zone wachsen mit, gemessen 401,1 px
  *  auf der schmalsten Buehne bis 489,8 bei 1732. */
-export const VOYAGE_MAP_LEGEND_NEED_FULL = 456
+export const VOYAGE_MAP_LEGEND_NEED_FULL = 318
 /** Dasselbe fuer die Sondenreihe allein — fuenf Kacheln, Abstaende, Polster
  *  und die Haarlinie; gemessen 191 an ihrer Schwelle. */
-export const VOYAGE_MAP_LEGEND_NEED_ICONS = 191
+export const VOYAGE_MAP_LEGEND_NEED_ICONS = 158
+/**
+ * Der Rest, der zwischen Legende und Payout stehen bleibt.
+ *
+ * Er war einmal `VOYAGE_MAP_STATS_BAND_H` (72) — die Fuge sollte so breit sein
+ * wie das Band hoch, damit sie als Trennung zweier Gruppen liest. Seit die
+ * Legende den freien Fuss NUTZEN soll statt ihn freizuhalten, ist er auf einen
+ * sichtbaren Spalt geschrumpft; die Trennung traegt jetzt die kraeftige
+ * Haarlinie der Payout-Spalte (0,62) allein.
+ *
+ * Unter 16 wuerde das letzte Wort an dieser Linie kleben — deshalb steht er
+ * auch als `padding-right`-Boden im CSS der Zone.
+ */
+export const VOYAGE_MAP_LEGEND_SEAM_MIN = 24
+
 /**
  * Ab dieser BUEHNENbreite traegt die Legende ihre WOERTER, darunter nur noch
  * die Sonden.
@@ -1489,14 +1518,15 @@ export const VOYAGE_MAP_LEGEND_NEED_ICONS = 191
  * die schmaler ist als das Band hoch, liest sich nicht mehr als Trennung
  * zweier Gruppen, sondern als Abstand innerhalb einer.
  *
- * Gemessen (Buehne → Fuge nach der Reihe mit Woertern): 1067 → 5,7 · 1102 → 33,0
- * · 1137 → 60,6 · 1172 → 88,2 · 1372 → 254,2. Unterhalb 1067 faellt sie auf
- * NULL, und der Ueberlauf einer `nowrap`-Zeile wird hier STILL abgeschnitten.
+ * Gemessen (Buehne → Fuge nach der Reihe mit Woertern): 900,4 → 12,4 ·
+ * 916,1 ist die letzte Sondenstufe · 927,9 → 31,8 · 952 → 48,3 · 1372 → 249,7.
+ * Der Ueberlauf einer `nowrap`-Zeile wird hier STILL abgeschnitten.
  *
- * Praktisch: Full HD mit ausgeklappter Zielliste (Buehne 952) traegt die Sonden,
- * eingeklappt (1176) die Woerter; 2K und 4K immer die Woerter.
+ * Praktisch traegt jede Desktopaufloesung die Woerter — auch Full HD mit
+ * ausgeklappter Zielliste (Buehne 952), und genau dafuer sind die Boeden von
+ * Kachel und Schrift so knapp gesetzt.
  */
-export const VOYAGE_MAP_LEGEND_MIN_W = 1152
+export const VOYAGE_MAP_LEGEND_MIN_W = 918
 /**
  * Ab hier steht die Sondenreihe, darunter faellt die Legende ganz weg.
  *

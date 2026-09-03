@@ -4,17 +4,26 @@
  *
  * Ihre Symbole kommen aus DERSELBEN Routine wie die Karte — winzige Canvas
  * statt nachgebautem CSS, damit Legende und Karte nie auseinanderlaufen können.
- * Gemalt wird beim Mount und bei einem Wechsel der Pixeldichte, sonst nie.
  *
- * **Die Kachel trägt 30 px, das Wort 11.** Beide Zahlen kommen aus je einem
- * Rückbau: mit 22-px-Kacheln und 9-px-Schrift war die Reihe 390 px lang, die
- * Marke füllte ihre Kachel halb und das Wort war das leiseste des Bandes — eine
- * Lesehilfe, die man nicht lesen kann, ist keine.
+ * **Sie wächst mit der Bühne**, wie jede andere Zone des Bandes: Kachel, Wort
+ * und Abstände laufen auf `clamp(…cqw…)` gegen `.egsb`. Fest gesetzt blieb auf
+ * 4K der halbe Fuss leer, und auf Full HD passten die Wörter nicht daneben.
+ *
+ * **Deshalb der `ResizeObserver`.** Ein Canvas trägt seine Auflösung im
+ * Backing-Store; auf eine grössere CSS-Fläche gezogen wäre es hochskaliert und
+ * unscharf, und unscharfe Skalierung ist projektweit verboten. Der Observer
+ * malt neu, sobald sich die Kachel WIRKLICH ändert — gerundet verglichen, damit
+ * ein Subpixel-Zucken beim Ziehen nicht fünf Sprites neu rastert. Keine
+ * Frame-Schleife: er feuert nur auf echte Grössenwechsel.
+ *
+ * Der Radius folgt der Kachel (`VOYAGE_MAP_LEGEND_R_RATIO`) und wird auf halbe
+ * Pixel quantisiert — sonst zöge jede Zwischenbreite eigene Cache-Einträge und
+ * `LANDMARK_SPRITE_CACHE_MAX` kippte in Thrashing.
  *
  * Der `v-tip` sitzt an der EINZELNEN Kachel und bleibt in BEIDEN Stufen: er
- * trägt den Satz, den das Wort nicht sagen kann, und ohne Wörter auch den
- * Namen. Eine Sammelliste an der Reihe liesse die Zuordnung Symbol → Name nur
- * über die Reihenfolge erraten.
+ * trägt den Satz, den das Wort nicht sagt, und ohne Wörter auch den Namen. Eine
+ * Sammelliste an der Reihe liesse die Zuordnung Symbol → Name nur über die
+ * Reihenfolge erraten.
  *
  * Weder `tint` noch `coreTint` werden gesetzt, und beides ist Absicht: `tint`
  * unkonditioniert durchzureichen war der Fehler der gefallenen Fassung, und
@@ -22,12 +31,14 @@
  * dieselbe Paarung wie `.egsb-val--freed` daneben —, während `void-impact`
  * seinen violetten Schwere-Kern gar nicht erst bekommt.
  */
-import { ref, watch, onMounted } from 'vue'
-import { drawLandmark } from '@/utils/fx/galaxyLandmarks'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { drawLandmark, roundLandmarkRadius } from '@/utils/fx/galaxyLandmarks'
 import {
-  VOYAGE_MAP_LEGEND_ICON_PX,
+  VOYAGE_MAP_LEGEND_ICON_MAX,
+  VOYAGE_MAP_LEGEND_ICON_MIN,
   VOYAGE_MAP_LEGEND_LABEL_MAX,
-  VOYAGE_MAP_LEGEND_R,
+  VOYAGE_MAP_LEGEND_LABEL_MIN,
+  VOYAGE_MAP_LEGEND_R_RATIO,
   VOYAGE_MAP_LEGEND_ROWS,
 } from '@/config/constants'
 
@@ -39,12 +50,17 @@ const props = defineProps<{
 
 const probes = ref<(HTMLCanvasElement | null)[]>([])
 
-const iconPx = `${VOYAGE_MAP_LEGEND_ICON_PX}px`
+const iconMin = `${VOYAGE_MAP_LEGEND_ICON_MIN}px`
+const iconMax = `${VOYAGE_MAP_LEGEND_ICON_MAX}px`
+const labelMin = `${VOYAGE_MAP_LEGEND_LABEL_MIN}px`
 const labelMax = `${VOYAGE_MAP_LEGEND_LABEL_MAX}px`
 
-function paint(): void {
-  const size = VOYAGE_MAP_LEGEND_ICON_PX
+/** Zuletzt gemalte Kantenlänge — gegen sie prüft der Observer. */
+let paintedAt = 0
+
+function paint(size: number): void {
   const dpr = Math.max(1, Math.min(props.dpr || 1, 2))
+  const r = roundLandmarkRadius(size / VOYAGE_MAP_LEGEND_R_RATIO)
   VOYAGE_MAP_LEGEND_ROWS.forEach((row, i) => {
     const el = probes.value[i]
     if (!el) return
@@ -54,12 +70,48 @@ function paint(): void {
     if (!ctx) return
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, size, size)
-    drawLandmark(ctx, row.kind, size / 2, size / 2, VOYAGE_MAP_LEGEND_R, { dpr, detail: 2 })
+    drawLandmark(ctx, row.kind, size / 2, size / 2, r, { dpr, detail: 2 })
   })
+  paintedAt = size
 }
 
-onMounted(paint)
-watch(() => props.dpr, paint, { flush: 'post' })
+/** Die gemessene Kante der ersten Kachel — alle fünf tragen dieselbe. */
+function measure(): number {
+  const el = probes.value[0]
+  return el ? Math.round(el.getBoundingClientRect().width) : 0
+}
+
+function repaintIfChanged(): void {
+  const size = measure()
+  if (size > 0 && size !== paintedAt) paint(size)
+}
+
+let ro: ResizeObserver | null = null
+
+onMounted(() => {
+  repaintIfChanged()
+  const first = probes.value[0]
+  if (first && typeof ResizeObserver !== 'undefined') {
+    ro = new ResizeObserver(repaintIfChanged)
+    ro.observe(first)
+  }
+})
+
+onBeforeUnmount(() => {
+  ro?.disconnect()
+  ro = null
+})
+
+// Eine andere Pixeldichte braucht ein anderes Backing, ohne dass sich die
+// CSS-Kante rührt — der Observer sähe das nicht.
+watch(
+  () => props.dpr,
+  () => {
+    paintedAt = 0
+    repaintIfChanged()
+  },
+  { flush: 'post' },
+)
 </script>
 
 <template>
@@ -82,20 +134,23 @@ watch(() => props.dpr, paint, { flush: 'post' })
 
 <style scoped>
 /* Die SCHWACHE Haarlinie wie zwischen zwei Ablesungen — die kräftige (0.62)
-   bleibt der Payout-Spalte, denn dort trennt sie zwei Aussagen. */
+   bleibt der Payout-Spalte, denn dort trennt sie zwei Aussagen.
+   Das rechte Polster ist der zugesagte Rest zum Payout: die Zone nimmt den
+   freien Fuss, klebt aber nicht an dessen Kante. */
 .eml {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: clamp(10px, 1.1cqw, 20px);
-  padding: 0 clamp(8px, 1cqw, 16px);
+  gap: clamp(7px, 0.74cqw, 30px);
+  padding-left: clamp(6px, 0.63cqw, 24px);
+  padding-right: clamp(16px, 1.68cqw, 44px);
   white-space: nowrap;
   border-left: 1px solid rgba(122, 78, 32, 0.34);
 }
 /* Ohne Wörter rücken die Sonden enger — sonst stünde die Reihe in derselben
    Breite und hätte nichts gewonnen. */
 .eml--icons {
-  gap: clamp(6px, 0.7cqw, 12px);
+  gap: clamp(8px, 1.1cqw, 24px);
 }
 
 /* Jede Kachel holt sich den Zeiger zurück, den `.egsb` abgibt — Muster
@@ -103,24 +158,25 @@ watch(() => props.dpr, paint, { flush: 'post' })
 .eml-row {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: clamp(4px, 0.45cqw, 12px);
   pointer-events: auto;
 }
 
-/* Feste Grösse: die Sonde ist auf `VOYAGE_MAP_LEGEND_ICON_PX` gerechnet und
-   darf nicht mitwachsen — der Radius sitzt sonst nicht mehr in seiner Kachel. */
+/* Die Kachel wächst mit der Bühne; der `ResizeObserver` im Script rastert die
+   Sonde in der ECHTEN Grösse nach, statt sie hochzuskalieren. */
 .eml-probe {
   display: block;
   flex: none;
-  width: v-bind(iconPx);
-  height: v-bind(iconPx);
+  width: clamp(v-bind(iconMin), 2.1cqw, v-bind(iconMax));
+  height: clamp(v-bind(iconMin), 2.1cqw, v-bind(iconMax));
 }
 
-/* Gleich gross wie `.egsb-lbl`, aber leiser: die Rangordnung trägt hier die
-   Deckkraft und nicht die Schriftgrösse. `normal` wie bei `.egsb-lbl--chip` —
-   bei `line-height: 1` sässe das Wort neben der Sonde zu tief. */
+/* Gleiche Skalierungsart wie die übrigen Beschriftungen, aber leiser: die
+   Rangordnung trägt hier die Deckkraft und nicht die Schriftgrösse. `normal`
+   wie bei `.egsb-lbl--chip` — bei `line-height: 1` sässe das Wort neben der
+   Sonde zu tief. */
 .eml-lbl {
-  font-size: clamp(9px, 1.2cqw, v-bind(labelMax));
+  font-size: clamp(v-bind(labelMin), 0.84cqw, v-bind(labelMax));
   line-height: normal;
   font-weight: 800;
   letter-spacing: 0.1em;

@@ -1,12 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import {
   VOYAGE_MAP_LEGEND_ICONS_MIN_W,
-  VOYAGE_MAP_LEGEND_ICON_PX,
+  VOYAGE_MAP_LEGEND_ICON_MAX,
+  VOYAGE_MAP_LEGEND_ICON_MIN,
   VOYAGE_MAP_LEGEND_LABEL_MAX,
+  VOYAGE_MAP_LEGEND_LABEL_MIN,
   VOYAGE_MAP_LEGEND_MIN_W,
   VOYAGE_MAP_LEGEND_NEED_FULL,
   VOYAGE_MAP_LEGEND_NEED_ICONS,
-  VOYAGE_MAP_LEGEND_R,
+  VOYAGE_MAP_LEGEND_R_RATIO,
+  VOYAGE_MAP_LEGEND_SEAM_MIN,
   VOYAGE_MAP_LEGEND_ROWS,
   VOYAGE_MAP_STATS_ART_MAX,
   VOYAGE_MAP_STATS_BAND_H,
@@ -74,6 +77,9 @@ const STACK_GAP = 3
  */
 const LEGEND_REACH = 1.3
 
+/** Der `clamp`-Boden von `.egsb-lbl--chip` — die kleinste Schrift des Bandes. */
+const BAND_LABEL_FLOOR = 8
+
 /**
  * Was die ÜBRIGEN Zonen samt Zeilenpolster an der jeweiligen Schwelle belegen —
  * im Browser gemessen, hier gespiegelt. Keine Konstante über alle Breiten: die
@@ -82,8 +88,8 @@ const LEGEND_REACH = 1.3
  * Sie stehen hier und nicht in `constants/`, weil sie nichts steuern — sie
  * belegen nur, dass beide Schwellen die Naht wirklich offen lassen.
  */
-const ZONES_AT_FULL = 624
-const ZONES_AT_ICONS = 527
+const ZONES_AT_FULL = 576
+const ZONES_AT_ICONS = 528
 
 /**
  * Luft über UND unter der höchsten Zone. Der Wert ist kein Geschmack: bei
@@ -131,8 +137,9 @@ function readColumn(value: number): number {
  * deshalb keine Summe, sondern das Maximum, und die Kachel gewinnt sie klar.
  */
 const LEGEND_LABEL_LINE = 1.2
+/** Gerechnet wird am DECKEL der Spanne: dort ist die Zone am höchsten. */
 function legendColumn(): number {
-  return Math.max(VOYAGE_MAP_LEGEND_ICON_PX, LEGEND_LABEL_LINE * VOYAGE_MAP_LEGEND_LABEL_MAX)
+  return Math.max(VOYAGE_MAP_LEGEND_ICON_MAX, LEGEND_LABEL_LINE * VOYAGE_MAP_LEGEND_LABEL_MAX)
 }
 
 /**
@@ -181,31 +188,53 @@ describe('voyage stats band fit', () => {
   })
 
   it('hält die Formlegende unter der höchsten Zone', () => {
-    // Sie ist die FLACHSTE Zone des Bandes, und das soll sie bleiben: eine
-    // Lesehilfe zur Form darf die Wand, gegen die alle Schriftdeckel gerechnet
-    // sind, nicht verschieben. Wer die Sondenkachel anhebt, scheitert hier.
-    expect(legendColumn()).toBeLessThan(modsColumn())
+    // Sie war einmal die flachste Zone; seit sie mitwächst, liegt `modsColumn`
+    // (32) INNERHALB ihrer Spanne. Der Grund der Regel bleibt derselbe: es muss
+    // genau EINE höchste Zone geben, sonst ist die Wand, gegen die alle
+    // Schriftdeckel des Bandes gerechnet sind, die falsche — und das merkt
+    // niemand. Wer den Kachel-Deckel anhebt, scheitert hier.
+    expect(legendColumn()).toBeLessThan(readColumn(VOYAGE_MAP_STATS_VALUE_MAX))
   })
 
-  it('lässt die Marke ihre Kachel füllen, ohne sie zu sprengen', () => {
+  it('lässt die Marke ihre Kachel füllen, an BEIDEN Enden der Spanne', () => {
     // Gemessen wird gegen den ZEICHENBEDARF der Marke, nicht gegen
     // `LANDMARK_PAD_SPAN`: das ist der Sprite-Rand samt `shadowBlur`, der schon
     // immer beschnitten wurde (bei 4,4 in 22 lag er mit 40 px weit darüber).
     // Maßgeblich ist, was die Marke selbst belegt.
-    expect(2 * LEGEND_REACH * VOYAGE_MAP_LEGEND_R).toBeLessThanOrEqual(VOYAGE_MAP_LEGEND_ICON_PX)
-    // Und sie soll die Kachel auch WIRKLICH füllen — der ganze Umbau war, dass
-    // eine Marke bei 4,4 in 22 nur gut die Hälfte einnahm und verloren aussah.
-    expect(2 * LEGEND_REACH * VOYAGE_MAP_LEGEND_R).toBeGreaterThan(0.7 * VOYAGE_MAP_LEGEND_ICON_PX)
+    //
+    // Beide Enden, weil der Radius der Kachel FOLGT: ein Verhältnis, das oben
+    // passt, kann unten sprengen. Dazwischen ist nichts zu prüfen — die
+    // Beziehung ist linear.
+    for (const icon of [VOYAGE_MAP_LEGEND_ICON_MIN, VOYAGE_MAP_LEGEND_ICON_MAX]) {
+      const reach = 2 * LEGEND_REACH * (icon / VOYAGE_MAP_LEGEND_R_RATIO)
+      expect(reach).toBeLessThanOrEqual(icon)
+      // Und sie soll die Kachel auch WIRKLICH füllen — der ganze Umbau war,
+      // dass eine Marke bei 4,4 in 22 nur gut die Hälfte einnahm.
+      expect(reach).toBeGreaterThan(0.7 * icon)
+    }
   })
 
-  it('lässt das Wort der Legende so gross wie die grösste Beschriftung werden, nicht grösser', () => {
-    // Es stand einmal auf 9 und war die leiseste Schrift des Bandes — eine
-    // Lesehilfe, die man nicht lesen kann, ist keine. Gleichauf mit STARS /
-    // VOYAGES / PAYOUT ist erlaubt, darüber hinaus nicht: dann führte die
-    // Legende das Band an, statt es zu erklären. Die Rangordnung trägt die
-    // DECKKRAFT (0,42 gegen 0,52), nicht die Grösse.
-    expect(VOYAGE_MAP_LEGEND_LABEL_MAX).toBeLessThanOrEqual(VOYAGE_MAP_STATS_LABEL_MAX)
-    expect(VOYAGE_MAP_LEGEND_LABEL_MAX).toBeGreaterThan(VOYAGE_MAP_STATS_CHIP_LABEL_MAX)
+  it('hat eine Spanne, die nach oben zeigt', () => {
+    expect(VOYAGE_MAP_LEGEND_ICON_MIN).toBeLessThan(VOYAGE_MAP_LEGEND_ICON_MAX)
+    expect(VOYAGE_MAP_LEGEND_LABEL_MIN).toBeLessThan(VOYAGE_MAP_LEGEND_LABEL_MAX)
+  })
+
+  it('lässt das Wort der Legende mitwachsen, ohne die Zone zu heben', () => {
+    // Es stand einmal fest auf 9 und war die leiseste Schrift des Bandes — eine
+    // Lesehilfe, die man nicht lesen kann, ist keine. Der Deckel darf ÜBER
+    // `VOYAGE_MAP_STATS_LABEL_MAX` liegen: dort ist 11 der Deckel einer Zone,
+    // die selbst mitwächst. Die Rangordnung trägt die DECKKRAFT (0,42 gegen
+    // 0,52), nicht die Grösse.
+    //
+    // Gebunden ist stattdessen, dass das Wort die Zonenhöhe nicht bestimmt —
+    // sonst hinge die Höhenbilanz an einer Schrift statt an der Kachel.
+    expect(LEGEND_LABEL_LINE * VOYAGE_MAP_LEGEND_LABEL_MAX).toBeLessThan(
+      VOYAGE_MAP_LEGEND_ICON_MAX,
+    )
+    // Der Boden ist der des ganzen Bandes: `.egsb-lbl--chip` läuft auf
+    // `clamp(8px, …)` und ist die kleinste Schrift im Fuss. Darunter zu gehen
+    // hiesse, im Band eine Schrift zu führen, die es sonst nirgends erlaubt.
+    expect(VOYAGE_MAP_LEGEND_LABEL_MIN).toBeGreaterThanOrEqual(BAND_LABEL_FLOOR)
   })
 
   it('zeigt die Legende erst, wo die Kosten schon stehen', () => {
@@ -219,28 +248,35 @@ describe('voyage stats band fit', () => {
     expect(VOYAGE_MAP_LEGEND_ICONS_MIN_W).toBeLessThan(VOYAGE_MAP_LEGEND_MIN_W)
   })
 
-  it('lässt der vollen Stufe den Mehrbedarf, den die Wörter kosten', () => {
-    // Die Zusicherung gegen den stillen Überlauf: der Abstand der beiden
-    // Schwellen muss mindestens so gross sein wie das, was die Wörter
-    // zusätzlich brauchen. Sonst griffe die volle Stufe auf einer Bühne, die
-    // nur die Sonden trägt — und die `nowrap`-Zeile würde abgeschnitten, ohne
-    // dass ein `scrollHeight` es meldet.
-    expect(VOYAGE_MAP_LEGEND_MIN_W - VOYAGE_MAP_LEGEND_ICONS_MIN_W).toBeGreaterThanOrEqual(
-      VOYAGE_MAP_LEGEND_NEED_FULL - VOYAGE_MAP_LEGEND_NEED_ICONS,
-    )
+  it('spiegelt Messwerte, die miteinander verträglich sind', () => {
+    // Hier stand einmal `MIN_W - ICONS_MIN_W >= NEED_FULL - NEED_ICONS` — der
+    // Gedanke, der Schwellenabstand müsse den Mehrbedarf der Wörter allein
+    // tragen. Das ist falsch, und die Messung zeigt es: zwischen den beiden
+    // Schwellen wachsen auch die ÜBRIGEN Zonen (528 → 576), die volle Stufe
+    // bekommt ihren Platz also aus zwei Quellen. Die Zusage schlug fehl,
+    // obwohl im Browser an beiden Schwellen der zugesagte Rest stand.
+    //
+    // Was den stillen Überlauf wirklich abfängt, ist die Naht-Rechnung darüber.
+    // Hier bleibt die Plausibilität der gespiegelten Messwerte: die übrigen
+    // Zonen wachsen mit der Bühne, wer das umdreht, hat sich vermessen.
+    expect(ZONES_AT_ICONS).toBeLessThan(ZONES_AT_FULL)
+    expect(VOYAGE_MAP_LEGEND_NEED_ICONS).toBeLessThan(VOYAGE_MAP_LEGEND_NEED_FULL)
   })
 
-  it('hält an beiden Schwellen die Bedeutungsnaht offen', () => {
-    // Gemessen, hier gespiegelt: an ihrer Schwelle lässt die Reihe mindestens
-    // eine Fuge von Bandhöhe zwischen Chronik und Deal. Eine Fuge, die
-    // schmaler ist als das Band hoch, liest sich als Abstand innerhalb einer
-    // Gruppe statt als Trennung zweier. Das ist zugleich die Zusicherung gegen
-    // den stillen Überlauf — die Zeile steht auf `nowrap`, und kein
-    // `scrollHeight` meldet, wenn sie abgeschnitten wird.
+  it('hält an beiden Schwellen den Rest zum Payout', () => {
+    // Gemessen, hier gespiegelt: an ihrer Schwelle lässt jede Stufe den
+    // zugesagten Spalt zum Payout. Er war einmal die volle Bandhöhe — die Fuge
+    // sollte so breit sein wie das Band hoch. Seit die Legende den freien Fuss
+    // NUTZEN soll statt ihn freizuhalten, ist er ein Spalt, und die Trennung
+    // trägt die kräftige Haarlinie der Payout-Spalte (0,62) allein.
+    //
+    // Das ist zugleich die Zusicherung gegen den stillen Überlauf: die Zeile
+    // steht auf `nowrap`, und kein `scrollHeight` meldet, wenn sie
+    // abgeschnitten wird.
     const seamFull = VOYAGE_MAP_LEGEND_MIN_W - VOYAGE_MAP_LEGEND_NEED_FULL - ZONES_AT_FULL
     const seamIcons = VOYAGE_MAP_LEGEND_ICONS_MIN_W - VOYAGE_MAP_LEGEND_NEED_ICONS - ZONES_AT_ICONS
-    expect(seamFull).toBeGreaterThanOrEqual(VOYAGE_MAP_STATS_BAND_H)
-    expect(seamIcons).toBeGreaterThanOrEqual(VOYAGE_MAP_STATS_BAND_H)
+    expect(seamFull).toBeGreaterThanOrEqual(VOYAGE_MAP_LEGEND_SEAM_MIN)
+    expect(seamIcons).toBeGreaterThanOrEqual(VOYAGE_MAP_LEGEND_SEAM_MIN)
   })
 
   it('führt fünf Marken, und jede genau einmal', () => {
