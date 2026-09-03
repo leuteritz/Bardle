@@ -16,7 +16,11 @@ import {
   GALAXY_INCIDENT_RANK_SCALE,
   LANDFALL_BOW_MAX,
 } from '@/config/constants'
-import type { GalaxyIncident } from '@/types'
+import {
+  backfillIncidentRng,
+  buildBackfillIncidents,
+} from '@/utils/game/galaxyArchiveBackfill'
+import type { GalaxyIncident, StarAttemptResult } from '@/types'
 
 const SEED = 20260903
 const ATTEMPTS = 6
@@ -193,5 +197,42 @@ describe('Womit eine Marke gemalt wird', () => {
     const einschlag = marken().filter((m) => m.kind === 'void-impact')[0]
     expect(incidentPaint(einschlag).kind).toBe('void-impact')
     expect(incidentPaint(einschlag).faded).toBe(false)
+  })
+})
+
+/**
+ * Der Archiv-Nachtrag liefert dieselbe Sorte Einträge wie das echte Spiel — er
+ * muss also durch dieselbe Ableitung gültige Marken ergeben. Ohne diese
+ * Zusicherung fiele eine erfundene Chronik erst im Browser auf.
+ */
+describe('Nachgetragene Chronik ergibt gültige Marken', () => {
+  const GALAXY = 22
+  const attempts: StarAttemptResult[] = Array.from({ length: ATTEMPTS }, () => 'rescued')
+  const nachgetragen = buildBackfillIncidents(GALAXY, attempts, backfillIncidentRng(GALAXY))
+
+  it('setzt genau so viele Marken, wie der Nachtrag Einträge hat', () => {
+    expect(nachgetragen.length).toBeGreaterThan(0)
+    expect(marken(nachgetragen)).toHaveLength(nachgetragen.length)
+  })
+
+  it('hält sie im Bild und auseinander', () => {
+    const out = marken(nachgetragen)
+    for (const m of out) {
+      expect(m.x).toBeGreaterThan(-0.05)
+      expect(m.x).toBeLessThan(1.05)
+      expect(m.y).toBeGreaterThan(-0.05)
+      expect(m.y).toBeLessThan(1.05)
+    }
+    for (let i = 0; i < out.length; i++) {
+      for (let j = i + 1; j < out.length; j++) {
+        expect(abstand(out[i], out[j])).toBeGreaterThanOrEqual(GALAXY_INCIDENT_MIN_GAP)
+      }
+    }
+  })
+
+  it('gibt jedem nachgetragenen Einschlag seinen Kernfunken', () => {
+    for (const m of marken(nachgetragen)) {
+      if (m.kind === 'void-impact') expect(m.coreTint).toBeTruthy()
+    }
   })
 })

@@ -12,7 +12,16 @@ import {
   buildBackfillRecord,
   backfillFailCount,
   backfillRng,
+  buildBackfillIncidents,
+  backfillIncidentRng,
 } from '@/utils/game/galaxyArchiveBackfill'
+import { getVoidRift, VOID_RIFT_SEVERITIES } from '@/config/world/void'
+import { getDrifter } from '@/config/world/drifters'
+import {
+  DRIFTER_RARITY_ORDER,
+  GALAXY_INCIDENT_DRIFTER_MIN_RANK,
+  GALAXY_INCIDENT_MAX,
+} from '@/config/constants'
 
 /**
  * Ein Admin-Sprung überspringt Läufe, die es nie gab. Ohne Nachtrag bleibt
@@ -231,5 +240,100 @@ describe('galaxy archive backfill', () => {
     for (const m of record.starManifests!) {
       expect(getChampionStarLevel(m.champion!)).toBeLessThanOrEqual(unlocked)
     }
+  })
+
+  /* ── Die Ereignis-Chronik ──────────────────────────────────────────────── */
+
+  function incidentsOf(galaxy: number) {
+    const required = computeRequired(galaxy)
+    const attempts = Array.from({ length: required }, () => 'rescued' as const)
+    return buildBackfillIncidents(galaxy, attempts, backfillIncidentRng(galaxy))
+  }
+
+  it('trägt jeder nachgetragenen Galaxie eine Ereignis-Chronik nach', () => {
+    const record = buildBackfillRecord(20, computeRequired(20), 3, 1000)
+    expect(record.incidentResults?.length).toBeGreaterThan(0)
+  })
+
+  it('ist deterministisch aus der Galaxienummer', () => {
+    expect(incidentsOf(14)).toEqual(incidentsOf(14))
+  })
+
+  it('gibt Galaxie 1 keinen Einschlag — dort gibt es den Void noch gar nicht', () => {
+    expect(incidentsOf(1).filter((e) => e.kind === 'void-impact')).toEqual([])
+    // Drifter fliegen von Anfang an.
+    expect(incidentsOf(1).filter((e) => e.kind !== 'void-impact').length).toBeGreaterThan(0)
+  })
+
+  it('lässt die Schwere mit der Galaxie wachsen, nicht springen', () => {
+    // Ein abyssaler Einschlag in Galaxie 2 fällt sofort als erfunden auf.
+    const fruehSchwerste = Math.max(
+      0,
+      ...incidentsOf(2)
+        .filter((e) => e.kind === 'void-impact')
+        .map((e) => VOID_RIFT_SEVERITIES.indexOf(getVoidRift(e.id)!.severity)),
+    )
+    const spaetSchwerste = Math.max(
+      0,
+      ...incidentsOf(40)
+        .filter((e) => e.kind === 'void-impact')
+        .map((e) => VOID_RIFT_SEVERITIES.indexOf(getVoidRift(e.id)!.severity)),
+    )
+    expect(fruehSchwerste).toBe(0)
+    expect(spaetSchwerste).toBeGreaterThan(0)
+  })
+
+  it('nennt nur Drifter, die das echte Spiel auch buchen würde', () => {
+    for (const g of [1, 5, 12, 30]) {
+      for (const e of incidentsOf(g)) {
+        if (e.kind === 'void-impact') continue
+        const def = getDrifter(e.id)!
+        expect(DRIFTER_RARITY_ORDER[def.rarity]).toBeGreaterThanOrEqual(
+          GALAXY_INCIDENT_DRIFTER_MIN_RANK,
+        )
+      }
+    }
+  })
+
+  it('hält jede Etappe innerhalb der geflogenen Kette', () => {
+    for (const g of [2, 9, 25]) {
+      const legs = computeRequired(g)
+      for (const e of incidentsOf(g)) {
+        expect(e.leg).toBeGreaterThanOrEqual(0)
+        expect(e.leg).toBeLessThanOrEqual(legs)
+      }
+    }
+  })
+
+  it('liefert die Chronik chronologisch, wie sie im Spiel entsteht', () => {
+    const legs = incidentsOf(18).map((e) => e.leg)
+    expect([...legs].sort((a, b) => a - b)).toEqual(legs)
+  })
+
+  it('bleibt je Art unter dem Deckel', () => {
+    for (const g of [1, 10, 30, 60]) {
+      const chronik = incidentsOf(g)
+      const voids = chronik.filter((e) => e.kind === 'void-impact').length
+      expect(voids).toBeLessThanOrEqual(GALAXY_INCIDENT_MAX)
+      expect(chronik.length - voids).toBeLessThanOrEqual(GALAXY_INCIDENT_MAX)
+    }
+  })
+
+  it('erfindet keine Kosten — eine HP-Zahl weiss der Nachtrag nicht', () => {
+    for (const e of incidentsOf(30)) {
+      expect(e.hp).toBeUndefined()
+      expect(e.meeps).toBeUndefined()
+    }
+  })
+
+  it('mischt gefangene und verpasste Drifter, statt nur zu glänzen', () => {
+    // Über mehrere späte Galaxien muss beides vorkommen — ein Archiv, in dem
+    // jeder Drifter gefangen wurde, liest sich falsch.
+    const arten = new Set<string>()
+    for (let g = 10; g <= 40; g++) {
+      for (const e of incidentsOf(g)) arten.add(e.kind)
+    }
+    expect(arten.has('drifter-caught')).toBe(true)
+    expect(arten.has('drifter-missed')).toBe(true)
   })
 })

@@ -58,13 +58,19 @@ function resolveOpen(): void {
 }
 
 /* Chronik und Segen schliessen das Profil NICHT — sie sind Zustand, keine Uhr.
-   Dieselbe Trennung wie bei `clearField()` im Drifter-Panel. */
+   Dieselbe Trennung wie bei `clearField()` im Drifter-Panel.
+
+   „Chart" meint die ganze Chronik der Karte, also auch die Ereignisse: ein Void
+   braucht Minuten, bis einer durchkommt, und der Weg zur Live-Minimap führt nur
+   hier entlang. Zwei weitere Knöpfe in dieser Zeile wären das teurere Mittel. */
 function fillChronicle(): void {
   galaxyStore.adminFillLandfallChronicle()
+  galaxyStore.adminFillIncidentChronicle()
 }
 
 function clearChronicle(): void {
   galaxyStore.adminClearLandfallChronicle()
+  galaxyStore.adminClearIncidentChronicle()
 }
 
 // ── Vorschau: jede Kachel zeigt die ECHTE Marke ──────────────────────────────

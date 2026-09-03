@@ -32,6 +32,8 @@ import {
   buildBackfillLandfalls,
   backfillLandfallRng,
   buildBackfillManifests,
+  buildBackfillIncidents,
+  backfillIncidentRng,
   backfillManifestRng,
 } from '@/utils/game/galaxyArchiveBackfill'
 import {
@@ -708,6 +710,28 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.landfallResults = []
       this.activeLandfall = null
       this._landfallLegDone = -1
+    },
+
+    /**
+     * Admin/Test: die Ereignis-Chronik der LAUFENDEN Galaxie füllen.
+     *
+     * Dieselbe Rechnung wie der Archiv-Nachtrag, nicht eine zweite daneben —
+     * dasselbe Muster, das `adminFillLandfallChronicle` schon führt. Ein Void
+     * braucht sonst Minuten, bis einer durchkommt, und ein seltener Drifter
+     * kommt rechnerisch achtmal je Galaxie.
+     */
+    adminFillIncidentChronicle(): number {
+      this.incidentResults = buildBackfillIncidents(
+        this.currentGalaxy,
+        this.attemptResults,
+        backfillIncidentRng(this.currentGalaxy),
+      )
+      return this.incidentResults.length
+    },
+
+    /** Admin/Test: die Ereignis-Chronik leeren. */
+    adminClearIncidentChronicle(): void {
+      this.incidentResults = []
     },
 
     /**

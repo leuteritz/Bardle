@@ -120,3 +120,59 @@ describe('galaxy travel state persistence', () => {
     expect(minimapVisible(reloaded)).toBe(true)
   })
 })
+
+/**
+ * Der Nachtrag der Ereignis-Chronik hat genau EIN Unterscheidungsmerkmal: ein
+ * Record verrät nicht, ob ihn ein Werkzeug gebaut oder ein Mensch geflogen hat.
+ *
+ * `undefined` heisst „nie gebucht", `[]` heisst „nichts kam durch" — und das
+ * Zweite ist eine Leistung, keine Lücke.
+ */
+describe('Ereignis-Chronik beim Laden', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.stubGlobal('localStorage', makeLocalStorageStub())
+  })
+
+  function saveWithRecords(records: unknown[]) {
+    const { saveGame } = usePersistence()
+    saveGame()
+    const saved = JSON.parse(localStorage.getItem(SAVE_KEY)!)
+    saved.galaxy = { ...saved.galaxy, completedGalaxies: records }
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saved))
+  }
+
+  const basis = {
+    galaxy: 12,
+    mapSeed: 987654,
+    themeIndex: 4,
+    attemptResults: ['rescued', 'rescued', 'failed', 'rescued'],
+    durationSeconds: 600,
+    completedAt: 1,
+  }
+
+  it('trägt einem Record OHNE das Feld eine Chronik nach', () => {
+    saveWithRecords([{ ...basis }])
+    setActivePinia(createPinia())
+    const reloaded = useGalaxyStore()
+    usePersistence().loadGame()
+    expect(reloaded.completedGalaxies[0].incidentResults?.length).toBeGreaterThan(0)
+  })
+
+  it('lässt ein LEERES Feld leer — dort ist wirklich nichts durchgekommen', () => {
+    saveWithRecords([{ ...basis, incidentResults: [] }])
+    setActivePinia(createPinia())
+    const reloaded = useGalaxyStore()
+    usePersistence().loadGame()
+    expect(reloaded.completedGalaxies[0].incidentResults).toEqual([])
+  })
+
+  it('rührt eine vorhandene Chronik nicht an', () => {
+    const echt = [{ kind: 'void-impact', leg: 1, id: 'sunlessBreach', hp: 6 }]
+    saveWithRecords([{ ...basis, incidentResults: echt }])
+    setActivePinia(createPinia())
+    const reloaded = useGalaxyStore()
+    usePersistence().loadGame()
+    expect(reloaded.completedGalaxies[0].incidentResults).toEqual(echt)
+  })
+})

@@ -81,6 +81,22 @@ describe('galaxyStore — die Ereignis-Chronik', () => {
     expect(galaxy.incidentResults).toEqual([])
   })
 
+  /** Das Feld wird IMMER geschrieben, auch leer — daran erkennt der Lade-
+   *  Nachtrag später, dass hier jemand geflogen ist und nichts durchkam. */
+  it('schreibt das Feld beim Abschluss auch dann, wenn nichts passiert ist', () => {
+    const galaxy = useGalaxyStore()
+    galaxy.starsRequired = 1
+    galaxy.starsRescued = 1
+    galaxy.attemptResults = ['rescued']
+    galaxy.galaxyBossDefeated = true
+    galaxy.bossEscortsTotal = 0
+    galaxy.bossEscortsDefeated = 0
+    galaxy.maybeRecordCompletion()
+
+    const record = galaxy.completedGalaxies[galaxy.completedGalaxies.length - 1]
+    expect(record?.incidentResults).toEqual([])
+  })
+
   it('legt sie beim Abschluss ins Archiv', () => {
     const galaxy = useGalaxyStore()
     galaxy.starsRequired = 1

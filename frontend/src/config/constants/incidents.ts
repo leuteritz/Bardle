@@ -66,3 +66,22 @@ export const GALAXY_INCIDENT_VOID_CORE: Record<VoidRiftSeverity, string> = {
 /** Der Kernfunke als Anteil des Markenradius. Kleiner als beim befreiten Stern
  *  (0,34): dort füllt er einen Ring, hier sitzt er auf einem Kreuzungspunkt. */
 export const GALAXY_INCIDENT_CORE_R_RATIO = 0.22
+
+/* ── Der Archiv-Nachtrag ──────────────────────────────────────────────────────
+   Ein Admin-Sprung, „Max Everything" und jeder Lauf von vor der Chronik lassen
+   Galaxien zurück, über die niemand etwas gebucht hat. Sie bekommen eine
+   plausible Chronik, sonst schweigt ihre Karte, während die daneben spricht —
+   dieselbe Begründung, mit der `buildBackfillManifests` entstanden ist.
+
+   Die Dichte folgt dem echten Spiel: rechnerisch acht seltene Drifter je Galaxie
+   und wenige Einschläge, denn erlegt wird das meiste unterwegs.             */
+
+/** Höchstzahl nachgetragener Einschläge. Sie wächst mit derselben Rampe wie die
+ *  Sternverluste; Galaxie 1 bekommt keinen — dort ist der Void noch gar nicht
+ *  freigeschaltet (`VOID_UNLOCK_LEVEL`). */
+export const GALAXY_INCIDENT_BACKFILL_VOID_MAX = 4
+
+/** Spanne der nachgetragenen Drifter. Anders als beim Void ab Galaxie 1: Drifter
+ *  fliegen von Anfang an. */
+export const GALAXY_INCIDENT_BACKFILL_DRIFTER_MIN = 2
+export const GALAXY_INCIDENT_BACKFILL_DRIFTER_MAX = 6

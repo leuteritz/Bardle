@@ -13,7 +13,12 @@ import { useItemStore } from '@/stores/economy/itemStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
-import { backfillManifestRng, buildBackfillManifests } from '@/utils/game/galaxyArchiveBackfill'
+import {
+  backfillIncidentRng,
+  backfillManifestRng,
+  buildBackfillIncidents,
+  buildBackfillManifests,
+} from '@/utils/game/galaxyArchiveBackfill'
 import { assignRecordUniverses } from '@/utils/game/galaxyUniverseBackfill'
 import type { StarManifest } from '@/types'
 
@@ -946,15 +951,28 @@ export function usePersistence() {
         galaxyStore.completedGalaxies = (
           Array.isArray(gx.completedGalaxies) ? gx.completedGalaxies : []
         ).map((r: CompletedGalaxyRecord) => {
+          // Die Ereignis-Chronik im selben Durchlauf, aber nach einer eigenen
+          // Regel: nachgetragen wird NUR, wem das Feld ganz fehlt. Ein leeres
+          // Array ist eine Aussage — dort ist nichts durchgekommen —, und ein
+          // erfundener Einschlag darüber wäre eine Falschaussage.
+          const incidentResults =
+            r.incidentResults ??
+            buildBackfillIncidents(r.galaxy, r.attemptResults, backfillIncidentRng(r.galaxy))
           const kept = r.starManifests?.map(migrateManifest)
           const have = kept?.length ?? 0
-          if (have >= r.attemptResults.length) return { ...r, ...(kept && { starManifests: kept }) }
+          if (have >= r.attemptResults.length) {
+            return { ...r, incidentResults, ...(kept && { starManifests: kept }) }
+          }
           const filled = buildBackfillManifests(
             r.galaxy,
             r.attemptResults,
             backfillManifestRng(r.galaxy),
           )
-          return { ...r, starManifests: [...(kept ?? []), ...filled.slice(have)] }
+          return {
+            ...r,
+            incidentResults,
+            starManifests: [...(kept ?? []), ...filled.slice(have)],
+          }
         })
         // Und dasselbe für das Universum: Archive von vor den Firmament-Bahnen
         // wissen nicht, wo sie befreit wurden. Der Lauf-Block steht weiter oben,

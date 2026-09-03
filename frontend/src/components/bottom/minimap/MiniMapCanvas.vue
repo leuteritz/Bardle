@@ -572,7 +572,15 @@ export default defineComponent({
         }
       }
 
-      if (attempts >= 1 && farAlpha > 0.01) {
+      // Die Ebene hing einmal allein an `attempts` — und damit fiel alles unter
+      // den Tisch, was auf der ERSTEN Etappe geschah: ein Void-Einschlag vor dem
+      // ersten geretteten Stern, und ebenso ein Ort auf Etappe 0. Die Chronik
+      // entscheidet mit, nicht nur die Sternzahl.
+      const hasChronicle =
+        attempts >= 1 ||
+        galaxyStore.incidentResults.length > 0 ||
+        galaxyStore.landfallResults.length > 0
+      if (hasChronicle && farAlpha > 0.01) {
         ctx.save()
         ctx.globalAlpha = farAlpha
         if (camMoving) {
@@ -595,8 +603,12 @@ export default defineComponent({
           }
           // Und die Ereignisse: eine Buchung legt eine Marke auf die Karte, ohne
           // dass sich `attempts` oder ein Ausgang rührt.
+          // Ein fester Code je Art, NICHT `kind.length`: `drifter-caught` und
+          // `drifter-missed` sind beide vierzehn Zeichen lang, und ein
+          // Deckel-Ersatz zwischen den beiden liesse die Signatur stehen.
           for (const e of galaxyStore.incidentResults) {
-            sig = (Math.imul(sig, 31) + e.leg * 7 + e.kind.length) >>> 0
+            const code = e.kind === 'void-impact' ? 5 : e.kind === 'drifter-caught' ? 6 : 7
+            sig = (Math.imul(sig, 31) + e.leg * 7 + code) >>> 0
           }
           // Und die Rollen dazu: ein nachgetragenes Manifest ändert die
           // Kernfarbe, ohne dass sich `attempts` oder ein Ausgang rührt.

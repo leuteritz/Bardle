@@ -25,12 +25,20 @@ import {
   ADMIN_ARCHIVE_FAIL_RAMP_GALAXIES,
   ADMIN_ARCHIVE_SECONDS_PER_STAR,
   ADMIN_ARCHIVE_DURATION_JITTER,
+  DRIFTER_RARITY_ORDER,
+  GALAXY_INCIDENT_BACKFILL_DRIFTER_MAX,
+  GALAXY_INCIDENT_BACKFILL_DRIFTER_MIN,
+  GALAXY_INCIDENT_BACKFILL_VOID_MAX,
+  GALAXY_INCIDENT_DRIFTER_MIN_RANK,
+  GALAXY_INCIDENT_MAX,
   CHAMPION_STAR_DURATION_MS,
   MS_PER_SECOND,
   STAR_EXTRA_PLANET_MIN,
   STAR_EXTRA_PLANET_RANGE,
 } from '@/config/constants'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
+import { VOID_RIFTS, VOID_RIFT_SEVERITIES } from '@/config/world/void'
+import { DRIFTERS } from '@/config/world/drifters'
 import { CHAMPION_HOME_PLANETS } from '@/config/champions/championHomePlanets'
 import {
   getChampionStarLevel,
@@ -40,7 +48,7 @@ import { galaxyDepth } from '@/utils/game/galaxyDepth'
 import { landfallsOfRun } from '@/utils/game/landfalls'
 import { drawUnique } from '@/utils/game/voyageLegs'
 import type { CompletedGalaxyRecord, StarAttemptResult } from '@/stores/world/galaxyStore'
-import type { LandfallOutcome, StarManifest } from '@/types'
+import type { GalaxyIncident, LandfallOutcome, StarManifest } from '@/types'
 
 type Rng = () => number
 
@@ -176,6 +184,99 @@ export function buildBackfillManifests(
   })
 }
 
+/**
+ * Eigener Strom für die Ereignisse, aus demselben Grund wie bei Orten und
+ * Manifesten: ein gemeinsamer liesse Sternpech, Ortspech, Championwahl und
+ * Void-Pech im Gleichschritt laufen.
+ */
+export function backfillIncidentRng(galaxy: number): Rng {
+  return seededRng(galaxy * ADMIN_ARCHIVE_SEED_SALT + 3719)
+}
+
+/** Gewichtete Wahl aus einem Katalogausschnitt — dasselbe Verfahren, mit dem der
+ *  `voidStore` innerhalb einer Schwere zieht. */
+function pickWeighted<T extends { weight: number }>(pool: readonly T[], rng: Rng): T | null {
+  if (!pool.length) return null
+  const total = pool.reduce((sum, d) => sum + d.weight, 0)
+  let roll = rng() * total
+  for (const def of pool) {
+    roll -= def.weight
+    if (roll <= 0) return def
+  }
+  return pool[pool.length - 1]
+}
+
+/**
+ * Die Ereignis-Chronik eines nachgetragenen Laufs.
+ *
+ * Nachgetragen wird nur, was NIE gebucht wurde — ein leeres `incidentResults`
+ * ist eine Aussage („nichts kam durch") und bleibt leer; die Entscheidung
+ * darüber trifft der Aufrufer.
+ *
+ * Die Ziehreihenfolge ist FEST: Zahl der Einschläge, je Einschlag Etappe /
+ * Schwere / Typ, dann Zahl der Drifter, je Drifter Etappe / Typ / Ausgang. Eine
+ * eingeschobene Ziehung schreibt jede nachgetragene Galaxie um.
+ *
+ * `hp` und `meeps` bleiben leer: eine erfundene Zahl behauptet mehr, als der
+ * Nachtrag wissen kann — die Hover-Karte lässt die Chips dann weg.
+ */
+export function buildBackfillIncidents(
+  galaxy: number,
+  results: readonly StarAttemptResult[],
+  rng: Rng,
+): GalaxyIncident[] {
+  const ramp = Math.min(1, Math.max(0, galaxy - 1) / ADMIN_ARCHIVE_FAIL_RAMP_GALAXIES)
+  const legs = results.length
+  const out: GalaxyIncident[] = []
+
+  // Galaxie 1 bekommt keinen Einschlag: dort ist der Void noch gar nicht
+  // freigeschaltet, und `backfillFailCount` setzt aus demselben Grund 0.
+  const voidCount =
+    galaxy <= 1
+      ? 0
+      : Math.min(
+          GALAXY_INCIDENT_MAX,
+          Math.round(GALAXY_INCIDENT_BACKFILL_VOID_MAX * ramp * (0.4 + rng() * 1.2)),
+        )
+  // Die Schwere wächst mit: früh nur `lesser`, erst spät bis `abyssal`. Ein
+  // abyssaler Einschlag in Galaxie 2 fällt sofort als erfunden auf — dasselbe
+  // Argument, mit dem der Manifest-Nachtrag seinen Kader klemmt.
+  const maxSeverity = Math.floor(ramp * (VOID_RIFT_SEVERITIES.length - 1) + 1e-9)
+  const riftPool = VOID_RIFTS.filter(
+    (r) => VOID_RIFT_SEVERITIES.indexOf(r.severity) <= maxSeverity,
+  )
+  for (let i = 0; i < voidCount; i++) {
+    const leg = Math.floor(rng() * (legs + 1))
+    const severity = VOID_RIFT_SEVERITIES[Math.floor(rng() * (maxSeverity + 1))]
+    const def = pickWeighted(
+      riftPool.filter((r) => r.severity === severity),
+      rng,
+    )
+    if (def) out.push({ kind: 'void-impact', leg, id: def.id })
+  }
+
+  const drifterPool = DRIFTERS.filter(
+    (d) => (DRIFTER_RARITY_ORDER[d.rarity] ?? 0) >= GALAXY_INCIDENT_DRIFTER_MIN_RANK,
+  )
+  const span = GALAXY_INCIDENT_BACKFILL_DRIFTER_MAX - GALAXY_INCIDENT_BACKFILL_DRIFTER_MIN
+  const drifterCount = Math.min(
+    GALAXY_INCIDENT_MAX,
+    GALAXY_INCIDENT_BACKFILL_DRIFTER_MIN + Math.round(span * ramp * (0.5 + rng())),
+  )
+  // Verpasst mit derselben Fehlerrate wie die Orte — ein Archiv, in dem jeder
+  // Drifter gefangen wurde, liest sich falsch.
+  const missRate = ADMIN_ARCHIVE_FAIL_RATE_MAX * ramp
+  for (let i = 0; i < drifterCount; i++) {
+    const leg = Math.floor(rng() * (legs + 1))
+    const def = pickWeighted(drifterPool, rng)
+    const missed = rng() < missRate
+    if (def) out.push({ kind: missed ? 'drifter-missed' : 'drifter-caught', leg, id: def.id })
+  }
+
+  // Chronologisch, so wie sie im echten Spiel entsteht.
+  return out.sort((a, b) => a.leg - b.leg)
+}
+
 export function buildBackfillRecord(
   galaxy: number,
   starsRequired: number,
@@ -201,6 +302,11 @@ export function buildBackfillRecord(
       starsRequired,
       attemptResults.length + 1,
       backfillLandfallRng(galaxy),
+    ),
+    incidentResults: buildBackfillIncidents(
+      galaxy,
+      attemptResults,
+      backfillIncidentRng(galaxy),
     ),
     starManifests: buildBackfillManifests(galaxy, attemptResults, backfillManifestRng(galaxy)),
     durationSeconds: Math.round(attemptResults.length * ADMIN_ARCHIVE_SECONDS_PER_STAR * jitter),
