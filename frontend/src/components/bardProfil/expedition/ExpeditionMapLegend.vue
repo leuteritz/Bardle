@@ -141,9 +141,13 @@ watch(
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
+  /* Sie sitzt in der elastischen Bahn und VERTEILT sich darin: der freie Fuss
+     geht in die Lücken zwischen den Marken, statt als eine Lücke danach zu
+     stehen. `gap` bleibt der Boden, unter den `space-between` nie drückt. */
+  justify-content: space-between;
   gap: clamp(7px, 0.74cqw, 30px);
   padding-left: clamp(6px, 0.63cqw, 24px);
-  padding-right: clamp(16px, 1.68cqw, 44px);
+  padding-right: clamp(24px, 1.68cqw, 44px);
   white-space: nowrap;
   border-left: 1px solid rgba(122, 78, 32, 0.34);
 }

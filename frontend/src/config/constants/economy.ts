@@ -1452,7 +1452,7 @@ export const VOYAGE_MAP_LEGEND_R_RATIO = 3.06
  * Groesse.
  */
 export const VOYAGE_MAP_LEGEND_LABEL_MIN = 8
-export const VOYAGE_MAP_LEGEND_LABEL_MAX = 14
+export const VOYAGE_MAP_LEGEND_LABEL_MAX = 18
 
 /**
  * Die fuenf Chronikmarken — was ein gespielter Lauf auf der Karte hinterlaesst.
@@ -1487,10 +1487,18 @@ export const VOYAGE_MAP_LEGEND_ROWS = [
   { kind: 'drifter-trace', label: 'Drifter', tip: 'Where a drifter crossed the run.' },
 ] as const
 
-/** Eigenbedarf der Reihe MIT Woertern, an ihrer Schwelle gemessen. Kein fester
- *  Wert ueber alle Breiten: die `clamp` der Zone wachsen mit, gemessen 401,1 px
- *  auf der schmalsten Buehne bis 489,8 bei 1732. */
-export const VOYAGE_MAP_LEGEND_NEED_FULL = 318
+/**
+ * MINDESTbedarf der Reihe mit Woertern, an ihrer Schwelle gemessen — Kacheln,
+ * Woerter, Boden-Abstaende, Polster und der Rest zum Payout.
+ *
+ * Seit die Zone in der ELASTISCHEN Bahn sitzt, ist das nicht mehr ihre Breite:
+ * sie nimmt, was die Bahn hergibt, und verteilt den Ueberschuss zwischen ihre
+ * Marken (gemessen 368 px auf Full HD, 716 auf 2K, 1940 auf 4K). Was hier steht,
+ * ist die Breite, unter die sie NICHT gedrueckt werden darf — darunter faellt
+ * der Abstand zwischen zwei Marken unter seinen `gap`-Boden und die
+ * `nowrap`-Zeile wird still abgeschnitten.
+ */
+export const VOYAGE_MAP_LEGEND_NEED_FULL = 326
 /** Dasselbe fuer die Sondenreihe allein — fuenf Kacheln, Abstaende, Polster
  *  und die Haarlinie; gemessen 191 an ihrer Schwelle. */
 export const VOYAGE_MAP_LEGEND_NEED_ICONS = 158

@@ -263,20 +263,30 @@ describe('voyage stats band fit', () => {
     expect(VOYAGE_MAP_LEGEND_NEED_ICONS).toBeLessThan(VOYAGE_MAP_LEGEND_NEED_FULL)
   })
 
-  it('hält an beiden Schwellen den Rest zum Payout', () => {
-    // Gemessen, hier gespiegelt: an ihrer Schwelle lässt jede Stufe den
-    // zugesagten Spalt zum Payout. Er war einmal die volle Bandhöhe — die Fuge
-    // sollte so breit sein wie das Band hoch. Seit die Legende den freien Fuss
-    // NUTZEN soll statt ihn freizuhalten, ist er ein Spalt, und die Trennung
-    // trägt die kräftige Haarlinie der Payout-Spalte (0,62) allein.
+  it('lässt die Reihe an beiden Schwellen in den freien Fuss passen', () => {
+    // Die Zone sitzt in der ELASTISCHEN Bahn: ihre Breite ist nicht mehr ihr
+    // Bedarf, sondern was die Bahn hergibt — den Überschuss verteilt sie
+    // zwischen ihre Marken. `NEED_*` ist deshalb der MINDESTbedarf inklusive
+    // des Rests zum Payout, und geprüft wird, dass er an der jeweiligen
+    // Schwelle noch hineinpasst.
     //
-    // Das ist zugleich die Zusicherung gegen den stillen Überlauf: die Zeile
-    // steht auf `nowrap`, und kein `scrollHeight` meldet, wenn sie
-    // abgeschnitten wird.
-    const seamFull = VOYAGE_MAP_LEGEND_MIN_W - VOYAGE_MAP_LEGEND_NEED_FULL - ZONES_AT_FULL
-    const seamIcons = VOYAGE_MAP_LEGEND_ICONS_MIN_W - VOYAGE_MAP_LEGEND_NEED_ICONS - ZONES_AT_ICONS
-    expect(seamFull).toBeGreaterThanOrEqual(VOYAGE_MAP_LEGEND_SEAM_MIN)
-    expect(seamIcons).toBeGreaterThanOrEqual(VOYAGE_MAP_LEGEND_SEAM_MIN)
+    // Darunter fiele der Abstand zwischen zwei Marken unter seinen `gap`-Boden
+    // und die `nowrap`-Zeile würde still abgeschnitten — kein `scrollHeight`
+    // meldet das. Im Browser an der Schwelle nachgemessen: kleinster Abstand
+    // 11,5 px gegen einen Boden von 7, also rund 10 px Reserve in der Bühne.
+    const restFull = VOYAGE_MAP_LEGEND_MIN_W - VOYAGE_MAP_LEGEND_NEED_FULL - ZONES_AT_FULL
+    const restIcons = VOYAGE_MAP_LEGEND_ICONS_MIN_W - VOYAGE_MAP_LEGEND_NEED_ICONS - ZONES_AT_ICONS
+    expect(restFull).toBeGreaterThanOrEqual(0)
+    expect(restIcons).toBeGreaterThanOrEqual(0)
+  })
+
+  it('spiegelt den Rest zum Payout, den das CSS setzt', () => {
+    // `padding-right` der Zone steht auf `clamp(24px, …)`, und diese 24 sind
+    // `VOYAGE_MAP_LEGEND_SEAM_MIN`. Sie stecken bereits in `NEED_FULL` — wer
+    // die Konstante ändert, ohne das CSS mitzuziehen, verschiebt den Rest,
+    // ohne dass eine Rechnung es merkt.
+    expect(VOYAGE_MAP_LEGEND_SEAM_MIN).toBeGreaterThanOrEqual(16)
+    expect(VOYAGE_MAP_LEGEND_SEAM_MIN).toBeLessThan(VOYAGE_MAP_LEGEND_NEED_ICONS)
   })
 
   it('führt fünf Marken, und jede genau einmal', () => {

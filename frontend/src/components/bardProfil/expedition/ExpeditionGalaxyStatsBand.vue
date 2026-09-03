@@ -254,9 +254,9 @@ const summary = computed(
   );
 }
 
-/* Die Chronik hugt links, die Kosten rechts; der Überschuss liegt dazwischen,
-   also auf der Naht. Der Payout wird ans Ende SEINER Spur gedrückt und bleibt
-   damit an den Kosten, mit denen er zusammen den Deal ergibt. */
+/* Die Chronik hugt links, Payout und Kosten rechts; der Überschuss geht an die
+   LEGENDE, die ihn zwischen ihren fünf Marken verteilt. Vorher lag er als eine
+   Lücke zwischen Legende und Payout — auf 2K 258 px, auf 4K 1265. */
 .egsb-row {
   position: relative;
   display: grid;
@@ -268,10 +268,10 @@ const summary = computed(
   padding: v-bind(padY) clamp(12px, 1.5cqw, 30px);
   border-top: 1px solid rgba(122, 78, 32, 0.42);
 }
-/* Die Legende bekommt eine EIGENE `auto`-Bahn links der Fuge. Ohne sie fiele
-   die Zuordnung um eine Bahn und der Payout landete in einer starren. */
+/* Mit Legende ist SIE die elastische Bahn — sie soll den freien Fuss belegen.
+   Ohne sie fällt die Zuordnung um eine Bahn und der Payout bekäme sie zurück. */
 .egsb-row--legend {
-  grid-template-columns: auto auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
 }
 /* Die Akzentkante der Galaxie — der einzige farbige Strich im Band. */
 .egsb-row::before {
@@ -307,14 +307,14 @@ const summary = computed(
 .egsb-mods {
   border-left: 1px solid rgba(122, 78, 32, 0.34);
 }
-/* Die Naht traegt die PAYOUT-SPALTE, nicht ihre Gridbahn: die Bahn ist die
-   elastische, ihre linke Kante steht am Ende der Chronik und damit bis zu
-   400 px vor dem, was sie abtrennt. Im Browser war das eine Haarlinie im
-   Nichts. Kraeftiger als die uebrigen, weil sie zwei Aussagen trennt und nicht
-   zwei Zahlen. */
+/* Die Naht traegt die PAYOUT-SPALTE, nicht ihre Gridbahn — sie stand einmal an
+   der Bahn, deren linke Kante bis zu 400 px vor dem lag, was sie abtrennt, und
+   war im Browser eine Haarlinie im Nichts. Kraeftiger als die uebrigen, weil
+   sie zwei Aussagen trennt und nicht zwei Zahlen. */
+/* Kein `flex-end` mehr: die Bahn ist nicht mehr die elastische, der Payout
+   steht ohnehin unmittelbar vor den Kosten. */
 .egsb-deal {
   display: flex;
-  justify-content: flex-end;
 }
 .egsb-deal > .egsb-col {
   border-left: 1px solid rgba(122, 78, 32, 0.62);
