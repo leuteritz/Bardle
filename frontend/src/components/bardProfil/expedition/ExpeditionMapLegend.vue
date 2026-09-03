@@ -1,49 +1,35 @@
 <script setup lang="ts">
 /**
- * Die Formlegende des Datenbands — fünf Chronikmarken, Sonde und Wort.
+ * Die Formlegende des Datenbands — fünf Chronikmarken als blanke Sonden.
  *
  * Ihre Symbole kommen aus DERSELBEN Routine wie die Karte — winzige Canvas
  * statt nachgebautem CSS, damit Legende und Karte nie auseinanderlaufen können.
  * Gemalt wird beim Mount und bei einem Wechsel der Pixeldichte, sonst nie.
  *
- * Die Sonde ist der ENGSTE Fall der ganzen Karte: `VOYAGE_MAP_LEGEND_R` mal
- * `LANDMARK_PAD_SPAN` sind 15,0 px in einer 22-px-Kachel, und `detail: 2` ist
- * erzwungen — die Legende zeigt, was die grosse Karte zeigt.
+ * **Ohne Wörter, und das ist der Punkt.** Mit ihnen war die Reihe auf 2K 390 px
+ * lang und die Marke darin halb so gross wie ihre Kachel; beides zusammen war
+ * in einer Zeile nicht zu beheben. Jetzt trägt die Kachel 30 px und die Marke
+ * `VOYAGE_MAP_LEGEND_R` — der Name steht im Tooltip.
+ *
+ * Der sitzt an der EINZELNEN Kachel, nicht an der Reihe: eine Sammelliste
+ * „Freed · Lost · …" liesse die Zuordnung Symbol → Name nur über die
+ * Reihenfolge erraten.
  *
  * Weder `tint` noch `coreTint` werden gesetzt, und beides ist Absicht: `tint`
  * unkonditioniert durchzureichen war der Fehler der gefallenen Fassung, und
  * ohne `coreTint` malt `star-freed` seinen Kern in `LANDMARK_FREED_CORE` —
  * dieselbe Paarung wie `.egsb-val--freed` daneben —, während `void-impact`
  * seinen violetten Schwere-Kern gar nicht erst bekommt.
- *
- * Der Aufrufer mountet sie über `:key` neu, wenn die Stufe wechselt: `v-tip`
- * bindet seine Listener nur beim Mount, ein nachgereichter Wortlaut bliebe tot.
  */
 import { ref, watch, onMounted } from 'vue'
 import { drawLandmark } from '@/utils/fx/galaxyLandmarks'
-import {
-  VOYAGE_MAP_LEGEND_ICON_PX,
-  VOYAGE_MAP_LEGEND_LABEL_MAX,
-  VOYAGE_MAP_LEGEND_R,
-  VOYAGE_MAP_LEGEND_ROWS,
-} from '@/config/constants'
+import { VOYAGE_MAP_LEGEND_ICON_PX, VOYAGE_MAP_LEGEND_R, VOYAGE_MAP_LEGEND_ROWS } from '@/config/constants'
 
-const props = defineProps<{
-  /** `full` trägt die Wörter, `icons` nur die Sonden. */
-  mode: 'full' | 'icons'
-  dpr: number
-}>()
+const props = defineProps<{ dpr: number }>()
 
 const probes = ref<(HTMLCanvasElement | null)[]>([])
 
-/** Ohne Wörter sagt die Reihe nichts — dann trägt sie die Namen als EINE Blase. */
-const iconsTip =
-  props.mode === 'icons'
-    ? { label: 'Map marks', text: VOYAGE_MAP_LEGEND_ROWS.map((r) => r.label).join(' · ') }
-    : ''
-
 const iconPx = `${VOYAGE_MAP_LEGEND_ICON_PX}px`
-const labelMax = `${VOYAGE_MAP_LEGEND_LABEL_MAX}px`
 
 function paint(): void {
   const size = VOYAGE_MAP_LEGEND_ICON_PX
@@ -66,14 +52,18 @@ watch(() => props.dpr, paint, { flush: 'post' })
 </script>
 
 <template>
-  <div v-tip="iconsTip" class="eml" :class="{ 'eml--icons': mode === 'icons' }">
-    <span v-for="(row, i) in VOYAGE_MAP_LEGEND_ROWS" :key="row.kind" class="eml-row">
+  <div class="eml">
+    <span
+      v-for="(row, i) in VOYAGE_MAP_LEGEND_ROWS"
+      :key="row.kind"
+      class="eml-row"
+      v-tip="{ label: row.label, text: row.tip }"
+    >
       <canvas
         :ref="(el) => (probes[i] = el as HTMLCanvasElement | null)"
         class="eml-probe"
         aria-hidden="true"
       />
-      <span v-if="mode === 'full'" class="eml-lbl">{{ row.label }}</span>
     </span>
   </div>
 </template>
@@ -85,44 +75,26 @@ watch(() => props.dpr, paint, { flush: 'post' })
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: clamp(8px, 1.1cqw, 18px);
-  padding: 0 clamp(7px, 1.1cqw, 18px);
+  gap: clamp(6px, 0.7cqw, 12px);
+  padding: 0 clamp(8px, 1cqw, 16px);
   white-space: nowrap;
   border-left: 1px solid rgba(122, 78, 32, 0.34);
 }
-/* Nur die Sondenreihe holt sich den Zeiger zurück — sie trägt dann die einzige
-   Blase. Mit Wörtern erklärt sie sich selbst und bleibt durchlässig. */
-.eml--icons {
-  pointer-events: auto;
-  gap: clamp(6px, 0.8cqw, 12px);
-}
 
+/* Jede Kachel holt sich den Zeiger zurück, den `.egsb` abgibt — Muster
+   `.egsb-col` / `.egsb-mod`. Sie trägt ihre eigene Blase. */
 .eml-row {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  min-width: 0;
+  pointer-events: auto;
 }
 
-/* Feste Grösse: die Sonde ist auf 22 px gerechnet und darf nicht mitwachsen —
-   `VOYAGE_MAP_LEGEND_R` sitzt sonst nicht mehr in seiner Kachel. */
+/* Feste Grösse: die Sonde ist auf `VOYAGE_MAP_LEGEND_ICON_PX` gerechnet und
+   darf nicht mitwachsen — der Radius sitzt sonst nicht mehr in seiner Kachel. */
 .eml-probe {
   display: block;
   flex: none;
   width: v-bind(iconPx);
   height: v-bind(iconPx);
-}
-
-/* Die leiseste Schrift des Bandes: eine Lesehilfe zur Form, keine Ablesung.
-   `normal` wie bei `.egsb-lbl--chip` — bei `line-height: 1` sässe das Wort
-   neben der Sonde zu tief. */
-.eml-lbl {
-  font-size: clamp(8px, 1.05cqw, v-bind(labelMax));
-  line-height: normal;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(216, 200, 160, 0.38);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 </style>
