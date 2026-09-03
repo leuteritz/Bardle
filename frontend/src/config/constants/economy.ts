@@ -1425,6 +1425,19 @@ export const VOYAGE_MAP_LEGEND_ICON_PX = 30
  * abgeschnittener Schein ist das Abbruchkriterium.
  */
 export const VOYAGE_MAP_LEGEND_R = 9
+/**
+ * Deckel des Wortes — GLEICHAUF mit `VOYAGE_MAP_STATS_LABEL_MAX`, also der
+ * Groesse von STARS, VOYAGES und PAYOUT.
+ *
+ * Er stand einmal auf 9 und war damit die leiseste Schrift des Bandes; genau
+ * das war der Fehler. Eine Lesehilfe, die man nicht lesen kann, ist keine.
+ * Die Nachrangigkeit traegt seither die DECKKRAFT (0,38 gegen 0,52 der
+ * Ablesungen), nicht die Groesse.
+ *
+ * Groesser darf er nicht werden: `voyageBandFit.spec.ts` haelt ihn gegen die
+ * groesste Beschriftung des Bandes.
+ */
+export const VOYAGE_MAP_LEGEND_LABEL_MAX = 11
 
 /**
  * Die fuenf Chronikmarken — was ein gespielter Lauf auf der Karte hinterlaesst.
@@ -1459,29 +1472,40 @@ export const VOYAGE_MAP_LEGEND_ROWS = [
   { kind: 'drifter-trace', label: 'Drifter', tip: 'Where a drifter crossed the run.' },
 ] as const
 
-/** Eigenbedarf der Reihe AN IHRER SCHWELLE, im Browser gemessen: fuenf Kacheln,
- *  ihre Abstaende, das Polster und die Haarlinie. */
-export const VOYAGE_MAP_LEGEND_NEED = 191
+/** Eigenbedarf der Reihe MIT Woertern, an ihrer Schwelle gemessen. Kein fester
+ *  Wert ueber alle Breiten: die `clamp` der Zone wachsen mit, gemessen 401,1 px
+ *  auf der schmalsten Buehne bis 489,8 bei 1732. */
+export const VOYAGE_MAP_LEGEND_NEED_FULL = 456
+/** Dasselbe fuer die Sondenreihe allein — fuenf Kacheln, Abstaende, Polster
+ *  und die Haarlinie; gemessen 191 an ihrer Schwelle. */
+export const VOYAGE_MAP_LEGEND_NEED_ICONS = 191
 /**
- * Ab dieser BUEHNENbreite steht die Legende, darunter faellt sie weg.
+ * Ab dieser BUEHNENbreite traegt die Legende ihre WOERTER, darunter nur noch
+ * die Sonden.
  *
- * Die Zahl ist gemessen und HERGELEITET, nicht gewaehlt: sie ist die schmalste
- * Buehne, auf der nach der Reihe noch `VOYAGE_MAP_STATS_BAND_H` an Fuge bleibt.
- * Die Naht zwischen Chronik und Deal ist Bedeutung — eine Fuge, die schmaler
- * ist als das Band hoch, liest sich nicht mehr als Trennung zweier Gruppen,
- * sondern als Abstand innerhalb einer.
+ * Beide Schwellen sind gemessen und HERGELEITET, nicht gewaehlt: sie sind die
+ * schmalste Buehne, auf der nach der Reihe noch `VOYAGE_MAP_STATS_BAND_H` an
+ * Fuge bleibt. Die Naht zwischen Chronik und Deal ist Bedeutung — eine Fuge,
+ * die schmaler ist als das Band hoch, liest sich nicht mehr als Trennung
+ * zweier Gruppen, sondern als Abstand innerhalb einer.
  *
- * Es waren einmal ZWEI Schwellen: eine fuer die Reihe mit Woertern (1048), eine
- * fuer die Sonden allein (733). Mit dem Fall der Woerter ist die obere
- * gegenstandslos geworden — eine Stufe, die es nicht mehr gibt, braucht keine
- * Schwelle. Anders als das gefallene `_WIDE_W` greift diese hier nachweislich.
+ * Gemessen (Buehne → Fuge nach der Reihe mit Woertern): 1067 → 5,7 · 1102 → 33,0
+ * · 1137 → 60,6 · 1172 → 88,2 · 1372 → 254,2. Unterhalb 1067 faellt sie auf
+ * NULL, und der Ueberlauf einer `nowrap`-Zeile wird hier STILL abgeschnitten.
  *
- * Gemessen (Buehne → Fuge nach der Reihe): 718,4 → 24,1 · 758,4 → 53,4 ·
- * 795,4 → 75,6 · 900,4 → 135,3. Mit 191 px ist die Reihe halb so lang wie die
- * Fassung mit Woertern (370) und steht damit auf jeder Buehne, die das Band
- * ueberhaupt traegt.
+ * Praktisch: Full HD mit ausgeklappter Zielliste (Buehne 952) traegt die Sonden,
+ * eingeklappt (1176) die Woerter; 2K und 4K immer die Woerter.
  */
-export const VOYAGE_MAP_LEGEND_MIN_W = 790
+export const VOYAGE_MAP_LEGEND_MIN_W = 1152
+/**
+ * Ab hier steht die Sondenreihe, darunter faellt die Legende ganz weg.
+ *
+ * Gemessen (Buehne → Fuge nach der Sondenreihe): 718,4 → 24,1 · 758,4 → 53,4 ·
+ * 795,4 → 75,6 · 900,4 → 135,3. Anders als das gefallene `_WIDE_W` greifen
+ * beide Schwellen nachweislich — darum sind sie eine Zusicherung und kein
+ * Irrtum in Wartestellung.
+ */
+export const VOYAGE_MAP_LEGEND_ICONS_MIN_W = 790
 
 /* ── Die Manifestreihe — der Zwilling des Datenbands, oben links ──────────────
    Das Band sagt WIE VIELE (`STARS 7/2`), die Reihe sagt WER. Deshalb traegt sie

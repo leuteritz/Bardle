@@ -73,8 +73,8 @@ const props = defineProps<{
   tier: 'common' | 'rare' | 'epic'
   /** Schmale Bühne: die vier Kosten entfallen, Chronik und Payout bleiben. */
   compact: boolean
-  /** Trägt die Bühne die Formlegende? Unter `VOYAGE_MAP_LEGEND_MIN_W` nicht. */
-  showLegend: boolean
+  /** Stufe der Formlegende: mit Wörtern, nur Sonden, oder gar nicht. */
+  legendMode: 'full' | 'icons' | 'off'
   dpr: number
 }>()
 
@@ -158,7 +158,7 @@ const summary = computed(
 
     <div
       class="egsb-row"
-      :class="{ 'egsb-row--legend': showLegend }"
+      :class="{ 'egsb-row--legend': legendMode !== 'off' }"
       role="group"
       :aria-label="summary"
     >
@@ -183,8 +183,14 @@ const summary = computed(
 
       <!-- WAS AUF DER KARTE LIEGT ─────────────────────────────────────────── -->
       <!-- Eigene Bahn LINKS der Fuge, nicht in ihr: der elastische Überschuss
-           bleibt damit auf der Bedeutungsnaht zwischen Chronik und Deal. -->
-      <ExpeditionMapLegend v-if="showLegend" :dpr="dpr" />
+           bleibt damit auf der Bedeutungsnaht zwischen Chronik und Deal. `key`
+           mountet neu, wenn die Stufe wechselt — `v-tip` bindet nur beim Mount. -->
+      <ExpeditionMapLegend
+        v-if="legendMode !== 'off'"
+        :key="legendMode"
+        :mode="legendMode"
+        :dpr="dpr"
+      />
 
       <!-- DER GEWINN ──────────────────────────────────────────────────────── -->
       <!-- Die einzige farbige Ablesung des Bandes: alles andere hier ist Preis. -->
