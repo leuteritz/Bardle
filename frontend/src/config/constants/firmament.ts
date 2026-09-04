@@ -174,8 +174,20 @@ export const FIRMAMENT_SCATTER_STEP_MAX = 2.3
  *  eine Folge der Regelmaessigkeit. */
 export const FIRMAMENT_SCATTER_MIN_SEP = 0.115
 /** Kandidaten je Knoten. Greift keiner, gewinnt der weiteste — und genau dort
- *  bricht der Boden ein: mit 12 Versuchen fiel er bei 120 Plaetzen auf 19,1 px. */
-export const FIRMAMENT_SCATTER_TRIES = 20
+ *  bricht der Boden ein: mit 12 Versuchen fiel er bei 120 Plaetzen auf 19,1 px.
+ *
+ *  Seit die Streuung je Universum wuerfelt, wird der Boden ueber ZEHN Bahnen
+ *  genommen statt ueber eine, und 20 trugen ihn nicht mehr (21,0 px bei 120
+ *  Plaetzen). Gemessen auf Full HD, Bahnradius 305,3: 24/28/32 halfen nicht
+ *  (21,0), 40 brachte 27,2, ab 48 saettigt es bei 27,9 — 56 und 64 aendern
+ *  nichts mehr. Der ganze Sweep (Spannen 8…120 x 10 Universen) kostet 2,7 s. */
+export const FIRMAMENT_SCATTER_TRIES = 48
+/** Die Drehneigung eines Universums, als Abstand von der Muenze: 0,5 +- dies.
+ *  Sie ist der Charakterzug einer Bahn — die eine umrundet die Mitte
+ *  ueberwiegend in EINE Richtung und liest sich als weit geoeffneter Arm, die
+ *  naechste kehrt staendig um. Bei 0 waere jede Bahn gleich launisch, bei 0,5
+ *  liefe eine stur im Kreis und der Ablehnungspass truege sie allein. */
+export const FIRMAMENT_SCATTER_TURN_BIAS = 0.22
 /** Das Feld, das dem START-Label gehoert: normiertes Rechteck unter der Mitte,
  *  samt halber Trefferflaeche als Saum. Weder ein Knoten noch eine Bahnsehne
  *  darf hinein. Ein groesserer Saum wurde gemessen und verworfen — er erzwang

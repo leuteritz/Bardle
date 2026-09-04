@@ -150,13 +150,17 @@ function radiusAt(vw: number, vh: number): number {
   return firmamentFitBox(z.stageW, z.stageH, FIRMAMENT_MAP_INSET_PX).r
 }
 
-/** Der engste Abstand zweier Knoten auf der Bahn, in Pixeln. */
+/** Der engste Abstand zweier Knoten auf der Bahn, in Pixeln — genommen ueber
+ *  ALLE Universen, denn seit die Streuung je Bahn wuerfelt, gibt es zehn davon
+ *  und der Spieler sieht die unguenstigste. */
 function minSeparation(count: number, radius: number): number {
-  const pts = firmamentSpots(count)
   let min = Infinity
-  for (let i = 0; i < pts.length; i++) {
-    for (let j = i + 1; j < pts.length; j++) {
-      min = Math.min(min, Math.hypot(pts[i].nx - pts[j].nx, pts[i].ny - pts[j].ny) * radius)
+  for (const u of universes) {
+    const pts = firmamentSpots(count, u.id)
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        min = Math.min(min, Math.hypot(pts[i].nx - pts[j].nx, pts[i].ny - pts[j].ny) * radius)
+      }
     }
   }
   return min
@@ -234,7 +238,8 @@ describe('Firmament — das Zonenbudget', () => {
     // 388 waren an das 92-px-Kopfband gebunden, also still falsch, sobald es
     // wuchs. Interpoliert wird jetzt zwischen den ZWEI gemessenen Staenden.
     const rows = universes.length
-    const big = rows * UNIVERSE_RAIL_ROW_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP + UNIVERSE_RAIL_LIST_PAD
+    const big =
+      rows * UNIVERSE_RAIL_ROW_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP + UNIVERSE_RAIL_LIST_PAD
     const loVh = 950
     const hiVh = 1080
     const loH = UNIVERSE_RAIL_COMPACT_STAGE_H
@@ -416,9 +421,12 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
     // seiner Stelle steht der Kern der Heldenscheibe, und der ist dieselbe
     // Marke: ein Knoten darauf waere nicht mehr von ihm zu trennen.
     const r = fullHd().r
-    expect(firmamentSpots(FIRMAMENT_PATH_MIN_SPAN)[0].radius * r).toBeGreaterThan(
-      FIRMAMENT_NODE_HIT_MIN,
-    )
+    for (const u of universes) {
+      expect(
+        firmamentSpots(FIRMAMENT_PATH_MIN_SPAN, u.id)[0].radius * r,
+        `Universum ${u.id}`,
+      ).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
+    }
   })
 
   it('laesst das Universum die GANZE Kartenscheibe fuellen', () => {
@@ -438,7 +446,9 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
       expect(reach / r, `${vw}x${vh} zu klein`).toBeGreaterThan(0.85)
       expect(reach / r, `${vw}x${vh} unter dem Wall hervor`).toBeLessThan(0.93)
       // Und jeder Knoten der Bahn liegt darin, nicht nur die innersten.
-      const outer = Math.max(...firmamentSpots(40).map((p) => p.radius))
+      const outer = Math.max(
+        ...universes.flatMap((u) => firmamentSpots(40, u.id).map((p) => p.radius)),
+      )
       expect(outer * r, `${vw}x${vh} aeusserster Knoten`).toBeLessThan((heroPx(r) / 2) * 1.02)
     }
   })

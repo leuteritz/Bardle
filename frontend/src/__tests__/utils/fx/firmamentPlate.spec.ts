@@ -95,8 +95,11 @@ const BOX = { cx: PLATE_SIDE / 2, cy: PLATE_SIDE / 2, r: PLATE_R }
  *  Geometrie — genau das binden die Zuege unten. */
 const TINT = '#ff8a34'
 
+/** Eine feste Bahn — diese Spec prueft das ZEICHENREZEPT, nicht die Lage. */
+const PLATE_UNIVERSE = 1
+
 function nodeAt(i: number, count: number, state: FirmamentNode['state']): FirmamentNode {
-  const p = firmamentSpots(count)[i]
+  const p = firmamentSpots(count, PLATE_UNIVERSE)[i]
   return {
     galaxy: i + 1,
     state,

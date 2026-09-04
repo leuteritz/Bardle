@@ -11,11 +11,20 @@ import {
 import {
   FIRMAMENT_PATH_MIN_SPAN,
   FIRMAMENT_PATH_R0,
+  FIRMAMENT_PATH_R1,
+  FIRMAMENT_PATH_RADIUS_EXP,
   FIRMAMENT_PLATE_SPRITE_MARGIN,
+  FIRMAMENT_SCATTER_MIN_SEP,
+  FIRMAMENT_SCATTER_T_WOBBLE,
   FIRMAMENT_UNLIT_AHEAD,
 } from '@/config/constants'
+import { universes } from '@/config/progression/universes'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { UniverseRunRecord } from '@/types'
+
+/** Die Streuung gehoert dem Universum — jede Aussage ueber Plaetze wird deshalb
+ *  ueber ALLE Bahnen genommen, nicht ueber eine. */
+const UNIVERSE_IDS = universes.map((u) => u.id)
 
 const starsOf = (g: number) => Math.min(3 + (g - 1), 7)
 
@@ -79,40 +88,69 @@ const RUNS = [run(1, 350), run(2, 550)]
 
 describe('firmamentSpots — die Streuung', () => {
   it('waechst monoton nach aussen', () => {
-    for (const span of [8, 20, 40]) {
-      let last = -1
-      for (const p of firmamentSpots(span)) {
-        expect(p.radius, `span ${span}`).toBeGreaterThan(last)
-        last = p.radius
+    for (const u of UNIVERSE_IDS) {
+      for (const span of [8, 20, 40]) {
+        let last = -1
+        for (const p of firmamentSpots(span, u)) {
+          expect(p.radius, `U${u} span ${span}`).toBeGreaterThan(last)
+          last = p.radius
+        }
       }
     }
   })
 
   it('bleibt im Einheitskreis', () => {
-    for (const span of [8, 20, 40, 120]) {
-      for (const p of firmamentSpots(span)) {
-        expect(Math.hypot(p.nx, p.ny), `span ${span}`).toBeLessThanOrEqual(1.0000001)
+    for (const u of UNIVERSE_IDS) {
+      for (const span of [8, 20, 40, 120]) {
+        for (const p of firmamentSpots(span, u)) {
+          expect(Math.hypot(p.nx, p.ny), `U${u} span ${span}`).toBeLessThanOrEqual(1.0000001)
+        }
       }
     }
   })
 
-  /* EINE Streuung fuer alle Universen: der Platz haengt am Index und am
-     Nenner, an nichts sonst. Sonst floete die Karte beim Repaint. */
-  it('liefert bei gleicher Spanne bitgleiche Plaetze', () => {
-    expect(firmamentSpots(23)).toEqual(firmamentSpots(23))
+  /* Die Karte ist ein Standbild: derselbe Wurf muss dieselben Plaetze liefern,
+     sonst floete sie beim Repaint. */
+  it('liefert bei gleicher Spanne und Bahn bitgleiche Plaetze', () => {
+    expect(firmamentSpots(23, 5)).toEqual(firmamentSpots(23, 5))
   })
 
-  /* Die Forderung, wegen der der Umbau stattfand. Bei einem festen
+  /* Die Forderung, wegen der DIESER Umbau stattfand: wer sich durch die
+     Universumsleiste klickt, sah zehnmal dasselbe Sternbild — nur
+     unterschiedlich lang. Gebunden wird, dass jedes Paar Bahnen mindestens
+     einen Knoten weiter auseinander traegt als den Mindestabstand selbst. */
+  it('gibt jedem Universum ein eigenes Sternbild', () => {
+    for (const span of [8, 12, 20, 40]) {
+      for (let a = 0; a < UNIVERSE_IDS.length; a++) {
+        for (let b = a + 1; b < UNIVERSE_IDS.length; b++) {
+          const pa = firmamentSpots(span, UNIVERSE_IDS[a])
+          const pb = firmamentSpots(span, UNIVERSE_IDS[b])
+          let far = 0
+          for (let i = 0; i < span; i++) {
+            far = Math.max(far, Math.hypot(pa[i].nx - pb[i].nx, pa[i].ny - pb[i].ny))
+          }
+          expect(
+            far,
+            `span ${span}, U${UNIVERSE_IDS[a]} gegen U${UNIVERSE_IDS[b]}`,
+          ).toBeGreaterThan(FIRMAMENT_SCATTER_MIN_SEP)
+        }
+      }
+    }
+  })
+
+  /* Die Forderung, wegen der der Umbau DAVOR stattfand. Bei einem festen
      Winkelschritt ist die Streuung null — die alte Spirale faellt hier durch.
      Dieselbe Ablesung, mit der `portalSprite.spec.ts` das Zifferblatt
      ausschliesst. */
   it('wuerfelt den Winkelschritt, statt ihn zu zaehlen', () => {
-    for (const span of [12, 20, 40]) {
-      const spots = firmamentSpots(span)
-      const gaps = spots.slice(1).map((p, i) => Math.abs(p.angle - spots[i].angle))
-      const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length
-      const sd = Math.sqrt(gaps.reduce((a, g) => a + (g - mean) ** 2, 0) / gaps.length)
-      expect(sd / mean, `span ${span}`).toBeGreaterThan(0.25)
+    for (const u of UNIVERSE_IDS) {
+      for (const span of [12, 20, 40]) {
+        const spots = firmamentSpots(span, u)
+        const gaps = spots.slice(1).map((p, i) => Math.abs(p.angle - spots[i].angle))
+        const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length
+        const sd = Math.sqrt(gaps.reduce((a, g) => a + (g - mean) ** 2, 0) / gaps.length)
+        expect(sd / mean, `U${u} span ${span}`).toBeGreaterThan(0.25)
+      }
     }
   })
 
@@ -121,33 +159,41 @@ describe('firmamentSpots — die Streuung', () => {
      Feld stehen, darunter die Alltagsspannen 11 und 19. Eine quadratische
      Bezier liegt in der Huelle ihrer drei Punkte. */
   it('haelt das Feld des START-Labels frei — Knoten UND Boegen', () => {
-    for (let span = FIRMAMENT_PATH_MIN_SPAN; span <= 120; span++) {
-      let prev = { nx: 0, ny: 0 }
-      firmamentSpots(span).forEach((p, i) => {
-        expect(firmamentInStartField(p.nx, p.ny), `span ${span} Knoten`).toBe(false)
-        const c = firmamentRoadCtrl(prev.nx, prev.ny, p.nx, p.ny, i)
-        for (const [ax, ay, bx, by] of [
-          [prev.nx, prev.ny, c.x, c.y],
-          [c.x, c.y, p.nx, p.ny],
-          [prev.nx, prev.ny, p.nx, p.ny],
-        ]) {
-          expect(firmamentChordHitsStart(ax, ay, bx, by), `span ${span} Bogen ${i}`).toBe(false)
-        }
-        prev = p
-      })
+    for (const u of UNIVERSE_IDS) {
+      for (let span = FIRMAMENT_PATH_MIN_SPAN; span <= 120; span++) {
+        let prev = { nx: 0, ny: 0 }
+        firmamentSpots(span, u).forEach((p, i) => {
+          expect(firmamentInStartField(p.nx, p.ny), `U${u} span ${span} Knoten`).toBe(false)
+          const c = firmamentRoadCtrl(prev.nx, prev.ny, p.nx, p.ny, i)
+          for (const [ax, ay, bx, by] of [
+            [prev.nx, prev.ny, c.x, c.y],
+            [c.x, c.y, p.nx, p.ny],
+            [prev.nx, prev.ny, p.nx, p.ny],
+          ]) {
+            expect(firmamentChordHitsStart(ax, ay, bx, by), `U${u} span ${span} Bogen ${i}`).toBe(
+              false,
+            )
+          }
+          prev = p
+        })
+      }
     }
   })
 
   /* Der Kontrollpunkt liegt weiter aussen als die Sehne — gebunden gegen die
      Sprite-Kante, sonst wandert ein abgeschnittener Rand durchs Bild. */
   it('haelt den Kontrollpunkt innerhalb der Sprite-Kante', () => {
-    for (let span = FIRMAMENT_PATH_MIN_SPAN; span <= 120; span++) {
-      let prev = { nx: 0, ny: 0 }
-      firmamentSpots(span).forEach((p, i) => {
-        const c = firmamentRoadCtrl(prev.nx, prev.ny, p.nx, p.ny, i)
-        expect(Math.hypot(c.x, c.y), `span ${span}`).toBeLessThan(FIRMAMENT_PLATE_SPRITE_MARGIN)
-        prev = p
-      })
+    for (const u of UNIVERSE_IDS) {
+      for (let span = FIRMAMENT_PATH_MIN_SPAN; span <= 120; span++) {
+        let prev = { nx: 0, ny: 0 }
+        firmamentSpots(span, u).forEach((p, i) => {
+          const c = firmamentRoadCtrl(prev.nx, prev.ny, p.nx, p.ny, i)
+          expect(Math.hypot(c.x, c.y), `U${u} span ${span}`).toBeLessThan(
+            FIRMAMENT_PLATE_SPRITE_MARGIN,
+          )
+          prev = p
+        })
+      }
     }
   })
 })
@@ -188,14 +234,24 @@ describe('buildFirmamentPath — die Bahn eines Universums', () => {
   })
 
   /* Die Forderung, wegen der der Umbau stattfand: jede Bahn faengt bei Start an,
-     nicht dort, wo die vorige aufhoerte. */
+     nicht dort, wo die vorige aufhoerte. Der ABSTAND steht fest — die RICHTUNG
+     gehoert dem Universum, nur nicht nach unten, dort steht das Wort START. */
   it('beginnt JEDE Bahn im Kern', () => {
     for (const u of [1, 2, 5]) {
       const first = buildFirmamentPath(base(ARCHIVE, u, 5, 6, RUNS)).nodes[0]
       expect(first.radius).toBeCloseTo(FIRMAMENT_PATH_R0, 10)
-      expect(first.nx).toBeCloseTo(0, 10)
-      expect(first.ny).toBeCloseTo(-FIRMAMENT_PATH_R0, 10)
+      expect(Math.hypot(first.nx, first.ny)).toBeCloseTo(FIRMAMENT_PATH_R0, 10)
+      expect(firmamentInStartField(first.nx, first.ny)).toBe(false)
+      // Die Platte zieht das erste Stueck GERADE, von der Mitte zum Knoten.
+      expect(firmamentChordHitsStart(0, 0, first.nx, first.ny)).toBe(false)
     }
+  })
+
+  it('gibt dem ersten Platz je Universum eine andere Himmelsrichtung', () => {
+    const dirs = new Set(
+      UNIVERSE_IDS.map((u) => Math.round((firmamentSpots(8, u)[0].angle * 180) / Math.PI)),
+    )
+    expect(dirs.size).toBeGreaterThanOrEqual(3)
   })
 
   it('haengt laufende Galaxie und Vorausplaetze nur an die EIGENE Bahn', () => {
@@ -251,12 +307,39 @@ describe('buildFirmamentPath — der gemeinsame Massstab', () => {
     expect(short[short.length - 1].radius).toBeLessThan(long[long.length - 1].radius)
   })
 
-  it('haelt den Knotenabstand ueber einen Universumswechsel hinweg gleich', () => {
-    const a = buildFirmamentPath(base(ARCHIVE, 1, 5, 6, RUNS)).nodes
-    const b = buildFirmamentPath(base(ARCHIVE, 2, 5, 6, RUNS)).nodes
-    const step = (n: (typeof a)[number], m: (typeof a)[number]) =>
-      Math.hypot(n.nx - m.nx, n.ny - m.ny)
-    expect(step(a[0], a[1])).toBeCloseTo(step(b[0], b[1]), 10)
+  /* Was ueber einen Universumswechsel hinweg gleich bleibt, ist seit der
+     eigenen Streuung je Bahn nicht mehr der KNOTENABSTAND, sondern die
+     RADIUSLEITER: dasselbe Band je Index, aus demselben Nenner. Hier stand
+     einmal `step(a[0],a[1]) == step(b[0],b[1])` — das nagelte die Fassung fest,
+     in der zehn Universen dasselbe Sternbild trugen. */
+  it('haelt die Radiusleiter ueber einen Universumswechsel hinweg gleich', () => {
+    const span = FIRMAMENT_PATH_MIN_SPAN
+    const rOf = (t: number) =>
+      FIRMAMENT_PATH_R0 +
+      (FIRMAMENT_PATH_R1 - FIRMAMENT_PATH_R0) *
+        Math.pow(Math.min(1, Math.max(0, t / (span - 1))), FIRMAMENT_PATH_RADIUS_EXP)
+
+    for (const u of UNIVERSE_IDS) {
+      firmamentSpots(span, u).forEach((p, i) => {
+        const lo = rOf(i === 0 ? 0 : i - FIRMAMENT_SCATTER_T_WOBBLE)
+        const hi = rOf(i === 0 ? 0 : i + FIRMAMENT_SCATTER_T_WOBBLE)
+        expect(p.radius, `U${u} Platz ${i} unter dem Band`).toBeGreaterThanOrEqual(lo - 1e-12)
+        expect(p.radius, `U${u} Platz ${i} ueber dem Band`).toBeLessThanOrEqual(hi + 1e-12)
+      })
+    }
+  })
+
+  /* Und die Baender ueberlappen nicht: kein Platz `i` einer Bahn liegt weiter
+     aussen als Platz `i + 1` einer anderen. Das ist „wer weiter kam, kommt
+     weiter nach aussen" — die Aussage, die zwei Bahnen vergleichbar haelt. */
+  it('laesst die Baender zweier Bahnen nicht ineinanderrutschen', () => {
+    const span = FIRMAMENT_PATH_MIN_SPAN
+    const all = UNIVERSE_IDS.map((u) => firmamentSpots(span, u))
+    for (let i = 0; i + 1 < span; i++) {
+      const outerHere = Math.max(...all.map((p) => p[i].radius))
+      const innerNext = Math.min(...all.map((p) => p[i + 1].radius))
+      expect(outerHere, `Platz ${i} gegen ${i + 1}`).toBeLessThan(innerNext)
+    }
   })
 
   it('waechst der Nenner mit der laengsten Bahn, nicht mit der gezeigten', () => {

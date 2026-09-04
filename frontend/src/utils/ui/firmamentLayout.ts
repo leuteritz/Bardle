@@ -13,10 +13,15 @@
  * der Bahn, sondern im schwarzen Raum ausserhalb der Scheibe
  * (`firmamentPortalSpot`). Diese Datei sagt nur, DASS es eines gibt.
  *
- * Der Nenner ist dabei fuer ALLE Bahnen derselbe: der Knotenabstand bleibt
- * ueber einen Universumswechsel hinweg gleich, und wer weiter kam, kommt weiter
- * nach aussen. Eine Bahn, die ihre Scheibe selbst ausfuellte, saehe mit fuenf
+ * Der Nenner ist dabei fuer ALLE Bahnen derselbe: die RADIUSLEITER bleibt ueber
+ * einen Universumswechsel hinweg dieselbe, und wer weiter kam, kommt weiter nach
+ * aussen. Eine Bahn, die ihre Scheibe selbst ausfuellte, saehe mit fuenf
  * Galaxien aus wie eine mit dreissig.
+ *
+ * Die STREUUNG dagegen gehoert dem Universum: Himmelsrichtung, Winkelschritte,
+ * Drehneigung und die Auslenkung innerhalb des Radiusbandes haengen an seiner
+ * Nummer. Vorher hingen sie allein am Index — zehn Bahnen zeigten dasselbe
+ * Sternbild, nur unterschiedlich lang.
  *
  * Der Winkel ist dabei GEWUERFELT, nicht gezaehlt: ein fester Schritt legte die
  * Knoten auf eine Spirale, und jeder sass dort, wo man ihn nach dem vorigen
@@ -36,6 +41,7 @@ import {
   FIRMAMENT_SCATTER_STEP_MAX,
   FIRMAMENT_SCATTER_STEP_MIN,
   FIRMAMENT_SCATTER_TRIES,
+  FIRMAMENT_SCATTER_TURN_BIAS,
   FIRMAMENT_SCATTER_T_WOBBLE,
   FIRMAMENT_START_CLEAR_X,
   FIRMAMENT_START_CLEAR_Y0,
@@ -141,13 +147,24 @@ const RADIUS_SALT = 3
 const STEP_SALT = 11
 const SIGN_SALT = 23
 const BOW_SALT = 37
+/* Versatz je Universum. Er liegt ueber allem, was die vier Kanaele plus
+   Versuchsnummer erreichen (37 + 20) — sonst schoebe sich Universum 2 in die
+   Wuerfe von Universum 1.                                                     */
+const UNIVERSE_STRIDE = 167
+/** Himmelsrichtung und Drehneigung einer Bahn — eigener Kanal, wie 131/137 in
+ *  `firmamentPortalSpot`. */
+const ORIGIN_SALT = 173
 
 /** Radius des `i`-ten Platzes. Die Auslenkung sitzt im PARAMETER und bleibt
  *  unter dem halben Platzabstand: der Radius ist monoton, Platz 0 liegt exakt
- *  auf `_R0`. Ohne sie laegen die Knoten auf Ringen. */
-function spotRadius(i: number, span: number): number {
+ *  auf `_R0`. Ohne sie laegen die Knoten auf Ringen. Das BAND je Index ist fuer
+ *  alle Universen dasselbe — nur wo im Band der Knoten sitzt, gehoert der Bahn. */
+function spotRadius(i: number, span: number, universe: number): number {
   if (span <= 1) return FIRMAMENT_PATH_R0
-  const w = i === 0 ? 0 : (jitter(i, RADIUS_SALT) * 2 - 1) * FIRMAMENT_SCATTER_T_WOBBLE
+  const w =
+    i === 0
+      ? 0
+      : (jitter(i, RADIUS_SALT + universe * UNIVERSE_STRIDE) * 2 - 1) * FIRMAMENT_SCATTER_T_WOBBLE
   const t = Math.min(1, Math.max(0, (i + w) / (span - 1)))
   return (
     FIRMAMENT_PATH_R0 +
@@ -166,12 +183,7 @@ export function firmamentInStartField(nx: number, ny: number): boolean {
 
 /** Schneidet die Sehne zwischen zwei Plaetzen das Feld des Labels? Slab-
  *  Verfahren statt Abtastung — eine Abtastung uebersieht den flachen Schnitt. */
-export function firmamentChordHitsStart(
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number,
-): boolean {
+export function firmamentChordHitsStart(ax: number, ay: number, bx: number, by: number): boolean {
   const d = [bx - ax, by - ay]
   const p = [ax, ay]
   const lo = [-FIRMAMENT_START_CLEAR_X, FIRMAMENT_START_CLEAR_Y0]
@@ -210,24 +222,68 @@ export function firmamentRoadCtrl(
   return { x: ((ax + bx) / 2) * bow, y: ((ay + by) / 2) * bow }
 }
 
+/** Die Himmelsrichtung des ersten Platzes. Der ABSTAND zum Start steht fest
+ *  (`_PATH_R0`), die Richtung gehoert dem Universum — nur nicht nach unten, dort
+ *  steht das Wort START und die gerade Zufahrt liefe hindurch. Der Rueckfall ist
+ *  der alte feste Wert: ein misslungener Wurf sieht aus wie frueher. */
+function originAngle(universe: number): number {
+  for (let k = 0; k < FIRMAMENT_SCATTER_TRIES; k++) {
+    const a = jitter(universe, ORIGIN_SALT + k) * Math.PI * 2
+    const nx = Math.cos(a) * FIRMAMENT_PATH_R0
+    const ny = Math.sin(a) * FIRMAMENT_PATH_R0
+    if (firmamentInStartField(nx, ny)) continue
+    // Die Platte zieht das erste Stueck GERADE — nur die Sehne, kein Bogen.
+    if (firmamentChordHitsStart(0, 0, nx, ny)) continue
+    return a
+  }
+  return -Math.PI / 2
+}
+
+/* Die Karte ist ein Standbild, und `buildFirmamentPath` laeuft bei jedem
+   reaktiven Anlauf. Der Wurf kostet O(span² · TRIES) und haengt an nichts
+   Laufendem — gerechnet wird er einmal je (Spanne, Universum). Die Liste wird
+   nirgends mutiert, der Cache darf dieselbe Referenz reichen.                  */
+const SPOT_CACHE_MAX = 256
+const spotCache = new Map<string, FirmamentSpot[]>()
+
 /**
- * Die Plaetze einer Bahn mit `span` Knoten — EINE Streuung fuer alle Universen.
+ * Die Plaetze einer Bahn mit `span` Knoten — eine EIGENE Streuung je Universum.
  *
- * Platz 0 steht senkrecht ueber der Mitte, danach wandert der Winkel in
- * gewuerfelter Weite und Richtung. Der Mindestabstand ist deshalb ERZWUNGEN und
+ * Platz 0 steht in gewuerfelter Richtung nah am Start, danach wandert der Winkel
+ * in gewuerfelter Weite und Richtung. Gemeinsam bleibt allen Bahnen allein die
+ * RADIUSLEITER: dasselbe Band je Index, aus demselben Nenner — ohne sie waeren
+ * zwei Bahnen nicht mehr vergleichbar. Hing die Streuung am Index allein, zeigten
+ * zehn Universen dasselbe Sternbild, nur unterschiedlich lang.
+ *
+ * Der Mindestabstand ist deshalb ERZWUNGEN und
  * nicht mehr eine Folge der Regelmaessigkeit: ein Kandidat faellt durch, wenn er
  * einem gesetzten Knoten zu nahe kommt, im Feld des START-Labels liegt oder
  * sein BOGEN hindurchlaeuft. Ohne die dritte Bedingung liefen ueber alle Spannen
  * 571 Bahnzuege quer ueber das Wort; gegen die gerade Sehne gepruaeft blieben
  * 229 Kurvenpunkte in 24 Spannen uebrig, darunter 11 und 19.
  */
-export function firmamentSpots(span: number): FirmamentSpot[] {
+export function firmamentSpots(span: number, universe: number): FirmamentSpot[] {
+  const key = `${span}|${universe}`
+  const hit = spotCache.get(key)
+  if (hit) return hit
+  if (spotCache.size >= SPOT_CACHE_MAX) spotCache.clear()
+  const out = scatter(span, universe)
+  spotCache.set(key, out)
+  return out
+}
+
+function scatter(span: number, universe: number): FirmamentSpot[] {
+  const uSalt = universe * UNIVERSE_STRIDE
+  /* Die Drehneigung ist der Charakterzug einer Bahn: nahe 0 umrundet sie die
+     Mitte ueberwiegend in EINE Richtung und liest sich als weit geoeffneter Arm,
+     nahe 1 kehrt sie staendig um und liest sich als gestreute Sternkarte.      */
+  const turn = 0.5 + (jitter(universe, ORIGIN_SALT) * 2 - 1) * FIRMAMENT_SCATTER_TURN_BIAS
   const out: FirmamentSpot[] = []
-  let prev = -Math.PI / 2
+  let prev = originAngle(universe)
   for (let i = 0; i < span; i++) {
-    const radius = spotRadius(i, span)
+    const radius = spotRadius(i, span, universe)
     if (i === 0) {
-      out.push({ nx: 0, ny: -radius, angle: prev, radius })
+      out.push({ nx: Math.cos(prev) * radius, ny: Math.sin(prev) * radius, angle: prev, radius })
       continue
     }
 
@@ -236,9 +292,9 @@ export function firmamentSpots(span: number): FirmamentSpot[] {
     for (let k = 0; k < FIRMAMENT_SCATTER_TRIES; k++) {
       const step =
         FIRMAMENT_SCATTER_STEP_MIN +
-        jitter(i * 2 + 1, STEP_SALT + k) *
+        jitter(i * 2 + 1, STEP_SALT + k + uSalt) *
           (FIRMAMENT_SCATTER_STEP_MAX - FIRMAMENT_SCATTER_STEP_MIN)
-      const angle = prev + (jitter(i * 2 + 1, SIGN_SALT + k) < 0.5 ? -step : step)
+      const angle = prev + (jitter(i * 2 + 1, SIGN_SALT + k + uSalt) < turn ? -step : step)
       const nx = Math.cos(angle) * radius
       const ny = Math.sin(angle) * radius
       if (firmamentInStartField(nx, ny)) continue
@@ -381,7 +437,7 @@ export function buildFirmamentPath(input: FirmamentInput): FirmamentPath {
     }
   }
 
-  const spots = firmamentSpots(spanOf(input))
+  const spots = firmamentSpots(spanOf(input), input.universe)
 
   const nodes = rows.map((row, i) => {
     const p = spots[i]
