@@ -43,6 +43,12 @@ import {
   STAR_BODY_SPRITE_SPAN,
   STAR_BODY_UMBRA_ARMS,
   STAR_BODY_VEIL_WISPS,
+  STAR_BODY_WIND_FILAMENTS,
+  STAR_BODY_WIND_REACH,
+  STAR_BODY_WIND_RESOURCE_EVERY,
+  STAR_BODY_WIND_SALT,
+  STAR_BODY_WIND_SEC_MIN,
+  STAR_BODY_WIND_SEC_RANGE,
 } from '@/config/constants'
 import {
   clampSpriteDpr,
@@ -57,7 +63,7 @@ import {
 const TAU = Math.PI * 2
 
 export type StarRgb = readonly [number, number, number]
-export type StarSpriteLayer = 'halo' | 'core' | 'spin'
+export type StarSpriteLayer = 'halo' | 'core' | 'spin' | 'wind'
 export type StarDetail = 0 | 1 | 2
 
 export interface StarPalette {
@@ -114,6 +120,25 @@ export function starSeedFor(roll: number): number {
     STAR_BODY_SEED_SLOTS - 1,
     Math.floor(jitter(roll, STAR_BODY_SEED_SALT) * STAR_BODY_SEED_SLOTS),
   )
+}
+
+/** Wer eine Eruptionsfahne trägt: Champion und Boss immer, Eskorten nie,
+ *  Resource-Sterne jeder dritte — je Fahne eine Compositor-Ebene. */
+export function starWindShown(type: StarType, seed: number): boolean {
+  if (type === 'boss_escort') return false
+  if (type === 'resource') return seed % STAR_BODY_WIND_RESOURCE_EVERY === 0
+  return true
+}
+
+/** Winkel, Zyklus und (negativer) Startversatz der Fahne — je Stern fest, damit
+ *  nichts im Takt feuert. */
+export function starWindStyle(seed: number): { angleDeg: number; sec: number; delaySec: number } {
+  const sec = STAR_BODY_WIND_SEC_MIN + jitter(seed, STAR_BODY_WIND_SALT + 1) * STAR_BODY_WIND_SEC_RANGE
+  return {
+    angleDeg: Math.round(jitter(seed, STAR_BODY_WIND_SALT) * 360),
+    sec: Math.round(sec * 10) / 10,
+    delaySec: -Math.round(jitter(seed, STAR_BODY_WIND_SALT + 2) * sec * 10) / 10,
+  }
 }
 
 export function starBodyDetail(px: number): StarDetail {
@@ -731,17 +756,88 @@ export const paintSplinterSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) =>
   }
 }
 
+/* ── Sonnenwind ─────────────────────────────────────────────────────────────── */
+
+/** Ein getapertes Filament vom Rand (0,95 r) nach +x, quer gebogen; der Anker
+ *  in der Komponente dreht die ganze Ebene auf den Sternwinkel. */
+function windPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  seed: number,
+  i: number,
+  n: number,
+): void {
+  const foot = r * 0.95
+  const off = (i - (n - 1) / 2) * r * 0.16
+  const bend = sway(seed, 400 + i) * r * 0.85 + off * 2
+  const len = r * STAR_BODY_WIND_REACH * (0.82 + jitter(seed, 410 + i) * 0.18)
+  const w0 = r * (0.24 - i * 0.04)
+  ctx.beginPath()
+  ctx.moveTo(x + foot, y + off - w0)
+  ctx.quadraticCurveTo(x + len * 0.55, y + bend - w0 * 0.5, x + len, y + bend * 0.7)
+  ctx.quadraticCurveTo(x + len * 0.55, y + bend + w0 * 0.5, x + foot, y + off + w0)
+  ctx.closePath()
+}
+
+function windSparks(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, seed: number): void {
+  const bend = sway(seed, 400) * r * 0.85
+  for (let k = 0; k < 4; k++) {
+    const t = 0.35 + k * 0.17
+    circle(
+      ctx,
+      x + r * STAR_BODY_WIND_REACH * t,
+      y + bend * t * t * 0.9 + sway(seed, 420 + k) * r * 0.08,
+      r * 0.03,
+    )
+    ctx.fill()
+  }
+}
+
+export const paintStarWind: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
+  const n = detail === 0 ? 1 : detail === 1 ? 2 : STAR_BODY_WIND_FILAMENTS
+  for (let i = 0; i < n; i++) {
+    windPath(ctx, x, y, r, seed, i, n)
+    ctx.fillStyle = rayGradient(ctx, x, y, r, pal.rgb, 0.9, STAR_BODY_WIND_REACH, 0.95 - i * 0.15)
+    ctx.fill()
+  }
+  if (detail < 2) return
+  ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.8), 0.85)
+  windSparks(ctx, x, y, r, seed)
+}
+
+/** Der Boss bricht dunkel aus — schwarz-violett mit hellem Saum, kein Glühen. */
+export const paintUmbraWind: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
+  const n = detail === 0 ? 1 : detail === 1 ? 2 : STAR_BODY_WIND_FILAMENTS
+  for (let i = 0; i < n; i++) {
+    windPath(ctx, x, y, r, seed, i, n)
+    const g = ctx.createRadialGradient(x, y, r * 0.9, x, y, r * STAR_BODY_WIND_REACH)
+    g.addColorStop(0, rgba(mix(pal.rgb, 0, 0.82), 0.9))
+    g.addColorStop(0.6, rgba(mix(pal.rgb, 0, 0.6), 0.6))
+    g.addColorStop(1, rgba(pal.rgb, 0))
+    ctx.fillStyle = g
+    ctx.fill()
+    ctx.strokeStyle = rgba(mix(pal.rgb, 255, 0.5), 0.55 - i * 0.12)
+    ctx.lineWidth = Math.max(0.5, r * 0.03)
+    ctx.stroke()
+  }
+  if (detail < 2) return
+  ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.6), 0.7)
+  windSparks(ctx, x, y, r, seed)
+}
+
 /* ── Tabelle, Bau, Cache, Blit ──────────────────────────────────────────────── */
 
 export const STAR_LOOK_PAINTERS: Record<StarLook, Record<StarSpriteLayer, StarPaint>> = {
-  dwarf: { halo: paintDwarfHalo, core: paintDwarfCore, spin: paintDwarfSpin },
-  giant: { halo: paintGiantHalo, core: paintGiantCore, spin: paintGiantSpin },
-  pulsar: { halo: paintPulsarHalo, core: paintPulsarCore, spin: paintPulsarSpin },
-  binary: { halo: paintBinaryHalo, core: paintBinaryCore, spin: paintBinarySpin },
-  flare: { halo: paintFlareHalo, core: paintFlareCore, spin: paintFlareSpin },
-  veil: { halo: paintVeilHalo, core: paintVeilCore, spin: paintVeilSpin },
-  umbra: { halo: paintUmbraHalo, core: paintUmbraCore, spin: paintUmbraSpin },
-  splinter: { halo: paintSplinterHalo, core: paintSplinterCore, spin: paintSplinterSpin },
+  dwarf: { halo: paintDwarfHalo, core: paintDwarfCore, spin: paintDwarfSpin, wind: paintStarWind },
+  giant: { halo: paintGiantHalo, core: paintGiantCore, spin: paintGiantSpin, wind: paintStarWind },
+  pulsar: { halo: paintPulsarHalo, core: paintPulsarCore, spin: paintPulsarSpin, wind: paintStarWind },
+  binary: { halo: paintBinaryHalo, core: paintBinaryCore, spin: paintBinarySpin, wind: paintStarWind },
+  flare: { halo: paintFlareHalo, core: paintFlareCore, spin: paintFlareSpin, wind: paintStarWind },
+  veil: { halo: paintVeilHalo, core: paintVeilCore, spin: paintVeilSpin, wind: paintStarWind },
+  umbra: { halo: paintUmbraHalo, core: paintUmbraCore, spin: paintUmbraSpin, wind: paintUmbraWind },
+  splinter: { halo: paintSplinterHalo, core: paintSplinterCore, spin: paintSplinterSpin, wind: paintStarWind },
 }
 
 const cache = createSpriteCache(STAR_BODY_SPRITE_CANVAS_MAX)
@@ -755,6 +851,8 @@ export function buildStarSprite(
   dpr: number,
   detail: StarDetail,
 ): HTMLCanvasElement | null {
+  // Unter 22 px sieht man keine Fahne (Regel 7)
+  if (layer === 'wind' && detail === 0) return null
   const d = clampSpriteDpr(dpr)
   const key = starBodySpriteKey(layer, look, rgb, seed, px, d, detail)
   const hit = cache.get(key)
@@ -848,8 +946,10 @@ export function mountStarSprites(
   const key = starBodySpriteKey('all', look, rgb, seed, rounded, d, detail)
   if (host.dataset.spriteKey === key) return
   host.dataset.spriteKey = key
-  for (const layer of ['halo', 'core', 'spin'] as const) {
-    const slot = host.querySelector<HTMLElement>(`:scope > .star-${layer}`)
+  for (const layer of ['halo', 'core', 'spin', 'wind'] as const) {
+    const slot = host.querySelector<HTMLElement>(
+      layer === 'wind' ? ':scope > .star-wind-anchor > .star-wind' : `:scope > .star-${layer}`,
+    )
     if (!slot) continue
     const layerKey = starBodySpriteKey(layer, look, rgb, seed, rounded, d, detail)
     mountSpriteImage(slot, layerKey, spriteUrl(layerKey, buildStarSprite(layer, look, rgb, seed, px, d, detail)))

@@ -104,6 +104,10 @@
             <div class="star-hover-glow" />
             <div class="star-charge" />
             <div class="star-spawn-flash" />
+            <!-- Anker dreht, Fahne animiert: ein Keyframe überschreibt transform ganz -->
+            <div v-if="starWindShown(star.starType, star.seed)" class="star-wind-anchor">
+              <div class="star-wind" />
+            </div>
             <div class="star-spin" />
             <div class="star-pulse-overlay" />
           </div>
@@ -389,7 +393,7 @@ import {
   STAR_BODY_SPIN_SEC,
 } from '@/config/constants'
 import { setMapEl, sweepMapEls, type FrameElRef } from '@/utils/orbit/frameEls'
-import { mountStarSprites, starBodyDetail } from '@/utils/fx/starBodySprite'
+import { mountStarSprites, starBodyDetail, starWindShown, starWindStyle } from '@/utils/fx/starBodySprite'
 import { hudFieldMetrics, hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
 import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
@@ -1539,10 +1543,14 @@ function starWrapStyle(star: StarRenderEntry) {
 
 function starBodyVisualStyle(star: StarRenderEntry) {
   const [r, g, b] = star.starColor
+  const wind = starWindStyle(star.seed)
   return {
     '--star-rgb': `${r}, ${g}, ${b}`,
     '--star-span': String(STAR_BODY_SPRITE_SPAN),
     '--star-spin-sec': `${STAR_BODY_SPIN_SEC[star.look]}s`,
+    '--wind-angle': `${wind.angleDeg}deg`,
+    '--wind-sec': `${wind.sec}s`,
+    '--wind-delay': `${wind.delaySec}s`,
     // Fokussierter Stern: kein Behind-Blur — er soll vor der Sonne klar lesbar sein
     filter: (isFocusStar(star.id) ? '' : star.filterStyle) || undefined,
     // Nur der Filter-Umschlag darf weich sein — die Opacity wird pro Frame
@@ -2147,6 +2155,57 @@ function starCountStyle(star: StarRenderEntry) {
   animation: star-spin-turn var(--star-spin-sec, 40s) linear infinite;
 }
 
+/* Sonnenwind: der Anker trägt den Winkel, die Fahne die Eruption — nur
+   transform/opacity, ~22 % des Zyklus sichtbar, Versatz je Stern. */
+.star-wind-anchor {
+  position: absolute;
+  inset: calc(50% - var(--star-span, 2.2) * 50%);
+  transform: rotate(var(--wind-angle, 0deg));
+  pointer-events: none;
+}
+
+.star-wind {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: star-wind-burst var(--wind-sec, 20s) ease-out var(--wind-delay, 0s) infinite;
+  pointer-events: none;
+}
+
+.star-wind :deep(img) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+
+.star-body--flat .star-wind {
+  animation: none;
+}
+
+@keyframes star-wind-burst {
+  0% {
+    opacity: 0;
+    transform: translateX(-4%) scale(0.72);
+  }
+  5% {
+    opacity: 0.9;
+    transform: translateX(0) scale(0.9);
+  }
+  14% {
+    opacity: 0.55;
+    transform: translateX(7%) scale(1.06);
+  }
+  22% {
+    opacity: 0;
+    transform: translateX(14%) scale(1.16);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(14%) scale(1.16);
+  }
+}
+
 /* Wie der Ring: Ressourcensterne stellen die Masse im Orbit und drehen NICHT
    (bei dreissig Stück wären es dreissig Compositor-Animationen samt Style-
    Invalidierung je Frame; gemessen +30 ms/s). Klein trägt keine Drehebene —
@@ -2258,7 +2317,8 @@ function starCountStyle(star: StarRenderEntry) {
   .star-body-wrap:hover .star-body,
   .star-body-wrap:active .star-body,
   .star-body-wrap.star-hovered .star-body,
-  .star-spin {
+  .star-spin,
+  .star-wind {
     animation: none;
   }
 

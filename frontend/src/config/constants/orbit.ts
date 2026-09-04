@@ -631,6 +631,15 @@ export const STAR_BODY_BINARY_COMPANION_AT = 0.58
 export const STAR_BODY_FLARE_LOOPS = 3
 export const STAR_BODY_FLARE_LOOP_R = 0.34
 export const STAR_BODY_FLARE_TAIL_LEN = 1.9
+/** Sonnenwind: eine Eruptionsfahne (vierte Sprite-Ebene), die selten aufsteigt und
+ *  abreisst. Nur Champion, Boss und jeder dritte Resource-Stern tragen eine — jede
+ *  ist eine Compositor-Ebene, bei dreissig Sternen wären es dreissig. */
+export const STAR_BODY_WIND_REACH = 2.05
+export const STAR_BODY_WIND_FILAMENTS = 3
+export const STAR_BODY_WIND_SEC_MIN = 16
+export const STAR_BODY_WIND_SEC_RANGE = 8
+export const STAR_BODY_WIND_RESOURCE_EVERY = 3
+export const STAR_BODY_WIND_SALT = 211
 export const STAR_BODY_VEIL_WISPS = 5
 export const STAR_BODY_UMBRA_ARMS = 6
 export const STAR_BODY_SPLINTER_WOBBLE = 0.22

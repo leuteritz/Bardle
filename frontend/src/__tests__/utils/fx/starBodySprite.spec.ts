@@ -6,6 +6,10 @@ import {
   starLookFor,
   starPaletteFromRgb,
   starSeedFor,
+  starWindShown,
+  starWindStyle,
+  paintStarWind,
+  paintUmbraWind,
   type StarDetail,
   type StarSpriteLayer,
 } from '@/utils/fx/starBodySprite'
@@ -16,6 +20,9 @@ import {
   STAR_BODY_SEED_SLOTS,
   STAR_BODY_SPIN_SEC,
   STAR_BODY_SPRITE_SPAN,
+  STAR_BODY_WIND_RESOURCE_EVERY,
+  STAR_BODY_WIND_SEC_MIN,
+  STAR_BODY_WIND_SEC_RANGE,
 } from '@/config/constants'
 import type { StarLook } from '@/types'
 import { recordingCtx } from '../../helpers/recordingCtx'
@@ -203,5 +210,71 @@ describe('Sternkörper — Gestalt, Stufe, Palette', () => {
     expect(edge[0]).toBeLessThan(low[0])
     expect(hi[0]).toBeGreaterThan(hi[1])
     expect(low[0]).toBeGreaterThan(low[1])
+  })
+})
+
+describe('Sonnenwind — die vierte Ebene', () => {
+  const wind = (paint: typeof paintStarWind, detail: StarDetail, seed = 3, x = 100, y = 100) => {
+    const { ctx, ops } = recordingCtx()
+    paint(ctx, x, y, R, starPaletteFromRgb(RGB), seed, detail)
+    return ops
+  }
+
+  it('malt auf jeder Stufe ein Filament, mit der Stufe mehr, und ist deterministisch', () => {
+    for (const paint of [paintStarWind, paintUmbraWind]) {
+      const counts = ([0, 1, 2] as const).map((d) => wind(paint, d).length)
+      expect(counts[0]).toBeGreaterThan(3)
+      expect(counts[1]).toBeGreaterThan(counts[0])
+      expect(counts[2]).toBeGreaterThan(counts[1])
+      expect(wind(paint, 2, 5).join('|')).toBe(wind(paint, 2, 5).join('|'))
+      expect(wind(paint, 2, 1).join('|')).not.toBe(wind(paint, 2, 6).join('|'))
+    }
+    expect(wind(paintStarWind, 2).join('|')).not.toBe(wind(paintUmbraWind, 2).join('|'))
+  })
+
+  it('bleibt innerhalb des Sprite-Feldes und beginnt am Rand', () => {
+    const halfSpan = R * STAR_BODY_SPRITE_SPAN
+    const pt = /^(moveTo|quadraticCurveTo)\((?:-?[\d.]+,)*(-?[\d.]+),(-?[\d.]+)\)$/
+    for (let seed = 0; seed < STAR_BODY_SEED_SLOTS; seed++) {
+      const ops = wind(paintStarWind, 2, seed, halfSpan, halfSpan)
+      const feet = ops.filter((o) => o.startsWith('moveTo('))
+      expect(feet.length).toBeGreaterThanOrEqual(3)
+      for (const op of ops) {
+        const m = pt.exec(op)
+        if (!m) continue
+        expect(Math.abs(Number(m[2]) - halfSpan), op).toBeLessThanOrEqual(halfSpan + 0.01)
+        expect(Math.abs(Number(m[3]) - halfSpan), op).toBeLessThanOrEqual(halfSpan + 0.01)
+      }
+      for (const f of feet) {
+        const m = /^moveTo\((-?[\d.]+),/.exec(f)!
+        expect(Number(m[1]) - halfSpan).toBeCloseTo(R * 0.95, 1)
+      }
+    }
+  })
+
+  it('Champion und Boss tragen immer eine Fahne, Eskorten nie, Resource jeder dritte', () => {
+    let resource = 0
+    for (let seed = 0; seed < 24; seed++) {
+      expect(starWindShown('champion', seed)).toBe(true)
+      expect(starWindShown('galaxy_boss', seed)).toBe(true)
+      expect(starWindShown('boss_escort', seed)).toBe(false)
+      if (starWindShown('resource', seed)) resource++
+    }
+    expect(resource).toBe(24 / STAR_BODY_WIND_RESOURCE_EVERY)
+  })
+
+  it('Winkel, Zyklus und Versatz liegen im Band und streuen', () => {
+    const seen = new Set<number>()
+    for (let seed = 0; seed < STAR_BODY_SEED_SLOTS; seed++) {
+      const w = starWindStyle(seed)
+      expect(w.angleDeg).toBeGreaterThanOrEqual(0)
+      expect(w.angleDeg).toBeLessThanOrEqual(360)
+      expect(w.sec).toBeGreaterThanOrEqual(STAR_BODY_WIND_SEC_MIN)
+      expect(w.sec).toBeLessThanOrEqual(STAR_BODY_WIND_SEC_MIN + STAR_BODY_WIND_SEC_RANGE)
+      expect(w.delaySec).toBeLessThanOrEqual(0)
+      expect(-w.delaySec).toBeLessThanOrEqual(w.sec)
+      seen.add(w.angleDeg)
+    }
+    expect(seen.size).toBeGreaterThan(STAR_BODY_SEED_SLOTS / 2)
   })
 })
