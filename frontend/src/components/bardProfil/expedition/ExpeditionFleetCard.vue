@@ -38,6 +38,7 @@ import {
   VOYAGE_FLEET_CARD_MIN_W,
   VOYAGE_FLEET_CARD_ROW_GAP,
   VOYAGE_FLEET_CHIME_PX,
+  VOYAGE_FLEET_CHIME_SCALE,
   VOYAGE_FLEET_DUR_W,
   VOYAGE_FLEET_EARN_GAP,
   VOYAGE_FLEET_EARN_TIGHT,
@@ -84,6 +85,7 @@ const durW = `${VOYAGE_FLEET_DUR_W}px`
 const earnGap = `${VOYAGE_FLEET_EARN_GAP}px`
 const earnTight = `${VOYAGE_FLEET_EARN_TIGHT}px`
 const chimePx = `${VOYAGE_FLEET_CHIME_PX}px`
+const chimeScale = `${VOYAGE_FLEET_CHIME_SCALE}`
 const lootIcon = `${VOYAGE_FLEET_LOOT_ICON}px`
 const tierBarW = `${VOYAGE_FLEET_TIER_BAR_W}px`
 const tierGap = `${VOYAGE_FLEET_TIER_BAR_GAP}px`
@@ -504,25 +506,30 @@ const aria = computed(
    Nur der TON bleibt der leisere — der Lohn ist die Zahl, wegen der die Zeile
    da ist. */
 .vfc-meep {
-  font-size: 25px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1;
   color: rgba(232, 220, 192, 0.82);
   white-space: nowrap;
 }
 /* Das ECHTE Artwork, kein Iconify-Ersatz — dieselbe Währung sieht überall
-   gleich aus. 18 px bleiben unter der 34-px-Schwelle der 128er-Stufe. */
+   gleich aus, und 20 px bleiben unter der 34-px-Schwelle der 128er-Stufe.
+
+   Die Skalierung richtet das MOTIV an der Boxkante aus: es füllt nur 69,5 % der
+   Bildbreite, das sichtbare Chime begann also 3 px rechts von der Uhr darunter.
+   Dieselbe Korrektur, die `.vfc-meep-i` schon trägt. */
 .vfc-chime {
   flex-shrink: 0;
   width: v-bind(chimePx);
   height: v-bind(chimePx);
   object-fit: contain;
+  transform: scale(v-bind(chimeScale));
 }
 /* Sie gibt nie nach: kürzte sie sich weg, verschwände die eine Zahl, wegen der
    die Zeile da ist. */
 .vfc-pay {
   flex-shrink: 0;
-  font-size: 25px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1;
   color: #e8dcc0;
@@ -534,11 +541,15 @@ const aria = computed(
 .vfc--failed .vfc-pay {
   color: #e08a7a;
 }
-/* Reservierte Zahlenbreite, sonst wandert die Pille, wenn 100 % auf 98 % fällt. */
+/* Sie steht NEBEN der Uhr, nicht am Kartenrand: Frist und Aussicht sind die zwei
+   Hälften derselben Frage. Dass sie dabei nicht wandert, wenn „4:13" auf „0:46"
+   fällt, trägt die reservierte Breite der Uhr — genau dafür ist sie da.
+
+   Die eigene reservierte Breite bleibt trotzdem: sonst rückt die Pille, wenn
+   100 % auf 98 % fällt. */
 .vfc-odds {
   flex: 0 0 auto;
   min-width: v-bind(oddsW);
-  margin-left: auto;
   padding: 2px 5px;
   border-radius: 3px;
   background: rgba(11, 8, 6, 0.55);
@@ -590,10 +601,10 @@ const aria = computed(
 .vfc--urgent .vfc-lead {
   color: #e08a7a;
 }
-/* Sie nimmt den Platz der Erfolgsaussicht, nicht einen eigenen. */
+/* Sie nimmt den Platz der Erfolgsaussicht, nicht einen eigenen — also steht sie
+   auch dort, wo die stünde: neben der Uhr. */
 .vfc-tail {
   flex: 0 0 auto;
-  margin-left: auto;
 }
 
 /* Dieselbe Formel wie „✓ Returned": Farbe, Rand auf 40 %, Grund auf 12 %. KEIN

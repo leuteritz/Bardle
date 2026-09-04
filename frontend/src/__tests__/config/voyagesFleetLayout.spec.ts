@@ -79,12 +79,12 @@ const CARD_INNER_W =
 
 /**
  * Die ZWEI Gruppen der Ertragszeile, jede als Aussenmass — Chimes und Meeps, die
- * beiden Währungen, und sie sind GLEICH gross (25 px Zahl, 16 px Sprite). Material war einmal eine dritte und ist gefallen: es ist die
+ * beiden Währungen, und sie sind GLEICH gross (24 px Zahl, 20 px Sprite). Material war einmal eine dritte und ist gefallen: es ist die
  * dritte Zahl in einer Zeile, die von zweien handelt, und steht vollständig in
  * `ExpeditionSubjectTooltip`. Erst dadurch konnte der Lohn auf 28 px wachsen.
  *
- * Die Wand der Meepzahl ist die NULL, nicht die Neun (16,53 gegen 15,08 bei
- * 25 px) — dieselbe Überraschung wie beim Lohn. Mit der Eins band die Spec
+ * Die Wand der Meepzahl ist die NULL, nicht die Neun (15,88 gegen 14,48 bei
+ * 24 px) — dieselbe Überraschung wie beim Lohn. Mit der Eins band die Spec
  * einmal 2 px zu schmal, und die Zeile schloss im Browser mit 0,11 px Reserve.
  */
 const PAY_W = VOYAGE_FLEET_CHIME_PX + VOYAGE_FLEET_EARN_TIGHT + VOYAGE_FLEET_PAY_MAX_PX
@@ -277,7 +277,7 @@ describe('voyages fleet strip', () => {
    * Die 89 sind der Preis des Kanaltauschs — der Zustandsstreifen sitzt jetzt
    * OBEN und kostet 3 px Rahmen in der Höhe statt in der Breite. Bezahlt hat es
    * die Ertragszeile (30 → 28); sie braucht die 30 nicht mehr, seit Lohn und
-   * Meepzahl bei 25 px stehen statt der Lohn allein bei 28.
+   * Meepzahl bei 24 px stehen statt der Lohn allein bei 28.
    */
   it('trägt die drei Zeilen der Karte samt Lücken', () => {
     const rows = VOYAGE_FLEET_AVATAR_PX + VOYAGE_FLEET_PAY_H + VOYAGE_FLEET_READ_H
@@ -293,9 +293,9 @@ describe('voyages fleet strip', () => {
    * Zahl, die abschneiden kann.
    *
    * Alle Textbreiten sind im Browser GEMESSEN, nicht gerechnet (MedievalSharp
-   * hat keine Tabellenziffern, `docs/playwright.md`): Lohn „+900.00M" bei 25 px
-   * fett (123,44 — NICHT „999.99M", die Null ist breiter als die Neun, und eine
-   * zurückgekehrte Mission trägt ein `+`), Meep-Ziffer „0" bei 25 px (16,53),
+   * hat keine Tabellenziffern, `docs/playwright.md`): Lohn „+900.00M" bei 24 px
+   * fett (118,5 — NICHT „999.99M", die Null ist breiter als die Neun, und eine
+   * zurückgekehrte Mission trägt ein `+`), Meep-Ziffer „0" bei 24 px (15,88),
    * „100 %" bei 13 px, Uhr „12:00" bei 19 px, Dauer „12m 30s" bei 13 px.
    */
   it('trägt die Ertragszeile mit Lohn und Meep', () => {

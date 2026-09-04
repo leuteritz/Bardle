@@ -1056,11 +1056,15 @@ export const VOYAGE_FLEET_MARK_MAX_PX = 63
  * Trupp ihr die Breite lässt.
  */
 export const VOYAGE_FLEET_DUR_W = 54
-/** Lücke zwischen zwei Gruppen einer Zeile, und die engere innerhalb einer
- *  Gruppe (Glyph gegen Zahl). Die Spec rechnet alle drei Zeilen daraus.
- *  Die enge steht auf 2, seit Glyph und Zahl als EIN Objekt lesen sollen —
- *  sie war einmal 3 und hat der überfüllten Ertragszeile Platz gemacht. */
-export const VOYAGE_FLEET_EARN_GAP = 4
+/**
+ * Lücke zwischen zwei Gruppen einer Zeile, und die engere innerhalb einer Gruppe
+ * (Glyph gegen Zahl). Die Spec rechnet alle drei Zeilen daraus.
+ *
+ * Der ABSTAND der beiden ist die eigentliche Aussage: 2 px binden Glyph und Zahl
+ * zu EINEM Objekt, 8 px trennen zwei Beträge. Bei 4 zu 2 war der Unterschied zu
+ * klein — „555,14K✦1" las sich als eine Zeichenkette statt als Lohn und Meep.
+ */
+export const VOYAGE_FLEET_EARN_GAP = 8
 export const VOYAGE_FLEET_EARN_TIGHT = 2
 /**
  * Chime- und Meep-Artwork auf der Karte — die BEIDEN Erträge, die sie zeigt, und
@@ -1072,30 +1076,51 @@ export const VOYAGE_FLEET_EARN_TIGHT = 2
  * gleichrangig, und mit 14 px neben 16 und einer 13-px-Zahl neben einer 28er las
  * sich der Meep als Fussnote des Lohns.
  */
-export const VOYAGE_FLEET_CHIME_PX = 16
-export const VOYAGE_FLEET_LOOT_ICON = 16
+export const VOYAGE_FLEET_CHIME_PX = 20
+export const VOYAGE_FLEET_LOOT_ICON = 20
+/**
+ * Das Chime-Artwork trägt einen breiten Alpha-Rand: im Canvas GEMESSEN füllt das
+ * Motiv nur 69,5 % der Bildbreite, links und rechts bleiben je 15,2 % leer. Die
+ * Element-Box beginnt also an der Inhaltskante, das sichtbare Chime erst 3 px
+ * weiter rechts — und die Uhr eine Zeile darunter stand sichtbar daneben statt
+ * darunter.
+ *
+ * `1 / 0,695 = 1,44` zieht das Motiv auf die volle Boxbreite. Danach sitzt die
+ * Uhr von selbst bündig, und das Bild wirkt zugleich grösser. Korrigiert wird
+ * das SPRITE, nicht die Textposition: eine Uhr, die an den Alpha-Rand einer
+ * PNG-Datei genagelt ist, verrutscht beim nächsten Export.
+ *
+ * Dieselbe Korrektur, die `UNIVERSE_TOOLTIP_MEEP_SCALE` für das Meep trägt —
+ * eigener Faktor, weil es ein anderes Motiv in einem anderen Seitenverhältnis
+ * ist (85 x 128 gegen 128 x 128).
+ *
+ * `transform` ändert die Flussbreite NICHT: der Überstand ist transparent und
+ * kostet in der Breitenrechnung der Ertragszeile nichts.
+ */
+export const VOYAGE_FLEET_CHIME_SCALE = 1.44
 /**
  * Die beiden Textbreiten der Ertragszeile, im Browser per `Range` GEMESSEN —
- * beide bei 25 px, denn Lohn und Meepzahl sind gleich gross. Sie sind die Wand,
+ * beide bei 24 px, denn Lohn und Meepzahl sind gleich gross. Sie sind die Wand,
  * gegen die `voyagesFleetLayout.spec.ts` die Zeile rechnet.
  *
- * Der Lohn hat DREI Überraschungen. „999.99M" ist NICHT der schlimmste Fall
- * (106,25 bei 25 px) — die NULL ist breiter als die Neun, und eine
- * zurückgekehrte Mission trägt das Präfix `+` (`rewardPrefix`), das allein rund
- * 13 px kostet. Gemessen: „+900.00M" 123,44, als theoretische Obergrenze
- * „+000.00M" 124,28. Die alte 102 war deshalb schon vor dem Umbau zu schmal
- * gebunden: sie mass „999.99M" ohne Präfix.
+ * Der Lohn hat DREI Überraschungen. „999.99M" ist NICHT der schlimmste Fall —
+ * die NULL ist breiter als die Neun, und eine zurückgekehrte Mission trägt das
+ * Präfix `+` (`rewardPrefix`), das allein rund 13 px kostet. Gemessen bei 24 px:
+ * „+900.00M" 118,5, als theoretische Obergrenze „+000.00M" 119,3. Die alte 102
+ * war deshalb schon vor dem Umbau zu schmal gebunden: sie mass „999.99M" ohne
+ * Präfix.
  *
  * Die Meepzahl ist eine Ziffer, denn `EXPEDITION_SPOILS` gibt höchstens 1 Meep.
- * Gebunden ist trotzdem die breiteste — die NULL mit 16,53 — die Wand soll die
- * Stufen überleben, nicht sie beschreiben.
+ * Gebunden ist trotzdem die breiteste — die NULL mit 15,88 gegen die Acht mit
+ * 14,48 — die Wand soll die Stufen überleben, nicht sie beschreiben.
  *
- * Warum 25 und nicht 26: bei 26 schliesst die Zeile mit 188 von 190 px, also
- * 2 px Reserve. Das ist keine, und der Unterschied ist auf dem Schirm nicht zu
- * sehen. Bei 25 sind es 182 von 190.
+ * Warum 24 und nicht 25: die 6 px, die die Wand dabei verliert, zahlen die
+ * grösseren Sprites (16 → 20) und die doppelte Gruppenlücke (4 → 8). Ein Pixel
+ * Schriftgrösse sieht niemand, einen klebenden Meep neben dem Lohn schon.
+ * Gerechnet: 20 + 2 + 120 + 8 + 20 + 2 + 16 = 188 von 190.
  */
-export const VOYAGE_FLEET_PAY_MAX_PX = 125
-export const VOYAGE_FLEET_LOOT_MAX_PX = 17
+export const VOYAGE_FLEET_PAY_MAX_PX = 120
+export const VOYAGE_FLEET_LOOT_MAX_PX = 16
 /**
  * Der Stufenstreifen — SENKRECHT an der linken Kante, drei Segmente übereinander.
  * Er liegt ABSOLUT und kostet deshalb keine Zeile; der Höhenhaushalt der Karte
