@@ -25,7 +25,6 @@ import {
   VOYAGE_FLEET_DUR_W,
   VOYAGE_FLEET_CHIME_PX,
   VOYAGE_FLEET_LOOT_ICON,
-  VOYAGE_FLEET_MAT_ICON_PX,
   VOYAGE_FLEET_PAY_MAX_PX,
   VOYAGE_FLEET_LOOT_MAX_PX,
   VOYAGE_FLEET_EARN_GAP,
@@ -74,17 +73,17 @@ const CARD_INNER_W =
   VOYAGE_FLEET_CARD_MIN_W - 2 * VOYAGE_FLEET_CARD_INSET_X - VOYAGE_FLEET_CARD_BORDER_X
 
 /**
- * Die DREI Gruppen der Ertragszeile, jede als Aussenmass. Sie stehen seit dem
- * Umbau nebeneinander in EINER Zeile — vorher lagen die Chimes über und Material
- * und Meep unter der Uhr, und was zusammengehört, las sich als drei Zahlen.
+ * Die ZWEI Gruppen der Ertragszeile, jede als Aussenmass — Chimes und Meeps, die
+ * beiden Währungen. Material war einmal eine dritte und ist gefallen: es ist die
+ * dritte Zahl in einer Zeile, die von zweien handelt, und steht vollständig in
+ * `ExpeditionSubjectTooltip`. Erst dadurch konnte der Lohn auf 28 px wachsen.
  *
- * Die Wand der Meepzahl ist die NEUN, nicht die Eins: die Eins misst 3,94 bei
- * 12 px, die Neun gemessene 7,53. Mit der 6 aus der Eins band die Spec 2 px zu
- * schmal, und die Zeile schloss im Browser mit 0,11 px Reserve.
+ * Die Wand der Meepzahl ist die NEUN, nicht die Eins (3,94 gegen 7,53 bei 12 px):
+ * mit der Eins band die Spec einmal 2 px zu schmal, und die Zeile schloss im
+ * Browser mit 0,11 px Reserve.
  */
 const PAY_W = VOYAGE_FLEET_CHIME_PX + VOYAGE_FLEET_EARN_TIGHT + VOYAGE_FLEET_PAY_MAX_PX
-const MAT_W = VOYAGE_FLEET_MAT_ICON_PX + VOYAGE_FLEET_EARN_TIGHT + VOYAGE_FLEET_LOOT_MAX_PX
-const MEEP_W = VOYAGE_FLEET_LOOT_ICON + VOYAGE_FLEET_EARN_TIGHT + 8
+const MEEP_W = VOYAGE_FLEET_LOOT_ICON + VOYAGE_FLEET_EARN_TIGHT + VOYAGE_FLEET_LOOT_MAX_PX
 
 /**
  * Die Breite des Crew-STAPELS: der erste Sitz voll, jeder weitere um die
@@ -265,11 +264,11 @@ describe('voyages fleet strip', () => {
    * 110 bräche schon die Zusicherung darüber, und danach die Kopfleiste, danach
    * beide STAGE_HEIGHT-Tabellen. Wer eine Zeile ergänzt, bricht hier zuerst.
    *
-   * Crew 34 + Ertrag 28 + Ablesung 22 + 2 x 3 Lücke = 90 von 91 px. Vier waren
+   * Crew 34 + Ertrag 30 + Ablesung 22 + 2 x 2 Lücke = 90 von 91 px. Vier waren
    * es einmal: die Kopfzeile (Glyph + Zielname) und die Fortschrittsschiene sind
    * gefallen und haben ihre 31 px an die Portraits und die beiden Zahlenzeilen
-   * abgegeben. Die 2 px, die die Ablesezeile für ihre 19-px-Uhr gewonnen hat,
-   * zahlen die beiden Zeilenlücken (4 → 3).
+   * abgegeben. Bezahlt haben seither zweimal die Zeilenlücken, beide Male für
+   * Schriftgrösse: 4 → 3 für die 19-px-Uhr, dann 3 → 2 für den 28-px-Lohn.
    */
   it('trägt die drei Zeilen der Karte samt Lücken', () => {
     const rows = VOYAGE_FLEET_AVATAR_PX + VOYAGE_FLEET_PAY_H + VOYAGE_FLEET_READ_H
@@ -279,24 +278,19 @@ describe('voyages fleet strip', () => {
   })
 
   /**
-   * Die ERTRAGSZEILE, der engste Platz der Karte: Chime-Artwork, der Lohn in
-   * 24 px, das Material-Glyph mit seiner Zahl, das Meep-Sprite mit seiner.
-   *
-   * ZWEI Zusicherungen, weil die Gruppen NICHT gleich viel wert sind. Lohn und
-   * Material geben NIE nach — kürzte sich der Lohn weg, verschwände die eine
-   * Zahl, wegen der die Zeile da ist. Die Meep-Gruppe ist der kleinste
-   * Ertragsposten und die einzige Zelle der Zeile, die schrumpfen darf; ihre
-   * Zusicherung ist deshalb die weichere, aber sie steht: 187 von 188 px.
+   * Die ERTRAGSZEILE: Chime-Artwork, der Lohn in 28 px, das Meep-Sprite mit
+   * seiner Zahl. KEINE Zelle darf hier nachgeben — seit Material gefallen ist,
+   * stehen rund 18 px Reserve, und eine Zahl, die schrumpfen darf, ist eine
+   * Zahl, die abschneiden kann.
    *
    * Alle Textbreiten sind im Browser GEMESSEN, nicht gerechnet (MedievalSharp
-   * hat keine Tabellenziffern, `docs/playwright.md`): Lohn „999.99M" bei 24 px
-   * fett, „100 %" bei 13 px, Uhr „12:00" bei 19 px, Beutezahl „2.6" bei 12 px,
-   * Dauer „12m 30s" bei 13 px.
+   * hat keine Tabellenziffern, `docs/playwright.md`): Lohn „+900.00M" bei 28 px
+   * fett (139 — NICHT „999.99M", die Null ist breiter als die Neun, und eine
+   * zurückgekehrte Mission trägt ein `+`), „100 %" bei 13 px, Uhr „12:00" bei
+   * 19 px, Meep-Ziffer bei 13 px, Dauer „12m 30s" bei 13 px.
    */
-  it('trägt die Ertragszeile mit Lohn, Material und Meep', () => {
-    const firm = PAY_W + VOYAGE_FLEET_EARN_GAP + MAT_W
-    expect(firm).toBeLessThanOrEqual(CARD_INNER_W)
-    expect(firm + VOYAGE_FLEET_EARN_GAP + MEEP_W).toBeLessThanOrEqual(CARD_INNER_W)
+  it('trägt die Ertragszeile mit Lohn und Meep', () => {
+    expect(PAY_W + VOYAGE_FLEET_EARN_GAP + MEEP_W).toBeLessThanOrEqual(CARD_INNER_W)
   })
 
   /**
@@ -304,6 +298,10 @@ describe('voyages fleet strip', () => {
    * keine Vorsicht: das Glyph trug `#7aa8e0` — exakt `EXPEDITION_TIER_COLORS.rare`,
    * dieselbe Farbe, die zwei Zeilen höher im Stufenstreifen derselben Karte die
    * Rare-Stufe markiert. Es las sich als Stufenangabe.
+   *
+   * Die Regel gilt weiter, sie wird nur woanders eingelöst: Material steht seit
+   * dem Umbau in `ExpeditionSubjectTooltip`, und die Karte trug denselben Fehler
+   * unbereinigt weiter. Der Test bindet den TON, nicht seinen Ort.
    *
    * Gleichheit allein zu verbieten reichte nicht — ein anderes Blau derselben
    * Buntheit machte denselben Fehler. Die Stufen sind das SIGNAL, Material eine

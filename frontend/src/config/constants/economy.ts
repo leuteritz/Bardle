@@ -985,20 +985,24 @@ export const VOYAGE_FLEET_SEAT_RING = 2
  * Unwichtigste auf der Karte und steht weiter im Tooltip; die Schiene maß
  * dieselbe Spanne wie die Uhr, nur ungenauer.
  *
- * `voyagesFleetLayout.spec.ts` bindet die Summe: 34 + 28 + 22 + 2 x 3 = 90 in
+ * `voyagesFleetLayout.spec.ts` bindet die Summe: 34 + 30 + 22 + 2 x 2 = 90 in
  * 91 px Innenmaß. Die 91 kommen seit dem Gleichstand der beiden Kopfleisten aus
  * `105 − 2 x 6 − 2` statt aus `109 − 2 x 8 − 2` — dieselbe eine Reserve, nur
  * anders bezahlt: die Karte gab 4 px Höhe ab und holte sie sich aus ihrem
  * eigenen senkrechten Innenabstand zurück.
  *
- * Die 2 px, die die Ablesezeile für ihre 19-px-Uhr gewonnen hat, zahlen die
- * beiden Zeilenlücken (4 → 3). Keine der drei Zeilen hat dafür nachgegeben, und
- * keine kann es: die Crew trägt das 34-px-Portrait, der Ertrag 24-px-Schrift,
- * die Ablesung 19 — und MedievalSharp überschiesst seine Zeilenbox um rund 5 %.
+ * ZWEIMAL haben die Zeilenlücken bezahlt, und beide Male für Schriftgröße: erst
+ * 4 → 3 für die 19-px-Uhr der Ablesezeile, dann 3 → 2 für den 28-px-Lohn. Das
+ * geht nur, weil die Ertragszeile einen eigenen GRUND trägt — er trennt sie von
+ * ihren Nachbarn, also braucht sie die Lücke nicht, um gelesen zu werden.
+ *
+ * Keine der drei Zeilen hat dafür nachgegeben, und keine kann es: die Crew trägt
+ * das 34-px-Portrait, der Ertrag 28-px-Schrift, die Ablesung 19 — und
+ * MedievalSharp überschiesst seine Zeilenbox um rund 5 % (28 x 1,05 = 29,4).
  */
-export const VOYAGE_FLEET_PAY_H = 28
+export const VOYAGE_FLEET_PAY_H = 30
 export const VOYAGE_FLEET_READ_H = 22
-export const VOYAGE_FLEET_CARD_ROW_GAP = 3
+export const VOYAGE_FLEET_CARD_ROW_GAP = 2
 export const VOYAGE_FLEET_CARD_INSET_Y = 6
 export const VOYAGE_FLEET_CARD_INSET_X = 9
 /** Rahmen quer und hoch: links 3 (Zustandskante) + rechts 1, oben/unten je 1. */
@@ -1010,19 +1014,19 @@ export const VOYAGE_FLEET_CARD_BORDER_Y = 2
  * `font-variant-numeric: tabular-nums` ist im Projekt wirkungslos, und Chance
  * wie Uhr wanderten sonst im Sekundentakt unter dem Zeiger.
  *
- * Beide im Browser GEMESSEN, in der Schriftgröße ihrer Zelle, und BEIDE als
- * Aussenmaß: „100 %" misst bei 13 px 31,45 plus 10 px Innenabstand der Pille,
- * „12:00" bei 19 px gemessene 52,0. Wer nur den Text misst, setzt die Pille zu
- * schmal und ihre `min-width` ist wirkungslos — genau das war sie eine Runde
- * lang.
+ * Beide im Browser GEMESSEN, in der Schriftgröße ihrer Zelle: „100 %" misst bei
+ * 13 px 31,45 plus 10 px Innenabstand der Pille, „12:00" bei 19 px 48,48.
  *
- * Die Uhr ist von 17 auf 19 px gewachsen und ihre Zelle mit ihr (46 → 55): die
- * Ablesezeile trägt seit dem Umbau nur noch Frist und Aussicht, der Loot steht
- * beim Lohn. Die 3 px über der gemessenen Textbreite sind dieselbe Reserve, die
- * die alte Zelle hatte (46 auf 43,39) — eine Zelle, die exakt auf ihrem Text
- * sitzt, schneidet bei der nächsten Schriftrundung ab. Von 188 px sind damit
- * 101 belegt: die Luft ist Absicht, der Ertrag ist die dichte Zeile der Karte,
- * die Frist die einfachste.
+ * GEMESSEN heisst hier: per `Range` über den Textknoten, NICHT per `scrollWidth`.
+ * An einem Element mit `min-width` meldet `scrollWidth` die BOX, sobald der Text
+ * schmaler ist — eine Runde lang stand hier deshalb „52", und das war die Zelle,
+ * die sich selbst bestätigte.
+ *
+ * Die Uhr ist von 17 auf 19 px gewachsen und ihre Zelle mit ihr (46 → 55). Die
+ * Reserve über dem Text ist grosszügig und darf es sein: „12:00" ist nicht die
+ * breiteste Ziffernfolge, die dort stehen kann, und die Ablesezeile hat Platz —
+ * sie trägt seit dem Umbau nur noch Frist und Aussicht, 101 von 188 px. Der
+ * Loot steht beim Lohn.
  */
 export const VOYAGE_FLEET_ODDS_W = 42
 export const VOYAGE_FLEET_TIME_W = 55
@@ -1034,8 +1038,8 @@ export const VOYAGE_FLEET_TIME_W = 55
  */
 export const VOYAGE_FLEET_MARK_MAX_PX = 63
 /**
- * Die längste Reisedauer, „12m 30s": im Browser GEMESSENE 52,0 bei 13 px, plus
- * 2 px Reserve wie bei der Uhr nebenan.
+ * Die längste Reisedauer, „12m 30s": im Browser GEMESSENE 51,16 bei 13 px, plus
+ * knapp 3 px Reserve wie bei der Uhr nebenan.
  *
  * Sie steht seit dem Umbau OBEN, rechts neben dem Crew-Stapel, statt als
  * kleinste Schrift der Karte unter der Uhr. Zwei Gründe: beim Vertrag
@@ -1049,43 +1053,42 @@ export const VOYAGE_FLEET_MARK_MAX_PX = 63
 export const VOYAGE_FLEET_DUR_W = 54
 /** Lücke zwischen zwei Gruppen einer Zeile, und die engere innerhalb einer
  *  Gruppe (Glyph gegen Zahl). Die Spec rechnet alle drei Zeilen daraus.
- *  Die enge ist von 3 auf 2 gefallen: die Ertragszeile ist auf den Pixel
- *  belegt, seit Lohn, Material und Meep in ihr zusammenstehen. */
+ *  Die enge steht auf 2, seit Glyph und Zahl als EIN Objekt lesen sollen —
+ *  sie war einmal 3 und hat der überfüllten Ertragszeile Platz gemacht. */
 export const VOYAGE_FLEET_EARN_GAP = 4
 export const VOYAGE_FLEET_EARN_TIGHT = 2
 /**
- * Chime- und Meep-Artwork auf der Karte. Das ECHTE Artwork, kein Iconify-Ersatz
- * — dieselbe Währung sieht überall gleich aus. Beide liegen unter der
- * 34-px-Schwelle, also trägt die `-128`-Stufe.
+ * Chime- und Meep-Artwork auf der Karte — die BEIDEN Erträge, die sie zeigt.
+ * Das ECHTE Artwork, kein Iconify-Ersatz: dieselbe Währung sieht überall gleich
+ * aus. Beide liegen unter der 34-px-Schwelle, also trägt die `-128`-Stufe.
  *
- * Das Chime ist von 18 auf 16 gefallen, und die 2 px sind der Grund: die
- * Ertragszeile schloss GEMESSEN mit 187,89 von 188 px, also 0,11 px Reserve.
- * Das ist keine. Bezahlt hat es das Sprite und nicht die Zahl daneben — 16 px
- * neben einer 24-px-Ziffer lesen sich unverändert, eine gekürzte Meepzahl nicht.
+ * Das Chime BLEIBT bei 16, obwohl seine Zahl auf 28 px gewachsen ist, und das
+ * ist kein Versehen: der Lohn braucht im schlimmsten Fall 139 px, und mit einem
+ * 20-px-Sprite liefe die Zeile über (190 von 188). Das Sprite ist der einzige
+ * Posten, dessen Verkleinerung nichts kostet — eine gekürzte Zahl kostet immer
+ * etwas.
  */
 export const VOYAGE_FLEET_CHIME_PX = 16
-export const VOYAGE_FLEET_LOOT_ICON = 13
+export const VOYAGE_FLEET_LOOT_ICON = 14
 /**
- * Das Material-Glyph, und es ist GRÖSSER als das Meep-Sprite daneben. Kein
- * Geschmack: Material ist das einzige der drei, für das Bardle kein Artwork hat,
- * also trägt es ein Iconify-Glyph — und ein Glyph braucht mehr Fläche als ein
- * Sprite, um dieselbe Form zu behaupten.
+ * Die beiden Textbreiten der Ertragszeile, im Browser per `Range` GEMESSEN.
+ * Sie sind die Wand, gegen die `voyagesFleetLayout.spec.ts` die Zeile rechnet —
+ * läuft sie über, kürzt sich der Lohn selbst weg, also genau die Zahl, wegen der
+ * die Zeile da ist.
  *
- * Bei dieser Größe kommt es aus einem GEOMETRISCHEN Set, nicht aus `game-icons`:
- * im Kontaktbogen (`dev/icon-check.html`) zerfaserte `game-icons:minerals` bei
- * 16 px zu einem Fleck, während es bei 40 px klar steht. Genau die Schwelle,
- * die die Icon-Regel nennt.
+ * Der Lohn: 139, und die Zahl hat DREI Überraschungen. „999.99M" ist NICHT der
+ * schlimmste Fall (119) — die NULL ist breiter als die Neun („000.00M" 123,72),
+ * und eine zurückgekehrte Mission trägt das Präfix `+` (`rewardPrefix`), das
+ * allein 15 px kostet. Gemessen bei 28 px: „+900.00M" 138,25, als theoretische
+ * Obergrenze „+000.00M" 139,19. Die alte 102 war deshalb schon vor dem Umbau zu
+ * schmal gebunden: sie mass „999.99M" ohne Präfix.
+ *
+ * Die Meepzahl: eine Ziffer, denn `EXPEDITION_SPOILS` gibt höchstens 1 Meep.
+ * Gebunden ist trotzdem die breiteste (7,53 bei 12 px, gut 8 bei 13) — die Wand
+ * soll die Stufen überleben, nicht sie beschreiben.
  */
-export const VOYAGE_FLEET_MAT_ICON_PX = 15
-/**
- * Die beiden Textbreiten der Zahlenzeilen, im Browser GEMESSEN: der längste
- * Lohn „999.99M" bei 24 px fett und die längste Beutezahl „2.6" bei 12 px.
- * Sie sind die Wand, gegen die `voyagesFleetLayout.spec.ts` die Zeilen rechnet
- * — läuft eine über, kürzt sich der Lohn selbst weg, also genau die Zahl,
- * wegen der die Zeile da ist.
- */
-export const VOYAGE_FLEET_PAY_MAX_PX = 102
-export const VOYAGE_FLEET_LOOT_MAX_PX = 19
+export const VOYAGE_FLEET_PAY_MAX_PX = 139
+export const VOYAGE_FLEET_LOOT_MAX_PX = 9
 /**
  * Der Stufenstreifen an der Oberkante. Er liegt ABSOLUT und kostet deshalb keine
  * Zeile — der Höhenhaushalt der Karte hat sie nicht.

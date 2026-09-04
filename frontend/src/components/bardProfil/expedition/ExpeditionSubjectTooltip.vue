@@ -32,6 +32,7 @@ import {
   EXPEDITION_CHANCE_GOOD,
   EXPEDITION_CHANCE_MID,
   EXPEDITION_EXPIRY_WARNING_MS,
+  MATERIAL_ACCENT_HEX,
   UNIVERSE_TOOLTIP_IMAGES,
   UNIVERSE_TOOLTIP_MEEP_SCALE,
   VOYAGE_ACTION_COLLECT_LABEL,
@@ -159,6 +160,11 @@ const bar = computed(() => {
    die Chimes — danach die Stücke, die bereitliegen. */
 
 /** Erwarteter Materialertrag, solange nichts gewürfelt ist. */
+/* Seit die Fleet-Karte Material nicht mehr zeigt, ist DIESE Karte sein Ort —
+   also trägt sie auch seinen Ton. Vorher stand hier `#7aa8e0`, und das ist
+   `EXPEDITION_TIER_COLORS.rare`: dieselbe Kollision, die die Karte schon hatte. */
+const matTint = MATERIAL_ACCENT_HEX
+
 const expectedDrops = computed(() => {
   const s = view.value?.spoils
   return s ? s.materialRolls * s.materialChance : 0
@@ -259,7 +265,7 @@ const showRequirement = computed(() => view.value?.state === 'offer')
           <span class="tip-read-cell">
             <span class="tip-read-k">{{ payout ? 'Loot' : 'Spoils' }}</span>
             <span v-if="payout" class="tip-read-v">
-              <Icon icon="ph:diamond-fill" width="16" height="16" class="vtt-mat" />
+              <Icon icon="ph:cube-fill" width="16" height="16" class="vtt-mat" />
               <span>{{ lootCount }}</span>
               <template v-if="payout.meep">
                 <img class="vtt-meep" :src="MEEP_IMG" alt="" aria-hidden="true" />
@@ -270,7 +276,7 @@ const showRequirement = computed(() => view.value?.state === 'offer')
               <img class="vtt-chime" :src="CHIME_IMG" alt="" aria-hidden="true" />
               <span>{{ $formatNumber(view.reward) }}</span>
               <span class="vtt-loot">
-                <Icon icon="ph:diamond-fill" width="16" height="16" class="vtt-mat" />
+                <Icon icon="ph:cube-fill" width="16" height="16" class="vtt-mat" />
                 <span>{{ expectedDrops.toFixed(1) }}</span>
                 <template v-if="view.spoils.meep">
                   <img class="vtt-meep" :src="MEEP_IMG" alt="" aria-hidden="true" />
@@ -429,11 +435,13 @@ const showRequirement = computed(() => view.value?.state === 'offer')
   color: rgba(232, 220, 192, 0.62);
 }
 
+/* Die Masse bleiben in `em`: der Tooltip skaliert über `--tip-u`, hier gilt kein
+   Pixelmass der Karte. Die FARBE ist dieselbe. */
 .vtt-mat {
   flex-shrink: 0;
   width: 0.82em;
   height: 0.82em;
-  color: #7aa8e0;
+  color: v-bind(matTint);
 }
 
 /* ── Crew ────────────────────────────────────────────────────────────────── */

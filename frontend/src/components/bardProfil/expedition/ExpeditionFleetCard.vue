@@ -9,13 +9,18 @@
  * Zielname und die Fortschrittsschiene sind dafür gefallen — der Name steht im
  * Tooltip und im `aria-label`, die Schiene maß dieselbe Spanne wie die Uhr.
  *
- * Geschnitten wird nach BEDEUTUNG, nicht nach Datentyp: der Ertrag — Chimes,
- * Material, Meep — steht vollständig in EINER Zeile, und die trägt als einzige
- * einen eigenen Grund. Vorher lagen die Chimes über und Material und Meep unter
- * der Uhr; was zusammengehört, las sich als drei unabhängige Zahlen.
+ * Geschnitten wird nach BEDEUTUNG, nicht nach Datentyp: der Ertrag steht
+ * vollständig in EINER Zeile, und die trägt als einzige einen eigenen Grund.
+ * Vorher lagen die Chimes über und der Rest unter der Uhr; was zusammengehört,
+ * las sich als drei unabhängige Zahlen.
+ *
+ * Der Ertrag der KARTE sind Chimes und Meeps — sonst nichts. Material ist die
+ * dritte Zahl in einer Zeile, die von zwei Währungen handelt, und sein Glyph
+ * bleibt eine Fremdform zwischen zwei echten Artworks; es steht vollständig in
+ * `ExpeditionSubjectTooltip`, in beiden Zuständen. Nur weil es gefallen ist,
+ * konnte der Lohn von 24 auf 28 px wachsen.
  */
 import { computed } from 'vue'
-import { Icon } from '@iconify/vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { getOriginColor } from '@/config/champions/championOrigins'
@@ -24,7 +29,6 @@ import {
   EXPEDITION_CHANCE_GOOD,
   EXPEDITION_CHANCE_MID,
   EXPEDITION_EXPIRY_WARNING_MS,
-  MATERIAL_ACCENT_HEX,
   UNIVERSE_TOOLTIP_IMAGES,
   UNIVERSE_TOOLTIP_MEEP_SCALE,
   VOYAGE_FLEET_AVATAR_PX,
@@ -38,7 +42,6 @@ import {
   VOYAGE_FLEET_EARN_GAP,
   VOYAGE_FLEET_EARN_TIGHT,
   VOYAGE_FLEET_LOOT_ICON,
-  VOYAGE_FLEET_MAT_ICON_PX,
   VOYAGE_FLEET_ODDS_W,
   VOYAGE_FLEET_PAY_H,
   VOYAGE_FLEET_READ_H,
@@ -82,8 +85,6 @@ const earnGap = `${VOYAGE_FLEET_EARN_GAP}px`
 const earnTight = `${VOYAGE_FLEET_EARN_TIGHT}px`
 const chimePx = `${VOYAGE_FLEET_CHIME_PX}px`
 const lootIcon = `${VOYAGE_FLEET_LOOT_ICON}px`
-const matIcon = `${VOYAGE_FLEET_MAT_ICON_PX}px`
-const matTint = MATERIAL_ACCENT_HEX
 const tierBarH = `${VOYAGE_FLEET_TIER_BAR_H}px`
 const tierGap = `${VOYAGE_FLEET_TIER_BAR_GAP}px`
 /* Der Streifen endet, wo der Inhalt beginnt — sonst liefe er unter die
@@ -216,6 +217,12 @@ const duration = computed(() =>
 const lead = computed(() => clock.value || badge.value)
 const tail = computed(() => (clock.value && badge.value ? badge.value : ''))
 
+/**
+ * Das Label nennt den VOLLEN Ertrag, auch das Material, das die Karte nicht mehr
+ * zeigt — dass die Optik sich auf die beiden Währungen beschränkt, ist eine
+ * Layoutentscheidung. Und dies ist der einzige Ort dafür: die Hover-Karte trägt
+ * kein eigenes `aria`.
+ */
 const lootAria = computed(
   () =>
     `${loot.value.exact ? '' : 'about '}${loot.value.materials} materials` +
@@ -287,18 +294,13 @@ const aria = computed(
         <span v-if="duration" class="vfc-dur">{{ duration }}</span>
       </span>
 
-      <!-- WAS es bringt — vollständig, in einer Zeile, auf eigenem Grund. -->
+      <!-- WAS es bringt: die beiden Währungen, mehr nicht. Material steht in
+           der Hover-Karte — es ist die dritte Zahl in einer Zeile, die von
+           zweien handelt. -->
       <span class="vfc-earn" aria-hidden="true">
         <span class="vfc-chimes">
           <img class="vfc-chime" :src="CHIME_IMG" alt="" />
           <span class="vfc-pay">{{ row.rewardPrefix }}{{ $formatNumber(row.reward ?? 0) }}</span>
-        </span>
-        <span class="vfc-mat">
-          <!-- Gefüllt und geometrisch, wie jedes Glyph unter 18 px. Im
-               Kontaktbogen zerfaserte `game-icons:minerals` bei 16 px zum
-               Fleck — game-icons trägt erst ab rund 20. -->
-          <Icon icon="ph:cube-fill" class="vfc-mat-i" />
-          <span>{{ loot.materials }}</span>
         </span>
         <span v-if="loot.meep" class="vfc-meep">
           <img class="vfc-meep-i" :src="MEEP_IMG" alt="" />
@@ -480,30 +482,21 @@ const aria = computed(
   background: rgba(0, 0, 0, 0.25);
 }
 .vfc-chimes,
-.vfc-mat,
 .vfc-meep {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: v-bind(earnTight);
 }
-.vfc-chimes,
-.vfc-mat {
-  flex: 0 0 auto;
-}
-.vfc-mat,
+/* Keine Zelle der Zeile gibt mehr nach: seit Material gefallen ist, stehen
+   18 px Reserve. Eine Zahl, die schrumpfen darf, ist eine Zahl, die abschneiden
+   kann. */
 .vfc-meep {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
   color: rgba(232, 220, 192, 0.68);
   white-space: nowrap;
-}
-/* Die EINZIGE Zelle der Zeile, die nachgeben darf — der kleinste Ertragsposten.
-   Dasselbe Muster, mit dem vorher die Reisedauer nachgab. */
-.vfc-meep {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
 }
 /* Das ECHTE Artwork, kein Iconify-Ersatz — dieselbe Währung sieht überall
    gleich aus. 18 px bleiben unter der 34-px-Schwelle der 128er-Stufe. */
@@ -514,10 +507,10 @@ const aria = computed(
   object-fit: contain;
 }
 /* Sie gibt nie nach: kürzte sie sich weg, verschwände die eine Zahl, wegen der
-   die Zeile da ist. */
+   die Zeile da ist. 28 px — gewachsen, als Material die Zeile verliess. */
 .vfc-pay {
   flex-shrink: 0;
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 800;
   line-height: 1;
   color: #e8dcc0;
@@ -553,15 +546,6 @@ const aria = computed(
   color: #cc6050;
 }
 
-/* Stein statt Signal. Die Vorgängerfarbe war `#7aa8e0` — exakt
-   `EXPEDITION_TIER_COLORS.rare`, also dieselbe, die zwei Zeilen höher im
-   Stufenstreifen die Rare-Stufe markiert; das Glyph las sich als Stufe. */
-.vfc-mat-i {
-  flex-shrink: 0;
-  width: v-bind(matIcon);
-  height: v-bind(matIcon);
-  color: v-bind(matTint);
-}
 /* Hochformatiges Sprite mit breitem Alpha-Rand — dieselbe Korrektur wie im
    Header und in der Hover-Karte. */
 .vfc-meep-i {
