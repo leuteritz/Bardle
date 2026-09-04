@@ -113,6 +113,25 @@ export function starMarkRadius(lost: boolean, hk: number): number {
 }
 
 /**
+ * Dasselbe für Ort und Ereignis, und aus demselben Grund: seit die Formlegende
+ * eine Markenart auf der Karte ausleuchtet, hat jeder gemalte Radius einen
+ * ZWEITEN Leser — den Ring, der sich darauf legt. Stand der Ausdruck nur inline
+ * in `paintGalaxy`, säße der Ring nach der ersten Maßänderung neben seiner
+ * Marke, und das sieht nach einem Zeichenfehler aus, nicht nach einer zweiten
+ * Rechnung.
+ *
+ * Aus der Fangfläche zurückrechnen geht auch hier nicht: `landfallHit` und
+ * `incidentHit` haben einen Boden (16) und einen eigenen Faktor.
+ */
+export function landfallMarkRadius(hk: number): number {
+  return roundLandmarkRadius(LANDFALL_MARK_R * hk)
+}
+
+export function incidentMarkRadiusAt(rank: number, hk: number): number {
+  return roundLandmarkRadius(incidentMarkRadius(rank, GALAXY_INCIDENT_MARK_R * hk))
+}
+
+/**
  * Fingerabdruck der Sternfarben eines Laufs — für die Cache-Schlüssel.
  *
  * Die drei Schlüssel (Snapshot, `paintKey` der Voyages-Karte, Markerebene der
@@ -486,7 +505,7 @@ export function paintGalaxy(
       LANDFALL_LANDMARK_KIND[m.kind],
       lx,
       ly,
-      roundLandmarkRadius(LANDFALL_MARK_R * hk),
+      landfallMarkRadius(hk),
       {
         dpr,
         variant: landmarkVariantFor(i),
@@ -515,7 +534,7 @@ export function paintGalaxy(
       wie.kind,
       ix,
       iy,
-      roundLandmarkRadius(incidentMarkRadius(m.rank, GALAXY_INCIDENT_MARK_R * hk)),
+      incidentMarkRadiusAt(m.rank, hk),
       { dpr, faded: wie.faded, coreTint: m.coreTint },
     )
   }
@@ -532,18 +551,11 @@ export function paintGalaxy(
   for (let i = 0; i < attempts; i++) {
     const [sx, sy] = toC(dots[i].x, dots[i].y)
     const failed = record.attemptResults[i] === 'failed'
-    drawLandmark(
-      ctx,
-      failed ? 'star-lost' : 'star-freed',
-      sx,
-      sy,
-      starMarkRadius(failed, hk),
-      {
-        dpr,
-        variant: landmarkVariantFor(i),
-        coreTint: starCoreTint(record.starManifests?.[i]),
-      },
-    )
+    drawLandmark(ctx, failed ? 'star-lost' : 'star-freed', sx, sy, starMarkRadius(failed, hk), {
+      dpr,
+      variant: landmarkVariantFor(i),
+      coreTint: starCoreTint(record.starManifests?.[i]),
+    })
   }
 
   // Caretaker's Gate: der befreite Kern. Er ist mit Abstand die grösste Marke,

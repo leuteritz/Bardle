@@ -3,10 +3,12 @@
  * Der Fuss der Kartenbühne — was hier war und was ein Vertrag von hier bietet,
  * in einer Zeile über die volle Breite.
  *
- * **WAS WAR ‖ WAS EIN VERTRAG HIER BIETET.** Chronik (Sterne, Fahrten) | Payout
- * | die vier Kosten. Der elastische Überschuss liegt auf der Naht zwischen
- * Chronik und Deal; Payout und Kosten bleiben beieinander, weil sie ZUSAMMEN
- * der Deal sind.
+ * **WIE MAN DIE KARTE LIEST ‖ WAS WAR ‖ WAS EIN VERTRAG HIER BIETET.**
+ * Formlegende | Chronik (Sterne, Fahrten) | Payout | die vier Kosten. Die
+ * Legende steht am ANFANG der Leserichtung: sie ist der Schlüssel zu allem, was
+ * auf der Bühne darüber liegt, und zugleich der Schalter, der eine Markenart
+ * dort ausleuchtet — in der Mitte war sie das Erste, was der Blick verlor.
+ * Payout und Kosten bleiben beieinander, weil sie ZUSAMMEN der Deal sind.
  *
  * **Die Identitätszone ist gefallen.** Ziffer, Name und Stufe standen
  * vollständig ein zweites Mal in der markierten Leistenzeile, bis hin zu
@@ -65,6 +67,7 @@ import {
   VOYAGE_MAP_STATS_VALUE_MIN,
 } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
+import type { LandmarkKind } from '@/utils/fx/galaxyLandmarks'
 
 const props = defineProps<{
   record: CompletedGalaxyRecord
@@ -77,6 +80,9 @@ const props = defineProps<{
   legendMode: 'full' | 'icons' | 'off'
   dpr: number
 }>()
+
+/** Die Legende reicht nach oben, welche Markenart die Karte ausleuchten soll. */
+const emit = defineEmits<{ lit: [LandmarkKind | null] }>()
 
 const chartStore = useExpeditionChartStore()
 
@@ -162,6 +168,19 @@ const summary = computed(
       role="group"
       :aria-label="summary"
     >
+      <!-- WIE MAN DIE KARTE LIEST ─────────────────────────────────────────── -->
+      <!-- Die elastische Bahn, und sie steht ganz vorn: der Überschuss geht in
+           die Lücken zwischen ihren fünf Marken statt als eine Fuge daneben.
+           `key` mountet neu, wenn die Stufe wechselt — `v-tip` bindet nur beim
+           Mount, ein nachgereichter Wortlaut bliebe tot. -->
+      <ExpeditionMapLegend
+        v-if="legendMode !== 'off'"
+        :key="legendMode"
+        :mode="legendMode"
+        :dpr="dpr"
+        @hover="emit('lit', $event)"
+      />
+
       <!-- WAS WAR ─────────────────────────────────────────────────────────── -->
       <div class="egsb-read">
         <!-- Befreit und verloren sind EINE Ablesung: die Null bleibt STEHEN und
@@ -180,17 +199,6 @@ const summary = computed(
           <span v-ink-center.y class="egsb-lbl">Voyages</span>
         </section>
       </div>
-
-      <!-- WAS AUF DER KARTE LIEGT ─────────────────────────────────────────── -->
-      <!-- Eigene Bahn LINKS der Fuge, nicht in ihr: der elastische Überschuss
-           bleibt damit auf der Bedeutungsnaht zwischen Chronik und Deal. `key`
-           mountet neu, wenn die Stufe wechselt — `v-tip` bindet nur beim Mount. -->
-      <ExpeditionMapLegend
-        v-if="legendMode !== 'off'"
-        :key="legendMode"
-        :mode="legendMode"
-        :dpr="dpr"
-      />
 
       <!-- DER GEWINN ──────────────────────────────────────────────────────── -->
       <!-- Die einzige farbige Ablesung des Bandes: alles andere hier ist Preis. -->
@@ -254,9 +262,9 @@ const summary = computed(
   );
 }
 
-/* Die Chronik hugt links, Payout und Kosten rechts; der Überschuss geht an die
-   LEGENDE, die ihn zwischen ihren fünf Marken verteilt. Vorher lag er als eine
-   Lücke zwischen Legende und Payout — auf 2K 258 px, auf 4K 1265. */
+/* Die Legende führt und trägt den Überschuss, den sie zwischen ihren fünf
+   Marken verteilt; Chronik, Payout und Kosten hugen rechts. Ohne Legende
+   bleibt es bei drei Bahnen und der Payout bekommt die elastische zurück. */
 .egsb-row {
   position: relative;
   display: grid;
@@ -268,10 +276,11 @@ const summary = computed(
   padding: v-bind(padY) clamp(12px, 1.5cqw, 30px);
   border-top: 1px solid rgba(122, 78, 32, 0.42);
 }
-/* Mit Legende ist SIE die elastische Bahn — sie soll den freien Fuss belegen.
-   Ohne sie fällt die Zuordnung um eine Bahn und der Payout bekäme sie zurück. */
+/* Mit Legende ist SIE die elastische Bahn, und sie steht vorn — sie soll den
+   freien Fuss belegen. Ohne sie fällt die Zuordnung um eine Bahn zurück und der
+   Payout bekommt sie wieder. */
 .egsb-row--legend {
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
 }
 /* Die Akzentkante der Galaxie — der einzige farbige Strich im Band. */
 .egsb-row::before {

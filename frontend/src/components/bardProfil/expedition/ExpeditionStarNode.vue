@@ -22,6 +22,7 @@ import { computed } from 'vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import ExpeditionMarkTooltip, { type MarkChip } from './ExpeditionMarkTooltip.vue'
 import ExpeditionStarTooltip from './ExpeditionStarTooltip.vue'
+import ExpeditionMarkHalo from './ExpeditionMarkHalo.vue'
 import { starCoreTint } from '@/utils/fx/galaxyPlate'
 import { ordinalOf } from '@/utils/ui/format'
 import {
@@ -51,6 +52,14 @@ const props = defineProps<{
   markR: number
   /** Von der Manifestreihe gezeigt: Ring, Schein und die eigene Karte. */
   highlight?: boolean
+  /**
+   * Von der Formlegende ausgeleuchtet: Ring und Schein, sonst NICHTS.
+   *
+   * Bewusst nicht `highlight`: das öffnet zusätzlich die Sternkarte, und die
+   * Legende meint alle Marken ihrer Art auf einmal — sieben gleichzeitig
+   * aufgehende Karten wären unlesbar.
+   */
+  lit?: boolean
 }>()
 
 /** Der Flugindex dieser Marke, damit die Reihe oben mitleuchten kann. */
@@ -98,23 +107,17 @@ const label = computed(() => {
     <template #default>
       <span
         class="stn"
-        :class="{ 'stn--on': highlight }"
+        :class="{ 'stn--on': highlight || lit }"
         :style="{
           left: `${left}%`,
           top: `${top}%`,
           '--stn-hit': `${hit}px`,
-          '--stn-r': `${markR}px`,
-          '--stn-ink': accent,
         }"
         :aria-label="label"
         @mouseenter="emit('hover', mark.index)"
         @mouseleave="emit('hover', null)"
       >
-        <!-- Eigene Ebene mit statischem Schein; eingeblendet wird nur ihre
-             opacity. Bauform von `.sn-breath`, aber OHNE dessen Keyframes —
-             der hervorgehobene Zustand ist ein einmaliger Umschlag. -->
-        <span class="stn-glow" aria-hidden="true" />
-        <span class="stn-ring" aria-hidden="true" />
+        <ExpeditionMarkHalo :mark-r="markR" :ink="accent" :on="!!(highlight || lit)" />
       </span>
     </template>
     <template #tip>
@@ -146,58 +149,6 @@ const label = computed(() => {
   z-index: 3;
 }
 
-/* Beide Ebenen ruhen unsichtbar und kosten nichts: kein Keyframe, kein
-   `will-change`, und `paintKey` sieht sie nicht — die Platte wird beim Hovern
-   NICHT neu gemalt. */
-.stn-glow,
-.stn-ring {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  border-radius: 50%;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 0.14s ease,
-    transform 0.14s ease;
-}
-
-.stn-glow {
-  width: calc(var(--stn-r) * 4.2);
-  height: calc(var(--stn-r) * 4.2);
-  margin: calc(var(--stn-r) * -2.1) 0 0 calc(var(--stn-r) * -2.1);
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--stn-ink) 42%, transparent) 0%,
-    color-mix(in srgb, var(--stn-ink) 13%, transparent) 45%,
-    transparent 72%
-  );
-  transform: scale(0.86);
-}
-
-/* Ein Ring statt einer animierten Randfarbe — dieselbe Regel wie beim Hafen.
-   Er sitzt auf dem GEMALTEN Radius, 19 % nach aussen versetzt wie `.sn--on`. */
-.stn-ring {
-  width: calc(var(--stn-r) * 2.38);
-  height: calc(var(--stn-r) * 2.38);
-  margin: calc(var(--stn-r) * -1.19) 0 0 calc(var(--stn-r) * -1.19);
-  border: 2px solid var(--stn-ink);
-  transform: scale(0.88);
-}
-
-.stn--on .stn-glow {
-  opacity: 1;
-  transform: scale(1);
-}
-.stn--on .stn-ring {
-  opacity: 1;
-  transform: scale(1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stn-glow,
-  .stn-ring {
-    transition: none;
-  }
-}
+/* Der Ring lebt in `ExpeditionMarkHalo` — dieselben gemessenen Faktoren tragen
+   seit der Formlegende auch Ort und Ereignis. */
 </style>

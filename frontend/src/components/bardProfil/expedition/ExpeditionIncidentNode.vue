@@ -10,9 +10,16 @@
 import { computed } from 'vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import ExpeditionMarkTooltip, { type MarkChip } from './ExpeditionMarkTooltip.vue'
+import ExpeditionMarkHalo from './ExpeditionMarkHalo.vue'
 import { getVoidRift } from '@/config/world/void'
 import { getDrifter } from '@/config/world/drifters'
-import { VOYAGE_TIP_GAP_PX, VOYAGE_TIP_OPEN_DELAY_MS, VOYAGE_TIP_WIDTH } from '@/config/constants'
+import {
+  LANDMARK_DRIFTER_TRACE,
+  LANDMARK_VOID_TRACE,
+  VOYAGE_TIP_GAP_PX,
+  VOYAGE_TIP_OPEN_DELAY_MS,
+  VOYAGE_TIP_WIDTH,
+} from '@/config/constants'
 import type { GalaxyIncidentKind } from '@/types'
 
 const props = defineProps<{
@@ -25,6 +32,12 @@ const props = defineProps<{
   top: number
   /** Kantenlänge der Fangfläche in px — sie folgt dem gemalten Zug. */
   hit: number
+  /** Der GEMALTE Radius (`incidentMarkRadiusAt`), nicht aus `hit` gerechnet. */
+  markR: number
+  /** Der Schwere-Ton des Einschlags, wie ihn die Marke im Kern trägt. */
+  coreTint?: string
+  /** Von der Formlegende ausgeleuchtet. */
+  lit?: boolean
 }>()
 
 const isVoid = computed(() => props.kind === 'void-impact')
@@ -52,6 +65,13 @@ const chips = computed<MarkChip[]>(() => {
 })
 
 const label = computed(() => (isVoid.value ? 'Void impact' : 'Drifter'))
+
+/* Der Ton, den die Marke auf dem Canvas ohnehin trägt: beim Einschlag der
+   Schwere-Kern, sonst der Zug selbst. `coreTint` fehlt unterhalb von
+   `GALAXY_INCIDENT_MIN_R` — dort malt auch die Marke keinen. */
+const haloInk = computed(() =>
+  isVoid.value ? (props.coreTint ?? LANDMARK_VOID_TRACE) : LANDMARK_DRIFTER_TRACE,
+)
 </script>
 
 <template>
@@ -69,7 +89,9 @@ const label = computed(() => (isVoid.value ? 'Void impact' : 'Drifter'))
         class="ein"
         :style="{ left: `${left}%`, top: `${top}%`, '--ein-hit': `${hit}px` }"
         :aria-label="`${def.name} — ${label}`"
-      />
+      >
+        <ExpeditionMarkHalo :mark-r="markR" :ink="haloInk" :on="!!lit" />
+      </span>
     </template>
     <template #tip>
       <ExpeditionMarkTooltip
@@ -84,8 +106,8 @@ const label = computed(() => (isVoid.value ? 'Void impact' : 'Drifter'))
 </template>
 
 <style scoped>
-/* Nur Fangfläche, kein Aussehen — ein eigener Rahmen wäre eine zweite Marke
-   über der gemalten. */
+/* Nur Fangfläche, kein Aussehen — ein DAUERHAFTER Rahmen wäre eine zweite Marke
+   über der gemalten. Der Halo darin ruht unsichtbar. */
 .ein {
   position: absolute;
   width: var(--ein-hit);

@@ -83,6 +83,21 @@ export function isLandfallLandmark(kind: LandmarkKind): kind is LandfallLandmark
   return (LANDFALL_KINDS as readonly string[]).includes(kind)
 }
 
+/**
+ * Ob eine Marke unter eine Zeile der Formlegende fällt.
+ *
+ * Die Legende führt FÜNF Zeilen, die Karte kennt zwölf Kinds — zwei Zeilen
+ * stehen deshalb für mehr als eine Form: `landfall-reef` vertritt alle sechs
+ * Orte (sechs Silhouetten wären bei 4,4 px nicht zu trennen), und
+ * `drifter-trace` deckt gefangene wie verpasste Drifter, die sich EINEN Zug
+ * teilen. Der Vergleich `kind === legend` allein liesse beim Zeigen auf
+ * „Landfall" fünf von sechs Orten dunkel.
+ */
+export function landmarkMatchesLegend(kind: LandmarkKind, legend: LandmarkKind): boolean {
+  if (isLandfallLandmark(legend)) return isLandfallLandmark(kind)
+  return kind === legend
+}
+
 export interface LandmarkOpts {
   /** Backing-Dichte des Ziels — der Sprite-Cache ist danach geschlüsselt. */
   dpr?: number
@@ -174,7 +189,12 @@ export function landmarkSpriteKey(
 
 const spriteCache = new Map<string, HTMLCanvasElement>()
 
-type SpriteKind = 'star-freed' | 'star-lost' | 'void-impact' | 'drifter-trace' | LandfallLandmarkKind
+type SpriteKind =
+  | 'star-freed'
+  | 'star-lost'
+  | 'void-impact'
+  | 'drifter-trace'
+  | LandfallLandmarkKind
 
 function getSprite(
   kind: SpriteKind,
@@ -278,15 +298,9 @@ function paintDeparturePortal(
     const tipY = y + Math.sin(heading) * gap
     const spread = 0.52
     ctx.beginPath()
-    ctx.moveTo(
-      tipX - wing * Math.cos(heading - spread),
-      tipY - wing * Math.sin(heading - spread),
-    )
+    ctx.moveTo(tipX - wing * Math.cos(heading - spread), tipY - wing * Math.sin(heading - spread))
     ctx.lineTo(tipX, tipY)
-    ctx.lineTo(
-      tipX - wing * Math.cos(heading + spread),
-      tipY - wing * Math.sin(heading + spread),
-    )
+    ctx.lineTo(tipX - wing * Math.cos(heading + spread), tipY - wing * Math.sin(heading + spread))
     ctx.strokeStyle = 'rgba(240, 205, 96, 0.9)'
     ctx.lineWidth = Math.max(1, r * 0.18)
     ctx.lineCap = 'round'
@@ -786,7 +800,12 @@ export function paintLandfallMark(
  * `paintIncidentCore` direkt auf die Zielfläche, weil seine Farbe je Marke
  * verschieden ist (Begründung bei `paintFreedStarCore`).
  */
-export function paintVoidImpact(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+export function paintVoidImpact(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+): void {
   const span = r * 0.95
   // Die beiden Züge stehen NICHT im rechten Winkel zueinander: ein sauberes X
   // liest sich als Bedienzeichen, ein Bruch ist schief.

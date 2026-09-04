@@ -15,9 +15,11 @@
 import { computed } from 'vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import ExpeditionMarkTooltip, { type MarkChip } from './ExpeditionMarkTooltip.vue'
+import ExpeditionMarkHalo from './ExpeditionMarkHalo.vue'
 import { getLandfall } from '@/config/world/landfalls'
 import {
   LANDFALL_PRESENCE_LABEL,
+  LANDMARK_LANDFALL_RING,
   VOYAGE_TIP_GAP_PX,
   VOYAGE_TIP_OPEN_DELAY_MS,
   VOYAGE_TIP_WIDTH,
@@ -32,6 +34,10 @@ const props = defineProps<{
   top: number
   /** Kantenlänge der Fangfläche in px — sie folgt der gemalten Marke. */
   hit: number
+  /** Der GEMALTE Radius (`landfallMarkRadius`), nicht aus `hit` gerechnet. */
+  markR: number
+  /** Von der Formlegende ausgeleuchtet — sie meint alle sechs Orte auf einmal. */
+  lit?: boolean
 }>()
 
 const def = getLandfall(props.kind)
@@ -69,7 +75,9 @@ const chips = computed<MarkChip[]>(() =>
         class="lfn"
         :style="{ left: `${left}%`, top: `${top}%`, '--lfn-hit': `${hit}px` }"
         :aria-label="`${def.name} — ${cleared ? 'made' : 'missed'}`"
-      />
+      >
+        <ExpeditionMarkHalo :mark-r="markR" :ink="LANDMARK_LANDFALL_RING" :on="!!lit" />
+      </span>
     </template>
     <template #tip>
       <ExpeditionMarkTooltip
@@ -83,8 +91,10 @@ const chips = computed<MarkChip[]>(() =>
 </template>
 
 <style scoped>
-/* Nur Fangfläche, kein Aussehen. Ein eigener Rahmen wäre eine zweite Marke über
-   der gemalten — dieselbe Doppelung, die dem Tor seinen Ring gekostet hat. */
+/* Nur Fangfläche, kein Aussehen. Ein DAUERHAFTER Rahmen wäre eine zweite Marke
+   über der gemalten — dieselbe Doppelung, die dem Tor seinen Ring gekostet hat.
+   Der Halo darin ist kein Widerspruch: er ruht unsichtbar und geht nur auf,
+   solange die Legende auf „Landfall" zeigt. */
 .lfn {
   position: absolute;
   width: var(--lfn-hit);

@@ -1455,6 +1455,36 @@ export const VOYAGE_MAP_LEGEND_LABEL_MIN = 8
 export const VOYAGE_MAP_LEGEND_LABEL_MAX = 18
 
 /**
+ * Die Skala ist AFFIN (`cqw x W - Versatz`), nicht proportional — sie muss zwei
+ * Enden gleichzeitig treffen, und ein reiner Faktor trifft nur eines.
+ *
+ * Auf Full HD ist der Fuss gemessen knapp: mit einer 24er Kachel braeuchte die
+ * Reihe 393 von 329 px, und der Ueberlauf einer `nowrap`-Zeile wird still
+ * abgeschnitten. Der Boden muss dort also stehen bleiben. Auf 2K und 4K blieb
+ * die Zone umgekehrt weit unter ihrem Deckel (30 von 44), obwohl daneben
+ * Hunderte Pixel frei sind.
+ *
+ * Der Versatz loest das: an beiden Schwellen (790, 918) und auf Full HD (952)
+ * rechnet die Formel UNTER den Boden und wird geklemmt — die Legende waechst
+ * erst dort, wo sie ohnehin schon Platz hat. Die gemessenen Bedarfszahlen
+ * `_NEED_FULL` / `ZONES_AT_FULL` bleiben damit gueltig, sie sind an genau
+ * diesen Schwellen genommen.
+ *
+ * Beide Versaetze tragen eine halbe bzw. drei Zehntel ZUVIEL, und das ist der
+ * Kern: der Boden muss die engste ECHTE Buehne mit Woertern ueberleben, nicht
+ * nur die Schwelle. Bei 20,0 loeste die Kachel schon bei 952,38 ab — 0,4 px
+ * ueber Full HD mit ausgeklappter Zielliste, eine Rundungswette. Bei 6,0 stand
+ * das Wort dort bereits auf 8,28 und frass ueber fuenf Marken samt
+ * `letter-spacing` rund 5 der 8 px Reserve, gegen die `_ICON_MIN` hergeleitet
+ * ist. Jetzt loesen die Boeden bei 964 und 953 ab, die Deckel greifen bei 1536
+ * und 1620 — beide ueber der offenen 2K-Buehne (1372).
+ */
+export const VOYAGE_MAP_LEGEND_ICON_CQW = 4.2
+export const VOYAGE_MAP_LEGEND_ICON_OFFSET = 20.5
+export const VOYAGE_MAP_LEGEND_LABEL_CQW = 1.5
+export const VOYAGE_MAP_LEGEND_LABEL_OFFSET = 6.3
+
+/**
  * Die fuenf Chronikmarken — was ein gespielter Lauf auf der Karte hinterlaesst.
  *
  * Tor und Ankunftsportal stehen NICHT drin: beide sind gross, einmalig je Karte
@@ -1489,7 +1519,7 @@ export const VOYAGE_MAP_LEGEND_ROWS = [
 
 /**
  * MINDESTbedarf der Reihe mit Woertern, an ihrer Schwelle gemessen — Kacheln,
- * Woerter, Boden-Abstaende, Polster und der Rest zum Payout.
+ * Woerter, Boden-Abstaende, Polster und der Rest zur naechsten Zone.
  *
  * Seit die Zone in der ELASTISCHEN Bahn sitzt, ist das nicht mehr ihre Breite:
  * sie nimmt, was die Bahn hergibt, und verteilt den Ueberschuss zwischen ihre
@@ -1503,13 +1533,14 @@ export const VOYAGE_MAP_LEGEND_NEED_FULL = 326
  *  und die Haarlinie; gemessen 191 an ihrer Schwelle. */
 export const VOYAGE_MAP_LEGEND_NEED_ICONS = 158
 /**
- * Der Rest, der zwischen Legende und Payout stehen bleibt.
+ * Der Rest, der hinter der Legende stehen bleibt — seit sie vorn steht, ist das
+ * die Naht zur CHRONIK und nicht mehr die zum Payout.
  *
  * Er war einmal `VOYAGE_MAP_STATS_BAND_H` (72) — die Fuge sollte so breit sein
  * wie das Band hoch, damit sie als Trennung zweier Gruppen liest. Seit die
  * Legende den freien Fuss NUTZEN soll statt ihn freizuhalten, ist er auf einen
- * sichtbaren Spalt geschrumpft; die Trennung traegt jetzt die kraeftige
- * Haarlinie der Payout-Spalte (0,62) allein.
+ * sichtbaren Spalt geschrumpft; die Trennung traegt jetzt die Haarlinie der
+ * Zone selbst (0,34).
  *
  * Unter 16 wuerde das letzte Wort an dieser Linie kleben — deshalb steht er
  * auch als `padding-right`-Boden im CSS der Zone.
@@ -1522,9 +1553,9 @@ export const VOYAGE_MAP_LEGEND_SEAM_MIN = 24
  *
  * Beide Schwellen sind gemessen und HERGELEITET, nicht gewaehlt: sie sind die
  * schmalste Buehne, auf der nach der Reihe noch `VOYAGE_MAP_STATS_BAND_H` an
- * Fuge bleibt. Die Naht zwischen Chronik und Deal ist Bedeutung — eine Fuge,
- * die schmaler ist als das Band hoch, liest sich nicht mehr als Trennung
- * zweier Gruppen, sondern als Abstand innerhalb einer.
+ * Fuge bleibt. Die Naht hinter der Legende ist Bedeutung — eine Fuge, die
+ * schmaler ist als das Band hoch, liest sich nicht mehr als Trennung zweier
+ * Gruppen, sondern als Abstand innerhalb einer.
  *
  * Gemessen (Buehne → Fuge nach der Reihe mit Woertern): 900,4 → 12,4 ·
  * 916,1 ist die letzte Sondenstufe · 927,9 → 31,8 · 952 → 48,3 · 1372 → 249,7.

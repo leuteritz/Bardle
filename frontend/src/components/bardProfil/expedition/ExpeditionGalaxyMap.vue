@@ -23,11 +23,15 @@ import {
   coreGateClearance,
   starRoleSignature,
   starMarkRadius,
+  landfallMarkRadius,
+  incidentMarkRadiusAt,
   GALAXY_PLATE_REF_W,
   type FitBox,
 } from '@/utils/fx/galaxyPlate'
+import { landmarkMatchesLegend, type LandmarkKind } from '@/utils/fx/galaxyLandmarks'
 import { landfallMarks } from '@/utils/game/landfalls'
-import { incidentMarkRadius, incidentMarks } from '@/utils/game/galaxyIncidents'
+import { LANDFALL_LANDMARK_KIND } from '@/config/world/landfalls'
+import { incidentMarkRadius, incidentMarks, incidentPaint } from '@/utils/game/galaxyIncidents'
 import { galaxyStarMarksOf } from '@/utils/game/starNames'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { voyageGateSizeFor, voyageMarkerSizeFor } from '@/utils/game/voyageSites'
@@ -273,6 +277,22 @@ const starNodes = computed(() => {
  */
 const hoveredStar = ref<number | null>(null)
 
+/**
+ * Welche Markenart die Formlegende gerade ausleuchtet — der zweite Knotenpunkt,
+ * und aus demselben Grund hier: Legende und Marken sind beide Kinder dieser
+ * Karte.
+ *
+ * Er kommt bewusst NICHT in `paintKey`: läge die Hervorhebung im Canvas, malte
+ * jede Mausbewegung die Platte neu (14–34 ms). Sie liegt im DOM, auf Ebenen,
+ * die unsichtbar ruhen.
+ */
+const litKind = ref<LandmarkKind | null>(null)
+
+/** Ob eine Marke unter die gezeigte Legendenzeile fällt. */
+function isLit(kind: LandmarkKind): boolean {
+  return litKind.value !== null && landmarkMatchesLegend(kind, litKind.value)
+}
+
 /** Das Sternsoll dieser Galaxie — dieselbe Formel, gegen die das Spiel zählt. */
 const starsRequired = computed(() => computeRequired(props.record.galaxy))
 
@@ -452,7 +472,7 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
   <div
     ref="stage"
     class="egm"
-    :class="{ 'egm--arrive': arriving, 'egm--leave': leaving }"
+    :class="{ 'egm--arrive': arriving, 'egm--leave': leaving, 'egm--lit': litKind !== null }"
     :style="{ '--egm-dive-origin': diveOrigin }"
     role="group"
     :aria-label="`${title} — voyage chart`"
@@ -462,6 +482,13 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
          ihn und darf beim Auf- und Zuklappen der Zielliste genau EINEN Zuwachs
          sehen. Steht dort mehr, ist eine Breite in eine Transition geraten. -->
     <canvas ref="canvas" class="egm-plate" :data-paints="paintCount" aria-hidden="true" />
+
+    <!-- Der Schleier, der die Karte zuruecknimmt, waehrend die Legende EINE
+         Markenart ausleuchtet. Er steht NACH der Platte und traegt denselben
+         z-index: bei gleichem Rang gewinnt die spaetere Position, damit liegt
+         er ueber ihr und unter den Marken, ohne dass eine Ebene ihren Rang
+         aendert. Ruhend ist er unsichtbar; animiert wird nur `opacity`. -->
+    <span class="egm-dim" aria-hidden="true" />
 
     <!-- Identität UND Bilanz sitzen im Fuss der Bühne. Sie sassen einmal als
          zwei eigene Overlays in den beiden linken Ecken: eine Plakette oben
@@ -475,6 +502,7 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
       :compact="cssW < VOYAGE_MAP_STATS_MIN_W"
       :legend-mode="legendMode"
       :dpr="dprNow"
+      @lit="litKind = $event"
     />
 
     <!-- Der Zwilling des Bandes in der gegenüberliegenden Ecke: das Band sagt
@@ -514,6 +542,8 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
         :left="pct(m.x, m.y).left"
         :top="pct(m.x, m.y).top"
         :hit="landfallHit"
+        :mark-r="landfallMarkRadius(historyHk)"
+        :lit="isLit(LANDFALL_LANDMARK_KIND[m.kind])"
       />
 
       <ExpeditionIncidentNode
@@ -526,6 +556,9 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
         :left="pct(m.x, m.y).left"
         :top="pct(m.x, m.y).top"
         :hit="incidentHit(m.rank)"
+        :mark-r="incidentMarkRadiusAt(m.rank, historyHk)"
+        :core-tint="m.coreTint"
+        :lit="isLit(incidentPaint(m).kind)"
       />
 
       <!-- Dann die Sterne: sie liegen ÜBER den Orten, wie beim Malen. Ein Ort
@@ -543,6 +576,7 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
         :hit="starHit"
         :mark-r="starMarkRadius(n.mark.outcome === 'failed', historyHk)"
         :highlight="hoveredStar === n.mark.index"
+        :lit="isLit(n.mark.outcome === 'failed' ? 'star-lost' : 'star-freed')"
         @hover="hoveredStar = $event"
       />
 
@@ -607,6 +641,43 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
   width: 100%;
   height: 100%;
   display: block;
+}
+
+/* ── Der Legenden-Scheinwerfer ─────────────────────────────────────────────
+   Ein flacher Schleier im Bühnenton, kein Verlauf und keine Maske: die Marken
+   der gezeigten Art tragen ihren Ring DARÜBER, das genügt zum Auffinden. Er
+   deckt die Platte, nicht die Marken — und darum dimmen die drei sichtbaren
+   DOM-Ebenen (Häfen, Crew, Tor) über eine eigene Regel mit; ungedimmt stünden
+   ausgerechnet die hellsten Marken der Karte unberührt da. */
+.egm-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(8, 6, 3, 0.68);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+.egm--lit .egm-dim {
+  opacity: 1;
+}
+.egm--lit :deep(.sn),
+.egm--lit :deep(.gt),
+.egm--lit :deep(.ecml) {
+  opacity: 0.28;
+}
+.egm :deep(.sn),
+.egm :deep(.gt),
+.egm :deep(.ecml) {
+  transition: opacity 0.16s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .egm-dim,
+  .egm :deep(.sn),
+  .egm :deep(.gt),
+  .egm :deep(.ecml) {
+    transition: none;
+  }
 }
 
 /* Reine Positionsebene: der Klick auf den Bühnengrund muss überall durchkommen,

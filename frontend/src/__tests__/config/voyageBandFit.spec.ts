@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import {
   VOYAGE_MAP_LEGEND_ICONS_MIN_W,
+  VOYAGE_MAP_LEGEND_ICON_CQW,
   VOYAGE_MAP_LEGEND_ICON_MAX,
   VOYAGE_MAP_LEGEND_ICON_MIN,
+  VOYAGE_MAP_LEGEND_ICON_OFFSET,
+  VOYAGE_MAP_LEGEND_LABEL_CQW,
   VOYAGE_MAP_LEGEND_LABEL_MAX,
   VOYAGE_MAP_LEGEND_LABEL_MIN,
+  VOYAGE_MAP_LEGEND_LABEL_OFFSET,
   VOYAGE_MAP_LEGEND_MIN_W,
   VOYAGE_MAP_LEGEND_NEED_FULL,
   VOYAGE_MAP_LEGEND_NEED_ICONS,
@@ -143,6 +147,52 @@ function legendColumn(): number {
 }
 
 /**
+ * Die BÜHNENbreiten, gegen die die Legende rechnet — dieselbe Kette wie
+ * `stageW()` in `voyageManifestFit.spec.ts`: Atlasbreite abzüglich Zielliste
+ * (268 offen, 44 als Griff) und Rinne (20).
+ *
+ * Beide Zustände der Liste, weil das Einklappen die Bühne um über 200 px weitet
+ * und die Legende das unmittelbar spürt. Die naheliegenden Zahlen sind hier
+ * FALSCH: 1016 ist die historische Kartenzone vor Abzug des Griffs, und 2K ist
+ * offen 1372, nicht 1436 — beides stand als Zonenbreite in den Notizen.
+ */
+const STAGE_W = {
+  fhdOpen: 952,
+  fhdFolded: 1176,
+  qhdOpen: 1372,
+  qhdFolded: 1596,
+  uhdOpen: 2652,
+  uhdFolded: 2876,
+}
+
+const clampPx = (lo: number, v: number, hi: number) => Math.min(hi, Math.max(lo, v))
+
+/**
+ * Kachel und Wort der Legende, wie sie im `calc()` von `.eml-probe` und
+ * `.eml-lbl` stehen.
+ *
+ * AFFIN und nicht mehr ein blosses Verhältnis: `2.1cqw` musste Full HD am Boden
+ * halten und liess 2K deshalb bei 28,8 px stehen, wo der Deckel 44 erlaubt. Der
+ * Versatz kauft die Steigung — und weil er das tut, ist die Lage des BODENS
+ * jetzt eine Zusicherung und keine Folge mehr.
+ */
+function legendIcon(w: number): number {
+  return clampPx(
+    VOYAGE_MAP_LEGEND_ICON_MIN,
+    (VOYAGE_MAP_LEGEND_ICON_CQW * w) / 100 - VOYAGE_MAP_LEGEND_ICON_OFFSET,
+    VOYAGE_MAP_LEGEND_ICON_MAX,
+  )
+}
+
+function legendLabel(w: number): number {
+  return clampPx(
+    VOYAGE_MAP_LEGEND_LABEL_MIN,
+    (VOYAGE_MAP_LEGEND_LABEL_CQW * w) / 100 - VOYAGE_MAP_LEGEND_LABEL_OFFSET,
+    VOYAGE_MAP_LEGEND_LABEL_MAX,
+  )
+}
+
+/**
  * Ein Kosten-Chip. Seine erste Zeile ist NICHT die Zahl, sondern das HÖHERE von
  * Zahl und Glyph: das Icon misst 17 gegen 16 und bestimmt damit die Zeile — im
  * Browser gemessen 17,0. Wer das Glyph anhebt, hebt die ganze Zone.
@@ -228,13 +278,83 @@ describe('voyage stats band fit', () => {
     //
     // Gebunden ist stattdessen, dass das Wort die Zonenhöhe nicht bestimmt —
     // sonst hinge die Höhenbilanz an einer Schrift statt an der Kachel.
-    expect(LEGEND_LABEL_LINE * VOYAGE_MAP_LEGEND_LABEL_MAX).toBeLessThan(
-      VOYAGE_MAP_LEGEND_ICON_MAX,
-    )
+    expect(LEGEND_LABEL_LINE * VOYAGE_MAP_LEGEND_LABEL_MAX).toBeLessThan(VOYAGE_MAP_LEGEND_ICON_MAX)
     // Der Boden ist der des ganzen Bandes: `.egsb-lbl--chip` läuft auf
     // `clamp(8px, …)` und ist die kleinste Schrift im Fuss. Darunter zu gehen
     // hiesse, im Band eine Schrift zu führen, die es sonst nirgends erlaubt.
     expect(VOYAGE_MAP_LEGEND_LABEL_MIN).toBeGreaterThanOrEqual(BAND_LABEL_FLOOR)
+  })
+
+  it('haelt Kachel und Wort an BEIDEN Schwellen auf ihrem Boden', () => {
+    // Der Grund, aus dem `NEED_FULL` (326) und `NEED_ICONS` (158) ueberhaupt
+    // gelten duerfen: beide sind AN ihrer Schwelle gemessen, und dort trug die
+    // Reihe die kleinste Kachel und das kleinste Wort. Waechst eines der beiden
+    // dort, ist der gemessene Bedarf zu klein — und der Ueberlauf einer
+    // `nowrap`-Zeile wird STILL abgeschnitten, kein `scrollHeight` meldet ihn.
+    expect(legendIcon(VOYAGE_MAP_LEGEND_ICONS_MIN_W)).toBe(VOYAGE_MAP_LEGEND_ICON_MIN)
+    expect(legendIcon(VOYAGE_MAP_LEGEND_MIN_W)).toBe(VOYAGE_MAP_LEGEND_ICON_MIN)
+    expect(legendLabel(VOYAGE_MAP_LEGEND_MIN_W)).toBe(VOYAGE_MAP_LEGEND_LABEL_MIN)
+  })
+
+  it('haelt den Boden bis ueber die engste Buehne, die die Woerter traegt', () => {
+    // Full HD mit AUSGEKLAPPTER Zielliste (952) ist der Fall, an dem die Boeden
+    // von Kachel und Schrift hergeleitet sind: 329 px fuer die Zone, rund 321
+    // Bedarf, 8 px Reserve. Ein Wort, das dort schon 8,28 misst, kostet ueber
+    // fuenf Marken samt `letter-spacing` rund 5 dieser 8 px — rechnerisch noch
+    // drin, aber die Herleitung waere stillschweigend falsch geworden. Genau
+    // dafuer tragen beide Versaetze eine halbe bzw. drei Zehntel zuviel.
+    expect(legendIcon(STAGE_W.fhdOpen)).toBe(VOYAGE_MAP_LEGEND_ICON_MIN)
+    expect(legendLabel(STAGE_W.fhdOpen)).toBe(VOYAGE_MAP_LEGEND_LABEL_MIN)
+  })
+
+  it('erreicht den Deckel erst ueber der offenen 2K-Buehne', () => {
+    // Die andere Haelfte der Zusage: eine Skala, die schon auf 2K anschlaegt,
+    // hat den Versatz umsonst bezahlt — dann waere das reine Verhaeltnis die
+    // einfachere Wahl gewesen. Eine, die auf 4K NICHT anschlaegt, laesst den
+    // Fuss dort halb leer, was der Grund des Umbaus war.
+    expect(legendIcon(STAGE_W.qhdOpen)).toBeLessThan(VOYAGE_MAP_LEGEND_ICON_MAX)
+    expect(legendIcon(STAGE_W.uhdOpen)).toBe(VOYAGE_MAP_LEGEND_ICON_MAX)
+    expect(legendLabel(STAGE_W.uhdOpen)).toBe(VOYAGE_MAP_LEGEND_LABEL_MAX)
+  })
+
+  it('laesst das Wort auf KEINER Buehne die Zonenhoehe bestimmen', () => {
+    // Der Test darueber prueft die Rangordnung nur an den DECKELN, und das
+    // genuegte, solange beide Masse dasselbe Verhaeltnis trugen: 1,2 x Wort war
+    // dann immer 0,48 x Kachel. Mit zwei Versaetzen ist das Verhaeltnis nicht
+    // mehr konstant, und die Ordnung an den Deckeln sagt nichts mehr ueber die
+    // Mitte. Also wird die Mitte geprueft, an jeder Buehne, die es gibt.
+    for (const w of [
+      VOYAGE_MAP_LEGEND_ICONS_MIN_W,
+      VOYAGE_MAP_LEGEND_MIN_W,
+      ...Object.values(STAGE_W),
+    ]) {
+      expect(LEGEND_LABEL_LINE * legendLabel(w)).toBeLessThan(legendIcon(w))
+      expect(legendIcon(w)).toBeLessThanOrEqual(VOYAGE_MAP_LEGEND_ICON_MAX)
+    }
+  })
+
+  it('waechst gegenueber der Skala, die sie ersetzt hat — und nirgends darunter', () => {
+    // Der ZWECK des Umbaus, als Zahl: auf 2K stand die Kachel bei 28,8 px in
+    // einem Fuss, der 44 erlaubt, weil dieselbe Steigung Full HD am Boden
+    // halten musste. Wo die alte Skala schon am Boden oder am Deckel stand,
+    // darf sich nichts aendern — sonst ist Full HD der Preis.
+    const OLD_ICON_CQW = 2.1
+    const OLD_LABEL_CQW = 0.84
+    for (const w of Object.values(STAGE_W)) {
+      const altIcon = clampPx(
+        VOYAGE_MAP_LEGEND_ICON_MIN,
+        (OLD_ICON_CQW * w) / 100,
+        VOYAGE_MAP_LEGEND_ICON_MAX,
+      )
+      const altLabel = clampPx(
+        VOYAGE_MAP_LEGEND_LABEL_MIN,
+        (OLD_LABEL_CQW * w) / 100,
+        VOYAGE_MAP_LEGEND_LABEL_MAX,
+      )
+      expect(legendIcon(w)).toBeGreaterThanOrEqual(altIcon)
+      expect(legendLabel(w)).toBeGreaterThanOrEqual(altLabel)
+    }
+    expect(legendIcon(STAGE_W.qhdOpen)).toBeGreaterThan(35)
   })
 
   it('zeigt die Legende erst, wo die Kosten schon stehen', () => {
