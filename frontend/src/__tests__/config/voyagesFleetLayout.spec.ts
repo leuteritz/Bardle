@@ -32,6 +32,7 @@ import {
   VOYAGE_FLEET_SEAT_OVERLAP,
   VOYAGE_FLEET_SEAT_RING,
   VOYAGE_FLEET_MARK_MAX_PX,
+  VOYAGE_FLEET_TIER_BAR_W,
   MATERIAL_ACCENT_HEX,
   EXPEDITION_TIERS,
   EXPEDITION_TIER_COLORS,
@@ -68,19 +69,23 @@ import { galaxyFitBox } from '@/utils/fx/galaxyPlate'
  * Hafenabstand dort ungestört bleibt.
  */
 
-/** Was einer Karte innen bleibt — dreimal dieselbe Rechnung wäre drei Quellen. */
+/**
+ * Was einer Karte innen bleibt — dreimal dieselbe Rechnung wäre drei Quellen.
+ * 190 seit dem Kanaltausch: der 3-px-Zustandsstreifen ist von der linken Kante
+ * an die obere gewandert, also aus der Breite in die Höhe.
+ */
 const CARD_INNER_W =
   VOYAGE_FLEET_CARD_MIN_W - 2 * VOYAGE_FLEET_CARD_INSET_X - VOYAGE_FLEET_CARD_BORDER_X
 
 /**
  * Die ZWEI Gruppen der Ertragszeile, jede als Aussenmass — Chimes und Meeps, die
- * beiden Währungen. Material war einmal eine dritte und ist gefallen: es ist die
+ * beiden Währungen, und sie sind GLEICH gross (25 px Zahl, 16 px Sprite). Material war einmal eine dritte und ist gefallen: es ist die
  * dritte Zahl in einer Zeile, die von zweien handelt, und steht vollständig in
  * `ExpeditionSubjectTooltip`. Erst dadurch konnte der Lohn auf 28 px wachsen.
  *
- * Die Wand der Meepzahl ist die NEUN, nicht die Eins (3,94 gegen 7,53 bei 12 px):
- * mit der Eins band die Spec einmal 2 px zu schmal, und die Zeile schloss im
- * Browser mit 0,11 px Reserve.
+ * Die Wand der Meepzahl ist die NULL, nicht die Neun (16,53 gegen 15,08 bei
+ * 25 px) — dieselbe Überraschung wie beim Lohn. Mit der Eins band die Spec
+ * einmal 2 px zu schmal, und die Zeile schloss im Browser mit 0,11 px Reserve.
  */
 const PAY_W = VOYAGE_FLEET_CHIME_PX + VOYAGE_FLEET_EARN_TIGHT + VOYAGE_FLEET_PAY_MAX_PX
 const MEEP_W = VOYAGE_FLEET_LOOT_ICON + VOYAGE_FLEET_EARN_TIGHT + VOYAGE_FLEET_LOOT_MAX_PX
@@ -264,11 +269,15 @@ describe('voyages fleet strip', () => {
    * 110 bräche schon die Zusicherung darüber, und danach die Kopfleiste, danach
    * beide STAGE_HEIGHT-Tabellen. Wer eine Zeile ergänzt, bricht hier zuerst.
    *
-   * Crew 34 + Ertrag 30 + Ablesung 22 + 2 x 2 Lücke = 90 von 91 px. Vier waren
-   * es einmal: die Kopfzeile (Glyph + Zielname) und die Fortschrittsschiene sind
-   * gefallen und haben ihre 31 px an die Portraits und die beiden Zahlenzeilen
-   * abgegeben. Bezahlt haben seither zweimal die Zeilenlücken, beide Male für
-   * Schriftgrösse: 4 → 3 für die 19-px-Uhr, dann 3 → 2 für den 28-px-Lohn.
+   * Crew 34 + Ertrag 28 + Ablesung 22 + 2 x 2 Lücke = 88 von 89 px. Vier Zeilen
+   * waren es einmal: die Kopfzeile (Glyph + Zielname) und die Fortschrittsschiene
+   * sind gefallen und haben ihre 31 px an die Portraits und die beiden
+   * Zahlenzeilen abgegeben.
+   *
+   * Die 89 sind der Preis des Kanaltauschs — der Zustandsstreifen sitzt jetzt
+   * OBEN und kostet 3 px Rahmen in der Höhe statt in der Breite. Bezahlt hat es
+   * die Ertragszeile (30 → 28); sie braucht die 30 nicht mehr, seit Lohn und
+   * Meepzahl bei 25 px stehen statt der Lohn allein bei 28.
    */
   it('trägt die drei Zeilen der Karte samt Lücken', () => {
     const rows = VOYAGE_FLEET_AVATAR_PX + VOYAGE_FLEET_PAY_H + VOYAGE_FLEET_READ_H
@@ -284,13 +293,23 @@ describe('voyages fleet strip', () => {
    * Zahl, die abschneiden kann.
    *
    * Alle Textbreiten sind im Browser GEMESSEN, nicht gerechnet (MedievalSharp
-   * hat keine Tabellenziffern, `docs/playwright.md`): Lohn „+900.00M" bei 28 px
-   * fett (139 — NICHT „999.99M", die Null ist breiter als die Neun, und eine
-   * zurückgekehrte Mission trägt ein `+`), „100 %" bei 13 px, Uhr „12:00" bei
-   * 19 px, Meep-Ziffer bei 13 px, Dauer „12m 30s" bei 13 px.
+   * hat keine Tabellenziffern, `docs/playwright.md`): Lohn „+900.00M" bei 25 px
+   * fett (123,44 — NICHT „999.99M", die Null ist breiter als die Neun, und eine
+   * zurückgekehrte Mission trägt ein `+`), Meep-Ziffer „0" bei 25 px (16,53),
+   * „100 %" bei 13 px, Uhr „12:00" bei 19 px, Dauer „12m 30s" bei 13 px.
    */
   it('trägt die Ertragszeile mit Lohn und Meep', () => {
     expect(PAY_W + VOYAGE_FLEET_EARN_GAP + MEEP_W).toBeLessThanOrEqual(CARD_INNER_W)
+  })
+
+  /**
+   * Die STUFE steht senkrecht an der linken Kante und liegt dabei IM linken
+   * Innenabstand — der Inhalt weicht ihr nicht aus. Wächst der Streifen über den
+   * Innenabstand hinaus, läuft er unter die Portraits, und zwar lautlos: er ist
+   * `position: absolute` und `pointer-events: none`.
+   */
+  it('hält den Stufenstreifen aus dem Inhalt', () => {
+    expect(VOYAGE_FLEET_TIER_BAR_W).toBeLessThan(VOYAGE_FLEET_CARD_INSET_X)
   })
 
   /**

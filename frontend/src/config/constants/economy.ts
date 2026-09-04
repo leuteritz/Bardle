@@ -985,29 +985,34 @@ export const VOYAGE_FLEET_SEAT_RING = 2
  * Unwichtigste auf der Karte und steht weiter im Tooltip; die Schiene maß
  * dieselbe Spanne wie die Uhr, nur ungenauer.
  *
- * `voyagesFleetLayout.spec.ts` bindet die Summe: 34 + 30 + 22 + 2 x 2 = 90 in
- * 91 px Innenmaß. Die 91 kommen seit dem Gleichstand der beiden Kopfleisten aus
- * `105 − 2 x 6 − 2` statt aus `109 − 2 x 8 − 2` — dieselbe eine Reserve, nur
- * anders bezahlt: die Karte gab 4 px Höhe ab und holte sie sich aus ihrem
- * eigenen senkrechten Innenabstand zurück.
+ * `voyagesFleetLayout.spec.ts` bindet die Summe: 34 + 28 + 22 + 2 x 2 = 88 in
+ * 89 px Innenmaß.
  *
- * ZWEIMAL haben die Zeilenlücken bezahlt, und beide Male für Schriftgröße: erst
- * 4 → 3 für die 19-px-Uhr der Ablesezeile, dann 3 → 2 für den 28-px-Lohn. Das
- * geht nur, weil die Ertragszeile einen eigenen GRUND trägt — er trennt sie von
- * ihren Nachbarn, also braucht sie die Lücke nicht, um gelesen zu werden.
+ * Die 89 sind neu und der Preis des Kanaltauschs: der Zustandsstreifen ist von
+ * der linken Kante an die OBERkante gewandert, und damit 3 px Rahmenstärke aus
+ * der Breite in die Höhe. `105 − 2 x 6 − 4` statt `105 − 2 x 6 − 2`. Die Breite
+ * gewinnt dieselben 2 px, und die Ertragszeile kann sie brauchen.
  *
- * Keine der drei Zeilen hat dafür nachgegeben, und keine kann es: die Crew trägt
- * das 34-px-Portrait, der Ertrag 28-px-Schrift, die Ablesung 19 — und
- * MedievalSharp überschiesst seine Zeilenbox um rund 5 % (28 x 1,05 = 29,4).
+ * Die Zeilenlücken stehen auf 2, und das geht nur, weil die Ertragszeile einen
+ * eigenen GRUND trägt — er trennt sie von ihren Nachbarn, also braucht sie die
+ * Lücke nicht, um gelesen zu werden.
+ *
+ * Keine der drei Zeilen gibt nach, und keine kann es: die Crew trägt das
+ * 34-px-Portrait, der Ertrag 25-px-Schrift, die Ablesung 19 — und MedievalSharp
+ * überschiesst seine Zeilenbox um rund 5 % (25 x 1,05 = 26,25 in 28).
  */
-export const VOYAGE_FLEET_PAY_H = 30
+export const VOYAGE_FLEET_PAY_H = 28
 export const VOYAGE_FLEET_READ_H = 22
 export const VOYAGE_FLEET_CARD_ROW_GAP = 2
 export const VOYAGE_FLEET_CARD_INSET_Y = 6
 export const VOYAGE_FLEET_CARD_INSET_X = 9
-/** Rahmen quer und hoch: links 3 (Zustandskante) + rechts 1, oben/unten je 1. */
-export const VOYAGE_FLEET_CARD_BORDER_X = 4
-export const VOYAGE_FLEET_CARD_BORDER_Y = 2
+/**
+ * Rahmen quer und hoch: links und rechts je 1, OBEN 3 (der Zustandsstreifen) und
+ * unten 1. Die 3 lagen einmal links — sie sind mit dem Kanaltausch nach oben
+ * gewandert, und mit ihnen 2 px aus der Innenhöhe in die Innenbreite.
+ */
+export const VOYAGE_FLEET_CARD_BORDER_X = 2
+export const VOYAGE_FLEET_CARD_BORDER_Y = 4
 /**
  * Reservierte Breiten der beiden laufenden Zahlen. Sie sind Pflicht, nicht
  * Kosmetik: MedievalSharp hat keine Tabellenziffern,
@@ -1058,42 +1063,54 @@ export const VOYAGE_FLEET_DUR_W = 54
 export const VOYAGE_FLEET_EARN_GAP = 4
 export const VOYAGE_FLEET_EARN_TIGHT = 2
 /**
- * Chime- und Meep-Artwork auf der Karte — die BEIDEN Erträge, die sie zeigt.
- * Das ECHTE Artwork, kein Iconify-Ersatz: dieselbe Währung sieht überall gleich
- * aus. Beide liegen unter der 34-px-Schwelle, also trägt die `-128`-Stufe.
+ * Chime- und Meep-Artwork auf der Karte — die BEIDEN Erträge, die sie zeigt, und
+ * sie sind GLEICH gross. Das ECHTE Artwork, kein Iconify-Ersatz: dieselbe
+ * Währung sieht überall gleich aus; beide liegen unter der 34-px-Schwelle, also
+ * trägt die `-128`-Stufe.
  *
- * Das Chime BLEIBT bei 16, obwohl seine Zahl auf 28 px gewachsen ist, und das
- * ist kein Versehen: der Lohn braucht im schlimmsten Fall 139 px, und mit einem
- * 20-px-Sprite liefe die Zeile über (190 von 188). Das Sprite ist der einzige
- * Posten, dessen Verkleinerung nichts kostet — eine gekürzte Zahl kostet immer
- * etwas.
+ * Gleich gross ist eine Aussage, keine Kosmetik: Chimes und Meeps sind im Spiel
+ * gleichrangig, und mit 14 px neben 16 und einer 13-px-Zahl neben einer 28er las
+ * sich der Meep als Fussnote des Lohns.
  */
 export const VOYAGE_FLEET_CHIME_PX = 16
-export const VOYAGE_FLEET_LOOT_ICON = 14
+export const VOYAGE_FLEET_LOOT_ICON = 16
 /**
- * Die beiden Textbreiten der Ertragszeile, im Browser per `Range` GEMESSEN.
- * Sie sind die Wand, gegen die `voyagesFleetLayout.spec.ts` die Zeile rechnet —
- * läuft sie über, kürzt sich der Lohn selbst weg, also genau die Zahl, wegen der
- * die Zeile da ist.
+ * Die beiden Textbreiten der Ertragszeile, im Browser per `Range` GEMESSEN —
+ * beide bei 25 px, denn Lohn und Meepzahl sind gleich gross. Sie sind die Wand,
+ * gegen die `voyagesFleetLayout.spec.ts` die Zeile rechnet.
  *
- * Der Lohn: 139, und die Zahl hat DREI Überraschungen. „999.99M" ist NICHT der
- * schlimmste Fall (119) — die NULL ist breiter als die Neun („000.00M" 123,72),
- * und eine zurückgekehrte Mission trägt das Präfix `+` (`rewardPrefix`), das
- * allein 15 px kostet. Gemessen bei 28 px: „+900.00M" 138,25, als theoretische
- * Obergrenze „+000.00M" 139,19. Die alte 102 war deshalb schon vor dem Umbau zu
- * schmal gebunden: sie mass „999.99M" ohne Präfix.
+ * Der Lohn hat DREI Überraschungen. „999.99M" ist NICHT der schlimmste Fall
+ * (106,25 bei 25 px) — die NULL ist breiter als die Neun, und eine
+ * zurückgekehrte Mission trägt das Präfix `+` (`rewardPrefix`), das allein rund
+ * 13 px kostet. Gemessen: „+900.00M" 123,44, als theoretische Obergrenze
+ * „+000.00M" 124,28. Die alte 102 war deshalb schon vor dem Umbau zu schmal
+ * gebunden: sie mass „999.99M" ohne Präfix.
  *
- * Die Meepzahl: eine Ziffer, denn `EXPEDITION_SPOILS` gibt höchstens 1 Meep.
- * Gebunden ist trotzdem die breiteste (7,53 bei 12 px, gut 8 bei 13) — die Wand
- * soll die Stufen überleben, nicht sie beschreiben.
+ * Die Meepzahl ist eine Ziffer, denn `EXPEDITION_SPOILS` gibt höchstens 1 Meep.
+ * Gebunden ist trotzdem die breiteste — die NULL mit 16,53 — die Wand soll die
+ * Stufen überleben, nicht sie beschreiben.
+ *
+ * Warum 25 und nicht 26: bei 26 schliesst die Zeile mit 188 von 190 px, also
+ * 2 px Reserve. Das ist keine, und der Unterschied ist auf dem Schirm nicht zu
+ * sehen. Bei 25 sind es 182 von 190.
  */
-export const VOYAGE_FLEET_PAY_MAX_PX = 139
-export const VOYAGE_FLEET_LOOT_MAX_PX = 9
+export const VOYAGE_FLEET_PAY_MAX_PX = 125
+export const VOYAGE_FLEET_LOOT_MAX_PX = 17
 /**
- * Der Stufenstreifen an der Oberkante. Er liegt ABSOLUT und kostet deshalb keine
- * Zeile — der Höhenhaushalt der Karte hat sie nicht.
+ * Der Stufenstreifen — SENKRECHT an der linken Kante, drei Segmente übereinander.
+ * Er liegt ABSOLUT und kostet deshalb keine Zeile; der Höhenhaushalt der Karte
+ * hat keine.
+ *
+ * Er lag einmal waagerecht oben und hat mit dem Zustand die Plätze getauscht:
+ * die linke Kante läuft über die ganze Kartenhöhe und ist der auffälligere Platz.
+ * Seine FORM ist mitgewandert — drei Segmente, 1/2/3 erleuchtet, Farbe UND Länge
+ * sagen dieselbe Stufe. Vom durchgehenden Zustandsstreifen oben unterscheidet
+ * ihn genau das: segmentiert gegen durchgehend.
+ *
+ * Die Breite muss UNTER `_CARD_INSET_X` bleiben — der Streifen liegt im linken
+ * Innenabstand, und der Inhalt weicht ihm nicht aus. 4 von 9 lassen 5 px Luft.
  */
-export const VOYAGE_FLEET_TIER_BAR_H = 4
+export const VOYAGE_FLEET_TIER_BAR_W = 4
 export const VOYAGE_FLEET_TIER_BAR_GAP = 2
 /**
  * Breite der Rangsäule links und der Aktionssäule rechts — die Bandbreite, die

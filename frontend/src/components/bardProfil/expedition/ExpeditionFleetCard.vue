@@ -48,7 +48,7 @@ import {
   VOYAGE_FLEET_SEAT_OVERLAP,
   VOYAGE_FLEET_SEAT_RING,
   VOYAGE_FLEET_TIER_BAR_GAP,
-  VOYAGE_FLEET_TIER_BAR_H,
+  VOYAGE_FLEET_TIER_BAR_W,
   VOYAGE_FLEET_TIME_W,
   EXPEDITION_TIER_COLORS,
   EXPEDITION_TIER_SEGMENTS,
@@ -85,14 +85,12 @@ const earnGap = `${VOYAGE_FLEET_EARN_GAP}px`
 const earnTight = `${VOYAGE_FLEET_EARN_TIGHT}px`
 const chimePx = `${VOYAGE_FLEET_CHIME_PX}px`
 const lootIcon = `${VOYAGE_FLEET_LOOT_ICON}px`
-const tierBarH = `${VOYAGE_FLEET_TIER_BAR_H}px`
+const tierBarW = `${VOYAGE_FLEET_TIER_BAR_W}px`
 const tierGap = `${VOYAGE_FLEET_TIER_BAR_GAP}px`
-/* Der Streifen endet, wo der Inhalt beginnt — sonst liefe er unter die
-   Zustandskante links und läse sich als deren Fortsetzung. */
-const tierInsetX = `${VOYAGE_FLEET_CARD_INSET_X}px`
 /* Der Ertragsgrund läuft über die volle Kartenbreite — so kostet er keine
-   Innenbreite, und die Ertragszeile ist auf den Pixel belegt. */
+   Innenbreite. Der Stufenstreifen liegt mit `z-index` DARÜBER. */
 const earnBleed = `-${VOYAGE_FLEET_CARD_INSET_X}px`
+const earnPad = `${VOYAGE_FLEET_CARD_INSET_X}px`
 
 const row = computed(() => props.card.row)
 
@@ -267,8 +265,10 @@ const aria = computed(
       :aria-label="aria"
       @click="emit('open', card.galaxy, card.pinKey)"
     >
-      <!-- Die STUFE: drei Segmente, davon 1/2/3 erleuchtet. Absolut gesetzt, es
-           kostet also keine Zeile — der Höhenhaushalt der Karte hat keine. -->
+      <!-- Die STUFE: drei Segmente, davon 1/2/3 erleuchtet — SENKRECHT an der
+           linken Kante. Absolut gesetzt, es kostet also keine Zeile; der
+           Höhenhaushalt der Karte hat keine. Vom durchgehenden Zustandsstreifen
+           oben unterscheidet ihn die FORM. -->
       <span class="vfc-tier" aria-hidden="true">
         <span
           v-for="seg in 3"
@@ -324,8 +324,9 @@ const aria = computed(
 </template>
 
 <style scoped>
-/* Die linke Kante ist der Zustandskanal — nie über die Kurzschreibweise färben,
-   das löschte sie. */
+/* Die OBERkante ist der Zustandskanal — nie über die Kurzschreibweise färben,
+   das löschte sie. Sie lag einmal links und hat mit der Stufe getauscht: die
+   linke Kante läuft über die ganze Kartenhöhe und ist der auffälligere Platz. */
 .vfc {
   position: relative;
   flex: 0 0 auto;
@@ -341,7 +342,7 @@ const aria = computed(
      Ablesezeile — damit er auch ohne Farbsehen trägt. */
   background: var(--vfc-bg, #1c1c18);
   border: 1px solid #3e200a;
-  border-left: 3px solid var(--vfc-edge, rgba(230, 220, 196, 0.4));
+  border-top: 3px solid var(--vfc-edge, rgba(230, 220, 196, 0.4));
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.16s ease;
@@ -380,9 +381,10 @@ const aria = computed(
   --vfc-bg: #1a0e0e;
 }
 /* Der Akzent wird in den Zustandsgrund GEMISCHT statt ihn zu ersetzen: eine
-   Auswahl darf nicht löschen, was die Karte über sich sagt. */
+   Auswahl darf nicht löschen, was die Karte über sich sagt. Die OBERkante bleibt
+   dabei ausgespart — sie gehört dem Zustand. */
 .vfc--on {
-  border-top-color: var(--gx-accent, #c89040);
+  border-left-color: var(--gx-accent, #c89040);
   border-right-color: var(--gx-accent, #c89040);
   border-bottom-color: var(--gx-accent, #c89040);
   background: color-mix(in srgb, var(--gx-accent, #c89040) 16%, var(--vfc-bg, #1c1c18));
@@ -391,22 +393,28 @@ const aria = computed(
   background: color-mix(in srgb, var(--gx-accent, #c89040) 24%, var(--vfc-bg, #1c1c18));
 }
 
-/* ── Stufe: drei Segmente an der Oberkante ──────────────────── */
+/* ── Stufe: drei Segmente an der LINKEN Kante ────────────────── */
 /* Farbe UND Länge tragen dieselbe Auskunft — die Stufe bleibt lesbar, wenn
-   jemand Blau und Lila nicht trennt. */
+   jemand Blau und Lila nicht trennt.
+
+   `top`/`bottom: 0` messen gegen die PADDING-Box, der Streifen läuft also von
+   selbst zwischen den beiden waagerechten Rahmen. Der `z-index` ist Pflicht:
+   der Ertragsgrund reicht über die volle Kartenbreite und läge sonst darüber. */
 .vfc-tier {
   position: absolute;
-  left: v-bind(tierInsetX);
-  right: v-bind(tierInsetX);
+  left: 0;
   top: 0;
+  bottom: 0;
+  z-index: 1;
   display: flex;
+  flex-direction: column;
   gap: v-bind(tierGap);
-  height: v-bind(tierBarH);
+  width: v-bind(tierBarW);
   pointer-events: none;
 }
 .vfc-tier-seg {
   flex: 1;
-  border-radius: 0 0 1px 1px;
+  border-radius: 0 1px 1px 0;
   background: rgba(200, 164, 90, 0.12);
 }
 .vfc-tier-seg.is-lit {
@@ -478,7 +486,7 @@ const aria = computed(
   gap: v-bind(earnGap);
   height: v-bind(payH);
   margin: 0 v-bind(earnBleed);
-  padding: 0 v-bind(tierInsetX);
+  padding: 0 v-bind(earnPad);
   background: rgba(0, 0, 0, 0.25);
 }
 .vfc-chimes,
@@ -488,14 +496,18 @@ const aria = computed(
   align-items: center;
   gap: v-bind(earnTight);
 }
-/* Keine Zelle der Zeile gibt mehr nach: seit Material gefallen ist, stehen
-   18 px Reserve. Eine Zahl, die schrumpfen darf, ist eine Zahl, die abschneiden
-   kann. */
+/* Keine Zelle der Zeile gibt nach — eine Zahl, die schrumpfen darf, ist eine
+   Zahl, die abschneiden kann.
+
+   Sie steht in DERSELBEN Grösse wie der Lohn: Chimes und Meeps sind im Spiel
+   gleichrangig, und mit 13 px neben einer 28er las sich der Meep als Fussnote.
+   Nur der TON bleibt der leisere — der Lohn ist die Zahl, wegen der die Zeile
+   da ist. */
 .vfc-meep {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 25px;
+  font-weight: 800;
   line-height: 1;
-  color: rgba(232, 220, 192, 0.68);
+  color: rgba(232, 220, 192, 0.82);
   white-space: nowrap;
 }
 /* Das ECHTE Artwork, kein Iconify-Ersatz — dieselbe Währung sieht überall
@@ -507,10 +519,10 @@ const aria = computed(
   object-fit: contain;
 }
 /* Sie gibt nie nach: kürzte sie sich weg, verschwände die eine Zahl, wegen der
-   die Zeile da ist. 28 px — gewachsen, als Material die Zeile verliess. */
+   die Zeile da ist. */
 .vfc-pay {
   flex-shrink: 0;
-  font-size: 28px;
+  font-size: 25px;
   font-weight: 800;
   line-height: 1;
   color: #e8dcc0;
