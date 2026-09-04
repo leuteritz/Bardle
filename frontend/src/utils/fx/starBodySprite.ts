@@ -25,6 +25,7 @@ import {
   STAR_BODY_HALO_ALPHA,
   STAR_BODY_HALO_ALPHA_MUL,
   STAR_BODY_HALO_REACH,
+  STAR_BODY_HALO_SMALL_BOOST,
   STAR_BODY_LIMB_ALPHA,
   STAR_BODY_LOOK_POOL,
   STAR_BODY_LOOK_SEED_SALT,
@@ -253,10 +254,11 @@ function rayGradient(
   return g
 }
 
-function haloFor(look: StarLook): { reach: number; alpha: number } {
+function haloFor(look: StarLook, detail: StarDetail): { reach: number; alpha: number } {
+  const boost = detail < 2 ? STAR_BODY_HALO_SMALL_BOOST : 1
   return {
     reach: STAR_BODY_HALO_REACH[look],
-    alpha: STAR_BODY_HALO_ALPHA * STAR_BODY_HALO_ALPHA_MUL[look],
+    alpha: Math.min(1, STAR_BODY_HALO_ALPHA * STAR_BODY_HALO_ALPHA_MUL[look] * boost),
   }
 }
 
@@ -493,13 +495,13 @@ export const paintSplinterCore: StarPaint = (ctx, x, y, r, pal, seed, detail) =>
 
 /* ── Halo ───────────────────────────────────────────────────────────────────── */
 
-export const paintDwarfHalo: StarPaint = (ctx, x, y, r, pal) => {
-  const h = haloFor('dwarf')
+export const paintDwarfHalo: StarPaint = (ctx, x, y, r, pal, _seed, detail) => {
+  const h = haloFor('dwarf', detail)
   haloGlow(ctx, x, y, r, pal.rgb, h.reach, h.alpha)
 }
 
-export const paintGiantHalo: StarPaint = (ctx, x, y, r, pal) => {
-  const h = haloFor('giant')
+export const paintGiantHalo: StarPaint = (ctx, x, y, r, pal, _seed, detail) => {
+  const h = haloFor('giant', detail)
   haloGlow(ctx, x, y, r, pal.rgb, h.reach, h.alpha)
   const mantle = ctx.createRadialGradient(x, y, r * 1.05, x, y, r * 1.45)
   const tone = mix(pal.rgb, 255, 0.3)
@@ -511,8 +513,8 @@ export const paintGiantHalo: StarPaint = (ctx, x, y, r, pal) => {
   ctx.fill()
 }
 
-export const paintPulsarHalo: StarPaint = (ctx, x, y, r, pal) => {
-  const h = haloFor('pulsar')
+export const paintPulsarHalo: StarPaint = (ctx, x, y, r, pal, _seed, detail) => {
+  const h = haloFor('pulsar', detail)
   haloGlow(ctx, x, y, r, pal.rgb, h.reach, h.alpha)
   const bloom = ctx.createRadialGradient(x, y, 0, x, y, r * 1.05)
   bloom.addColorStop(0, 'rgba(255, 255, 255, 0.55)')
@@ -523,21 +525,21 @@ export const paintPulsarHalo: StarPaint = (ctx, x, y, r, pal) => {
   ctx.fill()
 }
 
-export const paintBinaryHalo: StarPaint = (ctx, x, y, r, pal, seed) => {
-  const h = haloFor('binary')
+export const paintBinaryHalo: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
+  const h = haloFor('binary', detail)
   haloGlow(ctx, x - r * 0.12, y + r * 0.08, r * STAR_BODY_BINARY_MAIN_R, pal.rgb, h.reach, h.alpha)
   const c = binaryCompanionAt(r, seed)
   haloGlow(ctx, x + c.x, y + c.y, c.cr, mix(pal.rgb, 255, 0.35), 2.4, h.alpha * 0.7)
 }
 
-export const paintRingstarHalo: StarPaint = (ctx, x, y, r, pal, seed) => {
-  const h = haloFor('ringstar')
+export const paintRingstarHalo: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
+  const h = haloFor('ringstar', detail)
   haloGlow(ctx, x, y, r, pal.rgb, h.reach, h.alpha)
   ringDisc(ctx, x, y, r, pal, seed, 'back')
 }
 
 export const paintVeilHalo: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
-  const h = haloFor('veil')
+  const h = haloFor('veil', detail)
   haloGlow(ctx, x, y, r, pal.rgb, h.reach, h.alpha)
   const wisps = STAR_BODY_VEIL_WISPS - (2 - detail)
   const tone = mix(pal.rgb, 255, 0.25)
@@ -550,7 +552,7 @@ export const paintVeilHalo: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
 }
 
 export const paintUmbraHalo: StarPaint = (ctx, x, y, r, pal, _seed, detail) => {
-  const h = haloFor('umbra')
+  const h = haloFor('umbra', detail)
   haloGlow(ctx, x, y, r, pal.rgb, h.reach, h.alpha * 0.4)
   const ring = ctx.createRadialGradient(x, y, r * 0.98, x, y, r * 1.32)
   ring.addColorStop(0, rgba(pal.rgb, 0.55))
@@ -566,8 +568,8 @@ export const paintUmbraHalo: StarPaint = (ctx, x, y, r, pal, _seed, detail) => {
   ctx.stroke()
 }
 
-export const paintSplinterHalo: StarPaint = (ctx, x, y, r, pal) => {
-  const h = haloFor('splinter')
+export const paintSplinterHalo: StarPaint = (ctx, x, y, r, pal, _seed, detail) => {
+  const h = haloFor('splinter', detail)
   haloGlow(ctx, x, y, r, pal.rgb, h.reach, h.alpha)
 }
 
@@ -737,12 +739,6 @@ export const STAR_LOOK_PAINTERS: Record<StarLook, Record<StarSpriteLayer, StarPa
   splinter: { halo: paintSplinterHalo, core: paintSplinterCore, spin: paintSplinterSpin },
 }
 
-/** Ob die Drehebene bei dieser Stufe überhaupt gebaut wird (Perf-Regel 7).
- *  Die Eskorte behält ihre Zacken — ohne sie ist sie nur ein roter Punkt. */
-export function starSpinShown(look: StarLook, detail: StarDetail): boolean {
-  return detail > 0 || look === 'splinter'
-}
-
 const cache = createSpriteCache(STAR_BODY_SPRITE_CANVAS_MAX)
 
 export function buildStarSprite(
@@ -754,7 +750,6 @@ export function buildStarSprite(
   dpr: number,
   detail: StarDetail,
 ): HTMLCanvasElement | null {
-  if (layer === 'spin' && !starSpinShown(look, detail)) return null
   const d = clampSpriteDpr(dpr)
   const key = starBodySpriteKey(layer, look, rgb, seed, px, d, detail)
   const hit = cache.get(key)

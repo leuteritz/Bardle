@@ -15,6 +15,7 @@ import {
   STAR_BODY_SIZE_BOSS_ESCORT_MIN,
   STAR_BODY_SIZE_GALAXY_BOSS,
   STAR_BODY_SIZE_GALAXY_BOSS_MIN,
+  STAR_SYSTEM_MIN_SUN_SCALE,
   SUN_RADIUS,
 } from '@/config/constants'
 import type { StarType } from '@/types'
@@ -123,8 +124,14 @@ export function getOrbitBodyScale(
  * Oberhalb des Kometen-Ankers greift trotzdem dieselbe Spätdämpfung, sonst
  * würde er in den letzten Phasen unverhältnismäßig davonziehen.
  */
+/** Die Sonnenskala, gegen die ein Sternsystem (Körper, Planetenbahnen, Planeten)
+ *  rechnet — nach unten geklemmt, siehe STAR_SYSTEM_MIN_SUN_SCALE. */
+export function starSystemScale(sunScale: number): number {
+  return Math.max(STAR_SYSTEM_MIN_SUN_SCALE, sunScale)
+}
+
 export function starBodySize(type: StarType, sunScale: number): number {
-  const bodyScale = getOrbitBodyScale(sunScale, 1)
+  const bodyScale = getOrbitBodyScale(starSystemScale(sunScale), 1)
   if (type === 'champion') return ORBIT_TIERS.star[0].size * bodyScale
   if (type === 'resource') return ORBIT_TIERS.star[1].size * bodyScale
   if (type === 'boss_escort') {

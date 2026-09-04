@@ -367,6 +367,7 @@ import {
   COOLDOWN_RING_MIN_PROGRESS,
   COOLDOWN_RING_HOT_PROGRESS,
   COOLDOWN_RING_TIP_RADIUS,
+  STAR_COOLDOWN_RING_R_K,
   COOLDOWN_RING_TIP_RADIUS_HOT,
   STAR_ORBIT_MIN_SUN_SCALE,
   HINT_SPRITE_CACHE_LIMIT,
@@ -1331,7 +1332,7 @@ function drawCooldownRings() {
     const state = starBurstStates.get(star.id)
     if (!state && !isNovaStar) continue
 
-    const r = (starSize(star.starType) / 2 + 9) * star.scale
+    const r = (starSize(star.starType) / 2) * STAR_COOLDOWN_RING_R_K * star.scale
     const alpha = star.opacity * starHoverDimFactor(star.id)
     if (alpha <= ORBIT_RING_MIN_OPACITY) continue
     const bursting = !isNovaStar && state!.shotsLeft > 0
@@ -1350,13 +1351,8 @@ function drawCooldownRings() {
     const lineW = isNovaStar ? 3 : 2
     drewAny = true
 
-    // Leise Spur, damit der Ring auch bei wenig Fortschritt lesbar ist
-    c.beginPath()
-    c.arc(star.x, star.y, r, 0, TWO_PI)
-    c.strokeStyle = isNovaStar ? `rgba(255,80,0,${0.14 * alpha})` : `rgba(255,136,0,${0.1 * alpha})`
-    c.lineWidth = lineW
-    c.stroke()
-
+    // Keine Vollkreis-Spur: ein geschlossener Kreis um den Körper las sich als
+    // Planetenring — der Bogen samt Spitze trägt den Fortschritt allein.
     if (progress <= COOLDOWN_RING_MIN_PROGRESS) continue
     const start = -Math.PI / 2
     const end = start + progress * TWO_PI
@@ -1574,12 +1570,9 @@ function starWrapStyle(star: StarRenderEntry) {
 }
 
 function starBodyVisualStyle(star: StarRenderEntry) {
-  const s = starSize(star.starType)
-  const ringInset = Math.round(s * 0.16)
   const [r, g, b] = star.starColor
   return {
     '--star-rgb': `${r}, ${g}, ${b}`,
-    '--ring-inset': `-${ringInset}px`,
     '--star-span': String(STAR_BODY_SPRITE_SPAN),
     '--star-spin-sec': `${STAR_BODY_SPIN_SEC[star.look]}s`,
     // Fokussierter Stern: kein Behind-Blur — er soll vor der Sonne klar lesbar sein
@@ -2001,9 +1994,7 @@ function starCountStyle(star: StarRenderEntry) {
    Elements für ungültig, und das mal der Zahl der Sterne: bei zehn Sternen
    waren allein die Stern-Pulse rund zwölf Neuberechnungen je Frame. Was man
    nicht sieht, soll auch nichts kosten. */
-.star-sys-back .star-pulse-overlay,
-.star-sys-back .star-body::before,
-.star-sys-back .star-body::after {
+.star-sys-back .star-pulse-overlay {
   animation: none;
 }
 
@@ -2208,15 +2199,17 @@ function starCountStyle(star: StarRenderEntry) {
 
 /* Puls über Opacity eines Overlays statt filter: brightness() —
    läuft auf dem Compositor und erzwingt keine Repaints pro Frame. */
+/* Der atmende Halo in Sternfarbe. Kein Ring: ein Kreis um einen Punkt liest
+   sich als Planet, und ein Stern ist ein Leuchtkörper. */
 .star-pulse-overlay {
   position: absolute;
-  inset: 0;
+  inset: calc(50% - var(--star-span, 2.2) * 50%);
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(255, 255, 255, 0.5) 0%,
-    rgba(255, 255, 255, 0.15) 55%,
-    transparent 78%
+    rgba(var(--star-rgb), 0.5) 0%,
+    rgba(var(--star-rgb), 0.18) 28%,
+    transparent 52%
   );
   opacity: 0;
   /* Kein `will-change`: für eine LAUFENDE Opazitäts-Animation legt Chrome die
@@ -2300,71 +2293,18 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
 }
 
-/* Der Ring atmet nur noch am CHAMPION-Stern. Ressourcensterne stellen die
-   Masse im Orbit — bei zehn Stück lief hier zehnmal dieselbe Animation, für
-   einen 1,5 px starken Ring, dessen Deckkraft zwischen 45 % und 82 % wandert.
-   Den lebendigen Stern trägt sein Kernpuls (.star-pulse-overlay) allein; das
-   Atmen bleibt denen vorbehalten, die Aufmerksamkeit verdienen — Champion,
-   Eskorte und Galaxieboss. */
-.star-body--champion::after,
-.star-body--resource::after {
-  content: '';
-  position: absolute;
-  inset: var(--ring-inset, -11px);
-  border-radius: 50%;
-  border: 1.5px solid rgba(var(--star-rgb), 0.45);
-  opacity: 0.62;
-  pointer-events: none;
+/* Der Atem ist je Typ verschieden schnell — die Masse (Resource) langsam,
+   Aufmerksamkeit (Champion, Eskorte, Boss) schneller. */
+.star-body--champion .star-pulse-overlay {
+  animation-duration: 2.2s;
 }
 
-.star-body--champion::after {
-  opacity: 1;
-  animation: star-ring-pulse 2.8s ease-in-out infinite;
-}
-
-/* ── Galaxieboss: episches Doppelring- + Corona-Styling ─────────────────────
-   Alle Animationen laufen über transform/opacity auf eigenen Pseudo-Layern —
-   Compositor-only, keine Repaints pro Frame. */
-.star-body--galaxy_boss::after {
-  content: '';
-  position: absolute;
-  inset: var(--ring-inset, -14px);
-  border-radius: 50%;
-  border: 2.5px solid rgba(var(--star-rgb), 0.75);
-  animation: star-ring-pulse 1.6s ease-in-out infinite;
-  pointer-events: none;
-}
-
-/* Herzschlag des Bosses: schnellerer, härterer Kern-Puls als bei normalen Sternen */
 .star-body--galaxy_boss .star-pulse-overlay {
   animation-duration: 1.4s;
 }
 
-/* Eskorten: kleiner, aggressiver Warnring */
-.star-body--boss_escort::after {
-  content: '';
-  position: absolute;
-  inset: var(--ring-inset, -8px);
-  border-radius: 50%;
-  border: 1.5px solid rgba(var(--star-rgb), 0.65);
-  animation: star-ring-pulse 1.3s ease-in-out infinite;
-  pointer-events: none;
-}
-
 .star-body--boss_escort .star-pulse-overlay {
   animation-duration: 1.8s;
-}
-
-@keyframes star-ring-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.45;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 0.82;
-  }
 }
 
 .star-spawn-flash {

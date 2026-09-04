@@ -235,6 +235,9 @@ export const PLANET_ORBIT_MIN_RY_VIEWPORT_FACTORS = [0.1, 0.15]
  * zieht sonst auch die Sternbahnen mit ein, bis die Sterne im Kern kleben.
  */
 export const STAR_ORBIT_MIN_SUN_SCALE = 0.9
+/** Körper UND Planetenbahnen eines Sterns schrumpfen nie unter diese Sonnenskala —
+ *  bei 0,2 (Komet) war der Stern 14 px und las sich als Punkt mit Kreis. */
+export const STAR_SYSTEM_MIN_SUN_SCALE = 0.5
 
 // ── Stern-Rendering im Idle-Orbit (useStarSystem) ──────────────────────────
 /** Restdeckkraft eines Sterns hinter der Sonne. */
@@ -468,6 +471,8 @@ export const COOLDOWN_RING_MIN_PROGRESS = 0.004
 export const COOLDOWN_RING_HOT_PROGRESS = 0.92
 /** Radius der Glüh-Spitze am Bogenende, kalt und heiß. */
 export const COOLDOWN_RING_TIP_RADIUS = 2.2
+/** Radius des Angriffsbogens als Vielfaches des Sternradius — am Halo-Rand, nicht an der Kante. */
+export const STAR_COOLDOWN_RING_R_K = 1.45
 export const COOLDOWN_RING_TIP_RADIUS_HOT = 3
 
 // Canonical orbit tiers — 2 distinct orbit paths per category
@@ -558,9 +563,10 @@ export const STAR_BODY_SPRITE_SPAN = 2.2
 export const STAR_BODY_SPRITE_CACHE_MAX = 144
 /** Roh-Canvas nur als Durchlauf zum Encoder — der Bildspeicher liegt in der URL. */
 export const STAR_BODY_SPRITE_CANVAS_MAX = 8
-/** Unterhalb dieser Kante trägt ein Stern keine Drehebene (Perf-Regel 7, wie
- *  `DRIFTER_ORNAMENT_MIN_SIZE`); die volle Zier gibt es ab _PX_2. */
-export const STAR_BODY_DETAIL_PX_1 = 32
+/** Unterhalb dieser Kante DREHT die Strahlenebene nicht mehr (Perf-Regel 7, wie
+ *  `DRIFTER_ORNAMENT_MIN_SIZE`); die Strahlen selbst bleiben, sie sind die Gestalt.
+ *  Die volle Zier gibt es ab _PX_2. */
+export const STAR_BODY_DETAIL_PX_1 = 22
 export const STAR_BODY_DETAIL_PX_2 = 56
 /** Die sechs würfelbaren Gestalten für Champion- und Resource-Sterne;
  *  Galaxieboss (`umbra`) und Eskorte (`splinter`) sind fest. */
@@ -590,6 +596,8 @@ export const STAR_BODY_SPIN_SEC: Record<StarLook, number> = {
 }
 /** Halo: Deckkraft am Körperrand, Reichweite und Stärke je Gestalt. */
 export const STAR_BODY_HALO_ALPHA = 0.62
+/** Unter Stufe 2 leuchtet der Halo kräftiger — die blassen Spektralfarben tragen sonst nicht. */
+export const STAR_BODY_HALO_SMALL_BOOST = 1.25
 export const STAR_BODY_HALO_REACH: Record<StarLook, number> = {
   dwarf: 1.5,
   giant: 2.15,

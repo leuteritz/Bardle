@@ -6,7 +6,6 @@ import {
   starLookFor,
   starPaletteFromRgb,
   starSeedFor,
-  starSpinShown,
   type StarDetail,
   type StarSpriteLayer,
 } from '@/utils/fx/starBodySprite'
@@ -166,11 +165,20 @@ describe('Sternkörper — Gestalt, Stufe, Palette', () => {
     expect(starBodyDetail(STAR_BODY_DETAIL_PX_2)).toBe(2)
   })
 
-  it('klein trägt keine Drehebene — ausser der Eskorte', () => {
+  it('die Drehebene malt auf jeder Stufe — Strahlen sind die Gestalt', () => {
     for (const look of LOOKS) {
-      expect(starSpinShown(look, 0), look).toBe(look === 'splinter')
-      expect(starSpinShown(look, 1), look).toBe(true)
+      for (const detail of [0, 1, 2] as const) {
+        const ops = run(look, 'spin', detail)
+        expect(ops.some((o) => o === 'fill()' || o === 'stroke()'), `${look}/${detail}`).toBe(true)
+      }
     }
+  })
+
+  it('klein leuchtet der Halo kräftiger als gross', () => {
+    const alpha = (detail: StarDetail) =>
+      run('dwarf', 'halo', detail).find((o) => o.startsWith('addColorStop(0,'))!
+    expect(alpha(1)).not.toBe(alpha(2))
+    expect(alpha(0)).toBe(alpha(1))
   })
 
   it('jede Gestalt hat eine Umlaufdauer, und die Eskorte die kürzeste', () => {

@@ -12,6 +12,7 @@ import {
   orbitBehindArc,
   orbitBehindProgress,
   starBodySize,
+  starSystemScale,
 } from '@/utils/orbit/geometry'
 import { playStarVanishFx } from '@/utils/fx/starVanishFx'
 import {
@@ -218,6 +219,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
     const screenCx = window.innerWidth / 2
     const screenCy = window.innerHeight / 2
     const sunScale = planetShopStore.orbitSunScale
+    const systemScale = starSystemScale(sunScale)
     const orbitScaleVal = orbitScale.value
 
     const vMin = Math.min(window.innerWidth, window.innerHeight)
@@ -399,8 +401,8 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         planetAngles.set(slot.planetId, pAngle)
         livePlanetAngles.set(slot.planetId, pAngle)
 
-        const targetSlotRx = slot.orbitRx * sunScale * orbitScaleVal
-        const targetSlotRy = slot.orbitRy * sunScale * orbitScaleVal
+        const targetSlotRx = slot.orbitRx * systemScale * orbitScaleVal
+        const targetSlotRy = slot.orbitRy * systemScale * orbitScaleVal
         let curRx = planetCurRx.get(slot.planetId) ?? targetSlotRx * STAR_PLANET_FLY_IN_FACTOR
         let curRy = planetCurRy.get(slot.planetId) ?? targetSlotRy * STAR_PLANET_FLY_IN_FACTOR
         curRx += (targetSlotRx - curRx) * STAR_PLANET_RADIUS_LERP
@@ -424,7 +426,7 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
             ? STAR_PLANET_SIZE_GALAXY_BOSS
             : slot.isChampionPlanet
               ? STAR_PLANET_SIZE_CHAMPION
-              : STAR_PLANET_SIZE_NORMAL) * getOrbitBodyScale(sunScale)
+              : STAR_PLANET_SIZE_NORMAL) * getOrbitBodyScale(systemScale)
 
         const pRelY = (py - sy) / Math.max(targetSlotRy, 1)
         const pIsBehind = pRelY < ORBIT_BEHIND_REL_Y
