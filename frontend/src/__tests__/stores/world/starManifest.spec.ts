@@ -42,6 +42,8 @@ function makeChampionStar(clearedCount: number, total = 3) {
   return {
     id: 'star-1',
     starType: 'champion' as const,
+    look: 'dwarf' as const,
+    seed: 0,
     starAngle: 0,
     starDirection: 1 as const,
     orbitRx: 100,

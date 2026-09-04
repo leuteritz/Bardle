@@ -51,10 +51,12 @@
       <template v-for="star in backStars" :key="star.id">
         <div
           class="star-body"
-          :class="`star-body--${star.starType}`"
+          :class="starBodyClasses(star)"
           :style="starBodyBackStyle(star)"
-          :ref="(el) => setMapEl(starBackEls, star.id, el)"
+          :ref="(el) => bindStarBack(star, el)"
         >
+          <div class="star-core" />
+          <div class="star-spawn-flash" />
           <div class="star-pulse-overlay" />
         </div>
       </template>
@@ -87,12 +89,21 @@
         >
           <div
             class="star-body"
-            :class="`star-body--${star.starType}`"
+            :class="starBodyClasses(star)"
             :style="starBodyVisualStyle(star)"
+            :ref="(el) => bindStarBody(star, el)"
             role="button"
             :aria-label="`${star.starType === 'galaxy_boss' ? 'Galaxy Boss' : star.starType === 'boss_escort' ? 'Boss Escort' : star.starType === 'champion' ? 'Champion' : 'Resource'} Star – Boss-Fight starten`"
             tabindex="0"
           >
+            <!-- Reihenfolge ist Ebenen-Haushalt: was NACH einer animierten
+                 Ebene kommt, bekommt vom Compositor eine eigene — deshalb
+                 stehen Drehebene und Puls zuletzt. -->
+            <div class="star-halo" />
+            <div class="star-core" />
+            <div class="star-hover-glow" />
+            <div class="star-spawn-flash" />
+            <div class="star-spin" />
             <div class="star-pulse-overlay" />
           </div>
         </div>
@@ -376,8 +387,11 @@ import {
   STAR_TIMER_HP_MIN_PCT,
   HP_HEALTHY_PERCENT,
   HP_CRIT_PERCENT,
+  STAR_BODY_SPRITE_SPAN,
+  STAR_BODY_SPIN_SEC,
 } from '@/config/constants'
-import { setMapEl, sweepMapEls } from '@/utils/orbit/frameEls'
+import { setMapEl, sweepMapEls, type FrameElRef } from '@/utils/orbit/frameEls'
+import { mountStarSprites, starBodyDetail } from '@/utils/fx/starBodySprite'
 import { hudFieldMetrics, hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
 import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
@@ -467,7 +481,8 @@ const countEls = new Map<string, HTMLElement>()
 
 // Registrierung und Aufräumen liegen in utils/orbit/frameEls.ts — dasselbe
 // Muster nutzen inzwischen auch ChampionOrbit und PlanetOrbit.
-const ALL_EL_MAPS: Map<string, Element>[] = [starBackEls, starWrapEls, summaryEls, countEls]
+const starBodyEls = new Map<string, HTMLElement>()
+const ALL_EL_MAPS: Map<string, Element>[] = [starBackEls, starWrapEls, starBodyEls, summaryEls, countEls]
 let sweepCounter = 0
 
 // ── Orbit-Glow-Ringe als Canvas-Sprites ──────────────────────────────────────
@@ -716,6 +731,48 @@ function setSummaryHover(id: string | null) {
 const combatStore = useCombatStore()
 const battleStore = useBattleStore()
 const planetShopStore = usePlanetShopStore()
+
+// ── Sprite-Ebenen des Sternkörpers (utils/fx/starBodySprite.ts) ──────────────
+// Eine Funktions-Ref feuert bei JEDEM Patch des VNodes; der Blit ist deshalb
+// über den Schlüssel idempotent. Neu gerastert wird nur, wenn Sonnenphase
+// oder Pixeldichte den Schlüssel ändern.
+const dprNow = ref(1)
+let dprQuery: MediaQueryList | null = null
+function readDpr(): void {
+  const next = window.devicePixelRatio || 1
+  if (next !== dprNow.value) dprNow.value = next
+  watchDpr()
+}
+function watchDpr(): void {
+  dprQuery?.removeEventListener('change', readDpr)
+  dprQuery = window.matchMedia(`(resolution: ${dprNow.value}dppx)`)
+  dprQuery.addEventListener('change', readDpr)
+}
+function mountStarBody(star: StarRenderEntry, el: HTMLElement): void {
+  mountStarSprites(el, star.look, star.starColor, star.seed, starSize(star.starType), dprNow.value)
+}
+function bindStarBody(star: StarRenderEntry, el: FrameElRef): void {
+  setMapEl(starBodyEls, star.id, el)
+  if (el) mountStarBody(star, el as HTMLElement)
+}
+function bindStarBack(star: StarRenderEntry, el: FrameElRef): void {
+  setMapEl(starBackEls, star.id, el)
+  bindStarBody(star, el)
+}
+function rebuildStarSprites(): void {
+  for (const star of starRenders.value) {
+    const el = starBodyEls.get(star.id)
+    if (el) mountStarBody(star, el)
+  }
+}
+watch([() => planetShopStore.orbitSunScale, dprNow], rebuildStarSprites, { flush: 'post' })
+function starBodyClasses(star: StarRenderEntry): (string | Record<string, boolean>)[] {
+  return [
+    `star-body--${star.starType}`,
+    `star-body--${star.look}`,
+    { 'star-body--flat': starBodyDetail(starSize(star.starType)) === 0 },
+  ]
+}
 const { orbitScale } = useOrbitScale()
 
 const scaledStarOrbitTiers = computed(() =>
@@ -1481,11 +1538,14 @@ watch(isIdleRenderingPaused, (paused) => {
 
 onMounted(() => {
   window.addEventListener('resize', onResize)
+  dprNow.value = window.devicePixelRatio || 1
+  watchDpr()
   sizeHintCanvases()
   enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
 })
 onUnmounted(() => {
   window.removeEventListener('resize', onResize)
+  dprQuery?.removeEventListener('change', readDpr)
   clearRevealTimers()
   cancelAnimationFrame(enemyAnimFrame)
   cancelAnimationFrame(hintResumeFrame)
@@ -1503,16 +1563,6 @@ function starSize(type: StarType): number {
   return starBodySize(type, planetShopStore.orbitSunScale)
 }
 
-function starBoxShadow(starColor: [number, number, number], s: number): string {
-  const rn = (n: number) => Math.round(s * n)
-  const [r, g, b] = starColor
-  return [
-    `0 0 ${rn(0.19)}px rgba(${r},${g},${b},0.95)`,
-    `0 0 ${rn(0.44)}px rgba(${r},${g},${b},0.65)`,
-    `0 0 ${rn(0.8)}px rgba(${r},${g},${b},0.35)`,
-  ].join(', ')
-}
-
 function starWrapStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   return {
@@ -1527,17 +1577,11 @@ function starBodyVisualStyle(star: StarRenderEntry) {
   const s = starSize(star.starType)
   const ringInset = Math.round(s * 0.16)
   const [r, g, b] = star.starColor
-  const r2 = Math.round(r * 0.55),
-    g2 = Math.round(g * 0.55),
-    b2 = Math.round(b * 0.55)
-  const r3 = Math.round(r * 0.22),
-    g3 = Math.round(g * 0.22),
-    b3 = Math.round(b * 0.22)
   return {
-    background: `radial-gradient(circle, rgb(${r},${g},${b}) 0%, rgb(${r2},${g2},${b2}) 45%, rgb(${r3},${g3},${b3}) 100%)`,
-    boxShadow: starBoxShadow(star.starColor, s),
     '--star-rgb': `${r}, ${g}, ${b}`,
     '--ring-inset': `-${ringInset}px`,
+    '--star-span': String(STAR_BODY_SPRITE_SPAN),
+    '--star-spin-sec': `${STAR_BODY_SPIN_SEC[star.look]}s`,
     // Fokussierter Stern: kein Behind-Blur — er soll vor der Sonne klar lesbar sein
     filter: (isFocusStar(star.id) ? '' : star.filterStyle) || undefined,
     // Nur der Filter-Umschlag darf weich sein — die Opacity wird pro Frame
@@ -2117,8 +2161,49 @@ function starCountStyle(star: StarRenderEntry) {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  animation: star-spawn 0.7s ease-out;
   pointer-events: none;
+}
+
+/* Die drei Sprite-Ebenen: Halo und Drehebene ragen um --star-span über den
+   Körper hinaus, die Trefferfläche bleibt der Wrap. Das Bild kommt aus
+   mountStarSprites() und trägt deshalb kein Scope-Attribut. */
+.star-halo,
+.star-spin,
+.star-core {
+  position: absolute;
+  inset: calc(50% - var(--star-span, 2.2) * 50%);
+  pointer-events: none;
+}
+
+.star-halo :deep(img),
+.star-spin :deep(img),
+.star-core :deep(img) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+
+.star-spin {
+  animation: star-spin-turn var(--star-spin-sec, 40s) linear infinite;
+}
+
+/* Wie der Ring: Ressourcensterne stellen die Masse im Orbit und drehen NICHT
+   (bei dreissig Stück wären es dreissig Compositor-Animationen samt Style-
+   Invalidierung je Frame; gemessen +30 ms/s). Klein trägt keine Drehebene —
+   ausser der Eskorte, deren Zacken ihre Gestalt SIND. */
+.star-body--resource .star-spin,
+.star-body--flat:not(.star-body--splinter) .star-spin {
+  animation: none;
+}
+
+@keyframes star-spin-turn {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Puls über Opacity eines Overlays statt filter: brightness() —
@@ -2152,16 +2237,33 @@ function starCountStyle(star: StarRenderEntry) {
   }
 }
 
-.star-body-wrap:hover .star-body,
-.star-body-wrap.star-hovered .star-body {
-  animation: star-hover-pulse 0.6s ease-in-out infinite;
-  filter: drop-shadow(0 0 10px #ffe066) drop-shadow(0 0 22px rgba(255, 224, 102, 0.45))
-    brightness(1.3);
+/* Goldschein als eigene ruhende Ebene, nur ihre Opazität kippt — der frühere
+   drop-shadow-Filter rasterte im Hover jeden Frame die ganze Box neu. */
+.star-hover-glow {
+  position: absolute;
+  inset: calc(50% - var(--star-span, 2.2) * 50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 224, 102, 0.6) 0%,
+    rgba(255, 224, 102, 0.24) 30%,
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
 }
 
+.star-body-wrap:hover .star-hover-glow,
+.star-body-wrap.star-hovered .star-hover-glow,
+.star-body-wrap:active .star-hover-glow {
+  opacity: 1;
+}
+
+.star-body-wrap:hover .star-body,
+.star-body-wrap.star-hovered .star-body,
 .star-body-wrap:active .star-body {
   animation: star-hover-pulse 0.6s ease-in-out infinite;
-  filter: drop-shadow(0 0 10px #ffe066) brightness(1.3);
 }
 
 @keyframes star-hover-pulse {
@@ -2177,9 +2279,9 @@ function starCountStyle(star: StarRenderEntry) {
 @media (prefers-reduced-motion: reduce) {
   .star-body-wrap:hover .star-body,
   .star-body-wrap:active .star-body,
-  .star-body-wrap.star-hovered .star-body {
+  .star-body-wrap.star-hovered .star-body,
+  .star-spin {
     animation: none;
-    filter: drop-shadow(0 0 14px #ffe066) brightness(1.25);
   }
 
   .sun-aim-lock,
@@ -2229,48 +2331,8 @@ function starCountStyle(star: StarRenderEntry) {
   inset: var(--ring-inset, -14px);
   border-radius: 50%;
   border: 2.5px solid rgba(var(--star-rgb), 0.75);
-  box-shadow:
-    0 0 12px rgba(var(--star-rgb), 0.55),
-    inset 0 0 10px rgba(var(--star-rgb), 0.4);
   animation: star-ring-pulse 1.6s ease-in-out infinite;
   pointer-events: none;
-}
-
-/* Rotierende Corona: conic-gradient-Speichen, die langsam ums Zentrum kreisen */
-.star-body--galaxy_boss::before {
-  content: '';
-  position: absolute;
-  inset: calc(var(--ring-inset, -14px) * 2.4);
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    rgba(var(--star-rgb), 0.5) 0deg,
-    transparent 30deg,
-    rgba(var(--star-rgb), 0.28) 60deg,
-    transparent 95deg,
-    rgba(var(--star-rgb), 0.5) 120deg,
-    transparent 150deg,
-    rgba(var(--star-rgb), 0.28) 180deg,
-    transparent 215deg,
-    rgba(var(--star-rgb), 0.5) 240deg,
-    transparent 270deg,
-    rgba(var(--star-rgb), 0.28) 300deg,
-    transparent 335deg,
-    rgba(var(--star-rgb), 0.5) 360deg
-  );
-  -webkit-mask-image: radial-gradient(circle, transparent 42%, #000 55%, transparent 76%);
-  mask-image: radial-gradient(circle, transparent 42%, #000 55%, transparent 76%);
-  animation: galaxy-boss-corona-spin 9s linear infinite;
-  pointer-events: none;
-}
-
-@keyframes galaxy-boss-corona-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* Herzschlag des Bosses: schnellerer, härterer Kern-Puls als bei normalen Sternen */
@@ -2293,12 +2355,6 @@ function starCountStyle(star: StarRenderEntry) {
   animation-duration: 1.8s;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .star-body--galaxy_boss::before {
-    animation: none;
-  }
-}
-
 @keyframes star-ring-pulse {
   0%,
   100% {
@@ -2311,15 +2367,27 @@ function starCountStyle(star: StarRenderEntry) {
   }
 }
 
-@keyframes star-spawn {
+.star-spawn-flash {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 75%
+  );
+  opacity: 0;
+  animation: star-spawn-flash 0.7s ease-out;
+  pointer-events: none;
+}
+
+@keyframes star-spawn-flash {
   0% {
-    filter: brightness(3.5) saturate(1.8);
-  }
-  50% {
-    filter: brightness(2) saturate(1.3);
+    opacity: 1;
   }
   100% {
-    filter: brightness(1) saturate(1);
+    opacity: 0;
   }
 }
 

@@ -1,7 +1,8 @@
 import { hexToRgb } from '@/utils/ui/format'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import { defineStore } from 'pinia'
-import type { ChampionRole, PlanetType, StarManifest, StarType } from '@/types'
+import type { ChampionRole, PlanetType, StarLook, StarManifest, StarType } from '@/types'
+import { starLookFor, starSeedFor } from '@/utils/fx/starBodySprite'
 import { pickConfig } from '@/utils/planetDraw'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
@@ -88,6 +89,9 @@ export interface StarPlanetSlot {
 export interface StarGroup {
   id: string
   starType: StarType
+  /** Gestalt und Feinstreuung des Sprites — kosmetisch, beim Spawn gewürfelt. */
+  look: StarLook
+  seed: number
   starAngle: number
   starDirection: 1 | -1
   orbitRx: number
@@ -289,6 +293,8 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'resource',
+        look: starLookFor('resource', starIdCounter),
+        seed: starSeedFor(starIdCounter),
         starAngle:
           Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
         starDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
@@ -328,6 +334,8 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'resource',
+        look: starLookFor('resource', starIdCounter),
+        seed: starSeedFor(starIdCounter),
         starAngle:
           Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
         starDirection: (Math.random() < 0.5 ? 1 : -1) as 1 | -1,
@@ -402,6 +410,8 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'champion',
+        look: starLookFor('champion', starIdCounter),
+        seed: starSeedFor(starIdCounter),
         starAngle: Math.PI * CHAMPION_STAR_FIXED_ANGLE_FRAC_PI,
         starDirection: 1,
         orbitRx: tier.rx,
@@ -477,6 +487,8 @@ export const useStarGroupStore = defineStore('starGroup', {
       const star: StarGroup = {
         id: `star-${++starIdCounter}`,
         starType: 'galaxy_boss',
+        look: starLookFor('galaxy_boss', starIdCounter),
+        seed: starSeedFor(starIdCounter),
         starAngle:
           Math.PI * STAR_SPAWN_ANGLE_MIN_PI + Math.random() * Math.PI * STAR_SPAWN_ANGLE_RANGE_PI,
         starDirection: 1,
@@ -535,6 +547,8 @@ export const useStarGroupStore = defineStore('starGroup', {
         this.activeStars.push({
           id: `star-${++starIdCounter}`,
           starType: 'boss_escort',
+          look: starLookFor('boss_escort', starIdCounter),
+          seed: starSeedFor(starIdCounter),
           starAngle: baseAngle + (i / count) * Math.PI * 2,
           starDirection: (i % 2 === 0 ? 1 : -1) as 1 | -1,
           orbitRx: tier.rx,

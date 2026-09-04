@@ -48,7 +48,7 @@ import {
 } from '@/config/constants'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
-import type { PlanetType, StarType } from '@/types'
+import type { PlanetType, StarLook, StarType } from '@/types'
 
 export const livePlanetAngles = new Map<string, number>()
 
@@ -68,6 +68,8 @@ export interface StarRenderEntry {
   id: string
   starType: StarType
   starColor: [number, number, number]
+  look: StarLook
+  seed: number
   x: number
   y: number
   scale: number
@@ -476,6 +478,8 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
         id: star.id,
         starType: star.starType,
         starColor: star.starColor,
+        look: star.look,
+        seed: star.seed,
         x: displayX,
         y: displayY,
         scale: sScale,

@@ -2,7 +2,13 @@
 // Sterne, ihr Verhalten hinter der Sonne, die Cooldown-Ringe und die Drifter,
 // die durch das Bild fliegen.
 
-import type { ChampionRole, DrifterBodyKind, RoleAbilityMetric, RoleKitAbility } from '@/types'
+import type {
+  ChampionRole,
+  DrifterBodyKind,
+  RoleAbilityMetric,
+  RoleKitAbility,
+  StarLook,
+} from '@/types'
 import { SUN_RADIUS } from '@/config/constants/sun'
 import {
   ROLE_TOP_SHIELD_REBUILD_MS,
@@ -542,6 +548,88 @@ export const STAR_BODY_SIZE_BOSS_ESCORT = 30
 export const STAR_BODY_SIZE_BOSS_ESCORT_MIN = 20
 export const STAR_BODY_SIZE_GALAXY_BOSS = 58
 export const STAR_BODY_SIZE_GALAXY_BOSS_MIN = 46
+
+// ── Sternkörper als Sprite (utils/fx/starBodySprite.ts) ──────────────────────
+// Drei gecachte Offscreen-Ebenen je Stern (Halo, Kern, Drehebene) statt
+// Inline-Verlauf plus box-shadow. Alle drei Canvas messen px · SPAN.
+export const STAR_BODY_SPRITE_SPAN = 2.2
+/** Bild-URLs je Schlüssel: 30 Sterne × 3 Ebenen müssen hineinpassen, sonst
+ *  kodiert jeder Front/Back-Wechsel neu (gemessen: Frames über 60 ms). */
+export const STAR_BODY_SPRITE_CACHE_MAX = 144
+/** Roh-Canvas nur als Durchlauf zum Encoder — der Bildspeicher liegt in der URL. */
+export const STAR_BODY_SPRITE_CANVAS_MAX = 8
+/** Unterhalb dieser Kante trägt ein Stern keine Drehebene (Perf-Regel 7, wie
+ *  `DRIFTER_ORNAMENT_MIN_SIZE`); die volle Zier gibt es ab _PX_2. */
+export const STAR_BODY_DETAIL_PX_1 = 32
+export const STAR_BODY_DETAIL_PX_2 = 56
+/** Die sechs würfelbaren Gestalten für Champion- und Resource-Sterne;
+ *  Galaxieboss (`umbra`) und Eskorte (`splinter`) sind fest. */
+export const STAR_BODY_LOOK_POOL: readonly StarLook[] = [
+  'dwarf',
+  'giant',
+  'pulsar',
+  'binary',
+  'ringstar',
+  'veil',
+]
+export const STAR_BODY_LOOK_SEED_SALT = 41
+export const STAR_BODY_SEED_SALT = 97
+/** Feinstreuung je Stern (Fleckenlage, Zacken, Neigung) in so vielen Stufen —
+ *  klein gehalten, damit der Sprite-Cache Treffer landet. */
+export const STAR_BODY_SEED_SLOTS = 8
+/** Umlaufdauer der Drehebene in Sekunden je Gestalt. */
+export const STAR_BODY_SPIN_SEC: Record<StarLook, number> = {
+  dwarf: 48,
+  giant: 120,
+  pulsar: 22,
+  binary: 60,
+  ringstar: 40,
+  veil: 90,
+  umbra: 14,
+  splinter: 9,
+}
+/** Halo: Deckkraft am Körperrand, Reichweite und Stärke je Gestalt. */
+export const STAR_BODY_HALO_ALPHA = 0.62
+export const STAR_BODY_HALO_REACH: Record<StarLook, number> = {
+  dwarf: 1.5,
+  giant: 2.15,
+  pulsar: 1.45,
+  binary: 1.7,
+  ringstar: 1.6,
+  veil: 2.1,
+  umbra: 2.1,
+  splinter: 1.5,
+}
+export const STAR_BODY_HALO_ALPHA_MUL: Record<StarLook, number> = {
+  dwarf: 1,
+  giant: 0.62,
+  pulsar: 1.1,
+  binary: 0.9,
+  ringstar: 0.85,
+  veil: 0.5,
+  umbra: 0.8,
+  splinter: 0.9,
+}
+export const STAR_BODY_GRAIN_ALPHA = 0.14
+export const STAR_BODY_LIMB_ALPHA = 0.58
+export const STAR_BODY_DWARF_SPOTS = 3
+export const STAR_BODY_DWARF_RAYS = 8
+export const STAR_BODY_GIANT_BANDS = 3
+export const STAR_BODY_GIANT_MOTES = 14
+export const STAR_BODY_PULSAR_CORE_R = 0.74
+export const STAR_BODY_PULSAR_RAYS = 4
+export const STAR_BODY_BINARY_MAIN_R = 0.78
+export const STAR_BODY_BINARY_COMPANION_R = 0.3
+export const STAR_BODY_BINARY_COMPANION_AT = 0.58
+export const STAR_BODY_RINGSTAR_BODY_R = 0.72
+export const STAR_BODY_RINGSTAR_DISC_RX = 1.62
+export const STAR_BODY_RINGSTAR_DISC_INNER_RX = 1.02
+export const STAR_BODY_RINGSTAR_DISC_FLAT = 0.3
+export const STAR_BODY_RINGSTAR_TILT_DEG = 26
+export const STAR_BODY_VEIL_WISPS = 5
+export const STAR_BODY_UMBRA_ARMS = 6
+export const STAR_BODY_SPLINTER_WOBBLE = 0.22
+export const STAR_BODY_SPLINTER_RAYS = 5
 
 export const ORBIT_SUN_GROWTH_FACTOR = 0.7
 

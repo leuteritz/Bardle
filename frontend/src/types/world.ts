@@ -24,6 +24,18 @@ export type PlanetType =
 
 export type StarType = 'champion' | 'resource' | 'galaxy_boss' | 'boss_escort'
 
+/** Gestalt eines Orbit-Sterns — rein kosmetisch, beim Spawn gewürfelt
+ *  (`utils/fx/starBodySprite.ts`). Die FARBE trägt weiter die Rolle. */
+export type StarLook =
+  | 'dwarf'
+  | 'giant'
+  | 'pulsar'
+  | 'binary'
+  | 'ringstar'
+  | 'veil'
+  | 'umbra'
+  | 'splinter'
+
 export interface PlanetBossRewardSlot {
   type: 'chimes' | 'material'
   amount?: number

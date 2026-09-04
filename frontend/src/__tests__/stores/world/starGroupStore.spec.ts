@@ -14,6 +14,8 @@ function makeStar(id: string, planetIds: string[]) {
   return {
     id,
     starType: 'resource' as const,
+    look: 'dwarf' as const,
+    seed: 0,
     starAngle: 0,
     starDirection: 1 as const,
     orbitRx: 100,
