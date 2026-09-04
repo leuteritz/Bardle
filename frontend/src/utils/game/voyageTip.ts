@@ -76,6 +76,7 @@ export function buildVoyageTip(
       stateLabel: `${offer.tier} contract`,
       stateIcon: STATE_ICON.offer,
       destination: deps.destinationName(offer.galaxy),
+      galaxy: offer.galaxy,
       tier: offer.tier,
       expiresAt: offer.availableUntil,
       endsAt: null,
@@ -90,6 +91,8 @@ export function buildVoyageTip(
       seatsFilled: seats.filter(Boolean).length,
       seatsTotal: offer.requiredRoles.length,
       crew: seats.filter((n): n is string => !!n),
+      // Die Paarung, nicht die Liste: ein leerer Sitz nennt die Rolle, die fehlt.
+      crewSeats: offer.requiredRoles.map((role, i) => ({ name: seats[i] ?? null, role })),
     }
   }
 
@@ -111,6 +114,7 @@ export function buildVoyageTip(
     stateLabel: running ? 'In the field' : won ? 'Returned' : 'Lost',
     stateIcon: STATE_ICON[state],
     destination: deps.destinationName(mission.galaxy ?? 1),
+    galaxy: mission.galaxy ?? 1,
     tier,
     expiresAt: null,
     endsAt: running ? mission.startTime + spanMs : null,
@@ -128,5 +132,6 @@ export function buildVoyageTip(
     seatsFilled: null,
     seatsTotal: null,
     crew: mission.assignedChampions.map((c) => c.name),
+    crewSeats: mission.assignedChampions.map((c) => ({ name: c.name, role: c.role })),
   }
 }

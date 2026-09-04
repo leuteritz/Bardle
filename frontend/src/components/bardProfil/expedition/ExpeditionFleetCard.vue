@@ -19,6 +19,10 @@
  * bleibt eine Fremdform zwischen zwei echten Artworks; es steht vollständig in
  * `ExpeditionSubjectTooltip`, in beiden Zuständen. Nur weil es gefallen ist,
  * konnte der Lohn von 24 auf 28 px wachsen.
+ *
+ * Und was hier steht, steht in der Hover-Karte NICHT noch einmal: sie bekommt
+ * `context="fleet"` und laesst Uhr, Fristbalken, Lohn, Meep, Aussicht und die
+ * Gesichter weg. Uebrig bleibt, was auf 210 x 105 px keinen Platz hat.
  */
 import { computed } from 'vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
@@ -320,7 +324,9 @@ const aria = computed(
     </button>
 
     <template #tip>
-      <ExpeditionSubjectTooltip :pin-key="card.pinKey" :now="now" />
+      <!-- `fleet`: die Blase laesst weg, was hier im Bild schon steht — Uhr,
+           Lohn, Meep, Aussicht und die Gesichter. Siehe VOYAGE_TIP_BLOCKS. -->
+      <ExpeditionSubjectTooltip :pin-key="card.pinKey" :now="now" context="fleet" />
     </template>
   </RpgBadgeTooltip>
 </template>

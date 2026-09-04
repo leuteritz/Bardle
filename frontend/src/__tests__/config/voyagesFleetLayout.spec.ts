@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import {
   VOYAGE_RAIL_ZONE_W,
   VOYAGE_MAP_GUTTER_PX,
@@ -49,6 +51,11 @@ import {
   VOYAGE_RANK_RING_CIRCUMFERENCE,
   VOYAGE_RANK_CLOCK_W,
   VOYAGE_COMMAND_BAR_H,
+  VOYAGE_TIP_BLOCKS,
+  VOYAGE_FLEET_TIP_STATUS,
+  VOYAGE_FLEET_TIP_HINT,
+  VOYAGE_VERDICT_COLORS,
+  VOYAGE_ACTION_SEND_LABEL,
   EXPEDITION_LEDGER_RANKS,
   BOTTOM_BAR_SIDE_W,
 } from '@/config/constants'
@@ -394,5 +401,63 @@ describe('voyages fleet strip', () => {
     // Die Segmentzahl muss die Stufen TRENNEN, sonst trägt die Länge nichts.
     expect(new Set(Object.values(EXPEDITION_TIER_SEGMENTS)).size).toBe(tiers.length)
     expect(new Set(Object.values(EXPEDITION_TIER_COLORS)).size).toBe(tiers.length)
+  })
+
+  /**
+   * DIESELBE Hover-Karte hängt an zwei Ankern — an der Marke und an der
+   * Fleet-Karte. An der Marke ist sie die einzige Auskunft; über der Karte stand
+   * sie einmal fast vollständig doppelt: Uhr und Fristbalken, Lohn, Meep und
+   * Aussicht, dazu die Gesichter — SECHS von acht Blöcken.
+   *
+   * Die Spalten von `VOYAGE_TIP_BLOCKS` sind deshalb gegensätzlich: ein Block,
+   * der in beiden `true` steht, ist wieder eine Doppelung. Und die Fleet-Spalte
+   * trägt genau die zwei, für die auf 210 x 105 px kein Platz ist.
+   */
+  it('lässt die Hover-Karte der Fleet-Karte nichts wiederholen', () => {
+    const { mark, fleet } = VOYAGE_TIP_BLOCKS
+    expect(Object.keys(mark).sort()).toEqual(Object.keys(fleet).sort())
+    for (const key of Object.keys(mark) as (keyof typeof mark)[]) {
+      expect(mark[key], `${key} steht in beiden Ankern gleich`).not.toBe(fleet[key])
+    }
+    // Was die Karte selbst trägt, fällt; was sie nicht tragen kann, kommt hinzu.
+    expect(fleet.deadline || fleet.figures || fleet.faces).toBe(false)
+    expect(fleet.loot && fleet.hint).toBe(true)
+  })
+
+  /**
+   * Ein Klick auf die Fleet-Karte SPRINGT zur Marke — er sendet nicht und
+   * sammelt nicht ein. Die Blase sagt dort deshalb den Zustand, nicht die
+   * Geste; „Click to send" gehört der Marke. Jeder Ausgang braucht sein Wort,
+   * ausser dem blockierten: dort ist der GRUND die Auskunft.
+   */
+  it('gibt jedem Ausgang ein Wort für den Anker, der nicht handelt', () => {
+    const outcomes = Object.keys(VOYAGE_VERDICT_COLORS).filter((k) => k !== 'blocked')
+    expect(Object.keys(VOYAGE_FLEET_TIP_STATUS).sort()).toEqual(outcomes.sort())
+    for (const word of Object.values(VOYAGE_FLEET_TIP_STATUS)) {
+      expect(word).not.toBe(VOYAGE_ACTION_SEND_LABEL)
+      expect(word.toLowerCase()).not.toContain('click')
+    }
+    expect(VOYAGE_FLEET_TIP_HINT.toLowerCase()).toContain('click')
+  })
+
+  /**
+   * Die Tabelle bestimmt nur, was sie auch STEUERT. Eine Spalte, die keine
+   * `v-if` trägt, ist Dokumentation, kein Schalter — und der nächste Block
+   * rutscht dann wieder ungefragt in beide Anker. Ebenso muss die Karte ihren
+   * Anker durchreichen; ohne das gilt der Default, und alles stünde doppelt.
+   */
+  it('verdrahtet jede Spalte der Tabelle und reicht den Anker durch', () => {
+    const dir = join(__dirname, '..', '..', 'components', 'bardProfil', 'expedition')
+    const tip = readFileSync(join(dir, 'ExpeditionSubjectTooltip.vue'), 'utf8')
+    const card = readFileSync(join(dir, 'ExpeditionFleetCard.vue'), 'utf8')
+    const node = readFileSync(join(dir, 'ExpeditionSiteNode.vue'), 'utf8')
+
+    for (const key of Object.keys(VOYAGE_TIP_BLOCKS.mark)) {
+      expect(tip, `blocks.${key} steuert nichts`).toContain(`blocks.${key}`)
+    }
+    expect(tip).toContain('VOYAGE_FLEET_TIP_STATUS')
+    expect(card).toContain('context="fleet"')
+    // Die MARKE bleibt beim Default — sie zeigt von sich aus nichts.
+    expect(node).not.toContain('context=')
   })
 })

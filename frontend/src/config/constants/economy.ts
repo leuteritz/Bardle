@@ -1250,11 +1250,11 @@ export const VOYAGE_MAP_MAX_BACKING_PX = 2600
  * Der hoechste Expeditionsrang gibt 5 Angebotsplaetze und 5 Missionsplaetze
  * (EXPEDITION_LEDGER_RANKS), und ein Angebot behaelt beim Absenden seinen
  * Schluessel. Mehr als zehn Eintraege koennen also nie in DERSELBEN Galaxie
- * liegen, und ein Auffangfach fuer Ueberzaehlige braucht es nicht.
+ * liegen, und ein Auffangfach fuer Überzaehlige braucht es nicht.
  *
  * Die Zahl ist kein Spielraum, sondern eine Grenze: jeder weitere Platz drueckt
  * den garantierten Abstand (VOYAGE_BERTH_MIN_SEPARATION). Gemessen ueber 20
- * Galaxien und neun Sternzahlen faellt er von 38.9 px bei zehn Plaetzen auf
+ * Galaxien und neun Sternzahlen fällt er von 38.9 px bei zehn Plaetzen auf
  * 34.5 px bei zwoelf — unter die Klickflaeche.
  */
 export const VOYAGE_SITE_SLOTS = 10
@@ -1277,7 +1277,7 @@ export const VOYAGE_BERTH_MIN_SEPARATION = 0.072
  *
  * Die Plaetze kommen NICHT aus `generateGalaxyDots`. Der Zug strebt 0.085
  * Abstand an, garantiert ihn aber nicht — er probiert acht Kandidaten und nimmt
- * danach den letzten, wie er faellt. Gemessen lagen in der dichtesten Galaxie
+ * danach den letzten, wie er fällt. Gemessen lagen in der dichtesten Galaxie
  * zwei Punkte 25.5 px auseinander, bei VOYAGE_SITE_HIT_MIN 40 also zwei Haefen
  * mit deckenden Klickflaechen. Mehr Punkte anzufordern half nicht: die
  * spaeteren werden in genau die engen Luecken gedrueckt.
@@ -1327,7 +1327,7 @@ export const VOYAGE_SITE_DOT_RATIO = 0.69
  *  Pille darunter zu haengen. Die Ziffer misst `0.2 x Platte`; bei 48 sind das
  *  9.6 px und damit knapp unter der Pille (10.5) — darunter kippt es, und die
  *  Pille mit ihrem eigenen Untergrund ist dann die bessere Auskunft. Full HD
- *  liefert in der dichtesten Galaxie 51 px, faellt also gerade nicht zurueck. */
+ *  liefert in der dichtesten Galaxie 51 px, fällt also gerade nicht zurueck. */
 export const VOYAGE_SITE_INLINE_CLOCK_PX = 48
 
 /**
@@ -1362,12 +1362,12 @@ export const VOYAGE_MAP_ROUTE_ALPHA = 0.16
  * davor (Ziffer, Name, Stufe) ist GEFALLEN — sie stand vollstaendig ein zweites
  * Mal in der markierten Leistenzeile, bis hin zu denselben Stufen-Hexwerten.
  *
- * Der elastische Ueberschuss liegt auf der Naht zwischen Chronik und Deal, also
+ * Der elastische Überschuss liegt auf der Naht zwischen Chronik und Deal, also
  * dort, wo die Gruppen ohnehin auseinandergehen; Payout und Kosten bleiben
  * beieinander, weil sie ZUSAMMEN der Deal sind.
  *
  * 72 und nicht mehr 96: die 24 px sind an die Kopfleiste gegangen, damit deren
- * Karten Crew-Portraits tragen koennen. Weil die Buehne um DIESELBEN 24 faellt,
+ * Karten Crew-Portraits tragen koennen. Weil die Buehne um DIESELBEN 24 fällt,
  * bleibt `fitHeight = Buehne - Band` bei 561,6 px — die Galaxie verliert nichts.
  * Nach unten ist hier Schluss: `voyageBandFit.spec.ts` bindet
  * VOYAGE_MAP_STATS_VALUE_MIN > 30.4, und die hoechste Spalte samt dem
@@ -1382,7 +1382,7 @@ export const VOYAGE_RETURN_PILL_CLEARANCE = 14
  *  `voyagesAtlasLayout.spec.ts` rechnet sie gegen die Buehnenhoehe. */
 export const VOYAGE_RETURN_PILL_H = 52
 /** Senkrechtes Polster des Textblocks: 72 - 2x4 = 64 px nutzbar. Die hoechste
- *  Spalte (Segmente + Wert + Label) belegt davon 63,3 — daraus faellt der
+ *  Spalte (Segmente + Wert + Label) belegt davon 63,3 — daraus fällt der
  *  Wert-Deckel, er ist nicht gewaehlt. Der 1-px-`border-top` von `.egsb-row`
  *  geht zusaetzlich ab: nutzbar sind 63. `voyageBandFit.spec.ts` bindet es. */
 export const VOYAGE_MAP_STATS_PAD_Y = 4
@@ -1391,7 +1391,7 @@ export const VOYAGE_MAP_STATS_PAD_Y = 4
  *  gewaehlt: das Band steht vertikal MITTIG, oben wie unten muss also Luft
  *  bleiben. 37 x 1,07 + 11 x 1,5 = 54,3 in 63 nutzbaren (72 minus 2x4 Polster
  *  minus der 1-px-Rahmen) laesst je 4,4 px — im Browser gemessen 4,36 / 4,38.
- *  Schon 38 faellt unter die zugesagte Mindestluft; der Deckel ist damit der
+ *  Schon 38 fällt unter die zugesagte Mindestluft; der Deckel ist damit der
  *  groesstmoegliche Wert, nicht ein gewaehlter. `voyageBandFit.spec.ts` bindet
  *  beides. Die Kurve dazwischen steht als `clamp` im Band. */
 export const VOYAGE_MAP_STATS_VALUE_MIN = 31
@@ -1424,7 +1424,7 @@ export const VOYAGE_MAP_STATS_SCRIM_H = 110
  * Untergrenze der Buehnenhoehe — HERGELEITET, nicht gewaehlt: die kuerzere
  * Achse der Fit-Box muss VOYAGE_SITE_HIT_MIN / VOYAGE_BERTH_MIN_SEPARATION
  * (472.2) halten, sonst decken sich zwei Nachbarhaefen. Dazu das Band und
- * beide Insets. Darunter faellt es weg und die Box bekommt die Hoehe zurueck.
+ * beide Insets. Darunter fällt es weg und die Box bekommt die Hoehe zurueck.
  *
  * 472.2 + 72 (Band) + 36 (2 x Inset) = 580.2, aufgerundet mit demselben Polster
  * wie zuvor. Mit dem Band ist auch diese Schwelle um 24 gefallen — haette man
@@ -1446,7 +1446,7 @@ export const VOYAGE_MAP_STATS_MIN_W = 560
  * Zusicherung, sondern ein Irrtum in Wartestellung.
  *
  * Der Deckel bleibt trotzdem gebunden, denn die Reihe steht auf `nowrap` und
- * ihr Ueberlauf wird STILL abgeschnitten (`voyageBandFit.spec.ts` nennt den
+ * ihr Überlauf wird STILL abgeschnitten (`voyageBandFit.spec.ts` nennt den
  * Fall): wer einen fuenften Chip anhaengt oder ein Wort verbreitert, bricht die
  * Spec statt des Bildes.
  */
@@ -1503,7 +1503,7 @@ export const VOYAGE_MAP_STATS_RECORD_TIPS = {
    davon zu — es schrumpft die Fit-Box ohnehin, unter ihm liegt keine Marke.
 
    Sie fuellt die Fuge NICHT, sondern steht als eigene `auto`-Bahn LINKS davon:
-   der elastische Ueberschuss bleibt damit auf der Bedeutungsnaht zwischen
+   der elastische Überschuss bleibt damit auf der Bedeutungsnaht zwischen
    Chronik und Deal, wo er hingehoert. */
 
 /**
@@ -1564,7 +1564,7 @@ export const VOYAGE_MAP_LEGEND_LABEL_MAX = 18
  * Enden gleichzeitig treffen, und ein reiner Faktor trifft nur eines.
  *
  * Auf Full HD ist der Fuss gemessen knapp: mit einer 24er Kachel braeuchte die
- * Reihe 393 von 329 px, und der Ueberlauf einer `nowrap`-Zeile wird still
+ * Reihe 393 von 329 px, und der Überlauf einer `nowrap`-Zeile wird still
  * abgeschnitten. Der Boden muss dort also stehen bleiben. Auf 2K und 4K blieb
  * die Zone umgekehrt weit unter ihrem Deckel (30 von 44), obwohl daneben
  * Hunderte Pixel frei sind.
@@ -1627,9 +1627,9 @@ export const VOYAGE_MAP_LEGEND_ROWS = [
  * Woerter, Boden-Abstaende, Polster und der Rest zur naechsten Zone.
  *
  * Seit die Zone in der ELASTISCHEN Bahn sitzt, ist das nicht mehr ihre Breite:
- * sie nimmt, was die Bahn hergibt, und verteilt den Ueberschuss zwischen ihre
+ * sie nimmt, was die Bahn hergibt, und verteilt den Überschuss zwischen ihre
  * Marken (gemessen 368 px auf Full HD, 716 auf 2K, 1940 auf 4K). Was hier steht,
- * ist die Breite, unter die sie NICHT gedrueckt werden darf — darunter faellt
+ * ist die Breite, unter die sie NICHT gedrueckt werden darf — darunter fällt
  * der Abstand zwischen zwei Marken unter seinen `gap`-Boden und die
  * `nowrap`-Zeile wird still abgeschnitten.
  */
@@ -1664,7 +1664,7 @@ export const VOYAGE_MAP_LEGEND_SEAM_MIN = 24
  *
  * Gemessen (Buehne → Fuge nach der Reihe mit Woertern): 900,4 → 12,4 ·
  * 916,1 ist die letzte Sondenstufe · 927,9 → 31,8 · 952 → 48,3 · 1372 → 249,7.
- * Der Ueberlauf einer `nowrap`-Zeile wird hier STILL abgeschnitten.
+ * Der Überlauf einer `nowrap`-Zeile wird hier STILL abgeschnitten.
  *
  * Praktisch traegt jede Desktopaufloesung die Woerter — auch Full HD mit
  * ausgeklappter Zielliste (Buehne 952), und genau dafuer sind die Boeden von
@@ -1672,7 +1672,7 @@ export const VOYAGE_MAP_LEGEND_SEAM_MIN = 24
  */
 export const VOYAGE_MAP_LEGEND_MIN_W = 918
 /**
- * Ab hier steht die Sondenreihe, darunter faellt die Legende ganz weg.
+ * Ab hier steht die Sondenreihe, darunter fällt die Legende ganz weg.
  *
  * Gemessen (Buehne → Fuge nach der Sondenreihe): 718,4 → 24,1 · 758,4 → 53,4 ·
  * 795,4 → 75,6 · 900,4 → 135,3. Anders als das gefallene `_WIDE_W` greifen
@@ -1786,6 +1786,48 @@ export const VOYAGE_TIP_GAP_PX = 10
 export const VOYAGE_TIP_OPEN_DELAY_MS = 90
 /** So groß wie die größte Crew — es gibt deshalb nie ein „+N". */
 export const VOYAGE_TIP_CREW_MAX = 5
+
+/**
+ * Die Fleet-Karte SPRINGT zur Marke — sie sendet nicht und sammelt nicht ein.
+ *
+ * Ihre Hover-Karte nennt deshalb den ZUSTAND, nicht die Geste: „Click to send"
+ * über einer Karte, die nur zur Marke springt, verspricht etwas, das der Klick
+ * nicht tut. Was er tut, sagt `VOYAGE_FLEET_TIP_HINT` in der Fußzeile.
+ *
+ * Der blockierte Vertrag steht NICHT hier: dort ist der Grund die Auskunft, und
+ * der kommt wörtlich aus `voyageMarkAction`.
+ */
+export const VOYAGE_FLEET_TIP_STATUS = {
+  send: 'Ready to send',
+  collect: 'Spoils waiting',
+  lost: 'Salvage waiting',
+  waiting: 'Crew underway',
+} as const
+
+export const VOYAGE_FLEET_TIP_HINT = 'Click to open on the map'
+
+/** Materialbild der zurückgekehrten Beute. Unter der 34-px-Schwelle, also trägt
+ *  die `-128`-Stufe, die `Material.image` ohnehin liefert. */
+export const VOYAGE_FLEET_TIP_MAT_PX = 20
+
+/**
+ * Die Blöcke der Missions-Hover-Karte, je ANKER — und damit die eine Stelle,
+ * an der steht, was sie wo zeigt.
+ *
+ * An der MARKE steht alles: sie zeigt von sich aus nichts, die Blase ist ihre
+ * einzige Auskunft. Über der FLEET-Karte fällt jeder Block, den die Karte
+ * SELBST schon trägt — Uhr und Fristbalken, Lohn, Meep und Aussicht, die
+ * Gesichter des Trupps. Dafür kommen die beiden hinzu, für die auf der Karte
+ * kein Platz ist: die Materialbeute und die Fußzeile, die sagt, was der Klick
+ * wirklich tut.
+ *
+ * Die beiden Spalten sind deshalb GEGENSÄTZLICH, und `voyagesFleetLayout`
+ * bindet genau das: ein Block, der in beiden `true` steht, ist eine Doppelung.
+ */
+export const VOYAGE_TIP_BLOCKS = {
+  mark: { deadline: true, figures: true, faces: true, loot: false, hint: false },
+  fleet: { deadline: false, figures: false, faces: false, loot: true, hint: true },
+} as const
 
 /**
  * Eine Leistenzeile: Miniatur plus Namenszeile und Kartografiebalken.
@@ -1911,7 +1953,7 @@ export const VOYAGE_LEG_ARRIVAL_NAMES = [
 
 /** 24 x 20 = 480 Paare. Der Boden ist die dichteste Karte (rund 16 Marken):
  *  beide Haelften muessen 16 Ziehungen tragen, ohne dass `drawUnique` in den
- *  Wiederholungs-Fallback faellt — der letzte Stern waehlt noch aus 8 und 4. */
+ *  Wiederholungs-Fallback fällt — der letzte Stern waehlt noch aus 8 und 4. */
 export const GALAXY_STAR_NAME_ATTRIBUTES = [
   'Nameless',
   'Sleeping',

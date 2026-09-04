@@ -460,6 +460,8 @@ export interface VoyageTipView {
   stateIcon: string
   /** Themenname der Zielgalaxie. */
   destination: string
+  /** Ihre NUMMER. Das Fleet-Band mischt Galaxien und nennt nur ihren Ton. */
+  galaxy: number
   tier: 'common' | 'rare' | 'epic'
   /** Vertrag: Ablaufstempel. */
   expiresAt: number | null
@@ -481,6 +483,9 @@ export interface VoyageTipView {
   seatsTotal: number | null
   /** Wer draussen bzw. heimgekehrt ist. */
   crew: string[]
+  /** Sitz für Sitz, mit Rolle — `crew` verliert die Paarung, und ein leerer
+   *  Sitz sagt so, WELCHE Rolle noch fehlt. */
+  crewSeats: { name: string | null; role: ChampionRole }[]
 }
 
 /**

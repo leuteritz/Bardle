@@ -81,9 +81,32 @@ describe('voyageTip', () => {
     expect(view!.crew).toEqual(['Ahri'])
     expect(view!.odds).toBe(71)
     expect(view!.destination).toBe('Theme 5')
+    expect(view!.galaxy).toBe(5)
     expect(view!.hazards).toHaveLength(1)
     expect(view!.hazards[0]).toMatchObject({ id: 'voidStatic', name: 'Void Static' })
     expect(view!.hazards[0].requirement).toBeTruthy()
+  })
+
+  it('paart Sitz und Rolle — der leere Sitz nennt, was fehlt', () => {
+    /* `crew` ist die gefilterte Namensliste und verliert die Zuordnung. Die
+       Hover-Karte der Fleet-Karte zeigt statt der Gesichter die NAMEN, und ein
+       leerer Sitz sagt dort, welche Rolle noch aussteht — die Karte selbst zeigt
+       dafür nur einen leeren Ring. */
+    const view = buildVoyageTip({ pinKey: 'k', offer: slot(), mission: null }, deps())
+    expect(view!.crewSeats).toEqual([
+      { name: 'Ahri', role: 'TOP' },
+      { name: null, role: 'MID' },
+    ])
+
+    const mission = buildVoyageTip(
+      { pinKey: 'k', offer: null, mission: missionFrom(slot()) },
+      deps(),
+    )
+    expect(mission!.galaxy).toBe(5)
+    expect(mission!.crewSeats).toEqual([
+      { name: 'Ahri', role: 'TOP' },
+      { name: 'Ahri', role: 'MID' },
+    ])
   })
 
   it('lässt die Chance offen, solange kein Sitz besetzt ist', () => {

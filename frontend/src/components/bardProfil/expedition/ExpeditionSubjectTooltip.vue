@@ -13,6 +13,16 @@
  *
  * Nur beim Hover gemountet, der Inhalt kommt aus `buildVoyageTip`, die Uhr liest
  * allein diese Komponente.
+ *
+ * ZWEI Anker, ein Schnitt je Anker (`VOYAGE_TIP_BLOCKS`): an der MARKE steht
+ * alles, sie zeigt von sich aus nichts. Ueber der FLEET-Karte faellt jeder
+ * Block, den die Karte selbst traegt — Uhr, Fristbalken, Lohn, Meep, Aussicht
+ * und die Gesichter standen dort zweimal. Uebrig bleibt, was auf 210 x 105 px
+ * keinen Platz hat: Galaxie, Material, Gefahren, die Crew mit NAMEN und Rollen.
+ *
+ * Und die Geste gehoert der MARKE: ein Klick auf die Fleet-Karte springt nur
+ * dorthin. Sie sagt deshalb den ZUSTAND (`VOYAGE_FLEET_TIP_STATUS`) statt
+ * „Click to send" — und in der Fusszeile, was der Klick wirklich tut.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -22,6 +32,7 @@ import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { getOriginColor } from '@/config/champions/championOrigins'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
+import { MATERIALS } from '@/config/economy/materials'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { formatMinuteClock, formatShortDuration } from '@/utils/ui/format'
 import { buildVoyageTip } from '@/utils/game/voyageTip'
@@ -33,13 +44,20 @@ import {
   EXPEDITION_CHANCE_MID,
   EXPEDITION_EXPIRY_WARNING_MS,
   MATERIAL_ACCENT_HEX,
+  MATERIAL_COLOR,
+  MATERIAL_PLACEHOLDER_LABELS,
+  ROLE_BY_KEY,
   UNIVERSE_TOOLTIP_IMAGES,
   UNIVERSE_TOOLTIP_MEEP_SCALE,
   VOYAGE_ACTION_COLLECT_LABEL,
   VOYAGE_ACTION_ICONS,
   VOYAGE_ACTION_SEND_LABEL,
   VOYAGE_ACTION_WAITING_LABEL,
+  VOYAGE_FLEET_TIP_HINT,
+  VOYAGE_FLEET_TIP_MAT_PX,
+  VOYAGE_FLEET_TIP_STATUS,
   VOYAGE_ODDS_COLORS,
+  VOYAGE_TIP_BLOCKS,
   VOYAGE_TIP_CREW_MAX,
   VOYAGE_VERDICT_COLORS,
 } from '@/config/constants'
@@ -49,7 +67,15 @@ import type { VoyageRosterSubject } from '@/types'
 const CHIME_IMG = UNIVERSE_TOOLTIP_IMAGES.chimes
 const MEEP_IMG = UNIVERSE_TOOLTIP_IMAGES.meeps
 
-const props = defineProps<{ pinKey: string; now: number }>()
+const props = withDefaults(
+  defineProps<{ pinKey: string; now: number; context?: 'mark' | 'fleet' }>(),
+  { context: 'mark' },
+)
+
+/** Welche Bloecke dieser Anker traegt — die EINE Stelle steht in `constants`. */
+const blocks = computed(() => VOYAGE_TIP_BLOCKS[props.context])
+/** Nicht jeder Unterschied ist ein Block: Beschriftungen haengen am ANKER. */
+const isFleet = computed(() => props.context === 'fleet')
 
 const expeditionStore = useExpeditionStore()
 const galaxyStore = useGalaxyStore()
@@ -97,6 +123,18 @@ const action = computed(() =>
     : null,
 )
 
+/**
+ * Die Beschriftung ueber dem Namen. An der Marke der blosse Zustand; ueber der
+ * Fleet-Karte zusaetzlich die GALAXIENUMMER — das Band mischt Galaxien und
+ * nennt nur ihren Farbton. Der Themenname bleibt weg: er steckt schon im
+ * Missionsnamen (`Adjektiv + Zielname + Aktion`).
+ */
+const headState = computed(() => {
+  const v = view.value
+  if (!v) return ''
+  return isFleet.value ? `${v.stateLabel} · Galaxy ${v.galaxy}` : v.stateLabel
+})
+
 /* ── Das Verdikt ───────────────────────────────────────────────────────────
    Die eine Zeile, wegen der die Karte aufgeht. Sie nennt den Ausgang aus
    `voyageMarkAction` — dieselbe Funktion, die der Klick ausführt. */
@@ -113,20 +151,27 @@ const verdict = computed(() => {
   const a = action.value
   if (!a) return null
   const icon = VOYAGE_ACTION_ICONS[a.kind]
+  // Der Grund einer Sperre steht in BEIDEN Ankern woertlich — er ist die
+  // Auskunft, und die Karte kennt ihn nicht.
+  if (a.kind === 'blocked') return { icon, label: a.reason, clock: '' }
+  // Die Fleet-Karte fuehrt die Geste nicht aus, sie springt nur zur Marke.
+  if (isFleet.value) {
+    return { icon, label: VOYAGE_FLEET_TIP_STATUS[verdictKey.value], clock: '' }
+  }
   if (a.kind === 'send') return { icon, label: VOYAGE_ACTION_SEND_LABEL, clock: '' }
   if (a.kind === 'collect') {
     return { icon, label: `${VOYAGE_ACTION_COLLECT_LABEL} +${formatNumber(a.reward)}`, clock: '' }
   }
-  if (a.kind === 'waiting') {
-    const clock = formatMinuteClock(remaining.value ?? 0)
-    return { icon, label: VOYAGE_ACTION_WAITING_LABEL, clock }
-  }
-  return { icon, label: a.reason, clock: '' }
+  const clock = formatMinuteClock(remaining.value ?? 0)
+  return { icon, label: VOYAGE_ACTION_WAITING_LABEL, clock }
 })
 
-/** Nur beim Vertrag: wie lange die Crew gebunden wäre. Unterwegs sagt es die Uhr. */
+/** Nur beim Vertrag: wie lange die Crew gebunden wäre. Unterwegs sagt es die Uhr.
+ *  Ueber der Fleet-Karte gar nicht — dort steht sie neben dem Trupp-Stapel. */
 const voyageLength = computed(() =>
-  view.value?.state === 'offer' ? formatShortDuration(view.value.durationSeconds) : '',
+  blocks.value.deadline && view.value?.state === 'offer'
+    ? formatShortDuration(view.value.durationSeconds)
+    : '',
 )
 
 /**
@@ -138,7 +183,7 @@ const voyageLength = computed(() =>
  */
 const bar = computed(() => {
   const v = view.value
-  if (!v) return null
+  if (!v || !blocks.value.deadline) return null
   if (v.state === 'offer') {
     const left = Math.max(0, expiresIn.value ?? 0)
     return {
@@ -164,6 +209,7 @@ const bar = computed(() => {
    also trägt sie auch seinen Ton. Vorher stand hier `#7aa8e0`, und das ist
    `EXPEDITION_TIER_COLORS.rare`: dieselbe Kollision, die die Karte schon hatte. */
 const matTint = MATERIAL_ACCENT_HEX
+const matArtPx = `${VOYAGE_FLEET_TIP_MAT_PX}px`
 
 const expectedDrops = computed(() => {
   const s = view.value?.spoils
@@ -204,6 +250,44 @@ const seats = computed(() => {
   }))
 })
 
+/**
+ * Ueber der Fleet-Karte stehen die Gesichter schon auf der Karte — hier tragen
+ * die Sitze deshalb NAMEN. Ein leerer Sitz nennt die Rolle, die fehlt: die
+ * Karte zeigt dafuer nur einen leeren Ring.
+ *
+ * KEINE Rollenfarbe: `top` `#e05050` laege neben dem Gefahrenrot und `adc`
+ * `#e89840` neben dem Tooltip-Gold. Die Rolle traegt ihr Glyph.
+ */
+const crewChips = computed(() =>
+  (view.value?.crewSeats ?? []).slice(0, VOYAGE_TIP_CREW_MAX).map((seat, i) => ({
+    key: `${i}:${seat.name ?? seat.role}`,
+    name: seat.name,
+    role: ROLE_BY_KEY[seat.role],
+  })),
+)
+
+/**
+ * Die Stuecke, die WIRKLICH bereitliegen — mit Namen und eigenem Artwork. Die
+ * Fleet-Karte sagt ueber Material gar nichts, und ein Erwartungswert waere nach
+ * dem Wurf eine Luege (dieselbe Regel wie in `loot` der Karte).
+ */
+const lootPieces = computed(() =>
+  (payout.value?.materials ?? []).map((m) => {
+    const def = MATERIALS.find((x) => x.id === m.id)
+    const name = def?.name ?? m.id
+    return {
+      id: m.id,
+      qty: m.qty,
+      name,
+      // Vier Materialien haben noch kein Artwork. Ein leeres `src` fordert die
+      // SEITE nach — es braucht dieselbe Ersatzkachel wie der Header.
+      image: def?.image ?? '',
+      color: MATERIAL_COLOR[m.id] ?? '#e8c040',
+      initials: MATERIAL_PLACEHOLDER_LABELS[m.id] ?? name.slice(0, 2).toUpperCase(),
+    }
+  }),
+)
+
 /** Nur die LÜCKE bekommt ein Wort — eine volle Crew zeigen die Ringe selbst. */
 const seatGap = computed(() => {
   const v = view.value
@@ -228,7 +312,7 @@ const showRequirement = computed(() => view.value?.state === 'offer')
     :icon="view.icon"
     :accent="view.accent"
     :name="view.name"
-    :state="view.stateLabel"
+    :state="headState"
   >
     <template #foot>
       <div class="vtt-body">
@@ -250,7 +334,7 @@ const showRequirement = computed(() => view.value?.state === 'offer')
         <!-- Der Balken steht AUSSERHALB des Verdikt-Blocks: er misst die FRIST,
              nicht die Geste. Erbte er `--tip-color`, liefe er beim blockierten
              Vertrag rot voll, während das Fenster noch offen ist. -->
-        <div v-if="bar" class="vtt-gauge" :style="{ '--tip-color': gaugeColor }">
+        <div v-if="bar && blocks.deadline" class="vtt-gauge" :style="{ '--tip-color': gaugeColor }">
           <div class="tip-bar">
             <i
               class="tip-bar-fill"
@@ -261,7 +345,9 @@ const showRequirement = computed(() => view.value?.state === 'offer')
           <span v-if="bar.clock" class="vtt-gauge-clock">{{ bar.clock }}</span>
         </div>
 
-        <div class="tip-read tip-read--lg">
+        <!-- Lohn, Beute und Aussicht — an der MARKE. Ueber der Fleet-Karte
+             stehen alle drei Zahlen schon auf der Karte selbst. -->
+        <div v-if="blocks.figures" class="tip-read tip-read--lg">
           <span class="tip-read-cell">
             <span class="tip-read-k">{{ payout ? 'Loot' : 'Spoils' }}</span>
             <span v-if="payout" class="tip-read-v">
@@ -294,7 +380,36 @@ const showRequirement = computed(() => view.value?.state === 'offer')
           </span>
         </div>
 
-        <div class="vtt-crew">
+        <!-- Das EINE, was die Fleet-Karte an ihrem Ertrag nicht zeigt. Der Meep
+             gehoert NICHT dazu: er steht dort neben dem Lohn. -->
+        <div v-if="blocks.loot" class="vtt-mats">
+          <span class="tip-read-k">{{ payout ? 'Loot' : 'Expected loot' }}</span>
+          <span v-if="payout" class="vtt-mats-v">
+            <span v-for="m in lootPieces" :key="m.id" class="vtt-piece">
+              <img
+                v-if="m.image"
+                class="vtt-piece-art"
+                :src="m.image"
+                alt=""
+                aria-hidden="true"
+              />
+              <span v-else class="vtt-piece-ph" :style="{ color: m.color }">{{ m.initials }}</span>
+              <b>{{ m.qty }}</b>
+              <span class="tip-meta">{{ m.name }}</span>
+            </span>
+            <span v-if="!lootPieces.length" class="tip-meta">nothing salvaged</span>
+          </span>
+          <span v-else class="vtt-mats-v">
+            <Icon icon="ph:cube-fill" width="16" height="16" class="vtt-mat" />
+            <b>{{ expectedDrops.toFixed(1) }}</b>
+            <span class="tip-meta">materials</span>
+          </span>
+        </div>
+
+        <!-- WER faehrt. An der Marke die Gesichter, ueber der Fleet-Karte die
+             NAMEN — dort stehen die Gesichter schon auf der Karte, und ein
+             leerer Ring sagt nicht, welche Rolle fehlt. -->
+        <div v-if="blocks.faces" class="vtt-crew">
           <span class="vtt-seats" aria-hidden="true">
             <span
               v-for="s in seats"
@@ -309,6 +424,21 @@ const showRequirement = computed(() => view.value?.state === 'offer')
           <span v-if="seatGap" class="tip-meta vtt-gap">{{ seatGap }}</span>
         </div>
 
+        <div v-else class="vtt-mats">
+          <span class="tip-read-k">Crew</span>
+          <span class="vtt-chips">
+            <span
+              v-for="c in crewChips"
+              :key="c.key"
+              class="tip-chip"
+              :class="{ 'tip-chip--muted': !c.name }"
+            >
+              <Icon :icon="c.role.icon" width="14" height="14" class="tip-chip-ico" />
+              {{ c.name || c.role.short }}
+            </span>
+          </span>
+        </div>
+
         <p v-for="h in view.hazards" :key="h.id" class="vtt-hazard">
           <Icon :icon="h.icon" width="16" height="16" class="vtt-hazard-ico" />
           <span>
@@ -318,6 +448,10 @@ const showRequirement = computed(() => view.value?.state === 'offer')
             </span>
           </span>
         </p>
+
+        <!-- Die Geste sitzt an der MARKE. Ein Klick auf die Fleet-Karte springt
+             nur dorthin — und genau das steht hier, statt „Click to send". -->
+        <div v-if="blocks.hint" class="tip-hint vtt-cta">↗ {{ VOYAGE_FLEET_TIP_HINT }}</div>
       </div>
     </template>
   </ExpeditionMarkTooltip>
@@ -442,6 +576,87 @@ const showRequirement = computed(() => view.value?.state === 'offer')
   width: 0.82em;
   height: 0.82em;
   color: v-bind(matTint);
+}
+
+/* ── Material und Crew der Fleet-Variante ───────────────────────────────────
+   Die zwei Zeilen, die es nur ueber der Fleet-Karte gibt. WAAGERECHT, nicht als
+   Zelle: eine Zeile traegt hier genau EINEN Gedanken, und die Beschriftung ist
+   das Stichwort davor. Ihre Breite ist reserviert, sonst stehen Material und
+   Crew nicht untereinander — „EXPECTED LOOT" ist die laengere der beiden. */
+.vtt-mats {
+  display: flex;
+  align-items: baseline;
+  gap: 0.62em;
+}
+
+.vtt-mats > .tip-read-k {
+  flex: 0 0 auto;
+  min-width: 6.6em;
+}
+
+.vtt-mats-v {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.34em;
+  font-size: 1.05em;
+  font-weight: 800;
+  color: var(--tip-text);
+}
+
+/* Ein Stueck ist EIN Objekt: Bild, Zahl und Name binden sich enger aneinander
+   als die Stuecke untereinander. */
+.vtt-piece {
+  display: flex;
+  align-items: center;
+  gap: 0.22em;
+}
+
+.vtt-piece + .vtt-piece {
+  margin-left: 0.4em;
+}
+
+/* Das echte Material-Artwork — die `-128`-Stufe liegt in `Material.image`, und
+   VOYAGE_FLEET_TIP_MAT_PX bleibt unter der 34-px-Schwelle. Nur hier, wo die
+   Stuecke BENANNT sind; der Erwartungswert kennt seine Art noch nicht und
+   bleibt beim Wuerfel-Glyph. */
+.vtt-piece-art {
+  flex-shrink: 0;
+  width: v-bind(matArtPx);
+  height: v-bind(matArtPx);
+  object-fit: contain;
+}
+
+/* Dieselbe Ersatzkachel wie im Header — Initialen im Materialton, solange das
+   Artwork fehlt. */
+.vtt-piece-ph {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: v-bind(matArtPx);
+  height: v-bind(matArtPx);
+  border: 1px solid rgba(200, 144, 64, 0.28);
+  border-radius: 4px;
+  background: linear-gradient(to bottom, #241b12, #16110b);
+  font-size: 0.62em;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+/* Die Chips brechen um — fuenf Namen passen in keine Zeile. */
+.vtt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3em;
+}
+
+/* Die Fusszeile sagt, was der Klick tut. Gold wie die uebrigen CTA-Zeilen des
+   Spiels (`FirmamentGalaxyTip`), nicht in der Verdikt-Farbe: sie gehoert der
+   Geste, nicht dem Zustand. */
+.vtt-cta {
+  color: #e8c040;
 }
 
 /* ── Crew ────────────────────────────────────────────────────────────────── */
