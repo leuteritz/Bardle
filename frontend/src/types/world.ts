@@ -31,7 +31,7 @@ export type StarLook =
   | 'giant'
   | 'pulsar'
   | 'binary'
-  | 'ringstar'
+  | 'flare'
   | 'veil'
   | 'umbra'
   | 'splinter'

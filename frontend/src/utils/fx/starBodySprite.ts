@@ -4,7 +4,7 @@
    Canvas von px · SPAN Kante, in der Komponente per CSS gestapelt:
 
      halo  — statisch, ersetzt den dreifachen box-shadow
-     core  — statisch, die Kugel selbst (bei ringstar auch die vordere Scheibenhälfte)
+     core  — statisch, die Kugel selbst (samt Protuberanzen, Begleiter, Flecken)
      spin  — dreht per CSS-Keyframe; Strahlen, Arme, Staub
 
    Acht Gestalten (`StarLook`), Farbe kommt IMMER von aussen (Rolle, Spektral-
@@ -31,11 +31,9 @@ import {
   STAR_BODY_LOOK_SEED_SALT,
   STAR_BODY_PULSAR_CORE_R,
   STAR_BODY_PULSAR_RAYS,
-  STAR_BODY_RINGSTAR_BODY_R,
-  STAR_BODY_RINGSTAR_DISC_FLAT,
-  STAR_BODY_RINGSTAR_DISC_INNER_RX,
-  STAR_BODY_RINGSTAR_DISC_RX,
-  STAR_BODY_RINGSTAR_TILT_DEG,
+  STAR_BODY_FLARE_LOOPS,
+  STAR_BODY_FLARE_LOOP_R,
+  STAR_BODY_FLARE_TAIL_LEN,
   STAR_BODY_SEED_SALT,
   STAR_BODY_SEED_SLOTS,
   STAR_BODY_SPLINTER_RAYS,
@@ -268,47 +266,35 @@ function binaryCompanionAt(r: number, seed: number): { x: number; y: number; cr:
   return { x: Math.cos(a) * d, y: Math.sin(a) * d, cr: r * STAR_BODY_BINARY_COMPANION_R }
 }
 
-function ringstarTilt(seed: number): number {
-  const deg = STAR_BODY_RINGSTAR_TILT_DEG * (0.6 + jitter(seed, 3) * 0.8)
-  return ((sway(seed, 4) < 0 ? -1 : 1) * deg * Math.PI) / 180
+/** Schleifenwinkel: gestaffelt ab einem gewürfelten Start, nie zwei gegenüber —
+ *  zwei Klammern an gegenüberliegenden Seiten lesen sich als Ring von der Kante. */
+function flareLoopAngle(seed: number, i: number): number {
+  return jitter(seed, 300) * TAU + i * 1.9 + sway(seed, 301 + i) * 0.35
 }
 
-/** Die Scheibe des Ringsterns — `back` hinter, `front` vor dem Körper. */
-function ringDisc(
+/** Eine Protuberanz: ein Bogen, der auf dem Rand aufsetzt und nach aussen wölbt. */
+function flareLoop(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  r: number,
-  pal: StarPalette,
-  seed: number,
-  half: 'back' | 'front',
+  br: number,
+  a: number,
+  spread: number,
+  rise: number,
 ): void {
-  const rx = r * STAR_BODY_RINGSTAR_DISC_RX
-  const ry = rx * STAR_BODY_RINGSTAR_DISC_FLAT
-  const irx = r * STAR_BODY_RINGSTAR_DISC_INNER_RX
-  const iry = irx * STAR_BODY_RINGSTAR_DISC_FLAT
-  const reach = rx + 2
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.rotate(ringstarTilt(seed))
+  const a1 = a - spread
+  const a2 = a + spread
+  const top = br * (1 + rise)
   ctx.beginPath()
-  ctx.rect(-reach, half === 'front' ? 0 : -reach, reach * 2, reach)
-  ctx.clip()
-  ctx.beginPath()
-  ctx.ellipse(0, 0, rx, ry, 0, 0, TAU)
-  ctx.ellipse(0, 0, irx, iry, 0, 0, TAU, true)
-  const g = ctx.createRadialGradient(0, 0, irx, 0, 0, rx)
-  g.addColorStop(0, rgba(mix(pal.rgb, 255, 0.5), 0.62))
-  g.addColorStop(0.5, rgba(mix(pal.rgb, 255, 0.2), 0.4))
-  g.addColorStop(1, rgba(pal.rgb, 0.18))
-  ctx.fillStyle = g
-  ctx.fill('evenodd')
-  ctx.beginPath()
-  ctx.ellipse(0, 0, (rx + irx) / 2, ((rx + irx) / 2) * STAR_BODY_RINGSTAR_DISC_FLAT, 0, 0, TAU)
-  ctx.strokeStyle = rgba(mix(pal.rgb, 255, 0.7), 0.3)
-  ctx.lineWidth = Math.max(0.6, r * 0.04)
-  ctx.stroke()
-  ctx.restore()
+  ctx.moveTo(x + Math.cos(a1) * br * 0.96, y + Math.sin(a1) * br * 0.96)
+  ctx.bezierCurveTo(
+    x + Math.cos(a1) * top,
+    y + Math.sin(a1) * top,
+    x + Math.cos(a2) * top,
+    y + Math.sin(a2) * top,
+    x + Math.cos(a2) * br * 0.96,
+    y + Math.sin(a2) * br * 0.96,
+  )
 }
 
 /* ── Kern ───────────────────────────────────────────────────────────────────── */
@@ -391,24 +377,32 @@ export const paintBinaryCore: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
   photosphere(ctx, x + c.x, y + c.y, c.cr, light, detail, { hot: 1, limb: 0.7, grainAlpha: 0 })
 }
 
-export const paintRingstarCore: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
-  const br = r * STAR_BODY_RINGSTAR_BODY_R
-  photosphere(ctx, x, y, br, pal, detail, { hot: 0.9, limb: 1, grainAlpha: STAR_BODY_GRAIN_ALPHA * 0.7 })
-  if (detail >= 1) {
-    // Schatten der Scheibe auf der Kugel
-    ctx.save()
-    circle(ctx, x, y, br)
-    ctx.clip()
-    ctx.translate(x, y)
-    ctx.rotate(ringstarTilt(seed))
-    ctx.beginPath()
-    ctx.ellipse(0, br * 0.42, br * 1.1, br * 0.14, 0, 0, TAU)
-    ctx.strokeStyle = rgba(mix(pal.rgb, 0, 0.85), detail === 2 ? 0.4 : 0.28)
-    ctx.lineWidth = br * 0.12
+export const paintFlareCore: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
+  const br = r * 0.86
+  photosphere(ctx, x, y, br, pal, detail, { hot: 1, limb: 1, grainAlpha: STAR_BODY_GRAIN_ALPHA * 0.9 })
+  if (detail === 0) return
+  // Protuberanzen: Schleifen, die am Rand aus der Kugel steigen — keine Ringe
+  const loops = detail === 1 ? STAR_BODY_FLARE_LOOPS - 1 : STAR_BODY_FLARE_LOOPS
+  ctx.lineCap = 'round'
+  for (let i = 0; i < loops; i++) {
+    const a = flareLoopAngle(seed, i)
+    const spread = 0.22 + jitter(seed, 310 + i) * 0.16
+    const rise = STAR_BODY_FLARE_LOOP_R * (0.8 + jitter(seed, 320 + i) * 0.5)
+    // Plasma, kein Henkel: breiter weicher Unterschein, darauf eine dünne heisse Linie
+    flareLoop(ctx, x, y, br, a, spread, rise)
+    ctx.strokeStyle = rgba(pal.rgb, 0.28)
+    ctx.lineWidth = Math.max(1, r * 0.13)
     ctx.stroke()
-    ctx.restore()
+    flareLoop(ctx, x, y, br, a, spread, rise)
+    ctx.strokeStyle = rgba(mix(pal.rgb, 255, 0.55), 0.7)
+    ctx.lineWidth = Math.max(0.6, r * 0.045)
+    ctx.stroke()
+    if (detail < 2) continue
+    flareLoop(ctx, x, y, br, a, spread * 0.7, rise * 0.62)
+    ctx.strokeStyle = rgba(mix(pal.rgb, 255, 0.3), 0.4)
+    ctx.lineWidth = Math.max(0.5, r * 0.03)
+    ctx.stroke()
   }
-  ringDisc(ctx, x, y, r, pal, seed, 'front')
 }
 
 export const paintVeilCore: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
@@ -532,10 +526,19 @@ export const paintBinaryHalo: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
   haloGlow(ctx, x + c.x, y + c.y, c.cr, mix(pal.rgb, 255, 0.35), 2.4, h.alpha * 0.7)
 }
 
-export const paintRingstarHalo: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
-  const h = haloFor('ringstar', detail)
+export const paintFlareHalo: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
+  const h = haloFor('flare', detail)
   haloGlow(ctx, x, y, r, pal.rgb, h.reach, h.alpha)
-  ringDisc(ctx, x, y, r, pal, seed, 'back')
+  // Aufhellung zur ersten Protuberanz hin — der Halo ist nicht rund
+  const a = flareLoopAngle(seed, 0)
+  const ox = x + Math.cos(a) * r * 0.3
+  const oy = y + Math.sin(a) * r * 0.3
+  const g = ctx.createRadialGradient(ox, oy, r * 0.5, ox, oy, r * 1.3)
+  g.addColorStop(0, rgba(mix(pal.rgb, 255, 0.4), 0.28))
+  g.addColorStop(1, rgba(pal.rgb, 0))
+  circle(ctx, ox, oy, r * 1.3)
+  ctx.fillStyle = g
+  ctx.fill()
 }
 
 export const paintVeilHalo: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
@@ -657,19 +660,21 @@ export const paintBinarySpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
   ctx.stroke()
 }
 
-export const paintRingstarSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
-  const start = jitter(seed, 180) * TAU
-  ctx.beginPath()
-  ctx.arc(x, y, r * 1.14, start, start + Math.PI * 1.1)
-  ctx.strokeStyle = rgba(mix(pal.rgb, 255, 0.5), 0.2)
-  ctx.lineWidth = r * 0.1
-  ctx.lineCap = 'round'
-  ctx.stroke()
+export const paintFlareSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
+  const a = flareLoopAngle(seed, 0)
+  ctx.fillStyle = rayGradient(ctx, x, y, r, pal.rgb, 0.95, STAR_BODY_FLARE_TAIL_LEN, 0.6)
+  spike(ctx, x, y, a, r * 0.95, r * STAR_BODY_FLARE_TAIL_LEN, r * 0.12)
+  ctx.fill()
+  if (detail === 0) return
+  ctx.fillStyle = rayGradient(ctx, x, y, r, pal.rgb, 0.95, 1.4, 0.4)
+  spike(ctx, x, y, a + Math.PI + sway(seed, 320) * 0.4, r * 0.95, r * 1.4, r * 0.08)
+  ctx.fill()
   if (detail < 2) return
-  ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.7), 0.35)
-  for (let i = 0; i < 6; i++) {
-    const a = start + (i / 6) * TAU + sway(seed, 190 + i) * 0.3
-    circle(ctx, x + Math.cos(a) * r * 1.3, y + Math.sin(a) * r * 1.3, r * 0.03)
+  ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.8), 0.7)
+  for (let i = 0; i < 3; i++) {
+    const d = r * (1.15 + i * 0.25)
+    const wa = a + sway(seed, 330 + i) * 0.12
+    circle(ctx, x + Math.cos(wa) * d, y + Math.sin(wa) * d, r * 0.035)
     ctx.fill()
   }
 }
@@ -733,7 +738,7 @@ export const STAR_LOOK_PAINTERS: Record<StarLook, Record<StarSpriteLayer, StarPa
   giant: { halo: paintGiantHalo, core: paintGiantCore, spin: paintGiantSpin },
   pulsar: { halo: paintPulsarHalo, core: paintPulsarCore, spin: paintPulsarSpin },
   binary: { halo: paintBinaryHalo, core: paintBinaryCore, spin: paintBinarySpin },
-  ringstar: { halo: paintRingstarHalo, core: paintRingstarCore, spin: paintRingstarSpin },
+  flare: { halo: paintFlareHalo, core: paintFlareCore, spin: paintFlareSpin },
   veil: { halo: paintVeilHalo, core: paintVeilCore, spin: paintVeilSpin },
   umbra: { halo: paintUmbraHalo, core: paintUmbraCore, spin: paintUmbraSpin },
   splinter: { halo: paintSplinterHalo, core: paintSplinterCore, spin: paintSplinterSpin },

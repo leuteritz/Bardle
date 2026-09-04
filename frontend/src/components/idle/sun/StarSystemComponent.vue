@@ -102,16 +102,13 @@
             <div class="star-halo" />
             <div class="star-core" />
             <div class="star-hover-glow" />
+            <div class="star-charge" />
             <div class="star-spawn-flash" />
             <div class="star-spin" />
             <div class="star-pulse-overlay" />
           </div>
         </div>
       </template>
-
-      <!-- Angriffs-Cooldown-Ringe: ein einziges Canvas für alle Sterne, im
-           RAF-Loop gezeichnet — kein Per-Stern-DOM, keine Style-Recalcs -->
-      <canvas ref="cooldownCanvas" class="orbit-hints-canvas" />
 
       <!-- ③b Zielscheibe auf der Sonne: der Boss hat den Spieler im Visier.
            Gleicher Telegraph wie bei Champions (rsq-aim-lock) und Turret-
@@ -316,6 +313,10 @@
             <span class="star-planet-count__current">{{ star.remainingCount }}</span>
             <span class="star-planet-count__sep">/</span>
             <span class="star-planet-count__total">{{ star.totalPlanets }}</span>
+            <span
+              class="star-planet-count__cd"
+              :ref="(el) => setMapEl(countBarEls, star.id, el)"
+            />
           </div>
         </Transition>
       </template>
@@ -364,11 +365,7 @@ import {
   ORBIT_MIN_RY_VIEWPORT_FACTOR_BY_ROLE,
   ORBIT_MAX_RX_VIEWPORT_FRACTION,
   ORBIT_RING_MIN_OPACITY,
-  COOLDOWN_RING_MIN_PROGRESS,
   COOLDOWN_RING_HOT_PROGRESS,
-  COOLDOWN_RING_TIP_RADIUS,
-  STAR_COOLDOWN_RING_R_K,
-  COOLDOWN_RING_TIP_RADIUS_HOT,
   STAR_ORBIT_MIN_SUN_SCALE,
   HINT_SPRITE_CACHE_LIMIT,
   FRAME_EL_SWEEP_INTERVAL,
@@ -483,7 +480,17 @@ const countEls = new Map<string, HTMLElement>()
 // Registrierung und Aufräumen liegen in utils/orbit/frameEls.ts — dasselbe
 // Muster nutzen inzwischen auch ChampionOrbit und PlanetOrbit.
 const starBodyEls = new Map<string, HTMLElement>()
-const ALL_EL_MAPS: Map<string, Element>[] = [starBackEls, starWrapEls, starBodyEls, summaryEls, countEls]
+const chargeEls = new Map<string, HTMLElement>()
+const countBarEls = new Map<string, HTMLElement>()
+const ALL_EL_MAPS: Map<string, Element>[] = [
+  starBackEls,
+  starWrapEls,
+  starBodyEls,
+  chargeEls,
+  countBarEls,
+  summaryEls,
+  countEls,
+]
 let sweepCounter = 0
 
 // ── Orbit-Glow-Ringe als Canvas-Sprites ──────────────────────────────────────
@@ -493,7 +500,6 @@ let sweepCounter = 0
 // mit globalAlpha auf zwei Fullscreen-Canvases geblittet.
 const hintBackCanvas = ref<HTMLCanvasElement | null>(null)
 const hintFrontCanvas = ref<HTMLCanvasElement | null>(null)
-const cooldownCanvas = ref<HTMLCanvasElement | null>(null)
 const hintSpriteCache = new Map<string, HTMLCanvasElement>()
 const HINT_SPRITE_SCALE = 0.5 // Blur verzeiht Skalierung; spart 4× Speicher
 const canvasFilterSupported = 'filter' in CanvasRenderingContext2D.prototype
@@ -600,7 +606,7 @@ function drawHintCanvases() {
 }
 
 function sizeHintCanvases() {
-  for (const cv of [hintBackCanvas.value, hintFrontCanvas.value, cooldownCanvas.value]) {
+  for (const cv of [hintBackCanvas.value, hintFrontCanvas.value]) {
     if (cv) {
       cv.width = window.innerWidth
       cv.height = window.innerHeight
@@ -754,7 +760,10 @@ function mountStarBody(star: StarRenderEntry, el: HTMLElement): void {
 }
 function bindStarBody(star: StarRenderEntry, el: FrameElRef): void {
   setMapEl(starBodyEls, star.id, el)
-  if (el) mountStarBody(star, el as HTMLElement)
+  if (!el) return
+  mountStarBody(star, el as HTMLElement)
+  const charge = (el as HTMLElement).querySelector<HTMLElement>(':scope > .star-charge')
+  if (charge) chargeEls.set(star.id, charge)
 }
 function bindStarBack(star: StarRenderEntry, el: FrameElRef): void {
   setMapEl(starBackEls, star.id, el)
@@ -1308,82 +1317,42 @@ function fireEnemyShot(fromX: number, fromY: number) {
   })
 }
 
-// ── Cooldown-Ringe: alle Sterne auf EINEM Canvas, ein Draw-Pass pro Frame.
-// Canvas-Arcs statt DOM/SVG pro Stern: kein Style-Recalc, keine Layer-
-// Re-Rasterung — konstant billig auch bei 40+ Sternen gleichzeitig.
-const TWO_PI = Math.PI * 2
-let cooldownCanvasWasEmpty = false
-
-function drawCooldownRings() {
-  const cv = cooldownCanvas.value
-  const c = cv?.getContext('2d')
-  if (!cv || !c) return
-
-  const stars = starRenders.value
-  let drewAny = false
-  c.clearRect(0, 0, cv.width, cv.height)
-
-  for (const star of stars) {
-    if (star.isBehind || star.opacity <= ORBIT_RING_MIN_OPACITY) continue
-
-    // Boss-Stern: Ring spiegelt den Shock-Nova-Cooldown aus dem Store —
-    // exakt synchron zum Nova-Ring im Star-Fight-Modal
+// ── Angriffs-Cooldown: Balken im Zähler-Chip plus Glut am Halo. Ein Bogen um
+// den Körper las sich als Planetenring — und wurde kurz vor dem Schuss ein Kreis.
+// Pro Frame nur transform/opacity inline (frameEls-Muster), kein Vue.
+function applyCooldownBars() {
+  for (const star of starRenders.value) {
+    const bar = countBarEls.get(star.id)
+    const charge = chargeEls.get(star.id)
+    if (!bar && !charge) continue
     const isNovaStar = star.id === targetedStarId.value
     const state = starBurstStates.get(star.id)
-    if (!state && !isNovaStar) continue
-
-    const r = (starSize(star.starType) / 2) * STAR_COOLDOWN_RING_R_K * star.scale
     const alpha = star.opacity * starHoverDimFactor(star.id)
-    if (alpha <= ORBIT_RING_MIN_OPACITY) continue
-    const bursting = !isNovaStar && state!.shotsLeft > 0
-    // Nova: Zeitstempel-Interpolation pro Frame — smooth wie die Burst-Ringe,
-    // statt im 1s-Raster des Store-Ticks zu springen
-    const progress = isNovaStar
-      ? roleBehaviorStore.novaReadyAt > 0
-        ? Math.max(
-            0,
-            Math.min(1, 1 - (roleBehaviorStore.novaReadyAt - gameNow()) / BOSS_NOVA_INTERVAL_MS),
-          )
-        : 0
-      : bursting
-        ? 1
-        : 1 - Math.max(0, state!.cooldownMs) / state!.totalMs
-    const lineW = isNovaStar ? 3 : 2
-    drewAny = true
-
-    // Keine Vollkreis-Spur: ein geschlossener Kreis um den Körper las sich als
-    // Planetenring — der Bogen samt Spitze trägt den Fortschritt allein.
-    if (progress <= COOLDOWN_RING_MIN_PROGRESS) continue
-    const start = -Math.PI / 2
-    const end = start + progress * TWO_PI
-    const hot = bursting || progress > COOLDOWN_RING_HOT_PROGRESS
-    c.beginPath()
-    c.arc(star.x, star.y, r, start, end)
-    c.strokeStyle = isNovaStar
-      ? hot
-        ? `rgba(255,190,120,${0.95 * alpha})`
-        : `rgba(255,105,30,${0.7 * alpha})`
-      : hot
-        ? `rgba(255,205,95,${0.9 * alpha})`
-        : `rgba(255,150,45,${0.55 * alpha})`
-    c.lineWidth = lineW
-    c.lineCap = 'round'
-    c.stroke()
-
-    // Glüh-Spitze am Ende des Bogens
-    if (!bursting) {
-      c.beginPath()
-      c.arc(star.x + Math.cos(end) * r, star.y + Math.sin(end) * r, hot ? COOLDOWN_RING_TIP_RADIUS_HOT : COOLDOWN_RING_TIP_RADIUS, 0, TWO_PI)
-      c.fillStyle = `rgba(255,215,130,${0.85 * alpha})`
-      c.fill()
+    const hidden =
+      star.isBehind || alpha <= ORBIT_RING_MIN_OPACITY || (!state && !isNovaStar)
+    let progress = 0
+    let hot = false
+    if (!hidden) {
+      const bursting = !isNovaStar && state!.shotsLeft > 0
+      // Nova: Zeitstempel-Interpolation pro Frame statt 1-s-Raster des Store-Ticks
+      progress = isNovaStar
+        ? roleBehaviorStore.novaReadyAt > 0
+          ? Math.max(
+              0,
+              Math.min(1, 1 - (roleBehaviorStore.novaReadyAt - gameNow()) / BOSS_NOVA_INTERVAL_MS),
+            )
+          : 0
+        : bursting
+          ? 1
+          : 1 - Math.max(0, state!.cooldownMs) / state!.totalMs
+      hot = bursting || progress > COOLDOWN_RING_HOT_PROGRESS
     }
-  }
-
-  // Leeres Canvas ausblenden, damit der Compositor es überspringt
-  const empty = !drewAny
-  if (empty !== cooldownCanvasWasEmpty) {
-    cooldownCanvasWasEmpty = empty
-    cv.style.display = empty ? 'none' : ''
+    if (bar) {
+      bar.style.transform = `scaleX(${progress.toFixed(3)})`
+      bar.classList.toggle('star-planet-count__cd--hot', hot)
+      bar.classList.toggle('star-planet-count__cd--nova', isNovaStar)
+    }
+    if (charge) charge.style.opacity = hot ? '1' : '0'
   }
 }
 
@@ -1492,7 +1461,7 @@ function enemyAttackLoop(ts: number) {
     }
     // ──────────────────────────────────────────────────────────────────────────────
 
-    drawCooldownRings()
+    applyCooldownBars()
   }
 
   enemyAnimFrame = requestAnimationFrame(enemyAttackLoop)
@@ -1526,7 +1495,6 @@ watch(isIdleRenderingPaused, (paused) => {
   hintResumeFrame = requestAnimationFrame(() => {
     resetCanvasIfContextLost(hintBackCanvas.value)
     resetCanvasIfContextLost(hintFrontCanvas.value)
-    resetCanvasIfContextLost(cooldownCanvas.value)
     hintCanvasesDirty = true
   })
 })
@@ -2251,6 +2219,23 @@ function starCountStyle(star: StarRenderEntry) {
 .star-body-wrap.star-hovered .star-hover-glow,
 .star-body-wrap:active .star-hover-glow {
   opacity: 1;
+}
+
+/* Glut in den letzten Prozent vor dem Schuss — Ember, nicht Sternfarbe; nur
+   die Opazität kippt (applyCooldownBars), der Umschlag ist eine Transition. */
+.star-charge {
+  position: absolute;
+  inset: calc(50% - var(--star-span, 2.2) * 50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 150, 45, 0.55) 0%,
+    rgba(255, 150, 45, 0.2) 32%,
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
 }
 
 .star-body-wrap:hover .star-body,
@@ -3134,7 +3119,8 @@ function starCountStyle(star: StarRenderEntry) {
   background: rgba(8, 5, 18, 0.82);
   border: 1px solid rgba(232, 192, 64, 0.55);
   border-radius: 4px;
-  padding: 0.15em 0.55em;
+  padding: 0.15em 0.55em 0.28em;
+  overflow: clip;
   /* Nur für den einmaligen Umschlag in den Rage-Zustand — nichts läuft
      dauerhaft, der Zähler bleibt zwischen zwei Rages völlig ruhig. */
   transition:
@@ -3157,6 +3143,33 @@ function starCountStyle(star: StarRenderEntry) {
   border-radius: 4px;
   opacity: 0;
   pointer-events: none;
+}
+
+/* Der Angriffs-Cooldown als Balken an der Unterkante — scaleX kommt pro Frame
+   inline (applyCooldownBars), hier steht nur die ruhende Gestalt. */
+.star-planet-count__cd {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: #e8963c;
+  transform-origin: left center;
+  transform: scaleX(0);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.star-planet-count__cd--hot {
+  background: #ffd05f;
+}
+
+.star-planet-count__cd--nova {
+  background: #ff6a3c;
+}
+
+.star-planet-count__cd--nova.star-planet-count__cd--hot {
+  background: #ffc090;
 }
 
 /* Der Puls läuft nur, wo er etwas AUSSAGT — auf einem beschossenen,

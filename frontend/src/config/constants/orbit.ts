@@ -471,8 +471,6 @@ export const COOLDOWN_RING_MIN_PROGRESS = 0.004
 export const COOLDOWN_RING_HOT_PROGRESS = 0.92
 /** Radius der Glüh-Spitze am Bogenende, kalt und heiß. */
 export const COOLDOWN_RING_TIP_RADIUS = 2.2
-/** Radius des Angriffsbogens als Vielfaches des Sternradius — am Halo-Rand, nicht an der Kante. */
-export const STAR_COOLDOWN_RING_R_K = 1.45
 export const COOLDOWN_RING_TIP_RADIUS_HOT = 3
 
 // Canonical orbit tiers — 2 distinct orbit paths per category
@@ -575,7 +573,7 @@ export const STAR_BODY_LOOK_POOL: readonly StarLook[] = [
   'giant',
   'pulsar',
   'binary',
-  'ringstar',
+  'flare',
   'veil',
 ]
 export const STAR_BODY_LOOK_SEED_SALT = 41
@@ -589,7 +587,7 @@ export const STAR_BODY_SPIN_SEC: Record<StarLook, number> = {
   giant: 120,
   pulsar: 22,
   binary: 60,
-  ringstar: 40,
+  flare: 36,
   veil: 90,
   umbra: 14,
   splinter: 9,
@@ -603,7 +601,7 @@ export const STAR_BODY_HALO_REACH: Record<StarLook, number> = {
   giant: 2.15,
   pulsar: 1.45,
   binary: 1.7,
-  ringstar: 1.6,
+  flare: 1.7,
   veil: 2.1,
   umbra: 2.1,
   splinter: 1.5,
@@ -613,7 +611,7 @@ export const STAR_BODY_HALO_ALPHA_MUL: Record<StarLook, number> = {
   giant: 0.62,
   pulsar: 1.1,
   binary: 0.9,
-  ringstar: 0.85,
+  flare: 0.95,
   veil: 0.5,
   umbra: 0.8,
   splinter: 0.9,
@@ -629,11 +627,10 @@ export const STAR_BODY_PULSAR_RAYS = 4
 export const STAR_BODY_BINARY_MAIN_R = 0.78
 export const STAR_BODY_BINARY_COMPANION_R = 0.3
 export const STAR_BODY_BINARY_COMPANION_AT = 0.58
-export const STAR_BODY_RINGSTAR_BODY_R = 0.72
-export const STAR_BODY_RINGSTAR_DISC_RX = 1.62
-export const STAR_BODY_RINGSTAR_DISC_INNER_RX = 1.02
-export const STAR_BODY_RINGSTAR_DISC_FLAT = 0.3
-export const STAR_BODY_RINGSTAR_TILT_DEG = 26
+/** Protuberanzen: Schleifen am Rand (Radius in Sternradien) und die Eruptionsfahne. */
+export const STAR_BODY_FLARE_LOOPS = 3
+export const STAR_BODY_FLARE_LOOP_R = 0.34
+export const STAR_BODY_FLARE_TAIL_LEN = 1.9
 export const STAR_BODY_VEIL_WISPS = 5
 export const STAR_BODY_UMBRA_ARMS = 6
 export const STAR_BODY_SPLINTER_WOBBLE = 0.22

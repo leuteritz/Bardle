@@ -108,14 +108,17 @@ describe('Sternkörper — acht Gestalten, drei Ebenen', () => {
     }
   })
 
-  it('der Ringstern legt die Scheibe hinten in den Halo und vorn über den Kern', () => {
-    const back = run('ringstar', 'halo', 2)
-    const front = run('ringstar', 'core', 2)
-    expect(back.some((o) => o.startsWith('ellipse('))).toBe(true)
-    expect(front.some((o) => o.startsWith('ellipse('))).toBe(true)
-    // Vorn: der Clip beginnt auf der Achse (y = 0), hinten davor.
-    expect(front.some((o) => /^rect\(-?[\d.]+,0,/.test(o))).toBe(true)
-    expect(back.some((o) => /^rect\(-?[\d.]+,-[\d.]+,/.test(o))).toBe(true)
+  it('der Protuberanzen-Stern malt Bögen, die auf dem Rand aufsetzen — keine Scheibe', () => {
+    const core = run('flare', 'core', 2)
+    expect(core.some((o) => o.startsWith('ellipse('))).toBe(false)
+    const loops = core.filter((o) => o.startsWith('bezierCurveTo('))
+    expect(loops.length).toBeGreaterThanOrEqual(4)
+    // Fusspunkte liegen auf dem Rand (0,96 · br), nicht in der Mitte
+    const feet = core
+      .map((o) => /^moveTo\((-?[\d.]+),(-?[\d.]+)\)/.exec(o))
+      .filter((m): m is RegExpExecArray => m !== null)
+      .map((m) => Math.hypot(Number(m[1]) - 100, Number(m[2]) - 100))
+    expect(feet.some((d) => d > R * 0.7 && d < R)).toBe(true)
   })
 
   it('der Schlüssel trennt Ebene, Gestalt, Farbe, Seed, Grösse, Dichte und Stufe', () => {
