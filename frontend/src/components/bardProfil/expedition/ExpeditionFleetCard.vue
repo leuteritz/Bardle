@@ -8,6 +8,11 @@
  * DREI Zeilen für drei Fragen: WER fährt, WAS es bringt, WIE LANGE noch. Der
  * Zielname und die Fortschrittsschiene sind dafür gefallen — der Name steht im
  * Tooltip und im `aria-label`, die Schiene maß dieselbe Spanne wie die Uhr.
+ *
+ * Geschnitten wird nach BEDEUTUNG, nicht nach Datentyp: der Ertrag — Chimes,
+ * Material, Meep — steht vollständig in EINER Zeile, und die trägt als einzige
+ * einen eigenen Grund. Vorher lagen die Chimes über und Material und Meep unter
+ * der Uhr; was zusammengehört, las sich als drei unabhängige Zahlen.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -19,6 +24,7 @@ import {
   EXPEDITION_CHANCE_GOOD,
   EXPEDITION_CHANCE_MID,
   EXPEDITION_EXPIRY_WARNING_MS,
+  MATERIAL_ACCENT_HEX,
   UNIVERSE_TOOLTIP_IMAGES,
   UNIVERSE_TOOLTIP_MEEP_SCALE,
   VOYAGE_FLEET_AVATAR_PX,
@@ -28,13 +34,16 @@ import {
   VOYAGE_FLEET_CARD_MIN_W,
   VOYAGE_FLEET_CARD_ROW_GAP,
   VOYAGE_FLEET_CHIME_PX,
+  VOYAGE_FLEET_DUR_W,
   VOYAGE_FLEET_EARN_GAP,
   VOYAGE_FLEET_EARN_TIGHT,
   VOYAGE_FLEET_LOOT_ICON,
+  VOYAGE_FLEET_MAT_ICON_PX,
   VOYAGE_FLEET_ODDS_W,
   VOYAGE_FLEET_PAY_H,
   VOYAGE_FLEET_READ_H,
-  VOYAGE_FLEET_SEAT_GAP,
+  VOYAGE_FLEET_SEAT_OVERLAP,
+  VOYAGE_FLEET_SEAT_RING,
   VOYAGE_FLEET_TIER_BAR_GAP,
   VOYAGE_FLEET_TIER_BAR_H,
   VOYAGE_FLEET_TIME_W,
@@ -59,22 +68,30 @@ const battleStore = useBattleStore()
 const cardW = `${VOYAGE_FLEET_CARD_MIN_W}px`
 const cardH = `${VOYAGE_FLEET_CARD_H}px`
 const avatarPx = `${VOYAGE_FLEET_AVATAR_PX}px`
-const seatGap = `${VOYAGE_FLEET_SEAT_GAP}px`
+/* Negativ: der Sitz rückt UNTER seinen linken Nachbarn. */
+const seatLap = `-${VOYAGE_FLEET_SEAT_OVERLAP}px`
+const seatRing = `${VOYAGE_FLEET_SEAT_RING}px`
 const payH = `${VOYAGE_FLEET_PAY_H}px`
 const readH = `${VOYAGE_FLEET_READ_H}px`
 const rowGap = `${VOYAGE_FLEET_CARD_ROW_GAP}px`
 const inset = `${VOYAGE_FLEET_CARD_INSET_Y}px ${VOYAGE_FLEET_CARD_INSET_X}px`
 const oddsW = `${VOYAGE_FLEET_ODDS_W}px`
 const timeW = `${VOYAGE_FLEET_TIME_W}px`
+const durW = `${VOYAGE_FLEET_DUR_W}px`
 const earnGap = `${VOYAGE_FLEET_EARN_GAP}px`
 const earnTight = `${VOYAGE_FLEET_EARN_TIGHT}px`
 const chimePx = `${VOYAGE_FLEET_CHIME_PX}px`
 const lootIcon = `${VOYAGE_FLEET_LOOT_ICON}px`
+const matIcon = `${VOYAGE_FLEET_MAT_ICON_PX}px`
+const matTint = MATERIAL_ACCENT_HEX
 const tierBarH = `${VOYAGE_FLEET_TIER_BAR_H}px`
 const tierGap = `${VOYAGE_FLEET_TIER_BAR_GAP}px`
 /* Der Streifen endet, wo der Inhalt beginnt — sonst liefe er unter die
    Zustandskante links und läse sich als deren Fortsetzung. */
 const tierInsetX = `${VOYAGE_FLEET_CARD_INSET_X}px`
+/* Der Ertragsgrund läuft über die volle Kartenbreite — so kostet er keine
+   Innenbreite, und die Ertragszeile ist auf den Pixel belegt. */
+const earnBleed = `-${VOYAGE_FLEET_CARD_INSET_X}px`
 
 const row = computed(() => props.card.row)
 
@@ -117,10 +134,12 @@ const portraits = computed(() =>
     name: name ?? '',
     image: name ? battleStore.getChampionImage(name, { size: 'sm' }) : '',
     color: name ? getOriginColor(name) : '',
+    /** Der LINKE Sitz liegt oben — sonst verdeckt der Nachbar sein Gesicht. */
+    z: slots.value.length - i,
   })),
 )
 
-/* ── Lohnzeile: was es bringt ─────────────────────────────────────────────── */
+/* ── Ertragszeile: was es bringt, vollständig ─────────────────────────────── */
 
 /** Die Chance steht nur, wo sie noch etwas ändert — nach dem Wurf nicht mehr. */
 const odds = computed(() =>
@@ -154,7 +173,7 @@ const loot = computed(() => {
   }
 })
 
-/* ── Ablesezeile: wie lange noch ──────────────────────────────────────────── */
+/* ── Ablesezeile: welche Frist, welche Aussicht ───────────────────────────── */
 
 /** Was eine Handlung oder eine Sperre meint, steht als Plakette statt als Zahl. */
 const badge = computed(() => {
@@ -177,18 +196,25 @@ const clock = computed(() => {
   return formatMinuteClock(expiresIn.value ?? 0)
 })
 
-/** Nur beim Vertrag: was die Fahrt an ZEIT kostet. Unterwegs zählt die Uhr. */
+/**
+ * Nur beim Vertrag: was die Fahrt an ZEIT kostet. Unterwegs zählt die Uhr.
+ *
+ * Sie steht OBEN neben dem Crew-Stapel, nicht mehr unter der Uhr — dort waren es
+ * zwei Zeitangaben in einer Zeile, die Verschiedenes meinen, und die Dauer war
+ * mit 11 px die kleinste Schrift der Karte.
+ */
 const duration = computed(() =>
   row.value.state === 'offer' ? formatShortDuration(row.value.durationSeconds) : '',
 )
 
 /**
  * Die Plakette nimmt das Ende, das der Zustand frei lässt: heimgekehrt steht sie
- * links statt der Uhr, blockiert rechts statt der Reisedauer.
+ * links statt der Uhr, blockiert rechts — dort, wo sonst die Erfolgsaussicht
+ * steht. Das ist kein Verlust: wer nicht losschicken kann, ändert mit der Quote
+ * nichts. Dieselbe Regel, nach der die Chance nach dem Wurf verschwindet.
  */
 const lead = computed(() => clock.value || badge.value)
-const tail = computed(() => (clock.value && badge.value ? badge.value : duration.value))
-const tailIsBadge = computed(() => !!clock.value && !!badge.value)
+const tail = computed(() => (clock.value && badge.value ? badge.value : ''))
 
 const lootAria = computed(
   () =>
@@ -245,29 +271,47 @@ const aria = computed(
         />
       </span>
 
+      <!-- WER fährt, und WIE LANGE die Fahrt dauert. Der Stapel gibt der Dauer
+           den Platz, den fünf gereihte Sitze ihr nicht liessen. -->
       <span class="vfc-crew">
-        <span v-for="p in portraits" :key="p.key" class="vfc-seat" :style="{ '--seat': p.color }">
-          <img v-if="p.image" :src="p.image" :alt="p.name" class="vfc-face" />
+        <span class="vfc-stack">
+          <span
+            v-for="p in portraits"
+            :key="p.key"
+            class="vfc-seat"
+            :style="{ '--seat': p.color, zIndex: p.z }"
+          >
+            <img v-if="p.image" :src="p.image" :alt="p.name" class="vfc-face" />
+          </span>
+        </span>
+        <span v-if="duration" class="vfc-dur">{{ duration }}</span>
+      </span>
+
+      <!-- WAS es bringt — vollständig, in einer Zeile, auf eigenem Grund. -->
+      <span class="vfc-earn" aria-hidden="true">
+        <span class="vfc-chimes">
+          <img class="vfc-chime" :src="CHIME_IMG" alt="" />
+          <span class="vfc-pay">{{ row.rewardPrefix }}{{ $formatNumber(row.reward ?? 0) }}</span>
+        </span>
+        <span class="vfc-mat">
+          <!-- Gefüllt und geometrisch, wie jedes Glyph unter 18 px. Im
+               Kontaktbogen zerfaserte `game-icons:minerals` bei 16 px zum
+               Fleck — game-icons trägt erst ab rund 20. -->
+          <Icon icon="ph:cube-fill" class="vfc-mat-i" />
+          <span>{{ loot.materials }}</span>
+        </span>
+        <span v-if="loot.meep" class="vfc-meep">
+          <img class="vfc-meep-i" :src="MEEP_IMG" alt="" />
+          <span>{{ loot.meep }}</span>
         </span>
       </span>
 
-      <span class="vfc-pay-row">
-        <img class="vfc-chime" :src="CHIME_IMG" alt="" aria-hidden="true" />
-        <span class="vfc-pay">{{ row.rewardPrefix }}{{ $formatNumber(row.reward ?? 0) }}</span>
-        <span v-if="odds !== null" class="vfc-odds" :class="oddsTone">{{ odds }}%</span>
-      </span>
-
+      <!-- Welche FRIST, welche AUSSICHT. Die Plakette verdrängt die Quote:
+           wer nicht losschicken kann, ändert mit ihr nichts. -->
       <span class="vfc-read">
         <span class="vfc-lead" :class="{ 'vfc-mark': !clock }">{{ lead }}</span>
-        <span class="vfc-loot" aria-hidden="true">
-          <Icon icon="ph:diamond-fill" class="vfc-mat" />
-          <span>{{ loot.materials }}</span>
-          <template v-if="loot.meep">
-            <img class="vfc-meep" :src="MEEP_IMG" alt="" />
-            <span>{{ loot.meep }}</span>
-          </template>
-        </span>
-        <span v-if="tail" class="vfc-tail" :class="{ 'vfc-mark': tailIsBadge }">{{ tail }}</span>
+        <span v-if="tail" class="vfc-tail vfc-mark">{{ tail }}</span>
+        <span v-else-if="odds !== null" class="vfc-odds" :class="oddsTone">{{ odds }}%</span>
       </span>
     </button>
 
@@ -367,23 +411,37 @@ const aria = computed(
   background: var(--tier, #c89040);
 }
 
-/* ── Crew: die breiteste Aussage der Karte ──────────────────── */
-/* 34 px sind das Maximum, das fünf Sitze nebeneinander zulassen — und zugleich
-   die Schwelle, bis zu der die 128er-Auflösungsstufe trägt. */
+/* ── Crew: der Stapel, und rechts daneben die Reisedauer ────── */
+/* 34 px ist die Schwelle, bis zu der die 128er-Auflösungsstufe trägt. */
 .vfc-crew {
   display: flex;
   align-items: center;
-  gap: v-bind(seatGap);
+  gap: v-bind(earnGap);
   height: v-bind(avatarPx);
 }
+/* GESTAPELT, nicht gereiht: gereiht belegten fünf Sitze 186 von 188 px, und die
+   Reisedauer hatte in der Zeile keinen Platz. */
+.vfc-stack {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
 .vfc-seat {
+  position: relative;
   flex-shrink: 0;
   width: v-bind(avatarPx);
   height: v-bind(avatarPx);
   border-radius: 50%;
   overflow: hidden;
   background: #0f0d08;
-  box-shadow: inset 0 0 0 2px var(--seat, rgba(122, 78, 32, 0.55));
+  /* Zwei Ringe, zwei Aufgaben: innen die HERKUNFT, aussen die Kartenfarbe. Ohne
+     den äusseren laufen zwei Nachbarn zu EINER Form zusammen. */
+  box-shadow:
+    inset 0 0 0 2px var(--seat, rgba(122, 78, 32, 0.55)),
+    0 0 0 v-bind(seatRing) var(--vfc-bg, #1c1c18);
+}
+.vfc-seat + .vfc-seat {
+  margin-left: v-bind(seatLap);
 }
 .vfc-face {
   display: block;
@@ -393,12 +451,59 @@ const aria = computed(
   object-position: center top;
 }
 
-/* ── Lohnzeile: die grösste Zahl der Karte ──────────────────── */
-.vfc-pay-row {
+/* Die STATISCHE Zeit der Karte, gedämpft: die laufende Uhr darunter ist die
+   lautere. Auseinander gehalten werden sie an der Schreibweise — „2m 30s" mit
+   Einheiten gegen „2:55" mit Doppelpunkt. */
+.vfc-dur {
+  flex: 0 0 auto;
+  min-width: v-bind(durW);
+  margin-left: auto;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(216, 200, 160, 0.62);
+  white-space: nowrap;
+}
+
+/* ── Ertragszeile: Chimes, Material, Meep — in DIESER Reihenfolge ──── */
+/* Die einzige Zeile mit eigenem Grund. Er läuft über die volle Kartenbreite,
+   damit er keine Innenbreite kostet, und ist flach: er gruppiert, er leuchtet
+   nicht. */
+.vfc-earn {
+  display: flex;
+  align-items: center;
+  gap: v-bind(earnGap);
+  height: v-bind(payH);
+  margin: 0 v-bind(earnBleed);
+  padding: 0 v-bind(tierInsetX);
+  background: rgba(0, 0, 0, 0.25);
+}
+.vfc-chimes,
+.vfc-mat,
+.vfc-meep {
   display: flex;
   align-items: center;
   gap: v-bind(earnTight);
-  height: v-bind(payH);
+}
+.vfc-chimes,
+.vfc-mat {
+  flex: 0 0 auto;
+}
+.vfc-mat,
+.vfc-meep {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(232, 220, 192, 0.68);
+  white-space: nowrap;
+}
+/* Die EINZIGE Zelle der Zeile, die nachgeben darf — der kleinste Ertragsposten.
+   Dasselbe Muster, mit dem vorher die Reisedauer nachgab. */
+.vfc-meep {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
 }
 /* Das ECHTE Artwork, kein Iconify-Ersatz — dieselbe Währung sieht überall
    gleich aus. 18 px bleiben unter der 34-px-Schwelle der 128er-Stufe. */
@@ -426,7 +531,7 @@ const aria = computed(
 }
 /* Reservierte Zahlenbreite, sonst wandert die Pille, wenn 100 % auf 98 % fällt. */
 .vfc-odds {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   min-width: v-bind(oddsW);
   margin-left: auto;
   padding: 2px 5px;
@@ -448,7 +553,27 @@ const aria = computed(
   color: #cc6050;
 }
 
-/* ── Ablesezeile: Uhr · Loot · Dauer ────────────────────────── */
+/* Stein statt Signal. Die Vorgängerfarbe war `#7aa8e0` — exakt
+   `EXPEDITION_TIER_COLORS.rare`, also dieselbe, die zwei Zeilen höher im
+   Stufenstreifen die Rare-Stufe markiert; das Glyph las sich als Stufe. */
+.vfc-mat-i {
+  flex-shrink: 0;
+  width: v-bind(matIcon);
+  height: v-bind(matIcon);
+  color: v-bind(matTint);
+}
+/* Hochformatiges Sprite mit breitem Alpha-Rand — dieselbe Korrektur wie im
+   Header und in der Hover-Karte. */
+.vfc-meep-i {
+  flex-shrink: 0;
+  width: v-bind(lootIcon);
+  height: v-bind(lootIcon);
+  object-fit: contain;
+  transform: scale(v-bind(UNIVERSE_TOOLTIP_MEEP_SCALE));
+}
+
+/* ── Ablesezeile: Frist · Aussicht ──────────────────────────── */
+/* Sie trägt seit dem Umbau nur noch zwei Dinge; die Luft ist Absicht. */
 .vfc-read {
   display: flex;
   align-items: center;
@@ -458,9 +583,9 @@ const aria = computed(
 /* Die laufende Zahl — reservierte Breite, weil MedievalSharp keine
    Tabellenziffern hat und `tabular-nums` hier nichts ausrichtet. */
 .vfc-lead {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   min-width: v-bind(timeW);
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 800;
   line-height: 1;
   color: #e8dcc0;
@@ -469,45 +594,10 @@ const aria = computed(
 .vfc--urgent .vfc-lead {
   color: #e08a7a;
 }
-.vfc-loot {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: v-bind(earnTight);
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  color: rgba(232, 220, 192, 0.68);
-  white-space: nowrap;
-}
-.vfc-mat {
-  flex-shrink: 0;
-  width: v-bind(lootIcon);
-  height: v-bind(lootIcon);
-  color: #7aa8e0;
-}
-/* Hochformatiges Sprite mit breitem Alpha-Rand — dieselbe Korrektur wie im
-   Header und in der Hover-Karte. */
-.vfc-meep {
-  flex-shrink: 0;
-  width: v-bind(lootIcon);
-  height: v-bind(lootIcon);
-  margin-left: v-bind(earnTight);
-  object-fit: contain;
-  transform: scale(v-bind(UNIVERSE_TOOLTIP_MEEP_SCALE));
-}
-/* Die einzige Zelle der Zeile, die nachgeben darf. */
+/* Sie nimmt den Platz der Erfolgsaussicht, nicht einen eigenen. */
 .vfc-tail {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-align: right;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  color: rgba(216, 200, 160, 0.5);
-  white-space: nowrap;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 /* Dieselbe Formel wie „✓ Returned": Farbe, Rand auf 40 %, Grund auf 12 %. KEIN

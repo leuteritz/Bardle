@@ -84,6 +84,18 @@ export const MATERIAL_SINK_LABELS: Record<string, string> = {
   bargain: 'Forge Deals',
   other: 'Other',
 }
+/**
+ * Der Ton, in dem Material dort steht, wo es neben Chimes und Meeps abgelesen
+ * wird — Muster wie `MEEP_ACCENT_HEX`, `MISSION_ACCENT_HEX`, `LANDFALL_ACCENT_HEX`.
+ *
+ * Er muss sich von JEDER Stufenfarbe unterscheiden, und das ist keine Vorsicht,
+ * sondern eine Reparatur: die Fleet-Karte trug ihr Material-Glyph in `#7aa8e0`
+ * — exakt `EXPEDITION_TIER_COLORS.rare`, dieselbe Farbe, die zwei Zeilen höher
+ * im Stufenstreifen derselben Karte die Rare-Stufe markiert. Das Symbol las sich
+ * als Stufenangabe. Stein statt Signal: unbunter als jede der drei Stufen.
+ * `voyagesFleetLayout.spec.ts` bindet den Abstand.
+ */
+export const MATERIAL_ACCENT_HEX = '#9fb0c4'
 export const MATERIAL_SINK_ICONS: Record<string, string> = {
   recruit: 'game-icons:swordman',
   level: 'game-icons:upgrade',
@@ -945,14 +957,24 @@ export const VOYAGE_FLEET_CARD_PAD_Y = 2
  */
 export const VOYAGE_FLEET_CARD_MIN_VISIBLE = 4
 /**
- * Crew-Portrait auf der Karte und die Lücke dazwischen. Die 34 sind KEIN
- * gewählter Wert, sondern zweimal dieselbe Wand: mehr passt bei fünf Sitzen
- * nicht nebeneinander (5 x 34 + 4 x 4 = 186 von 188), und darüber trägt die
- * `-128`-Auflösungsstufe nicht mehr. `voyagesFleetLayout.spec.ts` bindet die
- * Reihe gegen `EXPEDITION_TIERS`.
+ * Crew-Portrait auf der Karte. Die 34 sind die `-128`-Auflösungsstufe, sonst
+ * nichts — die zweite Wand („fünf Sitze passen nicht nebeneinander") ist mit
+ * dem Stapel gefallen.
+ *
+ * Die Sitze STAPELN sich, statt nebeneinander zu stehen: nebeneinander belegten
+ * fünf 5 x 34 + 4 x 4 = 186 von 188 px, und die Reisedauer hatte in der Zeile
+ * keinen Platz mehr. Gestapelt sind es
+ *
+ *   34 + 4 x (34 − 12) + 2 x 2 = 126  →  56 px bleiben für die Dauer
+ *
+ * Der Aussenring ist nicht Zierrat: ohne ihn laufen zwei benachbarte Sitze zu
+ * EINER Form zusammen, weil beide dieselbe dunkle Fläche tragen. Er trägt die
+ * Kartenfarbe, nicht die des Sitzes — er trennt, er schmückt nicht.
+ * `voyagesFleetLayout.spec.ts` bindet den Stapel gegen `EXPEDITION_TIERS`.
  */
 export const VOYAGE_FLEET_AVATAR_PX = 34
-export const VOYAGE_FLEET_SEAT_GAP = 4
+export const VOYAGE_FLEET_SEAT_OVERLAP = 12
+export const VOYAGE_FLEET_SEAT_RING = 2
 /**
  * Die DREI Zeilen der Karte und ihr Innenmaß. Sie BESTIMMEN das CSS per
  * `v-bind` — eine Konstante, die nur beschreibt, driftet, und die Spec merkt es
@@ -963,17 +985,20 @@ export const VOYAGE_FLEET_SEAT_GAP = 4
  * Unwichtigste auf der Karte und steht weiter im Tooltip; die Schiene maß
  * dieselbe Spanne wie die Uhr, nur ungenauer.
  *
- * `voyagesFleetLayout.spec.ts` bindet die Summe: 34 + 28 + 20 + 2 x 4 = 90 in
+ * `voyagesFleetLayout.spec.ts` bindet die Summe: 34 + 28 + 22 + 2 x 3 = 90 in
  * 91 px Innenmaß. Die 91 kommen seit dem Gleichstand der beiden Kopfleisten aus
  * `105 − 2 x 6 − 2` statt aus `109 − 2 x 8 − 2` — dieselbe eine Reserve, nur
  * anders bezahlt: die Karte gab 4 px Höhe ab und holte sie sich aus ihrem
- * eigenen senkrechten Innenabstand zurück. Keine der drei Zeilen hat nachgegeben,
- * und keine kann es: Portrait 34 ist zweimal dieselbe Wand, die Lohnzeile trägt
- * 24-px-Schrift, die Ablesung 17.
+ * eigenen senkrechten Innenabstand zurück.
+ *
+ * Die 2 px, die die Ablesezeile für ihre 19-px-Uhr gewonnen hat, zahlen die
+ * beiden Zeilenlücken (4 → 3). Keine der drei Zeilen hat dafür nachgegeben, und
+ * keine kann es: die Crew trägt das 34-px-Portrait, der Ertrag 24-px-Schrift,
+ * die Ablesung 19 — und MedievalSharp überschiesst seine Zeilenbox um rund 5 %.
  */
 export const VOYAGE_FLEET_PAY_H = 28
-export const VOYAGE_FLEET_READ_H = 20
-export const VOYAGE_FLEET_CARD_ROW_GAP = 4
+export const VOYAGE_FLEET_READ_H = 22
+export const VOYAGE_FLEET_CARD_ROW_GAP = 3
 export const VOYAGE_FLEET_CARD_INSET_Y = 6
 export const VOYAGE_FLEET_CARD_INSET_X = 9
 /** Rahmen quer und hoch: links 3 (Zustandskante) + rechts 1, oben/unten je 1. */
@@ -987,36 +1012,71 @@ export const VOYAGE_FLEET_CARD_BORDER_Y = 2
  *
  * Beide im Browser GEMESSEN, in der Schriftgröße ihrer Zelle, und BEIDE als
  * Aussenmaß: „100 %" misst bei 13 px 31,45 plus 10 px Innenabstand der Pille,
- * „12:00" bei 17 px 43,39. Wer nur den Text misst, setzt die Pille zu schmal
- * und ihre `min-width` ist wirkungslos — genau das war sie eine Runde lang.
+ * „12:00" bei 19 px gemessene 52,0. Wer nur den Text misst, setzt die Pille zu
+ * schmal und ihre `min-width` ist wirkungslos — genau das war sie eine Runde
+ * lang.
+ *
+ * Die Uhr ist von 17 auf 19 px gewachsen und ihre Zelle mit ihr (46 → 55): die
+ * Ablesezeile trägt seit dem Umbau nur noch Frist und Aussicht, der Loot steht
+ * beim Lohn. Die 3 px über der gemessenen Textbreite sind dieselbe Reserve, die
+ * die alte Zelle hatte (46 auf 43,39) — eine Zelle, die exakt auf ihrem Text
+ * sitzt, schneidet bei der nächsten Schriftrundung ab. Von 188 px sind damit
+ * 101 belegt: die Luft ist Absicht, der Ertrag ist die dichte Zeile der Karte,
+ * die Frist die einfachste.
  */
 export const VOYAGE_FLEET_ODDS_W = 42
-export const VOYAGE_FLEET_TIME_W = 46
+export const VOYAGE_FLEET_TIME_W = 55
 /**
  * Die breiteste Plakette als Aussenmaß: „salvage" 50,7 bei 11 px versal plus
  * 12 px Innenabstand und Rahmen. Sie nimmt in der Ablesezeile das Ende, das der
- * Zustand frei lässt — links statt der Uhr, blockiert rechts statt der Dauer —
- * und muss dort in beiden Fällen neben den Loot passen.
+ * Zustand frei lässt — heimgekehrt links statt der Uhr, blockiert rechts statt
+ * der Erfolgsaussicht — und muss dort in beiden Fällen neben die Uhr passen.
  */
 export const VOYAGE_FLEET_MARK_MAX_PX = 63
 /**
- * Die längste Reisedauer, gemessen: „12m 30s" bei 11 px. KEIN CSS-Deckel — die
- * Zelle ist die einzige der Ablesezeile, die nachgeben darf, und Flexbox lässt
- * sie das von selbst. Die Zahl steht hier, damit die Spec prüfen kann, dass ihr
- * auch im schlimmsten Fall so viel übrig bleibt.
+ * Die längste Reisedauer, „12m 30s": im Browser GEMESSENE 52,0 bei 13 px, plus
+ * 2 px Reserve wie bei der Uhr nebenan.
+ *
+ * Sie steht seit dem Umbau OBEN, rechts neben dem Crew-Stapel, statt als
+ * kleinste Schrift der Karte unter der Uhr. Zwei Gründe: beim Vertrag
+ * entscheidet sie mit über „losschicken oder verfallen lassen", und in der
+ * Ablesezeile stand sie als Dauer neben einer laufenden Uhr — zwei Zeitangaben
+ * derselben Zeile, die Verschiedenes meinen. Auseinander gehalten werden sie
+ * jetzt durch die Schreibweise: „2m 30s" mit Einheiten gegen „2:55" mit
+ * Doppelpunkt. Die Zahl steht hier, damit die Spec prüfen kann, dass der volle
+ * Trupp ihr die Breite lässt.
  */
-export const VOYAGE_FLEET_DUR_W = 44
-/** Lücke zwischen den drei Zellen der Ertragszeile, und die engere innerhalb
- *  einer Zelle (Glyph gegen Zahl). Die Spec rechnet die Zeile daraus. */
+export const VOYAGE_FLEET_DUR_W = 54
+/** Lücke zwischen zwei Gruppen einer Zeile, und die engere innerhalb einer
+ *  Gruppe (Glyph gegen Zahl). Die Spec rechnet alle drei Zeilen daraus.
+ *  Die enge ist von 3 auf 2 gefallen: die Ertragszeile ist auf den Pixel
+ *  belegt, seit Lohn, Material und Meep in ihr zusammenstehen. */
 export const VOYAGE_FLEET_EARN_GAP = 4
-export const VOYAGE_FLEET_EARN_TIGHT = 3
+export const VOYAGE_FLEET_EARN_TIGHT = 2
 /**
- * Chime- und Meep-Artwork auf der Karte, dazu das Material-Glyph. Das ECHTE
- * Artwork, kein Iconify-Ersatz — dieselbe Währung sieht überall gleich aus.
- * 18 px liegen unter der 34-px-Schwelle, also trägt die `-128`-Stufe.
+ * Chime- und Meep-Artwork auf der Karte. Das ECHTE Artwork, kein Iconify-Ersatz
+ * — dieselbe Währung sieht überall gleich aus. Beide liegen unter der
+ * 34-px-Schwelle, also trägt die `-128`-Stufe.
+ *
+ * Das Chime ist von 18 auf 16 gefallen, und die 2 px sind der Grund: die
+ * Ertragszeile schloss GEMESSEN mit 187,89 von 188 px, also 0,11 px Reserve.
+ * Das ist keine. Bezahlt hat es das Sprite und nicht die Zahl daneben — 16 px
+ * neben einer 24-px-Ziffer lesen sich unverändert, eine gekürzte Meepzahl nicht.
  */
-export const VOYAGE_FLEET_CHIME_PX = 18
-export const VOYAGE_FLEET_LOOT_ICON = 14
+export const VOYAGE_FLEET_CHIME_PX = 16
+export const VOYAGE_FLEET_LOOT_ICON = 13
+/**
+ * Das Material-Glyph, und es ist GRÖSSER als das Meep-Sprite daneben. Kein
+ * Geschmack: Material ist das einzige der drei, für das Bardle kein Artwork hat,
+ * also trägt es ein Iconify-Glyph — und ein Glyph braucht mehr Fläche als ein
+ * Sprite, um dieselbe Form zu behaupten.
+ *
+ * Bei dieser Größe kommt es aus einem GEOMETRISCHEN Set, nicht aus `game-icons`:
+ * im Kontaktbogen (`dev/icon-check.html`) zerfaserte `game-icons:minerals` bei
+ * 16 px zu einem Fleck, während es bei 40 px klar steht. Genau die Schwelle,
+ * die die Icon-Regel nennt.
+ */
+export const VOYAGE_FLEET_MAT_ICON_PX = 15
 /**
  * Die beiden Textbreiten der Zahlenzeilen, im Browser GEMESSEN: der längste
  * Lohn „999.99M" bei 24 px fett und die längste Beutezahl „2.6" bei 12 px.
