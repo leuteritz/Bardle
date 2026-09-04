@@ -255,3 +255,125 @@ export function blitSprite(host: HTMLElement, sprite: HTMLCanvasElement | null):
   ctx.clearRect(0, 0, cv.width, cv.height)
   ctx.drawImage(sprite, 0, 0)
 }
+
+/* ── Selbstleuchter-Bausteine (Sterne, Spielerkörper) ─────────────────────── */
+
+export type Rgb = readonly [number, number, number]
+
+export function mix(rgb: Rgb, to: number, t: number): Rgb {
+  return [
+    Math.round(rgb[0] + (to - rgb[0]) * t),
+    Math.round(rgb[1] + (to - rgb[1]) * t),
+    Math.round(rgb[2] + (to - rgb[2]) * t),
+  ]
+}
+
+export function rgba(rgb: Rgb, a: number): string {
+  return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${a})`
+}
+
+export function circle(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.closePath()
+}
+
+export function haloGlow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  rgb: Rgb,
+  reach: number,
+  alpha: number,
+): void {
+  const g = ctx.createRadialGradient(x, y, r * 0.55, x, y, r * reach)
+  g.addColorStop(0, rgba(rgb, alpha))
+  g.addColorStop(0.3, rgba(rgb, alpha * 0.45))
+  g.addColorStop(1, rgba(rgb, 0))
+  circle(ctx, x, y, r * reach)
+  ctx.fillStyle = g
+  ctx.fill()
+}
+
+/** Ein weicher Nebelfetzen: unrunde Kontur, Verlauf läuft zum Rand aus. */
+export function wisp(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  seed: number,
+  rgb: Rgb,
+  alpha: number,
+): void {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r)
+  g.addColorStop(0, rgba(rgb, alpha))
+  g.addColorStop(0.55, rgba(rgb, alpha * 0.5))
+  g.addColorStop(1, rgba(rgb, 0))
+  lumpyPath(ctx, x, y, r, seed, 0.28, 24)
+  ctx.fillStyle = g
+  ctx.fill()
+}
+
+/** Ein Zacken von `from` bis `to` (Radien), Breite am Fuss `w`. */
+export function spike(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  a: number,
+  from: number,
+  to: number,
+  w: number,
+): void {
+  const ca = Math.cos(a)
+  const sa = Math.sin(a)
+  const nx = -sa * w
+  const ny = ca * w
+  ctx.beginPath()
+  ctx.moveTo(x + ca * from + nx, y + sa * from + ny)
+  ctx.lineTo(x + ca * to, y + sa * to)
+  ctx.lineTo(x + ca * from - nx, y + sa * from - ny)
+  ctx.closePath()
+}
+
+export function rayGradient(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  rgb: Rgb,
+  from: number,
+  to: number,
+  alpha: number,
+): CanvasGradient {
+  const g = ctx.createRadialGradient(x, y, r * from, x, y, r * to)
+  g.addColorStop(0, rgba(mix(rgb, 255, 0.6), alpha))
+  g.addColorStop(0.45, rgba(rgb, alpha * 0.55))
+  g.addColorStop(1, rgba(rgb, 0))
+  return g
+}
+
+/** Eine Protuberanz: ein Bogen, der auf dem Rand aufsetzt und nach aussen wölbt. */
+export function flareLoop(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  br: number,
+  a: number,
+  spread: number,
+  rise: number,
+): void {
+  const a1 = a - spread
+  const a2 = a + spread
+  const top = br * (1 + rise)
+  ctx.beginPath()
+  ctx.moveTo(x + Math.cos(a1) * br * 0.96, y + Math.sin(a1) * br * 0.96)
+  ctx.bezierCurveTo(
+    x + Math.cos(a1) * top,
+    y + Math.sin(a1) * top,
+    x + Math.cos(a2) * top,
+    y + Math.sin(a2) * top,
+    x + Math.cos(a2) * br * 0.96,
+    y + Math.sin(a2) * br * 0.96,
+  )
+}

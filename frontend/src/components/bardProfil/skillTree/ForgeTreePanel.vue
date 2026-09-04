@@ -2760,14 +2760,9 @@ const nextPhasePreviewStyle = computed(() => ({
   pointer-events: none;
 }
 
-/* Die Korona wächst MIT dem Körper. Fest gesetzte 90/180px lasen sich bei 320px
-   Scheibe hart abgeschnitten — der Schein ist das, was eine Sonne zur Sonne
-   macht, und er muss im Verhältnis bleiben. Beides bleibt ein STATISCHER
-   Schatten; animiert ist an der Scheibe nur `transform`/`opacity` (Regel 2). */
+/* Die Korona steckt im Halo-Sprite und wächst mit dem Körper. */
 :deep(.phase-sun-root) {
   z-index: 1;
-  --sun-corona-a: calc(var(--shop-sun-d, 200px) * 0.38);
-  --sun-corona-b: calc(var(--shop-sun-d, 200px) * 0.75);
 }
 
 .next-phase-preview {

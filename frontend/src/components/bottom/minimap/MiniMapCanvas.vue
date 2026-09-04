@@ -16,10 +16,11 @@ import { livePlanetAngles } from '@/composables/orbit/useStarSystem'
 import type { StarPlanetSlot } from '@/stores/world/starGroupStore'
 import type { PlanetType } from '@/types'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { sunBodyFor } from '@/utils/fx/sunBodySprite'
 import {
   GALAXY_TRANS_WARP_MS,
   GALAXY_TRANS_DECEL_MS,
-  STAR_PHASE_DATA,
+  COMET_PHASE_DATA,
   RESCUE_ROTATION_DURATION_MS,
   ROLE_COLORS,
   MINIMAP_FLIGHTPATH_BEND,
@@ -117,6 +118,8 @@ export default defineComponent({
     const planetBossStore = usePlanetBossStore()
     const roleBehaviorStore = useRoleBehaviorStore()
     const solarUpgradeStore = useSolarUpgradeStore()
+    /** Komet, Phase oder Loch — je Frame frisch, die Stufen sind sieben Lookups. */
+    const playerBody = () => sunBodyFor(solarUpgradeStore, solarUpgradeStore.solarSignature)
 
     const battleStore = useBattleStore()
     // keyed by URL, not name — the URL changes when the player equips a skin
@@ -739,9 +742,9 @@ export default defineComponent({
             const t0 = Math.max(0, t - tailT * f0)
             const nearHead = 1 - f1
             ctx.beginPath()
-            ctx.strokeStyle = `rgba(255, 214, 120, ${(nearHead * 0.85).toFixed(3)})`
+            ctx.strokeStyle = hexToRgba(COMET_PHASE_DATA.accent, nearHead * 0.85)
             ctx.lineWidth = 0.4 + nearHead * 2.8
-            ctx.shadowColor = 'rgba(255, 190, 80, 0.6)'
+            ctx.shadowColor = hexToRgba(COMET_PHASE_DATA.glow, 0.6)
             ctx.shadowBlur = nearHead * 5
             ctx.moveTo(qx(t1), qy(t1))
             ctx.lineTo(qx(t0), qy(t0))
@@ -756,8 +759,8 @@ export default defineComponent({
         const headR = MINIMAP_COMET_HEAD_R * Math.sqrt(cam.zoom)
         const headGlow = ctx.createRadialGradient(hx, hy, 0, hx, hy, headR * 3.2)
         headGlow.addColorStop(0, 'rgba(255, 255, 255, 0.95)')
-        headGlow.addColorStop(0.35, 'rgba(255, 216, 112, 0.65)')
-        headGlow.addColorStop(1, 'rgba(255, 190, 80, 0)')
+        headGlow.addColorStop(0.35, hexToRgba(COMET_PHASE_DATA.accent, 0.65))
+        headGlow.addColorStop(1, hexToRgba(COMET_PHASE_DATA.glow, 0))
         ctx.beginPath()
         ctx.arc(hx, hy, headR * 3.2, 0, Math.PI * 2)
         ctx.fillStyle = headGlow
@@ -772,7 +775,7 @@ export default defineComponent({
         // its own departure beacon at the flight origin instead)
         const player = getPlayerWorldPos(dots, attempts)
         const [px, py] = wToC(player.x, player.y)
-        drawMiniSun(ctx, px, py, MINIMAP_IDLE_SUN_R, nowMs)
+        drawMiniSun(ctx, px, py, MINIMAP_IDLE_SUN_R, playerBody(), nowMs, Math.min(window.devicePixelRatio || 1, 2))
         drawPlayerRing(ctx, px, py, MINIMAP_IDLE_SUN_R * 1.5, nowMs)
       }
     }
@@ -1136,8 +1139,7 @@ export default defineComponent({
         // Contrast scrim fades out as the sun docks at its departure point
         drawSunScrim(ctx, bx, by, sunR, fade)
 
-        const phase = STAR_PHASE_DATA[solarUpgradeStore.starPhase] ?? STAR_PHASE_DATA[0]
-        drawPhaseSun(ctx, bx, by, sunR, phase, nowMs)
+        drawPhaseSun(ctx, bx, by, sunR, playerBody(), nowMs, Math.min(window.devicePixelRatio || 1, 2))
 
         // Radial launch streaks (grow longer as t increases, then fade out)
         const numStreaks = 8

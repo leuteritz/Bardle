@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { SIGNATURE_AXIS_COLOR, SOLAR_SIGNATURE_AXIS_BY_NODE, blackHoleSignatureVars, cometGoldSignatureLift, emptySolarSignature, forgeNodeAxis, forgeNodePath, plasmaSignatureVars, solarSignatureFrom, wakeSignatureBonus } from '@/utils/game/solarSignature'
+import { SIGNATURE_AXIS_COLOR, SOLAR_SIGNATURE_AXIS_BY_NODE, cometGoldSignatureLift, emptySolarSignature, forgeNodeAxis, forgeNodePath, solarSignatureFrom, solarSignatureStages, sunSignatureKey, wakeSignatureBonus } from '@/utils/game/solarSignature'
 import { FORGE_NODES } from '@/config/progression/starForge'
 import {
   FORGE_SPOTLIGHT_MAX_LIMBS,
@@ -153,60 +153,43 @@ describe('Grundsignatur', () => {
   })
 })
 
-describe('Optik-Zuordnung', () => {
-  it('liefert fuer die nackte Sonne durchweg Nullwerte', () => {
-    const vars = plasmaSignatureVars(emptySolarSignature())
-    expect(vars['--sig-spark-a']).toBe('0%')
-    expect(vars['--sig-limb-a']).toBe('0%')
-    expect(vars['--sig-prom-a']).toBe('0%')
-    expect(vars['--sig-granule-a']).toBe('0%')
-    expect(vars['--sig-corona-a']).toBe('0%')
+describe('Stufenindizes fuer den Sprite-Schluessel', () => {
+  it('liefert fuer die nackte Sonne durchweg Stufe 0', () => {
+    const s = solarSignatureStages(emptySolarSignature())
+    expect(Object.values(s).every((v) => v === 0)).toBe(true)
   })
 
-  it('gibt Alphas als Prozent-Strings aus, nicht als Brueche', () => {
-    // Sie landen in `color-mix(... X%, transparent)`; ein blanker Bruch dort
-    // ist ungueltig und faellt still aus.
-    const vars = plasmaSignatureVars(
+  it('Saum und Korona sind EINE Achse (maxHp)', () => {
+    const s = solarSignatureStages(
       solarSignatureFrom(input({ rayLevels: { ...noRays(), maxHp: 6 } })),
     )
-    for (const key of ['--sig-spark-a', '--sig-limb-a', '--sig-prom-a', '--sig-granule-a']) {
-      expect(vars[key]).toMatch(/%$/)
-    }
+    expect(s.limb).toBeGreaterThanOrEqual(1)
+    expect(s.corona).toBe(s.limb)
+    expect(s.spark).toBe(0)
   })
 
-  it('nennt einen Winkel je Protuberanzen-Schritt', () => {
-    const vars = plasmaSignatureVars(emptySolarSignature())
-    expect(vars['--sig-prom-step']).toMatch(/deg$/)
-  })
-
-  it('gibt die Saumbreite als BRUCH aus — Prozent kippt den ganzen box-shadow', () => {
-    // Gemessen: `--sig-limb-w: 1%` machte `box-shadow` komplett ungueltig und
-    // damit auch die Korona daneben unsichtbar. Ein Blur-Radius kennt kein
-    // Prozent; die Scheibe rechnet den Bruch ueber `--disc-d` in Pixel um.
-    for (const levels of [0, 6, 90]) {
-      const vars = plasmaSignatureVars(
-        solarSignatureFrom(input({ rayLevels: { ...noRays(), maxHp: Math.min(levels, 6) } })),
-      )
-      expect(vars['--sig-limb-w']).not.toMatch(/%/)
-      expect(Number(vars['--sig-limb-w'])).not.toBeNaN()
-    }
-  })
-
-  it('gibt dem Schwarzen Loch Faktoren, keine Absolutwerte', () => {
-    const vars = blackHoleSignatureVars(emptySolarSignature())
-    for (const key of ['--sig-bh-jet', '--sig-bh-ring', '--sig-bh-halo', '--sig-bh-mote']) {
-      expect(Number(vars[key])).toBe(1)
-    }
-    // Die Akkretionsscheibe reicht mit dem Ausbau weiter nach INNEN.
-    expect(Number(vars['--sig-bh-inner'])).toBe(1)
-  })
-
-  it('hebt die Faktoren des Schwarzen Lochs mit dem Ausbau', () => {
+  it('deckelt auf die letzte Tabellenzeile', () => {
     const node = FORGE_NODES.find((n) => SOLAR_SIGNATURE_AXIS_BY_NODE.get(n.id) === 'flightSpeed')
-    const sig = solarSignatureFrom(input({ nodeLevelBags: [{ [node!.id]: 90 }] }))
-    expect(Number(blackHoleSignatureVars(sig)['--sig-bh-jet'])).toBeGreaterThan(1)
+    const s = solarSignatureStages(solarSignatureFrom(input({ nodeLevelBags: [{ [node!.id]: 900 }] })))
+    expect(s.wake).toBe(SOLAR_SIGNATURE_STAGES.length - 1)
   })
 
+  it('der Schluessel ist deterministisch und trennt Stufen', () => {
+    const a = solarSignatureStages(solarSignatureFrom(input({ rayLevels: { ...noRays(), dmgPerClick: 6 } })))
+    const b = solarSignatureStages(solarSignatureFrom(input({ rayLevels: { ...noRays(), maxHp: 6 } })))
+    expect(sunSignatureKey(a)).toBe(sunSignatureKey(a))
+    expect(sunSignatureKey(a)).not.toBe(sunSignatureKey(b))
+    expect(sunSignatureKey(a)).toHaveLength(6)
+  })
+
+  it('die Grundsignatur zaehlt aus Relikten allein', () => {
+    const s = solarSignatureStages(solarSignatureFrom(input({ relicLevels: 20 })))
+    expect(s.base).toBeGreaterThan(0)
+    expect(s.spark + s.limb + s.granule + s.prom + s.wake).toBe(0)
+  })
+})
+
+describe('Optik-Zuordnung', () => {
   it('gibt dem Kometen nur die GRUNDsignatur, nie eine Achse', () => {
     const axisOnly = solarSignatureFrom(input({ rayLevels: { ...noRays(), dmgPerClick: 6 } }))
     expect(cometGoldSignatureLift(axisOnly)).toBe(0)

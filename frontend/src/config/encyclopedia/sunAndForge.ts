@@ -27,7 +27,7 @@ export const sunForgeCategory: EncyclopediaCategory = {
       lore: 'Seven turns of the wheel. The last one is silence.',
       formula:
         'Comet → Spark → Dawn → Zenith → Swell → Pyre → Collapse\n' +
-        'Dwell: 3 min → 10 min → 30 min → 90 min → 4 h → 24 h → —\n' +
+        'Dwell: 3 min → 15 min → 45 min → 3.5 h → 12 h → 28 h → —\n' +
         'Evolve needs every ray ≥ phase + 1',
       related: ['solar-rays', 'comet-origin', 'planet-slots'],
     },

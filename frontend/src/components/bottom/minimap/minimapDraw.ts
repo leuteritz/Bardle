@@ -2,18 +2,10 @@
 // Store-Zugriff: MiniMapCanvas bringt Kamera, Zeitachse und Spielzustand mit,
 // hier stehen nur die Pinselstriche. Die Geometrie (Galaxie-Partikel, Punkte,
 // Planeten) liegt daneben in minimapGalaxyGeometry.ts.
-import type { PlanetType } from '@/types'
-import {
-  STAR_PHASE_DATA,
-  STAR_PHASE_FINAL_INDEX,
-  BLACK_HOLE_SHADOW_FRACTION,
-  BLACK_HOLE_DISC_INNER_FRACTION,
-  BLACK_HOLE_DISC_TILT,
-  BLACK_HOLE_PHOTON_RING_FRACTION,
-  BLACK_HOLE_BODY_TO_BOX_FACTOR,
-} from '@/config/constants'
+import type { PlanetType, SunBody } from '@/types'
+import { BLACK_HOLE_DISC_TILT, COMET_DISC_FILL, SUN_SPRITE_BODY_FRACTION } from '@/config/constants'
 import { STAR_PALETTE } from './minimapGalaxyGeometry'
-import { hexToRgba } from '@/utils/ui/format'
+import { drawSunLayer } from '@/utils/fx/sunBodySprite'
 
 export const ARRIVAL_TRANSITION_MS = 900
 
@@ -200,160 +192,50 @@ export const PLANET_TYPE_PALETTES: Record<PlanetType, typeof STAR_PALETTE> = {
   },
 }
 
-/** Small pulsing sun marker (player origin / idle position) in the mock's gold palette. */
-export function drawMiniSun(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  nowMs: number,
-) {
-  const pulse = 0.5 + 0.5 * Math.sin(nowMs / 540)
-  const glowR = r * (2.4 + 0.5 * pulse)
-  const glow = ctx.createRadialGradient(x, y, r * 0.4, x, y, glowR)
-  glow.addColorStop(0, `rgba(255, 180, 60, ${0.4 + 0.2 * pulse})`)
-  glow.addColorStop(1, 'rgba(255, 180, 60, 0)')
-  ctx.beginPath()
-  ctx.arc(x, y, glowR, 0, Math.PI * 2)
-  ctx.fillStyle = glow
-  ctx.fill()
-
-  const body = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, r * 0.1, x, y, r)
-  body.addColorStop(0, '#fff6d8')
-  body.addColorStop(0.58, '#ffcf5a')
-  body.addColorStop(1, '#c8791f')
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.fillStyle = body
-  ctx.fill()
-}
-
 /**
- * Der kollabierte Endzustand auf Minimap-Maßstab. Bewusst dieselben Fraktionen
- * wie BlackHoleDisc.vue (BLACK_HOLE_*), damit die Silhouette bei 9 px dieselbe
- * ist wie bei 560 px im Idle-Orbit — nur ohne Jets und Inspiral, die auf dieser
- * Größe zu Matsch würden. Übrig bleibt, was die Form trägt: Scheibe, schwarzer
- * Horizont, Photonenring.
+ * Der Spielerkörper auf Minimap-Massstab — dieselben Painter wie im Orbit
+ * (Detailstufe 0), gezeichnet aus dem Sprite-Cache. `r` ist der Körperradius;
+ * die Box folgt aus SUN_SPRITE_BODY_FRACTION. Der Halo atmet über globalAlpha.
  */
-function drawBlackHole(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  phase: (typeof STAR_PHASE_DATA)[number],
-  nowMs: number,
-) {
-  const pulseMs = (parseFloat(phase.pulseSpeed) * 1000) / (Math.PI * 2)
-  const pulse = 0.5 + 0.5 * Math.sin(nowMs / pulseMs)
-  // r ist der Radius, den die Plasmasonne hier hätte. Die BLACK_HOLE_*-Werte
-  // sind Bruchteile der Box-BREITE der CSS-Variante — einmal umrechnen, danach
-  // gelten dieselben Zahlen. Radien sind halbe Durchmesser, daher × 0.5.
-  const boxW = r * BLACK_HOLE_BODY_TO_BOX_FACTOR
-  const shadowR = boxW * BLACK_HOLE_SHADOW_FRACTION * 0.5
-  const discInnerR = boxW * BLACK_HOLE_DISC_INNER_FRACTION * 0.5
-  const discOuterR = boxW * 0.5
-
-  // Halo — das gelinste Licht um den Horizont
-  const haloR = discOuterR * 1.8
-  const halo = ctx.createRadialGradient(x, y, shadowR, x, y, haloR)
-  halo.addColorStop(0, hexToRgba(phase.glow1, 0.34))
-  halo.addColorStop(0.45, hexToRgba(phase.glow2, 0.12))
-  halo.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.beginPath()
-  ctx.arc(x, y, haloR, 0, Math.PI * 2)
-  ctx.fillStyle = halo
-  ctx.fill()
-
-  // Akkretionsscheibe: Ellipse in derselben Neigung wie die CSS-Variante.
-  // Der Doppler-Boost sitzt links, deshalb ein waagerechter Verlauf statt eines
-  // radialen — auf dieser Größe ist die Asymmetrie das, was "rotiert" verkauft.
-  const disc = ctx.createLinearGradient(x - discOuterR, y, x + discOuterR, y)
-  disc.addColorStop(0, hexToRgba(phase.core, 0.95))
-  disc.addColorStop(0.35, hexToRgba(phase.mid, 0.8))
-  disc.addColorStop(0.7, hexToRgba(phase.edge, 0.65))
-  disc.addColorStop(1, hexToRgba(phase.edge, 0.4))
-  ctx.beginPath()
-  ctx.ellipse(x, y, discOuterR, discOuterR * BLACK_HOLE_DISC_TILT, 0, 0, Math.PI * 2)
-  ctx.fillStyle = disc
-  ctx.fill()
-
-  // Horizont — deckt die Scheibenmitte ab, danach ist die Scheibe ein Ring
-  ctx.beginPath()
-  ctx.arc(x, y, Math.max(1, shadowR), 0, Math.PI * 2)
-  ctx.fillStyle = '#000'
-  ctx.fill()
-
-  // Photonenring direkt am Horizont, plus ein zweiter am inneren Scheibenrand
-  ctx.beginPath()
-  ctx.arc(x, y, Math.max(1, shadowR), 0, Math.PI * 2)
-  ctx.strokeStyle = `rgba(255,255,255,${(0.7 + 0.3 * pulse).toFixed(3)})`
-  ctx.lineWidth = Math.max(0.8, boxW * BLACK_HOLE_PHOTON_RING_FRACTION * 2)
-  ctx.stroke()
-
-  ctx.beginPath()
-  ctx.ellipse(x, y, discInnerR, discInnerR * BLACK_HOLE_DISC_TILT, 0, 0, Math.PI * 2)
-  ctx.strokeStyle = hexToRgba(phase.core, 0.45 + 0.2 * pulse)
-  ctx.lineWidth = Math.max(0.6, boxW * 0.02)
-  ctx.stroke()
-}
-
-/** Player sun rendered in its current phase palette (STAR_PHASE_DATA). */
 export function drawPhaseSun(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   r: number,
-  phase: (typeof STAR_PHASE_DATA)[number],
+  body: SunBody,
   nowMs: number,
+  dpr: number,
 ) {
-  // Die Endphase ist kein Plasmakörper mehr. Der Vergleich läuft über die
-  // Objektidentität, weil jeder Aufrufer direkt in STAR_PHASE_DATA indiziert —
-  // so bekommt jede bestehende Aufrufstelle das Schwarze Loch ohne Änderung.
-  if (phase === STAR_PHASE_DATA[STAR_PHASE_FINAL_INDEX]) {
-    drawBlackHole(ctx, x, y, r, phase, nowMs)
+  const px = (2 * r) / (body.kind === 'comet' ? COMET_DISC_FILL : SUN_SPRITE_BODY_FRACTION)
+  const pulse = 0.5 + 0.5 * Math.sin(nowMs / 540)
+  if (body.kind === 'blackHole') {
+    drawSunLayer(ctx, 'bhHalo', body, px, dpr, x, y)
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(1, BLACK_HOLE_DISC_TILT)
+    drawSunLayer(ctx, 'bhDisc', body, px, dpr, 0, 0)
+    ctx.restore()
+    drawSunLayer(ctx, 'bhShadow', body, px, dpr, x, y)
     return
   }
+  ctx.save()
+  ctx.globalAlpha = 0.75 + 0.25 * pulse
+  drawSunLayer(ctx, body.kind === 'comet' ? 'coma' : 'halo', body, px, dpr, x, y)
+  ctx.restore()
+  drawSunLayer(ctx, 'core', body, px, dpr, x, y)
+}
 
-  const pulseMs = (parseFloat(phase.pulseSpeed) * 1000) / (Math.PI * 2)
-  const pulse = 0.5 + 0.5 * Math.sin(nowMs / pulseMs)
-
-  // Outer corona
-  const coroR = r * (3.2 + 0.4 * pulse)
-  const outerCorona = ctx.createRadialGradient(x, y, r * 0.85, x, y, coroR)
-  outerCorona.addColorStop(0, hexToRgba(phase.glow1, 0.32))
-  outerCorona.addColorStop(0.5, hexToRgba(phase.glow2, 0.09))
-  outerCorona.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.beginPath()
-  ctx.arc(x, y, coroR, 0, Math.PI * 2)
-  ctx.fillStyle = outerCorona
-  ctx.fill()
-
-  // Inner halo
-  const innerHalo = ctx.createRadialGradient(x, y, r * 0.55, x, y, r * 2.2)
-  innerHalo.addColorStop(0, hexToRgba(phase.core, 0.6))
-  innerHalo.addColorStop(0.4, hexToRgba(phase.glow1, 0.22))
-  innerHalo.addColorStop(1, 'rgba(0,0,0,0)')
-  ctx.beginPath()
-  ctx.arc(x, y, r * 2.2, 0, Math.PI * 2)
-  ctx.fillStyle = innerHalo
-  ctx.fill()
-
-  // Body
-  const bodyGrad = ctx.createRadialGradient(x - r * 0.28, y - r * 0.3, r * 0.05, x, y, r)
-  bodyGrad.addColorStop(0, phase.core)
-  bodyGrad.addColorStop(0.5, phase.mid)
-  bodyGrad.addColorStop(1, phase.edge)
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.fillStyle = bodyGrad
-  ctx.fill()
-
-  // Rim highlight
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.strokeStyle = `rgba(255,255,220,${(0.35 + 0.15 * pulse).toFixed(3)})`
-  ctx.lineWidth = 1.2
-  ctx.stroke()
+/** Idle-Marker des Spielers — derselbe Körper, nur kleiner. */
+export function drawMiniSun(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  body: SunBody,
+  nowMs: number,
+  dpr: number,
+) {
+  drawPhaseSun(ctx, x, y, r, body, nowMs, dpr)
 }
 
 /**

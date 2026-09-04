@@ -25,7 +25,13 @@ import {
   FLIGHT_STREAK_COUNT,
   FLIGHT_STREAK_SPEED_MULT,
   FLIGHT_STREAK_LEN_FACTOR,
-  FLIGHT_STREAK_ALPHA,
+  FLIGHT_STREAK_BANDS,
+  FLIGHT_EXPOSURE_SEC,
+  FLIGHT_DRIFT_AMPLITUDE,
+  FLIGHT_DRIFT_PERIOD_X_SEC,
+  FLIGHT_DRIFT_PERIOD_Y_SEC,
+  FLIGHT_DRIFT_EASE_SEC,
+  WARP_STREAK_LEN_FACTOR,
   FLIGHT_BURST_INTERVAL_MIN_SEC,
   FLIGHT_BURST_INTERVAL_MAX_SEC,
   FLIGHT_BURST_STREAK_MIN,
@@ -72,14 +78,11 @@ import {
 } from '@/composables/starBackground/galaxyRenderers'
 import { gameNow } from '@/utils/game/gameClock'
 
-/** FLIGHT_STREAK_ALPHA as a 2-digit hex suffix for 8-digit-hex canvas colors. */
-const STREAK_ALPHA_HEX = Math.round(FLIGHT_STREAK_ALPHA * 255)
-  .toString(16)
-  .padStart(2, '0')
+const alphaHex = (a: number) => Math.round(a * 255).toString(16).padStart(2, '0')
+/** Je Tiefenband ein 2-stelliges Hex-Suffix für 8-stellige Canvas-Farben. */
+const BAND_ALPHA_HEX = FLIGHT_STREAK_BANDS.map((b) => alphaHex(b.alpha))
 /** Same for FLIGHT_BURST_ALPHA (outer stroke of burst streaks). */
-const BURST_ALPHA_HEX = Math.round(FLIGHT_BURST_ALPHA * 255)
-  .toString(16)
-  .padStart(2, '0')
+const BURST_ALPHA_HEX = alphaHex(FLIGHT_BURST_ALPHA)
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,6 +90,8 @@ type FlightStreak = {
   angle: number
   dist: number
   baseSpeed: number
+  /** Tiefenband (Index in FLIGHT_STREAK_BANDS). */
+  band: number
 }
 
 type DebrisRock = {
@@ -326,6 +331,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   const flightStreaks: FlightStreak[] = []
   /** Finite gusts of bright speed lines; refilled when burstCooldown expires. */
   const burstStreaks: FlightStreak[] = []
+  /** Wandernder Fluchtpunkt — Phase in Sekunden, Gewicht 0..1 (weich ein/aus). */
+  let driftPhase = 0
+  let driftGain = 0
   let burstCooldown =
     FLIGHT_BURST_INTERVAL_MIN_SEC +
     Math.random() * (FLIGHT_BURST_INTERVAL_MAX_SEC - FLIGHT_BURST_INTERVAL_MIN_SEC)
@@ -938,9 +946,22 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
 
     if (ctx) ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
 
-    const cx = w / 2,
-      cy = h / 2
-    const maxDist = Math.hypot(cx, cy) + 20
+    // Der Fluchtpunkt wandert leicht um die Bildmitte; die Sonne bleibt dort
+    // stehen — die Kamera hängt am Spieler, nur sein Kurs schiebt den Fokus.
+    // Bei Warp, Hyperspace, Schwenk und Reduced-Motion fährt er weich auf 0.
+    const driftOn =
+      !isFrozen &&
+      galaxyTransPhase === 'idle' &&
+      !hyperActive &&
+      speedMultiplier > 0 &&
+      !prefersReducedMotion.value
+    const driftStep = delta / FLIGHT_DRIFT_EASE_SEC
+    driftGain = Math.max(0, Math.min(1, driftGain + (driftOn ? driftStep : -driftStep)))
+    driftPhase += delta
+    const driftAmp = FLIGHT_DRIFT_AMPLITUDE * Math.min(w, h) * driftGain
+    const cx = w / 2 + Math.sin((driftPhase * Math.PI * 2) / FLIGHT_DRIFT_PERIOD_X_SEC) * driftAmp
+    const cy = h / 2 + Math.sin((driftPhase * Math.PI * 2) / FLIGHT_DRIFT_PERIOD_Y_SEC + 1.7) * driftAmp
+    const maxDist = Math.hypot(w / 2, h / 2) + 20 + driftAmp
 
     // ── Kosmischer Staub ────────────────────────────────────────────────────
     if (ctx) {
@@ -1091,7 +1112,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           speedMultiplier > 1.5
         const trailAngle = galaxyTransPhase === 'warp' ? galaxyTransDir : star.angle
         if (isStreaking) {
-          const trailLength = speed * delta * 2.2
+          const trailLength = speed * FLIGHT_EXPOSURE_SEC * WARP_STREAK_LEN_FACTOR
           ctx.beginPath()
           ctx.moveTo(x - Math.cos(trailAngle) * trailLength, y - Math.sin(trailAngle) * trailLength)
           ctx.lineTo(x, y)
@@ -1122,19 +1143,27 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           angle: Math.random() * Math.PI * 2,
           dist: maxDist * (0.05 + Math.random() * 0.3),
           baseSpeed: STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE,
+          band: flightStreaks.length % FLIGHT_STREAK_BANDS.length,
         })
       }
       for (const s of flightStreaks) {
+        const band = FLIGHT_STREAK_BANDS[s.band]
         const sNorm = s.dist / maxDist
         const sSpeed =
-          s.baseSpeed * sNorm * sNorm * WARP_SPEED_MAX * speedMultiplier * FLIGHT_STREAK_SPEED_MULT
+          s.baseSpeed *
+          sNorm *
+          sNorm *
+          WARP_SPEED_MAX *
+          speedMultiplier *
+          FLIGHT_STREAK_SPEED_MULT *
+          band.speed
         s.dist += sSpeed * delta
         if (s.dist > maxDist) {
           s.angle = Math.random() * Math.PI * 2
           s.dist = maxDist * (0.05 + Math.random() * 0.1)
           s.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
         }
-        const len = Math.max(6, sSpeed * delta * FLIGHT_STREAK_LEN_FACTOR)
+        const len = Math.max(6, sSpeed * FLIGHT_EXPOSURE_SEC * FLIGHT_STREAK_LEN_FACTOR)
         const hx = cx + Math.cos(s.angle) * s.dist
         const hy = cy + Math.sin(s.angle) * s.dist
         const tx = hx - Math.cos(s.angle) * len
@@ -1145,14 +1174,14 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         if (alpha < 0.05) continue
         const grad = ctx.createLinearGradient(tx, ty, hx, hy)
         grad.addColorStop(0, `${streakColor}00`)
-        grad.addColorStop(1, `${streakColor}${STREAK_ALPHA_HEX}`)
+        grad.addColorStop(1, `${streakColor}${BAND_ALPHA_HEX[s.band]}`)
         ctx.save()
         ctx.globalAlpha = alpha
         ctx.beginPath()
         ctx.moveTo(tx, ty)
         ctx.lineTo(hx, hy)
         ctx.strokeStyle = grad
-        ctx.lineWidth = 1 + sNorm * 1.2
+        ctx.lineWidth = band.width * (0.6 + sNorm)
         ctx.lineCap = 'round'
         ctx.stroke()
         ctx.restore()
@@ -1172,6 +1201,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
             dist: maxDist * (0.1 + Math.random() * 0.2),
             baseSpeed:
               STAR_BG_BASE_SPEED_MIN + STAR_BG_BASE_SPEED_RANGE * (0.7 + Math.random() * 0.3),
+            band: FLIGHT_STREAK_BANDS.length - 1,
           })
         }
         burstCooldown =
@@ -1189,7 +1219,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           burstStreaks.splice(i, 1)
           continue
         }
-        const len = Math.max(10, sSpeed * delta * FLIGHT_BURST_LEN_FACTOR)
+        const len = Math.max(10, sSpeed * FLIGHT_EXPOSURE_SEC * FLIGHT_BURST_LEN_FACTOR)
         const hx = cx + Math.cos(s.angle) * s.dist
         const hy = cy + Math.sin(s.angle) * s.dist
         const tx = hx - Math.cos(s.angle) * len
@@ -1209,11 +1239,11 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         ctx.lineWidth = outerWidth
         ctx.lineCap = 'round'
         ctx.stroke()
-        // hot white core — reads as bright without expensive shadowBlur
+        // hot core in the phase tint — reads as bright without expensive shadowBlur
         ctx.beginPath()
         ctx.moveTo(tx, ty)
         ctx.lineTo(hx, hy)
-        ctx.strokeStyle = `rgba(255,255,255,${(FLIGHT_BURST_ALPHA * 0.5).toFixed(3)})`
+        ctx.strokeStyle = `${streakColor}${alphaHex(FLIGHT_BURST_ALPHA * 0.6)}`
         ctx.lineWidth = outerWidth * 0.35
         ctx.stroke()
         ctx.restore()
@@ -1302,7 +1332,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         g.el.style.opacity = gOpStr
         g._lastOpacity = gOpStr
       }
-      const gTrStr = `translate(${g.x}px,${g.y}px) scale(${g.scale.toFixed(3)}) rotate(${g.rot}deg)`
+      const gTrStr = `translate(${(g.x + cx - w / 2).toFixed(1)}px,${(g.y + cy - h / 2).toFixed(1)}px) scale(${g.scale.toFixed(3)}) rotate(${g.rot}deg)`
       if (g._lastTransform !== gTrStr) {
         g.el.style.transform = gTrStr
         g._lastTransform = gTrStr

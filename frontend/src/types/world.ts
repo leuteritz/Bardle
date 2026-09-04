@@ -1,6 +1,7 @@
 // Welt: Planeten, Sterne, Boss-Events, Drifter, Planeten-Slots.
 
 import type { ChampionRole, TimedBuffEffects } from './core'
+import type { SolarSignatureStages } from './forge'
 
 export type PlanetType =
   | 'rocky'
@@ -652,4 +653,34 @@ export interface ActiveLandfall extends LandfallPlan {
   taps: number
   /** NUR `gesture: 'choice'` — der genommene Segen. `null` heisst „noch nicht". */
   choice?: string | null
+}
+
+/** Der Spielerkörper: Komet vor der Zündung, Plasmasonne, Schwarzes Loch. */
+export type SunBodyKind = 'comet' | 'star' | 'blackHole'
+
+/** Ebenen des Spielerkörpers (`utils/fx/sunBodySprite.ts`), je eine gecachte Grafik. */
+export type SunSpriteLayer =
+  | 'halo'
+  | 'core'
+  | 'surfaceA'
+  | 'surfaceB'
+  | 'corona'
+  | 'flare'
+  | 'wake'
+  | 'coma'
+  | 'jets'
+  | 'bhJets'
+  | 'bhHalo'
+  | 'bhDisc'
+  | 'bhShadow'
+  | 'bhRing'
+  | 'bhGlaze'
+
+/** Alles, was die Gestalt des Spielerkörpers bestimmt — die Farbe folgt aus
+ *  `kind` + `stage`, deshalb steht sie nicht hier. `stage`: cometStage 0–5,
+ *  starPhase 0–4 oder `STAR_PHASE_FINAL_INDEX`. */
+export interface SunBody {
+  kind: SunBodyKind
+  stage: number
+  sig: SolarSignatureStages
 }

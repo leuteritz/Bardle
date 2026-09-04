@@ -13,7 +13,11 @@
   <div
     ref="rootEl"
     class="sfsun"
-    :class="{ 'sfsun--comet': solarStore.isCometState, 'sfsun--collapse': isCollapsed }"
+    :class="{
+      'sfsun--comet': solarStore.isCometState,
+      'sfsun--collapse': isCollapsed,
+      'sfsun--sprite': spriteShown,
+    }"
     :style="rootVars"
     aria-hidden="true"
   >
@@ -23,6 +27,12 @@
     <!-- Glut-Halo direkt auf der Silhouette: überstrahlt die Schnittkante von
          außen, damit der Helligkeitssprung nicht in einem Pixel passiert -->
     <span class="sfsun-limbglow" />
+
+    <!-- Die Photosphäre als Sprite (dieselbe wie im Orbit), unter der Kuppel;
+         die Kuppel behält Saum, Hotspot und Endverdunkelung als Überlagerung. -->
+    <span v-if="spriteShown" ref="spriteHost" class="sfsun-body">
+      <span class="sun-slot" data-layer="core" :style="spriteSlotStyle" />
+    </span>
 
     <!-- Sonnenkuppel — obere Hälfte einer Kreisscheibe auf dem Arena-Boden -->
     <span class="sfsun-dome" />
@@ -107,7 +117,11 @@ import {
   SUN_HORIZON_FLOAT_MS,
   BOSS_WAVE_HIT_DELAY_MS,
   BOSS_AUTO_HIT_DELAY_MS,
+  SUN_SPRITE_BODY_FRACTION,
+  SUN_SPRITE_DOME_MAX_PX,
+  SUN_SPRITE_DOME_STEP_PX,
 } from '@/config/constants'
+import { mountSunSprites, sunBodyFor } from '@/utils/fx/sunBodySprite'
 
 const playerStore = usePlayerStore()
 const roleBehaviorStore = useRoleBehaviorStore()
@@ -196,6 +210,47 @@ watch(rootEl, (el, prev) => {
   arenaH.value = rect.height
   arenaW.value = rect.width
 })
+
+// ── Photosphäre als Sprite: nur die Plasmaphasen, nur bis zum Kugel-Deckel ──
+const spriteHost = ref<HTMLElement | null>(null)
+const spriteShown = computed(
+  () =>
+    !solarStore.isCometState && !isCollapsed.value && sphereRadiusPx.value * 2 <= SUN_SPRITE_DOME_MAX_PX,
+)
+/** Box des Sprites, auf Schritte gerundet — der ResizeObserver feuert bei jeder
+ *  Arena-Änderung, und jeder neue Schlüssel wäre ein neues Raster. */
+const spritePx = computed(
+  () =>
+    Math.ceil((sphereRadiusPx.value * 2) / SUN_SPRITE_BODY_FRACTION / SUN_SPRITE_DOME_STEP_PX) *
+    SUN_SPRITE_DOME_STEP_PX,
+)
+const spriteSlotStyle = computed(() => {
+  const px = spritePx.value
+  const pad = Math.max(SUN_HORIZON_PAD_MIN_PX, Math.round(Math.max(SUN_HORIZON_RIM_MIN_PX, Math.round(crestPx.value * SUN_HORIZON_RIM_FACTOR)) * SUN_HORIZON_PAD_FACTOR))
+  // Der Körper misst 0,74 · px/2 — auf den Scheibenradius skaliert, zentriert im Scheibenmittelpunkt
+  const scale = (sphereRadiusPx.value * 2) / (px * SUN_SPRITE_BODY_FRACTION)
+  return {
+    width: `${px}px`,
+    height: `${px}px`,
+    left: `calc(50% - ${px / 2}px)`,
+    top: `${sphereRadiusPx.value + pad - px / 2}px`,
+    transform: `scale(${scale.toFixed(4)})`,
+  }
+})
+const spriteBody = computed(() => sunBodyFor(solarStore, solarStore.solarSignature))
+watch(
+  [spriteHost, spriteBody, spritePx],
+  () => {
+    const el = spriteHost.value
+    if (!el) return
+    mountSunSprites(el, spriteBody.value, {
+      px: spritePx.value,
+      dpr: window.devicePixelRatio || 1,
+      layers: ['core'],
+    })
+  },
+  { flush: 'post', immediate: true },
+)
 
 const rootVars = computed<Record<string, string>>(() => {
   const comet = solarStore.isCometState
@@ -351,6 +406,7 @@ onUnmounted(() => {
    keinen Platz — genau am Scheitel bliebe die Kante hart. Der Überstand ist
    maskiert und damit unsichtbar. */
 .sfsun-dome,
+.sfsun-body,
 .sfsun-crest,
 .sfsun-aim-cap {
   position: absolute;
@@ -396,6 +452,45 @@ onUnmounted(() => {
       calc(var(--sfsun-cr, 100px) + var(--sfsun-limb, 12px) * 0.5),
     transparent calc(var(--sfsun-cr, 100px) + var(--sfsun-limb, 12px))
   );
+}
+
+/* Die Photosphäre: Sprite-Kern unter der Kuppel, in derselben Maske. Die
+   Kuppel darüber verliert dann ihren flächigen Kern-Verlauf und trägt nur noch
+   Saum, Hotspot und Endverdunkelung. */
+.sfsun-body {
+  z-index: 0;
+  overflow: hidden;
+}
+
+.sfsun-body .sun-slot {
+  transform-origin: center;
+}
+
+.sfsun--sprite .sfsun-dome {
+  background:
+    radial-gradient(
+      circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cy, 110px),
+      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 3.4),
+      color-mix(in srgb, white 18%, var(--sfsun-mid, #ffb347))
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 2.2),
+      color-mix(in srgb, white 62%, var(--sfsun-core, #fff0c0))
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 1.15),
+      color-mix(in srgb, white 30%, var(--sfsun-mid, #ffb347))
+        calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 0.45),
+      transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-soft, 3px) * 0.5)
+    ),
+    radial-gradient(
+      circle var(--sfsun-hotspot, 115px) at 50% calc(100% - var(--sfsun-r, 100px) * 0.58),
+      color-mix(in srgb, white 45%, var(--sfsun-core, #fff0c0)) 0%,
+      color-mix(in srgb, white 16%, var(--sfsun-core, #fff0c0)) 42%,
+      transparent 100%
+    ),
+    radial-gradient(
+      ellipse 52% 155% at 50% 100%,
+      transparent 58%,
+      color-mix(in srgb, var(--sfsun-edge, #cc5500) 60%, #160a04) 88%,
+      color-mix(in srgb, var(--sfsun-edge, #cc5500) 35%, #160a04) 100%
+    );
 }
 
 /* Kuppelfläche: heißer Kern am Boden, gedämpfter Saum an der Silhouette, dazu
@@ -473,11 +568,11 @@ onUnmounted(() => {
     radial-gradient(
       circle var(--sfsun-cr, 100px) at 50% var(--sfsun-cy, 110px),
       transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 2.4),
-      color-mix(in srgb, white 55%, var(--sfsun-mid, #c8a2ff))
+      color-mix(in srgb, white 55%, var(--sfsun-mid, #ffd08a))
         calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 1.5),
       color-mix(in srgb, white 80%, var(--sfsun-core, #ffffff))
         calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 0.9),
-      color-mix(in srgb, var(--sfsun-mid, #c8a2ff) 55%, transparent)
+      color-mix(in srgb, var(--sfsun-mid, #ffd08a) 55%, transparent)
         calc(var(--sfsun-cr, 100px) - var(--sfsun-rim, 7px) * 0.3),
       transparent calc(var(--sfsun-cr, 100px) - var(--sfsun-soft, 3px) * 0.5)
     ),
@@ -487,8 +582,8 @@ onUnmounted(() => {
       radial-gradient(
         ellipse 92% 13% at 50% calc(100% - var(--sfsun-r, 100px) * 0.3),
         color-mix(in srgb, white 60%, var(--sfsun-core, #ffffff)) 0%,
-        var(--sfsun-mid, #c8a2ff) 32%,
-        var(--sfsun-edge, #6a12b8) 64%,
+        var(--sfsun-mid, #ffd08a) 32%,
+        var(--sfsun-edge, #c8461a) 64%,
         transparent 92%
       ),
     /* Ereignishorizont — alles dazwischen ist echtes Schwarz, kein dunkler Ton */

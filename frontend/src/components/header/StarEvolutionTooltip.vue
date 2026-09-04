@@ -22,6 +22,9 @@ import { Icon } from '@iconify/vue'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 import { useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
 import { formatCompactDuration } from '@/utils/ui/format'
+import { solarSignatureStages } from '@/utils/game/solarSignature'
+import type { SunBody } from '@/types'
+import SunOrb from '../ui/SunOrb.vue'
 import {
   MS_PER_SECOND,
   STAR_PHASE_DATA,
@@ -31,6 +34,7 @@ import {
   SOLAR_BRANCHES,
   SOLAR_MAX_LEVELS,
   STAR_EVOLUTION_ICONS,
+  SUN_ORB_SPRITE_PX,
 } from '@/config/constants'
 
 const solarStore = useSolarUpgradeStore()
@@ -49,34 +53,18 @@ const accent = computed(() =>
   isComet.value ? COMET_PHASE_DATA.accent : STAR_PHASE_DATA[solarStore.starPhase].phasePrimary,
 )
 
-/**
- * Dieselbe Malvorschrift wie im Abzeichen — drei Fälle, weil der Endzustand
- * keine Kugel mehr ist: der Kollaps braucht Photonenring, schwarzen Horizont
- * und die fast von der Kante gesehene Scheibe, sonst wäre er auf 18px nur ein
- * violetter Fleck. `index` zählt −1 = Komet, 0…5 = Sternphasen.
- */
+/** Der Körper einer Stufe — mit der HEUTIGEN Signatur: die Leiter zeigt, wie
+ *  die Sonne dort aussähe. `index` zählt −1 = Komet, 0…5 = Sternphasen. */
+function bodyAt(index: number): SunBody {
+  const sig = solarSignatureStages(solarStore.solarSignature)
+  if (index < 0) return { kind: 'comet', stage: solarStore.cometStage, sig }
+  if (index >= STAR_PHASE_FINAL_INDEX) return { kind: 'blackHole', stage: STAR_PHASE_FINAL_INDEX, sig }
+  return { kind: 'star', stage: index, sig }
+}
+
 function orbStyle(index: number): Record<string, string> {
-  if (index < 0) {
-    const c = COMET_PHASE_DATA
-    return {
-      background: `radial-gradient(circle at 38% 34%, ${c.core}, ${c.mid} 42%, ${c.edge} 100%)`,
-      '--orb-glow': c.glow,
-    }
-  }
-  const p = STAR_PHASE_DATA[index]
-  if (index >= STAR_PHASE_FINAL_INDEX) {
-    return {
-      background:
-        `radial-gradient(circle at 50% 50%, transparent 0 43%, ${p.core} 45% 49%, transparent 53%),` +
-        `radial-gradient(circle at 50% 50%, #000 0 44%, transparent 46%),` +
-        `radial-gradient(ellipse 100% 22% at 50% 50%, ${p.core} 0%, ${p.mid} 30%, ${p.edge} 62%, transparent 82%)`,
-      '--orb-glow': p.glow1,
-    }
-  }
-  return {
-    background: `radial-gradient(circle at 38% 34%, ${p.core}, ${p.mid} 42%, ${p.edge} 100%)`,
-    '--orb-glow': p.glow1,
-  }
+  const glow = index < 0 ? COMET_PHASE_DATA.glow : STAR_PHASE_DATA[index].glow1
+  return { '--orb-glow': glow }
 }
 
 /* ── Die Lebenslauf-Schiene ──────────────────────────────────────────────── */
@@ -309,7 +297,9 @@ const timeRows = computed<StatRow[]>(() => [
         :class="{ 'set-head-orb--collapse': isFinal }"
         :style="orbStyle(isComet ? -1 : solarStore.starPhase)"
         aria-hidden="true"
-      ></div>
+      >
+        <SunOrb :body="bodyAt(isComet ? -1 : solarStore.starPhase)" />
+      </div>
       <div class="set-head-text">
         <div class="set-name">{{ current.name }}</div>
         <div class="set-subname">{{ current.astroName }}</div>
@@ -344,7 +334,9 @@ const timeRows = computed<StatRow[]>(() => [
             class="set-stage-orb"
             :class="{ 'set-stage-orb--collapse': s.index >= STAR_PHASE_FINAL_INDEX }"
             :style="orbStyle(s.index)"
-          />
+          >
+            <SunOrb :body="bodyAt(s.index)" :px="SUN_ORB_SPRITE_PX / 2" />
+          </span>
           <span class="set-stage-no">{{ s.displayNo }}</span>
         </div>
       </div>
@@ -495,13 +487,12 @@ const timeRows = computed<StatRow[]>(() => [
 /* Der Orb ist statisch: das Abzeichen daneben atmet bereits, ein zweiter
    pulsierender Schein wäre nur zusätzliche Paint-Arbeit im Dauerbetrieb. */
 .set-head-orb {
+  position: relative;
   flex-shrink: 0;
   width: 2.1em;
   height: 2.1em;
   border-radius: 50%;
-  box-shadow:
-    0 0 12px 2px var(--orb-glow),
-    inset -3px -4px 8px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 12px 2px var(--orb-glow);
 }
 
 /* Das Schwarze Loch ist keine Kugel — der Inset-Schatten würde eine Hälfte
@@ -631,11 +622,6 @@ const timeRows = computed<StatRow[]>(() => [
   width: 1.7em;
   height: 1.7em;
   border-radius: 50%;
-  box-shadow: inset -2px -3px 6px rgba(0, 0, 0, 0.45);
-}
-
-.set-stage-orb--collapse {
-  box-shadow: none;
 }
 
 .set-stage-no {
@@ -792,9 +778,9 @@ const timeRows = computed<StatRow[]>(() => [
 }
 
 .set-verdict--end {
-  color: #d9b6ff;
-  background: #170f22;
-  border-color: #4a2a7a;
+  color: var(--ph-accent);
+  background: #221208;
+  border-color: #7a3a1a;
 }
 
 /* ── Kernstrahlen ──────────────────────────────────────────────── */

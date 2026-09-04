@@ -17,13 +17,21 @@
       />
     </svg>
 
-    <!-- Flight wake — Motes fliegen radial auf den Betrachter zu, in jeder Phase -->
-    <FlightMotes :diameter="discDiameter" />
-
     <!-- Sonnenscheibe — geteiltes Phase-Disc (identisch zu Planet-/Shop-Tab);
-         vor der ersten Ignition fliegt stattdessen der Komet -->
-    <CometDisc v-if="solarStore.isCometState" :diameter="discDiameter" />
-    <PhaseSunDisc v-else :diameter="discDiameter" />
+         vor der ersten Ignition fliegt stattdessen der Komet. Beim Zünden
+         stehen beide kurz zugleich, sonst schnitte der Körperwechsel hart. -->
+    <CometDisc
+      v-if="showComet"
+      :diameter="discDiameter"
+      :wake="true"
+      :class="{ 'sun-body--out': !solarStore.isCometState }"
+    />
+    <PhaseSunDisc
+      v-if="showStar"
+      :diameter="discDiameter"
+      :wake="true"
+      :class="{ 'sun-body--out': solarStore.isCometState }"
+    />
 
     <!-- Chime Particles (canvas) -->
     <canvas ref="canvasEl" class="chime-canvas" />
@@ -40,6 +48,8 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   SUN_BG_DISC_RADIUS_FACTOR,
+  SUN_BODY_SWAP_MS,
+  STAR_PHASE_FINAL_INDEX,
   CHIME_PARTICLE_POOL_SIZE,
   CHIME_PARTICLE_MIN_VISIBLE,
   CHIME_PARTICLE_CPS_SCALE,
@@ -63,9 +73,11 @@ import {
   CHIME_PARTICLE_DRAW_SCALE_SPAN,
   CHIME_PARTICLE_CANVAS_SUN_FACTOR,
 } from '@/config/constants'
+import { sunBodyFor, warmSunSprites } from '@/utils/fx/sunBodySprite'
+import { solarSignatureStages } from '@/utils/game/solarSignature'
+import type { SunBody } from '@/types'
 import PhaseSunDisc from './PhaseSunDisc.vue'
 import CometDisc from './CometDisc.vue'
-import FlightMotes from './FlightMotes.vue'
 
 interface ChimeParticle {
   id: number
@@ -81,7 +93,7 @@ interface ChimeParticle {
 
 export default defineComponent({
   name: 'SunComponent',
-  components: { PhaseSunDisc, CometDisc, FlightMotes },
+  components: { PhaseSunDisc, CometDisc },
   props: {
     /** Override the visual radius (px). Defaults to the live phase radius from planetShopStore. */
     radius: { type: Number, default: null },
@@ -245,12 +257,54 @@ export default defineComponent({
       '--sun-r': `${effectiveRadius.value}px`,
     }))
 
+    // Körperwechsel Komet → Spark: der alte Körper bleibt SUN_BODY_SWAP_MS stehen
+    const showComet = ref(solarStore.isCometState)
+    const showStar = ref(!solarStore.isCometState)
+    let swapTimer = 0
+    watch(
+      () => solarStore.isCometState,
+      (comet) => {
+        showComet.value = true
+        showStar.value = true
+        clearTimeout(swapTimer)
+        // Rein visuelle Frist
+        swapTimer = window.setTimeout(() => {
+          showComet.value = comet
+          showStar.value = !comet
+        }, SUN_BODY_SWAP_MS)
+      },
+    )
+
+    /** Der Körper, der nach dem laufenden Evolve steht — vorgewärmt, damit der
+     *  Crossfade genau auf den Store-Wechsel fällt. */
+    function nextBody(): SunBody {
+      const sig = solarSignatureStages(solarStore.solarSignature)
+      if (solarStore.isCometState) return { kind: 'star', stage: 0, sig }
+      const next = solarStore.starPhase + 1
+      if (next >= STAR_PHASE_FINAL_INDEX) return { kind: 'blackHole', stage: STAR_PHASE_FINAL_INDEX, sig }
+      return { kind: 'star', stage: next, sig }
+    }
+
+    const dpr = () => window.devicePixelRatio || 1
+    watch(
+      () => solarStore.isUpgrading,
+      (on) => {
+        if (on) warmSunSprites(nextBody(), discDiameter.value, dpr(), true)
+      },
+    )
+    onMounted(() =>
+      warmSunSprites(sunBodyFor(solarStore, solarStore.solarSignature), discDiameter.value, dpr(), true),
+    )
+    onUnmounted(() => clearTimeout(swapTimer))
+
     return {
       combatStore,
       solarStore,
       discDiameter,
       sunContainerVars,
       canvasEl,
+      showComet,
+      showStar,
     }
   },
 })
@@ -290,5 +344,11 @@ export default defineComponent({
   inset: 0;
   pointer-events: none;
   z-index: 10;
+}
+
+/* Der ausblendende Körper beim Zünden. */
+.sun-body--out {
+  opacity: 0;
+  transition: opacity 0.6s ease;
 }
 </style>

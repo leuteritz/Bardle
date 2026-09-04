@@ -406,17 +406,20 @@ export const STAR_PHASE_DATA: StarPhaseData[] = [
     // black hole: an opaque event-horizon shadow inside a tilted accretion disc.
     // core/mid/edge describe the DISC, not a plasma body — every renderer that
     // draws the final phase reads BLACK_HOLE_* for the geometry on top of them.
+    // Thermisch wie M87: weissgluehender Innenrand, Gold, Glut am Aussenrand.
+    // Identitaet der Phase ist „weissgluehend" — heller als Zenith-Gelb und
+    // Swell-Orange, damit die Sieben-Kugel-Leiter unterscheidbar bleibt.
     name: 'Collapse',
     astroName: 'Black Hole',
     radius: 140,
     core: '#ffffff',
-    mid: '#c8a2ff',
-    edge: '#6a12b8',
-    glow1: '#b45cff',
-    glow2: '#7412c8',
-    glow3: '#2c0655',
-    phasePrimary: '#d9b6ff',
-    phaseGlow: '#b45cff',
+    mid: '#ffd08a',
+    edge: '#c8461a',
+    glow1: '#ffb464',
+    glow2: '#a02c10',
+    glow3: '#3a0c04',
+    phasePrimary: '#fff4e0',
+    phaseGlow: '#ffd08a',
     factor: 1.6,
     pulseSpeed: '1.5s',
   },

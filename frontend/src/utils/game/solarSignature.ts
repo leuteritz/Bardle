@@ -5,17 +5,11 @@ import {
   SOLAR_SIGNATURE_BASE_SATURATION_K,
   SOLAR_SIGNATURE_STAGES,
   SOLAR_SIGNATURE_BASE_STAGES,
-  SOLAR_SIGNATURE_BH_JET_GAIN,
-  SOLAR_SIGNATURE_BH_RING_GAIN,
-  SOLAR_SIGNATURE_BH_HALO_GAIN,
-  SOLAR_SIGNATURE_BH_MOTE_GAIN,
-  SOLAR_SIGNATURE_BH_INNER_GAIN,
-  SOLAR_SIGNATURE_BH_DOPPLER_GAIN,
   FORGE_SPOTLIGHT_MAX_LIMBS,
   type SolarSignatureStage,
   type SolarSignatureBaseStage,
 } from '@/config/constants'
-import type { ForgeAxisId, SolarSignature, SolarSignatureInput } from '@/types'
+import type { ForgeAxisId, SolarSignature, SolarSignatureInput, SolarSignatureStages } from '@/types'
 
 /**
  * Was der Waechter in seine Sonne gesteckt hat, als Zahl je Achse.
@@ -190,12 +184,29 @@ export function emptySolarSignature(): SolarSignature {
 }
 
 /**
- * Signatur zu CSS — die eine Stelle, an der aus Zahlen Optik wird.
- *
- * Getrennt von der Rechnung, damit die Zuordnung fuer sich pruefbar bleibt, und
- * getrennt von den Komponenten, damit Plasmascheibe und Schwarzes Loch nicht
- * jede ihre eigene Fassung mitschleppen.
+ * Die Signatur als Stufenindizes je Motiv — das ist, was in den Sprite-Schluessel
+ * des Spielerkoerpers geht. Farbe und Masse liest der Painter dann direkt aus
+ * `SOLAR_SIGNATURE_STAGES[index]`; `corona` ist `limb`, beide haengen an maxHp.
  */
+export function solarSignatureStages(sig: SolarSignature): SolarSignatureStages {
+  const top = SOLAR_SIGNATURE_STAGES.length - 1
+  const cap = (v: number) => Math.max(0, Math.min(top, v))
+  const limb = cap(sig.axes.maxHp.stage)
+  return {
+    spark: cap(sig.axes.chimesPerClick.stage),
+    limb,
+    corona: limb,
+    granule: cap(sig.axes.chimesPerSecond.stage),
+    prom: cap(sig.axes.dmgPerClick.stage),
+    wake: cap(sig.axes.flightSpeed.stage),
+    base: Math.max(0, Math.min(SOLAR_SIGNATURE_BASE_STAGES.length - 1, sig.base.stage)),
+  }
+}
+
+/** Sechs Ziffern — `corona` fehlt, sie ist `limb`. */
+export function sunSignatureKey(s: SolarSignatureStages): string {
+  return `${s.spark}${s.limb}${s.granule}${s.prom}${s.wake}${s.base}`
+}
 
 /** Zwischen zwei Stufen liegt kein Uebergang — die Tabelle IST die Aussage. */
 function axisStage(sig: SolarSignature, axis: ForgeAxisId): SolarSignatureStage {
@@ -208,73 +219,7 @@ function baseStage(sig: SolarSignature): SolarSignatureBaseStage {
   return stages[Math.min(sig.base.stage, stages.length - 1)] ?? stages[0]
 }
 
-/**
- * Die Variablen der Plasmascheibe.
- *
- * `showOrnaments` entscheidet der Aufrufer aus seinem AUTORISIERTEN Durchmesser
- * (nie aus der Bildschirmgroesse): der Shop skaliert seine Buehne per Zoom, und
- * eine Bedingung daran baute die Ebenen bei jedem Zoomschritt ab und wieder auf.
- */
-export function plasmaSignatureVars(sig: SolarSignature): Record<string, string> {
-  const hp = axisStage(sig, 'maxHp')
-  const cpc = axisStage(sig, 'chimesPerClick')
-  const cps = axisStage(sig, 'chimesPerSecond')
-  const dmg = axisStage(sig, 'dmgPerClick')
-  const base = baseStage(sig)
-
-  // Alphas stehen als fertige PROZENT-Strings da, nicht als Bruch: sie landen
-  // in `color-mix(... X%, transparent)`, und ein `calc()` im Prozentslot einer
-  // Farbfunktion ist die Sorte Ausdruck, die je nach Browser still ausfaellt.
-  return {
-    '--sig-spark-a': pct(cpc.sparkAlpha),
-    '--sig-spark-c': SIGNATURE_AXIS_COLOR.chimesPerClick,
-    // Als BRUCH, nicht als Prozent: der Wert landet im Blur-Radius eines
-    // `box-shadow`, und dort ist Prozent ungueltig — ein ungueltiger Wert
-    // kippt die GANZE Deklaration, also auch die Korona daneben. Die Scheibe
-    // rechnet ihn ueber `--disc-d` in Pixel um.
-    '--sig-limb-w': `${hp.limbWidth}`,
-    '--sig-limb-a': pct(hp.limbAlpha),
-    '--sig-limb-c': SIGNATURE_AXIS_COLOR.maxHp,
-    '--sig-corona-a': pct(Math.min(1, hp.coronaAlpha + base.coronaLift)),
-    '--sig-granule-size': `${cps.granuleSizePct}%`,
-    '--sig-granule-a': pct(cps.granuleAlpha),
-    '--sig-granule-c': SIGNATURE_AXIS_COLOR.chimesPerSecond,
-    '--sig-prom-step': `${360 / Math.max(1, dmg.prominenceArcs)}deg`,
-    '--sig-prom-h': pct(dmg.prominenceHeight),
-    '--sig-prom-a': pct(dmg.prominenceAlpha),
-    '--sig-prom-c': SIGNATURE_AXIS_COLOR.dmgPerClick,
-    '--sig-core-lift': pct(base.coreLift),
-  }
-}
-
-/** Anteil 0..1 als Prozentwert mit zwei Nachkommastellen. */
-function pct(v: number): string {
-  return `${Math.round(Math.max(0, Math.min(1, v)) * 10000) / 100}%`
-}
-
-/**
- * Die Variablen des Schwarzen Lochs.
- *
- * Fuenf Achsen, fuenf Properties, die es ALLE schon hat — der Kollaps bekommt
- * keine einzige neue Ebene. Was hier steht, ist der Faktor auf den Grundwert,
- * nicht der Wert selbst; `BlackHoleDisc` multipliziert ihn in seine Rechnung.
- */
-export function blackHoleSignatureVars(sig: SolarSignature): Record<string, string> {
-  const a = sig.axes
-  const base = baseStage(sig)
-
-  return {
-    '--sig-bh-jet': `${1 + a.flightSpeed.t * SOLAR_SIGNATURE_BH_JET_GAIN}`,
-    '--sig-bh-ring': `${1 + a.maxHp.t * SOLAR_SIGNATURE_BH_RING_GAIN}`,
-    '--sig-bh-halo': `${1 + a.maxHp.t * SOLAR_SIGNATURE_BH_HALO_GAIN}`,
-    '--sig-bh-mote': `${1 + a.chimesPerClick.t * SOLAR_SIGNATURE_BH_MOTE_GAIN}`,
-    '--sig-bh-inner': `${1 - a.chimesPerSecond.t * SOLAR_SIGNATURE_BH_INNER_GAIN}`,
-    '--sig-bh-dop': `${1 + a.dmgPerClick.t * SOLAR_SIGNATURE_BH_DOPPLER_GAIN}`,
-    '--sig-core-lift': pct(base.coreLift),
-  }
-}
-
-/** Zuschlag auf `--line-power` in FlightMotes — der Sonnenwind der Flugachse. */
+/** Zuschlag auf die Wake-Dichte — der Sonnenwind der Flugachse. */
 export function wakeSignatureBonus(sig: SolarSignature): number {
   return axisStage(sig, 'flightSpeed').wakeBonus
 }

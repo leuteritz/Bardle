@@ -53,18 +53,27 @@ import {
   STAR_BODY_WIND_TURN_SEC_RANGE,
 } from '@/config/constants'
 import {
+  circle,
   clampSpriteDpr,
   createSpriteCache,
+  flareLoop,
   grain,
+  haloGlow,
   jitter,
   lumpyPath,
+  mix,
   newSpriteCanvas,
+  rayGradient,
+  rgba,
+  spike,
   sway,
+  wisp,
+  type Rgb,
 } from '@/utils/fx/spaceBody'
 
 const TAU = Math.PI * 2
 
-export type StarRgb = readonly [number, number, number]
+export type StarRgb = Rgb
 export type StarSpriteLayer = 'halo' | 'core' | 'spin' | 'wind'
 export type StarDetail = 0 | 1 | 2
 
@@ -85,20 +94,6 @@ export type StarPaint = (
   seed: number,
   detail: StarDetail,
 ) => void
-
-/* ── Reine Helfer ───────────────────────────────────────────────────────────── */
-
-function mix(rgb: StarRgb, to: number, t: number): StarRgb {
-  return [
-    Math.round(rgb[0] + (to - rgb[0]) * t),
-    Math.round(rgb[1] + (to - rgb[1]) * t),
-    Math.round(rgb[2] + (to - rgb[2]) * t),
-  ]
-}
-
-function rgba(rgb: StarRgb, a: number): string {
-  return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${a})`
-}
 
 export function starPaletteFromRgb(rgb: StarRgb): StarPalette {
   return {
@@ -171,12 +166,6 @@ export function starBodySpriteKey(
 
 /* ── Bausteine ──────────────────────────────────────────────────────────────── */
 
-function circle(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, TAU)
-  ctx.closePath()
-}
-
 interface PhotoOpts {
   hot: number
   limb: number
@@ -212,81 +201,6 @@ function photosphere(
   }
 }
 
-function haloGlow(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  rgb: StarRgb,
-  reach: number,
-  alpha: number,
-): void {
-  const g = ctx.createRadialGradient(x, y, r * 0.55, x, y, r * reach)
-  g.addColorStop(0, rgba(rgb, alpha))
-  g.addColorStop(0.3, rgba(rgb, alpha * 0.45))
-  g.addColorStop(1, rgba(rgb, 0))
-  circle(ctx, x, y, r * reach)
-  ctx.fillStyle = g
-  ctx.fill()
-}
-
-/** Ein weicher Nebelfetzen: unrunde Kontur, Verlauf läuft zum Rand aus. */
-function wisp(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  seed: number,
-  rgb: StarRgb,
-  alpha: number,
-): void {
-  const g = ctx.createRadialGradient(x, y, 0, x, y, r)
-  g.addColorStop(0, rgba(rgb, alpha))
-  g.addColorStop(0.55, rgba(rgb, alpha * 0.5))
-  g.addColorStop(1, rgba(rgb, 0))
-  lumpyPath(ctx, x, y, r, seed, 0.28, 24)
-  ctx.fillStyle = g
-  ctx.fill()
-}
-
-/** Ein Zacken von `from` bis `to` (Radien), Breite am Fuss `w`. */
-function spike(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  a: number,
-  from: number,
-  to: number,
-  w: number,
-): void {
-  const ca = Math.cos(a)
-  const sa = Math.sin(a)
-  const nx = -sa * w
-  const ny = ca * w
-  ctx.beginPath()
-  ctx.moveTo(x + ca * from + nx, y + sa * from + ny)
-  ctx.lineTo(x + ca * to, y + sa * to)
-  ctx.lineTo(x + ca * from - nx, y + sa * from - ny)
-  ctx.closePath()
-}
-
-function rayGradient(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  rgb: StarRgb,
-  from: number,
-  to: number,
-  alpha: number,
-): CanvasGradient {
-  const g = ctx.createRadialGradient(x, y, r * from, x, y, r * to)
-  g.addColorStop(0, rgba(mix(rgb, 255, 0.6), alpha))
-  g.addColorStop(0.45, rgba(rgb, alpha * 0.55))
-  g.addColorStop(1, rgba(rgb, 0))
-  return g
-}
-
 function haloFor(look: StarLook, detail: StarDetail): { reach: number; alpha: number } {
   const boost = detail < 2 ? STAR_BODY_HALO_SMALL_BOOST : 1
   return {
@@ -305,31 +219,6 @@ function binaryCompanionAt(r: number, seed: number): { x: number; y: number; cr:
  *  zwei Klammern an gegenüberliegenden Seiten lesen sich als Ring von der Kante. */
 function flareLoopAngle(seed: number, i: number): number {
   return jitter(seed, 300) * TAU + i * 1.9 + sway(seed, 301 + i) * 0.35
-}
-
-/** Eine Protuberanz: ein Bogen, der auf dem Rand aufsetzt und nach aussen wölbt. */
-function flareLoop(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  br: number,
-  a: number,
-  spread: number,
-  rise: number,
-): void {
-  const a1 = a - spread
-  const a2 = a + spread
-  const top = br * (1 + rise)
-  ctx.beginPath()
-  ctx.moveTo(x + Math.cos(a1) * br * 0.96, y + Math.sin(a1) * br * 0.96)
-  ctx.bezierCurveTo(
-    x + Math.cos(a1) * top,
-    y + Math.sin(a1) * top,
-    x + Math.cos(a2) * top,
-    y + Math.sin(a2) * top,
-    x + Math.cos(a2) * br * 0.96,
-    y + Math.sin(a2) * br * 0.96,
-  )
 }
 
 /* ── Kern ───────────────────────────────────────────────────────────────────── */

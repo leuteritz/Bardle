@@ -20,6 +20,7 @@
 //   battle        140 Konstanten
 //   battleSim     190 Konstanten
 //   sun            85 Konstanten
+//   sunSprite      37 Konstanten
 //   orbit         149 Konstanten
 //   planets       171 Konstanten
 //   void           35 Konstanten
@@ -44,6 +45,7 @@ export * from '@/config/constants/champions'
 export * from '@/config/constants/battle'
 export * from '@/config/constants/battleSim'
 export * from '@/config/constants/sun'
+export * from '@/config/constants/sunSprite'
 export * from '@/config/constants/orbit'
 export * from '@/config/constants/planets'
 export * from '@/config/constants/void'

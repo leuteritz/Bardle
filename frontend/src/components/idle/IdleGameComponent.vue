@@ -144,13 +144,13 @@ export default defineComponent({
 
     /** Comet state: desaturate the gold aura by the un-gilded remainder. */
     const auraStageStyle = computed(() => {
-      if (isCollapsed.value) {
-        const p = STAR_PHASE_DATA[STAR_PHASE_FINAL_INDEX]
-        return { '--aura-inner': p.phasePrimary, '--aura-outer': p.phaseGlow }
+      if (solarStore.isCometState) {
+        const gold = COMET_STAGE_GOLD[solarStore.cometStage]
+        return { filter: `grayscale(${(1 - gold).toFixed(2)})` }
       }
-      if (!solarStore.isCometState) return {}
-      const gold = COMET_STAGE_GOLD[solarStore.cometStage]
-      return { filter: `grayscale(${(1 - gold).toFixed(2)})` }
+      // Der Schein trägt die Phasenfarbe — Gold auf einem blauen Stern färbte ihn gelb
+      const p = STAR_PHASE_DATA[isCollapsed.value ? STAR_PHASE_FINAL_INDEX : solarStore.starPhase] ?? STAR_PHASE_DATA[0]
+      return { '--aura-inner': p.phasePrimary, '--aura-outer': p.phaseGlow }
     })
 
     const chimeButtonStyle = computed(() => ({
@@ -512,12 +512,12 @@ export default defineComponent({
   pointer-events: none;
   background: radial-gradient(
     circle,
-    rgba(255, 244, 214, 0.75) 0%,
-    rgba(251, 191, 36, 0.6) 28%,
-    rgba(232, 192, 64, 0.28) 52%,
-    rgba(232, 192, 64, 0) 72%
+    color-mix(in srgb, var(--aura-inner, #fff4d6) 60%, transparent) 0%,
+    color-mix(in srgb, var(--aura-outer, #fbbf24) 45%, transparent) 28%,
+    color-mix(in srgb, var(--aura-outer, #e8c040) 22%, transparent) 52%,
+    transparent 72%
   );
-  box-shadow: 0 0 40px rgba(251, 191, 36, 0.35);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--aura-outer, #fbbf24) 35%, transparent);
   transition: filter 0.25s ease;
   animation: aura-pulse 2.4s ease-in-out infinite;
 }
@@ -532,11 +532,11 @@ export default defineComponent({
   background: radial-gradient(
     circle closest-side,
     rgba(0, 0, 0, 0) 0 52%,
-    color-mix(in srgb, var(--aura-inner, #d9b6ff) 42%, transparent) 64%,
-    color-mix(in srgb, var(--aura-outer, #b45cff) 30%, transparent) 78%,
+    color-mix(in srgb, var(--aura-inner, #fff4e0) 42%, transparent) 64%,
+    color-mix(in srgb, var(--aura-outer, #ffd08a) 30%, transparent) 78%,
     transparent 100%
   );
-  box-shadow: 0 0 40px color-mix(in srgb, var(--aura-outer, #b45cff) 26%, transparent);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--aura-outer, #ffd08a) 26%, transparent);
 }
 
 .chime-aura.punched {

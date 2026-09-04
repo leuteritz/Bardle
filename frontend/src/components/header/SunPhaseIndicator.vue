@@ -11,7 +11,9 @@ import {
   HEADER_TOOLTIP_CLEAR_SELECTOR,
 } from '@/config/constants'
 import { splitDuration } from '@/utils/ui/format'
+import { sunBodyFor } from '@/utils/fx/sunBodySprite'
 import RpgBadgeTooltip from '../ui/RpgBadgeTooltip.vue'
+import SunOrb from '../ui/SunOrb.vue'
 import StarEvolutionTooltip from './StarEvolutionTooltip.vue'
 
 const solarStore = useSolarUpgradeStore()
@@ -22,10 +24,6 @@ const isComet = computed(() => solarStore.isCometState)
 /** Endphase: der Orb zeigt kein Plasma mehr, sondern das Schwarze Loch. */
 const isCollapsed = computed(() => solarStore.isCollapsedStar)
 
-const phaseData = computed(() =>
-  isComet.value ? COMET_PHASE_DATA : STAR_PHASE_DATA[solarStore.starPhase],
-)
-
 const glowColor = computed(() =>
   isComet.value ? COMET_PHASE_DATA.glow : STAR_PHASE_DATA[solarStore.starPhase].glow1,
 )
@@ -35,26 +33,10 @@ const accentColor = computed(() =>
   isComet.value ? COMET_PHASE_DATA.accent : STAR_PHASE_DATA[solarStore.starPhase].phasePrimary,
 )
 
-const sunStyle = computed(() => {
-  const p = phaseData.value
-  if (isCollapsed.value) {
-    // Ein 30-px-Orb trägt keine gelinste Scheibe. Die Silhouette muss allein aus
-    // drei Lagen lesbar bleiben: Photonenring, schwarzer Horizont darunter, und
-    // ganz unten die fast von der Kante gesehene Akkretionsscheibe, die links und
-    // rechts über den Horizont hinausragt. Reihenfolge = Malreihenfolge.
-    return {
-      background:
-        `radial-gradient(circle at 50% 50%, transparent 0 43%, ${p.core} 45% 49%, transparent 53%),` +
-        `radial-gradient(circle at 50% 50%, #000 0 44%, transparent 46%),` +
-        `radial-gradient(ellipse 100% 22% at 50% 50%, ${p.core} 0%, ${p.mid} 30%, ${p.edge} 62%, transparent 82%)`,
-      '--sun-glow': glowColor.value,
-    }
-  }
-  return {
-    background: `radial-gradient(circle at 38% 34%, ${p.core}, ${p.mid} 42%, ${p.edge} 100%)`,
-    '--sun-glow': glowColor.value,
-  }
-})
+/** Derselbe Körper wie im Orbit, in Miniatur — Komet, Phase oder Loch. */
+const orbBody = computed(() => sunBodyFor(solarStore, solarStore.solarSignature))
+
+const sunStyle = computed(() => ({ '--sun-glow': glowColor.value }))
 
 /** Dwell progress 0–100. A phase with no dwell requirement counts as complete. */
 const dwellProgress = computed(() => {
@@ -91,7 +73,9 @@ const remainingText = computed(() => {
     >
       <div class="orb-wrap">
         <div v-if="dwellComplete" class="orb-ripple" aria-hidden="true"></div>
-        <div class="orb" :class="{ 'orb--collapse': isCollapsed }" :style="sunStyle"></div>
+        <div class="orb" :class="{ 'orb--collapse': isCollapsed }" :style="sunStyle">
+          <SunOrb :body="orbBody" />
+        </div>
         <svg class="orb-ring" viewBox="0 0 50 50" aria-hidden="true">
           <circle
             cx="25"
@@ -172,9 +156,7 @@ const remainingText = computed(() => {
   width: 74%;
   height: 74%;
   border-radius: 50%;
-  box-shadow:
-    0 0 13px 2px var(--sun-glow),
-    inset -4px -5px 10px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 13px 2px var(--sun-glow);
   transition: transform 0.2s;
 }
 
@@ -196,6 +178,21 @@ const remainingText = computed(() => {
    des Horizonts aufhellen und den Ring an dieser Seite auffressen. */
 .orb--collapse {
   box-shadow: 0 0 13px 2px var(--sun-glow);
+}
+
+/* Der Inset-Schatten liegt ÜBER dem Sprite — sonst wäre die Kugel flach. */
+.orb::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 50%;
+  box-shadow: inset -4px -5px 10px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.orb--collapse::before {
+  display: none;
 }
 
 .sun-phase:hover .orb {

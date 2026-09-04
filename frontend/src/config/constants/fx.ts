@@ -85,10 +85,6 @@ export const STAR_BG_MIN_STARS = 60
  * Radiale Staffelung der Flug-Linien um die Sonne: jede Linie bekommt über den
  * Index eine eigene Reichweite, damit kein gleichmäßiger Kranz entsteht.
  */
-export const FLIGHT_LINE_REACH_BASE = 0.75
-export const FLIGHT_LINE_REACH_INDEX_STEP = 29
-export const FLIGHT_LINE_REACH_VARIANTS = 5
-export const FLIGHT_LINE_REACH_STEP = 0.1
 
 // Background canvas star speeds
 export const STAR_BG_BASE_SPEED_MIN = 1.0 // base speed minimum (doubled from 0.5)
@@ -241,10 +237,10 @@ export const SUPERNOVA_SHARD_COUNT = 88
 /** After the ejecta, everything falls back in — this fraction of the timeline is
  *  the implosion that hands over to the black hole. */
 export const SUPERNOVA_COLLAPSE_START = 0.6
-/** Ejecta palette: hot core → shocked shell → the violet of the Collapse phase. */
+/** Ejecta palette: hot core → shocked shell → the ember of the Collapse phase. */
 export const SUPERNOVA_CORE_COLOR = '#ffffff'
 export const SUPERNOVA_SHELL_COLOR = '#8fd8ff'
-export const SUPERNOVA_EJECTA_COLOR = '#b45cff'
+export const SUPERNOVA_EJECTA_COLOR = '#ffb464'
 
 // ── Flight Wake ───────────────────────────────────────────────────────────────
 /** Camera perspective: the viewer sits BEHIND the player's celestial body,
@@ -253,30 +249,34 @@ export const SUPERNOVA_EJECTA_COLOR = '#b45cff'
  *  AT the camera — on the 2D screen it reads as motes/streaks expanding
  *  radially outward, growing and fading, using the same motion language as
  *  the starfield. Active in EVERY phase (comet and all sun phases), tinted in
- *  the current phase color: the player is always in flight. */
-/** Speed lines shooting radially off the disc toward the viewer (CSS). */
-export const FLIGHT_LINE_COUNT = 8
-/** Radial reach of the lines relative to the disc diameter — kept short: the
- *  lines form a tight wake ring around the player; the far-field motion is
- *  the job of the ambient/burst streaks on the background canvas. */
-export const FLIGHT_LINE_REACH_FACTOR = 0.85
-/** Line intensity gain per progression step (cometStage / starPhase). */
-export const FLIGHT_LINE_STAGE_BONUS = 0.25
-/** Base line length relative to the disc diameter. */
-export const FLIGHT_LINE_BASE_LEN_FACTOR = 0.16
-/** Line thickness in px. */
-export const FLIGHT_LINE_THICKNESS = 2
-/** End scaleX of a line — it stretches while flying out (parallax growth). */
-export const FLIGHT_LINE_GROW_SCALE = 1.7
+ *  the current phase color: the player is always in flight. Der Kranz am
+ *  Körper ist eine Sprite-Ebene (SUN_WAKE_* in sunSprite.ts). */
 /** Radial phase-tinted streaks on the background canvas — they ride the same
  *  center-outward flow as the stars, reinforcing the parallax. */
-export const FLIGHT_STREAK_COUNT = 10
+export const FLIGHT_STREAK_COUNT = 12
 /** Streaks run this much faster than regular background stars. */
 export const FLIGHT_STREAK_SPEED_MULT = 1.4
-/** Streak line length relative to per-frame travel (cf. warp streak 2.2). */
+/** Streak line length relative to travel per exposure. */
 export const FLIGHT_STREAK_LEN_FACTOR = 2.6
-/** Peak alpha of a streak — background accent, never foreground noise. */
-export const FLIGHT_STREAK_ALPHA = 0.18
+/** Belichtungszeit: die Streifenlänge ist Geschwindigkeit × DIESE Spanne, nicht
+ *  × Frame-Delta — sonst hängt die sichtbare Länge an der Framerate. */
+export const FLIGHT_EXPOSURE_SEC = 1 / 60
+/** Sternstriche im Warp, als Vielfaches des Weges je Belichtung. */
+export const WARP_STREAK_LEN_FACTOR = 2.2
+/** Tiefenbänder: nah = schneller, heller, breiter. Tiefe kommt aus Bändern,
+ *  nicht aus Menge. */
+export const FLIGHT_STREAK_BANDS: readonly { speed: number; alpha: number; width: number }[] = [
+  { speed: 0.7, alpha: 0.1, width: 0.8 },
+  { speed: 1.0, alpha: 0.18, width: 1.2 },
+  { speed: 1.5, alpha: 0.28, width: 1.8 },
+]
+/** Der Kurs lebt: der Fluchtpunkt wandert um diesen Anteil der kurzen Kante,
+ *  mit zwei inkommensurablen Perioden — die Sonne steht dabei still, denn die
+ *  Kamera hängt am Spieler und nur sein Gieren verschiebt den Fokus. */
+export const FLIGHT_DRIFT_AMPLITUDE = 0.03
+export const FLIGHT_DRIFT_PERIOD_X_SEC = 47
+export const FLIGHT_DRIFT_PERIOD_Y_SEC = 61
+export const FLIGHT_DRIFT_EASE_SEC = 1.5
 /** Streak bursts: every few seconds a gust of bright, long speed lines rushes
  *  past — a calm→gust→calm rhythm sells the motion far better than a constant
  *  glare would in a game that sits on screen for hours. */

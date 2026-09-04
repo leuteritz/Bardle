@@ -74,6 +74,32 @@
    den Profil-Tabs (Rift-Board, Sigil-Detailspalte) und ist genau dann sichtbar,
    wenn der Idle-Layer verdeckt ist. */
 
+/* Sonnenkörper-Slots (utils/fx/sunBodySprite.ts): jeder Slot ist eine Ebene mit
+   Kante `--span` · Box, zentriert ohne transform — das bleibt den Keyframes.
+   Das <img> darin blendet beim Schlüsselwechsel über, das alte bleibt so lange
+   stehen. */
+.sun-slot {
+  position: absolute;
+  left: calc(50% - var(--span, 1) * 50%);
+  top: calc(50% - var(--span, 1) * 50%);
+  width: calc(var(--span, 1) * 100%);
+  height: calc(var(--span, 1) * 100%);
+  pointer-events: none;
+}
+.sun-slot > img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity var(--sun-xfade, 600ms) ease;
+  user-select: none;
+}
+.sun-slot > img.is-in {
+  opacity: 1;
+}
+
 /* Void: Zeigefinger, solange der Cursor über einem Wesen steht. Die Klasse
    setzt der VoidLayer per Hit-Test, weil sein Canvas `pointer-events: none`
    trägt — es liegt über der Sonne und dürfte deren Klicks nicht abfangen, also

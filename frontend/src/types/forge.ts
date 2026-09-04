@@ -786,3 +786,16 @@ export interface SolarSignatureInput {
   constellationCount: number
   totalPrestiges: number
 }
+
+/** Die Signatur als Stufenindizes je Motiv — der Sprite-Schlüssel des
+ *  Spielerkörpers (`utils/fx/sunBodySprite.ts`). `corona` ist `limb`, beide
+ *  hängen an `maxHp`. */
+export interface SolarSignatureStages {
+  spark: number
+  limb: number
+  corona: number
+  granule: number
+  prom: number
+  wake: number
+  base: number
+}
