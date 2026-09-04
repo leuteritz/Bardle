@@ -635,9 +635,13 @@ export const STAR_BODY_FLARE_TAIL_LEN = 1.9
  *  abreisst. Nur Champion, Boss und jeder dritte Resource-Stern tragen eine — jede
  *  ist eine Compositor-Ebene, bei dreissig Sternen wären es dreissig. */
 export const STAR_BODY_WIND_REACH = 2.05
-export const STAR_BODY_WIND_FILAMENTS = 3
+/** Strömungsarme des Windkranzes — verteilt um den Stern, in Drehrichtung gekrümmt. */
+export const STAR_BODY_WIND_ARMS = 3
+/** Flackerzyklus (Eruption) und Umlaufdauer der Drehung, gegenläufig zur Strahlenebene. */
 export const STAR_BODY_WIND_SEC_MIN = 16
 export const STAR_BODY_WIND_SEC_RANGE = 8
+export const STAR_BODY_WIND_TURN_SEC_MIN = 44
+export const STAR_BODY_WIND_TURN_SEC_RANGE = 26
 export const STAR_BODY_WIND_RESOURCE_EVERY = 3
 export const STAR_BODY_WIND_SALT = 211
 export const STAR_BODY_VEIL_WISPS = 5

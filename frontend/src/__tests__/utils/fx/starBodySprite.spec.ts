@@ -23,6 +23,8 @@ import {
   STAR_BODY_WIND_RESOURCE_EVERY,
   STAR_BODY_WIND_SEC_MIN,
   STAR_BODY_WIND_SEC_RANGE,
+  STAR_BODY_WIND_TURN_SEC_MIN,
+  STAR_BODY_WIND_TURN_SEC_RANGE,
 } from '@/config/constants'
 import type { StarLook } from '@/types'
 import { recordingCtx } from '../../helpers/recordingCtx'
@@ -232,12 +234,15 @@ describe('Sonnenwind — die vierte Ebene', () => {
     expect(wind(paintStarWind, 2).join('|')).not.toBe(wind(paintUmbraWind, 2).join('|'))
   })
 
-  it('bleibt innerhalb des Sprite-Feldes und beginnt am Rand', () => {
+  it('bleibt innerhalb des Sprite-Feldes, beginnt am Rand und verteilt sich um den Stern', () => {
     const halfSpan = R * STAR_BODY_SPRITE_SPAN
     const pt = /^(moveTo|quadraticCurveTo)\((?:-?[\d.]+,)*(-?[\d.]+),(-?[\d.]+)\)$/
     for (let seed = 0; seed < STAR_BODY_SEED_SLOTS; seed++) {
       const ops = wind(paintStarWind, 2, seed, halfSpan, halfSpan)
-      const feet = ops.filter((o) => o.startsWith('moveTo('))
+      const feet = ops
+        .map((o) => /^moveTo\((-?[\d.]+),(-?[\d.]+)\)/.exec(o))
+        .filter((m): m is RegExpExecArray => m !== null)
+        .map((m) => [Number(m[1]) - halfSpan, Number(m[2]) - halfSpan] as const)
       expect(feet.length).toBeGreaterThanOrEqual(3)
       for (const op of ops) {
         const m = pt.exec(op)
@@ -245,9 +250,16 @@ describe('Sonnenwind — die vierte Ebene', () => {
         expect(Math.abs(Number(m[2]) - halfSpan), op).toBeLessThanOrEqual(halfSpan + 0.01)
         expect(Math.abs(Number(m[3]) - halfSpan), op).toBeLessThanOrEqual(halfSpan + 0.01)
       }
-      for (const f of feet) {
-        const m = /^moveTo\((-?[\d.]+),/.exec(f)!
-        expect(Number(m[1]) - halfSpan).toBeCloseTo(R * 0.95, 1)
+      // Fusspunkt auf dem Rand (1,0 r ± halbe Armbreite)
+      for (const [fx, fy] of feet) expect(Math.hypot(fx, fy)).toBeGreaterThan(R * 0.85)
+      // Winkel der Arme paarweise > 60° auseinander
+      const angles = feet.slice(0, 3).map(([fx, fy]) => Math.atan2(fy, fx))
+      for (let i = 0; i < angles.length; i++) {
+        for (let k = i + 1; k < angles.length; k++) {
+          let d = Math.abs(angles[i] - angles[k]) % (Math.PI * 2)
+          if (d > Math.PI) d = Math.PI * 2 - d
+          expect(d, `seed ${seed}`).toBeGreaterThan(Math.PI / 3)
+        }
       }
     }
   })
@@ -273,6 +285,8 @@ describe('Sonnenwind — die vierte Ebene', () => {
       expect(w.sec).toBeLessThanOrEqual(STAR_BODY_WIND_SEC_MIN + STAR_BODY_WIND_SEC_RANGE)
       expect(w.delaySec).toBeLessThanOrEqual(0)
       expect(-w.delaySec).toBeLessThanOrEqual(w.sec)
+      expect(w.turnSec).toBeGreaterThanOrEqual(STAR_BODY_WIND_TURN_SEC_MIN)
+      expect(w.turnSec).toBeLessThanOrEqual(STAR_BODY_WIND_TURN_SEC_MIN + STAR_BODY_WIND_TURN_SEC_RANGE)
       seen.add(w.angleDeg)
     }
     expect(seen.size).toBeGreaterThan(STAR_BODY_SEED_SLOTS / 2)

@@ -43,12 +43,14 @@ import {
   STAR_BODY_SPRITE_SPAN,
   STAR_BODY_UMBRA_ARMS,
   STAR_BODY_VEIL_WISPS,
-  STAR_BODY_WIND_FILAMENTS,
+  STAR_BODY_WIND_ARMS,
   STAR_BODY_WIND_REACH,
   STAR_BODY_WIND_RESOURCE_EVERY,
   STAR_BODY_WIND_SALT,
   STAR_BODY_WIND_SEC_MIN,
   STAR_BODY_WIND_SEC_RANGE,
+  STAR_BODY_WIND_TURN_SEC_MIN,
+  STAR_BODY_WIND_TURN_SEC_RANGE,
 } from '@/config/constants'
 import {
   clampSpriteDpr,
@@ -132,12 +134,20 @@ export function starWindShown(type: StarType, seed: number): boolean {
 
 /** Winkel, Zyklus und (negativer) Startversatz der Fahne — je Stern fest, damit
  *  nichts im Takt feuert. */
-export function starWindStyle(seed: number): { angleDeg: number; sec: number; delaySec: number } {
+export function starWindStyle(seed: number): {
+  angleDeg: number
+  sec: number
+  delaySec: number
+  turnSec: number
+} {
   const sec = STAR_BODY_WIND_SEC_MIN + jitter(seed, STAR_BODY_WIND_SALT + 1) * STAR_BODY_WIND_SEC_RANGE
+  const turn =
+    STAR_BODY_WIND_TURN_SEC_MIN + jitter(seed, STAR_BODY_WIND_SALT + 3) * STAR_BODY_WIND_TURN_SEC_RANGE
   return {
     angleDeg: Math.round(jitter(seed, STAR_BODY_WIND_SALT) * 360),
     sec: Math.round(sec * 10) / 10,
     delaySec: -Math.round(jitter(seed, STAR_BODY_WIND_SALT + 2) * sec * 10) / 10,
+    turnSec: Math.round(turn * 10) / 10,
   }
 }
 
@@ -758,61 +768,80 @@ export const paintSplinterSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) =>
 
 /* ── Sonnenwind ─────────────────────────────────────────────────────────────── */
 
-/** Ein getapertes Filament vom Rand (0,95 r) nach +x, quer gebogen; der Anker
- *  in der Komponente dreht die ganze Ebene auf den Sternwinkel. */
-function windPath(
+/** Ein Strömungsarm: getapertes Band ab dem Rand (1,0 r) bei Winkel `a`, das
+ *  sich gegen die Drehrichtung nach hinten krümmt — ein Spiralarm, der beim
+ *  Drehen um den Stern zieht. */
+function windArm(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   r: number,
-  seed: number,
-  i: number,
-  n: number,
+  a: number,
+  len: number,
+  w0: number,
 ): void {
-  const foot = r * 0.95
-  const off = (i - (n - 1) / 2) * r * 0.16
-  const bend = sway(seed, 400 + i) * r * 0.85 + off * 2
-  const len = r * STAR_BODY_WIND_REACH * (0.82 + jitter(seed, 410 + i) * 0.18)
-  const w0 = r * (0.24 - i * 0.04)
+  const trail = 0.62
+  const foot = r * 1.0
+  const tip = a + trail
+  const mid = a + trail * 0.42
+  const fx = x + Math.cos(a) * foot
+  const fy = y + Math.sin(a) * foot
+  const nx = -Math.sin(a) * w0
+  const ny = Math.cos(a) * w0
+  const mx = x + Math.cos(mid) * len * 0.62
+  const my = y + Math.sin(mid) * len * 0.62
+  const tx = x + Math.cos(tip) * len
+  const ty = y + Math.sin(tip) * len
   ctx.beginPath()
-  ctx.moveTo(x + foot, y + off - w0)
-  ctx.quadraticCurveTo(x + len * 0.55, y + bend - w0 * 0.5, x + len, y + bend * 0.7)
-  ctx.quadraticCurveTo(x + len * 0.55, y + bend + w0 * 0.5, x + foot, y + off + w0)
+  ctx.moveTo(fx + nx, fy + ny)
+  ctx.quadraticCurveTo(mx + nx * 0.45, my + ny * 0.45, tx, ty)
+  ctx.quadraticCurveTo(mx - nx * 0.45, my - ny * 0.45, fx - nx, fy - ny)
   ctx.closePath()
 }
 
-function windSparks(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, seed: number): void {
-  const bend = sway(seed, 400) * r * 0.85
-  for (let k = 0; k < 4; k++) {
-    const t = 0.35 + k * 0.17
-    circle(
-      ctx,
-      x + r * STAR_BODY_WIND_REACH * t,
-      y + bend * t * t * 0.9 + sway(seed, 420 + k) * r * 0.08,
-      r * 0.03,
-    )
-    ctx.fill()
+function windArmAngle(seed: number, i: number, n: number): number {
+  return (i / n) * TAU + sway(seed, 400 + i) * 0.35
+}
+
+function windArmLen(r: number, seed: number, i: number): number {
+  return r * STAR_BODY_WIND_REACH * (0.8 + jitter(seed, 410 + i) * 0.2)
+}
+
+function windSparks(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, seed: number, n: number): void {
+  for (let i = 0; i < n; i++) {
+    const a = windArmAngle(seed, i, n)
+    const len = windArmLen(r, seed, i)
+    for (let k = 0; k < 2; k++) {
+      const t = 0.55 + k * 0.25
+      const wa = a + 0.62 * t * t
+      circle(ctx, x + Math.cos(wa) * len * t, y + Math.sin(wa) * len * t, r * 0.03)
+      ctx.fill()
+    }
   }
 }
 
+function windArms(detail: StarDetail): number {
+  return detail === 0 ? 1 : detail === 1 ? 2 : STAR_BODY_WIND_ARMS
+}
+
 export const paintStarWind: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
-  const n = detail === 0 ? 1 : detail === 1 ? 2 : STAR_BODY_WIND_FILAMENTS
+  const n = windArms(detail)
   for (let i = 0; i < n; i++) {
-    windPath(ctx, x, y, r, seed, i, n)
-    ctx.fillStyle = rayGradient(ctx, x, y, r, pal.rgb, 0.9, STAR_BODY_WIND_REACH, 0.95 - i * 0.15)
+    windArm(ctx, x, y, r, windArmAngle(seed, i, n), windArmLen(r, seed, i), r * (0.2 - i * 0.03))
+    ctx.fillStyle = rayGradient(ctx, x, y, r, pal.rgb, 0.95, STAR_BODY_WIND_REACH, 0.9 - i * 0.15)
     ctx.fill()
   }
   if (detail < 2) return
   ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.8), 0.85)
-  windSparks(ctx, x, y, r, seed)
+  windSparks(ctx, x, y, r, seed, n)
 }
 
 /** Der Boss bricht dunkel aus — schwarz-violett mit hellem Saum, kein Glühen. */
 export const paintUmbraWind: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
-  const n = detail === 0 ? 1 : detail === 1 ? 2 : STAR_BODY_WIND_FILAMENTS
+  const n = windArms(detail)
   for (let i = 0; i < n; i++) {
-    windPath(ctx, x, y, r, seed, i, n)
-    const g = ctx.createRadialGradient(x, y, r * 0.9, x, y, r * STAR_BODY_WIND_REACH)
+    windArm(ctx, x, y, r, windArmAngle(seed, i, n), windArmLen(r, seed, i), r * (0.2 - i * 0.03))
+    const g = ctx.createRadialGradient(x, y, r * 0.95, x, y, r * STAR_BODY_WIND_REACH)
     g.addColorStop(0, rgba(mix(pal.rgb, 0, 0.82), 0.9))
     g.addColorStop(0.6, rgba(mix(pal.rgb, 0, 0.6), 0.6))
     g.addColorStop(1, rgba(pal.rgb, 0))
@@ -824,7 +853,7 @@ export const paintUmbraWind: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
   }
   if (detail < 2) return
   ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.6), 0.7)
-  windSparks(ctx, x, y, r, seed)
+  windSparks(ctx, x, y, r, seed, n)
 }
 
 /* ── Tabelle, Bau, Cache, Blit ──────────────────────────────────────────────── */

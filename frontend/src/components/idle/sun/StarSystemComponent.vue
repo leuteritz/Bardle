@@ -104,7 +104,7 @@
             <div class="star-hover-glow" />
             <div class="star-charge" />
             <div class="star-spawn-flash" />
-            <!-- Anker dreht, Fahne animiert: ein Keyframe überschreibt transform ganz -->
+            <!-- Anker = Startwinkel, Kranz = Drehung + Flackern (zwei Animationen, ein Element) -->
             <div v-if="starWindShown(star.starType, star.seed)" class="star-wind-anchor">
               <div class="star-wind" />
             </div>
@@ -1551,6 +1551,7 @@ function starBodyVisualStyle(star: StarRenderEntry) {
     '--wind-angle': `${wind.angleDeg}deg`,
     '--wind-sec': `${wind.sec}s`,
     '--wind-delay': `${wind.delaySec}s`,
+    '--wind-turn-sec': `${wind.turnSec}s`,
     // Fokussierter Stern: kein Behind-Blur — er soll vor der Sonne klar lesbar sein
     filter: (isFocusStar(star.id) ? '' : star.filterStyle) || undefined,
     // Nur der Filter-Umschlag darf weich sein — die Opacity wird pro Frame
@@ -2155,8 +2156,9 @@ function starCountStyle(star: StarRenderEntry) {
   animation: star-spin-turn var(--star-spin-sec, 40s) linear infinite;
 }
 
-/* Sonnenwind: der Anker trägt den Winkel, die Fahne die Eruption — nur
-   transform/opacity, ~22 % des Zyklus sichtbar, Versatz je Stern. */
+/* Sonnenwind: der Anker trägt den Startwinkel, der Kranz dreht gegenläufig zur
+   Strahlenebene und flackert periodisch auf — zwei Animationen (transform,
+   opacity) auf EINEM Element, also eine Ebene je Windträger. */
 .star-wind-anchor {
   position: absolute;
   inset: calc(50% - var(--star-span, 2.2) * 50%);
@@ -2164,11 +2166,17 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
 }
 
+/* Zwei Animationen auf einem Element, als Langformen: Drehung (transform) und
+   Flackern (opacity) je eine Spalte, Vue hängt den Scope-Suffix an beide Namen. */
 .star-wind {
   position: absolute;
   inset: 0;
-  opacity: 0;
-  animation: star-wind-burst var(--wind-sec, 20s) ease-out var(--wind-delay, 0s) infinite;
+  opacity: 0.55;
+  animation-name: star-wind-turn, star-wind-flare;
+  animation-duration: var(--wind-turn-sec, 55s), var(--wind-sec, 20s);
+  animation-timing-function: linear, ease-in-out;
+  animation-delay: 0s, var(--wind-delay, 0s);
+  animation-iteration-count: infinite, infinite;
   pointer-events: none;
 }
 
@@ -2183,26 +2191,28 @@ function starCountStyle(star: StarRenderEntry) {
   animation: none;
 }
 
-@keyframes star-wind-burst {
-  0% {
-    opacity: 0;
-    transform: translateX(-4%) scale(0.72);
+@keyframes star-wind-turn {
+  from {
+    transform: rotate(0deg);
   }
-  5% {
-    opacity: 0.9;
-    transform: translateX(0) scale(0.9);
+  to {
+    transform: rotate(-360deg);
   }
-  14% {
+}
+
+@keyframes star-wind-flare {
+  0%,
+  100% {
     opacity: 0.55;
-    transform: translateX(7%) scale(1.06);
+  }
+  4% {
+    opacity: 1;
+  }
+  12% {
+    opacity: 0.7;
   }
   22% {
-    opacity: 0;
-    transform: translateX(14%) scale(1.16);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(14%) scale(1.16);
+    opacity: 0.55;
   }
 }
 
