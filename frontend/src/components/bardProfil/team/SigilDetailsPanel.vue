@@ -22,6 +22,7 @@ import {
   CHAMPION_REGALIA_SIZE_SPLASH,
   ROLES,
   SKIN_ORIGINAL,
+  SWORN_ALLY_COUNT,
   SWORN_ICON,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
 } from '@/config/constants'
@@ -326,6 +327,9 @@ function equippedItem(category: ItemCategory): ShopItem | null {
           :class="{
             'sdp-seat--active': subject === seat.sub,
             'sdp-seat--empty': !seat.name,
+            'sdp-seat--main': !seat.ally,
+            'sdp-seat--sworn': seat.ally && seat.sub < SWORN_ALLY_COUNT,
+            'sdp-seat--ally': seat.ally && seat.sub >= SWORN_ALLY_COUNT,
             'sdp-seat--highlight': highlightedAlly === seat.sub,
             'sdp-seat--dimmed': boardSpotlight && seat.ally && highlightedAlly !== seat.sub,
           }"
@@ -666,7 +670,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   color: #f0dfb3;
 }
 .sdp-roster {
-  min-height: 94px;
+  min-height: 108px;
   display: flex;
   align-items: center;
   padding: 10px 16px;
@@ -677,13 +681,13 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   min-width: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: 1.22fr repeat(2, 1.08fr) repeat(3, minmax(0, 0.87fr));
   gap: 8px;
 }
 .sdp-seat {
   position: relative;
   min-width: 0;
-  height: 72px;
+  height: 86px;
   overflow: hidden;
   border: 1px solid #493116;
   background: color-mix(in srgb, var(--rc) 12%, #141410);
@@ -695,6 +699,19 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-seat--active {
   border: 2px solid var(--rc);
+}
+.sdp-seat--main {
+  border: 2px solid color-mix(in srgb, var(--rc) 74%, #e8c040);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #fff2b5 32%, transparent),
+    0 0 14px color-mix(in srgb, var(--rc) 28%, transparent);
+}
+.sdp-seat--sworn {
+  border-color: color-mix(in srgb, var(--rc) 62%, #8b632c);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 18%, transparent);
+}
+.sdp-seat--ally {
+  border-color: color-mix(in srgb, var(--rc) 34%, #493116);
 }
 .sdp-seat--empty {
   border-style: dashed;
@@ -724,7 +741,10 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.75;
+  opacity: 0.82;
+}
+.sdp-seat--main .sdp-seat-select img {
+  transform: scale(1.04);
 }
 .sdp-seat-select::after {
   content: '';
@@ -1318,11 +1338,11 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 @media (max-height: 1100px) {
   .sdp-roster {
-    min-height: 82px;
+    min-height: 92px;
     padding-block: 6px;
   }
   .sdp-seat {
-    height: 64px;
+    height: 74px;
   }
   .sdp-hero {
     min-height: 284px;
