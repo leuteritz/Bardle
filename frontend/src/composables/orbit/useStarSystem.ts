@@ -20,6 +20,7 @@ import {
   STAR_SPAWN_FLY_EASING,
   STAR_BEHIND_SUN_SPEED_MULTIPLIER,
   STAR_FX_TANGENT_PROBE_RAD,
+  STAR_FIGHT_VANISH_SETTLE_MS,
   HOVER_SPEED_MULTIPLIER,
   ROLE_BY_KEY,
   ORBIT_MIN_RY_SUN_FACTOR_BY_ROLE,
@@ -116,7 +117,10 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
   const starSpawnedAt = new Map<string, number>()
   const starSpeedMul = new Map<string, number>()
   const starFlyStart = new Map<string, { x: number; y: number }>()
+  // Verriegelt, sobald der Effekt GESPIELT wurde — nicht, sobald er fällig war
   const vanishFired = new Set<string>()
+  // Nach dem Schliessen des Star-Fight-Modals wartet der Effekt sein Settle-Fenster ab
+  let vanishGateUntil = 0
 
   const { orbitScale } = useOrbitScale()
 
@@ -138,6 +142,15 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
   // Sternrettung mehr, acht Stunden lang, während Chimes und Material
   // weiterliefen. Mit dem zweiten Signal zieht der Spawn nach, sobald der alte
   // Stern verschwunden ist.
+  // Das Modal blendet 160 ms aus, das Rendering kehrt zwei Frames später zurück —
+  // der Abgangseffekt wartet beides ab (rein visuelle Frist, RAF-Zeit)
+  watch(
+    () => starGroupStore.starFightModalOpen,
+    (open) => {
+      if (!open) vanishGateUntil = performance.now() + STAR_FIGHT_VANISH_SETTLE_MS
+    },
+  )
+
   watch(
     () => ({
       state: galaxyStore.championTravelState,
@@ -364,33 +377,34 @@ export function useStarSystem(hoveredStarId?: Ref<string | null>, onFrame?: () =
       const allSlotsCleared = star.planetSlots.every((s) => s.cleared)
 
       if (allSlotsCleared) {
-        if (!vanishFired.has(star.id)) {
+        if (vanishFired.has(star.id)) continue
+        // Unter dem Bard-Profil, im Star-Fight-Modal oder in dessen Settle-Fenster
+        // liegt der Orbit verdeckt: nicht zünden, nicht verriegeln — der Stern
+        // bleibt stehen, bis der Effekt ihn sichtbar holt (der Store hält seine
+        // Entfernung so lange zurück).
+        if (!isIdleRenderingPaused.value && ts >= vanishGateUntil) {
           vanishFired.add(star.id)
-          // Unter dem Bard-Profil oder im Star-Fight-Modal liegt der Orbit unter
-          // einem deckenden Overlay — der Effekt würde nur Frame-Budget kosten.
-          if (!isIdleRenderingPaused.value) {
-            // Ausbruchsrichtung = Bahntangente an dieser Stelle. Ein zweiter
-            // Punkt ein Stück weiter auf der Bahn ist billiger und robuster als
-            // eine analytische Ableitung über die gekippte Ellipse.
-            const ahead = getOrbitPos(
-              sAngle + star.starDirection * STAR_FX_TANGENT_PROBE_RAD,
-              scaledOrbitRx,
-              scaledOrbitRy,
-              star.orbitTilt,
-              screenCx,
-              screenCy,
-            )
-            playStarVanishFx(star.despawnReason ?? 'expired', {
-              x: sx,
-              y: sy,
-              size: starBodySize(star.starType, sunScale),
-              starColor: star.starColor,
-              dirX: ahead.x - sx,
-              dirY: ahead.y - sy,
-            })
-          }
+          // Ausbruchsrichtung = Bahntangente an dieser Stelle. Ein zweiter
+          // Punkt ein Stück weiter auf der Bahn ist billiger und robuster als
+          // eine analytische Ableitung über die gekippte Ellipse.
+          const ahead = getOrbitPos(
+            sAngle + star.starDirection * STAR_FX_TANGENT_PROBE_RAD,
+            scaledOrbitRx,
+            scaledOrbitRy,
+            star.orbitTilt,
+            screenCx,
+            screenCy,
+          )
+          playStarVanishFx(star.despawnReason ?? 'expired', {
+            x: sx,
+            y: sy,
+            size: starBodySize(star.starType, sunScale),
+            starColor: star.starColor,
+            dirX: ahead.x - sx,
+            dirY: ahead.y - sy,
+          })
+          continue
         }
-        continue
       }
 
       const planetEntries: PlanetRenderEntry[] = []

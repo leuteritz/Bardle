@@ -80,6 +80,8 @@ export const STAR_FIGHT_HERO_FADE_FRAC = 0.25
 export const STAR_FIGHT_BOSS_MATERIALIZE_MS = 350
 export const STAR_FIGHT_FREED_PULSE_MS = 400
 export const STAR_FIGHT_STAR_FLASH_MS = 400
+/** Nach dem Schliessen (160 ms Leave + 2 Frames Gate) wartet der Abgangseffekt des Sterns so lange. */
+export const STAR_FIGHT_VANISH_SETTLE_MS = 220
 export const STAR_FIGHT_CALLOUT_MS = 1400
 /** Deckkraft von Squad und Turrets im Flug. */
 export const STAR_FIGHT_TRAVEL_DIM = 0.35

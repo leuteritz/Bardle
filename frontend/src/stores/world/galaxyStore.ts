@@ -26,6 +26,7 @@ import {
 import { getLandfall, LANDFALLS } from '@/config/world/landfalls'
 import { incidentRank } from '@/utils/game/galaxyIncidents'
 import { useLandfallStore } from '@/stores/world/landfallStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import {
   buildBackfillRecord,
   backfillThemeRng,
@@ -293,6 +294,8 @@ export const useGalaxyStore = defineStore('galaxy', {
     usedThemeIndices: [0] as number[],
     // Role selection modal
     pendingRoleSelection: true,
+    /** Folgeaktion eines Champion-Sterns, die auf das Schliessen des Star-Fight-Modals wartet. */
+    rescueFollowUp: null as 'role' | 'travel' | null,
     nextStarRole: null as ChampionRole | null,
     // Champion travel state machine
     championTravelState: 'idle' as ChampionTravelState,
@@ -485,6 +488,34 @@ export const useGalaxyStore = defineStore('galaxy', {
     requestRoleSelection() {
       this.nextStarRole = null
       this.pendingRoleSelection = true
+    },
+
+    /**
+     * Was nach einem Champion-Stern folgt (Rollenwahl oder Abflug), wartet bei
+     * offenem Star-Fight-Modal — der Abgangseffekt des Sterns im Orbit soll
+     * gesehen werden, nicht von der Rollenwahl verdeckt. Die Buchung
+     * (starsRescued, Manifeste) bleibt synchron; nur die Präsentation wartet.
+     * Nicht persistiert: usePersistence löst ein 'idle' ohne Rollenwahl beim
+     * Laden ohnehin auf.
+     */
+    _rescueFollowUp(kind: 'role' | 'travel') {
+      if (useStarGroupStore().starFightModalOpen) {
+        this.rescueFollowUp = kind
+        return
+      }
+      this._runRescueFollowUp(kind)
+    },
+
+    _runRescueFollowUp(kind: 'role' | 'travel') {
+      if (kind === 'role') this.requestRoleSelection()
+      else this.startChampionTravel()
+    },
+
+    releaseRescueFollowUp() {
+      const kind = this.rescueFollowUp
+      if (!kind) return
+      this.rescueFollowUp = null
+      this._runRescueFollowUp(kind)
     },
 
     confirmRoleSelection(role: ChampionRole) {
@@ -824,9 +855,9 @@ export const useGalaxyStore = defineStore('galaxy', {
         // Last star saved → fly to the boss star waiting at the galaxy core,
         // with the same travel flow as a champion star (route, comet, zoom).
         this.travelingToGalaxyBoss = true
-        this.startChampionTravel()
+        this._rescueFollowUp('travel')
       } else {
-        this.requestRoleSelection()
+        this._rescueFollowUp('role')
       }
     },
 
@@ -849,7 +880,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       // animation launches from the map center and reads like a jump back
       // to the previous star). The ship stays put and flies on from here.
       this.travelPendingAfterRotation = false
-      this.startChampionTravel()
+      this._rescueFollowUp('travel')
     },
 
     onGalaxyBossDefeated() {

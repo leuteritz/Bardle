@@ -37,6 +37,7 @@ import {
   STAR_FORCED_PLANET_MIN,
   STAR_FORCED_PLANET_RANGE,
   STAR_REMOVAL_DELAY_MS,
+  STAR_FIGHT_VANISH_SETTLE_MS,
   STAR_DESPAWN_DELAY_MS,
   STAR_EXTRA_PLANET_MIN,
   STAR_EXTRA_PLANET_RANGE,
@@ -156,6 +157,10 @@ function pickResourceStarColor(): [number, number, number] {
 // STAR_DESPAWN_DELAY_MS eingeplant) — verhindert doppeltes Einplanen pro Tick.
 const resourceDespawnScheduled = new Set<string>()
 
+// Sterne, deren Entfernung auf das Schliessen des Star-Fight-Modals wartet —
+// der Abgangseffekt im Orbit (starVanishFx) soll GESEHEN werden.
+const removalHeld = new Set<string>()
+
 export const useStarGroupStore = defineStore('starGroup', {
   state: () => ({
     activeStars: [] as StarGroup[],
@@ -255,6 +260,32 @@ export const useStarGroupStore = defineStore('starGroup', {
       this.starFightPlanetQueue = []
       this.starFightCurrentIndex = 0
       this.starFightOutro = false
+      // Gehaltene Abgänge jetzt einplanen — ab dem Schliessen, EINE Frist für alle
+      for (const id of removalHeld) this._scheduleStarRemoval(id, STAR_REMOVAL_DELAY_MS)
+      removalHeld.clear()
+      // Rollenwahl oder Abflug erst, wenn der Abgangseffekt durch ist
+      const galaxyStore = useGalaxyStore()
+      if (galaxyStore.rescueFollowUp) {
+        gameTimeout(
+          () => galaxyStore.releaseRescueFollowUp(),
+          STAR_REMOVAL_DELAY_MS + STAR_FIGHT_VANISH_SETTLE_MS,
+        )
+      }
+    },
+
+    /** Entfernt den Stern nach `delayMs` — bei offenem Modal erst nach dessen Schliessen. */
+    _scheduleStarRemoval(starId: string, delayMs: number) {
+      if (this.starFightModalOpen) {
+        removalHeld.add(starId)
+        return
+      }
+      // Per ID suchen — ein eingefrorener Index zeigt auf den falschen Stern,
+      // sobald zwischenzeitlich gespawnt/entfernt wurde
+      gameTimeout(() => {
+        const idx = this.activeStars.findIndex((s) => s.id === starId)
+        if (idx !== -1) this.activeStars.splice(idx, 1)
+        resourceDespawnScheduled.delete(starId)
+      }, delayMs)
     },
 
     advanceStarFight() {
@@ -610,13 +641,7 @@ export const useStarGroupStore = defineStore('starGroup', {
             const gameStore = useGameStore()
             if (gameStore.isGamePaused) gameStore.pauseStats.starsRescued++
           }
-          // Im Timeout per ID suchen — ein eingefrorener Index zeigt auf den
-          // falschen Stern, sobald zwischenzeitlich gespawnt/entfernt wurde
-          // (z. B. mehrere Eskorten gleichzeitig durch Splash-Damage besiegt).
-          gameTimeout(() => {
-            const currentIdx = this.activeStars.findIndex((s) => s.id === star.id)
-            if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
-          }, STAR_REMOVAL_DELAY_MS)
+          this._scheduleStarRemoval(star.id, STAR_REMOVAL_DELAY_MS)
           if (star.starType === 'champion') {
             const galaxyStore = useGalaxyStore()
             galaxyStore.onChampionStarRescued(manifestOf(star))
@@ -682,11 +707,7 @@ export const useStarGroupStore = defineStore('starGroup', {
           bossStore.removeBoss(slot.planetId)
         }
       }
-      gameTimeout(() => {
-        const idx = this.activeStars.findIndex((s) => s.id === starId)
-        if (idx !== -1) this.activeStars.splice(idx, 1)
-        resourceDespawnScheduled.delete(starId)
-      }, STAR_DESPAWN_DELAY_MS)
+      this._scheduleStarRemoval(starId, STAR_DESPAWN_DELAY_MS)
     },
 
     tickChampionStar() {
@@ -718,11 +739,9 @@ export const useStarGroupStore = defineStore('starGroup', {
               bossStore.removeBoss(slot.planetId)
             }
           }
-          // One JS tick later so the render loop sees allSlotsCleared and fires the vanish effect
-          gameTimeout(() => {
-            const currentIdx = this.activeStars.indexOf(starRef)
-            if (currentIdx !== -1) this.activeStars.splice(currentIdx, 1)
-          }, 0)
+          // Ein voller Abstand, kein Makrotask: der Render-Loop muss allSlotsCleared
+          // einen Frame lang sehen, sonst zündet der Vanish-Effekt nie
+          this._scheduleStarRemoval(starRef.id, STAR_DESPAWN_DELAY_MS)
         }, STAR_DESPAWN_DELAY_MS)
       }
 
@@ -731,6 +750,7 @@ export const useStarGroupStore = defineStore('starGroup', {
 
     clearAll() {
       resourceDespawnScheduled.clear()
+      removalHeld.clear()
       this.activeStars = []
     },
   },

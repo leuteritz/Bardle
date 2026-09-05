@@ -1,8 +1,14 @@
 import { setActivePinia, createPinia } from 'pinia'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import type { PlanetBossEvent } from '@/types'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import {
+  STAR_REMOVAL_DELAY_MS,
+  STAR_DESPAWN_DELAY_MS,
+  STAR_FIGHT_VANISH_SETTLE_MS,
+} from '@/config/constants'
 
 /**
  * Der Getter liest von den beiden Arrays nur `id` / `planetSlots[].planetId`
@@ -238,5 +244,130 @@ describe('starFightOutro — das Modal fährt heraus und schliesst sich selbst',
     starStore.closeStarFightModal()
     starStore.openStarFightModal('s1')
     expect(starStore.starFightOutro).toBe(false)
+  })
+})
+
+describe('Sternentfernung wartet auf das Schliessen des Star-Fight-Modals', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  function twoStars() {
+    const starStore = useStarGroupStore()
+    const bossStore = usePlanetBossStore()
+    starStore.activeStars = [makeStar('s1', ['p1', 'p2']) as never, makeStar('s2', ['q1']) as never]
+    bossStore.activeBosses = [makeBoss('p1'), makeBoss('p2'), makeBoss('q1')]
+    return { starStore, bossStore }
+  }
+
+  it('hält den Kampfstern, solange das Modal offen ist, und entfernt ihn danach', () => {
+    const { starStore } = twoStars()
+    starStore.openStarFightModal('s1')
+    starStore.onBossResult('p1', true)
+    starStore.onBossResult('p2', true)
+    expect(starStore.starFightOutro).toBe(true)
+    vi.advanceTimersByTime(STAR_REMOVAL_DELAY_MS * 3)
+    expect(starStore.activeStars.some((s) => s.id === 's1')).toBe(true)
+    starStore.closeStarFightModal()
+    vi.advanceTimersByTime(STAR_REMOVAL_DELAY_MS - 1)
+    expect(starStore.activeStars.some((s) => s.id === 's1')).toBe(true)
+    vi.advanceTimersByTime(2)
+    expect(starStore.activeStars.some((s) => s.id === 's1')).toBe(false)
+  })
+
+  it('entfernt bei geschlossenem Modal wie bisher nach STAR_REMOVAL_DELAY_MS', () => {
+    const { starStore } = twoStars()
+    starStore.onBossResult('p1', true)
+    starStore.onBossResult('p2', true)
+    vi.advanceTimersByTime(STAR_REMOVAL_DELAY_MS + 1)
+    expect(starStore.activeStars.some((s) => s.id === 's1')).toBe(false)
+  })
+
+  it('hält auch einen FREMDEN Stern, der während des Kampfes abläuft', () => {
+    const { starStore } = twoStars()
+    starStore.openStarFightModal('s1')
+    starStore._despawnResourceStar('s2')
+    expect(starStore.activeStars.find((s) => s.id === 's2')?.despawnReason).toBe('expired')
+    vi.advanceTimersByTime(STAR_DESPAWN_DELAY_MS * 5)
+    expect(starStore.activeStars.some((s) => s.id === 's2')).toBe(true)
+    expect(starStore.starFightModalOpen).toBe(true)
+    starStore.closeStarFightModal()
+    vi.advanceTimersByTime(STAR_REMOVAL_DELAY_MS + 1)
+    expect(starStore.activeStars.some((s) => s.id === 's2')).toBe(false)
+  })
+
+  it('closeStarFightModal ohne gehaltene Sterne entfernt nichts', () => {
+    const { starStore } = twoStars()
+    starStore.openStarFightModal('s1')
+    starStore.closeStarFightModal()
+    vi.advanceTimersByTime(STAR_REMOVAL_DELAY_MS * 2)
+    expect(starStore.activeStars).toHaveLength(2)
+  })
+})
+
+describe('Rollenwahl und Abflug warten auf den Abgang des Sterns', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  function championStar() {
+    const starStore = useStarGroupStore()
+    const bossStore = usePlanetBossStore()
+    const galaxy = useGalaxyStore()
+    galaxy.pendingRoleSelection = false
+    galaxy.nextStarRole = 'top'
+    galaxy.starsRequired = 3
+    galaxy.starsRescued = 0
+    galaxy.championTravelState = 'champion_spawned'
+    const star = { ...makeStar('c1', ['p1']), starType: 'champion' as const }
+    starStore.activeStars = [star as never]
+    bossStore.activeBosses = [makeBoss('p1')]
+    return { starStore, galaxy }
+  }
+
+  it('hält die Rollenwahl bei offenem Modal zurück und gibt sie nach dem Effekt frei', () => {
+    const { starStore, galaxy } = championStar()
+    starStore.openStarFightModal('c1')
+    starStore.onBossResult('p1', true)
+    expect(galaxy.starsRescued).toBe(1)
+    expect(galaxy.attemptResults).toEqual(['rescued'])
+    expect(galaxy.pendingRoleSelection).toBe(false)
+    expect(galaxy.rescueFollowUp).toBe('role')
+    vi.advanceTimersByTime(10_000)
+    expect(galaxy.pendingRoleSelection).toBe(false)
+    starStore.closeStarFightModal()
+    vi.advanceTimersByTime(STAR_REMOVAL_DELAY_MS + STAR_FIGHT_VANISH_SETTLE_MS - 1)
+    expect(galaxy.pendingRoleSelection).toBe(false)
+    vi.advanceTimersByTime(2)
+    expect(galaxy.pendingRoleSelection).toBe(true)
+    expect(galaxy.rescueFollowUp).toBeNull()
+  })
+
+  it('öffnet die Rollenwahl sofort, wenn kein Modal offen ist', () => {
+    const { starStore, galaxy } = championStar()
+    starStore.onBossResult('p1', true)
+    expect(galaxy.pendingRoleSelection).toBe(true)
+    expect(galaxy.rescueFollowUp).toBeNull()
+  })
+
+  it('hält beim letzten Stern den Abflug zum Galaxiekern zurück', () => {
+    const { starStore, galaxy } = championStar()
+    galaxy.starsRequired = 1
+    starStore.openStarFightModal('c1')
+    starStore.onBossResult('p1', true)
+    expect(galaxy.travelingToGalaxyBoss).toBe(true)
+    expect(galaxy.rescueFollowUp).toBe('travel')
+    expect(galaxy.championTravelState).not.toBe('traveling')
+    starStore.closeStarFightModal()
+    vi.advanceTimersByTime(STAR_REMOVAL_DELAY_MS + STAR_FIGHT_VANISH_SETTLE_MS + 1)
+    expect(galaxy.championTravelState).toBe('traveling')
   })
 })

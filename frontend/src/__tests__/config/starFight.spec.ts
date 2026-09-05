@@ -23,6 +23,7 @@ import {
   STAR_FIGHT_PLANET_SPRITE_SPAN_RINGED,
   STAR_FIGHT_PLANET_SPRITE_SPAN,
   STAR_FIGHT_TRAVEL_DIM,
+  STAR_FIGHT_VANISH_SETTLE_MS,
   STRIKER_BOSS_ANCHOR_Y_PCT,
   STAR_REMOVAL_DELAY_MS,
   BOSS_REMOVAL_DELAY_MS,
@@ -74,8 +75,10 @@ describe('Star-Fight-Systembühne — Zeiten', () => {
     expect(STAR_FIGHT_CAM_NET_MUL).toBeGreaterThanOrEqual(1.5)
   })
 
-  it('das Outro endet, bevor der Stern das Bild verlässt', () => {
-    expect(STAR_FIGHT_CAM_OUTRO_MS).toBeLessThan(STAR_REMOVAL_DELAY_MS)
+  it('der Abgang des Sterns wartet das Ausblenden des Modals ab und hat sein Fenster', () => {
+    // .sf-entrance-leave-active blendet 160 ms aus, danach zwei Frames Wiedereinblende-Gate
+    expect(STAR_FIGHT_VANISH_SETTLE_MS).toBeGreaterThan(160)
+    expect(STAR_REMOVAL_DELAY_MS).toBeGreaterThan(STAR_FIGHT_VANISH_SETTLE_MS)
     expect(STAR_FIGHT_CAM_OUTRO_RM_MS).toBeLessThan(STAR_FIGHT_CAM_OUTRO_MS)
     expect(STAR_FIGHT_CAM_OUTRO_MS).toBeGreaterThan(STAR_FIGHT_CAM_DEPART_MS)
   })
