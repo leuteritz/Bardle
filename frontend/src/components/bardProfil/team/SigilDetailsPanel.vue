@@ -18,6 +18,8 @@ import {
 import {
   ALLIES_PER_ROLE,
   CHAMPION_PERK_INTERVAL,
+  CHAMPION_BASE_HP_BY_ROLE,
+  CHAMPION_HP_PER_STAR,
   CHAMPION_REGALIA_SIZE_ALLY,
   CHAMPION_REGALIA_SIZE_SPLASH,
   ROLES,
@@ -31,7 +33,7 @@ import {
   getOriginColor,
   ORIGIN_SYNERGIES,
 } from '@/config/champions/championOrigins'
-import { getChampionTier } from '@/config/champions/championTiers'
+import { getChampionStarLevel, getChampionTier } from '@/config/champions/championTiers'
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/champions/championTraits'
 import { MATERIALS } from '@/config/economy/materials'
 import { SHOP_ITEMS } from '@/config/economy/items'
@@ -184,6 +186,7 @@ const skinEntries = computed(() =>
 function equipSkin(id: string, label: string) {
   if (!champion.value || id === equippedSkin.value) return
   skinStore.setSkin(champion.value, id)
+  skinOpen.value = false
   announceReceipt({
     kind: 'equip',
     headline: label,
@@ -238,8 +241,22 @@ const cooldownRush = computed(() =>
 const statPeak = computed(() =>
   stats.value ? Math.max(...CHAMPION_STATS.map((stat) => stats.value![stat.key])) : 0,
 )
+const championMaxHp = computed(() => {
+  if (!champion.value) return 0
+  const role = roleDef.value.key
+  return Math.round(
+    CHAMPION_BASE_HP_BY_ROLE[role] *
+      (1 + (getChampionStarLevel(champion.value) - 1) * CHAMPION_HP_PER_STAR) *
+      levelStore.vitalityMultOf(champion.value),
+  )
+})
 function statEffectOf(key: ChampionStatKey) {
   return stats.value ? statEffectLabel(key, stats.value[key], cooldownRush.value) : ''
+}
+function statReadoutOf(key: ChampionStatKey) {
+  if (key === 'vitality') return `${championMaxHp.value.toLocaleString()} HP · ${statEffectOf(key)}`
+  const stat = CHAMPION_STATS.find((entry) => entry.key === key)
+  return `${statEffectOf(key)} ${stat?.effectLabel ?? ''}`
 }
 function statShare(key: ChampionStatKey) {
   return stats.value && statPeak.value > 0 ? stats.value[key] / statPeak.value : 0
@@ -278,6 +295,9 @@ const perkPath = computed<PerkSlot[]>(() => {
 })
 const takenPerkCount = computed(
   () => perkPath.value.filter((slot) => slot.state === 'taken').length,
+)
+const activePerks = computed(() =>
+  perkPath.value.filter((slot): slot is PerkSlot & { perk: ChampionPerkDef } => !!slot.perk),
 )
 const clickedPerkLevel = ref<number | null>(null)
 const openPerkSlot = computed(() => perkPath.value.find((slot) => slot.state === 'open') ?? null)
@@ -413,6 +433,44 @@ function equippedItem(category: ItemCategory): ShopItem | null {
           >
         </button>
         <template v-if="champion">
+          <button
+            v-if="skinEntries.length > 1"
+            class="sdp-skin-trigger"
+            type="button"
+            :aria-expanded="skinOpen"
+            @click="skinOpen = !skinOpen"
+          >
+            <Icon icon="lucide:palette" width="16" height="16" />
+            <span>Skins</span>
+            <em>{{ skinEntries.length }}</em>
+            <Icon
+              :icon="skinOpen ? 'lucide:chevron-up' : 'lucide:chevron-down'"
+              width="15"
+              height="15"
+            />
+          </button>
+          <div v-if="skinOpen" class="sdp-skin-popover">
+            <div class="sdp-skin-popover-head">
+              <span>Choose appearance</span
+              ><small>{{
+                equippedSkin === SKIN_ORIGINAL ? 'Original' : formatSkinName(equippedSkin)
+              }}</small>
+            </div>
+            <div class="sdp-skin-list">
+              <button
+                v-for="entry in skinEntries"
+                :key="entry.id"
+                type="button"
+                class="sdp-skin"
+                :class="{ 'sdp-skin--selected': entry.id === equippedSkin }"
+                :aria-pressed="entry.id === equippedSkin"
+                v-tip="entry.label"
+                @click="equipSkin(entry.id, entry.label)"
+              >
+                <img :src="entry.image" :alt="entry.label" /><span>{{ entry.label }}</span>
+              </button>
+            </div>
+          </div>
           <div class="sdp-identity">
             <p class="sdp-seat-name">{{ subjectSeatLabel }}</p>
             <h2>{{ champion }}</h2>
@@ -477,7 +535,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
       <div v-else class="sdp-workspace">
         <div v-if="champion && stats" class="sdp-section">
           <div class="sdp-section-head">
-            <span>Combat profile</span
+            <span>Combat stats</span
             ><small v-if="hasSwornBonus"
               ><Icon :icon="SWORN_ICON" width="13" height="13" /> Sworn included</small
             >
@@ -494,7 +552,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
               <div>
                 <small>{{ stat.short }}</small
                 ><strong>{{ stats[stat.key].toFixed(1) }}</strong
-                ><span>{{ statEffectOf(stat.key) }}</span>
+                ><span>{{ statReadoutOf(stat.key) }}</span>
               </div>
               <i><b :style="{ transform: `scaleX(${statShare(stat.key)})` }" /></i>
             </article>
@@ -569,39 +627,34 @@ function equippedItem(category: ItemCategory): ShopItem | null {
               /><span v-else>{{ slot.level }}</span>
             </button>
           </div>
-          <div
-            v-if="focusedPerkSlot"
-            class="sdp-perk-detail"
-            :class="`sdp-perk-detail--${focusedPerkSlot.state}`"
-            :style="focusedPerkSlot.perk ? { '--pc': focusedPerkSlot.perk.color } : undefined"
-          >
+          <div v-if="activePerks.length" class="sdp-active-perks" aria-label="Active perks">
+            <article
+              v-for="slot in activePerks"
+              :key="slot.level"
+              class="sdp-active-perk"
+              :style="{ '--pc': slot.perk.color }"
+              v-tip="`Level ${slot.level} · ${slot.perk.desc}`"
+            >
+              <Icon :icon="slot.perk.icon" width="25" height="25" />
+              <div>
+                <small>Level {{ slot.level }}</small><strong>{{ slot.perk.name }}</strong
+                ><span>{{ slot.perk.desc }}</span>
+              </div>
+            </article>
+          </div>
+          <div v-else-if="focusedPerkSlot" class="sdp-perk-empty">
             <Icon
-              v-if="focusedPerkSlot.perk"
-              :icon="focusedPerkSlot.perk.icon"
-              width="29"
-              height="29"
-            /><Icon
-              v-else-if="focusedPerkSlot.state === 'open'"
+              v-if="focusedPerkSlot.state === 'open'"
               icon="game-icons:ribbon-medal"
-              width="29"
-              height="29"
-            /><Icon v-else icon="lucide:lock-keyhole" width="25" height="25" />
-            <div>
-              <strong>{{
-                focusedPerkSlot.perk?.name ??
-                (focusedPerkSlot.state === 'open'
-                  ? 'Milestone reached'
-                  : `Level ${focusedPerkSlot.level}`)
-              }}</strong
-              ><span>{{
-                focusedPerkSlot.perk?.desc ??
-                (focusedPerkSlot.exhausted
-                  ? 'No perk remains at this milestone.'
-                  : focusedPerkSlot.state === 'open'
-                    ? 'Choose one of the available perks.'
-                    : `${Math.max(0, focusedPerkSlot.level - level)} levels to go`)
-              }}</span>
-            </div>
+              width="21"
+              height="21"
+            />
+            <Icon v-else icon="lucide:lock-keyhole" width="19" height="19" />
+            <span>{{
+              focusedPerkSlot.state === 'open'
+                ? 'Milestone reached — choose a perk below.'
+                : `First perk unlocks at level ${CHAMPION_PERK_INTERVAL}.`
+            }}</span>
           </div>
           <div v-if="openPerkSlot" class="sdp-perk-choices">
             <button
@@ -616,38 +669,6 @@ function equippedItem(category: ItemCategory): ShopItem | null {
                 ><strong>{{ perk.name }}</strong
                 ><small>{{ perk.desc }}</small></span
               >
-            </button>
-          </div>
-        </div>
-        <div v-if="champion && skinEntries.length > 1" class="sdp-section sdp-section--appearance">
-          <div class="sdp-section-head">
-            <span>Appearance</span>
-            <button
-              class="sdp-appearance-toggle"
-              type="button"
-              :aria-expanded="skinOpen"
-              @click="skinOpen = !skinOpen"
-            >
-              {{ skinOpen ? 'Hide skins' : `${skinEntries.length} skins` }}
-              <Icon
-                :icon="skinOpen ? 'lucide:chevron-up' : 'lucide:chevron-down'"
-                width="15"
-                height="15"
-              />
-            </button>
-          </div>
-          <div v-if="skinOpen" class="sdp-skin-list">
-            <button
-              v-for="entry in skinEntries"
-              :key="entry.id"
-              type="button"
-              class="sdp-skin"
-              :class="{ 'sdp-skin--selected': entry.id === equippedSkin }"
-              :aria-pressed="entry.id === equippedSkin"
-              v-tip="entry.label"
-              @click="equipSkin(entry.id, entry.label)"
-            >
-              <img :src="entry.image" :alt="entry.label" /><span>{{ entry.label }}</span>
             </button>
           </div>
         </div>
@@ -807,8 +828,9 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   grid-template-columns: 43% 57%;
 }
 .sdp-hero {
+  position: relative;
   min-width: 0;
-  min-height: 348px;
+  min-height: 372px;
   display: grid;
   grid-template-columns: 48% minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto auto;
@@ -873,6 +895,74 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-portrait:hover .sdp-portrait-change,
 .sdp-portrait:focus-visible .sdp-portrait-change {
   opacity: 1;
+}
+.sdp-skin-trigger {
+  position: absolute;
+  z-index: 3;
+  top: 16px;
+  right: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 33px;
+  padding: 6px 9px;
+  border: 1px solid #8b632c;
+  border-radius: 4px;
+  background: color-mix(in srgb, #111008 88%, var(--rc));
+  color: #f0dfb3;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sdp-skin-trigger:hover,
+.sdp-skin-trigger[aria-expanded='true'] {
+  border-color: #e8c040;
+  color: #e8c040;
+}
+.sdp-skin-trigger em {
+  min-width: 17px;
+  padding: 1px 4px;
+  border-radius: 9px;
+  background: var(--rc);
+  color: #111008;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  text-align: center;
+}
+.sdp-skin-popover {
+  position: absolute;
+  z-index: 5;
+  top: 57px;
+  right: 20px;
+  left: 20px;
+  padding: 10px;
+  border: 1px solid #8b632c;
+  border-radius: 5px;
+  background: #111008;
+  box-shadow: 0 14px 30px #000c;
+}
+.sdp-skin-popover-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 8px;
+  border-bottom: 1px solid #3e200a;
+  color: #e8c040;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sdp-skin-popover-head small {
+  overflow: hidden;
+  color: #bcae91;
+  font-size: 10px;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
 }
 .sdp-empty-art {
   opacity: 0.38;
@@ -1033,25 +1123,25 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 20px;
+  gap: 8px;
+  padding-top: 9px;
 }
 .sdp-stat {
   position: relative;
-  min-height: 72px;
+  min-height: 94px;
   display: grid;
-  grid-template-columns: 29px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 35px minmax(0, 1fr);
+  gap: 10px;
   align-items: center;
-  padding: 8px 0;
-  border-right: 0;
-  border-bottom: 1px solid #3e200a;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--sc) 36%, #3e200a);
+  border-radius: 4px;
+  background: linear-gradient(125deg, color-mix(in srgb, var(--sc) 10%, #15140e), #15140e 65%);
   color: var(--sc);
 }
-.sdp-stat:nth-child(2n) {
-  border-right: 0;
-}
-.sdp-stat:nth-last-child(-n + 2) {
-  border-bottom: 0;
+.sdp-stat > svg {
+  width: 29px;
+  height: 29px;
 }
 .sdp-stat div {
   min-width: 0;
@@ -1061,29 +1151,29 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-stat small {
   grid-column: 1;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.08em;
 }
 .sdp-stat strong {
   grid-column: 2;
   grid-row: 1;
-  font-size: 24px;
+  font-size: 29px;
   font-weight: 400;
 }
 .sdp-stat div span {
   grid-column: 1 / -1;
   overflow: hidden;
   color: #bcae91;
-  font-size: 12px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .sdp-stat i {
   position: absolute;
-  right: 9px;
-  bottom: 7px;
-  left: 9px;
-  height: 2px;
+  right: 12px;
+  bottom: 9px;
+  left: 12px;
+  height: 3px;
   background: #2a251c;
 }
 .sdp-stat i b {
@@ -1139,7 +1229,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   text-overflow: ellipsis;
 }
 .sdp-section--perks {
-  flex: 1 0 165px;
+  flex: 0 0 auto;
 }
 .sdp-section--open {
   background: #16140e;
@@ -1190,40 +1280,65 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   outline: 2px solid #e8c040;
   outline-offset: 2px;
 }
-.sdp-perk-detail {
+.sdp-active-perks {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 9px;
-  align-items: center;
-  min-height: 58px;
-  margin: 0 9px 9px;
-  padding: 9px;
-  border-left: 3px solid #65513c;
-  background: #1c1c18;
-  color: #a99b80;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding: 0 0 8px;
 }
-.sdp-perk-detail--taken {
-  border-left-color: var(--pc);
-  color: var(--pc);
-}
-.sdp-perk-detail--open {
-  border-left-color: #e8c040;
-  color: #e8c040;
-}
-.sdp-perk-detail div {
+.sdp-active-perk {
   min-width: 0;
   display: grid;
-  gap: 3px;
+  grid-template-columns: 31px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-height: 67px;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, var(--pc) 52%, #3e200a);
+  border-left: 3px solid var(--pc);
+  border-radius: 3px;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--pc) 11%, #171610), #171610);
+  color: var(--pc);
 }
-.sdp-perk-detail strong {
-  color: inherit;
+.sdp-active-perk div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.sdp-active-perk small {
+  color: #a99b80;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sdp-active-perk strong {
+  overflow: hidden;
+  color: var(--pc);
   font-size: 13px;
-  font-weight: 400;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.sdp-perk-detail span {
+.sdp-active-perk span {
+  display: -webkit-box;
+  overflow: hidden;
   color: #c0b294;
-  font-size: 11px;
-  line-height: 1.25;
+  font-size: 10px;
+  line-height: 1.2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.sdp-perk-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 51px;
+  margin-bottom: 8px;
+  padding: 9px;
+  border: 1px dashed #59452c;
+  background: #171610;
+  color: #a99b80;
+  font-size: 12px;
 }
 .sdp-perk-choices {
   display: grid;
@@ -1269,15 +1384,15 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-skin-list {
   display: flex;
   gap: 6px;
-  padding: 7px;
+  padding: 10px 0 0;
   overflow-x: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
 .sdp-skin {
   position: relative;
-  min-width: 86px;
-  height: 64px;
+  min-width: 116px;
+  height: 78px;
   padding: 0;
   overflow: hidden;
   border: 1px solid #493116;
@@ -1308,26 +1423,6 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-skin--selected {
   border: 2px solid #e8c040;
 }
-.sdp-section--appearance {
-  flex: 0 0 auto;
-}
-.sdp-appearance-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 0;
-  border: 0;
-  background: transparent;
-  color: #a59675;
-  cursor: pointer;
-  font: inherit;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-.sdp-appearance-toggle:hover {
-  color: #e8c040;
-}
 .sdp-swap-compare,
 .sdp-swap-grid {
   min-width: 0;
@@ -1345,7 +1440,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
     height: 74px;
   }
   .sdp-hero {
-    min-height: 284px;
+    min-height: 300px;
   }
   .sdp-portrait {
     min-height: 0;
@@ -1364,8 +1459,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
     flex-basis: 170px;
   }
   .sdp-stat {
-    min-height: 66px;
-    padding: 7px;
+    min-height: 78px;
+    padding: 9px;
   }
   .sdp-skin {
     height: 52px;
