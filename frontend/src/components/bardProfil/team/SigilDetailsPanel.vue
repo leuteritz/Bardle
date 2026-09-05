@@ -318,11 +318,6 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 <template>
   <section class="sdp-panel" :style="{ '--rc': roleDef.color }">
     <header class="sdp-roster">
-      <div class="sdp-roster-title">
-        <Icon :icon="roleDef.icon" width="23" height="23" />
-        <span>{{ roleDef.label }}</span>
-        <small>Squad</small>
-      </div>
       <div class="sdp-seat-list" @mouseleave="emit('hover-ally', null)">
         <div
           v-for="seat in rosterSeats"
@@ -671,41 +666,24 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   color: #f0dfb3;
 }
 .sdp-roster {
-  min-height: 82px;
+  min-height: 94px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
+  padding: 10px 16px;
   background: color-mix(in srgb, var(--rc) 18%, #111008);
   border-bottom: 3px solid #5c3310;
-}
-.sdp-roster-title {
-  display: flex;
-  flex: 0 0 76px;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  color: var(--rc);
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.sdp-roster-title small {
-  color: #a59675;
-  font-size: 10px;
-  letter-spacing: 0.12em;
 }
 .sdp-seat-list {
   min-width: 0;
   flex: 1;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 7px;
+  gap: 8px;
 }
 .sdp-seat {
   position: relative;
   min-width: 0;
-  height: 60px;
+  height: 72px;
   overflow: hidden;
   border: 1px solid #493116;
   background: color-mix(in srgb, var(--rc) 12%, #141410);
@@ -1340,11 +1318,11 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 @media (max-height: 1100px) {
   .sdp-roster {
-    min-height: 76px;
+    min-height: 82px;
     padding-block: 6px;
   }
   .sdp-seat {
-    height: 54px;
+    height: 64px;
   }
   .sdp-hero {
     min-height: 284px;
