@@ -39,6 +39,29 @@ describe('drifterStore', () => {
   })
 
   describe('spawning', () => {
+    it('chooses a stable flight per spawn and keeps unselected types on their lanes', () => {
+      const store = useDrifterStore()
+      const random = vi.spyOn(Math, 'random').mockReturnValue(0)
+      expect(spawn('emberShard').flightMode).toBe('approach')
+      const active = store.active[0]
+      random.mockReturnValue(0.99)
+      expect(active.flightMode).toBe('approach')
+      expect(spawn('emberShard').flightMode).toBe('lane')
+      for (const id of ['errantChime', 'lostMeep', 'wayfarerBeacon', 'sunderingPulse']) {
+        store.forceSpawn(id, 'approach')
+        expect(store.active[0].flightMode).toBe('lane')
+      }
+      random.mockRestore()
+    })
+
+    it('uses the existing lane for new reduced-motion spawns', () => {
+      const media = vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList)
+      const store = useDrifterStore()
+      store.forceSpawn('starLeviathan', 'approach')
+      expect(store.active[0].flightMode).toBe('lane')
+      media.mockRestore()
+    })
+
     it('respects the concurrency cap', () => {
       const store = useDrifterStore()
       for (let i = 0; i < DRIFTER_MAX_CONCURRENT + 3; i++) store.spawnDrifter('errantChime')

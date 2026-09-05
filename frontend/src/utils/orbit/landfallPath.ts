@@ -25,13 +25,19 @@ import {
   LANDFALL_BODY_SCALE_MIN,
   LANDFALL_BODY_SCALE_MAX,
   LANDFALL_CENTER_CLEARANCE,
+  LANDFALL_THROUGH_CHANCE,
+  LANDFALL_THROUGH_SCALE_MAX,
+  LANDFALL_BODY_HIT_PADDING_PX,
 } from '@/config/constants'
 import { hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
 import { pushOutOfCenter, type DrifterFieldRect } from '@/utils/orbit/drifterPath'
+import type { LandfallKindId, LandfallFlightMode } from '@/types'
+import { depthPassPointAt, depthMotionReduced } from '@/utils/orbit/depthPass'
 
 export interface LandfallLane {
   lane: number
   mirrored: boolean
+  flightMode: LandfallFlightMode
 }
 
 export interface LandfallFlyPoint {
@@ -49,10 +55,22 @@ export interface LandfallFlyPoint {
  * hat eine feste Ziehreihenfolge und wird für jede archivierte Galaxie
  * nachgespielt. Ein zusätzlicher Zug dort verschöbe die ganze Chronik.
  */
-export function landfallLaneFor(mapSeed: number, leg: number): LandfallLane {
+export function landfallLaneFor(mapSeed: number, leg: number, kind?: LandfallKindId): LandfallLane {
   const rng = seededRng(mapSeed * LANDFALL_LANE_SEED_SALT + leg * 313 + 11)
   const lane = Math.min(LANDFALL_LANES.length - 1, Math.floor(rng() * LANDFALL_LANES.length))
-  return { lane, mirrored: rng() < 0.5 }
+  const mirrored = rng() < 0.5
+  const chance = kind ? LANDFALL_THROUGH_CHANCE[kind] ?? 0 : 0
+  return { lane, mirrored, flightMode: rng() < chance ? 'through' : 'flyby' }
+}
+
+export function landfallFlightModeFor(
+  mapSeed: number,
+  leg: number,
+  kind: LandfallKindId,
+  forced?: LandfallFlightMode,
+): LandfallFlightMode {
+  if (depthMotionReduced() || !LANDFALL_THROUGH_CHANCE[kind]) return 'flyby'
+  return forced ?? landfallLaneFor(mapSeed, leg, kind).flightMode
 }
 
 /** Kantenlänge der Raute im Querab-Moment. Wächst mit dem Viewport statt mit
@@ -123,7 +141,15 @@ export function landfallFlyPointAt(
   field: DrifterFieldRect,
   bodyPx: number,
   metrics?: HudFieldMetrics,
+  flightMode: LandfallFlightMode = 'flyby',
+  sunRadius = 0,
 ): LandfallFlyPoint {
+  if (flightMode === 'through' && metrics) {
+    const point = depthPassPointAt(lane, mirrored, t, bodyPx, LANDFALL_BODY_HIT_PADDING_PX,
+      LANDFALL_THROUGH_SCALE_MAX, LANDFALL_CENTER_CLEARANCE, sunRadius, metrics)
+    const proximity = point.scale / LANDFALL_THROUGH_SCALE_MAX
+    return { ...point, alpha: LANDFALL_BODY_ALPHA_MIN + (1 - LANDFALL_BODY_ALPHA_MIN) * proximity }
+  }
   const spur = LANDFALL_LANES[lane % LANDFALL_LANES.length]
   const theta = flybyAngle(t)
   const naehe = Math.cos(theta)

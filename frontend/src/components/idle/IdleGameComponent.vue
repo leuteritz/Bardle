@@ -101,6 +101,7 @@ import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
   SUN_CLICK_PUNCH_MS,
+  SUN_CLICK_TARGET_DIAMETER_FACTOR,
   SUN_CLICK_RIPPLE_SUN_FACTOR,
   CHIME_BURST_ANGLE_JITTER,
   CHIME_POPUP_FONT_MIN_PX,
@@ -154,8 +155,8 @@ export default defineComponent({
     })
 
     const chimeButtonStyle = computed(() => ({
-      width: `${planetShopStore.currentSunRadius * 4}px`,
-      height: `${planetShopStore.currentSunRadius * 4}px`,
+      width: `${planetShopStore.currentSunRadius * SUN_CLICK_TARGET_DIAMETER_FACTOR}px`,
+      height: `${planetShopStore.currentSunRadius * SUN_CLICK_TARGET_DIAMETER_FACTOR}px`,
       transition: 'width 1.5s ease, height 1.5s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     }))
 

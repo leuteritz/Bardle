@@ -2,6 +2,7 @@
 CLAUDE.md
 AGENTS.md
 .claude
+.scratch
 graphify-out
 docs/*.md
 *.bak

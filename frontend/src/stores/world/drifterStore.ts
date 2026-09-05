@@ -5,11 +5,13 @@ import type {
   DrifterDef,
   DrifterOrbitStrike,
   DrifterRarity,
+  DrifterFlightMode,
 } from '@/types'
 import { DRIFTERS, getDrifter } from '@/config/world/drifters'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { logger } from '@/utils/logger'
 import { gameNow } from '@/utils/game/gameClock'
+import { depthMotionReduced } from '@/utils/orbit/depthPass'
 import {
   DRIFTER_SPAWN_INTERVAL_SEC,
   DRIFTER_FIRST_DELAY_SEC,
@@ -20,6 +22,7 @@ import {
   DRIFTER_CHIME_REWARD_CAP_SEC,
   DRIFTER_CHIME_REWARD_MIN_CLICKS,
   DRIFTER_ROUTES,
+  DRIFTER_DEPTH_CHANCE,
   GAME_TICK_INTERVAL_MS,
 } from '@/config/constants'
 import { useGameStore } from '@/stores/core/gameStore'
@@ -258,7 +261,7 @@ export const useDrifterStore = defineStore('drifter', {
     },
 
     /** Roll a type and send it on its way. Respects the concurrency cap. */
-    spawnDrifter(defId?: string): ActiveDrifter | null {
+    spawnDrifter(defId?: string, flightMode?: DrifterFlightMode): ActiveDrifter | null {
       if (this.active.length >= this.maxConcurrent) return null
       const def = defId ? getDrifter(defId) : rollAnyDrifter()
       if (!def) return null
@@ -268,6 +271,9 @@ export const useDrifterStore = defineStore('drifter', {
         defId: def.id,
         routeIndex: Math.floor(Math.random() * DRIFTER_ROUTES.length),
         mirrored: Math.random() < 0.5,
+        flightMode: depthMotionReduced() || !DRIFTER_DEPTH_CHANCE[def.id]
+          ? 'lane'
+          : flightMode ?? (Math.random() < DRIFTER_DEPTH_CHANCE[def.id] ? 'approach' : 'lane'),
         spawnedAt: gameNow(),
         flightMs: def.flightMs,
         hitsLanded: 0,
@@ -487,11 +493,9 @@ export const useDrifterStore = defineStore('drifter', {
     },
 
     /** Admin/testing: send a specific type out right now. */
-    forceSpawn(defId?: string): void {
-      // Clear the field first so the forced type is guaranteed to appear even
-      // when a drifter is already mid-flight.
+    forceSpawn(defId?: string, flightMode?: DrifterFlightMode): void {
       this.active = []
-      const spawned = this.spawnDrifter(defId)
+      const spawned = this.spawnDrifter(defId, flightMode)
       // Push that rarity's clock back so the forced one is not immediately
       // followed by the scheduled one of the same tier.
       if (spawned) {

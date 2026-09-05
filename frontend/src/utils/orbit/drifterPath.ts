@@ -11,8 +11,29 @@ import {
   DRIFTER_TANGENT_PROBE_STEP,
   DRIFTER_REVEAL_PROBE_STEPS,
   DRIFTER_LIGHT_QUANTIZE_DEG,
+  DRIFTER_DEPTH_SCALE_MAX,
+  DRIFTER_HIT_PADDING_PX,
+  DRIFTER_FADE_IN_FRAC,
 } from '@/config/constants'
 import { hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
+import type { ActiveDrifter, DrifterFlightMode } from '@/types'
+import { depthPassPointAt, type DepthPassPoint } from '@/utils/orbit/depthPass'
+
+export function drifterFlightPointAt(
+  flight: Pick<ActiveDrifter, 'routeIndex' | 'mirrored' | 'flightMode'>,
+  t: number,
+  field: DrifterFieldRect,
+  bodyPx: number,
+  metrics: HudFieldMetrics,
+  sunRadius: number,
+): DepthPassPoint {
+  if (flight.flightMode === 'approach') {
+    return depthPassPointAt(flight.routeIndex, flight.mirrored, t, bodyPx,
+      DRIFTER_HIT_PADDING_PX, DRIFTER_DEPTH_SCALE_MAX, DRIFTER_CENTER_CLEARANCE,
+      sunRadius, metrics)
+  }
+  return { ...drifterPointAt(flight.routeIndex, flight.mirrored, t, field, bodyPx / 2, metrics), scale: 1 }
+}
 
 export interface DrifterFieldRect {
   left: number
@@ -343,7 +364,9 @@ export function drifterRevealProgress(
   bodyRadiusPx: number,
   viewportW: number,
   viewportH: number,
+  flightMode?: DrifterFlightMode,
 ): number {
+  if (flightMode === 'approach') return DRIFTER_FADE_IN_FRAC
   const r = Math.max(0, bodyRadiusPx)
   for (let step = 0; step <= DRIFTER_REVEAL_PROBE_STEPS; step++) {
     const t = step / DRIFTER_REVEAL_PROBE_STEPS

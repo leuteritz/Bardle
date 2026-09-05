@@ -242,11 +242,11 @@ function createInstance(): HudCardColumnApi {
    * ein noch durchscheinender Körper ist auch dann nichts zum Suchen, wenn er
    * die Bildkante geometrisch schon überquert hat.
    */
-  function revealFractionFor(def: DrifterDef, routeIndex: number, mirrored: boolean): number {
+  function revealFractionFor(def: DrifterDef, routeIndex: number, mirrored: boolean, flightMode?: 'lane' | 'approach'): number {
     const w = window.innerWidth
     const h = window.innerHeight
     const field = drifterField(w, h, measuredFieldInsets())
-    const geometric = drifterRevealProgress(routeIndex, mirrored, field, def.sizePx / 2, w, h)
+    const geometric = drifterRevealProgress(routeIndex, mirrored, field, def.sizePx / 2, w, h, flightMode)
     return Math.min(1, Math.max(geometric, DRIFTER_FADE_IN_FRAC))
   }
 
@@ -258,7 +258,7 @@ function createInstance(): HudCardColumnApi {
       if (!d) return
       const def = getDrifter(d.defId)
       if (!def) return
-      revealFrac.value = revealFractionFor(def, d.routeIndex, d.mirrored)
+      revealFrac.value = revealFractionFor(def, d.routeIndex, d.mirrored, d.flightMode)
       beat()
     },
     { immediate: true },

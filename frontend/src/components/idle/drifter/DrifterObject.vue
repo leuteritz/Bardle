@@ -1,7 +1,6 @@
 <template>
-  <!-- The flying body. `pointer-events: none` on the shell, `auto` only on the
-       hit area, so the drifter never steals a click meant for the sun below. -->
-  <div ref="shell" class="drifter-shell" :style="shellStyle" aria-hidden="true">
+  <div ref="shell" class="drifter-shell" :style="shellStyle">
+    <div ref="scaleEl" class="drifter-scale">
     <button
       class="drifter-hit"
       :class="{ 'drifter-hit--large': def.hits > 1 }"
@@ -9,6 +8,7 @@
       :aria-label="`Collect ${def.name}`"
       @click.stop="onHit"
     >
+      <span v-if="drifter.flightMode === 'approach'" ref="hitFloor" class="drifter-hit-floor" aria-hidden="true"></span>
       <!-- The wake, turned once per frame together with the position: it trails
            BEHIND the body, against the flight heading. An earlier version had it
            point away from the sun — which is what a real comet tail does, and
@@ -101,6 +101,7 @@
         ></span>
       </span>
     </button>
+    </div>
   </div>
 </template>
 
@@ -108,11 +109,12 @@
 import { ref, computed, onMounted } from 'vue'
 import type { ActiveDrifter, DrifterDef } from '@/types'
 import {
-  drifterPointAt,
+  drifterFlightPointAt,
   drifterLightAngleDeg,
   type DrifterFieldRect,
 } from '@/utils/orbit/drifterPath'
 import type { HudFieldMetrics } from '@/utils/ui/hudField'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { hexToRgba } from '@/utils/ui/format'
 import { drifterFxStage, DRIFTER_DIRECTIONAL_BODIES } from '@/config/world/drifters'
 import DrifterBody from './DrifterBody.vue'
@@ -152,6 +154,8 @@ import {
   DRIFTER_ROCK_MS,
   DRIFTER_TURN_QUANTIZE_DEG,
   HEADING_FLIP_DEADZONE,
+  DEPTH_PASS_HIT_MIN_PX,
+  ORBIT_SCALE_QUANTIZE_STEPS,
 } from '@/config/constants'
 
 const props = defineProps<{
@@ -162,6 +166,10 @@ const props = defineProps<{
 const emit = defineEmits<{ hit: [x: number, y: number] }>()
 
 const shell = ref<HTMLElement>()
+const scaleEl = ref<HTMLElement>()
+const hitFloor = ref<HTMLElement>()
+const planetShop = usePlanetShopStore()
+const hitMinPx = `${DEPTH_PASS_HIT_MIN_PX}px`
 const trail = ref<HTMLElement>()
 const bodyBox = ref<HTMLElement>()
 
@@ -408,14 +416,19 @@ function renderFrame(
   if (!el) return
 
   const t = (now - props.drifter.spawnedAt) / props.drifter.flightMs
-  const point = drifterPointAt(
-    props.drifter.routeIndex,
-    props.drifter.mirrored,
+  const point = drifterFlightPointAt(
+    props.drifter,
     t,
     field,
-    props.def.sizePx / 2,
+    props.def.sizePx,
     metrics,
+    planetShop.currentSunRadius,
   )
+
+  const scale = Math.round(point.scale * ORBIT_SCALE_QUANTIZE_STEPS) / ORBIT_SCALE_QUANTIZE_STEPS
+  if (scaleEl.value) scaleEl.value.style.transform = `scale(${scale})`
+  if (hitFloor.value) hitFloor.value.style.transform = `translate(-50%, -50%) scale(${1 / scale})`
+  el.classList.toggle('drifter-shell--tiny', props.def.sizePx * scale < DRIFTER_ORNAMENT_MIN_SIZE)
 
   // Fade in on entry, out on exit — the shell carries the envelope so the wake,
   // the aura and the motes ride along without a second animated property.
@@ -425,6 +438,7 @@ function renderFrame(
 
   el.style.transform = `translate3d(${point.x}px, ${point.y}px, 0)`
   el.style.opacity = opacity.toFixed(3)
+  if (el.inert !== (opacity <= 0)) el.inert = opacity <= 0
 
   // The sun sits at the centre of the stage, so this one angle drives both the
   // terminator across the body and the direction the tail is blown.
@@ -473,7 +487,9 @@ function renderFrame(
 }
 
 function onHit(event: MouseEvent): void {
-  emit('hit', event.clientX, event.clientY)
+  const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  emit('hit', event.detail === 0 ? box.x + box.width / 2 : event.clientX,
+    event.detail === 0 ? box.y + box.height / 2 : event.clientY)
 }
 
 onMounted(() => {
@@ -508,6 +524,27 @@ defineExpose({ renderFrame })
   cursor: pointer;
   pointer-events: auto;
   transition: transform 0.14s ease;
+}
+
+.drifter-scale {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.drifter-hit-floor {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: v-bind(hitMinPx);
+  height: v-bind(hitMinPx);
+}
+
+.drifter-shell--tiny .drifter-aura,
+.drifter-shell--tiny .drifter-motes,
+.drifter-shell--tiny .drifter-ring-plane,
+.drifter-shell--tiny .drifter-trail {
+  display: none;
 }
 
 .drifter-hit:hover {

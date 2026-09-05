@@ -100,6 +100,30 @@ export const HINT_SPRITE_CACHE_LIMIT = 64
 /** Schrittweite, mit der die Drifter-Bahn abgetastet wird, um ihre Tangente zu bestimmen. */
 export const DRIFTER_TANGENT_PROBE_STEP = 0.01
 
+export const DEPTH_PASS_NEAR = 0.42
+export const DEPTH_PASS_HIT_MIN_PX = 44
+export const DEPTH_PASS_HOVER_SCALE = 1.14
+export const DEPTH_PASS_SAFE_MARGIN_PX = 12
+export const DEPTH_PASS_BAND_SAMPLES = 32
+export const DEPTH_PASS_BOW = 0.08
+export const DEPTH_PASS_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
+export const DEPTH_PASS_PROFILES = [
+  { from: 0.45, to: 0.2 },
+  { from: 0.55, to: 0.8 },
+  { from: 0.35, to: 0.65 },
+  { from: 0.65, to: 0.35 },
+  { from: 0.4, to: 0.7 },
+  { from: 0.6, to: 0.3 },
+] as const
+export const DRIFTER_DEPTH_SCALE_MAX = 1.25
+export const DRIFTER_DEPTH_CHANCE: Readonly<Record<string, number>> = {
+  starLeviathan: 0.5,
+  emberShard: 0.4,
+  coronalSurge: 0.4,
+  riftEcho: 0.4,
+  salvageProbe: 0.3,
+}
+
 /** Abtaststufen der Suche nach dem Sichtkontakt (`drifterRevealProgress`). 1/120
  *  der Flugzeit sind 80-215 ms — feiner als die Karte auftauchen kann. */
 export const DRIFTER_REVEAL_PROBE_STEPS = 120

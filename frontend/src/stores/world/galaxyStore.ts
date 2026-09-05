@@ -11,11 +11,13 @@ import type {
   ActiveLandfall,
   GalaxyIncident,
   LandfallKindId,
+  LandfallFlightMode,
   LandfallOutcome,
   StarManifest,
 } from '@/types'
 import { clampPercent } from '@/utils/orbit/geometry'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
+import { landfallFlightModeFor } from '@/utils/orbit/landfallPath'
 import { galaxyDepth } from '@/utils/game/galaxyDepth'
 import {
   landfallOnLeg,
@@ -617,7 +619,10 @@ export const useGalaxyStore = defineStore('galaxy', {
       }
       if (elapsed / dauer < plan.t) return
 
-      this.activeLandfall = { ...plan, openedAt: now, taps: 0, choice: null }
+      this.activeLandfall = {
+        ...plan, openedAt: now, taps: 0, choice: null,
+        flightMode: landfallFlightModeFor(this.mapSeed, plan.leg, plan.kind),
+      }
       useLandfallStore().onOpen(this.activeLandfall)
     },
 
@@ -677,7 +682,7 @@ export const useGalaxyStore = defineStore('galaxy', {
      * Gibt `false` zurück statt still nichts zu tun — das Panel nennt dem
      * Spieler den Grund.
      */
-    forceLandfall(kind?: LandfallKindId): boolean {
+    forceLandfall(kind?: LandfallKindId, flightMode?: LandfallFlightMode): boolean {
       // Nur unterwegs: `_tickLandfall` läuft ausschliesslich aus
       // `tickChampionTravel`, und das kehrt vorher um. Ausserhalb hätte der Ort
       // kein Fenster, das abläuft, und einen Balken, der stillsteht.
@@ -698,6 +703,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       const plan = landfallOnLeg(this.mapSeed, this.currentGalaxy, leg, this.plannedLegCount)
       this.activeLandfall = {
         kind: gewaehlt,
+        flightMode: landfallFlightModeFor(this.mapSeed, leg, gewaehlt, flightMode),
         leg,
         t: plan?.t ?? (LANDFALL_T_MIN + LANDFALL_T_MAX) / 2,
         bow: plan?.bow ?? LANDFALL_BOW_MIN,

@@ -3,6 +3,7 @@
 
 /** Dauer der Stauch-Rückmeldung beim Klick auf die Sonne. */
 export const SUN_CLICK_PUNCH_MS = 260
+export const SUN_CLICK_TARGET_DIAMETER_FACTOR = 4
 
 /** Durchmesser des Klick-Ripples als Vielfaches des Sonnenradius. */
 export const SUN_CLICK_RIPPLE_SUN_FACTOR = 2.4

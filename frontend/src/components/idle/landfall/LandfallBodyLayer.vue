@@ -91,6 +91,7 @@
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { getLandfall } from '@/config/world/landfalls'
 import { landfallAcceptsTap, landfallCleared } from '@/utils/game/landfalls'
 import { gameNow } from '@/utils/game/gameClock'
@@ -127,8 +128,9 @@ import {
   LANDFALL_VEIL_BREATHE_MS,
   LANDFALL_VEIL_OFFSET_MS,
   ORBIT_SCALE_QUANTIZE_STEPS,
+  LANDFALL_THROUGH_ABEAM_AT,
 } from '@/config/constants'
-import type { LandfallKindId } from '@/types'
+import type { LandfallKindId, LandfallFlightMode } from '@/types'
 
 /**
  * Der Ort, an dem das Schiff GERADE vorbeikommt — als Körper im freien Feld.
@@ -158,11 +160,13 @@ const beaconMs = `${LANDFALL_DISTRESS_MS}ms`
 const moteMs = `${LANDFALL_MOTE_ORBIT_MS}ms`
 
 const galaxyStore = useGalaxyStore()
+const planetShop = usePlanetShopStore()
 const { activeLandfall } = storeToRefs(galaxyStore)
 const { isIdleRenderingPaused } = useRenderingPaused()
 const { headerCenterArc } = useHeaderCenterArc()
 
 interface Snapshot {
+  flightMode: LandfallFlightMode
   kind: LandfallKindId
   name: string
   lane: number
@@ -180,6 +184,7 @@ const live = computed<Snapshot | null>(() => {
   if (!a || !d) return null
   const spur = landfallLaneFor(galaxyStore.mapSeed, a.leg)
   return {
+    flightMode: a.flightMode ?? 'flyby',
     kind: d.id,
     name: d.name,
     lane: spur.lane,
@@ -345,7 +350,8 @@ function render(): void {
   let t = s.windowMs > 0 ? (now - s.openedAt) / s.windowMs : 1
   let schwund = 0
   if (laeuft) {
-    if (t >= LANDFALL_BODY_ABEAM_AT && abeamSeq.value === 0) abeamSeq.value = 1
+    const abeamAt = s.flightMode === 'through' ? LANDFALL_THROUGH_ABEAM_AT : LANDFALL_BODY_ABEAM_AT
+    if (t >= abeamAt && abeamSeq.value === 0) abeamSeq.value = 1
   } else {
     // Der Abgang friert die Lage ein und nimmt nur noch Grösse und Deckkraft.
     t = exitT
@@ -359,8 +365,10 @@ function render(): void {
     feld,
     bodyPx.value,
     hudFieldMetrics(headerCenterArc.value ?? null),
+    s.flightMode,
+    planetShop.currentSunRadius,
   )
-  const skala = punkt.scale * (1 - LANDFALL_BODY_EXIT_SHRINK * schwund)
+  const skala = s.flightMode === 'through' ? punkt.scale : punkt.scale * (1 - LANDFALL_BODY_EXIT_SHRINK * schwund)
 
   el.style.transform = `translate3d(${punkt.x.toFixed(1)}px, ${punkt.y.toFixed(1)}px, 0)`
   el.style.opacity = (punkt.alpha * (1 - schwund)).toFixed(3)

@@ -192,7 +192,10 @@ export interface DrifterDef {
 
 /** A drifter currently in flight. Position is derived from `spawnedAt`, so a
  *  paused/stuttering frame loop can never desync it from the game clock. */
+export type DrifterFlightMode = 'lane' | 'approach'
+
 export interface ActiveDrifter {
+  flightMode?: DrifterFlightMode
   /** Unique instance id — also the Vue render key. */
   uid: number
   defId: string
@@ -644,7 +647,10 @@ export interface LandfallPlan {
 
 /** Der eine Ort, der GERADE offen steht. Nicht persistiert — dieselbe Regel wie
  *  bei Void-Wesen unterwegs: er käme mit halb abgelaufenem Fenster wieder. */
+export type LandfallFlightMode = 'flyby' | 'through'
+
 export interface ActiveLandfall extends LandfallPlan {
+  flightMode?: LandfallFlightMode
   /** Spielzeit-Stempel, zu dem der Ort fällig wurde. */
   openedAt: number
   /** Wie oft der Spieler ihn schon angefasst hat. Generisch: das Riff summiert

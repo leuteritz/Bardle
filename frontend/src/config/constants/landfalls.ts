@@ -354,6 +354,14 @@ export const LANDFALL_LANES: ReadonlyArray<{
  *  das Erntefenster halb um. */
 export const LANDFALL_BODY_ABEAM_AT = 0.5
 
+export const LANDFALL_THROUGH_SCALE_MAX = 1.15
+export const LANDFALL_THROUGH_ABEAM_AT = 0.9
+export const LANDFALL_THROUGH_CHANCE: Readonly<Partial<Record<LandfallKindId, number>>> = {
+  chime_reef: 0.4,
+  the_rupture: 0.4,
+  adrift_convoy: 0.35,
+}
+
 /* ── Der Körper als OBJEKT ────────────────────────────────────────────────────
    Ein Landfall war auf der Bühne bis hierher dieselbe hohle Raute wie auf dem
    Galaxiebild, mit einem Iconify-Glyph in der Mitte — ein ZEICHEN am Himmel.

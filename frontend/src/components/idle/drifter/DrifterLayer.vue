@@ -193,6 +193,7 @@ watch(
   () => {
     const next = new Map<number, number>()
     for (const d of active.value) {
+      if (d.flightMode === 'approach') continue
       const kept = pingUntil.value.get(d.uid)
       if (kept !== undefined) {
         next.set(d.uid, kept)
