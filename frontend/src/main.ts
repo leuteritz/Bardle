@@ -19,6 +19,7 @@ import { vInkCenter } from '@/utils/ui/textInkOffset'
 import { vTip } from '@/utils/ui/tipDirective'
 import { useGameStore } from '@/stores/core/gameStore'
 import { gameIntervalMs, getGameSpeed, onGameSpeedChange } from '@/utils/game/gameClock'
+import { flightLive, getSkyDebug } from '@/utils/orbit/flightLive'
 import {
   disableTelemetry,
   enableTelemetry,
@@ -91,10 +92,18 @@ onGameSpeedChange(startBattleSync)
 // Der einzige Griff, den ein Messtreiber von außen braucht — nur im Dev-Build.
 // Alles andere liest er aus den Pinia-Stores, die dort ohnehin am App-Knoten
 // hängen.
-if (import.meta.env.DEV) {
+// VITE_FX_DEBUG=1 hält den Griff auch im Messbuild (Worst-Case-Himmel spawnen).
+if (import.meta.env.DEV || import.meta.env.VITE_FX_DEBUG === '1') {
   ;(window as unknown as Record<string, unknown>).__bardle = {
     setGameSpeed: (s: number) => useGameStore().setGameSpeed(s),
     getGameSpeed,
+    flight: {
+      spawn: (kind: string) => getSkyDebug()?.spawn(kind),
+      evade: (angle: number, strength = 1) => getSkyDebug()?.evade(angle, strength),
+      helm: () => getSkyDebug()?.helm(),
+      sky: () => getSkyDebug()?.sky(),
+      live: flightLive,
+    },
     enableTelemetry,
     disableTelemetry,
     telemetryRows,

@@ -80,6 +80,14 @@ export const CHIME_POPUP_FONT_SUN_FACTOR = 0.5
 export const STAR_COUNT = 400
 /** Floor for the area-scaled star count so a small contained instance (Shop) is never empty. */
 export const STAR_BG_MIN_STARS = 60
+/** Sternhaufen, Staubflecken und Emissionsnebel im Hintergrund. */
+export const CLUSTER_COUNT = 10
+export const DUST_PATCH_COUNT = 7
+export const EMISSION_MAX_COUNT = 4
+export const EMISSION_SPAWN_MIN = 8_000
+export const EMISSION_SPAWN_MAX = 18_000
+/** Gesamtwinkel des Kameraschwenks nach der Rollenwahl (Dauer: RESCUE_ROTATION_DURATION_MS). */
+export const RESCUE_ROTATION_TOTAL_RAD = Math.PI * 1.5
 
 /**
  * Radiale Staffelung der Flug-Linien um die Sonne: jede Linie bekommt über den

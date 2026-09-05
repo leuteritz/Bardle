@@ -10,6 +10,8 @@ export type StarItem = {
   b: number
   twinklePhase: number
   twinkleSpeed: number
+  /** Trägt einen Bloom, sobald er nah genug ist (STAR_BG_BLOOM_*). */
+  bloom: boolean
 }
 
 export type GalaxyItem = {
@@ -91,14 +93,6 @@ export type NebulaMovingItem = {
   _lastOpacity: string
   _lastTransform: string
 }
-
-// ─── Emission Nebula / Ion Cloud constants ───────────────────────────────────
-
-export const EMISSION_MAX_COUNT = 4
-export const EMISSION_SPAWN_MIN = 8_000
-export const EMISSION_SPAWN_MAX = 18_000
-export const CLUSTER_COUNT = 10
-export const DUST_PATCH_COUNT = 7
 
 // ─── Emission Nebula palettes ─────────────────────────────────────────────────
 

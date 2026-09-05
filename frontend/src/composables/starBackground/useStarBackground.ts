@@ -1,5 +1,10 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { drawStarSprite, drawDotSprite } from '@/composables/starBackground/starSprites'
+import {
+  drawStarSprite,
+  drawDotSprite,
+  drawBloomSprite,
+  starFogTier,
+} from '@/composables/starBackground/starSprites'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
@@ -42,16 +47,26 @@ import {
   FLIGHT_BURST_WIDTH,
   STAR_PHASE_DATA,
   FOCUS_POLL_INTERVAL_MS,
-} from '@/config/constants'
-import { useWindowFocus } from '@/composables/system/useWindowFocus'
-import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
-import {
   EMISSION_MAX_COUNT,
-  EMISSION_NEBULA_PALETTES,
   EMISSION_SPAWN_MAX,
   EMISSION_SPAWN_MIN,
   CLUSTER_COUNT,
   DUST_PATCH_COUNT,
+  RESCUE_ROTATION_DURATION_MS,
+  RESCUE_ROTATION_TOTAL_RAD,
+  HELM_SLIP_EPS_PX_S,
+  HELM_RESPAWN_BIAS,
+  HELM_GALAXY_DEPTH,
+  STAR_BG_FOG_TIERS,
+  STAR_BG_BLOOM_SHARE,
+  STAR_BG_BLOOM_MIN_NORM,
+  STAR_BG_BLOOM_SCALE,
+  STAR_BG_BLOOM_ALPHA,
+} from '@/config/constants'
+import { useWindowFocus } from '@/composables/system/useWindowFocus'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import {
+  EMISSION_NEBULA_PALETTES,
   GALAXY_PALETTES_BY_TYPE,
   ION_CLOUD_PALETTES,
   type DustPatch,
@@ -77,8 +92,33 @@ import {
   svgEl,
 } from '@/composables/starBackground/galaxyRenderers'
 import { gameNow } from '@/utils/game/gameClock'
+import {
+  createHelmState,
+  stepHelm,
+  type HelmInputs,
+  type HelmOutput,
+} from '@/utils/orbit/flightHelm'
+import { flightLive, resetFlightLive, writeWakeFollowers } from '@/utils/orbit/flightLive'
+import { rotateAbout, slipPolar, trailAngle, upstreamAngle } from '@/utils/orbit/flightField'
+import {
+  clearEncounters,
+  createEncounterField,
+  drawEncounters,
+  firstEncounterDelay,
+  rescaleEncounters,
+  spawnEncounter,
+  stepEncounters,
+  type EncounterFrame,
+  type EncounterKind,
+} from '@/utils/fx/skyEncounters'
+import { registerSkyDebug } from '@/utils/orbit/flightLive'
+import { requestEvade } from '@/utils/orbit/flightHelm'
+import { cometTintForGalaxy } from '@/composables/starBackground/useBackgroundComets'
 
-const alphaHex = (a: number) => Math.round(a * 255).toString(16).padStart(2, '0')
+const alphaHex = (a: number) =>
+  Math.round(a * 255)
+    .toString(16)
+    .padStart(2, '0')
 /** Je Tiefenband ein 2-stelliges Hex-Suffix für 8-stellige Canvas-Farben. */
 const BAND_ALPHA_HEX = FLIGHT_STREAK_BANDS.map((b) => alphaHex(b.alpha))
 /** Same for FLIGHT_BURST_ALPHA (outer stroke of burst streaks). */
@@ -104,10 +144,6 @@ type DebrisRock = {
   /** Pre-generated per-vertex radius jitter → stable irregular silhouette. */
   verts: number[]
 }
-
-// ─── Champion-Rettungs-Rotation ───────────────────────────────────────────────
-const RESCUE_ROTATION_DURATION_MS = 2_000
-const RESCUE_ROTATION_TOTAL_RAD = Math.PI * 1.5
 
 /** Fortlaufende ID für Galaxie-SVGs — hält die Gradient-/Filter-IDs eindeutig. */
 let galaxyIdCounter = 0
@@ -334,6 +370,33 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   /** Wandernder Fluchtpunkt — Phase in Sekunden, Gewicht 0..1 (weich ein/aus). */
   let driftPhase = 0
   let driftGain = 0
+  const helm = createHelmState()
+  const helmInputs: HelmInputs = {
+    dt: 0,
+    active: false,
+    traveling: false,
+    minEdge: 0,
+    baseFocusX: 0,
+    baseFocusY: 0,
+    rand: Math.random,
+  }
+  const rotOut = { x: 0, y: 0 }
+  const sky = createEncounterField(firstEncounterDelay(Math.random))
+  const encounterFrame: EncounterFrame = {
+    w: 0,
+    h: 0,
+    cx: 0,
+    cy: 0,
+    maxDist: 0,
+    minEdge: 0,
+    delta: 0,
+    speedMultiplier: 0,
+    slipX: 0,
+    slipY: 0,
+    rollStep: 0,
+    tint: [230, 235, 255],
+  }
+  let tintThemeIndex = -1
   let burstCooldown =
     FLIGHT_BURST_INTERVAL_MIN_SEC +
     Math.random() * (FLIGHT_BURST_INTERVAL_MAX_SEC - FLIGHT_BURST_INTERVAL_MIN_SEC)
@@ -821,6 +884,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       b,
       twinklePhase: Math.random() * Math.PI * 2,
       twinkleSpeed: 0.5 + Math.random() * 1.5,
+      bloom: Math.random() < STAR_BG_BLOOM_SHARE,
     }
     stars.push(item)
     return item
@@ -844,6 +908,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // Frozen (Shop): kein Heranfliegen, keine Galaxy-/Warp-/Rescue-Mutationen.
     let hyperActive = false
     let speedMultiplier = 0
+    let rescueRotating = false
+    let backgroundPaused = false
+    let traveling = false
     if (!isFrozen) {
       const gameStore = useGameStore()
       hyperActive = gameStore.isHyperspaceActive
@@ -873,7 +940,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         }
       }
 
-      if (galaxyStore.starsBackgroundPaused) {
+      rescueRotating = galaxyStore.isRescueRotating
+      backgroundPaused = galaxyStore.starsBackgroundPaused
+      traveling = galaxyStore.championTravelState === 'traveling'
+      if (backgroundPaused) {
         // Kein Early-Return: der Frame wird statisch (delta = 0, speedMultiplier
         // bleibt 0) weitergezeichnet. Beim Tab-Rückwechsel alloziert
         // handleVisibilityChange() den Canvas-Backing-Store via resizeCanvas()
@@ -893,6 +963,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
             galaxyTransPhase = 'warp'
             galaxyTransElapsed = 0
             galaxyTransDir = Math.random() * Math.PI * 2
+            clearEncounters(sky)
             galaxyStore.setGalaxyTransitioning(true)
           }
         }
@@ -959,9 +1030,48 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     driftGain = Math.max(0, Math.min(1, driftGain + (driftOn ? driftStep : -driftStep)))
     driftPhase += delta
     const driftAmp = FLIGHT_DRIFT_AMPLITUDE * Math.min(w, h) * driftGain
-    const cx = w / 2 + Math.sin((driftPhase * Math.PI * 2) / FLIGHT_DRIFT_PERIOD_X_SEC) * driftAmp
-    const cy = h / 2 + Math.sin((driftPhase * Math.PI * 2) / FLIGHT_DRIFT_PERIOD_Y_SEC + 1.7) * driftAmp
-    const maxDist = Math.hypot(w / 2, h / 2) + 20 + driftAmp
+    const baseFx = Math.sin((driftPhase * Math.PI * 2) / FLIGHT_DRIFT_PERIOD_X_SEC) * driftAmp
+    const baseFy = Math.sin((driftPhase * Math.PI * 2) / FLIGHT_DRIFT_PERIOD_Y_SEC + 1.7) * driftAmp
+
+    // Der Helm legt Kurs, Schräglage und Ausweichen auf das Wobbeln; nur die
+    // Vollbild-Instanz hat einen und schreibt den Schweif.
+    let helmOut: HelmOutput | null = null
+    if (!isFrozen) {
+      helmInputs.dt = delta
+      helmInputs.active = driftOn && !rescueRotating && !backgroundPaused
+      helmInputs.traveling = traveling
+      helmInputs.minEdge = Math.min(w, h)
+      helmInputs.baseFocusX = baseFx
+      helmInputs.baseFocusY = baseFy
+      helmOut = stepHelm(helm, helmInputs)
+      speedMultiplier *= helmOut.throttle
+      flightLive.focusX = helmOut.focusX
+      flightLive.focusY = helmOut.focusY
+      flightLive.slipX = helmOut.slipX
+      flightLive.slipY = helmOut.slipY
+      flightLive.roll = helmOut.roll
+      flightLive.bank = helmOut.bank
+      flightLive.mode = helmOut.mode
+      writeWakeFollowers()
+    }
+    const cx = w / 2 + (helmOut ? helmOut.focusX : baseFx)
+    const cy = h / 2 + (helmOut ? helmOut.focusY : baseFy)
+    const maxDist = Math.hypot(w / 2, h / 2) + 20 + Math.hypot(cx - w / 2, cy - h / 2)
+    // Slip in px/s (Gewicht 1 am Rand) und als Schritt dieses Frames; Roll als Schritt.
+    const slipOn =
+      helmOut !== null &&
+      galaxyTransPhase === 'idle' &&
+      !hyperActive &&
+      (Math.hypot(helmOut.slipX, helmOut.slipY) >= HELM_SLIP_EPS_PX_S || helmOut.rollRate !== 0)
+    const slipVx = slipOn ? helmOut!.slipX : 0
+    const slipVy = slipOn ? helmOut!.slipY : 0
+    const slipX = slipVx * delta
+    const slipY = slipVy * delta
+    const rollStep = slipOn ? helmOut!.rollRate * delta : 0
+    const respawnAngle = (): number =>
+      slipOn && Math.random() < HELM_RESPAWN_BIAS
+        ? upstreamAngle(slipVx, slipVy, Math.random)
+        : Math.random() * Math.PI * 2
 
     // ── Kosmischer Staub ────────────────────────────────────────────────────
     if (ctx) {
@@ -979,9 +1089,14 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           d.angle = Math.atan2(ny - cy, nx - cx)
         } else {
           d.dist += dSpeed * delta
+          if (slipOn) {
+            d.angle += rollStep
+            const wgt = dNorm * dNorm
+            slipPolar(d, slipX * wgt, slipY * wgt, Math.cos(d.angle), Math.sin(d.angle))
+          }
         }
         if (d.dist > maxDist) {
-          d.angle = Math.random() * Math.PI * 2
+          d.angle = respawnAngle()
           d.dist = maxDist * (0.02 + Math.random() * 0.06)
           d.baseSpeed = 0.1 + Math.random() * 0.08
         }
@@ -1031,9 +1146,14 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           cluster.angle = Math.atan2(ny - cy, nx - cx)
         } else {
           cluster.dist += cSpeed * delta
+          if (slipOn) {
+            cluster.angle += rollStep
+            const wgt = cNorm * cNorm
+            slipPolar(cluster, slipX * wgt, slipY * wgt, Math.cos(cluster.angle), Math.sin(cluster.angle))
+          }
         }
         if (cluster.dist > maxDist) {
-          cluster.angle = Math.random() * Math.PI * 2
+          cluster.angle = respawnAngle()
           cluster.dist = maxDist * (0.02 + Math.random() * 0.06)
           cluster.baseSpeed = 0.56 + Math.random() * 0.32
         }
@@ -1078,6 +1198,11 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       } else {
         speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX * speedMultiplier
         star.dist += speed * delta
+        if (slipOn) {
+          star.angle += rollStep
+          const wgt = norm * norm
+          slipPolar(star, slipX * wgt, slipY * wgt, Math.cos(star.angle), Math.sin(star.angle))
+        }
       }
       if (star.dist > maxDist) {
         if (galaxyTransPhase === 'warp') {
@@ -1089,7 +1214,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           star.dist = maxDist * (0.25 + Math.random() * 0.65)
           star.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
         } else {
-          star.angle = Math.random() * Math.PI * 2
+          star.angle = respawnAngle()
           star.dist = hyperActive
             ? maxDist * (0.02 + Math.random() * 0.08)
             : maxDist * (0.1 + Math.random() * 0.35)
@@ -1123,8 +1248,24 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         } else {
           // Ein drawImage statt Kern- + Halo-Fill. Das sparte pro Frame 800
           // Canvas-Pfade und 800 `rgba(…)`-Strings (siehe starSprites.ts).
-          const starSize = 0.8 + norm * norm * 5.0
-          drawStarSprite(ctx, star.r, star.g, star.b, x, y, starSize, alpha)
+          const tier = starFogTier(norm)
+          const fog = STAR_BG_FOG_TIERS[tier]
+          const starSize = (0.8 + norm * norm * 5.0) * fog.size
+          const starAlpha = alpha * fog.alpha
+          if (star.bloom && norm > STAR_BG_BLOOM_MIN_NORM) {
+            const ramp = Math.min(1, (norm - STAR_BG_BLOOM_MIN_NORM) / 0.2)
+            drawBloomSprite(
+              ctx,
+              star.r,
+              star.g,
+              star.b,
+              x,
+              y,
+              starSize * STAR_BG_BLOOM_SCALE,
+              starAlpha * STAR_BG_BLOOM_ALPHA * ramp,
+            )
+          }
+          drawStarSprite(ctx, star.r, star.g, star.b, x, y, starSize, starAlpha, tier)
         }
       }
     }
@@ -1158,16 +1299,22 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           FLIGHT_STREAK_SPEED_MULT *
           band.speed
         s.dist += sSpeed * delta
+        if (slipOn) {
+          s.angle += rollStep
+          const wgt = sNorm * sNorm
+          slipPolar(s, slipX * wgt, slipY * wgt, Math.cos(s.angle), Math.sin(s.angle))
+        }
         if (s.dist > maxDist) {
-          s.angle = Math.random() * Math.PI * 2
+          s.angle = respawnAngle()
           s.dist = maxDist * (0.05 + Math.random() * 0.1)
           s.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
         }
         const len = Math.max(6, sSpeed * FLIGHT_EXPOSURE_SEC * FLIGHT_STREAK_LEN_FACTOR)
         const hx = cx + Math.cos(s.angle) * s.dist
         const hy = cy + Math.sin(s.angle) * s.dist
-        const tx = hx - Math.cos(s.angle) * len
-        const ty = hy - Math.sin(s.angle) * len
+        const ta = slipOn ? trailAngle(s.angle, sSpeed, slipVx, slipVy, sNorm * sNorm) : s.angle
+        const tx = hx - Math.cos(ta) * len
+        const ty = hy - Math.sin(ta) * len
         // fade in with distance like the stars: invisible at center, present
         // at the edges where it rushes past the camera
         const alpha = Math.min(1, sNorm * 3)
@@ -1214,6 +1361,11 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         const sSpeed =
           s.baseSpeed * sNorm * sNorm * WARP_SPEED_MAX * speedMultiplier * FLIGHT_BURST_SPEED_MULT
         s.dist += sSpeed * delta
+        if (slipOn) {
+          s.angle += rollStep
+          const wgt = sNorm * sNorm
+          slipPolar(s, slipX * wgt, slipY * wgt, Math.cos(s.angle), Math.sin(s.angle))
+        }
         if (s.dist > maxDist) {
           // gusts are finite — the streak leaves the screen and is gone
           burstStreaks.splice(i, 1)
@@ -1222,8 +1374,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         const len = Math.max(10, sSpeed * FLIGHT_EXPOSURE_SEC * FLIGHT_BURST_LEN_FACTOR)
         const hx = cx + Math.cos(s.angle) * s.dist
         const hy = cy + Math.sin(s.angle) * s.dist
-        const tx = hx - Math.cos(s.angle) * len
-        const ty = hy - Math.sin(s.angle) * len
+        const ta = slipOn ? trailAngle(s.angle, sSpeed, slipVx, slipVy, sNorm * sNorm) : s.angle
+        const tx = hx - Math.cos(ta) * len
+        const ty = hy - Math.sin(ta) * len
         const alpha = Math.min(1, sNorm * 3)
         if (alpha < 0.05) continue
         const grad = ctx.createLinearGradient(tx, ty, hx, hy)
@@ -1277,8 +1430,13 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
             COMET_DEBRIS_SPEED_MULT *
             delta
           d.spin += d.spinSpeed * delta
+          if (slipOn) {
+            d.angle += rollStep
+            const wgt = dNorm * dNorm
+            slipPolar(d, slipX * wgt, slipY * wgt, Math.cos(d.angle), Math.sin(d.angle))
+          }
           if (d.dist > maxDist) {
-            d.angle = Math.random() * Math.PI * 2
+            d.angle = respawnAngle()
             d.dist = maxDist * (0.05 + Math.random() * 0.08)
             d.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
             d.r = COMET_DEBRIS_MIN_R + Math.random() * (COMET_DEBRIS_MAX_R - COMET_DEBRIS_MIN_R)
@@ -1313,6 +1471,33 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       }
     }
 
+    // ── Himmelsbegegnungen — auf demselben Canvas, in derselben Strömung ───
+    if (ctx && !isFrozen && galaxyTransPhase === 'idle' && !hyperActive) {
+      const themeIndex = useGalaxyStore().currentThemeIndex
+      if (themeIndex !== tintThemeIndex) {
+        const t = cometTintForGalaxy(themeIndex)
+        encounterFrame.tint = [t.r, t.g, t.b]
+        tintThemeIndex = themeIndex
+      }
+      encounterFrame.w = w
+      encounterFrame.h = h
+      encounterFrame.cx = cx
+      encounterFrame.cy = cy
+      encounterFrame.maxDist = maxDist
+      encounterFrame.minEdge = Math.min(w, h)
+      encounterFrame.delta = delta
+      encounterFrame.speedMultiplier = speedMultiplier
+      encounterFrame.slipX = slipX
+      encounterFrame.slipY = slipY
+      encounterFrame.rollStep = rollStep
+      stepEncounters(sky, encounterFrame, Math.random, traveling)
+      if (sky.evade.pending) {
+        requestEvade(helm, sky.evade.awayAngle, sky.evade.strength)
+        sky.evade.pending = false
+      }
+      drawEncounters(ctx, sky, encounterFrame)
+    }
+
     // ── Galaxy-SVG-Animation ───────────────────────────────────────────────
     for (let i = galaxies.length - 1; i >= 0; i--) {
       const g = galaxies[i]
@@ -1326,6 +1511,12 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       if (hyperActive || galaxyTransPhase === 'warp') {
         const fadeTime = hyperActive ? hyperspaceElapsed : galaxyTransElapsed / 1000
         opacity *= Math.max(0, 1 - fadeTime * 3)
+      }
+      if (slipOn) {
+        // fern: der Fokus dreht sie, der Slip trifft sie nur leicht
+        rotateAbout(g.x, g.y, w / 2, h / 2, Math.cos(rollStep), Math.sin(rollStep), rotOut)
+        g.x = rotOut.x + slipX * HELM_GALAXY_DEPTH
+        g.y = rotOut.y + slipY * HELM_GALAXY_DEPTH
       }
       const gOpStr = opacity.toFixed(2)
       if (g._lastOpacity !== gOpStr) {
@@ -1359,6 +1550,11 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         n.angle = Math.atan2(ny2 - cy, nx2 - cx)
       } else {
         n.dist += nSpeed * delta
+        if (slipOn) {
+          n.angle += rollStep
+          const wgt = nNorm * nNorm
+          slipPolar(n, slipX * wgt, slipY * wgt, Math.cos(n.angle), Math.sin(n.angle))
+        }
       }
       n.scale = 0.02 + (n.maxScale - 0.02) * nNorm
       const wx = cx + Math.cos(n.angle) * n.dist
@@ -1409,6 +1605,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const newMaxDist = Math.hypot(w / 2, h / 2) + 20
       const scale = newMaxDist / oldMaxDist
       for (const star of stars) star.dist = star.dist * scale
+      rescaleEncounters(sky, scale)
       for (const d of dustPatches) {
         d.cachedGradient = null
         d._cachedRx = -1
@@ -1465,6 +1662,11 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   function cleanup(): void {
     stopLoop()
     stopFocusPolling()
+    if (!isFrozen) {
+      resetFlightLive()
+      clearEncounters(sky)
+      registerSkyDebug(null)
+    }
     if (galaxySpawnTimeout) {
       clearTimeout(galaxySpawnTimeout)
       galaxySpawnTimeout = null
@@ -1526,6 +1728,17 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       }
       scheduleNextGalaxy()
       scheduleNextEmission()
+      if (!isFrozen) {
+        registerSkyDebug({
+          spawn: (kind) => {
+            if (encounterFrame.maxDist > 0)
+              spawnEncounter(sky, kind as EncounterKind, Math.floor(Math.random() * 1e6), encounterFrame, Math.random)
+          },
+          evade: (angle, strength) => requestEvade(helm, angle, strength),
+          helm: () => helm,
+          sky: () => sky,
+        })
+      }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
   })

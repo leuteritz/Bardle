@@ -3,6 +3,11 @@ import {
   STAR_SPRITE_HALO_SCALE,
   STAR_SPRITE_HALO_ALPHA,
   STAR_SPRITE_SUPERSAMPLE,
+  STAR_BG_FOG_TIERS,
+  STAR_BG_FOG_RGB,
+  STAR_BG_WARM_RGB,
+  STAR_BG_WARM_MIX,
+  STAR_BG_BLOOM_SPRITE_PX,
 } from '@/config/constants'
 
 /**
@@ -16,23 +21,47 @@ import {
  * gesamten rAF-Last des Spiels (Orbit 85 fps ↔ Star-Fight-Modal 118 fps, weil
  * der Loop dort pausiert).
  *
- * Die Sternpalette hat nur 10 Farben (SPECTRAL_STAR_PALETTE). Pro Farbe wird
- * daher einmal ein kleines Offscreen-Canvas gerendert und danach nur noch per
- * `drawImage` geblittet:
+ * Die Sternpalette hat nur 10 Farben (SPECTRAL_STAR_PALETTE). Pro Farbe und
+ * Tiefenstufe wird daher einmal ein kleines Offscreen-Canvas gerendert und
+ * danach nur noch per `drawImage` geblittet:
  *   - Alpha-Variation (Twinkle, Distanz-Fade) → `ctx.globalAlpha`
  *   - Größenvariation (Distanz)               → Zielmaße von `drawImage`
  *
  * Die Sprites werden supersampled gerendert und immer verkleinert gezeichnet —
  * dadurch bleiben auch die kleinsten Sterne (Kernradius < 1 px) sauber.
+ *
+ * Tiefe: ferne Sterne sind in STAR_BG_FOG_RGB gemischt, die nahe Stufe leicht
+ * warm — drei Stufen, kein Verlauf pro Frame.
  */
 
-/** Kern-Sprite mit Halo (Hintergrundsterne). */
+/** Kern-Sprite mit Halo (Hintergrundsterne), Schlüssel = Farbe | Stufe. */
 const starSprites = new Map<number, HTMLCanvasElement>()
 /** Reiner Punkt ohne Halo (Cluster-Sterne). */
 const dotSprites = new Map<number, HTMLCanvasElement>()
+/** Weicher Schein um die hellsten nahen Sterne. */
+const bloomSprites = new Map<number, HTMLCanvasElement>()
+
+const LAST_TIER = STAR_BG_FOG_TIERS.length - 1
 
 function colorKey(r: number, g: number, b: number): number {
   return (r << 16) | (g << 8) | b
+}
+
+/** Tiefenstufe aus der normierten Distanz (0 = Fokus, 1 = Rand). */
+export function starFogTier(norm: number): number {
+  for (let i = 0; i < LAST_TIER; i++) if (norm <= STAR_BG_FOG_TIERS[i].maxNorm) return i
+  return LAST_TIER
+}
+
+function tierColor(r: number, g: number, b: number, tier: number): [number, number, number] {
+  const t = STAR_BG_FOG_TIERS[tier]
+  const [fr, fg, fb] = tier === LAST_TIER ? STAR_BG_WARM_RGB : STAR_BG_FOG_RGB
+  const m = tier === LAST_TIER ? STAR_BG_WARM_MIX : t.mix
+  return [
+    Math.round(r + (fr - r) * m),
+    Math.round(g + (fg - g) * m),
+    Math.round(b + (fb - b) * m),
+  ]
 }
 
 /**
@@ -80,12 +109,45 @@ function buildDotSprite(r: number, g: number, b: number): HTMLCanvasElement {
   return cv
 }
 
-/** Stern-Sprite (Kern + Halo) für eine Palettenfarbe — lazy gebaut, dann gecacht. */
-export function starSprite(r: number, g: number, b: number): HTMLCanvasElement {
-  const key = colorKey(r, g, b)
+/** Radialer Schein plus zwei leise Beugungskreuze — kein shadowBlur. */
+function buildBloomSprite(r: number, g: number, b: number): HTMLCanvasElement {
+  const side = STAR_BG_BLOOM_SPRITE_PX
+  const cv = document.createElement('canvas')
+  cv.width = side
+  cv.height = side
+  const c = cv.getContext('2d')
+  if (c) {
+    const center = side / 2
+    const rgb = `${r},${g},${b}`
+    const glow = c.createRadialGradient(center, center, 0, center, center, center)
+    glow.addColorStop(0, `rgba(${rgb},0.55)`)
+    glow.addColorStop(0.35, `rgba(${rgb},0.18)`)
+    glow.addColorStop(1, `rgba(${rgb},0)`)
+    c.fillStyle = glow
+    c.fillRect(0, 0, side, side)
+    const cross = c.createLinearGradient(0, center, side, center)
+    cross.addColorStop(0, `rgba(${rgb},0)`)
+    cross.addColorStop(0.5, `rgba(${rgb},0.35)`)
+    cross.addColorStop(1, `rgba(${rgb},0)`)
+    c.fillStyle = cross
+    c.fillRect(0, center - 0.6, side, 1.2)
+    const crossV = c.createLinearGradient(center, 0, center, side)
+    crossV.addColorStop(0, `rgba(${rgb},0)`)
+    crossV.addColorStop(0.5, `rgba(${rgb},0.35)`)
+    crossV.addColorStop(1, `rgba(${rgb},0)`)
+    c.fillStyle = crossV
+    c.fillRect(center - 0.6, 0, 1.2, side)
+  }
+  return cv
+}
+
+/** Stern-Sprite (Kern + Halo) für eine Palettenfarbe und Tiefenstufe — lazy gebaut, dann gecacht. */
+export function starSprite(r: number, g: number, b: number, tier = LAST_TIER): HTMLCanvasElement {
+  const key = colorKey(r, g, b) | (tier << 24)
   let sprite = starSprites.get(key)
   if (!sprite) {
-    sprite = buildStarSprite(r, g, b)
+    const [tr, tg, tb] = tierColor(r, g, b, tier)
+    sprite = buildStarSprite(tr, tg, tb)
     starSprites.set(key, sprite)
   }
   return sprite
@@ -98,6 +160,16 @@ export function dotSprite(r: number, g: number, b: number): HTMLCanvasElement {
   if (!sprite) {
     sprite = buildDotSprite(r, g, b)
     dotSprites.set(key, sprite)
+  }
+  return sprite
+}
+
+export function bloomSprite(r: number, g: number, b: number): HTMLCanvasElement {
+  const key = colorKey(r, g, b)
+  let sprite = bloomSprites.get(key)
+  if (!sprite) {
+    sprite = buildBloomSprite(r, g, b)
+    bloomSprites.set(key, sprite)
   }
   return sprite
 }
@@ -115,10 +187,11 @@ export function drawStarSprite(
   y: number,
   coreR: number,
   alpha: number,
+  tier = LAST_TIER,
 ): void {
   const half = coreR * STAR_SPRITE_HALO_SCALE
   ctx.globalAlpha = alpha
-  ctx.drawImage(starSprite(r, g, b), x - half, y - half, half * 2, half * 2)
+  ctx.drawImage(starSprite(r, g, b, tier), x - half, y - half, half * 2, half * 2)
 }
 
 /** Cluster-Punkt zeichnen — `dotR` ist der gewünschte Radius. */
@@ -134,4 +207,19 @@ export function drawDotSprite(
 ): void {
   ctx.globalAlpha = alpha
   ctx.drawImage(dotSprite(r, g, b), x - dotR, y - dotR, dotR * 2, dotR * 2)
+}
+
+/** Bloom zeichnen — `radius` ist der halbe Durchmesser des Scheins. */
+export function drawBloomSprite(
+  ctx: CanvasRenderingContext2D,
+  r: number,
+  g: number,
+  b: number,
+  x: number,
+  y: number,
+  radius: number,
+  alpha: number,
+): void {
+  ctx.globalAlpha = alpha
+  ctx.drawImage(bloomSprite(r, g, b), x - radius, y - radius, radius * 2, radius * 2)
 }

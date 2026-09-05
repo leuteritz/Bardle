@@ -3,7 +3,7 @@
     <div class="sun-slot comet-coma" data-layer="coma" />
     <div class="sun-slot comet-core" data-layer="core" />
     <div v-if="jetsShown" class="sun-slot comet-jets" data-layer="jets" />
-    <div v-if="wake && detail >= 1" class="sun-wake-group" :class="{ paused: wakePaused }">
+    <div v-if="wake && detail >= 1" ref="wakeGroup" class="sun-wake-group" :class="{ paused: wakePaused }">
       <div
         v-for="i in SUN_WAKE_COPIES"
         :key="i"
@@ -27,6 +27,7 @@ import {
   SUN_WAKE_COPIES,
 } from '@/config/constants'
 import { mountSunSprites, sunBodyFor, sunSpriteDetail } from '@/utils/fx/sunBodySprite'
+import { useWakeFollower } from '@/composables/orbit/useWakeFollower'
 
 /**
  * Der Herkunftskörper vor der Zündung: ein wandernder Fels mit Bard darin.
@@ -38,6 +39,8 @@ const props = withDefaults(defineProps<{ diameter: number; wake?: boolean }>(), 
 
 const solarStore = useSolarUpgradeStore()
 const host = ref<HTMLDivElement | null>(null)
+const wakeGroup = ref<HTMLDivElement | null>(null)
+useWakeFollower(wakeGroup, () => props.wake)
 
 const detail = computed(() => sunSpriteDetail(props.diameter))
 const body = computed(() => sunBodyFor(solarStore, solarStore.solarSignature))

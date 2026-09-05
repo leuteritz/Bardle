@@ -25,7 +25,8 @@
 //   planets       217 Konstanten
 //   void           35 Konstanten
 //   forge          56 Konstanten
-//   fx            193 Konstanten
+//   fx            201 Konstanten
+//   flight        Helm, Himmelsbegegnungen, Sternfeld-Tiefe
 //   ui            151 Konstanten
 //   sigil          92 Konstanten
 //   keybindings     5 Konstanten
@@ -51,6 +52,7 @@ export * from '@/config/constants/planets'
 export * from '@/config/constants/void'
 export * from '@/config/constants/forge'
 export * from '@/config/constants/fx'
+export * from '@/config/constants/flight'
 export * from '@/config/constants/ui'
 export * from '@/config/constants/sigil'
 export * from '@/config/constants/keybindings'

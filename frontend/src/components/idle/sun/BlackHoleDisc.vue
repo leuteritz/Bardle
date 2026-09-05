@@ -27,7 +27,12 @@
       <span v-for="i in inspiralCount" :key="i" class="bh-mote" :style="moteStyle(i)" />
     </span>
 
-    <div v-if="wake && detail >= 1" class="sun-wake-group" :class="{ paused: wakePaused }">
+    <div
+      v-if="wake && detail >= 1"
+      ref="wakeGroup"
+      class="sun-wake-group"
+      :class="{ paused: wakePaused }"
+    >
       <div
         v-for="i in SUN_WAKE_COPIES"
         :key="i"
@@ -58,6 +63,7 @@ import {
   SUN_WAKE_SEC,
 } from '@/config/constants'
 import { mountSunSprites, sunBodyFor, sunSpriteDetail } from '@/utils/fx/sunBodySprite'
+import { useWakeFollower } from '@/composables/orbit/useWakeFollower'
 
 /**
  * Die Endphase: Pyre detoniert, übrig bleibt ein opaker Ereignishorizont in
@@ -74,6 +80,8 @@ const phase = STAR_PHASE_DATA[STAR_PHASE_FINAL_INDEX]
 const inspiralCount = BLACK_HOLE_INSPIRAL_COUNT
 const solarStore = useSolarUpgradeStore()
 const host = ref<HTMLDivElement | null>(null)
+const wakeGroup = ref<HTMLDivElement | null>(null)
+useWakeFollower(wakeGroup, () => props.wake)
 
 const detail = computed(() => sunSpriteDetail(props.diameter))
 const body = computed(() => sunBodyFor(solarStore, solarStore.solarSignature))
@@ -86,21 +94,24 @@ const wakePaused = computed(() => {
 
 /** Die Trümmer wachsen mit der Klick-Achse — in der GRÖSSE, nie in der Zahl. */
 const moteFactor = computed(
-  () => 1 + (body.value.sig.spark / (SOLAR_SIGNATURE_STAGES.length - 1)) * SOLAR_SIGNATURE_BH_MOTE_GAIN,
+  () =>
+    1 + (body.value.sig.spark / (SOLAR_SIGNATURE_STAGES.length - 1)) * SOLAR_SIGNATURE_BH_MOTE_GAIN,
 )
 
-const vars = computed((): Record<string, string> => ({
-  '--bh-d': `${props.diameter}px`,
-  '--bh-core': phase.core,
-  '--bh-glow': phase.phaseGlow,
-  '--bh-tilt': `${BLACK_HOLE_DISC_TILT}`,
-  '--bh-spin': `${BLACK_HOLE_DISC_SPIN_SEC}s`,
-  '--bh-jet-pulse': `${BLACK_HOLE_JET_PULSE_SEC}s`,
-  '--bh-inspiral': `${BLACK_HOLE_INSPIRAL_SEC}s`,
-  '--bh-mote-f': `${moteFactor.value}`,
-  '--sun-xfade': `${SUN_SPRITE_CROSSFADE_MS}ms`,
-  '--sun-wake-sec': `${SUN_WAKE_SEC}s`,
-}))
+const vars = computed(
+  (): Record<string, string> => ({
+    '--bh-d': `${props.diameter}px`,
+    '--bh-core': phase.core,
+    '--bh-glow': phase.phaseGlow,
+    '--bh-tilt': `${BLACK_HOLE_DISC_TILT}`,
+    '--bh-spin': `${BLACK_HOLE_DISC_SPIN_SEC}s`,
+    '--bh-jet-pulse': `${BLACK_HOLE_JET_PULSE_SEC}s`,
+    '--bh-inspiral': `${BLACK_HOLE_INSPIRAL_SEC}s`,
+    '--bh-mote-f': `${moteFactor.value}`,
+    '--sun-xfade': `${SUN_SPRITE_CROSSFADE_MS}ms`,
+    '--sun-wake-sec': `${SUN_WAKE_SEC}s`,
+  }),
+)
 
 function moteStyle(index: number): Record<string, string> {
   const offset = ((index - 1) / inspiralCount) * BLACK_HOLE_INSPIRAL_SEC

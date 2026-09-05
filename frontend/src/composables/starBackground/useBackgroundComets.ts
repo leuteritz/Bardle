@@ -96,7 +96,7 @@ function rollCometVariant(): CometVariant {
 /** Pastel comet tint from the current galaxy's (dark, low-alpha) nebula color:
  *  parse the rgb components and mix them toward white so the comet reads as
  *  white-hot with a subtle per-galaxy mood. */
-function cometTintForGalaxy(themeIndex: number): { r: number; g: number; b: number } {
+export function cometTintForGalaxy(themeIndex: number): { r: number; g: number; b: number } {
   const theme = GALAXY_THEMES[themeIndex % GALAXY_THEMES.length]
   const m = theme.nebulaColors[0].match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
   const mix = (v: number) => Math.round(v + (255 - v) * COMET_BG_TINT_WHITE_MIX)

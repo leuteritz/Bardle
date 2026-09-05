@@ -16,7 +16,7 @@
     </template>
     <div v-if="detail >= 1" class="sun-slot sun-corona" data-layer="corona" />
     <div v-if="detail >= 2" class="sun-slot sun-flare" data-layer="flare" :style="flareStyle" />
-    <div v-if="wake && detail >= 1" class="sun-wake-group" :class="{ paused: wakePaused }">
+    <div v-if="wake && detail >= 1" ref="wakeGroup" class="sun-wake-group" :class="{ paused: wakePaused }">
       <div
         v-for="i in SUN_WAKE_COPIES"
         :key="i"
@@ -47,6 +47,7 @@ import {
 } from '@/config/constants'
 import { SIGNATURE_AXIS_COLOR } from '@/utils/game/solarSignature'
 import { mountSunSprites, sunBodyFor, sunSpriteDetail } from '@/utils/fx/sunBodySprite'
+import { useWakeFollower } from '@/composables/orbit/useWakeFollower'
 import { jitter } from '@/utils/fx/spaceBody'
 import BlackHoleDisc from './BlackHoleDisc.vue'
 
@@ -71,6 +72,8 @@ const props = withDefaults(
 const planetShopStore = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
 const host = ref<HTMLDivElement | null>(null)
+const wakeGroup = ref<HTMLDivElement | null>(null)
+useWakeFollower(wakeGroup, () => props.wake)
 const pulseEl = ref<HTMLDivElement | null>(null)
 
 const isCollapsed = computed(() => solarStore.isCollapsedStar)
