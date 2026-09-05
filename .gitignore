@@ -3,6 +3,7 @@ CLAUDE.md
 AGENTS.md
 .claude
 .scratch
+.scratch_depth-baseline
 graphify-out
 docs/*.md
 *.bak
