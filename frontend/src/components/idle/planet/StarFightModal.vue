@@ -224,6 +224,7 @@ import { emberStyle as emberField } from '@/utils/fx/particleField'
 import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
 import { systemLayout, systemSpritePx, heroSpritePx } from '@/utils/orbit/starFightSystem'
 import { warmPlanetSprites } from '@/utils/fx/planetSprite'
+import { warmStarSprites } from '@/utils/fx/starBodySprite'
 import { useBossFightHud } from '@/composables/orbit/useBossFightHud'
 import { useStarFightCamera } from '@/composables/orbit/useStarFightCamera'
 import type { StarGroup } from '@/stores/world/starGroupStore'
@@ -286,9 +287,12 @@ const loaderStartedAt = ref(0)
  * Spieler nur von einem Kampf ab, der längst da wäre.
  */
 const arenaBuilt = ref(false)
+const assetsReady = ref(false)
 let contentTimer: ReturnType<typeof setTimeout> | null = null
 let revealTimer: ReturnType<typeof setTimeout> | null = null
 let revealFrame = 0
+let warmPromise: Promise<void> = Promise.resolve()
+let openSequence = 0
 
 function cancelOpenSequence() {
   if (contentTimer !== null) {
@@ -303,9 +307,10 @@ function cancelOpenSequence() {
 }
 
 /** Zählt Frames, bis der gemountete Inhalt auch wirklich gezeichnet ist. */
-function revealWhenPainted() {
+function revealWhenPainted(sequence: number) {
   let left = STAR_FIGHT_LOADER_SETTLE_FRAMES
   const step = () => {
+    if (sequence !== openSequence || !starGroupStore.starFightModalOpen) return
     if (--left > 0) {
       revealFrame = requestAnimationFrame(step)
       return
@@ -314,6 +319,7 @@ function revealWhenPainted() {
     revealTimer = setTimeout(
       () => {
         revealTimer = null
+        if (sequence !== openSequence || !starGroupStore.starFightModalOpen) return
         loaderVisible.value = false
       },
       Math.max(0, STAR_FIGHT_LOADER_MIN_MS - shown),
@@ -326,16 +332,27 @@ watch(
   () => starGroupStore.starFightModalOpen,
   (open) => {
     cancelOpenSequence()
+    const sequence = ++openSequence
     if (!open) {
       contentReady.value = false
+      assetsReady.value = false
       loaderVisible.value = false
       fightStar.value = null
       return
     }
+    assetsReady.value = false
+    if (!arenaBuilt.value) {
+      loaderStartedAt.value = performance.now()
+      loaderVisible.value = true
+    }
     // Momentaufnahme: activeStars verliert den Stern im Outro
     fightStar.value =
       starGroupStore.activeStars.find((s) => s.id === starGroupStore.activeFightStarId) ?? null
-    void nextTick(warmStage)
+    void nextTick(() => {
+      warmPromise = warmStage().then(() => {
+        if (sequence === openSequence && starGroupStore.starFightModalOpen) assetsReady.value = true
+      })
+    })
     // Steht die Arena schon einmal gebaut im Speicher, genügt der eine Frame
     // Versatz von früher: er hält den Mount aus dem Einblende-Frame heraus, und
     // mehr ist bei 44 ms längstem Frame auch nicht nötig.
@@ -345,13 +362,11 @@ watch(
       })
       return
     }
-    loaderStartedAt.value = performance.now()
-    loaderVisible.value = true
     contentTimer = setTimeout(() => {
       contentTimer = null
       contentReady.value = true
       arenaBuilt.value = true
-      revealWhenPainted()
+      void warmPromise.then(() => revealWhenPainted(sequence))
     }, STAR_FIGHT_CONTENT_MOUNT_DELAY_MS)
   },
   { immediate: true },
@@ -487,7 +502,7 @@ const outro = computed(() => starGroupStore.starFightOutro)
 // Die Kamera sieht die BÜHNE, nicht den Store: das Intro beginnt erst, wenn der
 // Inhalt steht und der Ladeschleier weg ist
 const stageVisible = computed(
-  () => starGroupStore.starFightModalOpen && contentReady.value && !loaderVisible.value,
+  () => starGroupStore.starFightModalOpen && contentReady.value && assetsReady.value && !loaderVisible.value,
 )
 
 // Outro: HUD, Loot, Squad und Batterie bleiben bis Deckkraft 0 gemountet, dann hart
@@ -549,26 +564,28 @@ watch(
 // Zuletzt gemessene Bühne — damit ein neuer Stern schon beim Spawn warm wird
 let lastStage: { w: number; h: number } | null = null
 
-function warmStarSprites(star: StarGroup, w: number, h: number) {
+function warmStarSpritesForStage(star: StarGroup, w: number, h: number): Promise<void> {
   const dpr = window.devicePixelRatio || 1
   const layout = systemLayout(star, w, h, galaxyBossPlanetIds.value)
-  warmPlanetSprites(
+  const planets = warmPlanetSprites(
     layout.planets.flatMap((p) => [
       { type: p.type, seed: p.seed, px: systemSpritePx(p.r), lightAngle: p.lightAngle },
       { type: p.type, seed: p.seed, px: heroSpritePx(h), lightAngle: p.lightAngle },
     ]),
     dpr,
   )
+  const sun = warmStarSprites(star.look, star.starColor, star.seed, layout.star.px, dpr)
+  return Promise.all([planets, sun]).then(() => undefined)
 }
 
-function warmStage() {
+function warmStage(): Promise<void> {
   const el = stageEl.value
   const star = fightStar.value
-  if (!el || !star) return
+  if (!el || !star) return Promise.resolve()
   const r = el.getBoundingClientRect()
-  if (r.width <= 0 || r.height <= 0) return
+  if (r.width <= 0 || r.height <= 0) return Promise.resolve()
   lastStage = { w: Math.round(r.width), h: Math.round(r.height) }
-  warmStarSprites(star, lastStage.w, lastStage.h)
+  return warmStarSpritesForStage(star, lastStage.w, lastStage.h)
 }
 
 // ── Star-Watcher ──────────────────────────────────────────────────────────
@@ -587,7 +604,7 @@ watch(
     if (!lastStage) return
     const known = new Set(oldIds ?? [])
     for (const star of starGroupStore.activeStars) {
-      if (!known.has(star.id)) warmStarSprites(star, lastStage.w, lastStage.h)
+      if (!known.has(star.id)) void warmStarSpritesForStage(star, lastStage.w, lastStage.h)
     }
   },
 )

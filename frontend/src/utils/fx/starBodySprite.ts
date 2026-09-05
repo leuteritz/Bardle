@@ -874,6 +874,25 @@ export function mountStarSprites(
   }
 }
 
+export function warmStarSprites(
+  look: StarLook,
+  rgb: StarRgb,
+  seed: number,
+  px: number,
+  dpr: number,
+): Promise<void> {
+  const d = clampSpriteDpr(dpr)
+  const detail = starBodyDetail(px)
+  const rounded = Math.round(px * 10) / 10
+  const layers: StarSpriteLayer[] = ['halo', 'core', 'spin']
+  return Promise.all(
+    layers.map((layer) => {
+      const key = starBodySpriteKey(layer, look, rgb, seed, rounded, d, detail)
+      return spriteUrl(key, buildStarSprite(layer, look, rgb, seed, px, d, detail))
+    }),
+  ).then(() => undefined)
+}
+
 export function clearStarBodySpriteCache(): void {
   cache.clear()
   for (const url of urlCache.values()) URL.revokeObjectURL(url)

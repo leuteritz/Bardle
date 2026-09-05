@@ -48,6 +48,7 @@ export const STAR_FIGHT_SYS_MARGIN_TOP = 0.24
 export const STAR_FIGHT_SYS_MARGIN_BOTTOM = 0.14
 /** Planetendurchmesser in der Systemansicht, % der Bühnenhöhe. */
 export const STAR_FIGHT_SYS_PLANET_D_PCT = 2
+export const STAR_FIGHT_SYS_OVERVIEW_PLANET_SCALE = 1.22
 /** Sternkante in der Systemansicht, % der Bühnenhöhe. */
 export const STAR_FIGHT_SYS_STAR_PX_PCT = 14
 // Mindestabstand zweier Planeten wird per Ablehnungspass ERZWUNGEN, nie gefolgert.

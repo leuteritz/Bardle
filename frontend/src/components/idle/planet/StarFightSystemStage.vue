@@ -26,6 +26,17 @@
     <!-- Nahe Ebene: Bahnen, Kurs, die kleinen Planeten — die volle Kamera -->
     <div class="sfs-near" :style="nearStyle" @transitionend="onNearEnd">
       <svg class="sfs-course-layer" :width="w" :height="h" :viewBox="`0 0 ${w} ${h}`">
+        <ellipse
+          v-for="p in layout.planets"
+          :key="`orbit-${p.planetId}`"
+          class="sfs-orbit"
+          :class="{ 'is-target': p.planetId === targetPlanetId }"
+          :cx="p.orbit.cx"
+          :cy="p.orbit.cy"
+          :rx="p.orbit.rx"
+          :ry="p.orbit.ry"
+          :transform="`rotate(${(p.orbit.tilt * 180) / Math.PI} ${p.orbit.cx} ${p.orbit.cy})`"
+        />
         <line
           v-if="course"
           class="sfs-course"
@@ -94,6 +105,7 @@ import {
   STAR_FIGHT_PLANET_DRIFT_SCALE,
   STAR_BODY_SPRITE_SPAN,
   STAR_BODY_SPIN_SEC,
+  STAR_FIGHT_SYS_OVERVIEW_PLANET_SCALE,
 } from '@/config/constants'
 import {
   systemLayout,
@@ -336,6 +348,7 @@ const orbitsInDelay = `${Math.round(STAR_FIGHT_CAM_DEPART_MS * 0.5)}ms`
 const orbitsOutMs = `${Math.round(STAR_FIGHT_CAM_APPROACH_MS * 0.5)}ms`
 const freedPulseMs = `${STAR_FIGHT_FREED_PULSE_MS}ms`
 const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
+const overviewPlanetScale = String(STAR_FIGHT_SYS_OVERVIEW_PLANET_SCALE)
 </script>
 
 <style scoped>
@@ -349,6 +362,7 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
   --sfs-rm-fade: v-bind(rmFadeMs);
   --sfs-ease-out: v-bind(easeOut);
   --sfs-ease-in: v-bind(easeIn);
+  --sfs-overview-planet-scale: v-bind(overviewPlanetScale);
 }
 
 /* ── Kamera-Ebenen: nur transform fährt, kein will-change ─────────────────── */
@@ -467,6 +481,19 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
   transition: opacity v-bind(orbitsOutMs) ease-out;
 }
 
+.sfs-orbit {
+  fill: none;
+  stroke: rgba(236, 232, 220, 0.16);
+  stroke-width: 1;
+  stroke-dasharray: 2 9;
+  vector-effect: non-scaling-stroke;
+}
+
+.sfs-orbit.is-target {
+  stroke: rgba(232, 192, 64, 0.52);
+  stroke-dasharray: 5 8;
+}
+
 .sfs--depart .sfs-course-layer,
 .sfs--travel .sfs-course-layer,
 .sfs--outro .sfs-course-layer {
@@ -506,13 +533,18 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
   animation-delay: var(--planet-drift-delay);
 }
 
+.sfs--intro .sfs-planet-life {
+  --planet-overview-scale: var(--sfs-overview-planet-scale);
+}
+
 @keyframes sfs-planet-drift {
   0%,
   100% {
-    transform: translateY(var(--planet-drift-px)) scale(1);
+    transform: translateY(var(--planet-drift-px)) scale(var(--planet-overview-scale, 1));
   }
   50% {
-    transform: translateY(calc(var(--planet-drift-px) * -1)) scale(var(--planet-drift-scale));
+    transform: translateY(calc(var(--planet-drift-px) * -1))
+      scale(calc(var(--planet-drift-scale) * var(--planet-overview-scale, 1)));
   }
 }
 
@@ -543,6 +575,14 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
   border-radius: 50%;
   background: radial-gradient(circle, rgba(180, 60, 230, 0.55) 0%, rgba(140, 30, 200, 0.18) 45%, transparent 70%);
   opacity: 0;
+}
+
+.sfs--intro .sfs-planet:not(.is-galaxy) .sfs-planet-glow {
+  opacity: 0.38;
+}
+
+.sfs--intro .sfs-planet.is-target .sfs-planet-glow {
+  opacity: 0.78;
 }
 
 .sfs-planet.is-galaxy .sfs-planet-glow {

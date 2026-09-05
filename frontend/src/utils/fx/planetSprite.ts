@@ -272,8 +272,10 @@ export interface WarmPlanetEntry {
 }
 
 /** Rastern und kodieren, ohne zu mounten — vor dem Öffnen und vor jedem Flug. */
-export function warmPlanetSprites(list: readonly WarmPlanetEntry[], dpr: number): void {
-  for (const e of list) void planetSpriteUrl(e.type, e.seed, e.px, dpr, lightStepOf(e.lightAngle))
+export function warmPlanetSprites(list: readonly WarmPlanetEntry[], dpr: number): Promise<void> {
+  return Promise.all(list.map((e) => planetSpriteUrl(e.type, e.seed, e.px, dpr, lightStepOf(e.lightAngle)))).then(
+    () => undefined,
+  )
 }
 
 export function clearPlanetSpriteCache(): void {
