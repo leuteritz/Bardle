@@ -3,8 +3,19 @@ import {
   drawStarSprite,
   drawDotSprite,
   drawBloomSprite,
+  drawStreakSprite,
   starFogTier,
+  warpDopplerTier,
+  WARP_DOPPLER_OWN,
 } from '@/composables/starBackground/starSprites'
+import {
+  createGalaxyWarp,
+  persistentDrawAlpha,
+  resetGalaxyWarp,
+  startGalaxyWarp,
+  stepGalaxyWarp,
+} from '@/utils/orbit/galaxyWarp'
+import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
@@ -12,8 +23,10 @@ import {
   STAR_COUNT,
   STAR_BG_MIN_STARS,
   WARP_SPEED_MAX,
-  GALAXY_TRANS_WARP_MS,
-  GALAXY_TRANS_DECEL_MS,
+  WARP_STREAK_WIDTH_BASE,
+  WARP_STREAK_WIDTH_PER_SPEED,
+  WARP_HEADLIGHT_ALPHA,
+  WARP_HEADLIGHT_RADIUS_FRAC,
   GALAXY_SPAWN_INTERVAL_MIN,
   GALAXY_SPAWN_INTERVAL_MAX,
   GALAXY_MAX_COUNT,
@@ -73,6 +86,8 @@ import {
   type EmissionPalette,
   type EmissionType,
   type GalaxyItem,
+  type GalaxyPalette,
+  type GalaxyType,
   type NebulaMovingItem,
   type StarCluster,
   type StarItem,
@@ -446,10 +461,21 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   let hyperspaceElapsed = 0
   let wasHyperspaceActive = false
 
-  let galaxyTransPhase: 'idle' | 'warp' | 'decel' = 'idle'
-  let galaxyTransElapsed = 0
+  // Der Galaxien-Warp: Phasen, Kurs und Kurven leben in der reinen Maschine
+  // (utils/orbit/galaxyWarp.ts); die Schleife liest je Frame nur `warp.out`.
+  const warp = createGalaxyWarp()
   let wasPendingTransition = false
-  let galaxyTransDir = 0
+  /** Die Zielgalaxie am Fluchtpunkt — belegt den Reserve-Slot des Pools. */
+  let destGalaxy: GalaxyItem | null = null
+  let destGalaxySize = 0
+  /** Aufhellung um den Fluchtpunkt: EIN Verlauf bei (0,0), neu nur bei anderem Radius. */
+  let headlightGradient: CanvasGradient | null = null
+  let headlightRadius = 0
+  /** Signale an die Komponente: Nebel aus, Vignette an, Blitz (Zähler + Akzentfarbe). */
+  const warpNebulaHidden = ref(false)
+  const warpVignetteOn = ref(false)
+  const warpFlashKey = ref(0)
+  const warpAccent = ref('')
 
   let resizeTimeout: ReturnType<typeof setTimeout> | null = null
   let containerObserver: ResizeObserver | null = null
@@ -644,6 +670,53 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   }
 
   // ── Galaxy-Spawn ──────────────────────────────────────────────────────────
+  /** Baut das SVG-Motiv in einen Pool-Slot: Größe, Klasse, Zeichnung — ohne Platzierung. */
+  function buildGalaxySvg(
+    svg: SVGSVGElement,
+    type: GalaxyType,
+    palette: GalaxyPalette,
+    size: number,
+  ): void {
+    while (svg.firstChild) svg.removeChild(svg.firstChild)
+    svg.setAttribute('width', String(size))
+    svg.setAttribute('height', String(size))
+    svg.setAttribute('viewBox', `0 0 ${size} ${size}`)
+    svg.className.baseVal = 'galaxy'
+    svg.style.opacity = '0'
+
+    const cx = size / 2
+    const cy = size / 2
+    const r = size / 2
+    const id = `g${++galaxyIdCounter}`
+
+    switch (type) {
+      case 'spiral':
+        drawSpiral(svg, id, cx, cy, r, size, palette)
+        break
+      case 'barred-spiral':
+        drawBarredSpiral(svg, id, cx, cy, r, size, palette)
+        break
+      case 'elliptical':
+        drawElliptical(svg, id, cx, cy, r, size, palette)
+        break
+      case 'globular':
+        drawGlobular(svg, id, cx, cy, r, size, palette)
+        break
+      case 'irregular':
+        drawIrregular(svg, id, cx, cy, r, size, palette)
+        break
+      case 'ring':
+        drawRing(svg, id, cx, cy, r, size, palette)
+        break
+      case 'lenticular':
+        drawLenticular(svg, id, cx, cy, r, size, palette)
+        break
+      case 'starburst':
+        drawStarburst(svg, id, cx, cy, r, size, palette)
+        break
+    }
+  }
+
   function spawnGalaxy(): void {
     if (!starsContainer.value || prefersReducedMotion.value) return
     if (galaxies.length >= GALAXY_MAX_COUNT) return
@@ -670,44 +743,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     const rot = rotDir * rotDeg
 
     const svg = slot.el
-    while (svg.firstChild) svg.removeChild(svg.firstChild)
-    svg.setAttribute('width', String(size))
-    svg.setAttribute('height', String(size))
-    svg.setAttribute('viewBox', `0 0 ${size} ${size}`)
-    svg.className.baseVal = 'galaxy'
-    svg.style.opacity = '0'
-
-    const cx = size / 2
-    const cy = size / 2
-    const r = size / 2
-    const id = `g${++galaxyIdCounter}`
-
-    switch (config.type) {
-      case 'spiral':
-        drawSpiral(svg, id, cx, cy, r, size, palette)
-        break
-      case 'barred-spiral':
-        drawBarredSpiral(svg, id, cx, cy, r, size, palette)
-        break
-      case 'elliptical':
-        drawElliptical(svg, id, cx, cy, r, size, palette)
-        break
-      case 'globular':
-        drawGlobular(svg, id, cx, cy, r, size, palette)
-        break
-      case 'irregular':
-        drawIrregular(svg, id, cx, cy, r, size, palette)
-        break
-      case 'ring':
-        drawRing(svg, id, cx, cy, r, size, palette)
-        break
-      case 'lenticular':
-        drawLenticular(svg, id, cx, cy, r, size, palette)
-        break
-      case 'starburst':
-        drawStarburst(svg, id, cx, cy, r, size, palette)
-        break
-    }
+    buildGalaxySvg(svg, config.type, palette, size)
 
     const initTransform = `translate(${x}px,${y}px) scale(0.05) rotate(${rot}deg)`
     svg.style.transform = initTransform
@@ -725,6 +761,71 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       _lastOpacity: '0',
       _lastTransform: initTransform,
     })
+  }
+
+  /**
+   * Die Zielgalaxie des Warps: eine Spirale im Reserve-Slot des Pools (der hat
+   * GALAXY_MAX_COUNT + 1 Plätze, spawnGalaxy deckelt bei GALAXY_MAX_COUNT).
+   * Position und Größe schreibt die Schleife je Frame aus `warp.out`, deshalb
+   * steht sie NICHT in `galaxies[]` — dort liefe die Lebenszeit-Kurve.
+   */
+  function spawnDestGalaxy(): void {
+    if (!starsContainer.value || prefersReducedMotion.value || destGalaxy) return
+    const slot = galaxyPool.find((s) => !s.active)
+    if (!slot) return
+    const type: GalaxyType = Math.random() < 0.6 ? 'spiral' : 'barred-spiral'
+    const paletteList = GALAXY_PALETTES_BY_TYPE[type]
+    const palette = paletteList[Math.floor(Math.random() * paletteList.length)]
+    const minEdge = Math.min(cachedW || window.innerWidth, cachedH || window.innerHeight)
+    const size = Math.round(minEdge * 0.32)
+    const rot = (Math.random() - 0.5) * 50
+    const svg = slot.el
+    buildGalaxySvg(svg, type, palette, size)
+    svg.style.transform = `translate(0px,0px) scale(0.05) rotate(${rot}deg)`
+    svg.style.visibility = 'visible'
+    slot.active = true
+    destGalaxySize = size
+    destGalaxy = {
+      el: svg,
+      x: 0,
+      y: 0,
+      scale: 0.05,
+      maxScale: 1,
+      lifetime: 0,
+      elapsed: 0,
+      rot,
+      _lastOpacity: '0',
+      _lastTransform: '',
+    }
+  }
+
+  function releaseDestGalaxy(): void {
+    if (!destGalaxy) return
+    destGalaxy.el.style.visibility = 'hidden'
+    destGalaxy.el.style.opacity = '0'
+    const poolSlot = galaxyPool.find((s) => s.el === destGalaxy!.el)
+    if (poolSlot) poolSlot.active = false
+    destGalaxy = null
+  }
+
+  /**
+   * Bei der Ankunft: alles, was den Flug ausgeblendet überlebt hat, räumen.
+   * Sonst spränge eine halb abgelaufene Galaxie der ALTEN Welt mit voller
+   * Deckkraft zurück ins Bild, sobald der Warp-Fade wegfällt.
+   */
+  function retireSkyDecor(): void {
+    for (const g of galaxies) {
+      g.el.style.visibility = 'hidden'
+      const poolSlot = galaxyPool.find((s) => s.el === g.el)
+      if (poolSlot) poolSlot.active = false
+    }
+    galaxies.length = 0
+    for (const n of emissionNebulas) {
+      n.el.style.visibility = 'hidden'
+      const poolSlot = nebulaPool.find((s) => s.el === n.el)
+      if (poolSlot) poolSlot.active = false
+    }
+    emissionNebulas.length = 0
   }
 
   function scheduleNextGalaxy(): void {
@@ -954,6 +1055,53 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       rescueRotating = galaxyStore.isRescueRotating
       backgroundPaused = galaxyStore.starsBackgroundPaused
       traveling = galaxyStore.championTravelState === 'traveling'
+      // ── Galaxien-Warp ──────────────────────────────────────────────────────
+      // Tickt VOR der Hintergrund-Pause: kein Pausengrund darf den Flug
+      // einfrieren. (Der Store hält die Rollenwahl bis zur Ankunft zurück —
+      // früher öffnete sie beim Galaxiewechsel, setzte den Hintergrund still
+      // und mit ihm diese Maschine: das Ausrollen stand hinter dem Modal.)
+      //
+      // Skip transitions already driven elsewhere: requestTransition() runs the
+      // warp on wall-clock timers under reduced motion (this loop never starts
+      // there) — starting it again here would advance two galaxies.
+      const pendingTrans = galaxyStore.pendingTransition
+      if (pendingTrans && !wasPendingTransition && !galaxyStore.isGalaxyTransitioning) {
+        if (prefersReducedMotion.value) {
+          galaxyStore.commitAdvance()
+        } else {
+          startGalaxyWarp(warp, Math.random)
+          clearEncounters(sky)
+          warpNebulaHidden.value = true
+          warpVignetteOn.value = true
+          galaxyStore.setGalaxyTransitioning(true)
+        }
+      }
+      wasPendingTransition = pendingTrans
+
+      if (warp.phase !== 'idle') {
+        if (cachedCtx === null || cachedW === 0) refreshCanvasCache()
+        stepGalaxyWarp(warp, delta * 1000, Math.min(cachedW, cachedH))
+        const wo = warp.out
+        if (wo.destSpawn) spawnDestGalaxy()
+        if (wo.commit) {
+          galaxyStore.commitAdvance()
+          // Der Blitz trägt die Farbe der NEUEN Welt und deckt den harten
+          // Schnitt des Hintergrund-Gradienten; die Nebel dürfen ab jetzt in
+          // den neuen Farben zurückkommen.
+          warpAccent.value =
+            GALAXY_THEMES[galaxyStore.currentThemeIndex % GALAXY_THEMES.length].accentColor
+          warpFlashKey.value++
+          warpNebulaHidden.value = false
+          warpVignetteOn.value = false
+        }
+        if (wo.done) {
+          releaseDestGalaxy()
+          retireSkyDecor()
+          galaxyStore.setGalaxyTransitioning(false)
+        }
+        backgroundPaused = false
+      }
+
       if (backgroundPaused) {
         // Kein Early-Return: der Frame wird statisch (delta = 0, speedMultiplier
         // bleibt 0) weitergezeichnet. Beim Tab-Rückwechsel alloziert
@@ -962,49 +1110,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         // unsichtbar, bis die Pause endet (Champion-Stern besiegt).
         delta = 0
       } else {
-        const pendingTrans = galaxyStore.pendingTransition
-
-        // Skip transitions already driven elsewhere: requestTransition() runs the
-        // warp on wall-clock timers while the Bard profile is open (this loop is
-        // paused there) — starting it again here would advance two galaxies.
-        if (pendingTrans && !wasPendingTransition && !galaxyStore.isGalaxyTransitioning) {
-          if (prefersReducedMotion.value) {
-            galaxyStore.commitAdvance()
-          } else {
-            galaxyTransPhase = 'warp'
-            galaxyTransElapsed = 0
-            galaxyTransDir = Math.random() * Math.PI * 2
-            clearEncounters(sky)
-            galaxyStore.setGalaxyTransitioning(true)
-          }
-        }
-        wasPendingTransition = pendingTrans
-
-        if (galaxyTransPhase !== 'idle') {
-          galaxyTransElapsed += delta * 1000
-          if (galaxyTransPhase === 'warp') {
-            if (galaxyTransElapsed >= GALAXY_TRANS_WARP_MS) {
-              galaxyStore.commitAdvance()
-              galaxyTransPhase = 'decel'
-              galaxyTransElapsed -= GALAXY_TRANS_WARP_MS
-            }
-          } else if (galaxyTransPhase === 'decel') {
-            if (galaxyTransElapsed >= GALAXY_TRANS_DECEL_MS) {
-              galaxyTransPhase = 'idle'
-              galaxyTransElapsed = 0
-              galaxyStore.setGalaxyTransitioning(false)
-            }
-          }
-        }
-
         if (galaxyStore.isRescueRotating) {
           speedMultiplier = 0
-        } else if (galaxyTransPhase === 'warp') {
-          const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_WARP_MS, 1)
-          speedMultiplier = 1 + 44 * (t * t * t)
-        } else if (galaxyTransPhase === 'decel') {
-          const t = Math.min(galaxyTransElapsed / GALAXY_TRANS_DECEL_MS, 1)
-          speedMultiplier = 1 + 44 * Math.pow(1 - t, 3.5)
+        } else if (warp.phase !== 'idle') {
+          speedMultiplier = warp.out.speed
         } else {
           const solar = useSolarUpgradeStore()
           const flightBonus = 1 + solar.flightSpeedLevel * SOLAR_STAR_SPEED_BONUS
@@ -1026,17 +1135,31 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     const h = cachedH
     const ctx = cachedCtx
 
-    if (ctx) ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+    const wo = warp.out
+    const warpActive = wo.phase !== 'idle'
+    const warpFlight = warpActive && wo.phase !== 'decel'
+
+    if (ctx) {
+      if (warpActive && wo.trailFade < 0.999) {
+        // Persistenz-Blur: das Vorbild wird nur zum Teil gelöscht, die Striche
+        // ziehen eine Spur. `destination-out` hält den Canvas transparent — die
+        // CSS-Nebel darunter bleiben unberührt. Alpha und Composite werden
+        // explizit gesetzt, weil die Sprite-Zeichner globalAlpha stehen lassen.
+        ctx.globalAlpha = 1
+        ctx.globalCompositeOperation = 'destination-out'
+        ctx.fillStyle = `rgba(0,0,0,${wo.trailFade.toFixed(3)})`
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+        ctx.globalCompositeOperation = 'source-over'
+      } else {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+      }
+    }
 
     // Der Fluchtpunkt wandert leicht um die Bildmitte; die Sonne bleibt dort
     // stehen — die Kamera hängt am Spieler, nur sein Kurs schiebt den Fokus.
     // Bei Warp, Hyperspace, Schwenk und Reduced-Motion fährt er weich auf 0.
     const driftOn =
-      !isFrozen &&
-      galaxyTransPhase === 'idle' &&
-      !hyperActive &&
-      speedMultiplier > 0 &&
-      !prefersReducedMotion.value
+      !isFrozen && !warpActive && !hyperActive && speedMultiplier > 0 && !prefersReducedMotion.value
     const driftStep = delta / FLIGHT_DRIFT_EASE_SEC
     driftGain = Math.max(0, Math.min(1, driftGain + (driftOn ? driftStep : -driftStep)))
     driftPhase += delta
@@ -1066,13 +1189,15 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       flightLive.mode = helmOut.mode
       writeFlightFollowers()
     }
-    const cx = w / 2 + (helmOut ? helmOut.focusX : baseFx)
-    const cy = h / 2 + (helmOut ? helmOut.focusY : baseFy)
+    // Im Warp kommt der Kurs dazu: der Fluchtpunkt steht am Kursziel, die
+    // Sterne fließen von dort weg — das ist der Tunnel.
+    const cx = w / 2 + (helmOut ? helmOut.focusX : baseFx) + wo.focusX
+    const cy = h / 2 + (helmOut ? helmOut.focusY : baseFy) + wo.focusY
     const maxDist = Math.hypot(w / 2, h / 2) + 20 + Math.hypot(cx - w / 2, cy - h / 2)
     // Slip in px/s (Gewicht 1 am Rand) und als Schritt dieses Frames; Roll als Schritt.
     const slipOn =
       helmOut !== null &&
-      galaxyTransPhase === 'idle' &&
+      !warpActive &&
       !hyperActive &&
       (Math.hypot(helmOut.slipX, helmOut.slipY) >= HELM_SLIP_EPS_PX_S || helmOut.rollRate !== 0)
     const slipVx = slipOn ? helmOut!.slipX : 0
@@ -1086,26 +1211,21 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         : Math.random() * Math.PI * 2
 
     // ── Kosmischer Staub ────────────────────────────────────────────────────
-    if (ctx) {
+    // Im Flug ausgesetzt (bei 45× wäre er ohnehin nur Schmier), beim Ausrollen
+    // über globalAlpha zurückgeblendet — nicht über d.opacity, das würde den
+    // Verlaufs-Cache jeden Frame verwerfen.
+    if (ctx && wo.ambientGain > 0) {
       ctx.save()
       ctx.globalCompositeOperation = 'multiply'
+      ctx.globalAlpha = wo.ambientGain
       for (const d of dustPatches) {
         const dNorm = d.dist / maxDist
         const dSpeed = d.baseSpeed * dNorm * dNorm * WARP_SPEED_MAX * speedMultiplier
-        if (galaxyTransPhase === 'warp') {
-          const sx = cx + Math.cos(d.angle) * d.dist
-          const sy = cy + Math.sin(d.angle) * d.dist
-          const nx = sx + Math.cos(galaxyTransDir) * dSpeed * delta
-          const ny = sy + Math.sin(galaxyTransDir) * dSpeed * delta
-          d.dist = Math.hypot(nx - cx, ny - cy)
-          d.angle = Math.atan2(ny - cy, nx - cx)
-        } else {
-          d.dist += dSpeed * delta
-          if (slipOn) {
-            d.angle += rollStep
-            const wgt = dNorm * dNorm
-            slipPolar(d, slipX * wgt, slipY * wgt, Math.cos(d.angle), Math.sin(d.angle))
-          }
+        d.dist += dSpeed * delta
+        if (slipOn) {
+          d.angle += rollStep
+          const wgt = dNorm * dNorm
+          slipPolar(d, slipX * wgt, slipY * wgt, Math.cos(d.angle), Math.sin(d.angle))
         }
         if (d.dist > maxDist) {
           d.angle = respawnAngle()
@@ -1145,24 +1265,21 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     }
 
     // ── Sternenhaufen ──────────────────────────────────────────────────────
-    if (ctx) {
+    if (ctx && wo.ambientGain > 0) {
       for (const cluster of starClusters) {
         const cNorm = cluster.dist / maxDist
         const cSpeed = cluster.baseSpeed * cNorm * cNorm * WARP_SPEED_MAX * speedMultiplier
-        if (galaxyTransPhase === 'warp') {
-          const sx = cx + Math.cos(cluster.angle) * cluster.dist
-          const sy = cy + Math.sin(cluster.angle) * cluster.dist
-          const nx = sx + Math.cos(galaxyTransDir) * cSpeed * delta
-          const ny = sy + Math.sin(galaxyTransDir) * cSpeed * delta
-          cluster.dist = Math.hypot(nx - cx, ny - cy)
-          cluster.angle = Math.atan2(ny - cy, nx - cx)
-        } else {
-          cluster.dist += cSpeed * delta
-          if (slipOn) {
-            cluster.angle += rollStep
-            const wgt = cNorm * cNorm
-            slipPolar(cluster, slipX * wgt, slipY * wgt, Math.cos(cluster.angle), Math.sin(cluster.angle))
-          }
+        cluster.dist += cSpeed * delta
+        if (slipOn) {
+          cluster.angle += rollStep
+          const wgt = cNorm * cNorm
+          slipPolar(
+            cluster,
+            slipX * wgt,
+            slipY * wgt,
+            Math.cos(cluster.angle),
+            Math.sin(cluster.angle),
+          )
         }
         if (cluster.dist > maxDist) {
           cluster.angle = respawnAngle()
@@ -1174,7 +1291,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         cluster.twinklePhase += 0.5 * delta
         const distAlpha = Math.min(1, cNorm * 3)
         const fadeEdge = cNorm > 0.85 ? 1 - (cNorm - 0.85) / 0.15 : 1
-        const baseAlpha = distAlpha * fadeEdge * (0.3 + 0.1 * Math.sin(cluster.twinklePhase))
+        const baseAlpha =
+          distAlpha * fadeEdge * (0.3 + 0.1 * Math.sin(cluster.twinklePhase)) * wo.ambientGain
         const spreadScale = 0.25 + cNorm * 1.6
         for (const s of cluster.stars) {
           const a = baseAlpha * s.brightness
@@ -1196,42 +1314,43 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     }
 
     // ── Sterne ─────────────────────────────────────────────────────────────
+    // Auch der Warp ist radial: die Sterne fließen vom (versetzten) Fluchtpunkt
+    // weg, mit norm² Tiefe — nah am Fokus kriechen sie, am Rand rasen sie.
+    // Früher schob der Warp alle als flache Ebene quer über den Schirm; das las
+    // sich als gescrolltes Wallpaper, nicht als Flug.
+    const streaking = (hyperActive || (warpActive && wo.streakGain > 0)) && speedMultiplier > 1.5
+    const streakWidth = WARP_STREAK_WIDTH_BASE + speedMultiplier * WARP_STREAK_WIDTH_PER_SPEED
+    const streakLenGain = warpActive ? wo.streakGain : 1
+    const headlightBoost = 0.6 * wo.headlight
+    /** 0 … 1: wie weit der Tunnel schon zugezogen ist (Spawn-Nähe zum Fokus). */
+    const tunnel = Math.max(0, Math.min(1, (speedMultiplier - 2) / 18))
+    /** Steht die Drehung eines Streak-Sprites noch auf dem Context? */
+    let streakTransformDirty = false
     for (const star of stars) {
       const norm = star.dist / maxDist
-      let speed: number
-      if (galaxyTransPhase === 'warp') {
-        speed = star.baseSpeed * WARP_SPEED_MAX * speedMultiplier
-        const sx = cx + Math.cos(star.angle) * star.dist
-        const sy = cy + Math.sin(star.angle) * star.dist
-        const nx = sx + Math.cos(galaxyTransDir) * speed * delta
-        const ny = sy + Math.sin(galaxyTransDir) * speed * delta
-        star.dist = Math.hypot(nx - cx, ny - cy)
-        star.angle = Math.atan2(ny - cy, nx - cx)
-      } else {
-        speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX * speedMultiplier
-        star.dist += speed * delta
-        if (slipOn) {
-          star.angle += rollStep
-          const wgt = norm * norm
-          slipPolar(star, slipX * wgt, slipY * wgt, Math.cos(star.angle), Math.sin(star.angle))
-        }
+      const speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX * speedMultiplier
+      star.dist += speed * delta
+      if (slipOn) {
+        star.angle += rollStep
+        const wgt = norm * norm
+        slipPolar(star, slipX * wgt, slipY * wgt, Math.cos(star.angle), Math.sin(star.angle))
       }
       if (star.dist > maxDist) {
-        if (galaxyTransPhase === 'warp') {
-          star.angle = galaxyTransDir + Math.PI / 2 + Math.random() * Math.PI
-          star.dist = maxDist * (0.05 + Math.random() * 0.88)
-          star.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
-        } else if (galaxyTransPhase === 'decel') {
-          star.angle = Math.random() * Math.PI * 2
-          star.dist = maxDist * (0.25 + Math.random() * 0.65)
-          star.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
-        } else {
-          star.angle = respawnAngle()
-          star.dist = hyperActive
-            ? maxDist * (0.02 + Math.random() * 0.08)
-            : maxDist * (0.1 + Math.random() * 0.35)
-          star.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
-        }
+        star.angle = respawnAngle()
+        // Im Flug rückt der Nachschub mit dem Tempo an den Fluchtpunkt (der
+        // Tunnel); beim Ausrollen rundum verteilt, sonst wie gehabt. Nicht
+        // schlagartig: mit 2× am Rand geboren und bei 45× dicht am Fokus —
+        // sonst stand der Schirm beim Losfliegen für eine Sekunde leer.
+        if (hyperActive) star.dist = maxDist * (0.02 + Math.random() * 0.08)
+        else if (warpFlight)
+          star.dist = maxDist * (0.1 - 0.08 * tunnel + Math.random() * (0.35 - 0.27 * tunnel))
+        else if (wo.phase === 'decel') star.dist = maxDist * (0.25 + Math.random() * 0.65)
+        else star.dist = maxDist * (0.1 + Math.random() * 0.35)
+        star.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
+        // Diesen Frame nicht zeichnen: `speed` und `norm` stammen noch vom
+        // Rand — der Strich eines eben geborenen Sterns zog sonst mit der
+        // alten Randlänge quer durch den Fluchtpunkt.
+        continue
       }
       const x = cx + Math.cos(star.angle) * star.dist
       const y = cy + Math.sin(star.angle) * star.dist
@@ -1240,29 +1359,45 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const twinkle = 0.5 + 0.5 * Math.sin(star.twinklePhase)
       const fadeEdge = norm > 0.88 ? 1 - (norm - 0.88) / 0.12 : 1
       let alpha: number
-      if (hyperActive) alpha = Math.min(1, distAlpha * 1.5)
-      else if (galaxyTransPhase === 'decel') alpha = Math.min(1, distAlpha * 1.8) * fadeEdge
+      if (hyperActive || warpFlight) alpha = Math.min(1, distAlpha * 1.5)
+      else if (wo.phase === 'decel') alpha = Math.min(1, distAlpha * 1.8) * fadeEdge
       else alpha = distAlpha * (0.5 + 0.5 * twinkle) * fadeEdge
+      // Aberration: bei Höchsttempo drängt das Licht nach vorn — voraus heller.
+      if (headlightBoost > 0) alpha = Math.min(1, alpha * (1 + headlightBoost * (1 - norm)))
       if (ctx) {
-        const isStreaking =
-          (hyperActive || galaxyTransPhase === 'warp' || galaxyTransPhase === 'decel') &&
-          speedMultiplier > 1.5
-        const trailAngle = galaxyTransPhase === 'warp' ? galaxyTransDir : star.angle
-        if (isStreaking) {
-          const trailLength = speed * FLIGHT_EXPOSURE_SEC * WARP_STREAK_LEN_FACTOR
-          ctx.beginPath()
-          ctx.moveTo(x - Math.cos(trailAngle) * trailLength, y - Math.sin(trailAngle) * trailLength)
-          ctx.lineTo(x, y)
-          ctx.strokeStyle = `rgba(${star.r},${star.g},${star.b},${alpha})`
-          ctx.lineWidth = 0.8 + speedMultiplier * 0.12
-          ctx.lineCap = 'round'
-          ctx.stroke()
+        const tier = starFogTier(norm)
+        const fog = STAR_BG_FOG_TIERS[tier]
+        const starSize = (0.8 + norm * norm * 5.0) * fog.size
+        // Ein Stern wird erst zum Strich, wenn sein Schweif seinen Körper
+        // deutlich überragt. Vorher bleibt er das Halo-Sprite: bei 2× ist der
+        // Schweif ein einzelner Pixel, und ein Feld aus Ein-Pixel-Kapseln las
+        // sich beim Losfliegen als leerer Himmel.
+        const trailLength = streaking
+          ? speed * FLIGHT_EXPOSURE_SEC * WARP_STREAK_LEN_FACTOR * streakLenGain
+          : 0
+        if (trailLength > starSize * 3) {
+          const width = Math.max(streakWidth, starSize)
+          drawStreakSprite(
+            ctx,
+            star.r,
+            star.g,
+            star.b,
+            x,
+            y,
+            star.angle,
+            trailLength,
+            width,
+            alpha,
+            warpActive ? warpDopplerTier(norm, wo.tintGain) : WARP_DOPPLER_OWN,
+          )
+          streakTransformDirty = true
         } else {
           // Ein drawImage statt Kern- + Halo-Fill. Das sparte pro Frame 800
           // Canvas-Pfade und 800 `rgba(…)`-Strings (siehe starSprites.ts).
-          const tier = starFogTier(norm)
-          const fog = STAR_BG_FOG_TIERS[tier]
-          const starSize = (0.8 + norm * norm * 5.0) * fog.size
+          if (streakTransformDirty) {
+            ctx.setTransform(1, 0, 0, 1, 0, 0)
+            streakTransformDirty = false
+          }
           const starAlpha = alpha * fog.alpha
           if (star.bloom && norm > STAR_BG_BLOOM_MIN_NORM) {
             const ramp = Math.min(1, (norm - STAR_BG_BLOOM_MIN_NORM) / 0.2)
@@ -1281,12 +1416,43 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         }
       }
     }
-    if (ctx) ctx.globalAlpha = 1
+    if (ctx) {
+      ctx.globalAlpha = 1
+      // Die Streak-Sprites lassen ihre Drehung stehen (ein Reset je Stern wäre
+      // die halbe Arbeit umsonst) — hier EINMAL zurück auf die Einheit.
+      if (streakTransformDirty) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        streakTransformDirty = false
+      }
+    }
+
+    // ── Headlight — die Aufhellung um den Fluchtpunkt bei Höchsttempo ──────
+    // Ein Verlauf bei (0,0), per translate an den Fokus geschoben. Die Alpha ist
+    // auf den Stationärwert unter der Persistenz-Spur ausgelegt: jeden Frame
+    // neu über die halb gelöschte Spur gelegt, summierte sie sich sonst hoch.
+    if (ctx && wo.headlight > 0) {
+      const radius = WARP_HEADLIGHT_RADIUS_FRAC * Math.min(w, h)
+      if (!headlightGradient || Math.abs(radius - headlightRadius) > 1) {
+        headlightGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius)
+        headlightGradient.addColorStop(0, 'rgba(205,228,255,1)')
+        headlightGradient.addColorStop(0.4, 'rgba(170,200,255,0.35)')
+        headlightGradient.addColorStop(1, 'rgba(140,170,255,0)')
+        headlightRadius = radius
+      }
+      ctx.globalAlpha = persistentDrawAlpha(WARP_HEADLIGHT_ALPHA * wo.headlight, wo.trailFade)
+      ctx.setTransform(1, 0, 0, 1, cx, cy)
+      ctx.fillStyle = headlightGradient
+      ctx.fillRect(-radius, -radius, radius * 2, radius * 2)
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.globalAlpha = 1
+    }
 
     // ── Flight streaks — the player flies INTO the screen in every phase;
     // shed material streams back past the viewer as radial phase-tinted
     // lines riding the same center-outward flow as the stars.
-    if (ctx && !isFrozen && speedMultiplier > 0) {
+    // Im Warp übernehmen die Sterne selbst das Streaken; die Linien kommen mit
+    // dem Staub zurück.
+    if (ctx && !isFrozen && speedMultiplier > 0 && wo.ambientGain > 0) {
       const solarForStreaks = useSolarUpgradeStore()
       const streakColor = solarForStreaks.isCometState
         ? COMET_PHASE_DATA.accent
@@ -1329,7 +1495,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         const ty = hy - Math.sin(ta) * len
         // fade in with distance like the stars: invisible at center, present
         // at the edges where it rushes past the camera
-        const alpha = Math.min(1, sNorm * 3)
+        const alpha = Math.min(1, sNorm * 3) * wo.ambientGain
         if (alpha < 0.05) continue
         const grad = ctx.createLinearGradient(tx, ty, hx, hy)
         grad.addColorStop(0, `${streakColor}00`)
@@ -1350,7 +1516,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       // of bright, long lines rushes past. Skipped during warp/hyperspace,
       // where the stars themselves already streak.
       burstCooldown -= delta
-      if (burstCooldown <= 0 && galaxyTransPhase === 'idle' && !hyperActive) {
+      if (burstCooldown <= 0 && !warpActive && !hyperActive) {
         const count =
           FLIGHT_BURST_STREAK_MIN +
           Math.floor(Math.random() * (FLIGHT_BURST_STREAK_MAX - FLIGHT_BURST_STREAK_MIN + 1))
@@ -1419,7 +1585,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     if (ctx && !isFrozen) {
       const isComet = useSolarUpgradeStore().isCometState
       if (!isComet && cometDebris.length > 0) cometDebris.length = 0
-      if (isComet) {
+      if (isComet && !warpFlight) {
         while (cometDebris.length < COMET_DEBRIS_COUNT) {
           cometDebris.push({
             angle: Math.random() * Math.PI * 2,
@@ -1484,7 +1650,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     }
 
     // ── Himmelsbegegnungen — auf demselben Canvas, in derselben Strömung ───
-    if (ctx && !isFrozen && galaxyTransPhase === 'idle' && !hyperActive) {
+    if (ctx && !isFrozen && !warpActive && !hyperActive) {
       const themeIndex = useGalaxyStore().currentThemeIndex
       if (themeIndex !== tintThemeIndex) {
         const t = cometTintForGalaxy(themeIndex)
@@ -1520,8 +1686,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       if (p < 0.15) opacity = p / 0.15
       else if (p < 0.75) opacity = 1
       else opacity = 1 - (p - 0.75) / 0.25
-      if (hyperActive || galaxyTransPhase === 'warp') {
-        const fadeTime = hyperActive ? hyperspaceElapsed : galaxyTransElapsed / 1000
+      if (hyperActive || warpActive) {
+        const fadeTime = hyperActive ? hyperspaceElapsed : wo.flightSec
         opacity *= Math.max(0, 1 - fadeTime * 3)
       }
       if (slipOn) {
@@ -1548,25 +1714,33 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       }
     }
 
+    // ── Zielgalaxie — wächst am Fluchtpunkt heran, im Ausrollen füllt sie das
+    // Bild und löst sich auf: wir sind angekommen, wir sind IN ihr. ──────────
+    if (destGalaxy) {
+      const g = destGalaxy
+      const half = destGalaxySize / 2
+      const gOpStr = wo.destGalaxyAlpha.toFixed(3)
+      if (g._lastOpacity !== gOpStr) {
+        g.el.style.opacity = gOpStr
+        g._lastOpacity = gOpStr
+      }
+      const gTrStr = `translate(${(cx - half).toFixed(1)}px,${(cy - half).toFixed(1)}px) scale(${wo.destGalaxyScale.toFixed(3)}) rotate(${g.rot}deg)`
+      if (g._lastTransform !== gTrStr) {
+        g.el.style.transform = gTrStr
+        g._lastTransform = gTrStr
+      }
+    }
+
     // ── Emission Nebula / Ion Cloud ────────────────────────────────────────
     for (let i = emissionNebulas.length - 1; i >= 0; i--) {
       const n = emissionNebulas[i]
       const nNorm = n.dist / maxDist
       const nSpeed = n.baseSpeed * nNorm * nNorm * WARP_SPEED_MAX * speedMultiplier
-      if (galaxyTransPhase === 'warp') {
-        const sx = cx + Math.cos(n.angle) * n.dist
-        const sy = cy + Math.sin(n.angle) * n.dist
-        const nx2 = sx + Math.cos(galaxyTransDir) * nSpeed * delta
-        const ny2 = sy + Math.sin(galaxyTransDir) * nSpeed * delta
-        n.dist = Math.hypot(nx2 - cx, ny2 - cy)
-        n.angle = Math.atan2(ny2 - cy, nx2 - cx)
-      } else {
-        n.dist += nSpeed * delta
-        if (slipOn) {
-          n.angle += rollStep
-          const wgt = nNorm * nNorm
-          slipPolar(n, slipX * wgt, slipY * wgt, Math.cos(n.angle), Math.sin(n.angle))
-        }
+      n.dist += nSpeed * delta
+      if (slipOn) {
+        n.angle += rollStep
+        const wgt = nNorm * nNorm
+        slipPolar(n, slipX * wgt, slipY * wgt, Math.cos(n.angle), Math.sin(n.angle))
       }
       n.scale = 0.02 + (n.maxScale - 0.02) * nNorm
       const wx = cx + Math.cos(n.angle) * n.dist
@@ -1575,8 +1749,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const distAlpha = Math.min(1, nNorm * 3)
       const fadeEdge = nNorm > 0.85 ? 1 - (nNorm - 0.85) / 0.15 : 1
       let opacity = distAlpha * fadeEdge * 0.65
-      if (hyperActive || galaxyTransPhase === 'warp') {
-        const fadeTime = hyperActive ? hyperspaceElapsed : galaxyTransElapsed / 1000
+      if (hyperActive || warpActive) {
+        const fadeTime = hyperActive ? hyperspaceElapsed : wo.flightSec
         opacity *= Math.max(0, 1 - fadeTime * 2)
       }
       const nOpStr = opacity.toFixed(3)
@@ -1679,6 +1853,11 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       clearEncounters(sky)
       registerSkyDebug(null)
     }
+    resetGalaxyWarp(warp)
+    destGalaxy = null
+    headlightGradient = null
+    warpNebulaHidden.value = false
+    warpVignetteOn.value = false
     if (galaxySpawnTimeout) {
       clearTimeout(galaxySpawnTimeout)
       galaxySpawnTimeout = null
@@ -1744,7 +1923,13 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         registerSkyDebug({
           spawn: (kind) => {
             if (encounterFrame.maxDist > 0)
-              spawnEncounter(sky, kind as EncounterKind, Math.floor(Math.random() * 1e6), encounterFrame, Math.random)
+              spawnEncounter(
+                sky,
+                kind as EncounterKind,
+                Math.floor(Math.random() * 1e6),
+                encounterFrame,
+                Math.random,
+              )
           },
           evade: (angle, strength) => requestEvade(helm, angle, strength),
           helm: () => helm,
@@ -1760,5 +1945,13 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     cleanup()
   })
 
-  return { starsContainer, starCanvas, prefersReducedMotion }
+  return {
+    starsContainer,
+    starCanvas,
+    prefersReducedMotion,
+    warpNebulaHidden,
+    warpVignetteOn,
+    warpFlashKey,
+    warpAccent,
+  }
 }

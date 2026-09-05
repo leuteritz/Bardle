@@ -290,6 +290,18 @@ export const useGalaxyStore = defineStore('galaxy', {
     travelingToGalaxyBoss: false,
     pendingTransition: false,
     isGalaxyTransitioning: false,
+    /**
+     * Die Rollenwahl der neuen Galaxie wartet auf die ANKUNFT des Warps.
+     *
+     * `commitAdvance()` feuert am Ende der Beschleunigung, 3,6 s vor dem
+     * Stillstand. Öffnete es die Rollenwahl sofort, setzte `pendingRoleSelection`
+     * den Hintergrund still (`starsBackgroundPaused`) — und mit ihm die
+     * Warp-Maschine, die in derselben Schleife tickt: das Abbremsen fror hinter
+     * dem Modal ein und lief erst nach der Rollenwahl nachträglich mit 45× an.
+     * Nicht persistiert: ein Reload dazwischen fängt der Rettungsanker in
+     * usePersistence (idle ohne Rolle → Rollenwahl).
+     */
+    roleSelectionAfterWarp: false,
     currentThemeIndex: 0,
     // Alle in diesem Durchlauf bereits verwendeten Theme-Indizes — verhindert,
     // dass sich eine Galaxiefarbe wiederholt, bevor alle Themes durch sind.
@@ -620,7 +632,10 @@ export const useGalaxyStore = defineStore('galaxy', {
       if (elapsed / dauer < plan.t) return
 
       this.activeLandfall = {
-        ...plan, openedAt: now, taps: 0, choice: null,
+        ...plan,
+        openedAt: now,
+        taps: 0,
+        choice: null,
         flightMode: landfallFlightModeFor(this.mapSeed, plan.leg, plan.kind),
       }
       useLandfallStore().onOpen(this.activeLandfall)
@@ -966,6 +981,14 @@ export const useGalaxyStore = defineStore('galaxy', {
 
     setGalaxyTransitioning(val: boolean) {
       this.isGalaxyTransitioning = val
+      // Im Flug bleibt das Profil zu — ein offener Bard-Tab hielte die
+      // Hintergrundschleife und damit den Warp selbst an.
+      useUiStore().setBardModalLocked(val)
+      // Die Ankunft: erst jetzt steht das Schiff, erst jetzt die Rollenwahl.
+      if (!val && this.roleSelectionAfterWarp) {
+        this.roleSelectionAfterWarp = false
+        this.requestRoleSelection()
+      }
     },
 
     requestTransition() {
@@ -1055,7 +1078,12 @@ export const useGalaxyStore = defineStore('galaxy', {
       )
       this.currentThemeIndex = theme.themeIndex
       this.usedThemeIndices = theme.used
-      this.requestRoleSelection()
+      // Die alte Rolle gilt nicht mehr — auch dann nicht, wenn die Rollenwahl
+      // noch auf die Ankunft wartet: der Rettungsanker in usePersistence flöge
+      // sonst nach einem Reload im Abbremsen mit ihr los, ohne zu fragen.
+      this.nextStarRole = null
+      if (this.isGalaxyTransitioning) this.roleSelectionAfterWarp = true
+      else this.requestRoleSelection()
     },
 
     /**

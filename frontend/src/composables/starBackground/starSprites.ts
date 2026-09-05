@@ -8,6 +8,14 @@ import {
   STAR_BG_WARM_RGB,
   STAR_BG_WARM_MIX,
   STAR_BG_BLOOM_SPRITE_PX,
+  WARP_DOPPLER_AHEAD_NORM,
+  WARP_DOPPLER_BEHIND_NORM,
+  WARP_DOPPLER_BLUE_MIX,
+  WARP_DOPPLER_BLUE_RGB,
+  WARP_DOPPLER_RED_MIX,
+  WARP_DOPPLER_RED_RGB,
+  WARP_STREAK_SPRITE_H_PX,
+  WARP_STREAK_SPRITE_LEN_PX,
 } from '@/config/constants'
 
 /**
@@ -32,6 +40,13 @@ import {
  *
  * Tiefe: ferne Sterne sind in STAR_BG_FOG_RGB gemischt, die nahe Stufe leicht
  * warm — drei Stufen, kein Verlauf pro Frame.
+ *
+ * Streaks (Warp, Hyperspace): dieselbe Idee. Vorher war das die letzte
+ * Pfad-Schleife pro Stern — 400 `moveTo/lineTo/stroke` mit 400 frischen
+ * `rgba(…)`-Strings je Warp-Frame. Jetzt ist ein Strich eine gecachte Kapsel
+ * mit Verlauf (Schweif transparent → heller Kopf), gedreht und gestreckt über
+ * EIN `setTransform` + EIN `drawImage`. Die Doppler-Stufe (voraus blau-weiß,
+ * hinten warm) steckt wie die Tiefe im Sprite-Schlüssel.
  */
 
 /** Kern-Sprite mit Halo (Hintergrundsterne), Schlüssel = Farbe | Stufe. */
@@ -57,11 +72,7 @@ function tierColor(r: number, g: number, b: number, tier: number): [number, numb
   const t = STAR_BG_FOG_TIERS[tier]
   const [fr, fg, fb] = tier === LAST_TIER ? STAR_BG_WARM_RGB : STAR_BG_FOG_RGB
   const m = tier === LAST_TIER ? STAR_BG_WARM_MIX : t.mix
-  return [
-    Math.round(r + (fr - r) * m),
-    Math.round(g + (fg - g) * m),
-    Math.round(b + (fb - b) * m),
-  ]
+  return [Math.round(r + (fr - r) * m), Math.round(g + (fg - g) * m), Math.round(b + (fb - b) * m)]
 }
 
 /**
@@ -207,6 +218,108 @@ export function drawDotSprite(
 ): void {
   ctx.globalAlpha = alpha
   ctx.drawImage(dotSprite(r, g, b), x - dotR, y - dotR, dotR * 2, dotR * 2)
+}
+
+/* ── Streaks ────────────────────────────────────────────────────────────────── */
+
+/** Doppler-Stufen: 0 = voraus (blau-weiß), 1 = seitlich (eigen), 2 = hinten (warm). */
+export const WARP_DOPPLER_OWN = 1
+const streakSprites = new Map<number, HTMLCanvasElement>()
+
+/**
+ * Doppler-Stufe aus der normierten Distanz zum Fluchtpunkt. `gain` 0…1 lässt
+ * die Zonen aus dem Nichts wachsen: bei 0 ist alles „seitlich", bei 1 gelten
+ * die vollen Schwellen — kein Farbsprung, wenn die Tönung einblendet.
+ */
+export function warpDopplerTier(norm: number, gain = 1): number {
+  if (gain <= 0) return WARP_DOPPLER_OWN
+  if (norm < WARP_DOPPLER_AHEAD_NORM * gain) return 0
+  if (norm > 1 - (1 - WARP_DOPPLER_BEHIND_NORM) * gain) return 2
+  return WARP_DOPPLER_OWN
+}
+
+function dopplerColor(r: number, g: number, b: number, tier: number): [number, number, number] {
+  if (tier === WARP_DOPPLER_OWN) return [r, g, b]
+  const [fr, fg, fb] = tier === 0 ? WARP_DOPPLER_BLUE_RGB : WARP_DOPPLER_RED_RGB
+  const m = tier === 0 ? WARP_DOPPLER_BLUE_MIX : WARP_DOPPLER_RED_MIX
+  return [Math.round(r + (fr - r) * m), Math.round(g + (fg - g) * m), Math.round(b + (fb - b) * m)]
+}
+
+/**
+ * Kapsel, Kopf rechts: der Verlauf läuft vom transparenten Schweif über die
+ * Sternfarbe in einen fast weißen Kopf — der Strich liest sich als Bewegung
+ * ZUM Kopf hin, nicht als Balken.
+ */
+function buildStreakSprite(r: number, g: number, b: number): HTMLCanvasElement {
+  const w = WARP_STREAK_SPRITE_LEN_PX
+  const h = WARP_STREAK_SPRITE_H_PX
+  const cv = document.createElement('canvas')
+  cv.width = w
+  cv.height = h
+  const c = cv.getContext('2d')
+  if (c) {
+    const rgb = `${r},${g},${b}`
+    const head = `${Math.round(r + (255 - r) * 0.6)},${Math.round(g + (255 - g) * 0.6)},${Math.round(b + (255 - b) * 0.6)}`
+    const grad = c.createLinearGradient(0, 0, w, 0)
+    grad.addColorStop(0, `rgba(${rgb},0)`)
+    grad.addColorStop(0.55, `rgba(${rgb},0.45)`)
+    grad.addColorStop(0.9, `rgba(${rgb},0.9)`)
+    grad.addColorStop(1, `rgba(${head},1)`)
+    const rad = h / 2
+    c.beginPath()
+    c.moveTo(rad, 0)
+    c.lineTo(w - rad, 0)
+    c.arc(w - rad, rad, rad, -Math.PI / 2, Math.PI / 2)
+    c.lineTo(rad, h)
+    c.arc(rad, rad, rad, Math.PI / 2, (Math.PI * 3) / 2)
+    c.closePath()
+    c.fillStyle = grad
+    c.fill()
+  }
+  return cv
+}
+
+/** Streak-Sprite für eine Palettenfarbe und Doppler-Stufe — lazy gebaut, dann gecacht. */
+export function streakSprite(
+  r: number,
+  g: number,
+  b: number,
+  doppler = WARP_DOPPLER_OWN,
+): HTMLCanvasElement {
+  const key = colorKey(r, g, b) | (doppler << 24)
+  let sprite = streakSprites.get(key)
+  if (!sprite) {
+    const [dr, dg, db] = dopplerColor(r, g, b, doppler)
+    sprite = buildStreakSprite(dr, dg, db)
+    streakSprites.set(key, sprite)
+  }
+  return sprite
+}
+
+/**
+ * Strich zeichnen: Kopf bei (x, y), Schweif `len` px entgegen `angle`.
+ * Setzt die Transformation und lässt sie stehen — der Aufrufer setzt nach der
+ * Schleife EINMAL `ctx.setTransform(1, 0, 0, 1, 0, 0)` zurück; ein Reset je
+ * Stern wäre die Hälfte der Arbeit umsonst.
+ */
+export function drawStreakSprite(
+  ctx: CanvasRenderingContext2D,
+  r: number,
+  g: number,
+  b: number,
+  x: number,
+  y: number,
+  angle: number,
+  len: number,
+  width: number,
+  alpha: number,
+  doppler = WARP_DOPPLER_OWN,
+): void {
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
+  ctx.globalAlpha = alpha
+  ctx.setTransform(cos, sin, -sin, cos, x, y)
+  ctx.drawImage(streakSprite(r, g, b, doppler), -len, -width / 2, len, width)
 }
 
 /** Bloom zeichnen — `radius` ist der halbe Durchmesser des Scheins. */

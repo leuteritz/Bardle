@@ -245,9 +245,7 @@ describe('Weighted champion-tier spawn', () => {
     expect(CHAMPION_TIER_REQUIRED_GALAXY[5]).toBeGreaterThanOrEqual(80)
     // Streng monoton — ein Tor, das nicht weiter ist als das davor, ist keines.
     for (let i = 1; i < CHAMPION_TIER_REQUIRED_GALAXY.length; i++) {
-      expect(CHAMPION_TIER_REQUIRED_GALAXY[i]).toBeGreaterThan(
-        CHAMPION_TIER_REQUIRED_GALAXY[i - 1],
-      )
+      expect(CHAMPION_TIER_REQUIRED_GALAXY[i]).toBeGreaterThan(CHAMPION_TIER_REQUIRED_GALAXY[i - 1])
     }
   })
 
@@ -520,6 +518,58 @@ describe('Warp bei reduzierter Bewegung', () => {
     expect(store.currentGalaxy).toBe(2)
     expect(store.pendingTransition).toBe(false)
     expect(store.isGalaxyTransitioning).toBe(false)
+  })
+
+  it('öffnet die Rollenwahl erst bei der Ankunft, nicht schon beim Galaxiewechsel', () => {
+    stubReducedMotion(true)
+    const store = useGalaxyStore()
+    store.nextStarRole = 'mid'
+    completeGalaxy(store)
+
+    store.requestTransition()
+    vi.advanceTimersByTime(GALAXY_TRANS_WARP_MS + 100)
+
+    // Der Wechsel ist gebucht, aber das Schiff bremst noch: kein Modal, das
+    // den Hintergrund (und damit den Warp selbst) stillsetzen würde.
+    expect(store.currentGalaxy).toBe(2)
+    expect(store.pendingRoleSelection).toBe(false)
+    expect(store.nextStarRole).toBeNull()
+
+    vi.advanceTimersByTime(GALAXY_TRANS_DECEL_MS)
+
+    expect(store.isGalaxyTransitioning).toBe(false)
+    expect(store.pendingRoleSelection).toBe(true)
+    expect(store.roleSelectionAfterWarp).toBe(false)
+  })
+
+  it('hält das Bard-Profil im Flug zu und gibt es bei der Ankunft frei', () => {
+    stubReducedMotion(true)
+    const store = useGalaxyStore()
+    const uiStore = useUiStore()
+    uiStore.closeBardModal()
+    completeGalaxy(store)
+
+    store.requestTransition()
+    uiStore.openBardModal()
+    expect(uiStore.bardActiveTab).toBeNull()
+    uiStore.setBardTab('shop')
+    expect(uiStore.bardActiveTab).toBeNull()
+
+    vi.advanceTimersByTime(GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS + 100)
+    uiStore.openBardModal()
+    expect(uiStore.bardActiveTab).toBe('bard')
+  })
+
+  it('fragt die Rolle sofort ab, wenn kein Warp läuft (Admin-Sprung)', () => {
+    stubReducedMotion(false)
+    const store = useGalaxyStore()
+    store.pendingRoleSelection = false
+
+    store.adminJumpToGalaxy(3)
+
+    expect(store.currentGalaxy).toBe(3)
+    expect(store.pendingRoleSelection).toBe(true)
+    expect(store.roleSelectionAfterWarp).toBe(false)
   })
 
   it('überlässt den Warp ohne reduzierte Bewegung der Hintergrundschleife', () => {

@@ -7,7 +7,13 @@
     v-show="!prefersReducedMotion"
     aria-hidden="true"
   >
-    <div :class="{ 'nebulas-paused': isPaused || nebulasPaused || frozen }">
+    <div
+      class="nebulas"
+      :class="{
+        'nebulas-paused': isPaused || nebulasPaused || frozen,
+        'nebulas-warp': warpNebulaHidden && !frozen,
+      }"
+    >
       <div class="nebula nebula-1"></div>
       <div class="nebula nebula-2"></div>
       <div class="nebula nebula-3"></div>
@@ -21,6 +27,20 @@
       class="star-canvas"
       :class="{ 'star-canvas-hidden': isPaused }"
     ></canvas>
+
+    <!-- Warp-Zeremonie: Vignette und Blitz liegen als DOM-Ebenen über dem
+         Canvas. Auf dem Canvas summierten sich Vollflächen unter der
+         Persistenz-Spur hoch; hier mischt sie der Compositor umsonst. -->
+    <template v-if="!frozen">
+      <div class="warp-vignette" :class="{ 'warp-vignette--on': warpVignetteOn }"></div>
+      <div
+        v-if="warpFlashKey > 0 && !warpFlashDone"
+        :key="warpFlashKey"
+        class="warp-flash"
+        :style="{ backgroundColor: warpAccent }"
+        @animationend="warpFlashDone = true"
+      ></div>
+    </template>
 
     <BackgroundComets :pause-when-idle-hidden="true" />
   </div>
@@ -42,10 +62,25 @@ const props = withDefaults(
   { contained: false, frozen: false },
 )
 
-const { starsContainer, starCanvas, prefersReducedMotion } = useStarBackground({ frozen: props.frozen })
+const {
+  starsContainer,
+  starCanvas,
+  prefersReducedMotion,
+  warpNebulaHidden,
+  warpVignetteOn,
+  warpFlashKey,
+  warpAccent,
+} = useStarBackground({ frozen: props.frozen })
 // Der Hintergrund ruht, sobald das Spiel steht — gleich ob das Fenster den
 // Fokus verloren hat oder der Spieler das Kürzel gedrückt hat.
 const { isPaused } = useGamePause()
+
+// Der Blitz verlässt das DOM, sobald er verglüht ist — ein ausgelaufenes
+// `forwards`-Element hielte sonst seine Compositor-Ebene bis zum nächsten Warp.
+const warpFlashDone = ref(false)
+watch(warpFlashKey, () => {
+  warpFlashDone.value = false
+})
 
 const NEBULA_IDLE_TIMEOUT = 30_000
 const nebulasPaused = ref(false)
@@ -360,6 +395,70 @@ onBeforeUnmount(() => {
 .nebulas-paused .emission-nebula,
 .nebulas-paused .ion-cloud {
   animation-play-state: paused !important;
+}
+
+/* ─── Warp ────────────────────────────────────────────────────────────────── */
+/* Im Flug verschwinden die Nebel (bei 45× stünde nichts still im Bild); mit
+   dem Galaxiewechsel kommen sie in den Farben der NEUEN Welt zurück — die
+   Custom Properties flippen, während die Blobs unsichtbar sind. Nur Opacity:
+   kein Filter, kein will-change, siehe die Ebenen-Begründung oben. */
+.nebulas {
+  transition: opacity 2.5s ease;
+}
+.nebulas-warp {
+  opacity: 0;
+}
+
+/* Randabdunklung im Tunnel — der Blick verengt sich auf den Fluchtpunkt. */
+.warp-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 1.8s ease;
+  background: radial-gradient(
+    ellipse 70% 62% at 50% 50%,
+    rgba(0, 0, 0, 0) 45%,
+    rgba(4, 2, 16, 0.45) 78%,
+    rgba(4, 2, 16, 0.78) 100%
+  );
+}
+.warp-vignette--on {
+  opacity: 1;
+}
+
+/* Der Schnitt: ein Blitz in der Akzentfarbe der neuen Galaxie deckt den harten
+   Wechsel des Hintergrund-Gradienten. Läuft einmal je :key. */
+.warp-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  animation: warpFlash 0.4s ease-out forwards;
+}
+
+@keyframes warpFlash {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nebulas,
+  .warp-vignette {
+    transition: none !important;
+  }
+  .warp-flash {
+    animation: none !important;
+  }
 }
 
 /* ─── Planets ─────────────────────────────────────────────────────────────── */

@@ -163,6 +163,13 @@ export const RESCUE_ROTATION_DURATION_MS = 2_000 // camera spin after role selec
 
 export const GALAXY_TRANS_WARP_MS = 8_400
 export const GALAXY_TRANS_DECEL_MS = 3_600
+// Teilabschnitte des Warps (utils/orbit/galaxyWarp.ts). Der Flug dauert
+// GALAXY_TRANS_WARP_MS: erst giert das Schiff auf den Kurs, dann beschleunigt
+// es, der Rest ist Reiseflug. Die Zielgalaxie erscheint DEST_LEAD_MS vor dem
+// Schnitt am Fluchtpunkt.
+export const GALAXY_WARP_COURSE_MS = 1_200
+export const GALAXY_WARP_ACCEL_MS = 3_000
+export const GALAXY_WARP_DEST_LEAD_MS = 1_000
 export const GALAXY_SPAWN_INTERVAL_MIN = 5_000
 export const GALAXY_SPAWN_INTERVAL_MAX = 12_000
 export const GALAXY_MAX_COUNT = 4
