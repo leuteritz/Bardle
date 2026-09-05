@@ -14,6 +14,13 @@ export type { BardTabId }
 
 export const useUiStore = defineStore('ui', () => {
   const bardActiveTab = ref<BardTabId | null>(null)
+  /**
+   * Solange der Galaxien-Warp läuft, bleibt das Profil zu. Der Warp fährt auf
+   * der Hintergrundschleife, und die steht, sobald ein Bard-Tab offen ist —
+   * das Schiff hinge mitten im Flug fest, während die Minimap-Uhr weiterläuft.
+   * Gesetzt vom galaxyStore mit `setGalaxyTransitioning`.
+   */
+  const bardModalLocked = ref(false)
   const rolesActiveSlot = ref(0)
   const rolesActiveSubSlot = ref(-1)
   const rolesOpenToken = ref(0)
@@ -74,7 +81,12 @@ export const useUiStore = defineStore('ui', () => {
     hoveredPlanetSlotId.value = null
   }
 
+  function setBardModalLocked(locked: boolean) {
+    bardModalLocked.value = locked
+  }
+
   function openBardModal() {
+    if (bardModalLocked.value && bardActiveTab.value === null) return
     // 'bard' und nicht 'shop': seit Laden und Sternbaum getrennte Reiter sind,
     // waere 'shop' eine Zusage auf einen bestimmten Inhalt. Journey ist der
     // Heimatreiter und traegt als einziger keinen zielabhaengigen Zustand.
@@ -89,6 +101,9 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   function setBardTab(id: BardTabId) {
+    // Nur das AUFKLAPPEN ist gesperrt — ein Reiterwechsel im offenen Profil
+    // (Admin-Wege) bleibt frei.
+    if (bardModalLocked.value && bardActiveTab.value === null) return
     bardActiveTab.value = id
     // navigating by hand ends the offer to jump back to the battle tab
     battleTabReturnPending.value = false
@@ -294,6 +309,8 @@ export const useUiStore = defineStore('ui', () => {
     openBardModal,
     setBardTab,
     closeBardModal,
+    bardModalLocked,
+    setBardModalLocked,
     requestOpenRolesTab,
     requestRoleFillFromBattle,
     returnToBattleTab,

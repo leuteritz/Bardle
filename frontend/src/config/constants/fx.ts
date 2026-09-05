@@ -271,6 +271,44 @@ export const FLIGHT_STREAK_LEN_FACTOR = 2.6
 export const FLIGHT_EXPOSURE_SEC = 1 / 60
 /** Sternstriche im Warp, als Vielfaches des Weges je Belichtung. */
 export const WARP_STREAK_LEN_FACTOR = 2.2
+
+// ── Galaxien-Warp: Überlichtflug zur nächsten Galaxie ─────────────────────
+// (utils/orbit/galaxyWarp.ts + useStarBackground.ts). Der Flug ist ein
+// Perspektiv-Tunnel: der Fluchtpunkt wandert zum Kursziel, die Sterne fließen
+// radial von dort weg. Kein zweites Canvas — dieselbe Schleife, dieselben Sprites.
+/** Höchsttempo als Vielfaches der Ruhe-Strömung (die Kurven enden hier). */
+export const WARP_SPEED_PEAK = 45
+/** Tempo am Ende des Gierens — der Schub setzt ein, bevor die Nase steht. */
+export const WARP_COURSE_SPEED_END = 2
+/** Atmen des Reiseflugs: ±Anteil um das Höchsttempo, zwei Perioden. */
+export const WARP_CRUISE_SHIMMER = 0.05
+export const WARP_CRUISE_SHIMMER_PERIOD_A_SEC = 0.9
+export const WARP_CRUISE_SHIMMER_PERIOD_B_SEC = 1.7
+/** Kursziel: Versatz des Fluchtpunkts als Anteil der kurzen Kante. */
+export const WARP_FOCUS_FRAC_MIN = 0.1
+export const WARP_FOCUS_FRAC_MAX = 0.18
+/** Bogen um „oben", aus dem der Kurs gezogen wird — nie in die Bottom-Bar. */
+export const WARP_COURSE_ARC_DEG = 240
+/** Persistenz-Blur: Anteil des Vorbilds, der je Frame gelöscht wird (1 = kein Blur). */
+export const WARP_TRAIL_FADE = 0.35
+/** Strichbreite: Grundwert + Tempo-Anteil (bei 45× ≈ 4 px). */
+export const WARP_STREAK_WIDTH_BASE = 1.0
+export const WARP_STREAK_WIDTH_PER_SPEED = 0.07
+/** Doppler: voraus (norm unter AHEAD) blau-weiß, hinten (über BEHIND) warm. */
+export const WARP_DOPPLER_AHEAD_NORM = 0.45
+export const WARP_DOPPLER_BEHIND_NORM = 0.8
+export const WARP_DOPPLER_BLUE_RGB: readonly [number, number, number] = [175, 205, 255]
+export const WARP_DOPPLER_BLUE_MIX = 0.55
+export const WARP_DOPPLER_RED_RGB: readonly [number, number, number] = [255, 160, 110]
+export const WARP_DOPPLER_RED_MIX = 0.5
+/** Aufhellung um den Fluchtpunkt („Headlight") — Sichtwert und Radius. */
+export const WARP_HEADLIGHT_ALPHA = 0.26
+export const WARP_HEADLIGHT_RADIUS_FRAC = 0.34
+/** Streak-Sprite (starSprites.ts): Länge × Höhe des Offscreen-Canvas. */
+export const WARP_STREAK_SPRITE_LEN_PX = 128
+export const WARP_STREAK_SPRITE_H_PX = 16
+/** Blitz in der Akzentfarbe des neuen Themes beim Schnitt (DOM). */
+export const WARP_FLASH_MS = 400
 /** Tiefenbänder: nah = schneller, heller, breiter. Tiefe kommt aus Bändern,
  *  nicht aus Menge. */
 export const FLIGHT_STREAK_BANDS: readonly { speed: number; alpha: number; width: number }[] = [

@@ -363,6 +363,9 @@ export function useBackgroundComets(
 
     const hyperActive = gameStore.isHyperspaceActive
     const transitioning = galaxyStore.isGalaxyTransitioning || galaxyStore.pendingTransition
+    // Ein Komet, der im 45×-Warp gemütlich diagonal weiterzieht, verrät die
+    // Kulisse — laufende Vorbeiflüge enden mit dem Aufbruch.
+    if ((transitioning || hyperActive) && bgComets.length > 0) bgComets.length = 0
 
     // ── Background comets — rare diagonal flybys across the whole canvas.
     // In-loop spawn (delta accumulator) → pauses with the RAF loop for free;
