@@ -10,7 +10,6 @@ import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import {
   ascensionRank,
-  perkChoicesFor,
   statEffectLabel,
   CHAMPION_STATS,
   PERK_BY_ID,
@@ -258,6 +257,14 @@ function statReadoutOf(key: ChampionStatKey) {
   const stat = CHAMPION_STATS.find((entry) => entry.key === key)
   return `${statEffectOf(key)} ${stat?.effectLabel ?? ''}`
 }
+function statDisplayName(key: ChampionStatKey) {
+  return {
+    power: 'Damage power',
+    vitality: 'Max HP',
+    focus: 'Ability cooldown',
+    fortune: 'Loot rewards',
+  }[key]
+}
 function statShare(key: ChampionStatKey) {
   return stats.value && statPeak.value > 0 ? stats.value[key] / statPeak.value : 0
 }
@@ -266,7 +273,6 @@ interface PerkSlot {
   level: number
   perk: ChampionPerkDef | null
   state: 'taken' | 'open' | 'locked'
-  exhausted: boolean
 }
 const perkChoices = computed(() => (champion.value ? levelStore.perkChoicesOf(champion.value) : []))
 const pendingPerkLevel = computed(
@@ -275,7 +281,6 @@ const pendingPerkLevel = computed(
 const perkPath = computed<PerkSlot[]>(() => {
   if (!champion.value) return []
   const taken = levelStore.progressOf(champion.value).perks
-  const ownedIds = Object.values(taken)
   const path: PerkSlot[] = []
   for (
     let milestone = CHAMPION_PERK_INTERVAL;
@@ -287,8 +292,6 @@ const perkPath = computed<PerkSlot[]>(() => {
       level: milestone,
       perk,
       state: perk ? 'taken' : pendingPerkLevel.value === milestone ? 'open' : 'locked',
-      exhausted:
-        !perk && level.value >= milestone && perkChoicesFor(milestone, ownedIds).length === 0,
     })
   }
   return path
@@ -515,7 +518,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
               >
                 <Icon :icon="stat.icon" width="24" height="24" />
                 <div>
-                  <small>{{ stat.short }}</small
+                  <small>{{ statDisplayName(stat.key) }}</small
                   ><strong>{{ stats[stat.key].toFixed(1) }}</strong
                   ><span>{{ statReadoutOf(stat.key) }}</span>
                 </div>
@@ -636,22 +639,20 @@ function equippedItem(category: ItemCategory): ShopItem | null {
               v-tip="`Level ${slot.level} · ${slot.perk.desc}`"
             >
               <Icon :icon="slot.perk.icon" width="25" height="25" />
-              <div>
-                <small>Level {{ slot.level }}</small><strong>{{ slot.perk.name }}</strong
-                ><span>{{ slot.perk.desc }}</span>
-              </div>
+              <small>Lv. {{ slot.level }}</small><strong>{{ slot.perk.name }}</strong
+              ><span>{{ slot.perk.desc }}</span>
             </article>
           </div>
-          <div v-else-if="focusedPerkSlot" class="sdp-perk-empty">
+          <div v-else class="sdp-perk-empty">
             <Icon
-              v-if="focusedPerkSlot.state === 'open'"
+              v-if="openPerkSlot"
               icon="game-icons:ribbon-medal"
               width="21"
               height="21"
             />
             <Icon v-else icon="lucide:lock-keyhole" width="19" height="19" />
             <span>{{
-              focusedPerkSlot.state === 'open'
+              openPerkSlot
                 ? 'Milestone reached — choose a perk below.'
                 : `First perk unlocks at level ${CHAMPION_PERK_INTERVAL}.`
             }}</span>
@@ -830,18 +831,18 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-hero {
   position: relative;
   min-width: 0;
-  min-height: 454px;
+  min-height: 294px;
   display: grid;
   grid-template-columns: 48% minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto auto auto auto;
+  grid-template-rows: auto auto auto auto;
   column-gap: 20px;
-  padding: 16px 20px;
+  padding: 10px 20px;
   border-bottom: 2px solid #3e200a;
   background: color-mix(in srgb, var(--rc) 16%, #141410);
 }
 .sdp-portrait {
   position: relative;
-  grid-row: 1 / 6;
+  grid-row: 1 / 5;
   min-height: 0;
   width: 100%;
   overflow: hidden;
@@ -980,8 +981,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   margin: auto;
 }
 .sdp-identity {
-  align-self: end;
-  padding: 0 6px 20px;
+  align-self: start;
+  padding: 8px 6px 5px;
 }
 .sdp-seat-name {
   margin: 0 0 2px;
@@ -993,7 +994,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-identity h2 {
   margin: 0;
   color: #f3d57b;
-  font-size: 52px;
+  font-size: 40px;
   font-weight: 400;
   line-height: 1;
 }
@@ -1001,8 +1002,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   display: flex;
   flex-wrap: wrap;
   gap: 5px 10px;
-  margin-top: 9px;
-  font-size: 13px;
+  margin-top: 4px;
+  font-size: 11px;
 }
 .sdp-meta span {
   display: inline-flex;
@@ -1010,7 +1011,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   gap: 3px;
 }
 .sdp-progression {
-  padding: 0 6px 19px;
+  padding: 0 6px 5px;
 }
 .sdp-xp-head {
   display: flex;
@@ -1041,14 +1042,14 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-hero-stat-block {
   grid-column: 2;
-  padding: 0 6px 13px;
+  padding: 0 6px 5px;
 }
 .sdp-hero-stat-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  min-height: 24px;
+  min-height: 20px;
   border-bottom: 1px solid #5c3310;
   color: #e8c040;
   font-size: 11px;
@@ -1069,8 +1070,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: 48px;
-  padding: 12px;
+  min-height: 44px;
+  padding: 9px;
   border: 1px solid #6ec040;
   border-radius: 4px;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
@@ -1106,6 +1107,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   text-align: right;
 }
 .sdp-workspace {
+  flex: 1 1 0;
   min-width: 0;
   min-height: 0;
   display: flex;
@@ -1113,9 +1115,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   gap: 7px;
   padding: 12px 20px 16px;
   background: color-mix(in srgb, var(--rc) 6%, #111008);
-  overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
+  overflow: hidden;
 }
 .sdp-section {
   min-width: 0;
@@ -1145,26 +1145,26 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-hero-stat-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px;
   padding-top: 7px;
 }
 .sdp-stat {
   position: relative;
-  min-height: 54px;
+  min-height: 38px;
   display: grid;
   grid-template-columns: 29px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
-  padding: 7px 9px;
+  padding: 5px 7px;
   border: 1px solid color-mix(in srgb, var(--sc) 36%, #3e200a);
   border-radius: 4px;
   background: linear-gradient(125deg, color-mix(in srgb, var(--sc) 10%, #15140e), #15140e 65%);
   color: var(--sc);
 }
 .sdp-stat > svg {
-  width: 24px;
-  height: 24px;
+  width: 21px;
+  height: 21px;
 }
 .sdp-stat div {
   min-width: 0;
@@ -1174,27 +1174,27 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-stat small {
   grid-column: 1;
-  font-size: 10px;
+  font-size: 8px;
   letter-spacing: 0.08em;
 }
 .sdp-stat strong {
   grid-column: 2;
   grid-row: 1;
-  font-size: 27px;
+  font-size: 23px;
   font-weight: 400;
 }
 .sdp-stat div span {
   grid-column: 1 / -1;
   overflow: hidden;
   color: #bcae91;
-  font-size: 11px;
+  font-size: 9px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .sdp-stat i {
   position: absolute;
   right: 9px;
-  bottom: 5px;
+  bottom: 3px;
   left: 9px;
   height: 2px;
   background: #2a251c;
@@ -1218,8 +1218,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   grid-template-columns: 29px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
-  min-height: 68px;
-  padding: 10px 12px;
+  min-height: 50px;
+  padding: 5px 12px;
   border: 0;
   border-right: 1px solid #3e200a;
   border-radius: 0;
@@ -1236,12 +1236,12 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   color: #9b8e72;
 }
 .sdp-equipment img {
-  width: 32px;
-  height: 32px;
+  width: 29px;
+  height: 29px;
   object-fit: contain;
 }
 .sdp-equipment-icon {
-  font-size: 26px;
+  font-size: 24px;
   text-align: center;
 }
 .sdp-equipment strong {
@@ -1258,11 +1258,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   background: #16140e;
 }
 .sdp-perk-rail {
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  gap: 5px;
-  padding: 13px 15px 8px;
+  display: none;
 }
 .sdp-perk-rail::before {
   content: '';
@@ -1306,50 +1302,44 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-active-perks {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 7px;
-  padding: 0 0 8px;
+  gap: 5px;
+  padding: 5px 0 0;
 }
 .sdp-active-perk {
   min-width: 0;
   display: grid;
-  grid-template-columns: 31px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 26px 48px 142px minmax(0, 1fr);
+  gap: 7px;
   align-items: center;
-  min-height: 52px;
-  padding: 8px 10px;
+  min-height: 39px;
+  padding: 4px 8px;
   border: 1px solid color-mix(in srgb, var(--pc) 52%, #3e200a);
   border-left: 3px solid var(--pc);
   border-radius: 3px;
   background: linear-gradient(105deg, color-mix(in srgb, var(--pc) 11%, #171610), #171610);
   color: var(--pc);
 }
-.sdp-active-perk div {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
 .sdp-active-perk small {
   color: #a99b80;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .sdp-active-perk strong {
   overflow: hidden;
   color: var(--pc);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .sdp-active-perk span {
-  display: -webkit-box;
   overflow: hidden;
   color: #c0b294;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.2;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sdp-perk-empty {
   display: flex;
@@ -1463,7 +1453,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
     height: 74px;
   }
   .sdp-hero {
-    min-height: 400px;
+    min-height: 294px;
   }
   .sdp-portrait {
     min-height: 0;
@@ -1472,7 +1462,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
     padding-block: 9px 6px;
   }
   .sdp-identity h2 {
-    font-size: 40px;
+    font-size: 36px;
   }
   .sdp-workspace {
     gap: 7px;
@@ -1482,8 +1472,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
     flex-basis: 170px;
   }
   .sdp-stat {
-    min-height: 50px;
-    padding: 7px;
+    min-height: 38px;
+    padding: 4px 6px;
   }
   .sdp-skin {
     height: 52px;
