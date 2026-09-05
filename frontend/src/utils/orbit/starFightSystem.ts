@@ -97,7 +97,8 @@ export function systemLayout(
     maxEy = Math.max(maxEy, e.ey)
   }
   const availX = w * (0.5 - STAR_FIGHT_SYS_MARGIN_X) - r
-  const availY = Math.min(sy - h * STAR_FIGHT_SYS_MARGIN_TOP, h * (1 - STAR_FIGHT_SYS_MARGIN_BOTTOM) - sy) - r
+  const availY =
+    Math.min(sy - h * STAR_FIGHT_SYS_MARGIN_TOP, h * (1 - STAR_FIGHT_SYS_MARGIN_BOTTOM) - sy) - r
   const unit = Math.max(
     0,
     Math.min(maxEx > 0 ? availX / maxEx : Infinity, maxEy > 0 ? availY / maxEy : Infinity),
@@ -132,7 +133,13 @@ export function systemLayout(
       orbit: { cx: sx, cy: sy, rx, ry, tilt: slot.orbitTilt },
     })
   }
-  return { w, h, star: { x: sx, y: sy, px: (h * STAR_FIGHT_SYS_STAR_PX_PCT) / 100 }, unit: safeUnit, planets }
+  return {
+    w,
+    h,
+    star: { x: sx, y: sy, px: (h * STAR_FIGHT_SYS_STAR_PX_PCT) / 100 },
+    unit: safeUnit,
+    planets,
+  }
 }
 
 /** Kampf-Zoom: konstant, unabhängig von der Bühnengrösse. */
@@ -141,7 +148,10 @@ export function fightZoom(): number {
 }
 
 function anchor(layout: SystemLayout): { x: number; y: number } {
-  return { x: (layout.w * STAR_FIGHT_ANCHOR_X_PCT) / 100, y: (layout.h * STAR_FIGHT_ANCHOR_Y_PCT) / 100 }
+  return {
+    x: (layout.w * STAR_FIGHT_ANCHOR_X_PCT) / 100,
+    y: (layout.h * STAR_FIGHT_ANCHOR_Y_PCT) / 100,
+  }
 }
 
 export function planetOf(layout: SystemLayout, planetId: string): SystemPlanet | undefined {
@@ -186,10 +196,13 @@ export function courseLine(
 
 /** Auf die Schrittweite quantisiert: ein Resize rastert nicht neu. */
 export function quantSpritePx(px: number): number {
-  return Math.max(STAR_FIGHT_PLANET_PX_STEP, Math.ceil(px / STAR_FIGHT_PLANET_PX_STEP) * STAR_FIGHT_PLANET_PX_STEP)
+  return Math.max(
+    STAR_FIGHT_PLANET_PX_STEP,
+    Math.ceil(px / STAR_FIGHT_PLANET_PX_STEP) * STAR_FIGHT_PLANET_PX_STEP,
+  )
 }
 
-/** Rasterkante eines kleinen Planeten der Systemansicht. */
+/** Rasterkante eines kleinen Planeten der Systemansicht (4× überzeichnet, im Kampf 16× skaliert). */
 export function systemSpritePx(r: number): number {
   return quantSpritePx(2 * r * STAR_FIGHT_SYS_SPRITE_OVERSAMPLE)
 }

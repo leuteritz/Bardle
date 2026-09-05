@@ -84,6 +84,7 @@ import {
   STAR_FIGHT_ANCHOR_X_PCT,
   STAR_FIGHT_ANCHOR_Y_PCT,
   STAR_FIGHT_FIGHT_PLANET_D_PCT,
+  STAR_FIGHT_CAM_INTRO_LOCK_MS,
   STAR_FIGHT_CAM_DEPART_MS,
   STAR_FIGHT_CAM_APPROACH_MS,
   STAR_FIGHT_CAM_RM_FADE_MS,
@@ -92,6 +93,7 @@ import {
   STAR_FIGHT_HERO_FADE_FRAC,
   STAR_FIGHT_FREED_PULSE_MS,
   STAR_FIGHT_STAR_FLASH_MS,
+  STAR_FIGHT_STAR_FLASH_SPAN_K,
   STAR_BODY_SPRITE_SPAN,
   STAR_BODY_SPIN_SEC,
 } from '@/config/constants'
@@ -120,7 +122,7 @@ export type StageStar = {
   planetSlots: SystemSlotInput[]
 }
 
-export type CameraPhase = 'fight' | 'depart' | 'travel' | 'approach' | 'outro'
+export type CameraPhase = 'intro' | 'fight' | 'depart' | 'travel' | 'approach' | 'outro'
 
 const props = withDefaults(
   defineProps<{
@@ -232,7 +234,7 @@ const starStyle = computed(() => {
 
 const starFlashStyle = computed(() => {
   const s = layout.value.star
-  const d = s.px * STAR_BODY_SPRITE_SPAN * 1.6
+  const d = s.px * STAR_BODY_SPRITE_SPAN * STAR_FIGHT_STAR_FLASH_SPAN_K
   return { left: `${s.x}px`, top: `${s.y}px`, width: `${d}px`, height: `${d}px` }
 })
 
@@ -312,6 +314,7 @@ function onNearEnd(e: TransitionEvent) {
 }
 
 // CSS-Zeiten aus den Konstanten — EINE Quelle für Composable und Stylesheet
+const introLockMs = `${STAR_FIGHT_CAM_INTRO_LOCK_MS}ms`
 const departMs = `${STAR_FIGHT_CAM_DEPART_MS}ms`
 const approachMs = `${STAR_FIGHT_CAM_APPROACH_MS}ms`
 const rmFadeMs = `${STAR_FIGHT_CAM_RM_FADE_MS}ms`
@@ -448,7 +451,10 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
   transition: opacity 260ms ease-out v-bind(orbitsInDelay);
 }
 
+/* Intro: der Ladeschleier deckt auf, die Bahnen stehen ohne zweite Blende */
+.sfs--intro .sfs-orbits,
 .sfs--travel .sfs-orbits {
+  opacity: 1;
   transition: none;
 }
 
@@ -514,10 +520,10 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
   opacity: 1;
 }
 
-/* Befreit: dünner unbunter Ring, der Körper bleibt */
+/* Befreit: dünner unbunter Ring, der Körper bleibt. Mindestmass gegen den 4 %-Planeten */
 .sfs-freed-ring {
   position: absolute;
-  inset: -26%;
+  inset: calc(50% - max(76%, 26px));
   border-radius: 50%;
   border: 1px solid rgba(236, 232, 220, 0.55);
   opacity: 0;
@@ -531,7 +537,7 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
 /* Der Puls des soeben befreiten Planeten — einmal, beim Aufbruch */
 .sfs-freed-pulse {
   position: absolute;
-  inset: -26%;
+  inset: calc(50% - max(76%, 26px));
   border-radius: 50%;
   border: 2px solid rgba(236, 232, 220, 0.85);
   opacity: 0;
@@ -552,10 +558,10 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
   }
 }
 
-/* Fadenkreuz auf dem nächsten Ziel */
+/* Fadenkreuz auf dem nächsten Ziel — Aussendurchmesser mindestens 64 px */
 .sfs-crosshair {
   position: absolute;
-  inset: -38%;
+  inset: calc(50% - max(88%, 32px));
   border-radius: 50%;
   border: 1.5px solid rgba(232, 192, 64, 0.85);
   opacity: 0;
@@ -592,6 +598,12 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
   opacity: 1;
 }
 
+/* Intro: das Fadenkreuz rastet ein, sobald der Ladeschleier weg ist */
+.sfs--intro .sfs-planet.is-target .sfs-crosshair {
+  opacity: 1;
+  transition-delay: v-bind(introLockMs);
+}
+
 .sfs--approach .sfs-planet.is-target .sfs-crosshair {
   opacity: 0;
   transition-delay: 120ms;
@@ -609,6 +621,11 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
 .sfs--travel .sfs-hero,
 .sfs--outro .sfs-hero {
   opacity: 0;
+}
+
+.sfs--intro .sfs-hero {
+  opacity: 0;
+  transition: none;
 }
 
 .sfs--approach .sfs-hero {

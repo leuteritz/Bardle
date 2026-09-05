@@ -55,7 +55,9 @@
         </div>
 
         <!-- ── Main Layout ──────────────────────────────────────────────── -->
-        <div class="sf-main">
+        <!-- Im Flug (Intro, Wechsel, Outro) steht jede HUD-Fläche auf 0 — die Rail
+             ist Geschwister der Bühne, deshalb trägt .sf-main die Klasse -->
+        <div class="sf-main" :class="{ 'sf-main--travel': hudHidden }">
           <!-- ── Bard’s Rail: Passive → Q/W/E/R → laufende Buffs ─────────
                Eine EIGENE Spalte, kein Overlay. Die Leiste hing früher als
                `position: fixed` am Bildrand und lag damit 4 px innerhalb der
@@ -91,12 +93,19 @@
               @near-transition-end="cam.onNearTransitionEnd"
             />
 
-            <!-- Im Outro steht kein HUD mehr — die Ansage des Sterns steht für sich -->
-            <Transition name="sf-outro-callout">
-              <div v-if="outro && cam.callout.value" class="sf-outro-callout" aria-live="polite">
-                <span class="sf-outro-callout-line" />
-                <span v-ink-center class="sf-outro-callout-text">{{ cam.callout.value.text }}</span>
-                <span class="sf-outro-callout-line sf-outro-callout-line--right" />
+            <!-- Die Ansage der Kamera steht für sich, dort, wo das Ziel-HUD stand —
+                 im Flug ist das HUD weg -->
+            <Transition name="sf-flight-callout" mode="out-in">
+              <div
+                v-if="cam.travelling.value && cam.callout.value"
+                :key="cam.callout.value.id"
+                class="sf-flight-callout"
+                :class="`sf-flight-callout--${cam.callout.value.kind}`"
+                aria-live="polite"
+              >
+                <span class="sf-flight-callout-line" />
+                <span v-ink-center class="sf-flight-callout-text">{{ cam.callout.value.text }}</span>
+                <span class="sf-flight-callout-line sf-flight-callout-line--right" />
               </div>
             </Transition>
 
@@ -108,7 +117,6 @@
                 'sf-arena-wrap--jab': bossJabActive && !bossStrikeActive,
                 'sf-arena-wrap--hit': bossHitActive && !bossStrikeActive && !bossJabActive,
                 'sf-arena-wrap--eclipsed': bossBehindSun,
-                'sf-arena-wrap--travel': cam.travelling.value,
                 'sf-arena-wrap--materialize': cam.materializing.value,
               }"
             >
@@ -141,31 +149,26 @@
 
               <!-- ── Planet Battery: alle 6 Planet-Slots auf dem Bogen — nur
                    Turrets feuern Salven (geteilter Takt mit dem Idle-Orbit) ── -->
-              <PlanetBatteryHUD v-if="activeBoss && contentReady && !outro" />
+              <PlanetBatteryHUD v-if="activeBoss && hudShown" />
 
               <!-- Boss-Angriff: Abschuss-Blitz + Doppel-Schockwelle, die sichtbar
                    bis über Champions und Turret-Planeten hinausläuft -->
-              <template v-if="bossStrikeActive">
+              <template v-if="bossStrikeActive && !cam.travelling.value">
                 <span class="sf-boss-flare" />
                 <span class="sf-boss-wave" />
                 <span class="sf-boss-wave sf-boss-wave--echo" />
               </template>
 
               <!-- ── Ziel-HUD: Bossname + HP-Datenstreifen (rahmenlos, oben) ── -->
-              <StarFightBossHud
-                v-if="contentReady && !outro"
-                :now="now"
-                :boss-behind-sun="bossBehindSun"
-                :callout="cam.callout.value"
-              />
+              <StarFightBossHud v-if="hudShown" :now="now" :boss-behind-sun="bossBehindSun" />
 
               <!-- ── Loot des aktuellen Bosses — episch unter dem Boss-Bild ── -->
-              <div v-if="activeBoss && contentReady && !outro" class="sf-loot">
+              <div v-if="activeBoss && hudShown" class="sf-loot">
                 <BossRewardSection />
               </div>
 
               <!-- ── Attacker Squad: Rollen mit Boss-Fähigkeit + Cooldown ── -->
-              <div v-if="activeBoss && contentReady && !outro" class="sf-squad">
+              <div v-if="activeBoss && hudShown" class="sf-squad">
                 <RoleStrikerSquad />
               </div>
             </div>
@@ -211,7 +214,10 @@ import {
   STAR_FIGHT_BOSS_H_PCT_COMPACT,
   STAR_FIGHT_BOSS_GROUND_Y_PCT,
   STAR_FIGHT_BOSS_MATERIALIZE_MS,
-  STAR_FIGHT_TRAVEL_DIM,
+  STAR_FIGHT_HUD_OUT_MS,
+  STAR_FIGHT_HUD_IN_MS,
+  STAR_FIGHT_HUD_IN_STAGGER_MS,
+  STAR_FIGHT_HUD_SHIFT_PX,
   STRIKER_BOSS_ANCHOR_Y_PCT,
 } from '@/config/constants'
 import { emberStyle as emberField } from '@/utils/fx/particleField'
@@ -478,6 +484,34 @@ onUnmounted(() => {
 // ── Systembühne: Kamera, Sprite-Warm-up ──────────────────────────────────
 const outro = computed(() => starGroupStore.starFightOutro)
 
+// Die Kamera sieht die BÜHNE, nicht den Store: das Intro beginnt erst, wenn der
+// Inhalt steht und der Ladeschleier weg ist
+const stageVisible = computed(
+  () => starGroupStore.starFightModalOpen && contentReady.value && !loaderVisible.value,
+)
+
+// Outro: HUD, Loot, Squad und Batterie bleiben bis Deckkraft 0 gemountet, dann hart
+// weg — removeBoss schaltet selectedBossId sonst auf einen fremden Boss um
+const hudLinger = ref(false)
+let hudLingerTimer: ReturnType<typeof setTimeout> | null = null
+watch(outro, (on) => {
+  if (hudLingerTimer) clearTimeout(hudLingerTimer)
+  hudLingerTimer = null
+  hudLinger.value = on
+  if (!on) return
+  hudLingerTimer = setTimeout(() => {
+    hudLingerTimer = null
+    hudLinger.value = false
+  }, STAR_FIGHT_HUD_OUT_MS)
+})
+onUnmounted(() => {
+  if (hudLingerTimer) clearTimeout(hudLingerTimer)
+})
+const hudShown = computed(() => contentReady.value && (!outro.value || hudLinger.value))
+// Unter dem Ladeschleier steht das HUD schon auf 0 — sonst blendete es durch den
+// wegblendenden Schleier hindurch aus, statt mit dem Intro einzublenden
+const hudHidden = computed(() => cam.travelling.value || loaderVisible.value)
+
 const galaxyBossPlanetIds = computed<ReadonlySet<string>>(
   () => new Set(bossStore.activeBosses.filter((b) => b.isGalaxyBoss).map((b) => b.planetId)),
 )
@@ -493,7 +527,7 @@ const clearedIds = computed<ReadonlySet<string>>(() => {
 const reducedMotion = ref(false)
 
 const cam = useStarFightCamera({
-  open: computed(() => starGroupStore.starFightModalOpen),
+  open: stageVisible,
   currentIndex: computed(() => starGroupStore.starFightCurrentIndex),
   queue: computed(() => starGroupStore.starFightPlanetQueue),
   outro,
@@ -564,7 +598,10 @@ const bossHCompact = `${STAR_FIGHT_BOSS_H_PCT_COMPACT}%`
 const bossGround = `${STAR_FIGHT_BOSS_GROUND_Y_PCT}%`
 const bossAnchorTop = `${STRIKER_BOSS_ANCHOR_Y_PCT}%`
 const materializeMs = `${STAR_FIGHT_BOSS_MATERIALIZE_MS}ms`
-const travelDim = String(STAR_FIGHT_TRAVEL_DIM)
+const hudOutMs = `${STAR_FIGHT_HUD_OUT_MS}ms`
+const hudInMs = `${STAR_FIGHT_HUD_IN_MS}ms`
+const hudStaggerMs = `${STAR_FIGHT_HUD_IN_STAGGER_MS}ms`
+const hudShift = `${STAR_FIGHT_HUD_SHIFT_PX}px`
 
 // ── Admin ─────────────────────────────────────────────────────────────────
 const adminKillFlashing = ref(false)
@@ -930,8 +967,8 @@ function emberStyle(i: number): Record<string, string> {
   --sf-boss-ground: v-bind(bossGround);
 }
 
-/* ── Outro-Ansage: dort, wo das Ziel-HUD stand ───────────────────────────── */
-.sf-outro-callout {
+/* ── Flug-Ansage: dort, wo das Ziel-HUD stand; kommt, wenn das HUD weg ist ── */
+.sf-flight-callout {
   position: absolute;
   top: 58px;
   left: 50%;
@@ -944,68 +981,185 @@ function emberStyle(i: number): Record<string, string> {
   pointer-events: none;
 }
 
-.sf-outro-callout-line {
+.sf-flight-callout-line {
   flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(236, 232, 220, 0.55));
+}
+
+.sf-flight-callout-line--right {
+  background: linear-gradient(to left, transparent, rgba(236, 232, 220, 0.55));
+}
+
+.sf-flight-callout-text {
+  font-size: 0.92rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #ece8dc;
+  text-shadow:
+    0 0 10px rgba(236, 232, 220, 0.4),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+/* Intro: Gold wie das Fadenkreuz, das gerade einrastet */
+.sf-flight-callout--intro .sf-flight-callout-text {
+  color: rgba(232, 192, 64, 0.85);
+  text-shadow:
+    0 0 12px rgba(232, 192, 64, 0.45),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+.sf-flight-callout--intro .sf-flight-callout-line {
+  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.5));
+}
+
+.sf-flight-callout--intro .sf-flight-callout-line--right {
+  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.5));
+}
+
+.sf-flight-callout--final .sf-flight-callout-text {
+  color: #d9a0ff;
+  text-shadow:
+    0 0 12px rgba(180, 60, 230, 0.7),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+.sf-flight-callout--final .sf-flight-callout-line {
+  background: linear-gradient(to right, transparent, rgba(180, 60, 230, 0.7));
+}
+
+.sf-flight-callout--final .sf-flight-callout-line--right {
+  background: linear-gradient(to left, transparent, rgba(180, 60, 230, 0.7));
+}
+
+/* Stern befreit: Gold, eine Stufe grösser — das Finale des Sterns */
+.sf-flight-callout--star .sf-flight-callout-line {
   height: 2px;
   background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.65));
 }
 
-.sf-outro-callout-line--right {
+.sf-flight-callout--star .sf-flight-callout-line--right {
   background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.65));
 }
 
-.sf-outro-callout-text {
+.sf-flight-callout--star .sf-flight-callout-text {
   font-size: 1.05rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  white-space: nowrap;
   color: #e8c040;
   text-shadow:
     0 0 14px rgba(232, 192, 64, 0.6),
     0 2px 3px rgba(0, 0, 0, 0.95);
 }
 
-.sf-outro-callout-enter-active {
-  transition: opacity 0.25s ease-out;
+.sf-flight-callout-enter-active {
+  transition: opacity 0.25s ease-out var(--sf-hud-out);
 }
 
-.sf-outro-callout-leave-active {
+.sf-flight-callout-leave-active {
   transition: opacity 0.2s ease;
 }
 
-.sf-outro-callout-enter-from,
-.sf-outro-callout-leave-to {
+.sf-flight-callout-enter-from,
+.sf-flight-callout-leave-to {
   opacity: 0;
 }
 
-/* ── Flug: Boss, Loot, Projektile und Schadenszahlen aus, Squad und Turrets
-   gedimmt — der Kampf läuft im Store weiter, die Bühne zeigt die Reise ──── */
-.sf-arena-wrap--travel :deep(.boss-wrapper),
-.sf-arena-wrap--travel .sf-loot,
-.sf-arena-wrap--travel :deep(.tbh-strike-bolt),
-.sf-arena-wrap--travel :deep(.tbh-comet),
-.sf-arena-wrap--travel :deep(.tbh-impact-num),
-.sf-arena-wrap--travel :deep(.tbh-hitfloat),
-.sf-arena-wrap--travel :deep(.rsq-strike-bolt),
-.sf-arena-wrap--travel :deep(.rsq-proj),
-.sf-arena-wrap--travel :deep(.rsq-impact),
-.sf-arena-wrap--travel :deep(.rsq-float),
-.sf-arena-wrap--travel :deep(.sfsun-bolt),
-.sf-arena-wrap--travel :deep(.sfsun-float) {
+/* ── HUD im Flug ─────────────────────────────────────────────────────────────
+   Jede HUD-Fläche geht auf 0 (schnell, ein Stück nach aussen) und kommt bei
+   Ankunft gestaffelt zurück. Nur opacity und translate; `translate` statt
+   `transform`, weil .sf-hud und .sf-loot ihr translateX(-50%) schon tragen.
+   .sfsun hat bewusst keinen z-index — die Deckkraft < 1 macht ihn nur während
+   der Blende zum Stapelkontext, die Endzustände bleiben unberührt. */
+.sf-main {
+  --sf-hud-out: v-bind(hudOutMs);
+  --sf-hud-in: v-bind(hudInMs);
+  --sf-hud-stagger: v-bind(hudStaggerMs);
+  --sf-hud-shift: v-bind(hudShift);
+}
+
+.sf-rail,
+.sf-squad,
+.sf-loot,
+.sf-stage :deep(.sf-hud),
+.sf-stage :deep(.tbh),
+.sf-stage :deep(.sfsun) {
+  translate: 0 0;
+  transition:
+    opacity var(--sf-hud-in) ease-out var(--sf-hud-d, 0ms),
+    translate var(--sf-hud-in) ease-out var(--sf-hud-d, 0ms);
+}
+
+.sf-rail {
+  --sf-hud-d: var(--sf-hud-stagger);
+}
+
+.sf-stage :deep(.tbh) {
+  --sf-hud-d: calc(var(--sf-hud-stagger) * 2);
+}
+
+.sf-squad {
+  --sf-hud-d: calc(var(--sf-hud-stagger) * 3);
+}
+
+.sf-loot {
+  --sf-hud-d: calc(var(--sf-hud-stagger) * 4);
+}
+
+.sf-main--travel .sf-rail,
+.sf-main--travel .sf-squad,
+.sf-main--travel .sf-loot,
+.sf-main--travel :deep(.sf-hud),
+.sf-main--travel :deep(.tbh),
+.sf-main--travel :deep(.sfsun) {
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--sf-hud-out) ease-in,
+    translate var(--sf-hud-out) ease-in;
+}
+
+.sf-main--travel .sf-rail {
+  translate: calc(-1 * var(--sf-hud-shift)) 0;
+}
+
+.sf-main--travel :deep(.sf-hud) {
+  translate: 0 calc(-1 * var(--sf-hud-shift));
+}
+
+.sf-main--travel .sf-squad,
+.sf-main--travel .sf-loot,
+.sf-main--travel :deep(.tbh),
+.sf-main--travel :deep(.sfsun) {
+  translate: 0 var(--sf-hud-shift);
+}
+
+/* Der Boss bleibt an der Arena-Regel: die Ankunft materialisiert ihn */
+.sf-main--travel :deep(.boss-wrapper) {
   opacity: 0;
   transition: opacity 120ms ease-out;
   pointer-events: none;
 }
 
-.sf-arena-wrap--travel .sf-squad,
-.sf-arena-wrap--travel :deep(.tbh) {
-  opacity: v-bind(travelDim);
-  transition: opacity 200ms ease-out;
-}
-
-.sf-squad,
-.sf-arena-wrap :deep(.tbh) {
-  transition: opacity 260ms ease-in;
+/* Reduced motion: harter Schnitt. Steht NACH den Regeln oben — gleiche
+   Spezifität, die Reihenfolge entscheidet */
+@media (prefers-reduced-motion: reduce) {
+  .sf-rail,
+  .sf-squad,
+  .sf-loot,
+  .sf-stage :deep(.sf-hud),
+  .sf-stage :deep(.tbh),
+  .sf-stage :deep(.sfsun),
+  .sf-main--travel .sf-rail,
+  .sf-main--travel .sf-squad,
+  .sf-main--travel .sf-loot,
+  .sf-main--travel :deep(.sf-hud),
+  .sf-main--travel :deep(.tbh),
+  .sf-main--travel :deep(.sfsun),
+  .sf-flight-callout-enter-active,
+  .sf-flight-callout-leave-active {
+    transition: none;
+    translate: 0 0;
+  }
 }
 
 /* Ankunft: der nächste Boss materialisiert auf seinem Planeten */
@@ -1507,6 +1661,11 @@ function emberStyle(i: number): Record<string, string> {
      die Rail auf ihren vollen Größen stehen, während der Rest kompakt wurde. */
   .sf-squad {
     --sip-u: 10.56px;
+  }
+
+  /* Die Ansage folgt dem Ziel-HUD (StarFightBossHud, Kompakt top 44px) */
+  .sf-flight-callout {
+    top: 44px;
   }
 }
 

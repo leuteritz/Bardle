@@ -47,11 +47,12 @@ export const STAR_FIGHT_SYS_MARGIN_X = 0.1
 export const STAR_FIGHT_SYS_MARGIN_TOP = 0.24
 export const STAR_FIGHT_SYS_MARGIN_BOTTOM = 0.14
 /** Planetendurchmesser in der Systemansicht, % der Bühnenhöhe. */
-export const STAR_FIGHT_SYS_PLANET_D_PCT = 8
+export const STAR_FIGHT_SYS_PLANET_D_PCT = 4
 /** Sternkante in der Systemansicht, % der Bühnenhöhe. */
-export const STAR_FIGHT_SYS_STAR_PX_PCT = 16
+export const STAR_FIGHT_SYS_STAR_PX_PCT = 10
 // Mindestabstand zweier Planeten wird per Ablehnungspass ERZWUNGEN, nie gefolgert.
-export const STAR_FIGHT_SYS_MIN_GAP_PX = 10
+// 16: der Fadenkreuz-Mindestradius (32 px) muss den Nachbarn freihalten.
+export const STAR_FIGHT_SYS_MIN_GAP_PX = 16
 export const STAR_FIGHT_SYS_NUDGE_RAD = 0.12
 export const STAR_FIGHT_SYS_NUDGE_TRIES = 40
 // Kampfansicht: der Zielplanet steht am Anker mit diesem Durchmesser.
@@ -65,6 +66,9 @@ export const STAR_FIGHT_FAR_ZOOM = 1.35
 export const STAR_FIGHT_BOSS_GROUND_Y_PCT = 50
 export const STAR_FIGHT_BOSS_H_PCT = 24
 export const STAR_FIGHT_BOSS_H_PCT_COMPACT = 20
+// Intro beim Öffnen: Systemansicht steht, das Fadenkreuz rastet nach LOCK ein, dann approach.
+export const STAR_FIGHT_CAM_INTRO_HOLD_MS = 900
+export const STAR_FIGHT_CAM_INTRO_LOCK_MS = 320
 // Kamerafahrt je Planetenwechsel; transitionend taktet, Timer × NET_MUL ist das Netz.
 export const STAR_FIGHT_CAM_DEPART_MS = 650
 export const STAR_FIGHT_CAM_HOLD_MS = 200
@@ -80,15 +84,20 @@ export const STAR_FIGHT_HERO_FADE_FRAC = 0.25
 export const STAR_FIGHT_BOSS_MATERIALIZE_MS = 350
 export const STAR_FIGHT_FREED_PULSE_MS = 400
 export const STAR_FIGHT_STAR_FLASH_MS = 400
+/** Blitzdurchmesser als Vielfaches der Sternkante (mit Span). */
+export const STAR_FIGHT_STAR_FLASH_SPAN_K = 2.4
 /** Nach dem Schliessen (160 ms Leave + 2 Frames Gate) wartet der Abgangseffekt des Sterns so lange. */
 export const STAR_FIGHT_VANISH_SETTLE_MS = 220
 export const STAR_FIGHT_CALLOUT_MS = 1400
-/** Deckkraft von Squad und Turrets im Flug. */
-export const STAR_FIGHT_TRAVEL_DIM = 0.35
+// HUD im Flug: alle Flächen auf 0 (OUT), Ankunft gestaffelt (IN + n·STAGGER), Versatz nach aussen.
+export const STAR_FIGHT_HUD_OUT_MS = 140
+export const STAR_FIGHT_HUD_IN_MS = 280
+export const STAR_FIGHT_HUD_IN_STAGGER_MS = 60
+export const STAR_FIGHT_HUD_SHIFT_PX = 8
 // Planeten-Sprites (utils/fx/planetSprite.ts)
 export const STAR_FIGHT_PLANET_PX_STEP = 64
-/** Die kleinen Sprites werden überzeichnet: im Einzoom stehen sie 8× skaliert. */
-export const STAR_FIGHT_SYS_SPRITE_OVERSAMPLE = 2
+/** Die kleinen Sprites werden überzeichnet: im Einzoom stehen sie 16× skaliert, das Netz unter dem Hero bleibt 4×. */
+export const STAR_FIGHT_SYS_SPRITE_OVERSAMPLE = 4
 export const STAR_FIGHT_PLANET_LIGHT_STEPS = 16
 export const STAR_FIGHT_PLANET_SPRITE_MAX_PX = 1024
 export const STAR_FIGHT_PLANET_SPRITE_SPAN = 1.05

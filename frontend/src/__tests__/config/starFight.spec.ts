@@ -12,6 +12,8 @@ import {
   STAR_FIGHT_BOSS_GROUND_Y_PCT,
   STAR_FIGHT_BOSS_H_PCT,
   STAR_FIGHT_BOSS_H_PCT_COMPACT,
+  STAR_FIGHT_CAM_INTRO_HOLD_MS,
+  STAR_FIGHT_CAM_INTRO_LOCK_MS,
   STAR_FIGHT_CAM_DEPART_MS,
   STAR_FIGHT_CAM_HOLD_MS,
   STAR_FIGHT_CAM_APPROACH_MS,
@@ -22,7 +24,11 @@ import {
   STAR_FIGHT_PLANET_SPRITE_MAX_PX,
   STAR_FIGHT_PLANET_SPRITE_SPAN_RINGED,
   STAR_FIGHT_PLANET_SPRITE_SPAN,
-  STAR_FIGHT_TRAVEL_DIM,
+  STAR_FIGHT_SYS_SPRITE_OVERSAMPLE,
+  STAR_FIGHT_HUD_OUT_MS,
+  STAR_FIGHT_HUD_IN_MS,
+  STAR_FIGHT_HUD_IN_STAGGER_MS,
+  STAR_FIGHT_CALLOUT_MS,
   STAR_FIGHT_VANISH_SETTLE_MS,
   STRIKER_BOSS_ANCHOR_Y_PCT,
   STAR_REMOVAL_DELAY_MS,
@@ -86,8 +92,22 @@ describe('Star-Fight-Systembühne — Zeiten', () => {
   it('die Blende des Hero ist ein Anteil der Fahrt, nicht die Fahrt', () => {
     expect(STAR_FIGHT_HERO_FADE_FRAC).toBeGreaterThan(0)
     expect(STAR_FIGHT_HERO_FADE_FRAC).toBeLessThanOrEqual(0.5)
-    expect(STAR_FIGHT_TRAVEL_DIM).toBeGreaterThan(0)
-    expect(STAR_FIGHT_TRAVEL_DIM).toBeLessThan(1)
+  })
+
+  it('das Intro zeigt das System, bleibt aber unter 2,5 s und rastet vor dem Anflug ein', () => {
+    expect(STAR_FIGHT_CAM_INTRO_HOLD_MS).toBeGreaterThanOrEqual(600)
+    expect(STAR_FIGHT_CAM_INTRO_HOLD_MS + STAR_FIGHT_CAM_APPROACH_MS).toBeLessThan(2500)
+    expect(STAR_FIGHT_CAM_INTRO_LOCK_MS).toBeLessThan(STAR_FIGHT_CAM_INTRO_HOLD_MS)
+  })
+
+  it('das HUD geht schnell und kommt gestaffelt; die Ansage ist vorher weg', () => {
+    expect(STAR_FIGHT_HUD_OUT_MS).toBeLessThan(STAR_FIGHT_HUD_IN_MS)
+    expect(STAR_FIGHT_HUD_IN_STAGGER_MS).toBeGreaterThan(0)
+    const flight = STAR_FIGHT_CAM_DEPART_MS + STAR_FIGHT_CAM_HOLD_MS + STAR_FIGHT_CAM_APPROACH_MS
+    expect(STAR_FIGHT_CALLOUT_MS).toBeLessThan(flight)
+    expect(STAR_FIGHT_CALLOUT_MS).toBeLessThan(
+      STAR_FIGHT_CAM_INTRO_HOLD_MS + STAR_FIGHT_CAM_APPROACH_MS,
+    )
   })
 })
 
@@ -97,5 +117,10 @@ describe('Star-Fight-Systembühne — Sprites', () => {
     expect(STAR_FIGHT_PLANET_SPRITE_SPAN).toBeGreaterThanOrEqual(1)
     expect(STAR_FIGHT_PLANET_SPRITE_SPAN).toBeLessThan(STAR_FIGHT_PLANET_SPRITE_SPAN_RINGED)
     expect(STAR_FIGHT_PLANET_SPRITE_MAX_PX).toBeLessThanOrEqual(2048)
+  })
+
+  it('das kleine Sprite unter dem Hero ist höchstens 4× hochskaliert', () => {
+    const zoom = STAR_FIGHT_FIGHT_PLANET_D_PCT / STAR_FIGHT_SYS_PLANET_D_PCT
+    expect(zoom / STAR_FIGHT_SYS_SPRITE_OVERSAMPLE).toBeLessThanOrEqual(4)
   })
 })

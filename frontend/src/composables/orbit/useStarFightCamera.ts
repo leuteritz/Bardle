@@ -1,10 +1,12 @@
 /* ── Die Phasenmaschine der Star-Fight-Kamera ─────────────────────────────────
-   fight → depart → travel → approach → fight je Planetenwechsel; outro am Ende.
+   intro → approach → fight beim Öffnen; fight → depart → travel → approach →
+   fight je Planetenwechsel; outro am Ende.
    Taktgeber ist `transitionend` der nahen Ebene, Timer × NET_MUL nur als Netz.
    Wanduhr: nichts hier ändert Spielzustand, der Kampf läuft im Store weiter. */
 
 import { ref, computed, watch, onScopeDispose, type Ref, type ComputedRef } from 'vue'
 import {
+  STAR_FIGHT_CAM_INTRO_HOLD_MS,
   STAR_FIGHT_CAM_DEPART_MS,
   STAR_FIGHT_CAM_HOLD_MS,
   STAR_FIGHT_CAM_APPROACH_MS,
@@ -16,15 +18,16 @@ import {
   STAR_FIGHT_CALLOUT_MS,
 } from '@/config/constants'
 
-export type CameraPhase = 'fight' | 'depart' | 'travel' | 'approach' | 'outro'
+export type CameraPhase = 'intro' | 'fight' | 'depart' | 'travel' | 'approach' | 'outro'
 
 export interface StarFightCallout {
   id: number
-  kind: 'freed' | 'final' | 'star'
+  kind: 'intro' | 'freed' | 'final' | 'star'
   text: string
 }
 
 export interface StarFightCameraOptions {
+  /** Die Bühne ist SICHTBAR (Inhalt gemountet, Ladeschleier weg) — nicht starFightModalOpen. */
   open: Ref<boolean>
   currentIndex: Ref<number>
   queue: Ref<readonly string[]>
@@ -118,6 +121,35 @@ export function useStarFightCamera(opts: StarFightCameraOptions): StarFightCamer
     hold = setTimeout(toApproach, STAR_FIGHT_CAM_HOLD_MS)
   }
 
+  function toIntro() {
+    clearFlight()
+    phase.value = 'intro'
+    hold = setTimeout(toApproach, STAR_FIGHT_CAM_INTRO_HOLD_MS)
+  }
+
+  function startOutro() {
+    clearAll()
+    prevPlanetId.value = targetPlanetId.value
+    phase.value = 'outro'
+    const q = opts.queue.value
+    say('star', `STAR FREED · ${q.length} / ${q.length}`)
+    const rm = opts.reducedMotion.value
+    if (!rm) {
+      // Der Blitz kommt per transitionend; das Netz zündet ihn spätestens nach der Fahrt
+      net = setTimeout(() => {
+        net = null
+        flash.value = true
+      }, STAR_FIGHT_CAM_DEPART_MS)
+    }
+    outroTimer = setTimeout(
+      () => {
+        outroTimer = null
+        opts.onOutroDone()
+      },
+      rm ? STAR_FIGHT_CAM_OUTRO_RM_MS : STAR_FIGHT_CAM_OUTRO_MS,
+    )
+  }
+
   function startDepart() {
     clearFlight()
     phase.value = 'depart'
@@ -152,39 +184,49 @@ export function useStarFightCamera(opts: StarFightCameraOptions): StarFightCamer
   })
 
   watch(opts.outro, (on) => {
-    if (!on || !opts.open.value) return
-    clearAll()
-    prevPlanetId.value = targetPlanetId.value
-    phase.value = 'outro'
-    const q = opts.queue.value
-    say('star', `STAR FREED · ${q.length} / ${q.length}`)
-    const rm = opts.reducedMotion.value
-    if (!rm) {
-      // Der Blitz kommt per transitionend; das Netz zündet ihn spätestens nach der Fahrt
-      net = setTimeout(() => {
-        net = null
-        flash.value = true
-      }, STAR_FIGHT_CAM_DEPART_MS)
-    }
-    outroTimer = setTimeout(
-      () => {
-        outroTimer = null
-        opts.onOutroDone()
-      },
-      rm ? STAR_FIGHT_CAM_OUTRO_RM_MS : STAR_FIGHT_CAM_OUTRO_MS,
-    )
+    if (on && opts.open.value) startOutro()
   })
 
-  watch(opts.open, (open) => {
-    clearAll()
-    phase.value = 'fight'
-    prevPlanetId.value = null
-    flash.value = false
-    callout.value = null
-    targetPlanetId.value = open ? (opts.queue.value[opts.currentIndex.value] ?? null) : null
-  })
+  watch(
+    opts.open,
+    (open) => {
+      clearAll()
+      prevPlanetId.value = null
+      flash.value = false
+      callout.value = null
+      if (!open) {
+        phase.value = 'fight'
+        targetPlanetId.value = null
+        return
+      }
+      const q = opts.queue.value
+      const idx = opts.currentIndex.value
+      targetPlanetId.value = q[idx] ?? null
+      // Das Outro fiel unter den Ladeschleier — jetzt nachholen, sonst schliesst nichts
+      if (opts.outro.value) {
+        startOutro()
+        return
+      }
+      if (opts.reducedMotion.value || targetPlanetId.value === null) {
+        phase.value = 'fight'
+        return
+      }
+      say('intro', `COURSE SET · ${idx + 1} / ${q.length}`)
+      toIntro()
+    },
+    { immediate: true },
+  )
 
   onScopeDispose(clearAll)
 
-  return { phase, targetPlanetId, prevPlanetId, travelling, materializing, flash, callout, onNearTransitionEnd }
+  return {
+    phase,
+    targetPlanetId,
+    prevPlanetId,
+    travelling,
+    materializing,
+    flash,
+    callout,
+    onNearTransitionEnd,
+  }
 }

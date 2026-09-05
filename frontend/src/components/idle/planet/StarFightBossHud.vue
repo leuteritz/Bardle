@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { BOSS_RAGE_DMG_MULT } from '@/config/constants'
 import { useBossFightHud } from '@/composables/orbit/useBossFightHud'
-import type { StarFightCallout } from '@/composables/orbit/useStarFightCamera'
 import BossTimerRing from './BossTimerRing.vue'
 
 const props = defineProps<{
@@ -11,8 +10,6 @@ const props = defineProps<{
   now: number
   /** Boss steht hinter der Sonne — Kampf pausiert. */
   bossBehindSun: boolean
-  /** Ansage der Kamera: Planet befreit, Finale, Stern befreit. */
-  callout?: StarFightCallout | null
 }>()
 
 const {
@@ -69,19 +66,8 @@ const {
         <span class="sf-name-line" />
       </div>
 
-      <!-- Ansage der Kamerafahrt: Planet befreit · n / m, Finale, Stern befreit -->
-      <Transition name="sf-callout" mode="out-in">
-        <div
-          v-if="callout"
-          :key="callout.id"
-          class="sf-planet-callout"
-          :class="`sf-planet-callout--${callout.kind}`"
-        >
-          <span class="sf-planet-callout-line" />
-          <span v-ink-center class="sf-planet-callout-text">{{ callout.text }}</span>
-          <span class="sf-planet-callout-line sf-planet-callout-line--right" />
-        </div>
-      </Transition>
+      <!-- Die Flug-Ansage steht NICHT hier: im Flug ist das HUD auf 0,
+           sie lebt für sich in StarFightModal (.sf-flight-callout) -->
 
       <!-- Eclipse-Status: Boss steht hinter der Sonne — kein Kampf,
            Klicks richten keinen Schaden an, Fähigkeiten warten -->
@@ -206,7 +192,8 @@ const {
   }
 }
 
-/* ── Ziel-HUD oben — rahmenlos, verdrängt keinen Platz ───────────────────── */
+/* ── Ziel-HUD oben — rahmenlos, verdrängt keinen Platz. Im Flug auf 0
+   (StarFightModal .sf-main--travel), die Ansage steht dann für sich ──────── */
 .sf-hud {
   position: absolute;
   /* nicht mehr am oberen Rand — sitzt auf Höhe der Star-Ringe, näher am Boss */
@@ -585,66 +572,6 @@ const {
 
 .sf-callout-enter-active {
   animation: sf-callout-in 0.22s ease-out;
-}
-
-/* ── Ansage der Kamerafahrt ───────────────────────────────────────────────── */
-.sf-planet-callout {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: min(460px, 80%);
-  pointer-events: none;
-}
-
-.sf-planet-callout-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(236, 232, 220, 0.55));
-}
-
-.sf-planet-callout-line--right {
-  background: linear-gradient(to left, transparent, rgba(236, 232, 220, 0.55));
-}
-
-.sf-planet-callout-text {
-  font-size: 0.78rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: #ece8dc;
-  text-shadow:
-    0 0 10px rgba(236, 232, 220, 0.4),
-    0 2px 3px rgba(0, 0, 0, 0.95);
-}
-
-.sf-planet-callout--final .sf-planet-callout-text {
-  color: #d9a0ff;
-  text-shadow:
-    0 0 12px rgba(180, 60, 230, 0.7),
-    0 2px 3px rgba(0, 0, 0, 0.95);
-}
-
-.sf-planet-callout--final .sf-planet-callout-line {
-  background: linear-gradient(to right, transparent, rgba(180, 60, 230, 0.7));
-}
-
-.sf-planet-callout--final .sf-planet-callout-line--right {
-  background: linear-gradient(to left, transparent, rgba(180, 60, 230, 0.7));
-}
-
-.sf-planet-callout--star .sf-planet-callout-text {
-  color: #e8c040;
-  text-shadow:
-    0 0 12px rgba(232, 192, 64, 0.6),
-    0 2px 3px rgba(0, 0, 0, 0.95);
-}
-
-.sf-planet-callout--star .sf-planet-callout-line {
-  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.65));
-}
-
-.sf-planet-callout--star .sf-planet-callout-line--right {
-  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.65));
 }
 
 .sf-callout-leave-active {
