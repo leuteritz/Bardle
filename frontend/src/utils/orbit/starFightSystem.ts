@@ -16,8 +16,6 @@ import {
   STAR_FIGHT_ANCHOR_X_PCT,
   STAR_FIGHT_ANCHOR_Y_PCT,
   STAR_FIGHT_FIGHT_PLANET_D_PCT,
-  STAR_FIGHT_FAR_PARALLAX,
-  STAR_FIGHT_FAR_ZOOM,
   STAR_FIGHT_PLANET_PX_STEP,
   STAR_FIGHT_SYS_SPRITE_OVERSAMPLE,
 } from '@/config/constants'
@@ -158,8 +156,8 @@ export function planetOf(layout: SystemLayout, planetId: string): SystemPlanet |
   return layout.planets.find((p) => p.planetId === planetId)
 }
 
-/** Nahe Ebene, transform-origin 0 0: `k·P + t` legt den Planeten auf den Anker. */
-export function fightTransform(layout: SystemLayout, planetId: string): CameraTransform {
+/** Weltkamera, transform-origin 0 0: `k·P + t` legt den Planeten auf den Anker. */
+export function cameraTransform(layout: SystemLayout, planetId: string): CameraTransform {
   const p = planetOf(layout, planetId)
   if (!p) return systemTransform()
   const a = anchor(layout)
@@ -167,20 +165,17 @@ export function fightTransform(layout: SystemLayout, planetId: string): CameraTr
   return { tx: a.x - k * p.x, ty: a.y - k * p.y, k }
 }
 
+export function fightTransform(layout: SystemLayout, planetId: string): CameraTransform {
+  return cameraTransform(layout, planetId)
+}
+
 export function systemTransform(): CameraTransform {
   return { tx: 0, ty: 0, k: 1 }
 }
 
-/** Ferne Ebene, transform-origin = Sternmitte: rückt um einen Anteil der Fahrt. */
+/** Kompatibler Alias für die gemeinsame Weltkamera. */
 export function farTransform(layout: SystemLayout, planetId: string | null): CameraTransform {
-  const p = planetId === null ? undefined : planetOf(layout, planetId)
-  if (!p) return systemTransform()
-  const a = anchor(layout)
-  return {
-    tx: STAR_FIGHT_FAR_PARALLAX * (a.x - p.x),
-    ty: STAR_FIGHT_FAR_PARALLAX * (a.y - p.y),
-    k: STAR_FIGHT_FAR_ZOOM,
-  }
+  return planetId === null ? systemTransform() : cameraTransform(layout, planetId)
 }
 
 export function courseLine(

@@ -109,8 +109,7 @@ import {
 } from '@/config/constants'
 import {
   systemLayout,
-  fightTransform,
-  farTransform,
+  cameraTransform,
   systemTransform,
   courseLine,
   planetOf,
@@ -206,16 +205,17 @@ const cameraPlanetId = computed<string | null>(() => {
   return props.phase === 'fight' || props.phase === 'approach' ? props.targetPlanetId : null
 })
 
-const nearStyle = computed(() => {
+const camera = computed(() => {
   const id = cameraPlanetId.value
-  const t = id ? fightTransform(layout.value, id) : systemTransform()
-  return { transform: cameraCss(t) }
+  return id ? cameraTransform(layout.value, id) : systemTransform()
+})
+
+const nearStyle = computed(() => {
+  return { transform: cameraCss(camera.value) }
 })
 
 const farStyle = computed(() => {
-  const t = farTransform(layout.value, cameraPlanetId.value)
-  const s = layout.value.star
-  return { transform: cameraCss(t), transformOrigin: `${s.x}px ${s.y}px` }
+  return { transform: cameraCss(camera.value) }
 })
 
 const course = computed(() => {
@@ -370,6 +370,7 @@ const overviewPlanetScale = String(STAR_FIGHT_SYS_OVERVIEW_PLANET_SCALE)
 .sfs-near {
   position: absolute;
   inset: 0;
+  transform-origin: 0 0;
 }
 
 .sfs-near {

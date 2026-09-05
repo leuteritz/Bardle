@@ -15,7 +15,6 @@ import {
   STAR_FIGHT_SYS_MIN_GAP_PX,
   STAR_FIGHT_ANCHOR_X_PCT,
   STAR_FIGHT_ANCHOR_Y_PCT,
-  STAR_FIGHT_FAR_ZOOM,
   STAR_FIGHT_FIGHT_PLANET_D_PCT,
   STAR_FIGHT_SYS_PLANET_D_PCT,
 } from '@/config/constants'
@@ -112,12 +111,11 @@ describe('starFightSystem — Kamera', () => {
     }
   })
 
-  it('bewegt die ferne Ebene nur um einen Anteil und höchstens auf FAR_ZOOM', () => {
+  it('führt beide Kameraebenen synchron auf das Ziel', () => {
     const layout = systemLayout({ planetSlots: [0, 1].map((i) => slot(i)) }, 1108, 913)
     const near = fightTransform(layout, 'star-planet-1')
     const far = farTransform(layout, 'star-planet-1')
-    expect(far.k).toBeLessThanOrEqual(STAR_FIGHT_FAR_ZOOM)
-    expect(Math.hypot(far.tx, far.ty)).toBeLessThan(Math.hypot(near.tx, near.ty))
+    expect(far).toEqual(near)
     expect(farTransform(layout, null)).toEqual({ tx: 0, ty: 0, k: 1 })
   })
 

@@ -60,9 +60,6 @@ export const STAR_FIGHT_SYS_NUDGE_TRIES = 40
 export const STAR_FIGHT_ANCHOR_X_PCT = 50
 export const STAR_FIGHT_ANCHOR_Y_PCT = 42
 export const STAR_FIGHT_FIGHT_PLANET_D_PCT = 64
-// Ferne Ebene (Stern): Anteil der Kamerafahrt und Zoom in der Kampfansicht.
-export const STAR_FIGHT_FAR_PARALLAX = 0.25
-export const STAR_FIGHT_FAR_ZOOM = 1.35
 // Boss steht auf dem Planeten: Bodenlinie und Höhe in % der Bühne.
 export const STAR_FIGHT_BOSS_GROUND_Y_PCT = 50
 export const STAR_FIGHT_BOSS_H_PCT = 24
