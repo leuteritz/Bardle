@@ -237,11 +237,11 @@ const activeTotal = computed(
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-  height: 36px;
+  height: 44px;
   padding: 0 11px;
-  background: rgba(30, 16, 6, var(--cs-veil, 1));
+  background: #1e1006;
   border: none;
-  border-bottom: 2px solid #5c3310;
+  border-bottom: 1px solid #5c3310;
   color: #c89040;
   font-size: 12px;
   font-weight: 800;
@@ -287,10 +287,10 @@ const activeTotal = computed(
 .cs-doms {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
   flex-shrink: 0;
-  padding: 8px 9px 9px;
-  border-bottom: 2px solid #3e200a;
+  padding: 10px 10px 11px;
+  border-bottom: 1px solid #3e200a;
 }
 .cs-facets--folded .cs-doms {
   display: none;
@@ -299,12 +299,12 @@ const activeTotal = computed(
   display: flex;
   align-items: center;
   gap: 9px;
-  height: 40px;
+  height: 38px;
   padding: 0 9px;
   border: 1px solid #3e200a;
   border-left: 3px solid #3e200a;
   border-radius: 4px;
-  background: #16120a;
+  background: #1c1c18;
   color: #8a6030;
   font-size: 12px;
   font-weight: 800;

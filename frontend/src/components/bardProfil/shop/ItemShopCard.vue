@@ -354,4 +354,70 @@ export default defineComponent({
     animation: none !important;
   }
 }
+
+/* Quiet catalog card */
+.card-inner {
+  border-width: 1px;
+  border-color: #3e200a;
+  background: #141410;
+  box-shadow: none;
+}
+.item-card-slot:hover .card-inner,
+.card-buyable .card-inner,
+.item-card-slot.card-buyable:hover .card-inner {
+  border-color: var(--rar-c, #c89040);
+  box-shadow: inset 0 0 0 1px rgba(232, 192, 64, 0.18);
+}
+.item-card-slot.is-selected::before {
+  inset: -2px;
+  border-width: 2px;
+  border-color: #e8c040;
+  box-shadow: none;
+}
+.card-img-layer {
+  background: #161410;
+}
+.item-icon-img,
+.item-icon-gi {
+  filter: none;
+}
+.card-overlay {
+  background: rgba(8, 8, 6, 0.18);
+}
+.card-shimmer,
+.card-buyable.item-card-slot:not(:hover)::after,
+.card-buyable.item-card-slot:not(:hover) .card-inner::after {
+  display: none;
+}
+.card-content {
+  padding: 8px 9px 9px;
+  background: rgba(13, 11, 6, 0.82);
+}
+.item-name {
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-shadow: none;
+}
+.item-card-slot:hover .item-name--bright {
+  transform: none;
+  text-shadow: none;
+}
+.rarity-badge,
+.cat-badge-pill {
+  top: 7px;
+}
+.rarity-badge {
+  left: 7px;
+  background: #111008;
+  box-shadow: none;
+}
+.cat-badge-pill {
+  right: 7px;
+  box-shadow: none;
+}
+.owned-badge,
+.set-tag {
+  background: #1a2414;
+  border-color: #3f6b28;
+}
 </style>

@@ -1,34 +1,5 @@
 <template>
   <aside class="cs-detail">
-    <!-- Clearing the subject leaves the overview card standing in this
-         column; prev/next walk the same list the cards are drawn from. -->
-    <div class="cs-detail-nav">
-      <button
-        v-if="wide"
-        class="cs-back-btn"
-        title="Clear the selection (Esc)"
-        @click="$emit('back')"
-      >
-        <span class="cs-back-arrow">✕</span>
-        Close
-      </button>
-      <div class="cs-detail-steps">
-        <button
-          class="cs-nav-btn"
-          :disabled="total < 2"
-          aria-label="Previous entry"
-          @click="$emit('prev')"
-        >←</button>
-        <span class="cs-nav-pos">{{ index + 1 }} / {{ total }}</span>
-        <button
-          class="cs-nav-btn"
-          :disabled="total < 2"
-          aria-label="Next entry"
-          @click="$emit('next')"
-        >→</button>
-      </div>
-    </div>
-
     <!-- Hero — the icon on a rarity-tinted stage, and the whole identity below
          the name as one chip run. Mirrors ChampionDetailPanel: rarity and
          category used to sit in the corners, split apart from the name. -->
@@ -96,10 +67,10 @@
            player owns and what it costs are the same question. -->
       <div class="cs-cost">
         <div class="cs-cost-label">
-          <span>Purchase Cost</span>
+          <span>Cost</span>
           <span class="cs-owned" :class="{ 'cs-owned--none': detail.ownedCount === 0 }">
             <Icon icon="game-icons:knapsack" width="16" height="16" class="cs-owned-icon" />
-            In inventory ×{{ detail.ownedCount }}
+            Owned ×{{ detail.ownedCount }}
           </span>
         </div>
         <div class="cs-detail-rows">
@@ -175,12 +146,9 @@ export default defineComponent({
       type: Object as () => ShopItemDetail,
       required: true,
     },
-    index: { type: Number, default: -1 },
-    total: { type: Number, default: 0 },
     /** Standing in the shop's own column rather than over it — shows Close. */
-    wide: { type: Boolean, default: false },
   },
-  emits: ['prev', 'next', 'buy', 'back'],
+  emits: ['buy'],
   setup() {
     const fillStyle = (have: number, need: number) => ({
       transform: `scaleX(${need > 0 ? Math.min(1, have / need) : 1})`,
@@ -205,86 +173,6 @@ export default defineComponent({
 }
 
 /* ── Back + prev / next navigation ── */
-.cs-detail-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 9px 12px;
-  background: rgba(30, 16, 6, var(--cs-veil, 1));
-  border-bottom: 3px solid #5c3310;
-  flex-shrink: 0;
-}
-.cs-detail-steps {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.cs-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px 7px 11px;
-  background: #141410;
-  border: 1px solid #7a4e20;
-  border-radius: 4px;
-  color: #e8c040;
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  line-height: 1;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-.cs-back-btn:hover {
-  background: #241a0c;
-  border-color: #c89040;
-  color: #f0d870;
-}
-.cs-back-arrow {
-  font-size: 16px;
-  line-height: 1;
-}
-.cs-nav-btn {
-  width: 38px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #141410;
-  border: 1px solid #7a4e20;
-  border-radius: 4px;
-  color: #e8c040;
-  font-size: 17px;
-  font-weight: 900;
-  line-height: 1;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
-}
-.cs-nav-btn:hover:not(:disabled) {
-  background: #241a0c;
-  border-color: #c89040;
-}
-.cs-nav-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.cs-nav-pos {
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #b89a5a;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
 /* ── Hero: rarity-tinted icon stage ──
    Flexible, like the champion panel's: the body asks for the height it needs
    and the stage takes the rest. */
@@ -661,6 +549,117 @@ export default defineComponent({
   }
   .cs-block {
     padding: 9px 12px 9px 14px;
+  }
+}
+
+.cs-detail-hero {
+  order: 1;
+  flex: 0 0 400px;
+  min-height: 0;
+  border-bottom: 1px solid #5c3310;
+  background: #111008;
+}
+.hero-stage {
+  padding: 14px;
+}
+.hero-icon-img {
+  height: min(100%, 196px);
+}
+.hero-icon-gi {
+  height: min(100%, 176px);
+}
+.cs-hero-foot {
+  min-height: 94px;
+  gap: 8px;
+  padding: 30px 18px 14px;
+  background: linear-gradient(to top, rgba(13, 11, 6, 0.98), rgba(13, 11, 6, 0.7) 64%, transparent);
+}
+.cs-detail-name {
+  font-size: 31px;
+}
+.cs-hero-chips {
+  gap: 5px;
+  max-height: 36px;
+  overflow: hidden;
+}
+.cs-hero-chip {
+  padding: 4px 9px;
+  font-size: 11.5px;
+  letter-spacing: 0.05em;
+}
+.cs-detail-body {
+  order: 3;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 18px 18px;
+  gap: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #5c3310 #111008;
+}
+.cs-block,
+.cs-mat-row {
+  background: #1c1c18;
+  border-color: #3e200a;
+}
+.cs-block {
+  padding: 11px 13px 11px 15px;
+}
+.effect-desc,
+.set-card-desc {
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.set-card-hint {
+  font-size: 12px;
+}
+.cs-cost {
+  gap: 8px;
+}
+.cs-cost-label {
+  font-size: 12px;
+  color: #e8c040;
+}
+.cs-mat-row {
+  min-height: 48px;
+  padding: 8px 11px;
+  gap: 10px;
+}
+.cs-mat-img {
+  width: 30px;
+  height: 30px;
+}
+.cs-mat-name {
+  font-size: 13.5px;
+}
+.cs-mat-amount {
+  font-size: 15px;
+}
+.cs-detail-footer {
+  order: 2;
+  padding: 12px 18px 14px;
+  background: #1a1008;
+  border-top: 1px solid #5c3310;
+}
+.cs-buy-btn {
+  min-height: 58px;
+  padding: 14px 16px;
+  font-size: 15px;
+  letter-spacing: 0.09em;
+}
+.cs-buy-btn--ready {
+  box-shadow: none;
+}
+@media (max-height: 1100px) {
+  .cs-detail-hero {
+    flex-basis: 340px;
+  }
+  .cs-detail-name {
+    font-size: 28px;
+  }
+  .cs-hero-foot {
+    min-height: 84px;
+    padding: 26px 16px 12px;
   }
 }
 </style>

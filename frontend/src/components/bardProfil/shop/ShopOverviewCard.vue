@@ -123,7 +123,7 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
       </button>
     </div>
 
-    <p class="cs-ov-hint">Pick a card to open its page here.</p>
+    <p class="cs-ov-hint">Select an entry to inspect it.</p>
   </div>
 </template>
 
@@ -131,10 +131,11 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
 .cs-overview {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   height: 100%;
   min-height: 0;
-  padding: 14px 14px 12px;
+  padding: 16px 14px 12px;
+  background: #111008;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
@@ -149,9 +150,9 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
   color: #e8c040;
 }
 .cs-ov-head-title {
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #e8c040;
 }
@@ -159,9 +160,9 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
 /* ── Progress ── */
 .cs-ov-progress {
   flex-shrink: 0;
-  padding: 10px 11px;
-  background: rgba(26, 16, 8, var(--cs-block, 1));
-  border: 1px solid #3e200a;
+  padding: 12px;
+  background: #1a1008;
+  border: 1px solid #5c3310;
   border-radius: 4px;
 }
 .cs-ov-progress-row {
@@ -170,7 +171,7 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
   gap: 5px;
 }
 .cs-ov-progress-num {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 900;
   line-height: 1;
   color: #e8c040;
@@ -196,7 +197,7 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
 }
 .cs-ov-bar {
   margin-top: 7px;
-  height: 6px;
+  height: 5px;
   border-radius: 3px;
   background: #0d0b06;
   border: 1px solid #2a1808;
@@ -222,7 +223,7 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
   min-height: 0;
 }
 .cs-ov-section-title {
-  font-size: 10.5px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -334,7 +335,7 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
   gap: 9px;
   width: 100%;
   padding: 6px 9px 6px 6px;
-  background: rgba(26, 24, 16, var(--cs-block, 1));
+  background: #1c1c18;
   border: 1px solid #3e200a;
   border-left: 3px solid var(--pick-c, #c89040);
   border-radius: 4px;
@@ -375,7 +376,7 @@ const pct = () => (props.total > 0 ? Math.round((props.owned / props.total) * 10
   white-space: nowrap;
 }
 .cs-ov-pick-sub {
-  font-size: 10.5px;
+  font-size: 10px;
   color: #8a7a58;
 }
 .cs-ov-pick-arrow {

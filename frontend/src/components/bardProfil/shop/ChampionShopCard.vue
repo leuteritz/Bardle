@@ -441,4 +441,59 @@ export default defineComponent({
     animation: none !important;
   }
 }
+
+/* Quiet catalog card */
+.card-inner {
+  border-width: 1px !important;
+  border-color: #3e200a !important;
+  background: #141410;
+  box-shadow: none !important;
+}
+.champion-card-slot:hover .card-inner,
+.card-buyable .card-inner,
+.champion-card-slot.card-buyable:hover .card-inner {
+  border-color: #c89040 !important;
+  box-shadow: inset 0 0 0 1px rgba(232, 192, 64, 0.18) !important;
+}
+.champion-card-slot.is-selected::before {
+  inset: -2px;
+  border-width: 2px;
+  border-color: #e8c040;
+  box-shadow: none;
+}
+.card-overlay,
+.card-overlay--buyable,
+.card-overlay--default {
+  background: rgba(8, 8, 6, 0.24);
+}
+.card-shimmer,
+.card-buyable.champion-card-slot:not(:hover)::after,
+.card-buyable.champion-card-slot:not(:hover) .card-inner::after {
+  display: none;
+}
+.card-content {
+  padding: 8px 9px 9px;
+  background: rgba(13, 11, 6, 0.82);
+}
+.champion-name {
+  text-shadow: none;
+  font-size: 13px;
+}
+.champion-card-slot:hover .champion-name--bright,
+.champion-card-slot:hover .champion-name--dim {
+  transform: none;
+  text-shadow: none;
+}
+.role-badge-pill,
+.tier-badge {
+  top: 7px;
+  box-shadow: none;
+}
+.role-badge-pill {
+  right: 7px;
+}
+.tier-badge {
+  left: 7px;
+  background: #111008;
+}
 </style>

@@ -308,27 +308,15 @@
         <ItemDetailPanel
           v-if="itemDetail"
           key="item"
-          wide
           :detail="itemDetail"
-          :index="selectedIndex"
-          :total="visibleEntries.length"
-          @prev="selectPrev"
-          @next="selectNext"
-          @back="closeDetail"
           @buy="handleBuyItem"
         />
         <ChampionDetailPanel
           v-else-if="detail"
           key="champion"
-          wide
           :detail="detail"
-          :index="selectedIndex"
-          :total="visibleEntries.length"
           :take-seat="takeSeat"
           @update:take-seat="takeSeat = $event"
-          @prev="selectPrev"
-          @next="selectNext"
-          @back="closeDetail"
           @buy="handleBuy"
         />
         <ShopOverviewCard
@@ -1429,20 +1417,6 @@ const shopChampionNames = computed(() =>
       return entries
     })
 
-    const selectedIndex = computed(() => {
-      if (selectedItem.value) {
-        return visibleEntries.value.findIndex(
-          (e) => e.kind === 'item' && e.id === selectedItem.value,
-        )
-      }
-      if (selectedChampion.value) {
-        return visibleEntries.value.findIndex(
-          (e) => e.kind === 'champion' && e.id === selectedChampion.value,
-        )
-      }
-      return -1
-    })
-
     function selectChampion(name: string) {
       selectedChampion.value = name
       selectedItem.value = null
@@ -1590,19 +1564,6 @@ const shopChampionNames = computed(() =>
       showDomain('champions')
     }
 
-
-    function selectPrev() {
-      const list = visibleEntries.value
-      if (list.length === 0) return
-      const i = selectedIndex.value
-      applyEntry(list[(i - 1 + list.length) % list.length])
-    }
-
-    function selectNext() {
-      const list = visibleEntries.value
-      if (list.length === 0) return
-      applyEntry(list[(selectedIndex.value + 1) % list.length])
-    }
 
     // Without a search the panel shows its empty state until the player clicks a
     // card (search auto-select is handled by the searchQuery watcher above).
@@ -2129,9 +2090,6 @@ const shopChampionNames = computed(() =>
       openItem,
       closeDetail,
       gridScrolling,
-      selectPrev,
-      selectNext,
-      selectedIndex,
       visibleEntries,
       detail,
       takeSeat,
@@ -2260,8 +2218,8 @@ const shopChampionNames = computed(() =>
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: rgba(20, 16, 10, var(--cs-veil));
-  border-left: 2px solid #5c3310;
+  background: #111008;
+  border-left: 1px solid #5c3310;
 }
 /* The column swaps subjects, it does not slide in and out — only its content
    changes, so the exchange is a beat rather than a movement. */
@@ -2398,8 +2356,8 @@ const shopChampionNames = computed(() =>
   height: v-bind(heroBarHeightPx);
   margin: -12px -14px 12px;
   padding: 0 14px;
-  background: #111008;
-  border-bottom: 1px solid #3e200a;
+  background: #1a1008;
+  border-bottom: 1px solid #5c3310;
 }
 /* Takes whatever the two buttons leave over — that is the point of the row. */
 .cs-hero-field {
