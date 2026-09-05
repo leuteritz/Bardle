@@ -520,6 +520,12 @@ function equippedItem(category: ItemCategory): ShopItem | null {
                   v-if="equippedItem(category)!.icon.startsWith('/')"
                   :src="equippedItem(category)!.icon"
                   :alt="equippedItem(category)!.name"
+                /><Icon
+                  v-else-if="equippedItem(category)!.icon.includes(':')"
+                  :icon="equippedItem(category)!.icon"
+                  width="28"
+                  height="28"
+                  class="sdp-equipment-icon"
                 /><span v-else class="sdp-equipment-icon">{{ equippedItem(category)!.icon }}</span
                 ><strong>{{ equippedItem(category)!.name }}</strong></template
               ><template v-else
@@ -660,7 +666,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   z-index: 1;
   display: flex;
   flex-direction: column;
-  background: #111008;
+  background: color-mix(in srgb, var(--rc) 10%, #111008);
   border-left: 3px solid #5c3310;
   color: #f0dfb3;
 }
@@ -670,7 +676,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   align-items: center;
   gap: 14px;
   padding: 10px 14px;
-  background: #1e1006;
+  background: color-mix(in srgb, var(--rc) 18%, #111008);
   border-bottom: 3px solid #5c3310;
 }
 .sdp-roster-title {
@@ -702,7 +708,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   height: 60px;
   overflow: hidden;
   border: 1px solid #493116;
-  background: #141410;
+  background: color-mix(in srgb, var(--rc) 12%, #141410);
   border-radius: 4px;
   opacity: 1;
   transition:
@@ -804,14 +810,14 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-hero {
   min-width: 0;
-  min-height: 278px;
+  min-height: 348px;
   display: grid;
-  grid-template-columns: 43% minmax(0, 1fr);
+  grid-template-columns: 48% minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto auto;
   column-gap: 20px;
-  padding: 13px 18px;
+  padding: 16px 20px;
   border-bottom: 2px solid #3e200a;
-  background: #141410;
+  background: color-mix(in srgb, var(--rc) 16%, #141410);
 }
 .sdp-portrait {
   position: relative;
@@ -887,7 +893,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-identity {
   align-self: end;
-  padding: 0 2px 15px;
+  padding: 0 6px 20px;
 }
 .sdp-seat-name {
   margin: 0 0 2px;
@@ -899,7 +905,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-identity h2 {
   margin: 0;
   color: #f3d57b;
-  font-size: 38px;
+  font-size: 52px;
   font-weight: 400;
   line-height: 1;
 }
@@ -908,7 +914,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   flex-wrap: wrap;
   gap: 5px 10px;
   margin-top: 9px;
-  font-size: 11px;
+  font-size: 13px;
 }
 .sdp-meta span {
   display: inline-flex;
@@ -916,7 +922,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   gap: 3px;
 }
 .sdp-progression {
-  padding: 0 2px 15px;
+  padding: 0 6px 19px;
 }
 .sdp-xp-head {
   display: flex;
@@ -924,16 +930,16 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   gap: 10px;
   margin-bottom: 6px;
   color: #e8c040;
-  font-size: 13px;
+  font-size: 16px;
 }
 .sdp-xp-head small {
   color: var(--rc);
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .sdp-xp-track {
-  height: 7px;
+  height: 9px;
   overflow: hidden;
   background: #050504;
   border: 1px solid #5c3310;
@@ -952,7 +958,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px;
+  min-height: 48px;
+  padding: 12px;
   border: 1px solid #6ec040;
   border-radius: 4px;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
@@ -967,7 +974,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-level-cost {
   color: #fff3c2;
-  font-size: 12px;
+  font-size: 14px;
 }
 .sdp-level-cost img {
   width: 17px;
@@ -993,7 +1000,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  padding: 10px 18px 14px;
+  padding: 12px 20px 16px;
+  background: color-mix(in srgb, var(--rc) 6%, #111008);
   overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
@@ -1031,7 +1039,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-stat {
   position: relative;
-  min-height: 62px;
+  min-height: 72px;
   display: grid;
   grid-template-columns: 29px minmax(0, 1fr);
   gap: 8px;
@@ -1061,14 +1069,14 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-stat strong {
   grid-column: 2;
   grid-row: 1;
-  font-size: 19px;
+  font-size: 24px;
   font-weight: 400;
 }
 .sdp-stat div span {
   grid-column: 1 / -1;
   overflow: hidden;
   color: #bcae91;
-  font-size: 10px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1099,7 +1107,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   grid-template-columns: 29px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  min-height: 56px;
+  padding: 8px 12px;
   border: 0;
   border-right: 1px solid #3e200a;
   border-radius: 0;
@@ -1126,13 +1135,13 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-equipment strong {
   overflow: hidden;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   line-height: 1.2;
   text-overflow: ellipsis;
 }
 .sdp-section--perks {
-  flex: 1 0 150px;
+  flex: 1 0 165px;
 }
 .sdp-section--open {
   background: #16140e;
@@ -1338,7 +1347,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
     height: 54px;
   }
   .sdp-hero {
-    min-height: 238px;
+    min-height: 284px;
   }
   .sdp-portrait {
     min-height: 0;
@@ -1347,7 +1356,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
     padding-block: 9px 6px;
   }
   .sdp-identity h2 {
-    font-size: 25px;
+    font-size: 40px;
   }
   .sdp-workspace {
     gap: 7px;
@@ -1357,7 +1366,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
     flex-basis: 170px;
   }
   .sdp-stat {
-    min-height: 62px;
+    min-height: 66px;
     padding: 7px;
   }
   .sdp-skin {
