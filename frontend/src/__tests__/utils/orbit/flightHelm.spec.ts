@@ -7,6 +7,7 @@ import {
   type HelmInputs,
   type HelmOutput,
 } from '@/utils/orbit/flightHelm'
+import { createJoltState, kickJolt, stepJolt } from '@/utils/orbit/flightJolt'
 import {
   HELM_EASE_OUT_SEC,
   HELM_EVADE_COOLDOWN_SEC,
@@ -37,6 +38,7 @@ function inputs(over: Partial<HelmInputs> = {}): HelmInputs {
     baseFocusX: 0,
     baseFocusY: 0,
     rand: seeded(11),
+    jolt: null,
     ...over,
   }
 }
@@ -197,6 +199,46 @@ describe('Helm — Gating und Takt', () => {
     }
     expect(trace(9)).toBe(trace(9))
     expect(trace(9)).not.toBe(trace(10))
+  })
+
+  it('der Treffer-Ruck geht auch inaktiv und bei dt = 0 in Fokus, Slip und Rolle ein', () => {
+    const jolt = createJoltState()
+    kickJolt(jolt, -1, 0, 1, 1)
+    stepJolt(jolt, 1 / 60)
+    const state = createHelmState()
+    const off = inputs({ active: false, rand: () => 0.5, jolt: jolt.out })
+    // Direkt nach dem Stoss: Fokus nach links, das nahe Feld rutscht entgegen (nach rechts).
+    let o = stepHelm(state, off)
+    expect(o.focusX).toBeLessThan(0)
+    expect(o.slipX).toBeGreaterThan(0)
+    for (let i = 0; i < 6; i++) {
+      stepJolt(jolt, 1 / 60)
+      o = stepHelm(state, off)
+    }
+    expect(o.focusX).toBeLessThan(0)
+    expect(o.roll).not.toBe(0)
+    const frozen = stepHelm(
+      state,
+      inputs({ active: false, dt: 0, rand: () => 0.5, jolt: jolt.out }),
+    )
+    expect(frozen.focusX).toBeCloseTo(o.focusX, 9)
+    expect(Math.abs(frozen.roll)).toBeGreaterThan(0)
+  })
+
+  it('die Klemmen halten mit vollem Ruck während eines Ausweichens', () => {
+    const jolt = createJoltState()
+    const state = createHelmState()
+    const inp = inputs({ rand: () => 0.5, jolt: jolt.out })
+    requestEvade(state, 0, 1)
+    for (let i = 0; i < 60; i++) stepHelm(state, inp)
+    for (let k = 0; k < 5; k++) kickJolt(jolt, -1, 0, 1, 1)
+    for (let i = 0; i < 90; i++) {
+      stepJolt(jolt, 1 / 60)
+      const o = stepHelm(state, inp)
+      expect(Math.hypot(o.focusX, o.focusY)).toBeLessThanOrEqual(HELM_FOCUS_MAX_FRAC * EDGE + 1e-6)
+      expect(Math.abs(o.roll)).toBeLessThanOrEqual(HELM_ROLL_MAX_DEG * DEG + 1e-9)
+      expect(Math.hypot(o.slipX, o.slipY)).toBeLessThanOrEqual(HELM_SLIP_MAX_PX_S + 1e-6)
+    }
   })
 
   it('resetHelm stellt den Anfangszustand her', () => {

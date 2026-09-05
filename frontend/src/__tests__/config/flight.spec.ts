@@ -37,6 +37,13 @@ import {
   HELM_WAKE_SHIFT_PCT,
   HELM_YAW_AMP_FRAC_MAX,
   HELM_YAW_AMP_FRAC_MIN,
+  JOLT_FOCUS_FRAC,
+  JOLT_PROFILES,
+  JOLT_ROLL_DEG,
+  JOLT_TREMOR_HZ,
+  JOLT_UNIT_MAX,
+  JOLT_VOID_PROFILES,
+  JOLT_ZETA,
   STAR_BG_BLOOM_SHARE,
   STAR_BG_FOG_TIERS,
 } from '@/config/constants'
@@ -47,16 +54,18 @@ import {
  * Ausweichen still ab.
  */
 describe('Helm — Kurs', () => {
-  it('die Fokus-Klemme trägt Drift plus das grösste Manöver', () => {
+  it('die Fokus-Klemme trägt Drift plus das grösste Manöver plus den vollen Ruck', () => {
     const largest = Math.max(HELM_YAW_AMP_FRAC_MAX, HELM_EVADE_AMP_FRAC)
-    expect(HELM_FOCUS_MAX_FRAC).toBeGreaterThanOrEqual(FLIGHT_DRIFT_AMPLITUDE + largest)
+    expect(HELM_FOCUS_MAX_FRAC).toBeGreaterThanOrEqual(
+      FLIGHT_DRIFT_AMPLITUDE + largest + JOLT_FOCUS_FRAC * JOLT_UNIT_MAX,
+    )
     expect(HELM_YAW_AMP_FRAC_MIN).toBeLessThan(HELM_YAW_AMP_FRAC_MAX)
   })
 
   it('keine Rolle übersteigt die Roll-Klemme', () => {
     expect(HELM_BANK_ROLL_DEG_MIN).toBeLessThan(HELM_BANK_ROLL_DEG_MAX)
-    expect(HELM_BANK_ROLL_DEG_MAX).toBeLessThanOrEqual(HELM_ROLL_MAX_DEG)
-    expect(HELM_EVADE_ROLL_DEG).toBeLessThanOrEqual(HELM_ROLL_MAX_DEG)
+    expect(HELM_BANK_ROLL_DEG_MAX + JOLT_ROLL_DEG).toBeLessThanOrEqual(HELM_ROLL_MAX_DEG)
+    expect(HELM_EVADE_ROLL_DEG + JOLT_ROLL_DEG).toBeLessThanOrEqual(HELM_ROLL_MAX_DEG)
   })
 
   it('Ausweichen ist knackiger als Gieren und erholt sich vor dem nächsten', () => {
@@ -125,6 +134,23 @@ describe('Himmelsbegegnungen', () => {
     for (const tiers of [ENCOUNTER_ROCK_TIERS, ENCOUNTER_SHARD_TIERS]) {
       for (let i = 1; i < tiers.length; i++) expect(tiers[i]).toBeGreaterThan(tiers[i - 1])
     }
+  })
+})
+
+describe('Treffer — Jolt', () => {
+  it('die Feder ist unterkritisch gedämpft und das Beben unter Nyquist bei 60 Hz', () => {
+    expect(JOLT_ZETA).toBeGreaterThan(0)
+    expect(JOLT_ZETA).toBeLessThan(1)
+    expect(JOLT_TREMOR_HZ / 60).toBeLessThanOrEqual(0.5)
+  })
+
+  it('Void-Profile steigen mit der Schwere und bleiben unter dem Strike; Volleys stossen nicht', () => {
+    const { lesser, greater, abyssal } = JOLT_VOID_PROFILES
+    expect(lesser.strength).toBeLessThan(greater.strength)
+    expect(greater.strength).toBeLessThan(abyssal.strength)
+    expect(abyssal.strength).toBeLessThanOrEqual(JOLT_PROFILES.strike.strength)
+    expect(JOLT_PROFILES.volley.strength).toBe(0)
+    expect(JOLT_PROFILES.volley.tremor).toBe(0)
   })
 })
 

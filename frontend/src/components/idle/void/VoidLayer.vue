@@ -65,6 +65,7 @@ import { getVoidRift } from '@/config/world/void'
 import { hexToRgbTriple } from '@/utils/ui/format'
 import { voidPositionAt, voidHitRadius } from '@/utils/orbit/voidPath'
 import { hudFieldMetrics } from '@/utils/ui/hudField'
+import { kickFlightJolt } from '@/utils/orbit/flightLive'
 import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import {
   getVoidSpriteSet,
@@ -451,6 +452,13 @@ watch(
         seq: result.seq,
         severity: def.severity,
         color: VOID_SEVERITY_COLOR[def.severity] ?? def.color,
+      }
+      if (!isIdleRenderingPaused.value) {
+        kickFlightJolt(
+          'void',
+          Math.atan2(result.y - window.innerHeight / 2, result.x - window.innerWidth / 2),
+          def.severity,
+        )
       }
       if (waveTimer) clearTimeout(waveTimer)
       waveTimer = setTimeout(() => {

@@ -1,5 +1,5 @@
 <template>
-  <div class="sun-container" :class="{ contained }" :style="sunContainerVars">
+  <div ref="host" class="sun-container" :class="{ contained }" :style="sunContainerVars">
     <!-- Orbit-Ringe der Champions -->
     <svg v-if="showRings" class="orbit-paths" viewBox="0 0 360 360">
       <ellipse
@@ -33,6 +33,15 @@
       :class="{ 'sun-body--out': solarStore.isCometState }"
     />
 
+    <!-- Blitz über der Scheibe, wenn ein Treffer den Kurs stösst; je Treffer neu (key). -->
+    <span
+      v-if="hitFlash"
+      :key="'hf-' + hitFlash"
+      class="sun-hit-flash"
+      :style="{ '--sun-hit-ms': hitFlashMs + 'ms' }"
+      aria-hidden="true"
+    />
+
     <!-- Chime Particles (canvas) -->
     <canvas ref="canvasEl" class="chime-canvas" />
   </div>
@@ -41,6 +50,8 @@
 <script lang="ts">
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { useBodyFollower } from '@/composables/orbit/useBodyFollower'
+import { flightHitSeq } from '@/utils/orbit/flightLive'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { useCombatStore } from '@/stores/battle/combatStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
@@ -49,6 +60,10 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   SUN_BG_DISC_RADIUS_FACTOR,
   SUN_BODY_SWAP_MS,
+  SUN_HIT_FLASH_MS,
+  JOLT_BODY_PX_MAX,
+  JOLT_BODY_PX_MIN,
+  JOLT_BODY_R_FRAC,
   STAR_PHASE_FINAL_INDEX,
   CHIME_PARTICLE_POOL_SIZE,
   CHIME_PARTICLE_MIN_VISIBLE,
@@ -110,6 +125,32 @@ export default defineComponent({
 
     const effectiveRadius = computed(() => props.radius ?? planetShopStore.currentSunRadius)
     const discDiameter = computed(() => effectiveRadius.value * SUN_BG_DISC_RADIUS_FACTOR)
+
+    // Der Körper zuckt beim Treffer: die Sternfeld-Schleife schreibt seinen Transform.
+    const host = ref<HTMLDivElement | null>(null)
+    useBodyFollower(
+      host,
+      () => !props.contained,
+      () =>
+        Math.max(
+          JOLT_BODY_PX_MIN,
+          Math.min(JOLT_BODY_PX_MAX, effectiveRadius.value * JOLT_BODY_R_FRAC),
+        ),
+    )
+    const hitFlash = ref<number | null>(null)
+    let hitFlashTimer: ReturnType<typeof setTimeout> | null = null
+    watch(flightHitSeq, (seq) => {
+      if (props.contained || seq === 0) return
+      hitFlash.value = seq
+      if (hitFlashTimer) clearTimeout(hitFlashTimer)
+      hitFlashTimer = setTimeout(() => {
+        hitFlash.value = null
+        hitFlashTimer = null
+      }, SUN_HIT_FLASH_MS)
+    })
+    onUnmounted(() => {
+      if (hitFlashTimer) clearTimeout(hitFlashTimer)
+    })
 
     const POOL_SIZE = CHIME_PARTICLE_POOL_SIZE
     const chimeParticles: ChimeParticle[] = Array.from({ length: POOL_SIZE }, (_, i) => ({
@@ -303,6 +344,9 @@ export default defineComponent({
       discDiameter,
       sunContainerVars,
       canvasEl,
+      host,
+      hitFlash,
+      hitFlashMs: SUN_HIT_FLASH_MS,
       showComet,
       showStar,
     }
@@ -337,6 +381,35 @@ export default defineComponent({
   pointer-events: none;
   z-index: 1;
   overflow: visible;
+}
+
+/* Nur Deckkraft; der Verlauf ist statisch (Präzedenz .sig-pulse). */
+.sun-hit-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(255, 244, 220, 0.85) 0%,
+    rgba(255, 210, 150, 0.35) 22%,
+    transparent 45%
+  );
+  animation: sun-hit-flash var(--sun-hit-ms, 380ms) ease-out forwards;
+}
+
+@keyframes sun-hit-flash {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 .chime-canvas {

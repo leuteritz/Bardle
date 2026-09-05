@@ -98,7 +98,14 @@ import {
   type HelmInputs,
   type HelmOutput,
 } from '@/utils/orbit/flightHelm'
-import { flightLive, resetFlightLive, writeWakeFollowers } from '@/utils/orbit/flightLive'
+import {
+  flightLive,
+  joltOut,
+  resetFlightJolt,
+  resetFlightLive,
+  stepFlightJolt,
+  writeFlightFollowers,
+} from '@/utils/orbit/flightLive'
 import { rotateAbout, slipPolar, trailAngle, upstreamAngle } from '@/utils/orbit/flightField'
 import {
   clearEncounters,
@@ -379,6 +386,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     baseFocusX: 0,
     baseFocusY: 0,
     rand: Math.random,
+    jolt: joltOut(),
   }
   const rotOut = { x: 0, y: 0 }
   const sky = createEncounterField(firstEncounterDelay(Math.random))
@@ -510,6 +518,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     showCanvas()
     if (animFrame) return // läuft bereits
     lastTimestamp = 0
+    if (!isFrozen) resetFlightJolt()
     animFrame = requestAnimationFrame(animateStars)
   }
 
@@ -903,6 +912,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     if (lastTimestamp === 0) lastTimestamp = timestamp
     const rawDelta = (timestamp - lastTimestamp) / 1000
     let delta = Math.min(rawDelta, 0.1)
+    // Der Treffer-Ruck läuft auch im Stillstand — mit dem Delta VOR dem Nullen.
+    const joltDelta = delta
     lastTimestamp = timestamp
 
     // Frozen (Shop): kein Heranfliegen, keine Galaxy-/Warp-/Rescue-Mutationen.
@@ -1043,6 +1054,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       helmInputs.minEdge = Math.min(w, h)
       helmInputs.baseFocusX = baseFx
       helmInputs.baseFocusY = baseFy
+      stepFlightJolt(joltDelta)
       helmOut = stepHelm(helm, helmInputs)
       speedMultiplier *= helmOut.throttle
       flightLive.focusX = helmOut.focusX
@@ -1052,7 +1064,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       flightLive.roll = helmOut.roll
       flightLive.bank = helmOut.bank
       flightLive.mode = helmOut.mode
-      writeWakeFollowers()
+      writeFlightFollowers()
     }
     const cx = w / 2 + (helmOut ? helmOut.focusX : baseFx)
     const cy = h / 2 + (helmOut ? helmOut.focusY : baseFy)

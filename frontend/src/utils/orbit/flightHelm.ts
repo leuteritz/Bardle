@@ -31,7 +31,9 @@ import {
   HELM_YAW_AMP_FRAC_MIN,
   HELM_YAW_HOLD_SEC_MAX,
   HELM_YAW_HOLD_SEC_MIN,
+  JOLT_SLIP_GAIN,
 } from '@/config/constants'
+import type { JoltOut } from '@/utils/orbit/flightJolt'
 
 export type HelmMode = 'cruise' | 'yaw' | 'bank' | 'evade'
 
@@ -45,6 +47,8 @@ export interface HelmInputs {
   baseFocusX: number
   baseFocusY: number
   rand: () => number
+  /** Der Treffer-Ruck — geht IMMER ein, auch inaktiv und bei dt = 0. */
+  jolt: JoltOut | null
 }
 
 export interface HelmOutput {
@@ -213,10 +217,11 @@ export function stepHelm(state: HelmState, inp: HelmInputs): HelmOutput {
   }
 
   const edge = inp.minEdge
-  const helmX = state.fx * edge
-  const helmY = state.fy * edge
-  const rateX = dt > 0 ? ((state.fx - prevFx) * edge) / dt : 0
-  const rateY = dt > 0 ? ((state.fy - prevFy) * edge) / dt : 0
+  const j = inp.jolt
+  const helmX = (state.fx + (j ? j.focusX : 0)) * edge
+  const helmY = (state.fy + (j ? j.focusY : 0)) * edge
+  const rateX = (dt > 0 ? ((state.fx - prevFx) * edge) / dt : 0) + (j ? j.focusVx * JOLT_SLIP_GAIN * edge : 0)
+  const rateY = (dt > 0 ? ((state.fy - prevFy) * edge) / dt : 0) + (j ? j.focusVy * JOLT_SLIP_GAIN * edge : 0)
   let slipX = -(HELM_SLIP_HOLD_GAIN * helmX + HELM_SLIP_RATE_GAIN * rateX)
   let slipY = -(HELM_SLIP_HOLD_GAIN * helmY + HELM_SLIP_RATE_GAIN * rateY)
   const slipLen = Math.hypot(slipX, slipY)
@@ -225,8 +230,8 @@ export function stepHelm(state: HelmState, inp: HelmInputs): HelmOutput {
     slipY *= HELM_SLIP_MAX_PX_S / slipLen
   }
 
-  let focusX = inp.baseFocusX + helmX
-  let focusY = inp.baseFocusY + helmY
+  let focusX = inp.baseFocusX + helmX + (j ? j.tremorX * edge : 0)
+  let focusY = inp.baseFocusY + helmY + (j ? j.tremorY * edge : 0)
   const focusMax = HELM_FOCUS_MAX_FRAC * edge
   const focusLen = Math.hypot(focusX, focusY)
   if (focusLen > focusMax) {
@@ -235,14 +240,15 @@ export function stepHelm(state: HelmState, inp: HelmInputs): HelmOutput {
   }
 
   const rollMax = HELM_ROLL_MAX_DEG * DEG
-  const roll = Math.max(-rollMax, Math.min(rollMax, state.roll))
+  const roll = Math.max(-rollMax, Math.min(rollMax, state.roll + (j ? j.roll : 0)))
 
   out.focusX = focusX
   out.focusY = focusY
   out.slipX = slipX
   out.slipY = slipY
   out.roll = roll
-  out.rollRate = dt > 0 ? (roll - Math.max(-rollMax, Math.min(rollMax, prevRoll))) / dt : 0
+  out.rollRate =
+    (dt > 0 ? (state.roll - prevRoll) / dt : 0) + (j ? j.rollRate : 0)
   out.bank = roll / rollMax
   out.throttle = state.throttle
   out.mode = state.mode

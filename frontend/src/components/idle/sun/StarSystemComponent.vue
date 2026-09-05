@@ -345,6 +345,7 @@ import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useRoleBehaviorStore, CURSE_DEFS } from '@/stores/battle/roleBehaviorStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { kickFlightJolt } from '@/utils/orbit/flightLive'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
 import { useProjectileSystem } from '@/composables/orbit/useProjectileSystem'
@@ -1129,16 +1130,14 @@ watch(
 
     const novaOpts = { trailColor: NOVA_TRAIL_COLOR, headColor: NOVA_HEAD_COLOR }
 
-    // Spieler in der Orbit-Mitte
-    spawnEnemyShot(
-      star.x,
-      star.y,
-      window.innerWidth / 2,
-      window.innerHeight / 2,
-      true,
-      true,
-      novaOpts,
-    )
+    // Spieler in der Orbit-Mitte — der Ruck landet mit dem Geschoss
+    const novaCx = window.innerWidth / 2
+    const novaCy = window.innerHeight / 2
+    const novaAngle = Math.atan2(star.y - novaCy, star.x - novaCx)
+    spawnEnemyShot(star.x, star.y, novaCx, novaCy, true, true, {
+      ...novaOpts,
+      onHit: () => kickFlightJolt('nova', novaAngle),
+    })
 
     // Alle sichtbaren Spieler-Planeten
     for (const [, pos] of activePlayerPlanetPositions) {
@@ -1174,8 +1173,20 @@ watch(
     if (reducedMotion || isIdleRenderingPaused.value) return
     const starId = targetedStarId.value
     if (!starId) return
+    const strikeCx = window.innerWidth / 2
+    const strikeCy = window.innerHeight / 2
     const star = starRenders.value.find((s) => s.id === starId)
-    if (!star || star.isBehind || star.opacity <= ORBIT_RING_MIN_OPACITY) return
+    if (!star || star.isBehind || star.opacity <= ORBIT_RING_MIN_OPACITY) {
+      // Kein Geschoss zu sehen, der Schaden ist trotzdem gebucht — der Ruck kommt sofort.
+      if (roleBehaviorStore.autoTargetSun) {
+        const pos = activeStarCombatState.get(starId)
+        kickFlightJolt(
+          'strike',
+          pos ? Math.atan2(pos.y - strikeCy, pos.x - strikeCx) : -Math.PI / 2,
+        )
+      }
+      return
+    }
 
     const strikeOpts = { trailColor: STRIKE_TRAIL_COLOR, headColor: STRIKE_HEAD_COLOR }
     const role = roleBehaviorStore.autoTargetRole
@@ -1187,16 +1198,13 @@ watch(
       spawnEnemyShot(star.x, star.y, champ.screenX, champ.screenY, true, true, strikeOpts)
     } else if (roleBehaviorStore.autoTargetSun) {
       // Die eigene Sonne (= der Spieler) steht immer in der Orbit-Mitte und
-      // immer im Vordergrund — der Schuss fliegt direkt auf den Bildschirmkern
-      spawnEnemyShot(
-        star.x,
-        star.y,
-        window.innerWidth / 2,
-        window.innerHeight / 2,
-        true,
-        true,
-        strikeOpts,
-      )
+      // immer im Vordergrund — der Schuss fliegt direkt auf den Bildschirmkern,
+      // der Ruck landet mit ihm
+      const strikeAngle = Math.atan2(star.y - strikeCy, star.x - strikeCx)
+      spawnEnemyShot(star.x, star.y, strikeCx, strikeCy, true, true, {
+        ...strikeOpts,
+        onHit: () => kickFlightJolt('strike', strikeAngle),
+      })
     } else if (roleBehaviorStore.autoTargetSlotId) {
       const pos = activePlayerPlanetPositions.get(roleBehaviorStore.autoTargetSlotId)
       if (pos?.isForeground) {
@@ -1317,6 +1325,8 @@ function fireEnemyShot(fromX: number, fromY: number) {
         : undefined,
     onHit() {
       applyEnemyShotDamage(capturedSlotId)
+      if (capturedSlotId === null)
+        kickFlightJolt('volley', Math.atan2(fromY - targetY, fromX - targetX))
     },
   })
 }

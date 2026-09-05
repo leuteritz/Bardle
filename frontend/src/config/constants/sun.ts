@@ -99,6 +99,8 @@ export const SUN_HORIZON_HP_MAX_WIDTH_PX = 420
 export const SUN_HORIZON_HP_GAP_PX = 10
 /** Lebensdauer des Crest-Aufleuchtens, wenn die Sonne getroffen wird (ms). */
 export const SUN_HORIZON_HIT_FLASH_MS = 420
+/** Blitz über der Scheibe im Orbit, wenn ein Treffer den Kurs stösst. */
+export const SUN_HIT_FLASH_MS = 380
 /** Lebensdauer eines Schadens-Floats über dem Sonnen-Kamm (ms). */
 export const SUN_HORIZON_FLOAT_MS = 1200
 
@@ -665,13 +667,97 @@ export interface SolarSignatureStage {
  * exakt so aussieht wie vor diesem Feature.
  */
 export const SOLAR_SIGNATURE_STAGES: SolarSignatureStage[] = [
-  { minLevels: 0, sparkAlpha: 0, limbWidth: 0, limbAlpha: 0, coronaAlpha: 0, granuleSizePct: 0, granuleAlpha: 0, prominenceArcs: 0, prominenceHeight: 0, prominenceAlpha: 0, wakeBonus: 0 },
-  { minLevels: 3, sparkAlpha: 0.14, limbWidth: 0.010, limbAlpha: 0.16, coronaAlpha: 0.06, granuleSizePct: 30, granuleAlpha: 0.05, prominenceArcs: 3, prominenceHeight: 0.030, prominenceAlpha: 0.14, wakeBonus: 0.06 },
-  { minLevels: 9, sparkAlpha: 0.22, limbWidth: 0.014, limbAlpha: 0.22, coronaAlpha: 0.10, granuleSizePct: 25, granuleAlpha: 0.07, prominenceArcs: 5, prominenceHeight: 0.042, prominenceAlpha: 0.19, wakeBonus: 0.11 },
-  { minLevels: 20, sparkAlpha: 0.30, limbWidth: 0.018, limbAlpha: 0.28, coronaAlpha: 0.14, granuleSizePct: 21, granuleAlpha: 0.09, prominenceArcs: 7, prominenceHeight: 0.054, prominenceAlpha: 0.24, wakeBonus: 0.16 },
-  { minLevels: 36, sparkAlpha: 0.38, limbWidth: 0.022, limbAlpha: 0.34, coronaAlpha: 0.18, granuleSizePct: 18, granuleAlpha: 0.11, prominenceArcs: 9, prominenceHeight: 0.066, prominenceAlpha: 0.29, wakeBonus: 0.21 },
-  { minLevels: 58, sparkAlpha: 0.46, limbWidth: 0.026, limbAlpha: 0.40, coronaAlpha: 0.22, granuleSizePct: 15, granuleAlpha: 0.13, prominenceArcs: 11, prominenceHeight: 0.078, prominenceAlpha: 0.34, wakeBonus: 0.27 },
-  { minLevels: 86, sparkAlpha: 0.55, limbWidth: 0.030, limbAlpha: 0.46, coronaAlpha: 0.27, granuleSizePct: 12, granuleAlpha: 0.15, prominenceArcs: 13, prominenceHeight: 0.092, prominenceAlpha: 0.40, wakeBonus: 0.34 },
+  {
+    minLevels: 0,
+    sparkAlpha: 0,
+    limbWidth: 0,
+    limbAlpha: 0,
+    coronaAlpha: 0,
+    granuleSizePct: 0,
+    granuleAlpha: 0,
+    prominenceArcs: 0,
+    prominenceHeight: 0,
+    prominenceAlpha: 0,
+    wakeBonus: 0,
+  },
+  {
+    minLevels: 3,
+    sparkAlpha: 0.14,
+    limbWidth: 0.01,
+    limbAlpha: 0.16,
+    coronaAlpha: 0.06,
+    granuleSizePct: 30,
+    granuleAlpha: 0.05,
+    prominenceArcs: 3,
+    prominenceHeight: 0.03,
+    prominenceAlpha: 0.14,
+    wakeBonus: 0.06,
+  },
+  {
+    minLevels: 9,
+    sparkAlpha: 0.22,
+    limbWidth: 0.014,
+    limbAlpha: 0.22,
+    coronaAlpha: 0.1,
+    granuleSizePct: 25,
+    granuleAlpha: 0.07,
+    prominenceArcs: 5,
+    prominenceHeight: 0.042,
+    prominenceAlpha: 0.19,
+    wakeBonus: 0.11,
+  },
+  {
+    minLevels: 20,
+    sparkAlpha: 0.3,
+    limbWidth: 0.018,
+    limbAlpha: 0.28,
+    coronaAlpha: 0.14,
+    granuleSizePct: 21,
+    granuleAlpha: 0.09,
+    prominenceArcs: 7,
+    prominenceHeight: 0.054,
+    prominenceAlpha: 0.24,
+    wakeBonus: 0.16,
+  },
+  {
+    minLevels: 36,
+    sparkAlpha: 0.38,
+    limbWidth: 0.022,
+    limbAlpha: 0.34,
+    coronaAlpha: 0.18,
+    granuleSizePct: 18,
+    granuleAlpha: 0.11,
+    prominenceArcs: 9,
+    prominenceHeight: 0.066,
+    prominenceAlpha: 0.29,
+    wakeBonus: 0.21,
+  },
+  {
+    minLevels: 58,
+    sparkAlpha: 0.46,
+    limbWidth: 0.026,
+    limbAlpha: 0.4,
+    coronaAlpha: 0.22,
+    granuleSizePct: 15,
+    granuleAlpha: 0.13,
+    prominenceArcs: 11,
+    prominenceHeight: 0.078,
+    prominenceAlpha: 0.34,
+    wakeBonus: 0.27,
+  },
+  {
+    minLevels: 86,
+    sparkAlpha: 0.55,
+    limbWidth: 0.03,
+    limbAlpha: 0.46,
+    coronaAlpha: 0.27,
+    granuleSizePct: 12,
+    granuleAlpha: 0.15,
+    prominenceArcs: 13,
+    prominenceHeight: 0.092,
+    prominenceAlpha: 0.4,
+    wakeBonus: 0.34,
+  },
 ]
 
 export interface SolarSignatureBaseStage {
@@ -698,7 +784,7 @@ export const SOLAR_SIGNATURE_BASE_STAGES: SolarSignatureBaseStage[] = [
   { minLevels: 6, coreLift: 0.06, coronaLift: 0.06, cometGoldLift: 0.08 },
   { minLevels: 14, coreLift: 0.09, coronaLift: 0.09, cometGoldLift: 0.12 },
   { minLevels: 26, coreLift: 0.12, coronaLift: 0.12, cometGoldLift: 0.16 },
-  { minLevels: 44, coreLift: 0.15, coronaLift: 0.15, cometGoldLift: 0.20 },
+  { minLevels: 44, coreLift: 0.15, coronaLift: 0.15, cometGoldLift: 0.2 },
 ]
 
 /**

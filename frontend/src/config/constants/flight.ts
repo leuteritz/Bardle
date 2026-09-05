@@ -35,9 +35,9 @@ export const HELM_EVADE_TAU_SEC = 0.9
 export const HELM_EVADE_HOLD_SEC = 3.5
 export const HELM_EVADE_THROTTLE = 1.15
 export const HELM_EVADE_COOLDOWN_SEC = 25
-/** Harte Klemmen über Drift + Helm. */
-export const HELM_FOCUS_MAX_FRAC = 0.12
-export const HELM_ROLL_MAX_DEG = 8
+/** Harte Klemmen über Drift + Helm + Jolt. */
+export const HELM_FOCUS_MAX_FRAC = 0.19
+export const HELM_ROLL_MAX_DEG = 11
 /** Seitenrutsch des nahen Feldes: gehaltene Kurve und Übergang, px/s. */
 export const HELM_SLIP_HOLD_GAIN = 0.35
 export const HELM_SLIP_RATE_GAIN = 1.2
@@ -254,3 +254,42 @@ export const STAR_BG_BLOOM_MIN_NORM = 0.55
 export const STAR_BG_BLOOM_SCALE = 5
 export const STAR_BG_BLOOM_ALPHA = 0.35
 export const STAR_BG_BLOOM_SPRITE_PX = 64
+
+// ── Treffer — Jolt ────────────────────────────────────────────────────────────
+// Ein Treffer am Spielerkörper stösst den Kurs: gedämpfte Feder im Einheitsraum
+// (Spitze ≈ 1 bei Stärke 1), dazu ein kurzes Beben. Wirkt auch im Stillstand.
+/** ≈ 2,2 Hz, zwei sichtbare Überschwinger, Ruhe nach ≈ 0,8 s. */
+export const JOLT_OMEGA_RAD_S = 14
+export const JOLT_ZETA = 0.35
+/** Impuls je Stärke 1 → Spitze ≈ 1 Einheit; gestapelte Treffer deckeln bei 125 %. */
+export const JOLT_KICK_VEL = 22
+export const JOLT_UNIT_MAX = 1.25
+/** Eine Einheit als Fokus-Versatz (Anteil der kurzen Kante) und als Rolle. */
+export const JOLT_FOCUS_FRAC = 0.05
+export const JOLT_ROLL_DEG = 3
+/** Anteil der Federgeschwindigkeit, der in den Slip geht — sonst sättigt die Rate. */
+export const JOLT_SLIP_GAIN = 0.3
+/** Zucken des Körpers: Anteil des Sonnenradius, geklemmt in px. */
+export const JOLT_BODY_R_FRAC = 0.07
+export const JOLT_BODY_PX_MIN = 4
+export const JOLT_BODY_PX_MAX = 16
+/** Beben: Amplitude, Frequenz, inkommensurable zweite Achse, Abklingen. */
+export const JOLT_TREMOR_FRAC = 0.012
+export const JOLT_TREMOR_HZ = 17
+export const JOLT_TREMOR_HZ_RATIO = 1.31
+export const JOLT_TREMOR_DECAY_SEC = 0.2
+export const JOLT_REST_EPS = 1e-3
+export const JOLT_PROFILES: Readonly<
+  Record<'strike' | 'nova' | 'volley', { strength: number; tremor: number }>
+> = {
+  strike: { strength: 1, tremor: 0.6 },
+  nova: { strength: 0.6, tremor: 1 },
+  volley: { strength: 0, tremor: 0 },
+}
+export const JOLT_VOID_PROFILES: Readonly<
+  Record<'lesser' | 'greater' | 'abyssal', { strength: number; tremor: number }>
+> = {
+  lesser: { strength: 0.35, tremor: 0.4 },
+  greater: { strength: 0.55, tremor: 0.7 },
+  abyssal: { strength: 0.8, tremor: 1 },
+}

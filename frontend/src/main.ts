@@ -19,7 +19,7 @@ import { vInkCenter } from '@/utils/ui/textInkOffset'
 import { vTip } from '@/utils/ui/tipDirective'
 import { useGameStore } from '@/stores/core/gameStore'
 import { gameIntervalMs, getGameSpeed, onGameSpeedChange } from '@/utils/game/gameClock'
-import { flightLive, getSkyDebug } from '@/utils/orbit/flightLive'
+import { flightLive, getSkyDebug, kickFlightJolt } from '@/utils/orbit/flightLive'
 import {
   disableTelemetry,
   enableTelemetry,
@@ -102,6 +102,7 @@ if (import.meta.env.DEV || import.meta.env.VITE_FX_DEBUG === '1') {
       evade: (angle: number, strength = 1) => getSkyDebug()?.evade(angle, strength),
       helm: () => getSkyDebug()?.helm(),
       sky: () => getSkyDebug()?.sky(),
+      kick: kickFlightJolt,
       live: flightLive,
     },
     enableTelemetry,

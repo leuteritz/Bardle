@@ -1,11 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import {
+  bodyFollowerTransform,
+  flightHitSeq,
   flightLive,
+  kickFlightJolt,
+  registerBodyFollower,
   registerWakeFollower,
   resetFlightLive,
+  stepFlightJolt,
+  unregisterBodyFollower,
   unregisterWakeFollower,
   wakeFollowerTransform,
-  writeWakeFollowers,
+  writeFlightFollowers,
 } from '@/utils/orbit/flightLive'
 
 describe('flightLive — Schweif-Kopplung', () => {
@@ -35,16 +41,55 @@ describe('flightLive — Schweif-Kopplung', () => {
     flightLive.slipX = 30
     flightLive.slipY = 10
     flightLive.roll = 0.02
-    writeWakeFollowers()
+    writeFlightFollowers()
     expect(el.style.transform).toContain('translate(')
     resetFlightLive()
     expect(el.style.transform).toBe('')
     expect(flightLive.slipX).toBe(0)
     flightLive.slipX = 30
-    writeWakeFollowers()
+    writeFlightFollowers()
     expect(el.style.transform).not.toBe('')
     unregisterWakeFollower(el)
     expect(el.style.transform).toBe('')
     flightLive.slipX = 0
+  })
+})
+
+describe('flightLive — Treffer-Ruck und Körper', () => {
+  it('der Körper-Transform behält die Zentrierung', () => {
+    expect(bodyFollowerTransform(0, 0, 10)).toBe('translate(calc(-50% + 0.0px),calc(-50% + 0.0px))')
+    expect(bodyFollowerTransform(1, -0.5, 10)).toBe(
+      'translate(calc(-50% + 10.0px),calc(-50% + -5.0px))',
+    )
+  })
+
+  it('ein Volley stösst nicht, ein Strike zählt den Treffer hoch', () => {
+    resetFlightLive()
+    const before = flightHitSeq.value
+    expect(kickFlightJolt('volley', 0)).toBe(false)
+    expect(flightHitSeq.value).toBe(before)
+    expect(kickFlightJolt('strike', 0)).toBe(true)
+    expect(flightHitSeq.value).toBe(before + 1)
+    expect(kickFlightJolt('void', Math.PI, 'abyssal')).toBe(true)
+    resetFlightLive()
+  })
+
+  it('schreibt beiden Registern und räumt beim Reset', () => {
+    resetFlightLive()
+    const wake = document.createElement('div')
+    const body = document.createElement('div')
+    registerWakeFollower(wake)
+    registerBodyFollower(body, 10)
+    kickFlightJolt('strike', 0)
+    stepFlightJolt(1 / 60)
+    writeFlightFollowers()
+    expect(flightLive.bodyX).toBeLessThan(0)
+    expect(body.style.transform).toContain('calc(-50% + -')
+    expect(wake.style.transform).toContain('translate(')
+    resetFlightLive()
+    expect(flightLive.bodyX).toBe(0)
+    expect(body.style.transform).toBe('')
+    unregisterBodyFollower(body)
+    unregisterWakeFollower(wake)
   })
 })
