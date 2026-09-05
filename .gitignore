@@ -7,3 +7,4 @@ AGENTS.md
 graphify-out
 docs/*.md
 *.bak
+worktree.sh
