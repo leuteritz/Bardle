@@ -85,6 +85,7 @@ const allies = computed(
 const subject = ref(props.focusAlly ?? MAIN_SUBJECT)
 const swapOpen = ref(!!props.focusSwap)
 const candidate = ref<string | null>(null)
+const skinOpen = ref(false)
 const champion = computed(() =>
   subject.value === MAIN_SUBJECT ? main.value : (allies.value[subject.value] ?? null),
 )
@@ -109,6 +110,7 @@ watch(
     subject.value = props.focusAlly ?? MAIN_SUBJECT
     candidate.value = null
     swapOpen.value = !!props.focusSwap
+    skinOpen.value = false
   },
 )
 watch(
@@ -316,8 +318,10 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 <template>
   <section class="sdp-panel" :style="{ '--rc': roleDef.color }">
     <header class="sdp-roster">
-      <div class="sdp-role-mark">
-        <Icon :icon="roleDef.icon" width="23" height="23" /><span>{{ roleDef.label }}</span>
+      <div class="sdp-roster-title">
+        <Icon :icon="roleDef.icon" width="23" height="23" />
+        <span>{{ roleDef.label }}</span>
+        <small>Squad</small>
       </div>
       <div class="sdp-seat-list" @mouseleave="emit('hover-ally', null)">
         <div
@@ -370,7 +374,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
       </div>
     </header>
 
-    <div class="sdp-content">
+    <div class="sdp-content" :class="{ 'sdp-content--swap': swapOpen }">
       <ChampionSwapCompare
         v-if="swapOpen"
         class="sdp-swap-compare"
@@ -610,11 +614,24 @@ function equippedItem(category: ItemCategory): ShopItem | null {
             </button>
           </div>
         </div>
-        <div v-if="champion && skinEntries.length > 1" class="sdp-section">
+        <div v-if="champion && skinEntries.length > 1" class="sdp-section sdp-section--appearance">
           <div class="sdp-section-head">
-            <span>Appearance</span><small>{{ skinEntries.length }} looks</small>
+            <span>Appearance</span>
+            <button
+              class="sdp-appearance-toggle"
+              type="button"
+              :aria-expanded="skinOpen"
+              @click="skinOpen = !skinOpen"
+            >
+              {{ skinOpen ? 'Hide skins' : `${skinEntries.length} skins` }}
+              <Icon
+                :icon="skinOpen ? 'lucide:chevron-up' : 'lucide:chevron-down'"
+                width="15"
+                height="15"
+              />
+            </button>
           </div>
-          <div class="sdp-skin-list">
+          <div v-if="skinOpen" class="sdp-skin-list">
             <button
               v-for="entry in skinEntries"
               :key="entry.id"
@@ -648,7 +665,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   color: #f0dfb3;
 }
 .sdp-roster {
-  min-height: 92px;
+  min-height: 82px;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -656,15 +673,21 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
 }
-.sdp-role-mark {
+.sdp-roster-title {
   display: flex;
-  flex: 0 0 112px;
+  flex: 0 0 76px;
   flex-direction: column;
-  gap: 4px;
+  align-items: flex-start;
+  gap: 2px;
   color: var(--rc);
   font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+.sdp-roster-title small {
+  color: #a59675;
+  font-size: 10px;
+  letter-spacing: 0.12em;
 }
 .sdp-seat-list {
   min-width: 0;
@@ -676,7 +699,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-seat {
   position: relative;
   min-width: 0;
-  height: 70px;
+  height: 60px;
   overflow: hidden;
   border: 1px solid #493116;
   background: #141410;
@@ -771,22 +794,29 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-content {
   min-height: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sdp-content--swap {
   display: grid;
   grid-template-columns: 43% 57%;
 }
 .sdp-hero {
   min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 14px;
-  border-right: 2px solid #3e200a;
+  min-height: 278px;
+  display: grid;
+  grid-template-columns: 43% minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  column-gap: 20px;
+  padding: 13px 18px;
+  border-bottom: 2px solid #3e200a;
   background: #141410;
 }
 .sdp-portrait {
   position: relative;
-  min-height: 188px;
-  flex: 1 1 260px;
+  grid-row: 1 / 4;
+  min-height: 0;
   width: 100%;
   overflow: hidden;
   padding: 0;
@@ -856,7 +886,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   margin: auto;
 }
 .sdp-identity {
-  padding: 14px 2px 10px;
+  align-self: end;
+  padding: 0 2px 15px;
 }
 .sdp-seat-name {
   margin: 0 0 2px;
@@ -868,7 +899,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-identity h2 {
   margin: 0;
   color: #f3d57b;
-  font-size: 31px;
+  font-size: 38px;
   font-weight: 400;
   line-height: 1;
 }
@@ -885,7 +916,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   gap: 3px;
 }
 .sdp-progression {
-  padding: 8px 2px 13px;
+  padding: 0 2px 15px;
 }
 .sdp-xp-head {
   display: flex;
@@ -915,6 +946,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   background: linear-gradient(90deg, var(--rc), #e8c040);
 }
 .sdp-level-button {
+  grid-column: 2;
   width: 100%;
   display: flex;
   align-items: center;
@@ -949,6 +981,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   cursor: not-allowed;
 }
 .sdp-shortfall {
+  grid-column: 2;
   margin: 7px 0 0;
   color: #cc6050;
   font-size: 11px;
@@ -959,25 +992,25 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
+  gap: 7px;
+  padding: 10px 18px 14px;
   overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
 .sdp-section {
   min-width: 0;
-  border: 1px solid #5c3310;
-  background: #111008;
+  border: 0;
+  background: transparent;
 }
 .sdp-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  min-height: 31px;
-  padding: 0 10px;
-  background: #1e1006;
+  min-height: 28px;
+  padding: 0;
+  background: transparent;
   border-bottom: 1px solid #5c3310;
   color: #e8c040;
   font-size: 13px;
@@ -994,16 +1027,17 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 20px;
 }
 .sdp-stat {
   position: relative;
-  min-height: 74px;
+  min-height: 62px;
   display: grid;
   grid-template-columns: 29px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
-  padding: 9px;
-  border-right: 1px solid #3e200a;
+  padding: 8px 0;
+  border-right: 0;
   border-bottom: 1px solid #3e200a;
   color: var(--sc);
 }
@@ -1056,29 +1090,29 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-equipment-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  padding: 7px;
+  gap: 0;
+  padding: 7px 0 0;
 }
 .sdp-equipment {
   min-width: 0;
   display: grid;
   grid-template-columns: 29px minmax(0, 1fr);
   align-items: center;
-  gap: 6px;
-  padding: 6px;
-  border: 1px solid #61461d;
-  border-radius: 3px;
-  background: #1c1c18;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 0;
+  border-right: 1px solid #3e200a;
+  border-radius: 0;
+  background: transparent;
   color: #ebd8a2;
   cursor: pointer;
   font: inherit;
   text-align: left;
 }
 .sdp-equipment:hover {
-  border-color: #e8c040;
+  background: #1c1c18;
 }
 .sdp-equipment--empty {
-  border-style: dashed;
   color: #9b8e72;
 }
 .sdp-equipment img {
@@ -1098,10 +1132,10 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   text-overflow: ellipsis;
 }
 .sdp-section--perks {
-  flex: 1 0 205px;
+  flex: 1 0 150px;
 }
 .sdp-section--open {
-  border-color: #b1883a;
+  background: #16140e;
 }
 .sdp-perk-rail {
   position: relative;
@@ -1267,13 +1301,33 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-skin--selected {
   border: 2px solid #e8c040;
 }
+.sdp-section--appearance {
+  flex: 0 0 auto;
+}
+.sdp-appearance-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: #a59675;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.sdp-appearance-toggle:hover {
+  color: #e8c040;
+}
 .sdp-swap-compare,
 .sdp-swap-grid {
   min-width: 0;
   min-height: 0;
 }
 .sdp-swap-compare {
-  border-right: 2px solid #3e200a;
+  border-bottom: 2px solid #3e200a;
 }
 @media (max-height: 1100px) {
   .sdp-roster {
@@ -1281,11 +1335,13 @@ function equippedItem(category: ItemCategory): ShopItem | null {
     padding-block: 6px;
   }
   .sdp-seat {
-    height: 58px;
+    height: 54px;
+  }
+  .sdp-hero {
+    min-height: 238px;
   }
   .sdp-portrait {
-    min-height: 150px;
-    flex-basis: 190px;
+    min-height: 0;
   }
   .sdp-identity {
     padding-block: 9px 6px;
