@@ -280,6 +280,10 @@ const activeTotal = computed(
 .cs-facets--folded .cs-facets-grip-arrow {
   display: none;
 }
+.cs-facets--folded .cs-facets-grip svg {
+  width: 15px;
+  height: 15px;
+}
 
 /* ── Domain ──
    Two rows, not a segmented pair: they read as the first two entries of the
@@ -540,8 +544,8 @@ const activeTotal = computed(
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 30px;
   border: 1px solid #3e200a;
   border-radius: 4px;
   background: #16140e;

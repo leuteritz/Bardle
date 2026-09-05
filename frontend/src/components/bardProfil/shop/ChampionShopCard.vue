@@ -44,6 +44,7 @@
           v-if="buyable && !owned"
           class="absolute inset-0 pointer-events-none card-shimmer card-shimmer-anim"
         />
+
       </div>
 
       <!-- Content: name anchored to bottom of card-inner -->
@@ -56,7 +57,6 @@
         </span>
       </div>
 
-      <!-- Locked Tooltip -->
       <div v-if="locked" class="locked-tooltip">{{ lockedTooltip }}</div>
     </div>
 
@@ -448,12 +448,17 @@ export default defineComponent({
   border-color: #3e200a !important;
   background: #141410;
   box-shadow: none !important;
+  transform-origin: center bottom;
+  transition: transform 0.22s ease, border-color 0.18s ease;
 }
 .champion-card-slot:hover .card-inner,
 .card-buyable .card-inner,
 .champion-card-slot.card-buyable:hover .card-inner {
-  border-color: #c89040 !important;
-  box-shadow: inset 0 0 0 1px rgba(232, 192, 64, 0.18) !important;
+  border-color: var(--role-c-hi, #e8c040) !important;
+}
+.champion-card-slot:hover .card-inner {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.48) !important;
+  transform: translateY(-6px) scale(1.025);
 }
 .champion-card-slot.is-selected::before {
   inset: -2px;
@@ -472,28 +477,45 @@ export default defineComponent({
   display: none;
 }
 .card-content {
-  padding: 8px 9px 9px;
-  background: rgba(13, 11, 6, 0.82);
+  padding: 11px 12px 12px;
+  background: linear-gradient(to top, #111008 54%, rgba(17, 16, 8, 0));
 }
 .champion-name {
-  text-shadow: none;
-  font-size: 13px;
+  text-shadow: 0 2px 6px #000;
+  font-size: 15px;
 }
 .champion-card-slot:hover .champion-name--bright,
 .champion-card-slot:hover .champion-name--dim {
-  transform: none;
-  text-shadow: none;
+  transform: translateY(-2px);
+  text-shadow: 0 2px 6px #000;
 }
 .role-badge-pill,
 .tier-badge {
-  top: 7px;
+  top: 8px;
   box-shadow: none;
 }
 .role-badge-pill {
-  right: 7px;
+  right: 8px;
 }
 .tier-badge {
-  left: 7px;
+  left: 8px;
   background: #111008;
+}
+.card-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--role-c, #c89040);
+  opacity: 0.72;
+  pointer-events: none;
+  z-index: 16;
+  transition: opacity 0.18s ease;
+}
+.champion-card-slot:hover .card-inner::before {
+  opacity: 1;
+}
+.champion-card-slot:hover .card-img-scale {
+  transform: scale(1.1);
 }
 </style>

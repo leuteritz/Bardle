@@ -78,91 +78,138 @@
         </button>
       </div>
 
-    <Transition name="cs-domain-swap" mode="out-in">
-
-    <!-- ══ Champions ══ -->
-    <div v-if="activeDomain === 'champions'" key="champions">
-      <!-- Empty: current role has no matches but cross-role does -->
-      <div v-if="crossRoleOnly" class="cross-role-only-state">
-        <p class="empty-label">Not in this role</p>
-      </div>
-      <!-- Empty: no champion matches this half's filters. The count on the other
+      <Transition name="cs-domain-swap" mode="out-in">
+        <!-- ══ Champions ══ -->
+        <div v-if="activeDomain === 'champions'" key="champions">
+          <!-- Empty: current role has no matches but cross-role does -->
+          <div v-if="crossRoleOnly" class="cross-role-only-state">
+            <p class="empty-label">Not in this role</p>
+          </div>
+          <!-- Empty: no champion matches this half's filters. The count on the other
            tab is the only thing that can still be wrong about the search, so the
            empty state offers it as a way out instead of just stating a negative. -->
-      <div
-        v-else-if="noChampionsFound"
-        class="flex flex-col items-center justify-center gap-4 py-12"
-      >
-        <div class="flex items-center justify-center empty-icon-box w-14 h-14">
-          <Icon icon="lucide:search-x" width="32" height="32" style="color: #7a4e20; opacity: 0.4" />
-        </div>
-        <p class="empty-label">No champions found.</p>
-        <button v-if="visibleItemsCount > 0" class="cs-empty-jump" @click="showDomain('items')">
-          <Icon icon="ph:backpack-fill" width="16" height="16" />
-          {{ visibleItemsCount }} matching item{{ visibleItemsCount === 1 ? '' : 's' }}
-          <span class="cs-empty-jump-arrow">→</span>
-        </button>
-      </div>
-
-      <div v-else class="tier-groups">
-        <!-- Tier section: header (click to collapse) + its own grid -->
-        <div
-          v-for="group in tierGroups"
-          :key="group.tier"
-          class="tier-group"
-          :data-tier-section="group.tier"
-        >
-          <!-- Tier section: collapsible header (click to toggle) + its grid -->
           <div
-            class="tier-header"
-            :class="{ 'is-collapsed': isTierCollapsed(group.tier), 'is-galaxy-locked': group.isGalaxyLocked, 'is-active-tier': group.isActive }"
-            :style="{ '--tier-c': group.color }"
-            role="button"
-            :tabindex="group.isGalaxyLocked ? -1 : 0"
-            :aria-expanded="group.isGalaxyLocked ? false : !isTierCollapsed(group.tier)"
-            :aria-disabled="group.isGalaxyLocked"
-            v-tip="group.isGalaxyLocked ? `Unlocked in Galaxy ${group.requiredGalaxy}` : ''"
-            @click="toggleTier(group.tier)"
-            @keydown.enter.prevent="toggleTier(group.tier)"
-            @keydown.space.prevent="toggleTier(group.tier)"
+            v-else-if="noChampionsFound"
+            class="flex flex-col items-center justify-center gap-4 py-12"
           >
-            <Icon
-              v-if="group.isGalaxyLocked"
-              icon="lucide:lock"
-              class="tier-header-lock"
-              width="14"
-              height="14"
-            />
-            <span v-else class="tier-header-chevron">▾</span>
-            <Icon :icon="group.icon" class="tier-header-icon" width="15" height="15" />
-            <span class="tier-header-label">{{ group.label }}</span>
-            <span class="tier-header-stars">★{{ group.starLevel }}</span>
-            <span
-              class="tier-header-chance"
-              :class="{ 'is-locked': group.spawnPercent == null }"
-              v-tip="
-                group.spawnPercent == null
-                  ? 'Tier locked — does not spawn yet'
-                  : `This tier's current spawn chance`
-              "
-            >
-              {{ group.spawnPercent != null ? group.spawnPercent + '%' : 'Locked' }}
-            </span>
-            <span class="tier-header-line"></span>
-            <span v-if="group.isGalaxyLocked" class="tier-header-req">
-              <Icon icon="lucide:lock" class="tier-req-icon" width="16" height="16" />
-              Galaxy {{ group.requiredGalaxy }}
-            </span>
-            <span v-else class="tier-header-counter">
-              <span class="tier-header-count">{{ tierOwned(group.tier) }}/{{ tierTotal(group.tier) }}</span>
-            </span>
+            <div class="flex items-center justify-center empty-icon-box w-14 h-14">
+              <Icon
+                icon="lucide:search-x"
+                width="32"
+                height="32"
+                style="color: #7a4e20; opacity: 0.4"
+              />
+            </div>
+            <p class="empty-label">No champions found.</p>
+            <button v-if="visibleItemsCount > 0" class="cs-empty-jump" @click="showDomain('items')">
+              <Icon icon="ph:backpack-fill" width="16" height="16" />
+              {{ visibleItemsCount }} matching item{{ visibleItemsCount === 1 ? '' : 's' }}
+              <span class="cs-empty-jump-arrow">→</span>
+            </button>
           </div>
-          <Transition @enter="onTierEnter" @after-enter="onTierAfterEnter" @leave="onTierLeave">
-            <div v-if="!isTierCollapsed(group.tier)" class="tier-body-inner">
-              <div v-if="group.champions.length" class="cs-cards">
+
+          <div v-else class="tier-groups">
+            <!-- Tier section: header (click to collapse) + its own grid -->
+            <div
+              v-for="group in tierGroups"
+              :key="group.tier"
+              class="tier-group"
+              :data-tier-section="group.tier"
+            >
+              <!-- Tier section: collapsible header (click to toggle) + its grid -->
+              <div
+                class="tier-header"
+                :class="{
+                  'is-collapsed': isTierCollapsed(group.tier),
+                  'is-galaxy-locked': group.isGalaxyLocked,
+                  'is-active-tier': group.isActive,
+                }"
+                :style="{ '--tier-c': group.color }"
+                role="button"
+                :tabindex="group.isGalaxyLocked ? -1 : 0"
+                :aria-expanded="group.isGalaxyLocked ? false : !isTierCollapsed(group.tier)"
+                :aria-disabled="group.isGalaxyLocked"
+                v-tip="group.isGalaxyLocked ? `Unlocked in Galaxy ${group.requiredGalaxy}` : ''"
+                @click="toggleTier(group.tier)"
+                @keydown.enter.prevent="toggleTier(group.tier)"
+                @keydown.space.prevent="toggleTier(group.tier)"
+              >
+                <Icon
+                  v-if="group.isGalaxyLocked"
+                  icon="lucide:lock"
+                  class="tier-header-lock"
+                  width="14"
+                  height="14"
+                />
+                <span v-else class="tier-header-chevron">▾</span>
+                <Icon :icon="group.icon" class="tier-header-icon" width="15" height="15" />
+                <span class="tier-header-label">{{ group.label }}</span>
+                <span class="tier-header-stars">★{{ group.starLevel }}</span>
+                <span
+                  class="tier-header-chance"
+                  :class="{ 'is-locked': group.spawnPercent == null }"
+                  v-tip="
+                    group.spawnPercent == null
+                      ? 'Tier locked — does not spawn yet'
+                      : `This tier's current spawn chance`
+                  "
+                >
+                  {{ group.spawnPercent != null ? group.spawnPercent + '%' : 'Locked' }}
+                </span>
+                <span class="tier-header-line"></span>
+                <span v-if="group.isGalaxyLocked" class="tier-header-req">
+                  <Icon icon="lucide:lock" class="tier-req-icon" width="16" height="16" />
+                  Galaxy {{ group.requiredGalaxy }}
+                </span>
+                <span v-else class="tier-header-counter">
+                  <span class="tier-header-count"
+                    >{{ tierOwned(group.tier) }}/{{ tierTotal(group.tier) }}</span
+                  >
+                </span>
+              </div>
+              <Transition @enter="onTierEnter" @after-enter="onTierAfterEnter" @leave="onTierLeave">
+                <div v-if="!isTierCollapsed(group.tier)" class="tier-body-inner">
+                  <div v-if="group.champions.length" class="cs-cards">
+                    <ChampionShopCard
+                      v-for="champion in group.champions"
+                      :key="champion.name"
+                      :name="champion.name"
+                      :image="battleStore.getChampionImage(champion.name, { size: 'lg' })"
+                      :role="CHAMPION_ROLES[champion.name]"
+                      :role-badge="
+                        ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]
+                      "
+                      :tier-color="getTierColor(champion.name)"
+                      :tier-name="getChampionDetail(champion.name).cosmic.name"
+                      :star-level="getChampionDetail(champion.name).starLevel"
+                      :card-class="getCardClass(champion.name)"
+                      :owned="isOwned(champion.name)"
+                      :locked="isLocked(champion.name)"
+                      :buyable="isUnlocked(champion.name) && canAffordChampion(champion.name)"
+                      :selected="selectedChampion === champion.name"
+                      :is-new="isNew(champion.name)"
+                      :locked-tooltip="getLockedTooltip(champion.name)"
+                      @select="openChampion"
+                      @hover="dismissNewOnHover"
+                    />
+                  </div>
+                  <p v-else class="tier-all-recruited">All recruited ✓</p>
+                </div>
+              </Transition>
+            </div>
+          </div>
+
+          <!-- ── Cross-role search results ── -->
+          <Transition name="cross-role-fade">
+            <div v-if="crossRoleChampions.length > 0" class="cross-role-section">
+              <div class="cross-role-divider">
+                <span class="cross-role-divider-label">Other Roles</span>
+              </div>
+              <div class="cs-cards">
                 <ChampionShopCard
-                  v-for="champion in group.champions"
-                  :key="champion.name"
+                  v-for="champion in crossRoleChampions"
+                  :key="'cross-' + champion.name"
+                  class="cross-role-card"
                   :name="champion.name"
                   :image="battleStore.getChampionImage(champion.name, { size: 'lg' })"
                   :role="CHAMPION_ROLES[champion.name]"
@@ -181,117 +228,86 @@
                   @hover="dismissNewOnHover"
                 />
               </div>
-              <p v-else class="tier-all-recruited">All recruited ✓</p>
             </div>
           </Transition>
         </div>
 
-      </div>
-
-      <!-- ── Cross-role search results ── -->
-      <Transition name="cross-role-fade">
-        <div v-if="crossRoleChampions.length > 0" class="cross-role-section">
-          <div class="cross-role-divider">
-            <span class="cross-role-divider-label">Other Roles</span>
+        <!-- ══ Items ══ -->
+        <div v-else key="items">
+          <div v-if="noItemsFound" class="flex flex-col items-center justify-center gap-4 py-12">
+            <div class="flex items-center justify-center empty-icon-box w-14 h-14">
+              <Icon
+                icon="lucide:search-x"
+                width="32"
+                height="32"
+                style="color: #7a4e20; opacity: 0.4"
+              />
+            </div>
+            <p class="empty-label">No items found.</p>
+            <button
+              v-if="reachableChampionCount > 0"
+              class="cs-empty-jump"
+              @click="showDomain('champions')"
+            >
+              <Icon icon="ph:users-three-fill" width="16" height="16" />
+              {{ reachableChampionCount }} matching champion{{
+                reachableChampionCount === 1 ? '' : 's'
+              }}
+              <span class="cs-empty-jump-arrow">→</span>
+            </button>
           </div>
-          <div class="cs-cards">
-            <ChampionShopCard
-              v-for="champion in crossRoleChampions"
-              :key="'cross-' + champion.name"
-              class="cross-role-card"
-              :name="champion.name"
-              :image="battleStore.getChampionImage(champion.name, { size: 'lg' })"
-              :role="CHAMPION_ROLES[champion.name]"
-              :role-badge="ROLE_BADGE[CHAMPION_ROLES[champion.name] as keyof typeof ROLE_BADGE]"
-              :tier-color="getTierColor(champion.name)"
-              :tier-name="getChampionDetail(champion.name).cosmic.name"
-              :star-level="getChampionDetail(champion.name).starLevel"
-              :card-class="getCardClass(champion.name)"
-              :owned="isOwned(champion.name)"
-              :locked="isLocked(champion.name)"
-              :buyable="isUnlocked(champion.name) && canAffordChampion(champion.name)"
-              :selected="selectedChampion === champion.name"
-              :is-new="isNew(champion.name)"
-              :locked-tooltip="getLockedTooltip(champion.name)"
-              @select="openChampion"
-              @hover="dismissNewOnHover"
-            />
+
+          <!-- ── Item sections: same collapsible headers, one per category ── -->
+          <div v-else class="tier-groups">
+            <div v-for="group in itemGroups" :key="'cat-' + group.id" class="tier-group">
+              <div
+                class="tier-header"
+                :class="{ 'is-collapsed': isItemCatCollapsed(group.id) }"
+                :style="{ '--tier-c': group.color }"
+                role="button"
+                tabindex="0"
+                :aria-expanded="!isItemCatCollapsed(group.id)"
+                @click="toggleItemCatSection(group.id)"
+                @keydown.enter.prevent="toggleItemCatSection(group.id)"
+                @keydown.space.prevent="toggleItemCatSection(group.id)"
+              >
+                <span class="tier-header-chevron">▾</span>
+                <img :src="group.image" :alt="group.label" class="item-cat-header-img" />
+                <span class="tier-header-label">{{ group.label }}</span>
+                <span class="tier-header-line"></span>
+                <span class="tier-header-counter">
+                  <span class="tier-header-count"
+                    >{{ group.ownedCount }}/{{ group.totalCount }}</span
+                  >
+                </span>
+              </div>
+              <Transition @enter="onTierEnter" @after-enter="onTierAfterEnter" @leave="onTierLeave">
+                <div v-if="!isItemCatCollapsed(group.id)" class="tier-body-inner">
+                  <div class="cs-cards">
+                    <ItemShopCard
+                      v-for="item in group.items"
+                      :key="item.id"
+                      :id="item.id"
+                      :name="item.name"
+                      :icon="item.icon"
+                      :rarity-label="item.rarityLabel"
+                      :rarity-color="item.rarityColor"
+                      :category-label="group.label"
+                      :category-image="group.image"
+                      :category-color="group.color"
+                      :owned-count="item.ownedCount"
+                      :is-set="!!item.setId"
+                      :buyable="item.buyable"
+                      :selected="selectedItem === item.id"
+                      @select="openItem"
+                    />
+                  </div>
+                </div>
+              </Transition>
+            </div>
           </div>
         </div>
       </Transition>
-    </div>
-
-    <!-- ══ Items ══ -->
-    <div v-else key="items">
-      <div
-        v-if="noItemsFound"
-        class="flex flex-col items-center justify-center gap-4 py-12"
-      >
-        <div class="flex items-center justify-center empty-icon-box w-14 h-14">
-          <Icon icon="lucide:search-x" width="32" height="32" style="color: #7a4e20; opacity: 0.4" />
-        </div>
-        <p class="empty-label">No items found.</p>
-        <button
-          v-if="reachableChampionCount > 0"
-          class="cs-empty-jump"
-          @click="showDomain('champions')"
-        >
-          <Icon icon="ph:users-three-fill" width="16" height="16" />
-          {{ reachableChampionCount }} matching champion{{ reachableChampionCount === 1 ? '' : 's' }}
-          <span class="cs-empty-jump-arrow">→</span>
-        </button>
-      </div>
-
-      <!-- ── Item sections: same collapsible headers, one per category ── -->
-      <div v-else class="tier-groups">
-          <div v-for="group in itemGroups" :key="'cat-' + group.id" class="tier-group">
-            <div
-              class="tier-header"
-              :class="{ 'is-collapsed': isItemCatCollapsed(group.id) }"
-              :style="{ '--tier-c': group.color }"
-              role="button"
-              tabindex="0"
-              :aria-expanded="!isItemCatCollapsed(group.id)"
-              @click="toggleItemCatSection(group.id)"
-              @keydown.enter.prevent="toggleItemCatSection(group.id)"
-              @keydown.space.prevent="toggleItemCatSection(group.id)"
-            >
-              <span class="tier-header-chevron">▾</span>
-              <img :src="group.image" :alt="group.label" class="item-cat-header-img" />
-              <span class="tier-header-label">{{ group.label }}</span>
-              <span class="tier-header-line"></span>
-              <span class="tier-header-counter">
-                <span class="tier-header-count">{{ group.ownedCount }}/{{ group.totalCount }}</span>
-              </span>
-            </div>
-            <Transition @enter="onTierEnter" @after-enter="onTierAfterEnter" @leave="onTierLeave">
-              <div v-if="!isItemCatCollapsed(group.id)" class="tier-body-inner">
-                <div class="cs-cards">
-                  <ItemShopCard
-                    v-for="item in group.items"
-                    :key="item.id"
-                    :id="item.id"
-                    :name="item.name"
-                    :icon="item.icon"
-                    :rarity-label="item.rarityLabel"
-                    :rarity-color="item.rarityColor"
-                    :category-label="group.label"
-                    :category-image="group.image"
-                    :category-color="group.color"
-                    :owned-count="item.ownedCount"
-                    :is-set="!!item.setId"
-                    :buyable="item.buyable"
-                    :selected="selectedItem === item.id"
-                    @select="openItem"
-                  />
-                </div>
-              </div>
-            </Transition>
-          </div>
-      </div>
-    </div>
-
-    </Transition>
     </div>
 
     <!-- ══ Detail column ══
@@ -305,20 +321,8 @@
          the layer could never do without burying the list. -->
     <aside class="cs-atlas-detail">
       <Transition name="cs-detail-swap" mode="out-in">
-        <ItemDetailPanel
-          v-if="itemDetail"
-          key="item"
-          :detail="itemDetail"
-          @buy="handleBuyItem"
-        />
-        <ChampionDetailPanel
-          v-else-if="detail"
-          key="champion"
-          :detail="detail"
-          :take-seat="takeSeat"
-          @update:take-seat="takeSeat = $event"
-          @buy="handleBuy"
-        />
+        <ItemDetailPanel v-if="itemDetail" key="item" :detail="itemDetail" @buy="handleBuyItem" />
+        <ChampionDetailPanel v-else-if="detail" key="champion" :detail="detail" @buy="handleBuy" />
         <ShopOverviewCard
           v-else
           key="overview"
@@ -336,7 +340,6 @@
     </aside>
   </div>
 </template>
-
 
 <script lang="ts">
 import { ref, defineComponent, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
@@ -357,7 +360,15 @@ import { SHOP_ITEMS, ITEM_CATEGORIES, ITEM_RARITIES, ITEM_SETS } from '@/config/
 import { getChampionRoles, CHAMPION_ROLES, getChampionNames } from '@/config/champions/championData'
 import { CHAMPION_TRAITS, TRAIT_DEFINITIONS } from '@/config/champions/championTraits'
 import { ORIGIN_SYNERGIES, getChampionOrigin } from '@/config/champions/championOrigins'
-import { getChampionTier, getChampionStarLevel, getChampionChimesPrice, requiredGalaxyForTier, isChampionTierUnlocked, championTierSpawnPercent, CHAMPION_TIERS_BY_STAR } from '@/config/champions/championTiers'
+import {
+  getChampionTier,
+  getChampionStarLevel,
+  getChampionChimesPrice,
+  requiredGalaxyForTier,
+  isChampionTierUnlocked,
+  championTierSpawnPercent,
+  CHAMPION_TIERS_BY_STAR,
+} from '@/config/champions/championTiers'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { MATERIALS } from '@/config/economy/materials'
 import { getHomePlanetConfig } from '@/config/champions/championHomePlanets'
@@ -379,6 +390,7 @@ import {
   SHOP_ATLAS_CARD_MIN_WIDTH,
   SHOP_ATLAS_CARD_HEIGHT,
   SHOP_ATLAS_GRID_GAP,
+  SHOP_ATLAS_COMFORT_CARD_COLUMNS,
   ROLE_BY_KEY,
 } from '@/config/constants'
 import { recruitSeatFor, type RecruitSeat } from '@/utils/game/recruitSeat'
@@ -395,7 +407,6 @@ import type {
   ShopOverviewSet,
   ShopOverviewTier,
 } from '@/types'
-
 
 export default defineComponent({
   name: 'ChampionShopComponent',
@@ -474,10 +485,10 @@ export default defineComponent({
     }
 
     const ROLE_BADGE = {
-      top:     { label: 'TOP', color: '#e05050' },
-      jungle:  { label: 'JGL', color: '#52b830' },
-      mid:     { label: 'MID', color: '#5090e8' },
-      adc:     { label: 'ADC', color: '#e89840' },
+      top: { label: 'TOP', color: '#e05050' },
+      jungle: { label: 'JGL', color: '#52b830' },
+      mid: { label: 'MID', color: '#5090e8' },
+      adc: { label: 'ADC', color: '#e89840' },
       support: { label: 'SUP', color: '#b8c8d8' },
     } as const
 
@@ -575,7 +586,9 @@ export default defineComponent({
 
     function canAffordChampion(name: string): boolean {
       const cost = getMaterialCost(name)
-      return Object.keys(cost).length > 0 && inventoryStore.hasMaterials(cost) && canAffordChimes(name)
+      return (
+        Object.keys(cost).length > 0 && inventoryStore.hasMaterials(cost) && canAffordChimes(name)
+      )
     }
 
     function canClickBuy(name: string): boolean {
@@ -591,14 +604,9 @@ export default defineComponent({
       return 3
     }
 
-    /**
-     * Der frisch Gekaufte nimmt seinen Hauptsitz, wenn der leer ist — eine
-     * unbesetzte Rolle hat im Orbit gar kein Rollenverhalten. Einen Sitzenden
-     * verdrängt er nur, wenn `takeSeat` vor dem Kauf gesetzt wurde.
-     */
     function seatRecruit(name: string, seat: RecruitSeat): RecruitSeat | null {
       if (seat.kind === 'none') return null
-      if (seat.kind === 'held' && !takeSeat.value) return null
+      if (seat.kind === 'held') return null
       return battleStore.setHeaderSlot(seat.roleIndex, name) ? seat : null
     }
 
@@ -671,9 +679,7 @@ export default defineComponent({
       return 'card-locked'
     }
 
-const shopChampionNames = computed(() =>
-      battleStore.recruitableChampions.map((r) => r.name)
-    )
+    const shopChampionNames = computed(() => battleStore.recruitableChampions.map((r) => r.name))
 
     /**
      * What the grid can hold: everything not owned yet, locked cards included.
@@ -712,7 +718,9 @@ const shopChampionNames = computed(() =>
       if (activeRole.value !== 'all' && searchQuery.value.trim()) {
         const q = searchQuery.value.toLowerCase().trim()
         const anyTraitMatch = TRAIT_DEFINITIONS.some((t) => t.name.toLowerCase().includes(q))
-        const anyOriginMatch = Object.keys(ORIGIN_SYNERGIES).some((o) => o.toLowerCase().includes(q))
+        const anyOriginMatch = Object.keys(ORIGIN_SYNERGIES).some((o) =>
+          o.toLowerCase().includes(q),
+        )
         if (anyTraitMatch || anyOriginMatch) return gridChampionNames.value
       }
       return roleChampionNames.value
@@ -722,7 +730,7 @@ const shopChampionNames = computed(() =>
     const poolTraitIds = computed(() => {
       const seen = new Set<string>()
       for (const name of chipPool.value) {
-        for (const tid of (CHAMPION_TRAITS[name] ?? [])) seen.add(tid)
+        for (const tid of CHAMPION_TRAITS[name] ?? []) seen.add(tid)
       }
       return seen
     })
@@ -744,7 +752,14 @@ const shopChampionNames = computed(() =>
       ),
     )
     const originChips = computed(() =>
-      (Object.values(ORIGIN_SYNERGIES) as Array<{ origin: string; name: string; icon: string; color: string }>)
+      (
+        Object.values(ORIGIN_SYNERGIES) as Array<{
+          origin: string
+          name: string
+          icon: string
+          color: string
+        }>
+      )
         .map((o) => ({ ...o, available: poolOriginIds.value.has(o.origin) }))
         .sort((a, b) =>
           a.available === b.available ? a.origin.localeCompare(b.origin) : a.available ? -1 : 1,
@@ -754,7 +769,7 @@ const shopChampionNames = computed(() =>
     const filterChampionCount = computed(() => {
       const counts: Record<string, number> = {}
       for (const name of chipPool.value) {
-        for (const tid of (CHAMPION_TRAITS[name] ?? [])) {
+        for (const tid of CHAMPION_TRAITS[name] ?? []) {
           counts[tid] = (counts[tid] ?? 0) + 1
         }
         const o = getChampionOrigin(name)
@@ -889,7 +904,8 @@ const shopChampionNames = computed(() =>
       const map = new Map<number, number>()
       for (const name of championNames.value) {
         if (name === 'Bard') continue
-        if (activeRole.value !== 'all' && !getChampionRoles(name).includes(activeRole.value)) continue
+        if (activeRole.value !== 'all' && !getChampionRoles(name).includes(activeRole.value))
+          continue
         const tier = getChampionStarLevel(name)
         map.set(tier, (map.get(tier) ?? 0) + 1)
       }
@@ -899,7 +915,8 @@ const shopChampionNames = computed(() =>
       const map = new Map<number, number>()
       for (const name of battleStore.ownedChampions) {
         if (name === 'Bard') continue
-        if (activeRole.value !== 'all' && !getChampionRoles(name).includes(activeRole.value)) continue
+        if (activeRole.value !== 'all' && !getChampionRoles(name).includes(activeRole.value))
+          continue
         const tier = getChampionStarLevel(name)
         map.set(tier, (map.get(tier) ?? 0) + 1)
       }
@@ -954,9 +971,7 @@ const shopChampionNames = computed(() =>
       () => searchQuery.value.trim() !== '' || championFiltersActive.value,
     )
     /** Same for the item categories, driven by the item chips. */
-    const itemNarrowed = computed(
-      () => searchQuery.value.trim() !== '' || itemFiltersActive.value,
-    )
+    const itemNarrowed = computed(() => searchQuery.value.trim() !== '' || itemFiltersActive.value)
     function isTierCollapsed(tier: number): boolean {
       // Galaxy-locked tiers never expand, regardless of search/collapse state.
       if (isTierGalaxyLocked(tier)) return true
@@ -1330,12 +1345,13 @@ const shopChampionNames = computed(() =>
       }, SHOP_SCROLL_SETTLE_MS)
     }
 
-    const newChampionNames = computed(() =>
-      new Set(
-        battleStore.newlyUnlockedChampions.filter((n) =>
-          battleStore.recruitableChampions.some((r) => r.name === n),
+    const newChampionNames = computed(
+      () =>
+        new Set(
+          battleStore.newlyUnlockedChampions.filter((n) =>
+            battleStore.recruitableChampions.some((r) => r.name === n),
+          ),
         ),
-      ),
     )
 
     function isNew(name: string): boolean {
@@ -1356,7 +1372,7 @@ const shopChampionNames = computed(() =>
       const traitIds = CHAMPION_TRAITS[name] ?? []
       const traits = TRAIT_DEFINITIONS.filter((t) => (traitIds as string[]).includes(t.id))
       const originKey = getChampionOrigin(name)
-      const origin = originKey ? ORIGIN_SYNERGIES[originKey] ?? null : null
+      const origin = originKey ? (ORIGIN_SYNERGIES[originKey] ?? null) : null
       const cosmic = getChampionTier(name)
       const starLevel = getChampionStarLevel(name)
       return { traits, origin, cosmic, starLevel }
@@ -1372,11 +1388,6 @@ const shopChampionNames = computed(() =>
     // Der Schalter der Sitz-Zeile gilt genau für die aktuelle Auswahl und fällt
     // bei jedem Wechsel zurück — sonst verdrängt er beim nächsten Champion
     // einen Sitzenden, den niemand gemeint hat.
-    const takeSeat = ref(false)
-    watch(selectedChampion, () => {
-      takeSeat.value = false
-    })
-
     // Flat, tier-ordered list of every champion currently shown in the grid
     // (unlocked tier sections first, cross-role search results appended) —
     // handleBuy re-points the detail panel through this list.
@@ -1564,7 +1575,6 @@ const shopChampionNames = computed(() =>
       showDomain('champions')
     }
 
-
     // Without a search the panel shows its empty state until the player clicks a
     // card (search auto-select is handled by the searchQuery watcher above).
     // Here we only clear the selection when it goes stale (filtered out; a bought
@@ -1576,7 +1586,10 @@ const shopChampionNames = computed(() =>
       ) {
         selectedChampion.value = null
       }
-      if (selectedItem.value && !list.some((e) => e.kind === 'item' && e.id === selectedItem.value)) {
+      if (
+        selectedItem.value &&
+        !list.some((e) => e.kind === 'item' && e.id === selectedItem.value)
+      ) {
         selectedItem.value = null
       }
     })
@@ -1762,12 +1775,15 @@ const shopChampionNames = computed(() =>
      * sibling.
      */
     const atlasColumns = computed(() => {
-      const facet = facetsFolded.value ? SHOP_ATLAS_FACET_RAIL_COLLAPSED : SHOP_ATLAS_FACET_RAIL_WIDTH
+      const facet = facetsFolded.value
+        ? SHOP_ATLAS_FACET_RAIL_COLLAPSED
+        : SHOP_ATLAS_FACET_RAIL_WIDTH
       return `${facet}px minmax(0, 1fr) clamp(${SHOP_ATLAS_DETAIL_MIN_WIDTH}px, ${SHOP_ATLAS_DETAIL_PCT}%, ${SHOP_ATLAS_DETAIL_MAX_WIDTH}px)`
     })
     const cardMinWidthPx = computed(() => `${SHOP_ATLAS_CARD_MIN_WIDTH}px`)
     const cardHeightPx = computed(() => `${SHOP_ATLAS_CARD_HEIGHT}px`)
     const gridGapPx = computed(() => `${SHOP_ATLAS_GRID_GAP}px`)
+    const cardComfortColumns = SHOP_ATLAS_COMFORT_CARD_COLUMNS
 
     let atlasObserver: ResizeObserver | null = null
     onMounted(() => {
@@ -1897,14 +1913,14 @@ const shopChampionNames = computed(() =>
           chips: traitChips.value
             .filter((t) => !hasSearchTraitMatch.value || searchMatchedTraits.value.has(t.id))
             .map((t) => ({
-            id: t.id,
-            label: t.name,
-            color: t.color,
-            icon: t.icon,
-            count: filterChampionCount.value[t.id] ?? 0,
-            active: activeTraits.value.includes(t.id),
-            disabled: !t.available,
-          })),
+              id: t.id,
+              label: t.name,
+              color: t.color,
+              icon: t.icon,
+              count: filterChampionCount.value[t.id] ?? 0,
+              active: activeTraits.value.includes(t.id),
+              disabled: !t.available,
+            })),
         },
         {
           id: 'origin',
@@ -1913,14 +1929,14 @@ const shopChampionNames = computed(() =>
           chips: originChips.value
             .filter((o) => !hasSearchTraitMatch.value || searchMatchedTraits.value.has(o.origin))
             .map((o) => ({
-            id: o.origin,
-            label: o.origin,
-            color: o.color,
-            icon: o.icon,
-            count: filterChampionCount.value[o.origin] ?? 0,
-            active: activeTraits.value.includes(o.origin),
-            disabled: !o.available,
-          })),
+              id: o.origin,
+              label: o.origin,
+              color: o.color,
+              icon: o.icon,
+              count: filterChampionCount.value[o.origin] ?? 0,
+              active: activeTraits.value.includes(o.origin),
+              disabled: !o.available,
+            })),
         },
       ]
     })
@@ -2034,12 +2050,12 @@ const shopChampionNames = computed(() =>
     )
 
     /**
-      * Why the picks are empty, when they are. "Nothing affordable" is the wrong
-      * answer for a fresh save: the player may be sitting on billions of chimes
-      * and still have nobody to spend them on, because no home planet has fallen
-      * yet. An empty state that names the wrong cause sends them to farm the
-      * wrong thing.
-      */
+     * Why the picks are empty, when they are. "Nothing affordable" is the wrong
+     * answer for a fresh save: the player may be sitting on billions of chimes
+     * and still have nobody to spend them on, because no home planet has fallen
+     * yet. An empty state that names the wrong cause sends them to farm the
+     * wrong thing.
+     */
     const overviewEmptyHint = computed(() => {
       if (activeDomain.value === 'items') {
         return 'Nothing affordable yet — chimes are still gathering.'
@@ -2092,7 +2108,6 @@ const shopChampionNames = computed(() =>
       gridScrolling,
       visibleEntries,
       detail,
-      takeSeat,
       ROLE_BADGE,
       // ── Unified shop: items ──
       itemGroups,
@@ -2122,6 +2137,7 @@ const shopChampionNames = computed(() =>
       cardMinWidthPx,
       cardHeightPx,
       gridGapPx,
+      cardComfortColumns,
       facetsFolded,
       setFacetsFolded,
       facetGroups,
@@ -2446,6 +2462,11 @@ const shopChampionNames = computed(() =>
   grid-template-columns: repeat(auto-fill, minmax(v-bind(cardMinWidthPx), 1fr));
   gap: v-bind(gridGapPx);
 }
+@container cs-grid (min-width: 950px) and (max-width: 1100px) {
+  .cs-cards {
+    grid-template-columns: repeat(v-bind(cardComfortColumns), minmax(0, 1fr));
+  }
+}
 
 /* ── Cross-role search results ── */
 .cross-role-section {
@@ -2475,11 +2496,18 @@ const shopChampionNames = computed(() =>
   white-space: nowrap;
 }
 
-.cross-role-card { opacity: 0.88; transition: opacity 0.18s ease; }
-.cross-role-card:hover { opacity: 1; }
+.cross-role-card {
+  opacity: 0.88;
+  transition: opacity 0.18s ease;
+}
+.cross-role-card:hover {
+  opacity: 1;
+}
 
 /* ── Tier section spacing (header styles shared in rpg-theme.css → .tier-header*) ── */
-.tier-group + .tier-group { margin-top: 12px; }
+.tier-group + .tier-group {
+  margin-top: 12px;
+}
 
 /* Offscreen tier sections are neither painted nor layerized while the list
    scrolls; the browser keeps the last rendered height for stable scrollbars. */
@@ -2543,7 +2571,9 @@ const shopChampionNames = computed(() =>
 }
 
 .cross-role-fade-enter-active {
-  transition: opacity 0.22s ease, transform 0.22s ease;
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
 }
 .cross-role-fade-leave-active {
   transition: opacity 0.15s ease;
@@ -2587,5 +2617,4 @@ const shopChampionNames = computed(() =>
 .trait-chip--disabled:hover {
   opacity: 0.35;
 }
-
 </style>

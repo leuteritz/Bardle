@@ -90,14 +90,14 @@ describe('shop atlas layout', () => {
 
   it('matches the two widths measured in the browser', () => {
     const fhd = zones(1920, 1080)
-    expect(Math.round(fhd.grid)).toBe(636)
+    expect(Math.round(fhd.grid)).toBe(676)
     expect(Math.round(fhd.detail)).toBe(372)
     expect(columns(fhd.grid)).toBe(4)
 
     const qhd = zones(2560, 1440)
-    expect(Math.round(qhd.grid)).toBe(930)
+    expect(Math.round(qhd.grid)).toBe(970)
     expect(Math.round(qhd.detail)).toBe(498)
-    expect(columns(qhd.grid)).toBe(6)
+    expect(columns(qhd.grid)).toBe(5)
   })
 
   it.each(DESKTOPS)('%s: folding the facet rail never costs the grid a column', (_l, vw, vh) => {

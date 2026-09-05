@@ -730,9 +730,9 @@ export const SHOP_SCROLL_SETTLE_MS = 150
  * That the card lands near 144px on all three screens instead of 154/180/167 is
  * the second gain — one card size everywhere.
  */
-export const SHOP_ATLAS_FACET_RAIL_WIDTH = 232
+export const SHOP_ATLAS_FACET_RAIL_WIDTH = 192
 /** Collapsed facet rail — the group icons stay, the chips fold away. */
-export const SHOP_ATLAS_FACET_RAIL_COLLAPSED = 52
+export const SHOP_ATLAS_FACET_RAIL_COLLAPSED = 28
 export const SHOP_ATLAS_DETAIL_MIN_WIDTH = 360
 export const SHOP_ATLAS_DETAIL_PCT = 30
 export const SHOP_ATLAS_DETAIL_MAX_WIDTH = 520
@@ -748,9 +748,10 @@ export const SHOP_ATLAS_FACET_AUTOFOLD_WIDTH = 1180
  * .cs-cards reads, so the column count follows the space the other two zones
  * leave over instead of being fixed per breakpoint.
  */
-export const SHOP_ATLAS_CARD_MIN_WIDTH = 140
-export const SHOP_ATLAS_CARD_HEIGHT = 168
+export const SHOP_ATLAS_CARD_MIN_WIDTH = 152
+export const SHOP_ATLAS_CARD_HEIGHT = 228
 export const SHOP_ATLAS_GRID_GAP = 10
+export const SHOP_ATLAS_COMFORT_CARD_COLUMNS = 5
 /** Portrait (px) of the champion holding the seat, in the detail panel's seat row. */
 export const SHOP_SEAT_PORTRAIT_SIZE = 28
 // Champion Shop — Chimes cost badge icon
