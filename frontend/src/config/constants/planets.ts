@@ -47,9 +47,9 @@ export const STAR_FIGHT_SYS_MARGIN_X = 0.1
 export const STAR_FIGHT_SYS_MARGIN_TOP = 0.24
 export const STAR_FIGHT_SYS_MARGIN_BOTTOM = 0.14
 /** Planetendurchmesser in der Systemansicht, % der Bühnenhöhe. */
-export const STAR_FIGHT_SYS_PLANET_D_PCT = 4
+export const STAR_FIGHT_SYS_PLANET_D_PCT = 2
 /** Sternkante in der Systemansicht, % der Bühnenhöhe. */
-export const STAR_FIGHT_SYS_STAR_PX_PCT = 10
+export const STAR_FIGHT_SYS_STAR_PX_PCT = 14
 // Mindestabstand zweier Planeten wird per Ablehnungspass ERZWUNGEN, nie gefolgert.
 // 16: der Fadenkreuz-Mindestradius (32 px) muss den Nachbarn freihalten.
 export const STAR_FIGHT_SYS_MIN_GAP_PX = 16
@@ -86,6 +86,13 @@ export const STAR_FIGHT_FREED_PULSE_MS = 400
 export const STAR_FIGHT_STAR_FLASH_MS = 400
 /** Blitzdurchmesser als Vielfaches der Sternkante (mit Span). */
 export const STAR_FIGHT_STAR_FLASH_SPAN_K = 2.4
+export const STAR_FIGHT_STAR_BREATHE_MS = 5200
+export const STAR_FIGHT_PLANET_DRIFT_MS = 4600
+export const STAR_FIGHT_PLANET_DRIFT_VARIANCE_MS = 1600
+export const STAR_FIGHT_PLANET_DRIFT_DELAY_MS = 1300
+export const STAR_FIGHT_PLANET_DRIFT_DELAY_VARIANCE_MS = 1400
+export const STAR_FIGHT_PLANET_DRIFT_PX = 2
+export const STAR_FIGHT_PLANET_DRIFT_SCALE = 1.025
 /** Nach dem Schliessen (160 ms Leave + 2 Frames Gate) wartet der Abgangseffekt des Sterns so lange. */
 export const STAR_FIGHT_VANISH_SETTLE_MS = 220
 export const STAR_FIGHT_CALLOUT_MS = 1400
@@ -96,8 +103,8 @@ export const STAR_FIGHT_HUD_IN_STAGGER_MS = 60
 export const STAR_FIGHT_HUD_SHIFT_PX = 8
 // Planeten-Sprites (utils/fx/planetSprite.ts)
 export const STAR_FIGHT_PLANET_PX_STEP = 64
-/** Die kleinen Sprites werden überzeichnet: im Einzoom stehen sie 16× skaliert, das Netz unter dem Hero bleibt 4×. */
-export const STAR_FIGHT_SYS_SPRITE_OVERSAMPLE = 4
+/** Die kleinen Sprites werden überzeichnet: im Einzoom stehen sie 32× skaliert, das Netz unter dem Hero bleibt 4×. */
+export const STAR_FIGHT_SYS_SPRITE_OVERSAMPLE = 8
 export const STAR_FIGHT_PLANET_LIGHT_STEPS = 16
 export const STAR_FIGHT_PLANET_SPRITE_MAX_PX = 1024
 export const STAR_FIGHT_PLANET_SPRITE_SPAN = 1.05

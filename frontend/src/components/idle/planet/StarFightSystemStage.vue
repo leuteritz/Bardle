@@ -25,18 +25,7 @@
 
     <!-- Nahe Ebene: Bahnen, Kurs, die kleinen Planeten — die volle Kamera -->
     <div class="sfs-near" :style="nearStyle" @transitionend="onNearEnd">
-      <svg class="sfs-orbits" :width="w" :height="h" :viewBox="`0 0 ${w} ${h}`">
-        <ellipse
-          v-for="p in layout.planets"
-          :key="p.planetId"
-          class="sfs-orbit"
-          :class="{ 'sfs-orbit--target': p.planetId === targetPlanetId }"
-          :cx="p.orbit.cx"
-          :cy="p.orbit.cy"
-          :rx="p.orbit.rx"
-          :ry="p.orbit.ry"
-          :transform="`rotate(${(p.orbit.tilt * 180) / Math.PI} ${p.orbit.cx} ${p.orbit.cy})`"
-        />
+      <svg class="sfs-course-layer" :width="w" :height="h" :viewBox="`0 0 ${w} ${h}`">
         <line
           v-if="course"
           class="sfs-course"
@@ -59,8 +48,10 @@
         }"
         :style="planetStyle(p)"
       >
-        <span class="sfs-planet-glow" />
-        <div :ref="(el) => mountSmall(el, p)" class="sfs-planet-img planet-slot" />
+        <div class="sfs-planet-life" :style="planetLifeStyle(p)">
+          <span class="sfs-planet-glow" />
+          <div :ref="(el) => mountSmall(el, p)" class="sfs-planet-img planet-slot" />
+        </div>
         <span class="sfs-freed-ring" />
         <span class="sfs-freed-pulse" />
         <span class="sfs-crosshair" />
@@ -94,6 +85,13 @@ import {
   STAR_FIGHT_FREED_PULSE_MS,
   STAR_FIGHT_STAR_FLASH_MS,
   STAR_FIGHT_STAR_FLASH_SPAN_K,
+  STAR_FIGHT_STAR_BREATHE_MS,
+  STAR_FIGHT_PLANET_DRIFT_MS,
+  STAR_FIGHT_PLANET_DRIFT_VARIANCE_MS,
+  STAR_FIGHT_PLANET_DRIFT_DELAY_MS,
+  STAR_FIGHT_PLANET_DRIFT_DELAY_VARIANCE_MS,
+  STAR_FIGHT_PLANET_DRIFT_PX,
+  STAR_FIGHT_PLANET_DRIFT_SCALE,
   STAR_BODY_SPRITE_SPAN,
   STAR_BODY_SPIN_SEC,
 } from '@/config/constants'
@@ -229,6 +227,7 @@ const starStyle = computed(() => {
     height: `${s.px}px`,
     '--star-span': String(STAR_BODY_SPRITE_SPAN),
     '--star-spin-sec': `${STAR_BODY_SPIN_SEC[props.star.look]}s`,
+    '--star-breathe-ms': `${STAR_FIGHT_STAR_BREATHE_MS}ms`,
   }
 })
 
@@ -253,6 +252,16 @@ function planetStyle(p: SystemPlanet) {
     top: `${p.y}px`,
     width: `${2 * p.r}px`,
     height: `${2 * p.r}px`,
+  }
+}
+
+function planetLifeStyle(p: SystemPlanet) {
+  const seed = Math.abs(p.seed)
+  return {
+    '--planet-drift-delay': `-${STAR_FIGHT_PLANET_DRIFT_DELAY_MS + (seed % STAR_FIGHT_PLANET_DRIFT_DELAY_VARIANCE_MS)}ms`,
+    '--planet-drift-duration': `${STAR_FIGHT_PLANET_DRIFT_MS + (seed % STAR_FIGHT_PLANET_DRIFT_VARIANCE_MS)}ms`,
+    '--planet-drift-px': `${STAR_FIGHT_PLANET_DRIFT_PX}px`,
+    '--planet-drift-scale': String(STAR_FIGHT_PLANET_DRIFT_SCALE),
   }
 }
 
@@ -397,7 +406,12 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
   animation: sfs-star-spin var(--star-spin-sec, 40s) linear infinite;
 }
 
-.sfs--rm .sfs-star .star-spin {
+.sfs-star .star-halo {
+  animation: sfs-star-breathe var(--star-breathe-ms) ease-in-out infinite alternate;
+}
+
+.sfs--rm .sfs-star .star-spin,
+.sfs--rm .sfs-star .star-halo {
   animation: none;
 }
 
@@ -407,6 +421,15 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes sfs-star-breathe {
+  from {
+    opacity: 0.72;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -435,8 +458,8 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
   }
 }
 
-/* ── Bahnen und Kurs ─────────────────────────────────────────────────────── */
-.sfs-orbits {
+/* ── Reiseweg ────────────────────────────────────────────────────────────── */
+.sfs-course-layer {
   position: absolute;
   inset: 0;
   overflow: visible;
@@ -444,35 +467,23 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
   transition: opacity v-bind(orbitsOutMs) ease-out;
 }
 
-.sfs--depart .sfs-orbits,
-.sfs--travel .sfs-orbits,
-.sfs--outro .sfs-orbits {
+.sfs--depart .sfs-course-layer,
+.sfs--travel .sfs-course-layer,
+.sfs--outro .sfs-course-layer {
   opacity: 1;
   transition: opacity 260ms ease-out v-bind(orbitsInDelay);
 }
 
-/* Intro: der Ladeschleier deckt auf, die Bahnen stehen ohne zweite Blende */
-.sfs--intro .sfs-orbits,
-.sfs--travel .sfs-orbits {
+.sfs--intro .sfs-course-layer,
+.sfs--travel .sfs-course-layer {
   opacity: 1;
   transition: none;
 }
 
-.sfs-orbit {
-  fill: none;
-  stroke: rgba(232, 192, 64, 0.16);
-  stroke-width: 1;
-  stroke-dasharray: 3 5;
-}
-
-.sfs-orbit--target {
-  stroke: rgba(232, 192, 64, 0.34);
-}
-
 .sfs-course {
   stroke: rgba(240, 214, 120, 0.7);
-  stroke-width: 1.5;
-  stroke-dasharray: 6 6;
+  stroke-width: 1;
+  stroke-dasharray: 4 8;
   opacity: 0;
   transition: opacity 180ms ease-out;
 }
@@ -485,6 +496,24 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
 .sfs-planet {
   position: absolute;
   translate: -50% -50%;
+}
+
+.sfs-planet-life {
+  position: absolute;
+  inset: 0;
+  transform-origin: center;
+  animation: sfs-planet-drift var(--planet-drift-duration) ease-in-out infinite;
+  animation-delay: var(--planet-drift-delay);
+}
+
+@keyframes sfs-planet-drift {
+  0%,
+  100% {
+    transform: translateY(var(--planet-drift-px)) scale(1);
+  }
+  50% {
+    transform: translateY(calc(var(--planet-drift-px) * -1)) scale(var(--planet-drift-scale));
+  }
 }
 
 .planet-slot {
@@ -682,6 +711,8 @@ const starFlashMs = `${STAR_FIGHT_STAR_FLASH_MS}ms`
 
 @media (prefers-reduced-motion: reduce) {
   .sfs-star .star-spin,
+  .sfs-star .star-halo,
+  .sfs-planet-life,
   .sfs-hero--galaxy .sfs-hero-glow,
   .sfs-planet.is-freed-now .sfs-freed-pulse,
   .sfs--flash .sfs-star-flash {
