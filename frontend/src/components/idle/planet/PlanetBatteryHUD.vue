@@ -677,6 +677,9 @@ onUnmounted(() => {
   timeouts.forEach(window.clearTimeout)
   timeouts.length = 0
 })
+
+// Boss-Anker fuers Stylesheet — EINE Zahl mit den Projektilen
+const bossAnchorTop = `${STRIKER_BOSS_ANCHOR_Y_PCT}%`
 </script>
 
 <style scoped>
@@ -1224,7 +1227,7 @@ onUnmounted(() => {
   position: absolute;
   /* Boss-Anker (STRIKER_BOSS_ANCHOR_*_PCT) */
   left: 50%;
-  top: 41%;
+  top: v-bind(bossAnchorTop);
   width: 44px;
   height: 44px;
   margin: -22px 0 0 -22px;

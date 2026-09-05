@@ -72,7 +72,7 @@
     <!-- Floating Damage Numbers -->
     <template v-if="isMountedRef">
       <Teleport to="body">
-        <div class="dmg-overlay" aria-hidden="true">
+        <div v-if="!travelling" class="dmg-overlay" aria-hidden="true">
           <TransitionGroup name="dmg-float">
             <span
               v-for="dmg in damageFloats"
@@ -173,6 +173,8 @@ const props = defineProps<{
    *  das Role-Striker-Squad ersetzt — seine unsichtbaren Angriffs-Zyklen
    *  würden sonst verdeckt Boss-HP abziehen. */
   disableArcAttacks?: boolean
+  /** Kamerafahrt im Star-Fight-Modal: keine Schadenszahlen, kein Boss-Klick. */
+  travelling?: boolean
 }>()
 
 const emit = defineEmits<{ shake: [ms: number] }>()
@@ -291,7 +293,7 @@ function spawnFloat(
   opts: { blocked?: boolean; long?: boolean } = {},
 ) {
   const { blocked, long } = opts
-  if (!isMounted) return
+  if (!isMounted || props.travelling) return
   // Deckel gegen Klick-Spam: älteste Zahl verwerfen statt unbegrenzt stapeln
   if (damageFloats.length >= MAX_DAMAGE_FLOATS) damageFloats.shift()
   const id = ++dmgIdCounter

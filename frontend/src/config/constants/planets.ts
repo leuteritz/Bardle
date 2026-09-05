@@ -37,9 +37,63 @@ export const STAR_FIGHT_MODAL_TICK_MS = 250
 export const STAR_FIGHT_CONTENT_MOUNT_DELAY_MS = 210
 export const STAR_FIGHT_LOADER_SETTLE_FRAMES = 3
 export const STAR_FIGHT_LOADER_MIN_MS = 380
-/** Radius des Planeten-Hintergrunds im Star-Fight-Modal (600er viewBox). */
-export const STAR_FIGHT_MODAL_PLANET_R = 260
-export const STAR_FIGHT_MODAL_PLANET_R_GALAXY_BOSS = 290
+
+// ── Star-Fight-Systembühne: Kampfstern, Bahnen, Kamera ────────────────────
+// Systemansicht (k = 1): Stern in der Bühne, Planeten auf ihren Bahnen.
+export const STAR_FIGHT_SYS_CENTER_X_PCT = 50
+export const STAR_FIGHT_SYS_CENTER_Y_PCT = 46
+// Freier Rand der Systemansicht: oben unter dem Ziel-HUD, unten über dem Sonnenkamm.
+export const STAR_FIGHT_SYS_MARGIN_X = 0.1
+export const STAR_FIGHT_SYS_MARGIN_TOP = 0.24
+export const STAR_FIGHT_SYS_MARGIN_BOTTOM = 0.14
+/** Planetendurchmesser in der Systemansicht, % der Bühnenhöhe. */
+export const STAR_FIGHT_SYS_PLANET_D_PCT = 8
+/** Sternkante in der Systemansicht, % der Bühnenhöhe. */
+export const STAR_FIGHT_SYS_STAR_PX_PCT = 16
+// Mindestabstand zweier Planeten wird per Ablehnungspass ERZWUNGEN, nie gefolgert.
+export const STAR_FIGHT_SYS_MIN_GAP_PX = 10
+export const STAR_FIGHT_SYS_NUDGE_RAD = 0.12
+export const STAR_FIGHT_SYS_NUDGE_TRIES = 40
+// Kampfansicht: der Zielplanet steht am Anker mit diesem Durchmesser.
+export const STAR_FIGHT_ANCHOR_X_PCT = 50
+export const STAR_FIGHT_ANCHOR_Y_PCT = 42
+export const STAR_FIGHT_FIGHT_PLANET_D_PCT = 64
+// Ferne Ebene (Stern): Anteil der Kamerafahrt und Zoom in der Kampfansicht.
+export const STAR_FIGHT_FAR_PARALLAX = 0.25
+export const STAR_FIGHT_FAR_ZOOM = 1.35
+// Boss steht auf dem Planeten: Bodenlinie und Höhe in % der Bühne.
+export const STAR_FIGHT_BOSS_GROUND_Y_PCT = 50
+export const STAR_FIGHT_BOSS_H_PCT = 24
+export const STAR_FIGHT_BOSS_H_PCT_COMPACT = 20
+// Kamerafahrt je Planetenwechsel; transitionend taktet, Timer × NET_MUL ist das Netz.
+export const STAR_FIGHT_CAM_DEPART_MS = 650
+export const STAR_FIGHT_CAM_HOLD_MS = 200
+export const STAR_FIGHT_CAM_APPROACH_MS = 800
+export const STAR_FIGHT_CAM_OUTRO_MS = 1200
+export const STAR_FIGHT_CAM_OUTRO_RM_MS = 400
+export const STAR_FIGHT_CAM_RM_FADE_MS = 200
+export const STAR_FIGHT_CAM_NET_MUL = 2
+export const STAR_FIGHT_CAM_EASE_OUT = 'cubic-bezier(0.16, 1, 0.3, 1)'
+export const STAR_FIGHT_CAM_EASE_IN = 'cubic-bezier(0.6, 0, 0.35, 1)'
+/** Anteil der Fahrt, in dem der grosse Planet gegen den kleinen blendet. */
+export const STAR_FIGHT_HERO_FADE_FRAC = 0.25
+export const STAR_FIGHT_BOSS_MATERIALIZE_MS = 350
+export const STAR_FIGHT_FREED_PULSE_MS = 400
+export const STAR_FIGHT_STAR_FLASH_MS = 400
+export const STAR_FIGHT_CALLOUT_MS = 1400
+/** Deckkraft von Squad und Turrets im Flug. */
+export const STAR_FIGHT_TRAVEL_DIM = 0.35
+// Planeten-Sprites (utils/fx/planetSprite.ts)
+export const STAR_FIGHT_PLANET_PX_STEP = 64
+/** Die kleinen Sprites werden überzeichnet: im Einzoom stehen sie 8× skaliert. */
+export const STAR_FIGHT_SYS_SPRITE_OVERSAMPLE = 2
+export const STAR_FIGHT_PLANET_LIGHT_STEPS = 16
+export const STAR_FIGHT_PLANET_SPRITE_MAX_PX = 1024
+export const STAR_FIGHT_PLANET_SPRITE_SPAN = 1.05
+export const STAR_FIGHT_PLANET_SPRITE_SPAN_RINGED = 1.95
+export const STAR_FIGHT_PLANET_SPRITE_CANVAS_MAX = 12
+export const STAR_FIGHT_PLANET_SPRITE_URL_MAX = 16
+export const STAR_FIGHT_PLANET_SPRITE_CROSSFADE_MS = 250
 
 // Pre-scaled planet thumbnails (256px, HQ resampling) for small UI tiles —
 // browsers blur when minifying the ~700px originals down to ~60px in one step
@@ -444,7 +498,7 @@ export const STRIKER_ARC_RY_PCT = 3 // vertical semi-axis of the striker arc (% 
 // größten Banner. Nicht weiter anheben, ohne das Banner mitzumessen.
 export const STRIKER_ARC_CENTER_Y_PCT = 68 // arc center as % of arena height (between loot banner and sun horizon)
 export const STRIKER_BOSS_ANCHOR_X_PCT = 50 // projectile target: boss center X (% arena width)
-export const STRIKER_BOSS_ANCHOR_Y_PCT = 41 // projectile target: boss center Y (% arena height)
+export const STRIKER_BOSS_ANCHOR_Y_PCT = 38 // projectile target: boss center Y (% arena height) — Boss steht auf STAR_FIGHT_BOSS_GROUND_Y_PCT
 export const STRIKER_PROJECTILE_IMPACT_FRAC = 0.7 // projectile stops at this fraction toward boss center
 
 // Turret Battery — turret-planet volleys in the Star Fight Modal, synced with

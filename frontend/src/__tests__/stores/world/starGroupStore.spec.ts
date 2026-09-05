@@ -189,3 +189,54 @@ describe('spawnChampionStar — ein verpuffter Versuch muss nachholbar sein', ()
     expect(starStore.hasActiveChampionStar).toBe(true)
   })
 })
+
+describe('starFightOutro — das Modal fährt heraus und schliesst sich selbst', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  function openTwoPlanetStar() {
+    const starStore = useStarGroupStore()
+    const bossStore = usePlanetBossStore()
+    starStore.activeStars = [makeStar('s1', ['p1', 'p2']) as never]
+    bossStore.activeBosses = [makeBoss('p1'), makeBoss('p2')]
+    starStore.openStarFightModal('s1')
+    return { starStore, bossStore }
+  }
+
+  it('setzt beim letzten Planeten das Outro, statt zu schliessen', () => {
+    const { starStore } = openTwoPlanetStar()
+    expect(starStore.starFightOutro).toBe(false)
+    starStore.advanceStarFight()
+    expect(starStore.starFightCurrentIndex).toBe(1)
+    expect(starStore.starFightOutro).toBe(false)
+    starStore.advanceStarFight()
+    expect(starStore.starFightOutro).toBe(true)
+    expect(starStore.starFightModalOpen).toBe(true)
+    expect(starStore.starFightCurrentIndex).toBe(1)
+    expect(starStore.currentFightPlanetId).toBe('p2')
+  })
+
+  it('_despawnResourceStar schliesst NICHT im Outro — danach schon', () => {
+    const { starStore } = openTwoPlanetStar()
+    starStore.advanceStarFight()
+    starStore.advanceStarFight()
+    starStore._despawnResourceStar('s1')
+    expect(starStore.starFightModalOpen).toBe(true)
+    starStore.closeStarFightModal()
+    expect(starStore.starFightOutro).toBe(false)
+    expect(starStore.starFightModalOpen).toBe(false)
+
+    const again = openTwoPlanetStar()
+    again.starStore._despawnResourceStar('s1')
+    expect(again.starStore.starFightModalOpen).toBe(false)
+  })
+
+  it('openStarFightModal beginnt ohne Outro', () => {
+    const { starStore } = openTwoPlanetStar()
+    starStore.starFightOutro = true
+    starStore.closeStarFightModal()
+    starStore.openStarFightModal('s1')
+    expect(starStore.starFightOutro).toBe(false)
+  })
+})

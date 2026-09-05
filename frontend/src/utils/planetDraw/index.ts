@@ -25,6 +25,7 @@ export function drawPlanet(
   cx: number,
   cy: number,
   r: number,
+  seed?: number,
 ): void {
   switch (type) {
     case 'rocky':
@@ -34,7 +35,7 @@ export function drawPlanet(
       drawIce(svg, id, cx, cy, r)
       break
     case 'gas-giant':
-      drawGasGiant(svg, id, cx, cy, r)
+      drawGasGiant(svg, id, cx, cy, r, seed)
       break
     case 'lava':
       drawLava(svg, id, cx, cy, r)

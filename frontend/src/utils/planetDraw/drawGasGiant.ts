@@ -1,5 +1,6 @@
 import { GAS_GIANT_PALETTES } from '@/utils/planetDraw/types'
 import { svgEl, setAttrs, addGradStop, addClip } from '@/utils/planetDraw/svgHelpers'
+import { jitter } from '@/utils/fx/spaceBody'
 
 /**
  * Gas Giant – 7 bands, 3-layer nested storm, specular shine gradient
@@ -10,8 +11,11 @@ export function drawGasGiant(
   cx: number,
   cy: number,
   r: number,
+  seed?: number,
 ): void {
-  const pal = GAS_GIANT_PALETTES[Math.floor(Math.random() * GAS_GIANT_PALETTES.length)]
+  // Mit Seed deterministisch — dasselbe Sprite in klein und gross braucht dieselbe Palette
+  const roll = seed === undefined ? Math.random() : jitter(seed, 3)
+  const pal = GAS_GIANT_PALETTES[Math.floor(roll * GAS_GIANT_PALETTES.length)]
   const defs = svgEl('defs')
 
   addClip(defs, `ggc-${id}`, cx, cy, r * 0.92)

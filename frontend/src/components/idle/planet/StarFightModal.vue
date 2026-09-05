@@ -65,8 +65,8 @@
                per Konstruktion statt per nachgemessener Lücke.
 
                Breite ist hier die billige Achse — der Boss bemisst sich an
-               der HÖHE (`.boss-wrapper { height: 38% }`) und schrumpft mit
-               einer schmaleren Arena gar nicht. ────────────────────── -->
+               der HÖHE (`--sf-boss-h`) und schrumpft mit einer schmaleren
+               Arena gar nicht. ──────────────────────────────────────── -->
           <aside class="sf-rail" aria-label="Bard abilities and active effects">
             <div id="sf-ability-dock" class="sf-rail-slot" />
             <div id="sf-buff-dock" class="sf-rail-slot sf-rail-slot--buffs" />
@@ -75,8 +75,32 @@
           <!-- Die Bühne: Arena + Ladeschleier. Eigener Kasten, damit der
                Schleier NUR die Arena deckt — die Schiene baut sich nicht auf
                und braucht keinen. -->
-          <div class="sf-stage">
-            <!-- Section 1: Planet + Boss zentriert (größter Bereich) -->
+          <div ref="stageEl" class="sf-stage">
+            <!-- ── Die Systembühne: Kampfstern, Bahnen, der Zielplanet gross —
+                 liegt HINTER der Arena und trägt die Kamera (Zoom, Flug) ── -->
+            <StarFightSystemStage
+              v-if="fightStar && contentReady"
+              :star="fightStar"
+              :phase="cam.phase.value"
+              :target-planet-id="cam.targetPlanetId.value"
+              :prev-planet-id="cam.prevPlanetId.value"
+              :cleared-ids="clearedIds"
+              :galaxy-boss-planet-ids="galaxyBossPlanetIds"
+              :reduced-motion="reducedMotion"
+              :flash="cam.flash.value"
+              @near-transition-end="cam.onNearTransitionEnd"
+            />
+
+            <!-- Im Outro steht kein HUD mehr — die Ansage des Sterns steht für sich -->
+            <Transition name="sf-outro-callout">
+              <div v-if="outro && cam.callout.value" class="sf-outro-callout" aria-live="polite">
+                <span class="sf-outro-callout-line" />
+                <span v-ink-center class="sf-outro-callout-text">{{ cam.callout.value.text }}</span>
+                <span class="sf-outro-callout-line sf-outro-callout-line--right" />
+              </div>
+            </Transition>
+
+            <!-- Section 1: Boss auf dem Planeten (größter Bereich) -->
             <div
               class="sf-arena-wrap"
               :class="{
@@ -84,15 +108,10 @@
                 'sf-arena-wrap--jab': bossJabActive && !bossStrikeActive,
                 'sf-arena-wrap--hit': bossHitActive && !bossStrikeActive && !bossJabActive,
                 'sf-arena-wrap--eclipsed': bossBehindSun,
+                'sf-arena-wrap--travel': cam.travelling.value,
+                'sf-arena-wrap--materialize': cam.materializing.value,
               }"
             >
-              <!-- Planet-Hintergrund — zentriert im Arena-Bereich, Boss steht mittig darauf -->
-              <div
-                ref="modalPlanetBgRef"
-                class="sf-modal-planet-bg"
-                :class="{ 'sf-modal-planet-bg--galaxy': isGalaxyBoss }"
-              />
-
               <!-- ── Eigene Sonne als Horizont am unteren Arena-Rand: aktuelle
                    Phase + Spieler-HP. Steht VOR BossArenaSection im DOM, damit
                    Boss und Planet über der Kuppel liegen; HP-Leiste, Zielscheibe
@@ -100,15 +119,16 @@
               <SunHorizonHUD v-if="activeBoss && contentReady" />
 
               <BossArenaSection
-                v-if="activeBoss && contentReady"
+                v-if="activeBoss && contentReady && !outro"
                 disable-arc-attacks
+                :travelling="cam.travelling.value"
                 @shake="handleShake"
               />
 
               <!-- ── Eclipse-Schleier: Boss hinter der Sonne — gleißende Korona
                    legt sich über die Arena, der Boss wird zur Silhouette ────── -->
               <Transition name="sf-eclipse-fade">
-                <div v-if="bossBehindSun" class="sf-eclipse-veil" aria-hidden="true">
+                <div v-if="bossBehindSun && !cam.travelling.value" class="sf-eclipse-veil" aria-hidden="true">
                   <span class="sf-eclipse-scrim" />
                   <span class="sf-eclipse-corona" />
                   <!-- Großes Eclipse-Medaillon auf dem Boss — gleiches Icon wie
@@ -121,7 +141,7 @@
 
               <!-- ── Planet Battery: alle 6 Planet-Slots auf dem Bogen — nur
                    Turrets feuern Salven (geteilter Takt mit dem Idle-Orbit) ── -->
-              <PlanetBatteryHUD v-if="activeBoss && contentReady" />
+              <PlanetBatteryHUD v-if="activeBoss && contentReady && !outro" />
 
               <!-- Boss-Angriff: Abschuss-Blitz + Doppel-Schockwelle, die sichtbar
                    bis über Champions und Turret-Planeten hinausläuft -->
@@ -132,15 +152,20 @@
               </template>
 
               <!-- ── Ziel-HUD: Bossname + HP-Datenstreifen (rahmenlos, oben) ── -->
-              <StarFightBossHud v-if="contentReady" :now="now" :boss-behind-sun="bossBehindSun" />
+              <StarFightBossHud
+                v-if="contentReady && !outro"
+                :now="now"
+                :boss-behind-sun="bossBehindSun"
+                :callout="cam.callout.value"
+              />
 
               <!-- ── Loot des aktuellen Bosses — episch unter dem Boss-Bild ── -->
-              <div v-if="activeBoss && contentReady" class="sf-loot">
+              <div v-if="activeBoss && contentReady && !outro" class="sf-loot">
                 <BossRewardSection />
               </div>
 
               <!-- ── Attacker Squad: Rollen mit Boss-Fähigkeit + Cooldown ── -->
-              <div v-if="activeBoss && contentReady" class="sf-squad">
+              <div v-if="activeBoss && contentReady && !outro" class="sf-squad">
                 <RoleStrikerSquad />
               </div>
             </div>
@@ -166,7 +191,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
+import { ref, shallowRef, computed, watch, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
@@ -179,16 +204,23 @@ import {
   BOSS_RAGE_DMG_MULT,
   EMBER_LEFT_STEP_STAR_FIGHT_PCT,
   STAR_FIGHT_MODAL_TICK_MS,
-  STAR_FIGHT_MODAL_PLANET_R,
-  STAR_FIGHT_MODAL_PLANET_R_GALAXY_BOSS,
   STAR_FIGHT_CONTENT_MOUNT_DELAY_MS,
   STAR_FIGHT_LOADER_SETTLE_FRAMES,
   STAR_FIGHT_LOADER_MIN_MS,
+  STAR_FIGHT_BOSS_H_PCT,
+  STAR_FIGHT_BOSS_H_PCT_COMPACT,
+  STAR_FIGHT_BOSS_GROUND_Y_PCT,
+  STAR_FIGHT_BOSS_MATERIALIZE_MS,
+  STAR_FIGHT_TRAVEL_DIM,
+  STRIKER_BOSS_ANCHOR_Y_PCT,
 } from '@/config/constants'
 import { emberStyle as emberField } from '@/utils/fx/particleField'
-import { NS, drawPlanet } from '@/utils/planetDraw'
 import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
+import { systemLayout, systemSpritePx, heroSpritePx } from '@/utils/orbit/starFightSystem'
+import { warmPlanetSprites } from '@/utils/fx/planetSprite'
 import { useBossFightHud } from '@/composables/orbit/useBossFightHud'
+import { useStarFightCamera } from '@/composables/orbit/useStarFightCamera'
+import type { StarGroup } from '@/stores/world/starGroupStore'
 import BossArenaSection from '@/components/idle/planet/BossArenaSection.vue'
 import RoleStrikerSquad from '@/components/idle/planet/RoleStrikerSquad.vue'
 import BossRewardSection from '@/components/idle/planet/BossRewardSection.vue'
@@ -196,6 +228,7 @@ import PlanetBatteryHUD from '@/components/idle/planet/PlanetBatteryHUD.vue'
 import SunHorizonHUD from '@/components/idle/planet/SunHorizonHUD.vue'
 import StarFightBossHud from '@/components/idle/planet/StarFightBossHud.vue'
 import StarFightLoader from '@/components/idle/planet/StarFightLoader.vue'
+import StarFightSystemStage from '@/components/idle/planet/StarFightSystemStage.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
 import { gameNow } from '@/utils/game/gameClock'
@@ -208,7 +241,9 @@ const roleBehaviorStore = useRoleBehaviorStore()
 // ── Reactive values ───────────────────────────────────────────────────────
 const isShaking = ref(false)
 const now = ref(gameNow())
-const modalPlanetBgRef = ref<HTMLDivElement | null>(null)
+const stageEl = ref<HTMLDivElement | null>(null)
+// Momentaufnahme des Kampfsterns — VOR dem Open-Watcher (immediate)
+const fightStar = shallowRef<StarGroup | null>(null)
 let tickInterval: ReturnType<typeof setInterval> | null = null
 
 /**
@@ -288,8 +323,13 @@ watch(
     if (!open) {
       contentReady.value = false
       loaderVisible.value = false
+      fightStar.value = null
       return
     }
+    // Momentaufnahme: activeStars verliert den Stern im Outro
+    fightStar.value =
+      starGroupStore.activeStars.find((s) => s.id === starGroupStore.activeFightStarId) ?? null
+    void nextTick(warmStage)
     // Steht die Arena schon einmal gebaut im Speicher, genügt der eine Frame
     // Versatz von früher: er hält den Mount aus dem Einblende-Frame heraus, und
     // mehr ist bei 44 ms längstem Frame auch nicht nötig.
@@ -435,46 +475,96 @@ onUnmounted(() => {
   if (bossHitEndTimeout) clearTimeout(bossHitEndTimeout)
 })
 
-// ── Planet Background ─────────────────────────────────────────────────────
-function renderModalPlanet() {
-  if (!modalPlanetBgRef.value || !activeBoss.value) return
-  modalPlanetBgRef.value.innerHTML = ''
-  const svg = document.createElementNS(NS, 'svg') as SVGSVGElement
-  svg.setAttribute('width', '600')
-  svg.setAttribute('height', '600')
-  svg.setAttribute('viewBox', '0 0 600 600')
-  svg.style.width = '100%'
-  svg.style.height = '100%'
-  const radius = isGalaxyBoss.value
-    ? STAR_FIGHT_MODAL_PLANET_R_GALAXY_BOSS
-    : STAR_FIGHT_MODAL_PLANET_R
-  drawPlanet(svg, `modal-bg-${Date.now()}`, activeBoss.value.planetType, 300, 300, radius)
-  modalPlanetBgRef.value.appendChild(svg)
-}
+// ── Systembühne: Kamera, Sprite-Warm-up ──────────────────────────────────
+const outro = computed(() => starGroupStore.starFightOutro)
 
-// An contentReady gekoppelt: das SVG entsteht erst, wenn der Inhalt gemountet
-// wird — nicht schon im Einblende-Frame.
+const galaxyBossPlanetIds = computed<ReadonlySet<string>>(
+  () => new Set(bossStore.activeBosses.filter((b) => b.isGalaxyBoss).map((b) => b.planetId)),
+)
+
+// Geräumt ist, was in der Warteschlange VOR dem Ziel steht — `cleared` am
+// Slot kippt erst mit dem Boss-Removal, die Bühne zeigt es sofort.
+const clearedIds = computed<ReadonlySet<string>>(() => {
+  const q = starGroupStore.starFightPlanetQueue
+  const upTo = outro.value ? q.length : starGroupStore.starFightCurrentIndex
+  return new Set(q.slice(0, upTo))
+})
+
+const reducedMotion = ref(false)
+
+const cam = useStarFightCamera({
+  open: computed(() => starGroupStore.starFightModalOpen),
+  currentIndex: computed(() => starGroupStore.starFightCurrentIndex),
+  queue: computed(() => starGroupStore.starFightPlanetQueue),
+  outro,
+  reducedMotion,
+  galaxyBossPlanetIds,
+  onOutroDone: () => starGroupStore.closeStarFightModal(),
+})
+
 watch(
-  () => [activeBoss.value?.planetId, contentReady.value] as const,
-  async ([newId, ready]) => {
-    if (!newId || !ready) return
-    await nextTick()
-    renderModalPlanet()
+  () => starGroupStore.starFightModalOpen,
+  (open) => {
+    if (open && typeof window !== 'undefined') {
+      reducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    }
   },
   { immediate: true },
 )
 
+// Zuletzt gemessene Bühne — damit ein neuer Stern schon beim Spawn warm wird
+let lastStage: { w: number; h: number } | null = null
+
+function warmStarSprites(star: StarGroup, w: number, h: number) {
+  const dpr = window.devicePixelRatio || 1
+  const layout = systemLayout(star, w, h, galaxyBossPlanetIds.value)
+  warmPlanetSprites(
+    layout.planets.flatMap((p) => [
+      { type: p.type, seed: p.seed, px: systemSpritePx(p.r), lightAngle: p.lightAngle },
+      { type: p.type, seed: p.seed, px: heroSpritePx(h), lightAngle: p.lightAngle },
+    ]),
+    dpr,
+  )
+}
+
+function warmStage() {
+  const el = stageEl.value
+  const star = fightStar.value
+  if (!el || !star) return
+  const r = el.getBoundingClientRect()
+  if (r.width <= 0 || r.height <= 0) return
+  lastStage = { w: Math.round(r.width), h: Math.round(r.height) }
+  warmStarSprites(star, lastStage.w, lastStage.h)
+}
+
 // ── Star-Watcher ──────────────────────────────────────────────────────────
 watch(
   () => starGroupStore.activeStars.map((s) => s.id),
-  (ids) => {
-    if (starGroupStore.starFightModalOpen && starGroupStore.activeFightStarId) {
-      if (!ids.includes(starGroupStore.activeFightStarId)) {
-        starGroupStore.closeStarFightModal()
-      }
+  (ids, oldIds) => {
+    if (
+      starGroupStore.starFightModalOpen &&
+      starGroupStore.activeFightStarId &&
+      !starGroupStore.starFightOutro &&
+      !ids.includes(starGroupStore.activeFightStarId)
+    ) {
+      starGroupStore.closeStarFightModal()
+    }
+    // Neue Sterne: Sprites jetzt rastern, nicht erst beim Öffnen
+    if (!lastStage) return
+    const known = new Set(oldIds ?? [])
+    for (const star of starGroupStore.activeStars) {
+      if (!known.has(star.id)) warmStarSprites(star, lastStage.w, lastStage.h)
     }
   },
 )
+
+// Masse für das Stylesheet — EINE Zahl je Boss-Grösse und -Anker
+const bossH = `${STAR_FIGHT_BOSS_H_PCT}%`
+const bossHCompact = `${STAR_FIGHT_BOSS_H_PCT_COMPACT}%`
+const bossGround = `${STAR_FIGHT_BOSS_GROUND_Y_PCT}%`
+const bossAnchorTop = `${STRIKER_BOSS_ANCHOR_Y_PCT}%`
+const materializeMs = `${STAR_FIGHT_BOSS_MATERIALIZE_MS}ms`
+const travelDim = String(STAR_FIGHT_TRAVEL_DIM)
 
 // ── Admin ─────────────────────────────────────────────────────────────────
 const adminKillFlashing = ref(false)
@@ -523,7 +613,6 @@ function emberStyle(i: number): Record<string, string> {
 /* ── prefers-reduced-motion ───────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .sf-ember,
-  .sf-modal-planet-bg--galaxy,
   .sf-curse-veil-layer--edge,
   .sf-curse-veil-layer--smoke,
   .sf-rage-veil-layer--edge,
@@ -610,27 +699,6 @@ function emberStyle(i: number): Record<string, string> {
     0 0 0 1px #2a1608;
 }
 
-/* ── Planet Background — zentriert im Arena-Bereich ──────────────────────── */
-.sf-modal-planet-bg {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.5;
-  pointer-events: none;
-  z-index: 0;
-  overflow: hidden;
-}
-
-.sf-modal-planet-bg--galaxy {
-  /* Statischer Glow + Opacity-Pulse — animiertes drop-shadow würde das
-     komplette Planet-SVG jeden Frame neu rastern (FPS-Killer) */
-  filter: drop-shadow(0 0 35px rgba(180, 60, 230, 0.5));
-  animation: modal-planet-glow 3s ease-in-out infinite alternate;
-}
-
-/* All modal children above the planet background ───────────────────────── */
 .sf-main {
   position: relative;
   z-index: 1;
@@ -850,63 +918,138 @@ function emberStyle(i: number): Record<string, string> {
   /* Eigener Stapelkontext — sonst schlügen die hohen z-index der Arena
      (Schadenszahlen liegen auf 9999) durch den Ladeschleier hindurch, der die
      Arena gerade abdecken soll. Nach innen ändert das nichts: alle Ebenen der
-     Arena ordnen sich weiterhin untereinander, nur eben in diesem Kontext. */
+     Arena ordnen sich weiterhin untereinander, nur eben in diesem Kontext.
+     Die Systembühne steht davor im DOM und liegt damit HINTER der Arena. */
   z-index: 0;
   flex: 1 1 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  --sf-boss-h: v-bind(bossH);
+  --sf-boss-ground: v-bind(bossGround);
 }
 
-/* Arena füllt den ganzen Bereich — Boss steht mittig auf dem Planeten.
-   padding-bottom hebt den Boss an, damit Loot, Champion-Row und der
-   Sonnen-Horizont darunter Platz haben (auflösungsunabhängig) */
+/* ── Outro-Ansage: dort, wo das Ziel-HUD stand ───────────────────────────── */
+.sf-outro-callout {
+  position: absolute;
+  top: 58px;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(520px, 70%);
+  pointer-events: none;
+}
+
+.sf-outro-callout-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.65));
+}
+
+.sf-outro-callout-line--right {
+  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.65));
+}
+
+.sf-outro-callout-text {
+  font-size: 1.05rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #e8c040;
+  text-shadow:
+    0 0 14px rgba(232, 192, 64, 0.6),
+    0 2px 3px rgba(0, 0, 0, 0.95);
+}
+
+.sf-outro-callout-enter-active {
+  transition: opacity 0.25s ease-out;
+}
+
+.sf-outro-callout-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.sf-outro-callout-enter-from,
+.sf-outro-callout-leave-to {
+  opacity: 0;
+}
+
+/* ── Flug: Boss, Loot, Projektile und Schadenszahlen aus, Squad und Turrets
+   gedimmt — der Kampf läuft im Store weiter, die Bühne zeigt die Reise ──── */
+.sf-arena-wrap--travel :deep(.boss-wrapper),
+.sf-arena-wrap--travel .sf-loot,
+.sf-arena-wrap--travel :deep(.tbh-strike-bolt),
+.sf-arena-wrap--travel :deep(.tbh-comet),
+.sf-arena-wrap--travel :deep(.tbh-impact-num),
+.sf-arena-wrap--travel :deep(.tbh-hitfloat),
+.sf-arena-wrap--travel :deep(.rsq-strike-bolt),
+.sf-arena-wrap--travel :deep(.rsq-proj),
+.sf-arena-wrap--travel :deep(.rsq-impact),
+.sf-arena-wrap--travel :deep(.rsq-float),
+.sf-arena-wrap--travel :deep(.sfsun-bolt),
+.sf-arena-wrap--travel :deep(.sfsun-float) {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+  pointer-events: none;
+}
+
+.sf-arena-wrap--travel .sf-squad,
+.sf-arena-wrap--travel :deep(.tbh) {
+  opacity: v-bind(travelDim);
+  transition: opacity 200ms ease-out;
+}
+
+.sf-squad,
+.sf-arena-wrap :deep(.tbh) {
+  transition: opacity 260ms ease-in;
+}
+
+/* Ankunft: der nächste Boss materialisiert auf seinem Planeten */
+.sf-arena-wrap--materialize :deep(.boss-wrapper) {
+  animation: sf-boss-materialize v-bind(materializeMs) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes sf-boss-materialize {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/* Arena füllt den ganzen Bereich; der Boss steht absolut auf seiner Bodenlinie */
 .sf-arena-wrap :deep(.arena) {
   flex: 1;
   min-height: 0;
   height: auto;
   aspect-ratio: auto;
   z-index: 1;
-  padding-bottom: 18%;
+  padding-bottom: 0;
 }
 
-/* Boss-Größe. Das Vertikal-Budget der Arena ist von oben nach unten:
-   HUD → Boss → Loot (51 %) → Champion-Row (~68–70 %) → Sonnen-Kamm (~89 %).
-   Kompakte Full-HD-Größen siehe @media (max-height: 1100px) unten.
-
-   Die Höhe hängt am WRAPPER, nicht am Bild — und das mit Absicht:
-   `.boss-wrapper` hat keine eigene Breite und schrumpfte früher auf die
-   intrinsische Sprite-Breite. Ein `max-width` am Bild bezog sich damit auf das
-   Sprite selbst statt auf die Arena; die Darstellung war schlicht
-   `naturalWidth × Faktor` und hing an der Dateiauflösung. Folge: der Boss war
-   auf jeder Auflösung gleich groß und nahm auf 4K nur 17 % der Arenahöhe ein
-   (auf 2K dagegen 27,7 %) — genau der „auf 4K zu klein"-Fall.
-
-   Jetzt bekommt der Wrapper eine arena-relative Höhe (Prozent laufen gegen die
-   Content-Box der Arena, deren padding-bottom von 18 % ist bereits abgezogen),
-   das Bild füllt ihn per `height: 100%` und leitet seine Breite aus dem
-   Seitenverhältnis ab. Der Wrapper bleibt damit exakt so groß wie das Sprite —
-   wichtig, weil `.boss-aura` mit `inset: -20%` an ihm hängt. Gemessene Höhe in
-   % der Arena: Full HD 22,4 · WUXGA 24,0 · 2K 27,3 · 4K 26,9 (vorher 19,2 ·
-   16,8 · 27,7 · 17,0). Unterkante bleibt überall ≤ 49 %, also frei vom
-   Loot-Banner bei 51 %. Die Sprite-Auflösung spielt jetzt keine Rolle mehr. */
+/* Boss auf dem Planeten: Füsse auf der Bodenlinie (--sf-boss-ground), Höhe
+   arena-relativ (--sf-boss-h), Mitte = STRIKER_BOSS_ANCHOR_Y_PCT. `translate`
+   statt `transform`, damit die Keyframes boss-idle/boss-hit nicht kollidieren.
+   Die Höhe hängt am WRAPPER: `.boss-aura` (inset −20 %) hängt an ihm. */
 .sf-arena-wrap :deep(.boss-wrapper) {
-  height: 38%;
-  /* Schutz gegen extrem breite Sprites — bindet bei den aktuellen
-     Seitenverhältnissen nicht (breitestes Sprite landet bei ~32 %) */
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - var(--sf-boss-ground));
+  translate: -50% 0;
+  height: var(--sf-boss-h);
   max-width: 40%;
 }
 
 .sf-arena-wrap :deep(.boss-img) {
   height: 100%;
   max-width: 100%;
-}
-
-/* Boden-Schatten der Arena aus — der Boss schwebt hier frei über dem
-   Planeten, ein Kontakt-Schatten wirkt deplatziert */
-.sf-arena-wrap :deep(.boss-ground-shadow) {
-  display: none;
 }
 
 /* Bossname kommt jetzt oben ins HP-Overlay — Arena-eigenes Overlay ausblenden */
@@ -975,7 +1118,7 @@ function emberStyle(i: number): Record<string, string> {
   will-change: transform;
 }
 
-/* Schockwelle am Boss-Anker (50 % / 41 % — STRIKER_BOSS_ANCHOR_*_PCT).
+/* Schockwelle am Boss-Anker (STRIKER_BOSS_ANCHOR_*_PCT).
    Arena-relativ dimensioniert: Endradius ≈ 50 % der Arena-Breite — der Ring
    überstreicht Champions UND Turret-Planeten auf jeder Auflösung. Bei ~62 %
    der Laufzeit (= BOSS_WAVE_HIT_DELAY_MS von BOSS_WAVE_TRAVEL_MS) passiert
@@ -988,7 +1131,7 @@ function emberStyle(i: number): Record<string, string> {
 .sf-boss-wave {
   position: absolute;
   left: 50%;
-  top: 41%;
+  top: v-bind(bossAnchorTop);
   width: 100%;
   aspect-ratio: 1;
   border-radius: 50%;
@@ -1022,7 +1165,7 @@ function emberStyle(i: number): Record<string, string> {
 .sf-boss-flare {
   position: absolute;
   left: 50%;
-  top: 41%;
+  top: v-bind(bossAnchorTop);
   width: 12%;
   aspect-ratio: 1;
   border-radius: 50%;
@@ -1064,19 +1207,19 @@ function emberStyle(i: number): Record<string, string> {
   position: absolute;
   inset: 0;
   background: radial-gradient(
-    ellipse at 50% 41%,
+    ellipse at 50% v-bind(bossAnchorTop),
     rgba(255, 190, 60, 0.08) 0%,
     rgba(8, 4, 0, 0.45) 55%,
     rgba(0, 0, 0, 0.68) 100%
   );
 }
 
-/* Korona am Boss-Anker (50 % / 41 % — wie Flare/Welle): nur opacity/transform
-   animiert, der Verlauf wird EINMAL gerastert (FPS-freundlich) */
+/* Korona am Boss-Anker (wie Flare/Welle): nur opacity/transform animiert,
+   der Verlauf wird EINMAL gerastert (FPS-freundlich) */
 .sf-eclipse-corona {
   position: absolute;
   left: 50%;
-  top: 41%;
+  top: v-bind(bossAnchorTop);
   width: min(48%, 520px);
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
@@ -1092,13 +1235,12 @@ function emberStyle(i: number): Record<string, string> {
   will-change: opacity;
 }
 
-/* Großes Eclipse-Medaillon mittig auf dem Boss (Anker 50 % / 41 % wie
-   Flare/Welle) — Medaillon-Design identisch zu rsq-eclipse/tbh-eclipse,
-   nur hochskaliert für das Boss-Sprite */
+/* Großes Eclipse-Medaillon mittig auf dem Boss (Anker wie Flare/Welle) —
+   Medaillon-Design identisch zu rsq-eclipse/tbh-eclipse, hochskaliert */
 .sf-eclipse-medal {
   position: absolute;
   left: 50%;
-  top: 41%;
+  top: v-bind(bossAnchorTop);
   transform: translate(-50%, -50%);
   width: 92px;
   height: 92px;
@@ -1128,20 +1270,6 @@ function emberStyle(i: number): Record<string, string> {
 .sf-eclipse-fade-enter-from,
 .sf-eclipse-fade-leave-to {
   opacity: 0;
-}
-
-.sf-atk-emblem--rage .sf-atk-num {
-  color: #ffc4d4;
-  -webkit-text-stroke: 1px rgba(110, 0, 30, 0.85);
-  text-shadow:
-    0 0 12px rgba(255, 70, 120, 0.95),
-    0 0 30px rgba(255, 46, 99, 0.6),
-    0 0 56px rgba(220, 20, 70, 0.35),
-    0 2px 4px rgba(0, 0, 0, 0.95);
-}
-
-.sf-atk-emblem--rage .sf-atk-unit {
-  color: rgba(255, 140, 165, 0.75);
 }
 
 /* ── Attacker Squad — Halbkreis um den Boss (RoleStrikerSquad positioniert
@@ -1333,22 +1461,9 @@ function emberStyle(i: number): Record<string, string> {
    Loot und Striker skalieren gemeinsam herunter, damit Boss, HP-Leiste
    und dmg/s-Anzeige nicht kollidieren. */
 @media (max-height: 1100px) {
-  /* Flachere Arena → der Boss nimmt einen kleineren Anteil, damit die Unterkante
-     klar vor dem Loot-Banner (51 %) bleibt: gemessen 45,9 % auf Full HD und
-     49,0 % auf WUXGA. Das frühere `max-height: 360px` ist entfallen — es war ein
-     Pixel-Deckel gegen die alte, an der Dateiauflösung hängende Größe und würde
-     die arena-relative Skalierung jetzt nur wieder kappen. */
-  .sf-arena-wrap :deep(.boss-wrapper) {
-    height: 32%;
-  }
-
-  .sf-atk-emblem {
-    gap: 7px;
-    padding: 5px 20px 6px;
-  }
-
-  .sf-atk-num {
-    font-size: 1.35rem;
+  /* Flachere Arena → der Boss nimmt einen kleineren Anteil, die Bodenlinie bleibt */
+  .sf-arena-wrap {
+    --sf-boss-h: v-bind(bossHCompact);
   }
 
   /* Für das Loot-Banner steht hier bewusst nichts mehr. Früher stauchte es ein
@@ -1457,15 +1572,6 @@ function emberStyle(i: number): Record<string, string> {
   100% {
     transform: translateY(-90vh) translateX(-8px) scale(0.3);
     opacity: 0;
-  }
-}
-
-@keyframes modal-planet-glow {
-  from {
-    opacity: 0.45;
-  }
-  to {
-    opacity: 0.6;
   }
 }
 

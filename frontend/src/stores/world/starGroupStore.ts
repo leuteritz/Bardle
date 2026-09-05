@@ -163,6 +163,8 @@ export const useStarGroupStore = defineStore('starGroup', {
     activeFightStarId: null as string | null,
     starFightPlanetQueue: [] as string[],
     starFightCurrentIndex: 0,
+    /** Alle Bosse des Sterns sind tot; das Modal zeigt den Abflug und schliesst selbst. */
+    starFightOutro: false,
     hoveredTimerStarId: null as string | null,
     // ── Lifetime counters (Bard Stats catalog) ──
     /** Stars ever spawned into the orbit view, of every type. */
@@ -243,6 +245,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       this.activeFightStarId = starId
       this.starFightPlanetQueue = queue
       this.starFightCurrentIndex = 0
+      this.starFightOutro = false
       bossStore.selectedBossId = queue[0]
     },
 
@@ -251,13 +254,15 @@ export const useStarGroupStore = defineStore('starGroup', {
       this.activeFightStarId = null
       this.starFightPlanetQueue = []
       this.starFightCurrentIndex = 0
+      this.starFightOutro = false
     },
 
     advanceStarFight() {
       const bossStore = usePlanetBossStore()
       const nextIdx = this.starFightCurrentIndex + 1
       if (nextIdx >= this.starFightPlanetQueue.length) {
-        this.closeStarFightModal()
+        // Nicht schliessen: das Modal fährt heraus und schliesst nach dem Outro
+        this.starFightOutro = true
         return
       }
       this.starFightCurrentIndex = nextIdx
@@ -667,7 +672,8 @@ export const useStarGroupStore = defineStore('starGroup', {
       // Nur der Timer-Ablauf landet hier ungeklärt: sind alle Planeten befreit,
       // hat onBossResult den Grund längst auf 'rescued' gesetzt.
       if (!star.despawnReason) star.despawnReason = 'expired'
-      if (this.activeFightStarId === starId) this.closeStarFightModal()
+      // Im Outro schliesst das Modal selbst — sonst fiele der Abflug aus
+      if (this.activeFightStarId === starId && !this.starFightOutro) this.closeStarFightModal()
       // Slots sofort räumen → Kampf endet, und der Render-Loop sieht
       // allSlotsCleared und zündet den Vanish-Effekt.
       for (const slot of star.planetSlots) {
@@ -702,7 +708,7 @@ export const useStarGroupStore = defineStore('starGroup', {
       const manifest = manifestOf(toRemove[0])
 
       for (const star of toRemove) {
-        if (this.activeFightStarId === star.id) this.closeStarFightModal()
+        if (this.activeFightStarId === star.id && !this.starFightOutro) this.closeStarFightModal()
         const starRef = star
         gameTimeout(() => {
           if (!starRef.despawnReason) starRef.despawnReason = 'expired'
