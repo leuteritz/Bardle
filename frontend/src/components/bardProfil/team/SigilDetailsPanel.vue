@@ -498,6 +498,31 @@ function equippedItem(category: ItemCategory): ShopItem | null {
               <span :style="{ transform: `scaleX(${Math.min(1, xpBar.pct)})` }" />
             </div>
           </div>
+          <div v-if="stats" class="sdp-hero-stat-block">
+            <div class="sdp-hero-stat-head">
+              <span>Combat stats</span
+              ><small v-if="hasSwornBonus"
+                ><Icon :icon="SWORN_ICON" width="13" height="13" /> Sworn included</small
+              >
+            </div>
+            <div class="sdp-hero-stat-grid">
+              <article
+                v-for="stat in CHAMPION_STATS"
+                :key="stat.key"
+                class="sdp-stat"
+                :style="{ '--sc': stat.color }"
+                v-tip="stat.desc"
+              >
+                <Icon :icon="stat.icon" width="24" height="24" />
+                <div>
+                  <small>{{ stat.short }}</small
+                  ><strong>{{ stats[stat.key].toFixed(1) }}</strong
+                  ><span>{{ statReadoutOf(stat.key) }}</span>
+                </div>
+                <i><b :style="{ transform: `scaleX(${statShare(stat.key)})` }" /></i>
+              </article>
+            </div>
+          </div>
           <button
             class="sdp-level-button"
             :class="{ 'sdp-level-button--locked': !canLevel }"
@@ -533,31 +558,6 @@ function equippedItem(category: ItemCategory): ShopItem | null {
         @preview="candidate = $event"
       />
       <div v-else class="sdp-workspace">
-        <div v-if="champion && stats" class="sdp-section">
-          <div class="sdp-section-head">
-            <span>Combat stats</span
-            ><small v-if="hasSwornBonus"
-              ><Icon :icon="SWORN_ICON" width="13" height="13" /> Sworn included</small
-            >
-          </div>
-          <div class="sdp-stat-grid">
-            <article
-              v-for="stat in CHAMPION_STATS"
-              :key="stat.key"
-              class="sdp-stat"
-              :style="{ '--sc': stat.color }"
-              v-tip="stat.desc"
-            >
-              <Icon :icon="stat.icon" width="24" height="24" />
-              <div>
-                <small>{{ stat.short }}</small
-                ><strong>{{ stats[stat.key].toFixed(1) }}</strong
-                ><span>{{ statReadoutOf(stat.key) }}</span>
-              </div>
-              <i><b :style="{ transform: `scaleX(${statShare(stat.key)})` }" /></i>
-            </article>
-          </div>
-        </div>
         <div class="sdp-section">
           <div class="sdp-section-head">
             <span>Role equipment</span><small>{{ equippedCount }}/{{ CATEGORIES.length }}</small>
@@ -830,10 +830,10 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-hero {
   position: relative;
   min-width: 0;
-  min-height: 372px;
+  min-height: 454px;
   display: grid;
   grid-template-columns: 48% minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto auto;
+  grid-template-rows: minmax(0, 1fr) auto auto auto auto;
   column-gap: 20px;
   padding: 16px 20px;
   border-bottom: 2px solid #3e200a;
@@ -841,7 +841,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-portrait {
   position: relative;
-  grid-row: 1 / 4;
+  grid-row: 1 / 6;
   min-height: 0;
   width: 100%;
   overflow: hidden;
@@ -1039,6 +1039,29 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   transform-origin: left;
   background: linear-gradient(90deg, var(--rc), #e8c040);
 }
+.sdp-hero-stat-block {
+  grid-column: 2;
+  padding: 0 6px 13px;
+}
+.sdp-hero-stat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 24px;
+  border-bottom: 1px solid #5c3310;
+  color: #e8c040;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sdp-hero-stat-head small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #a59675;
+  font-size: 9px;
+}
 .sdp-level-button {
   grid-column: 2;
   width: 100%;
@@ -1120,28 +1143,28 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   color: #a59675;
   font-size: 10px;
 }
-.sdp-stat-grid {
+.sdp-hero-stat-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding-top: 9px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+  padding-top: 7px;
 }
 .sdp-stat {
   position: relative;
-  min-height: 94px;
+  min-height: 54px;
   display: grid;
-  grid-template-columns: 35px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 29px minmax(0, 1fr);
+  gap: 8px;
   align-items: center;
-  padding: 12px;
+  padding: 7px 9px;
   border: 1px solid color-mix(in srgb, var(--sc) 36%, #3e200a);
   border-radius: 4px;
   background: linear-gradient(125deg, color-mix(in srgb, var(--sc) 10%, #15140e), #15140e 65%);
   color: var(--sc);
 }
 .sdp-stat > svg {
-  width: 29px;
-  height: 29px;
+  width: 24px;
+  height: 24px;
 }
 .sdp-stat div {
   min-width: 0;
@@ -1157,23 +1180,23 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-stat strong {
   grid-column: 2;
   grid-row: 1;
-  font-size: 29px;
+  font-size: 27px;
   font-weight: 400;
 }
 .sdp-stat div span {
   grid-column: 1 / -1;
   overflow: hidden;
   color: #bcae91;
-  font-size: 13px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .sdp-stat i {
   position: absolute;
-  right: 12px;
-  bottom: 9px;
-  left: 12px;
-  height: 3px;
+  right: 9px;
+  bottom: 5px;
+  left: 9px;
+  height: 2px;
   background: #2a251c;
 }
 .sdp-stat i b {
@@ -1195,8 +1218,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   grid-template-columns: 29px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
-  min-height: 56px;
-  padding: 8px 12px;
+  min-height: 68px;
+  padding: 10px 12px;
   border: 0;
   border-right: 1px solid #3e200a;
   border-radius: 0;
@@ -1213,17 +1236,17 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   color: #9b8e72;
 }
 .sdp-equipment img {
-  width: 27px;
-  height: 27px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
 }
 .sdp-equipment-icon {
-  font-size: 22px;
+  font-size: 26px;
   text-align: center;
 }
 .sdp-equipment strong {
   overflow: hidden;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -1282,7 +1305,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-active-perks {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 7px;
   padding: 0 0 8px;
 }
@@ -1292,8 +1315,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   grid-template-columns: 31px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
-  min-height: 67px;
-  padding: 9px;
+  min-height: 52px;
+  padding: 8px 10px;
   border: 1px solid color-mix(in srgb, var(--pc) 52%, #3e200a);
   border-left: 3px solid var(--pc);
   border-radius: 3px;
@@ -1314,7 +1337,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-active-perk strong {
   overflow: hidden;
   color: var(--pc);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1323,10 +1346,10 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   display: -webkit-box;
   overflow: hidden;
   color: #c0b294;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.2;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
 }
 .sdp-perk-empty {
   display: flex;
@@ -1440,7 +1463,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
     height: 74px;
   }
   .sdp-hero {
-    min-height: 300px;
+    min-height: 400px;
   }
   .sdp-portrait {
     min-height: 0;
@@ -1459,8 +1482,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
     flex-basis: 170px;
   }
   .sdp-stat {
-    min-height: 78px;
-    padding: 9px;
+    min-height: 50px;
+    padding: 7px;
   }
   .sdp-skin {
     height: 52px;
