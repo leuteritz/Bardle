@@ -100,6 +100,86 @@
   opacity: 1;
 }
 
+/* Achsdrehung: das Band ist ein Streifen mit ZWEI Perioden, der unter einer
+   Kreismaske nach rechts rollt — `translateX(50 %)` ist genau eine Periode,
+   die Naht unsichtbar. Der Slot ist die Box; --band-r ist der Körperradius als
+   Anteil der halben Box, --band-w/-h/-y die Streifenmasse in Box-Einheiten,
+   --band-v der Geschwindigkeitsfaktor der Breite (cos). Diese Regeln stehen
+   global, weil ein per JS erzeugtes <img> keinen Scope-Suffix trägt. */
+.sun-band {
+  --span: 1;
+  -webkit-mask-image: radial-gradient(
+    circle closest-side,
+    #000 calc(var(--band-r, 0.74) * var(--band-mask-full, 0.7) * 100%),
+    transparent calc(var(--band-r, 0.74) * var(--band-mask-edge, 0.96) * 100%)
+  );
+  mask-image: radial-gradient(
+    circle closest-side,
+    #000 calc(var(--band-r, 0.74) * var(--band-mask-full, 0.7) * 100%),
+    transparent calc(var(--band-r, 0.74) * var(--band-mask-edge, 0.96) * 100%)
+  );
+}
+.sun-band > img {
+  inset: auto;
+  /* Preflight deckelt img auf max-width: 100 % — der Streifen ist 2,96 Boxen breit */
+  max-width: none;
+  left: calc(50% - var(--band-w, 2.96) * 75%);
+  top: calc(50% + var(--band-y, 0) * 100% - var(--band-h, 0.41) * 50%);
+  width: calc(var(--band-w, 2.96) * 100%);
+  height: calc(var(--band-h, 0.41) * 100%);
+  animation: sun-band-roll calc(var(--sun-turn, 56s) / var(--band-v, 1)) linear infinite;
+}
+@keyframes sun-band-roll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(50%);
+  }
+}
+
+/* Sonnenwind als Böe: bis --gust-idle unsichtbar, dann schiesst der Kranz
+   hinaus (ease-out) und zieht sich zurück (ease-in). Drei Kopien mit
+   ungleichen Dauern (--gust-f) — Schwebung statt Takt. */
+.sun-wake {
+  --span: 2;
+  opacity: 0;
+  animation: sun-wake-gust calc(var(--sun-wake-sec, 12s) * var(--gust-f, 1)) linear infinite;
+}
+@keyframes sun-wake-gust {
+  0%,
+  62% {
+    transform: scale(1);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1);
+  }
+  67% {
+    transform: scale(1.3);
+    opacity: 0.85;
+    animation-timing-function: ease-out;
+  }
+  78% {
+    transform: scale(var(--wake-grow, 1.6));
+    opacity: 0.5;
+    animation-timing-function: ease-in-out;
+  }
+  87% {
+    transform: scale(calc(var(--wake-grow, 1.6) * 0.98));
+    opacity: 0.3;
+    animation-timing-function: ease-in;
+  }
+  100% {
+    transform: scale(1.1);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sun-band > img {
+    animation: none;
+  }
+}
+
 /* Void: Zeigefinger, solange der Cursor über einem Wesen steht. Die Klasse
    setzt der VoidLayer per Hit-Test, weil sein Canvas `pointer-events: none`
    trägt — es liegt über der Sonne und dürfte deren Klicks nicht abfangen, also

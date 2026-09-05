@@ -9,11 +9,17 @@
     :style="rootVars"
   >
     <div class="sun-slot sun-halo" data-layer="halo" />
-    <div class="sun-slot sun-core" data-layer="core" />
-    <template v-if="detail >= 2">
-      <div class="sun-slot sun-surface sun-surface--a" data-layer="surfaceA" />
-      <div class="sun-slot sun-surface sun-surface--b" data-layer="surfaceB" />
-    </template>
+    <!-- Kern, Bänder und Schatten atmen GEMEINSAM — sonst rutscht die Kernkante
+         unter der statischen Randverdunkelung. Die Bänder rollen darin (main.css). -->
+    <div class="sun-sphere">
+      <div class="sun-slot sun-core" data-layer="core" />
+      <template v-if="detail >= 2">
+        <div class="sun-slot sun-band" data-layer="bandN" :style="bandVars('bandN')" />
+        <div class="sun-slot sun-band" data-layer="bandS" :style="bandVars('bandS')" />
+      </template>
+      <div v-if="detail >= 1" class="sun-slot sun-band" data-layer="bandE" :style="bandVars('bandE')" />
+      <div v-if="detail >= 1" class="sun-slot sun-shade" data-layer="shade" />
+    </div>
     <div v-if="detail >= 1" class="sun-slot sun-corona" data-layer="corona" />
     <div v-if="detail >= 2" class="sun-slot sun-flare" data-layer="flare" :style="flareStyle" />
     <div v-if="wake && detail >= 1" ref="wakeGroup" class="sun-wake-group" :class="{ paused: wakePaused }">
@@ -22,7 +28,7 @@
         :key="i"
         class="sun-slot sun-wake"
         data-layer="wake"
-        :style="wakeStyle(i)"
+        :style="sunWakeCopyStyle(i, SUN_WAKE_GUST_SEC)"
       />
     </div>
     <div ref="pulseEl" class="sig-pulse" />
@@ -31,22 +37,32 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import type { SunBandLayer } from '@/types'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import {
   STAR_PHASE_DATA,
   SOLAR_SIGNATURE_PULSE_MS,
-  SUN_CORONA_TURN_SEC,
+  SUN_BAND_MASK_EDGE,
+  SUN_BAND_MASK_FULL,
+  SUN_CORONA_BREATHE_SEC,
   SUN_FLARE_CYCLE_SEC,
+  SUN_SPRITE_BODY_FRACTION,
   SUN_SPRITE_CROSSFADE_MS,
-  SUN_SURFACE_TURN_SEC_A,
-  SUN_SURFACE_TURN_SEC_B,
+  SUN_TURN_SEC_BY_PHASE,
   SUN_WAKE_COPIES,
-  SUN_WAKE_SEC,
+  SUN_WAKE_GROW,
+  SUN_WAKE_GUST_SEC,
 } from '@/config/constants'
 import { SIGNATURE_AXIS_COLOR } from '@/utils/game/solarSignature'
-import { mountSunSprites, sunBodyFor, sunSpriteDetail } from '@/utils/fx/sunBodySprite'
+import {
+  mountSunSprites,
+  sunBandVars,
+  sunBodyFor,
+  sunSpriteDetail,
+  sunWakeCopyStyle,
+} from '@/utils/fx/sunBodySprite'
 import { useWakeFollower } from '@/composables/orbit/useWakeFollower'
 import { jitter } from '@/utils/fx/spaceBody'
 import BlackHoleDisc from './BlackHoleDisc.vue'
@@ -54,8 +70,9 @@ import BlackHoleDisc from './BlackHoleDisc.vue'
 /**
  * Die Plasmasonne — die eine Quelle ihrer Optik. Gerasterte Ebenen aus
  * `sunBodySprite.ts`, gestapelt als <img>; animiert werden nur transform und
- * opacity der Slots. Die Endphase ist kein Plasmakörper und geht an
- * BlackHoleDisc, damit jeder Konsument sie umsonst bekommt.
+ * opacity. Die Oberfläche dreht um die eigene Achse: drei Breitenbänder rollen
+ * als Streifen unter einer Kreismaske, N und S langsamer als der Äquator. Die
+ * Endphase ist kein Plasmakörper und geht an BlackHoleDisc.
  */
 const props = withDefaults(
   defineProps<{
@@ -95,6 +112,7 @@ const pulseColor = computed(() => {
 
 const rootVars = computed((): Record<string, string> => {
   const phase = STAR_PHASE_DATA[planetShopStore.currentSunStage] ?? STAR_PHASE_DATA[0]
+  const turn = SUN_TURN_SEC_BY_PHASE[Math.min(body.value.stage, SUN_TURN_SEC_BY_PHASE.length - 1)]
   return {
     '--disc-d': `${props.diameter}px`,
     '--phase-glow': phase.phaseGlow,
@@ -102,22 +120,25 @@ const rootVars = computed((): Record<string, string> => {
     '--sig-pulse-c': pulseColor.value,
     '--sig-pulse-ms': `${SOLAR_SIGNATURE_PULSE_MS}ms`,
     '--sun-xfade': `${SUN_SPRITE_CROSSFADE_MS}ms`,
-    '--sun-turn-a': `${SUN_SURFACE_TURN_SEC_A}s`,
-    '--sun-turn-b': `${SUN_SURFACE_TURN_SEC_B}s`,
-    '--sun-corona-turn': `${SUN_CORONA_TURN_SEC}s`,
+    '--sun-turn': `${turn}s`,
+    '--band-r': `${SUN_SPRITE_BODY_FRACTION}`,
+    '--band-mask-full': `${SUN_BAND_MASK_FULL}`,
+    '--band-mask-edge': `${SUN_BAND_MASK_EDGE}`,
+    '--sun-corona-breathe': `${SUN_CORONA_BREATHE_SEC}s`,
     '--sun-flare-sec': `${SUN_FLARE_CYCLE_SEC}s`,
-    '--sun-wake-sec': `${SUN_WAKE_SEC}s`,
+    '--sun-wake-sec': `${SUN_WAKE_GUST_SEC}s`,
+    '--wake-grow': `${SUN_WAKE_GROW}`,
   }
 })
+
+function bandVars(layer: SunBandLayer): Record<string, string> {
+  return sunBandVars(layer, 'star')
+}
 
 /** Startversatz je Phase, sonst feuerte jede Sonne im selben Takt. */
 const flareStyle = computed(() => ({
   animationDelay: `${-(jitter(body.value.stage, 7) * SUN_FLARE_CYCLE_SEC).toFixed(2)}s`,
 }))
-
-function wakeStyle(i: number): Record<string, string> {
-  return { animationDelay: `${(-((i - 1) / SUN_WAKE_COPIES) * SUN_WAKE_SEC).toFixed(2)}s` }
-}
 
 watch(
   [host, body, () => props.diameter, detail, () => props.wake],
@@ -169,31 +190,26 @@ watch(
   animation: sun-halo-breathe calc(var(--pulse-speed, 5s) * 2) ease-in-out infinite;
 }
 
-.sun-core {
-  --span: 1;
+.sun-sphere {
+  position: absolute;
+  inset: 0;
   animation: sun-core-breathe calc(var(--pulse-speed, 5s) * 2) ease-in-out infinite;
 }
 
+.sun-core,
+.sun-shade {
+  --span: 1;
+}
+
 .phase-sun-root--still .sun-halo,
-.phase-sun-root--still .sun-core {
+.phase-sun-root--still .sun-sphere {
   animation: none;
 }
 
-/* Zwei Konvektionsschichten, gegenläufig und so langsam, dass nichts als
-   Drehung gelesen wird — nur als Leben auf der Oberfläche. */
-.sun-surface {
-  --span: 1;
-  animation: sun-turn var(--sun-turn-a, 420s) linear infinite;
-}
-
-.sun-surface--b {
-  animation-duration: var(--sun-turn-b, 560s);
-  animation-direction: reverse;
-}
-
+/* Die Korona dreht nicht — ein Windrad las sich als flache Drehung. Sie atmet. */
 .sun-corona {
   --span: 2.4;
-  animation: sun-turn var(--sun-corona-turn, 180s) linear infinite;
+  animation: sun-corona-breathe var(--sun-corona-breathe, 9s) ease-in-out infinite;
 }
 
 .sun-flare {
@@ -214,13 +230,6 @@ watch(
 
 .sun-wake-group.paused .sun-wake {
   animation-play-state: paused;
-}
-
-/* ease-in = nach aussen beschleunigend, wie die norm²-Kurve der Sterne. */
-.sun-wake {
-  --span: 2;
-  opacity: 0;
-  animation: sun-wake-out var(--sun-wake-sec, 2.4s) ease-in infinite;
 }
 
 .sig-pulse {
@@ -261,12 +270,13 @@ watch(
   }
 }
 
-@keyframes sun-turn {
-  from {
-    transform: rotate(0deg);
+@keyframes sun-corona-breathe {
+  0%,
+  100% {
+    opacity: 0.8;
   }
-  to {
-    transform: rotate(360deg);
+  50% {
+    opacity: 1;
   }
 }
 
@@ -282,20 +292,6 @@ watch(
     opacity: 0.55;
   }
   100% {
-    opacity: 0;
-  }
-}
-
-@keyframes sun-wake-out {
-  0% {
-    transform: scale(1);
-    opacity: 0;
-  }
-  15% {
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(1.6);
     opacity: 0;
   }
 }
@@ -316,8 +312,7 @@ watch(
 
 @media (prefers-reduced-motion: reduce) {
   .sun-halo,
-  .sun-core,
-  .sun-surface,
+  .sun-sphere,
   .sun-corona,
   .sig-pulse--on {
     animation: none;

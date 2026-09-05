@@ -2,14 +2,18 @@
   <div ref="host" class="comet-root" :style="vars">
     <div class="sun-slot comet-coma" data-layer="coma" />
     <div class="sun-slot comet-core" data-layer="core" />
+    <!-- Der Fels dreht um die eigene Achse: Krater und Adern rollen als Band, der
+         Terminator steht darüber (main.css trägt die Bandregeln). -->
+    <div v-if="detail >= 1" class="sun-slot sun-band" data-layer="bandE" :style="bandVars" />
+    <div v-if="detail >= 1" class="sun-slot comet-shade" data-layer="shade" />
     <div v-if="jetsShown" class="sun-slot comet-jets" data-layer="jets" />
     <div v-if="wake && detail >= 1" ref="wakeGroup" class="sun-wake-group" :class="{ paused: wakePaused }">
       <div
         v-for="i in SUN_WAKE_COPIES"
         :key="i"
-        class="sun-slot comet-wake"
+        class="sun-slot sun-wake"
         data-layer="wake"
-        :style="wakeStyle(i)"
+        :style="sunWakeCopyStyle(i, SUN_COMET_WAKE_GUST_SEC)"
       />
     </div>
   </div>
@@ -20,13 +24,24 @@ import { computed, ref, watch } from 'vue'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import {
+  COMET_DISC_FILL,
   COMET_JET_MIN_STAGE,
   COMET_PHASE_DATA,
-  SUN_COMET_WAKE_SEC,
+  SUN_BAND_MASK_EDGE,
+  SUN_BAND_MASK_FULL,
+  SUN_COMET_TURN_SEC,
+  SUN_COMET_WAKE_GUST_SEC,
   SUN_SPRITE_CROSSFADE_MS,
   SUN_WAKE_COPIES,
+  SUN_WAKE_GROW,
 } from '@/config/constants'
-import { mountSunSprites, sunBodyFor, sunSpriteDetail } from '@/utils/fx/sunBodySprite'
+import {
+  mountSunSprites,
+  sunBandVars,
+  sunBodyFor,
+  sunSpriteDetail,
+  sunWakeCopyStyle,
+} from '@/utils/fx/sunBodySprite'
 import { useWakeFollower } from '@/composables/orbit/useWakeFollower'
 
 /**
@@ -45,6 +60,7 @@ useWakeFollower(wakeGroup, () => props.wake)
 const detail = computed(() => sunSpriteDetail(props.diameter))
 const body = computed(() => sunBodyFor(solarStore, solarStore.solarSignature))
 const jetsShown = computed(() => detail.value >= 2 && solarStore.cometStage >= COMET_JET_MIN_STAGE)
+const bandVars = sunBandVars('bandE', 'comet')
 
 const wakePaused = computed(() => {
   if (!props.wake) return false
@@ -54,15 +70,15 @@ const wakePaused = computed(() => {
 
 const vars = computed((): Record<string, string> => ({
   '--comet-d': `${props.diameter}px`,
-  '--comet-tumble': COMET_PHASE_DATA.tumbleSec,
   '--comet-pulse': COMET_PHASE_DATA.pulseSpeed,
   '--sun-xfade': `${SUN_SPRITE_CROSSFADE_MS}ms`,
-  '--sun-wake-sec': `${SUN_COMET_WAKE_SEC}s`,
+  '--sun-turn': `${SUN_COMET_TURN_SEC}s`,
+  '--band-r': `${COMET_DISC_FILL}`,
+  '--band-mask-full': `${SUN_BAND_MASK_FULL}`,
+  '--band-mask-edge': `${SUN_BAND_MASK_EDGE}`,
+  '--sun-wake-sec': `${SUN_COMET_WAKE_GUST_SEC}s`,
+  '--wake-grow': `${SUN_WAKE_GROW}`,
 }))
-
-function wakeStyle(i: number): Record<string, string> {
-  return { animationDelay: `${(-((i - 1) / SUN_WAKE_COPIES) * SUN_COMET_WAKE_SEC).toFixed(2)}s` }
-}
 
 watch(
   [host, body, () => props.diameter, detail, () => props.wake],
@@ -97,10 +113,9 @@ watch(
   animation: comet-coma-breathe var(--comet-pulse, 6s) ease-in-out infinite;
 }
 
-/* Taumeln, keine volle Drehung — die eingebackene Lichtseite bleibt plausibel. */
-.comet-core {
+.comet-core,
+.comet-shade {
   --span: 1;
-  animation: comet-tumble var(--comet-tumble, 14s) ease-in-out infinite alternate;
 }
 
 .comet-jets {
@@ -118,14 +133,8 @@ watch(
   opacity: 0;
 }
 
-.sun-wake-group.paused .comet-wake {
+.sun-wake-group.paused .sun-wake {
   animation-play-state: paused;
-}
-
-.comet-wake {
-  --span: 2;
-  opacity: 0;
-  animation: comet-wake-out var(--sun-wake-sec, 2s) ease-in infinite;
 }
 
 @keyframes comet-coma-breathe {
@@ -135,15 +144,6 @@ watch(
   }
   50% {
     opacity: 1;
-  }
-}
-
-@keyframes comet-tumble {
-  from {
-    transform: rotate(-7deg) scale(1);
-  }
-  to {
-    transform: rotate(9deg) scale(1.03);
   }
 }
 
@@ -158,23 +158,8 @@ watch(
   }
 }
 
-@keyframes comet-wake-out {
-  0% {
-    transform: scale(1);
-    opacity: 0;
-  }
-  15% {
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(1.6);
-    opacity: 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .comet-coma,
-  .comet-core,
   .comet-jets {
     animation: none;
   }

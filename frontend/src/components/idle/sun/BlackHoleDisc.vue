@@ -9,6 +9,7 @@
     <!-- Akkretionsscheibe, ferne Hälfte (hinter dem Horizont) -->
     <div class="bh-tilt bh-tilt--far">
       <div class="sun-slot bh-disc" data-layer="bhDisc" />
+      <div class="sun-slot bh-disc-in" data-layer="bhDiscIn" />
       <div class="sun-slot bh-glaze" data-layer="bhGlaze" />
     </div>
 
@@ -19,6 +20,7 @@
     <!-- Nahe Hälfte — läuft VOR der Unterkante des Horizonts durch -->
     <div class="bh-tilt bh-tilt--near">
       <div class="sun-slot bh-disc" data-layer="bhDisc" />
+      <div class="sun-slot bh-disc-in" data-layer="bhDiscIn" />
       <div class="sun-slot bh-glaze" data-layer="bhGlaze" />
     </div>
 
@@ -36,9 +38,9 @@
       <div
         v-for="i in SUN_WAKE_COPIES"
         :key="i"
-        class="sun-slot bh-wake"
+        class="sun-slot sun-wake"
         data-layer="wake"
-        :style="wakeStyle(i)"
+        :style="sunWakeCopyStyle(i, SUN_WAKE_GUST_SEC)"
       />
     </div>
   </div>
@@ -51,6 +53,7 @@ import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
+  BLACK_HOLE_DISC_INNER_SPIN_FRACTION,
   BLACK_HOLE_DISC_TILT,
   BLACK_HOLE_DISC_SPIN_SEC,
   BLACK_HOLE_JET_PULSE_SEC,
@@ -60,15 +63,19 @@ import {
   SOLAR_SIGNATURE_STAGES,
   SUN_SPRITE_CROSSFADE_MS,
   SUN_WAKE_COPIES,
-  SUN_WAKE_SEC,
+  SUN_WAKE_GROW,
+  SUN_WAKE_GUST_SEC,
 } from '@/config/constants'
-import { mountSunSprites, sunBodyFor, sunSpriteDetail } from '@/utils/fx/sunBodySprite'
+import { mountSunSprites, sunBodyFor, sunSpriteDetail, sunWakeCopyStyle } from '@/utils/fx/sunBodySprite'
 import { useWakeFollower } from '@/composables/orbit/useWakeFollower'
 
 /**
  * Die Endphase: Pyre detoniert, übrig bleibt ein opaker Ereignishorizont in
  * einer geneigten, Doppler-verstärkten Akkretionsscheibe, darüber die
  * gelinste Fernseite derselben Scheibe. Thermisch: weiss → gold → glut.
+ * Die Scheibe dreht keplersch — der Innenring doppelt so schnell — und gegen
+ * den Uhrzeigersinn: so kommt die LINKE Seite auf den Betrachter zu, wo der
+ * Doppler-Glanz sitzt.
  *
  * Der Horizont bleibt voll opak — der Planeten-Tab lässt einen Planeten
  * HINTER der Sonne vorbeiziehen. `container-type: size` bleibt nur für die
@@ -105,21 +112,19 @@ const vars = computed(
     '--bh-glow': phase.phaseGlow,
     '--bh-tilt': `${BLACK_HOLE_DISC_TILT}`,
     '--bh-spin': `${BLACK_HOLE_DISC_SPIN_SEC}s`,
+    '--bh-inner-f': `${BLACK_HOLE_DISC_INNER_SPIN_FRACTION}`,
     '--bh-jet-pulse': `${BLACK_HOLE_JET_PULSE_SEC}s`,
     '--bh-inspiral': `${BLACK_HOLE_INSPIRAL_SEC}s`,
     '--bh-mote-f': `${moteFactor.value}`,
     '--sun-xfade': `${SUN_SPRITE_CROSSFADE_MS}ms`,
-    '--sun-wake-sec': `${SUN_WAKE_SEC}s`,
+    '--sun-wake-sec': `${SUN_WAKE_GUST_SEC}s`,
+    '--wake-grow': `${SUN_WAKE_GROW}`,
   }),
 )
 
 function moteStyle(index: number): Record<string, string> {
   const offset = ((index - 1) / inspiralCount) * BLACK_HOLE_INSPIRAL_SEC
   return { animationDelay: `${-offset}s` }
-}
-
-function wakeStyle(i: number): Record<string, string> {
-  return { animationDelay: `${(-((i - 1) / SUN_WAKE_COPIES) * SUN_WAKE_SEC).toFixed(2)}s` }
 }
 
 watch(
@@ -186,7 +191,13 @@ watch(
 
 .bh-disc {
   --span: 1;
-  animation: bh-spin var(--bh-spin, 16s) linear infinite;
+  animation: bh-spin var(--bh-spin, 22s) linear infinite reverse;
+}
+
+/* Keplersch: der Innenring läuft schneller als der Rest der Scheibe. */
+.bh-disc-in {
+  --span: 1;
+  animation: bh-spin calc(var(--bh-spin, 22s) * var(--bh-inner-f, 0.5)) linear infinite reverse;
 }
 
 /* Doppler und heisser Innenrand stehen im Bildraum — sie drehen nicht mit. */
@@ -236,14 +247,8 @@ watch(
   opacity: 0;
 }
 
-.sun-wake-group.paused .bh-wake {
+.sun-wake-group.paused .sun-wake {
   animation-play-state: paused;
-}
-
-.bh-wake {
-  --span: 2;
-  opacity: 0;
-  animation: bh-wake-out var(--sun-wake-sec, 2.4s) ease-in infinite;
 }
 
 @keyframes bh-spin {
@@ -285,21 +290,8 @@ watch(
   }
 }
 
-@keyframes bh-wake-out {
-  0% {
-    transform: scale(1);
-    opacity: 0;
-  }
-  15% {
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1.6);
-    opacity: 0;
-  }
-}
-
-/* Spiralt vom Scheibenrand bis zum Photonenring; > 360°, damit es ein Bogen ist. */
+/* Die Motes spiralen mit der Scheibe — gegen den Uhrzeigersinn, > 360°, damit
+   es ein Bogen ist. */
 @keyframes bh-inspiral {
   0% {
     transform: translate(-50%, -50%) rotate(0deg) translateX(46cqw) scale(1);
@@ -312,7 +304,7 @@ watch(
     opacity: 0.9;
   }
   100% {
-    transform: translate(-50%, -50%) rotate(760deg) translateX(21cqw) scale(0.35);
+    transform: translate(-50%, -50%) rotate(-760deg) translateX(21cqw) scale(0.35);
     opacity: 0;
   }
 }
@@ -320,6 +312,7 @@ watch(
 @media (prefers-reduced-motion: reduce) {
   .bh-root,
   .bh-disc,
+  .bh-disc-in,
   .bh-ring,
   .bh-jets,
   .bh-mote {

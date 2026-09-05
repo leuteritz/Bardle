@@ -30,8 +30,10 @@
 
     <!-- Die Photosphäre als Sprite (dieselbe wie im Orbit), unter der Kuppel;
          die Kuppel behält Saum, Hotspot und Endverdunkelung als Überlagerung. -->
-    <span v-if="spriteShown" ref="spriteHost" class="sfsun-body">
+    <span v-if="spriteShown" ref="spriteHost" class="sfsun-body" :style="spriteBodyVars">
       <span class="sun-slot" data-layer="core" :style="spriteSlotStyle" />
+      <!-- Das Äquatorband rollt auch hier — dieselbe Achsdrehung wie im Orbit -->
+      <span class="sun-slot sun-band" data-layer="bandE" :style="spriteBandStyle" />
     </span>
 
     <!-- Sonnenkuppel — obere Hälfte einer Kreisscheibe auf dem Arena-Boden -->
@@ -120,8 +122,9 @@ import {
   SUN_SPRITE_BODY_FRACTION,
   SUN_SPRITE_DOME_MAX_PX,
   SUN_SPRITE_DOME_STEP_PX,
+  SUN_TURN_SEC_BY_PHASE,
 } from '@/config/constants'
-import { mountSunSprites, sunBodyFor } from '@/utils/fx/sunBodySprite'
+import { mountSunSprites, sunBandVars, sunBodyFor } from '@/utils/fx/sunBodySprite'
 
 const playerStore = usePlayerStore()
 const roleBehaviorStore = useRoleBehaviorStore()
@@ -237,6 +240,10 @@ const spriteSlotStyle = computed(() => {
     transform: `scale(${scale.toFixed(4)})`,
   }
 })
+const spriteBandStyle = computed(() => ({ ...spriteSlotStyle.value, ...sunBandVars('bandE', 'star') }))
+const spriteBodyVars = computed(() => ({
+  '--sun-turn': `${SUN_TURN_SEC_BY_PHASE[Math.min(solarStore.starPhase, SUN_TURN_SEC_BY_PHASE.length - 1)]}s`,
+}))
 const spriteBody = computed(() => sunBodyFor(solarStore, solarStore.solarSignature))
 watch(
   [spriteHost, spriteBody, spritePx],
@@ -246,7 +253,7 @@ watch(
     mountSunSprites(el, spriteBody.value, {
       px: spritePx.value,
       dpr: window.devicePixelRatio || 1,
-      layers: ['core'],
+      layers: ['core', 'bandE'],
     })
   },
   { flush: 'post', immediate: true },

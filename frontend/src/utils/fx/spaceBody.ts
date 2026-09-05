@@ -187,14 +187,15 @@ export function clampSpriteDpr(dpr: number): number {
   return Math.max(1, Math.min(dpr || 1, SPACE_BODY_SPRITE_MAX_DPR))
 }
 
-/** Ein Canvas mit `span` CSS-Pixeln Kante, Rasterung mal `dpr`, Transform gesetzt. */
+/** Ein Canvas mit `span` × `spanY` CSS-Pixeln, Rasterung mal `dpr`, Transform gesetzt. */
 export function newSpriteCanvas(
   span: number,
   dpr: number,
+  spanY = span,
 ): { cv: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null {
   const cv = document.createElement('canvas')
   cv.width = Math.max(1, Math.round(span * dpr))
-  cv.height = Math.max(1, Math.round(span * dpr))
+  cv.height = Math.max(1, Math.round(spanY * dpr))
   const ctx = cv.getContext('2d')
   if (!ctx) return null
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)

@@ -461,8 +461,14 @@ export const BLACK_HOLE_DISC_INNER_FRACTION = 0.46
  *  so the disc sweeps across the lower quarter of the hole. Flatter than this
  *  and it slices the shadow in half instead of orbiting it. */
 export const BLACK_HOLE_DISC_TILT = 0.58
-/** Seconds for one revolution of the disc's plasma texture. */
-export const BLACK_HOLE_DISC_SPIN_SEC = 16
+/** Seconds for one revolution of the disc's OUTER plasma texture; the inner
+ *  ring (`bhDiscIn`) runs Keplerian faster by _INNER_SPIN_FRACTION. Both turn
+ *  counter-clockwise — with the near half at the bottom that puts the
+ *  approaching side on the LEFT, where the Doppler glaze is bright. */
+export const BLACK_HOLE_DISC_SPIN_SEC = 22
+export const BLACK_HOLE_DISC_INNER_SPIN_FRACTION = 0.5
+/** Share of the disc's radial width the inner ring covers (from the inner edge). */
+export const BLACK_HOLE_DISC_INNER_RING_FRACTION = 0.42
 /** Diameter of the lensed halo arc — the far side of the disc, bent up over the
  *  top of the hole (and under the bottom) by gravity. */
 export const BLACK_HOLE_HALO_FRACTION = 0.72
@@ -507,7 +513,6 @@ export const COMET_PHASE_DATA = {
   glow: '#e8c040',
   accent: '#f0d878',
   dust: '#8a6420',
-  tumbleSec: '14s',
   pulseSpeed: '6s',
 } as const
 

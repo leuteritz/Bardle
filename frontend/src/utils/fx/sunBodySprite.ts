@@ -6,11 +6,23 @@
 
    `r` ist in jedem Painter die HALBE BOX (diameter / 2); der sichtbare Körper
    liegt bei r · SUN_SPRITE_BODY_FRACTION, der Kometenfels bei r · COMET_DISC_FILL.
-   Alles streut über `stage` und feste Salze, nie über Math.random.            */
+   Alles streut über `stage` und feste Salze, nie über Math.random.
 
-import type { ForgeAxisId, SolarSignature, SunBody, SunBodyKind, SunSpriteLayer } from '@/types'
+   Die Achsdrehung: `band*` sind horizontal nahtlose STREIFEN (zwei Perioden,
+   `(x, y)` ist die Streifenmitte), die CSS unter einer Kreismaske vorbeirollt;
+   `shade` liegt statisch darüber (Randverdunkelung bzw. Terminator).         */
+
+import type {
+  ForgeAxisId,
+  SolarSignature,
+  SunBandLayer,
+  SunBody,
+  SunBodyKind,
+  SunSpriteLayer,
+} from '@/types'
 import {
   BLACK_HOLE_DISC_INNER_FRACTION,
+  BLACK_HOLE_DISC_INNER_RING_FRACTION,
   BLACK_HOLE_HALO_FRACTION,
   BLACK_HOLE_JET_LENGTH_FRACTION,
   BLACK_HOLE_JET_WIDTH_FRACTION,
@@ -32,7 +44,17 @@ import {
   SOLAR_SIGNATURE_STAGES,
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
+  SUN_BAND_EDGE_FADE_BR,
+  SUN_BAND_MAX_BACKING_PX,
+  SUN_BAND_PERIOD_BR,
+  SUN_BAND_STRIP_PERIODS,
+  SUN_BANDS,
   SUN_COMET_ION_RGB,
+  SUN_CORONA_STREAMER_ALPHA,
+  SUN_CORONA_STREAMER_ALPHA_GIANT,
+  SUN_CORONA_STREAMER_ALPHA_SIG_GAIN,
+  SUN_CORONA_STREAMER_LEN,
+  SUN_CORONA_STREAMER_W,
   SUN_CORONA_STREAMERS_BY_PHASE,
   SUN_FLARE_PLUMES,
   SUN_GRANULE_SIZE_BY_PHASE,
@@ -46,6 +68,7 @@ import {
   SUN_SPRITE_MAX_BACKING_PX,
   SUN_SPRITE_SPAN,
   SUN_SPRITE_URL_MAX,
+  SUN_WAKE_GUST_STAGGER,
   SUN_WAKE_PHASE_GAIN,
   SUN_WAKE_STREAKS_MIN,
   SUN_WAKE_STREAKS_RANGE,
@@ -63,7 +86,6 @@ import {
   lumpyPath,
   mix,
   newSpriteCanvas,
-  paintTerminator,
   rgba,
   spike,
   sway,
@@ -122,7 +144,9 @@ export function sunPaletteFor(body: SunBody): SunPalette {
       axis: AXIS_RGB,
     }
   }
-  const p = STAR_PHASE_DATA[body.kind === 'blackHole' ? STAR_PHASE_FINAL_INDEX : body.stage] ?? STAR_PHASE_DATA[0]
+  const p =
+    STAR_PHASE_DATA[body.kind === 'blackHole' ? STAR_PHASE_FINAL_INDEX : body.stage] ??
+    STAR_PHASE_DATA[0]
   return {
     core: hexToRgb(p.core),
     mid: hexToRgb(p.mid),
@@ -149,24 +173,72 @@ export function sunSpriteDetail(px: number): SunDetail {
   return 2
 }
 
-/** Welche Ebenen ein Körper auf einer Detailstufe trägt — in DOM-Reihenfolge. */
+/** Welche Ebenen ein Körper auf einer Detailstufe trägt — in DOM-Reihenfolge.
+ *  Das Äquatorband liegt ÜBER N und S, damit beide Nähte gleich blenden. */
 export function sunSpriteLayers(body: SunBody, detail: SunDetail, wake: boolean): SunSpriteLayer[] {
   const out: SunSpriteLayer[] = []
   if (body.kind === 'star') {
     out.push('halo', 'core')
-    if (detail >= 2) out.push('surfaceA', 'surfaceB')
-    if (detail >= 1) out.push('corona')
+    if (detail >= 2) out.push('bandN', 'bandS')
+    if (detail >= 1) out.push('bandE', 'shade', 'corona')
     if (detail >= 2) out.push('flare')
   } else if (body.kind === 'comet') {
     out.push('coma', 'core')
+    if (detail >= 1) out.push('bandE', 'shade')
     if (detail >= 2 && body.stage >= COMET_JET_MIN_STAGE) out.push('jets')
   } else {
     if (detail >= 1) out.push('bhJets')
-    out.push('bhHalo', 'bhDisc', 'bhShadow')
+    out.push('bhHalo', 'bhDisc', 'bhDiscIn', 'bhShadow')
     if (detail >= 1) out.push('bhRing', 'bhGlaze')
   }
   if (wake && detail >= 1) out.push('wake')
   return out
+}
+
+export function isSunBandLayer(layer: SunSpriteLayer): layer is SunBandLayer {
+  return layer === 'bandN' || layer === 'bandE' || layer === 'bandS'
+}
+
+/** Körperradius als Anteil der halben Box. */
+export function sunBodyRadiusFraction(kind: SunBodyKind): number {
+  return kind === 'comet' ? COMET_DISC_FILL : SUN_SPRITE_BODY_FRACTION
+}
+
+/** Streifenmasse eines Bandes in BOX-Einheiten (Bruchteile der Box-Kante) —
+ *  dieselbe Rechnung für Raster (Backing) und CSS (`--band-*`). */
+export function sunBandStrip(
+  layer: SunBandLayer,
+  kind: SunBodyKind,
+): { w: number; h: number; y: number; speed: number } {
+  const brFrac = sunBodyRadiusFraction(kind) / 2
+  const band = SUN_BANDS[layer]
+  return {
+    w: SUN_BAND_PERIOD_BR * SUN_BAND_STRIP_PERIODS * brFrac,
+    h: band.h * brFrac,
+    y: band.y * brFrac,
+    speed: band.speed,
+  }
+}
+
+/** CSS-Variablen eines Band-Slots (`.sun-band`) — Streifenmasse und Tempo. */
+export function sunBandVars(layer: SunBandLayer, kind: SunBodyKind): Record<string, string> {
+  const s = sunBandStrip(layer, kind)
+  return {
+    '--band-w': `${s.w}`,
+    '--band-h': `${s.h}`,
+    '--band-y': `${s.y}`,
+    '--band-v': `${s.speed}`,
+  }
+}
+
+/** Dauerfaktor und Startversatz der i-ten Wake-Kopie (1-basiert) — drei
+ *  ungleiche Zyklen, jeder woanders begonnen: Böen statt Takt. */
+export function sunWakeCopyStyle(i: number, cycleSec: number): Record<string, string> {
+  const f = SUN_WAKE_GUST_STAGGER[(i - 1) % SUN_WAKE_GUST_STAGGER.length] ?? 1
+  return {
+    '--gust-f': `${f}`,
+    animationDelay: `${(-jitter(i, 5) * cycleSec * f).toFixed(2)}s`,
+  }
 }
 
 export function sunSpriteKey(
@@ -181,35 +253,51 @@ export function sunSpriteKey(
 
 const CORE_BACKED: ReadonlySet<SunSpriteLayer> = new Set([
   'core',
-  'surfaceA',
-  'surfaceB',
+  'shade',
   'bhDisc',
+  'bhDiscIn',
   'bhGlaze',
   'bhShadow',
 ])
 
-/** Kante in CSS-px und der effektive dpr unter dem Backing-Deckel. */
+/** Kante(n) in CSS-px und der effektive dpr unter dem Backing-Deckel. Bänder
+ *  sind Streifen: `span` ist die Breite, `spanY` die Höhe, gedeckelt über die
+ *  Breite. Quadratische Ebenen haben `spanY === span`. */
 export function sunSpriteBacking(
   px: number,
   layer: SunSpriteLayer,
   dpr: number,
-): { span: number; dpr: number } {
+  kind: SunBodyKind = 'star',
+): { span: number; spanY: number; dpr: number } {
+  if (isSunBandLayer(layer)) {
+    const strip = sunBandStrip(layer, kind)
+    const span = Math.round(px * strip.w)
+    const spanY = Math.round(px * strip.h)
+    const d = Math.min(clampSpriteDpr(dpr), SUN_BAND_MAX_BACKING_PX / Math.max(1, span))
+    return { span, spanY, dpr: Math.max(0.25, Math.floor(d * 100) / 100) }
+  }
   const span = Math.round(px * SUN_SPRITE_SPAN[layer])
   const cap = CORE_BACKED.has(layer) ? SUN_SPRITE_CORE_MAX_BACKING_PX : SUN_SPRITE_MAX_BACKING_PX
   const d = Math.min(clampSpriteDpr(dpr), cap / Math.max(1, span))
-  return { span, dpr: Math.max(0.25, Math.round(d * 100) / 100) }
+  return { span, spanY: span, dpr: Math.max(0.25, Math.round(d * 100) / 100) }
 }
 
 /* ── Gemeinsame Bausteine ───────────────────────────────────────────────────── */
 
 function stageRow(body: SunBody, key: keyof SunBody['sig']) {
   const i = body.sig[key]
-  return SOLAR_SIGNATURE_STAGES[Math.min(i, SOLAR_SIGNATURE_STAGES.length - 1)] ?? SOLAR_SIGNATURE_STAGES[0]
+  return (
+    SOLAR_SIGNATURE_STAGES[Math.min(i, SOLAR_SIGNATURE_STAGES.length - 1)] ??
+    SOLAR_SIGNATURE_STAGES[0]
+  )
 }
 
 function baseRow(body: SunBody) {
   const i = body.sig.base
-  return SOLAR_SIGNATURE_BASE_STAGES[Math.min(i, SOLAR_SIGNATURE_BASE_STAGES.length - 1)] ?? SOLAR_SIGNATURE_BASE_STAGES[0]
+  return (
+    SOLAR_SIGNATURE_BASE_STAGES[Math.min(i, SOLAR_SIGNATURE_BASE_STAGES.length - 1)] ??
+    SOLAR_SIGNATURE_BASE_STAGES[0]
+  )
 }
 
 function stageT(body: SunBody, key: keyof SunBody['sig']): number {
@@ -237,39 +325,14 @@ function granule(
   ctx.fill()
 }
 
-/** Zellen in einem versetzten Raster innerhalb `reach`, je Zelle leicht verschoben. */
-function granulation(
+/** Randweiche Kreismaske: voll bis `from`, aus bei `to`. */
+function fadeMask(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  reach: number,
-  cell: number,
-  seed: number,
-  hi: Rgb,
-  lo: Rgb,
-  alpha: number,
-  cap: number,
-  rim = 0.7,
+  from: number,
+  to: number,
 ): void {
-  const step = cell * 1.7
-  const rows = Math.ceil(reach / step)
-  let n = 0
-  for (let gy = -rows; gy <= rows && n < cap; gy++) {
-    const off = (gy & 1) * step * 0.5
-    for (let gx = -rows; gx <= rows && n < cap; gx++) {
-      const cx = gx * step + off + sway(seed, gx * 31 + gy) * step * 0.35
-      const cy = gy * step * 0.88 + sway(seed, gx + gy * 47) * step * 0.35
-      const d = Math.hypot(cx, cy)
-      if (d > reach) continue
-      const cr = cell * (0.7 + jitter(seed, gx * 7 + gy * 13) * 0.6)
-      granule(ctx, x + cx, y + cy, cr, hi, lo, alpha * (1 - (d / reach) * 0.35), rim)
-      n++
-    }
-  }
-}
-
-/** Randweiche Kreismaske: voll bis `from`, aus bei `to`. */
-function fadeMask(ctx: CanvasRenderingContext2D, x: number, y: number, from: number, to: number): void {
   const g = ctx.createRadialGradient(x, y, from, x, y, to)
   g.addColorStop(0, 'rgba(0, 0, 0, 1)')
   g.addColorStop(1, 'rgba(0, 0, 0, 0)')
@@ -361,7 +424,15 @@ const paintStarHalo: SunPaint = (ctx, x, y, r, pal, body, detail) => {
     for (let i = 0; i < n; i++) {
       const a = i * GOLDEN + sway(body.stage + 1, 500 + i) * 0.6
       const d = br * (1.35 + jitter(3, 510 + i) * 0.7)
-      wisp(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, br * (0.5 + jitter(3, 520 + i) * 0.4), 60 + i, dust, 0.22)
+      wisp(
+        ctx,
+        x + Math.cos(a) * d,
+        y + Math.sin(a) * d,
+        br * (0.5 + jitter(3, 520 + i) * 0.4),
+        60 + i,
+        dust,
+        0.22,
+      )
     }
   }
   if (t.giant && detail >= 1) {
@@ -371,42 +442,6 @@ const paintStarHalo: SunPaint = (ctx, x, y, r, pal, body, detail) => {
       [0.4, rgba(mix(pal.edge, 0, 0.2), 0.16)],
       [1, rgba(pal.edge, 0)],
     ])
-  }
-}
-
-/** Sonnenflecken: Umbra plus Penumbra, perspektivisch zum Rand hin gestaucht. */
-function sunspots(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  br: number,
-  seed: number,
-  groups: number,
-  dark: Rgb,
-): void {
-  for (let g = 0; g < groups; g++) {
-    const lat = (jitter(seed, 700 + g) - 0.5) * 1.1
-    const lon = sway(seed, 710 + g) * 0.72
-    const spots = 1 + Math.floor(jitter(seed, 720 + g) * 3)
-    for (let s = 0; s < spots; s++) {
-      const px = lon + sway(seed, 730 + g * 5 + s) * 0.12
-      const py = lat + sway(seed, 740 + g * 5 + s) * 0.06
-      const d = Math.hypot(px, py)
-      if (d > 0.82) continue
-      const squash = Math.sqrt(Math.max(0.15, 1 - d * d))
-      const size = br * 0.05 * (0.6 + jitter(seed, 750 + g * 5 + s) * 0.8)
-      const ang = Math.atan2(py, px)
-      const cx = x + px * br
-      const cy = y + py * br
-      ctx.beginPath()
-      ctx.ellipse(cx, cy, size * 2.1, size * 2.1 * squash, ang, 0, TAU)
-      ctx.fillStyle = rgba(dark, 0.32)
-      ctx.fill()
-      ctx.beginPath()
-      ctx.ellipse(cx, cy, size, size * squash, ang, 0, TAU)
-      ctx.fillStyle = rgba(mix(dark, 0, 0.5), 0.88)
-      ctx.fill()
-    }
   }
 }
 
@@ -429,7 +464,14 @@ const paintStarCore: SunPaint = (ctx, x, y, r, pal, body, detail) => {
   const hi = mix(pal.core, 255, Math.min(1, 0.4 + base.coreLift * 2))
   // Photosphäre: hell in der Mitte, Randverdunkelung, weicher Rand je Atmosphäre
   circle(ctx, x, y, br)
-  const g = ctx.createRadialGradient(x - br * 0.08 * t.hot, y - br * 0.1 * t.hot, br * 0.04, x, y, br)
+  const g = ctx.createRadialGradient(
+    x - br * 0.08 * t.hot,
+    y - br * 0.1 * t.hot,
+    br * 0.04,
+    x,
+    y,
+    br,
+  )
   g.addColorStop(0, rgba(hi, 1))
   g.addColorStop(0.32, rgba(pal.core, 1))
   g.addColorStop(0.66, rgba(pal.mid, 1))
@@ -439,58 +481,10 @@ const paintStarCore: SunPaint = (ctx, x, y, r, pal, body, detail) => {
   ctx.fillStyle = g
   ctx.fill()
 
-  if (detail >= 1) {
-    grain(ctx, x, y, br, t.giant ? 0.08 : 0.14)
-    const cell = br * SUN_GRANULE_SIZE_BY_PHASE[Math.min(body.stage, SUN_GRANULE_SIZE_BY_PHASE.length - 1)]
-    const gran = stageRow(body, 'granule')
-    const cellScale = gran.granuleSizePct > 0 ? 0.55 + (gran.granuleSizePct / 30) * 0.45 : 1
-    ctx.save()
-    circle(ctx, x, y, br * 0.985)
-    ctx.clip()
-    granulation(
-      ctx,
-      x,
-      y,
-      br * 0.94,
-      cell * cellScale,
-      11 + body.stage,
-      mix(pal.core, 255, 0.35),
-      mix(pal.edge, 0, 0.3),
-      (t.giant ? 0.26 : 0.16) + gran.granuleAlpha * 0.9,
-      detail === 2 ? 420 : 160,
-      // Riesenzellen ohne dunklen Saum — mit Saum lasen sie sich als Blasen
-      t.giant ? 0.22 : 0.7,
-    )
-    if (t.dusty) {
-      // Protostern: dunkle Staubfetzen auf der noch kühlen Oberfläche
-      const dust = mix(pal.edge, 0, 0.55)
-      for (let i = 0; i < 4; i++) {
-        const a = i * GOLDEN + sway(5, 800 + i) * 0.6
-        const d = br * (0.2 + jitter(5, 810 + i) * 0.55)
-        wisp(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, br * (0.28 + jitter(5, 820 + i) * 0.2), 90 + i, dust, 0.3)
-      }
-    }
-    // Riesen tragen keine Flecken — ihre Oberfläche sind wenige riesige Zellen
-    if (!t.giant) {
-      sunspots(
-        ctx,
-        x,
-        y,
-        br,
-        21 + body.stage * 3,
-        SUN_SPOT_GROUPS_BY_PHASE[Math.min(body.stage, SUN_SPOT_GROUPS_BY_PHASE.length - 1)],
-        mix(pal.edge, 0, 0.55),
-      )
-    }
-    ctx.restore()
-  }
-
-  // Randverdunkelung als eigener Pass — sie liegt ÜBER Flecken und Zellen
-  annulus(ctx, x, y, br * 0.6, br, [
-    [0, 'rgba(0, 0, 0, 0)'],
-    [0.7, rgba(mix(pal.edge, 0, 0.5), 0.22 * t.limb)],
-    [1, rgba(mix(pal.edge, 0, 0.6), 0.5 * t.limb)],
-  ])
+  if (detail >= 1) grain(ctx, x, y, br, t.giant ? 0.08 : 0.14)
+  // Zellen und Flecken rollen auf den Bändern; ohne Bänder (Detail 0) steht
+  // der Rand hier, sonst auf `shade` ÜBER den Bändern
+  if (detail === 0) paintStarLimb(ctx, x, y, br, pal, body)
 
   // Kernfunken (chimesPerClick): Fackeln an festen Orten
   const spark = stageRow(body, 'spark')
@@ -508,8 +502,24 @@ const paintStarCore: SunPaint = (ctx, x, y, r, pal, body, detail) => {
       ctx.fill()
     }
   }
+}
 
-  // Chromosphäre: der dünne helle Saum, immer da — der Schutzsaum (maxHp) verbreitert ihn
+/** Randverdunkelung plus Chromosphärensaum (maxHp verbreitert ihn) — im Kern
+ *  ohne Bänder, sonst als `shade` über den rollenden Bändern. */
+function paintStarLimb(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  br: number,
+  pal: SunPalette,
+  body: SunBody,
+): void {
+  const t = tuning(body.stage)
+  annulus(ctx, x, y, br * 0.6, br, [
+    [0, 'rgba(0, 0, 0, 0)'],
+    [0.7, rgba(mix(pal.edge, 0, 0.5), 0.22 * t.limb)],
+    [1, rgba(mix(pal.edge, 0, 0.6), 0.5 * t.limb)],
+  ])
   const limb = stageRow(body, 'limb')
   const limbTone = mix(blend(pal.axis.maxHp, pal.edge, 0.62), 255, 0.25)
   annulus(ctx, x, y, br * (0.94 - limb.limbWidth * 2), br * (1.04 + limb.limbWidth * 1.5), [
@@ -519,42 +529,291 @@ const paintStarCore: SunPaint = (ctx, x, y, r, pal, body, detail) => {
   ])
 }
 
-function paintSurface(seedSalt: number, cellMul: number): SunPaint {
-  return (ctx, x, y, r, pal, body) => {
-    const br = r * SUN_SPRITE_BODY_FRACTION
-    const gran = stageRow(body, 'granule')
-    const cell = br * SUN_GRANULE_SIZE_BY_PHASE[Math.min(body.stage, SUN_GRANULE_SIZE_BY_PHASE.length - 1)] * cellMul
-    granulation(
-      ctx,
-      x,
-      y,
-      br * 0.9,
-      cell,
-      seedSalt + body.stage * 5,
-      mix(pal.core, 255, 0.4),
-      mix(pal.edge, 0, 0.35),
-      0.1 + gran.granuleAlpha * 0.6,
-      360,
-      tuning(body.stage).giant ? 0.22 : 0.7,
-    )
-    // Zum Rand hin auslaufen — sonst dreht sich eine sichtbare Kante
-    fadeMask(ctx, x, y, br * 0.6, br * 0.88)
+/* ── Bänder — die rollende Oberfläche ───────────────────────────────────────── */
+
+interface Strip {
+  x0: number
+  y0: number
+  w: number
+  h: number
+  period: number
+  br: number
+}
+
+function stripOf(x: number, y: number, r: number, layer: SunBandLayer, kind: SunBodyKind): Strip {
+  const br = r * sunBodyRadiusFraction(kind)
+  const period = SUN_BAND_PERIOD_BR * br
+  const w = period * SUN_BAND_STRIP_PERIODS
+  const h = SUN_BANDS[layer].h * br
+  return { x0: x - w / 2, y0: y - h / 2, w, h, period, br }
+}
+
+/** Längengrad 0..P eines Motivs. */
+function wrapLon(s: Strip, lon: number): number {
+  return ((lon % s.period) + s.period) % s.period
+}
+
+/** Zellen über EINE Periode, jede doppelt (bei cx und cx + P) — die Naht ist unsichtbar. */
+function granulationStrip(
+  ctx: CanvasRenderingContext2D,
+  s: Strip,
+  cell: number,
+  seed: number,
+  hi: Rgb,
+  lo: Rgb,
+  alpha: number,
+  cap: number,
+  rim: number,
+): void {
+  const step = cell * 1.7
+  const cols = Math.ceil(s.period / step)
+  const rows = Math.ceil(s.h / (step * 0.88))
+  let n = 0
+  for (let gy = 0; gy <= rows && n < cap; gy++) {
+    const off = (gy & 1) * step * 0.5
+    for (let gx = 0; gx < cols && n < cap; gx++) {
+      const cx = wrapLon(s, gx * step + off + sway(seed, gx * 31 + gy) * step * 0.35)
+      const cy = gy * step * 0.88 + sway(seed, gx + gy * 47) * step * 0.35
+      if (cy < 0 || cy > s.h) continue
+      const cr = cell * (0.7 + jitter(seed, gx * 7 + gy * 13) * 0.6)
+      granule(ctx, s.x0 + cx, s.y0 + cy, cr, hi, lo, alpha, rim)
+      granule(ctx, s.x0 + cx + s.period, s.y0 + cy, cr, hi, lo, alpha, rim)
+      n += 2
+    }
   }
+}
+
+/** Sonnenflecken im Streifen: Umbra plus Penumbra, ohne Randstauchung — die
+ *  übernimmt die Kreismaske am Slot. */
+function stripSpots(
+  ctx: CanvasRenderingContext2D,
+  s: Strip,
+  seed: number,
+  groups: number,
+  dark: Rgb,
+  margin: number,
+): void {
+  const reach = Math.max(0, s.h / 2 - margin)
+  for (let g = 0; g < groups; g++) {
+    const lon = jitter(seed, 700 + g) * s.period
+    const lat = s.h / 2 + sway(seed, 710 + g) * reach
+    const spots = 1 + Math.floor(jitter(seed, 720 + g) * 3)
+    for (let k = 0; k < spots; k++) {
+      const px = wrapLon(s, lon + sway(seed, 730 + g * 5 + k) * s.br * 0.12)
+      const py = lat + sway(seed, 740 + g * 5 + k) * s.br * 0.06
+      const size = s.br * 0.05 * (0.6 + jitter(seed, 750 + g * 5 + k) * 0.8)
+      const ang = sway(seed, 760 + g * 5 + k) * 0.6
+      for (const dx of [0, s.period]) {
+        const cx = s.x0 + px + dx
+        const cy = s.y0 + py
+        ctx.beginPath()
+        ctx.ellipse(cx, cy, size * 2.1, size * 1.7, ang, 0, TAU)
+        ctx.fillStyle = rgba(dark, 0.32)
+        ctx.fill()
+        ctx.beginPath()
+        ctx.ellipse(cx, cy, size, size * 0.82, ang, 0, TAU)
+        ctx.fillStyle = rgba(mix(dark, 0, 0.5), 0.88)
+        ctx.fill()
+      }
+    }
+  }
+}
+
+/** Auslauf oben und unten — die Bänder überlappen, keine Naht darf stehen. */
+function fadeStripEdges(ctx: CanvasRenderingContext2D, s: Strip, fade: number): void {
+  const f = Math.min(0.45, fade / s.h)
+  const g = ctx.createLinearGradient(0, s.y0, 0, s.y0 + s.h)
+  g.addColorStop(0, 'rgba(0, 0, 0, 0)')
+  g.addColorStop(f, 'rgba(0, 0, 0, 1)')
+  g.addColorStop(1 - f, 'rgba(0, 0, 0, 1)')
+  g.addColorStop(1, 'rgba(0, 0, 0, 0)')
+  ctx.save()
+  ctx.globalCompositeOperation = 'destination-in'
+  ctx.fillStyle = g
+  ctx.fillRect(s.x0, s.y0, s.w, s.h)
+  ctx.restore()
+}
+
+const BAND_SALT: Record<SunBandLayer, number> = { bandN: 71, bandE: 11, bandS: 83 }
+
+function paintStarBand(
+  ctx: CanvasRenderingContext2D,
+  s: Strip,
+  layer: SunBandLayer,
+  pal: SunPalette,
+  body: SunBody,
+  detail: SunDetail,
+  fade: number,
+): void {
+  const t = tuning(body.stage)
+  const gran = stageRow(body, 'granule')
+  const cellScale = gran.granuleSizePct > 0 ? 0.55 + (gran.granuleSizePct / 30) * 0.45 : 1
+  const cell =
+    s.br *
+    SUN_GRANULE_SIZE_BY_PHASE[Math.min(body.stage, SUN_GRANULE_SIZE_BY_PHASE.length - 1)] *
+    cellScale
+  const seed = BAND_SALT[layer] + body.stage * 5
+  granulationStrip(
+    ctx,
+    s,
+    cell,
+    seed,
+    mix(pal.core, 255, 0.35),
+    mix(pal.edge, 0, 0.3),
+    (t.giant ? 0.26 : 0.16) + gran.granuleAlpha * 0.9,
+    detail === 2 ? 640 : 360,
+    // Riesenzellen ohne dunklen Saum — mit Saum lasen sie sich als Blasen
+    t.giant ? 0.22 : 0.7,
+  )
+  if (t.dusty) {
+    // Protostern: dunkle Staubfetzen auf der noch kühlen Oberfläche
+    const dust = mix(pal.edge, 0, 0.55)
+    const n = layer === 'bandE' ? 3 : 2
+    for (let i = 0; i < n; i++) {
+      const lon = jitter(seed, 800 + i) * s.period
+      const lat = s.h / 2 + sway(seed, 810 + i) * Math.max(0, s.h / 2 - s.br * 0.3)
+      const wr = s.br * (0.28 + jitter(seed, 820 + i) * 0.2)
+      wisp(ctx, s.x0 + lon, s.y0 + lat, wr, 90 + i, dust, 0.3)
+      wisp(ctx, s.x0 + lon + s.period, s.y0 + lat, wr, 90 + i, dust, 0.3)
+    }
+  }
+  // Riesen tragen keine Flecken — ihre Oberfläche sind wenige riesige Zellen.
+  // Eine Kugel hat die doppelte Fläche der Scheibe: das Äquatorband trägt die
+  // volle Gruppenzahl, N und S je die Hälfte.
+  if (!t.giant) {
+    const groups =
+      SUN_SPOT_GROUPS_BY_PHASE[Math.min(body.stage, SUN_SPOT_GROUPS_BY_PHASE.length - 1)]
+    stripSpots(
+      ctx,
+      s,
+      21 + body.stage * 3 + BAND_SALT[layer],
+      layer === 'bandE' ? groups : Math.ceil(groups / 2),
+      mix(pal.edge, 0, 0.55),
+      fade + s.br * 0.12,
+    )
+  }
+}
+
+function paintCometBand(
+  ctx: CanvasRenderingContext2D,
+  s: Strip,
+  pal: SunPalette,
+  body: SunBody,
+  detail: SunDetail,
+  fade: number,
+): void {
+  const nr = s.br
+  const reach = Math.max(0, s.h / 2 - fade - nr * 0.15)
+  const craters = detail === 1 ? 7 : 11
+  const rim = rgba(mix(pal.core, 255, 0.45), 1)
+  for (let i = 0; i < craters; i++) {
+    const lon = jitter(COMET_SEED, 1300 + i) * s.period
+    const lat = s.h / 2 + sway(COMET_SEED, 1310 + i) * reach
+    const cr = nr * (0.05 + jitter(COMET_SEED, 1320 + i) * 0.1)
+    crater(ctx, s.x0 + lon, s.y0 + lat, cr, rim)
+    crater(ctx, s.x0 + lon + s.period, s.y0 + lat, cr, rim)
+  }
+  // Goldadern: der Stern, der im Fels erwacht
+  const veins =
+    COMET_GOLD_VEINS_BY_STAGE[Math.min(body.stage, COMET_GOLD_VEINS_BY_STAGE.length - 1)]
+  const gold = cometGold(body)
+  if (veins > 0 && gold > 0) {
+    ctx.lineCap = 'round'
+    for (let i = 0; i < veins; i++) {
+      const lon = jitter(COMET_SEED, 1400 + i) * s.period
+      const lat = s.h / 2 + sway(COMET_SEED, 1405 + i) * reach * 0.8
+      // Flach entlang der Drehung — steile Adern liefen aus dem Band
+      const a =
+        (jitter(COMET_SEED, 1410 + i) > 0.5 ? 0 : Math.PI) + sway(COMET_SEED, 1425 + i) * 0.45
+      const bend = sway(COMET_SEED, 1415 + i) * 0.5
+      const len = nr * (0.3 + jitter(COMET_SEED, 1420 + i) * 0.3)
+      const path = (dx: number) => {
+        const x0 = s.x0 + lon + dx
+        const y0 = s.y0 + lat
+        ctx.beginPath()
+        ctx.moveTo(x0, y0)
+        ctx.quadraticCurveTo(
+          x0 + Math.cos(a + bend) * len * 0.5,
+          y0 + Math.sin(a + bend) * len * 0.5,
+          x0 + Math.cos(a) * len,
+          y0 + Math.sin(a) * len,
+        )
+      }
+      for (const dx of [0, s.period]) {
+        path(dx)
+        ctx.strokeStyle = rgba(pal.glow, 0.32 * gold)
+        ctx.lineWidth = Math.max(1, nr * 0.06)
+        ctx.stroke()
+        path(dx)
+        ctx.strokeStyle = rgba(mix(pal.glow, 255, 0.5), 0.95 * gold)
+        ctx.lineWidth = Math.max(0.5, nr * 0.018)
+        ctx.stroke()
+      }
+    }
+  }
+}
+
+/** Ein Band: `(x, y)` ist die Streifenmitte, zwei Perioden breit. */
+function paintBand(layer: SunBandLayer): SunPaint {
+  return (ctx, x, y, r, pal, body, detail) => {
+    const s = stripOf(x, y, r, layer, body.kind)
+    const fade = SUN_BAND_EDGE_FADE_BR * s.br
+    if (body.kind === 'comet') paintCometBand(ctx, s, pal, body, detail, fade)
+    else paintStarBand(ctx, s, layer, pal, body, detail, fade)
+    fadeStripEdges(ctx, s, fade)
+  }
+}
+
+/** Die statische Schattenebene ÜBER den Bändern: Randverdunkelung und
+ *  Chromosphäre beim Stern, der Terminator (Sonnenseite oben links) beim Kometen. */
+const paintShade: SunPaint = (ctx, x, y, r, pal, body) => {
+  if (body.kind === 'comet') {
+    const nr = r * COMET_DISC_FILL
+    lumpyPath(ctx, x, y, nr, COMET_SEED, 0.09)
+    ctx.fillStyle = terminatorFill(ctx, x, y, nr)
+    ctx.fill()
+    return
+  }
+  paintStarLimb(ctx, x, y, r * SUN_SPRITE_BODY_FRACTION, pal, body)
+}
+
+/** Der Terminator als Diagonalverlauf — dieselben Stufen wie `paintTerminator`,
+ *  nur als Fläche statt `source-atop`, weil die Ebene allein steht. */
+function terminatorFill(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+): CanvasGradient {
+  const k = r * Math.SQRT1_2
+  const g = ctx.createLinearGradient(x - k, y - k, x + k, y + k)
+  g.addColorStop(0, 'rgba(255, 250, 236, 0.4)')
+  g.addColorStop(0.12, 'rgba(255, 250, 236, 0.12)')
+  g.addColorStop(0.28, 'rgba(255, 250, 236, 0)')
+  g.addColorStop(0.46, 'rgba(4, 3, 2, 0)')
+  g.addColorStop(0.7, 'rgba(4, 3, 2, 0.48)')
+  g.addColorStop(1, 'rgba(4, 3, 2, 0.84)')
+  return g
 }
 
 const paintStarCorona: SunPaint = (ctx, x, y, r, pal, body, detail) => {
   const br = r * SUN_SPRITE_BODY_FRACTION
   const t = tuning(body.stage)
   const seed = 31 + body.stage * 7
-  const n = SUN_CORONA_STREAMERS_BY_PHASE[Math.min(body.stage, SUN_CORONA_STREAMERS_BY_PHASE.length - 1)]
+  const n =
+    SUN_CORONA_STREAMERS_BY_PHASE[Math.min(body.stage, SUN_CORONA_STREAMERS_BY_PHASE.length - 1)]
   const corona = stageRow(body, 'corona')
-  const streamerAlpha = (t.giant ? 0.14 : 0.2) + corona.coronaAlpha * 0.5
+  const streamerAlpha =
+    (t.giant ? SUN_CORONA_STREAMER_ALPHA_GIANT : SUN_CORONA_STREAMER_ALPHA) +
+    corona.coronaAlpha * SUN_CORONA_STREAMER_ALPHA_SIG_GAIN
   const tone = mix(pal.glow, 255, 0.35)
-  // Streamer: getaperte Fächer, gegen die Drehrichtung leicht gekippt
+  const [w0, w1] = SUN_CORONA_STREAMER_W
+  const [l0, l1, l2] = SUN_CORONA_STREAMER_LEN
+  // Streamer: getaperte Fächer, leicht gekippt — leise, sie tragen, sie führen nicht
   for (let i = 0; i < n; i++) {
     const a = (i / n) * TAU + sway(seed, 900 + i) * 0.28
-    const len = br * (1.7 + jitter(seed, 910 + i) * 0.9 + corona.coronaAlpha * 1.2)
-    const w = br * (0.09 + jitter(seed, 920 + i) * 0.12)
+    const len = br * (l0 + jitter(seed, 910 + i) * l1 + corona.coronaAlpha * l2)
+    const w = br * (w0 + jitter(seed, 920 + i) * w1)
     spike(ctx, x, y, a + 0.06, br * 0.98, Math.min(len, r * 2.3), w)
     const g = ctx.createRadialGradient(x, y, br, x, y, len)
     g.addColorStop(0, rgba(tone, streamerAlpha))
@@ -564,7 +823,7 @@ const paintStarCorona: SunPaint = (ctx, x, y, r, pal, body, detail) => {
     ctx.fill()
     if (detail < 2) continue
     spike(ctx, x, y, a + 0.06, br * 0.98, Math.min(len * 0.62, r * 2.2), w * 0.3)
-    ctx.fillStyle = rgba(mix(pal.glow, 255, 0.6), streamerAlpha * 0.55)
+    ctx.fillStyle = rgba(mix(pal.glow, 255, 0.6), streamerAlpha * 0.4)
     ctx.fill()
   }
   if (detail === 2) {
@@ -622,7 +881,12 @@ const paintStarFlare: SunPaint = (ctx, x, y, r, pal, body) => {
     for (let k = 0; k < 5; k++) {
       const d = br * (1.15 + rise * (0.3 + k * 0.18))
       const wa = a + sway(seed, 1030 + i * 9 + k) * spread * 1.6
-      circle(ctx, x + Math.cos(wa) * d, y + Math.sin(wa) * d, br * (0.02 + jitter(seed, 1040 + k) * 0.015))
+      circle(
+        ctx,
+        x + Math.cos(wa) * d,
+        y + Math.sin(wa) * d,
+        br * (0.02 + jitter(seed, 1040 + k) * 0.015),
+      )
       ctx.fill()
     }
   }
@@ -643,7 +907,13 @@ const paintWake: SunPaint = (ctx, x, y, r, pal, body) => {
   const seed = 51 + body.stage
   const comet = body.kind === 'comet'
   const dust = comet ? pal.glow : mix(pal.glow, 255, 0.3)
-  const gold = comet ? Math.min(1, COMET_STAGE_GOLD[Math.min(body.stage, COMET_STAGE_GOLD.length - 1)] + baseRow(body).cometGoldLift) : 1
+  const gold = comet
+    ? Math.min(
+        1,
+        COMET_STAGE_GOLD[Math.min(body.stage, COMET_STAGE_GOLD.length - 1)] +
+          baseRow(body).cometGoldLift,
+      )
+    : 1
   const dustTone = comet ? blend(mix(pal.core, 255, 0.45), dust, gold) : dust
   for (let i = 0; i < n; i++) {
     const a = i * GOLDEN + sway(seed, 1100 + i) * 0.12
@@ -664,7 +934,8 @@ const COMET_SEED = 7
 function cometGold(body: SunBody): number {
   return Math.min(
     1,
-    COMET_STAGE_GOLD[Math.min(body.stage, COMET_STAGE_GOLD.length - 1)] + baseRow(body).cometGoldLift,
+    COMET_STAGE_GOLD[Math.min(body.stage, COMET_STAGE_GOLD.length - 1)] +
+      baseRow(body).cometGoldLift,
   )
 }
 
@@ -689,7 +960,15 @@ const paintComa: SunPaint = (ctx, x, y, r, pal, body, detail) => {
   for (let i = 0; i < n; i++) {
     const a = i * GOLDEN + sway(COMET_SEED, 1200 + i) * 0.5
     const d = nr * (0.9 + jitter(COMET_SEED, 1210 + i) * 0.5)
-    wisp(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, nr * (0.35 + jitter(COMET_SEED, 1220 + i) * 0.3), 80 + i, tone, 0.12 + st * 0.08)
+    wisp(
+      ctx,
+      x + Math.cos(a) * d,
+      y + Math.sin(a) * d,
+      nr * (0.35 + jitter(COMET_SEED, 1220 + i) * 0.3),
+      80 + i,
+      tone,
+      0.12 + st * 0.08,
+    )
   }
 }
 
@@ -711,7 +990,8 @@ const paintCometCore: SunPaint = (ctx, x, y, r, pal, body, detail) => {
   ctx.save()
   lumpyPath(ctx, x, y, nr, COMET_SEED, 0.09)
   ctx.clip()
-  const craters = detail === 0 ? 3 : detail === 1 ? 6 : 9
+  // Krater und Adern rollen ab Detail 1 auf dem Band; nur die Miniatur trägt sie fest
+  const craters = detail === 0 ? 3 : 0
   const rim = rgba(mix(pal.core, 255, 0.45), 1)
   for (let i = 0; i < craters; i++) {
     const a = jitter(COMET_SEED, 1300 + i) * TAU
@@ -719,9 +999,12 @@ const paintCometCore: SunPaint = (ctx, x, y, r, pal, body, detail) => {
     const cr = nr * (0.05 + jitter(COMET_SEED, 1320 + i) * 0.1)
     crater(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, cr, rim)
   }
-  // Goldadern: der Stern, der im Fels erwacht
-  const veins = COMET_GOLD_VEINS_BY_STAGE[Math.min(body.stage, COMET_GOLD_VEINS_BY_STAGE.length - 1)]
-  if (veins > 0 && gold > 0) {
+  // Goldadern: der Stern, der im Fels erwacht — die Glut darunter bleibt hier
+  const veins =
+    detail === 0
+      ? COMET_GOLD_VEINS_BY_STAGE[Math.min(body.stage, COMET_GOLD_VEINS_BY_STAGE.length - 1)]
+      : 0
+  if (gold > 0) {
     ctx.lineCap = 'round'
     for (let i = 0; i < veins; i++) {
       const a = jitter(COMET_SEED, 1400 + i) * TAU
@@ -756,13 +1039,12 @@ const paintCometCore: SunPaint = (ctx, x, y, r, pal, body, detail) => {
     ctx.fill()
   }
   ctx.restore()
-  // Sonnenseite oben links — der Terminator läuft als letzter Pass über alles
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.rotate(Math.PI / 4)
-  ctx.translate(-x, -y)
-  paintTerminator(ctx, x * 2, nr)
-  ctx.restore()
+  // Sonnenseite oben links — ohne Schattenebene (Detail 0) läuft der Terminator hier
+  if (detail === 0) {
+    lumpyPath(ctx, x, y, nr, COMET_SEED, 0.09)
+    ctx.fillStyle = terminatorFill(ctx, x, y, nr)
+    ctx.fill()
+  }
 }
 
 const paintCometJets: SunPaint = (ctx, x, y, r, pal, body) => {
@@ -793,10 +1075,16 @@ function bhGeom(r: number, body: SunBody) {
   return {
     shadow: (px * BLACK_HOLE_SHADOW_FRACTION) / 2,
     ring: px * BLACK_HOLE_PHOTON_RING_FRACTION * (1 + gainT('limb') * SOLAR_SIGNATURE_BH_RING_GAIN),
-    inner: ((px * BLACK_HOLE_DISC_INNER_FRACTION) / 2) * (1 - gainT('granule') * SOLAR_SIGNATURE_BH_INNER_GAIN),
+    inner:
+      ((px * BLACK_HOLE_DISC_INNER_FRACTION) / 2) *
+      (1 - gainT('granule') * SOLAR_SIGNATURE_BH_INNER_GAIN),
     outer: r * 0.96,
-    halo: ((px * BLACK_HOLE_HALO_FRACTION) / 2) * (1 + gainT('limb') * SOLAR_SIGNATURE_BH_HALO_GAIN),
-    dop: Math.min(0.95, BLACK_HOLE_DOPPLER_STRENGTH * (1 + gainT('prom') * SOLAR_SIGNATURE_BH_DOPPLER_GAIN)),
+    halo:
+      ((px * BLACK_HOLE_HALO_FRACTION) / 2) * (1 + gainT('limb') * SOLAR_SIGNATURE_BH_HALO_GAIN),
+    dop: Math.min(
+      0.95,
+      BLACK_HOLE_DOPPLER_STRENGTH * (1 + gainT('prom') * SOLAR_SIGNATURE_BH_DOPPLER_GAIN),
+    ),
     jet: 1 + gainT('wake') * SOLAR_SIGNATURE_BH_JET_GAIN,
   }
 }
@@ -817,20 +1105,36 @@ const paintBhDisc: SunPaint = (ctx, x, y, r, pal, body, detail) => {
   ctx.arc(x, y, g.outer, 0, TAU)
   ctx.arc(x, y, g.inner, 0, TAU, true)
   ctx.clip()
-  // Turbulenz: Bahnstreifen, hell und dunkel
+  // Turbulenz: Bahnstreifen, hell und dunkel, leicht spiralig — konzentrische
+  // Bögen mittelten sich in der Drehung zu einem stehenden Band
   const seed = 61
   const arcs = detail === 0 ? 40 : detail === 1 ? 90 : 160
+  const width = g.outer - g.inner
   for (let i = 0; i < arcs; i++) {
-    const rr = g.inner + jitter(seed, 1600 + i) * (g.outer - g.inner)
+    const rr = g.inner + jitter(seed, 1600 + i) * width
     const a0 = jitter(seed, 1610 + i) * TAU
     const sweep = 0.25 + jitter(seed, 1620 + i) * 1.4
     const bright = jitter(seed, 1630 + i) > 0.5
-    ctx.beginPath()
-    ctx.arc(x, y, rr, a0, a0 + sweep)
-    ctx.strokeStyle = bright ? rgba(white, 0.16 + jitter(seed, 1640 + i) * 0.2) : rgba(mix(pal.edge, 0, 0.7), 0.18 + jitter(seed, 1640 + i) * 0.22)
+    spiralArc(ctx, x, y, rr, sway(seed, 1660 + i) * width * 0.08, a0, sweep)
+    ctx.strokeStyle = bright
+      ? rgba(white, 0.16 + jitter(seed, 1640 + i) * 0.2)
+      : rgba(mix(pal.edge, 0, 0.7), 0.18 + jitter(seed, 1640 + i) * 0.22)
     ctx.lineWidth = Math.max(0.6, r * (0.004 + jitter(seed, 1650 + i) * 0.012))
     ctx.stroke()
   }
+  // Heisse Klumpen im Aussenbereich — an ihnen liest man die Drehung
+  orbitClumps(
+    ctx,
+    x,
+    y,
+    g.inner + width * 0.55,
+    g.inner + width * 0.8,
+    width * 0.16,
+    detail === 0 ? 2 : 4,
+    seed,
+    mix(pal.mid, 255, 0.55),
+    0.42,
+  )
   if (detail >= 1) {
     circle(ctx, x, y, g.outer)
     grain(ctx, x, y, g.outer, 0.22)
@@ -857,6 +1161,109 @@ const paintBhDisc: SunPaint = (ctx, x, y, r, pal, body, detail) => {
     [0.5, rgba(mix(pal.mid, 255, 0.5), 0.4)],
     [1, rgba(pal.mid, 0)],
   ])
+}
+
+/** Ein Bahnbogen, dessen Radius über den Bogen um `drift` wandert. */
+function spiralArc(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r0: number,
+  drift: number,
+  a0: number,
+  sweep: number,
+): void {
+  const segs = 8
+  ctx.beginPath()
+  for (let k = 0; k <= segs; k++) {
+    const t = k / segs
+    const a = a0 + sweep * t
+    const rr = r0 + drift * t
+    const px = x + Math.cos(a) * rr
+    const py = y + Math.sin(a) * rr
+    if (k === 0) ctx.moveTo(px, py)
+    else ctx.lineTo(px, py)
+  }
+}
+
+/** Heisse Klumpen entlang der Bahn: je drei Schleier tangential hintereinander. */
+function orbitClumps(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r0: number,
+  r1: number,
+  size: number,
+  n: number,
+  seed: number,
+  tone: Rgb,
+  alpha: number,
+): void {
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU + jitter(seed, 1800 + i) * (TAU / n)
+    const rr = r0 + jitter(seed, 1810 + i) * (r1 - r0)
+    const da = (size * 0.9) / rr
+    for (let k = -1; k <= 1; k++) {
+      const ak = a + da * k
+      wisp(
+        ctx,
+        x + Math.cos(ak) * rr,
+        y + Math.sin(ak) * rr,
+        size,
+        1820 + i * 3 + k,
+        tone,
+        alpha * (k === 0 ? 1 : 0.55),
+      )
+    }
+  }
+}
+
+/** Der Innenring der Scheibe — dreht keplersch schneller als der Rest, mit
+ *  eigener Turbulenz und Klumpen; der Aussenrand läuft weich in die Scheibe aus. */
+const paintBhDiscIn: SunPaint = (ctx, x, y, r, pal, body, detail) => {
+  const g = bhGeom(r, body)
+  const white: Rgb = [255, 255, 255]
+  const edge = g.inner + (g.outer - g.inner) * BLACK_HOLE_DISC_INNER_RING_FRACTION
+  const width = edge - g.inner
+  annulus(ctx, x, y, g.inner, edge, [
+    [0, rgba(white, 1)],
+    [0.18, rgba(mix(pal.mid, 255, 0.45), 1)],
+    [0.6, rgba(pal.mid, 0.9)],
+    [1, rgba(pal.mid, 0)],
+  ])
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(x, y, edge, 0, TAU)
+  ctx.arc(x, y, g.inner, 0, TAU, true)
+  ctx.clip()
+  const seed = 67
+  const arcs = detail === 0 ? 30 : detail === 1 ? 70 : 120
+  for (let i = 0; i < arcs; i++) {
+    const rr = g.inner + jitter(seed, 1900 + i) * width
+    const a0 = jitter(seed, 1910 + i) * TAU
+    const sweep = 0.15 + jitter(seed, 1920 + i) * 0.8
+    const bright = jitter(seed, 1930 + i) > 0.45
+    spiralArc(ctx, x, y, rr, sway(seed, 1960 + i) * width * 0.1, a0, sweep)
+    ctx.strokeStyle = bright
+      ? rgba(white, 0.2 + jitter(seed, 1940 + i) * 0.25)
+      : rgba(mix(pal.edge, 0, 0.5), 0.16 + jitter(seed, 1940 + i) * 0.2)
+    ctx.lineWidth = Math.max(0.5, r * (0.003 + jitter(seed, 1950 + i) * 0.009))
+    ctx.stroke()
+  }
+  orbitClumps(
+    ctx,
+    x,
+    y,
+    g.inner + width * 0.3,
+    g.inner + width * 0.7,
+    width * 0.2,
+    3,
+    seed,
+    white,
+    0.5,
+  )
+  ctx.restore()
+  fadeMask(ctx, x, y, edge * 0.86, edge)
 }
 
 const paintBhGlaze: SunPaint = (ctx, x, y, r, _pal, body) => {
@@ -975,8 +1382,10 @@ export const SUN_BODY_PAINTERS: Record<SunBodyKind, Partial<Record<SunSpriteLaye
   star: {
     halo: paintStarHalo,
     core: paintStarCore,
-    surfaceA: paintSurface(71, 1),
-    surfaceB: paintSurface(83, 1.35),
+    bandN: paintBand('bandN'),
+    bandE: paintBand('bandE'),
+    bandS: paintBand('bandS'),
+    shade: paintShade,
     corona: paintStarCorona,
     flare: paintStarFlare,
     wake: paintWake,
@@ -984,6 +1393,8 @@ export const SUN_BODY_PAINTERS: Record<SunBodyKind, Partial<Record<SunSpriteLaye
   comet: {
     coma: paintComa,
     core: paintCometCore,
+    bandE: paintBand('bandE'),
+    shade: paintShade,
     jets: paintCometJets,
     wake: paintWake,
   },
@@ -991,6 +1402,7 @@ export const SUN_BODY_PAINTERS: Record<SunBodyKind, Partial<Record<SunSpriteLaye
     bhJets: paintBhJets,
     bhHalo: paintBhHalo,
     bhDisc: paintBhDisc,
+    bhDiscIn: paintBhDiscIn,
     bhShadow: paintBhShadow,
     bhRing: paintBhRing,
     bhGlaze: paintBhGlaze,
@@ -1011,13 +1423,13 @@ export function buildSunSprite(
 ): HTMLCanvasElement | null {
   const paint = SUN_BODY_PAINTERS[body.kind][layer]
   if (!paint) return null
-  const backing = sunSpriteBacking(px, layer, dpr)
+  const backing = sunSpriteBacking(px, layer, dpr, body.kind)
   const key = sunSpriteKey(layer, body, px, backing.dpr, detail)
   const hit = cache.get(key)
   if (hit) return hit
-  const made = newSpriteCanvas(backing.span, backing.dpr)
+  const made = newSpriteCanvas(backing.span, backing.dpr, backing.spanY)
   if (!made) return null
-  paint(made.ctx, backing.span / 2, backing.span / 2, px / 2, sunPaletteFor(body), body, detail)
+  paint(made.ctx, backing.span / 2, backing.spanY / 2, px / 2, sunPaletteFor(body), body, detail)
   cache.set(key, made.cv)
   return made.cv
 }
@@ -1036,6 +1448,13 @@ export function drawSunLayer(
   const sprite = buildSunSprite(layer, body, px, dpr, detail)
   if (!sprite) return
   const span = px * SUN_SPRITE_SPAN[layer]
+  if (isSunBandLayer(layer)) {
+    const strip = sunBandStrip(layer, body.kind)
+    const w = px * strip.w
+    const h = px * strip.h
+    ctx.drawImage(sprite, x - w / 2, y + px * strip.y - h / 2, w, h)
+    return
+  }
   ctx.drawImage(sprite, x - span / 2, y - span / 2, span, span)
 }
 
@@ -1081,7 +1500,12 @@ function spriteUrl(key: string, sprite: HTMLCanvasElement | null): Promise<strin
 
 /** Neues Bild dekodieren, dann einblenden; das alte bleibt bis zum Ende der
  *  Blende stehen — sonst flackert der Evolve. */
-function swapSlotImage(slot: HTMLElement, layerKey: string, url: Promise<string>, fadeMs: number): void {
+function swapSlotImage(
+  slot: HTMLElement,
+  layerKey: string,
+  url: Promise<string>,
+  fadeMs: number,
+): void {
   slot.dataset.layerKey = layerKey
   void url.then((src) => {
     if (slot.dataset.layerKey !== layerKey) return
@@ -1139,10 +1563,15 @@ export function mountSunSprites(host: HTMLElement, body: SunBody, opts: MountSun
       slot.replaceChildren()
       continue
     }
-    const backing = sunSpriteBacking(opts.px, layer, opts.dpr)
+    const backing = sunSpriteBacking(opts.px, layer, opts.dpr, body.kind)
     const layerKey = sunSpriteKey(layer, body, opts.px, backing.dpr, detail)
     if (slot.dataset.layerKey === layerKey) continue
-    swapSlotImage(slot, layerKey, spriteUrl(layerKey, buildSunSprite(layer, body, opts.px, opts.dpr, detail)), fade)
+    swapSlotImage(
+      slot,
+      layerKey,
+      spriteUrl(layerKey, buildSunSprite(layer, body, opts.px, opts.dpr, detail)),
+      fade,
+    )
   }
 }
 
@@ -1150,7 +1579,7 @@ export function mountSunSprites(host: HTMLElement, body: SunBody, opts: MountSun
 export function warmSunSprites(body: SunBody, px: number, dpr: number, wake: boolean): void {
   const detail = sunSpriteDetail(px)
   for (const layer of sunSpriteLayers(body, detail, wake)) {
-    const backing = sunSpriteBacking(px, layer, dpr)
+    const backing = sunSpriteBacking(px, layer, dpr, body.kind)
     const layerKey = sunSpriteKey(layer, body, px, backing.dpr, detail)
     void spriteUrl(layerKey, buildSunSprite(layer, body, px, dpr, detail))
   }

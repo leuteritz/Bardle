@@ -664,12 +664,15 @@ export interface ActiveLandfall extends LandfallPlan {
 /** Der Spielerkörper: Komet vor der Zündung, Plasmasonne, Schwarzes Loch. */
 export type SunBodyKind = 'comet' | 'star' | 'blackHole'
 
-/** Ebenen des Spielerkörpers (`utils/fx/sunBodySprite.ts`), je eine gecachte Grafik. */
+/** Ebenen des Spielerkörpers (`utils/fx/sunBodySprite.ts`), je eine gecachte Grafik.
+ *  `band*` sind rollende Streifen (Achsdrehung), `shade` die statische Schattenebene darüber. */
 export type SunSpriteLayer =
   | 'halo'
   | 'core'
-  | 'surfaceA'
-  | 'surfaceB'
+  | 'bandN'
+  | 'bandE'
+  | 'bandS'
+  | 'shade'
   | 'corona'
   | 'flare'
   | 'wake'
@@ -678,9 +681,12 @@ export type SunSpriteLayer =
   | 'bhJets'
   | 'bhHalo'
   | 'bhDisc'
+  | 'bhDiscIn'
   | 'bhShadow'
   | 'bhRing'
   | 'bhGlaze'
+
+export type SunBandLayer = Extract<SunSpriteLayer, 'bandN' | 'bandE' | 'bandS'>
 
 /** Alles, was die Gestalt des Spielerkörpers bestimmt — die Farbe folgt aus
  *  `kind` + `stage`, deshalb steht sie nicht hier. `stage`: cometStage 0–5,
