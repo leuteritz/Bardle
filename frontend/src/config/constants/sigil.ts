@@ -209,6 +209,8 @@ export const TEAM_SIGIL_CAMERA_MS = 450
  * that used to live in a modal, so it is roughly twice the synergies panel.
  */
 export const TEAM_SIGIL_DETAILS_PANEL_WIDTH = 980
+/** Steht in jedem Blueprint-Feld der Detailspalte, wo spaeter eine Zahl steht. */
+export const TEAM_VALUE_PLACEHOLDER = '—'
 /** Width (px) of the left (identity + progression) column inside that panel. */
 export const TEAM_SIGIL_DETAILS_LEFT_WIDTH = 434
 /**
