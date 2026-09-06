@@ -26,6 +26,19 @@ import type { UniverseRunRecord } from '@/types'
  *  ueber ALLE Bahnen genommen, nicht ueber eine. */
 const UNIVERSE_IDS = universes.map((u) => u.id)
 
+/*
+ * Gesammelt statt einzeln geprueft. Die zwei Bahnpruefungen unten laufen ueber
+ * 10 Universen x Spannen 8..120 x Knoten; als `expect()` je Knoten waren das
+ * 361.600 Aufrufe samt vorab gebauter Meldung — gemessen 2495 und 1059 ms, im
+ * vollen Lauf der 5000-ms-Timeout, isoliert gruen. Gesammelt sind es 311 und
+ * 276 ms. Geprueft wird unveraendert jede Bedingung an jedem Knoten.
+ */
+const REPORT_MAX = 8
+const report = (rows: string[]) =>
+  rows.length <= REPORT_MAX
+    ? rows.join('\n')
+    : [...rows.slice(0, REPORT_MAX), `… und ${rows.length - REPORT_MAX} weitere`].join('\n')
+
 const starsOf = (g: number) => Math.min(3 + (g - 1), 7)
 
 function rec(
@@ -159,42 +172,49 @@ describe('firmamentSpots — die Streuung', () => {
      Feld stehen, darunter die Alltagsspannen 11 und 19. Eine quadratische
      Bezier liegt in der Huelle ihrer drei Punkte. */
   it('haelt das Feld des START-Labels frei — Knoten UND Boegen', () => {
+    const offenders: string[] = []
     for (const u of UNIVERSE_IDS) {
       for (let span = FIRMAMENT_PATH_MIN_SPAN; span <= 120; span++) {
         let prev = { nx: 0, ny: 0 }
         firmamentSpots(span, u).forEach((p, i) => {
-          expect(firmamentInStartField(p.nx, p.ny), `U${u} span ${span} Knoten`).toBe(false)
+          if (firmamentInStartField(p.nx, p.ny)) offenders.push(`U${u} span ${span} Knoten ${i}`)
           const c = firmamentRoadCtrl(prev.nx, prev.ny, p.nx, p.ny, i)
           for (const [ax, ay, bx, by] of [
             [prev.nx, prev.ny, c.x, c.y],
             [c.x, c.y, p.nx, p.ny],
             [prev.nx, prev.ny, p.nx, p.ny],
           ]) {
-            expect(firmamentChordHitsStart(ax, ay, bx, by), `U${u} span ${span} Bogen ${i}`).toBe(
-              false,
-            )
+            if (firmamentChordHitsStart(ax, ay, bx, by)) {
+              offenders.push(`U${u} span ${span} Bogen ${i}`)
+            }
           }
           prev = p
         })
       }
     }
+    expect(offenders, report(offenders)).toEqual([])
   })
 
   /* Der Kontrollpunkt liegt weiter aussen als die Sehne — gebunden gegen die
      Sprite-Kante, sonst wandert ein abgeschnittener Rand durchs Bild. */
   it('haelt den Kontrollpunkt innerhalb der Sprite-Kante', () => {
+    const offenders: string[] = []
     for (const u of UNIVERSE_IDS) {
       for (let span = FIRMAMENT_PATH_MIN_SPAN; span <= 120; span++) {
         let prev = { nx: 0, ny: 0 }
         firmamentSpots(span, u).forEach((p, i) => {
           const c = firmamentRoadCtrl(prev.nx, prev.ny, p.nx, p.ny, i)
-          expect(Math.hypot(c.x, c.y), `U${u} span ${span}`).toBeLessThan(
-            FIRMAMENT_PLATE_SPRITE_MARGIN,
-          )
+          const reach = Math.hypot(c.x, c.y)
+          // Negiert, nicht `>=`: fuer NaN waere das false und der Verstoss fiele
+          // durch — `toBeLessThan` liess ihn nicht durch.
+          if (!(reach < FIRMAMENT_PLATE_SPRITE_MARGIN)) {
+            offenders.push(`U${u} span ${span} Platz ${i}: ${reach.toFixed(4)}`)
+          }
           prev = p
         })
       }
     }
+    expect(offenders, report(offenders)).toEqual([])
   })
 })
 
