@@ -306,6 +306,17 @@ export const useGalaxyStore = defineStore('galaxy', {
     // Alle in diesem Durchlauf bereits verwendeten Theme-Indizes — verhindert,
     // dass sich eine Galaxiefarbe wiederholt, bevor alle Themes durch sind.
     usedThemeIndices: [0] as number[],
+    /**
+     * Die Farbwelt der Zielgalaxie, schon beim AUFBRUCH gezogen. Der Warp
+     * blendet über die zweite Hälfte des Flugs dorthin über — dafür muss das
+     * Ziel bekannt sein, lange bevor `commitAdvance()` läuft. Derselbe Wurf mit
+     * denselben Argumenten, nur früher; die Kette bleibt dieselbe.
+     *
+     * Nicht persistiert, wie `pendingTransition` auch nicht: ein Reload mitten
+     * im Flug verwirft den Flug, und dann würfelt `commitAdvance()` wieder selbst.
+     */
+    pendingThemeIndex: null as number | null,
+    pendingUsedThemes: null as number[] | null,
     // Role selection modal
     pendingRoleSelection: true,
     /** Folgeaktion eines Champion-Sterns, die auf das Schliessen des Star-Fight-Modals wartet. */
@@ -998,6 +1009,16 @@ export const useGalaxyStore = defineStore('galaxy', {
       // Der Universumssprung faehrt auf derselben Schleife — nie zwei Fluege zugleich.
       if (useGameStore().isHyperspaceActive) return
       this.pendingTransition = true
+      // Die Zielfarbe JETZT ziehen, nicht erst beim Schnitt: der Tunnel blendet
+      // über die zweite Hälfte des Flugs dorthin. `currentGalaxy + 1`, weil
+      // `commitAdvance()` erst hochzählt und dann würfelt.
+      const nextTheme = pickThemeIndex(
+        this.currentGalaxy + 1,
+        this.currentThemeIndex,
+        this.usedThemeIndices,
+      )
+      this.pendingThemeIndex = nextTheme.themeIndex
+      this.pendingUsedThemes = nextTheme.used
       // If the Bard profile is open, close it first so the hyperspace warp
       // plays in full view: the orbit-background rAF loop (paused while the
       // profile is open) resumes on close and drives the transition from the
@@ -1072,13 +1093,19 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.resourceStarElapsedMs = 0
       this.resourceStarNextIntervalMs = 0
       this.pendingChampionStar = false
-      const theme = pickThemeIndex(
-        this.currentGalaxy,
-        this.currentThemeIndex,
-        this.usedThemeIndices,
-      )
+      // Der Aufbruch hat die Zielfarbe schon gezogen — der Tunnel ist bereits
+      // dorthin geblendet, ein zweiter Wurf würde jetzt eine andere Farbe
+      // aufdecken als die, in die man gerade geflogen ist. Der Rückfall trägt
+      // die Wege, die ohne Aufbruch hier ankommen: reduzierte Bewegung, der
+      // Waisen-Guard der Schleife und die Specs, die direkt hierher springen.
+      const theme =
+        this.pendingThemeIndex !== null && this.pendingUsedThemes !== null
+          ? { themeIndex: this.pendingThemeIndex, used: this.pendingUsedThemes }
+          : pickThemeIndex(this.currentGalaxy, this.currentThemeIndex, this.usedThemeIndices)
       this.currentThemeIndex = theme.themeIndex
       this.usedThemeIndices = theme.used
+      this.pendingThemeIndex = null
+      this.pendingUsedThemes = null
       // Die alte Rolle gilt nicht mehr — auch dann nicht, wenn die Rollenwahl
       // noch auf die Ankunft wartet: der Rettungsanker in usePersistence flöge
       // sonst nach einem Reload im Abbremsen mit ihr los, ohne zu fragen.
@@ -1101,6 +1128,10 @@ export const useGalaxyStore = defineStore('galaxy', {
     adminBackfillArchive(upto: number): number {
       const last = Math.floor(upto)
       if (last < 1) return 0
+      // Der Nachtrag schreibt die Farbkette neu — eine vorgezogene Zielfarbe aus
+      // einem angefangenen Aufbruch gehört danach nicht mehr dazu.
+      this.pendingThemeIndex = null
+      this.pendingUsedThemes = null
 
       const byGalaxy = new Map<number, CompletedGalaxyRecord>(
         this.completedGalaxies.map((r) => [r.galaxy, r]),
@@ -1156,6 +1187,12 @@ export const useGalaxyStore = defineStore('galaxy', {
     // N im Kontrast zu N−1, und die Kette bleibt lückenlos.
     adminJumpToGalaxy(target: number): number {
       const n = Math.max(1, Math.floor(target))
+      // Ein Sprung verwirft jeden angefangenen Aufbruch. Bliebe die vorgezogene
+      // Farbwelt stehen, nähme `commitAdvance()` unten sie samt ihrem alten
+      // `used`-Schnappschuss — und überschriebe damit die Kette, die der
+      // Nachtrag gerade erst lückenlos geschrieben hat.
+      this.pendingThemeIndex = null
+      this.pendingUsedThemes = null
       // Die laufende Galaxie noch unter IHRER Nummer archivieren, falls sie
       // fertig ist — danach die Bossmarke löschen, sonst schriebe das
       // Sicherheitsnetz in commitAdvance() denselben Lauf ein zweites Mal, dann

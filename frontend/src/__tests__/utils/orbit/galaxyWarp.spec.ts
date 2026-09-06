@@ -4,9 +4,12 @@ import {
   GALAXY_TRANS_WARP_MS,
   GALAXY_WARP_ACCEL_MS,
   WARP_SPEED_PEAK,
+  WARP_SURGE_FROM,
+  WARP_SURGE_PEAK,
   WARP_TRAIL_FADE,
 } from '@/config/constants'
 import {
+  additiveDrawAlpha,
   createGalaxyWarp,
   persistentDrawAlpha,
   startGalaxyWarp,
@@ -92,6 +95,7 @@ describe('galaxyWarp — Phasen und Flanken', () => {
     expect(state.out.done).toBe(false)
     expect(state.out.speed).toBe(1)
     expect(state.out.procession).toBe(0)
+    expect(state.out.themeMix).toBe(0)
   })
 })
 
@@ -223,6 +227,72 @@ describe('galaxyWarp — Kurven', () => {
     expect(o.focusX).toBeCloseTo(state.courseFx * MIN_EDGE * k, 6)
   })
 
+  it('lässt die Farbwelt erst in der zweiten Hälfte wandern und am Schnitt ankommen', () => {
+    const state = createGalaxyWarp()
+    startGalaxyWarp(state, seeded(31))
+    const dt = 16.7
+    // Anlauf und erste Reiseflughälfte: die alte Welt steht.
+    stepGalaxyWarp(state, GALAXY_WARP_ACCEL_MS, MIN_EDGE)
+    expect(state.out.themeMix).toBe(0)
+    const surgeStart =
+      GALAXY_WARP_ACCEL_MS + (GALAXY_TRANS_WARP_MS - GALAXY_WARP_ACCEL_MS) * WARP_SURGE_FROM
+    stepGalaxyWarp(state, surgeStart - GALAXY_WARP_ACCEL_MS - dt, MIN_EDGE)
+    expect(state.out.themeMix).toBe(0)
+    // Ab hier monoton hoch, ohne Rückschritt.
+    let last = 0
+    let t = surgeStart
+    while (t < GALAXY_TRANS_WARP_MS - dt) {
+      t += dt
+      stepGalaxyWarp(state, dt, MIN_EDGE)
+      expect(state.out.themeMix).toBeGreaterThanOrEqual(last - 1e-9)
+      expect(state.out.themeMix).toBeLessThanOrEqual(1)
+      last = state.out.themeMix
+    }
+    expect(last).toBeGreaterThan(0.9)
+    // Der Schnitt trifft die volle Farbe, und sie bleibt im Ausrollen.
+    stepGalaxyWarp(state, dt * 2, MIN_EDGE)
+    expect(state.out.themeMix).toBe(1)
+    stepGalaxyWarp(state, GALAXY_TRANS_DECEL_MS / 2, MIN_EDGE)
+    expect(state.out.themeMix).toBe(1)
+  })
+
+  it('zieht das Tempo mit derselben Kurve an wie die Farbe — eine Bewegung, nicht zwei', () => {
+    const state = createGalaxyWarp()
+    startGalaxyWarp(state, seeded(33))
+    stepGalaxyWarp(state, GALAXY_WARP_ACCEL_MS + 100, MIN_EDGE)
+    const early = state.out.speed
+    // Gebunden wird der ZUSAMMENHANG, nicht eine Prozentzahl: das Tempo steht in
+    // jedem Frame dort, wohin `themeMix` es trägt — bis auf das Atmen (±5 %).
+    for (const at of [0.3, 0.6, 0.85, 0.99]) {
+      const state2 = createGalaxyWarp()
+      startGalaxyWarp(state2, seeded(34))
+      stepGalaxyWarp(state2, GALAXY_TRANS_WARP_MS * at, MIN_EDGE)
+      const expected =
+        WARP_SPEED_PEAK + (WARP_SURGE_PEAK - WARP_SPEED_PEAK) * state2.out.themeMix
+      expect(state2.out.speed).toBeGreaterThan(expected * 0.94)
+      expect(state2.out.speed).toBeLessThan(expected * 1.06)
+    }
+    // Und am Ende ist es spürbar schneller als am Anfang des Reiseflugs — mehr,
+    // als das Atmen erklären könnte.
+    stepGalaxyWarp(state, GALAXY_TRANS_WARP_MS - GALAXY_WARP_ACCEL_MS - 200, MIN_EDGE)
+    expect(state.out.speed).toBeGreaterThan(early * 1.08)
+    expect(state.out.speed).toBeLessThanOrEqual(WARP_SURGE_PEAK * 1.05)
+    expect(state.out.themeMix).toBeGreaterThan(0.9)
+  })
+
+  it('springt am Schnitt nicht im Tempo — das Ausrollen beginnt am Gipfel', () => {
+    // Mit der Anlauf-Spanne fiele das Tempo im Frame des Schnitts um ein Viertel
+    // ab, während die Persistenz-Spur noch die längeren Striche danebenzeigt.
+    const state = createGalaxyWarp()
+    startGalaxyWarp(state, seeded(41))
+    const dt = 16.7
+    stepGalaxyWarp(state, GALAXY_TRANS_WARP_MS - dt, MIN_EDGE)
+    const lastCruise = state.out.speed
+    stepGalaxyWarp(state, dt * 2, MIN_EDGE)
+    expect(state.out.phase).toBe('decel')
+    expect(state.out.speed).toBeGreaterThan(lastCruise * 0.9)
+  })
+
   it('schreibt immer dasselbe Ausgabeobjekt', () => {
     const state = createGalaxyWarp()
     const out = state.out
@@ -230,6 +300,31 @@ describe('galaxyWarp — Kurven', () => {
     stepGalaxyWarp(state, 100, MIN_EDGE)
     stepGalaxyWarp(state, TOTAL_MS, MIN_EDGE)
     expect(state.out).toBe(out)
+  })
+})
+
+describe('additiveDrawAlpha', () => {
+  it('konvergiert unter `lighter` auf den gewünschten Sichtwert', () => {
+    const visible = 0.28
+    const erase = 0.35
+    const g = additiveDrawAlpha(visible, erase)
+    let a = 0
+    for (let i = 0; i < 200; i++) {
+      // Additiv summiert sich linear, statt gegen 1 zu konvergieren.
+      a = a * (1 - erase) + g
+    }
+    expect(a).toBeCloseTo(visible, 4)
+  })
+
+  it('ist NICHT persistentDrawAlpha — die gilt für source-over', () => {
+    // Beide sind nahe beieinander und driften mit steigender Deckkraft
+    // auseinander. Wer hier die falsche nimmt, malt still zu hell.
+    expect(additiveDrawAlpha(0.3, 0.35)).not.toBeCloseTo(persistentDrawAlpha(0.3, 0.35), 3)
+    expect(additiveDrawAlpha(0.3, 0.35)).toBeLessThan(persistentDrawAlpha(0.3, 0.35))
+  })
+
+  it('liefert ohne Spur den Sichtwert selbst', () => {
+    expect(additiveDrawAlpha(0.42, 1)).toBe(0.42)
   })
 })
 
