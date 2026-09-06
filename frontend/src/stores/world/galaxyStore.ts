@@ -1002,6 +1002,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       // pendingTransition flag.
       const ui = useUiStore()
       if (ui.bardActiveTab !== null) ui.closeBardModal()
+      this.setGalaxyTransitioning(true)
       // Bei reduzierter Bewegung gibt es die Hintergrundschleife GAR NICHT:
       // `useStarBackground` kapselt ihren kompletten Aufbau in
       // `if (!prefersReducedMotion)`. Dann treibt niemand den Warp, und weil
@@ -1013,10 +1014,8 @@ export const useGalaxyStore = defineStore('galaxy', {
       // Galaxie mit geschlossenem Profil abschloss, sass fest. Die Bedingung
       // gehört an die Bewegungseinstellung, nicht an ein offenes Modal.
       //
-      // Doppelter Warp ist ausgeschlossen: die Schleife läuft hier nicht, und
-      // ihre Bedingung verlangt ohnehin `!isGalaxyTransitioning`.
+      // Der Ersatzpfad läuft nur ohne Hintergrundschleife.
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        this.setGalaxyTransitioning(true)
         gameTimeout(() => this.commitAdvance(), GALAXY_TRANS_WARP_MS)
         gameTimeout(
           () => this.setGalaxyTransitioning(false),

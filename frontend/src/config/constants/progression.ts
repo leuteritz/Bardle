@@ -161,9 +161,8 @@ export const MAX_ABILITY_LEVEL = 5
 
 export const RESCUE_ROTATION_DURATION_MS = 2_000 // camera spin after role selection
 
-export const GALAXY_TRANS_WARP_MS = 8_400
+export const GALAXY_TRANS_WARP_MS = 12_000
 export const GALAXY_TRANS_DECEL_MS = 3_600
-export const GALAXY_WARP_COURSE_MS = 650
 export const GALAXY_WARP_ACCEL_MS = 2_200
 export const GALAXY_SPAWN_INTERVAL_MIN = 5_000
 export const GALAXY_SPAWN_INTERVAL_MAX = 12_000

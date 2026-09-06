@@ -3,7 +3,6 @@ import {
   GALAXY_TRANS_DECEL_MS,
   GALAXY_TRANS_WARP_MS,
   GALAXY_WARP_ACCEL_MS,
-  GALAXY_WARP_COURSE_MS,
   WARP_SPEED_PEAK,
   WARP_TRAIL_FADE,
 } from '@/config/constants'
@@ -30,7 +29,7 @@ function seeded(seed: number): () => number {
 function run(dtMs: number, untilMs: number, rand = seeded(7)) {
   const state = createGalaxyWarp()
   startGalaxyWarp(state, rand)
-  const phases: GalaxyWarpPhase[] = ['course']
+  const phases: GalaxyWarpPhase[] = ['accel']
   let commits = 0
   let dones = 0
   let commitAt = -1
@@ -54,9 +53,9 @@ function run(dtMs: number, untilMs: number, rand = seeded(7)) {
 }
 
 describe('galaxyWarp — Phasen und Flanken', () => {
-  it('durchläuft course → accel → cruise → decel → idle', () => {
+  it('durchläuft accel → cruise → decel → idle', () => {
     const r = run(16.7, TOTAL_MS + 200)
-    expect(r.phases).toEqual(['course', 'accel', 'cruise', 'decel', 'idle'])
+    expect(r.phases).toEqual(['accel', 'cruise', 'decel', 'idle'])
   })
 
   it.each([16.7, 100])('feuert commit und done genau einmal (dt %s ms)', (dt) => {
@@ -102,7 +101,7 @@ describe('galaxyWarp — Kurven', () => {
     const dt = 16.7
     let t = 0
     let last = 0
-    while (t < GALAXY_WARP_COURSE_MS + GALAXY_WARP_ACCEL_MS) {
+    while (t < GALAXY_WARP_ACCEL_MS) {
       t += dt
       stepGalaxyWarp(state, dt, MIN_EDGE)
       expect(state.out.speed).toBeGreaterThanOrEqual(last - 1e-9)
@@ -131,13 +130,13 @@ describe('galaxyWarp — Kurven', () => {
   it('fährt den Fluchtpunkt zum Kursziel und am Ende zurück auf die Mitte', () => {
     const state = createGalaxyWarp()
     startGalaxyWarp(state, seeded(5))
-    stepGalaxyWarp(state, GALAXY_WARP_COURSE_MS, MIN_EDGE)
+    stepGalaxyWarp(state, GALAXY_WARP_ACCEL_MS, MIN_EDGE)
     const targetX = state.courseFx * MIN_EDGE
     const targetY = state.courseFy * MIN_EDGE
     expect(state.out.focusX).toBeCloseTo(targetX, 6)
     expect(state.out.focusY).toBeCloseTo(targetY, 6)
     expect(Math.hypot(targetX, targetY)).toBeGreaterThan(MIN_EDGE * 0.09)
-    stepGalaxyWarp(state, TOTAL_MS - GALAXY_WARP_COURSE_MS, MIN_EDGE)
+    stepGalaxyWarp(state, TOTAL_MS - GALAXY_WARP_ACCEL_MS, MIN_EDGE)
     expect(state.out.focusX).toBe(0)
     expect(state.out.focusY).toBe(0)
   })
@@ -166,9 +165,9 @@ describe('galaxyWarp — Kurven', () => {
   it('löscht das Vorbild nur im Flug unvollständig (Persistenz-Blur)', () => {
     const state = createGalaxyWarp()
     startGalaxyWarp(state, seeded(2))
-    stepGalaxyWarp(state, GALAXY_WARP_COURSE_MS - 1, MIN_EDGE)
-    expect(state.out.trailFade).toBe(1)
-    stepGalaxyWarp(state, GALAXY_WARP_ACCEL_MS + 1, MIN_EDGE)
+    stepGalaxyWarp(state, 1, MIN_EDGE)
+    expect(state.out.trailFade).toBeGreaterThan(0.999)
+    stepGalaxyWarp(state, GALAXY_WARP_ACCEL_MS, MIN_EDGE)
     expect(state.out.trailFade).toBeCloseTo(WARP_TRAIL_FADE, 3)
     stepGalaxyWarp(state, TOTAL_MS, MIN_EDGE)
     expect(state.out.trailFade).toBe(1)

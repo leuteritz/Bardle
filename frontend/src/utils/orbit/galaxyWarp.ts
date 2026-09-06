@@ -9,8 +9,7 @@
 // mehrere Grenzen, und `commit`/`done` feuern trotzdem genau einmal.
 //
 // Choreografie (Zeiten aus config/constants/progression.ts):
-//   course  0 … COURSE_MS      Nase dreht zum Kursziel, Fluchtpunkt fährt hin
-//   accel   … + ACCEL_MS       kubischer Schub auf WARP_SPEED_PEAK
+//   accel   0 … ACCEL_MS       Kurs und Schub setzen gemeinsam weich ein
 //   cruise  … GALAXY_TRANS_WARP_MS   Reiseflug durch den Sterntunnel
 //   commit  = GALAXY_TRANS_WARP_MS   Galaxiewechsel (Theme, Zähler), Blitz
 //   decel   … + GALAXY_TRANS_DECEL_MS   Ausrollen, Fluchtpunkt kehrt zur Mitte
@@ -19,9 +18,7 @@ import {
   GALAXY_TRANS_DECEL_MS,
   GALAXY_TRANS_WARP_MS,
   GALAXY_WARP_ACCEL_MS,
-  GALAXY_WARP_COURSE_MS,
   WARP_COURSE_ARC_DEG,
-  WARP_COURSE_SPEED_END,
   WARP_CRUISE_SHIMMER,
   WARP_CRUISE_SHIMMER_PERIOD_A_SEC,
   WARP_CRUISE_SHIMMER_PERIOD_B_SEC,
@@ -31,7 +28,7 @@ import {
   WARP_TRAIL_FADE,
 } from '@/config/constants'
 
-export type GalaxyWarpPhase = 'idle' | 'course' | 'accel' | 'cruise' | 'decel'
+export type GalaxyWarpPhase = 'idle' | 'accel' | 'cruise' | 'decel'
 
 export interface GalaxyWarpOut {
   phase: GalaxyWarpPhase
@@ -68,7 +65,7 @@ export interface GalaxyWarpState {
 }
 
 const FLIGHT_MS = GALAXY_TRANS_WARP_MS
-const ACCEL_END_MS = GALAXY_WARP_COURSE_MS + GALAXY_WARP_ACCEL_MS
+const ACCEL_END_MS = GALAXY_WARP_ACCEL_MS
 const TOTAL_MS = GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS
 const DEG = Math.PI / 180
 
@@ -143,8 +140,8 @@ export function startGalaxyWarp(state: GalaxyWarpState, rand: () => number): voi
   const course = randomGalaxyWarpCourse(rand)
   state.courseFx = course.courseFx
   state.courseFy = course.courseFy
-  state.phase = 'course'
-  state.out.phase = 'course'
+  state.phase = 'accel'
+  state.out.phase = 'accel'
 }
 
 /** Ein Frame. `minEdge` = kurze Kante des Canvas in px (für den Fokus-Versatz). */
@@ -166,8 +163,7 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
   if (e >= TOTAL_MS) phase = 'idle'
   else if (e >= FLIGHT_MS) phase = 'decel'
   else if (e >= ACCEL_END_MS) phase = 'cruise'
-  else if (e >= GALAXY_WARP_COURSE_MS) phase = 'accel'
-  else phase = 'course'
+  else phase = 'accel'
   state.phase = phase
   o.phase = phase
 
@@ -189,23 +185,12 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
   const fy = state.courseFy * minEdge
   const peakSpan = WARP_SPEED_PEAK - 1
 
-  if (phase === 'course') {
-    const t = e / GALAXY_WARP_COURSE_MS
+  if (phase === 'accel') {
+    const t = e / GALAXY_WARP_ACCEL_MS
     const k = easeInOutCubic(t)
-    o.speed = 1 + (WARP_COURSE_SPEED_END - 1) * k
+    o.speed = 1 + peakSpan * k
     o.focusX = fx * k
     o.focusY = fy * k
-    o.streakGain = 0
-    o.trailFade = 1
-    o.tintGain = 0
-    o.headlight = 0
-    o.ambientGain = 1
-    o.flightSec = e / 1000
-  } else if (phase === 'accel') {
-    const t = (e - GALAXY_WARP_COURSE_MS) / GALAXY_WARP_ACCEL_MS
-    o.speed = WARP_COURSE_SPEED_END + (WARP_SPEED_PEAK - WARP_COURSE_SPEED_END) * t * t * t
-    o.focusX = fx
-    o.focusY = fy
     o.streakGain = clamp01(t * 2)
     o.trailFade = 1 - (1 - WARP_TRAIL_FADE) * easeOutCubic(t)
     o.tintGain = t

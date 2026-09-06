@@ -1017,7 +1017,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       // warp on wall-clock timers under reduced motion (this loop never starts
       // there) — starting it again here would advance two galaxies.
       const pendingTrans = galaxyStore.pendingTransition
-      if (pendingTrans && !wasPendingTransition && !galaxyStore.isGalaxyTransitioning) {
+      if (pendingTrans && !wasPendingTransition && warp.phase === 'idle') {
         if (prefersReducedMotion.value) {
           galaxyStore.commitAdvance()
         } else {
@@ -1025,7 +1025,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           clearEncounters(sky)
           warpNebulaHidden.value = true
           warpVignetteOn.value = true
-          galaxyStore.setGalaxyTransitioning(true)
         }
       }
       wasPendingTransition = pendingTrans
