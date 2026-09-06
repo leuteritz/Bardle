@@ -37,6 +37,11 @@ const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
+// Ohne Handler wirft Vue aus flushPostFlushCbs weiter und der Scheduler bleibt
+// stehen: ein Fehler in einer Ebene legte die ganze Anwendung still.
+app.config.errorHandler = (err, _instance, info) => {
+  console.error('[bardle] ' + info, err)
+}
 app.config.globalProperties.$formatNumber = formatNumber
 // v-ink-center: rückt zentrierten Text auf seine optische Achse — MedievalSharp
 // setzt die Glyphen asymmetrisch in ihre Boxen (siehe utils/ui/textInkOffset.ts).

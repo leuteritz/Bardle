@@ -621,7 +621,7 @@ function stripSpots(
 
 /** Auslauf oben und unten — die Bänder überlappen, keine Naht darf stehen. */
 function fadeStripEdges(ctx: CanvasRenderingContext2D, s: Strip, fade: number): void {
-  const f = Math.min(0.45, fade / s.h)
+  const f = s.h > 0 ? Math.min(0.45, fade / s.h) : 0
   const g = ctx.createLinearGradient(0, s.y0, 0, s.y0 + s.h)
   g.addColorStop(0, 'rgba(0, 0, 0, 0)')
   g.addColorStop(f, 'rgba(0, 0, 0, 1)')
@@ -1202,7 +1202,7 @@ function orbitClumps(
   for (let i = 0; i < n; i++) {
     const a = (i / n) * TAU + jitter(seed, 1800 + i) * (TAU / n)
     const rr = r0 + jitter(seed, 1810 + i) * (r1 - r0)
-    const da = (size * 0.9) / rr
+    const da = rr > 0 ? (size * 0.9) / rr : 0
     for (let k = -1; k <= 1; k++) {
       const ak = a + da * k
       wisp(
@@ -1414,6 +1414,12 @@ export const SUN_BODY_PAINTERS: Record<SunBodyKind, Partial<Record<SunSpriteLaye
 
 const cache = createSpriteCache(SUN_SPRITE_CANVAS_MAX)
 
+// Ein Aufrufer, der seine Box erst misst, reicht im ersten Frame 0 herein; bei
+// r = 0 teilt der Painter des Schwarzen Lochs 0 durch 0.
+function hasSunBox(px: number): boolean {
+  return Number.isFinite(px) && px > 0
+}
+
 export function buildSunSprite(
   layer: SunSpriteLayer,
   body: SunBody,
@@ -1423,6 +1429,7 @@ export function buildSunSprite(
 ): HTMLCanvasElement | null {
   const paint = SUN_BODY_PAINTERS[body.kind][layer]
   if (!paint) return null
+  if (!hasSunBox(px)) return null
   const backing = sunSpriteBacking(px, layer, dpr, body.kind)
   const key = sunSpriteKey(layer, body, px, backing.dpr, detail)
   const hit = cache.get(key)
@@ -1444,6 +1451,7 @@ export function drawSunLayer(
   x: number,
   y: number,
 ): void {
+  if (!hasSunBox(px)) return
   const detail = sunSpriteDetail(px)
   const sprite = buildSunSprite(layer, body, px, dpr, detail)
   if (!sprite) return
@@ -1549,6 +1557,7 @@ export interface MountSunOptions {
 /** Hängt alle Ebenen in die `.sun-slot[data-layer]` des Hosts — idempotent
  *  über `dataset.spriteKey`. Slots ohne Ebene werden geleert. */
 export function mountSunSprites(host: HTMLElement, body: SunBody, opts: MountSunOptions): void {
+  if (!hasSunBox(opts.px)) return
   const detail = sunSpriteDetail(opts.px)
   const layers = opts.layers ?? sunSpriteLayers(body, detail, opts.wake ?? false)
   const key = `${sunSpriteKey('all', body, opts.px, clampSpriteDpr(opts.dpr), detail)}|${layers.join(',')}`
@@ -1577,6 +1586,7 @@ export function mountSunSprites(host: HTMLElement, body: SunBody, opts: MountSun
 
 /** Rastern und kodieren, ohne zu mounten — vor einem Phasenwechsel. */
 export function warmSunSprites(body: SunBody, px: number, dpr: number, wake: boolean): void {
+  if (!hasSunBox(px)) return
   const detail = sunSpriteDetail(px)
   for (const layer of sunSpriteLayers(body, detail, wake)) {
     const backing = sunSpriteBacking(px, layer, dpr, body.kind)
