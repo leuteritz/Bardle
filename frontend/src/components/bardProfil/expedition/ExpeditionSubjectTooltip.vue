@@ -160,7 +160,11 @@ const verdict = computed(() => {
   if (a.kind === 'blocked') return { icon, label: a.reason, clock: '' }
   // Die Fleet-Karte fuehrt die Geste nicht aus, sie springt nur zur Marke.
   if (isFleet.value) {
-    return { icon, label: VOYAGE_FLEET_TIP_STATUS[verdictKey.value], clock: '' }
+    return {
+      icon,
+      label: VOYAGE_FLEET_TIP_STATUS[verdictKey.value],
+      clock: a.kind === 'waiting' ? formatMinuteClock(remaining.value ?? 0) : '',
+    }
   }
   if (a.kind === 'send') return { icon, label: VOYAGE_ACTION_SEND_LABEL, clock: '' }
   if (a.kind === 'collect') {
@@ -317,10 +321,10 @@ const showRequirement = computed(() => view.value?.state === 'offer')
     :accent="view.accent"
     :name="view.name"
     :state="headState"
-    :headless="!isFleet"
+    headless
   >
     <template #foot>
-      <div class="vtt-body" :class="{ 'vtt-body--mark': !isFleet }">
+      <div class="vtt-body vtt-body--primary">
         <!-- Kein Knopf: die Karte ist `passive`, getroffen wird die Marke selbst.
              `--tip-color` liegt lokal auf dem Block, damit die linke Kante der
              `.tip-effect` die AKTIONS-Farbe trägt — Pfeil und Akzentleiste der
@@ -475,7 +479,7 @@ const showRequirement = computed(() => view.value?.state === 'offer')
   gap: 0.74em;
 }
 
-.vtt-body--mark {
+.vtt-body--primary {
   gap: 0.86em;
 }
 
@@ -488,7 +492,7 @@ const showRequirement = computed(() => view.value?.state === 'offer')
   margin: 0;
 }
 
-.vtt-body--mark .vtt-say {
+.vtt-body--primary .vtt-say {
   min-height: 3.2em;
 }
 
@@ -506,7 +510,7 @@ const showRequirement = computed(() => view.value?.state === 'offer')
   color: var(--tip-color);
 }
 
-.vtt-body--mark .vtt-say-label {
+.vtt-body--primary .vtt-say-label {
   font-size: 1.08em;
 }
 
@@ -548,11 +552,11 @@ const showRequirement = computed(() => view.value?.state === 'offer')
   line-height: 1;
 }
 
-.vtt-body--mark .tip-read--lg .tip-read-v {
+.vtt-body--primary .tip-read--lg .tip-read-v {
   font-size: 1.86em;
 }
 
-.vtt-body--mark .tip-read--lg .tip-read-k {
+.vtt-body--primary .tip-read--lg .tip-read-k {
   font-size: 0.84em;
 }
 
