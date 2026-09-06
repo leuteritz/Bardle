@@ -130,10 +130,16 @@ export const HUD_CARD_PORTRAIT_PX = 56
 
 export const HEADER_MATERIALS_GRID_COLUMNS = 5
 
-/** Dauer, über die die Offline-Bilanz ihre Chime-Summe hochzählt. */
-export const OFFLINE_COUNTER_ANIM_MS = 2000
-/** Wartezeit, bis die Tore nach dem Öffnen der Bilanz erscheinen. */
-export const OFFLINE_CROSSING_START_DELAY_MS = 2100
+/** Dauer, über die die Offline-Bilanz ihre Chime-Summe hochzählt. Kürzer als die
+ *  2000 ms davor: die Tore stehen jetzt ab dem ersten Frame, und solange gezählt
+ *  wird, greift niemand nach ihnen. */
+export const OFFLINE_COUNTER_ANIM_MS = 1400
+/** Nachzählen auf den neuen Ertrag, wenn ein Chime-Tor aufgeht. */
+export const OFFLINE_PAYOUT_TICK_MS = 520
+/** Herunterzählen nach dem Void-Treffer — länger, der Verlust darf nicht huschen. */
+export const OFFLINE_PAYOUT_DROP_MS = 760
+/** Lebensdauer der aufsteigenden Zuwachsmarke über der Ertragszahl. */
+export const OFFLINE_GAIN_FLOAT_MS = 900
 
 // ── Header-Bogen: Sitzplätze der Badges ───────────────────────────────────
 /** Wie weit ein Badge über die Bogenlinie ragt, als Anteil seiner Höhe. */
