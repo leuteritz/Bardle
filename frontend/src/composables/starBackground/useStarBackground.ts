@@ -10,6 +10,7 @@ import {
 } from '@/composables/starBackground/starSprites'
 import {
   createGalaxyWarp,
+  additiveDrawAlpha,
   persistentDrawAlpha,
   resetGalaxyWarp,
   startGalaxyWarp,
@@ -24,7 +25,6 @@ import {
 } from '@/utils/orbit/universeHop'
 import { buildPortalSprite, portalSpriteSpan } from '@/utils/fx/portalSprite'
 import { hexToRgbTriple } from '@/utils/ui/format'
-import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
@@ -77,6 +77,11 @@ import {
   PROCESSION_TRAIL_WIDTH_K,
   PROCESSION_SUN_TRAIL_ALPHA,
   PROCESSION_SUN_TRAIL_LEN_K,
+  WARP_TINT_ALPHA,
+  WARP_TINT_RADIUS_K,
+  WARP_STREAK_LEN_MAX_FRAC,
+  WARP_HEADLIGHT_TINT_CORE,
+  WARP_HEADLIGHT_TINT_MID,
   FLIGHT_BURST_INTERVAL_MIN_SEC,
   FLIGHT_BURST_INTERVAL_MAX_SEC,
   FLIGHT_BURST_STREAK_MIN,
@@ -150,6 +155,7 @@ import {
   writeFlightFollowers,
 } from '@/utils/orbit/flightLive'
 import { rotateAbout, slipPolar, trailAngle, upstreamAngle } from '@/utils/orbit/flightField'
+import { mixGlow, themeGlowRgb } from '@/utils/fx/galaxyTint'
 import {
   processionLive,
   processionTrailAngle,
@@ -508,13 +514,48 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   /** Kehlenlicht: EIN Verlauf im Einheitsradius, je Frame nur skaliert. */
   let hopThroat: CanvasGradient | null = null
   /** Aufhellung um den Fluchtpunkt: EIN Verlauf bei (0,0), neu nur bei anderem Radius. */
-  let headlightGradient: CanvasGradient | null = null
   let headlightRadius = 0
   /** Signale an die Komponente: Nebel aus, Vignette an, Blitz (Zähler + Akzentfarbe). */
   const warpNebulaHidden = ref(false)
   const warpVignetteOn = ref(false)
   const warpFlashKey = ref(0)
+  /**
+   * Der Scheinwerfer am Fluchtpunkt in der Farbe einer Welt. Der Kern bleibt
+   * fast weiss — er TRÄGT die Weltfarbe, ersetzt sie nicht; ein gesättigter
+   * Kern wäre eine farbige Taschenlampe statt einer Tunnelmündung.
+   */
+  function buildHeadlight(
+    c: CanvasRenderingContext2D,
+    radius: number,
+    rgb: readonly [number, number, number],
+  ): CanvasGradient {
+    const toward = (v: number, k: number) => Math.round(v + (255 - v) * k)
+    const core = rgb.map((v) => toward(v, WARP_HEADLIGHT_TINT_CORE))
+    const mid = rgb.map((v) => toward(v, WARP_HEADLIGHT_TINT_MID))
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, radius)
+    g.addColorStop(0, `rgba(${core[0]},${core[1]},${core[2]},1)`)
+    g.addColorStop(0.4, `rgba(${mid[0]},${mid[1]},${mid[2]},0.35)`)
+    g.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`)
+    return g
+  }
+
   const warpAccent = ref('')
+  /**
+   * Die Farbwelt, aus der und in die geflogen wird — beim Aufbruch festgehalten.
+   * Der Tunnel trägt IMMER den Ton der Welt, in der er gerade fliegt, und wandert
+   * über die zweite Flughälfte hinüber.
+   */
+  let warpGlowFrom: [number, number, number] = [180, 200, 255]
+  let warpGlowTo: [number, number, number] = [180, 200, 255]
+  /** Gerasterte Stufe der Überblendung — sie treibt den Gradient-Cache und die CSS-Ebenen. */
+  /** Zählt je Aufbruch hoch — er stempelt die beiden gebackenen Headlight-Verläufe. */
+  let warpGlowKey = 0
+  let headlightKey = -1
+  /** Der Farbschleier des Tunnels — neu gebaut, wenn Ton oder Reichweite wechseln. */
+  let tunnelTint: CanvasGradient | null = null
+  let tunnelTintKey = ''
+  let headlightFrom: CanvasGradient | null = null
+  let headlightTo: CanvasGradient | null = null
 
   let resizeTimeout: ReturnType<typeof setTimeout> | null = null
   let containerObserver: ResizeObserver | null = null
@@ -1095,6 +1136,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           galaxyStore.commitAdvance()
         } else {
           startGalaxyWarp(warp, Math.random)
+          warpGlowFrom = themeGlowRgb(galaxyStore.currentThemeIndex)
+          warpGlowTo = themeGlowRgb(galaxyStore.pendingThemeIndex ?? galaxyStore.currentThemeIndex)
+          warpGlowKey++
           clearEncounters(sky)
           warpNebulaHidden.value = true
           warpVignetteOn.value = true
@@ -1108,11 +1152,14 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         const wo = warp.out
         if (wo.commit) {
           galaxyStore.commitAdvance()
-          // Der Blitz trägt die Farbe der NEUEN Welt und deckt den harten
-          // Schnitt des Hintergrund-Gradienten; die Nebel dürfen ab jetzt in
-          // den neuen Farben zurückkommen.
-          warpAccent.value =
-            GALAXY_THEMES[galaxyStore.currentThemeIndex % GALAXY_THEMES.length].accentColor
+          // Der Blitz war einmal ein VORHANG: eine Fläche im dunklen Akzent, die
+          // den harten Schnitt des Hintergrund-Gradienten zudeckte. Diesen Schnitt
+          // gibt es nicht mehr — die Farbe ist über den halben Flug hierher
+          // gewandert. Geblieben ist der Moment selbst, und der gehört hell: ein
+          // kurzer Durchbruch im Leuchtton der neuen Welt. Ein Abdunkeln würde
+          // jetzt genau das zudecken, worauf alles zugelaufen ist.
+          const [fr, fg, fb] = themeGlowRgb(galaxyStore.currentThemeIndex)
+          warpAccent.value = `rgb(${fr}, ${fg}, ${fb})`
           warpFlashKey.value++
           warpNebulaHidden.value = false
           warpVignetteOn.value = false
@@ -1535,8 +1582,16 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         // deutlich überragt. Vorher bleibt er das Halo-Sprite: bei 2× ist der
         // Schweif ein einzelner Pixel, und ein Feld aus Ein-Pixel-Kapseln las
         // sich beim Losfliegen als leerer Himmel.
+        // Gedeckelt am ABSTAND zum Fluchtpunkt, nicht am Tempo: ein Schweif, der
+        // über den Fluchtpunkt hinausreicht, quert ihn schief — der Fluchtpunkt
+        // liegt bis zu 18 % der kurzen Kante neben der Mitte — und der Tunnel
+        // liest sich als Sternexplosion statt als Sog. Ohne Deckel überschösse
+        // beim Crescendo fast jeder zweite Randstrich.
         const trailLength = streaking
-          ? speed * FLIGHT_EXPOSURE_SEC * WARP_STREAK_LEN_FACTOR * streakLenGain
+          ? Math.min(
+              speed * FLIGHT_EXPOSURE_SEC * WARP_STREAK_LEN_FACTOR * streakLenGain,
+              star.dist * WARP_STREAK_LEN_MAX_FRAC,
+            )
           : 0
         if (trailLength > starSize * 3) {
           const width = Math.max(streakWidth, starSize)
@@ -1593,19 +1648,39 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // Ein Verlauf bei (0,0), per translate an den Fokus geschoben. Die Alpha ist
     // auf den Stationärwert unter der Persistenz-Spur ausgelegt: jeden Frame
     // neu über die halb gelöschte Spur gelegt, summierte sie sich sonst hoch.
+    // Der Ton kommt aus der Welt, in der geflogen wird. Es sind ZWEI gebackene
+    // Verläufe — alte und neue Farbwelt — die gegenläufig überblendet werden;
+    // ein je Frame neu gebauter Verlauf wäre eine Allokation in der heissesten
+    // Schleife des Spiels, und ein gerasterter hätte den Farbwechsel gestuft.
+    // Gebacken wird bei Radiuswechsel und beim Aufbruch: zweimal je Reise.
     if (ctx && wo.headlight > 0) {
       const radius = WARP_HEADLIGHT_RADIUS_FRAC * Math.min(w, h)
-      if (!headlightGradient || Math.abs(radius - headlightRadius) > 1) {
-        headlightGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius)
-        headlightGradient.addColorStop(0, 'rgba(205,228,255,1)')
-        headlightGradient.addColorStop(0.4, 'rgba(170,200,255,0.35)')
-        headlightGradient.addColorStop(1, 'rgba(140,170,255,0)')
+      if (
+        !headlightFrom ||
+        !headlightTo ||
+        Math.abs(radius - headlightRadius) > 1 ||
+        headlightKey !== warpGlowKey
+      ) {
+        headlightFrom = buildHeadlight(ctx, radius, warpGlowFrom)
+        headlightTo = buildHeadlight(ctx, radius, warpGlowTo)
         headlightRadius = radius
+        headlightKey = warpGlowKey
       }
-      ctx.globalAlpha = persistentDrawAlpha(WARP_HEADLIGHT_ALPHA * wo.headlight, wo.trailFade)
+      const base = persistentDrawAlpha(WARP_HEADLIGHT_ALPHA * wo.headlight, wo.trailFade)
+      const m = wo.themeMix
       ctx.setTransform(1, 0, 0, 1, cx, cy)
-      ctx.fillStyle = headlightGradient
-      ctx.fillRect(-radius, -radius, radius * 2, radius * 2)
+      // Die beiden Wächter halten den Ruhefall exakt: ausserhalb der
+      // Überblendung läuft EIN fillRect, so wie seit je.
+      if (m < 0.997) {
+        ctx.globalAlpha = base * (1 - m)
+        ctx.fillStyle = headlightFrom
+        ctx.fillRect(-radius, -radius, radius * 2, radius * 2)
+      }
+      if (m > 0.003) {
+        ctx.globalAlpha = base * m
+        ctx.fillStyle = headlightTo
+        ctx.fillRect(-radius, -radius, radius * 2, radius * 2)
+      }
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.globalAlpha = 1
     }
@@ -1906,6 +1981,37 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       drawEncounters(ctx, sky, encounterFrame)
     }
 
+    // ── Der Tunnel trägt die Farbe seiner Welt ─────────────────────────────
+    // EINE getönte Vollfläche über dem fertigen Sternfeld — nicht in den
+    // Sternfarben: `starSprites` cacht je Farbe ein Offscreen-Canvas und leert
+    // die Maps nie, eine je Frame interpolierte Tönung legte pro Zwischenton ein
+    // neues an. Additiv, weil der Tunnel dunkel ist und die Farbe ihn färben
+    // soll, nicht abdunkeln. Die Deckkraft muss durch `persistentDrawAlpha`:
+    // unter der Persistenz-Spur summierte sich eine Vollfläche sonst hoch.
+    if (ctx && warp.phase !== 'idle' && wo.tintGain > 0) {
+      const [tr, tg, tb] = mixGlow(warpGlowFrom, warpGlowTo, wo.themeMix)
+      // Ein VERLAUF um den Fluchtpunkt, keine Fläche: flächig gelegt war die
+      // Tönung ein Farbfilter über dem ganzen Bild, und der Raum verlor seine
+      // Schwärze. So sitzt die Farbe dort, wo der Tunnel ist, und die Ecken
+      // bleiben dunkel — dieselbe Tiefe, die auch die Vignette meint.
+      const tintR = maxDist * WARP_TINT_RADIUS_K
+      const key = `${tr},${tg},${tb}|${Math.round(tintR)}`
+      if (key !== tunnelTintKey) {
+        tunnelTint = ctx.createRadialGradient(0, 0, 0, 0, 0, tintR)
+        tunnelTint.addColorStop(0, `rgb(${tr},${tg},${tb})`)
+        tunnelTint.addColorStop(0.55, `rgba(${tr},${tg},${tb},0.45)`)
+        tunnelTint.addColorStop(1, `rgba(${tr},${tg},${tb},0)`)
+        tunnelTintKey = key
+      }
+      ctx.save()
+      ctx.globalCompositeOperation = 'lighter'
+      ctx.globalAlpha = additiveDrawAlpha(WARP_TINT_ALPHA * wo.tintGain, wo.trailFade)
+      ctx.setTransform(1, 0, 0, 1, cx, cy)
+      ctx.fillStyle = tunnelTint
+      ctx.fillRect(-tintR, -tintR, tintR * 2, tintR * 2)
+      ctx.restore()
+    }
+
     // ── Galaxy-SVG-Animation ───────────────────────────────────────────────
     for (let i = galaxies.length - 1; i >= 0; i--) {
       const g = galaxies[i]
@@ -2065,7 +2171,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     resetUniverseHop(hop)
     releaseHopSprites()
     wasHopFlight = false
-    headlightGradient = null
+    headlightFrom = null
+    tunnelTint = null
+    tunnelTintKey = ''
+    headlightTo = null
     warpNebulaHidden.value = false
     warpVignetteOn.value = false
     if (galaxySpawnTimeout) {

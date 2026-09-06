@@ -67,6 +67,15 @@ import {
   PROCESSION_TRAIL_LEN_K_MAX,
   PROCESSION_TRAIL_LEN_K_MIN,
   PROCESSION_REACH_MAX_FRAC,
+  WARP_SPEED_PEAK,
+  WARP_SURGE_FROM,
+  WARP_SURGE_PEAK,
+  WARP_TINT_ALPHA,
+  WARP_HEADLIGHT_TINT_CORE,
+  WARP_HEADLIGHT_TINT_MID,
+  WARP_STREAK_LEN_MAX_FRAC,
+  UNIVERSE_HOP_SPEED_PEAK,
+  GALAXY_WARP_ACCEL_MS,
 } from '@/config/constants'
 
 /**
@@ -236,5 +245,43 @@ describe('Prozession — die Zahlen', () => {
     // Schnitt fertig sein, sonst bräche die Aufstellung mitten im Hochfahren ab.
     expect(GALAXY_WARP_ACCEL_MS).toBeLessThan(GALAXY_TRANS_WARP_MS)
     expect(GALAXY_TRANS_DECEL_MS).toBeGreaterThan(0)
+  })
+})
+
+describe('Warp — Crescendo und Farbwelt', () => {
+  it('setzt das Crescendo mitten in den Reiseflug, nicht an seine Ränder', () => {
+    // An 0 wäre es kein Crescendo, sondern ein zweiter Anlauf; an 1 gäbe es
+    // keine Strecke mehr, über die es steigen könnte.
+    expect(WARP_SURGE_FROM).toBeGreaterThan(0.1)
+    expect(WARP_SURGE_FROM).toBeLessThan(0.9)
+  })
+
+  it('lässt das Tempo im Schub über das Höchsttempo des Anlaufs steigen', () => {
+    expect(WARP_SURGE_PEAK).toBeGreaterThan(WARP_SPEED_PEAK)
+    // Der Anlauf muss vor dem Schub fertig sein, sonst überlagern sich zwei Kurven.
+    expect(GALAXY_WARP_ACCEL_MS).toBeGreaterThan(0)
+  })
+
+  it('hält die Tunnel-Tönung als Hauch, nicht als Farbfilter', () => {
+    expect(WARP_TINT_ALPHA).toBeGreaterThan(0)
+    expect(WARP_TINT_ALPHA).toBeLessThan(0.5)
+    // Kern und Saum des Headlights bleiben hell: sie TRAGEN die Weltfarbe.
+    // Der Kern heller als der Saum — sonst wäre es eine farbige Taschenlampe.
+    expect(WARP_HEADLIGHT_TINT_CORE).toBeGreaterThan(WARP_HEADLIGHT_TINT_MID)
+    expect(WARP_HEADLIGHT_TINT_CORE).toBeLessThan(1)
+    expect(WARP_HEADLIGHT_TINT_MID).toBeGreaterThan(0)
+  })
+
+  it('deckelt den Sternstrich, bevor er den Fluchtpunkt quert', () => {
+    // Ohne Deckel überschösse beim Crescendo fast jeder zweite Randstrich den
+    // Fluchtpunkt und der Tunnel läse sich als Explosion.
+    expect(WARP_STREAK_LEN_MAX_FRAC).toBeGreaterThan(0)
+    expect(WARP_STREAK_LEN_MAX_FRAC).toBeLessThan(1)
+  })
+
+  it('lässt den Universumssprung der schnellste Flug bleiben', () => {
+    // Auch am Gipfel des Crescendos — ein Weg zur Nachbargalaxie darf nicht
+    // schneller sein als der durch ein ganzes Universum.
+    expect(UNIVERSE_HOP_SPEED_PEAK).toBeGreaterThan(WARP_SURGE_PEAK)
   })
 })

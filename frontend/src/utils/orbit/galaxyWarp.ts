@@ -25,6 +25,8 @@ import {
   WARP_FOCUS_FRAC_MAX,
   WARP_FOCUS_FRAC_MIN,
   WARP_SPEED_PEAK,
+  WARP_SURGE_FROM,
+  WARP_SURGE_PEAK,
   WARP_TRAIL_FADE,
 } from '@/config/constants'
 
@@ -47,6 +49,15 @@ export interface WarpFlightOut {
   headlight: number
   /** 0 … 1: Staub, Cluster, Flug-Linien — 0 im Flug, Rampe im Ausrollen. */
   ambientGain: number
+  /**
+   * 0 … 1: wie weit die Farbwelt der ZIELgalaxie schon übernommen hat. Sie fährt
+   * in der zweiten Hälfte des Reiseflugs hoch und steht am Schnitt auf 1 — man
+   * kommt nicht in einer neuen Farbe an, man fliegt in sie hinein. Derselbe Wert
+   * trägt das Tempo-Crescendo: eine Bewegung, nicht zwei.
+   *
+   * Der Universumssprung lässt ihn auf 0 — er wechselt keine Galaxie.
+   */
+  themeMix: number
   /**
    * 0 … 1: wie weit die Bühne ihre Bahnen verlassen hat. 0 = Orbit wie immer,
    * 1 = volle Prozession. Fährt mit DEMSELBEN Easing wie Schub und Schwenk —
@@ -76,6 +87,8 @@ export interface GalaxyWarpState {
 
 const FLIGHT_MS = GALAXY_TRANS_WARP_MS
 const ACCEL_END_MS = GALAXY_WARP_ACCEL_MS
+/** Beginn des Crescendos — ein Anteil der Reiseflugstrecke, nicht der Gesamtzeit. */
+const SURGE_START_MS = GALAXY_WARP_ACCEL_MS + (GALAXY_TRANS_WARP_MS - GALAXY_WARP_ACCEL_MS) * WARP_SURGE_FROM
 const TOTAL_MS = GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS
 const DEG = Math.PI / 180
 
@@ -115,6 +128,7 @@ export function createGalaxyWarp(): GalaxyWarpState {
       tintGain: 0,
       headlight: 0,
       ambientGain: 1,
+      themeMix: 0,
       procession: 0,
       flightSec: 0,
       commit: false,
@@ -187,6 +201,7 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.tintGain = 0
     o.headlight = 0
     o.ambientGain = 1
+    o.themeMix = 0
     o.procession = 0
     o.flightSec = 0
     o.done = true
@@ -196,6 +211,12 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
   const fx = state.courseFx * minEdge
   const fy = state.courseFy * minEdge
   const peakSpan = WARP_SPEED_PEAK - 1
+  // Das Ausrollen setzt dort an, wo das Crescendo endete — nicht beim
+  // Anlauf-Höchsttempo. Mit `peakSpan` fiele das Tempo im Frame des Schnitts um
+  // ein Viertel ab, während die Persistenz-Spur noch drei Frames lang die
+  // längeren Striche danebenzeigt: ein Ruck, kein Schnitt. Der Blitz deckt ihn
+  // nicht, er beginnt bei Deckkraft 0 und steht erst vier Frames später.
+  const surgeSpan = WARP_SURGE_PEAK - 1
 
   if (phase === 'accel') {
     const t = e / GALAXY_WARP_ACCEL_MS
@@ -208,6 +229,7 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.tintGain = t
     o.headlight = t * clamp01((o.speed - 1) / peakSpan)
     o.ambientGain = clamp01(1 - t / 0.4)
+    o.themeMix = 0
     o.procession = k
     o.flightSec = e / 1000
   } else if (phase === 'cruise') {
@@ -222,7 +244,10 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
         0.5 *
         (Math.sin((sec * Math.PI * 2) / WARP_CRUISE_SHIMMER_PERIOD_A_SEC) +
           Math.sin((sec * Math.PI * 2) / WARP_CRUISE_SHIMMER_PERIOD_B_SEC + 1.3))
-    o.speed = WARP_SPEED_PEAK * shimmer
+    // Das Crescendo: ab SURGE_FROM der Reiseflugstrecke ziehen Schub und
+    // Farbe gemeinsam an und stehen am Schnitt beide auf ihrem Gipfel.
+    const surge = easeInOutCubic(clamp01((e - SURGE_START_MS) / (FLIGHT_MS - SURGE_START_MS)))
+    o.speed = (WARP_SPEED_PEAK + (WARP_SURGE_PEAK - WARP_SPEED_PEAK) * surge) * shimmer
     o.focusX = fx
     o.focusY = fy
     o.streakGain = 1
@@ -230,12 +255,13 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.tintGain = 1
     o.headlight = 1
     o.ambientGain = 0
+    o.themeMix = surge
     o.procession = 1
     o.flightSec = sec
   } else {
     // decel
     const t = (e - FLIGHT_MS) / GALAXY_TRANS_DECEL_MS
-    o.speed = 1 + peakSpan * Math.pow(1 - t, 3.5)
+    o.speed = 1 + surgeSpan * Math.pow(1 - t, 3.5)
     const back = 1 - easeOutBack(t)
     o.focusX = fx * back
     o.focusY = fy * back
@@ -244,6 +270,8 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.tintGain = 1 - easeOutCubic(t)
     o.headlight = Math.pow(1 - t, 2)
     o.ambientGain = clamp01((t - 0.4) / 0.6)
+    // Die neue Welt ist da und bleibt — im Ausrollen wird nicht zurückgeblendet.
+    o.themeMix = 1
     // Bewusst NICHT die back-Kurve des Fluchtpunkts: die schwingt über ihr
     // Ziel hinaus, und ein Körper, der an seiner Bahn vorbeischießt und
     // zurückrutscht, liest sich als Fehler.
@@ -263,4 +291,18 @@ export function persistentDrawAlpha(visible: number, erase: number): number {
   if (erase >= 1) return visible
   const denom = 1 - visible + visible * erase
   return denom <= 0 ? visible : (visible * erase) / denom
+}
+
+/**
+ * Dasselbe für eine ADDITIVE Fläche (`lighter`) über der Persistenz-Spur — und
+ * das ist eine ANDERE Formel, kein Sonderfall der obigen.
+ *
+ * Unter `source-over` konvergiert die Deckkraft gegen 1 und die Umkehrung ist
+ * ein Bruch; additiv summiert sich linear: `D = g + (1 − erase)·D`, stationär
+ * also `D = g / erase`. Die Umkehrung ist damit eine Multiplikation.
+ * `persistentDrawAlpha` liefert hier durchweg zu viel — bei 0,3 über einer Spur
+ * von 0,35 sind es 0,112 statt 0,105.
+ */
+export function additiveDrawAlpha(visible: number, erase: number): number {
+  return erase >= 1 ? visible : visible * erase
 }

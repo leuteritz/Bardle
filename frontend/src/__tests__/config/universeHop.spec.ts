@@ -15,6 +15,7 @@ import {
   UNIVERSE_HOP_GATE_LIFT_MS,
   UNIVERSE_HOP_SPEED_PEAK,
   WARP_SPEED_PEAK,
+  WARP_SURGE_PEAK,
   WARP_TRAIL_FADE,
 } from '@/config/constants'
 import { UNIVERSE_HOP_COMMIT_AT_MS, UNIVERSE_HOP_TOTAL_MS } from '@/utils/orbit/universeHop'
@@ -51,7 +52,11 @@ describe('Universumssprung — die Zeremonie', () => {
     expect(UNIVERSE_HOP_WASH_MS * UNIVERSE_HOP_WASH_PEAK).toBeLessThan(UNIVERSE_HOP_PASSAGE_MS)
     expect(UNIVERSE_HOP_TUNNEL_TRAIL_FADE).toBeLessThan(WARP_TRAIL_FADE)
     // Überlicht schlägt den Warp; die Beschleunigung überdauert das Heben — sie ist SICHTBAR.
+    // Gemessen gegen die SPITZE des Warps, nicht gegen sein Anlaufziel: seit dem
+    // Crescendo steigt er im Reiseflug weiter, und der Sprung durch ein ganzes
+    // Universum muss der schnellste Flug des Spiels bleiben.
     expect(UNIVERSE_HOP_SPEED_PEAK).toBeGreaterThan(WARP_SPEED_PEAK)
+    expect(UNIVERSE_HOP_SPEED_PEAK).toBeGreaterThan(WARP_SURGE_PEAK)
     expect(UNIVERSE_HOP_DEPART_MS).toBeGreaterThan(UNIVERSE_HOP_GATE_LIFT_MS)
     expect(UNIVERSE_HOP_WASH_PEAK).toBeGreaterThan(0)
     expect(UNIVERSE_HOP_WASH_PEAK).toBeLessThan(1)

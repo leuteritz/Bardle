@@ -67,7 +67,7 @@ export const UNIVERSE_HOP_WASH_PEAK = 0.35
 export const UNIVERSE_HOP_WASH_ALPHA = 0.92
 /** HUD kehrt gestaffelt zurück, gemessen ab Beginn des Ausrollens. */
 export const UNIVERSE_HOP_HUD_IN_DELAY_MS = 1000
-/** Überlicht: über der Spitze des Galaxien-Warps (WARP_SPEED_PEAK 120) — am Rand rund
+/** Überlicht: über der Spitze des Galaxien-Warps (WARP_SURGE_PEAK 138) — am Rand rund
  *  160 px je Frame, Striche um 350 px; die Strichbreite ist über WARP_STREAK_WIDTH_SPEED_CAP gedeckelt. */
 export const UNIVERSE_HOP_SPEED_PEAK = 140
 /** Kurs: volle 360° (das HUD ist im Flug weg, anders als beim Warp), Radius als Anteil der kurzen
@@ -199,6 +199,10 @@ export const PROCESSION_TRAIL_ALPHA = 0.5
 /** Der Spielerkörper zieht den längsten, aber leisesten — er füllt sonst das halbe Bild. */
 export const PROCESSION_SUN_TRAIL_LEN_K = 1.1
 export const PROCESSION_SUN_TRAIL_ALPHA = 0.3
+/** Der Leuchtton einer Galaxie (`utils/fx/galaxyTint.ts`): der dunkle Akzent auf
+ *  diesen Spitzenwert normiert und um diesen Anteil nach Weiss gehoben. */
+export const GALAXY_GLOW_PEAK = 225
+export const GALAXY_GLOW_WHITE_LIFT = 0.22
 /** Ton des Schweifs, wenn ein Körper keine Rollenfarbe trägt (Ally ohne Rolle). */
 export const PROCESSION_TRAIL_FALLBACK_COLOR = '#8fa6c8'
 /**
@@ -411,8 +415,26 @@ export const WARP_STREAK_LEN_FACTOR = 2.7
 // (utils/orbit/galaxyWarp.ts + useStarBackground.ts). Der Flug ist ein
 // Perspektiv-Tunnel: der Fluchtpunkt wandert zum Kursziel, die Sterne fließen
 // radial von dort weg. Kein zweites Canvas — dieselbe Schleife, dieselben Sprites.
-/** Höchsttempo als Vielfaches der Ruhe-Strömung (die Kurven enden hier). */
+/** Höchsttempo als Vielfaches der Ruhe-Strömung (Ende der Anlaufkurve). */
 export const WARP_SPEED_PEAK = 120
+/**
+ * Das Crescendo. Ab diesem Anteil der Reiseflugphase ziehen Schub UND
+ * Farbüberblendung gemeinsam an und erreichen ihren Gipfel exakt am Schnitt —
+ * eine Bewegung auf einen Moment zu, nicht zwei Effekte nebeneinander. Als
+ * ANTEIL, nicht in ms: die Flugzeit ist schon einmal gekürzt worden, und die
+ * Dramaturgie soll das überleben.
+ */
+export const WARP_SURGE_FROM = 0.45
+/**
+ * Tempo am Schnitt. Bewusst UNTER `UNIVERSE_HOP_SPEED_PEAK` (140): der Sprung
+ * durch ein Universum bleibt der schnellste Flug des Spiels — bei 165 wäre der
+ * Weg zur Nachbargalaxie schneller gewesen als der durch ein ganzes Universum.
+ *
+ * Der Zuwachs wirkt als ÄNDERUNG, nicht absolut: bei 120 ist am Bildrand ohnehin
+ * nichts mehr aufzulösen. Soll das Crescendo lauter werden, dreht man an dem,
+ * was man wirklich sieht — der Tönung und dem Headlight, nicht an dieser Zahl.
+ */
+export const WARP_SURGE_PEAK = 138
 /** Die gesamte HUD-Fläche blendet zu Beginn heraus und nach der Ankunft zurück ein. */
 export const GALAXY_WARP_HUD_OUT_MS = 180
 export const GALAXY_WARP_HUD_IN_MS = 360
@@ -430,6 +452,13 @@ export const WARP_TRAIL_FADE = 0.35
 /** Strichbreite: Grundwert + Tempo-Anteil (bei 54× ≈ 4,8 px). */
 export const WARP_STREAK_WIDTH_BASE = 1.0
 export const WARP_STREAK_WIDTH_PER_SPEED = 0.07
+/**
+ * Wie weit ein Sternstrich höchstens reichen darf, als Anteil seines ABSTANDS
+ * zum Fluchtpunkt. Die Länge wächst linear mit dem Tempo und war ungedeckelt;
+ * am Rand überschoss der Schweif damit den Fluchtpunkt und querte ihn schief —
+ * aus dem Sog wurde eine Explosion. Der Deckel wandert mit dem Kurs mit.
+ */
+export const WARP_STREAK_LEN_MAX_FRAC = 0.9
 /** Ab hier wächst die Breite nicht mehr mit dem Tempo — beim Universumssprung (140×) wäre sie sonst ein Balken. */
 export const WARP_STREAK_WIDTH_SPEED_CAP = 45
 /** Doppler: voraus (norm unter AHEAD) blau-weiß, hinten (über BEHIND) warm. */
@@ -445,6 +474,20 @@ export const WARP_HEADLIGHT_RADIUS_FRAC = 0.34
 /** Streak-Sprite (starSprites.ts): Länge × Höhe des Offscreen-Canvas. */
 export const WARP_STREAK_SPRITE_LEN_PX = 128
 export const WARP_STREAK_SPRITE_H_PX = 16
+/* ── Die Farbwelt wandert schon im Flug ────────────────────────────────────
+   Die neue Galaxie hat ihre Farbe, bevor man ankommt: ab `WARP_SURGE_FROM`
+   blendet der Tunnel von der alten zur neuen Welt. Sichtbar wird das nur, weil
+   eine getönte Vollflächen-Ebene über dem Sternfeld liegt — die Sterne selbst
+   tragen feste Spektralfarben, und die Theme-Akzente sind für sich zu dunkel. */
+/** Deckkraft der Tunnel-Tönung bei vollem `tintGain`. */
+export const WARP_TINT_ALPHA = 0.34
+/** Reichweite des Schleiers als Vielfaches des Abstands zur fernsten Ecke — er
+ *  läuft nach aussen aus, damit die Ecken ihre Schwärze behalten. */
+export const WARP_TINT_RADIUS_K = 0.85
+/** Anteile Weiss in Kern und Saum des Headlights — es TRÄGT die Weltfarbe,
+ *  ersetzt sie nicht: ein gesättigter Kern wäre eine farbige Taschenlampe. */
+export const WARP_HEADLIGHT_TINT_CORE = 0.75
+export const WARP_HEADLIGHT_TINT_MID = 0.45
 /** Blitz in der Akzentfarbe des neuen Themes beim Schnitt (DOM). */
 export const WARP_FLASH_MS = 400
 /** Tiefenbänder: nah = schneller, heller, breiter. Tiefe kommt aus Bändern,

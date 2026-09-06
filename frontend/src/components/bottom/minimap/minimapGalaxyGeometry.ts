@@ -18,6 +18,7 @@ import {
   MINIMAP_ROUTE_ARROW_SPREAD,
 } from '@/config/constants'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
+import { themeGlowRgb } from '@/utils/fx/galaxyTint'
 
 export function seededRng(seed: number) {
   let s = seed >>> 0
@@ -269,13 +270,8 @@ export function minimapAccentForTheme(themeIndex: number): string {
   const key = themeIndex % GALAXY_THEMES.length
   const hit = themeAccentCache.get(key)
   if (hit !== undefined) return hit
-  const hex = GALAXY_THEMES[key].accentColor
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  const scale = 225 / Math.max(r, g, b, 1)
-  const lift = (v: number) => Math.round(v * scale + (255 - v * scale) * 0.22)
-  const accent = `${lift(r)}, ${lift(g)}, ${lift(b)}`
+  const [r, g, b] = themeGlowRgb(key)
+  const accent = `${r}, ${g}, ${b}`
   themeAccentCache.set(key, accent)
   return accent
 }

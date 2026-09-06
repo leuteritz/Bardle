@@ -444,7 +444,7 @@ onBeforeUnmount(() => {
     opacity: 0;
   }
   18% {
-    opacity: 0.85;
+    opacity: 0.4;
   }
   100% {
     opacity: 0;
