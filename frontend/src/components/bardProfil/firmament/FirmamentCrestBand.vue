@@ -46,13 +46,20 @@ import {
   FIRMAMENT_CREST_ID_GAP,
   FIRMAMENT_CREST_ID_PAD_X,
   FIRMAMENT_CREST_ID_W,
+  FIRMAMENT_CREST_KICKER_GAP_PX,
+  FIRMAMENT_CREST_KICKER_ID_MAX_PX,
+  FIRMAMENT_CREST_KICKER_ID_MIN_PX,
+  FIRMAMENT_CREST_KICKER_STATE_PX,
+  FIRMAMENT_CREST_ID_STACK_GAP_PX,
   FIRMAMENT_CREST_PROV_NAME_PX,
+  FIRMAMENT_CREST_READ_GAP_PX,
   FIRMAMENT_CREST_READ_PAD_X,
   FIRMAMENT_CREST_READ_W_CHIMES,
   FIRMAMENT_CREST_READ_W_PROV,
   FIRMAMENT_CREST_READ_W_ELAPSED,
   FIRMAMENT_CREST_READ_W_GALAXIES,
   FIRMAMENT_CREST_READ_W_STARS,
+  FIRMAMENT_CREST_VALUE_MAX_PX,
   FIRMAMENT_CREST_VALUE_MIN_PX,
   MS_PER_SECOND,
   UNIVERSE_DISC_CREST_PX,
@@ -156,7 +163,14 @@ const bandH = `${FIRMAMENT_CREST_BAND_H}px`
 const idW = `${FIRMAMENT_CREST_ID_W}px`
 const idPadX = `${FIRMAMENT_CREST_ID_PAD_X}px`
 const idGap = `${FIRMAMENT_CREST_ID_GAP}px`
+const kickerIdMinPx = `${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px`
+const kickerIdMaxPx = `${FIRMAMENT_CREST_KICKER_ID_MAX_PX}px`
+const kickerStatePx = `${FIRMAMENT_CREST_KICKER_STATE_PX}px`
+const kickerGap = `${FIRMAMENT_CREST_KICKER_GAP_PX}px`
+const idStackGap = `${FIRMAMENT_CREST_ID_STACK_GAP_PX}px`
+const readGap = `${FIRMAMENT_CREST_READ_GAP_PX}px`
 const readPadX = `${FIRMAMENT_CREST_READ_PAD_X}px`
+const valueMaxPx = `${FIRMAMENT_CREST_VALUE_MAX_PX}px`
 const valueMinPx = `${FIRMAMENT_CREST_VALUE_MIN_PX}px`
 const provNamePx = `${FIRMAMENT_CREST_PROV_NAME_PX}px`
 const chimeArtPx = `${FIRMAMENT_CREST_CHIME_ART_PX}px`
@@ -183,8 +197,10 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
         </span>
         <span class="fm-crest-name-box">
           <span class="fm-crest-kicker">
-            <span class="fm-crest-kicker-id">{{ universeLabel(props.universe) }}</span> ·
-            {{ isHere ? 'you are here' : 'visited' }}{{ visitNote }}
+            <span class="fm-crest-kicker-id">{{ universeLabel(props.universe) }}</span>
+            <span class="fm-crest-kicker-state"
+              >{{ isHere ? 'you are here' : 'visited' }}{{ visitNote }}</span
+            >
           </span>
 
           <!-- Die Vorsehung IST das Gesetz dieses Universums, also steht sie in
@@ -341,20 +357,21 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
    der Zeilenhoehe hinterherliefe. */
 .fm-crest-name-box {
   align-self: stretch;
-  display: grid;
-  grid-template-rows: 1fr auto 1fr;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: v-bind(idStackGap);
   min-width: 0;
   flex: 1;
 }
 
 .fm-crest-kicker {
-  align-self: end;
-  padding-bottom: 3px;
-  font-size: 11.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #8a7a52;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: v-bind(kickerGap);
+  padding-bottom: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -365,15 +382,23 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
    braucht der laengste Fall („Universe VIII · you are here · x12") 255,3 px in
    einer Box, die im schmalsten Zielband 289 misst. */
 .fm-crest-kicker-id {
-  font-size: 13px;
-  color: #c8b890;
+  font-size: clamp(v-bind(kickerIdMinPx), 0.9vw, v-bind(kickerIdMaxPx));
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #e8c040;
+}
+
+.fm-crest-kicker-state {
+  font-size: v-bind(kickerStatePx);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #b39a65;
 }
 
 /* Die zwei Wirkungen der Vorsehung, in der Gestalt der Chronik-Ablesungen. Sie
    stehen in der Wappenzone, weil sie zum UNIVERSUM gehoeren und nicht zur
    Chronik — die Trennlinie rechts scheidet beides. */
 .fm-crest-prov-reads {
-  grid-row: 2;
   display: flex;
   align-items: stretch;
   min-width: 0;
@@ -395,7 +420,7 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: v-bind(readGap);
   padding: 0 v-bind(readPadX);
   border-right: 1px solid #3e200a;
 }
@@ -451,7 +476,7 @@ const wElapsed = `${FIRMAMENT_CREST_READ_W_ELAPSED}px`
    und sie ist eine Zeile aus ZWEI Schriftgraden — die Direktive misst mit der
    Schrift des Elements und laege bei einer gemischten Zeile daneben. */
 .fm-crest-v {
-  font-size: clamp(v-bind(valueMinPx), 1.9vw, 34px);
+  font-size: clamp(v-bind(valueMinPx), 1.9vw, v-bind(valueMaxPx));
   line-height: 1;
   font-weight: 900;
   white-space: nowrap;
