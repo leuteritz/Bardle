@@ -7,6 +7,7 @@ import type {
   ForgeEffectFamily,
   ForgeRelicRarity,
   ForgeSectionDef,
+  ForgeUpgradeState,
   ForgeUpgradeTier,
 } from '@/types'
 
@@ -3690,3 +3691,24 @@ export const FORGE_FOCUS_REQ_LABEL = 'NEEDED FIRST'
 export const FORGE_FOCUS_NOTE_LABEL = 'Focused'
 export const FORGE_FOCUS_NOTE_NEEDED = 'needed first'
 export const FORGE_FOCUS_NOTE_CLEAR = 'Clear'
+
+export const FORGE_FOCUS_CARD_LABEL = 'Focused upgrade'
+export const FORGE_FOCUS_CARD_EFFECT_LABEL = 'Upgrade effect'
+export const FORGE_FOCUS_CARD_CURRENT_LABEL = 'Current'
+export const FORGE_FOCUS_CARD_NEXT_LABEL = 'Next rank'
+export const FORGE_FOCUS_CARD_COST_LABEL = 'Next rank cost'
+export const FORGE_FOCUS_CARD_UNLOCK_LABEL = 'Unlock path'
+export const FORGE_FOCUS_CARD_LEVEL_LABEL = 'Current rank'
+export const FORGE_FOCUS_CARD_CLEAR_LABEL = 'Clear focus'
+export const FORGE_FOCUS_CARD_GROW_LABEL = 'Grow this upgrade'
+export const FORGE_FOCUS_CARD_ICON_SIZE = 64
+export const FORGE_FOCUS_CARD_ACTION_ICON = 'ph:arrow-up-right-bold'
+export const FORGE_FOCUS_CARD_STATE_LABELS: Record<ForgeUpgradeState, string> = {
+  locked: 'LOCKED',
+  empty: 'NOT STARTED',
+  partial: 'IN PROGRESS',
+  affordable: 'READY TO GROW',
+  capped: 'CAPPED',
+  maxed: 'MAXED',
+  sealed: 'PATH SEALED',
+}
