@@ -517,6 +517,21 @@ export interface FirmamentDive {
 
 export type FirmamentDiveRequest = Omit<FirmamentDive, 'phase'>
 
+/**
+ * Der Universumssprung als Zeremonie. Liegt global, nicht im Profil: das
+ * Profil schliesst mitten im Sprung. `x`/`y` sind Viewport-Koordinaten des
+ * angeklickten Portals, `accent` der Ton des Zieluniversums.
+ * `gate` setzt der Store beim Klick, `flight` der Schleier nach dem
+ * Schliessen des Profils, `threshold`/`arrive` die Sternschleife.
+ */
+export interface UniverseHop {
+  target: number
+  x: number
+  y: number
+  accent: string
+  phase: 'gate' | 'flight' | 'threshold' | 'arrive'
+}
+
 /** Die Marken-Art, die Tooltip, Herold und Badge Lab gemeinsam kennen. */
 export type NotifyBadgeKind =
   | 'level'

@@ -156,14 +156,13 @@ watch(
 //
 // Der Ausloeser ist die Notiz aus `executePrestigeReset` und NICHT
 // `isHyperspaceActive`: dieses Flag wird bei `prefers-reduced-motion` nie
-// gesetzt (die Ansage entfiele ganz) und faellt auf der SPIELUHR, waehrend das
-// Overlay auf der Wanduhr laeuft — bei zehnfacher Geschwindigkeit spielte die
-// Zeremonie hinter einem noch stehenden Weissblitz ab.
+// gesetzt (die Ansage entfiele ganz).
 //
-// Die Verzoegerung haengt deshalb an der Wanduhr und daran, OB ueberhaupt ein
-// Overlay im Weg steht. Damit deckt derselbe Pfad beide Faelle: der
-// Reduced-Motion-Sprung sagt sofort an, der animierte wartet, bis die Buehne
-// frei ist. Kein `gameTimeout()` — der Rueckruf aendert keinen Spielzustand, er
+// Die Verzoegerung haengt an der Wanduhr und daran, OB ueberhaupt ein Sprung
+// laeuft. Damit deckt derselbe Pfad beide Faelle: der Reduced-Motion-Sprung
+// sagt sofort an, der animierte wartet, bis das Ausrollen sich beruhigt hat —
+// der Herold liegt UEBER dem Sternfeld, kein Overlay steht ihm im Weg.
+// Kein `gameTimeout()` — der Rueckruf aendert keinen Spielzustand, er
 // schuetzt die Lesezeit des Spielers, und die vergeht real (dieselbe
 // Begruendung wie bei `armReceipt` in useHerald).
 watch(

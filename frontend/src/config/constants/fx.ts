@@ -50,26 +50,54 @@ export const STAR_RESCUE_BURST_MAX_ALPHA = 0.65
 export const STAR_RESCUE_BURST_RAY_MIN_LEN = 0.18
 export const STAR_RESCUE_BURST_RAY_MAX_LEN = 0.42
 
-// ── Hyperspace-Sprung: Phasenwechsel ──────────────────────────────────────
-// Das Vollbild-Overlay und die Minimap zeigen denselben Sprung gleichzeitig.
-// Liefen die Marken auseinander, blitzte die eine Ebene, während die andere
-// noch beschleunigt — deshalb eine Quelle für beide.
-/** Ende der Beschleunigung, Übergang in den weißen Blitz. */
-export const HYPERSPACE_FLASH_AT_MS = 2000
-/** Beginn des Ausblendens. */
-export const HYPERSPACE_FADEOUT_AT_MS = 2500
-/** Alles zurück auf Ruhezustand. */
-export const HYPERSPACE_END_AT_MS = 3500
+// ── Universumssprung: „Through the Gate" ──────────────────────────────────
+// Kein eigenes Canvas: die Maschine in utils/orbit/universeHop.ts tickt mit
+// dem rAF-Delta der Sternfeld-Schleife, ihre Flanken schalten den Store.
+// Alle Zeiten Wanduhr; das Netz in UniverseHopVeil ist ×2.
+export const UNIVERSE_HOP_DEPART_MS = 1400
+export const UNIVERSE_HOP_APPROACH_MS = 2000
+export const UNIVERSE_HOP_THRESHOLD_MS = 400
+export const UNIVERSE_HOP_EMERGE_MS = 2200
+/** DOM-Wash im Zielton an der Schwelle; der Reset liegt unter seinem Peak. */
+export const UNIVERSE_HOP_WASH_MS = 420
+export const UNIVERSE_HOP_WASH_PEAK = 0.35
+export const UNIVERSE_HOP_WASH_ALPHA = 0.92
+/** HUD kehrt gestaffelt zurück, gemessen ab Beginn des Ausrollens. */
+export const UNIVERSE_HOP_HUD_IN_DELAY_MS = 700
+export const UNIVERSE_HOP_SPEED_DEPART = 14
+export const UNIVERSE_HOP_SPEED_PEAK = 30
+/** Kursziel als Anteil der kurzen Kante — enger als der Galaxien-Warp, das Tor steht nah am Fluchtpunkt. */
+export const UNIVERSE_HOP_FOCUS_FRAC_MIN = 0.06
+export const UNIVERSE_HOP_FOCUS_FRAC_MAX = 0.1
+/** Ringradius zu Beginn des Anflugs (× kurze Kante) und beim Passieren (× Eckabstand). */
+export const UNIVERSE_HOP_PORTAL_R0_FRAC = 0.02
+export const UNIVERSE_HOP_PORTAL_PASS_K = 1.25
+/** Gebackener Ringdurchmesser; Schlund-Span 1,6× bleibt unter FIRMAMENT_PORTAL_MAX_BACKING_PX. */
+export const UNIVERSE_HOP_PORTAL_SPRITE_PX = 512
+export const UNIVERSE_HOP_PORTAL_SPIN_RAD_S = 0.9
+export const UNIVERSE_HOP_MAW_ALPHA = 0.9
+/** Das gebackene Feld blendet mit dem Passieren des Rings aus (× portalR/farCorner) — bei 5× wird es Konfetti. */
+export const UNIVERSE_HOP_FIELD_PASS_FADE = 0.8
+/** Kehlenlicht im Zielton hinter dem Schlund — das gebackene Feld allein ist bei 5× zu blass. */
+export const UNIVERSE_HOP_THROAT_ALPHA_CORE = 0.42
+export const UNIVERSE_HOP_THROAT_ALPHA_MID = 0.16
+export const UNIVERSE_HOP_THROAT_MID_STOP = 0.55
+/** Gate-Phase im Firmament: Schleier zu, Profil schliesst darunter, Schleier hebt. */
+export const UNIVERSE_HOP_GATE_MS = 380
+export const UNIVERSE_HOP_GATE_LIFT_MS = 500
+export const UNIVERSE_HOP_GATE_PORTAL_K = 1.8
+/** HUD im Flug: alle Flächen auf 0 (OUT), Rückkehr gestaffelt (IN + n·STAGGER), Versatz nach aussen. */
+export const UNIVERSE_HOP_HUD_OUT_MS = 140
+export const UNIVERSE_HOP_HUD_IN_MS = 280
+export const UNIVERSE_HOP_HUD_STAGGER_MS = 60
+export const UNIVERSE_HOP_HUD_SHIFT_PX = 8
 /**
- * Abstand zwischen dem Reset (bei HYPERSPACE_ANIM_START_MS) und der
- * Ankunfts-Zeremonie des Herolds.
- *
- * Der Herold liegt auf z-index 9700, dieses Overlay auf 9999 mit deckendem
- * Grund — eine Ansage im Weissblitz laeuft unsichtbar ab. 1000 ms decken die
- * Strecke bis HYPERSPACE_END_AT_MS, die restlichen 400 zeigen die nackte
- * Buehne, bevor die Karte aufgeht.
+ * Abstand zwischen dem Reset (commit-Flanke an der Schwelle) und der
+ * Ankunfts-Zeremonie des Herolds. Der Herold (9700) liegt ÜBER dem Sternfeld
+ * und wartet nicht auf ein deckendes Overlay, sondern auf das Beruhigen des
+ * Ausrollens: nach der letzten HUD-Staffel, rund 700 ms vor dem Stillstand.
  */
-export const HYPERSPACE_ARRIVAL_HERALD_DELAY_MS = 1400
+export const HYPERSPACE_ARRIVAL_HERALD_DELAY_MS = 1750
 
 /** Streuung der Chime-Funken um ihren Sollwinkel, als Anteil des Winkelschritts. */
 export const CHIME_BURST_ANGLE_JITTER = 0.6
@@ -144,9 +172,6 @@ export const CHIME_PARTICLE_DRAW_SCALE_BASE = 0.6
 export const CHIME_PARTICLE_DRAW_SCALE_SPAN = 0.3
 /** Kantenlänge des Partikel-Canvas als Vielfaches des Sonnenradius. */
 export const CHIME_PARTICLE_CANVAS_SUN_FACTOR = 6
-
-export const HYPERSPACE_ANIM_START_MS = 2500
-export const HYPERSPACE_ANIM_END_MS = 3500
 
 /** Winkel-Schrittweite, mit der die Bahntangente eines Sterns abgetastet wird. */
 export const STAR_FX_TANGENT_PROBE_RAD = 0.05

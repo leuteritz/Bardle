@@ -6,6 +6,7 @@ import type {
   ChampionRole,
   FirmamentDive,
   FirmamentDiveRequest,
+  UniverseHop,
 } from '@/types'
 
 // Der Typ wohnt in types/ui.ts, damit die Badge-Registry ihn nennen kann, ohne
@@ -51,6 +52,10 @@ export const useUiStore = defineStore('ui', () => {
   // ein Escape oder Reiterwechsel sie abraeumt — sonst schaltete ihr Timer
   // 380 ms spaeter ein geschlossenes Profil wieder auf.
   const firmamentDive = ref<FirmamentDive | null>(null)
+  // Der laufende Universumssprung. Anders als `firmamentDive` raeumt ihn kein
+  // Reiterwechsel ab — das Profil schliesst mitten im Sprung, die Zeremonie
+  // laeuft weiter. Abgeraeumt wird er von `gameStore.finishUniverseHop`.
+  const universeHop = ref<UniverseHop | null>(null)
   // Was der Aufbruch hinterlaesst, bis der Herold es ansagen kann. Es liegt
   // HIER und nicht im gameStore, weil dieser Store nicht persistiert wird: ein
   // Reload kann damit keinen Sprung feiern, der lange vorbei ist — derselbe
@@ -233,6 +238,18 @@ export const useUiStore = defineStore('ui', () => {
     firmamentDive.value = null
   }
 
+  function beginUniverseHop(req: UniverseHop) {
+    universeHop.value = { ...req }
+  }
+
+  function setUniverseHopPhase(phase: UniverseHop['phase']) {
+    if (universeHop.value) universeHop.value = { ...universeHop.value, phase }
+  }
+
+  function clearUniverseHop() {
+    universeHop.value = null
+  }
+
   /**
    * Der Aufbruch ist vollzogen — die Ankunft darf angesagt werden.
    *
@@ -337,6 +354,10 @@ export const useUiStore = defineStore('ui', () => {
     anchorFirmamentDive,
     settleFirmamentDive,
     clearFirmamentDive,
+    universeHop,
+    beginUniverseHop,
+    setUniverseHopPhase,
+    clearUniverseHop,
     requestOpenFirmamentDeparture,
     setHoveredChampionRole,
     setHoveredChampionSlotIndex,

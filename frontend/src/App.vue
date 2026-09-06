@@ -16,7 +16,7 @@ import StarFightModal from '@/components/idle/planet/StarFightModal.vue'
 import AugmentSelectionModal from '@/components/augment/AugmentSelectionModal.vue'
 import HudCardColumn from '@/components/idle/hud/HudCardColumn.vue'
 import RoleSelectionModal from '@/components/roleSelection/RoleSelectionModal.vue'
-import HyperspaceOverlay from '@/components/idle/prestige/HyperspaceOverlay.vue'
+import UniverseHopVeil from '@/components/idle/prestige/UniverseHopVeil.vue'
 import EncyclopediaPanel from '@/components/encyclopedia/EncyclopediaPanel.vue'
 import AppHeaderComponent from '@/components/header/AppHeaderComponent.vue'
 import StarTimerBarsComponent from '@/components/header/StarTimerBarsComponent.vue'
@@ -160,7 +160,7 @@ watch(
          dauerhaftes Glied in der HUD-Kontur steht und sich nie bewegen darf. -->
     <HudCardColumn />
     <RoleSelectionModal />
-    <HyperspaceOverlay />
+    <UniverseHopVeil />
     <EventLogPanel />
     <OfflineProgressModal />
     <PauseOverlay />
@@ -477,19 +477,20 @@ watch(
      ruckte einmal je Sekunde auf den nächsten gebundenen Wert. Was hier läuft,
      ist genau das, worauf der Spieler gerade schaut.
 
-     Ebenso der HYPERSPACE: er ist eine ZEREMONIE mit einem Ende, keine
-     Dauerschleife. Der Selektor greift auch nach `body` teleportierte Ebenen —
-     ein Alt-Tab mitten im Sprung machte aus Blitz und Ausblenden zwei harte
-     Schnitte, und danach stand die Choreografie schief. Sein rAF-Feld drosselt
-     der Browser im Hintergrund ohnehin selbst. */
+     Ebenso der Schleier des UNIVERSUMSSPRUNGS (.uhop): er ist eine ZEREMONIE
+     mit einem Ende, keine Dauerschleife. Der Selektor greift auch nach `body`
+     teleportierte Ebenen — ein Alt-Tab mitten im Sprung machte aus Blitz und
+     Ausblenden zwei harte Schnitte, und danach stand die Choreografie schief.
+     Der Flug selbst laeuft auf dem Sternfeld-Canvas, das der Browser im
+     Hintergrund ohnehin selbst drosselt. */
 .rendering-paused
   *:not(
     .bottom-bar-shell,
     .bottom-bar-shell *,
     .pause-overlay,
     .pause-overlay *,
-    .hyperspace-overlay,
-    .hyperspace-overlay *
+    .uhop,
+    .uhop *
   ),
 .rendering-paused
   *:not(
@@ -497,8 +498,8 @@ watch(
     .bottom-bar-shell *,
     .pause-overlay,
     .pause-overlay *,
-    .hyperspace-overlay,
-    .hyperspace-overlay *
+    .uhop,
+    .uhop *
   )::before,
 .rendering-paused
   *:not(
@@ -506,11 +507,110 @@ watch(
     .bottom-bar-shell *,
     .pause-overlay,
     .pause-overlay *,
-    .hyperspace-overlay,
-    .hyperspace-overlay *
+    .uhop,
+    .uhop *
   )::after {
   animation-play-state: paused !important;
   transition: none !important;
+}
+
+/* HUD-Fahrt des Universumssprungs. Eine Klasse am <html> (gesetzt von
+   UniverseHopVeil), Regeln HIER, weil die Flaechen ueber das ganze Dokument
+   verteilt und teils nach body teleportiert sind. Nur opacity und translate:
+   `translate`, nicht `transform`, weil .ability-bar, .kb-hud und .music-widget
+   ihr transform selbst tragen; `html … body …` (0,2,1) schlaegt deren scoped
+   Wurzelregeln. Raus alle zugleich, ein Stueck nach aussen; zurueck gestaffelt
+   ueber --uhop-d. Deckkraft aendert kein Layout — die HUD-Kontur bleibt. */
+html.uhop-hud-out
+  body
+  :is(
+    .header-bar,
+    .star-timer-bars-host,
+    .hcc-root,
+    .elp,
+    .bottom-bar-shell,
+    .ability-bar,
+    .buff-bar,
+    .kb-hud,
+    .music-widget,
+    .credit-row,
+    .encyclopedia-toggle
+  ) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition:
+    opacity var(--uhop-hud-out) ease-in,
+    translate var(--uhop-hud-out) ease-in;
+}
+html.uhop-hud-out body :is(.header-bar, .star-timer-bars-host, .hcc-root, .elp) {
+  translate: 0 calc(-1 * var(--uhop-hud-shift));
+}
+html.uhop-hud-out body :is(.bottom-bar-shell, .ability-bar, .buff-bar, .kb-hud, .credit-row) {
+  translate: 0 var(--uhop-hud-shift);
+}
+html.uhop-hud-out body .music-widget {
+  translate: calc(-1 * var(--uhop-hud-shift)) 0;
+}
+html.uhop-hud-out body .encyclopedia-toggle {
+  translate: var(--uhop-hud-shift) 0;
+}
+html.uhop-hud-in
+  body
+  :is(
+    .header-bar,
+    .star-timer-bars-host,
+    .hcc-root,
+    .elp,
+    .bottom-bar-shell,
+    .ability-bar,
+    .buff-bar,
+    .kb-hud,
+    .music-widget,
+    .credit-row,
+    .encyclopedia-toggle
+  ) {
+  translate: 0 0;
+  transition:
+    opacity var(--uhop-hud-in) ease-out var(--uhop-d, 0ms),
+    translate var(--uhop-hud-in) ease-out var(--uhop-d, 0ms);
+}
+html.uhop-hud-in body .bottom-bar-shell {
+  --uhop-d: calc(var(--uhop-hud-stagger) * 1);
+}
+html.uhop-hud-in body .hcc-root {
+  --uhop-d: calc(var(--uhop-hud-stagger) * 2);
+}
+html.uhop-hud-in body .elp {
+  --uhop-d: calc(var(--uhop-hud-stagger) * 3);
+}
+html.uhop-hud-in body :is(.ability-bar, .buff-bar) {
+  --uhop-d: calc(var(--uhop-hud-stagger) * 4);
+}
+html.uhop-hud-in body .star-timer-bars-host {
+  --uhop-d: calc(var(--uhop-hud-stagger) * 5);
+}
+html.uhop-hud-in body :is(.kb-hud, .music-widget, .credit-row, .encyclopedia-toggle) {
+  --uhop-d: calc(var(--uhop-hud-stagger) * 6);
+}
+@media (prefers-reduced-motion: reduce) {
+  html:is(.uhop-hud-out, .uhop-hud-in)
+    body
+    :is(
+      .header-bar,
+      .star-timer-bars-host,
+      .hcc-root,
+      .elp,
+      .bottom-bar-shell,
+      .ability-bar,
+      .buff-bar,
+      .kb-hud,
+      .music-widget,
+      .credit-row,
+      .encyclopedia-toggle
+    ) {
+    transition: none;
+    translate: 0 0;
+  }
 }
 
 /* Idle layer hidden behind an opaque overlay (bard tab or star-fight modal):

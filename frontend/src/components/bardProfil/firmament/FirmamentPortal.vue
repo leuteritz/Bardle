@@ -39,6 +39,8 @@ import {
   FIRMAMENT_PORTAL_HOVER_HALO_K,
   FIRMAMENT_PORTAL_HOVER_MAW_K,
   FIRMAMENT_PORTAL_HOVER_MS,
+  UNIVERSE_HOP_GATE_MS,
+  UNIVERSE_HOP_GATE_PORTAL_K,
   FIRMAMENT_PORTAL_HOVER_RIM_K,
   FIRMAMENT_PORTAL_HOVER_SWIRL_K,
   FIRMAMENT_PORTAL_MAX_BACKING_PX,
@@ -66,6 +68,8 @@ const props = defineProps<{
    *  Portale nebeneinander stehen. Eine Regel an `.fm-stage:has(…)` weckte
    *  alle drei, egal welches man ueberfaehrt. */
   awake?: boolean
+  /** Der Aufbruch: dieses Portal wird angeflogen, die Bühne fällt dahinter weg. */
+  departing?: boolean
 }>()
 
 const mawEl = ref<HTMLCanvasElement | null>(null)
@@ -141,6 +145,9 @@ const haloRest = String(FIRMAMENT_PORTAL_HALO_REST)
 const tintColor = computed(() => props.tint)
 const portalRy = String(FIRMAMENT_PORTAL_RY)
 const hoverDur = `${FIRMAMENT_PORTAL_HOVER_MS}ms`
+const gateDur = `${UNIVERSE_HOP_GATE_MS}ms`
+const gateK = String(UNIVERSE_HOP_GATE_PORTAL_K)
+const gateHaloK = String(UNIVERSE_HOP_GATE_PORTAL_K * 1.1)
 const haloK = String(FIRMAMENT_PORTAL_HOVER_HALO_K)
 const rimK = String(FIRMAMENT_PORTAL_HOVER_RIM_K)
 const mawK = String(FIRMAMENT_PORTAL_HOVER_MAW_K)
@@ -159,7 +166,7 @@ const top = computed(() => `${props.spot.y}px`)
 <template>
   <span
     class="fm-portal"
-    :class="{ 'is-awake': awake }"
+    :class="{ 'is-awake': awake, 'is-departing': departing }"
     aria-hidden="true"
   >
     <canvas ref="haloEl" class="fm-portal-l fm-portal-l--halo" />
@@ -352,6 +359,25 @@ const top = computed(() => `${props.spot.y}px`)
 .fm-portal.is-awake .fm-portal-fx--bloom {
   opacity: v-bind(bloomAlpha);
   transform: translate(-50%, -50%) scaleY(v-bind(portalRy)) scale(1);
+}
+
+/* Der Aufbruch: das angeflogene Portal waechst dem Schleier entgegen — dieselben
+   Ebenen wie beim Hover, groesser und in der Gate-Dauer; der Wirbel laeuft. */
+.fm-portal.is-departing .fm-portal-l--halo {
+  transform: translate(-50%, -50%) scale(v-bind(gateHaloK));
+  transition-duration: v-bind(gateDur);
+}
+
+.fm-portal.is-departing .fm-portal-l--rim,
+.fm-portal.is-departing .fm-portal-l--maw {
+  transform: translate(-50%, -50%) scale(v-bind(gateK));
+  transition-duration: v-bind(gateDur);
+}
+
+.fm-portal.is-departing .fm-portal-boost {
+  animation-play-state: running;
+  scale: v-bind(gateK);
+  transition-duration: v-bind(gateDur);
 }
 
 /* EINE Welle je Beruehrung, kein Dauerlaeufer. Danach steht das Element wieder

@@ -34,9 +34,9 @@ import {
 
 export type GalaxyWarpPhase = 'idle' | 'course' | 'accel' | 'cruise' | 'decel'
 
-export interface GalaxyWarpOut {
-  phase: GalaxyWarpPhase
-  /** Strömungstempo als Vielfaches der Ruhe (1 … WARP_SPEED_PEAK). */
+/** Was eine Flugmaschine der Sternschleife je Frame liefert — Warp und Universumssprung teilen die Leser. */
+export interface WarpFlightOut {
+  /** Strömungstempo als Vielfaches der Ruhe (1 … Spitze). */
   speed: number
   /** Versatz des Fluchtpunkts in px (Kursziel; im Decel zurück zur Mitte). */
   focusX: number
@@ -51,11 +51,15 @@ export interface GalaxyWarpOut {
   headlight: number
   /** 0 … 1: Staub, Cluster, Flug-Linien — 0 im Flug, Rampe im Ausrollen. */
   ambientGain: number
+  /** Flugzeit in Sekunden (für die bestehenden Ausblend-Kurven der SVG-Ebenen). */
+  flightSec: number
+}
+
+export interface GalaxyWarpOut extends WarpFlightOut {
+  phase: GalaxyWarpPhase
   /** Zielgalaxie am Fluchtpunkt (nur nach `destSpawn` gültig). */
   destGalaxyScale: number
   destGalaxyAlpha: number
-  /** Flugzeit in Sekunden (für die bestehenden Ausblend-Kurven der SVG-Ebenen). */
-  flightSec: number
   /** Flanken — je genau einen Frame lang wahr. */
   commit: boolean
   destSpawn: boolean

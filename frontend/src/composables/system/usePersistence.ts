@@ -1391,6 +1391,7 @@ export function usePersistence() {
     gameStore.prestigeAvailable = false
     gameStore.activeExpedition = null
     gameStore.isHyperspaceActive = false
+    gameStore.hopTarget = null
     gameStore.isCPSModalOpen = false
     gameStore.isExpeditionModalOpen = false
     gameStore.isEncyclopediaOpen = false

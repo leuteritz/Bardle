@@ -63,9 +63,6 @@ import {
   MINIMAP_ARRIVAL_RAGE_RING_MS,
   MINIMAP_ARRIVAL_RAGE_RINGS,
   MINIMAP_ARRIVAL_CURSE_PULSE_MS,
-  HYPERSPACE_FLASH_AT_MS,
-  HYPERSPACE_FADEOUT_AT_MS,
-  HYPERSPACE_END_AT_MS,
 } from '@/config/constants'
 import {
   seededRng,
@@ -1411,35 +1408,16 @@ export default defineComponent({
       },
     )
 
+    // Der Universumssprung faehrt keine eigene Choreografie mehr: die Minimap
+    // blendet mit dem HUD aus (html.uhop-hud-out) und kommt mit ihm zurueck —
+    // auf die neue Welt zeigt sie dann aus der Ruhelage.
     watch(
       () => gameStore.isHyperspaceActive,
       (active) => {
-        if (!active) return
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-        const canvas = canvasEl.value
-        const { w, h } = canvas ? ensureCanvasSize(canvas) : { w: 440, h: 440 }
-        for (const id of hyperspaceTimeouts) window.clearTimeout(id)
-        hyperspaceTimeouts = []
-        warp.init(w, h)
-        hyperspacePhase = 'streaks'
-        hyperspacePhaseStart = Date.now()
-        hyperspaceTimeouts.push(
-          window.setTimeout(() => {
-            hyperspacePhase = 'flash'
-            hyperspacePhaseStart = Date.now()
-          }, HYPERSPACE_FLASH_AT_MS),
-          window.setTimeout(() => {
-            hyperspacePhase = 'fadeout'
-            hyperspacePhaseStart = Date.now()
-          }, HYPERSPACE_FADEOUT_AT_MS),
-          window.setTimeout(() => {
-            hyperspacePhase = 'idle'
-            warp.reset()
-            camera.x = 0.5
-            camera.y = 0.5
-            camera.zoom = 1
-          }, HYPERSPACE_END_AT_MS),
-        )
+        if (active) return
+        camera.x = 0.5
+        camera.y = 0.5
+        camera.zoom = 1
       },
     )
 

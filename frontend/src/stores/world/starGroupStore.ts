@@ -234,6 +234,8 @@ export const useStarGroupStore = defineStore('starGroup', {
     openStarFightModal(starId: string) {
       const star = this.activeStars.find((s) => s.id === starId)
       if (!star) return
+      // Im Universumssprung nicht: das Modal hielte die Sternfeld-Schleife an, auf der er faehrt.
+      if (useGameStore().isHyperspaceActive) return
       const bossStore = usePlanetBossStore()
       // Hauptplanet immer ans Ende — Champion-Rettung bzw. Galaxieboss ist das
       // Finale des Sterns, seine Belohnung kommt zuletzt

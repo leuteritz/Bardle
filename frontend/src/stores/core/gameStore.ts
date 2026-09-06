@@ -25,7 +25,7 @@ import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { buildBackfillUniverseRuns } from '@/utils/game/universeRunBackfill'
 import { assignRecordUniverses } from '@/utils/game/galaxyUniverseBackfill'
-import { universes } from '@/config/progression/universes'
+import { getUniverse, universes } from '@/config/progression/universes'
 import { clampPercent } from '@/utils/orbit/geometry'
 import { universeLabel } from '@/utils/ui/format'
 import { bossPlanetInForeground } from '@/utils/orbit/foregroundGate'
@@ -50,8 +50,7 @@ import {
   AUGMENT_LEVEL_INTERVAL,
   ADMIN_LEVEL_AUGMENT_QUEUE_MAX,
   RARITY_WEIGHT_FALLBACK,
-  HYPERSPACE_ANIM_START_MS,
-  HYPERSPACE_ANIM_END_MS,
+  FIRMAMENT_FREED_COLOR,
   UNIVERSE_RESCUE_INITIAL_COST,
   UNIVERSE_RESCUE_COST_MULTIPLIER,
   MEEP_RUN_BASE_MIN,
@@ -215,6 +214,8 @@ export const useGameStore = defineStore('game', {
     activeExpedition: null as Expedition | null,
 
     isHyperspaceActive: false,
+    // Ziel des laufenden Sprungs; nicht im Save, wie das Flag.
+    hopTarget: null as number | null,
 
     // ── Expedition Tracking ──────────────────────
     totalChimesEarned: 0,
@@ -880,33 +881,56 @@ export const useGameStore = defineStore('game', {
      * Reihenfolge irgendwo anders ist genau der Fehler, gegen den sie hier
      * gebuendelt ist.
      *
-     * Das Profil macht dabei zu: der Blitz gehoert auf die BUEHNE, und wer
-     * gereist ist, will nicht im Reiter aufwachen. Dasselbe tut der galaxyStore
-     * beim Galaxienwechsel, aus demselben Grund.
+     * Keine Uhr hier: der Sprung faehrt auf der Sternfeld-Schleife
+     * (utils/orbit/universeHop.ts), deren Flanken `commitUniverseHop` und
+     * `finishUniverseHop` rufen. Das Profil schliesst NICHT hier, sondern der
+     * Schleier (UniverseHopVeil), sobald er deckt — wer gereist ist, will nicht
+     * im Reiter aufwachen, aber auch keinen Reiterwechsel sehen.
      */
-    travelToUniverse(targetUniverse: number) {
+    travelToUniverse(targetUniverse: number, at?: { x: number; y: number }) {
       if (targetUniverse === this.currentUniverse) return
       if (this.isHyperspaceActive) return
+      const galaxyStore = useGalaxyStore()
+      // Zwei Flugmaschinen auf EINER Schleife schliessen sich aus.
+      if (galaxyStore.isGalaxyTransitioning || galaxyStore.pendingTransition) return
       if (!useProvidenceStore().choose(targetUniverse)) return
 
       const ui = useUiStore()
-      if (ui.bardActiveTab !== null) ui.closeBardModal()
-
       if (
         typeof window !== 'undefined' &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches
       ) {
+        if (ui.bardActiveTab !== null) ui.closeBardModal()
         this.executePrestigeReset(targetUniverse)
         return
       }
 
+      this.hopTarget = targetUniverse
       this.isHyperspaceActive = true
-      gameTimeout(() => {
-        this.executePrestigeReset(targetUniverse)
-      }, HYPERSPACE_ANIM_START_MS)
-      gameTimeout(() => {
-        this.isHyperspaceActive = false
-      }, HYPERSPACE_ANIM_END_MS)
+      ui.beginUniverseHop({
+        target: targetUniverse,
+        x: at?.x ?? (typeof window !== 'undefined' ? window.innerWidth / 2 : 0),
+        y: at?.y ?? (typeof window !== 'undefined' ? window.innerHeight / 2 : 0),
+        accent: getUniverse(targetUniverse)?.tint ?? FIRMAMENT_FREED_COLOR,
+        phase: 'gate',
+      })
+    },
+
+    /** Die Schwelle ist erreicht — der Reset, genau einmal. */
+    commitUniverseHop() {
+      if (this.hopTarget === null) return
+      const target = this.hopTarget
+      this.hopTarget = null
+      this.executePrestigeReset(target)
+    },
+
+    /** Stillstand — oder das Netz des Schleiers, falls die Schleife nie ankam. */
+    finishUniverseHop() {
+      this.commitUniverseHop()
+      this.isHyperspaceActive = false
+      const ui = useUiStore()
+      ui.setBardModalLocked(false)
+      ui.clearUniverseHop()
     },
 
     // Processes passive income per second

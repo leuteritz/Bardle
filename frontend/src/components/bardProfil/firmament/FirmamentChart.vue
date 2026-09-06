@@ -404,9 +404,26 @@ const hoveredOffer = ref<number | null>(null)
  * ein Portal, das auf den ersten Klick nichts tut, liest sich als kaputt, und
  * die Ansage gehoert ohnehin VOR den Klick — sie steht in der Hover-Karte.
  */
-function tapOffer(universeId: number) {
-  gameStore.travelToUniverse(universeId)
+function tapOffer(mark: (typeof offerMarks.value)[number]) {
+  const id = mark.card.universe.id
+  if (gameStore.isHyperspaceActive) return
+  const rect = stage.value?.getBoundingClientRect()
+  gameStore.travelToUniverse(
+    id,
+    rect ? { x: rect.left + mark.spot.x, y: rect.top + mark.spot.y } : undefined,
+  )
+  // Bei reduzierter Bewegung ist der Reset schon durch — nichts anzufliegen.
+  if (gameStore.isHyperspaceActive) departingUniverse.value = id
 }
+
+/** Das Portal, das gerade angeflogen wird; die Buehne faellt dahinter weg. */
+const departingUniverse = ref<number | null>(null)
+watch(
+  () => uiStore.universeHop,
+  (hop) => {
+    if (!hop) departingUniverse.value = null
+  },
+)
 
 /* Nach dem Aufbruch steht man auf einer neuen Bahn — der Zeiger haengt dann
    ueber einem Portal, das es nicht mehr gibt. */
@@ -743,7 +760,12 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
   <div
     ref="stage"
     class="fm-stage"
-    :class="{ 'is-pannable': canPan, 'is-dragging': dragging, 'is-diving': !!dive }"
+    :class="{
+      'is-pannable': canPan,
+      'is-dragging': dragging,
+      'is-diving': !!dive,
+      'is-departing': departingUniverse !== null,
+    }"
     @pointerdown="onPointerDown"
     @wheel.prevent="onWheel"
     @dblclick="onDblClick"
@@ -773,7 +795,8 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
       :seed="selection.universe"
       :target="mark.card.universe.id"
       :tint="mark.tint"
-      :awake="hoveredOffer === mark.card.universe.id"
+      :awake="hoveredOffer === mark.card.universe.id || departingUniverse === mark.card.universe.id"
+      :departing="departingUniverse === mark.card.universe.id"
     />
 
     <div class="fm-layer" :class="dive && `fm-layer--${dive.way}`" :style="layerStyle">
@@ -938,7 +961,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
         }"
         :aria-label="`Depart to ${universeLabel(mark.card.universe.id)} under ${mark.card.providence.name}`"
         @pointerdown.stop
-        @click="tapOffer(mark.card.universe.id)"
+        @click="tapOffer(mark)"
         @pointerenter="hoveredOffer = mark.card.universe.id"
         @pointerleave="hoveredOffer = null"
         @focus="hoveredOffer = mark.card.universe.id"
@@ -1066,6 +1089,24 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 .fm-stage.is-diving :deep(.fm-portal) {
   opacity: 0;
   transition: opacity 0.16s ease;
+}
+
+/* Der Aufbruch: die Buehne faellt weg, nur das angeflogene Portal bleibt und
+   waechst dem Schleier entgegen. Eigener Block neben `.is-diving` — der ist
+   per Spec gebunden. Statische Umschlaege, keine neuen Keyframes. */
+.fm-stage.is-departing,
+.fm-stage.is-departing * {
+  pointer-events: none;
+}
+
+.fm-stage.is-departing :is(.fm-spin, .fm-rim, .fm-node-tag) {
+  animation-play-state: paused;
+}
+
+.fm-stage.is-departing :is(.fm-layer, .fm-ground, .fm-portal-hit),
+.fm-stage.is-departing :deep(.fm-portal:not(.is-departing)) {
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
 /* Wall und Herz. Beide zentriert auf der Mitte der Bahn, beide ohne

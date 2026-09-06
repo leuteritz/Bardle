@@ -14,14 +14,30 @@ import {
   resetGalaxyWarp,
   startGalaxyWarp,
   stepGalaxyWarp,
+  type WarpFlightOut,
 } from '@/utils/orbit/galaxyWarp'
+import {
+  createUniverseHop,
+  resetUniverseHop,
+  startUniverseHop,
+  stepUniverseHop,
+} from '@/utils/orbit/universeHop'
+import { buildPortalSprite, portalSpriteSpan } from '@/utils/fx/portalSprite'
+import { hexToRgbTriple } from '@/utils/ui/format'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import { useGameStore } from '@/stores/core/gameStore'
+import { useUiStore } from '@/stores/core/uiStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   STAR_COUNT,
   STAR_BG_MIN_STARS,
+  FIRMAMENT_PORTAL_PHOTON_R,
+  FIRMAMENT_PORTAL_RY,
+  UNIVERSE_HOP_PORTAL_SPRITE_PX,
+  UNIVERSE_HOP_THROAT_ALPHA_CORE,
+  UNIVERSE_HOP_THROAT_ALPHA_MID,
+  UNIVERSE_HOP_THROAT_MID_STOP,
   WARP_SPEED_MAX,
   WARP_STREAK_WIDTH_BASE,
   WARP_STREAK_WIDTH_PER_SPEED,
@@ -458,13 +474,21 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   let focusPollingInterval: ReturnType<typeof setInterval> | null = null
 
   let lastTimestamp = 0
-  let hyperspaceElapsed = 0
-  let wasHyperspaceActive = false
 
   // Der Galaxien-Warp: Phasen, Kurs und Kurven leben in der reinen Maschine
   // (utils/orbit/galaxyWarp.ts); die Schleife liest je Frame nur `warp.out`.
   const warp = createGalaxyWarp()
   let wasPendingTransition = false
+  // Der Universumssprung: dieselbe Bauart, dieselbe Schleife, nie zugleich.
+  // Die drei Portal-Sprites werden unter dem deckenden Schleier gebacken.
+  const hop = createUniverseHop()
+  let wasHopFlight = false
+  let hopMaw: HTMLCanvasElement | null = null
+  let hopSwirl: HTMLCanvasElement | null = null
+  let hopHalo: HTMLCanvasElement | null = null
+  let hopTint = ''
+  /** Kehlenlicht: EIN Verlauf im Einheitsradius, je Frame nur skaliert. */
+  let hopThroat: CanvasGradient | null = null
   /** Die Zielgalaxie am Fluchtpunkt — belegt den Reserve-Slot des Pools. */
   let destGalaxy: GalaxyItem | null = null
   let destGalaxySize = 0
@@ -799,6 +823,14 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     }
   }
 
+  /** Die Sprites bleiben im LRU des Painters — ein zweiter Sprung trifft den Cache. */
+  function releaseHopSprites(): void {
+    hopMaw = null
+    hopSwirl = null
+    hopHalo = null
+    hopThroat = null
+  }
+
   function releaseDestGalaxy(): void {
     if (!destGalaxy) return
     destGalaxy.el.style.visibility = 'hidden'
@@ -1018,19 +1050,42 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     lastTimestamp = timestamp
 
     // Frozen (Shop): kein Heranfliegen, keine Galaxy-/Warp-/Rescue-Mutationen.
-    let hyperActive = false
     let speedMultiplier = 0
     let rescueRotating = false
     let backgroundPaused = false
     let traveling = false
     if (!isFrozen) {
       const gameStore = useGameStore()
-      hyperActive = gameStore.isHyperspaceActive
-      if (hyperActive && !wasHyperspaceActive) hyperspaceElapsed = 0
-      wasHyperspaceActive = hyperActive
-      if (hyperActive) hyperspaceElapsed += delta
-
+      const uiStore = useUiStore()
       const galaxyStore = useGalaxyStore()
+
+      // ── Universumssprung ────────────────────────────────────────────────
+      // Steigende Flanke: die Gate-Phase läuft noch im Profil (Schleife steht),
+      // erst `flight` startet die Maschine. Der Waisen-Guard fängt den Fall,
+      // dass das Netz des Schleiers den Store schon beendet hat, während diese
+      // Schleife stand (Fenster ohne Fokus).
+      const hopReq = uiStore.universeHop
+      const hopFlight = hopReq !== null && hopReq.phase !== 'gate'
+      if (hopFlight && !wasHopFlight && hop.phase === 'idle' && warp.phase === 'idle') {
+        startUniverseHop(hop, Math.random)
+        hopTint = hopReq!.accent
+        const seed = gameStore.currentUniverse
+        const px = UNIVERSE_HOP_PORTAL_SPRITE_PX
+        hopMaw = buildPortalSprite('maw', seed, hopTint, hopReq!.target, px, 1)
+        hopSwirl = buildPortalSprite('swirl', seed, hopTint, hopReq!.target, px, 1)
+        hopHalo = buildPortalSprite('halo', seed, hopTint, hopReq!.target, px, 1)
+        clearEncounters(sky)
+        warpNebulaHidden.value = true
+        warpVignetteOn.value = true
+      }
+      wasHopFlight = hopFlight
+      if (hop.phase !== 'idle' && hopReq === null) {
+        resetUniverseHop(hop)
+        releaseHopSprites()
+        retireSkyDecor()
+        warpNebulaHidden.value = false
+        warpVignetteOn.value = false
+      }
 
       // ── Champion-Rettungs-Kameraschwenk (runs even while background is paused) ──
       if (galaxyStore.isRescueRotating) {
@@ -1102,6 +1157,31 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         backgroundPaused = false
       }
 
+      if (hop.phase !== 'idle') {
+        if (cachedCtx === null || cachedW === 0) refreshCanvasCache()
+        const ho = hop.out
+        const far =
+          Math.hypot(cachedW / 2, cachedH / 2) + Math.hypot(ho.focusX, ho.focusY)
+        stepUniverseHop(hop, delta * 1000, Math.min(cachedW, cachedH), far)
+        if (ho.wash) {
+          uiStore.setUniverseHopPhase('threshold')
+          warpVignetteOn.value = false
+        }
+        if (ho.commit) {
+          // Der Reset läuft unter dem Peak des Wash; die Nebel kommen in den
+          // Farben der neuen Welt zurück.
+          gameStore.commitUniverseHop()
+          warpNebulaHidden.value = false
+        }
+        if (ho.hudIn) uiStore.setUniverseHopPhase('arrive')
+        if (ho.done) {
+          releaseHopSprites()
+          retireSkyDecor()
+          gameStore.finishUniverseHop()
+        }
+        backgroundPaused = false
+      }
+
       if (backgroundPaused) {
         // Kein Early-Return: der Frame wird statisch (delta = 0, speedMultiplier
         // bleibt 0) weitergezeichnet. Beim Tab-Rückwechsel alloziert
@@ -1114,15 +1194,15 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           speedMultiplier = 0
         } else if (warp.phase !== 'idle') {
           speedMultiplier = warp.out.speed
+        } else if (hop.phase !== 'idle') {
+          speedMultiplier = hop.out.speed
         } else {
           const solar = useSolarUpgradeStore()
           const flightBonus = 1 + solar.flightSpeedLevel * SOLAR_STAR_SPEED_BONUS
           // Comet origin state: stars drift noticeably faster — the comet races
-          // through space (streak trails stay off, they need hyperActive/warp).
+          // through space (streak trails stay off, they need a flight machine).
           const cometBoost = solar.isCometState ? COMET_DRIFT_SPEED_MULT : 1
-          speedMultiplier = hyperActive
-            ? 1 + Math.min(hyperspaceElapsed / 2, 1) * 19
-            : flightBonus * cometBoost
+          speedMultiplier = flightBonus * cometBoost
         }
       }
     }
@@ -1135,9 +1215,11 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     const h = cachedH
     const ctx = cachedCtx
 
-    const wo = warp.out
-    const warpActive = wo.phase !== 'idle'
-    const warpFlight = warpActive && wo.phase !== 'decel'
+    // Beide Flugmaschinen liefern dieselbe Form; nie laufen zwei zugleich.
+    const wo: WarpFlightOut = hop.phase !== 'idle' ? hop.out : warp.out
+    const warpActive = warp.phase !== 'idle' || hop.phase !== 'idle'
+    const rollingOut = warp.phase === 'decel' || hop.phase === 'emerge'
+    const warpFlight = warpActive && !rollingOut
 
     if (ctx) {
       if (warpActive && wo.trailFade < 0.999) {
@@ -1158,8 +1240,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // Der Fluchtpunkt wandert leicht um die Bildmitte; die Sonne bleibt dort
     // stehen — die Kamera hängt am Spieler, nur sein Kurs schiebt den Fokus.
     // Bei Warp, Hyperspace, Schwenk und Reduced-Motion fährt er weich auf 0.
-    const driftOn =
-      !isFrozen && !warpActive && !hyperActive && speedMultiplier > 0 && !prefersReducedMotion.value
+    const driftOn = !isFrozen && !warpActive && speedMultiplier > 0 && !prefersReducedMotion.value
     const driftStep = delta / FLIGHT_DRIFT_EASE_SEC
     driftGain = Math.max(0, Math.min(1, driftGain + (driftOn ? driftStep : -driftStep)))
     driftPhase += delta
@@ -1198,7 +1279,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     const slipOn =
       helmOut !== null &&
       !warpActive &&
-      !hyperActive &&
       (Math.hypot(helmOut.slipX, helmOut.slipY) >= HELM_SLIP_EPS_PX_S || helmOut.rollRate !== 0)
     const slipVx = slipOn ? helmOut!.slipX : 0
     const slipVy = slipOn ? helmOut!.slipY : 0
@@ -1209,6 +1289,61 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       slipOn && Math.random() < HELM_RESPAWN_BIAS
         ? upstreamAngle(slipVx, slipVy, Math.random)
         : Math.random() * Math.PI * 2
+
+    // ── Das Tor — der Universumssprung ──────────────────────────────────────
+    // Direkt nach dem Löschen und vor allem anderen: das Tor ist FERN, die
+    // nahen Striche laufen darüber. Schlund, Halo und Wirbel sind gebackene
+    // Sprites (skaliert, frontal entzerrt), Ring und Schwellensaum EIN
+    // Vektorkreis je — ein skaliertes Rim-Sprite trüge gebackenen shadowBlur,
+    // bei 5× ein Schmierfleck. Über der teilgelöschten Spur hinterlässt der
+    // Ring Geisterringe nach innen: ein Tunnel aus Ringen, gewollt.
+    if (ctx && hop.out.portalR > 0 && hopMaw && hopSwirl && hopHalo) {
+      const ho = hop.out
+      const R = ho.portalR
+      const px = UNIVERSE_HOP_PORTAL_SPRITE_PX
+      const s = (R * 2) / px
+      const ry = 1 / FIRMAMENT_PORTAL_RY
+      if (!hopThroat) {
+        const rgb = hexToRgbTriple(hopTint)
+        hopThroat = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
+        hopThroat.addColorStop(0, `rgba(${rgb},${UNIVERSE_HOP_THROAT_ALPHA_CORE})`)
+        hopThroat.addColorStop(UNIVERSE_HOP_THROAT_MID_STOP, `rgba(${rgb},${UNIVERSE_HOP_THROAT_ALPHA_MID})`)
+        hopThroat.addColorStop(1, `rgba(${rgb},0)`)
+      }
+      ctx.save()
+      ctx.translate(cx, cy)
+      ctx.scale(R, R * ry)
+      ctx.globalAlpha = persistentDrawAlpha(ho.mawAlpha, ho.trailFade)
+      ctx.fillStyle = hopThroat
+      ctx.fillRect(-1, -1, 2, 2)
+      ctx.restore()
+      ctx.save()
+      ctx.translate(cx, cy)
+      ctx.scale(s, s * ry)
+      const mawSpan = portalSpriteSpan('maw', px)
+      ctx.globalAlpha = persistentDrawAlpha(ho.fieldAlpha, ho.trailFade)
+      ctx.drawImage(hopMaw, -mawSpan / 2, -mawSpan / 2, mawSpan, mawSpan)
+      const haloSpan = portalSpriteSpan('halo', px)
+      ctx.globalAlpha = persistentDrawAlpha(0.8 * ho.portalAlpha, ho.trailFade)
+      ctx.drawImage(hopHalo, -haloSpan / 2, -haloSpan / 2, haloSpan, haloSpan)
+      ctx.rotate(ho.portalSpin)
+      const swirlSpan = portalSpriteSpan('swirl', px)
+      ctx.globalAlpha = persistentDrawAlpha(ho.portalAlpha, ho.trailFade)
+      ctx.drawImage(hopSwirl, -swirlSpan / 2, -swirlSpan / 2, swirlSpan, swirlSpan)
+      ctx.restore()
+      ctx.globalAlpha = ho.portalAlpha
+      ctx.strokeStyle = hopTint
+      ctx.lineWidth = Math.max(1.5, R * 0.05)
+      ctx.beginPath()
+      ctx.arc(cx, cy, R, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.globalAlpha = ho.portalAlpha * 0.5
+      ctx.lineWidth = Math.max(0.8, R * 0.012)
+      ctx.beginPath()
+      ctx.arc(cx, cy, R * FIRMAMENT_PORTAL_PHOTON_R, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.globalAlpha = 1
+    }
 
     // ── Kosmischer Staub ────────────────────────────────────────────────────
     // Im Flug ausgesetzt (bei 45× wäre er ohnehin nur Schmier), beim Ausrollen
@@ -1318,7 +1453,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // weg, mit norm² Tiefe — nah am Fokus kriechen sie, am Rand rasen sie.
     // Früher schob der Warp alle als flache Ebene quer über den Schirm; das las
     // sich als gescrolltes Wallpaper, nicht als Flug.
-    const streaking = (hyperActive || (warpActive && wo.streakGain > 0)) && speedMultiplier > 1.5
+    const streaking = warpActive && wo.streakGain > 0 && speedMultiplier > 1.5
     const streakWidth = WARP_STREAK_WIDTH_BASE + speedMultiplier * WARP_STREAK_WIDTH_PER_SPEED
     const streakLenGain = warpActive ? wo.streakGain : 1
     const headlightBoost = 0.6 * wo.headlight
@@ -1341,10 +1476,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         // Tunnel); beim Ausrollen rundum verteilt, sonst wie gehabt. Nicht
         // schlagartig: mit 2× am Rand geboren und bei 45× dicht am Fokus —
         // sonst stand der Schirm beim Losfliegen für eine Sekunde leer.
-        if (hyperActive) star.dist = maxDist * (0.02 + Math.random() * 0.08)
-        else if (warpFlight)
+        if (warpFlight)
           star.dist = maxDist * (0.1 - 0.08 * tunnel + Math.random() * (0.35 - 0.27 * tunnel))
-        else if (wo.phase === 'decel') star.dist = maxDist * (0.25 + Math.random() * 0.65)
+        else if (rollingOut) star.dist = maxDist * (0.25 + Math.random() * 0.65)
         else star.dist = maxDist * (0.1 + Math.random() * 0.35)
         star.baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
         // Diesen Frame nicht zeichnen: `speed` und `norm` stammen noch vom
@@ -1359,8 +1493,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const twinkle = 0.5 + 0.5 * Math.sin(star.twinklePhase)
       const fadeEdge = norm > 0.88 ? 1 - (norm - 0.88) / 0.12 : 1
       let alpha: number
-      if (hyperActive || warpFlight) alpha = Math.min(1, distAlpha * 1.5)
-      else if (wo.phase === 'decel') alpha = Math.min(1, distAlpha * 1.8) * fadeEdge
+      if (warpFlight) alpha = Math.min(1, distAlpha * 1.5)
+      else if (rollingOut) alpha = Math.min(1, distAlpha * 1.8) * fadeEdge
       else alpha = distAlpha * (0.5 + 0.5 * twinkle) * fadeEdge
       // Aberration: bei Höchsttempo drängt das Licht nach vorn — voraus heller.
       if (headlightBoost > 0) alpha = Math.min(1, alpha * (1 + headlightBoost * (1 - norm)))
@@ -1516,7 +1650,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       // of bright, long lines rushes past. Skipped during warp/hyperspace,
       // where the stars themselves already streak.
       burstCooldown -= delta
-      if (burstCooldown <= 0 && !warpActive && !hyperActive) {
+      if (burstCooldown <= 0 && !warpActive) {
         const count =
           FLIGHT_BURST_STREAK_MIN +
           Math.floor(Math.random() * (FLIGHT_BURST_STREAK_MAX - FLIGHT_BURST_STREAK_MIN + 1))
@@ -1650,7 +1784,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     }
 
     // ── Himmelsbegegnungen — auf demselben Canvas, in derselben Strömung ───
-    if (ctx && !isFrozen && !warpActive && !hyperActive) {
+    if (ctx && !isFrozen && !warpActive) {
       const themeIndex = useGalaxyStore().currentThemeIndex
       if (themeIndex !== tintThemeIndex) {
         const t = cometTintForGalaxy(themeIndex)
@@ -1686,10 +1820,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       if (p < 0.15) opacity = p / 0.15
       else if (p < 0.75) opacity = 1
       else opacity = 1 - (p - 0.75) / 0.25
-      if (hyperActive || warpActive) {
-        const fadeTime = hyperActive ? hyperspaceElapsed : wo.flightSec
-        opacity *= Math.max(0, 1 - fadeTime * 3)
-      }
+      if (warpActive) opacity *= Math.max(0, 1 - wo.flightSec * 3)
       if (slipOn) {
         // fern: der Fokus dreht sie, der Slip trifft sie nur leicht
         rotateAbout(g.x, g.y, w / 2, h / 2, Math.cos(rollStep), Math.sin(rollStep), rotOut)
@@ -1719,12 +1850,12 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     if (destGalaxy) {
       const g = destGalaxy
       const half = destGalaxySize / 2
-      const gOpStr = wo.destGalaxyAlpha.toFixed(3)
+      const gOpStr = warp.out.destGalaxyAlpha.toFixed(3)
       if (g._lastOpacity !== gOpStr) {
         g.el.style.opacity = gOpStr
         g._lastOpacity = gOpStr
       }
-      const gTrStr = `translate(${(cx - half).toFixed(1)}px,${(cy - half).toFixed(1)}px) scale(${wo.destGalaxyScale.toFixed(3)}) rotate(${g.rot}deg)`
+      const gTrStr = `translate(${(cx - half).toFixed(1)}px,${(cy - half).toFixed(1)}px) scale(${warp.out.destGalaxyScale.toFixed(3)}) rotate(${g.rot}deg)`
       if (g._lastTransform !== gTrStr) {
         g.el.style.transform = gTrStr
         g._lastTransform = gTrStr
@@ -1749,10 +1880,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const distAlpha = Math.min(1, nNorm * 3)
       const fadeEdge = nNorm > 0.85 ? 1 - (nNorm - 0.85) / 0.15 : 1
       let opacity = distAlpha * fadeEdge * 0.65
-      if (hyperActive || warpActive) {
-        const fadeTime = hyperActive ? hyperspaceElapsed : wo.flightSec
-        opacity *= Math.max(0, 1 - fadeTime * 2)
-      }
+      if (warpActive) opacity *= Math.max(0, 1 - wo.flightSec * 2)
       const nOpStr = opacity.toFixed(3)
       if (n._lastOpacity !== nOpStr) {
         n.el.style.opacity = nOpStr
@@ -1854,6 +1982,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       registerSkyDebug(null)
     }
     resetGalaxyWarp(warp)
+    resetUniverseHop(hop)
+    releaseHopSprites()
+    wasHopFlight = false
     destGalaxy = null
     headlightGradient = null
     warpNebulaHidden.value = false

@@ -995,6 +995,8 @@ export const useGalaxyStore = defineStore('galaxy', {
       // Block the warp while the next tier is still locked — the player must pay
       // the tier-unlock cost first (see unlockNextTier / TierUnlockPanel).
       if (!this.isComplete || this.pendingTransition || this.nextTierLocked) return
+      // Der Universumssprung faehrt auf derselben Schleife — nie zwei Fluege zugleich.
+      if (useGameStore().isHyperspaceActive) return
       this.pendingTransition = true
       // If the Bard profile is open, close it first so the hyperspace warp
       // plays in full view: the orbit-background rAF loop (paused while the

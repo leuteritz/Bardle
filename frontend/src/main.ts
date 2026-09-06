@@ -12,6 +12,10 @@ import {
   HUD_COLUMN_INSET_WIDE,
   HUD_COLUMN_MAX_W,
   HUD_COLUMN_MIN_W,
+  UNIVERSE_HOP_HUD_IN_MS,
+  UNIVERSE_HOP_HUD_OUT_MS,
+  UNIVERSE_HOP_HUD_SHIFT_PX,
+  UNIVERSE_HOP_HUD_STAGGER_MS,
 } from '@/config/constants'
 import { usePersistence } from '@/composables/system/usePersistence'
 import { useBattleStore } from '@/stores/battle/battleStore'
@@ -56,6 +60,12 @@ document.documentElement.style.setProperty('--hud-col-min', `${HUD_COLUMN_MIN_W}
 document.documentElement.style.setProperty('--hud-col-max', `${HUD_COLUMN_MAX_W}px`)
 document.documentElement.style.setProperty('--hud-col-inset', `${HUD_COLUMN_INSET}px`)
 document.documentElement.style.setProperty('--hud-col-inset-wide', `${HUD_COLUMN_INSET_WIDE}px`)
+
+// Die HUD-Fahrt des Universumssprungs (html.uhop-hud-out / -in in App.vue).
+document.documentElement.style.setProperty('--uhop-hud-out', `${UNIVERSE_HOP_HUD_OUT_MS}ms`)
+document.documentElement.style.setProperty('--uhop-hud-in', `${UNIVERSE_HOP_HUD_IN_MS}ms`)
+document.documentElement.style.setProperty('--uhop-hud-stagger', `${UNIVERSE_HOP_HUD_STAGGER_MS}ms`)
+document.documentElement.style.setProperty('--uhop-hud-shift', `${UNIVERSE_HOP_HUD_SHIFT_PX}px`)
 
 app.mount('#app')
 
