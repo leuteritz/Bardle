@@ -639,8 +639,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
               v-tip="`Level ${slot.level} · ${slot.perk.desc}`"
             >
               <Icon :icon="slot.perk.icon" width="25" height="25" />
-              <small>Lv. {{ slot.level }}</small><strong>{{ slot.perk.name }}</strong
-              ><span>{{ slot.perk.desc }}</span>
+              <small>Lv. {{ slot.level }}</small><strong>{{ slot.perk.name }}</strong>
             </article>
           </div>
           <div v-else class="sdp-perk-empty">
@@ -1479,5 +1478,255 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   .sdp-skin {
     height: 52px;
   }
+}
+
+.sdp-panel {
+  background: #111008;
+  border-left-color: #7a4e20;
+}
+.sdp-roster {
+  min-height: 94px;
+  padding: 9px 14px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 24%, #111008), #111008 72%);
+}
+.sdp-seat-list {
+  gap: 10px;
+}
+.sdp-seat {
+  height: 74px;
+  border-color: #5c3310;
+  background: #141410;
+}
+.sdp-seat--main {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff2b5 32%, transparent);
+}
+.sdp-seat-label {
+  bottom: 6px;
+  left: 8px;
+  font-size: 12px;
+}
+.sdp-hero {
+  min-height: 364px;
+  grid-template-columns: minmax(286px, 39%) minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  column-gap: 24px;
+  padding: 14px 18px;
+  background: linear-gradient(115deg, color-mix(in srgb, var(--rc) 16%, #17150e), #141410 58%);
+}
+.sdp-portrait {
+  grid-row: 1 / 6;
+  outline-color: #7a4e20;
+}
+.sdp-identity {
+  padding: 5px 0 2px;
+}
+.sdp-seat-name {
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.sdp-identity h2 {
+  font-size: clamp(42px, 3vw, 54px);
+  letter-spacing: 0.02em;
+}
+.sdp-meta {
+  gap: 6px 12px;
+  margin-top: 7px;
+  font-size: 12px;
+}
+.sdp-meta span {
+  padding: 2px 0;
+}
+.sdp-skin-trigger {
+  top: 14px;
+  right: 18px;
+  min-height: 35px;
+  font-size: 12px;
+}
+.sdp-progression {
+  padding: 5px 0 10px;
+}
+.sdp-xp-head {
+  margin-bottom: 7px;
+  font-size: 18px;
+}
+.sdp-xp-head small {
+  font-size: 12px;
+}
+.sdp-xp-track {
+  height: 10px;
+}
+.sdp-hero-stat-block {
+  grid-column: 2;
+  padding: 0;
+}
+.sdp-hero-stat-head {
+  min-height: 27px;
+  color: #e8c040;
+  font-size: 12px;
+}
+.sdp-hero-stat-head small {
+  font-size: 10px;
+}
+.sdp-hero-stat-grid {
+  gap: 8px;
+  padding-top: 8px;
+}
+.sdp-stat {
+  min-height: 70px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 9px;
+  padding: 8px 9px;
+  border-color: color-mix(in srgb, var(--sc) 54%, #3e200a);
+  background: linear-gradient(115deg, color-mix(in srgb, var(--sc) 16%, #181710), #171610 72%);
+}
+.sdp-stat > svg {
+  width: 27px;
+  height: 27px;
+}
+.sdp-stat small {
+  font-size: 10px;
+}
+.sdp-stat strong {
+  font-size: 29px;
+  line-height: 1;
+}
+.sdp-stat div span {
+  font-size: 10px;
+}
+.sdp-stat i {
+  right: 10px;
+  bottom: 5px;
+  left: 10px;
+  height: 3px;
+}
+.sdp-level-button {
+  grid-column: 2;
+  min-height: 48px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  font-size: 16px;
+}
+.sdp-level-cost {
+  font-size: 16px;
+}
+.sdp-shortfall {
+  margin-top: 4px;
+  font-size: 12px;
+}
+.sdp-workspace {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.82fr) minmax(0, 1.45fr);
+  gap: 14px;
+  padding: 14px 18px 16px;
+  background: #111008;
+}
+.sdp-section {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #3e200a;
+  background: #15140f;
+}
+.sdp-section-head {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0 12px;
+  border-bottom: 2px solid #5c3310;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--rc) 18%, #1e1006), #1e1006);
+  font-size: 14px;
+}
+.sdp-section-head small {
+  font-size: 11px;
+}
+.sdp-equipment-list {
+  flex: 1;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  padding: 9px;
+}
+.sdp-equipment {
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+  padding: 10px;
+  border: 1px solid #493116;
+  background: #1c1c18;
+}
+.sdp-equipment:hover {
+  background: color-mix(in srgb, var(--rc) 14%, #1c1c18);
+}
+.sdp-equipment img {
+  width: 42px;
+  height: 42px;
+}
+.sdp-equipment-icon {
+  font-size: 32px;
+}
+.sdp-equipment strong {
+  font-size: 16px;
+}
+.sdp-section--perks {
+  grid-column: 2;
+  grid-row: 1;
+}
+.sdp-active-perks {
+  flex: 1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+}
+.sdp-active-perk {
+  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 2px 9px;
+  min-height: 0;
+  padding: 9px;
+  border-left-width: 4px;
+}
+.sdp-active-perk > svg {
+  grid-row: 1 / 3;
+  align-self: center;
+  width: 30px;
+  height: 30px;
+}
+.sdp-active-perk small {
+  align-self: end;
+  font-size: 11px;
+}
+.sdp-active-perk strong {
+  align-self: start;
+  font-size: 18px;
+  line-height: 1.05;
+}
+.sdp-active-perk span {
+  display: none;
+}
+.sdp-perk-empty {
+  flex: 1;
+  justify-content: center;
+  margin: 10px;
+  font-size: 15px;
+}
+.sdp-perk-choices {
+  margin: 0 10px 10px;
+}
+@media (max-height: 1100px) {
+  .sdp-roster { min-height: 84px; padding-block: 5px; }
+  .sdp-seat { height: 68px; }
+  .sdp-hero { min-height: 330px; padding-block: 11px; }
+  .sdp-identity h2 { font-size: 39px; }
+  .sdp-stat { min-height: 59px; padding-block: 6px; }
+  .sdp-stat strong { font-size: 25px; }
+  .sdp-level-button { min-height: 42px; margin-top: 7px; }
+  .sdp-workspace { gap: 10px; padding: 10px 14px 12px; }
+  .sdp-section-head { min-height: 35px; }
+  .sdp-equipment-list, .sdp-active-perks { gap: 6px; padding: 7px; }
+  .sdp-equipment { padding: 7px; }
+  .sdp-equipment img { width: 34px; height: 34px; }
+  .sdp-equipment strong { font-size: 14px; }
+  .sdp-active-perk { padding: 7px; }
+  .sdp-active-perk strong { font-size: 15px; }
 }
 </style>
