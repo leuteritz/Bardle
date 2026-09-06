@@ -292,8 +292,11 @@ function handleEvolve(): void {
           v-tip="phaseAstroName"
           :style="{ width: sunDiameter + 'px', height: sunDiameter + 'px' }"
         >
-          <CometDisc v-if="isComet" :diameter="sunDiameter" />
-          <PhaseSunDisc v-else :diameter="sunDiameter" :pulse="true" />
+          <!-- Not before the stage has measured itself: a body without a box. -->
+          <template v-if="sunDiameter > 0">
+            <CometDisc v-if="isComet" :diameter="sunDiameter" />
+            <PhaseSunDisc v-else :diameter="sunDiameter" :pulse="true" />
+          </template>
 
           <!-- Readiness announced by the body: two rings breaking out of the
                core, half a cycle apart. transform + opacity only. -->

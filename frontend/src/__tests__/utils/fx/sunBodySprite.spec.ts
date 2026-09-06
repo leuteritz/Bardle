@@ -3,6 +3,7 @@ import {
   SUN_BODY_PAINTERS,
   buildSunSprite,
   isSunBandLayer,
+  mountSunSprites,
   sunBandStrip,
   sunBodyFor,
   sunBodyRadiusFraction,
@@ -64,6 +65,14 @@ function run(b: SunBody, layer: SunSpriteLayer, detail: SunDetail): string[] {
   const paint = SUN_BODY_PAINTERS[b.kind][layer]
   if (!paint) return []
   paint(ctx, R * 2, R * 2, R, sunPaletteFor(b), b, detail)
+  return ops
+}
+
+function runAt(b: SunBody, layer: SunSpriteLayer, detail: SunDetail, r: number): string[] {
+  const { ctx, ops } = recordingCtx()
+  const paint = SUN_BODY_PAINTERS[b.kind][layer]
+  if (!paint) return []
+  paint(ctx, r * 2, r * 2, r, sunPaletteFor(b), b, detail)
   return ops
 }
 
@@ -421,6 +430,30 @@ describe('Geometrie und Verträge', () => {
 
   it('buildSunSprite liefert in jsdom null statt zu werfen', () => {
     expect(buildSunSprite('core', body('star'), 200, 2, 2)).toBeNull()
+  })
+
+  // Der Reiter Journey misst seine Buehne erst nach dem Mount und rendert den
+  // Koerper im ersten Frame mit 0; bei r = 0 teilte orbitClumps 0 durch 0, und
+  // der geworfene TypeError legte Vues Scheduler still.
+  it('kein Painter erzeugt eine nicht-endliche Zahl, auch ohne Kasten', () => {
+    for (const kind of KINDS) {
+      for (const detail of [0, 1, 2] as const) {
+        for (const layer of sunSpriteLayers(body(kind, 3), detail, true)) {
+          const bad = runAt(body(kind, 3), layer, detail, 0).filter((o) =>
+            /NaN|Infinity/.test(o),
+          )
+          expect(bad, `${kind}/${layer}/${detail}: ${bad[0]}`).toEqual([])
+        }
+      }
+    }
+  })
+
+  it('mountSunSprites merkt sich ohne Kasten keinen Schluessel', () => {
+    const host = document.createElement('div')
+    for (const px of [0, -1, Number.NaN]) {
+      mountSunSprites(host, body('blackHole'), { px, dpr: 1 })
+      expect(host.dataset.spriteKey).toBeUndefined()
+    }
   })
 
   it('die Endphase ist thermisch, nicht violett', () => {
