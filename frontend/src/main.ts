@@ -18,6 +18,7 @@ import {
   UNIVERSE_HOP_HUD_STAGGER_MS,
 } from '@/config/constants'
 import { usePersistence } from '@/composables/system/usePersistence'
+import { installErrorReporting, reportFault } from '@/composables/system/useErrorReporting'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { vInkCenter } from '@/utils/ui/textInkOffset'
 import { vTip } from '@/utils/ui/tipDirective'
@@ -33,15 +34,21 @@ import {
   telemetryRows,
 } from '@/utils/game/telemetry'
 
+// Als erstes, noch vor createApp: was davor wirft, ist unerreichbar — dann
+// rendert die App aber ohnehin nichts, und der leere Schirm IST die Meldung.
+installErrorReporting()
+
 const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
 // Ohne Handler wirft Vue aus flushPostFlushCbs weiter und der Scheduler bleibt
-// stehen: ein Fehler in einer Ebene legte die ganze Anwendung still.
-app.config.errorHandler = (err, _instance, info) => {
-  console.error('[bardle] ' + info, err)
-}
+// stehen: ein Fehler in einer Ebene legte die ganze Anwendung still. Er meldet
+// nicht mehr selbst in die Konsole — das tut der Reporter, und zwar genau
+// einmal; sonst stuende jeder Vue-Fehler doppelt in der Spur.
+app.config.errorHandler = (err, _instance, info) => reportFault('vue', err, info)
+// Bewusst KEIN warnHandler: er unterdrueckte Vues eigene Ausgabe, und die
+// console.warn-Umhuellung greift die Warnung ohnehin ab.
 app.config.globalProperties.$formatNumber = formatNumber
 // v-ink-center: rückt zentrierten Text auf seine optische Achse — MedievalSharp
 // setzt die Glyphen asymmetrisch in ihre Boxen (siehe utils/ui/textInkOffset.ts).

@@ -47,6 +47,37 @@ describe('formatEventLines', () => {
     expect(new Set(offsets).size).toBe(1)
   })
 
+  it('hängt den Wiederholungszähler an, aber erst ab zwei', () => {
+    const once = { ...event('error', 'Boom.', at(9, 0, 0)), repeat: 1 }
+    const many = { ...event('error', 'Boom.', at(9, 0, 0)), repeat: 12 }
+
+    expect(formatEventLine(once)).toBe(formatEventLine(event('error', 'Boom.', at(9, 0, 0))))
+    expect(formatEventLine(many)).toMatch(/Boom\. \(×12\)$/)
+  })
+
+  /* Copy ist der Ersatz fuer F12: faellt der Stack hier weg, muss der Spieler
+     die DevTools doch wieder oeffnen — und genau das soll entfallen. */
+  it('rückt den Stack einer Fehlerzeile unter die Nachrichtenspalte', () => {
+    const withStack = {
+      ...event('error', 'TypeError: bad value', at(9, 0, 0)),
+      detail: 'TypeError: bad value\n    at wisp (spaceBody.ts:310)',
+    }
+    const lines = formatEventLine(withStack).split('\n')
+
+    expect(lines).toHaveLength(3)
+    const column = lines[0].indexOf('TypeError')
+    for (const line of lines.slice(1)) {
+      expect(line.startsWith(' '.repeat(column))).toBe(true)
+    }
+  })
+
+  it('lässt eine Zeile ohne Zähler und ohne Stack zeichengleich', () => {
+    const plain = event('info', 'Nothing special.', at(9, 0, 0))
+    expect(formatEventLine({ ...plain, repeat: undefined, detail: undefined })).toBe(
+      formatEventLine(plain),
+    )
+  })
+
   it('trennt Zeilen mit Zeilenumbruch und bleibt bei leerer Eingabe leer', () => {
     expect(formatEventLines([])).toBe('')
     const two = formatEventLines([

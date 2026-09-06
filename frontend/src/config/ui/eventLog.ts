@@ -2,7 +2,7 @@
 // benannten Logger, mit denen Stores ein Ereignis eintragen. Beide Haelften
 // haengen am selben useEventLog-Composable und lagen vorher als zwei
 // Ein-Zweck-Dateien nebeneinander.
-import { useEventLog, type GameEventType } from '@/composables/ui/useEventLog'
+import { useEventLog, type GameEvent, type GameEventType } from '@/composables/ui/useEventLog'
 import {
   ROLE_COLORS,
   MISSION_ACCENT_HEX,
@@ -43,6 +43,14 @@ export const typeColor: Record<GameEventType, string> = {
   // ERREICHT oder VERLOREN ist. Hier ist nur etwas vorbeigekommen.
   landfall: LANDFALL_ACCENT_HEX,
   info: '#c8b89a',
+  // Das Projekt-Rot, und es meint hier keinen Spielinhalt: die Maschine
+  // meldet sich selbst. Bewusst NICHT das Magenta des Void — der meldet
+  // einen Verlust IM Spiel, dieser Ton einen Defekt AN ihm.
+  error: '#cc6050',
+  // Stumpfes Terrakotta: dieselbe Familie wie der Fehler, nur leiser. Es darf
+  // nicht wie combat (#fb923c) oder chronicle (#e8c040) lesen — die beiden
+  // sind gesaettigtes Orange und Gold und melden Spielereignisse.
+  warning: '#c98a72',
 }
 
 export type EventGroupId = 'combat' | 'cosmos' | 'progress' | 'system'
@@ -67,6 +75,8 @@ export const GROUP_OF_TYPE: Record<GameEventType, EventGroupId> = {
   augment: 'progress',
   prestige: 'progress',
   info: 'system',
+  error: 'system',
+  warning: 'system',
 }
 
 /** Reihenfolge = Reihenfolge der Tabs im Panel. `all` filtert nicht. */
@@ -235,4 +245,20 @@ export function logUniverseReached(label: string, providenceName: string | null)
     providenceName ? `Departed to ${label} — under ${providenceName}` : `Departed to ${label}`,
     'prestige',
   )
+}
+
+/**
+ * Etwas im Spiel ist kaputtgegangen — die einzigen beiden Zeilen, die nicht von
+ * Spielinhalt berichten, sondern von der Maschine darunter. Sie geben die Zeile
+ * zurück, weil der Reporter sie bei einer Wiederholung selbst hochzählt.
+ */
+export function logRuntimeError(message: string, detail?: string): GameEvent {
+  const { addEvent } = useEventLog()
+  return addEvent(message, 'error', detail)
+}
+
+/** Dieselbe Quelle, nur leiser — sie schaltet den Reiter nicht um. */
+export function logRuntimeWarning(message: string, detail?: string): GameEvent {
+  const { addEvent } = useEventLog()
+  return addEvent(message, 'warning', detail)
 }

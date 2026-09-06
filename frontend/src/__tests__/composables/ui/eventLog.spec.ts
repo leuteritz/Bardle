@@ -111,6 +111,40 @@ describe('useEventLog', () => {
     expect(historySize.value).toBe(1)
   })
 
+  /**
+   * Der Reporter braucht die Zeile, die er gerade geschrieben hat, um ihren
+   * `repeat` bei der naechsten Wiederholung hochzuzaehlen. Ohne den Rueckgabe-
+   * wert muesste er den Ring danach absuchen.
+   */
+  it('gibt die geschriebene Zeile zurück', () => {
+    const { addEvent, readHistory } = useEventLog()
+    const event = addEvent('boom', 'error', 'stack here')
+
+    expect(event.type).toBe('error')
+    expect(event.detail).toBe('stack here')
+    expect(readHistory()[0]).toBe(event)
+  })
+
+  /**
+   * `historyVersion` selbst hochzuzaehlen umginge die rAF-Drossel — ein Fehler
+   * in einer Frame-Schleife triebe die Rechenkette der Spur dann 60-mal je
+   * Sekunde ueber 300 Eintraege.
+   */
+  it('meldet eine geänderte Zeile über dieselbe Frame-Drossel', () => {
+    const { addEvent, touchHistory, historyVersion } = useEventLog()
+    const event = addEvent('boom', 'error')
+    runFrame()
+    const before = historyVersion.value
+
+    event.repeat = 2
+    touchHistory()
+    touchHistory()
+    expect(historyVersion.value).toBe(before)
+
+    runFrame()
+    expect(historyVersion.value).toBe(before + 1)
+  })
+
   it('leert mit clearEvents sofort, ohne auf einen Frame zu warten', () => {
     const { addEvent, clearEvents, historySize, readHistory } = useEventLog()
     addEvent('gone')

@@ -19,12 +19,18 @@ export type GameEventType =
   | 'void'
   | 'landfall'
   | 'info'
+  | 'error'
+  | 'warning'
 
 export interface GameEvent {
   id: number
   message: string
   type: GameEventType
   timestamp: number
+  /** Voller Stack einer Fehlerzeile — nur Copy liest ihn, die Spur nie. */
+  detail?: string
+  /** Wie oft dieselbe Meldung in diese Zeile gefallen ist; leer heisst einmal. */
+  repeat?: number
 }
 
 // Die Historie liegt in einem festen Ring und ist BEWUSST nicht reaktiv —
@@ -78,11 +84,24 @@ function readHistory(limit = EVENT_LOG_HISTORY_MAX): GameEvent[] {
 }
 
 export function useEventLog() {
-  function addEvent(message: string, type: GameEventType = 'info') {
+  function addEvent(message: string, type: GameEventType = 'info', detail?: string): GameEvent {
     // Wanduhrzeit: der Zeitstempel wird als Datum gelesen, nicht gegen die
     // Spieluhr gerechnet.
+    const event: GameEvent = { id: nextId++, message, type, timestamp: Date.now(), detail }
+    pushHistory(event)
+    return event
+  }
 
-    pushHistory({ id: nextId++, message, type, timestamp: Date.now() })
+  /**
+   * Eine bestehende Zeile hat sich an Ort und Stelle geaendert.
+   *
+   * Der Weg der Fehlerverdichtung: wer `repeat` an seiner Zeile hochzaehlt,
+   * meldet es hierueber. Nicht `historyVersion` selbst hochzaehlen — genau der
+   * Ref traegt die rAF-Drossel, und ein Fehler in einer Frame-Schleife triebe
+   * sonst die ganze Rechenkette der Spur 60-mal je Sekunde ueber 300 Eintraege.
+   */
+  function touchHistory(): void {
+    scheduleFlush()
   }
 
   function clearEvents() {
@@ -102,6 +121,7 @@ export function useEventLog() {
     historySize,
     readHistory,
     addEvent,
+    touchHistory,
     clearEvents,
   }
 }
