@@ -49,14 +49,14 @@ function run(dtMs: number, untilMs: number, rand = seeded(7)) {
   const state = createUniverseHop()
   startUniverseHop(state, rand)
   const phases: UniverseHopPhase[] = ['depart']
-  const edges = { kick: 0, wash: 0, commit: 0, hudIn: 0, done: 0 }
-  const at = { kick: -1, wash: -1, commit: -1, hudIn: -1, done: -1 }
+  const edges = { wash: 0, commit: 0, hudIn: 0, done: 0 }
+  const at = { wash: -1, commit: -1, hudIn: -1, done: -1 }
   let t = 0
   while (t < untilMs) {
     t += dtMs
     stepUniverseHop(state, dtMs, MIN_EDGE, FAR)
     const o = state.out
-    for (const k of ['kick', 'wash', 'commit', 'hudIn', 'done'] as const) {
+    for (const k of ['wash', 'commit', 'hudIn', 'done'] as const) {
       if (o[k]) {
         edges[k]++
         at[k] = t
@@ -86,8 +86,7 @@ describe('universeHop — Phasen und Flanken', () => {
 
   it.each([16.7, 100])('feuert jede Flanke genau einmal (dt %s ms)', (dt) => {
     const r = run(dt, UNIVERSE_HOP_TOTAL_MS + 500)
-    expect(r.edges).toEqual({ kick: 1, wash: 1, commit: 1, hudIn: 1, done: 1 })
-    expect(r.at.kick).toBeLessThan(dt + 0.01)
+    expect(r.edges).toEqual({ wash: 1, commit: 1, hudIn: 1, done: 1 })
     const expected = {
       wash: UNIVERSE_HOP_WASH_AT_MS,
       commit: UNIVERSE_HOP_COMMIT_AT_MS,
@@ -104,14 +103,12 @@ describe('universeHop — Phasen und Flanken', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(3))
     stepUniverseHop(state, UNIVERSE_HOP_TOTAL_MS + 1, MIN_EDGE, FAR)
-    expect(state.out.kick).toBe(true)
     expect(state.out.wash).toBe(true)
     expect(state.out.commit).toBe(true)
     expect(state.out.hudIn).toBe(true)
     expect(state.out.done).toBe(true)
     expect(state.out.phase).toBe('idle')
     stepUniverseHop(state, 16, MIN_EDGE, FAR)
-    expect(state.out.kick).toBe(false)
     expect(state.out.wash).toBe(false)
     expect(state.out.commit).toBe(false)
     expect(state.out.hudIn).toBe(false)
@@ -132,13 +129,18 @@ describe('universeHop — Kurven', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(11))
     let last = 1
+    let maxStep = 0
     let t = 0
     while (t < DEPART_END) {
       t += 16.7
       stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
-      expect(state.out.speed).toBeGreaterThanOrEqual(last - 1e-9)
+      // Am Phasenübergang setzt der Shimmer (±5 %) ein — kein Rückwärtsknick, nur Atmen.
+      expect(state.out.speed).toBeGreaterThanOrEqual(last - 0.05)
+      maxStep = Math.max(maxStep, state.out.speed - last)
       last = state.out.speed
     }
+    // Kein Sprung je Frame — der Schub ist eine Kurve.
+    expect(maxStep).toBeLessThan((UNIVERSE_HOP_SPEED_PEAK - 1) * 0.04)
     expect(state.out.speed).toBeGreaterThan(UNIVERSE_HOP_SPEED_PEAK * 0.93)
     while (t < PASSAGE_END - 20) {
       t += 16.7
@@ -237,6 +239,16 @@ describe('universeHop — Kurven', () => {
     expect(state.out.roll).toBe(0)
     expect(state.out.tunnelT).toBe(0)
     expect(state.out.wallAlpha).toBe(0)
+  })
+
+  it('beginnt weich: beim Heben des Schleiers ist das Feld noch nahe der Ruhe', () => {
+    const state = createUniverseHop()
+    startUniverseHop(state, seeded(17))
+    // Der Schleier hebt ~450 ms nach dem Start der Maschine.
+    stepUniverseHop(state, 450, MIN_EDGE, FAR)
+    expect(state.out.speed).toBeLessThan(UNIVERSE_HOP_SPEED_PEAK * 0.3)
+    const [ax, ay] = universeHopFocusAt(state, 0, MIN_EDGE)
+    expect(Math.hypot(state.out.focusX, state.out.focusY)).toBeLessThan(Math.hypot(ax, ay) * 0.3)
   })
 
   it('würfelt das Roll-Vorzeichen', () => {

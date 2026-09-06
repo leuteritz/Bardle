@@ -7,8 +7,7 @@
 // jede Flanke feuert genau einmal, auch über ein einziges grosses Delta.
 //
 // Choreografie (Zeiten aus config/constants/fx.ts):
-//   kick       = erster Frame            Ruck des Schubs
-//   depart     0 … DEPART_MS             direkt auf Überlicht, Fokus zum Startkurs
+//   depart     0 … DEPART_MS             weicher Schub auf Überlicht, Fokus zum Startkurs
 //   approach   … + APPROACH_MS           der Kurs KURVT (Bank), das Tor wächst
 //   passage    … + PASSAGE_MS            Tunnelreise: Echo-Ringe, Twist, Wände
 //   wash       = Ausgang − WASH_PEAK·WASH  DOM-Wash im Zielton
@@ -71,7 +70,6 @@ export interface UniverseHopOut extends WarpFlightOut {
   /** Roll des Sternfelds um den Fluchtpunkt in rad/s, nur im Tunnel; wechselt das Vorzeichen. */
   roll: number
   /** Flanken — je genau einen Frame lang wahr. */
-  kick: boolean
   wash: boolean
   commit: boolean
   hudIn: boolean
@@ -87,7 +85,6 @@ export interface UniverseHopState {
   courseAz1: number
   courseR1: number
   rollSign: number
-  kicked: boolean
   washed: boolean
   committed: boolean
   hudShown: boolean
@@ -120,7 +117,6 @@ export function createUniverseHop(): UniverseHopState {
     courseAz1: 0,
     courseR1: 0,
     rollSign: 1,
-    kicked: false,
     washed: false,
     committed: false,
     hudShown: false,
@@ -144,7 +140,6 @@ export function createUniverseHop(): UniverseHopState {
       tunnelT: 0,
       tunnelSec: 0,
       roll: 0,
-      kick: false,
       wash: false,
       commit: false,
       hudIn: false,
@@ -227,7 +222,6 @@ export function stepUniverseHop(
   farCorner: number,
 ): void {
   const o = state.out
-  o.kick = false
   o.wash = false
   o.commit = false
   o.hudIn = false
@@ -238,10 +232,6 @@ export function stepUniverseHop(
   state.elapsedMs += dt
   const e = state.elapsedMs
 
-  if (!state.kicked) {
-    state.kicked = true
-    o.kick = true
-  }
   if (!state.washed && e >= UNIVERSE_HOP_WASH_AT_MS) {
     state.washed = true
     o.wash = true
@@ -289,17 +279,20 @@ export function stepUniverseHop(
   const rPass = UNIVERSE_HOP_PORTAL_PASS_K * farCorner
 
   if (phase === 'depart') {
+    // EIN Easing für Schub, Schwenk, Spur und Tönung — nichts knickt, nichts
+    // springt: ein Ruck oder ein Sprung des Fluchtpunkts im ersten sichtbaren
+    // Moment las sich als Kamerawechsel.
     const t = e / UNIVERSE_HOP_DEPART_MS
     const k = easeInOutCubic(t)
     const [fx, fy] = universeHopFocusAt(state, 0, minEdge)
-    o.speed = 1 + PEAK_SPAN * t * t
+    o.speed = 1 + PEAK_SPAN * k
     o.focusX = fx * k
     o.focusY = fy * k
-    o.streakGain = clamp01(t * 2)
-    o.trailFade = 1 - (1 - WARP_TRAIL_FADE) * easeOutCubic(t)
-    o.tintGain = t
-    o.headlight = t * clamp01((o.speed - 1) / PEAK_SPAN)
-    o.ambientGain = clamp01(1 - t / 0.4)
+    o.streakGain = k
+    o.trailFade = 1 - (1 - WARP_TRAIL_FADE) * k
+    o.tintGain = k
+    o.headlight = k * k
+    o.ambientGain = 1 - k
     o.flightSec = e / 1000
     o.portalR = 0
     o.portalAlpha = 0

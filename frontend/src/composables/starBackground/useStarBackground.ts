@@ -1174,10 +1174,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           uiStore.setUniverseHopPhase('threshold')
           warpVignetteOn.value = false
         }
-        // Der Ruck kommt vom Kurs her: Schub drückt nach hinten, der Austritt
-        // setzt den Körper — beides über den Flug-Helm, kein eigenes Wackeln.
+        // Der einzige Ruck sitzt am Tunnelausgang, über den Flug-Helm; ein Ruck
+        // beim Aufbruch schwang noch, als der Schleier hob — ein Kamerasprung.
         const hopFrom = Math.atan2(ho.focusY, ho.focusX)
-        if (ho.kick) kickFlightJolt('hop', hopFrom)
         if (ho.commit) {
           // Der Reset läuft unter dem Peak des Wash. Die alte Welt geht HIER
           // (nicht auf done — das löschte den Schub gleich wieder), die neue

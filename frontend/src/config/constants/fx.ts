@@ -54,8 +54,9 @@ export const STAR_RESCUE_BURST_RAY_MAX_LEN = 0.42
 // Kein eigenes Canvas: die Maschine in utils/orbit/universeHop.ts tickt mit
 // dem rAF-Delta der Sternfeld-Schleife, ihre Flanken schalten den Store.
 // Alle Zeiten Wanduhr; das Netz in UniverseHopVeil ist ×2.
-/** Der Aufbruch geht direkt auf Überlicht — kurz, er liegt grösstenteils unter dem Schleier. */
-export const UNIVERSE_HOP_DEPART_MS = 500
+/** Der Aufbruch ist SICHTBAR: der Schleier hebt bei ~450 ms, Schub und Schwenk laufen mit
+ *  EINEM Easing bis 1400 — man sieht das Strecken der Sterne, keinen Schnitt. */
+export const UNIVERSE_HOP_DEPART_MS = 1400
 export const UNIVERSE_HOP_APPROACH_MS = 5000
 /** Der Durchflug: Ringtunnel und Roll, der Wash liegt an seinem AUSGANG. */
 export const UNIVERSE_HOP_PASSAGE_MS = 4500
