@@ -116,6 +116,7 @@ export default defineComponent({
     showRings: { type: Boolean, default: true },
     /** Position the sun within its parent (absolute) instead of the viewport (fixed). */
     contained: { type: Boolean, default: false },
+    flightScale: { type: Number, default: 1 },
   },
   setup(props) {
     const combatStore = useCombatStore()
@@ -124,7 +125,8 @@ export default defineComponent({
     const solarStore = useSolarUpgradeStore()
 
     const effectiveRadius = computed(() => props.radius ?? planetShopStore.currentSunRadius)
-    const discDiameter = computed(() => effectiveRadius.value * SUN_BG_DISC_RADIUS_FACTOR)
+    const visualRadius = computed(() => effectiveRadius.value * props.flightScale)
+    const discDiameter = computed(() => visualRadius.value * SUN_BG_DISC_RADIUS_FACTOR)
 
     // Der Körper zuckt beim Treffer: die Sternfeld-Schleife schreibt seinen Transform.
     const host = ref<HTMLDivElement | null>(null)
@@ -295,7 +297,7 @@ export default defineComponent({
     })
 
     const sunContainerVars = computed((): Record<string, string> => ({
-      '--sun-r': `${effectiveRadius.value}px`,
+      '--sun-r': `${visualRadius.value}px`,
     }))
 
     // Körperwechsel Komet → Spark: der alte Körper bleibt SUN_BODY_SWAP_MS stehen

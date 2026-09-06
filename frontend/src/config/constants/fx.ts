@@ -119,6 +119,11 @@ export const UNIVERSE_HOP_HUD_OUT_MS = 140
 export const UNIVERSE_HOP_HUD_IN_MS = 280
 export const UNIVERSE_HOP_HUD_STAGGER_MS = 60
 export const UNIVERSE_HOP_HUD_SHIFT_PX = 8
+export const FLIGHT_FORMATION = {
+  idle: { bodyScale: 1, orbitScale: 1 },
+  galaxy: { bodyScale: 0.88, orbitScale: 1.12 },
+  universe: { bodyScale: 0.7, orbitScale: 0.7 },
+} as const
 /**
  * Abstand zwischen dem Reset (commit-Flanke an der Schwelle) und der
  * Ankunfts-Zeremonie des Herolds. Der Herold (9700) liegt ÜBER dem Sternfeld

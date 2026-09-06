@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="shown"
+    v-if="shown && !flight.active.value"
     class="lfb-layer"
     :style="{
       '--lfb-px': `${bodyPx}px`,
@@ -98,6 +98,7 @@ import { gameNow } from '@/utils/game/gameClock'
 import { hudFieldMetrics } from '@/utils/ui/hudField'
 import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { useFlightCinematic } from '@/composables/orbit/useFlightCinematic'
 import {
   drifterField,
   drifterLightAngleDeg,
@@ -163,6 +164,7 @@ const galaxyStore = useGalaxyStore()
 const planetShop = usePlanetShopStore()
 const { activeLandfall } = storeToRefs(galaxyStore)
 const { isIdleRenderingPaused } = useRenderingPaused()
+const flight = useFlightCinematic()
 const { headerCenterArc } = useHeaderCenterArc()
 
 interface Snapshot {
@@ -415,7 +417,7 @@ function tick(): void {
   frame = requestAnimationFrame(tick)
   // Liegt ein Modal darüber, endet der Frame vor dem Schreiben. Die Schleife
   // läuft weiter — ab- und wieder anmelden kostet mehr als der leere Durchlauf.
-  if (isIdleRenderingPaused.value) return
+  if (isIdleRenderingPaused.value || flight.active.value) return
   render()
 }
 

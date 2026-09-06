@@ -139,6 +139,7 @@ useSpaceMusic()
 /** Der Spiegel im Store ist reaktiv, die Uhr selbst nicht. */
 const isTimeWarped = computed(() => gameStore.gameSpeed !== GAME_SPEED_DEFAULT)
 const isGalaxyWarping = computed(() => galaxyStore.isGalaxyTransitioning)
+const isTravelCinematic = computed(() => isGalaxyWarping.value || gameStore.isHyperspaceActive)
 const galaxyWarpHudOutMs = `${GALAXY_WARP_HUD_OUT_MS}ms`
 const galaxyWarpHudInMs = `${GALAXY_WARP_HUD_IN_MS}ms`
 
@@ -158,10 +159,14 @@ watch(
     <div class="galaxy-tint-overlay" aria-hidden="true"></div>
     <StarBackgroundComponent />
     <NebulaFlythroughComponent />
+    <div class="w-full" :class="{ 'idle-anim-paused': isIdleRenderingPaused }">
+      <IdleGameComponent />
+    </div>
+    <UniverseHopVeil />
     <div
       class="galaxy-warp-hud"
-      :class="{ 'galaxy-warp-hud--hidden': isGalaxyWarping }"
-      :inert="isGalaxyWarping || undefined"
+      :class="{ 'galaxy-warp-hud--hidden': isTravelCinematic }"
+      :inert="isTravelCinematic || undefined"
     >
       <StarFightModal />
       <AugmentSelectionModal />
@@ -174,7 +179,6 @@ watch(
          dauerhaftes Glied in der HUD-Kontur steht und sich nie bewegen darf. -->
       <HudCardColumn />
       <RoleSelectionModal />
-      <UniverseHopVeil />
       <EventLogPanel />
       <OfflineProgressModal />
       <PauseOverlay />
@@ -191,16 +195,6 @@ watch(
           </div>
         </div>
 
-        <div class="flex flex-col w-full gap-2">
-          <div class="flex justify-center w-full">
-            <!-- While an opaque overlay covers the screen (bard tab or star-fight
-               modal), the idle layer's CSS animations pause — they'd only burn
-               compositor time invisibly -->
-            <div class="w-full" :class="{ 'idle-anim-paused': isIdleRenderingPaused }">
-              <IdleGameComponent />
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Drifters fly over the idle orbit, below every modal. Their card lives in

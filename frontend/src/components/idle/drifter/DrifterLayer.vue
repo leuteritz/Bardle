@@ -1,5 +1,5 @@
 <template>
-  <div class="drifter-layer">
+  <div v-if="!flight.active.value" class="drifter-layer">
     <!-- Edge ping: a sensor wedge on the border a drifter is entering from,
          pointing the way it will travel. The old concentric ring said only THAT
          something was there; a wedge says where to look. Without it a quiet
@@ -96,10 +96,12 @@ import {
   DRIFTER_RARITY_ORDER,
 } from '@/config/constants'
 import { gameNow } from '@/utils/game/gameClock'
+import { useFlightCinematic } from '@/composables/orbit/useFlightCinematic'
 
 const drifterStore = useDrifterStore()
 const { active, lastCollect } = storeToRefs(drifterStore)
 const { isIdleRenderingPaused } = useRenderingPaused()
+const flight = useFlightCinematic()
 const { announce, announceReceipt } = useHerald()
 const { headerCenterArc } = useHeaderCenterArc()
 
@@ -109,8 +111,10 @@ function defOf(id: string) {
 
 // Spawning pauses while the bard profile or a star fight covers the idle view:
 // a drifter nobody can see would just fly by and count as missed.
+const spawningBlocked = computed(() => isIdleRenderingPaused.value || flight.active.value)
+
 watch(
-  isIdleRenderingPaused,
+  spawningBlocked,
   (hidden) => drifterStore.setSpawningBlocked(hidden),
   { immediate: true },
 )
