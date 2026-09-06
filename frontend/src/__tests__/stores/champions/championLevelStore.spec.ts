@@ -42,6 +42,7 @@ import {
   SAVE_KEY,
 } from '@/config/constants'
 import { CHAMPION_DATA } from '@/config/champions/championData'
+import { galaxyDepth } from '@/utils/game/galaxyDepth'
 
 /** The test environment has no global localStorage → in-memory stub. */
 function makeLocalStorageStub() {
@@ -237,6 +238,9 @@ describe('champion levels — curves and stats', () => {
       const gained =
         cur.studs > prev.studs ||
         cur.facets > prev.facets ||
+        cur.rim > prev.rim ||
+        cur.glow > prev.glow ||
+        cur.heat > prev.heat ||
         (
           [
             'sweep',
@@ -354,7 +358,8 @@ describe('champion levels — store behaviour', () => {
     expect(levelStore.levelCap).toBe(
       Math.min(
         CHAMPION_LEVEL_MAX_CAP,
-        CHAMPION_LEVEL_START_CAP + 2 * CHAMPION_LEVEL_CAP_PER_GALAXY,
+        CHAMPION_LEVEL_START_CAP +
+          Math.floor(galaxyDepth(3) * CHAMPION_LEVEL_CAP_PER_GALAXY),
       ),
     )
     galaxyStore.currentGalaxy = 999

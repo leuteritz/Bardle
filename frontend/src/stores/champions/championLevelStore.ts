@@ -80,7 +80,7 @@ export const useChampionLevelStore = defineStore('championLevel', {
   }),
 
   getters: {
-    /** Level ceiling — starts at 20 and rises with every galaxy reached. */
+    /** Level ceiling — starts at 50 and rises with every galaxy reached. */
     levelCap(): number {
       const galaxy = useGalaxyStore().currentGalaxy
       return Math.min(
