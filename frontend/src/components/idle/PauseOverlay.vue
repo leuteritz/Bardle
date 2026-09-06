@@ -719,6 +719,9 @@ const pauseTick = ref(0)
 const starTick = ref(0)
 let pauseInterval: ReturnType<typeof setInterval> | null = null
 let starInterval: ReturnType<typeof setInterval> | null = null
+let lastResourceStarsKey = ''
+let lastVoidThreatKey = ''
+let lastChampionKey = ''
 
 // ── Bilanz der laufenden Pause: Schaden und Regeneration ────────────────────
 // Beides kommt aus den Lebenszeit-Zählern des playerStore (`totalDamageTaken`,
@@ -975,7 +978,6 @@ function resourceStarsKey(list: PauseResourceStar[]): string {
     .join('|')
 }
 
-let lastResourceStarsKey = ''
 function refreshResourceStars(): void {
   const next = buildResourceStars()
   const key = resourceStarsKey(next)
@@ -1066,7 +1068,6 @@ function voidThreatKey(t: PauseVoidThreat | null): string {
   return t ? `${t.name}:${t.secs}:${t.endsAt}:${t.count}:${t.worn}` : ''
 }
 
-let lastVoidThreatKey = ''
 function refreshVoidThreat(): void {
   const next = buildVoidThreat()
   const key = voidThreatKey(next)
@@ -1186,7 +1187,6 @@ function championCalloutKey(c: PauseChampionCallout | null): string {
     : ''
 }
 
-let lastChampionKey = ''
 function refreshChampionCallout(): void {
   const next = buildChampionCallout()
   const key = championCalloutKey(next)
