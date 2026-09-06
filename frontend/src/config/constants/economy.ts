@@ -867,6 +867,10 @@ export const VOYAGE_ACTION_BLOCK_EXPIRED = 'This contract has lapsed'
 
 export const VOYAGE_ACTION_SEND_LABEL = 'Click to send'
 export const VOYAGE_ACTION_COLLECT_LABEL = 'Click to collect'
+export const VOYAGE_TIP_DURATION_LABEL = 'Duration'
+export const VOYAGE_TIP_REWARD_LABEL = 'Reward'
+export const VOYAGE_TIP_CHANCE_LABEL = 'Success chance'
+export const VOYAGE_TIP_CREW_LABEL = 'Crew'
 /** Die Uhr steht IN dieser Zeile — sie ist der Grund, warum nichts zu tun ist. */
 export const VOYAGE_ACTION_WAITING_LABEL = 'Back in'
 
