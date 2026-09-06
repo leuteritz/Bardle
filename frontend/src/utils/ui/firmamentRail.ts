@@ -13,6 +13,7 @@
  */
 
 import { universes } from '@/config/progression/universes'
+import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 import { formatCompactDuration, toRoman } from '@/utils/ui/format'
 import { MS_PER_SECOND } from '@/config/constants'
 import type { UniverseDiscState } from '@/utils/fx/universeDisc'
@@ -55,7 +56,7 @@ export function buildFirmamentRailRows(input: FirmamentRailInput): FirmamentRail
      ohne Feld. */
   const galaxiesByUniverse = new Map<number, number>()
   for (const r of input.completed) {
-    const u = r.universe ?? universes[0].id
+    const u = universeOfRecord(r)
     galaxiesByUniverse.set(u, (galaxiesByUniverse.get(u) ?? 0) + 1)
   }
 

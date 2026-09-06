@@ -48,6 +48,7 @@ import { Icon } from '@iconify/vue'
 import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { toRoman } from '@/utils/ui/format'
+import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import ExpeditionMapLegend from './ExpeditionMapLegend.vue'
 import {
@@ -98,7 +99,7 @@ const RECORD_TIPS = VOYAGE_MAP_STATS_RECORD_TIPS
 
 const progress = computed(() => chartStore.progressOf(props.record.galaxy))
 const dest = computed(() => destinationFor(props.record))
-const accent = computed(() => `rgb(${minimapAccentForTheme(props.record.themeIndex)})`)
+const accent = computed(() => `rgb(${minimapAccentForTheme(props.record.themeIndex, universeOfRecord(props.record))})`)
 
 /** Ein Faktor als Aussage statt als Rechnung — dasselbe `Math.round((m - 1) * 100)`,
  *  mit dem das ganze Spiel eine Wirkung schreibt. */

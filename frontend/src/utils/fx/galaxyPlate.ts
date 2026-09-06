@@ -24,6 +24,7 @@ import {
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import type { GalaxyGeo } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor, roundLandmarkRadius } from './galaxyLandmarks'
+import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 import { landfallMarks } from '@/utils/game/landfalls'
 import { incidentMarkRadius, incidentMarks, incidentPaint } from '@/utils/game/galaxyIncidents'
 import { LANDFALL_LANDMARK_KIND } from '@/config/world/landfalls'
@@ -380,7 +381,7 @@ export function paintGalaxy(
   // ── Tiefraum, darüber die Aura der Scheibe ──
   ctx.fillStyle = '#0b0806'
   ctx.fillRect(0, 0, w, h)
-  const accent = minimapAccentForTheme(record.themeIndex)
+  const accent = minimapAccentForTheme(record.themeIndex, universeOfRecord(record))
   const geo = galaxyGeo(record.mapSeed)
 
   // Der Dunst war einmal ein bildschirmzentrierter Kreis. Er beschrieb die

@@ -459,7 +459,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     rollStep: 0,
     tint: [230, 235, 255],
   }
-  let tintThemeIndex = -1
+  let tintKey = ''
   let burstCooldown =
     FLIGHT_BURST_INTERVAL_MIN_SEC +
     Math.random() * (FLIGHT_BURST_INTERVAL_MAX_SEC - FLIGHT_BURST_INTERVAL_MIN_SEC)
@@ -1136,8 +1136,12 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           galaxyStore.commitAdvance()
         } else {
           startGalaxyWarp(warp, Math.random)
-          warpGlowFrom = themeGlowRgb(galaxyStore.currentThemeIndex)
-          warpGlowTo = themeGlowRgb(galaxyStore.pendingThemeIndex ?? galaxyStore.currentThemeIndex)
+          const warpUniverse = gameStore.currentUniverse
+          warpGlowFrom = themeGlowRgb(galaxyStore.currentThemeIndex, warpUniverse)
+          warpGlowTo = themeGlowRgb(
+            galaxyStore.pendingThemeIndex ?? galaxyStore.currentThemeIndex,
+            warpUniverse,
+          )
           warpGlowKey++
           clearEncounters(sky)
           warpNebulaHidden.value = true
@@ -1158,7 +1162,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           // gewandert. Geblieben ist der Moment selbst, und der gehört hell: ein
           // kurzer Durchbruch im Leuchtton der neuen Welt. Ein Abdunkeln würde
           // jetzt genau das zudecken, worauf alles zugelaufen ist.
-          const [fr, fg, fb] = themeGlowRgb(galaxyStore.currentThemeIndex)
+          const [fr, fg, fb] = themeGlowRgb(
+            galaxyStore.currentThemeIndex,
+            gameStore.currentUniverse,
+          )
           warpAccent.value = `rgb(${fr}, ${fg}, ${fb})`
           warpFlashKey.value++
           warpNebulaHidden.value = false
@@ -1957,10 +1964,12 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // ── Himmelsbegegnungen — auf demselben Canvas, in derselben Strömung ───
     if (ctx && !isFrozen && !warpActive) {
       const themeIndex = useGalaxyStore().currentThemeIndex
-      if (themeIndex !== tintThemeIndex) {
-        const t = cometTintForGalaxy(themeIndex)
+      const universeId = useGameStore().currentUniverse
+      const key = `${universeId}:${themeIndex}`
+      if (key !== tintKey) {
+        const t = cometTintForGalaxy(themeIndex, universeId)
         encounterFrame.tint = [t.r, t.g, t.b]
-        tintThemeIndex = themeIndex
+        tintKey = key
       }
       encounterFrame.w = w
       encounterFrame.h = h

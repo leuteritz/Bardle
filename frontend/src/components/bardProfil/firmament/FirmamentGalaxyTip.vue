@@ -28,12 +28,14 @@ import {
 } from '@/config/constants'
 import type { FirmamentNode } from '@/utils/ui/firmamentLayout'
 
-const props = defineProps<{ node: FirmamentNode }>()
+const props = defineProps<{ node: FirmamentNode; universe: number }>()
 
 const galaxyStore = useGalaxyStore()
 
 const accent = computed(() =>
-  props.node.themeIndex >= 0 ? `rgb(${minimapAccentForTheme(props.node.themeIndex)})` : '#8a7a52',
+  props.node.themeIndex >= 0
+    ? `rgb(${minimapAccentForTheme(props.node.themeIndex, props.universe)})`
+    : '#8a7a52',
 )
 
 const themeName = computed(() =>

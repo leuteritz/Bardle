@@ -69,6 +69,7 @@ import ExpeditionPortalNode from './ExpeditionPortalNode.vue'
 import ExpeditionGalaxyStatsBand from './ExpeditionGalaxyStatsBand.vue'
 import ExpeditionStarManifest from './ExpeditionStarManifest.vue'
 import ExpeditionCrewMarkerLayer from './ExpeditionCrewMarkerLayer.vue'
+import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 
 const props = defineProps<{
   record: CompletedGalaxyRecord
@@ -365,6 +366,8 @@ const paintKey = computed(
   () =>
     `${props.record.galaxy}:${props.record.mapSeed}:${props.record.attemptResults.length}` +
     `:${props.record.landfallResults?.length ?? 0}:${props.record.themeIndex}` +
+    // Das Universum toent die Farbwelt — dasselbe Thema ist dort ein anderer Ton.
+    `:${universeOfRecord(props.record)}` +
     // Eine Buchung legt eine Marke auf die Karte, ohne dass sich eine der
     // anderen Zahlen rührt.
     `:${props.record.incidentResults?.length ?? 0}` +

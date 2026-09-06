@@ -49,7 +49,7 @@ import {
   FIRMAMENT_UNLIT_AHEAD,
 } from '@/config/constants'
 import { jitter } from '@/utils/fx/universeDisc'
-import { universes } from '@/config/progression/universes'
+import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { UniverseRunRecord } from '@/types'
 
@@ -332,12 +332,6 @@ function scatter(span: number, universe: number): FirmamentSpot[] {
   return out
 }
 
-/** Der Boden fuer einen Datensatz ohne Feld. Nach der Migration kann er nicht
- *  greifen — aber ein Datensatz, dem sie fehlte, darf auf KEINER Bahn fehlen. */
-function universeOf(record: CompletedGalaxyRecord): number {
-  return record.universe ?? universes[0].id
-}
-
 /** Alle Besuche eines Universums, aelteste zuerst. Exportiert, weil die Chronik
  *  des Kopfbands ueber dieselben Laeufe summiert — zwei Filter, die dasselbe
  *  meinen, laufen still auseinander. */
@@ -354,7 +348,7 @@ function slotsOf(input: FirmamentInput, universe: number): number {
   let n = 0
   let hasCurrent = false
   for (const r of input.completed) {
-    if (universeOf(r) !== universe) continue
+    if (universeOfRecord(r) !== universe) continue
     n++
     if (r.galaxy === input.currentGalaxy) hasCurrent = true
   }
@@ -368,7 +362,7 @@ function slotsOf(input: FirmamentInput, universe: number): number {
 /** Der gemeinsame Nenner: die laengste Bahn ueber alle Universen. */
 function spanOf(input: FirmamentInput): number {
   const seen = new Set<number>([input.currentUniverse, input.universe])
-  for (const r of input.completed) seen.add(universeOf(r))
+  for (const r of input.completed) seen.add(universeOfRecord(r))
   let max = 0
   for (const u of seen) max = Math.max(max, slotsOf(input, u))
   return Math.max(FIRMAMENT_PATH_MIN_SPAN, max)
@@ -389,7 +383,7 @@ function spanOf(input: FirmamentInput): number {
 export function buildFirmamentPath(input: FirmamentInput): FirmamentPath {
   const isHere = input.universe === input.currentUniverse
   const freed = input.completed
-    .filter((r) => universeOf(r) === input.universe)
+    .filter((r) => universeOfRecord(r) === input.universe)
     .sort((a, b) => a.galaxy - b.galaxy)
   const seen = new Set(freed.map((r) => r.galaxy))
 

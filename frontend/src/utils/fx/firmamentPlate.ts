@@ -97,9 +97,9 @@ function fade(hex: string, alpha: number): string {
 
 /** Die Farbe eines Knotens: befreit und laufend tragen ihr Galaxiethema,
  *  unbeleuchtet hat keines — dort steht die gedaempfte Kante. */
-function nodeColor(node: FirmamentNode): string {
+function nodeColor(node: FirmamentNode, universeId: number): string {
   if (node.state === 'unlit' || node.themeIndex < 0) return FIRMAMENT_UNLIT_COLOR
-  return `rgb(${minimapAccentForTheme(node.themeIndex)})`
+  return `rgb(${minimapAccentForTheme(node.themeIndex, universeId)})`
 }
 
 /** Grund und Penumbra — der RAUM, nicht die Karte. Eigenes Canvas, eigener
@@ -526,10 +526,11 @@ function paintNode(
   node: FirmamentNode,
   box: FirmamentFitBox,
   k: number,
+  universeId: number,
 ): void {
   const p = firmamentScreenPos(box, node.nx, node.ny)
   const r = node.bodyR * k
-  const color = nodeColor(node)
+  const color = nodeColor(node, universeId)
   const shape = bodyShape(node, r)
 
   if (node.state === 'unlit') {
@@ -645,11 +646,12 @@ export function paintFirmament(
   h: number,
   box: FirmamentFitBox,
   tint: string,
+  universeId: number,
 ): void {
   const k = box.r / FIRMAMENT_PLATE_REF_R
 
   ctx.clearRect(0, 0, w, h)
   paintRimRings(ctx, box, k, tint)
   paintRoad(ctx, nodes, box, k)
-  for (const node of nodes) paintNode(ctx, node, box, k)
+  for (const node of nodes) paintNode(ctx, node, box, k, universeId)
 }

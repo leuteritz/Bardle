@@ -269,7 +269,7 @@ const marks = computed(() =>
       accent:
         node.state === 'unlit' || node.themeIndex < 0
           ? FIRMAMENT_UNLIT_COLOR
-          : `rgb(${minimapAccentForTheme(node.themeIndex)})`,
+          : `rgb(${minimapAccentForTheme(node.themeIndex, props.selection.universe)})`,
     }
   }),
 )
@@ -675,7 +675,15 @@ function paint() {
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-  paintFirmament(ctx, props.nodes, side, side, plateBox.value, viewTint.value)
+  paintFirmament(
+    ctx,
+    props.nodes,
+    side,
+    side,
+    plateBox.value,
+    viewTint.value,
+    props.selection.universe,
+  )
   paintCount.value += 1
 }
 
@@ -870,7 +878,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
             <span class="fm-node-tag" aria-hidden="true">{{ toRoman(mark.node.galaxy) }}</span>
           </button>
           <template #tip>
-            <FirmamentGalaxyTip :node="mark.node" />
+            <FirmamentGalaxyTip :node="mark.node" :universe="props.selection.universe" />
           </template>
         </RpgBadgeTooltip>
       </div>

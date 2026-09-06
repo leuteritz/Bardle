@@ -14,6 +14,7 @@ import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
+import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { voyageBerthsOf, assignVoyageBerths, pinKeyOf, pinStampOf } from '@/utils/game/voyageSites'
 import { voyageLegsOf } from '@/utils/game/voyageLegs'
@@ -169,7 +170,7 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
         galaxy: record.galaxy,
         name: dest.name,
         tier: dest.tier,
-        accent: minimapAccentForTheme(record.themeIndex),
+        accent: minimapAccentForTheme(record.themeIndex, universeOfRecord(record)),
         charted: progress.charted,
         runs: progress.runs,
         contracts: expeditionStore.availableExpeditions.filter((s) => s.galaxy === record.galaxy)

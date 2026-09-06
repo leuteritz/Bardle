@@ -9,6 +9,7 @@
    Voyages-Reiters dieselbe Reihenfolge in Panelgrösse braucht. Hier bleibt, was
    nur das STANDBILD betrifft: die Grösse, die Rasterdichte und der Cache. */
 
+import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 import {
   paintGalaxy,
   galaxyFitBox,
@@ -69,7 +70,9 @@ function cacheKey(record: CompletedGalaxyRecord, deviceW: number): string {
   // ohne Deckel, dort wäre es endgültig.
   return (
     `${deviceW}:${record.galaxy}:${record.mapSeed}:${record.attemptResults.length}` +
-    `:${record.themeIndex}:${starRoleSignature(record.starManifests)}` +
+    // Das Universum toent die Farbwelt: dasselbe Thema in zwei Universen ist
+    // zwei Bilder, und ohne es bekaeme das zweite das des ersten.
+    `:${record.themeIndex}:${universeOfRecord(record)}:${starRoleSignature(record.starManifests)}` +
     // Die Ereignis-Chronik gehört dazu: sie legt Marken auf die Karte, ohne dass
     // sich eine der anderen Zahlen rührt.
     `:${record.incidentResults?.length ?? 0}`
