@@ -40,6 +40,18 @@ describe('Eventlog-Gruppen', () => {
     expect(tabIds[0]).toBe('all')
   })
 
+  /**
+   * Fehler und Warnungen gehören in den System-Tab und nirgendwo sonst. Ein
+   * sechster Tab dafür ist keine Option: `eventLogLayout.spec.ts` rechnet das
+   * Breitenbudget der Leiste über `EVENT_GROUPS.length`, und auf Full HD liefe
+   * sie damit über.
+   */
+  it('führt Laufzeitmeldungen unter „System"', () => {
+    expect(GROUP_OF_TYPE.error).toBe('system')
+    expect(GROUP_OF_TYPE.warning).toBe('system')
+    expect(EVENT_GROUPS).toHaveLength(5)
+  })
+
   it('gibt jedem Tab einen Leerzustand', () => {
     expect(Object.keys(EVENT_GROUP_EMPTY).sort()).toEqual([...tabIds].sort())
     for (const text of Object.values(EVENT_GROUP_EMPTY)) {
@@ -49,7 +61,9 @@ describe('Eventlog-Gruppen', () => {
 
   it('nennt bei jedem Tab-Icon sein Set — ohne Präfix lädt Iconify nichts', () => {
     for (const group of EVENT_GROUPS) {
-      expect(group.icon, `${group.id} trägt kein Set-Präfix`).toMatch(/^[a-z][a-z0-9-]*:[a-z0-9-]+$/)
+      expect(group.icon, `${group.id} trägt kein Set-Präfix`).toMatch(
+        /^[a-z][a-z0-9-]*:[a-z0-9-]+$/,
+      )
     }
   })
 

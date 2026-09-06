@@ -1019,6 +1019,81 @@ export const EVENT_LOG_TRAIL_FADE_TOP_PX = 24
 /** Rad-Vorfahren, die bis zu dieser Tiefe selbst rollen koennen, gewinnen. */
 export const EVENT_LOG_WHEEL_ANCESTOR_DEPTH = 8
 
+// ── Laufzeitfehler in der Spur ───────────────────────────────────────────────
+// Was in der DevTools-Konsole steht, sieht niemand, der spielt. Der Reporter
+// (composables/system/useErrorReporting.ts) spiegelt es in den System-Tab.
+
+/**
+ * Fenster, in dem dieselbe Fehlersignatur zu einer Zeile mit `×N` verdichtet
+ * wird statt eine zweite zu bauen.
+ *
+ * Ein Fehler in einer Frame-Schleife feuert 60x pro Sekunde. Ohne dieses
+ * Fenster spuelte er die 300er-Historie in fuenf Sekunden aus, und alles,
+ * woraus man den Fehler haette herleiten koennen, waere mit weg.
+ */
+export const ERROR_REPORT_MERGE_WINDOW_MS = 10_000
+
+/**
+ * Harter Deckel gemeldeter Fehler je Sitzung.
+ *
+ * Zweite Verteidigungslinie hinter der Verdichtung: die faengt Wiederholungen
+ * DERSELBEN Meldung, nicht eine Schleife, die bei jedem Durchlauf eine neue
+ * wirft. Ein Sechstel des 300er-Rings — darueber frisst der Fehlerkanal das
+ * Log, fuer das er gedacht ist. Danach schweigt die Spur mit einer letzten
+ * Zeile; die Konsole bekommt weiterhin alles.
+ */
+export const ERROR_REPORT_SESSION_MAX = 50
+
+/**
+ * Laenge der Kopfzeile in der Spur.
+ *
+ * Eine Fehlermeldung mit Stack ist schnell tausend Zeichen lang; ungekuerzt
+ * fuellte eine einzige Zeile die halbe Spur. Der Rest ist nicht verloren, er
+ * steht im `detail` und kommt ueber Copy heraus.
+ */
+export const ERROR_REPORT_HEADLINE_MAX = 140
+
+/**
+ * Gespeicherter Stack je Zeile.
+ *
+ * Ein V8-Stack liegt bei 600 bis 1500 Zeichen; 2000 fassen ihn ganz und
+ * deckeln den Ausreisser. Bei vollem Sitzungsdeckel liegen damit hoechstens
+ * rund 100 kB im Ring.
+ */
+export const ERROR_REPORT_DETAIL_MAX = 2_000
+
+/** Atemdauer der Alarmmarke am System-Tab. */
+export const ERROR_ALERT_PULSE_MS = 1_600
+
+/** Vorsatz der Konsolenzeile — sie kommt aus dem Reporter, nicht von Vue. */
+export const ERROR_REPORT_TAG = '[bardle]'
+
+/**
+ * Was bei einem Fehler aus fremder Herkunft bleibt.
+ *
+ * Der Browser haelt Nachricht und Stack zurueck; ohne diesen Text stuende eine
+ * leere Zeile in der Spur. Der Hinweis auf die DevTools ist hier das Aeusserste,
+ * was ueberhaupt zu sagen ist.
+ */
+export const ERROR_REPORT_OPAQUE_TEXT = 'Script error (cross-origin) — open DevTools for details.'
+
+/** Die letzte Zeile, die der Reporter schreibt, bevor er verstummt. */
+export const ERROR_REPORT_CAPPED_TEXT = `Fault reporting stopped after ${ERROR_REPORT_SESSION_MAX} entries — open DevTools for the rest.`
+
+/**
+ * Namensraum des Herald-Quittungsschluessels.
+ *
+ * Mit Schraegstrich getrennt, nie mit Doppelpunkt — `fault:xy` liest sich als
+ * Iconify-Set und bricht `icons.spec.ts`.
+ */
+export const ERROR_HERALD_MERGE_KEY = 'fault'
+
+/** Kopfzeile der Herald-Quittung. Als Wort im Repo sonst nirgends belegt. */
+export const ERROR_HERALD_EYEBROW = 'FAULT'
+
+/** Zweite Zeile der Quittung — sie sagt, wo die ganze Meldung nachzulesen ist. */
+export const ERROR_HERALD_SUBLINE = 'Logged under System'
+
 // Herald — large centered milestone announcements (HeraldOverlay / useHerald)
 /** How long a single herald banner stays on screen (ms) */
 export const HERALD_DISPLAY_MS = 2_000

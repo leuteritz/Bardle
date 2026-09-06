@@ -17,6 +17,8 @@ import {
 } from '@/config/ui/eventLog'
 import { formatEventClock, formatEventLines } from '@/utils/ui/eventLogFormat'
 import {
+  ERROR_ALERT_PULSE_MS,
+  HERALD_RECEIPT_COUNT_PREFIX,
   EVENT_LOG_BAR_GAP,
   EVENT_LOG_BAR_H,
   EVENT_LOG_BAR_H_MID,
@@ -56,16 +58,18 @@ const fadeMask = `linear-gradient(to bottom, #000 calc(100% - ${EVENT_LOG_TRAIL_
 // Zurückgerollt blendet auch der Kopf aus: das ist das einzige Zeichen dafür,
 // dass oben Neueres steht, und es kommt ohne Beschriftung aus.
 const fadeMaskBoth = `linear-gradient(to bottom, transparent 0, #000 ${EVENT_LOG_TRAIL_FADE_TOP_PX}px, #000 calc(100% - ${EVENT_LOG_TRAIL_FADE_PX}px), transparent 100%)`
+const alertPulse = `${ERROR_ALERT_PULSE_MS}ms`
 
 const uiStore = useUiStore()
 const gameStore = useGameStore()
 const starGroupStore = useStarGroupStore()
 const { historyVersion, readHistory, clearEvents } = useEventLog()
-const { folded, toggleFold } = useEventLogPane()
+// Tab und Alarm liegen im Composable, nicht hier: ein Laufzeitfehler muss sie
+// auch dann setzen koennen, wenn diese Komponente gerade verdeckt ist.
+const { folded, activeTab, errorAlert, toggleFold, selectTab, clearErrorAlert } = useEventLogPane()
 
 const shell = ref<HTMLElement | null>(null)
 const trailGroup = ref<{ $el?: HTMLElement } | null>(null)
-const activeTab = ref<EventTabId>('all')
 const copied = ref(false)
 const scrolled = ref(false)
 /** Der eingefrorene Stand, solange zurückgerollt ist — sonst `null`. */
@@ -180,14 +184,28 @@ function onWheel(event: WheelEvent) {
   setScrolled(next > 0)
 }
 
-function selectTab(id: EventTabId) {
-  activeTab.value = id
+// Der Watcher deckt BEIDE Wege ab — den Klick und den Fehler, der den Tab von
+// aussen setzt. Der Klick ruft `resetScroll` zusaetzlich, weil er auch auf dem
+// bereits aktiven Tab zurueckrollen soll; der Aufruf ist idempotent.
+watch(activeTab, resetScroll)
+
+/** Gelesen ist eine GESTE, nie ein Zustand: revealSystemTab setzt genau den
+ *  Zustand, den ein Watcher im selben Tick wieder loeschte. */
+function onTabClick(id: EventTabId) {
+  selectTab(id)
   resetScroll()
+  if (id === 'system') clearErrorAlert()
+}
+
+function onFold() {
+  toggleFold()
+  if (!folded.value && activeTab.value === 'system') clearErrorAlert()
 }
 
 function clearAll() {
   clearEvents()
   resetScroll()
+  clearErrorAlert()
 }
 
 function copyRows() {
@@ -204,7 +222,7 @@ function copyRows() {
   }, EVENT_LOG_COPY_FEEDBACK_MS)
 }
 
-onKeybinding('eventLog', () => toggleFold())
+onKeybinding('eventLog', () => onFold())
 
 watch([covered, folded], () => {
   setScrolled(false)
@@ -249,13 +267,16 @@ onUnmounted(() => {
           v-for="group in EVENT_GROUPS"
           :key="group.id"
           class="elp-tab"
-          :class="{ 'elp-tab--active': activeTab === group.id }"
+          :class="{
+            'elp-tab--active': activeTab === group.id,
+            'elp-tab--alert': group.id === 'system' && errorAlert,
+          }"
           type="button"
           role="tab"
           :aria-selected="activeTab === group.id"
           :aria-label="`${group.label} — ${tabCounts[group.id]}`"
           :title="`${group.label} — ${tabCounts[group.id]}`"
-          @click="selectTab(group.id)"
+          @click="onTabClick(group.id)"
         >
           <Icon :icon="group.icon" width="18" height="18" />
           <span class="elp-tab-label">{{ group.label }}</span>
@@ -288,7 +309,7 @@ onUnmounted(() => {
         :aria-expanded="!folded"
         aria-controls="event-log-trail"
         :title="folded ? 'Unfold the event log' : 'Fold the event log'"
-        @click="toggleFold"
+        @click="onFold"
       >
         <Icon icon="lucide:chevron-down" width="18" height="18" />
       </button>
@@ -316,6 +337,9 @@ onUnmounted(() => {
       >
         <span class="elp-time">{{ formatEventClock(event.timestamp, true) }}</span>
         <span class="elp-msg">{{ event.message }}</span>
+        <span v-if="(event.repeat ?? 1) > 1" class="elp-rep">
+          {{ HERALD_RECEIPT_COUNT_PREFIX }}{{ event.repeat }}
+        </span>
       </div>
     </TransitionGroup>
   </section>
@@ -378,6 +402,7 @@ onUnmounted(() => {
    sichtbar ueberlaufen statt still zu beschneiden. Den Rest der Reihe teilen
    sich die fuenf Tabs, damit rechts keine tote Flaeche steht. */
 .elp-tab {
+  position: relative;
   display: inline-flex;
   flex: 1 0 auto;
   align-items: center;
@@ -408,6 +433,44 @@ onUnmounted(() => {
 .elp-tab--active {
   background: #2a1c0c;
   color: #e8c040;
+}
+
+/* Der Alarm schlaegt Hover UND Auswahl: die beiden sagen, wo der Zeiger steht,
+   er sagt, dass etwas kaputt ist. Steht deshalb nach beiden und nennt `:hover`
+   ausdruecklich mit — sonst gewaenne dessen hoehere Spezifitaet. */
+.elp-tab--alert,
+.elp-tab--alert:hover {
+  color: #cc6050;
+}
+
+/* Eigene Ebene mit statischem Schein; animiert wird ausschliesslich ihre
+   Deckkraft. Sie belegt KEINE Breite — eine Layoutbox am Tab kippte das
+   Budget, das eventLogLayout.spec.ts bindet. */
+.elp-tab--alert::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 3px;
+  background: radial-gradient(ellipse at center, rgba(204, 96, 80, 0.34), transparent 72%);
+  pointer-events: none;
+  animation: elp-alert-breathe v-bind(alertPulse) ease-in-out infinite;
+}
+
+@keyframes elp-alert-breathe {
+  0%,
+  100% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .elp-tab--alert::after {
+    animation: none;
+    opacity: 0.7;
+  }
 }
 
 .elp-tab-count {
@@ -525,6 +588,21 @@ onUnmounted(() => {
     0 0 6px color-mix(in oklab, var(--row-color, #c8b89a) 55%, transparent),
     0 1px 3px rgba(0, 0, 0, 0.8);
   overflow-wrap: anywhere;
+}
+
+/* Wie oft dieselbe Meldung in diese Zeile gefallen ist. Sitzt rechts aussen,
+   damit die Nachricht ihre volle Breite behaelt. */
+.elp-rep {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  margin-left: auto;
+  padding: 0 4px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 3px;
+  color: var(--row-color, #c8b89a);
+  font-size: 11.5px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .elp-empty {
