@@ -31,6 +31,7 @@ import { Icon } from '@iconify/vue'
 import { starSeatsSplit } from '@/utils/ui/starSeats'
 import { voyageManifestRow } from '@/utils/ui/voyageManifestRow'
 import { getChampionIconPath } from '@/utils/game/champions'
+import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
   FIRMAMENT_FREED_COLOR,
@@ -106,7 +107,7 @@ const bands = computed(() =>
 )
 
 /** Derselbe Ton wie `--egsb-accent`: eine Buehne, ein Galaxieton. */
-const accent = computed(() => `rgb(${minimapAccentForTheme(props.record.themeIndex)})`)
+const accent = computed(() => `rgb(${minimapAccentForTheme(props.record.themeIndex, universeOfRecord(props.record))})`)
 
 const art = (champion: string) => getChampionIconPath(champion, STAR_MANIFEST_ART_SIZE)
 

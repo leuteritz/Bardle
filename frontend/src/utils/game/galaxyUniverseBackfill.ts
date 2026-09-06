@@ -15,6 +15,15 @@ import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { UniverseRunRecord } from '@/types'
 
 /**
+ * Das Universum eines Datensatzes — mit dem Boden für den Altbestand, dem der
+ * Nachtrag noch nicht begegnet ist. Drei Leser: die Bahnen des Firmaments, die
+ * Universumsleiste und die Tönung seiner Farbwelt.
+ */
+export function universeOfRecord(record: Pick<CompletedGalaxyRecord, 'universe'>): number {
+  return record.universe ?? universes[0].id
+}
+
+/**
  * Das Universum, in dem eine Galaxie mit diesem Stempel befreit wurde: der
  * ERSTE Lauf, der nicht vor ihr endete. Hinter dem letzten Lauf liegt das
  * laufende Universum.

@@ -29,6 +29,7 @@ import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import { useVoyageAtlas } from '@/composables/expedition/useVoyageAtlas'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
+import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
   VOYAGE_COMMAND_BAR_H,
@@ -110,7 +111,7 @@ function backToFirmament() {
     toward: 'firmament',
     galaxy,
     ...anchor,
-    accent: `rgb(${minimapAccentForTheme(record.themeIndex)})`,
+    accent: `rgb(${minimapAccentForTheme(record.themeIndex, universeOfRecord(record))})`,
   })
 }
 

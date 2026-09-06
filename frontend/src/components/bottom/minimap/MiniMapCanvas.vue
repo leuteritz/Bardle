@@ -359,7 +359,10 @@ export default defineComponent({
       // drawImage komponiert — solange die Kamera steht, also fast immer.
       // Additiv bleibt additiv: der Layer wird selbst mit 'lighter' aufgelegt.
       const geo = galaxyGeo(galaxyStore.mapSeed)
-      const themeAccent = minimapAccentForTheme(galaxyStore.currentThemeIndex)
+      const themeAccent = minimapAccentForTheme(
+        galaxyStore.currentThemeIndex,
+        gameStore.currentUniverse,
+      )
 
       // Gemeinsamer Zeichenkörper für Live- und Cache-Pfad — einzige Quelle
       // der Wahrheit für das Aussehen der Galaxie.
@@ -393,7 +396,7 @@ export default defineComponent({
         if (streaking) {
           drawGalaxyBody(ctx)
         } else {
-          const key = `${galaxyStore.mapSeed}|${galaxyStore.currentThemeIndex}|${cam.x}|${cam.y}|${cam.zoom}|${farAlpha.toFixed(4)}`
+          const key = `${galaxyStore.mapSeed}|${galaxyStore.currentThemeIndex}|${gameStore.currentUniverse}|${cam.x}|${cam.y}|${cam.zoom}|${farAlpha.toFixed(4)}`
           ctx.drawImage(galaxyLayer.get(w, h, renderDpr, key, drawGalaxyBody), 0, 0, w, h)
         }
         ctx.restore()

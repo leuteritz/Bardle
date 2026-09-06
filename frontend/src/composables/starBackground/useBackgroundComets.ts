@@ -1,7 +1,7 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
-import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
+import { tintedTheme } from '@/utils/fx/galaxyTint'
 import { useWindowFocus } from '@/composables/system/useWindowFocus'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import {
@@ -96,8 +96,11 @@ function rollCometVariant(): CometVariant {
 /** Pastel comet tint from the current galaxy's (dark, low-alpha) nebula color:
  *  parse the rgb components and mix them toward white so the comet reads as
  *  white-hot with a subtle per-galaxy mood. */
-export function cometTintForGalaxy(themeIndex: number): { r: number; g: number; b: number } {
-  const theme = GALAXY_THEMES[themeIndex % GALAXY_THEMES.length]
+export function cometTintForGalaxy(
+  themeIndex: number,
+  universeId: number,
+): { r: number; g: number; b: number } {
+  const theme = tintedTheme(themeIndex, universeId)
   const m = theme.nebulaColors[0].match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/)
   const mix = (v: number) => Math.round(v + (255 - v) * COMET_BG_TINT_WHITE_MIX)
   if (!m) return { r: 230, g: 235, b: 255 }
@@ -186,7 +189,7 @@ export function useBackgroundComets(
     allowTwin: boolean,
   ): void {
     if (bgComets.length >= maxCount) return
-    const tint = cometTintForGalaxy(galaxyStore.currentThemeIndex)
+    const tint = cometTintForGalaxy(galaxyStore.currentThemeIndex, gameStore.currentUniverse)
     const variant = rollCometVariant()
 
     let speed = COMET_BG_SPEED_MIN + Math.random() * (COMET_BG_SPEED_MAX - COMET_BG_SPEED_MIN)

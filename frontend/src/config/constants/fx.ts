@@ -203,6 +203,25 @@ export const PROCESSION_SUN_TRAIL_ALPHA = 0.3
  *  diesen Spitzenwert normiert und um diesen Anteil nach Weiss gehoben. */
 export const GALAXY_GLOW_PEAK = 225
 export const GALAXY_GLOW_WHITE_LIFT = 0.22
+/**
+ * Wie weit der Universumston die Galaxiefarbe zu sich zieht.
+ *
+ * Gezogen werden FARBTON und Saettigung, die Luminanz jedes Farbwerts bleibt —
+ * dieselbe Lehre wie die Penumbra-Tinte (`FIRMAMENT_PENUMBRA_INK_LUMA`): der Ton
+ * sagt WELCHES Universum, die Helligkeit bleibt. Voll gemischt hellte der
+ * Vollbild-Schleier auf, und der Raum verloere seine Schwaerze.
+ *
+ * 0,42 ist die Wand: `pickThemeIndex` garantiert zwischen aufeinanderfolgenden
+ * Galaxien `MIN_THEME_HUE_DISTANCE` (60 Grad). Der Zug komprimiert Abstaende auf
+ * 58 %, aus 60 werden 34,8 — sichtbar verschieden, aber erkennbar verwandt.
+ * Hoeher kippen die Galaxien eines Universums zu Varianten EINES Tons.
+ */
+export const UNIVERSE_TINT_HUE_PULL = 0.42
+export const UNIVERSE_TINT_SAT_PULL = 0.3
+/** Bisektionsschritte, mit denen die Toenung ihre Luminanz zurueckholt. */
+export const UNIVERSE_TINT_LUMA_STEPS = 24
+/** Das Universum, das seine Galaxien NICHT toent — der Referenzzustand. */
+export const UNIVERSE_TINT_NEUTRAL_ID = 1
 /** Ton des Schweifs, wenn ein Körper keine Rollenfarbe trägt (Ally ohne Rolle). */
 export const PROCESSION_TRAIL_FALLBACK_COLOR = '#8fa6c8'
 /**

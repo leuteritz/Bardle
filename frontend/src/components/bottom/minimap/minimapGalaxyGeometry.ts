@@ -263,14 +263,14 @@ export function getGalaxyParticles(seed: number): GalaxyParticle[] {
 // Eine Map und kein Einzelplatz: die Minimap fragt pro Frame nach dem laufenden
 // Thema, die Sternenkarte des Expeditions-Reiters nach zwanzig verschiedenen.
 // Mit einem Platz schrieben beide abwechselnd denselben Eintrag um. Zwanzig
-// Einträge sind dauerhaft resident und kosten nichts.
-const themeAccentCache = new Map<number, string>()
+// Einträge je besuchtem Universum sind dauerhaft resident und kosten nichts.
+const themeAccentCache = new Map<string, string>()
 
-export function minimapAccentForTheme(themeIndex: number): string {
-  const key = themeIndex % GALAXY_THEMES.length
+export function minimapAccentForTheme(themeIndex: number, universeId: number): string {
+  const key = `${universeId}:${themeIndex % GALAXY_THEMES.length}`
   const hit = themeAccentCache.get(key)
   if (hit !== undefined) return hit
-  const [r, g, b] = themeGlowRgb(key)
+  const [r, g, b] = themeGlowRgb(themeIndex, universeId)
   const accent = `${r}, ${g}, ${b}`
   themeAccentCache.set(key, accent)
   return accent

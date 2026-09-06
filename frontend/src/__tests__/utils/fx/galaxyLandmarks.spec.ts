@@ -245,7 +245,7 @@ describe('Die Marke des befreiten Sterns — unbunt im Ring, Bedeutung im Kern',
   it('hält den Ring von JEDEM Themenakzent fern — die Prüfung, die eine bunte Ringfarbe kippt', () => {
     const ring = rgbOf(LANDMARK_FREED_RING)
     for (let i = 0; i < GALAXY_THEMES.length; i++) {
-      const accent = minimapAccentForTheme(i).split(', ').map(Number) as [number, number, number]
+      const accent = minimapAccentForTheme(i, 1).split(', ').map(Number) as [number, number, number]
       expect(distance(ring, accent)).toBeGreaterThan(60)
     }
   })
@@ -387,7 +387,7 @@ describe('Die Marke des Landfalls — eine Familie, eine Silhouette', () => {
   it('hält Abstand zu JEDEM Themenakzent', () => {
     const ring = rgbOf(LANDMARK_LANDFALL_RING)
     for (let i = 0; i < GALAXY_THEMES.length; i++) {
-      const accent = minimapAccentForTheme(i).split(', ').map(Number) as [number, number, number]
+      const accent = minimapAccentForTheme(i, 1).split(', ').map(Number) as [number, number, number]
       expect(distance(ring, accent)).toBeGreaterThan(60)
     }
   })
@@ -516,7 +516,7 @@ describe('Die Marken der Ereignis-Chronik — Striche, keine Körper', () => {
 
   it('hält beide von JEDEM Themenakzent fern', () => {
     for (let i = 0; i < GALAXY_THEMES.length; i++) {
-      const accent = minimapAccentForTheme(i).split(', ').map(Number) as [number, number, number]
+      const accent = minimapAccentForTheme(i, 1).split(', ').map(Number) as [number, number, number]
       for (const hex of [LANDMARK_VOID_TRACE, LANDMARK_DRIFTER_TRACE]) {
         expect(distance(rgbOf(hex), accent), `${hex} vs Thema ${i}`).toBeGreaterThan(45)
       }
