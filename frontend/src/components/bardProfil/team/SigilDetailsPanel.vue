@@ -1695,6 +1695,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 9px;
   padding: 8px 9px;
+  align-items: center;
   border-color: color-mix(in srgb, var(--sc) 54%, #3e200a);
   background: linear-gradient(115deg, color-mix(in srgb, var(--sc) 16%, #181710), #171610 72%);
 }
@@ -1703,14 +1704,35 @@ function perkStatLine(perk: ChampionPerkDef): string {
   height: 27px;
 }
 .sdp-stat small {
-  font-size: 10px;
+  font-size: 9px;
+  line-height: 1;
+  text-align: center;
 }
 .sdp-stat strong {
-  font-size: 29px;
-  line-height: 1;
+  font-size: 17px;
+  line-height: 1.05;
+  text-align: center;
+}
+.sdp-stat div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-align: center;
 }
 .sdp-stat div span {
-  font-size: 10px;
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--sc);
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.05;
+  text-align: center;
+  text-overflow: clip;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .sdp-stat i {
   right: 10px;
@@ -1823,7 +1845,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
 }
 .sdp-active-perk {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto;
   align-content: center;
   justify-items: center;
   gap: 7px;
@@ -1842,14 +1864,20 @@ function perkStatLine(perk: ChampionPerkDef): string {
   width: 100%;
   display: grid;
   align-self: center;
+  align-content: center;
+  justify-content: center;
   justify-items: center;
   gap: 6px;
+  text-align: center;
 }
 .sdp-active-perk-head {
   width: 100%;
-  display: grid;
-  justify-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 2px;
+  text-align: center;
 }
 .sdp-active-perk small {
   align-self: center;
@@ -1870,9 +1898,11 @@ function perkStatLine(perk: ChampionPerkDef): string {
 }
 .sdp-active-perk-copy > span:not(.sdp-active-perk-head) {
   font-size: 15px;
+  text-align: center;
 }
 .sdp-active-perk p {
   width: 100%;
+  overflow-wrap: anywhere;
   font-size: 13px;
   line-height: 1.15;
   text-align: center;
@@ -1892,7 +1922,8 @@ function perkStatLine(perk: ChampionPerkDef): string {
   .sdp-hero { min-height: 330px; padding-block: 11px; }
   .sdp-identity h2 { font-size: 39px; }
   .sdp-stat { min-height: 59px; padding-block: 6px; }
-  .sdp-stat strong { font-size: 25px; }
+  .sdp-stat strong { font-size: 15px; }
+  .sdp-stat div span { font-size: 17px; }
   .sdp-level-button { min-height: 42px; margin-top: 7px; }
   .sdp-workspace { gap: 10px; padding: 10px 14px 12px; }
   .sdp-section-head { min-height: 35px; }
