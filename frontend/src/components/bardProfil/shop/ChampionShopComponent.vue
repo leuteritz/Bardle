@@ -2110,11 +2110,13 @@ export default defineComponent({
   border-left: 1px solid #5c3310;
 }
 .cs-detail-unavailable {
-  margin: clamp(2.25rem, 9%, 5rem) auto 0;
-  padding: 0.55rem 0.8rem;
+  align-self: stretch;
+  margin: auto 1.25rem;
+  padding: 0.55rem 0;
   color: #a89478;
-  font-size: 0.86rem;
-  letter-spacing: 0.04em;
+  font-size: clamp(2.25rem, 3.25cqi, 4.25rem);
+  line-height: 1.12;
+  letter-spacing: 0.06em;
   text-align: center;
 }
 /* The column swaps subjects, it does not slide in and out — only its content
