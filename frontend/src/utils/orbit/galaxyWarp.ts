@@ -47,6 +47,12 @@ export interface WarpFlightOut {
   headlight: number
   /** 0 … 1: Staub, Cluster, Flug-Linien — 0 im Flug, Rampe im Ausrollen. */
   ambientGain: number
+  /**
+   * 0 … 1: wie weit die Bühne ihre Bahnen verlassen hat. 0 = Orbit wie immer,
+   * 1 = volle Prozession. Fährt mit DEMSELBEN Easing wie Schub und Schwenk —
+   * ein eigenes wäre ein zweiter Aufbruch im selben Bild.
+   */
+  procession: number
   /** Flugzeit in Sekunden (für die bestehenden Ausblend-Kurven der SVG-Ebenen). */
   flightSec: number
 }
@@ -109,6 +115,7 @@ export function createGalaxyWarp(): GalaxyWarpState {
       tintGain: 0,
       headlight: 0,
       ambientGain: 1,
+      procession: 0,
       flightSec: 0,
       commit: false,
       done: false,
@@ -180,6 +187,7 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.tintGain = 0
     o.headlight = 0
     o.ambientGain = 1
+    o.procession = 0
     o.flightSec = 0
     o.done = true
     return
@@ -200,6 +208,7 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.tintGain = t
     o.headlight = t * clamp01((o.speed - 1) / peakSpan)
     o.ambientGain = clamp01(1 - t / 0.4)
+    o.procession = k
     o.flightSec = e / 1000
   } else if (phase === 'cruise') {
     const sec = e / 1000
@@ -221,6 +230,7 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.tintGain = 1
     o.headlight = 1
     o.ambientGain = 0
+    o.procession = 1
     o.flightSec = sec
   } else {
     // decel
@@ -234,6 +244,10 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.tintGain = 1 - easeOutCubic(t)
     o.headlight = Math.pow(1 - t, 2)
     o.ambientGain = clamp01((t - 0.4) / 0.6)
+    // Bewusst NICHT die back-Kurve des Fluchtpunkts: die schwingt über ihr
+    // Ziel hinaus, und ein Körper, der an seiner Bahn vorbeischießt und
+    // zurückrutscht, liest sich als Fehler.
+    o.procession = 1 - easeOutCubic(t)
     o.flightSec = FLIGHT_MS / 1000
   }
 }

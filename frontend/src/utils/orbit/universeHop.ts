@@ -130,6 +130,7 @@ export function createUniverseHop(): UniverseHopState {
       tintGain: 0,
       headlight: 0,
       ambientGain: 1,
+      procession: 0,
       flightSec: 0,
       portalR: 0,
       portalAlpha: 0,
@@ -263,6 +264,7 @@ export function stepUniverseHop(
     o.tintGain = 0
     o.headlight = 0
     o.ambientGain = 1
+    o.procession = 0
     o.flightSec = 0
     o.portalR = 0
     o.portalAlpha = 0
@@ -293,6 +295,7 @@ export function stepUniverseHop(
     o.tintGain = k
     o.headlight = k * k
     o.ambientGain = 1 - k
+    o.procession = k
     o.flightSec = e / 1000
     o.portalR = 0
     o.portalAlpha = 0
@@ -312,6 +315,7 @@ export function stepUniverseHop(
     o.trailFade = WARP_TRAIL_FADE
     o.tintGain = 1
     o.ambientGain = 0
+    o.procession = 1
     o.flightSec = e / 1000
     const r0 = UNIVERSE_HOP_PORTAL_R0_FRAC * minEdge
     o.portalR = r0 + (rPass - r0) * Math.pow(t, UNIVERSE_HOP_PORTAL_GROWTH_POW)
@@ -336,6 +340,7 @@ export function stepUniverseHop(
     o.trailFade = UNIVERSE_HOP_TUNNEL_TRAIL_FADE
     o.tintGain = 1
     o.ambientGain = 0
+    o.procession = 1
     o.flightSec = e / 1000
     // Der Ring ist im ersten Viertel vorbei; Tunnel und Wände übernehmen.
     o.portalR = rPass * (1 + 0.3 * t)
@@ -366,6 +371,9 @@ export function stepUniverseHop(
     o.tintGain = 1 - easeOutCubic(t)
     o.headlight = Math.pow(1 - t, 2)
     o.ambientGain = clamp01((t - 0.4) / 0.6)
+    // Nicht die back-Kurve des Fluchtpunkts: die schwingt über ihr Ziel hinaus,
+    // und ein Körper, der an seiner Bahn vorbeischießt, liest sich als Fehler.
+    o.procession = 1 - easeOutCubic(t)
     // Null, nicht eingefroren: die Körper der NEUEN Welt blenden über diese
     // Flugzeit ein, und die alte ist mit dem commit abgeräumt.
     o.flightSec = 0

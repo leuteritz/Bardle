@@ -3,7 +3,7 @@
     class="relative flex items-center justify-center w-full h-full idle-flight-stage"
     :class="`idle-flight-stage--${flight.mode.value}`"
   >
-    <SunComponent :flight-scale="flight.formation.value.bodyScale" />
+    <SunComponent :flight-scale="flight.bodyScale.value" />
 
     <div
       @click="handleChimeClick"
@@ -50,14 +50,8 @@
       </template>
     </div>
 
-    <ChampionOrbit
-      :flight-body-scale="flight.formation.value.bodyScale"
-      :flight-orbit-scale="flight.formation.value.orbitScale"
-    />
-    <PlanetOrbit
-      :flight-body-scale="flight.formation.value.bodyScale"
-      :flight-orbit-scale="flight.formation.value.orbitScale"
-    />
+    <ChampionOrbit />
+    <PlanetOrbit />
     <StarSystemComponent v-if="!flight.active.value" />
     <!-- EIN Projektil-Canvas für alle Schuss-Quellen (Champions, Turrets,
          Sterne). Es holt sich die Schuss-Listen selbst; früher mountete jede
@@ -441,6 +435,50 @@ export default defineComponent({
 
 .chime-main-button--flight {
   pointer-events: none;
+}
+
+/* Im Flug gibt es nichts mehr, um das etwas kreist: beide Ringgruppen blenden
+   aus — die Planetenbahnen und die Champion-Ringe in `.sun-container`. Animiert
+   wird nur `opacity`; die feGaussianBlur-Filter der Bahnen stehen dabei still.
+
+   Die Blende ist ASYMMETRISCH, und zwar gemessen: eine 900-ms-Überblendung des
+   gefilterten SVG kostete beim Aufbruch einen Frame von 58 ms statt 33. Beim
+   Aufbruch fällt der harte Schnitt nicht auf — dort setzt der Schub ein und das
+   HUD fährt weg; bei der Rückkehr ist das Bild ruhig, dort trägt die Weichheit.
+   Die Transition des ZIELzustands gewinnt, also steht die kurze im Flugzustand. */
+.idle-flight-stage :deep(.planet-orbit-rings),
+.idle-flight-stage :deep(.orbit-paths) {
+  transition: opacity 900ms ease;
+}
+
+.idle-flight-stage--galaxy :deep(.planet-orbit-rings),
+.idle-flight-stage--galaxy :deep(.orbit-paths),
+.idle-flight-stage--universe :deep(.planet-orbit-rings),
+.idle-flight-stage--universe :deep(.orbit-paths) {
+  opacity: 0;
+  transition: opacity 0ms;
+}
+
+/* Die Ablesungen der Bühne gehen im Flug mit dem HUD: eine HP-Zahl, die im
+   Überlichtflug niemand liest, zerlegt nur die Silhouette der Prozession.
+   Hier steht NUR die Spieler-Leiste — die Leisten und Buff-Anker an den Körpern
+   bekommen ihre Deckkraft pro Frame inline, dort käme kein Stylesheet durch;
+   sie blenden in `applyFrames` mit der Prozession aus. */
+.idle-flight-stage :deep(.hp-bar-container) {
+  transition: opacity 260ms ease;
+}
+
+.idle-flight-stage--galaxy :deep(.hp-bar-container),
+.idle-flight-stage--universe :deep(.hp-bar-container) {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idle-flight-stage :deep(.planet-orbit-rings),
+  .idle-flight-stage :deep(.orbit-paths),
+  .idle-flight-stage :deep(.hp-bar-container) {
+    transition: none;
+  }
 }
 
 .idle-flight-stage--universe :deep(.planet-orbit-rings) {

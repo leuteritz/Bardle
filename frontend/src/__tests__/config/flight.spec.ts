@@ -46,6 +46,27 @@ import {
   JOLT_ZETA,
   STAR_BG_BLOOM_SHARE,
   STAR_BG_FOG_TIERS,
+  GALAXY_TRANS_DECEL_MS,
+  GALAXY_TRANS_WARP_MS,
+  GALAXY_WARP_ACCEL_MS,
+  PROCESSION_BAND_CHAMPION,
+  PROCESSION_BAND_PLANET,
+  PROCESSION_DEPTH_FAR,
+  PROCESSION_DEPTH_NEAR,
+  PROCESSION_ENTER_T,
+  PROCESSION_EXIT_T,
+  PROCESSION_SCALE_K,
+  PROCESSION_SCALE_MAX,
+  PROCESSION_SCALE_MIN,
+  PROCESSION_SPREAD_MAX,
+  PROCESSION_SPREAD_MIN,
+  PROCESSION_SUN_TRAIL_ALPHA,
+  PROCESSION_SWELL_SEC_MAX,
+  PROCESSION_SWELL_SEC_MIN,
+  PROCESSION_TRAIL_ALPHA,
+  PROCESSION_TRAIL_LEN_K_MAX,
+  PROCESSION_TRAIL_LEN_K_MIN,
+  PROCESSION_REACH_MAX_FRAC,
 } from '@/config/constants'
 
 /**
@@ -166,5 +187,54 @@ describe('Sternfeld — Tiefe', () => {
 
   it('Bloom bleibt selten', () => {
     expect(STAR_BG_BLOOM_SHARE).toBeLessThanOrEqual(0.08)
+  })
+})
+
+describe('Prozession — die Zahlen', () => {
+  it('trennt die zwei Bänder, damit die Ebenen-Wand die Tiefe tragen kann', () => {
+    // `.planet-orbit-front` (z 7) liegt hart über `.champion-orbit-front` (6).
+    // Überlappten die Bänder, stünde irgendwann ein ferner Planet vor einem
+    // nahen Champion — und das wäre per z-index am Körper nicht zu heilen.
+    expect(PROCESSION_BAND_PLANET[0]).toBeLessThan(PROCESSION_BAND_PLANET[1])
+    expect(PROCESSION_BAND_CHAMPION[0]).toBeLessThan(PROCESSION_BAND_CHAMPION[1])
+    expect(PROCESSION_BAND_PLANET[1]).toBeLessThanOrEqual(PROCESSION_BAND_CHAMPION[0])
+    expect(PROCESSION_BAND_CHAMPION[1]).toBeLessThanOrEqual(1)
+    expect(PROCESSION_DEPTH_NEAR).toBeGreaterThan(0)
+    expect(PROCESSION_DEPTH_FAR).toBeGreaterThan(PROCESSION_DEPTH_NEAR)
+  })
+
+  it('hat eine Hysterese am Ebenenwechsel', () => {
+    // An EINER Schwelle zitterte der Wechsel auf der easeInOutCubic-Flanke und
+    // riss pro Frame einen vollen Vue-Render auf (isBehind steht im structureKey).
+    expect(PROCESSION_EXIT_T).toBeLessThan(PROCESSION_ENTER_T)
+    expect(PROCESSION_EXIT_T).toBeGreaterThan(0)
+  })
+
+  it('klemmt die Perspektivskala um ihren eigenen Nennwert', () => {
+    expect(PROCESSION_SCALE_MIN).toBeLessThan(PROCESSION_SCALE_MAX)
+    expect(PROCESSION_SCALE_K / PROCESSION_DEPTH_FAR).toBeLessThanOrEqual(PROCESSION_SCALE_MAX)
+    expect(PROCESSION_SCALE_K / PROCESSION_DEPTH_NEAR).toBeGreaterThanOrEqual(PROCESSION_SCALE_MIN)
+  })
+
+  it('hält den weitesten Platz innerhalb des Netzes', () => {
+    // Ohne das verließe der naheste Körper bei kleiner Tiefe das Bild.
+    expect(PROCESSION_SPREAD_MIN).toBeLessThan(PROCESSION_SPREAD_MAX)
+    expect(PROCESSION_REACH_MAX_FRAC).toBeLessThan(0.5)
+  })
+
+  it('streut die Wogen-Perioden, sonst atmen alle im Takt', () => {
+    expect(PROCESSION_SWELL_SEC_MIN).toBeLessThan(PROCESSION_SWELL_SEC_MAX)
+  })
+
+  it('lässt den Schweif des Spielerkörpers leiser sein als die der Begleiter', () => {
+    expect(PROCESSION_TRAIL_LEN_K_MIN).toBeLessThan(PROCESSION_TRAIL_LEN_K_MAX)
+    expect(PROCESSION_SUN_TRAIL_ALPHA).toBeLessThan(PROCESSION_TRAIL_ALPHA)
+  })
+
+  it('lässt die Rampe der Prozession in den Flug passen', () => {
+    // Der Aufbruch teilt sich sein Easing mit dem Schub — er muss vor dem
+    // Schnitt fertig sein, sonst bräche die Aufstellung mitten im Hochfahren ab.
+    expect(GALAXY_WARP_ACCEL_MS).toBeLessThan(GALAXY_TRANS_WARP_MS)
+    expect(GALAXY_TRANS_DECEL_MS).toBeGreaterThan(0)
   })
 })

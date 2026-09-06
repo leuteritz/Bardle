@@ -91,6 +91,7 @@ describe('galaxyWarp — Phasen und Flanken', () => {
     expect(state.elapsedMs).toBe(0)
     expect(state.out.done).toBe(false)
     expect(state.out.speed).toBe(1)
+    expect(state.out.procession).toBe(0)
   })
 })
 
@@ -179,6 +180,47 @@ describe('galaxyWarp — Kurven', () => {
     stepGalaxyWarp(state, TOTAL_MS / 2, MIN_EDGE)
     expect('destGalaxyScale' in state.out).toBe(false)
     expect('destGalaxyAlpha' in state.out).toBe(false)
+  })
+
+  it('fährt die Prozession mit dem Aufbruch hoch, hält sie und legt sie zurück', () => {
+    const state = createGalaxyWarp()
+    startGalaxyWarp(state, seeded(13))
+    const dt = 16.7
+    let t = 0
+    let last = 0
+    while (t < GALAXY_WARP_ACCEL_MS) {
+      t += dt
+      stepGalaxyWarp(state, dt, MIN_EDGE)
+      expect(state.out.procession).toBeGreaterThanOrEqual(last - 1e-9)
+      last = state.out.procession
+    }
+    expect(last).toBeGreaterThan(0.98)
+    // Reiseflug: voll ausgefahren
+    stepGalaxyWarp(state, 1000, MIN_EDGE)
+    expect(state.out.procession).toBe(1)
+    // Ausrollen: monoton zurück, ohne Überschwinger über die Bahn hinaus
+    stepGalaxyWarp(state, GALAXY_TRANS_WARP_MS, MIN_EDGE)
+    last = state.out.procession
+    for (let e = 0; e < GALAXY_TRANS_DECEL_MS; e += dt) {
+      stepGalaxyWarp(state, dt, MIN_EDGE)
+      expect(state.out.procession).toBeLessThanOrEqual(last + 1e-9)
+      expect(state.out.procession).toBeGreaterThanOrEqual(0)
+      last = state.out.procession
+    }
+    stepGalaxyWarp(state, dt, MIN_EDGE)
+    expect(state.out.procession).toBe(0)
+  })
+
+  it('lässt die Prozession mit demselben Easing anlaufen wie Schub und Schwenk', () => {
+    const state = createGalaxyWarp()
+    startGalaxyWarp(state, seeded(21))
+    stepGalaxyWarp(state, GALAXY_WARP_ACCEL_MS / 2, MIN_EDGE)
+    const o = state.out
+    // Ein eigenes Easing wäre ein zweiter Aufbruch im selben Bild: Tempo,
+    // Fluchtpunkt und Aufstellung teilen sich denselben Faktor k.
+    const k = o.procession
+    expect((o.speed - 1) / (WARP_SPEED_PEAK - 1)).toBeCloseTo(k, 6)
+    expect(o.focusX).toBeCloseTo(state.courseFx * MIN_EDGE * k, 6)
   })
 
   it('schreibt immer dasselbe Ausgabeobjekt', () => {
