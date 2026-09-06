@@ -4,6 +4,7 @@ import {
   buildSunSprite,
   isSunBandLayer,
   mountSunSprites,
+  sunBandRow,
   sunBandStrip,
   sunBodyFor,
   sunBodyRadiusFraction,
@@ -20,6 +21,7 @@ import {
   BLACK_HOLE_DISC_INNER_FRACTION,
   BLACK_HOLE_DISC_INNER_RING_FRACTION,
   BLACK_HOLE_SHADOW_FRACTION,
+  COMET_BANDS,
   COMET_DISC_FILL,
   COMET_JET_MIN_STAGE,
   COMET_STAGE_RADII,
@@ -185,25 +187,29 @@ describe('Signatur → Motiv', () => {
 })
 
 describe('Achsdrehung — Bänder und Schatten', () => {
-  it('Detail 1 trägt nur das Äquatorband, Detail 2 alle drei; der Schatten folgt dem Band', () => {
+  /**
+   * Der Stern staffelt: Detail 1 nur der Äquator, Detail 2 alle drei — seine
+   * Zierebenen hängen an derselben Schwelle. Der KOMET trägt alle drei schon ab
+   * Detail 1: der Orbit-Komet (64–104 px) kommt nie über Detail 1, und mit nur
+   * dem Äquatorband wanderten dort Punkte über eine stehende Kartoffel.
+   */
+  it('der Stern staffelt die Bänder, der Komet trägt ab Detail 1 alle drei', () => {
     for (const kind of ['star', 'comet'] as const) {
       const d0 = sunSpriteLayers(body(kind), 0, false)
       const d1 = sunSpriteLayers(body(kind), 1, false)
       const d2 = sunSpriteLayers(body(kind), 2, false)
       expect(d0.some(isSunBandLayer)).toBe(false)
       expect(d0).not.toContain('shade')
-      expect(d1.filter(isSunBandLayer)).toEqual(['bandE'])
+      expect(d1.filter(isSunBandLayer)).toEqual(
+        kind === 'star' ? ['bandE'] : ['bandN', 'bandS', 'bandE'],
+      )
       expect(d1).toContain('shade')
       expect(d1.indexOf('core')).toBeLessThan(d1.indexOf('bandE'))
       expect(d1.indexOf('bandE')).toBeLessThan(d1.indexOf('shade'))
-      if (kind === 'star') {
-        expect(d2.filter(isSunBandLayer).sort()).toEqual([...BANDS].sort())
-        // Der Äquator liegt ÜBER N und S — beide Nähte blenden gleich
-        expect(d2.indexOf('bandE')).toBeGreaterThan(d2.indexOf('bandN'))
-        expect(d2.indexOf('bandE')).toBeGreaterThan(d2.indexOf('bandS'))
-      } else {
-        expect(d2.filter(isSunBandLayer)).toEqual(['bandE'])
-      }
+      expect(d2.filter(isSunBandLayer).sort()).toEqual([...BANDS].sort())
+      // Der Äquator liegt ÜBER N und S — beide Nähte blenden gleich
+      expect(d2.indexOf('bandE')).toBeGreaterThan(d2.indexOf('bandN'))
+      expect(d2.indexOf('bandE')).toBeGreaterThan(d2.indexOf('bandS'))
       for (const band of d2.filter(isSunBandLayer))
         expect(d2.indexOf(band)).toBeLessThan(d2.indexOf('shade'))
     }
@@ -211,13 +217,38 @@ describe('Achsdrehung — Bänder und Schatten', () => {
     expect(bh.indexOf('bhDiscIn')).toBe(bh.indexOf('bhDisc') + 1)
   })
 
+  /**
+   * Der Stern ist Plasma und dreht DIFFERENTIELL (ungleiche Dauern). Ein Fels
+   * ist starr: überall dieselbe Umlaufzeit, und die Polbänder legen dafür die
+   * kürzere Strecke zurück — `periodK` ist cos der Breite. Wer das vertauscht,
+   * macht aus dem Kometen eine Flüssigkeit.
+   */
+  it('der Fels dreht starr, der Stern differentiell', () => {
+    for (const band of BANDS) {
+      expect(COMET_BANDS[band].speed, `comet/${band}`).toBe(1)
+      expect(SUN_BANDS[band].periodK, `star/${band}`).toBe(1)
+    }
+    expect(COMET_BANDS.bandE.periodK).toBe(1)
+    for (const band of ['bandN', 'bandS'] as const) {
+      expect(COMET_BANDS[band].periodK).toBeGreaterThan(0.7)
+      expect(COMET_BANDS[band].periodK).toBeLessThan(0.9)
+      // Kürzere Strecke bei gleicher Dauer: das Polband ist schmaler.
+      expect(sunBandStrip(band, 'comet').w).toBeLessThan(sunBandStrip('bandE', 'comet').w)
+    }
+    // Der Stern behält seine ungleichen Dauern
+    expect(SUN_BANDS.bandN.speed).not.toBe(SUN_BANDS.bandS.speed)
+    expect(sunBandStrip('bandN', 'star').w).toBe(sunBandStrip('bandE', 'star').w)
+  })
+
   it('die Bahn ist nahtlos: jeder Körper hat seinen Zwilling eine Periode weiter', () => {
     for (const kind of ['star', 'comet'] as const) {
       const b = body(kind, kind === 'comet' ? 4 : 2)
       const br = R * sunBodyRadiusFraction(kind)
-      const period = SUN_BAND_PERIOD_BR * br
-      const x0 = R * 2 - period
       for (const layer of sunSpriteLayers(b, 2, false).filter(isSunBandLayer)) {
+        // Je Layer: eine gekürzte Polperiode (COMET_BANDS.periodK) verschiebt
+        // auch die Naht.
+        const period = SUN_BAND_PERIOD_BR * sunBandRow(layer, kind).periodK * br
+        const x0 = R * 2 - period
         const marks = run(b, layer, 2)
           .map((op) => /^(arc|ellipse)\((-?[\d.]+),(-?[\d.]+),(-?[\d.]+)/.exec(op))
           .filter((m): m is RegExpExecArray => m !== null)
@@ -439,9 +470,7 @@ describe('Geometrie und Verträge', () => {
     for (const kind of KINDS) {
       for (const detail of [0, 1, 2] as const) {
         for (const layer of sunSpriteLayers(body(kind, 3), detail, true)) {
-          const bad = runAt(body(kind, 3), layer, detail, 0).filter((o) =>
-            /NaN|Infinity/.test(o),
-          )
+          const bad = runAt(body(kind, 3), layer, detail, 0).filter((o) => /NaN|Infinity/.test(o))
           expect(bad, `${kind}/${layer}/${detail}: ${bad[0]}`).toEqual([])
         }
       }

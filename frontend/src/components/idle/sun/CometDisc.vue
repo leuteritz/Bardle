@@ -2,9 +2,16 @@
   <div ref="host" class="comet-root" :style="vars">
     <div class="sun-slot comet-coma" data-layer="coma" />
     <div class="sun-slot comet-core" data-layer="core" />
-    <!-- Der Fels dreht um die eigene Achse: Krater und Adern rollen als Band, der
-         Terminator steht darüber (main.css trägt die Bandregeln). -->
-    <div v-if="detail >= 1" class="sun-slot sun-band" data-layer="bandE" :style="bandVars" />
+    <!-- Der Fels dreht um die eigene Achse: Korn, Krater und Adern rollen als
+         drei Breitenbänder, der Terminator steht darüber (main.css trägt die
+         Bandregeln). STARR, nicht differentiell: gleiche Dauer für alle drei,
+         die Polbänder legen die kürzere Strecke zurück (COMET_BANDS.periodK).
+         Der Äquator liegt ÜBER N und S, damit beide Nähte gleich blenden. -->
+    <template v-if="detail >= 1">
+      <div class="sun-slot sun-band" data-layer="bandN" :style="bandVars('bandN')" />
+      <div class="sun-slot sun-band" data-layer="bandS" :style="bandVars('bandS')" />
+      <div class="sun-slot sun-band" data-layer="bandE" :style="bandVars('bandE')" />
+    </template>
     <div v-if="detail >= 1" class="sun-slot comet-shade" data-layer="shade" />
     <div v-if="jetsShown" class="sun-slot comet-jets" data-layer="jets" />
     <div v-if="wake && detail >= 1" ref="wakeGroup" class="sun-wake-group" :class="{ paused: wakePaused }">
@@ -21,15 +28,16 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import type { SunBandLayer } from '@/types'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import {
+  COMET_BAND_MASK_EDGE,
+  COMET_BAND_MASK_FULL,
   COMET_DISC_FILL,
   COMET_JET_MIN_STAGE,
   COMET_PHASE_DATA,
-  SUN_BAND_MASK_EDGE,
-  SUN_BAND_MASK_FULL,
-  SUN_COMET_TURN_SEC,
+  COMET_TURN_SEC_BY_STAGE,
   SUN_COMET_WAKE_GUST_SEC,
   SUN_SPRITE_CROSSFADE_MS,
   SUN_WAKE_COPIES,
@@ -60,7 +68,13 @@ useWakeFollower(wakeGroup, () => props.wake)
 const detail = computed(() => sunSpriteDetail(props.diameter))
 const body = computed(() => sunBodyFor(solarStore, solarStore.solarSignature))
 const jetsShown = computed(() => detail.value >= 2 && solarStore.cometStage >= COMET_JET_MIN_STAGE)
-const bandVars = sunBandVars('bandE', 'comet')
+const bandVars = (layer: SunBandLayer) => sunBandVars(layer, 'comet')
+
+/** Der Fels wächst über sechs Stufen und dreht dabei träger. */
+const turnSec = computed(
+  () =>
+    COMET_TURN_SEC_BY_STAGE[Math.min(solarStore.cometStage, COMET_TURN_SEC_BY_STAGE.length - 1)],
+)
 
 const wakePaused = computed(() => {
   if (!props.wake) return false
@@ -72,10 +86,10 @@ const vars = computed((): Record<string, string> => ({
   '--comet-d': `${props.diameter}px`,
   '--comet-pulse': COMET_PHASE_DATA.pulseSpeed,
   '--sun-xfade': `${SUN_SPRITE_CROSSFADE_MS}ms`,
-  '--sun-turn': `${SUN_COMET_TURN_SEC}s`,
+  '--sun-turn': `${turnSec.value}s`,
   '--band-r': `${COMET_DISC_FILL}`,
-  '--band-mask-full': `${SUN_BAND_MASK_FULL}`,
-  '--band-mask-edge': `${SUN_BAND_MASK_EDGE}`,
+  '--band-mask-full': `${COMET_BAND_MASK_FULL}`,
+  '--band-mask-edge': `${COMET_BAND_MASK_EDGE}`,
   '--sun-wake-sec': `${SUN_COMET_WAKE_GUST_SEC}s`,
   '--wake-grow': `${SUN_WAKE_GROW}`,
 }))

@@ -45,11 +45,47 @@ export const SUN_SPRITE_SPAN: Record<SunSpriteLayer, number> = {
    symmetrisch. */
 export const SUN_BAND_PERIOD_BR = 4
 export const SUN_BAND_STRIP_PERIODS = 2
-export const SUN_BANDS: Record<SunBandLayer, { y: number; h: number; speed: number }> = {
-  bandN: { y: -0.62, h: 0.8, speed: 0.74 },
-  bandE: { y: 0, h: 1.12, speed: 1 },
-  bandS: { y: 0.62, h: 0.8, speed: 0.68 },
+export interface SunBandRow {
+  y: number
+  h: number
+  /** Dauerteiler: Umlaufzeit = --sun-turn / speed. */
+  speed: number
+  /** Anteil der Periode — die STRECKE, die das Band je Umlauf zurücklegt. */
+  periodK: number
 }
+export const SUN_BANDS: Record<SunBandLayer, SunBandRow> = {
+  bandN: { y: -0.62, h: 0.8, speed: 0.74, periodK: 1 },
+  bandE: { y: 0, h: 1.12, speed: 1, periodK: 1 },
+  bandS: { y: 0.62, h: 0.8, speed: 0.68, periodK: 1 },
+}
+
+/* Der Komet ist ein FELS, keine Plasmakugel. Differentialrotation wie oben wäre
+   hier falsch — sie liest sich als Flüssigkeit. Ein starrer Körper braucht
+   überall dieselbe Umlaufzeit (speed 1); die Polbänder legen dafür die KÜRZERE
+   Strecke zurück, weil ihr Breitenkreis kleiner ist: periodK ist cos der
+   Breite (die Bänder sitzen bei sin φ = 0,62, also φ ≈ 38,3° → cos ≈ 0,78). */
+export const COMET_BANDS: Record<SunBandLayer, SunBandRow> = {
+  bandN: { y: -0.62, h: 0.8, speed: 1, periodK: 0.78 },
+  bandE: { y: 0, h: 1.12, speed: 1, periodK: 1 },
+  bandS: { y: 0.62, h: 0.8, speed: 1, periodK: 0.78 },
+}
+/** Wobble der Kometensilhouette (lumpyPath): der Fels ist eine Kartoffel, sein
+ *  kleinster Radius liegt damit bei 1 - Wobble. COMET_BAND_MASK_EDGE rechnet
+ *  dagegen — sonst schweben Bandmotive in den Dellen über der Silhouette. */
+export const COMET_WOBBLE = 0.09
+/** Vertikale Stauchung der Motive eines Polbands — dieselbe cos-Breite. */
+export const COMET_BAND_LAT_SQUASH = 0.78
+/** Sprenkel je Streifen, die das Felskorn tragen (Detail 1 / 2). Sie ERSETZEN
+ *  das Rauschmuster, das der Kern bis Detail 0 trägt: als Pattern liesse es
+ *  sich nicht nahtlos rollen, jedes Korn steht deshalb doppelt (bei lon und
+ *  lon + Periode). Die Zahl liegt in derselben Grössenordnung wie die
+ *  Granulation des Sterns (360 / 640 je Band). */
+export const COMET_BAND_GRAIN = [280, 520]
+/** Randverdunkelung des Felsens auf der Schattenebene: innerer Rand als Anteil
+ *  des Körperradius, Deckkraft an der Kante. Sie steht STILL — das Motiv soll
+ *  am Limbus verlöschen, nicht das Licht mitdrehen. */
+export const COMET_LIMB_INNER = 0.52
+export const COMET_LIMB_ALPHA = 0.5
 /** Vertikaler Auslauf oben/unten je Band (in br) — die Bänder überlappen. */
 export const SUN_BAND_EDGE_FADE_BR = 0.14
 /** Deckel auf die STREIFENBREITE in Gerätepixeln; darüber sinkt der dpr. */
@@ -58,16 +94,30 @@ export const SUN_BAND_MAX_BACKING_PX = 2048
  *  Der weiche Rand ersetzt die Perspektivstauchung am Limbus. */
 export const SUN_BAND_MASK_FULL = 0.7
 export const SUN_BAND_MASK_EDGE = 0.96
+/** Der Komet braucht eine engere Maske: seine Silhouette ist eine Kartoffel
+ *  (Wobble 0,09), ihr kleinster Radius liegt bei 0,91 br. Mit der Sternmaske
+ *  (0,96) schwebten Motive in den Dellen über dem Fels — sichtbar erst, seit
+ *  die Bänder die ganze Scheibe decken statt nur den Äquator. */
+export const COMET_BAND_MASK_FULL = 0.62
+export const COMET_BAND_MASK_EDGE = 0.9
 
 /** Umlaufzeit am Äquator je Phase (Spark … Pyre) — Riesen drehen langsamer;
- *  ein Fleck quert die Scheibe in der halben Zeit. Der Komet ist ein Fels. */
+ *  ein Fleck quert die Scheibe in der halben Zeit. */
 export const SUN_TURN_SEC_BY_PHASE = [42, 50, 56, 74, 96]
-export const SUN_COMET_TURN_SEC = 22
+/** Umlaufzeit je Kometenstufe — dieselbe Lesart: der Fels wächst über sechs
+ *  Stufen (COMET_STAGE_RADII 16 → 26) und dreht dabei träger. Bleibt unter der
+ *  schnellsten Sternphase, er ist der kleinste Körper der Reise. */
+export const COMET_TURN_SEC_BY_STAGE = [18, 20, 22, 25, 28, 32]
 
 /** Unter _PX_1 nur Halo und Kern (Header-Orb, Tooltip-Kugeln, Minimap); ab
- *  _PX_1 Äquatorband, Schatten, Korona, Coma und der Wake (der Orbit-Komet ist
- *  64–104 px und braucht seinen Schweif); ab _PX_2 alle drei Bänder, Eruptionen
- *  und Jets — dieselbe Schwelle wie die Zierebenen (Performance-Regel 7). */
+ *  _PX_1 Band, Schatten, Korona, Coma und der Wake (der Orbit-Komet ist
+ *  64–104 px und braucht seinen Schweif); ab _PX_2 Eruptionen und Jets —
+ *  dieselbe Schwelle wie die Zierebenen (Performance-Regel 7).
+ *
+ *  Bei den BÄNDERN staffelt nur der Stern (ab _PX_2 alle drei). Der Komet
+ *  trägt alle drei schon ab _PX_1: er kommt im Orbit nie über Stufe 1, und mit
+ *  einem einzelnen Äquatorband wanderten dort Punkte über eine stehende
+ *  Kartoffel, statt dass sich der Fels dreht. */
 export const SUN_SPRITE_DETAIL_PX_1 = 60
 export const SUN_SPRITE_DETAIL_PX_2 = SOLAR_SIGNATURE_MIN_DIAMETER
 
