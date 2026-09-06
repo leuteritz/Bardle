@@ -323,19 +323,7 @@
       <Transition name="cs-detail-swap" mode="out-in">
         <ItemDetailPanel v-if="itemDetail" key="item" :detail="itemDetail" @buy="handleBuyItem" />
         <ChampionDetailPanel v-else-if="detail" key="champion" :detail="detail" @buy="handleBuy" />
-        <ShopOverviewCard
-          v-else
-          key="overview"
-          :domain="activeDomain"
-          :owned="overviewOwned"
-          :total="overviewTotal"
-          :galaxy="overviewGalaxy"
-          :next-tier="overviewNextTier"
-          :picks="overviewPicks"
-          :sets="overviewSets"
-          :empty-hint="overviewEmptyHint"
-          @pick="onOverviewPick"
-        />
+        <p v-else key="empty" class="cs-detail-unavailable">{{ detailEmptyLabel }}</p>
       </Transition>
     </aside>
   </div>
@@ -354,7 +342,6 @@ import ItemShopCard from './ItemShopCard.vue'
 import ItemDetailPanel from './ItemDetailPanel.vue'
 import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 import ShopFacetRail from './ShopFacetRail.vue'
-import ShopOverviewCard from './ShopOverviewCard.vue'
 import { useItemStore } from '@/stores/economy/itemStore'
 import { SHOP_ITEMS, ITEM_CATEGORIES, ITEM_RARITIES, ITEM_SETS } from '@/config/economy/items'
 import { getChampionRoles, CHAMPION_ROLES, getChampionNames } from '@/config/champions/championData'
@@ -403,9 +390,6 @@ import type {
   ItemRarity,
   PlanetType,
   ShopFacetGroup,
-  ShopOverviewPick,
-  ShopOverviewSet,
-  ShopOverviewTier,
 } from '@/types'
 
 export default defineComponent({
@@ -418,7 +402,6 @@ export default defineComponent({
     ItemDetailPanel,
     RpgSearchBar,
     ShopFacetRail,
-    ShopOverviewCard,
   },
   props: {
     /**
@@ -1402,6 +1385,11 @@ export default defineComponent({
       }
       return names
     })
+    const displayedChampion = computed(() =>
+      activeDomain.value === 'champions'
+        ? selectedChampion.value ?? visibleChampionList.value[0] ?? null
+        : null,
+    )
 
     // Grid order for the detail panel's ← / →, scoped to the OPEN tab: champion
     // tiers then cross-role hits, or the item sections. Stepping out of one
@@ -1427,6 +1415,11 @@ export default defineComponent({
       }
       return entries
     })
+    const displayedItem = computed(() =>
+      activeDomain.value === 'items'
+        ? selectedItem.value ?? visibleEntries.value.find((entry) => entry.kind === 'item')?.id ?? null
+        : null,
+    )
 
     function selectChampion(name: string) {
       selectedChampion.value = name
@@ -1453,7 +1446,7 @@ export default defineComponent({
       selectItem(id)
     }
 
-    /** Escape's first stop: drop the subject, the overview card takes over. */
+    /** Escape clears the explicit card selection. */
     function closeDetail() {
       selectedChampion.value = null
       selectedItem.value = null
@@ -1488,7 +1481,7 @@ export default defineComponent({
       () => {
         searchQuery.value = ''
         closeDetail()
-        nextTick(openAtHighestTier)
+        nextTick(selectFirstChampion)
       },
       { immediate: true },
     )
@@ -1548,37 +1541,13 @@ export default defineComponent({
       { immediate: true },
     )
 
-    /**
-     * Opening state: the shop lands ON the highest tier the player can actually
-     * recruit from — expanded, its header at the top of the grid, its first
-     * champion selected — instead of on six collapsed rows that all have to be
-     * opened by hand. That tier is where the next purchase is; everything under
-     * it is already owned or already passed.
-     *
-     * The pick inside the tier prefers a champion that is affordable right now,
-     * so the selection is a decision the player can act on rather than the
-     * alphabetically first name.
-     *
-     * That pick fills the detail column straight away. It costs the grid
-     * nothing to do so — which is exactly what the old layer could not say.
-     */
-    function openAtHighestTier() {
-      // a deep link (notify badge → pendingChampionSearch) has already aimed the
-      // shop somewhere; it wins
+    function selectFirstChampion() {
       if (searchQuery.value.trim() || selectedChampion.value || selectedItem.value) return
-      const open = tierGroups.value.filter((g) => !g.isGalaxyLocked && g.champions.length > 0)
-      const highest = open[open.length - 1]
-      if (!highest) return
-      const pick = highest.champions.find((c) => canClickBuy(c.name)) ?? highest.champions[0]
-      if (pick) selectChampion(pick.name)
-      // expands the tier and puts its header at the top edge (settle included)
+      const first = visibleChampionList.value[0]
+      if (first) selectChampion(first)
       showDomain('champions')
     }
 
-    // Without a search the panel shows its empty state until the player clicks a
-    // card (search auto-select is handled by the searchQuery watcher above).
-    // Here we only clear the selection when it goes stale (filtered out; a bought
-    // champion is re-pointed by handleBuy before this runs).
     watch(visibleEntries, (list) => {
       if (
         selectedChampion.value &&
@@ -1638,7 +1607,7 @@ export default defineComponent({
 
     // Everything the detail panel renders for the selected champion.
     const detail = computed<ShopChampionDetail | null>(() => {
-      const name = selectedChampion.value
+      const name = displayedChampion.value
       if (!name) return null
       const d = getChampionDetail(name)
       const role = CHAMPION_ROLES[name] as keyof typeof ROLE_BADGE | undefined
@@ -1682,7 +1651,7 @@ export default defineComponent({
 
     // Everything the item detail panel renders for the selected item.
     const itemDetail = computed<ShopItemDetail | null>(() => {
-      const id = selectedItem.value
+      const id = displayedItem.value
       if (!id) return null
       const item = SHOP_ITEMS.find((i) => i.id === id)
       if (!item) return null
@@ -1977,99 +1946,9 @@ export default defineComponent({
         : shopChampionNames.value.filter((n) => canClickBuy(n)).length,
     )
 
-    // ── Overview card (detail column, nothing picked) ────────────────────────
-    const overviewOwned = computed(() =>
-      activeDomain.value === 'items'
-        ? SHOP_ITEMS.filter((i) => (itemStore.ownedItems[i.id] ?? 0) > 0).length
-        : battleStore.ownedChampions.filter((n) => n !== 'Bard').length,
+    const detailEmptyLabel = computed(() =>
+      activeDomain.value === 'items' ? 'No items available.' : 'No champions available.',
     )
-    const overviewTotal = computed(() =>
-      activeDomain.value === 'items'
-        ? SHOP_ITEMS.length
-        : championNames.value.filter((n) => n !== 'Bard').length,
-    )
-    const overviewGalaxy = computed(() => galaxyStore.currentGalaxy)
-
-    /** The next wall, not the next step: the lowest tier still galaxy-locked. */
-    const overviewNextTier = computed<ShopOverviewTier | null>(() => {
-      const next = CHAMPION_TIERS_BY_STAR.find((t) => isTierGalaxyLocked(t.starLevel))
-      if (!next) return null
-      return {
-        starLevel: next.starLevel,
-        name: next.name,
-        icon: next.icon,
-        color: next.color,
-        requiredGalaxy: requiredGalaxyForTier(next.starLevel),
-      }
-    })
-
-    const OVERVIEW_PICK_LIMIT = 3
-    const overviewPicks = computed<ShopOverviewPick[]>(() => {
-      if (activeDomain.value === 'items') {
-        return SHOP_ITEMS.filter((i) => canAffordItem(i.id))
-          .sort((a, b) => itemStore.itemPrice(a.id) - itemStore.itemPrice(b.id))
-          .slice(0, OVERVIEW_PICK_LIMIT)
-          .map((i) => {
-            const rarity = ITEM_RARITIES.find((r) => r.id === i.rarity)
-            return {
-              kind: 'item' as const,
-              id: i.id,
-              name: i.name,
-              image: i.icon.startsWith('/') ? i.icon : undefined,
-              icon: i.icon.startsWith('/') ? undefined : i.icon,
-              color: rarity?.color ?? '#e8c040',
-              sub: `${rarity?.label ?? i.rarity} · ${itemStore.itemPrice(i.id).toLocaleString()} chimes`,
-            }
-          })
-      }
-      return shopChampionNames.value
-        .filter((n) => canClickBuy(n))
-        .sort((a, b) => getChampionStarLevel(b) - getChampionStarLevel(a) || a.localeCompare(b))
-        .slice(0, OVERVIEW_PICK_LIMIT)
-        .map((name) => ({
-          kind: 'champion' as const,
-          id: name,
-          name,
-          image: battleStore.getChampionImage(name, { size: 'sm' }),
-          color: getTierColor(name),
-          sub: `★${getChampionStarLevel(name)} · ${getChimesPrice(name).toLocaleString()} chimes`,
-        }))
-    })
-
-    const overviewSets = computed<ShopOverviewSet[]>(() =>
-      ITEM_SETS.map((s) => ({
-        id: s.setId,
-        name: s.setName,
-        icon: s.icon.startsWith('/') ? undefined : s.icon,
-        image: s.icon.startsWith('/') ? s.icon : undefined,
-        description: s.description,
-        ownedParts: setPartCounts.value.owned.get(s.setId) ?? 0,
-        totalParts: setPartCounts.value.total.get(s.setId) ?? 0,
-        active: itemStore.activeSetBonuses.some((b) => b.setId === s.setId),
-      })),
-    )
-
-    /**
-     * Why the picks are empty, when they are. "Nothing affordable" is the wrong
-     * answer for a fresh save: the player may be sitting on billions of chimes
-     * and still have nobody to spend them on, because no home planet has fallen
-     * yet. An empty state that names the wrong cause sends them to farm the
-     * wrong thing.
-     */
-    const overviewEmptyHint = computed(() => {
-      if (activeDomain.value === 'items') {
-        return 'Nothing affordable yet — chimes are still gathering.'
-      }
-      if (shopChampionNames.value.length === 0) {
-        return 'No champion unlocked yet — rescue a home planet in the orbit to bring one into the shop.'
-      }
-      return 'Nothing affordable yet — chimes and materials are still gathering.'
-    })
-
-    function onOverviewPick(kind: 'champion' | 'item', id: string) {
-      if (kind === 'champion') selectChampion(id)
-      else selectItem(id)
-    }
 
     return {
       tierGroups,
@@ -2144,14 +2023,7 @@ export default defineComponent({
       onFacetToggle,
       affordableOnly,
       affordableCount,
-      overviewOwned,
-      overviewTotal,
-      overviewGalaxy,
-      overviewNextTier,
-      overviewPicks,
-      overviewSets,
-      overviewEmptyHint,
-      onOverviewPick,
+      detailEmptyLabel,
     }
   },
 })
@@ -2236,6 +2108,14 @@ export default defineComponent({
   flex-direction: column;
   background: #111008;
   border-left: 1px solid #5c3310;
+}
+.cs-detail-unavailable {
+  margin: clamp(2.25rem, 9%, 5rem) auto 0;
+  padding: 0.55rem 0.8rem;
+  color: #a89478;
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+  text-align: center;
 }
 /* The column swaps subjects, it does not slide in and out — only its content
    changes, so the exchange is a beat rather than a movement. */

@@ -140,38 +140,6 @@ export interface ShopFacetGroup {
   chips: ShopFacetChip[]
 }
 
-/* ── Champion Shop overview card (detail column, nothing picked) ── */
-export interface ShopOverviewTier {
-  starLevel: number
-  name: string
-  icon: string
-  color: string
-  requiredGalaxy: number
-}
-
-export interface ShopOverviewPick {
-  kind: 'champion' | 'item'
-  id: string
-  name: string
-  image?: string
-  icon?: string
-  color: string
-  /** One line of why it is worth the click — tier and price, or rarity. */
-  sub: string
-}
-
-export interface ShopOverviewSet {
-  id: string
-  name: string
-  /** Iconify name — or `image`, since item icons are half asset paths. */
-  icon?: string
-  image?: string
-  description: string
-  ownedParts: number
-  totalParts: number
-  active: boolean
-}
-
 /* ── Champion Shop detail panel ── */
 export interface ShopDetailMaterial {
   id: string
