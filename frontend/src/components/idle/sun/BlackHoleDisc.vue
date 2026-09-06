@@ -82,6 +82,7 @@ import { useWakeFollower } from '@/composables/orbit/useWakeFollower'
  * Motes, die in cqw laufen; alles Gemalte ist ein Sprite.
  */
 const props = withDefaults(defineProps<{ diameter: number; wake?: boolean }>(), { wake: false })
+const emit = defineEmits<{ ready: [] }>()
 
 const phase = STAR_PHASE_DATA[STAR_PHASE_FINAL_INDEX]
 const inspiralCount = BLACK_HOLE_INSPIRAL_COUNT
@@ -136,6 +137,7 @@ watch(
       px: props.diameter,
       dpr: window.devicePixelRatio || 1,
       wake: props.wake,
+      onReady: () => emit('ready'),
     })
   },
   { flush: 'post', immediate: true },

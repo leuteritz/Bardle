@@ -80,7 +80,10 @@
     <!-- Scaled tree stage -->
     <div
       class="tree-stage"
-      :class="{ 'tree-stage--dragging': isDragging }"
+      :class="[
+        { 'tree-stage--dragging': isDragging },
+        `tree-stage--entry-${entryPhase}`,
+      ]"
       :style="{
         transform: stageTransform,
         transitionDuration: `${stageTransitionMs}ms`,
@@ -221,8 +224,12 @@
            oder mitpulst, ist keine Anzeige mehr. Alle vier sind absolut in der
            Mitte des Wrappers verankert und tragen ihre Größe selbst. -->
       <div class="sun-wrapper">
-        <CometDisc v-if="solarStore.isCometState" :diameter="bodyDiameter" />
-        <PhaseSunDisc v-else :diameter="bodyDiameter" />
+        <CometDisc
+          v-if="solarStore.isCometState"
+          :diameter="bodyDiameter"
+          @ready="onSunReady"
+        />
+        <PhaseSunDisc v-else :diameter="bodyDiameter" @ready="onSunReady" />
         <div
           v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
           class="next-phase-preview"
@@ -628,6 +635,7 @@ import {
   FORGE_SPOTLIGHT_COMPASS_ICON_PX,
   FORGE_SPOTLIGHT_COMPASS_SIZE_PX,
   FORGE_TREE_PAN_MS,
+  FORGE_TREE_ENTRY_CORE_MS,
   FORGE_CAMERA_PAN_MIN_MS,
   FORGE_CAMERA_PAN_MAX_MS,
   FORGE_CAMERA_PAN_SPEED_PX_PER_MS,
@@ -638,6 +646,7 @@ import {
 
 const solarStore = useSolarUpgradeStore()
 const forgeStore = useStarForgeStore()
+const emit = defineEmits<{ ready: [] }>()
 const { entryById, freshIds, buyUpgrade, affordableLevels } = useForgeUpgrades()
 const {
   spotlightId,
@@ -659,6 +668,22 @@ const {
 } = useForgeSpotlight()
 const { searchActive, matchIds } = useForgeSearch()
 const { detailsOpen, openDetails, closeDetails } = useForgeDetailsPane()
+
+const sunReady = ref(false)
+const entryPhase = ref<'wait' | 'core' | 'complete'>('wait')
+const entryMs = `${FORGE_TREE_ENTRY_CORE_MS}ms`
+let entryTimer: ReturnType<typeof setTimeout> | null = null
+
+function onSunReady(): void {
+  if (sunReady.value) return
+  sunReady.value = true
+  entryPhase.value = 'core'
+  emit('ready')
+  entryTimer = setTimeout(() => {
+    entryTimer = null
+    entryPhase.value = 'complete'
+  }, FORGE_TREE_ENTRY_CORE_MS)
+}
 
 const C = FORGE_STAGE_SIZE / 2
 
@@ -1891,6 +1916,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (entryTimer !== null) clearTimeout(entryTimer)
   resizeObserver?.disconnect()
   cancelAnimationFrame(settleFrame)
   // Der Spotlight lebt auf Modulebene und überlebte diese Komponente sonst.
@@ -2664,6 +2690,27 @@ const nextPhasePreviewStyle = computed(() => ({
   width: 100%;
   height: 100%;
   pointer-events: none;
+  transition: opacity v-bind(entryMs) ease;
+}
+
+.tree-node,
+.pursuit-mark {
+  transition:
+    opacity v-bind(entryMs) ease,
+    transform v-bind(entryMs) cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.tree-stage--entry-wait .tree-svg,
+.tree-stage--entry-core .tree-svg {
+  opacity: 0;
+}
+
+.tree-stage--entry-wait .tree-node,
+.tree-stage--entry-core .tree-node,
+.tree-stage--entry-wait .pursuit-mark,
+.tree-stage--entry-core .pursuit-mark {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.94);
 }
 
 /* ══════════════════════════════════════════════════
@@ -3724,6 +3771,18 @@ const nextPhasePreviewStyle = computed(() => ({
    REDUCED MOTION
 ══════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
+  .tree-svg,
+  .tree-node,
+  .pursuit-mark {
+    transition: none;
+  }
+
+  .tree-stage--entry-core .tree-svg,
+  .tree-stage--entry-core .tree-node,
+  .tree-stage--entry-core .pursuit-mark {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
   /* Der Schein bleibt stehen — ohne die Deckkraft mitzusetzen bliebe er
      unsichtbar, und der Knoten verlöre sein „bereit"-Zeichen. */
   .node-circle--ready .node-glow {

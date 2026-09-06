@@ -1513,27 +1513,40 @@ function swapSlotImage(
   layerKey: string,
   url: Promise<string>,
   fadeMs: number,
-): void {
+): Promise<void> {
   slot.dataset.layerKey = layerKey
-  void url.then((src) => {
-    if (slot.dataset.layerKey !== layerKey) return
+  return url.then(
+    (src) =>
+      new Promise<void>((resolve) => {
+    if (slot.dataset.layerKey !== layerKey) {
+      resolve()
+      return
+    }
     if (!src) {
       slot.replaceChildren()
+      resolve()
       return
     }
     const current = slot.querySelector<HTMLImageElement>('img.is-in')
-    if (current && current.src === src) return
+    if (current && current.src === src) {
+      resolve()
+      return
+    }
     const img = document.createElement('img')
     img.alt = ''
     img.draggable = false
     img.decoding = 'async'
     const show = () => {
-      if (slot.dataset.layerKey !== layerKey) return
+      if (slot.dataset.layerKey !== layerKey) {
+        resolve()
+        return
+      }
       const old = Array.from(slot.querySelectorAll<HTMLImageElement>('img'))
       slot.appendChild(img)
       requestAnimationFrame(() => {
         img.classList.add('is-in')
         for (const o of old) o.classList.remove('is-in')
+        resolve()
       })
       // Rein visuelle Frist — bleibt Wanduhr
       setTimeout(() => {
@@ -1543,7 +1556,9 @@ function swapSlotImage(
     img.src = src
     const decode = typeof img.decode === 'function' ? img.decode() : Promise.resolve()
     decode.then(show, show)
-  })
+      }),
+    () => undefined,
+  )
 }
 
 export interface MountSunOptions {
@@ -1552,6 +1567,7 @@ export interface MountSunOptions {
   wake?: boolean
   layers?: SunSpriteLayer[]
   crossfadeMs?: number
+  onReady?: () => void
 }
 
 /** Hängt alle Ebenen in die `.sun-slot[data-layer]` des Hosts — idempotent
@@ -1561,10 +1577,15 @@ export function mountSunSprites(host: HTMLElement, body: SunBody, opts: MountSun
   const detail = sunSpriteDetail(opts.px)
   const layers = opts.layers ?? sunSpriteLayers(body, detail, opts.wake ?? false)
   const key = `${sunSpriteKey('all', body, opts.px, clampSpriteDpr(opts.dpr), detail)}|${layers.join(',')}`
-  if (host.dataset.spriteKey === key) return
+  if (host.dataset.spriteKey === key) {
+    if (host.dataset.spriteReadyKey === key) opts.onReady?.()
+    return
+  }
   host.dataset.spriteKey = key
+  host.dataset.spriteReadyKey = ''
   const fade = opts.crossfadeMs ?? SUN_SPRITE_CROSSFADE_MS
   const slots = host.querySelectorAll<HTMLElement>('.sun-slot[data-layer]')
+  const pending: Promise<void>[] = []
   for (const slot of slots) {
     const layer = slot.dataset.layer as SunSpriteLayer
     if (!layers.includes(layer)) {
@@ -1575,13 +1596,25 @@ export function mountSunSprites(host: HTMLElement, body: SunBody, opts: MountSun
     const backing = sunSpriteBacking(opts.px, layer, opts.dpr, body.kind)
     const layerKey = sunSpriteKey(layer, body, opts.px, backing.dpr, detail)
     if (slot.dataset.layerKey === layerKey) continue
-    swapSlotImage(
-      slot,
-      layerKey,
-      spriteUrl(layerKey, buildSunSprite(layer, body, opts.px, opts.dpr, detail)),
-      fade,
+    pending.push(
+      swapSlotImage(
+        slot,
+        layerKey,
+        spriteUrl(layerKey, buildSunSprite(layer, body, opts.px, opts.dpr, detail)),
+        fade,
+      ),
     )
   }
+  if (pending.length === 0) {
+    host.dataset.spriteReadyKey = key
+    opts.onReady?.()
+    return
+  }
+  void Promise.all(pending).then(() => {
+    if (host.dataset.spriteKey !== key) return
+    host.dataset.spriteReadyKey = key
+    opts.onReady?.()
+  })
 }
 
 /** Rastern und kodieren, ohne zu mounten — vor einem Phasenwechsel. */

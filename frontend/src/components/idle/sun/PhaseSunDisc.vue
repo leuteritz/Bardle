@@ -1,6 +1,6 @@
 <template>
   <!-- Endphase: der Stern ist kollabiert — das Schwarze Loch ersetzt die Scheibe. -->
-  <BlackHoleDisc v-if="isCollapsed" :diameter="diameter" :wake="wake" />
+  <BlackHoleDisc v-if="isCollapsed" :diameter="diameter" :wake="wake" @ready="emit('ready')" />
   <div
     v-else
     ref="host"
@@ -85,6 +85,7 @@ const props = withDefaults(
   }>(),
   { pulse: true, wake: false },
 )
+const emit = defineEmits<{ ready: [] }>()
 
 const planetShopStore = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
@@ -149,6 +150,7 @@ watch(
       px: props.diameter,
       dpr: window.devicePixelRatio || 1,
       wake: props.wake,
+      onReady: () => emit('ready'),
     })
   },
   { flush: 'post', immediate: true },

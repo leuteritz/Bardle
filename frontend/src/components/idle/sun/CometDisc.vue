@@ -51,6 +51,7 @@ import { useWakeFollower } from '@/composables/orbit/useWakeFollower'
  * absolut zentriert, Grösse aus `diameter`, der Fels füllt COMET_DISC_FILL.
  */
 const props = withDefaults(defineProps<{ diameter: number; wake?: boolean }>(), { wake: false })
+const emit = defineEmits<{ ready: [] }>()
 
 const solarStore = useSolarUpgradeStore()
 const host = ref<HTMLDivElement | null>(null)
@@ -89,6 +90,7 @@ watch(
       px: props.diameter,
       dpr: window.devicePixelRatio || 1,
       wake: props.wake,
+      onReady: () => emit('ready'),
     })
   },
   { flush: 'post', immediate: true },

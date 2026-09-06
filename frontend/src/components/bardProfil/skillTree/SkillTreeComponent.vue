@@ -5,7 +5,7 @@
          zuletzt die Schublade mit Gesperrtem. Eine Abteilungs-Rail stand
          einmal rechts daneben; sie ist gestrichen (Herleitung an
          `FORGE_OFFER_TITLE` in `constants/forge.ts`). -->
-    <ForgeTreePanel ref="treeRef" class="shop-tree-col" />
+    <ForgeTreePanel ref="treeRef" class="shop-tree-col" @ready="onTreeReady" />
 
     <!-- Die Detailspalte fährt als EIN Stück seitlich hinaus; stehen bleibt die
          Griffleiste. Die BREITE der Spalte wechselt dabei in einem einzigen
@@ -233,13 +233,16 @@ const shopBuilt = ref(false)
  * Panel vor, statt den Aufbau nachzuholen.
  */
 const panelMounted = ref(false)
+const treeReady = ref(false)
 
 let settleFrame = 0
 let revealTimer: ReturnType<typeof setTimeout> | null = null
 let mountFrame = 0
+let revealStarted = false
 
 function cancelReveal(): void {
   cancelAnimationFrame(settleFrame)
+  revealStarted = false
   if (revealTimer !== null) {
     clearTimeout(revealTimer)
     revealTimer = null
@@ -260,6 +263,8 @@ function cancelInert(): void {
  * und hat mit der Spielzeit nichts zu tun.
  */
 function revealWhenPainted(): void {
+  if (!treeReady.value || revealStarted) return
+  revealStarted = true
   let left = FORGE_SHOP_LOADER_SETTLE_FRAMES
   const step = (): void => {
     if (left > 0) {
@@ -288,6 +293,11 @@ onMounted(() => {
     if (loaderVisible.value) revealWhenPainted()
   })
 })
+
+function onTreeReady(): void {
+  treeReady.value = true
+  if (panelMounted.value && loaderVisible.value) revealWhenPainted()
+}
 
 watch(
   isVisible,
