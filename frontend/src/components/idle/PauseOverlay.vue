@@ -52,6 +52,23 @@
                   <span class="level-chip__count">×{{ pendingAugmentCount }}</span>
                 </span>
               </Transition>
+              <button
+                type="button"
+                class="pause-resume"
+                :aria-label="`Resume journey — press ${pauseCap} or ${PAUSE_ESCAPE_CAP}`"
+                @click="unpause"
+              >
+                <span class="pause-resume__main">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <polygon points="6 3 21 12 6 21 6 3" />
+                  </svg>
+                  <span>Resume</span>
+                </span>
+                <span class="pause-resume__keys" aria-hidden="true">
+                  <KeyCap :cap="pauseCap" size="sm" tone="inherit" />
+                  <KeyCap :cap="PAUSE_ESCAPE_CAP" size="sm" tone="inherit" />
+                </span>
+              </button>
               <div class="pause-timer" role="timer" aria-label="Pause duration">
                 <span class="pause-timer__value">
                   <!-- Zweite, deckungsgleiche Lage derselben Ziffern: sie trägt
@@ -513,27 +530,6 @@
             </section>
           </div>
 
-          <!-- Fußzeile statt Knopf: der einzige Ausgang braucht keinen Rahmen,
-               um gefunden zu werden — eine Trennlinie darüber genügt. Die Tasten
-               stehen weiterhin IN der Zeile, nicht als Hinweis darunter: sie
-               gehören zu derselben Handlung. Beschriftung bleibt optisch mittig
-               (Dreispalter), die Tasten sitzen an der rechten Kante. -->
-          <button
-            class="continue-btn"
-            :aria-label="`Resume journey — press ${pauseCap} or ${PAUSE_ESCAPE_CAP}`"
-            @click="unpause"
-          >
-            <span class="continue-btn__main">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <polygon points="6 3 21 12 6 21 6 3" />
-              </svg>
-              Resume journey
-            </span>
-            <span class="continue-btn__keys" aria-hidden="true">
-              <KeyCap :cap="pauseCap" size="sm" tone="inherit" />
-              <KeyCap :cap="PAUSE_ESCAPE_CAP" size="sm" tone="inherit" />
-            </span>
-          </button>
           </div>
         </div>
       </div>
@@ -1469,6 +1465,52 @@ function particleStyle(i: number): Record<string, string> {
   gap: 16px;
 }
 
+.pause-resume {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 4px 0 4px 16px;
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(200, 144, 64, 0.42);
+  color: #c89040;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+.pause-resume:hover {
+  color: #ffeeb4;
+}
+.pause-resume:active {
+  color: #f0d060;
+}
+.pause-resume:focus-visible {
+  outline: 2px solid #f0d060;
+  outline-offset: 4px;
+}
+.pause-resume__main,
+.pause-resume__keys {
+  display: inline-flex;
+  align-items: center;
+}
+.pause-resume__main {
+  gap: 7px;
+}
+.pause-resume__keys {
+  gap: 5px;
+  opacity: 0.72;
+  transition: opacity 0.18s ease;
+}
+.pause-resume:hover .pause-resume__keys {
+  opacity: 1;
+}
+
 .pause-timer {
   display: flex;
   align-items: baseline;
@@ -2251,61 +2293,6 @@ function particleStyle(i: number): Record<string, string> {
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ── Continue button ──────────────────────────────────── */
-/* Dreispalter: die leere erste Spalte spiegelt die Tastengruppe rechts, damit
-   die Beschriftung in der Mitte steht — und nicht um deren Breite verschoben,
-   wie es ein einfaches space-between täte. */
-.continue-btn {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  width: 100%;
-  padding: 16px 4px 2px;
-  background: none;
-  border: none;
-  border-top: 1px solid rgba(122, 78, 32, 0.55);
-  color: #f4e2a0;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    color 0.18s ease,
-    border-color 0.18s ease;
-}
-.continue-btn:hover {
-  border-color: rgba(240, 208, 96, 0.6);
-  color: #ffeeb4;
-}
-.continue-btn:active {
-  color: #f0d060;
-}
-.continue-btn:focus-visible {
-  outline: 2px solid #f0d060;
-  outline-offset: 3px;
-}
-.continue-btn__main {
-  grid-column: 2;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-/* Die Tasten treten hinter der Beschriftung zurück — sie sagen, WIE es auch
-   geht, nicht was der Knopf tut. Beim Überfahren kommen sie mit nach vorn. */
-.continue-btn__keys {
-  grid-column: 3;
-  justify-self: end;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  opacity: 0.55;
-  transition: opacity 0.18s ease;
-}
-.continue-btn:hover .continue-btn__keys {
-  opacity: 1;
-}
-
 /* ── Transitions ──────────────────────────────────────── */
 .pause-fade-enter-active {
   transition: opacity 0.3s ease;
@@ -2349,7 +2336,6 @@ function particleStyle(i: number): Record<string, string> {
   .mat-pop-move {
     transition: opacity 0.15s;
   }
-  .continue-btn,
   .pause-fade-enter-active,
   .pause-fade-leave-active,
   .pause-fade-enter-active .pause-stage {
