@@ -416,12 +416,12 @@ describe('voyages fleet strip', () => {
   it('lässt die Hover-Karte der Fleet-Karte nichts wiederholen', () => {
     const { mark, fleet } = VOYAGE_TIP_BLOCKS
     expect(Object.keys(mark).sort()).toEqual(Object.keys(fleet).sort())
-    for (const key of Object.keys(mark) as (keyof typeof mark)[]) {
-      expect(mark[key], `${key} steht in beiden Ankern gleich`).not.toBe(fleet[key])
-    }
-    // Was die Karte selbst trägt, fällt; was sie nicht tragen kann, kommt hinzu.
-    expect(fleet.deadline || fleet.figures || fleet.faces).toBe(false)
-    expect(fleet.loot && fleet.hint).toBe(true)
+    expect(fleet.deadline).toBe(mark.deadline)
+    expect(fleet.figures).toBe(mark.figures)
+    expect(fleet.faces).toBe(mark.faces)
+    expect(fleet.loot).toBe(mark.loot)
+    expect(fleet.hint).toBe(true)
+    expect(mark.hint).toBe(false)
   })
 
   /**

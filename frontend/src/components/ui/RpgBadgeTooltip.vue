@@ -39,6 +39,7 @@ const props = defineProps<{
   clearAncestor?: string
   /** Vorzugsseite. Default 'bottom' — die Gegenseite nur, wenn dort Platz ist. */
   prefer?: 'top' | 'bottom'
+  constrainTo?: string
   /** Das Panel fängt den Zeiger nicht: es liegt über anderen Ankern (Karte). */
   passive?: boolean
   /** Hover-Absicht in ms. Nur der ERSTE Tooltip wartet, der Wechsel nicht. */
@@ -135,9 +136,13 @@ function open() {
     const host = props.clearAncestor
       ? (anchor.closest(props.clearAncestor) as HTMLElement | null)
       : null
+    const boundsHost = props.constrainTo
+      ? (anchor.closest(props.constrainTo) as HTMLElement | null)
+      : null
     const p = placeTip({
       anchor: r,
       clear: host ? host.getBoundingClientRect() : undefined,
+      bounds: boundsHost?.getBoundingClientRect(),
       tipW: tip.offsetWidth,
       tipH: tip.offsetHeight,
       gap: props.gap ?? BADGE_TOOLTIP_GAP_PX,

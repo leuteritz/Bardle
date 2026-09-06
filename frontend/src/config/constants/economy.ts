@@ -1831,7 +1831,7 @@ export const VOYAGE_FLEET_TIP_MAT_PX = 20
  */
 export const VOYAGE_TIP_BLOCKS = {
   mark: { deadline: true, figures: true, faces: true, loot: false, hint: false },
-  fleet: { deadline: false, figures: false, faces: false, loot: true, hint: true },
+  fleet: { deadline: true, figures: true, faces: true, loot: false, hint: true },
 } as const
 
 /**

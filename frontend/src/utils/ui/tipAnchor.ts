@@ -30,6 +30,7 @@ export interface TipAnchorInput {
   caretInset: number
   /** Vorzugsseite; die Gegenseite nur, wenn dort Platz ist. */
   prefer?: 'top' | 'bottom'
+  bounds?: DOMRect
   viewportW?: number
   viewportH?: number
 }
@@ -47,17 +48,23 @@ export function placeTip(o: TipAnchorInput): TipAnchorResult {
   const vh = o.viewportH ?? window.innerHeight
   const clear = o.clear ?? o.anchor
   const m = o.margin
+  const minX = Math.max(m, (o.bounds?.left ?? 0) + m)
+  const maxX = Math.min(vw - o.tipW - m, (o.bounds?.right ?? vw) - o.tipW - m)
 
   // Waagerecht folgt die Karte IMMER dem Anker; nur die Kante, die sie räumt,
   // darf von einem Vorfahren kommen.
   let left = o.anchor.left + o.anchor.width / 2 - o.tipW / 2
-  left = Math.min(Math.max(left, m), vw - o.tipW - m)
+  left = Math.min(Math.max(left, minX), Math.max(minX, maxX))
 
   const below = clear.bottom + o.gap
   const above = clear.top - o.gap - o.tipH
-  const fitsBelow = below + o.tipH + m <= vh
-  const fitsAbove = above > m
+  const minY = Math.max(m, (o.bounds?.top ?? 0) + m)
+  const maxY = Math.min(vh - o.tipH - m, (o.bounds?.bottom ?? vh) - o.tipH - m)
+  const fitsBelow = below >= minY && below <= maxY
+  const fitsAbove = above >= minY && above <= maxY
   const useTop = o.prefer === 'top' ? fitsAbove || !fitsBelow : !fitsBelow && fitsAbove
+  const rawTop = useTop ? above : below
+  const top = Math.min(Math.max(rawTop, minY), Math.max(minY, maxY))
 
   const caretX = Math.min(
     Math.max(o.anchor.left + o.anchor.width / 2 - left, o.caretInset),
@@ -66,7 +73,7 @@ export function placeTip(o: TipAnchorInput): TipAnchorResult {
 
   return {
     left,
-    top: useTop ? above : below,
+    top,
     caretX,
     placement: useTop ? 'top' : 'bottom',
   }
