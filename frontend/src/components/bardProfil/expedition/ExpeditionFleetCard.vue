@@ -47,6 +47,7 @@ import {
   VOYAGE_FLEET_EARN_GAP,
   VOYAGE_FLEET_EARN_TIGHT,
   VOYAGE_FLEET_LOOT_ICON,
+  VOYAGE_FLEET_MARK_UNDERWAY,
   VOYAGE_FLEET_ODDS_W,
   VOYAGE_FLEET_PAY_H,
   VOYAGE_FLEET_READ_H,
@@ -55,6 +56,7 @@ import {
   VOYAGE_FLEET_TIER_BAR_GAP,
   VOYAGE_FLEET_TIER_BAR_W,
   VOYAGE_FLEET_TIME_W,
+  VOYAGE_MARKER_BREATH_MS,
   EXPEDITION_TIER_COLORS,
   EXPEDITION_TIER_SEGMENTS,
   VOYAGE_TIP_GAP_PX,
@@ -84,6 +86,7 @@ const readH = `${VOYAGE_FLEET_READ_H}px`
 const rowGap = `${VOYAGE_FLEET_CARD_ROW_GAP}px`
 const inset = `${VOYAGE_FLEET_CARD_INSET_Y}px ${VOYAGE_FLEET_CARD_INSET_X}px`
 const oddsW = `${VOYAGE_FLEET_ODDS_W}px`
+const haloMs = `${VOYAGE_MARKER_BREATH_MS}ms`
 const timeW = `${VOYAGE_FLEET_TIME_W}px`
 const durW = `${VOYAGE_FLEET_DUR_W}px`
 const earnGap = `${VOYAGE_FLEET_EARN_GAP}px`
@@ -212,6 +215,12 @@ const duration = computed(() =>
   row.value.state === 'offer' ? formatShortDuration(row.value.durationSeconds) : '',
 )
 
+/** Steht VOR der Uhr statt an ihrer Stelle: wer draussen ist, hat trotzdem eine Quote. */
+const fieldMark = computed(() => (state.value === 'field' ? VOYAGE_FLEET_MARK_UNDERWAY : ''))
+
+/** Bewegung gehoert dem, was eine Handlung verlangt — die laufende Mission verlangt nichts. */
+const halo = computed(() => state.value === 'sendable' || state.value === 'ready')
+
 /**
  * Die Plakette nimmt das Ende, das der Zustand frei lässt: heimgekehrt steht sie
  * links statt der Uhr, blockiert rechts — dort, wo sonst die Erfolgsaussicht
@@ -242,7 +251,7 @@ const note = computed(() => {
     return `${props.card.tier} contract, ${seats}, ${duration.value} voyage, ${when}${gate}`
   }
   if (r.state === 'field') {
-    return `${formatMinuteClock(remaining.value ?? 0)} left, ${r.odds}% odds`
+    return `${VOYAGE_FLEET_MARK_UNDERWAY}, ${formatMinuteClock(remaining.value ?? 0)} left, ${r.odds}% odds`
   }
   return r.state === 'ready' ? 'ready to collect' : 'failed, salvage only'
 })
@@ -272,6 +281,8 @@ const aria = computed(
       :aria-label="aria"
       @click="emit('open', card.galaxy, card.pinKey)"
     >
+      <span v-if="halo" class="vfc-halo" aria-hidden="true" />
+
       <!-- Die STUFE: drei Segmente, davon 1/2/3 erleuchtet — SENKRECHT an der
            linken Kante. Absolut gesetzt, es kostet also keine Zeile; der
            Höhenhaushalt der Karte hat keine. Vom durchgehenden Zustandsstreifen
@@ -315,9 +326,11 @@ const aria = computed(
         </span>
       </span>
 
-      <!-- Welche FRIST, welche AUSSICHT. Die Plakette verdrängt die Quote:
-           wer nicht losschicken kann, ändert mit ihr nichts. -->
+      <!-- Welcher ZUSTAND, welche FRIST, welche AUSSICHT. Die Plakette des
+           blockierten Vertrags verdrängt die Quote — wer nicht losschicken kann,
+           ändert mit ihr nichts; die der laufenden Mission stellt sich davor. -->
       <span class="vfc-read">
+        <span v-if="fieldMark" class="vfc-flag vfc-mark">{{ fieldMark }}</span>
         <span class="vfc-lead" :class="{ 'vfc-mark': !clock }">{{ lead }}</span>
         <span v-if="tail" class="vfc-tail vfc-mark">{{ tail }}</span>
         <span v-else-if="odds !== null" class="vfc-odds" :class="oddsTone">{{ odds }}%</span>
@@ -347,8 +360,8 @@ const aria = computed(
   gap: v-bind(rowGap);
   padding: v-bind(inset);
   text-align: left;
-  /* Der ZUSTAND läuft über DREI Kanäle — Grund, linke Kante, Wort der
-     Ablesezeile — damit er auch ohne Farbsehen trägt. */
+  /* Der ZUSTAND läuft über VIER Kanäle — Bewegung, Grund, OBERkante und das Wort
+     der Ablesezeile — damit er auch ohne Farbsehen trägt. */
   background: var(--vfc-bg, #1c1c18);
   border: 1px solid #3e200a;
   border-top: 3px solid var(--vfc-edge, rgba(230, 220, 196, 0.4));
@@ -371,24 +384,68 @@ const aria = computed(
 }
 .vfc--sendable {
   --vfc-edge: #e8c040;
+  --vfc-halo: 232, 192, 64;
 }
 /* Bemannt, aber kein Feldplatz frei. Matt statt golden — golden hiesse „los!",
    und genau das geht gerade nicht. */
 .vfc--blocked {
   --vfc-edge: #8a5a1c;
 }
+/* `#1a1008` stand hier einmal und war von der Vertragsfarbe `#1c1c18` nicht zu
+   unterscheiden — 4,65 ΔL*. `#0e0e1a` ist die dritte Permutation derselben
+   Formel, die schon `#0e1a0e` und `#1a0e0e` tragen, und die kühle von den
+   dreien: draussen, nicht am Hafen. Die Kante wird voll deckend — mit 40 % Alpha
+   war sie die leiseste aller sechs, ausgerechnet beim Zustand mit den meisten
+   Karten. Der Grund bleibt trotzdem der schwaechste der vier Kanaele. */
 .vfc--field {
-  --vfc-edge: rgba(230, 220, 196, 0.4);
-  --vfc-bg: #1a1008;
+  --vfc-edge: #e8dcc0;
+  --vfc-bg: #0e0e1a;
 }
 .vfc--ready {
   --vfc-edge: #64dcb4;
   --vfc-bg: #0e1a0e;
+  --vfc-halo: 100, 220, 180;
 }
 .vfc--failed {
   --vfc-edge: #cc6050;
   --vfc-bg: #1a0e0e;
 }
+/* Bewegung gehoert dem, was eine Handlung verlangt: startbar und heimgekehrt
+   atmen, die laufende Mission steht still. Statischer Schein auf EIGENER Ebene,
+   animiert wird allein die Deckkraft.
+
+   Er liegt INNEN. Die Kartenspur klippt senkrecht (`.efl-track`), ein aeusserer
+   Schein waere oben und unten abgeschnitten und naehme waagerecht Flussbreite —
+   dieselbe Fassung, die `.bg-card > .fc-fresh` fuer eine klippende Karte traegt. */
+.vfc-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  box-shadow: inset 0 0 18px 1px rgba(var(--vfc-halo, 232, 192, 64), 0.42);
+  pointer-events: none;
+  animation-name: vfc-breathe;
+  animation-duration: v-bind(haloMs);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  /* Der Aus-Schalter, den das Projekt schon hat (ItemShopCard.vue). */
+  animation-play-state: var(--pulse-play, running);
+}
+@keyframes vfc-breathe {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.82;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vfc-halo {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
 /* Der Akzent wird in den Zustandsgrund GEMISCHT statt ihn zu ersetzen: eine
    Auswahl darf nicht löschen, was die Karte über sich sagt. Die OBERkante bleibt
    dabei ausgespart — sie gehört dem Zustand. */
@@ -586,8 +643,9 @@ const aria = computed(
   transform: scale(v-bind(UNIVERSE_TOOLTIP_MEEP_SCALE));
 }
 
-/* ── Ablesezeile: Frist · Aussicht ──────────────────────────── */
-/* Sie trägt seit dem Umbau nur noch zwei Dinge; die Luft ist Absicht. */
+/* ── Ablesezeile: Zustand · Frist · Aussicht ────────────────── */
+/* Zwei Zellen in jedem Zustand ausser dem laufenden — der trägt drei, und die
+   SILHOUETTE der Zeile ist damit selbst ein Kanal. */
 .vfc-read {
   display: flex;
   align-items: center;
@@ -608,6 +666,13 @@ const aria = computed(
 .vfc--urgent .vfc-lead {
   color: #e08a7a;
 }
+/* Die einzige Plakette, die NICHTS verdraengt: sie steht vor der Uhr, weil eine
+   Crew, die schon draussen ist, trotzdem eine Quote hat. KEINE reservierte Breite
+   — ihr Wort wechselt nie, und die 76 px stehen als gemessene Wand in der Spec. */
+.vfc-flag {
+  flex: 0 0 auto;
+}
+
 /* Sie nimmt den Platz der Erfolgsaussicht, nicht einen eigenen — also steht sie
    auch dort, wo die stünde: neben der Uhr. */
 .vfc-tail {
@@ -641,5 +706,12 @@ const aria = computed(
   color: #c08a50;
   border-color: rgba(192, 138, 80, 0.4);
   background: rgba(192, 138, 80, 0.12);
+}
+/* Kante und Wort tragen denselben Ton, weil sie dasselbe sagen. Kein Gold: das
+   hiesse auf dieser Karte „losschicken", und genau das ist hier vorbei. */
+.vfc--field .vfc-mark {
+  color: #e8dcc0;
+  border-color: rgba(232, 220, 192, 0.4);
+  background: rgba(232, 220, 192, 0.12);
 }
 </style>
