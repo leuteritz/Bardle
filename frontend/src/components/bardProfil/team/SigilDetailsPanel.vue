@@ -1297,6 +1297,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
   min-width: 0;
   display: grid;
   gap: 4px;
+  text-align: center;
 }
 .sdp-equipment-head {
   min-width: 0;
@@ -1304,6 +1305,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
+  width: 100%;
 }
 .sdp-equipment-head small {
   flex: 0 0 auto;
@@ -1313,12 +1315,13 @@ function perkStatLine(perk: ChampionPerkDef): string {
   text-transform: uppercase;
 }
 .sdp-equipment-stats {
+  display: -webkit-box;
   overflow: hidden;
   color: #e8c040;
   font-size: 12px;
   line-height: 1.15;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .sdp-equipment-copy > small {
   display: -webkit-box;
@@ -1434,6 +1437,9 @@ function perkStatLine(perk: ChampionPerkDef): string {
   color: var(--pc);
   font-size: 12px;
   font-weight: 500;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
 }
 .sdp-active-perk p {
   display: -webkit-box;
@@ -1759,10 +1765,10 @@ function perkStatLine(perk: ChampionPerkDef): string {
   padding: 9px;
 }
 .sdp-equipment {
-  grid-template-columns: 46px minmax(0, 1fr);
+  grid-template-columns: 58px minmax(0, 1fr);
   gap: 12px;
   min-height: 0;
-  padding: 10px;
+  padding: 14px 12px;
   border: 1px solid #493116;
   background: #1c1c18;
 }
@@ -1770,23 +1776,39 @@ function perkStatLine(perk: ChampionPerkDef): string {
   background: color-mix(in srgb, var(--rc) 14%, #1c1c18);
 }
 .sdp-equipment img {
-  width: 42px;
-  height: 42px;
+  width: 54px;
+  height: 54px;
 }
 .sdp-equipment-icon {
-  font-size: 32px;
+  font-size: 40px;
 }
 .sdp-equipment strong {
-  font-size: 16px;
+  font-size: 19px;
+  line-height: 1.05;
+  text-align: center;
+  white-space: normal;
 }
 .sdp-equipment-copy {
-  gap: 5px;
+  justify-items: center;
+  gap: 7px;
+}
+.sdp-equipment-head {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+.sdp-equipment-head small {
+  font-size: 11px;
 }
 .sdp-equipment-stats {
-  font-size: 14px;
+  font-size: 16px;
+  line-height: 1.1;
+  text-align: center;
 }
 .sdp-equipment-copy > small {
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.15;
+  text-align: center;
 }
 .sdp-section--perks {
   grid-column: 2;
@@ -1800,36 +1822,45 @@ function perkStatLine(perk: ChampionPerkDef): string {
   padding: 10px;
 }
 .sdp-active-perk {
-  grid-template-columns: 34px minmax(0, 1fr);
-  grid-template-rows: auto;
-  gap: 2px 9px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  align-content: center;
+  justify-items: center;
+  gap: 7px;
   min-height: 0;
-  padding: 9px;
+  padding: 12px 10px;
   border-left-width: 4px;
 }
 .sdp-active-perk > svg {
   grid-row: 1;
-  align-self: start;
-  margin-top: 3px;
-  width: 30px;
-  height: 30px;
+  align-self: center;
+  margin-top: 0;
+  width: 40px;
+  height: 40px;
 }
 .sdp-active-perk-copy {
+  width: 100%;
   display: grid;
-  align-self: start;
-  gap: 5px;
+  align-self: center;
+  justify-items: center;
+  gap: 6px;
 }
 .sdp-active-perk-head {
-  display: flex;
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
 }
 .sdp-active-perk small {
-  align-self: end;
-  font-size: 11px;
+  align-self: center;
+  font-size: 12px;
 }
 .sdp-active-perk strong {
   align-self: start;
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1.05;
+  text-align: center;
+  white-space: normal;
 }
 .sdp-active-perk > span.sdp-active-perk-copy {
   display: grid;
@@ -1838,10 +1869,13 @@ function perkStatLine(perk: ChampionPerkDef): string {
   display: block;
 }
 .sdp-active-perk-copy > span:not(.sdp-active-perk-head) {
-  font-size: 13px;
+  font-size: 15px;
 }
 .sdp-active-perk p {
-  font-size: 12px;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.15;
+  text-align: center;
 }
 .sdp-perk-empty {
   flex: 1;
@@ -1863,10 +1897,16 @@ function perkStatLine(perk: ChampionPerkDef): string {
   .sdp-workspace { gap: 10px; padding: 10px 14px 12px; }
   .sdp-section-head { min-height: 35px; }
   .sdp-equipment-list, .sdp-active-perks { gap: 6px; padding: 7px; }
-  .sdp-equipment { padding: 7px; }
-  .sdp-equipment img { width: 34px; height: 34px; }
-  .sdp-equipment strong { font-size: 14px; }
-  .sdp-active-perk { padding: 7px; }
-  .sdp-active-perk strong { font-size: 15px; }
+  .sdp-equipment { grid-template-columns: 48px minmax(0, 1fr); gap: 8px; padding: 10px 8px; }
+  .sdp-equipment img { width: 44px; height: 44px; }
+  .sdp-equipment-icon { font-size: 34px; }
+  .sdp-equipment strong { font-size: 17px; }
+  .sdp-equipment-stats { font-size: 14px; }
+  .sdp-equipment-copy > small { font-size: 10px; }
+  .sdp-active-perk { gap: 5px; padding: 9px 7px; }
+  .sdp-active-perk > svg { width: 34px; height: 34px; }
+  .sdp-active-perk strong { font-size: 20px; }
+  .sdp-active-perk-copy > span:not(.sdp-active-perk-head) { font-size: 13px; }
+  .sdp-active-perk p { font-size: 11px; }
 }
 </style>
