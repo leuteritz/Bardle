@@ -398,15 +398,12 @@ export const CHAMPION_XP_EXPONENT = 1.55
  * Level cap at galaxy 1; every further galaxy adds CHAMPION_LEVEL_CAP_PER_GALAXY,
  * clamped to CHAMPION_LEVEL_MAX_CAP.
  *
- * The start cap currently sits ON the maximum: champions can reach level 50 from
- * the first galaxy, so the whole regalia ladder — all eleven stages — is
- * reachable straight away instead of unlocking one stage per galaxy. That makes
- * the per-galaxy ramp inert; it is kept so the gate can be reintroduced by
- * lowering the start cap alone, without touching the store.
+ * The sixth perk sits beyond the first-galaxy cap: champions reach level 50
+ * immediately, while level 60 arrives through the galaxy ramp.
  */
 export const CHAMPION_LEVEL_START_CAP = 50
 export const CHAMPION_LEVEL_CAP_PER_GALAXY = 5
-export const CHAMPION_LEVEL_MAX_CAP = 50
+export const CHAMPION_LEVEL_MAX_CAP = 60
 
 /** Allies of a role earn this share of the XP their main champion receives. */
 export const CHAMPION_ALLY_XP_SHARE = 0.5
@@ -518,7 +515,7 @@ export const SYNERGY_NEUTRAL_ORIGIN = 'Runeterra'
  * One stage per CHAMPION_ASCENSION_INTERVAL levels — the same rhythm that grants
  * an ascension star — so every star a champion earns is also visible on its slot
  * from across the board. The apex stage sits on CHAMPION_LEVEL_MAX_CAP: a
- * level-50 champion is the loudest thing on the sigil board.
+ * level-60 champion is the loudest thing on the sigil board.
  *
  * Every stage adds exactly one new element on top of the numbers that keep
  * climbing, alternating between the frame and the medallion so no step feels
@@ -549,6 +546,8 @@ export const CHAMPION_REGALIA_STAGES: ChampionRegaliaStage[] = [
   { minLevel: 35,                     name: 'Exalted',   rim: 3.1,  glow: 27, glowAlpha: 0.49, heat: 0.40, facets: 10, studs: 10, sweep: true,  plate2: true,  bevel: true,  halo: true,  sheen: true,  sheenDual: true,  orbit: true,  rays: false, crown: false, spin: false },
   { minLevel: 40,                     name: 'Sovereign', rim: 3.25, glow: 29, glowAlpha: 0.53, heat: 0.45, facets: 10, studs: 10, sweep: true,  plate2: true,  bevel: true,  halo: true,  sheen: true,  sheenDual: true,  orbit: true,  rays: false, crown: true,  spin: false },
   { minLevel: 45,                     name: 'Empyrean',  rim: 3.4,  glow: 31, glowAlpha: 0.58, heat: 0.50, facets: 12, studs: 12, sweep: true,  plate2: true,  bevel: true,  halo: true,  sheen: true,  sheenDual: true,  orbit: true,  rays: true,  crown: true,  spin: false },
+  { minLevel: 50,                     name: 'Eventide',   rim: 3.5,  glow: 33, glowAlpha: 0.60, heat: 0.53, facets: 12, studs: 12, sweep: true,  plate2: true,  bevel: true,  halo: true,  sheen: true,  sheenDual: true,  orbit: true,  rays: true,  crown: true,  spin: false },
+  { minLevel: 55,                     name: 'Luminous',   rim: 3.55, glow: 33.5, glowAlpha: 0.62, heat: 0.55, facets: 12, studs: 12, sweep: true, plate2: true, bevel: true, halo: true, sheen: true, sheenDual: true, orbit: true, rays: true, crown: true, spin: false },
   { minLevel: CHAMPION_LEVEL_MAX_CAP, name: 'Eternal',   rim: 3.6,  glow: 34, glowAlpha: 0.63, heat: 0.56, facets: 12, studs: 12, sweep: true,  plate2: true,  bevel: true,  halo: true,  sheen: true,  sheenDual: true,  orbit: true,  rays: true,  crown: true,  spin: true  },
 ]
 

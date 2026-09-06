@@ -104,7 +104,7 @@ export const ASCENSION_RANKS: AscensionRank[] = [
   { minStars: 8, name: 'Prismatic', color: '#b070e0' },
 ]
 
-/** Ascension stars earned at `level` (level 5 → 1 star, level 50 → 10). */
+/** Ascension stars earned at `level` (level 5 → 1 star, level 60 → 12). */
 export function ascensionStars(level: number): number {
   return Math.floor(level / CHAMPION_ASCENSION_INTERVAL)
 }
@@ -154,7 +154,7 @@ export function isPerkLevel(level: number): boolean {
 
 // ── Perks ─────────────────────────────────────────────────────────────────────
 // Every 10th level opens a choice out of one pool. Pools escalate: `adept` is a
-// pure stat pick, `master` adds a mechanic, `elite` repeats at 30/40/50 but each
+// pure stat pick, `master` adds a mechanic, `elite` repeats at 30/40/50/60 but each
 // perk can only be taken once per champion, so the last picks are forced choices.
 
 export const CHAMPION_PERKS: ChampionPerkDef[] = [
@@ -220,7 +220,7 @@ export const CHAMPION_PERKS: ChampionPerkDef[] = [
     effect: 'fortuneSurge',
     value: 0.25,
   },
-  // ── Elite (levels 30 / 40 / 50) — one pick each, never repeated ──
+  // ── Elite (levels 30 / 40 / 50 / 60) — one pick each, never repeated ──
   {
     id: 'starfall',
     tier: 'elite',
@@ -264,6 +264,15 @@ export const CHAMPION_PERKS: ChampionPerkDef[] = [
     stats: { vitality: 15, fortune: 15 },
     effect: 'allyEcho',
     value: 0.4,
+  },
+  {
+    id: 'meep-constellation',
+    tier: 'elite',
+    name: 'Meep Constellation',
+    icon: 'game-icons:orbit',
+    color: '#66d6c4',
+    desc: 'Aligns the role with a balanced reserve of force, vitality and fortune.',
+    stats: { power: 10, vitality: 10, fortune: 10 },
   },
 ]
 

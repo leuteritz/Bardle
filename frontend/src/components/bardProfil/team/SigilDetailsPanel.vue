@@ -19,6 +19,7 @@ import {
   CHAMPION_PERK_INTERVAL,
   CHAMPION_BASE_HP_BY_ROLE,
   CHAMPION_HP_PER_STAR,
+  CHAMPION_LEVEL_MAX_CAP,
   CHAMPION_REGALIA_SIZE_ALLY,
   CHAMPION_REGALIA_SIZE_SPLASH,
   ROLES,
@@ -285,7 +286,7 @@ const perkPath = computed<PerkSlot[]>(() => {
   const path: PerkSlot[] = []
   for (
     let milestone = CHAMPION_PERK_INTERVAL;
-    milestone <= cap.value;
+    milestone <= CHAMPION_LEVEL_MAX_CAP;
     milestone += CHAMPION_PERK_INTERVAL
   ) {
     const perk = taken[milestone] ? (PERK_BY_ID[taken[milestone]] ?? null) : null
@@ -303,6 +304,7 @@ const takenPerkCount = computed(
 const activePerks = computed(() =>
   perkPath.value.filter((slot): slot is PerkSlot & { perk: ChampionPerkDef } => !!slot.perk),
 )
+const unfilledPerks = computed(() => perkPath.value.filter((slot) => !slot.perk))
 const clickedPerkLevel = ref<number | null>(null)
 const openPerkSlot = computed(() => perkPath.value.find((slot) => slot.state === 'open') ?? null)
 const focusedPerkSlot = computed<PerkSlot | null>(() => {
@@ -587,7 +589,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
         @preview="candidate = $event"
       />
       <div v-else class="sdp-workspace">
-        <div class="sdp-section">
+        <div class="sdp-section sdp-section--equipment">
           <div class="sdp-section-head">
             <span>Role equipment</span><small>{{ equippedCount }}/{{ CATEGORIES.length }}</small>
           </div>
@@ -682,6 +684,33 @@ function perkStatLine(perk: ChampionPerkDef): string {
                   ><strong class="sdp-active-perk-name">{{ slot.perk.name }}</strong></span
                 ><span>{{ perkStatLine(slot.perk) }}</span
                 ><p>{{ slot.perk.desc }}</p></span
+              >
+            </article>
+            <article
+              v-for="slot in unfilledPerks"
+              :key="'unfilled-' + slot.level"
+              class="sdp-active-perk sdp-active-perk--locked"
+              :class="{ 'sdp-active-perk--open': slot.state === 'open' }"
+            >
+              <Icon
+                :icon="slot.state === 'open' ? 'game-icons:ribbon-medal' : 'lucide:lock-keyhole'"
+                width="25"
+                height="25"
+              />
+              <span class="sdp-active-perk-copy"
+                ><span class="sdp-active-perk-head"
+                  ><small class="sdp-active-perk-level">Lv. {{ slot.level }}</small
+                  ><strong class="sdp-active-perk-name">{{
+                    slot.state === 'open' ? 'Choose a perk' : 'Locked'
+                  }}</strong></span
+                ><span>{{
+                  slot.state === 'open' ? 'One final elite choice remains.' : 'Future milestone'
+                }}</span
+                ><p>{{
+                  slot.state === 'open'
+                    ? 'Select a remaining elite perk below.'
+                    : 'Unlocks when this role reaches level ' + slot.level + '.'
+                }}</p></span
               >
             </article>
           </div>
@@ -1757,10 +1786,13 @@ function perkStatLine(perk: ChampionPerkDef): string {
 }
 .sdp-workspace {
   display: grid;
-  grid-template-columns: minmax(230px, 0.82fr) minmax(0, 1.45fr);
-  gap: 14px;
-  padding: 14px 18px 16px;
+  grid-template-columns: minmax(248px, 0.8fr) minmax(0, 1.2fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 18px 14px;
   background: #111008;
+  overflow: auto;
+  container-type: inline-size;
 }
 .sdp-section {
   min-height: 0;
@@ -1782,6 +1814,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
 }
 .sdp-equipment-list {
   flex: 1;
+  min-height: 0;
   grid-template-columns: 1fr;
   grid-template-rows: repeat(3, minmax(0, 1fr));
   gap: 7px;
@@ -1794,6 +1827,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
   justify-items: center;
   gap: 8px;
   min-height: 0;
+  overflow: hidden;
   padding: 12px 14px;
   border: 1px solid #493116;
   background: #1c1c18;
@@ -1810,10 +1844,15 @@ function perkStatLine(perk: ChampionPerkDef): string {
   font-size: 40px;
 }
 .sdp-equipment strong {
+  display: -webkit-box;
+  max-width: 100%;
   font-size: 19px;
   line-height: 1.05;
   text-align: center;
   white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
 }
 .sdp-equipment-copy {
   width: 100%;
@@ -1832,14 +1871,20 @@ function perkStatLine(perk: ChampionPerkDef): string {
   font-size: 11px;
 }
 .sdp-equipment-stats {
+  max-width: 100%;
   font-size: 16px;
   line-height: 1.1;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 .sdp-equipment-copy > small {
   font-size: 12px;
   line-height: 1.15;
   text-align: center;
+}
+.sdp-section--equipment {
+  grid-column: 1;
+  grid-row: 1;
 }
 .sdp-section--perks {
   grid-column: 2;
@@ -1847,6 +1892,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
 }
 .sdp-active-perks {
   flex: 1;
+  min-height: 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(3, minmax(0, 1fr));
   gap: 8px;
@@ -1861,6 +1907,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
   min-height: 0;
   padding: 12px 10px;
   border-left-width: 4px;
+  overflow: hidden;
 }
 .sdp-active-perk > svg {
   grid-row: 1;
@@ -1927,6 +1974,24 @@ function perkStatLine(perk: ChampionPerkDef): string {
   line-height: 1.15;
   text-align: center;
 }
+.sdp-active-perk--locked {
+  --pc: #8e8067;
+  border-color: #56462d;
+  background: #171610;
+}
+.sdp-active-perk--locked > svg {
+  color: #a99b80;
+}
+.sdp-active-perk--locked .sdp-active-perk-level {
+  color: #a99b80;
+}
+.sdp-active-perk--locked .sdp-active-perk-name {
+  color: #c0b294;
+}
+.sdp-active-perk--open {
+  border-color: #e8c040;
+  background: #211d10;
+}
 .sdp-perk-empty {
   flex: 1;
   justify-content: center;
@@ -1945,7 +2010,11 @@ function perkStatLine(perk: ChampionPerkDef): string {
   .sdp-stat strong { font-size: 15px; }
   .sdp-stat div span { font-size: 17px; }
   .sdp-level-button { min-height: 42px; margin-top: 7px; }
-  .sdp-workspace { gap: 10px; padding: 10px 14px 12px; }
+  .sdp-workspace {
+    grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.2fr);
+    gap: 8px;
+    padding: 8px 10px 10px;
+  }
   .sdp-section-head { min-height: 35px; }
   .sdp-equipment-list, .sdp-active-perks { gap: 6px; padding: 7px; }
   .sdp-equipment { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; gap: 6px; padding: 10px 8px; }
