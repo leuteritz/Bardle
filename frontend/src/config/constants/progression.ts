@@ -161,7 +161,13 @@ export const MAX_ABILITY_LEVEL = 5
 
 export const RESCUE_ROTATION_DURATION_MS = 2_000 // camera spin after role selection
 
-export const GALAXY_TRANS_WARP_MS = 12_000
+/**
+ * Anlauf plus Reiseflug bis zum Schnitt. Von 12 000 auf 10 000 gekürzt: der
+ * Reiseflug trug zwei Sekunden, in denen nichts Neues mehr passierte. Der
+ * Anlauf (`GALAXY_WARP_ACCEL_MS`) und das Ausrollen bleiben — gekürzt wird die
+ * Strecke, nicht der Auf- und Abbau. Gesamt damit 13 600 statt 15 600 ms.
+ */
+export const GALAXY_TRANS_WARP_MS = 10_000
 export const GALAXY_TRANS_DECEL_MS = 3_600
 export const GALAXY_WARP_ACCEL_MS = 2_200
 export const GALAXY_SPAWN_INTERVAL_MIN = 5_000

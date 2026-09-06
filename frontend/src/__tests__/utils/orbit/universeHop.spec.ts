@@ -321,3 +321,30 @@ describe('universeHop — Kurven', () => {
     expect(state.out.portalSpin).toBe(0)
   })
 })
+
+describe('Universumssprung — die Prozession', () => {
+  it('fährt mit dem Aufbruch hoch, hält über Anflug und Tunnel und legt sich zurück', () => {
+    const state = createUniverseHop()
+    startUniverseHop(state, seeded(5))
+    stepUniverseHop(state, UNIVERSE_HOP_DEPART_MS, MIN_EDGE, FAR)
+    expect(state.out.procession).toBeGreaterThan(0.98)
+    stepUniverseHop(state, UNIVERSE_HOP_APPROACH_MS / 2, MIN_EDGE, FAR)
+    expect(state.out.procession).toBe(1)
+    stepUniverseHop(state, UNIVERSE_HOP_APPROACH_MS / 2 + UNIVERSE_HOP_PASSAGE_MS / 2, MIN_EDGE, FAR)
+    expect(state.out.procession).toBe(1)
+    stepUniverseHop(state, UNIVERSE_HOP_PASSAGE_MS, MIN_EDGE, FAR)
+    let last = state.out.procession
+    for (let e = 0; e < UNIVERSE_HOP_EMERGE_MS; e += 16.7) {
+      stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
+      expect(state.out.procession).toBeLessThanOrEqual(last + 1e-9)
+      last = state.out.procession
+    }
+    stepUniverseHop(state, 50, MIN_EDGE, FAR)
+    expect(state.out.procession).toBe(0)
+  })
+
+  it('beginnt im Ruhezustand bei null', () => {
+    const state = createUniverseHop()
+    expect(state.out.procession).toBe(0)
+  })
+})

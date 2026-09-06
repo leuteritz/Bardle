@@ -25,6 +25,7 @@ import { vTip } from '@/utils/ui/tipDirective'
 import { useGameStore } from '@/stores/core/gameStore'
 import { gameIntervalMs, getGameSpeed, onGameSpeedChange } from '@/utils/game/gameClock'
 import { flightLive, getSkyDebug, kickFlightJolt } from '@/utils/orbit/flightLive'
+import { processionLive } from '@/utils/orbit/flightProcession'
 import {
   disableTelemetry,
   enableTelemetry,
@@ -126,6 +127,7 @@ if (import.meta.env.DEV || import.meta.env.VITE_FX_DEBUG === '1') {
       sky: () => getSkyDebug()?.sky(),
       kick: kickFlightJolt,
       live: flightLive,
+      procession: processionLive,
     },
     enableTelemetry,
     disableTelemetry,

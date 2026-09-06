@@ -67,7 +67,7 @@ export const UNIVERSE_HOP_WASH_PEAK = 0.35
 export const UNIVERSE_HOP_WASH_ALPHA = 0.92
 /** HUD kehrt gestaffelt zurück, gemessen ab Beginn des Ausrollens. */
 export const UNIVERSE_HOP_HUD_IN_DELAY_MS = 1000
-/** Überlicht: weit über der Spitze des Galaxien-Warps (WARP_SPEED_PEAK 45) — am Rand rund
+/** Überlicht: über der Spitze des Galaxien-Warps (WARP_SPEED_PEAK 120) — am Rand rund
  *  160 px je Frame, Striche um 350 px; die Strichbreite ist über WARP_STREAK_WIDTH_SPEED_CAP gedeckelt. */
 export const UNIVERSE_HOP_SPEED_PEAK = 140
 /** Kurs: volle 360° (das HUD ist im Flug weg, anders als beim Warp), Radius als Anteil der kurzen
@@ -119,11 +119,88 @@ export const UNIVERSE_HOP_HUD_OUT_MS = 140
 export const UNIVERSE_HOP_HUD_IN_MS = 280
 export const UNIVERSE_HOP_HUD_STAGGER_MS = 60
 export const UNIVERSE_HOP_HUD_SHIFT_PX = 8
+/**
+ * Das Maß des SPIELERKÖRPERS im Flug — er schrumpft deutlich, damit die
+ * Prozession vor ihm Platz hat und er nicht mehr der Mittelpunkt ist, um den
+ * etwas kreist.
+ *
+ * Für Planeten und Champions steht hier bewusst NICHTS mehr: ihre Größe führt
+ * die Perspektive der Prozession. Das frühere `orbitScale` dehnte die Bahn als
+ * schwache Andeutung der Reise — eine zweite, widersprüchliche Bewegung, seit
+ * die Körper die Bahn wirklich verlassen. Und ein `bodyScale` an ihnen stünde
+ * in `baseSize`, also im `structureKey`: der Flugbeginn hätte jedes Mal einen
+ * vollen Vue-Render über alle Körper ausgelöst.
+ */
 export const FLIGHT_FORMATION = {
-  idle: { bodyScale: 1, orbitScale: 1 },
-  galaxy: { bodyScale: 0.88, orbitScale: 1.12 },
-  universe: { bodyScale: 0.7, orbitScale: 0.7 },
+  idle: { bodyScale: 1 },
+  galaxy: { bodyScale: 0.62 },
+  universe: { bodyScale: 0.55 },
 } as const
+
+/* ── Die Prozession — die Bühne reist mit ──────────────────────────────────
+   Im Flug verlassen Planeten und Champions ihre Bahnen und ordnen sich
+   perspektivisch entlang der Flugachse: wer voraus fliegt, steht klein nahe am
+   Fluchtpunkt, wer zurückfällt, groß am Rand. Geometrie in
+   `utils/orbit/flightProcession.ts`.
+
+   Die zwei BÄNDER sind keine Kosmetik, sondern die Ebenen-Wand: `.planet-orbit-
+   front` (z 7) liegt über `.champion-orbit-front` (z 6), und beide sind eigene
+   Stapelkontexte. Ein gemischter Zug wäre per z-index am Körper nicht
+   sortierbar — also gehören die Planeten ins NAHE Band und die Champions ins
+   ferne. Perspektivisch stimmt genau das: näher heißt weiter vorn. */
+/** Die gemeinsame Tiefenleiter: 1 = auf der Kamera, FAR = am Fluchtpunkt. */
+export const PROCESSION_DEPTH_NEAR = 1
+export const PROCESSION_DEPTH_FAR = 4.2
+/** Die zwei Bänder als Anteil der Leiter — sie überlappen NIE (siehe oben). */
+export const PROCESSION_BAND_PLANET: readonly [number, number] = [0, 0.45]
+export const PROCESSION_BAND_CHAMPION: readonly [number, number] = [0.55, 1]
+/** Abstand von der Flugachse als Anteil der kurzen Kante, VOR der Teilung durch die Tiefe. */
+export const PROCESSION_SPREAD_MIN = 0.2
+export const PROCESSION_SPREAD_MAX = 0.46
+/** Netz gegen das Wogen: kein Körper weiter als das vom Fluchtpunkt. */
+export const PROCESSION_REACH_MAX_FRAC = 0.36
+/** Der Fluchtpunkt liegt regelmäßig IM Spielerkörper (Kurs 10–18 % der kurzen
+ *  Kante) — ohne diesen Boden steckte der Vorderste in der Korona. Gemessen
+ *  gegen die BILDMITTE, dort steht die Sonne, und gegen ihre GEZEICHNETE
+ *  Scheibe (`SUN_BG_DISC_RADIUS_FACTOR` 4× der Kernradius), nicht gegen den
+ *  Kern: beim Schwarzen Loch reicht die Akkretionsscheibe weit darüber hinaus. */
+export const PROCESSION_SUN_CLEAR_K = 1.12
+/** Perspektivskala k/Tiefe, geklemmt: sonst verschwindet der Vorderste oder der Letzte sprengt das Bild. */
+export const PROCESSION_SCALE_K = 1.3
+export const PROCESSION_SCALE_MIN = 0.38
+export const PROCESSION_SCALE_MAX = 1.45
+/** Das Wogen. Im Reiseflug steht die Achse STILL (`focusX` ist dort konstant) —
+ *  ohne diesen Term stünde der ganze Zug acht Sekunden bewegungslos. Die Periode
+ *  ist je Körper gestreut, sonst atmen alle im Takt. */
+export const PROCESSION_SWELL_AMP = 0.09
+export const PROCESSION_SWELL_PHI = 0.05
+export const PROCESSION_SWELL_SEC_MIN = 3.4
+export const PROCESSION_SWELL_SEC_MAX = 6.1
+/** Zwei Schwellen, nicht eine: an EINER zitterte der Ebenenwechsel auf der
+ *  easeInOutCubic-Flanke und riss pro Frame einen Vue-Render auf. */
+export const PROCESSION_ENTER_T = 0.03
+export const PROCESSION_EXIT_T = 0.01
+/** Basis des z-index INNERHALB der jeweiligen Ebene — konstant je Körper und Flug. */
+export const PROCESSION_Z_BASE = 12
+
+/* ── Schweife ──────────────────────────────────────────────────────────────
+   Sie fahren auf dem STERNFELD-Canvas, mit demselben `drawStreakSprite`, das
+   auch die Sternstriche zeichnet: keine zwölf neuen Compositor-Ebenen, dieselbe
+   Bildsprache, und die Persistenz-Spur verlängert sie gratis. */
+/** Länge als Vielfaches des dargestellten Halbmessers, über den Abstand vom Fluchtpunkt. */
+export const PROCESSION_TRAIL_LEN_K_MIN = 3.2
+export const PROCESSION_TRAIL_LEN_K_MAX = 9
+/** Bezugsweite der Länge (Anteil der kurzen Kante) — darüber wächst der Schweif nicht weiter. */
+export const PROCESSION_TRAIL_REACH_REF = 0.34
+/** Breite als Vielfaches des Halbmessers. Schmal: bei 0,9 las sich der Schweif
+ *  als massiver Keil neben dem Körper, nicht als Nachlauf hinter ihm. */
+export const PROCESSION_TRAIL_WIDTH_K = 0.4
+export const PROCESSION_TRAIL_ALPHA = 0.5
+/** Der Spielerkörper zieht den längsten, aber leisesten — er füllt sonst das halbe Bild. */
+export const PROCESSION_SUN_TRAIL_LEN_K = 1.1
+export const PROCESSION_SUN_TRAIL_ALPHA = 0.3
+/** Ton des Schweifs, wenn ein Körper keine Rollenfarbe trägt (Ally ohne Rolle). */
+export const PROCESSION_TRAIL_FALLBACK_COLOR = '#8fa6c8'
 /**
  * Abstand zwischen dem Reset (commit-Flanke an der Schwelle) und der
  * Ankunfts-Zeremonie des Herolds. Der Herold (9700) liegt ÜBER dem Sternfeld

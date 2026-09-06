@@ -73,6 +73,10 @@ import {
   FLIGHT_DRIFT_PERIOD_Y_SEC,
   FLIGHT_DRIFT_EASE_SEC,
   WARP_STREAK_LEN_FACTOR,
+  PROCESSION_TRAIL_ALPHA,
+  PROCESSION_TRAIL_WIDTH_K,
+  PROCESSION_SUN_TRAIL_ALPHA,
+  PROCESSION_SUN_TRAIL_LEN_K,
   FLIGHT_BURST_INTERVAL_MIN_SEC,
   FLIGHT_BURST_INTERVAL_MAX_SEC,
   FLIGHT_BURST_STREAK_MIN,
@@ -146,6 +150,12 @@ import {
   writeFlightFollowers,
 } from '@/utils/orbit/flightLive'
 import { rotateAbout, slipPolar, trailAngle, upstreamAngle } from '@/utils/orbit/flightField'
+import {
+  processionLive,
+  processionTrailAngle,
+  processionTrailLength,
+  resetProcessionLive,
+} from '@/utils/orbit/flightProcession'
 import {
   clearEncounters,
   createEncounterField,
@@ -1238,6 +1248,19 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // Sterne fließen von dort weg — das ist der Tunnel.
     const cx = w / 2 + (helmOut ? helmOut.focusX : baseFx) + wo.focusX
     const cy = h / 2 + (helmOut ? helmOut.focusY : baseFy) + wo.focusY
+    // Die Prozession liest denselben Fluchtpunkt, den auch der Tunnel zeichnet:
+    // `wo.focusX` allein wäre nur der Kursanteil ohne Helm und Drift, und der
+    // Zug stünde neben den Strichen. Nur die Vollbild-Instanz schreibt — eine
+    // eingebettete (Shop) überschriebe sonst dasselbe globale Objekt.
+    if (!isFrozen) {
+      processionLive.t = wo.procession
+      processionLive.focusX = cx
+      processionLive.focusY = cy
+      processionLive.minEdge = Math.min(w, h)
+      processionLive.sec += delta
+      processionLive.active = warpActive
+    }
+
     const maxDist = Math.hypot(w / 2, h / 2) + 20 + Math.hypot(cx - w / 2, cy - h / 2)
     // Slip in px/s (Gewicht 1 am Rand) und als Schritt dieses Frames; Roll als Schritt.
     const slipOn =
@@ -1350,7 +1373,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     }
 
     // ── Kosmischer Staub ────────────────────────────────────────────────────
-    // Im Flug ausgesetzt (bei 45× wäre er ohnehin nur Schmier), beim Ausrollen
+    // Im Flug ausgesetzt (bei Warp-Tempo wäre er ohnehin nur Schmier), beim Ausrollen
     // über globalAlpha zurückgeblendet — nicht über d.opacity, das würde den
     // Verlaufs-Cache jeden Frame verwerfen.
     if (ctx && wo.ambientGain > 0) {
@@ -1480,7 +1503,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         star.angle = respawnAngle()
         // Im Flug rückt der Nachschub mit dem Tempo an den Fluchtpunkt (der
         // Tunnel); beim Ausrollen rundum verteilt, sonst wie gehabt. Nicht
-        // schlagartig: mit 2× am Rand geboren und bei 45× dicht am Fokus —
+        // schlagartig: mit 2× am Rand geboren und bei Warp-Tempo dicht am Fokus —
         // sonst stand der Schirm beim Losfliegen für eine Sekunde leer.
         if (warpFlight)
           star.dist = maxDist * (0.1 - 0.08 * tunnel + Math.random() * (0.35 - 0.27 * tunnel))
@@ -1718,6 +1741,72 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         ctx.lineWidth = outerWidth * 0.35
         ctx.stroke()
         ctx.restore()
+      }
+    }
+
+    // ── Die Schweife der Prozession ───────────────────────────────────────
+    // Sie fahren HIER und nicht im DOM: zwölf bewegte Elemente wären zwölf
+    // Compositor-Ebenen samt Overlap-Kaskade. Gezeichnet wird mit DEMSELBEN
+    // Streak-Sprite wie die Sternstriche — der Zug spricht damit die Sprache
+    // des Tunnels, in dem er fliegt, und die Persistenz-Spur verlängert ihn
+    // gratis. Der Kopf sitzt am Körper, der Schweif liegt entgegen der
+    // Bewegung, also zum Fluchtpunkt hin.
+    //
+    // Die Positionen füllen die beiden Orbit-Schleifen; ein Frame Versatz ist
+    // der Preis und bei einem weich wogenden Zug unsichtbar.
+    if (ctx && !isFrozen && processionLive.t > 0.01) {
+      const minEdgePx = Math.min(w, h)
+      const bodyAlpha = persistentDrawAlpha(PROCESSION_TRAIL_ALPHA * processionLive.t, wo.trailFade)
+      let drewTrail = false
+      for (let li = 0; li < 2; li++) {
+        const list = li === 0 ? processionLive.planets : processionLive.champions
+        const n = li === 0 ? processionLive.planetCount : processionLive.championCount
+        for (let i = 0; i < n; i++) {
+          const b = list[i]
+          if (b.r <= 0) continue
+          const dx = b.x - cx
+          const dy = b.y - cy
+          drawStreakSprite(
+            ctx,
+            b.cr,
+            b.cg,
+            b.cb,
+            b.x,
+            b.y,
+            processionTrailAngle(dx, dy),
+            processionTrailLength(dx, dy, b.r, minEdgePx),
+            b.r * PROCESSION_TRAIL_WIDTH_K,
+            bodyAlpha,
+          )
+          drewTrail = true
+        }
+      }
+      // Der Spielerkörper steht in der Bildmitte — sein Schweif zeigt vom
+      // Fluchtpunkt weg wie jeder andere, ist aber länger und leiser. Liegt der
+      // Fluchtpunkt noch auf ihm (der Kurs baut sich erst auf), gibt es keine
+      // Richtung und er bleibt aus.
+      const sunR = processionLive.sunR
+      const sdx = w / 2 - cx
+      const sdy = h / 2 - cy
+      if (sunR > 0 && Math.hypot(sdx, sdy) > 1) {
+        drawStreakSprite(
+          ctx,
+          processionLive.sunRed,
+          processionLive.sunGreen,
+          processionLive.sunBlue,
+          w / 2,
+          h / 2,
+          processionTrailAngle(sdx, sdy),
+          sunR * PROCESSION_SUN_TRAIL_LEN_K,
+          sunR * PROCESSION_TRAIL_WIDTH_K,
+          persistentDrawAlpha(PROCESSION_SUN_TRAIL_ALPHA * processionLive.t, wo.trailFade),
+        )
+        drewTrail = true
+      }
+      // drawStreakSprite lässt seine Drehung stehen — hier EINMAL zurück.
+      if (drewTrail) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.globalAlpha = 1
       }
     }
 
@@ -1967,6 +2056,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     stopFocusPolling()
     if (!isFrozen) {
       resetFlightLive()
+      resetProcessionLive()
       clearEncounters(sky)
       registerSkyDebug(null)
     }

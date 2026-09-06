@@ -191,8 +191,21 @@ import {
   PLANET_ORBIT_FOREGROUND_DEPTH,
   ORBIT_SCALE_QUANTIZE_STEPS,
   FRAME_EL_SWEEP_INTERVAL,
+  PROCESSION_ENTER_T,
+  PROCESSION_EXIT_T,
+  PROCESSION_TRAIL_FALLBACK_COLOR,
+  PROCESSION_Z_BASE,
 } from '@/config/constants'
 import { setMapEl, sweepMapEls } from '@/utils/orbit/frameEls'
+import {
+  PROCESSION_LANE_CHAMPION,
+  processionBodyAt,
+  processionLive,
+  processionSlot,
+  processionSpot,
+  type ProcessionSpot,
+} from '@/utils/orbit/flightProcession'
+import { hexToRgb } from '@/utils/ui/format'
 import { useProjectileSystem } from '@/composables/orbit/useProjectileSystem'
 import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
 import type { ChampionRole } from '@/types'
@@ -255,11 +268,7 @@ interface LocalChampState {
 export default defineComponent({
   name: 'ChampionOrbit',
   components: { Icon },
-  props: {
-    flightBodyScale: { type: Number, default: 1 },
-    flightOrbitScale: { type: Number, default: 1 },
-  },
-  setup(props) {
+  setup() {
     const combatStore = useCombatStore()
     const battleStore = useBattleStore()
     const bossStore = usePlanetBossStore()
@@ -354,6 +363,23 @@ export default defineComponent({
 
     /** Zuletzt geschriebener z-index je Champion — er wechselt nur stufenweise. */
     const lastZIndex = new Map<string, number>()
+    /**
+     * Steht der Champion in der Prozession? Ein LATCH mit zwei Schwellen, kein
+     * Vergleich: `isBehind` steht im `structureKey`, und an einer einzigen
+     * Schwelle zitterte der Ebenenwechsel auf der Easing-Flanke.
+     */
+    const inProcession = new Map<string, boolean>()
+    /** Wiederverwendet — die Prozession alloziert je Frame nichts. */
+    const procSpot: ProcessionSpot = { x: 0, y: 0, scale: 1 }
+    const trailRgb = new Map<string, [number, number, number]>()
+    function trailRgbFor(hex: string): [number, number, number] {
+      let v = trailRgb.get(hex)
+      if (!v) {
+        v = hexToRgb(hex)
+        trailRgb.set(hex, v)
+      }
+      return v
+    }
 
     /** Kantenlänge der HP-Leiste — folgt der ungeschrumpften Avatar-Größe. */
     function hpWrapWidth(pos: ChampionRenderPos): number {
@@ -422,7 +448,10 @@ export default defineComponent({
         const hp = hpWrapEls.get(pos.name)
         if (hp) {
           hp.style.transform = hpWrapTransform(pos)
-          hp.style.opacity = pos.dimFactor.toFixed(3)
+          // Im Flug weg: die Zahl liest dort niemand, und sie zerlegt die
+          // Silhouette des Zuges. Hier und nicht im Stylesheet, weil diese
+          // Deckkraft pro Frame inline geschrieben wird.
+          hp.style.opacity = (pos.dimFactor * (1 - processionLive.t)).toFixed(3)
           if (zChanged) hp.style.zIndex = String(pos.zIndex)
         }
       }
@@ -480,6 +509,8 @@ export default defineComponent({
       const screenCy = window.innerHeight / 2
       const champions = combatStore.champions
       const newPositions: ChampionRenderPos[] = []
+      /** Wie viele Schweif-Köpfe dieser Frame gefüllt hat. */
+      let procBodies = 0
       seenBodyRoles.clear()
 
       const adcName = battleStore.headerSlots[3]
@@ -516,16 +547,14 @@ export default defineComponent({
         const flooredRx = flooredRy * aspectRatio
         const maxRx = (window.innerWidth / 2) * ORBIT_MAX_RX_VIEWPORT_FRACTION
         const capFactor = Math.min(1.0, maxRx / flooredRx)
-        const rx = flooredRx * capFactor * props.flightOrbitScale
-        const ry = flooredRy * capFactor * props.flightOrbitScale
+        const rx = flooredRx * capFactor
+        const ry = flooredRy * capFactor
 
         const tiltRad = roleTier ? roleTier.tiltRad : planetTier.tiltRad
         const tiltDeg = roleTier ? roleTier.tiltDeg : planetTier.tiltDeg
         const orbitColor = roleTier ? roleTier.color : planetTier.color
         const baseSize =
-          (roleTier ? roleTier.championSize : planetTier.size) *
-          getOrbitBodyScale(sunScale) *
-          props.flightBodyScale
+          (roleTier ? roleTier.championSize : planetTier.size) * getOrbitBodyScale(sunScale)
         const orbitSpeed = roleTier ? roleTier.speed : c.baseSpeed
 
         let ls = localStates.get(c.name)
@@ -572,7 +601,7 @@ export default defineComponent({
         combatStore.setChampionScreenPos(c.name, ls.x, ls.y)
 
         const relY = (ls.y - screenCy) / Math.max(ry, 1)
-        const isBehind = relY < ORBIT_BEHIND_REL_Y
+        const orbitIsBehind = relY < ORBIT_BEHIND_REL_Y
         const depth = (relY + 1) / 2
 
         // Parallax fährt als transform-scale, nicht mehr als width/height:
@@ -582,26 +611,27 @@ export default defineComponent({
         const rawScale = c.isAttacking
           ? 1
           : ORBIT_PARALLAX_SCALE_BASE + depth * ORBIT_PARALLAX_SCALE_SPAN
-        const scale =
+        const orbitScale =
           Math.round(rawScale * ORBIT_SCALE_QUANTIZE_STEPS) / ORBIT_SCALE_QUANTIZE_STEPS
-        const size = fixedSize * scale
-        const opacity = c.isAttacking
+        const orbitOpacity = c.isAttacking
           ? 1
-          : isBehind
+          : orbitIsBehind
             ? CHAMPION_ORBIT_OPACITY_BEHIND_BASE + depth * CHAMPION_ORBIT_OPACITY_BEHIND_SPAN
             : CHAMPION_ORBIT_OPACITY_FRONT_BASE + depth * CHAMPION_ORBIT_OPACITY_FRONT_SPAN
-        const zIndex = c.isAttacking ? 20 : Math.floor(8 + depth * 7)
 
-        activeChampionBehindState[c.name] = isBehind
+        // Die Auskunft folgt der BAHN, nicht dem Zug: `foregroundGate` liest sie,
+        // und ein zusammengezogener Zug hätte jeden Champion nach vorn gemeldet.
+        activeChampionBehindState[c.name] = orbitIsBehind
 
-        const isForeground = !isBehind && depth > PLANET_ORBIT_FOREGROUND_DEPTH
+        const isForeground = !orbitIsBehind && depth > PLANET_ORBIT_FOREGROUND_DEPTH
 
         // Körper für die Void-Berührung veröffentlichen — noch VOR dem
         // Render-Ausstieg unten, genau wie PlanetOrbit es tut: unter dem
         // Bard-Profil laufen die Bahnen weiter, also muss auch weiter berührt
         // werden können. Der Radius ist exakt die Zahl, die der Renderer gleich
-        // benutzt (`size` aus fixedSize × scale) — ihn anderswo nachzurechnen
-        // hiesse zwei Quellen für dasselbe Mass.
+        // benutzt (fixedSize × Bahn-Skala) — ihn anderswo nachzurechnen hieße
+        // zwei Quellen für dasselbe Mass. Bewusst die BAHN-Skala: im Flug ist
+        // der Körper perspektivisch verkleinert, seine Trefferfläche nicht.
         if (isMain && primaryRole) {
           seenBodyRoles.add(primaryRole)
           let body = activeChampionBodies.get(primaryRole)
@@ -612,7 +642,7 @@ export default defineComponent({
           body.cx = ls.x
           body.cy = ls.y
           body.isForeground = isForeground
-          body.r = size / 2
+          body.r = (fixedSize * orbitScale) / 2
         }
 
         const visibleFactor = Math.max(
@@ -632,6 +662,63 @@ export default defineComponent({
             roleBehaviorStore.tankInterceptDirX * CHAMPION_ORBIT_INTERCEPT_MAX_OFFSET_PX * progress
           renderY +=
             roleBehaviorStore.tankInterceptDirY * CHAMPION_ORBIT_INTERCEPT_MAX_OFFSET_PX * progress
+        }
+
+        // ── Die Prozession ────────────────────────────────────────────────
+        // Reine RENDER-Verbiegung, wie in PlanetOrbit: `ls.x`/`ls.y`,
+        // `setChampionScreenPos` und `activeChampionBodies` bleiben auf der
+        // Bahn. Der Zug legt sich AUF den Intercept-Versatz, nicht darunter —
+        // ein Tank, der im Flug ausschert, schert aus seiner Flugposition aus.
+        const procT = processionLive.t
+        const pslot = processionSlot(ci, champions.length, PROCESSION_LANE_CHAMPION)
+        let scale = orbitScale
+        let opacity = orbitOpacity
+        if (procT > 0) {
+          processionSpot(
+            pslot,
+            processionLive.sec,
+            processionLive.focusX,
+            processionLive.focusY,
+            screenCx,
+            screenCy,
+            processionLive.minEdge || Math.min(window.innerWidth, window.innerHeight),
+            processionLive.sunR,
+            procSpot,
+          )
+          renderX += (procSpot.x - renderX) * procT
+          renderY += (procSpot.y - renderY) * procT
+          const mixed = orbitScale + (procSpot.scale - orbitScale) * procT
+          scale = Math.round(mixed * ORBIT_SCALE_QUANTIZE_STEPS) / ORBIT_SCALE_QUANTIZE_STEPS
+          opacity = orbitOpacity + (1 - orbitOpacity) * procT
+        }
+        const size = fixedSize * scale
+
+        // LATCH mit zwei Schwellen — `isBehind` steht im `structureKey`, und an
+        // einer einzigen zitterte der Ebenenwechsel auf der Easing-Flanke.
+        const wasInProc = inProcession.get(c.name) ?? false
+        const nowInProc =
+          procT >= PROCESSION_ENTER_T ? true : procT <= PROCESSION_EXIT_T ? false : wasInProc
+        if (nowInProc !== wasInProc) inProcession.set(c.name, nowInProc)
+        const isBehind = nowInProc ? false : orbitIsBehind
+        const zIndex = c.isAttacking
+          ? 20
+          : nowInProc
+            ? PROCESSION_Z_BASE + pslot.rank
+            : Math.floor(8 + depth * 7)
+
+        // Kopf des Schweifs — gezeichnet wird er auf dem Sternfeld-Canvas.
+        if (procT > 0) {
+          const body = processionBodyAt(processionLive.champions, procBodies)
+          const rgb = trailRgbFor(
+            (primaryRole ? ROLE_BY_KEY[primaryRole]?.color : null) ?? PROCESSION_TRAIL_FALLBACK_COLOR,
+          )
+          body.x = renderX
+          body.y = renderY
+          body.r = size / 2
+          body.cr = rgb[0]
+          body.cg = rgb[1]
+          body.cb = rgb[2]
+          procBodies++
         }
 
         // ── Champion-HP (nur Mains haben einen HP-Pool) ────────────────────
@@ -688,6 +775,8 @@ export default defineComponent({
       // Eine leergeräumte Rolle muss auch aus der Körper-Map verschwinden,
       // sonst berührte ein Void-Wesen weiter den Geist eines Champions, der
       // längst nicht mehr im Orbit steht.
+      processionLive.championCount = procBodies
+
       if (activeChampionBodies.size !== seenBodyRoles.size) {
         for (const role of activeChampionBodies.keys()) {
           if (!seenBodyRoles.has(role)) activeChampionBodies.delete(role)

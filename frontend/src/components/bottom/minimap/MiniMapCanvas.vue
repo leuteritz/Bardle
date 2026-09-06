@@ -173,8 +173,8 @@ export default defineComponent({
     // Galaxie voller besuchter Sterne ein drawImage statt einer Marker-Schleife.
     const markerLayer = createCachedLayer()
 
-    let hyperspacePhase: HyperspacePhase = 'idle'
-    let hyperspacePhaseStart = 0
+    const hyperspacePhase: HyperspacePhase = 'idle'
+    const hyperspacePhaseStart = 0
     let hyperspaceTimeouts: number[] = []
     let arrivalTransitionStart = -1
     let departureTransitionStart = -1

@@ -87,7 +87,11 @@ import {
   CHIME_PARTICLE_DRAW_SCALE_BASE,
   CHIME_PARTICLE_DRAW_SCALE_SPAN,
   CHIME_PARTICLE_CANVAS_SUN_FACTOR,
+  COMET_PHASE_DATA,
+  STAR_PHASE_DATA,
 } from '@/config/constants'
+import { processionLive } from '@/utils/orbit/flightProcession'
+import { hexToRgb } from '@/utils/ui/format'
 import { sunBodyFor, warmSunSprites } from '@/utils/fx/sunBodySprite'
 import { solarSignatureStages } from '@/utils/game/solarSignature'
 import type { SunBody } from '@/types'
@@ -139,6 +143,28 @@ export default defineComponent({
           Math.min(JOLT_BODY_PX_MAX, effectiveRadius.value * JOLT_BODY_R_FRAC),
         ),
     )
+    // Der Spielerkörper meldet Maß und Ton für seinen Flug-Schweif — gezeichnet
+    // wird er auf dem Sternfeld-Canvas, das beides nicht kennt. Ein Watcher, kein
+    // Frame-Schreiben: beides ändert sich nur mit der Sonnenphase.
+    watch(
+      [discDiameter, () => solarStore.isCometState, () => solarStore.starPhase],
+      ([d, comet, phase]) => {
+        if (props.contained) return
+        // Die GEZEICHNETE Scheibe, nicht der Kernradius: die Korona (und beim
+        // Schwarzen Loch die Akkretionsscheibe) reicht das Vierfache weiter,
+        // und der Zug soll nicht darin stecken.
+        processionLive.sunR = (d as number) / 2
+        const hex = comet
+          ? COMET_PHASE_DATA.accent
+          : (STAR_PHASE_DATA[phase as number] ?? STAR_PHASE_DATA[0]).phaseGlow
+        const [cr, cg, cb] = hexToRgb(hex)
+        processionLive.sunRed = cr
+        processionLive.sunGreen = cg
+        processionLive.sunBlue = cb
+      },
+      { immediate: true },
+    )
+
     const hitFlash = ref<number | null>(null)
     let hitFlashTimer: ReturnType<typeof setTimeout> | null = null
     watch(flightHitSeq, (seq) => {

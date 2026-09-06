@@ -297,7 +297,7 @@ export const useGalaxyStore = defineStore('galaxy', {
      * Stillstand. Öffnete es die Rollenwahl sofort, setzte `pendingRoleSelection`
      * den Hintergrund still (`starsBackgroundPaused`) — und mit ihm die
      * Warp-Maschine, die in derselben Schleife tickt: das Abbremsen fror hinter
-     * dem Modal ein und lief erst nach der Rollenwahl nachträglich mit 45× an.
+     * dem Modal ein und lief erst nach der Rollenwahl nachträglich mit Warp-Tempo an.
      * Nicht persistiert: ein Reload dazwischen fängt der Rettungsanker in
      * usePersistence (idle ohne Rolle → Rollenwahl).
      */

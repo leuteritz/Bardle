@@ -16,7 +16,8 @@ export function useFlightCinematic() {
   })
 
   const active = computed(() => mode.value !== 'idle')
-  const formation = computed(() => FLIGHT_FORMATION[mode.value])
+  /** Nur noch der Spielerkörper — Planeten und Champions führt die Prozession. */
+  const bodyScale = computed(() => FLIGHT_FORMATION[mode.value].bodyScale)
 
-  return { mode, active, formation }
+  return { mode, active, bodyScale }
 }

@@ -215,8 +215,20 @@ import {
   COOLDOWN_RING_TIP_RADIUS_HOT,
   ORBIT_SCALE_QUANTIZE_STEPS,
   FRAME_EL_SWEEP_INTERVAL,
+  PROCESSION_ENTER_T,
+  PROCESSION_EXIT_T,
+  PROCESSION_Z_BASE,
 } from '@/config/constants'
 import { setMapEl, sweepMapEls } from '@/utils/orbit/frameEls'
+import {
+  PROCESSION_LANE_PLANET,
+  processionBodyAt,
+  processionLive,
+  processionSlot,
+  processionSpot,
+  type ProcessionSpot,
+} from '@/utils/orbit/flightProcession'
+import { hexToRgb } from '@/utils/ui/format'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { activePlanetPositions, activePlayerPlanetPositions } from '@/utils/orbit/liveState'
@@ -231,8 +243,18 @@ const MIN_SHOT_DISTANCE = 32
 interface PlanetRenderPos {
   id: string
   name: string
+  /** DARGESTELLTE Position — im Flug die der Prozession, sonst die der Bahn. */
   x: number
   y: number
+  /**
+   * Die Bahnposition, unverbogen. Alles, was ABSTÄNDE oder Winkel rechnet
+   * (`activePlayerPlanetPositions`, Turret-Ziele, Ringe), liest diese und nicht
+   * `x`/`y` — sonst feuerte im Flug jeder Buff auf jeden.
+   */
+  orbitX: number
+  orbitY: number
+  /** Parallax-Faktor der BAHN, ohne die Perspektive der Prozession. */
+  orbitScale: number
   /**
    * Ungeschrumpfte Kantenlänge — steht als width/height am Element und ändert
    * sich nur mit dem Sonnenradius. Die Parallax-Verkleinerung fährt `scale`
@@ -281,11 +303,7 @@ interface LocalPlanetState {
 export default defineComponent({
   name: 'PlanetOrbit',
   components: { OrbitPath, Icon },
-  props: {
-    flightBodyScale: { type: Number, default: 1 },
-    flightOrbitScale: { type: Number, default: 1 },
-  },
-  setup(props) {
+  setup() {
     const planetShopStore = usePlanetShopStore()
     const planetBossStore = usePlanetBossStore()
     const uiStore = useUiStore()
@@ -325,6 +343,24 @@ export default defineComponent({
     let sweepCounter = 0
     /** Zuletzt geschriebener z-index je Slot — er wechselt nur stufenweise. */
     const lastZIndex = new Map<string, number>()
+    /**
+     * Steht der Slot in der Prozession? Ein LATCH mit zwei Schwellen, kein
+     * Vergleich: `isBehind` steht im `structureKey`, und an einer einzigen
+     * Schwelle zitterte der Ebenenwechsel auf der Easing-Flanke — das riss pro
+     * Frame einen vollen Vue-Render auf.
+     */
+    const inProcession = new Map<string, boolean>()
+    /** Wiederverwendet — die Prozession alloziert je Frame nichts. */
+    const procSpot: ProcessionSpot = { x: 0, y: 0, scale: 1 }
+    const trailRgb = new Map<string, [number, number, number]>()
+    function trailRgbFor(hex: string): [number, number, number] {
+      let v = trailRgb.get(hex)
+      if (!v) {
+        v = hexToRgb(hex)
+        trailRgb.set(hex, v)
+      }
+      return v
+    }
 
     // Weiche Hover-Blende OHNE CSS-Transition: der Wert wird pro Slot gehalten,
     // im Frame Richtung Ziel gezogen und in die ohnehin pro Frame gesetzte
@@ -447,7 +483,10 @@ export default defineComponent({
       for (const pos of positions) {
         const transform = bodyTransform(pos)
         const opacity = (pos.opacity * pos.dimFactor).toFixed(3)
-        const dim = pos.dimFactor.toFixed(3)
+        // Leiste und Buff-Anker blenden im Flug aus: die Zahl liest dort
+        // niemand, und sie zerlegt die Silhouette des Zuges. Hier und nicht im
+        // Stylesheet, weil diese Deckkraft pro Frame inline geschrieben wird.
+        const dim = (pos.dimFactor * (1 - processionLive.t)).toFixed(3)
         // z-index wechselt nur stufenweise — jedes Schreiben sortiert die
         // Paint-Reihenfolge neu, deshalb nur bei echtem Wechsel.
         const zChanged = lastZIndex.get(pos.id) !== pos.zIndex
@@ -624,6 +663,9 @@ export default defineComponent({
         // Idle-Layer pausiert (Star-Fight-Modal / Profil offen): keine Schüsse
         // ansammeln, die beim Fortsetzen alle gleichzeitig losfliegen würden
         if (isIdleRenderingPaused.value) return
+        // Im Flug ist die Projektil-Ebene gar nicht gemountet — Schüsse, die
+        // niemand zeichnet, sammelt der Pool sonst über die ganze Reise.
+        if (processionLive.active) return
         // Gleiche Bedingung wie der Cooldown-Ring (nicht hinter der Sonne):
         // jeder Turret, dessen Ring voll läuft, verschießt auch ein Projektil
         const turretPlanets = renderPositions.value.filter(
@@ -644,7 +686,7 @@ export default defineComponent({
           for (const planetId of bossPlanetIds) {
             const pos = activePlanetPositions.get(planetId)
             if (!pos) continue
-            const dist = Math.hypot(pos.cx - turret.x, pos.cy - turret.y)
+            const dist = Math.hypot(pos.cx - turret.orbitX, pos.cy - turret.orbitY)
             // nächstes Ziel überhaupt — Fallback, falls alle zu nah stehen
             if (dist < fallbackDist) {
               fallbackDist = dist
@@ -659,7 +701,7 @@ export default defineComponent({
 
           const target = targetPos ?? fallbackPos
           if (target) {
-            spawnShot(turret.x, turret.y, target.cx, target.cy, true, true)
+            spawnShot(turret.orbitX, turret.orbitY, target.cx, target.cy, true, true)
           }
         }
       },
@@ -673,6 +715,8 @@ export default defineComponent({
       const cy = window.innerHeight / 2
       const purchased = planetShopStore.purchasedSlots.filter((s) => s.role !== null)
       const newPositions: PlanetRenderPos[] = []
+      /** Wie viele Schweif-Köpfe dieser Frame gefüllt hat. */
+      let procBodies = 0
 
       const sunScale = planetShopStore.orbitSunScale
       const orbitScaleVal = orbitScale.value
@@ -680,7 +724,7 @@ export default defineComponent({
         const slotIdx = purchased.indexOf(slot)
         const tier = ORBIT_TIERS.planet[slotIdx % ORBIT_TIERS.planet.length]
         const orbitColor = tier.color
-        const baseSize = tier.size * getOrbitBodyScale(sunScale) * props.flightBodyScale
+        const baseSize = tier.size * getOrbitBodyScale(sunScale)
 
         const tiltRad = tier.tiltRad
         const rawRy = tier.ry * sunScale * orbitScaleVal
@@ -697,8 +741,8 @@ export default defineComponent({
         const flooredRx = flooredRy * (tier.rx / tier.ry)
         const maxRx = (window.innerWidth / 2) * ORBIT_MAX_RX_VIEWPORT_FRACTION
         const capFactor = Math.min(1.0, maxRx / flooredRx)
-        const rx = flooredRx * capFactor * props.flightOrbitScale
-        const ry = flooredRy * capFactor * props.flightOrbitScale
+        const rx = flooredRx * capFactor
+        const ry = flooredRy * capFactor
 
         let ls = localStates.get(slot.id)
         if (!ls) {
@@ -747,7 +791,7 @@ export default defineComponent({
 
 
         const relY = (ls.y - cy) / Math.max(ry, 1)
-        const isBehind = relY < ORBIT_BEHIND_REL_Y
+        const orbitIsBehind = relY < ORBIT_BEHIND_REL_Y
         const depth = (relY + 1) / 2
 
         // Parallax fährt als transform-scale, nicht mehr als width/height: eine
@@ -756,16 +800,73 @@ export default defineComponent({
         const fixedSize = Math.round(baseSize)
         const rawScale =
           PLANET_ORBIT_PARALLAX_SCALE_BASE + depth * PLANET_ORBIT_PARALLAX_SCALE_SPAN
-        const scale =
+        const orbitScale =
           Math.round(rawScale * ORBIT_SCALE_QUANTIZE_STEPS) / ORBIT_SCALE_QUANTIZE_STEPS
+
+        // ── Die Prozession ────────────────────────────────────────────────
+        // Eine reine RENDER-Verbiegung: `ls.x`/`ls.y`, `planetOrbitPhases` und
+        // die liveState-Maps unten bleiben auf der BAHN. `roleBehaviorStore`
+        // (Jungle-Buff, Support-Heal) und `voidContact` rechnen im Flug weiter
+        // ABSTÄNDE gegen diese Zahlen — ein gestauchter Zug ließe sie auf alles
+        // zugleich feuern.
+        const procT = processionLive.t
+        const pslot = processionSlot(slotIdx, purchased.length, PROCESSION_LANE_PLANET)
+        let x = ls.x
+        let y = ls.y
+        let scale = orbitScale
+        if (procT > 0) {
+          processionSpot(
+            pslot,
+            processionLive.sec,
+            processionLive.focusX,
+            processionLive.focusY,
+            cx,
+            cy,
+            processionLive.minEdge || Math.min(window.innerWidth, window.innerHeight),
+            processionLive.sunR,
+            procSpot,
+          )
+          x = ls.x + (procSpot.x - ls.x) * procT
+          y = ls.y + (procSpot.y - ls.y) * procT
+          const mixed = orbitScale + (procSpot.scale - orbitScale) * procT
+          scale = Math.round(mixed * ORBIT_SCALE_QUANTIZE_STEPS) / ORBIT_SCALE_QUANTIZE_STEPS
+        }
+
+        // Der Ebenenwechsel ist ein LATCH mit zwei Schwellen — siehe
+        // `inProcession`. Im Zug gibt es kein „hinter der Sonne": alle Körper
+        // hängen vorn, ihre Ordnung trägt der Rang des Slots.
+        const wasInProc = inProcession.get(slot.id) ?? false
+        const nowInProc =
+          procT >= PROCESSION_ENTER_T ? true : procT <= PROCESSION_EXIT_T ? false : wasInProc
+        if (nowInProc !== wasInProc) inProcession.set(slot.id, nowInProc)
+
+        const isBehind = nowInProc ? false : orbitIsBehind
         const size = fixedSize * scale
-        const opacity = isBehind
+        const orbitOpacity = orbitIsBehind
           ? PLANET_ORBIT_OPACITY_BEHIND_BASE + depth * PLANET_ORBIT_OPACITY_BEHIND_SPAN
           : PLANET_ORBIT_OPACITY_FRONT_BASE + depth * PLANET_ORBIT_OPACITY_FRONT_SPAN
-        const zIndex = Math.floor(9 + depth * 6)
+        // Im Zug steht jeder Körper voll da — der Blur-Look der Rückseite hat
+        // dort keine Bedeutung mehr, und die Rampe blendet ihn weich weg.
+        const opacity = procT > 0 ? orbitOpacity + (1 - orbitOpacity) * procT : orbitOpacity
+        const zIndex = nowInProc ? PROCESSION_Z_BASE + pslot.rank : Math.floor(9 + depth * 6)
         // Geteilte Schwelle: Command Panel und Planeten-Tab richten ihr
-        // Eclipse-Medaillon exakt an diesem Wert aus.
-        const isForeground = !isBehind && depth > PLANET_ORBIT_FOREGROUND_DEPTH
+        // Eclipse-Medaillon exakt an diesem Wert aus. Die Auskunft folgt der
+        // BAHN, nicht dem Zug — sonst spränge das Medaillon bei jeder Reise.
+        const isForeground = !orbitIsBehind && depth > PLANET_ORBIT_FOREGROUND_DEPTH
+
+        // Kopf des Schweifs für die Sternfeld-Schleife (sie zeichnet ihn, damit
+        // kein Körper eine eigene Compositor-Ebene braucht).
+        if (procT > 0) {
+          const body = processionBodyAt(processionLive.planets, procBodies)
+          const rgb = trailRgbFor(slot.role ? PLANET_ROLES[slot.role].color : '#888888')
+          body.x = x
+          body.y = y
+          body.r = size / 2
+          body.cr = rgb[0]
+          body.cg = rgb[1]
+          body.cb = rgb[2]
+          procBodies++
+        }
 
         const visibleFactor = Math.max(
           0,
@@ -822,8 +923,11 @@ export default defineComponent({
         newPositions.push({
           id: slot.id,
           name: slot.role ? PLANET_ROLES[slot.role].name : `Orbit ${slot.id.replace('slot_', '')}`,
-          x: ls.x,
-          y: ls.y,
+          x,
+          y,
+          orbitX: ls.x,
+          orbitY: ls.y,
+          orbitScale,
           baseSize: fixedSize,
           scale,
           size,
@@ -876,21 +980,25 @@ export default defineComponent({
           continue
         }
         // In place mutieren statt sechs Objektliterale je Frame zu werfen —
-        // `r` ist die DARGESTELLTE Halbkante und damit exakt der Körper, gegen
-        // den die Void-Berührung prüft.
+        // `r` ist die Halbkante des Körpers auf seiner BAHN und damit exakt das,
+        // wogegen die Void-Berührung prüft.
         let entry = activePlayerPlanetPositions.get(pos.id)
         if (!entry) {
           entry = { cx: 0, cy: 0, isForeground: false, r: 0 }
           activePlayerPlanetPositions.set(pos.id, entry)
         }
-        entry.cx = pos.x
-        entry.cy = pos.y
+        // BAHN, nicht Zug: der Void-Kontakt und die Reichweiten des
+        // `roleBehaviorStore` laufen im Flug weiter, und ein zusammengezogener
+        // Zug ließe jeden Buff auf jeden feuern.
+        entry.cx = pos.orbitX
+        entry.cy = pos.orbitY
         entry.isForeground = pos.isForeground
-        entry.r = pos.size / 2
+        entry.r = (pos.baseSize * pos.orbitScale) / 2
       }
       for (const key of activePlayerPlanetPositions.keys()) {
         if (!newPositions.some((p) => p.id === key)) activePlayerPlanetPositions.delete(key)
       }
+      processionLive.planetCount = procBodies
 
       // Ab hier nur noch Sichtbares. Unter dem Bard-Profil endet der Frame: kein
       // Vue-Re-Render, kein Canvas-Paint, keine Projektil-Choreografie — nur die
@@ -916,6 +1024,11 @@ export default defineComponent({
           if (!o) continue
           o.x = n.x
           o.y = n.y
+          // Der Turret-Watch liest die Bahnwerte aus `renderPositions` — ohne
+          // sie hier stünden sie auf dem Stand des letzten Strukturwechsels.
+          o.orbitX = n.orbitX
+          o.orbitY = n.orbitY
+          o.orbitScale = n.orbitScale
           o.scale = n.scale
           o.size = n.size
           o.opacity = n.opacity
