@@ -54,22 +54,28 @@ export const STAR_RESCUE_BURST_RAY_MAX_LEN = 0.42
 // Kein eigenes Canvas: die Maschine in utils/orbit/universeHop.ts tickt mit
 // dem rAF-Delta der Sternfeld-Schleife, ihre Flanken schalten den Store.
 // Alle Zeiten Wanduhr; das Netz in UniverseHopVeil ist ×2.
-export const UNIVERSE_HOP_DEPART_MS = 2000
-export const UNIVERSE_HOP_APPROACH_MS = 3600
+/** Der Aufbruch geht direkt auf Überlicht — kurz, er liegt grösstenteils unter dem Schleier. */
+export const UNIVERSE_HOP_DEPART_MS = 500
+export const UNIVERSE_HOP_APPROACH_MS = 5000
 /** Der Durchflug: Ringtunnel und Roll, der Wash liegt an seinem AUSGANG. */
-export const UNIVERSE_HOP_PASSAGE_MS = 1200
-export const UNIVERSE_HOP_EMERGE_MS = 3400
+export const UNIVERSE_HOP_PASSAGE_MS = 4500
+export const UNIVERSE_HOP_EMERGE_MS = 3000
 /** DOM-Wash im Zielton an der Schwelle; der Reset liegt unter seinem Peak. */
 export const UNIVERSE_HOP_WASH_MS = 420
 export const UNIVERSE_HOP_WASH_PEAK = 0.35
 export const UNIVERSE_HOP_WASH_ALPHA = 0.92
 /** HUD kehrt gestaffelt zurück, gemessen ab Beginn des Ausrollens. */
 export const UNIVERSE_HOP_HUD_IN_DELAY_MS = 1000
-export const UNIVERSE_HOP_SPEED_DEPART = 14
-export const UNIVERSE_HOP_SPEED_PEAK = 30
-/** Kursziel als Anteil der kurzen Kante — weit genug aussen, dass das Tor NEBEN der Sonne steht. */
-export const UNIVERSE_HOP_FOCUS_FRAC_MIN = 0.14
-export const UNIVERSE_HOP_FOCUS_FRAC_MAX = 0.2
+/** Überlicht: über der Spitze des Galaxien-Warps (WARP_SPEED_PEAK 45). */
+export const UNIVERSE_HOP_SPEED_PEAK = 64
+/** Kurs: volle 360° (das HUD ist im Flug weg, anders als beim Warp), Radius als Anteil der kurzen
+ *  Kante — mal weit links oben, mal rechts unten. Der Kurs KURVT: ein zweiter Azimut um BANK
+ *  Grad versetzt, der Fokus wandert im Anflug auf dem Bogen dorthin. */
+export const UNIVERSE_HOP_COURSE_ARC_DEG = 360
+export const UNIVERSE_HOP_FOCUS_FRAC_MIN = 0.16
+export const UNIVERSE_HOP_FOCUS_FRAC_MAX = 0.34
+export const UNIVERSE_HOP_COURSE_BANK_MIN_DEG = 25
+export const UNIVERSE_HOP_COURSE_BANK_MAX_DEG = 70
 /** Ringradius zu Beginn des Anflugs (× kurze Kante) und beim Passieren (× Eckabstand). */
 export const UNIVERSE_HOP_PORTAL_R0_FRAC = 0.05
 export const UNIVERSE_HOP_PORTAL_PASS_K = 1.25
@@ -79,7 +85,11 @@ export const UNIVERSE_HOP_PORTAL_GROWTH_POW = 2.6
 export const UNIVERSE_HOP_PORTAL_SPIN_APPROACH_GAIN = 2
 /** Ringtunnel im Durchflug: Echo-Ringe wandern exponentiell von R_MIN·far bis R_MAX_K·far, zyklisch gestaffelt. */
 export const UNIVERSE_HOP_TUNNEL_RINGS = 6
-export const UNIVERSE_HOP_TUNNEL_CYCLES = 2.5
+export const UNIVERSE_HOP_TUNNEL_CYCLES_PER_SEC = 2
+/** Halbwellen des Roll-Vorzeichens über die Tunnelreise — der Twist wechselt die Richtung. */
+export const UNIVERSE_HOP_TUNNEL_TWISTS = 1.5
+/** Die Wirbelarme des Portals bleiben als Tunnelwände sichtbar. */
+export const UNIVERSE_HOP_WALL_ALPHA = 0.25
 export const UNIVERSE_HOP_TUNNEL_R_MIN_FRAC = 0.15
 export const UNIVERSE_HOP_TUNNEL_R_MAX_K = 1.3
 export const UNIVERSE_HOP_TUNNEL_ALPHA = 0.7
@@ -99,8 +109,8 @@ export const UNIVERSE_HOP_THROAT_ALPHA_CORE = 0.42
 export const UNIVERSE_HOP_THROAT_ALPHA_MID = 0.16
 export const UNIVERSE_HOP_THROAT_MID_STOP = 0.55
 /** Gate-Phase im Firmament: Schleier zu, Profil schliesst darunter, Schleier hebt. */
-export const UNIVERSE_HOP_GATE_MS = 380
-export const UNIVERSE_HOP_GATE_LIFT_MS = 500
+export const UNIVERSE_HOP_GATE_MS = 260
+export const UNIVERSE_HOP_GATE_LIFT_MS = 350
 export const UNIVERSE_HOP_GATE_PORTAL_K = 1.8
 /** HUD im Flug: alle Flächen auf 0 (OUT), Rückkehr gestaffelt (IN + n·STAGGER), Versatz nach aussen. */
 export const UNIVERSE_HOP_HUD_OUT_MS = 140

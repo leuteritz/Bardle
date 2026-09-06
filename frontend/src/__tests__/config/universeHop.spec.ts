@@ -11,6 +11,10 @@ import {
   UNIVERSE_HOP_TUNNEL_TRAIL_FADE,
   UNIVERSE_HOP_WASH_MS,
   UNIVERSE_HOP_WASH_PEAK,
+  UNIVERSE_HOP_DEPART_MS,
+  UNIVERSE_HOP_GATE_LIFT_MS,
+  UNIVERSE_HOP_SPEED_PEAK,
+  WARP_SPEED_PEAK,
   WARP_TRAIL_FADE,
 } from '@/config/constants'
 import { UNIVERSE_HOP_COMMIT_AT_MS, UNIVERSE_HOP_TOTAL_MS } from '@/utils/orbit/universeHop'
@@ -46,6 +50,9 @@ describe('Universumssprung — die Zeremonie', () => {
     // Der Wash liegt ganz im Durchflug (Peak am Ausgang), die Schweife im Tunnel sind länger als im Warp.
     expect(UNIVERSE_HOP_WASH_MS * UNIVERSE_HOP_WASH_PEAK).toBeLessThan(UNIVERSE_HOP_PASSAGE_MS)
     expect(UNIVERSE_HOP_TUNNEL_TRAIL_FADE).toBeLessThan(WARP_TRAIL_FADE)
+    // Überlicht schlägt den Warp; der Anlauf liegt grösstenteils unter dem hebenden Schleier.
+    expect(UNIVERSE_HOP_SPEED_PEAK).toBeGreaterThan(WARP_SPEED_PEAK)
+    expect(UNIVERSE_HOP_GATE_LIFT_MS).toBeGreaterThanOrEqual(UNIVERSE_HOP_DEPART_MS * 0.5)
     expect(UNIVERSE_HOP_WASH_PEAK).toBeGreaterThan(0)
     expect(UNIVERSE_HOP_WASH_PEAK).toBeLessThan(1)
     expect(UNIVERSE_HOP_HUD_IN_DELAY_MS).toBeLessThan(UNIVERSE_HOP_EMERGE_MS)

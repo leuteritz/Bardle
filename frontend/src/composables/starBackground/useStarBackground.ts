@@ -40,7 +40,7 @@ import {
   UNIVERSE_HOP_THROAT_MID_STOP,
   UNIVERSE_HOP_ARRIVAL_GALAXIES,
   UNIVERSE_HOP_TUNNEL_ALPHA,
-  UNIVERSE_HOP_TUNNEL_CYCLES,
+  UNIVERSE_HOP_TUNNEL_CYCLES_PER_SEC,
   UNIVERSE_HOP_TUNNEL_R_MAX_K,
   UNIVERSE_HOP_TUNNEL_R_MIN_FRAC,
   UNIVERSE_HOP_TUNNEL_RINGS,
@@ -1336,28 +1336,38 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       ctx.save()
       ctx.translate(cx, cy)
       ctx.scale(s, s * ry)
-      const mawSpan = portalSpriteSpan('maw', px)
-      ctx.globalAlpha = persistentDrawAlpha(ho.fieldAlpha, ho.trailFade)
-      ctx.drawImage(hopMaw, -mawSpan / 2, -mawSpan / 2, mawSpan, mawSpan)
-      const haloSpan = portalSpriteSpan('halo', px)
-      ctx.globalAlpha = persistentDrawAlpha(0.8 * ho.portalAlpha, ho.trailFade)
-      ctx.drawImage(hopHalo, -haloSpan / 2, -haloSpan / 2, haloSpan, haloSpan)
-      ctx.rotate(ho.portalSpin)
-      const swirlSpan = portalSpriteSpan('swirl', px)
-      ctx.globalAlpha = persistentDrawAlpha(ho.portalAlpha, ho.trailFade)
-      ctx.drawImage(hopSwirl, -swirlSpan / 2, -swirlSpan / 2, swirlSpan, swirlSpan)
+      if (ho.fieldAlpha > 0) {
+        const mawSpan = portalSpriteSpan('maw', px)
+        ctx.globalAlpha = persistentDrawAlpha(ho.fieldAlpha, ho.trailFade)
+        ctx.drawImage(hopMaw, -mawSpan / 2, -mawSpan / 2, mawSpan, mawSpan)
+      }
+      if (ho.portalAlpha > 0) {
+        const haloSpan = portalSpriteSpan('halo', px)
+        ctx.globalAlpha = persistentDrawAlpha(0.8 * ho.portalAlpha, ho.trailFade)
+        ctx.drawImage(hopHalo, -haloSpan / 2, -haloSpan / 2, haloSpan, haloSpan)
+      }
+      // Die Arme: im Anflug der Wirbel, in der Tunnelreise die vorbeiziehenden Wände.
+      const armsAlpha = Math.max(ho.portalAlpha, ho.wallAlpha)
+      if (armsAlpha > 0) {
+        ctx.rotate(ho.portalSpin)
+        const swirlSpan = portalSpriteSpan('swirl', px)
+        ctx.globalAlpha = persistentDrawAlpha(armsAlpha, ho.trailFade)
+        ctx.drawImage(hopSwirl, -swirlSpan / 2, -swirlSpan / 2, swirlSpan, swirlSpan)
+      }
       ctx.restore()
-      ctx.globalAlpha = ho.portalAlpha
-      ctx.strokeStyle = hopTint
-      ctx.lineWidth = Math.max(1.5, R * 0.05)
-      ctx.beginPath()
-      ctx.arc(cx, cy, R, 0, Math.PI * 2)
-      ctx.stroke()
-      ctx.globalAlpha = ho.portalAlpha * 0.5
-      ctx.lineWidth = Math.max(0.8, R * 0.012)
-      ctx.beginPath()
-      ctx.arc(cx, cy, R * FIRMAMENT_PORTAL_PHOTON_R, 0, Math.PI * 2)
-      ctx.stroke()
+      if (ho.portalAlpha > 0) {
+        ctx.globalAlpha = ho.portalAlpha
+        ctx.strokeStyle = hopTint
+        ctx.lineWidth = Math.max(1.5, R * 0.05)
+        ctx.beginPath()
+        ctx.arc(cx, cy, R, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.globalAlpha = ho.portalAlpha * 0.5
+        ctx.lineWidth = Math.max(0.8, R * 0.012)
+        ctx.beginPath()
+        ctx.arc(cx, cy, R * FIRMAMENT_PORTAL_PHOTON_R, 0, Math.PI * 2)
+        ctx.stroke()
+      }
       ctx.globalAlpha = 1
     }
 
@@ -1373,7 +1383,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const ratio = rMax / rMin
       ctx.strokeStyle = hopTint
       for (let i = 0; i < UNIVERSE_HOP_TUNNEL_RINGS; i++) {
-        const u = (ho.tunnelT * UNIVERSE_HOP_TUNNEL_CYCLES + i / UNIVERSE_HOP_TUNNEL_RINGS) % 1
+        const u = (ho.tunnelSec * UNIVERSE_HOP_TUNNEL_CYCLES_PER_SEC + i / UNIVERSE_HOP_TUNNEL_RINGS) % 1
         const r = rMin * Math.pow(ratio, u)
         const a = persistentDrawAlpha(UNIVERSE_HOP_TUNNEL_ALPHA * (1 - u), ho.trailFade)
         ctx.globalAlpha = a

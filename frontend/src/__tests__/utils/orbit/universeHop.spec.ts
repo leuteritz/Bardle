@@ -9,6 +9,11 @@ import {
   UNIVERSE_HOP_EMERGE_MS,
   UNIVERSE_HOP_PORTAL_R0_FRAC,
   UNIVERSE_HOP_TUNNEL_ROLL_RAD_S,
+  UNIVERSE_HOP_COURSE_BANK_MAX_DEG,
+  UNIVERSE_HOP_COURSE_BANK_MIN_DEG,
+  UNIVERSE_HOP_FOCUS_FRAC_MAX,
+  UNIVERSE_HOP_FOCUS_FRAC_MIN,
+  UNIVERSE_HOP_WALL_ALPHA,
   UNIVERSE_HOP_WASH_MS,
   UNIVERSE_HOP_WASH_PEAK,
 } from '@/config/constants'
@@ -21,6 +26,7 @@ import {
   UNIVERSE_HOP_HUD_IN_AT_MS,
   UNIVERSE_HOP_TOTAL_MS,
   UNIVERSE_HOP_WASH_AT_MS,
+  universeHopFocusAt,
   type UniverseHopPhase,
 } from '@/utils/orbit/universeHop'
 
@@ -122,7 +128,7 @@ describe('universeHop — Phasen und Flanken', () => {
 })
 
 describe('universeHop — Kurven', () => {
-  it('beschleunigt monoton im Aufbruch und erreicht die Spitze am Ende des Anflugs', () => {
+  it('geht im Aufbruch monoton auf Überlicht und hält es bis zum Tunnelende', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(11))
     let last = 1
@@ -133,11 +139,12 @@ describe('universeHop — Kurven', () => {
       expect(state.out.speed).toBeGreaterThanOrEqual(last - 1e-9)
       last = state.out.speed
     }
-    while (t < APPROACH_END) {
+    expect(state.out.speed).toBeGreaterThan(UNIVERSE_HOP_SPEED_PEAK * 0.93)
+    while (t < PASSAGE_END - 20) {
       t += 16.7
       stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
+      expect(state.out.speed).toBeGreaterThan(UNIVERSE_HOP_SPEED_PEAK * 0.93)
     }
-    expect(state.out.speed).toBeGreaterThan(UNIVERSE_HOP_SPEED_PEAK * 0.93)
   })
 
   it('rollt monoton aus und steht am Ende exakt auf 1', () => {
@@ -197,34 +204,64 @@ describe('universeHop — Kurven', () => {
     stepUniverseHop(state, APPROACH_END - 1, MIN_EDGE, FAR)
     expect(state.out.roll).toBe(0)
     expect(state.out.tunnelT).toBe(0)
-    let maxRoll = 0
+    expect(state.out.wallAlpha).toBe(0)
+    let maxAbs = 0
+    let signChanges = 0
+    let lastSign = 0
     let lastT = 0
+    let lastSec = 0
     let t = APPROACH_END - 1
     while (t < PASSAGE_END - 1) {
       t += 16.7
       stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
       if (state.out.phase !== 'passage') break
       expect(state.out.tunnelT).toBeGreaterThanOrEqual(lastT)
+      expect(state.out.tunnelSec).toBeGreaterThanOrEqual(lastSec)
       lastT = state.out.tunnelT
-      maxRoll = Math.max(maxRoll, state.out.roll)
+      lastSec = state.out.tunnelSec
+      maxAbs = Math.max(maxAbs, Math.abs(state.out.roll))
+      const sign = Math.sign(state.out.roll)
+      if (sign !== 0 && lastSign !== 0 && sign !== lastSign) signChanges++
+      if (sign !== 0) lastSign = sign
       expect(state.out.fieldAlpha).toBe(0)
+      expect(state.out.wallAlpha).toBe(UNIVERSE_HOP_WALL_ALPHA)
     }
-    expect(maxRoll).toBeCloseTo(UNIVERSE_HOP_TUNNEL_ROLL_RAD_S, 3)
-    expect(state.out.roll).toBeLessThan(UNIVERSE_HOP_TUNNEL_ROLL_RAD_S * 0.2)
+    expect(maxAbs).toBeGreaterThan(UNIVERSE_HOP_TUNNEL_ROLL_RAD_S * 0.8)
+    expect(maxAbs).toBeLessThanOrEqual(UNIVERSE_HOP_TUNNEL_ROLL_RAD_S + 1e-9)
+    // Der Twist wechselt die Richtung — sonst ist es ein Karussell.
+    expect(signChanges).toBeGreaterThanOrEqual(1)
+    expect(lastSec).toBeCloseTo(UNIVERSE_HOP_PASSAGE_MS / 1000, 1)
+    expect(Math.abs(state.out.roll)).toBeLessThan(UNIVERSE_HOP_TUNNEL_ROLL_RAD_S * 0.2)
     stepUniverseHop(state, 40, MIN_EDGE, FAR)
     expect(state.out.phase).toBe('emerge')
     expect(state.out.roll).toBe(0)
     expect(state.out.tunnelT).toBe(0)
+    expect(state.out.wallAlpha).toBe(0)
   })
 
-  it('fährt den Fluchtpunkt zum Kurs und exakt zurück', () => {
+  it('würfelt das Roll-Vorzeichen', () => {
+    const signs = new Set<number>()
+    for (let i = 0; i < 40; i++) {
+      const st = createUniverseHop()
+      startUniverseHop(st, seeded(Math.imul(i + 1, 2654435761) >>> 0))
+      signs.add(st.rollSign)
+    }
+    expect(signs).toEqual(new Set([-1, 1]))
+  })
+
+  it('fliegt eine KURVE: der Fokus startet bei A, endet bei B, und kehrt exakt zurück', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(21))
     stepUniverseHop(state, DEPART_END, MIN_EDGE, FAR)
-    expect(Math.hypot(state.out.focusX, state.out.focusY)).toBeCloseTo(
-      Math.hypot(state.courseFx, state.courseFy) * MIN_EDGE,
-      6,
-    )
+    const [ax, ay] = universeHopFocusAt(state, 0, MIN_EDGE)
+    expect(state.out.focusX).toBeCloseTo(ax, 6)
+    expect(state.out.focusY).toBeCloseTo(ay, 6)
+    stepUniverseHop(state, APPROACH_END - DEPART_END, MIN_EDGE, FAR)
+    const [bx, by] = universeHopFocusAt(state, 1, MIN_EDGE)
+    expect(state.out.focusX).toBeCloseTo(bx, 6)
+    expect(state.out.focusY).toBeCloseTo(by, 6)
+    // A und B liegen sichtbar auseinander — die Bank ist keine Null.
+    expect(Math.hypot(bx - ax, by - ay)).toBeGreaterThan(MIN_EDGE * 0.05)
     stepUniverseHop(state, UNIVERSE_HOP_TOTAL_MS, MIN_EDGE, FAR)
     expect(state.out.focusX).toBe(0)
     expect(state.out.focusY).toBe(0)
@@ -241,13 +278,24 @@ describe('universeHop — Kurven', () => {
     expect(b.out.focusY).toBeCloseTo(a.out.focusY * 2, 6)
   })
 
-  it('legt den Kurs nie in den unteren Bogen', () => {
+  it('würfelt den Kurs über alle vier Quadranten, im Radiusband, mit Bank', () => {
+    const quadrants = [0, 0, 0, 0]
+    // Der LCG liefert für Nachbar-Seeds fast dieselbe erste Ziehung — die Seeds
+    // werden gestreut, geprüft wird die MASCHINE, nicht der Testzufall.
     for (let i = 0; i < 400; i++) {
-      const s = createUniverseHop()
-      startUniverseHop(s, seeded(i + 1))
-      const len = Math.hypot(s.courseFx, s.courseFy)
-      expect(s.courseFy / len).toBeLessThanOrEqual(0.5 + 1e-9)
+      const st = createUniverseHop()
+      startUniverseHop(st, seeded(Math.imul(i + 1, 2654435761) >>> 0))
+      const [x, y] = universeHopFocusAt(st, 0, MIN_EDGE)
+      quadrants[(x >= 0 ? 0 : 1) + (y >= 0 ? 0 : 2)]++
+      for (const r of [st.courseR0, st.courseR1]) {
+        expect(r).toBeGreaterThanOrEqual(UNIVERSE_HOP_FOCUS_FRAC_MIN)
+        expect(r).toBeLessThanOrEqual(UNIVERSE_HOP_FOCUS_FRAC_MAX)
+      }
+      const bankDeg = (Math.abs(st.courseAz1 - st.courseAz0) * 180) / Math.PI
+      expect(bankDeg).toBeGreaterThanOrEqual(UNIVERSE_HOP_COURSE_BANK_MIN_DEG - 1e-9)
+      expect(bankDeg).toBeLessThanOrEqual(UNIVERSE_HOP_COURSE_BANK_MAX_DEG + 1e-9)
     }
+    for (const n of quadrants) expect(n).toBeGreaterThanOrEqual(40)
   })
 
   it('hält beim Zurücksetzen dasselbe out-Objekt', () => {
