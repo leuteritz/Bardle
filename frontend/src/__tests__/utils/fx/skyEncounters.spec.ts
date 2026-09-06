@@ -6,7 +6,6 @@ import {
   encounterSpriteKey,
   paintBinaryStar,
   paintEmberDot,
-  paintGiant,
   paintNovaFlash,
   paintPulsarCore,
   paintRock,
@@ -25,7 +24,6 @@ import {
   ENCOUNTER_BAND_WANDER_RAD,
   ENCOUNTER_CENTER_CLEARANCE_FRAC,
   ENCOUNTER_EVADE_AT,
-  ENCOUNTER_GIANT_PALETTES,
   ENCOUNTER_KIND_WEIGHTS,
   ENCOUNTER_MAX_MAJOR,
   ENCOUNTER_MAX_MINOR,
@@ -79,7 +77,6 @@ describe('Himmelsbegegnungen — Painter', () => {
     }
     rec('rock', (c) => paintRock(c, 100, 100, R, seed, ENCOUNTER_ROCK_PALETTE, 2))
     rec('shard', (c) => paintShard(c, 100, 100, R * 0.4, seed, ENCOUNTER_SHARD_PALETTE))
-    rec('giant', (c) => paintGiant(c, 100, 100, R, seed, ENCOUNTER_GIANT_PALETTES[0], true))
     rec('pulsar', (c) => paintPulsarCore(c, 100, 100, R, [190, 220, 255]))
     rec('nova', (c) => paintNovaFlash(c, 100, 100, R, seed, [255, 236, 200]))
     rec('binary', (c) => paintBinaryStar(c, 100, 100, R, [255, 214, 120]))
@@ -138,21 +135,12 @@ describe('Himmelsbegegnungen — Painter', () => {
     expect(painted(hi.ops)).toBeGreaterThan(painted(lo.ops))
   })
 
-  it('ein beringter Riese hat mehr Striche als ein ringloser', () => {
-    const a = recordingCtx()
-    const b = recordingCtx()
-    paintGiant(a.ctx, 100, 100, R, 2, ENCOUNTER_GIANT_PALETTES[1], true)
-    paintGiant(b.ctx, 100, 100, R, 2, ENCOUNTER_GIANT_PALETTES[1], false)
-    const strokes = (ops: string[]) => ops.filter((o) => o === 'stroke()').length
-    expect(strokes(a.ops)).toBeGreaterThan(strokes(b.ops))
-  })
-
   it('Sprite-Schlüssel sind über Art, Variante, Stufe und Zusatz eindeutig', () => {
     const keys = new Set<string>()
-    for (const kind of ['rock', 'shard', 'giant', 'pulsar', 'nova', 'binary', 'ember'] as const) {
+    for (const kind of ['rock', 'shard', 'pulsar', 'nova', 'binary', 'ember'] as const) {
       for (let v = 0; v < 6; v++) for (let t = 0; t < 3; t++) for (let e = 0; e < 2; e++) keys.add(encounterSpriteKey(kind, v, t, e))
     }
-    expect(keys.size).toBe(7 * 6 * 3 * 2)
+    expect(keys.size).toBe(6 * 6 * 3 * 2)
   })
 })
 
@@ -245,7 +233,7 @@ describe('Himmelsbegegnungen — Geometrie', () => {
   it('Einzelkörper spawnen ausserhalb der Mitte und laufen nur nach aussen', () => {
     const rand = seeded(5)
     const frame = frameFor(1920, 950)
-    for (const kind of ['giant', 'pulsar', 'nova', 'binary', 'dustlane'] as const) {
+    for (const kind of ['pulsar', 'nova', 'binary', 'dustlane'] as const) {
       const field = createEncounterField(999)
       const enc = spawnEncounter(field, kind, 3, frame, rand)
       expect(enc.anchor.dist).toBeGreaterThanOrEqual(ENCOUNTER_CENTER_CLEARANCE_FRAC * frame.minEdge)
@@ -287,12 +275,12 @@ describe('Himmelsbegegnungen — Geometrie', () => {
     for (let i = 0; i < 100; i++) {
       const k = pickEncounterKind(field, rand, false)
       expect(k).not.toBeNull()
-      expect(['asteroids', 'giant', 'shards', 'dustlane']).not.toContain(k)
+      expect(['asteroids', 'shards', 'dustlane']).not.toContain(k)
     }
     spawnEncounter(field, 'shower', 1, frame, rand)
     spawnEncounter(field, 'pulsar', 1, frame, rand)
     expect(pickEncounterKind(field, rand, false)).toBeNull()
-    expect(KINDS.length).toBe(8)
+    expect(KINDS.length).toBe(7)
   })
 
   it('rescaleEncounters skaliert jede Distanz', () => {

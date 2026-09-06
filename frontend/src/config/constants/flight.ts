@@ -72,12 +72,11 @@ export const ENCOUNTER_SPRITE_CACHE_MAX = 48
 export const ENCOUNTER_EVADE_AT = 0.22
 export const ENCOUNTER_KIND_WEIGHTS: Readonly<
   Record<
-    'asteroids' | 'giant' | 'shower' | 'pulsar' | 'nova' | 'shards' | 'dustlane' | 'binary',
+    'asteroids' | 'shower' | 'pulsar' | 'nova' | 'shards' | 'dustlane' | 'binary',
     number
   >
 > = {
   asteroids: 3,
-  giant: 2,
   shower: 3,
   pulsar: 2,
   nova: 1.5,
@@ -89,7 +88,6 @@ export const ENCOUNTER_LIFE_SEC: Readonly<
   Record<keyof typeof ENCOUNTER_KIND_WEIGHTS, [number, number]>
 > = {
   asteroids: [28, 40],
-  giant: [30, 45],
   shower: [12, 18],
   pulsar: [20, 30],
   nova: [6, 9],
@@ -99,7 +97,6 @@ export const ENCOUNTER_LIFE_SEC: Readonly<
 }
 export const ENCOUNTER_MAJOR_KINDS: readonly (keyof typeof ENCOUNTER_KIND_WEIGHTS)[] = [
   'asteroids',
-  'giant',
   'shards',
   'dustlane',
 ]
@@ -139,27 +136,6 @@ export const ENCOUNTER_SHARD_PALETTE = {
 }
 export const ENCOUNTER_SHARD_ALPHA = 0.7
 export const ENCOUNTER_SHARD_EVADE_STRENGTH = 0.5
-
-// Gasriese
-export const ENCOUNTER_GIANT_R_FRAC = 0.16
-export const ENCOUNTER_GIANT_SPAN_K = 2.6
-export const ENCOUNTER_GIANT_RING_CHANCE = 0.6
-export const ENCOUNTER_GIANT_BANDS_MIN = 5
-export const ENCOUNTER_GIANT_BANDS_MAX = 7
-export const ENCOUNTER_GIANT_PALETTES: readonly {
-  hi: string
-  mid: string
-  low: string
-  band: string
-  ring: string
-}[] = [
-  { hi: '#f2d9a8', mid: '#c8925a', low: '#5a3a22', band: '#8a5a34', ring: '#d9c39a' },
-  { hi: '#cfe6ff', mid: '#6f9fd8', low: '#22355e', band: '#3f5f9a', ring: '#b8cbe6' },
-  { hi: '#e8f0e0', mid: '#8fb68a', low: '#2f4a30', band: '#5a7d58', ring: '#c9d6c2' },
-  { hi: '#f3c6b8', mid: '#c77a68', low: '#5a2a26', band: '#8f4a40', ring: '#d9b1a7' },
-]
-/** Sprite-Kante des Riesen in CSS-px — ein Raster je Begegnung. */
-export const ENCOUNTER_GIANT_SPRITE_PX = 320
 
 // Meteorschauer — Striche aus EINEM Radianten
 export const ENCOUNTER_SHOWER_STREAKS_MAX = 14
@@ -213,9 +189,8 @@ export const ENCOUNTER_BINARY_BRIDGE_ALPHA = 0.18
 
 /** Spawn-Distanz der Anker als Anteil von maxDist, je Art. */
 export const ENCOUNTER_ANCHOR_DIST: Readonly<
-  Record<'giant' | 'shower' | 'pulsar' | 'nova' | 'binary', [number, number]>
+  Record<'shower' | 'pulsar' | 'nova' | 'binary', [number, number]>
 > = {
-  giant: [0.35, 0.5],
   shower: [0.25, 0.4],
   pulsar: [0.3, 0.6],
   nova: [0.45, 0.75],
@@ -223,9 +198,8 @@ export const ENCOUNTER_ANCHOR_DIST: Readonly<
 }
 /** Radialtempo der Anker (baseSpeed wie bei den Sternen). */
 export const ENCOUNTER_ANCHOR_SPEED: Readonly<
-  Record<'giant' | 'shower' | 'pulsar' | 'nova' | 'binary' | 'dustlane', number>
+  Record<'shower' | 'pulsar' | 'nova' | 'binary' | 'dustlane', number>
 > = {
-  giant: 0.5,
   shower: 0.4,
   pulsar: 0.3,
   nova: 0.15,

@@ -29,13 +29,6 @@ import {
   ENCOUNTER_FIRST_DELAY_SEC_MIN,
   ENCOUNTER_GAP_SEC_MAX,
   ENCOUNTER_GAP_SEC_MIN,
-  ENCOUNTER_GIANT_BANDS_MAX,
-  ENCOUNTER_GIANT_BANDS_MIN,
-  ENCOUNTER_GIANT_PALETTES,
-  ENCOUNTER_GIANT_RING_CHANCE,
-  ENCOUNTER_GIANT_R_FRAC,
-  ENCOUNTER_GIANT_SPAN_K,
-  ENCOUNTER_GIANT_SPRITE_PX,
   ENCOUNTER_KIND_WEIGHTS,
   ENCOUNTER_LIFE_SEC,
   ENCOUNTER_MAJOR_COOLDOWN_SEC,
@@ -167,8 +160,6 @@ export interface Encounter {
   parts: Part[]
   streaks: Streak[]
   spawnAcc: number
-  ringed: boolean
-  palette: number
   sep: number
   cachedGradient: CanvasGradient | null
   cachedRx: number
@@ -293,8 +284,6 @@ export function spawnEncounter(
     parts: [],
     streaks: [],
     spawnAcc: 0,
-    ringed: rand() < ENCOUNTER_GIANT_RING_CHANCE,
-    palette: Math.floor(rand() * ENCOUNTER_GIANT_PALETTES.length),
     sep: lerp(ENCOUNTER_BINARY_SEP_MIN, ENCOUNTER_BINARY_SEP_MAX, rand()),
     cachedGradient: null,
     cachedRx: -1,
@@ -455,14 +444,6 @@ export function clearEncounters(field: EncounterField): void {
 
 /* ── Painter ────────────────────────────────────────────────────────────────── */
 
-export interface GiantPalette {
-  hi: string
-  mid: string
-  low: string
-  band: string
-  ring: string
-}
-
 export function paintRock(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -509,74 +490,6 @@ export function paintShard(
   spike(ctx, x - r * ENCOUNTER_SHARD_ASPECT * 0.6, y, 0, 0, r * ENCOUNTER_SHARD_ASPECT * 1.2, r * 0.15)
   ctx.fillStyle = 'rgba(255,255,255,0.35)'
   ctx.fill()
-}
-
-function ringStrokes(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  seed: number,
-  pal: GiantPalette,
-  lowerHalf: boolean,
-): void {
-  const n = 3 + Math.floor(jitter(seed, 7) * 3)
-  ctx.save()
-  ctx.beginPath()
-  const clipTop = lowerHalf ? y : y - r * 3
-  ctx.rect(x - r * 3, clipTop, r * 6, r * 3)
-  ctx.clip()
-  ctx.strokeStyle = pal.ring
-  for (let i = 0; i < n; i++) {
-    const rx = r * (1.45 + i * 0.16 + jitter(seed, 100 + i) * 0.08)
-    const ry = rx * (0.22 + jitter(seed, 8) * 0.1)
-    ctx.globalAlpha = 0.28 + jitter(seed, 120 + i) * 0.3
-    ctx.lineWidth = r * (0.03 + jitter(seed, 140 + i) * 0.05)
-    ctx.beginPath()
-    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2)
-    ctx.stroke()
-  }
-  ctx.restore()
-}
-
-export function paintGiant(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  seed: number,
-  pal: GiantPalette,
-  ringed: boolean,
-): void {
-  if (ringed) ringStrokes(ctx, x, y, r, seed, pal, false)
-  circle(ctx, x, y, r)
-  ctx.fillStyle = bodyFill(ctx, x, y, r, pal.hi, pal.mid, pal.low)
-  ctx.fill()
-  ctx.save()
-  circle(ctx, x, y, r)
-  ctx.clip()
-  const bands = ENCOUNTER_GIANT_BANDS_MIN + Math.floor(jitter(seed, 1) * (ENCOUNTER_GIANT_BANDS_MAX - ENCOUNTER_GIANT_BANDS_MIN + 1))
-  const step = (r * 2) / bands
-  ctx.strokeStyle = pal.band
-  for (let i = 0; i < bands; i++) {
-    const yy = y - r + (i + 0.5) * step
-    const amp = r * 0.04 * (0.5 + jitter(seed, 200 + i))
-    ctx.globalAlpha = 0.22 + jitter(seed, 220 + i) * 0.22
-    ctx.lineWidth = step * (0.3 + jitter(seed, 240 + i) * 0.35)
-    ctx.beginPath()
-    ctx.moveTo(x - r * 1.1, yy)
-    ctx.bezierCurveTo(x - r * 0.4, yy - amp, x + r * 0.4, yy + amp, x + r * 1.1, yy)
-    ctx.stroke()
-  }
-  ctx.globalAlpha = 0.5
-  ctx.beginPath()
-  ctx.ellipse(x + sway(seed, 9) * r * 0.5, y + sway(seed, 10) * r * 0.3, r * 0.18, r * 0.1, 0, 0, Math.PI * 2)
-  ctx.fillStyle = pal.hi
-  ctx.fill()
-  ctx.restore()
-  ctx.globalAlpha = 1
-  grain(ctx, x, y, r, 0.18)
-  if (ringed) ringStrokes(ctx, x, y, r, seed, pal, true)
 }
 
 export function paintPulsarCore(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, rgb: Rgb): void {
@@ -628,7 +541,7 @@ export function paintEmberDot(ctx: CanvasRenderingContext2D, x: number, y: numbe
 
 /* ── Sprites ────────────────────────────────────────────────────────────────── */
 
-export type EncounterSpriteKind = 'rock' | 'shard' | 'giant' | 'pulsar' | 'nova' | 'binary' | 'ember'
+export type EncounterSpriteKind = 'rock' | 'shard' | 'pulsar' | 'nova' | 'binary' | 'ember'
 
 const cache = createSpriteCache(ENCOUNTER_SPRITE_CACHE_MAX)
 
@@ -642,8 +555,6 @@ function spriteSpan(kind: EncounterSpriteKind, tier: number): number {
       return ENCOUNTER_ROCK_TIERS[tier]
     case 'shard':
       return ENCOUNTER_SHARD_TIERS[tier]
-    case 'giant':
-      return ENCOUNTER_GIANT_SPRITE_PX
     case 'pulsar':
       return ENCOUNTER_PULSAR_SPRITE_PX
     case 'nova':
@@ -679,12 +590,6 @@ export function encounterSprite(
       paintShard(ctx, c, c, span * 0.18, variant, ENCOUNTER_SHARD_PALETTE)
       paintTerminator(ctx, span, span * 0.46)
       break
-    case 'giant': {
-      const r = span / (2 * ENCOUNTER_GIANT_SPAN_K)
-      paintGiant(ctx, c, c, r, variant, ENCOUNTER_GIANT_PALETTES[extra % ENCOUNTER_GIANT_PALETTES.length], tier === 1)
-      paintTerminator(ctx, span, span * 0.5)
-      break
-    }
     case 'pulsar':
       paintPulsarCore(ctx, c, c, span * 0.45, ENCOUNTER_PULSAR_RGB)
       break
@@ -743,20 +648,6 @@ function drawBand(ctx: CanvasRenderingContext2D, enc: Encounter, frame: Encounte
   }
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.globalCompositeOperation = 'source-over'
-}
-
-function drawGiant(ctx: CanvasRenderingContext2D, enc: Encounter, frame: EncounterFrame): void {
-  const sprite = encounterSprite('giant', enc.seed, enc.ringed ? 1 : 0, enc.palette)
-  if (!sprite) return
-  const norm = enc.anchor.dist / frame.maxDist
-  const alpha = passByAlpha(enc.t) * Math.min(1, norm * 3)
-  if (alpha < 0.02) return
-  const r = ENCOUNTER_GIANT_R_FRAC * frame.minEdge * (0.25 + norm * 1.1)
-  const x = frame.cx + Math.cos(enc.anchor.angle) * enc.anchor.dist
-  const y = frame.cy + Math.sin(enc.anchor.angle) * enc.anchor.dist
-  ctx.globalAlpha = alpha
-  drawRotated(ctx, sprite, x, y, r * 2 * ENCOUNTER_GIANT_SPAN_K, enc.anchor.angle + sway(enc.seed, 11) * 0.4)
-  ctx.setTransform(1, 0, 0, 1, 0, 0)
 }
 
 function drawShower(ctx: CanvasRenderingContext2D, enc: Encounter, frame: EncounterFrame): void {
@@ -933,9 +824,6 @@ export function drawEncounters(ctx: CanvasRenderingContext2D, field: EncounterFi
     switch (enc.kind) {
       case 'dustlane':
         drawDustlane(ctx, enc, frame)
-        break
-      case 'giant':
-        drawGiant(ctx, enc, frame)
         break
       case 'asteroids':
       case 'shards':
