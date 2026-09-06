@@ -14,7 +14,10 @@ import {
   SUN_BAND_STRIP_PERIODS,
   SUN_BANDS,
   SUN_BG_DISC_RADIUS_FACTOR,
-  SUN_COMET_TURN_SEC,
+  COMET_BAND_MASK_EDGE,
+  COMET_BAND_MASK_FULL,
+  COMET_TURN_SEC_BY_STAGE,
+  COMET_WOBBLE,
   SUN_CORONA_STREAMERS_BY_PHASE,
   SUN_ORB_SPRITE_PX,
   SUN_SPRITE_BODY_FRACTION,
@@ -46,7 +49,10 @@ describe('Sprite-Schwellen des Spielerkörpers', () => {
     expect(SUN_ORB_SPRITE_PX).toBeLessThan(SUN_SPRITE_DETAIL_PX_1)
   })
 
-  it('der Orbit-Komet trägt Band, Schatten und Wake, aber keine Zierebenen', () => {
+  /** Der Orbit-Komet bleibt auf Detailstufe 1 — deshalb tragen SEINE Bänder
+   *  ihre volle Zahl schon dort (sunSpriteLayers), sonst drehte sich der Fels
+   *  ausgerechnet an der Stelle nicht, an der man ihn am längsten sieht. */
+  it('der Orbit-Komet trägt Bänder, Schatten und Wake, aber keine Zierebenen', () => {
     const smallest = COMET_STAGE_RADII[0] * SUN_BG_DISC_RADIUS_FACTOR
     const largest = COMET_STAGE_RADII[COMET_STAGE_RADII.length - 1] * SUN_BG_DISC_RADIUS_FACTOR
     expect(smallest).toBeGreaterThanOrEqual(SUN_SPRITE_DETAIL_PX_1)
@@ -104,13 +110,28 @@ describe('Achsdrehung des Spielerkörpers', () => {
     expect(SUN_BAND_MASK_EDGE).toBeLessThanOrEqual(1)
   })
 
+  /** Die Silhouette des Kometen ist eine Kartoffel (lumpyPath, Wobble 0,09):
+   *  ihr kleinster Radius liegt bei 0,91 br. Endete die Bandmaske erst bei
+   *  0,96, schwebten Motive in den Dellen über dem Fels. */
+  it('die Kometenmaske bleibt in der Delle der Kartoffel', () => {
+    expect(COMET_BAND_MASK_FULL).toBeLessThan(COMET_BAND_MASK_EDGE)
+    expect(COMET_BAND_MASK_EDGE).toBeLessThanOrEqual(1 - COMET_WOBBLE)
+    expect(COMET_BAND_MASK_EDGE).toBeLessThan(SUN_BAND_MASK_EDGE)
+  })
+
   it('nichts kreiselt: jeder Umlauf ≥ 30 s, Riesen langsamer als die Hauptreihe', () => {
     expect(SUN_TURN_SEC_BY_PHASE).toHaveLength(STAR_PHASE_FINAL_INDEX)
     for (const sec of SUN_TURN_SEC_BY_PHASE) expect(sec).toBeGreaterThanOrEqual(30)
     for (let i = 3; i < SUN_TURN_SEC_BY_PHASE.length; i++)
       expect(SUN_TURN_SEC_BY_PHASE[i]).toBeGreaterThan(SUN_TURN_SEC_BY_PHASE[i - 1])
-    expect(SUN_COMET_TURN_SEC).toBeGreaterThanOrEqual(15)
-    expect(SUN_COMET_TURN_SEC).toBeLessThan(Math.min(...SUN_TURN_SEC_BY_PHASE))
+    expect(COMET_TURN_SEC_BY_STAGE).toHaveLength(COMET_STAGE_RADII.length)
+    for (const sec of COMET_TURN_SEC_BY_STAGE) {
+      expect(sec).toBeGreaterThanOrEqual(15)
+      expect(sec).toBeLessThan(Math.min(...SUN_TURN_SEC_BY_PHASE))
+    }
+    // Der Fels wächst über die Stufen und dreht dabei träger
+    for (let i = 1; i < COMET_TURN_SEC_BY_STAGE.length; i++)
+      expect(COMET_TURN_SEC_BY_STAGE[i]).toBeGreaterThan(COMET_TURN_SEC_BY_STAGE[i - 1])
   })
 
   it('der Innenring des Lochs läuft schneller, aber nicht als Kreisel', () => {
@@ -157,6 +178,8 @@ describe('Flug im Hintergrund', () => {
   })
 
   it('die Drift-Perioden sind inkommensurabel genug, dass der Kurs nicht kreist', () => {
-    expect(Math.abs(FLIGHT_DRIFT_PERIOD_X_SEC - FLIGHT_DRIFT_PERIOD_Y_SEC)).toBeGreaterThanOrEqual(10)
+    expect(Math.abs(FLIGHT_DRIFT_PERIOD_X_SEC - FLIGHT_DRIFT_PERIOD_Y_SEC)).toBeGreaterThanOrEqual(
+      10,
+    )
   })
 })

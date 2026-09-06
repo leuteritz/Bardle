@@ -12,6 +12,7 @@
    `(x, y)` ist die Streifenmitte), die CSS unter einer Kreismaske vorbeirollt;
    `shade` liegt statisch darüber (Randverdunkelung bzw. Terminator).         */
 
+import type { SunBandRow } from '@/config/constants'
 import type {
   ForgeAxisId,
   SolarSignature,
@@ -29,11 +30,17 @@ import {
   BLACK_HOLE_PHOTON_RING_FRACTION,
   BLACK_HOLE_SHADOW_FRACTION,
   BLACK_HOLE_DOPPLER_STRENGTH,
+  COMET_BAND_GRAIN,
+  COMET_BAND_LAT_SQUASH,
+  COMET_BANDS,
   COMET_DISC_FILL,
   COMET_GOLD_VEINS_BY_STAGE,
   COMET_JET_MIN_STAGE,
+  COMET_LIMB_ALPHA,
+  COMET_LIMB_INNER,
   COMET_PHASE_DATA,
   COMET_STAGE_GOLD,
+  COMET_WOBBLE,
   SOLAR_BRANCHES,
   SOLAR_SIGNATURE_BASE_STAGES,
   SOLAR_SIGNATURE_BH_DOPPLER_GAIN,
@@ -183,8 +190,11 @@ export function sunSpriteLayers(body: SunBody, detail: SunDetail, wake: boolean)
     if (detail >= 1) out.push('bandE', 'shade', 'corona')
     if (detail >= 2) out.push('flare')
   } else if (body.kind === 'comet') {
+    // Drei Bänder schon ab Detail 1: der Orbit-Komet (64–104 px) ist der Ort,
+    // an dem man den Fels stundenlang sieht. Mit nur dem Äquatorband wanderten
+    // dort Punkte über eine stehende Kartoffel.
     out.push('coma', 'core')
-    if (detail >= 1) out.push('bandE', 'shade')
+    if (detail >= 1) out.push('bandN', 'bandS', 'bandE', 'shade')
     if (detail >= 2 && body.stage >= COMET_JET_MIN_STAGE) out.push('jets')
   } else {
     if (detail >= 1) out.push('bhJets')
@@ -204,19 +214,29 @@ export function sunBodyRadiusFraction(kind: SunBodyKind): number {
   return kind === 'comet' ? COMET_DISC_FILL : SUN_SPRITE_BODY_FRACTION
 }
 
+/** Die Bandtabelle des Körpers — der Stern dreht differentiell, der Fels
+ *  starr (COMET_BANDS). */
+export function sunBandRow(layer: SunBandLayer, kind: SunBodyKind): SunBandRow {
+  return kind === 'comet' ? COMET_BANDS[layer] : SUN_BANDS[layer]
+}
+
 /** Streifenmasse eines Bandes in BOX-Einheiten (Bruchteile der Box-Kante) —
- *  dieselbe Rechnung für Raster (Backing) und CSS (`--band-*`). */
+ *  dieselbe Rechnung für Raster (Backing) und CSS (`--band-*`). `periodK`
+ *  kürzt die STRECKE eines Polbands, nicht seine Dauer: so dreht ein starrer
+ *  Körper überall in derselben Zeit. */
 export function sunBandStrip(
   layer: SunBandLayer,
   kind: SunBodyKind,
-): { w: number; h: number; y: number; speed: number } {
+): { w: number; h: number; y: number; speed: number; period: number } {
   const brFrac = sunBodyRadiusFraction(kind) / 2
-  const band = SUN_BANDS[layer]
+  const band = sunBandRow(layer, kind)
+  const period = SUN_BAND_PERIOD_BR * band.periodK * brFrac
   return {
-    w: SUN_BAND_PERIOD_BR * SUN_BAND_STRIP_PERIODS * brFrac,
+    w: period * SUN_BAND_STRIP_PERIODS,
     h: band.h * brFrac,
     y: band.y * brFrac,
     speed: band.speed,
+    period,
   }
 }
 
@@ -542,9 +562,10 @@ interface Strip {
 
 function stripOf(x: number, y: number, r: number, layer: SunBandLayer, kind: SunBodyKind): Strip {
   const br = r * sunBodyRadiusFraction(kind)
-  const period = SUN_BAND_PERIOD_BR * br
+  const band = sunBandRow(layer, kind)
+  const period = SUN_BAND_PERIOD_BR * band.periodK * br
   const w = period * SUN_BAND_STRIP_PERIODS
-  const h = SUN_BANDS[layer].h * br
+  const h = band.h * br
   return { x0: x - w / 2, y0: y - h / 2, w, h, period, br }
 }
 
@@ -694,9 +715,71 @@ function paintStarBand(
   }
 }
 
+/** Felskorn im Streifen — dieselbe Sprenkelung wie `grain`, nur wandernd und
+ *  nahtlos (jedes Korn bei `lon` UND `lon + period`). Stünde das Korn weiter
+ *  still im Kern, liefen die Krater über eine stehende Oberfläche, und der
+ *  Fels drehte sich nicht mit. */
+function stripGrain(
+  ctx: CanvasRenderingContext2D,
+  s: Strip,
+  seed: number,
+  count: number,
+  hi: Rgb,
+  lo: Rgb,
+  alpha: number,
+): void {
+  // Vier Ziehungen je Korn mit Schrittweite 4 — dieselbe Basis für alle vier
+  // liefe sonst über die Nachbarn und zöge sichtbare Diagonalen ins Korn.
+  for (let i = 0; i < count; i++) {
+    const k = 1600 + i * 4
+    const lon = jitter(seed, k) * s.period
+    const lat = jitter(seed, k + 1) * s.h
+    const gr = s.br * (0.006 + jitter(seed, k + 2) * 0.018)
+    const up = sway(seed, k + 3) > 0
+    // Der Ton kommt aus der Palette, nicht aus Schwarz und Weiss — sonst wird
+    // aus dem Fels Streusel.
+    ctx.fillStyle = rgba(up ? hi : lo, up ? alpha : alpha * 1.3)
+    for (const dx of [0, s.period]) {
+      ctx.beginPath()
+      ctx.arc(s.x0 + lon + dx, s.y0 + lat, gr, 0, TAU)
+      ctx.fill()
+    }
+  }
+}
+
+/** Ein Krater, zur Breite hin vertikal gestaucht: an den Polbändern steht die
+ *  Schüssel schräg zum Betrachter. Als `ellipse` statt über `scale()`, damit
+ *  die Mitte im Streifen ABSOLUT bleibt — sonst fände der Nahtwächter den
+ *  Zwilling eine Periode weiter nicht mehr. */
+function bandCrater(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  latK: number,
+  rim: string,
+): void {
+  if (latK >= 1) {
+    crater(ctx, x, y, r, rim)
+    return
+  }
+  ctx.beginPath()
+  ctx.ellipse(x, y, r, r * latK, 0, 0, TAU)
+  ctx.fillStyle = 'rgba(8, 6, 4, 0.42)'
+  ctx.fill()
+  ctx.beginPath()
+  ctx.ellipse(x, y, r, r * latK, 0, Math.PI * 0.9, Math.PI * 1.9)
+  ctx.strokeStyle = rim
+  ctx.globalAlpha = 0.34
+  ctx.lineWidth = Math.max(0.6, r * 0.3)
+  ctx.stroke()
+  ctx.globalAlpha = 1
+}
+
 function paintCometBand(
   ctx: CanvasRenderingContext2D,
   s: Strip,
+  layer: SunBandLayer,
   pal: SunPalette,
   body: SunBody,
   detail: SunDetail,
@@ -704,29 +787,43 @@ function paintCometBand(
 ): void {
   const nr = s.br
   const reach = Math.max(0, s.h / 2 - fade - nr * 0.15)
+  // Eigenes Salz je Band — sonst trüge die Kartoffel dreimal dieselben Krater.
+  const seed = COMET_SEED + BAND_SALT[layer]
+  const latK = layer === 'bandE' ? 1 : COMET_BAND_LAT_SQUASH
   const craters = detail === 1 ? 7 : 11
   const rim = rgba(mix(pal.core, 255, 0.45), 1)
+  stripGrain(
+    ctx,
+    s,
+    seed,
+    COMET_BAND_GRAIN[detail === 1 ? 0 : 1] ?? COMET_BAND_GRAIN[0],
+    mix(pal.core, 255, 0.3),
+    mix(pal.edge, 0, 0.4),
+    0.3,
+  )
   for (let i = 0; i < craters; i++) {
-    const lon = jitter(COMET_SEED, 1300 + i) * s.period
-    const lat = s.h / 2 + sway(COMET_SEED, 1310 + i) * reach
-    const cr = nr * (0.05 + jitter(COMET_SEED, 1320 + i) * 0.1)
-    crater(ctx, s.x0 + lon, s.y0 + lat, cr, rim)
-    crater(ctx, s.x0 + lon + s.period, s.y0 + lat, cr, rim)
+    const lon = jitter(seed, 1300 + i) * s.period
+    const lat = s.h / 2 + sway(seed, 1310 + i) * reach
+    const cr = nr * (0.05 + jitter(seed, 1320 + i) * 0.1)
+    bandCrater(ctx, s.x0 + lon, s.y0 + lat, cr, latK, rim)
+    bandCrater(ctx, s.x0 + lon + s.period, s.y0 + lat, cr, latK, rim)
   }
-  // Goldadern: der Stern, der im Fels erwacht
-  const veins =
-    COMET_GOLD_VEINS_BY_STAGE[Math.min(body.stage, COMET_GOLD_VEINS_BY_STAGE.length - 1)]
+  // Goldadern: der Stern, der im Fels erwacht — der Äquator trägt sie, die
+  // Polbänder nur halb so viele: dort läuft mehr Fläche in weniger Pixel.
+  const veins = Math.round(
+    COMET_GOLD_VEINS_BY_STAGE[Math.min(body.stage, COMET_GOLD_VEINS_BY_STAGE.length - 1)] *
+      (layer === 'bandE' ? 1 : 0.5),
+  )
   const gold = cometGold(body)
   if (veins > 0 && gold > 0) {
     ctx.lineCap = 'round'
     for (let i = 0; i < veins; i++) {
-      const lon = jitter(COMET_SEED, 1400 + i) * s.period
-      const lat = s.h / 2 + sway(COMET_SEED, 1405 + i) * reach * 0.8
+      const lon = jitter(seed, 1400 + i) * s.period
+      const lat = s.h / 2 + sway(seed, 1405 + i) * reach * 0.8
       // Flach entlang der Drehung — steile Adern liefen aus dem Band
-      const a =
-        (jitter(COMET_SEED, 1410 + i) > 0.5 ? 0 : Math.PI) + sway(COMET_SEED, 1425 + i) * 0.45
-      const bend = sway(COMET_SEED, 1415 + i) * 0.5
-      const len = nr * (0.3 + jitter(COMET_SEED, 1420 + i) * 0.3)
+      const a = (jitter(seed, 1410 + i) > 0.5 ? 0 : Math.PI) + sway(seed, 1425 + i) * 0.45
+      const bend = sway(seed, 1415 + i) * 0.5 * latK
+      const len = nr * (0.3 + jitter(seed, 1420 + i) * 0.3)
       const path = (dx: number) => {
         const x0 = s.x0 + lon + dx
         const y0 = s.y0 + lat
@@ -758,7 +855,7 @@ function paintBand(layer: SunBandLayer): SunPaint {
   return (ctx, x, y, r, pal, body, detail) => {
     const s = stripOf(x, y, r, layer, body.kind)
     const fade = SUN_BAND_EDGE_FADE_BR * s.br
-    if (body.kind === 'comet') paintCometBand(ctx, s, pal, body, detail, fade)
+    if (body.kind === 'comet') paintCometBand(ctx, s, layer, pal, body, detail, fade)
     else paintStarBand(ctx, s, layer, pal, body, detail, fade)
     fadeStripEdges(ctx, s, fade)
   }
@@ -769,9 +866,17 @@ function paintBand(layer: SunBandLayer): SunPaint {
 const paintShade: SunPaint = (ctx, x, y, r, pal, body) => {
   if (body.kind === 'comet') {
     const nr = r * COMET_DISC_FILL
-    lumpyPath(ctx, x, y, nr, COMET_SEED, 0.09)
+    lumpyPath(ctx, x, y, nr, COMET_SEED, COMET_WOBBLE)
     ctx.fillStyle = terminatorFill(ctx, x, y, nr)
     ctx.fill()
+    // Randverdunkelung: ein starr verschobener Streifen bewegt jedes Motiv
+    // gleich schnell — die Beschleunigung zur Mitte hin liest das Auge daraus,
+    // dass die Motive am Limbus verlöschen statt an einer Kante zu enden.
+    annulus(ctx, x, y, nr * COMET_LIMB_INNER, nr, [
+      [0, 'rgba(4, 3, 2, 0)'],
+      [0.55, `rgba(4, 3, 2, ${COMET_LIMB_ALPHA * 0.45})`],
+      [1, `rgba(4, 3, 2, ${COMET_LIMB_ALPHA})`],
+    ])
     return
   }
   paintStarLimb(ctx, x, y, r * SUN_SPRITE_BODY_FRACTION, pal, body)
@@ -975,7 +1080,7 @@ const paintComa: SunPaint = (ctx, x, y, r, pal, body, detail) => {
 const paintCometCore: SunPaint = (ctx, x, y, r, pal, body, detail) => {
   const nr = r * COMET_DISC_FILL
   const gold = cometGold(body)
-  lumpyPath(ctx, x, y, nr, COMET_SEED, 0.09)
+  lumpyPath(ctx, x, y, nr, COMET_SEED, COMET_WOBBLE)
   ctx.fillStyle = bodyFill(
     ctx,
     x,
@@ -986,9 +1091,12 @@ const paintCometCore: SunPaint = (ctx, x, y, r, pal, body, detail) => {
     rgba(pal.edge, 1),
   )
   ctx.fill()
-  if (detail >= 1) grain(ctx, x, y, nr, 0.42)
+  // Das Korn wandert ab Detail 1 MIT: stünde es hier still, liefen die Krater
+  // der Bänder über eine stehende Oberfläche — genau der Eindruck „nur die
+  // Punkte drehen sich". Detail 0 hat keine Bänder und behält es.
+  if (detail === 0) grain(ctx, x, y, nr, 0.42)
   ctx.save()
-  lumpyPath(ctx, x, y, nr, COMET_SEED, 0.09)
+  lumpyPath(ctx, x, y, nr, COMET_SEED, COMET_WOBBLE)
   ctx.clip()
   // Krater und Adern rollen ab Detail 1 auf dem Band; nur die Miniatur trägt sie fest
   const craters = detail === 0 ? 3 : 0
@@ -1041,7 +1149,7 @@ const paintCometCore: SunPaint = (ctx, x, y, r, pal, body, detail) => {
   ctx.restore()
   // Sonnenseite oben links — ohne Schattenebene (Detail 0) läuft der Terminator hier
   if (detail === 0) {
-    lumpyPath(ctx, x, y, nr, COMET_SEED, 0.09)
+    lumpyPath(ctx, x, y, nr, COMET_SEED, COMET_WOBBLE)
     ctx.fillStyle = terminatorFill(ctx, x, y, nr)
     ctx.fill()
   }
@@ -1393,7 +1501,9 @@ export const SUN_BODY_PAINTERS: Record<SunBodyKind, Partial<Record<SunSpriteLaye
   comet: {
     coma: paintComa,
     core: paintCometCore,
+    bandN: paintBand('bandN'),
     bandE: paintBand('bandE'),
+    bandS: paintBand('bandS'),
     shade: paintShade,
     jets: paintCometJets,
     wake: paintWake,
