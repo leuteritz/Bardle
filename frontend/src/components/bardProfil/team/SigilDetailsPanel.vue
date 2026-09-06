@@ -35,7 +35,8 @@ import {
 import { getChampionStarLevel, getChampionTier } from '@/config/champions/championTiers'
 import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/champions/championTraits'
 import { MATERIALS } from '@/config/economy/materials'
-import { SHOP_ITEMS } from '@/config/economy/items'
+import { ITEM_RARITIES, ITEM_SETS, SHOP_ITEMS } from '@/config/economy/items'
+import { formatNumberCompact } from '@/config/ui/numberFormat'
 import type { ChampionPerkDef, ChampionStatKey, ItemCategory, ShopItem } from '@/types'
 import {
   getChampionSkins,
@@ -337,6 +338,31 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   const id = equipment.value[category]
   return id ? (SHOP_ITEMS.find((item) => item.id === id) ?? null) : null
 }
+function equipmentEffectLine(item: ShopItem): string {
+  const effects: string[] = []
+  if (item.effects.powerMultiplier) {
+    effects.push(`+${Math.round((item.effects.powerMultiplier - 1) * 100)}% Combat Power`)
+  }
+  if (item.effects.cpsMultiplier) {
+    effects.push(`+${Math.round((item.effects.cpsMultiplier - 1) * 100)}% Chimes / sec`)
+  }
+  return effects.join(' · ')
+}
+function equipmentDetailLine(item: ShopItem): string {
+  const set = item.setId ? ITEM_SETS.find((entry) => entry.setId === item.setId) : null
+  if (set) return `${set.setName} set · ${set.description}`
+  return item.description
+}
+function equipmentRarityLabel(item: ShopItem): string {
+  return ITEM_RARITIES.find((rarity) => rarity.id === item.rarity)?.label ?? item.rarity
+}
+function perkStatLine(perk: ChampionPerkDef): string {
+  const stats = Object.entries(perk.stats ?? {}).map(([key, value]) => {
+    const stat = CHAMPION_STATS.find((entry) => entry.key === key)
+    return `+${formatNumberCompact(value)} ${stat?.short ?? key}`
+  })
+  return stats.join(' · ')
+}
 </script>
 
 <template>
@@ -587,12 +613,23 @@ function equippedItem(category: ItemCategory): ShopItem | null {
                   height="28"
                   class="sdp-equipment-icon"
                 /><span v-else class="sdp-equipment-icon">{{ equippedItem(category)!.icon }}</span
-                ><strong>{{ equippedItem(category)!.name }}</strong></template
+                ><span class="sdp-equipment-copy"
+                  ><span class="sdp-equipment-head"
+                    ><strong>{{ equippedItem(category)!.name }}</strong
+                    ><small>{{ equipmentRarityLabel(equippedItem(category)!) }}</small></span
+                  ><span class="sdp-equipment-stats">{{
+                    equipmentEffectLine(equippedItem(category)!)
+                  }}</span
+                  ><small>{{ equipmentDetailLine(equippedItem(category)!) }}</small></span
+              ></template
               ><template v-else
                 ><img
                   :src="`/img/itemShop/${category}-128.png`"
                   :alt="CAT_LABELS[category]"
-                /><strong>Equip {{ CAT_LABELS[category] }}</strong></template
+                /><span class="sdp-equipment-copy"
+                  ><strong>Equip {{ CAT_LABELS[category] }}</strong
+                  ><small>Choose a relic to strengthen this role.</small></span
+              ></template
               >
             </button>
           </div>
@@ -639,7 +676,12 @@ function equippedItem(category: ItemCategory): ShopItem | null {
               v-tip="`Level ${slot.level} · ${slot.perk.desc}`"
             >
               <Icon :icon="slot.perk.icon" width="25" height="25" />
-              <small>Lv. {{ slot.level }}</small><strong>{{ slot.perk.name }}</strong>
+              <span class="sdp-active-perk-copy"
+                ><span class="sdp-active-perk-head"
+                  ><small>Lv. {{ slot.level }}</small><strong>{{ slot.perk.name }}</strong></span
+                ><span>{{ perkStatLine(slot.perk) }}</span
+                ><p>{{ slot.perk.desc }}</p></span
+              >
             </article>
           </div>
           <div v-else class="sdp-perk-empty">
@@ -667,7 +709,7 @@ function equippedItem(category: ItemCategory): ShopItem | null {
             >
               <Icon :icon="perk.icon" width="22" height="22" /><span
                 ><strong>{{ perk.name }}</strong
-                ><small>{{ perk.desc }}</small></span
+                ><em>{{ perkStatLine(perk) }}</em><small>{{ perk.desc }}</small></span
               >
             </button>
           </div>
@@ -1251,6 +1293,42 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   line-height: 1.2;
   text-overflow: ellipsis;
 }
+.sdp-equipment-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.sdp-equipment-head {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sdp-equipment-head small {
+  flex: 0 0 auto;
+  color: #a59675;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.sdp-equipment-stats {
+  overflow: hidden;
+  color: #e8c040;
+  font-size: 12px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sdp-equipment-copy > small {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #bcae91;
+  font-size: 10px;
+  line-height: 1.2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
 .sdp-section--perks {
   flex: 0 0 auto;
 }
@@ -1319,6 +1397,17 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   background: linear-gradient(105deg, color-mix(in srgb, var(--pc) 11%, #171610), #171610);
   color: var(--pc);
 }
+.sdp-active-perk-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.sdp-active-perk-head {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
 .sdp-active-perk small {
   color: #a99b80;
   font-size: 10px;
@@ -1340,6 +1429,21 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.sdp-active-perk-copy > span:not(.sdp-active-perk-head) {
+  color: var(--pc);
+  font-size: 12px;
+  font-weight: 500;
+}
+.sdp-active-perk p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: #c0b294;
+  font-size: 11px;
+  line-height: 1.2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .sdp-perk-empty {
   display: flex;
@@ -1393,6 +1497,15 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   line-height: 1.15;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+.sdp-perk-choices em {
+  overflow: hidden;
+  color: var(--pc);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sdp-skin-list {
   display: flex;
@@ -1666,6 +1779,15 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 .sdp-equipment strong {
   font-size: 16px;
 }
+.sdp-equipment-copy {
+  gap: 5px;
+}
+.sdp-equipment-stats {
+  font-size: 14px;
+}
+.sdp-equipment-copy > small {
+  font-size: 11px;
+}
 .sdp-section--perks {
   grid-column: 2;
   grid-row: 1;
@@ -1679,17 +1801,26 @@ function equippedItem(category: ItemCategory): ShopItem | null {
 }
 .sdp-active-perk {
   grid-template-columns: 34px minmax(0, 1fr);
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto;
   gap: 2px 9px;
   min-height: 0;
   padding: 9px;
   border-left-width: 4px;
 }
 .sdp-active-perk > svg {
-  grid-row: 1 / 3;
-  align-self: center;
+  grid-row: 1;
+  align-self: start;
+  margin-top: 3px;
   width: 30px;
   height: 30px;
+}
+.sdp-active-perk-copy {
+  display: grid;
+  align-self: start;
+  gap: 5px;
+}
+.sdp-active-perk-head {
+  display: flex;
 }
 .sdp-active-perk small {
   align-self: end;
@@ -1700,8 +1831,17 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   font-size: 18px;
   line-height: 1.05;
 }
-.sdp-active-perk span {
-  display: none;
+.sdp-active-perk > span.sdp-active-perk-copy {
+  display: grid;
+}
+.sdp-active-perk-copy span {
+  display: block;
+}
+.sdp-active-perk-copy > span:not(.sdp-active-perk-head) {
+  font-size: 13px;
+}
+.sdp-active-perk p {
+  font-size: 12px;
 }
 .sdp-perk-empty {
   flex: 1;
