@@ -239,10 +239,21 @@ export function processionTrailLength(
 }
 
 /**
- * Die Richtung, in die sich der Körper bewegt — vom Fluchtpunkt weg.
- * `drawStreakSprite` legt den Schweif entgegen diesem Winkel, also zum
- * Fluchtpunkt hin: der Nachlauf, genau wie bei einem Sternstrich.
+ * Der Winkel für `drawStreakSprite`, so dass der Schweif NACH AUSSEN liegt —
+ * vom Fluchtpunkt weg. `dx`/`dy` zeigt vom Fluchtpunkt zum Körper.
+ *
+ * Das Vorzeichen ist hier bewusst umgekehrt zu dem der Sternstriche, und das
+ * ist der ganze Punkt: ein Hintergrundstern STRÖMT vom Fluchtpunkt nach außen
+ * an der Kamera vorbei, sein Streifen liegt also hinter dieser Bewegung, zum
+ * Fluchtpunkt hin. Ein Körper der Prozession fliegt dagegen MIT der Kamera und
+ * steht im Bild praktisch still; was er abwirft, bleibt zurück und kommt AUF
+ * die Kamera zu — auf dem Schirm nach außen. Dieselbe Sprache, die der Block
+ * „Flight Wake" in `config/constants/fx.ts` für den Spielerkörper festlegt.
+ *
+ * `drawStreakSprite` setzt den Kopf auf den Punkt und zeichnet das Sprite von
+ * `-len` bis `0`: der Schweif liegt entgegen dem Winkel. Also die Gegenrichtung
+ * einsetzen, dann sitzt der helle Kopf am Körper und der Schweif außen.
  */
 export function processionTrailAngle(dx: number, dy: number): number {
-  return Math.atan2(dy, dx)
+  return Math.atan2(-dy, -dx)
 }

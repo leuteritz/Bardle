@@ -1749,8 +1749,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // Compositor-Ebenen samt Overlap-Kaskade. Gezeichnet wird mit DEMSELBEN
     // Streak-Sprite wie die Sternstriche — der Zug spricht damit die Sprache
     // des Tunnels, in dem er fliegt, und die Persistenz-Spur verlängert ihn
-    // gratis. Der Kopf sitzt am Körper, der Schweif liegt entgegen der
-    // Bewegung, also zum Fluchtpunkt hin.
+    // gratis. Der Kopf sitzt am Körper, der Schweif liegt NACH AUSSEN — anders
+    // als bei einem Stern, der vorbeizieht: der Zug fliegt MIT der Kamera, und
+    // was er abwirft, kommt auf sie zu (`processionTrailAngle`).
     //
     // Die Positionen füllen die beiden Orbit-Schleifen; ein Frame Versatz ist
     // der Preis und bei einem weich wogenden Zug unsichtbar.
