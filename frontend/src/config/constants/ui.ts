@@ -871,7 +871,7 @@ export const PAUSE_KIT_BLOCK_H = PAUSE_KIT_TILE_H + PAUSE_KIT_GAP_PX + PAUSE_KIT
 //
 // Sie stand dafür einmal als 80-px-Zeile am Fuß der Zustandsspalte, wo ihr
 // 429 px Breite blieben. Über die volle Panelbreite (1352 innen) trägt sie
-// dieselben Angaben in Lesegröße, dazu Kapitelweg, Emblem und Blurb.
+// dieselben Angaben in Lesegröße, dazu Kapitelweg und Emblem.
 /** Reservierte Höhe des Bandkörpers, ohne die Kopfzeile.
  *
  *  FEST, und das ist der Punkt: wächst das Band mit dem Zustand, springt der
@@ -882,17 +882,24 @@ export const PAUSE_WAYFINDER_BAND_H = 120
 /** Kantenlänge des Missions-Emblems. Es zeigt das eigene Glyph der Mission —
  *  jedes der 41 ist einmalig und kommt sonst nirgends im Overlay vor. */
 export const PAUSE_WAYFINDER_EMBLEM_PX = 72
-/** Reservierte Breite der Belohnungsplakette. Der längste Fall im Katalog
- *  misst 196 px („+12m PRODUCTION · +4 SOLAR ESSENCE"); der Name weicht davor
- *  zurück, nie umgekehrt. Gebunden in `missionLadder.spec.ts`. */
-export const PAUSE_WAYFINDER_REWARD_W = 200
+/** Reservierte Breite der Belohnung. Sie stand einmal als Plakette mit eigenem
+ *  Grund und Rahmen; die 196 px des längsten Labels („+12m PRODUCTION · +4
+ *  SOLAR ESSENCE") galten dieser EINZEILIGEN Fassung. Rahmenlos und zweizeilig
+ *  ist der Bedarf ein anderer: Artwork (40) + Spalte (10) + das breitere aus
+ *  Betrag und Einheit. Über alle 41 Missionen gemessen sind das höchstens
+ *  122,5 px („3 NEBULA QUARTZ"); mit 20 px Einzug hinter der Haarlinie bleiben
+ *  von 170 noch 149 — gut ein Fünftel Reserve. Bei 220 standen 77 px Luft als
+ *  Loch am Bandrand. Der Name weicht davor zurück, nie umgekehrt. */
+export const PAUSE_WAYFINDER_REWARD_W = 170
 /** Reservierte Breite des Zählers in `ch`, dazu `tabular-nums`.
  *  `formatNumberCompact` liefert je Seite höchstens fünf Zeichen, mit
  *  Schrägstrich elf — sonst wanderte der Balken, sobald eine Zahl eine Stelle
  *  gewinnt. Dieselbe Stelle wie bei der Chime-Ablesung. */
 export const PAUSE_WAYFINDER_COUNT_CH = 12
-/** Höhe eines Kapitelbalkens in der Etappenleiste der Kopfzeile. */
-export const PAUSE_WAYFINDER_CHAPTER_BAR_H = 5
+/** Höhe eines Kapitelbalkens in der Etappenleiste der Kopfzeile. Der Balken
+ *  steht NEBEN seiner römischen Ziffer, nicht darunter — gestapelt blieben der
+ *  Ziffer 0,6 rem, ohne dass die Kopfzeile höher werden dürfte. */
+export const PAUSE_WAYFINDER_CHAPTER_BAR_H = 6
 
 // ── Star-Timer-Bars (Header) — Planeten-Kugeln mit Boss-HP-Füllstand ──────
 // Die Bars lesen die Boss-Daten NICHT reaktiv, sondern über einen Snapshot,

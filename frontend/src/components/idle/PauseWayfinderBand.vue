@@ -7,9 +7,9 @@
  * diesem Overlay (9998); der Herold, der ihren Abschluss feiert, bei 9700
  * ebenso. Der Fortschritt lief also schon immer weiter — zu sehen war er nicht.
  *
- * Sie stand dafür einmal als 80-px-Zeile am Fuß der Zustandsspalte, wo ihr
- * 429 px blieben. Über die ganze Breite trägt sie dieselben Angaben in
- * Lesegröße, dazu den Kapitelweg, das Missions-Emblem und den Blurb.
+ * Das Band beantwortet EINE Frage: was steht als Nächstes an. Erzähltext
+ * beantwortet sie nicht — Eyebrow und Blurb sind deshalb gefallen, ihre 34 px
+ * liegen heute in Name, Zähler und Belohnung.
  *
  * Die Höhe ist FEST reserviert (PAUSE_WAYFINDER_BAND_H). Wüchse sie mit dem
  * Zustand, spränge der Fit-Scale des ganzen Overlays beim Missionswechsel, beim
@@ -49,7 +49,8 @@ const DONE_ICON = 'game-icons:flying-flag'
 /**
  * Das Band verschwindet NICHT, wenn die Leiter durch ist: das Panel fiele um
  * seine reservierte Höhe, und der Fit-Scale spränge in genau dem Moment, in dem
- * die letzte Mission fällt. Es zeigt dann den Abschluss.
+ * die letzte Mission fällt. Es zeigt dann den Abschluss — dessen Zeile steht in
+ * `task`, der einzigen Textzeile, die das Band noch hat.
  */
 const view = computed(() => {
   const f = face.value
@@ -57,9 +58,7 @@ const view = computed(() => {
     return {
       accent: f.color,
       icon: f.def.icon,
-      chapter: `${f.chapterNumeral} · ${f.chapterName}`,
       name: f.name,
-      blurb: f.def.blurb,
       task: f.task,
       parts: f.rewardParts,
       ratio: f.ratio,
@@ -70,10 +69,8 @@ const view = computed(() => {
   return {
     accent: LAST_CHAPTER.color,
     icon: DONE_ICON,
-    chapter: LAST_CHAPTER.name,
     name: MISSION_LADDER_DONE_TITLE,
-    blurb: MISSION_LADDER_DONE_LINE,
-    task: '',
+    task: MISSION_LADDER_DONE_LINE,
     parts: [],
     ratio: 1,
     count: `${MISSION_COUNT} / ${MISSION_COUNT}`,
@@ -103,7 +100,9 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
     <!-- Kopfzeile im Format der übrigen Abschnitte: Glyph, Beschriftung, und
          rechts die Zahlen. Dazwischen der Weg als sieben Etappen — die einzige
          Stelle außerhalb des Stats-Panels, an der man sieht, wie weit die 41
-         Stufen insgesamt gegangen sind. -->
+         Stufen insgesamt gegangen sind. Seit der Eyebrow gefallen ist, trägt
+         die Ziffer hier die Kapitelauskunft des Bandes; sie steht deshalb NEBEN
+         dem Balken und nicht mehr darüber. -->
     <div class="wfb__head">
       <Icon
         :icon="MISSION_SYSTEM_ICON"
@@ -119,6 +118,7 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
           class="wfb__leg"
           :class="{
             'wfb__leg--running': ch.running,
+            'wfb__leg--done': ch.complete,
             'wfb__leg--ahead': ch.done === 0 && !ch.running,
           }"
           :style="{ '--leg-color': ch.color }"
@@ -152,9 +152,7 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
       </span>
 
       <div class="wfb__main">
-        <span class="wfb__chapter">{{ view.chapter }}</span>
         <span class="wfb__name">{{ view.name }}</span>
-        <span class="wfb__blurb">{{ view.blurb }}</span>
         <span class="wfb__task">{{ view.task }}</span>
         <span class="wfb__meter">
           <span class="wfb__track">
@@ -164,9 +162,10 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
         </span>
       </div>
 
-      <!-- Die Belohnung als eigene Plakette statt als Text am Zeilenrand: sie
-           ist der Grund, die Stufe zu gehen, und stand vorher am kleinsten. -->
-      <div class="wfb__boon">
+      <!-- Die Belohnung ist der Grund, die Stufe zu gehen — sie steht als
+           größte Zahl des Bandes. Kein eigener Kasten mehr: eine Haarlinie
+           trennt, Größe und Rechtsstand tun den Rest. -->
+      <div class="wfb__boon" :class="{ 'wfb__boon--multi': view.parts.length > 1 }">
         <span v-for="part in view.parts" :key="part.unit" class="wfb__boon-part">
           <img v-if="part.image" :src="part.image" class="wfb__boon-art" alt="" aria-hidden="true" />
           <span v-else class="wfb__boon-mono" aria-hidden="true">{{ part.mono }}</span>
@@ -213,31 +212,44 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
   gap: 6px;
 }
 
+/* Ziffer NEBEN dem Balken: gestapelt blieben ihr 0,6 rem, und die Kopfzeile
+   darf nicht höher werden. Nebeneinander trägt dieselbe Zeile 0,85 rem. */
 .wfb__leg {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
   min-width: 0;
 }
 
-.wfb__leg--ahead {
-  opacity: 0.38;
-}
-
+/* Ein Zustand wird an EINER Stelle gedimmt. Die frühere Elementopazität 0,38
+   lag über einer Textfarbe mit Alpha 0,38 — effektiv 0,14, und die Ziffer war
+   nicht mehr da. Heute dimmt allein die Farbe. */
 .wfb__leg-numeral {
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  flex-shrink: 0;
+  min-width: 2.4ch;
+  text-align: right;
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
   line-height: 1;
-  color: rgba(216, 200, 160, 0.38);
+  color: #6b6355;
 }
 
+.wfb__leg--done .wfb__leg-numeral {
+  color: var(--leg-color);
+}
+
+/* Statischer Schein, keine laufende Animation — Perf-Regel 2. */
 .wfb__leg--running .wfb__leg-numeral {
   color: var(--leg-color);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--leg-color) 45%, transparent);
 }
 
 .wfb__leg-track {
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
   height: var(--wfb-chapter-bar-h);
   border-radius: 1px;
   background: rgba(122, 78, 32, 0.4);
@@ -255,6 +267,10 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
 
 .wfb__leg--running .wfb__leg-track {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--leg-color) 55%, transparent);
+}
+
+.wfb__leg--ahead .wfb__leg-track {
+  background: rgba(122, 78, 32, 0.26);
 }
 
 .wfb__walked {
@@ -319,15 +335,13 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
 .wfb__main {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
 }
 
-/* Jedes Feld EINZEILIG mit Auslassung: ein Umbruch änderte die Bandhöhe und
+/* Beide Felder EINZEILIG mit Auslassung: ein Umbruch änderte die Bandhöhe und
    damit den Fit-Scale des ganzen Overlays. */
-.wfb__chapter,
 .wfb__name,
-.wfb__blurb,
 .wfb__task {
   min-width: 0;
   overflow: hidden;
@@ -335,53 +349,36 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
   text-overflow: ellipsis;
 }
 
-.wfb__chapter {
-  height: 14px;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  line-height: 1.2;
-  color: var(--wfb-accent);
-}
-
 .wfb__name {
-  height: 30px;
-  font-size: 1.7rem;
+  height: 40px;
+  font-size: 2.3rem;
   font-weight: 800;
   line-height: 1.15;
   color: #f2ead2;
 }
 
-.wfb__blurb {
-  height: 16px;
-  font-size: 0.82rem;
-  font-style: italic;
-  line-height: 1.3;
-  color: rgba(154, 145, 132, 0.75);
-}
-
 .wfb__task {
-  height: 18px;
-  font-size: 0.92rem;
+  height: 22px;
+  font-size: 1.05rem;
   line-height: 1.3;
-  color: #9a9184;
+  color: #a8a092;
 }
 
+/* 20 px, nicht 18: der Zähler steht in 1,15 rem mit `line-height: 1`, seine
+   Zeilenbox misst 18,4 px und liefe sonst um 0,4 px über. */
 .wfb__meter {
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: 12px;
+  gap: 14px;
+  height: 20px;
   width: 100%;
-  margin-top: 2px;
 }
 
 .wfb__track {
   position: relative;
   flex: 1;
   min-width: 0;
-  height: 6px;
+  height: 8px;
   border-radius: 1px;
   background: rgba(122, 78, 32, 0.55);
   overflow: hidden;
@@ -397,74 +394,76 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
   transition: transform 0.4s ease-out;
 }
 
+/* Die `ch`-Reservierung hält den Balken ruhig — `tabular-nums` tut es nicht:
+   MedievalSharp hat keine Tabellenziffern. */
 .wfb__count {
   flex-shrink: 0;
   width: var(--wfb-count-ch);
   text-align: right;
   white-space: nowrap;
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 1.15rem;
+  font-weight: 800;
   letter-spacing: 0.04em;
   line-height: 1;
-  color: #b89b5a;
+  color: #e0cfa0;
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Die Plakette ─────────────────────────────────────── */
-/* Reservierte Breite, höchstens zwei Teile (missionRewardParts). Sie steht als
-   eigene Fläche, nicht als Text am Rand: sie ist der Grund, die Stufe zu
-   gehen. */
+/* ── Die Belohnung ────────────────────────────────────── */
+/* Reservierte Breite, höchstens zwei Teile (missionRewardParts). KEIN eigener
+   Kasten: die Zahl ist die grösste des Bandes, eine Haarlinie trennt sie ab —
+   über 1352 px Bandbreite läse reiner Weissraum als Abriss. */
 .wfb__boon {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: 10px;
   width: var(--wfb-reward-w);
   min-width: 0;
-  padding: 8px 12px;
-  background: #0d0b06;
-  border-radius: 4px;
-  box-shadow: inset 0 0 0 1px rgba(122, 78, 32, 0.5);
+  padding-left: 20px;
+  border-left: 1px solid #3e200a;
 }
 
+/* Artwork über beide Zeilen, Betrag oben, Einheit darunter. */
 .wfb__boon-part {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
   min-width: 0;
+}
+
+.wfb__boon-art,
+.wfb__boon-mono {
+  grid-row: 1 / span 2;
+  width: 40px;
+  height: 40px;
 }
 
 .wfb__boon-art {
-  align-self: center;
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
   object-fit: contain;
 }
 
 /* Vier Materialien haben kein Artwork — gleiche Kantenlänge wie ein Bild,
    damit die Felder in Flucht bleiben (Muster der Header-Materialzeile). */
 .wfb__boon-mono {
-  align-self: center;
-  flex-shrink: 0;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
   border-radius: 3px;
   background: #241b12;
   border: 1px solid rgba(200, 144, 64, 0.28);
   color: var(--wfb-accent);
   font-family: ui-monospace, Menlo, monospace;
-  font-size: 10px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1;
 }
 
 /* Die Zahl kürzt nie — die Einheit weicht. */
 .wfb__boon-amount {
-  flex-shrink: 0;
-  font-size: 1.3rem;
+  grid-column: 2;
+  align-self: end;
+  font-size: 2.4rem;
   font-weight: 900;
   line-height: 1;
   color: var(--wfb-accent);
@@ -473,17 +472,35 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
 }
 
 .wfb__boon-unit {
+  grid-column: 2;
+  align-self: start;
   min-width: 0;
   overflow: hidden;
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.1em;
   line-height: 1.1;
   text-transform: uppercase;
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--wfb-accent);
-  opacity: 0.7;
+  opacity: 0.62;
+}
+
+/* Zwei Teile müssen in dieselbe reservierte Höhe passen — der längste Fall im
+   Katalog ist „+12m PRODUCTION · +4 SOLAR ESSENCE". */
+.wfb__boon--multi .wfb__boon-art,
+.wfb__boon--multi .wfb__boon-mono {
+  width: 30px;
+  height: 30px;
+}
+
+.wfb__boon--multi .wfb__boon-mono {
+  font-size: 12px;
+}
+
+.wfb__boon--multi .wfb__boon-amount {
+  font-size: 1.6rem;
 }
 
 /* Abschlussblitz — EIN Umschlag, keine laufende Animation. Dieselbe Farbe und

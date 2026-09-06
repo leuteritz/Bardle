@@ -254,8 +254,8 @@ describe('mission ladder — presentation', () => {
   /**
    * Das Band im Pause-Overlay hat eine RESERVIERTE Höhe und eine reservierte
    * Belohnungsbreite (`PAUSE_WAYFINDER_BAND_H`, `PAUSE_WAYFINDER_REWARD_W`) —
-   * jedes Feld steht dort einzeilig. Es misst innen 1352 px und trägt neben
-   * Name und Aufgabe seit dem Umbau auch den Blurb; die Grenzen stammen aber
+   * jedes Feld steht dort einzeilig. Es misst innen 1352 px und trägt Name und
+   * Aufgabe; die Grenzen stammen aber
    * weiter aus der schmalen Fassung von damals (429 px Spaltenbreite: längster
    * Name 181 px bei 23 Zeichen, längste Aufgabe 255 px bei 42, längste
    * Belohnung 196 px bei 34). Sie bleiben stehen — das Band ist breiter, nicht
@@ -270,9 +270,10 @@ describe('mission ladder — presentation', () => {
     const NAME_MAX = 30
     const OBJECTIVE_MAX = 52
     const REWARD_MAX = 42
-    // Der Blurb stand bis zum Umbau nur im Stats-Panel und im Tooltip, wo er
-    // umbrechen darf. Im Band ist er einzeilig; der längste im Katalog misst
-    // 66 Zeichen, die Mittelspalte trägt 1008 px.
+    // Der Blurb steht NICHT mehr im Band — das Band beantwortet, was als
+    // Nächstes ansteht, und Erzähltext beantwortet das nicht. Er lebt weiter im
+    // Stats-Panel und in den Tooltips, wo er umbrechen darf; die Grenze bleibt
+    // als Katalogschranke stehen (längster im Katalog: 66 Zeichen).
     const BLURB_MAX = 80
     for (const m of MISSIONS) {
       expect(m.name.length, `"${m.id}" name too long for the pause band`).toBeLessThanOrEqual(
