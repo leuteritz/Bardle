@@ -47,6 +47,7 @@ import {
   WARP_SPEED_MAX,
   WARP_STREAK_WIDTH_BASE,
   WARP_STREAK_WIDTH_PER_SPEED,
+  WARP_STREAK_WIDTH_SPEED_CAP,
   WARP_HEADLIGHT_ALPHA,
   WARP_HEADLIGHT_RADIUS_FRAC,
   GALAXY_SPAWN_INTERVAL_MIN,
@@ -1508,7 +1509,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // Früher schob der Warp alle als flache Ebene quer über den Schirm; das las
     // sich als gescrolltes Wallpaper, nicht als Flug.
     const streaking = warpActive && wo.streakGain > 0 && speedMultiplier > 1.5
-    const streakWidth = WARP_STREAK_WIDTH_BASE + speedMultiplier * WARP_STREAK_WIDTH_PER_SPEED
+    const streakWidth =
+      WARP_STREAK_WIDTH_BASE +
+      Math.min(speedMultiplier, WARP_STREAK_WIDTH_SPEED_CAP) * WARP_STREAK_WIDTH_PER_SPEED
     const streakLenGain = warpActive ? wo.streakGain : 1
     const headlightBoost = 0.6 * wo.headlight
     /** 0 … 1: wie weit der Tunnel schon zugezogen ist (Spawn-Nähe zum Fokus). */

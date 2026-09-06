@@ -67,8 +67,9 @@ export const UNIVERSE_HOP_WASH_PEAK = 0.35
 export const UNIVERSE_HOP_WASH_ALPHA = 0.92
 /** HUD kehrt gestaffelt zurück, gemessen ab Beginn des Ausrollens. */
 export const UNIVERSE_HOP_HUD_IN_DELAY_MS = 1000
-/** Überlicht: über der Spitze des Galaxien-Warps (WARP_SPEED_PEAK 45). */
-export const UNIVERSE_HOP_SPEED_PEAK = 64
+/** Überlicht: weit über der Spitze des Galaxien-Warps (WARP_SPEED_PEAK 45) — am Rand rund
+ *  160 px je Frame, Striche um 350 px; die Strichbreite ist über WARP_STREAK_WIDTH_SPEED_CAP gedeckelt. */
+export const UNIVERSE_HOP_SPEED_PEAK = 140
 /** Kurs: volle 360° (das HUD ist im Flug weg, anders als beim Warp), Radius als Anteil der kurzen
  *  Kante — mal weit links oben, mal rechts unten. Der Kurs KURVT: ein zweiter Azimut um BANK
  *  Grad versetzt, der Fokus wandert im Anflug auf dem Bogen dorthin. */
@@ -346,6 +347,8 @@ export const WARP_TRAIL_FADE = 0.35
 /** Strichbreite: Grundwert + Tempo-Anteil (bei 45× ≈ 4 px). */
 export const WARP_STREAK_WIDTH_BASE = 1.0
 export const WARP_STREAK_WIDTH_PER_SPEED = 0.07
+/** Ab hier wächst die Breite nicht mehr mit dem Tempo — beim Universumssprung (140×) wäre sie sonst ein Balken. */
+export const WARP_STREAK_WIDTH_SPEED_CAP = 45
 /** Doppler: voraus (norm unter AHEAD) blau-weiß, hinten (über BEHIND) warm. */
 export const WARP_DOPPLER_AHEAD_NORM = 0.45
 export const WARP_DOPPLER_BEHIND_NORM = 0.8
