@@ -3686,12 +3686,21 @@ export const FORGE_FOCUS_DIM_OPACITY = 0.5
  *  steht, dieselbe Kodierung wie am Kranz im Baum. */
 export const FORGE_FOCUS_REQ_LABEL = 'NEEDED FIRST'
 
-/* Die Kopfzeile über der Liste — sie sagt, WARUM die Spalte gerade gedämpft ist,
- * und gibt den Ausweg. Escape allein ist unsichtbar. */
-export const FORGE_FOCUS_NOTE_LABEL = 'Focused'
-export const FORGE_FOCUS_NOTE_NEEDED = 'needed first'
+/* Eine Kopfzeile über der Liste sagte einmal, WARUM die Spalte gedämpft ist,
+ * und gab den Ausweg — sie ist gefallen. Beides steht seit dem Umbau des
+ * Spaltenkopfs eine Handbreit höher und ohne Rollen: die Fokus-Karte nennt den
+ * Knoten samt Zustand, Rang, Wirkung und offenen Voraussetzungen, ihr `×` löst
+ * den Fokus. Zwei Zeilen für dieselbe Auskunft waren die Doppelung.
+ *
+ * `FORGE_FOCUS_NOTE_CLEAR` bleibt: der Verfolgungs-Block trägt denselben Knopf. */
 export const FORGE_FOCUS_NOTE_CLEAR = 'Clear'
 
+/**
+ * Das Etikett des Trenners über der Karte — es stand bis zum Umbau als
+ * Augenbraue IN ihr, zusammen mit der Familie („Focused upgrade · SOLAR RAY").
+ * Oben benennt es den ganzen Kopf der Spalte, und die Karte darunter beginnt
+ * mit dem, weswegen man hersieht: dem Namen.
+ */
 export const FORGE_FOCUS_CARD_LABEL = 'Focused upgrade'
 export const FORGE_FOCUS_CARD_EFFECT_LABEL = 'Upgrade effect'
 export const FORGE_FOCUS_CARD_CURRENT_LABEL = 'Current'

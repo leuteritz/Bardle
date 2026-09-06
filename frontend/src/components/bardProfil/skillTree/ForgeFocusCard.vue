@@ -1,94 +1,99 @@
 <template>
-  <section
-    v-if="entry"
-    class="sfc"
-    :style="{ '--focus-color': entry.color }"
-    aria-labelledby="forge-focus-title"
-  >
-    <div class="sfc-glow" aria-hidden="true" />
+  <div v-if="entry" class="sfc-slot" :style="{ '--focus-color': entry.color }">
+    <!-- Der Trenner nennt, was hier steht, und der Chip rechts die Familie.
+         Beides stand bis eben als Augenbraue IN der Karte — oben ist es der
+         Kopf der ganzen Spalte und muss nicht zweimal gesagt werden. -->
+    <div class="sfc-div" role="separator">
+      <Icon :icon="FORGE_PIN_ICON" width="17" height="17" class="sfc-div-ico" />
+      <span class="sfc-div-label">{{ FORGE_FOCUS_CARD_LABEL }}</span>
+      <span class="sfc-div-tier">{{ entry.tierLabel }}</span>
+    </div>
 
-    <header class="sfc-head">
-      <div class="sfc-icon-wrap">
-        <Icon
-          :icon="entry.icon"
-          :width="FORGE_FOCUS_CARD_ICON_SIZE"
-          :height="FORGE_FOCUS_CARD_ICON_SIZE"
-          class="sfc-icon"
-        />
+    <section class="sfc" aria-labelledby="forge-focus-title">
+      <div class="sfc-glow" aria-hidden="true" />
+
+      <header class="sfc-head">
+        <div class="sfc-icon-wrap">
+          <Icon
+            :icon="entry.icon"
+            :width="FORGE_FOCUS_CARD_ICON_SIZE"
+            :height="FORGE_FOCUS_CARD_ICON_SIZE"
+            class="sfc-icon"
+          />
+        </div>
+        <div class="sfc-heading">
+          <h2 id="forge-focus-title">{{ entry.name }}</h2>
+          <div class="sfc-status-row">
+            <span class="sfc-status">{{ stateLabel }}</span>
+            <span class="sfc-level">{{ FORGE_FOCUS_CARD_LEVEL_LABEL }} · {{ levelText }}</span>
+          </div>
+        </div>
+        <button
+          class="sfc-clear"
+          type="button"
+          :aria-label="FORGE_FOCUS_CARD_CLEAR_LABEL"
+          :title="FORGE_FOCUS_CARD_CLEAR_LABEL"
+          @click="clearPin"
+        >
+          ×
+        </button>
+      </header>
+
+      <div class="sfc-effect-block">
+        <span class="sfc-label">{{ FORGE_FOCUS_CARD_EFFECT_LABEL }}</span>
+        <p class="sfc-effect">{{ effectText }}</p>
       </div>
-      <div class="sfc-heading">
-        <span class="sfc-eyebrow">{{ FORGE_FOCUS_CARD_LABEL }} · {{ entry.tierLabel }}</span>
-        <h2 id="forge-focus-title">{{ entry.name }}</h2>
-        <div class="sfc-status-row">
-          <span class="sfc-status">{{ stateLabel }}</span>
-          <span class="sfc-level">{{ FORGE_FOCUS_CARD_LEVEL_LABEL }} · {{ levelText }}</span>
+
+      <div class="sfc-data-grid">
+        <div class="sfc-stat">
+          <span class="sfc-label">{{ FORGE_FOCUS_CARD_CURRENT_LABEL }}</span>
+          <strong>{{ currentImpact }}</strong>
+        </div>
+        <div v-if="showNext" class="sfc-stat sfc-stat--next">
+          <span class="sfc-label">{{ FORGE_FOCUS_CARD_NEXT_LABEL }}</span>
+          <strong>{{ entry.nextText }}</strong>
         </div>
       </div>
+
+      <div v-if="showCost" class="sfc-cost-block">
+        <span class="sfc-label">{{ FORGE_FOCUS_CARD_COST_LABEL }}</span>
+        <ForgeCostRow
+          class="sfc-cost"
+          :gold="entry.goldCost"
+          :gold-ok="entry.goldOk"
+          :meeps="entry.meepCost"
+          :meeps-ok="entry.meepOk"
+          :materials="entry.materials"
+          :label="false"
+          big
+          chips
+        />
+      </div>
+
+      <div v-if="showUnlock" class="sfc-unlock">
+        <span class="sfc-label">{{ FORGE_FOCUS_CARD_UNLOCK_LABEL }}</span>
+        <span v-if="entry.lockReason !== ''" class="sfc-lock-reason">{{ entry.lockReason }}</span>
+        <ul v-if="entry.reqs.length > 0" class="sfc-reqs">
+          <li v-for="req in entry.reqs" :key="req.id" :class="{ 'sfc-req--met': req.met }">
+            <span>{{ req.met ? FORGE_REQ_MET_MARK : FORGE_REQ_OPEN_MARK }}</span>
+            <span>{{ req.name }}</span>
+            <b>{{ req.have }}/{{ req.need }}</b>
+          </li>
+        </ul>
+      </div>
+
       <button
-        class="sfc-clear"
+        v-if="entry.canBuy"
+        class="sfc-action"
         type="button"
-        :aria-label="FORGE_FOCUS_CARD_CLEAR_LABEL"
-        :title="FORGE_FOCUS_CARD_CLEAR_LABEL"
-        @click="clearPin"
+        :aria-label="`${FORGE_FOCUS_CARD_GROW_LABEL}: ${entry.name}`"
+        @click="grow"
       >
-        ×
+        <Icon :icon="FORGE_FOCUS_CARD_ACTION_ICON" width="18" height="18" />
+        {{ FORGE_FOCUS_CARD_GROW_LABEL }}
       </button>
-    </header>
-
-    <div class="sfc-effect-block">
-      <span class="sfc-label">{{ FORGE_FOCUS_CARD_EFFECT_LABEL }}</span>
-      <p class="sfc-effect">{{ effectText }}</p>
-    </div>
-
-    <div class="sfc-data-grid">
-      <div class="sfc-stat">
-        <span class="sfc-label">{{ FORGE_FOCUS_CARD_CURRENT_LABEL }}</span>
-        <strong>{{ currentImpact }}</strong>
-      </div>
-      <div v-if="showNext" class="sfc-stat sfc-stat--next">
-        <span class="sfc-label">{{ FORGE_FOCUS_CARD_NEXT_LABEL }}</span>
-        <strong>{{ entry.nextText }}</strong>
-      </div>
-    </div>
-
-    <div v-if="showCost" class="sfc-cost-block">
-      <span class="sfc-label">{{ FORGE_FOCUS_CARD_COST_LABEL }}</span>
-      <ForgeCostRow
-        class="sfc-cost"
-        :gold="entry.goldCost"
-        :gold-ok="entry.goldOk"
-        :meeps="entry.meepCost"
-        :meeps-ok="entry.meepOk"
-        :materials="entry.materials"
-        :label="false"
-        big
-        chips
-      />
-    </div>
-
-    <div v-if="showUnlock" class="sfc-unlock">
-      <span class="sfc-label">{{ FORGE_FOCUS_CARD_UNLOCK_LABEL }}</span>
-      <span v-if="entry.lockReason !== ''" class="sfc-lock-reason">{{ entry.lockReason }}</span>
-      <ul v-if="entry.reqs.length > 0" class="sfc-reqs">
-        <li v-for="req in entry.reqs" :key="req.id" :class="{ 'sfc-req--met': req.met }">
-          <span>{{ req.met ? FORGE_REQ_MET_MARK : FORGE_REQ_OPEN_MARK }}</span>
-          <span>{{ req.name }}</span>
-          <b>{{ req.have }}/{{ req.need }}</b>
-        </li>
-      </ul>
-    </div>
-
-    <button
-      v-if="entry.canBuy"
-      class="sfc-action"
-      type="button"
-      :aria-label="`${FORGE_FOCUS_CARD_GROW_LABEL}: ${entry.name}`"
-      @click="grow"
-    >
-      <Icon :icon="FORGE_FOCUS_CARD_ACTION_ICON" width="18" height="18" />
-      {{ FORGE_FOCUS_CARD_GROW_LABEL }}
-    </button>
-  </section>
+    </section>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -113,6 +118,7 @@ import {
   FORGE_FOCUS_CARD_UNLOCK_LABEL,
   FORGE_ENDLESS_SYMBOL,
   FORGE_LEVEL_PREFIX,
+  FORGE_PIN_ICON,
   FORGE_REQ_MET_MARK,
   FORGE_REQ_OPEN_MARK,
 } from '@/config/constants'
@@ -157,9 +163,100 @@ function grow(): void {
 </script>
 
 <style scoped>
+/* ══════════════════════════════════════════════════
+   DER PLATZ IM KOPF
+   Dieselbe Fläche und dieselbe Naht wie die Segensreihe darunter (`.sf-buffs`):
+   der Kopf der Spalte liest sich als EIN Ort. Die Polsterung sitzt hier und
+   nicht an `.sf-panel` — die Karte stiess sonst hart an drei Panelkanten,
+   während jedes andere Kopfstück seine 18px selbst trägt.
+══════════════════════════════════════════════════ */
+.sfc-slot {
+  flex-shrink: 0;
+  padding: 12px 18px 14px;
+  background: #14100c;
+  border-bottom: 1px solid #2a1a08;
+}
+
+/* ══════════════════════════════════════════════════
+   DER TRENNER
+   Gestalt der Topf-Trenner der Liste (`.fu-div` in `ForgeUpgradesSection`):
+   Linie – Etikett – Linie, 13px in Versalien, die Linien zur Mitte hin kräftig.
+   Scoped kopiert und nicht geteilt, aus demselben Grund, der dort schon steht —
+   die geteilte `.filter-divider` hängt an einer 11px-Zeile im Filterfenster.
+   Die Farbe ist die des Knotens, nicht die eines Topfes.
+══════════════════════════════════════════════════ */
+.sfc-div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 2px 11px;
+}
+
+.sfc-div::before,
+.sfc-div::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+}
+
+.sfc-div::before {
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--focus-color, #c89040) 55%, transparent)
+  );
+}
+
+.sfc-div::after {
+  background: linear-gradient(
+    to left,
+    transparent,
+    color-mix(in srgb, var(--focus-color, #c89040) 55%, transparent)
+  );
+}
+
+.sfc-div-ico {
+  flex-shrink: 0;
+  color: var(--focus-color, #c89040);
+}
+
+.sfc-div-label {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--focus-color, #c89040);
+}
+
+.sfc-div-tier {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--focus-color, #c89040) 35%, #32210c);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--focus-color, #c89040);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════
+   DIE KARTE
+   EIN Grundton innen, nicht drei. Die Fläche hatte einmal `#1a140b`, der
+   Wirkungsblock `#111008`, die Kacheln `#211b10` und die Chips wieder
+   `#111008` — vier Töne in einem Kasten, der EINE Sache beschreibt, lasen sich
+   als Flickenteppich. Struktur trägt seitdem die Haarlinie und der farbige
+   Balken am Wirkungsblock, nicht der Füllwechsel.
+══════════════════════════════════════════════════ */
 .sfc {
   position: relative;
-  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -167,7 +264,7 @@ function grow(): void {
   padding: 18px;
   border: 2px solid var(--focus-color, #7a4e20);
   border-radius: 4px;
-  background: #1a140b;
+  background: #1a1008;
   box-shadow: inset 0 0 0 2px #3e200a, inset 0 0 24px rgba(0, 0, 0, 0.34);
 }
 
@@ -202,7 +299,7 @@ function grow(): void {
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--focus-color, #7a4e20) 72%, #3e200a);
   border-radius: 4px;
-  background: #111008;
+  background: #1e1409;
 }
 
 .sfc-icon {
@@ -214,7 +311,6 @@ function grow(): void {
   flex: 1;
 }
 
-.sfc-eyebrow,
 .sfc-label {
   display: block;
   color: #ad9b78;
@@ -225,7 +321,7 @@ function grow(): void {
 }
 
 .sfc-heading h2 {
-  margin: 4px 0 7px;
+  margin: 0 0 7px;
   color: var(--focus-color, #e8c040);
   font-size: clamp(22px, 2.1vw, 30px);
   font-weight: 900;
@@ -242,9 +338,9 @@ function grow(): void {
 .sfc-status,
 .sfc-level {
   padding: 4px 7px;
-  border: 1px solid #5c3310;
+  border: 1px solid #32210c;
   border-radius: 3px;
-  background: #111008;
+  background: #1e1409;
   color: #e8c040;
   font-size: 10px;
   font-weight: 900;
@@ -261,9 +357,9 @@ function grow(): void {
   align-self: flex-start;
   width: 28px;
   height: 28px;
-  border: 1px solid #5c3310;
+  border: 1px solid #32210c;
   border-radius: 4px;
-  background: #111008;
+  background: #1e1409;
   color: #b9a47a;
   font-size: 22px;
   line-height: 1;
@@ -279,7 +375,7 @@ function grow(): void {
 .sfc-effect-block {
   padding: 13px 14px;
   border-left: 3px solid var(--focus-color, #e8c040);
-  background: #111008;
+  background: #1e1409;
 }
 
 .sfc-effect {
@@ -299,9 +395,9 @@ function grow(): void {
 .sfc-stat {
   min-width: 0;
   padding: 10px 11px;
-  border: 1px solid #3e2a11;
+  border: 1px solid #32210c;
   border-radius: 4px;
-  background: #211b10;
+  background: #1e1409;
 }
 
 .sfc-stat strong {
@@ -323,7 +419,7 @@ function grow(): void {
 .sfc-cost-block,
 .sfc-unlock {
   padding-top: 12px;
-  border-top: 1px solid #3e2a11;
+  border-top: 1px solid #32210c;
 }
 
 .sfc-cost {
@@ -337,9 +433,9 @@ function grow(): void {
 
 .sfc-cost :deep(.fc-cost-pair) {
   padding: 5px 7px;
-  border: 1px solid #5c3310;
+  border: 1px solid #32210c;
   border-radius: 3px;
-  background: #111008;
+  background: #1e1409;
 }
 
 .sfc-lock-reason {
@@ -403,6 +499,14 @@ function grow(): void {
 }
 
 @media (max-height: 1100px) {
+  .sfc-slot {
+    padding: 10px 15px 12px;
+  }
+
+  .sfc-div {
+    margin-bottom: 9px;
+  }
+
   .sfc {
     gap: 11px;
     padding: 14px;
