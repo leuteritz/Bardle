@@ -236,6 +236,7 @@ export const PAUSE_SUN_VH_FACTOR = 0.16
  *  zieht statt einer Zahl an dieser Stelle. */
 export const PAUSE_PANEL_DESIGN_WIDTH = 1440
 export const PAUSE_PANEL_MAX_SCALE = 1.3
+export const PAUSE_SCALE_HEIGHT_RESERVE = 69
 
 /** Breite der Zustandsspalte rechts im Panel: Sonne, Vitalität,
  *  Universe/Galaxy/Level — und seit dem Umbau der KIT-BLOCK an ihrem Fuss.
