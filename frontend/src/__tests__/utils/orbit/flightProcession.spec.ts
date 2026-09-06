@@ -158,7 +158,12 @@ describe('Prozession — die Perspektive', () => {
 })
 
 describe('Prozession — die Schweife', () => {
-  it('zeigen vom Fluchtpunkt weg, in allen vier Quadranten', () => {
+  it('liegen NACH AUSSEN, vom Fluchtpunkt weg, in allen vier Quadranten', () => {
+    // Gebunden wird die WIRKUNG, nicht der Rohwinkel: `drawStreakSprite` setzt
+    // den Kopf auf den Körper und zeichnet von `-len` bis `0`, der Schweif liegt
+    // also entgegen dem Winkel. Der vorige Test prüfte den Winkel selbst — und
+    // ging deshalb durch, während der Schweif zum Fluchtpunkt zeigte.
+    const L = 40
     for (const [dx, dy] of [
       [10, 10],
       [-10, 10],
@@ -166,11 +171,16 @@ describe('Prozession — die Schweife', () => {
       [10, -10],
     ]) {
       const a = processionTrailAngle(dx, dy)
-      // Der Einheitsvektor des Winkels zeigt in DIESELBE Richtung wie (dx, dy);
-      // `drawStreakSprite` legt den Schweif dann entgegen — zum Fluchtpunkt hin.
-      const len = Math.hypot(dx, dy)
-      expect(Math.cos(a)).toBeCloseTo(dx / len, 6)
-      expect(Math.sin(a)).toBeCloseTo(dy / len, 6)
+      const tailX = dx - Math.cos(a) * L
+      const tailY = dy - Math.sin(a) * L
+      // Das Ende liegt weiter DRAUSSEN auf derselben Halbgeraden. Der Abstand
+      // allein genügt NICHT: ein zum Fluchtpunkt gelegter Schweif schiesst bei
+      // grosser Länge über ihn hinaus und ist dann auch weit weg — nur eben auf
+      // der falschen Seite. Deshalb das Skalarprodukt.
+      const d2 = dx * dx + dy * dy
+      expect(tailX * dx + tailY * dy).toBeGreaterThan(d2)
+      // …und ohne seitlichen Versatz: exakt auf der Radialen.
+      expect(tailX * dy - tailY * dx).toBeCloseTo(0, 6)
     }
   })
 
