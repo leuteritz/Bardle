@@ -37,19 +37,20 @@ withDefaults(
   defineProps<{
     icon: string
     name: string
+    headless?: boolean
     /** Die einzige Beschriftung: eine Zeile über dem Namen, klein und versal. */
     state: string
     accent?: string
     /** Ohne Reihe kein Streifen — die Missionskarte traegt ihren Zustand im Kopf. */
     chips?: MarkChip[]
   }>(),
-  { accent: '#e8c040', chips: () => [] },
+  { accent: '#e8c040', chips: () => [], headless: false },
 )
 </script>
 
 <template>
-  <div class="vtt" :style="{ '--tip-color': accent }">
-    <header class="tip-head tip-head--banded">
+  <div class="vtt" :class="{ 'vtt--headless': headless }" :style="{ '--tip-color': accent }">
+    <header v-if="!headless" class="tip-head tip-head--banded">
       <span class="vtt-glyph">
         <Icon :icon="icon" width="24" height="24" />
       </span>
@@ -121,5 +122,10 @@ withDefaults(
 
 .vtt-foot:empty {
   display: none;
+}
+
+.vtt--headless .vtt-foot {
+  padding: 1em 1.1em 1.1em;
+  border-top: 0;
 }
 </style>

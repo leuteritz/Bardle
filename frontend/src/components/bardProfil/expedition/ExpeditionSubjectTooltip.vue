@@ -56,9 +56,13 @@ import {
   VOYAGE_FLEET_TIP_HINT,
   VOYAGE_FLEET_TIP_MAT_PX,
   VOYAGE_FLEET_TIP_STATUS,
+  VOYAGE_TIP_CHANCE_LABEL,
   VOYAGE_ODDS_COLORS,
   VOYAGE_TIP_BLOCKS,
   VOYAGE_TIP_CREW_MAX,
+  VOYAGE_TIP_CREW_LABEL,
+  VOYAGE_TIP_DURATION_LABEL,
+  VOYAGE_TIP_REWARD_LABEL,
   VOYAGE_VERDICT_COLORS,
 } from '@/config/constants'
 import type { VoyageRosterSubject } from '@/types'
@@ -313,9 +317,10 @@ const showRequirement = computed(() => view.value?.state === 'offer')
     :accent="view.accent"
     :name="view.name"
     :state="headState"
+    :headless="!isFleet"
   >
     <template #foot>
-      <div class="vtt-body">
+      <div class="vtt-body" :class="{ 'vtt-body--mark': !isFleet }">
         <!-- Kein Knopf: die Karte ist `passive`, getroffen wird die Marke selbst.
              `--tip-color` liegt lokal auf dem Block, damit die linke Kante der
              `.tip-effect` die AKTIONS-Farbe trägt — Pfeil und Akzentleiste der
@@ -328,7 +333,10 @@ const showRequirement = computed(() => view.value?.state === 'offer')
           <Icon :icon="verdict.icon" width="20" height="20" class="vtt-say-ico" />
           <b class="vtt-say-label">{{ verdict.label }}</b>
           <span v-if="verdict.clock" class="vtt-say-clock">{{ verdict.clock }}</span>
-          <span v-if="voyageLength" class="vtt-say-aside">{{ voyageLength }}</span>
+          <span v-if="voyageLength" class="vtt-say-duration">
+            <span class="vtt-say-duration-label">{{ VOYAGE_TIP_DURATION_LABEL }}</span>
+            <strong>{{ voyageLength }}</strong>
+          </span>
         </p>
 
         <!-- Der Balken steht AUSSERHALB des Verdikt-Blocks: er misst die FRIST,
@@ -349,7 +357,7 @@ const showRequirement = computed(() => view.value?.state === 'offer')
              stehen alle drei Zahlen schon auf der Karte selbst. -->
         <div v-if="blocks.figures" class="tip-read tip-read--lg">
           <span class="tip-read-cell">
-            <span class="tip-read-k">{{ payout ? 'Loot' : 'Spoils' }}</span>
+            <span class="tip-read-k">{{ VOYAGE_TIP_REWARD_LABEL }}</span>
             <span v-if="payout" class="tip-read-v">
               <Icon icon="ph:cube-fill" width="16" height="16" class="vtt-mat" />
               <span>{{ lootCount }}</span>
@@ -373,7 +381,7 @@ const showRequirement = computed(() => view.value?.state === 'offer')
           </span>
 
           <span class="tip-read-cell vtt-read-end">
-            <span class="tip-read-k">Odds</span>
+            <span class="tip-read-k">{{ VOYAGE_TIP_CHANCE_LABEL }}</span>
             <span class="tip-read-v" :style="{ color: oddsColor }">
               {{ view.odds === null ? '—' : `${view.odds}%` }}
             </span>
@@ -425,7 +433,7 @@ const showRequirement = computed(() => view.value?.state === 'offer')
         </div>
 
         <div v-else class="vtt-mats">
-          <span class="tip-read-k">Crew</span>
+          <span class="tip-read-k">{{ VOYAGE_TIP_CREW_LABEL }}</span>
           <span class="vtt-chips">
             <span
               v-for="c in crewChips"
@@ -467,13 +475,21 @@ const showRequirement = computed(() => view.value?.state === 'offer')
   gap: 0.74em;
 }
 
+.vtt-body--mark {
+  gap: 0.86em;
+}
+
 /* ── Das Verdikt ───────────────────────────────────────────────────────────
    Fläche, linke Kante und Schriftgrösse kommen aus `.tip-effect`. */
 .vtt-say {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.44em;
   margin: 0;
+}
+
+.vtt-body--mark .vtt-say {
+  min-height: 3.2em;
 }
 
 .vtt-say-ico {
@@ -490,6 +506,10 @@ const showRequirement = computed(() => view.value?.state === 'offer')
   color: var(--tip-color);
 }
 
+.vtt-body--mark .vtt-say-label {
+  font-size: 1.08em;
+}
+
 /* Die grösste Zahl der Karte — sie ist der Grund, warum nichts zu tun ist.
    Die BREITE ist reserviert: `tabular-nums` trägt das nicht, MedievalSharp hat
    keine Tabellenziffern, und die Zeile wanderte sonst im Sekundentakt. */
@@ -503,13 +523,37 @@ const showRequirement = computed(() => view.value?.state === 'offer')
 
 /* Ein blockierter Grund bricht auf zwei Zeilen um; ohne `nowrap` bräche die
    Reisedauer daneben mit und stünde als `3m` über `20s`. */
-.vtt-say-aside {
+.vtt-say-duration {
+  display: flex;
   flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.08em;
   margin-left: auto;
   white-space: nowrap;
-  font-size: 0.76em;
-  font-weight: 700;
-  color: rgba(232, 220, 192, 0.5);
+  color: #e8c040;
+}
+
+.vtt-say-duration-label {
+  font-size: 0.62em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(232, 220, 192, 0.55);
+}
+
+.vtt-say-duration strong {
+  font-size: 1.32em;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.vtt-body--mark .tip-read--lg .tip-read-v {
+  font-size: 1.86em;
+}
+
+.vtt-body--mark .tip-read--lg .tip-read-k {
+  font-size: 0.84em;
 }
 
 /* Der Balken gehört zum Verdikt darüber und rückt deshalb enger heran, als der
