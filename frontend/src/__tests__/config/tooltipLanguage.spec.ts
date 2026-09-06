@@ -20,18 +20,23 @@ const SRC = resolve(process.cwd(), 'src')
 const THEME = 'assets/rpg-theme.css'
 
 /**
- * Die Blasen, die nicht `*Tooltip*.vue` heissen. Wer eine neue baut, trägt sie
+ * Die Blasen, die in einer GRÖSSEREN Datei wohnen. Wer eine neue baut, trägt sie
  * hier ein — und merkt dabei, dass es die Sprache schon gibt.
+ *
+ * Wer nur `v-tip` benutzt, gehört NICHT hierher: diese Blase entsteht als
+ * `.tip.tip--v` am `<body>` und die Datei bringt gar keine Gestalt mit — jeder
+ * Treffer in ihr ist ein Falschtreffer. `SigilDetailsPanel.vue` stand hier und
+ * liess `OWN_FRAME` an einem Champion-Porträtrahmen anschlagen.
+ *
+ * Offen: die fünf unten schreiben die Hülle von `.tip` mit deren Tokens nach.
+ * Das fängt erst eine Prüfung, die je Datei nur die Regeln der Blase liest.
  */
 const EXTRA_TIP_FILES = [
   'components/idle/abilities/BardAbilityBar.vue',
   'components/bardProfil/battle/rift/KillFeedTicker.vue',
   'components/bardProfil/battle/rift/DrakeBuffBadges.vue',
   'components/bardProfil/shop/ChampionShopCard.vue',
-  'components/bardProfil/team/SigilDetailsPanel.vue',
   'components/bardProfil/BardProfileMenu.vue',
-  'components/bardProfil/firmament/FirmamentGalaxyTip.vue',
-  'components/bardProfil/firmament/FirmamentOriginTip.vue',
 ]
 
 function vueFiles(dir: string, out: string[] = []): string[] {
@@ -51,9 +56,11 @@ function load(full: string) {
   }
 }
 
-/** Dateien, die GANZ Tooltip sind — dort gehört jede Regel der Datei. */
+/** Dateien, die GANZ Tooltip sind — dort gehört jede Regel der Datei.
+ *  `*Tip.vue` zählt mit — die vier Karten des Firmaments sassen nur wegen ihres
+ *  Namens ausserhalb, zwei davon ganz ungeprüft. */
 const PURE_TIP_FILES = vueFiles(join(SRC, 'components'))
-  .filter((f) => /Tooltip.*\.vue$/.test(f))
+  .filter((f) => /(?:Tooltip.*|Tip)\.vue$/.test(f))
   .map(load)
 
 /** Dazu die Blasen, die in einer größeren Datei wohnen. Bei ihnen gilt nur,
@@ -65,8 +72,10 @@ const theme = readFileSync(join(SRC, THEME), 'utf8')
 
 describe('Tooltip-Sprache: die Gestalt steht an EINER Stelle', () => {
   it('findet die Tooltip-Dateien überhaupt', () => {
-    // Ein leeres Netz fängt nichts und sähe trotzdem grün aus.
-    expect(TIP_FILES.length).toBeGreaterThan(15)
+    // Ein leeres Netz fängt nichts und sähe trotzdem grün aus. Die 20 liegt knapp
+    // unter den 24: fällt der `Tip`-Zweig aus dem Muster, sind es genau 20 und
+    // der Test fällt — sonst rutschten die vier Firmament-Karten still heraus.
+    expect(TIP_FILES.length).toBeGreaterThan(20)
   })
 
   it('die Sprache definiert Fläche, Rand, Schatten und Skala', () => {
