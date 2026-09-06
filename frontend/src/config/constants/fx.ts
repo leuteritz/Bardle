@@ -330,9 +330,10 @@ export const WARP_STREAK_LEN_FACTOR = 2.7
 // Perspektiv-Tunnel: der Fluchtpunkt wandert zum Kursziel, die Sterne fließen
 // radial von dort weg. Kein zweites Canvas — dieselbe Schleife, dieselben Sprites.
 /** Höchsttempo als Vielfaches der Ruhe-Strömung (die Kurven enden hier). */
-export const WARP_SPEED_PEAK = 54
-/** Tempo am Ende des Gierens — der Schub setzt ein, bevor die Nase steht. */
-export const WARP_COURSE_SPEED_END = 2
+export const WARP_SPEED_PEAK = 120
+/** Die gesamte HUD-Fläche blendet zu Beginn heraus und nach der Ankunft zurück ein. */
+export const GALAXY_WARP_HUD_OUT_MS = 180
+export const GALAXY_WARP_HUD_IN_MS = 360
 /** Atmen des Reiseflugs: ±Anteil um das Höchsttempo, zwei Perioden. */
 export const WARP_CRUISE_SHIMMER = 0.05
 export const WARP_CRUISE_SHIMMER_PERIOD_A_SEC = 0.9

@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import { GAME_SPEED_DEFAULT } from '@/config/constants'
+import {
+  GALAXY_WARP_HUD_IN_MS,
+  GALAXY_WARP_HUD_OUT_MS,
+  GAME_SPEED_DEFAULT,
+} from '@/config/constants'
 import type { AbilityBarDock } from '@/types'
 import { useGameStore } from '@/stores/core/gameStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGalaxyTheme } from '@/composables/ui/useGalaxyTheme'
 import { useGamePause } from '@/composables/system/useGamePause'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
@@ -40,6 +45,7 @@ import KeybindHud from '@/components/keybinds/KeybindHud.vue'
 import KeybindPanel from '@/components/keybinds/KeybindPanel.vue'
 
 const gameStore = useGameStore()
+const galaxyStore = useGalaxyStore()
 const starGroupStore = useStarGroupStore()
 const { isPaused } = useGamePause()
 
@@ -132,6 +138,9 @@ useSpaceMusic()
 
 /** Der Spiegel im Store ist reaktiv, die Uhr selbst nicht. */
 const isTimeWarped = computed(() => gameStore.gameSpeed !== GAME_SPEED_DEFAULT)
+const isGalaxyWarping = computed(() => galaxyStore.isGalaxyTransitioning)
+const galaxyWarpHudOutMs = `${GALAXY_WARP_HUD_OUT_MS}ms`
+const galaxyWarpHudInMs = `${GALAXY_WARP_HUD_IN_MS}ms`
 
 const { isRenderingPaused, isIdleRenderingPaused } = useRenderingPaused()
 
@@ -149,68 +158,73 @@ watch(
     <div class="galaxy-tint-overlay" aria-hidden="true"></div>
     <StarBackgroundComponent />
     <NebulaFlythroughComponent />
-    <StarFightModal />
-    <AugmentSelectionModal />
-    <!-- Die Kartenspalte oben links — EIN Container fuer alle sechs. Vorher
+    <div
+      class="galaxy-warp-hud"
+      :class="{ 'galaxy-warp-hud--hidden': isGalaxyWarping }"
+      :inert="isGalaxyWarping || undefined"
+    >
+      <StarFightModal />
+      <AugmentSelectionModal />
+      <!-- Die Kartenspalte oben links — EIN Container fuer alle sechs. Vorher
          hingen sie einzeln hier und teilten sich die Ecke ueber eine
          `max()`-Kette aus Custom Properties, die jede Karte samt ihrem
          2400er Media-Block wiederholte; ihre Kuerzung ist zweimal als Bug
          aufgeschlagen. Es steht jetzt genau EINE Karte aufgerissen, alles
          andere als Zeile — der Wayfinder immer zuoberst, weil er als einziges
          dauerhaftes Glied in der HUD-Kontur steht und sich nie bewegen darf. -->
-    <HudCardColumn />
-    <RoleSelectionModal />
-    <UniverseHopVeil />
-    <EventLogPanel />
-    <OfflineProgressModal />
-    <PauseOverlay />
-    <HeraldOverlay />
-    <SupernovaTransition />
-    <StarTimerBarsComponent />
+      <HudCardColumn />
+      <RoleSelectionModal />
+      <UniverseHopVeil />
+      <EventLogPanel />
+      <OfflineProgressModal />
+      <PauseOverlay />
+      <HeraldOverlay />
+      <SupernovaTransition />
+      <StarTimerBarsComponent />
 
-    <div class="flex flex-col justify-between w-full min-h-screen px-4 pb-10">
-      <div class="w-full">
-        <AppHeaderComponent />
+      <div class="flex flex-col justify-between w-full min-h-screen px-4 pb-10">
+        <div class="w-full">
+          <AppHeaderComponent />
 
-        <div class="planet-rescue-wrapper">
-          <PlanetRescueOverlay />
+          <div class="planet-rescue-wrapper">
+            <PlanetRescueOverlay />
+          </div>
         </div>
-      </div>
 
-      <div class="flex flex-col w-full gap-2">
-        <div class="flex justify-center w-full">
-          <!-- While an opaque overlay covers the screen (bard tab or star-fight
+        <div class="flex flex-col w-full gap-2">
+          <div class="flex justify-center w-full">
+            <!-- While an opaque overlay covers the screen (bard tab or star-fight
                modal), the idle layer's CSS animations pause — they'd only burn
                compositor time invisibly -->
-          <div class="w-full" :class="{ 'idle-anim-paused': isIdleRenderingPaused }">
-            <IdleGameComponent />
+            <div class="w-full" :class="{ 'idle-anim-paused': isIdleRenderingPaused }">
+              <IdleGameComponent />
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Drifters fly over the idle orbit, below every modal. Their card lives in
+      <!-- Drifters fly over the idle orbit, below every modal. Their card lives in
          `HudCardColumn`; the buff bar above the scoreboard collects every timed
          effect. -->
-    <DrifterLayer />
-    <div id="orbit-buff-dock" class="bard-dock" />
-    <Teleport defer :to="BUFF_DOCK_IDS[buffDock]">
-      <ActiveBuffBar :dock="buffDock" />
-    </Teleport>
+      <DrifterLayer />
+      <div id="orbit-buff-dock" class="bard-dock" />
+      <Teleport defer :to="BUFF_DOCK_IDS[buffDock]">
+        <ActiveBuffBar :dock="buffDock" />
+      </Teleport>
 
-    <!-- The Void: der Riss steht im Orbit auf derselben Ebene wie die Drifter.
+      <!-- The Void: der Riss steht im Orbit auf derselben Ebene wie die Drifter.
          Er haengt hier und nicht im Idle-Layer, damit er auch weiterlaeuft (und
          kollabiert), waehrend das Bard-Profil offen steht. Seine Karte wohnt in
          `HudCardColumn` und faltet dort zur Zeile, sobald etwas Fluechtigeres
          auftaucht — bei 26–44 s Nachschub ist fast immer etwas unterwegs. -->
-    <VoidLayer />
+      <VoidLayer />
 
-    <!-- Omens: die HUD-Karte wohnt in `HudCardColumn`. Das Wahl-Overlay erscheint
+      <!-- Omens: die HUD-Karte wohnt in `HudCardColumn`. Das Wahl-Overlay erscheint
          nur, wenn ein Trio ansteht, und wartet, solange ein Profil-Tab das
          Spielbild verdeckt. -->
-    <OmenChoiceOverlay />
+      <OmenChoiceOverlay />
 
-    <!-- Landfalls: der Ort, an dem das Schiff GERADE vorbeikommt. Seine Karte
+      <!-- Landfalls: der Ort, an dem das Schiff GERADE vorbeikommt. Seine Karte
          steht in `HudCardColumn` ganz oben im Rang — am Cairn traegt sie die
          Wahl unter dreien, sonst ist sie selbst der Griff.
          Der Körper liegt auf derselben Ebene wie Drifter und Void (42), verhält
@@ -218,55 +232,75 @@ watch(
          ein Ort steht still und das Schiff zieht an ihm vorbei. Karte UND Körper
          nehmen den Griff, beide über `tapLandfall()` — und die Karte tut das
          auch gefaltet, denn ihre Fläche IST der Griff. -->
-    <LandfallBodyLayer />
+      <LandfallBodyLayer />
 
-    <!-- Bard-Fähigkeiten: die Leiste sitzt über dem Scoreboard und schiebt die
+      <!-- Bard-Fähigkeiten: die Leiste sitzt über dem Scoreboard und schiebt die
          Buff-Reihe über sich; der Stase-Schleier liegt über dem Orbit, aber
          unter jedem Modal. -->
-    <div id="orbit-ability-dock" class="bard-dock" />
-    <Teleport defer :to="ABILITY_DOCK_IDS[abilityDock]">
-      <BardAbilityBar :dock="abilityDock" />
-    </Teleport>
-    <TemperedFateOverlay />
+      <div id="orbit-ability-dock" class="bard-dock" />
+      <Teleport defer :to="ABILITY_DOCK_IDS[abilityDock]">
+        <BardAbilityBar :dock="abilityDock" />
+      </Teleport>
+      <TemperedFateOverlay />
 
-    <MusicControlWidget />
+      <MusicControlWidget />
 
-    <button
-      v-show="!gameStore.isEncyclopediaOpen"
-      class="fixed right-0 z-[45] px-2 py-3 transition-all duration-300 -translate-y-1/2 border border-r-0 shadow-lg top-1/2 hover:pr-3 group encyclopedia-toggle"
-      @click="gameStore.toggleEncyclopedia()"
-    >
-      <Icon icon="game-icons:wax-tablet" width="24" height="24" class="transition-transform duration-200 group-hover:scale-110" style="color: #e8c040" />
-    </button>
+      <button
+        v-show="!gameStore.isEncyclopediaOpen"
+        class="fixed right-0 z-[45] px-2 py-3 transition-all duration-300 -translate-y-1/2 border border-r-0 shadow-lg top-1/2 hover:pr-3 group encyclopedia-toggle"
+        @click="gameStore.toggleEncyclopedia()"
+      >
+        <Icon
+          icon="game-icons:wax-tablet"
+          width="24"
+          height="24"
+          class="transition-transform duration-200 group-hover:scale-110"
+          style="color: #e8c040"
+        />
+      </button>
 
-    <EncyclopediaPanel />
-    <BottomBarComponent />
+      <EncyclopediaPanel />
+      <BottomBarComponent />
 
-    <!-- Tastenkürzel: die Keycap-Leiste sitzt unten rechts als Gegenstück zur
+      <!-- Tastenkürzel: die Keycap-Leiste sitzt unten rechts als Gegenstück zur
          Signatur-Zeile links, das Panel listet alle Kürzel auf. Das Panel ist
          immer montiert — es hält den Handler für sein eigenes Kürzel. -->
-    <KeybindHud />
-    <KeybindPanel />
+      <KeybindHud />
+      <KeybindPanel />
 
-    <!-- Zeitraffer-Warnung. Sie ist die wichtigere Hälfte des Reglers: ein Lauf
+      <!-- Zeitraffer-Warnung. Sie ist die wichtigere Hälfte des Reglers: ein Lauf
          bei 10× sieht auf einem Screenshot exakt aus wie ein Live-Lauf, und eine
          Balance-Messung, die versehentlich beschleunigt lief, ist wertlos.
          Der Rahmen liegt am Bildrand statt in der Bühne — dort verdeckt er
          nichts Spielbares (siehe „HUD-Freiraum"), ist aber immer im Blick. -->
-    <div v-if="isTimeWarped" class="warp-frame" aria-hidden="true"></div>
-    <div v-if="isTimeWarped" class="warp-pill">
-      <Icon icon="game-icons:extra-time" width="15" height="15" />
-      {{ gameStore.gameSpeed }}× TIME WARP — NOT LIVE
-    </div>
+      <div v-if="isTimeWarped" class="warp-frame" aria-hidden="true"></div>
+      <div v-if="isTimeWarped" class="warp-pill">
+        <Icon icon="game-icons:extra-time" width="15" height="15" />
+        {{ gameStore.gameSpeed }}× TIME WARP — NOT LIVE
+      </div>
 
-    <!-- Signatur und FPS-Zähler sitzen als ein Paar unten links über der
+      <!-- Signatur und FPS-Zähler sitzen als ein Paar unten links über der
          Minimap — die obere linke Ecke gehört der Auto-Pick-Meldung. -->
-    <div class="credit-row">
-      <span class="copyright-overlay text-amber-600/60">© Leuteritz</span>
-      <FpsOverlay />
+      <div class="credit-row">
+        <span class="copyright-overlay text-amber-600/60">© Leuteritz</span>
+        <FpsOverlay />
+      </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.galaxy-warp-hud {
+  opacity: 1;
+  transition: opacity v-bind(galaxyWarpHudInMs) ease-out;
+}
+
+.galaxy-warp-hud--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition-duration: v-bind(galaxyWarpHudOutMs);
+}
+</style>
 
 <style>
 /* Die Orbit-Docks sind reine Teleport-Ziele: `display: contents` gibt ihnen

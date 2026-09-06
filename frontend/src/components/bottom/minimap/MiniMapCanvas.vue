@@ -18,8 +18,6 @@ import type { PlanetType } from '@/types'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { sunBodyFor } from '@/utils/fx/sunBodySprite'
 import {
-  GALAXY_TRANS_WARP_MS,
-  GALAXY_TRANS_DECEL_MS,
   COMET_PHASE_DATA,
   RESCUE_ROTATION_DURATION_MS,
   ROLE_COLORS,
@@ -105,7 +103,6 @@ import {
   type HyperspacePhase,
 } from './minimapDraw'
 import { gameNow } from '@/utils/game/gameClock'
-import { randomGalaxyWarpCourse } from '@/utils/orbit/galaxyWarp'
 
 export default defineComponent({
   name: 'MiniMapCanvas',
@@ -1383,43 +1380,6 @@ export default defineComponent({
       }
     })
 
-    watch(
-      () => galaxyStore.isGalaxyTransitioning,
-      (active) => {
-        if (!active) return
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-        const canvas = canvasEl.value
-        const { w, h } = canvas ? ensureCanvasSize(canvas) : { w: 440, h: 440 }
-        for (const id of hyperspaceTimeouts) window.clearTimeout(id)
-        hyperspaceTimeouts = []
-        const course = randomGalaxyWarpCourse(Math.random)
-        warp.init(w, h, course.courseFx, course.courseFy)
-        hyperspacePhase = 'streaks'
-        hyperspacePhaseStart = Date.now()
-        hyperspaceTimeouts.push(
-          window.setTimeout(() => {
-            hyperspacePhase = 'flash'
-            hyperspacePhaseStart = Date.now()
-          }, GALAXY_TRANS_WARP_MS),
-          window.setTimeout(() => {
-            hyperspacePhase = 'fadeout'
-            hyperspacePhaseStart = Date.now()
-          }, GALAXY_TRANS_WARP_MS + 500),
-          window.setTimeout(() => {
-            hyperspacePhase = 'idle'
-            warp.reset()
-            camera.x = 0.5
-            camera.y = 0.5
-            camera.zoom = 1
-            departureTransitionStart = -1
-          }, GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS),
-        )
-      },
-    )
-
-    // Der Universumssprung faehrt keine eigene Choreografie mehr: die Minimap
-    // blendet mit dem HUD aus (html.uhop-hud-out) und kommt mit ihm zurueck —
-    // auf die neue Welt zeigt sie dann aus der Ruhelage.
     watch(
       () => gameStore.isHyperspaceActive,
       (active) => {
