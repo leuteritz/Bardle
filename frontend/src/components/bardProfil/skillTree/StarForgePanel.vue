@@ -1,5 +1,7 @@
 <template>
   <div class="sf-panel">
+    <ForgeFocusCard />
+
     <!-- Der Handel steht über allem, und zwar nicht als Rangfolge, sondern als
          Ruhe: er ist das einzige DAUERHAFTE Stück dieses Kopfes. Die beiden
          Leisten darunter sind bedingt — läge er unter ihnen, spränge sein
@@ -78,6 +80,7 @@ import { formatClock } from '@/utils/ui/format'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import ForgeBargainBar from './ForgeBargainBar.vue'
 import ForgeBuyAllBar from './ForgeBuyAllBar.vue'
+import ForgeFocusCard from './ForgeFocusCard.vue'
 import ForgePursuitCard from './ForgePursuitCard.vue'
 import ForgeOfferStrip from './ForgeOfferStrip.vue'
 import ForgeUpgradesSection from './ForgeUpgradesSection.vue'
