@@ -1,10 +1,14 @@
 <template>
-  <div class="relative flex items-center justify-center w-full h-full">
-    <SunComponent />
+  <div
+    class="relative flex items-center justify-center w-full h-full idle-flight-stage"
+    :class="`idle-flight-stage--${flight.mode.value}`"
+  >
+    <SunComponent :flight-scale="flight.formation.value.bodyScale" />
 
     <div
       @click="handleChimeClick"
       class="fixed z-10 flex items-center justify-center cursor-pointer chime-main-button"
+      :class="{ 'chime-main-button--flight': flight.active.value }"
       :style="chimeButtonStyle"
     >
       <!-- Idle affordance: pulsing gold "energy heart" of the sun = the click target.
@@ -46,13 +50,19 @@
       </template>
     </div>
 
-    <ChampionOrbit />
-    <PlanetOrbit />
-    <StarSystemComponent />
+    <ChampionOrbit
+      :flight-body-scale="flight.formation.value.bodyScale"
+      :flight-orbit-scale="flight.formation.value.orbitScale"
+    />
+    <PlanetOrbit
+      :flight-body-scale="flight.formation.value.bodyScale"
+      :flight-orbit-scale="flight.formation.value.orbitScale"
+    />
+    <StarSystemComponent v-if="!flight.active.value" />
     <!-- EIN Projektil-Canvas für alle Schuss-Quellen (Champions, Turrets,
          Sterne). Es holt sich die Schuss-Listen selbst; früher mountete jede
          der drei Quellen ihre eigene Vollbild-Ebene. -->
-    <AttackProjectileLayer />
+    <AttackProjectileLayer v-if="!flight.active.value" />
     <PlayerHPBar />
     <StarSystemRescueTransition />
     <MvpBuffOverlay />
@@ -108,6 +118,7 @@ import {
   CHIME_POPUP_FONT_SUN_FACTOR,
 } from '@/config/constants'
 import { gameTickPlan, onGameSpeedChange } from '@/utils/game/gameClock'
+import { useFlightCinematic } from '@/composables/orbit/useFlightCinematic'
 
 interface ChimeBurstParticle {
   dx: number
@@ -139,6 +150,7 @@ export default defineComponent({
     const galaxyStore = useGalaxyStore()
     const planetShopStore = usePlanetShopStore()
     const solarStore = useSolarUpgradeStore()
+    const flight = useFlightCinematic()
 
     /** Endphase: der Stern ist kollabiert — der Klickschein wird zum Ring. */
     const isCollapsed = computed(() => solarStore.isCollapsedStar)
@@ -306,6 +318,7 @@ export default defineComponent({
       rippleStyle,
       isPunching,
       bursts,
+      flight,
     }
   },
 })
@@ -424,6 +437,38 @@ export default defineComponent({
 
 .chime-main-button:active {
   transform: translate(-50%, -50%) scale(0.95);
+}
+
+.chime-main-button--flight {
+  pointer-events: none;
+}
+
+.idle-flight-stage--universe :deep(.planet-orbit-rings) {
+  z-index: 10000;
+}
+
+.idle-flight-stage--universe :deep(.planet-orbit-back) {
+  z-index: 10001;
+}
+
+.idle-flight-stage--universe :deep(.champion-orbit-back) {
+  z-index: 10002;
+}
+
+.idle-flight-stage--universe :deep(.sun-container) {
+  z-index: 10003;
+}
+
+.idle-flight-stage--universe :deep(.champion-orbit-front) {
+  z-index: 10004;
+}
+
+.idle-flight-stage--universe :deep(.planet-orbit-front) {
+  z-index: 10005;
+}
+
+.idle-flight-stage--universe .chime-main-button {
+  z-index: 10006;
 }
 
 /* Hover: brighten + enlarge the aura so the sun clearly reads as clickable. */

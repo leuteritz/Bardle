@@ -960,7 +960,11 @@ export const useGameStore = defineStore('game', {
       // Zufällig gestaffelte Resource-Star-Spawns; spawnResourceStar respektiert
       // das Concurrency-Limit selbst. Läuft auch während Pause weiter, damit
       // Sterne im Pause-Overlay erscheinen, bekämpft werden und despawnen.
-      if (galaxyStore.tickResourceStar(GAME_TICK_INTERVAL_MS)) {
+      if (
+        !this.isHyperspaceActive &&
+        !galaxyStore.isGalaxyTransitioning &&
+        galaxyStore.tickResourceStar(GAME_TICK_INTERVAL_MS)
+      ) {
         starGroupStore.spawnResourceStar()
       }
       starGroupStore.tickResourceStars()

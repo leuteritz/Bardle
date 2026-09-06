@@ -281,7 +281,11 @@ interface LocalPlanetState {
 export default defineComponent({
   name: 'PlanetOrbit',
   components: { OrbitPath, Icon },
-  setup() {
+  props: {
+    flightBodyScale: { type: Number, default: 1 },
+    flightOrbitScale: { type: Number, default: 1 },
+  },
+  setup(props) {
     const planetShopStore = usePlanetShopStore()
     const planetBossStore = usePlanetBossStore()
     const uiStore = useUiStore()
@@ -676,7 +680,7 @@ export default defineComponent({
         const slotIdx = purchased.indexOf(slot)
         const tier = ORBIT_TIERS.planet[slotIdx % ORBIT_TIERS.planet.length]
         const orbitColor = tier.color
-        const baseSize = tier.size * getOrbitBodyScale(sunScale)
+        const baseSize = tier.size * getOrbitBodyScale(sunScale) * props.flightBodyScale
 
         const tiltRad = tier.tiltRad
         const rawRy = tier.ry * sunScale * orbitScaleVal
@@ -693,8 +697,8 @@ export default defineComponent({
         const flooredRx = flooredRy * (tier.rx / tier.ry)
         const maxRx = (window.innerWidth / 2) * ORBIT_MAX_RX_VIEWPORT_FRACTION
         const capFactor = Math.min(1.0, maxRx / flooredRx)
-        const rx = flooredRx * capFactor
-        const ry = flooredRy * capFactor
+        const rx = flooredRx * capFactor * props.flightOrbitScale
+        const ry = flooredRy * capFactor * props.flightOrbitScale
 
         let ls = localStates.get(slot.id)
         if (!ls) {

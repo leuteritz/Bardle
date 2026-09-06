@@ -847,7 +847,8 @@ function equippedItem(category: ItemCategory): ShopItem | null {
   width: 100%;
   overflow: hidden;
   padding: 0;
-  border: 2px solid #7a4e20;
+  outline: 2px solid #7a4e20;
+  outline-offset: -2px;
   border-radius: 4px;
   background: #111008;
   color: #f0dfb3;

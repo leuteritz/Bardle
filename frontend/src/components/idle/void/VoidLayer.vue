@@ -1,5 +1,5 @@
 <template>
-  <div class="void-layer">
+  <div v-show="!flight.active.value" class="void-layer">
     <!-- EIN Canvas für alle Wesen. Bewusst kein Knoten je Wesen: bei zwei
          Dutzend gleichzeitig wären das hunderte DOM-Elemente mit eigener
          Frame-Schleife, eigenem Layer und eigenem Style-Recalc
@@ -89,11 +89,13 @@ import {
 } from '@/config/constants'
 import type { VoidContactState, VoidMonster } from '@/types'
 import { gameNow } from '@/utils/game/gameClock'
+import { useFlightCinematic } from '@/composables/orbit/useFlightCinematic'
 
 const voidStore = useVoidStore()
 const planetShop = usePlanetShopStore()
 const { active, lastOutcome } = storeToRefs(voidStore)
 const { isIdleRenderingPaused } = useRenderingPaused()
+const flight = useFlightCinematic()
 // Der Header veröffentlicht die Kurve seines Mittelovals — die Wesen reissen
 // entlang dieser Kontur auf, nicht auf einer geraden Linie darunter.
 const { headerCenterArc } = useHeaderCenterArc()
@@ -109,7 +111,9 @@ const reducedMotion =
 
 // Kein Aufreissen, solange das Bard-Profil oder ein Star Fight den Idle-Layer
 // deckt: ein Wesen, das niemand sehen kann, liefe ungesehen bis zur Sonne.
-watch(isIdleRenderingPaused, (hidden) => voidStore.setSpawningBlocked(hidden), {
+const spawningBlocked = computed(() => isIdleRenderingPaused.value || flight.active.value)
+
+watch(spawningBlocked, (hidden) => voidStore.setSpawningBlocked(hidden), {
   immediate: true,
 })
 
@@ -158,7 +162,7 @@ function draw(): void {
   }
   // Nicht Sichtbares kostet nichts (Performance-Regel 5): liegt ein Modal
   // darüber, endet der Frame vor dem Zeichnen.
-  if (isIdleRenderingPaused.value || active.value.length === 0) {
+  if (isIdleRenderingPaused.value || flight.active.value || active.value.length === 0) {
     frame = requestAnimationFrame(draw)
     return
   }

@@ -60,6 +60,11 @@ export const HYPERSPACE_FLASH_AT_MS = 2000
 export const HYPERSPACE_FADEOUT_AT_MS = 2500
 /** Alles zurück auf Ruhezustand. */
 export const HYPERSPACE_END_AT_MS = 3500
+export const FLIGHT_FORMATION = {
+  idle: { bodyScale: 1, orbitScale: 1 },
+  galaxy: { bodyScale: 0.88, orbitScale: 1.12 },
+  universe: { bodyScale: 0.7, orbitScale: 0.7 },
+} as const
 /**
  * Abstand zwischen dem Reset (bei HYPERSPACE_ANIM_START_MS) und der
  * Ankunfts-Zeremonie des Herolds.

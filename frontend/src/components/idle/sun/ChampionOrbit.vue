@@ -255,7 +255,11 @@ interface LocalChampState {
 export default defineComponent({
   name: 'ChampionOrbit',
   components: { Icon },
-  setup() {
+  props: {
+    flightBodyScale: { type: Number, default: 1 },
+    flightOrbitScale: { type: Number, default: 1 },
+  },
+  setup(props) {
     const combatStore = useCombatStore()
     const battleStore = useBattleStore()
     const bossStore = usePlanetBossStore()
@@ -512,14 +516,16 @@ export default defineComponent({
         const flooredRx = flooredRy * aspectRatio
         const maxRx = (window.innerWidth / 2) * ORBIT_MAX_RX_VIEWPORT_FRACTION
         const capFactor = Math.min(1.0, maxRx / flooredRx)
-        const rx = flooredRx * capFactor
-        const ry = flooredRy * capFactor
+        const rx = flooredRx * capFactor * props.flightOrbitScale
+        const ry = flooredRy * capFactor * props.flightOrbitScale
 
         const tiltRad = roleTier ? roleTier.tiltRad : planetTier.tiltRad
         const tiltDeg = roleTier ? roleTier.tiltDeg : planetTier.tiltDeg
         const orbitColor = roleTier ? roleTier.color : planetTier.color
         const baseSize =
-          (roleTier ? roleTier.championSize : planetTier.size) * getOrbitBodyScale(sunScale)
+          (roleTier ? roleTier.championSize : planetTier.size) *
+          getOrbitBodyScale(sunScale) *
+          props.flightBodyScale
         const orbitSpeed = roleTier ? roleTier.speed : c.baseSpeed
 
         let ls = localStates.get(c.name)
