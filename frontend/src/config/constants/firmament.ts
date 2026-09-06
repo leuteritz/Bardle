@@ -47,6 +47,11 @@ export const FIRMAMENT_CREST_ID_W = 390
  *  das CSS nur spiegelt, driftet unbemerkt. */
 export const FIRMAMENT_CREST_ID_PAD_X = 18
 export const FIRMAMENT_CREST_ID_GAP = 14
+export const FIRMAMENT_CREST_KICKER_ID_MIN_PX = 15
+export const FIRMAMENT_CREST_KICKER_ID_MAX_PX = 22
+export const FIRMAMENT_CREST_KICKER_STATE_PX = 12
+export const FIRMAMENT_CREST_KICKER_GAP_PX = 3
+export const FIRMAMENT_CREST_ID_STACK_GAP_PX = 8
 
 /* Die Unterkante war einmal die Fortschrittsschiene bis zum Aufbruch und lief
    auf der laufenden Bahn als Goldverlauf voll. Sie ist gefallen: das Band traegt
@@ -67,6 +72,7 @@ export const FIRMAMENT_CREST_READ_W_ELAPSED = 135
 /** Seitliche Polsterung EINER Ablesung, beidseitig — `v-bind`, weil die
  *  Textbreiten unten dagegen gerechnet werden. */
 export const FIRMAMENT_CREST_READ_PAD_X = 4
+export const FIRMAMENT_CREST_READ_GAP_PX = 5
 
 /* Die ZWEI Ablesungen der Vorsehung. Sie stehen in der Wappenzone und tragen
    dieselbe Gestalt wie die vier oben — dieselbe Schriftskala, Zahl oben,
@@ -99,6 +105,7 @@ export const FIRMAMENT_CREST_PROV_WIDE_MAX_PX = 196
  *  `VOYAGE_MAP_STATS_ART_MAX`. Er BESTIMMT den clamp-Boden per `v-bind`, statt
  *  ihn zu beschreiben. */
 export const FIRMAMENT_CREST_VALUE_MIN_PX = 26
+export const FIRMAMENT_CREST_VALUE_MAX_PX = 38
 /** Das echte Chime-Artwork neben der Chimes-Ablesung — dieselbe Waehrung,
  *  dasselbe Bild wie auf der Fleet-Karte. Unter dem Schriftboden, und unter der
  *  34-px-Schwelle der `-128`-Aufloesungsstufe. */
