@@ -4,7 +4,6 @@ import {
   GALAXY_TRANS_WARP_MS,
   GALAXY_WARP_ACCEL_MS,
   GALAXY_WARP_COURSE_MS,
-  GALAXY_WARP_DEST_LEAD_MS,
   WARP_SPEED_PEAK,
   WARP_TRAIL_FADE,
 } from '@/config/constants'
@@ -33,10 +32,8 @@ function run(dtMs: number, untilMs: number, rand = seeded(7)) {
   startGalaxyWarp(state, rand)
   const phases: GalaxyWarpPhase[] = ['course']
   let commits = 0
-  let spawns = 0
   let dones = 0
   let commitAt = -1
-  let spawnAt = -1
   let doneAt = -1
   let t = 0
   while (t < untilMs) {
@@ -47,17 +44,13 @@ function run(dtMs: number, untilMs: number, rand = seeded(7)) {
       commits++
       commitAt = t
     }
-    if (o.destSpawn) {
-      spawns++
-      spawnAt = t
-    }
     if (o.done) {
       dones++
       doneAt = t
     }
     if (phases[phases.length - 1] !== o.phase) phases.push(o.phase)
   }
-  return { state, phases, commits, spawns, dones, commitAt, spawnAt, doneAt }
+  return { state, phases, commits, dones, commitAt, doneAt }
 }
 
 describe('galaxyWarp — Phasen und Flanken', () => {
@@ -70,14 +63,12 @@ describe('galaxyWarp — Phasen und Flanken', () => {
     const r = run(dt, TOTAL_MS + 500)
     expect(r.commits).toBe(1)
     expect(r.dones).toBe(1)
-    expect(r.spawns).toBe(1)
     // Der Schnitt liegt beim Ende der Flugzeit, die Ankunft beim Gesamtende —
     // jeweils im ersten Frame, der die Grenze überschreitet.
     expect(r.commitAt).toBeGreaterThanOrEqual(GALAXY_TRANS_WARP_MS)
     expect(r.commitAt).toBeLessThan(GALAXY_TRANS_WARP_MS + dt + 0.01)
     expect(r.doneAt).toBeGreaterThanOrEqual(TOTAL_MS)
     expect(r.doneAt).toBeLessThan(TOTAL_MS + dt + 0.01)
-    expect(r.spawnAt).toBeGreaterThanOrEqual(GALAXY_TRANS_WARP_MS - GALAXY_WARP_DEST_LEAD_MS)
     expect(r.state.phase).toBe('idle')
   })
 
@@ -87,7 +78,6 @@ describe('galaxyWarp — Phasen und Flanken', () => {
     stepGalaxyWarp(state, TOTAL_MS + 1, MIN_EDGE)
     const o = state.out
     expect(o.commit).toBe(true)
-    expect(o.destSpawn).toBe(true)
     expect(o.done).toBe(true)
     expect(o.phase).toBe('idle')
     // Ein weiterer Frame: nichts feuert erneut.
@@ -184,16 +174,12 @@ describe('galaxyWarp — Kurven', () => {
     expect(state.out.trailFade).toBe(1)
   })
 
-  it('lässt die Zielgalaxie wachsen und im Ausrollen verschwinden', () => {
+  it('zeigt keine Zielgalaxie im Flug', () => {
     const state = createGalaxyWarp()
     startGalaxyWarp(state, seeded(4))
-    stepGalaxyWarp(state, GALAXY_TRANS_WARP_MS - GALAXY_WARP_DEST_LEAD_MS + 1, MIN_EDGE)
-    const early = state.out.destGalaxyScale
-    stepGalaxyWarp(state, GALAXY_WARP_DEST_LEAD_MS + GALAXY_TRANS_DECEL_MS * 0.5, MIN_EDGE)
-    expect(state.out.destGalaxyScale).toBeGreaterThan(early)
-    expect(state.out.destGalaxyAlpha).toBeGreaterThan(0)
-    stepGalaxyWarp(state, GALAXY_TRANS_DECEL_MS * 0.5 - 1, MIN_EDGE)
-    expect(state.out.destGalaxyAlpha).toBeLessThan(0.02)
+    stepGalaxyWarp(state, TOTAL_MS / 2, MIN_EDGE)
+    expect('destGalaxyScale' in state.out).toBe(false)
+    expect('destGalaxyAlpha' in state.out).toBe(false)
   })
 
   it('schreibt immer dasselbe Ausgabeobjekt', () => {

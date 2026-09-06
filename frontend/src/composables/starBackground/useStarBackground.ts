@@ -465,9 +465,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   // (utils/orbit/galaxyWarp.ts); die Schleife liest je Frame nur `warp.out`.
   const warp = createGalaxyWarp()
   let wasPendingTransition = false
-  /** Die Zielgalaxie am Fluchtpunkt — belegt den Reserve-Slot des Pools. */
-  let destGalaxy: GalaxyItem | null = null
-  let destGalaxySize = 0
   /** Aufhellung um den Fluchtpunkt: EIN Verlauf bei (0,0), neu nur bei anderem Radius. */
   let headlightGradient: CanvasGradient | null = null
   let headlightRadius = 0
@@ -644,7 +641,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       if (starsContainer.value.contains(slot.el)) starsContainer.value.removeChild(slot.el)
     }
     galaxyPool.length = 0
-    for (let i = 0; i < GALAXY_MAX_COUNT + 1; i++) {
+    for (let i = 0; i < GALAXY_MAX_COUNT; i++) {
       const el = document.createElementNS(NS, 'svg') as SVGSVGElement
       el.classList.add('galaxy')
       el.style.visibility = 'hidden'
@@ -761,51 +758,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       _lastOpacity: '0',
       _lastTransform: initTransform,
     })
-  }
-
-  /**
-   * Die Zielgalaxie des Warps: eine Spirale im Reserve-Slot des Pools (der hat
-   * GALAXY_MAX_COUNT + 1 Plätze, spawnGalaxy deckelt bei GALAXY_MAX_COUNT).
-   * Position und Größe schreibt die Schleife je Frame aus `warp.out`, deshalb
-   * steht sie NICHT in `galaxies[]` — dort liefe die Lebenszeit-Kurve.
-   */
-  function spawnDestGalaxy(): void {
-    if (!starsContainer.value || prefersReducedMotion.value || destGalaxy) return
-    const slot = galaxyPool.find((s) => !s.active)
-    if (!slot) return
-    const type: GalaxyType = Math.random() < 0.6 ? 'spiral' : 'barred-spiral'
-    const paletteList = GALAXY_PALETTES_BY_TYPE[type]
-    const palette = paletteList[Math.floor(Math.random() * paletteList.length)]
-    const minEdge = Math.min(cachedW || window.innerWidth, cachedH || window.innerHeight)
-    const size = Math.round(minEdge * 0.32)
-    const rot = (Math.random() - 0.5) * 50
-    const svg = slot.el
-    buildGalaxySvg(svg, type, palette, size)
-    svg.style.transform = `translate(0px,0px) scale(0.05) rotate(${rot}deg)`
-    svg.style.visibility = 'visible'
-    slot.active = true
-    destGalaxySize = size
-    destGalaxy = {
-      el: svg,
-      x: 0,
-      y: 0,
-      scale: 0.05,
-      maxScale: 1,
-      lifetime: 0,
-      elapsed: 0,
-      rot,
-      _lastOpacity: '0',
-      _lastTransform: '',
-    }
-  }
-
-  function releaseDestGalaxy(): void {
-    if (!destGalaxy) return
-    destGalaxy.el.style.visibility = 'hidden'
-    destGalaxy.el.style.opacity = '0'
-    const poolSlot = galaxyPool.find((s) => s.el === destGalaxy!.el)
-    if (poolSlot) poolSlot.active = false
-    destGalaxy = null
   }
 
   /**
@@ -1082,7 +1034,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         if (cachedCtx === null || cachedW === 0) refreshCanvasCache()
         stepGalaxyWarp(warp, delta * 1000, Math.min(cachedW, cachedH))
         const wo = warp.out
-        if (wo.destSpawn) spawnDestGalaxy()
         if (wo.commit) {
           galaxyStore.commitAdvance()
           // Der Blitz trägt die Farbe der NEUEN Welt und deckt den harten
@@ -1095,7 +1046,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           warpVignetteOn.value = false
         }
         if (wo.done) {
-          releaseDestGalaxy()
           retireSkyDecor()
           galaxyStore.setGalaxyTransitioning(false)
         }
@@ -1714,23 +1664,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       }
     }
 
-    // ── Zielgalaxie — wächst am Fluchtpunkt heran, im Ausrollen füllt sie das
-    // Bild und löst sich auf: wir sind angekommen, wir sind IN ihr. ──────────
-    if (destGalaxy) {
-      const g = destGalaxy
-      const half = destGalaxySize / 2
-      const gOpStr = wo.destGalaxyAlpha.toFixed(3)
-      if (g._lastOpacity !== gOpStr) {
-        g.el.style.opacity = gOpStr
-        g._lastOpacity = gOpStr
-      }
-      const gTrStr = `translate(${(cx - half).toFixed(1)}px,${(cy - half).toFixed(1)}px) scale(${wo.destGalaxyScale.toFixed(3)}) rotate(${g.rot}deg)`
-      if (g._lastTransform !== gTrStr) {
-        g.el.style.transform = gTrStr
-        g._lastTransform = gTrStr
-      }
-    }
-
     // ── Emission Nebula / Ion Cloud ────────────────────────────────────────
     for (let i = emissionNebulas.length - 1; i >= 0; i--) {
       const n = emissionNebulas[i]
@@ -1854,7 +1787,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       registerSkyDebug(null)
     }
     resetGalaxyWarp(warp)
-    destGalaxy = null
     headlightGradient = null
     warpNebulaHidden.value = false
     warpVignetteOn.value = false

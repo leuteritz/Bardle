@@ -270,14 +270,14 @@ export const FLIGHT_STREAK_LEN_FACTOR = 2.6
  *  × Frame-Delta — sonst hängt die sichtbare Länge an der Framerate. */
 export const FLIGHT_EXPOSURE_SEC = 1 / 60
 /** Sternstriche im Warp, als Vielfaches des Weges je Belichtung. */
-export const WARP_STREAK_LEN_FACTOR = 2.2
+export const WARP_STREAK_LEN_FACTOR = 2.7
 
 // ── Galaxien-Warp: Überlichtflug zur nächsten Galaxie ─────────────────────
 // (utils/orbit/galaxyWarp.ts + useStarBackground.ts). Der Flug ist ein
 // Perspektiv-Tunnel: der Fluchtpunkt wandert zum Kursziel, die Sterne fließen
 // radial von dort weg. Kein zweites Canvas — dieselbe Schleife, dieselben Sprites.
 /** Höchsttempo als Vielfaches der Ruhe-Strömung (die Kurven enden hier). */
-export const WARP_SPEED_PEAK = 45
+export const WARP_SPEED_PEAK = 54
 /** Tempo am Ende des Gierens — der Schub setzt ein, bevor die Nase steht. */
 export const WARP_COURSE_SPEED_END = 2
 /** Atmen des Reiseflugs: ±Anteil um das Höchsttempo, zwei Perioden. */
@@ -291,7 +291,7 @@ export const WARP_FOCUS_FRAC_MAX = 0.18
 export const WARP_COURSE_ARC_DEG = 240
 /** Persistenz-Blur: Anteil des Vorbilds, der je Frame gelöscht wird (1 = kein Blur). */
 export const WARP_TRAIL_FADE = 0.35
-/** Strichbreite: Grundwert + Tempo-Anteil (bei 45× ≈ 4 px). */
+/** Strichbreite: Grundwert + Tempo-Anteil (bei 54× ≈ 4,8 px). */
 export const WARP_STREAK_WIDTH_BASE = 1.0
 export const WARP_STREAK_WIDTH_PER_SPEED = 0.07
 /** Doppler: voraus (norm unter AHEAD) blau-weiß, hinten (über BEHIND) warm. */

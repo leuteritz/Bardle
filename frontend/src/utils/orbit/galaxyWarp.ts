@@ -11,7 +11,7 @@
 // Choreografie (Zeiten aus config/constants/progression.ts):
 //   course  0 … COURSE_MS      Nase dreht zum Kursziel, Fluchtpunkt fährt hin
 //   accel   … + ACCEL_MS       kubischer Schub auf WARP_SPEED_PEAK
-//   cruise  … GALAXY_TRANS_WARP_MS   Reiseflug, Zielgalaxie wächst voraus
+//   cruise  … GALAXY_TRANS_WARP_MS   Reiseflug durch den Sterntunnel
 //   commit  = GALAXY_TRANS_WARP_MS   Galaxiewechsel (Theme, Zähler), Blitz
 //   decel   … + GALAXY_TRANS_DECEL_MS   Ausrollen, Fluchtpunkt kehrt zur Mitte
 //   done    → idle
@@ -20,7 +20,6 @@ import {
   GALAXY_TRANS_WARP_MS,
   GALAXY_WARP_ACCEL_MS,
   GALAXY_WARP_COURSE_MS,
-  GALAXY_WARP_DEST_LEAD_MS,
   WARP_COURSE_ARC_DEG,
   WARP_COURSE_SPEED_END,
   WARP_CRUISE_SHIMMER,
@@ -51,14 +50,10 @@ export interface GalaxyWarpOut {
   headlight: number
   /** 0 … 1: Staub, Cluster, Flug-Linien — 0 im Flug, Rampe im Ausrollen. */
   ambientGain: number
-  /** Zielgalaxie am Fluchtpunkt (nur nach `destSpawn` gültig). */
-  destGalaxyScale: number
-  destGalaxyAlpha: number
   /** Flugzeit in Sekunden (für die bestehenden Ausblend-Kurven der SVG-Ebenen). */
   flightSec: number
   /** Flanken — je genau einen Frame lang wahr. */
   commit: boolean
-  destSpawn: boolean
   done: boolean
 }
 
@@ -69,14 +64,12 @@ export interface GalaxyWarpState {
   courseFx: number
   courseFy: number
   committed: boolean
-  destSpawned: boolean
   out: GalaxyWarpOut
 }
 
 const FLIGHT_MS = GALAXY_TRANS_WARP_MS
 const ACCEL_END_MS = GALAXY_WARP_COURSE_MS + GALAXY_WARP_ACCEL_MS
 const TOTAL_MS = GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS
-const DEST_SPAWN_MS = GALAXY_TRANS_WARP_MS - GALAXY_WARP_DEST_LEAD_MS
 const DEG = Math.PI / 180
 
 export function easeInOutCubic(t: number): number {
@@ -105,7 +98,6 @@ export function createGalaxyWarp(): GalaxyWarpState {
     courseFx: 0,
     courseFy: 0,
     committed: false,
-    destSpawned: false,
     out: {
       phase: 'idle',
       speed: 1,
@@ -116,11 +108,8 @@ export function createGalaxyWarp(): GalaxyWarpState {
       tintGain: 0,
       headlight: 0,
       ambientGain: 1,
-      destGalaxyScale: 0,
-      destGalaxyAlpha: 0,
       flightSec: 0,
       commit: false,
-      destSpawn: false,
       done: false,
     },
   }
@@ -138,12 +127,22 @@ export function resetGalaxyWarp(state: GalaxyWarpState): void {
  * Kurs setzen und den Flug beginnen. Der Azimut kommt aus dem Bogen um „oben"
  * (Bildschirm-y nach unten positiv): nie in die Bottom-Bar, nie hinter das HUD.
  */
-export function startGalaxyWarp(state: GalaxyWarpState, rand: () => number): void {
-  resetGalaxyWarp(state)
+export function randomGalaxyWarpCourse(
+  rand: () => number,
+): Pick<GalaxyWarpState, 'courseFx' | 'courseFy'> {
   const azimuth = (-90 - WARP_COURSE_ARC_DEG / 2 + rand() * WARP_COURSE_ARC_DEG) * DEG
   const radius = WARP_FOCUS_FRAC_MIN + rand() * (WARP_FOCUS_FRAC_MAX - WARP_FOCUS_FRAC_MIN)
-  state.courseFx = Math.cos(azimuth) * radius
-  state.courseFy = Math.sin(azimuth) * radius
+  return {
+    courseFx: Math.cos(azimuth) * radius,
+    courseFy: Math.sin(azimuth) * radius,
+  }
+}
+
+export function startGalaxyWarp(state: GalaxyWarpState, rand: () => number): void {
+  resetGalaxyWarp(state)
+  const course = randomGalaxyWarpCourse(rand)
+  state.courseFx = course.courseFx
+  state.courseFy = course.courseFy
   state.phase = 'course'
   state.out.phase = 'course'
 }
@@ -152,17 +151,12 @@ export function startGalaxyWarp(state: GalaxyWarpState, rand: () => number): voi
 export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: number): void {
   const o = state.out
   o.commit = false
-  o.destSpawn = false
   o.done = false
   if (state.phase === 'idle') return
 
   state.elapsedMs += Math.max(0, dtMs)
   const e = state.elapsedMs
 
-  if (!state.destSpawned && e >= DEST_SPAWN_MS) {
-    state.destSpawned = true
-    o.destSpawn = true
-  }
   if (!state.committed && e >= FLIGHT_MS) {
     state.committed = true
     o.commit = true
@@ -186,8 +180,6 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.tintGain = 0
     o.headlight = 0
     o.ambientGain = 1
-    o.destGalaxyScale = 0
-    o.destGalaxyAlpha = 0
     o.flightSec = 0
     o.done = true
     return
@@ -254,21 +246,6 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.headlight = Math.pow(1 - t, 2)
     o.ambientGain = clamp01((t - 0.4) / 0.6)
     o.flightSec = FLIGHT_MS / 1000
-  }
-
-  // Zielgalaxie: wächst voraus heran, im Ausrollen füllt sie das Bild und
-  // löst sich auf — wir sind angekommen, wir sind IN ihr.
-  if (!state.destSpawned) {
-    o.destGalaxyScale = 0
-    o.destGalaxyAlpha = 0
-  } else if (e < FLIGHT_MS) {
-    const t = clamp01((e - DEST_SPAWN_MS) / GALAXY_WARP_DEST_LEAD_MS)
-    o.destGalaxyScale = 0.05 + 0.45 * t * t
-    o.destGalaxyAlpha = 0.85 * clamp01(t * 2)
-  } else {
-    const t = clamp01((e - FLIGHT_MS) / GALAXY_TRANS_DECEL_MS)
-    o.destGalaxyScale = 0.5 + 2.0 * easeOutCubic(t)
-    o.destGalaxyAlpha = 0.85 * (1 - t * t)
   }
 }
 

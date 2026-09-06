@@ -3,7 +3,15 @@
 // hier stehen nur die Pinselstriche. Die Geometrie (Galaxie-Partikel, Punkte,
 // Planeten) liegt daneben in minimapGalaxyGeometry.ts.
 import type { PlanetType, SunBody } from '@/types'
-import { BLACK_HOLE_DISC_TILT, COMET_DISC_FILL, SUN_SPRITE_BODY_FRACTION } from '@/config/constants'
+import {
+  BLACK_HOLE_DISC_TILT,
+  COMET_DISC_FILL,
+  MINIMAP_WARP_ACCEL_GAIN,
+  MINIMAP_WARP_ACCEL_MS,
+  MINIMAP_WARP_TAIL_BASE_PX,
+  MINIMAP_WARP_TAIL_SPEED_FACTOR,
+  SUN_SPRITE_BODY_FRACTION,
+} from '@/config/constants'
 import { STAR_PALETTE } from './minimapGalaxyGeometry'
 import { drawSunLayer } from '@/utils/fx/sunBodySprite'
 
@@ -353,11 +361,19 @@ export function easeInOut(t: number) {
 export function createWarpEffect() {
   let particles: WarpParticle[] = []
   let lastFrameMs = 0
+  let focusX = 0
+  let focusY = 0
 
-  function init(w: number, h: number) {
-    const cx = w / 2
-    const cy = h / 2
-    const maxR = Math.sqrt(cx * cx + cy * cy)
+  function init(w: number, h: number, courseFx = 0, courseFy = 0) {
+    const minEdge = Math.min(w, h)
+    focusX = w / 2 + courseFx * minEdge
+    focusY = h / 2 + courseFy * minEdge
+    const maxR = Math.max(
+      Math.hypot(focusX, focusY),
+      Math.hypot(w - focusX, focusY),
+      Math.hypot(focusX, h - focusY),
+      Math.hypot(w - focusX, h - focusY),
+    )
     particles = []
     for (let i = 0; i < WARP_PARTICLE_COUNT; i++) {
       particles.push({
@@ -378,15 +394,20 @@ export function createWarpEffect() {
   ) {
     const dt = Math.min((timestamp - lastFrameMs) / 1000, 0.05)
     lastFrameMs = timestamp
-    const t = Math.min((Date.now() - phaseStart) / 2000, 1)
-    const accel = 1 + t * t * t * 17
-    const cx = w / 2
-    const cy = h / 2
-    const maxR = Math.sqrt(cx * cx + cy * cy)
+    const t = Math.min((Date.now() - phaseStart) / MINIMAP_WARP_ACCEL_MS, 1)
+    const accel = 1 + t * t * t * MINIMAP_WARP_ACCEL_GAIN
+    const cx = focusX
+    const cy = focusY
+    const maxR = Math.max(
+      Math.hypot(cx, cy),
+      Math.hypot(w - cx, cy),
+      Math.hypot(cx, h - cy),
+      Math.hypot(w - cx, h - cy),
+    )
     ctx.fillStyle = 'rgba(30, 16, 6, 0.75)'
     ctx.fillRect(0, 0, w, h)
     for (const p of particles) {
-      const tailLen = (4 + p.speed * 0.08) * accel
+      const tailLen = (MINIMAP_WARP_TAIL_BASE_PX + p.speed * MINIMAP_WARP_TAIL_SPEED_FACTOR) * accel
       const sx = cx + Math.cos(p.angle) * p.dist
       const sy = cy + Math.sin(p.angle) * p.dist
       const ex = cx + Math.cos(p.angle) * (p.dist + tailLen)

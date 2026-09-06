@@ -41,15 +41,12 @@
                Every non-travel phase (role pick, departure spin, arrival,
                boss dock, warp) is a non-'traveling' state, so this stays
                hidden there just like before. -->
-          <div
-            v-if="galaxyStore.championTravelState === 'traveling'"
-            class="star-progress"
-          >
+          <div v-if="galaxyStore.championTravelState === 'traveling'" class="star-progress">
             <div class="star-progress-row">
               <img src="/img/star-128.png" alt="" class="star-progress-star" />
               <span class="star-progress-value"
-                >{{ galaxyStore.starsRescued
-                }}<span class="star-progress-sep">/</span>{{ galaxyStore.starsRequired }}</span
+                >{{ galaxyStore.starsRescued }}<span class="star-progress-sep">/</span
+                >{{ galaxyStore.starsRequired }}</span
               >
             </div>
             <div class="star-progress-label">Stars rescued</div>
@@ -63,8 +60,8 @@
             <div class="star-progress-row">
               <span class="boss-wave-icon">☄</span>
               <span v-if="galaxyStore.bossEscortsRemaining > 0" class="star-progress-value"
-                >Wave {{ galaxyStore.currentBossWave
-                }}<span class="star-progress-sep">/</span>{{ galaxyStore.bossWavesTotal }}</span
+                >Wave {{ galaxyStore.currentBossWave }}<span class="star-progress-sep">/</span
+                >{{ galaxyStore.bossWavesTotal }}</span
               >
               <span v-else class="star-progress-value">BOSS</span>
             </div>
@@ -98,12 +95,18 @@
             "
             class="complete-overlay"
           >
-            <span class="complete-badge">✦ Galaxy Saved ✦</span>
-
-            <!-- Next tier still locked → show the unlock gate; otherwise the warp button -->
             <TierUnlockPanel v-if="galaxyStore.nextTierLocked" />
-            <button v-else class="next-galaxy-btn" @click="galaxyStore.requestTransition()">
-              » Next Galaxy «
+            <button
+              v-else
+              class="complete-map-hit"
+              aria-label="Depart for the next galaxy"
+              @click="galaxyStore.requestTransition()"
+            >
+              <span class="complete-callout">
+                <Icon icon="game-icons:portal" width="24" height="24" />
+                <span class="complete-badge">Galaxy Saved</span>
+                <span class="complete-hint">Click the map to depart</span>
+              </span>
             </button>
           </div>
 
@@ -133,7 +136,6 @@
           </button>
         </div>
       </div>
-
     </div>
   </Transition>
 </template>
@@ -148,11 +150,7 @@ import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import { useGamePause } from '@/composables/system/useGamePause'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
-import {
-  HUD_PANEL_ARC_R,
-  SKIP_DURATION_SECONDS,
-  MINIMAP_TIER_FLASH_MS,
-} from '@/config/constants'
+import { HUD_PANEL_ARC_R, SKIP_DURATION_SECONDS, MINIMAP_TIER_FLASH_MS } from '@/config/constants'
 import MiniMapCanvas from './MiniMapCanvas.vue'
 import MiniMapHudPanel from './MiniMapHudPanel.vue'
 import MiniMapArrivalHud from './MiniMapArrivalHud.vue'
@@ -528,7 +526,8 @@ export default defineComponent({
 }
 
 @keyframes minimap-star-ring-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow:
       0 0 0 3px rgba(255, 200, 80, 0.55),
       0 0 18px 6px rgba(255, 180, 40, 0.25);
@@ -584,25 +583,70 @@ export default defineComponent({
 .complete-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(10, 6, 2, 0.88);
+  background: rgba(10, 6, 2, 0.34);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
   z-index: 5;
   pointer-events: auto;
 }
 
+.complete-map-hit {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.complete-callout {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-width: 182px;
+  padding: 12px 18px;
+  border: 2px solid #7a4e20;
+  box-shadow:
+    inset 0 0 0 1px #3e200a,
+    0 4px 14px rgba(0, 0, 0, 0.65);
+  background: #1e1006;
+  color: #e8c040;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.complete-map-hit:hover .complete-callout,
+.complete-map-hit:focus-visible .complete-callout {
+  background: #2a1808;
+  transform: translateY(-2px);
+}
+
+.complete-map-hit:focus-visible {
+  outline: 2px solid #e8c040;
+  outline-offset: -4px;
+}
+
 .complete-badge {
-  font-size: 1.35rem;
-  letter-spacing: 0.2em;
+  font-size: 1.12rem;
+  letter-spacing: 0.15em;
   color: #e8c040;
   text-transform: uppercase;
   text-shadow:
     0 0 14px rgba(232, 192, 64, 0.95),
     0 0 5px rgba(255, 210, 60, 0.7);
   animation: badge-pulse 2s ease-in-out infinite;
+}
+
+.complete-hint {
+  color: #f4d878;
+  font-size: 0.76rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
 }
 
 @keyframes badge-pulse {
@@ -613,35 +657,6 @@ export default defineComponent({
   50% {
     opacity: 1;
   }
-}
-
-.next-galaxy-btn {
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  border: 1px solid #6ec040;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 1.05rem;
-  letter-spacing: 0.12em;
-  padding: 12px 26px;
-  cursor: pointer;
-  text-transform: uppercase;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
-  box-shadow: 0 2px 10px rgba(46, 122, 26, 0.55);
-  transition:
-    background 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.15s ease;
-}
-
-.next-galaxy-btn:hover {
-  background: linear-gradient(to bottom, #66d040, #3a9a22);
-  box-shadow: 0 0 16px rgba(82, 184, 48, 0.75);
-  transform: translateY(-1px);
-}
-
-.next-galaxy-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(46, 122, 26, 0.4);
 }
 
 /* ── Tier unlocked celebration flash ── */
@@ -789,5 +804,4 @@ export default defineComponent({
     inset 0 0 0 1px #3e200a,
     0 0 4px rgba(200, 144, 64, 0.12);
 }
-
 </style>
