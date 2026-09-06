@@ -566,6 +566,7 @@ import {
   PAUSE_SUN_VH_FACTOR,
   PAUSE_PANEL_DESIGN_WIDTH,
   PAUSE_PANEL_MAX_SCALE,
+  PAUSE_SCALE_HEIGHT_RESERVE,
   PAUSE_STATE_COL_WIDTH,
   PAUSE_BODY_COL_GAP,
   JOURNEY_AXIS_COLORS,
@@ -641,6 +642,7 @@ const panelEl = ref<HTMLElement | null>(null)
 const { scale: panelScale } = useFitScale(stageEl, panelEl, {
   maxScale: PAUSE_PANEL_MAX_SCALE,
   padding: 0,
+  heightReserve: PAUSE_SCALE_HEIGHT_RESERVE,
 })
 const galaxyStore = useGalaxyStore()
 const gameStore = useGameStore()

@@ -5,6 +5,8 @@ interface FitScaleOptions {
   maxScale?: number
   /** Breathing room (px) kept free around the content on each side. */
   padding?: number
+  /** Design-space height kept out of the scale calculation. */
+  heightReserve?: number
 }
 
 /**
@@ -20,7 +22,7 @@ export function useFitScale(
   content: Ref<HTMLElement | null>,
   options: FitScaleOptions = {},
 ) {
-  const { maxScale = 1, padding = 12 } = options
+  const { maxScale = 1, padding = 12, heightReserve = 0 } = options
   const scale = ref(1)
   let observer: ResizeObserver | null = null
 
@@ -33,7 +35,7 @@ export function useFitScale(
     const w = el.offsetWidth
     const h = el.offsetHeight
     if (w <= 0 || h <= 0 || availW <= 0 || availH <= 0) return
-    scale.value = Math.min(maxScale, availW / w, availH / h)
+    scale.value = Math.min(maxScale, availW / w, availH / (h + Math.max(0, heightReserve)))
   }
 
   function observe(): void {
