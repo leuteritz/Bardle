@@ -2,15 +2,9 @@
   <div class="sf-panel">
     <ForgeFocusCard />
 
-    <!-- Der Handel steht über allem, und zwar nicht als Rangfolge, sondern als
-         Ruhe: er ist das einzige DAUERHAFTE Stück dieses Kopfes. Die beiden
-         Leisten darunter sind bedingt — läge er unter ihnen, spränge sein
-         Kaufknopf jedes Mal weg, wenn eine von ihnen erscheint. -->
-    <ForgeBargainBar />
-
-    <!-- Laufende Segen des Händlers: das Einzige in dieser Spalte mit einer Uhr,
-         die abläuft, ohne dass man etwas tut — und oft genug das, was der Handel
-         eine Zeile höher eben verkauft hat. -->
+    <!-- Laufende Segen des Handels: das Einzige in dieser Spalte mit einer Uhr,
+         die abläuft, ohne dass man etwas tut. Gekauft werden sie eine Rolle
+         tiefer, im Angebotsstreifen. -->
     <div v-if="activeBuffs.length > 0" class="sf-buffs">
       <div v-for="buff in activeBuffs" :key="buff.id" class="blessing-chip">
         <Icon icon="ph:sparkle-fill" width="17" height="17" class="blessing-icon" />
@@ -52,9 +46,9 @@
 /**
  * Die Detailspalte des Skill-Tree-Reiters.
  *
- * Über dem Scrollfeld der Sammelkauf (`ForgeBuyAllBar`) — er ist mit der
- * Kopfleiste über dem Baum hierher gezogen, weil das Kaufbare in dieser Spalte
- * steht.
+ * Über dem Scrollfeld die Fokus-Karte (`ForgeFocusCard`) und der Sammelkauf
+ * (`ForgeBuyAllBar`) — Letzterer ist mit der Kopfleiste über dem Baum hierher
+ * gezogen, weil das Kaufbare in dieser Spalte steht.
  *
  * Sie zeigte bis zum Umbau EINE von vier Abteilungen, ausgewählt an einer
  * Reiter-Schiene ganz rechts (`ForgeSectionRail`, gestrichen). Drei dieser vier
@@ -68,17 +62,22 @@
  * `useForgeOffers` und `useForgeUpgrades`.
  *
  * ── Die Reihenfolge des Kopfes ──────────────────────────────────────────────
- * Nach Beständigkeit sortiert, nicht nach Wichtigkeit: Handel, Segen,
- * Sammelkauf. Der Handel steht IMMER, die Segen wechseln stündlich, der
- * Sammelkauf sooft die Chimes eine Kaufschwelle kreuzen — also ständig. Was
- * häufig umschaltet, gehört nach unten, denn von dort schiebt es nur die Liste,
- * die im selben Frame ohnehin ihren `READY TO GROW`-Block auf- oder zumacht.
+ * Nach Beständigkeit sortiert, nicht nach Wichtigkeit: Fokus, Segen,
+ * Sammelkauf. Der Fokus steht, bis der Spieler ihn löst; die Segen wechseln
+ * stündlich; der Sammelkauf kommt und geht, sooft die Chimes eine Kaufschwelle
+ * kreuzen — also ständig. Was häufig umschaltet, gehört nach unten, denn von
+ * dort schiebt es nur die Liste, die im selben Frame ohnehin ihren
+ * `READY TO GROW`-Block auf- oder zumacht.
+ *
+ * Der kosmische Handel stand hier einmal ganz oben, über der Fokus-Karte. Er ist
+ * zurück in den Angebotsstreifen gewandert: ein Dauerbalken über der Karte machte
+ * den Kopf zu einem Stapel aus vier Dingen, bevor die erste Upgrade-Zeile kam,
+ * und die Karte ist das, weswegen der Spieler hersieht.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { formatClock } from '@/utils/ui/format'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
-import ForgeBargainBar from './ForgeBargainBar.vue'
 import ForgeBuyAllBar from './ForgeBuyAllBar.vue'
 import ForgeFocusCard from './ForgeFocusCard.vue'
 import ForgePursuitCard from './ForgePursuitCard.vue'
