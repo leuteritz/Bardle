@@ -34,6 +34,8 @@ import {
   VOYAGE_FLEET_SEAT_OVERLAP,
   VOYAGE_FLEET_SEAT_RING,
   VOYAGE_FLEET_MARK_MAX_PX,
+  VOYAGE_FLEET_FIELD_MARK_W,
+  VOYAGE_FLEET_MARK_UNDERWAY,
   VOYAGE_FLEET_TIER_BAR_W,
   MATERIAL_ACCENT_HEX,
   EXPEDITION_TIERS,
@@ -342,10 +344,10 @@ describe('voyages fleet strip', () => {
   })
 
   /**
-   * Die ABLESEZEILE trägt seit dem Umbau nur noch zwei Dinge: die Frist links,
-   * die Erfolgsaussicht rechts. Der Loot ist zum Lohn gewandert, die Reisedauer
-   * nach oben zur Crew — 98 von 188 px, und die Luft ist Absicht: der Ertrag ist
-   * die dichte Zeile der Karte, die Frist die einfachste.
+   * Die ABLESEZEILE trägt in jedem Zustand ausser dem laufenden zwei Dinge: die
+   * Frist links, die Erfolgsaussicht rechts — 105 von 190 px. Der Loot ist zum
+   * Lohn gewandert, die Reisedauer nach oben zur Crew, und die Luft ist Absicht:
+   * der Ertrag ist die dichte Zeile der Karte, die Frist die einfachste.
    */
   it('trägt Frist und Aussicht der Ablesezeile', () => {
     expect(
@@ -363,6 +365,35 @@ describe('voyages fleet strip', () => {
     const blocked = VOYAGE_FLEET_TIME_W + VOYAGE_FLEET_EARN_GAP + VOYAGE_FLEET_MARK_MAX_PX
     expect(VOYAGE_FLEET_MARK_MAX_PX).toBeLessThanOrEqual(CARD_INNER_W)
     expect(blocked).toBeLessThanOrEqual(CARD_INNER_W)
+  })
+
+  /**
+   * Die laufende Mission ist die ENGSTE Fassung der Zeile: ihre Plakette
+   * verdrängt nichts, sondern stellt sich vor die Uhr — eine Crew, die schon
+   * draussen ist, hat trotzdem eine Quote. Drei Zellen also, wo jeder andere
+   * Zustand zwei trägt, und darum eine eigene Wand statt `_MARK_MAX_PX`.
+   */
+  it('trägt Marke, Frist und Aussicht der laufenden Mission', () => {
+    const field =
+      VOYAGE_FLEET_FIELD_MARK_W +
+      VOYAGE_FLEET_EARN_GAP +
+      VOYAGE_FLEET_TIME_W +
+      VOYAGE_FLEET_EARN_GAP +
+      VOYAGE_FLEET_ODDS_W
+    expect(field).toBeLessThanOrEqual(CARD_INNER_W)
+  })
+
+  /**
+   * Das Wort der laufenden Mission darf nicht mit dem des blockierten Vertrags
+   * kollidieren: „In field" neben „Field full" teilt sich das Hauptwort, und im
+   * Überflug trennt die beiden dann niemand mehr. Es spricht stattdessen die
+   * Sprache der Hover-Karte.
+   */
+  it('nennt die laufende Mission wie die Hover-Karte', () => {
+    expect(VOYAGE_FLEET_TIP_STATUS.waiting.toLowerCase()).toContain(
+      VOYAGE_FLEET_MARK_UNDERWAY.toLowerCase(),
+    )
+    expect(VOYAGE_FLEET_MARK_UNDERWAY.toLowerCase()).not.toContain('field')
   })
 
   /**

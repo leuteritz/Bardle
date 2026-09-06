@@ -1048,6 +1048,27 @@ export const VOYAGE_FLEET_TIME_W = 55
  */
 export const VOYAGE_FLEET_MARK_MAX_PX = 63
 /**
+ * Die Plakette der laufenden Mission. Sie verdraengt nichts, sondern kommt als
+ * DRITTE Zelle links HINZU — deshalb steht sie nicht unter `_MARK_MAX_PX`, das
+ * die Plakette bindet, die ein Zeilenende ganz uebernimmt. Eine gemeinsame Zahl
+ * baende die engere Rechnung an das breitere Wort.
+ *
+ * Im Browser GEMESSEN, per `Range` ueber den Textknoten und nicht per
+ * `scrollWidth`: „UNDERWAY" misst 63,86 bei 11 px versal mit 0,07em Sperrung,
+ * dazu 10 px Innenabstand und 2 px Rahmen — 75,86 aussen.
+ *
+ * Damit ist die Ablesezeile unterwegs die ENGSTE Zeile der ganzen Karte:
+ * `76 + 8 + 55 + 8 + 42 = 189` von 190. Sie traegt kein weiteres Wort und keine
+ * vierte Zelle; wer die Uhrzelle oder die Aussicht verbreitert, bricht sie.
+ */
+export const VOYAGE_FLEET_FIELD_MARK_W = 76
+/**
+ * Dieselbe Sprache wie `VOYAGE_FLEET_TIP_STATUS.waiting` („Crew underway"), und
+ * ausdruecklich nicht „In field": das stuende neben „Field full" des blockierten
+ * Vertrags, und zwei Marken mit demselben Hauptwort trennt im Ueberflug niemand.
+ */
+export const VOYAGE_FLEET_MARK_UNDERWAY = 'Underway'
+/**
  * Die längste Reisedauer, „12m 30s": im Browser GEMESSENE 51,16 bei 13 px, plus
  * knapp 3 px Reserve wie bei der Uhr nebenan.
  *
@@ -1765,6 +1786,8 @@ export const VOYAGE_MANIFEST_LOST_LABEL = 'Champions lost'
  */
 export const VOYAGE_CLOCK_TICK_MS = 1000
 
+/** Der Takt jedes Atems der Voyages — Marke auf der Karte wie Fleet-Karte. Karte
+ *  und Marke sind dasselbe Objekt an zwei Orten; zwei Takte pulsten gegeneinander. */
 export const VOYAGE_MARKER_BREATH_MS = 2600
 export const VOYAGE_MARKER_BREATH_WARN_MS = 900
 export const VOYAGE_MARKER_BOB_MS = 1100
