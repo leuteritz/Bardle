@@ -208,7 +208,7 @@ export const TEAM_SIGIL_CAMERA_MS = 450
  * two-column and carries the whole champion progression (levels, perks, costs)
  * that used to live in a modal, so it is roughly twice the synergies panel.
  */
-export const TEAM_SIGIL_DETAILS_PANEL_WIDTH = 900
+export const TEAM_SIGIL_DETAILS_PANEL_WIDTH = 980
 /** Width (px) of the left (identity + progression) column inside that panel. */
 export const TEAM_SIGIL_DETAILS_LEFT_WIDTH = 434
 /**
