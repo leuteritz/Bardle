@@ -678,7 +678,8 @@ function perkStatLine(perk: ChampionPerkDef): string {
               <Icon :icon="slot.perk.icon" width="25" height="25" />
               <span class="sdp-active-perk-copy"
                 ><span class="sdp-active-perk-head"
-                  ><small>Lv. {{ slot.level }}</small><strong>{{ slot.perk.name }}</strong></span
+                  ><small class="sdp-active-perk-level">Lv. {{ slot.level }}</small
+                  ><strong class="sdp-active-perk-name">{{ slot.perk.name }}</strong></span
                 ><span>{{ perkStatLine(slot.perk) }}</span
                 ><p>{{ slot.perk.desc }}</p></span
               >
@@ -1787,12 +1788,16 @@ function perkStatLine(perk: ChampionPerkDef): string {
   padding: 9px;
 }
 .sdp-equipment {
-  grid-template-columns: 58px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
   min-height: 0;
-  padding: 14px 12px;
+  padding: 12px 14px;
   border: 1px solid #493116;
   background: #1c1c18;
+  text-align: center;
 }
 .sdp-equipment:hover {
   background: color-mix(in srgb, var(--rc) 14%, #1c1c18);
@@ -1811,13 +1816,17 @@ function perkStatLine(perk: ChampionPerkDef): string {
   white-space: normal;
 }
 .sdp-equipment-copy {
+  width: 100%;
+  align-content: center;
   justify-items: center;
   gap: 7px;
 }
 .sdp-equipment-head {
+  justify-content: center;
   display: grid;
   justify-items: center;
   gap: 2px;
+  text-align: center;
 }
 .sdp-equipment-head small {
   font-size: 11px;
@@ -1879,13 +1888,24 @@ function perkStatLine(perk: ChampionPerkDef): string {
   gap: 2px;
   text-align: center;
 }
+.sdp-active-perk .sdp-active-perk-level {
+  display: block;
+  color: #d0c09a;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
 .sdp-active-perk small {
   align-self: center;
   font-size: 12px;
 }
+.sdp-active-perk-name {
+  display: block;
+  max-width: 100%;
+}
 .sdp-active-perk strong {
-  align-self: start;
-  font-size: 22px;
+  align-self: center;
+  font-size: 23px;
   line-height: 1.05;
   text-align: center;
   white-space: normal;
@@ -1928,14 +1948,15 @@ function perkStatLine(perk: ChampionPerkDef): string {
   .sdp-workspace { gap: 10px; padding: 10px 14px 12px; }
   .sdp-section-head { min-height: 35px; }
   .sdp-equipment-list, .sdp-active-perks { gap: 6px; padding: 7px; }
-  .sdp-equipment { grid-template-columns: 48px minmax(0, 1fr); gap: 8px; padding: 10px 8px; }
+  .sdp-equipment { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; gap: 6px; padding: 10px 8px; }
   .sdp-equipment img { width: 44px; height: 44px; }
   .sdp-equipment-icon { font-size: 34px; }
-  .sdp-equipment strong { font-size: 17px; }
+  .sdp-equipment strong { font-size: 18px; }
   .sdp-equipment-stats { font-size: 14px; }
   .sdp-equipment-copy > small { font-size: 10px; }
   .sdp-active-perk { gap: 5px; padding: 9px 7px; }
   .sdp-active-perk > svg { width: 34px; height: 34px; }
+  .sdp-active-perk .sdp-active-perk-level { font-size: 12px; }
   .sdp-active-perk strong { font-size: 20px; }
   .sdp-active-perk-copy > span:not(.sdp-active-perk-head) { font-size: 13px; }
   .sdp-active-perk p { font-size: 11px; }
