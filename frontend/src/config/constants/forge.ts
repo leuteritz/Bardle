@@ -3544,6 +3544,7 @@ export const FORGE_SHOP_LOADER_MIN_MS = 410
  * zurück, während der Baum noch seine Kanten legt.
  */
 export const FORGE_SHOP_LOADER_SETTLE_FRAMES = 4
+export const FORGE_TREE_ENTRY_CORE_MS = 180
 /** Amboss wie am Angebotsstreifen — dieselbe Bedeutung, dasselbe Glyph. */
 export const FORGE_SHOP_LOADER_ICON = FORGE_OFFER_ICON
 export const FORGE_SHOP_LOADER_ACCENT = '#e8c040'
