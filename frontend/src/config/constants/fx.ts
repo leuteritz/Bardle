@@ -54,24 +54,40 @@ export const STAR_RESCUE_BURST_RAY_MAX_LEN = 0.42
 // Kein eigenes Canvas: die Maschine in utils/orbit/universeHop.ts tickt mit
 // dem rAF-Delta der Sternfeld-Schleife, ihre Flanken schalten den Store.
 // Alle Zeiten Wanduhr; das Netz in UniverseHopVeil ist ×2.
-export const UNIVERSE_HOP_DEPART_MS = 1400
-export const UNIVERSE_HOP_APPROACH_MS = 2000
-export const UNIVERSE_HOP_THRESHOLD_MS = 400
-export const UNIVERSE_HOP_EMERGE_MS = 2200
+export const UNIVERSE_HOP_DEPART_MS = 2000
+export const UNIVERSE_HOP_APPROACH_MS = 3600
+/** Der Durchflug: Ringtunnel und Roll, der Wash liegt an seinem AUSGANG. */
+export const UNIVERSE_HOP_PASSAGE_MS = 1200
+export const UNIVERSE_HOP_EMERGE_MS = 3400
 /** DOM-Wash im Zielton an der Schwelle; der Reset liegt unter seinem Peak. */
 export const UNIVERSE_HOP_WASH_MS = 420
 export const UNIVERSE_HOP_WASH_PEAK = 0.35
 export const UNIVERSE_HOP_WASH_ALPHA = 0.92
 /** HUD kehrt gestaffelt zurück, gemessen ab Beginn des Ausrollens. */
-export const UNIVERSE_HOP_HUD_IN_DELAY_MS = 700
+export const UNIVERSE_HOP_HUD_IN_DELAY_MS = 1000
 export const UNIVERSE_HOP_SPEED_DEPART = 14
 export const UNIVERSE_HOP_SPEED_PEAK = 30
-/** Kursziel als Anteil der kurzen Kante — enger als der Galaxien-Warp, das Tor steht nah am Fluchtpunkt. */
-export const UNIVERSE_HOP_FOCUS_FRAC_MIN = 0.06
-export const UNIVERSE_HOP_FOCUS_FRAC_MAX = 0.1
+/** Kursziel als Anteil der kurzen Kante — weit genug aussen, dass das Tor NEBEN der Sonne steht. */
+export const UNIVERSE_HOP_FOCUS_FRAC_MIN = 0.14
+export const UNIVERSE_HOP_FOCUS_FRAC_MAX = 0.2
 /** Ringradius zu Beginn des Anflugs (× kurze Kante) und beim Passieren (× Eckabstand). */
-export const UNIVERSE_HOP_PORTAL_R0_FRAC = 0.02
+export const UNIVERSE_HOP_PORTAL_R0_FRAC = 0.05
 export const UNIVERSE_HOP_PORTAL_PASS_K = 1.25
+/** Wachstum des Rings über den Anflug: t^POW — sichtbar von Anfang an, nicht die echte Hyperbel (die hielt ihn 80 % der Zeit winzig). */
+export const UNIVERSE_HOP_PORTAL_GROWTH_POW = 2.6
+/** Der Wirbel dreht im Anflug schneller: SPIN · (1 + GAIN · t). */
+export const UNIVERSE_HOP_PORTAL_SPIN_APPROACH_GAIN = 2
+/** Ringtunnel im Durchflug: Echo-Ringe wandern exponentiell von R_MIN·far bis R_MAX_K·far, zyklisch gestaffelt. */
+export const UNIVERSE_HOP_TUNNEL_RINGS = 6
+export const UNIVERSE_HOP_TUNNEL_CYCLES = 2.5
+export const UNIVERSE_HOP_TUNNEL_R_MIN_FRAC = 0.15
+export const UNIVERSE_HOP_TUNNEL_R_MAX_K = 1.3
+export const UNIVERSE_HOP_TUNNEL_ALPHA = 0.7
+/** Im Tunnel längere Schweife (unter WARP_TRAIL_FADE) und ein Roll des Sternfelds um den Fluchtpunkt. */
+export const UNIVERSE_HOP_TUNNEL_TRAIL_FADE = 0.22
+export const UNIVERSE_HOP_TUNNEL_ROLL_RAD_S = 0.35
+/** Beim Austritt stehen sofort Körper der neuen Welt da, statt leerem Raum. */
+export const UNIVERSE_HOP_ARRIVAL_GALAXIES = 3
 /** Gebackener Ringdurchmesser; Schlund-Span 1,6× bleibt unter FIRMAMENT_PORTAL_MAX_BACKING_PX. */
 export const UNIVERSE_HOP_PORTAL_SPRITE_PX = 512
 export const UNIVERSE_HOP_PORTAL_SPIN_RAD_S = 0.9
@@ -95,9 +111,9 @@ export const UNIVERSE_HOP_HUD_SHIFT_PX = 8
  * Abstand zwischen dem Reset (commit-Flanke an der Schwelle) und der
  * Ankunfts-Zeremonie des Herolds. Der Herold (9700) liegt ÜBER dem Sternfeld
  * und wartet nicht auf ein deckendes Overlay, sondern auf das Beruhigen des
- * Ausrollens: nach der letzten HUD-Staffel, rund 700 ms vor dem Stillstand.
+ * Ausrollens: nach der letzten HUD-Staffel, rund 1,2 s vor dem Stillstand.
  */
-export const HYPERSPACE_ARRIVAL_HERALD_DELAY_MS = 1750
+export const HYPERSPACE_ARRIVAL_HERALD_DELAY_MS = 2200
 
 /** Streuung der Chime-Funken um ihren Sollwinkel, als Anteil des Winkelschritts. */
 export const CHIME_BURST_ANGLE_JITTER = 0.6

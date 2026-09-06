@@ -7,13 +7,14 @@
 // jede Flanke feuert genau einmal, auch über ein einziges grosses Delta.
 //
 // Choreografie (Zeiten aus config/constants/fx.ts):
-//   depart     0 … DEPART_MS            Schub, Fluchtpunkt fährt zum Kurs
-//   approach   … + APPROACH_MS          das Tor wächst aus dem Fluchtpunkt
-//   wash       = Beginn der Schwelle    DOM-Wash im Zielton
-//   commit     = wash + WASH_PEAK·WASH  Reset unter dem Peak des Wash
-//   threshold  … + THRESHOLD_MS         der Ring passiert die Kamera
-//   emerge     … + EMERGE_MS            Ausrollen im neuen Universum
-//   hudIn      = emerge + HUD_IN_DELAY  HUD kehrt zurück
+//   kick       = erster Frame            Ruck des Schubs
+//   depart     0 … DEPART_MS             Schub, Fluchtpunkt fährt zum Kurs
+//   approach   … + APPROACH_MS           das Tor wächst aus dem Fluchtpunkt
+//   passage    … + PASSAGE_MS            Ringtunnel und Roll, der Ring ist vorbei
+//   wash       = Ausgang − WASH_PEAK·WASH  DOM-Wash im Zielton
+//   commit     = Ausgang                 Reset unter dem Peak des Wash
+//   emerge     … + EMERGE_MS             Ausrollen im neuen Universum
+//   hudIn      = emerge + HUD_IN_DELAY   HUD kehrt zurück
 //   done       → idle
 import {
   UNIVERSE_HOP_APPROACH_MS,
@@ -24,12 +25,16 @@ import {
   UNIVERSE_HOP_FOCUS_FRAC_MIN,
   UNIVERSE_HOP_HUD_IN_DELAY_MS,
   UNIVERSE_HOP_MAW_ALPHA,
+  UNIVERSE_HOP_PASSAGE_MS,
+  UNIVERSE_HOP_PORTAL_GROWTH_POW,
   UNIVERSE_HOP_PORTAL_PASS_K,
   UNIVERSE_HOP_PORTAL_R0_FRAC,
+  UNIVERSE_HOP_PORTAL_SPIN_APPROACH_GAIN,
   UNIVERSE_HOP_PORTAL_SPIN_RAD_S,
   UNIVERSE_HOP_SPEED_DEPART,
   UNIVERSE_HOP_SPEED_PEAK,
-  UNIVERSE_HOP_THRESHOLD_MS,
+  UNIVERSE_HOP_TUNNEL_ROLL_RAD_S,
+  UNIVERSE_HOP_TUNNEL_TRAIL_FADE,
   UNIVERSE_HOP_WASH_MS,
   UNIVERSE_HOP_WASH_PEAK,
   WARP_COURSE_ARC_DEG,
@@ -40,7 +45,7 @@ import {
 } from '@/config/constants'
 import { easeInOutCubic, easeOutBack, easeOutCubic, type WarpFlightOut } from './galaxyWarp'
 
-export type UniverseHopPhase = 'idle' | 'depart' | 'approach' | 'threshold' | 'emerge'
+export type UniverseHopPhase = 'idle' | 'depart' | 'approach' | 'passage' | 'emerge'
 
 export interface UniverseHopOut extends WarpFlightOut {
   phase: UniverseHopPhase
@@ -54,7 +59,12 @@ export interface UniverseHopOut extends WarpFlightOut {
   fieldAlpha: number
   /** Drehung des Wirbels in rad, kumuliert. */
   portalSpin: number
+  /** 0 … 1: Fortschritt im Ringtunnel, sonst 0. */
+  tunnelT: number
+  /** Roll des Sternfelds um den Fluchtpunkt in rad/s, nur im Tunnel. */
+  roll: number
   /** Flanken — je genau einen Frame lang wahr. */
+  kick: boolean
   wash: boolean
   commit: boolean
   hudIn: boolean
@@ -67,6 +77,7 @@ export interface UniverseHopState {
   /** Kursziel als Anteil der kurzen Kante — bleibt bei Resize gültig. */
   courseFx: number
   courseFy: number
+  kicked: boolean
   washed: boolean
   committed: boolean
   hudShown: boolean
@@ -75,13 +86,14 @@ export interface UniverseHopState {
 
 const DEPART_END_MS = UNIVERSE_HOP_DEPART_MS
 const APPROACH_END_MS = DEPART_END_MS + UNIVERSE_HOP_APPROACH_MS
-const THRESHOLD_END_MS = APPROACH_END_MS + UNIVERSE_HOP_THRESHOLD_MS
+const PASSAGE_END_MS = APPROACH_END_MS + UNIVERSE_HOP_PASSAGE_MS
 /** Gesamtdauer des Flugs; das Netz im Schleier rechnet damit. */
-export const UNIVERSE_HOP_TOTAL_MS = THRESHOLD_END_MS + UNIVERSE_HOP_EMERGE_MS
-export const UNIVERSE_HOP_WASH_AT_MS = APPROACH_END_MS
-export const UNIVERSE_HOP_COMMIT_AT_MS =
-  APPROACH_END_MS + Math.round(UNIVERSE_HOP_WASH_PEAK * UNIVERSE_HOP_WASH_MS)
-export const UNIVERSE_HOP_HUD_IN_AT_MS = THRESHOLD_END_MS + UNIVERSE_HOP_HUD_IN_DELAY_MS
+export const UNIVERSE_HOP_TOTAL_MS = PASSAGE_END_MS + UNIVERSE_HOP_EMERGE_MS
+/** Der Wash beginnt so, dass sein Peak GENAU am Tunnelausgang liegt. */
+export const UNIVERSE_HOP_WASH_AT_MS =
+  PASSAGE_END_MS - Math.round(UNIVERSE_HOP_WASH_PEAK * UNIVERSE_HOP_WASH_MS)
+export const UNIVERSE_HOP_COMMIT_AT_MS = PASSAGE_END_MS
+export const UNIVERSE_HOP_HUD_IN_AT_MS = PASSAGE_END_MS + UNIVERSE_HOP_HUD_IN_DELAY_MS
 const DEG = Math.PI / 180
 const PEAK_SPAN = UNIVERSE_HOP_SPEED_PEAK - 1
 
@@ -95,6 +107,7 @@ export function createUniverseHop(): UniverseHopState {
     elapsedMs: 0,
     courseFx: 0,
     courseFy: 0,
+    kicked: false,
     washed: false,
     committed: false,
     hudShown: false,
@@ -114,6 +127,9 @@ export function createUniverseHop(): UniverseHopState {
       mawAlpha: 0,
       fieldAlpha: 0,
       portalSpin: 0,
+      tunnelT: 0,
+      roll: 0,
+      kick: false,
       wash: false,
       commit: false,
       hudIn: false,
@@ -130,7 +146,7 @@ export function resetUniverseHop(state: UniverseHopState): void {
   Object.assign(state, fresh)
 }
 
-/** Kurs setzen und den Flug beginnen — derselbe Bogen um „oben" wie der Warp, engerer Radius. */
+/** Kurs setzen und den Flug beginnen — derselbe Bogen um „oben" wie der Warp, das Tor neben der Sonne. */
 export function startUniverseHop(state: UniverseHopState, rand: () => number): void {
   resetUniverseHop(state)
   const azimuth = (-90 - WARP_COURSE_ARC_DEG / 2 + rand() * WARP_COURSE_ARC_DEG) * DEG
@@ -158,6 +174,11 @@ function shimmerAt(elapsedMs: number): number {
   )
 }
 
+/** Ein- und Ausblenden über je ein Viertel — der Roll setzt weich an und ab. */
+function rollEnvelope(t: number): number {
+  return clamp01(t / 0.25) * clamp01((1 - t) / 0.25)
+}
+
 /**
  * Ein Frame. `minEdge` = kurze Kante des Canvas, `farCorner` = Abstand vom
  * Fluchtpunkt zur fernsten Ecke — der Ring muss darüber hinauswachsen, sonst
@@ -170,6 +191,7 @@ export function stepUniverseHop(
   farCorner: number,
 ): void {
   const o = state.out
+  o.kick = false
   o.wash = false
   o.commit = false
   o.hudIn = false
@@ -180,6 +202,10 @@ export function stepUniverseHop(
   state.elapsedMs += dt
   const e = state.elapsedMs
 
+  if (!state.kicked) {
+    state.kicked = true
+    o.kick = true
+  }
   if (!state.washed && e >= UNIVERSE_HOP_WASH_AT_MS) {
     state.washed = true
     o.wash = true
@@ -195,8 +221,8 @@ export function stepUniverseHop(
 
   let phase: UniverseHopPhase
   if (e >= UNIVERSE_HOP_TOTAL_MS) phase = 'idle'
-  else if (e >= THRESHOLD_END_MS) phase = 'emerge'
-  else if (e >= APPROACH_END_MS) phase = 'threshold'
+  else if (e >= PASSAGE_END_MS) phase = 'emerge'
+  else if (e >= APPROACH_END_MS) phase = 'passage'
   else if (e >= DEPART_END_MS) phase = 'approach'
   else phase = 'depart'
   state.phase = phase
@@ -216,12 +242,15 @@ export function stepUniverseHop(
     o.portalAlpha = 0
     o.mawAlpha = 0
     o.fieldAlpha = 0
+    o.tunnelT = 0
+    o.roll = 0
     o.done = true
     return
   }
 
   const fx = state.courseFx * minEdge
   const fy = state.courseFy * minEdge
+  const rPass = UNIVERSE_HOP_PORTAL_PASS_K * farCorner
 
   if (phase === 'depart') {
     const t = e / UNIVERSE_HOP_DEPART_MS
@@ -239,6 +268,8 @@ export function stepUniverseHop(
     o.portalAlpha = 0
     o.mawAlpha = 0
     o.fieldAlpha = 0
+    o.tunnelT = 0
+    o.roll = 0
   } else if (phase === 'approach') {
     const t = (e - DEPART_END_MS) / UNIVERSE_HOP_APPROACH_MS
     const envelope =
@@ -251,50 +282,57 @@ export function stepUniverseHop(
     o.tintGain = 1
     o.ambientGain = 0
     o.flightSec = e / 1000
-    // Echte Perspektive: ein Ring fester Grösse, dem man sich mit konstantem
-    // Tempo nähert, wächst als Hyperbel — bei t = 1 steht er beim Passradius.
     const r0 = UNIVERSE_HOP_PORTAL_R0_FRAC * minEdge
-    const rPass = UNIVERSE_HOP_PORTAL_PASS_K * farCorner
-    const k = 1 - r0 / rPass
-    o.portalR = r0 / (1 - k * t)
+    o.portalR = r0 + (rPass - r0) * Math.pow(t, UNIVERSE_HOP_PORTAL_GROWTH_POW)
     o.portalAlpha = clamp01(t * 4)
     o.mawAlpha = UNIVERSE_HOP_MAW_ALPHA * clamp01((t - 0.1) / 0.5)
     o.fieldAlpha = o.mawAlpha * (1 - UNIVERSE_HOP_FIELD_PASS_FADE * clamp01(o.portalR / farCorner))
     // Der Schlund übernimmt das Licht vom Scheinwerfer.
     o.headlight = 1 - 0.7 * clamp01(o.portalR / farCorner)
-    o.portalSpin += (UNIVERSE_HOP_PORTAL_SPIN_RAD_S * dt) / 1000
-  } else if (phase === 'threshold') {
-    const t = (e - APPROACH_END_MS) / UNIVERSE_HOP_THRESHOLD_MS
+    o.portalSpin +=
+      (UNIVERSE_HOP_PORTAL_SPIN_RAD_S * (1 + UNIVERSE_HOP_PORTAL_SPIN_APPROACH_GAIN * t) * dt) / 1000
+    o.tunnelT = 0
+    o.roll = 0
+  } else if (phase === 'passage') {
+    const t = (e - APPROACH_END_MS) / UNIVERSE_HOP_PASSAGE_MS
     o.speed = UNIVERSE_HOP_SPEED_PEAK * shimmerAt(e)
     o.focusX = fx
     o.focusY = fy
     o.streakGain = 1
-    o.trailFade = WARP_TRAIL_FADE
+    o.trailFade = UNIVERSE_HOP_TUNNEL_TRAIL_FADE
     o.tintGain = 1
     o.ambientGain = 0
     o.flightSec = e / 1000
-    o.portalR = UNIVERSE_HOP_PORTAL_PASS_K * farCorner * (1 + 0.3 * t)
-    o.portalAlpha = 1 - t
+    // Der Ring ist im ersten Viertel vorbei; der Tunnel übernimmt.
+    o.portalR = rPass * (1 + 0.3 * t)
+    o.portalAlpha = 1 - clamp01(t * 4)
     o.mawAlpha = UNIVERSE_HOP_MAW_ALPHA
-    o.fieldAlpha = o.mawAlpha * (1 - UNIVERSE_HOP_FIELD_PASS_FADE)
+    o.fieldAlpha = 0
     o.headlight = 0.3
-    o.portalSpin += (UNIVERSE_HOP_PORTAL_SPIN_RAD_S * dt) / 1000
+    o.portalSpin +=
+      (UNIVERSE_HOP_PORTAL_SPIN_RAD_S * (1 + UNIVERSE_HOP_PORTAL_SPIN_APPROACH_GAIN) * dt) / 1000
+    o.tunnelT = t
+    o.roll = UNIVERSE_HOP_TUNNEL_ROLL_RAD_S * rollEnvelope(t)
   } else {
     // emerge
-    const t = (e - THRESHOLD_END_MS) / UNIVERSE_HOP_EMERGE_MS
+    const t = (e - PASSAGE_END_MS) / UNIVERSE_HOP_EMERGE_MS
     o.speed = 1 + PEAK_SPAN * Math.pow(1 - t, 3.5)
     const back = 1 - easeOutBack(t)
     o.focusX = fx * back
     o.focusY = fy * back
     o.streakGain = 1
-    o.trailFade = 1 - (1 - WARP_TRAIL_FADE) * clamp01(1 - t / 0.5)
+    o.trailFade = 1 - (1 - UNIVERSE_HOP_TUNNEL_TRAIL_FADE) * clamp01(1 - t / 0.5)
     o.tintGain = 1 - easeOutCubic(t)
     o.headlight = Math.pow(1 - t, 2)
     o.ambientGain = clamp01((t - 0.4) / 0.6)
-    o.flightSec = THRESHOLD_END_MS / 1000
+    // Null, nicht eingefroren: die Körper der NEUEN Welt blenden über diese
+    // Flugzeit ein, und die alte ist mit dem commit abgeräumt.
+    o.flightSec = 0
     o.portalR = 0
     o.portalAlpha = 0
     o.mawAlpha = 0
     o.fieldAlpha = 0
+    o.tunnelT = 0
+    o.roll = 0
   }
 }

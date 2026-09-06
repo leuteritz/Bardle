@@ -38,6 +38,12 @@ import {
   UNIVERSE_HOP_THROAT_ALPHA_CORE,
   UNIVERSE_HOP_THROAT_ALPHA_MID,
   UNIVERSE_HOP_THROAT_MID_STOP,
+  UNIVERSE_HOP_ARRIVAL_GALAXIES,
+  UNIVERSE_HOP_TUNNEL_ALPHA,
+  UNIVERSE_HOP_TUNNEL_CYCLES,
+  UNIVERSE_HOP_TUNNEL_R_MAX_K,
+  UNIVERSE_HOP_TUNNEL_R_MIN_FRAC,
+  UNIVERSE_HOP_TUNNEL_RINGS,
   WARP_SPEED_MAX,
   WARP_STREAK_WIDTH_BASE,
   WARP_STREAK_WIDTH_PER_SPEED,
@@ -132,6 +138,7 @@ import {
 import {
   flightLive,
   joltOut,
+  kickFlightJolt,
   resetFlightJolt,
   resetFlightLive,
   stepFlightJolt,
@@ -1167,16 +1174,24 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           uiStore.setUniverseHopPhase('threshold')
           warpVignetteOn.value = false
         }
+        // Der Ruck kommt vom Kurs her: Schub drückt nach hinten, der Austritt
+        // setzt den Körper — beides über den Flug-Helm, kein eigenes Wackeln.
+        const hopFrom = Math.atan2(ho.focusY, ho.focusX)
+        if (ho.kick) kickFlightJolt('hop', hopFrom)
         if (ho.commit) {
-          // Der Reset läuft unter dem Peak des Wash; die Nebel kommen in den
-          // Farben der neuen Welt zurück.
+          // Der Reset läuft unter dem Peak des Wash. Die alte Welt geht HIER
+          // (nicht auf done — das löschte den Schub gleich wieder), die neue
+          // steht sofort da: Nebel zurück, drei Galaxien und ein Emissionsnebel.
           gameStore.commitUniverseHop()
+          kickFlightJolt('hop', hopFrom)
+          retireSkyDecor()
+          for (let i = 0; i < UNIVERSE_HOP_ARRIVAL_GALAXIES; i++) spawnGalaxy()
+          spawnEmissionNebula(true)
           warpNebulaHidden.value = false
         }
         if (ho.hudIn) uiStore.setUniverseHopPhase('arrive')
         if (ho.done) {
           releaseHopSprites()
-          retireSkyDecor()
           gameStore.finishUniverseHop()
         }
         backgroundPaused = false
@@ -1284,7 +1299,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     const slipVy = slipOn ? helmOut!.slipY : 0
     const slipX = slipVx * delta
     const slipY = slipVy * delta
-    const rollStep = slipOn ? helmOut!.rollRate * delta : 0
+    // Im Tunnel rollt das Feld um den Fluchtpunkt — zusätzlich zum Helm.
+    const rollStep = (slipOn ? helmOut!.rollRate * delta : 0) + hop.out.roll * delta
     const respawnAngle = (): number =>
       slipOn && Math.random() < HELM_RESPAWN_BIAS
         ? upstreamAngle(slipVx, slipVy, Math.random)
@@ -1342,6 +1358,35 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       ctx.beginPath()
       ctx.arc(cx, cy, R * FIRMAMENT_PORTAL_PHOTON_R, 0, Math.PI * 2)
       ctx.stroke()
+      ctx.globalAlpha = 1
+    }
+
+    // ── Der Ringtunnel — der Durchflug ─────────────────────────────────────
+    // Echo-Ringe des Tors laufen von innen nach aussen an der Kamera vorbei,
+    // exponentiell (konstantes Tempo in Perspektive), zyklisch gestaffelt.
+    // Zwölf Bögen je Frame, sonst nichts.
+    if (ctx && hop.out.tunnelT > 0 && hopTint) {
+      const ho = hop.out
+      const far = Math.hypot(w / 2, h / 2) + Math.hypot(ho.focusX, ho.focusY)
+      const rMin = UNIVERSE_HOP_TUNNEL_R_MIN_FRAC * far
+      const rMax = UNIVERSE_HOP_TUNNEL_R_MAX_K * far
+      const ratio = rMax / rMin
+      ctx.strokeStyle = hopTint
+      for (let i = 0; i < UNIVERSE_HOP_TUNNEL_RINGS; i++) {
+        const u = (ho.tunnelT * UNIVERSE_HOP_TUNNEL_CYCLES + i / UNIVERSE_HOP_TUNNEL_RINGS) % 1
+        const r = rMin * Math.pow(ratio, u)
+        const a = persistentDrawAlpha(UNIVERSE_HOP_TUNNEL_ALPHA * (1 - u), ho.trailFade)
+        ctx.globalAlpha = a
+        ctx.lineWidth = Math.max(1.5, r * 0.035)
+        ctx.beginPath()
+        ctx.arc(cx, cy, r, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.globalAlpha = a * 0.5
+        ctx.lineWidth = Math.max(0.8, r * 0.01)
+        ctx.beginPath()
+        ctx.arc(cx, cy, r * FIRMAMENT_PORTAL_PHOTON_R, 0, Math.PI * 2)
+        ctx.stroke()
+      }
       ctx.globalAlpha = 1
     }
 
@@ -1465,8 +1510,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const norm = star.dist / maxDist
       const speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX * speedMultiplier
       star.dist += speed * delta
+      if (rollStep !== 0) star.angle += rollStep
       if (slipOn) {
-        star.angle += rollStep
         const wgt = norm * norm
         slipPolar(star, slipX * wgt, slipY * wgt, Math.cos(star.angle), Math.sin(star.angle))
       }

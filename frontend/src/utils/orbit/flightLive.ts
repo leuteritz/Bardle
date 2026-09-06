@@ -32,7 +32,7 @@ export const flightLive = {
 
 /* ── Treffer-Ruck ───────────────────────────────────────────────────────────── */
 
-export type JoltKind = 'strike' | 'nova' | 'void' | 'volley'
+export type JoltKind = 'strike' | 'nova' | 'void' | 'volley' | 'hop'
 
 const jolt = createJoltState()
 /** Zählt je wirksamem Treffer hoch — der Blitz am Körper hängt daran (selten, daher reaktiv). */

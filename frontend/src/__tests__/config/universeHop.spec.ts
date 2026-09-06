@@ -7,9 +7,11 @@ import {
   UNIVERSE_HOP_HUD_IN_DELAY_MS,
   UNIVERSE_HOP_HUD_IN_MS,
   UNIVERSE_HOP_HUD_STAGGER_MS,
-  UNIVERSE_HOP_THRESHOLD_MS,
+  UNIVERSE_HOP_PASSAGE_MS,
+  UNIVERSE_HOP_TUNNEL_TRAIL_FADE,
   UNIVERSE_HOP_WASH_MS,
   UNIVERSE_HOP_WASH_PEAK,
+  WARP_TRAIL_FADE,
 } from '@/config/constants'
 import { UNIVERSE_HOP_COMMIT_AT_MS, UNIVERSE_HOP_TOTAL_MS } from '@/utils/orbit/universeHop'
 
@@ -41,7 +43,9 @@ function code(rel: string): string {
 
 describe('Universumssprung — die Zeremonie', () => {
   it('legt Wash, HUD-Rueckkehr und Herold in ihre Phasen', () => {
-    expect(UNIVERSE_HOP_WASH_MS).toBeGreaterThanOrEqual(UNIVERSE_HOP_THRESHOLD_MS)
+    // Der Wash liegt ganz im Durchflug (Peak am Ausgang), die Schweife im Tunnel sind länger als im Warp.
+    expect(UNIVERSE_HOP_WASH_MS * UNIVERSE_HOP_WASH_PEAK).toBeLessThan(UNIVERSE_HOP_PASSAGE_MS)
+    expect(UNIVERSE_HOP_TUNNEL_TRAIL_FADE).toBeLessThan(WARP_TRAIL_FADE)
     expect(UNIVERSE_HOP_WASH_PEAK).toBeGreaterThan(0)
     expect(UNIVERSE_HOP_WASH_PEAK).toBeLessThan(1)
     expect(UNIVERSE_HOP_HUD_IN_DELAY_MS).toBeLessThan(UNIVERSE_HOP_EMERGE_MS)

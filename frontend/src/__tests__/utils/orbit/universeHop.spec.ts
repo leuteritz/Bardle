@@ -4,9 +4,13 @@ import {
   UNIVERSE_HOP_DEPART_MS,
   UNIVERSE_HOP_PORTAL_PASS_K,
   UNIVERSE_HOP_SPEED_PEAK,
-  UNIVERSE_HOP_THRESHOLD_MS,
+  UNIVERSE_HOP_PASSAGE_MS,
   UNIVERSE_HOP_HUD_IN_DELAY_MS,
   UNIVERSE_HOP_EMERGE_MS,
+  UNIVERSE_HOP_PORTAL_R0_FRAC,
+  UNIVERSE_HOP_TUNNEL_ROLL_RAD_S,
+  UNIVERSE_HOP_WASH_MS,
+  UNIVERSE_HOP_WASH_PEAK,
 } from '@/config/constants'
 import {
   createUniverseHop,
@@ -24,7 +28,7 @@ const MIN_EDGE = 900
 const FAR = 1100
 const DEPART_END = UNIVERSE_HOP_DEPART_MS
 const APPROACH_END = DEPART_END + UNIVERSE_HOP_APPROACH_MS
-const THRESHOLD_END = APPROACH_END + UNIVERSE_HOP_THRESHOLD_MS
+const PASSAGE_END = APPROACH_END + UNIVERSE_HOP_PASSAGE_MS
 
 function seeded(seed: number): () => number {
   let s = seed >>> 0
@@ -39,14 +43,14 @@ function run(dtMs: number, untilMs: number, rand = seeded(7)) {
   const state = createUniverseHop()
   startUniverseHop(state, rand)
   const phases: UniverseHopPhase[] = ['depart']
-  const edges = { wash: 0, commit: 0, hudIn: 0, done: 0 }
-  const at = { wash: -1, commit: -1, hudIn: -1, done: -1 }
+  const edges = { kick: 0, wash: 0, commit: 0, hudIn: 0, done: 0 }
+  const at = { kick: -1, wash: -1, commit: -1, hudIn: -1, done: -1 }
   let t = 0
   while (t < untilMs) {
     t += dtMs
     stepUniverseHop(state, dtMs, MIN_EDGE, FAR)
     const o = state.out
-    for (const k of ['wash', 'commit', 'hudIn', 'done'] as const) {
+    for (const k of ['kick', 'wash', 'commit', 'hudIn', 'done'] as const) {
       if (o[k]) {
         edges[k]++
         at[k] = t
@@ -58,23 +62,26 @@ function run(dtMs: number, untilMs: number, rand = seeded(7)) {
 }
 
 describe('universeHop — Phasen und Flanken', () => {
-  it('durchläuft depart → approach → threshold → emerge → idle', () => {
+  it('durchläuft depart → approach → passage → emerge → idle', () => {
     const r = run(16.7, UNIVERSE_HOP_TOTAL_MS + 200)
-    expect(r.phases).toEqual(['depart', 'approach', 'threshold', 'emerge', 'idle'])
+    expect(r.phases).toEqual(['depart', 'approach', 'passage', 'emerge', 'idle'])
   })
 
-  it('leitet die Flankenzeiten aus den Phasen ab', () => {
-    expect(UNIVERSE_HOP_WASH_AT_MS).toBe(APPROACH_END)
-    expect(UNIVERSE_HOP_COMMIT_AT_MS).toBeGreaterThan(APPROACH_END)
-    expect(UNIVERSE_HOP_COMMIT_AT_MS).toBeLessThan(THRESHOLD_END)
-    expect(UNIVERSE_HOP_HUD_IN_AT_MS).toBe(THRESHOLD_END + UNIVERSE_HOP_HUD_IN_DELAY_MS)
+  it('leitet die Flankenzeiten aus den Phasen ab — der Wash-Peak liegt am Tunnelausgang', () => {
+    expect(UNIVERSE_HOP_COMMIT_AT_MS).toBe(PASSAGE_END)
+    expect(UNIVERSE_HOP_WASH_AT_MS).toBe(
+      PASSAGE_END - Math.round(UNIVERSE_HOP_WASH_PEAK * UNIVERSE_HOP_WASH_MS),
+    )
+    expect(UNIVERSE_HOP_WASH_AT_MS).toBeGreaterThan(APPROACH_END)
+    expect(UNIVERSE_HOP_HUD_IN_AT_MS).toBe(PASSAGE_END + UNIVERSE_HOP_HUD_IN_DELAY_MS)
     expect(UNIVERSE_HOP_HUD_IN_DELAY_MS).toBeLessThan(UNIVERSE_HOP_EMERGE_MS)
-    expect(UNIVERSE_HOP_TOTAL_MS).toBe(THRESHOLD_END + UNIVERSE_HOP_EMERGE_MS)
+    expect(UNIVERSE_HOP_TOTAL_MS).toBe(PASSAGE_END + UNIVERSE_HOP_EMERGE_MS)
   })
 
   it.each([16.7, 100])('feuert jede Flanke genau einmal (dt %s ms)', (dt) => {
     const r = run(dt, UNIVERSE_HOP_TOTAL_MS + 500)
-    expect(r.edges).toEqual({ wash: 1, commit: 1, hudIn: 1, done: 1 })
+    expect(r.edges).toEqual({ kick: 1, wash: 1, commit: 1, hudIn: 1, done: 1 })
+    expect(r.at.kick).toBeLessThan(dt + 0.01)
     const expected = {
       wash: UNIVERSE_HOP_WASH_AT_MS,
       commit: UNIVERSE_HOP_COMMIT_AT_MS,
@@ -91,12 +98,14 @@ describe('universeHop — Phasen und Flanken', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(3))
     stepUniverseHop(state, UNIVERSE_HOP_TOTAL_MS + 1, MIN_EDGE, FAR)
+    expect(state.out.kick).toBe(true)
     expect(state.out.wash).toBe(true)
     expect(state.out.commit).toBe(true)
     expect(state.out.hudIn).toBe(true)
     expect(state.out.done).toBe(true)
     expect(state.out.phase).toBe('idle')
     stepUniverseHop(state, 16, MIN_EDGE, FAR)
+    expect(state.out.kick).toBe(false)
     expect(state.out.wash).toBe(false)
     expect(state.out.commit).toBe(false)
     expect(state.out.hudIn).toBe(false)
@@ -134,9 +143,9 @@ describe('universeHop — Kurven', () => {
   it('rollt monoton aus und steht am Ende exakt auf 1', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(5))
-    stepUniverseHop(state, THRESHOLD_END, MIN_EDGE, FAR)
+    stepUniverseHop(state, PASSAGE_END, MIN_EDGE, FAR)
     let last = state.out.speed
-    let t = THRESHOLD_END
+    let t = PASSAGE_END
     while (t < UNIVERSE_HOP_TOTAL_MS) {
       t += 16.7
       stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
@@ -147,29 +156,65 @@ describe('universeHop — Kurven', () => {
     expect(state.out.trailFade).toBe(1)
   })
 
-  it('lässt das Tor nur im Anflug wachsen und über die Kamera hinaus', () => {
+  it('lässt das Tor nur im Anflug wachsen — sichtbar von Anfang an, über die Kamera hinaus', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(9))
     stepUniverseHop(state, DEPART_END - 1, MIN_EDGE, FAR)
     expect(state.out.portalR).toBe(0)
     expect(state.out.mawAlpha).toBe(0)
     let last = 0
+    let lastField = 0
+    let lastMaw = 0
     let t = DEPART_END - 1
+    const r0 = UNIVERSE_HOP_PORTAL_R0_FRAC * MIN_EDGE
     while (t < APPROACH_END) {
       t += 16.7
       stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
       if (state.out.phase !== 'approach') break
       expect(state.out.portalR).toBeGreaterThan(last)
+      expect(state.out.portalR).toBeGreaterThanOrEqual(r0)
       last = state.out.portalR
+      lastField = state.out.fieldAlpha
+      lastMaw = state.out.mawAlpha
+      // Zur Halbzeit deutlich mehr als der Startring — keine Hyperbel, die ihn 80 % der Zeit winzig hält.
+      if (t >= DEPART_END + UNIVERSE_HOP_APPROACH_MS / 2 && t < DEPART_END + UNIVERSE_HOP_APPROACH_MS / 2 + 17)
+        expect(state.out.portalR).toBeGreaterThan(r0 * 3)
     }
     expect(state.out.portalR).toBeGreaterThanOrEqual(UNIVERSE_HOP_PORTAL_PASS_K * FAR * 0.999)
     expect(state.out.portalSpin).toBeGreaterThan(0)
-    expect(state.out.fieldAlpha).toBeLessThan(state.out.mawAlpha)
-    expect(state.out.fieldAlpha).toBeGreaterThan(0)
-    stepUniverseHop(state, UNIVERSE_HOP_THRESHOLD_MS + 1, MIN_EDGE, FAR)
+    expect(lastField).toBeLessThan(lastMaw)
+    expect(lastField).toBeGreaterThan(0)
+    stepUniverseHop(state, UNIVERSE_HOP_PASSAGE_MS + 1, MIN_EDGE, FAR)
     expect(state.out.phase).toBe('emerge')
     expect(state.out.portalR).toBe(0)
     expect(state.out.portalAlpha).toBe(0)
+    expect(state.out.flightSec).toBe(0)
+  })
+
+  it('rollt nur im Tunnel, weich an und ab, und der Tunnel läuft 0 → 1', () => {
+    const state = createUniverseHop()
+    startUniverseHop(state, seeded(13))
+    stepUniverseHop(state, APPROACH_END - 1, MIN_EDGE, FAR)
+    expect(state.out.roll).toBe(0)
+    expect(state.out.tunnelT).toBe(0)
+    let maxRoll = 0
+    let lastT = 0
+    let t = APPROACH_END - 1
+    while (t < PASSAGE_END - 1) {
+      t += 16.7
+      stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
+      if (state.out.phase !== 'passage') break
+      expect(state.out.tunnelT).toBeGreaterThanOrEqual(lastT)
+      lastT = state.out.tunnelT
+      maxRoll = Math.max(maxRoll, state.out.roll)
+      expect(state.out.fieldAlpha).toBe(0)
+    }
+    expect(maxRoll).toBeCloseTo(UNIVERSE_HOP_TUNNEL_ROLL_RAD_S, 3)
+    expect(state.out.roll).toBeLessThan(UNIVERSE_HOP_TUNNEL_ROLL_RAD_S * 0.2)
+    stepUniverseHop(state, 40, MIN_EDGE, FAR)
+    expect(state.out.phase).toBe('emerge')
+    expect(state.out.roll).toBe(0)
+    expect(state.out.tunnelT).toBe(0)
   })
 
   it('fährt den Fluchtpunkt zum Kurs und exakt zurück', () => {

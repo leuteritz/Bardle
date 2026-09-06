@@ -280,11 +280,13 @@ export const JOLT_TREMOR_HZ_RATIO = 1.31
 export const JOLT_TREMOR_DECAY_SEC = 0.2
 export const JOLT_REST_EPS = 1e-3
 export const JOLT_PROFILES: Readonly<
-  Record<'strike' | 'nova' | 'volley', { strength: number; tremor: number }>
+  Record<'strike' | 'nova' | 'volley' | 'hop', { strength: number; tremor: number }>
 > = {
   strike: { strength: 1, tremor: 0.6 },
   nova: { strength: 0.6, tremor: 1 },
   volley: { strength: 0, tremor: 0 },
+  // Schubbeginn und Tunnelausgang des Universumssprungs: spürbar, kein Treffer.
+  hop: { strength: 0.45, tremor: 0.35 },
 }
 export const JOLT_VOID_PROFILES: Readonly<
   Record<'lesser' | 'greater' | 'abyssal', { strength: number; tremor: number }>
