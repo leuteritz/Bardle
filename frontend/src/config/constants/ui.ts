@@ -371,6 +371,10 @@ export const MINIMAP_ZOOM_MAX = 5.4 // camera zoom at arrival (target star grows
 export const MINIMAP_ZOOM_LERP = 0.06 // per-frame camera smoothing (zoom-in)
 export const MINIMAP_ZOOM_OUT_LERP = 0.03 // slower zoom-out so the near field stays visible a while
 export const MINIMAP_DEPARTURE_TRANSITION_MS = 900 // crossfade arrival view → galaxy map
+export const MINIMAP_WARP_ACCEL_MS = 1_600
+export const MINIMAP_WARP_ACCEL_GAIN = 24
+export const MINIMAP_WARP_TAIL_BASE_PX = 5
+export const MINIMAP_WARP_TAIL_SPEED_FACTOR = 0.11
 // Zoom acts: galaxy overview → fly-through (arms spread, near field fades in) → arrival view
 export const MINIMAP_GALAXY_FADE: readonly [number, number] = [3.4, 5.2] // zoom range: galaxy body fades out
 export const MINIMAP_NEARFIELD_FADE: readonly [number, number] = [2.4, 4.2] // zoom range: local star field fades in

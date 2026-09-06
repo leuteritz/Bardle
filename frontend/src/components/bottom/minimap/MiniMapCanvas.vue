@@ -105,6 +105,7 @@ import {
   type HyperspacePhase,
 } from './minimapDraw'
 import { gameNow } from '@/utils/game/gameClock'
+import { randomGalaxyWarpCourse } from '@/utils/orbit/galaxyWarp'
 
 export default defineComponent({
   name: 'MiniMapCanvas',
@@ -267,11 +268,7 @@ export default defineComponent({
       // Final leg: after the last champion star the destination is the fixed
       // boss star at the galaxy core.
       const bossTravel = galaxyStore.travelingToGalaxyBoss
-      const travelDest = bossTravel
-        ? { x: 0.5, y: 0.5 }
-        : targetIdx >= 0
-          ? dots[targetIdx]
-          : null
+      const travelDest = bossTravel ? { x: 0.5, y: 0.5 } : targetIdx >= 0 ? dots[targetIdx] : null
 
       // Static map with a soft camera: world coords (0..1) map onto the
       // canvas relative to the camera center + zoom (no rotation). At
@@ -408,11 +405,7 @@ export default defineComponent({
       // ── Near-field star field around the destination: fades in while the
       // galaxy body thins out → depth during the fly-through, replaces the
       // old galaxy-near sprite. Expands naturally with the camera zoom.
-      const nearAlpha = smoothstep(
-        cam.zoom,
-        MINIMAP_NEARFIELD_FADE[0],
-        MINIMAP_NEARFIELD_FADE[1],
-      )
+      const nearAlpha = smoothstep(cam.zoom, MINIMAP_NEARFIELD_FADE[0], MINIMAP_NEARFIELD_FADE[1])
       if (nearAlpha > 0.01 && travelDest) {
         const anchor = travelDest
         const nfRng = seededRng(
@@ -485,8 +478,7 @@ export default defineComponent({
       // demselben Grund läuft der Helligkeitsverlauf der Route hier in
       // ROUTE_TRAIL_BANDS_LIVE Bändern statt Etappe für Etappe.
       /** Randzone = weitester Landmarken-Zierrat plus shadowBlur (landmarkPad(11) = 39). */
-      const inView = (sx: number, sy: number) =>
-        sx > -40 && sx < w + 40 && sy > -40 && sy < h + 40
+      const inView = (sx: number, sy: number) => sx > -40 && sx < w + 40 && sy > -40 && sy < h + 40
 
       function drawRouteAndMarkers(c: CanvasRenderingContext2D) {
         const [spx, spy] = wToC(spawnPos.value.x, spawnPos.value.y)
@@ -713,8 +705,7 @@ export default defineComponent({
         // glowing white-gold head + tapering tail along the flown route
         const startTime = galaxyStore.championTravelStartTime
         const duration = galaxyStore.championTravelDurationMs
-        const t =
-          startTime > 0 && duration > 0 ? Math.min((nowMs - startTime) / duration, 1) : 0
+        const t = startTime > 0 && duration > 0 ? Math.min((nowMs - startTime) / duration, 1) : 0
         const qx = (tt: number) => {
           const m = 1 - tt
           return m * m * flight.x0 + 2 * m * tt * flight.cx + tt * tt * flight.x2
@@ -727,9 +718,7 @@ export default defineComponent({
         // Tail: sample the curve backwards from the current position
         const legLen = Math.hypot(flight.x2 - flight.x0, flight.y2 - flight.y0)
         const tailT =
-          legLen > 1
-            ? Math.min(t, (MINIMAP_COMET_TAIL_LEN * Math.sqrt(cam.zoom)) / legLen)
-            : 0
+          legLen > 1 ? Math.min(t, (MINIMAP_COMET_TAIL_LEN * Math.sqrt(cam.zoom)) / legLen) : 0
         if (tailT > 0.0001) {
           ctx.lineCap = 'round'
           for (let i = MINIMAP_COMET_TAIL_SEGMENTS; i >= 1; i--) {
@@ -772,7 +761,15 @@ export default defineComponent({
         // its own departure beacon at the flight origin instead)
         const player = getPlayerWorldPos(dots, attempts)
         const [px, py] = wToC(player.x, player.y)
-        drawMiniSun(ctx, px, py, MINIMAP_IDLE_SUN_R, playerBody(), nowMs, Math.min(window.devicePixelRatio || 1, 2))
+        drawMiniSun(
+          ctx,
+          px,
+          py,
+          MINIMAP_IDLE_SUN_R,
+          playerBody(),
+          nowMs,
+          Math.min(window.devicePixelRatio || 1, 2),
+        )
         drawPlayerRing(ctx, px, py, MINIMAP_IDLE_SUN_R * 1.5, nowMs)
       }
     }
@@ -882,7 +879,10 @@ export default defineComponent({
       const coroR = ARRIVAL_STAR_R * (3.6 + 0.4 * pulse) * hoverGlowMult
       const outerCorona = ctx.createRadialGradient(cx, cy, ARRIVAL_STAR_R * 0.85, cx, cy, coroR)
       outerCorona.addColorStop(0, `rgba(${sr}, ${sg}, ${sb}, ${0.28 + hoverAlphaBoost})`)
-      outerCorona.addColorStop(0.45, `rgba(${sr}, ${Math.max(0, sg - 40)}, 0, ${0.08 + hoverAlphaBoost * 0.5})`)
+      outerCorona.addColorStop(
+        0.45,
+        `rgba(${sr}, ${Math.max(0, sg - 40)}, 0, ${0.08 + hoverAlphaBoost * 0.5})`,
+      )
       outerCorona.addColorStop(1, 'rgba(0, 0, 0, 0)')
       ctx.beginPath()
       ctx.arc(cx, cy, coroR, 0, Math.PI * 2)
@@ -950,7 +950,8 @@ export default defineComponent({
           : MINIMAP_ARRIVAL_PLANET_R + idx * MINIMAP_ARRIVAL_PLANET_STEP
         const planetR = cleared ? fullR * MINIMAP_ARRIVAL_CLEARED_SCALE : fullR
 
-        const orbitRx = ARRIVAL_STAR_R + MINIMAP_ARRIVAL_ORBIT_GAP + idx * MINIMAP_ARRIVAL_ORBIT_STEP
+        const orbitRx =
+          ARRIVAL_STAR_R + MINIMAP_ARRIVAL_ORBIT_GAP + idx * MINIMAP_ARRIVAL_ORBIT_STEP
         const orbitRy = orbitRx * MINIMAP_ARRIVAL_ORBIT_SQUASH
 
         // Sync with main UI: read live angle from useStarSystem; fallback to time-based
@@ -1053,8 +1054,14 @@ export default defineComponent({
           cy,
           ARRIVAL_STAR_R * (2.6 + 0.5 * ragePulse),
         )
-        rageGlow.addColorStop(0, `rgba(${MINIMAP_ARRIVAL_RAGE_RGB}, ${(0.3 + 0.14 * ragePulse).toFixed(3)})`)
-        rageGlow.addColorStop(0.5, `rgba(${MINIMAP_ARRIVAL_RAGE_RGB}, ${(0.12 + 0.08 * ragePulse).toFixed(3)})`)
+        rageGlow.addColorStop(
+          0,
+          `rgba(${MINIMAP_ARRIVAL_RAGE_RGB}, ${(0.3 + 0.14 * ragePulse).toFixed(3)})`,
+        )
+        rageGlow.addColorStop(
+          0.5,
+          `rgba(${MINIMAP_ARRIVAL_RAGE_RGB}, ${(0.12 + 0.08 * ragePulse).toFixed(3)})`,
+        )
         rageGlow.addColorStop(1, `rgba(${MINIMAP_ARRIVAL_RAGE_RGB}, 0)`)
         ctx.beginPath()
         ctx.arc(cx, cy, ARRIVAL_STAR_R * (2.6 + 0.5 * ragePulse), 0, Math.PI * 2)
@@ -1063,7 +1070,7 @@ export default defineComponent({
 
         for (let ring = 0; ring < MINIMAP_ARRIVAL_RAGE_RINGS; ring++) {
           const ringT =
-            ((nowMs / MINIMAP_ARRIVAL_RAGE_RING_MS + ring / MINIMAP_ARRIVAL_RAGE_RINGS) % 1)
+            (nowMs / MINIMAP_ARRIVAL_RAGE_RING_MS + ring / MINIMAP_ARRIVAL_RAGE_RINGS) % 1
           ctx.beginPath()
           ctx.arc(cx, cy, ARRIVAL_STAR_R * (1.02 + ringT * 1.5), 0, Math.PI * 2)
           ctx.strokeStyle = `rgba(${MINIMAP_ARRIVAL_RAGE_RGB}, ${((1 - ringT) * 0.6).toFixed(3)})`
@@ -1094,7 +1101,8 @@ export default defineComponent({
       // auf dem Stern, nicht auf einem Planeten: er färbt den Raum, nicht ein
       // Objekt.
       if (cursed) {
-        const cursePulse = 0.5 + 0.5 * Math.sin((nowMs / MINIMAP_ARRIVAL_CURSE_PULSE_MS) * Math.PI * 2)
+        const cursePulse =
+          0.5 + 0.5 * Math.sin((nowMs / MINIMAP_ARRIVAL_CURSE_PULSE_MS) * Math.PI * 2)
         const outerR = Math.max(w, h) * 0.62
         const vignette = ctx.createRadialGradient(cx, cy, outerR * 0.34, cx, cy, outerR)
         vignette.addColorStop(0, `rgba(${MINIMAP_ARRIVAL_CURSE_RGB}, 0)`)
@@ -1136,7 +1144,15 @@ export default defineComponent({
         // Contrast scrim fades out as the sun docks at its departure point
         drawSunScrim(ctx, bx, by, sunR, fade)
 
-        drawPhaseSun(ctx, bx, by, sunR, playerBody(), nowMs, Math.min(window.devicePixelRatio || 1, 2))
+        drawPhaseSun(
+          ctx,
+          bx,
+          by,
+          sunR,
+          playerBody(),
+          nowMs,
+          Math.min(window.devicePixelRatio || 1, 2),
+        )
 
         // Radial launch streaks (grow longer as t increases, then fade out)
         const numStreaks = 8
@@ -1236,9 +1252,7 @@ export default defineComponent({
         galaxyStore.championTravelState === 'champion_spawned'
       if (isArrived) {
         const elapsed =
-          arrivalTransitionStart >= 0
-            ? Date.now() - arrivalTransitionStart
-            : ARRIVAL_TRANSITION_MS
+          arrivalTransitionStart >= 0 ? Date.now() - arrivalTransitionStart : ARRIVAL_TRANSITION_MS
         const t = easeInOut(Math.min(1, elapsed / ARRIVAL_TRANSITION_MS))
         if (t < 1) {
           drawNormalMap(ctx, w, h)
@@ -1305,9 +1319,7 @@ export default defineComponent({
       } else if (galaxyStore.championTravelState === 'traveling' && target) {
         const remaining = galaxyStore.travelRemainingMs
         if (remaining <= MINIMAP_ZOOM_TRIGGER_MS) {
-          const tz = easeInOut(
-            Math.max(0, Math.min(1, 1 - remaining / MINIMAP_ZOOM_TRIGGER_MS)),
-          )
+          const tz = easeInOut(Math.max(0, Math.min(1, 1 - remaining / MINIMAP_ZOOM_TRIGGER_MS)))
           dz = 1 + (MINIMAP_ZOOM_MAX - 1) * tz
           dx = 0.5 + (target.x - 0.5) * tz
           dy = 0.5 + (target.y - 0.5) * tz
@@ -1333,11 +1345,7 @@ export default defineComponent({
     }
 
     watch(
-      () => [
-        galaxyStore.currentGalaxy,
-        galaxyStore.mapSeed,
-        galaxyStore.attemptResults.length,
-      ],
+      () => [galaxyStore.currentGalaxy, galaxyStore.mapSeed, galaxyStore.attemptResults.length],
       () => generateDots(),
       { immediate: true },
     )
@@ -1384,7 +1392,8 @@ export default defineComponent({
         const { w, h } = canvas ? ensureCanvasSize(canvas) : { w: 440, h: 440 }
         for (const id of hyperspaceTimeouts) window.clearTimeout(id)
         hyperspaceTimeouts = []
-        warp.init(w, h)
+        const course = randomGalaxyWarpCourse(Math.random)
+        warp.init(w, h, course.courseFx, course.courseFy)
         hyperspacePhase = 'streaks'
         hyperspacePhaseStart = Date.now()
         hyperspaceTimeouts.push(
@@ -1425,8 +1434,7 @@ export default defineComponent({
       () => galaxyStore.championTravelState,
       (state, prevState) => {
         const arrived = state === 'champion_available' || state === 'champion_spawned'
-        const wasArrived =
-          prevState === 'champion_available' || prevState === 'champion_spawned'
+        const wasArrived = prevState === 'champion_available' || prevState === 'champion_spawned'
         if (arrived && arrivalTransitionStart === -1) {
           arrivalTransitionStart = Date.now()
           departureTransitionStart = -1
