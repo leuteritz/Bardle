@@ -710,8 +710,8 @@ const configTarget = computed(() => {
 /* The comet is far smaller than a sun — tighten the orbit and shrink the
    planet so the path visually belongs to the rock it circles. */
 .ps-system--comet .ps-planet-preview-wrap {
-  --orb-x: min(122px, 40cqmin);
-  --orb-y: min(34px, 11cqmin);
+  --orb-x: min(190px, 48cqmin);
+  --orb-y: min(52px, 14cqmin);
 }
 
 .ps-system--comet .ps-planet-preview-img {
@@ -726,10 +726,9 @@ const configTarget = computed(() => {
   top: 50%;
   left: 50%;
   z-index: 3;
-  /* Orbit radii shrink with the container (like the sun) so the far-arc z-swap
-     always happens at the sun's rim, never outside it. */
-  --orb-x: min(150px, 46cqmin);
-  --orb-y: min(40px, 12.5cqmin);
+  /* Keep the orbit visibly clear of the sun while retaining its responsive cap. */
+  --orb-x: min(280px, 62cqmin);
+  --orb-y: min(74px, 18cqmin);
   transform: translate(-50%, -50%);
   /* The keyframe is never played — it is scrubbed. tickOrbit writes the negative
      --orbit-delay that corresponds to the planet's real orbit angle, so the
