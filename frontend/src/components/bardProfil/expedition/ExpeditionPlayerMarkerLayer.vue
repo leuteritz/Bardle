@@ -22,6 +22,7 @@ import { playerLeg, playerTravelProgress } from '@/utils/game/playerGalaxyPos'
 import SunOrb from '@/components/ui/SunOrb.vue'
 import { sunBodyFor } from '@/utils/fx/sunBodySprite'
 import {
+  COMET_PHASE_DATA,
   LANDMARK_ROLE_CORE,
   LANDMARK_FREED_CORE,
   MINIMAP_FLIGHTPATH_BEND,
@@ -29,6 +30,9 @@ import {
   PLAYER_MARKER_HALO_FILL_ALPHA,
   PLAYER_MARKER_HALO_PERIOD_MS,
   PLAYER_MARKER_HALO_SCALE,
+  PLAYER_MARKER_COMET_FRAME_CORNER_PX,
+  PLAYER_MARKER_COMET_FRAME_SCALE,
+  PLAYER_MARKER_COMET_FRAME_STROKE_PX,
   VOYAGE_LIVE_PLAYER_BOX_PX,
   VOYAGE_LIVE_PLAYER_TAIL_PX,
   VOYAGE_LIVE_PLAYER_TAIL_H_PX,
@@ -251,13 +255,16 @@ const haloPx = `${VOYAGE_LIVE_PLAYER_BOX_PX * PLAYER_MARKER_HALO_SCALE}px`
 const haloPulseMs = `${PLAYER_MARKER_HALO_PERIOD_MS}ms`
 const haloFillAlpha = String(PLAYER_MARKER_HALO_FILL_ALPHA)
 const haloEdge = `${PLAYER_MARKER_HALO_EDGE * 100}%`
+const framePx = `${VOYAGE_LIVE_PLAYER_BOX_PX * PLAYER_MARKER_COMET_FRAME_SCALE}px`
+const frameCornerPx = `${PLAYER_MARKER_COMET_FRAME_CORNER_PX}px`
+const frameStrokePx = `${PLAYER_MARKER_COMET_FRAME_STROKE_PX}px`
 const tailPx = `${VOYAGE_LIVE_PLAYER_TAIL_PX}px`
 const tailHPx = `${VOYAGE_LIVE_PLAYER_TAIL_H_PX}px`
 const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
 </script>
 
 <template>
-  <div class="epml" aria-hidden="true">
+  <div class="epml" :style="{ '--epml-frame-color': COMET_PHASE_DATA.accent }" aria-hidden="true">
     <svg
       v-if="routeD"
       class="epml-routes"
@@ -282,6 +289,12 @@ const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
       <span class="epml-halo" />
       <span class="epml-sun">
         <SunOrb :body="playerBody" :px="VOYAGE_LIVE_PLAYER_BOX_PX" />
+      </span>
+      <span v-if="playerBody.kind === 'comet'" class="epml-comet-frame">
+        <span class="epml-comet-corner epml-comet-corner--tl" />
+        <span class="epml-comet-corner epml-comet-corner--tr" />
+        <span class="epml-comet-corner epml-comet-corner--br" />
+        <span class="epml-comet-corner epml-comet-corner--bl" />
       </span>
     </div>
   </div>
@@ -335,6 +348,49 @@ const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
   width: v-bind(playerBoxPx);
   height: v-bind(playerBoxPx);
   transform: translate(-50%, -50%);
+}
+
+.epml-comet-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: v-bind(framePx);
+  height: v-bind(framePx);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.epml-comet-corner {
+  position: absolute;
+  width: v-bind(frameCornerPx);
+  height: v-bind(frameCornerPx);
+  border-style: solid;
+  border-color: var(--epml-frame-color, #f0d878);
+  border-width: v-bind(frameStrokePx) 0 0 v-bind(frameStrokePx);
+}
+
+.epml-comet-corner--tl {
+  top: 0;
+  left: 0;
+}
+
+.epml-comet-corner--tr {
+  top: 0;
+  right: 0;
+  transform: rotate(90deg);
+}
+
+.epml-comet-corner--br {
+  right: 0;
+  bottom: 0;
+  transform: rotate(180deg);
+}
+
+.epml-comet-corner--bl {
+  bottom: 0;
+  left: 0;
+  transform: rotate(270deg);
 }
 
 /* Der Schweif liegt HINTER dem Kopf und dreht mit dem Rumpf — ein statischer

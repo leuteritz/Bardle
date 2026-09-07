@@ -5,6 +5,7 @@
 import type { PlanetType, SunBody } from '@/types'
 import {
   BLACK_HOLE_DISC_TILT,
+  COMET_PHASE_DATA,
   COMET_DISC_FILL,
   MINIMAP_WARP_ACCEL_GAIN,
   MINIMAP_WARP_ACCEL_MS,
@@ -16,6 +17,9 @@ import {
   PLAYER_MARKER_HALO_MIN_ALPHA,
   PLAYER_MARKER_HALO_PERIOD_MS,
   PLAYER_MARKER_HALO_SCALE,
+  PLAYER_MARKER_COMET_FRAME_CORNER_PX,
+  PLAYER_MARKER_COMET_FRAME_SCALE,
+  PLAYER_MARKER_COMET_FRAME_STROKE_PX,
   SUN_SPRITE_BODY_FRACTION,
 } from '@/config/constants'
 import { STAR_PALETTE } from './minimapGalaxyGeometry'
@@ -248,6 +252,40 @@ export function drawPlayerSunMarker(
     return
   }
   drawSunLayer(ctx, 'core', body, px, dpr, x, y)
+  if (body.kind === 'comet') drawCometFrame(ctx, x, y, r)
+}
+
+function drawCometFrame(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
+  const half = r * PLAYER_MARKER_COMET_FRAME_SCALE
+  const corner = Math.min(PLAYER_MARKER_COMET_FRAME_CORNER_PX, half * 0.5)
+  const left = x - half
+  const right = x + half
+  const top = y - half
+  const bottom = y + half
+
+  ctx.save()
+  ctx.strokeStyle = COMET_PHASE_DATA.accent
+  ctx.lineWidth = PLAYER_MARKER_COMET_FRAME_STROKE_PX
+  ctx.lineCap = 'round'
+  const drawCorner = (
+    startX: number,
+    startY: number,
+    midX: number,
+    midY: number,
+    endX: number,
+    endY: number,
+  ) => {
+    ctx.beginPath()
+    ctx.moveTo(startX, startY)
+    ctx.lineTo(midX, midY)
+    ctx.lineTo(endX, endY)
+    ctx.stroke()
+  }
+  drawCorner(left + corner, top, left, top, left, top + corner)
+  drawCorner(right - corner, top, right, top, right, top + corner)
+  drawCorner(right, bottom - corner, right, bottom, right - corner, bottom)
+  drawCorner(left + corner, bottom, left, bottom, left, bottom - corner)
+  ctx.restore()
 }
 
 /** Idle-Marker des Spielers — derselbe Körper, nur kleiner. */

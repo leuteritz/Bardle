@@ -350,6 +350,9 @@ export const PLAYER_MARKER_HALO_MIN_ALPHA = 0.35
 export const PLAYER_MARKER_HALO_MAX_ALPHA = 0.85
 export const PLAYER_MARKER_HALO_FILL_ALPHA = 0.5
 export const PLAYER_MARKER_HALO_EDGE = 0.7
+export const PLAYER_MARKER_COMET_FRAME_SCALE = 1.7
+export const PLAYER_MARKER_COMET_FRAME_CORNER_PX = 10
+export const PLAYER_MARKER_COMET_FRAME_STROKE_PX = 2
 export const MINIMAP_TWINKLE_COUNT = 30 // seeded twinkling background stars
 // Procedural spiral galaxy (canvas-drawn, replaces the old galaxy-far sprite)
 export const MINIMAP_GALAXY_ARMS_MIN = 2 // min seeded spiral arm count
