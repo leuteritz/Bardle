@@ -1253,9 +1253,9 @@ export const FORGE_CROWN_MAX_LEVEL = 1
  *      bindet, dass jeder dieser Böden bei Vollausbau GENAU erreicht wird — ein
  *      Glimmer darüber wäre eine tote Stufe, die aussieht wie eine lebendige.
  *
- * Und sie zählen nicht in `achievementStore.forgeLevels`: sechzig Knoten in der
- * Sunsmith-Summe machten jede Schwelle der Bahn trivial. Aus demselben Grund
- * liegen schon Boughs und Kronen in eigenen Beuteln.
+ * Und sie zählen nicht in die Metrik `forgeLevels`: sechzig Knoten in der
+ * Summe machten jede Wayfinder-Schwelle trivial. Aus demselben Grund liegen
+ * schon Boughs und Kronen in eigenen Beuteln.
  */
 /**
  * Höchststufe eines Glimmers — FEST, nicht nach Phase gestaffelt.
@@ -1610,7 +1610,7 @@ export const FORGE_CROWN_OVERFLOW_MATERIAL = 'stardust'
  *   • Er hat als einziger Platz: fünf von fünfzehn Speichen waren belegt. Die
  *     Ringe 2–5 stehen auf 15/15, und `forgeRingLadder.spec.ts` verbietet einen
  *     zweiten Knoten je Ring und Speiche.
- *   • Kronen zählen NICHT in die Codex-Bahn „Sunsmith" (`achievementStore`
+ *   • Kronen zählen NICHT in die Metrik `forgeLevels` (`progressMetrics`
  *     überspringt `crownLevels`). Neue Kronen verschieben deshalb weder das
  *     erreichbare Maximum noch die Endstufe — die Bahn bleibt unberührt. Ein
  *     neuer Zweig oder Ward hätte sie still verschenkt.
@@ -3194,14 +3194,6 @@ export const FORGE_YIELD_SOURCES: readonly ForgeYieldSourceDef[] = [
     color: '#40c8b0',
     nature: 'earned',
     hint: 'Spend meeps in the Skill tab. It survives prestige.',
-  },
-  {
-    id: 'codex',
-    label: 'Codex',
-    title: 'Astral Codex',
-    color: '#86d0ff',
-    nature: 'earned',
-    hint: 'Reach the Chime Keeper stages in the Stats tab.',
   },
   {
     id: 'items',

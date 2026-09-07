@@ -12,7 +12,6 @@ import {
   missionObjectiveLine,
 } from '@/config/progression/missions'
 import { OMENS } from '@/config/progression/omens'
-import { CHRONICLE_TRACKS, CHRONICLE_RANKS } from '@/config/progression/achievements'
 import { MATERIALS } from '@/config/economy/materials'
 import { CHAMPION_DATA } from '@/config/champions/championData'
 import {
@@ -240,14 +239,10 @@ describe('mission ladder — presentation', () => {
     }
   })
 
-  it('collides with no omen, track or rank name', () => {
-    const taken = new Set([
-      ...OMENS.map((o) => o.name),
-      ...CHRONICLE_TRACKS.map((t) => t.name),
-      ...CHRONICLE_RANKS.map((r) => r.title),
-    ])
+  it('collides with no omen name', () => {
+    const taken = new Set(OMENS.map((o) => o.name))
     for (const m of MISSIONS) {
-      expect(taken, `"${m.name}" is already an omen, track or rank`).not.toContain(m.name)
+      expect(taken, `"${m.name}" is already an omen`).not.toContain(m.name)
     }
   })
 

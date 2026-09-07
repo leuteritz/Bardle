@@ -2,16 +2,16 @@
 import JourneyHeaderBand from './JourneyHeaderBand.vue'
 import SunStage from './SunStage.vue'
 import WayfinderNowCard from './WayfinderNowCard.vue'
-import ActiveBuffsCard from './ActiveBuffsCard.vue'
-import KpiBand from './KpiBand.vue'
+import KpiCard from './KpiCard.vue'
+import BuffsFooter from './BuffsFooter.vue'
 import type { StatCategoryId, StatCategoryView } from '@/types'
 
 /**
  * Die Übersicht des Journey-Reiters: Kopfband, Sonne links, Wayfinder und
- * Buffs rechts, Kennzahlen unten. Scrollt nie — die Sonne nimmt den Rest.
+ * Kennzahlen rechts, Buffs unten. Scrollt nie — die Sonne nimmt den Rest.
  */
 defineProps<{ categories: StatCategoryView[] }>()
-const emit = defineEmits<{ 'open-records': [category: StatCategoryId] }>()
+const emit = defineEmits<{ 'open-records': [category: StatCategoryId | null] }>()
 </script>
 
 <template>
@@ -21,10 +21,10 @@ const emit = defineEmits<{ 'open-records': [category: StatCategoryId] }>()
       <SunStage />
       <aside class="jt-aside">
         <WayfinderNowCard />
-        <ActiveBuffsCard />
+        <KpiCard :categories="categories" @open="emit('open-records', $event)" />
       </aside>
     </div>
-    <KpiBand :categories="categories" @open="emit('open-records', $event)" />
+    <BuffsFooter />
   </div>
 </template>
 

@@ -128,7 +128,7 @@
           </template>
         </dl>
 
-        <!-- Fuß: beschriftete Ablesungen wie im Astral Codex. Der Status ist
+        <!-- Fuß: beschriftete Ablesungen. Der Status ist
              das einzige Feld, das sich WÄHREND des Hovers ändert — er wird
              deshalb vom Frame-Lauf beschrieben, nicht von Vue gerendert. -->
         <footer v-if="hovered.live || hovered.foot.length" class="ab-tip-foot">
@@ -1433,7 +1433,7 @@ onUnmounted(() => {
 }
 
 /* ── Fuß ──────────────────────────────────────────────────────────────────
-   Beschriftete Ablesungen wie im Astral Codex: Überschrift über dem Wert.
+   Beschriftete Ablesungen: Überschrift über dem Wert.
    „Ready" und „42s" allein sagten nicht, was sie zählen.
 
    Es stehen bis zu DREI Zellen nebeneinander (Status · Cooldown · Next rank) —

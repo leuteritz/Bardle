@@ -14,7 +14,6 @@ import { useVoidStore } from '@/stores/world/voidStore'
 import { useLandfallStore } from '@/stores/world/landfallStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 
 export const useShopStore = defineStore('shop', {
@@ -54,7 +53,6 @@ export const useShopStore = defineStore('shop', {
         { id: 'solar', factor: useSolarUpgradeStore().flightSpeedMultiplier },
         { id: 'forge', factor: useStarForgeStore().cpsMult },
         { id: 'meeps', factor: useMeepTreeStore().fx.cpsMult },
-        { id: 'codex', factor: useAchievementStore().cpsMult },
         { id: 'items', factor: useItemStore().totalCPSMultiplier },
         { id: 'traits', factor: useSynergyStore().cpsSynergyMultiplier },
         // ── `activeModifier.cpsMultiplier`, aufgetrennt in seine zwei Hälften ──
@@ -136,8 +134,6 @@ export const useShopStore = defineStore('shop', {
       const omenMul = useOmenStore().cpsMult
       // Caretaker's Shrine (bard W) — the afterglow of a cast shrine
       const bardMul = useBardAbilityStore().cpsMult
-      // Chime Keeper (chronicle) — permanent, earned by lifetime chimes
-      const chronicleMul = useAchievementStore().cpsMult
       // Sunless Breach (void tide) — the only factor here that pulls DOWNWARD,
       // and it grows the longer the rift is left standing
       const voidMul = useVoidStore().cpsMult
@@ -156,7 +152,6 @@ export const useShopStore = defineStore('shop', {
           drifterMul *
           omenMul *
           bardMul *
-          chronicleMul *
           voidMul *
           landfallMul,
       )

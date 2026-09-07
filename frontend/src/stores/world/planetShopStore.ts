@@ -35,7 +35,6 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useLandfallStore } from '@/stores/world/landfallStore'
@@ -187,7 +186,7 @@ function sumTurretBase(slots: PlanetSlot[], extraFilter?: (id: string) => boolea
 /** Was dauerhaft verdient wurde — steht in JEDER der drei Zahlen, auch in der
  *  rohen, weil es kein befristeter Buff ist. */
 function permanentVolleyMult(): number {
-  return useAchievementStore().turretDpsMult * useProvidenceStore().turretDpsMult
+  return useProvidenceStore().turretDpsMult
 }
 
 /** Was gerade läuft und wieder vergeht. Bewusst NICHT in `autoAttackDPS` —

@@ -19,7 +19,6 @@ import {
   expeditionsCategory,
   itemsCategory,
   prestigeCategory,
-  chronicleCategory,
 } from '@/config/encyclopedia/worldAndMeta'
 import type { EncyclopediaCategory } from '@/config/encyclopedia/types'
 
@@ -41,5 +40,4 @@ export const encyclopediaData: EncyclopediaCategory[] = [
   expeditionsCategory,
   itemsCategory,
   prestigeCategory,
-  chronicleCategory,
 ]

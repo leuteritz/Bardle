@@ -14,7 +14,6 @@ import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useMissionStore } from '@/stores/progression/missionStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
@@ -865,7 +864,7 @@ export const useGameStore = defineStore('game', {
       //
       // Die Logzeile dagegen geht SOFORT — sie ist die Aufzeichnung, nicht der
       // Blitz, und dasselbe Muster („erst loggen, dann ansagen") tragen
-      // missionStore, omenStore und achievementStore.
+      // missionStore und omenStore.
       const providence = useProvidenceStore().active
       logUniverseReached(universeLabel(nextUniverse), providence?.name ?? null)
       useUiStore().noteArrival(nextUniverse, owed)
@@ -1053,24 +1052,15 @@ export const useGameStore = defineStore('game', {
       // verliert seine Quittung und meldet sich als neu, sobald er erneut
       // bezahlbar wird.
       useStarForgeStore().syncShopAcknowledged()
-      // Omens directly before the chronicle, for the same reason and with the
-      // same requirement: the running omen measures a DIFFERENCE against the
-      // counters above, so it has to see them at their final value for this
-      // second. Its own payout is a timed buff, which the chronicle does not
-      // read — the order between these two is therefore free.
+      // Omens after every counter: the running omen measures a DIFFERENCE
+      // against the counters above, so it has to see them at their final
+      // value for this second.
       useOmenStore().tick()
       // Der Wayfinder daneben, aus demselben Grund: seine Leiter misst eine
-      // ABSOLUTE Zahl gegen dieselben Zähler und muss sie auf Endstand sehen.
-      // Er zahlt selbst aus, VOR dem Chronicle — dessen Zähler sehen die
-      // Gutschrift damit in derselben Sekunde. Die Reihenfolge zwischen Omen und
-      // Wayfinder ist frei.
+      // ABSOLUTE Zahl gegen dieselben Zähler. Die Reihenfolge zwischen Omen
+      // und Wayfinder ist frei.
       useMissionStore().tick()
-      // Chronicle last: every counter this second feeds it (chimes above,
-      // bosses, stars, drifters), so a milestone announced here is one that was
-      // just earned — not one from the previous tick.
-      useAchievementStore().tick()
-
-      // Ganz zuletzt, und aus demselben Grund wie der Chronicle: die Telemetrie
+      // Ganz zuletzt: die Telemetrie
       // soll den ENDSTAND dieser Sekunde festhalten. Ausgeschaltet kostet der
       // Aufruf einen Boolean-Vergleich.
       recordTelemetry()

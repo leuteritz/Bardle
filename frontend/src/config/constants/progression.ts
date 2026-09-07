@@ -528,26 +528,3 @@ export const MEEP_TOOLTIP_ICONS = {
   // tragen — der Spieler soll die Zeile ohne Umweg dem Void zuordnen.
   devoured: 'game-icons:vortex',
 } as const
-
-// ── Chronicle (Meilensteine) ───────────────────────────────────────────────
-/**
- * Stufen je Bahn. Die Zahl steht hier und nicht nur implizit in der Länge von
- * `stages`, weil zwei Stellen sie ohne die Definition brauchen: der Prüflauf
- * (Obergrenze der Schleife) und die Kopfzeile des Tabs (Gesamtzahl aus Bahnen
- * × Stufen). Eine Bahn mit abweichender Länge ist ein Fehler in der Config, den
- * der Spec zu `CHRONICLE_TRACKS` abfängt — zur Laufzeit prüft das niemand,
- * statische Daten brauchen keinen Wächter im Produktionsbuild.
- */
-export const CHRONICLE_STAGES_PER_TRACK = 5
-/**
- * Akzent des Herald-Banners beim Freischalten, als „r, g, b"-Tripel wie alle
- * Herald-Payloads. Gold statt der Bahnfarbe: das Banner meldet den Meilenstein
- * als solchen, die Bahnfarbe erzählt die Karte im Tab.
- */
-export const CHRONICLE_HERALD_ACCENT = '232, 192, 64'
-/**
- * Glyph des Rang-Banners. Die Stufen-Banner tragen das Zeichen ihrer Bahn — ein
- * Rang gehört keiner Bahn, sondern allen, und braucht deshalb ein eigenes. Der
- * Lorbeer ist die Auszeichnung selbst und steht ebenso am Lexikon-Eintrag.
- */
-export const CHRONICLE_RANK_ICON = 'game-icons:laurels'

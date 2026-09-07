@@ -8,7 +8,6 @@ import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import {
@@ -1941,15 +1940,12 @@ export const useBattleStore = defineStore('battle', {
       // Elder Dragon buff: flat bonus LP on a won battle
       const elderBonus = won && this.drakeBuffs.includes('elder') ? DRAKE_ELDER_LP_BONUS : 0
       let lp = Math.round(lpChange * mmrFactor) + elderBonus
-      // Rift Regular (chronicle): a share more per win. Only on the way up — a
-      // milestone earned by winning must never make a defeat cost more.
-      // Rift Ascendant / Quickened Path (providence) steht in derselben Klammer
-      // und aus demselben Grund: eine Vorsehung, die den Siegertrag SENKT, darf
-      // eine Niederlage nicht im Gegenzug verbilligen.
+      // Rift Ascendant / Quickened Path (providence): nur auf dem Weg nach oben —
+      // eine Vorsehung, die den Siegertrag SENKT, darf eine Niederlage nicht
+      // im Gegenzug verbilligen.
       if (won)
         lp = Math.round(
           lp *
-            useAchievementStore().lpGainMult *
             useProvidenceStore().lpGainMult *
             // Die Leiter wird nach oben hin zäher — steht in derselben Klammer
             // und aus demselben Grund wie die beiden Faktoren darüber: was den

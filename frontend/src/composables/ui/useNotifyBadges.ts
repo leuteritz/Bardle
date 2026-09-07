@@ -1,6 +1,5 @@
 import { computed, type ComputedRef } from 'vue'
 import { NOTIFY_BADGES, NOTIFY_BADGE_BY_KIND } from '@/config/ui/notifyBadges'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
@@ -23,7 +22,6 @@ export function notifyBadgeCounters(): Record<NotifyBadgeKind, () => number> {
   const planetShopStore = usePlanetShopStore()
   const expeditionStore = useExpeditionStore()
   const battleStore = useBattleStore()
-  const achievementStore = useAchievementStore()
 
   return {
     // `shopFreshTotal`, nicht `shopReadyTotal`: kaufbar ist ab dem mittleren
@@ -35,7 +33,6 @@ export function notifyBadgeCounters(): Record<NotifyBadgeKind, () => number> {
     planet: () => planetShopStore.affordableLevelCount,
     expedition: () => expeditionStore.readyExpeditionCount,
     champions: () => battleStore.newlyUnlockedChampions.length,
-    chronicle: () => achievementStore.unseen.length,
     // Dauer-Anzeige des Bard-Levels, keine Marke.
     level: () => 0,
   }

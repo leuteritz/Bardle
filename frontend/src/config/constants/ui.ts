@@ -1265,10 +1265,9 @@ export const BADGE_HERALD_ACCENT_SKILL = '236, 72, 153'
 export const BADGE_HERALD_ACCENT_PLANET = '52, 211, 153'
 export const BADGE_HERALD_ACCENT_SHOP = '96, 165, 250'
 
-/* Dasselbe für die drei Marken ohne Herold. Champions ist cyan statt des Golds
+/* Dasselbe für die zwei Marken ohne Herold. Champions ist cyan statt des Golds
    von HERALD_ACCENT_CHAMPION: gemeint ist `.header-notif-badge--champion`. */
 export const BADGE_ACCENT_CHAMPIONS = '6, 182, 212'
-export const BADGE_ACCENT_CHRONICLE = '249, 115, 22'
 export const BADGE_ACCENT_LEVEL = '232, 192, 64'
 
 /**
@@ -1279,7 +1278,7 @@ export const BADGE_ACCENT_LEVEL = '232, 192, 64'
  * (`composables/ui/useBadgeHeralds.ts`). Stünde er zweimal im Code, hieße
  * dieselbe Marke nach der nächsten Umbenennung an einer Stelle anders.
  *
- * `level`, `champions` und `chronicle` tragen keinen Herold — sie stehen hier trotzdem,
+ * `level` und `champions` tragen keinen Herold — sie stehen hier trotzdem,
  * weil eine halbe Tabelle schlechter ist als eine ganze: der Tooltip hat sie.
  */
 export const NOTIFY_BADGE_TITLE: Record<NotifyBadgeKind, string> = {
@@ -1290,7 +1289,6 @@ export const NOTIFY_BADGE_TITLE: Record<NotifyBadgeKind, string> = {
   skill: 'Skill Ready',
   planet: 'Orbit Upgrades',
   shop: 'Ready to Forge',
-  chronicle: 'Codex Stages',
 }
 
 /* Der Typ wohnt in `types/ui.ts`, sonst hängt die Registry an `config/constants`
@@ -1339,7 +1337,6 @@ export const JOURNEY_SUBPAGES: readonly { id: JourneySubpageId; label: string; i
   { id: 'records', label: 'Records', icon: 'lucide:list' },
   { id: 'wayfinder', label: 'Wayfinder', icon: 'lucide:signpost' },
   { id: 'augments', label: 'Augments', icon: 'lucide:gem' },
-  { id: 'codex', label: 'Codex', icon: 'lucide:book-open' },
 ]
 
 /** Die Kacheln des KPI-Bands auf der Übersicht — je ein (Kategorie, Schlüssel)-Paar

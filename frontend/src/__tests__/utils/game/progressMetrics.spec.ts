@@ -1,7 +1,6 @@
 import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { progressMetricValue } from '@/utils/game/progressMetrics'
-import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
 import { OMENS } from '@/config/progression/omens'
 import type { ProgressMetricId } from '@/types'
 
@@ -56,12 +55,6 @@ describe('progressMetricValue', () => {
     const value = progressMetricValue(metric)
     expect(Number.isFinite(value), `metric "${metric}" resolved to ${value}`).toBe(true)
     expect(value).toBeGreaterThanOrEqual(0)
-  })
-
-  it('covers every metric the chronicle catalogue names', () => {
-    for (const track of CHRONICLE_TRACKS) {
-      expect(ALL_METRICS, `track "${track.id}"`).toContain(track.metric)
-    }
   })
 
   it('covers every metric the omen catalogue names', () => {

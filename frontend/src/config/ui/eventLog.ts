@@ -22,14 +22,9 @@ export const typeColor: Record<GameEventType, string> = {
   chime: '#fde68a',
   combat: '#fb923c',
   prestige: '#818cf8',
-  chronicle: '#e8c040',
-  // Kühles Violett gegen das Gold der Chronicle: die beiden melden ähnlich
-  // klingende Zeilen (ein Ziel ist erreicht, ein Bonus gilt ab jetzt) und
-  // müssen im Log auf den ersten Blick auseinanderzuhalten sein.
   omen: '#a8b0f0',
-  // Mint-Teal zwischen dem Gold der Chronicle und dem Violett der Vorzeichen:
-  // drei Systeme melden erreichte Ziele, und im Vorbeilesen trennt sie nur die
-  // Farbe. Steht als MISSION_ACCENT_HEX in den Konstanten, damit Log-Zeile,
+  // Mint-Teal neben dem Violett der Vorzeichen: zwei Systeme melden erreichte
+  // Ziele, und im Vorbeilesen trennt sie nur die Farbe. Steht als MISSION_ACCENT_HEX in den Konstanten, damit Log-Zeile,
   // Kartenrand und Herald-Banner denselben Ton tragen.
   mission: MISSION_ACCENT_HEX,
   // Magenta, und das einzige Rot-Ende im Log: die Void-Zeilen sind die
@@ -69,7 +64,6 @@ export const GROUP_OF_TYPE: Record<GameEventType, EventGroupId> = {
   chime: 'cosmos',
   meep: 'cosmos',
   landfall: 'cosmos',
-  chronicle: 'progress',
   mission: 'progress',
   omen: 'progress',
   augment: 'progress',
@@ -182,24 +176,6 @@ export function logVoidWarded(
 export function logVoidBanished(planetName: string, riftName: string, seconds: number) {
   const { addEvent } = useEventLog()
   addEvent(`${planetName} opens a corridor — ${riftName} loses ${seconds}s of ground.`, 'void')
-}
-
-/**
- * Eine Chronicle-Stufe ist gefallen. Das Herald-Banner sagt WAS, diese Zeile
- * bleibt als Belegkopie in der Historie — mit der Wirkung, die ab jetzt gilt.
- */
-export function logChronicleStage(trackName: string, numeral: string, effectLine: string) {
-  const { addEvent } = useEventLog()
-  addEvent(`${trackName} ${numeral} — ${effectLine}`, 'chronicle')
-}
-
-/**
- * Ein Rang des Codex ist erreicht. Eigene Zeile neben der Stufe, die ihn
- * ausgelöst hat: die Stufe hebt EINE Bahn, der Rang hebt alle acht.
- */
-export function logChronicleRank(rankTitle: string, effectLine: string) {
-  const { addEvent } = useEventLog()
-  addEvent(`Codex rank: ${rankTitle} — ${effectLine}`, 'chronicle')
 }
 
 /**

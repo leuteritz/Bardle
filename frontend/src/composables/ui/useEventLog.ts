@@ -13,7 +13,6 @@ export type GameEventType =
   | 'chime'
   | 'combat'
   | 'prestige'
-  | 'chronicle'
   | 'omen'
   | 'mission'
   | 'void'

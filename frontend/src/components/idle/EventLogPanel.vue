@@ -358,8 +358,7 @@ onUnmounted(() => {
     100vh - var(--header-total-height, 118px) - var(--hud-panel-size, 330px) -
       var(--kb-hud-h, 0px) - 46px
   );
-  /* Über der Missionskarte (899), unter dem Codex-Drawer (950) und allem,
-     was darüber aufgeht. */
+  /* Über der Missionskarte (899), unter allem, was darüber aufgeht. */
   z-index: 910;
   display: flex;
   flex-direction: column;

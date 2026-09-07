@@ -5,9 +5,7 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useAugmentStore } from '@/stores/economy/augmentStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { FORGE_YIELD_SOURCES } from '@/config/constants'
-import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
 import { AUGMENTS } from '@/config/economy/augments'
 
 /**
@@ -84,16 +82,15 @@ describe('cpsFactorBreakdown', () => {
     const solar = useSolarUpgradeStore()
     const augments = useAugmentStore()
     const drifters = useDrifterStore()
-    const chronicle = useAchievementStore()
 
     // Dauerhaft: der Flugtempo-Strahl multipliziert die CpS.
     solar.flightSpeedLevel = 4
     solar.chimesPerSecondLevel = 3
 
-    // Codex: die Bahn, die auf `cpsMult` zahlt, auf ihre erste Stufe.
-    const cpsTrack = CHRONICLE_TRACKS.find((track) => track.bonus === 'cpsMult')
-    expect(cpsTrack, 'keine Codex-Bahn zahlt auf cpsMult').toBeDefined()
-    chronicle.stages[cpsTrack!.id] = 1
+    // Dauerhaft: ein gewähltes Augment mit CpS-Wirkung (Eimer `augments`).
+    const cpsAugment = AUGMENTS.find((au) => (au.effects.cpsMultiplier ?? 1) !== 1)
+    expect(cpsAugment, 'kein Augment zahlt auf cpsMultiplier').toBeDefined()
+    useGameStore().activeAugments = [cpsAugment!.id]
 
     // Befristet: ein Zeit-Augment und ein eingesammelter Drifter. Beide landen
     // im Band unter `boons` — die Spec prueft damit auch, dass das Produkt der

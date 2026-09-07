@@ -43,7 +43,6 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { galaxyDepth } from '@/utils/game/galaxyDepth'
 import { usePlayerStore } from '@/stores/battle/playerStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { logger } from '@/utils/logger'
@@ -365,7 +364,7 @@ export const useChampionLevelStore = defineStore('championLevel', {
     },
 
     /** Grants XP to a single champion. Returns the amount actually banked.
-     *  The drifter and chronicle multipliers are applied here rather than at the
+     *  The drifter and omen multipliers are applied here rather than at the
      *  call sites so every XP source — battles, bosses, expeditions — is covered
      *  at once. */
     grantXp(name: string, amount: number): number {
@@ -376,7 +375,6 @@ export const useChampionLevelStore = defineStore('championLevel', {
         amount *
           useDrifterStore().xpMult *
           useOmenStore().xpMult *
-          useAchievementStore().xpMult *
           // Quickened Path / Rift Ascendant (providence)
           useProvidenceStore().xpMult *
           // Eternal Host (Star Forge, Ring 4): der endlose Zweig zahlt auf die

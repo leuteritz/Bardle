@@ -27,7 +27,7 @@ const PREVIEW = [
   {
     icon: 'game-icons:star-formation',
     title: 'What Carries Over',
-    text: 'Meeps, forge work and codex ranks outlive the run. The road remembers what the universe forgets.',
+    text: 'Meeps and forge work outlive the run. The road remembers what the universe forgets.',
   },
 ]
 </script>

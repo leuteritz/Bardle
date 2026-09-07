@@ -4,7 +4,7 @@
  *
  * Der Reiter beantwortet die Frage, die sonst nirgends gestellt wird: wie weit
  * ist der Wandering Caretaker INSGESAMT gekommen. Journey zählt Zahlen, das
- * Archiv listet Galaxien, der Codex misst Bahnen — hier steht der Weg als Bild.
+ * Voyages listet Galaxien — hier steht der Weg als Bild.
  *
  * **EINE Bahn je Universum.** Die Galaxienkette selbst läuft über das Prestige
  * hinweg durch (`executePrestigeReset` fasst `completedGalaxies` nicht an) —

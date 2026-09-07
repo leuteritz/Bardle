@@ -456,7 +456,7 @@ export type BardTabId =
   | 'planets'
 
 /** Eine Unterseite des Journey-Reiters (`bard`). */
-export type JourneySubpageId = 'overview' | 'records' | 'wayfinder' | 'augments' | 'codex'
+export type JourneySubpageId = 'overview' | 'records' | 'wayfinder' | 'augments'
 
 /**
  * Was der Universe-Reiter zeigt.
@@ -512,7 +512,6 @@ export type NotifyBadgeKind =
   | 'skill'
   | 'planet'
   | 'shop'
-  | 'chronicle'
 
 /** Eine Stelle im Markup, an der diese Marke auftaucht. Die Guard-Spec
  *  (`__tests__/config/notifyBadges.spec.ts`) prüft beide Richtungen gegen diese
