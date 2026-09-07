@@ -4,7 +4,6 @@ import { Icon } from '@iconify/vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
-import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGamePause } from '@/composables/system/useGamePause'
@@ -13,10 +12,10 @@ import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import type { BardTabId } from '@/stores/core/uiStore'
 import type { KeybindId } from '@/types'
-import { formatBadgeCount, toRoman } from '@/utils/ui/format'
+import { formatBadgeCount } from '@/utils/ui/format'
 import { useBadgeFlare } from '@/composables/ui/useBadgeFlare'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
-import { EXPEDITION_UNLOCK_GALAXY, HEADER_GEM_ICONS } from '@/config/constants'
+import { HEADER_GEM_ICONS } from '@/config/constants'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import RpgBadgeTooltipBody from '@/components/ui/RpgBadgeTooltipBody.vue'
 import { NOTIFY_BADGE_TIP_COLOR } from '@/config/ui/notifyBadges'
@@ -38,7 +37,6 @@ import ProfileReadinessCluster from '@/components/bardProfil/hud/ProfileReadines
 const uiStore = useUiStore()
 const galaxyStore = useGalaxyStore()
 const gameStore = useGameStore()
-const expeditionChartStore = useExpeditionChartStore()
 const planetShopStore = usePlanetShopStore()
 const battleStore = useBattleStore()
 const { isPaused } = useGamePause()
@@ -137,6 +135,7 @@ const allMenuItems: {
   { id: 'bard', name: 'Journey', icon: 'ph:compass-rose-fill' },
   { id: 'shop', name: 'Shop', icon: HEADER_GEM_ICONS.shop },
   { id: 'tree', name: 'Skill Tree', icon: HEADER_GEM_ICONS.tree, boost: true },
+  { id: 'expedition', name: 'Voyages', icon: 'ph:map-trifold-fill' },
   { id: 'team', name: 'Team', icon: 'ph:users-three-fill' },
   {
     id: 'battle',
@@ -161,13 +160,6 @@ const allMenuItems: {
     lockNote: 'claim your first orbit',
   },
   {
-    id: 'expedition',
-    name: 'Voyages',
-    icon: 'ph:map-trifold-fill',
-    locked: () => !expeditionChartStore.isUnlocked,
-    lockNote: `unlocks in Galaxy ${toRoman(EXPEDITION_UNLOCK_GALAXY)}`,
-  },
-  {
     id: 'firmament',
     name: 'Firmament',
     icon: 'ph:globe-hemisphere-west-fill',
@@ -183,14 +175,16 @@ const allMenuItems: {
 
 /**
  * Die Leiste steht vollständig, vom ersten Tick an. Ein Reiter, den es noch
- * nicht gibt, ist kein Ziel, auf das man hinarbeiten kann — Planets und Voyages
- * bleiben deshalb sichtbar und anklickbar und tragen ihren Zustand selbst:
- * gedämpft mit Schloss hier, ausbuchstabiert im Reiter (`PlanetLockedPanel`,
- * `ExpeditionLockedPanel`). Aus dem Grund steht in `uiStore.setBardTab` auch
- * keine Wache mehr.
+ * nicht gibt, ist kein Ziel, auf das man hinarbeiten kann — Planets bleibt
+ * deshalb sichtbar und anklickbar und trägt seinen Zustand selbst: gedämpft mit
+ * Schloss hier, ausbuchstabiert im Reiter (`PlanetLockedPanel`). Aus dem Grund
+ * steht in `uiStore.setBardTab` auch keine Wache mehr.
  *
- * Die Tore selbst liegen in den Stores (`planetShopStore.isUnlocked`,
- * `expeditionChartStore.isUnlocked`), nicht hier — die Leiste liest sie nur.
+ * Voyages trägt seit der Live-Bühne KEIN Schloss: der Reiter zeigt ab dem ersten
+ * Tick den laufenden Lauf, und ein Reiter mit Inhalt braucht kein Tor.
+ *
+ * Die Tore selbst liegen in den Stores (`planetShopStore.isUnlocked`), nicht
+ * hier — die Leiste liest sie nur.
  */
 const menuItems = computed(() =>
   allMenuItems.map((i) => {

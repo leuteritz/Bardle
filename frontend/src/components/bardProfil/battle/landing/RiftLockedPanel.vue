@@ -2,9 +2,9 @@
 /**
  * Der Rift, bevor die Aufstellung steht.
  *
- * Anders als bei Voyages ist das Tor hier zählbar und der Weg hinaus kurz:
- * jeder Sitz ist ein Knopf, der auf seine Rolle im Team-Reiter springt. Vorbild
- * der Form ist `expedition/ExpeditionLockedPanel.vue`.
+ * Das Tor ist hier zählbar und der Weg hinaus kurz: jeder Sitz ist ein Knopf,
+ * der auf seine Rolle im Team-Reiter springt. Vorbild der Form ist
+ * `planets/PlanetLockedPanel.vue`.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'

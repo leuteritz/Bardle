@@ -41,6 +41,10 @@ export const useUiStore = defineStore('ui', () => {
   // Wird EINMAL verbraucht — der Reiter bleibt gemountet, ein stehender Wert
   // spränge bei jedem weiteren Besuch erneut.
   const pendingVoyageTarget = ref<{ galaxy: number; pinKey: string | null } | null>(null)
+  // Dasselbe fuer die Live-Buehne: die Minimap-FLAECHE meint die LAUFENDE
+  // Galaxie, und die steht in keinem Archiv — sie hat deshalb keine Nummer im
+  // Gepaeck, nur die Ansage. Schliesst sich mit pendingVoyageTarget aus.
+  const pendingVoyageLive = ref(false)
   // true, solange der Voyages-Reiter aus dem Firmament heraus betreten wurde
   const firmamentTabReturnPending = ref(false)
   // Galaxie, auf die das Firmament beim Zurueckkommen zeigt — es raeumt seine
@@ -188,6 +192,7 @@ export const useUiStore = defineStore('ui', () => {
   /** Reiter auf UND scharfstellen — `openBardModal()` bleibt aussen vor, es
    *  TOGGELT und schlösse ein bereits offenes Profil. */
   function requestOpenVoyagesTab(galaxy: number, pinKey: string | null = null) {
+    pendingVoyageLive.value = false
     pendingVoyageTarget.value = { galaxy, pinKey }
     bardActiveTab.value = 'expedition'
     clearHoverMarks()
@@ -195,6 +200,19 @@ export const useUiStore = defineStore('ui', () => {
 
   function clearPendingVoyageTarget() {
     pendingVoyageTarget.value = null
+  }
+
+  /** Der Klick auf die Minimap-Flaeche: „zeig mir DAS hier gross". Kein Ziel,
+   *  keine Marke — die laufende Galaxie ist immer dieselbe. */
+  function requestOpenVoyagesLive() {
+    pendingVoyageTarget.value = null
+    pendingVoyageLive.value = true
+    bardActiveTab.value = 'expedition'
+    clearHoverMarks()
+  }
+
+  function clearPendingVoyageLive() {
+    pendingVoyageLive.value = false
   }
 
   /** Der Sprung von der Firmament-Bahn auf die Karte. Setzt NUR die Flagge dazu
@@ -341,6 +359,9 @@ export const useUiStore = defineStore('ui', () => {
     pendingVoyageTarget,
     requestOpenVoyagesTab,
     clearPendingVoyageTarget,
+    pendingVoyageLive,
+    requestOpenVoyagesLive,
+    clearPendingVoyageLive,
     firmamentTabReturnPending,
     pendingFirmamentGalaxy,
     pendingArrival,

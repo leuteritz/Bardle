@@ -5,17 +5,21 @@
         <div class="map-canvas-wrapper">
           <MiniMapCanvas />
 
-          <!-- ── Der Weg in den Voyages-Atlas ──
+          <!-- ── Die zwei Wege in den Voyages-Reiter ──
                Zwei Elemente statt eines Handlers am Wrapper: dort blubberten
                Stern-Hit-Area, „Next Galaxy" und Skip-Knopf hinein und feuerten
                doppelt. Die Fläche liegt unter allem Bedienbaren (z-index 1),
-               der Chip neben dem Skip-Knopf (6). -->
-          <div v-if="atlasReady" class="atlas-hit" @click="openAtlas" />
+               der Chip neben dem Skip-Knopf (6).
+
+               Sie beantworten VERSCHIEDENE Fragen: die Fläche „zeig mir DAS
+               hier gross" (die laufende Galaxie, live), der Chip „wo wartet
+               etwas auf mich" (eine befreite Galaxie samt Marke). -->
+          <div v-if="liveReady" class="atlas-hit" title="Follow this run" @click="openLive" />
           <button
             v-if="atlasReady"
             class="atlas-chip"
             :class="{ 'atlas-chip--marked': atlasReadyCount > 0 }"
-            title="Open the Voyages atlas"
+            title="Jump to a waiting crew"
             @click="openAtlas"
           >
             <Icon icon="ph:map-trifold-fill" width="18" height="18" />
@@ -233,25 +237,36 @@ export default defineComponent({
     }
 
     /**
-     * Die kleine Karte führt in die grosse. Ein 1:1-Sprung „zeig mir DIESE
-     * Galaxie" gibt es nicht — der Atlas kennt nur befreite, die laufende ist
-     * nie dabei. Der Klick beantwortet deshalb „wo wartet etwas auf mich?",
-     * und der Store sagt wo.
+     * Die kleine Karte führt in die grosse — und zwar auf zwei Wegen, weil es
+     * zwei Fragen sind.
+     *
+     * Die FLÄCHE meint das Naheliegende: dieselbe Galaxie, nur gross und live.
+     * Sie steht in keinem Archiv (der Atlas führt nur `completedGalaxies`),
+     * deshalb hat sie kein Sprungziel — die Live-Bühne des Reiters zeichnet sie
+     * mit demselben Renderer, der hier läuft.
+     *
+     * Der CHIP behält die andere Frage: „wo wartet etwas auf mich?" Der Store
+     * sagt wo, und die Marke auf dem Chip sagt, ob überhaupt.
      */
     const atlasTarget = computed(() => expeditionStore.voyageJumpTarget)
 
     /** Rollenwahl und Pause liegen über allem — dieselbe Klausel wie die
      *  Tab-Kürzel; die Bottom-Bar-Panels stehen ÜBER dem Pause-Overlay, der
      *  Klick wäre sonst erreichbar. Und `isComplete` gehört „Next Galaxy". */
-    const atlasReady = computed(
-      () =>
-        !!atlasTarget.value &&
-        !galaxyStore.pendingRoleSelection &&
-        !isPaused.value &&
-        !galaxyStore.isComplete,
+    const reachable = computed(
+      () => !galaxyStore.pendingRoleSelection && !isPaused.value && !galaxyStore.isComplete,
     )
 
+    /** Die Fläche braucht kein Ziel: die laufende Galaxie ist immer da. */
+    const liveReady = reachable
+    const atlasReady = computed(() => reachable.value && !!atlasTarget.value)
+
     const atlasReadyCount = useNotifyBadgeCount('expedition')
+
+    function openLive() {
+      if (!liveReady.value) return
+      uiStore.requestOpenVoyagesLive()
+    }
 
     function openAtlas() {
       const target = atlasTarget.value
@@ -278,8 +293,10 @@ export default defineComponent({
       onMinimapStarEnter,
       onMinimapStarLeave,
       onMinimapStarClick,
+      liveReady,
       atlasReady,
       atlasReadyCount,
+      openLive,
       openAtlas,
       teleportNearPlanet,
       SKIP_DURATION_SECONDS,
