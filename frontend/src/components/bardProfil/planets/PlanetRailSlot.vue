@@ -200,7 +200,8 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
 .ps-slot-btn {
   position: relative;
   container-type: size;
-  display: flex;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   flex: 1 1 0;
   min-height: clamp(64px, 9vh, 140px);
   flex-direction: column;
@@ -280,8 +281,8 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
 }
 
 .ps-slot-main {
-  display: flex;
-  flex: 1;
+  display: grid;
+  grid-template-columns: clamp(52px, 30cqw, 78px) minmax(0, 1fr);
   align-items: center;
   justify-content: center;
   gap: clamp(8px, 0.8vw, 14px);
@@ -295,6 +296,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   flex-shrink: 0;
   width: clamp(52px, 30cqw, 78px);
   height: clamp(50px, 6.4vh, 78px);
+  justify-self: center;
   display: grid;
   place-items: center;
 }
@@ -332,17 +334,17 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   justify-content: center;
   gap: clamp(4px, 0.6vh, 9px);
   width: auto;
-  flex: 1;
+  flex: none;
   min-width: 0;
-  align-items: flex-start;
-  text-align: left;
+  align-items: center;
+  text-align: center;
 }
 
 /* Header row: the level is the only metadata in the card. */
 .ps-slot-info-head {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 6px;
   width: 100%;
   min-width: 0;
@@ -380,7 +382,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.15;
-  text-align: left;
+  text-align: center;
 }
 
 .ps-slot-btn:hover {
@@ -541,8 +543,8 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
    & width), capped so it never crowds the text on a narrow rail nor balloons. */
 .ps-slot-btn-img {
   position: relative;
-  width: clamp(50px, min(36cqh, 46cqw), 78px);
-  height: clamp(50px, min(36cqh, 46cqw), 78px);
+  width: min(100%, clamp(50px, min(36cqh, 46cqw), 78px));
+  height: min(100%, clamp(50px, min(36cqh, 46cqw), 78px));
   object-fit: contain;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.55));
 }
@@ -579,6 +581,9 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
 
 .ps-slot-status {
   flex-shrink: 0;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: center;
   width: 100%;
   max-width: 190px;
 }
