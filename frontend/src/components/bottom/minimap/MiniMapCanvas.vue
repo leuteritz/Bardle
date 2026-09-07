@@ -94,7 +94,7 @@ import {
   createWarpEffect,
   drawMiniSun,
   drawPhaseSun,
-  drawPlayerRing,
+  drawPlayerSunMarker,
   drawRoleStar,
   easeInOut,
   rolePaletteFromHex,
@@ -720,23 +720,19 @@ export default defineComponent({
           ctx.shadowBlur = 0
         }
 
-        // Head: hot white core with warm gold glow
+        // Head: the same solar body as the live Galaxy marker.
         const hx = qx(t)
         const hy = qy(t)
         const headR = MINIMAP_COMET_HEAD_R * Math.sqrt(cam.zoom)
-        const headGlow = ctx.createRadialGradient(hx, hy, 0, hx, hy, headR * 3.2)
-        headGlow.addColorStop(0, 'rgba(255, 255, 255, 0.95)')
-        headGlow.addColorStop(0.35, hexToRgba(COMET_PHASE_DATA.accent, 0.65))
-        headGlow.addColorStop(1, hexToRgba(COMET_PHASE_DATA.glow, 0))
-        ctx.beginPath()
-        ctx.arc(hx, hy, headR * 3.2, 0, Math.PI * 2)
-        ctx.fillStyle = headGlow
-        ctx.fill()
-        ctx.beginPath()
-        ctx.arc(hx, hy, headR, 0, Math.PI * 2)
-        ctx.fillStyle = '#fff8e8'
-        ctx.fill()
-        drawPlayerRing(ctx, hx, hy, headR * 2.2, nowMs)
+        drawPlayerSunMarker(
+          ctx,
+          hx,
+          hy,
+          headR,
+          playerBody(),
+          nowMs,
+          Math.min(window.devicePixelRatio || 1, 2),
+        )
       } else if (!galaxyStore.isRescueRotating && !galaxyStore.pendingRoleSelection) {
         // Idle: player-sun at the current position (the waiting screen draws
         // its own departure beacon at the flight origin instead)
@@ -751,7 +747,6 @@ export default defineComponent({
           nowMs,
           Math.min(window.devicePixelRatio || 1, 2),
         )
-        drawPlayerRing(ctx, px, py, MINIMAP_IDLE_SUN_R * 1.5, nowMs)
       }
     }
 

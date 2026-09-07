@@ -25,6 +25,10 @@ import {
   LANDMARK_ROLE_CORE,
   LANDMARK_FREED_CORE,
   MINIMAP_FLIGHTPATH_BEND,
+  PLAYER_MARKER_HALO_EDGE,
+  PLAYER_MARKER_HALO_FILL_ALPHA,
+  PLAYER_MARKER_HALO_PERIOD_MS,
+  PLAYER_MARKER_HALO_SCALE,
   VOYAGE_LIVE_PLAYER_BOX_PX,
   VOYAGE_LIVE_PLAYER_TAIL_PX,
   VOYAGE_LIVE_PLAYER_TAIL_H_PX,
@@ -243,7 +247,10 @@ onMounted(() => nextTick(() => place(gameNow())))
 onBeforeUnmount(stopLoop)
 
 const playerBoxPx = `${VOYAGE_LIVE_PLAYER_BOX_PX}px`
-const haloPx = `${VOYAGE_LIVE_PLAYER_BOX_PX * 1.8}px`
+const haloPx = `${VOYAGE_LIVE_PLAYER_BOX_PX * PLAYER_MARKER_HALO_SCALE}px`
+const haloPulseMs = `${PLAYER_MARKER_HALO_PERIOD_MS}ms`
+const haloFillAlpha = String(PLAYER_MARKER_HALO_FILL_ALPHA)
+const haloEdge = `${PLAYER_MARKER_HALO_EDGE * 100}%`
 const tailPx = `${VOYAGE_LIVE_PLAYER_TAIL_PX}px`
 const tailHPx = `${VOYAGE_LIVE_PLAYER_TAIL_H_PX}px`
 const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
@@ -352,8 +359,12 @@ const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
   height: v-bind(haloPx);
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 220, 150, 0.5) 0%, rgba(255, 220, 150, 0) 70%);
-  animation: epml-breathe 2600ms ease-in-out infinite;
+  background: radial-gradient(
+    circle,
+    rgba(255, 220, 150, v-bind(haloFillAlpha)) 0%,
+    rgba(255, 220, 150, 0) v-bind(haloEdge)
+  );
+  animation: epml-breathe v-bind(haloPulseMs) ease-in-out infinite;
 }
 @keyframes epml-breathe {
   0%,
