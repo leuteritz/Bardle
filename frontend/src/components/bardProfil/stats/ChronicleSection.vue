@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useUiStore } from '@/stores/core/uiStore'
 import { useAchievementStore } from '@/stores/progression/achievementStore'
 import {
   CHRONICLE_TOTAL_STAGES,
@@ -12,47 +11,8 @@ import { formatPercentValue, toRoman } from '@/utils/ui/format'
 import type { ChronicleTrackView } from '@/types'
 import StatsColumnHeader from './StatsColumnHeader.vue'
 
-/**
- * The Astral Codex — der Streifen unter der Sonne im Bard-Stats-Deck. Die
- * Bahnen heißen im Code weiter `CHRONICLE_*`: die Umbenennung ist eine reine
- * Anzeigesache, und der Spielstand trägt den Schlüssel `chronicle`.
- *
- * Warum Master-Detail und nicht acht Karten: der Platz hier ist gemessen
- * 422×278 px auf WUXGA (dem Engpass — die Mittelspalte ist dort SCHMALER als
- * auf Full HD, weil die Bottom-Bar-Panels mit der Höhe skalieren). Acht Karten
- * mit Balken, Stand und Wirkung bräuchten darin je 40 px Höhe und 200 px Breite;
- * beides gibt es nicht, ohne die Schrift unter das Lesbare zu drücken.
- *
- * Deshalb tragen acht Wappen den Überblick (Bahn, Stufe, Fortschritt) und EIN
- * Feld darunter die Tiefe. Das macht den Hover zum Kern der Bedienung statt zur
- * Dekoration: fahren zeigt, klicken heftet an.
- *
- * Der Kopf ist derselbe `StatsColumnHeader` wie über den anderen Panels des
- * Decks, ohne Suchfeld: acht Bahnen stehen ohnehin alle gleichzeitig auf dem
- * Schirm — eine Suche über acht sichtbare Kacheln ist ein Feld, das nichts
- * findet, was das Auge nicht schon sieht.
- *
- * An seiner Stelle stehen die zwei Zahlen, die das Panel als Ganzes beschreiben,
- * und zwar BESCHRIFTET: „Unwritten" und „0/40" allein sagten niemandem, dass das
- * ein Rang und ein Stand ist. Jede trägt jetzt ihre Überschrift über sich und
- * die doppelte Schriftgröße.
- */
-const uiStore = useUiStore()
+/** Der Astral Codex (Code: `CHRONICLE_*`) — Master-Detail: acht Wappen, EIN Fokusfeld. */
 const store = useAchievementStore()
-
-/**
- * Beim Öffnen des Stats-Tabs ist alles gesehen — das Abzeichen an der Tab-Leiste
- * erlischt. Es hängt an der SICHTBARKEIT, nicht am Mounten: die Tab-Layer
- * werden nur versteckt, ein `onMounted` würde also genau einmal je Sitzung
- * feuern und danach nie wieder.
- */
-watch(
-  () => uiStore.bardActiveTab === 'bard',
-  (visible) => {
-    if (visible) store.markSeen()
-  },
-  { immediate: true },
-)
 
 /** Angeheftet per Klick; überlebt das Verlassen der Reihe. */
 const pinnedId = ref<string | null>(null)
@@ -324,53 +284,16 @@ function pin(id: string) {
 </template>
 
 <style scoped>
-/* ══════════════════════════════════════════════════════════════════════════
-   CHRONICLE — Wappenreihe plus Fokusfeld, unter der Sonne im Stats-Deck.
-
-   Höhenbudget ist knapp (278 px auf den flachen Viewports), deshalb hat jede
-   Ebene eine feste Aufgabe: Rubrik, Gesamtleiter, acht Wappen, ein Feld. Das
-   Feld ist der einzige flexible Teil — es nimmt, was übrig bleibt.
-
-   Alles Bewegte ist `transform` oder `opacity`; die Wappen wechseln ihren
-   Zustand über Farbe und Deckkraft, nie über Schatten oder Filter, denn es
-   stehen immer acht davon gleichzeitig auf dem Schirm.
-════════════════════════════════════════════════════════════════════════════ */
-/* FESTE Höhe, bewusst nicht inhaltsabhängig — dieselbe Regel, unter der vorher
-   das Augment-Deck hier stand: ein Layout-Anker darf nicht davon abhängen, wie
-   voll etwas ist, sonst schrumpft die Sonne darüber, während der Spieler
-   weiterspielt. Die Sonne nimmt (`flex: 1`), was diese Zone übrig lässt.
-
-   Die Werte sind gegen den gemessenen Platz gerechnet: der Spaltenkörper hat
-   587 px auf Full HD, 861 auf 2K und 1555 auf 4K. Was hier abgeht, bekommt der
-   Dial — mit 274 px bleiben ihm auf Full HD 303 px, mehr als die 281, die er
-   neben dem alten Augment-Deck hatte.
-
-   Die Basiswerte tragen den vollen Deck-Header (50 px / 44 kompakt / 58 auf 4K)
-   statt der 20 px hohen Mini-Rubrik, die hier vorher stand — jede Stufe ist um
-   genau diesen Unterschied gewachsen, damit unter dem Kopf so viel Feld steht
-   wie zuvor. */
+/* CHRONICLE — Wappenreihe plus Fokusfeld. Bewegt wird nur transform/opacity. */
+/* Die Zone ist ihr eigener Maßstab (cqw); Höhe folgt dem Inhalt, die Seite scrollt. */
 .cr-zone {
-  flex: 0 0 320px;
-  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  /* Die Zone ist ihr eigener Maßstab: die Mittelspalte ist 397px breit auf
-     WUXGA, 470 auf Full HD, 890 auf 2K und 1156 auf 4K — und diese Breite folgt
-     weder der Viewportbreite noch seiner Höhe allein (die Bottom-Bar-Panels
-     skalieren mit der Höhe und verschmälern das Modal). Breiten-Media-Queries
-     könnten das nicht treffen; `cqw` trifft es immer.
-     Dasselbe Muster nutzt der Dial darüber mit `100cqh`. */
+  gap: 10px;
+  width: 100%;
+  max-width: 1100px;
+  margin-inline: auto;
   container-type: inline-size;
-}
-
-/* ─ Kopf ─
-   Der geteilte Deck-Header. Er zieht sich um das Polster des Spaltenkörpers
-   (10px 12px) nach außen, damit seine Trennlinie wie die der anderen Panels
-   von Kante zu Kante läuft, während sein eigenes 12px-Polster den Text weiter
-   bündig mit dem Inhalt darunter hält. */
-.cr-head {
-  margin-inline: -12px;
 }
 
 /* Zwei Ablesungen im Kopf: der erreichte Rang und der Stand. Beide standen
@@ -389,7 +312,7 @@ function pin(id: string) {
 }
 
 .cr-read-cap {
-  font-size: 9.5px;
+  font-size: 11.5px;
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -399,7 +322,7 @@ function pin(id: string) {
 }
 
 .cr-read-val {
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1;
   color: var(--rpg-gold);
@@ -410,7 +333,7 @@ function pin(id: string) {
 /* Der Nenner tritt zurück: gelesen wird die erreichte Zahl, die 40 ist nur ihr
    Maßstab. */
 .cr-read-of {
-  font-size: 13px;
+  font-size: 15px;
   color: #6b5a3c;
 }
 
@@ -475,7 +398,7 @@ function pin(id: string) {
    den Verstärker benennt, deshalb heller als der Rest der Leiste. */
 .cr-boost {
   min-width: 0;
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.04em;
   color: var(--rpg-text-muted);
   white-space: nowrap;
@@ -492,7 +415,7 @@ function pin(id: string) {
 
 .cr-meter-next {
   flex-shrink: 0;
-  font-size: 11.5px;
+  font-size: 13.5px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #6b5a3c;
@@ -655,7 +578,7 @@ function pin(id: string) {
 }
 
 .cr-focus-blurb {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.2;
   color: var(--rpg-text-muted);
   white-space: nowrap;
@@ -672,14 +595,14 @@ function pin(id: string) {
 }
 
 .cr-focus-stage-num {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1;
   color: var(--tc);
 }
 
 .cr-focus-stage-of {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   color: #6b5a3c;
   font-variant-numeric: tabular-nums;
@@ -704,7 +627,7 @@ function pin(id: string) {
 
 .cr-focus-pending {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #6b5a3c;
@@ -725,7 +648,7 @@ function pin(id: string) {
 }
 
 .cr-focus-share-lbl {
-  font-size: 9.5px;
+  font-size: 11.5px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -733,7 +656,7 @@ function pin(id: string) {
 }
 
 .cr-focus-share strong {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 900;
   color: var(--rpg-gold);
   font-variant-numeric: tabular-nums;
@@ -744,7 +667,7 @@ function pin(id: string) {
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  font-size: 12px;
+  font-size: 14px;
   color: #d8cbb0;
   font-variant-numeric: tabular-nums;
 }
@@ -826,13 +749,8 @@ function pin(id: string) {
 /* Full HD / WUXGA — die flachsten Viewports. Gespart wird an Luft, nicht an
    Schrift: die Wappen rücken zusammen, die Zahlen bleiben. */
 @media (max-height: 1100px) {
-  /* 292 statt 274: die Legende unter dem Rangbalken kostet gemessen 17 px, und
-     das Fokusfeld hatte sie nicht mehr übrig (Überlauf 15 px). Die nimmt hier
-     die Zone, nicht das Feld — der Dial darüber hat auf Full HD noch 267 px und
-     ist als Kreis das Element, das eine Schrumpfung am besten verträgt. */
   .cr-zone {
-    flex-basis: 292px;
-    gap: 6px;
+    gap: 8px;
   }
   .cr-crest {
     padding: 5px 2px 7px;
@@ -858,8 +776,8 @@ function pin(id: string) {
    Viewporthöhe ablesbar ist. */
 @media (min-height: 1600px) {
   .cr-zone {
-    flex-basis: 458px;
-    gap: 11px;
+    max-width: 1400px;
+    gap: 13px;
   }
   .cr-read-cap {
     font-size: 11px;

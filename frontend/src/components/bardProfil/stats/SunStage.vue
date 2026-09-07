@@ -19,32 +19,9 @@ import {
 import { useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
-import StatsColumnHeader from './StatsColumnHeader.vue'
-import ChronicleSection from './ChronicleSection.vue'
 import { gameNow } from '@/utils/game/gameClock'
 
-/**
- * Middle column of the Bard-Stats deck — the sun's control desk.
- *
- * It used to be an orbit dial: the live sun ringed by all seven phases, each
- * marker carrying a name tag and a hover card, with the evolve console squeezed
- * underneath. On Full HD the column is 391px wide, so everything on that ring
- * had to be 9–11px to fit — the display was complete and unreadable at once.
- *
- * Now it is a stack, and every row owns the full width:
- *
- *   body        the live sun, nothing else on the band
- *   identity    who it is, and which of the seven steps that is
- *   rail        the journey as seven dots — names on hover
- *   dwell       the time gate, as one large number and one track
- *   rays        the five core rays, one tile each, level on the tile
- *   act         the evolve button, carrying its own reason as a subline
- *
- * The three things the player acts on — time, rays, button — are the three
- * largest things on the panel. The journey lost its labels, not its place: the
- * full lifecycle with names, dwell times and sizes lives in the hover panel on
- * the header's sun badge (`StarEvolutionTooltip`), which has the room for it.
- */
+/** Die Sonne auf der Journey-Übersicht — die EINZIGE Stelle, an der sie evolviert. */
 const solarStore = useSolarUpgradeStore()
 const { announceReceipt } = useHerald()
 
@@ -118,8 +95,11 @@ onMounted(() => {
     stageW.value = stageEl.value.clientWidth
     stageH.value = stageEl.value.clientHeight
     stageObserver = new ResizeObserver((entries) => {
-      stageW.value = entries[0].contentRect.width
-      stageH.value = entries[0].contentRect.height
+      const { width, height } = entries[0].contentRect
+      // 0×0 = per v-show versteckt; letzte Größe behalten, sonst unmountet die Disc
+      if (!width || !height) return
+      stageW.value = width
+      stageH.value = height
     })
     stageObserver.observe(stageEl.value)
   }
@@ -278,25 +258,22 @@ function handleEvolve(): void {
 </script>
 
 <template>
-  <section class="sf-panel sf-col sf-col--solar" :style="phaseVars">
-    <StatsColumnHeader title="Evolution" />
-
-    <div class="sf-p-body sf-solar-body">
-      <!-- ═ 1 · the body itself ═══════════════════════════════════ -->
-      <div ref="stageEl" class="se-stage">
-        <!-- The disc renderers centre themselves absolutely inside their
-             parent, so this box IS the body's footprint and the ready-rings
-             can simply take its inset. -->
-        <div
-          class="se-sun"
-          v-tip="phaseAstroName"
-          :style="{ width: sunDiameter + 'px', height: sunDiameter + 'px' }"
-        >
-          <!-- Not before the stage has measured itself: a body without a box. -->
-          <template v-if="sunDiameter > 0">
-            <CometDisc v-if="isComet" :diameter="sunDiameter" />
-            <PhaseSunDisc v-else :diameter="sunDiameter" :pulse="true" />
-          </template>
+  <section class="jt-sun" :style="phaseVars">
+    <!-- ═ 1 · the body itself ═══════════════════════════════════ -->
+    <div ref="stageEl" class="se-stage">
+      <!-- The disc renderers centre themselves absolutely inside their
+           parent, so this box IS the body's footprint and the ready-rings
+           can simply take its inset. -->
+      <div
+        class="se-sun"
+        v-tip="phaseAstroName"
+        :style="{ width: sunDiameter + 'px', height: sunDiameter + 'px' }"
+      >
+        <!-- Not before the stage has measured itself: a body without a box. -->
+        <template v-if="sunDiameter > 0">
+          <CometDisc v-if="isComet" :diameter="sunDiameter" />
+          <PhaseSunDisc v-else :diameter="sunDiameter" :pulse="true" />
+        </template>
 
           <!-- Readiness announced by the body: two rings breaking out of the
                core, half a cycle apart. transform + opacity only. -->
@@ -394,57 +371,26 @@ function handleEvolve(): void {
           <span class="se-fire-sub">{{ verdict.text }}</span>
         </div>
       </div>
-
-      <!-- ═ Astral Codex: die Meilenstein-Bahnen darunter ═════════ -->
-      <ChronicleSection />
-    </div>
   </section>
 </template>
 
 <style scoped>
-/* ═══ Solar Evolution — the sun's control desk ══════════════════════
-   Stacked slabs, each with the full column width. Type sizes hang on the
-   panel's own container width (`cqw`), not on the viewport: this column runs
-   from ~390px on Full HD to over 800px on 2K, and a fixed px scale would read
-   right on exactly one of them. Every clamp is bounded at both ends so neither
-   extreme runs away. */
-.sf-panel {
-  position: relative;
-  z-index: 1;
-  background: transparent;
-}
-
-.sf-col {
-  display: flex;
-  flex-direction: column;
+/* Sonnen-Bühne: gestapelte Bänder, Schrift an der eigenen Containerbreite (cqw). */
+.jt-sun {
+  container-type: inline-size;
+  /* Sonne links über Name und Rail, die Konsole rechts über die volle Höhe:
+     untereinander fraß die Konsole der Sonne die Höhe weg (gemessen 37 px Disc) */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 44%);
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  /* eigene Eigenschaften NIE in cqw: das Container-Element misst gegen den Vorfahren */
+  column-gap: 18px;
+  row-gap: 10px;
+  overflow: clip;
   min-height: 0;
   min-width: 0;
-}
-
-.sf-p-body {
-  flex: 1;
-  min-height: 0;
-  padding: 10px 12px;
-}
-
-.sf-solar-body {
-  container-type: inline-size;
-  display: flex;
-  flex-direction: column;
-  /* Fixed, NOT cqw: a container query unit used on the container ELEMENT
-     itself resolves against the nearest ANCESTOR container — and with none
-     above, against the viewport. `1.3cqw` read 25px off the 1920 viewport
-     instead of 5px off this 391px column, and the three row gaps ate 40px
-     straight out of the sun. Everything INSIDE this element resolves against
-     it correctly; only its own properties must stay clear of cqw. */
-  gap: 12px;
-  overflow: clip;
-  /* The middle column absorbs every pixel the two fixed side columns leave, so
-     on 4K it is over 2000px wide. Capping the CONTENT keeps the sun, the deck
-     and the codex reading as one centred block. */
-  width: 100%;
-  max-width: 1180px;
-  margin-inline: auto;
+  height: 100%;
+  padding: 12px 16px 14px;
 }
 
 /* ── 1 · the body ────────────────────────────────────────────────
@@ -452,7 +398,8 @@ function handleEvolve(): void {
    the disc is sized against it in script. */
 .se-stage {
   position: relative;
-  flex: 1 1 0;
+  grid-column: 1;
+  grid-row: 1;
   min-height: 0;
   display: flex;
   align-items: center;
@@ -517,6 +464,8 @@ function handleEvolve(): void {
    Name on the left in the phase's own colour, step count on the right. The
    name is the largest word on the panel — it is what the sun IS. */
 .se-ident {
+  grid-column: 1;
+  grid-row: 2;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -549,6 +498,8 @@ function handleEvolve(): void {
    it unreadable at this width. Each step carries its own connector (to its
    left), so the chain stays flush at any width without separate positioning. */
 .se-rail {
+  grid-column: 1;
+  grid-row: 3;
   display: flex;
   align-items: center;
 }
@@ -610,7 +561,10 @@ function handleEvolve(): void {
    One plate holding the two gates and the act. Its border carries the overall
    state, so "ready" reads before a single number is read. */
 .se-deck {
-  flex: 0 0 auto;
+  grid-column: 2;
+  grid-row: 1 / -1;
+  align-self: center;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: clamp(6px, 1.3cqw, 18px);
@@ -834,8 +788,9 @@ function handleEvolve(): void {
 /* Full HD / WUXGA — the flattest viewports. Every pixel the deck gives back
    here goes straight into the sun, which is the row that flexes. */
 @media (max-height: 1100px) {
-  .sf-solar-body {
-    gap: 7px;
+  .jt-sun {
+    row-gap: 7px;
+    padding: 8px 12px 10px;
   }
   .se-deck {
     padding: 7px 9px;

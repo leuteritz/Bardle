@@ -8,6 +8,8 @@ import type { StatCategoryId } from '@/types'
 const props = defineProps<{
   /** Free-text filter coming from the panel header search box. */
   query: string
+  /** Öffnet genau diese Kategorie (KPI-Kachel der Übersicht); Aufrufer rollt selbst. */
+  focusCategory?: StatCategoryId | null
 }>()
 
 const { categories, totalStatCount, matchCount } = useStatCatalog(toRef(props, 'query'))
@@ -50,6 +52,14 @@ function collapseAll(): void {
 watch(isSearching, (searching, wasSearching) => {
   if (wasSearching && !searching) openIds.value = new Set()
 })
+
+watch(
+  () => props.focusCategory,
+  (id) => {
+    if (id) openIds.value = new Set([id])
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -80,6 +90,7 @@ watch(isSearching, (searching, wasSearching) => {
       :key="cat.id"
       class="sc-cat"
       :class="{ 'is-open': isOpen(cat.id) }"
+      :data-cat="cat.id"
       :style="{ '--accent': cat.accent }"
     >
       <button

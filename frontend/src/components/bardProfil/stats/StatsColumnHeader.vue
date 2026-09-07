@@ -1,21 +1,7 @@
 <script setup lang="ts">
 import RpgSearchBar from '@/components/ui/RpgSearchBar.vue'
 
-/**
- * The header strip shared by every panel of the Bard-Stats deck: gold headline
- * on the left, optional readouts and context search on the right. It lives in
- * its own component because the headers must stay pixel-identical — same
- * height, same type scale, same behaviour at every desktop resolution. Only
- * their panel widths differ.
- *
- * Two parts are optional so the same strip fits all five call sites:
- * - no `placeholder` → no search field. The Solar dial is one figure; there is
- *   nothing in it to filter, and an inert field in its head only suggested
- *   otherwise.
- * - `#meta` → readouts that belong to the panel's title rather than its body
- *   (the Astral Codex puts its rank and stage count there). They sit right of
- *   the headline, pinned to the search.
- */
+/** Panelkopf der Journey-Seiten: Titel, optional #meta und Suchfeld (nur mit placeholder). */
 defineProps<{
   /** gold headline — the panel's name */
   title: string
