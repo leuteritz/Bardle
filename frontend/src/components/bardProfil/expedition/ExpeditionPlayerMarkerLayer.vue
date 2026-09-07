@@ -243,7 +243,7 @@ onMounted(() => nextTick(() => place(gameNow())))
 onBeforeUnmount(stopLoop)
 
 const playerBoxPx = `${VOYAGE_LIVE_PLAYER_BOX_PX}px`
-const haloPx = `${VOYAGE_LIVE_PLAYER_BOX_PX * 1.6}px`
+const haloPx = `${VOYAGE_LIVE_PLAYER_BOX_PX * 1.8}px`
 const tailPx = `${VOYAGE_LIVE_PLAYER_TAIL_PX}px`
 const tailHPx = `${VOYAGE_LIVE_PLAYER_TAIL_H_PX}px`
 const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
@@ -352,7 +352,7 @@ const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
   height: v-bind(haloPx);
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 220, 150, 0.4) 0%, rgba(255, 220, 150, 0) 70%);
+  background: radial-gradient(circle, rgba(255, 220, 150, 0.5) 0%, rgba(255, 220, 150, 0) 70%);
   animation: epml-breathe 2600ms ease-in-out infinite;
 }
 @keyframes epml-breathe {
