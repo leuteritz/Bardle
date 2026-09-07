@@ -2097,9 +2097,9 @@ export const VOYAGE_CREW_MARKER_FACES = 3
 export const VOYAGE_CREW_MARKER_PULSE_MS = 2400
 
 // ══ Die Live-Bühne des Voyages-Reiters ═══════════════════════════════════════
-// Die zweite Bühne des Reiters: der LAUFENDE Lauf, groß. Sie zeigt keine
-// befreite Galaxie, sondern die, in der der Spieler gerade fliegt — der Atlas
-// führt die nie, weil er `completedGalaxies` liest.
+// Der laufende Lauf im Voyages-Reiter. Die Karte zeigt ihn wie jede befreite
+// Galaxie — der Datensatz dazu wird gebaut (`liveGalaxyRecord`), weil der Atlas
+// `completedGalaxies` liest und die laufende dort nie steht.
 
 /** Die Zeile der laufenden Galaxie in der Zielliste. Eigene Höhe, KEIN
  *  `VOYAGE_RAIL_ROW_H`: die lebt von ihrer Snapshot-Miniatur, und für einen
@@ -2108,44 +2108,10 @@ export const VOYAGE_LIVE_ROW_H = 56
 
 export const VOYAGE_LIVE_RAIL_LABEL = 'Current run'
 export const VOYAGE_LIVE_RAIL_TITLE = 'Follow your current run'
-export const VOYAGE_LIVE_PLAQUE_LABEL = 'Current run'
 /** Der Leerzustand der Zielliste, solange nichts befreit ist. */
 export const VOYAGE_LIVE_EMPTY_NOTE = 'Free this galaxy and it becomes your first destination.'
 
-/** Die Zustände der Bühne, in EINEM Wort. Der Renderer zeigt das Bild dazu. */
-export const VOYAGE_LIVE_STATES = {
-  role: 'Choosing role',
-  flight: 'In flight',
-  system: 'In system',
-  boss: 'Boss star',
-  freed: 'Galaxy freed',
-  idle: 'Holding',
-} as const
-
-export const VOYAGE_LIVE_BAND_LABELS = {
-  next: 'Next',
-  eta: 'ETA',
-  stars: 'Stars',
-  distance: 'Distance',
-  chronicle: 'Chronicle',
-} as const
-
-/** Reservierte Breite der Uhrzelle in `ch` — MedievalSharp hat keine
- *  Tabellenziffern, ohne Reservierung wandert das Band im Sekundentakt. */
-export const VOYAGE_LIVE_ETA_CH = 5.4
-/** Dieselbe Sperre für die Sternzelle (`7/2`). */
-export const VOYAGE_LIVE_STARS_CH = 4.2
-
-/** Die zwei Listen liegen als Scrim AUF der Karte, wie die Manifestreihe des
- *  Atlas — die Platte nimmt die volle Bühne, es gibt keinen Rand mehr. */
-export const VOYAGE_LIVE_ASIDE_W = 232
-/** Deckel ihrer Höhe als Anteil der Bühne; darüber rollt die Liste in sich. */
-export const VOYAGE_LIVE_ASIDE_MAX_SHARE = 0.46
-/** Unter dieser Bühnenbreite weichen beide: eine gestauchte Liste ist
- *  schlimmer als keine, und die Karte gibt keinen Pixel ab. */
-export const VOYAGE_LIVE_ASIDE_MIN_STAGE_W = 900
-
-// ══ Der Spielerkörper auf der Live-Platte ════════════════════════════════════
+// ══ Der Spielerkörper auf der Live-Karte ═════════════════════════════════════
 // Er ist DOM, kein Canvas-Zug: die Platte ist ein Standbild und wird nur bei
 // `paintKey`-Wechsel gemalt. Ein Dot darauf hiesse die ganze Platte, jeden Frame.
 

@@ -69,6 +69,7 @@ import ExpeditionPortalNode from './ExpeditionPortalNode.vue'
 import ExpeditionGalaxyStatsBand from './ExpeditionGalaxyStatsBand.vue'
 import ExpeditionStarManifest from './ExpeditionStarManifest.vue'
 import ExpeditionCrewMarkerLayer from './ExpeditionCrewMarkerLayer.vue'
+import ExpeditionPlayerMarkerLayer from './ExpeditionPlayerMarkerLayer.vue'
 import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 
 const props = defineProps<{
@@ -99,6 +100,8 @@ const props = defineProps<{
   arriving: boolean
   /** Kamerafahrt zurueck ins Firmament: die Platte zieht sich zurueck. */
   leaving: boolean
+  /** Die LAUFENDE Galaxie: Route endet am letzten Stern, kein Tor, Bard fliegt. */
+  live?: boolean
 }>()
 const emit = defineEmits<{ select: [string | null]; act: [string] }>()
 
@@ -374,6 +377,7 @@ const paintKey = computed(
     // Die Rollen färben die Sternkerne und werden nachträglich gefüllt — ohne
     // sie malte die Karte nach einem Nachtrag nie wieder neu.
     `:${starRoleSignature(props.record.starManifests)}` +
+    `:${props.live ? 'live' : 'done'}` +
     `|${Math.round(cssW.value)}x${Math.round(cssH.value)}|${bandH.value}|${dprNow.value}`,
 )
 
@@ -417,6 +421,7 @@ function paint() {
     routeAlpha: VOYAGE_MAP_ROUTE_ALPHA,
     historyScale: VOYAGE_MAP_HISTORY_SCALE,
     deepField: true,
+    live: props.live,
   })
   paintCount.value += 1
 }
@@ -521,6 +526,16 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
       @hover="hoveredStar = $event"
     />
 
+    <ExpeditionPlayerMarkerLayer
+      v-if="live"
+      :record="record"
+      :box="box"
+      :width="cssW"
+      :height="cssH"
+      :visible="visible"
+      :now="now"
+    />
+
     <ExpeditionCrewMarkerLayer
       :record="record"
       :sites="sites"
@@ -596,6 +611,7 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
       <!-- Vor den Häfen: das Tor liegt bei gleichem z-index sonst darüber, und
            ein Vertrag nahe am Kern verschwände unter dem Reifen. -->
       <ExpeditionGateNode
+        v-if="!live"
         :left="pct(0.5, 0.5).left"
         :top="pct(0.5, 0.5).top"
         :now="now"
