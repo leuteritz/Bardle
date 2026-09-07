@@ -10,6 +10,8 @@ import type {
   NotifyBadgeKind,
   StatCategoryId,
 } from '@/types'
+// Das Waehrungs-Artwork wohnt bei den Waehrungen, nicht bei der Oberflaeche.
+import { CURRENCY_ART } from '@/config/constants/progression'
 
 // ── Idle-Layer hinter einem Overlay: Anhalten und Wiederanlaufen ───────────
 /**
@@ -1349,11 +1351,31 @@ export const JOURNEY_KPI_TILES: readonly {
   /** kurze Kachel-Beschriftung, wo das Kataloglabel zu lang ist */
   short?: string
   icon: string
+  /** Waehrungskacheln zeigen ihr eigenes Artwork statt des Iconify-Glyphs. */
+  art?: keyof typeof CURRENCY_ART
 }[] = [
-  { category: 'economy', key: 'cps', short: 'Chimes / Sec', icon: 'game-icons:sparkles' },
-  { category: 'economy', key: 'cpc', short: 'Chimes / Click', icon: 'game-icons:hand' },
-  { category: 'economy', key: 'total-chimes', short: 'Chimes Earned', icon: 'game-icons:coins' },
-  { category: 'economy', key: 'meeps', icon: 'game-icons:meeple-king' },
+  {
+    category: 'economy',
+    key: 'cps',
+    short: 'Chimes / Sec',
+    icon: 'game-icons:sparkles',
+    art: 'chimes',
+  },
+  {
+    category: 'economy',
+    key: 'cpc',
+    short: 'Chimes / Click',
+    icon: 'game-icons:hand',
+    art: 'chimes',
+  },
+  {
+    category: 'economy',
+    key: 'total-chimes',
+    short: 'Chimes Earned',
+    icon: 'game-icons:coins',
+    art: 'chimes',
+  },
+  { category: 'economy', key: 'meeps', icon: 'game-icons:meeple-king', art: 'meeps' },
   { category: 'autoBattle', key: 'rank', sub: 'lp', short: 'Rank', icon: 'game-icons:laurel-crown' },
   { category: 'autoBattle', key: 'winrate', short: 'Win Rate', icon: 'game-icons:trophy-cup' },
   { category: 'galaxy', key: 'stars-rescued', short: 'Stars Rescued', icon: 'game-icons:star-swirl' },

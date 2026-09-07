@@ -9,7 +9,7 @@ import type {
 } from '@/types'
 // Wie `universe.ts`: das Sternsoll ist eine Progressionszahl, die Reihe darf
 // sie nur LESEN. Direkt aus der Themendatei, nicht ueber das Barrel.
-import { GALAXY_STARS_MAX } from '@/config/constants/progression'
+import { CHIME_ART_ALPHA_SCALE, GALAXY_STARS_MAX } from '@/config/constants/progression'
 
 /** Aufsammel-Blitz und Lebensdauer eines Chime-Pops im Expeditions-Panel. */
 export const EXPEDITION_COLLECT_FLASH_MS = 600
@@ -1121,26 +1121,9 @@ export const VOYAGE_FLEET_EARN_TIGHT = 2
  */
 export const VOYAGE_FLEET_CHIME_PX = 20
 export const VOYAGE_FLEET_LOOT_ICON = 20
-/**
- * Das Chime-Artwork trägt einen breiten Alpha-Rand: im Canvas GEMESSEN füllt das
- * Motiv nur 69,5 % der Bildbreite, links und rechts bleiben je 15,2 % leer. Die
- * Element-Box beginnt also an der Inhaltskante, das sichtbare Chime erst 3 px
- * weiter rechts — und die Uhr eine Zeile darunter stand sichtbar daneben statt
- * darunter.
- *
- * `1 / 0,695 = 1,44` zieht das Motiv auf die volle Boxbreite. Danach sitzt die
- * Uhr von selbst bündig, und das Bild wirkt zugleich grösser. Korrigiert wird
- * das SPRITE, nicht die Textposition: eine Uhr, die an den Alpha-Rand einer
- * PNG-Datei genagelt ist, verrutscht beim nächsten Export.
- *
- * Dieselbe Korrektur, die `UNIVERSE_TOOLTIP_MEEP_SCALE` für das Meep trägt —
- * eigener Faktor, weil es ein anderes Motiv in einem anderen Seitenverhältnis
- * ist (85 x 128 gegen 128 x 128).
- *
- * `transform` ändert die Flussbreite NICHT: der Überstand ist transparent und
- * kostet in der Breitenrechnung der Ertragszeile nichts.
- */
-export const VOYAGE_FLEET_CHIME_SCALE = 1.44
+/** Der Alpha-Rand des Chime-Sprites, an jeder Stelle derselbe — Herleitung
+ *  steht an der Konstante. */
+export const VOYAGE_FLEET_CHIME_SCALE = CHIME_ART_ALPHA_SCALE
 /**
  * Die beiden Textbreiten der Ertragszeile, im Browser per `Range` GEMESSEN —
  * beide bei 24 px, denn Lohn und Meepzahl sind gleich gross. Sie sind die Wand,

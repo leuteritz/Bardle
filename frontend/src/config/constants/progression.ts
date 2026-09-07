@@ -457,6 +457,22 @@ export const MEEP_ART_IMAGE_SM = '/img/BardAbilities/BardMeep-128.png'
  * Header (`.meep-icon` in UniverseStatsRow.vue).
  */
 export const UNIVERSE_TOOLTIP_MEEP_SCALE = 1.3
+
+/** Alpha-Rand des Chime-Sprites: das Motiv fuellt 69,5 % der Bildbreite,
+ *  1 / 0,695 = 1,44 zieht es auf die volle Box. Korrigiert wird das SPRITE per
+ *  `scale` — `transform` aendert die Flussbreite nicht. */
+export const CHIME_ART_ALPHA_SCALE = 1.44
+
+/** Das Chime, wo es nach der Randkorrektur ueber 34px gezeichnet wird. */
+export const CHIME_ART_IMAGE_MD = '/img/BardAbilities/BardChime-256.png'
+
+/** Waehrung zu Bild und Randkorrektur — fuer Listen, die Chimes und Meeps neben
+ *  Iconify-Glyphen in DERSELBEN Box zeigen. */
+export const CURRENCY_ART = {
+  chimes: { src: CHIME_ART_IMAGE_MD, scale: CHIME_ART_ALPHA_SCALE },
+  meeps: { src: MEEP_ART_IMAGE_SM, scale: UNIVERSE_TOOLTIP_MEEP_SCALE },
+} as const
+
 // Archived universe runs kept in the save. Only the fastest and the latest are
 // read back, so the list exists as history, not as a growing ledger.
 export const UNIVERSE_RUN_HISTORY_LIMIT = 12
