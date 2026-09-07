@@ -21,12 +21,12 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import {
-  FIRMAMENT_DIVE_EASE_ARRIVE,
-  FIRMAMENT_DIVE_EASE_LEAVE,
-  FIRMAMENT_DIVE_GLOW_ALPHA,
-  FIRMAMENT_DIVE_GLOW_PAST,
-  FIRMAMENT_DIVE_GLOW_PX,
-  FIRMAMENT_DIVE_GLOW_SEED,
+  UNIVERSE_MAP_DIVE_EASE_ARRIVE,
+  UNIVERSE_MAP_DIVE_EASE_LEAVE,
+  UNIVERSE_MAP_DIVE_GLOW_ALPHA,
+  UNIVERSE_MAP_DIVE_GLOW_PAST,
+  UNIVERSE_MAP_DIVE_GLOW_PX,
+  UNIVERSE_MAP_DIVE_GLOW_SEED,
   IDLE_RESUME_DELAY_FRAMES,
   UNIVERSE_HOP_GATE_LIFT_MS,
   UNIVERSE_HOP_GATE_MS,
@@ -81,7 +81,7 @@ function measure() {
   const w = window.innerWidth
   const vh = window.innerHeight
   const far = Math.hypot(Math.max(h.x, w - h.x), Math.max(h.y, vh - h.y))
-  spot.value = { x: h.x, y: h.y, cover: (2 * far) / FIRMAMENT_DIVE_GLOW_PX }
+  spot.value = { x: h.x, y: h.y, cover: (2 * far) / UNIVERSE_MAP_DIVE_GLOW_PX }
 }
 
 /**
@@ -167,11 +167,11 @@ const glowStyle = computed(() => ({
 }))
 const washStyle = computed(() => ({ backgroundColor: hop.value?.accent ?? '#ffffff' }))
 
-const glowPx = `${FIRMAMENT_DIVE_GLOW_PX}px`
-const glowHalf = `${-FIRMAMENT_DIVE_GLOW_PX / 2}px`
-const glowAlpha = String(FIRMAMENT_DIVE_GLOW_ALPHA)
-const glowSeed = String(FIRMAMENT_DIVE_GLOW_SEED)
-const glowPast = String(FIRMAMENT_DIVE_GLOW_PAST)
+const glowPx = `${UNIVERSE_MAP_DIVE_GLOW_PX}px`
+const glowHalf = `${-UNIVERSE_MAP_DIVE_GLOW_PX / 2}px`
+const glowAlpha = String(UNIVERSE_MAP_DIVE_GLOW_ALPHA)
+const glowSeed = String(UNIVERSE_MAP_DIVE_GLOW_SEED)
+const glowPast = String(UNIVERSE_MAP_DIVE_GLOW_PAST)
 const gateDur = `${UNIVERSE_HOP_GATE_MS}ms`
 const liftDur = `${UNIVERSE_HOP_GATE_LIFT_MS}ms`
 // Zwei Animationen statt eines Keyframe-Prozents: v-bind() kann kein Selektor sein.
@@ -179,8 +179,8 @@ const washInMs = Math.round(UNIVERSE_HOP_WASH_PEAK * UNIVERSE_HOP_WASH_MS)
 const washInDur = `${washInMs}ms`
 const washOutDur = `${UNIVERSE_HOP_WASH_MS - washInMs}ms`
 const washAlpha = String(UNIVERSE_HOP_WASH_ALPHA)
-const easeLeave = FIRMAMENT_DIVE_EASE_LEAVE
-const easeArrive = FIRMAMENT_DIVE_EASE_ARRIVE
+const easeLeave = UNIVERSE_MAP_DIVE_EASE_LEAVE
+const easeArrive = UNIVERSE_MAP_DIVE_EASE_ARRIVE
 </script>
 
 <template>

@@ -2,7 +2,7 @@
  * Wo das Abflugportal im schwarzen Raum steht.
  *
  * Reine Rechnung, kein DOM, kein Store — die Buehnenmasse kommen herein, eine
- * Stelle kommt heraus. Sie liegt bewusst NICHT in `firmamentLayout.ts`: die
+ * Stelle kommt heraus. Sie liegt bewusst NICHT in `universeLayout.ts`: die
  * Bahndatei traegt einen engen Vertrag (reine Bahngeometrie), hier kommen
  * Bildkante und Kartenscheibe dazu. Der Import laeuft nur in eine Richtung.
  *
@@ -17,32 +17,32 @@
  */
 
 import {
-  FIRMAMENT_OFFER_PORTAL_ANGLE_TRIES,
-  FIRMAMENT_OFFER_PORTAL_GAP,
-  FIRMAMENT_OFFER_PORTAL_RADIAL_STEPS,
-  FIRMAMENT_OFFER_PORTAL_RING_K,
-  FIRMAMENT_PORTAL_ANGLE_TRIES,
-  FIRMAMENT_PORTAL_DISC_CLEAR,
-  FIRMAMENT_PORTAL_EDGE_KEEP,
-  FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS,
-  FIRMAMENT_PORTAL_LABEL_EDGE_PAD,
-  FIRMAMENT_PORTAL_LABEL_GAP_EM,
-  FIRMAMENT_PORTAL_LABEL_H_EM,
-  FIRMAMENT_PORTAL_LABEL_MAX_PX,
-  FIRMAMENT_PORTAL_LABEL_MIN_PX,
-  FIRMAMENT_PORTAL_LABEL_R_RATIO,
-  FIRMAMENT_PORTAL_LABEL_W_EM,
-  FIRMAMENT_PORTAL_MIN_VISIBLE,
-  FIRMAMENT_PORTAL_RING_H_RATIO,
-  FIRMAMENT_PORTAL_RING_MAX_PX,
-  FIRMAMENT_PORTAL_RING_MIN_PX,
-  FIRMAMENT_PORTAL_SHRINK_STEPS,
-  FIRMAMENT_PORTAL_VIS_SAMPLES,
+  UNIVERSE_MAP_OFFER_PORTAL_ANGLE_TRIES,
+  UNIVERSE_MAP_OFFER_PORTAL_GAP,
+  UNIVERSE_MAP_OFFER_PORTAL_RADIAL_STEPS,
+  UNIVERSE_MAP_OFFER_PORTAL_RING_K,
+  UNIVERSE_MAP_PORTAL_ANGLE_TRIES,
+  UNIVERSE_MAP_PORTAL_DISC_CLEAR,
+  UNIVERSE_MAP_PORTAL_EDGE_KEEP,
+  UNIVERSE_MAP_PORTAL_LABEL_CLEAR_STEPS,
+  UNIVERSE_MAP_PORTAL_LABEL_EDGE_PAD,
+  UNIVERSE_MAP_PORTAL_LABEL_GAP_EM,
+  UNIVERSE_MAP_PORTAL_LABEL_H_EM,
+  UNIVERSE_MAP_PORTAL_LABEL_MAX_PX,
+  UNIVERSE_MAP_PORTAL_LABEL_MIN_PX,
+  UNIVERSE_MAP_PORTAL_LABEL_R_RATIO,
+  UNIVERSE_MAP_PORTAL_LABEL_W_EM,
+  UNIVERSE_MAP_PORTAL_MIN_VISIBLE,
+  UNIVERSE_MAP_PORTAL_RING_H_RATIO,
+  UNIVERSE_MAP_PORTAL_RING_MAX_PX,
+  UNIVERSE_MAP_PORTAL_RING_MIN_PX,
+  UNIVERSE_MAP_PORTAL_SHRINK_STEPS,
+  UNIVERSE_MAP_PORTAL_VIS_SAMPLES,
 } from '@/config/constants'
 import { jitter } from '@/utils/fx/universeDisc'
-import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
+import { universeFitBox } from '@/utils/ui/universeLayout'
 
-export interface FirmamentPortalSpot {
+export interface UniversePortalSpot {
   /** Mitte des RINGS in Buehnenkoordinaten. */
   x: number
   y: number
@@ -50,7 +50,7 @@ export interface FirmamentPortalSpot {
   r: number
 }
 
-export interface FirmamentRect {
+export interface UniverseRect {
   x0: number
   y0: number
   x1: number
@@ -61,10 +61,10 @@ export interface FirmamentRect {
  *  das Band schwankt ueber die Zielaufloesungen um Faktor 4, die Hoehe nur um
  *  2,4. Am Band gemessen waere das Portal auf WUXGA halb so gross wie auf
  *  Full HD — bei derselben Bildschirmbreite. */
-export function firmamentPortalRingR(h: number): number {
+export function universePortalRingR(h: number): number {
   return Math.min(
-    FIRMAMENT_PORTAL_RING_MAX_PX,
-    Math.max(FIRMAMENT_PORTAL_RING_MIN_PX, h * FIRMAMENT_PORTAL_RING_H_RATIO),
+    UNIVERSE_MAP_PORTAL_RING_MAX_PX,
+    Math.max(UNIVERSE_MAP_PORTAL_RING_MIN_PX, h * UNIVERSE_MAP_PORTAL_RING_H_RATIO),
   )
 }
 
@@ -83,7 +83,7 @@ function rayToRect(cx: number, cy: number, a: number, inset: number, w: number, 
 
 /** Welcher Anteil der Ringscheibe im Bild liegt — Streifenintegration, weil ein
  *  Kreis-Rechteck-Schnitt an zwei Kanten keine geschlossene Formel hat. */
-export function firmamentPortalVisibleShare(
+export function universePortalVisibleShare(
   x: number,
   y: number,
   r: number,
@@ -91,7 +91,7 @@ export function firmamentPortalVisibleShare(
   h: number,
 ): number {
   if (r <= 0) return 0
-  const n = FIRMAMENT_PORTAL_VIS_SAMPLES
+  const n = UNIVERSE_MAP_PORTAL_VIS_SAMPLES
   const band = (2 * r) / n
   let inside = 0
   for (let i = 0; i < n; i++) {
@@ -119,16 +119,16 @@ export function firmamentPortalVisibleShare(
  * und genug Flaeche im Bild laesst, gewinnt. Findet sich nichts, wird der Ring
  * kleiner statt zu verschwinden.
  */
-export function firmamentPortalSpot(
+export function universePortalSpot(
   universe: number,
   w: number,
   h: number,
-): FirmamentPortalSpot | null {
+): UniversePortalSpot | null {
   if (w <= 0 || h <= 0) return null
 
-  const fit = firmamentFitBox(w, h)
-  const full = firmamentPortalRingR(h)
-  const clear = fit.r * FIRMAMENT_PORTAL_DISC_CLEAR
+  const fit = universeFitBox(w, h)
+  const full = universePortalRingR(h)
+  const clear = fit.r * UNIVERSE_MAP_PORTAL_DISC_CLEAR
 
   // Eigene Primzahl je Aspekt, ab 131 aufwaerts — die Kanaele darunter gehoeren
   // der Galaxienwolke, und zwei Aspekte auf einem Kanal laufen im Gleichschritt.
@@ -137,20 +137,20 @@ export function firmamentPortalSpot(
 
   // Aeussere Schleife ueber die GROESSE: passt die volle nirgends hin, wird der
   // Ring kleiner. Ein verschwundenes Portal waere die Weiterreise ohne Weg.
-  for (const step of FIRMAMENT_PORTAL_SHRINK_STEPS) {
+  for (const step of UNIVERSE_MAP_PORTAL_SHRINK_STEPS) {
     const r = full * step
     const dMin = clear + r
-    const inset = r * FIRMAMENT_PORTAL_EDGE_KEEP
+    const inset = r * UNIVERSE_MAP_PORTAL_EDGE_KEEP
 
-    for (let i = 0; i < FIRMAMENT_PORTAL_ANGLE_TRIES; i++) {
-      const angle = base + (i * Math.PI * 2) / FIRMAMENT_PORTAL_ANGLE_TRIES
+    for (let i = 0; i < UNIVERSE_MAP_PORTAL_ANGLE_TRIES; i++) {
+      const angle = base + (i * Math.PI * 2) / UNIVERSE_MAP_PORTAL_ANGLE_TRIES
       const dMax = rayToRect(fit.cx, fit.cy, angle, inset, w, h)
       if (dMax < dMin) continue
 
       const d = dMin + frac * (dMax - dMin)
       const x = fit.cx + Math.cos(angle) * d
       const y = fit.cy + Math.sin(angle) * d
-      if (firmamentPortalVisibleShare(x, y, r, w, h) < FIRMAMENT_PORTAL_MIN_VISIBLE) continue
+      if (universePortalVisibleShare(x, y, r, w, h) < UNIVERSE_MAP_PORTAL_MIN_VISIBLE) continue
 
       return { x, y, r }
     }
@@ -183,34 +183,34 @@ export function firmamentPortalSpot(
  * gehen nur in die Streuung ein, damit zwei Angebote am selben Ort verschiedene
  * Abstaende zur Mitte bekommen.
  */
-export function firmamentOfferPortalSpots(
+export function universeOfferPortalSpots(
   seed: number,
   targets: readonly number[],
   w: number,
   h: number,
-): FirmamentPortalSpot[] {
+): UniversePortalSpot[] {
   if (w <= 0 || h <= 0 || targets.length === 0) return []
 
-  const fit = firmamentFitBox(w, h)
-  const full = firmamentPortalRingR(h) * FIRMAMENT_OFFER_PORTAL_RING_K
-  const clear = fit.r * FIRMAMENT_PORTAL_DISC_CLEAR
-  const tries = FIRMAMENT_OFFER_PORTAL_ANGLE_TRIES
+  const fit = universeFitBox(w, h)
+  const full = universePortalRingR(h) * UNIVERSE_MAP_OFFER_PORTAL_RING_K
+  const clear = fit.r * UNIVERSE_MAP_PORTAL_DISC_CLEAR
+  const tries = UNIVERSE_MAP_OFFER_PORTAL_ANGLE_TRIES
 
   // Eigene Kanaele, ab 157 aufwaerts: 131/137 gehoeren dem Abflugportal, 149
   // dem Wirbel. Zwei Aspekte auf einem Kanal laufen im Gleichschritt.
   const base = jitter(seed, 157) * Math.PI * 2
 
-  for (const step of FIRMAMENT_PORTAL_SHRINK_STEPS) {
+  for (const step of UNIVERSE_MAP_PORTAL_SHRINK_STEPS) {
     const r = full * step
     const dMin = clear + r
-    const inset = r * FIRMAMENT_PORTAL_EDGE_KEEP
-    const spots: FirmamentPortalSpot[] = []
+    const inset = r * UNIVERSE_MAP_PORTAL_EDGE_KEEP
+    const spots: UniversePortalSpot[] = []
 
     for (const target of targets) {
       const k = spots.length
       const start = base + (k * Math.PI * 2) / targets.length
       const frac = jitter(seed * 10 + target, 163)
-      let found: FirmamentPortalSpot | null = null
+      let found: UniversePortalSpot | null = null
 
       // Von der Sollrichtung aus abwechselnd nach beiden Seiten: der erste
       // Treffer liegt damit so nah wie moeglich an der gespreizten Lage.
@@ -224,13 +224,13 @@ export function firmamentOfferPortalSpots(
         // nicht braucht: eine Speiche, die beim gewuerfelten Anteil im
         // Abstandskreis des Nachbarn liegt, ist weiter draussen oder weiter
         // drinnen oft frei.
-        for (const f of [frac, ...FIRMAMENT_OFFER_PORTAL_RADIAL_STEPS]) {
+        for (const f of [frac, ...UNIVERSE_MAP_OFFER_PORTAL_RADIAL_STEPS]) {
           const d = dMin + f * (dMax - dMin)
           const x = fit.cx + Math.cos(angle) * d
           const y = fit.cy + Math.sin(angle) * d
-          if (firmamentPortalVisibleShare(x, y, r, w, h) < FIRMAMENT_PORTAL_MIN_VISIBLE) continue
+          if (universePortalVisibleShare(x, y, r, w, h) < UNIVERSE_MAP_PORTAL_MIN_VISIBLE) continue
           if (
-            spots.some((p) => Math.hypot(p.x - x, p.y - y) < (p.r + r) * FIRMAMENT_OFFER_PORTAL_GAP)
+            spots.some((p) => Math.hypot(p.x - x, p.y - y) < (p.r + r) * UNIVERSE_MAP_OFFER_PORTAL_GAP)
           )
             continue
 
@@ -248,19 +248,19 @@ export function firmamentOfferPortalSpots(
 
   // Kein Fluchtweg mit Ueberlappung: eher enger gestellt als eines verschwunden.
   // Die kleinste Stufe auf gleichmaessig verteilten Winkeln, ohne Abstandstest.
-  const r = full * FIRMAMENT_PORTAL_SHRINK_STEPS[FIRMAMENT_PORTAL_SHRINK_STEPS.length - 1]
+  const r = full * UNIVERSE_MAP_PORTAL_SHRINK_STEPS[UNIVERSE_MAP_PORTAL_SHRINK_STEPS.length - 1]
   return targets.map((_, k) => {
     const angle = base + (k * Math.PI * 2) / targets.length
-    const d = Math.max(clear + r, rayToRect(fit.cx, fit.cy, angle, r * FIRMAMENT_PORTAL_EDGE_KEEP, w, h))
+    const d = Math.max(clear + r, rayToRect(fit.cx, fit.cy, angle, r * UNIVERSE_MAP_PORTAL_EDGE_KEEP, w, h))
     return { x: fit.cx + Math.cos(angle) * d, y: fit.cy + Math.sin(angle) * d, r }
   })
 }
 
 // ── Die Beschriftung ────────────────────────────────────────────────────────
 
-export type FirmamentPortalLabelSide = 'below' | 'above' | 'right' | 'left'
+export type UniversePortalLabelSide = 'below' | 'above' | 'right' | 'left'
 
-export interface FirmamentPortalLabelSpot {
+export interface UniversePortalLabelSpot {
   /** Mitte des Kaestchens in Buehnenkoordinaten. */
   cx: number
   cy: number
@@ -269,15 +269,15 @@ export interface FirmamentPortalLabelSpot {
   h: number
   /** Schriftgrad der Namenszeile in px; alles andere haengt in `em` daran. */
   size: number
-  side: FirmamentPortalLabelSide
+  side: UniversePortalLabelSide
 }
 
 /** Der Schriftgrad haengt am RING, nicht an der Buehne: die Beschriftung gehoert
  *  dem Portal, und auf WUXGA schrumpft der Ring als einziger Fall. */
-export function firmamentPortalLabelSize(r: number): number {
+export function universePortalLabelSize(r: number): number {
   return Math.min(
-    FIRMAMENT_PORTAL_LABEL_MAX_PX,
-    Math.max(FIRMAMENT_PORTAL_LABEL_MIN_PX, r * FIRMAMENT_PORTAL_LABEL_R_RATIO),
+    UNIVERSE_MAP_PORTAL_LABEL_MAX_PX,
+    Math.max(UNIVERSE_MAP_PORTAL_LABEL_MIN_PX, r * UNIVERSE_MAP_PORTAL_LABEL_R_RATIO),
   )
 }
 
@@ -318,26 +318,26 @@ function nearestFree(
  * gedraengt ist besser als weg, eine verschwundene Beschriftung waere eine
  * Weiterreise ohne Ziel.
  */
-export function firmamentPortalLabelSpot(
-  spot: FirmamentPortalSpot,
+export function universePortalLabelSpot(
+  spot: UniversePortalSpot,
   w: number,
   h: number,
-  neighbours: readonly FirmamentPortalSpot[] = [],
-): FirmamentPortalLabelSpot {
-  const size = firmamentPortalLabelSize(spot.r)
-  const bw = FIRMAMENT_PORTAL_LABEL_W_EM * size
-  const bh = FIRMAMENT_PORTAL_LABEL_H_EM * size
-  const gap = FIRMAMENT_PORTAL_LABEL_GAP_EM * size
-  const pad = FIRMAMENT_PORTAL_LABEL_EDGE_PAD
+  neighbours: readonly UniversePortalSpot[] = [],
+): UniversePortalLabelSpot {
+  const size = universePortalLabelSize(spot.r)
+  const bw = UNIVERSE_MAP_PORTAL_LABEL_W_EM * size
+  const bh = UNIVERSE_MAP_PORTAL_LABEL_H_EM * size
+  const gap = UNIVERSE_MAP_PORTAL_LABEL_GAP_EM * size
+  const pad = UNIVERSE_MAP_PORTAL_LABEL_EDGE_PAD
 
-  const fit = firmamentFitBox(w, h)
+  const fit = universeFitBox(w, h)
 
-  const outward: FirmamentPortalLabelSide = spot.x >= fit.cx ? 'right' : 'left'
-  const inward: FirmamentPortalLabelSide = outward === 'right' ? 'left' : 'right'
-  const order: FirmamentPortalLabelSide[] = ['below', 'above', outward, inward]
+  const outward: UniversePortalLabelSide = spot.x >= fit.cx ? 'right' : 'left'
+  const inward: UniversePortalLabelSide = outward === 'right' ? 'left' : 'right'
+  const order: UniversePortalLabelSide[] = ['below', 'above', outward, inward]
 
   /** Die feste Achse einer Seite: Kastenmitte und ihr halbes Mass. */
-  function bound(side: FirmamentPortalLabelSide): { mid: number; half: number } {
+  function bound(side: UniversePortalLabelSide): { mid: number; half: number } {
     const half = side === 'below' || side === 'above' ? bh / 2 : bw / 2
     const off = spot.r + gap + half
     if (side === 'below') return { mid: spot.y + off, half }
@@ -346,7 +346,7 @@ export function firmamentPortalLabelSpot(
     return { mid: spot.x - off, half }
   }
 
-  function place(side: FirmamentPortalLabelSide, clear: number): FirmamentPortalLabelSpot | null {
+  function place(side: UniversePortalLabelSide, clear: number): UniversePortalLabelSpot | null {
     const vertical = side === 'below' || side === 'above'
     const { mid, half: bHalf } = bound(side)
     const span = vertical ? w : h
@@ -381,7 +381,7 @@ export function firmamentPortalLabelSpot(
 
   // Aeussere Schleife ueber die NAEHE zur Karte, innere ueber die Seiten: eine
   // Seite in der schwarzen Flaeche schlaegt jede naehere, egal welche.
-  for (const step of FIRMAMENT_PORTAL_LABEL_CLEAR_STEPS) {
+  for (const step of UNIVERSE_MAP_PORTAL_LABEL_CLEAR_STEPS) {
     for (const side of order) {
       const cand = place(side, fit.r * step)
       if (cand) return cand
@@ -415,12 +415,12 @@ export function firmamentPortalLabelSpot(
  * zu treffen — und ein Anker, der ueber den Rand hinausreicht, zoege die Karte
  * samt Pfeil aus dem Reiter heraus.
  */
-export function firmamentPortalHitBox(
-  spot: FirmamentPortalSpot,
-  label: FirmamentPortalLabelSpot,
+export function universePortalHitBox(
+  spot: UniversePortalSpot,
+  label: UniversePortalLabelSpot,
   w: number,
   h: number,
-): FirmamentRect {
+): UniverseRect {
   return {
     x0: Math.max(0, Math.min(spot.x - spot.r, label.cx - label.w / 2)),
     y0: Math.max(0, Math.min(spot.y - spot.r, label.cy - label.h / 2)),

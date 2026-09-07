@@ -48,7 +48,7 @@ describe('Universumssprung — Store-Ablauf', () => {
   it('beginnt die Zeremonie, setzt aber noch nicht zurück', () => {
     const { game, providence, target } = seedOffer()
     const ui = useUiStore()
-    ui.setBardTab('firmament')
+    ui.setBardTab('universe')
     const before = game.currentUniverse
 
     game.travelToUniverse(target, { x: 300, y: 200 })
@@ -59,7 +59,7 @@ describe('Universumssprung — Store-Ablauf', () => {
     expect(providence.active).not.toBeNull()
     expect(providence.offer).toEqual([])
     // Das Profil bleibt offen — der Schleier schliesst es, sobald er deckt.
-    expect(ui.bardActiveTab).toBe('firmament')
+    expect(ui.bardActiveTab).toBe('universe')
     expect(ui.universeHop).toEqual({
       target,
       x: 300,
@@ -127,7 +127,7 @@ describe('Universumssprung — Store-Ablauf', () => {
     stubReducedMotion(true)
     const { game, target } = seedOffer()
     const ui = useUiStore()
-    ui.setBardTab('firmament')
+    ui.setBardTab('universe')
 
     game.travelToUniverse(target)
     expect(game.currentUniverse).toBe(target)

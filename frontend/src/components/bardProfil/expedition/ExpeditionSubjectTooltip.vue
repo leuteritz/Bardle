@@ -701,7 +701,7 @@ const showRequirement = computed(() => view.value?.state === 'offer')
 }
 
 /* Die Fusszeile sagt, was der Klick tut. Gold wie die uebrigen CTA-Zeilen des
-   Spiels (`FirmamentGalaxyTip`), nicht in der Verdikt-Farbe: sie gehoert der
+   Spiels (`UniverseGalaxyTip`), nicht in der Verdikt-Farbe: sie gehoert der
    Geste, nicht dem Zustand. */
 .vtt-cta {
   color: #e8c040;

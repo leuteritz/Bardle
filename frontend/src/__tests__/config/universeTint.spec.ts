@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { universes } from '@/config/progression/universes'
 import {
-  FIRMAMENT_FREED_COLOR,
-  FIRMAMENT_GATE_COLOR,
-  FIRMAMENT_HERE_COLOR,
-  FIRMAMENT_LANDFALL_COLOR,
-  FIRMAMENT_LOST_COLOR,
+  UNIVERSE_MAP_FREED_COLOR,
+  UNIVERSE_MAP_GATE_COLOR,
+  UNIVERSE_MAP_HERE_COLOR,
+  UNIVERSE_MAP_LANDFALL_COLOR,
+  UNIVERSE_MAP_LOST_COLOR,
 } from '@/config/constants'
 
 /**
@@ -18,11 +18,11 @@ import {
  */
 
 const STATE_COLORS = {
-  freed: FIRMAMENT_FREED_COLOR,
-  here: FIRMAMENT_HERE_COLOR,
-  gate: FIRMAMENT_GATE_COLOR,
-  landfall: FIRMAMENT_LANDFALL_COLOR,
-  lost: FIRMAMENT_LOST_COLOR,
+  freed: UNIVERSE_MAP_FREED_COLOR,
+  here: UNIVERSE_MAP_HERE_COLOR,
+  gate: UNIVERSE_MAP_GATE_COLOR,
+  landfall: UNIVERSE_MAP_LANDFALL_COLOR,
+  lost: UNIVERSE_MAP_LOST_COLOR,
 }
 
 function rgb(hex: string): [number, number, number] {

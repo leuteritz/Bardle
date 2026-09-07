@@ -5,33 +5,33 @@ import {
   BOTTOM_BAR_SIDE_W,
   CHAMPION_ART_MD_MAX_EDGE,
   CHAMPION_ART_SM_MAX_EDGE,
-  FIRMAMENT_CREST_BAND_H,
-  FIRMAMENT_MAP_INSET_PX,
-  FIRMAMENT_NODE_HIT_MIN,
-  FIRMAMENT_PATH_MIN_SPAN,
-  FIRMAMENT_PLATE_REF_R,
-  FIRMAMENT_PORTAL_AURA_SPAN,
-  FIRMAMENT_PORTAL_HOVER_BOOST_RATIO,
-  FIRMAMENT_PORTAL_HOVER_HALO_K,
-  FIRMAMENT_PORTAL_HOVER_MAW_K,
-  FIRMAMENT_PORTAL_HOVER_RIM_K,
-  FIRMAMENT_PORTAL_HOVER_SWIRL_K,
-  FIRMAMENT_PORTAL_RING_MIN_PX,
-  FIRMAMENT_PORTAL_RIPPLE_FROM,
-  FIRMAMENT_PORTAL_RIPPLE_TO,
-  FIRMAMENT_PORTAL_SHRINK_STEPS,
-  FIRMAMENT_RAIL_AUTOFOLD_W,
-  FIRMAMENT_RAIL_HANDLE_PX,
-  FIRMAMENT_RAIL_PANEL_W,
-  FIRMAMENT_RAIL_ZONE_W,
-  FIRMAMENT_STAGE_MIN_H,
-  FIRMAMENT_STAGE_MIN_W,
-  FIRMAMENT_TIP_SEAT_COLS,
-  FIRMAMENT_TIP_SEAT_EM,
-  FIRMAMENT_TIP_SEAT_GAP_EM,
-  FIRMAMENT_TIP_SEAT_MAX,
-  FIRMAMENT_UNLIT_AHEAD,
-  FIRMAMENT_ZOOM_STEPS,
+  UNIVERSE_MAP_CREST_BAND_H,
+  UNIVERSE_MAP_INSET_PX,
+  UNIVERSE_MAP_NODE_HIT_MIN,
+  UNIVERSE_MAP_PATH_MIN_SPAN,
+  UNIVERSE_MAP_PLATE_REF_R,
+  UNIVERSE_MAP_PORTAL_AURA_SPAN,
+  UNIVERSE_MAP_PORTAL_HOVER_BOOST_RATIO,
+  UNIVERSE_MAP_PORTAL_HOVER_HALO_K,
+  UNIVERSE_MAP_PORTAL_HOVER_MAW_K,
+  UNIVERSE_MAP_PORTAL_HOVER_RIM_K,
+  UNIVERSE_MAP_PORTAL_HOVER_SWIRL_K,
+  UNIVERSE_MAP_PORTAL_RING_MIN_PX,
+  UNIVERSE_MAP_PORTAL_RIPPLE_FROM,
+  UNIVERSE_MAP_PORTAL_RIPPLE_TO,
+  UNIVERSE_MAP_PORTAL_SHRINK_STEPS,
+  UNIVERSE_MAP_RAIL_AUTOFOLD_W,
+  UNIVERSE_MAP_RAIL_HANDLE_PX,
+  UNIVERSE_MAP_RAIL_PANEL_W,
+  UNIVERSE_MAP_RAIL_ZONE_W,
+  UNIVERSE_MAP_STAGE_MIN_H,
+  UNIVERSE_MAP_STAGE_MIN_W,
+  UNIVERSE_MAP_TIP_SEAT_COLS,
+  UNIVERSE_MAP_TIP_SEAT_EM,
+  UNIVERSE_MAP_TIP_SEAT_GAP_EM,
+  UNIVERSE_MAP_TIP_SEAT_MAX,
+  UNIVERSE_MAP_UNLIT_AHEAD,
+  UNIVERSE_MAP_ZOOM_STEPS,
   STAR_MANIFEST_ART_SIZE,
   UNIVERSE_RAIL_COMPACT_MAX_VH,
   UNIVERSE_RAIL_COMPACT_STAGE_H,
@@ -53,35 +53,35 @@ import {
   UNIVERSE_DISC_SPIN_BASE_PX,
   UNIVERSE_DISC_RIM_SPIN_RATIO,
   UNIVERSE_DISC_SPIN_SEC,
-  FIRMAMENT_RIM_SPRITE_MARGIN,
-  FIRMAMENT_MAX_DPR,
+  UNIVERSE_MAP_RIM_SPRITE_MARGIN,
+  UNIVERSE_MAP_MAX_DPR,
   GALAXY_STARS_MAX,
-  FIRMAMENT_NODE_HIT_BODY_K,
-  FIRMAMENT_NODE_R_BASE,
-  FIRMAMENT_NODE_R_PER_STAR,
-  FIRMAMENT_PATH_R1,
-  FIRMAMENT_SCATTER_STEP_MAX,
-  FIRMAMENT_SCATTER_STEP_MIN,
-  FIRMAMENT_START_CLEAR_X,
-  FIRMAMENT_START_CLEAR_Y0,
-  FIRMAMENT_START_CLEAR_Y1,
-  FIRMAMENT_START_LABEL_OFFSET,
-  FIRMAMENT_WALL_MAX_BACKING_PX,
+  UNIVERSE_MAP_NODE_HIT_BODY_K,
+  UNIVERSE_MAP_NODE_R_BASE,
+  UNIVERSE_MAP_NODE_R_PER_STAR,
+  UNIVERSE_MAP_PATH_R1,
+  UNIVERSE_MAP_SCATTER_STEP_MAX,
+  UNIVERSE_MAP_SCATTER_STEP_MIN,
+  UNIVERSE_MAP_START_CLEAR_X,
+  UNIVERSE_MAP_START_CLEAR_Y0,
+  UNIVERSE_MAP_START_CLEAR_Y1,
+  UNIVERSE_MAP_START_LABEL_OFFSET,
+  UNIVERSE_MAP_WALL_MAX_BACKING_PX,
 } from '@/config/constants'
 import { championArtSizeFor } from '@/utils/game/champions'
 import { universes } from '@/config/progression/universes'
-import { firmamentFitBox, firmamentSpots } from '@/utils/ui/firmamentLayout'
-import { firmamentPortalRingR } from '@/utils/ui/firmamentPortalSpot'
+import { universeFitBox, universeSpots } from '@/utils/ui/universeLayout'
+import { universePortalRingR } from '@/utils/ui/universePortalSpot'
 import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
 
 /**
- * Der Firmament-Reiter teilt ZWEI Zonen ein Budget: Leiste + Buehne sind der
+ * Der Universe-Reiter teilt ZWEI Zonen ein Budget: Leiste + Buehne sind der
  * ganze Reiter unter dem Kopfband. Nichts im CSS sagt, wie viel der Karte davon
  * bleibt — wer die Leiste verbreitert oder das Band hoeher macht, nimmt es ihr
  * still weg.
  *
  * Und der Boden ist hier keine Geschmacksfrage: die Knoten liegen GESTREUT,
- * ihr Mindestabstand ist erzwungen. Faellt er unter `FIRMAMENT_NODE_HIT_MIN`,
+ * ihr Mindestabstand ist erzwungen. Faellt er unter `UNIVERSE_MAP_NODE_HIT_MIN`,
  * decken sich die Klickflaechen und die Karte hoert auf zu funktionieren.
  * Diese Spec bindet den Boden an den Bahnradius jeder Zielaufloesung.
  */
@@ -95,7 +95,7 @@ const clamp = (lo: number, v: number, hi: number) => Math.min(hi, Math.max(lo, v
 const hudScale = (w: number, h: number) => clamp(0.52, Math.min(w / 2560, h / 1440), 1)
 
 /** Breite des Reiters: das Profilmodal ist beidseitig um `--hud-panel-size`
- *  eingerueckt. Der Firmament-Reiter traegt — anders als Team und Voyages —
+ *  eingerueckt. Der Universe-Reiter traegt — anders als Team und Voyages —
  *  KEIN `zoom`, sein Koordinatenraum ist also der des Modals. */
 function tabWidth(vw: number, vh: number): number {
   return vw - 2 * (BOTTOM_BAR_SIDE_W * hudScale(vw, vh) + MODAL_GAP)
@@ -121,16 +121,16 @@ const CONTENT_HEIGHT: Record<number, number> = {
 
 function zones(vw: number, vh: number, folded = false) {
   const tab = tabWidth(vw, vh)
-  const rail = folded ? FIRMAMENT_RAIL_HANDLE_PX : FIRMAMENT_RAIL_ZONE_W
+  const rail = folded ? UNIVERSE_MAP_RAIL_HANDLE_PX : UNIVERSE_MAP_RAIL_ZONE_W
   return {
     tab,
     rail,
     stageW: tab - rail,
-    stageH: CONTENT_HEIGHT[vh] - FIRMAMENT_CREST_BAND_H,
+    stageH: CONTENT_HEIGHT[vh] - UNIVERSE_MAP_CREST_BAND_H,
   }
 }
 
-/** Kantenlaenge der Wolke — dieselbe Rechnung wie `FirmamentChart`. */
+/** Kantenlaenge der Wolke — dieselbe Rechnung wie `UniverseChart`. */
 function heroPx(r: number): number {
   const stepped =
     Math.round((2 * r * UNIVERSE_DISC_HERO_R_RATIO) / UNIVERSE_DISC_HERO_QUANT_PX) *
@@ -140,13 +140,13 @@ function heroPx(r: number): number {
 
 /** Kantenlaenge des Wall-Sprites. */
 function rimPx(r: number): number {
-  return Math.max(1, Math.round(r * 2 * FIRMAMENT_RIM_SPRITE_MARGIN))
+  return Math.max(1, Math.round(r * 2 * UNIVERSE_MAP_RIM_SPRITE_MARGIN))
 }
 
 /** Der Bahnradius je Zielaufloesung. */
 function radiusAt(vw: number, vh: number): number {
   const z = zones(vw, vh)
-  return firmamentFitBox(z.stageW, z.stageH, FIRMAMENT_MAP_INSET_PX).r
+  return universeFitBox(z.stageW, z.stageH, UNIVERSE_MAP_INSET_PX).r
 }
 
 /** Der engste Abstand zweier Knoten auf der Bahn, in Pixeln — genommen ueber
@@ -155,7 +155,7 @@ function radiusAt(vw: number, vh: number): number {
 function minSeparation(count: number, radius: number): number {
   let min = Infinity
   for (const u of universes) {
-    const pts = firmamentSpots(count, u.id)
+    const pts = universeSpots(count, u.id)
     for (let i = 0; i < pts.length; i++) {
       for (let j = i + 1; j < pts.length; j++) {
         min = Math.min(min, Math.hypot(pts[i].nx - pts[j].nx, pts[i].ny - pts[j].ny) * radius)
@@ -165,7 +165,7 @@ function minSeparation(count: number, radius: number): number {
   return min
 }
 
-describe('Firmament — das Zonenbudget', () => {
+describe('Universe — das Zonenbudget', () => {
   it('laesst der Buehne auf jeder Zielaufloesung ihren Boden', () => {
     for (const [vw, vh] of [
       [1920, 1080],
@@ -174,27 +174,27 @@ describe('Firmament — das Zonenbudget', () => {
       [3840, 2160],
     ]) {
       const z = zones(vw, vh)
-      expect(z.stageW, `${vw}x${vh} Breite`).toBeGreaterThanOrEqual(FIRMAMENT_STAGE_MIN_W)
-      expect(z.stageH, `${vw}x${vh} Hoehe`).toBeGreaterThanOrEqual(FIRMAMENT_STAGE_MIN_H)
+      expect(z.stageW, `${vw}x${vh} Breite`).toBeGreaterThanOrEqual(UNIVERSE_MAP_STAGE_MIN_W)
+      expect(z.stageH, `${vw}x${vh} Hoehe`).toBeGreaterThanOrEqual(UNIVERSE_MAP_STAGE_MIN_H)
     }
   })
 
   it('klappt die Leiste ein, bevor die Buehne unter ihren Boden faellt', () => {
     // Unterhalb der Klappschwelle darf die eingeklappte Leiste den Boden noch
     // halten — genau dafuer ist sie da.
-    const stageW = FIRMAMENT_RAIL_AUTOFOLD_W - FIRMAMENT_RAIL_HANDLE_PX
-    expect(stageW).toBeGreaterThanOrEqual(FIRMAMENT_STAGE_MIN_W)
+    const stageW = UNIVERSE_MAP_RAIL_AUTOFOLD_W - UNIVERSE_MAP_RAIL_HANDLE_PX
+    expect(stageW).toBeGreaterThanOrEqual(UNIVERSE_MAP_STAGE_MIN_W)
   })
 
   it('spart mit dem Einklappen mehr als die Haelfte der Leiste', () => {
-    expect(FIRMAMENT_RAIL_HANDLE_PX).toBeLessThan(FIRMAMENT_RAIL_ZONE_W / 2)
+    expect(UNIVERSE_MAP_RAIL_HANDLE_PX).toBeLessThan(UNIVERSE_MAP_RAIL_ZONE_W / 2)
   })
 
   it('ist die Zone der Leiste Liste PLUS Griff', () => {
     // Die Griffleiste bleibt stehen, wenn die Liste weggefahren ist — sie gehoert
     // deshalb in dieselbe Spalte. Wer nur die Liste in die Spaltenbreite
     // schriebe, saehe den Griff ueber der Karte liegen.
-    expect(FIRMAMENT_RAIL_ZONE_W).toBe(FIRMAMENT_RAIL_PANEL_W + FIRMAMENT_RAIL_HANDLE_PX)
+    expect(UNIVERSE_MAP_RAIL_ZONE_W).toBe(UNIVERSE_MAP_RAIL_PANEL_W + UNIVERSE_MAP_RAIL_HANDLE_PX)
   })
 
   it('traegt alle zehn Universumsscheiben ohne zu rollen', () => {
@@ -237,7 +237,7 @@ describe('Firmament — das Zonenbudget', () => {
     const loVh = 950
     const hiVh = 1080
     const loH = UNIVERSE_RAIL_COMPACT_STAGE_H
-    const hiH = CONTENT_HEIGHT[1080] - FIRMAMENT_CREST_BAND_H
+    const hiH = CONTENT_HEIGHT[1080] - UNIVERSE_MAP_CREST_BAND_H
     const kippt = loVh + ((big - loH) * (hiVh - loVh)) / (hiH - loH)
     // Die Schwelle muss ueber der Viewport-Hoehe liegen, bei der die grosse
     // Stufe kippt — sonst gibt es ein Fenster dazwischen, in dem gerollt wird
@@ -311,24 +311,24 @@ describe('Firmament — das Zonenbudget', () => {
     // waeren es bei 2,4 auf 2K 27 MB fuer ein Band aus Haarlinien. Bei Zoom 1
     // darf er auf keiner Zielaufloesung greifen: dort soll der Wall aussehen
     // wie zuvor.
-    expect(FIRMAMENT_WALL_MAX_BACKING_PX ** 2 * 4).toBeLessThan(20 * 1024 * 1024)
+    expect(UNIVERSE_MAP_WALL_MAX_BACKING_PX ** 2 * 4).toBeLessThan(20 * 1024 * 1024)
     for (const [vw, vh] of [
       [1920, 1080],
       [2560, 1440],
     ]) {
       const side = rimPx(radiusAt(vw, vh))
-      expect(FIRMAMENT_WALL_MAX_BACKING_PX / side, `${vw}x${vh}`).toBeGreaterThanOrEqual(
-        FIRMAMENT_MAX_DPR,
+      expect(UNIVERSE_MAP_WALL_MAX_BACKING_PX / side, `${vw}x${vh}`).toBeGreaterThanOrEqual(
+        UNIVERSE_MAP_MAX_DPR,
       )
     }
   })
 
   it('deckt das Wall-Sprite seine ganze Tinte ab', () => {
     // Weiteste Tinte: der Ring bei 1,02 r plus die halbe 8k-Strichstaerke.
-    const widest = 1.02 + 4 / FIRMAMENT_PLATE_REF_R
-    expect(FIRMAMENT_RIM_SPRITE_MARGIN).toBeGreaterThan(widest)
+    const widest = 1.02 + 4 / UNIVERSE_MAP_PLATE_REF_R
+    expect(UNIVERSE_MAP_RIM_SPRITE_MARGIN).toBeGreaterThan(widest)
     // Aber nicht mehr: jeder Prozent darueber ist Textur fuer nichts.
-    expect(FIRMAMENT_RIM_SPRITE_MARGIN).toBeLessThan(1.15)
+    expect(UNIVERSE_MAP_RIM_SPRITE_MARGIN).toBeLessThan(1.15)
   })
 
   it('nennt die Wand, an der der Wall zu traege wird', () => {
@@ -356,18 +356,18 @@ describe('Firmament — das Zonenbudget', () => {
   })
 })
 
-describe('Firmament — die Bahn bleibt bedienbar', () => {
+describe('Universe — die Bahn bleibt bedienbar', () => {
   /** Die Fit-Box, in die die Bahn auf Full HD faellt. */
   const fullHd = () => {
     const z = zones(1920, 1080)
-    return firmamentFitBox(z.stageW, z.stageH, FIRMAMENT_MAP_INSET_PX)
+    return universeFitBox(z.stageW, z.stageH, UNIVERSE_MAP_INSET_PX)
   }
 
   it('traegt auf Full HD mindestens vierzig Knoten ohne Zoom', () => {
     // Vierzig Knoten sind 35 befreite Galaxien plus die laufende plus die vier
     // unbeleuchteten davor — deutlich mehr, als ein Lauf je erreicht.
     const sep = minSeparation(40, fullHd().r)
-    expect(sep).toBeGreaterThanOrEqual(FIRMAMENT_NODE_HIT_MIN)
+    expect(sep).toBeGreaterThanOrEqual(UNIVERSE_MAP_NODE_HIT_MIN)
   })
 
   /* Die 26 sind nur der BODEN der Trefferflaeche. Ein Sieben-Sterne-Knoten
@@ -377,12 +377,12 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
   it('haelt den Abstand ueber der ECHTEN Trefferflaeche einer vollen Galaxie', () => {
     const r = fullHd().r
     const hit = Math.max(
-      FIRMAMENT_NODE_HIT_MIN,
-      (FIRMAMENT_NODE_R_BASE + GALAXY_STARS_MAX * FIRMAMENT_NODE_R_PER_STAR) *
-        (r / FIRMAMENT_PLATE_REF_R) *
-        FIRMAMENT_NODE_HIT_BODY_K,
+      UNIVERSE_MAP_NODE_HIT_MIN,
+      (UNIVERSE_MAP_NODE_R_BASE + GALAXY_STARS_MAX * UNIVERSE_MAP_NODE_R_PER_STAR) *
+        (r / UNIVERSE_MAP_PLATE_REF_R) *
+        UNIVERSE_MAP_NODE_HIT_BODY_K,
     )
-    for (let n = FIRMAMENT_PATH_MIN_SPAN; n <= 44; n++) {
+    for (let n = UNIVERSE_MAP_PATH_MIN_SPAN; n <= 44; n++) {
       expect(minSeparation(n, r), `${n} Plaetze`).toBeGreaterThanOrEqual(hit)
     }
   })
@@ -402,12 +402,12 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
       }
     }
     expect(worst, `engster Fall bei ${worstAt} Knoten`).toBeGreaterThanOrEqual(
-      FIRMAMENT_NODE_HIT_MIN,
+      UNIVERSE_MAP_NODE_HIT_MIN,
     )
     // Und der Zoom haelt ihn erst recht.
     expect(
-      minSeparation(worstAt, r * FIRMAMENT_ZOOM_STEPS[FIRMAMENT_ZOOM_STEPS.length - 1]),
-    ).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
+      minSeparation(worstAt, r * UNIVERSE_MAP_ZOOM_STEPS[UNIVERSE_MAP_ZOOM_STEPS.length - 1]),
+    ).toBeGreaterThan(UNIVERSE_MAP_NODE_HIT_MIN)
   })
 
   it('haelt den innersten Knoten von der Mitte frei', () => {
@@ -417,9 +417,9 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
     const r = fullHd().r
     for (const u of universes) {
       expect(
-        firmamentSpots(FIRMAMENT_PATH_MIN_SPAN, u.id)[0].radius * r,
+        universeSpots(UNIVERSE_MAP_PATH_MIN_SPAN, u.id)[0].radius * r,
         `Universum ${u.id}`,
-      ).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
+      ).toBeGreaterThan(UNIVERSE_MAP_NODE_HIT_MIN)
     }
   })
 
@@ -441,7 +441,7 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
       expect(reach / r, `${vw}x${vh} unter dem Wall hervor`).toBeLessThan(0.93)
       // Und jeder Knoten der Bahn liegt darin, nicht nur die innersten.
       const outer = Math.max(
-        ...universes.flatMap((u) => firmamentSpots(40, u.id).map((p) => p.radius)),
+        ...universes.flatMap((u) => universeSpots(40, u.id).map((p) => p.radius)),
       )
       expect(outer * r, `${vw}x${vh} aeusserster Knoten`).toBeLessThan((heroPx(r) / 2) * 1.02)
     }
@@ -488,8 +488,8 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
   it('haengt vier unbeleuchtete Plaetze an, nicht null und nicht zehn', () => {
     // Null hiesse: die Bahn endet, wo der Spieler steht. Zehn hiesse: die
     // Haelfte der Karte ist Versprechen statt Weg.
-    expect(FIRMAMENT_UNLIT_AHEAD).toBeGreaterThan(0)
-    expect(FIRMAMENT_UNLIT_AHEAD).toBeLessThanOrEqual(6)
+    expect(UNIVERSE_MAP_UNLIT_AHEAD).toBeGreaterThan(0)
+    expect(UNIVERSE_MAP_UNLIT_AHEAD).toBeLessThanOrEqual(6)
   })
 
   /*
@@ -504,29 +504,29 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
    * zu springen — das war die verworfene Zickzack-Fassung.
    */
   it('haelt den Winkelschritt zwischen Boden und Deckel', () => {
-    expect(FIRMAMENT_SCATTER_STEP_MIN).toBeGreaterThan(0)
-    expect(FIRMAMENT_SCATTER_STEP_MIN).toBeLessThan(FIRMAMENT_SCATTER_STEP_MAX)
+    expect(UNIVERSE_MAP_SCATTER_STEP_MIN).toBeGreaterThan(0)
+    expect(UNIVERSE_MAP_SCATTER_STEP_MIN).toBeLessThan(UNIVERSE_MAP_SCATTER_STEP_MAX)
     // Kein voller Umlauf in einem Schritt, und keine halbe Kehrtwende.
-    expect(FIRMAMENT_SCATTER_STEP_MAX).toBeLessThan(Math.PI * 2)
-    expect(FIRMAMENT_SCATTER_STEP_MAX).toBeGreaterThan(Math.PI / 2)
+    expect(UNIVERSE_MAP_SCATTER_STEP_MAX).toBeLessThan(Math.PI * 2)
+    expect(UNIVERSE_MAP_SCATTER_STEP_MAX).toBeGreaterThan(Math.PI / 2)
   })
 
   /* Das Feld, das dem START-Label gehoert, muss das Label auch WIRKLICH
      enthalten — sonst haelt der Ablehnungspass etwas frei, wo nichts steht. */
   it('legt das freie Feld um das START-Label', () => {
-    expect(FIRMAMENT_START_CLEAR_Y0).toBeLessThan(FIRMAMENT_START_LABEL_OFFSET)
-    expect(FIRMAMENT_START_CLEAR_Y1).toBeGreaterThan(FIRMAMENT_START_LABEL_OFFSET)
+    expect(UNIVERSE_MAP_START_CLEAR_Y0).toBeLessThan(UNIVERSE_MAP_START_LABEL_OFFSET)
+    expect(UNIVERSE_MAP_START_CLEAR_Y1).toBeGreaterThan(UNIVERSE_MAP_START_LABEL_OFFSET)
     // Breit genug fuer das Wort samt halber Trefferflaeche.
-    expect(FIRMAMENT_START_CLEAR_X * fullHd().r).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
+    expect(UNIVERSE_MAP_START_CLEAR_X * fullHd().r).toBeGreaterThan(UNIVERSE_MAP_NODE_HIT_MIN)
   })
 
   it('haelt die Trefferflaeche auf jeder Bahnlaenge', () => {
     const r = fullHd().r
     // Der Abstand haengt am NENNER, nicht an der Zahl der gezeigten Knoten —
     // eine kurze Bahn nimmt nur die inneren Plaetze desselben Rasters.
-    for (const span of [FIRMAMENT_PATH_MIN_SPAN, 20, 40]) {
+    for (const span of [UNIVERSE_MAP_PATH_MIN_SPAN, 20, 40]) {
       expect(minSeparation(span, r), `${span} Plaetze`).toBeGreaterThanOrEqual(
-        FIRMAMENT_NODE_HIT_MIN,
+        UNIVERSE_MAP_NODE_HIT_MIN,
       )
     }
   })
@@ -534,9 +534,9 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
   it('setzt den Bahnboden zwischen eine Marke und die Wand', () => {
     // Darunter saesse eine Zwei-Galaxien-Bahn am Wall, darueber verschenkte die
     // laengste Bahn ihre Reichweite.
-    expect(FIRMAMENT_PATH_MIN_SPAN).toBeGreaterThan(1)
-    expect(minSeparation(FIRMAMENT_PATH_MIN_SPAN, fullHd().r)).toBeGreaterThanOrEqual(
-      FIRMAMENT_NODE_HIT_MIN,
+    expect(UNIVERSE_MAP_PATH_MIN_SPAN).toBeGreaterThan(1)
+    expect(minSeparation(UNIVERSE_MAP_PATH_MIN_SPAN, fullHd().r)).toBeGreaterThanOrEqual(
+      UNIVERSE_MAP_NODE_HIT_MIN,
     )
   })
 })
@@ -550,7 +550,7 @@ describe('Firmament — die Bahn bleibt bedienbar', () => {
  * eine eigene Dauer gibt, laesst die Bahn aus dem Universum wandern, in dem sie
  * liegt, und niemand sieht es sofort.
  */
-describe('Firmament — die Bahn dreht mit der Wolke', () => {
+describe('Universe — die Bahn dreht mit der Wolke', () => {
   const SCREENS: [number, number][] = [
     [1920, 1080],
     [1920, 1200],
@@ -559,7 +559,7 @@ describe('Firmament — die Bahn dreht mit der Wolke', () => {
   ]
 
   it('bleibt in der Dauer der NAHEN Wolkenebene sichtbar, ohne zu kreiseln', () => {
-    // `FirmamentChart` reicht `universeDiscSpinSec(heroPx)` an beide weiter —
+    // `UniverseChart` reicht `universeDiscSpinSec(heroPx)` an beide weiter —
     // an die drehende Gruppe und an `UniverseDisc`, das intern dasselbe
     // rechnet. Gebunden wird hier, dass diese EINE Dauer auf jeder
     // Zielaufloesung im sichtbaren Band liegt: dieselbe Ablesung wie beim Wall,
@@ -583,15 +583,15 @@ describe('Firmament — die Bahn dreht mit der Wolke', () => {
   })
 
   it('nennt die Wand, wegen der beim Ueberfahren alles anhaelt', () => {
-    // Der aeusserste Knoten sitzt auf `FIRMAMENT_PATH_R1`. Verlaesst er seine
+    // Der aeusserste Knoten sitzt auf `UNIVERSE_MAP_PATH_R1`. Verlaesst er seine
     // halbe Trefferflaeche in wenigen Sekunden, reisst die Hover-Karte mitten
-    // im Lesen ab — deshalb pausiert `:has(.fm-node:hover)` Bahn, Wolke und
+    // im Lesen ab — deshalb pausiert `:has(.un-node:hover)` Bahn, Wolke und
     // Wall gemeinsam. Wer die Pause herausnimmt, bricht das hier.
     for (const [vw, vh] of SCREENS) {
       const r = radiusAt(vw, vh)
       const omega = (Math.PI * 2) / universeDiscSpinSec(heroPx(r))
-      const edgePxPerSec = omega * r * FIRMAMENT_PATH_R1
-      const secondsToLeave = FIRMAMENT_NODE_HIT_MIN / 2 / edgePxPerSec
+      const edgePxPerSec = omega * r * UNIVERSE_MAP_PATH_R1
+      const secondsToLeave = UNIVERSE_MAP_NODE_HIT_MIN / 2 / edgePxPerSec
       expect(secondsToLeave, `${vw}x${vh}`).toBeLessThan(4)
       // Und sie kriecht auch nicht: unter 0,5 px/s saehe niemand die Drehung.
       expect(edgePxPerSec, `${vw}x${vh}`).toBeGreaterThan(0.5)
@@ -605,7 +605,7 @@ describe('Firmament — die Bahn dreht mit der Wolke', () => {
  * Zielaufloesung eine brauchbare Groesse bekommt, und dass es keine
  * Frame-Schleife mitbringt.
  */
-describe('Firmament — das Abflugportal', () => {
+describe('Universe — das Abflugportal', () => {
   /* Gemessen wie `CONTENT_HEIGHT`: wer `_RING_H_RATIO` anfasst, sieht hier
      sofort, was er allen vier Aufloesungen antut — und wer das KOPFBAND hoeher
      macht ebenso, denn der Ring haengt an der Buehnenhoehe. Die Tabelle stand
@@ -619,7 +619,7 @@ describe('Firmament — das Abflugportal', () => {
       ['4K', 2160, 260],
     ]
     for (const [name, vh, want] of table) {
-      const r = firmamentPortalRingR(
+      const r = universePortalRingR(
         zones(vh === 2160 ? 3840 : vh === 1440 ? 2560 : 1920, vh).stageH,
       )
       expect(Math.round(r), name).toBe(want)
@@ -632,10 +632,10 @@ describe('Firmament — das Abflugportal', () => {
   it('nennt WUXGA als den engen Fall', () => {
     const band = (vw: number, vh: number) => {
       const z = zones(vw, vh)
-      return (z.stageW - firmamentFitBox(z.stageW, z.stageH, FIRMAMENT_MAP_INSET_PX).r * 2) / 2
+      return (z.stageW - universeFitBox(z.stageW, z.stageH, UNIVERSE_MAP_INSET_PX).r * 2) / 2
     }
     expect(band(1920, 1200)).toBeLessThan(band(1920, 1080))
-    expect(band(1920, 1200)).toBeGreaterThan(FIRMAMENT_PORTAL_RING_MIN_PX / 2)
+    expect(band(1920, 1200)).toBeGreaterThan(UNIVERSE_MAP_PORTAL_RING_MIN_PX / 2)
   })
 
   /* Die Leiter greift, wenn die volle Groesse nirgends jenseits der Kartenkante
@@ -643,13 +643,13 @@ describe('Firmament — das Abflugportal', () => {
      ueber 1 vergroesserte das Portal heimlich, eine steigende Folge liesse die
      Suche die kleinste zuerst nehmen. */
   it('faengt die Schrumpfleiter bei voller Groesse an und laesst sie fallen', () => {
-    expect(FIRMAMENT_PORTAL_SHRINK_STEPS[0]).toBe(1)
-    for (let i = 1; i < FIRMAMENT_PORTAL_SHRINK_STEPS.length; i++) {
-      expect(FIRMAMENT_PORTAL_SHRINK_STEPS[i]).toBeLessThan(FIRMAMENT_PORTAL_SHRINK_STEPS[i - 1])
+    expect(UNIVERSE_MAP_PORTAL_SHRINK_STEPS[0]).toBe(1)
+    for (let i = 1; i < UNIVERSE_MAP_PORTAL_SHRINK_STEPS.length; i++) {
+      expect(UNIVERSE_MAP_PORTAL_SHRINK_STEPS[i]).toBeLessThan(UNIVERSE_MAP_PORTAL_SHRINK_STEPS[i - 1])
     }
     // Auch die kleinste Stufe bleibt ein Portal und wird keine Marke.
-    const smallest = FIRMAMENT_PORTAL_RING_MIN_PX * FIRMAMENT_PORTAL_SHRINK_STEPS.at(-1)!
-    expect(smallest).toBeGreaterThan(FIRMAMENT_NODE_HIT_MIN)
+    const smallest = UNIVERSE_MAP_PORTAL_RING_MIN_PX * UNIVERSE_MAP_PORTAL_SHRINK_STEPS.at(-1)!
+    expect(smallest).toBeGreaterThan(UNIVERSE_MAP_NODE_HIT_MIN)
   })
 
   /* Der Reiter steht auf Grundlast: bewegt wird per CSS an fertigen Sprites,
@@ -657,7 +657,7 @@ describe('Firmament — das Abflugportal', () => {
      ein „nur ganz kurz" pulsendes `box-shadow` oder ein rAF fuer den Wirbel. */
   it('bringt keine Frame-Schleife und keine verbotene Animation mit', () => {
     const src = readFileSync(
-      resolve(__dirname, '../../components/bardProfil/firmament/FirmamentPortal.vue'),
+      resolve(__dirname, '../../components/bardProfil/universe/UniversePortal.vue'),
       'utf8',
     )
     for (const forbidden of ['requestAnimationFrame', 'setInterval', 'setTimeout', 'Date.now']) {
@@ -676,18 +676,18 @@ describe('Firmament — das Abflugportal', () => {
      Blick IN den Durchgang. Zieht jemand den Schlund nach vorn oder den Wirbel
      hinaus, wird das Portal beim Ueberfahren nur groesser. */
   it('staffelt die Hover-Ebenen in die Tiefe', () => {
-    expect(FIRMAMENT_PORTAL_HOVER_SWIRL_K).toBeLessThan(FIRMAMENT_PORTAL_HOVER_MAW_K)
-    expect(FIRMAMENT_PORTAL_HOVER_MAW_K).toBeLessThan(1)
-    expect(FIRMAMENT_PORTAL_HOVER_RIM_K).toBeGreaterThan(1)
-    expect(FIRMAMENT_PORTAL_HOVER_HALO_K).toBeGreaterThan(FIRMAMENT_PORTAL_HOVER_RIM_K)
+    expect(UNIVERSE_MAP_PORTAL_HOVER_SWIRL_K).toBeLessThan(UNIVERSE_MAP_PORTAL_HOVER_MAW_K)
+    expect(UNIVERSE_MAP_PORTAL_HOVER_MAW_K).toBeLessThan(1)
+    expect(UNIVERSE_MAP_PORTAL_HOVER_RIM_K).toBeGreaterThan(1)
+    expect(UNIVERSE_MAP_PORTAL_HOVER_HALO_K).toBeGreaterThan(UNIVERSE_MAP_PORTAL_HOVER_RIM_K)
   })
 
   /* Die Zusatzdrehung ADDIERT sich, also zieht jeder positive Teiler an. Sie
      darf den Wirbel aber nicht zum Kreisel machen — bei doppelter Grundrate
      waere die Anzeige eine Maschine im Leerlauf, kein Sog. */
   it('laesst den Wirbel anziehen, ohne ihn zum Kreisel zu machen', () => {
-    expect(FIRMAMENT_PORTAL_HOVER_BOOST_RATIO).toBeGreaterThan(0)
-    expect(FIRMAMENT_PORTAL_HOVER_BOOST_RATIO).toBeLessThanOrEqual(2)
+    expect(UNIVERSE_MAP_PORTAL_HOVER_BOOST_RATIO).toBeGreaterThan(0)
+    expect(UNIVERSE_MAP_PORTAL_HOVER_BOOST_RATIO).toBeLessThanOrEqual(2)
   })
 
   /* Die Welle beginnt INNEN am Ring und stirbt innerhalb des Halos. Ein Start
@@ -695,9 +695,9 @@ describe('Firmament — das Abflugportal', () => {
      Reif, der ueber die Karte laeuft. Spannen sind zugleich die Reichweite in
      Ringradien, deshalb ist der Vergleich mit `_AURA_SPAN` einer. */
   it('laesst die Ringwelle innen beginnen und im Halo sterben', () => {
-    expect(FIRMAMENT_PORTAL_RIPPLE_FROM).toBeLessThan(1)
-    expect(FIRMAMENT_PORTAL_RIPPLE_TO).toBeGreaterThan(1)
-    expect(FIRMAMENT_PORTAL_RIPPLE_TO).toBeLessThan(FIRMAMENT_PORTAL_AURA_SPAN)
+    expect(UNIVERSE_MAP_PORTAL_RIPPLE_FROM).toBeLessThan(1)
+    expect(UNIVERSE_MAP_PORTAL_RIPPLE_TO).toBeGreaterThan(1)
+    expect(UNIVERSE_MAP_PORTAL_RIPPLE_TO).toBeLessThan(UNIVERSE_MAP_PORTAL_AURA_SPAN)
   })
 
   /* `will-change` legt die Ebene schon beim Mount an — im teuersten Frame des
@@ -705,7 +705,7 @@ describe('Firmament — das Abflugportal', () => {
      Begruendung wie am Wall und an der Universumsscheibe. */
   it('promotet keine Portal-Ebene von Hand', () => {
     const src = readFileSync(
-      resolve(__dirname, '../../components/bardProfil/firmament/FirmamentPortal.vue'),
+      resolve(__dirname, '../../components/bardProfil/universe/UniversePortal.vue'),
       'utf8',
     )
     expect(src.includes('will-change')).toBe(false)
@@ -723,11 +723,11 @@ describe('Firmament — das Abflugportal', () => {
      dasselbe wie „alle": die NACHBARN halten sehr wohl an — zwei weiterdrehende
      neben einem aufgewachten waeren dieselbe Inkonsistenz wie ein einzeln
      drehendes Portal ueber einem gehoverten Knoten. Gebunden ist deshalb nicht
-     mehr die Abwesenheit der Regel, sondern ihre AUSNAHME: wer `.fm-portal-l`
-     per `.fm-portal-hit` pausiert, muss das aufgewachte ausnehmen. */
+     mehr die Abwesenheit der Regel, sondern ihre AUSNAHME: wer `.un-portal-l`
+     per `.un-portal-hit` pausiert, muss das aufgewachte ausnehmen. */
   it('nimmt das aufgewachte Portal von seiner eigenen Hover-Pause aus', () => {
     const src = readFileSync(
-      resolve(__dirname, '../../components/bardProfil/firmament/FirmamentChart.vue'),
+      resolve(__dirname, '../../components/bardProfil/universe/UniverseChart.vue'),
       'utf8',
     )
     const rules = [...src.matchAll(/([^{}]*)\{\s*animation-play-state:\s*paused;\s*\}/g)].map(
@@ -735,25 +735,25 @@ describe('Firmament — das Abflugportal', () => {
     )
     expect(rules.length).toBeGreaterThan(0)
     for (const sel of rules) {
-      if (sel.includes('.fm-portal-l') && sel.includes('.fm-portal-hit')) {
+      if (sel.includes('.un-portal-l') && sel.includes('.un-portal-hit')) {
         expect(sel.includes(':not(.is-awake)')).toBe(true)
       }
     }
     // Die Wolke haelt weiterhin an — der Ausloeser ist also nicht bloss entfallen.
-    expect(rules.some((sel) => sel.includes('.fm-portal-hit'))).toBe(true)
+    expect(rules.some((sel) => sel.includes('.un-portal-hit'))).toBe(true)
   })
 
-  /* Das Aufwachen selbst haengt NICHT mehr an `.fm-stage:has(...)`: der fremde
+  /* Das Aufwachen selbst haengt NICHT mehr an `.un-stage:has(...)`: der fremde
      Vorfahre war buehnenweit und weckte alle drei Portale zugleich. Es kommt als
      Prop herein und schaltet eine Klasse an der eigenen Wurzel. */
   it('weckt ein Portal ueber seine eigene Klasse, nicht ueber die Buehne', () => {
     const src = readFileSync(
-      resolve(__dirname, '../../components/bardProfil/firmament/FirmamentPortal.vue'),
+      resolve(__dirname, '../../components/bardProfil/universe/UniversePortal.vue'),
       'utf8',
     )
     const style = src.slice(src.indexOf('<style'))
-    expect(style.includes('.fm-stage:has')).toBe(false)
-    expect(style.includes('.fm-portal.is-awake')).toBe(true)
+    expect(style.includes('.un-stage:has')).toBe(false)
+    expect(style.includes('.un-portal.is-awake')).toBe(true)
   })
 })
 
@@ -770,11 +770,11 @@ describe('Firmament — das Abflugportal', () => {
  * wie das Sternmanifest im Voyages-Atlas — dieselben Gesichter, dieselbe Datei,
  * ein Cache-Treffer statt eines zweiten Downloads.
  */
-describe('Firmament — die Portraitreihe der Knotenkarte', () => {
+describe('Universe — die Portraitreihe der Knotenkarte', () => {
   const TIP = readFileSync(resolve(__dirname, '../../components/ui/RpgBadgeTooltip.vue'), 'utf8')
   const THEME = readFileSync(resolve(__dirname, '../../assets/rpg-theme.css'), 'utf8')
   const CARD = readFileSync(
-    resolve(__dirname, '../../components/bardProfil/firmament/FirmamentGalaxyTip.vue'),
+    resolve(__dirname, '../../components/bardProfil/universe/UniverseGalaxyTip.vue'),
     'utf8',
   )
 
@@ -786,19 +786,19 @@ describe('Firmament — die Portraitreihe der Knotenkarte', () => {
   const padEm = 2 * Number(/\.fgt \{[^}]*padding: 0 ([\d.]+)em/.exec(CARD)![1])
 
   const rowEm =
-    FIRMAMENT_TIP_SEAT_COLS * FIRMAMENT_TIP_SEAT_EM +
-    (FIRMAMENT_TIP_SEAT_COLS - 1) * FIRMAMENT_TIP_SEAT_GAP_EM
+    UNIVERSE_MAP_TIP_SEAT_COLS * UNIVERSE_MAP_TIP_SEAT_EM +
+    (UNIVERSE_MAP_TIP_SEAT_COLS - 1) * UNIVERSE_MAP_TIP_SEAT_GAP_EM
 
   it('eine volle Galaxie steht in EINER Zeile', () => {
     expect(rowEm + padEm).toBeLessThanOrEqual(cardMaxEm)
     // Der Deckel sind ganze Zeilen — eine halbe letzte Reihe liest sich als
     // Fehler statt als Deckel.
-    expect(FIRMAMENT_TIP_SEAT_MAX % FIRMAMENT_TIP_SEAT_COLS).toBe(0)
+    expect(UNIVERSE_MAP_TIP_SEAT_MAX % UNIVERSE_MAP_TIP_SEAT_COLS).toBe(0)
   })
 
   it('die Portraitkante liegt im Band der gewaehlten Kunststufe', () => {
     // Gemessen wird die GROESSTE Anzeige: die clamp-Obergrenze von `--tip-u`.
-    const edgePx = FIRMAMENT_TIP_SEAT_EM * tipUMaxPx
+    const edgePx = UNIVERSE_MAP_TIP_SEAT_EM * tipUMaxPx
     expect(championArtSizeFor(edgePx)).toBe(STAR_MANIFEST_ART_SIZE)
     expect(edgePx).toBeGreaterThan(CHAMPION_ART_SM_MAX_EDGE)
     expect(edgePx).toBeLessThanOrEqual(CHAMPION_ART_MD_MAX_EDGE)

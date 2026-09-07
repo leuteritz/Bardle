@@ -53,7 +53,7 @@ import ExpeditionGalaxyRail from './ExpeditionGalaxyRail.vue'
 import ExpeditionRailHandle from './ExpeditionRailHandle.vue'
 import ExpeditionGalaxyMap from './ExpeditionGalaxyMap.vue'
 import VoyagesTabLoader from './VoyagesTabLoader.vue'
-import FirmamentReturnButton from '@/components/bardProfil/FirmamentReturnButton.vue'
+import UniverseReturnButton from '@/components/bardProfil/UniverseReturnButton.vue'
 
 const uiStore = useUiStore()
 const chartStore = useExpeditionChartStore()
@@ -86,21 +86,21 @@ const destination = computed(() =>
 const galaxyTitle = computed(() => destination.value?.name ?? '')
 const galaxyTier = computed(() => destination.value?.tier ?? 'common')
 
-// ── Kamerafahrt Firmament ⇄ Atlas ───────────────────────────────────────────
+// ── Kamerafahrt Universe ⇄ Atlas ───────────────────────────────────────────
 const mapEl = ref<InstanceType<typeof ExpeditionGalaxyMap> | null>(null)
 const arriving = computed(
-  () => uiStore.firmamentDive?.toward === 'atlas' && uiStore.firmamentDive.phase === 'in',
+  () => uiStore.universeDive?.toward === 'atlas' && uiStore.universeDive.phase === 'in',
 )
 const leaving = computed(
-  () => uiStore.firmamentDive?.toward === 'firmament' && uiStore.firmamentDive.phase === 'out',
+  () => uiStore.universeDive?.toward === 'universe' && uiStore.universeDive.phase === 'out',
 )
 
 /**
  * Der Rueckweg. Die GERADE gewaehlte Galaxie, nicht die, mit der man kam — wer
- * im Atlas weitergeklickt hat, soll im Firmament dort stehen. Ohne Kern (keine
+ * im Atlas weitergeklickt hat, soll im Universe dort stehen. Ohne Kern (keine
  * Karte) oder bei reduced-motion der harte Schnitt wie bisher.
  */
-function backToFirmament() {
+function backToUniverse() {
   const galaxy = chartStore.selectedGalaxy || null
   const anchor = mapEl.value?.diveAnchor()
   const record = selectedRecord.value
@@ -110,11 +110,11 @@ function backToFirmament() {
     !record ||
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
   ) {
-    uiStore.returnToFirmamentTab(galaxy)
+    uiStore.returnToUniverseTab(galaxy)
     return
   }
-  uiStore.requestFirmamentDive({
-    toward: 'firmament',
+  uiStore.requestUniverseDive({
+    toward: 'universe',
     galaxy,
     ...anchor,
     accent: `rgb(${minimapAccentForTheme(record.themeIndex, universeOfRecord(record))})`,
@@ -151,7 +151,7 @@ function showLive() {
 /**
  * Die Auswahl ist seit dem Fall der Detailspalte reine HERVORHEBUNG — sie
  * markiert die Marke, auf die ein Sprung von aussen gezielt hat (Fleet-Karte,
- * Minimap, Firmament). Ein Klick auf die Marke wählt nicht mehr, er handelt.
+ * Minimap, Universe). Ein Klick auf die Marke wählt nicht mehr, er handelt.
  */
 function onSelect(key: string | null) {
   selectedKey.value = key
@@ -287,7 +287,7 @@ watch(
       if (atlasBuilt.value || loaderVisible.value) return
       // Der Schleier der Kamerafahrt deckt den teuren ersten Frame schon; ein
       // zweiter darunter kaeme NACH dem ersten zum Vorschein.
-      if (uiStore.firmamentDive) {
+      if (uiStore.universeDive) {
         atlasBuilt.value = true
         return
       }
@@ -389,9 +389,9 @@ function openMassSendUpgrade() {
           @act="atlas.runMarkAction"
         />
 
-        <!-- Nur da, wenn man aus dem Firmament kam. Ueberlagerung, KEINE
+        <!-- Nur da, wenn man aus dem Universe kam. Ueberlagerung, KEINE
              Gridzeile: jede Hoehe in der Spalte ginge der Galaxie ab. -->
-        <FirmamentReturnButton @back="backToFirmament" />
+        <UniverseReturnButton @back="backToUniverse" />
       </div>
 
       <!-- Die Zielliste faehrt als EIN Stueck seitlich hinaus; stehen bleibt

@@ -1,9 +1,9 @@
 <template>
-  <Transition name="frb-slide">
-    <button v-if="visible" type="button" class="frb" @click="emit('back')">
-      <Icon icon="lucide:arrow-left" width="16" height="16" class="frb-arrow" />
-      <Icon icon="ph:globe-hemisphere-west-fill" width="24" height="24" class="frb-icon" />
-      <span class="frb-title">Back to Firmament</span>
+  <Transition name="urb-slide">
+    <button v-if="visible" type="button" class="urb" @click="emit('back')">
+      <Icon icon="lucide:arrow-left" width="16" height="16" class="urb-arrow" />
+      <Icon icon="ph:globe-hemisphere-west-fill" width="24" height="24" class="urb-icon" />
+      <span class="urb-title">Back to Universe</span>
     </button>
   </Transition>
 </template>
@@ -29,14 +29,14 @@ const uiStore = useUiStore()
  *  Bandhoehe nicht mehr als Custom Property heraus. */
 const bottom = `${VOYAGE_MAP_GUTTER_PX / 2 + VOYAGE_MAP_STATS_BAND_H + VOYAGE_RETURN_PILL_CLEARANCE}px`
 
-const visible = computed(() => uiStore.firmamentTabReturnPending)
+const visible = computed(() => uiStore.universeTabReturnPending)
 </script>
 
 <style scoped>
-/* ── Ruecksprung ins Firmament — Bauform des BattleTabReturnButton, Farbe des
-   Firmaments: Gold ist im Spiel die Farbe des befreiten Wegs, Rot gehoert dem
+/* ── Ruecksprung ins Universe — Bauform des BattleTabReturnButton, Farbe des
+   Universes: Gold ist im Spiel die Farbe des befreiten Wegs, Rot gehoert dem
    Kampf. Der Reiter traegt dasselbe Glyph in der Menueleiste. ───────────── */
-.frb {
+.urb {
   position: absolute;
   left: 50%;
   bottom: v-bind(bottom);
@@ -59,23 +59,23 @@ const visible = computed(() => uiStore.firmamentTabReturnPending)
     box-shadow 0.15s ease;
 }
 
-.frb:hover {
+.urb:hover {
   border-color: #e8c040;
   transform: translateX(-50%) translateY(-1px);
   box-shadow: 0 0 26px rgba(232, 192, 64, 0.45);
 }
 
-.frb:active {
+.urb:active {
   transform: translateX(-50%) scale(0.97);
 }
 
-.frb:focus-visible {
+.urb:focus-visible {
   outline: 2px solid #e8c040;
   outline-offset: 3px;
 }
 
 /* Sheen-Sweep: ruht unsichtbar, laeuft nur bei Hover */
-.frb::after {
+.urb::after {
   content: '';
   position: absolute;
   top: 0;
@@ -87,11 +87,11 @@ const visible = computed(() => uiStore.firmamentTabReturnPending)
   pointer-events: none;
 }
 
-.frb:hover::after {
-  animation: frb-sheen 1.1s ease-in-out infinite;
+.urb:hover::after {
+  animation: urb-sheen 1.1s ease-in-out infinite;
 }
 
-@keyframes frb-sheen {
+@keyframes urb-sheen {
   0% {
     left: -40%;
   }
@@ -100,18 +100,18 @@ const visible = computed(() => uiStore.firmamentTabReturnPending)
   }
 }
 
-.frb-arrow {
+.urb-arrow {
   color: #c89040;
   flex-shrink: 0;
 }
 
-.frb-icon {
+.urb-icon {
   color: #e8c040;
   filter: drop-shadow(0 0 6px rgba(232, 192, 64, 0.5));
   flex-shrink: 0;
 }
 
-.frb-title {
+.urb-title {
   font-size: 15px;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -125,24 +125,24 @@ const visible = computed(() => uiStore.firmamentTabReturnPending)
 }
 
 /* ── Slide-In von unten ──────────────────────────────────────────────────── */
-.frb-slide-enter-active {
+.urb-slide-enter-active {
   transition:
     opacity 0.25s ease,
     transform 0.25s ease;
 }
-.frb-slide-leave-active {
+.urb-slide-leave-active {
   transition:
     opacity 0.18s ease,
     transform 0.18s ease;
 }
-.frb-slide-enter-from,
-.frb-slide-leave-to {
+.urb-slide-enter-from,
+.urb-slide-leave-to {
   opacity: 0;
   transform: translateX(-50%) translateY(16px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .frb:hover::after {
+  .urb:hover::after {
     animation: none;
   }
 }

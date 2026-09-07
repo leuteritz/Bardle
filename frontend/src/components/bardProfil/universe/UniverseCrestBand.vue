@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Der Kopf des Firmaments: WELCHE Bahn man sieht, und was sie hergab.
+ * Der Kopf des Universes: WELCHE Bahn man sieht, und was sie hergab.
  *
  * Das Band ist EINE Ablesungsreihe ueber die volle Breite: die Identitaet, die
  * zwei Wirkungen der Vorsehung und fuenf Ablesungen der Chronik, alle in
@@ -26,7 +26,7 @@
  * Jede Zone traegt einen festen ANTEIL an der Bandbreite, keine Inhaltsbreite:
  * eine Breite, die am Text haengt, laesst jede wachsende Zahl die Nachbarn
  * schieben — und Chimes, Stars und Elapsed wachsen im laufenden Spiel dauernd.
- * Die Anteile stehen in `FIRMAMENT_CREST_SHARE`, gerechnet gegen die
+ * Die Anteile stehen in `UNIVERSE_MAP_CREST_SHARE`, gerechnet gegen die
  * gemessenen Textbreiten; die Zahlen selbst duerfen nie mehr eine Kante
  * bewegen.
  *
@@ -54,33 +54,33 @@ import {
   universeLabel,
 } from '@/utils/ui/format'
 import {
-  FIRMAMENT_CREST_BAND_H,
-  FIRMAMENT_CREST_CHIME_ART_PX,
-  FIRMAMENT_CREST_ID_GAP,
-  FIRMAMENT_CREST_ID_PAD_X,
-  FIRMAMENT_CREST_KICKER_ID_CQW,
-  FIRMAMENT_CREST_KICKER_ID_MAX_PX,
-  FIRMAMENT_CREST_KICKER_ID_MIN_PX,
-  FIRMAMENT_CREST_LABEL_CQW,
-  FIRMAMENT_CREST_LABEL_MAX_PX,
-  FIRMAMENT_CREST_LABEL_MIN_PX,
-  FIRMAMENT_CREST_PROV_NAME_PX,
-  FIRMAMENT_CREST_READ_GAP_PX,
-  FIRMAMENT_CREST_READ_PAD_X,
-  FIRMAMENT_CREST_SHARE,
-  FIRMAMENT_CREST_VALUE_CQW,
-  FIRMAMENT_CREST_VALUE_MAX_PX,
-  FIRMAMENT_CREST_VALUE_MIN_PX,
+  UNIVERSE_MAP_CREST_BAND_H,
+  UNIVERSE_MAP_CREST_CHIME_ART_PX,
+  UNIVERSE_MAP_CREST_ID_GAP,
+  UNIVERSE_MAP_CREST_ID_PAD_X,
+  UNIVERSE_MAP_CREST_KICKER_ID_CQW,
+  UNIVERSE_MAP_CREST_KICKER_ID_MAX_PX,
+  UNIVERSE_MAP_CREST_KICKER_ID_MIN_PX,
+  UNIVERSE_MAP_CREST_LABEL_CQW,
+  UNIVERSE_MAP_CREST_LABEL_MAX_PX,
+  UNIVERSE_MAP_CREST_LABEL_MIN_PX,
+  UNIVERSE_MAP_CREST_PROV_NAME_PX,
+  UNIVERSE_MAP_CREST_READ_GAP_PX,
+  UNIVERSE_MAP_CREST_READ_PAD_X,
+  UNIVERSE_MAP_CREST_SHARE,
+  UNIVERSE_MAP_CREST_VALUE_CQW,
+  UNIVERSE_MAP_CREST_VALUE_MAX_PX,
+  UNIVERSE_MAP_CREST_VALUE_MIN_PX,
   MS_PER_SECOND,
   UNIVERSE_DISC_CREST_PX,
   UNIVERSE_TOOLTIP_IMAGES,
 } from '@/config/constants'
-import type { FirmamentChronicle } from '@/utils/ui/firmamentChronicle'
+import type { UniverseChronicle } from '@/utils/ui/universeChronicle'
 import UniverseDisc from './UniverseDisc.vue'
 
 /** Das GEZEIGTE Universum und was es hergab. Die Chronik rechnet der Tab —
  *  eine reine Funktion laesst sich binden, ein Computed in der Ansicht nicht. */
-const props = defineProps<{ universe: number; chronicle: FirmamentChronicle }>()
+const props = defineProps<{ universe: number; chronicle: UniverseChronicle }>()
 
 const gameStore = useGameStore()
 const providenceStore = useProvidenceStore()
@@ -169,52 +169,52 @@ const elapsedTip = computed(() =>
 /** Dieselbe Waehrung, dasselbe Bild wie auf der Fleet-Karte — kein Iconify-Ersatz. */
 const CHIME_IMG = UNIVERSE_TOOLTIP_IMAGES.chimes
 
-const bandH = `${FIRMAMENT_CREST_BAND_H}px`
-const idPadX = `${FIRMAMENT_CREST_ID_PAD_X}px`
-const idGap = `${FIRMAMENT_CREST_ID_GAP}px`
-const readGap = `${FIRMAMENT_CREST_READ_GAP_PX}px`
-const readPadX = `${FIRMAMENT_CREST_READ_PAD_X}px`
-const provNamePx = `${FIRMAMENT_CREST_PROV_NAME_PX}px`
-const chimeArtPx = `${FIRMAMENT_CREST_CHIME_ART_PX}px`
+const bandH = `${UNIVERSE_MAP_CREST_BAND_H}px`
+const idPadX = `${UNIVERSE_MAP_CREST_ID_PAD_X}px`
+const idGap = `${UNIVERSE_MAP_CREST_ID_GAP}px`
+const readGap = `${UNIVERSE_MAP_CREST_READ_GAP_PX}px`
+const readPadX = `${UNIVERSE_MAP_CREST_READ_PAD_X}px`
+const provNamePx = `${UNIVERSE_MAP_CREST_PROV_NAME_PX}px`
+const chimeArtPx = `${UNIVERSE_MAP_CREST_CHIME_ART_PX}px`
 
 /* Feste Zonenbreiten als PROZENT-Basis. Nicht `flex-grow`: unter
    `box-sizing: border-box` floort `flex-basis: 0` auf Polsterung plus Kante,
    und die Verteilung waere dann nicht mehr proportional. */
 const pct = (n: number) => `${n}%`
-const shareId = pct(FIRMAMENT_CREST_SHARE.id)
-const shareProv = pct(FIRMAMENT_CREST_SHARE.prov)
-const shareProvWide = pct(FIRMAMENT_CREST_SHARE.provWide)
-const shareGalaxies = pct(FIRMAMENT_CREST_SHARE.galaxies)
-const shareStars = pct(FIRMAMENT_CREST_SHARE.stars)
-const shareChimes = pct(FIRMAMENT_CREST_SHARE.chimes)
-const shareElapsed = pct(FIRMAMENT_CREST_SHARE.elapsed)
+const shareId = pct(UNIVERSE_MAP_CREST_SHARE.id)
+const shareProv = pct(UNIVERSE_MAP_CREST_SHARE.prov)
+const shareProvWide = pct(UNIVERSE_MAP_CREST_SHARE.provWide)
+const shareGalaxies = pct(UNIVERSE_MAP_CREST_SHARE.galaxies)
+const shareStars = pct(UNIVERSE_MAP_CREST_SHARE.stars)
+const shareChimes = pct(UNIVERSE_MAP_CREST_SHARE.chimes)
+const shareElapsed = pct(UNIVERSE_MAP_CREST_SHARE.elapsed)
 
-/* Die drei Schriftskalen des Bandes. Sie messen in `cqw` gegen `.fm-crest`,
+/* Die drei Schriftskalen des Bandes. Sie messen in `cqw` gegen `.un-crest`,
    nicht in `vw` gegen den Viewport: `--hud-scale` entkoppelt beide. */
-const valueScale = `clamp(${FIRMAMENT_CREST_VALUE_MIN_PX}px, ${FIRMAMENT_CREST_VALUE_CQW}cqw, ${FIRMAMENT_CREST_VALUE_MAX_PX}px)`
-const labelScale = `clamp(${FIRMAMENT_CREST_LABEL_MIN_PX}px, ${FIRMAMENT_CREST_LABEL_CQW}cqw, ${FIRMAMENT_CREST_LABEL_MAX_PX}px)`
-const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CREST_KICKER_ID_CQW}cqw, ${FIRMAMENT_CREST_KICKER_ID_MAX_PX}px)`
+const valueScale = `clamp(${UNIVERSE_MAP_CREST_VALUE_MIN_PX}px, ${UNIVERSE_MAP_CREST_VALUE_CQW}cqw, ${UNIVERSE_MAP_CREST_VALUE_MAX_PX}px)`
+const labelScale = `clamp(${UNIVERSE_MAP_CREST_LABEL_MIN_PX}px, ${UNIVERSE_MAP_CREST_LABEL_CQW}cqw, ${UNIVERSE_MAP_CREST_LABEL_MAX_PX}px)`
+const kickerScale = `clamp(${UNIVERSE_MAP_CREST_KICKER_ID_MIN_PX}px, ${UNIVERSE_MAP_CREST_KICKER_ID_CQW}cqw, ${UNIVERSE_MAP_CREST_KICKER_ID_MAX_PX}px)`
 </script>
 
 <template>
-  <div class="fm-crest">
-    <div class="fm-crest-body">
+  <div class="un-crest">
+    <div class="un-crest-body">
       <!-- Die Identitaet: WELCHE Bahn die Karte zeigt. Inhaltsbreit, damit der
            ganze Rest des Bandes den Ablesungen gehoert. -->
-      <div class="fm-crest-id">
-        <span class="fm-crest-medal">
+      <div class="un-crest-id">
+        <span class="un-crest-medal">
           <UniverseDisc
             :universe="props.universe"
             :state="isHere ? 'current' : 'walked'"
             :px="UNIVERSE_DISC_CREST_PX"
           />
-          <span class="fm-crest-roman">{{ toRoman(props.universe) }}</span>
+          <span class="un-crest-roman">{{ toRoman(props.universe) }}</span>
         </span>
-        <span class="fm-crest-kicker">
-          <span v-ink-center.y class="fm-crest-v fm-crest-v--id">{{
+        <span class="un-crest-kicker">
+          <span v-ink-center.y class="un-crest-v un-crest-v--id">{{
             universeLabel(props.universe)
           }}</span>
-          <span v-ink-center.y class="fm-crest-k"
+          <span v-ink-center.y class="un-crest-k"
             >{{ isHere ? 'you are here' : 'visited' }}{{ visitNote }}</span
           >
         </span>
@@ -229,69 +229,69 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
           v-for="(line, i) in provLines"
           :key="i"
           v-tip="{ label: line.label, text: line.positive ? PROV_TIP_UP : PROV_TIP_DOWN }"
-          class="fm-crest-read fm-crest-read--prov"
+          class="un-crest-read un-crest-read--prov"
         >
           <span
             v-ink-center.y
-            class="fm-crest-v"
-            :class="line.positive ? 'fm-crest-v--up' : 'fm-crest-v--down'"
+            class="un-crest-v"
+            :class="line.positive ? 'un-crest-v--up' : 'un-crest-v--down'"
           >
-            <span class="fm-crest-dir">{{ line.positive ? '▲' : '▼' }}</span
+            <span class="un-crest-dir">{{ line.positive ? '▲' : '▼' }}</span
             >{{ line.value }}
           </span>
-          <span v-ink-center.y class="fm-crest-k">{{ line.label }}</span>
+          <span v-ink-center.y class="un-crest-k">{{ line.label }}</span>
         </div>
       </template>
       <div
         v-else
         v-tip="{ label: 'Providence', text: PROV_TIP }"
-        class="fm-crest-read fm-crest-read--provwide"
+        class="un-crest-read un-crest-read--provwide"
       >
-        <span v-ink-center.y class="fm-crest-v fm-crest-v--name">{{ provFallback.value }}</span>
-        <span v-ink-center.y class="fm-crest-k">{{ provFallback.key }}</span>
+        <span v-ink-center.y class="un-crest-v un-crest-v--name">{{ provFallback.value }}</span>
+        <span v-ink-center.y class="un-crest-k">{{ provFallback.key }}</span>
       </div>
 
       <!-- Was DIESE Bahn hergab. -->
       <div
         v-tip="{ label: 'Galaxies', text: READ_TIPS.galaxies }"
-        class="fm-crest-read fm-crest-read--galaxies"
+        class="un-crest-read un-crest-read--galaxies"
       >
-        <span v-ink-center.y class="fm-crest-v fm-crest-v--gold">{{
+        <span v-ink-center.y class="un-crest-v un-crest-v--gold">{{
           props.chronicle.galaxies
         }}</span>
-        <span v-ink-center.y class="fm-crest-k">Galaxies</span>
+        <span v-ink-center.y class="un-crest-k">Galaxies</span>
       </div>
       <div
         v-tip="{ label: 'Stars', text: READ_TIPS.stars }"
-        class="fm-crest-read fm-crest-read--stars"
+        class="un-crest-read un-crest-read--stars"
       >
-        <span v-ink-center.y class="fm-crest-v fm-crest-v--gold">
-          {{ props.chronicle.rescued }}<span class="fm-crest-sep">/</span
-          ><span class="fm-crest-lost">{{ props.chronicle.lost }}</span>
+        <span v-ink-center.y class="un-crest-v un-crest-v--gold">
+          {{ props.chronicle.rescued }}<span class="un-crest-sep">/</span
+          ><span class="un-crest-lost">{{ props.chronicle.lost }}</span>
         </span>
-        <span v-ink-center.y class="fm-crest-k">Stars</span>
+        <span v-ink-center.y class="un-crest-k">Stars</span>
       </div>
       <div
         v-tip="{ label: 'Chimes', text: chimesTip }"
-        class="fm-crest-read fm-crest-read--chimes"
+        class="un-crest-read un-crest-read--chimes"
       >
-        <span class="fm-crest-v fm-crest-v--gold fm-crest-v--art">
-          <img class="fm-crest-chime" :src="CHIME_IMG" alt="" aria-hidden="true" />
+        <span class="un-crest-v un-crest-v--gold un-crest-v--art">
+          <img class="un-crest-chime" :src="CHIME_IMG" alt="" aria-hidden="true" />
           <span v-ink-center.y
             >{{ chimesText
-            }}<span v-if="dep" class="fm-crest-goal"> / {{ formatNumber(dep.goal) }}</span></span
+            }}<span v-if="dep" class="un-crest-goal"> / {{ formatNumber(dep.goal) }}</span></span
           >
         </span>
-        <span v-ink-center.y class="fm-crest-k" :class="{ 'fm-crest-k--ready': dep?.etaSeconds === 0 }">
+        <span v-ink-center.y class="un-crest-k" :class="{ 'un-crest-k--ready': dep?.etaSeconds === 0 }">
           {{ chimesKey }}
         </span>
       </div>
       <div
         v-tip="{ label: 'Elapsed', text: elapsedTip }"
-        class="fm-crest-read fm-crest-read--elapsed"
+        class="un-crest-read un-crest-read--elapsed"
       >
-        <span v-ink-center.y class="fm-crest-v fm-crest-v--time">{{ elapsedText }}</span>
-        <span v-ink-center.y class="fm-crest-k">{{ elapsedKey }}</span>
+        <span v-ink-center.y class="un-crest-v un-crest-v--time">{{ elapsedText }}</span>
+        <span v-ink-center.y class="un-crest-k">{{ elapsedKey }}</span>
       </div>
     </div>
   </div>
@@ -301,7 +301,7 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
 /* Der Massstab jeder Schriftskala darunter. Eigenschaften DIESES Elements
    duerfen kein `cqw` benutzen — die loesten gegen den naechsten Vorfahren auf,
    nicht gegen das Band. */
-.fm-crest {
+.un-crest {
   position: relative;
   z-index: 2;
   flex-shrink: 0;
@@ -309,7 +309,7 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  /* Der Gurt, nicht die Regel: `firmamentCrest.spec.ts` rechnet nach, dass die
+  /* Der Gurt, nicht die Regel: `universeCrest.spec.ts` rechnet nach, dass die
      Reihe in jedes Zielband passt. Reisst die Rechnung doch, endet der Ueberlauf
      an der Bandkante statt auf der Karte. `clip` statt `hidden` — der Rahmen
      traegt geparkten Inhalt. */
@@ -324,7 +324,7 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
 /* DIE Reihe: Identitaet und alle Ablesungen sind Geschwister und stehen damit
    auf derselben Grundlinie. Vorher lag die Vorsehung in der Wappenzone, eine
    Etage unter der Kennzeile — der Stapel sprengte bei 2560 die Innenhoehe. */
-.fm-crest-body {
+.un-crest-body {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -332,7 +332,7 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
 }
 
 /* Wappen */
-.fm-crest-id {
+.un-crest-id {
   /* Fester Anteil wie jede Ablesung — die Scheibe und die Kennzeile stehen
      darin, aber sie bestimmen ihn nicht. */
   flex: 0 0 v-bind(shareId);
@@ -346,14 +346,14 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
 /* Dieselbe Scheibe wie in der Leiste, nur gross — das Heldenbild des Reiters.
    Kein Teller darunter: sie ist rund und braucht keinen Kasten. Mit 64 px ist
    sie das hoechste Element des Bandes; der Textstapel misst hoechstens 61. */
-.fm-crest-medal {
+.un-crest-medal {
   position: relative;
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
 
-.fm-crest-roman {
+.un-crest-roman {
   position: absolute;
   right: -4px;
   bottom: -2px;
@@ -368,7 +368,7 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
 /* Die Kennzeile traegt die Gestalt einer Ablesung: Wert oben, versale
    Beschriftung darunter. Erst dadurch steht die Identitaet auf derselben
    Tintenlinie wie die Zahlen. */
-.fm-crest-kicker {
+.un-crest-kicker {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -379,7 +379,7 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
 }
 
 /* Ablesungen */
-.fm-crest-read {
+.un-crest-read {
   /* Die Breite ist ein fester ANTEIL am Band (unten je Zone), nie der Inhalt:
      sonst schiebt jede wachsende Zahl ihre Nachbarn. Prozent-Basis, NICHT
      `flex-grow` mit `flex-basis: 0` — unter `box-sizing: border-box` floort die
@@ -400,29 +400,29 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
   border-left: 1px solid #3e200a;
 }
 
-.fm-crest-read--prov {
+.un-crest-read--prov {
   flex-basis: v-bind(shareProv);
 }
 
 /* Ohne Achsen im Archiv nimmt EINE Ablesung den Platz der beiden — zwingend
    ihr doppelter Anteil, sonst summiert dieser Fall nicht auf 100 %. */
-.fm-crest-read--provwide {
+.un-crest-read--provwide {
   flex-basis: v-bind(shareProvWide);
 }
 
-.fm-crest-read--galaxies {
+.un-crest-read--galaxies {
   flex-basis: v-bind(shareGalaxies);
 }
 
-.fm-crest-read--stars {
+.un-crest-read--stars {
   flex-basis: v-bind(shareStars);
 }
 
-.fm-crest-read--chimes {
+.un-crest-read--chimes {
   flex-basis: v-bind(shareChimes);
 }
 
-.fm-crest-read--elapsed {
+.un-crest-read--elapsed {
   flex-basis: v-bind(shareElapsed);
 }
 
@@ -440,8 +440,8 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
 
    Die Kennzeile bekommt die Direktive seit dem Umbau an ihren beiden Spans:
    jeder ist einschriftig, und die Direktive misst mit der Schrift des Elements.
-   Der Traeger `.fm-crest-kicker` bleibt ohne — er umschliesst ZWEI Schriftgrade. */
-.fm-crest-v {
+   Der Traeger `.un-crest-kicker` bleibt ohne — er umschliesst ZWEI Schriftgrade. */
+.un-crest-v {
   font-size: v-bind(valueScale);
   line-height: 1;
   font-weight: 900;
@@ -450,14 +450,14 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
 
 /* Die Kennung etwas kleiner als die Zahlen und in Gold: sie ist alles, was von
    der Identitaet uebrig ist, seit der Name gefallen ist. */
-.fm-crest-v--id {
+.un-crest-v--id {
   font-size: v-bind(kickerScale);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #e8c040;
 }
 
-.fm-crest-v--art {
+.un-crest-v--art {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -465,52 +465,52 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
 
 /* Unter dem Schriftboden der Ablesung: darueber bestimmte das BILD die
    Zeilenhoehe. Die `-128`-Stufe traegt bis 34 px. */
-.fm-crest-chime {
+.un-crest-chime {
   flex-shrink: 0;
   width: v-bind(chimeArtPx);
   height: v-bind(chimeArtPx);
   object-fit: contain;
 }
 
-.fm-crest-v--gold {
+.un-crest-v--gold {
   color: #e8c040;
 }
 
 /* Dieselben Toene wie im Header-Tooltip und auf der Prestige-Karte. Die
    Richtung kommt aus dem Roll, nicht aus dem Vorzeichen — eine senkende Achse
    (Building cost) traegt als BUFF ein Minus. */
-.fm-crest-v--up {
+.un-crest-v--up {
   color: #7fc95e;
 }
 
-.fm-crest-v--down {
+.un-crest-v--down {
   color: #cc6050;
 }
 
 /* Ein Name ist kein Zaehler: fester Grad statt der Skala der Zahlen, sonst
    liefe der laengste aus seiner Ablesung heraus. */
-.fm-crest-v--name {
+.un-crest-v--name {
   font-size: v-bind(provNamePx);
   font-weight: 700;
   color: #c8b890;
 }
 
-.fm-crest-dir {
+.un-crest-dir {
   font-size: 0.5em;
   padding-right: 0.16em;
 }
 
-.fm-crest-v--time {
+.un-crest-v--time {
   color: #ffd88a;
 }
 
-.fm-crest-lost {
+.un-crest-lost {
   color: #e08a7a;
 }
 
 /* Der Trennstrich gehoert keiner der beiden Zahlen. In voller Groesse kostete
    „ / " allein 0,72 em — bei 38 px also 27 px Zellbreite fuer ein Zeichen. */
-.fm-crest-sep {
+.un-crest-sep {
   font-size: 0.55em;
   margin: 0 0.1em;
   color: #5c4a30;
@@ -518,13 +518,13 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
 
 /* Das Ziel steht klein neben der erhobenen Summe: die grosse Zahl ist die, die
    waechst. */
-.fm-crest-goal {
+.un-crest-goal {
   font-size: 0.5em;
   font-weight: 400;
   color: #8a7a52;
 }
 
-.fm-crest-k {
+.un-crest-k {
   font-size: v-bind(labelScale);
   line-height: 1;
   letter-spacing: 0.1em;
@@ -533,7 +533,7 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
   white-space: nowrap;
 }
 
-.fm-crest-k--ready {
+.un-crest-k--ready {
   color: #e8c040;
 }
 </style>

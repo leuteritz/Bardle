@@ -40,71 +40,71 @@ import { useUiStore } from '@/stores/core/uiStore'
 import { getUniverse } from '@/config/progression/universes'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
-import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
+import { universeFitBox } from '@/utils/ui/universeLayout'
 import {
-  firmamentOfferPortalSpots,
-  firmamentPortalHitBox,
-  firmamentPortalLabelSpot,
-  firmamentPortalSpot,
-} from '@/utils/ui/firmamentPortalSpot'
+  universeOfferPortalSpots,
+  universePortalHitBox,
+  universePortalLabelSpot,
+  universePortalSpot,
+} from '@/utils/ui/universePortalSpot'
 import { universeDiscSpinSec } from '@/utils/fx/universeDisc'
 import {
-  firmamentScreenPos,
-  paintFirmament,
-  paintFirmamentGround,
-  paintFirmamentWeb,
-} from '@/utils/fx/firmamentPlate'
+  universeScreenPos,
+  paintUniverse,
+  paintUniverseGround,
+  paintUniverseWeb,
+} from '@/utils/fx/universePlate'
 import { toRoman, universeLabel } from '@/utils/ui/format'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
-import FirmamentGalaxyTip from './FirmamentGalaxyTip.vue'
-import FirmamentOriginTip from './FirmamentOriginTip.vue'
-import FirmamentPortal from './FirmamentPortal.vue'
-import FirmamentDepartureTip from './FirmamentDepartureTip.vue'
+import UniverseGalaxyTip from './UniverseGalaxyTip.vue'
+import UniverseOriginTip from './UniverseOriginTip.vue'
+import UniversePortal from './UniversePortal.vue'
+import UniverseDepartureTip from './UniverseDepartureTip.vue'
 import UniverseDisc from './UniverseDisc.vue'
 import {
-  FIRMAMENT_DIVE_ARRIVE_MS,
-  FIRMAMENT_DIVE_EASE_ARRIVE,
-  FIRMAMENT_DIVE_EASE_LEAVE,
-  FIRMAMENT_DIVE_LEAVE_MS,
-  FIRMAMENT_DIVE_SCALE,
-  FIRMAMENT_FREED_COLOR,
-  FIRMAMENT_GATE_COLOR,
-  FIRMAMENT_LABEL_MAX_NODES,
-  FIRMAMENT_MAX_BACKING_PX,
-  FIRMAMENT_MAX_DPR,
-  FIRMAMENT_NODE_HIT_BODY_K,
-  FIRMAMENT_NODE_HIT_MIN,
-  FIRMAMENT_PLATE_REF_R,
-  FIRMAMENT_PLATE_SPRITE_MARGIN,
-  FIRMAMENT_START_LABEL_MAX_PX,
-  FIRMAMENT_START_LABEL_MIN_PX,
-  FIRMAMENT_START_LABEL_OFFSET,
-  FIRMAMENT_START_LABEL_PX,
-  FIRMAMENT_START_TICK_PX,
-  FIRMAMENT_RIM_SPIN_REVERSE,
-  FIRMAMENT_RIM_SPRITE_MARGIN,
-  FIRMAMENT_PENUMBRA_SEED,
-  FIRMAMENT_WALL_MAX_BACKING_PX,
-  FIRMAMENT_UNLIT_COLOR,
-  FIRMAMENT_ZOOM_STEPS,
+  UNIVERSE_MAP_DIVE_ARRIVE_MS,
+  UNIVERSE_MAP_DIVE_EASE_ARRIVE,
+  UNIVERSE_MAP_DIVE_EASE_LEAVE,
+  UNIVERSE_MAP_DIVE_LEAVE_MS,
+  UNIVERSE_MAP_DIVE_SCALE,
+  UNIVERSE_MAP_FREED_COLOR,
+  UNIVERSE_MAP_GATE_COLOR,
+  UNIVERSE_MAP_LABEL_MAX_NODES,
+  UNIVERSE_MAP_MAX_BACKING_PX,
+  UNIVERSE_MAP_MAX_DPR,
+  UNIVERSE_MAP_NODE_HIT_BODY_K,
+  UNIVERSE_MAP_NODE_HIT_MIN,
+  UNIVERSE_MAP_PLATE_REF_R,
+  UNIVERSE_MAP_PLATE_SPRITE_MARGIN,
+  UNIVERSE_MAP_START_LABEL_MAX_PX,
+  UNIVERSE_MAP_START_LABEL_MIN_PX,
+  UNIVERSE_MAP_START_LABEL_OFFSET,
+  UNIVERSE_MAP_START_LABEL_PX,
+  UNIVERSE_MAP_START_TICK_PX,
+  UNIVERSE_MAP_RIM_SPIN_REVERSE,
+  UNIVERSE_MAP_RIM_SPRITE_MARGIN,
+  UNIVERSE_MAP_PENUMBRA_SEED,
+  UNIVERSE_MAP_WALL_MAX_BACKING_PX,
+  UNIVERSE_MAP_UNLIT_COLOR,
+  UNIVERSE_MAP_ZOOM_STEPS,
   UNIVERSE_DISC_HERO_MIN_PX,
   UNIVERSE_DISC_HERO_OPACITY,
   UNIVERSE_DISC_HERO_QUANT_PX,
   UNIVERSE_DISC_HERO_R_RATIO,
 } from '@/config/constants'
-import type { FirmamentDeparture, FirmamentNode } from '@/utils/ui/firmamentLayout'
-import type { FirmamentDiveRequest, FirmamentSelection } from '@/types'
+import type { UniverseDeparture, UniverseNode } from '@/utils/ui/universeLayout'
+import type { UniverseDiveRequest, UniverseSelection } from '@/types'
 import type { PrestigeOfferCard } from '@/stores/progression/providenceStore'
-import FirmamentOfferTip from './FirmamentOfferTip.vue'
+import UniverseOfferTip from './UniverseOfferTip.vue'
 
 const props = defineProps<{
-  nodes: FirmamentNode[]
-  departure: FirmamentDeparture | null
+  nodes: UniverseNode[]
+  departure: UniverseDeparture | null
   /** Die Karten des Aufbruchs — je eine wird zu einem Portal im schwarzen Raum.
    *  Leer auf jeder Bahn, auf der nichts ansteht; die VERGANGENE bekommt nie
    *  welche, sie traegt ihr Abflugportal. */
   offers: PrestigeOfferCard[]
-  selection: FirmamentSelection
+  selection: UniverseSelection
   visible: boolean
   /** Rueckweg aus dem Atlas als Kamerafahrt: die Ebene setzt sich aus dem
    *  Knoten der genannten Galaxie heraus. `null` = keine Fahrt. */
@@ -112,9 +112,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'select', value: FirmamentSelection): void
+  (e: 'select', value: UniverseSelection): void
   (e: 'open', galaxy: number): void
-  (e: 'dive', req: FirmamentDiveRequest): void
+  (e: 'dive', req: UniverseDiveRequest): void
 }>()
 
 const galaxyStore = useGalaxyStore()
@@ -143,11 +143,11 @@ const dragging = ref(false)
 /** Die laufende Kamerafahrt — siehe „Die Kamerafahrt" unten. */
 const dive = ref<{ ox: number; oy: number; way: 'leave' | 'arrive' } | null>(null)
 
-const zoom = computed(() => FIRMAMENT_ZOOM_STEPS[zoomStep.value] ?? 1)
+const zoom = computed(() => UNIVERSE_MAP_ZOOM_STEPS[zoomStep.value] ?? 1)
 const canPan = computed(() => zoomStep.value > 0)
 
 const box = computed(() => {
-  const fit = firmamentFitBox(cssW.value, cssH.value)
+  const fit = universeFitBox(cssW.value, cssH.value)
   return { cx: fit.cx + pan.value.x, cy: fit.cy + pan.value.y, r: fit.r * zoom.value }
 })
 
@@ -161,7 +161,7 @@ const box = computed(() => {
  * Bild.
  */
 function panLimit(): { x: number; y: number } {
-  const r = firmamentFitBox(cssW.value, cssH.value).r * zoom.value
+  const r = universeFitBox(cssW.value, cssH.value).r * zoom.value
   return {
     x: Math.max(0, r - cssW.value / 2),
     y: Math.max(0, r - cssH.value / 2),
@@ -188,18 +188,18 @@ function onWheel(e: WheelEvent) {
   const el = stage.value
   if (!el || dive.value) return
   const next = Math.min(
-    FIRMAMENT_ZOOM_STEPS.length - 1,
+    UNIVERSE_MAP_ZOOM_STEPS.length - 1,
     Math.max(0, zoomStep.value + (e.deltaY < 0 ? 1 : -1)),
   )
   if (next === zoomStep.value) return
 
   const rect = el.getBoundingClientRect()
-  const fit = firmamentFitBox(cssW.value, cssH.value)
+  const fit = universeFitBox(cssW.value, cssH.value)
   const mx = e.clientX - rect.left
   const my = e.clientY - rect.top
   const nx = (mx - (fit.cx + pan.value.x)) / (fit.r * zoom.value)
   const ny = (my - (fit.cy + pan.value.y)) / (fit.r * zoom.value)
-  const after = fit.r * FIRMAMENT_ZOOM_STEPS[next]
+  const after = fit.r * UNIVERSE_MAP_ZOOM_STEPS[next]
 
   zoomStep.value = next
   // Herauszoomen zieht die Fahrt mit zurueck in ihre neue, engere Reichweite.
@@ -251,24 +251,24 @@ function onPointerDown(e: PointerEvent) {
  * nicht am Canvas: so kostet ein Hover keinen Repaint, und es gibt den Text nur
  * einmal statt zweimal.
  */
-const showLabels = computed(() => props.nodes.length <= FIRMAMENT_LABEL_MAX_NODES)
+const showLabels = computed(() => props.nodes.length <= UNIVERSE_MAP_LABEL_MAX_NODES)
 
 const marks = computed(() =>
   props.nodes.map((node, i) => {
-    const p = firmamentScreenPos(box.value, node.nx, node.ny)
+    const p = universeScreenPos(box.value, node.nx, node.ny)
     return {
       node,
       index: i,
       x: p.x,
       y: p.y,
       size: Math.max(
-        FIRMAMENT_NODE_HIT_MIN,
-        node.bodyR * (box.value.r / FIRMAMENT_PLATE_REF_R) * FIRMAMENT_NODE_HIT_BODY_K,
+        UNIVERSE_MAP_NODE_HIT_MIN,
+        node.bodyR * (box.value.r / UNIVERSE_MAP_PLATE_REF_R) * UNIVERSE_MAP_NODE_HIT_BODY_K,
       ),
       picked: props.selection.galaxy === node.galaxy,
       accent:
         node.state === 'unlit' || node.themeIndex < 0
-          ? FIRMAMENT_UNLIT_COLOR
+          ? UNIVERSE_MAP_UNLIT_COLOR
           : `rgb(${minimapAccentForTheme(node.themeIndex, props.selection.universe)})`,
     }
   }),
@@ -281,34 +281,34 @@ const isHere = computed(() => props.selection.universe === gameStore.currentUniv
 /** Der Ton der gezeigten Bahn: Wolke, Wall und Glutringe sprechen ihn gemeinsam,
  *  die Zustandsfarben der Marken bleiben davon unberuehrt. */
 const viewTint = computed(
-  () => getUniverse(props.selection.universe)?.tint ?? FIRMAMENT_UNLIT_COLOR,
+  () => getUniverse(props.selection.universe)?.tint ?? UNIVERSE_MAP_UNLIT_COLOR,
 )
 
 /** Wo das Abflugportal steht. Es kennt weder Zoom noch Fahrt — sonst malte der
  *  Reiter bei jedem Zoomschritt ein Sprite neu, das sich nicht bewegt hat. */
 const portalSpot = computed(() =>
-  props.departure ? firmamentPortalSpot(props.selection.universe, cssW.value, cssH.value) : null,
+  props.departure ? universePortalSpot(props.selection.universe, cssW.value, cssH.value) : null,
 )
 
 /** Der Ton des ZIELS, nicht der gezeigten Bahn: Wall und Wolke sprechen deren
  *  Ton schon, und ein Portal in der Farbe der Wand, jenseits derer es steht,
  *  sagt nicht „woanders hin". */
 const portalTint = computed(
-  () => getUniverse(props.departure?.toUniverse ?? 0)?.tint ?? FIRMAMENT_GATE_COLOR,
+  () => getUniverse(props.departure?.toUniverse ?? 0)?.tint ?? UNIVERSE_MAP_GATE_COLOR,
 )
 
 /** Wohin das Portal fuehrt — als Schrift neben dem Ring, nicht erst im Hover.
  *  Die Seite sucht sich die Rechnung selbst; sie kennt Zoom und Fahrt genauso
  *  wenig wie die Stelle des Rings. */
 const portalLabel = computed(() =>
-  portalSpot.value ? firmamentPortalLabelSpot(portalSpot.value, cssW.value, cssH.value) : null,
+  portalSpot.value ? universePortalLabelSpot(portalSpot.value, cssW.value, cssH.value) : null,
 )
 
 /** Ring UND Beschriftung als EIN Rechteck: es ist die Trefferflaeche und
  *  zugleich der Anker der Hover-Karte, die sonst auf der Beschriftung aufginge. */
 const portalHit = computed(() =>
   portalSpot.value && portalLabel.value
-    ? firmamentPortalHitBox(portalSpot.value, portalLabel.value, cssW.value, cssH.value)
+    ? universePortalHitBox(portalSpot.value, portalLabel.value, cssW.value, cssH.value)
     : null,
 )
 
@@ -335,7 +335,7 @@ const portalLabelStyle = computed(() => {
     width: `${l.w}px`,
     height: `${l.h}px`,
     fontSize: `${l.size}px`,
-    '--fm-portal-tint': portalTint.value,
+    '--un-portal-tint': portalTint.value,
   }
 })
 
@@ -355,7 +355,7 @@ const portalLabelStyle = computed(() => {
  */
 const offerSpots = computed(() =>
   props.offers.length
-    ? firmamentOfferPortalSpots(
+    ? universeOfferPortalSpots(
         props.selection.universe,
         props.offers.map((o) => o.universe.id),
         cssW.value,
@@ -371,19 +371,19 @@ const offerMarks = computed(() => {
   const spots = offerSpots.value
   return props.offers.slice(0, spots.length).map((card, i) => {
     const spot = spots[i]
-    const label = firmamentPortalLabelSpot(
+    const label = universePortalLabelSpot(
       spot,
       cssW.value,
       cssH.value,
       spots.filter((_, j) => j !== i),
     )
-    const hit = firmamentPortalHitBox(spot, label, cssW.value, cssH.value)
+    const hit = universePortalHitBox(spot, label, cssW.value, cssH.value)
     return {
       card,
       spot,
       label,
       hit,
-      tint: getUniverse(card.universe.id)?.tint ?? FIRMAMENT_GATE_COLOR,
+      tint: getUniverse(card.universe.id)?.tint ?? UNIVERSE_MAP_GATE_COLOR,
     }
   })
 })
@@ -441,20 +441,20 @@ defineExpose({ paintCount })
  *
  * Er haengt am DOM wie die roemischen Ziffern: ein Hover auf dem Canvas kostete
  * einen Repaint der ganzen Platte, und den Text gaebe es zweimal. Er liegt in
- * `.fm-layer`, faehrt also mit und waechst ueber `box.r` mit dem Zoom.
+ * `.un-layer`, faehrt also mit und waechst ueber `box.r` mit dem Zoom.
  *
- * Unter der Mitte ist Platz: `firmamentSpots` haelt das Feld dort frei.
+ * Unter der Mitte ist Platz: `universeSpots` haelt das Feld dort frei.
  */
 const startMark = computed(() => {
-  const k = box.value.r / FIRMAMENT_PLATE_REF_R
+  const k = box.value.r / UNIVERSE_MAP_PLATE_REF_R
   return {
     x: box.value.cx,
-    y: box.value.cy + box.value.r * FIRMAMENT_START_LABEL_OFFSET,
+    y: box.value.cy + box.value.r * UNIVERSE_MAP_START_LABEL_OFFSET,
     size: Math.min(
-      FIRMAMENT_START_LABEL_MAX_PX,
-      Math.max(FIRMAMENT_START_LABEL_MIN_PX, FIRMAMENT_START_LABEL_PX * k),
+      UNIVERSE_MAP_START_LABEL_MAX_PX,
+      Math.max(UNIVERSE_MAP_START_LABEL_MIN_PX, UNIVERSE_MAP_START_LABEL_PX * k),
     ),
-    tick: FIRMAMENT_START_TICK_PX * k,
+    tick: UNIVERSE_MAP_START_TICK_PX * k,
   }
 })
 
@@ -475,7 +475,7 @@ const heroPx = computed(() => {
 
 /** Kante des Wall-Sprites. Quadratisch, die Mitte ist der Drehpunkt. */
 const rimSide = computed(() =>
-  Math.max(1, Math.round(box.value.r * 2 * FIRMAMENT_RIM_SPRITE_MARGIN)),
+  Math.max(1, Math.round(box.value.r * 2 * UNIVERSE_MAP_RIM_SPRITE_MARGIN)),
 )
 
 /**
@@ -486,7 +486,7 @@ const rimSide = computed(() =>
  * Knoepfe stuenden da, ihre Koerper nicht.
  */
 const plateSide = computed(() =>
-  Math.max(1, Math.round(box.value.r * 2 * FIRMAMENT_PLATE_SPRITE_MARGIN)),
+  Math.max(1, Math.round(box.value.r * 2 * UNIVERSE_MAP_PLATE_SPRITE_MARGIN)),
 )
 
 /** Die Karte malt in ihre EIGENE Mitte; die Lage besorgt das CSS. */
@@ -525,7 +525,7 @@ const spinDur = computed(() => `${universeDiscSpinSec(heroPx.value)}s`)
    selbst am traegsten — die Parallaxe zur Heldenscheibe kostet keine zweite
    Zahl. */
 const rimSpinDur = computed(() => `${universeDiscSpinSec(rimSide.value)}s`)
-const rimSpinDir = FIRMAMENT_RIM_SPIN_REVERSE ? 'reverse' : 'normal'
+const rimSpinDir = UNIVERSE_MAP_RIM_SPIN_REVERSE ? 'reverse' : 'normal'
 const heroOpacity = String(UNIVERSE_DISC_HERO_OPACITY)
 
 // ── Die Kamerafahrt ─────────────────────────────────────────────────────────
@@ -561,7 +561,7 @@ function pickNode(mark: (typeof marks.value)[number], e: MouseEvent) {
   emit('dive', { toward: 'atlas', galaxy: node.galaxy, x, y, accent })
 }
 
-/* Der Rueckweg: erst das SICHTBARE Firmament kennt die Knotenmitte — es meldet
+/* Der Rueckweg: erst das SICHTBARE Universe kennt die Knotenmitte — es meldet
    sie dem Schleier nach, das Licht faellt dorthin. Ohne Knoten (Galaxie nicht
    auf der gezeigten Bahn) faellt nur der Schleier. */
 watch(
@@ -572,18 +572,18 @@ watch(
       return
     }
     const s = stage.value?.getBoundingClientRect()
-    const el = stage.value?.querySelector(`.fm-node[data-galaxy="${galaxy}"]`)
+    const el = stage.value?.querySelector(`.un-node[data-galaxy="${galaxy}"]`)
     if (!s || !el) return
     const { x, y } = nodeCenter(el)
     dive.value = { ox: x - s.left, oy: y - s.top, way: 'arrive' }
-    uiStore.anchorFirmamentDive(x, y)
+    uiStore.anchorUniverseDive(x, y)
   },
   { flush: 'post' },
 )
 
 /** Weiterreisen: das Tor ist die Fortsetzung des Weges, nicht eine zweite
  *  Leiste. So geht man den ganzen Weg der Reihe nach ab. */
-function pickDeparture(departure: FirmamentDeparture) {
+function pickDeparture(departure: UniverseDeparture) {
   emit('select', { universe: departure.toUniverse, galaxy: null })
 }
 
@@ -613,8 +613,8 @@ const groundKey = computed(
  *  nicht der Hex-Wert: kuerzer, und sie tickt genauso wenig. */
 const rimKey = computed(() => `${rimSide.value}|${dprNow.value}|${props.selection.universe}`)
 
-function backingDpr(w: number, h: number, cap = FIRMAMENT_MAX_BACKING_PX): number {
-  return Math.min(window.devicePixelRatio || 1, FIRMAMENT_MAX_DPR, cap / Math.max(w, h))
+function backingDpr(w: number, h: number, cap = UNIVERSE_MAP_MAX_BACKING_PX): number {
+  return Math.min(window.devicePixelRatio || 1, UNIVERSE_MAP_MAX_DPR, cap / Math.max(w, h))
 }
 
 function paintGround() {
@@ -629,7 +629,7 @@ function paintGround() {
   const ctx = el.getContext('2d')
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  paintFirmamentGround(ctx, w, h, FIRMAMENT_PENUMBRA_SEED, props.selection.universe, viewTint.value)
+  paintUniverseGround(ctx, w, h, UNIVERSE_MAP_PENUMBRA_SEED, props.selection.universe, viewTint.value)
 }
 
 function paintRim() {
@@ -639,14 +639,14 @@ function paintRim() {
   resetCanvasIfContextLost(el)
   // Eigener, engerer Deckel: die Ebene ist quadratisch und waechst mit dem
   // Zoom. Bei Zoom 1 greift er nicht.
-  const dpr = backingDpr(side, side, FIRMAMENT_WALL_MAX_BACKING_PX)
+  const dpr = backingDpr(side, side, UNIVERSE_MAP_WALL_MAX_BACKING_PX)
   el.width = Math.max(1, Math.round(side * dpr))
   el.height = Math.max(1, Math.round(side * dpr))
   const ctx = el.getContext('2d')
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   const r = box.value.r
-  paintFirmamentWeb(ctx, side / 2, side / 2, r, r / FIRMAMENT_PLATE_REF_R, viewTint.value)
+  paintUniverseWeb(ctx, side / 2, side / 2, r, r / UNIVERSE_MAP_PLATE_REF_R, viewTint.value)
 }
 
 let queued = false
@@ -675,7 +675,7 @@ function paint() {
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-  paintFirmament(
+  paintUniverse(
     ctx,
     props.nodes,
     side,
@@ -754,20 +754,20 @@ const layerStyle = computed(() => ({
   transform: `translate3d(${drag.value.x}px, ${drag.value.y}px, 0)`,
   ...(dive.value && {
     transformOrigin: `${dive.value.ox}px ${dive.value.oy}px`,
-    '--fm-dive-scale': String(FIRMAMENT_DIVE_SCALE),
+    '--un-dive-scale': String(UNIVERSE_MAP_DIVE_SCALE),
   }),
 }))
-const diveLeaveDur = `${FIRMAMENT_DIVE_LEAVE_MS}ms`
-const diveArriveDur = `${FIRMAMENT_DIVE_ARRIVE_MS}ms`
-const diveEaseLeave = FIRMAMENT_DIVE_EASE_LEAVE
-const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
+const diveLeaveDur = `${UNIVERSE_MAP_DIVE_LEAVE_MS}ms`
+const diveArriveDur = `${UNIVERSE_MAP_DIVE_ARRIVE_MS}ms`
+const diveEaseLeave = UNIVERSE_MAP_DIVE_EASE_LEAVE
+const diveEaseArrive = UNIVERSE_MAP_DIVE_EASE_ARRIVE
 
 </script>
 
 <template>
   <div
     ref="stage"
-    class="fm-stage"
+    class="un-stage"
     :class="{
       'is-pannable': canPan,
       'is-dragging': dragging,
@@ -780,12 +780,12 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
   >
     <!-- Der Raum. Er faehrt NICHT mit: die Bahn wandert durch die Stroemung,
          statt sie mitzuschleppen. -->
-    <canvas ref="groundEl" class="fm-ground" aria-hidden="true" />
+    <canvas ref="groundEl" class="un-ground" aria-hidden="true" />
 
     <!-- Das Abflugportal steht im schwarzen Raum jenseits der Karte. Sein BILD
-         liegt AUSSERHALB `.fm-layer`: es faehrt nicht mit und waechst nicht mit
+         liegt AUSSERHALB `.un-layer`: es faehrt nicht mit und waechst nicht mit
          dem Zoom — beim Hineinzoomen schiebt sich die Karte davor. -->
-    <FirmamentPortal
+    <UniversePortal
       v-if="portalSpot && departure"
       :spot="portalSpot"
       :seed="selection.universe"
@@ -796,7 +796,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 
     <!-- Die Angebotsportale der LAUFENDEN Bahn. Dieselbe Schichtung wie oben:
          das BILD vor der fahrenden Ebene, der Knopf dahinter. -->
-    <FirmamentPortal
+    <UniversePortal
       v-for="mark in offerMarks"
       :key="mark.card.universe.id"
       :spot="mark.spot"
@@ -807,13 +807,13 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
       :departing="departingUniverse === mark.card.universe.id"
     />
 
-    <div class="fm-layer" :class="dive && `fm-layer--${dive.way}`" :style="layerStyle">
+    <div class="un-layer" :class="dive && `un-layer--${dive.way}`" :style="layerStyle">
       <!-- Die zwei Ebenen, die sich drehen. Beide sind fertige Sprites; das CSS
            dreht sie am Compositor, kein Repaint. Gegenlaeufig, damit sie nicht
            als EIN Rad zusammenfallen. -->
       <canvas
         ref="rimEl"
-        class="fm-rim"
+        class="un-rim"
         aria-hidden="true"
         :style="{
           ...centerStyle,
@@ -824,7 +824,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
         }"
       />
       <UniverseDisc
-        class="fm-hero"
+        class="un-hero"
         variant="cloud"
         :universe="selection.universe"
         :state="isHere ? 'current' : 'walked'"
@@ -835,13 +835,13 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
       <!-- Die Bahn dreht im Gleichtakt mit der Wolke — Karte, Knoten und Tore
            in EINEM `transform` um die Mitte der Bahn. Der Startpunkt bleibt
            draussen: er BENENNT diesen Drehpunkt und kreiste sonst um ihn. -->
-      <div class="fm-spin" :style="spinStyle">
+      <div class="un-spin" :style="spinStyle">
         <!-- `data-paints` ist der Beleg, nicht Zierrat: der Playwright-Lauf liest
              ihn und darf ihn in Ruhe nicht wachsen sehen. Er wird nur
              geschrieben, wenn ohnehin gemalt wurde. -->
         <canvas
           ref="canvas"
-          class="fm-canvas"
+          class="un-canvas"
           :data-paints="paintCount"
           :style="{ ...centerStyle, width: `${plateSide}px`, height: `${plateSide}px` }"
         />
@@ -850,7 +850,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
              darunter; hier liegt nur, was auf Zeiger und Tastatur antwortet. -->
         <RpgBadgeTooltip v-for="mark in marks" :key="mark.node.galaxy" passive :accent="mark.accent">
           <button
-            class="fm-node"
+            class="un-node"
             :class="{
               'is-current': mark.node.state === 'current',
               'is-unlit': mark.node.state === 'unlit',
@@ -863,7 +863,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
               top: `${mark.y}px`,
               width: `${mark.size}px`,
               height: `${mark.size}px`,
-              '--fm-node-accent': mark.accent,
+              '--un-node-accent': mark.accent,
             }"
             :data-galaxy="mark.node.galaxy"
             :aria-label="
@@ -874,11 +874,11 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
             :aria-pressed="mark.node.record ? undefined : mark.picked"
             @click="pickNode(mark, $event)"
           >
-            <span class="fm-node-ring" aria-hidden="true" />
-            <span class="fm-node-tag" aria-hidden="true">{{ toRoman(mark.node.galaxy) }}</span>
+            <span class="un-node-ring" aria-hidden="true" />
+            <span class="un-node-tag" aria-hidden="true">{{ toRoman(mark.node.galaxy) }}</span>
           </button>
           <template #tip>
-            <FirmamentGalaxyTip :node="mark.node" :universe="props.selection.universe" />
+            <UniverseGalaxyTip :node="mark.node" :universe="props.selection.universe" />
           </template>
         </RpgBadgeTooltip>
       </div>
@@ -886,9 +886,9 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
       <!-- Der Startpunkt. KEIN Knopf: er fuehrt keine Aktion aus, und „zurueck
            zur Mitte" liegt auf dem Doppelklick der freien Flaeche. Er ist
            trotzdem fokussierbar, damit die Karte auch per Tastatur aufgeht. -->
-      <RpgBadgeTooltip passive :accent="FIRMAMENT_FREED_COLOR">
+      <RpgBadgeTooltip passive :accent="UNIVERSE_MAP_FREED_COLOR">
         <div
-          class="fm-start"
+          class="un-start"
           tabindex="0"
           role="img"
           :aria-label="`Start — where the road begins, ${nodes.length} galaxies on the chain`"
@@ -896,14 +896,14 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
             left: `${startMark.x}px`,
             top: `${startMark.y}px`,
             fontSize: `${startMark.size}px`,
-            '--fm-start-tick': `${startMark.tick}px`,
+            '--un-start-tick': `${startMark.tick}px`,
           }"
         >
-          <span class="fm-start-tick" aria-hidden="true" />
-          <span class="fm-start-word">Start</span>
+          <span class="un-start-tick" aria-hidden="true" />
+          <span class="un-start-word">Start</span>
         </div>
         <template #tip>
-          <FirmamentOriginTip :nodes="nodes" :universe="selection.universe" />
+          <UniverseOriginTip :nodes="nodes" :universe="selection.universe" />
         </template>
       </RpgBadgeTooltip>
     </div>
@@ -916,7 +916,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
          Objekt waere ein Klickkreis mitten auf der Galaxie. -->
     <RpgBadgeTooltip v-if="portalHit && departure && zoomStep === 0" passive :accent="portalTint">
       <button
-        class="fm-portal-hit"
+        class="un-portal-hit"
         :style="portalHitStyle"
         :aria-label="`Departure portal — the road went on to ${universeLabel(departure.toUniverse)}`"
         @pointerdown.stop
@@ -932,19 +932,19 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
              Knopf den Namen im Label schon traegt. -->
         <span
           v-if="portalLabel"
-          class="fm-portal-label"
+          class="un-portal-label"
           :class="`is-${portalLabel.side}`"
           aria-hidden="true"
           :style="portalLabelStyle"
         >
-          <span class="fm-portal-name">
+          <span class="un-portal-name">
             Universe
-            <span class="fm-portal-num">{{ toRoman(departure.toUniverse) }}</span>
+            <span class="un-portal-num">{{ toRoman(departure.toUniverse) }}</span>
           </span>
         </span>
       </button>
       <template #tip>
-        <FirmamentDepartureTip :departure="departure" :tint="portalTint" />
+        <UniverseDepartureTip :departure="departure" :tint="portalTint" />
       </template>
     </RpgBadgeTooltip>
 
@@ -960,7 +960,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
       :accent="mark.tint"
     >
       <button
-        class="fm-portal-hit"
+        class="un-portal-hit"
         :style="{
           left: `${mark.hit.x0}px`,
           top: `${mark.hit.y0}px`,
@@ -976,7 +976,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
         @blur="hoveredOffer = null"
       >
         <span
-          class="fm-portal-label"
+          class="un-portal-label"
           :class="`is-${mark.label.side}`"
           aria-hidden="true"
           :style="{
@@ -985,17 +985,17 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
             width: `${mark.label.w}px`,
             height: `${mark.label.h}px`,
             fontSize: `${mark.label.size}px`,
-            '--fm-portal-tint': mark.tint,
+            '--un-portal-tint': mark.tint,
           }"
         >
-          <span class="fm-portal-name">
+          <span class="un-portal-name">
             Universe
-            <span class="fm-portal-num">{{ toRoman(mark.card.universe.id) }}</span>
+            <span class="un-portal-num">{{ toRoman(mark.card.universe.id) }}</span>
           </span>
         </span>
       </button>
       <template #tip>
-        <FirmamentOfferTip
+        <UniverseOfferTip
           :universe="mark.card.universe"
           :providence="mark.card.providence"
           :tint="mark.tint"
@@ -1007,7 +1007,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 </template>
 
 <style scoped>
-.fm-stage {
+.un-stage {
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -1017,16 +1017,16 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
   user-select: none;
 }
 
-.fm-stage.is-pannable {
+.un-stage.is-pannable {
   cursor: grab;
 }
 
-.fm-stage.is-dragging {
+.un-stage.is-dragging {
   cursor: grabbing;
 }
 
 /* Der Raum, unter allem. */
-.fm-ground {
+.un-ground {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1039,8 +1039,8 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 /* Auch die fahrende Ebene ist ein RAHMEN und buehnenfuellend: sie traegt die
    Fahrt, keinen Inhalt. Als Trefferziel deckte sie alles ab, was unter ihr
    liegt — das Portal steht dort. Wer hier etwas Klickbares einhaengt, gibt ihm
-   `pointer-events: auto`; das Panning laeuft ueber `.fm-stage` weiter. */
-.fm-layer {
+   `pointer-events: auto`; das Panning laeuft ueber `.un-stage` weiter. */
+.un-layer {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -1051,23 +1051,23 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
    ein `transform` auf fertigen Sprites, kein Repaint. `translate3d(0,0,0)`
    steht in beiden Keyframes: die Animation ueberstimmt das inline transform,
    und eine Fahrt (`drag`) ist beim Klick immer schon geflusht. */
-.fm-layer--leave {
-  animation: fm-dive-leave v-bind(diveLeaveDur) v-bind(diveEaseLeave) forwards;
+.un-layer--leave {
+  animation: un-dive-leave v-bind(diveLeaveDur) v-bind(diveEaseLeave) forwards;
 }
-.fm-layer--arrive {
-  animation: fm-dive-arrive v-bind(diveArriveDur) v-bind(diveEaseArrive) forwards;
+.un-layer--arrive {
+  animation: un-dive-arrive v-bind(diveArriveDur) v-bind(diveEaseArrive) forwards;
 }
-@keyframes fm-dive-leave {
+@keyframes un-dive-leave {
   from {
     transform: translate3d(0, 0, 0) scale(1);
   }
   to {
-    transform: translate3d(0, 0, 0) scale(var(--fm-dive-scale, 1));
+    transform: translate3d(0, 0, 0) scale(var(--un-dive-scale, 1));
   }
 }
-@keyframes fm-dive-arrive {
+@keyframes un-dive-arrive {
   from {
-    transform: translate3d(0, 0, 0) scale(var(--fm-dive-scale, 1));
+    transform: translate3d(0, 0, 0) scale(var(--un-dive-scale, 1));
   }
   to {
     transform: translate3d(0, 0, 0) scale(1);
@@ -1076,25 +1076,25 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 
 /* Die Kinder holen sich `pointer-events: auto` einzeln zurueck — nur der Stern
    trifft sie alle. */
-.fm-stage.is-diving,
-.fm-stage.is-diving * {
+.un-stage.is-diving,
+.un-stage.is-diving * {
   pointer-events: none;
 }
 
 /* Mit `pointer-events: none` endet die Hover-Pause, und die Bahn draengte
    unter dem Drehpunkt weg. Also stehen bleiben — der Klick ist die
    Fortsetzung des Ueberfahrens. */
-.fm-stage.is-diving :is(.fm-spin, .fm-rim, .fm-node-tag) {
+.un-stage.is-diving :is(.un-spin, .un-rim, .un-node-tag) {
   animation-play-state: paused;
 }
-.fm-stage.is-diving :deep(:is(.fm-hero .uni-disc-l, .fm-portal-l, .fm-portal-boost)) {
+.un-stage.is-diving :deep(:is(.un-hero .uni-disc-l, .un-portal-l, .un-portal-boost)) {
   animation-play-state: paused;
 }
 
 /* Die Portale stehen AUSSERHALB der fahrenden Ebene und blieben sonst scharf
    ueber dem Zoom stehen. Statischer Umschlag, kein Dauerlaeufer. */
-.fm-stage.is-diving .fm-portal-hit,
-.fm-stage.is-diving :deep(.fm-portal) {
+.un-stage.is-diving .un-portal-hit,
+.un-stage.is-diving :deep(.un-portal) {
   opacity: 0;
   transition: opacity 0.16s ease;
 }
@@ -1102,17 +1102,17 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 /* Der Aufbruch: die Buehne faellt weg, nur das angeflogene Portal bleibt und
    waechst dem Schleier entgegen. Eigener Block neben `.is-diving` — der ist
    per Spec gebunden. Statische Umschlaege, keine neuen Keyframes. */
-.fm-stage.is-departing,
-.fm-stage.is-departing * {
+.un-stage.is-departing,
+.un-stage.is-departing * {
   pointer-events: none;
 }
 
-.fm-stage.is-departing :is(.fm-spin, .fm-rim, .fm-node-tag) {
+.un-stage.is-departing :is(.un-spin, .un-rim, .un-node-tag) {
   animation-play-state: paused;
 }
 
-.fm-stage.is-departing :is(.fm-layer, .fm-ground, .fm-portal-hit),
-.fm-stage.is-departing :deep(.fm-portal:not(.is-departing)) {
+.un-stage.is-departing :is(.un-layer, .un-ground, .un-portal-hit),
+.un-stage.is-departing :deep(.un-portal:not(.is-departing)) {
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -1121,22 +1121,22 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
    `will-change`: Chrome promotet die laufende Animation ohnehin, und der
    Hinweis legte die Ebene schon beim Mount an — im teuersten Frame des
    Reiters. Dieselbe Begruendung wie in `UniverseDisc.vue`. */
-.fm-rim,
-.fm-hero {
+.un-rim,
+.un-hero {
   position: absolute;
   pointer-events: none;
 }
 
 /* Die Zentrierung steht IM Keyframe: eine Drehung ueberschriebe ein separates
    `transform` sonst. Die Richtung setzt der Aufrufer. */
-.fm-rim {
+.un-rim {
   display: block;
   transform: translate(-50%, -50%);
   transform-origin: 50% 50%;
-  animation: fm-rim-turn 260s linear infinite;
+  animation: un-rim-turn 260s linear infinite;
 }
 
-@keyframes fm-rim-turn {
+@keyframes un-rim-turn {
   from {
     transform: translate(-50%, -50%) rotate(0deg);
   }
@@ -1147,7 +1147,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 
 /* Die Heldenscheibe dreht in sich selbst (ihre zwei Ebenen); hier haelt nur die
    Zentrierung. Gedaempft, weil die drei innersten Knoten auf ihr liegen. */
-.fm-hero {
+.un-hero {
   transform: translate(-50%, -50%);
   opacity: v-bind(heroOpacity);
 }
@@ -1166,14 +1166,14 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
    (`inset: 0`). Ohne `pointer-events: none` faengt sie jeden Klick auf der
    ganzen Buehne ab, auch die auf das Portal, das UNTER ihr liegt. Ihre Kinder
    holen sich die Trefferflaeche einzeln zurueck. */
-.fm-spin {
+.un-spin {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  animation: fm-spin-turn v-bind(spinDur) linear infinite;
+  animation: un-spin-turn v-bind(spinDur) linear infinite;
 }
 
-@keyframes fm-spin-turn {
+@keyframes un-spin-turn {
   to {
     transform: rotate(360deg);
   }
@@ -1183,7 +1183,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
    auf dem Kopf. Der Fixpunkt der Abbildung ist bei beiden genau die
    Bildschirmmitte des Knotens: beim Tor die eigene Mitte, bei der Ziffer ihre
    Unterkante, die auf der Oberkante des Knopfes sitzt. */
-@keyframes fm-tag-counter {
+@keyframes un-tag-counter {
   from {
     transform: translateX(-50%) rotate(0deg);
   }
@@ -1198,21 +1198,21 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
    26-px-Trefferflaeche in 1,75 s: die Hover-Karte risse mitten im Lesen ab.
    Nur die Bahn anzuhalten liesse sie fuer die Dauer des Hoverns aus der Wolke
    herauslaufen. Reines CSS — kein Zustand, kein Re-Render. */
-.fm-stage:has(
-    .fm-node:hover,
-    .fm-node:focus-visible,
-    .fm-portal-hit:hover,
-    .fm-portal-hit:focus-visible
+.un-stage:has(
+    .un-node:hover,
+    .un-node:focus-visible,
+    .un-portal-hit:hover,
+    .un-portal-hit:focus-visible
   )
-  :is(.fm-spin, .fm-rim, .fm-node-tag) {
+  :is(.un-spin, .un-rim, .un-node-tag) {
   animation-play-state: paused;
 }
 
 /* Ueber einem KNOTEN haelt auch das Portal an: es wandert dem Zeiger zwar nicht
    davon, aber wenn alles andere steht, ist ein einzeln weiterdrehendes Objekt
    eine sichtbare Inkonsistenz. */
-.fm-stage:has(.fm-node:hover, .fm-node:focus-visible)
-  :deep(:is(.fm-hero .uni-disc-l, .fm-portal-l, .fm-portal-boost)) {
+.un-stage:has(.un-node:hover, .un-node:focus-visible)
+  :deep(:is(.un-hero .uni-disc-l, .un-portal-l, .un-portal-boost)) {
   animation-play-state: paused;
 }
 
@@ -1220,9 +1220,9 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
    Die Pause gibt es, damit ein wandernder Knoten dem Zeiger nicht aus seiner
    Trefferflaeche laeuft; das Portal steht fest, und ein Durchgang, der auf den
    Blick hin anzieht, ist selbst die Auskunft: hier geht es weiter. Was es beim
-   Ueberfahren tut, steht in `FirmamentPortal.vue`. */
-.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible)
-  :deep(.fm-hero .uni-disc-l) {
+   Ueberfahren tut, steht in `UniversePortal.vue`. */
+.un-stage:has(.un-portal-hit:hover, .un-portal-hit:focus-visible)
+  :deep(.un-hero .uni-disc-l) {
   animation-play-state: paused;
 }
 
@@ -1231,8 +1231,8 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
    dieselbe Inkonsistenz wie ein einzeln drehendes Portal ueber einem
    gehoverten Knoten. Ein geschaerftes bleibt davon ausgenommen — es hat eine
    Zusage abgegeben und darf sie zeigen. */
-.fm-stage:has(.fm-portal-hit:hover, .fm-portal-hit:focus-visible)
-  :deep(.fm-portal:not(.is-awake) :is(.fm-portal-l, .fm-portal-boost)) {
+.un-stage:has(.un-portal-hit:hover, .un-portal-hit:focus-visible)
+  :deep(.un-portal:not(.is-awake) :is(.un-portal-l, .un-portal-boost)) {
   animation-play-state: paused;
 }
 
@@ -1244,7 +1244,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 /* Er ist ein RECHTECK um Ring UND Beschriftung, kein Kreis um den Ring: als
    Kreis ging die Hover-Karte unter ihm auf — also genau auf der Beschriftung —
    und deckte sie zu. Als ein Ziel gehoert auch die Zeile zum Portal. */
-.fm-portal-hit {
+.un-portal-hit {
   position: absolute;
   z-index: 3;
   padding: 0;
@@ -1254,15 +1254,15 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
   cursor: pointer;
 }
 
-.fm-portal-hit:focus-visible {
+.un-portal-hit:focus-visible {
   outline: 2px solid #e8c040;
   outline-offset: 2px;
 }
 
 /* Die Beschriftung. Sie misst GENAU das Kaestchen, gegen das
-   `firmamentPortalLabelSpot` geprueft hat — Breite, Hoehe und Schriftgrad
+   `universePortalLabelSpot` geprueft hat — Breite, Hoehe und Schriftgrad
    kommen von dort. Alles darin haengt in `em` daran. */
-.fm-portal-label {
+.un-portal-label {
   position: absolute;
   transform: translate(-50%, -50%);
   line-height: 1.05;
@@ -1275,24 +1275,24 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 }
 
 /* Der Text haengt am Ring, statt von ihm wegzulaufen. */
-.fm-portal-label.is-left {
+.un-portal-label.is-left {
   text-align: right;
 }
 
-.fm-portal-label.is-right {
+.un-portal-label.is-right {
   text-align: left;
 }
 
-.fm-portal-name {
+.un-portal-name {
   font-size: 1em;
-  color: var(--fm-portal-tint);
+  color: var(--un-portal-tint);
   text-shadow:
     0 0 10px rgba(0, 0, 0, 0.95),
     0 1px 3px rgba(0, 0, 0, 0.95);
   transition: color 0.16s ease;
 }
 
-.fm-portal-num {
+.un-portal-num {
   font-size: 0.78em;
   color: rgba(232, 220, 192, 0.55);
 }
@@ -1300,17 +1300,17 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 /* Statischer Umschlag, kein Dauerlaeufer — die Farbe wechselt einmal. Der
    Ziel-Ton steht als VARIABLE am Kaestchen, nicht als `color` am Namen: inline
    gesetzt braeuchte dieser Hover ein `!important`. */
-.fm-portal-hit:hover .fm-portal-name,
-.fm-portal-hit:focus-visible .fm-portal-name {
+.un-portal-hit:hover .un-portal-name,
+.un-portal-hit:focus-visible .un-portal-name {
   color: #fdf0c4;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fm-rim,
-  .fm-spin,
-  .fm-node-tag,
-  .fm-layer--leave,
-  .fm-layer--arrive {
+  .un-rim,
+  .un-spin,
+  .un-node-tag,
+  .un-layer--leave,
+  .un-layer--arrive {
     animation: none;
   }
 }
@@ -1321,7 +1321,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 /* Die Platte holt sich die Trefferflaeche zurueck, und das ist Absicht: beim
    Hineinzoomen waechst sie ueber das Portal und verdeckt es dann auch fuer den
    Zeiger. Ohne das laege dort ein unsichtbarer Klickkreis auf der Galaxie. */
-.fm-canvas {
+.un-canvas {
   position: absolute;
   display: block;
   pointer-events: auto;
@@ -1332,7 +1332,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 /* Der Startpunkt. Er steht auf dem Galaxienfeld der Heldenscheibe — ohne den
    Schatten verschwindet versale Goldschrift dort zwischen den Marken. Die
    Haarlinie bindet ihn an den Kern, den er meint. */
-.fm-start {
+.un-start {
   position: absolute;
   pointer-events: auto;
   transform: translateX(-50%);
@@ -1344,20 +1344,20 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
   cursor: default;
 }
 
-.fm-start:focus-visible {
+.un-start:focus-visible {
   outline: 2px solid #e8c040;
   outline-offset: 4px;
 }
 
-.fm-start-tick {
+.un-start-tick {
   width: 1px;
-  height: var(--fm-start-tick);
+  height: var(--un-start-tick);
   background: linear-gradient(to bottom, rgba(232, 192, 64, 0), rgba(232, 192, 64, 0.7));
   /* Die Linie sitzt UEBER dem Wort und reicht zum Kern hinauf. */
-  margin-top: calc(-1 * var(--fm-start-tick));
+  margin-top: calc(-1 * var(--un-start-tick));
 }
 
-.fm-start-word {
+.un-start-word {
   color: #e8c040;
   font-size: 1em;
   letter-spacing: 0.34em;
@@ -1370,12 +1370,12 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
   transition: color 0.16s ease;
 }
 
-.fm-start:hover .fm-start-word,
-.fm-start:focus-visible .fm-start-word {
+.un-start:hover .un-start-word,
+.un-start:focus-visible .un-start-word {
   color: #fdf0c4;
 }
 
-.fm-node {
+.un-node {
   position: absolute;
   pointer-events: auto;
   transform: translate(-50%, -50%);
@@ -1388,34 +1388,34 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
   cursor: pointer;
 }
 
-.fm-node:focus-visible {
+.un-node:focus-visible {
   outline: 2px solid #e8c040;
   outline-offset: 2px;
 }
 
 /* Der Ring ist die EINZIGE Ebene, die der Knoten selbst malt. Ruhend ist er
    unsichtbar; er kostet erst etwas, wenn er etwas sagt. */
-.fm-node-ring {
+.un-node-ring {
   width: 76%;
   height: 76%;
   border-radius: 50%;
   border: 1.4px solid transparent;
 }
 
-.fm-node:hover .fm-node-ring {
+.un-node:hover .un-node-ring {
   border-color: rgba(232, 220, 192, 0.55);
 }
 
 /* Ein befreiter Knoten FUEHRT irgendwohin — sein Hover traegt deshalb die
    Goldkante, die im Spiel „bedienbar" heisst, statt der neutralen. Statischer
    Zustand, kein Keyframe. */
-.fm-node.is-open:hover .fm-node-ring,
-.fm-node.is-open:focus-visible .fm-node-ring {
+.un-node.is-open:hover .un-node-ring,
+.un-node.is-open:focus-visible .un-node-ring {
   border-color: rgba(232, 192, 64, 0.85);
   box-shadow: 0 0 7px rgba(232, 192, 64, 0.35);
 }
 
-.fm-node.is-picked .fm-node-ring {
+.un-node.is-picked .un-node-ring {
   border-color: #e8c040;
   box-shadow: 0 0 8px rgba(232, 192, 64, 0.5);
 }
@@ -1426,7 +1426,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
    Der Drehpunkt ist ihre UNTERKANTE: die sitzt auf der Oberkante des Knopfes,
    und damit faellt der Fixpunkt der Gegendrehung genau auf die Mitte des
    Knotens. */
-.fm-node-tag {
+.un-node-tag {
   position: absolute;
   bottom: 100%;
   left: 50%;
@@ -1436,7 +1436,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
      begaenne sie bei Phase null, waehrend die Gruppe laengst weitergedreht ist
      — die Ziffer stuende dann genau schief. Unsichtbar kostet sie nichts: die
      Uhr laeuft, gemalt wird sie nicht. */
-  animation: fm-tag-counter v-bind(spinDur) linear infinite;
+  animation: un-tag-counter v-bind(spinDur) linear infinite;
   padding-bottom: 2px;
   font-size: 12px;
   line-height: 1;
@@ -1446,29 +1446,29 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
   visibility: hidden;
 }
 
-.fm-node.is-labelled .fm-node-tag,
-.fm-node:hover .fm-node-tag,
-.fm-node:focus-visible .fm-node-tag,
-.fm-node.is-picked .fm-node-tag,
-.fm-node.is-current .fm-node-tag {
+.un-node.is-labelled .un-node-tag,
+.un-node:hover .un-node-tag,
+.un-node:focus-visible .un-node-tag,
+.un-node.is-picked .un-node-tag,
+.un-node.is-current .un-node-tag {
   visibility: visible;
 }
 
-.fm-node.is-unlit .fm-node-tag {
+.un-node.is-unlit .un-node-tag {
   color: rgba(160, 146, 114, 0.75);
 }
 
-.fm-node.is-current .fm-node-tag {
+.un-node.is-current .un-node-tag {
   color: #9fe062;
 }
 
-.fm-node.is-picked .fm-node-tag {
+.un-node.is-picked .un-node-tag {
   color: #e8c040;
 }
 
 /* Der laufende Knoten atmet — eigene Ebene, animiert wird nur ihre `opacity`
    (Compositor, keine Neurasterung). Dasselbe Muster wie `orbit-glow-breathe`. */
-.fm-node.is-current::after {
+.un-node.is-current::after {
   content: '';
   position: absolute;
   inset: 8%;
@@ -1476,10 +1476,10 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
   border: 1.6px solid #9fe062;
   box-shadow: 0 0 10px rgba(159, 224, 98, 0.5);
   pointer-events: none;
-  animation: fm-breathe 2.4s ease-in-out infinite;
+  animation: un-breathe 2.4s ease-in-out infinite;
 }
 
-@keyframes fm-breathe {
+@keyframes un-breathe {
   0%,
   100% {
     opacity: 0.35;

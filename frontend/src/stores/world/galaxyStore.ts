@@ -87,7 +87,7 @@ export interface CompletedGalaxyRecord {
   mapSeed: number
   themeIndex: number
   /** In welchem Universum die Galaxie befreit wurde — die Schnittkante der
-   *  Firmament-Bahnen. OPTIONAL nur für den Altbestand: `assignRecordUniverses`
+   *  Universe-Bahnen. OPTIONAL nur für den Altbestand: `assignRecordUniverses`
    *  trägt es beim Laden einmalig nach, danach stempelt jeder Abschluss selbst. */
   universe?: number
   attemptResults: StarAttemptResult[]

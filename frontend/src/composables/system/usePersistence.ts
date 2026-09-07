@@ -499,7 +499,7 @@ export function usePersistence() {
       // früher die ID war — wer `xpMult` umbenennt, macht laufende Läufe
       // wirkungslos. Das ANGEBOT erbt denselben Vertrag: es speichert dieselben
       // Objekte plus eine Universumsnummer. Es liegt hier, seit aus den drei
-      // Karten drei Portale im Firmament wurden — die Stelle eines Portals
+      // Karten drei Portale im Universe wurden — die Stelle eines Portals
       // haengt am Zieluniversum, und ein Angebot, das jeder Ladevorgang neu
       // wuerfelt, liesse die Portale ueber die Buehne springen.
       providence: {
@@ -974,7 +974,7 @@ export function usePersistence() {
             starManifests: [...(kept ?? []), ...filled.slice(have)],
           }
         })
-        // Und dasselbe für das Universum: Archive von vor den Firmament-Bahnen
+        // Und dasselbe für das Universum: Archive von vor den Universe-Bahnen
         // wissen nicht, wo sie befreit wurden. Der Lauf-Block steht weiter oben,
         // `universeRuns` und `currentUniverse` liegen hier also schon vor.
         galaxyStore.completedGalaxies = assignRecordUniverses(

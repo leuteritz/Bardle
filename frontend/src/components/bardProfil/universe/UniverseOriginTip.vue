@@ -15,19 +15,19 @@
  */
 import { computed } from 'vue'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
-import { FIRMAMENT_FREED_COLOR } from '@/config/constants'
+import { UNIVERSE_MAP_FREED_COLOR } from '@/config/constants'
 import { toRoman } from '@/utils/ui/format'
-import type { FirmamentNode } from '@/utils/ui/firmamentLayout'
+import type { UniverseNode } from '@/utils/ui/universeLayout'
 
-const props = defineProps<{ nodes: FirmamentNode[]; universe: number }>()
+const props = defineProps<{ nodes: UniverseNode[]; universe: number }>()
 
-const first = computed<FirmamentNode | null>(() => props.nodes[0] ?? null)
+const first = computed<UniverseNode | null>(() => props.nodes[0] ?? null)
 
 /** Wie weit die Kette reicht — die hoechste ERREICHTE Galaxienummer.
  *
  *  Die Nummer, nicht die Anzahl: ein Admin-Sprung laesst Luecken, und die
  *  Reichweite ist das, was der Ursprung ueber die Bahn sagt. Und ohne die
- *  unbeleuchteten Plaetze: `FIRMAMENT_UNLIT_AHEAD` haengt vier Knoten voraus,
+ *  unbeleuchteten Plaetze: `UNIVERSE_MAP_UNLIT_AHEAD` haengt vier Knoten voraus,
  *  an denen der Bard nie war — sie melden eine Reichweite, die es nicht gibt. */
 const reach = computed(() =>
   props.nodes.reduce((max, n) => (n.state === 'unlit' ? max : Math.max(max, n.galaxy)), 0),
@@ -48,7 +48,7 @@ const day = computed(() =>
 </script>
 
 <template>
-  <div class="fot" :style="{ '--tip-color': FIRMAMENT_FREED_COLOR }">
+  <div class="fot" :style="{ '--tip-color': UNIVERSE_MAP_FREED_COLOR }">
     <header class="tip-head tip-head--banded">
       <span class="tip-name">Start</span>
       <span class="tip-state">{{ walked ? 'the origin' : 'the road ahead' }}</span>

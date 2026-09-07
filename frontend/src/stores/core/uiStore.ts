@@ -4,8 +4,8 @@ import type {
   ArrivalNotice,
   BardTabId,
   ChampionRole,
-  FirmamentDive,
-  FirmamentDiveRequest,
+  UniverseDive,
+  UniverseDiveRequest,
   UniverseHop,
 } from '@/types'
 
@@ -45,18 +45,18 @@ export const useUiStore = defineStore('ui', () => {
   // Galaxie, und die steht in keinem Archiv — sie hat deshalb keine Nummer im
   // Gepaeck, nur die Ansage. Schliesst sich mit pendingGalaxyTarget aus.
   const pendingGalaxyLive = ref(false)
-  // true, solange der Galaxy-Reiter aus dem Firmament heraus betreten wurde
-  const firmamentTabReturnPending = ref(false)
-  // Galaxie, auf die das Firmament beim Zurueckkommen zeigt — es raeumt seine
+  // true, solange der Galaxy-Reiter aus dem Universe heraus betreten wurde
+  const universeTabReturnPending = ref(false)
+  // Galaxie, auf die das Universe beim Zurueckkommen zeigt — es raeumt seine
   // eigene Auswahl beim Verlassen ab, ohne diesen Zeiger kaeme man auf eine
   // leere Bahn zurueck. Nur die NUMMER: auf welcher Bahn sie liegt, steht im
   // Archiv, und dorthin greift der uiStore nicht.
-  const pendingFirmamentGalaxy = ref<number | null>(null)
-  // Die laufende Kamerafahrt zwischen Firmament und Atlas. Liegt HIER, damit
+  const pendingUniverseGalaxy = ref<number | null>(null)
+  // Die laufende Kamerafahrt zwischen Universe und Atlas. Liegt HIER, damit
   // ein Escape oder Reiterwechsel sie abraeumt — sonst schaltete ihr Timer
   // 380 ms spaeter ein geschlossenes Profil wieder auf.
-  const firmamentDive = ref<FirmamentDive | null>(null)
-  // Der laufende Universumssprung. Anders als `firmamentDive` raeumt ihn kein
+  const universeDive = ref<UniverseDive | null>(null)
+  // Der laufende Universumssprung. Anders als `universeDive` raeumt ihn kein
   // Reiterwechsel ab — das Profil schliesst mitten im Sprung, die Zeremonie
   // laeuft weiter. Abgeraeumt wird er von `gameStore.finishUniverseHop`.
   const universeHop = ref<UniverseHop | null>(null)
@@ -103,8 +103,8 @@ export const useUiStore = defineStore('ui', () => {
     // Zugeklappt endet auch hier das Rueckweg-Angebot — sonst stuende die Pille
     // nach Profil-zu-und-wieder-auf weiter da.
     if (bardActiveTab.value === null) {
-      firmamentTabReturnPending.value = false
-      firmamentDive.value = null
+      universeTabReturnPending.value = false
+      universeDive.value = null
     }
     clearHoverMarks()
   }
@@ -116,16 +116,16 @@ export const useUiStore = defineStore('ui', () => {
     bardActiveTab.value = id
     // navigating by hand ends the offer to jump back to the battle tab
     battleTabReturnPending.value = false
-    firmamentTabReturnPending.value = false
-    firmamentDive.value = null
+    universeTabReturnPending.value = false
+    universeDive.value = null
     clearHoverMarks()
   }
 
   function closeBardModal() {
     bardActiveTab.value = null
     battleTabReturnPending.value = false
-    firmamentTabReturnPending.value = false
-    firmamentDive.value = null
+    universeTabReturnPending.value = false
+    universeDive.value = null
     clearHoverMarks()
   }
 
@@ -215,45 +215,45 @@ export const useUiStore = defineStore('ui', () => {
     pendingGalaxyLive.value = false
   }
 
-  /** Der Sprung von der Firmament-Bahn auf die Karte. Setzt NUR die Flagge dazu
+  /** Der Sprung von der Universe-Bahn auf die Karte. Setzt NUR die Flagge dazu
    *  — das Sprungziel besorgt derselbe Weg, den die Minimap schon geht. */
-  function requestOpenGalaxyFromFirmament(galaxy: number) {
+  function requestOpenGalaxyFromUniverse(galaxy: number) {
     requestOpenGalaxyTab(galaxy)
-    firmamentTabReturnPending.value = true
+    universeTabReturnPending.value = true
   }
 
   /** Der Rueckweg. `galaxy` ist die GERADE im Atlas gewaehlte, nicht die, mit
-   *  der man kam: wer dort weitergeklickt hat, soll im Firmament dort stehen. */
-  function returnToFirmamentTab(galaxy: number | null) {
-    firmamentTabReturnPending.value = false
-    pendingFirmamentGalaxy.value = galaxy
-    bardActiveTab.value = 'firmament'
+   *  der man kam: wer dort weitergeklickt hat, soll im Universe dort stehen. */
+  function returnToUniverseTab(galaxy: number | null) {
+    universeTabReturnPending.value = false
+    pendingUniverseGalaxy.value = galaxy
+    bardActiveTab.value = 'universe'
     clearHoverMarks()
   }
 
-  function clearPendingFirmamentGalaxy() {
-    pendingFirmamentGalaxy.value = null
+  function clearPendingUniverseGalaxy() {
+    pendingUniverseGalaxy.value = null
   }
 
   /** Die Kamerafahrt beginnt. Den Reiter schaltet der Schleier selbst, wenn er
-   *  deckt — ueber `requestOpenGalaxyFromFirmament` bzw. `returnToFirmamentTab`. */
-  function requestFirmamentDive(req: FirmamentDiveRequest) {
-    firmamentDive.value = { ...req, phase: 'out' }
+   *  deckt — ueber `requestOpenGalaxyFromUniverse` bzw. `returnToUniverseTab`. */
+  function requestUniverseDive(req: UniverseDiveRequest) {
+    universeDive.value = { ...req, phase: 'out' }
   }
 
   /** Der Zielreiter meldet den echten Fahrtpunkt nach — beim Rueckweg kennt
-   *  erst das sichtbare Firmament die Knotenmitte. */
-  function anchorFirmamentDive(x: number, y: number) {
-    if (firmamentDive.value) firmamentDive.value = { ...firmamentDive.value, x, y }
+   *  erst das sichtbare Universe die Knotenmitte. */
+  function anchorUniverseDive(x: number, y: number) {
+    if (universeDive.value) universeDive.value = { ...universeDive.value, x, y }
   }
 
   /** Die Zielplatte steht — der Schleier darf fallen. */
-  function settleFirmamentDive() {
-    if (firmamentDive.value) firmamentDive.value = { ...firmamentDive.value, phase: 'in' }
+  function settleUniverseDive() {
+    if (universeDive.value) universeDive.value = { ...universeDive.value, phase: 'in' }
   }
 
-  function clearFirmamentDive() {
-    firmamentDive.value = null
+  function clearUniverseDive() {
+    universeDive.value = null
   }
 
   function beginUniverseHop(req: UniverseHop) {
@@ -284,7 +284,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   /**
-   * Der Weg vom Prestige-Knopf im Header ins Firmament — dorthin, wo der
+   * Der Weg vom Prestige-Knopf im Header ins Universe — dorthin, wo der
    * Aufbruch als BILD steht.
    *
    * Kein `openBardModal()`: das TOGGELT und schloesse ein bereits offenes
@@ -292,8 +292,8 @@ export const useUiStore = defineStore('ui', () => {
    * Betreten ohnehin auf der laufenden Bahn, und genau dort haengen die drei
    * Portale.
    */
-  function requestOpenFirmamentDeparture() {
-    bardActiveTab.value = 'firmament'
+  function requestOpenUniverseDeparture() {
+    bardActiveTab.value = 'universe'
     clearHoverMarks()
   }
 
@@ -362,24 +362,24 @@ export const useUiStore = defineStore('ui', () => {
     pendingGalaxyLive,
     requestOpenGalaxyLive,
     clearPendingGalaxyLive,
-    firmamentTabReturnPending,
-    pendingFirmamentGalaxy,
+    universeTabReturnPending,
+    pendingUniverseGalaxy,
     pendingArrival,
     noteArrival,
     clearPendingArrival,
-    requestOpenGalaxyFromFirmament,
-    returnToFirmamentTab,
-    clearPendingFirmamentGalaxy,
-    firmamentDive,
-    requestFirmamentDive,
-    anchorFirmamentDive,
-    settleFirmamentDive,
-    clearFirmamentDive,
+    requestOpenGalaxyFromUniverse,
+    returnToUniverseTab,
+    clearPendingUniverseGalaxy,
+    universeDive,
+    requestUniverseDive,
+    anchorUniverseDive,
+    settleUniverseDive,
+    clearUniverseDive,
     universeHop,
     beginUniverseHop,
     setUniverseHopPhase,
     clearUniverseHop,
-    requestOpenFirmamentDeparture,
+    requestOpenUniverseDeparture,
     setHoveredChampionRole,
     setHoveredChampionSlotIndex,
     setHoveredPlanetSlotId,

@@ -13,7 +13,7 @@
  * Die Meilenstein-Rauten bleiben bewusst außerhalb: sie stehen auch dann
  * noch, wenn der Button den Balken abgelöst hat.
  *
- * Der Button öffnet KEINEN Kasten mehr. Er führt ins Firmament, wo die drei
+ * Der Button öffnet KEINEN Kasten mehr. Er führt ins Universe, wo die drei
  * Wege als Portale im schwarzen Raum stehen — der Reiter zeigt denselben
  * Übergang für jede vergangene Bahn ohnehin schon als Bild.
  */
@@ -109,8 +109,8 @@ const glowClass = computed(() => (props.glow ? 'is-glowing' : null))
         key="prestige"
         class="prestige-btn"
         :class="glowClass"
-        aria-label="Universe rescued — open the Firmament and choose a way on"
-        @click.stop="uiStore.requestOpenFirmamentDeparture()"
+        aria-label="Universe rescued — open the Universe and choose a way on"
+        @click.stop="uiStore.requestOpenUniverseDeparture()"
       >
         <span class="prestige-shine" aria-hidden="true" />
         <span v-ink-center.x.y class="prestige-label">Prestige</span>

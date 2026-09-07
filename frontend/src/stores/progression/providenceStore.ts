@@ -58,7 +58,7 @@ export const useProvidenceStore = defineStore('providence', {
     active: null as RolledProvidence | null,
     /**
      * Die Karten, die zur Wahl stehen — je ein Universum mit der Vorsehung, die
-     * über ihm steht. Im Firmament ist jede davon ein PORTAL im schwarzen Raum
+     * über ihm steht. Im Universe ist jede davon ein PORTAL im schwarzen Raum
      * jenseits der Kartenscheibe.
      *
      * Es STEHT, und zwar im Spielstand: gewürfelt, sobald das Universum

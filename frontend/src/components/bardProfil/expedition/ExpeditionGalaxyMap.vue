@@ -52,11 +52,11 @@ import {
   VOYAGE_MAP_STATS_BAND_H,
   VOYAGE_MAP_STATS_MIN_H,
   VOYAGE_MAP_STATS_MIN_W,
-  FIRMAMENT_DIVE_ARRIVE_MS,
-  FIRMAMENT_DIVE_ARRIVE_SCALE,
-  FIRMAMENT_DIVE_EASE_ARRIVE,
-  FIRMAMENT_DIVE_EASE_LEAVE,
-  FIRMAMENT_DIVE_LEAVE_MS,
+  UNIVERSE_MAP_DIVE_ARRIVE_MS,
+  UNIVERSE_MAP_DIVE_ARRIVE_SCALE,
+  UNIVERSE_MAP_DIVE_EASE_ARRIVE,
+  UNIVERSE_MAP_DIVE_EASE_LEAVE,
+  UNIVERSE_MAP_DIVE_LEAVE_MS,
 } from '@/config/constants'
 import { computeRequired, type CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageHomecoming, VoyageMarkAction, VoyagePlacedSite } from '@/types'
@@ -95,10 +95,10 @@ const props = defineProps<{
   homecomings: VoyageHomecoming[]
   /** Was ein Klick je Marke tut, nach pinKey. */
   actions: Map<string, VoyageMarkAction>
-  /** Kamerafahrt aus dem Firmament: die Platte setzt sich aus leichter
+  /** Kamerafahrt aus dem Universe: die Platte setzt sich aus leichter
    *  Vergroesserung. */
   arriving: boolean
-  /** Kamerafahrt zurueck ins Firmament: die Platte zieht sich zurueck. */
+  /** Kamerafahrt zurueck ins Universe: die Platte zieht sich zurueck. */
   leaving: boolean
   /** Die LAUFENDE Galaxie: Route endet am letzten Stern, kein Tor, Bard fliegt. */
   live?: boolean
@@ -345,12 +345,12 @@ const diveOrigin = computed(() => {
   const p = pct(0.5, 0.5)
   return `${p.left}% ${p.top}%`
 })
-const diveArriveDur = `${FIRMAMENT_DIVE_ARRIVE_MS}ms`
-const diveLeaveDur = `${FIRMAMENT_DIVE_LEAVE_MS}ms`
-const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
-const diveEaseLeave = FIRMAMENT_DIVE_EASE_LEAVE
-const diveScale = String(FIRMAMENT_DIVE_ARRIVE_SCALE)
-const diveScaleInv = String(1 / FIRMAMENT_DIVE_ARRIVE_SCALE)
+const diveArriveDur = `${UNIVERSE_MAP_DIVE_ARRIVE_MS}ms`
+const diveLeaveDur = `${UNIVERSE_MAP_DIVE_LEAVE_MS}ms`
+const diveEaseArrive = UNIVERSE_MAP_DIVE_EASE_ARRIVE
+const diveEaseLeave = UNIVERSE_MAP_DIVE_EASE_LEAVE
+const diveScale = String(UNIVERSE_MAP_DIVE_ARRIVE_SCALE)
+const diveScaleInv = String(1 / UNIVERSE_MAP_DIVE_ARRIVE_SCALE)
 
 /** Der Galaxiekern in Viewport-Koordinaten — der Fahrtpunkt des Rückwegs. */
 function diveAnchor(): { x: number; y: number } | null {

@@ -1,14 +1,14 @@
-/* ── Firmament-Platte ─────────────────────────────────────────────────────────
-   Die EINE Zeichenreihenfolge der Firmament-Karte. Sie zerfaellt in DREI Zuege,
+/* ── Universe-Platte ─────────────────────────────────────────────────────────
+   Die EINE Zeichenreihenfolge der Universe-Karte. Sie zerfaellt in DREI Zuege,
    und der Schnitt ist der Grund, warum der Reiter auf Grundlast steht:
 
-   - `paintFirmamentGround` — Grund und Penumbra (`firmamentPenumbra.ts`).
+   - `paintUniverseGround` — Grund und Penumbra (`universePenumbra.ts`).
      Haengt weder an Zoom noch an Fahrt noch am Bestand; ein eigenes Canvas,
      das dabei fast nie neu malt.
-   - `paintFirmamentWeb` — das Filamentgewebe des Walls, um den Mittelpunkt des
+   - `paintUniverseWeb` — das Filamentgewebe des Walls, um den Mittelpunkt des
      Kontexts. Ein eigenes, quadratisches Sprite, das das CSS am Compositor
      dreht.
-   - `paintFirmament` — Bahn, Ringe, Koerper. DAS ist das Standbild: es
+   - `paintUniverse` — Bahn, Ringe, Koerper. DAS ist das Standbild: es
      malt genau dann, wenn Bestand, Groesse, Pixeldichte oder Zoomstufe sich
      geaendert haben, und es malt TRANSPARENT ueber die beiden anderen.
 
@@ -19,7 +19,7 @@
    ist genau die Art Dauerlast, gegen die `docs/performance.md` geschrieben
    ist.
 
-   Alle festen Pixelwerte sind im Massstab `k = box.r / FIRMAMENT_PLATE_REF_R`
+   Alle festen Pixelwerte sind im Massstab `k = box.r / UNIVERSE_MAP_PLATE_REF_R`
    gemeint, damit dieselbe Reihenfolge auf 240 px Radius traegt wie auf 900.
 
    Deterministisch: der Grund haengt an einem uebergebenen Seed, nie an
@@ -27,53 +27,53 @@
 
 import { seededRng, minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { jitter } from '@/utils/fx/universeDisc'
-import { paintFirmamentPenumbra } from '@/utils/fx/firmamentPenumbra'
+import { paintUniversePenumbra } from '@/utils/fx/universePenumbra'
 import {
-  FIRMAMENT_FREED_COLOR,
-  FIRMAMENT_HERE_COLOR,
-  FIRMAMENT_LANDFALL_COLOR,
-  FIRMAMENT_LANDFALL_MAX_MARKS,
-  FIRMAMENT_LANDFALL_ORBIT,
-  FIRMAMENT_LANDFALL_R,
-  FIRMAMENT_LOST_COLOR,
-  FIRMAMENT_NODE_BODY_RATIO_MAX,
-  FIRMAMENT_NODE_BODY_RATIO_MIN,
-  FIRMAMENT_NODE_BODY_RX,
-  FIRMAMENT_NODE_CORE_R,
-  FIRMAMENT_NODE_HALO_ALPHA,
-  FIRMAMENT_NODE_HALO_SPAN,
-  FIRMAMENT_NODE_POOL_SPAN,
-  FIRMAMENT_STAR_ARC_ALPHA,
-  FIRMAMENT_STAR_ARC_LOST_ALPHA,
-  FIRMAMENT_STAR_ARC_ORBIT,
-  FIRMAMENT_STAR_ARC_W,
-  FIRMAMENT_PLATE_REF_R,
-  FIRMAMENT_ROAD_CASING_W,
-  FIRMAMENT_WEB_ALPHA_IN,
-  FIRMAMENT_WEB_ALPHA_OUT,
-  FIRMAMENT_WEB_GLOW_ALPHA,
-  FIRMAMENT_WEB_INNER,
-  FIRMAMENT_WEB_LINK_SHARE,
-  FIRMAMENT_WEB_RINGS,
-  FIRMAMENT_WEB_SHELL_HI,
-  FIRMAMENT_WEB_SHELL_JITTER,
-  FIRMAMENT_WEB_SHELL_LO,
-  FIRMAMENT_WEB_NODES,
-  FIRMAMENT_WEB_OUTER,
-  FIRMAMENT_WEB_SPARK_R,
-  FIRMAMENT_WEB_SPARK_SHARE,
-  FIRMAMENT_WEB_TENDRIL_FORKS,
-  FIRMAMENT_WEB_TENDRIL_REACH,
-  FIRMAMENT_WEB_TENDRIL_SHARE,
-  FIRMAMENT_WEB_TINT_STOPS,
-  FIRMAMENT_WEB_W_MAX,
-  FIRMAMENT_WEB_W_MIN,
-  FIRMAMENT_PENUMBRA_GROUND,
-  FIRMAMENT_UNLIT_COLOR,
+  UNIVERSE_MAP_FREED_COLOR,
+  UNIVERSE_MAP_HERE_COLOR,
+  UNIVERSE_MAP_LANDFALL_COLOR,
+  UNIVERSE_MAP_LANDFALL_MAX_MARKS,
+  UNIVERSE_MAP_LANDFALL_ORBIT,
+  UNIVERSE_MAP_LANDFALL_R,
+  UNIVERSE_MAP_LOST_COLOR,
+  UNIVERSE_MAP_NODE_BODY_RATIO_MAX,
+  UNIVERSE_MAP_NODE_BODY_RATIO_MIN,
+  UNIVERSE_MAP_NODE_BODY_RX,
+  UNIVERSE_MAP_NODE_CORE_R,
+  UNIVERSE_MAP_NODE_HALO_ALPHA,
+  UNIVERSE_MAP_NODE_HALO_SPAN,
+  UNIVERSE_MAP_NODE_POOL_SPAN,
+  UNIVERSE_MAP_STAR_ARC_ALPHA,
+  UNIVERSE_MAP_STAR_ARC_LOST_ALPHA,
+  UNIVERSE_MAP_STAR_ARC_ORBIT,
+  UNIVERSE_MAP_STAR_ARC_W,
+  UNIVERSE_MAP_PLATE_REF_R,
+  UNIVERSE_MAP_ROAD_CASING_W,
+  UNIVERSE_MAP_WEB_ALPHA_IN,
+  UNIVERSE_MAP_WEB_ALPHA_OUT,
+  UNIVERSE_MAP_WEB_GLOW_ALPHA,
+  UNIVERSE_MAP_WEB_INNER,
+  UNIVERSE_MAP_WEB_LINK_SHARE,
+  UNIVERSE_MAP_WEB_RINGS,
+  UNIVERSE_MAP_WEB_SHELL_HI,
+  UNIVERSE_MAP_WEB_SHELL_JITTER,
+  UNIVERSE_MAP_WEB_SHELL_LO,
+  UNIVERSE_MAP_WEB_NODES,
+  UNIVERSE_MAP_WEB_OUTER,
+  UNIVERSE_MAP_WEB_SPARK_R,
+  UNIVERSE_MAP_WEB_SPARK_SHARE,
+  UNIVERSE_MAP_WEB_TENDRIL_FORKS,
+  UNIVERSE_MAP_WEB_TENDRIL_REACH,
+  UNIVERSE_MAP_WEB_TENDRIL_SHARE,
+  UNIVERSE_MAP_WEB_TINT_STOPS,
+  UNIVERSE_MAP_WEB_W_MAX,
+  UNIVERSE_MAP_WEB_W_MIN,
+  UNIVERSE_MAP_PENUMBRA_GROUND,
+  UNIVERSE_MAP_UNLIT_COLOR,
 } from '@/config/constants'
 import { hexToRgb } from '@/utils/ui/format'
-import { firmamentRoadCtrl } from '@/utils/ui/firmamentLayout'
-import type { FirmamentFitBox, FirmamentNode } from '@/utils/ui/firmamentLayout'
+import { universeRoadCtrl } from '@/utils/ui/universeLayout'
+import type { UniverseFitBox, UniverseNode } from '@/utils/ui/universeLayout'
 
 /* Die roemischen Ziffern malt die Platte NICHT. Sie haengen als DOM an den
    Knoten: dort blenden Hover und Auswahl sie per CSS ein, ohne dass die ganze
@@ -82,8 +82,8 @@ import type { FirmamentFitBox, FirmamentNode } from '@/utils/ui/firmamentLayout'
 
 /** Ein Punkt im Bild — die Karte rechnet einmal, Platte und Trefferflaechen
  *  lesen dasselbe Ergebnis. Zwei Rechnungen liefen auseinander. */
-export function firmamentScreenPos(
-  box: FirmamentFitBox,
+export function universeScreenPos(
+  box: UniverseFitBox,
   nx: number,
   ny: number,
 ): { x: number; y: number } {
@@ -97,14 +97,14 @@ function fade(hex: string, alpha: number): string {
 
 /** Die Farbe eines Knotens: befreit und laufend tragen ihr Galaxiethema,
  *  unbeleuchtet hat keines — dort steht die gedaempfte Kante. */
-function nodeColor(node: FirmamentNode, universeId: number): string {
-  if (node.state === 'unlit' || node.themeIndex < 0) return FIRMAMENT_UNLIT_COLOR
+function nodeColor(node: UniverseNode, universeId: number): string {
+  if (node.state === 'unlit' || node.themeIndex < 0) return UNIVERSE_MAP_UNLIT_COLOR
   return `rgb(${minimapAccentForTheme(node.themeIndex, universeId)})`
 }
 
 /** Grund und Penumbra — der RAUM, nicht die Karte. Eigenes Canvas, eigener
  *  Schluessel: er kennt weder Zoom noch Fahrt, nur die gezeigte Bahn. */
-export function paintFirmamentGround(
+export function paintUniverseGround(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
@@ -112,9 +112,9 @@ export function paintFirmamentGround(
   universe: number,
   tint: string,
 ): void {
-  ctx.fillStyle = FIRMAMENT_PENUMBRA_GROUND
+  ctx.fillStyle = UNIVERSE_MAP_PENUMBRA_GROUND
   ctx.fillRect(0, 0, w, h)
-  paintFirmamentPenumbra(ctx, w, h, seed, universe, tint)
+  paintUniversePenumbra(ctx, w, h, seed, universe, tint)
 }
 
 /* ── Das Filamentgewebe ───────────────────────────────────────────────────────
@@ -129,13 +129,13 @@ export function paintFirmamentGround(
    dunklen Grund.
 
    Der TON kommt vom gezeigten Universum, die Folge bleibt. Gebaut wird die
-   Rampe EINMAL am Kopf von `paintFirmamentWeb` und dann durchgereicht — vier
+   Rampe EINMAL am Kopf von `paintUniverseWeb` und dann durchgereicht — vier
    Multiplikationen, und die Funktion laeuft ohnehin nur bei `rimKey`-Wechsel. */
 type WebRamp = readonly (readonly [number, number, number])[]
 
 function webRamp(tint: string): WebRamp {
   const base = hexToRgb(tint)
-  return FIRMAMENT_WEB_TINT_STOPS.map((stop) => {
+  return UNIVERSE_MAP_WEB_TINT_STOPS.map((stop) => {
     const target = stop < 0 ? 0 : 255
     const f = Math.abs(stop)
     return base.map((c) => Math.round(c + (target - c) * f)) as [number, number, number]
@@ -161,7 +161,7 @@ function webInk(ramp: WebRamp, t: number, alpha: number): string {
 function inBand(x: number, y: number, r: number): { x: number; y: number } {
   const d = Math.hypot(x, y)
   if (d === 0) return { x, y }
-  const clamped = Math.min(r * FIRMAMENT_WEB_OUTER, Math.max(r * FIRMAMENT_WEB_INNER, d))
+  const clamped = Math.min(r * UNIVERSE_MAP_WEB_OUTER, Math.max(r * UNIVERSE_MAP_WEB_INNER, d))
   const s = clamped / d
   return { x: x * s, y: y * s }
 }
@@ -171,7 +171,7 @@ function bandT(x: number, y: number, r: number): number {
   const d = Math.hypot(x, y) / r
   return Math.min(
     1,
-    Math.max(0, (d - FIRMAMENT_WEB_INNER) / (FIRMAMENT_WEB_OUTER - FIRMAMENT_WEB_INNER)),
+    Math.max(0, (d - UNIVERSE_MAP_WEB_INNER) / (UNIVERSE_MAP_WEB_OUTER - UNIVERSE_MAP_WEB_INNER)),
   )
 }
 
@@ -179,7 +179,7 @@ type WebNode = { x: number; y: number; t: number }
 
 /** Deckkraft an einer Stelle des Bandes. */
 function webAlpha(t: number): number {
-  return FIRMAMENT_WEB_ALPHA_IN + (FIRMAMENT_WEB_ALPHA_OUT - FIRMAMENT_WEB_ALPHA_IN) * t
+  return UNIVERSE_MAP_WEB_ALPHA_IN + (UNIVERSE_MAP_WEB_ALPHA_OUT - UNIVERSE_MAP_WEB_ALPHA_IN) * t
 }
 
 /** Ein Strang zwischen zwei Kreuzungen: nie gerade, der Kontrollpunkt wandert
@@ -204,7 +204,7 @@ function strand(
   ctx.moveTo(a.x, a.y)
   ctx.quadraticCurveTo(ctrl.x, ctrl.y, b.x, b.y)
   ctx.strokeStyle = webInk(ramp, t, webAlpha(t) * (0.55 + rng() * 0.7) * dim)
-  ctx.lineWidth = (FIRMAMENT_WEB_W_MIN + (FIRMAMENT_WEB_W_MAX - FIRMAMENT_WEB_W_MIN) * t) * k
+  ctx.lineWidth = (UNIVERSE_MAP_WEB_W_MIN + (UNIVERSE_MAP_WEB_W_MAX - UNIVERSE_MAP_WEB_W_MIN) * t) * k
   ctx.stroke()
 }
 
@@ -220,7 +220,7 @@ function strand(
  * ein eigenes quadratisches Sprite passt, dessen Mitte der Drehpunkt ist. Der
  * Seed bleibt 19.
  */
-export function paintFirmamentWeb(
+export function paintUniverseWeb(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
@@ -236,17 +236,17 @@ export function paintFirmamentWeb(
 
   // Die Schalen. Aussen stehen mehr Knoten als innen — sonst waeren die Zellen
   // am Rand so breit wie die Bandbreite selbst.
-  const gap = FIRMAMENT_WEB_SHELL_HI - FIRMAMENT_WEB_SHELL_LO
-  const spread = (gap / Math.max(1, FIRMAMENT_WEB_RINGS - 1)) * FIRMAMENT_WEB_SHELL_JITTER
+  const gap = UNIVERSE_MAP_WEB_SHELL_HI - UNIVERSE_MAP_WEB_SHELL_LO
+  const spread = (gap / Math.max(1, UNIVERSE_MAP_WEB_RINGS - 1)) * UNIVERSE_MAP_WEB_SHELL_JITTER
   const shells: WebNode[][] = []
-  for (let s = 0; s < FIRMAMENT_WEB_RINGS; s++) {
-    const u = FIRMAMENT_WEB_RINGS > 1 ? s / (FIRMAMENT_WEB_RINGS - 1) : 1
-    const n = Math.round(FIRMAMENT_WEB_NODES * (0.7 + 0.5 * u))
+  for (let s = 0; s < UNIVERSE_MAP_WEB_RINGS; s++) {
+    const u = UNIVERSE_MAP_WEB_RINGS > 1 ? s / (UNIVERSE_MAP_WEB_RINGS - 1) : 1
+    const n = Math.round(UNIVERSE_MAP_WEB_NODES * (0.7 + 0.5 * u))
     const step = (Math.PI * 2) / n
     const shell: WebNode[] = []
     for (let i = 0; i < n; i++) {
       const ang = i * step + (rng() - 0.5) * step * 0.9 + s * 0.37
-      const rad = r * (FIRMAMENT_WEB_SHELL_LO + gap * u + (rng() - 0.5) * 2 * spread)
+      const rad = r * (UNIVERSE_MAP_WEB_SHELL_LO + gap * u + (rng() - 0.5) * 2 * spread)
       const p = inBand(Math.cos(ang) * rad, Math.sin(ang) * rad, r)
       shell.push({ x: p.x, y: p.y, t: bandT(p.x, p.y, r) })
     }
@@ -268,7 +268,7 @@ export function paintFirmamentWeb(
     for (let i = 0; i < from.length; i++) {
       const j = Math.round((i / from.length) * to.length) % to.length
       strand(ctx, ramp, from[i], to[j], r, k, rng)
-      if (rng() < FIRMAMENT_WEB_LINK_SHARE) {
+      if (rng() < UNIVERSE_MAP_WEB_LINK_SHARE) {
         strand(ctx, ramp, from[i], to[(j + 1) % to.length], r, k, rng, 0.8)
       }
     }
@@ -278,14 +278,14 @@ export function paintFirmamentWeb(
   // einmal gabelt. Sie tragen den Saum und LOESEN ihn auf — ohne sie endete
   // das Gewebe an einer Linie.
   for (const node of shells[0]) {
-    if (rng() >= FIRMAMENT_WEB_TENDRIL_SHARE) continue
+    if (rng() >= UNIVERSE_MAP_WEB_TENDRIL_SHARE) continue
     const d = Math.hypot(node.x, node.y) || 1
     // Die Laenge kommt aus dem PLATZ bis zum Innenrand, nicht aus der
     // Bandbreite: eine feste Laenge liefe bei der Haelfte der Ranken in die
     // Klemmung, und deren Spitzen laegen dann alle auf demselben Kreis — genau
     // die Kante, die der Saum aufloesen soll.
-    const room = Math.max(0, d - r * FIRMAMENT_WEB_INNER)
-    const len = room * FIRMAMENT_WEB_TENDRIL_REACH * (0.45 + rng() * 0.55)
+    const room = Math.max(0, d - r * UNIVERSE_MAP_WEB_INNER)
+    const len = room * UNIVERSE_MAP_WEB_TENDRIL_REACH * (0.45 + rng() * 0.55)
     const ux = -node.x / d
     const uy = -node.y / d
     const stem = inBand(
@@ -299,11 +299,11 @@ export function paintFirmamentWeb(
     ctx.lineTo(stem.x, stem.y)
     ctx.strokeStyle = webInk(ramp, stemT, webAlpha(stemT))
     ctx.lineWidth =
-      (FIRMAMENT_WEB_W_MIN + (FIRMAMENT_WEB_W_MAX - FIRMAMENT_WEB_W_MIN) * stemT) * k * 0.8
+      (UNIVERSE_MAP_WEB_W_MIN + (UNIVERSE_MAP_WEB_W_MAX - UNIVERSE_MAP_WEB_W_MIN) * stemT) * k * 0.8
     ctx.stroke()
 
-    for (let f = 0; f < FIRMAMENT_WEB_TENDRIL_FORKS; f++) {
-      const swing = (f - (FIRMAMENT_WEB_TENDRIL_FORKS - 1) / 2) * 0.9 + (rng() - 0.5) * 0.5
+    for (let f = 0; f < UNIVERSE_MAP_WEB_TENDRIL_FORKS; f++) {
+      const swing = (f - (UNIVERSE_MAP_WEB_TENDRIL_FORKS - 1) / 2) * 0.9 + (rng() - 0.5) * 0.5
       const fl = len * (0.35 + rng() * 0.4)
       const fx = ux * Math.cos(swing) - uy * Math.sin(swing)
       const fy = ux * Math.sin(swing) + uy * Math.cos(swing)
@@ -313,7 +313,7 @@ export function paintFirmamentWeb(
       ctx.moveTo(stem.x, stem.y)
       ctx.lineTo(tip.x, tip.y)
       ctx.strokeStyle = webInk(ramp, tipT, webAlpha(tipT) * 0.7)
-      ctx.lineWidth = FIRMAMENT_WEB_W_MIN * k
+      ctx.lineWidth = UNIVERSE_MAP_WEB_W_MIN * k
       ctx.stroke()
     }
   }
@@ -322,9 +322,9 @@ export function paintFirmamentWeb(
   // nur Griess — sie sind es, die es als Gewebe lesbar machen.
   for (const shell of shells) {
     for (const node of shell) {
-      if (rng() >= FIRMAMENT_WEB_SPARK_SHARE) continue
+      if (rng() >= UNIVERSE_MAP_WEB_SPARK_SHARE) continue
       ctx.beginPath()
-      ctx.arc(node.x, node.y, FIRMAMENT_WEB_SPARK_R * k * (0.5 + rng() * 0.8), 0, Math.PI * 2)
+      ctx.arc(node.x, node.y, UNIVERSE_MAP_WEB_SPARK_R * k * (0.5 + rng() * 0.8), 0, Math.PI * 2)
       ctx.fillStyle = webInk(
         ramp,
         Math.min(1, node.t + 0.25),
@@ -345,7 +345,7 @@ export function paintFirmamentWeb(
  */
 function paintRimRings(
   ctx: CanvasRenderingContext2D,
-  box: FirmamentFitBox,
+  box: UniverseFitBox,
   k: number,
   tint: string,
 ): void {
@@ -357,10 +357,10 @@ function paintRimRings(
   // endete sie frueher, saessen die inneren Ranken im Dunkeln und der Saum
   // fiele wieder an einer Kante ab. Sie liest DIESELBE Rampe wie die Filamente
   // — zwei Toene nebeneinander laesen sich als zwei Ringe.
-  const glow = ctx.createRadialGradient(0, 0, box.r * FIRMAMENT_WEB_INNER, 0, 0, box.r * 1.03)
+  const glow = ctx.createRadialGradient(0, 0, box.r * UNIVERSE_MAP_WEB_INNER, 0, 0, box.r * 1.03)
   glow.addColorStop(0, webInk(ramp, 0.7, 0))
-  glow.addColorStop(0.62, webInk(ramp, 0.45, FIRMAMENT_WEB_GLOW_ALPHA))
-  glow.addColorStop(0.92, webInk(ramp, 0.15, FIRMAMENT_WEB_GLOW_ALPHA * 1.5))
+  glow.addColorStop(0.62, webInk(ramp, 0.45, UNIVERSE_MAP_WEB_GLOW_ALPHA))
+  glow.addColorStop(0.92, webInk(ramp, 0.15, UNIVERSE_MAP_WEB_GLOW_ALPHA * 1.5))
   glow.addColorStop(1, webInk(ramp, 0, 0))
   ctx.beginPath()
   ctx.arc(0, 0, box.r * 1.03, 0, Math.PI * 2)
@@ -396,7 +396,7 @@ function paintRimRings(
  */
 function strokeRoad(ctx: CanvasRenderingContext2D, color: string, w: number, k: number): void {
   ctx.strokeStyle = 'rgba(4, 3, 6, 0.62)'
-  ctx.lineWidth = w + FIRMAMENT_ROAD_CASING_W * k
+  ctx.lineWidth = w + UNIVERSE_MAP_ROAD_CASING_W * k
   ctx.stroke()
   ctx.strokeStyle = color
   ctx.lineWidth = w
@@ -404,17 +404,17 @@ function strokeRoad(ctx: CanvasRenderingContext2D, color: string, w: number, k: 
 }
 
 /** Ein Abschnitt der Bahn — nie gerade; dasselbe Mittel wie `strand()` am Wall.
- *  Den Kontrollpunkt rechnet `firmamentRoadCtrl`, weil der Ablehnungspass der
+ *  Den Kontrollpunkt rechnet `universeRoadCtrl`, weil der Ablehnungspass der
  *  Bahn ihn ebenfalls braucht. Auswaerts bleibt er bei 1,025 r, die Sprite-Kante
  *  liegt bei 1,10. */
 function bowTo(
   ctx: CanvasRenderingContext2D,
-  box: FirmamentFitBox,
+  box: UniverseFitBox,
   a: { x: number; y: number },
   b: { x: number; y: number },
   i: number,
 ): void {
-  const c = firmamentRoadCtrl(a.x - box.cx, a.y - box.cy, b.x - box.cx, b.y - box.cy, i)
+  const c = universeRoadCtrl(a.x - box.cx, a.y - box.cy, b.x - box.cx, b.y - box.cy, i)
   ctx.quadraticCurveTo(box.cx + c.x, box.cy + c.y, b.x, b.y)
 }
 
@@ -422,13 +422,13 @@ function bowTo(
  *  gestrichelte zur laufenden Galaxie, eine gedaempfte ins Unbeleuchtete. */
 function paintRoad(
   ctx: CanvasRenderingContext2D,
-  nodes: readonly FirmamentNode[],
-  box: FirmamentFitBox,
+  nodes: readonly UniverseNode[],
+  box: UniverseFitBox,
   k: number,
 ): void {
   if (nodes.length < 1) return
 
-  const pt = (n: FirmamentNode) => firmamentScreenPos(box, n.nx, n.ny)
+  const pt = (n: UniverseNode) => universeScreenPos(box, n.nx, n.ny)
   const lastFreed = nodes.reduce((acc, n, i) => (n.state === 'freed' ? i : acc), -1)
   const currentIdx = nodes.findIndex((n) => n.state === 'current')
 
@@ -445,7 +445,7 @@ function paintRoad(
       else bowTo(ctx, box, prev, p, i)
       prev = p
     }
-    strokeRoad(ctx, fade(FIRMAMENT_FREED_COLOR, 0.45), 1.6 * k, k)
+    strokeRoad(ctx, fade(UNIVERSE_MAP_FREED_COLOR, 0.45), 1.6 * k, k)
   }
 
   // Die Ueberfahrt: gestrichelt, weil sie noch nicht abgeschlossen ist. Das
@@ -460,7 +460,7 @@ function paintRoad(
     ctx.moveTo(from.x, from.y)
     if (lastFreed < 0) ctx.lineTo(to.x, to.y)
     else bowTo(ctx, box, from, to, currentIdx)
-    strokeRoad(ctx, fade(FIRMAMENT_HERE_COLOR, 0.75), 1.6 * k, k)
+    strokeRoad(ctx, fade(UNIVERSE_MAP_HERE_COLOR, 0.75), 1.6 * k, k)
     ctx.restore()
   }
 
@@ -477,7 +477,7 @@ function paintRoad(
       bowTo(ctx, box, head, p, i)
       head = p
     }
-    strokeRoad(ctx, fade(FIRMAMENT_UNLIT_COLOR, 0.3), 1.1 * k, k)
+    strokeRoad(ctx, fade(UNIVERSE_MAP_UNLIT_COLOR, 0.3), 1.1 * k, k)
     ctx.restore()
   }
 }
@@ -504,11 +504,11 @@ function tone(color: string, alpha: number): string {
  * zieht (`jitter` in `universeDisc.ts`) — nie `Math.random()`, sonst saehe die
  * Karte nach jedem Repaint anders aus, und nie ein zweiter Generator daneben.
  */
-function bodyShape(node: FirmamentNode, r: number): { rx: number; ry: number; tilt: number } {
-  const rx = r * FIRMAMENT_NODE_BODY_RX
+function bodyShape(node: UniverseNode, r: number): { rx: number; ry: number; tilt: number } {
+  const rx = r * UNIVERSE_MAP_NODE_BODY_RX
   const ratio =
-    FIRMAMENT_NODE_BODY_RATIO_MIN +
-    jitter(node.galaxy, 17) * (FIRMAMENT_NODE_BODY_RATIO_MAX - FIRMAMENT_NODE_BODY_RATIO_MIN)
+    UNIVERSE_MAP_NODE_BODY_RATIO_MIN +
+    jitter(node.galaxy, 17) * (UNIVERSE_MAP_NODE_BODY_RATIO_MAX - UNIVERSE_MAP_NODE_BODY_RATIO_MIN)
   return { rx, ry: rx * ratio, tilt: jitter(node.galaxy, 29) * Math.PI }
 }
 
@@ -523,12 +523,12 @@ function bodyShape(node: FirmamentNode, r: number): { rx: number; ry: number; ti
  */
 function paintNode(
   ctx: CanvasRenderingContext2D,
-  node: FirmamentNode,
-  box: FirmamentFitBox,
+  node: UniverseNode,
+  box: UniverseFitBox,
   k: number,
   universeId: number,
 ): void {
-  const p = firmamentScreenPos(box, node.nx, node.ny)
+  const p = universeScreenPos(box, node.nx, node.ny)
   const r = node.bodyR * k
   const color = nodeColor(node, universeId)
   const shape = bodyShape(node, r)
@@ -551,26 +551,26 @@ function paintNode(
   // Heldenscheibe, der dritte sogar in ihrem Glutring. Dieselbe Lehre wie bei
   // `core-gate` — ein Leuchten auf einem Leuchten ist kein Leuchten. Er steht
   // VOR Schein und Kern, damit die auf dem gedaempften Grund stehen.
-  const pool = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * FIRMAMENT_NODE_POOL_SPAN)
+  const pool = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * UNIVERSE_MAP_NODE_POOL_SPAN)
   pool.addColorStop(0, 'rgba(6, 5, 4, 0.72)')
   pool.addColorStop(0.5, 'rgba(6, 5, 4, 0.44)')
   pool.addColorStop(1, 'rgba(6, 5, 4, 0)')
   ctx.beginPath()
-  ctx.arc(p.x, p.y, r * FIRMAMENT_NODE_POOL_SPAN, 0, Math.PI * 2)
+  ctx.arc(p.x, p.y, r * UNIVERSE_MAP_NODE_POOL_SPAN, 0, Math.PI * 2)
   ctx.fillStyle = pool
   ctx.fill()
 
   // Der Schein traegt die Neigung des Koerpers: ein Radialverlauf ist rund, die
   // Ellipse entsteht aus der Stauchung des Kontexts. Rund ueberrundete er die
   // Form, die er umgeben soll — genau das machte aus dem Knoten eine Bake.
-  const reach = r * FIRMAMENT_NODE_HALO_SPAN
+  const reach = r * UNIVERSE_MAP_NODE_HALO_SPAN
   ctx.save()
   ctx.translate(p.x, p.y)
   ctx.rotate(shape.tilt)
   ctx.scale(1, shape.ry / shape.rx)
   const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, reach)
-  glow.addColorStop(0, tone(color, FIRMAMENT_NODE_HALO_ALPHA))
-  glow.addColorStop(0.45, tone(color, FIRMAMENT_NODE_HALO_ALPHA * 0.42))
+  glow.addColorStop(0, tone(color, UNIVERSE_MAP_NODE_HALO_ALPHA))
+  glow.addColorStop(0.45, tone(color, UNIVERSE_MAP_NODE_HALO_ALPHA * 0.42))
   glow.addColorStop(1, tone(color, 0))
   ctx.beginPath()
   ctx.arc(0, 0, reach, 0, Math.PI * 2)
@@ -585,7 +585,7 @@ function paintNode(
 
   ctx.fillStyle = '#fdf6e0'
   ctx.beginPath()
-  ctx.arc(p.x, p.y, Math.max(1.2 * k, r * FIRMAMENT_NODE_CORE_R), 0, Math.PI * 2)
+  ctx.arc(p.x, p.y, Math.max(1.2 * k, r * UNIVERSE_MAP_NODE_CORE_R), 0, Math.PI * 2)
   ctx.fill()
 
   // Der Sternstand als EIN Bogen: gold, was gerettet wurde, rot anschliessend,
@@ -594,33 +594,33 @@ function paintNode(
   const stars = Math.max(1, node.stars)
   const gold = Math.min(node.rescued, stars) / stars
   const lost = Math.min(node.lost, Math.max(0, stars - node.rescued)) / stars
-  const arcR = r * FIRMAMENT_STAR_ARC_ORBIT
+  const arcR = r * UNIVERSE_MAP_STAR_ARC_ORBIT
   const top = -Math.PI / 2
   ctx.lineCap = 'butt'
-  ctx.lineWidth = FIRMAMENT_STAR_ARC_W * k
+  ctx.lineWidth = UNIVERSE_MAP_STAR_ARC_W * k
   if (gold > 0) {
     ctx.beginPath()
     ctx.arc(p.x, p.y, arcR, top, top + gold * Math.PI * 2)
-    ctx.strokeStyle = fade(FIRMAMENT_FREED_COLOR, FIRMAMENT_STAR_ARC_ALPHA)
+    ctx.strokeStyle = fade(UNIVERSE_MAP_FREED_COLOR, UNIVERSE_MAP_STAR_ARC_ALPHA)
     ctx.stroke()
   }
   if (lost > 0) {
     ctx.beginPath()
     ctx.arc(p.x, p.y, arcR, top + gold * Math.PI * 2, top + (gold + lost) * Math.PI * 2)
-    ctx.strokeStyle = fade(FIRMAMENT_LOST_COLOR, FIRMAMENT_STAR_ARC_LOST_ALPHA)
+    ctx.strokeStyle = fade(UNIVERSE_MAP_LOST_COLOR, UNIVERSE_MAP_STAR_ARC_LOST_ALPHA)
     ctx.stroke()
   }
 
   // Orte auf den Etappen — dieselbe hohle Raute wie auf der Galaxiekarte.
-  const marks = Math.min(node.landfalls, FIRMAMENT_LANDFALL_MAX_MARKS)
+  const marks = Math.min(node.landfalls, UNIVERSE_MAP_LANDFALL_MAX_MARKS)
   for (let l = 0; l < marks; l++) {
     const a = Math.PI / 2 + l * 0.44
-    const rr = r * FIRMAMENT_LANDFALL_ORBIT
-    const d = FIRMAMENT_LANDFALL_R * k
+    const rr = r * UNIVERSE_MAP_LANDFALL_ORBIT
+    const d = UNIVERSE_MAP_LANDFALL_R * k
     ctx.save()
     ctx.translate(p.x + Math.cos(a) * rr, p.y + Math.sin(a) * rr)
     ctx.rotate(Math.PI / 4)
-    ctx.strokeStyle = fade(FIRMAMENT_LANDFALL_COLOR, 0.85)
+    ctx.strokeStyle = fade(UNIVERSE_MAP_LANDFALL_COLOR, 0.85)
     ctx.lineWidth = 1 * k
     ctx.strokeRect(-d, -d, d * 2, d * 2)
     ctx.restore()
@@ -637,18 +637,18 @@ function paintNode(
  * Sie geht in ein QUADRATISCHES Sprite um `box.cx/cy`, wie der Wall: die Karte
  * dreht mit der Wolke, und buehnenfuellend schwenkte alles, was bei Zoom und
  * Fahrt ausserhalb der Buehne liegt, als leere Flaeche ins Bild. Kein Zug darf
- * `FIRMAMENT_PLATE_SPRITE_MARGIN · box.r` verlassen.
+ * `UNIVERSE_MAP_PLATE_SPRITE_MARGIN · box.r` verlassen.
  */
-export function paintFirmament(
+export function paintUniverse(
   ctx: CanvasRenderingContext2D,
-  nodes: readonly FirmamentNode[],
+  nodes: readonly UniverseNode[],
   w: number,
   h: number,
-  box: FirmamentFitBox,
+  box: UniverseFitBox,
   tint: string,
   universeId: number,
 ): void {
-  const k = box.r / FIRMAMENT_PLATE_REF_R
+  const k = box.r / UNIVERSE_MAP_PLATE_REF_R
 
   ctx.clearRect(0, 0, w, h)
   paintRimRings(ctx, box, k, tint)

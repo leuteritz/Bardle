@@ -1,5 +1,5 @@
 /* ── Nachtrag: in welchem Universum eine Galaxie befreit wurde ────────────────
-   `CompletedGalaxyRecord.universe` gibt es erst, seit das Firmament eine Bahn je
+   `CompletedGalaxyRecord.universe` gibt es erst, seit das Universe eine Bahn je
    Universum zeigt. Jeder Spielstand davor trägt das Feld nicht, und ohne es
    läge der ganze Altbestand auf einer einzigen Bahn.
 
@@ -16,7 +16,7 @@ import type { UniverseRunRecord } from '@/types'
 
 /**
  * Das Universum eines Datensatzes — mit dem Boden für den Altbestand, dem der
- * Nachtrag noch nicht begegnet ist. Drei Leser: die Bahnen des Firmaments, die
+ * Nachtrag noch nicht begegnet ist. Drei Leser: die Bahnen des Universes, die
  * Universumsleiste und die Tönung seiner Farbwelt.
  */
 export function universeOfRecord(record: Pick<CompletedGalaxyRecord, 'universe'>): number {

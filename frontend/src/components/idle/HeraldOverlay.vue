@@ -26,7 +26,7 @@
           :wide="hasReadouts"
         >
           <!-- Die Ankunft zeigt statt eines Medaillons die Scheibe, die das
-               Universum im Firmament IST — dasselbe Bild, das im Portal stand,
+               Universum im Universe IST — dasselbe Bild, das im Portal stand,
                durch das man gerade gereist ist. Sie dreht per CSS an einem
                fertigen Sprite, ohne einen einzigen Repaint. -->
           <template v-if="current.universe !== undefined" #visual>
@@ -55,7 +55,7 @@ import { useBadgeHeralds } from '@/composables/ui/useBadgeHeralds'
 import HeraldBanner from './HeraldBanner.vue'
 import HeraldReceiptStack from './HeraldReceiptStack.vue'
 import HeraldReadouts from './HeraldReadouts.vue'
-import UniverseDisc from '@/components/bardProfil/firmament/UniverseDisc.vue'
+import UniverseDisc from '@/components/bardProfil/universe/UniverseDisc.vue'
 import { hexToRgbTriple } from '@/utils/ui/format'
 import { buildArrivalHerald } from '@/utils/ui/arrivalHerald'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'

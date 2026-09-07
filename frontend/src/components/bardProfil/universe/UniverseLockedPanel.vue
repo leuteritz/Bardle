@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Das Firmament, bevor es eines gibt.
+ * Das Universe, bevor es eines gibt.
  *
  * Kein Leerzustand, sondern ein Versprechen — und ein Tor mit Ist-Wert daneben.
  * Vorbild: `planets/PlanetLockedPanel.vue`.
@@ -36,7 +36,7 @@ const PREVIEW = [
   <div class="fml">
     <div class="fml-head">
       <span v-ink-center class="fml-kicker">✦ Unlit ✦</span>
-      <h2 v-ink-center class="fml-title">Firmament</h2>
+      <h2 v-ink-center class="fml-title">Universe</h2>
       <span class="fml-sub">
         The sky keeps no record of a road not yet walked. Free a galaxy and the first light appears.
       </span>

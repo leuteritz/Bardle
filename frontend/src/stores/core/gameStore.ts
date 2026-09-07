@@ -50,7 +50,7 @@ import {
   AUGMENT_LEVEL_INTERVAL,
   ADMIN_LEVEL_AUGMENT_QUEUE_MAX,
   RARITY_WEIGHT_FALLBACK,
-  FIRMAMENT_FREED_COLOR,
+  UNIVERSE_MAP_FREED_COLOR,
   UNIVERSE_RESCUE_INITIAL_COST,
   UNIVERSE_RESCUE_COST_MULTIPLIER,
   MEEP_RUN_BASE_MIN,
@@ -665,7 +665,7 @@ export const useGameStore = defineStore('game', {
      * der Vorsehung gibt es einen Grund, dasselbe Universum ein zweites Mal zu
      * bereisen: gleiche Wirtschaft, anderer Kosmos.
      *
-     * Sie zieht ausserdem das Angebot, aus dem im Firmament die drei Portale
+     * Sie zieht ausserdem das Angebot, aus dem im Universe die drei Portale
      * werden — und zwar als BEDINGUNG, nicht im Moment des Kippens. Der
      * Unterschied traegt: das Admin-Panel setzt `prestigeAvailable` direkt und
      * liefe an einem Kipp-Zeitpunkt vorbei, der Spieler saesse dann vor einem
@@ -743,7 +743,7 @@ export const useGameStore = defineStore('game', {
     /**
      * Admin: die Aufbrüche nachtragen, die ein Sprung ins letzte Universum
      * überspringt — das Gegenstück zu `galaxyStore.adminBackfillArchive()` und
-     * zwingend NACH ihm: die Tore der Firmament-Bahn sitzen auf den Stempeln,
+     * zwingend NACH ihm: die Tore der Universe-Bahn sitzen auf den Stempeln,
      * die der Archiv-Nachtrag gerade vergeben hat.
      *
      * Sie steht hier und nicht in `maxEverything`, weil die fünf Felder EIN
@@ -874,7 +874,7 @@ export const useGameStore = defineStore('game', {
     /**
      * AUFBRECHEN — die eine Geste, die einen Durchlauf beendet.
      *
-     * Sie sitzt an einem Portal im Firmament, und sie ist die EINZIGE Stelle,
+     * Sie sitzt an einem Portal im Universe, und sie ist die EINZIGE Stelle,
      * an der die Reihenfolge steht: erst die Vorsehung antreten, dann reisen.
      * Andersherum liefe der neue Durchlauf fuer die Dauer der
      * Hyperspace-Animation noch unter der alten. Eine zweite Fassung dieser
@@ -911,7 +911,7 @@ export const useGameStore = defineStore('game', {
         target: targetUniverse,
         x: at?.x ?? (typeof window !== 'undefined' ? window.innerWidth / 2 : 0),
         y: at?.y ?? (typeof window !== 'undefined' ? window.innerHeight / 2 : 0),
-        accent: getUniverse(targetUniverse)?.tint ?? FIRMAMENT_FREED_COLOR,
+        accent: getUniverse(targetUniverse)?.tint ?? UNIVERSE_MAP_FREED_COLOR,
         phase: 'gate',
       })
     },

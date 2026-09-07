@@ -10,9 +10,9 @@ import { computed } from 'vue'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { formatCompactDuration, universeLabel } from '@/utils/ui/format'
 import { MS_PER_SECOND } from '@/config/constants'
-import type { FirmamentDeparture } from '@/utils/ui/firmamentLayout'
+import type { UniverseDeparture } from '@/utils/ui/universeLayout'
 
-const props = defineProps<{ departure: FirmamentDeparture; tint: string }>()
+const props = defineProps<{ departure: UniverseDeparture; tint: string }>()
 
 /** Chronikstempel — als Datum gelesen, nie gegen eine Frist geprueft. */
 const day = computed(() => new Date(props.departure.run.completedAt).toLocaleDateString())

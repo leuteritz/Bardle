@@ -8,7 +8,7 @@
  * gelesen, nicht neu hergestellt. Deshalb ist die LAENGE `outcomes`: ein
  * kuerzeres Manifest-Array laesst Sitze ohne Namen, es verschluckt keinen.
  *
- * Kein `firmament`-Praefix mehr: seit die Manifestreihe des Voyages-Atlas
+ * Kein `universe`-Praefix mehr: seit die Manifestreihe des Voyages-Atlas
  * dieselbe Quelle liest, waere er eine Kopplung, die niemand sucht.
  */
 import type { StarAttemptResult } from '@/stores/world/galaxyStore'

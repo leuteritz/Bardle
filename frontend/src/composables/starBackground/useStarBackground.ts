@@ -32,8 +32,8 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import {
   STAR_COUNT,
   STAR_BG_MIN_STARS,
-  FIRMAMENT_PORTAL_PHOTON_R,
-  FIRMAMENT_PORTAL_RY,
+  UNIVERSE_MAP_PORTAL_PHOTON_R,
+  UNIVERSE_MAP_PORTAL_RY,
   UNIVERSE_HOP_PORTAL_SPRITE_PX,
   UNIVERSE_HOP_THROAT_ALPHA_CORE,
   UNIVERSE_HOP_THROAT_ALPHA_MID,
@@ -1344,7 +1344,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const R = ho.portalR
       const px = UNIVERSE_HOP_PORTAL_SPRITE_PX
       const s = (R * 2) / px
-      const ry = 1 / FIRMAMENT_PORTAL_RY
+      const ry = 1 / UNIVERSE_MAP_PORTAL_RY
       if (!hopThroat) {
         const rgb = hexToRgbTriple(hopTint)
         hopThroat = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
@@ -1391,7 +1391,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         ctx.globalAlpha = ho.portalAlpha * 0.5
         ctx.lineWidth = Math.max(0.8, R * 0.012)
         ctx.beginPath()
-        ctx.arc(cx, cy, R * FIRMAMENT_PORTAL_PHOTON_R, 0, Math.PI * 2)
+        ctx.arc(cx, cy, R * UNIVERSE_MAP_PORTAL_PHOTON_R, 0, Math.PI * 2)
         ctx.stroke()
       }
       ctx.globalAlpha = 1
@@ -1420,7 +1420,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         ctx.globalAlpha = a * 0.5
         ctx.lineWidth = Math.max(0.8, r * 0.01)
         ctx.beginPath()
-        ctx.arc(cx, cy, r * FIRMAMENT_PORTAL_PHOTON_R, 0, Math.PI * 2)
+        ctx.arc(cx, cy, r * UNIVERSE_MAP_PORTAL_PHOTON_R, 0, Math.PI * 2)
         ctx.stroke()
       }
       ctx.globalAlpha = 1

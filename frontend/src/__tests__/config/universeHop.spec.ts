@@ -28,7 +28,7 @@ import { UNIVERSE_HOP_COMMIT_AT_MS, UNIVERSE_HOP_TOTAL_MS } from '@/utils/orbit/
  */
 const FILES = {
   veil: 'components/idle/prestige/UniverseHopVeil.vue',
-  portal: 'components/bardProfil/firmament/FirmamentPortal.vue',
+  portal: 'components/bardProfil/universe/UniversePortal.vue',
   app: 'App.vue',
   game: 'stores/core/gameStore.ts',
   machine: 'utils/orbit/universeHop.ts',

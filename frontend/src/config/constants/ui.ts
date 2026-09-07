@@ -1145,7 +1145,7 @@ export const HERALD_ARRIVAL_HOLD_MS = 5200
 /**
  * Kantenlaenge der Universumsscheibe im Medaillonplatz der Ankunft.
  *
- * Sie liegt zwischen den beiden Staenden, die der Firmament-Reiter fuehrt (34
+ * Sie liegt zwischen den beiden Staenden, die der Universe-Reiter fuehrt (34
  * in der Leiste, 46 im Kopfband) und dem Herzstueck der Buehne — gross genug,
  * dass ihre Drehung sichtbar ist, klein genug, dass die Karte nicht kippt.
  * `--hb-visual` deckelt sie im flachen Viewport ohnehin nicht: die Scheibe ist

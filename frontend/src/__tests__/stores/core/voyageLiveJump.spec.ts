@@ -50,10 +50,10 @@ describe('Voyages: Live-Sprung gegen Atlas-Sprung', () => {
     expect(ui.pendingGalaxyLive).toBe(false)
   })
 
-  it('laesst das Rueckweg-Angebot des Firmaments unberuehrt', () => {
+  it('laesst das Rueckweg-Angebot des Universes unberuehrt', () => {
     const ui = useUiStore()
     ui.requestOpenGalaxyLive()
 
-    expect(ui.firmamentTabReturnPending).toBe(false)
+    expect(ui.universeTabReturnPending).toBe(false)
   })
 })

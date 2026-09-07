@@ -38,7 +38,7 @@ export interface ModifierEffects {
  * (`ProvidenceDef.effects` → `gameStore.activeModifier`).
  *
  * Seinen NAMEN hat es danach auch verloren. Er stand als grösster Text im
- * Firmament-Kopfband, während die Zeile darüber schon „Universe VI" sagte — die
+ * Universe-Kopfband, während die Zeile darüber schon „Universe VI" sagte — die
  * grösste Schrift für die geringste Auskunft, und genau der Platz, den die
  * Vorsehung braucht. Wie es heisst, sagt jetzt `universeLabel(id)`.
  */
@@ -46,7 +46,7 @@ export interface UniverseConfig {
   id: number
   /** Wappen des Universums auf der Prestige-Karte. */
   icon: string
-  /** Der Farbton seiner Scheibe im Firmament — Staub und Galaxien, NIE eine
+  /** Der Farbton seiner Scheibe im Universe — Staub und Galaxien, NIE eine
    *  Kante: als Rahmen konkurrierte er mit den Zustandsfarben der Karte. */
   tint: string
 }

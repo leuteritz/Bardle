@@ -8,22 +8,22 @@ import {
   portalSpriteSpan,
 } from '@/utils/fx/portalSprite'
 import {
-  FIRMAMENT_PORTAL_ARMS,
-  FIRMAMENT_PORTAL_AURA_SPAN,
-  FIRMAMENT_PORTAL_BAND_ALPHA,
-  FIRMAMENT_PORTAL_BAND_R,
-  FIRMAMENT_PORTAL_BAND_SEGMENTS,
-  FIRMAMENT_PORTAL_BAND_WOBBLE,
-  FIRMAMENT_PORTAL_WEB_JITTER,
-  FIRMAMENT_PORTAL_WEB_OUT,
-  FIRMAMENT_PORTAL_WEB_SHELLS,
-  FIRMAMENT_PORTAL_FIELD_ZOOM,
-  FIRMAMENT_PORTAL_RY,
-  FIRMAMENT_PORTAL_MOTES,
-  FIRMAMENT_PORTAL_PHOTON_R,
-  FIRMAMENT_PORTAL_POOL_SPAN,
-  FIRMAMENT_PORTAL_SPRITE_SPAN,
-  FIRMAMENT_PORTAL_SWIRL_SPAN,
+  UNIVERSE_MAP_PORTAL_ARMS,
+  UNIVERSE_MAP_PORTAL_AURA_SPAN,
+  UNIVERSE_MAP_PORTAL_BAND_ALPHA,
+  UNIVERSE_MAP_PORTAL_BAND_R,
+  UNIVERSE_MAP_PORTAL_BAND_SEGMENTS,
+  UNIVERSE_MAP_PORTAL_BAND_WOBBLE,
+  UNIVERSE_MAP_PORTAL_WEB_JITTER,
+  UNIVERSE_MAP_PORTAL_WEB_OUT,
+  UNIVERSE_MAP_PORTAL_WEB_SHELLS,
+  UNIVERSE_MAP_PORTAL_FIELD_ZOOM,
+  UNIVERSE_MAP_PORTAL_RY,
+  UNIVERSE_MAP_PORTAL_MOTES,
+  UNIVERSE_MAP_PORTAL_PHOTON_R,
+  UNIVERSE_MAP_PORTAL_POOL_SPAN,
+  UNIVERSE_MAP_PORTAL_SPRITE_SPAN,
+  UNIVERSE_MAP_PORTAL_SWIRL_SPAN,
 } from '@/config/constants'
 
 /**
@@ -209,8 +209,8 @@ describe('Portal — der Durchgang', () => {
       .map((o) => o.slice(6, -1).split(',').map(Number))
     expect(scales).toEqual([
       [
-        round2(FIRMAMENT_PORTAL_FIELD_ZOOM),
-        round2(FIRMAMENT_PORTAL_FIELD_ZOOM * FIRMAMENT_PORTAL_RY),
+        round2(UNIVERSE_MAP_PORTAL_FIELD_ZOOM),
+        round2(UNIVERSE_MAP_PORTAL_FIELD_ZOOM * UNIVERSE_MAP_PORTAL_RY),
       ],
     ])
   })
@@ -233,7 +233,7 @@ describe('Portal — der Durchgang', () => {
     return ops
       .filter((o) => o.startsWith('lineTo('))
       .map((o) => o.slice(7, -1).split(',').map(Number))
-      .map(([x, y]) => ({ x, y, ang: Math.atan2(y / FIRMAMENT_PORTAL_RY, x) }))
+      .map(([x, y]) => ({ x, y, ang: Math.atan2(y / UNIVERSE_MAP_PORTAL_RY, x) }))
   }
 
   /** Alles vor dem ersten Zug des Bandes ist das Gewebe. */
@@ -252,7 +252,7 @@ describe('Portal — der Durchgang', () => {
     const ops0 = maw()
     const pts = bandPoints(ops0)
     // Zwei Durchgaenge zu je einem Segment pro Schritt.
-    expect(pts).toHaveLength(FIRMAMENT_PORTAL_BAND_SEGMENTS * 2)
+    expect(pts).toHaveLength(UNIVERSE_MAP_PORTAL_BAND_SEGMENTS * 2)
     // Und sie decken JEDEN Oktanten ab — eine Luecke faellt hier auf, egal wo.
     const octants = new Set(
       pts.map((p) => Math.floor(((p.ang + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4))),
@@ -281,8 +281,8 @@ describe('Portal — der Durchgang', () => {
       .filter((o) => o.startsWith('moveTo('))
       .map((o) => o.slice(7, -1).split(',').map(Number))
       .map(([x, y]) => ({
-        ang: Math.atan2(y / FIRMAMENT_PORTAL_RY, x),
-        rad: Math.hypot(x, y / FIRMAMENT_PORTAL_RY),
+        ang: Math.atan2(y / UNIVERSE_MAP_PORTAL_RY, x),
+        rad: Math.hypot(x, y / UNIVERSE_MAP_PORTAL_RY),
       }))
     expect(nodes.length).toBeGreaterThan(80)
 
@@ -317,15 +317,15 @@ describe('Portal — der Durchgang', () => {
      sein aeusserer Saum ohne Unterlage auf dem Sternfeld. */
   it('bleibt mit der ganzen Fassung auf dem Schattenteich', () => {
     const spread =
-      ((FIRMAMENT_PORTAL_WEB_OUT - 1) / Math.max(1, FIRMAMENT_PORTAL_WEB_SHELLS - 1)) *
-      FIRMAMENT_PORTAL_WEB_JITTER
-    expect(FIRMAMENT_PORTAL_WEB_OUT + spread).toBeLessThan(FIRMAMENT_PORTAL_POOL_SPAN)
-    expect(FIRMAMENT_PORTAL_WEB_OUT).toBeLessThan(FIRMAMENT_PORTAL_SPRITE_SPAN)
+      ((UNIVERSE_MAP_PORTAL_WEB_OUT - 1) / Math.max(1, UNIVERSE_MAP_PORTAL_WEB_SHELLS - 1)) *
+      UNIVERSE_MAP_PORTAL_WEB_JITTER
+    expect(UNIVERSE_MAP_PORTAL_WEB_OUT + spread).toBeLessThan(UNIVERSE_MAP_PORTAL_POOL_SPAN)
+    expect(UNIVERSE_MAP_PORTAL_WEB_OUT).toBeLessThan(UNIVERSE_MAP_PORTAL_SPRITE_SPAN)
     // Das Band liegt IM Gewebe, nicht daneben.
-    expect(FIRMAMENT_PORTAL_BAND_R * (1 + FIRMAMENT_PORTAL_BAND_WOBBLE)).toBeLessThan(
-      FIRMAMENT_PORTAL_WEB_OUT,
+    expect(UNIVERSE_MAP_PORTAL_BAND_R * (1 + UNIVERSE_MAP_PORTAL_BAND_WOBBLE)).toBeLessThan(
+      UNIVERSE_MAP_PORTAL_WEB_OUT,
     )
-    expect(FIRMAMENT_PORTAL_BAND_ALPHA).toBeGreaterThan(0.3)
+    expect(UNIVERSE_MAP_PORTAL_BAND_ALPHA).toBeGreaterThan(0.3)
   })
 
   /* `shadowBlur` ist erlaubt, WEIL er gebacken wird. Bliebe er stehen, truege
@@ -342,7 +342,7 @@ describe('Portal — der Durchgang', () => {
    * Die Fassung traegt den Saum — und KEINEN Punkt. Hier standen einmal ein
    * gefuellter Kernfunke auf der Mitte und zwei Kugeln auf den Ringscheiteln;
    * beide lasen sich als Aufkleber auf dem Durchgang, dieselbe Lektion wie beim
-   * Firmament-Knoten. Die Tiefe traegt jetzt das Feld im Schlund, die Achse die
+   * Universe-Knoten. Die Tiefe traegt jetzt das Feld im Schlund, die Achse die
    * Ellipse samt Saum.
    */
   it('traegt den Schwellensaum und keinen Punkt', () => {
@@ -356,8 +356,8 @@ describe('Portal — der Durchgang', () => {
   /* Der Saum sitzt knapp INNEN am Ring. Bei einem halben Radius war er ein
      zweiter Ring in der Mitte und machte aus dem Durchgang eine Zielscheibe. */
   it('legt den Schwellensaum an die Kante, nicht in die Mitte', () => {
-    expect(FIRMAMENT_PORTAL_PHOTON_R).toBeGreaterThan(0.8)
-    expect(FIRMAMENT_PORTAL_PHOTON_R).toBeLessThan(1)
+    expect(UNIVERSE_MAP_PORTAL_PHOTON_R).toBeGreaterThan(0.8)
+    expect(UNIVERSE_MAP_PORTAL_PHOTON_R).toBeLessThan(1)
   })
 
   it('aendert mit dem Ton die FARBE, nicht die Form', () => {
@@ -397,12 +397,12 @@ describe('Portal — die drehende Ebene', () => {
 
   it('malt jeden Arm als auslaufende Kurve, nicht als Speiche', () => {
     const ops = swirl()
-    expect(count(ops, 'quadraticCurveTo')).toBe(FIRMAMENT_PORTAL_ARMS)
-    expect(count(ops, 'createLinearGradient')).toBe(FIRMAMENT_PORTAL_ARMS)
+    expect(count(ops, 'quadraticCurveTo')).toBe(UNIVERSE_MAP_PORTAL_ARMS)
+    expect(count(ops, 'createLinearGradient')).toBe(UNIVERSE_MAP_PORTAL_ARMS)
     // Beide Enden transparent — sonst hat der Arm eine harte Kante.
     const stops = ops.filter((o) => o.startsWith('addColorStop('))
     expect(stops.filter((o) => o.includes(', 0)')).length).toBeGreaterThanOrEqual(
-      FIRMAMENT_PORTAL_ARMS * 2,
+      UNIVERSE_MAP_PORTAL_ARMS * 2,
     )
   })
 
@@ -411,7 +411,7 @@ describe('Portal — die drehende Ebene', () => {
   it('setzt die Motes als Koerper, die die Drehung ablesbar machen', () => {
     const ops = swirl()
     expect(count(ops, 'arc')).toBe(0)
-    expect(count(ops, 'ellipse')).toBe(FIRMAMENT_PORTAL_MOTES)
+    expect(count(ops, 'ellipse')).toBe(UNIVERSE_MAP_PORTAL_MOTES)
   })
 
   it('aendert mit dem Seed die Arme, nicht den Ring', () => {
@@ -469,14 +469,14 @@ describe('Portal — Schluessel und Kante', () => {
      gemeinsamer Wert schnitte entweder den Teich ab oder draehte leere Flaeche
      mit. Der Halo reicht am weitesten. */
   it('gibt jeder Ebene die Kante, die sie braucht', () => {
-    expect(portalSpriteSpan('halo', 260)).toBe(Math.round(260 * FIRMAMENT_PORTAL_AURA_SPAN))
-    expect(portalSpriteSpan('maw', 260)).toBe(Math.round(260 * FIRMAMENT_PORTAL_SPRITE_SPAN))
-    expect(portalSpriteSpan('swirl', 260)).toBe(Math.round(260 * FIRMAMENT_PORTAL_SWIRL_SPAN))
+    expect(portalSpriteSpan('halo', 260)).toBe(Math.round(260 * UNIVERSE_MAP_PORTAL_AURA_SPAN))
+    expect(portalSpriteSpan('maw', 260)).toBe(Math.round(260 * UNIVERSE_MAP_PORTAL_SPRITE_SPAN))
+    expect(portalSpriteSpan('swirl', 260)).toBe(Math.round(260 * UNIVERSE_MAP_PORTAL_SWIRL_SPAN))
 
     expect(portalSpriteSpan('halo', 260)).toBeGreaterThan(portalSpriteSpan('maw', 260))
     expect(portalSpriteSpan('maw', 260)).toBeGreaterThan(portalSpriteSpan('swirl', 260))
     // Der Teich ist die bindende Zone des stehenden Sprites.
-    expect(FIRMAMENT_PORTAL_SPRITE_SPAN).toBeGreaterThanOrEqual(FIRMAMENT_PORTAL_POOL_SPAN)
+    expect(UNIVERSE_MAP_PORTAL_SPRITE_SPAN).toBeGreaterThanOrEqual(UNIVERSE_MAP_PORTAL_POOL_SPAN)
   })
 
   /* Was uebersteht, wandert als abgeschnittene Ecke durchs Bild — und man sieht

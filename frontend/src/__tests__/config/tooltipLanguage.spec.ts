@@ -57,7 +57,7 @@ function load(full: string) {
 }
 
 /** Dateien, die GANZ Tooltip sind — dort gehört jede Regel der Datei.
- *  `*Tip.vue` zählt mit — die vier Karten des Firmaments sassen nur wegen ihres
+ *  `*Tip.vue` zählt mit — die vier Karten des Universes sassen nur wegen ihres
  *  Namens ausserhalb, zwei davon ganz ungeprüft. */
 const PURE_TIP_FILES = vueFiles(join(SRC, 'components'))
   .filter((f) => /(?:Tooltip.*|Tip)\.vue$/.test(f))
@@ -74,7 +74,7 @@ describe('Tooltip-Sprache: die Gestalt steht an EINER Stelle', () => {
   it('findet die Tooltip-Dateien überhaupt', () => {
     // Ein leeres Netz fängt nichts und sähe trotzdem grün aus. Die 20 liegt knapp
     // unter den 24: fällt der `Tip`-Zweig aus dem Muster, sind es genau 20 und
-    // der Test fällt — sonst rutschten die vier Firmament-Karten still heraus.
+    // der Test fällt — sonst rutschten die vier Universe-Karten still heraus.
     expect(TIP_FILES.length).toBeGreaterThan(20)
   })
 

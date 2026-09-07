@@ -26,8 +26,8 @@ import AdminDashboard from '@/components/bardProfil/admin/AdminDashboard.vue'
 import BattleResultComponent from '@/components/bardProfil/battle/BattleResultComponent.vue'
 import TeamTabComponent from '@/components/bardProfil/team/TeamTabComponent.vue'
 import ExpeditionTabComponent from '@/components/bardProfil/expedition/ExpeditionTabComponent.vue'
-import FirmamentTabComponent from '@/components/bardProfil/firmament/FirmamentTabComponent.vue'
-import FirmamentDiveVeil from '@/components/bardProfil/FirmamentDiveVeil.vue'
+import UniverseTabComponent from '@/components/bardProfil/universe/UniverseTabComponent.vue'
+import UniverseDiveVeil from '@/components/bardProfil/UniverseDiveVeil.vue'
 import PlanetSelectTabComponent from '@/components/bardProfil/planets/PlanetSelectTabComponent.vue'
 import BardStatsTab from '@/components/bardProfil/stats/BardStatsTab.vue'
 import RpgFrame from '@/components/ui/RpgFrame.vue'
@@ -88,7 +88,7 @@ const shopFlare = useBadgeFlare(shopFreshCount)
  *                                   (Phosphor hat nur die einzelne Klinge)
  *   ph:planet-fill                — die Planeten-Slots im Orbit
  *   ph:map-trifold-fill           — die Sternenkarte der Galaxy
- *   ph:globe-hemisphere-west-fill — das Firmament: der ganze Weg als EINE
+ *   ph:globe-hemisphere-west-fill — das Universe: der ganze Weg als EINE
  *                                   Karte, Galaxien und Universumstore
  *   ph:gear-six-fill              — Admin
  *
@@ -160,8 +160,8 @@ const allMenuItems: {
     lockNote: 'claim your first orbit',
   },
   {
-    id: 'firmament',
-    name: 'Firmament',
+    id: 'universe',
+    name: 'Universe',
     icon: 'ph:globe-hemisphere-west-fill',
     // Das Schloss weicht, sobald ein Aufbruch ansteht: der Prestige-Knopf im
     // Header fuehrt hierher, und er darf nie in einen verriegelten Reiter
@@ -569,11 +569,11 @@ onUnmounted(() => {
               </div>
 
               <div
-                v-if="mountedTabs.has('firmament')"
-                v-show="uiStore.bardActiveTab === 'firmament'"
+                v-if="mountedTabs.has('universe')"
+                v-show="uiStore.bardActiveTab === 'universe'"
                 class="tab-layer"
               >
-                <FirmamentTabComponent />
+                <UniverseTabComponent />
               </div>
 
               <div
@@ -592,9 +592,9 @@ onUnmounted(() => {
                 <AdminDashboard />
               </div>
 
-              <!-- Die Kamerafahrt Firmament ⇄ Galaxy: ein Geschwister ueber
+              <!-- Die Kamerafahrt Universe ⇄ Galaxy: ein Geschwister ueber
                    allen Tab-Layern, kein Kind eines Reiters. -->
-              <FirmamentDiveVeil v-if="uiStore.firmamentDive" />
+              <UniverseDiveVeil v-if="uiStore.universeDive" />
             </div>
           </div>
         </div>

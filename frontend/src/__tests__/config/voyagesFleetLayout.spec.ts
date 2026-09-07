@@ -136,9 +136,9 @@ function mapWidth(vw: number, vh: number): number {
  * hängt oben an `--level-badge-bottom`, das der Header zur Laufzeit aus einem
  * gerenderten Rechteck setzt. Dieselben Zahlen wie in `voyagesAtlasLayout.spec.ts`.
  *
- * Neu aufgenommen, seit die Kopfleiste mit dem Firmament-Band auf EINE Aussenhöhe
+ * Neu aufgenommen, seit die Kopfleiste mit dem Universe-Band auf EINE Aussenhöhe
  * gebunden ist (126 → 112): je 14 px mehr Bühne, und die Galaxie hat sie geerbt.
- * Gegengeprüft ist dabei mehr als die Zahl — der Firmament-Reiter misst auf allen
+ * Gegengeprüft ist dabei mehr als die Zahl — der Universe-Reiter misst auf allen
  * vier Auflösungen DIESELBE Bühnenhöhe, was beide Bänder als gleich hoch belegt.
  * Im Browser gegengeprüft, dass die Atlashöhe NICHT am Spielstand hängt:
  * `--level-badge-bottom` misst 133,2 px bei Level 1 wie bei Level 100.
@@ -228,7 +228,7 @@ describe('voyages fleet strip', () => {
    * Die 3 gehören dazu: `.ecb` trägt einen `border-bottom: 3px`, und
    * `getBoundingClientRect()` misst ihn mit.
    *
-   * Und die 112 gehören nicht diesem Reiter allein: `FIRMAMENT_CREST_BAND_H`
+   * Und die 112 gehören nicht diesem Reiter allein: `UNIVERSE_MAP_CREST_BAND_H`
    * trägt dieselbe Zahl. Beide Reiter legen ein Band über eine grosse Bühne,
    * und bei 126 gegen 108 sprang deren Oberkante beim Wechsel um 18 px. Wer
    * eine der beiden anfasst, fasst beide an.

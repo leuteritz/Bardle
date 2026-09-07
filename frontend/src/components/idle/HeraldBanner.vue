@@ -62,7 +62,7 @@ defineProps<{
 
     <div class="hb-visual">
       <!-- Ein Slot MIT Fallback, kein Import: die Universumsscheibe wohnt unter
-           `bardProfil/firmament/`, und diese Karte soll nicht dorthin greifen.
+           `bardProfil/universe/`, und diese Karte soll nicht dorthin greifen.
            Wer sie zeichnet, ist der Aufrufer — für alle anderen bleibt alles,
            wie es war. `--hb-visual` gilt in beiden Fällen. -->
       <slot name="visual">

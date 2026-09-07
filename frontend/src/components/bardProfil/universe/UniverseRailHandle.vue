@@ -10,30 +10,30 @@
  * uebernommen ist — eine Seitenleiste ist in diesem Spiel EIN Ort.
  *
  * KEINE Signalpille und kein Bereitschaftspunkt: die Voyages-Pille sagt „hier
- * will etwas etwas", und im Firmament will nichts etwas — die Leiste ist reine
+ * will etwas etwas", und im Universe will nichts etwas — die Leiste ist reine
  * Navigation. Die Zahl hinter dem Wort ist deshalb Auskunft, kein Signal: wie
  * viele Universen begangen sind. Das „/ 10" der gefallenen Kopfzeile steht in
  * der Hover-Karte.
  */
 import { computed } from 'vue'
 import {
-  FIRMAMENT_RAIL_CLOSE_TITLE,
-  FIRMAMENT_RAIL_HANDLE_LABEL,
-  FIRMAMENT_RAIL_HANDLE_PX,
-  FIRMAMENT_RAIL_OPEN_TITLE,
+  UNIVERSE_MAP_RAIL_CLOSE_TITLE,
+  UNIVERSE_MAP_RAIL_HANDLE_LABEL,
+  UNIVERSE_MAP_RAIL_HANDLE_PX,
+  UNIVERSE_MAP_RAIL_OPEN_TITLE,
 } from '@/config/constants'
 
 const props = defineProps<{ walked: number; total: number; open: boolean }>()
 const emit = defineEmits<{ toggle: [] }>()
 
 const toggleTitle = computed(() =>
-  props.open ? FIRMAMENT_RAIL_CLOSE_TITLE : FIRMAMENT_RAIL_OPEN_TITLE,
+  props.open ? UNIVERSE_MAP_RAIL_CLOSE_TITLE : UNIVERSE_MAP_RAIL_OPEN_TITLE,
 )
 const tipText = computed(
   () => `${toggleTitle.value} — ${props.walked} of ${props.total} walked`,
 )
 
-const handleWidth = `${FIRMAMENT_RAIL_HANDLE_PX}px`
+const handleWidth = `${UNIVERSE_MAP_RAIL_HANDLE_PX}px`
 </script>
 
 <template>
@@ -49,7 +49,7 @@ const handleWidth = `${FIRMAMENT_RAIL_HANDLE_PX}px`
          Zeile setzte sie NEBEN das Wort statt dahinter. So folgt sie ihm im
          senkrechten Fluss. -->
     <span class="frh-word">
-      {{ FIRMAMENT_RAIL_HANDLE_LABEL }}
+      {{ UNIVERSE_MAP_RAIL_HANDLE_LABEL }}
       <span class="frh-total">{{ walked }}</span>
     </span>
   </button>
