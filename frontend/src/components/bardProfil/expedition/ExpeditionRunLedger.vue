@@ -78,15 +78,15 @@ const pending = computed(() => {
 </template>
 
 <style scoped>
+/* Ohne eigene Flaeche: die Liste liegt als Scrim auf der Live-Platte, und ein
+   undurchsichtiger Kasten loeschte die Marken darunter aus. Den Verlauf legt
+   ExpeditionLiveStage darunter. */
 .erl {
   display: flex;
   flex-direction: column;
   gap: 7px;
   min-height: 0;
   padding: 10px;
-  background: #111008;
-  border: 1px solid #32210c;
-  border-radius: 4px;
 }
 
 .erl-title {

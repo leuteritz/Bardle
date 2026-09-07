@@ -1,0 +1,382 @@
+<script setup lang="ts">
+/**
+ * Bard auf der Live-Platte — der einzige Körper, der sich dort bewegt.
+ *
+ * Die Platte darunter ist ein STANDBILD und bleibt eines; was wandert, ist DOM.
+ * Der Kurs ist ein statisches SVG und wird nur beim Etappenwechsel neu gelegt,
+ * der Körper bekommt pro Frame EINEN `transform` — Ort und Kurswinkel in einem
+ * Schreibvorgang.
+ *
+ * Die Position kommt IMMER frisch aus `gameNow()` und wird nie fortgeschrieben:
+ * damit ist der Flug zeitraffer-treu und übersteht Reiterwechsel und Reload.
+ * Gerechnet wird auf der GEBOGENEN Bahn, nicht auf der Sehne — sonst liefe der
+ * Körper neben seinem eigenen Kurs.
+ */
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { gameNow } from '@/utils/game/gameClock'
+import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { playerLeg, playerTravelProgress } from '@/utils/game/playerGalaxyPos'
+import {
+  LANDMARK_ROLE_CORE,
+  LANDMARK_FREED_CORE,
+  MINIMAP_FLIGHTPATH_BEND,
+  VOYAGE_LIVE_PLAYER_HEAD_PX,
+  VOYAGE_LIVE_PLAYER_TAIL_PX,
+  VOYAGE_LIVE_TARGET_R_PX,
+} from '@/config/constants'
+import type { FitBox } from '@/utils/fx/galaxyPlate'
+import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
+
+const props = defineProps<{
+  record: CompletedGalaxyRecord
+  box: FitBox
+  /** Bühnenmasse — das SVG spannt über die ganze Bühne, nicht über die Box. */
+  width: number
+  height: number
+  /** Der Reiter bleibt gemountet; ohne das liefe die Schleife im Hintergrund. */
+  visible: boolean
+  /** Sekundentakt der Bühne — der Rückfallweg bei reduzierter Bewegung. */
+  now: number
+}>()
+
+const galaxyStore = useGalaxyStore()
+const { isRenderingPaused } = useRenderingPaused()
+
+/** Dieselbe Quelle wie `paintGalaxy` — beide setzen so denselben Punkt. */
+const geometry = computed(() => {
+  const attempts = props.record.attemptResults.length
+  const { spawn, dots } = generateGalaxyDots(props.record.mapSeed, attempts + 1)
+  return { spawn, dots, attempts }
+})
+
+/**
+ * Der nächste Stern bleibt verborgen, bis eine Rolle für ihn steht — die Karte
+ * enthüllt nichts, was noch vor dem Schiff liegt. Der Bossstern im Kern ist
+ * davon ausgenommen: dorthin führt der letzte Flug ohne Wahl.
+ */
+const revealed = computed(
+  () =>
+    galaxyStore.travelingToGalaxyBoss ||
+    (!!galaxyStore.nextStarRole && !galaxyStore.pendingRoleSelection),
+)
+
+const leg = computed(() => {
+  const g = geometry.value
+  const { from, target } = playerLeg(g.spawn, g.dots, g.attempts, galaxyStore)
+  return { from, target: revealed.value ? target : null }
+})
+
+/** Der Körper ruht im Kern, sobald der Bossstern dran ist. */
+const docked = computed(() => galaxyStore.bossPhaseActive || galaxyStore.isComplete)
+
+const targetTint = computed(() => {
+  const role = galaxyStore.nextStarRole
+  if (galaxyStore.travelingToGalaxyBoss || !role) return LANDMARK_FREED_CORE
+  return LANDMARK_ROLE_CORE[role] ?? LANDMARK_FREED_CORE
+})
+
+// ── Bahn ────────────────────────────────────────────────────────────────────
+interface Curve {
+  x0: number
+  y0: number
+  cx: number
+  cy: number
+  x2: number
+  y2: number
+}
+
+/**
+ * Die Biegung steht in PIXELN senkrecht zur Sehne. Im 0..1-Raum gerechnet
+ * krümmte sie auf breiten Bühnen falsch: der Raum ist anisotrop.
+ */
+const curve = computed<Curve | null>(() => {
+  const t = leg.value.target
+  if (!t) return null
+  const b = props.box
+  const f = leg.value.from
+  const x0 = b.x + f.x * b.w
+  const y0 = b.y + f.y * b.h
+  const x2 = b.x + t.x * b.w
+  const y2 = b.y + t.y * b.h
+  const dx = x2 - x0
+  const dy = y2 - y0
+  const len = Math.hypot(dx, dy)
+  if (len <= 1) return null
+  const bend = len * MINIMAP_FLIGHTPATH_BEND
+  return {
+    x0,
+    y0,
+    cx: (x0 + x2) / 2 - (dy / len) * bend,
+    cy: (y0 + y2) / 2 + (dx / len) * bend,
+    x2,
+    y2,
+  }
+})
+
+const routeD = computed(() => {
+  const c = curve.value
+  if (!c) return ''
+  return (
+    `M${c.x0.toFixed(1)} ${c.y0.toFixed(1)} ` +
+    `Q${c.cx.toFixed(1)} ${c.cy.toFixed(1)} ${c.x2.toFixed(1)} ${c.y2.toFixed(1)}`
+  )
+})
+
+const targetPos = computed(() => {
+  const c = curve.value
+  return c ? { left: c.x2, top: c.y2 } : null
+})
+
+const flying = computed(
+  () => galaxyStore.championTravelState === 'traveling' && !docked.value && !!curve.value,
+)
+
+function pointOn(c: Curve, t: number): { x: number; y: number; angle: number } {
+  const u = 1 - t
+  const x = u * u * c.x0 + 2 * u * t * c.cx + t * t * c.x2
+  const y = u * u * c.y0 + 2 * u * t * c.cy + t * t * c.y2
+  const tx = 2 * u * (c.cx - c.x0) + 2 * t * (c.x2 - c.cx)
+  const ty = 2 * u * (c.cy - c.y0) + 2 * t * (c.y2 - c.cy)
+  return { x, y, angle: Math.atan2(ty, tx) }
+}
+
+// ── Die eine Schleife ───────────────────────────────────────────────────────
+// Plain, NICHT reaktiv: der rAF darf weder Box noch Store pro Frame lesen.
+const body = ref<HTMLElement | null>(null)
+let curveCache: Curve | null = null
+let restCache = { x: 0, y: 0, angle: 0 }
+let flyCache = false
+let frame: number | null = null
+
+const reduceMotion =
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null
+
+function rebuild() {
+  curveCache = curve.value
+  flyCache = flying.value
+  const b = props.box
+  if (docked.value) {
+    restCache = { x: b.x + 0.5 * b.w, y: b.y + 0.5 * b.h, angle: 0 }
+    return
+  }
+  if (curveCache) {
+    // Stillstehend zeigt der Körper trotzdem den Kurs, den er nehmen wird.
+    const arrived =
+      galaxyStore.championTravelState === 'champion_available' ||
+      galaxyStore.championTravelState === 'champion_spawned'
+    restCache = pointOn(curveCache, arrived ? 1 : 0)
+    return
+  }
+  const p = leg.value.target ?? leg.value.from
+  restCache = { x: b.x + p.x * b.w, y: b.y + p.y * b.h, angle: 0 }
+}
+
+function place(now: number) {
+  const el = body.value
+  if (!el) return
+  let { x, y, angle } = restCache
+  if (flyCache && curveCache) {
+    const pt = pointOn(curveCache, playerTravelProgress(galaxyStore, now))
+    x = pt.x
+    y = pt.y
+    angle = pt.angle
+  }
+  el.style.transform =
+    `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) rotate(${angle.toFixed(3)}rad)`
+}
+
+function tick() {
+  // Immer zuerst neu anmelden, dann VOR dem Schreiben aussteigen.
+  frame = requestAnimationFrame(tick)
+  if (!props.visible || isRenderingPaused.value) return
+  place(gameNow())
+}
+
+function startLoop() {
+  if (frame !== null || reduceMotion?.matches) return
+  frame = requestAnimationFrame(tick)
+}
+function stopLoop() {
+  if (frame === null) return
+  cancelAnimationFrame(frame)
+  frame = null
+}
+
+watch(
+  [() => props.box, leg, docked, flying, () => galaxyStore.championTravelStartTime],
+  () => {
+    rebuild()
+    nextTick(() => place(gameNow()))
+  },
+  { immediate: true, deep: false },
+)
+
+watch(
+  [flying, () => props.visible],
+  ([isFlying, visible]) => {
+    if (isFlying && visible) startLoop()
+    else stopLoop()
+  },
+  { immediate: true },
+)
+
+/** Reduzierte Bewegung: keine Schleife, nur der Sekundentakt der Bühne. */
+watch(
+  () => props.now,
+  () => {
+    if (reduceMotion?.matches && props.visible) place(gameNow())
+  },
+)
+
+onMounted(() => nextTick(() => place(gameNow())))
+onBeforeUnmount(stopLoop)
+
+const headPx = `${VOYAGE_LIVE_PLAYER_HEAD_PX}px`
+const haloPx = `${VOYAGE_LIVE_PLAYER_HEAD_PX * 3}px`
+const tailPx = `${VOYAGE_LIVE_PLAYER_TAIL_PX}px`
+const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
+</script>
+
+<template>
+  <div class="epml" aria-hidden="true">
+    <svg
+      v-if="routeD"
+      class="epml-routes"
+      :viewBox="`0 0 ${Math.max(1, width)} ${Math.max(1, height)}`"
+    >
+      <path :d="routeD" class="epml-route" />
+    </svg>
+
+    <span
+      v-if="targetPos"
+      class="epml-target"
+      :style="{
+        transform: `translate3d(${targetPos.left.toFixed(1)}px, ${targetPos.top.toFixed(1)}px, 0)`,
+        '--ep-t': targetTint,
+      }"
+    >
+      <span class="epml-target-ring" />
+    </span>
+
+    <div ref="body" class="epml-marker">
+      <span class="epml-tail" />
+      <span class="epml-halo" />
+      <span class="epml-head" />
+    </div>
+  </div>
+</template>
+
+<style scoped>
+/* Reine Anzeigeebene über der Platte, unter dem Datenband und den Listen. */
+.epml {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.epml-routes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Statisch — die laufende Strichfahrt ist eine Canvas-Sache und bleibt bei der
+   Minimap; hier bewegen sich nur transform und opacity. */
+.epml-route {
+  fill: none;
+  stroke: rgba(255, 210, 120, 0.42);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-dasharray: 5 7;
+}
+
+/* Nullgrosse Hüllen: der Frame schreibt nur `transform`, die Kinder zentrieren
+   sich selbst. */
+.epml-marker,
+.epml-target {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+.epml-marker {
+  will-change: transform;
+}
+
+/* Der Schweif liegt HINTER dem Kopf und dreht mit dem Rumpf — ein statischer
+   Verlauf, kein Zug pro Frame. */
+.epml-tail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: v-bind(tailPx);
+  height: v-bind(headPx);
+  transform: translate(-100%, -50%);
+  background: linear-gradient(to right, rgba(255, 210, 120, 0) 0%, rgba(255, 214, 140, 0.5) 100%);
+  border-radius: 50%;
+}
+
+/* Eigene Ebene mit statischem Schein; animiert wird allein die Deckkraft. */
+.epml-halo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: v-bind(haloPx);
+  height: v-bind(haloPx);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 220, 150, 0.4) 0%, rgba(255, 220, 150, 0) 70%);
+  animation: epml-breathe 2600ms ease-in-out infinite;
+}
+@keyframes epml-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.epml-head {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: v-bind(headPx);
+  height: v-bind(headPx);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #fff3d0;
+  box-shadow: 0 0 10px rgba(255, 214, 140, 0.9);
+}
+
+/* Der Zielstern RUHT: statischer Ring, animiert wird nur seine Deckkraft. */
+.epml-target-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: v-bind(targetPx);
+  height: v-bind(targetPx);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid var(--ep-t, #64dcb4);
+  box-shadow: 0 0 8px var(--ep-t, #64dcb4);
+  animation: epml-breathe 2600ms ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .epml-halo,
+  .epml-target-ring {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+</style>
