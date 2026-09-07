@@ -139,7 +139,7 @@
 
         <span class="tier-pip">
           <span class="pip-halo" />
-          <img :src="RANK_EMBLEM_IMAGES[tier]" :alt="tier" class="tier-pip-img" />
+          <img :src="rankEmblemImage(tier)" :alt="tier" class="tier-pip-img" />
         </span>
         <span class="step-caption">
           <span
@@ -160,6 +160,7 @@
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battle/battleStore'
+import { rankEmblemImage, rankTierColor } from '@/utils/game/rankEmblem'
 import RankStatColumn, { type RankStatGroup } from './RankStatColumn.vue'
 import {
   LP_NORMAL_PROMOTION_THRESHOLD,
@@ -170,8 +171,6 @@ import {
   LP_PROMOTION_IMMINENT_PCT,
   RANK_TIERS,
   RANK_DIVISIONS,
-  RANK_EMBLEM_IMAGES,
-  RANK_TIER_COLORS,
 } from '@/config/constants'
 
 defineProps<{
@@ -193,10 +192,8 @@ function reachedOn(tier: string): string {
   })
 }
 
-const rankImage = computed(
-  () => RANK_EMBLEM_IMAGES[currentRank.value.tier] ?? RANK_EMBLEM_IMAGES.Iron,
-)
-const rankColor = computed(() => RANK_TIER_COLORS[currentRank.value.tier] ?? '#d4a020')
+const rankImage = computed(() => rankEmblemImage(currentRank.value.tier))
+const rankColor = computed(() => rankTierColor(currentRank.value.tier))
 const rankColorDim = computed(() => rankColor.value + '55')
 const rankColorFaint = computed(() => rankColor.value + '22')
 const rankColorDeep = computed(() => rankColor.value + '66')
@@ -275,7 +272,7 @@ function withAlpha(hex: string, alpha: number): string {
  *  climb toward something grander, not ten equal icons. Tiers already earned
  *  burn brighter than the ones still locked. */
 function stepStyle(i: number): Record<string, string> {
-  const color = RANK_TIER_COLORS[RANK_TIERS[i]] ?? '#d4a020'
+  const color = rankTierColor(RANK_TIERS[i])
   const t = i / (RANK_TIERS.length - 1) // 0 at Iron … 1 at Challenger
   const earned = i <= currentTierIndex.value
   const halo = earned ? 0.09 + t * 0.3 : 0.03 + t * 0.13

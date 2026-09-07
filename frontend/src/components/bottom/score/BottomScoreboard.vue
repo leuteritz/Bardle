@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useUiStore } from '@/stores/core/uiStore'
+import { rankEmblemImage, rankTierColor } from '@/utils/game/rankEmblem'
 import { useBattleScoreboardStats } from '@/composables/battle/useBattleScoreboardStats'
 import { useBattlePhase } from '@/composables/battle/useBattlePhase'
 import {
@@ -26,8 +27,7 @@ import {
   CREST_STAR_IMAGE,
   CREST_SEPARATOR,
   BOTTOM_BAR_CENTER_TOP_Y,
-  RANK_EMBLEM_IMAGES,
-  RANK_TIER_COLORS,
+  WIN_LOSS_TONE,
   RANK_TIERS,
   RANK_TIER_SHORT,
   RANK_DIVISION_DIGITS,
@@ -150,10 +150,11 @@ const rankFullLabel = computed(() =>
     ? currentRank.value.tier
     : `${currentRank.value.tier} ${currentRank.value.division}`,
 )
-const rankEmblem = computed(
-  () => RANK_EMBLEM_IMAGES[currentRank.value.tier] ?? RANK_EMBLEM_IMAGES.Iron,
-)
-const rankColor = computed(() => RANK_TIER_COLORS[currentRank.value.tier] ?? '#d4a020')
+const rankEmblem = computed(() => rankEmblemImage(currentRank.value.tier))
+const rankColor = computed(() => rankTierColor(currentRank.value.tier))
+
+const winTone = WIN_LOSS_TONE.win
+const lossTone = WIN_LOSS_TONE.loss
 
 function openBattleTab() {
   uiStore.setBardTab('battle')
@@ -954,10 +955,10 @@ const phaseProgressStyle = computed(() => ({
   font-size: var(--sb-stacked-size);
 }
 .sb-wl-win {
-  color: #74d448;
+  color: v-bind(winTone);
 }
 .sb-wl-loss {
-  color: #cc6050;
+  color: v-bind(lossTone);
 }
 
 .sb-stat-value {

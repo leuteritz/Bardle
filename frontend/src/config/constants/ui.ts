@@ -12,6 +12,8 @@ import type {
 } from '@/types'
 // Das Waehrungs-Artwork wohnt bei den Waehrungen, nicht bei der Oberflaeche.
 import { CURRENCY_ART } from '@/config/constants/progression'
+// Derselbe Pokal wie in der Bottom-Leiste — eine Bedeutung, ein Glyph.
+import { BATTLE_STAT_GAME_ICONS } from '@/config/constants/battle'
 
 // ── Idle-Layer hinter einem Overlay: Anhalten und Wiederanlaufen ───────────
 /**
@@ -1353,6 +1355,10 @@ export const JOURNEY_KPI_TILES: readonly {
   icon: string
   /** Waehrungskacheln zeigen ihr eigenes Artwork statt des Iconify-Glyphs. */
   art?: keyof typeof CURRENCY_ART
+  /** Zweiter Katalogschluessel; die Kachel malt beide als Sieg und Niederlage. */
+  pair?: string
+  /** Statt des Glyphs das LAUFENDE Rangemblem — sein Pfad haengt am Tier. */
+  emblem?: 'rank'
 }[] = [
   {
     category: 'economy',
@@ -1376,13 +1382,27 @@ export const JOURNEY_KPI_TILES: readonly {
     art: 'chimes',
   },
   { category: 'economy', key: 'meeps', icon: 'game-icons:meeple-king', art: 'meeps' },
-  { category: 'autoBattle', key: 'rank', sub: 'lp', short: 'Rank', icon: 'game-icons:laurel-crown' },
-  { category: 'autoBattle', key: 'winrate', short: 'Win Rate', icon: 'game-icons:trophy-cup' },
+  {
+    category: 'autoBattle',
+    key: 'rank',
+    sub: 'lp',
+    short: 'Rank',
+    icon: 'game-icons:laurel-crown',
+    emblem: 'rank',
+  },
+  {
+    category: 'autoBattle',
+    key: 'wins',
+    pair: 'losses',
+    sub: 'winrate',
+    short: 'Win / Loss',
+    icon: BATTLE_STAT_GAME_ICONS.winLoss,
+  },
   { category: 'galaxy', key: 'stars-rescued', short: 'Stars Rescued', icon: 'game-icons:star-swirl' },
   { category: 'expeditions', key: 'succeeded', short: 'Voyages Won', icon: 'game-icons:rocket-flight' },
   { category: 'progression', key: 'total-power', short: 'Power', icon: 'game-icons:muscle-up' },
-  { category: 'galaxy', key: 'galaxies-freed', icon: 'game-icons:galaxy' },
-  { category: 'starFights', key: 'bosses-defeated', short: 'Bosses Felled', icon: 'game-icons:star-skull' },
+  { category: 'starForge', key: 'relics', icon: 'game-icons:crystal-cluster' },
+  { category: 'meepTree', key: 'nodes', icon: 'game-icons:tree-growth' },
   { category: 'champions', key: 'owned', short: 'Champions', icon: 'game-icons:crested-helmet' },
 ]
 
