@@ -7,10 +7,15 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { useItemStore } from '@/stores/economy/itemStore'
 import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
+import { useSynergyStore } from '@/stores/champions/synergyStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import {
   ascensionRank,
+  championOrbitDps,
+  fortuneMult,
+  roleAbilityCooldownMs,
   statValueLabel,
+  vitalityMult,
   CHAMPION_STATS,
   PERK_BY_ID,
 } from '@/config/champions/championLevels'
@@ -25,17 +30,10 @@ import {
   ROLES,
   SKIN_ORIGINAL,
   SWORN_ALLY_COUNT,
-  SWORN_ICON,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_VALUE_PLACEHOLDER,
 } from '@/config/constants'
-import {
-  getChampionOrigin,
-  getOriginColor,
-  ORIGIN_SYNERGIES,
-} from '@/config/champions/championOrigins'
 import { getChampionStarLevel, getChampionTier } from '@/config/champions/championTiers'
-import { CHAMPION_TRAITS, TRAIT_BY_ID } from '@/config/champions/championTraits'
 import { MATERIALS } from '@/config/economy/materials'
 import { ITEM_RARITIES, ITEM_SETS, SHOP_ITEMS } from '@/config/economy/items'
 import { formatNumberCompact } from '@/config/ui/numberFormat'
@@ -81,6 +79,7 @@ const gameStore = useGameStore()
 const itemStore = useItemStore()
 const skinStore = useSkinStore()
 const levelStore = useChampionLevelStore()
+const synergyStore = useSynergyStore()
 const { announceReceipt } = useHerald()
 const { headerSlots, secondarySlots } = storeToRefs(battleStore)
 const roleDef = computed(() => ROLES[props.roleIndex])
@@ -155,16 +154,34 @@ function levelOf(name: string) {
 }
 
 const tier = computed(() => (champion.value ? getChampionTier(champion.value) : null))
-const origin = computed(() => (champion.value ? getChampionOrigin(champion.value) : null))
-const originColor = computed(() => getOriginColor(champion.value))
-const originIcon = computed(() =>
-  origin.value
-    ? ((ORIGIN_SYNERGIES as Record<string, { icon: string } | undefined>)[origin.value]?.icon ?? '')
-    : '',
-)
-const traits = computed(() =>
-  (CHAMPION_TRAITS[champion.value ?? ''] ?? []).map((id) => TRAIT_BY_ID[id]),
-)
+const activeAffinities = computed(() => {
+  if (!champion.value) return []
+  const name = champion.value
+  return [
+    ...synergyStore.activeOriginSynergies
+      .filter((entry) => entry.activeThreshold && entry.involvedChampions.includes(name))
+      .map((entry) => ({
+        id: `origin-${entry.origin}`,
+        kind: 'Origin',
+        name: entry.origin,
+        icon: entry.def.icon,
+        color: entry.def.color,
+        count: entry.count,
+        bonus: entry.activeThreshold!.bonus,
+      })),
+    ...synergyStore.activeTraits
+      .filter((entry) => entry.activeThreshold && entry.involvedChampions.includes(name))
+      .map((entry) => ({
+        id: `trait-${entry.trait.id}`,
+        kind: 'Trait',
+        name: entry.trait.name,
+        icon: entry.trait.icon,
+        color: entry.trait.color,
+        count: entry.count,
+        bonus: entry.activeThreshold!.bonus,
+      })),
+  ]
+})
 const equippedSkin = computed(() =>
   champion.value ? skinStore.getSelectedSkin(champion.value) : SKIN_ORIGINAL,
 )
@@ -234,15 +251,13 @@ function doLevelUp() {
 }
 
 const stats = computed(() => (champion.value ? levelStore.effectiveStatsOf(champion.value) : null))
+const ownStats = computed(() => (champion.value ? levelStore.statsOf(champion.value) : null))
 const swornBonus = computed(() => (champion.value ? levelStore.swornBonusOf(champion.value) : null))
 const hasSwornBonus = computed(
   () => !!swornBonus.value && Object.values(swornBonus.value).some((value) => value > 0),
 )
 const cooldownRush = computed(() =>
   champion.value ? levelStore.perkEffectOf(champion.value, 'cooldownRush') : 0,
-)
-const statPeak = computed(() =>
-  stats.value ? Math.max(...CHAMPION_STATS.map((stat) => stats.value![stat.key])) : 0,
 )
 const championMaxHp = computed(() => {
   if (!champion.value) return 0
@@ -253,24 +268,63 @@ const championMaxHp = computed(() => {
       levelStore.vitalityMultOf(champion.value),
   )
 })
+const ownChampionMaxHp = computed(() => {
+  if (!champion.value || !ownStats.value) return 0
+  const role = roleDef.value.key
+  return Math.round(
+    CHAMPION_BASE_HP_BY_ROLE[role] *
+      (1 + (getChampionStarLevel(champion.value) - 1) * CHAMPION_HP_PER_STAR) *
+      vitalityMult(ownStats.value.vitality),
+  )
+})
 const statCtx = computed(() => ({
   role: roleDef.value.key,
   maxHp: championMaxHp.value,
   cooldownRush: cooldownRush.value,
 }))
+const ownStatCtx = computed(() => ({
+  role: roleDef.value.key,
+  maxHp: ownChampionMaxHp.value,
+  cooldownRush: cooldownRush.value,
+}))
 function statValueOf(key: ChampionStatKey) {
   return stats.value ? statValueLabel(key, stats.value, statCtx.value) : ''
+}
+function statNumberOf(
+  key: ChampionStatKey,
+  source: NonNullable<typeof stats.value>,
+  ctx: typeof statCtx.value,
+) {
+  switch (key) {
+    case 'power':
+      return Math.round(championOrbitDps(source.power))
+    case 'vitality':
+      return ctx.maxHp
+    case 'focus':
+      return roleAbilityCooldownMs(ctx.role, source.focus, ctx.cooldownRush) / 1000
+    default:
+      return fortuneMult(source.fortune)
+  }
+}
+function swornDeltaOf(key: ChampionStatKey) {
+  if (!stats.value || !ownStats.value || !hasSwornBonus.value) return ''
+  const delta =
+    statNumberOf(key, stats.value, statCtx.value) -
+    statNumberOf(key, ownStats.value, ownStatCtx.value)
+  if (key === 'focus') {
+    const sign = delta < 0 ? '−' : '+'
+    return `${sign}${Math.abs(delta).toFixed(1)}s`
+  }
+  if (key === 'fortune') return `${delta >= 0 ? '+' : ''}${delta.toFixed(2)}`
+  return `${delta >= 0 ? '+' : ''}${Math.round(delta).toLocaleString()}`
 }
 function statDisplayName(key: ChampionStatKey) {
   return {
     power: 'Damage power',
-    vitality: 'Max HP',
+    vitality: 'Health',
     focus: 'Ability cooldown',
     fortune: 'Loot rewards',
   }[key]
-}
-function statShare(key: ChampionStatKey) {
-  return stats.value && statPeak.value > 0 ? stats.value[key] / statPeak.value : 0
 }
 
 interface PerkSlot {
@@ -451,10 +505,30 @@ function perkStatLine(perk: ChampionPerkDef): string {
           :aria-label="champion ? `Change ${champion}` : 'Select champion'"
           @click="openSwap(subject)"
         >
-          <template v-if="champion"
-            ><img :src="championImage" :alt="champion" /><span
-              class="sdp-portrait-shade"
-            /><ChampionLevelBadge
+          <template v-if="champion">
+            <img :src="championImage" :alt="champion" />
+            <span class="sdp-portrait-shade" />
+            <span
+              v-if="activeAffinities.length"
+              class="sdp-affinity-list"
+              aria-label="Active traits and origins"
+            >
+              <span
+                v-for="affinity in activeAffinities"
+                :key="affinity.id"
+                class="sdp-affinity"
+                :style="{ '--ac': affinity.color }"
+                v-tip="`${affinity.kind}: ${affinity.name} · ${affinity.bonus}`"
+              >
+                <Icon :icon="affinity.icon" width="24" height="24" />
+                <span class="sdp-affinity-copy">
+                  <small>{{ affinity.kind }}</small
+                  ><strong>{{ affinity.name }}</strong>
+                </span>
+                <em>{{ affinity.count }}</em>
+              </span>
+            </span>
+            <ChampionLevelBadge
               :level="level"
               :color="roleDef.color"
               :size="CHAMPION_REGALIA_SIZE_SPLASH"
@@ -525,14 +599,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
             <p class="sdp-seat-name">{{ subjectSeatLabel }}</p>
             <h2>{{ champion }}</h2>
             <div class="sdp-meta">
-              <span v-if="tier" :style="{ color: tier.color }">★ {{ tier.name }}</span
-              ><span v-if="origin" :style="{ color: originColor }"
-                ><Icon v-if="originIcon" :icon="originIcon" width="14" height="14" />{{
-                  origin
-                }}</span
-              ><span v-for="trait in traits" :key="trait.id" :style="{ color: trait.color }"
-                ><Icon :icon="trait.icon" width="14" height="14" />{{ trait.name }}</span
-              >
+              <span v-if="tier" :style="{ color: tier.color }">★ {{ tier.name }}</span>
             </div>
           </div>
           <div class="sdp-progression">
@@ -550,10 +617,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
           </div>
           <div v-if="stats" class="sdp-hero-stat-block">
             <div class="sdp-hero-stat-head">
-              <span>Combat stats</span
-              ><small v-if="hasSwornBonus"
-                ><Icon :icon="SWORN_ICON" width="13" height="13" /> Sworn included</small
-              >
+              <span>Combat stats</span>
             </div>
             <div class="sdp-hero-stat-grid">
               <article
@@ -566,9 +630,11 @@ function perkStatLine(perk: ChampionPerkDef): string {
                 <Icon :icon="stat.icon" width="24" height="24" />
                 <div>
                   <small>{{ statDisplayName(stat.key) }}</small
-                  ><strong>{{ statValueOf(stat.key) }}</strong>
+                  ><strong
+                    >{{ statValueOf(stat.key)
+                    }}<em v-if="swornDeltaOf(stat.key)">({{ swornDeltaOf(stat.key) }})</em></strong
+                  >
                 </div>
-                <i><b :style="{ transform: `scaleX(${statShare(stat.key)})` }" /></i>
               </article>
             </div>
           </div>
@@ -608,8 +674,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
           </div>
           <div class="sdp-progression sdp-ghost" aria-hidden="true">
             <div class="sdp-xp-head">
-              <span
-                >Level {{ TEAM_VALUE_PLACEHOLDER }} <small>Unranked</small></span
+              <span>Level {{ TEAM_VALUE_PLACEHOLDER }} <small>Unranked</small></span
               ><span>{{ TEAM_VALUE_PLACEHOLDER }} / {{ TEAM_VALUE_PLACEHOLDER }} XP</span>
             </div>
             <div class="sdp-xp-track sdp-xp-track--ghost"><span /></div>
@@ -629,7 +694,6 @@ function perkStatLine(perk: ChampionPerkDef): string {
                   <small>{{ statDisplayName(stat.key) }}</small
                   ><strong>{{ TEAM_VALUE_PLACEHOLDER }}</strong>
                 </div>
-                <i><b /></i>
               </article>
             </div>
           </div>
@@ -639,8 +703,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
             v-tip="`Assign a champion to ${subjectSeatLabel}`"
             @click="openSwap(subject)"
           >
-            <span
-              ><Icon icon="lucide:user-plus" width="20" height="20" />Choose champion</span
+            <span><Icon icon="lucide:user-plus" width="20" height="20" />Choose champion</span
             ><span class="sdp-ghost-note">Levels, perks and stats unlock</span>
           </button>
         </template>
@@ -689,15 +752,13 @@ function perkStatLine(perk: ChampionPerkDef): string {
                     equipmentEffectLine(equippedItem(category)!)
                   }}</span
                   ><small>{{ equipmentDetailLine(equippedItem(category)!) }}</small></span
-              ></template
+                ></template
               ><template v-else
-                ><img
-                  :src="`/img/itemShop/${category}-128.png`"
-                  :alt="CAT_LABELS[category]"
-                /><span class="sdp-equipment-copy"
+                ><img :src="`/img/itemShop/${category}-128.png`" :alt="CAT_LABELS[category]" /><span
+                  class="sdp-equipment-copy"
                   ><strong>Equip {{ CAT_LABELS[category] }}</strong
                   ><small>Choose a relic to strengthen this role.</small></span
-              ></template
+                ></template
               >
             </button>
           </div>
@@ -764,8 +825,8 @@ function perkStatLine(perk: ChampionPerkDef): string {
                 ><span class="sdp-active-perk-head"
                   ><small class="sdp-active-perk-level">Lv. {{ slot.level }}</small
                   ><strong class="sdp-active-perk-name">{{ slot.perk.name }}</strong></span
-                ><span>{{ perkStatLine(slot.perk) }}</span
-                ><p>{{ slot.perk.desc }}</p></span
+                ><span>{{ perkStatLine(slot.perk) }}</span>
+                <p>{{ slot.perk.desc }}</p></span
               >
             </article>
             <article
@@ -787,22 +848,19 @@ function perkStatLine(perk: ChampionPerkDef): string {
                   }}</strong></span
                 ><span>{{
                   slot.state === 'open' ? 'One final elite choice remains.' : 'Future milestone'
-                }}</span
-                ><p>{{
-                  slot.state === 'open'
-                    ? 'Select a remaining elite perk below.'
-                    : 'Unlocks when this role reaches level ' + slot.level + '.'
-                }}</p></span
+                }}</span>
+                <p>
+                  {{
+                    slot.state === 'open'
+                      ? 'Select a remaining elite perk below.'
+                      : 'Unlocks when this role reaches level ' + slot.level + '.'
+                  }}
+                </p></span
               >
             </article>
           </div>
           <div v-else class="sdp-perk-empty">
-            <Icon
-              v-if="openPerkSlot"
-              icon="game-icons:ribbon-medal"
-              width="21"
-              height="21"
-            />
+            <Icon v-if="openPerkSlot" icon="game-icons:ribbon-medal" width="21" height="21" />
             <Icon v-else icon="lucide:lock-keyhole" width="19" height="19" />
             <span>{{
               openPerkSlot
@@ -821,7 +879,8 @@ function perkStatLine(perk: ChampionPerkDef): string {
             >
               <Icon :icon="perk.icon" width="22" height="22" /><span
                 ><strong>{{ perk.name }}</strong
-                ><em>{{ perkStatLine(perk) }}</em><small>{{ perk.desc }}</small></span
+                ><em>{{ perkStatLine(perk) }}</em
+                ><small>{{ perk.desc }}</small></span
               >
             </button>
           </div>
@@ -1026,6 +1085,66 @@ function perkStatLine(perk: ChampionPerkDef): string {
   position: absolute;
   inset: 0;
   background: linear-gradient(0deg, #0c0b08 1%, transparent 55%);
+}
+.sdp-affinity-list {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.sdp-affinity {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--ac) 72%, #7a4e20);
+  border-radius: 4px;
+  background: #111008;
+  color: var(--ac);
+  text-align: left;
+}
+.sdp-affinity > svg {
+  width: 25px;
+  height: 25px;
+}
+.sdp-affinity-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.sdp-affinity-copy small {
+  color: #a59675;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.sdp-affinity-copy strong {
+  overflow: hidden;
+  color: #f0dfb3;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sdp-affinity em {
+  min-width: 21px;
+  padding: 2px 5px;
+  border: 1px solid color-mix(in srgb, var(--ac) 56%, #3e200a);
+  border-radius: 3px;
+  color: var(--ac);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  text-align: center;
 }
 .sdp-hero-level {
   position: absolute;
@@ -1338,26 +1457,19 @@ function perkStatLine(perk: ChampionPerkDef): string {
 .sdp-stat strong {
   max-width: 100%;
   overflow: hidden;
-  font-size: 34px;
+  color: #f3d57b;
+  font-size: 30px;
   font-weight: 400;
   line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sdp-stat i {
-  position: absolute;
-  right: 10px;
-  bottom: 5px;
-  left: 10px;
-  height: 3px;
-  background: #2a251c;
-}
-.sdp-stat i b {
-  display: block;
-  width: 100%;
-  height: 100%;
-  transform-origin: left;
-  background: var(--sc);
+.sdp-stat strong em {
+  margin-left: 4px;
+  color: #e8c040;
+  font-size: 16px;
+  font-style: normal;
+  vertical-align: 0.18em;
 }
 .sdp-equipment-list {
   display: grid;
@@ -2125,9 +2237,6 @@ function perkStatLine(perk: ChampionPerkDef): string {
 .sdp-stat--ghost small {
   color: var(--gk);
 }
-.sdp-stat--ghost i b {
-  transform: scaleX(0);
-}
 .sdp-level-button--ghost {
   border-color: #8b632c;
   background: #1c1c18;
@@ -2190,37 +2299,106 @@ function perkStatLine(perk: ChampionPerkDef): string {
   }
 }
 @media (max-height: 1100px) {
-  .sdp-roster { min-height: 84px; padding-block: 5px; }
-  .sdp-seat { height: 68px; }
-  .sdp-hero { min-height: 330px; padding-block: 11px; }
-  .sdp-identity h2 { font-size: 39px; }
-  .sdp-stat { min-height: 59px; padding-block: 6px; }
-  .sdp-stat strong { font-size: 28px; }
-  .sdp-level-button { min-height: 42px; margin-top: 7px; }
+  .sdp-roster {
+    min-height: 84px;
+    padding-block: 5px;
+  }
+  .sdp-seat {
+    height: 68px;
+  }
+  .sdp-hero {
+    min-height: 330px;
+    padding-block: 11px;
+  }
+  .sdp-identity h2 {
+    font-size: 39px;
+  }
+  .sdp-stat {
+    min-height: 59px;
+    padding-block: 6px;
+  }
+  .sdp-stat strong {
+    font-size: 28px;
+  }
+  .sdp-level-button {
+    min-height: 42px;
+    margin-top: 7px;
+  }
   .sdp-workspace {
     grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.2fr);
     gap: 8px;
     padding: 8px 10px 10px;
   }
-  .sdp-section-head { min-height: 35px; }
-  .sdp-equipment-list, .sdp-active-perks { gap: 6px; padding: 7px; }
-  .sdp-equipment { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; gap: 6px; padding: 10px 8px; }
-  .sdp-equipment img { width: 44px; height: 44px; }
-  .sdp-equipment-icon { font-size: 34px; }
-  .sdp-equipment strong { font-size: 18px; }
-  .sdp-equipment-stats { font-size: 14px; }
-  .sdp-equipment-copy > small { font-size: 10px; }
-  .sdp-active-perk { gap: 5px; padding: 9px 7px; }
-  .sdp-active-perk > svg { width: 34px; height: 34px; }
-  .sdp-active-perk .sdp-active-perk-level { font-size: 12px; }
-  .sdp-active-perk strong { font-size: 20px; }
-  .sdp-active-perk-copy > span:not(.sdp-active-perk-head) { font-size: 13px; }
-  .sdp-active-perk p { font-size: 11px; }
-  .sdp-ghost-regalia { width: 52px; height: 52px; font-size: 16px; }
-  .sdp-empty-mark { width: 64px; height: 64px; }
-  .sdp-empty-state { gap: 9px; }
-  .sdp-empty-state strong { font-size: 17px; }
-  .sdp-ghost-chip { padding: 1px 6px; }
-  .sdp-ghost-perks .sdp-active-perk small.sdp-ghost-perk-hint { display: none; }
+  .sdp-section-head {
+    min-height: 35px;
+  }
+  .sdp-equipment-list,
+  .sdp-active-perks {
+    gap: 6px;
+    padding: 7px;
+  }
+  .sdp-equipment {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 6px;
+    padding: 10px 8px;
+  }
+  .sdp-equipment img {
+    width: 44px;
+    height: 44px;
+  }
+  .sdp-equipment-icon {
+    font-size: 34px;
+  }
+  .sdp-equipment strong {
+    font-size: 18px;
+  }
+  .sdp-equipment-stats {
+    font-size: 14px;
+  }
+  .sdp-equipment-copy > small {
+    font-size: 10px;
+  }
+  .sdp-active-perk {
+    gap: 5px;
+    padding: 9px 7px;
+  }
+  .sdp-active-perk > svg {
+    width: 34px;
+    height: 34px;
+  }
+  .sdp-active-perk .sdp-active-perk-level {
+    font-size: 12px;
+  }
+  .sdp-active-perk strong {
+    font-size: 20px;
+  }
+  .sdp-active-perk-copy > span:not(.sdp-active-perk-head) {
+    font-size: 13px;
+  }
+  .sdp-active-perk p {
+    font-size: 11px;
+  }
+  .sdp-ghost-regalia {
+    width: 52px;
+    height: 52px;
+    font-size: 16px;
+  }
+  .sdp-empty-mark {
+    width: 64px;
+    height: 64px;
+  }
+  .sdp-empty-state {
+    gap: 9px;
+  }
+  .sdp-empty-state strong {
+    font-size: 17px;
+  }
+  .sdp-ghost-chip {
+    padding: 1px 6px;
+  }
+  .sdp-ghost-perks .sdp-active-perk small.sdp-ghost-perk-hint {
+    display: none;
+  }
 }
 </style>

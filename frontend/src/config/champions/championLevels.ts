@@ -42,7 +42,7 @@ export const CHAMPION_STATS: ChampionStatDef[] = [
     key: 'power',
     label: 'Power',
     short: 'PWR',
-    icon: 'game-icons:mighty-force',
+    icon: 'game-icons:deadly-strike',
     color: '#e05050',
     desc: 'Raises the damage this champion deals to planet bosses while orbiting.',
     effectLabel: 'Orbit DPS',
@@ -60,7 +60,7 @@ export const CHAMPION_STATS: ChampionStatDef[] = [
     key: 'focus',
     label: 'Focus',
     short: 'FOC',
-    icon: 'game-icons:meditation',
+    icon: 'game-icons:hourglass',
     color: '#4e96e0',
     desc: 'Sharpens the role ability — shields rebuild, curses land and bursts fire sooner.',
     effectLabel: 'Cooldown',
@@ -69,7 +69,7 @@ export const CHAMPION_STATS: ChampionStatDef[] = [
     key: 'fortune',
     label: 'Fortune',
     short: 'FOR',
-    icon: 'game-icons:coinflip',
+    icon: 'game-icons:coins',
     color: '#e8c040',
     desc: 'Boss kills pay out more chimes and drop materials more often.',
     effectLabel: 'Rewards',
@@ -404,11 +404,7 @@ export function championOrbitDps(power: number): number {
 }
 
 /** Cooldown of the role ability as the player sees it, FOCUS already applied. */
-export function roleAbilityCooldownMs(
-  role: ChampionRole,
-  focus: number,
-  cooldownRush = 0,
-): number {
+export function roleAbilityCooldownMs(role: ChampionRole, focus: number, cooldownRush = 0): number {
   const cd = ROLE_ABILITY_COOLDOWN[role]
   return cd.focusScaled ? cd.ms * focusCooldownMult(focus, cooldownRush) : cd.ms
 }
