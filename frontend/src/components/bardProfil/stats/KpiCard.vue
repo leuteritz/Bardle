@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { JOURNEY_KPI_GRID, JOURNEY_KPI_TILES } from '@/config/constants'
+import {
+  CHIME_ART_ALPHA_SCALE,
+  CURRENCY_ART,
+  JOURNEY_KPI_GRID,
+  JOURNEY_KPI_TILES,
+  UNIVERSE_TOOLTIP_MEEP_SCALE,
+} from '@/config/constants'
 import type { StatCategoryId, StatCategoryView } from '@/types'
 
 /**
@@ -16,6 +22,7 @@ interface KpiTile {
   key: string
   category: StatCategoryId
   icon: string
+  art?: keyof typeof CURRENCY_ART
   label: string
   fullLabel: string
   value: string
@@ -35,6 +42,7 @@ const tiles = computed<KpiTile[]>(() =>
         key: `${t.category}/${t.key}`,
         category: t.category,
         icon: t.icon,
+        art: t.art,
         label: t.short ?? stat.label,
         fullLabel: stat.label,
         value: stat.value,
@@ -45,6 +53,11 @@ const tiles = computed<KpiTile[]>(() =>
     ]
   }),
 )
+
+// Der Alpha-Rand der beiden Sprites wird per scale ausgeglichen, nicht ueber
+// die Box: die Textspalte muss in allen zwoelf Kacheln gleich weit einruecken.
+const chimeScale = `${CHIME_ART_ALPHA_SCALE}`
+const meepScale = `${UNIVERSE_TOOLTIP_MEEP_SCALE}`
 
 const gridStyle = {
   '--cols': JOURNEY_KPI_GRID.COLS,
@@ -72,7 +85,15 @@ const gridStyle = {
         v-tip="t.hint ?? `${t.fullLabel} — open Records`"
         @click="emit('open', t.category)"
       >
-        <Icon :icon="t.icon" class="jt-kpi-icon" aria-hidden="true" />
+        <img
+          v-if="t.art"
+          :src="CURRENCY_ART[t.art].src"
+          class="jt-kpi-icon jt-kpi-art"
+          :class="`jt-kpi-art--${t.art}`"
+          alt=""
+          aria-hidden="true"
+        />
+        <Icon v-else :icon="t.icon" class="jt-kpi-icon" aria-hidden="true" />
         <span class="jt-kpi-body">
           <span class="jt-kpi-val">
             {{ t.value }}<span v-if="t.sub" class="jt-kpi-sub">{{ t.sub }}</span>
@@ -172,6 +193,18 @@ const gridStyle = {
   width: clamp(16px, 11cqh, 30px);
   height: clamp(16px, 11cqh, 30px);
   color: var(--accent);
+}
+
+/* Gleiche Box wie der Glyph, groesseres Motiv: der Ueberstand ist der
+   transparente Rand des Sprites und kostet in der Breite nichts. */
+.jt-kpi-art {
+  object-fit: contain;
+}
+.jt-kpi-art--chimes {
+  transform: scale(v-bind(chimeScale));
+}
+.jt-kpi-art--meeps {
+  transform: scale(v-bind(meepScale));
 }
 
 .jt-kpi-body {

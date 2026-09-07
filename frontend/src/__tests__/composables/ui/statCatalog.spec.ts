@@ -5,7 +5,7 @@ import { useStatCatalog } from '@/composables/ui/useStatCatalog'
 import { STAT_CATEGORIES } from '@/config/ui/statCategories'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGameStore } from '@/stores/core/gameStore'
-import { JOURNEY_KPI_GRID, JOURNEY_KPI_TILES } from '@/config/constants'
+import { CURRENCY_ART, JOURNEY_KPI_GRID, JOURNEY_KPI_TILES } from '@/config/constants'
 
 describe('statCategories — definitions', () => {
   it('has unique ids and no duplicate icons', () => {
@@ -103,6 +103,9 @@ describe('JOURNEY_KPI_TILES', () => {
       expect(cat!.stats.some((s) => s.key === tile.key), `${tile.category}/${tile.key}`).toBe(true)
       if (tile.sub)
         expect(cat!.stats.some((s) => s.key === tile.sub), `${tile.category}/${tile.sub}`).toBe(true)
+    }
+    for (const tile of JOURNEY_KPI_TILES) {
+      if (tile.art) expect(CURRENCY_ART[tile.art], `art ${tile.art}`).toBeTruthy()
     }
     const icons = JOURNEY_KPI_TILES.map((t) => t.icon)
     expect(new Set(icons).size).toBe(icons.length)
