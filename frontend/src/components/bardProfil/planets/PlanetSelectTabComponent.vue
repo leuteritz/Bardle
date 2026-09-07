@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted, onBeforeUnmount } from 'vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
@@ -9,8 +9,12 @@ import {
   PLANET_TAB_SUN_MIN_DIAMETER,
   PLANET_TAB_SUN_MAX_DIAMETER,
   PLANET_TAB_PLANET_DIAMETER,
-  PLANET_TAB_RAIL_WIDTH_CSS,
+  PLANET_TAB_RAIL_AUTOFOLD_W,
+  PLANET_TAB_RAIL_HANDLE_PX,
+  PLANET_TAB_RAIL_PANEL_W,
   PLANET_TAB_RAIL_SEAM_WIDTH,
+  PLANET_TAB_RAIL_SLIDE_MS,
+  PLANET_TAB_RAIL_ZONE_W,
   HP_BAR_SEGMENTS,
 } from '@/config/constants'
 import { usePlanetTabOrbit } from '@/composables/orbit/usePlanetTabOrbit'
@@ -18,6 +22,7 @@ import { useOrbitSlotHerald } from '@/composables/ui/useOrbitSlotHerald'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import PlanetRailSlot from './PlanetRailSlot.vue'
+import PlanetRailHandle from './PlanetRailHandle.vue'
 import PlanetLockedPanel from './PlanetLockedPanel.vue'
 import PlanetRoleChoicePanel from './PlanetRoleChoicePanel.vue'
 import PlanetStagePanel from './PlanetStagePanel.vue'
@@ -33,8 +38,6 @@ const railSeamWidthPx = `${PLANET_TAB_RAIL_SEAM_WIDTH}px`
  * sonst von der Innenbreite abzöge — die Kacheln würden schmaler, obwohl sich
  * an der Schiene nichts geändert hat.
  */
-const railOuterWidthCss = `calc(${PLANET_TAB_RAIL_WIDTH_CSS} + ${PLANET_TAB_RAIL_SEAM_WIDTH}px)`
-
 const uiStore = useUiStore()
 const store = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
@@ -72,10 +75,67 @@ function selectSlot(id: string) {
   uiStore.setPlanetActiveSlot(id)
 }
 
-const activeSlot = computed(
-  () => store.slots.find((s) => s.id === selectedSlotId.value) ?? null,
-)
+const activeSlot = computed(() => store.slots.find((s) => s.id === selectedSlotId.value) ?? null)
 const activeSlotIndex = computed(() => store.slots.findIndex((s) => s.id === selectedSlotId.value))
+const purchasedSlots = computed(() => store.slots.filter((slot) => slot.purchased).length)
+
+const railChoice = ref<boolean | null>(null)
+const narrow = ref(false)
+const railFolded = computed(() => railChoice.value ?? narrow.value)
+const bodyColumns = computed(
+  () => `minmax(0, 1fr) ${railFolded.value ? PLANET_TAB_RAIL_HANDLE_PX : PLANET_TAB_RAIL_ZONE_W}px`,
+)
+const railPanelWidth = `${PLANET_TAB_RAIL_PANEL_W}px`
+const handleWidth = `${PLANET_TAB_RAIL_HANDLE_PX}px`
+const slideMs = `${PLANET_TAB_RAIL_SLIDE_MS}ms`
+
+const root = ref<HTMLElement | null>(null)
+let observer: ResizeObserver | null = null
+
+function observe(el: HTMLElement) {
+  observer = new ResizeObserver((entries) => {
+    const width = entries[0]?.contentRect.width ?? 0
+    if (width > 0) narrow.value = width < PLANET_TAB_RAIL_AUTOFOLD_W
+  })
+  observer.observe(el)
+}
+
+watch(
+  isVisible,
+  (visible) => {
+    if (!visible) {
+      observer?.disconnect()
+      observer = null
+      return
+    }
+    if (root.value && !observer) observe(root.value)
+  },
+  { immediate: true },
+)
+
+watch(root, (el) => {
+  if (el && isVisible.value && !observer) observe(el)
+})
+
+onBeforeUnmount(() => observer?.disconnect())
+
+const railInert = ref(false)
+let inertTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  railFolded,
+  (folded) => {
+    if (inertTimer !== null) clearTimeout(inertTimer)
+    inertTimer = setTimeout(() => {
+      inertTimer = null
+      railInert.value = folded
+    }, PLANET_TAB_RAIL_SLIDE_MS)
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  if (inertTimer !== null) clearTimeout(inertTimer)
+})
 
 // ── Orbit-Spiegelung ───────────────────────────────────────────────────────
 // Eine einzige rAF-Schleife versorgt Rail-Kacheln und Bühne, damit beide im
@@ -187,7 +247,7 @@ const sunPhaseStyle = computed(() => {
          tab plays, where the board sits left and its details page right. The tabs
          of one profile must not mirror each other.
          No in-tab header — Chimes/CPS live permanently in the global app header. -->
-    <div class="ps-split">
+    <div ref="root" class="ps-split">
       <!-- LEFT DETAIL ──────────────────────────────────────────────── -->
       <!-- sunPhaseStyle stays on the wrapper too: the stage's own children read
            --ps-sun-d / --phase-* from here. -->
@@ -250,16 +310,31 @@ const sunPhaseStyle = computed(() => {
            same 2px wood every side panel in the profile carries. It used to be
            a separate 3px gold bar with two glows — "this tab's own language",
            which is exactly what a shared profile must not have. -->
-      <div class="ps-rail">
-        <PlanetRailSlot
-          v-for="(slot, slotIndex) in store.slots"
-          :key="slot.id"
-          :planet="slot"
-          :slot-index="slotIndex"
-          :selected="selectedSlotId === slot.id"
-          :eclipsed="isSlotEclipsed(slot)"
-          :now="now"
-          @select="selectSlot"
+      <div class="ps-rail-zone">
+        <div
+          class="ps-rail-slide"
+          :class="{ 'ps-rail-slide--parked': railFolded }"
+          :inert="railInert"
+        >
+          <div class="ps-rail">
+            <PlanetRailSlot
+              v-for="(slot, slotIndex) in store.slots"
+              :key="slot.id"
+              :planet="slot"
+              :slot-index="slotIndex"
+              :selected="selectedSlotId === slot.id"
+              :eclipsed="isSlotEclipsed(slot)"
+              :now="now"
+              @select="selectSlot"
+            />
+          </div>
+        </div>
+
+        <PlanetRailHandle
+          :active="purchasedSlots"
+          :total="store.slots.length"
+          :open="!railFolded"
+          @toggle="railChoice = !railFolded"
         />
       </div>
     </div>
@@ -304,9 +379,38 @@ const sunPhaseStyle = computed(() => {
 .ps-split {
   position: relative;
   z-index: 1;
-  display: flex;
+  display: grid;
+  grid-template-columns: v-bind(bodyColumns);
   flex: 1;
   min-height: 0;
+  overflow: clip;
+}
+
+.ps-rail-zone {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.ps-rail-slide {
+  position: absolute;
+  top: 0;
+  right: v-bind(handleWidth);
+  bottom: 0;
+  z-index: 1;
+  width: v-bind(railPanelWidth);
+  transition: transform v-bind(slideMs) ease;
+}
+
+.ps-rail-slide--parked {
+  transform: translateX(100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-rail-slide,
+  .ps-rail-slide--parked {
+    transition: none;
+  }
 }
 
 /* Right rail: 6 slots filling the full column height — the seat the team tab
@@ -324,8 +428,9 @@ const sunPhaseStyle = computed(() => {
 .ps-rail {
   position: relative;
   z-index: 1;
-  flex-shrink: 0;
-  width: v-bind(railOuterWidthCss);
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: clamp(6px, 0.8vh, 12px);
