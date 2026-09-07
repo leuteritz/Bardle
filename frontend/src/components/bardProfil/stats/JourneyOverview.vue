@@ -39,7 +39,7 @@ const emit = defineEmits<{ 'open-records': [category: StatCategoryId | null] }>(
 
 .jt-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(340px, 26vw, 520px);
+  grid-template-columns: minmax(0, 1fr) clamp(400px, 30vw, 620px);
   min-height: 0;
   min-width: 0;
 }

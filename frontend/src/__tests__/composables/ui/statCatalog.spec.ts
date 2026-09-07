@@ -5,7 +5,7 @@ import { useStatCatalog } from '@/composables/ui/useStatCatalog'
 import { STAT_CATEGORIES } from '@/config/ui/statCategories'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGameStore } from '@/stores/core/gameStore'
-import { JOURNEY_KPI_TILES } from '@/config/constants'
+import { JOURNEY_KPI_GRID, JOURNEY_KPI_TILES } from '@/config/constants'
 
 describe('statCategories — definitions', () => {
   it('has unique ids and no duplicate icons', () => {
@@ -106,5 +106,6 @@ describe('JOURNEY_KPI_TILES', () => {
     }
     const icons = JOURNEY_KPI_TILES.map((t) => t.icon)
     expect(new Set(icons).size).toBe(icons.length)
+    expect(JOURNEY_KPI_TILES.length).toBe(JOURNEY_KPI_GRID.COLS * JOURNEY_KPI_GRID.ROWS)
   })
 })

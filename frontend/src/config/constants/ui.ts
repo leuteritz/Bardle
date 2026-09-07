@@ -1346,39 +1346,28 @@ export const JOURNEY_KPI_TILES: readonly {
   category: StatCategoryId
   key: string
   sub?: string
+  /** kurze Kachel-Beschriftung, wo das Kataloglabel zu lang ist */
+  short?: string
   icon: string
 }[] = [
-  { category: 'economy', key: 'cps', icon: 'game-icons:sparkles' },
-  { category: 'economy', key: 'cpc', icon: 'game-icons:hand' },
-  { category: 'economy', key: 'total-chimes', icon: 'game-icons:coins' },
+  { category: 'economy', key: 'cps', short: 'Chimes / Sec', icon: 'game-icons:sparkles' },
+  { category: 'economy', key: 'cpc', short: 'Chimes / Click', icon: 'game-icons:hand' },
+  { category: 'economy', key: 'total-chimes', short: 'Chimes Earned', icon: 'game-icons:coins' },
   { category: 'economy', key: 'meeps', icon: 'game-icons:meeple-king' },
-  { category: 'autoBattle', key: 'rank', sub: 'lp', icon: 'game-icons:laurel-crown' },
-  { category: 'autoBattle', key: 'winrate', icon: 'game-icons:trophy-cup' },
-  { category: 'galaxy', key: 'stars-rescued', icon: 'game-icons:star-swirl' },
-  { category: 'expeditions', key: 'succeeded', icon: 'game-icons:rocket-flight' },
-  { category: 'progression', key: 'total-power', icon: 'game-icons:muscle-up' },
+  { category: 'autoBattle', key: 'rank', sub: 'lp', short: 'Rank', icon: 'game-icons:laurel-crown' },
+  { category: 'autoBattle', key: 'winrate', short: 'Win Rate', icon: 'game-icons:trophy-cup' },
+  { category: 'galaxy', key: 'stars-rescued', short: 'Stars Rescued', icon: 'game-icons:star-swirl' },
+  { category: 'expeditions', key: 'succeeded', short: 'Voyages Won', icon: 'game-icons:rocket-flight' },
+  { category: 'progression', key: 'total-power', short: 'Power', icon: 'game-icons:muscle-up' },
   { category: 'galaxy', key: 'galaxies-freed', icon: 'game-icons:galaxy' },
-  { category: 'starFights', key: 'bosses-defeated', icon: 'game-icons:star-skull' },
-  { category: 'champions', key: 'owned', icon: 'game-icons:crested-helmet' },
-  { category: 'combatRecord', key: 'kda', icon: 'game-icons:crossed-swords' },
-  { category: 'autoBattle', key: 'battles', icon: 'game-icons:podium-winner' },
-  { category: 'economy', key: 'clicks', icon: 'game-icons:click' },
-  { category: 'materials', key: 'collected', icon: 'game-icons:ore' },
-  { category: 'starFights', key: 'planets-cleared', icon: 'game-icons:globe-ring' },
-  { category: 'buffs', key: 'drifters-collected', icon: 'game-icons:ufo' },
-  { category: 'buffs', key: 'rifts-sealed', icon: 'game-icons:vortex' },
-  { category: 'starForge', key: 'branches', icon: 'game-icons:anvil-impact' },
-  { category: 'meepTree', key: 'nodes', icon: 'game-icons:tree-roots' },
-  { category: 'progression', key: 'skill-points', icon: 'game-icons:light-bulb' },
-  { category: 'buffs', key: 'omens-completed', icon: 'game-icons:all-seeing-eye' },
-  { category: 'buffs', key: 'wayfinder-claimed', icon: 'game-icons:direction-signs' },
+  { category: 'starFights', key: 'bosses-defeated', short: 'Bosses Felled', icon: 'game-icons:star-skull' },
+  { category: 'champions', key: 'owned', short: 'Champions', icon: 'game-icons:crested-helmet' },
 ]
 
-/** Raster der Stats-Karte: Spalten aus der Breite, Zeilen aus der Höhe — nie scrollen. */
+/** Raster der Stats-Karte: fest, die Zeilen teilen die Höhe, Schrift skaliert per cqh. */
 export const JOURNEY_KPI_GRID = {
-  MIN_COL_W: 190,
-  MAX_COLS: 3,
-  GAP: 6,
+  COLS: 3,
+  ROWS: 4,
 } as const
 
 /** Die drei Fortschrittsachsen Level / Galaxy / Universe tragen überall
