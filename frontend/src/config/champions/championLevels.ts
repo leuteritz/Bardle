@@ -28,6 +28,8 @@ import {
   CHAMPION_FOCUS_CD_DIVISOR,
   CHAMPION_FOCUS_CD_FLOOR,
   CHAMPION_FORTUNE_DIVISOR,
+  CHAMPION_DPS_BASE,
+  ROLE_ABILITY_COOLDOWN,
 } from '@/config/constants'
 import { CHAMPION_DATA } from '@/config/champions/championData'
 import { CHAMPION_TIERS } from '@/config/champions/championTiers'
@@ -394,6 +396,59 @@ export function statEffectLabel(key: ChampionStatKey, value: number, cooldownRus
     default:
       return `+${Math.round((fortuneMult(value) - 1) * 100)}%`
   }
+}
+
+/** Orbit damage per second of one champion, before allies and situational perks. */
+export function championOrbitDps(power: number): number {
+  return CHAMPION_DPS_BASE * powerDpsMult(power)
+}
+
+/** Cooldown of the role ability as the player sees it, FOCUS already applied. */
+export function roleAbilityCooldownMs(
+  role: ChampionRole,
+  focus: number,
+  cooldownRush = 0,
+): number {
+  const cd = ROLE_ABILITY_COOLDOWN[role]
+  return cd.focusScaled ? cd.ms * focusCooldownMult(focus, cooldownRush) : cd.ms
+}
+
+interface StatReadoutContext {
+  role: ChampionRole
+  maxHp: number
+  cooldownRush: number
+}
+
+/**
+ * Der Wert, den der Spieler ablesen soll — HP, Schaden je Sekunde, Sekunden,
+ * Faktor. Die Punktzahl dahinter ist eine Rechengroesse und steht nirgends.
+ */
+export function statValueLabel(
+  key: ChampionStatKey,
+  stats: ChampionStats,
+  ctx: StatReadoutContext,
+): string {
+  switch (key) {
+    case 'power':
+      return `${Math.round(championOrbitDps(stats.power))} DPS`
+    case 'vitality':
+      return `${ctx.maxHp.toLocaleString()} HP`
+    case 'focus':
+      return `${(roleAbilityCooldownMs(ctx.role, stats.focus, ctx.cooldownRush) / 1000).toFixed(1)}s`
+    default:
+      return `×${fortuneMult(stats.fortune).toFixed(2)}`
+  }
+}
+
+/** Die Nebenzeile: der Zuwachs in Prozent — oder, wo FOCUS nicht greift, was da abkuehlt. */
+export function statDeltaLabel(
+  key: ChampionStatKey,
+  stats: ChampionStats,
+  ctx: StatReadoutContext,
+): string {
+  const cd = ROLE_ABILITY_COOLDOWN[ctx.role]
+  if (key === 'focus' && !cd.focusScaled) return cd.note ?? ''
+  return statEffectLabel(key, stats[key], ctx.cooldownRush)
 }
 
 // ── Level-up cost ─────────────────────────────────────────────────────────────

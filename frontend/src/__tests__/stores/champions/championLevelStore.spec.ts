@@ -20,6 +20,11 @@ import {
   vitalityMult,
   focusCooldownMult,
   fortuneMult,
+  statEffectLabel,
+  championOrbitDps,
+  roleAbilityCooldownMs,
+  statValueLabel,
+  statDeltaLabel,
   ROLE_GROWTH,
   CHAMPION_STATS,
   regaliaStageFor,
@@ -33,6 +38,8 @@ import {
   CHAMPION_LEVEL_CAP_PER_GALAXY,
   CHAMPION_LEVEL_MAX_CAP,
   CHAMPION_STAT_BASE,
+  CHAMPION_DPS_BASE,
+  ROLE_ABILITY_COOLDOWN,
   CHAMPION_ASCENSION_INTERVAL,
   CHAMPION_PERK_INTERVAL,
   CHAMPION_REGALIA_STAGES,
@@ -137,6 +144,40 @@ describe('champion levels — curves and stats', () => {
     expect(focusCooldownMult(200)).toBeLessThan(1)
     // absurd focus plus the perk still respects the clamp
     expect(focusCooldownMult(100_000, 0.9)).toBeGreaterThanOrEqual(0.45)
+  })
+
+  it('reads the concrete numbers a player acts on, not the stat points', () => {
+    const fresh = resolveChampionStats(MID_LOW, 1, 'mid')
+    // Ein frischer Champion schlägt exakt mit dem Grundwert zu.
+    expect(championOrbitDps(fresh.power)).toBe(CHAMPION_DPS_BASE)
+    expect(roleAbilityCooldownMs('mid', fresh.focus)).toBe(ROLE_ABILITY_COOLDOWN.mid.ms)
+
+    const ctx = { role: 'mid' as const, maxHp: 1639, cooldownRush: 0 }
+    const levelled = resolveChampionStats(MID_LOW, 60, 'mid')
+    expect(statValueLabel('vitality', levelled, ctx)).toBe(`${(1639).toLocaleString()} HP`)
+    expect(statValueLabel('power', levelled, ctx)).toBe(
+      `${Math.round(championOrbitDps(levelled.power))} DPS`,
+    )
+    expect(statValueLabel('focus', levelled, ctx)).toMatch(/^\d+\.\ds$/)
+    expect(statValueLabel('fortune', levelled, ctx)).toMatch(/^×\d+\.\d\d$/)
+    // Die Nebenzeile bleibt der Prozentwert, den auch die Kampf-Rail liest.
+    expect(statDeltaLabel('power', levelled, ctx)).toBe(statEffectLabel('power', levelled.power))
+  })
+
+  it('the ability cooldown falls with FOCUS but never past the floor', () => {
+    const base = ROLE_ABILITY_COOLDOWN.mid.ms
+    expect(roleAbilityCooldownMs('mid', 400)).toBeLessThan(base)
+    expect(roleAbilityCooldownMs('mid', 100_000, 0.9)).toBeGreaterThanOrEqual(base * 0.45)
+  })
+
+  it('the jungle buff cooldown ignores FOCUS and says so instead of a percentage', () => {
+    const base = ROLE_ABILITY_COOLDOWN.jungle.ms
+    expect(roleAbilityCooldownMs('jungle', 100_000)).toBe(base)
+    const ctx = { role: 'jungle' as const, maxHp: 0, cooldownRush: 0 }
+    const stats = resolveChampionStats(MID_LOW, 60, 'jungle')
+    expect(statValueLabel('focus', stats, ctx)).toBe(`${(base / 1000).toFixed(1)}s`)
+    expect(statDeltaLabel('focus', stats, ctx)).toBe(ROLE_ABILITY_COOLDOWN.jungle.note)
+    expect(statDeltaLabel('focus', stats, ctx)).not.toMatch(/%/)
   })
 
   it('awards an ascension star every interval and names the rank band', () => {

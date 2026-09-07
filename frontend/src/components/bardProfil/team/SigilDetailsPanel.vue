@@ -10,7 +10,8 @@ import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import {
   ascensionRank,
-  statEffectLabel,
+  statValueLabel,
+  statDeltaLabel,
   CHAMPION_STATS,
   PERK_BY_ID,
 } from '@/config/champions/championLevels'
@@ -253,13 +254,16 @@ const championMaxHp = computed(() => {
       levelStore.vitalityMultOf(champion.value),
   )
 })
-function statEffectOf(key: ChampionStatKey) {
-  return stats.value ? statEffectLabel(key, stats.value[key], cooldownRush.value) : ''
+const statCtx = computed(() => ({
+  role: roleDef.value.key,
+  maxHp: championMaxHp.value,
+  cooldownRush: cooldownRush.value,
+}))
+function statValueOf(key: ChampionStatKey) {
+  return stats.value ? statValueLabel(key, stats.value, statCtx.value) : ''
 }
-function statReadoutOf(key: ChampionStatKey) {
-  if (key === 'vitality') return `${championMaxHp.value.toLocaleString()} HP · ${statEffectOf(key)}`
-  const stat = CHAMPION_STATS.find((entry) => entry.key === key)
-  return `${statEffectOf(key)} ${stat?.effectLabel ?? ''}`
+function statDeltaOf(key: ChampionStatKey) {
+  return stats.value ? statDeltaLabel(key, stats.value, statCtx.value) : ''
 }
 function statDisplayName(key: ChampionStatKey) {
   return {
@@ -566,8 +570,8 @@ function perkStatLine(perk: ChampionPerkDef): string {
                 <Icon :icon="stat.icon" width="24" height="24" />
                 <div>
                   <small>{{ statDisplayName(stat.key) }}</small
-                  ><strong>{{ stats[stat.key].toFixed(1) }}</strong
-                  ><span>{{ statReadoutOf(stat.key) }}</span>
+                  ><strong>{{ statValueOf(stat.key) }}</strong
+                  ><span>{{ statDeltaOf(stat.key) }}</span>
                 </div>
                 <i><b :style="{ transform: `scaleX(${statShare(stat.key)})` }" /></i>
               </article>
@@ -629,7 +633,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
                 <div>
                   <small>{{ statDisplayName(stat.key) }}</small
                   ><strong>{{ TEAM_VALUE_PLACEHOLDER }}</strong
-                  ><span>{{ TEAM_VALUE_PLACEHOLDER }} {{ stat.effectLabel }}</span>
+                  ><span>{{ stat.effectLabel }}</span>
                 </div>
                 <i><b /></i>
               </article>
@@ -1198,17 +1202,17 @@ function perkStatLine(perk: ChampionPerkDef): string {
 }
 .sdp-hero-stat-block {
   grid-column: 2;
-  padding: 0 6px 5px;
+  padding: 0;
 }
 .sdp-hero-stat-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  min-height: 20px;
+  min-height: 27px;
   border-bottom: 1px solid #5c3310;
   color: #e8c040;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -1217,7 +1221,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
   align-items: center;
   gap: 4px;
   color: #a59675;
-  font-size: 9px;
+  font-size: 10px;
 }
 .sdp-level-button {
   grid-column: 2;
@@ -1302,57 +1306,65 @@ function perkStatLine(perk: ChampionPerkDef): string {
 .sdp-hero-stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 5px;
-  padding-top: 7px;
+  gap: 8px;
+  padding-top: 8px;
 }
 .sdp-stat {
   position: relative;
-  min-height: 38px;
+  min-height: 70px;
   display: grid;
-  grid-template-columns: 29px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 9px;
   align-items: center;
-  padding: 5px 7px;
-  border: 1px solid color-mix(in srgb, var(--sc) 36%, #3e200a);
+  padding: 8px 9px;
+  border: 1px solid color-mix(in srgb, var(--sc) 54%, #3e200a);
   border-radius: 4px;
-  background: linear-gradient(125deg, color-mix(in srgb, var(--sc) 10%, #15140e), #15140e 65%);
+  background: linear-gradient(115deg, color-mix(in srgb, var(--sc) 16%, #181710), #171610 72%);
   color: var(--sc);
 }
 .sdp-stat > svg {
-  width: 21px;
-  height: 21px;
+  width: 27px;
+  height: 27px;
 }
 .sdp-stat div {
   min-width: 0;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 1px 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
 }
 .sdp-stat small {
-  grid-column: 1;
-  font-size: 8px;
+  font-size: 9px;
+  line-height: 1;
   letter-spacing: 0.08em;
 }
+/* Der konkrete Wert ist die Aussage der Karte — die Punktzahl dahinter steht nirgends. */
 .sdp-stat strong {
-  grid-column: 2;
-  grid-row: 1;
-  font-size: 23px;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 27px;
   font-weight: 400;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sdp-stat div span {
-  grid-column: 1 / -1;
+  max-width: 100%;
   overflow: hidden;
   color: #bcae91;
-  font-size: 9px;
+  font-size: 12px;
+  line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .sdp-stat i {
   position: absolute;
-  right: 9px;
-  bottom: 3px;
-  left: 9px;
-  height: 2px;
+  right: 10px;
+  bottom: 5px;
+  left: 10px;
+  height: 3px;
   background: #2a251c;
 }
 .sdp-stat i b {
@@ -1704,10 +1716,6 @@ function perkStatLine(perk: ChampionPerkDef): string {
   .sdp-section--perks {
     flex-basis: 170px;
   }
-  .sdp-stat {
-    min-height: 38px;
-    padding: 4px 6px;
-  }
   .sdp-skin {
     height: 52px;
   }
@@ -1787,72 +1795,6 @@ function perkStatLine(perk: ChampionPerkDef): string {
 }
 .sdp-xp-track {
   height: 10px;
-}
-.sdp-hero-stat-block {
-  grid-column: 2;
-  padding: 0;
-}
-.sdp-hero-stat-head {
-  min-height: 27px;
-  color: #e8c040;
-  font-size: 12px;
-}
-.sdp-hero-stat-head small {
-  font-size: 10px;
-}
-.sdp-hero-stat-grid {
-  gap: 8px;
-  padding-top: 8px;
-}
-.sdp-stat {
-  min-height: 70px;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 9px;
-  padding: 8px 9px;
-  align-items: center;
-  border-color: color-mix(in srgb, var(--sc) 54%, #3e200a);
-  background: linear-gradient(115deg, color-mix(in srgb, var(--sc) 16%, #181710), #171610 72%);
-}
-.sdp-stat > svg {
-  width: 27px;
-  height: 27px;
-}
-.sdp-stat small {
-  font-size: 9px;
-  line-height: 1;
-  text-align: center;
-}
-.sdp-stat strong {
-  font-size: 17px;
-  line-height: 1.05;
-  text-align: center;
-}
-.sdp-stat div {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  text-align: center;
-}
-.sdp-stat div span {
-  display: -webkit-box;
-  overflow: hidden;
-  color: var(--sc);
-  font-size: 21px;
-  font-weight: 400;
-  line-height: 1.05;
-  text-align: center;
-  text-overflow: clip;
-  white-space: normal;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-.sdp-stat i {
-  right: 10px;
-  bottom: 5px;
-  left: 10px;
-  height: 3px;
 }
 .sdp-level-button {
   grid-column: 2;
@@ -2269,8 +2211,8 @@ function perkStatLine(perk: ChampionPerkDef): string {
   .sdp-hero { min-height: 330px; padding-block: 11px; }
   .sdp-identity h2 { font-size: 39px; }
   .sdp-stat { min-height: 59px; padding-block: 6px; }
-  .sdp-stat strong { font-size: 15px; }
-  .sdp-stat div span { font-size: 17px; }
+  .sdp-stat strong { font-size: 22px; }
+  .sdp-stat div span { font-size: 11px; }
   .sdp-level-button { min-height: 42px; margin-top: 7px; }
   .sdp-workspace {
     grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.2fr);
