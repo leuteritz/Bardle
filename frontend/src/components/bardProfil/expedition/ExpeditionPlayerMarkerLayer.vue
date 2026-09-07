@@ -14,16 +14,20 @@
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { gameNow } from '@/utils/game/gameClock'
 import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { playerLeg, playerTravelProgress } from '@/utils/game/playerGalaxyPos'
+import SunOrb from '@/components/ui/SunOrb.vue'
+import { sunBodyFor } from '@/utils/fx/sunBodySprite'
 import {
   LANDMARK_ROLE_CORE,
   LANDMARK_FREED_CORE,
   MINIMAP_FLIGHTPATH_BEND,
-  VOYAGE_LIVE_PLAYER_HEAD_PX,
+  VOYAGE_LIVE_PLAYER_BOX_PX,
   VOYAGE_LIVE_PLAYER_TAIL_PX,
+  VOYAGE_LIVE_PLAYER_TAIL_H_PX,
   VOYAGE_LIVE_TARGET_R_PX,
 } from '@/config/constants'
 import type { FitBox } from '@/utils/fx/galaxyPlate'
@@ -42,7 +46,10 @@ const props = defineProps<{
 }>()
 
 const galaxyStore = useGalaxyStore()
+const solarStore = useSolarUpgradeStore()
 const { isRenderingPaused } = useRenderingPaused()
+
+const playerBody = computed(() => sunBodyFor(solarStore, solarStore.solarSignature))
 
 /** Dieselbe Quelle wie `paintGalaxy` — beide setzen so denselben Punkt. */
 const geometry = computed(() => {
@@ -235,9 +242,10 @@ watch(
 onMounted(() => nextTick(() => place(gameNow())))
 onBeforeUnmount(stopLoop)
 
-const headPx = `${VOYAGE_LIVE_PLAYER_HEAD_PX}px`
-const haloPx = `${VOYAGE_LIVE_PLAYER_HEAD_PX * 3}px`
+const playerBoxPx = `${VOYAGE_LIVE_PLAYER_BOX_PX}px`
+const haloPx = `${VOYAGE_LIVE_PLAYER_BOX_PX * 1.6}px`
 const tailPx = `${VOYAGE_LIVE_PLAYER_TAIL_PX}px`
+const tailHPx = `${VOYAGE_LIVE_PLAYER_TAIL_H_PX}px`
 const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
 </script>
 
@@ -262,10 +270,12 @@ const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
       <span class="epml-target-ring" />
     </span>
 
-    <div ref="body" class="epml-marker">
+    <div ref="body" class="epml-marker" :class="`epml-marker--${playerBody.kind}`">
       <span class="epml-tail" />
       <span class="epml-halo" />
-      <span class="epml-head" />
+      <span class="epml-sun">
+        <SunOrb :body="playerBody" :px="VOYAGE_LIVE_PLAYER_BOX_PX" />
+      </span>
     </div>
   </div>
 </template>
@@ -311,6 +321,15 @@ const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
   will-change: transform;
 }
 
+.epml-sun {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: v-bind(playerBoxPx);
+  height: v-bind(playerBoxPx);
+  transform: translate(-50%, -50%);
+}
+
 /* Der Schweif liegt HINTER dem Kopf und dreht mit dem Rumpf — ein statischer
    Verlauf, kein Zug pro Frame. */
 .epml-tail {
@@ -318,7 +337,7 @@ const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
   top: 0;
   left: 0;
   width: v-bind(tailPx);
-  height: v-bind(headPx);
+  height: v-bind(tailHPx);
   transform: translate(-100%, -50%);
   background: linear-gradient(to right, rgba(255, 210, 120, 0) 0%, rgba(255, 214, 140, 0.5) 100%);
   border-radius: 50%;
@@ -344,18 +363,6 @@ const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
   50% {
     opacity: 0.85;
   }
-}
-
-.epml-head {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: v-bind(headPx);
-  height: v-bind(headPx);
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: #fff3d0;
-  box-shadow: 0 0 10px rgba(255, 214, 140, 0.9);
 }
 
 /* Der Zielstern RUHT: statischer Ring, animiert wird nur seine Deckkraft. */
