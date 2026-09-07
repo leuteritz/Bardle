@@ -11,8 +11,11 @@
  * `utils/game/voyageAction.ts` für sie ausrechnet. Was die Spalte kostete, hat
  * die Galaxie geerbt (Full HD 628 → 1016 px).
  *
- * Solange keine Galaxie befreit ist, steht statt allem das Sperr-Panel: der
- * Reiter ist von Anfang an sichtbar, also braucht er von Anfang an Inhalt.
+ * ZWEI Bühnen teilen sich die eine Fläche. Die LIVE-Bühne zeigt den laufenden
+ * Lauf — die Galaxie, in der der Spieler gerade fliegt, und die der Atlas nie
+ * führen kann, weil er `completedGalaxies` liest. Sie ist der Startzustand des
+ * Reiters und der Grund, warum er kein Schloss mehr braucht: er hat vom ersten
+ * Tick an Inhalt.
  *
  * Der Reiter bleibt nach dem ersten Öffnen gemountet. Alles, was läuft, hängt
  * deshalb an `isVisible` und nicht an der Lebensdauer.
@@ -43,11 +46,11 @@ import {
   VOYAGE_RAIL_ZONE_W,
   FORGE_MASS_SEND_NODE,
 } from '@/config/constants'
-import ExpeditionLockedPanel from './ExpeditionLockedPanel.vue'
 import ExpeditionCommandBar from './ExpeditionCommandBar.vue'
 import ExpeditionGalaxyRail from './ExpeditionGalaxyRail.vue'
 import ExpeditionRailHandle from './ExpeditionRailHandle.vue'
 import ExpeditionGalaxyMap from './ExpeditionGalaxyMap.vue'
+import ExpeditionLiveStage from './ExpeditionLiveStage.vue'
 import VoyagesTabLoader from './VoyagesTabLoader.vue'
 import FirmamentReturnButton from '@/components/bardProfil/FirmamentReturnButton.vue'
 
@@ -129,11 +132,25 @@ const railFolded = computed(
     (atlasWidth.value > 0 && atlasWidth.value < VOYAGE_RAIL_AUTOFOLD_WIDTH),
 )
 
+/**
+ * Welche der beiden Bühnen steht. Der Startzustand ist LIVE — wer den Reiter
+ * über die Leiste öffnet, will seinen Lauf sehen; eine befreite Galaxie wählt
+ * er rechts.
+ */
+const stageLive = ref(true)
+
 /** Der Sprung aus dem Fleet-Band. Reihenfolge ist bindend: `selectGalaxy`
  *  räumt `selectedKey` ab. */
 function jumpToMark(galaxy: number, key: string | null) {
+  // Jeder Sprung von aussen meint eine BEFREITE Galaxie — Fleet-Karte,
+  // Firmament, Minimap-Chip.
+  stageLive.value = false
   atlas.selectGalaxy(galaxy)
   if (key) selectedKey.value = key
+}
+
+function showLive() {
+  stageLive.value = true
 }
 
 /**
@@ -160,6 +177,17 @@ watch(
     if (!target) return
     jumpToMark(target.galaxy, target.pinKey)
     uiStore.clearPendingVoyageTarget()
+  },
+  { immediate: true },
+)
+
+/** Die Minimap-Fläche: dieselbe Galaxie, nur gross. Kein Ziel, keine Marke. */
+watch(
+  () => uiStore.pendingVoyageLive,
+  (wanted) => {
+    if (!wanted) return
+    showLive()
+    uiStore.clearPendingVoyageLive()
   },
   { immediate: true },
 )
@@ -277,6 +305,9 @@ watch(
     loaderVisible.value = false
     // Wer mitten im Aufbau weggeht, hat trotzdem gebaut.
     atlasBuilt.value = true
+    // Beim VERLASSEN, nicht beim Betreten: ein hereinkommender Sprung setzte
+    // sonst im selben Flush seine Galaxie und würde hier gleich überschrieben.
+    stageLive.value = true
   },
   { immediate: true },
 )
@@ -292,6 +323,8 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
   if (selectedKey.value) onSelect(null)
   else if (userRailFolded.value === true) userRailFolded.value = false
+  // Der Weg zurück endet beim laufenden Lauf, nicht auf einer leeren Fläche.
+  else if (!stageLive.value) showLive()
   else return
   e.preventDefault()
   e.stopPropagation()
@@ -327,10 +360,7 @@ function openMassSendUpgrade() {
 
 <template>
   <div class="etc">
-    <!-- Das Sperr-Panel trägt seine Bedingung selbst. -->
-    <ExpeditionLockedPanel v-if="!chartStore.isUnlocked" />
-
-    <div v-else ref="atlasEl" class="etc-atlas">
+    <div ref="atlasEl" class="etc-atlas">
       <ExpeditionCommandBar
         class="etc-bar"
         :now="now"
@@ -344,8 +374,10 @@ function openMassSendUpgrade() {
       />
 
       <div class="etc-stage">
+        <ExpeditionLiveStage v-if="stageLive" :visible="isVisible" />
+
         <ExpeditionGalaxyMap
-          v-if="selectedRecord"
+          v-else-if="selectedRecord"
           ref="mapEl"
           :record="selectedRecord"
           :sites="placedSites"
@@ -381,8 +413,10 @@ function openMassSendUpgrade() {
           <ExpeditionGalaxyRail
             :rows="railRows"
             :records="records"
-            :selected="selectedGalaxy"
-            @select="atlas.selectGalaxy"
+            :selected="stageLive ? 0 : selectedGalaxy"
+            :live="stageLive"
+            @select="jumpToMark($event, null)"
+            @select-live="showLive"
           />
         </div>
 

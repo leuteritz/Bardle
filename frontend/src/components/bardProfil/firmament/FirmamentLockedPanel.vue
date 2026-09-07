@@ -3,7 +3,7 @@
  * Das Firmament, bevor es eines gibt.
  *
  * Kein Leerzustand, sondern ein Versprechen — und ein Tor mit Ist-Wert daneben.
- * Vorbild: `expedition/ExpeditionLockedPanel.vue`.
+ * Vorbild: `planets/PlanetLockedPanel.vue`.
  */
 import { Icon } from '@iconify/vue'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'

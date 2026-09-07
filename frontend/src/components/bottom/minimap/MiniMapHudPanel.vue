@@ -18,13 +18,9 @@
 <script lang="ts">
 import { defineComponent, computed } from 'vue'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
-import {
-  CHAMPION_TRAVEL_BASE_LY,
-  CHAMPION_TRAVEL_LY_PER_GALAXY,
-  MS_PER_SECOND,
-} from '@/config/constants'
+import { MS_PER_SECOND } from '@/config/constants'
 import { splitDuration } from '@/utils/ui/format'
-import { galaxyDepth } from '@/utils/game/galaxyDepth'
+import { formatLY, travelRemainingLY } from '@/utils/game/travelDistance'
 
 export default defineComponent({
   name: 'MiniMapHudPanel',
@@ -50,16 +46,8 @@ export default defineComponent({
 
     const isTraveling = computed(() => galaxyStore.championTravelState === 'traveling')
 
-    const totalDistanceLY = computed(
-      () =>
-        Math.round(
-          CHAMPION_TRAVEL_BASE_LY +
-          galaxyDepth(galaxyStore.currentGalaxy) * CHAMPION_TRAVEL_LY_PER_GALAXY,
-        ),
-    )
-
-    const remainingDistanceLY = computed(
-      () => totalDistanceLY.value * (1 - galaxyStore.travelProgressPercent / 100),
+    const remainingDistanceLY = computed(() =>
+      travelRemainingLY(galaxyStore.currentGalaxy, galaxyStore.travelProgressPercent),
     )
 
     const speedLJperS = computed(() => {
@@ -68,10 +56,7 @@ export default defineComponent({
       return remainingDistanceLY.value / remainingSec
     })
 
-    const remainingDistDisplay = computed(() => {
-      const v = remainingDistanceLY.value
-      return v >= 100 ? `${Math.round(v)}` : `${v.toFixed(1)}`
-    })
+    const remainingDistDisplay = computed(() => formatLY(remainingDistanceLY.value))
 
     const speedDisplay = computed(() => speedLJperS.value.toFixed(1))
 

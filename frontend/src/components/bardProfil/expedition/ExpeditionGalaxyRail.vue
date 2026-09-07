@@ -1,6 +1,11 @@
 <script setup lang="ts">
 /**
- * Die rechte Spalte: jede befreite Galaxie, jüngste zuerst.
+ * Die rechte Spalte: der laufende Lauf, dann jede befreite Galaxie, jüngste
+ * zuerst.
+ *
+ * Die Live-Zeile steht OBEN und immer: sie ist die einzige Galaxie, die der
+ * Atlas nicht führen kann, und ohne sie hätte der Reiter vor der ersten
+ * Befreiung keinen einzigen Eintrag.
  *
  * Gesteuert und dumm, wie `ShopFacetRail` — sie rendert die Zeilen, die man ihr
  * gibt, und meldet zurück, welche getroffen wurde. Was eine Galaxie BEDEUTET,
@@ -22,18 +27,21 @@ import { onMounted, ref, watch } from 'vue'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageRailRow } from '@/types'
 import {
+  VOYAGE_LIVE_EMPTY_NOTE,
   VOYAGE_RAIL_HANDLE_LABEL,
   VOYAGE_RAIL_PAD_X,
   VOYAGE_RAIL_REVEAL_PAD,
 } from '@/config/constants'
 import ExpeditionGalaxyRow from './ExpeditionGalaxyRow.vue'
+import ExpeditionLiveRow from './ExpeditionLiveRow.vue'
 
 const props = defineProps<{
   rows: VoyageRailRow[]
   records: CompletedGalaxyRecord[]
   selected: number
+  live: boolean
 }>()
-const emit = defineEmits<{ select: [galaxy: number] }>()
+const emit = defineEmits<{ select: [galaxy: number]; selectLive: [] }>()
 
 function recordFor(records: CompletedGalaxyRecord[], galaxy: number) {
   return records.find((r) => r.galaxy === galaxy)
@@ -76,6 +84,8 @@ const padX = `${VOYAGE_RAIL_PAD_X}px`
        steht in einem Knopf — ohne das `aria-label` waere die Region namenlos. -->
   <aside class="egl" :aria-label="VOYAGE_RAIL_HANDLE_LABEL">
     <div ref="scroll" class="egl-scroll rpg-scrollbar">
+      <ExpeditionLiveRow :selected="live" @select="emit('selectLive')" />
+
       <template v-for="row in rows" :key="row.galaxy">
         <ExpeditionGalaxyRow
           v-if="recordFor(records, row.galaxy)"
@@ -87,7 +97,8 @@ const padX = `${VOYAGE_RAIL_PAD_X}px`
       </template>
 
       <p v-if="!rows.length" class="egl-empty">
-        No galaxy freed yet — rescue every star and defeat the core to open your first port.
+        {{ VOYAGE_LIVE_EMPTY_NOTE }} Rescue every star and defeat the core to open your first
+        port.
       </p>
     </div>
   </aside>
