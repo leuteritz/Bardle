@@ -17,42 +17,42 @@ describe('Voyages: Live-Sprung gegen Atlas-Sprung', () => {
 
   it('oeffnet den Reiter ohne Sprungziel', () => {
     const ui = useUiStore()
-    ui.requestOpenVoyagesLive()
+    ui.requestOpenGalaxyLive()
 
-    expect(ui.bardActiveTab).toBe('expedition')
-    expect(ui.pendingVoyageLive).toBe(true)
-    expect(ui.pendingVoyageTarget).toBeNull()
+    expect(ui.bardActiveTab).toBe('galaxy')
+    expect(ui.pendingGalaxyLive).toBe(true)
+    expect(ui.pendingGalaxyTarget).toBeNull()
   })
 
   it('loescht ein stehendes Sprungziel', () => {
     const ui = useUiStore()
-    ui.requestOpenVoyagesTab(7, 'mark-1')
-    ui.requestOpenVoyagesLive()
+    ui.requestOpenGalaxyTab(7, 'mark-1')
+    ui.requestOpenGalaxyLive()
 
-    expect(ui.pendingVoyageTarget).toBeNull()
-    expect(ui.pendingVoyageLive).toBe(true)
+    expect(ui.pendingGalaxyTarget).toBeNull()
+    expect(ui.pendingGalaxyLive).toBe(true)
   })
 
   it('loescht die Live-Ansage, sobald ein Sprungziel kommt', () => {
     const ui = useUiStore()
-    ui.requestOpenVoyagesLive()
-    ui.requestOpenVoyagesTab(7, 'mark-1')
+    ui.requestOpenGalaxyLive()
+    ui.requestOpenGalaxyTab(7, 'mark-1')
 
-    expect(ui.pendingVoyageLive).toBe(false)
-    expect(ui.pendingVoyageTarget).toEqual({ galaxy: 7, pinKey: 'mark-1' })
+    expect(ui.pendingGalaxyLive).toBe(false)
+    expect(ui.pendingGalaxyTarget).toEqual({ galaxy: 7, pinKey: 'mark-1' })
   })
 
   it('wird EINMAL verbraucht', () => {
     const ui = useUiStore()
-    ui.requestOpenVoyagesLive()
-    ui.clearPendingVoyageLive()
+    ui.requestOpenGalaxyLive()
+    ui.clearPendingGalaxyLive()
 
-    expect(ui.pendingVoyageLive).toBe(false)
+    expect(ui.pendingGalaxyLive).toBe(false)
   })
 
   it('laesst das Rueckweg-Angebot des Firmaments unberuehrt', () => {
     const ui = useUiStore()
-    ui.requestOpenVoyagesLive()
+    ui.requestOpenGalaxyLive()
 
     expect(ui.firmamentTabReturnPending).toBe(false)
   })

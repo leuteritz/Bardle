@@ -143,9 +143,9 @@ function openShopTab() {
   uiStore.setBardTab('shop')
 }
 
-function openExpeditionTab() {
+function openGalaxyTab() {
   uiStore.openBardModal()
-  uiStore.setBardTab('expedition')
+  uiStore.setBardTab('galaxy')
 }
 
 /**
@@ -447,7 +447,7 @@ onUnmounted(() => {
             class="header-notif-badge header-notif-badge--expedition"
             :style="expedBadgeStyle"
             :aria-label="`${expeditionBadgeCount} expedition(s) ready`"
-            @click.stop="openExpeditionTab"
+            @click.stop="openGalaxyTab"
           >
             {{ expeditionBadgeCount }}
           </button>

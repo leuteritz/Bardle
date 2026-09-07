@@ -122,8 +122,8 @@ const chronicle = computed(() =>
 
 /** Ein befreiter Knoten ist eine TUER, keine Auswahl: er fuehrt in den Atlas,
  *  in dem man mit dieser Galaxie etwas tun kann. */
-function openInVoyages(galaxy: number) {
-  uiStore.requestOpenVoyagesFromFirmament(galaxy)
+function openInGalaxy(galaxy: number) {
+  uiStore.requestOpenGalaxyFromFirmament(galaxy)
 }
 
 /** Dieselbe Tuer als Kamerafahrt — den Reiter schaltet der Schleier. */
@@ -281,7 +281,7 @@ onBeforeUnmount(() => {
           :visible="isVisible"
           :arriving="arriving"
           @select="select"
-          @open="openInVoyages"
+          @open="openInGalaxy"
           @dive="diveInto"
         />
 

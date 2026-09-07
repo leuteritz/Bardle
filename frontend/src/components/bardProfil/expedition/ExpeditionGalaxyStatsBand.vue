@@ -155,7 +155,7 @@ const summary = computed(
   () =>
     `${toRoman(props.record.galaxy)} ${props.title}, ${props.tier} destination · ` +
     `${rescued.value} stars freed, ${lost.value} lost · ` +
-    `${progress.value.runs} voyages sent · freed ${freedOn.value}`,
+    `${progress.value.runs} expeditions sent · freed ${freedOn.value}`,
 )
 </script>
 
@@ -195,9 +195,9 @@ const summary = computed(
           <span v-ink-center.y class="egsb-lbl">Stars</span>
         </section>
 
-        <section class="egsb-col" v-tip="{ label: 'Voyages', text: RECORD_TIPS.voyages }">
+        <section class="egsb-col" v-tip="{ label: 'Expeditions', text: RECORD_TIPS.expeditions }">
           <span v-ink-center.y class="egsb-val">{{ progress.runs }}</span>
-          <span v-ink-center.y class="egsb-lbl">Voyages</span>
+          <span v-ink-center.y class="egsb-lbl">Expeditions</span>
         </section>
       </div>
 

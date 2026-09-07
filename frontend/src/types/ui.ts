@@ -449,7 +449,7 @@ export type BardTabId =
   | 'shop'
   | 'tree'
   | 'team'
-  | 'expedition'
+  | 'galaxy'
   | 'firmament'
   | 'battle'
   | 'admin'

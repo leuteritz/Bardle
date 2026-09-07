@@ -868,7 +868,7 @@ const diveEaseArrive = FIRMAMENT_DIVE_EASE_ARRIVE
             :data-galaxy="mark.node.galaxy"
             :aria-label="
               mark.node.record
-                ? `Galaxy ${toRoman(mark.node.galaxy)} — open in Voyages`
+                ? `Galaxy ${toRoman(mark.node.galaxy)} — open in Galaxy`
                 : `Galaxy ${toRoman(mark.node.galaxy)}`
             "
             :aria-pressed="mark.node.record ? undefined : mark.picked"
