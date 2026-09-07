@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import { JOURNEY_KPI_TILES } from '@/config/constants'
+import { JOURNEY_KPI_GRID, JOURNEY_KPI_TILES } from '@/config/constants'
 import type { StatCategoryId, StatCategoryView } from '@/types'
 
-/** Acht Kennzahlen aus dem Katalog — bereits formatiert; ein Klick öffnet Records. */
+/**
+ * Kennzahlen aus dem Katalog (bereits formatiert), priorisiert. Das Raster
+ * misst sich und zeigt genau so viele Kacheln, wie ohne Scrollen hineinpassen.
+ */
 const props = defineProps<{ categories: StatCategoryView[] }>()
 const emit = defineEmits<{ open: [category: StatCategoryId | null] }>()
 
@@ -39,6 +42,35 @@ const tiles = computed<KpiTile[]>(() =>
     ]
   }),
 )
+
+/* ── Fit: nur bei Resize gerechnet, nie im Takt ── */
+const G = JOURNEY_KPI_GRID
+const gridEl = ref<HTMLElement | null>(null)
+const cols = ref(2)
+const rows = ref(4)
+let observer: ResizeObserver | null = null
+
+function measure(w: number, h: number): void {
+  if (!w || !h || !gridEl.value) return
+  // Zeilenhöhe aus der CSS-Variable: Media-Query und Script teilen EINE Zahl
+  const rowH = parseFloat(getComputedStyle(gridEl.value).getPropertyValue('--kpi-row')) || 50
+  cols.value = Math.max(1, Math.min(G.MAX_COLS, Math.floor((w + G.GAP) / (G.MIN_COL_W + G.GAP))))
+  rows.value = Math.max(1, Math.floor((h + G.GAP) / (rowH + G.GAP)))
+}
+
+onMounted(() => {
+  const el = gridEl.value
+  if (!el) return
+  measure(el.clientWidth, el.clientHeight)
+  observer = new ResizeObserver((entries) => {
+    const { width, height } = entries[0].contentRect
+    measure(width, height)
+  })
+  observer.observe(el)
+})
+onUnmounted(() => observer?.disconnect())
+
+const visible = computed(() => tiles.value.slice(0, cols.value * rows.value))
 </script>
 
 <template>
@@ -46,13 +78,19 @@ const tiles = computed<KpiTile[]>(() =>
     <div class="jt-kpis-head">
       <Icon icon="lucide:list" width="18" height="18" class="jt-kpis-sys" aria-hidden="true" />
       <span v-ink-center class="jt-kpis-title">Stats</span>
+      <span v-ink-center class="jt-kpis-count">{{ visible.length }} of {{ tiles.length }}</span>
       <button type="button" class="jt-kpis-more" @click="emit('open', null)">
         All records →
       </button>
     </div>
-    <div class="jt-kpi-grid" role="list">
+    <div
+      ref="gridEl"
+      class="jt-kpi-grid"
+      role="list"
+      :style="{ '--cols': cols, '--gap': G.GAP + 'px' }"
+    >
       <button
-        v-for="t in tiles"
+        v-for="t in visible"
         :key="t.key"
         type="button"
         role="listitem"
@@ -97,12 +135,18 @@ const tiles = computed<KpiTile[]>(() =>
   flex-shrink: 0;
 }
 .jt-kpis-title {
-  flex: 1;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--rpg-gold);
+}
+.jt-kpis-count {
+  flex: 1;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #8a7a58;
+  white-space: nowrap;
 }
 .jt-kpis-more {
   padding: 3px 9px;
@@ -122,14 +166,18 @@ const tiles = computed<KpiTile[]>(() =>
   color: var(--rpg-gold);
 }
 
-/* zwei Spalten, die Zeilen teilen sich die Resthöhe */
+/* Feste Zeilenhöhe; das Script füllt Spalten × Zeilen aus der gemessenen Fläche.
+   overflow: hidden ist nur das Netz für den Frame zwischen Resize und Messung. */
 .jt-kpi-grid {
+  --kpi-row: 50px;
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: minmax(0, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+  grid-auto-rows: var(--kpi-row);
+  align-content: start;
+  gap: var(--gap, 6px);
+  overflow: hidden;
 }
 
 .jt-kpi {
@@ -138,7 +186,7 @@ const tiles = computed<KpiTile[]>(() =>
   gap: 9px;
   min-width: 0;
   min-height: 0;
-  padding: 5px 10px;
+  padding: 0 10px;
   text-align: left;
   color: inherit;
   background: #1c1c18;
@@ -155,15 +203,15 @@ const tiles = computed<KpiTile[]>(() =>
 
 .jt-kpi-icon {
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   color: var(--accent);
 }
 
 .jt-kpi-body {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
@@ -184,10 +232,10 @@ const tiles = computed<KpiTile[]>(() =>
 }
 
 .jt-kpi-lbl {
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
-  line-height: 1.2;
+  line-height: 1.1;
   text-transform: uppercase;
   color: #8a7a58;
   white-space: nowrap;
@@ -200,20 +248,26 @@ const tiles = computed<KpiTile[]>(() =>
     gap: 6px;
     padding: 10px 12px;
   }
+  .jt-kpi-grid {
+    --kpi-row: 44px;
+  }
   .jt-kpi {
     gap: 7px;
-    padding: 3px 8px;
+    padding: 0 8px;
   }
   .jt-kpi-icon {
     width: 20px;
     height: 20px;
   }
   .jt-kpi-val {
-    font-size: 16px;
+    font-size: 17px;
   }
 }
 
 @media (min-height: 1600px) {
+  .jt-kpi-grid {
+    --kpi-row: 58px;
+  }
   .jt-kpi-val {
     font-size: 22px;
   }
@@ -221,8 +275,8 @@ const tiles = computed<KpiTile[]>(() =>
     font-size: 11px;
   }
   .jt-kpi-icon {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
   }
 }
 </style>
