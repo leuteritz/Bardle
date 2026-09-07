@@ -2101,18 +2101,6 @@ export const VOYAGE_CREW_MARKER_PULSE_MS = 2400
 // befreite Galaxie, sondern die, in der der Spieler gerade fliegt — der Atlas
 // führt die nie, weil er `completedGalaxies` liest.
 
-/**
- * Die Kante der Bottom-Bar-Minimap (`.minimap-panel`, 440x440) und damit der
- * Bezug der Vergrößerung: `scale = Kante / VOYAGE_LIVE_REF_PX`. Weil die
- * Vorlage QUADRATISCH ist, ist es die große Bühne auch — die Weltabbildung des
- * Renderers streckt sonst die Galaxienscheibe.
- */
-export const VOYAGE_LIVE_REF_PX = 440
-/** Über 4K hinaus wächst nur noch die Fläche, nicht die Ablesbarkeit. */
-export const VOYAGE_LIVE_SCALE_MAX = 3.4
-/** Unter 1 wird nicht verkleinert: das Bild ist auf 440 px hin gezeichnet. */
-export const VOYAGE_LIVE_SCALE_MIN = 1
-
 /** Die Zeile der laufenden Galaxie in der Zielliste. Eigene Höhe, KEIN
  *  `VOYAGE_RAIL_ROW_H`: die lebt von ihrer Snapshot-Miniatur, und für einen
  *  laufenden Lauf gibt es kein Standbild. */
@@ -2148,10 +2136,22 @@ export const VOYAGE_LIVE_ETA_CH = 5.4
 /** Dieselbe Sperre für die Sternzelle (`7/2`). */
 export const VOYAGE_LIVE_STARS_CH = 4.2
 
-/** Die zwei Listen links und rechts der quadratischen Live-Fläche. Sie nehmen
- *  nur, was der Zuschnitt übrig lässt, und weichen unter ihrer Mindestbreite —
- *  die Karte gibt keinen Pixel dafür ab. */
-export const VOYAGE_LIVE_ASIDE_MAX_W = 258
-export const VOYAGE_LIVE_ASIDE_GAP = 10
-/** Anteil der Kartenkante, den eine Spalte höchstens nimmt. */
-export const VOYAGE_LIVE_ASIDE_SHARE = 0.45
+/** Die zwei Listen liegen als Scrim AUF der Karte, wie die Manifestreihe des
+ *  Atlas — die Platte nimmt die volle Bühne, es gibt keinen Rand mehr. */
+export const VOYAGE_LIVE_ASIDE_W = 232
+/** Deckel ihrer Höhe als Anteil der Bühne; darüber rollt die Liste in sich. */
+export const VOYAGE_LIVE_ASIDE_MAX_SHARE = 0.46
+/** Unter dieser Bühnenbreite weichen beide: eine gestauchte Liste ist
+ *  schlimmer als keine, und die Karte gibt keinen Pixel ab. */
+export const VOYAGE_LIVE_ASIDE_MIN_STAGE_W = 900
+
+// ══ Der Spielerkörper auf der Live-Platte ════════════════════════════════════
+// Er ist DOM, kein Canvas-Zug: die Platte ist ein Standbild und wird nur bei
+// `paintKey`-Wechsel gemalt. Ein Dot darauf hiesse die ganze Platte, jeden Frame.
+
+/** Kantenlänge des Kopfes; der Hof darum ist ein Vielfaches davon. */
+export const VOYAGE_LIVE_PLAYER_HEAD_PX = 11
+/** Länge des Schweifs nach hinten, statischer Verlauf, dreht mit dem Rumpf. */
+export const VOYAGE_LIVE_PLAYER_TAIL_PX = 34
+/** Die ruhende Marke am Zielstern der offenen Etappe. */
+export const VOYAGE_LIVE_TARGET_R_PX = 9

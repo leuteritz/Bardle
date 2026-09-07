@@ -361,6 +361,16 @@ export interface GalaxyPaintOpts {
    *  Standbild und Miniatur behalten die alte Schleife: dort ist die Dichte
    *  unauffällig, und ihre Ziehreihenfolge teilen sie mit der Live-Minimap. */
   deepField?: boolean
+  /**
+   * Die LAUFENDE Galaxie statt einer befreiten. Genau zwei Stellen trennen die
+   * beiden, und sie stehen unten schon als Unterschied kommentiert: die Reise
+   * endet am letzten besuchten Stern statt im Kern, und das Caretaker's Gate
+   * gibt es noch nicht — wo es steht, sitzt bis zur Befreiung der Bossstern.
+   *
+   * Die Sperrzone des Tors bleibt trotzdem gesetzt: sonst lägen Orte und
+   * Ereignisse einer Galaxie live woanders als nach ihrer Befreiung.
+   */
+  live?: boolean
 }
 
 export function paintGalaxy(
@@ -473,7 +483,7 @@ export function paintGalaxy(
   const routePts: RoutePoints = [
     [spx, spy],
     ...dots.slice(0, attempts).map((d) => toC(d.x, d.y)),
-    [gcx, gcy],
+    ...(opts.live ? [] : ([[gcx, gcy]] as RoutePoints)),
   ]
   paintRouteTrail(ctx, routePts, { alpha: routeAlpha, hk })
   paintRouteChevrons(ctx, routePts, {
@@ -571,6 +581,7 @@ export function paintGalaxy(
   // Der Block klammert sich selbst: er ist zwar der letzte, aber `paintCoreGate`
   // fasst `shadowBlur` und `lineWidth` an, und die Funktion gibt den Context an
   // ihren Aufrufer zurück.
+  if (opts.live) return
   ctx.save()
   const coreGlowR = CORE_GATE_HALO_R * k
   const coreGlow = ctx.createRadialGradient(gcx, gcy, 0, gcx, gcy, coreGlowR)

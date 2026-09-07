@@ -3,95 +3,70 @@
  * Die zweite Bühne des Reiters: der LAUFENDE Lauf, gross.
  *
  * Der Atlas führt nur `completedGalaxies` — die Galaxie, in der der Spieler
- * gerade fliegt, ist dort nie dabei. Sie steht deshalb hier, und zwar mit
- * DEMSELBEN Renderer wie die Bottom-Bar-Minimap: Kamera, Komet, Zoomfahrt auf
- * den Zielstern und die Ankunft im Sternsystem stehen dort geschrieben, und ein
- * zweiter Live-Renderer daneben liesse beide Bilder auseinanderlaufen.
+ * gerade fliegt, ist dort nie dabei. Sie steht deshalb hier, und zwar in
+ * DERSELBEN Bildsprache: `ExpeditionLivePlate` malt sie mit `paintGalaxy`, aus
+ * einem synthetischen Datensatz (`liveGalaxyRecord`). Beim Umschalten wechselt
+ * damit nur der Inhalt, nicht das Bild.
  *
- * Vergrössert wird über `scale` — der Faktor liegt in der Canvas-Transformation,
- * nicht an den Konstanten. Die Fläche ist QUADRATISCH wie die Vorlage (440x440):
- * die Weltabbildung des Renderers streckt sonst die Galaxienscheibe.
+ * Die Zoomfahrt auf den Zielstern und das Ankunfts-Sternsystem bleiben allein
+ * bei der Minimap: im kleinen HUD sind sie richtig, hier will man die ganze
+ * Galaxie sehen.
  *
  * Die Bühne ist eine ANSICHT. Die Gesten der Minimap (Zielstern anklicken,
  * überspringen) bleiben dort — zwei Bedienwege für dieselbe Handlung wären
  * einer zu viel.
- *
- * Links und rechts der quadratischen Fläche bleibt auf jedem Desktop Rand übrig;
- * er trägt die zwei Listen, die die Karte nur als namenlose Marken kennt. Sie
- * WEICHEN, sobald der Rand zu schmal wird — die Karte gibt keinen Pixel dafür
- * ab.
  */
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
-import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { destinationName } from '@/config/economy/expeditionDestinations'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { liveGalaxyRecord } from '@/utils/game/liveGalaxyRecord'
 import { toRoman } from '@/utils/ui/format'
-import MiniMapCanvas from '@/components/bottom/minimap/MiniMapCanvas.vue'
+import ExpeditionLivePlate from './ExpeditionLivePlate.vue'
+import ExpeditionPlayerMarkerLayer from './ExpeditionPlayerMarkerLayer.vue'
 import ExpeditionLiveBand from './ExpeditionLiveBand.vue'
 import ExpeditionRunLedger from './ExpeditionRunLedger.vue'
 import ExpeditionRunLog from './ExpeditionRunLog.vue'
 import {
-  VOYAGE_LIVE_ASIDE_GAP,
-  VOYAGE_LIVE_ASIDE_MAX_W,
-  VOYAGE_LIVE_ASIDE_SHARE,
+  VOYAGE_LIVE_ASIDE_MAX_SHARE,
+  VOYAGE_LIVE_ASIDE_W,
   VOYAGE_LIVE_PLAQUE_LABEL,
-  VOYAGE_LIVE_REF_PX,
-  VOYAGE_LIVE_SCALE_MAX,
-  VOYAGE_LIVE_SCALE_MIN,
   VOYAGE_LIVE_STATES,
+  VOYAGE_MAP_STATS_BAND_H,
 } from '@/config/constants'
 
 const props = defineProps<{ visible: boolean }>()
 
 const galaxyStore = useGalaxyStore()
 const gameStore = useGameStore()
-// NICHT `isIdleRenderingPaused`: das ist wahr, sobald ein Profil-Reiter offen
-// ist — also immer, wenn diese Bühne sichtbar ist.
-const { isRenderingPaused } = useRenderingPaused()
 
-const mapEl = ref<HTMLElement | null>(null)
-const edge = ref(0)
-
-let observer: ResizeObserver | null = null
-watch(mapEl, (el) => {
-  observer?.disconnect()
-  observer = null
-  if (!el) return
-  observer = new ResizeObserver((entries) => {
-    const box = entries[0]?.contentRect
-    if (box) edge.value = box.width
-  })
-  observer.observe(el)
-})
-onBeforeUnmount(() => {
-  observer?.disconnect()
-  observer = null
-})
-
-const scale = computed(() =>
-  Math.min(
-    VOYAGE_LIVE_SCALE_MAX,
-    Math.max(VOYAGE_LIVE_SCALE_MIN, (edge.value || VOYAGE_LIVE_REF_PX) / VOYAGE_LIVE_REF_PX),
-  ),
+/**
+ * Der laufende Lauf als Datensatz. Dieselbe Feldliste, die beim Abschluss ins
+ * Archiv geht — so kann das Bild der laufenden Galaxie gar nicht von dem
+ * abweichen, das sie nach ihrer Befreiung zeigt.
+ */
+const record = computed(() =>
+  liveGalaxyRecord({
+    galaxy: galaxyStore.currentGalaxy,
+    mapSeed: galaxyStore.mapSeed,
+    themeIndex: galaxyStore.currentThemeIndex,
+    universe: gameStore.currentUniverse,
+    attemptResults: galaxyStore.attemptResults,
+    landfallResults: galaxyStore.landfallResults,
+    incidentResults: galaxyStore.incidentResults,
+    starManifests: galaxyStore.starManifests,
+  }),
 )
 
-/** Verdeckt kostet die Schleife nichts — der Reiter bleibt gemountet. */
-const active = computed(() => props.visible && !isRenderingPaused.value)
+/** Der Sekundentakt des Datenbands — KEINE zweite Uhr. */
+const now = computed(() => galaxyStore._travelTickMs)
 
 const accent = computed(
   () => `rgb(${minimapAccentForTheme(galaxyStore.currentThemeIndex, gameStore.currentUniverse)})`,
 )
 
 const themeName = computed(() => destinationName(galaxyStore.currentThemeIndex))
-
-const asideGap = `${VOYAGE_LIVE_ASIDE_GAP}px`
-/** Die Kante der Karte — die kleinere der beiden Seiten des Rahmens. */
-const mapEdge = `min(calc(100cqw - ${VOYAGE_LIVE_ASIDE_GAP * 2}px), 100cqh)`
-/** Die Spalte bleibt ein ANTEIL der Karte: auf einem flachen Fenster stünde sie
- *  sonst breiter da als das Bild, das sie erklärt. */
-const asideMax = `min(${VOYAGE_LIVE_ASIDE_MAX_W}px, calc(${VOYAGE_LIVE_ASIDE_SHARE} * ${mapEdge}))`
 
 const state = computed(() => {
   if (galaxyStore.isComplete) return VOYAGE_LIVE_STATES.freed
@@ -106,115 +81,73 @@ const state = computed(() => {
     return VOYAGE_LIVE_STATES.system
   return VOYAGE_LIVE_STATES.idle
 })
+
+const asideW = `${VOYAGE_LIVE_ASIDE_W}px`
+/** Die Listen decken höchstens diesen Anteil der Bühne ab; darüber rollen sie
+ *  in sich. Sie schrumpfen die Fit-Box NICHT — was unter ihnen liegt, steht
+ *  abgedunkelt weiter da. */
+const asideMaxH = `calc(${VOYAGE_LIVE_ASIDE_MAX_SHARE} * (100% - ${VOYAGE_MAP_STATS_BAND_H}px))`
 </script>
 
 <template>
-  <div class="els">
-    <div class="els-frame">
-      <div class="els-aside">
+  <div class="els" :style="{ '--els-accent': accent }">
+    <ExpeditionLivePlate v-slot="{ box, width, height, bandH }" :record="record">
+      <ExpeditionPlayerMarkerLayer
+        :record="record"
+        :box="box"
+        :width="width"
+        :height="height"
+        :visible="props.visible"
+        :now="now"
+      />
+
+      <!-- Plakette und Zustandspille liegen ÜBER der Karte, sie schrumpfen sie
+           nicht: unter ihnen dürfen echte Marken stehen. -->
+      <div class="els-plaque">
+        <span class="els-live" aria-hidden="true" />
+        <span class="els-plaque-body">
+          <span class="els-kicker">{{ VOYAGE_LIVE_PLAQUE_LABEL }}</span>
+          <span v-ink-center.y class="els-title">
+            Galaxy {{ toRoman(galaxyStore.currentGalaxy) }}
+          </span>
+          <span class="els-theme">{{ themeName }}</span>
+        </span>
+      </div>
+
+      <span v-ink-center.y class="els-state">{{ state }}</span>
+
+      <!-- Die zwei Listen, die die Karte nur als namenlose Marken kennt. Scrim
+           statt Kasten, wie die Manifestreihe des Atlas. -->
+      <div class="els-aside els-aside--l">
+        <span class="els-scrim els-scrim--l" aria-hidden="true" />
         <ExpeditionRunLedger class="els-aside-in" />
       </div>
 
-      <div ref="mapEl" class="els-map" :style="{ '--els-accent': accent }">
-        <MiniMapCanvas :scale="scale" :active="active" />
-
-        <!-- Plaketten liegen ÜBER der Karte, sie schrumpfen sie nicht: die
-             Kartenfläche ist quadratisch und hat links und rechts ohnehin
-             Rand. -->
-        <div class="els-plaque">
-          <span class="els-live" aria-hidden="true" />
-          <span class="els-plaque-body">
-            <span class="els-kicker">{{ VOYAGE_LIVE_PLAQUE_LABEL }}</span>
-            <span v-ink-center.y class="els-title">
-              Galaxy {{ toRoman(galaxyStore.currentGalaxy) }}
-            </span>
-            <span class="els-theme">{{ themeName }}</span>
-          </span>
-        </div>
-
-        <span v-ink-center.y class="els-state">{{ state }}</span>
-      </div>
-
-      <div class="els-aside">
+      <div class="els-aside els-aside--r">
+        <span class="els-scrim els-scrim--r" aria-hidden="true" />
         <ExpeditionRunLog class="els-aside-in" />
       </div>
-    </div>
 
-    <ExpeditionLiveBand />
+      <div v-if="bandH > 0" class="els-band">
+        <ExpeditionLiveBand />
+      </div>
+    </ExpeditionLivePlate>
   </div>
 </template>
 
 <style scoped>
 .els {
-  display: flex;
-  flex-direction: column;
+  container-type: inline-size;
   width: 100%;
   height: 100%;
   min-height: 0;
   background: #0b0806;
 }
 
-/* `size` und nicht `inline-size`: die Kante der Karte ist die KLEINERE der
-   beiden Seiten, dafür braucht es cqh. */
-.els-frame {
-  container-type: size;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  gap: v-bind(asideGap);
-  padding: 4px;
-}
-
-/* Die Spalten nehmen NUR, was der quadratische Zuschnitt übrig lässt: `flex: 1`
-   gegen eine Karte, die nicht schrumpfen darf. Unter der Schwelle bleibt die
-   Hülle stehen und ihr Inhalt geht — eine gestauchte Liste wäre schlimmer als
-   keine. */
-.els-aside {
-  container-type: inline-size;
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: v-bind(asideMax);
-  display: flex;
-  overflow: hidden;
-}
-.els-aside-in {
-  flex: 1;
-  min-width: 0;
-}
-/* Unter 150 px geht der Inhalt: eine gestauchte Liste ist schlimmer als keine.
-   Die Schwelle steht als LITERAL — eine Query-Praeambel nimmt kein var(), und
-   v-bind kompiliert genau dazu. */
-@container (max-width: 149.9px) {
-  .els-aside-in {
-    display: none;
-  }
-}
-
-/* Quadratisch wie die Vorlage — die Weltabbildung des Renderers rechnet Breite
-   und Höhe getrennt, ein anderes Seitenverhältnis staucht die Scheibe.
-   `min(cqw, cqh)` statt aspect-ratio: mit einer festen Seite plus max-* auf der
-   anderen bleibt die Ratio nicht erhalten, das Bild verzöge sich. */
-.els-map {
-  position: relative;
-  flex: 0 0 auto;
-  /* Die Fuge zweimal abziehen: sonst überliefe die Reihe genau dann, wenn die
-     Karte die volle Breite nimmt. */
-  width: v-bind(mapEdge);
-  height: v-bind(mapEdge);
-  border: 4px solid #7a4e20;
-  border-radius: 5px;
-  box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310;
-  background: #111008;
-  overflow: hidden;
-}
-
 /* ── Plaketten ───────────────────────────────────────────────────────────── */
 .els-plaque {
   position: absolute;
+  z-index: 2;
   top: 10px;
   left: 10px;
   display: flex;
@@ -281,6 +214,7 @@ const state = computed(() => {
 
 .els-state {
   position: absolute;
+  z-index: 2;
   top: 10px;
   right: 10px;
   padding: 6px 11px;
@@ -294,6 +228,76 @@ const state = computed(() => {
   border-radius: 4px;
   white-space: nowrap;
   pointer-events: none;
+}
+
+/* ── Die zwei Listen ─────────────────────────────────────────────────────── */
+.els-aside {
+  position: absolute;
+  z-index: 2;
+  top: 68px;
+  width: v-bind(asideW);
+  max-height: v-bind(asideMaxH);
+  display: flex;
+  min-height: 0;
+  pointer-events: none;
+}
+.els-aside--l {
+  left: 10px;
+}
+.els-aside--r {
+  right: 10px;
+}
+
+/* Scrim, kein Kasten: unter der Liste liegen echte Marken, und die sollen
+   abgedunkelt weiter dastehen statt zu verschwinden. Der Verlauf fällt
+   SENKRECHT und wird waagerecht maskiert. */
+.els-scrim {
+  position: absolute;
+  inset: -6px -8px;
+  background: linear-gradient(
+    to bottom,
+    rgba(8, 6, 3, 0.88),
+    rgba(8, 6, 3, 0.7) 62%,
+    rgba(8, 6, 3, 0)
+  );
+}
+.els-scrim--l {
+  -webkit-mask-image: linear-gradient(to right, #000 72%, transparent 100%);
+  mask-image: linear-gradient(to right, #000 72%, transparent 100%);
+}
+.els-scrim--r {
+  -webkit-mask-image: linear-gradient(to left, #000 72%, transparent 100%);
+  mask-image: linear-gradient(to left, #000 72%, transparent 100%);
+}
+
+/* Nur die Liste selbst nimmt Zeiger an — der Klick auf den Bühnengrund muss
+   überall sonst durchkommen. */
+.els-aside-in {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  pointer-events: auto;
+}
+
+/* Unter dieser Bühnenbreite weichen beide: eine gestauchte Liste ist schlimmer
+   als keine. Die Schwelle steht als LITERAL — eine Query-Präambel nimmt kein
+   var(), und v-bind kompiliert genau dazu. */
+@container (max-width: 899.9px) {
+  .els-aside {
+    display: none;
+  }
+}
+
+/* ── Das Datenband ───────────────────────────────────────────────────────── */
+/* Es sitzt IN der Bühne und schrumpft die Fit-Box um genau seine Höhe — damit
+   ist die Plattengeometrie Zeichen für Zeichen die des Atlas. */
+.els-band {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,16 +3,7 @@
 </template>
 
 <script lang="ts">
-import {
-  defineComponent,
-  ref,
-  computed,
-  watch,
-  onMounted,
-  onUnmounted,
-  nextTick,
-  type PropType,
-} from 'vue'
+import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
@@ -112,28 +103,11 @@ import {
   type HyperspacePhase,
 } from './minimapDraw'
 import { gameNow } from '@/utils/game/gameClock'
+import { playerGalaxyPos } from '@/utils/game/playerGalaxyPos'
 
 export default defineComponent({
   name: 'MiniMapCanvas',
-  /**
-   * Zwei Props, und beide dienen dem ZWEITEN Aufrufer: der Live-Buehne des
-   * Voyages-Reiters. Einen zweiten Live-Renderer daneben zu schreiben waere der
-   * Fehler — Kamera, Komet, Zoomfahrt und Ankunftssystem stehen hier.
-   */
-  props: {
-    /**
-     * Vergroesserung ueber die Canvas-Transformation, 1 = Bottom-Bar.
-     * Skaliert Weltabbildung, Markenradien, Linienstaerken UND die Sprites in
-     * einem Zug — deshalb faellt keine der MINIMAP_*-Konstanten dafuer an.
-     */
-    scale: { type: Number, default: 1 },
-    /**
-     * `null` = dem eigenen `show` folgen (Bottom-Bar). Ein Boolean ist das Tor:
-     * die grosse Buehne haelt ihre Schleife an, sobald ihr Reiter verdeckt ist.
-     */
-    active: { type: Boolean as unknown as PropType<boolean | null>, default: null },
-  },
-  setup(props) {
+  setup() {
     const galaxyStore = useGalaxyStore()
     const gameStore = useGameStore()
     const starGroupStore = useStarGroupStore()
@@ -220,13 +194,6 @@ export default defineComponent({
         galaxyStore.isComplete,
     )
 
-    /**
-     * Das Tor der Schleife. `active` ueberstimmt `show`: die Live-Buehne zeigt
-     * die Karte auch dann, wenn die Bottom-Bar sich ausblenden wuerde — und
-     * haelt dafuer an, sobald ihr Reiter verdeckt ist.
-     */
-    const running = computed(() => props.active ?? show.value)
-
     const warp = createWarpEffect()
 
     function drawFadeoutPhase(ctx: CanvasRenderingContext2D, w: number, h: number) {
@@ -254,30 +221,10 @@ export default defineComponent({
       dotPositions.value = dots
     }
 
-    function getPlayerWorldPos(dots: DotPos[], attempts: number): { x: number; y: number } {
-      // Docked at the boss star in the galaxy core
-      if (galaxyStore.bossPhaseActive || galaxyStore.isComplete) return { x: 0.5, y: 0.5 }
-      const from = attempts > 0 && dots.length >= attempts ? dots[attempts - 1] : spawnPos.value
-      if (galaxyStore.isRescueRotating) return from
-      const target = galaxyStore.travelingToGalaxyBoss
-        ? { x: 0.5, y: 0.5 }
-        : attempts < dots.length
-          ? dots[attempts]
-          : null
-      const state = galaxyStore.championTravelState
-      if (state === 'traveling' && target) {
-        const startTime = galaxyStore.championTravelStartTime
-        const duration = galaxyStore.championTravelDurationMs
-        const progress =
-          startTime > 0 && duration > 0 ? Math.min((gameNow() - startTime) / duration, 1) : 0
-        return {
-          x: from.x + (target.x - from.x) * progress,
-          y: from.y + (target.y - from.y) * progress,
-        }
-      }
-      const arrived = state === 'champion_available' || state === 'champion_spawned'
-      if (arrived && target) return target
-      return from
+    /** Ort des Spielers im 0..1-Raum — die Rechnung steht in `playerGalaxyPos`,
+     *  weil die Live-Buehne des Voyages-Reiters denselben Flug zeigt. */
+    function getPlayerWorldPos(dots: DotPos[], attempts: number): DotPos {
+      return playerGalaxyPos(spawnPos.value, dots, attempts, galaxyStore, gameNow())
     }
 
     function drawNormalMap(ctx: CanvasRenderingContext2D, w: number, h: number) {
@@ -802,7 +749,7 @@ export default defineComponent({
           MINIMAP_IDLE_SUN_R,
           playerBody(),
           nowMs,
-          renderDpr,
+          Math.min(window.devicePixelRatio || 1, 2),
         )
         drawPlayerRing(ctx, px, py, MINIMAP_IDLE_SUN_R * 1.5, nowMs)
       }
@@ -1185,7 +1132,7 @@ export default defineComponent({
           sunR,
           playerBody(),
           nowMs,
-          renderDpr,
+          Math.min(window.devicePixelRatio || 1, 2),
         )
 
         // Radial launch streaks (grow longer as t increases, then fade out)
@@ -1243,27 +1190,21 @@ export default defineComponent({
     function drawCanvas(timestamp = performance.now()) {
       const canvas = canvasEl.value
       if (!canvas) return
-      const { w: cssW, h: cssH } = ensureCanvasSize(canvas)
-      if (cssW === 0 || cssH === 0) return
+      const { w, h } = ensureCanvasSize(canvas)
+      if (w === 0 || h === 0) return
       // Render at device-pixel resolution so the map stays crisp on
       // HiDPI/Retina displays; all drawing keeps using CSS-pixel coords.
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      // Der Faktor liegt in der TRANSFORMATION, nicht an den Konstanten: alles
-      // waechst gemeinsam, und der Backing-Store bleibt in voller Geraete-
-      // aufloesung. Gezeichnet wird danach in logischen Massen (w, h).
-      const k = props.scale > 0 ? props.scale : 1
-      renderDpr = dpr * k
-      const w = cssW / k
-      const h = cssH / k
-      const pw = Math.round(cssW * dpr)
-      const ph = Math.round(cssH * dpr)
+      renderDpr = dpr
+      const pw = Math.round(w * dpr)
+      const ph = Math.round(h * dpr)
       if (canvas.width !== pw || canvas.height !== ph) {
         canvas.width = pw
         canvas.height = ph
       }
       const ctx = canvas.getContext('2d')
       if (!ctx) return
-      ctx.setTransform(renderDpr, 0, 0, renderDpr, 0, 0)
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, w, h)
       if (galaxyStore.pendingRoleSelection) {
         // Waiting for role selection: plain galaxy overview only — the
@@ -1377,7 +1318,7 @@ export default defineComponent({
     function rafTick(timestamp: number) {
       updateCamera()
       drawCanvas(timestamp)
-      if (running.value) {
+      if (show.value) {
         rafId = requestAnimationFrame(rafTick)
       } else {
         rafId = null
@@ -1395,23 +1336,11 @@ export default defineComponent({
       () => drawCanvas(),
     )
 
-    // Die Buehne waechst mit dem Fenster; steht die Schleife (Idle-Zustand),
-    // bliebe das Bild sonst im alten Massstab stehen.
     watch(
-      () => props.scale,
-      () => drawCanvas(),
-    )
-
-    watch(
-      running,
+      show,
       (val) => {
         if (val && rafId === null) {
           rafId = requestAnimationFrame(rafTick)
-        } else if (!val && rafId !== null) {
-          // Ausdruecklich abbrechen statt auf den naechsten Tick zu warten:
-          // ein verdeckter Reiter darf keinen Frame mehr kosten.
-          cancelAnimationFrame(rafId)
-          rafId = null
         }
       },
       { immediate: true },
@@ -1429,7 +1358,7 @@ export default defineComponent({
           cancelAnimationFrame(rafId)
           rafId = null
         }
-      } else if (running.value && rafId === null) {
+      } else if (show.value && rafId === null) {
         resetCanvasIfContextLost(canvasEl.value)
         rafId = requestAnimationFrame(rafTick)
       }
