@@ -344,6 +344,12 @@ export const MINIMAP_COMET_HEAD_R = 6 // player comet head radius (× √zoom)
 export const MINIMAP_COMET_TAIL_LEN = 58 // comet tail length in px along the flight curve
 export const MINIMAP_COMET_TAIL_SEGMENTS = 14 // tail sample count
 export const MINIMAP_IDLE_SUN_R = 15 // player-sun marker when not traveling
+export const PLAYER_MARKER_HALO_SCALE = 1.8
+export const PLAYER_MARKER_HALO_PERIOD_MS = 2600
+export const PLAYER_MARKER_HALO_MIN_ALPHA = 0.35
+export const PLAYER_MARKER_HALO_MAX_ALPHA = 0.85
+export const PLAYER_MARKER_HALO_FILL_ALPHA = 0.5
+export const PLAYER_MARKER_HALO_EDGE = 0.7
 export const MINIMAP_TWINKLE_COUNT = 30 // seeded twinkling background stars
 // Procedural spiral galaxy (canvas-drawn, replaces the old galaxy-far sprite)
 export const MINIMAP_GALAXY_ARMS_MIN = 2 // min seeded spiral arm count

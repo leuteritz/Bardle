@@ -10,6 +10,12 @@ import {
   MINIMAP_WARP_ACCEL_MS,
   MINIMAP_WARP_TAIL_BASE_PX,
   MINIMAP_WARP_TAIL_SPEED_FACTOR,
+  PLAYER_MARKER_HALO_EDGE,
+  PLAYER_MARKER_HALO_FILL_ALPHA,
+  PLAYER_MARKER_HALO_MAX_ALPHA,
+  PLAYER_MARKER_HALO_MIN_ALPHA,
+  PLAYER_MARKER_HALO_PERIOD_MS,
+  PLAYER_MARKER_HALO_SCALE,
   SUN_SPRITE_BODY_FRACTION,
 } from '@/config/constants'
 import { STAR_PALETTE } from './minimapGalaxyGeometry'
@@ -19,33 +25,6 @@ export const ARRIVAL_TRANSITION_MS = 900
 
 /** Sternenstriche im Hyperspace-Tunnel. */
 const WARP_PARTICLE_COUNT = 90
-
-/**
- * "You are here" player signature: stars are filled dots, only the player
- * carries gold rings — a crisp pulsing ring plus an expanding gold ping
- * (tighter and gold, so it never reads as the role-colored target beacon).
- */
-export function drawPlayerRing(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  r: number,
-  nowMs: number,
-) {
-  const pulse = 0.5 + 0.5 * Math.sin(nowMs / 500)
-  ctx.beginPath()
-  ctx.arc(x, y, r * (1.05 + 0.1 * pulse), 0, Math.PI * 2)
-  ctx.strokeStyle = 'rgba(232, 192, 64, 0.9)'
-  ctx.lineWidth = 1.6
-  ctx.stroke()
-
-  const pingT = (nowMs / 1400) % 1
-  ctx.beginPath()
-  ctx.arc(x, y, r * (1.2 + pingT * 1.1), 0, Math.PI * 2)
-  ctx.strokeStyle = `rgba(232, 192, 64, ${((1 - pingT) * 0.5).toFixed(3)})`
-  ctx.lineWidth = 1.2
-  ctx.stroke()
-}
 
 export interface WarpParticle {
   angle: number
@@ -233,6 +212,44 @@ export function drawPhaseSun(
   drawSunLayer(ctx, 'core', body, px, dpr, x, y)
 }
 
+/** Same body and halo as the live Galaxy marker, rasterized for the minimap. */
+export function drawPlayerSunMarker(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  body: SunBody,
+  nowMs: number,
+  dpr: number,
+) {
+  const pulse = 0.5 + 0.5 * Math.sin((nowMs / PLAYER_MARKER_HALO_PERIOD_MS) * Math.PI * 2)
+  const halo = ctx.createRadialGradient(x, y, 0, x, y, r * PLAYER_MARKER_HALO_SCALE)
+  halo.addColorStop(0, `rgba(255, 220, 150, ${PLAYER_MARKER_HALO_FILL_ALPHA})`)
+  halo.addColorStop(PLAYER_MARKER_HALO_EDGE, 'rgba(255, 220, 150, 0)')
+  ctx.save()
+  ctx.globalAlpha =
+    PLAYER_MARKER_HALO_MIN_ALPHA +
+    (PLAYER_MARKER_HALO_MAX_ALPHA - PLAYER_MARKER_HALO_MIN_ALPHA) * pulse
+  ctx.fillStyle = halo
+  ctx.beginPath()
+  ctx.arc(x, y, r * PLAYER_MARKER_HALO_SCALE, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+
+  const px = (2 * r) / (body.kind === 'comet' ? COMET_DISC_FILL : SUN_SPRITE_BODY_FRACTION)
+  if (body.kind === 'blackHole') {
+    drawSunLayer(ctx, 'bhHalo', body, px, dpr, x, y)
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(1, BLACK_HOLE_DISC_TILT)
+    drawSunLayer(ctx, 'bhDisc', body, px, dpr, 0, 0)
+    ctx.restore()
+    drawSunLayer(ctx, 'bhShadow', body, px, dpr, x, y)
+    return
+  }
+  drawSunLayer(ctx, 'core', body, px, dpr, x, y)
+}
+
 /** Idle-Marker des Spielers — derselbe Körper, nur kleiner. */
 export function drawMiniSun(
   ctx: CanvasRenderingContext2D,
@@ -243,7 +260,7 @@ export function drawMiniSun(
   nowMs: number,
   dpr: number,
 ) {
-  drawPhaseSun(ctx, x, y, r, body, nowMs, dpr)
+  drawPlayerSunMarker(ctx, x, y, r, body, nowMs, dpr)
 }
 
 /**
