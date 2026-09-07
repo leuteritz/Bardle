@@ -33,83 +33,119 @@ import { GALAXY_STARS_MAX } from '@/config/constants/progression'
  * 29,2 auf 28,3 faellt — die Trefferflaeche misst 26.
  */
 export const FIRMAMENT_CREST_BAND_H = 112
-/** BASIS der Wappenzone im Kopfband, nicht ihre Breite: sie waechst in den
- *  Rest, den die vier Ablesungen uebriglassen. Als Untergrenze steht sie
- *  trotzdem im Budget, das `firmamentCrest.spec.ts` bindet.
- *
- *  390 ist eine Rechnung, kein runder Wert — Polsterung 2x18, Scheibe 64,
- *  Luecke 14 und die ZWEI Vorsehungs-Ablesungen zu 138. Im schmalsten Zielband
- *  (988) bleiben der Zone 988 - 585 = 403 px, also 13 px Luft.
- *  `firmamentCrest.spec.ts` rechnet die Summe nach. */
-export const FIRMAMENT_CREST_ID_W = 390
-/** Polsterung und Luecke der Wappenzone. Sie haengen per `v-bind` am Element,
- *  denn die Spec rechnet mit genau diesen beiden Zahlen — eine Konstante, die
- *  das CSS nur spiegelt, driftet unbemerkt. */
-export const FIRMAMENT_CREST_ID_PAD_X = 18
-export const FIRMAMENT_CREST_ID_GAP = 14
-export const FIRMAMENT_CREST_KICKER_ID_MIN_PX = 15
-export const FIRMAMENT_CREST_KICKER_ID_MAX_PX = 22
-export const FIRMAMENT_CREST_KICKER_STATE_PX = 12
-export const FIRMAMENT_CREST_KICKER_GAP_PX = 3
-export const FIRMAMENT_CREST_ID_STACK_GAP_PX = 8
+/** Polsterung und Luecke der Wappenzone. Sie ist inhaltsbreit
+ *  (`flex: 0 0 auto`) und traegt nur noch Scheibe und Kennzeile — die
+ *  Vorsehung ist ausgezogen: sie sind ABLESUNGEN und stehen in der Reihe. */
+export const FIRMAMENT_CREST_ID_PAD_X = 10
+export const FIRMAMENT_CREST_ID_GAP = 10
 
-/* Die Unterkante war einmal die Fortschrittsschiene bis zum Aufbruch und lief
-   auf der laufenden Bahn als Goldverlauf voll. Sie ist gefallen: das Band traegt
-   jetzt dieselbe Kante wie die Voyages-Kopfleiste (`border-bottom: 3px #5c3310`),
-   damit die beiden Reiterkoepfe nicht nur gleich HOCH, sondern gleich sind. Der
-   Fortschritt steht weiter als Zahl in der Chimes-Ablesung.                    */
+/* ── Die EINE Ablesungsreihe ────────────────────────────────────────────────
 
-/* Die vier Ablesungen des Kopfbands. AUSSENMASSE, aus den Schriftboeden
-   hergeleitet: die Zahl laeuft bis clamp(26px, 1.9vw, 34px), die Beschriftung
-   bei 10,5 px. Zusammen mit der Wappenzone sind es 925 px — das schmalste
-   Zielband misst 988 (Full HD @125 %, Tab 1536 CSS-px).
-   `firmamentCrest.spec.ts` bindet die Bilanz. */
-export const FIRMAMENT_CREST_READ_W_GALAXIES = 105
-export const FIRMAMENT_CREST_READ_W_STARS = 145
-/** Die breiteste: sie traegt auf der laufenden Bahn `5.74B / 51.2M`. */
-export const FIRMAMENT_CREST_READ_W_CHIMES = 200
-export const FIRMAMENT_CREST_READ_W_ELAPSED = 135
-/** Seitliche Polsterung EINER Ablesung, beidseitig — `v-bind`, weil die
- *  Textbreiten unten dagegen gerechnet werden. */
+   Jede Zelle ist `flex: 1 0 auto`: sie nimmt ihren Inhalt, waechst in den
+   freien Rest und schrumpft NIE. Deshalb steht hier kein Zuschnitt mehr.
+
+   Der alte feste Zuschnitt schnitt still ab: `_READ_W_CHIMES` (200) war gegen
+   `5.74B / 51.2M` UND gegen einen clamp-Deckel von 34 gerechnet, waehrend der
+   Code auf 38 stand — `285.31B / 51.3B` lief ueber die rechte Bandkante.
+   Und die Wappenzone stapelte Kennzeile UEBER Vorsehung: bei 2560 summierte
+   der Stapel auf 117 px in einer 109-px-Box, und `you are here` lag unter
+   `+145%`.
+
+   Was bleibt, ist das BUDGET: die gemessenen Breiten unten, gegen die
+   `firmamentCrest.spec.ts` alle fuenf Zielbaender nachrechnet.               */
+
+/** Seitliche Polsterung EINER Ablesung, beidseitig, und die Luecke zwischen
+ *  Zahl und Beschriftung. */
 export const FIRMAMENT_CREST_READ_PAD_X = 4
 export const FIRMAMENT_CREST_READ_GAP_PX = 5
+/** Die Haarlinie, die zwei Ablesungen scheidet — sie zaehlt zur Zellbreite. */
+export const FIRMAMENT_CREST_CELL_RULE = 1
+/** Die Naht unter dem Band, dieselbe wie unter der Voyages-Kopfleiste. Sie
+ *  geht der Innenhoehe ab: 112 - 3 = 109. */
+export const FIRMAMENT_CREST_BAND_BORDER_B = 3
+/** Zeilenbox-Faktor der Beschriftung in der Hoehenbilanz. Sie traegt
+ *  `line-height: 1` — bei `normal` waere MedievalSharps Box 1,5. Die
+ *  Verwerfung von damals galt gegen eine FESTE 10,5-px-Beschriftung; mit der
+ *  mitwachsenden faellt die Abweichung von der Bandmitte auf allen drei
+ *  Zielbreiten (2,50/3,00/2,75 -> 1,25/1,50/1,25). */
+export const FIRMAMENT_CREST_LINE_BOX = 1
 
-/* Die ZWEI Ablesungen der Vorsehung. Sie stehen in der Wappenzone und tragen
-   dieselbe Gestalt wie die vier oben — dieselbe Schriftskala, Zahl oben,
-   Beschriftung versal darunter. Vorher waren sie zwei 11-px-Chips unter einem
-   lila Namen, also die KLEINSTE Zeile des Bandes fuer das Gesetz des ganzen
-   Durchlaufs.
-
-   Gebunden wird die BESCHRIFTUNG, nicht die Zahl: `.fm-crest-k` ist `nowrap`
-   ohne Ellipse und schneidet still ab. Die laengste Achse („Expedition
-   rewards") misst versal bei 10,5 px mit 0,1 em Sperrung 125,64 px — im
-   Browser gemessen, nicht geschaetzt. Die breiteste Zahl ist dagegen harmlos:
-   der hoechste Buff ist +250 %, also 86,4 px bei 34 px plus 16,8 px Pfeil. */
-export const FIRMAMENT_CREST_READ_W_PROV = 138
-export const FIRMAMENT_CREST_PROV_LABEL_MAX_PX = 126
-
-/** Eine VERGANGENE Bahn speichert nur den Namen ihrer Vorsehung, nie ihre
- *  Achsen — dort steht EINE Ablesung ueber die Breite der beiden, und ihr Wert
- *  ist ein Name statt einer Zahl. 24 px, weil ein Name kein Zaehler ist; auf
- *  der Schriftskala der Zahlen (bis 34) liefe „Struck Resonance" mit 276,6 px
- *  aus den 268 nutzbaren heraus. */
-export const FIRMAMENT_CREST_PROV_NAME_PX = 24
-/** Das Breiteste in dieser einen Ablesung: der laengste Vorsehungsname bei
- *  `_PROV_NAME_PX` (195,2 — „Struck Resonance"). Er schlaegt die laengste
- *  Beschriftung dieses Falls („No providence recorded", 156,4). */
-export const FIRMAMENT_CREST_PROV_WIDE_MAX_PX = 196
-
-/** Schriftboden der grossen Ablesung — und zugleich der Deckel des
- *  Chime-Artworks: darueber bestimmte das BILD die Zeilenhoehe, und die Bilanz,
- *  die nur Schriftgroessen kennt, ginge still daneben. Dieselbe Regel wie
- *  `VOYAGE_MAP_STATS_ART_MAX`. Er BESTIMMT den clamp-Boden per `v-bind`, statt
- *  ihn zu beschreiben. */
-export const FIRMAMENT_CREST_VALUE_MIN_PX = 26
+/* Die Schrift skaliert gegen das BAND (`container-type: inline-size` an
+   `.fm-crest`), nicht gegen den Viewport: `--hud-scale` entkoppelt beide —
+   bei 1536 CSS-px misst das Band 988, bei 1920 aber 1240. Die alte
+   1,9vw-Fassung gab dort 29,2 gegen 36,5 px, obwohl der Platz nur um ein
+   Viertel waechst. Die Faktoren sind so gesetzt, dass der Boden auf dem
+   schmalsten Zielband (988) greift und der Deckel auf 2K (1660).            */
+export const FIRMAMENT_CREST_VALUE_MIN_PX = 25
 export const FIRMAMENT_CREST_VALUE_MAX_PX = 38
-/** Das echte Chime-Artwork neben der Chimes-Ablesung — dieselbe Waehrung,
- *  dasselbe Bild wie auf der Fleet-Karte. Unter dem Schriftboden, und unter der
- *  34-px-Schwelle der `-128`-Aufloesungsstufe. */
+export const FIRMAMENT_CREST_VALUE_CQW = 2.5
+export const FIRMAMENT_CREST_LABEL_MIN_PX = 10
+export const FIRMAMENT_CREST_LABEL_MAX_PX = 12
+export const FIRMAMENT_CREST_LABEL_CQW = 1
+/** Die Kennzeile ist der WERT der Identitaetszelle: eigener Grad, weil ein
+ *  Wort breiter baut als eine Ziffer. */
+export const FIRMAMENT_CREST_KICKER_ID_MIN_PX = 17
+export const FIRMAMENT_CREST_KICKER_ID_MAX_PX = 26
+export const FIRMAMENT_CREST_KICKER_ID_CQW = 1.4
+
+/** Ein Name ist kein Zaehler: fester Grad statt der Skala der Zahlen. */
+export const FIRMAMENT_CREST_PROV_NAME_PX = 24
+/** Das echte Chime-Artwork neben der Chimes-Ablesung. Unter dem Schriftboden,
+ *  und unter der 34-px-Schwelle der `-128`-Aufloesungsstufe. */
 export const FIRMAMENT_CREST_CHIME_ART_PX = 24
+
+/* Die breitesten Inhalte des Bandes, in em IHRER Schrift — im Browser
+   gemessen (MedievalSharp, exakt die Deklarationen der SFC), nicht aus einer
+   Glyphenbreite geschaetzt. Genau diese Schaetzung war der Fehler: `+250 %`
+   misst 0,64 em je Zeichen, `999.99No` aber 0,57 — eine Zahl fuer beide traf
+   keine von beiden. Die Werte sind bei 24 und 38 px identisch gemessen.     */
+export const FIRMAMENT_CREST_EM = {
+  /** `999.99No / 999.99No` — Wert samt Ziel, das Ziel bei 0,5 em. Acht
+   *  Zeichen sind, was `formatNumber` unter 1e33 hoechstens liefert; darueber
+   *  `toExponential(2)` („1.23e+45"), ebenfalls acht. */
+  chimes: 7.428,
+  /** `999 / 99` mit verkleinertem Trennstrich (0,55 em, 0,1 em Rand). Ohne
+   *  ihn misst dieselbe Zeile 4,270 em — der Strich allein kostete 0,72 em. */
+  stars: 3.548,
+  /** `99d 23h` — die breiteste Form von `formatCompactDuration`. */
+  elapsed: 3.936,
+  /** `999` — Galaxien und Landfalls. */
+  count: 1.883,
+  /** `▲+250%`, Pfeil bei 0,5 em plus 0,16 em Polsterung. +250 % ist der
+   *  hoechste Buff. */
+  prov: 3.778,
+  /** `Universe VIII` versal, 0,12 em gesperrt. */
+  kicker: 7.785,
+  /** `Struck Resonance` — der laengste Vorsehungsname. */
+  provName: 8.133,
+} as const
+
+/** Dieselbe Messung fuer die Beschriftungen, versal und 0,1 em gesperrt. Sie
+ *  binden oefter als die Zahlen: `.fm-crest-k` ist `nowrap` OHNE Ellipse und
+ *  schnitte still ab. */
+export const FIRMAMENT_CREST_LABEL_EM = {
+  /** `Expedition rewards` — die laengste der 19 Vorsehungsachsen. */
+  prov: 11.966,
+  /** `No providence recorded` — der laengste Fall der breiten Ablesung. */
+  provWide: 14.891,
+  galaxies: 5.144,
+  stars: 3.53,
+  landfalls: 5.948,
+  /** `Chimes · ~59m 59s` — mit der Uhr bis zum Aufbruch. */
+  chimes: 10.85,
+  elapsed: 4.781,
+  /** `you are here · x12` unter der Kennzeile. */
+  state: 10.839,
+} as const
+
+/** Ab dieser BANDbreite traegt die Reihe die Landfalls-Ablesung. Darunter
+ *  (Full HD bei 125 %, Band 988) reicht der Platz nicht: die sechs uebrigen
+ *  Zellen und die Wappenzone brauchen dort schon 977 px.
+ *
+ *  ACHTUNG: `v-bind` greift NICHT in einer `@container`-Praeambel — im CSS
+ *  steht die Schwelle als Literal, und `firmamentCrest.spec.ts` bindet beide
+ *  aneinander. */
+export const FIRMAMENT_CREST_LANDFALLS_GATE_W = 1220
 
 /* Die Universumsleiste steht RECHTS und traegt das Rezept der Forge-Detailspalte:
    Liste plus Griffleiste, und die ZONE ist beides zusammen. Dieselben Zahlen wie
