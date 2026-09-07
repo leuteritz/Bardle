@@ -1457,7 +1457,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
 .sdp-stat strong {
   max-width: 100%;
   overflow: hidden;
-  color: #f3d57b;
+  color: var(--sc);
   font-size: 30px;
   font-weight: 400;
   line-height: 1.05;
@@ -1466,7 +1466,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
 }
 .sdp-stat strong em {
   margin-left: 4px;
-  color: #e8c040;
+  color: #f3d57b;
   font-size: 16px;
   font-style: normal;
   vertical-align: 0.18em;
