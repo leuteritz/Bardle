@@ -680,6 +680,10 @@ export const RANK_EMBLEM_IMAGES: Record<string, string> = {
 /** Win streak from which the ladder flank paints the streak "hot" (BattleLandingScreen) */
 export const HOT_WIN_STREAK_THRESHOLD = 3
 
+/** Sieg und Niederlage tragen ueberall denselben Zweiklang — Bottom-Leiste
+ *  und Kennzahlkachel des Journey-Reiters lesen von hier. */
+export const WIN_LOSS_TONE = { win: '#74d448', loss: '#cc6050' } as const
+
 export const RANK_TIER_COLORS: Record<string, string> = {
   Iron: '#8a9098',
   Bronze: '#c87832',
@@ -692,6 +696,9 @@ export const RANK_TIER_COLORS: Record<string, string> = {
   Grandmaster: '#f06028',
   Challenger: '#f0dc50',
 }
+
+/** Ton fuer ein Tier, das die Tabelle nicht kennt — Gold, wie das Scoreboard. */
+export const RANK_TIER_COLOR_FALLBACK = '#d4a020'
 
 /**
  * Frame a roster card wears for the player's current ladder tier

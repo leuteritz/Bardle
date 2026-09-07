@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import { storeToRefs } from 'pinia'
 import {
   CHIME_ART_ALPHA_SCALE,
   CURRENCY_ART,
   JOURNEY_KPI_GRID,
   JOURNEY_KPI_TILES,
   UNIVERSE_TOOLTIP_MEEP_SCALE,
+  WIN_LOSS_TONE,
 } from '@/config/constants'
+import { useBattleStore } from '@/stores/battle/battleStore'
+import { rankEmblemImage, rankTierColor } from '@/utils/game/rankEmblem'
 import type { StatCategoryId, StatCategoryView } from '@/types'
 
 /**
@@ -23,6 +27,8 @@ interface KpiTile {
   category: StatCategoryId
   icon: string
   art?: keyof typeof CURRENCY_ART
+  pair?: string
+  emblem?: 'rank'
   label: string
   fullLabel: string
   value: string
@@ -37,12 +43,15 @@ const tiles = computed<KpiTile[]>(() =>
     const stat = cat?.stats.find((s) => s.key === t.key)
     if (!cat || !stat) return []
     const sub = t.sub ? cat.stats.find((s) => s.key === t.sub)?.value : undefined
+    const pair = t.pair ? cat.stats.find((s) => s.key === t.pair)?.value : undefined
     return [
       {
         key: `${t.category}/${t.key}`,
         category: t.category,
         icon: t.icon,
         art: t.art,
+        pair,
+        emblem: t.emblem,
         label: t.short ?? stat.label,
         fullLabel: stat.label,
         value: stat.value,
@@ -53,6 +62,14 @@ const tiles = computed<KpiTile[]>(() =>
     ]
   }),
 )
+
+// Das Rangemblem der Kachel ist dasselbe wie unten in der Leiste.
+const { currentRank } = storeToRefs(useBattleStore())
+const rankEmblem = computed(() => rankEmblemImage(currentRank.value.tier))
+const rankColor = computed(() => rankTierColor(currentRank.value.tier))
+
+const winTone = WIN_LOSS_TONE.win
+const lossTone = WIN_LOSS_TONE.loss
 
 // Der Alpha-Rand der beiden Sprites wird per scale ausgeglichen, nicht ueber
 // die Box: die Textspalte muss in allen zwoelf Kacheln gleich weit einruecken.
@@ -86,7 +103,14 @@ const gridStyle = {
         @click="emit('open', t.category)"
       >
         <img
-          v-if="t.art"
+          v-if="t.emblem"
+          :src="rankEmblem"
+          class="jt-kpi-icon jt-kpi-art"
+          alt=""
+          aria-hidden="true"
+        />
+        <img
+          v-else-if="t.art"
           :src="CURRENCY_ART[t.art].src"
           class="jt-kpi-icon jt-kpi-art"
           :class="`jt-kpi-art--${t.art}`"
@@ -95,8 +119,16 @@ const gridStyle = {
         />
         <Icon v-else :icon="t.icon" class="jt-kpi-icon" aria-hidden="true" />
         <span class="jt-kpi-body">
-          <span class="jt-kpi-val">
-            {{ t.value }}<span v-if="t.sub" class="jt-kpi-sub">{{ t.sub }}</span>
+          <span
+            class="jt-kpi-val"
+            :class="{ 'jt-kpi-val--pair': t.pair }"
+            :style="t.emblem ? { color: rankColor } : undefined"
+          >
+            <template v-if="t.pair"
+              ><span class="jt-kpi-win">{{ t.value }}W</span
+              ><span class="jt-kpi-loss">{{ t.pair }}L</span></template
+            ><template v-else>{{ t.value }}</template
+            ><span v-if="t.sub" class="jt-kpi-sub">{{ t.sub }}</span>
           </span>
           <span v-ink-center class="jt-kpi-lbl">{{ t.label }}</span>
         </span>
@@ -223,6 +255,21 @@ const gridStyle = {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Sieg und Niederlage im Zweiklang der Bottom-Leiste, nebeneinander statt
+   gestapelt: hier traegt die Kachel eine Zeile, keine Spalte. Drei Zahlen
+   teilen sich die Zeile, die die anderen elf mit einer fuellen — also kleiner,
+   sonst schneidet die Kachel Niederlage und Quote ab (auf 2K gemessen). */
+.jt-kpi-val--pair {
+  font-size: clamp(11px, 6.6cqh, 18px);
+}
+.jt-kpi-win {
+  color: v-bind(winTone);
+}
+.jt-kpi-loss {
+  margin-left: 0.35em;
+  color: v-bind(lossTone);
+}
+
 .jt-kpi-sub {
   margin-left: 0.3em;
   font-size: clamp(9px, 5cqh, 13px);
