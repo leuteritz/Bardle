@@ -6,7 +6,6 @@ import {
   CHAMPION_ART_MD_MAX_EDGE,
   CHAMPION_ART_SM_MAX_EDGE,
   FIRMAMENT_CREST_BAND_H,
-  FIRMAMENT_CREST_ID_W,
   FIRMAMENT_MAP_INSET_PX,
   FIRMAMENT_NODE_HIT_MIN,
   FIRMAMENT_PATH_MIN_SPAN,
@@ -189,11 +188,6 @@ describe('Firmament — das Zonenbudget', () => {
 
   it('spart mit dem Einklappen mehr als die Haelfte der Leiste', () => {
     expect(FIRMAMENT_RAIL_HANDLE_PX).toBeLessThan(FIRMAMENT_RAIL_ZONE_W / 2)
-  })
-
-  it('haelt das Wappen im Kopfband schmaler als die halbe Breite', () => {
-    // Sonst bliebe der Fortschrittsleiste daneben kein lesbarer Rest.
-    expect(FIRMAMENT_CREST_ID_W).toBeLessThan(tabWidth(1920, 1080) / 2)
   })
 
   it('ist die Zone der Leiste Liste PLUS Griff', () => {

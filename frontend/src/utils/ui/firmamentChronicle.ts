@@ -40,6 +40,9 @@ export interface FirmamentChronicle {
    *  gerettet oder verloren, auch wenn ihr Kern noch steht. */
   rescued: number
   lost: number
+  /** Angelaufene Orte dieser Bahn — dieselbe Zahl, die die Karte als Rauten an
+   *  den Knoten zeichnet. */
+  landfalls: number
   /** Wie oft dieses Universum betreten wurde, das laufende Mal mitgezaehlt. */
   visits: number
   /** Chimes, die hier bis zum Aufbruch erhoben wurden — ueber alle Besuche.
@@ -72,11 +75,13 @@ export function buildFirmamentChronicle(input: FirmamentChronicleInput): Firmame
   let galaxies = 0
   let rescued = 0
   let lost = 0
+  let landfalls = 0
   for (const n of input.nodes) {
     if (n.state === 'unlit') continue
     if (n.state === 'freed') galaxies++
     rescued += n.rescued
     lost += n.lost
+    landfalls += n.landfalls
   }
 
   const past = runsOfUniverse(input.runs, input.universe)
@@ -94,6 +99,7 @@ export function buildFirmamentChronicle(input: FirmamentChronicleInput): Firmame
     galaxies,
     rescued,
     lost,
+    landfalls,
     visits: past.length + (isHere ? 1 : 0),
     chimes,
     seconds,

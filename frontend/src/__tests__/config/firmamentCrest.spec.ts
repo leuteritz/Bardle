@@ -3,22 +3,31 @@ import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import {
   BOTTOM_BAR_SIDE_W,
+  FIRMAMENT_CREST_BAND_BORDER_B,
+  FIRMAMENT_CREST_BAND_H,
+  FIRMAMENT_CREST_CELL_RULE,
   FIRMAMENT_CREST_CHIME_ART_PX,
+  FIRMAMENT_CREST_EM,
   FIRMAMENT_CREST_ID_GAP,
   FIRMAMENT_CREST_ID_PAD_X,
-  FIRMAMENT_CREST_ID_W,
-  FIRMAMENT_CREST_PROV_LABEL_MAX_PX,
+  FIRMAMENT_CREST_KICKER_ID_CQW,
+  FIRMAMENT_CREST_KICKER_ID_MAX_PX,
+  FIRMAMENT_CREST_KICKER_ID_MIN_PX,
+  FIRMAMENT_CREST_LABEL_CQW,
+  FIRMAMENT_CREST_LABEL_EM,
+  FIRMAMENT_CREST_LABEL_MAX_PX,
+  FIRMAMENT_CREST_LABEL_MIN_PX,
+  FIRMAMENT_CREST_LANDFALLS_GATE_W,
+  FIRMAMENT_CREST_LINE_BOX,
   FIRMAMENT_CREST_PROV_NAME_PX,
-  FIRMAMENT_CREST_PROV_WIDE_MAX_PX,
+  FIRMAMENT_CREST_READ_GAP_PX,
   FIRMAMENT_CREST_READ_PAD_X,
-  FIRMAMENT_CREST_READ_W_CHIMES,
-  FIRMAMENT_CREST_READ_W_ELAPSED,
-  FIRMAMENT_CREST_READ_W_GALAXIES,
-  FIRMAMENT_CREST_READ_W_PROV,
-  FIRMAMENT_CREST_READ_W_STARS,
+  FIRMAMENT_CREST_VALUE_CQW,
+  FIRMAMENT_CREST_VALUE_MAX_PX,
   FIRMAMENT_CREST_VALUE_MIN_PX,
   UNIVERSE_DISC_CREST_PX,
 } from '@/config/constants'
+import { formatNumber } from '@/config/ui/numberFormat'
 import { buildFirmamentChronicle } from '@/utils/ui/firmamentChronicle'
 import type { FirmamentNode } from '@/utils/ui/firmamentLayout'
 import type { UniverseRunRecord } from '@/types'
@@ -27,12 +36,22 @@ import type { UniverseRunRecord } from '@/types'
  * Das Kopfband des Firmaments — zwei Zusicherungen, und beide sind schon einmal
  * gebrochen gewesen.
  *
- * DIE ERSTE ist die Bilanz: Wappenzone plus vier Ablesungen muessen in das
- * SCHMALSTE Zielband passen. Die Ablesungen sind `flex-shrink: 0`, die
- * Wappenzone gibt nach — laeuft die Reihe trotzdem ueber, schneidet sie still
- * ab, und eine `scrollWidth`-Pruefung findet das nicht. Seit die zwei Wirkungen
- * der Vorsehung als ABLESUNGEN in der Wappenzone stehen, haengt an derselben
- * Bilanz auch, ob die laengste Achsenbeschriftung noch hineinpasst.
+ * DIE ERSTE ist die Bilanz: die Identitaetszone plus JEDE Ablesung muss in das
+ * SCHMALSTE Zielband passen. Die Zellen schrumpfen nicht mehr (`flex: 1 0 auto`)
+ * — passt die Reihe nicht, laeuft sie an die Bandkante, und eine
+ * `scrollWidth`-Pruefung findet das nicht.
+ *
+ * Zwei Fassungen sind an genau dieser Bilanz gestorben. Die Chimes-Ablesung
+ * stand auf 200 px, gerechnet gegen `5.74B / 51.2M` UND gegen einen clamp-Deckel
+ * von 34, waehrend der Code auf 38 lief — `285.31B / 51.3B` schob sich in die
+ * Nachbarzelle und ueber die rechte Bandkante. Und die Wappenzone stapelte die
+ * Vorsehung UNTER die Kennzeile: bei 2560 summierte der Stapel auf 117 px in
+ * einer 109-px-Box, und `you are here` verschwand unter `+145%`.
+ *
+ * Gerechnet wird deshalb gegen GEMESSENE Breiten (`FIRMAMENT_CREST_EM`,
+ * `FIRMAMENT_CREST_LABEL_EM`, im Browser aufgenommen), nie gegen einen
+ * Beispielwert und nie gegen eine geschaetzte Glyphenbreite: `+250 %` misst
+ * 0,64 em je Zeichen, `999.99No` aber 0,57.
  *
  * DIE ZWEITE ist die Chronik selbst: sie ist der ganze Grund, warum das Band
  * umgebaut wurde. Vorher standen dort Lebenszeit-Zaehler, und wer auf Universum
@@ -53,76 +72,153 @@ const hudScale = (w: number, h: number) => clamp(0.52, Math.min(w / 2560, h / 14
 const bandWidth = (vw: number, vh: number) =>
   vw - 2 * (BOTTOM_BAR_SIDE_W * hudScale(vw, vh) + MODAL_GAP)
 
-const READS =
-  FIRMAMENT_CREST_READ_W_GALAXIES +
-  FIRMAMENT_CREST_READ_W_STARS +
-  FIRMAMENT_CREST_READ_W_CHIMES +
-  FIRMAMENT_CREST_READ_W_ELAPSED
+/** Die fuenf Zielbaender, aus `docs/hud-and-layout.md`. */
+const SCREENS: readonly (readonly [number, number])[] = [
+  [1536, 864],
+  [1920, 1080],
+  [1920, 1200],
+  [2560, 1440],
+  [3840, 2160],
+]
+
+/** Die drei Schriftskalen des Bandes, gerechnet wie ihre `clamp()` im CSS —
+ *  gegen die BANDbreite, nicht gegen den Viewport. */
+const valueAt = (band: number) =>
+  clamp(
+    FIRMAMENT_CREST_VALUE_MIN_PX,
+    (FIRMAMENT_CREST_VALUE_CQW * band) / 100,
+    FIRMAMENT_CREST_VALUE_MAX_PX,
+  )
+const labelAt = (band: number) =>
+  clamp(
+    FIRMAMENT_CREST_LABEL_MIN_PX,
+    (FIRMAMENT_CREST_LABEL_CQW * band) / 100,
+    FIRMAMENT_CREST_LABEL_MAX_PX,
+  )
+const kickerAt = (band: number) =>
+  clamp(
+    FIRMAMENT_CREST_KICKER_ID_MIN_PX,
+    (FIRMAMENT_CREST_KICKER_ID_CQW * band) / 100,
+    FIRMAMENT_CREST_KICKER_ID_MAX_PX,
+  )
+
+/** Aussenmass EINER Ablesung: der breitere ihrer beiden Zeilen, dazu die
+ *  Polsterung beidseitig und die Haarlinie, die sie von der linken Nachbarin
+ *  scheidet. */
+const cell = (valueW: number, labelW: number) =>
+  Math.max(valueW, labelW) + 2 * FIRMAMENT_CREST_READ_PAD_X + FIRMAMENT_CREST_CELL_RULE
+
+/** Was die Reihe auf einem Band dieser Breite WIRKLICH belegt. `prov` waehlt
+ *  zwischen den zwei Achsen-Ablesungen der laufenden Bahn und der EINEN breiten
+ *  mit dem Vorsehungsnamen — der teurere Fall ist nicht immer derselbe. */
+const rowWidth = (band: number, opts: { prov: 'axes' | 'name' }) => {
+  const v = valueAt(band)
+  const k = labelAt(band)
+  const g = kickerAt(band)
+  const em = FIRMAMENT_CREST_EM
+  const lbl = FIRMAMENT_CREST_LABEL_EM
+
+  const id =
+    2 * FIRMAMENT_CREST_ID_PAD_X +
+    UNIVERSE_DISC_CREST_PX +
+    FIRMAMENT_CREST_ID_GAP +
+    Math.max(em.kicker * g, lbl.state * k) +
+    FIRMAMENT_CREST_CELL_RULE
+
+  const prov =
+    opts.prov === 'axes'
+      ? 2 * cell(em.prov * v, lbl.prov * k)
+      : cell(em.provName * FIRMAMENT_CREST_PROV_NAME_PX, lbl.provWide * k)
+
+  const chimes = cell(
+    FIRMAMENT_CREST_CHIME_ART_PX + FIRMAMENT_CREST_READ_GAP_PX + em.chimes * v,
+    lbl.chimes * k,
+  )
+
+  const landfalls =
+    band >= FIRMAMENT_CREST_LANDFALLS_GATE_W ? cell(em.count * v, lbl.landfalls * k) : 0
+
+  return (
+    id +
+    prov +
+    cell(em.count * v, lbl.galaxies * k) +
+    cell(em.stars * v, lbl.stars * k) +
+    landfalls +
+    chimes +
+    cell(em.elapsed * v, lbl.elapsed * k)
+  )
+}
 
 describe('Firmament-Kopfband — das Breitenbudget', () => {
-  it('traegt Wappen und alle vier Ablesungen im schmalsten Zielband', () => {
-    // Der schmalste Fall ist NICHT Full HD im Vollbild, sondern Full HD @125 %:
-    // der Browser meldet dort 1536 CSS-px. Eine Breitenpruefung an der
-    // Aufloesungstabelle statt an den CSS-Pixeln geht daran vorbei.
-    for (const [vw, vh] of [
-      [1536, 864],
-      [1920, 1080],
-      [1920, 1200],
-      [2560, 1440],
-      [3840, 2160],
-    ]) {
-      expect(FIRMAMENT_CREST_ID_W + READS, `${vw}x${vh}`).toBeLessThanOrEqual(bandWidth(vw, vh))
+  it('traegt die Identitaet und JEDE Ablesung in jedem Zielband', () => {
+    // Die Zellen schrumpfen nicht (`flex: 1 0 auto`). Passt die Summe nicht,
+    // laeuft die Reihe an die Bandkante — genau das tat die alte Fassung mit
+    // `285.31B / 51.3B` in einer 200-px-Zelle.
+    for (const [vw, vh] of SCREENS) {
+      const band = bandWidth(vw, vh)
+      for (const prov of ['axes', 'name'] as const) {
+        expect(rowWidth(band, { prov }), `${vw}x${vh} · ${prov}`).toBeLessThanOrEqual(band)
+      }
     }
   })
 
-  it('gibt der Chimes-Ablesung die groesste Breite', () => {
-    // Sie ist die einzige, die ZWEI Zahlen traegt (`5.74B / 51.2M`) — jede
-    // andere kaeme mit weniger aus, und wer sie angleicht, laesst genau diese
-    // umbrechen.
-    for (const w of [
-      FIRMAMENT_CREST_READ_W_GALAXIES,
-      FIRMAMENT_CREST_READ_W_STARS,
-      FIRMAMENT_CREST_READ_W_ELAPSED,
-    ]) {
-      expect(FIRMAMENT_CREST_READ_W_CHIMES).toBeGreaterThan(w)
+  it('traegt die Landfalls-Ablesung genau ab ihrer Schwelle', () => {
+    // Sie ist die siebte, und das schmalste Zielband (988) hat ihre 69 px nicht.
+    // Die Schwelle muss auf sich selbst passen — sonst waere sie zu frueh.
+    const gate = FIRMAMENT_CREST_LANDFALLS_GATE_W
+    expect(rowWidth(gate, { prov: 'axes' })).toBeLessThanOrEqual(gate)
+    // Und sie muss unter dem Full-HD-Band liegen, sonst faellt die Ablesung auf
+    // der Aufloesung weg, fuer die sie gedacht ist.
+    expect(gate).toBeLessThanOrEqual(bandWidth(1920, 1080))
+    // Unterhalb traegt das schmalste Zielband die uebrigen sechs — mit Reserve.
+    expect(rowWidth(bandWidth(1536, 864), { prov: 'axes' })).toBeLessThan(bandWidth(1536, 864))
+  })
+
+  it('rechnet die Chimes-Ablesung gegen den MAXIMALFALL von formatNumber', () => {
+    // Die alten 200 px standen gegen `5.74B / 51.2M`. Gebunden ist jetzt, was
+    // die Funktion hoechstens liefert: acht Zeichen — `999.99No` unter 1e33,
+    // darueber `toExponential(2)` („1.23e+45"), ebenfalls acht.
+    for (const n of [285.31e9, 5.74e9, 1e21, 999.994e30, 1e33, 9.9e40]) {
+      expect(formatNumber(n).length, formatNumber(n)).toBeLessThanOrEqual(8)
     }
+    // Und die gemessene Breite gehoert zu genau dieser Zeile, Ziel eingerechnet.
+    const v = FIRMAMENT_CREST_VALUE_MAX_PX
+    expect(FIRMAMENT_CREST_EM.chimes * v).toBeGreaterThan(FIRMAMENT_CREST_EM.stars * v)
+    expect(FIRMAMENT_CREST_EM.chimes * v).toBeGreaterThan(FIRMAMENT_CREST_EM.elapsed * v)
   })
 
-  it('traegt in der Wappenzone Scheibe UND beide Vorsehungs-Ablesungen', () => {
-    // Das ist die Herleitung der 390: Polsterung, Scheibe, Luecke und die zwei
-    // Ablesungen. Sie stehen in der Zone, die NACHGIBT — laeuft die Rechnung
-    // ueber, schneidet die Reihe still ab, statt zu rollen.
-    expect(FIRMAMENT_CREST_ID_W).toBeGreaterThanOrEqual(
-      2 * FIRMAMENT_CREST_ID_PAD_X +
-        UNIVERSE_DISC_CREST_PX +
-        FIRMAMENT_CREST_ID_GAP +
-        2 * FIRMAMENT_CREST_READ_W_PROV,
-    )
+  it('haelt Zahl, Luecke und Beschriftung samt Scheibe unter der Bandhoehe', () => {
+    // Die Hoehenbilanz fehlte, und daran starb die alte Wappenzone: Kennzeile
+    // UEBER Vorsehung ergab bei 2560 einen 117-px-Stapel in einer 109-px-Box.
+    const inner = FIRMAMENT_CREST_BAND_H - FIRMAMENT_CREST_BAND_BORDER_B
+    const stack = (value: number) =>
+      value + FIRMAMENT_CREST_READ_GAP_PX + FIRMAMENT_CREST_LABEL_MAX_PX * FIRMAMENT_CREST_LINE_BOX
+    expect(stack(FIRMAMENT_CREST_VALUE_MAX_PX)).toBeLessThanOrEqual(inner)
+    expect(stack(FIRMAMENT_CREST_KICKER_ID_MAX_PX)).toBeLessThanOrEqual(inner)
+    expect(UNIVERSE_DISC_CREST_PX).toBeLessThanOrEqual(inner)
+    // Die Scheibe bleibt das hoechste Element — sonst triebe der Text die
+    // Bandhoehe, und die haengt an der Voyages-Kopfleiste.
+    expect(stack(FIRMAMENT_CREST_VALUE_MAX_PX)).toBeLessThan(UNIVERSE_DISC_CREST_PX)
   })
 
-  it('laesst die laengste Achsenbeschriftung in ihre Ablesung passen', () => {
-    // `.fm-crest-k` ist `nowrap` OHNE Ellipse: zu lang heisst still
-    // abgeschnitten, und eine `scrollWidth`-Pruefung findet das nicht. Die Zahl
-    // ist im Browser gemessen („Expedition rewards", 10,5 px versal, 0,1 em
-    // Sperrung).
-    expect(FIRMAMENT_CREST_PROV_LABEL_MAX_PX + 2 * FIRMAMENT_CREST_READ_PAD_X).toBeLessThanOrEqual(
-      FIRMAMENT_CREST_READ_W_PROV,
-    )
-  })
-
-  it('laesst den laengsten Vorsehungsnamen in die EINE breite Ablesung passen', () => {
-    // Ohne Achsen (vergangene Bahn, oder nie geprestiged) steht dort ein Name
-    // statt zweier Zahlen, ueber die Breite der beiden.
-    expect(FIRMAMENT_CREST_PROV_WIDE_MAX_PX + 2 * FIRMAMENT_CREST_READ_PAD_X).toBeLessThanOrEqual(
-      2 * FIRMAMENT_CREST_READ_W_PROV,
-    )
-    // Und er laeuft NICHT auf der Skala der Zahlen: dort waere er breiter als
-    // seine Ablesung.
-    expect(FIRMAMENT_CREST_PROV_NAME_PX).toBeLessThan(FIRMAMENT_CREST_VALUE_MIN_PX)
+  it('trifft mit der cqw-Skala Boden UND Deckel im Zielband', () => {
+    // Auf dem schmalsten Band muss die Zahl auf ihrem Boden stehen — dort ist
+    // die Bilanz eng. Spaetestens auf 2K steht sie an ihrem Deckel, sonst
+    // wuechse sie auf 4K weiter, wo niemand mehr nachgerechnet hat.
+    expect(valueAt(bandWidth(1536, 864))).toBe(FIRMAMENT_CREST_VALUE_MIN_PX)
+    expect(valueAt(bandWidth(2560, 1440))).toBe(FIRMAMENT_CREST_VALUE_MAX_PX)
+    expect(labelAt(bandWidth(2560, 1440))).toBe(FIRMAMENT_CREST_LABEL_MAX_PX)
+    // Die Kennzeile steigt flacher: sie erreicht ihren Deckel erst auf 4K.
+    // Sie ist der laengste Text des Bandes und wuerde frueher die Zellen fressen.
+    expect(kickerAt(bandWidth(2560, 1440))).toBeGreaterThan(FIRMAMENT_CREST_KICKER_ID_MIN_PX)
+    expect(kickerAt(bandWidth(2560, 1440))).toBeLessThan(FIRMAMENT_CREST_KICKER_ID_MAX_PX)
+    expect(kickerAt(bandWidth(3840, 2160))).toBe(FIRMAMENT_CREST_KICKER_ID_MAX_PX)
+    // Und auf Full HD steht die Zahl UEBER dem alten festen Boden von 26.
+    expect(valueAt(bandWidth(1920, 1080))).toBeGreaterThan(26)
   })
 
   it('laesst das Chime-Artwork die Ablesung nicht hoeher machen', () => {
-    // Ueber dem Schriftboden bestimmt das BILD die Zeilenhoehe, und eine
+    // Ueber dem Schriftboden bestimmte das BILD die Zeilenhoehe, und eine
     // Bilanz, die nur Schriftgroessen kennt, geht dann still daneben —
     // dieselbe Wand wie `VOYAGE_MAP_STATS_ART_MAX` im Voyages-Datenband.
     expect(FIRMAMENT_CREST_CHIME_ART_PX).toBeLessThanOrEqual(FIRMAMENT_CREST_VALUE_MIN_PX)
@@ -207,15 +303,86 @@ describe('Firmament-Kopfband — jede Ablesung steht auf ihrer TINTE', () => {
     expect(art.slice(0, art.indexOf('</span'))).toContain('v-ink-center.y')
   })
 
+  it('misst am BAND, nicht am Viewport', () => {
+    // `--hud-scale` entkoppelt Viewport und Bandbreite: bei 1536 CSS-px misst
+    // das Band 988, bei 1920 aber 1240. Eine `vw`-Skala rechnet an dem Sprung
+    // vorbei — sie gab dort 29,2 gegen 36,5 px.
+    const style = SFC.slice(SFC.indexOf('<style'))
+    expect(style).toContain('container-type: inline-size')
+    expect(style).not.toMatch(/[\d.]vw/)
+    // Und `.fm-crest` selbst darf kein `cqw` tragen: das loeste gegen den
+    // naechsten Vorfahren auf, nicht gegen das Band.
+    const own = /\.fm-crest \{([\s\S]*?)\n\}/.exec(style)
+    expect(own?.[1]).not.toContain('cqw')
+  })
+
+  it('bindet die Landfalls-Schwelle an ihre Konstante', () => {
+    // `v-bind` greift in einer `@container`-Praeambel NICHT — die Abfrage
+    // matchte still nie. Die Schwelle steht deshalb als Literal, und genau
+    // deshalb muss sie hier gebunden sein.
+    const style = SFC.slice(SFC.indexOf('<style'))
+    expect(style).toContain(`@container (min-width: ${FIRMAMENT_CREST_LANDFALLS_GATE_W}px)`)
+  })
+
+  it('holt jedes Mass des BUDGETS aus den Konstanten', () => {
+    // Eine Zahl im scoped CSS driftet unbemerkt: die Specs lesen Konstanten,
+    // kein DOM. Geprueft sind die Masse, die in der Bilanz stehen — nicht die
+    // Roemerzahl-Marke auf der Scheibe, die keine Zeile des Bandes belegt.
+    const style = SFC.slice(SFC.indexOf('<style'))
+    const budget: readonly (readonly [string, readonly string[]])[] = [
+      ['.fm-crest', ['height:']],
+      ['.fm-crest-id', ['gap:', 'padding:']],
+      ['.fm-crest-kicker', ['gap:']],
+      ['.fm-crest-read', ['gap:', 'padding:']],
+      ['.fm-crest-v', ['font-size:']],
+      ['.fm-crest-v--id', ['font-size:']],
+      ['.fm-crest-v--name', ['font-size:']],
+      ['.fm-crest-k', ['font-size:']],
+      ['.fm-crest-chime', ['width:', 'height:']],
+    ]
+    for (const [sel, props] of budget) {
+      const start = style.indexOf(sel + ' {')
+      expect(start, sel).toBeGreaterThanOrEqual(0)
+      const body = style.slice(start, style.indexOf('}', start))
+      for (const p of props) {
+        const at = body.indexOf(p)
+        expect(at, sel + ' ' + p).toBeGreaterThanOrEqual(0)
+        expect(body.slice(at, body.indexOf(';', at)), sel + ' ' + p).toContain('v-bind')
+      }
+    }
+  })
+
+  it('laesst keine Zelle schrumpfen', () => {
+    // Eine Zelle, die schrumpfen darf, schneidet irgendwann ab — und
+    // `.fm-crest-k` ist `nowrap` OHNE Ellipse.
+    const style = SFC.slice(SFC.indexOf('<style'))
+    const read = /\.fm-crest-read \{([\s\S]*?)\n\}/.exec(style)
+    expect(read?.[1]).toContain('flex: 1 0 auto')
+    const id = /\.fm-crest-id \{([\s\S]*?)\n\}/.exec(style)
+    expect(id?.[1]).toContain('flex: 0 0 auto')
+  })
+
   it('laesst die Kennzeile bewusst aus', () => {
-    // Sie ist eine Zeile aus ZWEI Schriftgraden; die Direktive misst mit der
-    // Schrift des Elements und laege dort daneben.
+    // Der TRAEGER umschliesst zwei Schriftgrade; die Direktive misst mit der
+    // Schrift des Elements und laege dort daneben. Seine beiden Spans tragen sie
+    // seit dem Umbau sehr wohl — jeder von ihnen ist einschriftig.
     const kicker = SFC.match(/<span[^>]*class="fm-crest-kicker"/)
     expect(kicker?.[0]).not.toContain('v-ink-center')
   })
 })
 
 describe('Firmament-Kopfband — die Chronik der gezeigten Bahn', () => {
+  it('summiert die Landfalls der Bahn und ueberspringt die unbetretene Galaxie', () => {
+    // Dieselbe Zahl, die die Karte als Rauten an ihre Knoten zeichnet — und
+    // wie Galaxien und Sterne eine Zahl DIESER Bahn, keine des Spielstands.
+    const nodes = [
+      { ...node('freed', 3, 0), landfalls: 4 },
+      { ...node('current', 1, 1), landfalls: 2 },
+      { ...node('unlit', 0, 0), landfalls: 9 },
+    ]
+    expect(buildFirmamentChronicle({ ...BASE, nodes }).landfalls).toBe(6)
+  })
+
   it('zaehlt die laufende Galaxie bei den STERNEN, aber nicht bei den GALAXIEN', () => {
     // Ihre Sterne SIND gerettet oder verloren; sie selbst ist es nicht, und der
     // Knoten sagt das auch (`state: 'current'`).
