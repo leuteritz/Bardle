@@ -15,6 +15,8 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
+import { liveGalaxyRecord } from '@/utils/game/liveGalaxyRecord'
+import { useGameStore } from '@/stores/core/gameStore'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { voyageBerthsOf, assignVoyageBerths, pinKeyOf, pinStampOf } from '@/utils/game/voyageSites'
 import { voyageLegsOf } from '@/utils/game/voyageLegs'
@@ -42,6 +44,7 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
   const expeditionStore = useExpeditionStore()
   const chartStore = useExpeditionChartStore()
   const forgeStore = useStarForgeStore()
+  const gameStore = useGameStore()
   const { announceReceipt } = useHerald()
   const { selectedGalaxy } = storeToRefs(chartStore)
 
@@ -70,19 +73,36 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
   const records = computed(() =>
     [...galaxyStore.completedGalaxies].sort((a, b) => b.galaxy - a.galaxy),
   )
-  const selectedRecord = computed(
-    () => records.value.find((r) => r.galaxy === selectedGalaxy.value) ?? null,
+  /**
+   * Die LAUFENDE Galaxie steht in keinem Archiv — sie wird gebaut, damit die
+   * Karte sie mit demselben Renderer zeigt wie jede befreite. Ohne sie hat der
+   * Spielerpunkt keine Flaeche, auf der er fliegen koennte.
+   */
+  const isLive = computed(() => selectedGalaxy.value === galaxyStore.currentGalaxy)
+  const liveRecord = computed(() =>
+    liveGalaxyRecord({
+      galaxy: galaxyStore.currentGalaxy,
+      mapSeed: galaxyStore.mapSeed,
+      themeIndex: galaxyStore.currentThemeIndex,
+      universe: gameStore.currentUniverse,
+      attemptResults: galaxyStore.attemptResults,
+      landfallResults: galaxyStore.landfallResults,
+      incidentResults: galaxyStore.incidentResults,
+      starManifests: galaxyStore.starManifests,
+    }),
+  )
+  const selectedRecord = computed(() =>
+    isLive.value
+      ? liveRecord.value
+      : (records.value.find((r) => r.galaxy === selectedGalaxy.value) ?? null),
   )
 
-  /** Immer eine befreite Galaxie, sobald der Reiter offen ist. */
+  /** Der laufende Lauf ist der Startzustand — der Reiter hat damit vom ersten
+   *  Tick an Inhalt, auch bevor die erste Galaxie befreit ist. */
   function ensureSelection() {
-    const freed = records.value
-    if (!freed.length) {
-      selectedGalaxy.value = 0
-      return
-    }
-    if (freed.some((r) => r.galaxy === selectedGalaxy.value)) return
-    selectedGalaxy.value = freed[0].galaxy
+    if (isLive.value) return
+    if (records.value.some((r) => r.galaxy === selectedGalaxy.value)) return
+    selectedGalaxy.value = galaxyStore.currentGalaxy
   }
 
   function selectGalaxy(galaxy: number) {
@@ -358,6 +378,7 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
   return {
     now,
     records,
+    isLive,
     selectedGalaxy,
     selectedRecord,
     selectedKey,

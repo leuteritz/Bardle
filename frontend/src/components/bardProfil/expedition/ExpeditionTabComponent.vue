@@ -11,10 +11,11 @@
  * `utils/game/voyageAction.ts` für sie ausrechnet. Was die Spalte kostete, hat
  * die Galaxie geerbt (Full HD 628 → 1016 px).
  *
- * ZWEI Bühnen teilen sich die eine Fläche. Die LIVE-Bühne zeigt den laufenden
- * Lauf — die Galaxie, in der der Spieler gerade fliegt, und die der Atlas nie
- * führen kann, weil er `completedGalaxies` liest. Sie ist der Startzustand des
- * Reiters und der Grund, warum er kein Schloss mehr braucht: er hat vom ersten
+ * EINE Bühne, und sie zeigt auch den laufenden Lauf. Der Atlas liest
+ * `completedGalaxies`, die laufende Galaxie steht in keinem Archiv — sie wird
+ * deshalb als Datensatz gebaut (`liveGalaxyRecord`) und mit demselben Renderer
+ * gezeigt, nur mit Bard als fliegendem Punkt darauf. Sie ist der Startzustand
+ * des Reiters und der Grund, warum er kein Schloss braucht: er hat vom ersten
  * Tick an Inhalt.
  *
  * Der Reiter bleibt nach dem ersten Öffnen gemountet. Alles, was läuft, hängt
@@ -28,6 +29,7 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import { useVoyageAtlas } from '@/composables/expedition/useVoyageAtlas'
@@ -50,12 +52,12 @@ import ExpeditionCommandBar from './ExpeditionCommandBar.vue'
 import ExpeditionGalaxyRail from './ExpeditionGalaxyRail.vue'
 import ExpeditionRailHandle from './ExpeditionRailHandle.vue'
 import ExpeditionGalaxyMap from './ExpeditionGalaxyMap.vue'
-import ExpeditionLiveStage from './ExpeditionLiveStage.vue'
 import VoyagesTabLoader from './VoyagesTabLoader.vue'
 import FirmamentReturnButton from '@/components/bardProfil/FirmamentReturnButton.vue'
 
 const uiStore = useUiStore()
 const chartStore = useExpeditionChartStore()
+const galaxyStore = useGalaxyStore()
 const { setPursuit } = useForgeSpotlight()
 const { openDetails } = useForgeDetailsPane()
 
@@ -67,6 +69,7 @@ const {
   records,
   selectedGalaxy,
   selectedRecord,
+  isLive,
   selectedKey,
   placedSites,
   actions,
@@ -132,25 +135,17 @@ const railFolded = computed(
     (atlasWidth.value > 0 && atlasWidth.value < VOYAGE_RAIL_AUTOFOLD_WIDTH),
 )
 
-/**
- * Welche der beiden Bühnen steht. Der Startzustand ist LIVE — wer den Reiter
- * über die Leiste öffnet, will seinen Lauf sehen; eine befreite Galaxie wählt
- * er rechts.
- */
-const stageLive = ref(true)
-
 /** Der Sprung aus dem Fleet-Band. Reihenfolge ist bindend: `selectGalaxy`
  *  räumt `selectedKey` ab. */
 function jumpToMark(galaxy: number, key: string | null) {
-  // Jeder Sprung von aussen meint eine BEFREITE Galaxie — Fleet-Karte,
-  // Firmament, Minimap-Chip.
-  stageLive.value = false
   atlas.selectGalaxy(galaxy)
   if (key) selectedKey.value = key
 }
 
+/** Der laufende Lauf ist eine Galaxie wie jede andere — nur eine, die noch
+ *  laeuft. Kein eigener Zustand, sonst gaebe es zwei Wahrheiten. */
 function showLive() {
-  stageLive.value = true
+  atlas.selectGalaxy(galaxyStore.currentGalaxy)
 }
 
 /**
@@ -181,7 +176,7 @@ watch(
   { immediate: true },
 )
 
-/** Die Minimap-Fläche: dieselbe Galaxie, nur gross. Kein Ziel, keine Marke. */
+/** Die Minimap-Fläche: dieselbe Galaxie, nur gross und im Atlas. Kein Ziel. */
 watch(
   () => uiStore.pendingVoyageLive,
   (wanted) => {
@@ -307,7 +302,7 @@ watch(
     atlasBuilt.value = true
     // Beim VERLASSEN, nicht beim Betreten: ein hereinkommender Sprung setzte
     // sonst im selben Flush seine Galaxie und würde hier gleich überschrieben.
-    stageLive.value = true
+    showLive()
   },
   { immediate: true },
 )
@@ -324,7 +319,7 @@ function onKeydown(e: KeyboardEvent) {
   if (selectedKey.value) onSelect(null)
   else if (userRailFolded.value === true) userRailFolded.value = false
   // Der Weg zurück endet beim laufenden Lauf, nicht auf einer leeren Fläche.
-  else if (!stageLive.value) showLive()
+  else if (!isLive.value) showLive()
   else return
   e.preventDefault()
   e.stopPropagation()
@@ -374,10 +369,8 @@ function openMassSendUpgrade() {
       />
 
       <div class="etc-stage">
-        <ExpeditionLiveStage v-if="stageLive" :visible="isVisible" />
-
         <ExpeditionGalaxyMap
-          v-else-if="selectedRecord"
+          v-if="selectedRecord"
           ref="mapEl"
           :record="selectedRecord"
           :sites="placedSites"
@@ -391,6 +384,7 @@ function openMassSendUpgrade() {
           :actions="actions"
           :arriving="arriving"
           :leaving="leaving"
+          :live="isLive"
           @select="onSelect"
           @act="atlas.runMarkAction"
         />
@@ -413,8 +407,8 @@ function openMassSendUpgrade() {
           <ExpeditionGalaxyRail
             :rows="railRows"
             :records="records"
-            :selected="stageLive ? 0 : selectedGalaxy"
-            :live="stageLive"
+            :selected="isLive ? 0 : selectedGalaxy"
+            :live="isLive"
             @select="jumpToMark($event, null)"
             @select-live="showLive"
           />
