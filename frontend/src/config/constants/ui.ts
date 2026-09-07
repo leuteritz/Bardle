@@ -6,7 +6,9 @@ import type {
   ChampionRole,
   HeraldReceiptKind,
   HeraldReceiptKindDef,
+  JourneySubpageId,
   NotifyBadgeKind,
+  StatCategoryId,
 } from '@/types'
 
 // ── Idle-Layer hinter einem Overlay: Anhalten und Wiederanlaufen ───────────
@@ -1331,27 +1333,33 @@ export const SOLAR_EVOLUTION_PANEL = {
   SUN_MAX_PX: 300,
 } as const
 
-/** Bard Stats panel deck — user-resizable column widths (px). The two side
- *  columns (Journey / Galaxy Archive) are drag-resized; the middle (Solar
- *  Evolution) flexes to fill the rest and is protected by MIN_MIDDLE. It also
- *  carries the sun dial, so the sides are kept just wide enough for their own
- *  content — on Full HD every pixel they give back widens the dial. */
-export const STATS_TAB_DECK_RESIZE = {
-  /** initial width of the left (Journey) column — starts fully expanded (= MAX_LEFT) */
-  DEFAULT_LEFT: 360,
-  /** initial width of the right (Galaxy Archive) column — starts fully expanded (= MAX_RIGHT) */
-  DEFAULT_RIGHT: 440,
-  /** smallest either side column may shrink to */
-  MIN_SIDE: 200,
-  /** largest the left column may grow to — measured: the Play-Time odometer
-   *  needs ~344px, so this is the tightest the column can be without cutting it */
-  MAX_LEFT: 360,
-  /** largest the right column may grow to — the archive title needs the width
-   *  at the 4K type scale, so this one does NOT give ground to the dial */
-  MAX_RIGHT: 440,
-  /** the middle (Augments) column never shrinks below this */
-  MIN_MIDDLE: 260,
-} as const
+/** Die Unterseiten des Journey-Reiters, in Leistenreihenfolge. */
+export const JOURNEY_SUBPAGES: readonly { id: JourneySubpageId; label: string; icon: string }[] = [
+  { id: 'overview', label: 'Overview', icon: 'lucide:layout-dashboard' },
+  { id: 'records', label: 'Records', icon: 'lucide:list' },
+  { id: 'wayfinder', label: 'Wayfinder', icon: 'lucide:signpost' },
+  { id: 'augments', label: 'Augments', icon: 'lucide:gem' },
+  { id: 'codex', label: 'Codex', icon: 'lucide:book-open' },
+]
+
+/** Die Kacheln des KPI-Bands auf der Übersicht — je ein (Kategorie, Schlüssel)-Paar
+ *  aus dem Stat-Katalog; `sub` ist ein zweiter Katalogeintrag als Unterzeile.
+ *  Der Klick öffnet Records mit dieser Kategorie. */
+export const JOURNEY_KPI_TILES: readonly {
+  category: StatCategoryId
+  key: string
+  sub?: string
+  icon: string
+}[] = [
+  { category: 'economy', key: 'cps', icon: 'game-icons:sparkles' },
+  { category: 'economy', key: 'cpc', icon: 'game-icons:hand' },
+  { category: 'economy', key: 'total-chimes', icon: 'game-icons:coins' },
+  { category: 'economy', key: 'meeps', icon: 'game-icons:meeple-king' },
+  { category: 'autoBattle', key: 'rank', sub: 'lp', icon: 'game-icons:laurel-crown' },
+  { category: 'autoBattle', key: 'winrate', icon: 'game-icons:trophy-cup' },
+  { category: 'galaxy', key: 'stars-rescued', icon: 'game-icons:star-swirl' },
+  { category: 'expeditions', key: 'succeeded', icon: 'game-icons:rocket-flight' },
+]
 
 /** Die drei Fortschrittsachsen Level / Galaxy / Universe tragen überall
  *  dieselbe Farbe — Journey-Ringe im Stats-Tab und Meta-Säulen im Pause-Overlay
@@ -1375,10 +1383,10 @@ export const STATS_TAB_GAUGE = {
   /** value font size per length bucket: 1–2 chars, 3, 4, 5+ — longer readouts
    *  (three-digit levels, roman "VIII") shrink so they never touch the ring */
   VALUE_FONT: [40, 32, 26, 21],
-  /** largest rendered ring diameter (px); below this the ring scales with the column */
-  MAX_PX: 96,
+  /** largest rendered ring diameter (px); below this the ring scales with the band */
+  MAX_PX: 132,
   /** compact ring diameter (px) on Full-HD-height viewports */
-  MAX_PX_COMPACT: 78,
+  MAX_PX_COMPACT: 104,
 } as const
 
 // ── Admin ─────────────────────────────────────────────────────────────────────

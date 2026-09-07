@@ -14,24 +14,8 @@ import { progressMetricValue } from '@/utils/game/progressMetrics'
 import { formatNumber } from '@/config/ui/numberFormat'
 import StatsColumnHeader from './StatsColumnHeader.vue'
 
-/**
- * Der Wayfinder zum Nachschlagen — am Fuß der Journey-Spalte, spiegelbildlich
- * zum Codex am Fuß der Mittelspalte. Im Deck gilt damit eine ablesbare Regel:
- * eine Fortschrittsleiter hängt am Fuß ihrer Spalte.
- *
- * Warum hier und nicht in der Mitte oder rechts: die Mittelspalte trägt den
- * Codex und ist auf WUXGA mit gemessenen 422×278 px am Anschlag; die rechte
- * `.sf-stack` teilt sich exakt hälftig auf zwei Panels, ein drittes drittelte
- * beide. Diese Spalte SCROLLT bereits — eine Sektion an ihrem Fuß kostet keine
- * Höhe, nur Scrollweg. Und „Journey" ist inhaltlich genau der Ort für die
- * Leiter der Wanderung.
- *
- * Master-Detail wie im Codex, aus demselben Grund: 41 Missionen nebeneinander
- * gibt es hier nicht. Sieben Kapitelwappen tragen den Überblick, EIN Feld
- * darunter die Tiefe. Kein Abzeichen an der Tab-Leiste und kein `markSeen()` —
- * eingelöst wird von selbst; eine Marke schickte den Spieler an eine Stelle, an
- * der es nichts zu tun gibt.
- */
+/** Die Wayfinder-Unterseite: sieben Kapitelwappen, EIN Feld mit den Missionen darunter.
+ *  Kein Abzeichen, kein `markSeen()` — eingelöst wird von selbst. */
 const store = useMissionStore()
 /** Die sieben Etappen kommen aus derselben Quelle wie im Pause-Band — eine
  *  zweite Rechnung liefe beim ersten Nachjustieren auseinander. */
@@ -168,8 +152,8 @@ function toggle(id: string) {
         v-tip="rung.blurb"
       >
         <span class="wfs-rung__mark">
-          <Icon v-if="rung.state === 'done'" icon="lucide:check" width="13" height="13" />
-          <Icon v-else :icon="rung.icon" width="13" height="13" />
+          <Icon v-if="rung.state === 'done'" icon="lucide:check" width="18" height="18" />
+          <Icon v-else :icon="rung.icon" width="18" height="18" />
         </span>
 
         <span class="wfs-rung__body">
@@ -195,10 +179,10 @@ function toggle(id: string) {
 .wfs-zone {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid #2a2318;
+  gap: 12px;
+  width: 100%;
+  max-width: 1100px;
+  margin-inline: auto;
 }
 
 /* ── Kopfzahlen ── */
@@ -210,7 +194,7 @@ function toggle(id: string) {
 }
 
 .wfs-read-cap {
-  font-size: 8.5px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -218,7 +202,7 @@ function toggle(id: string) {
 }
 
 .wfs-read-val {
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 800;
   line-height: 1;
   color: #e8dcc0;
@@ -228,7 +212,7 @@ function toggle(id: string) {
 }
 
 .wfs-read-of {
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   color: #8a7a52;
 }
@@ -242,7 +226,7 @@ function toggle(id: string) {
 
 .wfs-caught {
   margin: 0;
-  font-size: 10.5px;
+  font-size: 13px;
   line-height: 1.3;
   color: #5a5248;
 }
@@ -251,7 +235,7 @@ function toggle(id: string) {
 .wfs-chapters {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 8px;
 }
 
 .wfs-chapter {
@@ -281,7 +265,7 @@ function toggle(id: string) {
 }
 
 .wfs-chapter__numeral {
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1;
   color: #8a7a52;
@@ -295,7 +279,7 @@ function toggle(id: string) {
 .wfs-chapter__bar {
   display: block;
   width: 100%;
-  height: 3px;
+  height: 5px;
   background: #100e08;
   border-radius: 2px;
   overflow: hidden;
@@ -314,7 +298,7 @@ function toggle(id: string) {
 .wfs-rungs {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -323,8 +307,8 @@ function toggle(id: string) {
 .wfs-rung {
   display: flex;
   align-items: flex-start;
-  gap: 7px;
-  padding: 5px 7px;
+  gap: 12px;
+  padding: 10px 14px;
   background: #1c1c18;
   border: 1px solid #2a2318;
   border-radius: 4px;
@@ -345,8 +329,8 @@ function toggle(id: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
   color: #6a6258;
 }
 
@@ -376,7 +360,7 @@ function toggle(id: string) {
 .wfs-rung__name {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.15;
   color: #e8dcc0;
@@ -387,22 +371,22 @@ function toggle(id: string) {
 
 .wfs-rung__reward {
   flex-shrink: 0;
-  font-size: 8.5px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.4px;
   color: #7a9a6a;
 }
 
 .wfs-rung__objective {
-  font-size: 10.5px;
+  font-size: 13.5px;
   line-height: 1.25;
   color: #8a7a52;
 }
 
 .wfs-rung__bar {
   display: block;
-  height: 2px;
-  margin-top: 2px;
+  height: 4px;
+  margin-top: 4px;
   background: rgba(255, 255, 255, 0.07);
 }
 
@@ -418,31 +402,31 @@ function toggle(id: string) {
 .wfs-rung__count {
   flex-shrink: 0;
   align-self: center;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: #8a7a52;
 }
 
 @media (min-width: 2400px) {
-  .wfs-read-cap {
-    font-size: 10px;
+  .wfs-zone {
+    max-width: 1400px;
   }
   .wfs-read-val {
-    font-size: 15px;
+    font-size: 21px;
   }
   .wfs-chapter__numeral {
-    font-size: 14px;
+    font-size: 20px;
   }
   .wfs-rung__name {
-    font-size: 14px;
+    font-size: 19px;
   }
   .wfs-rung__objective {
-    font-size: 12px;
+    font-size: 16px;
   }
   .wfs-rung__reward,
   .wfs-rung__count {
-    font-size: 10.5px;
+    font-size: 14px;
   }
 }
 

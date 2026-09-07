@@ -455,6 +455,9 @@ export type BardTabId =
   | 'admin'
   | 'planets'
 
+/** Eine Unterseite des Journey-Reiters (`bard`). */
+export type JourneySubpageId = 'overview' | 'records' | 'wayfinder' | 'augments' | 'codex'
+
 /**
  * Was der Universe-Reiter zeigt.
  *

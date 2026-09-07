@@ -263,6 +263,23 @@ export const AUGMENT_GRAVITY_FLIP_DURATION_MS = 3000
 export const AUGMENT_OVERCLOCK_DEFAULT_MS = 30_000
 export const AUGMENT_OVERCLOCK_DEFAULT_MULT = 2
 export const AUGMENT_ECHO_CHAMBER_DEFAULT_MS = 60_000
+/** Achsenlabel je `AugmentEffects`-Schlüssel eines laufenden Zeit-Buffs (Chip-Zeile). */
+export const AUGMENT_TIMED_EFFECT_LABELS: Record<string, string> = {
+  cpsMultiplier: 'CHIMES',
+  cpcMultiplier: 'PER CLICK',
+  buildingCostMultiplier: 'BUILD COST',
+  meepCostMultiplier: 'MEEP COST',
+  meepPowerMultiplier: 'MEEP POWER',
+  expeditionRewardMultiplier: 'VOYAGES',
+  abilityPowerPerLevel: 'POWER',
+  cooldownMultiplier: 'COOLDOWNS',
+  enemySpeedMultiplier: 'ENEMY SPEED',
+  enemyMaxHPDrainPerSecond: 'ENEMY DRAIN',
+}
+/** Farbe und Glyph eines laufenden Augment-Zeit-Buffs auf dem Chip. */
+export const AUGMENT_TIMED_BUFF_COLOR = '#a855f7'
+export const FORGE_TIMED_BUFF_COLOR = '#7ec8ff'
+export const FORGE_TIMED_BUFF_ICON = 'game-icons:anvil-impact'
 /** Keyboard Smash würfelt je Stat einen Modifikator in diesem Bereich. */
 export const AUGMENT_KEYBOARD_SMASH_DEFAULT_MIN = -0.05
 export const AUGMENT_KEYBOARD_SMASH_DEFAULT_MAX = 0.5

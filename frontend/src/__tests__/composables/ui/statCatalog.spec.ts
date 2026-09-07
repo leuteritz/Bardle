@@ -5,6 +5,7 @@ import { useStatCatalog } from '@/composables/ui/useStatCatalog'
 import { STAT_CATEGORIES } from '@/config/ui/statCategories'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGameStore } from '@/stores/core/gameStore'
+import { JOURNEY_KPI_TILES } from '@/config/constants'
 
 describe('statCategories — definitions', () => {
   it('has unique ids and no duplicate icons', () => {
@@ -86,5 +87,24 @@ describe('useStatCatalog', () => {
     const { categories } = useStatCatalog(ref('prestige resets'))
     const row = categories.value.flatMap((c) => c.stats).find((s) => s.label === 'Prestige Resets')
     expect(row?.value).toBe('4')
+  })
+})
+
+describe('JOURNEY_KPI_TILES', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('every tile resolves to an existing catalog entry with a unique icon', () => {
+    const { categories } = useStatCatalog(ref(''))
+    for (const tile of JOURNEY_KPI_TILES) {
+      const cat = categories.value.find((c) => c.id === tile.category)
+      expect(cat, `category ${tile.category}`).toBeTruthy()
+      expect(cat!.stats.some((s) => s.key === tile.key), `${tile.category}/${tile.key}`).toBe(true)
+      if (tile.sub)
+        expect(cat!.stats.some((s) => s.key === tile.sub), `${tile.category}/${tile.sub}`).toBe(true)
+    }
+    const icons = JOURNEY_KPI_TILES.map((t) => t.icon)
+    expect(new Set(icons).size).toBe(icons.length)
   })
 })
