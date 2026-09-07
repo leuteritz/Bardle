@@ -53,8 +53,12 @@ const starScale = computed(() => {
     <span class="elr-dot" aria-hidden="true" />
 
     <span class="elr-body">
+      <span class="elr-name">
+        <span class="elr-galaxy">Galaxy {{ toRoman(galaxyStore.currentGalaxy) }}</span>
+        <span class="elr-separator" aria-hidden="true">·</span>
+        <span class="elr-theme">{{ themeName }}</span>
+      </span>
       <span class="elr-kicker">{{ VOYAGE_LIVE_RAIL_LABEL }}</span>
-      <span class="elr-name">Galaxy {{ toRoman(galaxyStore.currentGalaxy) }} · {{ themeName }}</span>
     </span>
 
     <span class="elr-stars">
@@ -141,11 +145,26 @@ const starScale = computed(() => {
 }
 
 .elr-name {
-  font-size: 12.5px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 15px;
+  line-height: 1.05;
   font-weight: 800;
-  color: #e8c040;
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+}
+.elr-galaxy {
+  color: #e8c040;
+}
+.elr-separator {
+  color: #7a4e20;
+}
+.elr-theme {
+  min-width: 0;
+  overflow: hidden;
+  color: #e8dcc0;
   text-overflow: ellipsis;
 }
 

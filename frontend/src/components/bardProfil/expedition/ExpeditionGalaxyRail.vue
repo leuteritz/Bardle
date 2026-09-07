@@ -27,7 +27,6 @@ import { onMounted, ref, watch } from 'vue'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageRailRow } from '@/types'
 import {
-  VOYAGE_LIVE_EMPTY_NOTE,
   VOYAGE_RAIL_HANDLE_LABEL,
   VOYAGE_RAIL_PAD_X,
   VOYAGE_RAIL_REVEAL_PAD,
@@ -95,11 +94,6 @@ const padX = `${VOYAGE_RAIL_PAD_X}px`
           @select="emit('select', $event)"
         />
       </template>
-
-      <p v-if="!rows.length" class="egl-empty">
-        {{ VOYAGE_LIVE_EMPTY_NOTE }} Rescue every star and defeat the core to open your first
-        port.
-      </p>
     </div>
   </aside>
 </template>
@@ -146,11 +140,4 @@ const padX = `${VOYAGE_RAIL_PAD_X}px`
   border-radius: 2px;
 }
 
-.egl-empty {
-  padding: 16px 8px;
-  font-size: 11.5px;
-  font-weight: 600;
-  line-height: 1.45;
-  color: rgba(200, 144, 64, 0.4);
-}
 </style>
