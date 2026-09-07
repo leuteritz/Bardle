@@ -203,6 +203,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   justify-content: center;
   gap: clamp(3px, 0.4vh, 6px);
   padding: clamp(6px, 0.7vh, 10px) clamp(10px, 0.65vw, 14px);
+  padding-bottom: clamp(16px, 2.2vh, 28px);
   padding-right: clamp(14px, 0.9vw, 20px);
   min-width: 0;
   text-align: left;
