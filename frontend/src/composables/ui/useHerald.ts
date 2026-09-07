@@ -24,7 +24,6 @@ export type HeraldKind =
   | 'warp'
   | 'champion'
   | 'rankup'
-  | 'chronicle'
   | 'omen'
   | 'mission'
   /** Ankunft in einem neuen Universum — die einzige Zeremonie mit Ablesungen. */

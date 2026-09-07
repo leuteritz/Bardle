@@ -22,7 +22,7 @@ import {
   STAR_PHASE_FINAL_INDEX,
 } from '@/config/constants'
 import { usePlayerStore } from '@/stores/battle/playerStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
+import { progressMetricValue } from '@/utils/game/progressMetrics'
 import {
   getForgeNode,
   FORGE_NODES,
@@ -423,14 +423,12 @@ describe('starForgeStore', () => {
       expect(player.maxHP).toBe(before + 2 * def.effectPerLevel)
     })
 
-    it('zählt NICHT in die Codex-Metrik forgeLevels', () => {
-      // Eine unbegrenzte Zahl dort machte jede Bahn-Schwelle trivial, und der
-      // Lohn der Bahn senkt seinerseits die Materialkosten des Baums.
+    it('zählt NICHT in die Fortschrittsmetrik forgeLevels', () => {
+      // Eine unbegrenzte Zahl dort machte jede Wayfinder-/Omen-Schwelle trivial.
       const { store, def } = unlockBough()
-      const achievements = useAchievementStore()
-      const before = achievements.metricValue('forgeLevels')
+      const before = progressMetricValue('forgeLevels')
       store.buyNode(def.id)
-      expect(achievements.metricValue('forgeLevels')).toBe(before)
+      expect(progressMetricValue('forgeLevels')).toBe(before)
     })
   })
 

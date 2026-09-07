@@ -5,7 +5,6 @@ import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 // Gegenseitig: `voidStore` liest `voidTollRelief` von hier. Beide Richtungen
 // laufen ausschliesslich über lazy `useXStore()`-Aufrufe INNERHALB von Gettern
@@ -467,8 +466,7 @@ export const useStarForgeStore = defineStore('starForge', {
       return (id, forLevel) => {
         const def = getForgeNode(id)
         if (!def) return {}
-        const discount =
-          useAchievementStore().forgeMaterialCostMult * useProvidenceStore().forgeMaterialCostMult
+        const discount = useProvidenceStore().forgeMaterialCostMult
         const scaled: Record<string, number> = {}
         for (const [matId, qty] of Object.entries(def.materialCost)) {
           scaled[matId] = forgeMaterialQty(qty * forLevel, discount)
@@ -498,8 +496,7 @@ export const useStarForgeStore = defineStore('starForge', {
         if (!def) return {}
         if (forLevel < SOLAR_MATERIAL_FROM_LEVEL) return {}
         const step = forLevel - SOLAR_MATERIAL_FROM_LEVEL + 1
-        const discount =
-          useAchievementStore().forgeMaterialCostMult * useProvidenceStore().forgeMaterialCostMult
+        const discount = useProvidenceStore().forgeMaterialCostMult
         return { [def.material]: forgeMaterialQty(def.materialQty * step, discount) }
       }
     },
@@ -653,11 +650,8 @@ export const useStarForgeStore = defineStore('starForge', {
         const def = getForgeRelic(id)
         if (!def) return {}
         const nextLevel = this.relicLevel(id) + 1
-        // Chronicle-Rabatt und Vorsehung (Emberthrift / Cinder Hoard) greifen an
-        // derselben Zahl an — der eine dauerhaft verdient, die andere für diesen
-        // Durchlauf gewählt.
-        const discount =
-          useAchievementStore().forgeMaterialCostMult * useProvidenceStore().forgeMaterialCostMult
+        // Vorsehung (Emberthrift / Cinder Hoard) — für diesen Durchlauf gewählt
+        const discount = useProvidenceStore().forgeMaterialCostMult
         const scaled: Record<string, number> = {}
         for (const [matId, qty] of Object.entries(def.materialCost)) {
           scaled[matId] = forgeMaterialQty(qty * nextLevel, discount)

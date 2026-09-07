@@ -54,7 +54,7 @@ export const useExpeditionChartStore = defineStore('expeditionChart', {
       return (galaxy: number) => this.cartography[String(galaxy)] ?? { runs: 0, charted: 0 }
     },
 
-    /** Kartierte Ziele — die Metrik, die der Codex ab Stufe 4 liest. */
+    /** Kartierte Ziele. */
     chartedCount(): number {
       return Object.values(this.cartography as Record<string, DestinationProgress>).filter(
         (p) => p.charted > 0,

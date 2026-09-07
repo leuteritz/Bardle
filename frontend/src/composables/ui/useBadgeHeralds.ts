@@ -11,10 +11,9 @@
  * EIN Aufruf, aus `HeraldOverlay.vue` heraus. WELCHE Marken sich melden, steht
  * in `config/ui/notifyBadges.ts` (`heralds: true`) — hier steht nur noch, WIE.
  *
- * Champions und Codex melden sich bewusst nicht: neue Champions haben in
- * `HeraldOverlay.vue` schon ihr eigenes `NEW CHAMPION`-Banner beim Anflug, und
- * der Codex bannert seine Stufen selbst. Beides hier zu wiederholen hiesse,
- * dasselbe Ereignis zweimal anzukündigen.
+ * Champions melden sich bewusst nicht: neue Champions haben in
+ * `HeraldOverlay.vue` schon ihr eigenes `NEW CHAMPION`-Banner beim Anflug.
+ * Das hier zu wiederholen hiesse, dasselbe Ereignis zweimal anzukündigen.
  */
 
 import { watch, onMounted, onScopeDispose } from 'vue'
@@ -105,7 +104,6 @@ export function useBadgeHeralds() {
       return next ? `Next phase: ${next.name}` : 'The final phase awaits'
     },
     champions: (n) => plural(n, 'champion'),
-    chronicle: (n) => `${plural(n, 'track')} advanced`,
     level: () => '',
   }
 

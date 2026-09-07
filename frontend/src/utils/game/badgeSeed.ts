@@ -29,7 +29,6 @@ import {
 } from '@/config/constants'
 import { NOTIFY_BADGE_BY_KIND, SEEDABLE_BADGE_KINDS } from '@/config/ui/notifyBadges'
 import { notifyBadgeCounters } from '@/composables/ui/useNotifyBadges'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useGameStore } from '@/stores/core/gameStore'
@@ -197,10 +196,6 @@ export function seedBadge(kind: NotifyBadgeKind, n: number): BadgeSeedResult {
       if (!lit) notes.push('the sun is in its final phase — nothing left to evolve')
       break
     }
-    case 'chronicle': {
-      useAchievementStore().adminSeedUnseen(want)
-      break
-    }
     case 'level':
       notes.push('not a badge')
       break
@@ -238,9 +233,6 @@ export function clearBadge(kind: NotifyBadgeKind): BadgeSeedResult {
     case 'forge':
       useSolarUpgradeStore().adminSetEvolveReady(false)
       notes.push('core rays stay where they are')
-      break
-    case 'chronicle':
-      useAchievementStore().markSeen()
       break
     case 'level':
       break

@@ -11,14 +11,12 @@
 
 import {
   BADGE_ACCENT_CHAMPIONS,
-  BADGE_ACCENT_CHRONICLE,
   BADGE_ACCENT_LEVEL,
   BADGE_HERALD_ACCENT_EXPEDITION,
   BADGE_HERALD_ACCENT_PLANET,
   BADGE_HERALD_ACCENT_SHOP,
   BADGE_HERALD_ACCENT_SKILL,
   BADGE_HERALD_ACCENT_SUN,
-  CHRONICLE_RANK_ICON,
   HEADER_GEM_ICONS,
   NOTIFY_BADGE_TITLE,
 } from '@/config/constants'
@@ -258,26 +256,6 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
     seedability: 'capped',
     reversible: 'full',
     seedNote: 'Macht n echte Champions rekrutierbar. Auf vollem Roster bleibt nichts übrig.',
-  },
-  {
-    id: 'chronicle',
-    title: NOTIFY_BADGE_TITLE.chronicle,
-    short: 'Codex Stages',
-    accent: BADGE_ACCENT_CHRONICLE,
-    icon: CHRONICLE_RANK_ICON,
-    tab: 'bard',
-    hasBadge: true,
-    heralds: false,
-    sites: [
-      {
-        file: 'components/bardProfil/BardProfileMenu.vue',
-        marker: 'mini-badge--chronicle',
-        where: PROFILE_TABS,
-      },
-    ],
-    seedability: 'exact',
-    reversible: 'full',
-    seedNote: 'Markiert n Codex-Bahnen als ungesehen. Clear ist markSeen().',
   },
   {
     id: 'level',

@@ -56,7 +56,6 @@ describe('seedBadge — jede Marke leuchtet', () => {
 
   it('trifft die Quittungs-Marken exakt', () => {
     expect(seedBadge('shop', 2).achieved).toBe(2)
-    expect(seedBadge('chronicle', 4).achieved).toBe(4)
     expect(seedBadge('expedition', 3).achieved).toBe(3)
   })
 })

@@ -2205,7 +2205,7 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
      `voidboundPact`, `caretakersLedger` und `starfarersCompact` eroeffnet
      haben. Eine Konstellation ist ein EINMALKAUF ohne Stufe; eine Regel passt
      dazu, ein Prozentwert mit Zwischenschritten nicht — dasselbe Argument wie
-     beim Kronen-Ring. Sie zaehlen nicht in die Codex-Bahn „Sunsmith“ und
+     beim Kronen-Ring. Sie zaehlen nicht in die Metrik `forgeLevels` und
      verschieben deren Maximum daher nicht. */
   {
     id: 'waitingRoad',

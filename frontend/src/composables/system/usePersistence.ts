@@ -48,7 +48,6 @@ import { useVoidStore } from '@/stores/world/voidStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
 import { useMissionStore } from '@/stores/progression/missionStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
@@ -152,7 +151,6 @@ export function usePersistence() {
     const drifterStore = useDrifterStore()
     const voidStore = useVoidStore()
     const bardAbilityStore = useBardAbilityStore()
-    const achievementStore = useAchievementStore()
     const omenStore = useOmenStore()
     const missionStore = useMissionStore()
     const providenceStore = useProvidenceStore()
@@ -464,12 +462,6 @@ export function usePersistence() {
         totalCasts: bardAbilityStore.totalCasts,
         totalAbilityDamage: bardAbilityStore.totalAbilityDamage,
         totalAbilityHealing: bardAbilityStore.totalAbilityHealing,
-      },
-      // Chronicle. Nur die Stufen, keine Zähler: jede Metrik gehört dem Store,
-      // der sie ohnehin speichert, und wird beim Laden dort gelesen.
-      chronicle: {
-        stages: { ...achievementStore.stages },
-        unseen: [...achievementStore.unseen],
       },
       // Omens. Das laufende Vorzeichen samt eingefrorenem Startwert MUSS mit —
       // ohne ihn wäre der Fortschritt nach einem Reload nicht mehr rekonstruierbar
@@ -1214,19 +1206,6 @@ export function usePersistence() {
       bardAbilityStore.totalAbilityDamage = saved.bardAbility?.totalAbilityDamage ?? 0
       bardAbilityStore.totalAbilityHealing = saved.bardAbility?.totalAbilityHealing ?? 0
 
-      // Chronicle. Steht bewusst NACH allen Stores, deren Zahlen es misst, und
-      // VOR der CPS-Neuberechnung darunter: der stille Nachlauf kann eine Stufe
-      // setzen, die den Produktions-Multiplikator anhebt.
-      //
-      // Der Nachlauf ist keine Bequemlichkeit, sondern nötig: ein Spielstand,
-      // der älter ist als das Chronicle, bringt keine `stages` mit und erfüllt
-      // auf einen Schlag ein halbes Buch. Ohne ihn liefe beim ersten Takt eine
-      // Kette von Bannern über den Bildschirm.
-      const achievementStore = useAchievementStore()
-      achievementStore.stages = { ...(saved.chronicle?.stages ?? {}) }
-      achievementStore.unseen = [...(saved.chronicle?.unseen ?? [])]
-      achievementStore.syncSilently()
-
       // Omens. Steht ebenfalls nach allen Stores, deren Zahlen ein laufendes
       // Vorzeichen misst. Abgelaufene Buffs werden hier gleich ausgesiebt: sie
       // tragen absolute Zeitstempel, und ein Spielstand von gestern brächte
@@ -1508,10 +1487,6 @@ export function usePersistence() {
 
     // 7h. Reset bardAbilityStore — resonance, cooldowns and any running stasis
     useBardAbilityStore().$reset()
-
-    // 7i. Reset achievementStore — a full wipe unwrites the Chronicle. Prestige
-    // never does: its milestones are lifetime records and outlive a universe.
-    useAchievementStore().$reset()
 
     // 7j. Reset omenStore — clears the running omen, the offer and every buff.
     useOmenStore().$reset()

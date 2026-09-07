@@ -41,12 +41,10 @@ const planetShopStore = usePlanetShopStore()
 const battleStore = useBattleStore()
 const { isPaused } = useGamePause()
 // Alle Marken-Zahlen aus derselben Quelle wie Header-Bogen, Tooltip und Herold
-// — config/ui/notifyBadges.ts. Chronicle hängt am Bard-Tab, weil der Codex dort
-// unter der Sonne wohnt.
+// — config/ui/notifyBadges.ts.
 const expeditionBadgeCount = useNotifyBadgeCount('expedition')
 const championBadgeCount = useNotifyBadgeCount('champions')
 const skillBadgeCount = useNotifyBadgeCount('skill')
-const chronicleBadgeCount = useNotifyBadgeCount('chronicle')
 const planetBadgeCount = useNotifyBadgeCount('planet')
 const forgeBadgeCount = useNotifyBadgeCount('forge')
 const forgeBadgeReady = computed(() => forgeBadgeCount.value > 0)
@@ -79,7 +77,7 @@ const shopFlare = useBadgeFlare(shopFreshCount)
  * trifft. Innerhalb der Tabs bleibt es bei game-icons.
  *
  *   ph:compass-rose-fill          — der Wandering Caretaker: Journey-Stats,
- *                                   Solar Evolution, Galaxy-Archiv, Chronicle
+ *                                   Sonne, Wayfinder, Augments
  *   ph:storefront-fill            — der Marktstand: Champions und Ausrüstung
  *   material-symbols:account-tree — verzweigte Knoten, der Skill Tree
  *                                   (Phosphors `tree-structure` ist zu fein)
@@ -452,23 +450,13 @@ onUnmounted(() => {
                     >
                       <span class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
                     </div>
-                    <!-- Bard tab carries both of its own signals: the ready
-                         evolution (the sun dial lives here now, so the ✦ moved
-                         off the Forge tab with it) and unseen Codex stages. -->
-                    <div
-                      v-if="item.id === 'bard' && (forgeBadgeReady || chronicleBadgeCount > 0)"
-                      class="team-badge-row"
-                    >
+                    <!-- Bard tab: the ready evolution (the sun lives here, so
+                         the ✦ moved off the Forge tab with it). -->
+                    <div v-if="item.id === 'bard' && forgeBadgeReady" class="team-badge-row">
                       <span
-                        v-if="forgeBadgeReady"
                         class="mini-badge mini-badge--forge"
-                        title="The sun is ready to evolve — the console sits under the dial"
+                        title="The sun is ready to evolve — the console sits beside the sun"
                       >✦</span>
-                      <span
-                        v-if="chronicleBadgeCount > 0"
-                        class="mini-badge mini-badge--chronicle"
-                        :title="`${chronicleBadgeCount} Astral Codex ${chronicleBadgeCount === 1 ? 'track has' : 'tracks have'} a new stage`"
-                      >{{ chronicleBadgeCount }}</span>
                     </div>
                     <!-- Skill Tree: was in der Star Forge neu erreichbar ist und
                          noch nicht angesehen wurde. Dieselbe Marke wie an der
@@ -701,16 +689,6 @@ onUnmounted(() => {
   --tb-glow-a: rgba(52, 211, 153, 0.5);
   --tb-glow-b: rgba(52, 211, 153, 0.9);
   --tb-glow-c: rgba(5, 150, 105, 0.45);
-}
-
-/* Kupfer, nicht Gold: der Forge-Stern daneben ist golden, und zwei goldene
-   Marken in derselben Reihe wären beim Hinsehen dasselbe Abzeichen. */
-.mini-badge--chronicle {
-  background: linear-gradient(135deg, #f97316, #c2410c);
-  border: 1.5px solid #fdba74;
-  --tb-glow-a: rgba(249, 115, 22, 0.5);
-  --tb-glow-b: rgba(249, 115, 22, 0.9);
-  --tb-glow-c: rgba(194, 65, 12, 0.45);
 }
 
 @keyframes team-badge-beat {

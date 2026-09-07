@@ -37,7 +37,7 @@ describe('formatEventLines', () => {
   it('rückt die Nachricht bei jedem Typ auf dieselbe Spalte', () => {
     const events = [
       event('void', 'Rift sealed.', at(9, 41, 4)),
-      event('chronicle', 'Track II cleared.', at(9, 40, 58)),
+      event('mission', 'Track II cleared.', at(9, 40, 58)),
       event('top', 'Shield restored.', at(9, 40, 31)),
     ]
     const lines = formatEventLines(events).split('\n')

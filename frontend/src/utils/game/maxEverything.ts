@@ -42,7 +42,6 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useMissionStore } from '@/stores/progression/missionStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 
@@ -50,7 +49,6 @@ import { MATERIALS } from '@/config/economy/materials'
 import { AUGMENTS } from '@/config/economy/augments'
 import { SHOP_ITEMS, ITEM_SETS } from '@/config/economy/items'
 import { SECTIONS } from '@/config/progression/sections'
-import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import { perkChoicesFor } from '@/config/champions/championLevels'
 import { rollProvidence } from '@/config/progression/providences'
@@ -231,7 +229,6 @@ export function maxEverything(): MaxEverythingResult {
   const forgeStore = useStarForgeStore()
   const meepTreeStore = useMeepTreeStore()
   const bardAbilityStore = useBardAbilityStore()
-  const achievementStore = useAchievementStore()
   const missionStore = useMissionStore()
 
   // ① Sonne auf die Endphase — das Gate für Forge UND Planeten-Level, und
@@ -398,11 +395,7 @@ export function maxEverything(): MaxEverythingResult {
     slot.currentHp = slot.maxHp
   }
 
-  // ⑪ Astral Codex still auf Vollstand. `evaluate(true)` schickte für jede der
-  //    vierzig Stufen ein Herald-Banner über den Bildschirm.
-  for (const track of CHRONICLE_TRACKS) achievementStore.stages[track.id] = track.stages.length
-  achievementStore.markSeen()
-  // …und die zweite stille Leiter. Sie stünde sonst TOT bei Stufe eins: der
+  // ⑪ Die stille Leiter. Sie stünde sonst TOT bei Stufe eins: der
   // Wayfinder rückt nur bei erfüllter Metrik vor, und die erste verlangt zehn
   // Klicks, die dieser Knopf nicht tut.
   missionStore.adminCompleteLadder()

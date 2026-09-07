@@ -13,11 +13,10 @@
  * Vorsehung; alles andere waren Lebenszeit-Zaehler, und wer auf Universum II
  * sah, las die Zahlen des ganzen Spielstands.
  *
- * Drei Leitern sind dabei gefallen — Wayfinder, Codex und Departures. Sie
- * beantworten "wie weit insgesamt", und das tut der Journey-Reiter: die Leiter
- * steht in `WayfinderSection.vue` samt HUD-Karte und Pause-Band, der Codex in
- * `ChronicleSection.vue`. Sie hier zu wiederholen war genau die Doppelung,
- * gegen die dieser Reiter geschrieben ist.
+ * Zwei Leitern sind dabei gefallen — Wayfinder und Departures. Sie beantworten
+ * "wie weit insgesamt", und das tut der Journey-Reiter: die Leiter steht auf
+ * seiner Wayfinder-Unterseite samt HUD-Karte und Pause-Band. Sie hier zu
+ * wiederholen war genau die Doppelung, gegen die dieser Reiter geschrieben ist.
  *
  * Der Fortschritt bis zum Aufbruch steht in der Chimes-Ablesung, und nur dort:
  * die Goldschiene, die ihn einmal als Unterkante zeigte, ist gefallen. Die

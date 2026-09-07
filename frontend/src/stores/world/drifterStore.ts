@@ -31,7 +31,6 @@ import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 
@@ -455,12 +454,10 @@ export const useDrifterStore = defineStore('drifter', {
     applyBuff(def: DrifterDef): void {
       if (!def.buff) return
       this.buffs = this.buffs.filter((b) => b.sourceId !== def.id)
-      // Wanderer's Ear (chronicle): stretches the window. Stored as the buff's
-      // own duration, not applied on read — the bar counts down against
-      // `durationMs`, and a bonus earned mid-buff must not move its end.
+      // Stored as the buff's own duration, not applied on read — the bar
+      // counts down against `durationMs`.
       const durationMs = Math.round(
         def.buff.durationMs *
-          useAchievementStore().drifterBuffDurationMult *
           // Hollow Tide (providence): häufiger, dafür kürzer
           useProvidenceStore().drifterBuffDurationMult *
           // Pilgrim's Reliquary (Star Forge): der einzige KAUF, der auf die

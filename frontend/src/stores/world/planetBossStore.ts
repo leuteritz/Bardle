@@ -55,7 +55,6 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { SECTIONS } from '@/config/progression/sections'
 import { logger } from '@/utils/logger'
@@ -172,8 +171,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
           useGameStore().dmgPerClick *
             useSolarUpgradeStore().dmgMultiplier *
             useStarForgeStore().bossDamageMult *
-            useMeepTreeStore().fx.bossDamageMult *
-            useAchievementStore().bossDamageMult,
+            useMeepTreeStore().fx.bossDamageMult,
         ),
       )
     },
@@ -471,8 +469,7 @@ export const usePlanetBossStore = defineStore('planetBoss', {
         Math.round(
           cursed *
             useStarForgeStore().bossDamageMult *
-            useMeepTreeStore().fx.bossDamageMult *
-            useAchievementStore().bossDamageMult,
+            useMeepTreeStore().fx.bossDamageMult,
         ),
       )
       this.lastHitDamage = effective

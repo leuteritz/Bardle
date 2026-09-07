@@ -13,7 +13,6 @@ import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useDrifterStore } from '@/stores/world/drifterStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useOmenStore } from '@/stores/progression/omenStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { gameNow } from '@/utils/game/gameClock'
 
@@ -203,8 +202,6 @@ export const useInventoryStore = defineStore('inventory', {
       const drifterDropMult = useDrifterStore().materialDropMult
       // Fulfilled omen: timed as well, earned in another system
       const omenDropMult = useOmenStore().materialDropMult
-      // Starwright (chronicle): earned by stars pulled back out of the dark
-      const chronicleDropMult = useAchievementStore().materialDropMult
       // Providence: chosen at prestige, holds for the whole universe run
       const providenceDropMult = useProvidenceStore().materialDropMult
       // Starving Maw (void tide): zieht nach unten, solange der Riss steht
@@ -215,7 +212,6 @@ export const useInventoryStore = defineStore('inventory', {
         treeDropMult *
         drifterDropMult *
         omenDropMult *
-        chronicleDropMult *
         providenceDropMult *
         voidDropMult
       if (Math.random() > dropChance) return null

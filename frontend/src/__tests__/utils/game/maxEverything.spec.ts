@@ -14,14 +14,12 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore, FORGE_NODES } from '@/stores/progression/starForgeStore'
 import { FORGE_BOUGHS } from '@/config/progression/starForge'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useMissionStore } from '@/stores/progression/missionStore'
 import { useExpeditionChartStore } from '@/stores/economy/expeditionChartStore'
 import { universes } from '@/config/progression/universes'
 import { FORGE_CONFLUENCES } from '@/config/progression/starForge'
 import { MISSION_COUNT } from '@/config/progression/missions'
-import { CHRONICLE_TRACKS } from '@/config/progression/achievements'
 import { SHOP_ITEMS } from '@/config/economy/items'
 import {
   ADMIN_MAX_BOUGH_LEVEL,
@@ -172,17 +170,6 @@ describe('maxEverything', () => {
     }
     // Negative Verfügbarkeit hieße: mehr getragen als besessen.
     for (const item of SHOP_ITEMS) expect(items.availableCount(item.id)).toBeGreaterThanOrEqual(0)
-  })
-
-  it('schreibt den Astral Codex still voll', () => {
-    maxEverything()
-    const chronicle = useAchievementStore()
-
-    for (const track of CHRONICLE_TRACKS) {
-      expect(chronicle.stages[track.id]).toBe(track.stages.length)
-    }
-    // evaluate(true) hätte für jede Stufe ein Herald-Banner geschickt.
-    expect(chronicle.unseen).toHaveLength(0)
   })
 
   it('steigt bis Challenger', () => {

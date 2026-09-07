@@ -22,7 +22,6 @@ import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useSectionStore } from '@/stores/core/sectionStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
-import { useAchievementStore } from '@/stores/progression/achievementStore'
 import { STAT_CATEGORIES } from '@/config/ui/statCategories'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { formatCompactDuration } from '@/utils/ui/format'
@@ -37,7 +36,6 @@ import {
   FORGE_CONFLUENCES,
 } from '@/config/progression/starForge'
 import { MEEP_TREE_BRANCHES, MEEP_TREE_PATH_NODES } from '@/config/progression/meepTree'
-import { CHRONICLE_TOTAL_STAGES } from '@/config/progression/achievements'
 import {
   STAR_PHASE_DATA,
   COMET_PHASE_DATA,
@@ -98,7 +96,6 @@ export function useStatCatalog(query: Ref<string>): {
   const omenStore = useOmenStore()
   const missionStore = useMissionStore()
   const bardAbilityStore = useBardAbilityStore()
-  const achievementStore = useAchievementStore()
   const playerStore = usePlayerStore()
   const sectionStore = useSectionStore()
   const championLevelStore = useChampionLevelStore()
@@ -183,24 +180,6 @@ export function useStatCatalog(query: Ref<string>): {
         key: 'sections-completed',
         label: 'Sections Completed',
         value: ratio(completedSections, TOTAL_SECTIONS),
-      },
-      {
-        key: 'chronicle-stages',
-        label: 'Codex Stages',
-        value: ratio(achievementStore.unlockedStageCount, CHRONICLE_TOTAL_STAGES),
-        keywords: 'astral codex milestones achievements tracks chronicle',
-      },
-      {
-        key: 'chronicle-rank',
-        label: 'Codex Rank',
-        value: achievementStore.rankTitle,
-        keywords: 'astral codex milestones achievements title chronicle',
-      },
-      {
-        key: 'chronicle-rank-boost',
-        label: 'Codex Rank Boost',
-        value: `×${achievementStore.rankMult.toFixed(2)}`,
-        keywords: 'astral codex rank multiplier track bonus chronicle',
       },
     ]
   })
@@ -1480,7 +1459,7 @@ export function useStatCatalog(query: Ref<string>): {
       // Die Store-Felder heissen weiter `totalRifts*`: sie stehen so im
       // Spielstand, und ein umbenanntes Feld liesse die Zähler still auf null
       // zurückfallen. Was der Spieler liest, sagt „Void"; was gespeichert wird,
-      // bleibt `rifts` — dasselbe Muster wie bei Chronicle/Astral Codex.
+      // bleibt `rifts`.
       {
         key: 'rifts-sealed',
         label: 'Void Slain',
