@@ -338,10 +338,10 @@ export const SNAPSHOT_ROUTE_ARROW_GAP = 12 // chevron tip distance before the en
 // Vorlauf des IntersectionObserver, der einen Archiv-Snapshot zeichnen lässt —
 // renderGalaxySnapshot rastert synchron, Dutzende in einem Frame sind teuer.
 export const ARCHIVE_SNAPSHOT_ROOT_MARGIN = '160px'
-export const MINIMAP_COMET_HEAD_R = 4.5 // player comet head radius (× √zoom)
-export const MINIMAP_COMET_TAIL_LEN = 46 // comet tail length in px along the flight curve
+export const MINIMAP_COMET_HEAD_R = 6 // player comet head radius (× √zoom)
+export const MINIMAP_COMET_TAIL_LEN = 58 // comet tail length in px along the flight curve
 export const MINIMAP_COMET_TAIL_SEGMENTS = 14 // tail sample count
-export const MINIMAP_IDLE_SUN_R = 11 // player-sun marker when not traveling
+export const MINIMAP_IDLE_SUN_R = 15 // player-sun marker when not traveling
 export const MINIMAP_TWINKLE_COUNT = 30 // seeded twinkling background stars
 // Procedural spiral galaxy (canvas-drawn, replaces the old galaxy-far sprite)
 export const MINIMAP_GALAXY_ARMS_MIN = 2 // min seeded spiral arm count
