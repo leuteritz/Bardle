@@ -17,18 +17,18 @@ import { formatCompactDuration, toRoman } from '@/utils/ui/format'
 import { starSeats } from '@/utils/ui/starSeats'
 import { getChampionIconPath } from '@/utils/game/champions'
 import {
-  FIRMAMENT_FREED_COLOR,
-  FIRMAMENT_LOST_COLOR,
-  FIRMAMENT_TIP_SEAT_COLS,
-  FIRMAMENT_TIP_SEAT_EM,
-  FIRMAMENT_TIP_SEAT_GAP_EM,
-  FIRMAMENT_TIP_SEAT_MAX,
+  UNIVERSE_MAP_FREED_COLOR,
+  UNIVERSE_MAP_LOST_COLOR,
+  UNIVERSE_MAP_TIP_SEAT_COLS,
+  UNIVERSE_MAP_TIP_SEAT_EM,
+  UNIVERSE_MAP_TIP_SEAT_GAP_EM,
+  UNIVERSE_MAP_TIP_SEAT_MAX,
   MS_PER_SECOND,
   STAR_MANIFEST_ART_SIZE,
 } from '@/config/constants'
-import type { FirmamentNode } from '@/utils/ui/firmamentLayout'
+import type { UniverseNode } from '@/utils/ui/universeLayout'
 
-const props = defineProps<{ node: FirmamentNode; universe: number }>()
+const props = defineProps<{ node: UniverseNode; universe: number }>()
 
 const galaxyStore = useGalaxyStore()
 
@@ -69,12 +69,12 @@ const seats = computed(() =>
     ? starSeats(
         galaxyStore.attemptResults,
         galaxyStore.starManifests,
-        FIRMAMENT_TIP_SEAT_MAX,
+        UNIVERSE_MAP_TIP_SEAT_MAX,
       )
     : starSeats(
         props.node.record?.attemptResults,
         props.node.record?.starManifests,
-        FIRMAMENT_TIP_SEAT_MAX,
+        UNIVERSE_MAP_TIP_SEAT_MAX,
       ),
 )
 
@@ -86,11 +86,11 @@ const day = computed(() =>
 )
 
 // Masse der Reihe: die Breite deckelt sie auf genau eine Galaxie je Zeile.
-const seatSize = `${FIRMAMENT_TIP_SEAT_EM}em`
-const seatGap = `${FIRMAMENT_TIP_SEAT_GAP_EM}em`
+const seatSize = `${UNIVERSE_MAP_TIP_SEAT_EM}em`
+const seatGap = `${UNIVERSE_MAP_TIP_SEAT_GAP_EM}em`
 const seatRowW = `${(
-  FIRMAMENT_TIP_SEAT_COLS * FIRMAMENT_TIP_SEAT_EM +
-  (FIRMAMENT_TIP_SEAT_COLS - 1) * FIRMAMENT_TIP_SEAT_GAP_EM
+  UNIVERSE_MAP_TIP_SEAT_COLS * UNIVERSE_MAP_TIP_SEAT_EM +
+  (UNIVERSE_MAP_TIP_SEAT_COLS - 1) * UNIVERSE_MAP_TIP_SEAT_GAP_EM
 ).toFixed(2)}em`
 </script>
 
@@ -112,7 +112,7 @@ const seatRowW = `${(
         :key="i"
         class="fgt-seat"
         :class="{ 'fgt-seat--lost': seat.lost }"
-        :style="{ '--fgt-ink': seat.lost ? FIRMAMENT_LOST_COLOR : FIRMAMENT_FREED_COLOR }"
+        :style="{ '--fgt-ink': seat.lost ? UNIVERSE_MAP_LOST_COLOR : UNIVERSE_MAP_FREED_COLOR }"
       >
         <img v-if="seat.champion" :src="seatArt(seat.champion)" :alt="seat.champion" />
         <Icon v-else icon="lucide:lock" width="16" height="16" aria-hidden="true" />

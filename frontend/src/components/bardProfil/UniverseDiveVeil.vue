@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Der Schleier der Kamerafahrt Firmament ⇄ Galaxy — und ihr Taktgeber.
+ * Der Schleier der Kamerafahrt Universe ⇄ Galaxy — und ihr Taktgeber.
  *
  * Er liegt als Geschwister ueber den Tab-Layern des Profils und traegt zwei
  * Ebenen: den Dunkelschleier und die Lichtscheibe in der Farbe der Galaxie,
@@ -22,15 +22,15 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import {
-  FIRMAMENT_DIVE_ARRIVE_MS,
-  FIRMAMENT_DIVE_EASE_ARRIVE,
-  FIRMAMENT_DIVE_EASE_LEAVE,
-  FIRMAMENT_DIVE_GLOW_ALPHA,
-  FIRMAMENT_DIVE_GLOW_PAST,
-  FIRMAMENT_DIVE_GLOW_PX,
-  FIRMAMENT_DIVE_GLOW_SEED,
-  FIRMAMENT_DIVE_LEAVE_MS,
-  FIRMAMENT_FREED_COLOR,
+  UNIVERSE_MAP_DIVE_ARRIVE_MS,
+  UNIVERSE_MAP_DIVE_EASE_ARRIVE,
+  UNIVERSE_MAP_DIVE_EASE_LEAVE,
+  UNIVERSE_MAP_DIVE_GLOW_ALPHA,
+  UNIVERSE_MAP_DIVE_GLOW_PAST,
+  UNIVERSE_MAP_DIVE_GLOW_PX,
+  UNIVERSE_MAP_DIVE_GLOW_SEED,
+  UNIVERSE_MAP_DIVE_LEAVE_MS,
+  UNIVERSE_MAP_FREED_COLOR,
   VOYAGE_LOADER_SETTLE_FRAMES,
 } from '@/config/constants'
 
@@ -39,8 +39,8 @@ const root = ref<HTMLElement | null>(null)
 /** Fahrtpunkt im eigenen Rechteck; `cover` skaliert die Scheibe bis zur fernsten Ecke. */
 const spot = ref({ x: 0, y: 0, cover: 1 })
 
-const phase = computed(() => uiStore.firmamentDive?.phase ?? 'out')
-const toward = computed(() => uiStore.firmamentDive?.toward ?? 'atlas')
+const phase = computed(() => uiStore.universeDive?.phase ?? 'out')
+const toward = computed(() => uiStore.universeDive?.toward ?? 'atlas')
 
 let leaveTimer: ReturnType<typeof setTimeout> | null = null
 let arriveTimer: ReturnType<typeof setTimeout> | null = null
@@ -54,25 +54,25 @@ function clearAll() {
 }
 
 function measure() {
-  const d = uiStore.firmamentDive
+  const d = uiStore.universeDive
   const r = root.value?.getBoundingClientRect()
   if (!d || !r) return
   const x = d.x - r.left
   const y = d.y - r.top
   const far = Math.hypot(Math.max(x, r.width - x), Math.max(y, r.height - y))
-  spot.value = { x, y, cover: (2 * far) / FIRMAMENT_DIVE_GLOW_PX }
+  spot.value = { x, y, cover: (2 * far) / UNIVERSE_MAP_DIVE_GLOW_PX }
 }
 
 /** Reiter schalten — nur, wenn die Fahrt noch steht und der Quellreiter noch offen ist. */
 function switchTab() {
-  const d = uiStore.firmamentDive
+  const d = uiStore.universeDive
   if (!d) return false
   if (d.toward === 'atlas') {
-    if (uiStore.bardActiveTab !== 'firmament') return false
-    uiStore.requestOpenGalaxyFromFirmament(d.galaxy)
+    if (uiStore.bardActiveTab !== 'universe') return false
+    uiStore.requestOpenGalaxyFromUniverse(d.galaxy)
   } else {
     if (uiStore.bardActiveTab !== 'galaxy') return false
-    uiStore.returnToFirmamentTab(d.galaxy)
+    uiStore.returnToUniverseTab(d.galaxy)
   }
   return true
 }
@@ -97,12 +97,12 @@ function onLeaveEnd() {
       return
     }
     settleFrame = null
-    uiStore.settleFirmamentDive()
+    uiStore.settleUniverseDive()
     // setTimeout, nicht gameTimeout(): reine Anzeige.
     arriveTimer = setTimeout(() => {
       arriveTimer = null
-      uiStore.clearFirmamentDive()
-    }, FIRMAMENT_DIVE_ARRIVE_MS)
+      uiStore.clearUniverseDive()
+    }, UNIVERSE_MAP_DIVE_ARRIVE_MS)
   }
   step()
 }
@@ -110,45 +110,45 @@ function onLeaveEnd() {
 function run() {
   clearAll()
   measure()
-  leaveTimer = setTimeout(onLeaveEnd, FIRMAMENT_DIVE_LEAVE_MS * 2)
+  leaveTimer = setTimeout(onLeaveEnd, UNIVERSE_MAP_DIVE_LEAVE_MS * 2)
 }
 
 onMounted(run)
 watch(
-  () => (uiStore.firmamentDive ? `${uiStore.firmamentDive.toward}:${uiStore.firmamentDive.galaxy}` : null),
+  () => (uiStore.universeDive ? `${uiStore.universeDive.toward}:${uiStore.universeDive.galaxy}` : null),
   (key) => (key === null ? clearAll() : run()),
 )
 // Der Zielreiter ankert nach — das Licht folgt ihm.
-watch(() => [uiStore.firmamentDive?.x, uiStore.firmamentDive?.y], measure)
+watch(() => [uiStore.universeDive?.x, uiStore.universeDive?.y], measure)
 onUnmounted(clearAll)
 
 const glowStyle = computed(() => ({
   left: `${spot.value.x}px`,
   top: `${spot.value.y}px`,
-  '--fdv-cover': String(spot.value.cover),
-  '--fdv-accent': uiStore.firmamentDive?.accent ?? FIRMAMENT_FREED_COLOR,
+  '--udv-cover': String(spot.value.cover),
+  '--udv-accent': uiStore.universeDive?.accent ?? UNIVERSE_MAP_FREED_COLOR,
 }))
 
-const glowPx = `${FIRMAMENT_DIVE_GLOW_PX}px`
-const glowHalf = `${-FIRMAMENT_DIVE_GLOW_PX / 2}px`
-const glowAlpha = String(FIRMAMENT_DIVE_GLOW_ALPHA)
-const glowSeed = String(FIRMAMENT_DIVE_GLOW_SEED)
-const glowPast = String(FIRMAMENT_DIVE_GLOW_PAST)
-const leaveDur = `${FIRMAMENT_DIVE_LEAVE_MS}ms`
-const arriveDur = `${FIRMAMENT_DIVE_ARRIVE_MS}ms`
-const easeLeave = FIRMAMENT_DIVE_EASE_LEAVE
-const easeArrive = FIRMAMENT_DIVE_EASE_ARRIVE
+const glowPx = `${UNIVERSE_MAP_DIVE_GLOW_PX}px`
+const glowHalf = `${-UNIVERSE_MAP_DIVE_GLOW_PX / 2}px`
+const glowAlpha = String(UNIVERSE_MAP_DIVE_GLOW_ALPHA)
+const glowSeed = String(UNIVERSE_MAP_DIVE_GLOW_SEED)
+const glowPast = String(UNIVERSE_MAP_DIVE_GLOW_PAST)
+const leaveDur = `${UNIVERSE_MAP_DIVE_LEAVE_MS}ms`
+const arriveDur = `${UNIVERSE_MAP_DIVE_ARRIVE_MS}ms`
+const easeLeave = UNIVERSE_MAP_DIVE_EASE_LEAVE
+const easeArrive = UNIVERSE_MAP_DIVE_EASE_ARRIVE
 </script>
 
 <template>
-  <div ref="root" class="fdv" :class="[`fdv--${phase}`, `fdv--to-${toward}`]" aria-hidden="true">
-    <div class="fdv-veil" @animationend="phase === 'out' && onLeaveEnd()" />
-    <div class="fdv-glow" :style="glowStyle" />
+  <div ref="root" class="udv" :class="[`udv--${phase}`, `udv--to-${toward}`]" aria-hidden="true">
+    <div class="udv-veil" @animationend="phase === 'out' && onLeaveEnd()" />
+    <div class="udv-glow" :style="glowStyle" />
   </div>
 </template>
 
 <style scoped>
-.fdv {
+.udv {
   position: absolute;
   inset: 0;
   z-index: 2;
@@ -157,19 +157,19 @@ const easeArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 }
 
 /* Ruhend DECKEND — siehe Kopf. */
-.fdv-veil {
+.udv-veil {
   position: absolute;
   inset: 0;
   background: #05050b;
   opacity: 1;
 }
-.fdv--out .fdv-veil {
-  animation: fdv-veil-in v-bind(leaveDur) v-bind(easeLeave) both;
+.udv--out .udv-veil {
+  animation: udv-veil-in v-bind(leaveDur) v-bind(easeLeave) both;
 }
-.fdv--in .fdv-veil {
-  animation: fdv-veil-out v-bind(arriveDur) v-bind(easeArrive) forwards;
+.udv--in .udv-veil {
+  animation: udv-veil-out v-bind(arriveDur) v-bind(easeArrive) forwards;
 }
-@keyframes fdv-veil-in {
+@keyframes udv-veil-in {
   from {
     opacity: 0;
   }
@@ -177,7 +177,7 @@ const easeArrive = FIRMAMENT_DIVE_EASE_ARRIVE
     opacity: 1;
   }
 }
-@keyframes fdv-veil-out {
+@keyframes udv-veil-out {
   from {
     opacity: 1;
   }
@@ -187,49 +187,49 @@ const easeArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 }
 
 /* Statischer Verlauf; bewegt werden nur transform und opacity. */
-.fdv-glow {
+.udv-glow {
   position: absolute;
   width: v-bind(glowPx);
   height: v-bind(glowPx);
   margin: v-bind(glowHalf) 0 0 v-bind(glowHalf);
   border-radius: 50%;
-  background: radial-gradient(circle, var(--fdv-accent) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--udv-accent) 0%, transparent 70%);
   opacity: 0;
 }
-.fdv--out .fdv-glow {
-  animation: fdv-glow-in v-bind(leaveDur) v-bind(easeLeave) both;
+.udv--out .udv-glow {
+  animation: udv-glow-in v-bind(leaveDur) v-bind(easeLeave) both;
 }
 /* Nach dem Durchgang waechst das Licht weiter und verblasst … */
-.fdv--in.fdv--to-atlas .fdv-glow {
-  animation: fdv-glow-past v-bind(arriveDur) v-bind(easeArrive) forwards;
+.udv--in.udv--to-atlas .udv-glow {
+  animation: udv-glow-past v-bind(arriveDur) v-bind(easeArrive) forwards;
 }
 /* … beim Rueckweg faellt es in den Knoten zurueck. */
-.fdv--in.fdv--to-firmament .fdv-glow {
-  animation: fdv-glow-back v-bind(arriveDur) v-bind(easeArrive) forwards;
+.udv--in.udv--to-universe .udv-glow {
+  animation: udv-glow-back v-bind(arriveDur) v-bind(easeArrive) forwards;
 }
-@keyframes fdv-glow-in {
+@keyframes udv-glow-in {
   from {
     transform: scale(v-bind(glowSeed));
     opacity: 0;
   }
   to {
-    transform: scale(var(--fdv-cover, 1));
+    transform: scale(var(--udv-cover, 1));
     opacity: v-bind(glowAlpha);
   }
 }
-@keyframes fdv-glow-past {
+@keyframes udv-glow-past {
   from {
-    transform: scale(var(--fdv-cover, 1));
+    transform: scale(var(--udv-cover, 1));
     opacity: v-bind(glowAlpha);
   }
   to {
-    transform: scale(calc(var(--fdv-cover, 1) * v-bind(glowPast)));
+    transform: scale(calc(var(--udv-cover, 1) * v-bind(glowPast)));
     opacity: 0;
   }
 }
-@keyframes fdv-glow-back {
+@keyframes udv-glow-back {
   from {
-    transform: scale(var(--fdv-cover, 1));
+    transform: scale(var(--udv-cover, 1));
     opacity: v-bind(glowAlpha);
   }
   to {
@@ -239,8 +239,8 @@ const easeArrive = FIRMAMENT_DIVE_EASE_ARRIVE
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fdv-veil,
-  .fdv-glow {
+  .udv-veil,
+  .udv-glow {
     animation: none;
   }
 }

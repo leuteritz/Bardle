@@ -8,10 +8,10 @@
  * das Banner setzt — deshalb braucht diese Spalte KEINE eigenen Breakpoints und
  * kann von der Karte nicht abdriften.
  *
- * Die Gestalt ist die des Angebotsportals (`FirmamentOfferTip`): der WERT steht
+ * Die Gestalt ist die des Angebotsportals (`UniverseOfferTip`): der WERT steht
  * über seiner Beschriftung und groß — „+145 %" ist die Antwort, „Champion DPS"
  * nur die Frage dazu —, und der Pfeil trägt dieselbe Aussage wie die Farbe,
- * weil er als einziger auch ohne Farbsehen ankommt. Wer im Firmament ein Portal
+ * weil er als einziger auch ohne Farbsehen ankommt. Wer im Universe ein Portal
  * überfahren und dann geklickt hat, sieht hier dieselben zwei Blöcke wieder.
  */
 import type { HeraldReadout } from '@/composables/ui/useHerald'

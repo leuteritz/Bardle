@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Das Firmament — der ganze Weg auf EINER Karte.
+ * Das Universe — der ganze Weg auf EINER Karte.
  *
  * Der Reiter beantwortet die Frage, die sonst nirgends gestellt wird: wie weit
  * ist der Wandering Caretaker INSGESAMT gekommen. Journey zählt Zahlen, das
@@ -22,22 +22,22 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore, computeRequired } from '@/stores/world/galaxyStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
-import FirmamentLockedPanel from './FirmamentLockedPanel.vue'
-import FirmamentCrestBand from './FirmamentCrestBand.vue'
-import FirmamentUniverseRail from './FirmamentUniverseRail.vue'
-import FirmamentRailHandle from './FirmamentRailHandle.vue'
-import FirmamentChart from './FirmamentChart.vue'
-import { buildFirmamentPath, type FirmamentPath } from '@/utils/ui/firmamentLayout'
-import { buildFirmamentRailRows } from '@/utils/ui/firmamentRail'
-import { buildFirmamentChronicle } from '@/utils/ui/firmamentChronicle'
+import UniverseLockedPanel from './UniverseLockedPanel.vue'
+import UniverseCrestBand from './UniverseCrestBand.vue'
+import UniverseRail from './UniverseRail.vue'
+import UniverseRailHandle from './UniverseRailHandle.vue'
+import UniverseChart from './UniverseChart.vue'
+import { buildUniversePath, type UniversePath } from '@/utils/ui/universeLayout'
+import { buildUniverseRailRows } from '@/utils/ui/universeRail'
+import { buildUniverseChronicle } from '@/utils/ui/universeChronicle'
 import {
-  FIRMAMENT_RAIL_AUTOFOLD_W,
-  FIRMAMENT_RAIL_HANDLE_PX,
-  FIRMAMENT_RAIL_PANEL_W,
-  FIRMAMENT_RAIL_SLIDE_MS,
-  FIRMAMENT_RAIL_ZONE_W,
+  UNIVERSE_MAP_RAIL_AUTOFOLD_W,
+  UNIVERSE_MAP_RAIL_HANDLE_PX,
+  UNIVERSE_MAP_RAIL_PANEL_W,
+  UNIVERSE_MAP_RAIL_SLIDE_MS,
+  UNIVERSE_MAP_RAIL_ZONE_W,
 } from '@/config/constants'
-import type { FirmamentDiveRequest, FirmamentSelection } from '@/types'
+import type { UniverseDiveRequest, UniverseSelection } from '@/types'
 
 const uiStore = useUiStore()
 const gameStore = useGameStore()
@@ -47,7 +47,7 @@ const providenceStore = useProvidenceStore()
 const { completedGalaxies, currentGalaxy, currentThemeIndex, attemptResults, landfallResults } =
   storeToRefs(galaxyStore)
 
-const isVisible = computed(() => uiStore.bardActiveTab === 'firmament')
+const isVisible = computed(() => uiStore.bardActiveTab === 'universe')
 /* Das Schloss weicht auch, wenn ein Aufbruch ansteht: der Prestige-Knopf im
    Header fuehrt hierher, und die Chimes-Schwelle und die erste befreite Galaxie
    sind zwei verschiedene Uhren. Die laufende Bahn traegt auch ohne Archiv immer
@@ -69,12 +69,12 @@ const offers = computed(() =>
 )
 
 // ── Auswahl: der Ansichtszustand, nie leer ──────────────────────────────────
-const selection = ref<FirmamentSelection>({
+const selection = ref<UniverseSelection>({
   universe: gameStore.currentUniverse,
   galaxy: null,
 })
 
-function select(next: FirmamentSelection) {
+function select(next: UniverseSelection) {
   selection.value = next
 }
 
@@ -87,8 +87,8 @@ function resetSelection() {
 watch(() => gameStore.currentUniverse, resetSelection)
 
 // ── Die EINE Bahn ───────────────────────────────────────────────────────────
-const path = computed<FirmamentPath>(() =>
-  buildFirmamentPath({
+const path = computed<UniversePath>(() =>
+  buildUniversePath({
     completed: completedGalaxies.value,
     runs: gameStore.universeRuns,
     universe: selection.value.universe,
@@ -108,7 +108,7 @@ const path = computed<FirmamentPath>(() =>
  *  `record.universe` geschnitten und traegt die laufende Galaxie mit. Die Uhr
  *  bleibt draussen, gerechnet wird nur, wenn sich der Bestand aendert. */
 const chronicle = computed(() =>
-  buildFirmamentChronicle({
+  buildUniverseChronicle({
     nodes: path.value.nodes,
     runs: gameStore.universeRuns,
     universe: selection.value.universe,
@@ -123,25 +123,25 @@ const chronicle = computed(() =>
 /** Ein befreiter Knoten ist eine TUER, keine Auswahl: er fuehrt in den Atlas,
  *  in dem man mit dieser Galaxie etwas tun kann. */
 function openInGalaxy(galaxy: number) {
-  uiStore.requestOpenGalaxyFromFirmament(galaxy)
+  uiStore.requestOpenGalaxyFromUniverse(galaxy)
 }
 
 /** Dieselbe Tuer als Kamerafahrt — den Reiter schaltet der Schleier. */
-function diveInto(req: FirmamentDiveRequest) {
-  uiStore.requestFirmamentDive(req)
+function diveInto(req: UniverseDiveRequest) {
+  uiStore.requestUniverseDive(req)
 }
 
 /** Der Rueckweg aus dem Atlas kommt als Fahrt an: die Karte setzt sich aus dem
  *  Knoten dieser Galaxie heraus, sobald der Schleier faellt. */
 const arriving = computed(() => {
-  const d = uiStore.firmamentDive
-  return d && d.toward === 'firmament' && d.phase === 'in' ? d.galaxy : null
+  const d = uiStore.universeDive
+  return d && d.toward === 'universe' && d.phase === 'in' ? d.galaxy : null
 })
 
 // ── Leiste ──────────────────────────────────────────────────────────────────
 /** Die EINE Zeilenrechnung — Liste und Griff lesen dieselbe. */
 const railRows = computed(() =>
-  buildFirmamentRailRows({
+  buildUniverseRailRows({
     completed: completedGalaxies.value,
     runs: gameStore.universeRuns,
     currentUniverse: gameStore.currentUniverse,
@@ -163,7 +163,7 @@ function observe(el: HTMLElement) {
     const w = entries[0]?.contentRect.width ?? 0
     // Die 0 eines versteckten Reiters verwerfen — sonst spränge die Leiste beim
     // Zurückkehren einen Frame lang auf die eingeklappte Breite.
-    if (w > 0) narrow.value = w < FIRMAMENT_RAIL_AUTOFOLD_W
+    if (w > 0) narrow.value = w < UNIVERSE_MAP_RAIL_AUTOFOLD_W
   })
   observer.observe(el)
 }
@@ -217,14 +217,14 @@ onBeforeUnmount(() => {
  * allerersten Ruecksprung laeuft sein Setup erst NACH dem Setzen des Zeigers.
  */
 watch(
-  () => uiStore.pendingFirmamentGalaxy,
+  () => uiStore.pendingUniverseGalaxy,
   (galaxy) => {
     if (galaxy === null) return
     // Der Atlas kennt kein Universum — auf welcher Bahn die Galaxie liegt,
     // steht in ihrem Datensatz.
     const record = completedGalaxies.value.find((r) => r.galaxy === galaxy)
     select({ universe: record?.universe ?? gameStore.currentUniverse, galaxy })
-    uiStore.clearPendingFirmamentGalaxy()
+    uiStore.clearPendingUniverseGalaxy()
   },
   { immediate: true },
 )
@@ -239,11 +239,11 @@ watch(
  */
 const bodyColumns = computed(
   () =>
-    `minmax(0, 1fr) ${railFolded.value ? FIRMAMENT_RAIL_HANDLE_PX : FIRMAMENT_RAIL_ZONE_W}px`,
+    `minmax(0, 1fr) ${railFolded.value ? UNIVERSE_MAP_RAIL_HANDLE_PX : UNIVERSE_MAP_RAIL_ZONE_W}px`,
 )
-const railPanelWidth = `${FIRMAMENT_RAIL_PANEL_W}px`
-const handleWidth = `${FIRMAMENT_RAIL_HANDLE_PX}px`
-const slideMs = `${FIRMAMENT_RAIL_SLIDE_MS}ms`
+const railPanelWidth = `${UNIVERSE_MAP_RAIL_PANEL_W}px`
+const handleWidth = `${UNIVERSE_MAP_RAIL_HANDLE_PX}px`
+const slideMs = `${UNIVERSE_MAP_RAIL_SLIDE_MS}ms`
 
 /**
  * Den Fokus nimmt `inert`, aber VERZOEGERT: synchron gesetzt liegt seine Arbeit
@@ -256,7 +256,7 @@ watch(railFolded, (folded) => {
   inertTimer = setTimeout(() => {
     inertTimer = null
     railInert.value = folded
-  }, FIRMAMENT_RAIL_SLIDE_MS)
+  }, UNIVERSE_MAP_RAIL_SLIDE_MS)
 })
 onBeforeUnmount(() => {
   if (inertTimer !== null) clearTimeout(inertTimer)
@@ -264,16 +264,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="root" class="fm-tab">
+  <div ref="root" class="un-tab">
     <CosmicStageBackground />
 
-    <FirmamentLockedPanel v-if="!isUnlocked" />
+    <UniverseLockedPanel v-if="!isUnlocked" />
 
     <template v-else>
-      <FirmamentCrestBand :universe="selection.universe" :chronicle="chronicle" />
+      <UniverseCrestBand :universe="selection.universe" :chronicle="chronicle" />
 
-      <div class="fm-body">
-        <FirmamentChart
+      <div class="un-body">
+        <UniverseChart
           :nodes="path.nodes"
           :departure="path.departure"
           :offers="offers"
@@ -288,16 +288,16 @@ onBeforeUnmount(() => {
         <!-- Die Leiste faehrt als EIN Stueck seitlich hinaus; stehen bleibt die
              Griffleiste. Sie steht im DOM HINTER der Karte, damit Tabulator und
              Screenreader dem Bild folgen. -->
-        <div class="fm-rail-zone">
+        <div class="un-rail-zone">
           <div
-            class="fm-rail-slide"
-            :class="{ 'fm-rail-slide--parked': railFolded }"
+            class="un-rail-slide"
+            :class="{ 'un-rail-slide--parked': railFolded }"
             :inert="railInert"
           >
-            <FirmamentUniverseRail :rows="railRows" :selection="selection" @select="select" />
+            <UniverseRail :rows="railRows" :selection="selection" @select="select" />
           </div>
 
-          <FirmamentRailHandle
+          <UniverseRailHandle
             :walked="walkedCount"
             :total="railRows.length"
             :open="!railFolded"
@@ -312,7 +312,7 @@ onBeforeUnmount(() => {
 <style scoped>
 /* `.tab-layer` ist `position: absolute` ohne Flex — die Box bringt der Reiter
    selbst mit, sonst fielen Band und Bühne auf Inhaltsgröße. */
-.fm-tab {
+.un-tab {
   position: absolute;
   inset: 0;
   display: flex;
@@ -323,7 +323,7 @@ onBeforeUnmount(() => {
 }
 
 /* Depth-Wash über dem Grund — flache Radialtöne, kein Blur, einmal Paint. */
-.fm-tab::after {
+.un-tab::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -337,7 +337,7 @@ onBeforeUnmount(() => {
 /* Zwei Zonen, EIN Budget: was die Leiste nimmt, nimmt sie der Karte. Die
    Spaltenbreite wechselt HART — sie steht in `paintKey` und `groundKey` der
    Karte, animiert malte jede Umschaltung die ganze Platte mehrfach neu. */
-.fm-body {
+.un-body {
   position: relative;
   z-index: 1;
   flex: 1;
@@ -352,7 +352,7 @@ onBeforeUnmount(() => {
 
 /* Die Huelle traegt beide Kinder absolut — die Spaltenbreite wechselt hart, das
    Panel darin faehrt. */
-.fm-rail-zone {
+.un-rail-zone {
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -365,7 +365,7 @@ onBeforeUnmount(() => {
    Hier steht bewusst KEIN `transform: translateX(0)` und kein `will-change`:
    beides machte dieses Element zum Containing Block fuer `position: fixed`, und
    die Hover-Karten des Reiters teleportieren nach `<body>`. */
-.fm-rail-slide {
+.un-rail-slide {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -374,12 +374,12 @@ onBeforeUnmount(() => {
   z-index: 1;
   transition: transform v-bind(slideMs) ease;
 }
-.fm-rail-slide--parked {
+.un-rail-slide--parked {
   transform: translateX(100%);
 }
 @media (prefers-reduced-motion: reduce) {
-  .fm-rail-slide,
-  .fm-rail-slide--parked {
+  .un-rail-slide,
+  .un-rail-slide--parked {
     transition: none;
   }
 }

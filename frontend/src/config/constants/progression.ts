@@ -292,7 +292,7 @@ export const ADMIN_ARCHIVE_GAP_MS = 12 * 60_000
 
 // ── Aufbruch-Nachtrag beim Sprung ins letzte Universum ────────────────────
 // Ein Sprung setzt `currentUniverse`, lässt `universeRuns` aber leer — dann
-// steht das Firmament ohne Tore da. Der Nachtrag rechnet die Rettungskosten
+// steht das Universe ohne Tore da. Der Nachtrag rechnet die Rettungskosten
 // nach (Anfangskosten mal Multiplikator hoch Aufbruch), plus diesen Überschuss:
 // exakt auf der Schwelle bricht kein Spieler auf.
 export const ADMIN_UNIVERSE_OVERSHOOT = 0.35

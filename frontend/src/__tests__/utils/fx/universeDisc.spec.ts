@@ -13,8 +13,8 @@ import {
 } from '@/utils/fx/universeDisc'
 import { universes } from '@/config/progression/universes'
 import {
-  FIRMAMENT_FREED_COLOR,
-  FIRMAMENT_HERE_COLOR,
+  UNIVERSE_MAP_FREED_COLOR,
+  UNIVERSE_MAP_HERE_COLOR,
   UNIVERSE_DISC_GALAXIES,
   UNIVERSE_DISC_RIM_ARCS,
   UNIVERSE_DISC_RIM_INNER,
@@ -148,7 +148,7 @@ describe('Universumsscheibe — die Ebenen', () => {
   })
 
   it('der Kern trägt die Zustandsfarbe der Karte, keine eigene', () => {
-    // Zwei Farben, die der Spieler im Firmament ohnehin schon liest — ein
+    // Zwei Farben, die der Spieler im Universe ohnehin schon liest — ein
     // dritter Ton dafür wäre eine zweite Sprache für dieselbe Auskunft.
     const here = recordingCtx()
     paintCore(here.ctx, R, R, R, 'current')
@@ -158,8 +158,8 @@ describe('Universumsscheibe — die Ebenen', () => {
       const n = parseInt(hex.slice(1), 16)
       return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`
     }
-    expect(here.ops.join('|')).toContain(rgbOf(FIRMAMENT_HERE_COLOR))
-    expect(freed.ops.join('|')).toContain(rgbOf(FIRMAMENT_FREED_COLOR))
+    expect(here.ops.join('|')).toContain(rgbOf(UNIVERSE_MAP_HERE_COLOR))
+    expect(freed.ops.join('|')).toContain(rgbOf(UNIVERSE_MAP_FREED_COLOR))
     expect(here.ops.join('|')).not.toBe(freed.ops.join('|'))
   })
 
@@ -204,7 +204,7 @@ describe('Universumsscheibe — die zwei Ebenen', () => {
     // Galaxien sind das einzige, was als Ellipse gesetzt wird.
     expect(ops.filter((o) => o.startsWith('ellipse('))).toHaveLength(0)
     // Und der Kern ist der einzige, der die Hier-Farbe traegt.
-    const n = parseInt(FIRMAMENT_HERE_COLOR.slice(1), 16)
+    const n = parseInt(UNIVERSE_MAP_HERE_COLOR.slice(1), 16)
     expect(ops.join('|')).not.toContain(`${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`)
   })
 

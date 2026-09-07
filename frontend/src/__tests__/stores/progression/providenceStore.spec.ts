@@ -195,7 +195,7 @@ describe('providenceStore', () => {
       // Die umgekehrte Zusicherung von früher („jedes Öffnen würfelt neu"), und
       // sie ist mit dem Prestige-Modal gekippt: es gibt keinen Öffnen-Schritt
       // mehr, an dem ein Reroll hängen könnte. Aus den drei Karten sind drei
-      // PORTALE im Firmament geworden, und die Stelle eines Portals hängt am
+      // PORTALE im Universe geworden, und die Stelle eines Portals hängt am
       // Zieluniversum — ein Angebot, das bei jedem Blick neu fällt, liesse sie
       // über die Bühne springen. Der Aufrufer fragt jetzt im Sekundentakt.
       const store = useProvidenceStore()

@@ -18,7 +18,7 @@ import { SAVE_KEY } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 
 /**
- * `record.universe` ist die Schnittkante der Firmament-Bahnen. Fehlt der
+ * `record.universe` ist die Schnittkante der Universe-Bahnen. Fehlt der
  * Stempel, liegt der ganze Bestand auf EINER Bahn — und das sieht man erst im
  * Reiter, nicht im Code.
  */

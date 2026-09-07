@@ -73,7 +73,7 @@ export interface HeraldPayload {
    * Die Scheibe DIESES Universums als Bild statt Medaillon oder Portrait.
    *
    * Nur die Nummer, nicht die Komponente: `HeraldBanner` liegt unter `idle/`
-   * und soll nicht in den Firmament-Ordner greifen. Wer sie zeichnet, ist
+   * und soll nicht in den Universe-Ordner greifen. Wer sie zeichnet, ist
    * `HeraldOverlay` über den `visual`-Slot.
    */
   universe?: number

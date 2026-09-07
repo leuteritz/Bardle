@@ -14,38 +14,38 @@
 
 import { seededRng } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
-  FIRMAMENT_PENUMBRA_ALPHA_MAX,
-  FIRMAMENT_PENUMBRA_ALPHA_MIN,
-  FIRMAMENT_PENUMBRA_BAND_GAP,
-  FIRMAMENT_PENUMBRA_BAND_W_MAX,
-  FIRMAMENT_PENUMBRA_BAND_W_MIN,
-  FIRMAMENT_PENUMBRA_BANDS_MAX,
-  FIRMAMENT_PENUMBRA_BANDS_MIN,
-  FIRMAMENT_PENUMBRA_BLUR_PASSES,
-  FIRMAMENT_PENUMBRA_DAMP_IN,
-  FIRMAMENT_PENUMBRA_DAMP_OUT,
-  FIRMAMENT_PENUMBRA_DISC_DAMP,
-  FIRMAMENT_PENUMBRA_FLOW_DEG,
-  FIRMAMENT_PENUMBRA_GROUND,
-  FIRMAMENT_PENUMBRA_INK_HUE_SHIFT_DEG,
-  FIRMAMENT_PENUMBRA_INK_LUMA,
-  FIRMAMENT_PENUMBRA_MAX_STEPS,
-  FIRMAMENT_PENUMBRA_MOTE_ALPHA,
-  FIRMAMENT_PENUMBRA_MOTE_LUMA,
-  FIRMAMENT_PENUMBRA_MOTE_RATIO_MAX,
-  FIRMAMENT_PENUMBRA_MOTE_RATIO_MIN,
-  FIRMAMENT_PENUMBRA_MOTE_RX,
-  FIRMAMENT_PENUMBRA_MOTES_MAX,
-  FIRMAMENT_PENUMBRA_MOTES_PER_BAND,
-  FIRMAMENT_PENUMBRA_OVERSCAN,
-  FIRMAMENT_PENUMBRA_SEED_JITTER,
-  FIRMAMENT_PENUMBRA_STEP,
-  FIRMAMENT_PENUMBRA_WARM_SHARE,
-  FIRMAMENT_PENUMBRA_WAVES,
-  FIRMAMENT_PLATE_REF_R,
+  UNIVERSE_MAP_PENUMBRA_ALPHA_MAX,
+  UNIVERSE_MAP_PENUMBRA_ALPHA_MIN,
+  UNIVERSE_MAP_PENUMBRA_BAND_GAP,
+  UNIVERSE_MAP_PENUMBRA_BAND_W_MAX,
+  UNIVERSE_MAP_PENUMBRA_BAND_W_MIN,
+  UNIVERSE_MAP_PENUMBRA_BANDS_MAX,
+  UNIVERSE_MAP_PENUMBRA_BANDS_MIN,
+  UNIVERSE_MAP_PENUMBRA_BLUR_PASSES,
+  UNIVERSE_MAP_PENUMBRA_DAMP_IN,
+  UNIVERSE_MAP_PENUMBRA_DAMP_OUT,
+  UNIVERSE_MAP_PENUMBRA_DISC_DAMP,
+  UNIVERSE_MAP_PENUMBRA_FLOW_DEG,
+  UNIVERSE_MAP_PENUMBRA_GROUND,
+  UNIVERSE_MAP_PENUMBRA_INK_HUE_SHIFT_DEG,
+  UNIVERSE_MAP_PENUMBRA_INK_LUMA,
+  UNIVERSE_MAP_PENUMBRA_MAX_STEPS,
+  UNIVERSE_MAP_PENUMBRA_MOTE_ALPHA,
+  UNIVERSE_MAP_PENUMBRA_MOTE_LUMA,
+  UNIVERSE_MAP_PENUMBRA_MOTE_RATIO_MAX,
+  UNIVERSE_MAP_PENUMBRA_MOTE_RATIO_MIN,
+  UNIVERSE_MAP_PENUMBRA_MOTE_RX,
+  UNIVERSE_MAP_PENUMBRA_MOTES_MAX,
+  UNIVERSE_MAP_PENUMBRA_MOTES_PER_BAND,
+  UNIVERSE_MAP_PENUMBRA_OVERSCAN,
+  UNIVERSE_MAP_PENUMBRA_SEED_JITTER,
+  UNIVERSE_MAP_PENUMBRA_STEP,
+  UNIVERSE_MAP_PENUMBRA_WARM_SHARE,
+  UNIVERSE_MAP_PENUMBRA_WAVES,
+  UNIVERSE_MAP_PLATE_REF_R,
   UNIVERSE_DISC_GOLDEN_ANGLE,
 } from '@/config/constants'
-import { firmamentFitBox } from '@/utils/ui/firmamentLayout'
+import { universeFitBox } from '@/utils/ui/universeLayout'
 import { hexToRgb, shiftHue } from '@/utils/ui/format'
 
 type Vec = { x: number; y: number }
@@ -70,7 +70,7 @@ const lerp = (lo: number, hi: number, t: number) => lo + (hi - lo) * t
 /** Richtung je Universum: Basis plus goldener Winkel je Schritt, in (-180, 180]. */
 export function penumbraFlowDeg(universe: number): number {
   const golden = (UNIVERSE_DISC_GOLDEN_ANGLE * 180) / Math.PI
-  const raw = FIRMAMENT_PENUMBRA_FLOW_DEG + (Math.max(1, Math.floor(universe)) - 1) * golden
+  const raw = UNIVERSE_MAP_PENUMBRA_FLOW_DEG + (Math.max(1, Math.floor(universe)) - 1) * golden
   const wrapped = ((((raw + 180) % 360) + 360) % 360) - 180
   return wrapped === -180 ? 180 : wrapped
 }
@@ -82,7 +82,7 @@ function penumbraFlow(w: number, h: number, flowDeg: number, phases: readonly nu
   const dx = Math.cos(a)
   const dy = Math.sin(a)
   const L = Math.min(w, h)
-  const waves = FIRMAMENT_PENUMBRA_WAVES.map(([lam, amp, deg], i) => {
+  const waves = UNIVERSE_MAP_PENUMBRA_WAVES.map(([lam, amp, deg], i) => {
     const t = a + (deg * Math.PI) / 180
     return {
       nx: Math.cos(t),
@@ -111,7 +111,7 @@ function inside(p: Vec, b: Bounds): boolean {
 function march(flow: Flow, from: Vec, step: number, b: Bounds, sign: 1 | -1): Vec[] {
   const out: Vec[] = []
   let p = from
-  for (let i = 0; i < FIRMAMENT_PENUMBRA_MAX_STEPS; i++) {
+  for (let i = 0; i < UNIVERSE_MAP_PENUMBRA_MAX_STEPS; i++) {
     const v = flow(p.x, p.y)
     const m = Math.hypot(v.x, v.y) || 1
     p = { x: p.x + (sign * step * v.x) / m, y: p.y + (sign * step * v.y) / m }
@@ -136,7 +136,7 @@ function strokeBand(
   ink: Rgb,
   coreAlpha: number,
 ): void {
-  for (const [wMul, aMul] of FIRMAMENT_PENUMBRA_BLUR_PASSES) {
+  for (const [wMul, aMul] of UNIVERSE_MAP_PENUMBRA_BLUR_PASSES) {
     ctx.beginPath()
     ctx.moveTo(pts[0].x, pts[0].y)
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y)
@@ -146,7 +146,7 @@ function strokeBand(
   }
 }
 
-export function paintFirmamentPenumbra(
+export function paintUniversePenumbra(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
@@ -154,17 +154,17 @@ export function paintFirmamentPenumbra(
   universe: number,
   tint: string,
 ): void {
-  const fit = firmamentFitBox(w, h)
-  const k = fit.r / FIRMAMENT_PLATE_REF_R
+  const fit = universeFitBox(w, h)
+  const k = fit.r / UNIVERSE_MAP_PLATE_REF_R
   const L = Math.min(w, h)
-  const ov = L * FIRMAMENT_PENUMBRA_OVERSCAN
+  const ov = L * UNIVERSE_MAP_PENUMBRA_OVERSCAN
   const bounds: Bounds = { x0: -ov, y0: -ov, x1: w + ov, y1: h + ov }
   const rng = seededRng(seed)
 
   const flowDeg = penumbraFlowDeg(universe)
   const flow = penumbraFlow(w, h, flowDeg, [rng(), rng(), rng()].map((p) => p * Math.PI * 2))
-  const cold = inkFromTint(tint, FIRMAMENT_PENUMBRA_INK_LUMA)
-  const warm = inkFromTint(shiftHue(tint, FIRMAMENT_PENUMBRA_INK_HUE_SHIFT_DEG), FIRMAMENT_PENUMBRA_INK_LUMA)
+  const cold = inkFromTint(tint, UNIVERSE_MAP_PENUMBRA_INK_LUMA)
+  const warm = inkFromTint(shiftHue(tint, UNIVERSE_MAP_PENUMBRA_INK_HUE_SHIFT_DEG), UNIVERSE_MAP_PENUMBRA_INK_LUMA)
 
   const a = (flowDeg * Math.PI) / 180
   const d: Vec = { x: Math.cos(a), y: Math.sin(a) }
@@ -174,21 +174,21 @@ export function paintFirmamentPenumbra(
   const span =
     2 * Math.min((w / 2 + ov) / (Math.abs(perp.x) || 1e-9), (h / 2 + ov) / (Math.abs(perp.y) || 1e-9))
   const n = Math.min(
-    FIRMAMENT_PENUMBRA_BANDS_MAX,
-    Math.max(FIRMAMENT_PENUMBRA_BANDS_MIN, Math.round(span / (FIRMAMENT_PENUMBRA_BAND_GAP * k))),
+    UNIVERSE_MAP_PENUMBRA_BANDS_MAX,
+    Math.max(UNIVERSE_MAP_PENUMBRA_BANDS_MIN, Math.round(span / (UNIVERSE_MAP_PENUMBRA_BAND_GAP * k))),
   )
-  const step = FIRMAMENT_PENUMBRA_STEP * k
+  const step = UNIVERSE_MAP_PENUMBRA_STEP * k
 
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
   const bands: { pts: Vec[]; w: number }[] = []
   for (let i = 0; i < n; i++) {
     // Stratifiziert: nie zwei Baender uebereinander, das verdoppelte die Tinte.
-    const u = ((i + 0.5 + (rng() - 0.5) * FIRMAMENT_PENUMBRA_SEED_JITTER) / n - 0.5) * span
+    const u = ((i + 0.5 + (rng() - 0.5) * UNIVERSE_MAP_PENUMBRA_SEED_JITTER) / n - 0.5) * span
     const along = (rng() - 0.5) * L * 0.5
-    const coreW = lerp(FIRMAMENT_PENUMBRA_BAND_W_MIN, FIRMAMENT_PENUMBRA_BAND_W_MAX, rng()) * k
-    const alpha = lerp(FIRMAMENT_PENUMBRA_ALPHA_MIN, FIRMAMENT_PENUMBRA_ALPHA_MAX, rng())
-    const ink = rng() < FIRMAMENT_PENUMBRA_WARM_SHARE ? warm : cold
+    const coreW = lerp(UNIVERSE_MAP_PENUMBRA_BAND_W_MIN, UNIVERSE_MAP_PENUMBRA_BAND_W_MAX, rng()) * k
+    const alpha = lerp(UNIVERSE_MAP_PENUMBRA_ALPHA_MIN, UNIVERSE_MAP_PENUMBRA_ALPHA_MAX, rng())
+    const ink = rng() < UNIVERSE_MAP_PENUMBRA_WARM_SHARE ? warm : cold
     const seedPt: Vec = {
       x: fit.cx + perp.x * u + d.x * along,
       y: fit.cy + perp.y * u + d.y * along,
@@ -199,15 +199,15 @@ export function paintFirmamentPenumbra(
   }
 
   // Motes reiten den Strom: Neigung = das Segment, auf dem sie sitzen.
-  const clear = fit.r * FIRMAMENT_PENUMBRA_DAMP_OUT
-  const motes = Math.min(FIRMAMENT_PENUMBRA_MOTES_MAX, n * FIRMAMENT_PENUMBRA_MOTES_PER_BAND)
-  ctx.fillStyle = rgba(inkFromTint(tint, FIRMAMENT_PENUMBRA_MOTE_LUMA), FIRMAMENT_PENUMBRA_MOTE_ALPHA)
+  const clear = fit.r * UNIVERSE_MAP_PENUMBRA_DAMP_OUT
+  const motes = Math.min(UNIVERSE_MAP_PENUMBRA_MOTES_MAX, n * UNIVERSE_MAP_PENUMBRA_MOTES_PER_BAND)
+  ctx.fillStyle = rgba(inkFromTint(tint, UNIVERSE_MAP_PENUMBRA_MOTE_LUMA), UNIVERSE_MAP_PENUMBRA_MOTE_ALPHA)
   for (let j = 0; j < motes; j++) {
     const band = bands[Math.min(n - 1, Math.floor(rng() * n))]
     const idx = Math.min(band.pts.length - 2, Math.floor(rng() * (band.pts.length - 1)))
     const side = (rng() - 0.5) * 2.4 * band.w
-    const rx = FIRMAMENT_PENUMBRA_MOTE_RX * k * (0.7 + rng() * 0.7)
-    const ratio = lerp(FIRMAMENT_PENUMBRA_MOTE_RATIO_MIN, FIRMAMENT_PENUMBRA_MOTE_RATIO_MAX, rng())
+    const rx = UNIVERSE_MAP_PENUMBRA_MOTE_RX * k * (0.7 + rng() * 0.7)
+    const ratio = lerp(UNIVERSE_MAP_PENUMBRA_MOTE_RATIO_MIN, UNIVERSE_MAP_PENUMBRA_MOTE_RATIO_MAX, rng())
     const p0 = band.pts[idx]
     const p1 = band.pts[idx + 1]
     const tilt = Math.atan2(p1.y - p0.y, p1.x - p0.x)
@@ -224,13 +224,13 @@ export function paintFirmamentPenumbra(
   const pool = ctx.createRadialGradient(
     fit.cx,
     fit.cy,
-    fit.r * FIRMAMENT_PENUMBRA_DAMP_IN,
+    fit.r * UNIVERSE_MAP_PENUMBRA_DAMP_IN,
     fit.cx,
     fit.cy,
-    fit.r * FIRMAMENT_PENUMBRA_DAMP_OUT,
+    fit.r * UNIVERSE_MAP_PENUMBRA_DAMP_OUT,
   )
-  const ground = hexToRgb(FIRMAMENT_PENUMBRA_GROUND)
-  pool.addColorStop(0, rgba(ground, FIRMAMENT_PENUMBRA_DISC_DAMP))
+  const ground = hexToRgb(UNIVERSE_MAP_PENUMBRA_GROUND)
+  pool.addColorStop(0, rgba(ground, UNIVERSE_MAP_PENUMBRA_DISC_DAMP))
   pool.addColorStop(1, rgba(ground, 0))
   ctx.fillStyle = pool
   ctx.beginPath()

@@ -212,7 +212,7 @@ export interface MaxEverythingResult {
   perks: number
   rank: string
   galaxy: number
-  /** Universen mit einem Lauf im Archiv — die Tore auf der Firmament-Bahn. */
+  /** Universen mit einem Lauf im Archiv — die Tore auf der Universe-Bahn. */
   universes: number
 }
 
@@ -316,9 +316,9 @@ export function maxEverything(): MaxEverythingResult {
   if (galaxyStore.pendingRoleSelection) galaxyStore.confirmRoleSelection(ROLES[0].key)
 
   // Die neun Aufbrüche, die der Sprung überspringt. MUSS hier stehen und nicht
-  // oben bei `currentUniverse`: die Tore der Firmament-Bahn hängen an den
+  // oben bei `currentUniverse`: die Tore der Universe-Bahn hängen an den
   // Stempeln, die `adminJumpToGalaxy` eine Zeile darüber vergeben hat. Ohne sie
-  // steht das Firmament auf fünfzig Galaxien und NULL Toren — jede Zeile der
+  // steht das Universe auf fünfzig Galaxien und NULL Toren — jede Zeile der
   // Universumsleiste ausser der laufenden liest „not yet walked" und ist nicht
   // anklickbar.
   gameStore.adminBackfillUniverseRuns()

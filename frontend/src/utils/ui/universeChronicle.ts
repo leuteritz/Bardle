@@ -1,7 +1,7 @@
 /**
  * Was EINE Bahn hergab — die Chronik des Kopfbands.
  *
- * Rein und ZEITFREI, im Rezept von `firmamentRail.ts` und `voyageRoster.ts`:
+ * Rein und ZEITFREI, im Rezept von `universeRail.ts` und `voyageRoster.ts`:
  * der Aufrufer reicht den Bestand herein und bekommt Ablesungen zurueck. Die
  * Uhr bleibt draussen, sonst baute sich das Band im Sekundentakt neu.
  *
@@ -16,13 +16,13 @@
  * andere waere eine Bahn, deren Zahlen verschiedene Zeitraeume meinen.
  */
 
-import { runsOfUniverse } from '@/utils/ui/firmamentLayout'
-import type { FirmamentNode } from '@/utils/ui/firmamentLayout'
+import { runsOfUniverse } from '@/utils/ui/universeLayout'
+import type { UniverseNode } from '@/utils/ui/universeLayout'
 import type { UniverseRunRecord } from '@/types'
 
 /** Der Aufbruch — nur auf der LAUFENDEN Bahn. Eine vergangene ist aufgebrochen,
  *  ihr Fortschritt ist kein Fortschritt mehr, sondern ein Ergebnis. */
-export interface FirmamentDepartureProgress {
+export interface UniverseDepartureProgress {
   raised: number
   goal: number
   /** 0..100, schon geklemmt — dieselbe Zahl, die die Unterkante fuellt. */
@@ -32,7 +32,7 @@ export interface FirmamentDepartureProgress {
   etaSeconds: number | null
 }
 
-export interface FirmamentChronicle {
+export interface UniverseChronicle {
   /** Befreite Galaxien dieser Bahn. Die LAUFENDE zaehlt nicht mit — sie ist
    *  noch nicht befreit, und der Knoten sagt das auch. */
   galaxies: number
@@ -49,12 +49,12 @@ export interface FirmamentChronicle {
   /** Spielsekunden in diesem Universum, ueber alle Besuche. Dieselbe
    *  `null`-Regel. */
   seconds: number | null
-  departure: FirmamentDepartureProgress | null
+  departure: UniverseDepartureProgress | null
 }
 
-export interface FirmamentChronicleInput {
-  /** Die Knoten der GEZEIGTEN Bahn, wie `buildFirmamentPath` sie legt. */
-  nodes: readonly FirmamentNode[]
+export interface UniverseChronicleInput {
+  /** Die Knoten der GEZEIGTEN Bahn, wie `buildUniversePath` sie legt. */
+  nodes: readonly UniverseNode[]
   runs: readonly UniverseRunRecord[]
   universe: number
   currentUniverse: number
@@ -66,7 +66,7 @@ export interface FirmamentChronicleInput {
   chimesPerSecond: number
 }
 
-export function buildFirmamentChronicle(input: FirmamentChronicleInput): FirmamentChronicle {
+export function buildUniverseChronicle(input: UniverseChronicleInput): UniverseChronicle {
   const isHere = input.universe === input.currentUniverse
 
   let galaxies = 0
@@ -101,7 +101,7 @@ export function buildFirmamentChronicle(input: FirmamentChronicleInput): Firmame
   }
 }
 
-function departureOf(input: FirmamentChronicleInput): FirmamentDepartureProgress {
+function departureOf(input: UniverseChronicleInput): UniverseDepartureProgress {
   const left = Math.max(0, input.liveGoal - input.liveChimes)
   return {
     raised: input.liveChimes,

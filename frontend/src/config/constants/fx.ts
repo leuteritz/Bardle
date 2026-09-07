@@ -100,7 +100,7 @@ export const UNIVERSE_HOP_TUNNEL_TRAIL_FADE = 0.22
 export const UNIVERSE_HOP_TUNNEL_ROLL_RAD_S = 0.35
 /** Beim Austritt stehen sofort Körper der neuen Welt da, statt leerem Raum. */
 export const UNIVERSE_HOP_ARRIVAL_GALAXIES = 3
-/** Gebackener Ringdurchmesser; Schlund-Span 1,6× bleibt unter FIRMAMENT_PORTAL_MAX_BACKING_PX. */
+/** Gebackener Ringdurchmesser; Schlund-Span 1,6× bleibt unter UNIVERSE_MAP_PORTAL_MAX_BACKING_PX. */
 export const UNIVERSE_HOP_PORTAL_SPRITE_PX = 512
 export const UNIVERSE_HOP_PORTAL_SPIN_RAD_S = 0.9
 export const UNIVERSE_HOP_MAW_ALPHA = 0.9
@@ -110,7 +110,7 @@ export const UNIVERSE_HOP_FIELD_PASS_FADE = 0.8
 export const UNIVERSE_HOP_THROAT_ALPHA_CORE = 0.42
 export const UNIVERSE_HOP_THROAT_ALPHA_MID = 0.16
 export const UNIVERSE_HOP_THROAT_MID_STOP = 0.55
-/** Gate-Phase im Firmament: Schleier zu, Profil schliesst darunter, Schleier hebt. */
+/** Gate-Phase im Universe: Schleier zu, Profil schliesst darunter, Schleier hebt. */
 export const UNIVERSE_HOP_GATE_MS = 260
 export const UNIVERSE_HOP_GATE_LIFT_MS = 350
 export const UNIVERSE_HOP_GATE_PORTAL_K = 1.8
@@ -207,7 +207,7 @@ export const GALAXY_GLOW_WHITE_LIFT = 0.22
  * Wie weit der Universumston die Galaxiefarbe zu sich zieht.
  *
  * Gezogen werden FARBTON und Saettigung, die Luminanz jedes Farbwerts bleibt —
- * dieselbe Lehre wie die Penumbra-Tinte (`FIRMAMENT_PENUMBRA_INK_LUMA`): der Ton
+ * dieselbe Lehre wie die Penumbra-Tinte (`UNIVERSE_MAP_PENUMBRA_INK_LUMA`): der Ton
  * sagt WELCHES Universum, die Helligkeit bleibt. Voll gemischt hellte der
  * Vollbild-Schleier auf, und der Raum verloere seine Schwaerze.
  *

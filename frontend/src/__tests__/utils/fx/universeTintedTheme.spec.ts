@@ -58,7 +58,7 @@ describe('tintedTheme — Universum I ist der Referenzzustand', () => {
 
 describe('tintedTheme — der Ton wandert, die Helligkeit bleibt', () => {
   // Die Wand: voll gemischt hellte der Vollbild-Schleier auf und der Raum
-  // verloere seine Schwaerze. Dieselbe Lehre wie FIRMAMENT_PENUMBRA_INK_LUMA.
+  // verloere seine Schwaerze. Dieselbe Lehre wie UNIVERSE_MAP_PENUMBRA_INK_LUMA.
   it('haelt die Luminanz jedes einzelnen Farbwerts', () => {
     for (const u of TINTING) {
       for (let i = 0; i < GALAXY_THEMES.length; i++) {

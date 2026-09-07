@@ -9,7 +9,7 @@
  * etwas verloren ging. Sie traegt deshalb KEINEN Zaehler — dieselbe Zahl
  * zweimal auf einem Bild war der Grund, aus dem die Identitaetsplakette in
  * genau dieser Ecke gefallen ist. Gesichter wiederholen nichts: sie stehen
- * sonst nirgends im Reiter, und `FirmamentGalaxyTip` verweist fuer die NAMEN
+ * sonst nirgends im Reiter, und `UniverseGalaxyTip` verweist fuer die NAMEN
  * ausdruecklich hierher.
  *
  * **Sie schrumpft die Fit-Box nicht.** Anders als beim Band liegen unter dieser
@@ -34,8 +34,8 @@ import { getChampionIconPath } from '@/utils/game/champions'
 import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
-  FIRMAMENT_FREED_COLOR,
-  FIRMAMENT_LOST_COLOR,
+  UNIVERSE_MAP_FREED_COLOR,
+  UNIVERSE_MAP_LOST_COLOR,
   STAR_MANIFEST_ART_SIZE,
   VOYAGE_MANIFEST_ACCENT_BAR_PX,
   VOYAGE_MANIFEST_LABEL,
@@ -100,7 +100,7 @@ const bands = computed(() =>
     {
       key: 'lost',
       label: VOYAGE_MANIFEST_LOST_LABEL,
-      ink: FIRMAMENT_LOST_COLOR,
+      ink: UNIVERSE_MAP_LOST_COLOR,
       ...split.value.lost,
     },
   ].filter((b) => b.seats.length),
@@ -151,7 +151,7 @@ const barPx = `${VOYAGE_MANIFEST_ACCENT_BAR_PX}px`
             class="esm-tile"
             :class="{ 'esm-tile--lost': seat.lost, 'esm-tile--on': seat.index === highlight }"
             :data-star="seat.index"
-            :style="{ '--esm-ink': seat.lost ? FIRMAMENT_LOST_COLOR : FIRMAMENT_FREED_COLOR }"
+            :style="{ '--esm-ink': seat.lost ? UNIVERSE_MAP_LOST_COLOR : UNIVERSE_MAP_FREED_COLOR }"
           >
             <span class="esm-art">
               <img v-if="seat.champion" :src="art(seat.champion)" :alt="seat.champion" />

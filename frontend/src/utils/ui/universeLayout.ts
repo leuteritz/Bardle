@@ -1,5 +1,5 @@
 /**
- * Die Bahn des Firmaments — wo eine Galaxie auf der Karte steht.
+ * Die Bahn des Universes — wo eine Galaxie auf der Karte steht.
  *
  * Reine Rechnung, kein DOM, kein Store: die Karte reicht ihr den Bestand und
  * bekommt normierte Koordinaten zurueck. Die Umrechnung in Pixel macht die
@@ -11,7 +11,7 @@
  * geschnitten wird sie erst hier, am Feld `record.universe`. Jede Bahn beginnt
  * wieder bei Start; wo ein Universum endete, steht ein Portal — aber nicht auf
  * der Bahn, sondern im schwarzen Raum ausserhalb der Scheibe
- * (`firmamentPortalSpot`). Diese Datei sagt nur, DASS es eines gibt.
+ * (`universePortalSpot`). Diese Datei sagt nur, DASS es eines gibt.
  *
  * Der Nenner ist dabei fuer ALLE Bahnen derselbe: die RADIUSLEITER bleibt ueber
  * einen Universumswechsel hinweg dieselbe, und wer weiter kam, kommt weiter nach
@@ -29,35 +29,35 @@
  */
 
 import {
-  FIRMAMENT_MAP_INSET_PX,
-  FIRMAMENT_NODE_R_BASE,
-  FIRMAMENT_NODE_R_PER_STAR,
-  FIRMAMENT_PATH_MIN_SPAN,
-  FIRMAMENT_PATH_R0,
-  FIRMAMENT_PATH_R1,
-  FIRMAMENT_PATH_RADIUS_EXP,
-  FIRMAMENT_ROAD_BOW,
-  FIRMAMENT_SCATTER_MIN_SEP,
-  FIRMAMENT_SCATTER_STEP_MAX,
-  FIRMAMENT_SCATTER_STEP_MIN,
-  FIRMAMENT_SCATTER_TRIES,
-  FIRMAMENT_SCATTER_TURN_BIAS,
-  FIRMAMENT_SCATTER_T_WOBBLE,
-  FIRMAMENT_START_CLEAR_X,
-  FIRMAMENT_START_CLEAR_Y0,
-  FIRMAMENT_START_CLEAR_Y1,
-  FIRMAMENT_UNLIT_AHEAD,
+  UNIVERSE_MAP_INSET_PX,
+  UNIVERSE_MAP_NODE_R_BASE,
+  UNIVERSE_MAP_NODE_R_PER_STAR,
+  UNIVERSE_MAP_PATH_MIN_SPAN,
+  UNIVERSE_MAP_PATH_R0,
+  UNIVERSE_MAP_PATH_R1,
+  UNIVERSE_MAP_PATH_RADIUS_EXP,
+  UNIVERSE_MAP_ROAD_BOW,
+  UNIVERSE_MAP_SCATTER_MIN_SEP,
+  UNIVERSE_MAP_SCATTER_STEP_MAX,
+  UNIVERSE_MAP_SCATTER_STEP_MIN,
+  UNIVERSE_MAP_SCATTER_TRIES,
+  UNIVERSE_MAP_SCATTER_TURN_BIAS,
+  UNIVERSE_MAP_SCATTER_T_WOBBLE,
+  UNIVERSE_MAP_START_CLEAR_X,
+  UNIVERSE_MAP_START_CLEAR_Y0,
+  UNIVERSE_MAP_START_CLEAR_Y1,
+  UNIVERSE_MAP_UNLIT_AHEAD,
 } from '@/config/constants'
 import { jitter } from '@/utils/fx/universeDisc'
 import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { UniverseRunRecord } from '@/types'
 
-export type FirmamentNodeState = 'freed' | 'current' | 'unlit'
+export type UniverseNodeState = 'freed' | 'current' | 'unlit'
 
-export interface FirmamentNode {
+export interface UniverseNode {
   galaxy: number
-  state: FirmamentNodeState
+  state: UniverseNodeState
   /** Lage auf der Bahn, normiert: Mitte (0.5, 0.5), Rand 1. */
   nx: number
   ny: number
@@ -79,10 +79,10 @@ export interface FirmamentNode {
  * Wo ein Universum endete — hoechstens EINES je Bahn.
  *
  * Ohne Lage: der Ausgang steht als grosses Portal im schwarzen Raum ausserhalb
- * der Scheibe, und dessen Stelle rechnet `firmamentPortalSpot` aus den
+ * der Scheibe, und dessen Stelle rechnet `universePortalSpot` aus den
  * Buehnenmassen. Die Bahn sagt nur noch, DASS es einen gibt und wohin er fuehrt.
  */
-export interface FirmamentDeparture {
+export interface UniverseDeparture {
   /** Das Universum, in das es weiterging. */
   toUniverse: number
   /** Wie oft dieses Universum betreten wurde — die Bahn traegt alle Besuche. */
@@ -90,19 +90,19 @@ export interface FirmamentDeparture {
   run: UniverseRunRecord
 }
 
-export interface FirmamentPath {
-  nodes: FirmamentNode[]
-  departure: FirmamentDeparture | null
+export interface UniversePath {
+  nodes: UniverseNode[]
+  departure: UniverseDeparture | null
 }
 
-export interface FirmamentFitBox {
+export interface UniverseFitBox {
   cx: number
   cy: number
   /** Radius, auf den `radius: 1` faellt. */
   r: number
 }
 
-export interface FirmamentInput {
+export interface UniverseInput {
   completed: readonly CompletedGalaxyRecord[]
   runs: readonly UniverseRunRecord[]
   /** Die Bahn, die gezeigt wird. */
@@ -122,11 +122,11 @@ export interface FirmamentInput {
 /** Die groesste zentrierte Kreisflaeche der Buehne. Die Bahn ist rund; eine
  *  seitenverhaeltnis-gebundene Box wie bei der Galaxieplatte liesse links und
  *  rechts Rand stehen, den die Spirale braucht. */
-export function firmamentFitBox(
+export function universeFitBox(
   w: number,
   h: number,
-  inset = FIRMAMENT_MAP_INSET_PX,
-): FirmamentFitBox {
+  inset = UNIVERSE_MAP_INSET_PX,
+): UniverseFitBox {
   return {
     cx: w / 2,
     cy: h / 2,
@@ -134,7 +134,7 @@ export function firmamentFitBox(
   }
 }
 
-export interface FirmamentSpot {
+export interface UniverseSpot {
   nx: number
   ny: number
   angle: number
@@ -142,7 +142,7 @@ export interface FirmamentSpot {
 }
 
 /* Kanaele des Hashes — getrennt, damit Radius, Weite und Richtung nicht
-   aneinanderhaengen. Dasselbe Mittel wie in `firmamentPortalSpot`.            */
+   aneinanderhaengen. Dasselbe Mittel wie in `universePortalSpot`.            */
 const RADIUS_SALT = 3
 const STEP_SALT = 11
 const SIGN_SALT = 23
@@ -152,7 +152,7 @@ const BOW_SALT = 37
    Wuerfe von Universum 1.                                                     */
 const UNIVERSE_STRIDE = 167
 /** Himmelsrichtung und Drehneigung einer Bahn — eigener Kanal, wie 131/137 in
- *  `firmamentPortalSpot`. */
+ *  `universePortalSpot`. */
 const ORIGIN_SALT = 173
 
 /** Radius des `i`-ten Platzes. Die Auslenkung sitzt im PARAMETER und bleibt
@@ -160,34 +160,34 @@ const ORIGIN_SALT = 173
  *  auf `_R0`. Ohne sie laegen die Knoten auf Ringen. Das BAND je Index ist fuer
  *  alle Universen dasselbe — nur wo im Band der Knoten sitzt, gehoert der Bahn. */
 function spotRadius(i: number, span: number, universe: number): number {
-  if (span <= 1) return FIRMAMENT_PATH_R0
+  if (span <= 1) return UNIVERSE_MAP_PATH_R0
   const w =
     i === 0
       ? 0
-      : (jitter(i, RADIUS_SALT + universe * UNIVERSE_STRIDE) * 2 - 1) * FIRMAMENT_SCATTER_T_WOBBLE
+      : (jitter(i, RADIUS_SALT + universe * UNIVERSE_STRIDE) * 2 - 1) * UNIVERSE_MAP_SCATTER_T_WOBBLE
   const t = Math.min(1, Math.max(0, (i + w) / (span - 1)))
   return (
-    FIRMAMENT_PATH_R0 +
-    (FIRMAMENT_PATH_R1 - FIRMAMENT_PATH_R0) * Math.pow(t, FIRMAMENT_PATH_RADIUS_EXP)
+    UNIVERSE_MAP_PATH_R0 +
+    (UNIVERSE_MAP_PATH_R1 - UNIVERSE_MAP_PATH_R0) * Math.pow(t, UNIVERSE_MAP_PATH_RADIUS_EXP)
   )
 }
 
 /** Das Feld, das dem START-Label gehoert. */
-export function firmamentInStartField(nx: number, ny: number): boolean {
+export function universeInStartField(nx: number, ny: number): boolean {
   return (
-    Math.abs(nx) < FIRMAMENT_START_CLEAR_X &&
-    ny > FIRMAMENT_START_CLEAR_Y0 &&
-    ny < FIRMAMENT_START_CLEAR_Y1
+    Math.abs(nx) < UNIVERSE_MAP_START_CLEAR_X &&
+    ny > UNIVERSE_MAP_START_CLEAR_Y0 &&
+    ny < UNIVERSE_MAP_START_CLEAR_Y1
   )
 }
 
 /** Schneidet die Sehne zwischen zwei Plaetzen das Feld des Labels? Slab-
  *  Verfahren statt Abtastung — eine Abtastung uebersieht den flachen Schnitt. */
-export function firmamentChordHitsStart(ax: number, ay: number, bx: number, by: number): boolean {
+export function universeChordHitsStart(ax: number, ay: number, bx: number, by: number): boolean {
   const d = [bx - ax, by - ay]
   const p = [ax, ay]
-  const lo = [-FIRMAMENT_START_CLEAR_X, FIRMAMENT_START_CLEAR_Y0]
-  const hi = [FIRMAMENT_START_CLEAR_X, FIRMAMENT_START_CLEAR_Y1]
+  const lo = [-UNIVERSE_MAP_START_CLEAR_X, UNIVERSE_MAP_START_CLEAR_Y0]
+  const hi = [UNIVERSE_MAP_START_CLEAR_X, UNIVERSE_MAP_START_CLEAR_Y1]
   let t0 = 0
   let t1 = 1
   for (let k = 0; k < 2; k++) {
@@ -211,14 +211,14 @@ export function firmamentChordHitsStart(ax: number, ay: number, bx: number, by: 
  * Bildschirmkoordinaten um `box.cx/cy`. Sie steht hier, weil der Ablehnungspass
  * den GEMALTEN Bogen freihalten muss und nicht die gerade Sehne.
  */
-export function firmamentRoadCtrl(
+export function universeRoadCtrl(
   ax: number,
   ay: number,
   bx: number,
   by: number,
   i: number,
 ): { x: number; y: number } {
-  const bow = 1 + (jitter(i, BOW_SALT) * 2 - 1) * FIRMAMENT_ROAD_BOW
+  const bow = 1 + (jitter(i, BOW_SALT) * 2 - 1) * UNIVERSE_MAP_ROAD_BOW
   return { x: ((ax + bx) / 2) * bow, y: ((ay + by) / 2) * bow }
 }
 
@@ -227,24 +227,24 @@ export function firmamentRoadCtrl(
  *  steht das Wort START und die gerade Zufahrt liefe hindurch. Der Rueckfall ist
  *  der alte feste Wert: ein misslungener Wurf sieht aus wie frueher. */
 function originAngle(universe: number): number {
-  for (let k = 0; k < FIRMAMENT_SCATTER_TRIES; k++) {
+  for (let k = 0; k < UNIVERSE_MAP_SCATTER_TRIES; k++) {
     const a = jitter(universe, ORIGIN_SALT + k) * Math.PI * 2
-    const nx = Math.cos(a) * FIRMAMENT_PATH_R0
-    const ny = Math.sin(a) * FIRMAMENT_PATH_R0
-    if (firmamentInStartField(nx, ny)) continue
+    const nx = Math.cos(a) * UNIVERSE_MAP_PATH_R0
+    const ny = Math.sin(a) * UNIVERSE_MAP_PATH_R0
+    if (universeInStartField(nx, ny)) continue
     // Die Platte zieht das erste Stueck GERADE — nur die Sehne, kein Bogen.
-    if (firmamentChordHitsStart(0, 0, nx, ny)) continue
+    if (universeChordHitsStart(0, 0, nx, ny)) continue
     return a
   }
   return -Math.PI / 2
 }
 
-/* Die Karte ist ein Standbild, und `buildFirmamentPath` laeuft bei jedem
+/* Die Karte ist ein Standbild, und `buildUniversePath` laeuft bei jedem
    reaktiven Anlauf. Der Wurf kostet O(span² · TRIES) und haengt an nichts
    Laufendem — gerechnet wird er einmal je (Spanne, Universum). Die Liste wird
    nirgends mutiert, der Cache darf dieselbe Referenz reichen.                  */
 const SPOT_CACHE_MAX = 256
-const spotCache = new Map<string, FirmamentSpot[]>()
+const spotCache = new Map<string, UniverseSpot[]>()
 
 /**
  * Die Plaetze einer Bahn mit `span` Knoten — eine EIGENE Streuung je Universum.
@@ -262,7 +262,7 @@ const spotCache = new Map<string, FirmamentSpot[]>()
  * 571 Bahnzuege quer ueber das Wort; gegen die gerade Sehne gepruaeft blieben
  * 229 Kurvenpunkte in 24 Spannen uebrig, darunter 11 und 19.
  */
-export function firmamentSpots(span: number, universe: number): FirmamentSpot[] {
+export function universeSpots(span: number, universe: number): UniverseSpot[] {
   const key = `${span}|${universe}`
   const hit = spotCache.get(key)
   if (hit) return hit
@@ -272,13 +272,13 @@ export function firmamentSpots(span: number, universe: number): FirmamentSpot[] 
   return out
 }
 
-function scatter(span: number, universe: number): FirmamentSpot[] {
+function scatter(span: number, universe: number): UniverseSpot[] {
   const uSalt = universe * UNIVERSE_STRIDE
   /* Die Drehneigung ist der Charakterzug einer Bahn: nahe 0 umrundet sie die
      Mitte ueberwiegend in EINE Richtung und liest sich als weit geoeffneter Arm,
      nahe 1 kehrt sie staendig um und liest sich als gestreute Sternkarte.      */
-  const turn = 0.5 + (jitter(universe, ORIGIN_SALT) * 2 - 1) * FIRMAMENT_SCATTER_TURN_BIAS
-  const out: FirmamentSpot[] = []
+  const turn = 0.5 + (jitter(universe, ORIGIN_SALT) * 2 - 1) * UNIVERSE_MAP_SCATTER_TURN_BIAS
+  const out: UniverseSpot[] = []
   let prev = originAngle(universe)
   for (let i = 0; i < span; i++) {
     const radius = spotRadius(i, span, universe)
@@ -287,32 +287,32 @@ function scatter(span: number, universe: number): FirmamentSpot[] {
       continue
     }
 
-    let best: FirmamentSpot | null = null
+    let best: UniverseSpot | null = null
     let bestGap = -1
-    for (let k = 0; k < FIRMAMENT_SCATTER_TRIES; k++) {
+    for (let k = 0; k < UNIVERSE_MAP_SCATTER_TRIES; k++) {
       const step =
-        FIRMAMENT_SCATTER_STEP_MIN +
+        UNIVERSE_MAP_SCATTER_STEP_MIN +
         jitter(i * 2 + 1, STEP_SALT + k + uSalt) *
-          (FIRMAMENT_SCATTER_STEP_MAX - FIRMAMENT_SCATTER_STEP_MIN)
+          (UNIVERSE_MAP_SCATTER_STEP_MAX - UNIVERSE_MAP_SCATTER_STEP_MIN)
       const angle = prev + (jitter(i * 2 + 1, SIGN_SALT + k + uSalt) < turn ? -step : step)
       const nx = Math.cos(angle) * radius
       const ny = Math.sin(angle) * radius
-      if (firmamentInStartField(nx, ny)) continue
+      if (universeInStartField(nx, ny)) continue
       // Eine quadratische Bezier liegt in der Huelle von Anfang, Kontrollpunkt
       // und Ende — drei Sehnen genuegen fuer den ganzen Bogen.
       const a = out[i - 1]
-      const c = firmamentRoadCtrl(a.nx, a.ny, nx, ny, i)
+      const c = universeRoadCtrl(a.nx, a.ny, nx, ny, i)
       if (
-        firmamentChordHitsStart(a.nx, a.ny, c.x, c.y) ||
-        firmamentChordHitsStart(c.x, c.y, nx, ny) ||
-        firmamentChordHitsStart(a.nx, a.ny, nx, ny)
+        universeChordHitsStart(a.nx, a.ny, c.x, c.y) ||
+        universeChordHitsStart(c.x, c.y, nx, ny) ||
+        universeChordHitsStart(a.nx, a.ny, nx, ny)
       ) {
         continue
       }
 
       let gap = Infinity
       for (const o of out) gap = Math.min(gap, Math.hypot(nx - o.nx, ny - o.ny))
-      if (gap >= FIRMAMENT_SCATTER_MIN_SEP) {
+      if (gap >= UNIVERSE_MAP_SCATTER_MIN_SEP) {
         best = { nx, ny, angle, radius }
         break
       }
@@ -323,7 +323,7 @@ function scatter(span: number, universe: number): FirmamentSpot[] {
     }
 
     if (!best) {
-      const angle = prev + FIRMAMENT_SCATTER_STEP_MIN
+      const angle = prev + UNIVERSE_MAP_SCATTER_STEP_MIN
       best = { nx: Math.cos(angle) * radius, ny: Math.sin(angle) * radius, angle, radius }
     }
     out.push(best)
@@ -344,7 +344,7 @@ export function runsOfUniverse(
 
 /** Plaetze, die eine Bahn auf der Spirale belegt. Nur Knoten — das Portal steht
  *  nicht darauf und braucht deshalb auch keinen reservierten Platz. */
-function slotsOf(input: FirmamentInput, universe: number): number {
+function slotsOf(input: UniverseInput, universe: number): number {
   let n = 0
   let hasCurrent = false
   for (const r of input.completed) {
@@ -354,23 +354,23 @@ function slotsOf(input: FirmamentInput, universe: number): number {
   }
   if (universe === input.currentUniverse) {
     if (!hasCurrent) n++
-    return n + FIRMAMENT_UNLIT_AHEAD
+    return n + UNIVERSE_MAP_UNLIT_AHEAD
   }
   return n
 }
 
 /** Der gemeinsame Nenner: die laengste Bahn ueber alle Universen. */
-function spanOf(input: FirmamentInput): number {
+function spanOf(input: UniverseInput): number {
   const seen = new Set<number>([input.currentUniverse, input.universe])
   for (const r of input.completed) seen.add(universeOfRecord(r))
   let max = 0
   for (const u of seen) max = Math.max(max, slotsOf(input, u))
-  return Math.max(FIRMAMENT_PATH_MIN_SPAN, max)
+  return Math.max(UNIVERSE_MAP_PATH_MIN_SPAN, max)
 }
 
 /**
  * Die Bahn eines Universums: was darin befreit wurde, dahinter — nur im
- * laufenden — die aktuelle Galaxie und `FIRMAMENT_UNLIT_AHEAD` unbeleuchtete
+ * laufenden — die aktuelle Galaxie und `UNIVERSE_MAP_UNLIT_AHEAD` unbeleuchtete
  * Plaetze.
  *
  * Die Kette ist nach GALAXIENUMMER geordnet, nicht nach Zeitstempel — ein
@@ -380,14 +380,14 @@ function spanOf(input: FirmamentInput): number {
  * Eine vergangene Bahn endet, wo sie endete: dort gibt es kein „davor", also
  * auch keine Vorausplaetze.
  */
-export function buildFirmamentPath(input: FirmamentInput): FirmamentPath {
+export function buildUniversePath(input: UniverseInput): UniversePath {
   const isHere = input.universe === input.currentUniverse
   const freed = input.completed
     .filter((r) => universeOfRecord(r) === input.universe)
     .sort((a, b) => a.galaxy - b.galaxy)
   const seen = new Set(freed.map((r) => r.galaxy))
 
-  const rows: Array<Omit<FirmamentNode, 'nx' | 'ny' | 'angle' | 'radius' | 'bodyR'>> = freed.map(
+  const rows: Array<Omit<UniverseNode, 'nx' | 'ny' | 'angle' | 'radius' | 'bodyR'>> = freed.map(
     (r) => ({
       galaxy: r.galaxy,
       state: 'freed' as const,
@@ -417,7 +417,7 @@ export function buildFirmamentPath(input: FirmamentInput): FirmamentPath {
     }
 
     const last = rows.length ? rows[rows.length - 1].galaxy : input.currentGalaxy
-    for (let i = 1; i <= FIRMAMENT_UNLIT_AHEAD; i++) {
+    for (let i = 1; i <= UNIVERSE_MAP_UNLIT_AHEAD; i++) {
       rows.push({
         galaxy: last + i,
         state: 'unlit',
@@ -431,7 +431,7 @@ export function buildFirmamentPath(input: FirmamentInput): FirmamentPath {
     }
   }
 
-  const spots = firmamentSpots(spanOf(input), input.universe)
+  const spots = universeSpots(spanOf(input), input.universe)
 
   const nodes = rows.map((row, i) => {
     const p = spots[i]
@@ -443,8 +443,8 @@ export function buildFirmamentPath(input: FirmamentInput): FirmamentPath {
       radius: p.radius,
       bodyR:
         row.state === 'unlit'
-          ? FIRMAMENT_NODE_R_BASE
-          : FIRMAMENT_NODE_R_BASE + row.stars * FIRMAMENT_NODE_R_PER_STAR,
+          ? UNIVERSE_MAP_NODE_R_BASE
+          : UNIVERSE_MAP_NODE_R_BASE + row.stars * UNIVERSE_MAP_NODE_R_PER_STAR,
     }
   })
 
@@ -462,7 +462,7 @@ export function buildFirmamentPath(input: FirmamentInput): FirmamentPath {
  * Kein Tor bekommt, wer keinen Lauf mehr im Archiv hat — `UNIVERSE_RUN_HISTORY_LIMIT`
  * schiebt alte hinaus. Dort ist die Auskunft verloren, nicht falsch.
  */
-function buildDeparture(input: FirmamentInput, nodeCount: number): FirmamentDeparture | null {
+function buildDeparture(input: UniverseInput, nodeCount: number): UniverseDeparture | null {
   if (input.universe === input.currentUniverse || nodeCount === 0) return null
   const mine = runsOfUniverse(input.runs, input.universe)
   if (!mine.length) return null

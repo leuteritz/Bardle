@@ -20,7 +20,7 @@ import type { UniverseDiscState } from '@/utils/fx/universeDisc'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { UniverseRunRecord } from '@/types'
 
-export interface FirmamentRailRow {
+export interface UniverseRailRow {
   id: number
   /** Wie es heisst, ist seine Nummer — `universeLabel(id)` baut die Zeile. */
   roman: string
@@ -33,7 +33,7 @@ export interface FirmamentRailRow {
   discState: UniverseDiscState
 }
 
-export interface FirmamentRailInput {
+export interface UniverseRailInput {
   completed: readonly CompletedGalaxyRecord[]
   runs: readonly UniverseRunRecord[]
   currentUniverse: number
@@ -41,7 +41,7 @@ export interface FirmamentRailInput {
   selectedUniverse: number
 }
 
-export function buildFirmamentRailRows(input: FirmamentRailInput): FirmamentRailRow[] {
+export function buildUniverseRailRows(input: UniverseRailInput): UniverseRailRow[] {
   /* Der letzte Lauf JE Universum: ein Ort kann mehrfach besucht werden, die
      Leiste zeigt eine Zeile je Ort, nicht je Besuch. */
   const runByUniverse = new Map<number, { galaxiesFreed: number; durationSeconds: number }>()
@@ -52,7 +52,7 @@ export function buildFirmamentRailRows(input: FirmamentRailInput): FirmamentRail
     })
   }
 
-  /* Dieselbe Zaehlung wie `buildFirmamentPath`, samt Boden fuer einen Datensatz
+  /* Dieselbe Zaehlung wie `buildUniversePath`, samt Boden fuer einen Datensatz
      ohne Feld. */
   const galaxiesByUniverse = new Map<number, number>()
   for (const r of input.completed) {

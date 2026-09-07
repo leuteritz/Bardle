@@ -10,12 +10,12 @@ import type { UniverseConfig } from '@/types'
  * werden damit zehn mal achtzehn.
  *
  * Sie tragen auch keine NAMEN mehr. Ein Universum ist seine Nummer — überall
- * `universeLabel(id)`, also „Universe VI". Der Name stand im Firmament-Kopfband
+ * `universeLabel(id)`, also „Universe VI". Der Name stand im Universe-Kopfband
  * als grösste Schrift über einer Zeile, die dasselbe schon sagte, und nahm den
  * Platz, an dem jetzt die zwei Wirkungen der Vorsehung stehen.
  *
  * Was bleibt, ist das, was ohne Text trägt: das `icon` als Wappen und der
- * `tint` — der Farbton der Scheibe, die das Universum im Firmament IST. Er liegt
+ * `tint` — der Farbton der Scheibe, die das Universum im Universe IST. Er liegt
  * nur im Inneren der Scheibe — Staub und Galaxien —, nie auf einer Kante, sonst
  * spraeche er dieselbe Sprache wie die Zustandsfarben der Karte.
  */

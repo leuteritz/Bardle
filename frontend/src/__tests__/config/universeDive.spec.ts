@@ -2,23 +2,23 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
-  FIRMAMENT_DIVE_ARRIVE_MS,
-  FIRMAMENT_DIVE_ARRIVE_SCALE,
-  FIRMAMENT_DIVE_LEAVE_MS,
-  FIRMAMENT_DIVE_SCALE,
+  UNIVERSE_MAP_DIVE_ARRIVE_MS,
+  UNIVERSE_MAP_DIVE_ARRIVE_SCALE,
+  UNIVERSE_MAP_DIVE_LEAVE_MS,
+  UNIVERSE_MAP_DIVE_SCALE,
   MINIMAP_DEPARTURE_TRANSITION_MS,
 } from '@/config/constants'
 
 /**
- * Die Kamerafahrt Firmament ⇄ Voyages.
+ * Die Kamerafahrt Universe ⇄ Voyages.
  *
  * Sie laeuft in dem Moment, in dem der Atlas seinen teuersten Frame malt —
  * was hier animiert, muss am Compositor laufen, sonst steht es genau dann
  * still. Und sie ist reine Anzeige: Wanduhr, nie die Spieluhr.
  */
 const FILES = {
-  veil: 'components/bardProfil/FirmamentDiveVeil.vue',
-  chart: 'components/bardProfil/firmament/FirmamentChart.vue',
+  veil: 'components/bardProfil/UniverseDiveVeil.vue',
+  chart: 'components/bardProfil/universe/UniverseChart.vue',
   map: 'components/bardProfil/expedition/ExpeditionGalaxyMap.vue',
 }
 
@@ -34,13 +34,13 @@ function code(rel: string): string {
     .replace(/^\s*\/\/.*$/gm, '')
 }
 
-describe('Kamerafahrt Firmament ⇄ Voyages', () => {
+describe('Kamerafahrt Universe ⇄ Voyages', () => {
   it('dauert zusammen so lang wie die Abflugblende der Minimap', () => {
-    expect(FIRMAMENT_DIVE_LEAVE_MS + FIRMAMENT_DIVE_ARRIVE_MS).toBe(MINIMAP_DEPARTURE_TRANSITION_MS)
-    expect(FIRMAMENT_DIVE_ARRIVE_SCALE).toBeGreaterThan(1)
+    expect(UNIVERSE_MAP_DIVE_LEAVE_MS + UNIVERSE_MAP_DIVE_ARRIVE_MS).toBe(MINIMAP_DEPARTURE_TRANSITION_MS)
+    expect(UNIVERSE_MAP_DIVE_ARRIVE_SCALE).toBeGreaterThan(1)
     // Ab ~60 % Schleier ist die Platte unsichtbar; mehr rastert die
     // 2600-px-Platte fuer nichts neu.
-    expect(FIRMAMENT_DIVE_SCALE).toBeLessThanOrEqual(4)
+    expect(UNIVERSE_MAP_DIVE_SCALE).toBeLessThanOrEqual(4)
   })
 
   it.each(Object.entries(FILES))('bewegt in %s nur transform und opacity', (_name, rel) => {
@@ -63,7 +63,7 @@ describe('Kamerafahrt Firmament ⇄ Voyages', () => {
     expect(text.includes('VOYAGE_LOADER_SETTLE_FRAMES')).toBe(true)
     expect(text.includes('requestAnimationFrame')).toBe(true)
     // Ruhend DECKEND — ein eingefrorener Schleier zeigt Schwarz, nie einen halben Reiter.
-    expect(text).toMatch(/\.fdv-veil\s*\{[^}]*opacity:\s*1;/)
+    expect(text).toMatch(/\.udv-veil\s*\{[^}]*opacity:\s*1;/)
   })
 
   it('laesst reduced-motion den harten Schnitt gehen', () => {
@@ -72,13 +72,13 @@ describe('Kamerafahrt Firmament ⇄ Voyages', () => {
     }
   })
 
-  it('macht die Firmament-Buehne waehrend der Fahrt taub und haelt die Drehung an', () => {
+  it('macht die Universe-Buehne waehrend der Fahrt taub und haelt die Drehung an', () => {
     const text = src(FILES.chart)
-    // `.fm-node` & Co. holen sich pointer-events: auto einzeln zurueck — nur
+    // `.un-node` & Co. holen sich pointer-events: auto einzeln zurueck — nur
     // der Stern trifft sie alle.
-    expect(text).toMatch(/\.fm-stage\.is-diving \*\s*\{[^}]*pointer-events:\s*none/)
+    expect(text).toMatch(/\.un-stage\.is-diving \*\s*\{[^}]*pointer-events:\s*none/)
     expect(text).toMatch(
-      /\.fm-stage\.is-diving :is\(\.fm-spin, \.fm-rim, \.fm-node-tag\)\s*\{[^}]*animation-play-state:\s*paused/,
+      /\.un-stage\.is-diving :is\(\.un-spin, \.un-rim, \.un-node-tag\)\s*\{[^}]*animation-play-state:\s*paused/,
     )
   })
 })

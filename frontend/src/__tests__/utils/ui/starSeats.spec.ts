@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { starSeats, starSeatsSplit } from '@/utils/ui/starSeats'
-import { FIRMAMENT_TIP_SEAT_MAX } from '@/config/constants'
+import { UNIVERSE_MAP_TIP_SEAT_MAX } from '@/config/constants'
 import type { StarAttemptResult } from '@/stores/world/galaxyStore'
 import type { StarManifest } from '@/types'
 
@@ -28,7 +28,7 @@ describe('starSeats — wer in einer Galaxie geflogen ist', () => {
     const { seats, hidden } = starSeats(
       outcomes('rescued', 'failed', 'rescued'),
       [man('Ahri'), man('Braum'), man('Kayn')],
-      FIRMAMENT_TIP_SEAT_MAX,
+      UNIVERSE_MAP_TIP_SEAT_MAX,
     )
     expect(seats.map((s) => s.champion)).toEqual(['Ahri', 'Braum', 'Kayn'])
     expect(seats.map((s) => s.lost)).toEqual([false, true, false])
@@ -62,10 +62,10 @@ describe('starSeats — wer in einer Galaxie geflogen ist', () => {
     const { seats, hidden } = starSeats(
       many,
       many.map((_, i) => man(`C${i}`)),
-      FIRMAMENT_TIP_SEAT_MAX,
+      UNIVERSE_MAP_TIP_SEAT_MAX,
     )
-    expect(seats).toHaveLength(FIRMAMENT_TIP_SEAT_MAX)
-    expect(hidden).toBe(20 - FIRMAMENT_TIP_SEAT_MAX)
+    expect(seats).toHaveLength(UNIVERSE_MAP_TIP_SEAT_MAX)
+    expect(hidden).toBe(20 - UNIVERSE_MAP_TIP_SEAT_MAX)
   })
 
   it('reicht die Rolle durch — sie faerbt Sternkern und Rollenwort', () => {

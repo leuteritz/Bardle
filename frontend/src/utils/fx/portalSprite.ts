@@ -15,7 +15,7 @@
    KEIN runder Punkt im ganzen Portal — nicht in der Mitte, nicht auf den
    Ringscheiteln, nicht im Schlund. Man sieht HINDURCH, und was man sieht, ist
    ein Universum; ein Punkt darauf ist ein Aufkleber auf dem Durchgang. Dieselbe
-   Lektion, die der Firmament-Knoten schon gelernt hat.
+   Lektion, die der Universe-Knoten schon gelernt hat.
 
    Kein Frame, keine Uhr, kein `Math.random()` — alles aus `seed` und Index,
    sonst saehe das Portal nach jedem Cache-Verwurf anders aus.
@@ -24,41 +24,41 @@
    Begruendungen gelten hier unveraendert und stehen an den Ebenen. */
 
 import {
-  FIRMAMENT_PORTAL_ARMS,
-  FIRMAMENT_PORTAL_ARM_IN,
-  FIRMAMENT_PORTAL_ARM_OUT,
-  FIRMAMENT_PORTAL_AURA_SPAN,
-  FIRMAMENT_PORTAL_CACHE_MAX,
-  FIRMAMENT_PORTAL_BAND_ALPHA,
-  FIRMAMENT_PORTAL_BAND_R,
-  FIRMAMENT_PORTAL_BAND_SEGMENTS,
-  FIRMAMENT_PORTAL_BAND_WOBBLE,
-  FIRMAMENT_PORTAL_WEB_ALPHA,
-  FIRMAMENT_PORTAL_WEB_IN,
-  FIRMAMENT_PORTAL_WEB_JITTER,
-  FIRMAMENT_PORTAL_WEB_LINK_SHARE,
-  FIRMAMENT_PORTAL_WEB_NODES,
-  FIRMAMENT_PORTAL_WEB_OUT,
-  FIRMAMENT_PORTAL_WEB_SHELLS,
-  FIRMAMENT_PORTAL_WEB_SPARK_R,
-  FIRMAMENT_PORTAL_WEB_SPARK_SHARE,
-  FIRMAMENT_PORTAL_WEB_TENDRIL_FORKS,
-  FIRMAMENT_PORTAL_WEB_TENDRIL_SHARE,
-  FIRMAMENT_PORTAL_WEB_W_MAX,
-  FIRMAMENT_PORTAL_WEB_W_MIN,
-  FIRMAMENT_PORTAL_FIELD_R,
-  FIRMAMENT_PORTAL_FIELD_ZOOM,
-  FIRMAMENT_PORTAL_HALO_ALPHA,
-  FIRMAMENT_PORTAL_MAX_BACKING_PX,
-  FIRMAMENT_PORTAL_MOTES,
-  FIRMAMENT_PORTAL_MOTE_R,
-  FIRMAMENT_PORTAL_PHOTON_R,
-  FIRMAMENT_PORTAL_POOL_SPAN,
-  FIRMAMENT_PORTAL_RY,
-  FIRMAMENT_PORTAL_RIM_SPAN,
-  FIRMAMENT_PORTAL_SPRITE_SPAN,
-  FIRMAMENT_PORTAL_SWIRL_SPAN,
-  FIRMAMENT_MAX_DPR,
+  UNIVERSE_MAP_PORTAL_ARMS,
+  UNIVERSE_MAP_PORTAL_ARM_IN,
+  UNIVERSE_MAP_PORTAL_ARM_OUT,
+  UNIVERSE_MAP_PORTAL_AURA_SPAN,
+  UNIVERSE_MAP_PORTAL_CACHE_MAX,
+  UNIVERSE_MAP_PORTAL_BAND_ALPHA,
+  UNIVERSE_MAP_PORTAL_BAND_R,
+  UNIVERSE_MAP_PORTAL_BAND_SEGMENTS,
+  UNIVERSE_MAP_PORTAL_BAND_WOBBLE,
+  UNIVERSE_MAP_PORTAL_WEB_ALPHA,
+  UNIVERSE_MAP_PORTAL_WEB_IN,
+  UNIVERSE_MAP_PORTAL_WEB_JITTER,
+  UNIVERSE_MAP_PORTAL_WEB_LINK_SHARE,
+  UNIVERSE_MAP_PORTAL_WEB_NODES,
+  UNIVERSE_MAP_PORTAL_WEB_OUT,
+  UNIVERSE_MAP_PORTAL_WEB_SHELLS,
+  UNIVERSE_MAP_PORTAL_WEB_SPARK_R,
+  UNIVERSE_MAP_PORTAL_WEB_SPARK_SHARE,
+  UNIVERSE_MAP_PORTAL_WEB_TENDRIL_FORKS,
+  UNIVERSE_MAP_PORTAL_WEB_TENDRIL_SHARE,
+  UNIVERSE_MAP_PORTAL_WEB_W_MAX,
+  UNIVERSE_MAP_PORTAL_WEB_W_MIN,
+  UNIVERSE_MAP_PORTAL_FIELD_R,
+  UNIVERSE_MAP_PORTAL_FIELD_ZOOM,
+  UNIVERSE_MAP_PORTAL_HALO_ALPHA,
+  UNIVERSE_MAP_PORTAL_MAX_BACKING_PX,
+  UNIVERSE_MAP_PORTAL_MOTES,
+  UNIVERSE_MAP_PORTAL_MOTE_R,
+  UNIVERSE_MAP_PORTAL_PHOTON_R,
+  UNIVERSE_MAP_PORTAL_POOL_SPAN,
+  UNIVERSE_MAP_PORTAL_RY,
+  UNIVERSE_MAP_PORTAL_RIM_SPAN,
+  UNIVERSE_MAP_PORTAL_SPRITE_SPAN,
+  UNIVERSE_MAP_PORTAL_SWIRL_SPAN,
+  UNIVERSE_MAP_MAX_DPR,
   UNIVERSE_DISC_CLOUD_DUST_ALPHA,
   UNIVERSE_DISC_CLOUD_REACH,
 } from '@/config/constants'
@@ -68,7 +68,7 @@ import { GALAXY_WHITE, jitter, paintDustVeil, paintGalaxyField } from '@/utils/f
 export type PortalLayer = 'maw' | 'swirl' | 'rim' | 'halo'
 
 /** `rgb(...)`-Zerlegung eines Hex-Tons, damit die Verlaeufe eigene Deckkraft
- *  bekommen. Dieselbe Rechnung wie `fade()` in `firmamentPlate.ts`. */
+ *  bekommen. Dieselbe Rechnung wie `fade()` in `universePlate.ts`. */
 function ink(hex: string, alpha: number): string {
   const n = parseInt(hex.slice(1), 16)
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
@@ -84,7 +84,7 @@ interface WebNode {
 
 /**
  * Die FASSUNG: ein Filamentgewebe im Idiom des aeusseren Walls
- * (`paintFirmamentWeb` in `firmamentPlate.ts`).
+ * (`paintUniverseWeb` in `universePlate.ts`).
  *
  * Zwei Fassungen lagen hier vorher, und beide sind an derselben Sache
  * gescheitert. Eine „zersprungene Krone" sollte kein Planetenring sein und war
@@ -98,7 +98,7 @@ interface WebNode {
  * Knotensatz: Straenge, Ranken, Lichtpunkte, darueber das Band.
  *
  * Die Bandrechnung ist eine eigene, nicht die des Walls: dessen `bandT`/
- * `webAlpha` haengen an `FIRMAMENT_WEB_INNER/OUTER`, und zwei verschiedene
+ * `webAlpha` haengen an `UNIVERSE_MAP_WEB_INNER/OUTER`, und zwei verschiedene
  * Baender an einem Konstantensatz waeren eine Kopplung, die niemand sucht.
  * Uebernommen ist das Idiom, nicht der Code.
  */
@@ -114,11 +114,11 @@ function paintPortalWeb(
   const rng = seededRng(seed + 1)
   ctx.lineCap = 'round'
 
-  const lo = FIRMAMENT_PORTAL_WEB_IN
-  const hi = FIRMAMENT_PORTAL_WEB_OUT
+  const lo = UNIVERSE_MAP_PORTAL_WEB_IN
+  const hi = UNIVERSE_MAP_PORTAL_WEB_OUT
   const shellGap = hi - lo
   const spread =
-    (shellGap / Math.max(1, FIRMAMENT_PORTAL_WEB_SHELLS - 1)) * FIRMAMENT_PORTAL_WEB_JITTER
+    (shellGap / Math.max(1, UNIVERSE_MAP_PORTAL_WEB_SHELLS - 1)) * UNIVERSE_MAP_PORTAL_WEB_JITTER
   const at = (a: number, k: number) => ({ x: Math.cos(a) * r * k, y: Math.sin(a) * ry * k })
 
   /** Deckkraft nach der Lage IM Band: Gipfel in der Mitte, an beiden Raendern
@@ -135,9 +135,9 @@ function paintPortalWeb(
   // Die Schalen. Aussen stehen mehr Knoten als innen — sonst waeren die Zellen
   // am Rand so breit wie das Band selbst.
   const shells: WebNode[][] = []
-  for (let s = 0; s < FIRMAMENT_PORTAL_WEB_SHELLS; s++) {
-    const u = FIRMAMENT_PORTAL_WEB_SHELLS > 1 ? s / (FIRMAMENT_PORTAL_WEB_SHELLS - 1) : 1
-    const n = Math.round(FIRMAMENT_PORTAL_WEB_NODES * (0.7 + 0.5 * u))
+  for (let s = 0; s < UNIVERSE_MAP_PORTAL_WEB_SHELLS; s++) {
+    const u = UNIVERSE_MAP_PORTAL_WEB_SHELLS > 1 ? s / (UNIVERSE_MAP_PORTAL_WEB_SHELLS - 1) : 1
+    const n = Math.round(UNIVERSE_MAP_PORTAL_WEB_NODES * (0.7 + 0.5 * u))
     const step = (Math.PI * 2) / n
     const shell: WebNode[] = []
     for (let i = 0; i < n; i++) {
@@ -157,10 +157,10 @@ function paintPortalWeb(
     ctx.beginPath()
     ctx.moveTo(p.x, p.y)
     ctx.quadraticCurveTo(((p.x + q.x) / 2) * bow, ((p.y + q.y) / 2) * bow, q.x, q.y)
-    ctx.strokeStyle = ink(tint, Math.min(0.9, FIRMAMENT_PORTAL_WEB_ALPHA * t * jitterAlpha * dim))
+    ctx.strokeStyle = ink(tint, Math.min(0.9, UNIVERSE_MAP_PORTAL_WEB_ALPHA * t * jitterAlpha * dim))
     ctx.lineWidth =
       r *
-      (FIRMAMENT_PORTAL_WEB_W_MIN + (FIRMAMENT_PORTAL_WEB_W_MAX - FIRMAMENT_PORTAL_WEB_W_MIN) * t)
+      (UNIVERSE_MAP_PORTAL_WEB_W_MIN + (UNIVERSE_MAP_PORTAL_WEB_W_MAX - UNIVERSE_MAP_PORTAL_WEB_W_MIN) * t)
     ctx.stroke()
   }
 
@@ -177,7 +177,7 @@ function paintPortalWeb(
     for (let i = 0; i < from.length; i++) {
       const j = Math.round((i / from.length) * to.length) % to.length
       strand(from[i], to[j])
-      if (rng() < FIRMAMENT_PORTAL_WEB_LINK_SHARE) strand(from[i], to[(j + 1) % to.length], 0.8)
+      if (rng() < UNIVERSE_MAP_PORTAL_WEB_LINK_SHARE) strand(from[i], to[(j + 1) % to.length], 0.8)
     }
   }
 
@@ -188,13 +188,13 @@ function paintPortalWeb(
     const roll = rng()
     const len = 0.03 + rng() * 0.05
     const swingBase = (rng() - 0.5) * 0.5
-    if (roll >= FIRMAMENT_PORTAL_WEB_TENDRIL_SHARE) continue
+    if (roll >= UNIVERSE_MAP_PORTAL_WEB_TENDRIL_SHARE) continue
     const stemK = node.k - len
     const stemA = node.a + swingBase * 0.4
     const stem = { a: stemA, k: stemK, ...at(stemA, stemK) }
     strand(node, stem, 0.9)
-    for (let f = 0; f < FIRMAMENT_PORTAL_WEB_TENDRIL_FORKS; f++) {
-      const swing = (f - (FIRMAMENT_PORTAL_WEB_TENDRIL_FORKS - 1) / 2) * 0.24 + swingBase * 0.3
+    for (let f = 0; f < UNIVERSE_MAP_PORTAL_WEB_TENDRIL_FORKS; f++) {
+      const swing = (f - (UNIVERSE_MAP_PORTAL_WEB_TENDRIL_FORKS - 1) / 2) * 0.24 + swingBase * 0.3
       const tipK = stemK - len * (0.35 + rng() * 0.4)
       const tipA = stemA + swing
       strand(stem, { a: tipA, k: tipK, ...at(tipA, tipK) }, 0.7)
@@ -207,10 +207,10 @@ function paintPortalWeb(
     for (const node of shell) {
       const roll = rng()
       const size = 0.5 + rng() * 0.8
-      if (roll >= FIRMAMENT_PORTAL_WEB_SPARK_SHARE) continue
+      if (roll >= UNIVERSE_MAP_PORTAL_WEB_SPARK_SHARE) continue
       ctx.beginPath()
-      ctx.arc(node.x, node.y, r * FIRMAMENT_PORTAL_WEB_SPARK_R * size, 0, Math.PI * 2)
-      ctx.fillStyle = ink(tint, Math.min(0.9, FIRMAMENT_PORTAL_WEB_ALPHA * share(node.k) * 1.7))
+      ctx.arc(node.x, node.y, r * UNIVERSE_MAP_PORTAL_WEB_SPARK_R * size, 0, Math.PI * 2)
+      ctx.fillStyle = ink(tint, Math.min(0.9, UNIVERSE_MAP_PORTAL_WEB_ALPHA * share(node.k) * 1.7))
       ctx.fill()
     }
   }
@@ -223,10 +223,10 @@ function paintPortalWeb(
   // Deckkraft ueber den Umlauf — gezeichnet in Segmenten, damit sie das kann.
   const p1 = rng() * Math.PI * 2
   const p2 = rng() * Math.PI * 2
-  const segs = FIRMAMENT_PORTAL_BAND_SEGMENTS
+  const segs = UNIVERSE_MAP_PORTAL_BAND_SEGMENTS
   const bandK = (a: number) =>
-    FIRMAMENT_PORTAL_BAND_R *
-    (1 + FIRMAMENT_PORTAL_BAND_WOBBLE * (Math.sin(a * 2 + p1) * 0.6 + Math.sin(a * 3 + p2) * 0.4))
+    UNIVERSE_MAP_PORTAL_BAND_R *
+    (1 + UNIVERSE_MAP_PORTAL_BAND_WOBBLE * (Math.sin(a * 2 + p1) * 0.6 + Math.sin(a * 3 + p2) * 0.4))
 
   // Zwei Durchgaenge, erst dunkel und breiter: ohne die Unterlage verschwindet
   // die duenne Linie ueber dem Sternfeld.
@@ -246,7 +246,7 @@ function paintPortalWeb(
       ctx.lineTo(q.x, q.y)
       ctx.strokeStyle = dark
         ? 'rgba(6, 5, 4, 0.7)'
-        : ink(tint, FIRMAMENT_PORTAL_BAND_ALPHA * breath)
+        : ink(tint, UNIVERSE_MAP_PORTAL_BAND_ALPHA * breath)
       ctx.stroke()
     }
   }
@@ -276,7 +276,7 @@ export function paintPortalMaw(
   // Schattenteich. Das Portal steht auf dem Sternfeld des Grundes — ein Loch in
   // einem Leuchten ist kein Loch. Er kommt VOR dem Gewebe, damit der Kranz auf
   // gedaempftem Grund steht statt darin zu verschwinden.
-  const span = r * FIRMAMENT_PORTAL_POOL_SPAN
+  const span = r * UNIVERSE_MAP_PORTAL_POOL_SPAN
   const pool = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, span)
   pool.addColorStop(0, 'rgba(6, 5, 4, 0.62)')
   pool.addColorStop(0.55, 'rgba(6, 5, 4, 0.4)')
@@ -289,7 +289,7 @@ export function paintPortalMaw(
   // `_RY` ist nicht die flache 0,42 der Landmarke auf der Galaxiekarte: dort
   // fliegt man hindurch, hier sieht man hinein. Die Fassung teilt sie sich mit
   // dem Schlund — dieselbe Ellipse macht aus beiden EIN Objekt.
-  const ry = r * FIRMAMENT_PORTAL_RY
+  const ry = r * UNIVERSE_MAP_PORTAL_RY
 
   paintPortalWeb(ctx, r, ry, tint, seed)
 
@@ -324,9 +324,9 @@ export function paintPortalMaw(
   ctx.clip()
   // Zoom und Stauchung in EINEM Zug: das Achsverhaeltnis bleibt `_RY`, also die
   // Ellipse des Schlunds.
-  const z = FIRMAMENT_PORTAL_FIELD_ZOOM
-  ctx.scale(z, z * FIRMAMENT_PORTAL_RY)
-  const fieldR = (r * FIRMAMENT_PORTAL_FIELD_R) / z
+  const z = UNIVERSE_MAP_PORTAL_FIELD_ZOOM
+  ctx.scale(z, z * UNIVERSE_MAP_PORTAL_RY)
+  const fieldR = (r * UNIVERSE_MAP_PORTAL_FIELD_R) / z
   // Der Nebel zwischen den Galaxien, mit denselben Zahlen wie die Wolke der
   // Karte: ohne ihn zerfaellt das Feld in lose Marken. Er kommt VOR den
   // Koerpern und ist der einzige Kreis hinter der Schwelle.
@@ -352,7 +352,7 @@ export function paintPortalRim(
   r: number,
   tint: string,
 ): void {
-  const ry = r * FIRMAMENT_PORTAL_RY
+  const ry = r * UNIVERSE_MAP_PORTAL_RY
   ctx.save()
   ctx.translate(cx, cy)
 
@@ -374,8 +374,8 @@ export function paintPortalRim(
   ctx.ellipse(
     0,
     0,
-    r * FIRMAMENT_PORTAL_PHOTON_R,
-    ry * FIRMAMENT_PORTAL_PHOTON_R,
+    r * UNIVERSE_MAP_PORTAL_PHOTON_R,
+    ry * UNIVERSE_MAP_PORTAL_PHOTON_R,
     0,
     0,
     Math.PI * 2,
@@ -413,11 +413,11 @@ export function paintPortalSwirl(
   ctx.lineCap = 'round'
 
   const start = jitter(seed, 149) * Math.PI * 2
-  const rIn = r * FIRMAMENT_PORTAL_ARM_IN
-  const rOut = r * FIRMAMENT_PORTAL_ARM_OUT
+  const rIn = r * UNIVERSE_MAP_PORTAL_ARM_IN
+  const rOut = r * UNIVERSE_MAP_PORTAL_ARM_OUT
 
-  for (let i = 0; i < FIRMAMENT_PORTAL_ARMS; i++) {
-    const a0 = start + (i * Math.PI * 2) / FIRMAMENT_PORTAL_ARMS
+  for (let i = 0; i < UNIVERSE_MAP_PORTAL_ARMS; i++) {
+    const a0 = start + (i * Math.PI * 2) / UNIVERSE_MAP_PORTAL_ARMS
     const sweep = 1.1 + jitter(i + seed, 151) * 0.6
     const a1 = a0 + sweep
     const ax = Math.cos(a0) * rIn
@@ -445,10 +445,10 @@ export function paintPortalSwirl(
   // Feld im Schlund, nur naeher. Damit tragen die beiden Sprites zusammen die
   // Parallaxe der Wolke — nahe Galaxien wandern vor einem stehenden fernen
   // Feld, wo vorher zwei Punktsorten uebereinander lagen.
-  for (let i = 0; i < FIRMAMENT_PORTAL_MOTES; i++) {
+  for (let i = 0; i < UNIVERSE_MAP_PORTAL_MOTES; i++) {
     const a = start + jitter(i + seed, 167) * Math.PI * 2
     const rr = r * (0.5 + jitter(i + seed, 173) * 0.45)
-    const rx = r * FIRMAMENT_PORTAL_MOTE_R * (0.7 + jitter(i + seed, 179) * 0.7)
+    const rx = r * UNIVERSE_MAP_PORTAL_MOTE_R * (0.7 + jitter(i + seed, 179) * 0.7)
     ctx.beginPath()
     ctx.ellipse(
       Math.cos(a) * rr,
@@ -481,7 +481,7 @@ export function paintPortalHalo(
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, outer)
   g.addColorStop(0, ink(tint, 0))
   g.addColorStop(Math.max(0, peak - 0.19), ink(tint, 0.1))
-  g.addColorStop(peak, ink(tint, FIRMAMENT_PORTAL_HALO_ALPHA))
+  g.addColorStop(peak, ink(tint, UNIVERSE_MAP_PORTAL_HALO_ALPHA))
   g.addColorStop(Math.min(1, peak + 0.19), ink(tint, 0.12))
   g.addColorStop(1, ink(tint, 0))
   ctx.beginPath()
@@ -515,17 +515,17 @@ export function portalSpriteKey(
 export function portalSpriteSpan(layer: PortalLayer, px: number): number {
   const factor =
     layer === 'halo'
-      ? FIRMAMENT_PORTAL_AURA_SPAN
+      ? UNIVERSE_MAP_PORTAL_AURA_SPAN
       : layer === 'swirl'
-        ? FIRMAMENT_PORTAL_SWIRL_SPAN
+        ? UNIVERSE_MAP_PORTAL_SWIRL_SPAN
         : layer === 'rim'
-          ? FIRMAMENT_PORTAL_RIM_SPAN
-          : FIRMAMENT_PORTAL_SPRITE_SPAN
+          ? UNIVERSE_MAP_PORTAL_RIM_SPAN
+          : UNIVERSE_MAP_PORTAL_SPRITE_SPAN
   return Math.round(px * factor)
 }
 
 function backingDpr(span: number, dpr: number): number {
-  return Math.max(1, Math.min(dpr, FIRMAMENT_MAX_DPR, FIRMAMENT_PORTAL_MAX_BACKING_PX / span))
+  return Math.max(1, Math.min(dpr, UNIVERSE_MAP_MAX_DPR, UNIVERSE_MAP_PORTAL_MAX_BACKING_PX / span))
 }
 
 function touch(key: string): HTMLCanvasElement | undefined {
@@ -538,7 +538,7 @@ function touch(key: string): HTMLCanvasElement | undefined {
 
 function keep(key: string, cv: HTMLCanvasElement): HTMLCanvasElement {
   cache.set(key, cv)
-  if (cache.size > FIRMAMENT_PORTAL_CACHE_MAX) {
+  if (cache.size > UNIVERSE_MAP_PORTAL_CACHE_MAX) {
     const oldest = cache.keys().next().value
     if (oldest !== undefined) cache.delete(oldest)
   }

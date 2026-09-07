@@ -47,7 +47,7 @@ function onMaxEverything() {
       <span class="me-title">Max Everything</span>
       <span class="me-sub">
         Every system to its end state — roster, forge, tree, planets, codex, wayfinder,
-        firmament, Challenger
+        universe, Challenger
       </span>
     </span>
 

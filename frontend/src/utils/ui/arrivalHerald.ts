@@ -13,7 +13,7 @@ import type { RolledProvidence } from '@/types'
  *
  * Rein und ZEITFREI, ohne Store — deshalb testbar, waehrend `HeraldOverlay.vue`
  * als Komponente es nicht ist. Dieselbe Trennung wie bei
- * `utils/ui/firmamentChronicle.ts` und `utils/game/voyageTip.ts`.
+ * `utils/ui/universeChronicle.ts` und `utils/game/voyageTip.ts`.
  *
  * Die Karte beantwortet die zwei Fragen, die nach einem Sprung offen sind: WO
  * man ist (Nummer, Scheibe, Farbton) und WORUNTER man spielt (Vorsehung samt
@@ -38,7 +38,7 @@ export function buildArrivalHerald(
       ? `${providence.name} · ${PROVIDENCE_DOMAIN_LABELS[providence.domain]}`
       : undefined,
     // Der Ton des Universums traegt die Karte — derselbe, in dem seine Scheibe
-    // im Firmament steht. Ohne Eintrag (kann nur ein Datenfehler sein) faellt
+    // im Universe steht. Ohne Eintrag (kann nur ein Datenfehler sein) faellt
     // sie auf den Warp-Akzent zurueck, statt mit einem leeren `--ac` jedes
     // `rgba()` im Banner zu brechen.
     accent: universe ? hexToRgbTriple(universe.tint) : HERALD_ACCENT_WARP,

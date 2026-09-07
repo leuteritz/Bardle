@@ -106,12 +106,12 @@ function zones(vw: number, vh: number, folded = false) {
  * den der Reiter nicht mehr trägt. Die Bühne hat ihn geerbt und gibt einen Teil
  * davon als Datenband wieder aus.
  *
- * Neu aufgenommen, seit die Kopfleiste mit dem Firmament-Band auf EINE Aussenhöhe
+ * Neu aufgenommen, seit die Kopfleiste mit dem Universe-Band auf EINE Aussenhöhe
  * gebunden ist (126 → 112): je 14 px mehr Bühne für die Galaxie. Die Herleitung
  * steht in `voyagesFleetLayout.spec.ts`.
  * Je 3 px hoeher, seit die Goldlinie des Profilmodals gefallen ist: `.rp-accent-bar`
  * war ein Flex-Kind im Fluss, kein Pseudoelement — was sie belegte, hat die Buehne
- * geerbt. Nachgemessen auf allen vier Aufloesungen, und der Firmament-Reiter meldet
+ * geerbt. Nachgemessen auf allen vier Aufloesungen, und der Universe-Reiter meldet
  * dieselben Zahlen — der Beleg, dass beide Baender gleich hoch sind.
  */
 const STAGE_HEIGHT: Record<number, number> = {
@@ -320,7 +320,7 @@ describe('voyages atlas layout', () => {
   })
 
   /**
-   * Die Ruecksprung-Pille ins Firmament ist eine UEBERLAGERUNG — sie nimmt der
+   * Die Ruecksprung-Pille ins Universe ist eine UEBERLAGERUNG — sie nimmt der
    * Buehne keine Hoehe, muss also selbst ausweichen. Ihr `bottom` misst ab der
    * Buehnenkante, das Datenband sitzt am Fuss der KARTE: eine halbe Rinne
    * tiefer. Waechst eine der drei Zahlen, steht sie auf den Zahlen der Galaxie

@@ -260,7 +260,7 @@ describe('maxEverything', () => {
 
   /**
    * Der Befund, der diesen Block ausgelöst hat: nach „Max Everything" stand das
-   * Firmament auf fünfzig Galaxien und NULL Toren. `universeRuns` wird nur beim
+   * Universe auf fünfzig Galaxien und NULL Toren. `universeRuns` wird nur beim
    * echten Prestige geschrieben, und das rührt der Knopf bewusst nicht an — also
    * las jede Zeile der Universumsleiste ausser der laufenden „not yet walked"
    * und war nicht anklickbar.
@@ -277,7 +277,7 @@ describe('maxEverything', () => {
   })
 
   /**
-   * Die Bahnen des Firmaments schneiden an `record.universe`. Ohne den Stempel
+   * Die Bahnen des Universes schneiden an `record.universe`. Ohne den Stempel
    * läge nach „Max Everything" der ganze Bestand auf der Bahn von Universum 1,
    * und neun Leistenzeilen wären trotz ihres Laufs nicht anklickbar.
    */

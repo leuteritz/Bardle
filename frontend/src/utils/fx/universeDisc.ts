@@ -24,15 +24,15 @@
      Der Ring ist braun-orange wie der aeussere Karten-Wall, und zwei
      konzentrische Ringe derselben Farbe lasen sich als Rahmen.
    - **Der Tint bleibt drinnen.** Er faerbt Staub und Galaxien, nie eine Kante:
-     als Ring konkurrierte er mit den fuenf Zustandsfarben der Firmament-Karte.
+     als Ring konkurrierte er mit den fuenf Zustandsfarben der Universe-Karte.
 
-   Aufrufer: `components/bardProfil/firmament/UniverseDisc.vue` — und
+   Aufrufer: `components/bardProfil/universe/UniverseDisc.vue` — und
    `paintPortalMaw`, das `paintGalaxyField` fuer den Blick durch das Abflug-
    portal borgt: was man dort sieht, ist dasselbe Universum, nur klein.        */
 
 import {
-  FIRMAMENT_FREED_COLOR,
-  FIRMAMENT_HERE_COLOR,
+  UNIVERSE_MAP_FREED_COLOR,
+  UNIVERSE_MAP_HERE_COLOR,
   UNIVERSE_DISC_CACHE_MAX,
   UNIVERSE_DISC_CORE_R,
   UNIVERSE_DISC_DUST_R,
@@ -96,7 +96,7 @@ export type UniverseDiscVariant = 'orb' | 'cloud'
 
 const TAU = Math.PI * 2
 
-/* -- Das Tempo jeder Drehung im Firmament ------------------------------------
+/* -- Das Tempo jeder Drehung im Universe ------------------------------------
    Die Wahrnehmung einer Drehung haengt an ZWEI Groessen, und die beiden reinen
    Formen sind beide falsch:
 
@@ -312,7 +312,7 @@ export function paintCloudGround(
  *
  * Gruen, solange der Bard dort steht — dieselbe Farbe, mit der die Karte „hier"
  * sagt; Gold, wenn der Lauf vorbei ist — dieselbe, mit der sie „befreit" sagt.
- * Zwei Farben, die der Spieler im Firmament ohnehin schon liest.
+ * Zwei Farben, die der Spieler im Universe ohnehin schon liest.
  */
 export function paintCore(
   ctx: CanvasRenderingContext2D,
@@ -322,7 +322,7 @@ export function paintCore(
   state: Exclude<UniverseDiscState, 'unlit'>,
   variant: UniverseDiscVariant = 'orb',
 ): void {
-  const tone = state === 'current' ? FIRMAMENT_HERE_COLOR : FIRMAMENT_FREED_COLOR
+  const tone = state === 'current' ? UNIVERSE_MAP_HERE_COLOR : UNIVERSE_MAP_FREED_COLOR
   // Bei der Wolke ABSOLUT: sie misst rund `2 box.r`, ein Anteil des Radius
   // ergaebe auf Full HD einen 93-px-Halo und auf 4K 237. Die Zahlen sind die
   // des entfallenen `paintOrigin`, dessen Nachfolger dieser Kern ist.

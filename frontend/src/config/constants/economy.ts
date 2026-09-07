@@ -7,7 +7,7 @@ import type {
   ExpeditionLedgerRankDef,
   ExpeditionSpoilsDef,
 } from '@/types'
-// Wie `firmament.ts`: das Sternsoll ist eine Progressionszahl, die Reihe darf
+// Wie `universe.ts`: das Sternsoll ist eine Progressionszahl, die Reihe darf
 // sie nur LESEN. Direkt aus der Themendatei, nicht ueber das Barrel.
 import { GALAXY_STARS_MAX } from '@/config/constants/progression'
 
@@ -916,8 +916,8 @@ export const VOYAGE_MARK_REFUSE_MS = 420
    `.ecb` ergeben 112 — genau sie steckt in den STAGE_HEIGHT-Tabellen beider
    Layout-Specs. `voyagesFleetLayout.spec.ts` bindet das.
 
-   Und 112 ist keine Zahl dieses Reiters allein: das Kopfband des Firmaments
-   misst dieselbe (`FIRMAMENT_CREST_BAND_H`). Beide Reiter legen ein Band über
+   Und 112 ist keine Zahl dieses Reiters allein: das Kopfband des Universes
+   misst dieselbe (`UNIVERSE_MAP_CREST_BAND_H`). Beide Reiter legen ein Band über
    eine grosse Bühne, und bei 126 gegen 108 sprang deren Oberkante beim Wechsel
    um 18 px. Wer eine der beiden anfasst, fasst beide an.
 
@@ -934,7 +934,7 @@ export const VOYAGE_MARK_REFUSE_MS = 420
  *  Konstante, die beschreibt statt zu bestimmen, driftet unbemerkt: die Specs
  *  lesen Zahlen, kein DOM.
  *
- *  109 + 3 Rahmen = 112, dieselbe Aussenhöhe wie das Firmament-Band. Die 14 px
+ *  109 + 3 Rahmen = 112, dieselbe Aussenhöhe wie das Universe-Band. Die 14 px
  *  gegenüber der vorigen Fassung (123) zahlt NICHT der Inhalt der Karte — ihre
  *  drei Zeilen stehen unverändert —, sondern ihre Polsterung: `_CARD_PAD_Y`
  *  7 → 2 und `_CARD_INSET_Y` 8 → 6. Die Galaxie GEWINNT die 14. */
@@ -1400,7 +1400,7 @@ export const VOYAGE_MAP_ROUTE_ALPHA = 0.16
  * 15-px-Abstand des Bodens braucht dafuer 63 px nutzbare Hoehe.
  */
 export const VOYAGE_MAP_STATS_BAND_H = 72
-/** Luft zwischen Datenband und der Ruecksprung-Pille ins Firmament. Auf dem
+/** Luft zwischen Datenband und der Ruecksprung-Pille ins Universe. Auf dem
  *  Band stuende sie ueber den Zahlen, die die Galaxie ausmachen. */
 export const VOYAGE_RETURN_PILL_CLEARANCE = 14
 /** Ihre Aussenhoehe, im Browser GEMESSEN (2x12 Polster + 24 Glyph + 2x2 Rahmen)
@@ -1724,7 +1724,7 @@ export const VOYAGE_MAP_LEGEND_ICONS_MIN_W = 790
 /** Portraitkante, Boden und Deckel. Der DECKEL ist die eigentliche Zusicherung:
  *  er haelt die Kachel unter `CHAMPION_ART_MD_MAX_EDGE` (110), damit ueberall
  *  die 256er-Stufe gilt — dieselbe, die Sternmanifest-Tooltip und
- *  Firmament-Knotenkarte laden. Darueber holte der Reiter dieselben Gesichter
+ *  Universe-Knotenkarte laden. Darueber holte der Reiter dieselben Gesichter
  *  ein zweites Mal, und im Bild saehe man nichts davon. */
 export const VOYAGE_MANIFEST_TILE_MIN = 56
 export const VOYAGE_MANIFEST_TILE_MAX = 96

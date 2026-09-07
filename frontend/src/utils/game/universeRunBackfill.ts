@@ -1,6 +1,6 @@
 /* ── Nachtrag für übersprungene Aufbrüche ─────────────────────────────────────
    Ein Admin-Sprung setzt `currentUniverse`, lässt `gameStore.universeRuns` aber
-   leer — das Feld wird nur beim echten Prestige geschrieben. Das Firmament
+   leer — das Feld wird nur beim echten Prestige geschrieben. Das Universe
    steht dann auf fünfzig Galaxien und NULL Toren, und jede Zeile der
    Universumsleiste ausser der laufenden liest „not yet walked".
 
@@ -8,7 +8,7 @@
    die Records nur als Typ, kein Store, damit die Spec ohne Pinia läuft.
 
    Der Vertrag, an dem alles hängt: ein Lauf bekommt seinen Platz auf der Bahn
-   über `completedAt`, und die Regel dafür steht in `buildFirmamentGates`. Also
+   über `completedAt`, und die Regel dafür steht in `buildUniverseGates`. Also
    wird der Stempel AUS dem Archiv abgeleitet, nicht daneben gerechnet —
    `gateRecordIndex` spiegelt dieselbe Suche, und die Spec hält beide
    gegeneinander. */
@@ -45,7 +45,7 @@ export function universeProvidenceRng(currentUniverse: number): Rng {
 }
 
 /**
- * Wo ein Lauf sein Tor bekäme — dieselbe Suche wie in `buildFirmamentGates`:
+ * Wo ein Lauf sein Tor bekäme — dieselbe Suche wie in `buildUniverseGates`:
  * der LETZTE Datensatz, der nicht nach dem Aufbruch liegt. `-1` heisst „vor
  * allem, was archiviert ist", dort gibt es kein Tor.
  */
@@ -109,7 +109,7 @@ export function buildBackfillUniverseRuns(
   const order = [...head, ...rest]
 
   // Plätze, die ein bestehender Lauf schon beansprucht — zwei Tore auf einer
-  // Marke wären nicht mehr zu trennen, `buildFirmamentGates` verwirft das
+  // Marke wären nicht mehr zu trennen, `buildUniverseGates` verwirft das
   // zweite stillschweigend.
   const taken = new Set(existing.map((run) => gateRecordIndex(records, run.completedAt)))
   const free: number[] = []

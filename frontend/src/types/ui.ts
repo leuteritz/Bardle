@@ -450,32 +450,32 @@ export type BardTabId =
   | 'tree'
   | 'team'
   | 'galaxy'
-  | 'firmament'
+  | 'universe'
   | 'battle'
   | 'admin'
   | 'planets'
 
 /**
- * Was der Firmament-Reiter zeigt.
+ * Was der Universe-Reiter zeigt.
  *
  * Das Universum ist der ANSICHTSZUSTAND und nie leer — jede Bahn gehört einem,
  * eine Gesamtansicht gibt es nicht. Die Galaxie ist die Hervorhebung darauf;
  * ohne sie zeigt die Auswahlkarte die Bahn selbst.
  */
-export interface FirmamentSelection {
+export interface UniverseSelection {
   universe: number
   galaxy: number | null
 }
 
 /**
- * Der Sprung zwischen Firmament und Voyages-Atlas als Kamerafahrt.
+ * Der Sprung zwischen Universe und Voyages-Atlas als Kamerafahrt.
  *
  * `x`/`y` sind Viewport-Koordinaten des Fahrtpunkts (Knotenmitte bzw.
  * Galaxiekern); `phase` schaltet der Schleier: `out` zoomt den Quellreiter,
  * `in` setzt den Zielreiter.
  */
-export interface FirmamentDive {
-  toward: 'atlas' | 'firmament'
+export interface UniverseDive {
+  toward: 'atlas' | 'universe'
   galaxy: number
   x: number
   y: number
@@ -483,7 +483,7 @@ export interface FirmamentDive {
   phase: 'out' | 'in'
 }
 
-export type FirmamentDiveRequest = Omit<FirmamentDive, 'phase'>
+export type UniverseDiveRequest = Omit<UniverseDive, 'phase'>
 
 /**
  * Der Universumssprung als Zeremonie. Liegt global, nicht im Profil: das

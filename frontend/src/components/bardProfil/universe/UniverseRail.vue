@@ -18,10 +18,10 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
-  FIRMAMENT_HERE_COLOR,
-  FIRMAMENT_RAIL_HANDLE_LABEL,
-  FIRMAMENT_RAIL_PAD_X,
-  FIRMAMENT_RAIL_REVEAL_PAD,
+  UNIVERSE_MAP_HERE_COLOR,
+  UNIVERSE_MAP_RAIL_HANDLE_LABEL,
+  UNIVERSE_MAP_RAIL_PAD_X,
+  UNIVERSE_MAP_RAIL_REVEAL_PAD,
   UNIVERSE_DISC_RAIL_COMPACT_PX,
   UNIVERSE_DISC_RAIL_PX,
   UNIVERSE_RAIL_COMPACT_MAX_VH,
@@ -29,20 +29,20 @@ import {
   UNIVERSE_RAIL_ROW_GAP_COMPACT,
 } from '@/config/constants'
 import UniverseDisc from './UniverseDisc.vue'
-import type { FirmamentRailRow } from '@/utils/ui/firmamentRail'
-import type { FirmamentSelection } from '@/types'
+import type { UniverseRailRow } from '@/utils/ui/universeRail'
+import type { UniverseSelection } from '@/types'
 
 const props = defineProps<{
-  rows: FirmamentRailRow[]
-  selection: FirmamentSelection
+  rows: UniverseRailRow[]
+  selection: UniverseSelection
 }>()
 
 const emit = defineEmits<{
-  (e: 'select', value: FirmamentSelection): void
+  (e: 'select', value: UniverseSelection): void
 }>()
 
 /** Kein Toggle: die Bahn ist der Ansichtszustand, es gibt kein Nichts. */
-function pick(row: FirmamentRailRow) {
+function pick(row: UniverseRailRow) {
   if (!row.pickable || row.picked) return
   emit('select', { universe: row.id, galaxy: null })
 }
@@ -58,8 +58,8 @@ function revealSelected() {
   if (!box || !el || box.clientHeight === 0) return
   const r = el.getBoundingClientRect()
   const c = box.getBoundingClientRect()
-  if (r.top < c.top) box.scrollTop -= c.top - r.top + FIRMAMENT_RAIL_REVEAL_PAD
-  else if (r.bottom > c.bottom) box.scrollTop += r.bottom - c.bottom + FIRMAMENT_RAIL_REVEAL_PAD
+  if (r.top < c.top) box.scrollTop -= c.top - r.top + UNIVERSE_MAP_RAIL_REVEAL_PAD
+  else if (r.bottom > c.bottom) box.scrollTop += r.bottom - c.bottom + UNIVERSE_MAP_RAIL_REVEAL_PAD
 }
 
 // `post`: der Ruecksprung aus dem Atlas laeuft `pre`, und der Reiter haengt an
@@ -87,49 +87,49 @@ onMounted(() => {
 })
 onBeforeUnmount(() => heightQuery?.removeEventListener('change', readCompact))
 
-const hereColor = FIRMAMENT_HERE_COLOR
+const hereColor = UNIVERSE_MAP_HERE_COLOR
 const discPx = computed(() =>
   compact.value ? UNIVERSE_DISC_RAIL_COMPACT_PX : UNIVERSE_DISC_RAIL_PX,
 )
-const padX = `${FIRMAMENT_RAIL_PAD_X}px`
+const padX = `${UNIVERSE_MAP_RAIL_PAD_X}px`
 const rowGap = computed(() =>
   compact.value ? `${UNIVERSE_RAIL_ROW_GAP_COMPACT}px` : `${UNIVERSE_RAIL_ROW_GAP}px`,
 )
-const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths you have walked`)
+const railLabel = computed(() => `${UNIVERSE_MAP_RAIL_HANDLE_LABEL} — the paths you have walked`)
 </script>
 
 <template>
   <!-- Ohne Kopfband ist der Griff daneben die einzige Beschriftung, und der steht
        in einem Knopf — ohne das `aria-label` waere die Region namenlos. -->
-  <aside class="fm-rail" :class="{ 'fm-rail--compact': compact }" :aria-label="railLabel">
-    <div ref="scroll" class="fm-rail-list rpg-scrollbar">
+  <aside class="un-rail" :class="{ 'un-rail--compact': compact }" :aria-label="railLabel">
+    <div ref="scroll" class="un-rail-list rpg-scrollbar">
       <button
         v-for="row in rows"
         :key="row.id"
-        class="fm-rail-row"
+        class="un-rail-row"
         :class="{
           'is-current': row.current,
           'is-picked': row.picked,
           'is-dim': !row.walked,
           'is-inert': !row.pickable,
         }"
-        :style="{ '--fm-row-tint': row.tint }"
+        :style="{ '--un-row-tint': row.tint }"
         :data-universe="row.id"
         :aria-label="`Universe ${row.roman}, ${row.note}`"
         :aria-pressed="row.picked"
         @click="pick(row)"
       >
-        <span class="fm-rail-disc">
+        <span class="un-rail-disc">
           <UniverseDisc :universe="row.id" :state="row.discState" :px="discPx" />
           <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre
                Deckkraft. Nur „du bist hier" atmet. -->
-          <span v-if="row.current" class="fm-rail-pulse" aria-hidden="true" />
-          <span class="fm-rail-roman">{{ row.roman }}</span>
+          <span v-if="row.current" class="un-rail-pulse" aria-hidden="true" />
+          <span class="un-rail-roman">{{ row.roman }}</span>
         </span>
 
-        <span class="fm-rail-body">
-          <span class="fm-rail-name">Universe {{ row.roman }}</span>
-          <span class="fm-rail-note">{{ row.note }}</span>
+        <span class="un-rail-body">
+          <span class="un-rail-name">Universe {{ row.roman }}</span>
+          <span class="un-rail-note">{{ row.note }}</span>
         </span>
       </button>
     </div>
@@ -140,7 +140,7 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
 /* Dieselbe Flaeche und dieselbe Naht wie die Forge-Detailspalte (`.sf-panel`)
    und die Voyages-Zielliste (`.egl`). Die Naht gehoert immer der rechten Zone —
    eine zweite Linie am Nachbarn verdoppelte sie. */
-.fm-rail {
+.un-rail {
   position: relative;
   z-index: 1;
   display: flex;
@@ -151,7 +151,7 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
   border-left: 2px solid #5c3310;
 }
 
-.fm-rail-list {
+.un-rail-list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -165,20 +165,20 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
-.fm-rail-list::-webkit-scrollbar {
+.un-rail-list::-webkit-scrollbar {
   width: 4px;
 }
-.fm-rail-list::-webkit-scrollbar-track {
+.un-rail-list::-webkit-scrollbar-track {
   background: #111;
 }
-.fm-rail-list::-webkit-scrollbar-thumb {
+.un-rail-list::-webkit-scrollbar-thumb {
   background: #5c3310;
   border-radius: 2px;
 }
 
 /* Eine Karte im Rezept der Forge-Liste (`.fut-row`) und der Voyages-Zeile
    (`.egr`): eigene Flaeche, eigener Rahmen, Radius 4. */
-.fm-rail-row {
+.un-rail-row {
   position: relative;
   display: flex;
   align-items: center;
@@ -206,7 +206,7 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
    ist er vom Rahmen entkoppelt, den Hover und Auswahl faerben — die Kurzform
    `border-color` loeschte sonst genau die Auskunft, neben der sie steht.
    Dieselbe Trennung fuehren `.egr::before` und `.fut-row::before`. */
-.fm-rail-row::before {
+.un-rail-row::before {
   content: '';
   position: absolute;
   left: 0;
@@ -217,41 +217,41 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
   pointer-events: none;
   z-index: 1;
 }
-.fm-rail-row.is-current {
+.un-rail-row.is-current {
   --st-c: v-bind(hereColor);
 }
 /* Die gewaehlte Zeile ist vom Hover AUSGENOMMEN, statt ihn zu ueberschreiben:
    `:not()` hebt die Spezifitaet, und `.is-picked` danach zu schreiben genuegte
    deshalb nicht — der Hover faerbte den Rahmen der gewaehlten Zeile genau dann
    um, wenn der Zeiger daraufsteht. Markiert ist sie ohnehin schon. */
-.fm-rail-row:not(.is-inert):not(.is-picked):hover {
+.un-rail-row:not(.is-inert):not(.is-picked):hover {
   border-color: #7a4e20;
 }
-.fm-rail-row.is-inert {
+.un-rail-row.is-inert {
   cursor: default;
 }
 /* Die gewaehlte Bahn traegt den Ton DIESES Universums, nicht den einer
    Zustandsfarbe — `universeTint.spec.ts` haelt beide auseinander. */
-.fm-rail-row.is-picked {
-  --st-c: var(--fm-row-tint);
-  background: color-mix(in srgb, var(--fm-row-tint) 20%, #1c1c18);
-  border-color: var(--fm-row-tint);
+.un-rail-row.is-picked {
+  --st-c: var(--un-row-tint);
+  background: color-mix(in srgb, var(--un-row-tint) 20%, #1c1c18);
+  border-color: var(--un-row-tint);
 }
-.fm-rail-row:focus-visible {
+.un-rail-row:focus-visible {
   outline: 2px solid #e8c040;
   outline-offset: -2px;
 }
 
 /* Die Scheibe traegt die Ziffer, wie die Voyages-Miniatur (`.egr-no`) — in der
    Namenszeile kostete sie die 24 px, die der Name braucht. */
-.fm-rail-disc {
+.un-rail-disc {
   position: relative;
   flex-shrink: 0;
   display: block;
   line-height: 0;
 }
 
-.fm-rail-roman {
+.un-rail-roman {
   position: absolute;
   left: 1px;
   top: -1px;
@@ -261,20 +261,20 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
   color: #e8c040;
   text-shadow: 0 1px 3px #000;
 }
-.fm-rail-row.is-dim .fm-rail-roman {
+.un-rail-row.is-dim .un-rail-roman {
   color: #8a7a52;
 }
 
 /* Statischer Schein, animierte Deckkraft — Performance-Regel 11. */
-.fm-rail-pulse {
+.un-rail-pulse {
   position: absolute;
   inset: -2px;
   border-radius: 50%;
   pointer-events: none;
   box-shadow: 0 0 10px 2px rgba(159, 224, 98, 0.55);
-  animation: fm-rail-breathe 2.6s ease-in-out infinite;
+  animation: un-rail-breathe 2.6s ease-in-out infinite;
 }
-@keyframes fm-rail-breathe {
+@keyframes un-rail-breathe {
   0%,
   100% {
     opacity: 0.28;
@@ -287,7 +287,7 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
 /* Feste Zeilenkaesten: so treibt die SCHEIBE die Zeilenhoehe und nicht die
    Schriftmetrik — nur dann sagt `UNIVERSE_RAIL_ROW_H` die Wahrheit.
    MedievalSharp ueberschiesst seine Zeilenbox um die Haelfte. */
-.fm-rail-body {
+.un-rail-body {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -295,7 +295,7 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
   flex: 1;
 }
 
-.fm-rail-name {
+.un-rail-name {
   font-size: 16px;
   line-height: 20px;
   color: #e8dcc0;
@@ -303,14 +303,14 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.fm-rail-row.is-picked .fm-rail-name {
+.un-rail-row.is-picked .un-rail-name {
   color: #fff4dc;
 }
-.fm-rail-row.is-dim .fm-rail-name {
+.un-rail-row.is-dim .un-rail-name {
   color: #7a6a46;
 }
 
-.fm-rail-note {
+.un-rail-note {
   font-size: 12px;
   line-height: 16px;
   color: #7a6c50;
@@ -318,10 +318,10 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.fm-rail-row.is-current .fm-rail-note {
+.un-rail-row.is-current .un-rail-note {
   color: v-bind(hereColor);
 }
-.fm-rail-row.is-dim .fm-rail-note {
+.un-rail-row.is-dim .un-rail-note {
   color: #5c4e34;
 }
 
@@ -333,27 +333,27 @@ const railLabel = computed(() => `${FIRMAMENT_RAIL_HANDLE_LABEL} — the paths y
    Polsterung (6/10 statt 8/12) und Zeilenabstand, NICHT die Scheibe — sie
    traegt die Zeile, und kleiner waere die Drehung wieder unsichtbar.
    Die Schwelle steht in `UNIVERSE_RAIL_COMPACT_MAX_VH`. */
-.fm-rail--compact .fm-rail-list {
+.un-rail--compact .un-rail-list {
   padding: 6px v-bind(padX) 10px;
 }
-.fm-rail--compact .fm-rail-row {
+.un-rail--compact .un-rail-row {
   padding: 6px 6px 6px 8px;
   gap: 7px;
 }
-.fm-rail--compact .fm-rail-name {
+.un-rail--compact .un-rail-name {
   font-size: 15px;
   line-height: 19px;
 }
-.fm-rail--compact .fm-rail-note {
+.un-rail--compact .un-rail-note {
   font-size: 11px;
   line-height: 15px;
 }
-.fm-rail--compact .fm-rail-roman {
+.un-rail--compact .un-rail-roman {
   font-size: 11px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fm-rail-pulse {
+  .un-rail-pulse {
     animation: none;
     opacity: 0.7;
   }

@@ -200,7 +200,7 @@ describe('Notify-Registry ist vollständig', () => {
       'tree',
       'team',
       'galaxy',
-      'firmament',
+      'universe',
       'battle',
       'admin',
       'planets',

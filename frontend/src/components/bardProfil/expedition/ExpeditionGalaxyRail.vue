@@ -48,7 +48,7 @@ function recordFor(records: CompletedGalaxyRecord[], galaxy: number) {
 }
 
 /**
- * Ein Sprung von aussen (Firmament, Minimap, Fleet-Band) markiert eine Zeile,
+ * Ein Sprung von aussen (Universe, Minimap, Fleet-Band) markiert eine Zeile,
  * die weit unten liegen kann — unsichtbar markiert saehe der Sprung aus, als
  * haette er nichts getroffen.
  *

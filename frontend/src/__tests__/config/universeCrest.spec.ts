@@ -3,38 +3,38 @@ import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import {
   BOTTOM_BAR_SIDE_W,
-  FIRMAMENT_CREST_BAND_BORDER_B,
-  FIRMAMENT_CREST_BAND_H,
-  FIRMAMENT_CREST_CELL_RULE,
-  FIRMAMENT_CREST_CHIME_ART_PX,
-  FIRMAMENT_CREST_EM,
-  FIRMAMENT_CREST_ID_GAP,
-  FIRMAMENT_CREST_ID_PAD_X,
-  FIRMAMENT_CREST_KICKER_ID_CQW,
-  FIRMAMENT_CREST_KICKER_ID_MAX_PX,
-  FIRMAMENT_CREST_KICKER_ID_MIN_PX,
-  FIRMAMENT_CREST_LABEL_CQW,
-  FIRMAMENT_CREST_LABEL_EM,
-  FIRMAMENT_CREST_LABEL_MAX_PX,
-  FIRMAMENT_CREST_LABEL_MIN_PX,
-  FIRMAMENT_CREST_LINE_BOX,
-  FIRMAMENT_CREST_PROV_NAME_PX,
-  FIRMAMENT_CREST_READ_GAP_PX,
-  FIRMAMENT_CREST_READ_PAD_X,
-  FIRMAMENT_CREST_ROW_FLOOR_W,
-  FIRMAMENT_CREST_SHARE,
-  FIRMAMENT_CREST_VALUE_CQW,
-  FIRMAMENT_CREST_VALUE_MAX_PX,
-  FIRMAMENT_CREST_VALUE_MIN_PX,
+  UNIVERSE_MAP_CREST_BAND_BORDER_B,
+  UNIVERSE_MAP_CREST_BAND_H,
+  UNIVERSE_MAP_CREST_CELL_RULE,
+  UNIVERSE_MAP_CREST_CHIME_ART_PX,
+  UNIVERSE_MAP_CREST_EM,
+  UNIVERSE_MAP_CREST_ID_GAP,
+  UNIVERSE_MAP_CREST_ID_PAD_X,
+  UNIVERSE_MAP_CREST_KICKER_ID_CQW,
+  UNIVERSE_MAP_CREST_KICKER_ID_MAX_PX,
+  UNIVERSE_MAP_CREST_KICKER_ID_MIN_PX,
+  UNIVERSE_MAP_CREST_LABEL_CQW,
+  UNIVERSE_MAP_CREST_LABEL_EM,
+  UNIVERSE_MAP_CREST_LABEL_MAX_PX,
+  UNIVERSE_MAP_CREST_LABEL_MIN_PX,
+  UNIVERSE_MAP_CREST_LINE_BOX,
+  UNIVERSE_MAP_CREST_PROV_NAME_PX,
+  UNIVERSE_MAP_CREST_READ_GAP_PX,
+  UNIVERSE_MAP_CREST_READ_PAD_X,
+  UNIVERSE_MAP_CREST_ROW_FLOOR_W,
+  UNIVERSE_MAP_CREST_SHARE,
+  UNIVERSE_MAP_CREST_VALUE_CQW,
+  UNIVERSE_MAP_CREST_VALUE_MAX_PX,
+  UNIVERSE_MAP_CREST_VALUE_MIN_PX,
   UNIVERSE_DISC_CREST_PX,
 } from '@/config/constants'
 import { formatNumber } from '@/config/ui/numberFormat'
-import { buildFirmamentChronicle } from '@/utils/ui/firmamentChronicle'
-import type { FirmamentNode } from '@/utils/ui/firmamentLayout'
+import { buildUniverseChronicle } from '@/utils/ui/universeChronicle'
+import type { UniverseNode } from '@/utils/ui/universeLayout'
 import type { UniverseRunRecord } from '@/types'
 
 /**
- * Das Kopfband des Firmaments — zwei Zusicherungen, und beide sind schon einmal
+ * Das Kopfband des Universes — zwei Zusicherungen, und beide sind schon einmal
  * gebrochen gewesen.
  *
  * DIE ERSTE ist die Bilanz: die Identitaetszone plus JEDE Ablesung muss in das
@@ -49,8 +49,8 @@ import type { UniverseRunRecord } from '@/types'
  * Vorsehung UNTER die Kennzeile: bei 2560 summierte der Stapel auf 117 px in
  * einer 109-px-Box, und `you are here` verschwand unter `+145%`.
  *
- * Gerechnet wird deshalb gegen GEMESSENE Breiten (`FIRMAMENT_CREST_EM`,
- * `FIRMAMENT_CREST_LABEL_EM`, im Browser aufgenommen), nie gegen einen
+ * Gerechnet wird deshalb gegen GEMESSENE Breiten (`UNIVERSE_MAP_CREST_EM`,
+ * `UNIVERSE_MAP_CREST_LABEL_EM`, im Browser aufgenommen), nie gegen einen
  * Beispielwert und nie gegen eine geschaetzte Glyphenbreite: `+250 %` misst
  * 0,64 em je Zeichen, `999.99No` aber 0,57.
  *
@@ -86,28 +86,28 @@ const SCREENS: readonly (readonly [number, number])[] = [
  *  gegen die BANDbreite, nicht gegen den Viewport. */
 const valueAt = (band: number) =>
   clamp(
-    FIRMAMENT_CREST_VALUE_MIN_PX,
-    (FIRMAMENT_CREST_VALUE_CQW * band) / 100,
-    FIRMAMENT_CREST_VALUE_MAX_PX,
+    UNIVERSE_MAP_CREST_VALUE_MIN_PX,
+    (UNIVERSE_MAP_CREST_VALUE_CQW * band) / 100,
+    UNIVERSE_MAP_CREST_VALUE_MAX_PX,
   )
 const labelAt = (band: number) =>
   clamp(
-    FIRMAMENT_CREST_LABEL_MIN_PX,
-    (FIRMAMENT_CREST_LABEL_CQW * band) / 100,
-    FIRMAMENT_CREST_LABEL_MAX_PX,
+    UNIVERSE_MAP_CREST_LABEL_MIN_PX,
+    (UNIVERSE_MAP_CREST_LABEL_CQW * band) / 100,
+    UNIVERSE_MAP_CREST_LABEL_MAX_PX,
   )
 const kickerAt = (band: number) =>
   clamp(
-    FIRMAMENT_CREST_KICKER_ID_MIN_PX,
-    (FIRMAMENT_CREST_KICKER_ID_CQW * band) / 100,
-    FIRMAMENT_CREST_KICKER_ID_MAX_PX,
+    UNIVERSE_MAP_CREST_KICKER_ID_MIN_PX,
+    (UNIVERSE_MAP_CREST_KICKER_ID_CQW * band) / 100,
+    UNIVERSE_MAP_CREST_KICKER_ID_MAX_PX,
   )
 
 /** Aussenmass EINER Ablesung: der breitere ihrer beiden Zeilen, dazu die
  *  Polsterung beidseitig und die Haarlinie, die sie von der linken Nachbarin
  *  scheidet. */
 const cell = (valueW: number, labelW: number) =>
-  Math.max(valueW, labelW) + 2 * FIRMAMENT_CREST_READ_PAD_X + FIRMAMENT_CREST_CELL_RULE
+  Math.max(valueW, labelW) + 2 * UNIVERSE_MAP_CREST_READ_PAD_X + UNIVERSE_MAP_CREST_CELL_RULE
 
 /** Was jede Zone auf einem Band dieser Breite WIRKLICH braucht — je Zone, nicht
  *  als Summe: gebunden wird Zelle gegen Zelle, weil jede ihre eigene feste
@@ -116,21 +116,21 @@ const need = (band: number) => {
   const v = valueAt(band)
   const k = labelAt(band)
   const g = kickerAt(band)
-  const em = FIRMAMENT_CREST_EM
-  const lbl = FIRMAMENT_CREST_LABEL_EM
+  const em = UNIVERSE_MAP_CREST_EM
+  const lbl = UNIVERSE_MAP_CREST_LABEL_EM
   return {
     id:
-      2 * FIRMAMENT_CREST_ID_PAD_X +
+      2 * UNIVERSE_MAP_CREST_ID_PAD_X +
       UNIVERSE_DISC_CREST_PX +
-      FIRMAMENT_CREST_ID_GAP +
+      UNIVERSE_MAP_CREST_ID_GAP +
       Math.max(em.kicker * g, lbl.state * k) +
-      FIRMAMENT_CREST_CELL_RULE,
+      UNIVERSE_MAP_CREST_CELL_RULE,
     prov: cell(em.prov * v, lbl.prov * k),
-    provWide: cell(em.provName * FIRMAMENT_CREST_PROV_NAME_PX, lbl.provWide * k),
+    provWide: cell(em.provName * UNIVERSE_MAP_CREST_PROV_NAME_PX, lbl.provWide * k),
     galaxies: cell(em.count * v, lbl.galaxies * k),
     stars: cell(em.stars * v, lbl.stars * k),
     chimes: cell(
-      FIRMAMENT_CREST_CHIME_ART_PX + FIRMAMENT_CREST_READ_GAP_PX + em.chimes * v,
+      UNIVERSE_MAP_CREST_CHIME_ART_PX + UNIVERSE_MAP_CREST_READ_GAP_PX + em.chimes * v,
       Math.max(lbl.chimes, lbl.unrecorded) * k,
     ),
     elapsed: cell(em.elapsed * v, Math.max(lbl.elapsed, lbl.unrecorded) * k),
@@ -153,7 +153,7 @@ const BANDS: readonly number[] = [
 const reserveOf = (band: number) => {
   const n = need(band)
   const w = (share: number) => (band * share) / 100
-  const s = FIRMAMENT_CREST_SHARE
+  const s = UNIVERSE_MAP_CREST_SHARE
   return {
     id: w(s.id) - n.id,
     prov: w(s.prov) - n.prov,
@@ -165,12 +165,12 @@ const reserveOf = (band: number) => {
   }
 }
 
-describe('Firmament-Kopfband — das Breitenbudget', () => {
+describe('Universe-Kopfband — das Breitenbudget', () => {
   it('gibt jeder Zone einen festen Anteil, und beide Faelle ergeben das ganze Band', () => {
     // Die Breite haengt allein an der BANDBREITE — sonst schoebe jede wachsende
     // Zahl ihre Nachbarn. Zwei Faelle teilen sich denselben Satz: mit Achsen
     // zwei Vorsehungszellen, ohne Achsen EINE breite an ihrer Stelle.
-    const s = FIRMAMENT_CREST_SHARE
+    const s = UNIVERSE_MAP_CREST_SHARE
     const rest = s.id + s.galaxies + s.stars + s.chimes + s.elapsed
     expect(rest + 2 * s.prov).toBeCloseTo(100, 6)
     expect(rest + s.provWide).toBeCloseTo(100, 6)
@@ -203,10 +203,10 @@ describe('Firmament-Kopfband — das Breitenbudget', () => {
   it('nennt den harten Boden, unter dem KEIN Anteilssatz mehr existiert', () => {
     // Dort stehen alle Schriften auf ihrem clamp-Boden: der Bedarf ist konstant
     // und uebersteigt das Band. Der Boden ist 961,9 — nicht 988.
-    const n = need(FIRMAMENT_CREST_ROW_FLOOR_W)
+    const n = need(UNIVERSE_MAP_CREST_ROW_FLOOR_W)
     const row = n.id + 2 * n.prov + n.galaxies + n.stars + n.chimes + n.elapsed
-    expect(row).toBeLessThanOrEqual(FIRMAMENT_CREST_ROW_FLOOR_W)
-    expect(bandWidth(1536, 864)).toBeGreaterThan(FIRMAMENT_CREST_ROW_FLOOR_W)
+    expect(row).toBeLessThanOrEqual(UNIVERSE_MAP_CREST_ROW_FLOOR_W)
+    expect(bandWidth(1536, 864)).toBeGreaterThan(UNIVERSE_MAP_CREST_ROW_FLOOR_W)
   })
 
   it('rechnet die Chimes-Ablesung gegen den MAXIMALFALL von formatNumber', () => {
@@ -217,37 +217,37 @@ describe('Firmament-Kopfband — das Breitenbudget', () => {
       expect(formatNumber(n).length, formatNumber(n)).toBeLessThanOrEqual(8)
     }
     // Und die Chimes-Zeile bleibt die breiteste des Bandes.
-    const v = FIRMAMENT_CREST_VALUE_MAX_PX
-    expect(FIRMAMENT_CREST_EM.chimes * v).toBeGreaterThan(FIRMAMENT_CREST_EM.stars * v)
-    expect(FIRMAMENT_CREST_EM.chimes * v).toBeGreaterThan(FIRMAMENT_CREST_EM.elapsed * v)
+    const v = UNIVERSE_MAP_CREST_VALUE_MAX_PX
+    expect(UNIVERSE_MAP_CREST_EM.chimes * v).toBeGreaterThan(UNIVERSE_MAP_CREST_EM.stars * v)
+    expect(UNIVERSE_MAP_CREST_EM.chimes * v).toBeGreaterThan(UNIVERSE_MAP_CREST_EM.elapsed * v)
   })
 
   it('haelt Zahl, Luecke und Beschriftung samt Scheibe unter der Bandhoehe', () => {
     // Die Hoehenbilanz fehlte, und daran starb die alte Wappenzone: Kennzeile
     // UEBER Vorsehung ergab bei 2560 einen 117-px-Stapel in einer 109-px-Box.
-    const inner = FIRMAMENT_CREST_BAND_H - FIRMAMENT_CREST_BAND_BORDER_B
+    const inner = UNIVERSE_MAP_CREST_BAND_H - UNIVERSE_MAP_CREST_BAND_BORDER_B
     const stack = (value: number) =>
-      value + FIRMAMENT_CREST_READ_GAP_PX + FIRMAMENT_CREST_LABEL_MAX_PX * FIRMAMENT_CREST_LINE_BOX
-    expect(stack(FIRMAMENT_CREST_VALUE_MAX_PX)).toBeLessThanOrEqual(inner)
-    expect(stack(FIRMAMENT_CREST_KICKER_ID_MAX_PX)).toBeLessThanOrEqual(inner)
+      value + UNIVERSE_MAP_CREST_READ_GAP_PX + UNIVERSE_MAP_CREST_LABEL_MAX_PX * UNIVERSE_MAP_CREST_LINE_BOX
+    expect(stack(UNIVERSE_MAP_CREST_VALUE_MAX_PX)).toBeLessThanOrEqual(inner)
+    expect(stack(UNIVERSE_MAP_CREST_KICKER_ID_MAX_PX)).toBeLessThanOrEqual(inner)
     expect(UNIVERSE_DISC_CREST_PX).toBeLessThanOrEqual(inner)
     // Die Scheibe bleibt das hoechste Element — sonst triebe der Text die
     // Bandhoehe, und die haengt an der Voyages-Kopfleiste.
-    expect(stack(FIRMAMENT_CREST_VALUE_MAX_PX)).toBeLessThan(UNIVERSE_DISC_CREST_PX)
+    expect(stack(UNIVERSE_MAP_CREST_VALUE_MAX_PX)).toBeLessThan(UNIVERSE_DISC_CREST_PX)
   })
 
   it('trifft mit der cqw-Skala Boden UND Deckel im Zielband', () => {
     // Auf dem schmalsten Band muss die Zahl auf ihrem Boden stehen — dort ist
     // die Bilanz eng. Spaetestens auf 2K steht sie an ihrem Deckel, sonst
     // wuechse sie auf 4K weiter, wo niemand mehr nachgerechnet hat.
-    expect(valueAt(bandWidth(1536, 864))).toBe(FIRMAMENT_CREST_VALUE_MIN_PX)
-    expect(valueAt(bandWidth(2560, 1440))).toBe(FIRMAMENT_CREST_VALUE_MAX_PX)
-    expect(labelAt(bandWidth(2560, 1440))).toBe(FIRMAMENT_CREST_LABEL_MAX_PX)
+    expect(valueAt(bandWidth(1536, 864))).toBe(UNIVERSE_MAP_CREST_VALUE_MIN_PX)
+    expect(valueAt(bandWidth(2560, 1440))).toBe(UNIVERSE_MAP_CREST_VALUE_MAX_PX)
+    expect(labelAt(bandWidth(2560, 1440))).toBe(UNIVERSE_MAP_CREST_LABEL_MAX_PX)
     // Die Kennzeile steigt flacher: sie erreicht ihren Deckel erst auf 4K.
     // Sie ist der laengste Text des Bandes und wuerde frueher die Zellen fressen.
-    expect(kickerAt(bandWidth(2560, 1440))).toBeGreaterThan(FIRMAMENT_CREST_KICKER_ID_MIN_PX)
-    expect(kickerAt(bandWidth(2560, 1440))).toBeLessThan(FIRMAMENT_CREST_KICKER_ID_MAX_PX)
-    expect(kickerAt(bandWidth(3840, 2160))).toBe(FIRMAMENT_CREST_KICKER_ID_MAX_PX)
+    expect(kickerAt(bandWidth(2560, 1440))).toBeGreaterThan(UNIVERSE_MAP_CREST_KICKER_ID_MIN_PX)
+    expect(kickerAt(bandWidth(2560, 1440))).toBeLessThan(UNIVERSE_MAP_CREST_KICKER_ID_MAX_PX)
+    expect(kickerAt(bandWidth(3840, 2160))).toBe(UNIVERSE_MAP_CREST_KICKER_ID_MAX_PX)
     // Und auf Full HD steht die Zahl UEBER dem alten festen Boden von 26.
     expect(valueAt(bandWidth(1920, 1080))).toBeGreaterThan(26)
   })
@@ -256,18 +256,18 @@ describe('Firmament-Kopfband — das Breitenbudget', () => {
     // Ueber dem Schriftboden bestimmte das BILD die Zeilenhoehe, und eine
     // Bilanz, die nur Schriftgroessen kennt, geht dann still daneben —
     // dieselbe Wand wie `VOYAGE_MAP_STATS_ART_MAX` im Voyages-Datenband.
-    expect(FIRMAMENT_CREST_CHIME_ART_PX).toBeLessThanOrEqual(FIRMAMENT_CREST_VALUE_MIN_PX)
+    expect(UNIVERSE_MAP_CREST_CHIME_ART_PX).toBeLessThanOrEqual(UNIVERSE_MAP_CREST_VALUE_MIN_PX)
   })
 })
 
 // ── Die Chronik ─────────────────────────────────────────────────────────────
 
 function node(
-  state: FirmamentNode['state'],
+  state: UniverseNode['state'],
   rescued: number,
   lost: number,
   galaxy = 1,
-): FirmamentNode {
+): UniverseNode {
   return {
     galaxy,
     state,
@@ -306,14 +306,14 @@ const BASE = {
   chimesPerSecond: 0,
 }
 
-describe('Firmament-Kopfband — jede Ablesung steht auf ihrer TINTE', () => {
+describe('Universe-Kopfband — jede Ablesung steht auf ihrer TINTE', () => {
   // Die Tinte selbst laesst sich hier nicht messen: jsdom hat weder Canvas noch
   // Layout, und `textInkOffset.ts` gibt dort in beiden Messfunktionen 0 zurueck.
   // Gebunden wird deshalb die QUELLE — eine siebte Ablesung, die `v-ink-center.y`
   // vergisst, stuende 1 bis 2 px neben den anderen, und im Bild faellt das erst
   // im Nebeneinander auf.
   const SFC = readFileSync(
-    resolve(process.cwd(), 'src/components/bardProfil/firmament/FirmamentCrestBand.vue'),
+    resolve(process.cwd(), 'src/components/bardProfil/universe/UniverseCrestBand.vue'),
     'utf8',
   )
 
@@ -321,20 +321,20 @@ describe('Firmament-Kopfband — jede Ablesung steht auf ihrer TINTE', () => {
     // Jedes Vorkommen der beiden Klassen — ausser der Flex-Zeile mit dem
     // Chime-Artwork, wo die Direktive den inneren Textspan traegt: an der Zeile
     // verschoebe sie das BILD mit.
-    // `(?=["\s]|--)` haelt `fm-crest-kicker` heraus — es faengt mit derselben
+    // `(?=["\s]|--)` haelt `un-crest-kicker` heraus — es faengt mit derselben
     // Zeichenfolge an wie die Beschriftung.
-    for (const m of SFC.matchAll(/<span([^>]*?)class="fm-crest-[vk](?=["\s]|--)[^"]*"/g)) {
+    for (const m of SFC.matchAll(/<span([^>]*?)class="un-crest-[vk](?=["\s]|--)[^"]*"/g)) {
       const tag = m[0]
-      if (tag.includes('fm-crest-v--art')) continue
+      if (tag.includes('un-crest-v--art')) continue
       expect(m[1], tag).toContain('v-ink-center.y')
     }
   })
 
   it('haengt sie bei der Chimes-Ablesung an den inneren Textspan', () => {
-    // `.fm-crest-v--art` ist eine Flex-Zeile aus Bild und Zahl. An der Zeile
+    // `.un-crest-v--art` ist eine Flex-Zeile aus Bild und Zahl. An der Zeile
     // verschoebe die Direktive das Chime-Artwork mit; sie gehoert an die Zahl,
     // und danach sitzen Bild und Zahl auf derselben optischen Mitte.
-    const art = SFC.slice(SFC.indexOf('fm-crest-v--art'))
+    const art = SFC.slice(SFC.indexOf('un-crest-v--art'))
     expect(art.slice(0, art.indexOf('</span'))).toContain('v-ink-center.y')
   })
 
@@ -345,9 +345,9 @@ describe('Firmament-Kopfband — jede Ablesung steht auf ihrer TINTE', () => {
     const style = SFC.slice(SFC.indexOf('<style'))
     expect(style).toContain('container-type: inline-size')
     expect(style).not.toMatch(/[\d.]vw/)
-    // Und `.fm-crest` selbst darf kein `cqw` tragen: das loeste gegen den
+    // Und `.un-crest` selbst darf kein `cqw` tragen: das loeste gegen den
     // naechsten Vorfahren auf, nicht gegen das Band.
-    const own = /\.fm-crest \{([\s\S]*?)\n\}/.exec(style)
+    const own = /\.un-crest \{([\s\S]*?)\n\}/.exec(style)
     expect(own?.[1]).not.toContain('cqw')
   })
 
@@ -357,15 +357,15 @@ describe('Firmament-Kopfband — jede Ablesung steht auf ihrer TINTE', () => {
     // Roemerzahl-Marke auf der Scheibe, die keine Zeile des Bandes belegt.
     const style = SFC.slice(SFC.indexOf('<style'))
     const budget: readonly (readonly [string, readonly string[]])[] = [
-      ['.fm-crest', ['height:']],
-      ['.fm-crest-id', ['gap:', 'padding:']],
-      ['.fm-crest-kicker', ['gap:']],
-      ['.fm-crest-read', ['gap:', 'padding:']],
-      ['.fm-crest-v', ['font-size:']],
-      ['.fm-crest-v--id', ['font-size:']],
-      ['.fm-crest-v--name', ['font-size:']],
-      ['.fm-crest-k', ['font-size:']],
-      ['.fm-crest-chime', ['width:', 'height:']],
+      ['.un-crest', ['height:']],
+      ['.un-crest-id', ['gap:', 'padding:']],
+      ['.un-crest-kicker', ['gap:']],
+      ['.un-crest-read', ['gap:', 'padding:']],
+      ['.un-crest-v', ['font-size:']],
+      ['.un-crest-v--id', ['font-size:']],
+      ['.un-crest-v--name', ['font-size:']],
+      ['.un-crest-k', ['font-size:']],
+      ['.un-crest-chime', ['width:', 'height:']],
     ]
     for (const [sel, props] of budget) {
       const start = style.indexOf(sel + ' {')
@@ -387,7 +387,7 @@ describe('Firmament-Kopfband — jede Ablesung steht auf ihrer TINTE', () => {
       expect(at, sel).toBeGreaterThanOrEqual(0)
       return style.slice(at, style.indexOf('}', at))
     }
-    const read = block('.fm-crest-read')
+    const read = block('.un-crest-read')
     expect(read).toContain('flex-grow: 0')
     expect(read).toContain('flex-shrink: 0')
     // Ohne das setzt der Flex-Default einen Min-Content-Boden, und die Zelle
@@ -399,27 +399,27 @@ describe('Firmament-Kopfband — jede Ablesung steht auf ihrer TINTE', () => {
     // Verteilung waere dann nicht proportional, und der Chimes-Zelle fehlten
     // bei 988 px 5,6.
     for (const zone of ['prov', 'provwide', 'galaxies', 'stars', 'chimes', 'elapsed']) {
-      const body = block('.fm-crest-read--' + zone)
+      const body = block('.un-crest-read--' + zone)
       expect(body, zone).toContain('flex-basis: v-bind')
       expect(body, zone).not.toContain('flex-basis: 0')
     }
-    expect(block('.fm-crest-id')).toContain('flex: 0 0 v-bind')
+    expect(block('.un-crest-id')).toContain('flex: 0 0 v-bind')
   })
 
   it('laesst die Kennzeile bewusst aus', () => {
     // Der TRAEGER umschliesst zwei Schriftgrade; die Direktive misst mit der
     // Schrift des Elements und laege dort daneben. Seine beiden Spans tragen sie
     // seit dem Umbau sehr wohl — jeder von ihnen ist einschriftig.
-    const kicker = SFC.match(/<span[^>]*class="fm-crest-kicker"/)
+    const kicker = SFC.match(/<span[^>]*class="un-crest-kicker"/)
     expect(kicker?.[0]).not.toContain('v-ink-center')
   })
 })
 
-describe('Firmament-Kopfband — die Chronik der gezeigten Bahn', () => {
+describe('Universe-Kopfband — die Chronik der gezeigten Bahn', () => {
   it('zaehlt die laufende Galaxie bei den STERNEN, aber nicht bei den GALAXIEN', () => {
     // Ihre Sterne SIND gerettet oder verloren; sie selbst ist es nicht, und der
     // Knoten sagt das auch (`state: 'current'`).
-    const c = buildFirmamentChronicle({
+    const c = buildUniverseChronicle({
       ...BASE,
       nodes: [node('freed', 3, 1, 1), node('current', 2, 1, 2)],
     })
@@ -431,7 +431,7 @@ describe('Firmament-Kopfband — die Chronik der gezeigten Bahn', () => {
   it('laesst unbeleuchtete Plaetze ganz aus', () => {
     // Sie sind Vorausschau, kein Bestand — mitgezaehlt behauptete die Bahn
     // Galaxien, die es nicht gibt.
-    const c = buildFirmamentChronicle({
+    const c = buildUniverseChronicle({
       ...BASE,
       nodes: [node('freed', 3, 0, 1), node('unlit', 0, 0, 2), node('unlit', 0, 0, 3)],
     })
@@ -443,7 +443,7 @@ describe('Firmament-Kopfband — die Chronik der gezeigten Bahn', () => {
     // Die Galaxien umspannen ohnehin alle Besuche — `completedGalaxies` traegt
     // nur das Universum, nicht den Besuch. Nur den letzten Lauf zu nehmen gaebe
     // eine Bahn, deren Zahlen verschiedene Zeitraeume meinen.
-    const c = buildFirmamentChronicle({
+    const c = buildUniverseChronicle({
       ...BASE,
       nodes: [node('freed', 4, 0, 1)],
       runs: [run(2, 100, 60, 1), run(3, 999, 999, 2), run(2, 400, 240, 3)],
@@ -455,7 +455,7 @@ describe('Firmament-Kopfband — die Chronik der gezeigten Bahn', () => {
   })
 
   it('legt den laufenden Durchgang auf die vergangenen Besuche derselben Bahn', () => {
-    const c = buildFirmamentChronicle({
+    const c = buildUniverseChronicle({
       ...BASE,
       nodes: [node('current', 1, 0, 1)],
       runs: [run(2, 100, 60)],
@@ -471,7 +471,7 @@ describe('Firmament-Kopfband — die Chronik der gezeigten Bahn', () => {
     // `UNIVERSE_RUN_HISTORY_LIMIT` schiebt alte Laeufe hinaus. Dort ist die
     // Auskunft verloren, nicht null — eine gerechnete 0 waere eine Luege, und
     // das Band schreibt darum „—" mit der Beschriftung „Unrecorded".
-    const c = buildFirmamentChronicle({
+    const c = buildUniverseChronicle({
       ...BASE,
       nodes: [node('freed', 5, 2, 1)],
       universe: 7,
@@ -489,7 +489,7 @@ describe('Firmament-Kopfband — die Chronik der gezeigten Bahn', () => {
     // Eine vergangene ist aufgebrochen: ihr Fortschritt ist kein Fortschritt
     // mehr, sondern ein Ergebnis. Sonst fuellte die Unterkante einer fremden
     // Bahn mit dem Stand des eigenen Laufs.
-    const here = buildFirmamentChronicle({
+    const here = buildUniverseChronicle({
       ...BASE,
       nodes: [],
       liveChimes: 25,
@@ -498,7 +498,7 @@ describe('Firmament-Kopfband — die Chronik der gezeigten Bahn', () => {
     })
     expect(here.departure).toEqual({ raised: 25, goal: 100, percent: 25, etaSeconds: 15 })
 
-    const past = buildFirmamentChronicle({ ...BASE, nodes: [], universe: 1, currentUniverse: 2 })
+    const past = buildUniverseChronicle({ ...BASE, nodes: [], universe: 1, currentUniverse: 2 })
     expect(past.departure).toBeNull()
   })
 
@@ -506,7 +506,7 @@ describe('Firmament-Kopfband — die Chronik der gezeigten Bahn', () => {
     // Ueber dem Ziel laeuft die Unterkante sonst aus dem Band; und „ready" ist
     // eine ANDERE Aussage als „keine Produktion" — die erste ist 0, die zweite
     // null.
-    const ready = buildFirmamentChronicle({
+    const ready = buildUniverseChronicle({
       ...BASE,
       nodes: [],
       liveChimes: 250,
@@ -516,7 +516,7 @@ describe('Firmament-Kopfband — die Chronik der gezeigten Bahn', () => {
     expect(ready.departure?.percent).toBe(100)
     expect(ready.departure?.etaSeconds).toBe(0)
 
-    const stalled = buildFirmamentChronicle({
+    const stalled = buildUniverseChronicle({
       ...BASE,
       nodes: [],
       liveChimes: 25,
