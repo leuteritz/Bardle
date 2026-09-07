@@ -58,12 +58,9 @@ export const ROLE_STAR_ATTACKS: Record<ChampionRole, { damage: number; intervalM
  * Der Cooldown, den die Rollenfähigkeit im Orbit trägt. `focusScaled` sagt, ob
  * FOCUS ihn verkürzt — der Jungle-Buff setzt seinen Wert fest (roleBehaviorStore).
  */
-export const ROLE_ABILITY_COOLDOWN: Record<
-  ChampionRole,
-  { ms: number; focusScaled: boolean; note?: string }
-> = {
+export const ROLE_ABILITY_COOLDOWN: Record<ChampionRole, { ms: number; focusScaled: boolean }> = {
   top: { ms: ROLE_TOP_SHIELD_REBUILD_MS, focusScaled: true },
-  jungle: { ms: JUNGLE_BUFF_COOLDOWN_MS, focusScaled: false, note: 'Jungle buff' },
+  jungle: { ms: JUNGLE_BUFF_COOLDOWN_MS, focusScaled: false },
   mid: { ms: ROLE_MID_CURSE_INTERVAL_MS, focusScaled: true },
   adc: { ms: ROLE_ADC_BURST_INTERVAL_MS, focusScaled: true },
   support: { ms: ROLE_SUPPORT_HEAL_INTERVAL_MS, focusScaled: true },

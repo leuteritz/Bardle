@@ -440,17 +440,6 @@ export function statValueLabel(
   }
 }
 
-/** Die Nebenzeile: der Zuwachs in Prozent — oder, wo FOCUS nicht greift, was da abkuehlt. */
-export function statDeltaLabel(
-  key: ChampionStatKey,
-  stats: ChampionStats,
-  ctx: StatReadoutContext,
-): string {
-  const cd = ROLE_ABILITY_COOLDOWN[ctx.role]
-  if (key === 'focus' && !cd.focusScaled) return cd.note ?? ''
-  return statEffectLabel(key, stats[key], ctx.cooldownRush)
-}
-
 // ── Level-up cost ─────────────────────────────────────────────────────────────
 
 /**

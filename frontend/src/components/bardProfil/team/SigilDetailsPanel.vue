@@ -11,7 +11,6 @@ import { useHerald } from '@/composables/ui/useHerald'
 import {
   ascensionRank,
   statValueLabel,
-  statDeltaLabel,
   CHAMPION_STATS,
   PERK_BY_ID,
 } from '@/config/champions/championLevels'
@@ -261,9 +260,6 @@ const statCtx = computed(() => ({
 }))
 function statValueOf(key: ChampionStatKey) {
   return stats.value ? statValueLabel(key, stats.value, statCtx.value) : ''
-}
-function statDeltaOf(key: ChampionStatKey) {
-  return stats.value ? statDeltaLabel(key, stats.value, statCtx.value) : ''
 }
 function statDisplayName(key: ChampionStatKey) {
   return {
@@ -570,8 +566,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
                 <Icon :icon="stat.icon" width="24" height="24" />
                 <div>
                   <small>{{ statDisplayName(stat.key) }}</small
-                  ><strong>{{ statValueOf(stat.key) }}</strong
-                  ><span>{{ statDeltaOf(stat.key) }}</span>
+                  ><strong>{{ statValueOf(stat.key) }}</strong>
                 </div>
                 <i><b :style="{ transform: `scaleX(${statShare(stat.key)})` }" /></i>
               </article>
@@ -632,8 +627,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
                 <Icon :icon="stat.icon" width="24" height="24" />
                 <div>
                   <small>{{ statDisplayName(stat.key) }}</small
-                  ><strong>{{ TEAM_VALUE_PLACEHOLDER }}</strong
-                  ><span>{{ stat.effectLabel }}</span>
+                  ><strong>{{ TEAM_VALUE_PLACEHOLDER }}</strong>
                 </div>
                 <i><b /></i>
               </article>
@@ -1336,7 +1330,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
   text-align: center;
 }
 .sdp-stat small {
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
   letter-spacing: 0.08em;
 }
@@ -1344,17 +1338,8 @@ function perkStatLine(perk: ChampionPerkDef): string {
 .sdp-stat strong {
   max-width: 100%;
   overflow: hidden;
-  font-size: 27px;
+  font-size: 34px;
   font-weight: 400;
-  line-height: 1.05;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sdp-stat div span {
-  max-width: 100%;
-  overflow: hidden;
-  color: #bcae91;
-  font-size: 12px;
   line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2137,8 +2122,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
   opacity: 0.55;
 }
 .sdp-stat--ghost strong,
-.sdp-stat--ghost small,
-.sdp-stat--ghost div span {
+.sdp-stat--ghost small {
   color: var(--gk);
 }
 .sdp-stat--ghost i b {
@@ -2211,8 +2195,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
   .sdp-hero { min-height: 330px; padding-block: 11px; }
   .sdp-identity h2 { font-size: 39px; }
   .sdp-stat { min-height: 59px; padding-block: 6px; }
-  .sdp-stat strong { font-size: 22px; }
-  .sdp-stat div span { font-size: 11px; }
+  .sdp-stat strong { font-size: 28px; }
   .sdp-level-button { min-height: 42px; margin-top: 7px; }
   .sdp-workspace {
     grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.2fr);

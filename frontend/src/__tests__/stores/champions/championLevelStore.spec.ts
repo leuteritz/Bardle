@@ -20,11 +20,9 @@ import {
   vitalityMult,
   focusCooldownMult,
   fortuneMult,
-  statEffectLabel,
   championOrbitDps,
   roleAbilityCooldownMs,
   statValueLabel,
-  statDeltaLabel,
   ROLE_GROWTH,
   CHAMPION_STATS,
   regaliaStageFor,
@@ -160,8 +158,6 @@ describe('champion levels — curves and stats', () => {
     )
     expect(statValueLabel('focus', levelled, ctx)).toMatch(/^\d+\.\ds$/)
     expect(statValueLabel('fortune', levelled, ctx)).toMatch(/^×\d+\.\d\d$/)
-    // Die Nebenzeile bleibt der Prozentwert, den auch die Kampf-Rail liest.
-    expect(statDeltaLabel('power', levelled, ctx)).toBe(statEffectLabel('power', levelled.power))
   })
 
   it('the ability cooldown falls with FOCUS but never past the floor', () => {
@@ -170,14 +166,12 @@ describe('champion levels — curves and stats', () => {
     expect(roleAbilityCooldownMs('mid', 100_000, 0.9)).toBeGreaterThanOrEqual(base * 0.45)
   })
 
-  it('the jungle buff cooldown ignores FOCUS and says so instead of a percentage', () => {
+  it('the jungle buff cooldown ignores FOCUS', () => {
     const base = ROLE_ABILITY_COOLDOWN.jungle.ms
     expect(roleAbilityCooldownMs('jungle', 100_000)).toBe(base)
     const ctx = { role: 'jungle' as const, maxHp: 0, cooldownRush: 0 }
     const stats = resolveChampionStats(MID_LOW, 60, 'jungle')
     expect(statValueLabel('focus', stats, ctx)).toBe(`${(base / 1000).toFixed(1)}s`)
-    expect(statDeltaLabel('focus', stats, ctx)).toBe(ROLE_ABILITY_COOLDOWN.jungle.note)
-    expect(statDeltaLabel('focus', stats, ctx)).not.toMatch(/%/)
   })
 
   it('awards an ascension star every interval and names the rank band', () => {
