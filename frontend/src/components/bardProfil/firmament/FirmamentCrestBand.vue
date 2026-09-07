@@ -23,10 +23,12 @@
  * die Goldschiene, die ihn einmal als Unterkante zeigte, ist gefallen. Die
  * Unterkante traegt jetzt dieselbe Naht wie die Voyages-Kopfleiste.
  *
- * Keine Zelle traegt einen festen Zuschnitt mehr: sie nimmt ihren Inhalt,
- * waechst in den freien Rest und schrumpft NIE. Der alte Zuschnitt schnitt
- * still ab — 200 px fuer die Chimes waren gegen `5.74B / 51.2M` gerechnet, und
- * `285.31B / 51.3B` lief ueber die rechte Bandkante hinaus.
+ * Jede Zone traegt einen festen ANTEIL an der Bandbreite, keine Inhaltsbreite:
+ * eine Breite, die am Text haengt, laesst jede wachsende Zahl die Nachbarn
+ * schieben — und Chimes, Stars und Elapsed wachsen im laufenden Spiel dauernd.
+ * Die Anteile stehen in `FIRMAMENT_CREST_SHARE`, gerechnet gegen die
+ * gemessenen Textbreiten; die Zahlen selbst duerfen nie mehr eine Kante
+ * bewegen.
  *
  * Was ein Universum BEDEUTET, bringt die beim Prestige gezogene Vorsehung mit —
  * und ihre zwei Wirkungen stehen als ABLESUNGEN da, in derselben Gestalt und
@@ -65,6 +67,7 @@ import {
   FIRMAMENT_CREST_PROV_NAME_PX,
   FIRMAMENT_CREST_READ_GAP_PX,
   FIRMAMENT_CREST_READ_PAD_X,
+  FIRMAMENT_CREST_SHARE,
   FIRMAMENT_CREST_VALUE_CQW,
   FIRMAMENT_CREST_VALUE_MAX_PX,
   FIRMAMENT_CREST_VALUE_MIN_PX,
@@ -144,7 +147,6 @@ const elapsedKey = computed(() => (props.chronicle.seconds === null ? 'Unrecorde
 const READ_TIPS = {
   galaxies: 'Galaxies freed on this path. The running one counts once its core falls.',
   stars: 'Stars rescued against stars lost in this universe, the running galaxy included.',
-  landfalls: 'Landfalls cleared on this path, counted across every galaxy of this universe.',
   chimesHere: 'Chimes raised toward leaving this universe. The band edge below fills with it.',
   chimesPast: 'Chimes this universe raised before its departure, across every visit.',
   chimesGone: 'This run was pushed out of the archive, so its chimes are no longer recorded.',
@@ -174,6 +176,18 @@ const readGap = `${FIRMAMENT_CREST_READ_GAP_PX}px`
 const readPadX = `${FIRMAMENT_CREST_READ_PAD_X}px`
 const provNamePx = `${FIRMAMENT_CREST_PROV_NAME_PX}px`
 const chimeArtPx = `${FIRMAMENT_CREST_CHIME_ART_PX}px`
+
+/* Feste Zonenbreiten als PROZENT-Basis. Nicht `flex-grow`: unter
+   `box-sizing: border-box` floort `flex-basis: 0` auf Polsterung plus Kante,
+   und die Verteilung waere dann nicht mehr proportional. */
+const pct = (n: number) => `${n}%`
+const shareId = pct(FIRMAMENT_CREST_SHARE.id)
+const shareProv = pct(FIRMAMENT_CREST_SHARE.prov)
+const shareProvWide = pct(FIRMAMENT_CREST_SHARE.provWide)
+const shareGalaxies = pct(FIRMAMENT_CREST_SHARE.galaxies)
+const shareStars = pct(FIRMAMENT_CREST_SHARE.stars)
+const shareChimes = pct(FIRMAMENT_CREST_SHARE.chimes)
+const shareElapsed = pct(FIRMAMENT_CREST_SHARE.elapsed)
 
 /* Die drei Schriftskalen des Bandes. Sie messen in `cqw` gegen `.fm-crest`,
    nicht in `vw` gegen den Viewport: `--hud-scale` entkoppelt beide. */
@@ -215,7 +229,7 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
           v-for="(line, i) in provLines"
           :key="i"
           v-tip="{ label: line.label, text: line.positive ? PROV_TIP_UP : PROV_TIP_DOWN }"
-          class="fm-crest-read"
+          class="fm-crest-read fm-crest-read--prov"
         >
           <span
             v-ink-center.y
@@ -228,19 +242,29 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
           <span v-ink-center.y class="fm-crest-k">{{ line.label }}</span>
         </div>
       </template>
-      <div v-else v-tip="{ label: 'Providence', text: PROV_TIP }" class="fm-crest-read">
+      <div
+        v-else
+        v-tip="{ label: 'Providence', text: PROV_TIP }"
+        class="fm-crest-read fm-crest-read--provwide"
+      >
         <span v-ink-center.y class="fm-crest-v fm-crest-v--name">{{ provFallback.value }}</span>
         <span v-ink-center.y class="fm-crest-k">{{ provFallback.key }}</span>
       </div>
 
       <!-- Was DIESE Bahn hergab. -->
-      <div v-tip="{ label: 'Galaxies', text: READ_TIPS.galaxies }" class="fm-crest-read">
+      <div
+        v-tip="{ label: 'Galaxies', text: READ_TIPS.galaxies }"
+        class="fm-crest-read fm-crest-read--galaxies"
+      >
         <span v-ink-center.y class="fm-crest-v fm-crest-v--gold">{{
           props.chronicle.galaxies
         }}</span>
         <span v-ink-center.y class="fm-crest-k">Galaxies</span>
       </div>
-      <div v-tip="{ label: 'Stars', text: READ_TIPS.stars }" class="fm-crest-read">
+      <div
+        v-tip="{ label: 'Stars', text: READ_TIPS.stars }"
+        class="fm-crest-read fm-crest-read--stars"
+      >
         <span v-ink-center.y class="fm-crest-v fm-crest-v--gold">
           {{ props.chronicle.rescued }}<span class="fm-crest-sep">/</span
           ><span class="fm-crest-lost">{{ props.chronicle.lost }}</span>
@@ -248,15 +272,9 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
         <span v-ink-center.y class="fm-crest-k">Stars</span>
       </div>
       <div
-        v-tip="{ label: 'Landfalls', text: READ_TIPS.landfalls }"
-        class="fm-crest-read fm-crest-read--landfalls"
+        v-tip="{ label: 'Chimes', text: chimesTip }"
+        class="fm-crest-read fm-crest-read--chimes"
       >
-        <span v-ink-center.y class="fm-crest-v fm-crest-v--gold">{{
-          props.chronicle.landfalls
-        }}</span>
-        <span v-ink-center.y class="fm-crest-k">Landfalls</span>
-      </div>
-      <div v-tip="{ label: 'Chimes', text: chimesTip }" class="fm-crest-read">
         <span class="fm-crest-v fm-crest-v--gold fm-crest-v--art">
           <img class="fm-crest-chime" :src="CHIME_IMG" alt="" aria-hidden="true" />
           <span v-ink-center.y
@@ -268,7 +286,10 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
           {{ chimesKey }}
         </span>
       </div>
-      <div v-tip="{ label: 'Elapsed', text: elapsedTip }" class="fm-crest-read">
+      <div
+        v-tip="{ label: 'Elapsed', text: elapsedTip }"
+        class="fm-crest-read fm-crest-read--elapsed"
+      >
         <span v-ink-center.y class="fm-crest-v fm-crest-v--time">{{ elapsedText }}</span>
         <span v-ink-center.y class="fm-crest-k">{{ elapsedKey }}</span>
       </div>
@@ -312,9 +333,10 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
 
 /* Wappen */
 .fm-crest-id {
-  /* Inhaltsbreit: sie nimmt Scheibe und Kennzeile, sonst nichts. Was uebrig
-     bleibt, gehoert den Ablesungen. */
-  flex: 0 0 auto;
+  /* Fester Anteil wie jede Ablesung — die Scheibe und die Kennzeile stehen
+     darin, aber sie bestimmen ihn nicht. */
+  flex: 0 0 v-bind(shareId);
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: v-bind(idGap);
@@ -358,10 +380,15 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
 
 /* Ablesungen */
 .fm-crest-read {
-  /* Sie nimmt ihren Inhalt, waechst in den freien Rest und schrumpft NIE. Eine
-     Zelle, die schrumpfen darf, schneidet irgendwann ab — und `.fm-crest-k` ist
-     `nowrap` OHNE Ellipse. Genau daran starb der alte feste Zuschnitt. */
-  flex: 1 0 auto;
+  /* Die Breite ist ein fester ANTEIL am Band (unten je Zone), nie der Inhalt:
+     sonst schiebt jede wachsende Zahl ihre Nachbarn. Prozent-Basis, NICHT
+     `flex-grow` mit `flex-basis: 0` — unter `box-sizing: border-box` floort die
+     auf Polsterung plus Kante, und die Verteilung waere nicht proportional.
+     `min-width: 0` ist Pflicht: der Flex-Default `auto` setzte sonst einen
+     Min-Content-Boden, und die Zelle haenge doch wieder am Text. */
+  flex-grow: 0;
+  flex-shrink: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -373,21 +400,30 @@ const kickerScale = `clamp(${FIRMAMENT_CREST_KICKER_ID_MIN_PX}px, ${FIRMAMENT_CR
   border-left: 1px solid #3e200a;
 }
 
-/* Die Landfalls-Ablesung braucht 69 px, die das schmalste Zielband (988, Full HD
-   bei 125 %) nicht hat: dort stehen die uebrigen sechs Zellen und die Wappenzone
-   schon auf 977. Ab 1220 traegt die Reihe sie mit 21 px Reserve.
-
-   Die Schwelle steht als LITERAL: `v-bind` greift in einer `@container`-Praeambel
-   NICHT — die Abfrage matchte still nie. `firmamentCrest.spec.ts` bindet Literal
-   und Konstante aneinander. */
-.fm-crest-read--landfalls {
-  display: none;
+.fm-crest-read--prov {
+  flex-basis: v-bind(shareProv);
 }
 
-@container (min-width: 1220px) {
-  .fm-crest-read--landfalls {
-    display: flex;
-  }
+/* Ohne Achsen im Archiv nimmt EINE Ablesung den Platz der beiden — zwingend
+   ihr doppelter Anteil, sonst summiert dieser Fall nicht auf 100 %. */
+.fm-crest-read--provwide {
+  flex-basis: v-bind(shareProvWide);
+}
+
+.fm-crest-read--galaxies {
+  flex-basis: v-bind(shareGalaxies);
+}
+
+.fm-crest-read--stars {
+  flex-basis: v-bind(shareStars);
+}
+
+.fm-crest-read--chimes {
+  flex-basis: v-bind(shareChimes);
+}
+
+.fm-crest-read--elapsed {
+  flex-basis: v-bind(shareElapsed);
 }
 
 /* `v-ink-center.y` an JEDER Zahl und JEDER Beschriftung des Bandes — dasselbe
