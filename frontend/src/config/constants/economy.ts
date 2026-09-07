@@ -2131,9 +2131,9 @@ export const VOYAGE_LIVE_RAIL_TITLE = 'Follow your current run'
 // `paintKey`-Wechsel gemalt. Ein Dot darauf hiesse die ganze Platte, jeden Frame.
 
 /** Kantenlänge des Sonnenkörpers auf der Live-Karte. */
-export const VOYAGE_LIVE_PLAYER_BOX_PX = 58
+export const VOYAGE_LIVE_PLAYER_BOX_PX = 42
 /** Länge des Schweifs nach hinten, statischer Verlauf, dreht mit dem Rumpf. */
-export const VOYAGE_LIVE_PLAYER_TAIL_PX = 54
-export const VOYAGE_LIVE_PLAYER_TAIL_H_PX = 6
+export const VOYAGE_LIVE_PLAYER_TAIL_PX = 42
+export const VOYAGE_LIVE_PLAYER_TAIL_H_PX = 5
 /** Die ruhende Marke am Zielstern der offenen Etappe. */
 export const VOYAGE_LIVE_TARGET_R_PX = 9
