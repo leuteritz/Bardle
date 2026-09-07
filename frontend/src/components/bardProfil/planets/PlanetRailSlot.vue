@@ -110,25 +110,26 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
          card's inner layout by a pixel). -->
     <span v-if="selected" class="ps-slot-caret" aria-hidden="true" />
 
-    <div class="ps-slot-icon">
-      <template v-if="!planet.purchased">
-        <span class="ps-slot-btn-lock">
-          <img src="/img/lock-256.png" alt="Locked" class="lock-icon" />
-        </span>
-      </template>
-      <template v-else>
-        <img
-          v-if="planet.role"
-          :src="PLANET_ROLES[planet.role].image"
-          class="ps-slot-btn-img"
-          alt=""
-        />
-        <span v-else class="ps-slot-btn-placeholder">＋</span>
-        <!-- Zerstört: Wrack-Emblem legt sich über das Planetenbild -->
-        <span v-if="down" class="ps-slot-down-emblem" aria-hidden="true">
-          <Icon icon="game-icons:fragmented-meteor" width="30" height="30" />
-        </span>
-        <!-- Hinter der Sonne: dasselbe Medaillon wie auf der Bühne und im
+    <div class="ps-slot-main">
+      <div class="ps-slot-icon">
+        <template v-if="!planet.purchased">
+          <span class="ps-slot-btn-lock">
+            <img src="/img/lock-256.png" alt="Locked" class="lock-icon" />
+          </span>
+        </template>
+        <template v-else>
+          <img
+            v-if="planet.role"
+            :src="PLANET_ROLES[planet.role].image"
+            class="ps-slot-btn-img"
+            alt=""
+          />
+          <span v-else class="ps-slot-btn-placeholder">＋</span>
+          <!-- Zerstört: Wrack-Emblem legt sich über das Planetenbild -->
+          <span v-if="down" class="ps-slot-down-emblem" aria-hidden="true">
+            <Icon icon="game-icons:fragmented-meteor" width="30" height="30" />
+          </span>
+          <!-- Hinter der Sonne: dasselbe Medaillon wie auf der Bühne und im
              Command Panel, aus derselben Positions-Map im selben Frame —
              bewusst ohne Transition, damit es exakt mit den anderen beiden
              umschaltet. Es steht auf dem PLANETEN, nicht in der Kachelmitte:
@@ -137,36 +138,40 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
              allein sein z-index — .ps-slot-icon eröffnet keinen eigenen
              Stapelkontext (position: relative, z-index: auto), der Wert zählt
              also gegen den der Kachel. -->
-        <span
-          v-else-if="showEclipse"
-          class="ps-slot-eclipse-emblem"
-          title="Behind the Sun — out of reach"
-        >
-          <Icon icon="game-icons:eclipse-flare" width="32" height="32" />
-        </span>
-      </template>
-    </div>
-
-    <div class="ps-slot-info">
-      <div v-if="planet.purchased && planet.role" class="ps-slot-info-head">
-        <span class="ps-slot-lvl-badge">Lv {{ planet.level }}</span>
+          <span
+            v-else-if="showEclipse"
+            class="ps-slot-eclipse-emblem"
+            title="Behind the Sun — out of reach"
+          >
+            <Icon icon="game-icons:eclipse-flare" width="32" height="32" />
+          </span>
+        </template>
       </div>
-      <template v-if="!planet.purchased">
-        <span class="ps-slot-phase-badge">
-          <Icon icon="ph:sun-fill" width="16" height="16" />
-          Phase {{ requiredPhase }}
-        </span>
-      </template>
-      <template v-else>
-        <span
-          class="ps-slot-sub"
-          :style="planet.role ? { color: PLANET_ROLES[planet.role].color } : {}"
-        >
-          {{ planet.role ? PLANET_ROLES[planet.role].name : 'No role yet' }}
-        </span>
-        <!-- Zerstört: Der Respawn-Balken ersetzt die HP-Leiste — eine
+
+      <div class="ps-slot-info">
+        <div v-if="planet.purchased && planet.role" class="ps-slot-info-head">
+          <span class="ps-slot-lvl-badge">Lv {{ planet.level }}</span>
+        </div>
+        <template v-if="!planet.purchased">
+          <span class="ps-slot-phase-badge">
+            <Icon icon="ph:sun-fill" width="16" height="16" />
+            Phase {{ requiredPhase }}
+          </span>
+        </template>
+        <template v-else>
+          <span
+            class="ps-slot-sub"
+            :style="planet.role ? { color: PLANET_ROLES[planet.role].color } : {}"
+          >
+            {{ planet.role ? PLANET_ROLES[planet.role].name : 'No role yet' }}
+          </span>
+          <!-- Zerstört: Der Respawn-Balken ersetzt die HP-Leiste — eine
              0-%-HP-Anzeige würde nur wie ein Sonderfall aussehen, statt
              die eigentliche Information zu zeigen: wann er zurückkommt. -->
+        </template>
+      </div>
+
+      <div class="ps-slot-status">
         <div v-if="down" class="ps-slot-down">
           <div class="ps-slot-down-track">
             <div class="ps-slot-down-fill" :style="{ width: downProgress * 100 + '%' }" />
@@ -179,7 +184,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
           </div>
           <span class="ps-slot-hp-val">{{ hpPct }}%</span>
         </div>
-      </template>
+      </div>
     </div>
 
     <!-- Der Zustand gilt der GANZEN Kachel, nicht nur ihrem Planetenbild: der
@@ -274,10 +279,21 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   pointer-events: none;
 }
 
+.ps-slot-main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 0.8vw, 14px);
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
 .ps-slot-icon {
   position: relative;
   flex-shrink: 0;
-  width: 100%;
+  width: clamp(52px, 30cqw, 78px);
   height: clamp(50px, 6.4vh, 78px);
   display: grid;
   place-items: center;
@@ -314,18 +330,19 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
   gap: clamp(4px, 0.6vh, 9px);
-  width: 100%;
+  width: auto;
+  flex: 1;
   min-width: 0;
-  text-align: center;
+  align-items: flex-start;
+  text-align: left;
 }
 
 /* Header row: the level is the only metadata in the card. */
 .ps-slot-info-head {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 6px;
   width: 100%;
   min-width: 0;
@@ -363,7 +380,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.15;
-  text-align: center;
+  text-align: left;
 }
 
 .ps-slot-btn:hover {
@@ -558,6 +575,12 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   width: 100%;
   max-width: 190px;
   margin-top: 1px;
+}
+
+.ps-slot-status {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 190px;
 }
 
 .ps-slot-hp--high {
