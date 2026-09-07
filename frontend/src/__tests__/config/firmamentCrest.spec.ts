@@ -17,11 +17,12 @@ import {
   FIRMAMENT_CREST_LABEL_EM,
   FIRMAMENT_CREST_LABEL_MAX_PX,
   FIRMAMENT_CREST_LABEL_MIN_PX,
-  FIRMAMENT_CREST_LANDFALLS_GATE_W,
   FIRMAMENT_CREST_LINE_BOX,
   FIRMAMENT_CREST_PROV_NAME_PX,
   FIRMAMENT_CREST_READ_GAP_PX,
   FIRMAMENT_CREST_READ_PAD_X,
+  FIRMAMENT_CREST_ROW_FLOOR_W,
+  FIRMAMENT_CREST_SHARE,
   FIRMAMENT_CREST_VALUE_CQW,
   FIRMAMENT_CREST_VALUE_MAX_PX,
   FIRMAMENT_CREST_VALUE_MIN_PX,
@@ -108,70 +109,104 @@ const kickerAt = (band: number) =>
 const cell = (valueW: number, labelW: number) =>
   Math.max(valueW, labelW) + 2 * FIRMAMENT_CREST_READ_PAD_X + FIRMAMENT_CREST_CELL_RULE
 
-/** Was die Reihe auf einem Band dieser Breite WIRKLICH belegt. `prov` waehlt
- *  zwischen den zwei Achsen-Ablesungen der laufenden Bahn und der EINEN breiten
- *  mit dem Vorsehungsnamen — der teurere Fall ist nicht immer derselbe. */
-const rowWidth = (band: number, opts: { prov: 'axes' | 'name' }) => {
+/** Was jede Zone auf einem Band dieser Breite WIRKLICH braucht — je Zone, nicht
+ *  als Summe: gebunden wird Zelle gegen Zelle, weil jede ihre eigene feste
+ *  Breite hat. */
+const need = (band: number) => {
   const v = valueAt(band)
   const k = labelAt(band)
   const g = kickerAt(band)
   const em = FIRMAMENT_CREST_EM
   const lbl = FIRMAMENT_CREST_LABEL_EM
+  return {
+    id:
+      2 * FIRMAMENT_CREST_ID_PAD_X +
+      UNIVERSE_DISC_CREST_PX +
+      FIRMAMENT_CREST_ID_GAP +
+      Math.max(em.kicker * g, lbl.state * k) +
+      FIRMAMENT_CREST_CELL_RULE,
+    prov: cell(em.prov * v, lbl.prov * k),
+    provWide: cell(em.provName * FIRMAMENT_CREST_PROV_NAME_PX, lbl.provWide * k),
+    galaxies: cell(em.count * v, lbl.galaxies * k),
+    stars: cell(em.stars * v, lbl.stars * k),
+    chimes: cell(
+      FIRMAMENT_CREST_CHIME_ART_PX + FIRMAMENT_CREST_READ_GAP_PX + em.chimes * v,
+      Math.max(lbl.chimes, lbl.unrecorded) * k,
+    ),
+    elapsed: cell(em.elapsed * v, Math.max(lbl.elapsed, lbl.unrecorded) * k),
+  }
+}
 
-  const id =
-    2 * FIRMAMENT_CREST_ID_PAD_X +
-    UNIVERSE_DISC_CREST_PX +
-    FIRMAMENT_CREST_ID_GAP +
-    Math.max(em.kicker * g, lbl.state * k) +
-    FIRMAMENT_CREST_CELL_RULE
+/** Die Bandbreiten, gegen die gebunden wird: die fuenf Zielviewports UND die
+ *  Knie der drei `clamp()`. Nur Viewports zu pruefen liefe an einem Knie
+ *  vorbei — dort wechselt eine Schrift vom Boden ins Wachstum. */
+const BANDS: readonly number[] = [
+  ...SCREENS.map(([vw, vh]) => bandWidth(vw, vh)),
+  1000,
+  1200,
+  1214.29,
+  1520,
+  1857,
+]
 
-  const prov =
-    opts.prov === 'axes'
-      ? 2 * cell(em.prov * v, lbl.prov * k)
-      : cell(em.provName * FIRMAMENT_CREST_PROV_NAME_PX, lbl.provWide * k)
-
-  const chimes = cell(
-    FIRMAMENT_CREST_CHIME_ART_PX + FIRMAMENT_CREST_READ_GAP_PX + em.chimes * v,
-    lbl.chimes * k,
-  )
-
-  const landfalls =
-    band >= FIRMAMENT_CREST_LANDFALLS_GATE_W ? cell(em.count * v, lbl.landfalls * k) : 0
-
-  return (
-    id +
-    prov +
-    cell(em.count * v, lbl.galaxies * k) +
-    cell(em.stars * v, lbl.stars * k) +
-    landfalls +
-    chimes +
-    cell(em.elapsed * v, lbl.elapsed * k)
-  )
+/** Reserve einer Zone auf einem Band: Breite minus Bedarf, in px. */
+const reserveOf = (band: number) => {
+  const n = need(band)
+  const w = (share: number) => (band * share) / 100
+  const s = FIRMAMENT_CREST_SHARE
+  return {
+    id: w(s.id) - n.id,
+    prov: w(s.prov) - n.prov,
+    provWide: w(s.provWide) - n.provWide,
+    galaxies: w(s.galaxies) - n.galaxies,
+    stars: w(s.stars) - n.stars,
+    chimes: w(s.chimes) - n.chimes,
+    elapsed: w(s.elapsed) - n.elapsed,
+  }
 }
 
 describe('Firmament-Kopfband — das Breitenbudget', () => {
-  it('traegt die Identitaet und JEDE Ablesung in jedem Zielband', () => {
-    // Die Zellen schrumpfen nicht (`flex: 1 0 auto`). Passt die Summe nicht,
-    // laeuft die Reihe an die Bandkante — genau das tat die alte Fassung mit
-    // `285.31B / 51.3B` in einer 200-px-Zelle.
-    for (const [vw, vh] of SCREENS) {
-      const band = bandWidth(vw, vh)
-      for (const prov of ['axes', 'name'] as const) {
-        expect(rowWidth(band, { prov }), `${vw}x${vh} · ${prov}`).toBeLessThanOrEqual(band)
+  it('gibt jeder Zone einen festen Anteil, und beide Faelle ergeben das ganze Band', () => {
+    // Die Breite haengt allein an der BANDBREITE — sonst schoebe jede wachsende
+    // Zahl ihre Nachbarn. Zwei Faelle teilen sich denselben Satz: mit Achsen
+    // zwei Vorsehungszellen, ohne Achsen EINE breite an ihrer Stelle.
+    const s = FIRMAMENT_CREST_SHARE
+    const rest = s.id + s.galaxies + s.stars + s.chimes + s.elapsed
+    expect(rest + 2 * s.prov).toBeCloseTo(100, 6)
+    expect(rest + s.provWide).toBeCloseTo(100, 6)
+    expect(s.provWide).toBeCloseTo(2 * s.prov, 6)
+  })
+
+  it('traegt JEDE Zone auf JEDER Bandbreite, auch an den clamp-Knien', () => {
+    // Der Fehlermodus hat sich mit den festen Anteilen gedreht: eine zu enge
+    // Zelle laeuft nicht mehr sichtbar ueber die Bandkante, sondern still ueber
+    // die Haarlinie in die Nachbarin. Diese Bilanz ist die EINZIGE Zusicherung.
+    for (const band of BANDS) {
+      const r = reserveOf(band)
+      for (const [zone, px] of Object.entries(r)) {
+        expect(px, `${zone} @ ${band.toFixed(2)}`).toBeGreaterThanOrEqual(0)
       }
     }
   })
 
-  it('traegt die Landfalls-Ablesung genau ab ihrer Schwelle', () => {
-    // Sie ist die siebte, und das schmalste Zielband (988) hat ihre 69 px nicht.
-    // Die Schwelle muss auf sich selbst passen — sonst waere sie zu frueh.
-    const gate = FIRMAMENT_CREST_LANDFALLS_GATE_W
-    expect(rowWidth(gate, { prov: 'axes' })).toBeLessThanOrEqual(gate)
-    // Und sie muss unter dem Full-HD-Band liegen, sonst faellt die Ablesung auf
-    // der Aufloesung weg, fuer die sie gedacht ist.
-    expect(gate).toBeLessThanOrEqual(bandWidth(1920, 1080))
-    // Unterhalb traegt das schmalste Zielband die uebrigen sechs — mit Reserve.
-    expect(rowWidth(bandWidth(1536, 864), { prov: 'axes' })).toBeLessThan(bandWidth(1536, 864))
+  it('haelt eine benannte Mindestreserve auf dem schmalsten Zielband', () => {
+    // 988 ist das EINZIGE bindende Band — darueber waechst jede Reserve monoton.
+    // Der Boden faengt eine kuenftige Messung, die 2 px frisst, laut ab.
+    const r = reserveOf(bandWidth(1536, 864))
+    const smallest = Math.min(...Object.values(r))
+    expect(smallest).toBeGreaterThanOrEqual(3)
+    // Und weiter als 26,1/7 geht es nicht: mehr Reserve hat keine Zone, ohne
+    // einer anderen dieselbe zu nehmen.
+    expect(smallest).toBeLessThan(4)
+  })
+
+  it('nennt den harten Boden, unter dem KEIN Anteilssatz mehr existiert', () => {
+    // Dort stehen alle Schriften auf ihrem clamp-Boden: der Bedarf ist konstant
+    // und uebersteigt das Band. Der Boden ist 961,9 — nicht 988.
+    const n = need(FIRMAMENT_CREST_ROW_FLOOR_W)
+    const row = n.id + 2 * n.prov + n.galaxies + n.stars + n.chimes + n.elapsed
+    expect(row).toBeLessThanOrEqual(FIRMAMENT_CREST_ROW_FLOOR_W)
+    expect(bandWidth(1536, 864)).toBeGreaterThan(FIRMAMENT_CREST_ROW_FLOOR_W)
   })
 
   it('rechnet die Chimes-Ablesung gegen den MAXIMALFALL von formatNumber', () => {
@@ -181,7 +216,7 @@ describe('Firmament-Kopfband — das Breitenbudget', () => {
     for (const n of [285.31e9, 5.74e9, 1e21, 999.994e30, 1e33, 9.9e40]) {
       expect(formatNumber(n).length, formatNumber(n)).toBeLessThanOrEqual(8)
     }
-    // Und die gemessene Breite gehoert zu genau dieser Zeile, Ziel eingerechnet.
+    // Und die Chimes-Zeile bleibt die breiteste des Bandes.
     const v = FIRMAMENT_CREST_VALUE_MAX_PX
     expect(FIRMAMENT_CREST_EM.chimes * v).toBeGreaterThan(FIRMAMENT_CREST_EM.stars * v)
     expect(FIRMAMENT_CREST_EM.chimes * v).toBeGreaterThan(FIRMAMENT_CREST_EM.elapsed * v)
@@ -316,14 +351,6 @@ describe('Firmament-Kopfband — jede Ablesung steht auf ihrer TINTE', () => {
     expect(own?.[1]).not.toContain('cqw')
   })
 
-  it('bindet die Landfalls-Schwelle an ihre Konstante', () => {
-    // `v-bind` greift in einer `@container`-Praeambel NICHT — die Abfrage
-    // matchte still nie. Die Schwelle steht deshalb als Literal, und genau
-    // deshalb muss sie hier gebunden sein.
-    const style = SFC.slice(SFC.indexOf('<style'))
-    expect(style).toContain(`@container (min-width: ${FIRMAMENT_CREST_LANDFALLS_GATE_W}px)`)
-  })
-
   it('holt jedes Mass des BUDGETS aus den Konstanten', () => {
     // Eine Zahl im scoped CSS driftet unbemerkt: die Specs lesen Konstanten,
     // kein DOM. Geprueft sind die Masse, die in der Bilanz stehen — nicht die
@@ -352,14 +379,31 @@ describe('Firmament-Kopfband — jede Ablesung steht auf ihrer TINTE', () => {
     }
   })
 
-  it('laesst keine Zelle schrumpfen', () => {
-    // Eine Zelle, die schrumpfen darf, schneidet irgendwann ab — und
-    // `.fm-crest-k` ist `nowrap` OHNE Ellipse.
+  it('gibt jeder Zone eine feste Breite, die nicht am Inhalt haengt', () => {
+    // Der Kern der Reihe: waechst eine Zahl, darf keine Kante wandern.
     const style = SFC.slice(SFC.indexOf('<style'))
-    const read = /\.fm-crest-read \{([\s\S]*?)\n\}/.exec(style)
-    expect(read?.[1]).toContain('flex: 1 0 auto')
-    const id = /\.fm-crest-id \{([\s\S]*?)\n\}/.exec(style)
-    expect(id?.[1]).toContain('flex: 0 0 auto')
+    const block = (sel: string) => {
+      const at = style.indexOf(sel + ' {')
+      expect(at, sel).toBeGreaterThanOrEqual(0)
+      return style.slice(at, style.indexOf('}', at))
+    }
+    const read = block('.fm-crest-read')
+    expect(read).toContain('flex-grow: 0')
+    expect(read).toContain('flex-shrink: 0')
+    // Ohne das setzt der Flex-Default einen Min-Content-Boden, und die Zelle
+    // haenge doch wieder am Text.
+    expect(read).toContain('min-width: 0')
+
+    // Die Anteile stehen als PROZENT-Basis. `flex-basis: 0` mit `flex-grow`
+    // floort unter `box-sizing: border-box` auf Polsterung plus Kante — die
+    // Verteilung waere dann nicht proportional, und der Chimes-Zelle fehlten
+    // bei 988 px 5,6.
+    for (const zone of ['prov', 'provwide', 'galaxies', 'stars', 'chimes', 'elapsed']) {
+      const body = block('.fm-crest-read--' + zone)
+      expect(body, zone).toContain('flex-basis: v-bind')
+      expect(body, zone).not.toContain('flex-basis: 0')
+    }
+    expect(block('.fm-crest-id')).toContain('flex: 0 0 v-bind')
   })
 
   it('laesst die Kennzeile bewusst aus', () => {
@@ -372,17 +416,6 @@ describe('Firmament-Kopfband — jede Ablesung steht auf ihrer TINTE', () => {
 })
 
 describe('Firmament-Kopfband — die Chronik der gezeigten Bahn', () => {
-  it('summiert die Landfalls der Bahn und ueberspringt die unbetretene Galaxie', () => {
-    // Dieselbe Zahl, die die Karte als Rauten an ihre Knoten zeichnet — und
-    // wie Galaxien und Sterne eine Zahl DIESER Bahn, keine des Spielstands.
-    const nodes = [
-      { ...node('freed', 3, 0), landfalls: 4 },
-      { ...node('current', 1, 1), landfalls: 2 },
-      { ...node('unlit', 0, 0), landfalls: 9 },
-    ]
-    expect(buildFirmamentChronicle({ ...BASE, nodes }).landfalls).toBe(6)
-  })
-
   it('zaehlt die laufende Galaxie bei den STERNEN, aber nicht bei den GALAXIEN', () => {
     // Ihre Sterne SIND gerettet oder verloren; sie selbst ist es nicht, und der
     // Knoten sagt das auch (`state: 'current'`).

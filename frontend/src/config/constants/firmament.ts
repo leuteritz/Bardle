@@ -56,7 +56,14 @@ export const FIRMAMENT_CREST_ID_GAP = 10
 
 /** Seitliche Polsterung EINER Ablesung, beidseitig, und die Luecke zwischen
  *  Zahl und Beschriftung. */
-export const FIRMAMENT_CREST_READ_PAD_X = 4
+/* Die Polsterung zaehlt zweimal je Zelle, also 12 px in der Reihe — und sie
+   ist der billigste Hebel der Breitenbilanz: von 4 auf 3 hebt sie die kleinste
+   Zellreserve auf dem schmalsten Zielband von 2,0 auf 3,7 px, ohne dass ein
+   Text kuerzer oder eine Schrift kleiner wird. Die Marge ist noetig, seit die
+   Zonen feste Anteile tragen: ein zu breiter Text laeuft dann nicht mehr
+   sichtbar ueber die Bandkante, sondern still ueber die Haarlinie in die
+   Nachbarzelle.                                                              */
+export const FIRMAMENT_CREST_READ_PAD_X = 3
 export const FIRMAMENT_CREST_READ_GAP_PX = 5
 /** Die Haarlinie, die zwei Ablesungen scheidet — sie zaehlt zur Zellbreite. */
 export const FIRMAMENT_CREST_CELL_RULE = 1
@@ -109,7 +116,7 @@ export const FIRMAMENT_CREST_EM = {
   stars: 3.548,
   /** `99d 23h` — die breiteste Form von `formatCompactDuration`. */
   elapsed: 3.936,
-  /** `999` — Galaxien und Landfalls. */
+  /** `999` — die Galaxien-Ablesung. */
   count: 1.883,
   /** `▲+250%`, Pfeil bei 0,5 em plus 0,16 em Polsterung. +250 % ist der
    *  hoechste Buff. */
@@ -130,22 +137,58 @@ export const FIRMAMENT_CREST_LABEL_EM = {
   provWide: 14.891,
   galaxies: 5.144,
   stars: 3.53,
-  landfalls: 5.948,
   /** `Chimes · ~59m 59s` — mit der Uhr bis zum Aufbruch. */
   chimes: 10.85,
   elapsed: 4.781,
-  /** `you are here · x12` unter der Kennzeile. */
-  state: 10.839,
+  /** `Unrecorded` — steht in der Chimes- UND der Elapsed-Beschriftung, wenn
+   *  das Archiv den Lauf nicht mehr hergibt. In beiden Zellen bindet die ZAHL,
+   *  aber ungemessen war das eine Behauptung. */
+  unrecorded: 7.273,
+  /** `you are here · x123` unter der Kennzeile — der Besuchszaehler ist nach
+   *  oben offen, also der dreistellige Fall. */
+  state: 11.572,
 } as const
 
-/** Ab dieser BANDbreite traegt die Reihe die Landfalls-Ablesung. Darunter
- *  (Full HD bei 125 %, Band 988) reicht der Platz nicht: die sechs uebrigen
- *  Zellen und die Wappenzone brauchen dort schon 977 px.
+/** Die feste Breite JEDER Zone, als Anteil an der Bandbreite in Prozent.
  *
- *  ACHTUNG: `v-bind` greift NICHT in einer `@container`-Praeambel — im CSS
- *  steht die Schwelle als Literal, und `firmamentCrest.spec.ts` bindet beide
- *  aneinander. */
-export const FIRMAMENT_CREST_LANDFALLS_GATE_W = 1220
+ *  Sie ist der ganze Punkt dieser Reihe: eine Breite, die am INHALT haengt,
+ *  laesst jede wachsende Zahl die Nachbarn schieben — und Chimes, Stars und
+ *  Elapsed wachsen im laufenden Spiel dauernd. Hier haengt sie allein an der
+ *  BANDBREITE.
+ *
+ *  ACHTUNG, der naheliegende Weg ist falsch: `flex-grow: N` mit
+ *  `flex-basis: 0` ergibt NICHT `Band x Anteil`. Unter `box-sizing:
+ *  border-box` (Tailwind-Preflight) floort die Basis auf Polsterung plus
+ *  Kante — 7 px je Ablesung, 21 px fuer die Identitaet. Diese Summe wird VOR
+ *  der Verteilung abgezogen und danach flach zurueckgegeben; grosse Zellen
+ *  verlieren, kleine gewinnen. Durchgerechnet fehlten der Chimes-Zelle bei
+ *  988 px 5,6 px. Es MUSS eine prozentuale `flex-basis` sein: sie loest gegen
+ *  die Content-Box auf und ist unter `border-box` selbst ein Border-Box-Wert.
+ *
+ *  Hergeleitet aus dem Bedarf auf dem schmalsten Zielband (988, Full HD bei
+ *  125 %) — dem EINZIGEN bindenden: darueber waechst jede Reserve monoton.
+ *  Dort deckt der Bedarf 961,9 px; die uebrigen 26,1 px gehen zu gleichen
+ *  PIXELN an alle sieben Zonen (je 3,73), nicht anteilig — eine grosse Zelle
+ *  braucht keinen groesseren Puffer als eine kleine. Mehr als 26,1/7 kann die
+ *  kleinste Reserve nicht werden.
+ *
+ *  `provWide` ist zwingend `2 x prov`: der Fall ohne Achsen ersetzt zwei
+ *  Zellen durch eine, und beide Faelle muessen auf 100 kommen.
+ *  `firmamentCrest.spec.ts` rechnet alles nach. */
+export const FIRMAMENT_CREST_SHARE = {
+  id: 23.388,
+  prov: 13.197,
+  provWide: 26.394,
+  galaxies: 6.292,
+  stars: 10.064,
+  chimes: 22.817,
+  elapsed: 11.045,
+} as const
+
+/** Unter dieser Bandbreite gibt es KEINEN gueltigen Anteilssatz mehr: alle
+ *  Schriften stehen dann auf ihrem clamp-Boden, der Bedarf ist konstant und
+ *  uebersteigt das Band. Der Boden liegt bei 961,91 — nicht bei 988. */
+export const FIRMAMENT_CREST_ROW_FLOOR_W = 961.91
 
 /* Die Universumsleiste steht RECHTS und traegt das Rezept der Forge-Detailspalte:
    Liste plus Griffleiste, und die ZONE ist beides zusammen. Dieselben Zahlen wie
