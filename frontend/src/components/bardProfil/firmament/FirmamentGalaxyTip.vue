@@ -146,7 +146,7 @@ const seatRowW = `${(
 
     <!-- Kein `.tip-act`: die Karte traegt `pointer-events: none`, ein Knopf
          waere darin nicht zu treffen. Die Geste sitzt am Knoten selbst. -->
-    <div v-if="node.record" class="tip-hint fgt-cta">↗ Click to open in Voyages</div>
+    <div v-if="node.record" class="tip-hint fgt-cta">↗ Click to open in Galaxy</div>
   </div>
 </template>
 

@@ -87,7 +87,7 @@ const shopFlare = useBadgeFlare(shopFreshCount)
  *   ri:sword-fill                 — gekreuzte Klingen, Auto-Battle
  *                                   (Phosphor hat nur die einzelne Klinge)
  *   ph:planet-fill                — die Planeten-Slots im Orbit
- *   ph:map-trifold-fill           — die Sternenkarte der Voyages
+ *   ph:map-trifold-fill           — die Sternenkarte der Galaxy
  *   ph:globe-hemisphere-west-fill — das Firmament: der ganze Weg als EINE
  *                                   Karte, Galaxien und Universumstore
  *   ph:gear-six-fill              — Admin
@@ -135,7 +135,7 @@ const allMenuItems: {
   { id: 'bard', name: 'Journey', icon: 'ph:compass-rose-fill' },
   { id: 'shop', name: 'Shop', icon: HEADER_GEM_ICONS.shop },
   { id: 'tree', name: 'Skill Tree', icon: HEADER_GEM_ICONS.tree, boost: true },
-  { id: 'expedition', name: 'Voyages', icon: 'ph:map-trifold-fill' },
+  { id: 'galaxy', name: 'Galaxy', icon: 'ph:map-trifold-fill' },
   { id: 'team', name: 'Team', icon: 'ph:users-three-fill' },
   {
     id: 'battle',
@@ -180,7 +180,7 @@ const allMenuItems: {
  * Schloss hier, ausbuchstabiert im Reiter (`PlanetLockedPanel`). Aus dem Grund
  * steht in `uiStore.setBardTab` auch keine Wache mehr.
  *
- * Voyages trägt seit der Live-Bühne KEIN Schloss: der Reiter zeigt ab dem ersten
+ * Galaxy trägt seit der Live-Bühne KEIN Schloss: der Reiter zeigt ab dem ersten
  * Tick den laufenden Lauf, und ein Reiter mit Inhalt braucht kein Tor.
  *
  * Die Tore selbst liegen in den Stores (`planetShopStore.isUnlocked`), nicht
@@ -447,7 +447,7 @@ onUnmounted(() => {
                       <span class="mini-badge mini-badge--champion">{{ championBadgeCount }}</span>
                     </div>
                     <div
-                      v-if="item.id === 'expedition' && expeditionBadgeCount > 0"
+                      v-if="item.id === 'galaxy' && expeditionBadgeCount > 0"
                       class="team-badge-row"
                     >
                       <span class="mini-badge mini-badge--expedition">{{ expeditionBadgeCount }}</span>
@@ -561,8 +561,8 @@ onUnmounted(() => {
               </div>
 
               <div
-                v-if="mountedTabs.has('expedition')"
-                v-show="uiStore.bardActiveTab === 'expedition'"
+                v-if="mountedTabs.has('galaxy')"
+                v-show="uiStore.bardActiveTab === 'galaxy'"
                 class="tab-layer"
               >
                 <ExpeditionTabComponent />
@@ -592,7 +592,7 @@ onUnmounted(() => {
                 <AdminDashboard />
               </div>
 
-              <!-- Die Kamerafahrt Firmament ⇄ Voyages: ein Geschwister ueber
+              <!-- Die Kamerafahrt Firmament ⇄ Galaxy: ein Geschwister ueber
                    allen Tab-Layern, kein Kind eines Reiters. -->
               <FirmamentDiveVeil v-if="uiStore.firmamentDive" />
             </div>

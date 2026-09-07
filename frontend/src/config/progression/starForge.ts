@@ -2283,7 +2283,7 @@ export const FORGE_CONSTELLATIONS: ForgeConstellationDef[] = [
     // once."), aber dieses Upgrade verschiebt keine Zahl, es schaltet einen
     // Knopf frei — und derselbe Satz ist der Heuhaufen der Suche. Ohne den
     // Knopfnamen findet ihn niemand, der „send" eintippt.
-    desc: 'Unlocks Send All in Voyages — every crewed contract departs at once.',
+    desc: 'Unlocks Send All in Galaxy — every crewed contract departs at once.',
     sourceLabel: "Solar Sails + Wayfinder's Cache + Aurora Wake",
   },
 ]

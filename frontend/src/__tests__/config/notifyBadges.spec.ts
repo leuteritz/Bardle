@@ -199,7 +199,7 @@ describe('Notify-Registry ist vollständig', () => {
       'shop',
       'tree',
       'team',
-      'expedition',
+      'galaxy',
       'firmament',
       'battle',
       'admin',

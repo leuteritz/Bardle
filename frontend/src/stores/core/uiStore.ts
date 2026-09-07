@@ -37,15 +37,15 @@ export const useUiStore = defineStore('ui', () => {
   // markiert damit dieselbe Rollenkarte, die im Modal bearbeitet wird.
   const teamActiveRoleIndex = ref<number | null>(null)
   const pendingChampionSearch = ref('')
-  // Sprungziel des Voyages-Atlas, gesetzt von ausserhalb des Reiters (Minimap).
+  // Sprungziel des Galaxy-Atlas, gesetzt von ausserhalb des Reiters (Minimap).
   // Wird EINMAL verbraucht — der Reiter bleibt gemountet, ein stehender Wert
   // spränge bei jedem weiteren Besuch erneut.
-  const pendingVoyageTarget = ref<{ galaxy: number; pinKey: string | null } | null>(null)
+  const pendingGalaxyTarget = ref<{ galaxy: number; pinKey: string | null } | null>(null)
   // Dasselbe fuer die Live-Buehne: die Minimap-FLAECHE meint die LAUFENDE
   // Galaxie, und die steht in keinem Archiv — sie hat deshalb keine Nummer im
-  // Gepaeck, nur die Ansage. Schliesst sich mit pendingVoyageTarget aus.
-  const pendingVoyageLive = ref(false)
-  // true, solange der Voyages-Reiter aus dem Firmament heraus betreten wurde
+  // Gepaeck, nur die Ansage. Schliesst sich mit pendingGalaxyTarget aus.
+  const pendingGalaxyLive = ref(false)
+  // true, solange der Galaxy-Reiter aus dem Firmament heraus betreten wurde
   const firmamentTabReturnPending = ref(false)
   // Galaxie, auf die das Firmament beim Zurueckkommen zeigt — es raeumt seine
   // eigene Auswahl beim Verlassen ab, ohne diesen Zeiger kaeme man auf eine
@@ -191,34 +191,34 @@ export const useUiStore = defineStore('ui', () => {
 
   /** Reiter auf UND scharfstellen — `openBardModal()` bleibt aussen vor, es
    *  TOGGELT und schlösse ein bereits offenes Profil. */
-  function requestOpenVoyagesTab(galaxy: number, pinKey: string | null = null) {
-    pendingVoyageLive.value = false
-    pendingVoyageTarget.value = { galaxy, pinKey }
-    bardActiveTab.value = 'expedition'
+  function requestOpenGalaxyTab(galaxy: number, pinKey: string | null = null) {
+    pendingGalaxyLive.value = false
+    pendingGalaxyTarget.value = { galaxy, pinKey }
+    bardActiveTab.value = 'galaxy'
     clearHoverMarks()
   }
 
-  function clearPendingVoyageTarget() {
-    pendingVoyageTarget.value = null
+  function clearPendingGalaxyTarget() {
+    pendingGalaxyTarget.value = null
   }
 
   /** Der Klick auf die Minimap-Flaeche: „zeig mir DAS hier gross". Kein Ziel,
    *  keine Marke — die laufende Galaxie ist immer dieselbe. */
-  function requestOpenVoyagesLive() {
-    pendingVoyageTarget.value = null
-    pendingVoyageLive.value = true
-    bardActiveTab.value = 'expedition'
+  function requestOpenGalaxyLive() {
+    pendingGalaxyTarget.value = null
+    pendingGalaxyLive.value = true
+    bardActiveTab.value = 'galaxy'
     clearHoverMarks()
   }
 
-  function clearPendingVoyageLive() {
-    pendingVoyageLive.value = false
+  function clearPendingGalaxyLive() {
+    pendingGalaxyLive.value = false
   }
 
   /** Der Sprung von der Firmament-Bahn auf die Karte. Setzt NUR die Flagge dazu
    *  — das Sprungziel besorgt derselbe Weg, den die Minimap schon geht. */
-  function requestOpenVoyagesFromFirmament(galaxy: number) {
-    requestOpenVoyagesTab(galaxy)
+  function requestOpenGalaxyFromFirmament(galaxy: number) {
+    requestOpenGalaxyTab(galaxy)
     firmamentTabReturnPending.value = true
   }
 
@@ -236,7 +236,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   /** Die Kamerafahrt beginnt. Den Reiter schaltet der Schleier selbst, wenn er
-   *  deckt — ueber `requestOpenVoyagesFromFirmament` bzw. `returnToFirmamentTab`. */
+   *  deckt — ueber `requestOpenGalaxyFromFirmament` bzw. `returnToFirmamentTab`. */
   function requestFirmamentDive(req: FirmamentDiveRequest) {
     firmamentDive.value = { ...req, phase: 'out' }
   }
@@ -356,18 +356,18 @@ export const useUiStore = defineStore('ui', () => {
     setTeamActiveRole,
     requestOpenShopTabWithSearch,
     clearPendingChampionSearch,
-    pendingVoyageTarget,
-    requestOpenVoyagesTab,
-    clearPendingVoyageTarget,
-    pendingVoyageLive,
-    requestOpenVoyagesLive,
-    clearPendingVoyageLive,
+    pendingGalaxyTarget,
+    requestOpenGalaxyTab,
+    clearPendingGalaxyTarget,
+    pendingGalaxyLive,
+    requestOpenGalaxyLive,
+    clearPendingGalaxyLive,
     firmamentTabReturnPending,
     pendingFirmamentGalaxy,
     pendingArrival,
     noteArrival,
     clearPendingArrival,
-    requestOpenVoyagesFromFirmament,
+    requestOpenGalaxyFromFirmament,
     returnToFirmamentTab,
     clearPendingFirmamentGalaxy,
     firmamentDive,

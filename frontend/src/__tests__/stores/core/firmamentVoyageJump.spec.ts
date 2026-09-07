@@ -17,24 +17,24 @@ describe('Firmament-Sprung in den Voyages-Atlas', () => {
 
   it('setzt Reiter, Sprungziel und das Rueckweg-Angebot in EINEM Zug', () => {
     const ui = useUiStore()
-    ui.requestOpenVoyagesFromFirmament(7)
+    ui.requestOpenGalaxyFromFirmament(7)
 
-    expect(ui.bardActiveTab).toBe('expedition')
-    expect(ui.pendingVoyageTarget).toEqual({ galaxy: 7, pinKey: null })
+    expect(ui.bardActiveTab).toBe('galaxy')
+    expect(ui.pendingGalaxyTarget).toEqual({ galaxy: 7, pinKey: null })
     expect(ui.firmamentTabReturnPending).toBe(true)
   })
 
   it('laesst den Sprung der Minimap ohne Rueckweg-Angebot', () => {
     const ui = useUiStore()
-    ui.requestOpenVoyagesTab(7, 'mark-1')
+    ui.requestOpenGalaxyTab(7, 'mark-1')
 
-    expect(ui.bardActiveTab).toBe('expedition')
+    expect(ui.bardActiveTab).toBe('galaxy')
     expect(ui.firmamentTabReturnPending).toBe(false)
   })
 
   it('bringt die GERADE gewaehlte Galaxie zurueck, nicht die, mit der man kam', () => {
     const ui = useUiStore()
-    ui.requestOpenVoyagesFromFirmament(7)
+    ui.requestOpenGalaxyFromFirmament(7)
     ui.returnToFirmamentTab(3)
 
     expect(ui.bardActiveTab).toBe('firmament')
@@ -47,7 +47,7 @@ describe('Firmament-Sprung in den Voyages-Atlas', () => {
 
   it('gibt ohne Galaxie keinen Zeiger zurueck', () => {
     const ui = useUiStore()
-    ui.requestOpenVoyagesFromFirmament(7)
+    ui.requestOpenGalaxyFromFirmament(7)
     ui.returnToFirmamentTab(null)
 
     expect(ui.bardActiveTab).toBe('firmament')
@@ -60,7 +60,7 @@ describe('Firmament-Sprung in den Voyages-Atlas', () => {
     ['openBardModal (zuklappen)', (ui: ReturnType<typeof useUiStore>) => ui.openBardModal()],
   ])('beendet das Angebot, wenn der Spieler per %s weiternavigiert', (_name, navigate) => {
     const ui = useUiStore()
-    ui.requestOpenVoyagesFromFirmament(7)
+    ui.requestOpenGalaxyFromFirmament(7)
     navigate(ui)
 
     expect(ui.firmamentTabReturnPending).toBe(false)
@@ -87,7 +87,7 @@ describe('Der Sprung als Kamerafahrt', () => {
 
     expect(ui.firmamentDive).toEqual({ ...req, phase: 'out' })
     expect(ui.bardActiveTab).toBe('firmament')
-    expect(ui.pendingVoyageTarget).toBeNull()
+    expect(ui.pendingGalaxyTarget).toBeNull()
   })
 
   it('ankert nach, setzt sich und raeumt ab', () => {
@@ -109,9 +109,9 @@ describe('Der Sprung als Kamerafahrt', () => {
   it('ueberlebt den Reiterwechsel, den der Schleier selbst ausloest', () => {
     const ui = useUiStore()
     ui.requestFirmamentDive(req)
-    ui.requestOpenVoyagesFromFirmament(7)
+    ui.requestOpenGalaxyFromFirmament(7)
     expect(ui.firmamentDive).not.toBeNull()
-    expect(ui.bardActiveTab).toBe('expedition')
+    expect(ui.bardActiveTab).toBe('galaxy')
 
     ui.requestFirmamentDive({ ...req, toward: 'firmament' })
     ui.returnToFirmamentTab(7)

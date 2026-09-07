@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Der Ladeschleier des Voyages-Reiters.
+ * Der Ladeschleier des Galaxy-Reiters.
  *
  * Warum ausgerechnet dieser Reiter einen bekommt, obwohl `docs/performance.md`
  * (Regel 9) für alle übrigen abrät: gemessen am Produktionsbuild, Full HD,

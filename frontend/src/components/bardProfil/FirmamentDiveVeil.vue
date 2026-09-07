@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Der Schleier der Kamerafahrt Firmament ⇄ Voyages — und ihr Taktgeber.
+ * Der Schleier der Kamerafahrt Firmament ⇄ Galaxy — und ihr Taktgeber.
  *
  * Er liegt als Geschwister ueber den Tab-Layern des Profils und traegt zwei
  * Ebenen: den Dunkelschleier und die Lichtscheibe in der Farbe der Galaxie,
@@ -69,9 +69,9 @@ function switchTab() {
   if (!d) return false
   if (d.toward === 'atlas') {
     if (uiStore.bardActiveTab !== 'firmament') return false
-    uiStore.requestOpenVoyagesFromFirmament(d.galaxy)
+    uiStore.requestOpenGalaxyFromFirmament(d.galaxy)
   } else {
-    if (uiStore.bardActiveTab !== 'expedition') return false
+    if (uiStore.bardActiveTab !== 'galaxy') return false
     uiStore.returnToFirmamentTab(d.galaxy)
   }
   return true

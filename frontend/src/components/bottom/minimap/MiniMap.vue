@@ -5,7 +5,7 @@
         <div class="map-canvas-wrapper">
           <MiniMapCanvas />
 
-          <!-- ── Die zwei Wege in den Voyages-Reiter ──
+          <!-- ── Die zwei Wege in den Galaxy-Reiter ──
                Zwei Elemente statt eines Handlers am Wrapper: dort blubberten
                Stern-Hit-Area, „Next Galaxy" und Skip-Knopf hinein und feuerten
                doppelt. Die Fläche liegt unter allem Bedienbaren (z-index 1),
@@ -23,7 +23,7 @@
             @click="openAtlas"
           >
             <Icon icon="ph:map-trifold-fill" width="18" height="18" />
-            <span class="atlas-chip-label">Voyages</span>
+            <span class="atlas-chip-label">Galaxy</span>
             <RpgNotifyBadge :count="atlasReadyCount" label="Expedition crews ready to collect" />
           </button>
 
@@ -265,13 +265,13 @@ export default defineComponent({
 
     function openLive() {
       if (!liveReady.value) return
-      uiStore.requestOpenVoyagesLive()
+      uiStore.requestOpenGalaxyLive()
     }
 
     function openAtlas() {
       const target = atlasTarget.value
       if (!atlasReady.value || !target) return
-      uiStore.requestOpenVoyagesTab(target.galaxy, target.pinKey)
+      uiStore.requestOpenGalaxyTab(target.galaxy, target.pinKey)
     }
 
     function teleportNearPlanet() {
@@ -459,7 +459,7 @@ export default defineComponent({
     0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
-/* ── Weg in den Voyages-Atlas ──
+/* ── Weg in den Galaxy-Atlas ──
    Die Fläche trägt nur den Klick. Sie bekommt bewusst KEINEN eigenen Rand: das
    Panel steht schon in einem goldenen Rahmen, ein zweiter daneben war im
    Browser nicht als Zustand lesbar, nur als Rauschen. Stattdessen leuchtet der

@@ -1519,7 +1519,7 @@ export const VOYAGE_DEST_MODS = {
  *  gespielten LAUF und nicht am Ziel, deshalb eine eigene Liste. */
 export const VOYAGE_MAP_STATS_RECORD_TIPS = {
   stars: 'Stars freed here against stars lost on the way.',
-  voyages: 'Expeditions that have come back from this destination.',
+  expeditions: 'Expeditions that have come back from this destination.',
 } as const
 
 /* ── Die Formlegende — eine dritte Bahn im Band ───────────────────────────────
@@ -1908,7 +1908,7 @@ export const VOYAGE_LOADER_MIN_MS = 380
 export const VOYAGE_LOADER_SETTLE_FRAMES = 4
 export const VOYAGE_LOADER_ACCENT = '#e8c040'
 export const VOYAGE_LOADER_ICON = 'game-icons:treasure-map'
-export const VOYAGE_LOADER_TITLE = 'VOYAGES'
+export const VOYAGE_LOADER_TITLE = 'GALAXY'
 export const VOYAGE_LOADER_CAPTION = 'Unrolling the chart'
 
 /* ── Etappen einer Voyage ─────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Der Voyages-Reiter — eine KARTE, kein Vertragsbrett.
+ * Der Galaxy-Reiter — eine KARTE, kein Vertragsbrett.
  *
  * Mittig steht die gewählte Galaxie, live gezeichnet, mit den Verträgen als
  * anklickbare Ankerplätze auf ihr. Links wählt die Leiste, welche befreite
@@ -61,7 +61,7 @@ const galaxyStore = useGalaxyStore()
 const { setPursuit } = useForgeSpotlight()
 const { openDetails } = useForgeDetailsPane()
 
-const isVisible = computed(() => uiStore.bardActiveTab === 'expedition')
+const isVisible = computed(() => uiStore.bardActiveTab === 'galaxy')
 
 const atlas = useVoyageAtlas(isVisible)
 const {
@@ -167,22 +167,22 @@ function onSelect(key: string | null) {
  * Hervorhebung, bevor der Atlas sie kennt.
  */
 watch(
-  () => uiStore.pendingVoyageTarget,
+  () => uiStore.pendingGalaxyTarget,
   (target) => {
     if (!target) return
     jumpToMark(target.galaxy, target.pinKey)
-    uiStore.clearPendingVoyageTarget()
+    uiStore.clearPendingGalaxyTarget()
   },
   { immediate: true },
 )
 
 /** Die Minimap-Fläche: dieselbe Galaxie, nur gross und im Atlas. Kein Ziel. */
 watch(
-  () => uiStore.pendingVoyageLive,
+  () => uiStore.pendingGalaxyLive,
   (wanted) => {
     if (!wanted) return
     showLive()
-    uiStore.clearPendingVoyageLive()
+    uiStore.clearPendingGalaxyLive()
   },
   { immediate: true },
 )
