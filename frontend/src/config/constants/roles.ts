@@ -5,6 +5,7 @@
 
 import type { ChampionRole, RoleStat, RoleAbilityDetail } from '@/types'
 import { SUN_RADIUS } from '@/config/constants/sun'
+import { JUNGLE_BUFF_COOLDOWN_MS } from '@/config/constants/planets'
 
 /** Nachlauf nach der Rollenwahl, damit die Auswahl-Animation sichtbar bleibt. */
 export const ROLE_SELECTION_CONFIRM_DELAY_MS = 260
@@ -51,6 +52,21 @@ export const ROLE_STAR_ATTACKS: Record<ChampionRole, { damage: number; intervalM
   mid: { damage: 25, intervalMs: 6000 }, // arcane bolt
   adc: { damage: 15, intervalMs: 3000 }, // rapid shots (burst stays separate)
   support: { damage: 12, intervalMs: 5000 }, // light chime blast
+}
+
+/**
+ * Der Cooldown, den die Rollenfähigkeit im Orbit trägt. `focusScaled` sagt, ob
+ * FOCUS ihn verkürzt — der Jungle-Buff setzt seinen Wert fest (roleBehaviorStore).
+ */
+export const ROLE_ABILITY_COOLDOWN: Record<
+  ChampionRole,
+  { ms: number; focusScaled: boolean; note?: string }
+> = {
+  top: { ms: ROLE_TOP_SHIELD_REBUILD_MS, focusScaled: true },
+  jungle: { ms: JUNGLE_BUFF_COOLDOWN_MS, focusScaled: false, note: 'Jungle buff' },
+  mid: { ms: ROLE_MID_CURSE_INTERVAL_MS, focusScaled: true },
+  adc: { ms: ROLE_ADC_BURST_INTERVAL_MS, focusScaled: true },
+  support: { ms: ROLE_SUPPORT_HEAL_INTERVAL_MS, focusScaled: true },
 }
 
 /** Central role registry — single source of truth for key, label, icon, color and orbit parameters. */
