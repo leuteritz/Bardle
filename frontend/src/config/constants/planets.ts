@@ -741,17 +741,15 @@ export const PLANET_TAB_SUN_MAX_DIAMETER = 560
 /** Fixed base diameter (px) of the orbiting planet image (kept small vs. the sun). */
 export const PLANET_TAB_PLANET_DIAMETER = 112
 
-/**
- * Breite der Slot-Schiene rechts im Planet-Tab, als CSS-Ausdruck — sie skaliert
- * mit dem Viewport und lässt sich deshalb nicht als Zahl fassen.
- *
- * Zwei Stellen lesen sie: die Schiene selbst und der Action-Toast, der NICHT im
- * ganzen Modal zentriert, sondern in dem, was links von der Schiene übrig
- * bleibt — sonst steht seine Karte neben der Bühne, auf die sie sich bezieht.
- * Deshalb hier und nicht als Literal im CSS: liefen die beiden auseinander,
- * wäre der Toast wieder aus der Mitte.
- */
-export const PLANET_TAB_RAIL_WIDTH_CSS = 'clamp(210px, 16vw, 320px)'
+export const PLANET_TAB_RAIL_PANEL_W = 224
+export const PLANET_TAB_RAIL_HANDLE_PX = 44
+export const PLANET_TAB_RAIL_ZONE_W = PLANET_TAB_RAIL_PANEL_W + PLANET_TAB_RAIL_HANDLE_PX
+export const PLANET_TAB_RAIL_AUTOFOLD_W = 1080
+export const PLANET_TAB_RAIL_SLIDE_MS = 220
+export const PLANET_TAB_RAIL_WIDTH_CSS = `${PLANET_TAB_RAIL_PANEL_W}px`
+export const PLANET_TAB_RAIL_LABEL = 'PLANETS'
+export const PLANET_TAB_RAIL_OPEN_TITLE = 'Show planets'
+export const PLANET_TAB_RAIL_CLOSE_TITLE = 'Hide planets'
 /**
  * Breite der Naht zwischen Bühne und Schiene (px) — dieselbe Spaltennaht, die
  * jede Seitenschiene des Bard-Profils trägt (`.sdp-panel`, `.tsps-panel`,
