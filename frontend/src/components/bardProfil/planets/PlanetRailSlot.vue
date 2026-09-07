@@ -117,7 +117,12 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
         </span>
       </template>
       <template v-else>
-        <img v-if="planet.role" :src="PLANET_ROLES[planet.role].image" class="ps-slot-btn-img" alt="" />
+        <img
+          v-if="planet.role"
+          :src="PLANET_ROLES[planet.role].image"
+          class="ps-slot-btn-img"
+          alt=""
+        />
         <span v-else class="ps-slot-btn-placeholder">＋</span>
         <!-- Zerstört: Wrack-Emblem legt sich über das Planetenbild -->
         <span v-if="down" class="ps-slot-down-emblem" aria-hidden="true">
@@ -143,9 +148,8 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
     </div>
 
     <div class="ps-slot-info">
-      <div class="ps-slot-info-head">
-        <span class="ps-slot-btn-label">Orbit {{ planet.id.replace('slot_', '') }}</span>
-        <span v-if="planet.purchased && planet.role" class="ps-slot-lvl-badge"> Lv {{ planet.level }} </span>
+      <div v-if="planet.purchased && planet.role" class="ps-slot-info-head">
+        <span class="ps-slot-lvl-badge">Lv {{ planet.level }}</span>
       </div>
       <template v-if="!planet.purchased">
         <span class="ps-slot-phase-badge">
@@ -154,7 +158,10 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
         </span>
       </template>
       <template v-else>
-        <span class="ps-slot-sub" :style="planet.role ? { color: PLANET_ROLES[planet.role].color } : {}">
+        <span
+          class="ps-slot-sub"
+          :style="planet.role ? { color: PLANET_ROLES[planet.role].color } : {}"
+        >
           {{ planet.role ? PLANET_ROLES[planet.role].name : 'No role yet' }}
         </span>
         <!-- Zerstört: Der Respawn-Balken ersetzt die HP-Leiste — eine
@@ -191,12 +198,12 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   display: flex;
   flex: 1 1 0;
   min-height: clamp(64px, 9vh, 140px);
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  gap: clamp(10px, 0.8vw, 18px);
-  padding: clamp(8px, 1.2vh, 18px) clamp(10px, 0.8vw, 18px);
-  /* room for the accent rail on the card's OUTER edge — the rail sits right */
-  padding-right: clamp(15px, 1vw, 24px);
+  justify-content: center;
+  gap: clamp(3px, 0.4vh, 6px);
+  padding: clamp(6px, 0.7vh, 10px) clamp(10px, 0.65vw, 14px);
+  padding-right: clamp(14px, 0.9vw, 20px);
   min-width: 0;
   text-align: left;
   /* Translucent card — it now sits on the rail's own deep base rather than on
@@ -269,6 +276,8 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
 .ps-slot-icon {
   position: relative;
   flex-shrink: 0;
+  width: 100%;
+  height: clamp(50px, 6.4vh, 78px);
   display: grid;
   place-items: center;
 }
@@ -304,16 +313,18 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   gap: clamp(4px, 0.6vh, 9px);
+  width: 100%;
   min-width: 0;
-  flex: 1;
+  text-align: center;
 }
 
-/* Header row: orbit label on the left, level badge pushed right */
+/* Header row: the level is the only metadata in the card. */
 .ps-slot-info-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 6px;
   width: 100%;
   min-width: 0;
@@ -340,6 +351,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
 }
 
 .ps-slot-sub {
+  width: 100%;
   font-size: clamp(0.95rem, 1.25vh, 1.3rem);
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -350,6 +362,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.15;
+  text-align: center;
 }
 
 .ps-slot-btn:hover {
@@ -510,8 +523,8 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
    & width), capped so it never crowds the text on a narrow rail nor balloons. */
 .ps-slot-btn-img {
   position: relative;
-  width: clamp(48px, min(62cqh, 36cqw), 108px);
-  height: clamp(48px, min(62cqh, 36cqw), 108px);
+  width: clamp(50px, min(36cqh, 46cqw), 78px);
+  height: clamp(50px, min(36cqh, 46cqw), 78px);
   object-fit: contain;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.55));
 }
@@ -533,23 +546,6 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   background: radial-gradient(circle at 50% 38%, #14140e 0%, #0c0a06 100%);
 }
 
-.ps-slot-btn-label {
-  font-size: clamp(0.88rem, 1.15vh, 1.2rem);
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(206, 168, 92, 0.85);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.ps-slot-btn--active .ps-slot-btn-label {
-  color: var(--rc, #52b830);
-}
-
 /* ── Rail slot HP — modern segmented bar with health-state color ───────────── */
 .ps-slot-hp {
   --hp-a: #2f9a24;
@@ -559,6 +555,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   align-items: center;
   gap: 5px;
   width: 100%;
+  max-width: 190px;
   margin-top: 1px;
 }
 
@@ -782,6 +779,8 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
+  max-width: 190px;
   margin-top: 3px;
 }
 
@@ -981,7 +980,8 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
 
 /* ── Keyframes ──────────────────────────────────────────────────────────────── */
 @keyframes ps-afford-pulse {
-  0%, 100% {
+  0%,
+  100% {
     border-color: rgba(82, 184, 48, 0.45);
     box-shadow:
       0 0 8px rgba(82, 184, 48, 0.2),
@@ -997,13 +997,26 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
 }
 
 @keyframes ps-afford-shine {
-  0%   { left: -80%; opacity: 0; }
-  15%  { opacity: 1; }
-  100% { left: 130%; opacity: 0; }
+  0% {
+    left: -80%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    left: 130%;
+    opacity: 0;
+  }
 }
 
 @keyframes ps-lock-bob {
-  0%, 100% { transform: translateY(0) rotate(-4deg); }
-  50%       { transform: translateY(-3px) rotate(4deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(4deg);
+  }
 }
 </style>
