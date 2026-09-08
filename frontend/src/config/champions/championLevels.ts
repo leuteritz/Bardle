@@ -9,9 +9,11 @@ import type {
   ChampionPerkTier,
   ChampionLevelCost,
   ChampionRegaliaStage,
+  ChampionCrestStage,
 } from '@/types'
 import {
   CHAMPION_REGALIA_STAGES,
+  CHAMPION_CREST_STAGES,
   CHAMPION_XP_BASE,
   CHAMPION_XP_EXPONENT,
   CHAMPION_STAT_BASE,
@@ -142,6 +144,23 @@ export function regaliaStageFor(level: number): ChampionRegaliaStage {
 /** True when `level` is the apex stage — the loudest badge in the game. */
 export function isApexRegalia(level: number): boolean {
   return regaliaStageIndexFor(level) === CHAMPION_REGALIA_STAGES.length - 1
+}
+
+// The orbit crest rides the same ladder one notch coarser — see
+// CHAMPION_CREST_STAGES for why the orbit steps every tenth level, not fifth.
+
+/** Index of the orbit crest stage worn at `level` (0 = bare, no sprite). */
+export function crestStageIndexFor(level: number): number {
+  let index = 0
+  for (let i = 0; i < CHAMPION_CREST_STAGES.length; i++) {
+    if (level >= CHAMPION_CREST_STAGES[i].minLevel) index = i
+  }
+  return index
+}
+
+/** Orbit crest stage worn at `level` — never null, level 1 wears the bare stage. */
+export function crestStageFor(level: number): ChampionCrestStage {
+  return CHAMPION_CREST_STAGES[crestStageIndexFor(level)]
 }
 
 /** True when reaching `level` grants an ascension star (and charges materials). */

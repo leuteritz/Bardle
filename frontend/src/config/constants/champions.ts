@@ -2,7 +2,12 @@
 // Regalia-Stufen, Tiers und Rekrutierungskosten, Skins und Bildgrößen sowie
 // die verbündeten Slots (Sworn Allies + Bank).
 
-import type { ChampionArtSize, ChampionRegaliaStage, ChampionRole } from '@/types'
+import type {
+  ChampionArtSize,
+  ChampionCrestStage,
+  ChampionRegaliaStage,
+  ChampionRole,
+} from '@/types'
 import { ROLES } from '@/config/constants/roles'
 
 // Champion travel timing
@@ -613,3 +618,78 @@ export const CHAMPION_REGALIA_ORBIT_MS = 4200
 export const CHAMPION_REGALIA_RAYS_MS = 16000
 /** Numeral size as a share of the badge diameter. */
 export const CHAMPION_REGALIA_FONT_RATIO = 0.46
+
+// -- Orbit crest ---------------------------------------------------------------
+/**
+ * The frame a champion wears in the idle orbit, escalating every tenth level.
+ *
+ * A separate, COARSER ladder than the regalia medallion, for two reasons. The
+ * body is 28-77 px wide and moving, so a step every fifth level would not read;
+ * and ten is the rhythm the player already knows from perks
+ * (CHAMPION_PERK_INTERVAL). The stage names are the regalia names at the same
+ * levels, so the two ladders never disagree about what a champion is called.
+ *
+ * Every stage adds at least one element and drops none:
+ *
+ *   10 band + studs . 20 blades + groove . 30 long blades + bevel + sweep .
+ *   40 crown (and the aura starts breathing) . 50 rays . 60 wreath + gem
+ *
+ * Level 1-9 wears NO crest at all - stage 0 paints nothing and mounts no image,
+ * so a fresh roster costs exactly what it costs today.
+ *
+ * Escalation is metal, geometry and brightness only; the role colour is never
+ * joined by a second hue. Cost: one cached <img> per champion, never more than
+ * five on screen, plus one opacity-only aura layer from stage 4.
+ */
+/* prettier-ignore */
+export const CHAMPION_CREST_STAGES: ChampionCrestStage[] = [
+  { minLevel: 1,                      name: 'Initiate',  rim: 0,   rimGap: 0,   heat: 0,    studs: 0,  blades: 0, bladeLong: false, groove: false, bevel: false, sweep: false, crown: false, gem: false, rays: 0,  wreath: 0,  aura: false },
+  { minLevel: 10,                     name: 'Sigil',     rim: 2.2, rimGap: 1.6, heat: 0.10, studs: 8,  blades: 0, bladeLong: false, groove: false, bevel: false, sweep: false, crown: false, gem: false, rays: 0,  wreath: 0,  aura: false },
+  { minLevel: 20,                     name: 'Radiant',   rim: 2.7, rimGap: 1.7, heat: 0.18, studs: 8,  blades: 4, bladeLong: false, groove: true,  bevel: false, sweep: false, crown: false, gem: false, rays: 0,  wreath: 0,  aura: false },
+  { minLevel: 30,                     name: 'Ascendant', rim: 3.2, rimGap: 1.8, heat: 0.26, studs: 12, blades: 8, bladeLong: true,  groove: true,  bevel: true,  sweep: true,  crown: false, gem: false, rays: 0,  wreath: 0,  aura: false },
+  { minLevel: 40,                     name: 'Sovereign', rim: 3.6, rimGap: 1.9, heat: 0.34, studs: 12, blades: 8, bladeLong: true,  groove: true,  bevel: true,  sweep: true,  crown: true,  gem: false, rays: 0,  wreath: 0,  aura: true  },
+  { minLevel: 50,                     name: 'Eventide',  rim: 4,   rimGap: 2,   heat: 0.42, studs: 12, blades: 8, bladeLong: true,  groove: true,  bevel: true,  sweep: true,  crown: true,  gem: false, rays: 16, wreath: 0,  aura: true  },
+  { minLevel: CHAMPION_LEVEL_MAX_CAP, name: 'Eternal',   rim: 4.4, rimGap: 2.1, heat: 0.50, studs: 12, blades: 8, bladeLong: true,  groove: true,  bevel: true,  sweep: true,  crown: true,  gem: true,  rays: 16, wreath: 24, aura: true  },
+]
+
+/** Metal of a champion flying without a role — matches the avatar's bare border. */
+export const CHAMPION_CREST_FALLBACK_COLOR = '#c89040'
+/** Avatar diameter (px) the crest px values above are authored against. */
+export const CHAMPION_CREST_BASE_SIZE = 56
+/**
+ * Sprite edge as a multiple of the avatar box. Kept as tight as the tallest
+ * ornament allows — the backing grows with the SQUARE of this. At 1.58 the
+ * crown spires and the outer rays of the apex stage were clipped by a few
+ * pixels; 1.78 clears the longest of them with room to spare.
+ */
+export const CHAMPION_CREST_SPAN = 1.78
+/** Below this avatar diameter there is no crest at all (comet phase, ~20 px). */
+export const CHAMPION_CREST_MIN_SIZE = 24
+/**
+ * Below this diameter only the band and its studs are painted. Sister of
+ * CHAMPION_REGALIA_ORNAMENT_MIN_SIZE: blades, crown and rays fall under two
+ * pixels there, read as noise, and are paid for in full.
+ */
+export const CHAMPION_CREST_ORNAMENT_MIN_SIZE = 34
+/**
+ * Half-width (radians) of the sector the crown keeps to itself. Blades and the
+ * apex wreath skip it — without that gap the crown is just three more spikes
+ * among two dozen, and the apex stage reads as a cogwheel instead of a crown.
+ */
+export const CHAMPION_CREST_CROWN_GAP = 0.55
+/** First stage whose aura layer breathes — everything below stands still. */
+export const CHAMPION_CREST_AURA_MIN_STAGE = 4
+export const CHAMPION_CREST_AURA_MS = 3400
+/** Fade when a champion levels into a new stage; the old <img> stands through it. */
+export const CHAMPION_CREST_CROSSFADE_MS = 500
+/** Sprite edge quantisation — without it every sun upgrade rasterises anew. */
+export const CHAMPION_CREST_PX_STEP = 4
+/**
+ * Two-stage cache after the star body pattern: few raw canvases (they are only
+ * a pass-through to the encoder), plenty of URLs (they are cheap). At most five
+ * keys are mounted at once — front and back layer share one.
+ */
+export const CHAMPION_CREST_CANVAS_MAX = 12
+export const CHAMPION_CREST_URL_MAX = 40
+/** Backing cap on the sprite EDGE in device pixels. */
+export const CHAMPION_CREST_MAX_BACKING_PX = 384

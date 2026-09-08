@@ -148,6 +148,50 @@ export interface ChampionRegaliaStage {
   spin: boolean
 }
 
+/**
+ * One visual stage of the frame a champion wears in the IDLE ORBIT — a separate
+ * ladder from the regalia medallion, coarser on purpose: it steps every tenth
+ * level, and the body it sits on is 28–77 px wide and moving. Table:
+ * CHAMPION_CREST_STAGES; lookup: crestStageFor().
+ *
+ * Same rule as the regalia — no second hue. The role colour carries identity,
+ * `heat` mixes white in, depth comes from the same colour darkened.
+ */
+export interface ChampionCrestStage {
+  /** Lowest champion level that wears this stage. */
+  minLevel: number
+  /** Stage name — shares the regalia vocabulary at the same levels. */
+  name: string
+  /** Outer band thickness, px at CHAMPION_CREST_BASE_SIZE; 0 paints no crest. */
+  rim: number
+  /** Gap between the avatar's own border and the band, same scale. */
+  rimGap: number
+  /** White mixed into the metal, 0…1. */
+  heat: number
+  /** Studs seated on the band; 0 leaves it bare. */
+  studs: number
+  /** Chiselled blades around the band; 0 leaves it smooth. */
+  blades: number
+  /** Every second blade reaches further — the band stops reading as a ring. */
+  bladeLong: boolean
+  /** Engraved groove running through the band. */
+  groove: boolean
+  /** Lit bevel on the band — matte metal becomes shaped metal. */
+  bevel: boolean
+  /** Two arcs riding the band's flanks. */
+  sweep: boolean
+  /** Crown seated on the top edge. */
+  crown: boolean
+  /** Gem set into the crown. */
+  gem: boolean
+  /** Spokes fanning out between the blades. */
+  rays: number
+  /** Closed wreath of star points — the apex silhouette. */
+  wreath: number
+  /** Breathing aura layer behind the body (opacity only). */
+  aura: boolean
+}
+
 /** Which milestone pool a perk belongs to. */
 export type ChampionPerkTier = 'adept' | 'master' | 'elite'
 

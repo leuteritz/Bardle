@@ -100,6 +100,20 @@
   opacity: 1;
 }
 
+/* Rang-Kranz eines Champions im Orbit (utils/fx/championCrestSprite.ts).
+   Global und nicht scoped, weil das per JS erzeugte <img> keinen Scope-Suffix
+   trägt; `max-width: none` gegen Preflight, sonst stünde der Kranz auf
+   Slotbreite. Zwei Bilder liegen nur während der Stufenblende übereinander. */
+.champion-orbit-crest > img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  user-select: none;
+}
+
 /* Achsdrehung: das Band ist ein Streifen mit ZWEI Perioden, der unter einer
    Kreismaske nach rechts rollt — `translateX(50 %)` ist genau eine Periode,
    die Naht unsichtbar. Der Slot ist die Box; --band-r ist der Körperradius als

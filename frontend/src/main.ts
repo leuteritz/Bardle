@@ -8,6 +8,7 @@ import {
   BOTTOM_BAR_NOTCH_R,
   AUTO_SAVE_INTERVAL_MS,
   BATTLE_SYNC_INTERVAL_MS,
+  CHAMPION_CREST_AURA_MS,
   HUD_COLUMN_INSET,
   HUD_COLUMN_INSET_WIDE,
   HUD_COLUMN_MAX_W,
@@ -73,6 +74,9 @@ document.documentElement.style.setProperty('--hud-col-min', `${HUD_COLUMN_MIN_W}
 document.documentElement.style.setProperty('--hud-col-max', `${HUD_COLUMN_MAX_W}px`)
 document.documentElement.style.setProperty('--hud-col-inset', `${HUD_COLUMN_INSET}px`)
 document.documentElement.style.setProperty('--hud-col-inset-wide', `${HUD_COLUMN_INSET_WIDE}px`)
+
+// Takt der Kranz-Aura im Orbit; die Spanne steht als --crest-out am Avatar.
+document.documentElement.style.setProperty('--crest-breathe', `${CHAMPION_CREST_AURA_MS}ms`)
 
 // Die HUD-Fahrt des Universumssprungs (html.uhop-hud-out / -in in App.vue).
 document.documentElement.style.setProperty('--uhop-hud-out', `${UNIVERSE_HOP_HUD_OUT_MS}ms`)

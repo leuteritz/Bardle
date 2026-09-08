@@ -19,6 +19,13 @@
       :ref="(el) => setMapEl(backAvatarEls, pos.name, el)"
     >
       <img :src="pos.img" :alt="pos.name" class="champion-orbit-portrait" />
+      <!-- Hinter der Sonne trägt der Kranz kein Leuchten: was dort steht, pulst nicht. -->
+      <span
+        v-if="pos.crestStage > 0"
+        class="champion-orbit-crest"
+        aria-hidden="true"
+        :ref="(el) => setCrestEl(el, pos)"
+      />
     </div>
   </div>
 
@@ -62,6 +69,20 @@
       :ref="(el) => setMapEl(frontAvatarEls, pos.name, el)"
     >
       <img :src="pos.img" :alt="pos.name" class="champion-orbit-portrait" />
+      <!-- Rang-Kranz: EIN gecachtes Bild je Stufe und Rollenfarbe. Er steht VOR
+           den atmenden Ebenen, denn was nach einer animierten Ebene im DOM
+           steht, bekommt vom Compositor eine eigene (Overlap). -->
+      <span
+        v-if="pos.crestStage > 0"
+        class="champion-orbit-crest"
+        aria-hidden="true"
+        :ref="(el) => setCrestEl(el, pos)"
+      />
+      <span
+        v-if="pos.crestStage >= CHAMPION_CREST_AURA_MIN_STAGE"
+        class="champion-orbit-crest-aura"
+        aria-hidden="true"
+      />
       <!-- Zustands-Glow als eigene Ebene: der Schein selbst steht STATISCH im
            CSS, geatmet wird ausschließlich seine Deckkraft. Früher pulsierten
            box-shadow und border-width am Avatar direkt — beides zwingt den
@@ -152,6 +173,7 @@ import { useSynergyStore } from '@/stores/champions/synergyStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useUiStore } from '@/stores/core/uiStore'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { ROLE_HOVER_COLORS } from '@/config/constants'
 import {
   activePlanetPositions,
@@ -195,6 +217,8 @@ import {
   PROCESSION_EXIT_T,
   PROCESSION_TRAIL_FALLBACK_COLOR,
   PROCESSION_Z_BASE,
+  CHAMPION_CREST_AURA_MIN_STAGE,
+  CHAMPION_CREST_FALLBACK_COLOR,
 } from '@/config/constants'
 import { setMapEl, sweepMapEls } from '@/utils/orbit/frameEls'
 import {
@@ -206,6 +230,9 @@ import {
   type ProcessionSpot,
 } from '@/utils/orbit/flightProcession'
 import { hexToRgb } from '@/utils/ui/format'
+import { crestStageIndexFor } from '@/config/champions/championLevels'
+import { championCrestSpan, mountChampionCrest } from '@/utils/fx/championCrestSprite'
+import type { FrameElRef } from '@/utils/orbit/frameEls'
 import { useProjectileSystem } from '@/composables/orbit/useProjectileSystem'
 import { useOrbitScale } from '@/composables/orbit/useOrbitScale'
 import type { ChampionRole } from '@/types'
@@ -249,6 +276,8 @@ interface ChampionRenderPos {
   dimFactor: number
   /** Blende so weit zu, dass der Avatar als versteckt gilt (Zustandsklasse). */
   dimHidden: boolean
+  /** Rang-Kranz aus dem Champion-Level; 0 = keiner, siehe CHAMPION_CREST_STAGES. */
+  crestStage: number
 }
 
 interface Assignment {
@@ -277,6 +306,7 @@ export default defineComponent({
     const planetShopStore = usePlanetShopStore()
     const starGroupStore = useStarGroupStore()
     const uiStore = useUiStore()
+    const championLevelStore = useChampionLevelStore()
 
     const hoveredChampionRole = computed(() => uiStore.hoveredChampionRole)
     const hoveredPlanetSlotId = computed(() => uiStore.hoveredPlanetSlotId)
@@ -397,6 +427,26 @@ export default defineComponent({
       return `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`
     }
 
+    /**
+     * Hängt den Rang-Kranz ein. Läuft NUR bei einem Vue-Render, nicht pro Frame,
+     * und ist über `dataset.crestKey` idempotent — eine Inline-Ref feuert bei
+     * jedem Patch des VNodes.
+     */
+    function setCrestEl(el: FrameElRef, pos: ChampionRenderPos): void {
+      const slot = el as HTMLElement | null
+      if (!slot) return
+      const color = pos.primaryRole
+        ? (ROLE_BY_KEY[pos.primaryRole]?.color ?? CHAMPION_CREST_FALLBACK_COLOR)
+        : CHAMPION_CREST_FALLBACK_COLOR
+      mountChampionCrest(
+        slot,
+        pos.crestStage,
+        hexToRgb(color),
+        pos.baseSize,
+        window.devicePixelRatio || 1,
+      )
+    }
+
     /** Initialstil für einen Vue-Render — pro Frame überschreibt applyFrames ihn. */
     function avatarStyle(pos: ChampionRenderPos) {
       return {
@@ -407,6 +457,11 @@ export default defineComponent({
         zIndex: pos.isBehind ? undefined : pos.zIndex,
         '--role-color': pos.primaryRole ? ROLE_BY_KEY[pos.primaryRole]?.color : undefined,
         '--hover-role-color': hoverColor.value || undefined,
+        // Kante des Rang-Kranzes in px. Nicht in Prozent und nicht über `inset`:
+        // beide rechnen gegen die PADDING-Box des Avatars, der Sprite dagegen
+        // gegen seine Border-Box — der Kranz stünde sonst gestaucht auf dem
+        // Portrait. Muster: .sun-slot in main.css.
+        '--crest-span': pos.crestStage > 0 ? championCrestSpan(pos.baseSize) + 'px' : undefined,
       }
     }
 
@@ -475,6 +530,8 @@ export default defineComponent({
           (p.isHit ? '1' : '0') +
           (p.isDown ? '1' : '0') +
           p.downSecs +
+          '_' +
+          p.crestStage +
           '_' +
           p.primaryRole +
           '_' +
@@ -760,6 +817,7 @@ export default defineComponent({
           isHit: !isDown && nowMs - hitAt < CHAMPION_HIT_FLASH_MS,
           dimFactor,
           dimHidden: dimFactor <= HOVER_DIM_HIDDEN_THRESHOLD,
+          crestStage: crestStageIndexFor(championLevelStore.levelOf(c.name)),
         })
       }
 
@@ -918,6 +976,8 @@ export default defineComponent({
       avatarStyle,
       hpWrapStyle,
       setMapEl,
+      setCrestEl,
+      CHAMPION_CREST_AURA_MIN_STAGE,
       backAvatarEls,
       frontAvatarEls,
       hpWrapEls,
@@ -991,6 +1051,55 @@ export default defineComponent({
 
 .champion-orbit-avatar--foreground {
   filter: brightness(1.18) saturate(1.2);
+}
+
+/* ── Rang-Kranz (Champion-Level) ───────────────────────────────────────────
+   EIN gecachtes Bild je Stufe und Rollenfarbe, gemalt in
+   utils/fx/championCrestSprite.ts. Kein CSS-Ornament und kein Canvas-Kind: der
+   Kranz fährt im transform des Avatars mit und kostet pro Frame nichts. Die
+   Spanne steht als --crest-out am Avatar, siehe avatarStyle(). */
+.champion-orbit-crest {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--crest-span, 0px);
+  height: var(--crest-span, 0px);
+  margin-left: calc(var(--crest-span, 0px) / -2);
+  margin-top: calc(var(--crest-span, 0px) / -2);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Ab CHAMPION_CREST_AURA_MIN_STAGE atmet EINE Ebene. Der Schein steht statisch,
+   animiert wird ausschließlich seine Deckkraft — die Stufen darunter stehen
+   vollkommen still. */
+.champion-orbit-crest-aura {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--crest-span, 0px) * 1.22);
+  height: calc(var(--crest-span, 0px) * 1.22);
+  margin-left: calc(var(--crest-span, 0px) * -0.61);
+  margin-top: calc(var(--crest-span, 0px) * -0.61);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -2;
+  background: radial-gradient(
+    circle,
+    transparent 46%,
+    color-mix(in srgb, var(--role-color, #c89040) 30%, transparent) 62%,
+    transparent 78%
+  );
+  animation: orbit-crest-breathe var(--crest-breathe, 3400ms) ease-in-out infinite alternate;
+}
+
+@keyframes orbit-crest-breathe {
+  from {
+    opacity: 0.36;
+  }
+  to {
+    opacity: 0.85;
+  }
 }
 
 /* ── Zustands-Glow-Ebene ───────────────────────────────────────────────────
@@ -1634,6 +1743,7 @@ export default defineComponent({
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .champion-orbit-crest-aura,
   .champion-orbit-glow,
   .champion-ability-badge::after,
   .champion-orbit-avatar--attacking,
@@ -1747,5 +1857,12 @@ export default defineComponent({
 .champion-orbit-avatar--dim::before,
 .champion-orbit-avatar--dim::after {
   content: none !important;
+}
+
+/* Der Kranz ist ein echtes Element, kein Pseudo — er braucht seine eigene Zeile. */
+.champion-orbit-avatar--dim .champion-orbit-crest,
+.champion-orbit-avatar--dim .champion-orbit-crest-aura {
+  opacity: 0 !important;
+  animation: none !important;
 }
 </style>
