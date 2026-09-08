@@ -16,6 +16,13 @@ import {
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_SYNERGIES_PANEL_WIDTH,
   TEAM_EQUIPMENT_PANEL_WIDTH,
+  TEAM_ROLE_RAIL_HANDLE_PX,
+  TEAM_ROLE_RAIL_SLIDE_MS,
+  TEAM_ROLE_RAIL_LABEL,
+  TEAM_ROLE_RAIL_OPEN_TITLE,
+  TEAM_ROLE_RAIL_CLOSE_TITLE,
+  TEAM_ROLE_RAIL_NAV_HEIGHT,
+  TEAM_ROLE_RAIL_HERO_COMPACT_HEIGHT,
 } from '@/config/constants'
 import { getItemById } from '@/config/economy/items'
 import { allySlotLabel } from '@/utils/ui/format'
@@ -27,6 +34,8 @@ import TeamTabLoader from './TeamTabLoader.vue'
 import TeamSidePanelShell from './TeamSidePanelShell.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
+import SideRailHandle from '@/components/ui/SideRailHandle.vue'
+import { useSideRail } from '@/composables/ui/useSideRail'
 
 /**
  * The tab has exactly ONE right rail and everything opens into it — the role
@@ -275,6 +284,36 @@ watch(
 const activeDestination = ref<TeamDestination>(null)
 const equipCategory = ref<ItemCategory>('weapon')
 
+const railChoice = ref<boolean | null>(null)
+const railFolded = computed(
+  () =>
+    railChoice.value ??
+    (selectedRole.value === null && !synergiesOpen.value && activeDestination.value === null),
+)
+const railPanelWidth = computed(() => {
+  if (activeDestination.value === 'equipment') return TEAM_EQUIPMENT_PANEL_WIDTH
+  if (synergiesOpen.value && selectedRole.value === null) return TEAM_SIGIL_SYNERGIES_PANEL_WIDTH
+  return TEAM_SIGIL_DETAILS_PANEL_WIDTH
+})
+const railZoneWidth = computed(
+  () =>
+    `${railFolded.value ? TEAM_ROLE_RAIL_HANDLE_PX : railPanelWidth.value + TEAM_ROLE_RAIL_HANDLE_PX}px`,
+)
+const railPanelWidthPx = computed(() => `${railPanelWidth.value}px`)
+const railHandleWidth = `${TEAM_ROLE_RAIL_HANDLE_PX}px`
+const railSlideMs = `${TEAM_ROLE_RAIL_SLIDE_MS}ms`
+const roleNavHeight = `${TEAM_ROLE_RAIL_NAV_HEIGHT}px`
+const roleHeroCompactHeight = `${TEAM_ROLE_RAIL_HERO_COMPACT_HEIGHT}px`
+const roleCount = computed(() => battleStore.headerSlots.filter(Boolean).length)
+const railTitle = computed(() =>
+  railFolded.value ? TEAM_ROLE_RAIL_OPEN_TITLE : TEAM_ROLE_RAIL_CLOSE_TITLE,
+)
+
+const { inert: railInert } = useSideRail({
+  folded: railFolded,
+  slideMs: TEAM_ROLE_RAIL_SLIDE_MS,
+})
+
 /**
  * Steht der Ladeschleier gerade in der Schiene? Bewusst abgeleitet statt
  * mitgeführt: damit nimmt JEDER Weg, der die Spalte wegräumt — Escape, Klick
@@ -286,6 +325,8 @@ const detailsVeilVisible = computed(() => {
   // Der Board-Schleier wartet auf gar keine Rolle — alle anderen schon.
   return veilScope.value === 'board' || selectedRole.value !== null
 })
+const railVeilVisible = computed(() => detailsVeilVisible.value && veilScope.value === 'rail')
+const tabVeilVisible = computed(() => detailsVeilVisible.value && veilScope.value !== 'rail')
 
 /**
  * Der Übergang, mit dem die Schiene wechselt — normalerweise das Hereingleiten,
@@ -299,9 +340,9 @@ const railTransition = computed(() =>
 
 /** Width the board has to subtract to fit itself beside the open rail. */
 const sidePanelWidth = computed(() => {
-  if (activeDestination.value === 'equipment') return TEAM_EQUIPMENT_PANEL_WIDTH
-  if (selectedRole.value !== null) return TEAM_SIGIL_DETAILS_PANEL_WIDTH
-  return synergiesOpen.value ? TEAM_SIGIL_SYNERGIES_PANEL_WIDTH : 0
+  return railFolded.value
+    ? TEAM_ROLE_RAIL_HANDLE_PX
+    : railPanelWidth.value + TEAM_ROLE_RAIL_HANDLE_PX
 })
 
 const roleIndex = computed(() => selectedRole.value ?? uiStore.rolesActiveSlot)
@@ -329,6 +370,7 @@ function focusSeat(subSlot: number | null, swap = false) {
 function selectRole(index: number) {
   synergiesOpen.value = false
   activeDestination.value = null
+  railChoice.value = false
   // Geht die Spalte NEU auf, während das Board noch aufbaut, übernimmt der
   // Ladeschleier ihren Platz — steht das Board schon, mountet sie sofort.
   const opening = selectedRole.value === null
@@ -357,6 +399,7 @@ function selectAlly(index: number, subSlot: number) {
 
 function closePanel() {
   selectedRole.value = null
+  railChoice.value = null
 }
 
 /** Empty board clicked — dismisses whatever the rail is showing, one layer at a
@@ -375,6 +418,7 @@ function openSynergies() {
   activeDestination.value = null
   selectedRole.value = null
   synergiesOpen.value = true
+  railChoice.value = false
 }
 
 /** Opened from the details page — keeps `selectedRole`, so closing returns there. */
@@ -385,6 +429,14 @@ function openEquipment(category: ItemCategory) {
 
 function closeDestination() {
   activeDestination.value = null
+}
+
+function toggleRoleRail() {
+  railChoice.value = !railFolded.value
+}
+
+function roleChampion(index: number) {
+  return battleStore.headerSlots[index] ?? 'Open slot'
 }
 
 /** A champion picked in the details page's inline picker. */
@@ -417,7 +469,6 @@ function assignChampion(subSlot: number, champion: string) {
 function clearAlly(subSlot: number) {
   battleStore.clearSecondarySlot(roleIndex.value, subSlot)
 }
-
 
 /** Anlegen und Ablegen quittieren beide — ein Skin tat es längst, ein Item
  *  nicht, und es ist dieselbe Handlung am selben Champion. Gemeinsamer
@@ -458,6 +509,7 @@ function applyRolesOpenRequest() {
   uiStore.clearRolesOpenPending()
   synergiesOpen.value = false
   activeDestination.value = null
+  railChoice.value = null
 
   // Steht die Spalte schon, ist nichts einzublenden — nur ihr Inhalt wechselt.
   const opening = selectedRole.value === null
@@ -487,6 +539,7 @@ function onEsc(e: KeyboardEvent) {
     closeSwapToken.value++
   } else if (synergiesOpen.value) {
     synergiesOpen.value = false
+    railChoice.value = null
   } else if (selectedRole.value !== null) {
     closePanel()
   } else {
@@ -529,6 +582,7 @@ function resetTabState() {
   selectedRole.value = null
   synergiesOpen.value = false
   activeDestination.value = null
+  railChoice.value = null
   searchHighlights.value = []
   hoveredAllySub.value = null
   boardHoveredAlly.value = null
@@ -590,45 +644,99 @@ onUnmounted(() => {
     <!-- ══ RIGHT — the one rail: equipment, role details or synergies ══
          One Transition for all of them, so swapping what the rail holds is a
          single slide, not a close followed by an open. -->
-    <Transition :name="railTransition" mode="out-in">
-      <TeamSidePanelShell
-        v-if="activeDestination === 'equipment'"
-        key="equipment"
-        title="Equipment"
-        icon="game-icons:open-treasure-chest"
-        :subtitle="`Equip the ${roleDef.label} champion`"
-        :width="TEAM_EQUIPMENT_PANEL_WIDTH"
-        @close="closeDestination"
-      >
-        <EquipmentPickerPanel
-          :initial-category="equipCategory"
-          :current-equipment="currentEquipment"
-          @equip="handleEquipFromPicker"
+    <div class="team-rail-zone">
+      <Transition name="sdv" @after-leave="veilCovering = false">
+        <TeamTabLoader
+          v-if="railVeilVisible"
+          class="team-rail-loader"
+          :role-index="selectedRole"
+          :started-at="detailsStartedAt"
+          cover="rail"
         />
-      </TeamSidePanelShell>
+      </Transition>
 
-      <SigilDetailsPanel
-        v-else-if="selectedRole !== null && panelReady && !detailsPending"
-        key="details"
-        :role-index="selectedRole"
-        :highlighted-ally="boardHoveredAlly"
-        :focus-ally="focusAlly"
-        :focus-token="focusToken"
-        :focus-swap="focusSwap"
-        :close-swap-token="closeSwapToken"
-        @assign="assignChampion"
-        @clear-ally="clearAlly"
-        @pick-equipment="openEquipment"
-        @hover-ally="hoveredAllySub = $event"
-        @swap-state="swapOpen = $event"
+      <div
+        class="team-rail-slide"
+        :class="{ 'team-rail-slide--parked': railFolded }"
+        :inert="railInert"
+      >
+        <Transition :name="railTransition" mode="out-in">
+          <TeamSidePanelShell
+            v-if="activeDestination === 'equipment'"
+            key="equipment"
+            title="Equipment"
+            icon="game-icons:open-treasure-chest"
+            :subtitle="`Equip the ${roleDef.label} champion`"
+            :width="TEAM_EQUIPMENT_PANEL_WIDTH"
+            @close="closeDestination"
+          >
+            <EquipmentPickerPanel
+              :initial-category="equipCategory"
+              :current-equipment="currentEquipment"
+              @equip="handleEquipFromPicker"
+            />
+          </TeamSidePanelShell>
+
+          <div
+            v-else-if="selectedRole !== null && panelReady && !detailsPending"
+            key="details"
+            class="team-role-detail"
+          >
+            <nav class="team-role-nav" aria-label="Team roles">
+              <span class="team-role-nav-label">Role index</span>
+              <div class="team-role-nav-list">
+                <button
+                  v-for="(role, index) in ROLES"
+                  :key="role.key"
+                  type="button"
+                  class="team-role-button"
+                  :class="{ 'team-role-button--active': selectedRole === index }"
+                  :style="{ '--role-color': role.color }"
+                  :aria-label="`${role.label} details`"
+                  :aria-current="selectedRole === index ? 'page' : undefined"
+                  @click="selectRole(index)"
+                >
+                  <Icon :icon="role.icon" width="24" height="24" class="team-role-button-icon" />
+                  <span class="team-role-button-copy">
+                    <strong>{{ role.short }}</strong>
+                    <small>{{ roleChampion(index) }}</small>
+                  </span>
+                </button>
+              </div>
+            </nav>
+
+            <SigilDetailsPanel
+              :role-index="selectedRole"
+              :highlighted-ally="boardHoveredAlly"
+              :focus-ally="focusAlly"
+              :focus-token="focusToken"
+              :focus-swap="focusSwap"
+              :close-swap-token="closeSwapToken"
+              @assign="assignChampion"
+              @clear-ally="clearAlly"
+              @pick-equipment="openEquipment"
+              @hover-ally="hoveredAllySub = $event"
+              @swap-state="swapOpen = $event"
+            />
+          </div>
+          <TeamSynergiesPanel
+            v-else-if="synergiesOpen && panelReady"
+            key="synergies"
+            @close="synergiesOpen = false"
+            @highlight="searchHighlights = $event"
+          />
+        </Transition>
+      </div>
+
+      <SideRailHandle
+        :label="TEAM_ROLE_RAIL_LABEL"
+        :width-px="TEAM_ROLE_RAIL_HANDLE_PX"
+        :open="!railFolded"
+        :title="railTitle"
+        :total="roleCount"
+        @toggle="toggleRoleRail"
       />
-      <TeamSynergiesPanel
-        v-else-if="synergiesOpen && panelReady"
-        key="synergies"
-        @close="synergiesOpen = false"
-        @highlight="searchHighlights = $event"
-      />
-    </Transition>
+    </div>
 
     <!-- ══ Ladeschleier der Detailspalte ══
          Sitzt IM Flex-Fluss und belegt exakt die Breite der Seite, die gleich
@@ -639,7 +747,7 @@ onUnmounted(() => {
          ohne Schiene, in dem das Board kurz breiter würde. -->
     <Transition name="sdv" @after-leave="veilCovering = false">
       <TeamTabLoader
-        v-if="detailsVeilVisible"
+        v-if="tabVeilVisible"
         :role-index="selectedRole"
         :started-at="detailsStartedAt"
         :cover="veilScope"
@@ -651,11 +759,143 @@ onUnmounted(() => {
 <style scoped>
 .team-tab {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) v-bind(railZoneWidth);
   height: 100%;
   min-height: 0;
-  overflow: hidden;
+  overflow: clip;
   background: #111008; /* same deep-space base as Shop / Planets / Skill Tree */
+}
+
+.team-rail-zone {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.team-rail-slide {
+  position: absolute;
+  top: 0;
+  right: v-bind(railHandleWidth);
+  bottom: 0;
+  z-index: 1;
+  width: v-bind(railPanelWidthPx);
+  transition: transform v-bind(railSlideMs) ease;
+}
+.team-rail-slide--parked {
+  transform: translateX(100%);
+}
+.team-role-detail {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--sr-surface);
+}
+.team-role-detail :deep(.sdp-panel) {
+  width: 100%;
+  height: calc(100% - v-bind(roleNavHeight));
+  min-height: 0;
+}
+.team-role-nav {
+  flex: 0 0 v-bind(roleNavHeight);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #1e1006;
+  border-left: 3px solid var(--sr-seam);
+  border-bottom: 3px solid #5c3310;
+}
+.team-role-nav-label {
+  flex: 0 0 70px;
+  color: var(--sr-accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+.team-role-nav-list {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+.team-role-button {
+  min-width: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  border: 1px solid #493116;
+  border-radius: 4px;
+  background: #141410;
+  color: var(--sr-text);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color 0.12s ease,
+    transform 0.12s ease;
+}
+.team-role-button:hover,
+.team-role-button--active {
+  background: color-mix(in srgb, var(--role-color) 18%, #141410);
+  border-color: var(--role-color);
+}
+.team-role-button--active {
+  box-shadow: inset 0 -3px 0 var(--role-color);
+}
+.team-role-button:focus-visible {
+  outline: 2px solid var(--sr-accent-hi);
+  outline-offset: -2px;
+}
+.team-role-button-icon {
+  flex: 0 0 auto;
+  color: var(--role-color);
+}
+.team-role-button-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.team-role-button-copy strong {
+  color: var(--sr-text-hi);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+.team-role-button-copy small {
+  overflow: hidden;
+  color: var(--sr-note);
+  font-size: 9px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.team-rail-loader {
+  position: absolute;
+  inset: 0 v-bind(railHandleWidth) 0 auto;
+  z-index: 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .team-rail-slide,
+  .team-role-button {
+    transition: none;
+  }
+}
+
+@media (max-height: 1100px) {
+  .team-role-detail :deep(.sdp-hero) {
+    flex: 0 1 v-bind(roleHeroCompactHeight);
+    height: v-bind(roleHeroCompactHeight);
+    min-height: 0;
+  }
 }
 
 /* rail slide-in — shared by the details page, the synergies panel and the
