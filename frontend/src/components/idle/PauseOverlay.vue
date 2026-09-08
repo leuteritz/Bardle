@@ -140,6 +140,7 @@
                 :style="{
                   '--readout-orb': `${PAUSE_READOUT_ORB_PX}px`,
                   '--readout-gap': `${PAUSE_READOUT_GAP_PX}px`,
+                  '--chime-readout-y-offset': `${PAUSE_CHIME_READOUT_Y_OFFSET_PX}px`,
                 }"
               >
                 <div class="chime-readout__part">
@@ -590,6 +591,7 @@ import {
   PAUSE_CALLOUT_ROWS,
   PAUSE_READOUT_ORB_PX,
   PAUSE_READOUT_GAP_PX,
+  PAUSE_CHIME_READOUT_Y_OFFSET_PX,
   PAUSE_KIT_GAP_PX,
   PAUSE_KIT_EFFECT_CHIP_H,
   PAUSE_KIT_EFFECT_CHIP_W,
@@ -1771,6 +1773,10 @@ function particleStyle(i: number): Record<string, string> {
   align-items: start;
   gap: var(--readout-gap);
   min-width: 0;
+}
+
+.chime-readout__part:first-child {
+  transform: translateY(var(--chime-readout-y-offset, 0px));
 }
 
 .chime-orb {

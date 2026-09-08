@@ -804,6 +804,8 @@ export const PAUSE_STAR_PLANET_ROW_WIDTH =
 export const PAUSE_READOUT_ORB_PX = 72
 /** Abstand zwischen Orb und Text, und zwischen den beiden Hälften. */
 export const PAUSE_READOUT_GAP_PX = 16
+/** Optical y-offset for the chime readout beside its orb. */
+export const PAUSE_CHIME_READOUT_Y_OFFSET_PX = 6
 
 // ── Der Kit-Block steht am FUSS DER ZUSTANDSSÄULE ─────────────────────────
 // Er war einmal ein Band über die volle Panelbreite — vier Namenszeilen links,
