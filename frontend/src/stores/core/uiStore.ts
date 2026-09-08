@@ -37,11 +37,11 @@ export const useUiStore = defineStore('ui', () => {
   // markiert damit dieselbe Rollenkarte, die im Modal bearbeitet wird.
   const teamActiveRoleIndex = ref<number | null>(null)
   const pendingChampionSearch = ref('')
-  // Sprungziel des Galaxy-Atlas, gesetzt von ausserhalb des Reiters (Minimap).
+  // Sprungziel des Galaxy-Atlas, gesetzt von ausserhalb des Reiters (Universe).
   // Wird EINMAL verbraucht — der Reiter bleibt gemountet, ein stehender Wert
   // spränge bei jedem weiteren Besuch erneut.
   const pendingGalaxyTarget = ref<{ galaxy: number; pinKey: string | null } | null>(null)
-  // Dasselbe fuer die Live-Buehne: die Minimap-FLAECHE meint die LAUFENDE
+  // Dasselbe fuer die Live-Buehne: der Klick auf die Minimap meint die LAUFENDE
   // Galaxie, und die steht in keinem Archiv — sie hat deshalb keine Nummer im
   // Gepaeck, nur die Ansage. Schliesst sich mit pendingGalaxyTarget aus.
   const pendingGalaxyLive = ref(false)
@@ -202,8 +202,8 @@ export const useUiStore = defineStore('ui', () => {
     pendingGalaxyTarget.value = null
   }
 
-  /** Der Klick auf die Minimap-Flaeche: „zeig mir DAS hier gross". Kein Ziel,
-   *  keine Marke — die laufende Galaxie ist immer dieselbe. */
+  /** Der Klick auf die Minimap: „zeig mir DAS hier gross". Kein Ziel, keine
+   *  Marke — die laufende Galaxie ist immer dieselbe. */
   function requestOpenGalaxyLive() {
     pendingGalaxyTarget.value = null
     pendingGalaxyLive.value = true
@@ -216,7 +216,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   /** Der Sprung von der Universe-Bahn auf die Karte. Setzt NUR die Flagge dazu
-   *  — das Sprungziel besorgt derselbe Weg, den die Minimap schon geht. */
+   *  — das Sprungziel besorgt `requestOpenGalaxyTab`. */
   function requestOpenGalaxyFromUniverse(galaxy: number) {
     requestOpenGalaxyTab(galaxy)
     universeTabReturnPending.value = true

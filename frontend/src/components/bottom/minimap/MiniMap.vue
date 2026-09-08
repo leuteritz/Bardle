@@ -5,27 +5,11 @@
         <div class="map-canvas-wrapper">
           <MiniMapCanvas />
 
-          <!-- ── Die zwei Wege in den Galaxy-Reiter ──
-               Zwei Elemente statt eines Handlers am Wrapper: dort blubberten
-               Stern-Hit-Area, „Next Galaxy" und Skip-Knopf hinein und feuerten
-               doppelt. Die Fläche liegt unter allem Bedienbaren (z-index 1),
-               der Chip neben dem Skip-Knopf (6).
-
-               Sie beantworten VERSCHIEDENE Fragen: die Fläche „zeig mir DAS
-               hier gross" (die laufende Galaxie, live), der Chip „wo wartet
-               etwas auf mich" (eine befreite Galaxie samt Marke). -->
-          <div v-if="liveReady" class="atlas-hit" title="Follow this run" @click="openLive" />
-          <button
-            v-if="atlasReady"
-            class="atlas-chip"
-            :class="{ 'atlas-chip--marked': atlasReadyCount > 0 }"
-            title="Jump to a waiting crew"
-            @click="openAtlas"
-          >
-            <Icon icon="ph:map-trifold-fill" width="18" height="18" />
-            <span class="atlas-chip-label">Galaxy</span>
-            <RpgNotifyBadge :count="atlasReadyCount" label="Expedition crews ready to collect" />
-          </button>
+          <!-- ── Weg in den Galaxy-Reiter ──
+               Eine eigene Fläche statt eines Handlers am Wrapper: dort
+               blubberten Stern-Hit-Area, „Next Galaxy" und Skip-Knopf hinein
+               und feuerten doppelt. Sie liegt unter allem Bedienbaren. -->
+          <div v-if="liveReady" class="atlas-hit" title="Open this galaxy" @click="openLive" />
 
           <!-- ── Waiting for role selection ── -->
           <div v-if="galaxyStore.pendingRoleSelection" class="minimap-waiting-label">
@@ -150,16 +134,13 @@ import { Icon } from '@iconify/vue'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useUiStore } from '@/stores/core/uiStore'
-import { useExpeditionStore } from '@/stores/economy/expeditionStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import { useGamePause } from '@/composables/system/useGamePause'
-import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { HUD_PANEL_ARC_R, SKIP_DURATION_SECONDS, MINIMAP_TIER_FLASH_MS } from '@/config/constants'
 import MiniMapCanvas from './MiniMapCanvas.vue'
 import MiniMapHudPanel from './MiniMapHudPanel.vue'
 import MiniMapArrivalHud from './MiniMapArrivalHud.vue'
 import TierUnlockPanel from './TierUnlockPanel.vue'
-import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import { gameNow } from '@/utils/game/gameClock'
 
 const CORNER_R = 20
@@ -172,14 +153,12 @@ export default defineComponent({
     MiniMapHudPanel,
     MiniMapArrivalHud,
     TierUnlockPanel,
-    RpgNotifyBadge,
     Icon,
   },
   setup() {
     const galaxyStore = useGalaxyStore()
     const starGroupStore = useStarGroupStore()
     const uiStore = useUiStore()
-    const expeditionStore = useExpeditionStore()
     const { announceReceipt } = useHerald()
     const { isPaused } = useGamePause()
 
@@ -236,20 +215,6 @@ export default defineComponent({
       starGroupStore.openStarFightModal(championStar.value.id)
     }
 
-    /**
-     * Die kleine Karte führt in die grosse — und zwar auf zwei Wegen, weil es
-     * zwei Fragen sind.
-     *
-     * Die FLÄCHE meint das Naheliegende: dieselbe Galaxie, nur gross und live.
-     * Sie steht in keinem Archiv (der Atlas führt nur `completedGalaxies`),
-     * deshalb hat sie kein Sprungziel — die Live-Bühne des Reiters zeichnet sie
-     * mit demselben Renderer, der hier läuft.
-     *
-     * Der CHIP behält die andere Frage: „wo wartet etwas auf mich?" Der Store
-     * sagt wo, und die Marke auf dem Chip sagt, ob überhaupt.
-     */
-    const atlasTarget = computed(() => expeditionStore.voyageJumpTarget)
-
     /** Rollenwahl und Pause liegen über allem — dieselbe Klausel wie die
      *  Tab-Kürzel; die Bottom-Bar-Panels stehen ÜBER dem Pause-Overlay, der
      *  Klick wäre sonst erreichbar. Und `isComplete` gehört „Next Galaxy". */
@@ -257,21 +222,13 @@ export default defineComponent({
       () => !galaxyStore.pendingRoleSelection && !isPaused.value && !galaxyStore.isComplete,
     )
 
-    /** Die Fläche braucht kein Ziel: die laufende Galaxie ist immer da. */
+    /** Kein Sprungziel nötig: die laufende Galaxie steht in keinem Archiv, der
+     *  Reiter zeichnet sie live mit demselben Renderer wie hier. */
     const liveReady = reachable
-    const atlasReady = computed(() => reachable.value && !!atlasTarget.value)
-
-    const atlasReadyCount = useNotifyBadgeCount('expedition')
 
     function openLive() {
       if (!liveReady.value) return
       uiStore.requestOpenGalaxyLive()
-    }
-
-    function openAtlas() {
-      const target = atlasTarget.value
-      if (!atlasReady.value || !target) return
-      uiStore.requestOpenGalaxyTab(target.galaxy, target.pinKey)
     }
 
     function teleportNearPlanet() {
@@ -294,10 +251,7 @@ export default defineComponent({
       onMinimapStarLeave,
       onMinimapStarClick,
       liveReady,
-      atlasReady,
-      atlasReadyCount,
       openLive,
-      openAtlas,
       teleportNearPlanet,
       SKIP_DURATION_SECONDS,
     }
@@ -462,63 +416,13 @@ export default defineComponent({
 /* ── Weg in den Galaxy-Atlas ──
    Die Fläche trägt nur den Klick. Sie bekommt bewusst KEINEN eigenen Rand: das
    Panel steht schon in einem goldenen Rahmen, ein zweiter daneben war im
-   Browser nicht als Zustand lesbar, nur als Rauschen. Stattdessen leuchtet der
-   Chip auf — er ist ohnehin die Stelle, die sagt, wohin der Klick führt. */
+   Browser nicht als Zustand lesbar, nur als Rauschen. */
 .atlas-hit {
   position: absolute;
   inset: 0;
   z-index: 1;
   cursor: pointer;
   pointer-events: auto;
-}
-
-/* `position: relative` fehlt bewusst nicht — RpgNotifyBadge sitzt absolut auf
-   top/right 4px und braucht diesen Kasten als Bezug. */
-.atlas-chip {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  z-index: 6;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 4px;
-  background: #1e1006;
-  border: 2px solid #5c3310;
-  color: #e8c040;
-  cursor: pointer;
-  pointer-events: auto;
-  transition:
-    background 160ms ease,
-    border-color 160ms ease;
-}
-
-/* Die Marke sitzt absolut in der oberen rechten Ecke und deckte sonst das
-   letzte Zeichen der Beschriftung zu — der Platz wird reserviert, nicht
-   geteilt. */
-.atlas-chip--marked {
-  padding-right: 24px;
-}
-
-/* Der Chip folgt der Fläche — er steht im Markup hinter ihr, also trägt der
-   Geschwister-Selektor das ohne zweiten Zustand in JavaScript. */
-.atlas-chip:hover,
-.atlas-hit:hover ~ .atlas-chip {
-  background: #2a1808;
-  border-color: #7a4e20;
-  color: #f4d878;
-}
-
-.atlas-chip:active {
-  background: #150c04;
-}
-
-.atlas-chip-label {
-  font-size: 15px;
-  letter-spacing: 0.05em;
-  line-height: 1;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 /* ── Minimap-Stern Hit-Area (Arrival View) ── */

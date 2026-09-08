@@ -146,11 +146,6 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
         marker: '<RpgNotifyBadge',
         where: 'Galaxy map, at a returning harbor',
       },
-      {
-        file: 'components/bottom/minimap/MiniMap.vue',
-        marker: '<RpgNotifyBadge',
-        where: 'Minimap, at the Galaxy chip',
-      },
     ],
     seedability: 'exact',
     reversible: 'full',
