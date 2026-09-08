@@ -42,6 +42,10 @@ const display = computed(() => String(props.count))
   line-height: 1;
   pointer-events: none;
   animation: rpg-badge-pulse 1.8s ease-in-out infinite;
+  /* Der Aus-Schalter, den jede andere Dauerbewegung im Projekt schon traegt
+     (.vfc-halo, ShopReadyBadge, ItemShopCard). Er fiel nicht auf, solange die
+     Marke an drei Einzelstellen hing; im Fleet-Band koennen mehrere stehen. */
+  animation-play-state: var(--pulse-play, running);
   --badge-glow-a: rgba(168, 85, 247, 0.5);
   --badge-glow-b: rgba(168, 85, 247, 0.9);
   --badge-glow-c: rgba(124, 58, 237, 0.4);
@@ -54,6 +58,12 @@ const display = computed(() => String(props.count))
   --badge-glow-a: rgba(6, 182, 212, 0.5);
   --badge-glow-b: rgba(6, 182, 212, 0.9);
   --badge-glow-c: rgba(8, 145, 178, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpg-notify-badge {
+    animation: none;
+  }
 }
 
 @keyframes rpg-badge-pulse {

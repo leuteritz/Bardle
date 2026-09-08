@@ -31,12 +31,14 @@
  */
 import { computed, onBeforeUnmount, ref } from 'vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
+import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { getOriginColor } from '@/config/champions/championOrigins'
 import { voyageGestureLabel } from '@/utils/game/voyageAction'
 import { formatMinuteClock, formatShortDuration } from '@/utils/ui/format'
 import {
   EXPEDITION_CHANCE_GOOD,
+  VOYAGE_BADGE_RETURNED_LABEL,
   EXPEDITION_CHANCE_MID,
   EXPEDITION_EXPIRY_WARNING_MS,
   UNIVERSE_TOOLTIP_IMAGES,
@@ -231,6 +233,9 @@ const duration = computed(() =>
   row.value.state === 'offer' ? formatShortDuration(row.value.durationSeconds) : '',
 )
 
+/** Zurueck ist zurueck — eingesammelt wird die Beute wie die Bergung. */
+const returned = computed(() => state.value === 'ready' || state.value === 'failed')
+
 /**
  * Bewegung gehoert dem, was eine Handlung verlangt — die laufende Mission
  * verlangt nichts und ATMET deshalb nicht. Ihre Glut liegt trotzdem: seit das
@@ -354,6 +359,12 @@ const aria = computed(
       @click="onClick"
     >
       <span v-if="halo" class="vfc-halo" aria-hidden="true" />
+
+      <!-- Dieselbe Marke wie an der Kartenmarke und an der Truhe: heimgekehrt ist
+           heimgekehrt, an welchem der drei Orte man auch hinsieht. Ohne Override —
+           sie setzt sich selbst in die Ecke und traegt `pointer-events: none`.
+           Die obere rechte Ecke ist hier frei: `.vfc-dur` steht nur beim Vertrag. -->
+      <RpgNotifyBadge v-if="returned" :count="1" :label="VOYAGE_BADGE_RETURNED_LABEL" />
 
       <!-- Die STUFE: drei Segmente, davon 1/2/3 erleuchtet — SENKRECHT an der
            linken Kante. Absolut gesetzt, es kostet also keine Zeile; der

@@ -30,6 +30,7 @@ import {
   EXPEDITION_COLORS,
   EXPEDITION_EXPIRY_WARNING_MS,
   VOYAGE_ACTION_ICONS,
+  VOYAGE_BADGE_RETURNED_LABEL,
   VOYAGE_MARK_REFUSE_MS,
   VOYAGE_MARKER_BREATH_MS,
   VOYAGE_MARKER_BREATH_WARN_MS,
@@ -252,7 +253,11 @@ const nodeStyle = computed(() => ({
 
       <!-- Ausserhalb der Platte: die Marke hat ihre eigene Lesegrösse und darf
            nicht mit dem Hafen schrumpfen. -->
-      <RpgNotifyBadge v-if="state === 'returned'" :count="1" label="Expedition ready to collect" />
+      <RpgNotifyBadge
+        v-if="state === 'returned'"
+        :count="1"
+        :label="VOYAGE_BADGE_RETURNED_LABEL"
+      />
 
       <span
         v-if="!showInlineClock"
