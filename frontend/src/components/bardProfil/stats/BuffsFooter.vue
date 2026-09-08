@@ -52,26 +52,88 @@ const totalChips = computed<TotalChip[]>(() => {
   const cost = cutOf(mod.buildingCostMultiplier)
   const enemy = cutOf(mod.enemySpeedMultiplier)
 
-  if (cps > 0) chips.push({ key: 'cps', icon: 'game-icons:sparkles', label: 'Production', value: `+${cps}%`, positive: true })
-  if (cpc > 0) chips.push({ key: 'cpc', icon: 'game-icons:hand', label: 'Click', value: `+${cpc}%`, positive: true })
+  if (cps > 0)
+    chips.push({
+      key: 'cps',
+      icon: 'game-icons:sparkles',
+      label: 'Production',
+      value: `+${cps}%`,
+      positive: true,
+    })
+  if (cpc > 0)
+    chips.push({
+      key: 'cpc',
+      icon: 'game-icons:hand',
+      label: 'Click',
+      value: `+${cpc}%`,
+      positive: true,
+    })
   if (powerPct > 0 || powerFlat > 0) {
     const parts: string[] = []
     if (powerPct > 0) parts.push(`+${powerPct}%`)
     if (powerFlat > 0) parts.push(`+${powerFlat}`)
-    chips.push({ key: 'power', icon: 'game-icons:mighty-force', label: 'Power', value: parts.join(' & '), positive: true })
+    chips.push({
+      key: 'power',
+      icon: 'game-icons:mighty-force',
+      label: 'Power',
+      value: parts.join(' & '),
+      positive: true,
+    })
   }
-  if (meep > 0) chips.push({ key: 'meep', icon: 'game-icons:meeple-king', label: 'Meep Power', value: `+${meep}%`, positive: true })
-  if (dps > 0) chips.push({ key: 'dps', icon: 'ri:sword-fill', label: 'Combat DPS', value: `+${dps}%`, positive: true })
-  if (cdr > 0) chips.push({ key: 'cdr', icon: 'game-icons:sands-of-time', label: 'Cooldowns', value: `-${cdr}%`, positive: false })
-  if (exp > 0) chips.push({ key: 'exp', icon: 'ph:compass-fill', label: 'Expeditions', value: `+${exp}%`, positive: true })
-  if (cost > 0) chips.push({ key: 'cost', icon: 'game-icons:stone-wall', label: 'Build Cost', value: `-${cost}%`, positive: false })
-  if (enemy > 0) chips.push({ key: 'enemy', icon: 'game-icons:turtle', label: 'Enemy Speed', value: `-${enemy}%`, positive: false })
+  if (meep > 0)
+    chips.push({
+      key: 'meep',
+      icon: 'game-icons:meeple-king',
+      label: 'Meep Power',
+      value: `+${meep}%`,
+      positive: true,
+    })
+  if (dps > 0)
+    chips.push({
+      key: 'dps',
+      icon: 'ri:sword-fill',
+      label: 'Combat DPS',
+      value: `+${dps}%`,
+      positive: true,
+    })
+  if (cdr > 0)
+    chips.push({
+      key: 'cdr',
+      icon: 'game-icons:sands-of-time',
+      label: 'Cooldowns',
+      value: `-${cdr}%`,
+      positive: false,
+    })
+  if (exp > 0)
+    chips.push({
+      key: 'exp',
+      icon: 'ph:compass-fill',
+      label: 'Expeditions',
+      value: `+${exp}%`,
+      positive: true,
+    })
+  if (cost > 0)
+    chips.push({
+      key: 'cost',
+      icon: 'game-icons:stone-wall',
+      label: 'Build Cost',
+      value: `-${cost}%`,
+      positive: false,
+    })
+  if (enemy > 0)
+    chips.push({
+      key: 'enemy',
+      icon: 'game-icons:turtle',
+      label: 'Enemy Speed',
+      value: `-${enemy}%`,
+      positive: false,
+    })
   return chips
 })
 </script>
 
 <template>
-  <footer class="jt-foot" aria-label="Active buffs">
+  <section class="jt-foot" aria-label="Active buffs">
     <section class="jt-foot-zone jt-foot-zone--running">
       <span v-ink-center class="jt-foot-lbl">
         Running <span class="jt-foot-count">{{ buffs.length }}</span>
@@ -103,7 +165,8 @@ const totalChips = computed<TotalChip[]>(() => {
             </span>
           </span>
           <span v-if="b.timer" class="jt-buff-clock">
-            <span class="jt-buff-sec">{{ b.timer.secondsLeft }}</span><span class="jt-buff-unit">s</span>
+            <span class="jt-buff-sec">{{ b.timer.secondsLeft }}</span
+            ><span class="jt-buff-unit">s</span>
           </span>
           <span v-else class="jt-buff-clock jt-buff-clock--galaxy">galaxy</span>
           <span v-if="b.timer" class="jt-buff-track" aria-hidden="true">
@@ -120,22 +183,26 @@ const totalChips = computed<TotalChip[]>(() => {
         <div v-for="chip in totalChips" :key="chip.key" class="jt-tile">
           <Icon :icon="chip.icon" width="20" height="20" class="jt-tile-icon" aria-hidden="true" />
           <span class="jt-tile-body">
-            <span class="jt-tile-val" :class="chip.positive ? 'is-up' : 'is-down'">{{ chip.value }}</span>
+            <span class="jt-tile-val" :class="chip.positive ? 'is-up' : 'is-down'">{{
+              chip.value
+            }}</span>
             <span class="jt-tile-lbl">{{ chip.label }}</span>
           </span>
         </div>
       </div>
     </section>
-  </footer>
+  </section>
 </template>
 
 <style scoped>
 /* Feste Höhe: das Band darf der Sonne darüber keine Höhe nehmen, wenn ein Buff kommt. */
 .jt-foot {
+  container-type: inline-size;
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  height: 86px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.85fr);
+  gap: clamp(12px, 1.8cqw, 24px);
   min-width: 0;
+  padding-top: clamp(8px, 1.2cqw, 14px);
   border-top: 1px solid #2c1806;
 }
 
@@ -144,9 +211,10 @@ const totalChips = computed<TotalChip[]>(() => {
   flex-direction: column;
   gap: 5px;
   min-width: 0;
-  padding: 8px 16px 6px;
+  padding: 0;
 }
 .jt-foot-zone--total {
+  padding-left: clamp(12px, 1.8cqw, 24px);
   border-left: 1px solid #2c1806;
 }
 
@@ -154,7 +222,7 @@ const totalChips = computed<TotalChip[]>(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: clamp(9px, 1cqw, 12px);
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -168,13 +236,10 @@ const totalChips = computed<TotalChip[]>(() => {
 
 .jt-foot-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: 6px;
-  min-height: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
+  min-width: 0;
 }
 
 .jt-foot-empty {
@@ -194,9 +259,10 @@ const totalChips = computed<TotalChip[]>(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 0 0 auto;
+  flex: 1 1 150px;
+  max-width: 100%;
   min-width: 0;
-  padding: 4px 12px 6px 9px;
+  padding: 5px 10px 7px 8px;
   background: #1c1c18;
   border: 1px solid #3e200a;
   border-left: 3px solid var(--buff);
@@ -301,8 +367,9 @@ const totalChips = computed<TotalChip[]>(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 0 0 auto;
-  padding: 4px 11px 4px 9px;
+  flex: 1 1 105px;
+  max-width: 100%;
+  padding: 5px 9px;
   background: #1c1c18;
   border: 1px solid #3e200a;
   border-radius: 4px;
@@ -340,11 +407,13 @@ const totalChips = computed<TotalChip[]>(() => {
 
 @media (max-height: 1100px) {
   .jt-foot {
-    height: 78px;
+    padding-top: 7px;
   }
   .jt-foot-zone {
     gap: 4px;
-    padding: 6px 14px 5px;
+  }
+  .jt-foot-zone--total {
+    padding-left: 14px;
   }
   .jt-buff {
     padding: 3px 10px 5px 8px;
