@@ -193,7 +193,7 @@ const tierBand = computed(() =>
     ? {
         ...tier.value,
         crowned: tier.value.starLevel >= MAX_STAR_LEVEL,
-        tip: `Tier ${tier.value.starLevel} of ${MAX_STAR_LEVEL}`,
+        tip: `Tier ${tier.value.starLevel} of ${MAX_STAR_LEVEL} · ${tier.value.description}`,
       }
     : null,
 )
@@ -604,19 +604,17 @@ function perkStatLine(perk: ChampionPerkDef): string {
                 ><Icon :icon="tierBand.icon" width="28" height="28"
               /></span>
               <span class="sdp-tier-copy">
-                <span class="sdp-affinity-head"
-                  ><small>Tier</small
-                  ><span class="sdp-affinity-stars"
-                    ><i
-                      v-for="n in MAX_STAR_LEVEL"
-                      :key="n"
-                      :class="{ 'sdp-affinity-star--lit': n <= tierBand.starLevel }"
-                      >★</i
-                    ></span
-                  ></span
+                <span class="sdp-affinity-head"><small>Tier</small></span
                 ><strong>{{ tierBand.name }}</strong>
               </span>
-              <p class="sdp-tier-lore">{{ tierBand.description }}</p>
+              <span class="sdp-tier-stars" aria-hidden="true"
+                ><i
+                  v-for="n in MAX_STAR_LEVEL"
+                  :key="n"
+                  :class="{ 'sdp-tier-star--lit': n <= tierBand.starLevel }"
+                  >★</i
+                ></span
+              >
             </div>
             <div
               v-if="activeAffinities.length"
@@ -1148,7 +1146,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
 .sdp-tier-band {
   min-width: 0;
   display: grid;
-  grid-template-columns: 38px minmax(0, auto) minmax(0, 1fr);
+  grid-template-columns: 38px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   margin-top: 10px;
@@ -1183,16 +1181,21 @@ function perkStatLine(perk: ChampionPerkDef): string {
   text-shadow: 0 0 12px color-mix(in srgb, var(--ac) 34%, transparent);
   white-space: nowrap;
 }
-/* Geklemmt statt umbrechend — das Band haelt seine Hoehe. */
-.sdp-tier-lore {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  color: #a99b80;
-  font-size: 12px;
-  line-height: 1.25;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+/* Die Skala steht rechts aussen und traegt die Breite, die vorher der Lore-Satz
+   fuellte — die Stufe liest sich aus der Ferne, ohne ein Wort zu lesen. */
+.sdp-tier-stars {
+  display: flex;
+  gap: 3px;
+  color: #3b3226;
+  font-size: 14px;
+  line-height: 1;
+}
+.sdp-tier-stars i {
+  font-style: normal;
+}
+.sdp-tier-star--lit {
+  color: color-mix(in srgb, var(--ac) 74%, #fff);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--ac) 70%, transparent);
 }
 .sdp-affinity {
   min-width: 0;
@@ -1246,27 +1249,10 @@ function perkStatLine(perk: ChampionPerkDef): string {
   text-transform: uppercase;
 }
 /* Ein Punkt je Schwelle — die erleuchteten sagen die erreichte Stufe. */
-.sdp-affinity-steps,
-.sdp-affinity-stars {
+.sdp-affinity-steps {
   display: flex;
   gap: 4px;
   margin-right: auto;
-}
-/* Der Rang braucht die volle Skala: die Tier-Farben ★2 und ★3 liegen zu dicht
-   beieinander, um die Stufe allein zu tragen. */
-.sdp-affinity-stars {
-  gap: 1px;
-  color: #3b3226;
-  font-size: 10px;
-  font-style: normal;
-  line-height: 1;
-}
-.sdp-affinity-stars i {
-  font-style: normal;
-}
-.sdp-affinity-star--lit {
-  color: color-mix(in srgb, var(--ac) 74%, #fff);
-  text-shadow: 0 0 7px color-mix(in srgb, var(--ac) 70%, transparent);
 }
 /* Ohne Rand — bei 8 px trennt nur die Fuellung erreicht von offen. */
 .sdp-affinity-steps i {
@@ -2477,7 +2463,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
      an den Arbeitsbereich darunter zurueck — dort stossen die Ausruestungs-
      zeilen sonst ineinander. */
   .sdp-tier-band {
-    grid-template-columns: 25px minmax(0, auto) minmax(0, 1fr);
+    grid-template-columns: 25px minmax(0, 1fr) auto;
     gap: 8px;
     margin-top: 4px;
     padding: 3px 8px;
@@ -2498,9 +2484,9 @@ function perkStatLine(perk: ChampionPerkDef): string {
   .sdp-tier-copy strong {
     font-size: 17px;
   }
-  .sdp-tier-lore {
-    font-size: 11px;
-    -webkit-line-clamp: 1;
+  .sdp-tier-stars {
+    gap: 2px;
+    font-size: 12px;
   }
   .sdp-affinity {
     grid-template-columns: 25px minmax(0, 1fr);
