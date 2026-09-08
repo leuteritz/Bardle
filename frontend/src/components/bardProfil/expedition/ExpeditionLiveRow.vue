@@ -50,8 +50,6 @@ const starScale = computed(() => {
     :aria-pressed="selected"
     @click="emit('select')"
   >
-    <span class="elr-dot" aria-hidden="true" />
-
     <span class="elr-body">
       <span class="elr-name">
         <span class="elr-galaxy">Galaxy {{ toRoman(galaxyStore.currentGalaxy) }}</span>
@@ -77,9 +75,10 @@ const starScale = computed(() => {
    Theme — die laufende Galaxie ist dieselbe Karte wie die Zeilen darunter.
    Hier bleiben nur ihre Masse und ihre Farben. */
 .elr {
-  gap: 9px;
+  gap: 8px;
   height: v-bind(rowH);
-  padding: 0 10px;
+  margin-top: -4px;
+  padding: 0 11px 0 12px;
   /* Die Akzentkante der laufenden Galaxie — dieselbe Geste wie bei den Zeilen
      darunter, nur traegt sie hier die Farbe des THEMAS statt der Stufe. */
   --sr-color: var(--elr-accent, #c89040);
@@ -88,49 +87,30 @@ const starScale = computed(() => {
   --sr-pick: var(--rpg-wood);
 }
 
-/* Der Punkt RUHT: statischer Schein, animiert wird allein die Deckkraft. */
-.elr-dot {
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  margin-left: 3px;
-  border-radius: 50%;
-  background: var(--elr-freed);
-  box-shadow: 0 0 7px rgba(92, 232, 180, 0.7);
-  animation: elr-pulse 2.4s ease-in-out infinite alternate;
-}
-@keyframes elr-pulse {
-  from {
-    opacity: 0.45;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 .elr-body {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .elr-kicker {
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(200, 160, 80, 0.6);
+  color: #c89040;
 }
 
 .elr-name {
   display: flex;
   align-items: baseline;
   gap: 4px;
-  font-size: 15px;
-  line-height: 1.05;
+  font-size: 16px;
+  line-height: 1;
   font-weight: 800;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -150,23 +130,24 @@ const starScale = computed(() => {
 
 .elr-stars {
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 900;
+  letter-spacing: 0.04em;
 }
 .elr-freed {
   color: var(--elr-freed);
 }
 .elr-of {
-  color: rgba(216, 200, 160, 0.45);
+  color: #7a4e20;
 }
 
 .elr-rail {
   position: absolute;
-  left: 3px;
+  left: 0;
   right: 0;
   bottom: 0;
-  height: 2px;
-  background: rgba(122, 78, 32, 0.24);
+  height: 3px;
+  background: #3e200a;
   overflow: hidden;
 }
 .elr-fill {
@@ -178,10 +159,6 @@ const starScale = computed(() => {
   transition: transform 0.4s ease;
 }
 @media (prefers-reduced-motion: reduce) {
-  .elr-dot {
-    animation: none;
-    opacity: 1;
-  }
   .elr-fill {
     transition: none;
   }
