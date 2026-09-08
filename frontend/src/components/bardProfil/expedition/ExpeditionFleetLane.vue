@@ -13,7 +13,6 @@
  * liegt, nennt der `+N`-Chip — still verschwinden darf nichts.
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Icon } from '@iconify/vue'
 import ExpeditionFleetCard from './ExpeditionFleetCard.vue'
 import { VOYAGE_FLEET_CARD_GAP, VOYAGE_FLEET_CARD_MIN_W } from '@/config/constants'
 import type { VoyageFleetCard } from '@/types'
@@ -72,10 +71,7 @@ function scrollOn() {
         @open="(galaxy, pinKey) => emit('open', galaxy, pinKey)"
       />
 
-      <p v-if="!cards.length" class="efl-empty">
-        <Icon icon="lucide:timer" width="14" height="14" />
-        No contracts bound anywhere — the next one is on its way
-      </p>
+      <p v-if="!cards.length" class="efl-empty">NO EXPEDITION YET</p>
     </div>
 
     <button
@@ -123,13 +119,13 @@ function scrollOn() {
 }
 
 .efl-empty {
-  display: flex;
-  align-items: center;
-  gap: 7px;
+  width: 100%;
   margin: 0;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: rgba(200, 144, 64, 0.45);
+  text-align: center;
+  font-size: clamp(24px, 2.2vw, 36px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #e8c040;
 }
 
 /* Liegt ÜBER der Spur statt in ihr — nähme er Flussbreite, änderte er die Zahl,
