@@ -4,6 +4,9 @@ import { Icon } from '@iconify/vue'
 import { formatCompactDuration } from '@/utils/ui/format'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 import { useHerald } from '@/composables/ui/useHerald'
+import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
+import { useUiStore } from '@/stores/core/uiStore'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
@@ -21,6 +24,9 @@ import { gameNow } from '@/utils/game/gameClock'
 /** Die Sonne auf der Journey-Übersicht — die EINZIGE Stelle, an der sie evolviert. */
 const solarStore = useSolarUpgradeStore()
 const { announceReceipt } = useHerald()
+const uiStore = useUiStore()
+const { focusNode } = useForgeSpotlight()
+const { openDetails } = useForgeDetailsPane()
 
 const totalPhases = STAR_PHASE_DATA.length
 const isComet = computed(() => solarStore.isCometState)
@@ -179,6 +185,15 @@ const raysShortText = computed(() => {
   const missing = SOLAR_BRANCHES.length - raysMet.value
   return `${missing} ray${missing === 1 ? '' : 's'}`
 })
+const raysNeedUpgrade = computed(() => !isMax.value && !raysAllMet.value)
+
+function openRayUpgrade(): void {
+  const target = rayTiles.value.find((ray) => !ray.met)?.id
+  if (!target) return
+  uiStore.setBardTab('tree')
+  openDetails()
+  focusNode(target, { readable: true })
+}
 
 /* ── The act ──────────────────────────────────────────────────────
    This panel is the ONLY place the sun evolves. The Star Forge grows the rays
@@ -210,23 +225,20 @@ const verdict = computed<{ tone: 'ready' | 'blocked' | 'end'; text: string }>(()
   if (isMax.value) return { tone: 'end', text: 'Nothing follows the collapse' }
   if (solarStore.isUpgrading)
     return { tone: 'ready', text: `${nextStage.value.name} is taking shape…` }
-  if (dwellMet.value && raysAllMet.value) return { tone: 'ready', text: nextPhaseGain.value }
+  if (dwellMet.value && raysAllMet.value) return { tone: 'ready', text: 'Ready to evolve' }
   if (!dwellMet.value && !raysAllMet.value)
     return {
       tone: 'blocked',
-      text: `${formatCompactDuration(dwellRemainingMs.value)} of dwell · ${raysShortText.value} below Lv ${requiredRayLevel.value}`,
+      text: `${formatCompactDuration(dwellRemainingMs.value)} remaining`,
     }
   if (!dwellMet.value)
     return {
       tone: 'blocked',
-      text: `${formatCompactDuration(dwellRemainingMs.value)} of dwell left`,
+      text: `${formatCompactDuration(dwellRemainingMs.value)} remaining`,
     }
-  /* Rays only: there is room on this line to also say WHERE they grow, which
-     replaces the pointer chip that used to sit in the rays slab and crowded
-     its label. Not added to the both-gates case — that line is already full. */
   return {
     tone: 'blocked',
-    text: `${raysShortText.value} below Lv ${requiredRayLevel.value} — grow them in the Star Forge`,
+    text: `${raysShortText.value} below Lv ${requiredRayLevel.value}`,
   }
 })
 
@@ -321,17 +333,11 @@ function handleEvolve(): void {
           <strong class="se-next-name">{{ isMax ? 'Fully Evolved' : nextStage.name }}</strong>
           <span class="se-next-gain">{{ isMax ? verdict.text : nextPhaseGain }}</span>
         </span>
-        <span class="se-next-index"
-          >{{ isMax ? totalPhases : solarStore.starPhase + 1 }}/{{ totalPhases }}</span
-        >
       </div>
 
       <div v-if="!isMax" class="se-requirements">
         <div class="se-requirements-head">
           <span class="se-requirements-k">Requirements</span>
-          <span class="se-requirements-state" :class="{ 'is-ready': canEvolveNow }">
-            {{ canEvolveNow ? 'Ready to evolve' : 'Not ready yet' }}
-          </span>
         </div>
 
         <div class="se-requirement" :class="{ 'is-met': dwellMet }">
@@ -367,8 +373,7 @@ function handleEvolve(): void {
             <span>
               <span class="se-requirement-name">Core rays</span>
               <span class="se-requirement-value"
-                >{{ raysMet }}/{{ SOLAR_BRANCHES.length }} attuned · Lv
-                {{ requiredRayLevel }} needed</span
+                >{{ raysMet }}/{{ SOLAR_BRANCHES.length }} rays · Lv {{ requiredRayLevel }}</span
               >
             </span>
           </div>
@@ -390,28 +395,33 @@ function handleEvolve(): void {
         </div>
       </div>
 
-      <button
-        v-if="!isMax"
-        class="se-fire"
-        type="button"
-        :disabled="!canEvolveNow"
-        @click="handleEvolve"
-      >
-        <span class="se-fire-mark" aria-hidden="true">✦</span>
-        <span class="se-fire-copy">
-          <span class="se-fire-lbl">{{ evolveLabel }}</span>
-          <span class="se-fire-sub">{{ verdict.text }}</span>
-        </span>
-        <span class="se-fire-arrow" aria-hidden="true">→</span>
-      </button>
-      <div v-else class="se-fire se-fire--done">
-        <span class="se-fire-mark" aria-hidden="true">
-          <Icon icon="game-icons:laurel-crown" width="22" height="22" aria-hidden="true" />
-        </span>
-        <span class="se-fire-copy">
-          <span class="se-fire-lbl">Fully Evolved</span>
-          <span class="se-fire-sub">{{ verdict.text }}</span>
-        </span>
+      <div class="se-action">
+        <button
+          v-if="!isMax"
+          class="se-fire"
+          type="button"
+          :disabled="!canEvolveNow"
+          @click="handleEvolve"
+        >
+          <span class="se-fire-mark" aria-hidden="true">✦</span>
+          <span class="se-fire-copy">
+            <span class="se-fire-lbl">{{ evolveLabel }}</span>
+            <span class="se-fire-sub">{{ verdict.text }}</span>
+          </span>
+          <span class="se-fire-arrow" aria-hidden="true">→</span>
+        </button>
+        <div v-else class="se-fire se-fire--done">
+          <span class="se-fire-mark" aria-hidden="true">
+            <Icon icon="game-icons:laurel-crown" width="22" height="22" aria-hidden="true" />
+          </span>
+          <span class="se-fire-copy">
+            <span class="se-fire-lbl">Fully Evolved</span>
+            <span class="se-fire-sub">{{ verdict.text }}</span>
+          </span>
+        </div>
+        <button v-if="raysNeedUpgrade" class="se-fire-link" type="button" @click="openRayUpgrade">
+          Open in Skill Tree →
+        </button>
       </div>
     </section>
   </section>
@@ -424,7 +434,7 @@ function handleEvolve(): void {
   /* Sonne links über Name und Rail, die Konsole rechts über die volle Höhe:
      untereinander fraß die Konsole der Sonne die Höhe weg (gemessen 37 px Disc) */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 40%);
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 43%);
   grid-template-rows: minmax(0, 1fr) auto auto;
   /* eigene Eigenschaften NIE in cqw: das Container-Element misst gegen den Vorfahren */
   column-gap: 18px;
@@ -607,7 +617,7 @@ function handleEvolve(): void {
   grid-column: 2;
   grid-row: 1 / -1;
   align-self: center;
-  width: min(100%, 520px);
+  width: min(100%, 560px);
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -678,16 +688,6 @@ function handleEvolve(): void {
   color: #c7b98d;
 }
 
-.se-next-index {
-  align-self: start;
-  padding-top: 2px;
-  font-size: clamp(10px, 1.2cqw, 14px);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--se-state);
-  white-space: nowrap;
-}
-
 .se-requirements {
   display: flex;
   flex-direction: column;
@@ -699,18 +699,6 @@ function handleEvolve(): void {
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-}
-
-.se-requirements-state {
-  font-size: clamp(9px, 1.1cqw, 13px);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #8a7c66;
-  white-space: nowrap;
-}
-
-.se-requirements-state.is-ready {
-  color: #a8e878;
 }
 
 .se-requirement {
@@ -754,6 +742,31 @@ function handleEvolve(): void {
 
 .se-requirement--rays {
   gap: clamp(7px, 1cqw, 12px);
+}
+
+.se-action {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+}
+
+.se-fire-link {
+  align-self: flex-start;
+  padding: 0;
+  font-size: clamp(10px, 1.15cqw, 14px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #d8b06a;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.se-fire-link:hover {
+  color: #e8c040;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Label left, value right, the visual underneath — full width, because that is
