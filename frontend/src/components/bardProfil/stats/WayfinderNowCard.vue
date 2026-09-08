@@ -116,9 +116,9 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
 .jt-wf {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
-  padding: 12px 14px;
+  padding: 16px 18px;
   background: #1a1008;
   border: 1px solid #2c1806;
   border-left: 3px solid var(--accent);
@@ -136,7 +136,7 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
   flex-shrink: 0;
 }
 .jt-wf-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -214,7 +214,7 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
   min-width: 0;
 }
 .jt-wf-name {
-  font-size: 20px;
+  font-size: 23px;
   font-weight: 900;
   line-height: 1.1;
   color: #f0e6c8;
@@ -223,7 +223,7 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
   white-space: nowrap;
 }
 .jt-wf-task {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.3;
   color: var(--rpg-text-muted);
 }
@@ -235,7 +235,7 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
 }
 .jt-wf-track {
   flex: 1;
-  height: 12px;
+  height: 14px;
   background: #0d0904;
   border: 1px solid #2c1806;
   border-radius: 3px;
@@ -249,7 +249,7 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
   background: var(--accent);
 }
 .jt-wf-count {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--rpg-gold);
   white-space: nowrap;
@@ -312,8 +312,8 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
 
 @media (max-height: 1100px) {
   .jt-wf {
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 9px;
+    padding: 13px 15px;
   }
   .jt-wf-emblem {
     width: 46px;
@@ -324,7 +324,7 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
     height: 28px;
   }
   .jt-wf-name {
-    font-size: 18px;
+    font-size: 20px;
   }
 }
 </style>

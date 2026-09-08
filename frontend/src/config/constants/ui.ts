@@ -1415,6 +1415,20 @@ export const JOURNEY_KPI_TILES: readonly {
   { category: 'champions', key: 'owned', short: 'Champions', icon: 'game-icons:crested-helmet' },
 ]
 
+export const JOURNEY_OVERVIEW_KPI_TILES = JOURNEY_KPI_TILES.filter(
+  (tile) =>
+    !(
+      (tile.category === 'economy' && tile.key === 'meeps') ||
+      (tile.category === 'starForge' && tile.key === 'relics') ||
+      (tile.category === 'meepTree' && tile.key === 'nodes')
+    ),
+)
+
+export const JOURNEY_OVERVIEW_KPI_GRID = {
+  COLS: 3,
+  ROWS: 3,
+} as const
+
 /** Raster der Stats-Karte: fest, die Zeilen teilen die Höhe, Schrift skaliert per cqh. */
 export const JOURNEY_KPI_GRID = {
   COLS: 3,

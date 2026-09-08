@@ -5,8 +5,8 @@ import { storeToRefs } from 'pinia'
 import {
   CHIME_ART_ALPHA_SCALE,
   CURRENCY_ART,
-  JOURNEY_KPI_GRID,
-  JOURNEY_KPI_TILES,
+  JOURNEY_OVERVIEW_KPI_GRID,
+  JOURNEY_OVERVIEW_KPI_TILES,
   UNIVERSE_TOOLTIP_MEEP_SCALE,
   WIN_LOSS_TONE,
 } from '@/config/constants'
@@ -14,11 +14,7 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import { rankEmblemImage, rankTierColor } from '@/utils/game/rankEmblem'
 import type { StatCategoryId, StatCategoryView } from '@/types'
 
-/**
- * Zwölf Kennzahlen aus dem Katalog (bereits formatiert) in einem festen
- * 3×4-Raster. Die Zeilen teilen sich die Höhe, die Schrift wächst mit ihr —
- * jede Auflösung zeigt dieselben Zahlen, nur größer oder kleiner.
- */
+/** Core metrics from the catalog in the responsive overview grid. */
 const props = defineProps<{ categories: StatCategoryView[] }>()
 const emit = defineEmits<{ open: [category: StatCategoryId | null] }>()
 
@@ -38,7 +34,7 @@ interface KpiTile {
 }
 
 const tiles = computed<KpiTile[]>(() =>
-  JOURNEY_KPI_TILES.flatMap((t) => {
+  JOURNEY_OVERVIEW_KPI_TILES.flatMap((t) => {
     const cat = props.categories.find((c) => c.id === t.category)
     const stat = cat?.stats.find((s) => s.key === t.key)
     if (!cat || !stat) return []
@@ -77,8 +73,8 @@ const chimeScale = `${CHIME_ART_ALPHA_SCALE}`
 const meepScale = `${UNIVERSE_TOOLTIP_MEEP_SCALE}`
 
 const gridStyle = {
-  '--cols': JOURNEY_KPI_GRID.COLS,
-  '--rows': JOURNEY_KPI_GRID.ROWS,
+  '--cols': JOURNEY_OVERVIEW_KPI_GRID.COLS,
+  '--rows': JOURNEY_OVERVIEW_KPI_GRID.ROWS,
 }
 </script>
 
@@ -141,10 +137,10 @@ const gridStyle = {
 .jt-kpis {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   min-height: 0;
   min-width: 0;
-  padding: 12px 14px;
+  padding: 16px 18px 18px;
   background: #1a1008;
   border: 1px solid #2c1806;
   border-radius: 4px;
@@ -155,6 +151,8 @@ const gridStyle = {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #2c1806;
 }
 .jt-kpis-sys {
   color: var(--rpg-gold);
@@ -162,15 +160,15 @@ const gridStyle = {
 }
 .jt-kpis-title {
   flex: 1;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--rpg-gold);
 }
 .jt-kpis-more {
-  padding: 3px 9px;
-  font-size: 11px;
+  padding: 6px 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -195,16 +193,17 @@ const gridStyle = {
   display: grid;
   grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
   grid-template-rows: repeat(var(--rows, 4), minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
 }
 
 .jt-kpi {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: clamp(6px, 2.4cqh, 12px);
+  gap: clamp(10px, 2.8cqh, 16px);
   min-width: 0;
   min-height: 0;
-  padding: 0 clamp(6px, 2.6cqh, 14px);
+  padding: clamp(10px, 2.4cqh, 16px) clamp(10px, 3cqh, 18px);
   overflow: hidden;
   text-align: left;
   color: inherit;
@@ -222,8 +221,8 @@ const gridStyle = {
 
 .jt-kpi-icon {
   flex-shrink: 0;
-  width: clamp(16px, 11cqh, 30px);
-  height: clamp(16px, 11cqh, 30px);
+  width: clamp(24px, 13cqh, 38px);
+  height: clamp(24px, 13cqh, 38px);
   color: var(--accent);
 }
 
@@ -247,7 +246,7 @@ const gridStyle = {
 }
 
 .jt-kpi-val {
-  font-size: clamp(14px, 9.5cqh, 26px);
+  font-size: clamp(18px, 10.5cqh, 30px);
   font-weight: 900;
   line-height: 1;
   color: var(--rpg-gold);
@@ -278,7 +277,7 @@ const gridStyle = {
 }
 
 .jt-kpi-lbl {
-  font-size: clamp(8.5px, 4.6cqh, 12px);
+  font-size: clamp(10px, 5.2cqh, 13px);
   font-weight: 700;
   letter-spacing: 0.1em;
   line-height: 1.1;
@@ -291,8 +290,8 @@ const gridStyle = {
 
 @media (max-height: 1100px) {
   .jt-kpis {
-    gap: 6px;
-    padding: 10px 12px;
+    gap: 9px;
+    padding: 13px 15px 14px;
   }
 }
 </style>

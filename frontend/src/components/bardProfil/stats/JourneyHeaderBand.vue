@@ -174,11 +174,12 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 
 <style scoped>
 .jt-band {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(250px, 0.8fr) repeat(3, minmax(190px, 1fr));
   align-items: center;
-  gap: 28px;
+  gap: 14px;
   min-width: 0;
-  padding: 10px 16px;
+  padding: 16px 20px;
   border-bottom: 1px solid #2c1806;
 }
 
@@ -187,12 +188,19 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
+  min-height: 104px;
+  padding: 12px 18px;
+  background: #1a1008;
+  border: 1px solid #2c1806;
+  border-left: 3px solid #e8c040;
+  border-radius: 4px;
   cursor: help;
 }
 
 .jt-pt-lbl {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -214,7 +222,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 0 14px;
+  padding: 0 16px;
 }
 .jt-pt-seg:first-child {
   padding-left: 0;
@@ -225,7 +233,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 
 .jt-pt-num {
   display: flex;
-  font-size: 44px;
+  font-size: 48px;
   font-weight: 900;
   line-height: 0.95;
   color: var(--rpg-gold);
@@ -262,23 +270,21 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 
 /* ── Ringe ── */
 .jt-gauges {
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  display: contents;
   min-width: 0;
 }
 
 .jt-gauge {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
+  justify-content: flex-start;
+  gap: 16px;
   min-width: 0;
-  padding: 8px 18px 8px 10px;
-  background: #141008;
-  border: 1px solid #241a0c;
-  border-radius: 5px;
+  min-height: 104px;
+  padding: 12px 18px;
+  background: #1a1008;
+  border: 1px solid #2c1806;
+  border-radius: 4px;
   cursor: help;
 }
 .jt-gauge:hover {
@@ -287,7 +293,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 
 .jt-gauge-ring {
   position: relative;
-  width: var(--gauge-max);
+  width: min(var(--gauge-max), 112px);
   aspect-ratio: 1;
   flex-shrink: 0;
 }
@@ -337,7 +343,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 }
 
 .jt-gauge-lbl {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -349,7 +355,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1;
   color: var(--rpg-text-muted);
@@ -384,19 +390,20 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 
 @media (max-height: 1100px) {
   .jt-band {
-    padding: 7px 14px;
+    padding: 12px 16px;
   }
   .jt-pt-num {
-    font-size: 36px;
+    font-size: 40px;
   }
   .jt-pt-seg {
-    padding: 0 11px;
+    padding: 0 12px;
   }
   .jt-gauge-ring {
-    width: var(--gauge-max-compact);
+    width: min(var(--gauge-max-compact), 92px);
   }
   .jt-gauge {
-    padding: 6px 14px 6px 8px;
+    min-height: 88px;
+    padding: 8px 14px;
   }
 }
 
