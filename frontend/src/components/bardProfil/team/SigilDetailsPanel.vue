@@ -168,6 +168,8 @@ const activeAffinities = computed(() => {
         color: entry.def.color,
         count: entry.count,
         bonus: entry.activeThreshold!.bonus,
+        steps: entry.def.thresholds.map((step) => step.count),
+        crowned: !entry.nextThreshold,
       })),
     ...synergyStore.activeTraits
       .filter((entry) => entry.activeThreshold && entry.involvedChampions.includes(name))
@@ -179,6 +181,8 @@ const activeAffinities = computed(() => {
         color: entry.trait.color,
         count: entry.count,
         bonus: entry.activeThreshold!.bonus,
+        steps: entry.trait.thresholds.map((step) => step.count),
+        crowned: !entry.nextThreshold,
       })),
   ]
 })
@@ -508,26 +512,6 @@ function perkStatLine(perk: ChampionPerkDef): string {
           <template v-if="champion">
             <img :src="championImage" :alt="champion" />
             <span class="sdp-portrait-shade" />
-            <span
-              v-if="activeAffinities.length"
-              class="sdp-affinity-list"
-              aria-label="Active traits and origins"
-            >
-              <span
-                v-for="affinity in activeAffinities"
-                :key="affinity.id"
-                class="sdp-affinity"
-                :style="{ '--ac': affinity.color }"
-                v-tip="`${affinity.kind}: ${affinity.name} · ${affinity.bonus}`"
-              >
-                <Icon :icon="affinity.icon" width="24" height="24" />
-                <span class="sdp-affinity-copy">
-                  <small>{{ affinity.kind }}</small
-                  ><strong>{{ affinity.name }}</strong>
-                </span>
-                <em>{{ affinity.count }}</em>
-              </span>
-            </span>
             <ChampionLevelBadge
               :level="level"
               :color="roleDef.color"
@@ -600,6 +584,35 @@ function perkStatLine(perk: ChampionPerkDef): string {
             <h2>{{ champion }}</h2>
             <div class="sdp-meta">
               <span v-if="tier" :style="{ color: tier.color }">★ {{ tier.name }}</span>
+            </div>
+            <div
+              v-if="activeAffinities.length"
+              class="sdp-affinity-list"
+              aria-label="Active traits and origins"
+            >
+              <div
+                v-for="affinity in activeAffinities"
+                :key="affinity.id"
+                class="sdp-affinity"
+                :class="{ 'sdp-affinity--crowned': affinity.crowned }"
+                :style="{ '--ac': affinity.color }"
+                v-tip="`${affinity.kind}: ${affinity.name} · ${affinity.bonus}`"
+              >
+                <span class="sdp-affinity-crest" aria-hidden="true"
+                  ><Icon :icon="affinity.icon" width="22" height="22"
+                /></span>
+                <span class="sdp-affinity-copy">
+                  <span class="sdp-affinity-head"
+                    ><small>{{ affinity.kind }}</small
+                    ><span class="sdp-affinity-steps"
+                      ><i
+                        v-for="step in affinity.steps"
+                        :key="step"
+                        :class="{ 'sdp-affinity-step--lit': affinity.count >= step }" /></span
+                    ><em>{{ affinity.count }}</em></span
+                  ><strong>{{ affinity.name }}</strong>
+                </span>
+              </div>
             </div>
           </div>
           <div class="sdp-progression">
@@ -1089,65 +1102,100 @@ function perkStatLine(perk: ChampionPerkDef): string {
   inset: 0;
   background: linear-gradient(0deg, #0c0b08 1%, transparent 55%);
 }
+/* Die Zugehörigkeiten stehen unter dem Namen, nicht auf dem Splash — und tragen die
+   Synergie-Sprache des Team-Panels: Hex-Plakette, Akzentkante, Stufenpunkte. */
 .sdp-affinity-list {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  left: 10px;
-  z-index: 2;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
 }
 .sdp-affinity {
   min-width: 0;
   display: grid;
-  grid-template-columns: 27px minmax(0, 1fr) auto;
+  grid-template-columns: 30px minmax(0, 1fr);
   align-items: center;
-  gap: 7px;
-  min-height: 48px;
-  padding: 6px 8px;
-  border: 1px solid color-mix(in srgb, var(--ac) 72%, #7a4e20);
+  gap: 8px;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--ac) 46%, #3e200a);
+  border-left: 3px solid var(--ac);
   border-radius: 4px;
-  background: #111008;
-  color: var(--ac);
+  background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 15%, #17150e), #141410 78%);
   text-align: left;
 }
-.sdp-affinity > svg {
-  width: 25px;
-  height: 25px;
+/* Höchste Stufe erreicht — der Schein ist statisch, nichts atmet hier. */
+.sdp-affinity--crowned {
+  border-color: color-mix(in srgb, var(--ac) 78%, #e8c040);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--ac) 26%, transparent),
+    0 0 12px color-mix(in srgb, var(--ac) 24%, transparent);
+}
+.sdp-affinity-crest {
+  width: 30px;
+  height: 33px;
+  display: grid;
+  place-items: center;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: var(--ac);
+  color: #fff;
 }
 .sdp-affinity-copy {
   min-width: 0;
   display: grid;
-  gap: 2px;
+  gap: 3px;
 }
-.sdp-affinity-copy small {
+.sdp-affinity-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.sdp-affinity-head small {
   color: #a59675;
   font-size: 9px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   line-height: 1;
   text-transform: uppercase;
 }
-.sdp-affinity-copy strong {
-  overflow: hidden;
-  color: #f0dfb3;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* Ein Punkt je Schwelle — die erleuchteten sagen die erreichte Stufe. */
+.sdp-affinity-steps {
+  display: flex;
+  gap: 4px;
+  margin-right: auto;
 }
+/* Ohne Rand — bei 8 px trennt nur die Fuellung erreicht von offen. */
+.sdp-affinity-steps i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3b3226;
+}
+.sdp-affinity-step--lit {
+  background: color-mix(in srgb, var(--ac) 74%, #fff);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--ac) 70%, transparent);
+}
+/* Der Zaehler meint Koepfe im Orbit, nicht die Stufe — das Kreuz sagt es. */
 .sdp-affinity em {
-  min-width: 21px;
-  padding: 2px 5px;
-  border: 1px solid color-mix(in srgb, var(--ac) 56%, #3e200a);
-  border-radius: 3px;
   color: var(--ac);
-  font-size: 12px;
+  font-size: 14px;
   font-style: normal;
   font-weight: 700;
-  text-align: center;
+  line-height: 1;
+}
+.sdp-affinity em::before {
+  content: '×';
+  margin-right: 1px;
+  opacity: 0.7;
+}
+.sdp-affinity strong {
+  overflow: hidden;
+  color: var(--ac);
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--ac) 34%, transparent);
+  white-space: nowrap;
 }
 .sdp-hero-level {
   position: absolute;
@@ -2315,6 +2363,22 @@ function perkStatLine(perk: ChampionPerkDef): string {
   }
   .sdp-identity h2 {
     font-size: 39px;
+  }
+  .sdp-affinity-list {
+    gap: 6px;
+    margin-top: 7px;
+  }
+  .sdp-affinity {
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 7px;
+    padding: 5px 8px;
+  }
+  .sdp-affinity-crest {
+    width: 26px;
+    height: 29px;
+  }
+  .sdp-affinity strong {
+    font-size: 17px;
   }
   .sdp-stat {
     min-height: 59px;
