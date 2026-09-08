@@ -779,10 +779,13 @@ onUnmounted(() => {
 }
 .team-role-rail-nav {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
   z-index: 2;
   display: flex;
   flex-direction: column;
+  width: v-bind(railHandleWidth);
   border-left: 3px solid #5c3310;
   background: #111008;
 }
