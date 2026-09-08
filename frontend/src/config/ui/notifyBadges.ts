@@ -146,6 +146,11 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
         marker: '<RpgNotifyBadge',
         where: 'Galaxy map, at a returning harbor',
       },
+      {
+        file: 'components/bardProfil/expedition/ExpeditionFleetCard.vue',
+        marker: '<RpgNotifyBadge',
+        where: 'Galaxy command bar, on a returned fleet card',
+      },
     ],
     seedability: 'exact',
     reversible: 'full',

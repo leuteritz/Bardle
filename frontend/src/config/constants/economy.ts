@@ -1839,6 +1839,13 @@ export const VOYAGE_FLEET_TIP_STATUS = {
 /** Die Fußzeile der UNSCHARFEN Karte — sie beschreibt den Sprung, nicht die Geste. */
 export const VOYAGE_FLEET_TIP_HINT = 'Click to open on the map'
 
+/**
+ * Die Vorlesung der Notify-Marke. Kartenmarke und Fleet-Karte tragen dieselbe,
+ * weil sie dasselbe melden — und sie gilt auch der GESCHEITERTEN Mission:
+ * eingesammelt wird beides, und die Truhe zählt beides.
+ */
+export const VOYAGE_BADGE_RETURNED_LABEL = 'Expedition ready to collect'
+
 /** Materialbild der zurückgekehrten Beute. Unter der 34-px-Schwelle, also trägt
  *  die `-128`-Stufe, die `Material.image` ohnehin liefert. */
 export const VOYAGE_FLEET_TIP_MAT_PX = 20
