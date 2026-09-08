@@ -381,7 +381,7 @@ function handleEvolve(): void {
   /* Sonne links über Name und Rail, die Konsole rechts über die volle Höhe:
      untereinander fraß die Konsole der Sonne die Höhe weg (gemessen 37 px Disc) */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 44%);
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 35%);
   grid-template-rows: minmax(0, 1fr) auto auto;
   /* eigene Eigenschaften NIE in cqw: das Container-Element misst gegen den Vorfahren */
   column-gap: 18px;
@@ -564,22 +564,24 @@ function handleEvolve(): void {
   grid-column: 2;
   grid-row: 1 / -1;
   align-self: center;
+  justify-self: center;
+  width: min(100%, clamp(260px, 23cqw, 430px));
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: clamp(6px, 1.3cqw, 18px);
-  padding: clamp(8px, 1.8cqw, 24px) clamp(9px, 2cqw, 27px);
+  gap: clamp(7px, 1.1cqw, 14px);
+  padding: clamp(10px, 1.4cqw, 18px) clamp(11px, 1.6cqw, 21px);
   background: #1a1008;
-  border: 2px solid #5c3310;
+  border: 1px solid #5c3310;
   border-radius: 4px;
 }
 .se-deck.is-live {
-  border-color: #6ec040;
-  background: #141c0c;
+  border-color: #5c3310;
+  box-shadow: inset 2px 0 0 #6ec040;
 }
 .se-deck.is-end {
   border-color: #4a2a7a;
-  background: #170f22;
+  background: #1a1008;
 }
 
 /* Label left, value right, the visual underneath — full width, because that is
@@ -588,11 +590,15 @@ function handleEvolve(): void {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: clamp(4px, 1cqw, 13px) clamp(8px, 1.8cqw, 24px);
+  gap: clamp(4px, 0.8cqw, 10px) clamp(8px, 1.4cqw, 18px);
+}
+.se-slab + .se-slab {
+  padding-top: clamp(7px, 1.1cqw, 14px);
+  border-top: 1px solid #2c1806;
 }
 
 .se-slab-k {
-  font-size: clamp(10px, 1.8cqw, 24px);
+  font-size: clamp(10px, 1.4cqw, 17px);
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #7a6c56;
@@ -602,7 +608,7 @@ function handleEvolve(): void {
 /* The numbers this panel exists for */
 .se-slab-v {
   grid-column: 3;
-  font-size: clamp(24px, 4.55cqw, 62px);
+  font-size: clamp(22px, 3.4cqw, 42px);
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.01em;
@@ -624,7 +630,7 @@ function handleEvolve(): void {
    scaleX, not width — this creeps forward every second the panel is open. */
 .se-track {
   grid-column: 1 / -1;
-  height: clamp(7px, 1.2cqw, 16px);
+  height: clamp(6px, 0.8cqw, 10px);
   background: #0d0904;
   border: 1px solid #2c1806;
   border-radius: 3px;
@@ -649,7 +655,7 @@ function handleEvolve(): void {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(4px, 1.1cqw, 14px);
+  gap: clamp(4px, 0.7cqw, 9px);
 }
 
 .se-ray {
@@ -657,8 +663,8 @@ function handleEvolve(): void {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(2px, 0.5cqw, 7px);
-  padding: clamp(5px, 1.2cqw, 16px) 2px;
+  gap: clamp(2px, 0.4cqw, 5px);
+  padding: clamp(6px, 0.9cqw, 11px) 2px;
   background: #141410;
   border: 1px solid #2c1806;
   border-radius: 4px;
@@ -668,8 +674,8 @@ function handleEvolve(): void {
 /* A grown ray burns in its own colour; a short one stays a dark socket. No
    `filter: grayscale` — the colour IS the ray's name here. */
 .se-ray-ico {
-  width: clamp(18px, 3.6cqw, 44px);
-  height: clamp(18px, 3.6cqw, 44px);
+  width: clamp(18px, 2.7cqw, 32px);
+  height: clamp(18px, 2.7cqw, 32px);
   color: #4e422c;
 }
 .se-ray.is-met {
@@ -681,7 +687,7 @@ function handleEvolve(): void {
 }
 
 .se-ray-lv {
-  font-size: clamp(12px, 2.4cqw, 30px);
+  font-size: clamp(11px, 1.8cqw, 22px);
   font-weight: 900;
   line-height: 1;
   color: #6a5a3a;
@@ -709,8 +715,8 @@ function handleEvolve(): void {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(2px, 0.6cqw, 8px);
-  padding: clamp(9px, 1.9cqw, 26px) clamp(10px, 2.2cqw, 30px);
+  gap: clamp(3px, 0.5cqw, 6px);
+  padding: clamp(9px, 1.3cqw, 16px) clamp(10px, 1.6cqw, 20px);
   width: 100%;
   color: #08130a;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
@@ -725,8 +731,8 @@ function handleEvolve(): void {
 .se-fire-lbl {
   display: flex;
   align-items: center;
-  gap: clamp(5px, 1.2cqw, 16px);
-  font-size: clamp(16px, 3.1cqw, 42px);
+  gap: clamp(5px, 0.8cqw, 10px);
+  font-size: clamp(15px, 2.3cqw, 28px);
   font-weight: 900;
   line-height: 1.05;
   letter-spacing: 0.04em;
@@ -734,7 +740,7 @@ function handleEvolve(): void {
 }
 
 .se-fire-sub {
-  font-size: clamp(10px, 1.8cqw, 22px);
+  font-size: clamp(10px, 1.35cqw, 16px);
   line-height: 1.2;
   letter-spacing: 0.02em;
   color: #10300c;
@@ -793,8 +799,8 @@ function handleEvolve(): void {
     padding: 8px 12px 10px;
   }
   .se-deck {
-    padding: 7px 9px;
-    gap: 5px;
+    padding: 8px 9px;
+    gap: 6px;
   }
   .se-ray {
     padding: 4px 2px;
