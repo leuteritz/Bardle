@@ -18,9 +18,6 @@ import {
   TEAM_EQUIPMENT_PANEL_WIDTH,
   TEAM_ROLE_RAIL_HANDLE_PX,
   TEAM_ROLE_RAIL_SLIDE_MS,
-  TEAM_ROLE_RAIL_LABEL,
-  TEAM_ROLE_RAIL_OPEN_TITLE,
-  TEAM_ROLE_RAIL_CLOSE_TITLE,
   TEAM_ROLE_RAIL_NAV_HEIGHT,
   TEAM_ROLE_RAIL_HERO_COMPACT_HEIGHT,
 } from '@/config/constants'
@@ -34,7 +31,6 @@ import TeamTabLoader from './TeamTabLoader.vue'
 import TeamSidePanelShell from './TeamSidePanelShell.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
-import SideRailHandle from '@/components/ui/SideRailHandle.vue'
 import { useSideRail } from '@/composables/ui/useSideRail'
 
 /**
@@ -304,11 +300,6 @@ const railHandleWidth = `${TEAM_ROLE_RAIL_HANDLE_PX}px`
 const railSlideMs = `${TEAM_ROLE_RAIL_SLIDE_MS}ms`
 const roleNavHeight = `${TEAM_ROLE_RAIL_NAV_HEIGHT}px`
 const roleHeroCompactHeight = `${TEAM_ROLE_RAIL_HERO_COMPACT_HEIGHT}px`
-const roleCount = computed(() => battleStore.headerSlots.filter(Boolean).length)
-const railTitle = computed(() =>
-  railFolded.value ? TEAM_ROLE_RAIL_OPEN_TITLE : TEAM_ROLE_RAIL_CLOSE_TITLE,
-)
-
 const { inert: railInert } = useSideRail({
   folded: railFolded,
   slideMs: TEAM_ROLE_RAIL_SLIDE_MS,
@@ -431,8 +422,12 @@ function closeDestination() {
   activeDestination.value = null
 }
 
-function toggleRoleRail() {
-  railChoice.value = !railFolded.value
+function handleRoleRailClick(index: number) {
+  if (!railFolded.value && selectedRole.value === index && activeDestination.value === null) {
+    closePanel()
+    return
+  }
+  selectRole(index)
 }
 
 function roleChampion(index: number) {
@@ -728,32 +723,24 @@ onUnmounted(() => {
         </Transition>
       </div>
 
-      <nav v-if="railFolded" class="team-role-folded-nav" aria-label="Team roles">
+      <nav class="team-role-rail-nav" aria-label="Team roles">
         <button
           v-for="(role, index) in ROLES"
           :key="role.key"
           type="button"
-          class="team-role-folded-button"
-          :class="{ 'team-role-folded-button--active': selectedRole === index }"
+          class="team-role-rail-button"
+          :class="{ 'team-role-rail-button--active': selectedRole === index && !railFolded }"
           :style="{ '--role-color': role.color }"
           :aria-label="`${role.label} details`"
-          :aria-current="selectedRole === index ? 'page' : undefined"
+          :aria-current="selectedRole === index && !railFolded ? 'page' : undefined"
+          :aria-expanded="selectedRole === index && !railFolded"
           v-tip="`${role.label} details`"
-          @click="selectRole(index)"
+          @click="handleRoleRailClick(index)"
         >
           <Icon :icon="role.icon" width="18" height="18" aria-hidden="true" />
           <strong>{{ role.short }}</strong>
         </button>
       </nav>
-      <SideRailHandle
-        v-else
-        :label="TEAM_ROLE_RAIL_LABEL"
-        :width-px="TEAM_ROLE_RAIL_HANDLE_PX"
-        :open="true"
-        :title="railTitle"
-        :total="roleCount"
-        @toggle="toggleRoleRail"
-      />
     </div>
 
     <!-- ══ Ladeschleier der Detailspalte ══
@@ -790,7 +777,7 @@ onUnmounted(() => {
   min-width: 0;
   min-height: 0;
 }
-.team-role-folded-nav {
+.team-role-rail-nav {
   position: absolute;
   inset: 0;
   z-index: 2;
@@ -799,7 +786,7 @@ onUnmounted(() => {
   border-left: 3px solid #5c3310;
   background: #111008;
 }
-.team-role-folded-button {
+.team-role-rail-button {
   min-height: 0;
   flex: 1 1 0;
   display: flex;
@@ -809,6 +796,7 @@ onUnmounted(() => {
   gap: 5px;
   padding: 6px 2px;
   border: 0;
+  border-left: 3px solid var(--role-color);
   border-bottom: 1px solid #493116;
   background: #141410;
   color: var(--role-color);
@@ -817,21 +805,22 @@ onUnmounted(() => {
     background-color 0.12s ease,
     color 0.12s ease;
 }
-.team-role-folded-button:last-child {
+.team-role-rail-button:last-child {
   border-bottom: 0;
 }
-.team-role-folded-button:hover,
-.team-role-folded-button--active {
-  background: #1e1006;
-  color: var(--role-color);
-  box-shadow: inset 3px 0 0 var(--role-color);
+.team-role-rail-button:hover,
+.team-role-rail-button--active {
+  background: var(--role-color);
+  color: #111008;
+  box-shadow: inset 0 0 0 2px #111008;
 }
-.team-role-folded-button:focus-visible {
+.team-role-rail-button:focus-visible {
   outline: 2px solid var(--role-color);
   outline-offset: -2px;
 }
-.team-role-folded-button strong {
+.team-role-rail-button strong {
   font-size: 10px;
+  font-weight: 800;
   letter-spacing: 0.08em;
   line-height: 1;
 }
@@ -949,7 +938,7 @@ onUnmounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .team-rail-slide,
   .team-role-button,
-  .team-role-folded-button {
+  .team-role-rail-button {
     transition: none;
   }
 }
