@@ -436,13 +436,11 @@ function handleEvolve(): void {
 /* Sonnen-Bühne: gestapelte Bänder, Schrift an der eigenen Containerbreite (cqw). */
 .jt-sun {
   container-type: inline-size;
-  /* Sonne links über Name und Rail, die Konsole rechts über die volle Höhe:
-     untereinander fraß die Konsole der Sonne die Höhe weg (gemessen 37 px Disc) */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 52%);
-  grid-template-rows: minmax(0, 1fr) auto auto auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto auto auto auto;
   /* eigene Eigenschaften NIE in cqw: das Container-Element misst gegen den Vorfahren */
-  column-gap: 18px;
+  column-gap: 0;
   row-gap: 10px;
   overflow: clip;
   min-height: 0;
@@ -625,19 +623,17 @@ function handleEvolve(): void {
    One plate holding the two gates and the act. Its border carries the overall
    state, so "ready" reads before a single number is read. */
 .se-deck {
-  grid-column: 2;
-  grid-row: 1 / -1;
+  grid-column: 1;
+  grid-row: 5;
   align-self: center;
   width: 100%;
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(180px, 0.85fr) minmax(260px, 1.15fr);
-  grid-template-areas:
-    'next action'
-    'requirements requirements';
-  align-items: center;
-  gap: clamp(12px, 1.5cqw, 20px) clamp(16px, 2cqw, 30px);
-  padding: clamp(12px, 1.6cqw, 20px) 0;
+  grid-template-columns: minmax(170px, 0.78fr) minmax(300px, 1.45fr) minmax(185px, 0.87fr);
+  grid-template-areas: 'next requirements action';
+  align-items: stretch;
+  gap: clamp(10px, 1.5cqw, 20px);
+  padding: clamp(12px, 1.6cqw, 20px) 0 0;
   border-block: 1px solid #2c1806;
   --se-state: #5c3310;
 }
@@ -711,8 +707,8 @@ function handleEvolve(): void {
   grid-template-columns: minmax(155px, 0.7fr) minmax(240px, 1.3fr);
   gap: clamp(7px, 0.9cqw, 11px);
   min-width: 0;
-  padding-top: clamp(10px, 1.3cqw, 16px);
-  border-top: 1px solid #2c1806;
+  padding: 0 clamp(12px, 1.5cqw, 22px);
+  border-inline: 1px solid #2c1806;
 }
 
 .se-requirements-head {
@@ -721,6 +717,8 @@ function handleEvolve(): void {
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2c1806;
 }
 
 .se-requirement {
@@ -769,12 +767,13 @@ function handleEvolve(): void {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  justify-content: center;
   gap: 7px;
   min-width: 0;
 }
 
 .se-fire-link {
-  align-self: flex-start;
+  align-self: center;
   padding: 0;
   font-size: clamp(10px, 1.15cqw, 14px);
   font-weight: 700;
@@ -980,7 +979,7 @@ function handleEvolve(): void {
     padding: 8px 12px 10px;
   }
   .se-deck {
-    padding: 8px 0;
+    padding: 8px 0 0;
     gap: 8px;
   }
   .se-ray {
@@ -988,6 +987,23 @@ function handleEvolve(): void {
   }
   .se-fire {
     padding: 8px 10px;
+  }
+}
+
+@container (max-width: 700px) {
+  .se-deck {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-areas:
+      'next action'
+      'requirements requirements';
+    row-gap: 12px;
+  }
+
+  .se-requirements {
+    grid-template-columns: minmax(145px, 0.7fr) minmax(220px, 1.3fr);
+    padding: 10px 0 0;
+    border-top: 1px solid #2c1806;
+    border-inline: 0;
   }
 }
 
