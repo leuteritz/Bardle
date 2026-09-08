@@ -20,7 +20,10 @@
       v-for="cell in cells"
       :key="cell.id"
       class="kit-cell"
-      :class="{ 'kit-cell--locked': cell.locked, 'kit-cell--cooling': cell.cooling }"
+      :class="[
+        { 'kit-cell--locked': cell.locked, 'kit-cell--cooling': cell.cooling },
+        `kit-cell--rank-${Math.min(cell.rank, ABILITY_MAX_RANK)}`,
+      ]"
       :style="{ '--kit-color': cell.color }"
       :title="cell.name"
       :aria-label="`${cell.name} — ${cell.rankLabel} — ${cell.stateLabel}`"
@@ -150,15 +153,45 @@ const cells = computed<KitCell[]>(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
+  justify-content: flex-end;
+  gap: 6px;
   min-width: 0;
-  padding: 6px 8px;
-  overflow: hidden;
-  background: #16140e;
-  border: 1px solid #3e200a;
-  border-top: 2px solid var(--kit-color, #c89040);
+  padding: 8px;
+  overflow: clip;
+  background: #111008;
+  border: 2px solid #3e200a;
+  border-top: 3px solid var(--kit-color, #c89040);
   border-radius: 4px;
+  box-shadow: inset 0 0 0 1px #5c3310;
+}
+
+.kit-cell--rank-2 {
+  box-shadow: inset 0 0 0 1px #5c3310, inset 0 -12px 22px rgba(232, 192, 64, 0.08);
+}
+
+.kit-cell--rank-3 {
+  box-shadow: inset 0 0 0 1px #5c3310, inset 0 -16px 28px rgba(232, 192, 64, 0.13);
+}
+
+.kit-cell--rank-4,
+.kit-cell--rank-5 {
+  box-shadow: inset 0 0 0 1px #5c3310, inset 0 -20px 34px rgba(232, 192, 64, 0.18);
+}
+
+.kit-cell--rank-2 .kit-cell__img {
+  transform: scale(1.03);
+}
+
+.kit-cell--rank-3 .kit-cell__img {
+  transform: scale(1.06);
+}
+
+.kit-cell--rank-4 .kit-cell__img {
+  transform: scale(1.1);
+}
+
+.kit-cell--rank-5 .kit-cell__img {
+  transform: scale(1.14);
 }
 
 .kit-cell--locked {
@@ -171,9 +204,8 @@ const cells = computed<KitCell[]>(() => {
   flex: 0 0 auto;
   width: var(--kit-art);
   height: var(--kit-art);
-  overflow: hidden;
+  overflow: clip;
   border-radius: 4px;
-  background: #0d0b06;
 }
 
 /* Das Motiv liegt als 512er Kunst vor und wird hier auf 44 px gebracht — das
@@ -190,10 +222,11 @@ const cells = computed<KitCell[]>(() => {
   position: absolute;
   top: 0;
   left: 0;
-  padding: 0 3px 1px;
-  background: rgba(8, 6, 3, 0.72);
+  padding: 2px 6px 3px;
+  background: #1e1006;
+  border: 1px solid var(--kit-color, #e8c040);
   border-bottom-right-radius: 3px;
-  font-size: 0.62rem;
+  font-size: 0.9rem;
   font-weight: 900;
   line-height: 1.2;
   color: #f0e2b8;
@@ -202,13 +235,13 @@ const cells = computed<KitCell[]>(() => {
 .kit-cell__pips {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   flex: 0 0 auto;
 }
 
 .kit-pip {
-  width: 10px;
-  height: 3px;
+  width: 15px;
+  height: 4px;
   border-radius: 1px;
   background: rgba(232, 224, 196, 0.16);
 }
@@ -222,7 +255,7 @@ const cells = computed<KitCell[]>(() => {
    Fähigkeit — die Pips daneben bleiben ruhig. */
 .kit-cell__state {
   flex: 0 0 auto;
-  font-size: 0.78rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1;
   color: var(--kit-color, #e8c040);

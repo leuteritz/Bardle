@@ -824,22 +824,10 @@ export const PAUSE_READOUT_GAP_PX = 16
 // Bilanz, weil beide Füllstände pausiert weiterlaufen.
 /** Lücke zwischen den Kacheln und zwischen den beiden Reihen des Blocks. */
 export const PAUSE_KIT_GAP_PX = 12
-/** Höhe einer Fähigkeits-KACHEL: Kunst 36, darunter Rang-Pips und Zustand.
- *
- *  Die Kachelform war einmal verworfen — „eine Kachel ist die Form eines
- *  Knopfes, und im Overlay ist nichts bedienbar". Sie trägt hier trotzdem, weil
- *  der NAME entfallen ist: in 499 px bleiben je Kachel 115, und ein Name braucht
- *  allein 129 Textbreite. Was die Kachel vom Knopf trennt, ist ihre Fassung —
- *  flache Füllung, Farbe als Oberkante, kein Verlauf, keine Erhebung.
- *
- *  84 statt 72: die zwölf Pixel kosten auf Full HD NICHTS, weil dort die
- *  Bilanzsäule die Body-Höhe bindet — und sie gehen ganz an die Kunst. */
-export const PAUSE_KIT_TILE_H = 84
-/** Kantenlänge der Kunst-Miniatur. Sie trägt jetzt die Wiedererkennung ALLEIN,
- *  zusammen mit dem Kürzel darauf — vorher stand der Name daneben, und 40 px
- *  reichten. Grösser geht nicht: 44 + Pips + Zustand + Innenabstand füllen die
- *  84er Kachel bis auf viereinhalb Pixel. */
-export const PAUSE_KIT_CELL_ART_PX = 44
+/** Height of a pause-kit ability tile. */
+export const PAUSE_KIT_TILE_H = 150
+/** Artwork edge inside a pause-kit ability tile. */
+export const PAUSE_KIT_CELL_ART_PX = 96
 /** Höhe eines Effekt-Chips. FEST, nicht mehr an die Bandhöhe gekoppelt: die
  *  Reihen stehen übereinander und müssen nicht gleich hoch sein. 80 bleibt,
  *  weil die Bilanzspalte die Body-Höhe bindet — ein flacherer Chip verschenkte

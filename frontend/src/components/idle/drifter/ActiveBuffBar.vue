@@ -21,6 +21,7 @@
     :class="{
       'buff-bar--docked': props.dock === 'rail',
       'buff-bar--pause': props.dock === 'pause',
+      'buff-bar--empty': props.dock === 'pause' && chips.length === 0,
     }"
     role="status"
   >
@@ -80,12 +81,6 @@
       <span v-if="overflowCount > 0">+{{ overflowCount }}</span>
     </div>
 
-    <!-- Nur im Band: dort ist die Reihe eine Fläche mit Überschrift, und eine
-         leere Fläche unter einer Überschrift liest sich als Fehler. Im freien
-         Bild verschwindet die Reihe stattdessen ganz. -->
-    <div v-if="props.dock === 'pause' && chips.length === 0" key="empty" class="buff-empty">
-      Nothing running
-    </div>
   </TransitionGroup>
 </template>
 
@@ -741,18 +736,6 @@ const overflowCount = computed(() => chips.value.length - visibleChips.value.len
   font-weight: 700;
   letter-spacing: 0.06em;
   color: #8a7a62;
-}
-
-/* Eine Fläche mit Überschrift, in der nichts steht, liest sich als Fehler —
-   derselbe gedämpfte Satz wie in der leeren Callout-Reihe des Overlays. */
-.buff-empty {
-  display: flex;
-  align-items: center;
-  height: var(--pause-kit-chip-h, 80px);
-  padding: 0 12px;
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  color: #6b6152;
 }
 
 /* Der Name im Band. Er nimmt den Platz des Multiplikators in der Kopfzeile —
