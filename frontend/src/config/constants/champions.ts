@@ -440,6 +440,14 @@ export const CHAMPION_XP_EXPEDITION_FAIL_SHARE = 0.35
  */
 export const CHAMPION_AUTO_LEVEL_MAX_PER_TICK = 25
 
+/**
+ * Sprungweite des zweiten Kaufknopfes im Details-Panel („+5"). Fünf, weil der
+ * Ascension-Takt fünf ist: ein Druck landet genau auf der nächsten Sternstufe.
+ * Der dritte Knopf (MAX) kennt keine Stufengröße — er fragt nach dem Abstand
+ * zum Deckel und der Store hört von selbst auf.
+ */
+export const CHAMPION_LEVEL_BULK_STEP = 5
+
 /** Level-up chime price: BASE * level^EXPONENT, scaled by the champion's tier. */
 export const CHAMPION_LEVEL_CHIME_BASE = 500
 export const CHAMPION_LEVEL_CHIME_EXPONENT = 2.1

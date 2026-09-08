@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useItemStore } from '@/stores/economy/itemStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSkinStore } from '@/stores/champions/skinStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useSynergyStore } from '@/stores/champions/synergyStore'
@@ -24,6 +25,7 @@ import {
   CHAMPION_PERK_INTERVAL,
   CHAMPION_BASE_HP_BY_ROLE,
   CHAMPION_HP_PER_STAR,
+  CHAMPION_LEVEL_BULK_STEP,
   CHAMPION_LEVEL_MAX_CAP,
   CHAMPION_REGALIA_SIZE_ALLY,
   CHAMPION_REGALIA_SIZE_SPLASH,
@@ -78,6 +80,7 @@ const CAT_LABELS: Record<ItemCategory, string> = {
 const battleStore = useBattleStore()
 const gameStore = useGameStore()
 const itemStore = useItemStore()
+const inventoryStore = useInventoryStore()
 const skinStore = useSkinStore()
 const levelStore = useChampionLevelStore()
 const synergyStore = useSynergyStore()
@@ -252,17 +255,47 @@ const materialCosts = computed(() =>
     def: MATERIALS.find((material) => material.id === id) ?? null,
   })),
 )
-const affordsChimes = computed(() => gameStore.chimes >= cost.value.chimes)
-function doLevelUp() {
-  if (!champion.value || !levelStore.levelUp(champion.value)) return
+// Der Store kennt den Grund laengst — ein stummer grauer Knopf ist der Fehler.
+const blockReason = computed(() =>
+  champion.value ? levelStore.blockReasonOf(champion.value) : null,
+)
+const missingLabel = computed(() => {
+  switch (blockReason.value) {
+    case 'xp':
+      return `Needs ${formatNumberCompact(Math.max(0, xpBar.value.needed - xpBar.value.current))} XP`
+    case 'chimes':
+      return `Needs ${formatNumberCompact(cost.value.chimes - gameStore.chimes)} Chimes`
+    case 'materials': {
+      const short = materialCosts.value.find(
+        (material) => !inventoryStore.hasMaterials({ [material.id]: material.qty }),
+      )
+      // Notfalls die blanke ID — eine unsichtbare Ursache darf nicht zurueckkehren.
+      return short ? `Needs ${short.qty} ${short.def?.name ?? short.id}` : 'Missing materials'
+    }
+    default:
+      return ''
+  }
+})
+function announceLevels(name: string, gained: number) {
   announceReceipt({
     kind: 'levelup',
-    headline: champion.value,
-    subline: `Level ${levelStore.levelOf(champion.value)}`,
-    portraitSrc: battleStore.getChampionImage(champion.value, { size: 'md' }),
-    delta: { value: 1, unit: 'levels', unitOne: 'level' },
-    mergeKey: `levelup/champ/${champion.value}`,
+    headline: name,
+    subline: `Level ${levelStore.levelOf(name)}`,
+    portraitSrc: battleStore.getChampionImage(name, { size: 'md' }),
+    delta: { value: gained, unit: 'levels', unitOne: 'level' },
+    mergeKey: `levelup/champ/${name}`,
   })
+}
+function doLevelUp() {
+  if (!champion.value || !levelStore.levelUp(champion.value)) return
+  announceLevels(champion.value, 1)
+}
+// Kauft, was geht — drei von fuenf gewuenschten Stufen sind der Normalfall,
+// kein Fehlschlag. Der Herald nennt die tatsaechliche Zahl.
+function doLevelUpMany(steps: number) {
+  if (!champion.value) return
+  const gained = levelStore.levelUpMany(champion.value, steps)
+  if (gained > 0) announceLevels(champion.value, gained)
 }
 
 const stats = computed(() => (champion.value ? levelStore.effectiveStatsOf(champion.value) : null))
@@ -682,29 +715,56 @@ function perkStatLine(perk: ChampionPerkDef): string {
               </article>
             </div>
           </div>
-          <button
-            class="sdp-level-button"
-            :class="{ 'sdp-level-button--locked': !canLevel }"
-            type="button"
-            :disabled="!canLevel"
-            v-tip="atCap ? 'This champion is at the level cap' : `Cost of level ${nextLevel}`"
-            @click="doLevelUp"
+          <div
+            class="sdp-level-buy"
+            :class="{
+              'sdp-level-buy--locked': !canLevel,
+              'sdp-level-buy--capped': atCap,
+              'sdp-level-buy--short': blockReason === 'chimes' || blockReason === 'materials',
+            }"
           >
-            <span
-              ><Icon icon="game-icons:circle-sparks" width="20" height="20" />{{
-                atCap ? 'Level Cap Reached' : `Level Up · ${nextLevel}`
-              }}</span
-            ><span v-if="!atCap" class="sdp-level-cost"
-              ><img src="/img/BardAbilities/BardChime-128.png" alt="Chimes" />{{
-                $formatNumber(cost.chimes)
-              }}<template v-for="material in materialCosts" :key="material.id"
-                ><img v-if="material.def" :src="material.def.image" :alt="material.def.name" />{{
-                  material.qty
-                }}</template
-              ></span
+            <button
+              class="sdp-level-button"
+              type="button"
+              :disabled="!canLevel"
+              v-tip="atCap ? 'This champion is at the level cap' : `Cost of level ${nextLevel}`"
+              @click="doLevelUp"
             >
-          </button>
-          <p v-if="!affordsChimes && !atCap" class="sdp-shortfall">More Chimes are needed.</p>
+              <span
+                ><Icon icon="game-icons:circle-sparks" width="20" height="20" />{{
+                  atCap ? 'Level Cap Reached' : canLevel ? `Level Up · ${nextLevel}` : missingLabel
+                }}</span
+              ><span v-if="!atCap" class="sdp-level-cost"
+                ><img src="/img/BardAbilities/BardChime-128.png" alt="Chimes" />{{
+                  $formatNumber(cost.chimes)
+                }}<template v-for="material in materialCosts" :key="material.id"
+                  ><img v-if="material.def" :src="material.def.image" :alt="material.def.name" />{{
+                    material.qty
+                  }}</template
+                ></span
+              >
+            </button>
+            <button
+              v-if="!atCap"
+              class="sdp-level-step"
+              type="button"
+              :disabled="!canLevel"
+              v-tip="`Buy up to ${CHAMPION_LEVEL_BULK_STEP} levels`"
+              @click="doLevelUpMany(CHAMPION_LEVEL_BULK_STEP)"
+            >
+              +{{ CHAMPION_LEVEL_BULK_STEP }}
+            </button>
+            <button
+              v-if="!atCap"
+              class="sdp-level-step sdp-level-step--max"
+              type="button"
+              :disabled="!canLevel"
+              v-tip="'Buy every level you can afford'"
+              @click="doLevelUpMany(cap - level)"
+            >
+              MAX
+            </button>
+          </div>
         </template>
         <template v-else>
           <div class="sdp-identity sdp-ghost" aria-hidden="true">
@@ -1486,21 +1546,73 @@ function perkStatLine(perk: ChampionPerkDef): string {
   color: #a59675;
   font-size: 10px;
 }
-.sdp-level-button {
+/* Kaufknopf und Mengen sind EINE Flaeche: ein Rahmen aussen, Haarlinien innen,
+   Radius nur an den Aussenecken. */
+.sdp-level-buy {
   grid-column: 2;
-  width: 100%;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid #6ec040;
+  border-radius: 4px;
+}
+.sdp-level-button {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   min-height: 44px;
   padding: 9px;
-  border: 1px solid #6ec040;
-  border-radius: 4px;
+  border: 0;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   color: #f6edcd;
   cursor: pointer;
   font: inherit;
+}
+.sdp-level-step {
+  flex: 0 0 auto;
+  min-width: 52px;
+  padding: 0 10px;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, #14110c 45%, transparent);
+  background: linear-gradient(to bottom, #46a028, #276a15);
+  color: #f6edcd;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.sdp-level-button:hover:not(:disabled),
+.sdp-level-step:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #5cc838, #34881e);
+}
+/* Fehlt etwas, ist der Knopf kein Fehler — er ist eine Ansage. Deshalb neutral
+   dunkel mit Warnkante, nicht dasselbe Grau wie der erreichte Deckel. */
+.sdp-level-buy--locked {
+  border-color: #7a5a3a;
+}
+.sdp-level-buy--locked .sdp-level-button,
+.sdp-level-buy--locked .sdp-level-step {
+  background: #241f16;
+  color: #c9b48c;
+  cursor: not-allowed;
+}
+.sdp-level-buy--locked .sdp-level-step {
+  border-left-color: #3e3527;
+  color: #8b7c60;
+}
+/* Rot heisst "nicht bezahlbar" — bei fehlender XP reichen die Chimes ja. */
+.sdp-level-buy--short .sdp-level-cost {
+  color: #cc6050;
+}
+.sdp-level-buy--capped {
+  border-color: #5c4c35;
+}
+.sdp-level-buy--capped .sdp-level-button {
+  background: #29281e;
+  color: #9e9279;
 }
 .sdp-level-button > span {
   display: inline-flex;
@@ -1515,19 +1627,6 @@ function perkStatLine(perk: ChampionPerkDef): string {
   width: 17px;
   height: 17px;
   object-fit: contain;
-}
-.sdp-level-button--locked {
-  border-color: #5c4c35;
-  background: #29281e;
-  color: #9e9279;
-  cursor: not-allowed;
-}
-.sdp-shortfall {
-  grid-column: 2;
-  margin: 7px 0 0;
-  color: #cc6050;
-  font-size: 11px;
-  text-align: right;
 }
 .sdp-workspace {
   flex: 1 1 0;
@@ -2043,19 +2142,21 @@ function perkStatLine(perk: ChampionPerkDef): string {
 .sdp-xp-track {
   height: 10px;
 }
-.sdp-level-button {
+.sdp-level-buy {
   grid-column: 2;
-  min-height: 48px;
   margin-top: 10px;
+}
+.sdp-level-button {
+  min-height: 48px;
   padding: 10px 12px;
   font-size: 16px;
 }
+.sdp-level-step {
+  min-width: 58px;
+  font-size: 15px;
+}
 .sdp-level-cost {
   font-size: 16px;
-}
-.sdp-shortfall {
-  margin-top: 4px;
-  font-size: 12px;
 }
 .sdp-workspace {
   display: grid;
@@ -2528,9 +2629,15 @@ function perkStatLine(perk: ChampionPerkDef): string {
   .sdp-stat strong {
     font-size: 28px;
   }
+  .sdp-level-buy {
+    margin-top: 7px;
+  }
   .sdp-level-button {
     min-height: 42px;
-    margin-top: 7px;
+  }
+  .sdp-level-step {
+    min-width: 50px;
+    font-size: 14px;
   }
   .sdp-workspace {
     grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.2fr);

@@ -475,6 +475,24 @@ export const useChampionLevelStore = defineStore('championLevel', {
     },
 
     /**
+     * Buys up to `steps` levels for ONE champion — the panel's +5 and MAX.
+     * Stops at the first level that cannot be paid, so XP, chimes, materials
+     * and the cap all keep their say: every step goes through `levelUp`.
+     *
+     * The ceiling is the distance to the cap, never Infinity — an unbounded
+     * loop is the only way this could do harm. Returns the levels actually
+     * bought, which the caller announces (buying 3 of the 5 asked for is the
+     * normal case, not a failure).
+     */
+    levelUpMany(name: string, steps: number): number {
+      const room = this.levelCap - this.levelOf(name)
+      const limit = Math.min(Math.floor(steps), room)
+      let bought = 0
+      while (bought < limit && this.levelUp(name)) bought++
+      return bought
+    },
+
+    /**
      * Flips the auto switch. Turning it ON settles the backlog straight away
      * rather than at the next tick — a player who enables it while champions are
      * already sitting on full XP bars expects the levels now, not in a second.

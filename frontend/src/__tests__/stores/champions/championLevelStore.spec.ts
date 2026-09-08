@@ -393,8 +393,7 @@ describe('champion levels — store behaviour', () => {
     expect(levelStore.levelCap).toBe(
       Math.min(
         CHAMPION_LEVEL_MAX_CAP,
-        CHAMPION_LEVEL_START_CAP +
-          Math.floor(galaxyDepth(3) * CHAMPION_LEVEL_CAP_PER_GALAXY),
+        CHAMPION_LEVEL_START_CAP + Math.floor(galaxyDepth(3) * CHAMPION_LEVEL_CAP_PER_GALAXY),
       ),
     )
     galaxyStore.currentGalaxy = 999
@@ -739,6 +738,64 @@ describe('champion levels — admin team level-up', () => {
 
     expect(levelStore.adminLevelUpTeam(0)).toBe(0)
     expect(levelStore.adminLevelUpTeam(-3)).toBe(0)
+    expect(levelStore.levelOf(MID_LOW)).toBe(1)
+  })
+})
+
+describe('champion levels — bulk purchase', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.stubGlobal('localStorage', makeLocalStorageStub())
+  })
+
+  it('buys exactly the funded levels and reports the count', () => {
+    const levelStore = useChampionLevelStore()
+    fund(MID_LOW, 5)
+
+    expect(levelStore.levelUpMany(MID_LOW, 5)).toBe(5)
+    expect(levelStore.levelOf(MID_LOW)).toBe(6)
+  })
+
+  it('stops at the first level it cannot pay for', () => {
+    const levelStore = useChampionLevelStore()
+    // Nur drei Stufen finanziert, fuenf gewuenscht — drei ist kein Fehlschlag.
+    fund(MID_LOW, 3)
+
+    expect(levelStore.levelUpMany(MID_LOW, 5)).toBe(3)
+    expect(levelStore.levelOf(MID_LOW)).toBe(4)
+    expect(levelStore.canLevelUp(MID_LOW)).toBe(false)
+  })
+
+  it('leaves chimes and XP untouched when nothing is affordable', () => {
+    const levelStore = useChampionLevelStore()
+    const gameStore = useGameStore()
+    gameStore.chimes = 0
+
+    expect(levelStore.levelUpMany(MID_LOW, 5)).toBe(0)
+    expect(levelStore.levelOf(MID_LOW)).toBe(1)
+    expect(gameStore.chimes).toBe(0)
+  })
+
+  it('never climbs past the galaxy cap, however many steps are asked for', () => {
+    const levelStore = useChampionLevelStore()
+    const gameStore = useGameStore()
+    const cap = levelStore.levelCap
+    fund(MID_LOW, cap)
+    gameStore.chimes += 1e12
+
+    // MAX fragt nach dem Abstand zum Deckel — und darf dort auch landen.
+    expect(levelStore.levelUpMany(MID_LOW, cap - levelStore.levelOf(MID_LOW))).toBe(cap - 1)
+    expect(levelStore.levelOf(MID_LOW)).toBe(cap)
+    // Ein zweiter Griff am Deckel terminiert und kauft nichts mehr.
+    expect(levelStore.levelUpMany(MID_LOW, 99)).toBe(0)
+  })
+
+  it('ignores non-positive step counts', () => {
+    const levelStore = useChampionLevelStore()
+    fund(MID_LOW, 2)
+
+    expect(levelStore.levelUpMany(MID_LOW, 0)).toBe(0)
+    expect(levelStore.levelUpMany(MID_LOW, -3)).toBe(0)
     expect(levelStore.levelOf(MID_LOW)).toBe(1)
   })
 })
