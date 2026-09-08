@@ -15,11 +15,13 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import ExpeditionFleetCard from './ExpeditionFleetCard.vue'
 import { VOYAGE_FLEET_CARD_GAP, VOYAGE_FLEET_CARD_MIN_W } from '@/config/constants'
-import type { VoyageFleetCard } from '@/types'
+import type { VoyageFleetCard, VoyageMarkAction } from '@/types'
 
 const props = defineProps<{
   cards: VoyageFleetCard[]
   selectedKey: string | null
+  /** Nur für die gewählte Galaxie belegt — nur deren Karte kann handeln. */
+  actions: Map<string, VoyageMarkAction>
   now: number
 }>()
 const emit = defineEmits<{ open: [galaxy: number, pinKey: string] }>()
@@ -68,6 +70,7 @@ function scrollOn() {
         :card="card"
         :now="now"
         :selected="card.pinKey === selectedKey"
+        :action="card.pinKey === selectedKey ? (actions.get(card.pinKey) ?? null) : null"
         @open="(galaxy, pinKey) => emit('open', galaxy, pinKey)"
       />
 

@@ -40,6 +40,7 @@ import {
   VOYAGE_TIP_MISSION_WIDTH,
 } from '@/config/constants'
 import type { VoyageMarkAction, VoyagePlacedSite } from '@/types'
+import { voyageGestureLabel } from '@/utils/game/voyageAction'
 import ExpeditionSubjectTooltip from './ExpeditionSubjectTooltip.vue'
 
 const props = defineProps<{
@@ -136,15 +137,7 @@ const showInlineClock = computed(() => props.inlineClock && state.value !== 'ret
 const label = computed(() => {
   const s = subject.value
   if (!s) return ''
-  const a = props.action
-  const gesture =
-    a.kind === 'send'
-      ? ' — click to send'
-      : a.kind === 'collect'
-        ? ' — click to collect'
-        : a.kind === 'blocked'
-          ? ` — ${a.reason}`
-          : ''
+  const gesture = voyageGestureLabel(props.action)
   if (state.value === 'offer') return `${s.name} — expires in ${clock(expiresIn.value)}${gesture}`
   if (state.value === 'running') return `${s.name} — returns in ${remaining.value}`
   return `${s.name} — ${success.value ? 'returned' : 'lost'}${gesture}`

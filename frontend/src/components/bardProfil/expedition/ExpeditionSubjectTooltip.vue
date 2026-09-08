@@ -71,9 +71,11 @@ import type { VoyageRosterSubject } from '@/types'
 const CHIME_IMG = UNIVERSE_TOOLTIP_IMAGES.chimes
 const MEEP_IMG = UNIVERSE_TOOLTIP_IMAGES.meeps
 
+/** `armed`: die Fleet-Karte steht am Ziel und fuehrt beim naechsten Klick
+ *  dieselbe Geste aus wie die Marke. Sie spricht dann auch wie diese. */
 const props = withDefaults(
-  defineProps<{ pinKey: string; now: number; context?: 'mark' | 'fleet' }>(),
-  { context: 'mark' },
+  defineProps<{ pinKey: string; now: number; context?: 'mark' | 'fleet'; armed?: boolean }>(),
+  { context: 'mark', armed: false },
 )
 
 /** Welche Bloecke dieser Anker traegt — die EINE Stelle steht in `constants`. */
@@ -158,8 +160,9 @@ const verdict = computed(() => {
   // Der Grund einer Sperre steht in BEIDEN Ankern woertlich — er ist die
   // Auskunft, und die Karte kennt ihn nicht.
   if (a.kind === 'blocked') return { icon, label: a.reason, clock: '' }
-  // Die Fleet-Karte fuehrt die Geste nicht aus, sie springt nur zur Marke.
-  if (isFleet.value) {
+  // Die Fleet-Karte fuehrt die Geste nicht aus, sie springt nur zur Marke —
+  // solange sie nicht scharf ist. Dann faellt sie auf den Pfad der Marke durch.
+  if (isFleet.value && !props.armed) {
     return {
       icon,
       label: VOYAGE_FLEET_TIP_STATUS[verdictKey.value],
@@ -463,7 +466,11 @@ const showRequirement = computed(() => view.value?.state === 'offer')
 
         <!-- Die Geste sitzt an der MARKE. Ein Klick auf die Fleet-Karte springt
              nur dorthin — und genau das steht hier, statt „Click to send". -->
-        <div v-if="blocks.hint" class="tip-hint vtt-cta">↗ {{ VOYAGE_FLEET_TIP_HINT }}</div>
+        <!-- Die Fussnote beschreibt den SPRUNG. Scharf spraeche sie vom
+             falschen Klick — dann steht die Geste schon im Verdikt. -->
+        <div v-if="blocks.hint && !armed" class="tip-hint vtt-cta">
+          ↗ {{ VOYAGE_FLEET_TIP_HINT }}
+        </div>
       </div>
     </template>
   </ExpeditionMarkTooltip>

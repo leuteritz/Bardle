@@ -1085,27 +1085,6 @@ export const VOYAGE_FLEET_TIME_W = 55
  */
 export const VOYAGE_FLEET_MARK_MAX_PX = 63
 /**
- * Die Plakette der laufenden Mission. Sie verdraengt nichts, sondern kommt als
- * DRITTE Zelle links HINZU — deshalb steht sie nicht unter `_MARK_MAX_PX`, das
- * die Plakette bindet, die ein Zeilenende ganz uebernimmt. Eine gemeinsame Zahl
- * baende die engere Rechnung an das breitere Wort.
- *
- * Im Browser GEMESSEN, per `Range` ueber den Textknoten und nicht per
- * `scrollWidth`: „UNDERWAY" misst 63,86 bei 11 px versal mit 0,07em Sperrung,
- * dazu 10 px Innenabstand und 2 px Rahmen — 75,86 aussen.
- *
- * Damit ist die Ablesezeile unterwegs die ENGSTE Zeile der ganzen Karte:
- * `76 + 8 + 55 + 8 + 42 = 189` von 190. Sie traegt kein weiteres Wort und keine
- * vierte Zelle; wer die Uhrzelle oder die Aussicht verbreitert, bricht sie.
- */
-export const VOYAGE_FLEET_FIELD_MARK_W = 76
-/**
- * Dieselbe Sprache wie `VOYAGE_FLEET_TIP_STATUS.waiting` („Crew underway"), und
- * ausdruecklich nicht „In field": das stuende neben „Field full" des blockierten
- * Vertrags, und zwei Marken mit demselben Hauptwort trennt im Ueberflug niemand.
- */
-export const VOYAGE_FLEET_MARK_UNDERWAY = 'Underway'
-/**
  * Die längste Reisedauer, „12m 30s": im Browser GEMESSENE 51,16 bei 13 px, plus
  * knapp 3 px Reserve wie bei der Uhr nebenan.
  *
@@ -1836,11 +1815,16 @@ export const VOYAGE_TIP_OPEN_DELAY_MS = 90
 export const VOYAGE_TIP_CREW_MAX = 5
 
 /**
- * Die Fleet-Karte SPRINGT zur Marke — sie sendet nicht und sammelt nicht ein.
+ * Die Wörter der Fleet-Karte, SOLANGE SIE NICHT SCHARF IST.
  *
- * Ihre Hover-Karte nennt deshalb den ZUSTAND, nicht die Geste: „Click to send"
- * über einer Karte, die nur zur Marke springt, verspricht etwas, das der Klick
- * nicht tut. Was er tut, sagt `VOYAGE_FLEET_TIP_HINT` in der Fußzeile.
+ * Ihr erster Klick springt zur Marke, er handelt nicht — die Hover-Karte nennt
+ * deshalb den ZUSTAND, nicht die Geste: „Click to send" über einer Karte, die
+ * nur springt, verspricht etwas, das der Klick nicht tut. Was er tut, sagt
+ * `VOYAGE_FLEET_TIP_HINT` in der Fußzeile.
+ *
+ * Steht die Karte am Ziel, ist sie scharf und führt dieselbe Geste aus wie die
+ * Marke. Dann sprechen `VOYAGE_ACTION_SEND_LABEL` und `_COLLECT_LABEL`, und
+ * diese Tabelle schweigt — sonst stünde die Ansage neben der falschen Wirkung.
  *
  * Der blockierte Vertrag steht NICHT hier: dort ist der Grund die Auskunft, und
  * der kommt wörtlich aus `voyageMarkAction`.
@@ -1852,6 +1836,7 @@ export const VOYAGE_FLEET_TIP_STATUS = {
   waiting: 'Crew underway',
 } as const
 
+/** Die Fußzeile der UNSCHARFEN Karte — sie beschreibt den Sprung, nicht die Geste. */
 export const VOYAGE_FLEET_TIP_HINT = 'Click to open on the map'
 
 /** Materialbild der zurückgekehrten Beute. Unter der 34-px-Schwelle, also trägt

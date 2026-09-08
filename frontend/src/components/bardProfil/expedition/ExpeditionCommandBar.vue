@@ -48,7 +48,7 @@ import {
   VOYAGE_RANK_RING_STROKE,
   FORGE_MASS_SEND_NODE,
 } from '@/config/constants'
-import type { VoyageRailRow } from '@/types'
+import type { VoyageMarkAction, VoyageRailRow } from '@/types'
 import ExpeditionFleetLane from './ExpeditionFleetLane.vue'
 
 const props = defineProps<{
@@ -56,6 +56,8 @@ const props = defineProps<{
   collectFlashing: boolean
   selectedKey: string | null
   rows: VoyageRailRow[]
+  /** Dieselbe Karte, die die Marken bekommen — sie trägt nur die gewählte Galaxie. */
+  actions: Map<string, VoyageMarkAction>
 }>()
 const emit = defineEmits<{
   'collect-all': []
@@ -233,6 +235,7 @@ const cards = computed(() =>
       <ExpeditionFleetLane
         :cards="cards"
         :selected-key="selectedKey"
+        :actions="actions"
         :now="now"
         @open="(galaxy, pinKey) => emit('open', galaxy, pinKey)"
       />

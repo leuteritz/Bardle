@@ -23,11 +23,17 @@
  * Und was hier steht, steht in der Hover-Karte NICHT noch einmal: sie bekommt
  * `context="fleet"` und laesst Uhr, Fristbalken, Lohn, Meep, Aussicht und die
  * Gesichter weg. Uebrig bleibt, was auf 210 x 105 px keinen Platz hat.
+ *
+ * Sie ist ein Knopf in ZWEI Schritten: der erste bringt zur Marke, der zweite
+ * fuehrt dort dieselbe Geste aus. Die Regel dafuer steht in `voyageAction.ts`
+ * und kommt fertig als `action` herein — scharf ist die Karte nur, solange sie
+ * die gewaehlte Marke IST.
  */
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { getOriginColor } from '@/config/champions/championOrigins'
+import { voyageGestureLabel } from '@/utils/game/voyageAction'
 import { formatMinuteClock, formatShortDuration } from '@/utils/ui/format'
 import {
   EXPEDITION_CHANCE_GOOD,
@@ -47,7 +53,6 @@ import {
   VOYAGE_FLEET_EARN_GAP,
   VOYAGE_FLEET_EARN_TIGHT,
   VOYAGE_FLEET_LOOT_ICON,
-  VOYAGE_FLEET_MARK_UNDERWAY,
   VOYAGE_FLEET_ODDS_W,
   VOYAGE_FLEET_PAY_H,
   VOYAGE_FLEET_READ_H,
@@ -56,21 +61,31 @@ import {
   VOYAGE_FLEET_TIER_BAR_GAP,
   VOYAGE_FLEET_TIER_BAR_W,
   VOYAGE_FLEET_TIME_W,
+  VOYAGE_FLEET_TIP_STATUS,
+  VOYAGE_MARK_REFUSE_MS,
   VOYAGE_MARKER_BREATH_MS,
+  VOYAGE_VERDICT_COLORS,
   EXPEDITION_TIER_COLORS,
   EXPEDITION_TIER_SEGMENTS,
   VOYAGE_TIP_GAP_PX,
   VOYAGE_TIP_OPEN_DELAY_MS,
   VOYAGE_TIP_MISSION_WIDTH,
 } from '@/config/constants'
-import type { VoyageFleetCard } from '@/types'
+import type { VoyageFleetCard, VoyageMarkAction } from '@/types'
 import ExpeditionSubjectTooltip from './ExpeditionSubjectTooltip.vue'
 
 /** Eigenes Artwork statt eines Iconify-Ersatzes: dieselbe Währung, dasselbe Bild. */
 const CHIME_IMG = UNIVERSE_TOOLTIP_IMAGES.chimes
 const MEEP_IMG = UNIVERSE_TOOLTIP_IMAGES.meeps
 
-const props = defineProps<{ card: VoyageFleetCard; now: number; selected: boolean }>()
+/** `action` traegt NUR die gewaehlte Karte — sie allein steht auf der Buehne,
+ *  und nur sie kann handeln. Sonst `null`: dann springt der Klick. */
+const props = defineProps<{
+  card: VoyageFleetCard
+  now: number
+  selected: boolean
+  action?: VoyageMarkAction | null
+}>()
 const emit = defineEmits<{ open: [galaxy: number, pinKey: string] }>()
 
 const battleStore = useBattleStore()
@@ -87,6 +102,7 @@ const rowGap = `${VOYAGE_FLEET_CARD_ROW_GAP}px`
 const inset = `${VOYAGE_FLEET_CARD_INSET_Y}px ${VOYAGE_FLEET_CARD_INSET_X}px`
 const oddsW = `${VOYAGE_FLEET_ODDS_W}px`
 const haloMs = `${VOYAGE_MARKER_BREATH_MS}ms`
+const refuseMs = `${VOYAGE_MARK_REFUSE_MS}ms`
 const timeW = `${VOYAGE_FLEET_TIME_W}px`
 const durW = `${VOYAGE_FLEET_DUR_W}px`
 const earnGap = `${VOYAGE_FLEET_EARN_GAP}px`
@@ -215,11 +231,14 @@ const duration = computed(() =>
   row.value.state === 'offer' ? formatShortDuration(row.value.durationSeconds) : '',
 )
 
-/** Steht VOR der Uhr statt an ihrer Stelle: wer draussen ist, hat trotzdem eine Quote. */
-const fieldMark = computed(() => (state.value === 'field' ? VOYAGE_FLEET_MARK_UNDERWAY : ''))
-
-/** Bewegung gehoert dem, was eine Handlung verlangt — die laufende Mission verlangt nichts. */
-const halo = computed(() => state.value === 'sendable' || state.value === 'ready')
+/**
+ * Bewegung gehoert dem, was eine Handlung verlangt — die laufende Mission
+ * verlangt nichts und ATMET deshalb nicht. Ihre Glut liegt trotzdem: seit das
+ * Wort `UNDERWAY` gefallen ist, traegt sie die Karte mit, statisch.
+ */
+const halo = computed(
+  () => state.value === 'sendable' || state.value === 'ready' || state.value === 'field',
+)
 
 /**
  * Die Plakette nimmt das Ende, das der Zustand frei lässt: heimgekehrt steht sie
@@ -229,6 +248,46 @@ const halo = computed(() => state.value === 'sendable' || state.value === 'ready
  */
 const lead = computed(() => clock.value || badge.value)
 const tail = computed(() => (clock.value && badge.value ? badge.value : ''))
+
+/* ── Der zweite Klick ─────────────────────────────────────────────────────── */
+
+/** Was der Klick TAETE. `null`, solange die Karte nur springt. */
+const armedKind = computed(() => (props.selected ? (props.action?.kind ?? null) : null))
+/** Nur diese beiden tragen einen Ring — sie fuehren wirklich etwas aus. */
+const armedColor = computed(() =>
+  armedKind.value === 'send' || armedKind.value === 'collect'
+    ? VOYAGE_VERDICT_COLORS[armedKind.value]
+    : '',
+)
+
+const refusing = ref(false)
+let refuseTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * Erster Klick springt, zweiter handelt — entschieden wird oben, wo Galaxie und
+ * Marke bekannt sind. Hier bleibt nur die Ablehnung: dieselbe Geste und dieselbe
+ * Frist wie an der Marke, sonst schluckt die Karte den Klick lautlos.
+ */
+function onClick() {
+  if (armedKind.value === 'blocked') {
+    if (refuseTimer) clearTimeout(refuseTimer)
+    refusing.value = true
+    // Rein visuell, deshalb setTimeout und nicht gameTimeout().
+    refuseTimer = setTimeout(() => {
+      refusing.value = false
+      refuseTimer = null
+    }, VOYAGE_MARK_REFUSE_MS)
+    return
+  }
+  emit('open', props.card.galaxy, props.card.pinKey)
+}
+
+onBeforeUnmount(() => {
+  if (refuseTimer) clearTimeout(refuseTimer)
+})
+
+/** Dieselbe Nachschrift, die die Marke traegt — und dieselbe Fassung davon. */
+const gesture = computed(() => (props.selected ? voyageGestureLabel(props.action) : ''))
 
 /**
  * Das Label nennt den VOLLEN Ertrag, auch das Material, das die Karte nicht mehr
@@ -251,7 +310,7 @@ const note = computed(() => {
     return `${props.card.tier} contract, ${seats}, ${duration.value} voyage, ${when}${gate}`
   }
   if (r.state === 'field') {
-    return `${VOYAGE_FLEET_MARK_UNDERWAY}, ${formatMinuteClock(remaining.value ?? 0)} left, ${r.odds}% odds`
+    return `${VOYAGE_FLEET_TIP_STATUS.waiting}, ${formatMinuteClock(remaining.value ?? 0)} left, ${r.odds}% odds`
   }
   return r.state === 'ready' ? 'ready to collect' : 'failed, salvage only'
 })
@@ -261,7 +320,8 @@ const crewNames = computed(() => slots.value.filter(Boolean).join(', '))
 const aria = computed(
   () =>
     `${row.value.name}, ${props.card.galaxyName} — ${note.value}, ${lootAria.value}` +
-    (crewNames.value ? `, crew ${crewNames.value}` : ''),
+    (crewNames.value ? `, crew ${crewNames.value}` : '') +
+    gesture.value,
 )
 </script>
 
@@ -276,10 +336,22 @@ const aria = computed(
   >
     <button
       class="vfc"
-      :class="[`vfc--${state}`, { 'vfc--on': selected, 'vfc--urgent': urgent }]"
-      :style="{ '--gx-accent': `rgb(${card.accent})`, '--tier': tierColor }"
+      :class="[
+        `vfc--${state}`,
+        {
+          'vfc--on': selected,
+          'vfc--urgent': urgent,
+          'vfc--armed': !!armedColor,
+          'vfc--refuse': refusing,
+        },
+      ]"
+      :style="{
+        '--gx-accent': `rgb(${card.accent})`,
+        '--tier': tierColor,
+        '--vfc-arm': armedColor,
+      }"
       :aria-label="aria"
-      @click="emit('open', card.galaxy, card.pinKey)"
+      @click="onClick"
     >
       <span v-if="halo" class="vfc-halo" aria-hidden="true" />
 
@@ -326,11 +398,12 @@ const aria = computed(
         </span>
       </span>
 
-      <!-- Welcher ZUSTAND, welche FRIST, welche AUSSICHT. Die Plakette des
-           blockierten Vertrags verdrängt die Quote — wer nicht losschicken kann,
-           ändert mit ihr nichts; die der laufenden Mission stellt sich davor. -->
+      <!-- Welche FRIST, welche AUSSICHT. Die Plakette des blockierten Vertrags
+           verdrängt die Quote — wer nicht losschicken kann, ändert mit ihr
+           nichts. Die laufende Mission trägt hier gar kein Wort mehr: sie ist
+           die einzige Karte mit nur ZWEI Zellen, und ihr Zustand steht in
+           Kante, Grund, Glut und Uhrfarbe. -->
       <span class="vfc-read">
-        <span v-if="fieldMark" class="vfc-flag vfc-mark">{{ fieldMark }}</span>
         <span class="vfc-lead" :class="{ 'vfc-mark': !clock }">{{ lead }}</span>
         <span v-if="tail" class="vfc-tail vfc-mark">{{ tail }}</span>
         <span v-else-if="odds !== null" class="vfc-odds" :class="oddsTone">{{ odds }}%</span>
@@ -340,7 +413,12 @@ const aria = computed(
     <template #tip>
       <!-- `fleet`: die Blase laesst weg, was hier im Bild schon steht — Uhr,
            Lohn, Meep, Aussicht und die Gesichter. Siehe VOYAGE_TIP_BLOCKS. -->
-      <ExpeditionSubjectTooltip :pin-key="card.pinKey" :now="now" context="fleet" />
+      <ExpeditionSubjectTooltip
+        :pin-key="card.pinKey"
+        :now="now"
+        context="fleet"
+        :armed="selected"
+      />
     </template>
   </RpgBadgeTooltip>
 </template>
@@ -391,15 +469,16 @@ const aria = computed(
 .vfc--blocked {
   --vfc-edge: #8a5a1c;
 }
-/* `#1a1008` stand hier einmal und war von der Vertragsfarbe `#1c1c18` nicht zu
-   unterscheiden — 4,65 ΔL*. `#0e0e1a` ist die dritte Permutation derselben
-   Formel, die schon `#0e1a0e` und `#1a0e0e` tragen, und die kühle von den
-   dreien: draussen, nicht am Hafen. Die Kante wird voll deckend — mit 40 % Alpha
-   war sie die leiseste aller sechs, ausgerechnet beim Zustand mit den meisten
-   Karten. Der Grund bleibt trotzdem der schwaechste der vier Kanaele. */
+/* Der Zustand mit den meisten Karten, und bis eben der leiseste: Knochenweiß auf
+   `#0e0e1a`, das vom Vertragsgrund `#1c1c18` nur 5,9 ΔL* entfernt lag, dazu ein
+   Wort in der Ablesezeile. Das Wort ist gefallen — dafür trägt der Zustand jetzt
+   eine eigene FARBE, und zwar die einzige im Vorrat, die keine zweite Bedeutung
+   hat: Gold heisst „losschicken", Teal „einsammeln", Rot „verloren", Bernstein
+   „gesperrt". Violett heisst hier nur „draussen". */
 .vfc--field {
-  --vfc-edge: #e8dcc0;
-  --vfc-bg: #0e0e1a;
+  --vfc-edge: #9a7cf0;
+  --vfc-bg: #120e20;
+  --vfc-halo: 154, 124, 240;
 }
 .vfc--ready {
   --vfc-edge: #64dcb4;
@@ -443,6 +522,46 @@ const aria = computed(
   .vfc-halo {
     animation: none;
     opacity: 0.5;
+  }
+}
+/* Dieselbe Ebene, ohne Takt: die laufende Mission verlangt keine Handlung und
+   darf deshalb nicht pulsen — sie steht nur hell. */
+.vfc--field .vfc-halo {
+  animation: none;
+  opacity: 0.42;
+}
+
+/* SCHARF: der nächste Klick handelt. Ein statischer Innenring in der Farbe des
+   Verdikts — dieselbe, die die Hover-Karte über ihrer Ansage trägt. Kein Puls:
+   die Karte ist bereits ausgewählt und steht unter dem Zeiger, ein zweiter
+   bewegter Kanal neben Halo und Auswahl trüge nichts bei. */
+.vfc--armed {
+  box-shadow: inset 0 0 0 2px var(--vfc-arm, #64dcb4);
+}
+
+/* Abgewiesen — dieselbe Geste und dieselbe Frist wie an der Marke. Nur
+   `transform` bewegt sich. */
+.vfc--refuse {
+  animation: vfc-refuse v-bind(refuseMs) ease-in-out;
+}
+@keyframes vfc-refuse {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-3px);
+  }
+  45% {
+    transform: translateX(3px);
+  }
+  70% {
+    transform: translateX(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vfc--refuse {
+    animation: none;
   }
 }
 
@@ -605,6 +724,9 @@ const aria = computed(
 .vfc--failed .vfc-pay {
   color: #e08a7a;
 }
+.vfc--field .vfc-pay {
+  color: #cfc0f8;
+}
 /* Sie steht NEBEN der Uhr, nicht am Kartenrand: Frist und Aussicht sind die zwei
    Hälften derselben Frage. Dass sie dabei nicht wandert, wenn „4:13" auf „0:46"
    fällt, trägt die reservierte Breite der Uhr — genau dafür ist sie da.
@@ -644,8 +766,9 @@ const aria = computed(
 }
 
 /* ── Ablesezeile: Zustand · Frist · Aussicht ────────────────── */
-/* Zwei Zellen in jedem Zustand ausser dem laufenden — der trägt drei, und die
-   SILHOUETTE der Zeile ist damit selbst ein Kanal. */
+/* Zwei Zellen in jedem Zustand — und die laufende Mission ist die einzige, die
+   sie NICHT mit einer Plakette füllt. Die SILHOUETTE der Zeile bleibt damit ein
+   Kanal, nur umgekehrt: wo ein Wort steht, läuft nichts. */
 .vfc-read {
   display: flex;
   align-items: center;
@@ -666,13 +789,12 @@ const aria = computed(
 .vfc--urgent .vfc-lead {
   color: #e08a7a;
 }
-/* Die einzige Plakette, die NICHTS verdraengt: sie steht vor der Uhr, weil eine
-   Crew, die schon draussen ist, trotzdem eine Quote hat. KEINE reservierte Breite
-   — ihr Wort wechselt nie, und die 76 px stehen als gemessene Wand in der Spec. */
-.vfc-flag {
-  flex: 0 0 auto;
+/* Die laufende Uhr IST die Auskunft dieser Karte — sie trägt den Zustandston.
+   Ihre Größe bleibt bei 19 px: die Ablesezeile misst 22, und MedievalSharp
+   überschiesst seine Zeilenbox. */
+.vfc--field .vfc-lead {
+  color: #b49cf6;
 }
-
 /* Sie nimmt den Platz der Erfolgsaussicht, nicht einen eigenen — also steht sie
    auch dort, wo die stünde: neben der Uhr. */
 .vfc-tail {
@@ -706,12 +828,5 @@ const aria = computed(
   color: #c08a50;
   border-color: rgba(192, 138, 80, 0.4);
   background: rgba(192, 138, 80, 0.12);
-}
-/* Kante und Wort tragen denselben Ton, weil sie dasselbe sagen. Kein Gold: das
-   hiesse auf dieser Karte „losschicken", und genau das ist hier vorbei. */
-.vfc--field .vfc-mark {
-  color: #e8dcc0;
-  border-color: rgba(232, 220, 192, 0.4);
-  background: rgba(232, 220, 192, 0.12);
 }
 </style>
