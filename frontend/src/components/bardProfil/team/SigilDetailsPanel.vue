@@ -187,46 +187,16 @@ const activeAffinities = computed(() => {
       })),
   ]
 })
-// Rang und Zugehoerigkeiten stehen in EINER Reihe — der Rang zuerst.
-interface IdentityMark {
-  id: string
-  kind: string
-  name: string
-  icon: string
-  color: string
-  tip: string
-  crowned: boolean
-  steps?: number[]
-  count?: number
-  stars?: number
-}
-const identityMarks = computed<IdentityMark[]>(() => [
-  ...(tier.value
-    ? [
-        {
-          id: `tier-${tier.value.id}`,
-          kind: 'Tier',
-          name: tier.value.name,
-          icon: tier.value.icon,
-          color: tier.value.color,
-          tip: `Tier ${tier.value.starLevel}: ${tier.value.name} · ${tier.value.description}`,
-          crowned: tier.value.starLevel >= MAX_STAR_LEVEL,
-          stars: tier.value.starLevel,
-        },
-      ]
-    : []),
-  ...activeAffinities.value.map((entry) => ({
-    id: entry.id,
-    kind: entry.kind,
-    name: String(entry.name),
-    icon: entry.icon,
-    color: entry.color,
-    tip: `${entry.kind}: ${entry.name} · ${entry.bonus}`,
-    crowned: entry.crowned,
-    steps: entry.steps,
-    count: entry.count,
-  })),
-])
+// Der Rang ist keine Team-Synergie — er bekommt sein eigenes Band ueber der Reihe.
+const tierBand = computed(() =>
+  tier.value
+    ? {
+        ...tier.value,
+        crowned: tier.value.starLevel >= MAX_STAR_LEVEL,
+        tip: `Tier ${tier.value.starLevel} of ${MAX_STAR_LEVEL}`,
+      }
+    : null,
+)
 const equippedSkin = computed(() =>
   champion.value ? skinStore.getSelectedSkin(champion.value) : SKIN_ORIGINAL,
 )
@@ -624,39 +594,56 @@ function perkStatLine(perk: ChampionPerkDef): string {
             <p class="sdp-seat-name">{{ subjectSeatLabel }}</p>
             <h2>{{ champion }}</h2>
             <div
-              v-if="identityMarks.length"
+              v-if="tierBand"
+              class="sdp-tier-band"
+              :class="{ 'sdp-affinity--crowned': tierBand.crowned }"
+              :style="{ '--ac': tierBand.color }"
+              v-tip="tierBand.tip"
+            >
+              <span class="sdp-tier-crest" aria-hidden="true"
+                ><Icon :icon="tierBand.icon" width="28" height="28"
+              /></span>
+              <span class="sdp-tier-copy">
+                <span class="sdp-affinity-head"
+                  ><small>Tier</small
+                  ><span class="sdp-affinity-stars"
+                    ><i
+                      v-for="n in MAX_STAR_LEVEL"
+                      :key="n"
+                      :class="{ 'sdp-affinity-star--lit': n <= tierBand.starLevel }"
+                      >★</i
+                    ></span
+                  ></span
+                ><strong>{{ tierBand.name }}</strong>
+              </span>
+              <p class="sdp-tier-lore">{{ tierBand.description }}</p>
+            </div>
+            <div
+              v-if="activeAffinities.length"
               class="sdp-affinity-list"
-              :class="{ 'sdp-affinity-list--dense': identityMarks.length >= 4 }"
-              aria-label="Rank, origins and traits"
+              aria-label="Active origins and traits"
             >
               <div
-                v-for="mark in identityMarks"
-                :key="mark.id"
+                v-for="affinity in activeAffinities"
+                :key="affinity.id"
                 class="sdp-affinity"
-                :class="{ 'sdp-affinity--crowned': mark.crowned }"
-                :style="{ '--ac': mark.color }"
-                v-tip="mark.tip"
+                :class="{ 'sdp-affinity--crowned': affinity.crowned }"
+                :style="{ '--ac': affinity.color }"
+                v-tip="`${affinity.kind}: ${affinity.name} · ${affinity.bonus}`"
               >
                 <span class="sdp-affinity-crest" aria-hidden="true"
-                  ><Icon :icon="mark.icon" width="22" height="22"
+                  ><Icon :icon="affinity.icon" width="22" height="22"
                 /></span>
                 <span class="sdp-affinity-copy">
                   <span class="sdp-affinity-head"
-                    ><small>{{ mark.kind }}</small
-                    ><span v-if="mark.stars" class="sdp-affinity-stars"
+                    ><small>{{ affinity.kind }}</small
+                    ><span class="sdp-affinity-steps"
                       ><i
-                        v-for="n in MAX_STAR_LEVEL"
-                        :key="n"
-                        :class="{ 'sdp-affinity-star--lit': n <= mark.stars }"
-                        >★</i
-                      ></span
-                    ><span v-else class="sdp-affinity-steps"
-                      ><i
-                        v-for="step in mark.steps"
+                        v-for="step in affinity.steps"
                         :key="step"
-                        :class="{ 'sdp-affinity-step--lit': (mark.count ?? 0) >= step }" /></span
-                    ><em v-if="mark.count">{{ mark.count }}</em></span
-                  ><strong>{{ mark.name }}</strong>
+                        :class="{ 'sdp-affinity-step--lit': affinity.count >= step }" /></span
+                    ><em>{{ affinity.count }}</em></span
+                  ><strong>{{ affinity.name }}</strong>
                 </span>
               </div>
             </div>
@@ -1156,39 +1143,56 @@ function perkStatLine(perk: ChampionPerkDef): string {
   gap: 8px;
   margin-top: 10px;
 }
-/* Vier Marken (Rang plus drei Zugehoerigkeiten) passen nur enger in EINE Zeile. */
-.sdp-affinity-list--dense {
-  grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
-  gap: 6px;
+/* Der Rang steht ueber der Reihe und ueber ihre volle Breite — er ist keine
+   Zugehoerigkeit, sondern die Herkunftsstufe des Champions. */
+.sdp-tier-band {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 38px minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 7px 11px;
+  border: 1px solid color-mix(in srgb, var(--ac) 46%, #3e200a);
+  border-left: 3px solid var(--ac);
+  border-radius: 4px;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 17%, #17150e), #141410 78%);
+  text-align: left;
 }
-.sdp-affinity-list--dense .sdp-affinity {
-  grid-template-columns: 26px minmax(0, 1fr);
-  gap: 6px;
-  padding: 6px 7px;
+.sdp-tier-crest {
+  width: 38px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: var(--ac);
+  color: #fff;
 }
-.sdp-affinity-list--dense .sdp-affinity-crest {
-  width: 26px;
-  height: 29px;
-}
-.sdp-affinity-list--dense .sdp-affinity strong {
-  font-size: 17px;
-}
-.sdp-affinity-list--dense .sdp-affinity-head {
-  gap: 4px;
-}
-.sdp-affinity-list--dense .sdp-affinity-head small {
-  font-size: 8px;
-  letter-spacing: 0.06em;
-}
-.sdp-affinity-list--dense .sdp-affinity-steps {
+.sdp-tier-copy {
+  min-width: 0;
+  display: grid;
   gap: 3px;
 }
-.sdp-affinity-list--dense .sdp-affinity-steps i {
-  width: 6px;
-  height: 6px;
+.sdp-tier-copy strong {
+  overflow: hidden;
+  color: var(--ac);
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--ac) 34%, transparent);
+  white-space: nowrap;
 }
-.sdp-affinity-list--dense .sdp-affinity em {
+/* Geklemmt statt umbrechend — das Band haelt seine Hoehe. */
+.sdp-tier-lore {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: #a99b80;
   font-size: 12px;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .sdp-affinity {
   min-width: 0;
@@ -2466,20 +2470,53 @@ function perkStatLine(perk: ChampionPerkDef): string {
     font-size: 39px;
   }
   .sdp-affinity-list {
-    gap: 6px;
-    margin-top: 7px;
+    gap: 5px;
+    margin-top: 4px;
+  }
+  /* Flacher Viewport: das Band legt sich in EINE Zeile und gibt die Hoehe
+     an den Arbeitsbereich darunter zurueck — dort stossen die Ausruestungs-
+     zeilen sonst ineinander. */
+  .sdp-tier-band {
+    grid-template-columns: 25px minmax(0, auto) minmax(0, 1fr);
+    gap: 8px;
+    margin-top: 4px;
+    padding: 3px 8px;
+  }
+  .sdp-tier-crest {
+    width: 25px;
+    height: 28px;
+  }
+  .sdp-tier-crest svg {
+    width: 20px;
+    height: 20px;
+  }
+  .sdp-tier-copy {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .sdp-tier-copy strong {
+    font-size: 17px;
+  }
+  .sdp-tier-lore {
+    font-size: 11px;
+    -webkit-line-clamp: 1;
   }
   .sdp-affinity {
-    grid-template-columns: 26px minmax(0, 1fr);
-    gap: 7px;
-    padding: 5px 8px;
+    grid-template-columns: 25px minmax(0, 1fr);
+    gap: 6px;
+    padding: 4px 8px;
   }
   .sdp-affinity-crest {
-    width: 26px;
-    height: 29px;
+    width: 25px;
+    height: 28px;
+  }
+  .sdp-affinity-crest svg {
+    width: 20px;
+    height: 20px;
   }
   .sdp-affinity strong {
-    font-size: 17px;
+    font-size: 16px;
   }
   .sdp-stat {
     min-height: 59px;
