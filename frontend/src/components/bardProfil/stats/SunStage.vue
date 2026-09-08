@@ -620,9 +620,12 @@ function handleEvolve(): void {
   width: 100%;
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(132px, 0.85fr) minmax(210px, 1.25fr) minmax(165px, 0.95fr);
+  grid-template-columns: minmax(180px, 0.85fr) minmax(260px, 1.15fr);
+  grid-template-areas:
+    'next action'
+    'requirements requirements';
   align-items: center;
-  gap: clamp(12px, 1.5cqw, 24px);
+  gap: clamp(12px, 1.5cqw, 20px) clamp(16px, 2cqw, 30px);
   padding: clamp(12px, 1.6cqw, 20px) 0;
   border-block: 1px solid #2c1806;
   --se-state: #5c3310;
@@ -635,6 +638,7 @@ function handleEvolve(): void {
 }
 
 .se-next {
+  grid-area: next;
   display: flex;
   align-items: center;
   gap: clamp(8px, 1.2cqw, 15px);
@@ -691,15 +695,17 @@ function handleEvolve(): void {
 }
 
 .se-requirements {
-  display: flex;
-  flex-direction: column;
+  grid-area: requirements;
+  display: grid;
+  grid-template-columns: minmax(155px, 0.7fr) minmax(240px, 1.3fr);
   gap: clamp(7px, 0.9cqw, 11px);
   min-width: 0;
-  padding-right: clamp(12px, 1.5cqw, 22px);
-  border-right: 1px solid #2c1806;
+  padding-top: clamp(10px, 1.3cqw, 16px);
+  border-top: 1px solid #2c1806;
 }
 
 .se-requirements-head {
+  grid-column: 1 / -1;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -748,6 +754,7 @@ function handleEvolve(): void {
 }
 
 .se-action {
+  grid-area: action;
   display: flex;
   flex-direction: column;
   align-items: stretch;
