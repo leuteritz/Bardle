@@ -1768,7 +1768,7 @@ function particleStyle(i: number): Record<string, string> {
 .chime-readout__part {
   display: grid;
   grid-template-columns: var(--readout-orb) minmax(0, 1fr);
-  align-items: center;
+  align-items: start;
   gap: var(--readout-gap);
   min-width: 0;
 }
@@ -1851,7 +1851,8 @@ function particleStyle(i: number): Record<string, string> {
 /* Die Zahl und, beim Meep, ihr Zusatz — in EINER Zeile. */
 .chime-value-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  height: var(--readout-orb);
   gap: 10px;
   min-width: 0;
 }
