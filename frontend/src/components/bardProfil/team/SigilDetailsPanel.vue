@@ -1251,19 +1251,27 @@ function perkStatLine(perk: ChampionPerkDef): string {
 /* Ein Punkt je Schwelle — die erleuchteten sagen die erreichte Stufe. */
 .sdp-affinity-steps {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   margin-right: auto;
 }
-/* Ohne Rand — bei 8 px trennt nur die Fuellung erreicht von offen. */
+/* Offen ist ein hohler Ring, erreicht eine volle Scheibe: die FORM sagt den
+   Zustand: eine Fuellfarbe allein traegt ihn nicht, wenn die Marke selbst
+   dieselbe Farbe als Untergrund hat. */
 .sdp-affinity-steps i {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #6c5c3c;
   border-radius: 50%;
-  background: #3b3226;
+  background: transparent;
 }
-.sdp-affinity-step--lit {
-  background: color-mix(in srgb, var(--ac) 74%, #fff);
-  box-shadow: 0 0 7px color-mix(in srgb, var(--ac) 70%, transparent);
+/* Der Typselektor der Grundregel oben waere sonst spezifischer als eine blosse
+   Klasse — die Fuellung kam nie an, sichtbar war nur der Schein. */
+.sdp-affinity-steps i.sdp-affinity-step--lit {
+  border-color: color-mix(in srgb, var(--ac) 40%, #fff);
+  background: color-mix(in srgb, var(--ac) 85%, #fff);
+  box-shadow:
+    0 0 0 1px #14110c,
+    0 0 8px color-mix(in srgb, var(--ac) 75%, transparent);
 }
 /* Der Zaehler meint Koepfe im Orbit, nicht die Stufe — das Kreuz sagt es. */
 .sdp-affinity em {
@@ -2492,6 +2500,15 @@ function perkStatLine(perk: ChampionPerkDef): string {
     grid-template-columns: 25px minmax(0, 1fr);
     gap: 6px;
     padding: 4px 8px;
+  }
+  /* Die Kopfzeile hat hier nur 2 px Luft — die Punkte bleiben klein. */
+  .sdp-affinity-steps {
+    gap: 4px;
+  }
+  .sdp-affinity-steps i {
+    width: 8px;
+    height: 8px;
+    border-width: 1.5px;
   }
   .sdp-affinity-crest {
     width: 25px;
