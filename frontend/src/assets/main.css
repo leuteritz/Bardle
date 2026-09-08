@@ -100,11 +100,29 @@
   opacity: 1;
 }
 
-/* Rang-Kranz eines Champions im Orbit (utils/fx/championCrestSprite.ts).
-   Global und nicht scoped, weil das per JS erzeugte <img> keinen Scope-Suffix
-   trägt; `max-width: none` gegen Preflight, sonst stünde der Kranz auf
-   Slotbreite. Zwei Bilder liegen nur während der Stufenblende übereinander. */
-.champion-orbit-crest > img {
+/* Rang-Kranz eines Champions (utils/fx/championCrestSprite.ts) — im Idle-Orbit
+   und am Rollenknoten des Sigil-Boards dieselbe Gestalt. Global und nicht
+   scoped: das per JS erzeugte <img> trägt keinen Scope-Suffix, und der Keyframe
+   unten müsste sonst zweimal existieren. Der Aufrufer setzt NUR --crest-span
+   (die Kante in px) und, wo nötig, den z-index.
+
+   Die Kante steht in px und nicht in Prozent: Prozente und `inset` rechnen gegen
+   die PADDING-Box des Elternteils, der Sprite dagegen gegen dessen Border-Box —
+   bei einem gerahmten Portrait stünde der Kranz sonst gestaucht darauf. Muster
+   ist .sun-slot weiter oben. */
+.champion-crest {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--crest-span, 0px);
+  height: var(--crest-span, 0px);
+  margin-left: calc(var(--crest-span, 0px) / -2);
+  margin-top: calc(var(--crest-span, 0px) / -2);
+  pointer-events: none;
+}
+/* `max-width: none` gegen Preflight, sonst stünde der Kranz auf Slotbreite.
+   Zwei Bilder liegen nur während der Stufenblende übereinander. */
+.champion-crest > img {
   position: absolute;
   inset: 0;
   display: block;
@@ -112,6 +130,43 @@
   height: 100%;
   max-width: none;
   user-select: none;
+}
+
+/* Ab CHAMPION_CREST_AURA_MIN_STAGE atmet EINE Ebene. Der Schein steht statisch,
+   animiert wird ausschließlich seine Deckkraft — die Stufen darunter stehen
+   vollkommen still. */
+.champion-crest-aura {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--crest-span, 0px) * 1.22);
+  height: calc(var(--crest-span, 0px) * 1.22);
+  margin-left: calc(var(--crest-span, 0px) * -0.61);
+  margin-top: calc(var(--crest-span, 0px) * -0.61);
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    transparent 46%,
+    color-mix(in srgb, var(--role-color, #c89040) 30%, transparent) 62%,
+    transparent 78%
+  );
+  animation: champion-crest-breathe var(--crest-breathe, 3400ms) ease-in-out infinite alternate;
+}
+
+@keyframes champion-crest-breathe {
+  from {
+    opacity: 0.36;
+  }
+  to {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .champion-crest-aura {
+    animation: none;
+  }
 }
 
 /* Achsdrehung: das Band ist ein Streifen mit ZWEI Perioden, der unter einer

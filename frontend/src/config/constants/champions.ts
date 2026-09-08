@@ -652,6 +652,22 @@ export const CHAMPION_CREST_STAGES: ChampionCrestStage[] = [
   { minLevel: CHAMPION_LEVEL_MAX_CAP, name: 'Eternal',   rim: 4.4, rimGap: 2.1, heat: 0.50, studs: 12, blades: 8, bladeLong: true,  groove: true,  bevel: true,  sweep: true,  crown: true,  gem: true,  rays: 16, wreath: 24, aura: true  },
 ]
 
+/**
+ * Ornamentlängen des Kranzes, in px bei CHAMPION_CREST_BASE_SIZE. Sie stehen
+ * hier und nicht im Painter, weil sie bestimmen, wie weit der Kranz über das
+ * Portrait hinausreicht — und daran hängt, ob er auf einer Bühne noch Platz hat
+ * (championCrestReach, gebunden in championCrest.spec.ts).
+ */
+export const CHAMPION_CREST_BLADE_LEN_FOUR = 7
+export const CHAMPION_CREST_BLADE_LEN_EIGHT = 5.5
+/** Jede zweite Klinge reicht so viel weiter — sonst liest der Kranz als Ring. */
+export const CHAMPION_CREST_BLADE_LONG_MUL = 1.75
+/** Mittlere und seitliche Kronenzacke; die mittlere ist das höchste Ornament. */
+export const CHAMPION_CREST_CROWN_TIP = 12.5
+export const CHAMPION_CREST_CROWN_SIDE = 8
+/** Länge der Strahlen — ein weicher Verlauf, der lange vor seinem Ende ausläuft. */
+export const CHAMPION_CREST_RAY_LEN = 9
+
 /** Metal of a champion flying without a role — matches the avatar's bare border. */
 export const CHAMPION_CREST_FALLBACK_COLOR = '#c89040'
 /** Avatar diameter (px) the crest px values above are authored against. */
@@ -686,10 +702,12 @@ export const CHAMPION_CREST_CROSSFADE_MS = 500
 export const CHAMPION_CREST_PX_STEP = 4
 /**
  * Two-stage cache after the star body pattern: few raw canvases (they are only
- * a pass-through to the encoder), plenty of URLs (they are cheap). At most five
- * keys are mounted at once — front and back layer share one.
+ * a pass-through to the encoder), plenty of URLs (they are cheap). Two places
+ * mount the crest at two different sizes — the orbit and the sigil board's role
+ * nodes — so up to ten keys stand at once; the URL cache holds well over that,
+ * because a tab switch that re-encodes costs whole frames.
  */
 export const CHAMPION_CREST_CANVAS_MAX = 12
-export const CHAMPION_CREST_URL_MAX = 40
+export const CHAMPION_CREST_URL_MAX = 64
 /** Backing cap on the sprite EDGE in device pixels. */
 export const CHAMPION_CREST_MAX_BACKING_PX = 384

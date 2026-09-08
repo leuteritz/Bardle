@@ -145,7 +145,23 @@ export const SIGIL_NODE_NAME_OFFSET = 80
  * without it the two tabs would have left the name 70 px.
  */
 export const SIGIL_NODE_NAME_MAX_WIDTH = 146
-export const SIGIL_NODE_SIZE = 94
+/**
+ * Durchmesser des Portraits im Rollenknoten.
+ *
+ * War 94, solange der Rahmen aus Platten auf 134 % der Box bestand. Seit der
+ * Knoten denselben Rang-Kranz trägt wie der Idle-Orbit
+ * (utils/fx/championCrestSprite.ts), reicht dessen höchstes Ornament — die
+ * Krone — auf 0,855 × Portraitdurchmesser. 72 ist der grösste Wert, bei dem
+ * der Kranz INNERHALB des alten Fussabdrucks bleibt (championCrestReach(72) =
+ * 61,6 gegen 63 px) und der zugleich auf CHAMPION_CREST_PX_STEP aufgeht — sonst
+ * rechnete der Sprite gegen einen anderen Körperradius als das Portrait hat. Er
+ * ist damit der einzige Wert, bei dem keine weitere Zahl dieses Boards
+ * nachziehen muss:
+ * SIGIL_SWORN_GAP, SIGIL_ALLY_RADIUS, SIGIL_NODE_NAME_OFFSET und die LINK_GAPs
+ * bleiben, wie sie gemeinsam gelöst wurden. Der Slot wirkt so gross wie zuvor —
+ * es steht nur mehr Metall und weniger Gesicht darin.
+ */
+export const SIGIL_NODE_SIZE = 72
 export const SIGIL_ALLY_SIZE = 36
 export const SIGIL_CREST_SIZE = 170
 
@@ -190,8 +206,15 @@ export const SIGIL_CORE_GAUGE_MIN_ARC = 5
  */
 export const SIGIL_XP_RING_RADIUS = 46
 export const SIGIL_XP_RING_CIRCUMFERENCE = 2 * Math.PI * SIGIL_XP_RING_RADIUS
-/** How far the XP ring sits outside the portrait circle, in % of node size. */
-export const SIGIL_XP_RING_INSET = -9
+/**
+ * Wie weit der XP-Bogen ausserhalb des Portraits laeuft, in % der Knotenkante.
+ *
+ * War -9, als zwischen Portrait und Plattenrahmen ein freies Band lag. Der
+ * Rang-Kranz beginnt dichter am Portrait, und dort verschwand der Bogen unter
+ * dessen Reif: sichtbar, aber nicht mehr ablesbar. Bei -6 laeuft er auf der
+ * Portraitkante und steht vor dem Metall statt darunter.
+ */
+export const SIGIL_XP_RING_INSET = -6
 /** SVG ring radii (stage coordinates, center = SIGIL_STAGE_SIZE / 2). */
 export const SIGIL_RING_OUTER_R = 430
 export const SIGIL_RING_RUNE_R = 360
@@ -488,30 +511,20 @@ export const SIGIL_EMBER_R_SPREAD = 190
  */
 export const TEAM_SIGIL_SPLASH_HEIGHT_COMPACT = 226
 
-/** Portrait frame on the sigil board — ring width = stage rim * this + base. */
-export const SIGIL_FRAME_RIM_BASE = 1.4
-export const SIGIL_FRAME_RIM_STEP = 0.62
-/** Rim opacity (%) = this base plus SIGIL_FRAME_RIM_ALPHA_STEP per stage, capped at 100. */
-export const SIGIL_FRAME_RIM_ALPHA_BASE = 50
-export const SIGIL_FRAME_RIM_ALPHA_STEP = 4.5
-/** Portrait frame glow radius = stage glow * this. */
-export const SIGIL_FRAME_GLOW_FACTOR = 0.85
-/** Rotation period (ms) of the faceted crest plate behind an apex portrait. */
-export const SIGIL_FRAME_PLATE_MS = 34000
 /**
- * Half-turn of the second plate (deg per facet step) — offsetting it by half a
- * corner is what turns two overlapping polygons into a star silhouette.
+ * Der Plattenrahmen des Rollenknotens (Reif, Nietenkranz, Glanz, Korona, zwei
+ * gegenläufige Facettenplatten) ist gefallen: der Knoten trägt jetzt denselben
+ * Rang-Kranz wie der Idle-Orbit, gemalt in utils/fx/championCrestSprite.ts.
+ * Seine Masse stehen in CHAMPION_CREST_STAGES und brauchen hier keine
+ * Übersetzung mehr.
  */
-export const SIGIL_FRAME_PLATE2_OFFSET = 0.5
-/** Angular width (deg) of a single stud on the frame's stud ring. */
-export const SIGIL_FRAME_STUD_ARC_DEG = 3.6
-/** Travel period (ms) of the highlight sweeping around the frame ring. */
-export const SIGIL_FRAME_SWEEP_MS = 5600
-/** Breathing period (ms) of the corona behind an Exalted-or-higher frame. */
-export const SIGIL_FRAME_HALO_MS = 3800
-/** XP arc stroke width = this base plus SIGIL_XP_STROKE_STEP per regalia stage. */
+/** XP arc stroke width = this base plus SIGIL_XP_STROKE_STEP per crest stage. */
 export const SIGIL_XP_STROKE_BASE = 3.2
-export const SIGIL_XP_STROKE_STEP = 0.14
+/**
+ * Zuwachs je Rangstufe. Verdoppelt, als der Knoten von den 13 Regalia-Stufen
+ * auf die 7 Kranzstufen wechselte — die Spanne 3,2 … 4,88 bleibt damit dieselbe.
+ */
+export const SIGIL_XP_STROKE_STEP = 0.28
 
 /**
  * Champion LEVEL on a role node — a tab struck into the LEFT EDGE of the name

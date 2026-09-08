@@ -5,9 +5,10 @@ import { useBattleStore } from '@/stores/battle/battleStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { getChampionTier } from '@/config/champions/championTiers'
-import { regaliaStageFor, regaliaStageIndexFor } from '@/config/champions/championLevels'
-import { facetClipPath, studRingGradient } from '@/utils/orbit/geometry'
-import { allySlotLabel } from '@/utils/ui/format'
+import { crestStageIndexFor } from '@/config/champions/championLevels'
+import { facetClipPath } from '@/utils/orbit/geometry'
+import { allySlotLabel, hexToRgb } from '@/utils/ui/format'
+import { championCrestSpan, mountChampionCrest } from '@/utils/fx/championCrestSprite'
 import { formatNumberCompact } from '@/config/ui/numberFormat'
 import ChampionLevelBadge from '../ChampionLevelBadge.vue'
 import {
@@ -33,17 +34,8 @@ import {
   SIGIL_XP_RING_CIRCUMFERENCE,
   SIGIL_XP_RING_INSET,
   CHAMPION_REGALIA_SIZE_ALLY,
-  SIGIL_FRAME_RIM_BASE,
-  SIGIL_FRAME_RIM_STEP,
-  SIGIL_FRAME_RIM_ALPHA_BASE,
-  SIGIL_FRAME_RIM_ALPHA_STEP,
-  SIGIL_FRAME_GLOW_FACTOR,
-  SIGIL_FRAME_PLATE_MS,
-  SIGIL_FRAME_PLATE2_OFFSET,
-  SIGIL_FRAME_STUD_ARC_DEG,
-  SIGIL_FRAME_SWEEP_MS,
-  SIGIL_FRAME_HALO_MS,
   SIGIL_XP_STROKE_BASE,
+  CHAMPION_CREST_AURA_MIN_STAGE,
   SIGIL_XP_STROKE_STEP,
   SIGIL_NODE_LEVEL_TAB_WIDTH,
   SIGIL_NODE_POWER_TAB_WIDTH,
@@ -239,46 +231,41 @@ const mainAttention = computed(() => (main.value ? needsAttentionOf(main.value) 
 const mainXpReady = computed(() => !!mainXp.value && !mainXp.value.capped && mainXp.value.pct >= 1)
 
 // ── Portrait frame ───────────────────────────────────────────────────────────
-// The frame climbs the same regalia ladder as the medallion — one stage every
-// five levels, i.e. every ascension star — so a champion's rank is readable from
-// the shape of its slot alone, without ever leaving its role colour. Each stage
-// adds one element on top of the numbers that keep climbing: plate (5), studs
-// (10), sweep (15), star plate (20), polished bevel (30), halo (35), and at the
-// apex the plates turn. An empty slot wears the first stage, exactly the frame
-// it had before.
+// Der Knoten trägt denselben Rang-Kranz wie der Idle-Orbit: EIN gecachtes Bild
+// je Stufe und Rollenfarbe aus utils/fx/championCrestSprite.ts, sieben Stufen,
+// eine alle zehn Level. Vorher kletterte er eine EIGENE Leiter — 13 Stufen aus
+// geschnittenen Platten, Nietenkranz, wanderndem Glanz und Korona, eine alle
+// fünf Level. Zwei Leitern für dieselbe Zahl: ein Champion auf Level 44 sah im
+// Orbit aus wie einer auf 40 und hier wie einer auf 45.
 //
-// Cost: every added layer is a single composited element. Only sweep, halo and
-// the apex spin animate, all transform/opacity — up to the starting cap that is
-// one animated layer per node, five on a full board.
+// Nebenbei billiger: die alten Ebenen animierten auf der Höchststufe zu viert
+// je Knoten (Korona, zwei gegenläufige Platten, Glanz) — zwanzig auf einem
+// vollen Board. Jetzt ist es die eine Aura ab CHAMPION_CREST_AURA_MIN_STAGE.
 const mainLevel = computed(() => (main.value ? levelStore.levelOf(main.value) : 1))
 /** The tab shows the bare figure — the word belongs in the tooltip. */
 const levelLabel = computed(() => `Level ${mainLevel.value}`)
-const mainStage = computed(() => regaliaStageFor(mainLevel.value))
-const mainStageIndex = computed(() => (main.value ? regaliaStageIndexFor(mainLevel.value) : 0))
+const mainStageIndex = computed(() => (main.value ? crestStageIndexFor(mainLevel.value) : 0))
 
-const frameVars = computed<Record<string, string>>(() => {
-  const stage = mainStage.value
-  return {
-    '--node-rim': `${SIGIL_FRAME_RIM_BASE + stage.rim * SIGIL_FRAME_RIM_STEP}px`,
-    // an empty slot keeps the old faint ring; every stage above it firms up
-    '--node-rim-a': `${Math.min(100, SIGIL_FRAME_RIM_ALPHA_BASE + mainStageIndex.value * SIGIL_FRAME_RIM_ALPHA_STEP)}%`,
-    '--node-heat': `${Math.round(stage.heat * 100)}%`,
-    // The level numeral runs cooler than the rim: it is type, not metal, and it
-    // still has to read as a number at every stage. Resolved here rather than as
-    // a calc() inside color-mix — see the same split in ChampionLevelBadge.
-    '--node-heat-ink': `${Math.round(26 + stage.heat * 52)}%`,
-    '--node-glow': `${Math.round(stage.glow * SIGIL_FRAME_GLOW_FACTOR)}px`,
-    '--node-glow-a': `${Math.round(stage.glowAlpha * 100)}%`,
-    '--node-facets': facetClipPath(stage.facets),
-    // half a corner off the first plate — two hexagons become a twelve-point star
-    '--node-facets-2': facetClipPath(stage.facets, SIGIL_FRAME_PLATE2_OFFSET),
-    '--node-studs': studRingGradient(stage.studs, SIGIL_FRAME_STUD_ARC_DEG),
-    '--node-plate-ms': `${SIGIL_FRAME_PLATE_MS}ms`,
-    '--node-sweep-ms': `${SIGIL_FRAME_SWEEP_MS}ms`,
-    '--node-halo-ms': `${SIGIL_FRAME_HALO_MS}ms`,
-    '--xp-w': String(SIGIL_XP_STROKE_BASE + mainStageIndex.value * SIGIL_XP_STROKE_STEP),
-  }
-})
+const frameVars = computed<Record<string, string>>(() => ({
+  '--crest-span': `${championCrestSpan(SIGIL_NODE_SIZE)}px`,
+  '--xp-w': String(SIGIL_XP_STROKE_BASE + mainStageIndex.value * SIGIL_XP_STROKE_STEP),
+}))
+
+/**
+ * Hängt den Kranz ein — idempotent über `dataset.crestKey`, denn eine
+ * Inline-Ref feuert bei jedem Patch des VNodes.
+ */
+function setCrestEl(el: Element | null): void {
+  const slot = el as HTMLElement | null
+  if (!slot) return
+  mountChampionCrest(
+    slot,
+    mainStageIndex.value,
+    hexToRgb(roleDef.value.color),
+    SIGIL_NODE_SIZE,
+    window.devicePixelRatio || 1,
+  )
+}
 </script>
 
 <template>
@@ -341,8 +328,6 @@ const frameVars = computed<Record<string, string>>(() => {
       'sigil-node--full': full,
       'sigil-node--search-hit': mainHit,
       'sigil-node--search-miss': searchActive && !mainHit,
-      'sigil-node--bevel': !!main && mainStage.bevel,
-      'sigil-node--spin': !!main && mainStage.spin,
     }"
     :style="[
       nodeStyle(point, SIGIL_NODE_SIZE),
@@ -357,19 +342,21 @@ const frameVars = computed<Record<string, string>>(() => {
     @focus="uiStore.setHoveredChampionSlotIndex(roleIndex)"
     @blur="uiStore.setHoveredChampionSlotIndex(null)"
   >
-    <!-- ── regalia frame ── back to front: corona, the cut metal plates, the
-         sweeping highlight, then the studs riding on top of it. Everything here
-         sits behind the XP arc, the aura and the portrait. -->
+    <!-- ── Rang-Kranz ── derselbe wie im Idle-Orbit; die statische Ebene steht
+         vor der atmenden, denn was nach einer animierten Ebene im DOM steht,
+         bekommt vom Compositor eine eigene (Overlap). -->
     <template v-if="showOrnaments">
-      <span v-if="main && mainStage.halo" class="sigil-node-halo" aria-hidden="true" />
       <span
-        v-if="main && mainStage.plate2"
-        class="sigil-node-plate sigil-node-plate--star"
+        v-if="main && mainStageIndex > 0"
+        class="champion-crest"
+        aria-hidden="true"
+        :ref="(el) => setCrestEl(el as Element | null)"
+      />
+      <span
+        v-if="main && mainStageIndex >= CHAMPION_CREST_AURA_MIN_STAGE"
+        class="champion-crest-aura"
         aria-hidden="true"
       />
-      <span v-if="main && mainStage.facets > 0" class="sigil-node-plate" aria-hidden="true" />
-      <span v-if="main && mainStage.sweep" class="sigil-node-sweep" aria-hidden="true" />
-      <span v-if="main && mainStage.studs > 0" class="sigil-node-studs" aria-hidden="true" />
 
       <span v-if="full" class="sigil-node-aura" aria-hidden="true" />
       <span v-if="full" class="sigil-node-conic" aria-hidden="true" />
@@ -646,164 +633,6 @@ const frameVars = computed<Record<string, string>>(() => {
   animation: sigil-xp-breathe 1.9s ease-in-out infinite;
 }
 
-/* ── regalia frame ────────────────────────────────────────────────────────────
-   All five layers share the node's centre and the same 134% footprint, so the
-   frame grows in detail without ever growing past the ally satellites. Only the
-   sweep, the halo and the apex spin animate, and all three animate transform or
-   opacity only — no layout, no paint, no filter per frame. */
-
-/* cut metal plate behind the portrait — the frame's own regalia stage */
-.sigil-node-plate {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  /* wide enough that its edges clear the XP arc rather than crossing it */
-  width: 134%;
-  height: 134%;
-  transform: translate(-50%, -50%);
-  clip-path: var(--node-facets, none);
-  background: color-mix(in srgb, var(--role-color) 52%, #0a0704);
-  pointer-events: none;
-}
-.sigil-node-plate::after {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  clip-path: var(--node-facets, none);
-  background: linear-gradient(
-    155deg,
-    color-mix(in srgb, var(--role-color) 20%, #0a0704),
-    #0a0704 62%,
-    color-mix(in srgb, var(--role-color) 12%, #0a0704)
-  );
-}
-/* Second plate, offset by half a corner and seated a little wider *behind* the
-   first: only its points clear the front plate's flat edges, so the slot reads
-   as a spiked star rather than as one more polygon. Wider is the whole point —
-   140% still leaves the ally satellites their clearance. */
-.sigil-node-plate--star {
-  width: 140%;
-  height: 140%;
-  clip-path: var(--node-facets-2, none);
-  background: linear-gradient(
-    155deg,
-    color-mix(in srgb, #fff 30%, var(--role-color)),
-    var(--role-color) 46%,
-    color-mix(in srgb, var(--role-color) 55%, #0a0704)
-  );
-}
-/* the front plate carries the inner face; the spikes stay solid metal */
-.sigil-node-plate--star::after {
-  content: none;
-}
-/* Ascendant+ — the cast metal is polished: a lit top edge and a dark underside.
-   Pure background swap on layers that already exist, so it costs nothing. */
-.sigil-node--bevel .sigil-node-plate {
-  background: linear-gradient(
-    158deg,
-    color-mix(in srgb, #fff 42%, var(--role-color)),
-    var(--role-color) 40%,
-    color-mix(in srgb, var(--role-color) 32%, #0a0704)
-  );
-}
-.sigil-node--bevel .sigil-node-plate::after {
-  background: linear-gradient(
-    158deg,
-    color-mix(in srgb, var(--role-color) 34%, #0a0704),
-    #0a0704 58%,
-    color-mix(in srgb, var(--role-color) 18%, #0a0704)
-  );
-}
-/* apex only — the plates turn against each other, slowly enough to read as a
-   mounted medal rather than as a spinner */
-.sigil-node--spin .sigil-node-plate {
-  animation: sigil-plate-turn var(--node-plate-ms, 34000ms) linear infinite;
-}
-.sigil-node--spin .sigil-node-plate--star {
-  animation-direction: reverse;
-}
-
-/* highlight sweeping around the frame ring — the first motion a frame earns.
-   Masked to the band between the XP arc and the plate corners, so it glints
-   across the studs instead of washing over the portrait. */
-.sigil-node-sweep {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 134%;
-  height: 134%;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    color-mix(in srgb, #fff 55%, var(--role-color)) 18deg,
-    transparent 48deg,
-    transparent 192deg,
-    color-mix(in srgb, var(--role-color) 75%, transparent) 212deg,
-    transparent 248deg
-  );
-  -webkit-mask-image: radial-gradient(
-    closest-side,
-    transparent 85%,
-    #000 88%,
-    #000 99%,
-    transparent 100%
-  );
-  mask-image: radial-gradient(closest-side, transparent 85%, #000 88%, #000 99%, transparent 100%);
-  opacity: 0.75;
-  pointer-events: none;
-  animation: sigil-frame-sweep var(--node-sweep-ms, 5600ms) linear infinite;
-}
-
-/* stud ring — one bolt per plate corner (same count, same start angle), seated
-   on the plate tips. Static: a gradient masked to a band, painted once. */
-.sigil-node-studs {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 134%;
-  height: 134%;
-  transform: translate(-50%, -50%);
-  --stud-c: color-mix(in srgb, #fff 34%, var(--role-color));
-  background: var(--node-studs, none);
-  -webkit-mask-image: radial-gradient(
-    closest-side,
-    transparent 88%,
-    #000 90%,
-    #000 98.5%,
-    transparent 100%
-  );
-  mask-image: radial-gradient(
-    closest-side,
-    transparent 88%,
-    #000 90%,
-    #000 98.5%,
-    transparent 100%
-  );
-  pointer-events: none;
-}
-
-/* breathing corona behind the whole frame (Exalted+) — scale/opacity only.
-   Kept on the same 134% footprint as everything else: it glows out through the
-   gaps between the star plate's points instead of past the ally satellites. */
-.sigil-node-halo {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 134%;
-  height: 134%;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--role-color) 30%, transparent) 40%,
-    transparent 72%
-  );
-  pointer-events: none;
-  animation: sigil-frame-halo var(--node-halo-ms, 3800ms) ease-in-out infinite;
-}
-
 .sigil-node-circle {
   position: relative;
   display: block;
@@ -812,15 +641,11 @@ const frameVars = computed<Record<string, string>>(() => {
   border-radius: 50%;
   overflow: hidden;
   background: #0a0704;
-  /* ring width, colour heat and glow all climb with the champion's level */
+  /* Eine feste Kante, keine kletternde mehr: den Rang erzählt der Kranz
+     darüber. Ein leerer Slot und ein Level-9-Champion tragen genau diese. */
   box-shadow:
-    0 0 0 var(--node-rim, 3px)
-      color-mix(
-        in srgb,
-        color-mix(in srgb, #fff var(--node-heat, 0%), var(--role-color)) var(--node-rim-a, 60%),
-        transparent
-      ),
-    0 0 var(--node-glow, 12px) color-mix(in srgb, var(--role-color) var(--node-glow-a, 30%), transparent),
+    0 0 0 2px color-mix(in srgb, var(--role-color) 72%, transparent),
+    0 0 10px color-mix(in srgb, var(--role-color) 26%, transparent),
     0 4px 10px rgba(0, 0, 0, 0.55);
   transition:
     box-shadow 0.25s,
@@ -828,8 +653,8 @@ const frameVars = computed<Record<string, string>>(() => {
 }
 .sigil-node--selected .sigil-node-circle {
   box-shadow:
-    0 0 0 calc(var(--node-rim, 3px) + 1px) color-mix(in srgb, #fff var(--node-heat, 0%), var(--role-color)),
-    0 0 calc(var(--node-glow, 12px) * 2) color-mix(in srgb, var(--role-color) 80%, transparent),
+    0 0 0 3px color-mix(in srgb, #fff 20%, var(--role-color)),
+    0 0 20px color-mix(in srgb, var(--role-color) 80%, transparent),
     0 4px 12px rgba(0, 0, 0, 0.6);
 }
 .sigil-node-img {
@@ -1345,29 +1170,6 @@ const frameVars = computed<Record<string, string>>(() => {
   }
 }
 
-@keyframes sigil-plate-turn {
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
-}
-/* both frame animations carry the centring translate so they never fight the
-   layer's own positioning transform */
-@keyframes sigil-frame-sweep {
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
-}
-/* opacity only — a scaling gradient of this size makes the compositor re-raster
-   the layer every frame, and the breath reads just as well without it */
-@keyframes sigil-frame-halo {
-  0%,
-  100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 0.95;
-  }
-}
 @keyframes sigil-xp-breathe {
   0%,
   100% {
@@ -1416,9 +1218,6 @@ const frameVars = computed<Record<string, string>>(() => {
   }
   .sigil-ally--spotlight,
   .sigil-node-rank-sheen,
-  .sigil-node--spin .sigil-node-plate,
-  .sigil-node-sweep,
-  .sigil-node-halo,
   .sigil-node-xp--attention .sigil-node-xp-fill,
   .sigil-node-rank-pulse {
     animation: none !important;

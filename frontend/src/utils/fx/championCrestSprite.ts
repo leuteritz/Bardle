@@ -13,6 +13,11 @@
 
 import {
   CHAMPION_CREST_BASE_SIZE,
+  CHAMPION_CREST_BLADE_LEN_EIGHT,
+  CHAMPION_CREST_BLADE_LEN_FOUR,
+  CHAMPION_CREST_BLADE_LONG_MUL,
+  CHAMPION_CREST_CROWN_SIDE,
+  CHAMPION_CREST_CROWN_TIP,
   CHAMPION_CREST_CANVAS_MAX,
   CHAMPION_CREST_CROSSFADE_MS,
   CHAMPION_CREST_CROWN_GAP,
@@ -20,6 +25,7 @@ import {
   CHAMPION_CREST_MIN_SIZE,
   CHAMPION_CREST_ORNAMENT_MIN_SIZE,
   CHAMPION_CREST_PX_STEP,
+  CHAMPION_CREST_RAY_LEN,
   CHAMPION_CREST_SPAN,
   CHAMPION_CREST_STAGES,
   CHAMPION_CREST_URL_MAX,
@@ -76,6 +82,29 @@ export function championCrestSpriteKey(
   return `${stage}|${rgb[0]},${rgb[1]},${rgb[2]}|${px}|${dpr}|${detail}`
 }
 
+/**
+ * Wie weit das äusserste HARTE Ornament einer Stufe über die Mitte hinausreicht.
+ *
+ * Nicht dasselbe wie die halbe Sprite-Kante: die Box trägt Rand für die weichen
+ * Strahlen, die lange vor ihrem Ende auslaufen. Wer den Kranz auf eine Bühne
+ * setzt, rechnet gegen DIESEN Wert — championCrest.spec.ts bindet damit den
+ * Rollenknoten des Sigil-Boards gegen seine Nachbarn.
+ */
+export function championCrestReach(px: number, stage = CHAMPION_CREST_STAGES.length - 1): number {
+  const s = CHAMPION_CREST_STAGES[stage]
+  if (!s || s.rim <= 0) return px / 2
+  const u = px / CHAMPION_CREST_BASE_SIZE
+  const rim = s.rim * u
+  const band = px / 2 + s.rimGap * u + rim / 2
+  if (s.crown) return band + rim * 0.7 + CHAMPION_CREST_CROWN_TIP * u
+  if (s.blades > 0) {
+    const len =
+      (s.blades === 4 ? CHAMPION_CREST_BLADE_LEN_FOUR : CHAMPION_CREST_BLADE_LEN_EIGHT) * u
+    return band + rim * 0.4 + len * (s.bladeLong ? CHAMPION_CREST_BLADE_LONG_MUL : 1)
+  }
+  return band + rim / 2
+}
+
 /* ── Der Painter ──────────────────────────────────────────────────────────── */
 
 /** Vier Klingen sitzen auf den Diagonalen, acht auf allen Achtelpunkten. */
@@ -117,7 +146,7 @@ export function paintChampionCrest(
   // Strahlen liegen ganz hinten und laufen weich aus.
   if (ornate && s.rays > 0) {
     const from = band + rim
-    const to = from + 9 * u
+    const to = from + CHAMPION_CREST_RAY_LEN * u
     ctx.fillStyle = rayGradient(ctx, cx, cy, to, lite, from / to, 1, 0.34)
     const step = (Math.PI * 2) / s.rays
     for (let i = 0; i < s.rays; i++) {
@@ -142,12 +171,13 @@ export function paintChampionCrest(
 
   if (ornate && s.blades > 0) {
     const from = band + rim * 0.4
-    const base = (s.blades === 4 ? 7 : 5.5) * u
+    const base =
+      (s.blades === 4 ? CHAMPION_CREST_BLADE_LEN_FOUR : CHAMPION_CREST_BLADE_LEN_EIGHT) * u
     const angles = bladeAngles(s.blades)
     for (let i = 0; i < angles.length; i++) {
       const a = angles[i]
       if (s.crown && underCrown(a)) continue
-      const to = from + base * (s.bladeLong && i % 2 === 0 ? 1.75 : 1)
+      const to = from + base * (s.bladeLong && i % 2 === 0 ? CHAMPION_CREST_BLADE_LONG_MUL : 1)
       spike(ctx, cx, cy, a, from, to, 1.5 * u)
       ctx.fillStyle = rgba(metal, 0.92)
       ctx.fill()
@@ -230,7 +260,7 @@ export function paintChampionCrest(
     for (let i = 0; i < spires.length; i++) {
       const a = spires[i]
       const mid = i === 1
-      const to = from + (mid ? 12.5 : 8) * u
+      const to = from + (mid ? CHAMPION_CREST_CROWN_TIP : CHAMPION_CREST_CROWN_SIDE) * u
       spike(ctx, cx, cy, a, from, to, 2.2 * u)
       ctx.fillStyle = rgba(mid ? lite : metal, 0.96)
       ctx.fill()

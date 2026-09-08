@@ -9,8 +9,14 @@ import {
   CHAMPION_LEVEL_MAX_CAP,
   CHAMPION_PERK_INTERVAL,
   CHAMPION_REGALIA_STAGES,
+  SIGIL_NODE_NAME_OFFSET,
+  SIGIL_NODE_SIZE,
+  SIGIL_SWORN_GAP,
+  SIGIL_SWORN_RIM_PX,
+  SIGIL_SWORN_SIZE,
 } from '@/config/constants'
 import { crestStageFor, crestStageIndexFor } from '@/config/champions/championLevels'
+import { championCrestReach } from '@/utils/fx/championCrestSprite'
 
 describe('champion orbit crest — the ladder', () => {
   it('steps once every CHAMPION_PERK_INTERVAL levels up to the cap', () => {
@@ -109,5 +115,47 @@ describe('champion orbit crest — the cost guards', () => {
 
   it('quantises the sprite edge so a sun upgrade does not rasterise anew', () => {
     expect(CHAMPION_CREST_PX_STEP).toBeGreaterThanOrEqual(2)
+  })
+})
+
+// ── Der Kranz auf dem Sigil-Board ────────────────────────────────────────────
+// Der Rollenknoten trägt denselben Kranz wie der Orbit. Seine Nachbarn auf dem
+// Board — die Sworn-Satelliten und die Namensplakette — wurden gegen den ALTEN
+// Plattenrahmen gelöst (63 px ab Knotenmitte, siehe SIGIL_NODE_SIZE). Diese Wand
+// bricht, sobald jemand den Span, eine Ornamentlänge oder die Knotengrösse
+// ändert, ohne die Nachbarn mitzuziehen.
+describe('champion crest — the sigil board wall', () => {
+  /** Halbe Höhe der zweizeiligen Namensplakette, siehe SIGIL_NODE_NAME_OFFSET. */
+  const PLATE_HALF_H = 16
+  /** Die selektierte Rolle wächst; der Wert steht im scoped CSS des Knotens. */
+  const SELECTED_SCALE = 1.12
+  const reach = championCrestReach(SIGIL_NODE_SIZE)
+
+  it('keeps the footprint the old plate frame had', () => {
+    // 63 px war die Kante, gegen die SWORN_GAP, ALLY_RADIUS und NAME_OFFSET
+    // gemeinsam gelöst wurden — der Kranz darf sie nicht überschreiten.
+    expect(reach).toBeLessThanOrEqual(63)
+  })
+
+  it('clears the name plate', () => {
+    expect(reach).toBeLessThan(SIGIL_NODE_NAME_OFFSET - PLATE_HALF_H)
+  })
+
+  it('clears the sworn satellites, even on a selected node', () => {
+    const swornInner = SIGIL_SWORN_GAP - (SIGIL_SWORN_SIZE / 2 + SIGIL_SWORN_RIM_PX)
+    expect(reach * SELECTED_SCALE).toBeLessThan(swornInner)
+  })
+
+  it('reaches past the portrait — otherwise it would sit on the face', () => {
+    expect(reach).toBeGreaterThan(SIGIL_NODE_SIZE / 2)
+  })
+
+  it('grows with every stage that adds a longer ornament', () => {
+    let last = 0
+    for (let i = 0; i < CHAMPION_CREST_STAGES.length; i++) {
+      const r = championCrestReach(SIGIL_NODE_SIZE, i)
+      expect(r).toBeGreaterThanOrEqual(last)
+      last = r
+    }
   })
 })

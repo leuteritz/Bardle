@@ -22,7 +22,7 @@
       <!-- Hinter der Sonne trägt der Kranz kein Leuchten: was dort steht, pulst nicht. -->
       <span
         v-if="pos.crestStage > 0"
-        class="champion-orbit-crest"
+        class="champion-crest"
         aria-hidden="true"
         :ref="(el) => setCrestEl(el, pos)"
       />
@@ -74,13 +74,13 @@
            steht, bekommt vom Compositor eine eigene (Overlap). -->
       <span
         v-if="pos.crestStage > 0"
-        class="champion-orbit-crest"
+        class="champion-crest"
         aria-hidden="true"
         :ref="(el) => setCrestEl(el, pos)"
       />
       <span
         v-if="pos.crestStage >= CHAMPION_CREST_AURA_MIN_STAGE"
-        class="champion-orbit-crest-aura"
+        class="champion-crest-aura"
         aria-hidden="true"
       />
       <!-- Zustands-Glow als eigene Ebene: der Schein selbst steht STATISCH im
@@ -1054,52 +1054,15 @@ export default defineComponent({
 }
 
 /* ── Rang-Kranz (Champion-Level) ───────────────────────────────────────────
-   EIN gecachtes Bild je Stufe und Rollenfarbe, gemalt in
-   utils/fx/championCrestSprite.ts. Kein CSS-Ornament und kein Canvas-Kind: der
-   Kranz fährt im transform des Avatars mit und kostet pro Frame nichts. Die
-   Spanne steht als --crest-out am Avatar, siehe avatarStyle(). */
-.champion-orbit-crest {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--crest-span, 0px);
-  height: var(--crest-span, 0px);
-  margin-left: calc(var(--crest-span, 0px) / -2);
-  margin-top: calc(var(--crest-span, 0px) / -2);
-  pointer-events: none;
+   Gestalt, Grösse und Takt stehen global in main.css — derselbe Kranz trägt den
+   Rollenknoten des Sigil-Boards. Hier bleibt nur, was allein der Orbit weiss:
+   die Ebenenlage hinter dem Portrait. */
+.champion-crest {
   z-index: -1;
 }
 
-/* Ab CHAMPION_CREST_AURA_MIN_STAGE atmet EINE Ebene. Der Schein steht statisch,
-   animiert wird ausschließlich seine Deckkraft — die Stufen darunter stehen
-   vollkommen still. */
-.champion-orbit-crest-aura {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: calc(var(--crest-span, 0px) * 1.22);
-  height: calc(var(--crest-span, 0px) * 1.22);
-  margin-left: calc(var(--crest-span, 0px) * -0.61);
-  margin-top: calc(var(--crest-span, 0px) * -0.61);
-  border-radius: 50%;
-  pointer-events: none;
+.champion-crest-aura {
   z-index: -2;
-  background: radial-gradient(
-    circle,
-    transparent 46%,
-    color-mix(in srgb, var(--role-color, #c89040) 30%, transparent) 62%,
-    transparent 78%
-  );
-  animation: orbit-crest-breathe var(--crest-breathe, 3400ms) ease-in-out infinite alternate;
-}
-
-@keyframes orbit-crest-breathe {
-  from {
-    opacity: 0.36;
-  }
-  to {
-    opacity: 0.85;
-  }
 }
 
 /* ── Zustands-Glow-Ebene ───────────────────────────────────────────────────
@@ -1743,7 +1706,6 @@ export default defineComponent({
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .champion-orbit-crest-aura,
   .champion-orbit-glow,
   .champion-ability-badge::after,
   .champion-orbit-avatar--attacking,
@@ -1860,8 +1822,8 @@ export default defineComponent({
 }
 
 /* Der Kranz ist ein echtes Element, kein Pseudo — er braucht seine eigene Zeile. */
-.champion-orbit-avatar--dim .champion-orbit-crest,
-.champion-orbit-avatar--dim .champion-orbit-crest-aura {
+.champion-orbit-avatar--dim .champion-crest,
+.champion-orbit-avatar--dim .champion-crest-aura {
   opacity: 0 !important;
   animation: none !important;
 }
