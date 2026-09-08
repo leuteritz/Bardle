@@ -29,9 +29,9 @@ const page = defineModel<JourneySubpageId>({ required: true })
 .jt-nav {
   display: flex;
   align-items: stretch;
-  gap: 4px;
+  gap: 8px;
   flex-shrink: 0;
-  padding: 0 12px;
+  padding: 0 18px;
   background: #1e1006;
   border-bottom: 3px solid #5c3310;
 }
@@ -40,8 +40,8 @@ const page = defineModel<JourneySubpageId>({ required: true })
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 11px 18px 9px;
+  gap: 9px;
+  padding: 13px 22px 11px;
   color: #8a7a58;
   background: transparent;
   border: none;
@@ -59,7 +59,7 @@ const page = defineModel<JourneySubpageId>({ required: true })
 }
 
 .jt-nav-lbl {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -68,10 +68,10 @@ const page = defineModel<JourneySubpageId>({ required: true })
 
 @media (max-height: 1100px) {
   .jt-nav-tab {
-    padding: 8px 15px 6px;
+    padding: 10px 18px 8px;
   }
   .jt-nav-lbl {
-    font-size: 13px;
+    font-size: 14px;
   }
 }
 </style>

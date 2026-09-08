@@ -37,7 +37,7 @@ const emit = defineEmits<{ 'open-records': [category: StatCategoryId | null] }>(
 
 .jt-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(400px, 30vw, 620px);
+  grid-template-columns: minmax(0, 1fr) clamp(580px, 39vw, 820px);
   min-height: 0;
   min-width: 0;
 }
@@ -49,15 +49,16 @@ const emit = defineEmits<{ 'open-records': [category: StatCategoryId | null] }>(
 .jt-aside {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 10px;
+  gap: 14px;
   min-height: 0;
-  padding: 12px 14px 10px;
+  padding: 18px 20px 16px;
+  border-left: 1px solid #2c1806;
 }
 
 @media (max-height: 1100px) {
   .jt-aside {
-    gap: 8px;
-    padding: 10px 12px 8px;
+    gap: 11px;
+    padding: 14px 16px 12px;
   }
 }
 </style>
