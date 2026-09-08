@@ -434,7 +434,7 @@ function handleEvolve(): void {
   /* Sonne links über Name und Rail, die Konsole rechts über die volle Höhe:
      untereinander fraß die Konsole der Sonne die Höhe weg (gemessen 37 px Disc) */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(330px, 43%);
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 52%);
   grid-template-rows: minmax(0, 1fr) auto auto;
   /* eigene Eigenschaften NIE in cqw: das Container-Element misst gegen den Vorfahren */
   column-gap: 18px;
@@ -617,12 +617,14 @@ function handleEvolve(): void {
   grid-column: 2;
   grid-row: 1 / -1;
   align-self: center;
-  width: min(100%, 560px);
+  width: 100%;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(10px, 1.5cqw, 18px);
-  padding: clamp(10px, 1.5cqw, 18px) 0;
+  display: grid;
+  grid-template-columns: minmax(132px, 0.85fr) minmax(210px, 1.25fr) minmax(165px, 0.95fr);
+  align-items: center;
+  gap: clamp(12px, 1.5cqw, 24px);
+  padding: clamp(12px, 1.6cqw, 20px) 0;
+  border-block: 1px solid #2c1806;
   --se-state: #5c3310;
 }
 .se-deck.is-live {
@@ -633,12 +635,12 @@ function handleEvolve(): void {
 }
 
 .se-next {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
   gap: clamp(8px, 1.2cqw, 15px);
-  padding-bottom: clamp(9px, 1.4cqw, 17px);
-  border-bottom: 1px solid #2c1806;
+  min-width: 0;
+  padding-right: clamp(12px, 1.5cqw, 22px);
+  border-right: 1px solid #2c1806;
 }
 
 .se-next-mark {
@@ -691,7 +693,10 @@ function handleEvolve(): void {
 .se-requirements {
   display: flex;
   flex-direction: column;
-  gap: clamp(8px, 1.1cqw, 14px);
+  gap: clamp(7px, 0.9cqw, 11px);
+  min-width: 0;
+  padding-right: clamp(12px, 1.5cqw, 22px);
+  border-right: 1px solid #2c1806;
 }
 
 .se-requirements-head {
@@ -704,9 +709,7 @@ function handleEvolve(): void {
 .se-requirement {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding-bottom: clamp(8px, 1.1cqw, 13px);
-  border-bottom: 1px solid #2c1806;
+  gap: 6px;
 }
 
 .se-requirement-copy {
@@ -749,6 +752,7 @@ function handleEvolve(): void {
   flex-direction: column;
   align-items: stretch;
   gap: 7px;
+  min-width: 0;
 }
 
 .se-fire-link {
