@@ -2186,6 +2186,14 @@ function particleStyle(i: number): Record<string, string> {
   height: var(--pause-kit-block-h);
 }
 
+.kit-block:has(.buff-bar--empty) {
+  height: var(--pause-kit-tile-h);
+}
+
+.kit-block:has(.buff-bar--empty) #pause-buff-dock {
+  display: none;
+}
+
 .kit-dock {
   display: flex;
   align-items: stretch;
