@@ -805,10 +805,30 @@ export const CHIMES_COST_ICON = 'game-icons:windchimes'
    hört sie auf zu funktionieren — `__tests__/config/voyagesAtlasLayout.spec.ts`
    bindet das.                                                                */
 
-/** Breiter als die Facettenleiste des Shops (196), weil eine Zeile hier eine
- *  Kartenminiatur trägt und kein Glyph: dieses Bild IST das Wiedererkennen.
- *  Die LISTE allein — der Griff daneben zählt extra. */
-export const VOYAGE_RAIL_WIDTH = 224
+/**
+ * Die LISTE allein — der Griff daneben zaehlt extra.
+ *
+ * Breiter als die Facettenleiste des Shops (196), weil eine Zeile hier eine
+ * Kartenminiatur traegt und kein Glyph: dieses Bild IST das Wiedererkennen.
+ *
+ * **224 → 244, und die 20 px sind GEKAUFT, nicht gefunden.** Der Textblock
+ * neben der 96-px-Miniatur hatte 86 px — darin standen drei Zustandschips UND
+ * die Stufe. Er hat jetzt 106, also 23 % mehr, waehrend die Miniatur gleich
+ * bleibt. Bezahlt hat es die Karte: die Fit-Box klemmt hier an der BREITE, die
+ * 20 px gehen 1:1 von der gemalten Platte ab (Full HD 972 → 952 px Zone-Rest).
+ * Das ist der einzige Reiter, in dem die Verbreiterung etwas kostet — im
+ * Universe klemmt die Fit-Box an der Hoehe, bei Planets an der Sonne.
+ *
+ * **Und 244 ist der DECKEL, nicht der Wunsch.** Angesetzt waren 260. Dabei
+ * fiel die Manifestreihe auf dem Datenband von sieben Sitzen auf sechs, weil
+ * ihr Budget ein Anteil der BUEHNE ist (`VOYAGE_MANIFEST_MAX_SHARE`): ab
+ * Galaxie 5 haette dauerhaft ein „+1 more" neben einer Reihe gestanden, die
+ * Platz gehabt haette. Die kleinste Buehne, die sieben Sitze traegt, misst
+ * 927 px; 244 laesst ihr 932 und damit 5 px Reserve, 248 nur noch einen.
+ * `voyageManifestFit.spec.ts` haelt das — wer hier weiter aufdreht, bricht es
+ * dort und nicht hier.
+ */
+export const VOYAGE_RAIL_WIDTH = 244
 /**
  * Die Griffleiste, die eingeklappt stehen bleibt.
  *
@@ -1897,12 +1917,13 @@ export const VOYAGE_RAIL_ROW_H = VOYAGE_RAIL_THUMB_H + 2 * VOYAGE_RAIL_ROW_PAD_Y
  * Was dem Textblock neben der Miniatur bleibt — die Zahl, gegen die die
  * Polsterung oben hergeleitet ist, gebunden in `voyagesAtlasLayout.spec.ts`.
  *
- * Genau so viel wie VOR dem Kartenrezept: die Zeile trug damals 3 px
- * Zustandskante plus 1 px Rahmen statt 1 + 1, und 9/7 Polsterung ergibt
- * dieselbe Summe. Der Umbau nimmt dem Textblock also nichts. Im Browser
- * nachgemessen.
+ * **86 → 106.** Das ist der GRUND, aus dem die Liste von 224 auf 244 gewachsen
+ * ist: die 20 px gehen vollstaendig hierher, weil die Miniatur (96) und die
+ * Polsterung gleich bleiben. In 86 px standen drei Zustandschips UND die Stufe
+ * nebeneinander — 23 % mehr Lesebreite ist der ganze Gegenwert der Karte, die
+ * dafuer 20 px abgibt.
  */
-export const VOYAGE_RAIL_BODY_MIN = 86
+export const VOYAGE_RAIL_BODY_MIN = 106
 /* ── Voyages-Ladeschleier ─────────────────────────────────────────────────── */
 export const VOYAGE_LOADER_MIN_MS = 380
 export const VOYAGE_LOADER_SETTLE_FRAMES = 4

@@ -43,8 +43,8 @@ const starScale = computed(() => {
 <template>
   <button
     type="button"
-    class="elr"
-    :class="{ 'elr--on': selected }"
+    class="sr-row elr"
+    :class="{ 'is-picked': selected }"
     :style="{ '--elr-accent': accent, '--elr-freed': LANDMARK_FREED_CORE }"
     :title="VOYAGE_LIVE_RAIL_TITLE"
     :aria-pressed="selected"
@@ -73,39 +73,19 @@ const starScale = computed(() => {
 </template>
 
 <style scoped>
+/* Flaeche, Rahmen, Radius, Hover, Auswahl und Fokus stehen als `.sr-row` im
+   Theme — die laufende Galaxie ist dieselbe Karte wie die Zeilen darunter.
+   Hier bleiben nur ihre Masse und ihre Farben. */
 .elr {
-  position: relative;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
   gap: 9px;
-  width: 100%;
   height: v-bind(rowH);
   padding: 0 10px;
-  text-align: left;
-  background: #1c1c18;
-  border: 1px solid #32210c;
-  border-radius: 4px;
-  cursor: pointer;
-  overflow: hidden;
+  /* Die Akzentkante der laufenden Galaxie — dieselbe Geste wie bei den Zeilen
+     darunter, nur traegt sie hier die Farbe des THEMAS statt der Stufe. */
+  --sr-color: var(--elr-accent, #c89040);
 }
-/* Die Akzentkante der laufenden Galaxie — dieselbe Geste wie bei den Zeilen
-   darunter, nur trägt sie hier die Farbe des Themas statt der Stufe. */
-.elr::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--elr-accent, #c89040);
-}
-.elr:hover {
-  border-color: #5c3310;
-}
-.elr--on {
-  background: #221c10;
-  border-color: #7a4e20;
+.elr.is-picked {
+  --sr-pick: var(--rpg-wood);
 }
 
 /* Der Punkt RUHT: statischer Schein, animiert wird allein die Deckkraft. */

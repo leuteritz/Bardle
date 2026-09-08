@@ -899,8 +899,11 @@ function perkStatLine(perk: ChampionPerkDef): string {
   z-index: 1;
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--rc) 10%, #111008);
-  border-left: 3px solid #5c3310;
+  /* Grund und Naht der Seitenleisten-Sprache, getoent von der Rollenfarbe.
+     Die Naht misst hier 3 px statt 2: dieses Panel ist bis zu 980 px breit,
+     und die Roster-Rechnung darunter ist gegen die 3 hergeleitet. */
+  background: color-mix(in srgb, var(--rc) 10%, var(--sr-surface));
+  border-left: 3px solid var(--sr-seam);
   color: #f0dfb3;
 }
 .sdp-roster {
@@ -1495,7 +1498,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
   text-align: left;
 }
 .sdp-equipment:hover {
-  background: #1c1c18;
+  background: var(--sr-row-bg);
 }
 .sdp-equipment--empty {
   color: #9b8e72;
@@ -1585,7 +1588,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
   padding: 0;
   border: 1px solid #59452c;
   border-radius: 50%;
-  background: #1c1c18;
+  background: var(--sr-row-bg);
   color: #9f9174;
   cursor: pointer;
   font: inherit;
@@ -1700,7 +1703,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
   padding: 7px;
   border: 1px solid var(--pc);
   border-radius: 3px;
-  background: #1c1c18;
+  background: var(--sr-row-bg);
   color: var(--pc);
   cursor: pointer;
   font: inherit;
@@ -1953,11 +1956,11 @@ function perkStatLine(perk: ChampionPerkDef): string {
   overflow: hidden;
   padding: 12px 14px;
   border: 1px solid #493116;
-  background: #1c1c18;
+  background: var(--sr-row-bg);
   text-align: center;
 }
 .sdp-equipment:hover {
-  background: color-mix(in srgb, var(--rc) 14%, #1c1c18);
+  background: color-mix(in srgb, var(--rc) 14%, var(--sr-row-bg));
 }
 .sdp-equipment img {
   width: 54px;
@@ -2239,13 +2242,13 @@ function perkStatLine(perk: ChampionPerkDef): string {
 }
 .sdp-level-button--ghost {
   border-color: #8b632c;
-  background: #1c1c18;
+  background: var(--sr-row-bg);
   color: #e8c040;
 }
 .sdp-level-button--ghost:hover,
 .sdp-level-button--ghost:focus-visible {
   border-color: var(--rc);
-  background: color-mix(in srgb, var(--rc) 14%, #1c1c18);
+  background: color-mix(in srgb, var(--rc) 14%, var(--sr-row-bg));
 }
 .sdp-ghost-note {
   color: var(--gk);

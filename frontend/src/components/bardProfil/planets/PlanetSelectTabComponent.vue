@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
@@ -10,7 +10,10 @@ import {
   PLANET_TAB_SUN_MAX_DIAMETER,
   PLANET_TAB_PLANET_DIAMETER,
   PLANET_TAB_RAIL_AUTOFOLD_W,
+  PLANET_TAB_RAIL_CLOSE_TITLE,
   PLANET_TAB_RAIL_HANDLE_PX,
+  PLANET_TAB_RAIL_LABEL,
+  PLANET_TAB_RAIL_OPEN_TITLE,
   PLANET_TAB_RAIL_PANEL_W,
   PLANET_TAB_RAIL_SEAM_WIDTH,
   PLANET_TAB_RAIL_SLIDE_MS,
@@ -22,7 +25,8 @@ import { useOrbitSlotHerald } from '@/composables/ui/useOrbitSlotHerald'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import PlanetRailSlot from './PlanetRailSlot.vue'
-import PlanetRailHandle from './PlanetRailHandle.vue'
+import SideRailHandle from '@/components/ui/SideRailHandle.vue'
+import { useSideRail } from '@/composables/ui/useSideRail'
 import PlanetLockedPanel from './PlanetLockedPanel.vue'
 import PlanetRoleChoicePanel from './PlanetRoleChoicePanel.vue'
 import PlanetStagePanel from './PlanetStagePanel.vue'
@@ -85,56 +89,40 @@ const railFolded = computed(() => railChoice.value ?? narrow.value)
 const bodyColumns = computed(
   () => `minmax(0, 1fr) ${railFolded.value ? PLANET_TAB_RAIL_HANDLE_PX : PLANET_TAB_RAIL_ZONE_W}px`,
 )
+const handleTitle = computed(
+  () =>
+    `${railFolded.value ? PLANET_TAB_RAIL_OPEN_TITLE : PLANET_TAB_RAIL_CLOSE_TITLE} — ` +
+    `${purchasedSlots.value} of ${store.slots.length} orbit slots active`,
+)
+
 const railPanelWidth = `${PLANET_TAB_RAIL_PANEL_W}px`
 const handleWidth = `${PLANET_TAB_RAIL_HANDLE_PX}px`
 const slideMs = `${PLANET_TAB_RAIL_SLIDE_MS}ms`
 
 const root = ref<HTMLElement | null>(null)
-let observer: ResizeObserver | null = null
 
-function observe(el: HTMLElement) {
-  observer = new ResizeObserver((entries) => {
-    const width = entries[0]?.contentRect.width ?? 0
-    if (width > 0) narrow.value = width < PLANET_TAB_RAIL_AUTOFOLD_W
-  })
-  observer.observe(el)
-}
+/** Fahrt, Fokus und Breitenmessung teilen sich alle vier Leisten. */
+const { inert: railInert, observe, unobserve } = useSideRail({
+  folded: railFolded,
+  slideMs: PLANET_TAB_RAIL_SLIDE_MS,
+  autofoldW: PLANET_TAB_RAIL_AUTOFOLD_W,
+  narrow,
+})
 
 watch(
   isVisible,
   (visible) => {
     if (!visible) {
-      observer?.disconnect()
-      observer = null
+      unobserve()
       return
     }
-    if (root.value && !observer) observe(root.value)
+    observe(root.value)
   },
   { immediate: true },
 )
 
 watch(root, (el) => {
-  if (el && isVisible.value && !observer) observe(el)
-})
-
-onBeforeUnmount(() => observer?.disconnect())
-
-const railInert = ref(false)
-let inertTimer: ReturnType<typeof setTimeout> | null = null
-watch(
-  railFolded,
-  (folded) => {
-    if (inertTimer !== null) clearTimeout(inertTimer)
-    inertTimer = setTimeout(() => {
-      inertTimer = null
-      railInert.value = folded
-    }, PLANET_TAB_RAIL_SLIDE_MS)
-  },
-  { immediate: true },
-)
-
-onBeforeUnmount(() => {
-  if (inertTimer !== null) clearTimeout(inertTimer)
+  if (isVisible.value) observe(el)
 })
 
 // ── Orbit-Spiegelung ───────────────────────────────────────────────────────
@@ -316,7 +304,7 @@ const sunPhaseStyle = computed(() => {
           :class="{ 'ps-rail-slide--parked': railFolded }"
           :inert="railInert"
         >
-          <div class="ps-rail">
+          <div class="sr ps-rail">
             <PlanetRailSlot
               v-for="(slot, slotIndex) in store.slots"
               :key="slot.id"
@@ -330,10 +318,12 @@ const sunPhaseStyle = computed(() => {
           </div>
         </div>
 
-        <PlanetRailHandle
-          :active="purchasedSlots"
-          :total="store.slots.length"
+        <SideRailHandle
+          :label="PLANET_TAB_RAIL_LABEL"
+          :width-px="PLANET_TAB_RAIL_HANDLE_PX"
           :open="!railFolded"
+          :title="handleTitle"
+          :total="purchasedSlots"
           @toggle="railChoice = !railFolded"
         />
       </div>
@@ -425,24 +415,31 @@ const sunPhaseStyle = computed(() => {
  * tab's .cosmic-stage-bg is absolutely positioned at z-index 0 and would
  * otherwise paint OVER a static panel however opaque its background is (same
  * trap the team page documents on .sdp-panel). */
+/* Flaeche, Naht und Schriftskala stehen als `.sr` im Theme — dieselbe
+   Seitenleiste wie im Skill Tree, in Voyages und im Universe. Hier bleiben nur
+   die Masse und die Nahtbreite, die an PLANET_TAB_RAIL_SEAM_WIDTH haengt.
+
+   Diese Leiste ist Flaeche UND Rollkasten in einem: sie traegt sechs Kacheln,
+   keine Liste, und braucht deshalb kein eigenes `.sr-scroll` darin. */
 .ps-rail {
-  position: relative;
-  z-index: 1;
   width: 100%;
-  height: 100%;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
   gap: clamp(6px, 0.8vh, 12px);
   padding: clamp(8px, 1vh, 14px);
-  background: var(--rpg-bg-deep, #111008);
-  /* The seam every side panel of the profile carries (.sdp-panel, .tsps-panel,
-     .sf-panel, .msd-root). Its width is PLANET_TAB_RAIL_SEAM_WIDTH so all four
-     line up on the same edge. */
-  border-left: v-bind(railSeamWidthPx) solid #5c3310;
+  border-left-width: v-bind(railSeamWidthPx);
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
+  scrollbar-color: var(--sr-seam) #111;
+}
+.ps-rail::-webkit-scrollbar {
+  width: 4px;
+}
+.ps-rail::-webkit-scrollbar-track {
+  background: #111;
+}
+.ps-rail::-webkit-scrollbar-thumb {
+  background: var(--sr-seam);
+  border-radius: 2px;
 }
 
 /* Left detail panel — column layout: stage (flexible, dominates) on top +

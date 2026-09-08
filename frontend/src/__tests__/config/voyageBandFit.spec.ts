@@ -149,19 +149,22 @@ function legendColumn(): number {
 /**
  * Die BÜHNENbreiten, gegen die die Legende rechnet — dieselbe Kette wie
  * `stageW()` in `voyageManifestFit.spec.ts`: Atlasbreite abzüglich Zielliste
- * (268 offen, 44 als Griff) und Rinne (20).
+ * (288 offen, 44 als Griff) und Rinne (20).
  *
  * Beide Zustände der Liste, weil das Einklappen die Bühne um über 200 px weitet
  * und die Legende das unmittelbar spürt. Die naheliegenden Zahlen sind hier
  * FALSCH: 1016 ist die historische Kartenzone vor Abzug des Griffs, und 2K ist
- * offen 1372, nicht 1436 — beides stand als Zonenbreite in den Notizen.
+ * offen 1352, nicht 1436 — beides stand als Zonenbreite in den Notizen.
+ *
+ * Nachgezogen, als die Liste von 224 auf 244 wuchs: die OFFENEN Breiten sind um
+ * 20 px gefallen, die eingeklappten nicht — dort steht nur der Griff.
  */
 const STAGE_W = {
-  fhdOpen: 952,
+  fhdOpen: 932,
   fhdFolded: 1176,
-  qhdOpen: 1372,
+  qhdOpen: 1352,
   qhdFolded: 1596,
-  uhdOpen: 2652,
+  uhdOpen: 2632,
   uhdFolded: 2876,
 }
 
@@ -297,7 +300,7 @@ describe('voyage stats band fit', () => {
   })
 
   it('haelt den Boden bis ueber die engste Buehne, die die Woerter traegt', () => {
-    // Full HD mit AUSGEKLAPPTER Zielliste (952) ist der Fall, an dem die Boeden
+    // Full HD mit AUSGEKLAPPTER Zielliste (932) ist der Fall, an dem die Boeden
     // von Kachel und Schrift hergeleitet sind: 329 px fuer die Zone, rund 321
     // Bedarf, 8 px Reserve. Ein Wort, das dort schon 8,28 misst, kostet ueber
     // fuenf Marken samt `letter-spacing` rund 5 dieser 8 px — rechnerisch noch

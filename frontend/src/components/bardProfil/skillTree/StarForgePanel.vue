@@ -1,5 +1,5 @@
 <template>
-  <div class="sf-panel">
+  <div class="sr sf-panel">
     <ForgeFocusCard />
 
     <!-- Laufende Segen des Handels: das Einzige in dieser Spalte mit einer Uhr,
@@ -33,7 +33,7 @@
          `closest('.sf-body')` täte dasselbe, koppelte die Liste aber an eine
          CSS-Klasse, die hier jederzeit umbenannt werden dürfte. Ein Attribut
          ist eine Zusage, ein Klassenname ist es nicht. -->
-    <div class="sf-body" data-forge-scroll>
+    <div class="sr-scroll sf-body" data-forge-scroll>
       <ForgePursuitCard />
       <ForgeOfferStrip />
       <ForgeUpgradesSection />
@@ -100,18 +100,11 @@ function buffLabel(id: ForgeActiveBuff['id']): string {
 <style scoped>
 /* ══════════════════════════════════════════════════
    PANEL
-   Same surface the role detail page opens onto (#111008, the flat deep base)
-   with the same 2px seam — a sidebar in this game reads as one kind of place,
-   not one per tab.
+   Flaeche, Naht und Schriftskala kommen als `.sr` aus dem Theme. Der Satz
+   darueber — „a sidebar in this game reads as one kind of place, not one per
+   tab" — stand hier seit jeher als Vorsatz; seit es die Sprache gibt, ist er
+   derselbe Code.
 ══════════════════════════════════════════════════ */
-.sf-panel {
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  background: #111008;
-  border-left: 2px solid #5c3310;
-}
 
 /* ══════════════════════════════════════════════════
    RUNNING BLESSINGS
@@ -157,30 +150,12 @@ function buffLabel(id: ForgeActiveBuff['id']): string {
 /* ══════════════════════════════════════════════════
    BODY
 ══════════════════════════════════════════════════ */
+/* Rollkasten und Scrollbar stehen als `.sr-scroll` im Theme. Die Masse
+   bleiben eigen: diese Spalte ist 400–560 px breit, nicht 260, und traegt
+   Karten statt Zeilen. */
 .sf-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
   padding: 10px 18px 26px;
-  display: flex;
-  flex-direction: column;
   gap: 13px;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
-}
-
-.sf-body::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sf-body::-webkit-scrollbar-track {
-  background: #111;
-}
-
-.sf-body::-webkit-scrollbar-thumb {
-  background: #5c3310;
-  border-radius: 2px;
 }
 
 /* Die drei Blöcke dürfen nie von der Flexspalte gestaucht werden — Kinder mit

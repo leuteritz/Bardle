@@ -35,6 +35,7 @@ import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
 import { useVoyageAtlas } from '@/composables/expedition/useVoyageAtlas'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
+import { voyageGalaxyState } from '@/utils/game/voyageFleet'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
   VOYAGE_COMMAND_BAR_H,
@@ -42,7 +43,13 @@ import {
   VOYAGE_LOADER_SETTLE_FRAMES,
   VOYAGE_MAP_GUTTER_PX,
   VOYAGE_RAIL_AUTOFOLD_WIDTH,
+  VOYAGE_RAIL_CLOSE_TITLE,
+  VOYAGE_RAIL_HANDLE_BADGE_GAP,
+  VOYAGE_RAIL_HANDLE_LABEL,
   VOYAGE_RAIL_HANDLE_PX,
+  VOYAGE_RAIL_OPEN_TITLE,
+  VOYAGE_RAIL_READY_TITLE,
+  VOYAGE_RAIL_WAITING_TITLE,
   VOYAGE_RAIL_SLIDE_MS,
   VOYAGE_RAIL_WIDTH,
   VOYAGE_RAIL_ZONE_W,
@@ -50,7 +57,8 @@ import {
 } from '@/config/constants'
 import ExpeditionCommandBar from './ExpeditionCommandBar.vue'
 import ExpeditionGalaxyRail from './ExpeditionGalaxyRail.vue'
-import ExpeditionRailHandle from './ExpeditionRailHandle.vue'
+import SideRailHandle from '@/components/ui/SideRailHandle.vue'
+import { useSideRail } from '@/composables/ui/useSideRail'
 import ExpeditionGalaxyMap from './ExpeditionGalaxyMap.vue'
 import VoyagesTabLoader from './VoyagesTabLoader.vue'
 import UniverseReturnButton from '@/components/bardProfil/UniverseReturnButton.vue'
@@ -198,26 +206,39 @@ watch(
 const atlasColumns = computed(
   () => `minmax(0, 1fr) ${railFolded.value ? VOYAGE_RAIL_HANDLE_PX : VOYAGE_RAIL_ZONE_W}px`,
 )
+/**
+ * Die Signale des Griffs. Sie tragen nur, solange die Leiste ZU ist: offen
+ * sagt jede Zeile es selbst, und eine Zahl daneben wäre dieselbe Auskunft ein
+ * zweites Mal.
+ *
+ * **Gezählt werden GALAXIEN, nicht Missionen** — wie viele Missionen im Feld
+ * fertig sind, steht schon auf der Kopfleiste. Hinter dem Griff liegt eine
+ * WAHL, und die dazu passende Zahl ist, wie viele Ziele gerade etwas wollen.
+ * Beide Signale kommen aus DERSELBEN Rechnung, aus der die Zeile ihren Zähler
+ * zieht (`contracts + ready`) und ihre Zustandskante (`voyageGalaxyState`).
+ */
+const liveRows = computed(() =>
+  railFolded.value ? railRows.value.filter((row) => row.contracts + row.ready > 0) : [],
+)
+const waitingCount = computed(() => liveRows.value.length)
+const hasReady = computed(() => liveRows.value.some((row) => voyageGalaxyState(row) === 'ready'))
+const waitingTitle = computed(() => `${waitingCount.value} ${VOYAGE_RAIL_WAITING_TITLE}`)
+const handleTitle = computed(() =>
+  railFolded.value ? VOYAGE_RAIL_OPEN_TITLE : VOYAGE_RAIL_CLOSE_TITLE,
+)
+
 const railPanelWidth = `${VOYAGE_RAIL_WIDTH}px`
 const handleWidth = `${VOYAGE_RAIL_HANDLE_PX}px`
 const slideMs = `${VOYAGE_RAIL_SLIDE_MS}ms`
 
-/**
- * Den Fokus nimmt `inert`, aber VERZÖGERT: synchron gesetzt liegt seine Arbeit
- * im ersten Frame der Fahrt, und dort ist der Ruck am sichtbarsten (im Skill
- * Tree gemessen 39 gegen 25 ms längster Einzelframe).
- */
-const railInert = ref(false)
-let inertTimer: ReturnType<typeof setTimeout> | null = null
-watch(railFolded, (folded) => {
-  if (inertTimer !== null) clearTimeout(inertTimer)
-  inertTimer = setTimeout(() => {
-    inertTimer = null
-    railInert.value = folded
-  }, VOYAGE_RAIL_SLIDE_MS)
-})
-onBeforeUnmount(() => {
-  if (inertTimer !== null) clearTimeout(inertTimer)
+/* Fahrt und Fokus teilen sich alle vier Leisten. Den BEOBACHTER teilt dieser
+ * Reiter nicht: er misst die Atlasbreite selbst, weil sie ausser dem Faltzustand
+ * auch die Fit-Box der Galaxieplatte traegt — ein blosses `narrow` genuegt hier
+ * nicht. Gemessen wird am Atlas per `container-type: inline-size`, nicht am
+ * Viewport: die Modalbreite haengt an `--hud-panel-size`. */
+const { inert: railInert } = useSideRail({
+  folded: railFolded,
+  slideMs: VOYAGE_RAIL_SLIDE_MS,
 })
 
 const stageGutter = computed(() => `${VOYAGE_MAP_GUTTER_PX / 2}px`)
@@ -414,9 +435,18 @@ function openMassSendUpgrade() {
           />
         </div>
 
-        <ExpeditionRailHandle
-          :rows="railRows"
+        <SideRailHandle
+          :label="VOYAGE_RAIL_HANDLE_LABEL"
+          :width-px="VOYAGE_RAIL_HANDLE_PX"
           :open="!railFolded"
+          :title="handleTitle"
+          :total="railRows.length"
+          :count="waitingCount"
+          :count-title="waitingTitle"
+          :dot="hasReady"
+          dot-color="#64dcb4"
+          :dot-title="VOYAGE_RAIL_READY_TITLE"
+          :badge-gap="VOYAGE_RAIL_HANDLE_BADGE_GAP"
           @toggle="userRailFolded = !railFolded"
         />
       </div>

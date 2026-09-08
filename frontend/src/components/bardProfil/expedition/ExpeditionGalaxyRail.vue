@@ -16,7 +16,7 @@
  * müsste jede Galaxie durchklicken, um eine leere Karte zu finden.
  *
  * Sie kennt ihren Klappzustand NICHT mehr: sie fährt als ganzes Stück hinaus,
- * und die Geste gehört dem Griff daneben (`ExpeditionRailHandle`).
+ * und die Geste gehört dem Griff daneben (`ui/SideRailHandle.vue`, geteilt mit den drei anderen Leisten).
  *
  * Sie hat auch KEINE eigene Überschrift mehr. Ihr Kopfband zeigte dasselbe Wort,
  * das senkrecht auf dem Griff steht, und nahm ihr dafür 37,5 px Höhe; die Zahl
@@ -81,8 +81,8 @@ const padX = `${VOYAGE_RAIL_PAD_X}px`
 <template>
   <!-- Ohne Kopfband ist der Griff daneben die einzige Beschriftung, und der
        steht in einem Knopf — ohne das `aria-label` waere die Region namenlos. -->
-  <aside class="egl" :aria-label="VOYAGE_RAIL_HANDLE_LABEL">
-    <div ref="scroll" class="egl-scroll rpg-scrollbar">
+  <aside class="sr egl" :aria-label="VOYAGE_RAIL_HANDLE_LABEL">
+    <div ref="scroll" class="sr-scroll egl-scroll">
       <ExpeditionLiveRow :selected="live" @select="emit('selectLive')" />
 
       <template v-for="row in rows" :key="row.galaxy">
@@ -99,45 +99,14 @@ const padX = `${VOYAGE_RAIL_PAD_X}px`
 </template>
 
 <style scoped>
-/* Dieselbe Fläche und dieselbe Naht wie die Forge-Detailspalte (`.sf-panel`):
-   eine Seitenleiste liest sich in diesem Spiel als EIN Ort, nicht als einer je
-   Reiter. Die Naht gehört immer der rechten Zone — eine zweite Linie am
-   Nachbarn verdoppelte sie. */
-.egl {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  background: #111008;
-  border-left: 2px solid #5c3310;
-}
+/* Flaeche, Naht und Rollkasten stehen als `.sr-*` im Theme. Hier steht NUR,
+   was diese Leiste allein weiss. */
 
+/* Seitlich an die Konstante gebunden — der Ladeschleier baut dieselbe Zone,
+   und zwei Zahlen dafuer liefen still auseinander. Karten brauchen mehr Luft
+   ZUEINANDER als randlose Zeilen, deshalb der eigene `gap`. */
 .egl-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  /* Seitlich an die Konstante gebunden — der Ladeschleier baut dieselbe Zone,
-     und zwei Zahlen dafuer liefen still auseinander. Karten brauchen mehr Luft
-     ZUEINANDER als randlose Zeilen, deshalb der groessere `gap`. */
   padding: 10px v-bind(padX) 14px;
-  display: flex;
-  flex-direction: column;
   gap: 5px;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
 }
-.egl-scroll::-webkit-scrollbar {
-  width: 4px;
-}
-.egl-scroll::-webkit-scrollbar-track {
-  background: #111;
-}
-.egl-scroll::-webkit-scrollbar-thumb {
-  background: #5c3310;
-  border-radius: 2px;
-}
-
 </style>

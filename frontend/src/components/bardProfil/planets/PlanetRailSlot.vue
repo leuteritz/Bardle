@@ -213,12 +213,18 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   padding-right: clamp(14px, 0.9vw, 20px);
   min-width: 0;
   text-align: left;
-  /* Translucent card — it now sits on the rail's own deep base rather than on
-     the starfield, which lands it near the profile's item-row tone (#1c1c18)
-     without a second colour to keep in sync. */
-  background: linear-gradient(150deg, rgba(32, 27, 17, 0.82) 0%, rgba(13, 11, 7, 0.88) 100%);
-  border: 1px solid #2e2416;
-  border-radius: var(--bp-radius);
+  /* Die Farben der Seitenleisten-Sprache. Hier stand ein Verlauf, der die
+     Item-Zeilenfarbe nachahmte — sein eigener Kommentar sagte schon, dass er
+     „ohne eine zweite Farbe, die man synchron halten muss" auskommen wollte.
+     Genau die gibt es jetzt.
+
+     Die STRUKTUR bleibt eigen: diese Kachel ist ein Grid mit
+     `container-type: size`, keine Listenzeile, und traegt `.sr-row` deshalb
+     nicht — nur dessen Farben. */
+  background: var(--sr-row-bg);
+  border: 1px solid var(--sr-row-border);
+  /* `--bp-radius` war NIRGENDS definiert: die Kachel fiel still auf 0 zurueck. */
+  border-radius: 4px;
   box-shadow:
     0 2px 10px rgba(0, 0, 0, 0.45),
     inset 0 1px 0 rgba(232, 192, 64, 0.06);
@@ -243,7 +249,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   bottom: 0;
   width: 4px;
   background: var(--rc, #3a2c12);
-  border-radius: 0 var(--bp-radius) var(--bp-radius) 0;
+  border-radius: 0 4px 4px 0;
   opacity: 0.4;
   transition:
     opacity 180ms ease,
@@ -469,7 +475,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   position: absolute;
   inset: 0;
   border: 2px solid #5ce66a;
-  border-radius: var(--bp-radius);
+  border-radius: 4px;
   pointer-events: none;
   box-shadow:
     0 0 14px #5ce66a55,
@@ -710,7 +716,7 @@ const requiredPhase = computed(() => displaySunPhase(store.getSlotRequiredPhase(
   position: absolute;
   inset: 0;
   z-index: 2;
-  border-radius: var(--bp-radius);
+  border-radius: 4px;
   background: color-mix(in srgb, var(--rpg-bg-deep, #111008) 62%, transparent);
   pointer-events: none;
 }

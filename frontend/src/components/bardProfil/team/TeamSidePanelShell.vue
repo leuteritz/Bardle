@@ -79,8 +79,11 @@ const widthPx = computed(() => `${props.width}px`)
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--rpg-bg-deep, #111008);
-  border-left: 2px solid #5c3310;
+  /* Flaeche und Naht der Seitenleisten-Sprache. Die STRUKTUR bleibt eigen:
+     dieses Panel traegt `zoom` und einen Kopf mit Schliessen-Knopf, und es
+     faehrt nicht hinter einen Griff — es oeffnet per Auswahl. */
+  background: var(--sr-surface);
+  border-left: 2px solid var(--sr-seam);
 }
 .tsps-head {
   display: flex;

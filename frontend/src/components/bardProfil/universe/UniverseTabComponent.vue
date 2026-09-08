@@ -25,14 +25,18 @@ import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import UniverseLockedPanel from './UniverseLockedPanel.vue'
 import UniverseCrestBand from './UniverseCrestBand.vue'
 import UniverseRail from './UniverseRail.vue'
-import UniverseRailHandle from './UniverseRailHandle.vue'
+import SideRailHandle from '@/components/ui/SideRailHandle.vue'
+import { useSideRail } from '@/composables/ui/useSideRail'
 import UniverseChart from './UniverseChart.vue'
 import { buildUniversePath, type UniversePath } from '@/utils/ui/universeLayout'
 import { buildUniverseRailRows } from '@/utils/ui/universeRail'
 import { buildUniverseChronicle } from '@/utils/ui/universeChronicle'
 import {
   UNIVERSE_MAP_RAIL_AUTOFOLD_W,
+  UNIVERSE_MAP_RAIL_CLOSE_TITLE,
+  UNIVERSE_MAP_RAIL_HANDLE_LABEL,
   UNIVERSE_MAP_RAIL_HANDLE_PX,
+  UNIVERSE_MAP_RAIL_OPEN_TITLE,
   UNIVERSE_MAP_RAIL_PANEL_W,
   UNIVERSE_MAP_RAIL_SLIDE_MS,
   UNIVERSE_MAP_RAIL_ZONE_W,
@@ -156,17 +160,15 @@ const narrow = ref(false)
 const railFolded = computed(() => railChoice.value ?? narrow.value)
 
 const root = ref<HTMLElement | null>(null)
-let observer: ResizeObserver | null = null
 
-function observe(el: HTMLElement) {
-  observer = new ResizeObserver((entries) => {
-    const w = entries[0]?.contentRect.width ?? 0
-    // Die 0 eines versteckten Reiters verwerfen — sonst spränge die Leiste beim
-    // Zurückkehren einen Frame lang auf die eingeklappte Breite.
-    if (w > 0) narrow.value = w < UNIVERSE_MAP_RAIL_AUTOFOLD_W
-  })
-  observer.observe(el)
-}
+/** Fahrt, Fokus und Breitenmessung teilen sich alle vier Leisten. Die
+ *  Politik — Startzustand und Escape-Richtung — bleibt hier. */
+const { inert: railInert, observe, unobserve } = useSideRail({
+  folded: railFolded,
+  slideMs: UNIVERSE_MAP_RAIL_SLIDE_MS,
+  autofoldW: UNIVERSE_MAP_RAIL_AUTOFOLD_W,
+  narrow,
+})
 
 // ── Sichtbarkeit: Escape-Leiter und Beobachter hängen daran, nicht am Leben ──
 function onKeydown(e: KeyboardEvent) {
@@ -185,28 +187,24 @@ watch(
   (visible) => {
     if (!visible) {
       document.removeEventListener('keydown', onKeydown, true)
-      if (observer) {
-        observer.disconnect()
-        observer = null
-      }
+      unobserve()
       // Beim VERLASSEN zurücksetzen, nicht beim Betreten: ein Reset im selben
       // Flush wie eine Öffnungs-Anfrage löschte, was gerade gezeigt werden soll.
       resetSelection()
       return
     }
     document.addEventListener('keydown', onKeydown, true)
-    if (root.value && !observer) observe(root.value)
+    observe(root.value)
   },
   { immediate: true },
 )
 
 watch(root, (el) => {
-  if (el && isVisible.value && !observer) observe(el)
+  if (isVisible.value) observe(el)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown, true)
-  observer?.disconnect()
 })
 
 /**
@@ -241,26 +239,18 @@ const bodyColumns = computed(
   () =>
     `minmax(0, 1fr) ${railFolded.value ? UNIVERSE_MAP_RAIL_HANDLE_PX : UNIVERSE_MAP_RAIL_ZONE_W}px`,
 )
+/** Die Zahl hinter dem Wort ist Auskunft, kein Signal: wie viele Universen
+ *  begangen sind. Das „/ 10" der gefallenen Kopfzeile steht in der Hover-Karte. */
+const handleTitle = computed(
+  () =>
+    `${railFolded.value ? UNIVERSE_MAP_RAIL_OPEN_TITLE : UNIVERSE_MAP_RAIL_CLOSE_TITLE} — ` +
+    `${walkedCount.value} of ${railRows.value.length} walked`,
+)
+
 const railPanelWidth = `${UNIVERSE_MAP_RAIL_PANEL_W}px`
 const handleWidth = `${UNIVERSE_MAP_RAIL_HANDLE_PX}px`
 const slideMs = `${UNIVERSE_MAP_RAIL_SLIDE_MS}ms`
 
-/**
- * Den Fokus nimmt `inert`, aber VERZOEGERT: synchron gesetzt liegt seine Arbeit
- * im ersten Frame der Fahrt, und dort ist der Ruck am sichtbarsten.
- */
-const railInert = ref(false)
-let inertTimer: ReturnType<typeof setTimeout> | null = null
-watch(railFolded, (folded) => {
-  if (inertTimer !== null) clearTimeout(inertTimer)
-  inertTimer = setTimeout(() => {
-    inertTimer = null
-    railInert.value = folded
-  }, UNIVERSE_MAP_RAIL_SLIDE_MS)
-})
-onBeforeUnmount(() => {
-  if (inertTimer !== null) clearTimeout(inertTimer)
-})
 </script>
 
 <template>
@@ -297,10 +287,12 @@ onBeforeUnmount(() => {
             <UniverseRail :rows="railRows" :selection="selection" @select="select" />
           </div>
 
-          <UniverseRailHandle
-            :walked="walkedCount"
-            :total="railRows.length"
+          <SideRailHandle
+            :label="UNIVERSE_MAP_RAIL_HANDLE_LABEL"
+            :width-px="UNIVERSE_MAP_RAIL_HANDLE_PX"
             :open="!railFolded"
+            :title="handleTitle"
+            :total="walkedCount"
             @toggle="railChoice = !railFolded"
           />
         </div>

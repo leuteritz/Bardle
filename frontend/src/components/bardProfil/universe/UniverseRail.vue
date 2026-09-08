@@ -2,10 +2,16 @@
 /**
  * Die Universumsleiste — sie waehlt die BAHN, die die Karte zeigt.
  *
- * Sie steht RECHTS und traegt das Rezept der Forge-Detailspalte: dieselbe Flaeche
- * `#111008`, dieselbe Naht `border-left: 2px #5c3310`, dieselbe Zeilenkarte
- * `#1c1c18` / `1px #32210c`. Eine Seitenleiste ist in diesem Spiel EIN Ort, nicht
- * einer je Reiter.
+ * Sie steht RECHTS und traegt die Seitenleisten-Sprache (`.sr-*` in
+ * `rpg-theme.css`): Flaeche, Naht, Rollkasten, Zeilenkarte und Schriftskala
+ * kommen von dort. Eine Seitenleiste ist in diesem Spiel EIN Ort, nicht einer je
+ * Reiter — und seit die Sprache existiert, ist das kein Vorsatz mehr, sondern
+ * derselbe Code.
+ *
+ * Hier bleibt NUR, was allein dieser Leiste gehoert: die Scheibe samt ihrer
+ * Ziffer, der Puls auf „du bist hier", die Toenung der gewaehlten Bahn — und
+ * die Polsterung, weil sie an `UNIVERSE_RAIL_*` haengt und `universeLayout.spec`
+ * mit genau diesen Zahlen rechnet.
  *
  * Sie hat KEINE eigene Ueberschrift, genau wie ihre beiden Vorbilder: das Wort
  * steht senkrecht auf dem Griff daneben, und die Zahl der begangenen Universen
@@ -101,12 +107,12 @@ const railLabel = computed(() => `${UNIVERSE_MAP_RAIL_HANDLE_LABEL} — the path
 <template>
   <!-- Ohne Kopfband ist der Griff daneben die einzige Beschriftung, und der steht
        in einem Knopf — ohne das `aria-label` waere die Region namenlos. -->
-  <aside class="un-rail" :class="{ 'un-rail--compact': compact }" :aria-label="railLabel">
-    <div ref="scroll" class="un-rail-list rpg-scrollbar">
+  <aside class="sr un-rail" :class="{ 'sr--compact': compact }" :aria-label="railLabel">
+    <div ref="scroll" class="sr-scroll un-rail-list">
       <button
         v-for="row in rows"
         :key="row.id"
-        class="un-rail-row"
+        class="sr-row un-rail-row"
         :class="{
           'is-current': row.current,
           'is-picked': row.picked,
@@ -127,9 +133,9 @@ const railLabel = computed(() => `${UNIVERSE_MAP_RAIL_HANDLE_LABEL} — the path
           <span class="un-rail-roman">{{ row.roman }}</span>
         </span>
 
-        <span class="un-rail-body">
-          <span class="un-rail-name">Universe {{ row.roman }}</span>
-          <span class="un-rail-note">{{ row.note }}</span>
+        <span class="sr-row-body">
+          <span class="sr-row-name">Universe {{ row.roman }}</span>
+          <span class="sr-row-note">{{ row.note }}</span>
         </span>
       </button>
     </div>
@@ -137,109 +143,35 @@ const railLabel = computed(() => `${UNIVERSE_MAP_RAIL_HANDLE_LABEL} — the path
 </template>
 
 <style scoped>
-/* Dieselbe Flaeche und dieselbe Naht wie die Forge-Detailspalte (`.sf-panel`)
-   und die Voyages-Zielliste (`.egl`). Die Naht gehoert immer der rechten Zone —
-   eine zweite Linie am Nachbarn verdoppelte sie. */
-.un-rail {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-  background: #111008;
-  border-left: 2px solid #5c3310;
-}
+/* Flaeche, Naht, Rollkasten und Zeilenkarte stehen als `.sr-*` im Theme.
+   Hier steht NUR, was diese Leiste allein weiss. */
 
+/* Die Polsterung haengt an den Konstanten, nicht an der Schriftskala:
+   `UNIVERSE_RAIL_LIST_PAD` (20) spiegelt die 8 oben und 12 unten, und
+   `universeLayout.spec.ts` rechnet mit genau diesen Zahlen. Ein em-Mass
+   drifteete gegen die Spec, sobald der Monitor wechselt. */
 .un-rail-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  /* Seitlich an die Konstante gebunden — `UNIVERSE_RAIL_LIST_PAD` (20) spiegelt
-     die 8 oben und 12 unten, und die Spec rechnet mit genau diesen Zahlen. */
   padding: 8px v-bind(padX) 12px;
-  display: flex;
-  flex-direction: column;
   gap: v-bind(rowGap);
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
-}
-.un-rail-list::-webkit-scrollbar {
-  width: 4px;
-}
-.un-rail-list::-webkit-scrollbar-track {
-  background: #111;
-}
-.un-rail-list::-webkit-scrollbar-thumb {
-  background: #5c3310;
-  border-radius: 2px;
 }
 
-/* Eine Karte im Rezept der Forge-Liste (`.fut-row`) und der Voyages-Zeile
-   (`.egr`): eigene Flaeche, eigener Rahmen, Radius 4. */
+/* Links mehr: 3 px Zustandskanal plus 6 px Luft. Feste px, weil der Kanal
+   selbst fest ist. */
 .un-rail-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  /* Der Rollkasten ist eine Flex-Spalte: ohne das stauchen sich zehn Zeilen
-     gegenseitig, statt zu rollen — und die Scheibe, die das Wiedererkennen
-     TRAEGT, waere darin unkenntlich. */
-  flex-shrink: 0;
-  /* Links mehr: 3 px Zustandskanal plus 6 px Luft. */
   padding: 6px 7px 6px 9px;
-  text-align: left;
-  color: inherit;
-  background: #1c1c18;
-  border: 1px solid #32210c;
-  border-radius: 4px;
-  overflow: hidden;
-  cursor: pointer;
-  transition:
-    background-color 0.12s ease,
-    border-color 0.12s ease;
+  gap: 8px;
 }
 
-/* Der ZUSTANDSKANAL, und zwar als eigene Ebene statt als `border-left`. Damit
-   ist er vom Rahmen entkoppelt, den Hover und Auswahl faerben — die Kurzform
-   `border-color` loeschte sonst genau die Auskunft, neben der sie steht.
-   Dieselbe Trennung fuehren `.egr::before` und `.fut-row::before`. */
-.un-rail-row::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--st-c, transparent);
-  pointer-events: none;
-  z-index: 1;
-}
 .un-rail-row.is-current {
-  --st-c: v-bind(hereColor);
+  --sr-color: v-bind(hereColor);
 }
-/* Die gewaehlte Zeile ist vom Hover AUSGENOMMEN, statt ihn zu ueberschreiben:
-   `:not()` hebt die Spezifitaet, und `.is-picked` danach zu schreiben genuegte
-   deshalb nicht — der Hover faerbte den Rahmen der gewaehlten Zeile genau dann
-   um, wenn der Zeiger daraufsteht. Markiert ist sie ohnehin schon. */
-.un-rail-row:not(.is-inert):not(.is-picked):hover {
-  border-color: #7a4e20;
-}
-.un-rail-row.is-inert {
-  cursor: default;
-}
+
 /* Die gewaehlte Bahn traegt den Ton DIESES Universums, nicht den einer
    Zustandsfarbe — `universeTint.spec.ts` haelt beide auseinander. */
 .un-rail-row.is-picked {
-  --st-c: var(--un-row-tint);
-  background: color-mix(in srgb, var(--un-row-tint) 20%, #1c1c18);
+  --sr-color: var(--un-row-tint);
+  background: color-mix(in srgb, var(--un-row-tint) 20%, var(--sr-row-bg));
   border-color: var(--un-row-tint);
-}
-.un-rail-row:focus-visible {
-  outline: 2px solid #e8c040;
-  outline-offset: -2px;
 }
 
 /* Die Scheibe traegt die Ziffer, wie die Voyages-Miniatur (`.egr-no`) — in der
@@ -255,10 +187,10 @@ const railLabel = computed(() => `${UNIVERSE_MAP_RAIL_HANDLE_LABEL} — the path
   position: absolute;
   left: 1px;
   top: -1px;
-  font-size: 12px;
+  font-size: 0.87em;
   font-weight: 900;
   line-height: 1.1;
-  color: #e8c040;
+  color: var(--sr-accent-hi);
   text-shadow: 0 1px 3px #000;
 }
 .un-rail-row.is-dim .un-rail-roman {
@@ -284,72 +216,24 @@ const railLabel = computed(() => `${UNIVERSE_MAP_RAIL_HANDLE_LABEL} — the path
   }
 }
 
-/* Feste Zeilenkaesten: so treibt die SCHEIBE die Zeilenhoehe und nicht die
-   Schriftmetrik — nur dann sagt `UNIVERSE_RAIL_ROW_H` die Wahrheit.
-   MedievalSharp ueberschiesst seine Zeilenbox um die Haelfte. */
-.un-rail-body {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-  flex: 1;
-}
-
-.un-rail-name {
-  font-size: 16px;
-  line-height: 20px;
-  color: #e8dcc0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.un-rail-row.is-picked .un-rail-name {
-  color: #fff4dc;
-}
-.un-rail-row.is-dim .un-rail-name {
-  color: #7a6a46;
-}
-
-.un-rail-note {
-  font-size: 12px;
-  line-height: 16px;
-  color: #7a6c50;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.un-rail-row.is-current .un-rail-note {
+.un-rail-row.is-current .sr-row-note {
   color: v-bind(hereColor);
-}
-.un-rail-row.is-dim .un-rail-note {
-  color: #5c4e34;
 }
 
 /* ══ Kompakte Stufe ══
-   Nur Polsterung und Schrift; die Zeilenhoehe faellt von selbst, weil die
-   SCHEIBE sie treibt und `discPx` mitgeschaltet hat. Gemessen passen damit zehn
-   Zeilen in 543 von 553 px — dem flachsten Referenzfall (Full HD im Fenster).
-   Es waren 556 von 569, bis das Kopfband um 16 px wuchs; die Differenz zahlen
-   Polsterung (6/10 statt 8/12) und Zeilenabstand, NICHT die Scheibe — sie
-   traegt die Zeile, und kleiner waere die Drehung wieder unsichtbar.
+   Nur die Polsterung; Schrift und Zeilenhoehe fallen von selbst, weil
+   `.sr--compact` die Einheit senkt und die SCHEIBE die Zeile treibt
+   (`discPx` schaltet mit). Gemessen passen damit zehn Zeilen in 543 von
+   553 px — dem flachsten Referenzfall. Die Differenz zahlen Polsterung und
+   Zeilenabstand, NICHT die Scheibe: sie traegt die Zeile, und kleiner waere
+   die Drehung wieder unsichtbar.
    Die Schwelle steht in `UNIVERSE_RAIL_COMPACT_MAX_VH`. */
-.un-rail--compact .un-rail-list {
+.sr--compact .un-rail-list {
   padding: 6px v-bind(padX) 10px;
 }
-.un-rail--compact .un-rail-row {
+.sr--compact .un-rail-row {
   padding: 6px 6px 6px 8px;
   gap: 7px;
-}
-.un-rail--compact .un-rail-name {
-  font-size: 15px;
-  line-height: 19px;
-}
-.un-rail--compact .un-rail-note {
-  font-size: 11px;
-  line-height: 15px;
-}
-.un-rail--compact .un-rail-roman {
-  font-size: 11px;
 }
 
 @media (prefers-reduced-motion: reduce) {

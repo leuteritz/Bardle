@@ -193,7 +193,7 @@ export const UNIVERSE_MAP_CREST_ROW_FLOOR_W = 961.91
 /* Die Universumsleiste steht RECHTS und traegt das Rezept der Forge-Detailspalte:
    Liste plus Griffleiste, und die ZONE ist beides zusammen. Dieselben Zahlen wie
    die Voyages-Zielliste — eine Seitenleiste ist in diesem Spiel EIN Ort. */
-export const UNIVERSE_MAP_RAIL_PANEL_W = 224
+export const UNIVERSE_MAP_RAIL_PANEL_W = 244
 export const UNIVERSE_MAP_RAIL_HANDLE_PX = 44
 export const UNIVERSE_MAP_RAIL_ZONE_W = UNIVERSE_MAP_RAIL_PANEL_W + UNIVERSE_MAP_RAIL_HANDLE_PX
 /** Unter dieser Reiterbreite klappt die Leiste selbst ein. Gemessen per

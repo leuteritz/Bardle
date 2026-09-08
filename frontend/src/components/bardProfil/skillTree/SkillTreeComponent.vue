@@ -18,7 +18,19 @@
       >
         <StarForgePanel v-if="panelMounted" />
       </div>
-      <ForgeDetailsHandle />
+      <SideRailHandle
+        :label="FORGE_DETAILS_RAIL_LABEL"
+        :width-px="FORGE_DETAILS_RAIL_PX"
+        :open="detailsOpen"
+        :title="handleTitle"
+        :count="readyCount"
+        :count-title="FORGE_DETAILS_READY_TITLE"
+        :dot="hasOffer"
+        dot-color="#52b830"
+        :dot-title="FORGE_DETAILS_OFFER_TITLE"
+        :badge-gap="FORGE_DETAILS_BADGE_GAP_PX"
+        @toggle="toggleDetails"
+      />
     </div>
 
     <!-- TEMP: admin shortcut — buys every ray, branch, leaf, relic and
@@ -47,20 +59,29 @@ import { useUiStore } from '@/stores/core/uiStore'
 import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useForgeSearch } from '@/composables/ui/useForgeSearch'
 import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
+import { useForgeUpgrades } from '@/composables/ui/useForgeUpgrades'
+import { useForgeOffers } from '@/composables/ui/useForgeOffers'
 import { onKeybinding } from '@/composables/system/useKeybindings'
 import { useHerald } from '@/composables/ui/useHerald'
 import {
   BARD_PROFILE_RAIL_MAX_PX,
   BARD_PROFILE_RAIL_MIN_PX,
   BARD_PROFILE_RAIL_VW,
+  FORGE_DETAILS_BADGE_GAP_PX,
+  FORGE_DETAILS_CLOSE_TITLE,
+  FORGE_DETAILS_OFFER_TITLE,
+  FORGE_DETAILS_OPEN_TITLE,
+  FORGE_DETAILS_RAIL_LABEL,
   FORGE_DETAILS_RAIL_PX,
+  FORGE_DETAILS_READY_TITLE,
   FORGE_DETAILS_SLIDE_MS,
   FORGE_SHOP_LOADER_MIN_MS,
   FORGE_SHOP_LOADER_SETTLE_FRAMES,
 } from '@/config/constants'
 import ForgeTreePanel from './ForgeTreePanel.vue'
 import StarForgePanel from './StarForgePanel.vue'
-import ForgeDetailsHandle from './ForgeDetailsHandle.vue'
+import SideRailHandle from '@/components/ui/SideRailHandle.vue'
+import { useSideRail } from '@/composables/ui/useSideRail'
 import SkillTreeTabLoader from './SkillTreeTabLoader.vue'
 
 const forgeStore = useStarForgeStore()
@@ -81,7 +102,29 @@ const { announceReceipt } = useHerald()
 const { spotlightId, hoverId, pinned, pursuitId, clearPin, clearPursuit, resetForgeSpotlight } =
   useForgeSpotlight()
 const { searchActive, clearSearch } = useForgeSearch()
-const { detailsOpen, closeDetails } = useForgeDetailsPane()
+const { detailsOpen, closeDetails, toggleDetails } = useForgeDetailsPane()
+
+/**
+ * Die beiden Signale des Griffs. Sie kommen aus DERSELBEN Rechnung wie die
+ * Anzeigen im Panel — `buyAllPlan` trägt die Zahl der Sammelkauf-Leiste,
+ * `offers` den Vorrat des Angebotsstreifens. Eine eigene Zählung hier
+ * verspräche einen Materialvorrat mehrfach, den `buyAllPlan` kumulativ
+ * abrechnet.
+ *
+ * Der Kurzschluss vor dem Zugriff ist der Grund, warum eine weitere
+ * `useForgeUpgrades()`-Instanz hier zulässig ist: das Composable ist eine
+ * Fabrik, `buyAllPlan` rechnet einen ganzen Kauflauf durch — ungelesen wertet
+ * Vue es nicht aus. Sie tragen ohnehin nur, solange die Spalte ZU ist.
+ */
+const { buyAllPlan } = useForgeUpgrades()
+const { offers } = useForgeOffers()
+const readyCount = computed(() => (detailsOpen.value ? 0 : buyAllPlan.value.count))
+const hasOffer = computed(() =>
+  detailsOpen.value ? false : offers.value.some((offer) => offer.ready),
+)
+const handleTitle = computed(() =>
+  detailsOpen.value ? FORGE_DETAILS_CLOSE_TITLE : FORGE_DETAILS_OPEN_TITLE,
+)
 
 watch(spotlightId, (id) => {
   if (id) forgeStore.acknowledgeShopEntry(id)
@@ -186,28 +229,12 @@ function onEsc(event: KeyboardEvent): void {
  * Danach stimmt der Zustand wieder. `setTimeout` und nicht `gameTimeout()` —
  * das hier ist Bedienung, keine Spielzeit.
  */
-const paneInert = ref(true)
-let inertTimer: ReturnType<typeof setTimeout> | null = null
-
-/*
- * `immediate`, weil die Spalte auch von AUSSEN aufgehen kann: der Sprung aus dem
- * Voyages-Reiter ruft `openDetails()`, bevor dieser Reiter ueberhaupt montiert
- * ist — der Wechsel liegt dann vor dem Watcher, und ein reiner Flankenwatcher
- * liesse `paneInert` auf seinem Startwert `true` stehen. Gemessen: die
- * ausgefahrene Spalte war vollstaendig unbedienbar, `elementFromPoint` meldete
- * ueberall `.shop-forge-col`.
- */
-watch(
-  detailsOpen,
-  (open) => {
-    if (inertTimer !== null) clearTimeout(inertTimer)
-    inertTimer = setTimeout(() => {
-      inertTimer = null
-      paneInert.value = !open
-    }, FORGE_DETAILS_SLIDE_MS)
-  },
-  { immediate: true },
-)
+const { inert: paneInert } = useSideRail({
+  // Die Forge faltet sich NIE selbst — ihre Spalte ist Nachschlagewerk, keine
+  // Navigation, und sie startet eingeklappt. Deshalb kein `autofoldW`.
+  folded: () => !detailsOpen.value,
+  slideMs: FORGE_DETAILS_SLIDE_MS,
+})
 
 /* ── Der Ladeschleier ──────────────────────────────────────────────────────
  *
@@ -246,13 +273,6 @@ function cancelReveal(): void {
   if (revealTimer !== null) {
     clearTimeout(revealTimer)
     revealTimer = null
-  }
-}
-
-function cancelInert(): void {
-  if (inertTimer !== null) {
-    clearTimeout(inertTimer)
-    inertTimer = null
   }
 }
 
@@ -339,7 +359,6 @@ onUnmounted(() => {
   releaseRecenter?.()
   releaseRecenter = null
   cancelReveal()
-  cancelInert()
   cancelAnimationFrame(mountFrame)
 })
 

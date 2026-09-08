@@ -741,7 +741,7 @@ export const PLANET_TAB_SUN_MAX_DIAMETER = 560
 /** Fixed base diameter (px) of the orbiting planet image (kept small vs. the sun). */
 export const PLANET_TAB_PLANET_DIAMETER = 112
 
-export const PLANET_TAB_RAIL_PANEL_W = 224
+export const PLANET_TAB_RAIL_PANEL_W = 244
 export const PLANET_TAB_RAIL_HANDLE_PX = 44
 export const PLANET_TAB_RAIL_ZONE_W = PLANET_TAB_RAIL_PANEL_W + PLANET_TAB_RAIL_HANDLE_PX
 export const PLANET_TAB_RAIL_AUTOFOLD_W = 1080

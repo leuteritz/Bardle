@@ -38,9 +38,9 @@ import { voyageGateSizeFor, voyageMarkerSizeFor } from '@/utils/game/voyageSites
  * ganze Reiter. Nichts im CSS sagt, wie gross die Karte davon bleibt — wer die
  * Liste verbreitert, nimmt sie ihr still weg.
  *
- * Die Liste steht RECHTS, im Rezept der Forge-Detailspalte, und ihre Zone ist
- * Liste PLUS Griff: 224 + 44 = 268. Der Griff bleibt auch eingeklappt stehen,
- * die Liste faehrt hinter ihn.
+ * Die Liste steht RECHTS, in der Seitenleisten-Sprache (`.sr-*`), und ihre Zone
+ * ist Liste PLUS Griff: 244 + 44 = 288. Der Griff bleibt auch eingeklappt
+ * stehen, die Liste faehrt hinter ihn.
  *
  * Die dritte Zone ist gefallen. Sie trug das Missions-Dossier und war zugleich
  * der einzige Weg, eine Expedition loszuschicken; beides liegt jetzt an der
@@ -59,8 +59,8 @@ import { voyageGateSizeFor, voyageMarkerSizeFor } from '@/utils/game/voyageSites
  * Compiler können diese Kopplung ausdrücken.
  *
  * Die Zahlen unten spiegeln, was App.vue rechnet:
- *   Full HD  →  268px  972px   (eingeklappt 44px 1196px)
- *   2K       →  268px 1392px   (eingeklappt 44px 1616px)
+ *   Full HD  →  288px  952px   (eingeklappt 44px 1196px)
+ *   2K       →  288px 1372px   (eingeklappt 44px 1616px)
  */
 
 /** `--bp-gap` von .rp-wrapper, beide Seiten. */
@@ -155,10 +155,10 @@ describe('voyages atlas layout', () => {
 
   it('trifft die im Browser gemessenen Breiten', () => {
     const fhd = zones(1920, 1080)
-    expect(Math.round(fhd.rail)).toBe(268)
-    expect(Math.round(fhd.map)).toBe(972)
+    expect(Math.round(fhd.rail)).toBe(288)
+    expect(Math.round(fhd.map)).toBe(952)
 
-    expect(Math.round(zones(2560, 1440).map)).toBe(1392)
+    expect(Math.round(zones(2560, 1440).map)).toBe(1372)
   })
 
   it.each(DESKTOPS)('%s: Einklappen gibt der Karte genau die Listenbreite', (_l, vw, vh) => {
@@ -188,16 +188,31 @@ describe('voyages atlas layout', () => {
     expect(box.w).toBeCloseTo(avail - 2 * VOYAGE_MAP_INSET_PX, 6)
   })
 
-  it('gibt der Galaxie zurück, was die Detailspalte kostete — bis auf den Griff', () => {
+  it('gibt der Galaxie zurück, was die Detailspalte kostete — bis auf zwei Ränder', () => {
     // Full HD: die Spalte mass 388 px, die Karte 628. Beides gemessen, bevor sie
-    // fiel — die Zahl steht hier, damit der Gewinn nicht stillschweigend wieder
-    // an einen dritten Rand geht.
+    // fiel — die Zahlen stehen hier, damit der Gewinn nicht stillschweigend an
+    // immer neue Ränder geht.
     //
-    // Genau EIN Rand ist zugestanden, und er steht hier ausgeschrieben: die
-    // Griffleiste der Zielliste. Weil die Fit-Box auf allen vier Auflösungen an
-    // der BREITE klemmt, gehen ihre 44 px 1:1 von der gemalten Platte ab
-    // (box.w 960 → 916). Wer einen zweiten Rand hinzufügt, bricht diese Zeile.
-    expect(Math.round(zones(1920, 1080).map)).toBe(628 + 388 - VOYAGE_RAIL_HANDLE_PX)
+    // Genau ZWEI Ränder sind zugestanden, und beide stehen hier ausgeschrieben:
+    //
+    //   1. die Griffleiste der Zielliste (44)
+    //   2. die Verbreiterung der Liste von 224 auf 244 (20)
+    //
+    // Der zweite ist neu und war eine Entscheidung, keine Entdeckung: der
+    // Textblock der Zeile hatte neben der 96-px-Miniatur nur 86 px für drei
+    // Zustandschips UND die Stufe. Er hat jetzt 106 (+23 %), und weil die
+    // Fit-Box auf allen vier Auflösungen an der BREITE klemmt, gehen die 20 px
+    // 1:1 von der gemalten Platte ab (box.w 916 → 896).
+    //
+    // Weiter ging es nicht: bei 260 fiel die Manifestreihe von sieben Sitzen
+    // auf sechs — `voyageManifestFit.spec.ts` hat es gefangen.
+    //
+    // Wer einen DRITTEN Rand hinzufügt, bricht diese Zeile — und soll das.
+    const LIST_W_BEFORE_WIDENING = 224
+    const WIDENING = VOYAGE_RAIL_WIDTH - LIST_W_BEFORE_WIDENING
+    expect(Math.round(zones(1920, 1080).map)).toBe(
+      628 + 388 - VOYAGE_RAIL_HANDLE_PX - WIDENING,
+    )
   })
 
   it('lässt der Karte auch an der Faltschwelle ihren Boden', () => {

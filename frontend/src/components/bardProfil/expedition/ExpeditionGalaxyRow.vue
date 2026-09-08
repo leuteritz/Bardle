@@ -73,8 +73,8 @@ const title = computed(
 <template>
   <button
     ref="root"
-    class="egr"
-    :class="[`egr--${row.tier}`, `egr--st-${state}`, { 'egr--on': selected }]"
+    class="sr-row egr"
+    :class="[`egr--${row.tier}`, `egr--st-${state}`, { 'is-picked': selected }]"
     :data-galaxy="row.galaxy"
     :style="{ '--gx-accent': `rgb(${row.accent})` }"
     :aria-pressed="selected"
@@ -95,8 +95,8 @@ const title = computed(
       <span v-if="!row.seen" class="egr-new">NEW</span>
     </span>
 
-    <span class="egr-body">
-      <span class="egr-name">{{ row.name }}</span>
+    <span class="sr-row-body egr-body">
+      <span class="sr-row-name egr-name">{{ row.name }}</span>
       <span class="egr-meta">
         <span v-if="row.contracts" class="egr-chip egr-chip--offer">
           <Icon icon="ph:scroll-fill" width="12" height="12" />
@@ -120,71 +120,40 @@ const title = computed(
 </template>
 
 <style scoped>
-/* Eine Karte im Rezept der Forge-Liste (`.fut-row`): eigene Fläche, eigener
-   Rahmen, Radius 4. Randlos stand die Zeile zuvor auf der Leistenfläche und
-   trennte sich nur durch ihren Hover. */
+/* Flaeche, Rahmen, Radius, Hover, Auswahl und Fokus stehen als `.sr-row` im
+   Theme. Hier bleiben nur die MASSE, und die sind hergeleitet, nicht geliehen —
+   siehe die Rechnung an VOYAGE_RAIL_ROW_PAD_L in `constants/economy.ts`. */
 .egr {
-  position: relative;
-  display: flex;
-  align-items: center;
   gap: v-bind(rowGap);
-  width: 100%;
-  /* Der Rollkasten ist eine Flex-Spalte: ohne das stauchen zwölf Zeilen sich
-     gegenseitig, statt zu rollen — auf Full HD gemessen 45,2 px statt 76, und
-     die Miniatur, die das Wiedererkennen TRÄGT, war darin unkenntlich. */
-  flex-shrink: 0;
-  /* Hergeleitet, nicht von `.fut-row` geliehen — siehe die Rechnung an
-     VOYAGE_RAIL_ROW_PAD_L in `constants/economy.ts`. */
   padding: v-bind(rowPad);
-  background: #1c1c18;
-  border: 1px solid #32210c;
-  border-radius: 4px;
-  overflow: hidden;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background-color 0.12s ease,
-    border-color 0.12s ease;
 }
 
-/* Der ZUSTANDSKANAL, und zwar als eigene Ebene statt als `border-left`. Damit
-   ist er vom Rahmen entkoppelt, den Hover und Auswahl färben — die Kurzform
-   `border-color` löschte sonst genau die Auskunft, neben der sie steht, und
-   `.egr--on` musste drei Seiten einzeln setzen. Dieselbe Trennung führt
-   `.fut-row::before`. */
+/* Den Kanal selbst malt `.sr-row::before`; hier steht nur seine BREITE, weil
+   sie an `VOYAGE_RAIL_STATE_BAR_PX` haengt. */
 .egr::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
   width: v-bind(stateBar);
-  background: var(--st-c, transparent);
-  pointer-events: none;
-  z-index: 1;
 }
 .egr--st-ready {
-  --st-c: #64dcb4;
+  --sr-color: #64dcb4;
 }
 .egr--st-offer {
-  --st-c: #e8c040;
+  --sr-color: #e8c040;
 }
 .egr--st-field {
-  --st-c: rgba(230, 220, 196, 0.4);
+  --sr-color: rgba(230, 220, 196, 0.4);
 }
-.egr:hover {
-  border-color: #7a4e20;
-}
-.egr--on {
-  background: color-mix(in srgb, var(--gx-accent, #e8c040) 20%, #1c1c18);
-  border-color: var(--gx-accent, #e8c040);
-}
-.egr:focus-visible {
-  outline: 2px solid #e8c040;
-  outline-offset: -2px;
+
+/* Die Auswahl traegt eine EIGENE Farbe, anders als in der Universumsleiste:
+   dort IST die Toenung der Bahn auch ihr Zustandskanal, hier sagt der Kanal,
+   was die Galaxie gerade will, und darf davon nicht ueberschrieben werden.
+   Den Hover haelt das Theme mit `:not(.is-picked)` von dieser Kante fern —
+   vorher gewann `.egr:hover` gegen `.egr--on` und loeschte sie, sobald der
+   Zeiger daraufstand. */
+.egr.is-picked {
+  --sr-pick: var(--gx-accent, #e8c040);
 }
 /* Still heisst zurücktreten — die Miniatur bleibt hell, sie IST das Wiedererkennen. */
-.egr--st-quiet .egr-name,
+.egr--st-quiet .sr-row-name,
 .egr--st-quiet .egr-tier {
   color: rgba(200, 144, 64, 0.42);
 }
@@ -259,24 +228,11 @@ const title = computed(
   letter-spacing: 0.08em;
 }
 
+/* Der Textblock steht als `.sr-row-body` / `.sr-row-name` im Theme — samt
+   Schriftskala, Farbe und Ellipse. Hier nur der Abstand zur Chipzeile.
+   (`font-family` stand hier einmal scoped; sie wird global geerbt.) */
 .egr-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
   gap: 4px;
-}
-.egr-name {
-  font-family: 'MedievalSharp', Georgia, serif;
-  font-size: 14px;
-  line-height: 1.1;
-  color: #e8dcc0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.egr--on .egr-name {
-  color: #fff4dc;
 }
 
 .egr-meta {

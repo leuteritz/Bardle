@@ -45,15 +45,20 @@ import {
 
 /** Die gemessenen Buehnenmasse — dieselbe Quelle wie `universeLayout.spec.ts`:
  *  `CONTENT_HEIGHT` minus `UNIVERSE_MAP_CREST_BAND_H` (112), Breite minus
- *  `UNIVERSE_MAP_RAIL_ZONE_W` (268). Sie standen hier einmal 30 px breiter und
+ *  `UNIVERSE_MAP_RAIL_ZONE_W` (288). Sie standen hier einmal 30 px breiter und
  *  20 px hoeher — die Zahlen von vor dem Wachstum des Kopfbands und der
  *  Leistenzone, und niemandem faellt so etwas auf: die Portale sassen weiter
- *  richtig, nur gegen eine Buehne, die es nicht mehr gab. */
+ *  richtig, nur gegen eine Buehne, die es nicht mehr gab.
+ *
+ *  Zuletzt nachgezogen, als die Leiste von 224 auf 244 wuchs (Zone 268 → 288):
+ *  jede Breite hier ist um 20 px gefallen, die HOEHEN bleiben — die
+ *  Verbreiterung kostet im Universe keine Hoehe, und die Fit-Box klemmt dort
+ *  ohnehin an ihr. */
 const STAGES: Array<{ name: string; w: number; h: number }> = [
-  { name: 'Full HD', w: 972, h: 670.6 },
-  { name: 'WUXGA', w: 972, h: 771.4 },
-  { name: '2K', w: 1392, h: 949 },
-  { name: '4K', w: 2672, h: 1658.2 },
+  { name: 'Full HD', w: 952, h: 670.6 },
+  { name: 'WUXGA', w: 952, h: 771.4 },
+  { name: '2K', w: 1372, h: 949 },
+  { name: '4K', w: 2652, h: 1658.2 },
   { name: 'Boden', w: UNIVERSE_MAP_STAGE_MIN_W, h: UNIVERSE_MAP_STAGE_MIN_H },
 ]
 

@@ -151,6 +151,55 @@
      misst damit 53–90 px statt 78–137 px und lässt der Champion-Row darunter
      37–134 px Luft. */
   --loot-u: clamp(15px, min(0.78vw, 1.8px + 1.39vh), 26px);
+
+  /* ── Seitenleisten-Sprache (.sr-*) ───────────────────────────────
+     Die auf- und zuklappbaren Detailleisten der Reiter Skill Tree, Planets,
+     Voyages und Universe — dazu die Team-Rollenseite, die Fläche und Zeile
+     mitbenutzt. Wie bei `--tip-*` und `--hc-*` teilen sich Fläche und Rand
+     die vorhandenen Token; der Aufrufer setzt allein `--sr-color`, sie trägt
+     den Zustandskanal der Zeile.
+
+     Eine Seitenleiste ist in diesem Spiel EIN Ort, nicht einer je Reiter. */
+  --sr-surface: var(--rpg-bg-deep);
+  --sr-seam: var(--rpg-wood-mid);
+  --sr-handle-bg: #14100c;
+  --sr-handle-hover: #1a140d;
+  --sr-row-bg: var(--rpg-bg-row);
+  --sr-row-border: #32210c;
+  --sr-row-hover-border: var(--rpg-wood);
+  --sr-text: #e8dcc0;
+  --sr-text-hi: #fff4dc;
+  --sr-note: #7a6c50;
+  --sr-dim: #7a6a46;
+  --sr-accent: var(--rpg-gold-dim);
+  --sr-accent-hi: var(--rpg-gold);
+
+  /* Die EINE Schriftskala der Seitenleisten, Muster von `--tip-u`/`--hc-u`.
+     Baseline sind die festen Grade, die die Universumsleiste vorher trug
+     (Name 16, Note 12):
+
+       Full HD  1920×1080 → 13.8px   Name 16.0   Note 12.0   (unverändert)
+       WUXGA    1920×1200 → 13.8px   Name 16.0   Note 12.0
+       2K/QHD   2560×1440 → 17.0px   Name 19.7   Note 14.8   (+23 %, Deckel)
+       4K       3840×2160 → 17.0px   Name 19.7   Note 14.8
+       FHD@125 %     1536 → 13.0px   Name 15.1   Note 11.3   (Boden)
+
+     DER DECKEL IST GERECHNET, NICHT GEWÄHLT — er hängt an der Scheibe der
+     Universumsleiste. Deren Zeile ist scheibengetrieben
+     (`UNIVERSE_RAIL_ROW_H = UNIVERSE_DISC_RAIL_PX + 14`), und der Textblock
+     daneben muss unter die 46 px der Scheibe passen, sonst treibt plötzlich
+     die SCHRIFT die Zeilenhöhe und zehn Zeilen passen nicht mehr in die
+     Leiste — auf 4K, wo niemand hinsieht. Der Block misst
+     `1.16em × 1.25 + 0.87em × 1.33 = 2.607em`; bei 17 px sind das 44,3 von
+     46 px, bei 18 wären es 46,9 und die Zeile risse.
+     Wer die Grade oder die Zeilenhöhen ändert, rechnet diesen Deckel neu.
+
+     Der Boden ist ebenso wenig Zierrat: bei 1536 (Full HD @125 %) ist die
+     Auflösung kein Maß für den verfügbaren Platz — dieselbe Begründung wie
+     bei `--hc-u-base`. Die `-base`-Fassung steht daneben, weil die
+     Kompaktstufe sie zurückholen muss. */
+  --sr-u-base: clamp(13px, 0.72vw, 17px);
+  --sr-u: var(--sr-u-base);
 }
 
 /* ── Modal shell (containers, modals) ── */
@@ -2683,6 +2732,321 @@
   .hc-move,
   .hc-fill,
   .hc-edge {
+    transition: none;
+  }
+}
+
+
+/* ── Seitenleisten-Sprache (.sr-*) ──────────────────────────────────
+   Fläche, Rollkasten, Zeilenkarte und Griff der rechten Detailleisten —
+   Skill Tree, Planets, Voyages, Universe und die Team-Rollenseite.
+
+   Der Aufrufer behält NUR, was allein er weiß: Lage, Breite, z-index seiner
+   Zone. Alles Übrige kommt von hier; eine Leiste, die sich ihre Fläche selbst
+   malt, bricht `sideRailLanguage.spec.ts`.
+
+   Alle Maße in `em` gegen `--sr-u` — AUSGENOMMEN Radien und Rahmenstärken:
+   die stehen in festen px, sonst risse ein mitwachsender Radius auf 4K die
+   4–5-px-Grenze. */
+
+/* ── Die Fläche ────────────────────────────────────────────────────── */
+.sr {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  font-size: var(--sr-u);
+  background: var(--sr-surface);
+  /* Die Naht gehört immer der rechten Zone — eine zweite Linie am Nachbarn
+     verdoppelte sie. */
+  border-left: 2px solid var(--sr-seam);
+}
+
+/* Die Dichtestufe setzt ALLEIN die Einheit, nie einzelne Maße. */
+
+/* Die kompakte Stufe der Universumsleiste. Ihr Deckel ist GERECHNET wie der
+   grosse, nur gegen die kleinere Scheibe: dort traegt
+   `UNIVERSE_DISC_RAIL_COMPACT_PX` 36 px, und der Textblock misst 2.607em —
+   bei 13 px sind das 33,9, wie die 34 der festen Grade davor. Ein blosser
+   Faktor auf `--sr-u-base` genuegt NICHT: auf einem breiten, aber flachen
+   Fenster (4K-Breite, Hoehe unter 1076) bliebe er zu gross und die SCHRIFT
+   triebe die Zeilenhoehe statt der Scheibe. */
+.sr--compact {
+  --sr-u: min(var(--sr-u-base), 13px);
+}
+
+/* ── Der Rollkasten ────────────────────────────────────────────────── */
+.sr-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.36em;
+  padding: 0.58em 0.5em 0.87em;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sr-seam) #111;
+}
+.sr-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.sr-scroll::-webkit-scrollbar-track {
+  background: #111;
+}
+.sr-scroll::-webkit-scrollbar-thumb {
+  background: var(--sr-seam);
+  border-radius: 2px;
+}
+
+/* ── Die Zeilenkarte ───────────────────────────────────────────────── */
+.sr-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.58em;
+  width: 100%;
+  /* Der Rollkasten ist eine Flex-Spalte: ohne das stauchen sich die Zeilen
+     gegenseitig, statt zu rollen. */
+  flex-shrink: 0;
+  /* Links mehr: 3 px Zustandskanal plus Luft. */
+  padding: 0.43em 0.5em 0.43em 0.65em;
+  text-align: left;
+  color: inherit;
+  background: var(--sr-row-bg);
+  border: 1px solid var(--sr-row-border);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  /* Nur die Fläche fährt. Der Rahmen schaltet hart: eine Bewegung auf
+     `border-color` ist im ganzen Theme verboten und wird von
+     `hudCardLanguage.spec.ts` gehalten. */
+  transition: background-color 0.12s ease;
+}
+
+/* Der ZUSTANDSKANAL, und zwar als eigene Ebene statt als `border-left`. Damit
+   ist er vom Rahmen entkoppelt, den Hover und Auswahl färben — die Kurzform
+   `border-color` löschte sonst genau die Auskunft, neben der sie steht. */
+.sr-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--sr-color, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Die gewählte Zeile ist vom Hover AUSGENOMMEN, statt ihn zu überschreiben:
+   `:not()` hebt die Spezifität, und `.is-picked` danach zu schreiben genügte
+   deshalb nicht — der Hover färbte den Rahmen der gewählten Zeile genau dann
+   um, wenn der Zeiger daraufsteht. Markiert ist sie ohnehin schon. */
+.sr-row:not(.is-inert):not(.is-picked):hover {
+  border-color: var(--sr-row-hover-border);
+}
+/* Die GEWAEHLTE Zeile. Zwei Variablen und nicht eine, weil die beiden Leisten
+   Verschiedenes meinen: im Universe IST die Toenung der Bahn auch ihr
+   Zustandskanal (`--sr-color`), im Voyages-Atlas traegt der Kanal den Zustand
+   der Galaxie und die Auswahl eine eigene Farbe. `--sr-pick` faellt deshalb auf
+   `--sr-color` zurueck, wenn ein Aufrufer nicht unterscheidet. */
+.sr-row.is-picked {
+  --sr-picked: var(--sr-pick, var(--sr-color, var(--sr-accent-hi)));
+  background: color-mix(in srgb, var(--sr-picked) 20%, var(--sr-row-bg));
+  border-color: var(--sr-picked);
+}
+
+.sr-row.is-inert {
+  cursor: default;
+}
+.sr-row:focus-visible {
+  outline: 2px solid var(--sr-accent-hi);
+  outline-offset: -2px;
+}
+
+/* ── Der Textblock ─────────────────────────────────────────────────── */
+/* Feste Zeilenkästen: so treibt das MOTIV die Zeilenhöhe und nicht die
+   Schriftmetrik — nur dann sagen die Zeilenhöhen-Konstanten die Wahrheit.
+   MedievalSharp überschießt seine Zeilenbox um die Hälfte. */
+.sr-row-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.sr-row-name {
+  font-size: 1.16em;
+  line-height: 1.25;
+  color: var(--sr-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sr-row.is-picked .sr-row-name {
+  color: var(--sr-text-hi);
+}
+.sr-row.is-dim .sr-row-name {
+  color: var(--sr-dim);
+}
+
+.sr-row-note {
+  font-size: 0.87em;
+  line-height: 1.33;
+  color: var(--sr-note);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sr-row.is-dim .sr-row-note {
+  color: #5c4e34;
+}
+
+/* ── Der Griff ─────────────────────────────────────────────────────
+   Die Kante, die stehen bleibt, wenn die Leiste weggefahren ist. Sie trägt das
+   Wort ALLEIN: ein Kopfband über der Liste zeigte dasselbe Wort ein zweites
+   Mal und nahm ihr dafür 38 px Höhe. Die Breite setzt der Aufrufer — sie hängt
+   an der Länge SEINES Wortes und ist nie unter 44 px. */
+.sr-handle {
+  position: absolute;
+  inset: 0 0 0 auto;
+  /* Liegt ÜBER der geparkten Leiste (z-index 1), damit deren Kante nicht durch
+     den Griff scheint, während sie hinter ihm steht. */
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Links 2 px weniger — die Naht zählt zur Breite und rückte die Gruppe sonst
+     um ihre Hälfte aus der Leistenmitte. */
+  padding: 12px 6px 12px 4px;
+  border: none;
+  border-left: 2px solid var(--sr-seam);
+  background: var(--sr-handle-bg);
+  color: var(--sr-accent);
+  cursor: pointer;
+}
+.sr-handle:hover {
+  background: var(--sr-handle-hover);
+}
+
+/* Goldfaden auf der Naht. Statisch — nur die DECKUNG wechselt, und sie trägt
+   allein den Zustand (matt zu, hell offen oder unter dem Zeiger). */
+.sr-handle::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: linear-gradient(to bottom, #5c3310, #c89040, #e8c060, #c89040, #5c3310);
+  opacity: 0.4;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+.sr-handle:hover::after,
+.sr-handle--open::after {
+  opacity: 1;
+}
+
+/* Nur das Wort steht im Fluss — die Gruppe ist damit genau so hoch wie es und
+   sitzt mittig in der Leiste. */
+.sr-handle-stack {
+  position: relative;
+  display: flex;
+}
+
+/* Gekippt und mittig: es sagt, was hinter ihm liegt. */
+.sr-handle-word {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  color: var(--sr-accent);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  white-space: nowrap;
+}
+.sr-handle:hover .sr-handle-word,
+.sr-handle--open .sr-handle-word {
+  color: var(--sr-accent-hi);
+}
+
+/* Was es überhaupt gibt — die ruhige Zahl. Gedämpft: das Wort trägt, sie
+   ergänzt. Ziffern brauchen die Sperrung des Wortes nicht, gesperrt säßen sie
+   als lose Punkte darüber. */
+.sr-handle-total {
+  color: rgba(200, 144, 64, 0.5);
+  letter-spacing: 0.1em;
+}
+.sr-handle:hover .sr-handle-total,
+.sr-handle--open .sr-handle-total {
+  color: rgba(232, 192, 64, 0.62);
+}
+
+/* Am Wortende, OHNE Fluss-Platz: sonst wanderte das Wort, sobald ein Signal
+   kommt oder geht. Den Abstand setzt der Aufrufer, er hängt an seinem Wort. */
+.sr-handle-signals {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: var(--sr-badge-gap, 10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Aufrecht, nicht mitgekippt: eine Zahl liest man nicht seitwärts.
+   Tabellenziffern gibt MedievalSharp nicht her, deshalb eine Mindestbreite —
+   sonst springt die Pille beim Sprung von 9 auf 10. */
+.sr-handle-count {
+  position: relative;
+  min-width: 24px;
+  padding: 2px 5px;
+  border: 1px solid var(--sr-seam);
+  border-radius: 4px;
+  background: var(--sr-row-bg);
+  color: var(--sr-accent-hi);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+}
+.sr-handle:hover .sr-handle-count {
+  border-color: var(--sr-accent);
+  background: #241a0f;
+}
+
+/* Ein Punkt und keine zweite Zahl: wie viele es sind, entscheidet nichts —
+   dass überhaupt eines dasteht, schon. An der Ecke der Pille, weil er sonst der
+   44 px schmalen Leiste eine Spalte wegnähme; der Ring ist die Leistenfarbe,
+   kein Hof. Die FARBE setzt der Aufrufer: grün heißt in der Forge „kaufbar",
+   teal heißt überall im Spiel „einsammelbar" — derselbe Punkt darf nicht in
+   zwei Reitern zwei Dinge heißen. */
+.sr-handle-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--sr-dot, var(--rpg-green-top));
+  box-shadow: 0 0 0 2px var(--sr-handle-bg);
+}
+/* Ohne Pille steht er allein an der Wortkante und trägt wieder seinen Hof.
+   Der Hof wird aus der Punktfarbe GEMISCHT, nicht zweitens gesetzt: sonst
+   müsste der Aufrufer zwei Werte in Einklang halten, die immer dieselbe Farbe
+   meinen. */
+.sr-handle-dot--solo {
+  position: static;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sr-dot, var(--rpg-green-top)) 18%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sr-row,
+  .sr-handle::after {
     transition: none;
   }
 }
