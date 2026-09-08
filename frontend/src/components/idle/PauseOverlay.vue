@@ -195,7 +195,7 @@
                            Beschriftung war die Zeile mit 370 px zu breit und
                            brach um. -->
                       <span class="chime-value-note"
-                        >· {{ formatNumberCompact(gameStore.pendingMeeps) }} pending</span
+                        >{{ formatNumberCompact(gameStore.pendingMeeps) }} MEEPS TO CLAIM</span
                       >
                     </span>
                     <!-- Was die Beschriftung sagte, sagt jetzt der Füllstand:
@@ -1890,9 +1890,9 @@ function particleStyle(i: number): Record<string, string> {
      Inhalt). Sie ist kurz und darf ihre Breite behalten. */
   flex: 0 0 auto;
   min-width: 0;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: rgba(253, 186, 116, 0.6);
   font-variant-numeric: tabular-nums;
