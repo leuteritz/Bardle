@@ -2,10 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { formatCompactDuration } from '@/utils/ui/format'
-import {
-  useSolarUpgradeStore,
-  type SolarBranchId,
-} from '@/stores/progression/solarUpgradeStore'
+import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import {
   STAR_PHASE_DATA,
@@ -155,9 +152,7 @@ const dwellElapsedMs = computed(() =>
 const dwellRemainingMs = computed(() => Math.max(0, dwellRequiredMs.value - dwellElapsedMs.value))
 const dwellMet = computed(() => dwellRemainingMs.value <= 0)
 const dwellPct = computed(() =>
-  dwellRequiredMs.value <= 0
-    ? 1
-    : Math.min(1, dwellElapsedMs.value / dwellRequiredMs.value),
+  dwellRequiredMs.value <= 0 ? 1 : Math.min(1, dwellElapsedMs.value / dwellRequiredMs.value),
 )
 
 /* ── Gate two: the five core rays ─────────────────────────────────
@@ -254,7 +249,6 @@ function handleEvolve(): void {
     icon: 'game-icons:heraldic-sun',
   })
 }
-
 </script>
 
 <template>
@@ -275,66 +269,109 @@ function handleEvolve(): void {
           <PhaseSunDisc v-else :diameter="sunDiameter" :pulse="true" />
         </template>
 
-          <!-- Readiness announced by the body: two rings breaking out of the
+        <!-- Readiness announced by the body: two rings breaking out of the
                core, half a cycle apart. transform + opacity only. -->
-          <template v-if="canEvolveNow">
-            <span class="se-ring" aria-hidden="true"></span>
-            <span class="se-ring se-ring--late" aria-hidden="true"></span>
-          </template>
+        <template v-if="canEvolveNow">
+          <span class="se-ring" aria-hidden="true"></span>
+          <span class="se-ring se-ring--late" aria-hidden="true"></span>
+        </template>
+      </div>
+
+      <!-- TEMP: admin dwell-skip — floated into the corner so it never
+             affects the layout (remove with adminSkipDwellTime in the store) -->
+      <button
+        v-if="!isMax && !dwellMet"
+        class="se-dev-skip"
+        type="button"
+        v-tip="'Admin: skip the remaining dwell time of this phase'"
+        @click.stop="solarStore.adminSkipDwellTime()"
+      >
+        DEV · Skip
+      </button>
+      <!-- /TEMP -->
+    </div>
+
+    <!-- ═ 2 · who, and where on the road ════════════════════════ -->
+    <div class="se-ident">
+      <span class="se-ident-name">{{ phaseName }}</span>
+      <span class="se-ident-step">{{ phaseDisplayLabel }}</span>
+    </div>
+
+    <div class="se-rail">
+      <span
+        v-for="step in railSteps"
+        :key="step.key"
+        class="se-step"
+        :class="{ 'is-done': step.done, 'is-current': step.current }"
+        :style="{ '--step-color': step.color, '--step-glow': step.glow }"
+        v-tip="step.title"
+      >
+        <i class="se-step-dot" />
+      </span>
+    </div>
+
+    <!-- ═ 3 · the deck: time, rays, act ═════════════════════════ -->
+    <section class="se-deck" :class="[`is-${verdict.tone}`, { 'is-live': canEvolveNow }]">
+      <div class="se-next">
+        <span class="se-next-mark" aria-hidden="true">
+          <Icon icon="game-icons:heraldic-sun" width="24" height="24" />
+        </span>
+        <span class="se-next-copy">
+          <span class="se-next-k">{{ isMax ? 'Solar path' : 'Next solar phase' }}</span>
+          <strong class="se-next-name">{{ isMax ? 'Fully Evolved' : nextStage.name }}</strong>
+          <span class="se-next-gain">{{ isMax ? verdict.text : nextPhaseGain }}</span>
+        </span>
+        <span class="se-next-index"
+          >{{ isMax ? totalPhases : solarStore.starPhase + 1 }}/{{ totalPhases }}</span
+        >
+      </div>
+
+      <div v-if="!isMax" class="se-requirements">
+        <div class="se-requirements-head">
+          <span class="se-requirements-k">Requirements</span>
+          <span class="se-requirements-state" :class="{ 'is-ready': canEvolveNow }">
+            {{ canEvolveNow ? 'Ready to evolve' : 'Not ready yet' }}
+          </span>
         </div>
 
-        <!-- TEMP: admin dwell-skip — floated into the corner so it never
-             affects the layout (remove with adminSkipDwellTime in the store) -->
-        <button
-          v-if="!isMax && !dwellMet"
-          class="se-dev-skip"
-          type="button"
-          v-tip="'Admin: skip the remaining dwell time of this phase'"
-          @click.stop="solarStore.adminSkipDwellTime()"
-        >
-          DEV · Skip
-        </button>
-        <!-- /TEMP -->
-      </div>
-
-      <!-- ═ 2 · who, and where on the road ════════════════════════ -->
-      <div class="se-ident">
-        <span class="se-ident-name">{{ phaseName }}</span>
-        <span class="se-ident-step">{{ phaseDisplayLabel }}</span>
-      </div>
-
-      <div class="se-rail">
-        <span
-          v-for="step in railSteps"
-          :key="step.key"
-          class="se-step"
-          :class="{ 'is-done': step.done, 'is-current': step.current }"
-          :style="{ '--step-color': step.color, '--step-glow': step.glow }"
-          v-tip="step.title"
-        >
-          <i class="se-step-dot" />
-        </span>
-      </div>
-
-      <!-- ═ 3 · the deck: time, rays, act ═════════════════════════ -->
-      <div class="se-deck" :class="[`is-${verdict.tone}`, { 'is-live': canEvolveNow }]">
-        <!-- gate one -->
-        <div v-if="!isMax" class="se-slab" :class="{ 'is-met': dwellMet }">
-          <span class="se-slab-k">Dwell</span>
-          <span class="se-slab-v">
-            {{ dwellMet ? 'Served' : formatCompactDuration(dwellRemainingMs) }}
-          </span>
+        <div class="se-requirement" :class="{ 'is-met': dwellMet }">
+          <div class="se-requirement-copy">
+            <Icon
+              icon="lucide:hourglass"
+              class="se-requirement-ico"
+              width="17"
+              height="17"
+              aria-hidden="true"
+            />
+            <span>
+              <span class="se-requirement-name">Dwell</span>
+              <span class="se-requirement-value">
+                {{ dwellMet ? 'Served' : `${formatCompactDuration(dwellRemainingMs)} remaining` }}
+              </span>
+            </span>
+          </div>
           <span class="se-track">
             <i class="se-track-fill" :style="{ transform: `scaleX(${dwellPct})` }" />
           </span>
         </div>
 
-        <!-- gate two -->
-        <div v-if="!isMax" class="se-slab" :class="{ 'is-met': raysAllMet }">
-          <span class="se-slab-k">Rays</span>
-          <span class="se-slab-v">
-            {{ raysMet }}<span class="se-slab-cap">/{{ SOLAR_BRANCHES.length }}</span>
-          </span>
+        <div class="se-requirement se-requirement--rays" :class="{ 'is-met': raysAllMet }">
+          <div class="se-requirement-copy">
+            <Icon
+              icon="game-icons:solar-power"
+              class="se-requirement-ico"
+              width="18"
+              height="18"
+              aria-hidden="true"
+            />
+            <span>
+              <span class="se-requirement-name">Core rays</span>
+              <span class="se-requirement-value"
+                >{{ raysMet }}/{{ SOLAR_BRANCHES.length }} attuned · Lv
+                {{ requiredRayLevel }} needed</span
+              >
+            </span>
+          </div>
           <div class="se-rays">
             <div
               v-for="ray in rayTiles"
@@ -351,26 +388,32 @@ function handleEvolve(): void {
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- the act, carrying its own reason -->
-        <button
-          v-if="!isMax"
-          class="se-fire"
-          type="button"
-          :disabled="!canEvolveNow"
-          @click="handleEvolve"
-        >
+      <button
+        v-if="!isMax"
+        class="se-fire"
+        type="button"
+        :disabled="!canEvolveNow"
+        @click="handleEvolve"
+      >
+        <span class="se-fire-mark" aria-hidden="true">✦</span>
+        <span class="se-fire-copy">
           <span class="se-fire-lbl">{{ evolveLabel }}</span>
           <span class="se-fire-sub">{{ verdict.text }}</span>
-        </button>
-        <div v-else class="se-fire se-fire--done">
-          <span class="se-fire-lbl">
-            <Icon icon="game-icons:laurel-crown" width="22" height="22" aria-hidden="true" />
-            Fully Evolved
-          </span>
+        </span>
+        <span class="se-fire-arrow" aria-hidden="true">→</span>
+      </button>
+      <div v-else class="se-fire se-fire--done">
+        <span class="se-fire-mark" aria-hidden="true">
+          <Icon icon="game-icons:laurel-crown" width="22" height="22" aria-hidden="true" />
+        </span>
+        <span class="se-fire-copy">
+          <span class="se-fire-lbl">Fully Evolved</span>
           <span class="se-fire-sub">{{ verdict.text }}</span>
-        </div>
+        </span>
       </div>
+    </section>
   </section>
 </template>
 
@@ -381,7 +424,7 @@ function handleEvolve(): void {
   /* Sonne links über Name und Rail, die Konsole rechts über die volle Höhe:
      untereinander fraß die Konsole der Sonne die Höhe weg (gemessen 37 px Disc) */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(250px, 35%);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 40%);
   grid-template-rows: minmax(0, 1fr) auto auto;
   /* eigene Eigenschaften NIE in cqw: das Container-Element misst gegen den Vorfahren */
   column-gap: 18px;
@@ -564,72 +607,162 @@ function handleEvolve(): void {
   grid-column: 2;
   grid-row: 1 / -1;
   align-self: center;
-  justify-self: center;
-  width: min(100%, clamp(260px, 23cqw, 430px));
+  width: min(100%, 520px);
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: clamp(7px, 1.1cqw, 14px);
-  padding: clamp(10px, 1.4cqw, 18px) clamp(11px, 1.6cqw, 21px);
-  background: #1a1008;
-  border: 1px solid #5c3310;
-  border-radius: 4px;
+  gap: clamp(10px, 1.5cqw, 18px);
+  padding: clamp(10px, 1.5cqw, 18px) 0;
+  --se-state: #5c3310;
 }
 .se-deck.is-live {
-  border-color: #5c3310;
-  box-shadow: inset 2px 0 0 #6ec040;
+  --se-state: #6ec040;
 }
 .se-deck.is-end {
-  border-color: #4a2a7a;
-  background: #1a1008;
+  --se-state: #4a2a7a;
+}
+
+.se-next {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(8px, 1.2cqw, 15px);
+  padding-bottom: clamp(9px, 1.4cqw, 17px);
+  border-bottom: 1px solid #2c1806;
+}
+
+.se-next-mark {
+  display: grid;
+  place-items: center;
+  width: clamp(30px, 4.4cqw, 42px);
+  height: clamp(30px, 4.4cqw, 42px);
+  color: var(--phase-primary);
+  border: 1px solid var(--se-state);
+  border-radius: 50%;
+}
+
+.se-next-copy,
+.se-requirement-copy,
+.se-fire-copy {
+  min-width: 0;
+}
+
+.se-next-copy,
+.se-requirement-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.se-next-k,
+.se-requirements-k,
+.se-requirement-name {
+  font-size: clamp(9px, 1.1cqw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #7a6c56;
+}
+
+.se-next-name {
+  margin-top: 2px;
+  font-size: clamp(20px, 2.6cqw, 30px);
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: var(--phase-primary);
+}
+
+.se-next-gain {
+  margin-top: 4px;
+  font-size: clamp(10px, 1.25cqw, 15px);
+  line-height: 1.2;
+  color: #c7b98d;
+}
+
+.se-next-index {
+  align-self: start;
+  padding-top: 2px;
+  font-size: clamp(10px, 1.2cqw, 14px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--se-state);
+  white-space: nowrap;
+}
+
+.se-requirements {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.1cqw, 14px);
+}
+
+.se-requirements-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.se-requirements-state {
+  font-size: clamp(9px, 1.1cqw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #8a7c66;
+  white-space: nowrap;
+}
+
+.se-requirements-state.is-ready {
+  color: #a8e878;
+}
+
+.se-requirement {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-bottom: clamp(8px, 1.1cqw, 13px);
+  border-bottom: 1px solid #2c1806;
+}
+
+.se-requirement-copy {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+}
+
+.se-requirement-ico {
+  color: #6a5a3a;
+}
+
+.se-requirement.is-met .se-requirement-ico,
+.se-requirement.is-met .se-requirement-name {
+  color: #8bcf60;
+}
+
+.se-requirement-name,
+.se-requirement-value {
+  display: block;
+}
+
+.se-requirement-value {
+  margin-top: 2px;
+  font-size: clamp(10px, 1.25cqw, 15px);
+  line-height: 1.2;
+  color: #c7b98d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.se-requirement--rays {
+  gap: clamp(7px, 1cqw, 12px);
 }
 
 /* Label left, value right, the visual underneath — full width, because that is
    the whole point of the stack. */
-.se-slab {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: clamp(4px, 0.8cqw, 10px) clamp(8px, 1.4cqw, 18px);
-}
-.se-slab + .se-slab {
-  padding-top: clamp(7px, 1.1cqw, 14px);
-  border-top: 1px solid #2c1806;
-}
-
-.se-slab-k {
-  font-size: clamp(10px, 1.4cqw, 17px);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: #7a6c56;
-  white-space: nowrap;
-}
-
-/* The numbers this panel exists for */
-.se-slab-v {
-  grid-column: 3;
-  font-size: clamp(22px, 3.4cqw, 42px);
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  color: #e8c040;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.se-slab.is-met .se-slab-v {
-  color: #a8e878;
-}
-
-.se-slab-cap {
-  font-size: 0.5em;
-  font-weight: 700;
-  color: #7a6c56;
-}
-
 /* ── gate one: the dwell track ───────────────────────────────────
    scaleX, not width — this creeps forward every second the panel is open. */
 .se-track {
-  grid-column: 1 / -1;
+  display: block;
+  width: 100%;
   height: clamp(6px, 0.8cqw, 10px);
   background: #0d0904;
   border: 1px solid #2c1806;
@@ -644,7 +777,7 @@ function handleEvolve(): void {
   transform-origin: left center;
   background: linear-gradient(to right, #b8791c, #e0a828);
 }
-.se-slab.is-met .se-track-fill {
+.se-requirement.is-met .se-track-fill {
   background: linear-gradient(to right, #2e7a1a, #6ec040);
 }
 
@@ -652,10 +785,9 @@ function handleEvolve(): void {
    Its own glyph and its own level on every tile: a bare "3 / 5" never said
    WHICH ray was short, and that is the only thing the player can act on. */
 .se-rays {
-  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(4px, 0.7cqw, 9px);
+  gap: clamp(4px, 0.8cqw, 10px);
 }
 
 .se-ray {
@@ -664,10 +796,11 @@ function handleEvolve(): void {
   align-items: center;
   justify-content: center;
   gap: clamp(2px, 0.4cqw, 5px);
-  padding: clamp(6px, 0.9cqw, 11px) 2px;
-  background: #141410;
-  border: 1px solid #2c1806;
-  border-radius: 4px;
+  padding: clamp(6px, 0.9cqw, 11px) 2px 5px;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid #2c1806;
+  border-radius: 0;
   cursor: help;
 }
 
@@ -679,8 +812,7 @@ function handleEvolve(): void {
   color: #4e422c;
 }
 .se-ray.is-met {
-  background: color-mix(in srgb, var(--ray) 12%, #141410);
-  border-color: color-mix(in srgb, var(--ray) 55%, #2c1806);
+  border-bottom-color: color-mix(in srgb, var(--ray) 55%, #2c1806);
 }
 .se-ray.is-met .se-ray-ico {
   color: var(--ray);
@@ -712,11 +844,11 @@ function handleEvolve(): void {
    subline is why no separate verdict row is needed. */
 .se-fire {
   position: relative;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: clamp(3px, 0.5cqw, 6px);
-  padding: clamp(9px, 1.3cqw, 16px) clamp(10px, 1.6cqw, 20px);
+  gap: clamp(8px, 1.2cqw, 15px);
+  padding: clamp(10px, 1.4cqw, 16px) clamp(11px, 1.6cqw, 20px);
   width: 100%;
   color: #08130a;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
@@ -729,10 +861,8 @@ function handleEvolve(): void {
 }
 
 .se-fire-lbl {
-  display: flex;
-  align-items: center;
-  gap: clamp(5px, 0.8cqw, 10px);
-  font-size: clamp(15px, 2.3cqw, 28px);
+  display: block;
+  font-size: clamp(14px, 1.9cqw, 23px);
   font-weight: 900;
   line-height: 1.05;
   letter-spacing: 0.04em;
@@ -740,18 +870,34 @@ function handleEvolve(): void {
 }
 
 .se-fire-sub {
-  font-size: clamp(10px, 1.35cqw, 16px);
+  display: block;
+  margin-top: 3px;
+  font-size: clamp(10px, 1.15cqw, 14px);
   line-height: 1.2;
   letter-spacing: 0.02em;
   color: #10300c;
-  text-align: center;
+  text-align: left;
+}
+
+.se-fire-mark {
+  display: grid;
+  place-items: center;
+  width: clamp(22px, 3.2cqw, 32px);
+  height: clamp(22px, 3.2cqw, 32px);
+  font-size: clamp(17px, 2.4cqw, 24px);
+  line-height: 1;
+}
+
+.se-fire-arrow {
+  font-size: clamp(18px, 2.5cqw, 26px);
+  line-height: 1;
 }
 
 /* Blocked is not hidden — the button stays, so the target is always visible;
    its subline says what holds it. */
 .se-fire:disabled {
   color: #9a8f7c;
-  background: #16130c;
+  background: transparent;
   border-color: #3e200a;
   cursor: not-allowed;
 }
@@ -761,7 +907,7 @@ function handleEvolve(): void {
 
 .se-fire--done {
   color: #e8c040;
-  background: #1e1a06;
+  background: transparent;
   border-color: #e8c040;
   cursor: default;
 }
@@ -799,8 +945,8 @@ function handleEvolve(): void {
     padding: 8px 12px 10px;
   }
   .se-deck {
-    padding: 8px 9px;
-    gap: 6px;
+    padding: 8px 0;
+    gap: 8px;
   }
   .se-ray {
     padding: 4px 2px;
