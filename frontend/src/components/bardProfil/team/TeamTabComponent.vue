@@ -728,10 +728,28 @@ onUnmounted(() => {
         </Transition>
       </div>
 
+      <nav v-if="railFolded" class="team-role-folded-nav" aria-label="Team roles">
+        <button
+          v-for="(role, index) in ROLES"
+          :key="role.key"
+          type="button"
+          class="team-role-folded-button"
+          :class="{ 'team-role-folded-button--active': selectedRole === index }"
+          :style="{ '--role-color': role.color }"
+          :aria-label="`${role.label} details`"
+          :aria-current="selectedRole === index ? 'page' : undefined"
+          v-tip="`${role.label} details`"
+          @click="selectRole(index)"
+        >
+          <Icon :icon="role.icon" width="18" height="18" aria-hidden="true" />
+          <strong>{{ role.short }}</strong>
+        </button>
+      </nav>
       <SideRailHandle
+        v-else
         :label="TEAM_ROLE_RAIL_LABEL"
         :width-px="TEAM_ROLE_RAIL_HANDLE_PX"
-        :open="!railFolded"
+        :open="true"
         :title="railTitle"
         :total="roleCount"
         @toggle="toggleRoleRail"
@@ -771,6 +789,51 @@ onUnmounted(() => {
   position: relative;
   min-width: 0;
   min-height: 0;
+}
+.team-role-folded-nav {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  border-left: 3px solid #5c3310;
+  background: #111008;
+}
+.team-role-folded-button {
+  min-height: 0;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 2px;
+  border: 0;
+  border-bottom: 1px solid #493116;
+  background: #141410;
+  color: var(--role-color);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+.team-role-folded-button:last-child {
+  border-bottom: 0;
+}
+.team-role-folded-button:hover,
+.team-role-folded-button--active {
+  background: #1e1006;
+  color: var(--role-color);
+  box-shadow: inset 3px 0 0 var(--role-color);
+}
+.team-role-folded-button:focus-visible {
+  outline: 2px solid var(--role-color);
+  outline-offset: -2px;
+}
+.team-role-folded-button strong {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  line-height: 1;
 }
 .team-rail-slide {
   position: absolute;
@@ -885,7 +948,8 @@ onUnmounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .team-rail-slide,
-  .team-role-button {
+  .team-role-button,
+  .team-role-folded-button {
     transition: none;
   }
 }
