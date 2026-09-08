@@ -39,16 +39,18 @@ export interface VoyageFleetDeps {
 }
 
 /**
- * Was zuerst gesehen werden will: einsammeln > unterwegs > startbar > unbemannt.
+ * Was zuerst gesehen werden will: unterwegs > einsammeln > startbar > unbemannt.
  *
- * „Startbar" steht bewusst HINTER den laufenden Missionen, obwohl es eine Geste
- * verlangt und die laufende nur Geduld: `crewFor` bemannt jeden Vertrag
- * automatisch vor, also ist praktisch JEDER Vertrag startbar. Als Rang trägt das
- * keine Auskunft — es schöbe nur die Crews, die wirklich draussen sind, hinter
- * bis zu zehn Angebote. Startbereitschaft trägt deshalb die Kante der Karte,
- * nicht ihr Platz.
+ * Die laufende Crew führt: die erste Frage beim Öffnen ist „was ist gerade
+ * draussen", und ihre Antwort darf nicht hinter Karten stehen, die stillhalten.
+ *
+ * „Startbar" steht bewusst HINTER beiden, obwohl es eine Geste verlangt:
+ * `crewFor` bemannt jeden Vertrag automatisch vor, also ist praktisch JEDER
+ * Vertrag startbar. Als Rang trägt das keine Auskunft — es schöbe nur die Crews,
+ * die wirklich draussen sind, hinter bis zu zehn Angebote. Startbereitschaft
+ * trägt deshalb die Kante der Karte, nicht ihr Platz.
  */
-const RANK = { ready: 0, failed: 0, field: 1, sendable: 2, offer: 3 } as const
+const RANK = { field: 0, ready: 1, failed: 1, sendable: 2, offer: 3 } as const
 
 function rankOf(card: Pick<VoyageFleetCard, 'row' | 'sendable'>): number {
   if (card.row.state === 'offer') return card.sendable ? RANK.sendable : RANK.offer

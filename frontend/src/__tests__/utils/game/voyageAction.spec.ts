@@ -1,9 +1,16 @@
 import { describe, it, expect } from 'vitest'
-import { voyageMarkAction, type VoyageActionDeps } from '@/utils/game/voyageAction'
+import {
+  isVoyageCardArmed,
+  voyageGestureLabel,
+  voyageMarkAction,
+  type VoyageActionDeps,
+} from '@/utils/game/voyageAction'
 import {
   VOYAGE_ACTION_BLOCK_EXPIRED,
   VOYAGE_ACTION_BLOCK_NO_CREW,
   VOYAGE_ACTION_BLOCK_NO_SLOT,
+  VOYAGE_ACTION_COLLECT_LABEL,
+  VOYAGE_ACTION_SEND_LABEL,
 } from '@/config/constants'
 import type { AvailableExpeditionSlot, ExpeditionMission, VoyageRosterSubject } from '@/types'
 
@@ -140,5 +147,60 @@ describe('voyageMarkAction', () => {
       deps({ canStart: false, crewFor: () => [null, null] }),
     )
     expect(a).toEqual({ kind: 'blocked', reason: VOYAGE_ACTION_BLOCK_NO_SLOT })
+  })
+})
+
+/**
+ * Der zweite Klick auf eine Fleet-Karte. Die Bedingung steht neben der Regel,
+ * die er ausfuehrt — sonst gaebe es zwei Stellen, an denen entschieden wird,
+ * was ein Klick tut.
+ */
+describe('isVoyageCardArmed', () => {
+  it('ist scharf, sobald die Karte die gewaehlte Marke IST', () => {
+    expect(isVoyageCardArmed(3, 'a', 3, 'a')).toBe(true)
+  })
+
+  it('springt beim ersten Klick — andere Marke, dieselbe Galaxie', () => {
+    expect(isVoyageCardArmed(3, 'b', 3, 'a')).toBe(false)
+  })
+
+  /**
+   * Die Galaxiepruefung ist nicht doppelt gemoppelt: `runMarkAction` sucht in
+   * den Marken der GEWAEHLTEN Galaxie, und die Auswahl kann der Marke einen
+   * Zug hinterherhinken.
+   */
+  it('entwaffnet, solange eine andere Galaxie auf der Buehne steht', () => {
+    expect(isVoyageCardArmed(4, 'a', 3, 'a')).toBe(false)
+  })
+
+  it('ist ohne Marke nie scharf', () => {
+    expect(isVoyageCardArmed(3, null, 3, null)).toBe(false)
+  })
+})
+
+/**
+ * Marke und Fleet-Karte haengen dieselbe Nachschrift an ihren Namen. Zweimal
+ * ausgeschrieben liefen sie auseinander, sobald ein Ausgang dazukaeme — und
+ * zwar lautlos, weil sie nur in der Vorlesung steht.
+ */
+describe('voyageGestureLabel', () => {
+  it('spricht die Sprache der Aktionslabels', () => {
+    expect(voyageGestureLabel({ kind: 'send', offerId: 'a', crew: ['Ahri'] })).toBe(
+      ` — ${VOYAGE_ACTION_SEND_LABEL.toLowerCase()}`,
+    )
+    expect(
+      voyageGestureLabel({ kind: 'collect', missionId: 'm', reward: 1, success: true }),
+    ).toBe(` — ${VOYAGE_ACTION_COLLECT_LABEL.toLowerCase()}`)
+  })
+
+  it('nennt bei einer Sperre den GRUND, nicht die Geste', () => {
+    expect(voyageGestureLabel({ kind: 'blocked', reason: VOYAGE_ACTION_BLOCK_NO_SLOT })).toBe(
+      ` — ${VOYAGE_ACTION_BLOCK_NO_SLOT}`,
+    )
+  })
+
+  it('schweigt, wo nichts zu tun ist', () => {
+    expect(voyageGestureLabel({ kind: 'waiting', endsAt: 1 })).toBe('')
+    expect(voyageGestureLabel(null)).toBe('')
   })
 })

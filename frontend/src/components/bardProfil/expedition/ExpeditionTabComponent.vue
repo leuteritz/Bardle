@@ -36,6 +36,7 @@ import { useVoyageAtlas } from '@/composables/expedition/useVoyageAtlas'
 import { destinationFor } from '@/config/economy/expeditionDestinations'
 import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 import { voyageGalaxyState } from '@/utils/game/voyageFleet'
+import { isVoyageCardArmed } from '@/utils/game/voyageAction'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
   VOYAGE_COMMAND_BAR_H,
@@ -143,9 +144,23 @@ const railFolded = computed(
     (atlasWidth.value > 0 && atlasWidth.value < VOYAGE_RAIL_AUTOFOLD_WIDTH),
 )
 
-/** Der Sprung aus dem Fleet-Band. Reihenfolge ist bindend: `selectGalaxy`
- *  räumt `selectedKey` ab. */
+/**
+ * Der Sprung aus dem Fleet-Band — und beim ZWEITEN Mal die Geste selbst.
+ *
+ * Der erste Klick bringt nur hin: das Band mischt Galaxien, und ohne den Sprung
+ * handelte man blind an einem Ort, den man nicht sieht. Steht die Marke schon
+ * gewählt auf der Bühne, ist die Karte scharf und führt `runMarkAction` aus —
+ * dieselbe Regel, die die Marke ausführt, kein zweiter Weg daneben.
+ *
+ * Ein eigener Zustand braucht es dafür nicht: `selectGalaxy` räumt
+ * `selectedKey` beim Galaxiewechsel ab, „gewählt" heisst also immer „hier".
+ * Reihenfolge unten ist bindend — `selectGalaxy` zuerst, dann die Marke.
+ */
 function jumpToMark(galaxy: number, key: string | null) {
+  if (isVoyageCardArmed(galaxy, key, selectedGalaxy.value, selectedKey.value)) {
+    atlas.runMarkAction(key)
+    return
+  }
   atlas.selectGalaxy(galaxy)
   if (key) selectedKey.value = key
 }
@@ -383,6 +398,7 @@ function openMassSendUpgrade() {
         :collect-flashing="collectFlashing"
         :rows="railRows"
         :selected-key="selectedKey"
+        :actions="actions"
         @collect-all="atlas.collectAll"
         @send-all="atlas.sendAll"
         @open-upgrade="openMassSendUpgrade"

@@ -8,6 +8,8 @@
  */
 import {
   VOYAGE_ACTION_BLOCK_EXPIRED,
+  VOYAGE_ACTION_COLLECT_LABEL,
+  VOYAGE_ACTION_SEND_LABEL,
   VOYAGE_ACTION_BLOCK_NO_CREW,
   VOYAGE_ACTION_BLOCK_NO_SLOT,
   MS_PER_SECOND,
@@ -20,6 +22,38 @@ export interface VoyageActionDeps {
   /** Ist noch ein Missionsplatz frei? */
   canStart: boolean
   now: number
+}
+
+/**
+ * Was die Vorlesung an den Namen haengt. Marke und Fleet-Karte tragen dieselbe
+ * Geste, also auch dasselbe Wort — zweimal ausgeschrieben liefen sie
+ * auseinander, sobald ein Ausgang dazukaeme.
+ */
+export function voyageGestureLabel(action: VoyageMarkAction | null | undefined): string {
+  if (!action) return ''
+  if (action.kind === 'send') return ` — ${VOYAGE_ACTION_SEND_LABEL.toLowerCase()}`
+  if (action.kind === 'collect') return ` — ${VOYAGE_ACTION_COLLECT_LABEL.toLowerCase()}`
+  return action.kind === 'blocked' ? ` — ${action.reason}` : ''
+}
+
+/**
+ * Wann die Fleet-Karte HANDELT statt nur zu springen.
+ *
+ * Sie steht hier, nicht in der Komponente: wer diese Bedingung nachbaut, baut
+ * die zweite Stelle, an der entschieden wird, was ein Klick tut.
+ *
+ * Beide Haelften sind noetig. Der `pinKey` allein genuegte nicht — er ist ueber
+ * alle Galaxien eindeutig, aber `runMarkAction` sucht in den Marken der
+ * GEWAEHLTEN Galaxie; ohne die Galaxiepruefung liefe der Klick ins Leere,
+ * sobald die Auswahl noch nachzieht.
+ */
+export function isVoyageCardArmed(
+  galaxy: number,
+  pinKey: string | null,
+  selectedGalaxy: number,
+  selectedKey: string | null,
+): boolean {
+  return pinKey !== null && pinKey === selectedKey && galaxy === selectedGalaxy
 }
 
 export function voyageMarkAction(

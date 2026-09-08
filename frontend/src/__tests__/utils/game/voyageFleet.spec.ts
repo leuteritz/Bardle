@@ -106,7 +106,7 @@ describe('buildVoyageFleetCards', () => {
     expect(cards.map((c) => c.pinKey).sort()).toEqual(['a', 'b', 'c'])
   })
 
-  it('ordnet einsammelbar > unterwegs > bemannter Vertrag > unbemannter Vertrag', () => {
+  it('ordnet unterwegs > einsammelbar > bemannter Vertrag > unbemannter Vertrag', () => {
     const rows = [row({ galaxy: 1, contracts: 2, inField: 1, ready: 1 })]
     const offers = [slot(1, 'crewed'), slot(1, 'empty')]
     const cards = buildVoyageFleetCards(
@@ -120,7 +120,7 @@ describe('buildVoyageFleetCards', () => {
           o.requiredRoles.map(() => (o.id === 'crewed' ? 'Ahri' : null)),
       },
     )
-    expect(cards.map((c) => c.pinKey)).toEqual(['done', 'field', 'crewed', 'empty'])
+    expect(cards.map((c) => c.pinKey)).toEqual(['field', 'done', 'crewed', 'empty'])
   })
 
   it('ordnet innerhalb eines Rangs nach Galaxie absteigend', () => {

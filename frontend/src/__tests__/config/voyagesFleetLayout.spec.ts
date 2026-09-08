@@ -34,8 +34,6 @@ import {
   VOYAGE_FLEET_SEAT_OVERLAP,
   VOYAGE_FLEET_SEAT_RING,
   VOYAGE_FLEET_MARK_MAX_PX,
-  VOYAGE_FLEET_FIELD_MARK_W,
-  VOYAGE_FLEET_MARK_UNDERWAY,
   VOYAGE_FLEET_TIER_BAR_W,
   MATERIAL_ACCENT_HEX,
   EXPEDITION_TIERS,
@@ -57,6 +55,7 @@ import {
   VOYAGE_FLEET_TIP_STATUS,
   VOYAGE_FLEET_TIP_HINT,
   VOYAGE_VERDICT_COLORS,
+  VOYAGE_ACTION_COLLECT_LABEL,
   VOYAGE_ACTION_SEND_LABEL,
   EXPEDITION_LEDGER_RANKS,
   BOTTOM_BAR_SIDE_W,
@@ -368,35 +367,6 @@ describe('voyages fleet strip', () => {
   })
 
   /**
-   * Die laufende Mission ist die ENGSTE Fassung der Zeile: ihre Plakette
-   * verdrängt nichts, sondern stellt sich vor die Uhr — eine Crew, die schon
-   * draussen ist, hat trotzdem eine Quote. Drei Zellen also, wo jeder andere
-   * Zustand zwei trägt, und darum eine eigene Wand statt `_MARK_MAX_PX`.
-   */
-  it('trägt Marke, Frist und Aussicht der laufenden Mission', () => {
-    const field =
-      VOYAGE_FLEET_FIELD_MARK_W +
-      VOYAGE_FLEET_EARN_GAP +
-      VOYAGE_FLEET_TIME_W +
-      VOYAGE_FLEET_EARN_GAP +
-      VOYAGE_FLEET_ODDS_W
-    expect(field).toBeLessThanOrEqual(CARD_INNER_W)
-  })
-
-  /**
-   * Das Wort der laufenden Mission darf nicht mit dem des blockierten Vertrags
-   * kollidieren: „In field" neben „Field full" teilt sich das Hauptwort, und im
-   * Überflug trennt die beiden dann niemand mehr. Es spricht stattdessen die
-   * Sprache der Hover-Karte.
-   */
-  it('nennt die laufende Mission wie die Hover-Karte', () => {
-    expect(VOYAGE_FLEET_TIP_STATUS.waiting.toLowerCase()).toContain(
-      VOYAGE_FLEET_MARK_UNDERWAY.toLowerCase(),
-    )
-    expect(VOYAGE_FLEET_MARK_UNDERWAY.toLowerCase()).not.toContain('field')
-  })
-
-  /**
    * Die CREW-Zeile, und sie trägt nicht nur den Trupp: rechts daneben steht die
    * Reisedauer. Der Boden ist der volle Trupp — `EXPEDITION_TIERS.epic.maxRoles`
    * Sitze. Wächst dort jemals eine Stufe, bricht dieser Test, und das ist sein
@@ -456,12 +426,12 @@ describe('voyages fleet strip', () => {
   })
 
   /**
-   * Ein Klick auf die Fleet-Karte SPRINGT zur Marke — er sendet nicht und
+   * Der ERSTE Klick auf die Fleet-Karte springt zur Marke — er sendet nicht und
    * sammelt nicht ein. Die Blase sagt dort deshalb den Zustand, nicht die
-   * Geste; „Click to send" gehört der Marke. Jeder Ausgang braucht sein Wort,
-   * ausser dem blockierten: dort ist der GRUND die Auskunft.
+   * Geste; „Click to send" gehört dem zweiten Klick. Jeder Ausgang braucht sein
+   * Wort, ausser dem blockierten: dort ist der GRUND die Auskunft.
    */
-  it('gibt jedem Ausgang ein Wort für den Anker, der nicht handelt', () => {
+  it('gibt jedem Ausgang ein Wort für den Anker, der noch nicht handelt', () => {
     const outcomes = Object.keys(VOYAGE_VERDICT_COLORS).filter((k) => k !== 'blocked')
     expect(Object.keys(VOYAGE_FLEET_TIP_STATUS).sort()).toEqual(outcomes.sort())
     for (const word of Object.values(VOYAGE_FLEET_TIP_STATUS)) {
@@ -469,6 +439,30 @@ describe('voyages fleet strip', () => {
       expect(word.toLowerCase()).not.toContain('click')
     }
     expect(VOYAGE_FLEET_TIP_HINT.toLowerCase()).toContain('click')
+  })
+
+  /**
+   * Der Zwei-Schritt braucht ZWEI Wortlaute, und sie duerfen sich nicht
+   * ueberschneiden: die unscharfe Karte kuendigt den SPRUNG an, die scharfe die
+   * GESTE. Faellt das eine mit dem anderen zusammen, verspricht die Blase beim
+   * ersten Klick etwas, das erst der zweite tut.
+   *
+   * Gebunden wird auch die Verdrahtung: ohne `:armed` bliebe die Blase beim
+   * Default und saehe die Schaerfe nie — der Fehler waere still, weil die
+   * Fussnote weiter richtig aussieht.
+   */
+  it('trennt die Ansage des Sprungs von der Ansage der Geste', () => {
+    expect(VOYAGE_FLEET_TIP_HINT).not.toBe(VOYAGE_ACTION_SEND_LABEL)
+    expect(VOYAGE_FLEET_TIP_HINT).not.toBe(VOYAGE_ACTION_COLLECT_LABEL)
+    for (const word of Object.values(VOYAGE_FLEET_TIP_STATUS)) {
+      expect(word).not.toBe(VOYAGE_ACTION_COLLECT_LABEL)
+    }
+
+    const dir = join(__dirname, '..', '..', 'components', 'bardProfil', 'expedition')
+    const card = readFileSync(join(dir, 'ExpeditionFleetCard.vue'), 'utf8')
+    const tip = readFileSync(join(dir, 'ExpeditionSubjectTooltip.vue'), 'utf8')
+    expect(card).toContain(':armed="selected"')
+    expect(tip).toContain('!armed')
   })
 
   /**
