@@ -408,9 +408,10 @@ describe('champion levels — store behaviour', () => {
     }
   })
 
-  it('reaches the level cap with a single admin MAX press', () => {
-    // the MAX button asks for CHAMPION_LEVEL_MAX_CAP steps — that has to land on
-    // the cap from level 1, whatever the cap currently is
+  it('reaches the absolute cap with a single admin MAX press', () => {
+    // Der MAX-Knopf fragt CHAMPION_LEVEL_MAX_CAP Schritte an und muss von Level 1
+    // aus dort landen — auch in Galaxie 1, wo der Fortschrittsdeckel noch bei 50
+    // steht. Genau diese Ausnahme ist der Zweck des Werkzeugs.
     const levelStore = useChampionLevelStore()
     const battleStore = useBattleStore()
     const galaxyStore = useGalaxyStore()
@@ -418,8 +419,22 @@ describe('champion levels — store behaviour', () => {
     battleStore.setHeaderSlot(2, MID_LOW)
 
     levelStore.adminLevelUpTeam(CHAMPION_LEVEL_MAX_CAP)
-    expect(levelStore.levelOf(MID_LOW)).toBe(levelStore.levelCap)
+    expect(levelStore.levelOf(MID_LOW)).toBe(CHAMPION_LEVEL_MAX_CAP)
+    expect(levelStore.levelOf(MID_LOW)).toBeGreaterThan(levelStore.levelCap)
     expect(levelStore.adminLevelUpTeam(CHAMPION_LEVEL_MAX_CAP)).toBe(0)
+  })
+
+  it('leaves the normal buying path on the galaxy cap', () => {
+    // Die Ausnahme gilt NUR der Abkürzung: wer Level kauft, bleibt geklemmt.
+    const levelStore = useChampionLevelStore()
+    const battleStore = useBattleStore()
+    const galaxyStore = useGalaxyStore()
+    galaxyStore.currentGalaxy = 1
+    battleStore.setHeaderSlot(2, MID_LOW)
+
+    levelStore.adminLevelUpTeam(CHAMPION_LEVEL_MAX_CAP)
+    expect(levelStore.canLevelUp(MID_LOW)).toBe(false)
+    expect(levelStore.blockReasonOf(MID_LOW)).toBe('cap')
   })
 
   it('pays the main in full and its allies a share, benched champions nothing', () => {
@@ -686,19 +701,21 @@ describe('champion levels — admin team level-up', () => {
     expect(levelStore.levelOf(TOP_LOW)).toBe(1)
   })
 
-  it('stops at the level cap and reports the reduced count', () => {
+  it('stops at the absolute cap and reports the reduced count', () => {
+    // Der Deckel des Werkzeugs ist CHAMPION_LEVEL_MAX_CAP, nicht der
+    // Galaxie-Deckel — hier steht der bei 1 Galaxie noch auf START_CAP.
     const levelStore = useChampionLevelStore()
     const battleStore = useBattleStore()
     const galaxyStore = useGalaxyStore()
     galaxyStore.currentGalaxy = 1
     battleStore.setHeaderSlot(2, MID_LOW)
 
-    levelStore.adminLevelUpTeam(CHAMPION_LEVEL_START_CAP - 2)
-    expect(levelStore.levelOf(MID_LOW)).toBe(CHAMPION_LEVEL_START_CAP - 1)
+    levelStore.adminLevelUpTeam(CHAMPION_LEVEL_MAX_CAP - 2)
+    expect(levelStore.levelOf(MID_LOW)).toBe(CHAMPION_LEVEL_MAX_CAP - 1)
 
     // asking for 10 more only grants the single level left below the cap
     expect(levelStore.adminLevelUpTeam(10)).toBe(1)
-    expect(levelStore.levelOf(MID_LOW)).toBe(CHAMPION_LEVEL_START_CAP)
+    expect(levelStore.levelOf(MID_LOW)).toBe(CHAMPION_LEVEL_MAX_CAP)
     // and pressing again is a no-op rather than an error
     expect(levelStore.adminLevelUpTeam(5)).toBe(0)
   })

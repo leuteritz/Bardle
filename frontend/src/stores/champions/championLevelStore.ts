@@ -527,15 +527,21 @@ export const useChampionLevelStore = defineStore('championLevel', {
     /**
      * Admin/testing shortcut: raises every champion assigned to the team —
      * mains and allies alike — by `steps` levels, free of charge and without
-     * requiring banked XP. Champions already at the level cap are skipped, so
-     * the button is safe to spam. Milestone perks still open normally.
+     * requiring banked XP. Milestone perks still open normally.
+     *
+     * Es klemmt gegen CHAMPION_LEVEL_MAX_CAP, NICHT gegen `levelCap`: der
+     * Galaxie-Deckel ist eine Fortschrittsachse und beginnt bei 50, die obersten
+     * Rang- und Perk-Stufen liegen aber auf 60. Über den Regler wären sie sonst
+     * erst nach drei Galaxien prüfbar — genau das, wofür das Werkzeug da ist.
+     * Der normale Kaufweg (canLevelUp, blockReasonOf, xpBarOf) hält den
+     * Galaxie-Deckel unverändert ein.
      *
      * Returns how many levels were actually granted.
      */
     adminLevelUpTeam(steps: number): number {
       if (steps <= 0) return 0
       const battleStore = useBattleStore()
-      const cap = this.levelCap
+      const cap = CHAMPION_LEVEL_MAX_CAP
 
       // A champion could in principle sit in more than one place; a set keeps
       // it from being levelled twice in a single press.

@@ -95,12 +95,15 @@ function toggleAutoLevel() {
 }
 
 // ── Admin: level the whole team ──────────────────────────────────────────────
-// Testing shortcut — grants levels for free, stops at the cap. Lives on the
-// board rather than the admin tab because that is where the levels are read.
+// Testing shortcut — grants levels for free up to CHAMPION_LEVEL_MAX_CAP. Der
+// Galaxie-Deckel (levelStore.levelCap) gilt hier bewusst NICHT, siehe
+// adminLevelUpTeam(); Zähler und Tooltip müssen dieselbe Grenze nennen wie die
+// Action, sonst stehen die Knöpfe grau, während sie noch etwas täten. Lives on
+// the board rather than the admin tab because that is where the levels are read.
 const adminLevelSteps = ADMIN_TEAM_LEVEL_STEPS
 /** Team members that could still gain a level — 0 disables the buttons. */
 const adminLevelableCount = computed(() => {
-  const cap = levelStore.levelCap
+  const cap = CHAMPION_LEVEL_MAX_CAP
   const roster = new Set<string>()
   for (const main of battleStore.headerSlots) if (main) roster.add(main)
   for (const row of secondarySlots.value) for (const ally of row) if (ally) roster.add(ally)
@@ -405,7 +408,7 @@ watch(
         :title="
           adminLevelableCount === 0
             ? 'Every team champion is at the level cap'
-            : `Raise ${adminLevelableCount} champion(s) straight to level ${levelStore.levelCap}`
+            : `Raise ${adminLevelableCount} champion(s) straight to level ${CHAMPION_LEVEL_MAX_CAP}`
         "
         @click="adminLevelTeam(CHAMPION_LEVEL_MAX_CAP)"
       >
@@ -558,9 +561,11 @@ watch(
 
 /* ── admin strip — muted red-brown so it never competes with the gold game
    actions. Bottom left, in the corner the shop door used to share with it. ── */
+/* Auf derselben Grundlinie wie die Aktionsspalte rechts (.sigil-actions) — die
+   beiden sind das Paar unten am Board, und links blieb sonst ein toter Streifen. */
 .sigil-admin {
   position: absolute;
-  bottom: 82px;
+  bottom: 22px;
   left: 26px;
   z-index: 6;
   display: flex;
@@ -642,6 +647,10 @@ watch(
    cannot share that line, and the CTA is the time-critical one, so it keeps the
    baseline. */
 .sigil-board:has(.brb, .btrb) .sigil-actions {
+  bottom: 92px;
+}
+/* Die Admin-Leiste teilt die Grundlinie und weicht deshalb mit aus. */
+.sigil-board:has(.brb, .btrb) .sigil-admin {
   bottom: 92px;
 }
 .sigil-action {
