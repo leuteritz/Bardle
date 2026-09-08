@@ -3,7 +3,6 @@ import JourneyHeaderBand from './JourneyHeaderBand.vue'
 import SunStage from './SunStage.vue'
 import WayfinderNowCard from './WayfinderNowCard.vue'
 import KpiCard from './KpiCard.vue'
-import BuffsFooter from './BuffsFooter.vue'
 import type { StatCategoryId, StatCategoryView } from '@/types'
 
 /**
@@ -24,14 +23,13 @@ const emit = defineEmits<{ 'open-records': [category: StatCategoryId | null] }>(
         <KpiCard :categories="categories" @open="emit('open-records', $event)" />
       </aside>
     </div>
-    <BuffsFooter />
   </div>
 </template>
 
 <style scoped>
 .jt-overview {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   height: 100%;
   min-height: 0;
   min-width: 0;

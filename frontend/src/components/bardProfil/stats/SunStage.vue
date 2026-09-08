@@ -19,6 +19,7 @@ import {
 import { useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
+import BuffsFooter from './BuffsFooter.vue'
 import { gameNow } from '@/utils/game/gameClock'
 
 /** Die Sonne auf der Journey-Übersicht — die EINZIGE Stelle, an der sie evolviert. */
@@ -303,6 +304,10 @@ function handleEvolve(): void {
       <!-- /TEMP -->
     </div>
 
+    <div class="se-effects">
+      <BuffsFooter />
+    </div>
+
     <!-- ═ 2 · who, and where on the road ════════════════════════ -->
     <div class="se-ident">
       <span class="se-ident-name">{{ phaseName }}</span>
@@ -435,7 +440,7 @@ function handleEvolve(): void {
      untereinander fraß die Konsole der Sonne die Höhe weg (gemessen 37 px Disc) */
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(420px, 52%);
-  grid-template-rows: minmax(0, 1fr) auto auto;
+  grid-template-rows: minmax(0, 1fr) auto auto auto;
   /* eigene Eigenschaften NIE in cqw: das Container-Element misst gegen den Vorfahren */
   column-gap: 18px;
   row-gap: 10px;
@@ -516,9 +521,15 @@ function handleEvolve(): void {
 /* ── 2 · identity and journey ────────────────────────────────────
    Name on the left in the phase's own colour, step count on the right. The
    name is the largest word on the panel — it is what the sun IS. */
-.se-ident {
+.se-effects {
   grid-column: 1;
   grid-row: 2;
+  min-width: 0;
+}
+
+.se-ident {
+  grid-column: 1;
+  grid-row: 3;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -552,7 +563,7 @@ function handleEvolve(): void {
    left), so the chain stays flush at any width without separate positioning. */
 .se-rail {
   grid-column: 1;
-  grid-row: 3;
+  grid-row: 4;
   display: flex;
   align-items: center;
 }
