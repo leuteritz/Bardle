@@ -42,6 +42,16 @@ describe('Voyages: Live-Sprung gegen Atlas-Sprung', () => {
     expect(ui.pendingGalaxyTarget).toEqual({ galaxy: 7, pinKey: 'mark-1' })
   })
 
+  it('oeffnet den Galaxy-Tab per Hand immer auf dem laufenden Lauf', () => {
+    const ui = useUiStore()
+    ui.requestOpenGalaxyTab(7, 'mark-1')
+    ui.setBardTab('team')
+    ui.setBardTab('galaxy')
+
+    expect(ui.pendingGalaxyTarget).toBeNull()
+    expect(ui.pendingGalaxyLive).toBe(true)
+  })
+
   it('wird EINMAL verbraucht', () => {
     const ui = useUiStore()
     ui.requestOpenGalaxyLive()
