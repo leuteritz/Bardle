@@ -27,6 +27,7 @@ import {
   CHAMPION_LEVEL_MAX_CAP,
   CHAMPION_REGALIA_SIZE_ALLY,
   CHAMPION_REGALIA_SIZE_SPLASH,
+  MAX_STAR_LEVEL,
   ROLES,
   SKIN_ORIGINAL,
   SWORN_ALLY_COUNT,
@@ -186,6 +187,46 @@ const activeAffinities = computed(() => {
       })),
   ]
 })
+// Rang und Zugehoerigkeiten stehen in EINER Reihe — der Rang zuerst.
+interface IdentityMark {
+  id: string
+  kind: string
+  name: string
+  icon: string
+  color: string
+  tip: string
+  crowned: boolean
+  steps?: number[]
+  count?: number
+  stars?: number
+}
+const identityMarks = computed<IdentityMark[]>(() => [
+  ...(tier.value
+    ? [
+        {
+          id: `tier-${tier.value.id}`,
+          kind: 'Tier',
+          name: tier.value.name,
+          icon: tier.value.icon,
+          color: tier.value.color,
+          tip: `Tier ${tier.value.starLevel}: ${tier.value.name} · ${tier.value.description}`,
+          crowned: tier.value.starLevel >= MAX_STAR_LEVEL,
+          stars: tier.value.starLevel,
+        },
+      ]
+    : []),
+  ...activeAffinities.value.map((entry) => ({
+    id: entry.id,
+    kind: entry.kind,
+    name: String(entry.name),
+    icon: entry.icon,
+    color: entry.color,
+    tip: `${entry.kind}: ${entry.name} · ${entry.bonus}`,
+    crowned: entry.crowned,
+    steps: entry.steps,
+    count: entry.count,
+  })),
+])
 const equippedSkin = computed(() =>
   champion.value ? skinStore.getSelectedSkin(champion.value) : SKIN_ORIGINAL,
 )
@@ -582,35 +623,40 @@ function perkStatLine(perk: ChampionPerkDef): string {
           <div class="sdp-identity">
             <p class="sdp-seat-name">{{ subjectSeatLabel }}</p>
             <h2>{{ champion }}</h2>
-            <div class="sdp-meta">
-              <span v-if="tier" :style="{ color: tier.color }">★ {{ tier.name }}</span>
-            </div>
             <div
-              v-if="activeAffinities.length"
+              v-if="identityMarks.length"
               class="sdp-affinity-list"
-              aria-label="Active traits and origins"
+              :class="{ 'sdp-affinity-list--dense': identityMarks.length >= 4 }"
+              aria-label="Rank, origins and traits"
             >
               <div
-                v-for="affinity in activeAffinities"
-                :key="affinity.id"
+                v-for="mark in identityMarks"
+                :key="mark.id"
                 class="sdp-affinity"
-                :class="{ 'sdp-affinity--crowned': affinity.crowned }"
-                :style="{ '--ac': affinity.color }"
-                v-tip="`${affinity.kind}: ${affinity.name} · ${affinity.bonus}`"
+                :class="{ 'sdp-affinity--crowned': mark.crowned }"
+                :style="{ '--ac': mark.color }"
+                v-tip="mark.tip"
               >
                 <span class="sdp-affinity-crest" aria-hidden="true"
-                  ><Icon :icon="affinity.icon" width="22" height="22"
+                  ><Icon :icon="mark.icon" width="22" height="22"
                 /></span>
                 <span class="sdp-affinity-copy">
                   <span class="sdp-affinity-head"
-                    ><small>{{ affinity.kind }}</small
-                    ><span class="sdp-affinity-steps"
+                    ><small>{{ mark.kind }}</small
+                    ><span v-if="mark.stars" class="sdp-affinity-stars"
                       ><i
-                        v-for="step in affinity.steps"
+                        v-for="n in MAX_STAR_LEVEL"
+                        :key="n"
+                        :class="{ 'sdp-affinity-star--lit': n <= mark.stars }"
+                        >★</i
+                      ></span
+                    ><span v-else class="sdp-affinity-steps"
+                      ><i
+                        v-for="step in mark.steps"
                         :key="step"
-                        :class="{ 'sdp-affinity-step--lit': affinity.count >= step }" /></span
-                    ><em>{{ affinity.count }}</em></span
-                  ><strong>{{ affinity.name }}</strong>
+                        :class="{ 'sdp-affinity-step--lit': (mark.count ?? 0) >= step }" /></span
+                    ><em v-if="mark.count">{{ mark.count }}</em></span
+                  ><strong>{{ mark.name }}</strong>
                 </span>
               </div>
             </div>
@@ -1106,9 +1152,43 @@ function perkStatLine(perk: ChampionPerkDef): string {
    Synergie-Sprache des Team-Panels: Hex-Plakette, Akzentkante, Stufenpunkte. */
 .sdp-affinity-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
   gap: 8px;
   margin-top: 10px;
+}
+/* Vier Marken (Rang plus drei Zugehoerigkeiten) passen nur enger in EINE Zeile. */
+.sdp-affinity-list--dense {
+  grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
+  gap: 6px;
+}
+.sdp-affinity-list--dense .sdp-affinity {
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 6px;
+  padding: 6px 7px;
+}
+.sdp-affinity-list--dense .sdp-affinity-crest {
+  width: 26px;
+  height: 29px;
+}
+.sdp-affinity-list--dense .sdp-affinity strong {
+  font-size: 17px;
+}
+.sdp-affinity-list--dense .sdp-affinity-head {
+  gap: 4px;
+}
+.sdp-affinity-list--dense .sdp-affinity-head small {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+}
+.sdp-affinity-list--dense .sdp-affinity-steps {
+  gap: 3px;
+}
+.sdp-affinity-list--dense .sdp-affinity-steps i {
+  width: 6px;
+  height: 6px;
+}
+.sdp-affinity-list--dense .sdp-affinity em {
+  font-size: 12px;
 }
 .sdp-affinity {
   min-width: 0;
@@ -1150,6 +1230,10 @@ function perkStatLine(perk: ChampionPerkDef): string {
   align-items: center;
   gap: 7px;
 }
+/* Nichts in der Kopfzeile gibt nach — sonst frisst die Reihe den Zaehler an. */
+.sdp-affinity-head > * {
+  flex: 0 0 auto;
+}
 .sdp-affinity-head small {
   color: #a59675;
   font-size: 9px;
@@ -1158,10 +1242,27 @@ function perkStatLine(perk: ChampionPerkDef): string {
   text-transform: uppercase;
 }
 /* Ein Punkt je Schwelle — die erleuchteten sagen die erreichte Stufe. */
-.sdp-affinity-steps {
+.sdp-affinity-steps,
+.sdp-affinity-stars {
   display: flex;
   gap: 4px;
   margin-right: auto;
+}
+/* Der Rang braucht die volle Skala: die Tier-Farben ★2 und ★3 liegen zu dicht
+   beieinander, um die Stufe allein zu tragen. */
+.sdp-affinity-stars {
+  gap: 1px;
+  color: #3b3226;
+  font-size: 10px;
+  font-style: normal;
+  line-height: 1;
+}
+.sdp-affinity-stars i {
+  font-style: normal;
+}
+.sdp-affinity-star--lit {
+  color: color-mix(in srgb, var(--ac) 74%, #fff);
+  text-shadow: 0 0 7px color-mix(in srgb, var(--ac) 70%, transparent);
 }
 /* Ohne Rand — bei 8 px trennt nur die Fuellung erreicht von offen. */
 .sdp-affinity-steps i {
