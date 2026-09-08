@@ -1427,7 +1427,10 @@ export const JOURNEY_OVERVIEW_KPI_TILES = JOURNEY_KPI_TILES.filter(
 export const JOURNEY_OVERVIEW_KPI_GRID = {
   COLS: 3,
   ROWS: 3,
+  TRACKS: 6,
 } as const
+
+export const JOURNEY_OVERVIEW_KPI_HERO_COUNT = 3
 
 /** Raster der Stats-Karte: fest, die Zeilen teilen die Höhe, Schrift skaliert per cqh. */
 export const JOURNEY_KPI_GRID = {
