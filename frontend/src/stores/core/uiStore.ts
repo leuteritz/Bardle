@@ -113,6 +113,10 @@ export const useUiStore = defineStore('ui', () => {
     // Nur das AUFKLAPPEN ist gesperrt — ein Reiterwechsel im offenen Profil
     // (Admin-Wege) bleibt frei.
     if (bardModalLocked.value && bardActiveTab.value === null) return
+    if (id === 'galaxy') {
+      pendingGalaxyTarget.value = null
+      pendingGalaxyLive.value = true
+    }
     bardActiveTab.value = id
     // navigating by hand ends the offer to jump back to the battle tab
     battleTabReturnPending.value = false
