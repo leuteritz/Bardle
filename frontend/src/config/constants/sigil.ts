@@ -273,6 +273,17 @@ export const TEAM_SIGIL_ROSTER_GRIP_WIDTH = 44
 /** Fold/unfold duration (ms). One-shot, so a height transition is affordable —
  *  the strip's own contents cross-fade on transform/opacity alongside it. */
 export const TEAM_SIGIL_ROSTER_FOLD_MS = 240
+/** Right-edge role rail handle — shared with the profile side-rail language. */
+export const TEAM_ROLE_RAIL_HANDLE_PX = 44
+/** Rail slide duration for the team role detail page. */
+export const TEAM_ROLE_RAIL_SLIDE_MS = 280
+export const TEAM_ROLE_RAIL_LABEL = 'Roles'
+export const TEAM_ROLE_RAIL_OPEN_TITLE = 'Open role details'
+export const TEAM_ROLE_RAIL_CLOSE_TITLE = 'Close role details'
+/** Height reserved for the five-button role index above the detail page. */
+export const TEAM_ROLE_RAIL_NAV_HEIGHT = 64
+/** Compact hero height so the detail workspace remains usable on flat desktops. */
+export const TEAM_ROLE_RAIL_HERO_COMPACT_HEIGHT = 380
 /** Width (px) of the team synergies panel — the other, narrower side panel. */
 export const TEAM_SIGIL_SYNERGIES_PANEL_WIDTH = 460
 /** Width (px) of the expeditions rail — same rail as the details page, so the
