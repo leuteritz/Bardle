@@ -404,6 +404,8 @@ function dismissPanels() {
   }
   selectedRole.value = null
   synergiesOpen.value = false
+  // Den Override freigeben, sonst bliebe die Zone offen und das Board links.
+  railChoice.value = null
 }
 
 function openSynergies() {
@@ -738,7 +740,6 @@ onUnmounted(() => {
           v-tip="`${role.label} details`"
           @click="handleRoleRailClick(index)"
         >
-          <Icon :icon="role.icon" class="trr-icon" width="18" height="18" aria-hidden="true" />
           <strong class="trr-word">{{ role.short }}</strong>
         </button>
       </nav>
@@ -797,7 +798,6 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(8px, 1.1vh, 16px);
   padding: 10px 2px;
   border: 0;
   border-left: 3px solid color-mix(in srgb, var(--role-color) 55%, #241a0c);
@@ -832,16 +832,6 @@ onUnmounted(() => {
   outline: 2px solid var(--role-color);
   outline-offset: -2px;
 }
-.trr-icon {
-  width: clamp(19px, 1.9vh, 26px);
-  height: clamp(19px, 1.9vh, 26px);
-  opacity: 0.75;
-  transition: opacity 0.14s ease;
-}
-.team-role-rail-button:hover .trr-icon,
-.team-role-rail-button--active .trr-icon {
-  opacity: 1;
-}
 /* Gekippt statt geschrumpft: das Segment ist bis 380px hoch, aber nur 37px
    breit nutzbar. Eigenständig gegenüber `.sr-handle-word` — das ist der EINE
    Fold-Griff mit EINEM Wort, dies eine Fünf-Wege-Navigation je Rollenfarbe. */
@@ -849,7 +839,7 @@ onUnmounted(() => {
   writing-mode: vertical-rl;
   text-orientation: mixed;
   transform: rotate(180deg);
-  font-size: clamp(15px, 1.55vh, 20px);
+  font-size: clamp(16px, 1.75vh, 22px);
   font-weight: 800;
   letter-spacing: 0.26em;
   line-height: 1;
