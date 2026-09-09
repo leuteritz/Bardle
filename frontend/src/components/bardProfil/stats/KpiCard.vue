@@ -86,7 +86,7 @@ const gridStyle = {
       <Icon icon="lucide:list" width="18" height="18" class="jt-kpis-sys" aria-hidden="true" />
       <span v-ink-center class="jt-kpis-title">Stats</span>
       <button type="button" class="jt-kpis-more" @click="emit('open', null)">
-        All records →
+        All stats →
       </button>
     </div>
     <div class="jt-kpi-grid" role="list" :style="gridStyle">
@@ -98,7 +98,7 @@ const gridStyle = {
         class="jt-kpi"
         :class="{ 'jt-kpi--hero': index < JOURNEY_OVERVIEW_KPI_HERO_COUNT }"
         :style="{ '--accent': t.accent }"
-        v-tip="t.hint ?? `${t.fullLabel} — open Records`"
+        v-tip="t.hint ?? `${t.fullLabel} — open Stats`"
         @click="emit('open', t.category)"
       >
         <img

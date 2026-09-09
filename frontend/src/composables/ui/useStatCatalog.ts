@@ -1591,7 +1591,7 @@ export function useStatCatalog(query: Ref<string>): {
             (s) =>
               s.label.toLowerCase().includes(q) ||
               s.value.toLowerCase().includes(q) ||
-              (s.keywords ?? '').includes(q) ||
+              (s.keywords ?? '').toLowerCase().includes(q) ||
               def.label.toLowerCase().includes(q),
           )
         : all
