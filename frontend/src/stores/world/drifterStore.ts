@@ -24,7 +24,10 @@ import {
   DRIFTER_ROUTES,
   DRIFTER_DEPTH_CHANCE,
   GAME_TICK_INTERVAL_MS,
+  PLANET_ROLES,
 } from '@/config/constants'
+import { logDrifterNetted } from '@/config/ui/eventLog'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
@@ -243,15 +246,38 @@ export const useDrifterStore = defineStore('drifter', {
       }
     },
 
-    /** Drop drifters whose flight has finished without being collected. */
+    /**
+     * Drop drifters whose flight has finished without being collected.
+     *
+     * Ein Weir-Planet holt einen Teil davon doch noch ein — derselbe
+     * Belohnungspfad wie ein Klick, nur ohne Mauszeiger. `lastCollect` bleibt
+     * dabei unangetastet: die Sammel-Explosion hängt an einer Klickposition,
+     * und die gibt es hier nicht. Die Meldung trägt der Eventlog.
+     */
     expireFlownDrifters(): void {
       const now = this.drifterNow
       const gone = this.active.filter((d) => now >= d.spawnedAt + d.flightMs)
       if (gone.length === 0) return
-      this.totalDriftersMissed += gone.length
-      for (const d of gone) noteDrifterOnMap(d.defId, 'drifter-missed')
       this.active = this.active.filter((d) => now < d.spawnedAt + d.flightMs)
-      const last = gone[gone.length - 1]
+
+      const catchChance = usePlanetShopStore().planetDrifterCatchChance
+      const missed: typeof gone = []
+      for (const d of gone) {
+        const def = catchChance > 0 && Math.random() < catchChance ? getDrifter(d.defId) : null
+        if (!def) {
+          missed.push(d)
+          continue
+        }
+        this.totalDriftersCollected++
+        noteDrifterOnMap(def.id, 'drifter-caught')
+        this._applyReward(def)
+        logDrifterNetted(PLANET_ROLES.drift_weir.name, def.name, def.effectLine)
+      }
+
+      if (missed.length === 0) return
+      this.totalDriftersMissed += missed.length
+      for (const d of missed) noteDrifterOnMap(d.defId, 'drifter-missed')
+      const last = missed[missed.length - 1]
       this.lastExpired = {
         defId: last.defId,
         at: gameNow(),

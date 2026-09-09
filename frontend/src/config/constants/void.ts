@@ -395,7 +395,46 @@ export const VOID_PLANET_RIDER: Record<PlanetRoleType, VoidPlanetRider> = {
   harvest_node: { verb: 'scavenge', damageMult: 0.5, takesChip: true },
   resonance_tower: { verb: 'splash', damageMult: 1, takesChip: true },
   expedition_relay: { verb: 'banish', damageMult: 0, takesChip: true },
+  // Die drei Zustandsverben unten sind bereits vorhandene Infrastruktur
+  // (`wardedUntil`, `cursedUntil`, `focusedUntil`) — bis hierher trug sie nur
+  // der Kader. Der Turret bleibt mit 2.2 die stärkste Salve; kein Planet, der
+  // etwas anderes verspricht, überholt ihn im Schaden.
+  void_bastion: { verb: 'ward', damageMult: 0.4, takesChip: false },
+  omen_scryer: { verb: 'curse', damageMult: 0.5, takesChip: true },
+  drift_weir: { verb: 'focus', damageMult: 0.6, takesChip: true },
+  transmuter: { verb: 'smelt', damageMult: 1.4, takesChip: true },
+  meridian_spire: { verb: 'sear', damageMult: 1.8, takesChip: true },
+  orbit_obelisk: { verb: 'smite', damageMult: 1.2, takesChip: true },
 }
+
+/** Wie lange ein Bastion die Drossel eines Wesens stilllegt. Kürzer als Supports
+ *  Ward, und wie jede Planetenwirkung unter `VOID_PLANET_CONTACT_REARM_MS`. */
+export const VOID_PLANET_WARD_MS = 8_000
+
+/** Wie lange der Fluch des Scryers hält. Setzt NUR `cursedUntil` — die Bremse
+ *  daneben gehört der Zeitkapsel, sonst täten zwei Rollen dasselbe. */
+export const VOID_PLANET_CURSE_MS = 8_000
+
+/** Wie lange die Marke des Weirs den Orbit-Beschuss bündelt. */
+export const VOID_PLANET_FOCUS_MS = 7_000
+
+/** Verweildauer, die ein am Meridian versengtes Wesen der Sonne zuführt.
+ *  Läuft wie jede Abkürzung gegen `DWELL_SKIP_PHASE_FRACTION`. */
+export const VOID_PLANET_SEAR_DWELL_MS = 1_500
+
+/** Unter diesem Anteil seiner maxHp zerspringt ein Wesen am Obelisken.
+ *  Deutlich tiefer als `VOID_JUNGLE_EXECUTE_PCT` — ein Stein zielt nicht. */
+export const VOID_PLANET_SMITE_EXECUTE_PCT = 0.1
+
+/**
+ * Der Deckel über ALLE Milderungsquellen zusammen — Forge UND Bastionen.
+ *
+ * Bewusst über `FORGE_VOID_RELIEF_CAP` (0.6): der Forge-Deckel begrenzt eine
+ * einzelne Quelle, dieser die Summe. Läge er gleich, wäre ein Bastion neben
+ * voll ausgebauter Forge ein toter Slot — und die Rollenwahl ist permanent.
+ * Bei 0.75 landet ein Viertel des Zolls immer, der Void verschwindet nie.
+ */
+export const VOID_TOLL_RELIEF_CAP = 0.75
 
 /** Reichweite des Resonator-Splashes in px, um den getroffenen Körper herum. */
 export const VOID_PLANET_SPLASH_RADIUS_PX = 180

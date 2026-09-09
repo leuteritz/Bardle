@@ -3,6 +3,8 @@
 // Batterie und Striker-Squad.
 
 import type { ChampionRole, PlanetRole, PlanetRoleType, JungleBuffDef } from '@/types'
+import { OMEN_UNLOCK_LEVEL } from './omens'
+import { VOID_UNLOCK_LEVEL } from './void'
 
 /** Eigene, tiefere Warnschwelle der Striker-Plakette im Star-Fight. */
 export const STRIKER_HP_LOW_PCT = 25
@@ -643,6 +645,73 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
     color: '#c09040',
     image: '/img/planets/planet6.png',
   },
+  void_bastion: {
+    id: 'void_bastion',
+    name: 'Bastion',
+    bonusType: 'void_toll_relief',
+    bonusPerSlot: 0.1,
+    icon: 'game-icons:stone-tower',
+    color: '#9a6ee0',
+    image: '/img/planets/planet7.png',
+  },
+  transmuter: {
+    id: 'transmuter',
+    name: 'Crucible',
+    bonusType: 'material_transmute',
+    bonusPerSlot: 1,
+    icon: 'game-icons:cauldron',
+    color: '#e08040',
+    image: '/img/planets/planet8.png',
+  },
+  meridian_spire: {
+    id: 'meridian_spire',
+    name: 'Meridian',
+    bonusType: 'dwell_burn',
+    bonusPerSlot: 250,
+    icon: 'game-icons:solar-time',
+    color: '#f0a030',
+    image: '/img/planets/planet9.png',
+  },
+  omen_scryer: {
+    id: 'omen_scryer',
+    name: 'Scryer',
+    bonusType: 'omen_boon',
+    bonusPerSlot: 0.3,
+    icon: 'game-icons:crystal-ball',
+    color: '#40d0c0',
+    image: '/img/planets/planet10.png',
+  },
+  drift_weir: {
+    id: 'drift_weir',
+    name: 'Weir',
+    bonusType: 'drifter_capture',
+    bonusPerSlot: 0.2,
+    icon: 'game-icons:fishing-net',
+    color: '#c060c0',
+    image: '/img/planets/planet11.png',
+  },
+  orbit_obelisk: {
+    id: 'orbit_obelisk',
+    name: 'Obelisk',
+    bonusType: 'champion_blessing',
+    bonusPerSlot: 0.5,
+    icon: 'game-icons:obelisk',
+    color: '#d0c060',
+    image: '/img/planets/planet12.png',
+  },
+}
+
+/**
+ * Rollen, deren System früh noch nicht existiert — Slot 1 wird in Sonnenphase 0
+ * gekauft. Wahl ist permanent, also ist das Tor eine Wand im Store und nicht nur
+ * ein blasser Knopf. Was von Anfang an läuft (Drifter, Sonne, Material,
+ * Champions) steht hier bewusst nicht.
+ */
+export const PLANET_ROLE_UNLOCK: Partial<
+  Record<PlanetRoleType, { level: number; label: string }>
+> = {
+  omen_scryer: { level: OMEN_UNLOCK_LEVEL, label: 'Omens' },
+  void_bastion: { level: VOID_UNLOCK_LEVEL, label: 'The Void' },
 }
 
 export const PLANET_ROLES_LIST: PlanetRole[] = Object.values(PLANET_ROLES)
@@ -654,6 +723,12 @@ export const JUNGLE_BUFF_DEFS: Record<PlanetRoleType, JungleBuffDef> = {
   shield_barrier: { name: 'Aegis Pulse', multiplier: 1.5, durationMs: 15_000 },
   time_capsule: { name: 'Temporal Rift', multiplier: 2.0, durationMs: 30_000 },
   resonance_tower: { name: 'Resonant Smite', multiplier: 2.0, durationMs: 18_000 },
+  void_bastion: { name: 'Warding Vigil', multiplier: 2.0, durationMs: 15_000 },
+  transmuter: { name: 'Alloy Bloom', multiplier: 2.5, durationMs: 12_000 },
+  meridian_spire: { name: 'Solar Draft', multiplier: 2.0, durationMs: 20_000 },
+  omen_scryer: { name: 'Second Sight', multiplier: 2.0, durationMs: 25_000 },
+  drift_weir: { name: 'Full Haul', multiplier: 2.5, durationMs: 15_000 },
+  orbit_obelisk: { name: 'Standing Rite', multiplier: 2.0, durationMs: 18_000 },
 }
 
 /** Laufrichtung, Bahngeschwindigkeit und Grundpreis je Slot. */
@@ -686,6 +761,22 @@ export const JUNGLE_BUFF_COOLDOWN_MS = 30_000 // 30s cooldown between jungle buf
  * viel mehr HP haben und entsprechend selten fallen.
  */
 export const PLANET_RESPAWN_MS = 30_000
+
+// ── Zahlen der sechs jüngeren Rollen ───────────────────────────────────────
+/** Crucible: Grundtakt einer Umschmelzung. Schrumpft mit dem Level wie die Ernte. */
+export const PLANET_TRANSMUTE_INTERVAL_TICKS = 60
+/** Wie viele Einheiten der Stufe darunter eine Einheit des Ziels kosten. */
+export const PLANET_TRANSMUTE_INPUT_COST = 4
+/**
+ * Weir: Deckel der Fangchance. Nie 1 — ein sicherer Fang entwertete den Klick
+ * auf einen Drifter, und der ist die Geste, um die das System gebaut ist.
+ */
+export const PLANET_DRIFT_WEIR_CAP = 0.85
+/** Obelisk: wie lange der Segen eines Vorbeiflugs am Champion hängt. */
+export const PLANET_BLESSING_MS = 12_000
+/** Sperrzeit je Obelisk — LÄNGER als die Wirkung, sonst wird aus dem Moment ein
+ *  Dauerzustand (dieselbe Regel wie VOID_PLANET_CONTACT_REARM_MS). */
+export const PLANET_BLESSING_REARM_MS = 20_000
 
 // ── Jungle-Buff-Marke im Idle-Orbit ────────────────────────────────────────
 // Der gebuffte Planet trägt seinen Zustand in derselben Grammatik wie ein

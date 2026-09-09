@@ -285,6 +285,8 @@ export type MaterialSourceId =
   | 'mission'
   /** Ein Ort auf einer Reiseetappe (`utils/game/landfalls.ts`). */
   | 'landfall'
+  /** Aus einem Crucible-Planeten umgeschmolzen. */
+  | 'transmute'
 
 /** What a unit of material was spent on. Labels: MATERIAL_SINK_LABELS. */
 export type MaterialSinkId =
@@ -296,6 +298,8 @@ export type MaterialSinkId =
   | 'relic'
   | 'constellation'
   | 'bargain'
+  /** In einem Crucible-Planeten zu etwas Selteneren verschmolzen. */
+  | 'transmute'
   | 'other'
 
 /** One row of the source/sink breakdown in the header material tooltip. */

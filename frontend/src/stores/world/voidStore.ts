@@ -66,6 +66,12 @@ import {
   VOID_PLANET_SPLASH_FRAC,
   VOID_PLANET_RELAY_BANISH_MS,
   VOID_PLANET_SLOW_MS,
+  VOID_PLANET_WARD_MS,
+  VOID_PLANET_CURSE_MS,
+  VOID_PLANET_FOCUS_MS,
+  VOID_PLANET_SEAR_DWELL_MS,
+  VOID_PLANET_SMITE_EXECUTE_PCT,
+  VOID_TOLL_RELIEF_CAP,
   COMBAT_FLOAT_DURATION_MS,
   ROLE_INDEX_BY_KEY,
   ROLE_SUPPORT_HEAL_AMOUNT,
@@ -81,6 +87,7 @@ import { useShopStore } from '@/stores/economy/shopStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useCombatStore } from '@/stores/battle/combatStore'
 // Gegenseitig: die Forge räumt mit dem Handel „Wanderer's Toll" den Riss und
@@ -343,7 +350,13 @@ export const useVoidStore = defineStore('void', {
      * und ein Siegel, das nur eine der Fesseln löst, wäre nicht zu erklären.
      */
     tollRelief(): number {
-      return useStarForgeStore().voidTollRelief
+      const forge = useStarForgeStore().voidTollRelief
+      const bastions = usePlanetShopStore().planetVoidTollRelief
+      if (bastions <= 0) return forge
+      // Beide schieben an denselben Boden, statt sich zu addieren — und der
+      // Deckel gilt der SUMME, nicht je Quelle. Er liegt bewusst über dem
+      // Forge-Deckel: sonst wäre ein Bastion neben voller Forge ein toter Slot.
+      return Math.min(VOID_TOLL_RELIEF_CAP, 1 - (1 - forge) * (1 - bastions))
     },
 
     // ── Effekt-Getter (je einer pro Einbaustelle) ─────────────────────────────
@@ -844,6 +857,18 @@ export const useVoidStore = defineStore('void', {
       // Spielers auf ein Feld voller Wesen.
       if (rider.verb === 'absorb') return true
 
+      // Der Obelisk zielt nicht — er steht da, und wer schon angeschlagen ist,
+      // zerspringt an ihm. Gegenstück zum Cull des Junglers, tiefere Schwelle.
+      if (rider.verb === 'smite' && m.currentHp <= m.maxHp * VOID_PLANET_SMITE_EXECUTE_PCT) {
+        contactFloat(m.currentHp, hit.cx, hit.cy, {
+          voidFloat: true,
+          planetFloat: true,
+          crit: true,
+        })
+        this.slayMonster(m)
+        return true
+      }
+
       if (rider.takesChip) {
         shop.takeVoidChip(slot.id, slot.maxHp * VOID_PLANET_CONTACT_HP_FRAC[def.severity])
       }
@@ -854,6 +879,22 @@ export const useVoidStore = defineStore('void', {
           break
         case 'scavenge':
           useInventoryStore().tryDropMaterial(1, 'void')
+          break
+        case 'ward':
+          m.wardedUntil = Math.max(m.wardedUntil, now + VOID_PLANET_WARD_MS)
+          break
+        // Nur der Fluch, nicht die Bremse daneben — die gehört der Zeitkapsel.
+        case 'curse':
+          m.cursedUntil = Math.max(m.cursedUntil, now + VOID_PLANET_CURSE_MS)
+          break
+        case 'focus':
+          m.focusedUntil = Math.max(m.focusedUntil, now + VOID_PLANET_FOCUS_MS)
+          break
+        case 'smelt':
+          shop.smeltVoidYield(slot.id)
+          break
+        case 'sear':
+          useSolarUpgradeStore().skipDwell(VOID_PLANET_SEAR_DWELL_MS)
           break
         case 'banish':
           // Zurückwerfen als ZEIT, nicht als Strecke — die Bahn kennt nur

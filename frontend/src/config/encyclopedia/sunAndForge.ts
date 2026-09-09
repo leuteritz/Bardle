@@ -222,22 +222,38 @@ export const planetSlotsCategory: EncyclopediaCategory = {
       icon: 'game-icons:stone-sphere',
       description:
         'Six orbit slots for worker planets, unlocked by sun phase and bought with Chimes. ' +
-        'Each slot is permanently assigned one role — choose wisely.',
+        'Each slot is permanently assigned one of twelve callings — choose wisely.',
       lore: 'Worlds sworn to a single purpose.',
       formula:
-        'Costs: 500 · 2,000 · 8,000 · 35,000 · 150,000 · 600,000\n' +
+        'Costs: 100 · 2,000 · 8,000 · 35,000 · 150,000 · 600,000\n' +
         'Slot i requires sun phase i − 1',
-      related: ['planet-roles', 'attunement', 'sun-phases'],
+      related: ['planet-roles', 'deeper-callings', 'attunement', 'sun-phases'],
     },
     {
       id: 'planet-roles',
       name: 'Planet Roles',
       icon: 'game-icons:gears',
       description:
-        'Six roles: Turret (auto-attack DPS), Harvester (+1 material every 30 ticks), Relay (+30% expedition rewards), ' +
-        'Aegis (−15% boss damage), Timewarp (+25% offline earnings) and Resonator (+25% CPS for one chosen Solar Ray).',
+        'Twelve callings compete for six slots, so half the catalogue goes unused every run. ' +
+        'The founding six: Turret (auto-attack DPS), Harvester (materials on a timer), Relay (+30% expedition rewards), ' +
+        'Aegis (−15% boss damage), Timewarp (+25% offline earnings) and Resonator (+25% to one chosen Solar Ray).',
       lore: 'Each world keeps its own hour.',
-      related: ['planet-slots', 'jungle-buffs', 'turret-salvos'],
+      related: ['planet-slots', 'deeper-callings', 'jungle-buffs', 'turret-salvos'],
+    },
+    {
+      id: 'deeper-callings',
+      name: 'Deeper Callings',
+      icon: 'game-icons:orbital',
+      description:
+        'Six younger callings reach into a system of their own instead of paying a flat bonus: ' +
+        'Bastion (−10% Void drain on every axis), Crucible (melts 4 units of the tier below into 1 rarer), ' +
+        'Meridian (burns sun dwell away), Scryer (omens arrive sooner and their boons last longer), ' +
+        'Weir (nets drifters that flew past uncaught) and Obelisk (blesses each champion passing it).',
+      lore: 'Some worlds answer a call from further out.',
+      formula:
+        'Bastion stays sealed until The Void wakes (Level 6)\n' +
+        'Scryer stays sealed until Omens appear (Level 3)',
+      related: ['planet-roles', 'planet-slots', 'jungle-buffs'],
     },
     {
       id: 'attunement',
@@ -250,7 +266,7 @@ export const planetSlotsCategory: EncyclopediaCategory = {
       formula:
         'Bonus = 1 + (level − 1) × 0.10 + milestones × 0.25\n' +
         'HP = 100 × (1 + (level − 1) × 0.20)\n' +
-        'Cost = ceil(slotCost × 0.5 × 1.6^(level − 1))',
+        'Cost = ceil(slotCost × 0.5 × 1.28^(level − 1))',
       related: ['planet-slots'],
     },
     {
@@ -258,10 +274,11 @@ export const planetSlotsCategory: EncyclopediaCategory = {
       name: 'Jungle Buffs',
       icon: 'game-icons:jungle',
       description:
-        'Your Jungle champion patrols the orbit and super-charges planets it passes: Turret ×2.5, Harvester ×3, Relay ×2, ' +
-        'Aegis ×1.5, Timewarp ×2 and Resonator ×2 — for 12–30 seconds each.',
+        'Your Jungle champion patrols the orbit and super-charges planets it passes — ×1.5 to ×3 on whatever ' +
+        'that world produces, for 12–30 seconds. Every calling carries its own buff name and figure; ' +
+        'the Obelisk answers in kind and blesses the champion back.',
       lore: 'The hunter feeds the garden.',
-      related: ['planet-roles', 'role-abilities'],
+      related: ['planet-roles', 'deeper-callings', 'role-abilities'],
     },
   ],
 }

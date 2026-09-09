@@ -2,6 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { usePlanetShopStore, PLANET_ROLES, PLANET_ROLES_LIST } from '@/stores/world/planetShopStore'
+import { useGameStore } from '@/stores/core/gameStore'
+import { PLANET_ROLE_UNLOCK } from '@/config/constants'
 import type { PlanetRoleType } from '@/stores/world/planetShopStore'
 import { planetBonusText } from '@/utils/orbit/planetStatus'
 import { toRoman } from '@/utils/ui/format'
@@ -10,9 +12,17 @@ import { useHerald } from '@/composables/ui/useHerald'
 const props = defineProps<{ slotId: string }>()
 
 const store = usePlanetShopStore()
+const gameStore = useGameStore()
 const { announceReceipt } = useHerald()
 
-const roles = PLANET_ROLES_LIST
+// Eine Karte je Rolle, ihr Tor gleich mit — die Wand selbst steht im Store
+// (`assignRole`), hier hängt nur, was der Spieler sieht.
+const cards = computed(() =>
+  PLANET_ROLES_LIST.map((role) => {
+    const gate = PLANET_ROLE_UNLOCK[role.id] ?? null
+    return { role, gate, locked: !!gate && gameStore.level < gate.level }
+  }),
+)
 const orbitNumber = computed(() => Number(props.slotId.replace('slot_', '')))
 
 // Permanent planet choice: clicking a role arms a confirm step before it locks.
@@ -28,6 +38,8 @@ watch(
 )
 
 function pickRole(roleId: PlanetRoleType) {
+  const gate = PLANET_ROLE_UNLOCK[roleId]
+  if (gate && gameStore.level < gate.level) return
   pendingRoleId.value = pendingRoleId.value === roleId ? null : roleId
 }
 
@@ -64,11 +76,15 @@ function confirmRole() {
     </div>
     <div class="ps-role-grid ps-role-grid--choose">
       <button
-        v-for="role in roles"
+        v-for="{ role, gate, locked } in cards"
         :key="role.id"
         class="ps-role-option"
-        :class="{ 'ps-role-option--selected': pendingRoleId === role.id }"
+        :class="{
+          'ps-role-option--selected': pendingRoleId === role.id,
+          'ps-role-option--locked': locked,
+        }"
         :style="{ '--rc': role.color }"
+        :disabled="locked"
         @click="pickRole(role.id)"
       >
         <span class="ps-role-medal">
@@ -87,7 +103,11 @@ function confirmRole() {
         </span>
         <span class="ps-role-name">{{ role.name }}</span>
         <div class="ps-role-divider" />
-        <span class="ps-role-effect">{{ planetBonusText(role) }}</span>
+        <span v-if="locked && gate" class="ps-role-gate">
+          <img src="/img/lock-128.png" alt="" class="ps-role-gate-lock" />
+          Level {{ gate.level }} · {{ gate.label }}
+        </span>
+        <span v-else class="ps-role-effect">{{ planetBonusText(role) }}</span>
         <div v-if="pendingRoleId === role.id" class="ps-role-badge">✓ Selected</div>
       </button>
     </div>
@@ -177,22 +197,26 @@ function confirmRole() {
   filter: sepia(1) saturate(3) hue-rotate(-25deg) brightness(1.1);
 }
 
-.ps-role-grid--choose {
-  grid-template-columns: repeat(3, 1fr);
-  gap: clamp(8px, 1vw, 16px);
-  width: min(940px, 100%);
+/* Vier Spalten statt drei: zwölf Karten in DREI Reihen passen auf Full HD
+   ohne zu rollen — bei vier Reihen fiele die letzte unter den Falz, und die
+   Wahl hier ist permanent. */
+.ps-role-grid.ps-role-grid--choose {
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(7px, 0.8vw, 13px);
+  width: min(1180px, 100%);
   margin: 0 auto;
 }
 
 /* ── Permanence confirm bar ────────────────────────────────────────────────── */
 .ps-confirm-bar {
   --rc: #e8c040;
+  /* folgt der Rasterbreite, sonst steht die Leiste schmaler als die Karten */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: clamp(12px, 1.4vw, 24px);
   flex-wrap: wrap;
-  width: min(940px, 100%);
+  width: min(1180px, 100%);
   margin: 0 auto;
   padding: clamp(11px, 1.5vh, 18px) clamp(14px, 1.4vw, 22px);
   background: linear-gradient(150deg, rgba(30, 26, 16, 0.92) 0%, rgba(14, 12, 8, 0.94) 100%);
@@ -264,8 +288,8 @@ function confirmRole() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(5px, 0.8vh, 10px);
-  padding: clamp(12px, 1.8vh, 22px) clamp(8px, 0.8vw, 16px);
+  gap: clamp(4px, 0.6vh, 8px);
+  padding: clamp(9px, 1.3vh, 16px) clamp(6px, 0.6vw, 12px);
   /* translucent like the rail cards — the shared starfield keeps showing through */
   background: linear-gradient(150deg, rgba(30, 25, 17, 0.82) 0%, rgba(13, 11, 7, 0.88) 100%);
   border: 1px solid #2e2416;
@@ -348,8 +372,8 @@ function confirmRole() {
 .ps-role-medal {
   display: grid;
   place-items: center;
-  width: clamp(52px, 7vh, 78px);
-  height: clamp(52px, 7vh, 78px);
+  width: clamp(44px, 5.6vh, 64px);
+  height: clamp(44px, 5.6vh, 64px);
   background: radial-gradient(circle at 45% 35%, #1a1710 0%, #0a0906 100%);
   border: 1px solid color-mix(in srgb, var(--rc) 45%, #3a2a10);
   border-radius: 6px;
@@ -375,7 +399,7 @@ function confirmRole() {
 }
 
 span.ps-role-icon {
-  font-size: clamp(1.9rem, 3.4vh, 2.8rem);
+  font-size: clamp(1.6rem, 2.8vh, 2.3rem);
   line-height: 1;
 }
 
@@ -398,7 +422,7 @@ img.ps-role-icon {
 }
 
 .ps-role-name {
-  font-size: clamp(0.92rem, 1.6vh, 1.25rem);
+  font-size: clamp(0.82rem, 1.35vh, 1.08rem);
   font-weight: 800;
   color: #e4d8ae;
   letter-spacing: 0.05em;
@@ -422,12 +446,51 @@ img.ps-role-icon {
 }
 
 .ps-role-effect {
-  font-size: clamp(0.8rem, 1.35vh, 1.05rem);
+  font-size: clamp(0.72rem, 1.15vh, 0.92rem);
   font-weight: 800;
   color: var(--rc);
   line-height: 1.35;
   text-wrap: balance;
   text-shadow: 0 0 8px color-mix(in oklch, var(--rc) 40%, transparent);
+}
+
+/* Gesperrt — das spielweite Rezept: halbe Deckkraft, entsättigt, kein Zeiger.
+   Die Karte bleibt sichtbar, damit der Spieler weiss, worauf er hinspart. */
+.ps-role-option--locked {
+  opacity: 0.5;
+  filter: grayscale(55%);
+  cursor: not-allowed;
+}
+
+.ps-role-option--locked:hover {
+  background: linear-gradient(150deg, rgba(30, 25, 17, 0.82) 0%, rgba(13, 11, 7, 0.88) 100%);
+  border-color: #2e2416;
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(232, 192, 64, 0.05);
+  transform: none;
+}
+
+.ps-role-option--locked:hover .ps-role-icon {
+  transform: none;
+}
+
+.ps-role-gate {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: clamp(0.68rem, 1.05vh, 0.86rem);
+  font-weight: 800;
+  line-height: 1.3;
+  text-wrap: balance;
+  color: #c0b890;
+}
+
+.ps-role-gate-lock {
+  width: clamp(11px, 1.4vh, 15px);
+  height: clamp(11px, 1.4vh, 15px);
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .ps-role-badge {
@@ -476,8 +539,14 @@ img.ps-role-icon {
 /* Below common desktop widths the three dock zones would squeeze each other —
    stack them and let the detail column scroll while the stage keeps a sane
    minimum height. */
+@media (max-width: 1250px) {
+  .ps-role-grid.ps-role-grid--choose {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 @media (max-width: 950px) {
-  .ps-role-grid--choose {
+  .ps-role-grid.ps-role-grid--choose {
     grid-template-columns: repeat(2, 1fr);
   }
 }

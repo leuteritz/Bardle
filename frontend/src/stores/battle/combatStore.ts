@@ -33,6 +33,7 @@ import { useBardAbilityStore } from '@/stores/progression/bardAbilityStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useLandfallStore } from '@/stores/world/landfallStore'
+import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 
 let _damageFloatId = 0
 
@@ -80,6 +81,8 @@ function sumChampionDps(
 ): { total: number; anyCrit: boolean } {
   const battleStore = useBattleStore()
   const levelStore = useChampionLevelStore()
+  // Einmal geholt, nicht je Champion — die Schleife läuft frameweise.
+  const blessingOf = usePlanetShopStore().blessingMultOf
   let total = 0
   let anyCrit = false
 
@@ -93,6 +96,9 @@ function sumChampionDps(
     // levelled one — everything below stacks on top of it.
     let dps = CHAMPION_DPS_BASE * (1 + filledAllies * allyShare)
     dps *= levelStore.orbitDpsMultOf(a.name)
+    // Obelisk: der Segen gilt DIESEM Körper, deshalb hier und nicht in
+    // `globalDpsMultiplier`.
+    dps *= blessingOf(a.name)
 
     const execute = levelStore.perkEffectOf(a.name, 'execute')
     if (execute > 0 && bossHpFraction <= CHAMPION_EXECUTE_HP_THRESHOLD) {

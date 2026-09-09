@@ -99,7 +99,12 @@ export const useOmenStore = defineStore('omen', {
      * ersten Vorzeichen-Anflug nicht in die ersten Sekunden ziehen.
      */
     nextOfferDelaySec(): number {
-      return OMEN_OFFER_DELAY_SEC * useStarForgeStore().omenIntervalMult
+      // Der Scryer zieht dieselbe Zahl von beiden Enden: kürzere Pause hier,
+      // längerer Segen in `applyBuff`.
+      return (
+        (OMEN_OFFER_DELAY_SEC * useStarForgeStore().omenIntervalMult) /
+        usePlanetShopStore().planetOmenBoonMultiplier
+      )
     },
 
     /**
@@ -386,7 +391,10 @@ export const useOmenStore = defineStore('omen', {
       // angewandt: die Leiste zählt gegen `durationMs`, und ein Eilbonus, der
       // erst beim Anzeigen dazukäme, verschöbe die Anzeige gegen das Ende.
       const durationMs = Math.round(
-        def.reward.durationSec * 1000 * (swift ? OMEN_SWIFT_DURATION_MULT : 1),
+        def.reward.durationSec *
+          1000 *
+          (swift ? OMEN_SWIFT_DURATION_MULT : 1) *
+          usePlanetShopStore().planetOmenBoonMultiplier,
       )
       this.buffs.push({
         sourceId: def.id,

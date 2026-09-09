@@ -60,6 +60,7 @@ export const MATERIAL_SOURCE_LABELS: Record<string, string> = {
   click: 'Shaken Loose',
   mission: 'Wayfinder',
   landfall: 'Landfalls',
+  transmute: 'Transmuted',
 }
 export const MATERIAL_SOURCE_ICONS: Record<string, string> = {
   drop: 'game-icons:falling-rocks',
@@ -72,6 +73,7 @@ export const MATERIAL_SOURCE_ICONS: Record<string, string> = {
   click: 'game-icons:click',
   mission: 'game-icons:direction-signs',
   landfall: 'game-icons:crossroad',
+  transmute: 'game-icons:cauldron',
 }
 export const MATERIAL_SINK_LABELS: Record<string, string> = {
   recruit: 'Champion Recruits',
@@ -82,6 +84,7 @@ export const MATERIAL_SINK_LABELS: Record<string, string> = {
   relic: 'Relics',
   constellation: 'Constellations',
   bargain: 'Forge Deals',
+  transmute: 'Transmuted Away',
   other: 'Other',
 }
 /**

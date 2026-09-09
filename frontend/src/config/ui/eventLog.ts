@@ -119,6 +119,24 @@ export function logDrifterCollected(name: string, effectLine: string) {
   addEvent(`${name} collected — ${effectLine}`, 'chime')
 }
 
+/** Ein Obelisk hat einen vorbeiziehenden Champion gesegnet — dieselbe Form wie
+ *  die Jungle-Buff-Zeile, nur in die andere Richtung. */
+export function logChampionBlessed(
+  planetName: string,
+  championName: string,
+  pct: number,
+  seconds: number,
+) {
+  const { addEvent } = useEventLog()
+  addEvent(`${planetName} blesses ${championName} (+${pct}% DPS, ${seconds}s)!`, 'jungle')
+}
+
+/** Ein Weir hat einen Drifter eingeholt, der sonst durchgefallen wäre. */
+export function logDrifterNetted(planetName: string, name: string, effectLine: string) {
+  const { addEvent } = useEventLog()
+  addEvent(`${planetName} netted ${name} — ${effectLine}`, 'chime')
+}
+
 /** Ein Void-Wesen wurde erlegt — Name plus die Beute, die es freigibt. */
 export function logVoidRiftSealed(name: string, boonLine: string) {
   const { addEvent } = useEventLog()

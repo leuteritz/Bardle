@@ -357,7 +357,19 @@ export interface VoidMonster {
 export type VoidContactState = 'blocked' | 'warded' | 'cursed' | 'focused'
 
 /** Was ein Planet tut, wenn ein Wesen ihn streift. */
-export type VoidPlanetVerb = 'volley' | 'absorb' | 'slow' | 'scavenge' | 'splash' | 'banish'
+export type VoidPlanetVerb =
+  | 'volley'
+  | 'absorb'
+  | 'slow'
+  | 'scavenge'
+  | 'splash'
+  | 'banish'
+  | 'ward'
+  | 'smelt'
+  | 'sear'
+  | 'curse'
+  | 'focus'
+  | 'smite'
 
 /**
  * Der Rider einer Planetenrolle bei Berührung.
@@ -410,6 +422,12 @@ export type PlanetRoleType =
   | 'shield_barrier'
   | 'time_capsule'
   | 'resonance_tower'
+  | 'void_bastion'
+  | 'transmuter'
+  | 'meridian_spire'
+  | 'omen_scryer'
+  | 'drift_weir'
+  | 'orbit_obelisk'
 
 export interface PlanetRole {
   id: PlanetRoleType
@@ -421,6 +439,12 @@ export interface PlanetRole {
     | 'boss_damage_reduction'
     | 'offline_boost'
     | 'building_cps_multiplier'
+    | 'void_toll_relief'
+    | 'material_transmute'
+    | 'dwell_burn'
+    | 'omen_boon'
+    | 'drifter_capture'
+    | 'champion_blessing'
   bonusPerSlot: number
   icon: string
   color: string

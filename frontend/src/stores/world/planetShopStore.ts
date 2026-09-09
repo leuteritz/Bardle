@@ -27,8 +27,16 @@ import {
   PLANET_RESPAWN_MS,
   PLANET_SLOT_CONFIG as SLOT_CONFIG,
   PLANET_ROLES,
+  PLANET_ROLE_UNLOCK,
+  PLANET_TRANSMUTE_INTERVAL_TICKS,
+  PLANET_TRANSMUTE_INPUT_COST,
+  PLANET_DRIFT_WEIR_CAP,
+  PLANET_BLESSING_MS,
+  PLANET_BLESSING_REARM_MS,
+  MATERIAL_RARITY_ORDER,
   SECONDS_PER_HOUR,
 } from '@/config/constants'
+import { MATERIALS } from '@/config/economy/materials'
 // Rollen- und Buff-Tabellen leben in config/constants.ts; hier nur noch
 // weitergereicht, damit die bestehenden Importpfade gültig bleiben.
 export { PLANET_ROLES, PLANET_ROLES_LIST, JUNGLE_BUFF_DEFS } from '@/config/constants'
@@ -144,6 +152,52 @@ export function harvestIntervalTicks(level: number, forgeMult = 1): number {
   return Math.max(1, Math.ceil((PLANET_HARVEST_INTERVAL_TICKS / rate) * forgeMult))
 }
 
+/** Umschmelztakt eines Crucible. Gleiche Kurve wie die Ernte, nur träger. */
+export function transmuteIntervalTicks(level: number): number {
+  const rate = 1 + Math.max(0, level - 1) * PLANET_LEVEL_BONUS_PCT
+  return Math.max(1, Math.ceil(PLANET_TRANSMUTE_INTERVAL_TICKS / rate))
+}
+
+/**
+ * Womit ein Crucible sein Ziel bezahlt: das Material der Stufe DARUNTER, von dem
+ * am meisten im Lager liegt.
+ *
+ * Der grösste Bestand statt einer festen Zutat — so zieht die Umschmelzung den
+ * Überschuss ab und nicht den Vorrat, den gerade ein Tier-Tor verlangt.
+ * `common` hat nichts unter sich und ist deshalb nie ein Ziel.
+ */
+export function transmuteInputFor(
+  targetId: string,
+  stock: Record<string, number>,
+): { materialId: string; qty: number } | null {
+  const target = MATERIALS.find((m) => m.id === targetId)
+  if (!target) return null
+  const step = MATERIAL_RARITY_ORDER.indexOf(target.rarity) + 1
+  const below = MATERIAL_RARITY_ORDER[step]
+  if (!below) return null
+
+  let best: string | null = null
+  for (const m of MATERIALS) {
+    if (m.rarity !== below) continue
+    const have = stock[m.id] ?? 0
+    if (have < PLANET_TRANSMUTE_INPUT_COST) continue
+    if (best === null || have > (stock[best] ?? 0)) best = m.id
+  }
+  return best ? { materialId: best, qty: PLANET_TRANSMUTE_INPUT_COST } : null
+}
+
+/** Materialien, die ein Crucible überhaupt als Ziel annehmen kann. */
+export function transmuteTargets(): typeof MATERIALS {
+  const lowest = MATERIAL_RARITY_ORDER[MATERIAL_RARITY_ORDER.length - 1]
+  return MATERIALS.filter((m) => m.rarity !== lowest)
+}
+
+/** Steht die Rolle dem Spieler auf diesem Bard-Level schon offen? */
+export function isRoleUnlocked(role: PlanetRoleType, bardLevel: number): boolean {
+  const gate = PLANET_ROLE_UNLOCK[role]
+  return !gate || bardLevel >= gate.level
+}
+
 /**
  * Bahntempo eines Slots als Faktor auf `baseSpeed` — gedeckelt bei Verdopplung.
  *
@@ -173,7 +227,11 @@ const INITIAL_SLOTS: PlanetSlot[] = PLANET_SLOT_ORBITS.map((orbit, i) => ({
   jungleBuff: null,
 }))
 
-const CONFIGURABLE_ROLES: PlanetRoleType[] = ['harvest_node', 'resonance_tower']
+export const CONFIGURABLE_ROLES: PlanetRoleType[] = [
+  'harvest_node',
+  'resonance_tower',
+  'transmuter',
+]
 
 // ── Turret-Salve ────────────────────────────────────────────────────────────
 // Drei Getter bilden inzwischen eine Salve: die rohe Zahl für den Stats-Katalog,
@@ -222,6 +280,12 @@ export const usePlanetShopStore = defineStore('planetShop', {
   state: () => ({
     slots: INITIAL_SLOTS.map((s) => ({ ...s })) as PlanetSlot[],
     activeRoleModalSlotId: null as string | null,
+    /** Laufende Obelisken-Segen je Champion. Nicht persistiert — eine Sitzung
+     *  beginnt sauber, wie bei jungleBuff und den HP. */
+    blessings: {} as Record<string, { until: number; mult: number }>,
+    /** Sperrzeit je Obelisk-Slot, damit ein mitlaufender Champion seinen eigenen
+     *  Segen nicht dauernd auffrischt. */
+    blessRearm: {} as Record<string, number>,
   }),
 
   getters: {
@@ -382,6 +446,96 @@ export const usePlanetShopStore = defineStore('planetShop', {
         }
       }
       return result
+    },
+
+    /**
+     * Milderung des Void-Zolls aus allen stehenden Bastionen.
+     *
+     * Multiplikativ auf dem REST, dasselbe Rezept wie `starForgeStore.voidTollRelief`:
+     * zwei Bastionen zu je 10 % ergeben 19 %, nicht 20 — additiv hätten sechs
+     * Slots den Void abgeschafft.
+     */
+    planetVoidTollRelief(state): number {
+      const remainder = state.slots
+        .filter((s) => s.purchased && s.role === 'void_bastion' && !isPlanetDown(s))
+        .reduce((prod, slot) => {
+          const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
+          const relief = Math.min(
+            1,
+            PLANET_ROLES.void_bastion.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul,
+          )
+          return prod * (1 - relief)
+        }, 1)
+      return 1 - remainder
+    },
+
+    /** Faktor auf Dauer UND Takt der Vorzeichen — eine Zahl, zwei Wirkungen. */
+    planetOmenBoonMultiplier(state): number {
+      return state.slots
+        .filter((s) => s.purchased && s.role === 'omen_scryer' && !isPlanetDown(s))
+        .reduce((prod, slot) => {
+          const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
+          return (
+            prod *
+            (1 +
+              PLANET_ROLES.omen_scryer.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul)
+          )
+        }, 1)
+    },
+
+    /** Chance, dass ein davonfliegender Drifter doch noch eingeholt wird.
+     *  Nie 1 — der Deckel hält den Klick auf einen Drifter am Leben. */
+    planetDrifterCatchChance(state): number {
+      const missed = state.slots
+        .filter((s) => s.purchased && s.role === 'drift_weir' && !isPlanetDown(s))
+        .reduce((prod, slot) => {
+          const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
+          const chance = Math.min(
+            1,
+            PLANET_ROLES.drift_weir.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul,
+          )
+          return prod * (1 - chance)
+        }, 1)
+      return Math.min(PLANET_DRIFT_WEIR_CAP, 1 - missed)
+    },
+
+    /** Millisekunden Verweildauer, die alle Meridiane je Tick wegbrennen. */
+    dwellBurnMsPerTick(state): number {
+      return state.slots
+        .filter((s) => s.purchased && s.role === 'meridian_spire' && !isPlanetDown(s))
+        .reduce((sum, slot) => {
+          const mul = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
+          return (
+            sum +
+            PLANET_ROLES.meridian_spire.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * mul
+          )
+        }, 0)
+    },
+
+    /** Crucibles mit gesetztem Ziel — je einer mit eigenem Takt, wie die Ernte. */
+    activeTransmuteSlots(state): { materialId: string; intervalTicks: number }[] {
+      return state.slots
+        .filter(
+          (s) =>
+            s.purchased && s.role === 'transmuter' && !isPlanetDown(s) && s.slotConfig?.materialId,
+        )
+        .map((s) => ({
+          materialId: s.slotConfig!.materialId!,
+          intervalTicks: transmuteIntervalTicks(s.level),
+        }))
+    },
+
+    /**
+     * Segen eines Obelisken auf EINEN Champion.
+     *
+     * Gilt dem einzelnen Körper, der vorbeigezogen ist — deshalb liest ihn
+     * `sumChampionDps` je Champion und nicht `globalDpsMultiplier`.
+     */
+    blessingMultOf(state) {
+      return (championName: string): number => {
+        const held = state.blessings[championName]
+        return held && held.until > gameNow() ? held.mult : 1
+      }
     },
 
     /** Purchased, role-assigned slots whose next level is affordable right now
@@ -589,6 +743,8 @@ export const usePlanetShopStore = defineStore('planetShop', {
       if (!slot || !slot.purchased) return
       // Permanent choice: a planet type can only ever be set once (null → role).
       if (slot.role !== null) return
+      // Ein gesperrtes System ergäbe einen toten Planeten — und die Wahl bleibt.
+      if (role !== null && !isRoleUnlocked(role, useGameStore().level)) return
 
       const prev = slot.role
       slot.role = role
@@ -686,6 +842,79 @@ export const usePlanetShopStore = defineStore('planetShop', {
         logger.info('Planet', `Offline-Ernte: ${harvested} Materialien nachgeholt`)
       }
       return harvested
+    },
+
+    /**
+     * Crucible: Überschuss der Stufe darunter wird zu einer Einheit des Ziels.
+     *
+     * Reicht der Bestand nicht, passiert nichts — kein Nachholen, keine Schuld.
+     * `removeMaterials` prüft selbst und gibt `false` zurück, bevor es abbucht.
+     */
+    tickTransmute(inGameTime: number): void {
+      const slots = this.activeTransmuteSlots
+      if (slots.length === 0) return
+
+      const inventory = useInventoryStore()
+      let made = 0
+      for (const { materialId, intervalTicks } of slots) {
+        if (inGameTime % intervalTicks !== 0) continue
+        const input = transmuteInputFor(materialId, inventory.collectedMaterials)
+        if (!input) continue
+        if (!inventory.removeMaterials({ [input.materialId]: input.qty }, 'transmute')) continue
+        inventory.addMaterial(materialId, 'transmute', 1)
+        made++
+      }
+      if (made > 0) {
+        logger.info('Planet', `Transmute-Tick: ${made} Materialien umgeschmolzen`)
+      }
+    },
+
+    /** Ein Wesen, das an einem Crucible zerschellt, IST das Rohmaterial —
+     *  eine Umschmelzung ohne Einsatz, gehalten von der Kontakt-Sperrzeit. */
+    smeltVoidYield(slotId: string): boolean {
+      const slot = this.getSlot(slotId)
+      const target = slot?.slotConfig?.materialId
+      if (!slot || slot.role !== 'transmuter' || !target) return false
+      useInventoryStore().addMaterial(target, 'void', 1)
+      return true
+    },
+
+    /**
+     * Meridian: EIN Aufruf für alle Spiere.
+     *
+     * `skipDwell` trägt den Phasendeckel für ALLE Quellen gemeinsam — je Planet
+     * einzeln aufzurufen fragte denselben Deckel nur öfter ab.
+     */
+    tickDwellBurn(): void {
+      const ms = this.dwellBurnMsPerTick
+      if (ms <= 0) return
+      useSolarUpgradeStore().skipDwell(ms)
+    },
+
+    /**
+     * Obelisk: ein vorbeiziehender Champion nimmt den Segen mit.
+     *
+     * Gegenstück zum Jungle-Buff — dort buffen Champions die Planeten. Die
+     * Sperrzeit ist länger als die Wirkung, sonst frischte ein mitlaufender
+     * Champion seinen eigenen Segen dauernd auf.
+     */
+    blessChampion(slotId: string, championName: string): void {
+      const slot = this.getSlot(slotId)
+      if (!slot || slot.role !== 'orbit_obelisk' || isPlanetDown(slot)) return
+
+      const now = gameNow()
+      if ((this.blessRearm[slotId] ?? 0) > now) return
+      this.blessRearm[slotId] = now + PLANET_BLESSING_REARM_MS
+
+      const jb = slot.jungleBuff?.active ? slot.jungleBuff.multiplier : 1
+      const mult =
+        1 + PLANET_ROLES.orbit_obelisk.bonusPerSlot * planetLevelBonusMultiplier(slot.level) * jb
+      const held = this.blessings[championName]
+      // Der stärkere Segen gewinnt; ein schwächerer verlängert ihn nicht.
+      this.blessings[championName] =
+        held && held.until > now && held.mult > mult
+          ? { until: Math.max(held.until, now + PLANET_BLESSING_MS), mult: held.mult }
+          : { until: now + PLANET_BLESSING_MS, mult }
     },
 
     openRoleModal(slotId: string): void {

@@ -9,11 +9,13 @@ import {
   PLANET_MILESTONE_BONUS,
   PLANET_MILESTONE_INTERVAL,
   PLANET_ORBIT_SPEED_MAX_MULT,
+  PLANET_TRANSMUTE_INPUT_COST,
   PLANET_SLOT_CONFIG,
 } from '@/config/constants'
 import {
   PLANET_ROLES,
   harvestIntervalTicks,
+  transmuteIntervalTicks,
   planetLevelBonusMultiplier,
   planetMilestoneCount,
   planetOrbitSpeedMultiplier,
@@ -67,6 +69,21 @@ export function planetBonusText(role: PlanetRole, level = 1, harvestForgeMult = 
       return `+${Math.round(v * 100)}% Offline Yield`
     case 'building_cps_multiplier':
       return `+${Math.round(v * 100)}% Building CPS`
+    case 'void_toll_relief':
+      return `-${Math.round(v * 100)}% Void Drain`
+    // Nennt den EINSATZ mit — sonst liest sich der Crucible wie ein zweiter
+    // Harvester, obwohl er Material verbraucht statt zu fördern.
+    case 'material_transmute':
+      return `${PLANET_TRANSMUTE_INPUT_COST} → 1 rarer every ${transmuteIntervalTicks(level)}s`
+    // `v` sind Millisekunden je Spielsekunde — die Minute liest sich besser.
+    case 'dwell_burn':
+      return `-${formatBonusValue((v * 60) / 1000)}s Sun Dwell/min`
+    case 'omen_boon':
+      return `+${Math.round(v * 100)}% Omen Boon & Pace`
+    case 'drifter_capture':
+      return `${Math.round(v * 100)}% Drifter Catch`
+    case 'champion_blessing':
+      return `+${Math.round(v * 100)}% DPS on Flyby`
   }
 }
 

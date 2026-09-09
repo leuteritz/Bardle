@@ -4,6 +4,7 @@ import { Icon } from '@iconify/vue'
 import {
   usePlanetShopStore,
   PLANET_ROLES,
+  CONFIGURABLE_ROLES,
   computePlanetMaxHp,
   isPlanetDown,
 } from '@/stores/world/planetShopStore'
@@ -201,9 +202,7 @@ watch(
   },
 )
 
-const isConfigurableRole = computed(
-  () => role.value === 'harvest_node' || role.value === 'resonance_tower',
-)
+const isConfigurableRole = computed(() => !!role.value && CONFIGURABLE_ROLES.includes(role.value))
 
 function capitalize(s: string): string {
   return s ? s[0].toUpperCase() + s.slice(1) : s
@@ -220,6 +219,18 @@ const configTarget = computed(() => {
       kicker: 'Harvesting',
       name: m?.name ?? 'Pick a material',
       sub: m ? `${capitalize(m.rarity)} material` : 'No material set yet',
+      icon: m?.image ?? null,
+      glyph: null,
+      color: m ? (MATERIAL_RARITY_COLOR[m.rarity] ?? MATERIAL_RARITY_COLOR.common) : '#8a7a50',
+      chosen: !!m,
+    }
+  }
+  if (role.value === 'transmuter') {
+    const m = MATERIALS.find((mat) => mat.id === props.planet.slotConfig?.materialId) ?? null
+    return {
+      kicker: 'Transmuting',
+      name: m?.name ?? 'Pick a material',
+      sub: m ? `${capitalize(m.rarity)} material` : 'No target set yet',
       icon: m?.image ?? null,
       glyph: null,
       color: m ? (MATERIAL_RARITY_COLOR[m.rarity] ?? MATERIAL_RARITY_COLOR.common) : '#8a7a50',

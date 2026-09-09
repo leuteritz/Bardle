@@ -37,6 +37,7 @@ import {
   SUPPORT_MAX_HEAL_TARGETS,
   JUNGLE_BUFF_RANGE,
   JUNGLE_BUFF_COOLDOWN_MS,
+  PLANET_BLESSING_MS,
   GAME_TICK_INTERVAL_MS,
   HEAL_FLOAT_DURATION_MS,
   HEAL_FLOAT_Y_OFFSET,
@@ -93,6 +94,7 @@ import {
 } from '@/utils/orbit/foregroundGate'
 import type { ChampionRole, MidCurseType, ActiveCurse } from '@/types'
 import { useEventLog } from '@/composables/ui/useEventLog'
+import { logChampionBlessed } from '@/config/ui/eventLog'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 
 /** Rollen der aktuell in headerSlots besetzten Team-Slots. */
@@ -304,6 +306,7 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       this._tickMid(roles, TICK_MS)
       this._tickAdc(roles, TICK_MS)
       this._tickJungler(roles, TICK_MS)
+      this._tickObelisks()
       this._tickRoleAttacks(roles, TICK_MS)
     },
 
@@ -1146,6 +1149,53 @@ export const useRoleBehaviorStore = defineStore('roleBehavior', {
       gameTimeout(() => {
         this.tankInterceptActive = false
       }, INTERCEPT_SHIELD_ANIM_MS)
+    },
+
+    /**
+     * Obelisk — das Gegenstück zum Jungle-Buff: hier segnet der PLANET den
+     * Champion, der an ihm vorbeizieht, und das gilt für jede Rolle.
+     *
+     * Die Sperrzeit sitzt im Store am einzelnen Planeten statt hier an einer
+     * gemeinsamen Uhr, damit mehrere Obelisken unabhängig auslösen. Gesegnet
+     * wird der NÄCHSTE Körper in Reichweite, nicht der erste in der Liste —
+     * sonst gewänne immer derselbe Champion die Reihenfolge.
+     */
+    _tickObelisks() {
+      const planetShopStore = usePlanetShopStore()
+      const obelisks = planetShopStore.purchasedSlots.filter(
+        (s) => s.role === 'orbit_obelisk' && !isPlanetDown(s) && playerSlotInForeground(s.id),
+      )
+      if (obelisks.length === 0) return
+
+      const combatStore = useCombatStore()
+      for (const slot of obelisks) {
+        const pos = activePlayerPlanetPositions.get(slot.id)
+        if (!pos) continue
+
+        let best: { name: string; dist: number } | null = null
+        for (const champ of combatStore.champions) {
+          if (champ.screenX === 0 && champ.screenY === 0) continue
+          if (!championInForeground(champ.name)) continue
+          const dist = Math.hypot(champ.screenX - pos.cx, champ.screenY - pos.cy)
+          if (dist > JUNGLE_BUFF_RANGE) continue
+          if (!best || dist < best.dist) best = { name: champ.name, dist }
+        }
+        if (!best) continue
+
+        // Vergleich statt Rückgabewert: die Sperrzeit liegt im Store, und nur
+        // ein wirklich gesetzter Segen soll eine Zeile schreiben.
+        const prev = planetShopStore.blessingMultOf(best.name)
+        planetShopStore.blessChampion(slot.id, best.name)
+        const now = planetShopStore.blessingMultOf(best.name)
+        if (now === prev) continue
+
+        logChampionBlessed(
+          getPlanetLabel(slot),
+          best.name,
+          Math.round((now - 1) * 100),
+          Math.round(PLANET_BLESSING_MS / 1000),
+        )
+      }
     },
 
     _tickJungler(roles: Set<string>, tickMs: number) {

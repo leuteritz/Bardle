@@ -37,7 +37,11 @@ import { usePlayerStore } from '@/stores/battle/playerStore'
 import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import { useSkinStore } from '@/stores/champions/skinStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
-import { usePlanetShopStore, computePlanetMaxHp } from '@/stores/world/planetShopStore'
+import {
+  usePlanetShopStore,
+  computePlanetMaxHp,
+  transmuteTargets,
+} from '@/stores/world/planetShopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
@@ -371,16 +375,20 @@ export function maxEverything(): MaxEverythingResult {
   equipBestItemSet()
 
   // ⑩ Planeten. `adminFillRandomRoles` (in ⑥) kauft die Slots und verteilt
-  //    Rollen, lässt aber Level, maxHp UND slotConfig unangetastet — und ohne
-  //    Konfiguration produzieren zwei der sechs Rollen schlicht nichts:
-  //    ein Harvest Node ohne `materialId` erntet nicht, ein Resonator ohne
-  //    `rayId` legt auf nichts zu.
+//    Rollen, lässt aber Level, maxHp UND slotConfig unangetastet — und ohne
+  //    Konfiguration produzieren drei der zwölf Rollen schlicht nichts:
+  //    Harvester ohne `materialId`, Resonator ohne `rayId`, Crucible ohne Ziel.
   for (const slot of planetShopStore.slots) {
     if (slot.role === 'harvest_node' && !slot.slotConfig?.materialId) {
       planetShopStore.setSlotConfig(slot.id, { materialId: MATERIALS[0].id })
     }
     if (slot.role === 'resonance_tower' && !slot.slotConfig?.rayId) {
       planetShopStore.setSlotConfig(slot.id, { rayId: 'chimesPerSecond' })
+    }
+    // `MATERIALS[0]` taugt hier nicht: `common` hat nichts unter sich und ist
+    // deshalb nie ein Umschmelz-Ziel.
+    if (slot.role === 'transmuter' && !slot.slotConfig?.materialId) {
+      planetShopStore.setSlotConfig(slot.id, { materialId: transmuteTargets()[0].id })
     }
     // Ein zerstörter Planet zählt nirgends mit — die Sperre muss weg.
     slot.downUntilMs = 0

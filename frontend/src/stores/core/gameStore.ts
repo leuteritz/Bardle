@@ -1031,6 +1031,10 @@ export const useGameStore = defineStore('game', {
       planetShopStore.tickRespawn()
       // harvest_node: periodic material harvest
       planetShopStore.tickHarvest(this.inGameTime)
+      // transmuter: Überschuss zu Seltenerem umschmelzen
+      planetShopStore.tickTransmute(this.inGameTime)
+      // meridian_spire: Verweildauer der Sonnenphase wegbrennen
+      planetShopStore.tickDwellBurn()
       const combatStore = useCombatStore()
       combatStore.tick()
       const playerStore = usePlayerStore()

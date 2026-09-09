@@ -46,11 +46,15 @@ import {
   SECONDS_PER_HOUR,
   RESONANCE_MAX_STACKS,
 } from '@/config/constants'
+// Der Segen des Obelisken wird gegen die Spieluhr gesetzt — die Zeile unten
+// muss dieselbe lesen, sonst zaehlt sie im Zeitraffer falsch.
+import { gameNow } from '@/utils/game/gameClock'
 import type { StatCategoryId, StatCategoryView, StatEntry } from '@/types'
 
 /* ── Value formatters — one place, so every row reads the same ───────────── */
 const num = (n: number): string => formatNumber(Math.round(n))
 const dec = (n: number, digits = 2): string => n.toFixed(digits)
+
 const int = (n: number): string => String(Math.round(n))
 /** A ratio like 0.54 → "54%". */
 const pct = (fraction: number): string => `${Math.round(fraction * 100)}%`
@@ -745,6 +749,38 @@ export function useStatCatalog(query: Ref<string>): {
         key: 'harvesters',
         label: 'Active Harvest Nodes',
         value: int(planetShopStore.activeHarvestSlots.length),
+      },
+      {
+        key: 'bastion',
+        label: 'Bastion Void Relief',
+        value: pct(planetShopStore.planetVoidTollRelief),
+      },
+      {
+        key: 'crucibles',
+        label: 'Active Crucibles',
+        value: int(planetShopStore.activeTransmuteSlots.length),
+      },
+      {
+        key: 'meridian',
+        label: 'Meridian Dwell Burn',
+        value: `${int((planetShopStore.dwellBurnMsPerTick * 60) / 1000)}s/min`,
+      },
+      {
+        key: 'scryer',
+        label: 'Scryer Omen Bonus',
+        value: bonus(planetShopStore.planetOmenBoonMultiplier),
+      },
+      {
+        key: 'weir',
+        label: 'Weir Catch Chance',
+        value: pct(planetShopStore.planetDrifterCatchChance),
+      },
+      {
+        key: 'obelisk',
+        label: 'Blessed Champions',
+        value: int(
+          Object.values(planetShopStore.blessings).filter((b) => b.until > gameNow()).length,
+        ),
       },
     )
     return rows

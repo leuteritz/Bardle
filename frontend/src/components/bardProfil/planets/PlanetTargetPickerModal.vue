@@ -1,9 +1,15 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { usePlanetShopStore, transmuteTargets } from '@/stores/world/planetShopStore'
 import type { PlanetSlot } from '@/stores/world/planetShopStore'
 import { MATERIALS } from '@/config/economy/materials'
-import { MATERIAL_RARITY_COLOR, SOLAR_BRANCHES } from '@/config/constants'
+import {
+  MATERIAL_RARITY_COLOR,
+  MATERIAL_RARITY_ORDER,
+  PLANET_TRANSMUTE_INPUT_COST,
+  SOLAR_BRANCHES,
+} from '@/config/constants'
 import type { SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 
 const props = defineProps<{ planet: PlanetSlot }>()
@@ -14,6 +20,35 @@ const store = usePlanetShopStore()
 function rarityColorOf(rarity: string): string {
   return MATERIAL_RARITY_COLOR[rarity] ?? MATERIAL_RARITY_COLOR.common
 }
+
+/** Die Stufe, aus der ein Crucible sein Ziel schmilzt. */
+function rarityBelow(rarity: string): string {
+  return MATERIAL_RARITY_ORDER[MATERIAL_RARITY_ORDER.indexOf(rarity) + 1] ?? ''
+}
+
+// Drei Rollen teilen sich dieses Modal — Kopf und Rumpf verzweigen einmal hier
+// statt an fünf Stellen im Template.
+const head = computed(() => {
+  if (props.planet.role === 'harvest_node') {
+    return {
+      icon: 'game-icons:wheat',
+      title: 'Harvest Target',
+      sub: 'This planet pulls one material out of the orbit on every cycle — choose which one flows into your inventory.',
+    }
+  }
+  if (props.planet.role === 'transmuter') {
+    return {
+      icon: 'game-icons:cauldron',
+      title: 'Transmute Target',
+      sub: `This planet melts ${PLANET_TRANSMUTE_INPUT_COST} units of the tier below into one of these — choose what comes out.`,
+    }
+  }
+  return {
+    icon: 'game-icons:radio-tower',
+    title: 'Resonance Target',
+    sub: 'This planet amplifies one Solar Ray — choose which one gets the boost.',
+  }
+})
 
 // Selecting keeps the modal open so the player can compare options and read every
 // description; a "Done" button / scrim / ✕ closes it.
@@ -33,23 +68,11 @@ function chooseRay(rayId: SolarBranchId) {
     <div class="ps-modal">
       <div class="ps-modal-head">
         <span class="ps-modal-head-icon">
-          <Icon
-            :icon="planet.role === 'harvest_node' ? 'game-icons:wheat' : 'game-icons:radio-tower'"
-            width="28"
-            height="28"
-          />
+          <Icon :icon="head.icon" width="28" height="28" />
         </span>
         <div class="ps-modal-head-text">
-          <span class="ps-modal-title">
-            {{ planet.role === 'harvest_node' ? 'Harvest Target' : 'Resonance Target' }}
-          </span>
-          <span class="ps-modal-subtitle">
-            {{
-              planet.role === 'harvest_node'
-                ? 'This planet harvests one material every 30s — choose which one flows into your inventory.'
-                : 'This planet amplifies one building — choose which one gets the Chimes boost.'
-            }}
-          </span>
+          <span class="ps-modal-title">{{ head.title }}</span>
+          <span class="ps-modal-subtitle">{{ head.sub }}</span>
         </div>
         <button class="ps-modal-close" aria-label="Close" @click="emit('close')">✕</button>
       </div>
@@ -72,6 +95,35 @@ function chooseRay(rayId: SolarBranchId) {
               <span class="ps-pick-name">{{ mat.name }}</span>
               <span class="ps-pick-rarity">{{ mat.rarity }}</span>
               <span class="ps-pick-desc">{{ mat.description }}</span>
+            </span>
+            <span
+              v-if="planet.slotConfig?.materialId === mat.id"
+              class="ps-pick-check"
+              aria-hidden="true"
+              >✓</span
+            >
+          </button>
+        </template>
+        <template v-else-if="planet.role === 'transmuter'">
+          <button
+            v-for="mat in transmuteTargets()"
+            :key="mat.id"
+            class="ps-pick"
+            :class="{ 'ps-pick--active': planet.slotConfig?.materialId === mat.id }"
+            :style="{ '--tc': rarityColorOf(mat.rarity) }"
+            @click="chooseMaterial(mat.id)"
+          >
+            <span class="ps-pick-medal">
+              <img v-if="mat.image" :src="mat.image" class="ps-pick-icon" alt="" />
+              <span v-else class="ps-pick-icon-missing">?</span>
+            </span>
+            <span class="ps-pick-body">
+              <span class="ps-pick-name">{{ mat.name }}</span>
+              <span class="ps-pick-rarity">{{ mat.rarity }}</span>
+              <span class="ps-pick-desc">
+                Costs {{ PLANET_TRANSMUTE_INPUT_COST }} × {{ rarityBelow(mat.rarity) }} — whichever
+                you hold most of.
+              </span>
             </span>
             <span
               v-if="planet.slotConfig?.materialId === mat.id"
