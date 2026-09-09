@@ -1332,7 +1332,7 @@ export const SOLAR_EVOLUTION_PANEL = {
 /** Die Unterseiten des Journey-Reiters, in Leistenreihenfolge. */
 export const JOURNEY_SUBPAGES: readonly { id: JourneySubpageId; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'lucide:layout-dashboard' },
-  { id: 'records', label: 'Records', icon: 'lucide:list' },
+  { id: 'records', label: 'Stats', icon: 'lucide:chart-column' },
   { id: 'wayfinder', label: 'Wayfinder', icon: 'lucide:signpost' },
   { id: 'augments', label: 'Augments', icon: 'lucide:gem' },
 ]
