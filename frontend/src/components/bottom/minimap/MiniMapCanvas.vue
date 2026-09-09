@@ -102,7 +102,7 @@ import {
   smoothstep,
   type HyperspacePhase,
 } from './minimapDraw'
-import { gameNow } from '@/utils/game/gameClock'
+import { gameNow, getGameSpeed } from '@/utils/game/gameClock'
 import { playerGalaxyPos } from '@/utils/game/playerGalaxyPos'
 
 export default defineComponent({
@@ -195,6 +195,7 @@ export default defineComponent({
     )
 
     const warp = createWarpEffect()
+    const pausedPlanetAngles = new Map<string, { angle: number; lastMs: number }>()
 
     function drawFadeoutPhase(ctx: CanvasRenderingContext2D, w: number, h: number) {
       const t = Math.min((Date.now() - hyperspacePhaseStart) / 1000, 1)
@@ -892,6 +893,8 @@ export default defineComponent({
 
       type ArrivalSlot = {
         orbitDirection: 1 | -1
+        orbitAngle?: number
+        orbitSpeed?: number
         planetId?: string
         type?: PlanetType
         isChampionPlanet?: boolean
@@ -901,6 +904,8 @@ export default defineComponent({
       if (rawSlots.length > 0) {
         slots = (rawSlots as StarPlanetSlot[]).map((s) => ({
           orbitDirection: s.orbitDirection,
+          orbitAngle: s.orbitAngle,
+          orbitSpeed: s.orbitSpeed,
           planetId: s.planetId,
           type: s.type,
           isChampionPlanet: s.isChampionPlanet,
@@ -918,6 +923,9 @@ export default defineComponent({
       }
 
       // Compute planet positions for this frame (speed boosted when hovered)
+      const isGamePaused = gameStore.isGamePaused
+      const gameSpeed = getGameSpeed()
+      if (!isGamePaused) pausedPlanetAngles.clear()
       const planetData = slots.map((slot, idx) => {
         const isChamp = slot.isChampionPlanet ?? false
         const cleared = slot.cleared ?? false
@@ -931,13 +939,24 @@ export default defineComponent({
         const orbitRy = orbitRx * MINIMAP_ARRIVAL_ORBIT_SQUASH
 
         // Sync with main UI: read live angle from useStarSystem; fallback to time-based
-        const liveAngle =
-          !gameStore.isGamePaused && slot.planetId
-            ? livePlanetAngles.get(slot.planetId)
-            : undefined
+        const liveAngle = slot.planetId ? livePlanetAngles.get(slot.planetId) : undefined
         let angle: number
-        if (liveAngle !== undefined) {
+        if (liveAngle !== undefined && !isGamePaused) {
           angle = liveAngle
+        } else if (isGamePaused && slot.planetId && slot.orbitSpeed !== undefined) {
+          const state = pausedPlanetAngles.get(slot.planetId)
+          if (!state) {
+            pausedPlanetAngles.set(slot.planetId, {
+              angle: liveAngle ?? slot.orbitAngle ?? idx * Math.PI * 0.67,
+              lastMs: nowMs,
+            })
+            angle = liveAngle ?? slot.orbitAngle ?? idx * Math.PI * 0.67
+          } else {
+            const dt = Math.min(Math.max(0, nowMs - state.lastMs), 50)
+            state.angle += slot.orbitDirection * slot.orbitSpeed * gameSpeed * dt
+            state.lastMs = nowMs
+            angle = state.angle
+          }
         } else {
           const speed = slot.orbitDirection * (0.32 + idx * 0.15) * hoverSpeedMult
           angle = (nowMs / 1000) * speed + idx * Math.PI * 0.67
