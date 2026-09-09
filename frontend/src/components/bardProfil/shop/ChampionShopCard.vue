@@ -522,6 +522,9 @@ export default defineComponent({
   opacity: 1;
   transition: none;
 }
+.champion-card-slot.is-selected .card-img-layer {
+  inset: 9px;
+}
 .champion-card-slot:hover .card-img-scale {
   transform: scale(1.1);
 }
