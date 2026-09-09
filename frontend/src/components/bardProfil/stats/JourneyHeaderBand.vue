@@ -6,11 +6,10 @@ import { formatCompactDuration, durationSegments, toRoman, universeLabel } from 
 import { formatNumber } from '@/config/ui/numberFormat'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
-import JourneyBuffStrip from './JourneyBuffStrip.vue'
 import { JOURNEY_AXIS_COLORS, STATS_TAB_GAUGE } from '@/config/constants'
 
-/** Kommandoband der Übersicht: Spielzeit, die drei Achsenringe, laufende und
- *  dauerhafte Effekte — EINE Leiste, die Zonen nur durch Haarlinien getrennt. */
+/** Kommandoband der Übersicht: Spielzeit und die drei Achsenringe — EINE
+ *  Leiste über der Sonnenspalte, die Zonen nur durch Haarlinien getrennt. */
 const gameStore = useGameStore()
 const galaxyStore = useGalaxyStore()
 
@@ -175,19 +174,19 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
         </span>
       </div>
     </div>
-
-    <div class="jt-seg jt-seg--strip">
-      <JourneyBuffStrip />
-    </div>
   </header>
 </template>
 
 <style scoped>
-/* EINE flache Leiste, keine sechs Kästen: die Zonen trennt eine Haarlinie, nicht
-   ein Rahmen. Jede Höhe hier fällt eins zu eins an die Sonnenbühne darunter. */
+/* EINE flache Leiste, keine fünf Kästen: die Zonen trennt eine Haarlinie, nicht
+   ein Rahmen. Jede Höhe hier fällt eins zu eins an die Sonnenbühne darunter.
+   Die Leiste steht nur noch über der Sonnenspalte — auf Full HD sind das rund
+   570px für vier Zonen, deshalb misst sie sich an sich selbst und nimmt ihren
+   Zonen unter 620cqw das Polster. */
 .jt-band {
+  container-type: inline-size;
   display: grid;
-  grid-template-columns: auto auto auto auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.14fr) repeat(3, minmax(0, 1fr));
   align-items: stretch;
   min-width: 0;
   min-height: 82px;
@@ -202,8 +201,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
   padding: 11px 18px;
   border-right: 1px solid #2c1806;
 }
-.jt-seg--strip {
-  display: block;
+.jt-seg:last-child {
   border-right: 0;
 }
 
@@ -289,7 +287,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 /* ── Ringe ── */
 .jt-gauge {
   position: relative;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 11px;
   cursor: help;
 }
@@ -436,6 +434,18 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
   }
   .jt-gauge-sub {
     font-size: 13px;
+  }
+}
+
+@container (max-width: 620px) {
+  .jt-seg {
+    padding: 11px 10px;
+  }
+  .jt-gauge {
+    gap: 7px;
+  }
+  .jt-gauge-lbl {
+    letter-spacing: 0.1em;
   }
 }
 

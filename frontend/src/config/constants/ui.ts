@@ -1323,6 +1323,22 @@ export const SOLAR_EVOLUTION_PANEL = {
   SUN_MAX_PX: 380,
 } as const
 
+/** Die Buff-Zeile über der Sonne. Ihre Höhe steht FEST, auch leer: sie fällt
+ *  eins zu eins vom Durchmesser der Scheibe darunter ab. */
+export const JOURNEY_BUFF_PANEL = {
+  H: 72,
+  H_COMPACT: 66,
+  /** Karten nebeneinander, bevor der Rest als ein Platz „+N" zusammenfällt. */
+  COLS: 4,
+  /** Schmalste noch lesbare Karte, gemessen: bei 206px läuft kein Name über,
+   *  bei 183 jeder. Die Sonnenspalte ist auf Full HD nur rund 490px breit —
+   *  dort stehen damit zwei Karten, auf 2K drei, erst auf 4K die vollen vier. */
+  CARD_MIN_W: 200,
+  CARD_GAP: 10,
+  /** Breite der „+N"-Platte samt ihrer Fuge. */
+  MORE_W: 44,
+} as const
+
 /** Die Unterseiten des Journey-Reiters, in Leistenreihenfolge. */
 export const JOURNEY_SUBPAGES: readonly { id: JourneySubpageId; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'lucide:layout-dashboard' },

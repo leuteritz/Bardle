@@ -64,6 +64,18 @@ interface Hit {
   pattern: string
 }
 
+/** Ein Komponenten-Tag steht selten in einer Zeile — Prettier bricht es um,
+ *  sobald ein Attribut dazukommt, und der Marker der Registry rutscht dabei aus
+ *  der Trefferzeile. Der Treffer trägt deshalb das ganze Tag. */
+function tagText(lines: string[], start: number): string {
+  const out: string[] = []
+  for (let i = start; i < Math.min(lines.length, start + 14); i++) {
+    out.push(lines[i].trim())
+    if (lines[i].trimEnd().endsWith('>')) break
+  }
+  return out.join(' ')
+}
+
 /** Ein Marken-Vorkommen im Template. Vier Muster plus die Sondertoken der Registry. */
 function badgeHits(file: string, source: string): Hit[] {
   const extra = NOTIFY_BADGES.flatMap((b) => b.extraMarkers ?? [])
@@ -81,7 +93,13 @@ function badgeHits(file: string, source: string): Hit[] {
   lines.forEach((text, i) => {
     for (const [pattern, re] of patterns) {
       re.lastIndex = 0
-      if (re.test(text)) hits.push({ file, line: i + 1, text: text.trim(), pattern })
+      if (!re.test(text)) continue
+      hits.push({
+        file,
+        line: i + 1,
+        text: pattern === 'component' ? tagText(lines, i) : text.trim(),
+        pattern,
+      })
     }
   })
   return hits
