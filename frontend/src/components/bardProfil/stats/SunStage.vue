@@ -4,16 +4,11 @@ import { Icon } from '@iconify/vue'
 import { formatCompactDuration } from '@/utils/ui/format'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 import { useHerald } from '@/composables/ui/useHerald'
-import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
-import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
-import { useUiStore } from '@/stores/core/uiStore'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
   COMET_PHASE_DATA,
   SOLAR_BRANCHES,
-  FORGE_BRANCH_UNLOCK_PHASE,
-  FORGE_LEAF_UNLOCK_PHASE,
   SOLAR_EVOLUTION_PANEL,
 } from '@/config/constants'
 import { useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
@@ -24,9 +19,6 @@ import { gameNow } from '@/utils/game/gameClock'
 /** Die Sonne auf der Journey-Übersicht — die EINZIGE Stelle, an der sie evolviert. */
 const solarStore = useSolarUpgradeStore()
 const { announceReceipt } = useHerald()
-const uiStore = useUiStore()
-const { focusNode } = useForgeSpotlight()
-const { openDetails } = useForgeDetailsPane()
 
 const totalPhases = STAR_PHASE_DATA.length
 const isComet = computed(() => solarStore.isCometState)
@@ -181,23 +173,12 @@ const rayTiles = computed(() =>
 )
 const raysMet = computed(() => rayTiles.value.filter((r) => r.met).length)
 const raysAllMet = computed(() => raysMet.value >= SOLAR_BRANCHES.length)
-const raysShortText = computed(() => {
-  const missing = SOLAR_BRANCHES.length - raysMet.value
-  return `${missing} ray${missing === 1 ? '' : 's'}`
-})
-const raysNeedUpgrade = computed(() => !isMax.value && !raysAllMet.value)
-
-function openRayUpgrade(): void {
-  const target = rayTiles.value.find((ray) => !ray.met)?.id
-  if (!target) return
-  uiStore.setBardTab('tree')
-  openDetails()
-  focusNode(target, { readable: true })
-}
 
 /* ── The act ──────────────────────────────────────────────────────
-   This panel is the ONLY place the sun evolves. The Star Forge grows the rays
-   that feed gate one; it never calls `upgradeStar()`. */
+   This panel is the ONLY place the sun evolves, and the BODY is the button —
+   same doctrine as the orbit sun (IdleGameComponent: „the sun itself is the
+   button, no static icon"). The Star Forge grows the rays that feed gate two;
+   it never calls `upgradeStar()`. */
 const canEvolveNow = computed(() => solarStore.canUpgradeStar)
 
 const nextStage = computed(() =>
@@ -206,46 +187,17 @@ const nextStage = computed(() =>
     : STAR_PHASE_DATA[Math.min(solarStore.starPhase + 1, totalPhases - 1)],
 )
 
-/** What the next phase opens up — the reason to bother. */
-const nextPhaseGain = computed(() => {
-  const next = solarStore.starPhase + 1
-  if (next === FORGE_BRANCH_UNLOCK_PHASE) return 'Opens 10 Star Forge branches'
-  if (next === FORGE_LEAF_UNLOCK_PHASE) return 'Opens 10 Star Forge leaves'
-  return '+1 max level on every Star Forge branch'
+const sunTip = computed(() => {
+  if (!canEvolveNow.value) return phaseAstroName.value
+  return isComet.value ? 'Click to ignite the core' : `Click to evolve → ${nextStage.value.name}`
 })
 
-/**
- * The button's subline: what holds the evolution, or what it pays out.
- *
- * A fragment, not a sentence — the two slabs above already SHOW their state,
- * so "both gates stand open" would spend a line on what was just read. What is
- * left is the part the slabs cannot say: the missing number, or the reward.
- */
-const verdict = computed<{ tone: 'ready' | 'blocked' | 'end'; text: string }>(() => {
-  if (isMax.value) return { tone: 'end', text: 'Nothing follows the collapse' }
-  if (solarStore.isUpgrading)
-    return { tone: 'ready', text: `${nextStage.value.name} is taking shape…` }
-  if (dwellMet.value && raysAllMet.value) return { tone: 'ready', text: 'Ready to evolve' }
-  if (!dwellMet.value && !raysAllMet.value)
-    return {
-      tone: 'blocked',
-      text: `${formatCompactDuration(dwellRemainingMs.value)} remaining`,
-    }
-  if (!dwellMet.value)
-    return {
-      tone: 'blocked',
-      text: `${formatCompactDuration(dwellRemainingMs.value)} remaining`,
-    }
-  return {
-    tone: 'blocked',
-    text: `${raysShortText.value} below Lv ${requiredRayLevel.value}`,
-  }
-})
-
-const evolveLabel = computed(() => {
+/** The wreath line under the body — only while there is something to do. */
+const callText = computed(() => {
+  if (isMax.value) return ''
   if (solarStore.isUpgrading) return isComet.value ? 'Igniting…' : 'Evolving…'
-  if (isComet.value) return '✦ Ignite the Core'
-  return `✦ Evolve → ${nextStage.value.name}`
+  if (!canEvolveNow.value) return ''
+  return isComet.value ? 'Click to ignite' : `Click to evolve → ${nextStage.value.name}`
 })
 
 function handleEvolve(): void {
@@ -261,19 +213,37 @@ function handleEvolve(): void {
     icon: 'game-icons:heraldic-sun',
   })
 }
+
+function handleSunClick(): void {
+  if (!canEvolveNow.value) return
+  handleEvolve()
+}
+
+function handleSunKey(e: KeyboardEvent): void {
+  if (!canEvolveNow.value) return
+  if (e.key !== 'Enter' && e.key !== ' ') return
+  e.preventDefault()
+  handleEvolve()
+}
 </script>
 
 <template>
   <section class="jt-sun" :style="phaseVars">
-    <!-- ═ 1 · the body itself ═══════════════════════════════════ -->
+    <!-- ═ 1 · the body itself — and the button ══════════════════ -->
     <div ref="stageEl" class="se-stage">
       <!-- The disc renderers centre themselves absolutely inside their
            parent, so this box IS the body's footprint and the ready-rings
            can simply take its inset. -->
       <div
         class="se-sun"
-        v-tip="phaseAstroName"
+        :class="{ 'is-armed': canEvolveNow, 'is-working': solarStore.isUpgrading }"
+        v-tip="sunTip"
+        :role="canEvolveNow ? 'button' : null"
+        :tabindex="canEvolveNow ? 0 : null"
+        :aria-label="canEvolveNow ? sunTip : null"
         :style="{ width: sunDiameter + 'px', height: sunDiameter + 'px' }"
+        @click="handleSunClick"
+        @keydown="handleSunKey"
       >
         <!-- Not before the stage has measured itself: a body without a box. -->
         <template v-if="sunDiameter > 0">
@@ -281,13 +251,19 @@ function handleEvolve(): void {
           <PhaseSunDisc v-else :diameter="sunDiameter" :pulse="true" />
         </template>
 
-        <!-- Readiness announced by the body: two rings breaking out of the
-               core, half a cycle apart. transform + opacity only. -->
+        <!-- Readiness announced by the body: a standing halo whose opacity
+             breathes, plus two rings breaking out of the core half a cycle
+             apart. transform + opacity only. -->
         <template v-if="canEvolveNow">
+          <span class="se-halo" aria-hidden="true"></span>
           <span class="se-ring" aria-hidden="true"></span>
           <span class="se-ring se-ring--late" aria-hidden="true"></span>
         </template>
       </div>
+
+      <!-- Sits in the band `.se-stage` reserves below itself, so it can never
+           collide with the disc no matter how flat the viewport gets. -->
+      <span v-if="callText" class="se-call" aria-hidden="true">{{ callText }}</span>
 
       <!-- TEMP: admin dwell-skip — floated into the corner so it never
              affects the layout (remove with adminSkipDwellTime in the store) -->
@@ -322,36 +298,23 @@ function handleEvolve(): void {
       </span>
     </div>
 
-    <!-- ═ 3 · the deck: time, rays, act ═════════════════════════ -->
-    <section class="se-deck" :class="[`is-${verdict.tone}`, { 'is-live': canEvolveNow }]">
-      <div class="se-next">
-        <span class="se-next-mark" aria-hidden="true">
-          <Icon icon="game-icons:heraldic-sun" width="24" height="24" />
-        </span>
-        <span class="se-next-copy">
-          <span class="se-next-k">{{ isMax ? 'Solar path' : 'Next solar phase' }}</span>
-          <strong class="se-next-name">{{ isMax ? 'Fully Evolved' : nextStage.name }}</strong>
-          <span class="se-next-gain">{{ isMax ? verdict.text : nextPhaseGain }}</span>
-        </span>
-      </div>
+    <!-- ═ 3 · the two gates, and nothing else ═══════════════════ -->
+    <section v-if="!isMax" class="se-gates" :class="{ 'is-open': canEvolveNow }">
+      <span class="se-gates-k">Requirements</span>
 
-      <div v-if="!isMax" class="se-requirements">
-        <div class="se-requirements-head">
-          <span class="se-requirements-k">Requirements</span>
-        </div>
-
-        <div class="se-requirement" :class="{ 'is-met': dwellMet }">
-          <div class="se-requirement-copy">
+      <div class="se-gates-grid">
+        <article class="se-gate" :class="{ 'is-met': dwellMet }">
+          <div class="se-gate-head">
             <Icon
               icon="lucide:hourglass"
-              class="se-requirement-ico"
-              width="17"
-              height="17"
+              class="se-gate-ico"
+              width="24"
+              height="24"
               aria-hidden="true"
             />
-            <span>
-              <span class="se-requirement-name">Dwell</span>
-              <span class="se-requirement-value">
+            <span class="se-gate-copy">
+              <span class="se-gate-name">Dwell</span>
+              <span class="se-gate-value">
                 {{ dwellMet ? 'Served' : `${formatCompactDuration(dwellRemainingMs)} remaining` }}
               </span>
             </span>
@@ -359,20 +322,20 @@ function handleEvolve(): void {
           <span class="se-track">
             <i class="se-track-fill" :style="{ transform: `scaleX(${dwellPct})` }" />
           </span>
-        </div>
+        </article>
 
-        <div class="se-requirement se-requirement--rays" :class="{ 'is-met': raysAllMet }">
-          <div class="se-requirement-copy">
+        <article class="se-gate se-gate--rays" :class="{ 'is-met': raysAllMet }">
+          <div class="se-gate-head">
             <Icon
               icon="game-icons:solar-power"
-              class="se-requirement-ico"
-              width="18"
-              height="18"
+              class="se-gate-ico"
+              width="24"
+              height="24"
               aria-hidden="true"
             />
-            <span>
-              <span class="se-requirement-name">Core rays</span>
-              <span class="se-requirement-value"
+            <span class="se-gate-copy">
+              <span class="se-gate-name">Core rays</span>
+              <span class="se-gate-value"
                 >{{ raysMet }}/{{ SOLAR_BRANCHES.length }} rays · Lv {{ requiredRayLevel }}</span
               >
             </span>
@@ -386,44 +349,29 @@ function handleEvolve(): void {
               :style="{ '--ray': ray.color }"
               v-tip="`${ray.name} — Lv ${ray.level} of ${requiredRayLevel} needed`"
             >
-              <Icon :icon="ray.icon" class="se-ray-ico" width="22" height="22" aria-hidden="true" />
+              <Icon :icon="ray.icon" class="se-ray-ico" width="28" height="28" aria-hidden="true" />
               <span class="se-ray-lv">
                 {{ ray.level }}<span class="se-ray-req">/{{ requiredRayLevel }}</span>
               </span>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="se-action">
-        <button
-          v-if="!isMax"
-          class="se-fire"
-          type="button"
-          :disabled="!canEvolveNow"
-          @click="handleEvolve"
-        >
-          <span class="se-fire-mark" aria-hidden="true">✦</span>
-          <span class="se-fire-copy">
-            <span class="se-fire-lbl">{{ evolveLabel }}</span>
-            <span class="se-fire-sub">{{ verdict.text }}</span>
-          </span>
-          <span class="se-fire-arrow" aria-hidden="true">→</span>
-        </button>
-        <div v-else class="se-fire se-fire--done">
-          <span class="se-fire-mark" aria-hidden="true">
-            <Icon icon="game-icons:laurel-crown" width="22" height="22" aria-hidden="true" />
-          </span>
-          <span class="se-fire-copy">
-            <span class="se-fire-lbl">Fully Evolved</span>
-            <span class="se-fire-sub">{{ verdict.text }}</span>
-          </span>
-        </div>
-        <button v-if="raysNeedUpgrade" class="se-fire-link" type="button" @click="openRayUpgrade">
-          Open in Skill Tree →
-        </button>
+        </article>
       </div>
     </section>
+
+    <div v-else class="se-gates se-gates--done">
+      <Icon
+        icon="game-icons:laurel-crown"
+        class="se-done-ico"
+        width="32"
+        height="32"
+        aria-hidden="true"
+      />
+      <span class="se-done-copy">
+        <strong class="se-done-name">Fully Evolved</strong>
+        <span class="se-done-sub">Nothing follows the collapse</span>
+      </span>
+    </div>
   </section>
 </template>
 
@@ -446,12 +394,16 @@ function handleEvolve(): void {
 
 /* ── 1 · the body ────────────────────────────────────────────────
    The only row that flexes: it takes whatever the fixed rows below leave, and
-   the disc is sized against it in script. */
+   the disc is sized against it in script.
+   Das untere Polster ist das Band der Kranzzeile. Es steht IMMER, auch leer:
+   `contentRect` schließt Polster aus, also rechnet die Scheibe schon ohne es —
+   so springt beim Bereitwerden nichts, und nichts überdeckt sich je. */
 .se-stage {
   position: relative;
   grid-column: 1;
   grid-row: 1;
   min-height: 0;
+  padding-bottom: clamp(20px, 2.6cqw, 34px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -461,6 +413,42 @@ function handleEvolve(): void {
   position: relative;
   flex-shrink: 0;
   cursor: help;
+}
+
+/* Bereit = der Körper IST der Knopf. Hover fährt nur `transform`. */
+.se-sun.is-armed {
+  cursor: pointer;
+  transition: transform 0.18s ease-out;
+}
+.se-sun.is-armed:hover {
+  transform: scale(1.03);
+}
+.se-sun.is-armed:focus-visible {
+  outline: 2px solid #6ec040;
+  outline-offset: 6px;
+  border-radius: 50%;
+}
+.se-sun.is-working {
+  cursor: progress;
+}
+
+/* Stehender Schein auf eigener Ebene — animiert wird nur seine Deckkraft. */
+.se-halo {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 26px 6px rgba(140, 240, 110, 0.55);
+  animation: se-halo-breathe 2.4s ease-in-out infinite;
+}
+@keyframes se-halo-breathe {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.85;
+  }
 }
 
 /* Two rings out of the core, half a cycle apart. transform + opacity only, so
@@ -486,6 +474,27 @@ function handleEvolve(): void {
     transform: scale(1.35);
     opacity: 0;
   }
+}
+
+/* Die Aufforderung, im reservierten Band unter dem Körper. */
+.se-call {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-bottom: 2px;
+  font-size: clamp(11px, 1.9cqw, 20px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+  color: #8bcf60;
+  text-shadow: 0 0 12px rgba(110, 192, 64, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
 }
 
 /* TEMP: admin dwell-skip chip */
@@ -608,185 +617,110 @@ function handleEvolve(): void {
     0 0 20px color-mix(in srgb, var(--step-glow) 45%, transparent);
 }
 
-/* ── 3 · the deck ────────────────────────────────────────────────
-   One plate holding the two gates and the act. Its border carries the overall
-   state, so "ready" reads before a single number is read. */
-.se-deck {
+/* ── 3 · die Tore ────────────────────────────────────────────────
+   Unter der Perlenschnur steht nur noch, was der Spieler wirklich liest: die
+   zwei Bedingungen. Kein Ziel-Steckbrief, kein Knopf — der Knopf ist oben die
+   Sonne. Deshalb bekommt jedes Tor rund die dreifache Breite von vorher und
+   darf endlich in lesbaren Graden stehen. */
+.se-gates {
   grid-column: 1;
   grid-row: 4;
-  align-self: center;
   width: 100%;
   min-width: 0;
+  padding-top: clamp(12px, 1.6cqw, 20px);
+  border-top: 1px solid #2c1806;
+}
+
+.se-gates-k {
+  display: block;
+  margin-bottom: clamp(8px, 1.1cqw, 14px);
+  font-size: clamp(11px, 1.7cqw, 18px);
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  text-align: center;
+  color: #7a6c56;
+}
+
+.se-gates.is-open .se-gates-k {
+  color: #8bcf60;
+}
+
+/* Mittig, mit Deckel: auf 4K soll die Zeile nicht auf 1,5 m auseinanderlaufen. */
+.se-gates-grid {
   display: grid;
-  grid-template-columns: minmax(170px, 0.78fr) minmax(300px, 1.45fr) minmax(185px, 0.87fr);
-  grid-template-areas: 'next requirements action';
-  align-items: stretch;
-  gap: clamp(10px, 1.5cqw, 20px);
-  padding: clamp(12px, 1.6cqw, 20px) 0 0;
-  border-block: 1px solid #2c1806;
-  --se-state: #5c3310;
-}
-.se-deck.is-live {
-  --se-state: #6ec040;
-}
-.se-deck.is-end {
-  --se-state: #4a2a7a;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: clamp(14px, 2cqw, 30px);
+  max-width: clamp(560px, 94cqw, 1120px);
+  margin-inline: auto;
 }
 
-.se-next {
-  grid-area: next;
-  display: flex;
-  align-items: center;
-  gap: clamp(8px, 1.2cqw, 15px);
-  min-width: 0;
-  padding-right: clamp(12px, 1.5cqw, 22px);
-  border-right: 1px solid #2c1806;
-}
-
-.se-next-mark {
-  display: grid;
-  place-items: center;
-  width: clamp(30px, 4.4cqw, 42px);
-  height: clamp(30px, 4.4cqw, 42px);
-  color: var(--phase-primary);
-  border: 1px solid var(--se-state);
-  border-radius: 50%;
-}
-
-.se-next-copy,
-.se-requirement-copy,
-.se-fire-copy {
-  min-width: 0;
-}
-
-.se-next-copy,
-.se-requirement-copy {
+.se-gate {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  gap: clamp(8px, 1.1cqw, 14px);
+  min-width: 0;
+  padding: clamp(10px, 1.3cqw, 16px) clamp(12px, 1.6cqw, 20px);
+  background: #1a1008;
+  border: 1px solid #2c1806;
+  border-radius: 4px;
+}
+.se-gate.is-met {
+  border-color: #2e7a1a;
 }
 
-.se-next-k,
-.se-requirements-k,
-.se-requirement-name {
-  font-size: clamp(9px, 1.1cqw, 13px);
+.se-gate-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: clamp(9px, 1.2cqw, 15px);
+  min-width: 0;
+}
+
+.se-gate-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.se-gate-ico {
+  width: clamp(20px, 3cqw, 34px);
+  height: clamp(20px, 3cqw, 34px);
+  color: #6a5a3a;
+}
+
+.se-gate.is-met .se-gate-ico,
+.se-gate.is-met .se-gate-name {
+  color: #8bcf60;
+}
+
+.se-gate-name {
+  display: block;
+  font-size: clamp(12px, 1.9cqw, 20px);
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #7a6c56;
 }
 
-.se-next-name {
-  margin-top: 2px;
-  font-size: clamp(20px, 2.6cqw, 30px);
-  line-height: 1;
-  letter-spacing: 0.03em;
-  color: var(--phase-primary);
-}
-
-.se-next-gain {
-  margin-top: 4px;
-  font-size: clamp(10px, 1.25cqw, 15px);
-  line-height: 1.2;
-  color: #c7b98d;
-}
-
-.se-requirements {
-  grid-area: requirements;
-  display: grid;
-  grid-template-columns: minmax(155px, 0.7fr) minmax(240px, 1.3fr);
-  gap: clamp(7px, 0.9cqw, 11px);
-  min-width: 0;
-  padding: 0 clamp(12px, 1.5cqw, 22px);
-  border-inline: 1px solid #2c1806;
-}
-
-.se-requirements-head {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #2c1806;
-}
-
-.se-requirement {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.se-requirement-copy {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  column-gap: 8px;
-}
-
-.se-requirement-ico {
-  color: #6a5a3a;
-}
-
-.se-requirement.is-met .se-requirement-ico,
-.se-requirement.is-met .se-requirement-name {
-  color: #8bcf60;
-}
-
-.se-requirement-name,
-.se-requirement-value {
+.se-gate-value {
   display: block;
-}
-
-.se-requirement-value {
-  margin-top: 2px;
-  font-size: clamp(10px, 1.25cqw, 15px);
-  line-height: 1.2;
-  color: #c7b98d;
+  margin-top: 3px;
+  font-size: clamp(14px, 2.4cqw, 26px);
+  line-height: 1.15;
+  color: #e8e4d8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.se-requirement--rays {
-  gap: clamp(7px, 1cqw, 12px);
-}
-
-.se-action {
-  grid-area: action;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: 7px;
-  min-width: 0;
-}
-
-.se-fire-link {
-  align-self: center;
-  padding: 0;
-  font-size: clamp(10px, 1.15cqw, 14px);
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: #d8b06a;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-}
-
-.se-fire-link:hover {
-  color: #e8c040;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-/* Label left, value right, the visual underneath — full width, because that is
-   the whole point of the stack. */
 /* ── gate one: the dwell track ───────────────────────────────────
    scaleX, not width — this creeps forward every second the panel is open. */
 .se-track {
   display: block;
   width: 100%;
-  height: clamp(6px, 0.8cqw, 10px);
+  height: clamp(9px, 1.1cqw, 14px);
   background: #0d0904;
   border: 1px solid #2c1806;
   border-radius: 3px;
@@ -800,7 +734,7 @@ function handleEvolve(): void {
   transform-origin: left center;
   background: linear-gradient(to right, #b8791c, #e0a828);
 }
-.se-requirement.is-met .se-track-fill {
+.se-gate.is-met .se-track-fill {
   background: linear-gradient(to right, #2e7a1a, #6ec040);
 }
 
@@ -810,7 +744,7 @@ function handleEvolve(): void {
 .se-rays {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(4px, 0.8cqw, 10px);
+  gap: clamp(5px, 0.9cqw, 12px);
 }
 
 .se-ray {
@@ -818,7 +752,7 @@ function handleEvolve(): void {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(2px, 0.4cqw, 5px);
+  gap: clamp(3px, 0.5cqw, 7px);
   padding: clamp(6px, 0.9cqw, 11px) 2px 5px;
   background: transparent;
   border: 0;
@@ -830,8 +764,8 @@ function handleEvolve(): void {
 /* A grown ray burns in its own colour; a short one stays a dark socket. No
    `filter: grayscale` — the colour IS the ray's name here. */
 .se-ray-ico {
-  width: clamp(18px, 2.7cqw, 32px);
-  height: clamp(18px, 2.7cqw, 32px);
+  width: clamp(24px, 4.2cqw, 46px);
+  height: clamp(24px, 4.2cqw, 46px);
   color: #4e422c;
 }
 .se-ray.is-met {
@@ -842,11 +776,10 @@ function handleEvolve(): void {
 }
 
 .se-ray-lv {
-  font-size: clamp(11px, 1.8cqw, 22px);
+  font-size: clamp(15px, 2.9cqw, 30px);
   font-weight: 900;
   line-height: 1;
   color: #6a5a3a;
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .se-ray.is-met .se-ray-lv {
@@ -862,150 +795,88 @@ function handleEvolve(): void {
   color: #7a6c56;
 }
 
-/* ── the act ─────────────────────────────────────────────────────
-   Full width, two lines: what it does, and why it will or will not fire. The
-   subline is why no separate verdict row is needed. */
-.se-fire {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+/* ── das Ende der Straße ─────────────────────────────────────────
+   Statt der Tore: eine Zeile, mittig, in Gold. */
+.se-gates--done {
+  display: flex;
   align-items: center;
-  gap: clamp(8px, 1.2cqw, 15px);
-  padding: clamp(10px, 1.4cqw, 16px) clamp(11px, 1.6cqw, 20px);
-  width: 100%;
-  color: #08130a;
-  background: linear-gradient(to bottom, #52b830, #2e7a1a);
-  border: 1px solid #6ec040;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.se-fire:hover:not(:disabled) {
-  filter: brightness(1.12);
+  justify-content: center;
+  gap: clamp(10px, 1.4cqw, 18px);
 }
 
-.se-fire-lbl {
-  display: block;
-  font-size: clamp(14px, 1.9cqw, 23px);
-  font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.se-fire-sub {
-  display: block;
-  margin-top: 3px;
-  font-size: clamp(10px, 1.15cqw, 14px);
-  line-height: 1.2;
-  letter-spacing: 0.02em;
-  color: #10300c;
-  text-align: left;
-}
-
-.se-fire-mark {
-  display: grid;
-  place-items: center;
-  width: clamp(22px, 3.2cqw, 32px);
-  height: clamp(22px, 3.2cqw, 32px);
-  font-size: clamp(17px, 2.4cqw, 24px);
-  line-height: 1;
-}
-
-.se-fire-arrow {
-  font-size: clamp(18px, 2.5cqw, 26px);
-  line-height: 1;
-}
-
-/* Blocked is not hidden — the button stays, so the target is always visible;
-   its subline says what holds it. */
-.se-fire:disabled {
-  color: #9a8f7c;
-  background: transparent;
-  border-color: #3e200a;
-  cursor: not-allowed;
-}
-.se-fire:disabled .se-fire-sub {
-  color: #d8b06a;
-}
-
-.se-fire--done {
+.se-done-ico {
+  width: clamp(28px, 3.2cqw, 42px);
+  height: clamp(28px, 3.2cqw, 42px);
   color: #e8c040;
-  background: transparent;
-  border-color: #e8c040;
-  cursor: default;
 }
-.se-fire--done .se-fire-sub {
+
+.se-done-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.se-done-name {
+  font-size: clamp(18px, 2.4cqw, 30px);
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  color: #e8c040;
+}
+
+.se-done-sub {
+  margin-top: 3px;
+  font-size: clamp(12px, 1.5cqw, 18px);
+  line-height: 1.2;
   color: #b89ad8;
 }
 
-/* The call to act breathes on its OWN layer: the glow stands still in CSS and
-   only its opacity animates. Pulsing the button's box-shadow directly would
-   re-raster the box every frame (see „Performance" Regel 2/11). */
-.se-fire:not(:disabled):not(.se-fire--done)::after {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 5px;
-  box-shadow: 0 0 18px 2px rgba(140, 240, 110, 0.8);
-  pointer-events: none;
-  animation: se-fire-breathe 2s ease-in-out infinite;
-}
-@keyframes se-fire-breathe {
-  0%,
-  100% {
-    opacity: 0.28;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
-
-/* Full HD / WUXGA — the flattest viewports. Every pixel the deck gives back
+/* Full HD / WUXGA — the flattest viewports. Every pixel the gates give back
    here goes straight into the sun, which is the row that flexes. */
 @media (max-height: 1100px) {
   .jt-sun {
     row-gap: 7px;
     padding: 8px 12px 10px;
   }
-  .se-deck {
-    padding: 8px 0 0;
-    gap: 8px;
+  .se-stage {
+    padding-bottom: clamp(17px, 2.1cqw, 26px);
+  }
+  .se-gates {
+    padding-top: 9px;
+  }
+  .se-gates-k {
+    margin-bottom: 7px;
+  }
+  .se-gate {
+    gap: 7px;
+    padding: 7px 11px;
   }
   .se-ray {
     padding: 4px 2px;
   }
-  .se-fire {
-    padding: 8px 10px;
-  }
 }
 
-@container (max-width: 700px) {
-  .se-deck {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    grid-template-areas:
-      'next action'
-      'requirements requirements';
-    row-gap: 12px;
-  }
-
-  .se-requirements {
-    grid-template-columns: minmax(145px, 0.7fr) minmax(220px, 1.3fr);
-    padding: 10px 0 0;
-    border-top: 1px solid #2c1806;
-    border-inline: 0;
+/* Gestapelt erst, wenn nebeneinander wirklich nicht mehr geht: die Spalte ist
+   auf Full HD nur ~466px breit, und jede gestapelte Zeile nimmt der Sonne 70px. */
+@container (max-width: 430px) {
+  .se-gates-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .se-ring,
-  .se-fire:not(:disabled)::after {
+  .se-halo {
     animation: none;
   }
   .se-ring--late {
     display: none;
   }
-  .se-fire:not(:disabled)::after {
+  .se-halo {
     opacity: 0.6;
+  }
+  .se-sun.is-armed {
+    transition: none;
   }
 }
 </style>
