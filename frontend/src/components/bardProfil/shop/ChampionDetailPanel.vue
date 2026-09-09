@@ -245,7 +245,8 @@ export default defineComponent({
         .map((threshold) => `At ${threshold.count} → ${threshold.bonus}`)
         .join('\n')
     const affinityTip = (affinity: AffinityCard) => ({
-      label: `${affinity.kind} · ${affinity.name}`,
+      label: `${affinity.kind} ·`,
+      labelAccent: affinity.name,
       text: affinityTipText(affinity),
       color: affinity.color,
     })
