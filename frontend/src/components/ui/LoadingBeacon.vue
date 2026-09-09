@@ -24,6 +24,9 @@ const props = withDefaults(
     accent: string
     /** Wappen in der Ringmitte — game-icons, passend zum Gegenstand. */
     icon: string
+    /** Gezeichnetes Wappen statt Glyph, wenn es eines gibt (Rollenbild).
+     *  Ohne dieses steht das Glyph — die vier anderen Ladekarten tragen keines. */
+    image?: string | null
     /** Überschrift: was gleich erscheint (Rollenkürzel, Bossname). */
     title: string
     /** Zeile darunter, immer englisch (siehe Sprachregel). */
@@ -61,7 +64,8 @@ onBeforeUnmount(() => {
     <div class="lb-ring">
       <span class="lb-arc lb-arc--outer" />
       <span class="lb-arc lb-arc--inner" />
-      <Icon :icon="icon" width="34" height="34" class="lb-ring-icon" />
+      <img v-if="image" :src="image" alt="" class="lb-ring-art" />
+      <Icon v-else :icon="icon" width="34" height="34" class="lb-ring-icon" />
     </div>
 
     <div class="lb-title">{{ title }}</div>
@@ -120,6 +124,16 @@ onBeforeUnmount(() => {
 }
 .lb-ring-icon {
   color: var(--acc);
+  opacity: 0.92;
+}
+/* 62 ist gerechnet: der innere Bogen sitzt auf inset 15 im 104er Ring, misst
+   also 74 — das lässt ihm auf jeder Seite 6 px Luft. Breite und Höhe stehen
+   explizit, sonst deckelt Tailwinds Preflight das Bild auf die Flexbreite.
+   Keine Akzentfarbe: das Wappen trägt seine eigene. */
+.lb-ring-art {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
   opacity: 0.92;
 }
 

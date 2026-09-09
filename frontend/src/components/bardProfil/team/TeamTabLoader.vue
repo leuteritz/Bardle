@@ -66,6 +66,8 @@ const showPage = computed(() => props.cover !== 'board')
  */
 const accent = computed(() => roleDef.value?.color ?? SIGIL_LOADER_NEUTRAL_ACCENT)
 const beaconIcon = computed(() => roleDef.value?.icon ?? 'game-icons:crenel-crown')
+/** Die Rolle bringt ihr gezeichnetes Wappen mit; ohne Rolle bleibt das Glyph. */
+const beaconImage = computed(() => roleDef.value?.image ?? null)
 const beaconTitle = computed(() => roleDef.value?.short ?? 'Battle Sigil')
 const beaconCaption = computed(() =>
   roleDef.value ? 'Assembling role details' : 'Assembling the battle sigil',
@@ -166,6 +168,7 @@ const skeletonNodes = computed(() =>
       class="ttl-beacon"
       :accent="accent"
       :icon="beaconIcon"
+      :image="beaconImage"
       :title="beaconTitle"
       :caption="beaconCaption"
       :started-at="startedAt"
