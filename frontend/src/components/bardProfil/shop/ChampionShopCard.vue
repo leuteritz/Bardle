@@ -12,8 +12,6 @@
         {{ roleBadge?.label }}
       </div>
 
-      <span v-if="selected" class="selected-card-mark" aria-hidden="true">Selected</span>
-
       <!-- Tier badge: top-left — Cosmic/Champion Tier (★N) -->
       <div
         v-if="!owned"
@@ -248,46 +246,11 @@ export default defineComponent({
     0 0 22px rgba(200, 144, 64, 0.22);
 }
 
-/* ── Selected card: gold ring around the slot (drives the detail panel) ── */
+/* ── Selected card: role frame drives the detail panel ── */
 .champion-card-slot.is-selected {
   z-index: 22;
-}
-.champion-card-slot.is-selected::before {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border: 2px solid var(--role-c-hi, #e8c060);
-  border-radius: calc(var(--bp-radius) + 2px);
-  box-shadow:
-    0 0 14px color-mix(in srgb, var(--role-c, #e8c060) 65%, transparent),
-    inset 0 0 8px color-mix(in srgb, var(--role-c, #e8c060) 22%, transparent);
-  pointer-events: none;
-  z-index: 21;
-}
-.champion-card-slot.is-selected .card-inner {
-  border-color: var(--role-c-hi, #e8c060);
-  box-shadow:
-    0 0 0 1px #111008,
-    0 0 0 3px var(--role-c, #e8c060),
-    0 0 22px color-mix(in srgb, var(--role-c, #e8c060) 46%, transparent);
-}
-.selected-card-mark {
-  position: absolute;
-  top: 7px;
-  left: 50%;
-  z-index: 12;
-  padding: 2px 6px;
-  border: 1px solid var(--role-c-hi, #e8c060);
-  border-radius: 3px;
-  background: #111008;
-  color: var(--role-c-hi, #e8c060);
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  line-height: 1.1;
-  text-transform: uppercase;
-  transform: translateX(-50%);
-  white-space: nowrap;
+  transform: scale(1.045);
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* ── Image layer: clipped within card-inner ── */
@@ -457,6 +420,10 @@ export default defineComponent({
 .champion-badge-fade-leave-to { opacity: 0; }
 
 @media (prefers-reduced-motion: reduce) {
+  .champion-card-slot.is-selected {
+    transition: none;
+    transform: none;
+  }
   .card-content,
   .champion-name,
   .card-img-scale {
@@ -491,10 +458,15 @@ export default defineComponent({
   transform: translateY(-6px) scale(1.025);
 }
 .champion-card-slot.is-selected::before {
-  inset: -2px;
-  border-width: 2px;
-  border-color: #e8c040;
-  box-shadow: none;
+  display: none;
+}
+.champion-card-slot.is-selected .card-inner {
+  border-width: 4px !important;
+  border-color: var(--role-c-hi, #e8c060) !important;
+  box-shadow:
+    0 0 0 2px #111008,
+    0 0 0 4px var(--role-c, #e8c060),
+    0 0 24px color-mix(in srgb, var(--role-c, #e8c060) 48%, transparent) !important;
 }
 .card-overlay,
 .card-overlay--buyable,
