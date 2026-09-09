@@ -31,51 +31,85 @@
            leave over, and below SHOP_HERO_LABEL_MIN_W they leave more by
            dropping their labels. -->
       <div class="cs-search-hero" role="search" aria-label="Search the shop">
-        <RpgSearchBar
-          ref="searchInputRef"
-          v-model="searchQuery"
-          class="cs-hero-field"
-          size="lg"
-          placeholder="Search champions, traits or items..."
-          aria-label="Search champions, traits and items"
-          @clear="resetSearch"
-        >
-          <template #trailing>
-            <span class="cs-hits" :class="{ 'cs-hits--empty': domainHitCount === 0 }">
-              {{ domainHitCount }}
-            </span>
-          </template>
-        </RpgSearchBar>
+        <div class="cs-search-row">
+          <RpgSearchBar
+            ref="searchInputRef"
+            v-model="searchQuery"
+            class="cs-hero-field"
+            size="lg"
+            placeholder="Search champions, traits or items..."
+            aria-label="Search champions, traits and items"
+            @clear="resetSearch"
+          >
+            <template #trailing>
+              <span class="cs-hits" :class="{ 'cs-hits--empty': domainHitCount === 0 }">
+                {{ domainHitCount }}
+              </span>
+            </template>
+          </RpgSearchBar>
 
-        <!-- Both carry a `v-tip`: labelless they have nothing else to say what
+          <!-- Both carry a `v-tip`: labelless they have nothing else to say what
              they do. -->
-        <button
+          <button
+            v-if="canCollapseAll && !domainNarrowed"
+            class="cs-hero-btn"
+            :class="{ 'cs-hero-btn--on': allTiersCollapsed }"
+            v-tip="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
+            :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
+            @click="toggleAllTiers"
+          >
+            <Icon
+              :icon="allTiersCollapsed ? 'lucide:list-tree' : 'lucide:list-collapse'"
+              width="17"
+              height="17"
+            />
+            <span class="cs-hero-btn-label">
+              {{ allTiersCollapsed ? 'Expand all' : 'Collapse all' }}
+            </span>
+          </button>
+        </div>
+
+        <div
           v-if="hasActiveFilter"
-          class="cs-hero-btn cs-hero-btn--reset"
-          v-tip="'Clear every filter'"
-          aria-label="Clear every filter"
-          @click="clearFilters"
+          class="cs-active-filters"
+          aria-label="Active shop filters"
+          aria-live="polite"
         >
-          <Icon icon="lucide:rotate-ccw" width="17" height="17" />
-          <span class="cs-hero-btn-label">Reset</span>
-        </button>
-        <button
-          v-if="canCollapseAll && !domainNarrowed"
-          class="cs-hero-btn"
-          :class="{ 'cs-hero-btn--on': allTiersCollapsed }"
-          v-tip="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
-          :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
-          @click="toggleAllTiers"
-        >
-          <Icon
-            :icon="allTiersCollapsed ? 'lucide:list-tree' : 'lucide:list-collapse'"
-            width="17"
-            height="17"
-          />
-          <span class="cs-hero-btn-label">
-            {{ allTiersCollapsed ? 'Expand all' : 'Collapse all' }}
-          </span>
-        </button>
+          <div class="cs-active-filters-intro">
+            <Icon icon="lucide:filter" width="19" height="19" />
+            <span class="cs-active-filters-title">Active filters</span>
+            <span class="cs-active-filters-count">{{ activeFilterChips.length }}</span>
+          </div>
+
+          <div class="cs-active-filter-list">
+            <button
+              v-for="filter in activeFilterChips"
+              :key="filter.key"
+              class="cs-active-filter"
+              :style="{ '--filter-color': filter.color ?? '#c89040' }"
+              :aria-label="`Remove ${filter.groupLabel} filter ${filter.label}`"
+              v-tip="`Remove ${filter.groupLabel} filter`"
+              @click="removeActiveFilter(filter.groupId, filter.id)"
+            >
+              <img v-if="filter.image" :src="filter.image" :alt="filter.label" />
+              <Icon v-else-if="filter.icon" :icon="filter.icon" width="19" height="19" />
+              <span class="cs-active-filter-group">{{ filter.groupLabel }}</span>
+              <span class="cs-active-filter-separator">·</span>
+              <span class="cs-active-filter-label">{{ filter.label }}</span>
+              <Icon icon="lucide:x" width="16" height="16" class="cs-active-filter-remove" />
+            </button>
+          </div>
+
+          <button
+            class="cs-active-clear"
+            v-tip="'Clear every filter'"
+            aria-label="Clear every filter"
+            @click="clearFilters"
+          >
+            <Icon icon="lucide:rotate-ccw" width="16" height="16" />
+            <span>Clear all</span>
+          </button>
+        </div>
       </div>
 
       <Transition name="cs-domain-swap" mode="out-in">
@@ -395,8 +429,15 @@ import type {
   ItemCategory,
   ItemRarity,
   PlanetType,
+  ShopFacetChip,
   ShopFacetGroup,
 } from '@/types'
+
+type ActiveShopFilter = ShopFacetChip & {
+  key: string
+  groupId: string
+  groupLabel: string
+}
 
 export default defineComponent({
   name: 'ChampionShopComponent',
@@ -1104,17 +1145,6 @@ export default defineComponent({
       return matched
     })
     const hasSearchTraitMatch = computed(() => searchMatchedTraits.value.size > 0)
-    const hasActiveFilter = computed(
-      () =>
-        activeTraits.value.length > 0 ||
-        activeTier.value !== 'all' ||
-        activeRole.value !== 'all' ||
-        activeItemCats.value.length > 0 ||
-        activeRarities.value.length > 0 ||
-        activeSets.value.length > 0 ||
-        affordableOnly.value,
-    )
-
     // ── Items: search + chip filtering, grouped by category ──
     const RARITY_BY_ID = new Map(ITEM_RARITIES.map((r) => [r.id, r]))
     const RARITY_RANK = new Map(ITEM_RARITIES.map((r, i) => [r.id, i]))
@@ -1256,12 +1286,15 @@ export default defineComponent({
       if (!grid) return
       const section = grid.querySelector<HTMLElement>(`[data-tier-section="${tier}"]`)
       if (!section) return
+      const searchHeight =
+        grid.querySelector<HTMLElement>('.cs-search-hero')?.getBoundingClientRect().height ??
+        SHOP_HERO_BAR_H
       const top =
         section.getBoundingClientRect().top -
         grid.getBoundingClientRect().top +
         grid.scrollTop -
         // the pinned search row covers the top edge, so the header clears it too
-        (SHOP_JUMP_SCROLL_OFFSET_PX + SHOP_HERO_BAR_H)
+        (SHOP_JUMP_SCROLL_OFFSET_PX + searchHeight)
       grid.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
     }
 
@@ -1887,7 +1920,12 @@ export default defineComponent({
           // search reads chips too, and leaving fifteen of them standing while
           // one is meant would make the player find it twice.
           chips: traitChips.value
-            .filter((t) => !hasSearchTraitMatch.value || searchMatchedTraits.value.has(t.id))
+            .filter(
+              (t) =>
+                !hasSearchTraitMatch.value ||
+                searchMatchedTraits.value.has(t.id) ||
+                activeTraits.value.includes(t.id),
+            )
             .map((t) => ({
               id: t.id,
               label: t.name,
@@ -1903,7 +1941,12 @@ export default defineComponent({
           label: 'Origins',
           icon: 'lucide:map-pin',
           chips: originChips.value
-            .filter((o) => !hasSearchTraitMatch.value || searchMatchedTraits.value.has(o.origin))
+            .filter(
+              (o) =>
+                !hasSearchTraitMatch.value ||
+                searchMatchedTraits.value.has(o.origin) ||
+                activeTraits.value.includes(o.origin),
+            )
             .map((o) => ({
               id: o.origin,
               label: o.origin,
@@ -1916,6 +1959,33 @@ export default defineComponent({
         },
       ]
     })
+
+    const activeFilterChips = computed<ActiveShopFilter[]>(() => {
+      const chips = facetGroups.value.flatMap((group) =>
+        group.chips
+          .filter((chip) => chip.active)
+          .map((chip) => ({
+            ...chip,
+            key: `${group.id}:${chip.id}`,
+            groupId: group.id,
+            groupLabel: group.label,
+          })),
+      )
+      if (affordableOnly.value) {
+        chips.unshift({
+          id: 'affordable',
+          key: 'affordable',
+          groupId: 'affordable',
+          groupLabel: 'Availability',
+          label: 'Affordable',
+          color: '#52b830',
+          icon: 'game-icons:coins',
+          active: true,
+        })
+      }
+      return chips
+    })
+    const hasActiveFilter = computed(() => activeFilterChips.value.length > 0)
 
     function onFacetToggle(groupId: string, chipId: string) {
       switch (groupId) {
@@ -1943,6 +2013,14 @@ export default defineComponent({
             : [...activeSets.value, chipId]
           break
       }
+    }
+
+    function removeActiveFilter(groupId: string, chipId: string) {
+      if (groupId === 'affordable') {
+        affordableOnly.value = false
+        return
+      }
+      onFacetToggle(groupId, chipId)
     }
 
     function onDetailFilter(groupId: 'tier' | 'trait' | 'origin', chipId: string) {
@@ -2033,6 +2111,8 @@ export default defineComponent({
       setFacetsFolded,
       facetGroups,
       onFacetToggle,
+      activeFilterChips,
+      removeActiveFilter,
       onDetailFilter,
       affordableOnly,
       affordableCount,
@@ -2262,13 +2342,21 @@ export default defineComponent({
   top: -12px;
   z-index: 3;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  height: v-bind(heroBarHeightPx);
+  flex-direction: column;
+  align-items: stretch;
+  height: auto;
+  min-height: v-bind(heroBarHeightPx);
   margin: -12px -14px 12px;
   padding: 0 14px;
   background: #1a1008;
   border-bottom: 1px solid #5c3310;
+}
+.cs-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: v-bind(heroBarHeightPx);
 }
 /* Takes whatever the two buttons leave over — that is the point of the row. */
 .cs-hero-field {
@@ -2336,14 +2424,151 @@ export default defineComponent({
   color: #e8c040;
   border-color: #7a4e20;
 }
-.cs-hero-btn--reset {
-  color: #cc8070;
-  border-color: #6a3020;
+
+/* Active facets keep the current answer visible while the catalog scrolls. */
+.cs-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 0 0 11px;
 }
-.cs-hero-btn--reset:hover {
-  color: #ffdddd;
+.cs-active-filters-intro {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  color: #e8c040;
+}
+.cs-active-filters-intro svg {
+  color: #e8c040;
+}
+.cs-active-filters-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.cs-active-filters-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid #7a4e20;
+  border-radius: 4px;
+  background: #141410;
+  color: #e8c040;
+  font-size: 12px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.cs-active-filter-list {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+}
+.cs-active-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 250px;
+  min-height: 34px;
+  padding: 4px 9px 4px 8px;
+  border: 1px solid #5c3310;
+  border-left: 3px solid var(--filter-color);
+  border-radius: 4px;
+  background: #1c1c18;
+  color: #d8c9a0;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s;
+}
+.cs-active-filter:hover {
+  border-color: #7a4e20;
+  border-left-color: var(--filter-color);
+  background: #221408;
+  color: #e8c040;
+}
+.cs-active-filter:focus-visible,
+.cs-active-clear:focus-visible {
+  outline: 2px solid #e8c040;
+  outline-offset: 1px;
+}
+.cs-active-filter img,
+.cs-active-filter > svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  object-fit: contain;
+  color: var(--filter-color);
+}
+.cs-active-filter-group {
+  color: #9a8565;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.cs-active-filter-separator {
+  color: #7a6040;
+  font-size: 13px;
+}
+.cs-active-filter-label {
+  min-width: 0;
+  overflow: hidden;
+  color: #e8c040;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cs-active-filter-remove {
+  flex-shrink: 0;
+  color: #9a8565;
+}
+.cs-active-filter:hover .cs-active-filter-remove {
+  color: #e8c040;
+}
+.cs-active-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-shrink: 0;
+  min-height: 34px;
+  padding: 4px 11px;
+  border: 1px solid #6a3020;
+  border-radius: 4px;
+  background: #141410;
+  color: #cc8070;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s,
+    border-color 0.15s;
+}
+.cs-active-clear:hover {
   border-color: #cc6050;
-  background: rgba(60, 20, 14, 0.7);
+  background: #221408;
+  color: #ffdddd;
 }
 
 /* ── Card grid ──
