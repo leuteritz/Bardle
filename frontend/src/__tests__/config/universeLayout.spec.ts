@@ -33,8 +33,10 @@ import {
   UNIVERSE_MAP_UNLIT_AHEAD,
   UNIVERSE_MAP_ZOOM_STEPS,
   STAR_MANIFEST_ART_SIZE,
+  UNIVERSE_RAIL_CARD_MAX_H,
   UNIVERSE_RAIL_COMPACT_MAX_VH,
   UNIVERSE_RAIL_COMPACT_STAGE_H,
+  UNIVERSE_RAIL_MIN_VISIBLE,
   UNIVERSE_RAIL_LIST_PAD,
   UNIVERSE_RAIL_LIST_PAD_COMPACT,
   UNIVERSE_RAIL_ROW_GAP,
@@ -130,6 +132,11 @@ function zones(vw: number, vh: number, folded = false) {
   }
 }
 
+/** Wie viele Karten in eine Leiste dieser Hoehe passen, ohne zu rollen. */
+function fits(h: number, rowH: number, gap: number, pad: number): number {
+  return Math.floor((h - pad + gap) / (rowH + gap))
+}
+
 /** Kantenlaenge der Wolke — dieselbe Rechnung wie `UniverseChart`. */
 function heroPx(r: number): number {
   const stepped =
@@ -197,14 +204,46 @@ describe('Universe — das Zonenbudget', () => {
     expect(UNIVERSE_MAP_RAIL_ZONE_W).toBe(UNIVERSE_MAP_RAIL_PANEL_W + UNIVERSE_MAP_RAIL_HANDLE_PX)
   })
 
-  it('traegt alle zehn Universumsscheiben ohne zu rollen', () => {
-    // Die Leiste ist so hoch wie die Buehne. Zehn Zeilen und die Polsterung
-    // muessen auf Full HD hineinpassen — wer die Scheibe groesser macht, laesst
-    // die Leiste rollen, und genau das soll hier auffallen. Kopfzeile und
-    // Carry-over-Fuss sind gefallen; ihre 178 px stecken in der Zeilenhoehe.
+  it('traegt auf jeder Zielaufloesung ihren Boden an Karten, ohne zu rollen', () => {
+    // Hier stand „alle zehn ohne zu rollen". Das ist ABSICHTLICH gefallen: die
+    // Zeile ist eine Karte geworden — Scheibe, Zustand, Ablesungen und
+    // Fortschrittsbalken — und zehn davon passen unter 4K nirgends mehr.
+    // Gebunden ist deshalb der BODEN. Faellt er, sieht der Spieler nicht mehr,
+    // wie viele Bahnen es ueberhaupt gibt, ohne zu rollen.
+    const table: Array<[string, number, number, number]> = [
+      ['Full HD', 1920, 1080, UNIVERSE_RAIL_MIN_VISIBLE],
+      ['WUXGA', 1920, 1200, 7],
+      ['2K', 2560, 1440, 9],
+      ['4K', 3840, 2160, universes.length],
+    ]
+    for (const [name, vw, vh, want] of table) {
+      const n = fits(
+        zones(vw, vh).stageH,
+        UNIVERSE_RAIL_ROW_H,
+        UNIVERSE_RAIL_ROW_GAP,
+        UNIVERSE_RAIL_LIST_PAD,
+      )
+      expect(n, name).toBeGreaterThanOrEqual(want)
+    }
+  })
+
+  it('haelt den Boden zwischen einer Handvoll und der Vollzahl', () => {
+    // Unter fuenf ist die Leiste ein Guckloch; bei zehn waere sie wieder die
+    // alte Liste, und die Karte haette keinen Platz.
+    expect(UNIVERSE_RAIL_MIN_VISIBLE).toBeGreaterThanOrEqual(5)
+    expect(UNIVERSE_RAIL_MIN_VISIBLE).toBeLessThan(universes.length)
+  })
+
+  it('laesst die Karte auf hohen Schirmen wachsen, aber nicht ins Leere', () => {
+    // Sie waechst per `flex-grow` in den freien Rest — auf 4K sonst 160 px, von
+    // denen 68 Luft waeren. Die SCHEIBE waechst nicht mit.
+    expect(UNIVERSE_RAIL_CARD_MAX_H).toBeGreaterThan(UNIVERSE_RAIL_ROW_H)
+    expect(UNIVERSE_RAIL_CARD_MAX_H).toBeLessThanOrEqual(UNIVERSE_RAIL_ROW_H * 1.5)
+    // Und in voller Groesse rollt sie auf 4K immer noch nicht.
     const rows = universes.length
-    const list = rows * UNIVERSE_RAIL_ROW_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP
-    expect(list + UNIVERSE_RAIL_LIST_PAD).toBeLessThanOrEqual(zones(1920, 1080).stageH)
+    const full =
+      rows * UNIVERSE_RAIL_CARD_MAX_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP + UNIVERSE_RAIL_LIST_PAD
+    expect(full).toBeLessThanOrEqual(zones(3840, 2160).stageH)
   })
 
   /*
@@ -216,24 +255,42 @@ describe('Universe — das Zonenbudget', () => {
    * Stufe rollte dort um genau 100. Wer die kompakte Stufe anfasst, sieht es
    * hier statt im Spiel.
    */
-  it('traegt sie auch im flachsten Fenster, dann kompakt', () => {
-    const rows = universes.length
-    const list = rows * UNIVERSE_RAIL_ROW_H_COMPACT + (rows - 1) * UNIVERSE_RAIL_ROW_GAP_COMPACT
-    expect(list + UNIVERSE_RAIL_LIST_PAD_COMPACT).toBeLessThanOrEqual(UNIVERSE_RAIL_COMPACT_STAGE_H)
-    // Und die grosse Stufe passt dort NICHT — sonst waere die kompakte umsonst.
-    const big = rows * UNIVERSE_RAIL_ROW_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP
-    expect(big + UNIVERSE_RAIL_LIST_PAD).toBeGreaterThan(UNIVERSE_RAIL_COMPACT_STAGE_H)
+  it('kauft die kompakte Stufe im flachsten Fenster WIRKLICH Karten zurueck', () => {
+    // Hier stand „zehn Zeilen passen, die grosse Stufe nicht". Beide Haelften
+    // sind hinfaellig, weil zehn Karten nirgends passen. Was bleibt, ist der
+    // GRUND der Stufe: sie muss mehr Karten zeigen als die grosse, sonst ist sie
+    // eine zweite Schriftgroesse fuer nichts.
+    const big = fits(
+      UNIVERSE_RAIL_COMPACT_STAGE_H,
+      UNIVERSE_RAIL_ROW_H,
+      UNIVERSE_RAIL_ROW_GAP,
+      UNIVERSE_RAIL_LIST_PAD,
+    )
+    const small = fits(
+      UNIVERSE_RAIL_COMPACT_STAGE_H,
+      UNIVERSE_RAIL_ROW_H_COMPACT,
+      UNIVERSE_RAIL_ROW_GAP_COMPACT,
+      UNIVERSE_RAIL_LIST_PAD_COMPACT,
+    )
+    expect(UNIVERSE_RAIL_ROW_H_COMPACT).toBeLessThan(UNIVERSE_RAIL_ROW_H)
+    expect(small).toBeGreaterThan(big)
+    // Und sie haelt dort den Boden, den die grosse Stufe verliert.
+    expect(small).toBeGreaterThanOrEqual(UNIVERSE_RAIL_MIN_VISIBLE)
   })
 
-  it('schaltet die kompakte Stufe genau dort, wo die grosse aufhoert zu passen', () => {
+  it('schaltet die kompakte Stufe, BEVOR der Boden faellt', () => {
     // Hier stand einmal `Viewport − 388`. Der Abstand ist keine Konstante: der
     // App-Header haengt an `--hud-scale`, und die skaliert mit der HOEHE — von
     // 950 auf 1080 waechst die Buehne nur um 0,93 px je Viewport-Pixel. Und die
     // 388 waren an das 92-px-Kopfband gebunden, also still falsch, sobald es
-    // wuchs. Interpoliert wird jetzt zwischen den ZWEI gemessenen Staenden.
-    const rows = universes.length
+    // wuchs. Interpoliert wird zwischen den ZWEI gemessenen Staenden.
+    //
+    // Die Wand ist eine andere geworden: nicht mehr die Hoehe, ab der zehn
+    // Zeilen nicht mehr passen, sondern die, ab der der BODEN nicht mehr steht.
     const big =
-      rows * UNIVERSE_RAIL_ROW_H + (rows - 1) * UNIVERSE_RAIL_ROW_GAP + UNIVERSE_RAIL_LIST_PAD
+      UNIVERSE_RAIL_MIN_VISIBLE * UNIVERSE_RAIL_ROW_H +
+      (UNIVERSE_RAIL_MIN_VISIBLE - 1) * UNIVERSE_RAIL_ROW_GAP +
+      UNIVERSE_RAIL_LIST_PAD
     const loVh = 950
     const hiVh = 1080
     const loH = UNIVERSE_RAIL_COMPACT_STAGE_H
@@ -245,6 +302,33 @@ describe('Universe — das Zonenbudget', () => {
     expect(UNIVERSE_RAIL_COMPACT_MAX_VH).toBeGreaterThanOrEqual(Math.ceil(kippt))
     // Aber nicht so hoch, dass sie im Vollbild-Referenzfall schon greift.
     expect(UNIVERSE_RAIL_COMPACT_MAX_VH).toBeLessThan(1080)
+  })
+
+  /* Ein Knopf IM Knopf ist ungueltiges HTML: der Parser haengt ihn still aus,
+     und der Klick geht verloren. Die Zeile ist ein `<button>`, also steht der
+     Annalen-Knopf daneben — es gibt keinen Mount-Test fuer diese Datei, der das
+     sonst faenge. */
+  it('haelt den Annalen-Knopf als GESCHWISTER der Zeile', () => {
+    const src = readFileSync(
+      resolve(__dirname, '../../components/bardProfil/universe/UniverseRail.vue'),
+      'utf8',
+    )
+    const row = src.indexOf('class="sr-row un-rail-row"')
+    const detail = src.indexOf('class="un-rail-detail"')
+    expect(row).toBeGreaterThan(-1)
+    expect(detail).toBeGreaterThan(-1)
+    // Zwischen beiden muss das schliessende Tag der Zeile liegen.
+    expect(src.lastIndexOf('</button>', detail)).toBeGreaterThan(row)
+  })
+
+  /* Zehn Karten, die je Einkommens-Tick neu rechnen, sind etwas anderes als ein
+     Kopfband. Die laufende Uhr gehoert dorthin, nicht hierher. */
+  it('haelt die Zeilenrechnung der Leiste zeitfrei', () => {
+    const src = readFileSync(resolve(__dirname, '../../utils/ui/universeRail.ts'), 'utf8')
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+    for (const forbidden of ['Date.now', 'gameNow', 'performance.now']) {
+      expect(code.includes(forbidden), forbidden).toBe(false)
+    }
   })
 
   it('dreht Feld und Wall verschieden schnell', () => {
@@ -645,7 +729,9 @@ describe('Universe — das Abflugportal', () => {
   it('faengt die Schrumpfleiter bei voller Groesse an und laesst sie fallen', () => {
     expect(UNIVERSE_MAP_PORTAL_SHRINK_STEPS[0]).toBe(1)
     for (let i = 1; i < UNIVERSE_MAP_PORTAL_SHRINK_STEPS.length; i++) {
-      expect(UNIVERSE_MAP_PORTAL_SHRINK_STEPS[i]).toBeLessThan(UNIVERSE_MAP_PORTAL_SHRINK_STEPS[i - 1])
+      expect(UNIVERSE_MAP_PORTAL_SHRINK_STEPS[i]).toBeLessThan(
+        UNIVERSE_MAP_PORTAL_SHRINK_STEPS[i - 1],
+      )
     }
     // Auch die kleinste Stufe bleibt ein Portal und wird keine Marke.
     const smallest = UNIVERSE_MAP_PORTAL_RING_MIN_PX * UNIVERSE_MAP_PORTAL_SHRINK_STEPS.at(-1)!

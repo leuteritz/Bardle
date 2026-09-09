@@ -531,13 +531,13 @@ export const UNIVERSE_MAP_LOST_COLOR = '#cc6050'
  *  GETRENNT — waechst die Leiste, duerfen die Drehdauern aller Scheiben im Spiel
  *  nicht mitwandern. */
 export const UNIVERSE_DISC_SPIN_BASE_PX = 34
-/** Kachel in der Universumsleiste. Der Deckel ist der Haushalt der Leiste, den
- *  `universeLayout.spec.ts` bindet: bei 10 Zeilen sind auf Full HD im Vollbild
- *  670,6 px zu haben, belegt sind 665. */
-export const UNIVERSE_DISC_RAIL_PX = 46
+/** Kachel in der Universumsleiste. Sie treibt die Kartenhoehe, und die bindet
+ *  `universeLayout.spec.ts` nicht mehr an „alle zehn passen", sondern an
+ *  `UNIVERSE_RAIL_MIN_VISIBLE` — die Leiste rollt. */
+export const UNIVERSE_DISC_RAIL_PX = 56
 /** Dieselbe Kachel im FLACHEN Fenster. Das Canvas wird per CSS herunterskaliert
  *  — es traegt seine volle Aufloesung und bleibt scharf. */
-export const UNIVERSE_DISC_RAIL_COMPACT_PX = 36
+export const UNIVERSE_DISC_RAIL_COMPACT_PX = 44
 /** Wappen im Kopfband — dieselbe Scheibe, nur gross. */
 export const UNIVERSE_DISC_CREST_PX = 64
 export const UNIVERSE_DISC_MAX_DPR = 2
@@ -619,18 +619,70 @@ export const UNIVERSE_DISC_CLOUD_MAX_BODIES = 2000
  *  nicht faerben. */
 export const UNIVERSE_DISC_CLOUD_DUST_ALPHA = 0.16
 
-/** Zeilenhoehe der Leiste: Scheibe plus 2x6 Polsterung plus 2 Rahmen.
+/**
+ * Die KARTE der Leiste: Kopf (Scheibe, Name, Zustand), Ablesungszeile, Balken.
  *
- *  Die SCHEIBE treibt sie, nicht der Text — dafuer tragen Namenszeile und Notiz
- *  feste Zeilenkaesten (20/16 px). Vorher hing die Hoehe an der Schriftmetrik
- *  von MedievalSharp, war gemessen 53,5 statt der gerechneten 48, und die Liste
- *  rollte auf Full HD, waehrend die Konstante das Gegenteil behauptete. */
-export const UNIVERSE_RAIL_ROW_H = UNIVERSE_DISC_RAIL_PX + 14
+ * Die SCHEIBE treibt den Kopf, nicht der Text — dafuer tragen Namenszeile,
+ * Notiz und Ablesung feste Zeilenkaesten. Die Hoehe ist deshalb GERECHNET:
+ * `universeLayout.spec.ts` zaehlt mit genau dieser Summe, wie viele Karten ohne
+ * Rollen dastehen. Vorher hing sie an der Schriftmetrik von MedievalSharp, war
+ * gemessen 53,5 statt der gerechneten 48, und die Liste rollte, waehrend die
+ * Konstante das Gegenteil behauptete.
+ */
+export const UNIVERSE_RAIL_CARD_BORDER = 1
+export const UNIVERSE_RAIL_CARD_PAD_T = 5
+/** Traegt den Fortschrittsbalken: der liegt absolut auf der Unterkante und
+ *  kostet keine Layout-Hoehe. Im Fluss laege die Karte bei 102. */
+export const UNIVERSE_RAIL_CARD_PAD_B = 6
+/** 3 px Zustandskanal der Sprache plus 6 px Luft. */
+export const UNIVERSE_RAIL_CARD_PAD_L = 9
+/** 4 px Toenungsstreifen plus 4 px Luft. */
+export const UNIVERSE_RAIL_CARD_PAD_R = 8
+export const UNIVERSE_RAIL_CARD_GAP_Y = 3
+/** Fester Kasten der Ablesungszeile: `0.87em` bei `--sr-u` 17 sind 14,8 px. */
+export const UNIVERSE_RAIL_READ_H = 20
+export const UNIVERSE_RAIL_BAR_H = 4
+export const UNIVERSE_RAIL_TINT_BAR_W = 4
+export const UNIVERSE_RAIL_DETAIL_PX = 22
+export const UNIVERSE_RAIL_DETAIL_ICON_PX = 16
+/** Luft zwischen Knopf und Toenungsstreifen. Sie bemisst auch die Gasse, die der
+ *  Kopf dem Knopf freihaelt — sonst liefe der Name darunter. */
+export const UNIVERSE_RAIL_DETAIL_INSET = 3
+
+export const UNIVERSE_RAIL_ROW_H =
+  2 * UNIVERSE_RAIL_CARD_BORDER +
+  UNIVERSE_RAIL_CARD_PAD_T +
+  UNIVERSE_DISC_RAIL_PX +
+  UNIVERSE_RAIL_CARD_GAP_Y +
+  UNIVERSE_RAIL_READ_H +
+  UNIVERSE_RAIL_CARD_PAD_B
+
+/** Wie hoch eine Karte auf einem hohen Schirm werden darf. Sie waechst per
+ *  `flex-grow` in den freien Rest; darueber ist der Zuwachs nur noch Luft — die
+ *  Scheibe waechst nicht mit. */
+export const UNIVERSE_RAIL_CARD_MAX_H = 132
+
+/** Der BODEN: so viele Karten stehen auf Full HD im Vollbild ohne Rollen da.
+ *  Zehn passen dort nicht mehr, seit die Zeile eine Karte ist — das ist die
+ *  Entscheidung, nicht ein Versehen. */
+export const UNIVERSE_RAIL_MIN_VISIBLE = 6
+
+/** Nenner des Fortschrittsbalkens: die tiefste Bahn, nie unter zehn Galaxien —
+ *  sonst malte ein frischer Spielstand seine erste Bahn voll aus. Ein
+ *  universumseigenes Maximum gibt es nicht: ein Lauf endet an einer
+ *  Chimes-Schwelle, nicht bei einer Galaxienzahl. */
+export const UNIVERSE_RAIL_PROGRESS_FLOOR = 10
+
+/** Die laufende Bahn hat keine abgeschlossene Dauer, ein aus dem Archiv
+ *  geschobener Lauf keine ueberlieferte — und das ist nicht dasselbe wie null. */
+export const UNIVERSE_RAIL_ELAPSED_NOW = 'now'
+export const UNIVERSE_RAIL_UNKNOWN = '—'
+
+export const UNIVERSE_RAIL_DETAIL_TITLE = 'Open the annals'
+export const UNIVERSE_RAIL_DETAIL_ICON = 'lucide:file-search'
+
 /** Listenpolsterung der Leiste (8 oben, 12 unten) — sie ist alles, was neben
- *  den zehn Zeilen noch Hoehe kostet: Kopfzeile und Carry-over-Fuss sind
- *  gefallen. Es waren 10/14, bis das Kopfband auf die gemeinsame Hoehe mit der
- *  Voyages-Leiste wuchs; die vier Pixel kommen von hier und NICHT von der
- *  Scheibe — sie treibt die Zeilenhoehe. */
+ *  den Karten noch Hoehe kostet: Kopfzeile und Carry-over-Fuss sind gefallen. */
 export const UNIVERSE_RAIL_LIST_PAD = 20
 export const UNIVERSE_RAIL_ROW_GAP = 5
 
@@ -639,15 +691,29 @@ export const UNIVERSE_RAIL_ROW_GAP = 5
  *
  * Die Layout-Specs rechnen mit „Viewport == Bildschirmhoehe"; real nimmt der
  * Browser rund 130 px. GEMESSEN bleiben dem Reiter auf Full HD im Vollbild
- * 670,6 px, im Fenster nur 549,1 — und zehn grosse Zeilen brauchen 669. Ohne
- * diese Stufe rollte ausgerechnet der flachste Referenzfall.
+ * 670,6 px, im Fenster nur 549,1.
  *
- * Die Schwelle ist keine runde Zahl, sondern der Punkt, an dem die grosse Stufe
- * aufhoert zu passen: der Reiterinhalt misst rund `Viewport − 388`, und
- * 669 + 388 + Bandhoehe ueber 92 = 1073.
+ * Ihr alter Grund ist gefallen: sie sorgte dafuer, dass zehn ZEILEN ins flachste
+ * Fenster passten, und zehn KARTEN passen nirgends mehr. Was bleibt, ist der
+ * bessere Grund — sie kauft dort Karten zurueck (6 statt 5) und haelt damit
+ * genau den Boden, den die grosse Stufe dort verliert.
+ *
+ * Die Schwelle ist keine runde Zahl, sondern der Punkt, an dem der BODEN faellt:
+ * gerechnet 1002, siehe `universeLayout.spec.ts`.
  */
 export const UNIVERSE_RAIL_COMPACT_MAX_VH = 1076
-export const UNIVERSE_RAIL_ROW_H_COMPACT = UNIVERSE_DISC_RAIL_COMPACT_PX + 14
+export const UNIVERSE_RAIL_CARD_PAD_T_COMPACT = 4
+export const UNIVERSE_RAIL_CARD_PAD_B_COMPACT = 5
+export const UNIVERSE_RAIL_CARD_GAP_Y_COMPACT = 3
+/** `0.87em` bei `--sr-u` 13 sind 11,3 px. */
+export const UNIVERSE_RAIL_READ_H_COMPACT = 16
+export const UNIVERSE_RAIL_ROW_H_COMPACT =
+  2 * UNIVERSE_RAIL_CARD_BORDER +
+  UNIVERSE_RAIL_CARD_PAD_T_COMPACT +
+  UNIVERSE_DISC_RAIL_COMPACT_PX +
+  UNIVERSE_RAIL_CARD_GAP_Y_COMPACT +
+  UNIVERSE_RAIL_READ_H_COMPACT +
+  UNIVERSE_RAIL_CARD_PAD_B_COMPACT
 export const UNIVERSE_RAIL_LIST_PAD_COMPACT = 16
 export const UNIVERSE_RAIL_ROW_GAP_COMPACT = 3
 /** Was dem Reiter im flachsten Referenzfall bleibt — GEMESSEN (Full HD, 950 px
@@ -659,6 +725,19 @@ export const UNIVERSE_RAIL_ROW_GAP_COMPACT = 3
  *  543), nicht die Scheibe: sie traegt die Zeile. Bei 112 bleiben 6,1 px Luft,
  *  die kompakte Stufe musste dafuer nichts weiter abgeben. */
 export const UNIVERSE_RAIL_COMPACT_STAGE_H = 549.1
+
+// ── Die Annalen ─────────────────────────────────────────────────────────────
+/* Das Dossier EINER Bahn, geoeffnet vom Knopf auf ihrer Karte. Es zeigt, was das
+   Kopfband nicht kann: die Besuche EINZELN statt summiert, die Spanne der Bahn
+   und was das Archiv nicht mehr haelt. „Annals" und nicht „Chronicle" — das ist
+   die Ereignis-Chronik, und nicht „Record": das sind drei Typen im Code. */
+export const UNIVERSE_ANNALS_TITLE = 'Universe Annals'
+export const UNIVERSE_ANNALS_MAX_W = 620
+export const UNIVERSE_ANNALS_MAX_H_PCT = 84
+export const UNIVERSE_ANNALS_SLIDE_MS = 200
+export const UNIVERSE_DISC_ANNALS_PX = 72
+export const UNIVERSE_ANNALS_GOTO_LABEL = 'Show this path'
+export const UNIVERSE_ANNALS_CLOSE_LABEL = 'Done'
 
 // ── Drehung der Scheibe ─────────────────────────────────────────────────────
 /* Feld und Wall drehen GLEICHSINNIG, der Wall mit halbem Tempo. Das Verhaeltnis

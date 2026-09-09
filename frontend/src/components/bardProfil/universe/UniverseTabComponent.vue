@@ -15,7 +15,7 @@
  * Leistenzeilen. Eine zweite Kette in der Karte liefe gegen die der Leiste, und
  * eine zweite Zählung im Griff gegen die der Liste.
  */
-import { computed, ref, watch, onBeforeUnmount } from 'vue'
+import { computed, nextTick, ref, watch, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useGameStore } from '@/stores/core/gameStore'
@@ -25,6 +25,7 @@ import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import UniverseLockedPanel from './UniverseLockedPanel.vue'
 import UniverseCrestBand from './UniverseCrestBand.vue'
 import UniverseRail from './UniverseRail.vue'
+import UniverseAnnalsModal from './UniverseAnnalsModal.vue'
 import SideRailHandle from '@/components/ui/SideRailHandle.vue'
 import { useSideRail } from '@/composables/ui/useSideRail'
 import UniverseChart from './UniverseChart.vue'
@@ -87,23 +88,35 @@ function resetSelection() {
 }
 
 /** Ein Prestige bei offenem Profil macht die gezeigte Bahn zur Vergangenheit —
- *  ohne das stünde die Karte darauf, während die Wolke „hier bin ich" sagt. */
-watch(() => gameStore.currentUniverse, resetSelection)
+ *  ohne das stünde die Karte darauf, während die Wolke „hier bin ich" sagt. Die
+ *  Annalen fallen mit: sie stünden sonst über einem zurückgesetzten Reiter. */
+watch(() => gameStore.currentUniverse, () => {
+  annalsUniverse.value = null
+  resetSelection()
+})
 
 // ── Die EINE Bahn ───────────────────────────────────────────────────────────
+/** Die Sterne der laufenden Galaxie — EINE Quelle fuer Bahn, Chronik und Leiste.
+ *  Zwei Zaehlungen liefen still auseinander, sobald eine davon nachzog. */
+const currentRescued = computed(() => attemptResults.value.filter((a) => a !== 'failed').length)
+const currentLost = computed(() => attemptResults.value.filter((a) => a === 'failed').length)
+
+/** Alles ausser dem Universum — die Bahn der Auswahl und die der Annalen sind
+ *  dieselbe Rechnung an zwei Stellen. */
+const pathBase = computed(() => ({
+  completed: completedGalaxies.value,
+  runs: gameStore.universeRuns,
+  currentUniverse: gameStore.currentUniverse,
+  currentGalaxy: currentGalaxy.value,
+  currentRescued: currentRescued.value,
+  currentLost: currentLost.value,
+  currentLandfalls: landfallResults.value.filter((l) => l.cleared).length,
+  currentThemeIndex: currentThemeIndex.value,
+  starsOf: computeRequired,
+}))
+
 const path = computed<UniversePath>(() =>
-  buildUniversePath({
-    completed: completedGalaxies.value,
-    runs: gameStore.universeRuns,
-    universe: selection.value.universe,
-    currentUniverse: gameStore.currentUniverse,
-    currentGalaxy: currentGalaxy.value,
-    currentRescued: attemptResults.value.filter((a) => a !== 'failed').length,
-    currentLost: attemptResults.value.filter((a) => a === 'failed').length,
-    currentLandfalls: landfallResults.value.filter((l) => l.cleared).length,
-    currentThemeIndex: currentThemeIndex.value,
-    starsOf: computeRequired,
-  }),
+  buildUniversePath({ ...pathBase.value, universe: selection.value.universe }),
 )
 
 /** Was die gezeigte Bahn hergab — die vier Ablesungen des Kopfbands.
@@ -150,9 +163,40 @@ const railRows = computed(() =>
     runs: gameStore.universeRuns,
     currentUniverse: gameStore.currentUniverse,
     selectedUniverse: selection.value.universe,
+    currentRescued: currentRescued.value,
+    currentLost: currentLost.value,
   }),
 )
 const walkedCount = computed(() => railRows.value.filter((r) => r.walked).length)
+
+// ── Die Annalen ─────────────────────────────────────────────────────────────
+/** Die GEKLICKTE Bahn, nicht die gewaehlte: der Knopf steht auf jeder Karte, und
+ *  ueber eine Bahn zu lesen ist eine andere Geste, als sie zu gehen. */
+const annalsUniverse = ref<number | null>(null)
+
+const annalsPath = computed<UniversePath | null>(() =>
+  annalsUniverse.value === null
+    ? null
+    : buildUniversePath({ ...pathBase.value, universe: annalsUniverse.value }),
+)
+const annalsTint = computed(
+  () => railRows.value.find((r) => r.id === annalsUniverse.value)?.tint ?? '',
+)
+
+function closeAnnals() {
+  const id = annalsUniverse.value
+  annalsUniverse.value = null
+  if (id === null) return
+  // Der Fokus zurueck auf den Knopf, der die Karte geoeffnet hat.
+  nextTick(() => {
+    document.querySelector<HTMLElement>(`[data-universe-detail="${id}"]`)?.focus()
+  })
+}
+
+function gotoFromAnnals() {
+  if (annalsUniverse.value !== null) select({ universe: annalsUniverse.value, galaxy: null })
+  closeAnnals()
+}
 
 /** `null` = der Reiter entscheidet nach Breite, sonst hat es der Spieler gesagt. */
 const railChoice = ref<boolean | null>(null)
@@ -173,7 +217,9 @@ const { inert: railInert, observe, unobserve } = useSideRail({
 // ── Sichtbarkeit: Escape-Leiter und Beobachter hängen daran, nicht am Leben ──
 function onKeydown(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
-  if (selection.value.galaxy !== null) select({ ...selection.value, galaxy: null })
+  // Das Oberste zuerst: was ueber allem liegt, geht zuerst zu.
+  if (annalsUniverse.value !== null) closeAnnals()
+  else if (selection.value.galaxy !== null) select({ ...selection.value, galaxy: null })
   else if (selection.value.universe !== gameStore.currentUniverse) resetSelection()
   else if (railChoice.value === true) railChoice.value = null
   // Nicht verbraucht: die Taste gehört dem Profil, es macht zu.
@@ -190,6 +236,7 @@ watch(
       unobserve()
       // Beim VERLASSEN zurücksetzen, nicht beim Betreten: ein Reset im selben
       // Flush wie eine Öffnungs-Anfrage löschte, was gerade gezeigt werden soll.
+      annalsUniverse.value = null
       resetSelection()
       return
     }
@@ -262,7 +309,9 @@ const slideMs = `${UNIVERSE_MAP_RAIL_SLIDE_MS}ms`
     <template v-else>
       <UniverseCrestBand :universe="selection.universe" :chronicle="chronicle" />
 
-      <div class="un-body">
+      <!-- `inert`, solange die Annalen stehen: die Karte und die Leiste
+           dahinter duerfen nicht mehr per Tabulator erreichbar sein. -->
+      <div class="un-body" :inert="annalsUniverse !== null">
         <UniverseChart
           :nodes="path.nodes"
           :departure="path.departure"
@@ -284,7 +333,12 @@ const slideMs = `${UNIVERSE_MAP_RAIL_SLIDE_MS}ms`
             :class="{ 'un-rail-slide--parked': railFolded }"
             :inert="railInert"
           >
-            <UniverseRail :rows="railRows" :selection="selection" @select="select" />
+            <UniverseRail
+              :rows="railRows"
+              :selection="selection"
+              @select="select"
+              @annals="annalsUniverse = $event"
+            />
           </div>
 
           <SideRailHandle
@@ -296,6 +350,23 @@ const slideMs = `${UNIVERSE_MAP_RAIL_SLIDE_MS}ms`
           />
         </div>
       </div>
+
+      <!-- Geschwister von `.un-body`, nicht Kind: dort schnitte `overflow: clip`
+           es ab, und in der Leiste machte deren `transform` sie zum Containing
+           Block, der den Schleier aus dem Bild zoege. -->
+      <Transition name="una-pop">
+        <UniverseAnnalsModal
+          v-if="annalsUniverse !== null && annalsPath"
+          :universe="annalsUniverse"
+          :tint="annalsTint"
+          :is-here="annalsUniverse === gameStore.currentUniverse"
+          :nodes="annalsPath.nodes"
+          :departure="annalsPath.departure"
+          :runs="gameStore.universeRuns"
+          @goto="gotoFromAnnals"
+          @close="closeAnnals"
+        />
+      </Transition>
     </template>
   </div>
 </template>

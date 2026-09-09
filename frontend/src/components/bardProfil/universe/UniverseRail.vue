@@ -9,9 +9,17 @@
  * derselbe Code.
  *
  * Hier bleibt NUR, was allein dieser Leiste gehoert: die Scheibe samt ihrer
- * Ziffer, der Puls auf „du bist hier", die Toenung der gewaehlten Bahn — und
- * die Polsterung, weil sie an `UNIVERSE_RAIL_*` haengt und `universeLayout.spec`
- * mit genau diesen Zahlen rechnet.
+ * Ziffer, der Puls auf „du bist hier", die Toenung der gewaehlten Bahn, die
+ * Ablesungszeile, der Fortschrittsbalken und der Knopf in die Annalen.
+ *
+ * **Die Zeile ist eine KARTE, und die Leiste ROLLT.** Zehn Karten passen auf
+ * keiner Zielaufloesung unter 4K; gebunden ist deshalb ein BODEN
+ * (`UNIVERSE_RAIL_MIN_VISIBLE`), nicht die Vollzahl. Die Hoehe ist gerechnet,
+ * nicht geraten — `UNIVERSE_RAIL_ROW_H` summiert Polsterung, Scheibe und
+ * Ablesungskasten, und `universeLayout.spec.ts` zaehlt mit derselben Summe.
+ *
+ * Der Detailknopf ist ein GESCHWISTER der Zeile, kein Kind: ein Knopf im Knopf
+ * ist ungueltiges HTML, das der Browser still aushaengt. Darum der Wrapper.
  *
  * Sie hat KEINE eigene Ueberschrift, genau wie ihre beiden Vorbilder: das Wort
  * steht senkrecht auf dem Griff daneben, und die Zahl der begangenen Universen
@@ -23,6 +31,7 @@
  * Zuklappen, ohne dass jemand sie sichert.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import {
   UNIVERSE_MAP_HERE_COLOR,
   UNIVERSE_MAP_RAIL_HANDLE_LABEL,
@@ -30,9 +39,29 @@ import {
   UNIVERSE_MAP_RAIL_REVEAL_PAD,
   UNIVERSE_DISC_RAIL_COMPACT_PX,
   UNIVERSE_DISC_RAIL_PX,
+  UNIVERSE_RAIL_BAR_H,
+  UNIVERSE_RAIL_CARD_GAP_Y,
+  UNIVERSE_RAIL_CARD_GAP_Y_COMPACT,
+  UNIVERSE_RAIL_CARD_MAX_H,
+  UNIVERSE_RAIL_CARD_PAD_B,
+  UNIVERSE_RAIL_CARD_PAD_B_COMPACT,
+  UNIVERSE_RAIL_CARD_PAD_L,
+  UNIVERSE_RAIL_CARD_PAD_R,
+  UNIVERSE_RAIL_CARD_PAD_T,
+  UNIVERSE_RAIL_CARD_PAD_T_COMPACT,
   UNIVERSE_RAIL_COMPACT_MAX_VH,
+  UNIVERSE_RAIL_DETAIL_ICON,
+  UNIVERSE_RAIL_DETAIL_ICON_PX,
+  UNIVERSE_RAIL_DETAIL_INSET,
+  UNIVERSE_RAIL_DETAIL_PX,
+  UNIVERSE_RAIL_DETAIL_TITLE,
+  UNIVERSE_RAIL_READ_H,
+  UNIVERSE_RAIL_READ_H_COMPACT,
   UNIVERSE_RAIL_ROW_GAP,
   UNIVERSE_RAIL_ROW_GAP_COMPACT,
+  UNIVERSE_RAIL_ROW_H,
+  UNIVERSE_RAIL_ROW_H_COMPACT,
+  UNIVERSE_RAIL_TINT_BAR_W,
 } from '@/config/constants'
 import UniverseDisc from './UniverseDisc.vue'
 import type { UniverseRailRow } from '@/utils/ui/universeRail'
@@ -45,6 +74,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'select', value: UniverseSelection): void
+  (e: 'annals', universe: number): void
 }>()
 
 /** Kein Toggle: die Bahn ist der Ansichtszustand, es gibt kein Nichts. */
@@ -77,7 +107,7 @@ onMounted(revealSelected)
  * Die KOMPAKTE Stufe — eine Hoehen-Media-Query, in JS gelesen statt im CSS.
  *
  * Die Scheibe traegt ihre Masse als Inline-Style (`.uni-disc`), gegen den eine
- * CSS-Regel nur mit `!important` ankaeme; und sie treibt die Zeilenhoehe, also
+ * CSS-Regel nur mit `!important` ankaeme; und sie treibt die Kartenhoehe, also
  * muss sie WIRKLICH kleiner werden, nicht bloss skaliert aussehen. Der Listener
  * feuert beim Umschalten, nicht im Takt.
  */
@@ -97,11 +127,42 @@ const hereColor = UNIVERSE_MAP_HERE_COLOR
 const discPx = computed(() =>
   compact.value ? UNIVERSE_DISC_RAIL_COMPACT_PX : UNIVERSE_DISC_RAIL_PX,
 )
-const padX = `${UNIVERSE_MAP_RAIL_PAD_X}px`
-const rowGap = computed(() =>
-  compact.value ? `${UNIVERSE_RAIL_ROW_GAP_COMPACT}px` : `${UNIVERSE_RAIL_ROW_GAP}px`,
-)
 const railLabel = computed(() => `${UNIVERSE_MAP_RAIL_HANDLE_LABEL} — the paths you have walked`)
+
+const px = (n: number) => `${n}px`
+const padX = px(UNIVERSE_MAP_RAIL_PAD_X)
+const rowGap = computed(() =>
+  px(compact.value ? UNIVERSE_RAIL_ROW_GAP_COMPACT : UNIVERSE_RAIL_ROW_GAP),
+)
+const cardH = computed(() => px(compact.value ? UNIVERSE_RAIL_ROW_H_COMPACT : UNIVERSE_RAIL_ROW_H))
+const cardMaxH = px(UNIVERSE_RAIL_CARD_MAX_H)
+const cardGapY = computed(() =>
+  px(compact.value ? UNIVERSE_RAIL_CARD_GAP_Y_COMPACT : UNIVERSE_RAIL_CARD_GAP_Y),
+)
+const cardPad = computed(() => {
+  const t = compact.value ? UNIVERSE_RAIL_CARD_PAD_T_COMPACT : UNIVERSE_RAIL_CARD_PAD_T
+  const b = compact.value ? UNIVERSE_RAIL_CARD_PAD_B_COMPACT : UNIVERSE_RAIL_CARD_PAD_B
+  return `${t}px ${UNIVERSE_RAIL_CARD_PAD_R}px ${b}px ${UNIVERSE_RAIL_CARD_PAD_L}px`
+})
+const headMinH = computed(() => px(discPx.value))
+const readH = computed(() =>
+  px(compact.value ? UNIVERSE_RAIL_READ_H_COMPACT : UNIVERSE_RAIL_READ_H),
+)
+const barH = px(UNIVERSE_RAIL_BAR_H)
+const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
+const detailPx = px(UNIVERSE_RAIL_DETAIL_PX)
+const detailTop = computed(() =>
+  px(compact.value ? UNIVERSE_RAIL_CARD_PAD_T_COMPACT : UNIVERSE_RAIL_CARD_PAD_T),
+)
+const detailRight = px(UNIVERSE_RAIL_TINT_BAR_W + UNIVERSE_RAIL_DETAIL_INSET)
+/** Die Gasse, die der Kopf dem Knopf freihaelt — das Polster deckt sie zum Teil
+ *  schon ab. */
+const detailGutter = px(
+  UNIVERSE_RAIL_DETAIL_PX +
+    UNIVERSE_RAIL_TINT_BAR_W +
+    UNIVERSE_RAIL_DETAIL_INSET -
+    UNIVERSE_RAIL_CARD_PAD_R,
+)
 </script>
 
 <template>
@@ -109,35 +170,76 @@ const railLabel = computed(() => `${UNIVERSE_MAP_RAIL_HANDLE_LABEL} — the path
        in einem Knopf — ohne das `aria-label` waere die Region namenlos. -->
   <aside class="sr un-rail" :class="{ 'sr--compact': compact }" :aria-label="railLabel">
     <div ref="scroll" class="sr-scroll un-rail-list">
-      <button
+      <!-- Die Huelle traegt nichts Sichtbares: sie haelt nur den Ton, den beide
+           Kinder lesen, und traegt den Knopf als Geschwister der Zeile. -->
+      <div
         v-for="row in rows"
         :key="row.id"
-        class="sr-row un-rail-row"
-        :class="{
-          'is-current': row.current,
-          'is-picked': row.picked,
-          'is-dim': !row.walked,
-          'is-inert': !row.pickable,
-        }"
+        class="un-rail-card"
         :style="{ '--un-row-tint': row.tint }"
-        :data-universe="row.id"
-        :aria-label="`Universe ${row.roman}, ${row.note}`"
-        :aria-pressed="row.picked"
-        @click="pick(row)"
       >
-        <span class="un-rail-disc">
-          <UniverseDisc :universe="row.id" :state="row.discState" :px="discPx" />
-          <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre
-               Deckkraft. Nur „du bist hier" atmet. -->
-          <span v-if="row.current" class="un-rail-pulse" aria-hidden="true" />
-          <span class="un-rail-roman">{{ row.roman }}</span>
-        </span>
+        <button
+          class="sr-row un-rail-row"
+          :class="{
+            'is-current': row.current,
+            'is-picked': row.picked,
+            'is-dim': !row.walked,
+            'is-inert': !row.pickable,
+          }"
+          :data-universe="row.id"
+          :aria-label="`Universe ${row.roman}, ${row.note}`"
+          :aria-pressed="row.picked"
+          @click="pick(row)"
+        >
+          <span class="un-rail-head">
+            <span class="un-rail-disc">
+              <UniverseDisc :universe="row.id" :state="row.discState" :px="discPx" />
+              <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre
+                   Deckkraft. Nur „du bist hier" atmet. -->
+              <span v-if="row.current" class="un-rail-pulse" aria-hidden="true" />
+              <span class="un-rail-roman">{{ row.roman }}</span>
+            </span>
 
-        <span class="sr-row-body">
-          <span class="sr-row-name">Universe {{ row.roman }}</span>
-          <span class="sr-row-note">{{ row.note }}</span>
-        </span>
-      </button>
+            <span class="sr-row-body">
+              <span class="sr-row-name">Universe {{ row.roman }}</span>
+              <span class="sr-row-note">{{ row.state }}</span>
+            </span>
+          </span>
+
+          <!-- Grad, Farbe und Ellipse kommen von `.sr-row-note` — eine zweite
+               Textzeile ohne zweite Schriftskala. -->
+          <span class="sr-row-note un-rail-read">
+            <span class="un-rail-v">{{ row.galaxies }}</span> freed<span class="un-rail-sep"
+              >·</span
+            ><span class="un-rail-v">{{ row.rescued }}</span
+            ><span class="un-rail-slash">/</span
+            ><span class="un-rail-lost">{{ row.lost }}</span> stars<span class="un-rail-sep"
+              >·</span
+            ><span class="un-rail-t">{{ row.elapsed }}</span>
+          </span>
+
+          <span class="un-rail-bar" aria-hidden="true">
+            <span class="un-rail-fill" :style="{ transform: `scaleX(${row.progress})` }" />
+          </span>
+        </button>
+
+        <!-- Zuletzt im DOM: er malt ohne `z-index` darueber, und die
+             Tabulator-Reihenfolge liest „Bahn waehlen" vor „Bahn nachlesen". -->
+        <button
+          v-if="row.walked"
+          class="un-rail-detail"
+          :data-universe-detail="row.id"
+          :title="`${UNIVERSE_RAIL_DETAIL_TITLE} — Universe ${row.roman}`"
+          :aria-label="`Open the annals of Universe ${row.roman}`"
+          @click="emit('annals', row.id)"
+        >
+          <Icon
+            :icon="UNIVERSE_RAIL_DETAIL_ICON"
+            :width="UNIVERSE_RAIL_DETAIL_ICON_PX"
+            :height="UNIVERSE_RAIL_DETAIL_ICON_PX"
+          />
+        </button>
+      </div>
     </div>
   </aside>
 </template>
@@ -155,11 +257,33 @@ const railLabel = computed(() => `${UNIVERSE_MAP_RAIL_HANDLE_LABEL} — the path
   gap: v-bind(rowGap);
 }
 
-/* Links mehr: 3 px Zustandskanal plus 6 px Luft. Feste px, weil der Kanal
-   selbst fest ist. */
+/* `flex: 1 0 <ROW_H>` ist der ganze Groessenmechanismus: Basis ist die Zahl, mit
+   der die Spec rechnet, `shrink: 0` haelt sie (die Pflicht, die frueher `.sr-row`
+   trug), und `grow: 1` verteilt nur POSITIVEN Rest — passen zehn nicht, gibt es
+   keinen, und die Rechnung der Spec bleibt wahr. */
+.un-rail-card {
+  position: relative;
+  flex: 1 0 v-bind(cardH);
+  max-height: v-bind(cardMaxH);
+}
+
+/* Die Zeilenkarte ist eine SPALTE geworden: Kopf, Ablesung, Balken. */
 .un-rail-row {
-  padding: 6px 7px 6px 9px;
+  flex-direction: column;
+  align-items: stretch;
+  height: 100%;
+  gap: v-bind(cardGapY);
+  padding: v-bind(cardPad);
+}
+
+.un-rail-head {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  flex: 1;
+  min-height: v-bind(headMinH);
+  min-width: 0;
+  padding-right: v-bind(detailGutter);
 }
 
 .un-rail-row.is-current {
@@ -167,11 +291,11 @@ const railLabel = computed(() => `${UNIVERSE_MAP_RAIL_HANDLE_LABEL} — the path
 }
 
 /* Die gewaehlte Bahn traegt den Ton DIESES Universums, nicht den einer
-   Zustandsfarbe — `universeTint.spec.ts` haelt beide auseinander. */
+   Zustandsfarbe — `universeTint.spec.ts` haelt beide auseinander. Flaeche und
+   Kante rechnet `.sr-row.is-picked` daraus selbst. Sie steht NACH `is-current`:
+   bei gleicher Spezifitaet entscheidet die Reihenfolge, und die Wahl gewinnt. */
 .un-rail-row.is-picked {
   --sr-color: var(--un-row-tint);
-  background: color-mix(in srgb, var(--un-row-tint) 20%, var(--sr-row-bg));
-  border-color: var(--un-row-tint);
 }
 
 /* Die Scheibe traegt die Ziffer, wie die Voyages-Miniatur (`.egr-no`) — in der
@@ -216,30 +340,133 @@ const railLabel = computed(() => `${UNIVERSE_MAP_RAIL_HANDLE_LABEL} — the path
   }
 }
 
-.un-rail-row.is-current .sr-row-note {
+.un-rail-row.is-current .un-rail-head .sr-row-note {
   color: v-bind(hereColor);
 }
 
+/* ══ Die Ablesungszeile ══
+   Fester Kasten, damit `UNIVERSE_RAIL_ROW_H` wahr bleibt. KEIN Flex: die
+   Ellipse von `.sr-row-note` ist das Netz, wenn die Zahlen wachsen, und in einem
+   Flex-Container greift sie nicht. Die Zeilenhoehe zentriert stattdessen. */
+.un-rail-read {
+  flex: 0 0 v-bind(readH);
+  line-height: v-bind(readH);
+}
+.un-rail-v {
+  color: var(--sr-text);
+}
+.un-rail-lost {
+  color: #e08a7a;
+}
+.un-rail-sep {
+  color: #5c4a30;
+  padding: 0 0.34em;
+}
+.un-rail-slash {
+  color: #5c4a30;
+}
+.un-rail-t {
+  color: #ffd88a;
+}
+.un-rail-row.is-dim .un-rail-v,
+.un-rail-row.is-dim .un-rail-lost,
+.un-rail-row.is-dim .un-rail-slash,
+.un-rail-row.is-dim .un-rail-t {
+  color: #5c4e34;
+}
+
+/* ══ Der Ton dieser Bahn auf der AEUSSEREN Kante ══
+   Rezept der Planetenkarte (`.ps-slot-btn::before`). Hier `::after`, weil
+   `::before` dem Zustandskanal der Sprache gehoert. Bewegt wird nur die
+   Deckkraft. */
+.un-rail-row::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: v-bind(tintBarW);
+  background: var(--un-row-tint);
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+.un-rail-row:not(.is-inert):not(.is-picked):hover::after {
+  opacity: 0.8;
+}
+.un-rail-row.is-picked::after {
+  opacity: 1;
+}
+.un-rail-row.is-dim::after {
+  opacity: 0.18;
+}
+
+/* ══ Der Fortschrittsbalken ══
+   Er liegt AUF der Unterkante im Polster und kostet keine Layout-Hoehe; im Fluss
+   laege die Karte bei 102. Gefahren wird `transform`, nie `width`. */
+.un-rail-bar {
+  position: absolute;
+  left: 0;
+  right: v-bind(tintBarW);
+  bottom: 0;
+  height: v-bind(barH);
+  background: #14100a;
+  pointer-events: none;
+}
+.un-rail-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  background: var(--un-row-tint);
+  opacity: 0.85;
+  transition: transform 220ms ease;
+}
+
+/* ══ Der Knopf in die Annalen ══ */
+.un-rail-detail {
+  position: absolute;
+  top: v-bind(detailTop);
+  right: v-bind(detailRight);
+  display: grid;
+  place-items: center;
+  width: v-bind(detailPx);
+  height: v-bind(detailPx);
+  padding: 0;
+  color: var(--sr-accent);
+  background: color-mix(in srgb, var(--sr-row-bg) 82%, #000);
+  border: 1px solid var(--sr-row-border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+.un-rail-detail:hover {
+  color: var(--sr-accent-hi);
+  background: #241a0f;
+}
+.un-rail-detail:focus-visible {
+  outline: 2px solid var(--sr-accent-hi);
+  outline-offset: -2px;
+}
+
 /* ══ Kompakte Stufe ══
-   Nur die Polsterung; Schrift und Zeilenhoehe fallen von selbst, weil
-   `.sr--compact` die Einheit senkt und die SCHEIBE die Zeile treibt
-   (`discPx` schaltet mit). Gemessen passen damit zehn Zeilen in 543 von
-   553 px — dem flachsten Referenzfall. Die Differenz zahlen Polsterung und
-   Zeilenabstand, NICHT die Scheibe: sie traegt die Zeile, und kleiner waere
-   die Drehung wieder unsichtbar.
-   Die Schwelle steht in `UNIVERSE_RAIL_COMPACT_MAX_VH`. */
+   Nur Polsterung, Abstand und der Ablesungskasten; Schrift und Kopfhoehe fallen
+   von selbst, weil `.sr--compact` die Einheit senkt und die SCHEIBE den Kopf
+   treibt (`discPx` schaltet mit). Sie kauft im flachsten Fenster eine Karte
+   zurueck — 6 statt 5 — und haelt damit den Boden, den die grosse Stufe dort
+   verliert. Die Schwelle steht in `UNIVERSE_RAIL_COMPACT_MAX_VH`. */
 .sr--compact .un-rail-list {
   padding: 6px v-bind(padX) 10px;
-}
-.sr--compact .un-rail-row {
-  padding: 6px 6px 6px 8px;
-  gap: 7px;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .un-rail-pulse {
     animation: none;
     opacity: 0.7;
+  }
+  .un-rail-fill,
+  .un-rail-row::after {
+    transition: none;
   }
 }
 </style>
