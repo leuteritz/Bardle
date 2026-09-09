@@ -461,8 +461,8 @@ export default defineComponent({
   display: none;
 }
 .champion-card-slot.is-selected .card-inner {
-  border-width: 5px !important;
-  border-color: var(--role-c-hi, #e8c060) !important;
+  border-width: 1px !important;
+  border-color: #141410 !important;
   box-shadow: 0 0 24px color-mix(in srgb, var(--role-c, #e8c060) 48%, transparent) !important;
 }
 .card-overlay,
@@ -513,6 +513,14 @@ export default defineComponent({
 }
 .champion-card-slot:hover .card-inner::before {
   opacity: 1;
+}
+.champion-card-slot.is-selected .card-inner::before {
+  inset: 4px;
+  height: auto;
+  border: 5px solid var(--role-c-hi, #e8c060);
+  background: transparent;
+  opacity: 1;
+  transition: none;
 }
 .champion-card-slot:hover .card-img-scale {
   transform: scale(1.1);
