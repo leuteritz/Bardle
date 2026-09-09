@@ -27,7 +27,7 @@ import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
-import PlanetStatBar from './PlanetStatBar.vue'
+import PlanetStatDeck from './PlanetStatDeck.vue'
 import PlanetTargetPickerModal from './PlanetTargetPickerModal.vue'
 
 const props = defineProps<{
@@ -119,8 +119,11 @@ const statRows = computed(() =>
     slot: props.planet,
     orbitIndex: Math.max(0, orbitIndex.value),
     previewLevel: previewLevel.value,
+    role: role.value,
   }),
 )
+const statRowsLeft = computed(() => statRows.value.filter((r) => r.flank === 'left'))
+const statRowsRight = computed(() => statRows.value.filter((r) => r.flank === 'right'))
 
 // ── HP-bar hover preview ────────────────────────────────────────────────────
 // Hovering the upgrade button previews the post-level-up state: the effect chip
@@ -261,71 +264,98 @@ const configTarget = computed(() => {
       </Transition>
     </div>
 
-    <!-- Central body (comet rock or phase sun) + orbiting planet — the exact
-         vertical center: crown band above and readout band below carry equal
-         flex weight, so the sun is always dead-centered. -->
-    <div
-      class="ps-system"
-      :class="{ 'ps-system--comet': solarStore.isCometState, 'ps-system--collapse': isCollapsed }"
-    >
-      <CometDisc v-if="solarStore.isCometState" :diameter="200" />
-      <PhaseSunDisc v-else :diameter="PLANET_TAB_SUN_MAX_DIAMETER" />
-      <!-- The whole orbit wrapper is keyed per planet: the old planet fades
-           out at ITS orbit position, the new one fades in at its own — no
-           visible position jump. type="transition" required (the orbit
-           keyframe would otherwise deadlock mode="out-in").
-           The keyframe is scrubbed by the tab's rAF loop via --orbit-delay, so
-           the planet passes behind the sun in lockstep with the idle orbit. -->
-      <Transition name="ps-planet-swap" mode="out-in" type="transition">
+    <!-- Orrery — die Sonne mit ihren beiden Instrumentenspalten. Links, was der
+         Planet leistet, rechts, wo er läuft; die Zahlen stehen jetzt gross neben
+         dem Körper statt klein unter dem HP-Balken. EIN DOM, zwei Anordnungen:
+         unter der Container-Schwelle bricht die Sonne auf eine eigene Zeile und
+         die beiden Spalten legen sich als Reihe darunter. -->
+    <div class="ps-orrery-wrap">
+      <div class="ps-orrery">
+        <PlanetStatDeck
+          :rows="statRowsLeft"
+          :preview="previewActive"
+          :color="roleColor"
+          :dim="orbitBehind || down"
+          side="left"
+          caption="Output"
+        />
+
+        <!-- Central body (comet rock or phase sun) + orbiting planet — the exact
+             vertical center: crown band above and readout band below carry equal
+             flex weight, so the sun is always dead-centered. -->
         <div
-          v-if="!down"
-          :key="planet.id"
-          ref="orbitEl"
-          class="ps-planet-preview-wrap"
-          :style="orbitPhaseStyle"
+          class="ps-system"
+          :class="{ 'ps-system--comet': solarStore.isCometState, 'ps-system--collapse': isCollapsed }"
         >
-          <img
-            :src="roleImage"
-            class="ps-planet-preview-img"
-            :class="{ 'ps-planet-preview-img--buffed': planet.jungleBuff?.active }"
-            alt="Planet"
-          />
+          <CometDisc v-if="solarStore.isCometState" :diameter="200" />
+          <PhaseSunDisc v-else :diameter="PLANET_TAB_SUN_MAX_DIAMETER" />
+          <!-- The whole orbit wrapper is keyed per planet: the old planet fades
+               out at ITS orbit position, the new one fades in at its own — no
+               visible position jump. type="transition" required (the orbit
+               keyframe would otherwise deadlock mode="out-in").
+               The keyframe is scrubbed by the tab's rAF loop via --orbit-delay, so
+               the planet passes behind the sun in lockstep with the idle orbit. -->
+          <Transition name="ps-planet-swap" mode="out-in" type="transition">
+            <div
+              v-if="!down"
+              :key="planet.id"
+              ref="orbitEl"
+              class="ps-planet-preview-wrap"
+              :style="orbitPhaseStyle"
+            >
+              <img
+                :src="roleImage"
+                class="ps-planet-preview-img"
+                :class="{ 'ps-planet-preview-img--buffed': planet.jungleBuff?.active }"
+                alt="Planet"
+              />
+            </div>
+          </Transition>
+
+          <!-- Zerstört: Der Planet ist aus der Bahn — an seiner Stelle steht
+               ein Wrack-Emblem auf der Sonne, umlegt von einem Ring, der die
+               Ausfallzeit abfährt. Größter Blickfang der Stage, weil es die
+               einzige Information ist, auf die der Spieler warten kann. -->
+          <div v-if="down" class="ps-down-core" aria-live="polite">
+            <svg class="ps-down-ring" viewBox="0 0 100 100" aria-hidden="true">
+              <circle class="ps-down-ring-track" cx="50" cy="50" r="46" />
+              <circle
+                class="ps-down-ring-fill"
+                cx="50"
+                cy="50"
+                r="46"
+                :style="{ '--ring-progress': downProgress }"
+              />
+            </svg>
+            <Icon icon="game-icons:fragmented-meteor" width="96" height="96" class="ps-down-icon" />
+            <span class="ps-down-secs">{{ downSecsLeft }}<i>s</i></span>
+          </div>
+
+          <!-- Eclipse medallion — same emblem and same source of truth as the
+               Command Panel's, sitting on the sun's face because the planet
+               itself is occluded while this shows. Deliberately without a
+               transition: the Command Panel switches its medallion instantly,
+               and a fade here would make this one linger behind it.
+               A destroyed planet suppresses it: it isn't in orbit at all,
+               so "behind the sun" would be the wrong story. -->
+          <span
+            v-if="orbitBehind && !down"
+            class="ps-eclipse-medal"
+            title="Behind the Sun — out of reach"
+          >
+            <Icon icon="game-icons:eclipse-flare" width="104" height="104" />
+          </span>
         </div>
-      </Transition>
 
-      <!-- Zerstört: Der Planet ist aus der Bahn — an seiner Stelle steht
-           ein Wrack-Emblem auf der Sonne, umlegt von einem Ring, der die
-           Ausfallzeit abfährt. Größter Blickfang der Stage, weil es die
-           einzige Information ist, auf die der Spieler warten kann. -->
-      <div v-if="down" class="ps-down-core" aria-live="polite">
-        <svg class="ps-down-ring" viewBox="0 0 100 100" aria-hidden="true">
-          <circle class="ps-down-ring-track" cx="50" cy="50" r="46" />
-          <circle
-            class="ps-down-ring-fill"
-            cx="50"
-            cy="50"
-            r="46"
-            :style="{ '--ring-progress': downProgress }"
-          />
-        </svg>
-        <Icon icon="game-icons:fragmented-meteor" width="96" height="96" class="ps-down-icon" />
-        <span class="ps-down-secs">{{ downSecsLeft }}<i>s</i></span>
+        <PlanetStatDeck
+          :rows="statRowsRight"
+          :preview="previewActive"
+          :color="roleColor"
+          :dim="orbitBehind || down"
+          side="right"
+          caption="Orbit"
+        />
       </div>
-
-      <!-- Eclipse medallion — same emblem and same source of truth as the
-           Command Panel's, sitting on the sun's face because the planet
-           itself is occluded while this shows. Deliberately without a
-           transition: the Command Panel switches its medallion instantly,
-           and a fade here would make this one linger behind it.
-           A destroyed planet suppresses it: it isn't in orbit at all,
-           so "behind the sun" would be the wrong story. -->
-      <span
-        v-if="orbitBehind && !down"
-        class="ps-eclipse-medal"
-        title="Behind the Sun — out of reach"
-      >
-        <Icon icon="game-icons:eclipse-flare" width="104" height="104" />
-      </span>
     </div>
 
     <!-- Name + HP unit — directly under the sun (top of the bottom balancing
@@ -418,12 +448,6 @@ const configTarget = computed(() => {
             />
           </div>
         </div>
-
-        <!-- Instrumentenreihe — sechs Messwerte in der Breite des HP-Balkens,
-             direkt darunter. Sie steht im FLUSS des Readouts: eine zweite
-             Positionslogik neben der Sonne wäre auf Full HD nicht unterzubringen
-             (dort bleiben seitlich nur 140 px frei). -->
-        <PlanetStatBar :rows="statRows" :preview="previewActive" />
       </div>
 
       <!-- Status banner — states why the readout is dimmed and the
@@ -683,21 +707,55 @@ const configTarget = computed(() => {
   overflow: hidden;
 }
 
+/* Die Reihe aus Spalte | Sonne | Spalte. Sie ist der Container, an dem die
+   beiden Anordnungen hängen — gemessen wird die Bühnenbreite, nie der Viewport.
+   Vertikal ist SIE jetzt das schrumpfende Flex-Kind der Bühne; die Sonne folgt
+   ihr über `max-height`. */
+.ps-orrery-wrap {
+  position: relative;
+  z-index: 1;
+  flex: 0 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  container-type: inline-size;
+  container-name: ps-orrery;
+}
+
+.ps-orrery {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  /* Gedeckelt, weil die Sonne von der HÖHE gedeckelt ist: ohne das wüchse nur
+     der Abstand, und die Spalten stünden am Bühnenrand statt neben ihr (auf 4K
+     883 px daneben). Die Zahl ist der Bedarf der Reihe — Bahn 2x340, Spalten
+     2x190, Lücken 2x30. */
+  max-width: 1180px;
+  min-width: 0;
+  column-gap: clamp(10px, 1.4vw, 30px);
+  row-gap: clamp(6px, 1vh, 14px);
+}
+
 /* Sun + orbiting planet share one centered system. Fills whatever height the
    stage has left; a container query lets the sun scale to the real free space
    instead of fixed pixels, so nothing ever overflows. */
 .ps-system {
   position: relative;
   z-index: 1;
-  width: 100%;
+  /* Nimmt die Breite, die die beiden Spalten übrig lassen — nie `width: 100%`,
+     das drängte sie sofort auf eine zweite Zeile. */
+  flex: 1 1 0;
+  min-width: 0;
+  max-height: 100%;
   /* Sized to the sun itself (no empty slack below it), so the equal-flex spacer
      above and hero band below can center it in the stage AND put the button at
      the exact midpoint between the sun and the name/HP unit. */
-  /* SHRINK, nicht fix: Krone, Readout und Instrumentenreihe melden über
-     min-content ihren echten Bedarf, und die Sonne gibt her, was fehlt. Vorher
-     war sie starr und der Rest lief unter dem Level-Up-Knopf durch — auf JEDER
-     Auflösung unter 4K, nicht nur auf den flachen. */
-  flex: 0 1 auto;
+  /* SHRINK, nicht fix: Krone und Readout melden über min-content ihren echten
+     Bedarf, und die Sonne gibt her, was fehlt. Vorher war sie starr und der Rest
+     lief unter dem Level-Up-Knopf durch — auf JEDER Auflösung unter 4K. */
   height: min(var(--ps-sun-d, 380px), 56vh);
   min-height: 160px;
   container-type: size;
@@ -726,8 +784,8 @@ const configTarget = computed(() => {
    prop is static px) — same pattern as .bh-root and .comet-root below.
    z above the planet's "far" half so the planet can pass behind the sun. */
 :deep(.phase-sun-root) {
-  width: min(var(--ps-sun-d, 380px), 96cqmin);
-  height: min(var(--ps-sun-d, 380px), 96cqmin);
+  width: min(var(--ps-sun-d, 380px), 96cqmin, 76cqw);
+  height: min(var(--ps-sun-d, 380px), 96cqmin, 76cqw);
   z-index: 1;
 }
 
@@ -735,8 +793,8 @@ const configTarget = computed(() => {
 /* Same responsive cap as .ps-stage-sun (the component's diameter prop is static
    px), and the same z-index, so the planet's far arc still passes behind it. */
 .ps-system--collapse :deep(.bh-root) {
-  width: min(var(--ps-sun-d, 560px), 96cqmin);
-  height: min(var(--ps-sun-d, 560px), 96cqmin);
+  width: min(var(--ps-sun-d, 560px), 96cqmin, 76cqw);
+  height: min(var(--ps-sun-d, 560px), 96cqmin, 76cqw);
   z-index: 1;
 }
 
@@ -744,15 +802,15 @@ const configTarget = computed(() => {
 /* Responsive size override (the component's diameter prop is static px);
    z-index 1 so the planet's far arc (z 0) passes BEHIND the rock. */
 .ps-system--comet :deep(.comet-root) {
-  width: min(200px, 62cqmin);
-  height: min(200px, 62cqmin);
+  width: min(200px, 62cqmin, 76cqw);
+  height: min(200px, 62cqmin, 76cqw);
   z-index: 1;
 }
 
 /* The comet is far smaller than a sun — tighten the orbit and shrink the
    planet so the path visually belongs to the rock it circles. */
 .ps-system--comet .ps-planet-preview-wrap {
-  --orb-x: min(190px, 48cqmin);
+  --orb-x: min(190px, 48cqmin, 50cqw - 44px);
   --orb-y: min(52px, 14cqmin);
 }
 
@@ -768,8 +826,10 @@ const configTarget = computed(() => {
   top: 50%;
   left: 50%;
   z-index: 3;
-  /* Keep the orbit visibly clear of the sun while retaining its responsive cap. */
-  --orb-x: min(280px, 62cqmin);
+  /* Keep the orbit visibly clear of the sun while retaining its responsive cap.
+     Der dritte Term ist die Wand zu den Instrumentenspalten: der Körper reicht
+     --orb-x plus seine halbe Breite im nahen Vorbeigang (Scale 1.15) weit. */
+  --orb-x: min(280px, 62cqmin, 50cqw - 68px);
   --orb-y: min(74px, 18cqmin);
   transform: translate(-50%, -50%);
   /* The keyframe is never played — it is scrubbed. tickOrbit writes the negative
@@ -1585,15 +1645,34 @@ const configTarget = computed(() => {
   opacity: 0;
 }
 
+/* Zu schmal für zwei Spalten neben der Sonne: sie bricht auf eine eigene Zeile,
+   die beiden Spalten legen sich als eine Reihe darunter. Die Schwelle steht auch
+   in `PlanetStatDeck.vue` (dort wechselt die Spalte in ihren Reihen-Modus);
+   `planetStatDeck.spec.ts` hält die beiden Zahlen zusammen. */
+@container ps-orrery (max-width: 900px) {
+  .ps-system {
+    flex: 0 0 100%;
+    order: -1;
+    /* Die Reihe liegt in derselben Hülle wie die Sonne — ohne diesen Abzug
+       schrumpft die Hülle unter ihre zwei Zeilen und die Reihe rutschte über
+       den Namen. 66 px sind die Reihe (52) plus die Zeilenlücke. */
+    max-height: calc(100% - 66px);
+  }
+
+  .ps-orrery {
+    column-gap: 0;
+  }
+}
+
 /* ── Compact height (Full HD ~950px viewport) ───────────────────────────────── */
 /* Shrink the sun cap, crown and dock so crown + sun + name/HP + dock all fit the
    flattest desktop viewport without overflow. 2K/4K keep the roomy defaults. */
 @media (max-height: 1100px) {
-  /* Die Instrumentenreihe kostet 62 px, die es hier nicht gibt: Krone, Sonne und
-     Readout füllten die 783 px der Full-HD-Bühne schon vorher aus (daher die alte
-     Überlappung von Knopf und HP-Balken). Die Sonne gibt sie her. */
+  /* Die 62 px, die die Instrumentenreihe unter dem HP-Balken gekostet hat, stehen
+     der Sonne wieder zu — die Spalten stehen jetzt NEBEN ihr und kosten in der
+     Höhe nichts. Auf 950 px Viewport sind das genau die 46 → 52 vh. */
   .ps-system {
-    height: min(var(--ps-sun-d, 340px), 46vh);
+    height: min(var(--ps-sun-d, 340px), 52vh);
   }
 
   .ps-crown-value {
@@ -1621,8 +1700,11 @@ const configTarget = computed(() => {
     flex: none;
   }
 
-  .ps-system {
+  .ps-orrery-wrap {
     flex: none;
+  }
+
+  .ps-system {
     height: clamp(240px, 42vh, 400px);
   }
 }

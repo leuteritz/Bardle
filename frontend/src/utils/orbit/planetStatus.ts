@@ -4,6 +4,9 @@
 import {
   HP_COLOR_THRESHOLD_HIGH,
   HP_COLOR_THRESHOLD_LOW,
+  JUNGLE_BUFF_DEFS,
+  PLANET_LEVEL_BONUS_PCT,
+  PLANET_MILESTONE_BONUS,
   PLANET_MILESTONE_INTERVAL,
   PLANET_ORBIT_SPEED_MAX_MULT,
   PLANET_SLOT_CONFIG,
@@ -85,9 +88,19 @@ export function planetBonusTextFor(
 // Readout darüber schon zeigt (max HP, Rollenbonus), gehören nicht hierher —
 // eine Kachel trägt einen Messwert, sonst ist sie keine.
 
+/** Welche der beiden Spalten neben der Sonne die Kachel trägt. */
+export type PlanetStatFlank = 'left' | 'right'
+
 export interface PlanetStatRow {
   key: string
   label: string
+  flank: PlanetStatFlank
+  /**
+   * Der Satz der Hover-Karte. Er steht hier und nicht im Template, weil die
+   * Zahl ohne ihn nicht zu verstehen war — drei der alten Beschriftungen
+   * (Resonance, Milestone, In Reach) sagten dem Spieler nichts.
+   */
+  tip: string
   /** Der Zahlwert allein — die Einheit steht getrennt in `suffix`. */
   value: string
   /** Einheit, klein gesetzt: 's', '%', 'AU', 'lv'. Kurz halten — bei drei Zeichen
@@ -106,8 +119,12 @@ function fmtSeconds(ms: number): string {
   return s < 100 ? s.toFixed(1) : String(Math.round(s))
 }
 
-function fmtMult(v: number): string {
-  return `×${v.toFixed(v < 10 ? 2 : 1)}`
+function fmtMult(v: number, digits = v < 10 ? 2 : 1): string {
+  return `×${v.toFixed(digits)}`
+}
+
+function pct(frac: number): string {
+  return `${Math.round(frac * 100)}%`
 }
 
 /** Nur setzen, wo sich der Wert wirklich bewegt — sonst flackert die Vorschau grundlos. */
@@ -143,17 +160,24 @@ export interface PlanetStatInput {
   orbitIndex: number
   /** Level, das die Vorschau zeigen soll (= Ist-Level, wenn keine Vorschau läuft). */
   previewLevel: number
+  /** Rolle des Slots — die Buff-Kachel liest ihre Zahl daraus. */
+  role: PlanetRoleType
 }
 
 /**
- * Die Instrumentenreihe unter dem HP-Balken — sechs Zahlen, feste Reihenfolge.
+ * Die beiden Instrumentenspalten neben der Sonne — links was der Planet leistet,
+ * rechts wo er läuft. Feste Reihenfolge, drei Zeilen je Flanke.
  *
  * Jede Zeile trägt ihre Vorschau selbst: `preview` ist genau dort gesetzt, wo das
- * nächste Attunement den Wert bewegt. Zeilen ohne `preview` (In Reach, Radius) sind
- * level-stabil, und dass sie beim Hover stehen bleiben, ist die eigentliche Aussage.
+ * nächste Attunement den Wert bewegt. Zeilen ohne `preview` (Buff, Uptime,
+ * Distance) sind level-stabil, und dass sie beim Hover stehen bleiben, ist die
+ * eigentliche Aussage.
+ *
+ * Keine Zeile für die Zeit hinter der Sonne: sie ist `Uptime` ein zweites Mal
+ * (6,1 s von 29,6 s = 21 % = 100 − 79).
  */
 export function planetStatRows(input: PlanetStatInput): PlanetStatRow[] {
-  const { slot, orbitIndex, previewLevel } = input
+  const { slot, orbitIndex, previewLevel, role } = input
   const level = slot.level
   const tier = orbitTierForSlotIndex(orbitIndex)
 
@@ -178,46 +202,62 @@ export function planetStatRows(input: PlanetStatInput): PlanetStatRow[] {
   const milestoneNext =
     (planetMilestoneCount(previewLevel) + 1) * PLANET_MILESTONE_INTERVAL - previewLevel
 
+  const buff = JUNGLE_BUFF_DEFS[role]
+  const milestoneBonus = pct(PLANET_MILESTONE_BONUS)
+
   return [
     {
-      key: 'period',
-      label: 'Period',
-      value: fmtSeconds(now.periodMs),
-      suffix: 's',
-      preview: previewOf(fmtSeconds(now.periodMs), fmtSeconds(next.periodMs)),
-      atCap: speedAtCap,
-    },
-    {
-      key: 'eclipse',
-      label: 'Eclipse',
-      value: fmtSeconds(now.behindMs),
-      suffix: 's',
-      preview: previewOf(fmtSeconds(now.behindMs), fmtSeconds(next.behindMs)),
-      atCap: speedAtCap,
-    },
-    {
-      key: 'in-reach',
-      label: 'In Reach',
-      value: String(Math.round(now.inReachFrac * 100)),
-      suffix: '%',
-    },
-    {
-      key: 'resonance',
-      label: 'Resonance',
+      key: 'power',
+      label: 'Power',
+      flank: 'left',
+      tip: `Everything this planet delivers is multiplied by this — +${pct(
+        PLANET_LEVEL_BONUS_PCT,
+      )} per level, plus a +${milestoneBonus} jump on every ${PLANET_MILESTONE_INTERVAL}th.`,
       value: fmtMult(bonusNow),
       preview: previewOf(fmtMult(bonusNow), fmtMult(planetLevelBonusMultiplier(previewLevel))),
     },
     {
-      key: 'milestone',
-      label: 'Milestone',
+      key: 'next-bonus',
+      label: 'Next Bonus',
+      flank: 'left',
+      tip: `Every ${PLANET_MILESTONE_INTERVAL}th level pays a permanent +${milestoneBonus} power bonus on top — this many levels to go.`,
       value: String(milestoneLeft),
       suffix: 'lv',
       preview: previewOf(String(milestoneLeft), String(milestoneNext)),
       bar: (level % PLANET_MILESTONE_INTERVAL) / PLANET_MILESTONE_INTERVAL,
     },
     {
-      key: 'radius',
-      label: 'Radius',
+      key: 'buff',
+      label: 'Buff',
+      flank: 'left',
+      tip: `When your Jungle champion flies past, "${buff.name}" multiplies this planet's output by ${buff.multiplier} for ${Math.round(
+        buff.durationMs / 1000,
+      )}s.`,
+      value: fmtMult(buff.multiplier, 1),
+    },
+    {
+      key: 'lap-time',
+      label: 'Lap Time',
+      flank: 'right',
+      tip: 'One full trip around the sun. Every level speeds the orbit up a little, up to its cap.',
+      value: fmtSeconds(now.periodMs),
+      suffix: 's',
+      preview: previewOf(fmtSeconds(now.periodMs), fmtSeconds(next.periodMs)),
+      atCap: speedAtCap,
+    },
+    {
+      key: 'uptime',
+      label: 'Uptime',
+      flank: 'right',
+      tip: 'Share of every lap the planet spends in front of the sun — the only stretch where its role pays out and it can be levelled.',
+      value: String(Math.round(now.inReachFrac * 100)),
+      suffix: '%',
+    },
+    {
+      key: 'distance',
+      label: 'Distance',
+      flank: 'right',
+      tip: "How far out this orbit runs, with the innermost planet's orbit as 1 AU.",
       value: orbitRadiusAu(orbitIndex, slot.baseSpeed, slot.direction).toFixed(2),
       suffix: 'AU',
     },
