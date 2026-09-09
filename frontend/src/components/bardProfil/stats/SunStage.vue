@@ -53,7 +53,7 @@ const phaseAstroName = computed(() =>
 )
 
 /* ── Live clock ───────────────────────────────────────────────────
-   One ticker for the whole panel: the dwell readout, its track and the time
+   One ticker for the whole panel: the dwell dial, its readout and the time
    banked on the rail's current step all read from it. */
 const now = ref(gameNow())
 let ticker: ReturnType<typeof setInterval>
@@ -330,24 +330,30 @@ function handleSunKey(e: KeyboardEvent): void {
       <span class="se-gates-k">Requirements</span>
 
       <div class="se-gates-grid">
-        <article class="se-gate" :class="{ 'is-met': dwellMet }">
-          <div class="se-gate-head">
-            <Icon
-              icon="lucide:hourglass"
-              class="se-gate-ico"
-              width="24"
-              height="24"
-              aria-hidden="true"
-            />
-            <span class="se-gate-copy">
-              <span class="se-gate-name">Dwell</span>
-              <span class="se-gate-value">
-                {{ dwellMet ? 'Served' : `${formatCompactDuration(dwellRemainingMs)} remaining` }}
-              </span>
-            </span>
-          </div>
-          <span class="se-track">
-            <i class="se-track-fill" :style="{ transform: `scaleX(${dwellPct})` }" />
+        <!-- Die Verweildauer ist eine Uhr, also steht sie als Zifferblatt da —
+             dieselbe Gestalt wie ein Core Ray, nur gross. -->
+        <article class="se-gate se-gate--dwell" :class="{ 'is-met': dwellMet }">
+          <span class="se-dial">
+            <svg class="se-dial-svg" viewBox="0 0 24 24" aria-hidden="true">
+              <circle class="se-dial-track" cx="12" cy="12" r="10" pathLength="100" />
+              <circle
+                class="se-dial-fill"
+                cx="12"
+                cy="12"
+                r="10"
+                pathLength="100"
+                :stroke-dashoffset="100 - dwellPct * 100"
+              />
+            </svg>
+            <Icon icon="lucide:hourglass" class="se-dial-ico" aria-hidden="true" />
+            <Icon v-if="dwellMet" icon="lucide:check" class="se-dial-check" aria-hidden="true" />
+          </span>
+          <span class="se-gate-copy">
+            <span class="se-gate-name">Dwell</span>
+            <strong class="se-dwell-val">{{
+              dwellMet ? 'Served' : formatCompactDuration(dwellRemainingMs)
+            }}</strong>
+            <span class="se-dwell-sub">{{ dwellMet ? 'Minimum dwell met' : 'remaining' }}</span>
           </span>
         </article>
 
@@ -387,14 +393,11 @@ function handleSunKey(e: KeyboardEvent): void {
               v-tip="ray.tip"
               @click="openRay(ray.id)"
             >
-              <span class="se-ray-disc">
-                <!-- Füllstand über `stroke-dashoffset`, nie conic-gradient; der
-                     Kreis ist per pathLength auf 100 normiert (Muster:
-                     SunPhaseIndicator), damit kein Umfang gerechnet wird. -->
-                <svg class="se-ray-svg" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle class="se-ray-track" cx="12" cy="12" r="10" pathLength="100" />
+              <span class="se-dial">
+                <svg class="se-dial-svg" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle class="se-dial-track" cx="12" cy="12" r="10" pathLength="100" />
                   <circle
-                    class="se-ray-fill"
+                    class="se-dial-fill"
                     cx="12"
                     cy="12"
                     r="10"
@@ -402,19 +405,11 @@ function handleSunKey(e: KeyboardEvent): void {
                     :stroke-dashoffset="100 - ray.fillPct"
                   />
                 </svg>
-                <Icon
-                  :icon="ray.icon"
-                  class="se-ray-ico"
-                  width="28"
-                  height="28"
-                  aria-hidden="true"
-                />
+                <Icon :icon="ray.icon" class="se-dial-ico" aria-hidden="true" />
                 <Icon
                   v-if="ray.met"
                   icon="lucide:check"
-                  class="se-ray-check"
-                  width="14"
-                  height="14"
+                  class="se-dial-check"
                   aria-hidden="true"
                 />
               </span>
@@ -734,8 +729,53 @@ function handleSunKey(e: KeyboardEvent): void {
   border: 1px solid #2c1806;
   border-radius: 4px;
 }
+/* Erfüllt heisst Schleier, nicht Signal — derselbe Griff wie an der erfüllten
+   Strahlenkachel, sonst schriee der Rahmen lauter als der Inhalt. */
 .se-gate.is-met {
-  border-color: #2e7a1a;
+  background: color-mix(in srgb, #6ec040 10%, #1a1008);
+  border-color: color-mix(in srgb, #6ec040 45%, #2c1806);
+}
+
+/* Zifferblatt links, Text rechts, beides mittig: so ist die Höhe gefüllt, die
+   das Raster der Karte ohnehin gibt. */
+.se-gate--dwell {
+  flex-direction: row;
+  align-items: center;
+  gap: clamp(10px, 1.4cqw, 20px);
+}
+
+.se-gate--dwell .se-dial {
+  --dial: #e0a828;
+  --dial-size: clamp(46px, 10cqw, 116px);
+}
+.se-gate--dwell.is-met .se-dial {
+  --dial: #6ec040;
+}
+
+.se-dwell-val {
+  display: block;
+  margin-top: 3px;
+  font-size: clamp(20px, 3.2cqw, 36px);
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  color: #e8e4d8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.se-gate--dwell.is-met .se-dwell-val {
+  color: #8bcf60;
+}
+
+.se-dwell-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: clamp(11px, 1.4cqw, 17px);
+  line-height: 1.2;
+  color: #7a6c56;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .se-gate-head {
@@ -791,6 +831,9 @@ function handleSunKey(e: KeyboardEvent): void {
   color: #8bcf60;
 }
 
+/* Die grosse Uhr fällt im flachen Fenster zuerst zurück — jeder Pixel hier
+   geht in die Sonne, die einzige flexende Zeile. */
+
 .se-gate-name {
   display: block;
   font-size: clamp(12px, 1.9cqw, 20px);
@@ -809,29 +852,6 @@ function handleSunKey(e: KeyboardEvent): void {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* ── gate one: the dwell track ───────────────────────────────────
-   scaleX, not width — this creeps forward every second the panel is open. */
-.se-track {
-  display: block;
-  width: 100%;
-  height: clamp(9px, 1.1cqw, 14px);
-  background: #0d0904;
-  border: 1px solid #2c1806;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.se-track-fill {
-  display: block;
-  width: 100%;
-  height: 100%;
-  transform-origin: left center;
-  background: linear-gradient(to right, #b8791c, #e0a828);
-}
-.se-gate.is-met .se-track-fill {
-  background: linear-gradient(to right, #2e7a1a, #6ec040);
 }
 
 /* ── gate two: five tiles, one per core ray ──────────────────────
@@ -869,16 +889,25 @@ function handleSunKey(e: KeyboardEvent): void {
   outline-offset: 2px;
 }
 
-/* Die Scheibe: Ring aussen, Glyph in der Mitte, Häkchen in der Ecke. */
-.se-ray-disc {
+/* ── das Zifferblatt ─────────────────────────────────────────────
+   EINE Gestalt für beide Tore: Ring aussen, Glyph in der Mitte, Häkchen in der
+   Ecke. Der Aufrufer setzt nur, was allein er weiss — `--dial-size` und
+   `--dial`. Füllstand über `stroke-dashoffset`, nie conic-gradient; der Kreis
+   ist per pathLength auf 100 normiert (Muster: SunPhaseIndicator), damit kein
+   Umfang gerechnet wird. Glyph und Häkchen messen in PROZENT der Scheibe, so
+   trägt dieselbe Regel die kleine Kachel und die grosse Uhr. */
+.se-dial {
+  --dial-size: 40px;
+  --dial: #e8c040;
   position: relative;
   display: grid;
   place-items: center;
-  width: clamp(36px, 6.2cqw, 68px);
-  height: clamp(36px, 6.2cqw, 68px);
+  flex-shrink: 0;
+  width: var(--dial-size);
+  height: var(--dial-size);
 }
 
-.se-ray-svg {
+.se-dial-svg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -886,48 +915,57 @@ function handleSunKey(e: KeyboardEvent): void {
   transform: rotate(-90deg);
 }
 
-.se-ray-track {
+.se-dial-track {
   fill: none;
-  stroke: color-mix(in srgb, var(--ray) 22%, #2c1806);
+  stroke: color-mix(in srgb, var(--dial) 22%, #2c1806);
   stroke-width: 2;
 }
 
-.se-ray-fill {
+.se-dial-fill {
   fill: none;
-  stroke: var(--ray);
+  stroke: var(--dial);
   stroke-width: 2.4;
   stroke-linecap: round;
   stroke-dasharray: 100;
   transition: stroke-dashoffset 0.45s ease;
 }
 
-/* A grown ray burns in its own colour; a short one keeps a dimmed version of
-   it. No `filter: grayscale` — the colour IS the ray's name here. */
-.se-ray-ico {
-  width: clamp(21px, 3.6cqw, 40px);
-  height: clamp(21px, 3.6cqw, 40px);
+.se-dial-ico {
+  width: 58%;
+  height: 58%;
+  color: var(--dial);
+}
+
+.se-dial-check {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  width: max(13px, 30%);
+  height: max(13px, 30%);
+  padding: 1px;
+  color: #08130a;
+  background: var(--dial);
+  border-radius: 50%;
+}
+
+/* Die Kachel gibt dem Zifferblatt Farbe und Grösse. A grown ray burns in its
+   own colour; a short one keeps a dimmed version of it. No `filter: grayscale`
+   — the colour IS the ray's name here. */
+.se-ray .se-dial {
+  --dial: var(--ray);
+  --dial-size: clamp(36px, 6.2cqw, 68px);
+}
+.se-ray .se-dial-ico {
   color: color-mix(in srgb, var(--ray) 40%, #4e422c);
 }
-.se-ray.is-lit .se-ray-ico {
+.se-ray.is-lit .se-dial-ico {
   color: var(--ray);
 }
 
 .se-ray.is-met {
   background: color-mix(in srgb, var(--ray) 14%, #1a1008);
   border-color: color-mix(in srgb, var(--ray) 50%, #2c1806);
-}
-
-.se-ray-check {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  box-sizing: border-box;
-  width: clamp(13px, 1.9cqw, 19px);
-  height: clamp(13px, 1.9cqw, 19px);
-  padding: 1px;
-  color: #08130a;
-  background: var(--ray);
-  border-radius: 50%;
 }
 
 .se-ray-lv {
@@ -1009,9 +1047,11 @@ function handleSunKey(e: KeyboardEvent): void {
     gap: 2px;
     padding: 3px 2px 2px;
   }
-  .se-ray-disc {
-    width: clamp(34px, 5.6cqw, 62px);
-    height: clamp(34px, 5.6cqw, 62px);
+  .se-ray .se-dial {
+    --dial-size: clamp(34px, 5.6cqw, 62px);
+  }
+  .se-gate--dwell .se-dial {
+    --dial-size: clamp(42px, 8.4cqw, 98px);
   }
 }
 
