@@ -100,7 +100,7 @@
                dabei zusehen kann. Ganz oben, weil sie als einziges System
                beantwortet, was als NÄCHSTES ansteht: genau die Frage beim
                Fortsetzen. -->
-          <PauseWayfinderBand :milestones="pauseMilestones" />
+          <PauseWayfinderBand />
 
           <!-- Zwei Spalten statt zehn Bänder: links, was während der Pause
                hereinkam, rechts, wie es steht. Nebeneinander statt untereinander
@@ -554,7 +554,6 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useVoidStore } from '@/stores/world/voidStore'
 import { useUiStore } from '@/stores/core/uiStore'
-import { useMissionStore } from '@/stores/progression/missionStore'
 import { getVoidRift } from '@/config/world/void'
 import { formatNumber, formatNumberCompact } from '@/config/ui/numberFormat'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
@@ -653,7 +652,6 @@ const playerStore = usePlayerStore()
 const planetBossStore = usePlanetBossStore()
 const planetShopStore = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
-const missionStore = useMissionStore()
 
 // Die Rollenwahl hält das Spiel bereits an und liegt über allem — eine zweite
 // Pause darüber wäre nur ein Overlay über einem Overlay.
@@ -706,7 +704,6 @@ const galaxyPct = computed(
 const levelSub = computed(() => `${formatNumberCompact(gameStore.chimesToNextLevel)} to next`)
 
 const pauseStartChimes = ref(0)
-const pauseStartMissions = ref(0)
 const pauseTick = ref(0)
 /**
  * Der schnellere der beiden Takte (STAR_TIMER_TICK_MS). Er treibt bisher die
@@ -808,7 +805,6 @@ watch(
     if (paused) {
       gameStore.setPauseState(true)
       pauseStartChimes.value = gameStore.chimes
-      pauseStartMissions.value = missionStore.totalMissionsClaimed
       pauseStartDamage.value = playerStore.totalDamageTaken
       pauseStartRegen.value = playerStore.totalHpRegenerated
       damagePops.value = []
@@ -855,16 +851,6 @@ onUnmounted(() => {
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onEscape)
 })
-
-/**
- * Meilensteine dieser Pause. Differenz gegen den Lebenszeit-Zähler, dasselbe
- * Muster wie bei Schaden und Regeneration — kein `pauseStats`-Feld und damit
- * keine Änderung am Spielstand. Reaktiv, also ohne Takt: die Leiter rückt im
- * ungebremsten Spiel-Tick weiter.
- */
-const pauseMilestones = computed(() =>
-  Math.max(0, missionStore.totalMissionsClaimed - pauseStartMissions.value),
-)
 
 const accumulatedChimes = computed(() => {
   void pauseTick.value

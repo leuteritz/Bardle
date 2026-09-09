@@ -903,11 +903,6 @@ export const PAUSE_WAYFINDER_EMBLEM_PX = 72
  *  von 170 noch 149 — gut ein Fünftel Reserve. Bei 220 standen 77 px Luft als
  *  Loch am Bandrand. Der Name weicht davor zurück, nie umgekehrt. */
 export const PAUSE_WAYFINDER_REWARD_W = 170
-/** Reservierte Breite des Zählers in `ch`, dazu `tabular-nums`.
- *  `formatNumberCompact` liefert je Seite höchstens fünf Zeichen, mit
- *  Schrägstrich elf — sonst wanderte der Balken, sobald eine Zahl eine Stelle
- *  gewinnt. Dieselbe Stelle wie bei der Chime-Ablesung. */
-export const PAUSE_WAYFINDER_COUNT_CH = 12
 /** Höhe eines Kapitelbalkens in der Etappenleiste der Kopfzeile. Der Balken
  *  steht NEBEN seiner römischen Ziffer, nicht darunter — gestapelt blieben der
  *  Ziffer 0,6 rem, ohne dass die Kopfzeile höher werden dürfte. */
