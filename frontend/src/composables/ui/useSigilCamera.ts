@@ -1,8 +1,8 @@
 /* ── Die Phasenmaschine des Team-Tabs ─────────────────────────────────────────
-   Board ⇄ Detailseite in ZWEI Takten, und die KAMERA fährt zuerst: `aim` rückt
-   das Board auf seine Endlage und zoomt auf den Rollencluster, `open` führt
-   danach die Seite herein, ohne die Kamera noch einmal zu bewegen. Das
-   Schliessen spiegelt das (`leave` → `home`).
+   `aim`: das Board rückt auf seine Endlage und zoomt auf den Rollencluster,
+   während die Schiene mit dem Skelett hereinfährt — EIN Takt, weil der
+   Ladeschleier die Seite von Anfang an vertritt. Das Schliessen ist zweitaktig
+   und gespiegelt: `leave` (Seite raus, Kamera hält) → `home`.
 
    Zwei Taktarten: wo die Bühne fährt, taktet ihr `transitionend` (Timer × NET_MUL
    als Netz); wo sie stillsteht, käme nie eines — dort taktet der Timer selbst.
@@ -11,7 +11,7 @@
 import { computed, onScopeDispose, ref, type ComputedRef, type Ref } from 'vue'
 import { TEAM_SIGIL_CAM_NET_MUL, TEAM_SIGIL_OPEN_MS, TEAM_SIGIL_TRAVEL_MS } from '@/config/constants'
 
-export type SigilCamPhase = 'idle' | 'aim' | 'open' | 'travel' | 'leave' | 'home'
+export type SigilCamPhase = 'idle' | 'aim' | 'travel' | 'leave' | 'home'
 
 export interface SigilCameraOptions {
   /** Die Fahrt ist gerade nicht zu sehen (Ladeschleier deckt) — dann wird
@@ -22,10 +22,11 @@ export interface SigilCameraOptions {
 export interface SigilCamera {
   /** Was die SCHIENE zeigt. Ersetzt das frühere `selectedRole`. */
   role: Ref<number | null>
-  /**
+/**
    * Worauf die KAMERA blickt — und damit auch, welcher Knoten hervorgehoben ist
-   * und wie breit das Board rechnet. Steht ab dem Klick, `role` folgt einen Takt
-   * später; beim Schliessen genau umgekehrt.
+   * und wie breit das Board rechnet. Beim Öffnen fällt sie mit `role` zusammen;
+   * beim Schliessen hält sie einen Takt länger, damit das Board nicht unter der
+   * noch ausfahrenden Seite aufgeht.
    */
   cameraRole: Ref<number | null>
   /** Subjekt der Seite. Gleich `role` — ausser beim Schliessen, wo es stehen
@@ -81,13 +82,6 @@ export function useSigilCamera(opts: SigilCameraOptions): SigilCamera {
 
   function settle(): void {
     switch (phase.value) {
-      case 'aim':
-        // Die Kamera steht. Jetzt erst die Seite: Schiene herein, Mount, Aufdecken.
-        phase.value = 'open'
-        role.value = cameraRole.value
-        panelRole.value = cameraRole.value
-        armTimer(TEAM_SIGIL_OPEN_MS)
-        return
       case 'leave':
         // Die Seite ist draussen. Jetzt erst das Board zurück auf die volle Breite.
         phase.value = 'home'
@@ -116,10 +110,13 @@ export function useSigilCamera(opts: SigilCameraOptions): SigilCamera {
     }
 
     if (next !== null && role.value === null) {
-      // Takt 1: nur die Kamera. Das Board rückt auf seine Endlage und zoomt auf
-      // den Cluster — die Schiene bleibt geparkt, die Seite mountet noch nicht.
+      // EIN Takt: das Board fährt auf seine Endlage, und die Schiene fährt mit
+      // dem Skelett herein. Was der Spieler dabei sieht, ist der Ladeschleier —
+      // die echte Seite entsteht dahinter (siehe `panelArmed` im Team-Tab).
       phase.value = 'aim'
       cameraRole.value = next
+      role.value = next
+      panelRole.value = next
       armTimer(TEAM_SIGIL_TRAVEL_MS)
       return
     }

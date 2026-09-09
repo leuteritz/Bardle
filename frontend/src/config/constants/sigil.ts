@@ -251,22 +251,13 @@ export const TEAM_SIGIL_CAM_NET_MUL = 2
 export const TEAM_SIGIL_EASE_TRAVEL = 'cubic-bezier(0.16, 1, 0.3, 1)'
 
 /**
- * Aufbaustufen der Detailseite. Sie brachte ~40–60 Karten, sieben Regalia-
- * Medaillen und rund 25 Icons in EINEM Frame — gemessen 65 ms zusammen mit dem
- * Board.
- *
- * ZWEI Stufen, nicht drei: Sitzreihe und linke Spalte müssen zusammen kommen,
- * sonst rückt die Spalte um die Höhe der Sitzreihe hoch und wieder runter. Die
- * rechte Spalte darf nachziehen — sie ist `flex: 1`, ihr Fehlen lässt Fläche
- * stehen statt etwas zu verschieben.
+ * Frames, die die ECHTE Seite dem Klick nachläuft. Sie mountet hinter dem
+ * Ladeschleier, aber nicht in Frame 0 — dort liegen schon der Layout-Snap der
+ * Spalte und der Start zweier Fahrten. Zwei Frames später fällt ihr teurer Frame
+ * in bereits laufende Kompositor-Animationen, die ein blockierter Hauptthread
+ * nicht anhält.
  */
-export const TEAM_SIGIL_PANEL_STAGE_HEAD = 0
-export const TEAM_SIGIL_PANEL_STAGE_WORKSPACE = 1
-/** Aufgedeckt wird in DREI Schritten, auch wenn in zwei gebaut wird: das
- *  Aufdecken kostet nichts und liest sich als Leserichtung. */
-export const TEAM_SIGIL_PANEL_REVEAL_MS = 260
-export const TEAM_SIGIL_PANEL_REVEAL_STEP_MS = 60
-export const TEAM_SIGIL_PANEL_REVEAL_SHIFT_PX = 8
+export const TEAM_SIGIL_PANEL_ARM_FRAMES = 2
 /**
  * Width (px) of the role details panel — the board's fit-scale subtracts it while
  * a role is selected so open/close resolves in a single camera move. The panel is

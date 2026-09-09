@@ -20,6 +20,7 @@ import {
   TEAM_ROLE_RAIL_SLIDE_MS,
   TEAM_ROLE_RAIL_HERO_COMPACT_HEIGHT,
   TEAM_SIGIL_OPEN_MS,
+  TEAM_SIGIL_PANEL_ARM_FRAMES,
   TEAM_SIGIL_EASE_TRAVEL,
 } from '@/config/constants'
 import { getItemById } from '@/config/economy/items'
@@ -218,20 +219,6 @@ function beginTabOpen() {
   startDetailsLoad('board')
 }
 
-// Aufgedeckt wird, sobald BEIDES gilt: das Board steht, und der Schleier hat
-// lange genug gestanden, um als Ladevorgang gelesen zu werden.
-watch([boardBuilt, detailsPending], ([built, pending]) => {
-  if (!built || !pending || detailsTimer !== null) return
-  const shown = performance.now() - detailsStartedAt.value
-  detailsTimer = setTimeout(
-    () => {
-      detailsTimer = null
-      detailsPending.value = false
-    },
-    Math.max(0, loaderMinMs.value - shown),
-  )
-})
-
 // ── Tab UI state ─────────────────────────────────────────────────────────────
 /**
  * Der Übergang gehört der Phasenmaschine, nicht mehr einem nackten `ref`.
@@ -250,7 +237,73 @@ const {
   requestRole,
   onStageTransitionEnd,
   snap: snapCamera,
-} = useSigilCamera({ covered: () => veilCovering.value })
+} = useSigilCamera({
+  // Nur ein Schleier, der das BOARD deckt, darf die Fahrt unterdrücken. Der
+  // Schienen-Schleier deckt nur die Seite; daneben fährt die Kamera sichtbar.
+  covered: () => veilCovering.value && veilScope.value !== 'rail',
+})
+
+/** Die Detailseite hat beide Aufbaustufen hinter sich (`@ready`). */
+const panelBuilt = ref(false)
+
+// Aufgedeckt wird, sobald DREIERLEI gilt: das Board steht, die Seite steht, und
+// der Schleier hat lange genug gestanden, um als Ladevorgang gelesen zu werden.
+//
+// NICHT an `camPhase` gebunden: die Fahrt läuft im Kompositor und ist nach
+// TEAM_SIGIL_TRAVEL_MS sichtbar zu Ende, ihr `transitionend` kommt bei
+// blockiertem Hauptthread aber erst danach — gemessen stand der Schleier dadurch
+// 1165 statt 700 ms. Die Mindeststandzeit deckt die Fahrt ohnehin ab
+// (SIGIL_DETAILS_LOADER_MIN_MS > TEAM_SIGIL_TRAVEL_MS, gebunden in sigilCamera.spec).
+watch([boardBuilt, detailsPending, panelBuilt, panelHeld], ([built, pending, ready, held]) => {
+  if (!built || !pending || detailsTimer !== null) return
+  if (held && !ready) return
+  const shown = performance.now() - detailsStartedAt.value
+  detailsTimer = setTimeout(
+    () => {
+      detailsTimer = null
+      detailsPending.value = false
+    },
+    Math.max(0, loaderMinMs.value - shown),
+  )
+})
+
+/**
+ * Frames, die die ECHTE Seite dem Klick nachläuft.
+ *
+ * Sie mountet hinter dem Schleier, aber nicht in Frame 0: dort liegen schon der
+ * Layout-Snap der Spalte und der Start zweier Fahrten. Zwei Frames später fällt
+ * ihr teurer Frame in bereits laufende Kompositor-Animationen, die ein
+ * blockierter Hauptthread nicht anhält.
+ */
+const panelArmed = ref(false)
+let armFrame: number | null = null
+
+function cancelPanelArm() {
+  if (armFrame === null) return
+  cancelAnimationFrame(armFrame)
+  armFrame = null
+}
+
+watch(panelHeld, (held) => {
+  cancelPanelArm()
+  if (!held) {
+    panelArmed.value = false
+    panelBuilt.value = false
+    return
+  }
+  if (panelArmed.value) return
+  let left = TEAM_SIGIL_PANEL_ARM_FRAMES
+  const step = () => {
+    if (--left > 0) {
+      armFrame = requestAnimationFrame(step)
+      return
+    }
+    armFrame = null
+    panelArmed.value = true
+  }
+  armFrame = requestAnimationFrame(step)
+})
+
 
 /** Team synergies side panel — mutually exclusive with the role details panel. */
 const synergiesOpen = ref(false)
@@ -352,7 +405,7 @@ const railTransition = computed(() => {
   if (veilCovering.value && activeDestination.value === null) return 'sdp-instant'
   // Fährt die SCHIENE gerade, trägt sie den Inhalt mit — ein zweiter Slide auf
   // derselben Achse liefe doppelt so weit und läse sich als Nachziehen.
-  if (camPhase.value === 'open' || camPhase.value === 'leave') return 'sdp-instant'
+  if (camPhase.value === 'leave') return 'sdp-instant'
   return 'sdp-slide'
 })
 
@@ -404,11 +457,10 @@ function selectRole(index: number) {
   // Takt herein, und der gehört allein der Kamera. `railFolded` fällt so auf
   // `selectedRole === null` zurück — genau der gewünschte Takt.
   railChoice.value = null
-  // Geht die Spalte NEU auf, während das Board noch aufbaut, übernimmt der
-  // Ladeschleier ihren Platz — steht das Board schon, mountet sie sofort.
-  // Er muss VOR `requestRole` stehen: eine Fahrt unter einer deckenden Fläche
-  // ist nicht zu sehen und zuckt beim Aufdecken nach (`covered`).
-  if (selectedRole.value === null && !boardBuilt.value) startDetailsLoad('rail')
+  // Jedes Öffnen bekommt sein Skelett: ohne es stünde rechts die leere Fläche,
+  // in die die Seite gleich einfährt, und das liest sich als kaputt statt als
+  // Ladevorgang. Läuft schon ein Schleier (Tab-Aufbau), bleibt dessen Reichweite.
+  if (selectedRole.value === null && !detailsPending.value) startDetailsLoad('rail')
   requestRole(index)
   focusSeat(null)
   uiStore.setRolesActiveSlot(index)
@@ -611,6 +663,8 @@ function resetTabState() {
   // dürfte die Spalte nicht nachträglich doch noch aufschlagen.
   cancelDetailsLoad()
   cancelBoardSettle()
+  cancelPanelArm()
+  panelArmed.value = false
   veilCovering.value = false
   // `boardBuilt` bleibt bewusst stehen: was einmal gebaut ist, ist gebaut. Das
   // Wiedereinblenden kostet zwei Frames (gemessen 42 ms längster Frame gegen
@@ -652,6 +706,7 @@ onUnmounted(() => {
   if (mountFrame !== null) cancelAnimationFrame(mountFrame)
   cancelDetailsLoad()
   cancelBoardSettle()
+  cancelPanelArm()
   window.removeEventListener('keydown', onEsc)
   uiStore.setTeamActiveRole(null)
 })
@@ -716,13 +771,12 @@ onUnmounted(() => {
           </TeamSidePanelShell>
 
           <div
-            v-else-if="panelHeld && panelReady && !detailsPending"
+            v-else-if="panelHeld && panelReady && panelArmed"
             key="details"
             class="team-role-detail"
           >
             <SigilDetailsPanel
               :role-index="panelRole ?? roleIndex"
-              :instant="detailsPending || veilCovering"
               :highlighted-ally="boardHoveredAlly"
               :focus-ally="focusAlly"
               :focus-token="focusToken"
@@ -733,6 +787,7 @@ onUnmounted(() => {
               @pick-equipment="openEquipment"
               @hover-ally="hoveredAllySub = $event"
               @swap-state="swapOpen = $event"
+              @ready="panelBuilt = true"
             />
           </div>
           <TeamSynergiesPanel
@@ -942,6 +997,16 @@ onUnmounted(() => {
    Übergangs: er gibt seinen Platz im Fluss im selben Frame frei, in dem die
    Detailseite ihn einnimmt, und blendet danach über ihr weg — der teure
    Mount-Frame liegt vollständig hinter einer deckenden Fläche. */
+/* Das Skelett der Schiene poppt nicht: es gleitet in derselben Zeit herein wie
+   die Schiene, die es vertritt. Nur `transform` — deckend bleibt es ab Frame 1
+   (siehe den Kommentar über .sdv-leave-active). */
+.sdv-enter-from.team-rail-loader {
+  transform: translateX(100%);
+}
+.sdv-enter-active.team-rail-loader {
+  transition: transform v-bind(railEnterMs) v-bind(easeTravel);
+}
+
 .sdv-leave-active {
   /* `!important`, weil hier zwei scoped Regeln gleicher Spezifität gegeneinander
      stehen: die des Schleiers (position: relative) und diese. Wer gewinnt, hinge

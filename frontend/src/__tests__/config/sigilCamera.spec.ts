@@ -9,23 +9,22 @@ import {
   TEAM_SIGIL_EASE_TRAVEL,
   TEAM_SIGIL_FLIGHT_DIM_OPACITY,
   TEAM_SIGIL_OPEN_MS,
-  TEAM_SIGIL_PANEL_REVEAL_MS,
-  TEAM_SIGIL_PANEL_REVEAL_STEP_MS,
-  TEAM_SIGIL_PANEL_STAGE_HEAD,
-  TEAM_SIGIL_PANEL_STAGE_WORKSPACE,
+  SIGIL_DETAILS_LOADER_MIN_MS,
+  TEAM_SIGIL_PANEL_ARM_FRAMES,
   TEAM_SIGIL_RIDE_MS,
   TEAM_SIGIL_TRAVEL_MS,
 } from '@/config/constants'
 
 /*
- * Der Übergang Board ⇄ Detailseite ist EINE Bewegung mit EINER Uhr, und die
- * Kamera fährt zuerst. Vorher waren es vier Uhren: Kamera 450, Schiene 280,
- * Rail-Inhalt 300/120, Schleier 320 — vier Kurven mit vier Enden, jede an ihrer
- * eigenen Stelle hartkodiert.
+ * Der Übergang Board ⇄ Detailseite ist EINE Bewegung mit EINER Uhr: die Kamera
+ * fährt auf den Rollencluster, und die Schiene bringt zeitgleich das Skelett der
+ * Seite mit. Die echte Seite entsteht dahinter und wird aufgedeckt, wenn die
+ * Kamera steht.
  *
- * Diese Spec hält die Beziehungen, nicht die Beträge: wer eine Dauer ändert, darf
- * das tun, aber nicht so, dass das Aufdecken der Seite aus der Fahrt herausfällt
- * oder die Schiene neben der Bühne läuft.
+ * Vorher waren es vier Uhren — Kamera 450, Schiene 280, Rail-Inhalt 300/120,
+ * Schleier 320 —, jede an ihrer eigenen Stelle hartkodiert.
+ *
+ * Diese Spec hält die Beziehungen, nicht die Beträge.
  */
 
 const SRC = resolve(process.cwd(), 'src')
@@ -42,8 +41,8 @@ function code(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 }
 
-describe('Sigil-Kamera — zwei Takte, eine Uhr', () => {
-  it('Schiene und zweiter Takt sind dieselbe Bewegung', () => {
+describe('Sigil-Kamera — eine Uhr', () => {
+  it('Schiene und Ausfahr-Takt sind dieselbe Bewegung', () => {
     expect(TEAM_ROLE_RAIL_SLIDE_MS).toBe(TEAM_SIGIL_OPEN_MS)
   })
 
@@ -65,21 +64,44 @@ describe('Sigil-Kamera — zwei Takte, eine Uhr', () => {
   })
 })
 
-describe('Sigil-Kamera — erst die Kamera, dann die Seite', () => {
+describe('Sigil-Kamera — Fahrt und Skelett laufen zusammen', () => {
   const cam = code(CAMERA)
+  const tab = code(TAB)
 
-  it('der erste Takt bewegt NUR die Kamera', () => {
-    // `role` treibt die Schiene. Stünde es hier, führe sie im selben Takt mit.
-    const aim = cam.slice(cam.indexOf("phase.value = 'aim'"), cam.indexOf("if (next === null)"))
+  it('das Öffnen ist EIN Takt: Kamera und Schiene starten gemeinsam', () => {
+    // Das Skelett vertritt die Seite von Anfang an — es gibt nichts, was danach
+    // noch hereinfahren müsste.
+    const aim = cam.slice(cam.indexOf("phase.value = 'aim'"), cam.indexOf('if (next === null)'))
     expect(aim).toContain('cameraRole.value = next')
-    expect(aim).not.toContain('role.value = next')
+    expect(aim).toContain('role.value = next')
+    expect(cam).not.toContain("'open'")
   })
 
-  it('der zweite Takt bringt die Seite, ohne die Kamera zu bewegen', () => {
-    const open = cam.slice(cam.indexOf("case 'aim':"), cam.indexOf("case 'leave':"))
-    expect(open).toContain("phase.value = 'open'")
-    expect(open).toContain('role.value = cameraRole.value')
-    expect(open).not.toMatch(/cameraRole\.value = (?!cameraRole)/)
+  it('jedes Öffnen zieht das Skelett der Schiene auf', () => {
+    expect(tab).toMatch(/selectedRole\.value === null && !detailsPending\.value/)
+    expect(tab).toMatch(/startDetailsLoad\('rail'\)/)
+  })
+
+  it('der Schienen-Schleier unterdrückt die Fahrt NICHT', () => {
+    // Er deckt nur die Seite — daneben fährt die Kamera sichtbar.
+    expect(tab).toMatch(/covered:[\s\S]{0,140}veilScope\.value !== 'rail'/)
+  })
+
+  it('der Schleier steht mindestens so lange wie die Fahrt', () => {
+    // Er wird NICHT an transitionend gebunden: die Fahrt laeuft im Kompositor
+    // und ist nach TRAVEL_MS sichtbar zu Ende, ihr Ereignis kommt bei
+    // blockiertem Hauptthread aber erst danach.
+    expect(SIGIL_DETAILS_LOADER_MIN_MS).toBeGreaterThanOrEqual(TEAM_SIGIL_TRAVEL_MS)
+  })
+
+  it('der Schleier deckt auf, was er deckt: die fertige Seite', () => {
+    expect(tab).toContain('watch([boardBuilt, detailsPending, panelBuilt, panelHeld]')
+    expect(tab).toContain('if (held && !ready) return')
+  })
+
+  it('die echte Seite mountet HINTER dem Skelett, aber nicht in Frame 0', () => {
+    expect(tab).toContain('panelHeld && panelReady && panelArmed')
+    expect(TEAM_SIGIL_PANEL_ARM_FRAMES).toBeGreaterThanOrEqual(1)
   })
 
   it('das Schliessen spiegelt: erst die Seite, dann die Kamera', () => {
@@ -91,31 +113,13 @@ describe('Sigil-Kamera — erst die Kamera, dann die Seite', () => {
   })
 
   it('nur Takte, in denen die Bühne fährt, warten auf transitionend', () => {
-    // `open` und `leave` lassen den Transform unangetastet — dort käme nie eines.
+    // `leave` lässt den Transform unangetastet — dort käme nie eines.
     expect(cam).toMatch(/STAGE_DRIVEN[\s\S]*?'aim'[\s\S]*?'travel'[\s\S]*?'home'/)
     expect(cam).toContain('if (!STAGE_DRIVEN.has(phase.value)) return')
   })
 
   it('das Board rechnet mit der KAMERA, damit sie nur einmal fährt', () => {
-    expect(code(TAB)).toMatch(/boardFolded[\s\S]{0,200}cameraRole\.value === null/)
-  })
-})
-
-describe('Sigil-Kamera — das Aufdecken liegt IN der Fahrt', () => {
-  /** Drei Schritte: Sitzreihe, linke Spalte, rechte Spalte. */
-  const lastReveal = 2 * TEAM_SIGIL_PANEL_REVEAL_STEP_MS + TEAM_SIGIL_PANEL_REVEAL_MS
-
-  it('die letzte Zone ist fertig, bevor die Fahrt abgelaufen ist', () => {
-    expect(lastReveal).toBeLessThanOrEqual(TEAM_SIGIL_RIDE_MS)
-  })
-
-  it('das Aufdecken ist nicht vorbei, bevor die Schiene steht', () => {
-    expect(lastReveal).toBeGreaterThanOrEqual(TEAM_SIGIL_OPEN_MS)
-  })
-
-  it('zwei Aufbaustufen, lückenlos — die dritte verschöbe die Spalte', () => {
-    expect(TEAM_SIGIL_PANEL_STAGE_HEAD).toBe(0)
-    expect(TEAM_SIGIL_PANEL_STAGE_WORKSPACE).toBe(TEAM_SIGIL_PANEL_STAGE_HEAD + 1)
+    expect(tab).toMatch(/boardFolded[\s\S]{0,200}cameraRole\.value === null/)
   })
 })
 
