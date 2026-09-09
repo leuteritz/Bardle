@@ -35,6 +35,7 @@ export interface TipValue {
   text: string
   /** Kleine Versalzeile darüber — sagt, WOVON die Rede ist. */
   label?: string
+  labelAccent?: string
   /** Zugehörigkeitsfarbe für Leiste und Pfeil. */
   color?: string
 }
@@ -49,6 +50,7 @@ let panel: HTMLElement | null = null
 let caretEl: HTMLElement | null = null
 let accentEl: HTMLElement | null = null
 let labelEl: HTMLElement | null = null
+let labelAccentEl: HTMLElement | null = null
 let textEl: HTMLElement | null = null
 
 let openTimer: ReturnType<typeof setTimeout> | null = null
@@ -68,7 +70,8 @@ const NAMED = 'button, a, input, select, textarea, [role="button"], [tabindex]'
 function syncAriaLabel(el: TipHost, val: TipValue | null): void {
   if (!val || !el.matches(NAMED)) return
   if (el.hasAttribute('aria-label') || el.hasAttribute('aria-labelledby')) return
-  el.setAttribute('aria-label', val.label ? `${val.label}: ${val.text}` : val.text)
+  const label = [val.label, val.labelAccent].filter(Boolean).join(' ')
+  el.setAttribute('aria-label', label ? `${label}: ${val.text}` : val.text)
 }
 
 function normalize(v: TipBinding): TipValue | null {
@@ -93,6 +96,9 @@ function build(): void {
   labelEl = document.createElement('span')
   labelEl.className = 'tip-v-label'
 
+  labelAccentEl = document.createElement('span')
+  labelAccentEl.className = 'tip-v-label-accent'
+
   textEl = document.createElement('span')
   textEl.className = 'tip-v-text'
 
@@ -113,10 +119,13 @@ function show(el: TipHost): void {
   const val = normalize(el.__tip)
   if (!val || !el.isConnected) return
   build()
-  if (!panel || !caretEl || !labelEl || !textEl) return
+  if (!panel || !caretEl || !labelEl || !labelAccentEl || !textEl) return
 
   labelEl.textContent = val.label ?? ''
   labelEl.style.display = val.label ? '' : 'none'
+  labelAccentEl.textContent = val.labelAccent ?? ''
+  labelAccentEl.style.display = val.labelAccent ? '' : 'none'
+  if (val.labelAccent) labelEl.append(' ', labelAccentEl)
   textEl.textContent = val.text
   panel.style.setProperty('--tip-color', val.color ?? '')
 
