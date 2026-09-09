@@ -378,7 +378,6 @@ import {
   SHOP_ATLAS_CARD_HEIGHT,
   SHOP_ATLAS_GRID_GAP,
   SHOP_ATLAS_COMFORT_CARD_COLUMNS,
-  ROLE_ART_MD_SUFFIX,
   ROLE_BY_KEY,
 } from '@/config/constants'
 import { recruitSeatFor, type RecruitSeat } from '@/utils/game/recruitSeat'
@@ -1628,11 +1627,7 @@ export default defineComponent({
       return {
         name,
         image: battleStore.getChampionImage(name, { size: 'lg' }),
-        roleLabel: badge?.label ?? '',
         roleColor: badge?.color ?? '#c89040',
-        roleImage: role
-          ? (ROLE_BY_KEY[role]?.image ?? '').replace(/\.png$/, ROLE_ART_MD_SUFFIX)
-          : '',
         traits: d.traits,
         origin: d.origin,
         starLevel: d.starLevel,
