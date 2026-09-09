@@ -10,7 +10,6 @@ import {
   TEAM_SIGIL_FLIGHT_DIM_OPACITY,
   TEAM_SIGIL_OPEN_MS,
   SIGIL_DETAILS_LOADER_MIN_MS,
-  TEAM_SIGIL_PANEL_ARM_FRAMES,
   TEAM_SIGIL_RIDE_MS,
   TEAM_SIGIL_TRAVEL_MS,
 } from '@/config/constants'
@@ -99,9 +98,9 @@ describe('Sigil-Kamera — Fahrt und Skelett laufen zusammen', () => {
     expect(tab).toContain('if (held && !ready) return')
   })
 
-  it('die echte Seite mountet HINTER dem Skelett, aber nicht in Frame 0', () => {
+  it('die echte Seite entsteht HINTER dem Skelett und erst nach der Fahrt', () => {
     expect(tab).toContain('panelHeld && panelReady && panelArmed')
-    expect(TEAM_SIGIL_PANEL_ARM_FRAMES).toBeGreaterThanOrEqual(1)
+    expect(tab).toContain("if (phase === 'idle') panelArmed.value = true")
   })
 
   it('das Schliessen spiegelt: erst die Seite, dann die Kamera', () => {

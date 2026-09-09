@@ -251,14 +251,6 @@ export const TEAM_SIGIL_CAM_NET_MUL = 2
 export const TEAM_SIGIL_EASE_TRAVEL = 'cubic-bezier(0.16, 1, 0.3, 1)'
 
 /**
- * Frames, die die ECHTE Seite dem Klick nachläuft. Sie mountet hinter dem
- * Ladeschleier, aber nicht in Frame 0 — dort liegen schon der Layout-Snap der
- * Spalte und der Start zweier Fahrten. Zwei Frames später fällt ihr teurer Frame
- * in bereits laufende Kompositor-Animationen, die ein blockierter Hauptthread
- * nicht anhält.
- */
-export const TEAM_SIGIL_PANEL_ARM_FRAMES = 2
-/**
  * Width (px) of the role details panel — the board's fit-scale subtracts it while
  * a role is selected so open/close resolves in a single camera move. The panel is
  * two-column and carries the whole champion progression (levels, perks, costs)

@@ -20,7 +20,6 @@ import {
   TEAM_ROLE_RAIL_SLIDE_MS,
   TEAM_ROLE_RAIL_HERO_COMPACT_HEIGHT,
   TEAM_SIGIL_OPEN_MS,
-  TEAM_SIGIL_PANEL_ARM_FRAMES,
   TEAM_SIGIL_EASE_TRAVEL,
 } from '@/config/constants'
 import { getItemById } from '@/config/economy/items'
@@ -243,17 +242,38 @@ const {
   covered: () => veilCovering.value && veilScope.value !== 'rail',
 })
 
-/** Die Detailseite hat beide Aufbaustufen hinter sich (`@ready`). */
+/**
+ * Die ECHTE Seite entsteht erst, wenn die Kamera steht — weiterhin hinter dem
+ * Skelett.
+ *
+ * Sie lief einmal zwei Frames nach dem Klick an, also MITTEN in der Fahrt. Das
+ * setzt darauf, dass die Bühnen-Transition im Kompositor liegt und ein
+ * blockierter Hauptthread sie nicht anhält — belegen liess sich das nicht, und
+ * eine stotternde Kamera ist genau der Befund, der diesen Umbau ausgelöst hat.
+ * Jetzt fährt sie auf einem freien Hauptthread, und der teure Aufbau fällt
+ * danach in eine Zeit, in der sich sichtbar nichts mehr bewegt.
+ *
+ * Einmal scharf, bleibt es scharf: ein Rollenwechsel schwenkt die Kamera erneut,
+ * darf die schon stehende Seite aber nicht abreissen.
+ */
+const panelArmed = ref(false)
+/** Die Detailseite hat ihren Aufbau hinter sich (`@ready`). */
 const panelBuilt = ref(false)
+
+watch([panelHeld, camPhase], ([held, phase]) => {
+  if (!held) {
+    panelArmed.value = false
+    panelBuilt.value = false
+    return
+  }
+  if (phase === 'idle') panelArmed.value = true
+})
 
 // Aufgedeckt wird, sobald DREIERLEI gilt: das Board steht, die Seite steht, und
 // der Schleier hat lange genug gestanden, um als Ladevorgang gelesen zu werden.
 //
-// NICHT an `camPhase` gebunden: die Fahrt läuft im Kompositor und ist nach
-// TEAM_SIGIL_TRAVEL_MS sichtbar zu Ende, ihr `transitionend` kommt bei
-// blockiertem Hauptthread aber erst danach — gemessen stand der Schleier dadurch
-// 1165 statt 700 ms. Die Mindeststandzeit deckt die Fahrt ohnehin ab
-// (SIGIL_DETAILS_LOADER_MIN_MS > TEAM_SIGIL_TRAVEL_MS, gebunden in sigilCamera.spec).
+// Die Mindeststandzeit deckt die Fahrt mit ab (SIGIL_DETAILS_LOADER_MIN_MS >
+// TEAM_SIGIL_TRAVEL_MS, gebunden in sigilCamera.spec).
 watch([boardBuilt, detailsPending, panelBuilt, panelHeld], ([built, pending, ready, held]) => {
   if (!built || !pending || detailsTimer !== null) return
   if (held && !ready) return
@@ -266,44 +286,6 @@ watch([boardBuilt, detailsPending, panelBuilt, panelHeld], ([built, pending, rea
     Math.max(0, loaderMinMs.value - shown),
   )
 })
-
-/**
- * Frames, die die ECHTE Seite dem Klick nachläuft.
- *
- * Sie mountet hinter dem Schleier, aber nicht in Frame 0: dort liegen schon der
- * Layout-Snap der Spalte und der Start zweier Fahrten. Zwei Frames später fällt
- * ihr teurer Frame in bereits laufende Kompositor-Animationen, die ein
- * blockierter Hauptthread nicht anhält.
- */
-const panelArmed = ref(false)
-let armFrame: number | null = null
-
-function cancelPanelArm() {
-  if (armFrame === null) return
-  cancelAnimationFrame(armFrame)
-  armFrame = null
-}
-
-watch(panelHeld, (held) => {
-  cancelPanelArm()
-  if (!held) {
-    panelArmed.value = false
-    panelBuilt.value = false
-    return
-  }
-  if (panelArmed.value) return
-  let left = TEAM_SIGIL_PANEL_ARM_FRAMES
-  const step = () => {
-    if (--left > 0) {
-      armFrame = requestAnimationFrame(step)
-      return
-    }
-    armFrame = null
-    panelArmed.value = true
-  }
-  armFrame = requestAnimationFrame(step)
-})
-
 
 /** Team synergies side panel — mutually exclusive with the role details panel. */
 const synergiesOpen = ref(false)
@@ -663,7 +645,6 @@ function resetTabState() {
   // dürfte die Spalte nicht nachträglich doch noch aufschlagen.
   cancelDetailsLoad()
   cancelBoardSettle()
-  cancelPanelArm()
   panelArmed.value = false
   veilCovering.value = false
   // `boardBuilt` bleibt bewusst stehen: was einmal gebaut ist, ist gebaut. Das
@@ -706,7 +687,6 @@ onUnmounted(() => {
   if (mountFrame !== null) cancelAnimationFrame(mountFrame)
   cancelDetailsLoad()
   cancelBoardSettle()
-  cancelPanelArm()
   window.removeEventListener('keydown', onEsc)
   uiStore.setTeamActiveRole(null)
 })
