@@ -11,6 +11,7 @@
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import { SKIN_GALLERY_GAP } from '@/config/constants'
 import { formatSkinName, getSkinArtPath } from '@/utils/game/champions'
 
 const props = defineProps<{
@@ -25,6 +26,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ wear: [skin: string]; close: [] }>()
+
+const gap = `${SKIN_GALLERY_GAP}px`
 
 const shown = computed(() => props.preview ?? props.worn)
 const isWorn = computed(() => shown.value === props.worn)
@@ -60,12 +63,12 @@ const artUnder = computed(() => `url("${getSkinArtPath(props.champion, shown.val
 </template>
 
 <style scoped>
+/* Ohne eigene Polsterung — die setzt das Content-Grid fuer beide Spalten. */
 .cst-stage {
   min-height: 0;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
-  gap: 10px;
-  padding: 14px 0 14px 18px;
+  gap: v-bind(gap);
 }
 .cst-frame {
   position: relative;
@@ -183,9 +186,6 @@ const artUnder = computed(() => `url("${getSkinArtPath(props.champion, shown.val
 }
 
 @media (max-height: 1100px) {
-  .cst-stage {
-    padding: 11px 0 11px 18px;
-  }
   .cst-text strong {
     font-size: 19px;
   }

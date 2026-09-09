@@ -301,21 +301,6 @@ export const CHAMPION_TIER_CHIMES_PRICE: number[] = [500, 1400, 2800, 4500, 6500
 export const SKIN_ORIGINAL = 'OriginalSkin'
 /** Aspect ratio of bundled splash arts (1280×~730) — skin gallery cards. */
 export const SKIN_CARD_ASPECT_RATIO = '16 / 9'
-/**
- * Skin gallery in the details page — the smallest a card may get before the grid
- * drops a column.
- *
- * The gallery takes 53% of the 980px panel, so the grid has ~483px of usable
- * width, and this value decides the column count outright: at 190 two columns
- * fit (2×190 + 14 gap = 394) and three cannot (3×190 + 28 = 598). Two it is — a
- * card is a splash art, and at ~220px the champion in it is recognisable instead
- * of a smear you have to hover to identify.
- *
- * The card is capped at CHAMPION_ART_LG_MAX_EDGE so twenty of them keep loading
- * the 512px variant rather than twenty untouched 1280px splashes. Judging a look
- * happens on the stage next to the grid, not in the card.
- */
-export const SKIN_THUMB_MIN_WIDTH = 190
 
 /**
  * Downscaled art variants generated next to every splash
@@ -336,6 +321,35 @@ export const CHAMPION_ART_VARIANT_PX = { sm: 128, md: 256, lg: 512, full: 0 } as
 export const CHAMPION_ART_SM_MAX_EDGE = 34
 export const CHAMPION_ART_MD_MAX_EDGE = 110
 export const CHAMPION_ART_LG_MAX_EDGE = 220
+
+// ── Skin gallery (details page) ──────────────────────────────────────────────
+/**
+ * The ONE spacing of the gallery: panel edge, the seam between stage and grid,
+ * the gap between two cards — all of it.
+ *
+ * It is a single value because it was five (0, 14, 18, 20 and whatever
+ * `space-between` had left over), and the seam that read worst was the 0: the
+ * first column of cards sat flush against the stage. Both children now carry no
+ * padding at all; the content grid sets padding AND gap from here, so the
+ * distances cannot drift apart again.
+ */
+export const SKIN_GALLERY_GAP = 14
+/**
+ * Two, and the card is exactly CHAMPION_ART_LG_MAX_EDGE wide.
+ *
+ * The cap is the art table's threshold, not a taste: above it a card would pull
+ * the untouched 1280px splash, and a champion with twenty skins would pull
+ * twenty of them. A card only has to be recognisable — judging a look happens on
+ * the stage beside the grid, at full size.
+ */
+export const SKIN_GALLERY_COLUMNS = 2
+/**
+ * What the gallery zone is WIDE — derived, never guessed. The zone used to be a
+ * flat 53% of the panel, which was 65px more than its content, and that surplus
+ * had to go somewhere: it went into the gaps between the cards.
+ */
+export const SKIN_GALLERY_ZONE_WIDTH =
+  SKIN_GALLERY_COLUMNS * CHAMPION_ART_LG_MAX_EDGE + (SKIN_GALLERY_COLUMNS - 1) * SKIN_GALLERY_GAP
 
 /**
  * Portrait im Sternmanifest der Galaxiekarte.

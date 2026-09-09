@@ -5,11 +5,17 @@
  * sight. Hovering one shows it on the stage; clicking wears it and leaves the
  * gallery open, because a skin costs nothing and trying them on IS the task.
  *
- * Card width is capped at the art table's 'lg' edge so twenty cards never pull
- * twenty 1280px splashes.
+ * Two columns of exactly one art-table 'lg' edge, so twenty cards never pull
+ * twenty 1280px splashes. Every distance in here is SKIN_GALLERY_GAP, and the
+ * panel around it sets it — this component carries no padding of its own.
  */
 import { computed } from 'vue'
-import { CHAMPION_ART_LG_MAX_EDGE, SKIN_CARD_ASPECT_RATIO, SKIN_THUMB_MIN_WIDTH } from '@/config/constants'
+import {
+  CHAMPION_ART_LG_MAX_EDGE,
+  SKIN_CARD_ASPECT_RATIO,
+  SKIN_GALLERY_COLUMNS,
+  SKIN_GALLERY_GAP,
+} from '@/config/constants'
 import { championSkinEntries } from '@/utils/game/champions'
 
 const props = defineProps<{
@@ -24,16 +30,13 @@ const emit = defineEmits<{ preview: [skin: string]; select: [skin: string] }>()
 
 const entries = computed(() => championSkinEntries(props.champion))
 
-const cardMin = `${SKIN_THUMB_MIN_WIDTH}px`
-const cardMax = `${CHAMPION_ART_LG_MAX_EDGE}px`
+const columns = `repeat(${SKIN_GALLERY_COLUMNS}, ${CHAMPION_ART_LG_MAX_EDGE}px)`
+const gap = `${SKIN_GALLERY_GAP}px`
 const cardAspect = SKIN_CARD_ASPECT_RATIO
 </script>
 
 <template>
   <section class="csg-panel">
-    <div class="csg-head">
-      <span>Appearances</span><small>{{ entries.length }}</small>
-    </div>
     <div class="csg-scroll">
       <div class="csg-grid">
         <button
@@ -69,30 +72,11 @@ const cardAspect = SKIN_CARD_ASPECT_RATIO
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 14px 18px 14px 0;
-}
-.csg-head {
-  flex-shrink: 0;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 0 2px 8px;
-  border-bottom: 1px solid #3e200a;
-  color: #e8c040;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.csg-head small {
-  color: #bcae91;
-  font-size: 12px;
 }
 .csg-scroll {
   min-height: 0;
   flex: 1;
   overflow-y: auto;
-  padding: 12px 2px 2px;
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111;
 }
@@ -108,9 +92,8 @@ const cardAspect = SKIN_CARD_ASPECT_RATIO
 }
 .csg-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(v-bind(cardMin), v-bind(cardMax)));
-  justify-content: space-between;
-  gap: 14px;
+  grid-template-columns: v-bind(columns);
+  gap: v-bind(gap);
 }
 .csg-card {
   position: relative;
@@ -122,15 +105,14 @@ const cardAspect = SKIN_CARD_ASPECT_RATIO
   background: #1a1008;
   cursor: pointer;
   text-align: left;
-  transition: transform 0.16s ease-out;
 }
 .csg-card:hover {
   --csg-edge: #c89040;
-  transform: translateY(-3px);
 }
+/* Innen, nicht aussen — der Scrollkasten hat keine Polsterung mehr. */
 .csg-card:focus-visible {
   outline: 2px solid #e8c040;
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 /* Beide nach dem Hover und mit dessen Spezifitaet — sonst schluckt :hover die
    Zustandskante, und man sieht beim Darueberfahren nicht mehr, was man traegt. */
@@ -202,12 +184,5 @@ const cardAspect = SKIN_CARD_ASPECT_RATIO
   opacity: 1;
 }
 
-@media (max-height: 1100px) {
-  .csg-panel {
-    padding-block: 11px;
-  }
-  .csg-grid {
-    gap: 10px;
-  }
-}
+
 </style>

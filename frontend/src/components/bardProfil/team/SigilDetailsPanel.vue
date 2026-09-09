@@ -31,6 +31,8 @@ import {
   CHAMPION_REGALIA_SIZE_SPLASH,
   MAX_STAR_LEVEL,
   ROLES,
+  SKIN_GALLERY_GAP,
+  SKIN_GALLERY_ZONE_WIDTH,
   SKIN_ORIGINAL,
   SWORN_ALLY_COUNT,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
@@ -70,6 +72,8 @@ const emit = defineEmits<{
 }>()
 
 const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
+const skinGapPx = `${SKIN_GALLERY_GAP}px`
+const skinZonePx = `${SKIN_GALLERY_ZONE_WIDTH}px`
 /**
  * Die Seite entsteht in EINEM Frame und meldet sich dann fertig.
  *
@@ -1181,11 +1185,14 @@ function perkStatLine(perk: ChampionPerkDef): string {
   display: grid;
   grid-template-columns: 43% 57%;
 }
-/* Die Buehne bekommt mehr als beim Tausch: dort vergleicht man Zahlen, hier
-   ein Bild — und das Raster braucht nur zwei Spalten. */
+/* Die Zone ist so breit wie ihre Kacheln, nicht breiter — der Rest gehoert der
+   Buehne. Rand und Naht kommen BEIDE von hier, damit sie nicht auseinander
+   laufen koennen; die zwei Kinder tragen selbst keine Polsterung. */
 .sdp-content--skins {
   display: grid;
-  grid-template-columns: 47% 53%;
+  grid-template-columns: minmax(0, 1fr) v-bind(skinZonePx);
+  gap: v-bind(skinGapPx);
+  padding: v-bind(skinGapPx);
 }
 .sdp-hero {
   position: relative;
