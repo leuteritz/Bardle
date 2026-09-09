@@ -65,7 +65,8 @@
               :key="affinity.id"
               class="cs-affinity"
               :style="{ '--ac': affinity.color }"
-              :aria-label="`${affinity.kind}: ${affinity.name}`"
+              :aria-label="affinityTip(affinity)"
+              v-tip="affinityTip(affinity)"
             >
               <span class="cs-affinity-crest" aria-hidden="true">
                 <Icon :icon="affinity.icon" width="19" height="19" />
@@ -80,8 +81,7 @@
                 </span>
                 <strong>{{ affinity.name }}</strong>
                 <span v-if="affinity.thresholds[0]" class="cs-affinity-next">
-                  {{ affinity.thresholds[0].count }} to activate ·
-                  {{ affinity.thresholds[0].bonus }}
+                  {{ affinityEffect(affinity) }}
                 </span>
               </span>
             </article>
@@ -173,6 +173,12 @@ import { TRAIT_DEFINITIONS } from '@/config/champions/championTraits'
 import { MAX_STAR_LEVEL, SHOP_CHAMPION_AFFINITY_COUNT } from '@/config/constants'
 import type { ShopChampionDetail } from '@/types'
 
+type AffinityCard = {
+  kind: 'Origin' | 'Trait'
+  name: string
+  thresholds: Array<{ count: number; bonus: string }>
+}
+
 export default defineComponent({
   name: 'ChampionDetailPanel',
   components: { Icon, CosmicStageBackground },
@@ -227,8 +233,19 @@ export default defineComponent({
     const fillStyle = (have: number, need: number) => ({
       transform: `scaleX(${need > 0 ? Math.min(1, have / need) : 1})`,
     })
+    const affinityEffect = (affinity: AffinityCard) => {
+      const bonus = affinity.thresholds[0]?.bonus ?? ''
+      const separator = bonus.indexOf(':')
+      return separator >= 0 ? bonus.slice(separator + 1).trim() : bonus
+    }
+    const affinityTip = (affinity: AffinityCard) =>
+      `${affinity.kind}: ${affinity.name} · ${affinity.thresholds
+        .map((threshold) => `${threshold.count} → ${threshold.bonus}`)
+        .join(' · ')}`
 
     return {
+      affinityEffect,
+      affinityTip,
       affinities,
       costState,
       fillStyle,
@@ -516,9 +533,12 @@ export default defineComponent({
   white-space: nowrap;
 }
 .cs-affinity-next {
+  display: block;
   overflow: hidden;
-  color: #a59675;
-  font-size: 11px;
+  color: color-mix(in srgb, var(--ac) 76%, #fff9e8);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
