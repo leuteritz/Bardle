@@ -12,6 +12,8 @@
         {{ roleBadge?.label }}
       </div>
 
+      <span v-if="selected" class="selected-card-mark" aria-hidden="true">Selected</span>
+
       <!-- Tier badge: top-left — Cosmic/Champion Tier (★N) -->
       <div
         v-if="!owned"
@@ -247,17 +249,45 @@ export default defineComponent({
 }
 
 /* ── Selected card: gold ring around the slot (drives the detail panel) ── */
+.champion-card-slot.is-selected {
+  z-index: 22;
+}
 .champion-card-slot.is-selected::before {
   content: '';
   position: absolute;
   inset: -3px;
-  border: 2px solid #e8c060;
+  border: 2px solid var(--role-c-hi, #e8c060);
   border-radius: calc(var(--bp-radius) + 2px);
   box-shadow:
-    0 0 14px rgba(232, 192, 64, 0.45),
-    inset 0 0 8px rgba(232, 192, 64, 0.15);
+    0 0 14px color-mix(in srgb, var(--role-c, #e8c060) 65%, transparent),
+    inset 0 0 8px color-mix(in srgb, var(--role-c, #e8c060) 22%, transparent);
   pointer-events: none;
   z-index: 21;
+}
+.champion-card-slot.is-selected .card-inner {
+  border-color: var(--role-c-hi, #e8c060);
+  box-shadow:
+    0 0 0 1px #111008,
+    0 0 0 3px var(--role-c, #e8c060),
+    0 0 22px color-mix(in srgb, var(--role-c, #e8c060) 46%, transparent);
+}
+.selected-card-mark {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  z-index: 12;
+  padding: 2px 6px;
+  border: 1px solid var(--role-c-hi, #e8c060);
+  border-radius: 3px;
+  background: #111008;
+  color: var(--role-c-hi, #e8c060);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
 /* ── Image layer: clipped within card-inner ── */
