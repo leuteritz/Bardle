@@ -1,13 +1,17 @@
 /* ── Die Phasenmaschine des Team-Tabs ─────────────────────────────────────────
-   Board ⇄ Detailseite in ZWEI Takten: `open` macht Platz (Schiene herein, Board
-   schmaler, Kamera bleibt mittig), `travel` schwenkt auf den Rollencluster.
-   Taktgeber ist `transitionend` der Sigil-Bühne, Timer × NET_MUL nur als Netz.
+   Board ⇄ Detailseite in ZWEI Takten, und die KAMERA fährt zuerst: `aim` rückt
+   das Board auf seine Endlage und zoomt auf den Rollencluster, `open` führt
+   danach die Seite herein, ohne die Kamera noch einmal zu bewegen. Das
+   Schliessen spiegelt das (`leave` → `home`).
+
+   Zwei Taktarten: wo die Bühne fährt, taktet ihr `transitionend` (Timer × NET_MUL
+   als Netz); wo sie stillsteht, käme nie eines — dort taktet der Timer selbst.
    Wanduhr: nichts hier ändert Spielzustand. */
 
 import { computed, onScopeDispose, ref, type ComputedRef, type Ref } from 'vue'
 import { TEAM_SIGIL_CAM_NET_MUL, TEAM_SIGIL_OPEN_MS, TEAM_SIGIL_TRAVEL_MS } from '@/config/constants'
 
-export type SigilCamPhase = 'idle' | 'open' | 'travel' | 'closing'
+export type SigilCamPhase = 'idle' | 'aim' | 'open' | 'travel' | 'leave' | 'home'
 
 export interface SigilCameraOptions {
   /** Die Fahrt ist gerade nicht zu sehen (Ladeschleier deckt) — dann wird
@@ -16,21 +20,19 @@ export interface SigilCameraOptions {
 }
 
 export interface SigilCamera {
-  /** Was Schiene und Seite zeigen. Ersetzt das frühere `selectedRole`. */
+  /** Was die SCHIENE zeigt. Ersetzt das frühere `selectedRole`. */
   role: Ref<number | null>
-  /** Worauf die Kamera blickt — in `open` hinkt sie um einen Takt hinterher. */
-  cameraRole: Ref<number | null>
   /**
-   * Subjekt der Seite. Gleich `role` — AUSSER beim Schliessen: dort bleibt es
-   * stehen, damit keine leere Platte ausfährt.
-   *
-   * Es war einmal um eine Blende verzögert, damit der teure Re-Patch in den
-   * schnellsten Teil der Fahrt fiel. Gemessen kostete das mehr, als es einbrachte
-   * (Rollenwechsel 170–200 ms gegen 92–95 ms ohne) — zurückgenommen.
+   * Worauf die KAMERA blickt — und damit auch, welcher Knoten hervorgehoben ist
+   * und wie breit das Board rechnet. Steht ab dem Klick, `role` folgt einen Takt
+   * später; beim Schliessen genau umgekehrt.
    */
+  cameraRole: Ref<number | null>
+  /** Subjekt der Seite. Gleich `role` — ausser beim Schliessen, wo es stehen
+   *  bleibt, damit keine leere Platte ausfährt. */
   panelRole: Ref<number | null>
   phase: Ref<SigilCamPhase>
-  /** Den Mount halten, auch während `closing`: sonst führe eine leere Platte aus. */
+  /** Den Mount halten, bis die Schiene draussen ist. */
   panelHeld: ComputedRef<boolean>
   /** Board friert seine Keyframes ein und dimmt die ungewählten Cluster. */
   flying: ComputedRef<boolean>
@@ -42,10 +44,12 @@ export interface SigilCamera {
 
 type Timer = ReturnType<typeof setTimeout> | null
 
+/** Takte, in denen die Bühne wirklich fährt — nur sie warten auf `transitionend`. */
+const STAGE_DRIVEN: ReadonlySet<SigilCamPhase> = new Set<SigilCamPhase>(['aim', 'travel', 'home'])
+
 function prefersReducedMotion(): boolean {
   return (
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   )
 }
 
@@ -55,7 +59,7 @@ export function useSigilCamera(opts: SigilCameraOptions): SigilCamera {
   const panelRole = ref<number | null>(null)
   const phase = ref<SigilCamPhase>('idle')
 
-  const panelHeld = computed(() => role.value !== null || phase.value === 'closing')
+  const panelHeld = computed(() => role.value !== null || phase.value === 'leave')
   const flying = computed(() => phase.value !== 'idle')
 
   let net: Timer = null
@@ -65,25 +69,34 @@ export function useSigilCamera(opts: SigilCameraOptions): SigilCamera {
     return null
   }
 
-  /** Bleibt der Zielwert der Bühne gleich, kommt nie ein `transitionend`. */
-  function armNet(ms: number): void {
+  /** Bei fahrender Bühne das Netz (× NET_MUL), sonst der Takt selbst. */
+  function armTimer(ms: number): void {
     net = clear(net)
+    const factor = STAGE_DRIVEN.has(phase.value) ? TEAM_SIGIL_CAM_NET_MUL : 1
     net = setTimeout(() => {
       net = null
       settle()
-    }, ms * TEAM_SIGIL_CAM_NET_MUL)
+    }, ms * factor)
   }
 
   function settle(): void {
-    if (phase.value === 'open') {
-      phase.value = 'travel'
-      cameraRole.value = role.value
-      armNet(TEAM_SIGIL_TRAVEL_MS)
-      return
-    }
-    if (phase.value === 'travel' || phase.value === 'closing') {
-      net = clear(net)
-      phase.value = 'idle'
+    switch (phase.value) {
+      case 'aim':
+        // Die Kamera steht. Jetzt erst die Seite: Schiene herein, Mount, Aufdecken.
+        phase.value = 'open'
+        role.value = cameraRole.value
+        panelRole.value = cameraRole.value
+        armTimer(TEAM_SIGIL_OPEN_MS)
+        return
+      case 'leave':
+        // Die Seite ist draussen. Jetzt erst das Board zurück auf die volle Breite.
+        phase.value = 'home'
+        cameraRole.value = null
+        armTimer(TEAM_SIGIL_TRAVEL_MS)
+        return
+      default:
+        net = clear(net)
+        phase.value = 'idle'
     }
   }
 
@@ -96,44 +109,43 @@ export function useSigilCamera(opts: SigilCameraOptions): SigilCamera {
   }
 
   function requestRole(next: number | null): void {
-    if (next === role.value) return
+    if (next === role.value && phase.value === 'idle') return
     if (prefersReducedMotion() || opts.covered()) {
       snap(next)
       return
     }
-    const prev = role.value
-    role.value = next
 
-    if (prev === null && next !== null) {
-      // Takt 1: Platz machen. Die Kamera bleibt stehen, die Seite mountet
-      // hinter ihrer eigenen Deckkraft, während die Schiene fährt.
-      panelRole.value = next
-      phase.value = 'open'
-      armNet(TEAM_SIGIL_OPEN_MS)
+    if (next !== null && role.value === null) {
+      // Takt 1: nur die Kamera. Das Board rückt auf seine Endlage und zoomt auf
+      // den Cluster — die Schiene bleibt geparkt, die Seite mountet noch nicht.
+      phase.value = 'aim'
+      cameraRole.value = next
+      armTimer(TEAM_SIGIL_TRAVEL_MS)
       return
     }
 
     if (next === null) {
-      // Zurück auf die Mitte: Schiene parkt, Board weitet sich, Kamera zoomt
-      // aus — ein Zug. `panelRole` bleibt stehen, damit nichts leer ausfährt.
-      phase.value = 'closing'
-      cameraRole.value = null
-      armNet(TEAM_SIGIL_TRAVEL_MS)
+      // Takt 1 rückwärts: die Seite fährt hinaus, die Kamera hält ihre Lage.
+      // `panelRole` bleibt stehen, damit nichts Leeres ausfährt.
+      phase.value = 'leave'
+      role.value = null
+      armTimer(TEAM_SIGIL_OPEN_MS)
       return
     }
 
-    // Rollenwechsel: nur schwenken. Die Kamera trägt ihn, der Inhalt tauscht
-    // sofort — ihn hinter eine Blende zu legen war gemessen teurer.
+    // Rollenwechsel bei stehender Schiene: nur schwenken.
     phase.value = 'travel'
+    role.value = next
     cameraRole.value = next
     panelRole.value = next
-    armNet(TEAM_SIGIL_TRAVEL_MS)
+    armTimer(TEAM_SIGIL_TRAVEL_MS)
   }
 
-  /** Nur das eigene `transform` der Bühne taktet — die Knoten darin tragen
-   *  eigene Transitions und meldeten sich sonst als Ende der Fahrt. */
+  /** Nur das eigene `transform` der Bühne taktet, und nur, wo sie auch fährt —
+   *  die Knoten darin tragen eigene Transitions und meldeten sich sonst als Ende. */
   function onStageTransitionEnd(event: TransitionEvent): void {
     if (event.target !== event.currentTarget || event.propertyName !== 'transform') return
+    if (!STAGE_DRIVEN.has(phase.value)) return
     settle()
   }
 

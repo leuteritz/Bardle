@@ -26,7 +26,6 @@ import {
   SIGIL_ACTIONS_COMPACT_MAX_W,
   TEAM_SIGIL_OPEN_MS,
   TEAM_SIGIL_TRAVEL_MS,
-  TEAM_SIGIL_EASE_OPEN,
   TEAM_SIGIL_EASE_TRAVEL,
   TEAM_SIGIL_FLIGHT_DIM_OPACITY,
 } from '@/config/constants'
@@ -38,14 +37,13 @@ import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 import BattleTabReturnButton from '@/components/bardProfil/BattleTabReturnButton.vue'
 
 const props = defineProps<{
-  selectedRole: number | null
   /**
-   * Worauf die KAMERA blickt. Nicht dasselbe wie `selectedRole`: der geklickte
-   * Knoten wächst sofort (Rückmeldung in Frame 0), die Kamera fährt erst im
-   * zweiten Takt hinterher — siehe `useSigilCamera`.
+   * Worauf die KAMERA blickt — Knotenauswahl, Fokus und Dimmen hängen an
+   * derselben Zahl. Der Aufrufer speist sie aus `useSigilCamera`: sie steht ab
+   * dem Klick, die Schiene folgt einen Takt später.
    */
-  cameraRole: number | null
-  /** Takt des Übergangs; setzt Fahrtdauer, Kurve und den Stillstand der Deko. */
+  selectedRole: number | null
+  /** Takt des Übergangs; setzt den Stillstand der Deko und das Dimmen. */
   camPhase: SigilCamPhase
   /** Aufbaustufe des Tabs (TEAM_TAB_MOUNT_STAGE_*) — Satelliten und Deko warten
    *  einen Frame, damit das Öffnen nicht in einem Stück gerechnet wird. */
@@ -223,7 +221,7 @@ onBeforeUnmount(() => {
 // ── Camera focus on the selected role cluster ────────────────────────────────
 /** Focal point = centroid of the role node and all its ally satellites (stage coords). */
 const focusPoint = computed(() => {
-  const i = props.cameraRole
+  const i = props.selectedRole
   if (i === null) return null
   const cluster = [rolePoints.value[i], ...allyPoints.value[i]]
   return {
@@ -283,7 +281,6 @@ const boardCenter = computed(() => ({
 
 const openMs = `${TEAM_SIGIL_OPEN_MS}ms`
 const travelMs = `${TEAM_SIGIL_TRAVEL_MS}ms`
-const easeOpen = TEAM_SIGIL_EASE_OPEN
 const easeTravel = TEAM_SIGIL_EASE_TRAVEL
 const flightDim = String(TEAM_SIGIL_FLIGHT_DIM_OPACITY)
 
@@ -381,7 +378,7 @@ function onBackgroundClick(): void {
 
 // the focus camera owns the framing — a selection/panel change eases the pan back home
 watch(
-  [() => props.selectedRole, () => props.cameraRole, () => props.sidePanelWidth],
+  [() => props.selectedRole, () => props.sidePanelWidth],
   () => {
     panOffset.value = { x: 0, y: 0 }
   },
@@ -397,9 +394,9 @@ watch(
       'sigil-board--dragging': isDragging,
       'sigil-board--compact-actions': compactActions,
       'sigil-board--flying': camPhase !== 'idle',
-      'sigil-board--open': camPhase === 'open',
-      'sigil-board--travel': camPhase === 'travel',
-      'sigil-board--closing': camPhase === 'closing',
+      // Gedimmt wird, solange eine Rolle gewählt IST — in `home` ist keine mehr
+      // gewählt, dort dimmten sonst alle fünf Cluster.
+      'sigil-board--picked': camPhase !== 'idle' && camPhase !== 'home',
     }"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
@@ -829,19 +826,16 @@ watch(
 }
 
 /* ── stage ── */
-/* Zwei Takte, zwei Kurven: OPEN beschleunigt weg, alles andere kommt an. Die
-   Ankunft ist die Grundfahrt — auch eine Breite, die sich ohne Rollenwechsel
-   ändert (Equipment auf und zu), soll fahren statt zu springen. Kein
-   `will-change`: die Bühne steht die meiste Zeit still. */
+/* EINE Fahrt, EINE Kurve. Sie trägt den Schwenk auf den Cluster, den
+   Rollenwechsel, die Rückkehr — und den reinen Breitenwechsel, wenn das
+   Equipment auf- und zugeht. Kein `will-change`: die Bühne steht die meiste
+   Zeit still. */
 .sigil-stage {
   position: absolute;
   top: 0;
   left: 0;
   transform-origin: center center;
   transition: transform v-bind(travelMs) v-bind(easeTravel);
-}
-.sigil-board--open .sigil-stage {
-  transition: transform v-bind(openMs) v-bind(easeOpen);
 }
 /* Die Hand schlägt jeden Takt: 1:1 am Zeiger, und beim Loslassen fährt die
    Kamera den Pan zurück. Steht NACH den Phasen — gleiche Spezifität. */
@@ -881,10 +875,8 @@ watch(
 /* Ein Cluster ist Knoten UND Satelliten — die liegen als Geschwister daneben,
    nicht darin. Nur den Knoten zu dimmen ergäbe halbe Cluster.
    Nicht beim Schließen: dort ist keiner mehr gewählt, es dimmten alle fünf. */
-.sigil-board--open :deep(.sigil-node:not(.sigil-node--selected)),
-.sigil-board--travel :deep(.sigil-node:not(.sigil-node--selected)),
-.sigil-board--open :deep(.sigil-ally:not(.sigil-ally--highlight)),
-.sigil-board--travel :deep(.sigil-ally:not(.sigil-ally--highlight)) {
+.sigil-board--picked :deep(.sigil-node:not(.sigil-node--selected)),
+.sigil-board--picked :deep(.sigil-ally:not(.sigil-ally--highlight)) {
   opacity: v-bind(flightDim);
 }
 
@@ -933,8 +925,7 @@ watch(
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sigil-stage,
-  .sigil-board--open .sigil-stage {
+  .sigil-stage {
     transition: none;
   }
   .sigil-board--flying :deep(:is(
@@ -953,10 +944,8 @@ watch(
     animation-play-state: running !important;
   }
   .sigil-board--flying .sigil-ember,
-  .sigil-board--open :deep(.sigil-node:not(.sigil-node--selected)),
-  .sigil-board--travel :deep(.sigil-node:not(.sigil-node--selected)),
-  .sigil-board--open :deep(.sigil-ally:not(.sigil-ally--highlight)),
-  .sigil-board--travel :deep(.sigil-ally:not(.sigil-ally--highlight)) {
+  .sigil-board--picked :deep(.sigil-node:not(.sigil-node--selected)),
+  .sigil-board--picked :deep(.sigil-ally:not(.sigil-ally--highlight)) {
     opacity: unset;
     transition: none;
   }

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useItemStore } from '@/stores/economy/itemStore'
 import { useUiStore } from '@/stores/core/uiStore'
@@ -19,7 +18,6 @@ import {
   TEAM_EQUIPMENT_PANEL_WIDTH,
   TEAM_ROLE_RAIL_HANDLE_PX,
   TEAM_ROLE_RAIL_SLIDE_MS,
-  TEAM_ROLE_RAIL_NAV_HEIGHT,
   TEAM_ROLE_RAIL_HERO_COMPACT_HEIGHT,
   TEAM_SIGIL_OPEN_MS,
   TEAM_SIGIL_EASE_TRAVEL,
@@ -324,7 +322,6 @@ const railZoneWidth = computed(
 const railPanelWidthPx = computed(() => `${railPanelWidth.value}px`)
 const railHandleWidth = `${TEAM_ROLE_RAIL_HANDLE_PX}px`
 const railSlideMs = `${TEAM_ROLE_RAIL_SLIDE_MS}ms`
-const roleNavHeight = `${TEAM_ROLE_RAIL_NAV_HEIGHT}px`
 const roleHeroCompactHeight = `${TEAM_ROLE_RAIL_HERO_COMPACT_HEIGHT}px`
 const { inert: railInert } = useSideRail({
   folded: railFolded,
@@ -355,19 +352,28 @@ const railTransition = computed(() => {
   if (veilCovering.value && activeDestination.value === null) return 'sdp-instant'
   // Fährt die SCHIENE gerade, trägt sie den Inhalt mit — ein zweiter Slide auf
   // derselben Achse liefe doppelt so weit und läse sich als Nachziehen.
-  if (camPhase.value === 'open' || camPhase.value === 'closing') return 'sdp-instant'
+  if (camPhase.value === 'open' || camPhase.value === 'leave') return 'sdp-instant'
   return 'sdp-slide'
 })
 
 const railEnterMs = `${TEAM_SIGIL_OPEN_MS}ms`
 const easeTravel = TEAM_SIGIL_EASE_TRAVEL
 
-/** Width the board has to subtract to fit itself beside the open rail. */
-const sidePanelWidth = computed(() => {
-  return railFolded.value
-    ? TEAM_ROLE_RAIL_HANDLE_PX
-    : railPanelWidth.value + TEAM_ROLE_RAIL_HANDLE_PX
-})
+/**
+ * Was das BOARD abzieht, um neben der Schiene zu sitzen.
+ *
+ * Es hängt an `cameraRole`, nicht an `selectedRole`: dadurch rückt das Board
+ * schon im ersten Takt auf seine Endlage, und wenn die Schiene danach hereinfährt,
+ * muss die Kamera nicht ein zweites Mal fahren. Sie bewegt sich genau einmal.
+ */
+const boardFolded = computed(
+  () =>
+    railChoice.value ??
+    (cameraRole.value === null && !synergiesOpen.value && activeDestination.value === null),
+)
+const sidePanelWidth = computed(() =>
+  boardFolded.value ? TEAM_ROLE_RAIL_HANDLE_PX : railPanelWidth.value + TEAM_ROLE_RAIL_HANDLE_PX,
+)
 
 const roleIndex = computed(() => selectedRole.value ?? uiStore.rolesActiveSlot)
 const roleDef = computed(() => ROLES[roleIndex.value])
@@ -394,7 +400,10 @@ function focusSeat(subSlot: number | null, swap = false) {
 function selectRole(index: number) {
   synergiesOpen.value = false
   activeDestination.value = null
-  railChoice.value = false
+  // NICHT `false`: ein erzwungenes Aufklappen führe die Schiene schon im ersten
+  // Takt herein, und der gehört allein der Kamera. `railFolded` fällt so auf
+  // `selectedRole === null` zurück — genau der gewünschte Takt.
+  railChoice.value = null
   // Geht die Spalte NEU auf, während das Board noch aufbaut, übernimmt der
   // Ladeschleier ihren Platz — steht das Board schon, mountet sie sofort.
   // Er muss VOR `requestRole` stehen: eine Fahrt unter einer deckenden Fläche
@@ -443,7 +452,9 @@ function dismissPanels() {
 
 function openSynergies() {
   activeDestination.value = null
-  requestRole(null)
+  // Gesetzt, nicht gefahren: die Schiene bleibt offen und tauscht nur ihren
+  // Inhalt. Ein Ausfahr-Takt hielte das Synergien-Panel bloss auf.
+  snapCamera(null)
   synergiesOpen.value = true
   railChoice.value = false
 }
@@ -464,10 +475,6 @@ function handleRoleRailClick(index: number) {
     return
   }
   selectRole(index)
-}
-
-function roleChampion(index: number) {
-  return battleStore.headerSlots[index] ?? 'Open slot'
 }
 
 /** A champion picked in the details page's inline picker. */
@@ -658,8 +665,7 @@ onUnmounted(() => {
 
     <!-- ══ LEFT — Battle Sigil ══ -->
     <SigilBoardComponent
-      :selected-role="selectedRole"
-      :camera-role="cameraRole"
+      :selected-role="cameraRole"
       :cam-phase="camPhase"
       :mount-stage="mountStage"
       :side-panel-width="sidePanelWidth"
@@ -714,29 +720,6 @@ onUnmounted(() => {
             key="details"
             class="team-role-detail"
           >
-            <nav class="team-role-nav" aria-label="Team roles">
-              <span class="team-role-nav-label">Role index</span>
-              <div class="team-role-nav-list">
-                <button
-                  v-for="(role, index) in ROLES"
-                  :key="role.key"
-                  type="button"
-                  class="team-role-button"
-                  :class="{ 'team-role-button--active': selectedRole === index }"
-                  :style="{ '--role-color': role.color }"
-                  :aria-label="`${role.label} details`"
-                  :aria-current="selectedRole === index ? 'page' : undefined"
-                  @click="selectRole(index)"
-                >
-                  <Icon :icon="role.icon" width="24" height="24" class="team-role-button-icon" />
-                  <span class="team-role-button-copy">
-                    <strong>{{ role.short }}</strong>
-                    <small>{{ roleChampion(index) }}</small>
-                  </span>
-                </button>
-              </div>
-            </nav>
-
             <SigilDetailsPanel
               :role-index="panelRole ?? roleIndex"
               :instant="detailsPending || veilCovering"
@@ -902,89 +885,12 @@ onUnmounted(() => {
   overflow: hidden;
   background: var(--sr-surface);
 }
+/* Die Seite beginnt direkt mit der Sitzreihe. Eine waagerechte Rollenzeile
+   darüber sagte dasselbe wie die senkrechte Leiste am rechten Rand. */
 .team-role-detail :deep(.sdp-panel) {
   width: 100%;
-  height: calc(100% - v-bind(roleNavHeight));
+  height: 100%;
   min-height: 0;
-}
-.team-role-nav {
-  flex: 0 0 v-bind(roleNavHeight);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background: #1e1006;
-  border-left: 3px solid var(--sr-seam);
-  border-bottom: 3px solid #5c3310;
-}
-.team-role-nav-label {
-  flex: 0 0 70px;
-  color: var(--sr-accent);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  line-height: 1.1;
-  text-transform: uppercase;
-}
-.team-role-nav-list {
-  min-width: 0;
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 5px;
-}
-.team-role-button {
-  min-width: 0;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 7px;
-  border: 1px solid #493116;
-  border-radius: 4px;
-  background: #141410;
-  color: var(--sr-text);
-  cursor: pointer;
-  text-align: left;
-  transition:
-    background-color 0.12s ease,
-    transform 0.12s ease;
-}
-.team-role-button:hover,
-.team-role-button--active {
-  background: color-mix(in srgb, var(--role-color) 18%, #141410);
-  border-color: var(--role-color);
-}
-.team-role-button--active {
-  box-shadow: inset 0 -3px 0 var(--role-color);
-}
-.team-role-button:focus-visible {
-  outline: 2px solid var(--sr-accent-hi);
-  outline-offset: -2px;
-}
-.team-role-button-icon {
-  flex: 0 0 auto;
-  color: var(--role-color);
-}
-.team-role-button-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.team-role-button-copy strong {
-  color: var(--sr-text-hi);
-  font-size: 13px;
-  letter-spacing: 0.12em;
-  line-height: 1;
-}
-.team-role-button-copy small {
-  overflow: hidden;
-  color: var(--sr-note);
-  font-size: 9px;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .team-rail-loader {
   position: absolute;
@@ -994,7 +900,6 @@ onUnmounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .team-rail-slide,
-  .team-role-button,
   .team-role-rail-button {
     transition: none;
   }

@@ -40,7 +40,6 @@ import {
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
   TEAM_SIGIL_DETAILS_LEFT_WIDTH,
   TEAM_SIGIL_MAIN_CHIP_WIDTH,
-  TEAM_ROLE_RAIL_NAV_HEIGHT,
 } from '@/config/constants'
 import LoadingBeacon from '@/components/ui/LoadingBeacon.vue'
 
@@ -86,7 +85,6 @@ const scaled = (px: number) => `calc(${px}px * var(--team-ui-scale, 1))`
 const railPx = computed(() => scaled(TEAM_SIGIL_DETAILS_PANEL_WIDTH))
 const leftColPx = computed(() => scaled(TEAM_SIGIL_DETAILS_LEFT_WIDTH))
 const mainChipPx = computed(() => scaled(TEAM_SIGIL_MAIN_CHIP_WIDTH))
-const roleNavHeight = computed(() => scaled(TEAM_ROLE_RAIL_NAV_HEIGHT))
 
 /** Die Rosterzeile: Sworn-Paar oben (breiter), der Rest der Bank darunter — die
  *  Aufteilung, die die Seite selbst hat, aus denselben Zahlen abgeleitet. */
@@ -131,9 +129,6 @@ const skeletonNodes = computed(() =>
 
     <!-- ══ Skelett der Detailseite — entfällt, wenn keine Rolle offen ist ══ -->
     <div v-if="showPage" class="ttl-page" aria-hidden="true">
-      <div v-if="roleDef" class="ttl-role-nav">
-        <span v-for="role in ROLES" :key="role.key" class="ttl-role-button" />
-      </div>
       <div class="ttl-roster">
         <span class="ttl-block ttl-block--main" />
         <div class="ttl-bench">
@@ -258,18 +253,6 @@ const skeletonNodes = computed(() =>
   padding: 12px;
   overflow: hidden;
   opacity: 0.55;
-}
-.ttl-role-nav {
-  flex: 0 0 v-bind(roleNavHeight);
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
-}
-.ttl-role-button {
-  min-width: 0;
-  border-radius: 4px;
-  background: #17150e;
-  border: 1px solid #2c2216;
 }
 /* In der Schienen-Variante trägt der Wrapper die Breite schon — das Skelett
    füllt ihn nur noch aus, statt sie ein zweites Mal zu setzen. */

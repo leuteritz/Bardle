@@ -224,27 +224,30 @@ export const SIGIL_RING_CORE_R = 120
 /** Extra zoom multiplier while a role is focused (camera zoom-in on role + allies). */
 export const TEAM_SIGIL_FOCUS_ZOOM = 1.6
 /**
- * Der Übergang Board ⇄ Detailseite läuft in ZWEI Takten mit EINER Uhr.
+ * Der Übergang Board ⇄ Detailseite läuft in ZWEI Takten mit EINER Uhr, und die
+ * KAMERA fährt zuerst.
  *
- * OPEN macht Platz: Schiene herein, Board schmaler, Kamera bleibt mittig und
- * verliert nur Maßstab. TRAVEL schwenkt auf den Cluster. Der teure Mount der
- * Detailseite fällt einen rAF NACH dem Klick — dort fährt eine einfarbige
- * Platte, die einen verlorenen Frame maskiert, und sichtbaren Inhalt, der
- * nachklappen könnte, gibt es dort noch nicht. Frame 0 bleibt billig, damit
- * der Klick sofort antwortet.
+ * TRAVEL: das Board rückt auf seine Endlage und zoomt auf den Rollencluster —
+ * die Schiene ist dabei noch geparkt. OPEN: erst danach fährt die Seite herein,
+ * ohne dass die Kamera sich noch einmal bewegt. Das Schliessen spiegelt das.
+ *
+ * Damit die Kamera nur EINMAL fährt, rechnet das Board seine Breite ab dem
+ * ersten Takt mit der offenen Schiene (siehe `boardFolded` im Team-Tab).
  *
  * Vorher stand eine Kamerafahrt von 450 ms neben einem Rail-Slide von 280 und
  * zwei weiteren Kurven: vier Bewegungen mit vier Enden.
  */
 export const TEAM_SIGIL_OPEN_MS = 280
 export const TEAM_SIGIL_TRAVEL_MS = 380
+/** Die ganze Bewegung, in beide Richtungen gleich lang. */
+export const TEAM_SIGIL_RIDE_MS = TEAM_SIGIL_OPEN_MS + TEAM_SIGIL_TRAVEL_MS
 /** Ändert sich der Zielwert nicht, kommt kein `transitionend` — Netz wie bei
  *  der Star-Fight-Kamera. */
 export const TEAM_SIGIL_CAM_NET_MUL = 2
-/** Dieselben zwei Kurven wie die Star-Fight-Kamera (`STAR_FIGHT_CAM_EASE_*`),
- *  bewusst dupliziert: `sigil` ist ein Blatt der Config und bekommt keine
- *  Kante zu `planets`. */
-export const TEAM_SIGIL_EASE_OPEN = 'cubic-bezier(0.6, 0, 0.35, 1)'
+/** Dieselbe Ankunftskurve wie die Star-Fight-Kamera (`STAR_FIGHT_CAM_EASE_OUT`),
+ *  bewusst dupliziert: `sigil` ist ein Blatt der Config und bekommt keine Kante
+ *  zu `planets`. Es gibt nur EINE Kurve — die Bühne fährt nur in Takten, die
+ *  ankommen. */
 export const TEAM_SIGIL_EASE_TRAVEL = 'cubic-bezier(0.16, 1, 0.3, 1)'
 
 /**
@@ -264,9 +267,6 @@ export const TEAM_SIGIL_PANEL_STAGE_WORKSPACE = 1
 export const TEAM_SIGIL_PANEL_REVEAL_MS = 260
 export const TEAM_SIGIL_PANEL_REVEAL_STEP_MS = 60
 export const TEAM_SIGIL_PANEL_REVEAL_SHIFT_PX = 8
-/** Abgeleitet, nicht gewählt: das Aufdecken soll in TRAVEL fallen, und TRAVEL
- *  beginnt am Ende von OPEN. */
-export const TEAM_SIGIL_PANEL_REVEAL_DELAY_MS = TEAM_SIGIL_OPEN_MS
 /**
  * Width (px) of the role details panel — the board's fit-scale subtracts it while
  * a role is selected so open/close resolves in a single camera move. The panel is
@@ -323,8 +323,6 @@ export const TEAM_ROLE_RAIL_SLIDE_MS = TEAM_SIGIL_OPEN_MS
 export const TEAM_ROLE_RAIL_LABEL = 'Roles'
 export const TEAM_ROLE_RAIL_OPEN_TITLE = 'Open role details'
 export const TEAM_ROLE_RAIL_CLOSE_TITLE = 'Close role details'
-/** Height reserved for the five-button role index above the detail page. */
-export const TEAM_ROLE_RAIL_NAV_HEIGHT = 64
 /** Compact hero height so the detail workspace remains usable on flat desktops. */
 export const TEAM_ROLE_RAIL_HERO_COMPACT_HEIGHT = 380
 /** Width (px) of the team synergies panel — the other, narrower side panel. */
