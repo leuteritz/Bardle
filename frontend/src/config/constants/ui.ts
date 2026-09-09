@@ -1307,26 +1307,21 @@ export const OFFLINE_CPS_RATE = 0.75
 export const OFFLINE_MAX_HOURS = 10
 export const OFFLINE_MIN_SECONDS = 60
 
-/** Bard Stats "Solar Evolution" — the control desk of the middle column.
- *  The sun used to sit at the centre of an orbit dial carrying all seven
- *  phases; on Full HD that column is only 391px wide, so the ring's markers,
- *  their tags and the console below all fought over the same pixels and every
- *  one of them ended up small. The panel is stacked slabs now — body, journey
- *  rail, dwell, rays, act — each with the full width to itself.
- *  Only what the SCRIPT needs lives here; the slabs size themselves in CSS
- *  off the panel's own container width. */
+/** Bard Stats "Solar Evolution" — Körper, Perlenschnur, die zwei Tore.
+ *  Nur was das SKRIPT braucht; die Bänder messen sich in CSS an der eigenen
+ *  Containerbreite. */
 export const SOLAR_EVOLUTION_PANEL = {
   /** Disc diameter as a share (%) of the sun stage's SHORT side, at the
-   *  smallest and the largest star phase. Near-full, because the stage is now
-   *  a band that holds nothing but the body. */
+   *  smallest and the largest star phase. */
   SUN_PCT_MIN: 66,
   SUN_PCT_MAX: 98,
   /** The comet is the smallest body of the journey and keeps its own share —
    *  interpolating it with the stars would make the origin a full-width rock. */
   COMET_SUN_PCT: 64,
-  /** Ceiling (px) for the disc. On 4K the column offers over 600px of stage
-   *  height, and a sun that large would dwarf the deck it belongs to. */
-  SUN_MAX_PX: 300,
+  /** Ceiling (px) for the disc. Angehoben von 300, als der Evolve-Knopf aus dem
+   *  Panel fiel: unter der Perlenschnur stehen nur noch die zwei Tore, die
+   *  Bühne ist die grösste Fläche — auf 2K liess ein 300er Körper sie leer. */
+  SUN_MAX_PX: 380,
 } as const
 
 /** Die Unterseiten des Journey-Reiters, in Leistenreihenfolge. */
