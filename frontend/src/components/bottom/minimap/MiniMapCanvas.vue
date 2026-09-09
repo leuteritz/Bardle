@@ -931,7 +931,10 @@ export default defineComponent({
         const orbitRy = orbitRx * MINIMAP_ARRIVAL_ORBIT_SQUASH
 
         // Sync with main UI: read live angle from useStarSystem; fallback to time-based
-        const liveAngle = slot.planetId ? livePlanetAngles.get(slot.planetId) : undefined
+        const liveAngle =
+          !gameStore.isGamePaused && slot.planetId
+            ? livePlanetAngles.get(slot.planetId)
+            : undefined
         let angle: number
         if (liveAngle !== undefined) {
           angle = liveAngle
