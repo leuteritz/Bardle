@@ -6,7 +6,7 @@
  * It replaces a popover that laid itself over the very splash art it was asking
  * about — 116x78 thumbnails above a 1280px image you could no longer see. The
  * preview is sticky like the swap picker's: the last hovered card stays here
- * after the cursor leaves the grid, so the Wear button is reachable without the
+ * after the cursor leaves the grid, so the Equip button is reachable without the
  * subject changing on the way to it.
  */
 import { computed } from 'vue'
@@ -16,21 +16,21 @@ import { formatSkinName, getSkinArtPath } from '@/utils/game/champions'
 
 const props = defineProps<{
   champion: string
-  /** Skin the champion is wearing right now. */
-  worn: string
-  /** Skin under the cursor — null falls back to the worn one. */
+  /** Skin the champion has equipped right now. */
+  equipped: string
+  /** Skin under the cursor — null falls back to the equipped one. */
   preview: string | null
   /** Position of the shown skin in the gallery, 1-based. */
   index: number
   total: number
 }>()
 
-const emit = defineEmits<{ wear: [skin: string]; close: [] }>()
+const emit = defineEmits<{ equip: [skin: string]; close: [] }>()
 
 const gap = `${SKIN_GALLERY_GAP}px`
 
-const shown = computed(() => props.preview ?? props.worn)
-const isWorn = computed(() => shown.value === props.worn)
+const shown = computed(() => props.preview ?? props.equipped)
+const isActive = computed(() => shown.value === props.equipped)
 const label = computed(() => formatSkinName(shown.value))
 
 /* Full art for the stage, the gallery's own variant underneath it: the small
@@ -54,10 +54,12 @@ const artUnder = computed(() => `url("${getSkinArtPath(props.champion, shown.val
         <small>Appearance</small>
         <strong>{{ label }}</strong>
       </div>
-      <span v-if="isWorn" class="cst-worn"
-        ><Icon icon="lucide:check" width="15" height="15" />Worn</span
+      <span v-if="isActive" class="cst-active"
+        ><Icon icon="lucide:check" width="15" height="15" />Active</span
       >
-      <button v-else class="cst-wear" type="button" @click="emit('wear', shown)">Wear this</button>
+      <button v-else class="cst-equip" type="button" @click="emit('equip', shown)">
+        Equip this
+      </button>
     </div>
   </section>
 </template>
@@ -150,21 +152,25 @@ const artUnder = computed(() => `url("${getSkinArtPath(props.champion, shown.val
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.cst-worn {
+/* Gold traegt den ZUSTAND, gruen die Aktion — deshalb ist die Marke satt und
+   bleibt trotzdem kein Knopf. */
+.cst-active {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 6px 11px;
-  border: 1px solid #5c3310;
+  padding: 6px 12px;
+  border: 1px solid #e8c040;
   border-radius: 4px;
-  background: #1a1008;
-  color: #e8c040;
+  background: rgba(232, 192, 64, 0.16);
+  box-shadow: 0 0 12px rgba(232, 192, 64, 0.22);
+  color: #f7e6a8;
   font-size: 12px;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-.cst-wear {
+.cst-equip {
   flex-shrink: 0;
   padding: 8px 16px;
   border: 1px solid #6ec040;
@@ -178,10 +184,10 @@ const artUnder = computed(() => `url("${getSkinArtPath(props.champion, shown.val
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.cst-wear:hover {
+.cst-equip:hover {
   background: linear-gradient(to bottom, #60d038, #388e22);
 }
-.cst-wear:active {
+.cst-equip:active {
   transform: scale(0.97);
 }
 

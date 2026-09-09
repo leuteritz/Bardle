@@ -592,11 +592,11 @@ function perkStatLine(perk: ChampionPerkDef): string {
         v-else-if="skinOpen && champion"
         class="sdp-skin-stage"
         :champion="champion"
-        :worn="equippedSkin"
+        :equipped="equippedSkin"
         :preview="skinPreview"
         :index="shownSkinIndex"
         :total="skinEntries.length"
-        @wear="equipSkin"
+        @equip="equipSkin"
         @close="closeSkins"
       />
       <div v-else class="sdp-hero">
@@ -617,7 +617,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
               class="sdp-hero-level"
             /><span class="sdp-portrait-change"
               ><Icon icon="lucide:repeat-2" width="16" height="16" /> Change</span
-            ><span v-if="skinEntries.length > 1" class="sdp-skin-worn">{{
+            ><span v-if="skinEntries.length > 1" class="sdp-skin-active">{{
               formatSkinName(equippedSkin)
             }}</span></template
           >
@@ -854,7 +854,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
         v-else-if="skinOpen && champion"
         class="sdp-skin-grid"
         :champion="champion"
-        :worn="equippedSkin"
+        :equipped="equippedSkin"
         :preview="skinPreview"
         @preview="skinPreview = $event"
         @select="equipSkin"
@@ -1465,7 +1465,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
 }
 /* Sagt im Normalzustand, was getragen wird — das stand vorher nur im
    geoeffneten Popover. */
-.sdp-skin-worn {
+.sdp-skin-active {
   position: absolute;
   bottom: 10px;
   left: 10px;

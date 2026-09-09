@@ -2,8 +2,13 @@
 /**
  * The RIGHT column while the skin gallery is open: every bundled appearance as
  * a splash card, wrapping down the column instead of scrolling sideways out of
- * sight. Hovering one shows it on the stage; clicking wears it and leaves the
+ * sight. Hovering one shows it on the stage; clicking equips it and leaves the
  * gallery open, because a skin costs nothing and trying them on IS the task.
+ *
+ * The equipped card carries four signals at once — gold edge, a static outer
+ * glow, a breathing layer and a gold name — because one of them is not enough
+ * to find it in a grid of twenty. The other cards dim their art instead, which
+ * does more for that than anything the active card could add.
  *
  * Two columns of exactly one art-table 'lg' edge, so twenty cards never pull
  * twenty 1280px splashes. Every distance in here is SKIN_GALLERY_GAP, and the
@@ -20,8 +25,8 @@ import { championSkinEntries } from '@/utils/game/champions'
 
 const props = defineProps<{
   champion: string
-  /** Skin the champion is wearing right now. */
-  worn: string
+  /** Skin the champion has equipped right now. */
+  equipped: string
   /** Skin under the cursor — it keeps its ring after the cursor leaves. */
   preview: string | null
 }>()
@@ -46,9 +51,9 @@ const cardAspect = SKIN_CARD_ASPECT_RATIO
           class="csg-card"
           :class="{
             'csg-card--viewing': entry.id === preview,
-            'csg-card--worn': entry.id === worn,
+            'csg-card--active': entry.id === equipped,
           }"
-          :aria-pressed="entry.id === worn"
+          :aria-pressed="entry.id === equipped"
           @mouseenter="emit('preview', entry.id)"
           @focus="emit('preview', entry.id)"
           @click="emit('select', entry.id)"
@@ -57,8 +62,10 @@ const cardAspect = SKIN_CARD_ASPECT_RATIO
           <span class="csg-fade" aria-hidden="true" />
           <span class="csg-bottom">
             <span class="csg-name">{{ entry.label }}</span>
-            <span v-if="entry.id === worn" class="csg-mark csg-mark--worn">Worn</span>
-            <span v-else class="csg-mark csg-mark--cta">Wear</span>
+            <span v-if="entry.id === equipped" class="csg-mark csg-mark--active"
+              >Active</span
+            >
+            <span v-else class="csg-mark csg-mark--cta">Equip</span>
           </span>
         </button>
       </div>
@@ -119,8 +126,36 @@ const cardAspect = SKIN_CARD_ASPECT_RATIO
 .csg-card.csg-card--viewing {
   --csg-edge: #d8b878;
 }
-.csg-card.csg-card--worn {
+.csg-card.csg-card--active {
   --csg-edge: #e8c040;
+  box-shadow: 0 0 16px rgba(232, 192, 64, 0.3);
+}
+/* Der Atem liegt auf einer EIGENEN Ebene mit statischem Schein — animiert wird
+   nur ihre Deckkraft. Ein pulsierender box-shadow waere hier der naheliegende
+   und der verbotene Griff. Muster: champion-crest-breathe in main.css. */
+.csg-card--active::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border-radius: 2px;
+  box-shadow: inset 0 0 20px rgba(232, 192, 64, 0.55);
+  pointer-events: none;
+  animation: csg-active-breathe 3200ms ease-in-out infinite alternate;
+}
+@keyframes csg-active-breathe {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .csg-card--active::after {
+    animation: none;
+    opacity: 0.6;
+  }
 }
 .csg-art {
   position: absolute;
@@ -129,6 +164,11 @@ const cardAspect = SKIN_CARD_ASPECT_RATIO
   height: 100%;
   object-fit: cover;
   object-position: center 20%;
+  opacity: 0.82;
+}
+.csg-card:hover .csg-art,
+.csg-card--active .csg-art {
+  opacity: 1;
 }
 .csg-fade {
   position: absolute;
@@ -142,6 +182,7 @@ const cardAspect = SKIN_CARD_ASPECT_RATIO
 }
 .csg-bottom {
   position: absolute;
+  z-index: 2;
   right: 8px;
   bottom: 7px;
   left: 8px;
@@ -159,6 +200,9 @@ const cardAspect = SKIN_CARD_ASPECT_RATIO
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
   white-space: nowrap;
 }
+.csg-card--active .csg-name {
+  color: #e8c040;
+}
 .csg-mark {
   flex-shrink: 0;
   padding: 3px 8px;
@@ -168,10 +212,11 @@ const cardAspect = SKIN_CARD_ASPECT_RATIO
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
-.csg-mark--worn {
-  border-color: #8b632c;
-  background: rgba(17, 16, 8, 0.86);
-  color: #e8c040;
+.csg-mark--active {
+  border-color: #f0d67a;
+  background: #e8c040;
+  color: #1a1008;
+  font-weight: 700;
 }
 .csg-mark--cta {
   border-color: rgba(200, 144, 64, 0.55);
