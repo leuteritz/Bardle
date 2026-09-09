@@ -249,7 +249,7 @@ export default defineComponent({
 /* ── Selected card: role frame drives the detail panel ── */
 .champion-card-slot.is-selected {
   z-index: 22;
-  transform: scale(1.045);
+  transform: scale(1.06);
   transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -463,10 +463,7 @@ export default defineComponent({
 .champion-card-slot.is-selected .card-inner {
   border-width: 4px !important;
   border-color: var(--role-c-hi, #e8c060) !important;
-  box-shadow:
-    0 0 0 2px #111008,
-    0 0 0 4px var(--role-c, #e8c060),
-    0 0 24px color-mix(in srgb, var(--role-c, #e8c060) 48%, transparent) !important;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--role-c, #e8c060) 48%, transparent) !important;
 }
 .card-overlay,
 .card-overlay--buyable,
