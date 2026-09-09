@@ -20,14 +20,14 @@ import {
   hpTier,
   hpPercentOf,
   planetBonusTextFor,
-  planetStatSections,
+  planetStatRows,
 } from '@/utils/orbit/planetStatus'
 import { orbitOrderedSlots } from '@/utils/orbit/planetOrbitPhase'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
-import PlanetStatFlank from './PlanetStatFlank.vue'
+import PlanetStatBar from './PlanetStatBar.vue'
 import PlanetTargetPickerModal from './PlanetTargetPickerModal.vue'
 
 const props = defineProps<{
@@ -114,12 +114,11 @@ const nextMaxHp = computed(() => computePlanetMaxHp(previewLevel.value))
 const orbitIndex = computed(() =>
   orbitOrderedSlots(store.purchasedSlots).findIndex((s) => s.id === props.planet.id),
 )
-const statSections = computed(() =>
-  planetStatSections({
+const statRows = computed(() =>
+  planetStatRows({
     slot: props.planet,
     orbitIndex: Math.max(0, orbitIndex.value),
     previewLevel: previewLevel.value,
-    harvestForgeMult: harvestForgeMult.value,
   }),
 )
 
@@ -261,23 +260,6 @@ const configTarget = computed(() => {
         </div>
       </Transition>
     </div>
-
-    <!-- Data sheet — pinned to the free space left and right of the sun, so it
-         costs no height (the tightest budget on Full HD) and leaves the orbit
-         geometry untouched. Below the container threshold both fold into one
-         band above the dock; see the container query in the styles. -->
-    <PlanetStatFlank
-      class="ps-flank ps-flank--l"
-      :sections="statSections.left"
-      side="left"
-      :preview="previewActive"
-    />
-    <PlanetStatFlank
-      class="ps-flank ps-flank--r"
-      :sections="statSections.right"
-      side="right"
-      :preview="previewActive"
-    />
 
     <!-- Central body (comet rock or phase sun) + orbiting planet — the exact
          vertical center: crown band above and readout band below carry equal
@@ -436,6 +418,12 @@ const configTarget = computed(() => {
             />
           </div>
         </div>
+
+        <!-- Instrumentenreihe — sechs Messwerte in der Breite des HP-Balkens,
+             direkt darunter. Sie steht im FLUSS des Readouts: eine zweite
+             Positionslogik neben der Sonne wäre auf Full HD nicht unterzubringen
+             (dort bleiben seitlich nur 140 px frei). -->
+        <PlanetStatBar :rows="statRows" :preview="previewActive" />
       </div>
 
       <!-- Status banner — states why the readout is dimmed and the
@@ -549,7 +537,9 @@ const configTarget = computed(() => {
   position: relative;
   z-index: 2;
   flex: 1 1 0;
-  min-height: 0;
+  /* min-content statt 0: sonst meldet das Band dem Flex-Algorithmus, es
+     brauche keinen Platz — und sein Inhalt läuft still über. */
+  min-height: min-content;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -691,46 +681,6 @@ const configTarget = computed(() => {
      the flex-centered crown + sun + readout never overlap the Level-Up button. */
   padding: 0.9rem 1rem clamp(96px, 15vh, 150px);
   overflow: hidden;
-  /* Die Flanken messen sich an der Bühne, nicht am Viewport: die Zonenbreite der
-     Rail springt um 244 px, und ein Viewport-Breakpoint würde das verschlafen. */
-  container-type: inline-size;
-}
-
-/* ── Instrumententafeln ────────────────────────────────────────────────────── */
-/* Absolut statt als Grid-Spalten: `.ps-system` ist ein Größen-Container, an dem
-   Sonne, Planet und Bahnradius in cqmin hängen. Jede Spalte neben ihm würde seine
-   Box schmaler machen und damit die Bahn verschieben.
-
-   Gemessen: der Planet läuft bis x±336 aus der Mitte, aber nur bis y±138 — die
-   Bahn ist eine flache Ellipse. Seitlich UNTERHALB dieses Bands ist auf jeder
-   Auflösung Platz, auf Sonnenhöhe erst ab einer breiten Bühne (Full HD lässt dort
-   nur 140 px frei). Darum die untere Verankerung als Grundstellung. */
-.ps-flank {
-  position: absolute;
-  bottom: 10px;
-  z-index: 2;
-  /* 18,5 % hält die Tafel auf einer 952-px-Bühne knapp neben dem HP-Balken, der
-     dort mit seinen 560 px max-width bis auf 196 px an den Rand reicht. */
-  width: clamp(160px, 18.5cqw, 196px);
-}
-
-.ps-flank--l {
-  left: clamp(6px, 1.5cqw, 30px);
-}
-
-.ps-flank--r {
-  right: clamp(6px, 1.5cqw, 30px);
-}
-
-/* Ab hier trägt die Bühne die Tafeln neben der Sonne: 336 px Bahn + Tafel +
-   Rändern brauchen rund 1110 px. Die Schwelle steht als Literal — `v-bind`
-   matcht in einer Query-Präambel still nie. */
-@container (min-width: 1120px) {
-  .ps-flank {
-    top: 50%;
-    bottom: auto;
-    transform: translateY(-50%);
-  }
 }
 
 /* Sun + orbiting planet share one centered system. Fills whatever height the
@@ -743,7 +693,11 @@ const configTarget = computed(() => {
   /* Sized to the sun itself (no empty slack below it), so the equal-flex spacer
      above and hero band below can center it in the stage AND put the button at
      the exact midpoint between the sun and the name/HP unit. */
-  flex: 0 0 auto;
+  /* SHRINK, nicht fix: Krone, Readout und Instrumentenreihe melden über
+     min-content ihren echten Bedarf, und die Sonne gibt her, was fehlt. Vorher
+     war sie starr und der Rest lief unter dem Level-Up-Knopf durch — auf JEDER
+     Auflösung unter 4K, nicht nur auf den flachen. */
+  flex: 0 1 auto;
   height: min(var(--ps-sun-d, 380px), 56vh);
   min-height: 160px;
   container-type: size;
@@ -759,7 +713,7 @@ const configTarget = computed(() => {
   position: relative;
   z-index: 2;
   flex: 1 1 0;
-  min-height: 0;
+  min-height: min-content;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -1635,6 +1589,9 @@ const configTarget = computed(() => {
 /* Shrink the sun cap, crown and dock so crown + sun + name/HP + dock all fit the
    flattest desktop viewport without overflow. 2K/4K keep the roomy defaults. */
 @media (max-height: 1100px) {
+  /* Die Instrumentenreihe kostet 62 px, die es hier nicht gibt: Krone, Sonne und
+     Readout füllten die 783 px der Full-HD-Bühne schon vorher aus (daher die alte
+     Überlappung von Knopf und HP-Balken). Die Sonne gibt sie her. */
   .ps-system {
     height: min(var(--ps-sun-d, 340px), 46vh);
   }
@@ -1643,9 +1600,10 @@ const configTarget = computed(() => {
     font-size: clamp(2rem, 4.6vh, 3rem);
   }
 
-  /* Reserve a little less for the dock and tighten it on flat viewports. */
+  /* Das Dock ist 72 px hoch und sitzt 19 px über dem Boden — 128 px waren zu
+     grosszügig reserviert. */
   .ps-stage {
-    padding-bottom: clamp(84px, 13vh, 128px);
+    padding-bottom: clamp(78px, 10vh, 104px);
   }
 
   .ps-action-dock {

@@ -2,26 +2,18 @@
 // Rail-Kachel, Bühne und Command Panel müssen dieselbe Farbstufe und denselben
 // Prozentwert zeigen, sonst driften die drei Anzeigen auseinander.
 import {
-  BOSS_DAMAGE_REDUCTION_CAP,
   HP_COLOR_THRESHOLD_HIGH,
   HP_COLOR_THRESHOLD_LOW,
-  PLANET_LEVEL_HP_PCT,
-  PLANET_MILESTONE_BONUS,
   PLANET_MILESTONE_INTERVAL,
   PLANET_ORBIT_SPEED_MAX_MULT,
-  PLANET_RESPAWN_MS,
   PLANET_SLOT_CONFIG,
-  PLANET_SLOT_MAX_HP,
-  VOID_PLANET_RIDER,
 } from '@/config/constants'
 import {
   PLANET_ROLES,
-  computePlanetMaxHp,
   harvestIntervalTicks,
   planetLevelBonusMultiplier,
   planetMilestoneCount,
   planetOrbitSpeedMultiplier,
-  planetRankTier,
 } from '@/stores/world/planetShopStore'
 import type { PlanetRole, PlanetRoleType, PlanetSlot } from '@/stores/world/planetShopStore'
 import { orbitTierForSlotIndex, planetOrbitTiming } from '@/utils/orbit/planetOrbitPhase'
@@ -84,43 +76,34 @@ export function planetBonusTextFor(
   return planetBonusText(PLANET_ROLES[roleId], level, harvestForgeMult)
 }
 
-// ── Kennwerte eines Planeten — das Datenblatt der Bühne ────────────────────
+// ── Die sechs Kennwerte eines Planeten ─────────────────────────────────────
 // Bewusst hier und nicht in der Komponente: die Bühne zeigt sie heute, Rail und
 // Command Panel könnten sie morgen zeigen — und müssten dann dieselben Zahlen
 // nennen, sonst widersprechen sich zwei Anzeigen desselben Planeten.
+//
+// Ausschliesslich Zahlen. Textwerte (Rangname, Void-Verb) und alles, was der
+// Readout darüber schon zeigt (max HP, Rollenbonus), gehören nicht hierher —
+// eine Kachel trägt einen Messwert, sonst ist sie keine.
 
 export interface PlanetStatRow {
   key: string
   label: string
+  /** Der Zahlwert allein — die Einheit steht getrennt in `suffix`. */
   value: string
-  icon: string
-  /** Kleiner Zusatz rechts vom Wert: Einheit, Laufrichtung, Deckel. */
-  note?: string
+  /** Einheit, klein gesetzt: 's', '%', 'AU', 'lv'. Kurz halten — bei drei Zeichen
+   *  verschmilzt MedievalSharp sie in diesem Grad zu einem Klumpen. */
+  suffix?: string
   /** Wert nach dem nächsten Attunement — nur wo das Level etwas bewegt. */
   preview?: string
   /** Der Wert steht an seinem Deckel und geht nicht weiter. */
   atCap?: boolean
-  /** Eigene Farbe statt der Rollenfarbe (Rangstufe). */
-  tint?: string
-  /** Füllstand 0 … 1 einer Mini-Leiste unter der Zeile. */
+  /** Füllstand 0 … 1 einer Leiste am Kachelboden. */
   bar?: number
-  /** Bildpfad statt Iconify-Glyph (die Aegis-Rolle trägt ein PNG). */
-  image?: string
-}
-
-export interface PlanetStatSection {
-  key: string
-  title: string
-  rows: PlanetStatRow[]
 }
 
 function fmtSeconds(ms: number): string {
   const s = ms / 1000
-  return s < 100 ? `${s.toFixed(1)}s` : `${Math.round(s)}s`
-}
-
-function fmtPct(frac: number): string {
-  return `${Math.round(frac * 100)}%`
+  return s < 100 ? s.toFixed(1) : String(Math.round(s))
 }
 
 function fmtMult(v: number): string {
@@ -160,24 +143,17 @@ export interface PlanetStatInput {
   orbitIndex: number
   /** Level, das die Vorschau zeigen soll (= Ist-Level, wenn keine Vorschau läuft). */
   previewLevel: number
-  /** Derselbe Forge-Faktor, den `activeHarvestSlots` benutzt. */
-  harvestForgeMult: number
 }
 
 /**
- * Die zwei Instrumententafeln der Bühne — links die Bahn, rechts der Ausbau.
+ * Die Instrumentenreihe unter dem HP-Balken — sechs Zahlen, feste Reihenfolge.
  *
  * Jede Zeile trägt ihre Vorschau selbst: `preview` ist genau dort gesetzt, wo das
- * nächste Attunement den Wert bewegt. Zeilen ohne `preview` sind level-stabil, und
- * dass sie beim Hover stehen bleiben, ist die eigentliche Aussage.
+ * nächste Attunement den Wert bewegt. Zeilen ohne `preview` (In Reach, Radius) sind
+ * level-stabil, und dass sie beim Hover stehen bleiben, ist die eigentliche Aussage.
  */
-export function planetStatSections(input: PlanetStatInput): {
-  left: PlanetStatSection[]
-  right: PlanetStatSection[]
-} {
-  const { slot, orbitIndex, previewLevel, harvestForgeMult } = input
-  const roleId = slot.role as PlanetRoleType
-  const role = PLANET_ROLES[roleId]
+export function planetStatRows(input: PlanetStatInput): PlanetStatRow[] {
+  const { slot, orbitIndex, previewLevel } = input
   const level = slot.level
   const tier = orbitTierForSlotIndex(orbitIndex)
 
@@ -197,169 +173,53 @@ export function planetStatSections(input: PlanetStatInput): {
   )
   const speedAtCap = planetOrbitSpeedMultiplier(level) >= PLANET_ORBIT_SPEED_MAX_MULT
 
-  // ── Bahn ──────────────────────────────────────────────────────────────────
-  const orbit: PlanetStatSection = {
-    key: 'orbit',
-    title: 'Orbit',
-    rows: [
-      {
-        key: 'period',
-        label: 'Period',
-        icon: 'ph:spiral-fill',
-        value: fmtSeconds(now.periodMs),
-        note: 'per lap',
-        preview: previewOf(fmtSeconds(now.periodMs), fmtSeconds(next.periodMs)),
-        atCap: speedAtCap,
-      },
-      {
-        key: 'eclipse',
-        label: 'Eclipse',
-        icon: 'game-icons:eclipse-flare',
-        value: fmtSeconds(now.behindMs),
-        note: 'per lap',
-        preview: previewOf(fmtSeconds(now.behindMs), fmtSeconds(next.behindMs)),
-        atCap: speedAtCap,
-      },
-      {
-        key: 'in-reach',
-        label: 'In Reach',
-        icon: 'ph:eye-fill',
-        value: fmtPct(now.inReachFrac),
-        note: 'reachable',
-      },
-      {
-        key: 'radius',
-        label: 'Radius',
-        icon: 'ph:path-fill',
-        value: `${orbitRadiusAu(orbitIndex, slot.baseSpeed, slot.direction).toFixed(2)} AU`,
-        note: slot.direction === 1 ? 'prograde' : 'retrograde',
-      },
-    ],
-  }
-
-  const rider = VOID_PLANET_RIDER[roleId]
-  const voidSection: PlanetStatSection = {
-    key: 'void',
-    title: 'The Void',
-    rows: [
-      {
-        key: 'void-toll',
-        label: 'Void Toll',
-        icon: 'ph:skull-fill',
-        value: rider.damageMult === 0 ? 'None' : fmtMult(rider.damageMult),
-        note: rider.damageMult === 0 ? `it ${rider.verb}s instead` : `on ${rider.verb}`,
-      },
-      {
-        key: 'rebuild',
-        label: 'Rebuild',
-        icon: 'ph:hammer-fill',
-        value: fmtSeconds(PLANET_RESPAWN_MS),
-        note: 'once destroyed',
-      },
-    ],
-  }
-
-  // ── Ausbau ────────────────────────────────────────────────────────────────
-  const rankNow = planetRankTier(level)
-  const rankNext = planetRankTier(previewLevel)
   const bonusNow = planetLevelBonusMultiplier(level)
-  const bonusNext = planetLevelBonusMultiplier(previewLevel)
-  const nextMilestone = (planetMilestoneCount(level) + 1) * PLANET_MILESTONE_INTERVAL
-  const hpNow = computePlanetMaxHp(level)
-  const hpStep = Math.round(PLANET_SLOT_MAX_HP * PLANET_LEVEL_HP_PCT)
+  const milestoneLeft = (planetMilestoneCount(level) + 1) * PLANET_MILESTONE_INTERVAL - level
+  const milestoneNext =
+    (planetMilestoneCount(previewLevel) + 1) * PLANET_MILESTONE_INTERVAL - previewLevel
 
-  const attunement: PlanetStatSection = {
-    key: 'attunement',
-    title: 'Attunement',
-    rows: [
-      {
-        key: 'rank',
-        label: 'Rank',
-        icon: 'ph:medal-military-fill',
-        value: rankNow.name,
-        tint: rankNow.color,
-        note: `level ${level}`,
-        preview: previewOf(rankNow.name, rankNext.name),
-      },
-      {
-        key: 'resonance',
-        label: 'Resonance',
-        icon: 'ph:sparkle-fill',
-        value: fmtMult(bonusNow),
-        note: 'on role bonus',
-        preview: previewOf(fmtMult(bonusNow), fmtMult(bonusNext)),
-      },
-      {
-        key: 'milestone',
-        label: 'Milestone',
-        icon: 'ph:flag-banner-fill',
-        value: `${nextMilestone - level} lvl`,
-        note: `to +${Math.round(PLANET_MILESTONE_BONUS * 100)}%`,
-        bar: (level % PLANET_MILESTONE_INTERVAL) / PLANET_MILESTONE_INTERVAL,
-      },
-      {
-        key: 'integrity',
-        label: 'Integrity',
-        icon: 'ph:shield-chevron-fill',
-        value: `${hpNow} HP`,
-        note: `+${hpStep} / lvl`,
-        preview: previewOf(`${hpNow} HP`, `${computePlanetMaxHp(previewLevel)} HP`),
-      },
-    ],
-  }
-
-  // ── Rolle ─────────────────────────────────────────────────────────────────
-  // Nur die Turrets kämpfen, und Kampf gibt es allein im Vordergrund. Für jede
-  // andere Rolle ist die Eclipse reine Optik — genau das sagt diese Zeile, und
-  // sie ist der Grund, warum "In Reach" nebenan überhaupt eine Zahl verdient.
-  const gated = role.bonusType === 'auto_attack_dps'
-  const contribution = (lvl: number): { value: string; note: string } => {
-    const v = role.bonusPerSlot * planetLevelBonusMultiplier(lvl)
-    switch (role.bonusType) {
-      case 'auto_attack_dps':
-        return { value: `${(v * now.inReachFrac).toFixed(1)} DPS`, note: 'lap average' }
-      case 'material_harvest_rate': {
-        const secs = harvestIntervalTicks(lvl, harvestForgeMult)
-        return { value: `${(3600 / secs).toFixed(1)} / h`, note: `one every ${secs}s` }
-      }
-      case 'boss_damage_reduction':
-        return {
-          value: `−${Math.round(v * 100)}%`,
-          note: `cap −${Math.round(BOSS_DAMAGE_REDUCTION_CAP * 100)}%`,
-        }
-      case 'expedition_reward_multiplier':
-        return { value: `+${Math.round(v * 100)}%`, note: 'expedition payout' }
-      case 'offline_boost':
-        return { value: `+${Math.round(v * 100)}%`, note: 'offline yield' }
-      case 'building_cps_multiplier':
-        return { value: `+${Math.round(v * 100)}%`, note: 'building CPS' }
-    }
-  }
-  const contribNow = contribution(level)
-  const isImage = role.icon.startsWith('/')
-
-  const calling: PlanetStatSection = {
-    key: 'calling',
-    title: 'Calling',
-    rows: [
-      {
-        key: 'contribution',
-        label: role.name,
-        icon: isImage ? '' : role.icon,
-        image: isImage ? role.icon : undefined,
-        value: contribNow.value,
-        note: contribNow.note,
-        preview: previewOf(contribNow.value, contribution(previewLevel).value),
-      },
-      {
-        key: 'orbit-gated',
-        label: 'Gated',
-        icon: gated ? 'ph:eye-fill' : 'ph:check-circle-fill',
-        value: gated ? fmtPct(now.inReachFrac) : 'Always on',
-        note: gated ? 'fires in front only' : 'eclipse is cosmetic',
-      },
-    ],
-  }
-
-  return { left: [orbit, voidSection], right: [attunement, calling] }
+  return [
+    {
+      key: 'period',
+      label: 'Period',
+      value: fmtSeconds(now.periodMs),
+      suffix: 's',
+      preview: previewOf(fmtSeconds(now.periodMs), fmtSeconds(next.periodMs)),
+      atCap: speedAtCap,
+    },
+    {
+      key: 'eclipse',
+      label: 'Eclipse',
+      value: fmtSeconds(now.behindMs),
+      suffix: 's',
+      preview: previewOf(fmtSeconds(now.behindMs), fmtSeconds(next.behindMs)),
+      atCap: speedAtCap,
+    },
+    {
+      key: 'in-reach',
+      label: 'In Reach',
+      value: String(Math.round(now.inReachFrac * 100)),
+      suffix: '%',
+    },
+    {
+      key: 'resonance',
+      label: 'Resonance',
+      value: fmtMult(bonusNow),
+      preview: previewOf(fmtMult(bonusNow), fmtMult(planetLevelBonusMultiplier(previewLevel))),
+    },
+    {
+      key: 'milestone',
+      label: 'Milestone',
+      value: String(milestoneLeft),
+      suffix: 'lv',
+      preview: previewOf(String(milestoneLeft), String(milestoneNext)),
+      bar: (level % PLANET_MILESTONE_INTERVAL) / PLANET_MILESTONE_INTERVAL,
+    },
+    {
+      key: 'radius',
+      label: 'Radius',
+      value: orbitRadiusAu(orbitIndex, slot.baseSpeed, slot.direction).toFixed(2),
+      suffix: 'AU',
+    },
+  ]
 }
