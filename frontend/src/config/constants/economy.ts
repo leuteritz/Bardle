@@ -873,14 +873,19 @@ export const VOYAGE_RAIL_READY_TITLE = 'a crew is home and waiting'
  *  Fluss-Platz, sonst wanderte das Wort, sobald ein Signal kommt oder geht. */
 export const VOYAGE_RAIL_HANDLE_BADGE_GAP = 10
 /**
- * Höhe des gekippten Wortes.
+ * Höhe des gekippten Wortes — als Vielfaches SEINES Schriftgrades.
  *
  * Nur der Ladeschleier braucht sie — der Griff selbst setzt sie nie, dort
  * ergibt sie sich aus der Schrift. Sie steht hier, damit sein Platzhalter
  * dieselbe Marke zeigt und das Wort beim Aufdecken nicht hereinspringt.
- * Im Browser gemessen, nicht gerechnet: das WORT samt der Zahl dahinter.
+ *
+ * Ein Faktor und keine Pixelzahl, seit der Grad an der Fensterhöhe hängt
+ * (`--sr-handle-u`, clamp 16–22 px): 125 px stimmten nur für die alten 15 px.
+ * Im Browser gemessen, nicht gerechnet — MedievalSharp gibt keine Metrik her,
+ * aus der sich die Länge von „GALAXIES" samt Sperrung ableiten liesse. Auf
+ * 1920×950, 1920×1080 und 2560×1440 derselbe Quotient.
  */
-export const VOYAGE_RAIL_WORD_H = 125
+export const VOYAGE_RAIL_WORD_EM = 6.554
 /**
  * Wie lange die Leiste fährt.
  *

@@ -456,7 +456,6 @@ function openMassSendUpgrade() {
           :width-px="VOYAGE_RAIL_HANDLE_PX"
           :open="!railFolded"
           :title="handleTitle"
-          :total="railRows.length"
           :count="waitingCount"
           :count-title="waitingTitle"
           :dot="hasReady"

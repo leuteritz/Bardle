@@ -16,6 +16,10 @@
  * Gesteuert und dumm: sie bekommt, was es zu zeigen gibt, und meldet den Klick
  * zurueck. Die Rechnungen hinter `count` und `dot` bleiben beim Reiter — sie
  * ziehen dort aus derselben Quelle wie die Liste selbst.
+ *
+ * Ihre Gestalt ist die der Rollen-Leiste im Team-Reiter (`.sr-handle*` in
+ * `rpg-theme.css`): dieselbe 44-px-Kante im selben Modal, also dieselbe Fläche,
+ * Akzentkante und Schriftskala.
  */
 import { computed } from 'vue'
 
@@ -28,8 +32,6 @@ const props = withDefaults(
     open: boolean
     /** Fertig formuliert vom Reiter: jeder haengt anderes an. */
     title: string
-    /** Die ruhige Zahl im Wortfluss: was es ueberhaupt gibt. */
-    total?: number | null
     /** Die gerahmte Pille: was gerade etwas WILL. Universe bekommt sie nie. */
     count?: number | null
     countTitle?: string
@@ -42,7 +44,6 @@ const props = withDefaults(
     badgeGap?: number
   }>(),
   {
-    total: null,
     count: null,
     countTitle: '',
     dot: false,
@@ -91,13 +92,9 @@ const style = computed(() => {
         />
       </span>
 
-      <!-- Die Zahl steht IM gekippten Element, nicht daneben: `.sr-handle-stack`
-           ist eine waagerechte Zeile, ein zweites Kind darin staende NEBEN dem
-           Wort statt dahinter. So folgt sie ihm im senkrechten Fluss. -->
-      <span class="sr-handle-word">
-        {{ label }}
-        <span v-if="total !== null" class="sr-handle-total">{{ total }}</span>
-      </span>
+      <!-- Das Wort steht allein im Fluss; die Signale liegen absolut darueber,
+           sonst wanderte es, sobald eines kommt oder geht. -->
+      <span class="sr-handle-word">{{ label }}</span>
     </span>
   </button>
 </template>

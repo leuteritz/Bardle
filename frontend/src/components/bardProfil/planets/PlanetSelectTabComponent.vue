@@ -323,7 +323,6 @@ const sunPhaseStyle = computed(() => {
           :width-px="PLANET_TAB_RAIL_HANDLE_PX"
           :open="!railFolded"
           :title="handleTitle"
-          :total="purchasedSlots"
           @toggle="railChoice = !railFolded"
         />
       </div>
