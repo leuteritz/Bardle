@@ -249,7 +249,7 @@ export default defineComponent({
 /* ── Selected card: role frame drives the detail panel ── */
 .champion-card-slot.is-selected {
   z-index: 22;
-  transform: scale(1.09);
+  transform: scale(1.04);
   transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
