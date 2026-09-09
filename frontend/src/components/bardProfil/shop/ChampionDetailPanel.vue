@@ -242,10 +242,13 @@ export default defineComponent({
   flex: 0 0 clamp(420px, 48%, 540px);
   min-height: 0;
   overflow: hidden;
-  border: 2px solid color-mix(in srgb, var(--role-c) 68%, #5c3310);
-  border-bottom: 5px solid var(--role-c);
+  border: 4px solid var(--role-c);
+  border-bottom: 8px solid var(--role-c);
   background: #111008;
-  box-shadow: 0 5px 0 color-mix(in srgb, var(--role-c) 30%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #fff 34%, var(--role-c)),
+    0 0 0 2px #111008,
+    0 0 18px color-mix(in srgb, var(--role-c) 44%, transparent);
 }
 .cs-detail-img {
   position: absolute;
