@@ -1,7 +1,7 @@
 <template>
   <aside class="cs-detail">
     <template v-if="detail">
-      <div class="cs-detail-hero">
+      <div class="cs-detail-hero" :style="{ '--role-c': detail.roleColor }">
         <img
           :src="detail.image"
           :alt="detail.name"
@@ -13,18 +13,6 @@
           <div class="cs-hero-meta">
             <span class="cs-hero-tier" :style="{ '--cc': detail.tierColor }">
               ★ {{ detail.starLevel }} · {{ detail.tierName }}
-            </span>
-            <span class="cs-hero-role" :style="{ '--cc': detail.roleColor }">
-              <img
-                v-if="detail.roleImage"
-                :src="detail.roleImage"
-                alt=""
-                class="cs-hero-role-art rpg-img"
-              />
-              <span class="cs-hero-role-copy">
-                <small>Role</small>
-                <strong>{{ detail.roleLabel }}</strong>
-              </span>
             </span>
             <span v-for="trait in detail.traits" :key="trait.id" class="cs-hero-trait">
               <Icon :icon="trait.icon" class="cs-hero-trait-icon" :style="{ color: trait.color }" />
@@ -254,8 +242,10 @@ export default defineComponent({
   flex: 0 0 clamp(420px, 48%, 540px);
   min-height: 0;
   overflow: hidden;
-  border-bottom: 2px solid #5c3310;
+  border: 2px solid color-mix(in srgb, var(--role-c) 68%, #5c3310);
+  border-bottom: 5px solid var(--role-c);
   background: #111008;
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--role-c) 30%, transparent);
 }
 .cs-detail-img {
   position: absolute;
@@ -272,15 +262,15 @@ export default defineComponent({
   padding: 52px 20px 18px;
   background: linear-gradient(
     to top,
-    rgba(13, 11, 6, 0.98),
-    rgba(13, 11, 6, 0.78) 58%,
+    color-mix(in srgb, var(--role-c) 18%, rgba(13, 11, 6, 0.98)),
+    rgba(13, 11, 6, 0.86) 34%,
     transparent
   );
 }
 .cs-detail-name {
   margin-bottom: 10px;
   overflow: hidden;
-  color: #fff9e8;
+  color: color-mix(in srgb, var(--role-c) 44%, #fff9e8);
   font-size: 34px;
   font-weight: 900;
   letter-spacing: 0.01em;
@@ -290,60 +280,17 @@ export default defineComponent({
   white-space: nowrap;
 }
 .cs-hero-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 7px 12px;
-  color: #d6c8a8;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.055em;
-  line-height: 1.25;
-  text-transform: uppercase;
+  display: none;
 }
 .cs-hero-tier,
-.cs-hero-role,
 .cs-hero-trait {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   min-width: 0;
 }
-.cs-hero-tier,
-.cs-hero-role {
+.cs-hero-tier {
   color: var(--cc, #e8c040);
-}
-.cs-hero-role {
-  gap: 8px;
-  min-height: 38px;
-  padding: 4px 10px 4px 5px;
-  border: 1px solid color-mix(in srgb, var(--cc) 52%, #5c3310);
-  border-radius: 4px;
-  background: color-mix(in srgb, #111008 82%, var(--cc));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-.cs-hero-role-art {
-  width: 30px;
-  height: 30px;
-  border-radius: 4px;
-  object-fit: cover;
-}
-.cs-hero-role-copy {
-  display: grid;
-  gap: 2px;
-  line-height: 1;
-}
-.cs-hero-role-copy small {
-  color: #b5a37d;
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  line-height: 1;
-}
-.cs-hero-role-copy strong {
-  color: var(--cc);
-  font-size: 14px;
-  letter-spacing: 0.11em;
-  line-height: 1;
 }
 .cs-hero-tier,
 .cs-hero-trait {
