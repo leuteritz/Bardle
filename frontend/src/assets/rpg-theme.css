@@ -2171,7 +2171,7 @@
 .tip-v-text {
   font-size: 1.07em;
   font-weight: 700;
-  color: var(--tip-text);
+  color: var(--tip-color, var(--tip-text));
   white-space: pre-line;
 }
 
