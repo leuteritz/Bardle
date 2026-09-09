@@ -242,23 +242,18 @@ export default defineComponent({
   flex: 0 0 clamp(420px, 48%, 540px);
   min-height: 0;
   overflow: hidden;
-  border: 4px solid var(--role-c);
-  border-bottom: 4px solid var(--role-c);
+  border: 0;
   background: #111008;
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, #fff 34%, var(--role-c)),
     0 0 0 2px #111008,
     0 0 18px color-mix(in srgb, var(--role-c) 44%, transparent);
 }
-.cs-detail-hero::after {
+.cs-detail-hero::before {
   position: absolute;
-  right: 0;
-  bottom: 4px;
-  left: 0;
+  inset: 0;
   z-index: 2;
-  height: 4px;
-  background: var(--role-c);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--role-c) 68%, transparent);
+  border: 5px solid var(--role-c);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 34%, var(--role-c));
   content: '';
   pointer-events: none;
 }
