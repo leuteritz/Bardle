@@ -1,6 +1,11 @@
 <template>
-  <aside class="cs-detail">
+  <aside
+    class="cs-detail"
+    :class="{ 'cs-detail--recruit-hover': recruitHover }"
+    :style="{ '--recruit-c': detail?.roleColor ?? '#e8c040' }"
+  >
     <template v-if="detail">
+      <div class="cs-recruit-signal" aria-hidden="true" />
       <div class="cs-detail-hero" :style="{ '--role-c': detail.roleColor }">
         <img
           :src="detail.image"
@@ -127,6 +132,10 @@
           class="cs-buy-btn"
           :class="{ 'cs-buy-btn--ready': detail.canBuy }"
           :disabled="!detail.canBuy"
+          @mouseenter="setRecruitHover(true)"
+          @mouseleave="setRecruitHover(false)"
+          @focus="setRecruitHover(true)"
+          @blur="setRecruitHover(false)"
           @click="$emit('buy', detail.name)"
         >
           <span v-if="detail.locked">
@@ -155,7 +164,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent } from 'vue'
+import { computed, defineComponent, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import { formatNumber } from '@/config/ui/numberFormat'
@@ -170,6 +179,10 @@ export default defineComponent({
   props: { detail: { type: Object as () => ShopChampionDetail | null, default: null } },
   emits: ['buy'],
   setup(props) {
+    const recruitHover = ref(false)
+    const setRecruitHover = (active: boolean) => {
+      recruitHover.value = active && !!props.detail?.canBuy
+    }
     const affinities = computed(() => {
       const detail = props.detail
       if (!detail) return []
@@ -222,6 +235,8 @@ export default defineComponent({
       formatNumber,
       lockedButtonLabel,
       MAX_STAR_LEVEL,
+      recruitHover,
+      setRecruitHover,
       SHOP_CHAMPION_AFFINITY_COUNT,
     }
   },
@@ -230,12 +245,65 @@ export default defineComponent({
 
 <style scoped>
 .cs-detail {
+  position: relative;
+  isolation: isolate;
   width: 100%;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   background: transparent;
+}
+.cs-recruit-signal {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border: 2px solid color-mix(in srgb, var(--recruit-c) 72%, transparent);
+  background: radial-gradient(
+    circle at 50% 92%,
+    color-mix(in srgb, var(--recruit-c) 22%, transparent),
+    transparent 58%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.985);
+}
+.cs-detail-hero,
+.cs-identity,
+.cs-cost,
+.cs-detail-footer {
+  transition:
+    transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 280ms ease;
+}
+.cs-detail--recruit-hover .cs-recruit-signal {
+  animation: cs-recruit-signal 1.25s ease-in-out infinite;
+}
+.cs-detail--recruit-hover .cs-detail-hero {
+  transform: translateY(-3px);
+}
+.cs-detail--recruit-hover .cs-identity {
+  transform: translateY(-2px);
+  transition-delay: 35ms;
+}
+.cs-detail--recruit-hover .cs-cost {
+  transform: translateY(-1px);
+  transition-delay: 70ms;
+}
+.cs-detail--recruit-hover .cs-detail-footer {
+  transform: translateY(-2px);
+  transition-delay: 105ms;
+}
+@keyframes cs-recruit-signal {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
 }
 .cs-detail-hero {
   position: relative;
@@ -550,12 +618,18 @@ export default defineComponent({
   font-weight: 900;
   letter-spacing: 0.07em;
   text-transform: uppercase;
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
 }
 .cs-buy-btn--ready {
   border-color: #6ec040;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   color: #eaffe0;
   cursor: pointer;
+}
+.cs-detail--recruit-hover .cs-buy-btn--ready {
+  transform: translateY(-2px) scale(1.01);
 }
 .cs-buy-btn--ready:hover {
   filter: brightness(1.12);
@@ -567,6 +641,17 @@ export default defineComponent({
 }
 .cs-buy-lock {
   color: #cc6050;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-recruit-signal,
+  .cs-detail-hero,
+  .cs-identity,
+  .cs-cost,
+  .cs-detail-footer,
+  .cs-buy-btn {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 .cs-detail-empty {
   position: relative;
