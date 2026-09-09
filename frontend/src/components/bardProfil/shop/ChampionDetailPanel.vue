@@ -66,6 +66,7 @@
               class="cs-affinity"
               :style="{ '--ac': affinity.color }"
               :aria-label="affinityAriaLabel(affinity)"
+              tabindex="0"
               v-tip="affinityTip(affinity)"
             >
               <span class="cs-affinity-crest" aria-hidden="true">
@@ -497,6 +498,17 @@ export default defineComponent({
   border-left: 3px solid var(--ac);
   border-radius: 4px;
   background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 15%, #17150e), #141410 78%);
+}
+.cs-affinity:hover,
+.cs-affinity:focus-visible {
+  z-index: 1;
+  border-color: var(--ac);
+  background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 25%, #17150e), #141410 78%);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--ac) 30%, transparent);
+}
+.cs-affinity:focus-visible {
+  outline: 2px solid var(--ac);
+  outline-offset: 2px;
 }
 .cs-affinity-crest {
   width: 30px;
