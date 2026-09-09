@@ -1450,10 +1450,10 @@ export const STATS_TAB_GAUGE = {
   /** value font size per length bucket: 1–2 chars, 3, 4, 5+ — longer readouts
    *  (three-digit levels, roman "VIII") shrink so they never touch the ring */
   VALUE_FONT: [40, 32, 26, 21],
-  /** largest rendered ring diameter (px); below this the ring scales with the band */
-  MAX_PX: 132,
+  /** rendered ring diameter (px) in the journey command band */
+  MAX_PX: 54,
   /** compact ring diameter (px) on Full-HD-height viewports */
-  MAX_PX_COMPACT: 104,
+  MAX_PX_COMPACT: 46,
 } as const
 
 // ── Admin ─────────────────────────────────────────────────────────────────────

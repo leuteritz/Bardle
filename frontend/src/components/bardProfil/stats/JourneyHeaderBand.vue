@@ -6,9 +6,11 @@ import { formatCompactDuration, durationSegments, toRoman, universeLabel } from 
 import { formatNumber } from '@/config/ui/numberFormat'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import JourneyBuffStrip from './JourneyBuffStrip.vue'
 import { JOURNEY_AXIS_COLORS, STATS_TAB_GAUGE } from '@/config/constants'
 
-/** Kopfband der Übersicht: Spielzeit als Chronometer, Level / Galaxy / Universe als Ringe. */
+/** Kommandoband der Übersicht: Spielzeit, die drei Achsenringe, laufende und
+ *  dauerhafte Effekte — EINE Leiste, die Zonen nur durch Haarlinien getrennt. */
 const gameStore = useGameStore()
 const galaxyStore = useGalaxyStore()
 
@@ -89,7 +91,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 
 <template>
   <header class="jt-band">
-    <div class="jt-playtime" v-tip="`${playTimeCompact} spent in this universe`">
+    <div class="jt-seg jt-playtime" v-tip="`${playTimeCompact} spent in this universe`">
       <span v-ink-center class="jt-pt-lbl">Play Time</span>
       <div class="jt-pt-stack">
         <div class="jt-pt-readout">
@@ -112,96 +114,111 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
       </div>
     </div>
 
-    <div class="jt-gauges">
-      <div
-        v-for="g in journeyGauges"
-        :key="g.key"
-        class="jt-gauge"
-        :class="{ 'is-full': g.full }"
-        :style="{
-          '--gauge': g.color,
-          '--gauge-max': STATS_TAB_GAUGE.MAX_PX + 'px',
-          '--gauge-max-compact': STATS_TAB_GAUGE.MAX_PX_COMPACT + 'px',
-        }"
-        v-tip="g.tip"
-      >
-        <div class="jt-gauge-ring">
-          <svg
-            class="jt-gauge-svg"
-            :viewBox="`0 0 ${STATS_TAB_GAUGE.VIEW} ${STATS_TAB_GAUGE.VIEW}`"
-            aria-hidden="true"
+    <div
+      v-for="g in journeyGauges"
+      :key="g.key"
+      class="jt-seg jt-gauge"
+      :class="{ 'is-full': g.full }"
+      :style="{
+        '--gauge': g.color,
+        '--gauge-max': STATS_TAB_GAUGE.MAX_PX + 'px',
+        '--gauge-max-compact': STATS_TAB_GAUGE.MAX_PX_COMPACT + 'px',
+      }"
+      v-tip="g.tip"
+    >
+      <div class="jt-gauge-ring">
+        <svg
+          class="jt-gauge-svg"
+          :viewBox="`0 0 ${STATS_TAB_GAUGE.VIEW} ${STATS_TAB_GAUGE.VIEW}`"
+          aria-hidden="true"
+        >
+          <circle
+            class="jt-gauge-track"
+            :cx="STATS_TAB_GAUGE.VIEW / 2"
+            :cy="STATS_TAB_GAUGE.VIEW / 2"
+            :r="STATS_TAB_GAUGE.RADIUS"
+            :stroke-width="STATS_TAB_GAUGE.STROKE"
+          />
+          <circle
+            class="jt-gauge-arc"
+            :cx="STATS_TAB_GAUGE.VIEW / 2"
+            :cy="STATS_TAB_GAUGE.VIEW / 2"
+            :r="STATS_TAB_GAUGE.RADIUS"
+            :stroke-width="STATS_TAB_GAUGE.STROKE"
+            :stroke-dasharray="GAUGE_CIRCUMFERENCE"
+            :stroke-dashoffset="gaugeOffset(g.pct)"
+            :transform="`rotate(-90 ${STATS_TAB_GAUGE.VIEW / 2} ${STATS_TAB_GAUGE.VIEW / 2})`"
+          />
+          <text
+            class="jt-gauge-val"
+            :x="STATS_TAB_GAUGE.VIEW / 2"
+            :y="STATS_TAB_GAUGE.VIEW / 2"
+            :font-size="gaugeFont(g.value)"
+            text-anchor="middle"
+            dominant-baseline="central"
           >
-            <circle
-              class="jt-gauge-track"
-              :cx="STATS_TAB_GAUGE.VIEW / 2"
-              :cy="STATS_TAB_GAUGE.VIEW / 2"
-              :r="STATS_TAB_GAUGE.RADIUS"
-              :stroke-width="STATS_TAB_GAUGE.STROKE"
-            />
-            <circle
-              class="jt-gauge-arc"
-              :cx="STATS_TAB_GAUGE.VIEW / 2"
-              :cy="STATS_TAB_GAUGE.VIEW / 2"
-              :r="STATS_TAB_GAUGE.RADIUS"
-              :stroke-width="STATS_TAB_GAUGE.STROKE"
-              :stroke-dasharray="GAUGE_CIRCUMFERENCE"
-              :stroke-dashoffset="gaugeOffset(g.pct)"
-              :transform="`rotate(-90 ${STATS_TAB_GAUGE.VIEW / 2} ${STATS_TAB_GAUGE.VIEW / 2})`"
-            />
-            <text
-              class="jt-gauge-val"
-              :x="STATS_TAB_GAUGE.VIEW / 2"
-              :y="STATS_TAB_GAUGE.VIEW / 2"
-              :font-size="gaugeFont(g.value)"
-              text-anchor="middle"
-              dominant-baseline="central"
-            >
-              {{ g.value }}
-            </text>
-          </svg>
-        </div>
-        <div class="jt-gauge-text">
-          <span v-ink-center class="jt-gauge-lbl">{{ g.label }}</span>
-          <span v-ink-center class="jt-gauge-sub">
-            <Icon v-if="g.starIcon" class="jt-gauge-sub-ico" icon="ph:star-fill" width="12" height="12" />
-            {{ g.sub }}
-          </span>
-        </div>
+            {{ g.value }}
+          </text>
+        </svg>
       </div>
+      <div class="jt-gauge-text">
+        <span v-ink-center class="jt-gauge-lbl">{{ g.label }}</span>
+        <span v-ink-center class="jt-gauge-sub">
+          <Icon
+            v-if="g.starIcon"
+            class="jt-gauge-sub-ico"
+            icon="ph:star-fill"
+            width="11"
+            height="11"
+          />
+          {{ g.sub }}
+        </span>
+      </div>
+    </div>
+
+    <div class="jt-seg jt-seg--strip">
+      <JourneyBuffStrip />
     </div>
   </header>
 </template>
 
 <style scoped>
+/* EINE flache Leiste, keine sechs Kästen: die Zonen trennt eine Haarlinie, nicht
+   ein Rahmen. Jede Höhe hier fällt eins zu eins an die Sonnenbühne darunter. */
 .jt-band {
   display: grid;
-  grid-template-columns: minmax(300px, 0.88fr) repeat(3, minmax(180px, 1fr));
-  align-items: center;
-  gap: 14px;
+  grid-template-columns: auto auto auto auto minmax(0, 1fr);
+  align-items: stretch;
   min-width: 0;
-  padding: 16px 20px;
+  min-height: 82px;
+  background: #1a1008;
   border-bottom: 1px solid #2c1806;
+}
+
+.jt-seg {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 11px 18px;
+  border-right: 1px solid #2c1806;
+}
+.jt-seg--strip {
+  display: block;
+  border-right: 0;
 }
 
 /* ── Spielzeit ── */
 .jt-playtime {
-  display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 6px;
-  min-height: 104px;
-  padding: 12px 18px;
-  background: #1a1008;
-  border: 1px solid #2c1806;
+  gap: 4px;
   border-left: 3px solid #e8c040;
-  border-radius: 4px;
-  overflow: hidden;
   cursor: help;
 }
 
 .jt-pt-lbl {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -222,8 +239,8 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 0 8px;
+  gap: 1px;
+  padding: 0 7px;
 }
 .jt-pt-seg:first-child {
   padding-left: 0;
@@ -234,11 +251,11 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 
 .jt-pt-num {
   display: flex;
-  font-size: 44px;
+  font-size: 24px;
   font-weight: 900;
   line-height: 0.95;
   color: var(--rpg-gold);
-  text-shadow: 0 0 16px rgba(232, 192, 64, 0.3);
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.28);
 }
 
 .jt-pt-digit {
@@ -247,9 +264,9 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 }
 
 .jt-pt-unit {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #8a7a58;
 }
@@ -265,36 +282,35 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 .jt-pt-rule {
   width: 100%;
   height: 2px;
-  margin-top: 4px;
+  margin-top: 3px;
   background: linear-gradient(to right, #5c3310, #c89040, #e8c060, #d4a020, #c89040, #5c3310);
 }
 
 /* ── Ringe ── */
-.jt-gauges {
-  display: contents;
-  min-width: 0;
-}
-
 .jt-gauge {
-  display: flex;
-  align-items: center;
+  position: relative;
   justify-content: flex-start;
-  gap: 16px;
-  min-width: 0;
-  min-height: 104px;
-  padding: 12px 18px;
-  background: #1a1008;
-  border: 1px solid #2c1806;
-  border-radius: 4px;
+  gap: 11px;
   cursor: help;
 }
 .jt-gauge:hover {
-  border-color: color-mix(in srgb, var(--gauge) 45%, #241a0c);
+  background: color-mix(in srgb, var(--gauge) 7%, transparent);
+}
+
+/* Die Achsenfarbe unterstreicht ihre Zone — statisch, kein Rahmen. */
+.jt-gauge::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: color-mix(in srgb, var(--gauge) 32%, transparent);
 }
 
 .jt-gauge-ring {
   position: relative;
-  width: min(var(--gauge-max), 112px);
+  width: var(--gauge-max);
   aspect-ratio: 1;
   flex-shrink: 0;
 }
@@ -340,11 +356,12 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 .jt-gauge-text {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
+  min-width: 0;
 }
 
 .jt-gauge-lbl {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -356,7 +373,7 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1;
   color: var(--rpg-text-muted);
@@ -370,8 +387,8 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 }
 
 /* Ring geschlossen: die Einheit wartet auf den Spieler — nur die Deckkraft atmet */
-.jt-gauge.is-full {
-  border-color: color-mix(in srgb, var(--gauge) 50%, #241a0c);
+.jt-gauge.is-full::after {
+  background: var(--gauge);
 }
 .jt-gauge.is-full .jt-gauge-arc {
   animation: jt-gauge-pulse 2.4s ease-in-out infinite;
@@ -391,20 +408,34 @@ const journeyGauges = computed<JourneyGauge[]>(() => {
 
 @media (max-height: 1100px) {
   .jt-band {
-    padding: 12px 16px;
+    min-height: 70px;
+  }
+  .jt-seg {
+    padding: 8px 14px;
+  }
+  .jt-pt-lbl {
+    font-size: 9px;
   }
   .jt-pt-num {
-    font-size: 36px;
+    font-size: 20px;
+  }
+  .jt-pt-unit {
+    font-size: 8px;
   }
   .jt-pt-seg {
-    padding: 0 4px;
-  }
-  .jt-gauge-ring {
-    width: min(var(--gauge-max-compact), 92px);
+    padding: 0 5px;
   }
   .jt-gauge {
-    min-height: 88px;
-    padding: 8px 14px;
+    gap: 9px;
+  }
+  .jt-gauge-ring {
+    width: var(--gauge-max-compact);
+  }
+  .jt-gauge-lbl {
+    font-size: 10px;
+  }
+  .jt-gauge-sub {
+    font-size: 13px;
   }
 }
 

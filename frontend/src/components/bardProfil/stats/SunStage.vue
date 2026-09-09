@@ -19,7 +19,6 @@ import {
 import { useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
-import BuffsFooter from './BuffsFooter.vue'
 import { gameNow } from '@/utils/game/gameClock'
 
 /** Die Sonne auf der Journey-Übersicht — die EINZIGE Stelle, an der sie evolviert. */
@@ -304,10 +303,6 @@ function handleEvolve(): void {
       <!-- /TEMP -->
     </div>
 
-    <div class="se-effects">
-      <BuffsFooter />
-    </div>
-
     <!-- ═ 2 · who, and where on the road ════════════════════════ -->
     <div class="se-ident">
       <span class="se-ident-name">{{ phaseName }}</span>
@@ -438,7 +433,7 @@ function handleEvolve(): void {
   container-type: inline-size;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto auto auto auto;
+  grid-template-rows: minmax(0, 1fr) auto auto auto;
   /* eigene Eigenschaften NIE in cqw: das Container-Element misst gegen den Vorfahren */
   column-gap: 0;
   row-gap: 10px;
@@ -519,15 +514,9 @@ function handleEvolve(): void {
 /* ── 2 · identity and journey ────────────────────────────────────
    Name on the left in the phase's own colour, step count on the right. The
    name is the largest word on the panel — it is what the sun IS. */
-.se-effects {
-  grid-column: 1;
-  grid-row: 2;
-  min-width: 0;
-}
-
 .se-ident {
   grid-column: 1;
-  grid-row: 3;
+  grid-row: 2;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -561,7 +550,7 @@ function handleEvolve(): void {
    left), so the chain stays flush at any width without separate positioning. */
 .se-rail {
   grid-column: 1;
-  grid-row: 4;
+  grid-row: 3;
   display: flex;
   align-items: center;
 }
@@ -624,7 +613,7 @@ function handleEvolve(): void {
    state, so "ready" reads before a single number is read. */
 .se-deck {
   grid-column: 1;
-  grid-row: 5;
+  grid-row: 4;
   align-self: center;
   width: 100%;
   min-width: 0;
