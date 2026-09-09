@@ -89,7 +89,7 @@ const uiStore = useUiStore()
 const { announceReceipt } = useHerald()
 
 /**
- * Was der Zeiger berührt hat, ist gesehen — und der azurne „NEW"-Rahmen daran
+ * Was der Zeiger berührt hat, ist gesehen — und die pinke „NEW"-Marke daran
  * erledigt.
  *
  * EIN Wächter für BEIDE Spalten: `spotlightId` ist `listHoverId ?? treeHoverId`,

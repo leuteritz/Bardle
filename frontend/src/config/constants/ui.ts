@@ -1253,7 +1253,7 @@ export const BADGE_HERALD_COOLDOWN_MS = 90_000
  * Akzent (r,g,b) je Badge-Quelle für den `ready`-Herold.
  *
  * Dieselben Farben, die die Marken selbst tragen — violett/gold/pink/grün aus
- * den `.header-notif-badge--*`-Verläufen in `AppHeaderComponent.vue`, azurn aus
+ * den `.header-notif-badge--*`-Verläufen in `AppHeaderComponent.vue`, pink/cyan aus
  * `.bt--shop` bzw. `ShopReadyBadge.vue`. Der Herold erscheint in der Farbe der
  * Marke, die ihn ausgelöst hat, damit der Blick vom Banner zur Marke findet.
  */
@@ -1261,7 +1261,6 @@ export const BADGE_HERALD_ACCENT_EXPEDITION = '168, 85, 247'
 export const BADGE_HERALD_ACCENT_SUN = '240, 208, 96'
 export const BADGE_HERALD_ACCENT_SKILL = '236, 72, 153'
 export const BADGE_HERALD_ACCENT_PLANET = '52, 211, 153'
-export const BADGE_HERALD_ACCENT_SHOP = '96, 165, 250'
 
 /* Dasselbe für die zwei Marken ohne Herold. Champions ist cyan statt des Golds
    von HERALD_ACCENT_CHAMPION: gemeint ist `.header-notif-badge--champion`. */

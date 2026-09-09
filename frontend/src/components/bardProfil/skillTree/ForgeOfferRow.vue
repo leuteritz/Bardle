@@ -26,6 +26,7 @@
          die Uhr, die nur er hat. -->
     <ShopReadyBadge
       v-if="fresh && offer.kind !== 'bargain'"
+      tone="skill"
       class="fo-fresh-badge"
       :count="1"
       :title="FORGE_FRESH_TITLE"
@@ -36,7 +37,7 @@
          ihre Deckkraft (Performance-Regel 2/11) — dasselbe Rezept wie `.fut-halo`
          in der Upgrade-Zeile nebenan.
 
-         Sie hatte einen zweiten Anlass: „neu seit dem letzten Blick", in Azur.
+         Sie hatte einen zweiten Anlass: „neu seit dem letzten Blick", in Pink.
          Der ist gefallen — ein frisches Angebot sieht aus wie ein kaufbares, und
          was es auszeichnet, steht als Marke in seiner Ecke. -->
     <div v-if="offer.ready" class="fo-halo fo-halo--ready" aria-hidden="true" />

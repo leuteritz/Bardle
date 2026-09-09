@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Die azurne Marke „Star Forge ready" — EINE Quelle für alle Stellen, an denen
+ * Die Skill-Tree-Marke „Star Forge ready“ — EINE Quelle für alle Stellen, an denen
  * sie erscheint: die beiden Ecktasten im Header, die Reiter der Profil-Leiste
  * und im Skill-Tree-Reiter jeder einzelne Eintrag, der seit dem letzten Blick
  * bezahlbar geworden ist — Upgrade-Zeile, Baumknoten, Angebot.
@@ -16,14 +16,12 @@
  * zweimal ausgeschrieben (`.btn-gem-badge` im globalen Block von
  * `AppHeaderComponent.vue`, `.mini-badge--shopready` scoped in
  * `BardProfileMenu.vue`), die Schiene trug eine dritte, davon ABWEICHENDE Form
- * (grün, eckig, ohne Schein). Der Spieler folgt einem blauen Abzeichen vom
+ * (grün, eckig, ohne Schein). Der Spieler folgt einem pinken Abzeichen vom
  * Header in den Reiter — die Spur darf nicht genau dort abbrechen, wo sie ans
  * Ziel führt.
  *
- * **Der Farbkanon des Spiels entscheidet, welchen Ton sie trägt** — Violett ist
- * Expedition, Gold die Sonnen-Entwicklung, Smaragd die Planeten, Kupfer der
- * Codex. Zwei davon leben hier: Azur für die Star Forge, Cyan für den
- * Champion-Shop. Das ist der Grund für `tone` und nicht für eine zweite
+ * **Der Farbkanon des Spiels entscheidet, welchen Ton sie trägt** — Pink für den
+ * Skill Tree, Cyan für den Champion-Shop. Das ist der Grund für `tone` und nicht für eine zweite
  * Komponente — die Ecktasten links und rechts sind dieselbe Platte mit
  * demselben Drei-Variablen-Vertrag (`--sbadge-d/-top/-right`), sie melden nur
  * Verschiedenes. Eine zweite Form nähme dem Spieler die Spur, die er vom
@@ -55,9 +53,9 @@ withDefaults(
      */
     place?: 'corner' | 'inline'
     /** Welche Bereitschaft sie meldet — siehe den Farbkanon oben. */
-    tone?: 'forge' | 'champions'
+    tone?: 'skill' | 'champions'
   }>(),
-  { place: 'corner', tone: 'forge' },
+  { place: 'corner', tone: 'skill' },
 )
 </script>
 
@@ -141,12 +139,12 @@ withDefaults(
   opacity: 0;
 }
 
-/* Azur — die Star Forge. */
-.sbadge--forge {
-  --sb-a: #7cc0ff;
-  --sb-b: #2563eb;
-  --sb-glow-a: rgba(59, 130, 246, 0.9);
-  --sb-glow-b: rgba(37, 99, 235, 0.45);
+/* Pink — der Skill Tree. */
+.sbadge--skill {
+  --sb-a: #ec4899;
+  --sb-b: #be185d;
+  --sb-glow-a: rgba(236, 72, 153, 0.9);
+  --sb-glow-b: rgba(190, 24, 93, 0.45);
 }
 
 /* Cyan — der Champion-Shop. Dieselben Werte wie `.mini-badge--champion` in der

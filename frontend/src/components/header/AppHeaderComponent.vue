@@ -559,12 +559,13 @@ onUnmounted(() => {
             aria-hidden="true"
           />
           <span class="btn-gem-label">Tree</span>
-          <!-- Die azurne Forge-Marke sass einmal an der Ecktaste links; sie ist
+          <!-- Die pinke Skill-Tree-Marke sass einmal an der Ecktaste links; sie ist
                mit dem Sternbaum hierher gezogen. Ein `span`, kein zweiter
                Button — verschachtelte Buttons sind ungueltiges HTML, und die
                Platte darunter fuehrt bereits an ihr Ziel. -->
           <RpgBadgeTooltip clear-ancestor=".btn-gem" :accent="NOTIFY_BADGE_TIP_COLOR.shop">
             <ShopReadyBadge
+              tone="skill"
               :count="shopFreshCount"
               :flare="shopFlare"
               :label="`${shopFreshCount} new Star Forge purchases within reach`"

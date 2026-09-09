@@ -121,7 +121,7 @@ const wrapEl = ref<HTMLElement | null>(null)
 const hoverId = ref<string | null>(null)
 
 /**
- * Betreten heißt zugleich GESEHEN: der azurne Rahmen an dieser Zeile ist damit
+ * Betreten heißt zugleich GESEHEN: die pinke Marke an dieser Zeile ist damit
  * erledigt, und die Marke am Header zählt sie nicht mehr mit.
  */
 function enterRow(id: string): void {

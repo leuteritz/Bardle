@@ -461,6 +461,7 @@
                der Baum hat keinen Stapelknopf, der es sonst sagen würde. -->
           <ShopReadyBadge
             v-if="freshIds.has(node.id) && showCornerBadge(node)"
+            tone="skill"
             class="node-fresh-badge"
             :style="{ '--sbadge-d': freshBadgePx[node.sizeClass] }"
             :count="freshCountOf(node)"
@@ -3278,13 +3279,13 @@ const nextPhasePreviewStyle = computed(() => ({
   filter: grayscale(60%);
 }
 
-/* Freigeschaltet, nie gekauft. Hier stand ein azurner Rand mit Schein bei
+/* Freigeschaltet, nie gekauft. Hier stand ein pinker Rand mit Schein bei
    Deckkraft 0,85 — und das war der eigentliche Grund, warum der Baum beim
    Öffnen nicht zu lesen war: im frischen Spielstand ist `empty` die MEHRHEIT
    der Knoten, und die Mehrheit leuchtete lauter als das, was man kaufen kann.
    Hervorheben trägt nicht, solange die Gegenseite gleich laut bleibt.
 
-   Azur ist ausserdem die Farbe der NEU-Marke in der Ecke und darf nicht zweimal
+   Pink ist ausserdem die Farbe der NEU-Marke in der Ecke und darf nicht zweimal
    etwas bedeuten. Was ein leerer Knoten von einem angefangenen unterscheidet,
    sagt weiterhin der Stufen-Chip: `0/6` gegen `3/6`. */
 .node-circle--empty {
@@ -3393,7 +3394,7 @@ const nextPhasePreviewStyle = computed(() => ({
 
    „Kaufbar" bleibt trotzdem eindeutig: die Sättigung trägt es über alle
    fünfzehn Knotenfarben. Drei Zeichen standen hier einmal daneben und sind
-   gefallen — das grüne Blitz-Abzeichen, der azurne Rand der frischen Knoten und
+   gefallen — das grüne Blitz-Abzeichen, der pinke Rand der frischen Knoten und
    zuletzt der grüne Best-Buy-Ring. Die ersten beiden besetzten die Ecke, die
    jetzt der NEU-Marke gehört, und der Rand übermalte obendrein die Farbe, an
    der man den Knoten überhaupt erkennt.
@@ -3435,12 +3436,12 @@ const nextPhasePreviewStyle = computed(() => ({
   opacity: 0.72;
 }
 
-/* Hier atmete zuletzt der FRISCH aufgegangene Knoten, in Azur. Beides ist
+/* Hier atmete zuletzt der FRISCH aufgegangene Knoten, in Pink. Beides ist
    gefallen — die Atmung und die Farbe —, weil ein frischer Knoten kein eigenes
    Aussehen mehr hat: er sieht aus wie ein kaufbarer, und was ihn auszeichnet,
    steht als Marke in seiner Ecke (`ShopReadyBadge`).
    Der Grund stand im Bild: das Motiv eines Knotens ist seine Farbe — pink,
-   bernstein, grün —, und ein azurner Rand darum überschrieb genau die eine
+   bernstein, grün —, und ein pinker Rand darum überschrieb genau die eine
    Auskunft, an der man ihn im Netz wiedererkennt. Eine Zustandsmeldung darf
    nicht die Identität übermalen.
 

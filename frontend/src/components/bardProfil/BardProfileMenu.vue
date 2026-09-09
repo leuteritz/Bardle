@@ -470,7 +470,9 @@ onUnmounted(() => {
                       <span class="mini-badge mini-badge--skill">{{ skillBadgeCount }}</span>
                     </div>
                     <div v-if="item.id === 'tree' && shopFreshCount > 0" class="team-badge-row">
-                      <ShopReadyBadge place="inline"
+                      <ShopReadyBadge
+                        place="inline"
+                        tone="skill"
                         :count="shopFreshCount"
                         :flare="shopFlare"
                         :title="`${shopFreshCount} new Star Forge ${shopFreshCount === 1 ? 'purchase is' : 'purchases are'} within reach`"
@@ -643,7 +645,7 @@ onUnmounted(() => {
   border: 1.5px solid #38bdf8;
 }
 
-/* Azur fehlt in dieser Reihe: die Shop-Marke ist keine `.mini-badge` mehr,
+/* Pink fehlt in dieser Reihe: die Skill-Tree-Marke ist keine `.mini-badge` mehr,
    sondern `components/ui/ShopReadyBadge.vue` — dieselbe Komponente, die auch
    an der Ecktaste rechts und in der Schiene des Skill-Tree-Reiters hängt. Sie liegt als
    `place="inline"` in derselben `.team-badge-row` wie die Marken hier. */

@@ -2243,9 +2243,9 @@ export const FORGE_BUY_ALL_HERALD_NAME_CAP = 3
  * BEST-BUY-Marke, die auf den billigsten kaufbaren Eintrag zeigte, und die ist
  * gefallen: der Preis steht an jedem Eintrag und ordnet sich selbst.
  *
- * Azur ist die Farbe dazu, und zwar dieselbe, die den Spieler hergeführt hat —
+ * Pink ist die Farbe dazu, und zwar dieselbe, die den Spieler herführt —
  * `ShopReadyBadge` am Header und am Profil-Reiter, sowie der `ready`-Herold
- * (`BADGE_HERALD_ACCENT_SHOP`). Grün und Gold sind im Shop bereits mit „kaufbar"
+ * (`BADGE_HERALD_ACCENT_SKILL`). Grün und Gold sind im Shop bereits mit „kaufbar"
  * belegt (`.fut-row--ready`, `.fo-row--ready`).
  *
  * ── Hier stand einmal ein Wort ──────────────────────────────────────────────
@@ -2329,7 +2329,7 @@ export const FORGE_AFFORDABLE_TOTAL_ICON = 'ph:lightning-fill'
  * dessen, was noch eine Ziffer ist statt eines Flecks (Performance-Regel 7).
  *
  * 40 trennt `glimmer` (34) von `leaf` (46) — der einzige Rang, der herausfällt.
- * Er verliert dadurch nichts: der azurne RAND sagt „neu" auch ohne Marke.
+ * Er verliert dadurch nichts: die pinke MARKE sagt „neu" auch ohne Rand.
  * Gepinnt in `__tests__/config/forgeReqWreath.spec.ts` gegen `FORGE_NODE_DIAMETER`.
  */
 export const FORGE_CORNER_BADGE_MIN_DIAMETER = 40
@@ -2341,7 +2341,7 @@ export const FORGE_CORNER_BADGE_MIN_DIAMETER = 40
  * Am Knoten war jeder andere Kanal vergeben: vier Ecken (Schloss, Anheftung,
  * NEU-Marke, Stufen-Chip), der obere Bogen (Bedingungskranz), fünf Ringebenen
  * (Schein, Spotlight, Voraussetzung, Suchtreffer, Weg) und jede Farbe (Gold
- * heisst fertig, Grün/Rot Voraussetzung, Azur neu, Türkis gesucht). Frei war
+ * heisst fertig, Grün/Rot Voraussetzung, Pink neu, Türkis gesucht). Frei war
  * allein die FORM — alle hundertfünfundfünfzig Knoten und alle vierzehn
  * Fusions-Körper sind Kreise.
  *

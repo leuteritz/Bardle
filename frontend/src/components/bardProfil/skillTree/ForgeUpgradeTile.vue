@@ -66,6 +66,7 @@
          Marke nimmt keine Zeiger an (Regel unten). -->
     <ShopReadyBadge
       v-if="fresh"
+      tone="skill"
       class="fut-fresh-badge"
       :count="freshCount"
       :title="FORGE_FRESH_TITLE"
@@ -80,7 +81,7 @@
          Genau derselbe Sitz wie beim Quittungsblitz darüber.
 
          Sie hatte einmal zwei weitere Anlässe, und beide sind gefallen: „seit
-         dem letzten Blick bezahlbar" (Azur) ist zur Marke in der Ecke geworden,
+         dem letzten Blick bezahlbar" (Pink) ist zur Marke in der Ecke geworden,
          „das Günstigste, was gerade geht" (grün) ersatzlos. Übrig bleibt ein
          EREIGNIS — die Zeile ist eben hereingerollt —, und damit atmet in der
          ganzen Liste nichts mehr dauerhaft. -->
@@ -359,8 +360,8 @@ const props = withDefaults(
   defineProps<{
     entry: ForgeUpgradeEntry
     flashed: boolean
-    /** Seit dem letzten Blick des Spielers bezahlbar geworden — trägt den azurnen
-     *  Rahmen, bis der Zeiger die Zeile einmal berührt hat. */
+    /** Seit dem letzten Blick des Spielers bezahlbar geworden — trägt die pinke
+     *  Marke, bis der Zeiger die Zeile einmal berührt hat. */
     fresh: boolean
     /**
      * Wie viele Stufen Vorrat UND Lager gerade hergeben. Kommt von der Liste,
