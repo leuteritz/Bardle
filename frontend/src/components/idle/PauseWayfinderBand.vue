@@ -28,12 +28,8 @@ import {
   PAUSE_WAYFINDER_BAND_H,
   PAUSE_WAYFINDER_EMBLEM_PX,
   PAUSE_WAYFINDER_REWARD_W,
-  PAUSE_WAYFINDER_COUNT_CH,
   PAUSE_WAYFINDER_CHAPTER_BAR_H,
 } from '@/config/constants'
-
-/** Meilensteine, die während DIESER Pause gefallen sind. */
-const props = defineProps<{ milestones: number }>()
 
 const { face, flashing, chapters } = useMissionFace()
 const missionStore = useMissionStore()
@@ -91,7 +87,6 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
       '--wfb-h': `${PAUSE_WAYFINDER_BAND_H}px`,
       '--wfb-emblem': `${PAUSE_WAYFINDER_EMBLEM_PX}px`,
       '--wfb-reward-w': `${PAUSE_WAYFINDER_REWARD_W}px`,
-      '--wfb-count-ch': `${PAUSE_WAYFINDER_COUNT_CH}ch`,
       '--wfb-chapter-bar-h': `${PAUSE_WAYFINDER_CHAPTER_BAR_H}px`,
       '--wfb-accent': view.accent,
     }"
@@ -132,16 +127,6 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
       </div>
 
       <span class="wfb__walked">{{ walked }}</span>
-      <!-- Die Meilensteine dieser Pause stehen neben dem Gesamtweg, nicht in
-           der Kopfzeile der Bilanz: dieselbe Sorte Zahl, dieselbe Stelle. Bei
-           null bleibt die Marke stehen und dimmt nur ab. -->
-      <span
-        class="wfb__gained"
-        :class="{ 'wfb__gained--zero': props.milestones === 0 }"
-        title="Wayfinder milestones claimed during this pause"
-      >
-        +{{ props.milestones }}
-      </span>
     </div>
 
     <div class="wfb__body">
@@ -283,20 +268,6 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
   white-space: nowrap;
 }
 
-.wfb__gained {
-  flex-shrink: 0;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #7ad0be;
-  white-space: nowrap;
-}
-
-.wfb__gained--zero {
-  opacity: 0.3;
-}
-
 /* ── Körper ───────────────────────────────────────────── */
 /* Feste Höhe, der Inhalt richtet sich danach — nicht umgekehrt.
    `clip` statt `hidden`: ein Scrollport liesse sich verschieben. */
@@ -369,7 +340,7 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
 .wfb__meter {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
   height: 20px;
   width: 100%;
 }
@@ -394,11 +365,10 @@ const walked = computed(() => `${missionStore.claimedCount} / ${MISSION_COUNT}`)
   transition: transform 0.4s ease-out;
 }
 
-/* Die `ch`-Reservierung hält den Balken ruhig — `tabular-nums` tut es nicht:
-   MedievalSharp hat keine Tabellenziffern. */
+/* Der Balken endet direkt vor dem aktuellen Zähler. */
 .wfb__count {
   flex-shrink: 0;
-  width: var(--wfb-count-ch);
+  width: max-content;
   text-align: right;
   white-space: nowrap;
   font-size: 1.15rem;
