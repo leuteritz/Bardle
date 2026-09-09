@@ -848,7 +848,7 @@ export const FORGE_MIN_AIR_PX = 44
  * weg, wie er kann, und weil das ALLE tun, endet es dort, wo alle gleich weit
  * auseinander stehen. Ein Gas, kein Stapel.
  *
- * 65 ist der Wunsch, nicht das Ergebnis: das Gleichgewicht stellt sich bei
+ * 68 ist der Wunsch, nicht das Ergebnis: das Gleichgewicht stellt sich bei
  * einem Median von **55 px** ein (Minimum 44, p90 62, Variationskoeffizient
  * 0,13). Weiter kommt das Netz nicht, ohne dass die Kanten sich strecken —
  * gemessen, nicht vermutet: 600 statt 320 Runden ändern nichts, und ein
@@ -859,7 +859,7 @@ export const FORGE_MIN_AIR_PX = 44
  * Zum Vergleich der Stand davor: Median 22,0 px — der Anschlag selbst —
  * bei einem Variationskoeffizienten von 0,56.
  */
-export const FORGE_COMFORT_AIR_PX = 65
+export const FORGE_COMFORT_AIR_PX = 68
 
 /**
  * Luft zwischen ZWEI Fusions-Körpern — weniger als zwischen zwei Sitzen.
@@ -875,6 +875,21 @@ export const FORGE_COMFORT_AIR_PX = 65
  * mit.
  */
 export const FORGE_FUSION_AIR_PX = 24
+
+/** The Wandering's route uses a bead-like stroke so it reads as a separate road. */
+export const FORGE_MEEP_ROAD_DASH = '2 10'
+export const FORGE_MEEP_COST_BADGE_OFFSET_PX = 7
+export const FORGE_MEEP_COST_BADGE_ICON_PX = 12
+export const FORGE_MEEP_COST_BADGE = {
+  gapPx: 3,
+  minWidthPx: 28,
+  minHeightPx: 16,
+  paddingYPx: 2,
+  paddingXPx: 4,
+  borderPx: 1,
+  radiusPx: 4,
+  fontPx: 9,
+} as const
 /** Federstärke entlang einer Kante, Abstossung, und der Zug zurück in den
  *  eigenen Sektor. Der Zug ist der schwächste — er ordnet, er zwingt nicht. */
 export const FORGE_SPRING_K = 0.18

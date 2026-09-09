@@ -24,6 +24,14 @@
 
     <div class="tip-effect">{{ tip.effect }}</div>
 
+    <div v-if="tip.meepCost !== null" class="tip-block tip-meep-cost">
+      <img :src="FORGE_MEEP_IMAGE" alt="" class="tip-meep-cost-icon" />
+      <span>Meep cost</span>
+      <strong :class="{ 'tip-meep-cost--short': !tip.meepCost.ok }">
+        {{ formatNumber(tip.meepCost.amount) }}
+      </strong>
+    </div>
+
     <!-- Ein Knoten mit mehreren Vorgängern zeigt sie ALLE, einer mit genau
          einem zeigt ihn auch. Keine Überschrift darüber: das Schloss links sagt
          dasselbe ohne ein Wort. -->
@@ -77,12 +85,14 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { ForgeTipView } from '@/types'
 import {
+  FORGE_MEEP_IMAGE,
   FORGE_LOCK_ICON,
   FORGE_NODE_TIP_EDGE_PAD_PX,
   FORGE_REQ_MET_MARK,
   FORGE_REQ_OPEN_MARK,
   FORGE_TIP_WIDTH_PX,
 } from '@/config/constants'
+import { formatNumber } from '@/config/ui/numberFormat'
 
 const props = defineProps<{
   tip: ForgeTipView
@@ -157,6 +167,8 @@ watch(
     props.tip.chip,
     props.tip.ruleLabel,
     props.tip.effect,
+    props.tip.meepCost?.amount,
+    props.tip.meepCost?.ok,
     props.tip.reqs.length,
     props.tip.lockReason,
   ],

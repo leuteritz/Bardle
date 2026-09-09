@@ -1804,6 +1804,32 @@
   line-height: 1.5;
 }
 
+.tip-meep-cost {
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  color: rgba(232, 220, 192, 0.72);
+  font-size: 1.02em;
+  font-weight: 700;
+}
+
+.tip-meep-cost-icon {
+  width: 1.25em;
+  height: 1.25em;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.tip-meep-cost strong {
+  margin-left: auto;
+  color: #9fe062;
+  font-variant-numeric: tabular-nums;
+}
+
+.tip-meep-cost--short {
+  color: #cc6050 !important;
+}
+
 /* Grundfläche für alles, was BEDINGUNG ist statt Wirkung. */
 .tip-block {
   padding: 0.74em 0.91em;

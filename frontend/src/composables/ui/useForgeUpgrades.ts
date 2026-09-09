@@ -220,6 +220,7 @@ export function forgeNodeTipView(entry: ForgeUpgradeEntry): ForgeTipView {
     chip: entry.state === 'maxed' ? FORGE_TIP_MAX_LABEL : '',
     ruleLabel: forgeRuleLabel(entry.id),
     effect: forgeEffectText(entry),
+    meepCost: entry.meepCost > 0 ? { amount: entry.meepCost, ok: entry.meepOk } : null,
     reqs: entry.lockKind === 'parent' ? entry.reqs : [],
     lockReason: entry.lockReason,
   }
