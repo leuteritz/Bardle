@@ -7,6 +7,7 @@ import { useRoleBehaviorStore } from '@/stores/battle/roleBehaviorStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useRoleAbilityStates } from '@/composables/battle/useRoleAbilityStates'
 import { championInForeground } from '@/utils/orbit/foregroundGate'
+import { useChampionLevelStore } from '@/stores/champions/championLevelStore'
 import {
   ROLES,
   COMMAND_PANEL_ART_SIZE,
@@ -17,10 +18,12 @@ import {
 } from '@/config/constants'
 import type { ChampionRole } from '@/types'
 import { gameNow } from '@/utils/game/gameClock'
+import ChampionLevelFrame from '@/components/ui/ChampionLevelFrame.vue'
 
 const battleStore = useBattleStore()
 const roleBehaviorStore = useRoleBehaviorStore()
 const uiStore = useUiStore()
+const championLevelStore = useChampionLevelStore()
 const { headerSlots } = storeToRefs(battleStore)
 const { roleAbilities } = useRoleAbilityStates()
 
@@ -53,6 +56,10 @@ function downSecsLeft(i: number): number {
 /** Restanteil der Revive-Dauer (1 → 0) für den abschmelzenden Ring. */
 function downProgress(i: number): number {
   return Math.min(1, downMsLeft(i) / CHAMPION_REVIVE_MS)
+}
+
+function championLevel(slot: string | null): number {
+  return slot ? championLevelStore.progress[slot]?.level ?? 1 : 1
 }
 
 // Spiegel der Team-Tab-Auswahl: solange der Tab offen ist und dort das
@@ -135,6 +142,11 @@ function onSlotLeave() {
 
       <!-- portrait body -->
       <div class="champ-card-body">
+        <ChampionLevelFrame
+          v-if="slot"
+          :level="championLevel(slot)"
+          :color="ROLES[i].color"
+        />
         <img
           v-if="slot"
           :src="battleStore.getChampionImage(slot, { size: COMMAND_PANEL_ART_SIZE })"
