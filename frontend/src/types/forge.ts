@@ -675,6 +675,8 @@ export interface ForgeTipView {
    */
   ruleLabel: string
   effect: string
+  /** The Wandering is the only tree region with a Meep price. */
+  meepCost: { amount: number; ok: boolean } | null
   /** Leer heißt: eine Bedingungsliste ist hier nicht die Antwort. */
   reqs: ForgeOfferReq[]
   /** Ein Satz statt einer Liste — Phase, Prestige-Tor, Gleichwuchs-Deckel. */

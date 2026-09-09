@@ -123,6 +123,22 @@
               :d="limb.d" :stroke-width="limbWidth(limb)" :stroke="limb.tint"
             />
           </g>
+
+          <g
+            class="road-limbs"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            fill="none"
+            :stroke-dasharray="FORGE_MEEP_ROAD_DASH"
+          >
+            <path
+              v-for="limb in roadLimbs"
+              :key="limb.key + '-road'"
+              :d="limb.d"
+              :stroke-width="limbWidth(limb)"
+              :stroke="limb.tint"
+            />
+          </g>
         </g>
 
         <!-- Die BEDINGUNGEN des GEZEIGTEN Knotens, gestrichelt und in der Farbe
@@ -490,6 +506,20 @@
           <span v-if="pinnedId === node.id" class="node-pin-badge" aria-hidden="true">
             <Icon :icon="FORGE_PIN_ICON" width="100%" height="100%" />
           </span>
+
+          <span
+            v-if="node.tier === 'meep'"
+            class="meep-cost-badge"
+            :class="{
+              'meep-cost-badge--short': !entryOf(node).meepOk,
+              'meep-cost-badge--bought': entryOf(node).state === 'maxed',
+            }"
+            :style="{ '--meep-c': node.color }"
+            aria-hidden="true"
+          >
+            <img :src="FORGE_MEEP_IMAGE" alt="" />
+            <span>{{ entryOf(node).meepCost }}</span>
+          </span>
         </div>
 
         <!-- Die Karte am Knoten. Sie hängt am Hover DIESER Spalte, nicht am
@@ -608,6 +638,11 @@ import {
   FORGE_ICON_SIZE_CROWN,
   FORGE_ICON_SIZE_BOUGH,
   FORGE_ICON_SIZE_MEEP,
+  FORGE_MEEP_IMAGE,
+  FORGE_MEEP_ROAD_DASH,
+  FORGE_MEEP_COST_BADGE_OFFSET_PX,
+  FORGE_MEEP_COST_BADGE_ICON_PX,
+  FORGE_MEEP_COST_BADGE,
   FORGE_SEAL_ICON_SIZE,
   FORGE_SEAL_INSET_PX,
   FORGE_SEAL_BORDER_PX,
@@ -1044,11 +1079,14 @@ const openLimbs = computed<DrawnLimb[]>(() => {
   for (const bridge of bridgeLimbs.value) {
     if (isOpen(bridge.targetId)) out.push({ ...bridge, tint: bridge.accent })
   }
-  // Die Strasse steht immer. Sie ist der Weg selbst — was auf ihm schon
-  // gegangen ist, sagt der Knoten, nicht die Linie.
-  for (const path of pathLimbs.value) out.push({ ...path, tint: path.color })
+  // The road is rendered separately so its price path has its own visual weight.
   return out
 })
+
+/** The Meep road stays visible, but its dotted stroke keeps it distinct from Forge structure. */
+const roadLimbs = computed<DrawnLimb[]>(() =>
+  pathLimbs.value.map((path) => ({ ...path, tint: path.color })),
+)
 
 /** Der Boden verhindert, dass die feinste Kante beim Herauszoomen verschwindet. */
 function limbWidth(limb: Limb): number {
@@ -2488,6 +2526,15 @@ const compassStyle = computed(() => {
  *  (`panDurationMs`), nicht als Custom Property am Komponentenrahmen. */
 const ringInset = `${-FORGE_SPOTLIGHT_RING_INSET_PX}px`
 const trailInset = `${-FORGE_TRAIL_RING_INSET_PX}px`
+const meepCostBadgeOffset = `${FORGE_MEEP_COST_BADGE_OFFSET_PX}px`
+const meepCostBadgeIcon = `${FORGE_MEEP_COST_BADGE_ICON_PX}px`
+const meepCostBadgeGap = `${FORGE_MEEP_COST_BADGE.gapPx}px`
+const meepCostBadgeMinWidth = `${FORGE_MEEP_COST_BADGE.minWidthPx}px`
+const meepCostBadgeMinHeight = `${FORGE_MEEP_COST_BADGE.minHeightPx}px`
+const meepCostBadgePadding = `${FORGE_MEEP_COST_BADGE.paddingYPx}px ${FORGE_MEEP_COST_BADGE.paddingXPx}px`
+const meepCostBadgeBorder = `${FORGE_MEEP_COST_BADGE.borderPx}px`
+const meepCostBadgeRadius = `${FORGE_MEEP_COST_BADGE.radiusPx}px`
+const meepCostBadgeFont = `${FORGE_MEEP_COST_BADGE.fontPx}px`
 const trailOpacity = String(FORGE_TRAIL_DIM_OPACITY)
 const trailWaveMs = `${FORGE_TRAIL_WAVE_MS}ms`
 const compassIconPx = FORGE_SPOTLIGHT_COMPASS_ICON_PX
@@ -2732,6 +2779,10 @@ const nextPhasePreviewStyle = computed(() => ({
    die Fäden dazwischen. */
 .limb-open {
   opacity: 0.75;
+}
+
+.road-limbs {
+  opacity: 0.72;
 }
 
 /* Das Kantenfeld tritt zurück, sobald auf einen Knoten gezeigt wird — EIN Wert
@@ -3033,6 +3084,47 @@ const nextPhasePreviewStyle = computed(() => ({
   width: v-bind("nodePx.crown");
   height: v-bind("nodePx.crown");
   border: 3px solid #6a5020;
+}
+
+.meep-cost-badge {
+  position: absolute;
+  top: 50%;
+  right: auto;
+  left: calc(100% + v-bind(meepCostBadgeOffset));
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: v-bind(meepCostBadgeGap);
+  min-width: v-bind(meepCostBadgeMinWidth);
+  min-height: v-bind(meepCostBadgeMinHeight);
+  padding: v-bind(meepCostBadgePadding);
+  border: v-bind(meepCostBadgeBorder) solid var(--meep-c, #9fe062);
+  border-radius: v-bind(meepCostBadgeRadius);
+  background: #111008;
+  color: #e8c040;
+  font-size: v-bind(meepCostBadgeFont);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.meep-cost-badge img {
+  width: v-bind(meepCostBadgeIcon);
+  height: v-bind(meepCostBadgeIcon);
+  object-fit: contain;
+}
+
+.meep-cost-badge--short {
+  border-color: #cc6050;
+  color: #cc6050;
+}
+
+.meep-cost-badge--bought {
+  border-color: #52b830;
+  color: #9fe062;
 }
 
 /* ══════════════════════════════════════════════════

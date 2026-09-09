@@ -519,6 +519,7 @@ export function forgeFusionTipView(offer: ForgeOffer, forged: boolean): ForgeTip
     chip: forged ? FORGE_VAULT_FUSED_BADGE : '',
     ruleLabel: forgeRuleLabel(offer.id),
     effect: offer.desc,
+    meepCost: null,
     reqs: open ? offer.reqs : [],
     lockReason: '',
   }
