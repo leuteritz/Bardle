@@ -4,17 +4,23 @@ import StatsColumnHeader from './StatsColumnHeader.vue'
 import StatCategoryRail from './StatCategoryRail.vue'
 import StatCategoryFlow from './StatCategoryFlow.vue'
 import { useStatCatalog } from '@/composables/ui/useStatCatalog'
-import type { StatCategoryId } from '@/types'
+import { useTotalBonusChips } from '@/composables/ui/useTotalBonusChips'
+import type { JourneyStatsAnchorId, StatCategoryId } from '@/types'
 
 /** Stats: der ganze Katalog auf einmal — Kategorienleiste links, Bänder rechts. */
 const props = defineProps<{ focusCategory: StatCategoryId | null }>()
 
 const search = ref('')
 const scroller = ref<HTMLElement | null>(null)
-const activeId = ref<StatCategoryId | null>(null)
+const activeId = ref<JourneyStatsAnchorId | null>(null)
 
 const { categories, totalStatCount, matchCount } = useStatCatalog(search)
+const { chips: bonusChips } = useTotalBonusChips()
 const searching = computed(() => search.value.trim().length > 0)
+
+/* Das Bonus-Band steht nur, wenn es etwas zu zeigen gibt — und nie neben einer
+   Trefferliste: die Boni stehen nicht im Katalog, ein Trefferzähler wäre gelogen. */
+const showBonus = computed(() => !searching.value && bonusChips.value.length > 0)
 
 /* Die Marken sind ≤ 15 Knoten; einmal eingesammelt, statt sie je Rollbild neu
    aus 300 Kacheln zu suchen. */
@@ -30,7 +36,7 @@ function syncActive(): void {
   const el = scroller.value
   if (!el) return
   const line = el.scrollTop + 12
-  let id: StatCategoryId | null = null
+  let id: JourneyStatsAnchorId | null = null
   let best = -1
   for (const mark of marks) {
     // In der Trefferansicht liegen mehrere Marken in DERSELBEN Zeile — von
@@ -38,10 +44,10 @@ function syncActive(): void {
     if (mark.offsetTop > line) break
     if (mark.offsetTop > best) {
       best = mark.offsetTop
-      id = mark.dataset.cat as StatCategoryId
+      id = mark.dataset.cat as JourneyStatsAnchorId
     }
   }
-  activeId.value = id ?? ((marks[0]?.dataset.cat as StatCategoryId) ?? null)
+  activeId.value = id ?? ((marks[0]?.dataset.cat as JourneyStatsAnchorId) ?? null)
 }
 
 function onScroll(): void {
@@ -53,7 +59,7 @@ function onScroll(): void {
 }
 
 // den eigenen Container rollen, nie scrollIntoView (das Modal ist teils außerhalb)
-function goTo(id: StatCategoryId): void {
+function goTo(id: JourneyStatsAnchorId): void {
   const el = scroller.value
   const target = el?.querySelector<HTMLElement>(`[data-cat="${id}"]`)
   if (el && target) el.scrollTop = target.offsetTop - 6
@@ -74,8 +80,9 @@ watch(
   },
 )
 
-// Nur die Suche verändert, welche Marken es gibt — der Sekundentakt tut es nicht.
-watch(search, async () => {
+// Marken ändern sich nur mit der Suche und mit dem Erscheinen des Bonus-Bandes —
+// der Sekundentakt tut es nicht.
+watch([search, showBonus], async () => {
   await nextTick()
   collectMarks()
 })
@@ -106,10 +113,16 @@ onBeforeUnmount(() => {
         :categories="categories"
         :active-id="activeId"
         :searching="searching"
+        :show-bonus="showBonus"
+        :bonus-count="bonusChips.length"
         @pick="goTo"
       />
       <div ref="scroller" class="st-flow rpg-scrollbar" @scroll.passive="onScroll">
-        <StatCategoryFlow :categories="categories" :query="search" />
+        <StatCategoryFlow
+          :categories="categories"
+          :query="search"
+          :bonus-chips="showBonus ? bonusChips : []"
+        />
       </div>
     </div>
   </div>

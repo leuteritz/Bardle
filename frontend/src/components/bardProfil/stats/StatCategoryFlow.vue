@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import { JOURNEY_TOTAL_BONUS_BAND } from '@/config/constants'
+import type { TotalBonusChip } from '@/composables/ui/useTotalBonusChips'
 import type { StatCategoryView, StatEntry } from '@/types'
 
 const props = defineProps<{
   categories: StatCategoryView[]
   /** Free-text filter coming from the panel header search box. */
   query: string
+  /** Leer = kein Bonus-Band; der Aufrufer entscheidet, wann es steht. */
+  bonusChips: TotalBonusChip[]
 }>()
+
+const BONUS = JOURNEY_TOTAL_BONUS_BAND
 
 const searching = computed(() => props.query.trim().length > 0)
 const hitCategories = computed(() => props.categories.filter((c) => c.stats.length > 0))
@@ -56,6 +62,29 @@ function ordered(cat: StatCategoryView): StatEntry[] {
   </div>
 
   <template v-else>
+    <!-- Die dauerhaften Boni stehen vor dem Katalog: sie gelten für alles darunter. -->
+    <section
+      v-if="bonusChips.length > 0"
+      class="st-band"
+      :data-cat="BONUS.id"
+      :style="{ '--accent': BONUS.accent }"
+    >
+      <header class="st-band-head">
+        <Icon :icon="BONUS.icon" class="st-band-ico" width="26" height="26" aria-hidden="true" />
+        <span class="st-band-name" v-tip="BONUS.blurb">{{ BONUS.label }}</span>
+        <span v-ink-center class="st-band-count">{{ bonusChips.length }}</span>
+        <span class="st-band-rule" aria-hidden="true" />
+      </header>
+
+      <div class="st-grid">
+        <div v-for="chip in bonusChips" :key="chip.key" class="st-cell st-cell--bonus">
+          <Icon :icon="chip.icon" class="st-bonus-ico" width="20" height="20" aria-hidden="true" />
+          <span class="st-cell-val" :class="chip.positive ? 'is-up' : 'is-down'">{{ chip.value }}</span>
+          <span class="st-cell-lbl">{{ chip.label }}</span>
+        </div>
+      </div>
+    </section>
+
     <section
       v-for="cat in categories"
       :key="cat.id"
@@ -208,6 +237,24 @@ function ordered(cat: StatCategoryView): StatEntry[] {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Bonus-Kachel: dieselbe Fläche, dazu das Glyph des Modifikators oben rechts. */
+.st-cell--bonus {
+  position: relative;
+  padding-right: 34px;
+}
+.st-bonus-ico {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  color: color-mix(in srgb, var(--accent) 60%, #6a5a3a);
+}
+.st-cell-val.is-up {
+  color: var(--rpg-gold);
+}
+.st-cell-val.is-down {
+  color: #52b830;
 }
 
 /* Herkunftsmarke — nur in der Trefferansicht, wo die Bandköpfe fehlen */

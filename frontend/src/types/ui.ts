@@ -79,6 +79,9 @@ export type StatCategoryId =
   | 'materials'
   | 'buffs'
 
+/** Sprungziel auf der Stats-Seite — die 15 Kategorien plus das Bonus-Band. */
+export type JourneyStatsAnchorId = StatCategoryId | 'totalBonus'
+
 /** Static metadata of a stat category (config/ui/statCategories.ts). */
 export interface StatCategoryDef {
   id: StatCategoryId

@@ -1392,8 +1392,18 @@ export const JOURNEY_KPI_TILES: readonly {
     short: 'Win / Loss',
     icon: BATTLE_STAT_GAME_ICONS.winLoss,
   },
-  { category: 'galaxy', key: 'stars-rescued', short: 'Stars Rescued', icon: 'game-icons:star-swirl' },
-  { category: 'expeditions', key: 'succeeded', short: 'Voyages Won', icon: 'game-icons:rocket-flight' },
+  {
+    category: 'galaxy',
+    key: 'stars-rescued',
+    short: 'Stars Rescued',
+    icon: 'game-icons:star-swirl',
+  },
+  {
+    category: 'expeditions',
+    key: 'succeeded',
+    short: 'Voyages Won',
+    icon: 'game-icons:rocket-flight',
+  },
   { category: 'progression', key: 'total-power', short: 'Power', icon: 'game-icons:muscle-up' },
   { category: 'starForge', key: 'relics', icon: 'game-icons:crystal-cluster' },
   { category: 'meepTree', key: 'nodes', icon: 'game-icons:tree-growth' },
@@ -1421,6 +1431,17 @@ export const JOURNEY_OVERVIEW_KPI_HERO_COUNT = 3
 export const JOURNEY_KPI_GRID = {
   COLS: 3,
   ROWS: 4,
+} as const
+
+/** Das Bonus-Band am Kopf der Stats-Seite: keine Katalogkategorie, aber dieselbe
+ *  Gestalt. Grün ist im Projekt die Farbe für „in Kraft"; Gold stünde in derselben
+ *  Leiste ein zweites Mal neben `progression`. */
+export const JOURNEY_TOTAL_BONUS_BAND = {
+  id: 'totalBonus',
+  label: 'Total Bonus',
+  blurb: 'Every permanent modifier currently in effect',
+  icon: 'game-icons:upgrade',
+  accent: '#6ec040',
 } as const
 
 /** Die drei Fortschrittsachsen Level / Galaxy / Universe tragen überall

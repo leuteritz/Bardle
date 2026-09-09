@@ -1,20 +1,40 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import type { StatCategoryId, StatCategoryView } from '@/types'
+import { JOURNEY_TOTAL_BONUS_BAND } from '@/config/constants'
+import type { JourneyStatsAnchorId, StatCategoryView } from '@/types'
 
 /** Die 15 Kategorien als stehende Leiste — reine Anzeige, der Aufrufer rollt. */
 defineProps<{
   categories: StatCategoryView[]
-  activeId: StatCategoryId | null
+  activeId: JourneyStatsAnchorId | null
   /** Bei aktiver Suche zeigen die Zähler Treffer, leere Kategorien sind stumm. */
   searching: boolean
+  /** Das Bonus-Band steht nicht immer — sein Eintrag deshalb auch nicht. */
+  showBonus: boolean
+  bonusCount: number
 }>()
 
-const emit = defineEmits<{ pick: [id: StatCategoryId] }>()
+const emit = defineEmits<{ pick: [id: JourneyStatsAnchorId] }>()
+
+const BONUS = JOURNEY_TOTAL_BONUS_BAND
 </script>
 
 <template>
   <nav class="st-rail rpg-scrollbar" aria-label="Stat categories">
+    <button
+      v-if="showBonus"
+      class="st-rail-row st-rail-row--bonus"
+      :class="{ 'is-active': activeId === BONUS.id }"
+      :style="{ '--accent': BONUS.accent }"
+      type="button"
+      v-tip="BONUS.blurb"
+      @click="emit('pick', BONUS.id)"
+    >
+      <Icon :icon="BONUS.icon" class="st-rail-ico" width="20" height="20" aria-hidden="true" />
+      <span class="st-rail-name">{{ BONUS.label }}</span>
+      <span v-ink-center class="st-rail-count">{{ bonusCount }}</span>
+    </button>
+
     <button
       v-for="cat in categories"
       :key="cat.id"
@@ -112,6 +132,13 @@ const emit = defineEmits<{ pick: [id: StatCategoryId] }>()
 }
 .st-rail-row.is-active .st-rail-count {
   color: #e8e4d8;
+}
+
+/* Der Bonus-Eintrag gehört nicht zum Katalog — die Linie sagt das. */
+.st-rail-row--bonus {
+  margin-bottom: 6px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid #2c1806;
 }
 
 .st-rail-row.is-empty {
