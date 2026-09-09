@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useItemStore } from '@/stores/economy/itemStore'
 import { useUiStore } from '@/stores/core/uiStore'
@@ -737,8 +738,8 @@ onUnmounted(() => {
           v-tip="`${role.label} details`"
           @click="handleRoleRailClick(index)"
         >
-          <Icon :icon="role.icon" width="18" height="18" aria-hidden="true" />
-          <strong>{{ role.short }}</strong>
+          <Icon :icon="role.icon" class="trr-icon" width="18" height="18" aria-hidden="true" />
+          <strong class="trr-word">{{ role.short }}</strong>
         </button>
       </nav>
     </div>
@@ -796,36 +797,64 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 6px 2px;
+  gap: clamp(8px, 1.1vh, 16px);
+  padding: 10px 2px;
   border: 0;
-  border-left: 3px solid var(--role-color);
+  border-left: 3px solid color-mix(in srgb, var(--role-color) 55%, #241a0c);
   border-bottom: 1px solid #493116;
   background: #141410;
-  color: var(--role-color);
+  color: color-mix(in srgb, var(--role-color) 62%, #cdbb96);
   cursor: pointer;
   transition:
-    background-color 0.12s ease,
-    color 0.12s ease;
+    background-color 0.14s ease,
+    border-left-color 0.14s ease,
+    color 0.14s ease;
 }
 .team-role-rail-button:last-child {
   border-bottom: 0;
 }
-.team-role-rail-button:hover,
+/* Hover und aktiv sind ZWEI Zustände: geteilt verschwand die offene Rolle,
+   sobald der Zeiger auf einem Nachbarn stand. */
+.team-role-rail-button:hover {
+  background: color-mix(in srgb, var(--role-color) 14%, #141410);
+  border-left-color: var(--role-color);
+  color: color-mix(in srgb, var(--role-color) 85%, #f0e6d0);
+}
 .team-role-rail-button--active {
-  background: var(--role-color);
-  color: #111008;
-  box-shadow: inset 0 0 0 2px #111008;
+  background: color-mix(in srgb, var(--role-color) 26%, #12100a);
+  border-left-color: var(--role-color);
+  /* Inset statt breiterer Border — sonst schrumpft die Innenbreite und das Wort
+     springt beim Wechsel um 2px. */
+  box-shadow: inset 2px 0 0 var(--role-color);
+  color: #f4ecd8;
 }
 .team-role-rail-button:focus-visible {
   outline: 2px solid var(--role-color);
   outline-offset: -2px;
 }
-.team-role-rail-button strong {
-  font-size: 10px;
+.trr-icon {
+  width: clamp(19px, 1.9vh, 26px);
+  height: clamp(19px, 1.9vh, 26px);
+  opacity: 0.75;
+  transition: opacity 0.14s ease;
+}
+.team-role-rail-button:hover .trr-icon,
+.team-role-rail-button--active .trr-icon {
+  opacity: 1;
+}
+/* Gekippt statt geschrumpft: das Segment ist bis 380px hoch, aber nur 37px
+   breit nutzbar. Eigenständig gegenüber `.sr-handle-word` — das ist der EINE
+   Fold-Griff mit EINEM Wort, dies eine Fünf-Wege-Navigation je Rollenfarbe. */
+.trr-word {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  font-size: clamp(15px, 1.55vh, 20px);
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.26em;
   line-height: 1;
+  white-space: nowrap;
+  text-indent: 0.13em; /* halber Nachlauf des letzten Zeichens */
 }
 .team-rail-slide {
   position: absolute;
