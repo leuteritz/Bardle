@@ -4,6 +4,9 @@ import { Icon } from '@iconify/vue'
 import { formatCompactDuration } from '@/utils/ui/format'
 import { useSolarUpgradeStore, type SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 import { useHerald } from '@/composables/ui/useHerald'
+import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
+import { useForgeDetailsPane } from '@/composables/ui/useForgeDetailsPane'
+import { useUiStore } from '@/stores/core/uiStore'
 import {
   STAR_PHASE_DATA,
   STAR_PHASE_FINAL_INDEX,
@@ -19,6 +22,9 @@ import { gameNow } from '@/utils/game/gameClock'
 /** Die Sonne auf der Journey-Übersicht — die EINZIGE Stelle, an der sie evolviert. */
 const solarStore = useSolarUpgradeStore()
 const { announceReceipt } = useHerald()
+const uiStore = useUiStore()
+const { focusNode } = useForgeSpotlight()
+const { openDetails } = useForgeDetailsPane()
 
 const totalPhases = STAR_PHASE_DATA.length
 const isComet = computed(() => solarStore.isCometState)
@@ -154,25 +160,46 @@ const dwellPct = computed(() =>
 )
 
 /* ── Gate two: the five core rays ─────────────────────────────────
-   A tile each, carrying the ray's own glyph and its level against the level
-   this evolution demands. The count alone ("3/5") never said WHICH one. */
+   A tile each, carrying the ray's own glyph, its own colour and its level
+   against the level this evolution demands. The count alone ("3/5") never said
+   WHICH one — and the tile is the way to it, not just a readout. */
 const requiredRayLevel = computed(() => (isComet.value ? 1 : solarStore.starPhase + 1))
 
 const rayTiles = computed(() =>
   SOLAR_BRANCHES.map((b) => {
     const level = solarStore.branchLevel(b.id as SolarBranchId)
+    const need = requiredRayLevel.value
     return {
       id: b.id,
       name: b.name,
       icon: b.icon,
       color: b.color,
       level,
-      met: level >= requiredRayLevel.value,
+      met: level >= need,
+      fillPct: need <= 0 ? 100 : Math.min(1, level / need) * 100,
+      tip: `${b.name} · ${b.statLabel} — Lv ${level} of ${need} · Open in Skill Tree`,
     }
   }),
 )
 const raysMet = computed(() => rayTiles.value.filter((r) => r.met).length)
 const raysAllMet = computed(() => raysMet.value >= SOLAR_BRANCHES.length)
+
+/** Von der Anforderung zu ihrer Behebung — die Kachel IST der Weg dorthin. */
+function openRay(id: string): void {
+  uiStore.setBardTab('tree')
+  openDetails()
+  focusNode(id, { readable: true })
+}
+
+const raysHeadTip = computed(() =>
+  raysAllMet.value
+    ? 'Open the core rays in the Skill Tree'
+    : 'Open the first missing ray in the Skill Tree',
+)
+
+function openFirstMissingRay(): void {
+  openRay(rayTiles.value.find((r) => !r.met)?.id ?? rayTiles.value[0].id)
+}
 
 /* ── The act ──────────────────────────────────────────────────────
    This panel is the ONLY place the sun evolves, and the BODY is the button —
@@ -325,7 +352,14 @@ function handleSunKey(e: KeyboardEvent): void {
         </article>
 
         <article class="se-gate se-gate--rays" :class="{ 'is-met': raysAllMet }">
-          <div class="se-gate-head">
+          <!-- Kopf und Kacheln sind Geschwister, keine Schachtel: zwei Knöpfe
+               ineinander sind kein gültiges Markup. -->
+          <button
+            class="se-gate-head se-gate-head--act"
+            type="button"
+            v-tip="raysHeadTip"
+            @click="openFirstMissingRay"
+          >
             <Icon
               icon="game-icons:solar-power"
               class="se-gate-ico"
@@ -339,21 +373,55 @@ function handleSunKey(e: KeyboardEvent): void {
                 >{{ raysMet }}/{{ SOLAR_BRANCHES.length }} rays · Lv {{ requiredRayLevel }}</span
               >
             </span>
-          </div>
+            <span class="se-gate-go" aria-hidden="true">→</span>
+          </button>
+
           <div class="se-rays">
-            <div
+            <button
               v-for="ray in rayTiles"
               :key="ray.id"
               class="se-ray"
-              :class="{ 'is-met': ray.met }"
+              :class="{ 'is-met': ray.met, 'is-lit': ray.level > 0 }"
               :style="{ '--ray': ray.color }"
-              v-tip="`${ray.name} — Lv ${ray.level} of ${requiredRayLevel} needed`"
+              type="button"
+              v-tip="ray.tip"
+              @click="openRay(ray.id)"
             >
-              <Icon :icon="ray.icon" class="se-ray-ico" width="28" height="28" aria-hidden="true" />
+              <span class="se-ray-disc">
+                <!-- Füllstand über `stroke-dashoffset`, nie conic-gradient; der
+                     Kreis ist per pathLength auf 100 normiert (Muster:
+                     SunPhaseIndicator), damit kein Umfang gerechnet wird. -->
+                <svg class="se-ray-svg" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle class="se-ray-track" cx="12" cy="12" r="10" pathLength="100" />
+                  <circle
+                    class="se-ray-fill"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    pathLength="100"
+                    :stroke-dashoffset="100 - ray.fillPct"
+                  />
+                </svg>
+                <Icon
+                  :icon="ray.icon"
+                  class="se-ray-ico"
+                  width="28"
+                  height="28"
+                  aria-hidden="true"
+                />
+                <Icon
+                  v-if="ray.met"
+                  icon="lucide:check"
+                  class="se-ray-check"
+                  width="14"
+                  height="14"
+                  aria-hidden="true"
+                />
+              </span>
               <span class="se-ray-lv">
                 {{ ray.level }}<span class="se-ray-req">/{{ requiredRayLevel }}</span>
               </span>
-            </div>
+            </button>
           </div>
         </article>
       </div>
@@ -649,7 +717,7 @@ function handleSunKey(e: KeyboardEvent): void {
 /* Mittig, mit Deckel: auf 4K soll die Zeile nicht auf 1,5 m auseinanderlaufen. */
 .se-gates-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
   gap: clamp(14px, 2cqw, 30px);
   max-width: clamp(560px, 94cqw, 1120px);
   margin-inline: auto;
@@ -676,6 +744,34 @@ function handleSunKey(e: KeyboardEvent): void {
   align-items: center;
   column-gap: clamp(9px, 1.2cqw, 15px);
   min-width: 0;
+}
+
+/* Der Kopf der Strahlenkarte ist der Sprung zum ERSTEN fehlenden Strahl — er
+   ersetzt den früheren Textlink unter der Karte. */
+.se-gate-head--act {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.se-gate-go {
+  font-size: clamp(15px, 2cqw, 22px);
+  line-height: 1;
+  color: #d8b06a;
+  transition: transform 0.14s ease-out;
+}
+.se-gate-head--act:hover .se-gate-go,
+.se-gate-head--act:focus-visible .se-gate-go {
+  color: #e8c040;
+  transform: translateX(3px);
+}
+.se-gate-head--act:focus-visible {
+  outline: 2px solid #e8c040;
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .se-gate-copy {
@@ -739,12 +835,13 @@ function handleSunKey(e: KeyboardEvent): void {
 }
 
 /* ── gate two: five tiles, one per core ray ──────────────────────
-   Its own glyph and its own level on every tile: a bare "3 / 5" never said
-   WHICH ray was short, and that is the only thing the player can act on. */
+   Jede Kachel trägt ihr eigenes Glyph, ihre eigene Farbe aus SOLAR_BRANCHES und
+   ihren Füllstand — und sie IST der Weg zu ihrem Strahl im Skill Tree. Ein
+   bares „3/5" sagte weder, welcher fehlt, noch wie man ihn wachsen lässt. */
 .se-rays {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(5px, 0.9cqw, 12px);
+  gap: clamp(4px, 0.9cqw, 12px);
 }
 
 .se-ray {
@@ -752,37 +849,95 @@ function handleSunKey(e: KeyboardEvent): void {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(3px, 0.5cqw, 7px);
-  padding: clamp(6px, 0.9cqw, 11px) 2px 5px;
-  background: transparent;
-  border: 0;
-  border-bottom: 2px solid #2c1806;
-  border-radius: 0;
-  cursor: help;
+  gap: clamp(2px, 0.4cqw, 6px);
+  padding: clamp(5px, 0.7cqw, 9px) 2px clamp(4px, 0.6cqw, 8px);
+  background: #16100a;
+  border: 1px solid #2c1806;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    transform 0.14s ease-out,
+    border-color 0.14s;
+}
+.se-ray:hover {
+  border-color: var(--ray);
+  transform: translateY(-1px);
+}
+.se-ray:focus-visible {
+  border-color: var(--ray);
+  outline: 2px solid var(--ray);
+  outline-offset: 2px;
 }
 
-/* A grown ray burns in its own colour; a short one stays a dark socket. No
-   `filter: grayscale` — the colour IS the ray's name here. */
+/* Die Scheibe: Ring aussen, Glyph in der Mitte, Häkchen in der Ecke. */
+.se-ray-disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(36px, 6.2cqw, 68px);
+  height: clamp(36px, 6.2cqw, 68px);
+}
+
+.se-ray-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.se-ray-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ray) 22%, #2c1806);
+  stroke-width: 2;
+}
+
+.se-ray-fill {
+  fill: none;
+  stroke: var(--ray);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  transition: stroke-dashoffset 0.45s ease;
+}
+
+/* A grown ray burns in its own colour; a short one keeps a dimmed version of
+   it. No `filter: grayscale` — the colour IS the ray's name here. */
 .se-ray-ico {
-  width: clamp(24px, 4.2cqw, 46px);
-  height: clamp(24px, 4.2cqw, 46px);
-  color: #4e422c;
+  width: clamp(21px, 3.6cqw, 40px);
+  height: clamp(21px, 3.6cqw, 40px);
+  color: color-mix(in srgb, var(--ray) 40%, #4e422c);
 }
-.se-ray.is-met {
-  border-bottom-color: color-mix(in srgb, var(--ray) 55%, #2c1806);
-}
-.se-ray.is-met .se-ray-ico {
+.se-ray.is-lit .se-ray-ico {
   color: var(--ray);
 }
 
+.se-ray.is-met {
+  background: color-mix(in srgb, var(--ray) 14%, #1a1008);
+  border-color: color-mix(in srgb, var(--ray) 50%, #2c1806);
+}
+
+.se-ray-check {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  width: clamp(13px, 1.9cqw, 19px);
+  height: clamp(13px, 1.9cqw, 19px);
+  padding: 1px;
+  color: #08130a;
+  background: var(--ray);
+  border-radius: 50%;
+}
+
 .se-ray-lv {
-  font-size: clamp(15px, 2.9cqw, 30px);
+  font-size: clamp(14px, 2.5cqw, 27px);
   font-weight: 900;
   line-height: 1;
   color: #6a5a3a;
   white-space: nowrap;
 }
-.se-ray.is-met .se-ray-lv {
+.se-ray.is-lit .se-ray-lv {
   color: #e8e4d8;
 }
 
@@ -791,7 +946,7 @@ function handleSunKey(e: KeyboardEvent): void {
   font-weight: 700;
   color: #4e422c;
 }
-.se-ray.is-met .se-ray-req {
+.se-ray.is-lit .se-ray-req {
   color: #7a6c56;
 }
 
@@ -851,7 +1006,12 @@ function handleSunKey(e: KeyboardEvent): void {
     padding: 7px 11px;
   }
   .se-ray {
-    padding: 4px 2px;
+    gap: 2px;
+    padding: 3px 2px 2px;
+  }
+  .se-ray-disc {
+    width: clamp(34px, 5.6cqw, 62px);
+    height: clamp(34px, 5.6cqw, 62px);
   }
 }
 
