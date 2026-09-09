@@ -27,7 +27,6 @@ const vars = computed<Record<string, string>>(() => ({
       'champion-level-frame--crown': stage.crown,
       'champion-level-frame--rays': stage.rays > 0,
       'champion-level-frame--aura': stage.aura,
-      'champion-level-frame--apex': stage.gem,
     }"
     :style="vars"
     :title="label"
@@ -42,7 +41,6 @@ const vars = computed<Record<string, string>>(() => ({
     <span v-if="stage.crown" class="champion-level-frame__crown" />
     <span v-if="stage.rays > 0" class="champion-level-frame__rays" />
     <span v-if="stage.aura" class="champion-level-frame__aura" />
-    <span v-if="stage.gem" class="champion-level-frame__sheen" />
     <span v-if="stage.gem" class="champion-level-frame__gem" />
   </span>
 </template>
@@ -152,18 +150,6 @@ const vars = computed<Record<string, string>>(() => ({
   animation: champion-level-frame-aura var(--frame-breathe) ease-in-out infinite alternate;
 }
 
-.champion-level-frame__sheen {
-  position: absolute;
-  top: -35%;
-  left: 8%;
-  width: 84%;
-  height: 24%;
-  background: color-mix(in srgb, #fff 55%, var(--frame-color));
-  opacity: 0;
-  transform: translateY(-220%);
-  animation: champion-level-frame-sheen var(--frame-breathe) linear infinite;
-}
-
 .champion-level-frame__gem {
   position: absolute;
   top: 5px;
@@ -184,25 +170,8 @@ const vars = computed<Record<string, string>>(() => ({
   }
 }
 
-@keyframes champion-level-frame-sheen {
-  0%,
-  36% {
-    opacity: 0;
-    transform: translateY(-220%);
-  }
-  52% {
-    opacity: 0.72;
-  }
-  68%,
-  100% {
-    opacity: 0;
-    transform: translateY(560%);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .champion-level-frame__aura,
-  .champion-level-frame__sheen {
+  .champion-level-frame__aura {
     animation: none;
   }
   .champion-level-frame__aura {
