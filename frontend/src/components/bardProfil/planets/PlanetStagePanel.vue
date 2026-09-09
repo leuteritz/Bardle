@@ -16,10 +16,18 @@ import {
   PLANET_TAB_SUN_MAX_DIAMETER,
   SOLAR_BRANCHES,
 } from '@/config/constants'
-import { hpTier, hpPercentOf, planetBonusTextFor } from '@/utils/orbit/planetStatus'
+import {
+  hpTier,
+  hpPercentOf,
+  planetBonusTextFor,
+  planetStatSections,
+} from '@/utils/orbit/planetStatus'
+import { orbitOrderedSlots } from '@/utils/orbit/planetOrbitPhase'
+import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useHerald } from '@/composables/ui/useHerald'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
+import PlanetStatFlank from './PlanetStatFlank.vue'
 import PlanetTargetPickerModal from './PlanetTargetPickerModal.vue'
 
 const props = defineProps<{
@@ -36,6 +44,7 @@ const props = defineProps<{
 
 const store = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
+const forgeStore = useStarForgeStore()
 const { announceReceipt } = useHerald()
 
 /** Orbit-Wrapper — der Tab-Loop setzt hier pro Frame `--orbit-delay`. */
@@ -66,7 +75,12 @@ const downProgress = computed(() => {
 
 const hpPercent = computed(() => hpPercentOf(props.planet.currentHp, props.planet.maxHp))
 const activeHpTier = computed(() => hpTier(props.planet.currentHp, props.planet.maxHp))
-const bonusText = computed(() => planetBonusTextFor(role.value, props.planet.level))
+// Derselbe Forge-Faktor, den `activeHarvestSlots` benutzt — sonst nennt die Bühne
+// einen Erntetakt, den der Tick nicht liefert.
+const harvestForgeMult = computed(() => forgeStore.harvestIntervalMult)
+const bonusText = computed(() =>
+  planetBonusTextFor(role.value, props.planet.level, harvestForgeMult.value),
+)
 
 // ── Per-planet leveling ────────────────────────────────────────────────────
 const levelUpCost = computed(() => store.getPlanetLevelUpCost(props.planet.id))
@@ -84,12 +98,29 @@ const maxCost = computed(() =>
 // shows the state AFTER that buy. With nothing affordable it falls back to a
 // +1 preview so the player still sees what the next attunement would bring.
 const previewLevelGain = computed(() => Math.max(1, maxAffordableCount.value))
+const previewLevel = computed(() => (props.planet.level ?? 1) + previewLevelGain.value)
 const nextBonusText = computed(() =>
-  planetBonusTextFor(role.value, (props.planet.level ?? 1) + previewLevelGain.value),
+  planetBonusTextFor(role.value, previewLevel.value, harvestForgeMult.value),
 )
 const currentMaxHp = computed(() => computePlanetMaxHp(props.planet.level ?? 1))
-const nextMaxHp = computed(() =>
-  computePlanetMaxHp((props.planet.level ?? 1) + previewLevelGain.value),
+const nextMaxHp = computed(() => computePlanetMaxHp(previewLevel.value))
+
+// ── Instrumententafeln ─────────────────────────────────────────────────────
+// Der Bahn-Index ist der Rang in `orbitOrderedSlots` und NICHT die Slot-Nummer:
+// er entscheidet, auf welchem Tier der Planet läuft, und wechselt mit jedem
+// zugekauften Planeten. Die Rechnung dahinter integriert über die Bahn — sie
+// hängt allein an Slot und Level, läuft also nur hier im computed und nie im
+// Frame-Loop des Tabs.
+const orbitIndex = computed(() =>
+  orbitOrderedSlots(store.purchasedSlots).findIndex((s) => s.id === props.planet.id),
+)
+const statSections = computed(() =>
+  planetStatSections({
+    slot: props.planet,
+    orbitIndex: Math.max(0, orbitIndex.value),
+    previewLevel: previewLevel.value,
+    harvestForgeMult: harvestForgeMult.value,
+  }),
 )
 
 // ── HP-bar hover preview ────────────────────────────────────────────────────
@@ -212,8 +243,8 @@ const configTarget = computed(() => {
 <template>
   <!-- Purchased + role locked: cosmic stage with LEVEL crown above the sun,
        name + HP directly beneath it, and a bundled action dock at the bottom.
-       The corners are intentionally empty — every readout the player acts on
-       lives right next to the Level-Up button now. -->
+       The flanks beside the sun carry the data sheet — orbit on the left, build
+       on the right; everything the player ACTS on stays next to the button. -->
   <div class="ps-stage" :style="[{ '--rc': roleColor }, phaseStyle]">
     <!-- LEVEL crown — big + modern, sits directly above the sun (bottom of
          the top balancing band). While a jungle buff is live the top-center
@@ -230,6 +261,23 @@ const configTarget = computed(() => {
         </div>
       </Transition>
     </div>
+
+    <!-- Data sheet — pinned to the free space left and right of the sun, so it
+         costs no height (the tightest budget on Full HD) and leaves the orbit
+         geometry untouched. Below the container threshold both fold into one
+         band above the dock; see the container query in the styles. -->
+    <PlanetStatFlank
+      class="ps-flank ps-flank--l"
+      :sections="statSections.left"
+      side="left"
+      :preview="previewActive"
+    />
+    <PlanetStatFlank
+      class="ps-flank ps-flank--r"
+      :sections="statSections.right"
+      side="right"
+      :preview="previewActive"
+    />
 
     <!-- Central body (comet rock or phase sun) + orbiting planet — the exact
          vertical center: crown band above and readout band below carry equal
@@ -643,6 +691,46 @@ const configTarget = computed(() => {
      the flex-centered crown + sun + readout never overlap the Level-Up button. */
   padding: 0.9rem 1rem clamp(96px, 15vh, 150px);
   overflow: hidden;
+  /* Die Flanken messen sich an der Bühne, nicht am Viewport: die Zonenbreite der
+     Rail springt um 244 px, und ein Viewport-Breakpoint würde das verschlafen. */
+  container-type: inline-size;
+}
+
+/* ── Instrumententafeln ────────────────────────────────────────────────────── */
+/* Absolut statt als Grid-Spalten: `.ps-system` ist ein Größen-Container, an dem
+   Sonne, Planet und Bahnradius in cqmin hängen. Jede Spalte neben ihm würde seine
+   Box schmaler machen und damit die Bahn verschieben.
+
+   Gemessen: der Planet läuft bis x±336 aus der Mitte, aber nur bis y±138 — die
+   Bahn ist eine flache Ellipse. Seitlich UNTERHALB dieses Bands ist auf jeder
+   Auflösung Platz, auf Sonnenhöhe erst ab einer breiten Bühne (Full HD lässt dort
+   nur 140 px frei). Darum die untere Verankerung als Grundstellung. */
+.ps-flank {
+  position: absolute;
+  bottom: 10px;
+  z-index: 2;
+  /* 18,5 % hält die Tafel auf einer 952-px-Bühne knapp neben dem HP-Balken, der
+     dort mit seinen 560 px max-width bis auf 196 px an den Rand reicht. */
+  width: clamp(160px, 18.5cqw, 196px);
+}
+
+.ps-flank--l {
+  left: clamp(6px, 1.5cqw, 30px);
+}
+
+.ps-flank--r {
+  right: clamp(6px, 1.5cqw, 30px);
+}
+
+/* Ab hier trägt die Bühne die Tafeln neben der Sonne: 336 px Bahn + Tafel +
+   Rändern brauchen rund 1110 px. Die Schwelle steht als Literal — `v-bind`
+   matcht in einer Query-Präambel still nie. */
+@container (min-width: 1120px) {
+  .ps-flank {
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+  }
 }
 
 /* Sun + orbiting planet share one centered system. Fills whatever height the
@@ -984,35 +1072,6 @@ const configTarget = computed(() => {
   flex-direction: column;
   align-items: center;
   gap: 0.05rem;
-}
-
-/* ── Attunement upgrade dock (slim bar under the stage) ─────────────────────── */
-/* One row: status | effect preview | buy. Frameless — integrated via a gold
-   separator on top, so the stage above keeps nearly all the vertical space.
-   flex-wrap + the effect zone's flex-basis make it reflow on narrow panels
-   without any breakpoints. */
-.ps-dock {
-  --rc: #e8c040;
-  position: relative; /* paints above the ps-detail cosmic backdrop */
-  flex-shrink: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1rem;
-  padding: 0.5rem 1rem;
-  background: #131009;
-  border-top: 3px solid transparent;
-  border-image: linear-gradient(
-      to right,
-      transparent,
-      #5c3310 10%,
-      #c89040 30%,
-      #f0d060 50%,
-      #c89040 70%,
-      #5c3310 90%,
-      transparent
-    )
-    1;
 }
 
 /* Zone 3: Max button — vertically centered in the footer band */

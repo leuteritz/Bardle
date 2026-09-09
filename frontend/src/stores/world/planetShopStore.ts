@@ -21,6 +21,8 @@ import {
   PLANET_MILESTONE_INTERVAL,
   PLANET_MILESTONE_BONUS,
   PLANET_MAX_BULK_LEVELS,
+  PLANET_ORBIT_SPEED_PER_LEVEL,
+  PLANET_ORBIT_SPEED_MAX_MULT,
   PLANET_RANK_TIERS,
   PLANET_RESPAWN_MS,
   PLANET_SLOT_CONFIG as SLOT_CONFIG,
@@ -140,6 +142,20 @@ export function planetLevelRequiredPhase(nextLevel: number): number {
 export function harvestIntervalTicks(level: number, forgeMult = 1): number {
   const rate = 1 + Math.max(0, level - 1) * PLANET_LEVEL_BONUS_PCT
   return Math.max(1, Math.ceil((PLANET_HARVEST_INTERVAL_TICKS / rate) * forgeMult))
+}
+
+/**
+ * Bahntempo eines Slots als Faktor auf `baseSpeed` — gedeckelt bei Verdopplung.
+ *
+ * Gleiche Bauart wie `harvestIntervalTicks`: reine Funktion, damit Bahnintegration
+ * (`PlanetOrbit.vue`) und Anzeige (`planetOrbitTiming`) dieselbe Zahl benutzen und
+ * die Spec sie ohne Store-Instanz prüfen kann.
+ */
+export function planetOrbitSpeedMultiplier(level: number): number {
+  return Math.min(
+    PLANET_ORBIT_SPEED_MAX_MULT,
+    1 + Math.max(0, level - 1) * PLANET_ORBIT_SPEED_PER_LEVEL,
+  )
 }
 
 const INITIAL_SLOTS: PlanetSlot[] = PLANET_SLOT_ORBITS.map((orbit, i) => ({

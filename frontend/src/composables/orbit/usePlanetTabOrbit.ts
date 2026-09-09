@@ -11,6 +11,7 @@ import type { PlanetSlot } from '@/stores/world/planetShopStore'
 import {
   initialOrbitAngle,
   orbitEclipsePhase,
+  orbitOrderedSlots,
   orbitTierForSlotIndex,
   planetOrbitPhases,
 } from '@/utils/orbit/planetOrbitPhase'
@@ -50,10 +51,7 @@ export function usePlanetTabOrbit(
    */
   const eclipsedSlotIds = ref<ReadonlySet<string>>(new Set())
 
-  // Reihenfolge und Filter müssen exakt PlanetOrbit.vue entsprechen: der Index in
-  // dieser Liste bestimmt, auf welchem Orbit-Tier (und damit welcher Ellipse) der
-  // Slot läuft.
-  const orbitSlots = computed(() => store.purchasedSlots.filter((s) => s.role !== null))
+  const orbitSlots = computed(() => orbitOrderedSlots(store.purchasedSlots))
 
   function orbitProgressOf(slotId: string | null): number {
     const slots = orbitSlots.value

@@ -419,6 +419,19 @@ export const PLANET_LEVEL_MAX_PHASE = 5 // cap aligned to starPhase max (0–5)
 export const PLANET_MILESTONE_INTERVAL = 5 // every Nth Attunement grants a perk spike
 export const PLANET_MILESTONE_BONUS = 0.25 // +25% of base role bonus per milestone reached
 export const PLANET_MAX_BULK_LEVELS = 1000 // safety cap for the "Max" simulation loop
+/**
+ * Bahntempo je Attunement — die einzige Achse, die gegen die Eclipse hilft.
+ *
+ * Hinter der Sonne feuert kein Turret und kein Level-Up geht durch; die Wartezeit
+ * darauf war bis hierher unveränderlich. Der Deckel ist eine VERDOPPLUNG und keine
+ * offene Rampe: er fällt auf Level 41 und hält danach.
+ *
+ * Der verdeckte Anteil der Bahn ist geometrisch und bleibt gleich — schneller
+ * kreisen verkürzt den einzelnen Blackout, nicht seinen Zeitanteil. Die gemittelte
+ * Turret-DPS rührt das also nicht an.
+ */
+export const PLANET_ORBIT_SPEED_PER_LEVEL = 0.025
+export const PLANET_ORBIT_SPEED_MAX_MULT = 2
 // Attunement rank tiers — ordered bands; highest min <= level wins
 export const PLANET_RANK_TIERS: { min: number; name: string; color: string }[] = [
   { min: 1, name: 'Nascent', color: '#9aa0a6' },

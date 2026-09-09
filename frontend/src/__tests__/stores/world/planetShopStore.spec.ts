@@ -11,6 +11,7 @@ import {
   planetLevelUpCost,
   planetLevelRequiredPhase,
   harvestIntervalTicks,
+  planetOrbitSpeedMultiplier,
   isPlanetDown,
 } from '@/stores/world/planetShopStore'
 import type { PlanetRoleType } from '@/stores/world/planetShopStore'
@@ -26,6 +27,8 @@ import {
   PLANET_LEVEL_MAX_PHASE,
   PLANET_SLOT_SUN_PHASE_REQUIREMENTS,
   PLANET_RESPAWN_MS,
+  PLANET_ORBIT_SPEED_MAX_MULT,
+  PLANET_ORBIT_SPEED_PER_LEVEL,
   STAR_PHASE_DATA,
 } from '@/config/constants'
 
@@ -454,5 +457,41 @@ describe('planetShopStore — das Tor des Reiters', () => {
     game.chimes = 0
     expect(store.canUnlockPlanetSlot(1)).toBe(false)
     expect(store.isUnlocked).toBe(true)
+  })
+})
+
+describe('planetShopStore — Bahntempo je Attunement', () => {
+  it('startet bei 1.0 und wächst mit dem Level', () => {
+    expect(planetOrbitSpeedMultiplier(1)).toBe(1)
+    expect(planetOrbitSpeedMultiplier(2)).toBeCloseTo(1 + PLANET_ORBIT_SPEED_PER_LEVEL)
+    expect(planetOrbitSpeedMultiplier(11)).toBeCloseTo(1 + 10 * PLANET_ORBIT_SPEED_PER_LEVEL)
+  })
+
+  it('steigt monoton bis zum Deckel und bleibt dort', () => {
+    let prev = 0
+    for (let lvl = 1; lvl <= 200; lvl++) {
+      const v = planetOrbitSpeedMultiplier(lvl)
+      expect(v).toBeGreaterThanOrEqual(prev)
+      expect(v).toBeLessThanOrEqual(PLANET_ORBIT_SPEED_MAX_MULT)
+      prev = v
+    }
+    // Der Deckel ist der Punkt der Aussage: er fällt und hält, egal wie weit
+    // das Level noch läuft.
+    expect(planetOrbitSpeedMultiplier(500)).toBe(PLANET_ORBIT_SPEED_MAX_MULT)
+    expect(planetOrbitSpeedMultiplier(5000)).toBe(PLANET_ORBIT_SPEED_MAX_MULT)
+  })
+
+  it('erreicht den Deckel auf einem erreichbaren Level', () => {
+    const capLevel =
+      1 + Math.ceil((PLANET_ORBIT_SPEED_MAX_MULT - 1) / PLANET_ORBIT_SPEED_PER_LEVEL)
+    expect(planetOrbitSpeedMultiplier(capLevel)).toBe(PLANET_ORBIT_SPEED_MAX_MULT)
+    expect(planetOrbitSpeedMultiplier(capLevel - 1)).toBeLessThan(PLANET_ORBIT_SPEED_MAX_MULT)
+    // Sonst wäre die Achse abgeschnitten statt gedeckelt.
+    expect(capLevel).toBeLessThanOrEqual(60)
+  })
+
+  it('behandelt Level unter 1 wie Level 1', () => {
+    expect(planetOrbitSpeedMultiplier(0)).toBe(1)
+    expect(planetOrbitSpeedMultiplier(-5)).toBe(1)
   })
 })

@@ -10,8 +10,10 @@
 // verschwindet der Planet dort exakt dann und so lange hinter der Sonne wie im
 // Idle-Orbit.
 import {
+  BEHIND_SUN_SPEED_MULTIPLIER,
   ORBIT_TIERS,
   PLANET_ORBIT_FOREGROUND_DEPTH,
+  PLANET_ORBIT_KEPLER_BOOST,
   PLANET_TAB_ORBIT_FOREGROUND_PROGRESS,
 } from '@/config/constants'
 
@@ -48,8 +50,19 @@ export function initialOrbitAngle(index: number, count: number): number {
   return (index / Math.max(count, 1)) * TWO_PI
 }
 
+export interface OrbitArcs {
+  /** Bogenlänge im Vordergrund, in Radiant. */
+  foregroundArc: number
+  /** Bogenlänge hinter der Sonne, in Radiant. */
+  behindArc: number
+  /** Phasenverschiebung der Bahn gegen den relY-Nulldurchgang. */
+  phaseShift: number
+  /** Winkel des Austritts aus der Verdeckung, in psi-Koordinaten. */
+  psiExit: number
+}
+
 /**
- * Bahnwinkel → Fortschritt (0 … 1) in den `ps-planet-orbit`-Keyframes.
+ * Die zwei Bögen einer Bahn — vorn und verdeckt.
  *
  * relY(A) lässt sich als R·sin(A + φ) schreiben, der Vordergrundbogen liegt also
  * zwischen zwei festen Winkeln. `psi` dreht die Bahn so, dass sie unabhängig von
@@ -58,11 +71,35 @@ export function initialOrbitAngle(index: number, count: number): number {
  * auch wenn die Schwelle (wie hier) im positiven relY-Bereich liegt.
  *
  * Die Grenze ist bewusst die Vordergrund-Schwelle und nicht die Sonnenkante:
- * genau an ihr schaltet das Command Panel sein Eclipse-Medaillon. Verdeckung im
- * Tab und Medaillon dort gehen damit gemeinsam an und aus.
+ * genau an ihr schaltet das Command Panel sein Eclipse-Medaillon.
  *
- * Das Ergebnis wird stückweise linear abgebildet: Vordergrundbogen auf 0 … 70 %,
- * verdeckter Bogen auf 70 … 100 % — passend zum z-index-Wechsel der Keyframes.
+ * `null` bei entarteter Bahn — dann gibt es keinen verdeckten Bogen.
+ */
+export function orbitArcs(ratio: number, tiltRad: number): OrbitArcs | null {
+  const ampX = ratio * Math.sin(tiltRad)
+  const ampY = Math.cos(tiltRad)
+  const amplitude = Math.hypot(ampX, ampY)
+  if (amplitude < 1e-6) return null
+
+  const foregroundRelY = 2 * PLANET_ORBIT_FOREGROUND_DEPTH - 1
+  const ratioAtThreshold = Math.max(-1, Math.min(1, foregroundRelY / amplitude))
+  // Vorzeichenbehaftet: verschiebt die Grenzen symmetrisch um den Halbkreis.
+  const skew = Math.asin(ratioAtThreshold)
+
+  const behindArc = Math.PI + 2 * skew
+  return {
+    behindArc,
+    foregroundArc: TWO_PI - behindArc,
+    phaseShift: Math.atan2(ampX, ampY),
+    psiExit: TWO_PI + skew,
+  }
+}
+
+/**
+ * Bahnwinkel → Fortschritt (0 … 1) in den `ps-planet-orbit`-Keyframes.
+ *
+ * Stückweise linear: Vordergrundbogen auf 0 … 70 %, verdeckter Bogen auf
+ * 70 … 100 % — passend zum z-index-Wechsel der Keyframes.
  */
 export function orbitEclipsePhase(
   angle: number,
@@ -70,23 +107,9 @@ export function orbitEclipsePhase(
   ratio: number,
   tiltRad: number,
 ): number {
-  const ampX = ratio * Math.sin(tiltRad)
-  const ampY = Math.cos(tiltRad)
-  const amplitude = Math.hypot(ampX, ampY)
-  const phaseShift = Math.atan2(ampX, ampY)
-
-  // Sonderfall einer entarteten Bahn: dann gibt es keinen verdeckten Bogen.
-  if (amplitude < 1e-6) return 0
-
-  const foregroundRelY = 2 * PLANET_ORBIT_FOREGROUND_DEPTH - 1
-  const ratioAtThreshold = Math.max(-1, Math.min(1, foregroundRelY / amplitude))
-  // Vorzeichenbehaftet: verschiebt die Grenzen symmetrisch um den Halbkreis.
-  const skew = Math.asin(ratioAtThreshold)
-
-  // Bogenlängen: psiEnter = π − skew, psiExit = 2π + skew.
-  const behindArc = Math.PI + 2 * skew
-  const foregroundArc = TWO_PI - behindArc
-  const psiExit = TWO_PI + skew
+  const arcs = orbitArcs(ratio, tiltRad)
+  if (!arcs) return 0
+  const { behindArc, foregroundArc, phaseShift, psiExit } = arcs
 
   const psi = normalizeAngle(direction === 1 ? angle + phaseShift : Math.PI - (angle + phaseShift))
   // Zurückgelegter Weg seit dem Austritt aus der Verdeckung — wächst monoton
@@ -96,4 +119,77 @@ export function orbitEclipsePhase(
   const fg = PLANET_TAB_ORBIT_FOREGROUND_PROGRESS
   if (travelled < foregroundArc) return fg * (travelled / foregroundArc)
   return fg + (1 - fg) * ((travelled - foregroundArc) / behindArc)
+}
+
+/** Auflösung der Periodenintegration — 0,5° je Schritt. */
+const TIMING_STEPS = 720
+
+export interface PlanetOrbitTiming {
+  /** Dauer eines vollen Umlaufs in Millisekunden Spielzeit. */
+  periodMs: number
+  /** Davon hinter der Sonne verbracht. */
+  behindMs: number
+  /** Anteil der Umlaufzeit, in dem der Planet erreichbar ist (0 … 1). */
+  inReachFrac: number
+}
+
+/**
+ * Umlaufzeit einer Planetenbahn, numerisch integriert.
+ *
+ * Eine geschlossene Formel gibt es nicht: die Winkelgeschwindigkeit ist über die
+ * Bahn nicht konstant, und ein Mittelwert wäre falsch — Zeit ist das harmonische,
+ * nicht das arithmetische Mittel der Geschwindigkeit. Zwei Modulationen wirken,
+ * beide exakt wie in `PlanetOrbit.vue`: der Kepler-Boost an den Apexen und der
+ * fünffach durchlaufene verdeckte Bogen.
+ *
+ * `ORBIT_BEHIND_SPEED_LERP` bleibt bewusst draussen — der Speedup ist geweicht und
+ * erreicht seinen Sollwert nie ganz, die reale Periode liegt darum wenige Prozent
+ * unter der gerechneten.
+ *
+ * NIE in einer Frame-Schleife aufrufen: das Ergebnis hängt allein an Slot und
+ * Level und ändert sich nur beim Attunement.
+ */
+export function planetOrbitTiming(
+  baseSpeed: number,
+  levelMult: number,
+  direction: 1 | -1,
+  ratio: number,
+  tiltRad: number,
+): PlanetOrbitTiming {
+  const arcs = orbitArcs(ratio, tiltRad)
+  const omegaBase = baseSpeed * levelMult
+  if (!arcs || omegaBase <= 0) {
+    const periodMs = omegaBase > 0 ? TWO_PI / omegaBase : 0
+    return { periodMs, behindMs: 0, inReachFrac: 1 }
+  }
+
+  const step = TWO_PI / TIMING_STEPS
+  let periodMs = 0
+  let behindMs = 0
+
+  for (let i = 0; i < TIMING_STEPS; i++) {
+    const travelled = (i + 0.5) * step
+    const psi = travelled + arcs.psiExit
+    // Rückrechnung auf den echten Bahnwinkel; |dpsi| = |dangle| in beide Richtungen.
+    const angle = direction === 1 ? psi - arcs.phaseShift : Math.PI - psi - arcs.phaseShift
+    const kepler = 1 + PLANET_ORBIT_KEPLER_BOOST * (1 - Math.abs(Math.cos(angle)))
+    const behind = travelled >= arcs.foregroundArc
+    const omega = omegaBase * kepler * (behind ? BEHIND_SUN_SPEED_MULTIPLIER : 1)
+    const dt = step / omega
+    periodMs += dt
+    if (behind) behindMs += dt
+  }
+
+  return { periodMs, behindMs, inReachFrac: (periodMs - behindMs) / periodMs }
+}
+
+/**
+ * Die Slots in Bahnreihenfolge. Filter und Reihenfolge bestimmen, auf welchem
+ * Tier ein Slot läuft — sie müssen exakt denen in `PlanetOrbit.vue` entsprechen,
+ * darum stehen sie hier einmal statt in jedem Aufrufer.
+ */
+export function orbitOrderedSlots<T extends { purchased: boolean; role: unknown }>(
+  slots: readonly T[],
+): T[] {
+  return slots.filter((s) => s.purchased && s.role !== null)
 }

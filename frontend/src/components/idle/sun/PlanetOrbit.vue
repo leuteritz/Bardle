@@ -182,6 +182,7 @@ import {
   PLANET_ROLES,
   JUNGLE_BUFF_DEFS,
   isPlanetDown,
+  planetOrbitSpeedMultiplier,
 } from '@/stores/world/planetShopStore'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import {
@@ -762,7 +763,9 @@ export default defineComponent({
         if (!reducedMotion) {
           const keplerBoost =
             1.0 + PLANET_ORBIT_KEPLER_BOOST * (1 - Math.abs(Math.cos(ls.orbitAngle)))
-          ls.orbitAngle += slot.direction * slot.baseSpeed * keplerBoost * newMul * dt
+          // Attunement zieht die Bahn an — gedeckelt bei Verdopplung.
+          const levelMul = planetOrbitSpeedMultiplier(slot.level)
+          ls.orbitAngle += slot.direction * slot.baseSpeed * levelMul * keplerBoost * newMul * dt
           const target = getOrbitPos(ls.orbitAngle, rx, ry, tiltRad, cx, cy)
           ls.x += (target.x - ls.x) * PLANET_ORBIT_POSITION_LERP
           ls.y += (target.y - ls.y) * PLANET_ORBIT_POSITION_LERP
