@@ -292,7 +292,6 @@ const slideMs = `${UNIVERSE_MAP_RAIL_SLIDE_MS}ms`
             :width-px="UNIVERSE_MAP_RAIL_HANDLE_PX"
             :open="!railFolded"
             :title="handleTitle"
-            :total="walkedCount"
             @toggle="railChoice = !railFolded"
           />
         </div>

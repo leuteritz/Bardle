@@ -119,6 +119,7 @@ describe('Seitenleisten-Sprache: die Gestalt steht an EINER Stelle', () => {
       '--sr-accent-hi:',
       '--sr-u-base:',
       '--sr-u:',
+      '--sr-handle-u:',
     ]) {
       expect(theme, `${token} fehlt in ${THEME}`).toContain(token)
     }
@@ -140,7 +141,6 @@ describe('Seitenleisten-Sprache: die Gestalt steht an EINER Stelle', () => {
       '.sr-handle::after {',
       '.sr-handle-stack {',
       '.sr-handle-word {',
-      '.sr-handle-total {',
       '.sr-handle-signals {',
       '.sr-handle-count {',
       '.sr-handle-dot {',
@@ -163,9 +163,9 @@ describe('Seitenleisten-Sprache: die Gestalt steht an EINER Stelle', () => {
   })
 
   it('es gibt genau EINEN Griff', () => {
-    // Das gekippte Wort und der Goldfaden auf der Naht sind seine Signatur.
-    const OWN_HANDLE =
-      /writing-mode:\s*vertical-rl|linear-gradient\(to bottom, #5c3310, #c89040, #e8c060/
+    // Das gekippte Wort und seine Schriftskala sind die Signatur des Griffs —
+    // wer eines von beidem im Reiter schreibt, hat einen zweiten gebaut.
+    const OWN_HANDLE = /writing-mode:\s*vertical-rl|--sr-handle-u\s*:/
     const offenders: string[] = []
     for (const { file, source } of [...rails, ...tabs]) {
       const m = code(source).match(OWN_HANDLE)
@@ -181,8 +181,9 @@ describe('Seitenleisten-Sprache: die Gestalt steht an EINER Stelle', () => {
   })
 
   it('keine Leiste bringt eine eigene Schriftskala mit', () => {
-    // Es gibt EINE `--sr-u`. Eine zweite clamp()-Kette daneben ist der Anfang
-    // des Auseinanderlaufens.
+    // Es gibt EINE `--sr-u` für die Leiste und EINE `--sr-handle-u` für den
+    // Griff — die eine misst an der Breite, die andere an der Höhe der Kante.
+    // Eine dritte clamp()-Kette daneben ist der Anfang des Auseinanderlaufens.
     const offenders: string[] = []
     for (const { file, source } of [...rails, handle]) {
       if (/font-size:\s*clamp\(/.test(code(source)))

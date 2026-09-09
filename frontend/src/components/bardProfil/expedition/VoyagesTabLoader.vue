@@ -54,7 +54,7 @@ import {
   VOYAGE_RAIL_THUMB_H,
   VOYAGE_RAIL_THUMB_W,
   VOYAGE_RAIL_WIDTH,
-  VOYAGE_RAIL_WORD_H,
+  VOYAGE_RAIL_WORD_EM,
   VOYAGE_RAIL_ZONE_W,
 } from '@/config/constants'
 
@@ -67,7 +67,7 @@ const railZone = `${VOYAGE_RAIL_ZONE_W}px`
 const railWidth = `${VOYAGE_RAIL_WIDTH}px`
 const railPadX = `${VOYAGE_RAIL_PAD_X}px`
 const handleWidth = `${VOYAGE_RAIL_HANDLE_PX}px`
-const wordHeight = `${VOYAGE_RAIL_WORD_H}px`
+const wordHeight = `calc(var(--sr-handle-u) * ${VOYAGE_RAIL_WORD_EM})`
 const rowHeight = `${VOYAGE_RAIL_ROW_H}px`
 const thumbWidth = `${VOYAGE_RAIL_THUMB_W}px`
 const thumbHeight = `${VOYAGE_RAIL_THUMB_H}px`
@@ -275,15 +275,15 @@ const skeletonPorts = computed(() =>
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 6px 12px 4px;
-  background: #14100c;
-  border-left: 2px solid #5c3310;
+  padding: 10px 2px 10px 5px;
+  background: #141410;
+  border-left: 3px solid #5c3310;
 }
 /* Mittig wie das Wort selbst. Die Pille darüber zeichnet der Schleier nicht —
    sie steht nur eingeklappt, und eingeklappt startet die Liste nicht. */
 .vtl-grip-word {
   display: block;
-  width: 13px;
+  width: var(--sr-handle-u);
   height: v-bind(wordHeight);
   border-radius: 4px;
   background: #241a0e;

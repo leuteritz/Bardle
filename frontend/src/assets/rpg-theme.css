@@ -162,8 +162,8 @@
      Eine Seitenleiste ist in diesem Spiel EIN Ort, nicht einer je Reiter. */
   --sr-surface: var(--rpg-bg-deep);
   --sr-seam: var(--rpg-wood-mid);
-  --sr-handle-bg: #14100c;
-  --sr-handle-hover: #1a140d;
+  --sr-handle-bg: #141410;
+  --sr-handle-hover: color-mix(in srgb, var(--sr-accent) 14%, #141410);
   --sr-row-bg: var(--rpg-bg-row);
   --sr-row-border: #32210c;
   --sr-row-hover-border: var(--rpg-wood);
@@ -200,6 +200,12 @@
      Kompaktstufe sie zurückholen muss. */
   --sr-u-base: clamp(13px, 0.72vw, 17px);
   --sr-u: var(--sr-u-base);
+
+  /* Die Schriftskala des GRIFFS — eine zweite Kette, weil sie an einer anderen
+     Achse hängt: die Leiste misst sich an ihrer Breite (`--sr-u`, vw), das
+     gekippte Wort läuft über die HÖHE der Kante. Dieselbe Kette wie die
+     Rollen-Leiste des Team-Reiters, damit beide Kanten gleich gross lesen. */
+  --sr-handle-u: clamp(16px, 1.75vh, 22px);
 }
 
 /* ── Modal shell (containers, modals) ── */
@@ -2915,7 +2921,11 @@
    Die Kante, die stehen bleibt, wenn die Leiste weggefahren ist. Sie trägt das
    Wort ALLEIN: ein Kopfband über der Liste zeigte dasselbe Wort ein zweites
    Mal und nahm ihr dafür 38 px Höhe. Die Breite setzt der Aufrufer — sie hängt
-   an der Länge SEINES Wortes und ist nie unter 44 px. */
+   an der Länge SEINES Wortes und ist nie unter 44 px.
+
+   Fläche, Akzentkante, Zustände und Schriftgrad kommen von der Rollen-Leiste
+   des Team-Reiters (`.team-role-rail-button`): dieselbe Aufgabe, dieselbe
+   Kante, dasselbe Modal. An die Stelle ihrer Rollenfarbe tritt der Goldkanal. */
 .sr-handle {
   position: absolute;
   inset: 0 0 0 auto;
@@ -2925,29 +2935,47 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Links 2 px weniger — die Naht zählt zur Breite und rückte die Gruppe sonst
-     um ihre Hälfte aus der Leistenmitte. */
-  padding: 12px 6px 12px 4px;
-  border: none;
-  border-left: 2px solid var(--sr-seam);
+  /* Links 5 statt 2 px: der Akzent ist hier ein absolutes ::after und nimmt
+     keinen Fluss — ohne Ausgleich säße das Wort 3 px links der Stelle, an der
+     es in der Rollen-Leiste steht. */
+  padding: 10px 2px 10px 5px;
+  border: 0;
+  border-left: 3px solid var(--sr-seam);
   background: var(--sr-handle-bg);
-  color: var(--sr-accent);
+  color: color-mix(in srgb, var(--sr-accent) 62%, #cdbb96);
   cursor: pointer;
+  transition:
+    background-color 0.14s ease,
+    color 0.14s ease;
 }
+/* Hover und offen sind ZWEI Zustände: geteilt verlor der offene Griff seine
+   Auszeichnung, sobald der Zeiger auf ihm lag. */
 .sr-handle:hover {
   background: var(--sr-handle-hover);
+  color: color-mix(in srgb, var(--sr-accent-hi) 85%, #f0e6d0);
+}
+.sr-handle--open {
+  background: color-mix(in srgb, var(--sr-accent) 26%, #12100a);
+  /* Inset statt breiterer Kante — sonst schrumpft die Innenbreite und das Wort
+     springt beim Umschalten um 2 px. */
+  box-shadow: inset 2px 0 0 var(--sr-accent-hi);
+  color: #f4ecd8;
+}
+.sr-handle:focus-visible {
+  outline: 2px solid var(--sr-accent-hi);
+  outline-offset: -2px;
 }
 
-/* Goldfaden auf der Naht. Statisch — nur die DECKUNG wechselt, und sie trägt
-   allein den Zustand (matt zu, hell offen oder unter dem Zeiger). */
+/* Die Akzentkante auf der Naht. Statisch — nur die DECKUNG wechselt, und sie
+   trägt allein den Zustand (matt zu, voll offen oder unter dem Zeiger). */
 .sr-handle::after {
   content: '';
   position: absolute;
   inset: 0 auto 0 0;
-  width: 2px;
-  background: linear-gradient(to bottom, #5c3310, #c89040, #e8c060, #c89040, #5c3310);
-  opacity: 0.4;
-  transition: opacity 0.18s ease;
+  width: 3px;
+  background: var(--sr-accent-hi);
+  opacity: 0.55;
+  transition: opacity 0.14s ease;
   pointer-events: none;
 }
 .sr-handle:hover::after,
@@ -2962,32 +2990,21 @@
   display: flex;
 }
 
-/* Gekippt und mittig: es sagt, was hinter ihm liegt. */
+/* Gekippt und mittig: es sagt, was hinter ihm liegt, und es sagt es allein.
+   Die Farbe erbt es vom Griff — Ruhe, Hover und Offen stehen an EINER Stelle.
+   Eine gedämpfte Bestandszahl lief hier einmal im Fluss hinter dem Wort mit;
+   bei leerer Liste las sie sich als loser Kringel, und was gerade etwas WILL,
+   sagt ohnehin die Pille. */
 .sr-handle-word {
   writing-mode: vertical-rl;
   text-orientation: mixed;
   transform: rotate(180deg);
-  color: var(--sr-accent);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.28em;
+  font-size: var(--sr-handle-u);
+  font-weight: 800;
+  letter-spacing: 0.26em;
+  line-height: 1;
   white-space: nowrap;
-}
-.sr-handle:hover .sr-handle-word,
-.sr-handle--open .sr-handle-word {
-  color: var(--sr-accent-hi);
-}
-
-/* Was es überhaupt gibt — die ruhige Zahl. Gedämpft: das Wort trägt, sie
-   ergänzt. Ziffern brauchen die Sperrung des Wortes nicht, gesperrt säßen sie
-   als lose Punkte darüber. */
-.sr-handle-total {
-  color: rgba(200, 144, 64, 0.5);
-  letter-spacing: 0.1em;
-}
-.sr-handle:hover .sr-handle-total,
-.sr-handle--open .sr-handle-total {
-  color: rgba(232, 192, 64, 0.62);
+  text-indent: 0.13em; /* halber Nachlauf des letzten Zeichens */
 }
 
 /* Am Wortende, OHNE Fluss-Platz: sonst wanderte das Wort, sobald ein Signal
@@ -3051,6 +3068,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sr-row,
+  .sr-handle,
   .sr-handle::after {
     transition: none;
   }
