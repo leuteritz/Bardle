@@ -301,62 +301,21 @@ export const CHAMPION_TIER_CHIMES_PRICE: number[] = [500, 1400, 2800, 4500, 6500
 export const SKIN_ORIGINAL = 'OriginalSkin'
 /** Aspect ratio of bundled splash arts (1280×~730) — skin gallery cards. */
 export const SKIN_CARD_ASPECT_RATIO = '16 / 9'
-/** Skin gallery grid — min card width (px); the grid auto-fills columns. */
-export const SKIN_CARD_MIN_WIDTH = 300
 /**
- * Inline skin gallery in the details page.
+ * Skin gallery in the details page — the smallest a card may get before the grid
+ * drops a column.
  *
- * MIN_WIDTH is the smallest a card may get before the grid drops a column. The
- * right column is 464px wide (900 panel − 434 left − border) and gives the grid
- * ~425px of usable width, so this value decides the column count outright: at
- * 190 two columns fit (2×190 + 8 gap = 388) and three cannot (3×190 + 16 = 586).
- * Two it is — a skin card is a splash art, and at ~208px the champion in it is
- * recognisable instead of being a smear you have to hover to identify. It stays
- * inside the 111–220px band of the art table, so the cards keep loading the
- * 512px variant ('lg').
+ * The gallery takes 53% of the 980px panel, so the grid has ~483px of usable
+ * width, and this value decides the column count outright: at 190 two columns
+ * fit (2×190 + 14 gap = 394) and three cannot (3×190 + 28 = 598). Two it is — a
+ * card is a splash art, and at ~220px the champion in it is recognisable instead
+ * of a smear you have to hover to identify.
  *
- * The card HEIGHT is not authored at all: the grid divides whatever height the
- * block ends up with into whole rows (`grid-auto-rows: calc((100% - gaps) / n)`,
- * 2 rows normally, 3 on a 4K column). That is the only way to keep a no-scroll
- * column honest — an authored height either leaves a band of dead space or slices
- * the second row in half, and which of the two you get depends on the resolution.
- * Rows follow the room; the values below only bound how much room the grid asks
- * for.
+ * The card is capped at CHAMPION_ART_LG_MAX_EDGE so twenty of them keep loading
+ * the 512px variant rather than twenty untouched 1280px splashes. Judging a look
+ * happens on the stage next to the grid, not in the card.
  */
 export const SKIN_THUMB_MIN_WIDTH = 190
-/**
- * What the grid ASKS for (its flex basis) and the least it will accept, per
- * desktop height class:
- *
- *   viewport ≤ 1100px  (Full HD 950 / WUXGA 1070 → column 598–627px)  COMPACT
- *   viewport ≤ 1600px  (2K 1310 → column 767px)                       default
- *   viewport  > 1600px (4K 2030 → column 1397px)                      LARGE
- *
- * BASIS is two rows at a comfortable card height (three at 4K). MIN is the floor
- * the other blocks may not push it below — two rows of ~65px, still a readable
- * splash at 208px wide, and the point past which the gallery would stop being
- * able to answer "which look is this".
- */
-export const SKIN_GRID_BASIS = 234
-/** Floor of the 2K/default step. */
-export const SKIN_GRID_MIN = 168
-/** Full HD / WUXGA — the column is a fifth shorter, so it asks for less. */
-export const SKIN_GRID_BASIS_COMPACT = 172
-/** Floor at Full HD: two ~62px rows. Below this the strip stops being legible. */
-export const SKIN_GRID_MIN_COMPACT = 132
-/** 4K — three rows of ~152px; the column has ~600px spare there. */
-export const SKIN_GRID_BASIS_LARGE = 480
-/** Floor at 4K: three rows of ~100px. */
-export const SKIN_GRID_MIN_LARGE = 324
-/**
- * While a perk choice is open the gallery drops to ONE row (see the `:has()`
- * rule on the column). The choice expires and the skins do not, so for those few
- * seconds the three cards outrank the second row of splashes — and one full-height
- * row still shows two skins rather than a band of crops.
- */
-export const SKIN_GRID_BASIS_CHOOSING = 104
-/** Floor of the one-row state — 208×92 is still a readable splash. */
-export const SKIN_GRID_MIN_CHOOSING = 92
 
 /**
  * Downscaled art variants generated next to every splash

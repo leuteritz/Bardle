@@ -146,10 +146,7 @@ const skeletonNodes = computed(() =>
           <span class="ttl-block ttl-block--action" />
         </div>
         <div class="ttl-col ttl-col--right">
-          <div class="ttl-pair ttl-pair--skins">
-            <span class="ttl-block ttl-block--skin" />
-            <span class="ttl-block ttl-block--skin" />
-          </div>
+          <span class="ttl-block ttl-block--ident" />
           <div class="ttl-grid">
             <span v-for="i in STAT_TILES" :key="`stat-${i}`" class="ttl-block ttl-block--stat" />
           </div>
@@ -335,13 +332,12 @@ const skeletonNodes = computed(() =>
   gap: 8px;
   min-height: 0;
 }
-.ttl-pair--skins {
+.ttl-block--ident {
   flex: 0 0 22%;
 }
 .ttl-pair--perks {
   flex: 0 0 15%;
 }
-.ttl-block--skin,
 .ttl-block--perk {
   flex: 1;
   min-width: 0;

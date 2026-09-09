@@ -425,6 +425,9 @@ const focusSwap = ref(false)
 const swapOpen = ref(false)
 /** Bumped to ask the page to leave the picker (Escape), see `closeSwapToken`. */
 const closeSwapToken = ref(0)
+const skinsOpen = ref(false)
+/** Same token trick as the picker — the skin gallery lives in the page too. */
+const closeSkinsToken = ref(0)
 
 function focusSeat(subSlot: number | null, swap = false) {
   focusAlly.value = subSlot
@@ -607,6 +610,8 @@ function onEsc(e: KeyboardEvent) {
     closeDestination()
   } else if (swapOpen.value) {
     closeSwapToken.value++
+  } else if (skinsOpen.value) {
+    closeSkinsToken.value++
   } else if (synergiesOpen.value) {
     synergiesOpen.value = false
     railChoice.value = null
@@ -660,6 +665,7 @@ function resetTabState() {
   focusAlly.value = null
   focusSwap.value = false
   swapOpen.value = false
+  skinsOpen.value = false
 }
 
 watch(isVisible, (visible) => {
@@ -762,11 +768,13 @@ onUnmounted(() => {
               :focus-token="focusToken"
               :focus-swap="focusSwap"
               :close-swap-token="closeSwapToken"
+              :close-skins-token="closeSkinsToken"
               @assign="assignChampion"
               @clear-ally="clearAlly"
               @pick-equipment="openEquipment"
               @hover-ally="hoveredAllySub = $event"
               @swap-state="swapOpen = $event"
+              @skins-state="skinsOpen = $event"
               @ready="panelBuilt = true"
             />
           </div>

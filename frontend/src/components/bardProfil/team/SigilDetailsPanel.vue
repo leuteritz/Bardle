@@ -41,16 +41,13 @@ import { MATERIALS } from '@/config/economy/materials'
 import { ITEM_RARITIES, ITEM_SETS, SHOP_ITEMS } from '@/config/economy/items'
 import { formatNumberCompact } from '@/config/ui/numberFormat'
 import type { ChampionPerkDef, ChampionStatKey, ItemCategory, ShopItem } from '@/types'
-import {
-  getChampionSkins,
-  formatSkinName,
-  getOriginalPreviewPath,
-  getSkinImagePath,
-} from '@/utils/game/champions'
+import { championSkinEntries, formatSkinName } from '@/utils/game/champions'
 import { allySlotLabel } from '@/utils/ui/format'
 import ChampionLevelBadge from './ChampionLevelBadge.vue'
 import ChampionSwapCompare from './swap/ChampionSwapCompare.vue'
 import ChampionSwapGrid from './swap/ChampionSwapGrid.vue'
+import ChampionSkinStage from './skins/ChampionSkinStage.vue'
+import ChampionSkinGrid from './skins/ChampionSkinGrid.vue'
 
 const props = defineProps<{
   roleIndex: number
@@ -59,6 +56,7 @@ const props = defineProps<{
   focusToken?: number
   focusSwap?: boolean
   closeSwapToken?: number
+  closeSkinsToken?: number
 }>()
 const emit = defineEmits<{
   assign: [subSlot: number, champion: string]
@@ -66,6 +64,7 @@ const emit = defineEmits<{
   'pick-equipment': [category: ItemCategory]
   'hover-ally': [subSlot: number | null]
   'swap-state': [open: boolean]
+  'skins-state': [open: boolean]
   /** Beide Aufbaustufen stehen — der Ladeschleier darf aufdecken. */
   ready: []
 }>()
@@ -117,6 +116,8 @@ const subject = ref(props.focusAlly ?? MAIN_SUBJECT)
 const swapOpen = ref(!!props.focusSwap)
 const candidate = ref<string | null>(null)
 const skinOpen = ref(false)
+/** Sticky wie der Swap-Kandidat: bleibt stehen, wenn der Zeiger das Raster verlaesst. */
+const skinPreview = ref<string | null>(null)
 const champion = computed(() =>
   subject.value === MAIN_SUBJECT ? main.value : (allies.value[subject.value] ?? null),
 )
@@ -135,6 +136,11 @@ const boardSpotlight = computed(
 )
 
 watch(swapOpen, (open) => emit('swap-state', open), { immediate: true })
+watch(skinOpen, (open) => emit('skins-state', open), { immediate: true })
+watch(champion, (name) => {
+  skinPreview.value = null
+  if (!name) closeSkins()
+})
 watch(
   () => [props.roleIndex, props.focusToken] as const,
   () => {
@@ -142,11 +148,16 @@ watch(
     candidate.value = null
     swapOpen.value = !!props.focusSwap
     skinOpen.value = false
+    skinPreview.value = null
   },
 )
 watch(
   () => props.closeSwapToken,
   () => closeSwap(),
+)
+watch(
+  () => props.closeSkinsToken,
+  () => closeSkins(),
 )
 watch(allies, (slots) => {
   if (!swapOpen.value && subject.value !== MAIN_SUBJECT && !slots[subject.value])
@@ -163,6 +174,7 @@ function openSwap(seat: number) {
   subject.value = seat
   candidate.value = null
   swapOpen.value = true
+  closeSkins()
 }
 function closeSwap() {
   swapOpen.value = false
@@ -226,30 +238,31 @@ const equippedSkin = computed(() =>
   champion.value ? skinStore.getSelectedSkin(champion.value) : SKIN_ORIGINAL,
 )
 const skinEntries = computed(() =>
-  champion.value
-    ? [
-        {
-          id: SKIN_ORIGINAL,
-          label: formatSkinName(SKIN_ORIGINAL),
-          image: getOriginalPreviewPath(champion.value, 'lg'),
-        },
-        ...getChampionSkins(champion.value)
-          .filter((skin) => skin !== SKIN_ORIGINAL)
-          .map((skin) => ({
-            id: skin,
-            label: formatSkinName(skin),
-            image: getSkinImagePath(champion.value!, skin, 'lg'),
-          })),
-      ]
-    : [],
+  champion.value ? championSkinEntries(champion.value) : [],
 )
-function equipSkin(id: string, label: string) {
+/** 1-basierte Stelle des gezeigten Skins — die Buehne schreibt "3 / 11". */
+const shownSkinIndex = computed(() => {
+  const shown = skinPreview.value ?? equippedSkin.value
+  return skinEntries.value.findIndex((entry) => entry.id === shown) + 1
+})
+function openSkins() {
+  if (skinOpen.value) return closeSkins()
+  skinPreview.value = null
+  skinOpen.value = true
+}
+function closeSkins() {
+  skinOpen.value = false
+  skinPreview.value = null
+}
+/** Traegt den Skin und LAESST DIE GALERIE OFFEN — er kostet nichts, also ist
+    Weiterprobieren der Normalfall und nicht die Ausnahme. */
+function equipSkin(id: string) {
   if (!champion.value || id === equippedSkin.value) return
   skinStore.setSkin(champion.value, id)
-  skinOpen.value = false
+  skinPreview.value = id
   announceReceipt({
     kind: 'equip',
-    headline: label,
+    headline: formatSkinName(id),
     subline: champion.value,
     portraitSrc: battleStore.getChampionImage(champion.value, { size: 'md' }),
     mergeKey: 'equip',
@@ -556,7 +569,10 @@ function perkStatLine(perk: ChampionPerkDef): string {
       </div>
     </header>
 
-    <div class="sdp-content" :class="{ 'sdp-content--swap': swapOpen }">
+    <div
+      class="sdp-content"
+      :class="{ 'sdp-content--swap': swapOpen, 'sdp-content--skins': skinOpen }"
+    >
       <ChampionSwapCompare
         v-if="swapOpen"
         class="sdp-swap-compare"
@@ -567,6 +583,17 @@ function perkStatLine(perk: ChampionPerkDef): string {
         :candidate="candidate"
         @cancel="closeSwap"
         @assign="assignChampion"
+      />
+      <ChampionSkinStage
+        v-else-if="skinOpen && champion"
+        class="sdp-skin-stage"
+        :champion="champion"
+        :worn="equippedSkin"
+        :preview="skinPreview"
+        :index="shownSkinIndex"
+        :total="skinEntries.length"
+        @wear="equipSkin"
+        @close="closeSkins"
       />
       <div v-else class="sdp-hero">
         <button
@@ -586,7 +613,9 @@ function perkStatLine(perk: ChampionPerkDef): string {
               class="sdp-hero-level"
             /><span class="sdp-portrait-change"
               ><Icon icon="lucide:repeat-2" width="16" height="16" /> Change</span
-            ></template
+            ><span v-if="skinEntries.length > 1" class="sdp-skin-worn">{{
+              formatSkinName(equippedSkin)
+            }}</span></template
           >
           <template v-else
             ><img :src="roleDef.image" :alt="roleDef.label" class="sdp-empty-art" /><span
@@ -611,40 +640,14 @@ function perkStatLine(perk: ChampionPerkDef): string {
             v-if="skinEntries.length > 1"
             class="sdp-skin-trigger"
             type="button"
-            :aria-expanded="skinOpen"
-            @click="skinOpen = !skinOpen"
+            :aria-pressed="skinOpen"
+            v-tip="'Browse appearances'"
+            @click="openSkins"
           >
             <Icon icon="lucide:palette" width="16" height="16" />
             <span>Skins</span>
             <em>{{ skinEntries.length }}</em>
-            <Icon
-              :icon="skinOpen ? 'lucide:chevron-up' : 'lucide:chevron-down'"
-              width="15"
-              height="15"
-            />
           </button>
-          <div v-if="skinOpen" class="sdp-skin-popover">
-            <div class="sdp-skin-popover-head">
-              <span>Choose appearance</span
-              ><small>{{
-                equippedSkin === SKIN_ORIGINAL ? 'Original' : formatSkinName(equippedSkin)
-              }}</small>
-            </div>
-            <div class="sdp-skin-list">
-              <button
-                v-for="entry in skinEntries"
-                :key="entry.id"
-                type="button"
-                class="sdp-skin"
-                :class="{ 'sdp-skin--selected': entry.id === equippedSkin }"
-                :aria-pressed="entry.id === equippedSkin"
-                v-tip="entry.label"
-                @click="equipSkin(entry.id, entry.label)"
-              >
-                <img :src="entry.image" :alt="entry.label" /><span>{{ entry.label }}</span>
-              </button>
-            </div>
-          </div>
           <div class="sdp-identity">
             <p class="sdp-seat-name">{{ subjectSeatLabel }}</p>
             <h2>{{ champion }}</h2>
@@ -842,6 +845,15 @@ function perkStatLine(perk: ChampionPerkDef): string {
         :sub-slot="subject"
         @select="assignChampion"
         @preview="candidate = $event"
+      />
+      <ChampionSkinGrid
+        v-else-if="skinOpen && champion"
+        class="sdp-skin-grid"
+        :champion="champion"
+        :worn="equippedSkin"
+        :preview="skinPreview"
+        @preview="skinPreview = $event"
+        @select="equipSkin"
       />
       <div v-else class="sdp-workspace">
         <div class="sdp-section sdp-section--equipment">
@@ -1169,6 +1181,12 @@ function perkStatLine(perk: ChampionPerkDef): string {
   display: grid;
   grid-template-columns: 43% 57%;
 }
+/* Die Buehne bekommt mehr als beim Tausch: dort vergleicht man Zahlen, hier
+   ein Bild — und das Raster braucht nur zwei Spalten. */
+.sdp-content--skins {
+  display: grid;
+  grid-template-columns: 47% 53%;
+}
 .sdp-hero {
   position: relative;
   min-width: 0;
@@ -1438,36 +1456,21 @@ function perkStatLine(perk: ChampionPerkDef): string {
   font-weight: 700;
   text-align: center;
 }
-.sdp-skin-popover {
+/* Sagt im Normalzustand, was getragen wird — das stand vorher nur im
+   geoeffneten Popover. */
+.sdp-skin-worn {
   position: absolute;
-  z-index: 5;
-  top: 57px;
-  right: 20px;
-  left: 20px;
-  padding: 10px;
-  border: 1px solid #8b632c;
-  border-radius: 5px;
-  background: #111008;
-  box-shadow: 0 14px 30px #000c;
-}
-.sdp-skin-popover-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 2px 8px;
-  border-bottom: 1px solid #3e200a;
-  color: #e8c040;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.sdp-skin-popover-head small {
+  bottom: 10px;
+  left: 10px;
+  max-width: calc(100% - 20px);
   overflow: hidden;
-  color: #bcae91;
-  font-size: 10px;
-  letter-spacing: 0;
+  padding: 4px 9px;
+  border: 1px solid #5c3310;
+  border-radius: 3px;
+  background: rgba(17, 16, 8, 0.86);
+  color: #e8c040;
+  font-size: 12px;
   text-overflow: ellipsis;
-  text-transform: none;
   white-space: nowrap;
 }
 .sdp-empty-art {
@@ -2007,50 +2010,10 @@ function perkStatLine(perk: ChampionPerkDef): string {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.sdp-skin-list {
-  display: flex;
-  gap: 6px;
-  padding: 10px 0 0;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #5c3310 #111;
-}
-.sdp-skin {
-  position: relative;
-  min-width: 116px;
-  height: 78px;
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid #493116;
-  border-radius: 3px;
-  background: #141410;
-  color: #f0dfb3;
-  cursor: pointer;
-}
-.sdp-skin img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.74;
-}
-.sdp-skin span {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  padding: 4px 5px;
-  overflow: hidden;
-  background: #100d08;
-  font-size: 9px;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sdp-skin--selected {
-  border: 2px solid #e8c040;
-}
 .sdp-swap-compare,
-.sdp-swap-grid {
+.sdp-swap-grid,
+.sdp-skin-stage,
+.sdp-skin-grid {
   min-width: 0;
   min-height: 0;
 }
@@ -2083,9 +2046,6 @@ function perkStatLine(perk: ChampionPerkDef): string {
   }
   .sdp-section--perks {
     flex-basis: 170px;
-  }
-  .sdp-skin {
-    height: 52px;
   }
 }
 

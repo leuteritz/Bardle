@@ -124,3 +124,32 @@ export function formatSkinName(skin: string): string {
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
     .trim()
 }
+
+/** One selectable appearance: the default look first, then every bundled skin. */
+export interface ChampionSkinEntry {
+  id: string
+  label: string
+  image: string
+}
+
+/** The full appearance list of a champion — the gallery and the trigger's
+ *  counter read the same one, so they can never disagree on how many there are. */
+export function championSkinEntries(
+  championName: string,
+  size: ChampionArtSize = 'lg',
+): ChampionSkinEntry[] {
+  return [
+    {
+      id: SKIN_ORIGINAL,
+      label: formatSkinName(SKIN_ORIGINAL),
+      image: getOriginalPreviewPath(championName, size),
+    },
+    ...getChampionSkins(championName)
+      .filter((skin) => skin !== SKIN_ORIGINAL)
+      .map((skin) => ({
+        id: skin,
+        label: formatSkinName(skin),
+        image: getSkinImagePath(championName, skin, size),
+      })),
+  ]
+}
