@@ -45,7 +45,10 @@ export const NOTIFY_BADGES: readonly NotifyBadgeDef[] = [
     sites: [
       {
         file: 'components/bardProfil/BardProfileMenu.vue',
-        marker: 'place="inline"',
+        // Die Marke muss auf der TAG-Zeile stehen; `place="inline"` rutschte
+        // dort weg, als `tone="skill"` dazukam und Prettier alle Attribute
+        // umbrach.
+        marker: '<ShopReadyBadge',
         where: 'Skill-Tree-Reiter der Profil-Leiste',
       },
       {

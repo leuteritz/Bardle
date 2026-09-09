@@ -184,15 +184,25 @@
        4K       3840×2160 → 17.0px   Name 19.7   Note 14.8
        FHD@125 %     1536 → 13.0px   Name 15.1   Note 11.3   (Boden)
 
-     DER DECKEL IST GERECHNET, NICHT GEWÄHLT — er hängt an der Scheibe der
-     Universumsleiste. Deren Zeile ist scheibengetrieben
-     (`UNIVERSE_RAIL_ROW_H = UNIVERSE_DISC_RAIL_PX + 14`), und der Textblock
-     daneben muss unter die 46 px der Scheibe passen, sonst treibt plötzlich
-     die SCHRIFT die Zeilenhöhe und zehn Zeilen passen nicht mehr in die
-     Leiste — auf 4K, wo niemand hinsieht. Der Block misst
-     `1.16em × 1.25 + 0.87em × 1.33 = 2.607em`; bei 17 px sind das 44,3 von
-     46 px, bei 18 wären es 46,9 und die Zeile risse.
-     Wer die Grade oder die Zeilenhöhen ändert, rechnet diesen Deckel neu.
+     DER DECKEL IST EINE WAHL, KEINE HERLEITUNG — und das ist neu.
+
+     Er war einmal gerechnet: die Zeile der Universumsleiste war
+     scheibengetrieben (`UNIVERSE_DISC_RAIL_PX` 46), ihr Textblock
+     `1.16em × 1.25 + 0.87em × 1.33 = 2.607em` mass bei 17 px 44,3 von 46, und
+     bei 18 wären es 46,9 gewesen — die Zeile wäre gerissen. Diese Rechnung ist
+     hinfällig, seit die Zeile eine KARTE ist: die Scheibe misst 56, der Kopf
+     wächst auf hohen Schirmen mit, und der Textblock hat Luft.
+
+     GEMESSEN am Deckel (17 px, 4K), beide motivgetriebenen Zeilen:
+
+       Universumsleiste  Textblock 44,31  von  96 px Kopf   (Scheibe 56)
+       Voyages-Zielliste Textblock 48,39  von  60 px Miniatur
+
+     Keine der beiden setzt den Deckel also noch. 17 ist die Lesbarkeitsgrenze
+     eines 244-px-Panels — mehr Grad frisst dort die Breite, nicht die Höhe.
+     Wer ihn anhebt, misst alle fünf `RAIL_FILES` neu; die Zusage, dass die
+     SCHRIFT nirgends die Zeilenhöhe treibt, gilt weiter und ist das, was hier
+     gebunden wird.
 
      Der Boden ist ebenso wenig Zierrat: bei 1536 (Full HD @125 %) ist die
      Auflösung kein Maß für den verfügbaren Platz — dieselbe Begründung wie
