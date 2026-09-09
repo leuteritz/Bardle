@@ -65,7 +65,7 @@
               :key="affinity.id"
               class="cs-affinity"
               :style="{ '--ac': affinity.color }"
-              :aria-label="affinityTip(affinity)"
+              :aria-label="affinityAriaLabel(affinity)"
               v-tip="affinityTip(affinity)"
             >
               <span class="cs-affinity-crest" aria-hidden="true">
@@ -176,6 +176,7 @@ import type { ShopChampionDetail } from '@/types'
 type AffinityCard = {
   kind: 'Origin' | 'Trait'
   name: string
+  color: string
   thresholds: Array<{ count: number; bonus: string }>
 }
 
@@ -238,12 +239,22 @@ export default defineComponent({
       const separator = bonus.indexOf(':')
       return separator >= 0 ? bonus.slice(separator + 1).trim() : bonus
     }
-    const affinityTip = (affinity: AffinityCard) =>
-      `${affinity.kind}: ${affinity.name} · ${affinity.thresholds
-        .map((threshold) => `${threshold.count} → ${threshold.bonus}`)
-        .join(' · ')}`
+    const affinityTipText = (affinity: AffinityCard) =>
+      affinity.thresholds
+        .map((threshold) => `At ${threshold.count} → ${threshold.bonus}`)
+        .join('\n')
+    const affinityTip = (affinity: AffinityCard) => ({
+      label: `${affinity.kind} · ${affinity.name}`,
+      text: affinityTipText(affinity),
+      color: affinity.color,
+    })
+    const affinityAriaLabel = (affinity: AffinityCard) =>
+      `${affinity.kind}: ${affinity.name}. ${affinity.thresholds
+        .map((threshold) => `At ${threshold.count}: ${threshold.bonus}`)
+        .join('; ')}`
 
     return {
+      affinityAriaLabel,
       affinityEffect,
       affinityTip,
       affinities,
