@@ -606,9 +606,6 @@ onUnmounted(() => {
 }
 
 .mini-badge {
-  /* Anker für die Schein-Ebene unten — ohne das hinge ihr `inset: 0` am
-     Tab-Button und legte sich über dessen ganze Fläche. */
-  position: relative;
   pointer-events: auto;
   min-width: 16px;
   height: 16px;
@@ -621,36 +618,12 @@ onUnmounted(() => {
   font-weight: 900;
   color: #fff;
   line-height: 1;
-  /* Der Ruhe-Schein steht STATISCH; die Keyframe fährt nur noch `transform`. */
-  box-shadow: 0 0 4px var(--tb-glow-a);
   animation: team-badge-beat 1.8s ease-in-out infinite;
-}
-
-/* Der helle Schein als eigene Ebene, statisch gerastert — animiert wird nur
-   seine `opacity` (Compositor, kein Repaint). Vorher lag der Verlauf des
-   Scheins in der Keyframe selbst: eine `box-shadow`-Animation rastert jede
-   Frame die Box samt Schatten neu, und in der Leiste stehen bis zu fünf davon
-   nebeneinander. Dieselbe Mechanik wie `.header-notif-badge::after`, dort steht
-   die Herleitung. */
-.mini-badge::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  box-shadow:
-    0 0 10px var(--tb-glow-b),
-    0 0 18px var(--tb-glow-c);
-  opacity: 0;
-  animation: team-badge-glow 1.8s ease-in-out infinite;
 }
 
 .mini-badge--expedition {
   background: linear-gradient(135deg, #a855f7, #7c3aed);
   border: 1.5px solid #c9a0ff;
-  --tb-glow-a: rgba(168, 85, 247, 0.5);
-  --tb-glow-b: rgba(168, 85, 247, 0.9);
-  --tb-glow-c: rgba(124, 58, 237, 0.4);
 }
 
 .mini-badge--forge {
@@ -658,25 +631,16 @@ onUnmounted(() => {
   border: 1.5px solid #ffe080;
   color: #2a1608;
   text-shadow: 0 1px 0 rgba(255, 240, 180, 0.5);
-  --tb-glow-a: rgba(232, 192, 64, 0.55);
-  --tb-glow-b: rgba(240, 208, 96, 0.95);
-  --tb-glow-c: rgba(200, 144, 64, 0.45);
 }
 
 .mini-badge--skill {
   background: linear-gradient(135deg, #ec4899, #be185d);
   border: 1.5px solid #f9a8d4;
-  --tb-glow-a: rgba(236, 72, 153, 0.5);
-  --tb-glow-b: rgba(236, 72, 153, 0.9);
-  --tb-glow-c: rgba(190, 24, 93, 0.4);
 }
 
 .mini-badge--champion {
   background: linear-gradient(135deg, #06b6d4, #0891b2);
   border: 1.5px solid #38bdf8;
-  --tb-glow-a: rgba(6, 182, 212, 0.5);
-  --tb-glow-b: rgba(6, 182, 212, 0.9);
-  --tb-glow-c: rgba(8, 145, 178, 0.4);
 }
 
 /* Azur fehlt in dieser Reihe: die Shop-Marke ist keine `.mini-badge` mehr,
@@ -686,9 +650,6 @@ onUnmounted(() => {
 .mini-badge--planet {
   background: linear-gradient(135deg, #34d399, #059669);
   border: 1.5px solid #6ee7b7;
-  --tb-glow-a: rgba(52, 211, 153, 0.5);
-  --tb-glow-b: rgba(52, 211, 153, 0.9);
-  --tb-glow-c: rgba(5, 150, 105, 0.45);
 }
 
 @keyframes team-badge-beat {
@@ -698,16 +659,6 @@ onUnmounted(() => {
   }
   50% {
     transform: scale(1.15);
-  }
-}
-
-@keyframes team-badge-glow {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
   }
 }
 
