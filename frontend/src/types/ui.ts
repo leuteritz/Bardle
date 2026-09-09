@@ -157,6 +157,7 @@ export interface ShopChampionDetail {
   image: string
   roleLabel: string
   roleColor: string
+  roleImage: string
   traits: Array<{ id: string; name: string; icon: string; color: string }>
   origin: { origin: string; icon: string; color: string } | null
   starLevel: number

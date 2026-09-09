@@ -15,7 +15,16 @@
               ★ {{ detail.starLevel }} · {{ detail.tierName }}
             </span>
             <span class="cs-hero-role" :style="{ '--cc': detail.roleColor }">
-              {{ detail.roleLabel }}
+              <img
+                v-if="detail.roleImage"
+                :src="detail.roleImage"
+                alt=""
+                class="cs-hero-role-art rpg-img"
+              />
+              <span class="cs-hero-role-copy">
+                <small>Role</small>
+                <strong>{{ detail.roleLabel }}</strong>
+              </span>
             </span>
             <span v-for="trait in detail.traits" :key="trait.id" class="cs-hero-trait">
               <Icon :icon="trait.icon" class="cs-hero-trait-icon" :style="{ color: trait.color }" />
@@ -84,21 +93,6 @@
               </span>
             </article>
           </div>
-        </div>
-
-        <div
-          v-if="detail.locked && detail.homePlanet"
-          class="cs-unlock-line"
-          :style="{ '--unlock-c': detail.tierColor }"
-        >
-          <PlanetGlyph
-            :type="detail.homePlanet.type"
-            :size="SHOP_HOME_PLANET_GLYPH_SIZE"
-            class="cs-home-glyph"
-          />
-          <span>
-            Rescue <b>{{ detail.homePlanet.name }}</b> to recruit {{ detail.name }}.
-          </span>
         </div>
 
         <div class="cs-cost" :class="{ 'cs-cost--preview': detail.locked }">
@@ -176,20 +170,15 @@
 import { computed, defineComponent } from 'vue'
 import { Icon } from '@iconify/vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
-import PlanetGlyph from '@/components/ui/PlanetGlyph.vue'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { ORIGIN_SYNERGIES } from '@/config/champions/championOrigins'
 import { TRAIT_DEFINITIONS } from '@/config/champions/championTraits'
-import {
-  MAX_STAR_LEVEL,
-  SHOP_CHAMPION_AFFINITY_COUNT,
-  SHOP_HOME_PLANET_GLYPH_SIZE,
-} from '@/config/constants'
+import { MAX_STAR_LEVEL, SHOP_CHAMPION_AFFINITY_COUNT } from '@/config/constants'
 import type { ShopChampionDetail } from '@/types'
 
 export default defineComponent({
   name: 'ChampionDetailPanel',
-  components: { Icon, CosmicStageBackground, PlanetGlyph },
+  components: { Icon, CosmicStageBackground },
   props: { detail: { type: Object as () => ShopChampionDetail | null, default: null } },
   emits: ['buy'],
   setup(props) {
@@ -246,7 +235,6 @@ export default defineComponent({
       lockedButtonLabel,
       MAX_STAR_LEVEL,
       SHOP_CHAMPION_AFFINITY_COUNT,
-      SHOP_HOME_PLANET_GLYPH_SIZE,
     }
   },
 })
@@ -324,6 +312,38 @@ export default defineComponent({
 .cs-hero-tier,
 .cs-hero-role {
   color: var(--cc, #e8c040);
+}
+.cs-hero-role {
+  gap: 8px;
+  min-height: 38px;
+  padding: 4px 10px 4px 5px;
+  border: 1px solid color-mix(in srgb, var(--cc) 52%, #5c3310);
+  border-radius: 4px;
+  background: color-mix(in srgb, #111008 82%, var(--cc));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.cs-hero-role-art {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+.cs-hero-role-copy {
+  display: grid;
+  gap: 2px;
+  line-height: 1;
+}
+.cs-hero-role-copy small {
+  color: #b5a37d;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  line-height: 1;
+}
+.cs-hero-role-copy strong {
+  color: var(--cc);
+  font-size: 14px;
+  letter-spacing: 0.11em;
+  line-height: 1;
 }
 .cs-hero-tier,
 .cs-hero-trait {
@@ -437,7 +457,7 @@ export default defineComponent({
 }
 .cs-affinity-head small {
   color: #a59675;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.12em;
   line-height: 1;
   text-transform: uppercase;
@@ -455,7 +475,7 @@ export default defineComponent({
 }
 .cs-affinity em {
   color: var(--ac);
-  font-size: 13px;
+  font-size: 14px;
   font-style: normal;
   font-weight: 700;
   line-height: 1;
@@ -463,7 +483,7 @@ export default defineComponent({
 .cs-affinity strong {
   overflow: hidden;
   color: var(--ac);
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 400;
   line-height: 1.05;
   text-overflow: ellipsis;
@@ -473,27 +493,10 @@ export default defineComponent({
 .cs-affinity-next {
   overflow: hidden;
   color: #a59675;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.cs-unlock-line {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  margin-bottom: 18px;
-  padding: 0 0 12px;
-  border-bottom: 1px solid #3e200a;
-  color: #c6b796;
-  font-size: 13px;
-  line-height: 1.4;
-}
-.cs-unlock-line b {
-  color: var(--unlock-c, #e8c040);
-}
-.cs-home-glyph {
-  flex: 0 0 auto;
 }
 .cs-cost--preview {
   opacity: 0.68;
