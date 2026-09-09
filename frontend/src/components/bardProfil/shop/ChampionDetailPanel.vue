@@ -34,6 +34,58 @@
       </div>
 
       <div class="cs-detail-body">
+        <div class="cs-identity" aria-label="Champion identity">
+          <div
+            class="cs-tier-band"
+            :style="{ '--ac': detail.tierColor }"
+            :aria-label="`Tier ${detail.starLevel} of ${MAX_STAR_LEVEL}: ${detail.tierName}`"
+          >
+            <span class="cs-tier-crest" aria-hidden="true">
+              <Icon :icon="detail.tierIcon" width="25" height="25" />
+            </span>
+            <span class="cs-tier-copy">
+              <span class="cs-affinity-head"><small>Champion Tier</small></span>
+              <strong>{{ detail.tierName }}</strong>
+            </span>
+            <span class="cs-tier-stars" aria-hidden="true">
+              <i
+                v-for="n in MAX_STAR_LEVEL"
+                :key="n"
+                :class="{ 'cs-tier-star--lit': n <= detail.starLevel }"
+                >★</i
+              >
+            </span>
+          </div>
+
+          <div class="cs-affinity-list" aria-label="Champion origins and traits">
+            <article
+              v-for="affinity in affinities"
+              :key="affinity.id"
+              class="cs-affinity"
+              :style="{ '--ac': affinity.color }"
+              :aria-label="`${affinity.kind}: ${affinity.name}`"
+            >
+              <span class="cs-affinity-crest" aria-hidden="true">
+                <Icon :icon="affinity.icon" width="19" height="19" />
+              </span>
+              <span class="cs-affinity-copy">
+                <span class="cs-affinity-head">
+                  <small>{{ affinity.kind }}</small>
+                  <span class="cs-affinity-steps" aria-hidden="true">
+                    <i v-for="step in affinity.thresholds" :key="step.count" />
+                  </span>
+                  <em>{{ SHOP_CHAMPION_AFFINITY_COUNT }}×</em>
+                </span>
+                <strong>{{ affinity.name }}</strong>
+                <span v-if="affinity.thresholds[0]" class="cs-affinity-next">
+                  {{ affinity.thresholds[0].count }} to activate ·
+                  {{ affinity.thresholds[0].bonus }}
+                </span>
+              </span>
+            </article>
+          </div>
+        </div>
+
         <div
           v-if="detail.locked && detail.homePlanet"
           class="cs-unlock-line"
@@ -126,7 +178,13 @@ import { Icon } from '@iconify/vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import PlanetGlyph from '@/components/ui/PlanetGlyph.vue'
 import { formatNumber } from '@/config/ui/numberFormat'
-import { SHOP_HOME_PLANET_GLYPH_SIZE } from '@/config/constants'
+import { ORIGIN_SYNERGIES } from '@/config/champions/championOrigins'
+import { TRAIT_DEFINITIONS } from '@/config/champions/championTraits'
+import {
+  MAX_STAR_LEVEL,
+  SHOP_CHAMPION_AFFINITY_COUNT,
+  SHOP_HOME_PLANET_GLYPH_SIZE,
+} from '@/config/constants'
 import type { ShopChampionDetail } from '@/types'
 
 export default defineComponent({
@@ -135,6 +193,36 @@ export default defineComponent({
   props: { detail: { type: Object as () => ShopChampionDetail | null, default: null } },
   emits: ['buy'],
   setup(props) {
+    const affinities = computed(() => {
+      const detail = props.detail
+      if (!detail) return []
+
+      const originDef = detail.origin ? ORIGIN_SYNERGIES[detail.origin.origin] : null
+      const origin =
+        originDef && detail.origin
+          ? {
+              id: `origin-${detail.origin.origin}`,
+              kind: 'Origin' as const,
+              name: detail.origin.origin,
+              icon: originDef.icon,
+              color: originDef.color,
+              thresholds: originDef.thresholds,
+            }
+          : null
+      const traits = detail.traits.map((trait) => {
+        const definition = TRAIT_DEFINITIONS.find((entry) => entry.id === trait.id)
+        return {
+          id: `trait-${trait.id}`,
+          kind: 'Trait' as const,
+          name: trait.name,
+          icon: trait.icon,
+          color: trait.color,
+          thresholds: definition?.thresholds ?? [],
+        }
+      })
+
+      return origin ? [origin, ...traits] : traits
+    })
     const lockedButtonLabel = computed(() => {
       const planet = props.detail?.homePlanet
       return `Locked · Rescue ${planet ? `a ${planet.name}` : 'its planet'}`
@@ -151,10 +239,13 @@ export default defineComponent({
     })
 
     return {
+      affinities,
       costState,
       fillStyle,
       formatNumber,
       lockedButtonLabel,
+      MAX_STAR_LEVEL,
+      SHOP_CHAMPION_AFFINITY_COUNT,
       SHOP_HOME_PLANET_GLYPH_SIZE,
     }
   },
@@ -234,6 +325,10 @@ export default defineComponent({
 .cs-hero-role {
   color: var(--cc, #e8c040);
 }
+.cs-hero-tier,
+.cs-hero-trait {
+  display: none;
+}
 .cs-hero-trait::before {
   width: 3px;
   height: 3px;
@@ -254,6 +349,134 @@ export default defineComponent({
   padding: 18px 20px 20px;
   scrollbar-color: #5c3310 #111008;
   scrollbar-width: thin;
+}
+.cs-identity {
+  margin-bottom: 18px;
+}
+.cs-tier-band {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--ac) 46%, #3e200a);
+  border-left: 3px solid var(--ac);
+  border-radius: 4px;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 17%, #17150e), #141410 78%);
+}
+.cs-tier-crest,
+.cs-affinity-crest {
+  display: grid;
+  place-items: center;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: var(--ac);
+  color: #fff;
+}
+.cs-tier-crest {
+  width: 38px;
+  height: 42px;
+}
+.cs-tier-copy,
+.cs-affinity-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.cs-tier-copy strong {
+  overflow: hidden;
+  color: var(--ac);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--ac) 34%, transparent);
+  white-space: nowrap;
+}
+.cs-tier-stars {
+  display: flex;
+  gap: 3px;
+  color: #3b3226;
+  font-size: 13px;
+  line-height: 1;
+}
+.cs-tier-stars i {
+  font-style: normal;
+}
+.cs-tier-star--lit {
+  color: color-mix(in srgb, var(--ac) 74%, #fff);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--ac) 70%, transparent);
+}
+.cs-affinity-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 8px;
+  margin-top: 9px;
+}
+.cs-affinity {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--ac) 46%, #3e200a);
+  border-left: 3px solid var(--ac);
+  border-radius: 4px;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 15%, #17150e), #141410 78%);
+}
+.cs-affinity-crest {
+  width: 30px;
+  height: 33px;
+}
+.cs-affinity-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cs-affinity-head small {
+  color: #a59675;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.cs-affinity-steps {
+  display: flex;
+  gap: 4px;
+  margin-right: auto;
+}
+.cs-affinity-steps i {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid #6c5c3c;
+  border-radius: 50%;
+}
+.cs-affinity em {
+  color: var(--ac);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+}
+.cs-affinity strong {
+  overflow: hidden;
+  color: var(--ac);
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--ac) 34%, transparent);
+  white-space: nowrap;
+}
+.cs-affinity-next {
+  overflow: hidden;
+  color: #a59675;
+  font-size: 10px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cs-unlock-line {
   display: flex;

@@ -683,6 +683,7 @@ export const MATERIAL_ICON_MD_SUFFIX = '-256.png'
  * below the fold at Full HD.
  */
 export const SHOP_HOME_PLANET_GLYPH_SIZE = 84
+export const SHOP_CHAMPION_AFFINITY_COUNT = 1
 
 // ── Shop domain tabs (ChampionShopComponent) ─────────────────────────────────
 /** Gap kept above a section header after the tab's landing scroll (px). */
