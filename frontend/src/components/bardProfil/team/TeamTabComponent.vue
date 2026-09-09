@@ -21,6 +21,8 @@ import {
   TEAM_ROLE_RAIL_SLIDE_MS,
   TEAM_ROLE_RAIL_NAV_HEIGHT,
   TEAM_ROLE_RAIL_HERO_COMPACT_HEIGHT,
+  TEAM_SIGIL_OPEN_MS,
+  TEAM_SIGIL_EASE_TRAVEL,
 } from '@/config/constants'
 import { getItemById } from '@/config/economy/items'
 import { allySlotLabel } from '@/utils/ui/format'
@@ -33,6 +35,7 @@ import TeamSidePanelShell from './TeamSidePanelShell.vue'
 import EquipmentPickerPanel from '../roles/EquipmentPickerPanel.vue'
 import TeamSynergiesPanel from './TeamSynergiesPanel.vue'
 import { useSideRail } from '@/composables/ui/useSideRail'
+import { useSigilCamera } from '@/composables/ui/useSigilCamera'
 
 /**
  * The tab has exactly ONE right rail and everything opens into it — the role
@@ -141,6 +144,11 @@ function scheduleBoardSettle() {
   settleFrame = requestAnimationFrame(step)
 }
 
+/* Zurückgenommen: ein eigener `rail`-Schleier für den ersten Aufbau der
+   Detailseite. Ihre Kosten sind kein Frame, sondern Bilddekodierungen über rund
+   eine Sekunde — die fielen hinter dem Schleier hervor und machten den ZWEITEN
+   Klick teuer (67–86 → 170–192 ms). */
+
 /** Der Schleier steht — die Detailseite ist noch nicht gemountet. */
 const detailsPending = ref(false)
 /** Startzeitpunkt des Ladens, Basis der Zeitangabe im Schleier. */
@@ -227,8 +235,25 @@ watch([boardBuilt, detailsPending], ([built, pending]) => {
 })
 
 // ── Tab UI state ─────────────────────────────────────────────────────────────
-/** null = details panel closed (sigil fills the tab). */
-const selectedRole = ref<number | null>(null)
+/**
+ * Der Übergang gehört der Phasenmaschine, nicht mehr einem nackten `ref`.
+ * `role` ist das frühere `selectedRole` — was Schiene und Seite zeigen; die
+ * Kamera und das Subjekt der Seite hinken ihm um je einen Takt hinterher.
+ *
+ * Deckt der Ladeschleier, wird gesetzt statt gefahren: eine Fahrt unter einer
+ * deckenden Fläche ist nicht zu sehen und zuckt beim Aufdecken nach.
+ */
+const {
+  role: selectedRole,
+  cameraRole,
+  panelRole,
+  phase: camPhase,
+  panelHeld,
+  requestRole,
+  onStageTransitionEnd,
+  snap: snapCamera,
+} = useSigilCamera({ covered: () => veilCovering.value })
+
 /** Team synergies side panel — mutually exclusive with the role details panel. */
 const synergiesOpen = ref(false)
 /** Champions spotlighted by the synergies search — mirrored on the sigil board. */
@@ -326,9 +351,16 @@ const tabVeilVisible = computed(() => detailsVeilVisible.value && veilScope.valu
  * wird durch sein Ausblenden aufgedeckt, eine zusätzliche Bewegung wäre erst
  * unsichtbar und dann ein Nachzucken.
  */
-const railTransition = computed(() =>
-  veilCovering.value && activeDestination.value === null ? 'sdp-instant' : 'sdp-slide',
-)
+const railTransition = computed(() => {
+  if (veilCovering.value && activeDestination.value === null) return 'sdp-instant'
+  // Fährt die SCHIENE gerade, trägt sie den Inhalt mit — ein zweiter Slide auf
+  // derselben Achse liefe doppelt so weit und läse sich als Nachziehen.
+  if (camPhase.value === 'open' || camPhase.value === 'closing') return 'sdp-instant'
+  return 'sdp-slide'
+})
+
+const railEnterMs = `${TEAM_SIGIL_OPEN_MS}ms`
+const easeTravel = TEAM_SIGIL_EASE_TRAVEL
 
 /** Width the board has to subtract to fit itself beside the open rail. */
 const sidePanelWidth = computed(() => {
@@ -365,11 +397,12 @@ function selectRole(index: number) {
   railChoice.value = false
   // Geht die Spalte NEU auf, während das Board noch aufbaut, übernimmt der
   // Ladeschleier ihren Platz — steht das Board schon, mountet sie sofort.
-  const opening = selectedRole.value === null
-  selectedRole.value = index
+  // Er muss VOR `requestRole` stehen: eine Fahrt unter einer deckenden Fläche
+  // ist nicht zu sehen und zuckt beim Aufdecken nach (`covered`).
+  if (selectedRole.value === null && !boardBuilt.value) startDetailsLoad('rail')
+  requestRole(index)
   focusSeat(null)
   uiStore.setRolesActiveSlot(index)
-  if (opening && !boardBuilt.value) startDetailsLoad()
 }
 
 /**
@@ -390,7 +423,7 @@ function selectAlly(index: number, subSlot: number) {
 }
 
 function closePanel() {
-  selectedRole.value = null
+  requestRole(null)
   railChoice.value = null
 }
 
@@ -402,7 +435,7 @@ function dismissPanels() {
     activeDestination.value = null
     return
   }
-  selectedRole.value = null
+  requestRole(null)
   synergiesOpen.value = false
   // Den Override freigeben, sonst bliebe die Zone offen und das Board links.
   railChoice.value = null
@@ -410,7 +443,7 @@ function dismissPanels() {
 
 function openSynergies() {
   activeDestination.value = null
-  selectedRole.value = null
+  requestRole(null)
   synergiesOpen.value = true
   railChoice.value = false
 }
@@ -509,18 +542,16 @@ function applyRolesOpenRequest() {
   activeDestination.value = null
   railChoice.value = null
 
-  // Steht die Spalte schon, ist nichts einzublenden — nur ihr Inhalt wechselt.
-  const opening = selectedRole.value === null
+  // Kam die Anfrage aus dem Command Panel, wird der Tab im selben Flush
+  // sichtbar — hier entsteht ALLES neu, also deckt der Schleier auch das Board
+  // ab und gibt am Ende einen fertigen Tab frei (siehe veilScope). Er steht vor
+  // der Auswahl, damit die Kamera unter ihm setzt statt zu fahren.
+  if (selectedRole.value === null && !boardBuilt.value) startDetailsLoad('tab')
   // Die Auswahl fällt SOFORT, nicht erst nach dem Laden: sie bestimmt die
   // Breite der Schiene und damit die Kamera des Boards. Beides muss vom ersten
   // Frame an stimmen, sonst rückt das Board beim Aufdecken noch einmal nach.
-  selectedRole.value = slot
+  requestRole(slot)
   focusSeat(subSlot < 0 ? null : subSlot, subSlot >= 0)
-
-  // Kam die Anfrage aus dem Command Panel, wird der Tab im selben Flush
-  // sichtbar — hier entsteht ALLES neu, also deckt der Schleier auch das Board
-  // ab und gibt am Ende einen fertigen Tab frei (siehe veilScope).
-  if (opening && !boardBuilt.value) startDetailsLoad('tab')
 }
 
 watch(() => uiStore.rolesOpenToken, applyRolesOpenRequest)
@@ -577,7 +608,7 @@ function resetTabState() {
   // `boardBuilt` bleibt bewusst stehen: was einmal gebaut ist, ist gebaut. Das
   // Wiedereinblenden kostet zwei Frames (gemessen 42 ms längster Frame gegen
   // 308 ms beim ersten Mal) — dafür braucht es keinen Schleier mehr.
-  selectedRole.value = null
+  snapCamera(null)
   synergiesOpen.value = false
   activeDestination.value = null
   railChoice.value = null
@@ -628,6 +659,8 @@ onUnmounted(() => {
     <!-- ══ LEFT — Battle Sigil ══ -->
     <SigilBoardComponent
       :selected-role="selectedRole"
+      :camera-role="cameraRole"
+      :cam-phase="camPhase"
       :mount-stage="mountStage"
       :side-panel-width="sidePanelWidth"
       :search-highlights="searchHighlights"
@@ -637,6 +670,7 @@ onUnmounted(() => {
       @hover-ally="boardHoveredAlly = $event"
       @open-synergies="openSynergies"
       @deselect="dismissPanels"
+      @camera-settled="onStageTransitionEnd"
     />
 
     <!-- ══ RIGHT — the one rail: equipment, role details or synergies ══
@@ -676,7 +710,7 @@ onUnmounted(() => {
           </TeamSidePanelShell>
 
           <div
-            v-else-if="selectedRole !== null && panelReady && !detailsPending"
+            v-else-if="panelHeld && panelReady && !detailsPending"
             key="details"
             class="team-role-detail"
           >
@@ -704,7 +738,8 @@ onUnmounted(() => {
             </nav>
 
             <SigilDetailsPanel
-              :role-index="selectedRole"
+              :role-index="panelRole ?? roleIndex"
+              :instant="detailsPending || veilCovering"
               :highlighted-ally="boardHoveredAlly"
               :focus-ally="focusAlly"
               :focus-token="focusToken"
@@ -976,7 +1011,7 @@ onUnmounted(() => {
 /* rail slide-in — shared by the details page, the synergies panel and the
    equipment picker, so they all enter and leave on the same motion */
 .sdp-slide-enter-active {
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform v-bind(railEnterMs) v-bind(easeTravel);
 }
 .sdp-slide-leave-active {
   transition: transform 0.12s cubic-bezier(0.55, 0, 1, 0.45);

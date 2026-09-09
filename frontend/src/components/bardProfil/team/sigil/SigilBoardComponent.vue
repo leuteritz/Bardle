@@ -24,7 +24,13 @@ import {
   TEAM_TAB_MOUNT_STAGE_ORNAMENTS,
   COMMAND_PANEL_ART_SIZE,
   SIGIL_ACTIONS_COMPACT_MAX_W,
+  TEAM_SIGIL_OPEN_MS,
+  TEAM_SIGIL_TRAVEL_MS,
+  TEAM_SIGIL_EASE_OPEN,
+  TEAM_SIGIL_EASE_TRAVEL,
+  TEAM_SIGIL_FLIGHT_DIM_OPACITY,
 } from '@/config/constants'
+import type { SigilCamPhase } from '@/composables/ui/useSigilCamera'
 import SigilSvgLayers from './SigilSvgLayers.vue'
 import SigilRoleNode from './SigilRoleNode.vue'
 import SigilPowerCore from './SigilPowerCore.vue'
@@ -33,6 +39,14 @@ import BattleTabReturnButton from '@/components/bardProfil/BattleTabReturnButton
 
 const props = defineProps<{
   selectedRole: number | null
+  /**
+   * Worauf die KAMERA blickt. Nicht dasselbe wie `selectedRole`: der geklickte
+   * Knoten wächst sofort (Rückmeldung in Frame 0), die Kamera fährt erst im
+   * zweiten Takt hinterher — siehe `useSigilCamera`.
+   */
+  cameraRole: number | null
+  /** Takt des Übergangs; setzt Fahrtdauer, Kurve und den Stillstand der Deko. */
+  camPhase: SigilCamPhase
   /** Aufbaustufe des Tabs (TEAM_TAB_MOUNT_STAGE_*) — Satelliten und Deko warten
    *  einen Frame, damit das Öffnen nicht in einem Stück gerechnet wird. */
   mountStage: number
@@ -58,6 +72,8 @@ const emit = defineEmits<{
   'open-synergies': []
   /** Empty board clicked — the tab closes whatever side panel is open. */
   deselect: []
+  /** Ende einer Bühnenfahrt — der Taktgeber der Phasenmaschine. */
+  'camera-settled': [event: TransitionEvent]
 }>()
 
 const battleStore = useBattleStore()
@@ -207,7 +223,7 @@ onBeforeUnmount(() => {
 // ── Camera focus on the selected role cluster ────────────────────────────────
 /** Focal point = centroid of the role node and all its ally satellites (stage coords). */
 const focusPoint = computed(() => {
-  const i = props.selectedRole
+  const i = props.cameraRole
   if (i === null) return null
   const cluster = [rolePoints.value[i], ...allyPoints.value[i]]
   return {
@@ -265,6 +281,12 @@ const boardCenter = computed(() => ({
   y: tabRect.value.height / 2,
 }))
 
+const openMs = `${TEAM_SIGIL_OPEN_MS}ms`
+const travelMs = `${TEAM_SIGIL_TRAVEL_MS}ms`
+const easeOpen = TEAM_SIGIL_EASE_OPEN
+const easeTravel = TEAM_SIGIL_EASE_TRAVEL
+const flightDim = String(TEAM_SIGIL_FLIGHT_DIM_OPACITY)
+
 /** Manual camera offset from drag-to-pan (screen px), bounded by the rubber band below. */
 const panOffset = ref({ x: 0, y: 0 })
 
@@ -275,8 +297,12 @@ const stageTransform = computed(() => {
   const c = boardCenter.value
   const o = panOffset.value
   const half = SIGIL_STAGE_SIZE / 2
-  const pan = f ? `translate(${-(f.x - half) * s}px, ${-(f.y - half) * s}px) ` : ''
-  return `translate(${c.x + o.x}px, ${c.y + o.y}px) ${pan}translate(-50%, -50%) scale(${s})`
+  // Der Pan-Term steht IMMER, auch als 0: eine Liste, die zwischen drei und
+  // vier Funktionen wechselt, zwingt Chrome auf Matrix-Interpolation, und die
+  // Fahrt nimmt dann einen anderen Weg als den gemeinten.
+  const px = f ? -(f.x - half) * s : 0
+  const py = f ? -(f.y - half) * s : 0
+  return `translate(${c.x + o.x}px, ${c.y + o.y}px) translate(${px}px, ${py}px) translate(-50%, -50%) scale(${s})`
 })
 
 // ── Drag-to-pan (rubber-band bounded camera offset) ──────────────────────────
@@ -355,7 +381,7 @@ function onBackgroundClick(): void {
 
 // the focus camera owns the framing — a selection/panel change eases the pan back home
 watch(
-  [() => props.selectedRole, () => props.sidePanelWidth],
+  [() => props.selectedRole, () => props.cameraRole, () => props.sidePanelWidth],
   () => {
     panOffset.value = { x: 0, y: 0 }
   },
@@ -370,6 +396,10 @@ watch(
     :class="{
       'sigil-board--dragging': isDragging,
       'sigil-board--compact-actions': compactActions,
+      'sigil-board--flying': camPhase !== 'idle',
+      'sigil-board--open': camPhase === 'open',
+      'sigil-board--travel': camPhase === 'travel',
+      'sigil-board--closing': camPhase === 'closing',
     }"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
@@ -462,6 +492,7 @@ watch(
         height: `${SIGIL_STAGE_SIZE}px`,
         transform: stageTransform,
       }"
+      @transitionend="emit('camera-settled', $event)"
     >
       <SigilSvgLayers
         :stage="sigilStage"
@@ -552,11 +583,6 @@ watch(
 }
 .sigil-board--dragging {
   cursor: grabbing;
-}
-/* while dragging the stage follows the pointer 1:1 — the camera transition
-   resumes on release and eases the pan back inside the bound / to center */
-.sigil-board--dragging .sigil-stage {
-  transition: none;
 }
 
 /* ── admin strip — muted red-brown so it never competes with the gold game
@@ -803,13 +829,85 @@ watch(
 }
 
 /* ── stage ── */
+/* Zwei Takte, zwei Kurven: OPEN beschleunigt weg, alles andere kommt an. Die
+   Ankunft ist die Grundfahrt — auch eine Breite, die sich ohne Rollenwechsel
+   ändert (Equipment auf und zu), soll fahren statt zu springen. Kein
+   `will-change`: die Bühne steht die meiste Zeit still. */
 .sigil-stage {
   position: absolute;
   top: 0;
   left: 0;
   transform-origin: center center;
-  /* camera pan/zoom (TEAM_SIGIL_CAMERA_MS) — also smooths wheel zoom */
-  transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.35, 1);
+  transition: transform v-bind(travelMs) v-bind(easeTravel);
+}
+.sigil-board--open .sigil-stage {
+  transition: transform v-bind(openMs) v-bind(easeOpen);
+}
+/* Die Hand schlägt jeden Takt: 1:1 am Zeiger, und beim Loslassen fährt die
+   Kamera den Pan zurück. Steht NACH den Phasen — gleiche Spezifität. */
+.sigil-board--dragging .sigil-stage {
+  transition: none;
+}
+
+/* Unter einer wechselnden Rasterskala erklärt jede laufende Animation pro Frame
+   den Stil ihres Elements für ungültig — hier 73 Stück: Auren, Kegelverläufe,
+   XP-Atmung, Sheen, Ringdrehung, Kernpuls und Glut. `paused` friert EIN statt
+   zurückzusetzen, die Takte laufen danach weiter, wo sie standen (Muster:
+   .idle-deco-paused).
+
+   NAMENTLICH, nicht `.sigil-stage *`: der Universalselektor lässt jeden Wechsel
+   der Klasse den ganzen Teilbaum neu durchrechnen — rund 900 Elemente, zweimal je
+   Fahrt. Gemessen kostete das den Rollenwechsel 175 statt 95 ms. */
+.sigil-board--flying :deep(:is(
+    .sigil-node-aura,
+    .sigil-node-conic,
+    .sigil-node-xp-fill,
+    .sigil-node-rank-pulse,
+    .sigil-node-rank-sheen,
+    .sigil-node-circle,
+    .sigil-ally,
+    .sigil-svg--spin,
+    .sigil-svg--pentagram,
+    .core-pulse
+  )),
+.sigil-board--flying :deep(.sigil-ally--sworn)::after {
+  animation-play-state: paused !important;
+}
+/* Glut trägt box-shadow und sagt nichts — sie geht die Fahrt über weg. */
+.sigil-board--flying .sigil-ember {
+  opacity: 0;
+  transition: opacity v-bind(openMs) linear;
+}
+/* Ein Cluster ist Knoten UND Satelliten — die liegen als Geschwister daneben,
+   nicht darin. Nur den Knoten zu dimmen ergäbe halbe Cluster.
+   Nicht beim Schließen: dort ist keiner mehr gewählt, es dimmten alle fünf. */
+.sigil-board--open :deep(.sigil-node:not(.sigil-node--selected)),
+.sigil-board--travel :deep(.sigil-node:not(.sigil-node--selected)),
+.sigil-board--open :deep(.sigil-ally:not(.sigil-ally--highlight)),
+.sigil-board--travel :deep(.sigil-ally:not(.sigil-ally--highlight)) {
+  opacity: v-bind(flightDim);
+}
+
+/* ── Was während der Fahrt NICHT animiert ─────────────────────────────────
+   Ein Rollenklick schaltet an 5 Knoten und 25 Satelliten `box-shadow` und
+   `filter` um — je drei Schattenterme, beim Satelliten zusätzlich über
+   `--sub × 25ms` auf 625 ms gestreckt. Als Transition rastert das die Box samt
+   Schatten in JEDEM Frame neu, pro Element (Perf-Regel 2), und zwar genau über
+   der Fahrt. Während der Fahrt schlagen diese Zustände deshalb SOFORT um: eine
+   Rasterung statt zweihundert. Was bleibt, ist die Rückmeldung (`transform`)
+   und die Tiefe (`opacity`) — beides Kompositor-Arbeit. */
+.sigil-board--flying :deep(.sigil-node-circle),
+.sigil-board--flying :deep(.sigil-node-img) {
+  transition: none;
+}
+.sigil-board--flying :deep(.sigil-node) {
+  transition:
+    transform 0.18s,
+    opacity 0.25s;
+}
+.sigil-board--flying :deep(.sigil-ally) {
+  transition: opacity 0.25s;
+  transition-delay: 0s;
 }
 .sigil-ember {
   position: absolute;
@@ -835,7 +933,31 @@ watch(
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sigil-stage {
+  .sigil-stage,
+  .sigil-board--open .sigil-stage {
+    transition: none;
+  }
+  .sigil-board--flying :deep(:is(
+      .sigil-node-aura,
+      .sigil-node-conic,
+      .sigil-node-xp-fill,
+      .sigil-node-rank-pulse,
+      .sigil-node-rank-sheen,
+      .sigil-node-circle,
+      .sigil-ally,
+      .sigil-svg--spin,
+      .sigil-svg--pentagram,
+      .core-pulse
+    )),
+  .sigil-board--flying :deep(.sigil-ally--sworn)::after {
+    animation-play-state: running !important;
+  }
+  .sigil-board--flying .sigil-ember,
+  .sigil-board--open :deep(.sigil-node:not(.sigil-node--selected)),
+  .sigil-board--travel :deep(.sigil-node:not(.sigil-node--selected)),
+  .sigil-board--open :deep(.sigil-ally:not(.sigil-ally--highlight)),
+  .sigil-board--travel :deep(.sigil-ally:not(.sigil-ally--highlight)) {
+    opacity: unset;
     transition: none;
   }
   .sigil-ember {

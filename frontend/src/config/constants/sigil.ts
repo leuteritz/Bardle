@@ -223,8 +223,50 @@ export const SIGIL_RING_CORE_R = 120
 
 /** Extra zoom multiplier while a role is focused (camera zoom-in on role + allies). */
 export const TEAM_SIGIL_FOCUS_ZOOM = 1.6
-/** Camera pan/zoom transition duration (ms) — mirrored in SigilBoardComponent CSS. */
-export const TEAM_SIGIL_CAMERA_MS = 450
+/**
+ * Der Übergang Board ⇄ Detailseite läuft in ZWEI Takten mit EINER Uhr.
+ *
+ * OPEN macht Platz: Schiene herein, Board schmaler, Kamera bleibt mittig und
+ * verliert nur Maßstab. TRAVEL schwenkt auf den Cluster. Der teure Mount der
+ * Detailseite fällt einen rAF NACH dem Klick — dort fährt eine einfarbige
+ * Platte, die einen verlorenen Frame maskiert, und sichtbaren Inhalt, der
+ * nachklappen könnte, gibt es dort noch nicht. Frame 0 bleibt billig, damit
+ * der Klick sofort antwortet.
+ *
+ * Vorher stand eine Kamerafahrt von 450 ms neben einem Rail-Slide von 280 und
+ * zwei weiteren Kurven: vier Bewegungen mit vier Enden.
+ */
+export const TEAM_SIGIL_OPEN_MS = 280
+export const TEAM_SIGIL_TRAVEL_MS = 380
+/** Ändert sich der Zielwert nicht, kommt kein `transitionend` — Netz wie bei
+ *  der Star-Fight-Kamera. */
+export const TEAM_SIGIL_CAM_NET_MUL = 2
+/** Dieselben zwei Kurven wie die Star-Fight-Kamera (`STAR_FIGHT_CAM_EASE_*`),
+ *  bewusst dupliziert: `sigil` ist ein Blatt der Config und bekommt keine
+ *  Kante zu `planets`. */
+export const TEAM_SIGIL_EASE_OPEN = 'cubic-bezier(0.6, 0, 0.35, 1)'
+export const TEAM_SIGIL_EASE_TRAVEL = 'cubic-bezier(0.16, 1, 0.3, 1)'
+
+/**
+ * Aufbaustufen der Detailseite. Sie brachte ~40–60 Karten, sieben Regalia-
+ * Medaillen und rund 25 Icons in EINEM Frame — gemessen 65 ms zusammen mit dem
+ * Board.
+ *
+ * ZWEI Stufen, nicht drei: Sitzreihe und linke Spalte müssen zusammen kommen,
+ * sonst rückt die Spalte um die Höhe der Sitzreihe hoch und wieder runter. Die
+ * rechte Spalte darf nachziehen — sie ist `flex: 1`, ihr Fehlen lässt Fläche
+ * stehen statt etwas zu verschieben.
+ */
+export const TEAM_SIGIL_PANEL_STAGE_HEAD = 0
+export const TEAM_SIGIL_PANEL_STAGE_WORKSPACE = 1
+/** Aufgedeckt wird in DREI Schritten, auch wenn in zwei gebaut wird: das
+ *  Aufdecken kostet nichts und liest sich als Leserichtung. */
+export const TEAM_SIGIL_PANEL_REVEAL_MS = 260
+export const TEAM_SIGIL_PANEL_REVEAL_STEP_MS = 60
+export const TEAM_SIGIL_PANEL_REVEAL_SHIFT_PX = 8
+/** Abgeleitet, nicht gewählt: das Aufdecken soll in TRAVEL fallen, und TRAVEL
+ *  beginnt am Ende von OPEN. */
+export const TEAM_SIGIL_PANEL_REVEAL_DELAY_MS = TEAM_SIGIL_OPEN_MS
 /**
  * Width (px) of the role details panel — the board's fit-scale subtracts it while
  * a role is selected so open/close resolves in a single camera move. The panel is
@@ -275,8 +317,9 @@ export const TEAM_SIGIL_ROSTER_GRIP_WIDTH = 44
 export const TEAM_SIGIL_ROSTER_FOLD_MS = 240
 /** Right-edge role rail handle — shared with the profile side-rail language. */
 export const TEAM_ROLE_RAIL_HANDLE_PX = 44
-/** Rail slide duration for the team role detail page. */
-export const TEAM_ROLE_RAIL_SLIDE_MS = 280
+/** Rail slide duration for the team role detail page. Der ERSTE Takt der
+ *  Kamera — Schiene und Bühne sind eine Bewegung, nicht zwei nebeneinander. */
+export const TEAM_ROLE_RAIL_SLIDE_MS = TEAM_SIGIL_OPEN_MS
 export const TEAM_ROLE_RAIL_LABEL = 'Roles'
 export const TEAM_ROLE_RAIL_OPEN_TITLE = 'Open role details'
 export const TEAM_ROLE_RAIL_CLOSE_TITLE = 'Close role details'
@@ -416,6 +459,9 @@ export const SIGIL_SKELETON_NODE_RADIUS_PCT = 38
 export const SIGIL_ALLY_HOVER_SCALE = 1.4
 export const SIGIL_ALLY_HOVER_DIM_OPACITY = 0.45
 export const SIGIL_ALLY_HOVER_PING_MS = 450
+/** Während der Kamerafahrt treten die ungewählten Cluster zurück — dieselbe
+ *  Tiefe wie das Ally-Spotlight, damit das Board EIN Dimm-Vokabular hat. */
+export const TEAM_SIGIL_FLIGHT_DIM_OPACITY = SIGIL_ALLY_HOVER_DIM_OPACITY
 /** The same spotlight in the other direction — hovering a satellite on the board
  *  lights its card in the details roster and dims every other card of the strip.
  *  The dim goes deeper than the board's (0.45): a roster card carries a splash,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { useBattleStore } from '@/stores/battle/battleStore'
@@ -34,6 +34,11 @@ import {
   SKIN_ORIGINAL,
   SWORN_ALLY_COUNT,
   TEAM_SIGIL_DETAILS_PANEL_WIDTH,
+  TEAM_SIGIL_PANEL_STAGE_HEAD,
+  TEAM_SIGIL_PANEL_STAGE_WORKSPACE,
+  TEAM_SIGIL_PANEL_REVEAL_MS,
+  TEAM_SIGIL_PANEL_REVEAL_STEP_MS,
+  TEAM_SIGIL_PANEL_REVEAL_SHIFT_PX,
   TEAM_VALUE_PLACEHOLDER,
 } from '@/config/constants'
 import { getChampionStarLevel, getChampionTier } from '@/config/champions/championTiers'
@@ -59,6 +64,9 @@ const props = defineProps<{
   focusToken?: number
   focusSwap?: boolean
   closeSwapToken?: number
+  /** Unter dem Ladeschleier gibt es keine Staffelung — er IST dort die
+   *  Choreografie, und was er deckt, darf nicht zusätzlich blenden. */
+  instant?: boolean
 }>()
 const emit = defineEmits<{
   assign: [subSlot: number, champion: string]
@@ -69,6 +77,32 @@ const emit = defineEmits<{
 }>()
 
 const panelWidthPx = `${TEAM_SIGIL_DETAILS_PANEL_WIDTH}px`
+const revealMs = `${TEAM_SIGIL_PANEL_REVEAL_MS}ms`
+const revealStep = `${TEAM_SIGIL_PANEL_REVEAL_STEP_MS}ms`
+const revealRise = `${TEAM_SIGIL_PANEL_REVEAL_SHIFT_PX}px`
+
+/**
+ * Die Seite baut sich über zwei Frames auf und deckt in derselben Reihenfolge
+ * auf, in der sie gebaut wird — dadurch erscheint nie etwas, das schon fertig
+ * aussah, und es gibt kein Nachklappen. Nur beim MOUNT: ein Rollenwechsel
+ * patcht, und Abriss plus Wiederaufbau wäre teurer als das blosse Einblenden.
+ */
+const mountStage = ref(TEAM_SIGIL_PANEL_STAGE_HEAD)
+const revealed = ref(false)
+let stageFrame: number | null = null
+
+onMounted(() => {
+  stageFrame = requestAnimationFrame(() => {
+    mountStage.value = TEAM_SIGIL_PANEL_STAGE_WORKSPACE
+    stageFrame = requestAnimationFrame(() => {
+      stageFrame = null
+      revealed.value = true
+    })
+  })
+})
+onBeforeUnmount(() => {
+  if (stageFrame !== null) cancelAnimationFrame(stageFrame)
+})
 const MAIN_SUBJECT = -1
 const CATEGORIES: ItemCategory[] = ['weapon', 'armor', 'artefact']
 const GHOST_META = ['Tier', 'Origin', 'Trait']
@@ -478,7 +512,11 @@ function perkStatLine(perk: ChampionPerkDef): string {
 </script>
 
 <template>
-  <section class="sdp-panel" :style="{ '--rc': roleDef.color }">
+  <section
+    class="sdp-panel"
+    :class="{ 'sdp-panel--revealed': revealed, 'sdp-panel--instant': instant }"
+    :style="{ '--rc': roleDef.color }"
+  >
     <header class="sdp-roster">
       <div class="sdp-seat-list" @mouseleave="emit('hover-ally', null)">
         <div
@@ -821,7 +859,7 @@ function perkStatLine(perk: ChampionPerkDef): string {
         @select="assignChampion"
         @preview="candidate = $event"
       />
-      <div v-else class="sdp-workspace">
+      <div v-else-if="mountStage >= TEAM_SIGIL_PANEL_STAGE_WORKSPACE" class="sdp-workspace">
         <div class="sdp-section sdp-section--equipment">
           <div class="sdp-section-head">
             <span>Role equipment</span><small>{{ equippedCount }}/{{ CATEGORIES.length }}</small>
@@ -2714,6 +2752,48 @@ function perkStatLine(perk: ChampionPerkDef): string {
   }
   .sdp-ghost-perks .sdp-active-perk small.sdp-ghost-perk-hint {
     display: none;
+  }
+}
+
+/* ── Aufdecken in der Reihenfolge des Bauens ──────────────────────────────
+   Nur `opacity` und ein kurzer Weg — Muster `--uhop-d` beim HUD-Aufgang.
+   Die drei Schritte fallen in den zweiten Takt der Kamerafahrt, also braucht
+   es hier keine zweite Uhr: die Verzögerung IST die Bauzeit. */
+.sdp-roster,
+.sdp-hero,
+.sdp-workspace {
+  opacity: 0;
+  translate: 0 v-bind(revealRise);
+}
+.sdp-hero {
+  transition-delay: v-bind(revealStep);
+}
+.sdp-workspace {
+  transition-delay: calc(2 * v-bind(revealStep));
+}
+.sdp-panel--revealed :is(.sdp-roster, .sdp-hero, .sdp-workspace) {
+  opacity: 1;
+  translate: 0 0;
+  transition-property: opacity, translate;
+  transition-duration: v-bind(revealMs);
+  transition-timing-function: ease-out;
+}
+/* Unter dem Ladeschleier steht die Seite fertig da — er deckt sie ohnehin. */
+.sdp-panel--instant :is(.sdp-roster, .sdp-hero, .sdp-workspace) {
+  opacity: 1;
+  translate: 0 0;
+  transition: none;
+  transition-delay: 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sdp-roster,
+  .sdp-hero,
+  .sdp-workspace {
+    opacity: 1;
+    translate: none;
+    transition: none;
+    transition-delay: 0s;
   }
 }
 </style>
