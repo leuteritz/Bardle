@@ -322,7 +322,13 @@
     <aside class="cs-atlas-detail">
       <Transition name="cs-detail-swap" mode="out-in">
         <ItemDetailPanel v-if="itemDetail" key="item" :detail="itemDetail" @buy="handleBuyItem" />
-        <ChampionDetailPanel v-else-if="detail" key="champion" :detail="detail" @buy="handleBuy" />
+        <ChampionDetailPanel
+          v-else-if="detail"
+          key="champion"
+          :detail="detail"
+          @buy="handleBuy"
+          @filter="onDetailFilter"
+        />
         <p v-else key="empty" class="cs-detail-unavailable">{{ detailEmptyLabel }}</p>
       </Transition>
     </aside>
@@ -1939,6 +1945,11 @@ export default defineComponent({
       }
     }
 
+    function onDetailFilter(groupId: 'tier' | 'trait' | 'origin', chipId: string) {
+      setFacetsFolded(false)
+      onFacetToggle(groupId, chipId)
+    }
+
     /** Cards the player could pay for right now, independent of every filter —
      *  including the affordable filter itself, which would make it circular. */
     const affordableCount = computed(() =>
@@ -2022,6 +2033,7 @@ export default defineComponent({
       setFacetsFolded,
       facetGroups,
       onFacetToggle,
+      onDetailFilter,
       affordableOnly,
       affordableCount,
       detailEmptyLabel,

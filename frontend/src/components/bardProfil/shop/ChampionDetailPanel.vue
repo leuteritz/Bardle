@@ -37,16 +37,22 @@
 
       <div class="cs-detail-body">
         <div class="cs-identity" aria-label="Champion identity">
-          <div
+          <button
+            type="button"
             class="cs-tier-band"
             :style="{ '--ac': detail.tierColor }"
-            :aria-label="`Tier ${detail.starLevel} of ${MAX_STAR_LEVEL}: ${detail.tierName}`"
+            :aria-label="`Champion Tier ${detail.starLevel} of ${MAX_STAR_LEVEL}: ${detail.tierName}. Click to filter champions by this tier.`"
+            v-tip="`Filter champions by ★${detail.starLevel} ${detail.tierName}`"
+            @click="$emit('filter', 'tier', String(detail.starLevel))"
           >
             <span class="cs-tier-crest" aria-hidden="true">
               <Icon :icon="detail.tierIcon" width="25" height="25" />
             </span>
             <span class="cs-tier-copy">
-              <span class="cs-affinity-head"><small>Champion Tier</small></span>
+              <span class="cs-affinity-head">
+                <small>Champion Tier</small>
+                <Icon icon="lucide:filter" width="13" height="13" class="cs-filter-cue" />
+              </span>
               <strong>{{ detail.tierName }}</strong>
             </span>
             <span class="cs-tier-stars" aria-hidden="true">
@@ -57,17 +63,20 @@
                 >★</i
               >
             </span>
-          </div>
+          </button>
 
           <div class="cs-affinity-list" aria-label="Champion origins and traits">
-            <article
+            <button
               v-for="affinity in affinities"
               :key="affinity.id"
+              type="button"
               class="cs-affinity"
               :style="{ '--ac': affinity.color }"
-              :aria-label="affinityAriaLabel(affinity)"
-              tabindex="0"
+              :aria-label="`${affinityAriaLabel(affinity)} Click to filter champions by ${affinity.name}.`"
               v-tip="affinityTip(affinity)"
+              @click="
+                $emit('filter', affinity.kind === 'Origin' ? 'origin' : 'trait', affinity.filterId)
+              "
             >
               <span class="cs-affinity-crest" aria-hidden="true">
                 <Icon :icon="affinity.icon" width="19" height="19" />
@@ -79,13 +88,14 @@
                     <i v-for="step in affinity.thresholds" :key="step.count" />
                   </span>
                   <em>{{ SHOP_CHAMPION_AFFINITY_COUNT }}×</em>
+                  <Icon icon="lucide:filter" width="12" height="12" class="cs-filter-cue" />
                 </span>
                 <strong>{{ affinity.name }}</strong>
                 <span v-if="affinity.thresholds[0]" class="cs-affinity-next">
                   {{ affinityEffect(affinity) }}
                 </span>
               </span>
-            </article>
+            </button>
           </div>
         </div>
 
@@ -177,6 +187,7 @@ import type { ShopChampionDetail } from '@/types'
 type AffinityCard = {
   kind: 'Origin' | 'Trait'
   name: string
+  filterId: string
   color: string
   thresholds: Array<{ count: number; bonus: string }>
 }
@@ -185,7 +196,7 @@ export default defineComponent({
   name: 'ChampionDetailPanel',
   components: { Icon, CosmicStageBackground },
   props: { detail: { type: Object as () => ShopChampionDetail | null, default: null } },
-  emits: ['buy'],
+  emits: ['buy', 'filter'],
   setup(props) {
     const recruitHover = ref(false)
     const setRecruitHover = (active: boolean) => {
@@ -202,6 +213,7 @@ export default defineComponent({
               id: `origin-${detail.origin.origin}`,
               kind: 'Origin' as const,
               name: detail.origin.origin,
+              filterId: detail.origin.origin,
               icon: originDef.icon,
               color: originDef.color,
               thresholds: originDef.thresholds,
@@ -213,6 +225,7 @@ export default defineComponent({
           id: `trait-${trait.id}`,
           kind: 'Trait' as const,
           name: trait.name,
+          filterId: trait.id,
           icon: trait.icon,
           color: trait.color,
           thresholds: definition?.thresholds ?? [],
@@ -429,6 +442,7 @@ export default defineComponent({
   margin-bottom: 18px;
 }
 .cs-tier-band {
+  width: 100%;
   min-width: 0;
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr) auto;
@@ -439,6 +453,25 @@ export default defineComponent({
   border-left: 3px solid var(--ac);
   border-radius: 4px;
   background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 17%, #17150e), #141410 78%);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.cs-tier-band:hover,
+.cs-tier-band:focus-visible {
+  border-color: var(--ac);
+  background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 25%, #17150e), #141410 78%);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--ac) 28%, transparent);
+}
+.cs-tier-band:focus-visible,
+.cs-affinity:focus-visible {
+  outline: 2px solid var(--ac);
+  outline-offset: 2px;
 }
 .cs-tier-crest,
 .cs-affinity-crest {
@@ -482,6 +515,21 @@ export default defineComponent({
   color: color-mix(in srgb, var(--ac) 74%, #fff);
   text-shadow: 0 0 8px color-mix(in srgb, var(--ac) 70%, transparent);
 }
+.cs-filter-cue {
+  flex: 0 0 auto;
+  color: #8d7652;
+  opacity: 0.72;
+  transition:
+    color 0.15s,
+    opacity 0.15s;
+}
+.cs-tier-band:hover .cs-filter-cue,
+.cs-tier-band:focus-visible .cs-filter-cue,
+.cs-affinity:hover .cs-filter-cue,
+.cs-affinity:focus-visible .cs-filter-cue {
+  color: var(--ac);
+  opacity: 1;
+}
 .cs-affinity-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
@@ -489,6 +537,7 @@ export default defineComponent({
   margin-top: 9px;
 }
 .cs-affinity {
+  width: 100%;
   min-width: 0;
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
@@ -499,6 +548,10 @@ export default defineComponent({
   border-left: 3px solid var(--ac);
   border-radius: 4px;
   background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 15%, #17150e), #141410 78%);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 .cs-affinity:hover,
 .cs-affinity:focus-visible {
@@ -506,10 +559,6 @@ export default defineComponent({
   border-color: var(--ac);
   background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 25%, #17150e), #141410 78%);
   box-shadow: 0 0 14px color-mix(in srgb, var(--ac) 30%, transparent);
-}
-.cs-affinity:focus-visible {
-  outline: 2px solid var(--ac);
-  outline-offset: 2px;
 }
 .cs-affinity-crest {
   width: 30px;
