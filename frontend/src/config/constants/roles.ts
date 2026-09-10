@@ -403,6 +403,7 @@ export const INTERCEPT_SHIELD_ANIM_MS = 500
  * gerendert wird; wer sie klein zeigt, leitet daraus diese Stufe ab.
  */
 export const ROLE_ART_MD_SUFFIX = '-256.png'
+export const ROLE_ART_SM_SUFFIX = '-128.png'
 
 // ── Hover-effect colors per role (Command Panel slot hover) ───────────────
 // Distinct from ROLES[].color — these drive the champion lift-glow and slot

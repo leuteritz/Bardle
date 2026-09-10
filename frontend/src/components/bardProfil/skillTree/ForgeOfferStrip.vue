@@ -12,7 +12,6 @@
       <Icon :icon="FORGE_OFFER_ICON" width="17" height="17" class="fos-head-ico" />
       <span class="fos-head-label">{{ FORGE_OFFER_TITLE }}</span>
       <span class="fos-head-num">{{ readyCount }}</span>
-      <span class="fos-head-rule" />
     </header>
 
     <!-- Der Wurf gehört allein dem Handel — die Zeile zeigt den Knopf ohnehin
@@ -216,18 +215,36 @@ const listMaxCompact = `${FORGE_OFFER_LIST_MAX_COMPACT_PX}px`
   flex-shrink: 0;
 }
 
-/* ══════════════════════════════════════════════════
-   KOPFZEILE
-   Bewusst NICHT der Topf-Trenner der Liste darunter (`.fu-div`, Linie–Etikett–
-   Linie): der Streifen ist kein weiterer Topf derselben Liste, sondern ein
-   eigener Ort. Etikett links, Linie nach rechts auslaufend — dieselbe Sprache,
-   andere Satzstellung.
-══════════════════════════════════════════════════ */
+/* Zentrierter Trenner wie die Upgrade-Gruppen darunter. */
 .fos-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 2px 2px 0;
+  gap: 9px;
+  margin: 7px 2px 3px;
+}
+
+.fos-head::before,
+.fos-head::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+}
+
+.fos-head::before {
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, v-bind('FORGE_OFFER_COLOR') 55%, transparent)
+  );
+}
+
+.fos-head::after {
+  background: linear-gradient(
+    to left,
+    transparent,
+    color-mix(in srgb, v-bind('FORGE_OFFER_COLOR') 55%, transparent)
+  );
 }
 
 .fos-head-ico {
@@ -256,13 +273,6 @@ const listMaxCompact = `${FORGE_OFFER_LIST_MAX_COMPACT_PX}px`
   font-weight: 900;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
-}
-
-.fos-head-rule {
-  flex: 1;
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(to right, rgba(232, 160, 32, 0.45), transparent);
 }
 
 /* ══════════════════════════════════════════════════

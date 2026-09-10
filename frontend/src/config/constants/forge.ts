@@ -2529,11 +2529,9 @@ export const FORGE_NODE_TIP_EDGE_PAD_PX = 10
  * sonst verschwände eine Zeile unter dem Zeiger, während die Chimes ticken.
  * Kaufbar oder nicht trägt allein die Optik.
  *
- * Der Wortlaut ist nicht neu: „within reach" steht seit jeher in den
- * Badge-Labels der Forge (Header-Ecktaste, Profil-Reiter). Der Streifen greift
- * damit genau den Satz auf, dem der Spieler hierher gefolgt ist.
+ * Die Liste sammelt Relikte, Konstellationen und den wechselnden Handel.
  */
-export const FORGE_OFFER_TITLE = 'Within reach'
+export const FORGE_OFFER_TITLE = 'Special offers'
 export const FORGE_OFFER_ICON = 'game-icons:anvil-impact'
 export const FORGE_OFFER_COLOR = '#e8a020'
 /** Die Verben der drei Arten — je Art eines, nie zwei Wörter für dieselbe Tat. */
