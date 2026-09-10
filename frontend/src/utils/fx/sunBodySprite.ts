@@ -92,12 +92,18 @@ import {
   jitter,
   lumpyPath,
   mix,
+  fadeStripEdges,
+  granulationStrip,
+  makeStrip,
   newSpriteCanvas,
+  stripGrain,
+  stripSpots,
   rgba,
   spike,
   sway,
   wisp,
   type Rgb,
+  type Strip,
 } from '@/utils/fx/spaceBody'
 import { solarSignatureStages, sunSignatureKey } from '@/utils/game/solarSignature'
 import { hexToRgb } from '@/utils/ui/format'
@@ -324,27 +330,6 @@ function stageT(body: SunBody, key: keyof SunBody['sig']): number {
   return body.sig[key] / (SOLAR_SIGNATURE_STAGES.length - 1)
 }
 
-/** Eine Konvektionszelle: heller Kern, dunkler Saum. */
-function granule(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  cr: number,
-  hi: Rgb,
-  lo: Rgb,
-  alpha: number,
-  rim = 0.7,
-): void {
-  const g = ctx.createRadialGradient(x, y, 0, x, y, cr)
-  g.addColorStop(0, rgba(hi, alpha))
-  g.addColorStop(0.55, rgba(hi, 0))
-  g.addColorStop(0.82, rgba(lo, alpha * rim))
-  g.addColorStop(1, rgba(lo, 0))
-  circle(ctx, x, y, cr)
-  ctx.fillStyle = g
-  ctx.fill()
-}
-
 /** Randweiche Kreismaske: voll bis `from`, aus bei `to`. */
 function fadeMask(
   ctx: CanvasRenderingContext2D,
@@ -551,108 +536,11 @@ function paintStarLimb(
 
 /* ── Bänder — die rollende Oberfläche ───────────────────────────────────────── */
 
-interface Strip {
-  x0: number
-  y0: number
-  w: number
-  h: number
-  period: number
-  br: number
-}
-
 function stripOf(x: number, y: number, r: number, layer: SunBandLayer, kind: SunBodyKind): Strip {
   const br = r * sunBodyRadiusFraction(kind)
   const band = sunBandRow(layer, kind)
   const period = SUN_BAND_PERIOD_BR * band.periodK * br
-  const w = period * SUN_BAND_STRIP_PERIODS
-  const h = band.h * br
-  return { x0: x - w / 2, y0: y - h / 2, w, h, period, br }
-}
-
-/** Längengrad 0..P eines Motivs. */
-function wrapLon(s: Strip, lon: number): number {
-  return ((lon % s.period) + s.period) % s.period
-}
-
-/** Zellen über EINE Periode, jede doppelt (bei cx und cx + P) — die Naht ist unsichtbar. */
-function granulationStrip(
-  ctx: CanvasRenderingContext2D,
-  s: Strip,
-  cell: number,
-  seed: number,
-  hi: Rgb,
-  lo: Rgb,
-  alpha: number,
-  cap: number,
-  rim: number,
-): void {
-  const step = cell * 1.7
-  const cols = Math.ceil(s.period / step)
-  const rows = Math.ceil(s.h / (step * 0.88))
-  let n = 0
-  for (let gy = 0; gy <= rows && n < cap; gy++) {
-    const off = (gy & 1) * step * 0.5
-    for (let gx = 0; gx < cols && n < cap; gx++) {
-      const cx = wrapLon(s, gx * step + off + sway(seed, gx * 31 + gy) * step * 0.35)
-      const cy = gy * step * 0.88 + sway(seed, gx + gy * 47) * step * 0.35
-      if (cy < 0 || cy > s.h) continue
-      const cr = cell * (0.7 + jitter(seed, gx * 7 + gy * 13) * 0.6)
-      granule(ctx, s.x0 + cx, s.y0 + cy, cr, hi, lo, alpha, rim)
-      granule(ctx, s.x0 + cx + s.period, s.y0 + cy, cr, hi, lo, alpha, rim)
-      n += 2
-    }
-  }
-}
-
-/** Sonnenflecken im Streifen: Umbra plus Penumbra, ohne Randstauchung — die
- *  übernimmt die Kreismaske am Slot. */
-function stripSpots(
-  ctx: CanvasRenderingContext2D,
-  s: Strip,
-  seed: number,
-  groups: number,
-  dark: Rgb,
-  margin: number,
-): void {
-  const reach = Math.max(0, s.h / 2 - margin)
-  for (let g = 0; g < groups; g++) {
-    const lon = jitter(seed, 700 + g) * s.period
-    const lat = s.h / 2 + sway(seed, 710 + g) * reach
-    const spots = 1 + Math.floor(jitter(seed, 720 + g) * 3)
-    for (let k = 0; k < spots; k++) {
-      const px = wrapLon(s, lon + sway(seed, 730 + g * 5 + k) * s.br * 0.12)
-      const py = lat + sway(seed, 740 + g * 5 + k) * s.br * 0.06
-      const size = s.br * 0.05 * (0.6 + jitter(seed, 750 + g * 5 + k) * 0.8)
-      const ang = sway(seed, 760 + g * 5 + k) * 0.6
-      for (const dx of [0, s.period]) {
-        const cx = s.x0 + px + dx
-        const cy = s.y0 + py
-        ctx.beginPath()
-        ctx.ellipse(cx, cy, size * 2.1, size * 1.7, ang, 0, TAU)
-        ctx.fillStyle = rgba(dark, 0.32)
-        ctx.fill()
-        ctx.beginPath()
-        ctx.ellipse(cx, cy, size, size * 0.82, ang, 0, TAU)
-        ctx.fillStyle = rgba(mix(dark, 0, 0.5), 0.88)
-        ctx.fill()
-      }
-    }
-  }
-}
-
-/** Auslauf oben und unten — die Bänder überlappen, keine Naht darf stehen. */
-function fadeStripEdges(ctx: CanvasRenderingContext2D, s: Strip, fade: number): void {
-  const f = s.h > 0 ? Math.min(0.45, fade / s.h) : 0
-  const g = ctx.createLinearGradient(0, s.y0, 0, s.y0 + s.h)
-  g.addColorStop(0, 'rgba(0, 0, 0, 0)')
-  g.addColorStop(f, 'rgba(0, 0, 0, 1)')
-  g.addColorStop(1 - f, 'rgba(0, 0, 0, 1)')
-  g.addColorStop(1, 'rgba(0, 0, 0, 0)')
-  ctx.save()
-  ctx.globalCompositeOperation = 'destination-in'
-  ctx.fillStyle = g
-  ctx.fillRect(s.x0, s.y0, s.w, s.h)
-  ctx.restore()
+  return makeStrip(x, y, br, period, SUN_BAND_STRIP_PERIODS, band.h * br)
 }
 
 const BAND_SALT: Record<SunBandLayer, number> = { bandN: 71, bandE: 11, bandS: 83 }
@@ -712,38 +600,6 @@ function paintStarBand(
       mix(pal.edge, 0, 0.55),
       fade + s.br * 0.12,
     )
-  }
-}
-
-/** Felskorn im Streifen — dieselbe Sprenkelung wie `grain`, nur wandernd und
- *  nahtlos (jedes Korn bei `lon` UND `lon + period`). Stünde das Korn weiter
- *  still im Kern, liefen die Krater über eine stehende Oberfläche, und der
- *  Fels drehte sich nicht mit. */
-function stripGrain(
-  ctx: CanvasRenderingContext2D,
-  s: Strip,
-  seed: number,
-  count: number,
-  hi: Rgb,
-  lo: Rgb,
-  alpha: number,
-): void {
-  // Vier Ziehungen je Korn mit Schrittweite 4 — dieselbe Basis für alle vier
-  // liefe sonst über die Nachbarn und zöge sichtbare Diagonalen ins Korn.
-  for (let i = 0; i < count; i++) {
-    const k = 1600 + i * 4
-    const lon = jitter(seed, k) * s.period
-    const lat = jitter(seed, k + 1) * s.h
-    const gr = s.br * (0.006 + jitter(seed, k + 2) * 0.018)
-    const up = sway(seed, k + 3) > 0
-    // Der Ton kommt aus der Palette, nicht aus Schwarz und Weiss — sonst wird
-    // aus dem Fels Streusel.
-    ctx.fillStyle = rgba(up ? hi : lo, up ? alpha : alpha * 1.3)
-    for (const dx of [0, s.period]) {
-      ctx.beginPath()
-      ctx.arc(s.x0 + lon + dx, s.y0 + lat, gr, 0, TAU)
-      ctx.fill()
-    }
   }
 }
 

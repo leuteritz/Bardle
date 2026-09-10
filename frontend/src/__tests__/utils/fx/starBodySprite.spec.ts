@@ -23,8 +23,6 @@ import {
   STAR_BODY_WIND_RESOURCE_EVERY,
   STAR_BODY_WIND_SEC_MIN,
   STAR_BODY_WIND_SEC_RANGE,
-  STAR_BODY_WIND_TURN_SEC_MIN,
-  STAR_BODY_WIND_TURN_SEC_RANGE,
 } from '@/config/constants'
 import type { StarLook } from '@/types'
 import { recordingCtx } from '../../helpers/recordingCtx'
@@ -40,7 +38,7 @@ function run(look: StarLook, layer: StarSpriteLayer, detail: StarDetail, seed = 
   return ops
 }
 
-describe('Sternkörper — acht Gestalten, drei Ebenen', () => {
+describe('Sternkörper — acht Gestalten, ihre Ebenen', () => {
   it('Halo und Kern malen auf jeder Stufe etwas, die Drehebene auf ihrer höchsten', () => {
     for (const look of LOOKS) {
       for (const detail of [0, 1, 2] as const) {
@@ -83,6 +81,9 @@ describe('Sternkörper — acht Gestalten, drei Ebenen', () => {
         expect(counts[1], `${look}/${layer}`).toBeGreaterThanOrEqual(counts[0])
         expect(counts[2], `${look}/${layer}`).toBeGreaterThanOrEqual(counts[1])
       }
+      // Der Riese trägt seine Gürtel seit der Achsdrehung im rollenden Band statt
+      // im Kern — seine Stufen stehen in starBandRoll.spec.ts.
+      if (look === 'giant') continue
       expect(run(look, 'core', 2).length, `${look} ignoriert detail`).toBeGreaterThan(
         run(look, 'core', 0).length,
       )
@@ -193,7 +194,7 @@ describe('Sternkörper — Gestalt, Stufe, Palette', () => {
     expect(alpha(0)).toBe(alpha(1))
   })
 
-  it('jede Gestalt hat eine Umlaufdauer, und die Eskorte die kürzeste', () => {
+  it('jede Gestalt hat eine Drehebenen-Dauer, und die Eskorte die kürzeste', () => {
     for (const look of LOOKS) expect(STAR_BODY_SPIN_SEC[look], look).toBeGreaterThan(0)
     expect(Math.min(...LOOKS.map((l) => STAR_BODY_SPIN_SEC[l]))).toBe(STAR_BODY_SPIN_SEC.splinter)
   })
@@ -264,7 +265,7 @@ describe('Sonnenwind — die vierte Ebene', () => {
     }
   })
 
-  it('Champion und Boss tragen immer eine Fahne, Eskorten nie, Resource jeder dritte', () => {
+  it('Champion, Boss und jeder Resource-Stern tragen eine Fahne, Eskorten nie', () => {
     let resource = 0
     for (let seed = 0; seed < 24; seed++) {
       expect(starWindShown('champion', seed)).toBe(true)
@@ -285,8 +286,6 @@ describe('Sonnenwind — die vierte Ebene', () => {
       expect(w.sec).toBeLessThanOrEqual(STAR_BODY_WIND_SEC_MIN + STAR_BODY_WIND_SEC_RANGE)
       expect(w.delaySec).toBeLessThanOrEqual(0)
       expect(-w.delaySec).toBeLessThanOrEqual(w.sec)
-      expect(w.turnSec).toBeGreaterThanOrEqual(STAR_BODY_WIND_TURN_SEC_MIN)
-      expect(w.turnSec).toBeLessThanOrEqual(STAR_BODY_WIND_TURN_SEC_MIN + STAR_BODY_WIND_TURN_SEC_RANGE)
       seen.add(w.angleDeg)
     }
     expect(seen.size).toBeGreaterThan(STAR_BODY_SEED_SLOTS / 2)

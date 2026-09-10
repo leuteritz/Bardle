@@ -600,12 +600,17 @@ export const STAR_BODY_LOOK_POOL: readonly StarLook[] = [
   'flare',
   'veil',
 ]
+/** Wer seine Ebene weiter im Kreis dreht: der Pulsar (seine Kegel FEGEN, das IST
+ *  Achsdrehung) und der Eskorten-Scherben (er taumelt). Alle anderen stehen still. */
+export const STAR_BODY_SPIN_LOOKS: readonly StarLook[] = ['pulsar', 'splinter']
 export const STAR_BODY_LOOK_SEED_SALT = 41
 export const STAR_BODY_SEED_SALT = 97
 /** Feinstreuung je Stern (Fleckenlage, Zacken, Neigung) in so vielen Stufen —
  *  klein gehalten, damit der Sprite-Cache Treffer landet. */
 export const STAR_BODY_SEED_SLOTS = 8
-/** Umlaufdauer der Drehebene in Sekunden je Gestalt. */
+/** Umlaufdauer der Drehebene in Sekunden je Gestalt. Sie dreht nur noch, wo die
+ *  Drehung die GESTALT ist (`STAR_BODY_SPIN_LOOKS`) — der Körper selbst dreht um
+ *  seine Achse, indem die Oberfläche rollt. */
 export const STAR_BODY_SPIN_SEC: Record<StarLook, number> = {
   dwarf: 48,
   giant: 120,
@@ -617,6 +622,87 @@ export const STAR_BODY_SPIN_SEC: Record<StarLook, number> = {
   splinter: 9,
 }
 /** Halo: Deckkraft am Körperrand, Reichweite und Stärke je Gestalt. */
+/** Der Scheibenradius je Gestalt als Anteil von r — abgelesen aus den Core-Paintern.
+ *  `binary` steht kleiner als seine 0,78: die Hauptkugel sitzt versetzt, und das
+ *  zentrierte Band darf nicht über ihren Rand laufen. `splinter` rechnet den
+ *  Wobble ab (0,9 · (1 − 0,22)). */
+export const STAR_BODY_DISC_R: Record<StarLook, number> = {
+  dwarf: 0.92,
+  giant: 0.98,
+  pulsar: 0.74,
+  binary: 0.62,
+  flare: 0.86,
+  veil: 0.82,
+  umbra: 0.95,
+  splinter: 0.72,
+}
+/** Die rollende Oberfläche: ein Streifen über die GANZE Scheibe (die Sonne teilt
+ *  in drei Breitenbänder — bei 34–100 px ist Differentialrotation unsichtbar und
+ *  jedes Band wäre eine eigene Compositor-Ebene). Zwei Perioden im Bild,
+ *  `translateX(50 %)` fährt genau eine: die Naht bleibt unsichtbar. */
+export const STAR_BODY_BAND_PERIOD_BR = 4
+export const STAR_BODY_BAND_STRIP_PERIODS = 2
+export const STAR_BODY_BAND_H_BR = 2.2
+/** Auslauf an Ober- und Unterkante — an den Polen darf keine Kante stehen. */
+export const STAR_BODY_BAND_FADE_BR = 0.24
+/** Kreismaske am Slot: voll bis FULL, aus bei EDGE (Anteile des Scheibenradius). */
+export const STAR_BODY_BAND_MASK_FULL = 0.72
+export const STAR_BODY_BAND_MASK_EDGE = 0.98
+export const STAR_BODY_BAND_SALT = 227
+/** Umlaufdauer der Achsdrehung je Gestalt; Riesen drehen träge, Scherben schnell. */
+export const STAR_BODY_TURN_SEC: Record<StarLook, number> = {
+  dwarf: 38,
+  giant: 70,
+  pulsar: 30,
+  binary: 46,
+  flare: 34,
+  veil: 58,
+  umbra: 32,
+  splinter: 22,
+}
+/** Streuung der Umlaufdauer je Stern — ohne sie liefen gleiche Gestalten im Takt. */
+export const STAR_BODY_TURN_JITTER = 0.25
+/** Neigung der Achse je Stern: ± dieser Grad. Nicht bis 90 — eine senkrecht
+ *  rollende Oberfläche liest sich als fallender Vorhang, nicht als Stern. */
+export const STAR_BODY_AXIS_TILT_MAX_DEG = 55
+/** Was auf dem Streifen steht, je Gestalt. `cap` ist KEIN Sparknopf, sondern die
+ *  Reissleine: die Zellen laufen zeilenweise von oben, ein zu kleiner Deckel füllt
+ *  nur die obere Hälfte und der Körper sieht schief aus. `rim` ist der dunkle Saum
+ *  der Zelle — zu viel davon, und die Oberfläche liest sich als Seifenblasen. */
+export interface StarBandRow {
+  cell: number
+  alpha: number
+  cap: number
+  rim: number
+  /** Dunkle Flächen — auf einer 60-px-Scheibe der EINZIGE Hinweis, der die Drehung
+   *  wirklich trägt: helle Zellen auf heller Photosphäre sieht man nicht. */
+  patches: number
+  spots: number
+  wisps: number
+  craters: number
+  streaks: number
+  /** Gürtel über die ganze Streifenbreite (Riese). Keine Naht möglich. */
+  belts: number
+}
+export const STAR_BODY_BAND_LOOK: Record<StarLook, StarBandRow> = {
+  dwarf: { cell: 0.17, alpha: 0.24, cap: 320, rim: 0.25, patches: 5, spots: 6, wisps: 0, craters: 0, streaks: 0, belts: 0 },
+  giant: { cell: 0.38, alpha: 0.34, cap: 100, rim: 0.15, patches: 4, spots: 0, wisps: 4, craters: 0, streaks: 0, belts: 4 },
+  pulsar: { cell: 0.15, alpha: 0.2, cap: 400, rim: 0.25, patches: 3, spots: 4, wisps: 0, craters: 0, streaks: 5, belts: 0 },
+  binary: { cell: 0.18, alpha: 0.32, cap: 320, rim: 0.25, patches: 6, spots: 5, wisps: 0, craters: 0, streaks: 0, belts: 0 },
+  flare: { cell: 0.16, alpha: 0.26, cap: 360, rim: 0.25, patches: 5, spots: 5, wisps: 0, craters: 0, streaks: 0, belts: 0 },
+  veil: { cell: 0.26, alpha: 0.26, cap: 180, rim: 0.2, patches: 5, spots: 0, wisps: 6, craters: 0, streaks: 0, belts: 2 },
+  umbra: { cell: 0.2, alpha: 0.22, cap: 260, rim: 0.35, patches: 5, spots: 7, wisps: 0, craters: 0, streaks: 0, belts: 0 },
+  splinter: { cell: 0.16, alpha: 0.22, cap: 360, rim: 0.3, patches: 4, spots: 0, wisps: 0, craters: 7, streaks: 0, belts: 0 },
+}
+/** Fleckengrösse als Anteil des Scheibenradius. Die Sonne rechnet mit 0,05 — auf
+ *  einem 60-px-Stern wären das anderthalb Pixel. */
+export const STAR_BODY_BAND_SPOT_K = 0.07
+/** Dunkle Fläche: Radius und Deckkraft. */
+export const STAR_BODY_BAND_PATCH_R = 0.3
+export const STAR_BODY_BAND_PATCH_ALPHA = 0.26
+/** Auf der kleinen Stufe WENIGER, aber GRÖSSERE Zellen — den Deckel zu halbieren
+ *  hiesse, die untere Hälfte des Streifens leer zu lassen. */
+export const STAR_BODY_BAND_CELL_SMALL_K = 1.45
 export const STAR_BODY_HALO_ALPHA = 0.62
 /** Unter Stufe 2 leuchtet der Halo kräftiger — die blassen Spektralfarben tragen sonst nicht. */
 export const STAR_BODY_HALO_SMALL_BOOST = 1.25
@@ -640,11 +726,9 @@ export const STAR_BODY_HALO_ALPHA_MUL: Record<StarLook, number> = {
   umbra: 0.8,
   splinter: 0.9,
 }
-export const STAR_BODY_GRAIN_ALPHA = 0.14
 export const STAR_BODY_LIMB_ALPHA = 0.58
 export const STAR_BODY_DWARF_SPOTS = 3
 export const STAR_BODY_DWARF_RAYS = 8
-export const STAR_BODY_GIANT_BANDS = 3
 export const STAR_BODY_GIANT_MOTES = 14
 export const STAR_BODY_PULSAR_CORE_R = 0.74
 export const STAR_BODY_PULSAR_RAYS = 4
@@ -655,18 +739,20 @@ export const STAR_BODY_BINARY_COMPANION_AT = 0.58
 export const STAR_BODY_FLARE_LOOPS = 3
 export const STAR_BODY_FLARE_LOOP_R = 0.34
 export const STAR_BODY_FLARE_TAIL_LEN = 1.9
-/** Sonnenwind: eine Eruptionsfahne (vierte Sprite-Ebene), die selten aufsteigt und
- *  abreisst. Nur Champion, Boss und jeder dritte Resource-Stern tragen eine — jede
- *  ist eine Compositor-Ebene, bei dreissig Sternen wären es dreissig. */
+/** Sonnenwind: eine Eruptionsfahne (vierte Sprite-Ebene) mit Böe. Champion, Boss
+ *  und jeder Resource-Stern tragen eine, Eskorten nie. Die Spawnpfade deckeln auf
+ *  acht Sterne gleichzeitig (3 Resource + 1 Champion + 3 Eskorten bzw. 1 Boss) —
+ *  die alte Rechnung mit dreissig Fahnen stimmte nie. */
 export const STAR_BODY_WIND_REACH = 2.05
 /** Strömungsarme des Windkranzes — verteilt um den Stern, in Drehrichtung gekrümmt. */
 export const STAR_BODY_WIND_ARMS = 3
-/** Flackerzyklus (Eruption) und Umlaufdauer der Drehung, gegenläufig zur Strahlenebene. */
+/** Böen-Zyklus des Kranzes. Eine Umlaufdauer hat er nicht mehr: er dreht nicht. */
 export const STAR_BODY_WIND_SEC_MIN = 16
 export const STAR_BODY_WIND_SEC_RANGE = 8
-export const STAR_BODY_WIND_TURN_SEC_MIN = 44
-export const STAR_BODY_WIND_TURN_SEC_RANGE = 26
-export const STAR_BODY_WIND_RESOURCE_EVERY = 3
+export const STAR_BODY_WIND_RESOURCE_EVERY = 1
+/** Die Böe: bis IDLE unsichtbar, dann schiesst der Kranz auf GROW hinaus. */
+export const STAR_BODY_WIND_GUST_GROW = 1.28
+export const STAR_BODY_WIND_GUST_IDLE_FRACTION = 0.58
 export const STAR_BODY_WIND_SALT = 211
 export const STAR_BODY_VEIL_WISPS = 5
 export const STAR_BODY_UMBRA_ARMS = 6

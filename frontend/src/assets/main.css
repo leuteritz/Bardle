@@ -207,6 +207,49 @@
   }
 }
 
+/* Achsdrehung des STERNS — dasselbe Idiom wie `.sun-band`: der Streifen rollt
+   unter einer Kreismaske nach rechts, `translateX(50 %)` ist genau eine Periode.
+   Der ANKER trägt die Neigung der Achse, der Keyframe liegt auf dem Kind — ein
+   Keyframe überschreibt `transform` vollständig. Global, weil das per JS erzeugte
+   <img> kein Scope-Attribut trägt und die Star-Fight-Arena dieselbe Gestalt zeigt. */
+.star-band {
+  position: absolute;
+  inset: 0;
+  transform: rotate(var(--star-axis, 0deg));
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(
+    circle closest-side,
+    #000 calc(var(--band-r, 0.9) * var(--band-mask-full, 0.72) * 100%),
+    transparent calc(var(--band-r, 0.9) * var(--band-mask-edge, 0.98) * 100%)
+  );
+  mask-image: radial-gradient(
+    circle closest-side,
+    #000 calc(var(--band-r, 0.9) * var(--band-mask-full, 0.72) * 100%),
+    transparent calc(var(--band-r, 0.9) * var(--band-mask-edge, 0.98) * 100%)
+  );
+}
+.star-band > img {
+  position: absolute;
+  display: block;
+  /* Preflight deckelt img auf max-width: 100 % — der Streifen ist 3,7 Boxen breit */
+  max-width: none;
+  left: calc(50% - var(--band-w, 3.68) * 75%);
+  top: calc(50% - var(--band-h, 1.01) * 50%);
+  width: calc(var(--band-w, 3.68) * 100%);
+  height: calc(var(--band-h, 1.01) * 100%);
+  animation: star-band-roll var(--star-turn, 40s) linear infinite;
+  animation-direction: var(--star-roll-dir, normal);
+  user-select: none;
+}
+@keyframes star-band-roll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(50%);
+  }
+}
+
 /* Sonnenwind als Böe: bis --gust-idle unsichtbar, dann schiesst der Kranz
    hinaus (ease-out) und zieht sich zurück (ease-in). Drei Kopien mit
    ungleichen Dauern (--gust-f) — Schwebung statt Takt. */
@@ -244,7 +287,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sun-band > img {
+  .sun-band > img,
+  .star-band > img {
     animation: none;
   }
 }
