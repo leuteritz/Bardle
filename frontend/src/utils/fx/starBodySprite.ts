@@ -12,11 +12,14 @@
    Acht Gestalten (`StarLook`), Farbe kommt IMMER von aussen (Rolle, Spektral-
    palette, Boss). Alles streut über `seed`, nie über Math.random.            */
 
+import type { StarBandMark } from '@/config/constants'
 import type { StarLook, StarType } from '@/types'
 import {
   STAR_BODY_AXIS_TILT_MAX_DEG,
   STAR_BODY_BAND_FADE_BR,
   STAR_BODY_BAND_H_BR,
+  STAR_BODY_BAND_LANDMARK_ALPHA,
+  STAR_BODY_BAND_LANDMARK_R,
   STAR_BODY_BAND_CELL_SMALL_K,
   STAR_BODY_BAND_LOOK,
   STAR_BODY_BAND_MASK_EDGE,
@@ -32,7 +35,7 @@ import {
   STAR_BODY_BINARY_MAIN_R,
   STAR_BODY_DETAIL_PX_1,
   STAR_BODY_DETAIL_PX_2,
-  STAR_BODY_DWARF_RAYS,
+  STAR_BODY_DWARF_PLUMES,
   STAR_BODY_DWARF_SPOTS,
   STAR_BODY_GIANT_MOTES,
   STAR_BODY_HALO_ALPHA,
@@ -45,6 +48,7 @@ import {
   STAR_BODY_PULSAR_CORE_R,
   STAR_BODY_PULSAR_RAYS,
   STAR_BODY_FLARE_LOOPS,
+  STAR_BODY_FLARE_TAILS,
   STAR_BODY_FLARE_LOOP_R,
   STAR_BODY_FLARE_TAIL_LEN,
   STAR_BODY_DISC_R,
@@ -59,6 +63,7 @@ import {
   STAR_BODY_SPRITE_CANVAS_MAX,
   STAR_BODY_SPRITE_SPAN,
   STAR_BODY_UMBRA_ARMS,
+  STAR_BODY_VEIL_SHROUDS,
   STAR_BODY_VEIL_WISPS,
   STAR_BODY_WIND_ARMS,
   STAR_BODY_WIND_REACH,
@@ -274,6 +279,13 @@ function photosphere(
     ctx.fillStyle = limb
     ctx.fill()
   }
+}
+
+/** Eine Anzahl aus der Spanne, je STERN gewürfelt — zwei Sterne derselben Gestalt
+ *  sollen sich unterscheiden. Aus `seed`, nicht aus der Stern-id: der Sprite-Cache
+ *  hat nur `STAR_BODY_SEED_SLOTS` Stufen. */
+function pickCount(seed: number, salt: number, span: readonly [number, number]): number {
+  return span[0] + Math.floor(jitter(seed, salt) * (span[1] - span[0] + 1))
 }
 
 function haloFor(look: StarLook, detail: StarDetail): { reach: number; alpha: number } {
@@ -523,7 +535,7 @@ export const paintFlareHalo: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
 export const paintVeilHalo: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
   const h = haloFor('veil', detail)
   haloGlow(ctx, x, y, r, pal.rgb, h.reach, h.alpha)
-  const wisps = STAR_BODY_VEIL_WISPS - (2 - detail)
+  const wisps = Math.max(2, pickCount(seed, 88, STAR_BODY_VEIL_WISPS) - (2 - detail))
   const tone = mix(pal.rgb, 255, 0.25)
   for (let i = 0; i < wisps; i++) {
     const a = (i / wisps) * TAU + sway(seed, 90 + i) * 0.5
@@ -558,18 +570,23 @@ export const paintSplinterHalo: StarPaint = (ctx, x, y, r, pal, _seed, detail) =
 /* ── Drehebene ──────────────────────────────────────────────────────────────── */
 
 export const paintDwarfSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
-  const rays = detail === 0 ? STAR_BODY_DWARF_RAYS / 2 : STAR_BODY_DWARF_RAYS
-  ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.6), 0.35)
-  for (let i = 0; i < rays; i++) {
-    const a = (i / rays) * TAU
-    spike(ctx, x, y, a, r * 1.0, r * (1.2 + jitter(seed, 120 + i) * 0.2), r * 0.06)
+  // Wenige Fahnen ungleicher Länge an gewürfelten Winkeln: acht gleiche Zacken
+  // ringsum lasen sich als Sonnen-Icon, und jeder Zwerg sah aus wie der nächste.
+  const n = pickCount(seed, 118, STAR_BODY_DWARF_PLUMES)
+  const base = jitter(seed, 119) * TAU
+  for (let i = 0; i < n; i++) {
+    const a = base + (i / n) * TAU + sway(seed, 120 + i) * 0.6
+    const len = 1.22 + jitter(seed, 130 + i) * 0.7
+    ctx.fillStyle = rayGradient(ctx, x, y, r, pal.rgb, 0.98, len, 0.5)
+    spike(ctx, x, y, a, r * 0.98, r * len, r * (0.07 + jitter(seed, 140 + i) * 0.07))
     ctx.fill()
   }
-  if (detail < 2) return
-  ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.6), 0.16)
-  for (let i = 0; i < rays; i++) {
-    const a = ((i + 0.5) / rays) * TAU
-    spike(ctx, x, y, a, r * 1.0, r * 1.12, r * 0.04)
+  if (detail === 0) return
+  // Der Schein zwischen den Fahnen: ohne ihn liest sich die Asymmetrie als Fehler
+  ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.6), 0.12)
+  for (let i = 0; i < n; i++) {
+    const a = base + ((i + 0.5) / n) * TAU + sway(seed, 150 + i) * 0.45
+    spike(ctx, x, y, a, r * 0.98, r * (1.06 + jitter(seed, 160 + i) * 0.22), r * 0.05)
     ctx.fill()
   }
 }
@@ -583,8 +600,9 @@ export const paintGiantSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
   ctx.stroke()
   if (detail < 2) return
   ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.5), 0.3)
-  for (let i = 0; i < STAR_BODY_GIANT_MOTES; i++) {
-    const a = (i / STAR_BODY_GIANT_MOTES) * TAU + sway(seed, 130 + i) * 0.2
+  const motes = pickCount(seed, 129, STAR_BODY_GIANT_MOTES)
+  for (let i = 0; i < motes; i++) {
+    const a = (i / motes) * TAU + sway(seed, 130 + i) * 0.2
     const d = r * (1.2 + jitter(seed, 140 + i) * 0.4)
     circle(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, r * (0.025 + jitter(seed, 150 + i) * 0.03))
     ctx.fill()
@@ -592,18 +610,19 @@ export const paintGiantSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
 }
 
 export const paintPulsarSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
-  const base = jitter(seed, 160) * (TAU / STAR_BODY_PULSAR_RAYS)
+  const cones = pickCount(seed, 159, STAR_BODY_PULSAR_RAYS)
+  const base = jitter(seed, 160) * (TAU / cones)
   const from = r * STAR_BODY_PULSAR_CORE_R * 0.9
   ctx.fillStyle = rayGradient(ctx, x, y, r, pal.rgb, STAR_BODY_PULSAR_CORE_R * 0.9, 2.1, 0.75)
-  for (let i = 0; i < STAR_BODY_PULSAR_RAYS; i++) {
-    spike(ctx, x, y, base + (i / STAR_BODY_PULSAR_RAYS) * TAU, from, r * 2.1, r * 0.045)
+  for (let i = 0; i < cones; i++) {
+    spike(ctx, x, y, base + (i / cones) * TAU, from, r * 2.1, r * 0.045)
     ctx.fill()
   }
   if (detail === 0) return
   const shorts = detail === 1 ? 2 : 4
   ctx.fillStyle = rayGradient(ctx, x, y, r, pal.rgb, STAR_BODY_PULSAR_CORE_R * 0.9, 1.5, 0.45)
   for (let i = 0; i < shorts; i++) {
-    const a = base + ((i + 0.5) / STAR_BODY_PULSAR_RAYS) * TAU
+    const a = base + ((i + 0.5) / cones) * TAU
     spike(ctx, x, y, a, from, r * 1.5, r * 0.03)
     ctx.fill()
   }
@@ -644,7 +663,7 @@ export const paintFlareSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
   ctx.fillStyle = rayGradient(ctx, x, y, r, pal.rgb, 0.95, STAR_BODY_FLARE_TAIL_LEN, 0.6)
   spike(ctx, x, y, a, r * 0.95, r * STAR_BODY_FLARE_TAIL_LEN, r * 0.12)
   ctx.fill()
-  if (detail === 0) return
+  if (detail === 0 || pickCount(seed, 318, STAR_BODY_FLARE_TAILS) < 2) return
   ctx.fillStyle = rayGradient(ctx, x, y, r, pal.rgb, 0.95, 1.4, 0.4)
   spike(ctx, x, y, a + Math.PI + sway(seed, 320) * 0.4, r * 0.95, r * 1.4, r * 0.08)
   ctx.fill()
@@ -659,7 +678,7 @@ export const paintFlareSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
 }
 
 export const paintVeilSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
-  const wisps = detail === 2 ? 3 : 2
+  const wisps = Math.max(2, pickCount(seed, 199, STAR_BODY_VEIL_SHROUDS) - (detail === 2 ? 0 : 1))
   const tone = mix(pal.rgb, 255, 0.3)
   for (let i = 0; i < wisps; i++) {
     const a = (i / wisps) * TAU + jitter(seed, 200) * TAU
@@ -668,7 +687,8 @@ export const paintVeilSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
 }
 
 export const paintUmbraSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
-  const arms = detail === 2 ? STAR_BODY_UMBRA_ARMS : STAR_BODY_UMBRA_ARMS - 2
+  const spread = pickCount(seed, 209, STAR_BODY_UMBRA_ARMS)
+  const arms = detail === 2 ? spread : spread - 2
   const base = jitter(seed, 210) * TAU
   for (let i = 0; i < arms; i++) {
     const a = base + (i / arms) * TAU + sway(seed, 220 + i) * 0.3
@@ -687,23 +707,24 @@ export const paintUmbraSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
 
 export const paintSplinterSpin: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
   const base = jitter(seed, 250) * TAU
+  const shards = pickCount(seed, 249, STAR_BODY_SPLINTER_RAYS)
   ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.7), 0.7)
-  for (let i = 0; i < STAR_BODY_SPLINTER_RAYS; i++) {
-    const a = base + (i / STAR_BODY_SPLINTER_RAYS) * TAU + sway(seed, 260 + i) * 0.25
+  for (let i = 0; i < shards; i++) {
+    const a = base + (i / shards) * TAU + sway(seed, 260 + i) * 0.25
     spike(ctx, x, y, a, r * 0.95, r * (1.3 + jitter(seed, 270 + i) * 0.25), r * 0.08)
     ctx.fill()
   }
   if (detail === 0) return
   ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.7), 0.35)
-  for (let i = 0; i < STAR_BODY_SPLINTER_RAYS; i++) {
-    const a = base + ((i + 0.5) / STAR_BODY_SPLINTER_RAYS) * TAU
+  for (let i = 0; i < shards; i++) {
+    const a = base + ((i + 0.5) / shards) * TAU
     spike(ctx, x, y, a, r * 0.95, r * 1.15, r * 0.05)
     ctx.fill()
   }
   if (detail < 2) return
   ctx.fillStyle = rgba(mix(pal.rgb, 255, 0.85), 0.8)
-  for (let i = 0; i < STAR_BODY_SPLINTER_RAYS; i++) {
-    const a = base + (i / STAR_BODY_SPLINTER_RAYS) * TAU + sway(seed, 260 + i) * 0.25
+  for (let i = 0; i < shards; i++) {
+    const a = base + (i / shards) * TAU + sway(seed, 260 + i) * 0.25
     const d = r * (1.3 + jitter(seed, 270 + i) * 0.25)
     circle(ctx, x + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.035)
     ctx.fill()
@@ -802,6 +823,101 @@ export const paintUmbraWind: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
 
 /* ── Tabelle, Bau, Cache, Blit ──────────────────────────────────────────────── */
 
+/** Das EINE grosse Motiv, das die Drehung trägt — je Gestalt eine eigene Lesart.
+ *  Zwanzig kleine Flecken mitteln sich auf einer 60-px-Scheibe zu Rauschen; ein
+ *  Motiv von halbem Scheibenradius wandert sichtbar durchs Bild. */
+export function paintBandMark(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  mr: number,
+  mark: StarBandMark,
+  pal: StarPalette,
+  salt: number,
+): void {
+  const hi = mix(pal.rgb, 255, 0.62)
+  const dark = mix(pal.rgb, 0, 0.7)
+  const a = STAR_BODY_BAND_LANDMARK_ALPHA
+  const tilt = sway(salt, 1100) * 0.5
+  if (mark === 'storm') {
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, mr)
+    g.addColorStop(0, rgba(dark, a * 1.3))
+    g.addColorStop(0.55, rgba(dark, a * 0.8))
+    g.addColorStop(1, rgba(dark, 0))
+    ctx.beginPath()
+    ctx.ellipse(cx, cy, mr, mr * 0.62, tilt, 0, TAU)
+    ctx.fillStyle = g
+    ctx.fill()
+    ctx.beginPath()
+    ctx.ellipse(cx, cy, mr * 0.76, mr * 0.44, tilt, 0.6, 4.3)
+    ctx.strokeStyle = rgba(hi, a * 0.75)
+    ctx.lineWidth = Math.max(0.6, mr * 0.12)
+    ctx.stroke()
+    return
+  }
+  if (mark === 'spotgroup') {
+    ctx.beginPath()
+    ctx.ellipse(cx, cy, mr, mr * 0.66, tilt, 0, TAU)
+    ctx.fillStyle = rgba(dark, a * 0.55)
+    ctx.fill()
+    for (let i = 0; i < 3; i++) {
+      const ang = tilt + i * 2.1
+      const d = mr * (0.08 + jitter(salt, 1110 + i) * 0.5)
+      const rr = mr * (0.17 + jitter(salt, 1120 + i) * 0.16)
+      ctx.beginPath()
+      ctx.ellipse(cx + Math.cos(ang) * d, cy + Math.sin(ang) * d * 0.6, rr, rr * 0.82, tilt, 0, TAU)
+      ctx.fillStyle = rgba(mix(pal.rgb, 0, 0.86), Math.min(1, a * 2))
+      ctx.fill()
+    }
+    return
+  }
+  if (mark === 'plage') {
+    wisp(ctx, cx, cy, mr, 1130, hi, a * 0.85)
+    wisp(ctx, cx + mr * 0.22, cy - mr * 0.16, mr * 0.5, 1131, mix(pal.rgb, 255, 0.88), a)
+    return
+  }
+  if (mark === 'crack') {
+    // Glutriss: ein Zug, zweimal gezeichnet — breit und glühend, darüber schmal und hell
+    const steps = 5
+    const line = () => {
+      ctx.beginPath()
+      for (let i = 0; i <= steps; i++) {
+        const px = cx + (i / steps - 0.5) * mr * 2
+        const py = cy + sway(salt, 1140 + i) * mr * 0.42
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+    }
+    ctx.lineCap = 'round'
+    line()
+    ctx.strokeStyle = rgba(hi, a * 1.4)
+    ctx.lineWidth = Math.max(0.8, mr * 0.18)
+    ctx.stroke()
+    line()
+    ctx.strokeStyle = rgba(mix(pal.rgb, 255, 0.92), a)
+    ctx.lineWidth = Math.max(0.4, mr * 0.07)
+    ctx.stroke()
+    return
+  }
+  if (mark === 'basin') {
+    crater(ctx, cx, cy, mr * 0.8, rgba(hi, 0.8))
+    for (let i = 0; i < 3; i++) {
+      const ang = jitter(salt, 1150 + i) * TAU
+      crater(
+        ctx,
+        cx + Math.cos(ang) * mr * 0.92,
+        cy + Math.sin(ang) * mr * 0.66,
+        mr * (0.15 + jitter(salt, 1160 + i) * 0.12),
+        rgba(hi, 0.6),
+      )
+    }
+    return
+  }
+  // knot — ein dichter Knoten aus hell und dunkel
+  wisp(ctx, cx, cy, mr * 0.92, 1170, hi, a * 0.9)
+  wisp(ctx, cx - mr * 0.3, cy + mr * 0.2, mr * 0.48, 1171, dark, a * 0.8)
+}
+
 /* ── Die rollende Oberfläche ────────────────────────────────────────────────── */
 
 /** Ein Painter für alle acht Gestalten: Granulation aus der Palette, dazu was die
@@ -871,6 +987,15 @@ export function paintStarBandStrip(
       ctx.ellipse(s.x0 + lon + dx, s.y0 + lat, len, th, 0, 0, TAU)
       ctx.fillStyle = g
       ctx.fill()
+    }
+  }
+  if (row.mark !== 'none') {
+    // NICHT halbiert auf der kleinen Stufe: genau dort trägt sie die Drehung allein
+    const lon = jitter(salt, 1090) * s.period
+    const lat = s.h / 2 + sway(salt, 1091) * s.h * 0.2
+    const mr = s.br * STAR_BODY_BAND_LANDMARK_R * (0.85 + jitter(salt, 1092) * 0.3)
+    for (const dx of [0, s.period]) {
+      paintBandMark(ctx, s.x0 + lon + dx, s.y0 + lat, mr, row.mark, pal, salt)
     }
   }
   for (let i = 0; i < row.belts; i++) {
