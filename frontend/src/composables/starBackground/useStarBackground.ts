@@ -1,13 +1,26 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   drawStarSprite,
-  drawDotSprite,
   drawBloomSprite,
   drawStreakSprite,
   starFogTier,
   warpDopplerTier,
   WARP_DOPPLER_OWN,
 } from '@/composables/starBackground/starSprites'
+import {
+  clearClusters,
+  createClusterField,
+  drawClusters,
+  firstClusterDelay,
+  rescaleClusters,
+  rotateClusters,
+  seedStaticClusters,
+  spawnCluster,
+  stepClusters,
+  type ClusterField,
+  type ClusterKind,
+} from '@/composables/starBackground/starClusters'
+import { pickFieldStarColor } from '@/composables/starBackground/starPalette'
 import {
   createGalaxyWarp,
   additiveDrawAlpha,
@@ -55,7 +68,6 @@ import {
   GALAXY_MAX_COUNT,
   STAR_BG_BASE_SPEED_MIN,
   STAR_BG_BASE_SPEED_RANGE,
-  BACKGROUND_STAR_BLUE_BIAS,
   SOLAR_STAR_SPEED_BONUS,
   COMET_PHASE_DATA,
   COMET_DRIFT_SPEED_MULT,
@@ -95,7 +107,7 @@ import {
   EMISSION_MAX_COUNT,
   EMISSION_SPAWN_MAX,
   EMISSION_SPAWN_MIN,
-  CLUSTER_COUNT,
+  CLUSTER_FROZEN_SEED_COUNT,
   DUST_PATCH_COUNT,
   RESCUE_ROTATION_DURATION_MS,
   RESCUE_ROTATION_TOTAL_RAD,
@@ -121,7 +133,6 @@ import {
   type GalaxyPalette,
   type GalaxyType,
   type NebulaMovingItem,
-  type StarCluster,
   type StarItem,
 } from '@/composables/starBackground/types'
 import {
@@ -352,67 +363,6 @@ function drawIonCloud(
 
 // ─── Composable ───────────────────────────────────────────────────────────────
 
-// Spectral star color palette with weighted random selection.
-// Weights: Red 30%, Orange 30%, Yellow 20%, White 12%, Blue-White 8%
-const SPECTRAL_STAR_PALETTE: { weight: number; colors: [number, number, number][] }[] = [
-  {
-    weight: 0.3,
-    colors: [
-      [255, 96, 48],
-      [255, 69, 0],
-    ],
-  },
-  {
-    weight: 0.3,
-    colors: [
-      [255, 179, 71],
-      [255, 160, 64],
-    ],
-  },
-  {
-    weight: 0.2,
-    colors: [
-      [255, 244, 163],
-      [255, 233, 122],
-    ],
-  },
-  {
-    weight: 0.12,
-    colors: [
-      [245, 245, 255],
-      [255, 255, 255],
-    ],
-  },
-  {
-    weight: 0.08,
-    colors: [
-      [176, 200, 255],
-      [202, 216, 255],
-    ],
-  },
-]
-
-function pickBackgroundStarColor(): [number, number, number] {
-  if (Math.random() < BACKGROUND_STAR_BLUE_BIAS) {
-    const blue = SPECTRAL_STAR_PALETTE[SPECTRAL_STAR_PALETTE.length - 1]
-    return blue.colors[Math.floor(Math.random() * blue.colors.length)]
-  }
-  const nonBlue = SPECTRAL_STAR_PALETTE.slice(0, -1)
-  const totalWeight = nonBlue.reduce((s, c) => s + c.weight, 0)
-  let rand = Math.random() * totalWeight
-  for (const cat of nonBlue) {
-    rand -= cat.weight
-    if (rand <= 0) return cat.colors[Math.floor(Math.random() * cat.colors.length)]
-  }
-  return nonBlue[nonBlue.length - 1].colors[0]
-}
-
-function pickOrbitStarColor(): [number, number, number] {
-  const idx = Math.floor(Math.random() * SPECTRAL_STAR_PALETTE.length)
-  const cat = SPECTRAL_STAR_PALETTE[idx]
-  return cat.colors[Math.floor(Math.random() * cat.colors.length)]
-}
-
 export function useStarBackground(options: { frozen?: boolean } = {}) {
   // frozen = statisches Sternenfeld (Shop): kein Heranfliegen, keine Galaxien/Nebel-Spawns,
   // keine Galaxy-/Warp-Mutationen — nur In-Place-Twinkle.
@@ -425,7 +375,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   const galaxies: GalaxyItem[] = []
   const emissionNebulas: NebulaMovingItem[] = []
   const dustPatches: DustPatch[] = []
-  const starClusters: StarCluster[] = []
+  const clusters: ClusterField = createClusterField(firstClusterDelay(Math.random))
   const cometDebris: DebrisRock[] = []
   const flightStreaks: FlightStreak[] = []
   /** Finite gusts of bright speed lines; refilled when burstCooldown expires. */
@@ -870,6 +820,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       if (poolSlot) poolSlot.active = false
     }
     emissionNebulas.length = 0
+    clearClusters(clusters)
+    clusters.gap = firstClusterDelay(Math.random)
   }
 
   function scheduleNextGalaxy(): void {
@@ -984,37 +936,36 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     }
   }
 
+  /**
+   * Nur die frozen-Instanz (Shop) bekommt einen festen Bestand: dort bleibt
+   * `speedMultiplier` null, ein episodischer Haufen wanderte nie und stünde
+   * für immer. Die Vollbild-Instanz lässt die Regie spawnen.
+   */
   function initClusters(): void {
-    starClusters.length = 0
+    clearClusters(clusters)
+    if (!isFrozen) {
+      clusters.gap = firstClusterDelay(Math.random)
+      return
+    }
+    fillSkyFrame()
+    seedStaticClusters(
+      clusters,
+      Math.max(1, Math.round(CLUSTER_FROZEN_SEED_COUNT * densityScale())),
+      encounterFrame,
+      Math.random,
+    )
+  }
+
+  /** Maße für die Aussaat, bevor die Schleife das erste Mal gelaufen ist. */
+  function fillSkyFrame(): void {
     const w = starsContainer.value?.clientWidth || window.innerWidth
     const h = starsContainer.value?.clientHeight || window.innerHeight
-    const maxDist = Math.hypot(w / 2, h / 2) + 20
-    const clusterCount = Math.max(1, Math.round(CLUSTER_COUNT * densityScale()))
-    for (let i = 0; i < clusterCount; i++) {
-      const count = 15 + Math.floor(Math.random() * 12)
-      const radius = 18 + Math.random() * 32
-      const clusterStars = []
-      for (let j = 0; j < count; j++) {
-        const a = Math.random() * Math.PI * 2
-        const d = Math.random() * radius
-        const [r, g, b] = pickOrbitStarColor()
-        clusterStars.push({
-          dx: Math.cos(a) * d,
-          dy: Math.sin(a) * d,
-          r,
-          g,
-          b,
-          brightness: 0.4 + Math.random() * 0.6,
-        })
-      }
-      starClusters.push({
-        angle: Math.random() * Math.PI * 2,
-        dist: maxDist * (0.08 + Math.random() * 0.8),
-        baseSpeed: 0.56 + Math.random() * 0.36,
-        stars: clusterStars,
-        twinklePhase: Math.random() * Math.PI * 2,
-      })
-    }
+    encounterFrame.w = w
+    encounterFrame.h = h
+    encounterFrame.cx = w / 2
+    encounterFrame.cy = h / 2
+    encounterFrame.maxDist = Math.hypot(w / 2, h / 2) + 20
+    encounterFrame.minEdge = Math.min(w, h)
   }
 
   function spawnStar(randomDist = false): StarItem {
@@ -1027,7 +978,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     const minDist = maxDist * 0.1
     const dist = randomDist ? minDist + Math.random() * (maxDist * 0.85) : minDist
     const baseSpeed = STAR_BG_BASE_SPEED_MIN + Math.random() * STAR_BG_BASE_SPEED_RANGE
-    const [r, g, b] = pickBackgroundStarColor()
+    const [r, g, b] = pickFieldStarColor()
     const item: StarItem = {
       id: nextStarId++,
       angle,
@@ -1114,7 +1065,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           const dir = galaxyStore.rescueRotationDirection
           for (const star of stars) star.angle += angularDelta * dir
           for (const d of dustPatches) d.angle += angularDelta * dir
-          for (const c of starClusters) c.angle += angularDelta * dir
+          rotateClusters(clusters, angularDelta * dir)
           if (t >= 1) galaxyStore.endRescueRotation()
         }
       }
@@ -1333,6 +1284,17 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     const slipY = slipVy * delta
     // Im Tunnel rollt das Feld um den Fluchtpunkt — zusätzlich zum Helm.
     const rollStep = (slipOn ? helmOut!.rollRate * delta : 0) + hop.out.roll * delta
+    encounterFrame.w = w
+    encounterFrame.h = h
+    encounterFrame.cx = cx
+    encounterFrame.cy = cy
+    encounterFrame.maxDist = maxDist
+    encounterFrame.minEdge = Math.min(w, h)
+    encounterFrame.delta = delta
+    encounterFrame.speedMultiplier = speedMultiplier
+    encounterFrame.slipX = slipX
+    encounterFrame.slipY = slipY
+    encounterFrame.rollStep = rollStep
     const respawnAngle = (): number =>
       slipOn && Math.random() < HELM_RESPAWN_BIAS
         ? upstreamAngle(slipVx, slipVy, Math.random)
@@ -1491,53 +1453,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     }
 
     // ── Sternenhaufen ──────────────────────────────────────────────────────
-    if (ctx && wo.ambientGain > 0) {
-      for (const cluster of starClusters) {
-        const cNorm = cluster.dist / maxDist
-        const cSpeed = cluster.baseSpeed * cNorm * cNorm * WARP_SPEED_MAX * speedMultiplier
-        cluster.dist += cSpeed * delta
-        if (slipOn) {
-          cluster.angle += rollStep
-          const wgt = cNorm * cNorm
-          slipPolar(
-            cluster,
-            slipX * wgt,
-            slipY * wgt,
-            Math.cos(cluster.angle),
-            Math.sin(cluster.angle),
-          )
-        }
-        if (cluster.dist > maxDist) {
-          cluster.angle = respawnAngle()
-          cluster.dist = maxDist * (0.02 + Math.random() * 0.06)
-          cluster.baseSpeed = 0.56 + Math.random() * 0.32
-        }
-        const pcx = cx + Math.cos(cluster.angle) * cluster.dist
-        const pcy = cy + Math.sin(cluster.angle) * cluster.dist
-        cluster.twinklePhase += 0.5 * delta
-        const distAlpha = Math.min(1, cNorm * 3)
-        const fadeEdge = cNorm > 0.85 ? 1 - (cNorm - 0.85) / 0.15 : 1
-        const baseAlpha =
-          distAlpha * fadeEdge * (0.3 + 0.1 * Math.sin(cluster.twinklePhase)) * wo.ambientGain
-        const spreadScale = 0.25 + cNorm * 1.6
-        for (const s of cluster.stars) {
-          const a = baseAlpha * s.brightness
-          if (a < 0.02) continue
-          const dotSize = s.brightness * spreadScale * 1.2
-          drawDotSprite(
-            ctx,
-            s.r,
-            s.g,
-            s.b,
-            pcx + s.dx * spreadScale,
-            pcy + s.dy * spreadScale,
-            dotSize,
-            a,
-          )
-        }
-        ctx.globalAlpha = 1
-      }
-    }
+    // Vor dem freien Feld: die Haufen liegen darunter. Im Tunnel spawnt nichts
+    // nach (kein Pop-in), Bestehendes blendet über ambientGain aus.
+    if (!isFrozen) stepClusters(clusters, encounterFrame, Math.random, !warpActive)
+    if (ctx) drawClusters(ctx, clusters, encounterFrame, wo.ambientGain)
 
     // ── Sterne ─────────────────────────────────────────────────────────────
     // Auch der Warp ist radial: die Sterne fließen vom (versetzten) Fluchtpunkt
@@ -1981,17 +1900,6 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         encounterFrame.tint = [t.r, t.g, t.b]
         tintKey = key
       }
-      encounterFrame.w = w
-      encounterFrame.h = h
-      encounterFrame.cx = cx
-      encounterFrame.cy = cy
-      encounterFrame.maxDist = maxDist
-      encounterFrame.minEdge = Math.min(w, h)
-      encounterFrame.delta = delta
-      encounterFrame.speedMultiplier = speedMultiplier
-      encounterFrame.slipX = slipX
-      encounterFrame.slipY = slipY
-      encounterFrame.rollStep = rollStep
       stepEncounters(sky, encounterFrame, Math.random, traveling)
       if (sky.evade.pending) {
         requestEvade(helm, sky.evade.awayAngle, sky.evade.strength)
@@ -2124,6 +2032,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const scale = newMaxDist / oldMaxDist
       for (const star of stars) star.dist = star.dist * scale
       rescaleEncounters(sky, scale)
+      rescaleClusters(clusters, scale)
       for (const d of dustPatches) {
         d.cachedGradient = null
         d._cachedRx = -1
@@ -2220,7 +2129,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     galaxies.length = 0
     emissionNebulas.length = 0
     dustPatches.length = 0
-    starClusters.length = 0
+    clearClusters(clusters)
     window.removeEventListener('resize', handleResize)
     containerObserver?.disconnect()
     containerObserver = null
@@ -2269,6 +2178,11 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
                 Math.random,
               )
           },
+          cluster: (kind) => {
+            if (encounterFrame.maxDist > 0)
+              spawnCluster(clusters, kind as ClusterKind, encounterFrame, Math.random)
+          },
+          clusters: () => clusters,
           evade: (angle, strength) => requestEvade(helm, angle, strength),
           helm: () => helm,
           sky: () => sky,

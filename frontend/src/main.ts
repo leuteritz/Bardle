@@ -126,6 +126,8 @@ if (import.meta.env.DEV || import.meta.env.VITE_FX_DEBUG === '1') {
     getGameSpeed,
     flight: {
       spawn: (kind: string) => getSkyDebug()?.spawn(kind),
+      cluster: (kind: string) => getSkyDebug()?.cluster(kind),
+      clusters: () => getSkyDebug()?.clusters(),
       evade: (angle: number, strength = 1) => getSkyDebug()?.evade(angle, strength),
       helm: () => getSkyDebug()?.helm(),
       sky: () => getSkyDebug()?.sky(),

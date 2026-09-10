@@ -73,14 +73,6 @@ export type DustPatch = {
   _cachedOpacity: number
 }
 
-export type StarCluster = {
-  angle: number // polar angle from screen center
-  dist: number // current distance from center
-  baseSpeed: number
-  stars: Array<{ dx: number; dy: number; r: number; g: number; b: number; brightness: number }>
-  twinklePhase: number
-}
-
 export type NebulaMovingItem = {
   el: SVGSVGElement
   angle: number // polar angle from screen center
