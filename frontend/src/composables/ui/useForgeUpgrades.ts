@@ -522,7 +522,8 @@ export function useForgeUpgrades(): {
       nowText = level > 0 ? FORGE_CROWN_STATE_FORGED : FORGE_CROWN_STATE_OPEN
       nextText = FORGE_CROWN_STATE_FORGED
     } else if (def.tier === 'confluence') {
-      const meepNodes = meepTree.bought.length
+      // Jede Confluence setzt mindestens einen Wandering-Knoten voraus.
+      const meepNodes = Math.max(meepTree.bought.length, 1)
       const now = forgeStore.confluenceEffect(def.id)
       const next = def.effectPerLevel * meepNodes
       desc = def.desc.replace(FORGE_DESC_VALUE_TOKEN, trimNumber(now))
