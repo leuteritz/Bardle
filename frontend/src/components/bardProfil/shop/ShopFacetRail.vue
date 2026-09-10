@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** Permanent filter rail for the shop atlas. */
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { highlightSegments } from '@/utils/ui/searchHighlight'
 import type { ShopFacetGroup } from '@/types'
@@ -17,6 +17,8 @@ const props = defineProps<{
   domainCounts: Record<ShopDomain, number>
   /** Already lowercased and trimmed; only used to mark matched label parts. */
   query: string
+  /** Bumped when the shop is opened again. */
+  visitToken: number
 }>()
 
 const emit = defineEmits<{
@@ -42,10 +44,32 @@ const DOMAINS: Array<{ id: ShopDomain; label: string; icon: string; tip: (n: num
     },
   ]
 
-/* Fold state of the groups. Pure rail UI, so it lives here — and the two
-   domains never share a group id, which is why the domain switch needs no
-   reset. */
-const collapsedGroups = ref(new Set<string>())
+/* Fold state belongs to the rail. */
+function defaultCollapsedGroups(groups: ShopFacetGroup[]): Set<string> {
+  return new Set(
+    groups
+      .filter((group) => group.id !== 'role' && group.id !== 'tier')
+      .map((group) => group.id),
+  )
+}
+
+const collapsedGroups = ref(defaultCollapsedGroups(props.groups))
+const groupIds = computed(() => props.groups.map((group) => group.id))
+watch(
+  () => props.visitToken,
+  () => {
+    collapsedGroups.value = defaultCollapsedGroups(props.groups)
+  },
+  { immediate: true },
+)
+watch(groupIds, (ids, previousIds) => {
+  const previous = new Set(previousIds)
+  const next = new Set(collapsedGroups.value)
+  for (const id of ids) {
+    if (!previous.has(id) && id !== 'role' && id !== 'tier') next.add(id)
+  }
+  collapsedGroups.value = next
+})
 function toggleGroup(id: string): void {
   const next = new Set(collapsedGroups.value)
   if (!next.delete(id)) next.add(id)

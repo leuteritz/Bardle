@@ -8,6 +8,7 @@
       :domain="activeDomain"
       :domain-counts="domainCounts"
       :query="normalizedQuery"
+      :visit-token="visitToken"
       @toggle="onFacetToggle"
       @update:affordable-only="affordableOnly = $event"
       @update:domain="showDomain"
@@ -415,6 +416,7 @@ import {
   SHOP_ATLAS_GRID_GAP,
   SHOP_ATLAS_COMFORT_CARD_COLUMNS,
   ROLE_BY_KEY,
+  ROLE_ART_SM_SUFFIX,
 } from '@/config/constants'
 import { recruitSeatFor, type RecruitSeat } from '@/utils/game/recruitSeat'
 import { useHerald } from '@/composables/ui/useHerald'
@@ -734,7 +736,7 @@ export default defineComponent({
         label: r.label,
         short: r.short,
         color: r.color,
-        image: r.image,
+        image: r.image.replace(/\.png$/, ROLE_ART_SM_SUFFIX),
         available: gridChampionNames.value.some((name) => CHAMPION_ROLES[name] === r.key),
       })),
     )
