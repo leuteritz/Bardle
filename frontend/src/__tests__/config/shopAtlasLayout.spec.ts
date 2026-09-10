@@ -6,6 +6,10 @@ import {
   SHOP_ATLAS_DETAIL_MAX_WIDTH,
   SHOP_ATLAS_CARD_MIN_WIDTH,
   SHOP_ATLAS_GRID_GAP,
+  SHOP_ATLAS_CARD_FULL_HD_COLUMNS,
+  SHOP_ATLAS_CARD_COMFORT_MIN_GRID_WIDTH,
+  SHOP_ATLAS_CARD_COMFORT_MAX_GRID_WIDTH,
+  SHOP_ATLAS_COMFORT_CARD_COLUMNS,
   SHOP_HERO_ACTIONS_W,
   SHOP_HERO_ACTIONS_ICON_W,
   SHOP_HERO_FIELD_MIN_W,
@@ -15,10 +19,8 @@ import {
 
 /**
  * The shop's three zones share one budget: facets + grid + detail = the whole
- * tab. Nothing in the CSS says how many card columns that leaves, so raising one
- * width silently takes columns off the grid — and the floor that matters is
- * four, which is what the old 900px rail showed. A layout that buys its detail
- * column by showing fewer champions is not the trade this was made for.
+ * tab. The compact and comfort bands keep the card rhythm intentional instead
+ * of letting five narrow cards appear at the lower Full HD container width.
  *
  * The numbers below mirror what App.vue computes and what the browser was
  * measured at (see the worked example in constants/economy.ts):
@@ -60,8 +62,14 @@ function zones(vw: number, vh: number) {
   return { atlas, facets, detail, grid }
 }
 
-/** What `repeat(auto-fill, minmax(CARD_MIN, 1fr))` resolves to. */
+/** What the shop container queries resolve to. */
 function columns(gridWidth: number): number {
+  if (gridWidth < SHOP_ATLAS_CARD_COMFORT_MIN_GRID_WIDTH) {
+    return SHOP_ATLAS_CARD_FULL_HD_COLUMNS
+  }
+  if (gridWidth <= SHOP_ATLAS_CARD_COMFORT_MAX_GRID_WIDTH) {
+    return SHOP_ATLAS_COMFORT_CARD_COLUMNS
+  }
   const usable = gridWidth - GRID_PADDING
   return Math.floor(
     (usable + SHOP_ATLAS_GRID_GAP) / (SHOP_ATLAS_CARD_MIN_WIDTH + SHOP_ATLAS_GRID_GAP),
@@ -76,8 +84,8 @@ const DESKTOPS: Array<[string, number, number]> = [
 ]
 
 describe('shop atlas layout', () => {
-  it.each(DESKTOPS)('%s keeps at least four card columns', (_label, vw, vh) => {
-    expect(columns(zones(vw, vh).grid)).toBeGreaterThanOrEqual(4)
+  it.each(DESKTOPS)('%s keeps the compact grid at four or more columns', (_label, vw, vh) => {
+    expect(columns(zones(vw, vh).grid)).toBeGreaterThanOrEqual(SHOP_ATLAS_CARD_FULL_HD_COLUMNS)
   })
 
   it.each(DESKTOPS)('%s leaves every zone a positive width', (_label, vw, vh) => {
@@ -92,17 +100,17 @@ describe('shop atlas layout', () => {
     const fhd = zones(1920, 1080)
     expect(Math.round(fhd.grid)).toBe(636)
     expect(Math.round(fhd.detail)).toBe(372)
-    expect(columns(fhd.grid)).toBe(4)
+    expect(columns(fhd.grid)).toBe(SHOP_ATLAS_CARD_FULL_HD_COLUMNS)
 
     const qhd = zones(2560, 1440)
     expect(Math.round(qhd.grid)).toBe(930)
     expect(Math.round(qhd.detail)).toBe(498)
-    expect(columns(qhd.grid)).toBe(5)
+    expect(columns(qhd.grid)).toBe(SHOP_ATLAS_COMFORT_CARD_COLUMNS)
   })
 
   it.each(DESKTOPS)('%s keeps the facet rail permanently open', (_l, vw, vh) => {
     expect(zones(vw, vh).facets).toBe(SHOP_ATLAS_FACET_RAIL_WIDTH)
-    expect(columns(zones(vw, vh).grid)).toBeGreaterThanOrEqual(4)
+    expect(columns(zones(vw, vh).grid)).toBeGreaterThanOrEqual(SHOP_ATLAS_CARD_FULL_HD_COLUMNS)
   })
 
   /** What the search row leaves the field once its two buttons took their share. */

@@ -414,6 +414,7 @@ import {
   SHOP_ATLAS_CARD_MIN_WIDTH,
   SHOP_ATLAS_CARD_HEIGHT,
   SHOP_ATLAS_GRID_GAP,
+  SHOP_ATLAS_CARD_FULL_HD_COLUMNS,
   SHOP_ATLAS_COMFORT_CARD_COLUMNS,
   ROLE_BY_KEY,
   ROLE_ART_SM_SUFFIX,
@@ -1769,6 +1770,7 @@ export default defineComponent({
     const cardMinWidthPx = computed(() => `${SHOP_ATLAS_CARD_MIN_WIDTH}px`)
     const cardHeightPx = computed(() => `${SHOP_ATLAS_CARD_HEIGHT}px`)
     const gridGapPx = computed(() => `${SHOP_ATLAS_GRID_GAP}px`)
+    const cardFullHdColumns = SHOP_ATLAS_CARD_FULL_HD_COLUMNS
     const cardComfortColumns = SHOP_ATLAS_COMFORT_CARD_COLUMNS
 
     // ── Facets ──────────────────────────────────────────────────────────────
@@ -2062,6 +2064,7 @@ export default defineComponent({
       cardMinWidthPx,
       cardHeightPx,
       gridGapPx,
+      cardFullHdColumns,
       cardComfortColumns,
       facetGroups,
       onFacetToggle,
@@ -2525,17 +2528,21 @@ export default defineComponent({
 }
 
 /* ── Card grid ──
-   auto-fill, not a fixed column count: the grid gets whatever the facet rail
-   and the detail column leave over, and that number is different at Full HD
-   than at 2K. Tailwind's sm:/md: breakpoints measured the VIEWPORT, which the
-   profile modal is inset from on both sides — they were counting the wrong
-   width. */
+   Four columns are the compact Full HD rhythm; five are the 2K rhythm. Beyond
+   the comfort band, auto-fill uses the card floor so 4K can use its extra room.
+   The container owns the decision because the profile modal is inset from both
+   sides and viewport breakpoints count the wrong width. */
 .cs-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(v-bind(cardMinWidthPx), 1fr));
   gap: v-bind(gridGapPx);
 }
-@container cs-grid (min-width: 950px) and (max-width: 1100px) {
+@container cs-grid (max-width: 919px) {
+  .cs-cards {
+    grid-template-columns: repeat(v-bind(cardFullHdColumns), minmax(0, 1fr));
+  }
+}
+@container cs-grid (min-width: 920px) and (max-width: 1100px) {
   .cs-cards {
     grid-template-columns: repeat(v-bind(cardComfortColumns), minmax(0, 1fr));
   }

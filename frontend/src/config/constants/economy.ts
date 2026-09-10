@@ -741,14 +741,14 @@ export const SHOP_SCROLL_SETTLE_MS = 150
  * = atlas − facets − detail, minus 28px of padding; a column costs
  * CARD_MIN_WIDTH + GRID_GAP):
  *   Full HD  atlas 1240 → detail 372 → grid 636 → 4 columns → card 144px
- *   2K       atlas 1660 → detail 498 → grid 930 → 6 columns → card 142px
- *   4K       atlas 2940 → detail 520 → grid 2188 → 14 columns → card 144px
+ *   2K       atlas 1660 → detail 498 → grid 930 → 5 columns → card 182px
+ *   4K       atlas 2940 → detail 520 → grid 2188 → 12 columns → card 170px
  * Four at Full HD is the floor that matters: it is what the old 900px rail
  * showed, and this layout must not buy its detail column with a narrower grid.
  *
  * The permanent rail is 232px so the domain switch and facet labels have room
- * to stay visible beside the card grid. The card floor is 144px, preserving
- * four columns at Full HD.
+ * to stay visible beside the card grid. The card floor is 168px; compact and
+ * comfort container bands keep Full HD at four columns and 2K at five.
  */
 export const SHOP_ATLAS_FACET_RAIL_WIDTH = 232
 export const SHOP_ATLAS_DETAIL_MIN_WIDTH = 360
@@ -756,12 +756,14 @@ export const SHOP_ATLAS_DETAIL_PCT = 30
 export const SHOP_ATLAS_DETAIL_MAX_WIDTH = 520
 /**
  * Card grid geometry. The min width is what `repeat(auto-fill, minmax(…))` in
- * .cs-cards reads, so the column count follows the space the other two zones
- * leave over instead of being fixed per breakpoint.
+ * .cs-cards reads above the compact and comfort container bands.
  */
-export const SHOP_ATLAS_CARD_MIN_WIDTH = 144
-export const SHOP_ATLAS_CARD_HEIGHT = 228
+export const SHOP_ATLAS_CARD_MIN_WIDTH = 168
+export const SHOP_ATLAS_CARD_HEIGHT = 252
 export const SHOP_ATLAS_GRID_GAP = 10
+export const SHOP_ATLAS_CARD_FULL_HD_COLUMNS = 4
+export const SHOP_ATLAS_CARD_COMFORT_MIN_GRID_WIDTH = 920
+export const SHOP_ATLAS_CARD_COMFORT_MAX_GRID_WIDTH = 1100
 export const SHOP_ATLAS_COMFORT_CARD_COLUMNS = 5
 /** Portrait (px) of the champion holding the seat, in the detail panel's seat row. */
 export const SHOP_SEAT_PORTRAIT_SIZE = 28
