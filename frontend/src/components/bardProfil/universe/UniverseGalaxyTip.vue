@@ -18,7 +18,7 @@ import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { formatCompactDuration, toRoman } from '@/utils/ui/format'
-import { starSeats } from '@/utils/ui/starSeats'
+import { starSeatsSplit } from '@/utils/ui/starSeats'
 import { getChampionIconPath } from '@/utils/game/champions'
 import {
   UNIVERSE_MAP_FREED_COLOR,
@@ -26,7 +26,6 @@ import {
   UNIVERSE_MAP_TIP_SEAT_COLS,
   UNIVERSE_MAP_TIP_SEAT_EM,
   UNIVERSE_MAP_TIP_SEAT_GAP_EM,
-  UNIVERSE_MAP_TIP_SEAT_MAX,
   MS_PER_SECOND,
   STAR_MANIFEST_ART_SIZE,
 } from '@/config/constants'
@@ -48,44 +47,42 @@ const themeName = computed(() =>
     : 'uncharted',
 )
 
-const state = computed(() =>
-  props.node.state === 'freed'
-    ? 'freed'
-    : props.node.state === 'current'
-      ? 'you are here'
-      : 'unlit',
-)
-
 /** Die Zeile, wegen der die Karte aufgeht: der NAME der Galaxie. Die Zahlen des
  *  Laufs stehen darunter als Ablesung — hier stuenden sie ein zweites Mal. */
 const lead = computed(() =>
   props.node.state === 'unlit' ? 'Not charted yet' : themeName.value,
 )
 
-/** Wer geflogen ist, in FLUGREIHENFOLGE — der Sternbogen am Knoten gruppiert
- *  (gold, dann rot), die Reihe erzaehlt die Chronologie des Laufs.
+/** Wer geflogen ist, getrennt nach dem AUSGANG — wie der Sternbogen am Knoten
+ *  daneben, der gold ab oben und rot anschliessend zieht. Je Band EINE Zeile:
+ *  das gerettete kann seinen Deckel nie reissen (`computeRequired` bleibt unter
+ *  `GALAXY_STARS_MAX`), nur das verlorene laeuft ueber.
  *  Der `freed`-Knoten traegt sein Archiv am Record; die LAUFENDE Galaxie hat
  *  noch keins, ihre Sitze stehen live im Store. */
-const seats = computed(() =>
+const split = computed(() =>
   props.node.state === 'current'
-    ? starSeats(
+    ? starSeatsSplit(
         galaxyStore.attemptResults,
         galaxyStore.starManifests,
-        UNIVERSE_MAP_TIP_SEAT_MAX,
+        UNIVERSE_MAP_TIP_SEAT_COLS,
       )
-    : starSeats(
+    : starSeatsSplit(
         props.node.record?.attemptResults,
         props.node.record?.starManifests,
-        UNIVERSE_MAP_TIP_SEAT_MAX,
+        UNIVERSE_MAP_TIP_SEAT_COLS,
       ),
 )
 
-const seatArt = (champion: string) => getChampionIconPath(champion, STAR_MANIFEST_ART_SIZE)
-
-/** Chronikstempel — als Datum gelesen, nie gegen eine Frist geprueft. */
-const day = computed(() =>
-  props.node.record ? new Date(props.node.record.completedAt).toLocaleDateString() : null,
+/** Beide Baender in EINER Liste; das Template unterscheidet sie nur am Ton.
+ *  Der Ueberlauf kostet eine ZELLE, wie in der Manifestreihe des Voyages-Atlas —
+ *  sonst stuende das achte Kaestchen als eigene Zeile unter dem Band. */
+const bands = computed(() =>
+  [split.value.freed, split.value.lost]
+    .filter((b) => b.seats.length)
+    .map((b) => (b.hidden > 0 ? { seats: b.seats.slice(0, -1), hidden: b.hidden + 1 } : b)),
 )
+
+const seatArt = (champion: string) => getChampionIconPath(champion, STAR_MANIFEST_ART_SIZE)
 
 // Masse der Reihe: die Breite deckelt sie auf genau eine Galaxie je Zeile.
 const seatSize = `${UNIVERSE_MAP_TIP_SEAT_EM}em`
@@ -104,17 +101,21 @@ const lostInk = UNIVERSE_MAP_LOST_COLOR
   <div class="fgt" :style="{ '--tip-color': accent }">
     <header class="tip-head tip-head--banded">
       <span class="tip-name">Galaxy {{ toRoman(node.galaxy) }}</span>
-      <span class="tip-state">{{ state }}</span>
+      <!-- Nur der laufende Knoten traegt einen Chip: „freed" und „unlit" sagen
+           beide nichts, was die Gesichter bzw. die Zeile darunter nicht sagen. -->
+      <span v-if="node.state === 'current'" class="tip-state">you are here</span>
     </header>
 
     <div class="tip-effect" :class="{ 'fgt-name': node.state !== 'unlit' }">{{ lead }}</div>
 
     <!-- Wer, nicht wie viele: die Zahl steht darunter, hier stehen die
          Gesichter. Kein Name und kein Knopf — die Karte ist
-         `pointer-events: none`, und Namen traegt die Galaxie in Voyages. -->
-    <ul v-if="seats.seats.length" class="fgt-seats">
+         `pointer-events: none`, und Namen traegt die Galaxie in Voyages.
+         Kein Kopfwort ueber den Baendern: Kante und Ablesung tragen den
+         Ausgang schon zweimal. -->
+    <ul v-for="band in bands" :key="band.seats[0].lost ? 'lost' : 'freed'" class="fgt-seats">
       <li
-        v-for="(seat, i) in seats.seats"
+        v-for="(seat, i) in band.seats"
         :key="i"
         class="fgt-seat"
         :class="{ 'fgt-seat--lost': seat.lost }"
@@ -123,8 +124,8 @@ const lostInk = UNIVERSE_MAP_LOST_COLOR
         <img v-if="seat.champion" :src="seatArt(seat.champion)" :alt="seat.champion" />
         <Icon v-else icon="lucide:lock" width="16" height="16" aria-hidden="true" />
       </li>
+      <li v-if="band.hidden > 0" class="fgt-seat fgt-more">+{{ band.hidden }}</li>
     </ul>
-    <div v-if="seats.hidden > 0" class="tip-hint fgt-more">+{{ seats.hidden }} more</div>
 
     <div class="tip-read tip-read--lg">
       <span class="tip-read-cell">
@@ -156,13 +157,9 @@ const lostInk = UNIVERSE_MAP_LOST_COLOR
       </span>
     </div>
 
-    <!-- Die Fusszeile haengt am Record: ohne Lauf gibt es weder Datum noch
-         Geste. Kein `.tip-act` — die Karte traegt `pointer-events: none`, ein
-         Knopf waere darin nicht zu treffen; die Geste sitzt am Knoten selbst. -->
-    <div v-if="node.record" class="tip-hint fgt-foot">
-      <span class="fgt-cta">↗ Click to open in Galaxy</span>
-      <span class="fgt-day">{{ day }}</span>
-    </div>
+    <!-- Keine Fusszeile: Datum und Klickhinweis sind gefallen. Die Geste sitzt
+         am Knoten selbst und steht in seinem `aria-label` — ein `.tip-act` waere
+         hier ohnehin nicht zu treffen, die Karte ist `pointer-events: none`. -->
   </div>
 </template>
 
@@ -221,10 +218,13 @@ const lostInk = UNIVERSE_MAP_LOST_COLOR
   opacity: 0.62;
 }
 
+/* Der Ueberlauf steht IM Band, im Kachelmass — nur die Zahl, „more" passt nicht
+   hinein. Er kann nur das verlorene Band treffen. */
 .fgt-more {
-  margin-top: -0.36em;
-  border-top: none;
-  padding-top: 0;
+  border-style: dashed;
+  color: rgba(232, 220, 192, 0.62);
+  font-size: 0.95em;
+  font-weight: 800;
 }
 
 /* Die zwei Kanaele des Sternbogens am Knoten, hier als Zahl. */
@@ -248,19 +248,4 @@ const lostInk = UNIVERSE_MAP_LOST_COLOR
   flex: 1.7;
 }
 
-.fgt-foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4em;
-}
-
-/* Die einzige Zeile der Karte, die eine HANDLUNG nennt — Gold, damit sie sich
-   von der Ablesung darueber trennt. */
-.fgt-cta {
-  color: #e8c040;
-}
-
-.fgt-day {
-  margin-left: auto;
-}
 </style>

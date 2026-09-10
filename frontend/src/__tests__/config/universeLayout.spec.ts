@@ -861,8 +861,20 @@ describe('Universe — die Portraitreihe der Knotenkarte', () => {
   it('eine volle Galaxie steht in EINER Zeile', () => {
     expect(rowEm + padEm).toBeLessThanOrEqual(cardMaxEm)
     // Der Deckel sind ganze Zeilen — eine halbe letzte Reihe liest sich als
-    // Fehler statt als Deckel.
+    // Fehler statt als Deckel. Zwei Baender, je eine Zeile.
     expect(UNIVERSE_MAP_TIP_SEAT_MAX % UNIVERSE_MAP_TIP_SEAT_COLS).toBe(0)
+    expect(UNIVERSE_MAP_TIP_SEAT_MAX / UNIVERSE_MAP_TIP_SEAT_COLS).toBe(2)
+  })
+
+  // Der Sternbogen am Knoten gruppiert seit jeher (gold ab oben, rot
+  // anschliessend). In Flugreihenfolge fiel der Umbruch dorthin, wo die Zeile
+  // voll ist, statt dorthin, wo der Ausgang wechselt — eine rote Kachel
+  // zwischen goldenen ist nicht zu zaehlen.
+  it('die Reihen sind nach dem AUSGANG getrennt', () => {
+    expect(CARD).toContain('starSeatsSplit(')
+    expect(CARD).not.toMatch(/\bstarSeats\(/)
+    // Der Deckel ist EINE Zeile je Band, nicht der Gesamtdeckel.
+    expect(CARD).toContain('UNIVERSE_MAP_TIP_SEAT_COLS,')
   })
 
   it('die Portraitkante liegt im Band der gewaehlten Kunststufe', () => {
@@ -885,10 +897,9 @@ describe('Universe — die Portraitreihe der Knotenkarte', () => {
     expect(CARD).not.toMatch(/tierOf/)
   })
 
-  // Genau zwei: der Ueberlaufzaehler der Portraitreihe und die Fusszeile.
-  // Datum und Geste teilen sich EINEN Trennstrich — zwei `tip-hint` untereinander
-  // zogen zwei Linien durch das untere Drittel der Karte.
-  it('die Karte hat EINE Fusszeile', () => {
-    expect(CARD.match(/tip-hint/g)?.length).toBe(2)
+  // Datum und Klickhinweis sind gefallen, der Ueberlaufzaehler steht als Kachel
+  // IM Band. Damit traegt die Karte keinen einzigen Trennstrich mehr.
+  it('die Karte traegt keine Fusszeile', () => {
+    expect(CARD).not.toMatch(/tip-hint/)
   })
 })
