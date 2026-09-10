@@ -204,8 +204,8 @@ const kickerScale = `clamp(${UNIVERSE_MAP_CREST_KICKER_ID_MIN_PX}px, ${UNIVERSE_
 <template>
   <div class="un-crest">
     <div class="un-crest-body">
-      <!-- Die Identitaet: WELCHE Bahn die Karte zeigt. Inhaltsbreit, damit der
-           ganze Rest des Bandes den Ablesungen gehoert. -->
+      <!-- Die Identitaet: WELCHE Bahn die Karte zeigt. Fester Anteil wie jede
+           Ablesung, und wie jede traegt sie ihren Inhalt mittig. -->
       <div class="un-crest-id">
         <span class="un-crest-medal">
           <UniverseDisc
@@ -340,11 +340,14 @@ const kickerScale = `clamp(${UNIVERSE_MAP_CREST_KICKER_ID_MIN_PX}px, ${UNIVERSE_
 /* Wappen */
 .un-crest-id {
   /* Fester Anteil wie jede Ablesung — die Scheibe und die Kennzeile stehen
-     darin, aber sie bestimmen ihn nicht. */
+     darin, aber sie bestimmen ihn nicht. Und wie jede Ablesung traegt sie ihren
+     Inhalt MITTIG: linksbuendig blieb der Rest der Zone leer, seit sie nicht
+     mehr inhaltsbreit ist. */
   flex: 0 0 v-bind(shareId);
   min-width: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: v-bind(idGap);
   padding: 0 v-bind(idPadX);
 }
@@ -377,7 +380,7 @@ const kickerScale = `clamp(${UNIVERSE_MAP_CREST_KICKER_ID_MIN_PX}px, ${UNIVERSE_
 .un-crest-kicker {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   gap: v-bind(readGap);
   min-width: 0;
@@ -447,9 +450,14 @@ const kickerScale = `clamp(${UNIVERSE_MAP_CREST_KICKER_ID_MIN_PX}px, ${UNIVERSE_
    Die Kennzeile bekommt die Direktive seit dem Umbau an ihren beiden Spans:
    jeder ist einschriftig, und die Direktive misst mit der Schrift des Elements.
    Der Traeger `.un-crest-kicker` bleibt ohne — er umschliesst ZWEI Schriftgrade. */
+/* EINE Zeilenhoehe fuer JEDE Wertzeile, unabhaengig von ihrem Grad — sonst ist
+   der Stapel der Kennzeile (17–26 px) kuerzer als der einer Ablesung (25–38),
+   beide werden je fuer sich zentriert, und die Beschriftungen liegen rund 7 px
+   auseinander. Betrifft ebenso den festen 24-px-Grad des Vorsehungsnamens. */
 .un-crest-v {
   font-size: v-bind(valueScale);
-  line-height: 1;
+  height: v-bind(valueScale);
+  line-height: v-bind(valueScale);
   font-weight: 900;
   white-space: nowrap;
 }

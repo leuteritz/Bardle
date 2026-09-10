@@ -206,16 +206,21 @@ const cards = computed(() =>
             />
           </svg>
           <Icon :icon="rank.icon" width="32" height="32" class="ecb-seal-ico" aria-hidden="true" />
-          <span class="ecb-seal-num" aria-hidden="true">{{ toRoman(rank.tier) }}</span>
+          <span v-ink-center.y class="ecb-seal-num" aria-hidden="true">{{
+            toRoman(rank.tier)
+          }}</span>
         </div>
 
         <!-- Die Zelle hängt am LABEL, nicht an der Zahl: es ist das breitere
-             von beiden, also kann die Uhr die Zeile nicht verschieben. -->
+             von beiden, also kann die Uhr die Zeile nicht verschieben. Sie bleibt
+             deshalb auch linksbündig — mittig wackelte die Zahl bei jedem
+             Sekundenwechsel, MedievalSharp hat keine Tabellenziffern. Mittig ist
+             hier die TINTE, senkrecht: `v-ink-center.y`. -->
         <div class="ecb-next" :class="{ 'is-full': offersFull }">
-          <span class="ecb-next-value">{{
+          <span v-ink-center.y class="ecb-next-value">{{
             offersFull ? 'FULL' : formatMinuteClock(timeUntilNextSpawn)
           }}</span>
-          <span class="ecb-next-label">Next contract</span>
+          <span v-ink-center.y class="ecb-next-label">Next contract</span>
         </div>
 
         <!-- Absolut: `v-if` darf keine Zone umbauen, sonst sähe die Leiste im
