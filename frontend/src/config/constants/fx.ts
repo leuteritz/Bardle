@@ -1,3 +1,5 @@
+import type { Rgb } from '@/utils/fx/spaceBody'
+
 // Rein visuelle Effekte ohne Spielwirkung: Partikelfelder, Sternenhintergrund,
 // Hintergrund-Kometen, die Abgangs-Effekte der Sterne, Supernova und der
 // Hyperspace-Sprung.
@@ -241,8 +243,7 @@ export const CHIME_POPUP_FONT_SUN_FACTOR = 0.5
 export const STAR_COUNT = 400
 /** Floor for the area-scaled star count so a small contained instance (Shop) is never empty. */
 export const STAR_BG_MIN_STARS = 60
-/** Sternhaufen, Staubflecken und Emissionsnebel im Hintergrund. */
-export const CLUSTER_COUNT = 10
+/** Staubflecken und Emissionsnebel im Hintergrund. */
 export const DUST_PATCH_COUNT = 7
 export const EMISSION_MAX_COUNT = 4
 export const EMISSION_SPAWN_MIN = 8_000
@@ -258,8 +259,177 @@ export const RESCUE_ROTATION_TOTAL_RAD = Math.PI * 1.5
 // Background canvas star speeds
 export const STAR_BG_BASE_SPEED_MIN = 1.0 // base speed minimum (doubled from 0.5)
 export const STAR_BG_BASE_SPEED_RANGE = 2.0 // base speed random range (doubled from 1.0)
-// Probability that a background star gets blue-tinted (more realistic starfield)
-export const BACKGROUND_STAR_BLUE_BIAS = 0.9
+// ── Sternenhaufen im Hintergrund (starBackground/starClusters.ts) ─────────────
+// Der Himmel wechselt zwischen Haufen, lockeren Gruppen und echter Leere.
+//
+// Die Mitgliederzahl ist HERGELEITET, nicht gewählt. Das freie Feld streut
+// STAR_COUNT gleichverteilt über Winkel und Distanz; im Ring n ist seine
+// Flächendichte rho(n) = STAR_COUNT / (0.85 * 2*PI * n * maxDist^2). Ein Haufen
+// mit Winkelmaß h deckt bei n die Fläche PI * (n*maxDist*h)^2, also gilt für
+// den Dichtefaktor F am Referenzring n = 0.6 (Full HD, maxDist ~ 1120):
+//   m = F * 141 * h^2
+// Der Faktor ist NICHT konstant über den Anflug: bei festem Winkelmaß gilt
+// F ~ 1/dist^2, ein Haufen durchläuft also ~16x beim Spawn, ~4x in der Mitte,
+// ~1.5x im Durchflug. Das ist der Auflösungsbogen eines echten Haufens — von
+// fern ein Knoten, nahe einzelne Sterne — und der Grund, warum die Dichte nur
+// am Referenzring geprüft werden kann.
+export const CLUSTER_MAX_MAJOR = 1
+export const CLUSTER_MAX_MINOR = 2
+/** Wächter: Summe der Archetyp-Maxima. Früher standen 150–260 Punkte DAUERHAFT. */
+export const CLUSTER_POINT_BUDGET = 96
+export const CLUSTER_REFERENCE_NORM = 0.6
+export const CLUSTER_GAP_SEC: readonly [number, number] = [20, 45]
+/** Zweiter Gipfel: ohne ihn entsteht nie eine gefühlte Leere. */
+export const CLUSTER_VOID_GAP_SEC: readonly [number, number] = [70, 150]
+export const CLUSTER_VOID_CHANCE = 0.3
+export const CLUSTER_MAJOR_COOLDOWN_SEC = 70
+export const CLUSTER_FIRST_DELAY_SEC: readonly [number, number] = [8, 18]
+// Der Gap zählt STRECKE, nicht Zeit: im Kometenzustand erreicht der Faktor ~8,9,
+// und ein Sekunden-Gap leerte den Himmel genau dann, wenn man am schnellsten
+// fliegt. Der Deckel hält den Warp-Faktor (138) draußen.
+export const CLUSTER_GAP_SPEED_CAP = 4
+export const CLUSTER_FADE_IN_SEC = 2.5
+export const CLUSTER_TWINKLE_RATE = 0.5
+/** Goldener Winkel: eigenes Funkeln je Mitglied ohne ein Feld je Mitglied. */
+export const CLUSTER_TWINKLE_STAGGER = 2.39996
+export const CLUSTER_EDGE_FADE_NORM = 0.88
+/** Haufensterne bleiben Hintergrund: etwas kleiner und leiser als das freie Feld. */
+export const CLUSTER_SIZE_K = 0.85
+export const CLUSTER_ALPHA_K = 0.9
+/** Nur die hellsten tragen Kern + Halo — 50 überlappende Halos wären ein Schmier. */
+export const CLUSTER_HALO_MIN_BRIGHT = 0.75
+/** Die frozen-Instanz (Shop) hat keine Regie und bekommt einen festen Bestand. */
+export const CLUSTER_FROZEN_SEED_COUNT = 4
+export const CLUSTER_SEED_NORM: readonly [number, number] = [0.25, 0.85]
+
+export const CLUSTER_KIND_WEIGHTS: Readonly<
+  Record<'dense' | 'loose' | 'spray' | 'knot' | 'pair', number>
+> = { dense: 0.18, loose: 0.26, spray: 0.12, knot: 0.28, pair: 0.16 }
+
+export const CLUSTER_MAJOR_KINDS: readonly (keyof typeof CLUSTER_KIND_WEIGHTS)[] = [
+  'dense',
+  'loose',
+  'spray',
+]
+
+/**
+ * Bauplan je Archetyp. `spanA` ist das tangentiale, `spanQ` das radiale
+ * Winkelmaß — bei runden Haufen gleich, bei `spray` gestreckt. `core` ist der
+ * Exponent der Radialverteilung: 0.5 streut flächengleich, größere Werte ziehen
+ * die Punkte in den Kern. `spawn` ist der Ring, in dem er auftaucht — unter
+ * 0.25 kriecht mit der norm²-Perspektive alles minutenlang.
+ */
+export const CLUSTER_SHAPES: Readonly<
+  Record<
+    keyof typeof CLUSTER_KIND_WEIGHTS,
+    {
+      count: readonly [number, number]
+      spanA: number
+      spanQ: number
+      core: number
+      speed: readonly [number, number]
+      spawn: readonly [number, number]
+      bright: readonly [number, number]
+    }
+  >
+> = {
+  dense: {
+    count: [40, 56],
+    spanA: 0.3,
+    spanQ: 0.3,
+    core: 1.3,
+    speed: [0.55, 0.7],
+    spawn: [0.28, 0.36],
+    bright: [0.3, 0.55],
+  },
+  loose: {
+    count: [46, 62],
+    spanA: 0.42,
+    spanQ: 0.42,
+    core: 0.5,
+    speed: [0.8, 0.95],
+    spawn: [0.32, 0.4],
+    bright: [0.35, 0.55],
+  },
+  spray: {
+    count: [20, 30],
+    spanA: 0.55,
+    spanQ: 0.1,
+    core: 0.6,
+    speed: [0.7, 0.85],
+    spawn: [0.28, 0.36],
+    bright: [0.3, 0.55],
+  },
+  knot: {
+    count: [8, 13],
+    spanA: 0.1,
+    spanQ: 0.1,
+    core: 1,
+    speed: [1.35, 1.65],
+    spawn: [0.33, 0.42],
+    bright: [0.4, 0.5],
+  },
+  pair: {
+    count: [2, 4],
+    spanA: 0.035,
+    spanQ: 0.035,
+    core: 0.5,
+    speed: [1.2, 1.45],
+    spawn: [0.35, 0.45],
+    bright: [0.8, 0.2],
+  },
+}
+
+/**
+ * Spektralpalette des Sternfelds — fünf Klassen mit je zwei Tönen, zugleich der
+ * Schlüsselraum des Sprite-Caches (starSprites.ts), der NIE geleert wird. Eine
+ * elfte Farbe wäre eine weitere Offscreen-Fläche je Tiefenstufe; die Vielfalt
+ * würfelt deshalb an den GEWICHTEN, nie an den Tönen.
+ * Reihenfolge: rot · orange · gelb · weiß · blau-weiß.
+ */
+export const SPECTRAL_STAR_PALETTE: readonly (readonly Rgb[])[] = [
+  [
+    [255, 96, 48],
+    [255, 69, 0],
+  ],
+  [
+    [255, 179, 71],
+    [255, 160, 64],
+  ],
+  [
+    [255, 244, 163],
+    [255, 233, 122],
+  ],
+  [
+    [245, 245, 255],
+    [255, 255, 255],
+  ],
+  [
+    [176, 200, 255],
+    [202, 216, 255],
+  ],
+]
+
+/**
+ * Feldsterne: 15 % farbig, der Rest weiß. Weiß ist die Basis, nicht Blau-Weiß —
+ * STAR_BG_FOG_TIERS mischt die ferne Stufe nach STAR_BG_FOG_RGB (blau) und die
+ * nahe nach STAR_BG_WARM_RGB; auf blau-weißer Basis war der blaue Mix ein
+ * No-op und der warme kämpfte gegen die Basis. Rot ist der seltenste Ton, weil
+ * er der lauteste ist.
+ */
+export const STAR_BG_COLOR_WEIGHTS: readonly number[] = [0.005, 0.025, 0.05, 0.85, 0.07]
+
+/** Alte Haufen warm, junge blau, der Rest wie das Feld. */
+export const CLUSTER_COLOR_WEIGHTS: Readonly<
+  Record<keyof typeof CLUSTER_KIND_WEIGHTS, readonly number[]>
+> = {
+  dense: [0.01, 0.05, 0.1, 0.82, 0.02],
+  loose: [0, 0.01, 0.03, 0.84, 0.12],
+  spray: STAR_BG_COLOR_WEIGHTS,
+  knot: [0.005, 0.035, 0.07, 0.84, 0.05],
+  pair: STAR_BG_COLOR_WEIGHTS,
+}
+
 
 // Vorgerenderte Stern-Sprites (starBackground/starSprites.ts). Sterne werden per
 // drawImage geblittet statt pro Frame als Pfad gefüllt — die Palette hat nur

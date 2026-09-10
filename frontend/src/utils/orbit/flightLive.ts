@@ -196,6 +196,8 @@ export function resetFlightLive(): void {
 /** Griffe der Vollbild-Instanz für den Messtreiber (`__bardle.flight`). */
 export interface SkyDebug {
   spawn: (kind: string) => void
+  cluster: (kind: string) => void
+  clusters: () => unknown
   evade: (awayFromAngle: number, strength: number) => boolean
   helm: () => unknown
   sky: () => unknown
