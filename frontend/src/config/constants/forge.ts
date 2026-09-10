@@ -935,6 +935,8 @@ export const FORGE_TREE_ZOOM_FLOOR = 0.15
 /** Ein Schritt am Rad oder an den Knöpfen. Feiner als früher (0,19), weil der
  *  Bereich schmaler ist und ein Schritt sonst ein Sprung wäre. */
 export const FORGE_TREE_ZOOM_STEP = 0.08
+/** Ruhefenster nach dem letzten Wheel-Event, bevor Kamerafahrten wieder gleiten. */
+export const FORGE_TREE_ZOOM_IDLE_MS = 120
 /**
  * Wie weit die Maus wandern darf, bevor aus einem Klick ein Zug wird.
  *

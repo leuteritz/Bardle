@@ -76,11 +76,13 @@
       <!-- Scaled tree stage -->
       <div
         class="tree-stage"
-        :class="[{ 'tree-stage--dragging': isDragging }, `tree-stage--entry-${entryPhase}`]"
+        :class="[
+          { 'tree-stage--dragging': isDragging, 'tree-stage--zooming': isWheelZooming },
+          `tree-stage--entry-${entryPhase}`,
+        ]"
         :style="{
           transform: stageTransform,
           transitionDuration: `${stageTransitionMs}ms`,
-          '--inv-scale': (1 / totalScale).toFixed(4),
           '--forge-stage-size': `${FORGE_STAGE_SIZE}px`,
         }"
       >
@@ -94,7 +96,7 @@
 
            Steht VOR dem `<svg>` und liegt damit darunter: bei gleichem Rang
            (z-index 0 gegen `auto`) entscheidet die Dokumentordnung. -->
-        <div class="zone-haze" :style="zoneHazeStyle" aria-hidden="true" />
+        <div v-memo="[zoneHazeStyle]" class="zone-haze" :style="zoneHazeStyle" aria-hidden="true" />
 
         <svg
           class="tree-svg"
@@ -107,7 +109,7 @@
              `opacity`-Wert auf einer Ebene ist und nicht eine Umschaltung je
              Pfad. Bedingung und Scheinwerferkette stehen bewusst DARAUSSEN: sie
              sind die Antwort auf das Zeigen und dürfen nie mitgedimmt werden. -->
-          <g class="limb-field">
+          <g v-memo="[openLimbs, roadLimbs]" class="limb-field">
             <!-- Gezeichnet wird nur, was OFFEN ist. Die Breite sagt die Ebene,
                die Farbe das Ziel. -->
             <g class="limb-open" stroke-linecap="round" stroke-linejoin="round" fill="none">
@@ -137,7 +139,13 @@
             </g>
           </g>
 
-          <g class="confluence-limbs" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <g
+            v-memo="[confluenceLimbs]"
+            class="confluence-limbs"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            fill="none"
+          >
             <path
               v-for="limb in confluenceLimbs"
               :key="limb.key + '-confluence'"
@@ -159,6 +167,7 @@
              r = 221. Im Netz ist jede dieser Kanten hoechstens
              `FORGE_EDGE_MAX_PX` lang — beide Enden stehen im selben Bild. -->
           <g
+            v-memo="[requireLimbs]"
             class="req-limbs"
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -184,6 +193,7 @@
              sieben Glieder wäre dann Lärm statt Auskunft. -->
           <g
             v-if="pursuitPath.chain.length > 0"
+            v-memo="[pursuitPath.chain, aimedFusionColor]"
             class="pursuit-limbs"
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -202,6 +212,7 @@
              kein Körper unverbunden im Feld schwebt — laut wird immer nur der,
              den der Spieler gerade meint. -->
           <g
+            v-memo="[fusionLimbs]"
             class="fusion-limbs"
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -223,6 +234,7 @@
              ein Ziel darf nie mitgedimmt werden. -->
           <g
             v-if="pursuitLimbs.length > 0"
+            v-memo="[pursuitLimbs]"
             class="req-limbs"
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -242,6 +254,7 @@
              only while something is hovered, seven links at most. -->
           <g
             v-if="spotlightLimbs.length > 0"
+            v-memo="[spotlightLimbs, spotlightColor]"
             class="spot-limbs"
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -290,6 +303,15 @@
         <div
           v-for="body in fusionBodies"
           :key="body.id"
+          v-memo="[
+            body.id,
+            body.forged,
+            aimedFusionId,
+            fusionHoverId,
+            totalScale,
+            isSearchHit(body.id),
+            isDimmed(body.id),
+          ]"
           class="pursuit-mark"
           :class="{
             'pursuit-mark--aimed': aimedFusionId === body.id,
@@ -343,6 +365,7 @@
             v-if="fusionHoverId === body.id && fusionTip !== null"
             :tip="fusionTip"
             :side="body.at.y >= C ? 'below' : 'above'"
+            :style="tooltipScaleStyle"
           />
         </div>
 
@@ -350,6 +373,27 @@
         <div
           v-for="node in allNodes"
           :key="node.id"
+          v-memo="[
+            node.id,
+            node.x,
+            node.y,
+            entryOf(node).level,
+            entryOf(node).state,
+            entryOf(node).canBuy,
+            entryOf(node).meepCost,
+            node.def?.confluenceStage,
+            isSpot(node.id),
+            treeHoverId === node.id,
+            hasReqRing(node.id),
+            reqRingMet(node.id),
+            spotTrail.get(node.id),
+            spotlightColor,
+            isDimmed(node.id),
+            isSearchHit(node.id),
+            freshIds.has(node.id),
+            freshCountOf(node),
+            arrivalTick,
+          ]"
           class="tree-node"
           :class="{ 'tree-node--spot': isSpot(node.id) }"
           :style="nodePos(node)"
@@ -566,6 +610,7 @@
             v-if="treeHoverId === node.id"
             :tip="forgeNodeTipView(entryOf(node))"
             :side="isTooltipBelow(node) ? 'below' : 'above'"
+            :style="tooltipScaleStyle"
           />
         </div>
       </div>
@@ -662,6 +707,7 @@ import {
   FORGE_REQ_DOT_PITCH_DEG,
   FORGE_TREE_ZOOM_MAX,
   FORGE_TREE_ZOOM_STEP,
+  FORGE_TREE_ZOOM_IDLE_MS,
   FORGE_TREE_ZOOM_DEFAULT,
   SOLAR_BRANCHES,
   FORGE_ICON_SIZE_ROOT,
@@ -1867,6 +1913,11 @@ const viewportSize = ref({ w: 0, h: 0 })
  * mittig im Bild. Warum nicht auf der Mitte des Netzes: `forgeCameraBounds.ts`.
  */
 const pan = ref(forgeCameraHome())
+const isWheelZooming = ref(false)
+let wheelFrame = 0
+let wheelEndTimer: ReturnType<typeof setTimeout> | null = null
+let pendingWheelSteps = 0
+let wheelClient = { x: 0, y: 0 }
 
 let resizeObserver: ResizeObserver | null = null
 
@@ -1925,7 +1976,7 @@ const panDurationMs = ref(FORGE_TREE_PAN_MS)
  * gehören deshalb hierher, in die Zahl selbst.
  */
 const stageTransitionMs = computed(() =>
-  isDragging.value || panInstant.value ? 0 : panDurationMs.value,
+  isDragging.value || panInstant.value || isWheelZooming.value ? 0 : panDurationMs.value,
 )
 
 watch(detailsOpen, () => {
@@ -2005,6 +2056,8 @@ onBeforeUnmount(() => {
   if (entryTimer !== null) clearTimeout(entryTimer)
   resizeObserver?.disconnect()
   cancelAnimationFrame(settleFrame)
+  cancelAnimationFrame(wheelFrame)
+  if (wheelEndTimer !== null) clearTimeout(wheelEndTimer)
   // Der Spotlight lebt auf Modulebene und überlebte diese Komponente sonst.
   //
   // Beim TABWECHSEL greift das hier allerdings nicht: der Skill-Tree-Reiter bleibt nach
@@ -2020,6 +2073,9 @@ onBeforeUnmount(() => {
 })
 
 const totalScale = computed(() => zoom.value)
+const tooltipScaleStyle = computed(() => ({
+  '--inv-scale': (1 / totalScale.value).toFixed(4),
+}))
 /** Der tatsächliche untere Anschlag: nie über dem Fit, nie unter dem festen
  *  Boden — auf einem winzigen Fenster wäre der Fit sonst unlesbar klein. */
 const zoomFloor = computed(() => Math.max(FORGE_TREE_ZOOM_FLOOR, Math.min(1, fitScale.value)))
@@ -2122,20 +2178,35 @@ function zoomBy(direction: number): void {
  * Die KLEMMUNG kommt zuletzt. Umgekehrt zöge sie den Fixpunkt weg, und das Bild
  * verschöbe sich doppelt.
  */
-function onWheel(event: WheelEvent): void {
+function flushWheel(): void {
+  wheelFrame = 0
+  const steps = pendingWheelSteps
+  pendingWheelSteps = 0
   const el = viewportEl.value
-  if (!el) return
+  if (!el || steps === 0) return
   const before = clampZoom(zoom.value)
-  const after = clampZoom(before + (event.deltaY < 0 ? 1 : -1) * FORGE_TREE_ZOOM_STEP)
+  const after = clampZoom(before + steps * FORGE_TREE_ZOOM_STEP)
   if (after === before) return
   const rect = el.getBoundingClientRect()
-  const offX = event.clientX - rect.left - rect.width / 2
-  const offY = event.clientY - rect.top - rect.height / 2
+  const offX = wheelClient.x - rect.left - rect.width / 2
+  const offY = wheelClient.y - rect.top - rect.height / 2
   // Der Bühnenpunkt unter dem Zeiger — vor und nach dem Schritt derselbe.
   const stageX = pan.value.x + offX / before
   const stageY = pan.value.y + offY / before
   zoom.value = after
   movePan({ x: stageX - offX / after, y: stageY - offY / after })
+}
+
+function onWheel(event: WheelEvent): void {
+  pendingWheelSteps += event.deltaY < 0 ? 1 : -1
+  wheelClient = { x: event.clientX, y: event.clientY }
+  isWheelZooming.value = true
+  if (wheelEndTimer !== null) clearTimeout(wheelEndTimer)
+  wheelEndTimer = setTimeout(() => {
+    wheelEndTimer = null
+    isWheelZooming.value = false
+  }, FORGE_TREE_ZOOM_IDLE_MS)
+  if (wheelFrame === 0) wheelFrame = requestAnimationFrame(flushWheel)
 }
 
 // ── Ziehen ─────────────────────────────────────────────────────
