@@ -33,16 +33,17 @@ import { GALAXY_STARS_MAX } from '@/config/constants/progression'
  * 29,2 auf 28,3 faellt — die Trefferflaeche misst 26.
  */
 export const UNIVERSE_MAP_CREST_BAND_H = 112
-/** Polsterung und Luecke der Wappenzone. Sie ist inhaltsbreit
- *  (`flex: 0 0 auto`) und traegt nur noch Scheibe und Kennzeile — die
- *  Vorsehung ist ausgezogen: sie sind ABLESUNGEN und stehen in der Reihe. */
+/** Polsterung und Luecke der Wappenzone. Sie hat einen festen ANTEIL wie jede
+ *  Ablesung und traegt ihren Inhalt ebenso mittig; darin stehen nur noch Scheibe
+ *  und Kennzeile — die Vorsehung ist ausgezogen: sie sind ABLESUNGEN und stehen
+ *  in der Reihe. */
 export const UNIVERSE_MAP_CREST_ID_PAD_X = 10
 export const UNIVERSE_MAP_CREST_ID_GAP = 10
 
 /* ── Die EINE Ablesungsreihe ────────────────────────────────────────────────
 
-   Jede Zelle ist `flex: 1 0 auto`: sie nimmt ihren Inhalt, waechst in den
-   freien Rest und schrumpft NIE. Deshalb steht hier kein Zuschnitt mehr.
+   Jede Zelle hat einen festen prozentualen ANTEIL am Band (unten), nie eine
+   Breite aus dem Inhalt — sonst schiebt jede wachsende Zahl ihre Nachbarn.
 
    Der alte feste Zuschnitt schnitt still ab: `_READ_W_CHIMES` (200) war gegen
    `5.74B / 51.2M` UND gegen einen clamp-Deckel von 34 gerechnet, waehrend der
