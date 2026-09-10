@@ -101,10 +101,15 @@
                  stehen Drehebene und Puls zuletzt. -->
             <div class="star-halo" />
             <div class="star-core" />
+            <!-- Die Achsdrehung: der Streifen rollt unter der Kreismaske (main.css).
+                 Er steht über dem Kern, weil er dessen Oberfläche IST. Weiter hinten
+                 einsortiert kostet er dieselben Ebenen (gemessen: 199 gegen 198),
+                 läge aber über Schleier und Blitz. -->
+            <div class="star-band" />
             <div class="star-hover-glow" />
             <div class="star-charge" />
             <div class="star-spawn-flash" />
-            <!-- Anker = Startwinkel, Kranz = Drehung + Flackern (zwei Animationen, ein Element) -->
+            <!-- Anker = Startwinkel, Kranz = die Böe -->
             <div v-if="starWindShown(star.starType, star.seed)" class="star-wind-anchor">
               <div class="star-wind" />
             </div>
@@ -394,7 +399,14 @@ import {
   STAR_BODY_SPIN_SEC,
 } from '@/config/constants'
 import { setMapEl, sweepMapEls, type FrameElRef } from '@/utils/orbit/frameEls'
-import { mountStarSprites, starBodyDetail, starWindShown, starWindStyle } from '@/utils/fx/starBodySprite'
+import {
+  mountStarSprites,
+  starAxisStyle,
+  starBandVars,
+  starBodyDetail,
+  starWindShown,
+  starWindStyle,
+} from '@/utils/fx/starBodySprite'
 import { hudFieldMetrics, hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
 import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
@@ -1554,14 +1566,21 @@ function starWrapStyle(star: StarRenderEntry) {
 function starBodyVisualStyle(star: StarRenderEntry) {
   const [r, g, b] = star.starColor
   const wind = starWindStyle(star.seed)
+  const axis = starAxisStyle(star.look, star.seed, star.id)
   return {
     '--star-rgb': `${r}, ${g}, ${b}`,
     '--star-span': String(STAR_BODY_SPRITE_SPAN),
     '--star-spin-sec': `${STAR_BODY_SPIN_SEC[star.look]}s`,
+    ...starBandVars(star.look),
+    '--star-axis': `${axis.tiltDeg}deg`,
+    '--star-turn': `${axis.turnSec}s`,
+    '--star-roll-dir': axis.dir,
+    // Die Arme des Kranzes sind gegen die Drehung gekrümmt — dreht der Stern
+    // andersherum, wird der Kranz gespiegelt.
+    '--wind-flip': axis.dir === 'reverse' ? '-1' : '1',
     '--wind-angle': `${wind.angleDeg}deg`,
     '--wind-sec': `${wind.sec}s`,
     '--wind-delay': `${wind.delaySec}s`,
-    '--wind-turn-sec': `${wind.turnSec}s`,
     // Fokussierter Stern: kein Behind-Blur — er soll vor der Sonne klar lesbar sein
     filter: (isFocusStar(star.id) ? '' : star.filterStyle) || undefined,
     // Nur der Filter-Umschlag darf weich sein — die Opacity wird pro Frame
@@ -2142,8 +2161,9 @@ function starCountStyle(star: StarRenderEntry) {
   pointer-events: none;
 }
 
-/* Die drei Sprite-Ebenen: Halo und Drehebene ragen um --star-span über den
-   Körper hinaus, die Trefferfläche bleibt der Wrap. Das Bild kommt aus
+/* Die Sprite-Ebenen: Halo und Drehebene ragen um --star-span über den Körper
+   hinaus, die Trefferfläche bleibt der Wrap. Das Band liegt genau auf der Box
+   (seine Gestalt steht global in main.css). Das Bild kommt aus
    mountStarSprites() und trägt deshalb kein Scope-Attribut. */
 .star-halo,
 .star-spin,
@@ -2162,31 +2182,31 @@ function starCountStyle(star: StarRenderEntry) {
   user-select: none;
 }
 
-.star-spin {
+/* Die Ebene dreht NICHT mehr im Kreis — der Körper dreht um seine Achse, indem
+   seine Oberfläche rollt. Stehen bleibt die Drehung nur, wo sie die GESTALT ist:
+   die Kegel des Pulsars FEGEN, der Eskorten-Scherben taumelt. */
+.star-body--pulsar .star-spin,
+.star-body--splinter .star-spin {
   animation: star-spin-turn var(--star-spin-sec, 40s) linear infinite;
 }
 
-/* Sonnenwind: der Anker trägt den Startwinkel, der Kranz dreht gegenläufig zur
-   Strahlenebene und flackert periodisch auf — zwei Animationen (transform,
-   opacity) auf EINEM Element, also eine Ebene je Windträger. */
+/* Sonnenwind: der Anker trägt Startwinkel und Spiegelung, der Kranz die Böe —
+   EINE Animation auf EINEM Element, also eine Ebene je Windträger. Der Kranz
+   dreht nicht mehr: seit der Körper um seine Achse rollt, wäre eine zweite
+   `transform`-Animation auf demselben Element die Böe losgeworden. */
 .star-wind-anchor {
   position: absolute;
   inset: calc(50% - var(--star-span, 2.2) * 50%);
-  transform: rotate(var(--wind-angle, 0deg));
+  transform: rotate(var(--wind-angle, 0deg)) scaleX(var(--wind-flip, 1));
   pointer-events: none;
 }
 
-/* Zwei Animationen auf einem Element, als Langformen: Drehung (transform) und
-   Flackern (opacity) je eine Spalte, Vue hängt den Scope-Suffix an beide Namen. */
 .star-wind {
   position: absolute;
   inset: 0;
-  opacity: 0.55;
-  animation-name: star-wind-turn, star-wind-flare;
-  animation-duration: var(--wind-turn-sec, 55s), var(--wind-sec, 20s);
-  animation-timing-function: linear, ease-in-out;
-  animation-delay: 0s, var(--wind-delay, 0s);
-  animation-iteration-count: infinite, infinite;
+  opacity: 0.42;
+  animation: star-wind-gust var(--wind-sec, 20s) linear infinite;
+  animation-delay: var(--wind-delay, 0s);
   pointer-events: none;
 }
 
@@ -2201,36 +2221,32 @@ function starCountStyle(star: StarRenderEntry) {
   animation: none;
 }
 
-@keyframes star-wind-turn {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(-360deg);
-  }
-}
-
-@keyframes star-wind-flare {
+/* Die Böe: der Kranz liegt leise da, dann schiesst er hinaus und zieht sich
+   zurück (Vorbild sun-wake-gust). Nur transform und opacity, eine Ebene. */
+@keyframes star-wind-gust {
   0%,
-  100% {
-    opacity: 0.55;
+  58% {
+    transform: scale(1);
+    opacity: 0.42;
+    animation-timing-function: cubic-bezier(0.1, 0.9, 0.3, 1);
   }
-  4% {
+  64% {
+    transform: scale(1.1);
     opacity: 1;
+    animation-timing-function: ease-out;
   }
-  12% {
-    opacity: 0.7;
+  78% {
+    transform: scale(var(--wind-grow, 1.28));
+    opacity: 0.62;
+    animation-timing-function: ease-in-out;
   }
-  22% {
-    opacity: 0.55;
+  100% {
+    transform: scale(1.02);
+    opacity: 0.42;
   }
 }
 
-/* Wie der Ring: Ressourcensterne stellen die Masse im Orbit und drehen NICHT
-   (bei dreissig Stück wären es dreissig Compositor-Animationen samt Style-
-   Invalidierung je Frame; gemessen +30 ms/s). Klein trägt keine Drehebene —
-   ausser der Eskorte, deren Zacken ihre Gestalt SIND. */
-.star-body--resource .star-spin,
+/* Klein trägt keine Drehung — ausser der Eskorte, deren Zacken ihre Gestalt SIND. */
 .star-body--flat:not(.star-body--splinter) .star-spin {
   animation: none;
 }

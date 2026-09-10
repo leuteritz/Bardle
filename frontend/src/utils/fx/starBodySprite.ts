@@ -1,17 +1,32 @@
 /* ── Der Sternkörper im Idle-Orbit als Offscreen-Sprite ───────────────────────
    Ein Stern ist ein SELBSTLEUCHTER: kein Terminator, dafür Halo, Photosphäre
-   und eine Drehebene mit Strahlen. Drei Ebenen je Stern, jede ein gecachtes
-   Canvas von px · SPAN Kante, in der Komponente per CSS gestapelt:
+   und eine Drehebene mit Strahlen. Fünf Ebenen je Stern, in der Komponente per
+   CSS gestapelt:
 
      halo  — statisch, ersetzt den dreifachen box-shadow
      core  — statisch, die Kugel selbst (samt Protuberanzen, Begleiter, Flecken)
-     spin  — dreht per CSS-Keyframe; Strahlen, Arme, Staub
+     band  — die ACHSDREHUNG: ein Streifen, der unter einer Kreismaske rollt
+     spin  — dreht per CSS-Keyframe, nur wo die Drehung die Gestalt IST
+     wind  — der Sonnenwindkranz mit seiner Böe
 
    Acht Gestalten (`StarLook`), Farbe kommt IMMER von aussen (Rolle, Spektral-
    palette, Boss). Alles streut über `seed`, nie über Math.random.            */
 
 import type { StarLook, StarType } from '@/types'
 import {
+  STAR_BODY_AXIS_TILT_MAX_DEG,
+  STAR_BODY_BAND_FADE_BR,
+  STAR_BODY_BAND_H_BR,
+  STAR_BODY_BAND_CELL_SMALL_K,
+  STAR_BODY_BAND_LOOK,
+  STAR_BODY_BAND_MASK_EDGE,
+  STAR_BODY_BAND_MASK_FULL,
+  STAR_BODY_BAND_PATCH_ALPHA,
+  STAR_BODY_BAND_PATCH_R,
+  STAR_BODY_BAND_PERIOD_BR,
+  STAR_BODY_BAND_SALT,
+  STAR_BODY_BAND_SPOT_K,
+  STAR_BODY_BAND_STRIP_PERIODS,
   STAR_BODY_BINARY_COMPANION_AT,
   STAR_BODY_BINARY_COMPANION_R,
   STAR_BODY_BINARY_MAIN_R,
@@ -19,9 +34,7 @@ import {
   STAR_BODY_DETAIL_PX_2,
   STAR_BODY_DWARF_RAYS,
   STAR_BODY_DWARF_SPOTS,
-  STAR_BODY_GIANT_BANDS,
   STAR_BODY_GIANT_MOTES,
-  STAR_BODY_GRAIN_ALPHA,
   STAR_BODY_HALO_ALPHA,
   STAR_BODY_HALO_ALPHA_MUL,
   STAR_BODY_HALO_REACH,
@@ -34,7 +47,11 @@ import {
   STAR_BODY_FLARE_LOOPS,
   STAR_BODY_FLARE_LOOP_R,
   STAR_BODY_FLARE_TAIL_LEN,
+  STAR_BODY_DISC_R,
   STAR_BODY_SEED_SALT,
+  STAR_BODY_SPIN_LOOKS,
+  STAR_BODY_TURN_JITTER,
+  STAR_BODY_TURN_SEC,
   STAR_BODY_SEED_SLOTS,
   STAR_BODY_SPLINTER_RAYS,
   STAR_BODY_SPLINTER_WOBBLE,
@@ -49,32 +66,37 @@ import {
   STAR_BODY_WIND_SALT,
   STAR_BODY_WIND_SEC_MIN,
   STAR_BODY_WIND_SEC_RANGE,
-  STAR_BODY_WIND_TURN_SEC_MIN,
-  STAR_BODY_WIND_TURN_SEC_RANGE,
 } from '@/config/constants'
 import {
   circle,
   clampSpriteDpr,
+  crater,
   createSpriteCache,
   flareLoop,
-  grain,
+  fadeStripEdges,
+  granulationStrip,
   haloGlow,
   jitter,
   lumpyPath,
+  makeStrip,
   mix,
   newSpriteCanvas,
   rayGradient,
   rgba,
   spike,
+  stripSpots,
   sway,
   wisp,
   type Rgb,
+  type Strip,
 } from '@/utils/fx/spaceBody'
 
 const TAU = Math.PI * 2
 
 export type StarRgb = Rgb
-export type StarSpriteLayer = 'halo' | 'core' | 'spin' | 'wind'
+export type StarSpriteLayer = 'halo' | 'core' | 'band' | 'spin' | 'wind'
+/** Die vier Ebenen mit eigenem Painter je Gestalt — das Band malt EIN Painter. */
+export type StarLookLayer = Exclude<StarSpriteLayer, 'band'>
 export type StarDetail = 0 | 1 | 2
 
 export interface StarPalette {
@@ -127,22 +149,75 @@ export function starWindShown(type: StarType, seed: number): boolean {
   return true
 }
 
-/** Winkel, Zyklus und (negativer) Startversatz der Fahne — je Stern fest, damit
- *  nichts im Takt feuert. */
+/** Winkel, Böen-Zyklus und (negativer) Startversatz der Fahne — je Stern fest,
+ *  damit nichts im Takt feuert. Der Kranz DREHT nicht mehr: seit der Körper um
+ *  seine Achse rollt, schluckte eine zweite `transform`-Animation auf demselben
+ *  Element die Böe. */
 export function starWindStyle(seed: number): {
   angleDeg: number
   sec: number
   delaySec: number
-  turnSec: number
 } {
   const sec = STAR_BODY_WIND_SEC_MIN + jitter(seed, STAR_BODY_WIND_SALT + 1) * STAR_BODY_WIND_SEC_RANGE
-  const turn =
-    STAR_BODY_WIND_TURN_SEC_MIN + jitter(seed, STAR_BODY_WIND_SALT + 3) * STAR_BODY_WIND_TURN_SEC_RANGE
   return {
     angleDeg: Math.round(jitter(seed, STAR_BODY_WIND_SALT) * 360),
     sec: Math.round(sec * 10) / 10,
     delaySec: -Math.round(jitter(seed, STAR_BODY_WIND_SALT + 2) * sec * 10) / 10,
+  }
+}
+
+/** Aus einer Stern-id eine Zahl — `seed` allein hat nur `STAR_BODY_SEED_SLOTS`
+ *  Stufen (klein gehalten für Sprite-Cache-Treffer), drei Resource-Sterne liefen
+ *  damit im Gleichtakt. */
+function idHash(id: string): number {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 100003
+  return h
+}
+
+/** Neigung, Umlaufdauer und Drehsinn der Achse — je Stern fest. Reines CSS: nichts
+ *  davon steht im Sprite-Schlüssel, die Werte kosten keinen Cache-Platz. */
+export function starAxisStyle(
+  look: StarLook,
+  seed: number,
+  id: string,
+): { tiltDeg: number; turnSec: number; dir: 'normal' | 'reverse' } {
+  const h = idHash(id) + seed
+  const turn = STAR_BODY_TURN_SEC[look] * (1 + sway(h, STAR_BODY_BAND_SALT + 1) * STAR_BODY_TURN_JITTER)
+  return {
+    tiltDeg: Math.round(sway(h, STAR_BODY_BAND_SALT) * STAR_BODY_AXIS_TILT_MAX_DEG),
     turnSec: Math.round(turn * 10) / 10,
+    dir: jitter(h, STAR_BODY_BAND_SALT + 2) < 0.5 ? 'reverse' : 'normal',
+  }
+}
+
+/** Wer seine Ebene weiter im Kreis dreht — sonst rollt nur die Oberfläche. */
+export function starSpinShown(look: StarLook): boolean {
+  return STAR_BODY_SPIN_LOOKS.includes(look)
+}
+
+/** Streifenmasse eines Sterns in PIXELN. `(x, y)` ist die Streifenmitte. */
+export function starBandStrip(x: number, y: number, r: number, look: StarLook): Strip {
+  const br = r * STAR_BODY_DISC_R[look]
+  return makeStrip(
+    x,
+    y,
+    br,
+    STAR_BODY_BAND_PERIOD_BR * br,
+    STAR_BODY_BAND_STRIP_PERIODS,
+    STAR_BODY_BAND_H_BR * br,
+  )
+}
+
+/** Streifenmasse und Maskenradius als CSS-Variablen des Slots (Box-Einheiten). */
+export function starBandVars(look: StarLook): Record<string, string> {
+  const dr = STAR_BODY_DISC_R[look]
+  return {
+    '--band-r': String(dr),
+    '--band-w': String(STAR_BODY_BAND_PERIOD_BR * STAR_BODY_BAND_STRIP_PERIODS * dr * 0.5),
+    '--band-h': String(STAR_BODY_BAND_H_BR * dr * 0.5),
+    '--band-mask-full': String(STAR_BODY_BAND_MASK_FULL),
+    '--band-mask-edge': String(STAR_BODY_BAND_MASK_EDGE),
   }
 }
 
@@ -169,10 +244,11 @@ export function starBodySpriteKey(
 interface PhotoOpts {
   hot: number
   limb: number
-  grainAlpha: number
 }
 
-/** Die leuchtende Kugel: versetzter Hotspot, Randverdunkelung, Körnung. */
+/** Die leuchtende Kugel: versetzter Hotspot, Randverdunkelung. Das KORN liegt im
+ *  rollenden Band, nicht hier — ein stehendes Korn unter wandernden Motiven sagt
+ *  „die Punkte bewegen sich, der Körper nicht" (dieselbe Lehre wie beim Kometen). */
 function photosphere(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -190,7 +266,6 @@ function photosphere(
   g.addColorStop(1, pal.edge)
   ctx.fillStyle = g
   ctx.fill()
-  if (detail >= 1 && o.grainAlpha > 0) grain(ctx, x, y, r, o.grainAlpha)
   if (o.limb > 0) {
     const limb = ctx.createRadialGradient(x, y, r * 0.62, x, y, r)
     limb.addColorStop(0, 'rgba(0, 0, 0, 0)')
@@ -225,7 +300,7 @@ function flareLoopAngle(seed: number, i: number): number {
 
 export const paintDwarfCore: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
   const br = r * 0.92
-  photosphere(ctx, x, y, br, pal, detail, { hot: 1.1, limb: 1, grainAlpha: STAR_BODY_GRAIN_ALPHA * 1.4 })
+  photosphere(ctx, x, y, br, pal, detail, { hot: 1.1, limb: 1})
   if (detail === 0) return
   const spots = detail === 1 ? STAR_BODY_DWARF_SPOTS - 1 : STAR_BODY_DWARF_SPOTS
   ctx.save()
@@ -244,29 +319,14 @@ export const paintDwarfCore: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
 
 export const paintGiantCore: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
   const br = r * 0.98
-  photosphere(ctx, x, y, br, pal, detail, {
-    hot: 0.6,
-    limb: 1.3,
-    grainAlpha: detail === 2 ? STAR_BODY_GRAIN_ALPHA * 0.5 : 0,
-  })
-  if (detail === 0) return
-  ctx.save()
-  circle(ctx, x, y, br)
-  ctx.clip()
-  ctx.strokeStyle = rgba(mix(pal.rgb, 0, 0.5), 0.2)
-  ctx.lineWidth = br * 0.09
-  for (let i = 0; i < STAR_BODY_GIANT_BANDS; i++) {
-    const oy = sway(seed, 40 + i) * br * 0.55
-    ctx.beginPath()
-    ctx.ellipse(x, y + oy, br * 1.05, br * 0.16, 0, 0, TAU)
-    ctx.stroke()
-  }
-  ctx.restore()
+  photosphere(ctx, x, y, br, pal, detail, { hot: 0.6, limb: 1.3 })
+  // Die Gürtel liegen im rollenden Band: stünden sie hier, drehte sich die
+  // Oberfläche unter einem stehenden Streifenmuster.
 }
 
 export const paintPulsarCore: StarPaint = (ctx, x, y, r, pal, _seed, detail) => {
   const br = r * STAR_BODY_PULSAR_CORE_R
-  photosphere(ctx, x, y, br, pal, detail, { hot: 0.5, limb: 0.4, grainAlpha: 0 })
+  photosphere(ctx, x, y, br, pal, detail, { hot: 0.5, limb: 0.4})
   const g = ctx.createRadialGradient(x, y, 0, x, y, br * 0.6)
   g.addColorStop(0, 'rgba(255, 255, 255, 0.95)')
   g.addColorStop(0.5, 'rgba(255, 255, 255, 0.45)')
@@ -282,11 +342,7 @@ export const paintPulsarCore: StarPaint = (ctx, x, y, r, pal, _seed, detail) => 
 }
 
 export const paintBinaryCore: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
-  photosphere(ctx, x - r * 0.12, y + r * 0.08, r * STAR_BODY_BINARY_MAIN_R, pal, detail, {
-    hot: 0.9,
-    limb: 1,
-    grainAlpha: STAR_BODY_GRAIN_ALPHA,
-  })
+  photosphere(ctx, x - r * 0.12, y + r * 0.08, r * STAR_BODY_BINARY_MAIN_R, pal, detail, { hot: 0.9, limb: 1 })
   const c = binaryCompanionAt(r, seed)
   const light = starPaletteFromRgb(mix(pal.rgb, 255, 0.35))
   if (detail >= 1) {
@@ -298,12 +354,12 @@ export const paintBinaryCore: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
     ctx.lineTo(x + c.x * 0.8, y + c.y * 0.8)
     ctx.stroke()
   }
-  photosphere(ctx, x + c.x, y + c.y, c.cr, light, detail, { hot: 1, limb: 0.7, grainAlpha: 0 })
+  photosphere(ctx, x + c.x, y + c.y, c.cr, light, detail, { hot: 1, limb: 0.7})
 }
 
 export const paintFlareCore: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
   const br = r * 0.86
-  photosphere(ctx, x, y, br, pal, detail, { hot: 1, limb: 1, grainAlpha: STAR_BODY_GRAIN_ALPHA * 0.9 })
+  photosphere(ctx, x, y, br, pal, detail, { hot: 1, limb: 1})
   if (detail === 0) return
   // Protuberanzen: Schleifen, die am Rand aus der Kugel steigen — keine Ringe
   const loops = detail === 1 ? STAR_BODY_FLARE_LOOPS - 1 : STAR_BODY_FLARE_LOOPS
@@ -331,7 +387,7 @@ export const paintFlareCore: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
 
 export const paintVeilCore: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
   const br = r * 0.82
-  photosphere(ctx, x, y, br, pal, detail, { hot: 0.8, limb: 0.9, grainAlpha: STAR_BODY_GRAIN_ALPHA * 0.7 })
+  photosphere(ctx, x, y, br, pal, detail, { hot: 0.8, limb: 0.9})
   if (detail === 0) return
   ctx.save()
   circle(ctx, x, y, br)
@@ -390,7 +446,6 @@ export const paintSplinterCore: StarPaint = (ctx, x, y, r, pal, seed, detail) =>
   g.addColorStop(1, pal.edge)
   ctx.fillStyle = g
   ctx.fill()
-  if (detail >= 1) grain(ctx, x, y, br, STAR_BODY_GRAIN_ALPHA * 1.5)
   const glow = ctx.createRadialGradient(x, y, 0, x, y, br * 0.4)
   glow.addColorStop(0, rgba(mix(pal.rgb, 255, 0.8), 0.75))
   glow.addColorStop(1, rgba(pal.rgb, 0))
@@ -747,7 +802,92 @@ export const paintUmbraWind: StarPaint = (ctx, x, y, r, pal, seed, detail) => {
 
 /* ── Tabelle, Bau, Cache, Blit ──────────────────────────────────────────────── */
 
-export const STAR_LOOK_PAINTERS: Record<StarLook, Record<StarSpriteLayer, StarPaint>> = {
+/* ── Die rollende Oberfläche ────────────────────────────────────────────────── */
+
+/** Ein Painter für alle acht Gestalten: Granulation aus der Palette, dazu was die
+ *  Zeile bestellt. Jedes Motiv steht doppelt (bei `lon` UND `lon + Periode`),
+ *  sonst reisst die Naht auf. */
+export function paintStarBandStrip(
+  ctx: CanvasRenderingContext2D,
+  s: Strip,
+  pal: StarPalette,
+  look: StarLook,
+  seed: number,
+  detail: StarDetail,
+): void {
+  const row = STAR_BODY_BAND_LOOK[look]
+  const salt = STAR_BODY_BAND_SALT + seed
+  const half = detail === 2 ? 1 : 0.5
+  const cell = s.br * row.cell * (detail === 2 ? 1 : STAR_BODY_BAND_CELL_SMALL_K)
+  const hi = mix(pal.rgb, 255, 0.45)
+  const lo = mix(pal.rgb, 0, 0.45)
+  granulationStrip(ctx, s, cell, salt, hi, lo, row.alpha, row.cap, row.rim)
+  // Zuerst die dunklen Flächen, darüber die kleinen Flecken
+  const dark = mix(pal.rgb, 0, 0.62)
+  for (let i = 0; i < Math.ceil(row.patches * half); i++) {
+    const lon = jitter(salt, 860 + i) * s.period
+    const lat = s.h / 2 + sway(salt, 870 + i) * s.h * 0.3
+    const pr = s.br * STAR_BODY_BAND_PATCH_R * (0.7 + jitter(salt, 880 + i) * 0.7)
+    for (const dx of [0, s.period]) {
+      wisp(ctx, s.x0 + lon + dx, s.y0 + lat, pr, 60 + i, dark, STAR_BODY_BAND_PATCH_ALPHA)
+    }
+  }
+  if (row.spots > 0) {
+    stripSpots(
+      ctx,
+      s,
+      salt,
+      Math.ceil(row.spots * half),
+      mix(pal.rgb, 0, 0.72),
+      s.br * 0.2,
+      STAR_BODY_BAND_SPOT_K,
+    )
+  }
+  for (let i = 0; i < Math.ceil(row.wisps * half); i++) {
+    const lon = jitter(salt, 900 + i) * s.period
+    const lat = s.h / 2 + sway(salt, 910 + i) * s.h * 0.3
+    const wr = s.br * (0.3 + jitter(salt, 920 + i) * 0.24)
+    for (const dx of [0, s.period]) {
+      wisp(ctx, s.x0 + lon + dx, s.y0 + lat, wr, 40 + i, hi, 0.22)
+    }
+  }
+  for (let i = 0; i < Math.ceil(row.craters * half); i++) {
+    const lon = jitter(salt, 940 + i) * s.period
+    const lat = s.h / 2 + sway(salt, 950 + i) * s.h * 0.34
+    const cr = s.br * (0.07 + jitter(salt, 960 + i) * 0.09)
+    for (const dx of [0, s.period]) crater(ctx, s.x0 + lon + dx, s.y0 + lat, cr, rgba(hi, 0.7))
+  }
+  for (let i = 0; i < Math.ceil(row.streaks * half); i++) {
+    const lon = jitter(salt, 980 + i) * s.period
+    const lat = s.h / 2 + sway(salt, 990 + i) * s.h * 0.32
+    const len = s.br * (0.34 + jitter(salt, 1000 + i) * 0.4)
+    const th = s.br * (0.05 + jitter(salt, 1010 + i) * 0.05)
+    for (const dx of [0, s.period]) {
+      const g = ctx.createLinearGradient(s.x0 + lon + dx - len, 0, s.x0 + lon + dx + len, 0)
+      g.addColorStop(0, rgba(hi, 0))
+      g.addColorStop(0.5, rgba(hi, row.alpha * 0.9))
+      g.addColorStop(1, rgba(hi, 0))
+      ctx.beginPath()
+      ctx.ellipse(s.x0 + lon + dx, s.y0 + lat, len, th, 0, 0, TAU)
+      ctx.fillStyle = g
+      ctx.fill()
+    }
+  }
+  for (let i = 0; i < row.belts; i++) {
+    const lat = s.h / 2 + sway(salt, 1040 + i) * s.h * 0.34
+    const th = s.br * (0.07 + jitter(salt, 1050 + i) * 0.09)
+    const g = ctx.createLinearGradient(0, s.y0 + lat - th, 0, s.y0 + lat + th)
+    const tone = jitter(salt, 1060 + i) > 0.5 ? hi : lo
+    g.addColorStop(0, rgba(tone, 0))
+    g.addColorStop(0.5, rgba(tone, row.alpha * 0.8))
+    g.addColorStop(1, rgba(tone, 0))
+    ctx.fillStyle = g
+    ctx.fillRect(s.x0, s.y0 + lat - th, s.w, th * 2)
+  }
+  fadeStripEdges(ctx, s, s.br * STAR_BODY_BAND_FADE_BR)
+}
+
+export const STAR_LOOK_PAINTERS: Record<StarLook, Record<StarLookLayer, StarPaint>> = {
   dwarf: { halo: paintDwarfHalo, core: paintDwarfCore, spin: paintDwarfSpin, wind: paintStarWind },
   giant: { halo: paintGiantHalo, core: paintGiantCore, spin: paintGiantSpin, wind: paintStarWind },
   pulsar: { halo: paintPulsarHalo, core: paintPulsarCore, spin: paintPulsarSpin, wind: paintStarWind },
@@ -769,12 +909,28 @@ export function buildStarSprite(
   dpr: number,
   detail: StarDetail,
 ): HTMLCanvasElement | null {
-  // Unter 22 px sieht man keine Fahne (Regel 7)
-  if (layer === 'wind' && detail === 0) return null
+  // Unter 22 px sieht man weder Fahne noch Oberfläche (Regel 7)
+  if ((layer === 'wind' || layer === 'band') && detail === 0) return null
   const d = clampSpriteDpr(dpr)
   const key = starBodySpriteKey(layer, look, rgb, seed, px, d, detail)
   const hit = cache.get(key)
   if (hit) return hit
+  if (layer === 'band') {
+    // Der Streifen ist kein Quadrat: zwei Perioden breit, eine Scheibe hoch
+    const s = starBandStrip(0, 0, px / 2, look)
+    const strip = newSpriteCanvas(s.w, d, s.h)
+    if (!strip) return null
+    paintStarBandStrip(
+      strip.ctx,
+      starBandStrip(s.w / 2, s.h / 2, px / 2, look),
+      starPaletteFromRgb(rgb),
+      look,
+      seed,
+      detail,
+    )
+    cache.set(key, strip.cv)
+    return strip.cv
+  }
   const span = Math.round(px * STAR_BODY_SPRITE_SPAN)
   const made = newSpriteCanvas(span, d)
   if (!made) return null
@@ -864,7 +1020,7 @@ export function mountStarSprites(
   const key = starBodySpriteKey('all', look, rgb, seed, rounded, d, detail)
   if (host.dataset.spriteKey === key) return
   host.dataset.spriteKey = key
-  for (const layer of ['halo', 'core', 'spin', 'wind'] as const) {
+  for (const layer of ['halo', 'core', 'band', 'spin', 'wind'] as const) {
     const slot = host.querySelector<HTMLElement>(
       layer === 'wind' ? ':scope > .star-wind-anchor > .star-wind' : `:scope > .star-${layer}`,
     )
@@ -884,7 +1040,7 @@ export function warmStarSprites(
   const d = clampSpriteDpr(dpr)
   const detail = starBodyDetail(px)
   const rounded = Math.round(px * 10) / 10
-  const layers: StarSpriteLayer[] = ['halo', 'core', 'spin']
+  const layers: StarSpriteLayer[] = ['halo', 'core', 'band', 'spin']
   return Promise.all(
     layers.map((layer) => {
       const key = starBodySpriteKey(layer, look, rgb, seed, rounded, d, detail)

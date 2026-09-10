@@ -18,6 +18,7 @@
       >
         <div class="star-halo" />
         <div class="star-core" />
+        <div class="star-band" />
         <div class="star-spin" />
       </div>
       <span class="sfs-star-flash" :style="starFlashStyle" />
@@ -120,7 +121,7 @@ import {
   type SystemPlanet,
   type SystemSlotInput,
 } from '@/utils/orbit/starFightSystem'
-import { mountStarSprites } from '@/utils/fx/starBodySprite'
+import { mountStarSprites, starAxisStyle, starBandVars } from '@/utils/fx/starBodySprite'
 import { mountPlanetSprite } from '@/utils/fx/planetSprite'
 import type { StarLook } from '@/types'
 
@@ -232,6 +233,9 @@ function isCleared(p: SystemPlanet): boolean {
 // ── Stern ─────────────────────────────────────────────────────────────────
 const starStyle = computed(() => {
   const s = layout.value.star
+  // Fester id-Anteil: in der Arena steht genau EIN Stern, seine Achse soll bei
+  // jedem Öffnen dieselbe sein.
+  const axis = starAxisStyle(props.star.look, props.star.seed, 'arena')
   return {
     left: `${s.x}px`,
     top: `${s.y}px`,
@@ -239,6 +243,10 @@ const starStyle = computed(() => {
     height: `${s.px}px`,
     '--star-span': String(STAR_BODY_SPRITE_SPAN),
     '--star-spin-sec': `${STAR_BODY_SPIN_SEC[props.star.look]}s`,
+    ...starBandVars(props.star.look),
+    '--star-axis': `${axis.tiltDeg}deg`,
+    '--star-turn': `${axis.turnSec}s`,
+    '--star-roll-dir': axis.dir,
     '--star-breathe-ms': `${STAR_FIGHT_STAR_BREATHE_MS}ms`,
   }
 })
@@ -410,14 +418,20 @@ const overviewPlanetScale = String(STAR_FIGHT_SYS_OVERVIEW_PLANET_SCALE)
   inset: calc(50% - var(--star-span, 2.2) * 50%);
 }
 
-.sfs-star :deep(img) {
+/* NICHT alle Bilder: der Streifen des Bandes ist breiter als die Box und holt
+   seine Masse aus main.css. */
+.sfs-star .star-halo :deep(img),
+.sfs-star .star-core :deep(img),
+.sfs-star .star-spin :deep(img) {
   display: block;
   width: 100%;
   height: 100%;
   user-select: none;
 }
 
-.sfs-star .star-spin {
+/* Wie im Orbit: die Ebene dreht nur, wo die Drehung die GESTALT ist. */
+.sfs-star--pulsar .star-spin,
+.sfs-star--splinter .star-spin {
   animation: sfs-star-spin var(--star-spin-sec, 40s) linear infinite;
 }
 
@@ -426,7 +440,8 @@ const overviewPlanetScale = String(STAR_FIGHT_SYS_OVERVIEW_PLANET_SCALE)
 }
 
 .sfs--rm .sfs-star .star-spin,
-.sfs--rm .sfs-star .star-halo {
+.sfs--rm .sfs-star .star-halo,
+.sfs--rm .sfs-star .star-band :deep(img) {
   animation: none;
 }
 
