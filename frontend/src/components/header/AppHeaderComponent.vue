@@ -148,7 +148,7 @@ function openGalaxyTab() {
   uiStore.setBardTab('galaxy')
 }
 
-/** Skill-Badge und K-Taste führen zum nächsten Meep der Wandering-Straße. */
+/** Skill-Badge führt zum nächsten Meep der Wandering-Straße. */
 function openRoadTab() {
   uiStore.openBardModal()
   uiStore.setBardTab('tree')

@@ -8,8 +8,6 @@ import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGamePause } from '@/composables/system/useGamePause'
 import { onKeybinding } from '@/composables/system/useKeybindings'
-import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
-import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import type { BardTabId } from '@/stores/core/uiStore'
 import type { KeybindId } from '@/types'
 import { formatBadgeCount } from '@/utils/ui/format'
@@ -258,25 +256,12 @@ function bindTabShortcut(id: KeybindId, tab: BardTabId) {
   })
 }
 
-const meepTreeStore = useMeepTreeStore()
-const { focusNode } = useForgeSpotlight()
-
 bindTabShortcut('shop', 'shop')
 
-/**
- * Taste K — sie öffnete einmal einen eigenen Reiter.
- *
- * Sie ist NICHT gestrichen und auch nicht auf den Shop umgehängt: zwei Tasten
- * auf denselben Reiter wären eine Lüge im Controls-Panel. Sie fährt stattdessen
- * dorthin, wo der Reiter hingezogen ist — an den äusseren Rand des Netzes. Das
- * ist keine Bequemlichkeit: The Wandering liegt jenseits der Sonnenleiter, und
- * am Zoomboden ist ein Knoten dort sechs Pixel gross.
- */
+/** Taste K öffnet den Skill Tree wie der Header-Button. */
 onKeybinding('road', () => {
   if (galaxyStore.pendingRoleSelection || isPaused.value) return
-  if (uiStore.bardActiveTab !== 'tree') uiStore.setBardTab('tree')
-  const target = meepTreeStore.roadAnchorId
-  if (target) focusNode(target, { readable: true })
+  uiStore.setBardTab('tree')
 })
 
 
