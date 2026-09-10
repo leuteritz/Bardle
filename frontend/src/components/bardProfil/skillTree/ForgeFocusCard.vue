@@ -1,12 +1,8 @@
 <template>
   <div v-if="entry" class="sfc-slot" :style="{ '--focus-color': entry.color }">
-    <!-- Der Trenner nennt, was hier steht, und der Chip rechts die Familie.
-         Beides stand bis eben als Augenbraue IN der Karte — oben ist es der
-         Kopf der ganzen Spalte und muss nicht zweimal gesagt werden. -->
     <div class="sfc-div" role="separator">
       <Icon :icon="FORGE_PIN_ICON" width="17" height="17" class="sfc-div-ico" />
       <span class="sfc-div-label">{{ FORGE_FOCUS_CARD_LABEL }}</span>
-      <span class="sfc-div-tier">{{ entry.tierLabel }}</span>
     </div>
 
     <section class="sfc" aria-labelledby="forge-focus-title">
@@ -224,21 +220,6 @@ function grow(): void {
   line-height: 1;
   white-space: nowrap;
   color: var(--focus-color, #c89040);
-}
-
-.sfc-div-tier {
-  flex-shrink: 0;
-  padding: 2px 7px;
-  border: 1px solid color-mix(in srgb, var(--focus-color, #c89040) 35%, #32210c);
-  border-radius: 3px;
-  background: transparent;
-  color: var(--focus-color, #c89040);
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  line-height: 1.2;
-  text-transform: uppercase;
-  white-space: nowrap;
 }
 
 /* ══════════════════════════════════════════════════
