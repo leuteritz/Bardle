@@ -15,15 +15,6 @@
       </div>
       <div class="cs-hero-foot">
         <div class="cs-detail-name">{{ detail.name }}</div>
-        <div class="cs-hero-chips">
-          <span class="cs-hero-chip" :style="{ '--cc': detail.rarityColor }">
-            {{ detail.rarityLabel }}
-          </span>
-          <span class="cs-hero-chip cs-hero-chip--solid" :style="{ '--cc': detail.categoryColor }">
-            <img :src="detail.categoryImage" :alt="detail.categoryLabel" class="cs-hero-chip-img" />
-            {{ detail.categoryLabel }}
-          </span>
-        </div>
       </div>
     </div>
 
@@ -132,12 +123,9 @@
       </div>
 
       <div class="cs-cost">
-        <div class="cs-cost-label">
-          <span>Cost</span>
-          <span class="cs-owned" :class="{ 'cs-owned--none': detail.ownedCount === 0 }">
-            <Icon icon="game-icons:knapsack" width="16" height="16" class="cs-owned-icon" />
-            Owned ×{{ detail.ownedCount }}
-          </span>
+        <div class="cs-cost-heading">
+          <span>Purchase cost</span>
+          <span class="cs-cost-state">{{ detail.canBuy ? 'Ready' : 'Incomplete' }}</span>
         </div>
         <div class="cs-detail-rows">
           <div
@@ -152,7 +140,6 @@
             <span class="cs-mat-amount">
               {{ formatNumber(mat.have) }} / {{ formatNumber(mat.need) }}
             </span>
-            <span class="cs-mat-state">{{ mat.ok ? '✓' : '✕' }}</span>
             <i class="cs-mat-fill" :style="fillStyle(mat.have, mat.need)"></i>
           </div>
           <div
@@ -168,7 +155,6 @@
             <span class="cs-mat-amount">
               {{ formatNumber(detail.chimes.have) }} / {{ formatNumber(detail.chimes.need) }}
             </span>
-            <span class="cs-mat-state">{{ detail.chimes.ok ? '✓' : '✕' }}</span>
             <i class="cs-mat-fill" :style="fillStyle(detail.chimes.have, detail.chimes.need)"></i>
           </div>
         </div>
@@ -314,44 +300,6 @@ export default defineComponent({
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.cs-hero-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-.cs-hero-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 9px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.62);
-  border: 1px solid var(--cc, #7a4e20);
-  color: color-mix(in srgb, var(--cc, #e8c040) 55%, #fff);
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  line-height: 1.25;
-  text-transform: uppercase;
-  white-space: nowrap;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-}
-.cs-hero-chip-img {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-/* The category reads solid on the grid cards too, and the filled block anchors
-   the run — same role the champion panel gives its role chip. */
-.cs-hero-chip--solid {
-  background: var(--cc);
-  border-color: var(--cc);
-  color: #111008;
-  font-weight: 900;
-  text-shadow: none;
-}
-
 /* ── Identity ── */
 .cs-identity {
   margin-bottom: 4px;
@@ -604,75 +552,55 @@ export default defineComponent({
   flex-direction: column;
   gap: 7px;
 }
-/* The stock count rides in the label row — what the player owns and what it
-   costs answer the same question, and a row of its own cost a block. */
-.cs-cost-label {
+.cs-cost-heading {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  margin-bottom: 10px;
+  color: #e8c040;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #b89a5a;
 }
-.cs-owned {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  letter-spacing: 0.06em;
-  color: #6ec040;
-  font-variant-numeric: tabular-nums;
-}
-.cs-owned--none {
-  color: #7a6f58;
-}
-.cs-owned-icon {
-  flex-shrink: 0;
-  color: #c89040;
+.cs-cost-state {
+  color: #a99a7c;
+  font-size: 12px;
 }
 .cs-detail-rows {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 .cs-mat-row {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(28, 28, 24, var(--cs-block, 1));
-  border: 1px solid color-mix(in srgb, var(--cost-c, #e8c040) 40%, transparent);
-  border-radius: 4px;
-  padding: 8px 11px;
+  gap: 13px;
+  min-height: 68px;
   overflow: hidden;
-}
-.cs-mat-row--missing {
-  border-color: rgba(204, 96, 80, 0.5);
+  border-bottom: 1px solid #332918;
 }
 .cs-mat-img {
-  width: 26px;
-  height: 26px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
   object-fit: contain;
-  flex-shrink: 0;
 }
 .cs-mat-name {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: #d8d0bc;
   overflow: hidden;
+  color: #d8d0bc;
+  font-size: 17px;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .cs-mat-amount {
-  font-size: 15px;
-  font-weight: 800;
-  white-space: nowrap;
+  flex: 0 0 auto;
+  font-size: 19px;
   font-variant-numeric: tabular-nums;
+  font-weight: 900;
 }
 .cs-mat-row--ok .cs-mat-amount {
   color: var(--cost-c, #e8c040);
@@ -680,30 +608,15 @@ export default defineComponent({
 .cs-mat-row--missing .cs-mat-amount {
   color: #cc6050;
 }
-.cs-mat-state {
-  width: 15px;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 900;
-  flex-shrink: 0;
-}
-.cs-mat-row--ok .cs-mat-state {
-  color: #6ec040;
-}
-.cs-mat-row--missing .cs-mat-state {
-  color: #cc6050;
-}
-/* How far the stock has come. scaleX, not width — the value moves when the store
-   moves, and a width would relayout the row on every tick. */
 .cs-mat-fill {
   position: absolute;
-  left: 0;
-  right: 0;
   bottom: 0;
-  height: 3px;
+  right: 0;
+  left: 0;
+  height: 2px;
   transform-origin: left center;
   background: var(--cost-c, #e8c040);
-  opacity: 0.75;
+  opacity: 0.82;
   transition: transform 0.25s ease-out;
 }
 .cs-mat-row--missing .cs-mat-fill {
@@ -795,16 +708,6 @@ export default defineComponent({
 .cs-detail-name {
   font-size: 31px;
 }
-.cs-hero-chips {
-  gap: 5px;
-  max-height: 36px;
-  overflow: hidden;
-}
-.cs-hero-chip {
-  padding: 4px 9px;
-  font-size: 11.5px;
-  letter-spacing: 0.05em;
-}
 .cs-detail-body {
   order: 2;
   flex: 1 1 auto;
@@ -815,8 +718,7 @@ export default defineComponent({
   scrollbar-width: thin;
   scrollbar-color: #5c3310 #111008;
 }
-.cs-block,
-.cs-mat-row {
+.cs-block {
   background: #1c1c18;
   border-color: #3e200a;
 }
@@ -834,36 +736,20 @@ export default defineComponent({
 .cs-cost {
   gap: 8px;
 }
-.cs-cost-label {
-  font-size: 12px;
-  color: #e8c040;
-}
 .cs-mat-row {
-  min-height: 48px;
-  padding: 8px 11px;
-  gap: 10px;
-}
-.cs-mat-img {
-  width: 30px;
-  height: 30px;
-}
-.cs-mat-name {
-  font-size: 13.5px;
-}
-.cs-mat-amount {
-  font-size: 15px;
+  background: transparent;
 }
 .cs-detail-footer {
   order: 3;
-  padding: 12px 18px 14px;
+  padding: 16px 20px 18px;
   background: #1a1008;
   border-top: 1px solid #5c3310;
 }
 .cs-buy-btn {
-  min-height: 58px;
+  min-height: 78px;
   padding: 14px 16px;
-  font-size: 15px;
-  letter-spacing: 0.09em;
+  font-size: 18px;
+  letter-spacing: 0.07em;
 }
 .cs-buy-btn--ready {
   box-shadow: none;
@@ -878,6 +764,15 @@ export default defineComponent({
   .cs-hero-foot {
     min-height: 84px;
     padding: 26px 16px 12px;
+  }
+  .cs-detail-body {
+    padding: 14px 16px 16px;
+  }
+  .cs-detail-footer {
+    padding: 13px 16px 15px;
+  }
+  .cs-buy-btn {
+    min-height: 70px;
   }
 }
 </style>
