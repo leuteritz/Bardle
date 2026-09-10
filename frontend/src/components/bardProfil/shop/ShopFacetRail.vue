@@ -139,7 +139,11 @@ const activeTotal = computed(
         class="cs-facet-panel"
         :class="[
           `cs-facet-panel--${group.id}`,
-          { 'cs-facet-panel--active': setCounts[group.id] > 0 },
+          {
+            'cs-facet-panel--active': setCounts[group.id] > 0,
+            'cs-facet-panel--open': !collapsedGroups.has(group.id),
+            'cs-facet-panel--closed': collapsedGroups.has(group.id),
+          },
         ]"
       >
         <button
@@ -339,15 +343,21 @@ const activeTotal = computed(
   --facet-group-color: #c89040;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 6px;
+  gap: 0;
   background: #111008;
   border: 1px solid #3e200a;
-  border-left: 3px solid var(--facet-group-color);
+  border-left: 4px solid var(--facet-group-color);
   border-radius: 4px;
 }
 .cs-facet-panel--active {
   border-left-color: var(--facet-group-color);
+}
+.cs-facet-panel--open {
+  border-color: #5c3310;
+  border-left-color: var(--facet-group-color);
+}
+.cs-facet-panel--closed {
+  background: #141410;
 }
 .cs-facet-panel--afford {
   --facet-group-color: #52b830;
@@ -374,11 +384,11 @@ const activeTotal = computed(
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 44px;
-  padding: 5px 7px;
-  border: 1px solid #3e200a;
-  border-left: 4px solid var(--facet-group-color);
-  border-radius: 4px;
+  min-height: 50px;
+  padding: 7px 8px;
+  border: 0;
+  border-bottom: 1px solid #3e200a;
+  border-radius: 0;
   background: #1a1008;
   color: inherit;
   font: inherit;
@@ -392,11 +402,19 @@ const activeTotal = computed(
 .cs-facet-panel-head:focus-visible {
   background: #1c1c18;
   border-color: var(--facet-group-color);
-  border-left-color: var(--facet-group-color);
 }
 .cs-facet-panel-head:focus-visible {
   outline: 2px solid var(--facet-group-color);
   outline-offset: 2px;
+}
+.cs-facet-panel--open .cs-facet-panel-head {
+  background: #1e1006;
+  border-bottom: 2px solid var(--facet-group-color);
+}
+.cs-facet-panel--closed .cs-facet-panel-head {
+  min-height: 46px;
+  border-bottom: 0;
+  background: #141410;
 }
 .cs-facet-panel-head--closed .cs-facet-chev {
   transform: rotate(-90deg);
@@ -410,8 +428,8 @@ const activeTotal = computed(
   color: #fff;
 }
 .cs-facet-panel-crest {
-  width: 30px;
-  height: 32px;
+  width: 32px;
+  height: 34px;
 }
 .cs-facet-panel-copy,
 .cs-facet-copy {
@@ -431,20 +449,24 @@ const activeTotal = computed(
   white-space: nowrap;
 }
 .cs-facet-panel-copy small {
-  color: color-mix(in srgb, var(--facet-group-color) 72%, #a59675);
+  color: var(--facet-group-color);
   font-weight: 800;
 }
 .cs-facet-panel-copy strong {
   overflow: hidden;
-  color: var(--facet-group-color);
-  font-size: 15px;
-  font-weight: 400;
+  color: #f1dfb6;
+  font-size: 16px;
+  font-weight: 800;
   line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.cs-facet-panel--closed .cs-facet-panel-copy strong {
+  color: var(--facet-group-color);
+}
 .cs-facet-chev {
   flex-shrink: 0;
+  color: var(--facet-group-color);
   opacity: 0.7;
   transition: transform 0.15s;
 }
@@ -461,11 +483,17 @@ const activeTotal = computed(
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
+.cs-facet-panel--open .cs-facet-panel-count {
+  background: #141410;
+  border-color: var(--facet-group-color);
+  color: #f1dfb6;
+}
 .cs-facet-panel-body {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 1px 0 0;
+  gap: 3px;
+  padding: 5px 5px 6px;
+  background: #111008;
 }
 
 /* One row, three anchors: mark, name, number. The left border is where the
@@ -477,10 +505,10 @@ const activeTotal = computed(
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 40px;
-  padding: 5px 8px;
+  min-height: 36px;
+  padding: 4px 7px;
   border: 1px solid #3e200a;
-  border-left: 3px solid var(--chip-color, #c89040);
+  border-left: 2px solid var(--chip-color, #c89040);
   border-radius: 4px;
   background: #141410;
   color: #b09a74;
@@ -515,8 +543,8 @@ const activeTotal = computed(
   --chip-color: #52b830;
 }
 .cs-facet-crest {
-  width: 28px;
-  height: 30px;
+  width: 24px;
+  height: 25px;
   background: var(--chip-color, #c89040);
 }
 .cs-facet-icon {
@@ -532,8 +560,13 @@ const activeTotal = computed(
   display: block;
   min-width: 0;
   overflow: hidden;
+  color: #c9b991;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.cs-facet-row--active .cs-facet-label {
+  color: #fff4dc;
 }
 .cs-facet-mark {
   background: rgba(232, 192, 64, 0.28);
