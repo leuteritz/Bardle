@@ -1,7 +1,19 @@
 import { describe, it, expect } from 'vitest'
 import { forgeSeatTier } from '@/config/progression/forgeSeats'
-import { forgeContentBounds, forgeFusionAnchors, forgeTreePlacements } from '@/utils/ui/forgeTreeLayout'
-import { forgeCameraHome, forgeClampPan, forgeClampPanBox, forgeFitScale, forgeGroupCameraAt, forgeNodeScreenRadius, forgePanLimit } from '@/utils/ui/forgeCameraBounds'
+import {
+  forgeContentBounds,
+  forgeFusionAnchors,
+  forgeTreePlacements,
+} from '@/utils/ui/forgeTreeLayout'
+import {
+  forgeCameraHome,
+  forgeClampPan,
+  forgeClampPanBox,
+  forgeFitScale,
+  forgeGroupCameraAt,
+  forgeNodeScreenRadius,
+  forgePanLimit,
+} from '@/utils/ui/forgeCameraBounds'
 import { getForgeConstellation } from '@/config/progression/starForge'
 import { forgeNodePath } from '@/utils/game/solarSignature'
 import { forgeNodeInView, forgeNodeScreenPoint } from '@/utils/ui/forgeSpotlightView'
@@ -293,7 +305,6 @@ describe('Star Forge — die Kamera fasst den KAUFWEG', () => {
     { name: 'QHD gemessen', w: 1135, h: 938 },
   ]
 
-
   function radiusOf(id: string): number {
     return forgeNodeScreenRadius(forgeSeatTier(id), 1)
   }
@@ -362,7 +373,7 @@ describe('Star Forge — die Kamera fasst den KAUFWEG', () => {
     for (const view of GROUP_VIEWS) {
       const cam = forgeGroupCameraAt(anchor, marks, view, zoomFloorFor(view))!
       expect(cam.scale, `${view.name} klebt am Deckel`).toBeLessThan(FORGE_TREE_ZOOM_MAX)
-      expect(cam.scale, `${view.name} steht zu weit weg`).toBeGreaterThan(0.46)
+      expect(cam.scale, `${view.name} steht zu weit weg`).toBeGreaterThan(0.45)
     }
   })
 

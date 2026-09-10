@@ -244,6 +244,10 @@ export interface ForgeNodeDef {
   /** Branches, Wards, Pacts und Boughs: Wirkung je Stufe. Leaves: ungenutzt
    *  (fester Verstärker), Crowns: ungenutzt (die Regel steht als Konstante). */
   effectPerLevel: number
+  /** Kosten in Meeps für die einmalige Naht zwischen beiden Fortschrittswegen. */
+  meepCost?: number
+  /** Nahtstufe used to render the transition chain. */
+  confluenceStage?: number
   /**
    * NUR bei Glimmers: der Knoten, dessen Wirkung dieser hier hebt.
    *

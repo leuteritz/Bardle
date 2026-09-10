@@ -475,6 +475,8 @@ export function useForgeUpgrades(): {
     const unlocked = forgeStore.nodeUnlocked(def.id)
     const goldCost = forgeStore.nodeGoldCost(def.id)
     const goldOk = gameStore.chimes >= goldCost
+    const meepCost = def.meepCost ?? 0
+    const meepOk = gameStore.meeps >= meepCost
     const materials = costItems(forgeStore.nodeMaterialCost(def.id))
     /* Einmal gelesen, zweimal gebraucht — hier und unten am Feld. `canAffordNode`
        geht durch das ganze Materiallager; bei hundertfünfzig Knoten mal vier
@@ -519,6 +521,14 @@ export function useForgeUpgrades(): {
       nextDesc = def.desc
       nowText = level > 0 ? FORGE_CROWN_STATE_FORGED : FORGE_CROWN_STATE_OPEN
       nextText = FORGE_CROWN_STATE_FORGED
+    } else if (def.tier === 'confluence') {
+      const meepNodes = meepTree.bought.length
+      const now = forgeStore.confluenceEffect(def.id)
+      const next = def.effectPerLevel * meepNodes
+      desc = def.desc.replace(FORGE_DESC_VALUE_TOKEN, trimNumber(now))
+      nextDesc = def.desc.replace(FORGE_DESC_VALUE_TOKEN, trimNumber(next))
+      nowText = valueText(def, now)
+      nextText = valueText(def, next)
     } else if (
       def.tier === 'bough' ||
       def.tier === 'ward' ||
@@ -573,8 +583,8 @@ export function useForgeUpgrades(): {
       unlockProgress: lock.progress,
       rule: forgeRuleKind(def.id),
       canBuy: buyable,
-      meepCost: 0,
-      meepOk: true,
+      meepCost,
+      meepOk,
       rivals: [],
     }
   }

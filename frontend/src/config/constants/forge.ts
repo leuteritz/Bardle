@@ -706,6 +706,10 @@ export const FORGE_CONFLUENCE_MEEP_COST = 60
 /** Chime-Grundpreis. An den Kronen orientiert; sie sind die einzigen
  *  anderen Einmalkäufe des Netzes. */
 export const FORGE_CONFLUENCE_BASE_COST = 2.5e10
+export const FORGE_CONFLUENCE_LINK_COST_MULTIPLIER = 1.35
+export const FORGE_CONFLUENCE_LINK_MEEP_COST = 90
+export const FORGE_CONFLUENCE_LINK_PARENT_MIN_LEVEL = 1
+export const FORGE_CONFLUENCE_MAX_LEVEL = 1
 
 /* ── Die CLUSTER: Ort und Thema statt Radius und Speiche ───────────────────
  *
@@ -2861,7 +2865,7 @@ export const FORGE_SPOTLIGHT_PING_MS = 450
  * Die Zahl MUSS mit der Ringzahl mitwachsen: stünde sie zu tief, bräche die
  * hervorgehobene Kette mitten im Baum ab und die Sonne wäre nicht mehr ihr Ende.
  */
-export const FORGE_SPOTLIGHT_MAX_LIMBS = 7
+export const FORGE_SPOTLIGHT_MAX_LIMBS = 8
 /**
  * Wartezeit, bevor ein Hover am Baum die zugehörige Karte ins Bild rollt. Ein
  * Schwenk über den Baum soll EINEN Rollbefehl absetzen, nicht fünfundzwanzig.

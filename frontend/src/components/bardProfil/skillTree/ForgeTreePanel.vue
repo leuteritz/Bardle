@@ -12,7 +12,7 @@
       :class="{ 'tree-viewport--dragging': isDragging }"
       @wheel.prevent="onWheel"
       @mouseover="onFusionOver"
-      @mouseleave="setTreeHover(null); fusionHoverId = null"
+      @mouseleave="onViewportLeave"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"
       @pointerup="onPointerEnd"
@@ -21,41 +21,37 @@
       @click.capture="onClickCapture"
       @click="onBackgroundClick"
     >
-    <!-- DIE ZOOM-LEISTE unten rechts. Ihre Sperrfläche steht als
+      <!-- DIE ZOOM-LEISTE unten rechts. Ihre Sperrfläche steht als
          `FORGE_VIEWPORT_KEEPOUTS.bottomRight` und ist aus ihrem Mass abgeleitet.
 
          `.stop` liegt am Dock und nicht an der Leiste: es räumt sonst die
          Anheftung ab, und genau beim Anheften will der Spieler herauszoomen
          oder zurückfahren, um die Voraussetzungen ins Bild zu holen. -->
-    <div class="tree-camera-dock" @click.stop>
-      <div class="tree-zoom">
-        <button class="zoom-btn" aria-label="Zoom out" @click="zoomBy(-1)">−</button>
-        <div class="zoom-track">
-          <div class="zoom-knob" :style="{ left: zoomKnobLeft }" />
+      <div class="tree-camera-dock" @click.stop>
+        <div class="tree-zoom">
+          <button class="zoom-btn" aria-label="Zoom out" @click="zoomBy(-1)">−</button>
+          <div class="zoom-track">
+            <div class="zoom-knob" :style="{ left: zoomKnobLeft }" />
+          </div>
+          <button class="zoom-btn" aria-label="Zoom in" @click="zoomBy(1)">＋</button>
         </div>
-        <button class="zoom-btn" aria-label="Zoom in" @click="zoomBy(1)">＋</button>
       </div>
-    </div>
 
-    <!-- DIE KÜRZEL-ZEILE unten links, dieselbe Darstellung wie die Leiste über
+      <!-- DIE KÜRZEL-ZEILE unten links, dieselbe Darstellung wie die Leiste über
          dem Command Panel. Sie leuchtet, solange die Kamera nicht mittig steht —
          das ist die Auskunft, für die hier einmal ein Zifferblatt stand.
 
          Als Zeile angelegt, damit ein zweites Kürzel danebenpasst; `.stop` aus
          demselben Grund wie am Dock. -->
-    <div
-      class="tree-key-hints"
-      :class="{ 'tree-key-hints--lit': !recenterAtRest }"
-      @click.stop
-    >
-      <KeybindChip id="forgeRecenter" :lit="!recenterAtRest" />
-    </div>
+      <div class="tree-key-hints" :class="{ 'tree-key-hints--lit': !recenterAtRest }" @click.stop>
+        <KeybindChip id="forgeRecenter" :lit="!recenterAtRest" />
+      </div>
 
-    <!-- DIE SUCHLEISTE oben rechts, die dritte belegte Ecke
+      <!-- DIE SUCHLEISTE oben rechts, die dritte belegte Ecke
          (`FORGE_VIEWPORT_KEEPOUTS.topRight`). -->
-    <ForgeSearchDock />
+      <ForgeSearchDock />
 
-    <!-- DER RAND-KOMPASS. Zeigt an der Viewport-Kante in die Richtung des
+      <!-- DER RAND-KOMPASS. Zeigt an der Viewport-Kante in die Richtung des
          gemeinten Knotens, solange er ausserhalb liegt, und verschwindet in dem
          Moment, in dem die Fahrt ihn hereinholt.
 
@@ -67,31 +63,28 @@
          `transform`, inline, weil es sich mit `pan` ändert), die innere nur
          ihre Deckkraft. Ein einziges Element könnte nicht beides tragen — die
          Einblendung überschriebe die Lage. -->
-    <div v-if="compassAt" class="tree-compass" :style="compassStyle" aria-hidden="true">
-      <span class="tree-compass-arrow">
-        <Icon
-          :icon="FORGE_SPOTLIGHT_COMPASS_ICON"
-          :width="compassIconPx"
-          :height="compassIconPx"
-        />
-      </span>
-    </div>
+      <div v-if="compassAt" class="tree-compass" :style="compassStyle" aria-hidden="true">
+        <span class="tree-compass-arrow">
+          <Icon
+            :icon="FORGE_SPOTLIGHT_COMPASS_ICON"
+            :width="compassIconPx"
+            :height="compassIconPx"
+          />
+        </span>
+      </div>
 
-    <!-- Scaled tree stage -->
-    <div
-      class="tree-stage"
-      :class="[
-        { 'tree-stage--dragging': isDragging },
-        `tree-stage--entry-${entryPhase}`,
-      ]"
-      :style="{
-        transform: stageTransform,
-        transitionDuration: `${stageTransitionMs}ms`,
-        '--inv-scale': (1 / totalScale).toFixed(4),
-        '--forge-stage-size': `${FORGE_STAGE_SIZE}px`,
-      }"
-    >
-      <!-- DER ZONENSCHLEIER. Hier lagen sieben KAEMME auf den Ringradien — ein
+      <!-- Scaled tree stage -->
+      <div
+        class="tree-stage"
+        :class="[{ 'tree-stage--dragging': isDragging }, `tree-stage--entry-${entryPhase}`]"
+        :style="{
+          transform: stageTransform,
+          transitionDuration: `${stageTransitionMs}ms`,
+          '--inv-scale': (1 / totalScale).toFixed(4),
+          '--forge-stage-size': `${FORGE_STAGE_SIZE}px`,
+        }"
+      >
+        <!-- DER ZONENSCHLEIER. Hier lagen sieben KAEMME auf den Ringradien — ein
            Kamm um den Mittelpunkt ist ein Ring, nur unscharf, und sieben davon
            waren ein Zifferblatt mit weichen Zeigern. Jetzt liegt je Cluster ein
            weicher Fleck in der Farbe seiner Phase, alle auf DERSELBEN einen
@@ -101,47 +94,63 @@
 
            Steht VOR dem `<svg>` und liegt damit darunter: bei gleichem Rang
            (z-index 0 gegen `auto`) entscheidet die Dokumentordnung. -->
-      <div class="zone-haze" :style="zoneHazeStyle" aria-hidden="true" />
+        <div class="zone-haze" :style="zoneHazeStyle" aria-hidden="true" />
 
-      <svg
-        class="tree-svg"
-        :class="{ 'tree-svg--focus': spotlightId !== null }"
-        :viewBox="`0 0 ${FORGE_STAGE_SIZE} ${FORGE_STAGE_SIZE}`"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <!-- DAS KANTENFELD. Alles, was die Bühne dauerhaft trägt, liegt in
+        <svg
+          class="tree-svg"
+          :class="{ 'tree-svg--focus': spotlightId !== null }"
+          :viewBox="`0 0 ${FORGE_STAGE_SIZE} ${FORGE_STAGE_SIZE}`"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <!-- DAS KANTENFELD. Alles, was die Bühne dauerhaft trägt, liegt in
              EINER Gruppe — damit das Zurücktreten beim Zeigen ein einziger
              `opacity`-Wert auf einer Ebene ist und nicht eine Umschaltung je
              Pfad. Bedingung und Scheinwerferkette stehen bewusst DARAUSSEN: sie
              sind die Antwort auf das Zeigen und dürfen nie mitgedimmt werden. -->
-        <g class="limb-field">
-          <!-- Gezeichnet wird nur, was OFFEN ist. Die Breite sagt die Ebene,
+          <g class="limb-field">
+            <!-- Gezeichnet wird nur, was OFFEN ist. Die Breite sagt die Ebene,
                die Farbe das Ziel. -->
-          <g class="limb-open" stroke-linecap="round" stroke-linejoin="round" fill="none">
-            <path
-              v-for="limb in openLimbs" :key="limb.key + '-o'"
-              :d="limb.d" :stroke-width="limbWidth(limb)" :stroke="limb.tint"
-            />
+            <g class="limb-open" stroke-linecap="round" stroke-linejoin="round" fill="none">
+              <path
+                v-for="limb in openLimbs"
+                :key="limb.key + '-o'"
+                :d="limb.d"
+                :stroke-width="limbWidth(limb)"
+                :stroke="limb.tint"
+              />
+            </g>
+
+            <g
+              class="road-limbs"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+              :stroke-dasharray="FORGE_MEEP_ROAD_DASH"
+            >
+              <path
+                v-for="limb in roadLimbs"
+                :key="limb.key + '-road'"
+                :d="limb.d"
+                :stroke-width="limbWidth(limb)"
+                :stroke="limb.tint"
+              />
+            </g>
           </g>
 
-          <g
-            class="road-limbs"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            fill="none"
-            :stroke-dasharray="FORGE_MEEP_ROAD_DASH"
-          >
+          <g class="confluence-limbs" stroke-linecap="round" stroke-linejoin="round" fill="none">
             <path
-              v-for="limb in roadLimbs"
-              :key="limb.key + '-road'"
+              v-for="limb in confluenceLimbs"
+              :key="limb.key + '-confluence'"
               :d="limb.d"
               :stroke-width="limbWidth(limb)"
               :stroke="limb.tint"
+              :class="
+                limb.kind === 'require' ? 'confluence-limb--require' : 'confluence-limb--structure'
+              "
             />
           </g>
-        </g>
 
-        <!-- Die BEDINGUNGEN des GEZEIGTEN Knotens, gestrichelt und in der Farbe
+          <!-- Die BEDINGUNGEN des GEZEIGTEN Knotens, gestrichelt und in der Farbe
              des Zustands. Sie lagen einmal an jedem gesperrten Ziel und damit
              im frischen Spielstand fast ueberall — rund fuenfzig Linien, die
              niemand erfragt hatte. Jetzt haengen sie am Zeiger.
@@ -149,19 +158,23 @@
              Bild heraus, weil eine Krone auf r = 438 stand und ihr Zweig auf
              r = 221. Im Netz ist jede dieser Kanten hoechstens
              `FORGE_EDGE_MAX_PX` lang — beide Enden stehen im selben Bild. -->
-        <g
-          class="req-limbs"
-          stroke-linecap="round" stroke-linejoin="round" fill="none"
-          :stroke-dasharray="FORGE_EDGE_REQ_DASH"
-        >
-          <path
-            v-for="limb in requireLimbs" :key="limb.key + '-req'"
-            :d="limb.d" :stroke-width="limb.width"
-            :class="limb.met ? 'req-limb--met' : 'req-limb--open'"
-          />
-        </g>
+          <g
+            class="req-limbs"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            fill="none"
+            :stroke-dasharray="FORGE_EDGE_REQ_DASH"
+          >
+            <path
+              v-for="limb in requireLimbs"
+              :key="limb.key + '-req'"
+              :d="limb.d"
+              :stroke-width="limb.width"
+              :class="limb.met ? 'req-limb--met' : 'req-limb--open'"
+            />
+          </g>
 
-        <!-- DER KAUFWEG der Verfolgung: Sonnenrand → Kernstrahl → Zweig →
+          <!-- DER KAUFWEG der Verfolgung: Sonnenrand → Kernstrahl → Zweig →
              Blatt, also genau das, was man kaufen muss. Durchgezogen, damit die
              Sprache eindeutig bleibt — gestrichelt sind die TORE darunter, die
              zusammenlaufen.
@@ -169,92 +182,104 @@
              OHNE Lauflicht: `.spot-limbs` marschiert, weil ein Hover Sekunden
              dauert; eine Verfolgung steht Minuten, und ein Dauerläufer über
              sieben Glieder wäre dann Lärm statt Auskunft. -->
-        <g
-          v-if="pursuitPath.chain.length > 0"
-          class="pursuit-limbs"
-          stroke-linecap="round" stroke-linejoin="round" fill="none"
-          :stroke="aimedFusionColor"
-        >
-          <path
-            v-for="limb in pursuitPath.chain" :key="limb.key + '-pursuit'"
-            :d="limb.d" :stroke-width="limbWidth(limb)"
-          />
-        </g>
+          <g
+            v-if="pursuitPath.chain.length > 0"
+            class="pursuit-limbs"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            fill="none"
+            :stroke="aimedFusionColor"
+          >
+            <path
+              v-for="limb in pursuitPath.chain"
+              :key="limb.key + '-pursuit'"
+              :d="limb.d"
+              :stroke-width="limbWidth(limb)"
+            />
+          </g>
 
-        <!-- Die Tore ALLER Fusions-Körper, blass. Sie stehen dauerhaft, damit
+          <!-- Die Tore ALLER Fusions-Körper, blass. Sie stehen dauerhaft, damit
              kein Körper unverbunden im Feld schwebt — laut wird immer nur der,
              den der Spieler gerade meint. -->
-        <g
-          class="fusion-limbs"
-          stroke-linecap="round" stroke-linejoin="round" fill="none"
-          :stroke-dasharray="FORGE_EDGE_REQ_DASH"
-        >
-          <path
-            v-for="limb in fusionLimbs" :key="limb.key"
-            :d="limb.d" :stroke-width="limb.width"
-          />
-        </g>
+          <g
+            class="fusion-limbs"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            fill="none"
+            :stroke-dasharray="FORGE_EDGE_REQ_DASH"
+          >
+            <path
+              v-for="limb in fusionLimbs"
+              :key="limb.key"
+              :d="limb.d"
+              :stroke-width="limb.width"
+            />
+          </g>
 
-        <!-- Die Tore des GEMEINTEN. Eigene Gruppe und nicht die daneben: sie
+          <!-- Die Tore des GEMEINTEN. Eigene Gruppe und nicht die daneben: sie
              hat eine andere Lebensdauer als der Zeiger, und zwei `v-for` in
              einem `<g>` verbänden sie an einem Ort, an dem nichts sie
              verbindet. Ebenfalls AUSSERHALB von `.limb-field` — die Antwort auf
              ein Ziel darf nie mitgedimmt werden. -->
-        <g
-          v-if="pursuitLimbs.length > 0"
-          class="req-limbs"
-          stroke-linecap="round" stroke-linejoin="round" fill="none"
-          :stroke-dasharray="FORGE_EDGE_REQ_DASH"
-        >
-          <path
-            v-for="limb in pursuitLimbs" :key="limb.key"
-            :d="limb.d" :stroke-width="limb.width"
-            :class="limb.met ? 'req-limb--met' : 'req-limb--open'"
-          />
-        </g>
+          <g
+            v-if="pursuitLimbs.length > 0"
+            class="req-limbs"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            fill="none"
+            :stroke-dasharray="FORGE_EDGE_REQ_DASH"
+          >
+            <path
+              v-for="limb in pursuitLimbs"
+              :key="limb.key"
+              :d="limb.d"
+              :stroke-width="limb.width"
+              :class="limb.met ? 'req-limb--met' : 'req-limb--open'"
+            />
+          </g>
 
-        <!-- Spotlight chain: star edge → … → the node being pointed at. Exists
+          <!-- Spotlight chain: star edge → … → the node being pointed at. Exists
              only while something is hovered, seven links at most. -->
-        <g
-          v-if="spotlightLimbs.length > 0"
-          class="spot-limbs"
-          stroke-linecap="round" stroke-linejoin="round" fill="none"
-        >
-          <path
-            v-for="limb in spotlightLimbs" :key="limb.key + '-spot'"
-            :d="limb.d" :stroke-width="limb.width + 1"
-            :stroke="spotlightColor"
-          />
-        </g>
-      </svg>
+          <g
+            v-if="spotlightLimbs.length > 0"
+            class="spot-limbs"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            fill="none"
+          >
+            <path
+              v-for="limb in spotlightLimbs"
+              :key="limb.key + '-spot'"
+              :d="limb.d"
+              :stroke-width="limb.width + 1"
+              :stroke="spotlightColor"
+            />
+          </g>
+        </svg>
 
-      <!-- Die Bühne ist WORTLOS. Hier standen fünf Pillen, je eine über einer
+        <!-- Die Bühne ist WORTLOS. Hier standen fünf Pillen, je eine über einer
            Ebene („Phase 1–2", „Swell · open" …). Was sie sagten, sagen inzwischen
            die Zeichen selbst: das Schloss am Motiv, DASS ein Knoten zu ist, und
            Tooltip wie Detailspalte, WELCHE Phase ihn aufschliesst. -->
 
-      <!-- DIE SONNE, und in ihrem Kern die Leitzahl.
+        <!-- DIE SONNE, und in ihrem Kern die Leitzahl.
 
            `SunChimeBoost` steht NEBEN den drei Körpern und nicht in ihnen: der
            Komet taumelt, die Plasmascheibe atmet, und eine Zahl, die mitdreht
            oder mitpulst, ist keine Anzeige mehr. Alle vier sind absolut in der
            Mitte des Wrappers verankert und tragen ihre Größe selbst. -->
-      <div class="sun-wrapper">
-        <CometDisc
-          v-if="solarStore.isCometState"
-          :diameter="bodyDiameter"
-          @ready="onSunReady"
-        />
-        <PhaseSunDisc v-else :diameter="bodyDiameter" @ready="onSunReady" />
-        <div
-          v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
-          class="next-phase-preview"
-          :style="nextPhasePreviewStyle"
-        />
-        <SunChimeBoost :diameter="bodyDiameter" :scale="totalScale" />
-      </div>
+        <div class="sun-wrapper">
+          <CometDisc v-if="solarStore.isCometState" :diameter="bodyDiameter" @ready="onSunReady" />
+          <PhaseSunDisc v-else :diameter="bodyDiameter" @ready="onSunReady" />
+          <div
+            v-if="solarStore.canUpgradeStar || solarStore.isUpgrading"
+            class="next-phase-preview"
+            :style="nextPhasePreviewStyle"
+          />
+          <SunChimeBoost :diameter="bodyDiameter" :scale="totalScale" />
+        </div>
 
-      <!-- DER ANKERKNOTEN der Verfolgung — die Konstellation selbst.
+        <!-- DER ANKERKNOTEN der Verfolgung — die Konstellation selbst.
            Eigene Klassen, NICHT `.tree-node`/`.node-circle`: die tragen
            Zustand, Kranz und Kaufgeste, und ein Körper ohne Sitz, der sie erbt,
            ist ein Sitz, der nur so tut. Übernommen ist allein die
@@ -262,114 +287,117 @@
 
            Wrapper trägt die Bühnenlage, der Knopf die Geste: die Karte am
            Zeiger enthält eine Liste und kann nicht in einen `<button>`. -->
-      <div
-        v-for="body in fusionBodies"
-        :key="body.id"
-        class="pursuit-mark"
-        :class="{
-          'pursuit-mark--aimed': aimedFusionId === body.id,
-          'pursuit-mark--forged': body.forged,
-          'pursuit-mark--hit': isSearchHit(body.id),
-          'pursuit-mark--dim': isDimmed(body.id),
-          'pursuit-mark--tipped': fusionHoverId === body.id,
-        }"
-        :style="{
-          left: `${Math.round(body.at.x)}px`,
-          top: `${Math.round(body.at.y)}px`,
-          '--pursuit-c': body.color,
-        }"
-      >
-        <button
-          class="pursuit-mark-btn"
-          type="button"
-          :data-fusion="body.id"
-          :aria-label="body.name"
-          @click.stop="aimFusion(body.id)"
+        <div
+          v-for="body in fusionBodies"
+          :key="body.id"
+          class="pursuit-mark"
+          :class="{
+            'pursuit-mark--aimed': aimedFusionId === body.id,
+            'pursuit-mark--forged': body.forged,
+            'pursuit-mark--hit': isSearchHit(body.id),
+            'pursuit-mark--dim': isDimmed(body.id),
+            'pursuit-mark--tipped': fusionHoverId === body.id,
+          }"
+          :style="{
+            left: `${Math.round(body.at.x)}px`,
+            top: `${Math.round(body.at.y)}px`,
+            '--pursuit-c': body.color,
+          }"
         >
-          <span class="pursuit-mark-ring">
-            <!-- Dasselbe Siegel wie am Baumknoten, und aus demselben Grund:
+          <button
+            class="pursuit-mark-btn"
+            type="button"
+            :data-fusion="body.id"
+            :aria-label="body.name"
+            @click.stop="aimFusion(body.id)"
+          >
+            <span class="pursuit-mark-ring">
+              <!-- Dasselbe Siegel wie am Baumknoten, und aus demselben Grund:
                  sieben der vierzehn Fusionen kaufen eine Regel, die anderen
                  sieben einen Prozentsatz. Bis hierher sahen alle vierzehn
                  gleich aus. -->
-            <span v-if="body.rule !== null" class="node-seal" aria-hidden="true">
-              <svg viewBox="0 0 100 100">
-                <polygon :points="FORGE_SEAL_POINTS" />
-              </svg>
+              <span v-if="body.rule !== null" class="node-seal" aria-hidden="true">
+                <svg viewBox="0 0 100 100">
+                  <polygon :points="FORGE_SEAL_POINTS" />
+                </svg>
+              </span>
+              <Icon
+                :icon="body.icon"
+                :width="body.rule === null ? FORGE_FUSION_ICON_SIZE : FORGE_SEAL_ICON_SIZE"
+                :height="body.rule === null ? FORGE_FUSION_ICON_SIZE : FORGE_SEAL_ICON_SIZE"
+              />
             </span>
-            <Icon
-              :icon="body.icon"
-              :width="body.rule === null ? FORGE_FUSION_ICON_SIZE : FORGE_SEAL_ICON_SIZE"
-              :height="body.rule === null ? FORGE_FUSION_ICON_SIZE : FORGE_SEAL_ICON_SIZE"
-            />
-          </span>
-          <!-- Das Namensschild trägt NUR der Gemeinte. Die Bühne ist wortlos —
+            <!-- Das Namensschild trägt NUR der Gemeinte. Die Bühne ist wortlos —
                vierzehn Schilder dauerhaft wären ein zweites Kantenfeld aus Text.
                Steht die Karte, nennt sie ihn schon; dann tritt es zurück. -->
-          <span
-            v-if="aimedFusionId === body.id && fusionHoverId !== body.id"
-            class="pursuit-mark-name"
-            :style="pursuitNameStyle"
-            >{{ body.name }}</span
-          >
-        </button>
+            <span
+              v-if="aimedFusionId === body.id && fusionHoverId !== body.id"
+              class="pursuit-mark-name"
+              :style="pursuitNameStyle"
+              >{{ body.name }}</span
+            >
+          </button>
 
-        <!-- Dieselbe Karte wie am Baumknoten, aus derselben Komponente. -->
-        <ForgeNodeTooltip
-          v-if="fusionHoverId === body.id && fusionTip !== null"
-          :tip="fusionTip"
-          :side="body.at.y >= C ? 'below' : 'above'"
-        />
-      </div>
+          <!-- Dieselbe Karte wie am Baumknoten, aus derselben Komponente. -->
+          <ForgeNodeTooltip
+            v-if="fusionHoverId === body.id && fusionTip !== null"
+            :tip="fusionTip"
+            :side="body.at.y >= C ? 'below' : 'above'"
+          />
+        </div>
 
-      <!-- Nodes -->
-      <div
-        v-for="node in allNodes"
-        :key="node.id"
-        class="tree-node"
-        :class="{ 'tree-node--spot': isSpot(node.id) }"
-        :style="nodePos(node)"
-      >
+        <!-- Nodes -->
         <div
-          class="node-circle"
-          :class="[
-            `node-circle--${node.sizeClass}`,
-            `node-circle--${entryOf(node).state}`,
-            {
-              // Die zwei Klassen, die den Baum beim Öffnen lesbar machen:
-              // kaufbar leuchtet, offen-aber-zu-teuer tritt zurück. Sie hängen
-              // an `canBuy` und NICHT an `state === 'affordable'` — dieselbe
-              // Wahl wie in `ForgeUpgradeTile.vue`, damit Baum und Liste
-              // dieselbe Frage gleich beantworten.
-              'node-circle--ready': entryOf(node).canBuy,
-              'node-circle--short': isShort(node),
-              'node-circle--spot': isSpot(node.id),
-              'node-circle--pinned': pinnedId === node.id,
-              // Was Voraussetzung IST, dämpft nicht — dieselbe Vorfahrt wie
-              // `onChain()` im Meep-Baum. Eine Antwort, die auf gedimmten
-              // Kreisen steht, sieht nach einem Fehler aus.
-              'node-circle--req': hasReqRing(node.id),
-              // Und was auf dem WEG dorthin liegt, ebenso wenig.
-              'node-circle--trail': spotTrail.has(node.id),
-              'node-circle--dim': isDimmed(node.id),
-              'node-circle--hit': isSearchHit(node.id),
-              // Der Rand trägt die Fassung nach AUSSEN, wo das Sechseck darin
-              // zu klein wird. Verliert absichtlich gegen die Zustände darunter.
-              'node-circle--rule': node.rule !== null,
-              // Nicht `maxed`: das färbt den ganzen Kreis gold. Gemeint ist
-              // allein die Fassung.
-              'node-circle--forged': entryOf(node).level > 0,
-            },
-          ]"
-          :style="{ '--node-color': node.color }"
-          @click.stop="handleNodeClick(node)"
-          @mouseenter="setTreeHover(node.id)"
-          @mouseleave="setTreeHover(null)"
+          v-for="node in allNodes"
+          :key="node.id"
+          class="tree-node"
+          :class="{ 'tree-node--spot': isSpot(node.id) }"
+          :style="nodePos(node)"
         >
-          <span class="node-glow" aria-hidden="true" />
-          <!-- Der SUCHRING. Eigene, statische Ebene mit eigenem Ton — Gold ist
+          <div
+            class="node-circle"
+            :class="[
+              `node-circle--${node.sizeClass}`,
+              `node-circle--${entryOf(node).state}`,
+              node.tier === 'confluence'
+                ? `node-circle--confluence-stage-${node.def?.confluenceStage ?? 1}`
+                : '',
+              {
+                // Die zwei Klassen, die den Baum beim Öffnen lesbar machen:
+                // kaufbar leuchtet, offen-aber-zu-teuer tritt zurück. Sie hängen
+                // an `canBuy` und NICHT an `state === 'affordable'` — dieselbe
+                // Wahl wie in `ForgeUpgradeTile.vue`, damit Baum und Liste
+                // dieselbe Frage gleich beantworten.
+                'node-circle--ready': entryOf(node).canBuy,
+                'node-circle--short': isShort(node),
+                'node-circle--spot': isSpot(node.id),
+                'node-circle--pinned': pinnedId === node.id,
+                // Was Voraussetzung IST, dämpft nicht — dieselbe Vorfahrt wie
+                // `onChain()` im Meep-Baum. Eine Antwort, die auf gedimmten
+                // Kreisen steht, sieht nach einem Fehler aus.
+                'node-circle--req': hasReqRing(node.id),
+                // Und was auf dem WEG dorthin liegt, ebenso wenig.
+                'node-circle--trail': spotTrail.has(node.id),
+                'node-circle--dim': isDimmed(node.id),
+                'node-circle--hit': isSearchHit(node.id),
+                // Der Rand trägt die Fassung nach AUSSEN, wo das Sechseck darin
+                // zu klein wird. Verliert absichtlich gegen die Zustände darunter.
+                'node-circle--rule': node.rule !== null,
+                // Nicht `maxed`: das färbt den ganzen Kreis gold. Gemeint ist
+                // allein die Fassung.
+                'node-circle--forged': entryOf(node).level > 0,
+              },
+            ]"
+            :style="{ '--node-color': node.color }"
+            @click.stop="handleNodeClick(node)"
+            @mouseenter="setTreeHover(node.id)"
+            @mouseleave="setTreeHover(null)"
+          >
+            <span class="node-glow" aria-hidden="true" />
+            <!-- Der SUCHRING. Eigene, statische Ebene mit eigenem Ton — Gold ist
                „kaufbar", Grün/Rot sind die Voraussetzung. -->
-          <span v-if="isSearchHit(node.id)" class="node-hit" aria-hidden="true" />
-          <!-- Eine Ebene je Spotlight, nicht eine je Knoten: so existiert genau
+            <span v-if="isSearchHit(node.id)" class="node-hit" aria-hidden="true" />
+            <!-- Eine Ebene je Spotlight, nicht eine je Knoten: so existiert genau
                EINE statt fünfundzwanzig, und der Ping fängt bei jedem neuen
                Ziel von vorn an, weil das Element selbst neu ist.
 
@@ -378,37 +406,37 @@
                gewechselt — das Element stünde da und hätte seinen Ping
                ausserhalb des Bildes verpulvert. Ein neuer Schlüssel lässt es
                neu entstehen, und der Ping fällt mit der Ankunft zusammen. -->
-          <span
-            v-if="isSpot(node.id)"
-            :key="`spot-${node.id}-${arrivalTick}`"
-            class="node-spot"
-            aria-hidden="true"
-          />
-          <!-- Der VORAUSSETZUNGS-RING. Grün steht, rot fehlt — dieselben zwei
+            <span
+              v-if="isSpot(node.id)"
+              :key="`spot-${node.id}-${arrivalTick}`"
+              class="node-spot"
+              aria-hidden="true"
+            />
+            <!-- Der VORAUSSETZUNGS-RING. Grün steht, rot fehlt — dieselben zwei
                Töne wie die Punkte des Kranzes und die Häkchen im Tooltip. Eigene
                Ebene neben `.node-spot`, aber nie gleichzeitig mit ihr: ein
                Knoten kann nicht seine eigene Voraussetzung sein. -->
-          <span
-            v-if="hasReqRing(node.id)"
-            class="node-req"
-            :class="reqRingMet(node.id) ? 'node-req--met' : 'node-req--open'"
-            aria-hidden="true"
-          />
-          <!-- Der WEG-RING. Dritte Rolle neben Ziel und Voraussetzung, und die
+            <span
+              v-if="hasReqRing(node.id)"
+              class="node-req"
+              :class="reqRingMet(node.id) ? 'node-req--met' : 'node-req--open'"
+              aria-hidden="true"
+            />
+            <!-- Der WEG-RING. Dritte Rolle neben Ziel und Voraussetzung, und die
                leiseste: enger, dünner, in der Farbe des ZIELS — er gehört zur
                Kante unter ihm, nicht zum Kreis, auf dem er sitzt.
 
                Der Schlüssel hängt am Spotlight, nicht am Knoten: dasselbe Rezept
                wie beim Ping darüber, damit die Welle bei jedem Fokuswechsel von
                vorn anläuft statt einmal pro Sitzung. -->
-          <span
-            v-if="spotTrail.has(node.id)"
-            :key="`trail-${node.id}-${spotlightId}`"
-            class="node-trail"
-            :style="spotTrailStyles.get(node.id)"
-            aria-hidden="true"
-          />
-          <!-- DAS SIEGEL — die einzige Stelle im Netz, an der die FORM etwas
+            <span
+              v-if="spotTrail.has(node.id)"
+              :key="`trail-${node.id}-${spotlightId}`"
+              class="node-trail"
+              :style="spotTrailStyles.get(node.id)"
+              aria-hidden="true"
+            />
+            <!-- DAS SIEGEL — die einzige Stelle im Netz, an der die FORM etwas
                sagt.
 
                Ein Knoten, der eine Regel kauft, ist kein Kreis. Jeder andere
@@ -424,37 +452,42 @@
                Gestrichelt heisst „gilt noch nicht", durchgezogen „gilt". Die
                Vokabel ist geborgt, nicht neu: `.pursuit-mark-ring` spricht sie
                seit jeher, und sie kommt hier erstmals an einen Baumknoten. -->
-          <span v-if="node.rule !== null" class="node-seal" aria-hidden="true">
-            <svg viewBox="0 0 100 100">
-              <polygon :points="FORGE_SEAL_POINTS" />
-            </svg>
-          </span>
-          <Icon
-            :icon="node.icon"
-            :width="node.iconSize"
-            :height="node.iconSize"
-            class="node-glyph"
-            :style="{ color: node.color }"
-          />
-          <span v-if="entryOf(node).level > 0 || entryOf(node).state !== 'locked'" class="node-level">
-            {{ levelChip(entryOf(node)) }}
-          </span>
-          <!-- Das Schloss steht genau dort, wo der Stufen-Chip NICHT steht: die
+            <span v-if="node.rule !== null" class="node-seal" aria-hidden="true">
+              <svg viewBox="0 0 100 100">
+                <polygon :points="FORGE_SEAL_POINTS" />
+              </svg>
+            </span>
+            <Icon
+              :icon="node.icon"
+              :width="node.iconSize"
+              :height="node.iconSize"
+              class="node-glyph"
+              :style="{ color: node.color }"
+            />
+            <span
+              v-if="node.tier === 'confluence'"
+              class="node-confluence-stage"
+              aria-hidden="true"
+            >
+              {{ node.def?.confluenceStage ?? 1 }}
+            </span>
+            <span
+              v-if="entryOf(node).level > 0 || entryOf(node).state !== 'locked'"
+              class="node-level"
+            >
+              {{ levelChip(entryOf(node)) }}
+            </span>
+            <!-- Das Schloss steht genau dort, wo der Stufen-Chip NICHT steht: die
                Bedingung darüber schliesst den gesperrten Knoten aus, und bis
                hierher war das eine Leerstelle. Dieselbe Marke trägt die Zeile in
                der Liste (`.fc-lock-badge` in rpg-theme.css) — daran erkennt man
                beide als dasselbe Upgrade wieder.
                `capped` bekommt keins: ein Deckel ist keine Sperre. -->
-          <span
-            v-if="entryOf(node).state === 'locked'"
-            class="fc-lock-badge"
-            aria-hidden="true"
-          >
-            <Icon :icon="FORGE_LOCK_ICON" width="100%" height="100%" />
-          </span>
+            <span v-if="entryOf(node).state === 'locked'" class="fc-lock-badge" aria-hidden="true">
+              <Icon :icon="FORGE_LOCK_ICON" width="100%" height="100%" />
+            </span>
 
-
-          <!-- Hier stand DAS GEGENSTÜCK ZUM SCHLOSS: ein grüner Kreis mit
+            <!-- Hier stand DAS GEGENSTÜCK ZUM SCHLOSS: ein grüner Kreis mit
                Blitz, „kaufbar", oben rechts. Er ist gefallen, weil die Ecke
                inzwischen der NEU-Marke gehört und die beiden sich zwangsläufig
                trafen — frisch heisst immer auch kaufbar. Ein Zeichen, das nur
@@ -465,7 +498,7 @@
                heller Rand, statischer Schein (`--ready`) — und drüben in der
                Liste der grüne Knopf mit dem Preis darauf. -->
 
-          <!-- NEU SEIT DEM LETZTEN BLICK — und zwar STATT des Blitzes darüber,
+            <!-- NEU SEIT DEM LETZTEN BLICK — und zwar STATT des Blitzes darüber,
                nicht neben ihm.
 
                Dieselbe Marke wie an der Zeile, am Profil-Reiter und an der
@@ -475,66 +508,67 @@
                Ihre Zahl ist die des Stapelkaufs: wie viele Stufen dieser Knoten
                jetzt auf einmal hergäbe. Hier ist sie die EINZIGE Quelle dafür —
                der Baum hat keinen Stapelknopf, der es sonst sagen würde. -->
-          <ShopReadyBadge
-            v-if="freshIds.has(node.id) && showCornerBadge(node)"
-            tone="skill"
-            class="node-fresh-badge"
-            :style="{ '--sbadge-d': freshBadgePx[node.sizeClass] }"
-            :count="freshCountOf(node)"
-            :title="FORGE_FRESH_TITLE"
-            :label="FORGE_FRESH_TITLE"
-          />
+            <ShopReadyBadge
+              v-if="freshIds.has(node.id) && showCornerBadge(node)"
+              tone="skill"
+              class="node-fresh-badge"
+              :style="{ '--sbadge-d': freshBadgePx[node.sizeClass] }"
+              :count="freshCountOf(node)"
+              :title="FORGE_FRESH_TITLE"
+              :label="FORGE_FRESH_TITLE"
+            />
 
-          <!-- DER BEDINGUNGS-KRANZ. Er steht auf dem OBEREN Bogen, weil das
+            <!-- DER BEDINGUNGS-KRANZ. Er steht auf dem OBEREN Bogen, weil das
                Schloss immer unten rechts sitzt (Sektor 105°…165°) und der
                Fächer bei ±39° endet — die beiden Marken können sich bei keiner
                Knotenrichtung treffen, weil beide am Kreis kleben und nicht an
                der Bühne. -->
-          <span v-if="reqWreaths.has(node.id)" class="node-wreath" aria-hidden="true">
-            <i
-              v-for="dot in reqWreaths.get(node.id)"
-              :key="dot.key"
-              class="wreath-dot"
-              :class="dot.met ? 'wreath-dot--met' : 'wreath-dot--open'"
-              :style="dot.style"
-            />
-          </span>
+            <span v-if="reqWreaths.has(node.id)" class="node-wreath" aria-hidden="true">
+              <i
+                v-for="dot in reqWreaths.get(node.id)"
+                :key="dot.key"
+                class="wreath-dot"
+                :class="dot.met ? 'wreath-dot--met' : 'wreath-dot--open'"
+                :style="dot.style"
+              />
+            </span>
 
-          <!-- Die ANHEFTUNG. Unten LINKS, also genau gegenüber dem Schloss: ein
+            <!-- Die ANHEFTUNG. Unten LINKS, also genau gegenüber dem Schloss: ein
                angehefteter Knoten ist immer auch ein gesperrter, beide Marken
                stehen damit gleichzeitig im Bild, ohne sich zu berühren. -->
-          <span v-if="pinnedId === node.id" class="node-pin-badge" aria-hidden="true">
-            <Icon :icon="FORGE_PIN_ICON" width="100%" height="100%" />
-          </span>
+            <span v-if="pinnedId === node.id" class="node-pin-badge" aria-hidden="true">
+              <Icon :icon="FORGE_PIN_ICON" width="100%" height="100%" />
+            </span>
 
-          <span
-            v-if="node.tier === 'meep'"
-            class="meep-cost-badge"
-            :class="{
-              'meep-cost-badge--short': !entryOf(node).meepOk,
-              'meep-cost-badge--bought': entryOf(node).state === 'maxed',
-            }"
-            :style="{ '--meep-c': node.color }"
-            aria-hidden="true"
-          >
-            <img :src="FORGE_MEEP_IMAGE" alt="" />
-            <span>{{ entryOf(node).meepCost }}</span>
-          </span>
-        </div>
+            <span
+              v-if="node.tier === 'meep' || entryOf(node).meepCost > 0"
+              class="meep-cost-badge"
+              :class="{
+                'meep-cost-badge--short': !entryOf(node).meepOk,
+                'meep-cost-badge--bought': entryOf(node).state === 'maxed',
+                'meep-cost-badge--confluence': node.tier === 'confluence',
+              }"
+              :style="{ '--meep-c': node.color }"
+              aria-hidden="true"
+            >
+              <img :src="FORGE_MEEP_IMAGE" alt="" />
+              <span>{{ entryOf(node).meepCost }}</span>
+            </span>
+          </div>
 
-        <!-- Die Karte am Knoten. Sie hängt am Hover DIESER Spalte, nicht am
+          <!-- Die Karte am Knoten. Sie hängt am Hover DIESER Spalte, nicht am
              Spotlight: ein Zeiger auf der Karte rechts darf hier keinen zweiten
              Abzug derselben Zahlen aufklappen.
 
              Durchgereicht wird nur die Aufklapprichtung — alles andere steht
              im Eintrag, und der ist für Baum und Liste derselbe. -->
-        <ForgeNodeTooltip
-          v-if="treeHoverId === node.id"
-          :tip="forgeNodeTipView(entryOf(node))"
-          :side="isTooltipBelow(node) ? 'below' : 'above'"
-        />
+          <ForgeNodeTooltip
+            v-if="treeHoverId === node.id"
+            :tip="forgeNodeTipView(entryOf(node))"
+            :side="isTooltipBelow(node) ? 'below' : 'above'"
+          />
+        </div>
       </div>
-    </div>
     </div>
   </div>
 </template>
@@ -1074,6 +1108,7 @@ const openLimbs = computed<DrawnLimb[]>(() => {
   }
   const out: DrawnLimb[] = []
   for (const limb of structureLimbs.value) {
+    if (nodeById.value.get(limb.targetId)?.tier === 'confluence') continue
     if (isOpen(limb.targetId)) out.push({ ...limb, tint: limb.color })
   }
   for (const bridge of bridgeLimbs.value) {
@@ -1082,6 +1117,12 @@ const openLimbs = computed<DrawnLimb[]>(() => {
   // The road is rendered separately so its price path has its own visual weight.
   return out
 })
+
+const confluenceLimbs = computed<DrawnLimb[]>(() =>
+  limbs.value
+    .filter((limb) => nodeById.value.get(limb.targetId)?.tier === 'confluence')
+    .map((limb) => ({ ...limb, tint: limb.color })),
+)
 
 /** The Meep road stays visible, but its dotted stroke keeps it distinct from Forge structure. */
 const roadLimbs = computed<DrawnLimb[]>(() =>
@@ -1234,6 +1275,12 @@ function onFusionOver(e: MouseEvent): void {
   const btn = (e.target as HTMLElement | null)?.closest?.('.pursuit-mark-btn')
   fusionHoverId.value = btn?.getAttribute('data-fusion') ?? null
 }
+
+function onViewportLeave(): void {
+  setTreeHover(null)
+  fusionHoverId.value = null
+}
+
 const aimedFusionId = computed(() => pursuitId.value ?? fusionHoverId.value)
 
 /**
@@ -1409,7 +1456,10 @@ const aimedFusionColor = computed(
 const pursuitNameStyle = computed(() => {
   const read = Math.min(
     FORGE_PURSUIT_NAME_MAX_READ_SCALE,
-    Math.max(1, FORGE_PURSUIT_NAME_MIN_SCREEN_PX / (FORGE_PURSUIT_NAME_PX * (totalScale.value || 1))),
+    Math.max(
+      1,
+      FORGE_PURSUIT_NAME_MIN_SCREEN_PX / (FORGE_PURSUIT_NAME_PX * (totalScale.value || 1)),
+    ),
   )
   return { transform: `translateX(-50%) scale(${read.toFixed(3)})` }
 })
@@ -1665,10 +1715,7 @@ function entryOf(node: TreeNode): ForgeUpgradeEntry {
 function isShort(node: TreeNode): boolean {
   const entry = entryOf(node)
   return (
-    entry.state !== 'locked' &&
-    entry.state !== 'capped' &&
-    entry.state !== 'maxed' &&
-    !entry.canBuy
+    entry.state !== 'locked' && entry.state !== 'capped' && entry.state !== 'maxed' && !entry.canBuy
   )
 }
 
@@ -2220,7 +2267,8 @@ function frameToPursuit(): void {
   ]
   for (const id of pursuitPath.value.ids) {
     const node = nodeById.value.get(id)
-    if (node) marks.push({ at: { x: node.x, y: node.y }, radius: forgeNodeScreenRadius(node.sizeClass, 1) })
+    if (node)
+      marks.push({ at: { x: node.x, y: node.y }, radius: forgeNodeScreenRadius(node.sizeClass, 1) })
   }
   const cam = forgeGroupCameraAt(anchor, marks, viewportSize.value, zoomFloor.value)
   if (!cam) return
@@ -2290,12 +2338,7 @@ function comfortToFocus(id: string | null): void {
   if (id === null) return
   const node = nodeById.value.get(id)
   if (!node) return
-  const target = forgeComfortPan(
-    node,
-    nodeRadiusOnScreen(node),
-    camera(),
-    viewportSize.value,
-  )
+  const target = forgeComfortPan(node, nodeRadiusOnScreen(node), camera(), viewportSize.value)
   if (!target) return
   movePan(target, panDurationFor(pan.value, target))
   pingOnArrival(id)
@@ -2457,12 +2500,7 @@ watch(listHoverId, (id) => {
     // Über dieselbe Komfortzone wie der Klick. Zwei Kamerasprachen in einem
     // Baum wären die schlimmere Fassung: dieselbe Zeile, einmal überfahren und
     // einmal angeklickt, führte sonst zu zwei verschiedenen Bildern.
-    const target = forgeComfortPan(
-      node,
-      nodeRadiusOnScreen(node),
-      camera(),
-      viewportSize.value,
-    )
+    const target = forgeComfortPan(node, nodeRadiusOnScreen(node), camera(), viewportSize.value)
     travelId.value = null
     if (!target) return
     movePan(target, panDurationFor(pan.value, target))
@@ -2785,6 +2823,19 @@ const nextPhasePreviewStyle = computed(() => ({
   opacity: 0.72;
 }
 
+.confluence-limbs {
+  opacity: 0.86;
+}
+
+.confluence-limb--structure {
+  opacity: 0.92;
+}
+
+.confluence-limb--require {
+  stroke-dasharray: 9 6;
+  opacity: 0.82;
+}
+
 /* Das Kantenfeld tritt zurück, sobald auf einen Knoten gezeigt wird — EIN Wert
    auf EINER Ebene, also Compositor-Arbeit (Regel 1). Vorher dimmten nur die
    Kreise, und das volle Liniennetz darüber las sich nicht als Antwort, sondern
@@ -2875,8 +2926,15 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 @keyframes tree-phase-preview-pulse {
-  0%, 100% { opacity: 0.12; transform: scale(1); }
-  50%       { opacity: 0.35; transform: scale(1.06); }
+  0%,
+  100% {
+    opacity: 0.12;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(1.06);
+  }
 }
 
 /* ══════════════════════════════════════════════════
@@ -3024,20 +3082,20 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 .node-circle--root {
-  width: v-bind("nodePx.root");
-  height: v-bind("nodePx.root");
+  width: v-bind('nodePx.root');
+  height: v-bind('nodePx.root');
   border: 3px solid #2a1a08;
 }
 
 .node-circle--branch {
-  width: v-bind("nodePx.branch");
-  height: v-bind("nodePx.branch");
+  width: v-bind('nodePx.branch');
+  height: v-bind('nodePx.branch');
   border: 2px solid #2a1a08;
 }
 
 .node-circle--leaf {
-  width: v-bind("nodePx.leaf");
-  height: v-bind("nodePx.leaf");
+  width: v-bind('nodePx.leaf');
+  height: v-bind('nodePx.leaf');
   border: 2px solid #2a1a08;
 }
 
@@ -3046,14 +3104,14 @@ const nextPhasePreviewStyle = computed(() => ({
    Rand ist das einzige, was sie optisch trennt: dieselben Töne wie ihr Kamm im
    Tiefenfeld und ihr Chip in der Leiste (Türkis, Blauviolett). */
 .node-circle--ward {
-  width: v-bind("nodePx.ward");
-  height: v-bind("nodePx.ward");
+  width: v-bind('nodePx.ward');
+  height: v-bind('nodePx.ward');
   border: 2px solid #1e5a50;
 }
 
 .node-circle--pact {
-  width: v-bind("nodePx.pact");
-  height: v-bind("nodePx.pact");
+  width: v-bind('nodePx.pact');
+  height: v-bind('nodePx.pact');
   border: 2px solid #3a4a80;
 }
 
@@ -3061,8 +3119,8 @@ const nextPhasePreviewStyle = computed(() => ({
    wie sein Kamm und sein Listenabschnitt — und im Projekt der Ton für
    „episch/selten" (`FORGE_RELIC_RARITY_COLOR.epic`). */
 .node-circle--bough {
-  width: v-bind("nodePx.bough");
-  height: v-bind("nodePx.bough");
+  width: v-bind('nodePx.bough');
+  height: v-bind('nodePx.bough');
   border: 2px solid #4a2a6a;
 }
 
@@ -3070,8 +3128,8 @@ const nextPhasePreviewStyle = computed(() => ({
    Sein Rand ist blasser als jeder andere: eine Kette aus fünf davon soll als
    Linie lesen und nicht als Reihe von Zielen. */
 .node-circle--glimmer {
-  width: v-bind("nodePx.glimmer");
-  height: v-bind("nodePx.glimmer");
+  width: v-bind('nodePx.glimmer');
+  height: v-bind('nodePx.glimmer');
   border: 2px solid #3a4048;
 }
 
@@ -3081,9 +3139,33 @@ const nextPhasePreviewStyle = computed(() => ({
    60 % zieht. Der goldene Rand ist derselbe Ton wie sein Kamm und sein
    Listenabschnitt. */
 .node-circle--crown {
-  width: v-bind("nodePx.crown");
-  height: v-bind("nodePx.crown");
+  width: v-bind('nodePx.crown');
+  height: v-bind('nodePx.crown');
   border: 3px solid #6a5020;
+}
+
+.node-circle--confluence {
+  width: v-bind('nodePx.confluence');
+  height: v-bind('nodePx.confluence');
+  border: 3px solid #7a4e20;
+}
+
+.node-confluence-stage {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  min-width: 13px;
+  height: 13px;
+  padding: 1px 3px;
+  border: 1px solid #7a4e20;
+  border-radius: 50%;
+  background: #141410;
+  color: #e8c040;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 10px;
+  text-align: center;
+  pointer-events: none;
 }
 
 .meep-cost-badge {
@@ -3125,6 +3207,16 @@ const nextPhasePreviewStyle = computed(() => ({
 .meep-cost-badge--bought {
   border-color: #52b830;
   color: #9fe062;
+}
+
+.meep-cost-badge--confluence {
+  border-color: #e8c040;
+  color: #f0d878;
+}
+
+.meep-cost-badge--confluence.meep-cost-badge--short {
+  border-color: #cc6050;
+  color: #cc6050;
 }
 
 /* ══════════════════════════════════════════════════
@@ -3175,7 +3267,6 @@ const nextPhasePreviewStyle = computed(() => ({
   opacity: 0.62;
 }
 
-
 /* GESCHMIEDET: durchgezogen und voll. Gestrichelt hiess von Anfang an „gibt es
    noch nicht" — dieselbe Vokabel, die `.pursuit-mark-ring` seit jeher spricht;
    das Siegel bringt sie erstmals an die Baumknoten. */
@@ -3184,7 +3275,6 @@ const nextPhasePreviewStyle = computed(() => ({
   stroke-dasharray: none;
   opacity: 1;
 }
-
 
 /* Der RAND trägt die Aussage nach aussen, wo das Sechseck zu klein wird.
    Volle Leitfarbe statt des matten Rang-Tons `#6a5020`, und drei Pixel — das
@@ -3263,25 +3353,25 @@ const nextPhasePreviewStyle = computed(() => ({
    Heute tragen nur Kronen und Boughs `requires`; die übrigen fünf Regeln stehen
    für den nächsten Ring, der welche bekommt, und kosten nichts. */
 .node-circle--root .wreath-dot {
-  --wr: v-bind("nodeRadiusPx.root");
+  --wr: v-bind('nodeRadiusPx.root');
 }
 .node-circle--branch .wreath-dot {
-  --wr: v-bind("nodeRadiusPx.branch");
+  --wr: v-bind('nodeRadiusPx.branch');
 }
 .node-circle--leaf .wreath-dot {
-  --wr: v-bind("nodeRadiusPx.leaf");
+  --wr: v-bind('nodeRadiusPx.leaf');
 }
 .node-circle--ward .wreath-dot {
-  --wr: v-bind("nodeRadiusPx.ward");
+  --wr: v-bind('nodeRadiusPx.ward');
 }
 .node-circle--pact .wreath-dot {
-  --wr: v-bind("nodeRadiusPx.pact");
+  --wr: v-bind('nodeRadiusPx.pact');
 }
 .node-circle--crown .wreath-dot {
-  --wr: v-bind("nodeRadiusPx.crown");
+  --wr: v-bind('nodeRadiusPx.crown');
 }
 .node-circle--bough .wreath-dot {
-  --wr: v-bind("nodeRadiusPx.bough");
+  --wr: v-bind('nodeRadiusPx.bough');
 }
 
 /* Gefüllt = erfüllt. Der dunkle Rand hält den Punkt bei kleinem Zoom vom
@@ -3592,7 +3682,9 @@ const nextPhasePreviewStyle = computed(() => ({
 
 .node-circle--maxed {
   border-color: #c89040;
-  box-shadow: 0 0 10px rgba(232, 192, 64, 0.5), 0 0 20px rgba(232, 192, 64, 0.2);
+  box-shadow:
+    0 0 10px rgba(232, 192, 64, 0.5),
+    0 0 20px rgba(232, 192, 64, 0.2);
   cursor: default;
 }
 
@@ -3622,8 +3714,14 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 @keyframes node-spot-breathe {
-  from { opacity: 0.55; transform: scale(1); }
-  to   { opacity: 1; transform: scale(1.06); }
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.06);
+  }
 }
 
 /* Der einmalige Ping auf derselben Marke: ein Ring, der aufgeht und vergeht. */
@@ -3637,8 +3735,14 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 @keyframes node-spot-ping {
-  from { opacity: 0.7; transform: scale(1); }
-  to   { opacity: 0; transform: scale(1.9); }
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.9);
+  }
 }
 
 /* Der VORAUSSETZUNGS-RING. Gleiche Ebene und gleicher `inset` wie `.node-spot` —
@@ -3694,9 +3798,18 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 @keyframes node-trail-wave {
-  from { opacity: 0; transform: scale(0.72); }
-  55%  { opacity: 1; transform: scale(1.14); }
-  to   { opacity: 0.85; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.14);
+  }
+  to {
+    opacity: 0.85;
+    transform: scale(1);
+  }
 }
 
 /* Zwischen `--dim` (0,3) und voll: der Weg ist beteiligt, aber nicht gemeint.
@@ -3836,7 +3949,6 @@ const nextPhasePreviewStyle = computed(() => ({
   z-index: -1;
 }
 
-
 /* ══════════════════════════════════════════════════
    RINGFILTER — was der Chip oben nicht durchlässt
 ══════════════════════════════════════════════════ */
@@ -3857,7 +3969,9 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 @keyframes forge-spot-flow {
-  to { stroke-dashoffset: -24; }
+  to {
+    stroke-dashoffset: -24;
+  }
 }
 
 /* ══════════════════════════════════════════════════

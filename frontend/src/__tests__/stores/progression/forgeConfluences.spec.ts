@@ -5,8 +5,11 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useMeepTreeStore } from '@/stores/progression/meepTreeStore'
 import { useGameStore } from '@/stores/core/gameStore'
+import { useInventoryStore } from '@/stores/economy/inventoryStore'
+import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { FORGE_CONFLUENCES, getForgeNode } from '@/config/progression/starForge'
 import { MEEP_TREE_NODE_INDEX, MEEP_TREE_NODES } from '@/config/progression/meepTree'
+import { FORGE_BOUGH_UNLOCK_PHASE } from '@/config/constants'
 
 /*
  * Die Naht zwischen Sonne und Strasse — und die zwei Fehler, die sie beim Bauen
@@ -33,6 +36,11 @@ const READINGS: { id: string; read: () => number }[] = [
   { id: 'sunbind', read: () => useStarForgeStore().bossDamageMult },
   { id: 'handfast', read: () => useStarForgeStore().cpcMult },
   { id: 'hostcall', read: () => useGameStore().totalPower },
+  { id: 'tideweave', read: () => useStarForgeStore().offlineEarningsMult },
+  { id: 'waythread', read: () => useStarForgeStore().expeditionRewardMult },
+  { id: 'sunweave', read: () => useStarForgeStore().bossDamageMult },
+  { id: 'handspan', read: () => useStarForgeStore().cpcMult },
+  { id: 'hostlink', read: () => useGameStore().totalPower },
 ]
 
 describe('Confluences — die Naht wirkt', () => {
@@ -86,6 +94,38 @@ describe('Confluences — die Naht wirkt', () => {
     useMeepTreeStore().bought = MEEP_TREE_NODES.map((n) => n.id)
     for (const def of FORGE_CONFLUENCES) expect(forge.confluenceEffect(def.id)).toBe(0)
   })
+
+  it('kauft die Nahtstufen mit Meeps und oeffnet sie nacheinander', () => {
+    const forge = useStarForgeStore()
+    const game = useGameStore()
+    const solar = useSolarUpgradeStore()
+    const inventory = useInventoryStore()
+    solar.starPhase = FORGE_BOUGH_UNLOCK_PHASE
+    forge.boughLevels.kindledVigil = 2
+    useMeepTreeStore().bought = ['vigil_1']
+    game.chimes = 1e12
+    game.meeps = 200
+    inventory.collectedMaterials = {
+      stardust: 999,
+      moon_crystal: 999,
+      nebula_quartz: 999,
+      solar_essence: 999,
+      void_shard: 999,
+      dark_matter: 999,
+      comet_ice: 999,
+      star_iron: 999,
+      aether_dust: 999,
+      plasma_core: 999,
+    }
+
+    expect(forge.buyNode('tidewatch')).toBe(true)
+    expect(game.meeps).toBe(140)
+    expect(game.totalMeepsSpent).toBe(60)
+    expect(forge.nodeParentRequirement(getForgeNode('tideweave')!)).toBe(1)
+    expect(forge.buyNode('tideweave')).toBe(true)
+    expect(game.meeps).toBe(50)
+    expect(game.totalMeepsSpent).toBe(150)
+  })
 })
 
 describe('Confluences — erreichbar in beiden Katalogen', () => {
@@ -136,7 +176,9 @@ describe('Star Forge — kein Beutel ohne Spielstand', () => {
 
     const persistence = read('composables/system/usePersistence.ts')
     for (const bag of bags) {
-      expect(persistence, `${bag} fehlt im Save-Block`).toContain(`${bag}: { ...starForgeStore.${bag} }`)
+      expect(persistence, `${bag} fehlt im Save-Block`).toContain(
+        `${bag}: { ...starForgeStore.${bag} }`,
+      )
       expect(persistence, `${bag} fehlt im Ladeblock`).toContain(`starForgeStore.${bag} = `)
     }
   })

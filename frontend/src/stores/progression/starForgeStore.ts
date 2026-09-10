@@ -70,6 +70,8 @@ import {
   FORGE_BARGAIN_KINDS_PAYING_MATERIALS,
   FORGE_CROWN_MAX_LEVEL,
   FORGE_CROWN_PARENT_MIN_LEVEL,
+  FORGE_CONFLUENCE_LINK_PARENT_MIN_LEVEL,
+  FORGE_CONFLUENCE_MAX_LEVEL,
   FORGE_CROWN_UNLOCK_PRESTIGES,
   FORGE_CROWN_VOID_RELIEF,
   FORGE_CROWN_VOID_SLAY_REWARD_MULT,
@@ -109,6 +111,7 @@ import {
 import { pickPooledIcon } from '@/config/ui/iconPools'
 import type { SolarBranchId } from '@/stores/progression/solarUpgradeStore'
 import { gameNow } from '@/utils/game/gameClock'
+import { canPayMixed, payMixed } from '@/utils/game/mixedCost'
 
 /**
  * Eine Materialposition nach dem Sunsmith-Rabatt (Chronicle). Abgerundet wird
@@ -294,6 +297,7 @@ export const useStarForgeStore = defineStore('starForge', {
         if (def.tier === 'bough') return Infinity
         // Ring 6 ist die Gegenfigur dazu: genau eine Stufe, dafür eine Regel.
         if (def.tier === 'crown') return FORGE_CROWN_MAX_LEVEL
+        if (def.tier === 'confluence') return FORGE_CONFLUENCE_MAX_LEVEL
         // Ein Glimmer steht NEBEN der Leiter, nicht auf ihr: seine Höchststufe
         // ist fest und wächst nicht mit der Sonne. Die Staffelung „+1 je Phase"
         // ist die Zusage der grossen Knoten; ein Weg soll sofort begehbar sein.
@@ -325,7 +329,12 @@ export const useStarForgeStore = defineStore('starForge', {
 
     /** Elternstufe, die ein Knoten seines Rings verlangt, bevor er aufgeht. */
     nodeParentRequirement(): (def: ForgeNodeDef) => number {
-      return (def) => TIER_PARENT_MIN_LEVEL[def.tier]
+      return (def) => {
+        if (def.tier === 'confluence' && getForgeNode(def.parentId)?.tier === 'confluence') {
+          return FORGE_CONFLUENCE_LINK_PARENT_MIN_LEVEL
+        }
+        return TIER_PARENT_MIN_LEVEL[def.tier]
+      }
     },
 
     /**
@@ -340,7 +349,9 @@ export const useStarForgeStore = defineStore('starForge', {
         const solar = useSolarUpgradeStore()
         return SOLAR_BRANCHES.some((ray) => ray.id === id)
           ? solar.branchLevel(id as SolarBranchId)
-          : 0
+          : useMeepTreeStore().bought.includes(id)
+            ? 1
+            : 0
       }
     },
 
@@ -510,8 +521,20 @@ export const useStarForgeStore = defineStore('starForge', {
       return (id) => {
         if (!this.nodeUnlocked(id)) return false
         if (this.nodeLevel(id) >= this.nodeMaxLevel(id)) return false
-        if (useGameStore().chimes < this.nodeGoldCost(id)) return false
-        return useInventoryStore().hasMaterials(this.nodeMaterialCost(id))
+        const gameStore = useGameStore()
+        const inventory = useInventoryStore()
+        return canPayMixed(
+          {
+            chimes: this.nodeGoldCost(id),
+            meeps: getForgeNode(id)?.meepCost ?? 0,
+            materials: this.nodeMaterialCost(id),
+          },
+          {
+            chimes: gameStore.chimes,
+            meeps: gameStore.meeps,
+            stock: inventory.collectedMaterials,
+          },
+        )
       }
     },
 
@@ -983,6 +1006,7 @@ export const useStarForgeStore = defineStore('starForge', {
           this.relicEffect('echoOfTheVoid') +
           this.boughEffect('sleeplessOrbit') +
           this.confluenceEffect('tidewatch') +
+          this.confluenceEffect('tideweave') +
           eternal) /
           100
       )
@@ -1000,6 +1024,7 @@ export const useStarForgeStore = defineStore('starForge', {
         (this.branchEffect('wayfindersCache') +
           this.boughEffect('wayfarersHoard') +
           this.confluenceEffect('waychart') +
+          this.confluenceEffect('waythread') +
           // Was `MIN_EXPEDITION_MULT` am Tempo abschneidet, kommt hier als
           // Beute wieder heraus — bei Vollausbau die grösste der vier
           // Überlaufmengen (37 Punkte).
@@ -1422,7 +1447,8 @@ export const useStarForgeStore = defineStore('starForge', {
         (this.branchEffect('shatter') +
           this.relicEffect('emberCrown') +
           this.boughEffect('undyingWrath') +
-          this.confluenceEffect('sunbind')) /
+          this.confluenceEffect('sunbind') +
+          this.confluenceEffect('sunweave')) /
           100
       )
     },
@@ -1436,7 +1462,7 @@ export const useStarForgeStore = defineStore('starForge', {
      * `abilityPowerBonus`, nicht in einem Faktor.
      */
     battlePowerBonus(): number {
-      return this.confluenceEffect('hostcall')
+      return this.confluenceEffect('hostcall') + this.confluenceEffect('hostlink')
     },
 
     /** Fraction of click damage splashed to all enemies
@@ -1476,7 +1502,8 @@ export const useStarForgeStore = defineStore('starForge', {
         1 +
         (this.branchEffect('gildedHarvest') +
           this.boughEffect('gildedCascade') +
-          this.confluenceEffect('handfast')) /
+          this.confluenceEffect('handfast') +
+          this.confluenceEffect('handspan')) /
           100
       return tempest * (this.buffActive('cpcX2') ? 2 : 1) * tree
     },
@@ -1791,8 +1818,26 @@ export const useStarForgeStore = defineStore('starForge', {
       const gameStore = useGameStore()
       const inventory = useInventoryStore()
       const materials = this.nodeMaterialCost(id)
-      if (!inventory.removeMaterials(materials, 'forge')) return false
-      gameStore.chimes -= this.nodeGoldCost(id)
+      const paid = payMixed(
+        {
+          chimes: this.nodeGoldCost(id),
+          meeps: def.meepCost ?? 0,
+          materials,
+        },
+        {
+          chimes: gameStore.chimes,
+          meeps: gameStore.meeps,
+          stock: inventory.collectedMaterials,
+        },
+        (cost, sink) => inventory.removeMaterials(cost, sink),
+        'forge',
+        (chimes, meeps) => {
+          gameStore.chimes -= chimes
+          gameStore.meeps -= meeps
+          gameStore.totalMeepsSpent += meeps
+        },
+      )
+      if (!paid) return false
       if (def.tier === 'branch') {
         this.branchLevels[id] = (this.branchLevels[id] ?? 0) + 1
       } else if (def.tier === 'leaf') {
