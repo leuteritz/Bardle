@@ -88,8 +88,7 @@ export const KEYBINDINGS: readonly KeybindDef[] = [
     keys: ['k'],
     cap: 'K',
     label: 'Tree',
-    description:
-      'Opens the Skill Tree and takes the camera out to The Wandering. The meep road lies beyond the sun, and at full zoom-out it is too small to aim at by hand.',
+    description: 'Opens the Skill Tree centered on the sun, like the Tree button in the header.',
     icon: 'game-icons:journey',
     category: 'interface',
     inHud: true,
