@@ -20,6 +20,7 @@
  */
 import { computed, ref, watch, onMounted } from 'vue'
 import PlanetGlyph from '@/components/ui/PlanetGlyph.vue'
+import { planetSeedFor } from '@/utils/fx/planetSprite'
 import { hpStageClass } from '@/utils/ui/format'
 import {
   PAUSE_STAR_CARD_WIDTH,
@@ -207,7 +208,7 @@ const glyphPx = computed(() =>
         :class="{ 'planet-cell--cleared': p.cleared }"
       >
         <span class="planet-cell__body">
-          <PlanetGlyph :type="p.type" :size="glyphPx" />
+          <PlanetGlyph :type="p.type" :seed="planetSeedFor(p.id)" :size="glyphPx" />
         </span>
         <span class="planet-hp" :class="hpStageClass(p.hp * 100)">
           <!-- Pro-Wert gesetzter Transform steht inline am Balken selbst, nicht

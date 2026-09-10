@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Desert – layered dune arcs, heat shimmer haze, warm specular
@@ -9,7 +9,10 @@ export function drawDesert(
   cx: number,
   cy: number,
   r: number,
+  seed?: number,
 ): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, 0, 360), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -30,6 +33,7 @@ export function drawDesert(
 
   const duneG = svgEl('g')
   duneG.setAttribute('clip-path', `url(#dsc-${id})`)
+  duneG.setAttribute('transform', surface)
 
   // Dune arcs – each with a light crest stroke + dark shadow fill below
   const duneData: [number, number, number, number, number, number, string, string][] = [

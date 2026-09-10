@@ -1,9 +1,11 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Void – abyssal dark world: near-black body, glowing magenta rift network, violet aura
  */
-export function drawVoid(svg: SVGSVGElement, id: string, cx: number, cy: number, r: number): void {
+export function drawVoid(svg: SVGSVGElement, id: string, cx: number, cy: number, r: number, seed?: number): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, 0, 360), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -48,6 +50,7 @@ export function drawVoid(svg: SVGSVGElement, id: string, cx: number, cy: number,
 
   const riftG = svgEl('g')
   riftG.setAttribute('clip-path', `url(#vc-${id})`)
+  riftG.setAttribute('transform', surface)
 
   // Central rift — a torn seam with a blazing inner line
   const riftPath = `M${cx - r * 0.45},${cy - r * 0.1} Q${cx - r * 0.1},${cy + r * 0.18} ${cx + r * 0.15},${cy - r * 0.02} T${cx + r * 0.5},${cy + r * 0.12}`

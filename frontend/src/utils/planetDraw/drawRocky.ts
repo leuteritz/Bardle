@@ -1,9 +1,11 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Rocky – richer surface patches + craters with floor & rim highlight
  */
-export function drawRocky(svg: SVGSVGElement, id: string, cx: number, cy: number, r: number): void {
+export function drawRocky(svg: SVGSVGElement, id: string, cx: number, cy: number, r: number, seed?: number): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, 0, 360), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -25,6 +27,7 @@ export function drawRocky(svg: SVGSVGElement, id: string, cx: number, cy: number
   // Surface texture patches
   const texG = svgEl('g')
   texG.setAttribute('clip-path', `url(#rc-${id})`)
+  texG.setAttribute('transform', surface)
   for (const [ox, oy, erx, ery, col] of [
     [-0.15, 0.2, 0.3, 0.19, 'rgba(60,35,18,0.38)'],
     [0.28, -0.08, 0.24, 0.15, 'rgba(80,50,25,0.30)'],

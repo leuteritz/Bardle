@@ -1,9 +1,11 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Ocean – more continents, rotated cloud swirls, blue atmospheric rim
  */
-export function drawOcean(svg: SVGSVGElement, id: string, cx: number, cy: number, r: number): void {
+export function drawOcean(svg: SVGSVGElement, id: string, cx: number, cy: number, r: number, seed?: number): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, 0, 360), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -24,6 +26,7 @@ export function drawOcean(svg: SVGSVGElement, id: string, cx: number, cy: number
 
   const contG = svgEl('g')
   contG.setAttribute('clip-path', `url(#oc-${id})`)
+  contG.setAttribute('transform', surface)
 
   // Continents (more organic shapes via overlapping ellipses)
   const continents: {

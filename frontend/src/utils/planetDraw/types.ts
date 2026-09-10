@@ -1,4 +1,11 @@
 import type { PlanetType } from '@/types'
+import { jitter } from '@/utils/fx/spaceBody'
+import {
+  PLANET_SIZE_REF_PX,
+  PLANET_SIZE_COMPRESSION,
+  PLANET_SIZE_FACTOR_MIN,
+  PLANET_SIZE_FACTOR_MAX,
+} from '@/config/constants'
 
 export type { PlanetType }
 
@@ -207,3 +214,51 @@ export const GAS_GIANT_PALETTES = [
     stormInner: '#fff0f8',
   },
 ]
+
+/* ── Groessenklasse ──────────────────────────────────────────────────────────
+   Deterministisch aus Typ und Seed, NIE aus der Zeichengroesse: klein und Hero
+   kreuzblenden und muessen deckungsgleich sein.                               */
+
+const CONFIG_BY_TYPE = new Map(PLANET_TYPE_CONFIGS.map((c) => [c.type, c]))
+
+export function planetSizeFactor(type: PlanetType, seed: number | undefined): number {
+  const cfg = CONFIG_BY_TYPE.get(type)
+  if (!cfg) return 1
+  const t = seed === undefined ? 0.5 : jitter(seed, 101)
+  const px = cfg.sizeMin + t * (cfg.sizeMax - cfg.sizeMin)
+  const raw = Math.pow(px / PLANET_SIZE_REF_PX, PLANET_SIZE_COMPRESSION)
+  return Math.min(PLANET_SIZE_FACTOR_MAX, Math.max(PLANET_SIZE_FACTOR_MIN, raw))
+}
+
+/* ── Leitfarben je Typ ───────────────────────────────────────────────────────
+   Nur noch der Rueckfall: solange das Sprite eines Planeten nicht gerastert ist,
+   malt die Minimap ihre Kugel in diesen Toenen. Steht hier statt in der Minimap,
+   damit Farbe und Painter EINEN Ort teilen.                                    */
+export interface PlanetTint {
+  base: string
+  shadow: string
+  highlight: string
+  atmo: string
+  ring: boolean
+}
+
+export const PLANET_TYPE_TINT: Record<PlanetType, PlanetTint> = {
+  rocky: { base: '#8a7060', shadow: '#2a1808', highlight: '#b8a090', atmo: 'rgba(130,100,80,0.4)', ring: false },
+  ice: { base: '#90c8f0', shadow: '#104060', highlight: '#d0f0ff', atmo: 'rgba(80,160,240,0.4)', ring: true },
+  'gas-giant': { base: '#c87941', shadow: '#4a2010', highlight: '#e8aa70', atmo: 'rgba(200,120,60,0.45)', ring: true },
+  lava: { base: '#e05020', shadow: '#600800', highlight: '#ff8050', atmo: 'rgba(240,80,30,0.5)', ring: false },
+  ocean: { base: '#3080c0', shadow: '#082040', highlight: '#60c0f0', atmo: 'rgba(40,120,200,0.4)', ring: false },
+  desert: { base: '#c8a048', shadow: '#604010', highlight: '#f0d080', atmo: 'rgba(200,160,60,0.4)', ring: false },
+  jungle: { base: '#50a840', shadow: '#102808', highlight: '#90e870', atmo: 'rgba(60,180,50,0.4)', ring: false },
+  ringed: { base: '#9060c0', shadow: '#200840', highlight: '#c090f0', atmo: 'rgba(140,80,220,0.45)', ring: true },
+  crystal: { base: '#40d0c0', shadow: '#083838', highlight: '#b0fff0', atmo: 'rgba(70,220,200,0.45)', ring: false },
+  toxic: { base: '#94c428', shadow: '#243008', highlight: '#d8f070', atmo: 'rgba(160,220,50,0.45)', ring: false },
+  void: { base: '#402060', shadow: '#0a0418', highlight: '#a860e8', atmo: 'rgba(150,60,240,0.5)', ring: false },
+  aurora: { base: '#4878a0', shadow: '#0a1830', highlight: '#80ffd0', atmo: 'rgba(90,255,190,0.4)', ring: false },
+  shattered: { base: '#786450', shadow: '#1c1006', highlight: '#ffb060', atmo: 'rgba(255,140,50,0.4)', ring: false },
+  storm: { base: '#4a5a9a', shadow: '#0a0e28', highlight: '#aabcf0', atmo: 'rgba(110,150,255,0.45)', ring: false },
+  bloom: { base: '#f0a8c4', shadow: '#4a1c38', highlight: '#ffe0ec', atmo: 'rgba(255,170,200,0.45)', ring: false },
+  neon: { base: '#1e2630', shadow: '#04060a', highlight: '#8cf0ff', atmo: 'rgba(80,200,255,0.4)', ring: false },
+  obsidian: { base: '#2a2a32', shadow: '#040406', highlight: '#c8d0e8', atmo: 'rgba(180,190,220,0.3)', ring: false },
+  coral: { base: '#40c8c0', shadow: '#043045', highlight: '#a0f0e8', atmo: 'rgba(90,230,220,0.45)', ring: false },
+}

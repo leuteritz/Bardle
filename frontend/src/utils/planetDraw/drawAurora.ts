@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Aurora – steel-blue tundra world crowned by curtains of green-cyan polar light
@@ -9,7 +9,10 @@ export function drawAurora(
   cx: number,
   cy: number,
   r: number,
+  seed?: number,
 ): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, -14, 14), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -38,6 +41,7 @@ export function drawAurora(
 
   const detailG = svgEl('g')
   detailG.setAttribute('clip-path', `url(#ac-${id})`)
+  detailG.setAttribute('transform', surface)
 
   // Frozen terrain streaks — muted horizontal bands
   for (const [oy, h, op] of [

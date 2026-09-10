@@ -4,6 +4,9 @@
    deterministic: same seed → identical galaxy shape, star placement and look,
    so an archived galaxy re-renders exactly as it was played. */
 
+import { peekPlanetSprite, planetSpriteSpan, PLANET_SPRITE_UNLIT } from '@/utils/fx/planetSprite'
+import { paintPlanetShade } from '@/utils/fx/spaceBody'
+import type { PlanetType } from '@/types'
 import {
   MINIMAP_GALAXY_ARMS_MIN,
   MINIMAP_GALAXY_ARMS_MAX,
@@ -359,6 +362,40 @@ export const PLANET_PALETTES = [
   },
 ]
 
+/**
+ * Woraus der Koerper gemalt wird: derselbe Painter wie im Star-Fight-Modal.
+ * Ohne diese Angabe (oder solange das Raster noch entsteht) faellt die Karte auf
+ * ihre Verlaufskugel zurueck.
+ */
+export interface PlanetBodySprite {
+  type: PlanetType
+  seed: number
+  /** Richtung Planet → Stern, rad. */
+  lightAngle: number
+  dpr: number
+}
+
+/**
+ * Das Sprite aus dem gemeinsamen Cache, lichtneutral gerastert und hier
+ * schattiert: die Planeten der Minimap KREISEN, sechzehn eingebrannte
+ * Lichtstufen je Planet wuerden den Cache jeden Frame umwaelzen.
+ */
+function paintBodySprite(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  body: PlanetBodySprite,
+): boolean {
+  const px = Math.max(2, Math.round(2 * r))
+  const sprite = peekPlanetSprite(body.type, body.seed, px, body.dpr, PLANET_SPRITE_UNLIT)
+  if (!sprite) return false
+  const edge = px * planetSpriteSpan(body.type)
+  ctx.drawImage(sprite, x - edge / 2, y - edge / 2, edge, edge)
+  paintPlanetShade(ctx, x, y, r, body.lightAngle)
+  return true
+}
+
 export function drawPlanet(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -368,6 +405,7 @@ export function drawPlanet(
   state: 'unrescued' | 'rescued' | 'target' | 'failed',
   pulse = false,
   palOverride?: typeof STAR_PALETTE,
+  body?: PlanetBodySprite,
 ) {
   const rng = seededRng(seed >>> 0)
   const pal = palOverride ?? PLANET_PALETTES[Math.floor(rng() * PLANET_PALETTES.length)]
@@ -406,6 +444,21 @@ export function drawPlanet(
   ctx.arc(x, y, glowR, 0, Math.PI * 2)
   ctx.fillStyle = atmoGrad
   ctx.fill()
+
+  // Der ECHTE Planet, wenn sein Raster steht — sonst die Verlaufskugel darunter
+  if (body && paintBodySprite(ctx, x, y, r, body)) {
+    if (state === 'failed') {
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(x, y, r, 0, Math.PI * 2)
+      ctx.clip()
+      ctx.fillStyle = 'rgba(22,10,6,0.5)'
+      ctx.fillRect(x - r, y - r, r * 2, r * 2)
+      ctx.restore()
+    }
+    drawPlanetState(ctx, x, y, r, state, pulse)
+    return
+  }
 
   const lx = x - r * 0.3
   const ly = y - r * 0.32
@@ -463,6 +516,18 @@ export function drawPlanet(
     ctx.restore()
   }
 
+  drawPlanetState(ctx, x, y, r, state, pulse)
+}
+
+/** Kranz, Fadenkreuz und Marke — der ZUSTAND, nie der Koerper. */
+function drawPlanetState(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  state: 'unrescued' | 'rescued' | 'target' | 'failed',
+  pulse: boolean,
+) {
   ctx.beginPath()
   ctx.arc(x, y, r, 0, Math.PI * 2)
   if (state === 'target') {

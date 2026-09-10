@@ -1,10 +1,12 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Neon – night-side tech world: dark slate sphere webbed with glowing
  * cyan circuit lines, amber city clusters and an orange terminator glow
  */
-export function drawNeon(svg: SVGSVGElement, id: string, cx: number, cy: number, r: number): void {
+export function drawNeon(svg: SVGSVGElement, id: string, cx: number, cy: number, r: number, seed?: number): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, 0, 360), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -37,6 +39,7 @@ export function drawNeon(svg: SVGSVGElement, id: string, cx: number, cy: number,
 
   const gridG = svgEl('g')
   gridG.setAttribute('clip-path', `url(#nc-${id})`)
+  gridG.setAttribute('transform', surface)
 
   // Circuit arteries — glowing cyan trunk lines linking the city hubs
   const arteries: [string, number][] = [

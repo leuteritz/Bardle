@@ -1,9 +1,11 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Lava – 3-layer crack glow (outer/mid/inner), hot-spot nodes, ember atmosphere
  */
-export function drawLava(svg: SVGSVGElement, id: string, cx: number, cy: number, r: number): void {
+export function drawLava(svg: SVGSVGElement, id: string, cx: number, cy: number, r: number, seed?: number): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, 0, 360), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -30,6 +32,7 @@ export function drawLava(svg: SVGSVGElement, id: string, cx: number, cy: number,
 
   const crackG = svgEl('g')
   crackG.setAttribute('clip-path', `url(#lvc-${id})`)
+  crackG.setAttribute('transform', surface)
 
   // Cooled basalt plates — matte crust slabs between the glowing cracks
   for (const [pts, op] of [

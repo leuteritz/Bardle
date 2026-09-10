@@ -570,7 +570,7 @@ function warmStarSpritesForStage(star: StarGroup, w: number, h: number): Promise
   const planets = warmPlanetSprites(
     layout.planets.flatMap((p) => [
       { type: p.type, seed: p.seed, px: systemSpritePx(p.r), lightAngle: p.lightAngle },
-      { type: p.type, seed: p.seed, px: heroSpritePx(h), lightAngle: p.lightAngle },
+      { type: p.type, seed: p.seed, px: heroSpritePx(p.r), lightAngle: p.lightAngle },
     ]),
     dpr,
   )

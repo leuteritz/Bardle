@@ -8,7 +8,7 @@ import {
   STAR_FIGHT_PLANET_LIGHT_STEPS,
   STAR_FIGHT_PLANET_SPRITE_MAX_PX,
   STAR_FIGHT_PLANET_SPRITE_SPAN,
-  STAR_FIGHT_PLANET_SPRITE_SPAN_RINGED,
+  STAR_FIGHT_PLANET_SPRITE_SPANS,
   STAR_FIGHT_PLANET_SPRITE_CANVAS_MAX,
   STAR_FIGHT_PLANET_SPRITE_URL_MAX,
   STAR_FIGHT_PLANET_SPRITE_CROSSFADE_MS,
@@ -33,10 +33,17 @@ export function planetSeedFor(planetId: string): number {
   return hash >>> 0
 }
 
-/** Kante des Sprites als Vielfaches des Durchmessers — Ringe reichen bis 1,9 r. */
+/**
+ * Kante des Sprites als Vielfaches des Durchmessers. Der Zierrat ausserhalb der
+ * Scheibe — Monde, Ringbaender, Splitter — lebt in dieser Reserve; ohne sie
+ * schneidet das Raster ihn wortlos ab.
+ */
 export function planetSpriteSpan(type: PlanetType): number {
-  return type === 'ringed' ? STAR_FIGHT_PLANET_SPRITE_SPAN_RINGED : STAR_FIGHT_PLANET_SPRITE_SPAN
+  return STAR_FIGHT_PLANET_SPRITE_SPANS[type] ?? STAR_FIGHT_PLANET_SPRITE_SPAN
 }
+
+/** Lichtneutrales Raster: der Aufrufer schattiert selbst (Minimap). */
+export const PLANET_SPRITE_UNLIT = -1
 
 /** Lichtwinkel auf STAR_FIGHT_PLANET_LIGHT_STEPS quantisiert, periodisch. */
 export function lightStepOf(angle: number): number {
@@ -92,14 +99,40 @@ function loadImage(url: string): Promise<HTMLImageElement | null> {
 
 // Bau ist asynchron (Image.decode): Cache und pending-Map sind EINE Map von Promises
 const canvasCache = new Map<string, Promise<HTMLCanvasElement | null>>()
+// … und daneben das FERTIGE Canvas, weil eine Frame-Schleife keine Promise abwarten kann
+const readyCanvas = new Map<string, HTMLCanvasElement>()
 
 function rememberCanvas(key: string, job: Promise<HTMLCanvasElement | null>): void {
   canvasCache.set(key, job)
+  void job.then((cv) => {
+    if (cv && canvasCache.has(key)) readyCanvas.set(key, cv)
+  })
   while (canvasCache.size > STAR_FIGHT_PLANET_SPRITE_CANVAS_MAX) {
     const oldest = canvasCache.keys().next().value
     if (oldest === undefined) break
     canvasCache.delete(oldest)
+    readyCanvas.delete(oldest)
   }
+}
+
+/**
+ * Das fertige Sprite oder `null` — und im zweiten Fall wird sein Bau angestossen.
+ * Für Aufrufer, die pro Frame zeichnen und keinen Rueckstau vertragen; bis es da
+ * ist, malt der Aufrufer seinen eigenen Rueckfall.
+ */
+export function peekPlanetSprite(
+  type: PlanetType,
+  seed: number,
+  px: number,
+  dpr: number,
+  lightStep: number,
+): HTMLCanvasElement | null {
+  const d = clampSpriteDpr(dpr)
+  const key = planetSpriteKey(type, seed, px, d, lightStep)
+  const hit = readyCanvas.get(key)
+  if (hit) return hit
+  if (!canvasCache.has(key)) void buildPlanetSprite(type, seed, px, d, lightStep)
+  return null
 }
 
 async function rasterPlanet(
@@ -121,14 +154,19 @@ async function rasterPlanet(
   const { ctx } = made
   const span = backing.span
   ctx.drawImage(img, 0, 0, span, span)
-  // paintTerminator leuchtet ungedreht von LINKS — auf den Lichtwinkel drehen
-  const c = span / 2
-  ctx.save()
-  ctx.translate(c, c)
-  ctx.rotate(lightAngleOfStep(lightStep) + Math.PI)
-  ctx.translate(-c, -c)
-  paintTerminator(ctx, span, (px / 2) * TERMINATOR_R_K)
-  ctx.restore()
+  // Bei PLANET_SPRITE_UNLIT bleibt der Koerper unbeleuchtet — die Minimap
+  // schattiert pro Frame, weil ihre Planeten kreisen und 16 gerasterte
+  // Lichtstufen je Planet den Cache sprengen wuerden.
+  if (lightStep >= 0) {
+    // paintTerminator leuchtet ungedreht von LINKS — auf den Lichtwinkel drehen
+    const c = span / 2
+    ctx.save()
+    ctx.translate(c, c)
+    ctx.rotate(lightAngleOfStep(lightStep) + Math.PI)
+    ctx.translate(-c, -c)
+    paintTerminator(ctx, span, (px / 2) * TERMINATOR_R_K)
+    ctx.restore()
+  }
   return made.cv
 }
 
@@ -280,6 +318,7 @@ export function warmPlanetSprites(list: readonly WarmPlanetEntry[], dpr: number)
 
 export function clearPlanetSpriteCache(): void {
   canvasCache.clear()
+  readyCanvas.clear()
   for (const url of urlCache.values()) URL.revokeObjectURL(url)
   urlCache.clear()
   urlPending.clear()

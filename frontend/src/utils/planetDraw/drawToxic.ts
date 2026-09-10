@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Toxic – acid sludge world: sulfur-green swirls, bubbling pools, hazy smog band
@@ -9,7 +9,10 @@ export function drawToxic(
   cx: number,
   cy: number,
   r: number,
+  seed?: number,
 ): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, 0, 360), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -30,6 +33,7 @@ export function drawToxic(
 
   const detailG = svgEl('g')
   detailG.setAttribute('clip-path', `url(#tc-${id})`)
+  detailG.setAttribute('transform', surface)
 
   // Swirling sludge currents — curved strokes in darker and brighter acid tones
   const swirls: [string, string, number, number][] = [

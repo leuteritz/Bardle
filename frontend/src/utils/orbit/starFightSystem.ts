@@ -21,6 +21,7 @@ import {
 } from '@/config/constants'
 import { getOrbitPos } from '@/utils/orbit/geometry'
 import { planetSeedFor } from '@/utils/fx/planetSprite'
+import { planetSizeFactor } from '@/utils/planetDraw/types'
 import type { PlanetType } from '@/types'
 
 export interface SystemSlotInput {
@@ -85,8 +86,12 @@ export function systemLayout(
 ): SystemLayout {
   const sx = (w * STAR_FIGHT_SYS_CENTER_X_PCT) / 100
   const sy = (h * STAR_FIGHT_SYS_CENTER_Y_PCT) / 100
+  // Der Grundradius; jeder Planet zieht seine Groessenklasse daraus
   const r = (h * STAR_FIGHT_SYS_PLANET_D_PCT) / 200
   const slots = star.planetSlots
+  const radiusOf = (slot: SystemSlotInput) =>
+    r * planetSizeFactor(slot.type, planetSeedFor(slot.planetId))
+  const maxR = slots.reduce((m, slot) => Math.max(m, radiusOf(slot)), r)
   let maxEx = 0
   let maxEy = 0
   for (const slot of slots) {
@@ -94,25 +99,29 @@ export function systemLayout(
     maxEx = Math.max(maxEx, e.ex)
     maxEy = Math.max(maxEy, e.ey)
   }
-  const availX = w * (0.5 - STAR_FIGHT_SYS_MARGIN_X) - r
+  const availX = w * (0.5 - STAR_FIGHT_SYS_MARGIN_X) - maxR
   const availY =
-    Math.min(sy - h * STAR_FIGHT_SYS_MARGIN_TOP, h * (1 - STAR_FIGHT_SYS_MARGIN_BOTTOM) - sy) - r
+    Math.min(sy - h * STAR_FIGHT_SYS_MARGIN_TOP, h * (1 - STAR_FIGHT_SYS_MARGIN_BOTTOM) - sy) - maxR
   const unit = Math.max(
     0,
     Math.min(maxEx > 0 ? availX / maxEx : Infinity, maxEy > 0 ? availY / maxEy : Infinity),
   )
   const safeUnit = Number.isFinite(unit) ? unit : 0
-  const minDist = 2 * r + STAR_FIGHT_SYS_MIN_GAP_PX
 
   const planets: SystemPlanet[] = []
   for (const slot of slots) {
+    const pr = radiusOf(slot)
     const rx = slot.orbitRx * safeUnit
     const ry = slot.orbitRy * safeUnit
     let angle = slot.orbitAngle
     let pos = getOrbitPos(angle, rx, ry, slot.orbitTilt, sx, sy)
     // Ablehnungspass: zu nah an einem früheren Planeten → auf der eigenen Bahn weiterdrehen
     for (let t = 0; t < STAR_FIGHT_SYS_NUDGE_TRIES; t++) {
-      const crowded = planets.some((p) => Math.hypot(p.x - pos.x, p.y - pos.y) < minDist)
+      // Der Mindestabstand haengt am PAAR: zwei ungleich grosse Planeten brauchen
+      // ihre beiden Radien, nicht zweimal den Grundradius.
+      const crowded = planets.some(
+        (p) => Math.hypot(p.x - pos.x, p.y - pos.y) < p.r + pr + STAR_FIGHT_SYS_MIN_GAP_PX,
+      )
       if (!crowded) break
       angle += STAR_FIGHT_SYS_NUDGE_RAD * slot.orbitDirection
       pos = getOrbitPos(angle, rx, ry, slot.orbitTilt, sx, sy)
@@ -126,7 +135,7 @@ export function systemLayout(
       isGalaxyBoss: galaxyBossPlanetIds.has(slot.planetId),
       x: pos.x,
       y: pos.y,
-      r,
+      r: pr,
       lightAngle: Math.atan2(sy - pos.y, sx - pos.x),
       orbit: { cx: sx, cy: sy, rx, ry, tilt: slot.orbitTilt },
     })
@@ -202,9 +211,19 @@ export function systemSpritePx(r: number): number {
   return quantSpritePx(2 * r * STAR_FIGHT_SYS_SPRITE_OVERSAMPLE)
 }
 
-/** Rasterkante des Hero-Planeten bei Bühnenhöhe h. */
-export function heroSpritePx(h: number): number {
-  return quantSpritePx((h * STAR_FIGHT_FIGHT_PLANET_D_PCT) / 100)
+/**
+ * Kante des Hero-Planeten: sein eigener Radius mal dem Kampf-Zoom.
+ *
+ * Vorher die halbe Bühnenhöhe — das ging, solange jeder Planet denselben Radius
+ * hatte. Seit die Groessenklasse den Radius spreizt, waere der Hero eines
+ * kleinen Planeten zu gross und die LOD-Blende spraenge.
+ */
+export function heroPlanetD(r: number): number {
+  return 2 * r * fightZoom()
+}
+
+export function heroSpritePx(r: number): number {
+  return quantSpritePx(heroPlanetD(r))
 }
 
 export function cameraCss(t: CameraTransform): string {
