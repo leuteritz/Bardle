@@ -113,7 +113,10 @@ const activeTotal = computed(
         v-for="group in groups"
         :key="group.id"
         class="cs-facet-panel"
-        :class="{ 'cs-facet-panel--active': setCounts[group.id] > 0 }"
+        :class="[
+          `cs-facet-panel--${group.id}`,
+          { 'cs-facet-panel--active': setCounts[group.id] > 0 },
+        ]"
       >
         <button
           class="cs-facet-panel-head"
@@ -309,33 +312,50 @@ const activeTotal = computed(
 }
 
 .cs-facet-panel {
+  --facet-group-color: #c89040;
   display: flex;
   flex-direction: column;
   gap: 5px;
   padding: 6px;
   background: #111008;
   border: 1px solid #3e200a;
-  border-left: 3px solid #5c3310;
+  border-left: 3px solid var(--facet-group-color);
   border-radius: 4px;
 }
 .cs-facet-panel--active {
-  border-left-color: #e8c040;
+  border-left-color: var(--facet-group-color);
+}
+.cs-facet-panel--afford {
+  --facet-group-color: #52b830;
+}
+.cs-facet-panel--role {
+  --facet-group-color: #5090e8;
+}
+.cs-facet-panel--tier {
+  --facet-group-color: #e8c040;
+}
+.cs-facet-panel--trait {
+  --facet-group-color: #b060e0;
+}
+.cs-facet-panel--origin {
+  --facet-group-color: #c07c30;
 }
 
 /* ── Group head ──
    Not `.filter-divider`: that one is global and still carries the swap grid. */
 .cs-facet-panel-head {
+  position: relative;
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr) auto 16px;
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 40px;
-  padding: 4px 6px;
+  min-height: 44px;
+  padding: 5px 7px;
   border: 1px solid #3e200a;
-  border-left: 3px solid #c89040;
+  border-left: 4px solid var(--facet-group-color);
   border-radius: 4px;
-  background: #141410;
+  background: #1a1008;
   color: inherit;
   font: inherit;
   text-align: left;
@@ -347,8 +367,12 @@ const activeTotal = computed(
 .cs-facet-panel-head:hover,
 .cs-facet-panel-head:focus-visible {
   background: #1c1c18;
-  border-color: #7a4e20;
-  border-left-color: #e8c040;
+  border-color: var(--facet-group-color);
+  border-left-color: var(--facet-group-color);
+}
+.cs-facet-panel-head:focus-visible {
+  outline: 2px solid var(--facet-group-color);
+  outline-offset: 2px;
 }
 .cs-facet-panel-head--closed .cs-facet-chev {
   transform: rotate(-90deg);
@@ -358,7 +382,7 @@ const activeTotal = computed(
   display: grid;
   place-items: center;
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-  background: #c89040;
+  background: var(--facet-group-color, #c89040);
   color: #fff;
 }
 .cs-facet-panel-crest {
@@ -382,9 +406,13 @@ const activeTotal = computed(
   text-transform: uppercase;
   white-space: nowrap;
 }
+.cs-facet-panel-copy small {
+  color: color-mix(in srgb, var(--facet-group-color) 72%, #a59675);
+  font-weight: 800;
+}
 .cs-facet-panel-copy strong {
   overflow: hidden;
-  color: #c89040;
+  color: var(--facet-group-color);
   font-size: 15px;
   font-weight: 400;
   line-height: 1.05;
@@ -402,8 +430,8 @@ const activeTotal = computed(
   padding: 2px 5px;
   border-radius: 4px;
   background: rgba(10, 8, 4, 0.7);
-  border: 1px solid #7a4e20;
-  color: #e8c040;
+  border: 1px solid color-mix(in srgb, var(--facet-group-color) 60%, #3e200a);
+  color: var(--facet-group-color);
   font-size: 10.5px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
