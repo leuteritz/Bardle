@@ -25,7 +25,7 @@ import {
   UNIVERSE_RUN_HISTORY_LIMIT,
 } from '@/config/constants'
 import { universes } from '@/config/progression/universes'
-import { PROVIDENCE_AXES } from '@/config/progression/providences'
+import { PROVIDENCE_AXES, rollProvidenceNamed } from '@/config/progression/providences'
 import { drawUnique } from '@/utils/game/voyageLegs'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { UniverseRunRecord } from '@/types'
@@ -42,6 +42,16 @@ export function universeChimesRng(currentUniverse: number): Rng {
 
 export function universeProvidenceRng(currentUniverse: number): Rng {
   return seededRng(currentUniverse * ADMIN_UNIVERSE_PROVIDENCE_SALT + 1)
+}
+
+/** Name UND Wurf eines nachgetragenen Laufs. Der Nachtrag erfindet Chimes,
+ *  Dauern und Sterne ohnehin — ein Lauf mit Namen, aber ohne Achsen waere die
+ *  einzige Stelle, an der das Kopfband in einem geseedeten Spielstand leer
+ *  bliebe. Gezogen wird aus DEMSELBEN Strom: ein Seed je Index kollabiert. */
+type ProvidenceFields = Pick<UniverseRunRecord, 'providence' | 'providenceRoll'>
+
+function providenceOf(name: string, rng: Rng): ProvidenceFields {
+  return { providence: name, providenceRoll: rollProvidenceNamed(name, rng) ?? undefined }
 }
 
 /**
@@ -152,7 +162,7 @@ export function buildBackfillUniverseRuns(
           UNIVERSE_RESCUE_COST_MULTIPLIER ** k *
           (1 + chimesRng() * ADMIN_UNIVERSE_OVERSHOOT),
       ),
-      providence: drawUnique(providencePool, usedProvidences, providenceRng),
+      ...providenceOf(drawUnique(providencePool, usedProvidences, providenceRng), providenceRng),
       completedAt: stampAfter(records, boundary),
     })
   }

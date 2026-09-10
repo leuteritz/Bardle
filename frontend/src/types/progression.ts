@@ -246,6 +246,10 @@ export interface UniverseRunRecord {
    *  Migration und zeigen keine — dort wurde nie eine mitgeschrieben. Das ist
    *  wahr, nicht gelogen. */
   providence?: string
+  /** Ihr ganzer Wurf. Erst damit kann eine vergangene Bahn ihre zwei Wirkungen
+   *  zeigen statt nur ihren Namen; ohne ihn bleibt der Name alles, was wahr
+   *  ist. Optional wie `providence`, aus demselben Grund. */
+  providenceRoll?: RolledProvidence
   completedAt: number
 }
 
