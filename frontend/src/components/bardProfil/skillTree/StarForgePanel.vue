@@ -1,5 +1,6 @@
 <template>
   <div class="sr sf-panel">
+    <ForgeBuyAllBar />
     <ForgeFocusCard />
 
     <!-- Laufende Segen des Handels: das Einzige in dieser Spalte mit einer Uhr,
@@ -21,7 +22,6 @@
          es nur die Liste, die im selben Frame ohnehin ihren `READY TO GROW`-Block
          auf- oder zumacht. Stünde es oben, ruckte die Segensreihe bei jeder
          Schwelle mit. -->
-    <ForgeBuyAllBar />
 
     <!-- ══ Scrolling body ════════════════════════════════════════
          Vier Blöcke, in der Reihenfolge, in der der Spieler sie braucht: was
