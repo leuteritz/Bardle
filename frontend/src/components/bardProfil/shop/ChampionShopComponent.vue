@@ -1,16 +1,14 @@
 <template>
-  <div ref="atlasRef" class="cs-atlas">
+  <div class="cs-atlas">
     <ShopFacetRail
       class="cs-atlas-facets"
       :groups="facetGroups"
-      :folded="facetsFolded"
       :affordable-only="affordableOnly"
       :affordable-count="affordableCount"
       :domain="activeDomain"
       :domain-counts="domainCounts"
       :query="normalizedQuery"
       @toggle="onFacetToggle"
-      @fold="setFacetsFolded"
       @update:affordable-only="affordableOnly = $event"
       @update:domain="showDomain"
     />
@@ -370,7 +368,7 @@
 </template>
 
 <script lang="ts">
-import { ref, defineComponent, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, defineComponent, computed, watch, nextTick, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
@@ -409,8 +407,6 @@ import {
   SHOP_SCROLL_SETTLE_MS,
   CHAMPION_NEW_BADGE_DISMISS_MS,
   SHOP_ATLAS_FACET_RAIL_WIDTH,
-  SHOP_ATLAS_FACET_RAIL_COLLAPSED,
-  SHOP_ATLAS_FACET_AUTOFOLD_WIDTH,
   SHOP_ATLAS_DETAIL_MIN_WIDTH,
   SHOP_ATLAS_DETAIL_PCT,
   SHOP_ATLAS_DETAIL_MAX_WIDTH,
@@ -1759,24 +1755,6 @@ export default defineComponent({
       })
     }
 
-    // ══ Atlas: three zones, one bar ═════════════════════════════════════════
-    const atlasRef = ref<HTMLElement | null>(null)
-    /**
-     * Explicit fold, or `null` for "let the width decide". Kept apart from the
-     * measured default on purpose: once the player has folded or unfolded the
-     * rail themselves, resizing the window must not undo that decision.
-     */
-    const userFacetsFolded = ref<boolean | null>(null)
-    const atlasWidth = ref(0)
-    const facetsFolded = computed(
-      () =>
-        userFacetsFolded.value ??
-        (atlasWidth.value > 0 && atlasWidth.value < SHOP_ATLAS_FACET_AUTOFOLD_WIDTH),
-    )
-    function setFacetsFolded(folded: boolean) {
-      userFacetsFolded.value = folded
-    }
-
     /**
      * The three zones share one budget: whatever the facets and the detail take,
      * the grid gets the rest. Written as one string rather than three custom
@@ -1784,34 +1762,12 @@ export default defineComponent({
      * sibling.
      */
     const atlasColumns = computed(() => {
-      const facet = facetsFolded.value
-        ? SHOP_ATLAS_FACET_RAIL_COLLAPSED
-        : SHOP_ATLAS_FACET_RAIL_WIDTH
-      return `${facet}px minmax(0, 1fr) clamp(${SHOP_ATLAS_DETAIL_MIN_WIDTH}px, ${SHOP_ATLAS_DETAIL_PCT}%, ${SHOP_ATLAS_DETAIL_MAX_WIDTH}px)`
+      return `${SHOP_ATLAS_FACET_RAIL_WIDTH}px minmax(0, 1fr) clamp(${SHOP_ATLAS_DETAIL_MIN_WIDTH}px, ${SHOP_ATLAS_DETAIL_PCT}%, ${SHOP_ATLAS_DETAIL_MAX_WIDTH}px)`
     })
     const cardMinWidthPx = computed(() => `${SHOP_ATLAS_CARD_MIN_WIDTH}px`)
     const cardHeightPx = computed(() => `${SHOP_ATLAS_CARD_HEIGHT}px`)
     const gridGapPx = computed(() => `${SHOP_ATLAS_GRID_GAP}px`)
     const cardComfortColumns = SHOP_ATLAS_COMFORT_CARD_COLUMNS
-
-    let atlasObserver: ResizeObserver | null = null
-    onMounted(() => {
-      const el = atlasRef.value
-      if (!el || typeof ResizeObserver === 'undefined') return
-      atlasObserver = new ResizeObserver((entries) => {
-        // Versteckt (`display: none`) meldet der Beobachter 0. Das ist keine
-        // Breite, sondern die Abwesenheit einer — uebernaehme man sie, faende
-        // `facetsFolded` beim Wiedereinblenden einen Frame lang keine Schwelle
-        // und die eingeklappte Leiste spraenge auf.
-        const w = entries[0]?.contentRect.width ?? 0
-        if (w > 0) atlasWidth.value = w
-      })
-      atlasObserver.observe(el)
-    })
-    onUnmounted(() => {
-      atlasObserver?.disconnect()
-      atlasObserver = null
-    })
 
     // ── Facets ──────────────────────────────────────────────────────────────
     // Counts come from the UNFILTERED pool on purpose: a count that shrank as
@@ -2024,7 +1980,6 @@ export default defineComponent({
     }
 
     function onDetailFilter(groupId: 'tier' | 'trait' | 'origin', chipId: string) {
-      setFacetsFolded(false)
       onFacetToggle(groupId, chipId)
     }
 
@@ -2101,14 +2056,11 @@ export default defineComponent({
       heroBarHeightPx,
       onGridScroll,
       // ── Atlas ──
-      atlasRef,
       atlasColumns,
       cardMinWidthPx,
       cardHeightPx,
       gridGapPx,
       cardComfortColumns,
-      facetsFolded,
-      setFacetsFolded,
       facetGroups,
       onFacetToggle,
       activeFilterChips,
@@ -2181,8 +2133,7 @@ export default defineComponent({
    scroll under it.
 
    Its own container: the search row's buttons drop their labels by the width of
-   THIS column, and the column gains 180px whenever the facet rail folds — the
-   atlas never sees that. */
+   THIS column; the facet rail remains permanently available beside it. */
 .cs-atlas-grid {
   container: cs-grid / inline-size;
   position: relative;

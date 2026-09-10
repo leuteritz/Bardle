@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   SHOP_ATLAS_FACET_RAIL_WIDTH,
-  SHOP_ATLAS_FACET_RAIL_COLLAPSED,
-  SHOP_ATLAS_FACET_AUTOFOLD_WIDTH,
   SHOP_ATLAS_DETAIL_MIN_WIDTH,
   SHOP_ATLAS_DETAIL_PCT,
   SHOP_ATLAS_DETAIL_MAX_WIDTH,
@@ -25,7 +23,7 @@ import {
  * The numbers below mirror what App.vue computes and what the browser was
  * measured at (see the worked example in constants/economy.ts):
  *   Full HD  →  232px 636px 372px   4 columns
- *   2K       →  232px 930px 498px   6 columns
+ *   2K       →  232px 930px 498px   5 columns
  */
 
 /** Horizontal padding of .cs-atlas-grid, both sides. */
@@ -50,9 +48,9 @@ function atlasWidth(vw: number, vh: number): number {
   return modal / teamUiScale(vw, vh)
 }
 
-function zones(vw: number, vh: number, folded = false) {
+function zones(vw: number, vh: number) {
   const atlas = atlasWidth(vw, vh)
-  const facets = folded ? SHOP_ATLAS_FACET_RAIL_COLLAPSED : SHOP_ATLAS_FACET_RAIL_WIDTH
+  const facets = SHOP_ATLAS_FACET_RAIL_WIDTH
   const detail = clamp(
     SHOP_ATLAS_DETAIL_MIN_WIDTH,
     (atlas * SHOP_ATLAS_DETAIL_PCT) / 100,
@@ -65,7 +63,9 @@ function zones(vw: number, vh: number, folded = false) {
 /** What `repeat(auto-fill, minmax(CARD_MIN, 1fr))` resolves to. */
 function columns(gridWidth: number): number {
   const usable = gridWidth - GRID_PADDING
-  return Math.floor((usable + SHOP_ATLAS_GRID_GAP) / (SHOP_ATLAS_CARD_MIN_WIDTH + SHOP_ATLAS_GRID_GAP))
+  return Math.floor(
+    (usable + SHOP_ATLAS_GRID_GAP) / (SHOP_ATLAS_CARD_MIN_WIDTH + SHOP_ATLAS_GRID_GAP),
+  )
 }
 
 const DESKTOPS: Array<[string, number, number]> = [
@@ -90,29 +90,19 @@ describe('shop atlas layout', () => {
 
   it('matches the two widths measured in the browser', () => {
     const fhd = zones(1920, 1080)
-    expect(Math.round(fhd.grid)).toBe(676)
+    expect(Math.round(fhd.grid)).toBe(636)
     expect(Math.round(fhd.detail)).toBe(372)
     expect(columns(fhd.grid)).toBe(4)
 
     const qhd = zones(2560, 1440)
-    expect(Math.round(qhd.grid)).toBe(970)
+    expect(Math.round(qhd.grid)).toBe(930)
     expect(Math.round(qhd.detail)).toBe(498)
     expect(columns(qhd.grid)).toBe(5)
   })
 
-  it.each(DESKTOPS)('%s: folding the facet rail never costs the grid a column', (_l, vw, vh) => {
-    const open = zones(vw, vh)
-    const folded = zones(vw, vh, true)
-    expect(folded.grid - open.grid).toBe(
-      SHOP_ATLAS_FACET_RAIL_WIDTH - SHOP_ATLAS_FACET_RAIL_COLLAPSED,
-    )
-    expect(columns(folded.grid)).toBeGreaterThanOrEqual(columns(open.grid))
-  })
-
-  it.each(DESKTOPS)('%s: folding the rail buys a whole extra column', (_l, vw, vh) => {
-    // With the wider rail the 180px it frees are worth a column everywhere — at
-    // Full HD too, where the old 144px only bought reading room.
-    expect(columns(zones(vw, vh, true).grid)).toBeGreaterThan(columns(zones(vw, vh).grid))
+  it.each(DESKTOPS)('%s keeps the facet rail permanently open', (_l, vw, vh) => {
+    expect(zones(vw, vh).facets).toBe(SHOP_ATLAS_FACET_RAIL_WIDTH)
+    expect(columns(zones(vw, vh).grid)).toBeGreaterThanOrEqual(4)
   })
 
   /** What the search row leaves the field once its two buttons took their share. */
@@ -128,20 +118,11 @@ describe('shop atlas layout', () => {
     expect(searchFieldWidth(zones(vw, vh).grid)).toBeGreaterThanOrEqual(SHOP_HERO_FIELD_MIN_W)
   })
 
-  it('labels stand at 2K and fold away at Full HD', () => {
+  it('uses compact search actions at Full HD and labels at 2K', () => {
     // The threshold is the decision, not a round number: spelled out the buttons
     // cost 264px, which the Full HD column cannot pay and the 2K one can.
     expect(zones(1920, 1080).grid).toBeLessThan(SHOP_HERO_LABEL_MIN_W)
     expect(zones(2560, 1440).grid).toBeGreaterThanOrEqual(SHOP_HERO_LABEL_MIN_W)
     expect(SHOP_HERO_ACTIONS_ICON_W).toBeLessThan(SHOP_HERO_ACTIONS_W)
-  })
-
-  it('never auto-folds a desktop that has room for the rail', () => {
-    // The fold threshold exists for narrow windows, not for the reference
-    // resolutions — folding one of those would hide the facets by default on a
-    // screen that fits them.
-    for (const [, vw, vh] of DESKTOPS) {
-      expect(atlasWidth(vw, vh)).toBeGreaterThan(SHOP_ATLAS_FACET_AUTOFOLD_WIDTH)
-    }
   })
 })

@@ -31,7 +31,6 @@ type ShopDomain = 'champions' | 'items'
 
 const props = defineProps<{
   groups: ShopFacetGroup[]
-  folded: boolean
   /** Shown above every group — the one cut that applies to both domains. */
   affordableOnly: boolean
   affordableCount: number
@@ -44,26 +43,26 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   toggle: [groupId: string, chipId: string]
-  fold: [folded: boolean]
   'update:affordableOnly': [value: boolean]
   'update:domain': [domain: ShopDomain]
 }>()
 
-const DOMAINS: Array<{ id: ShopDomain; label: string; icon: string; tip: (n: number) => string }> = [
-  {
-    id: 'champions',
-    label: 'Champions',
-    icon: 'ph:users-three-fill',
-    tip: (n) =>
-      `${n} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies`,
-  },
-  {
-    id: 'items',
-    label: 'Items',
-    icon: 'ph:backpack-fill',
-    tip: (n) => `${n} item(s) on offer under the current filters`,
-  },
-]
+const DOMAINS: Array<{ id: ShopDomain; label: string; icon: string; tip: (n: number) => string }> =
+  [
+    {
+      id: 'champions',
+      label: 'Champions',
+      icon: 'ph:users-three-fill',
+      tip: (n) =>
+        `${n} champion(s) you can find and recruit right now — the rest belong to tiers that unlock in later galaxies`,
+    },
+    {
+      id: 'items',
+      label: 'Items',
+      icon: 'ph:backpack-fill',
+      tip: (n) => `${n} item(s) on offer under the current filters`,
+    },
+  ]
 
 /* Fold state of the groups. Pure rail UI, so it lives here — and the two
    domains never share a group id, which is why the domain switch needs no
@@ -84,19 +83,12 @@ const activeTotal = computed(
 </script>
 
 <template>
-  <aside class="cs-facets" :class="{ 'cs-facets--folded': folded }">
-    <button
-      class="cs-facets-grip"
-      v-tip="folded ? 'Show filters' : 'Hide filters'"
-      :aria-label="folded ? 'Show filters' : 'Hide filters'"
-      :aria-expanded="!folded"
-      @click="emit('fold', !folded)"
-    >
-      <Icon icon="lucide:sliders-horizontal" width="17" height="17" />
-      <span v-if="!folded" class="cs-facets-grip-label">Filters</span>
-      <span v-if="!folded && activeTotal" class="cs-facets-grip-count">{{ activeTotal }}</span>
-      <span class="cs-facets-grip-arrow">{{ folded ? '›' : '‹' }}</span>
-    </button>
+  <aside class="cs-facets">
+    <div class="cs-facets-grip" role="heading" aria-level="2">
+      <Icon icon="lucide:sliders-horizontal" width="20" height="20" />
+      <span class="cs-facets-grip-label">Filters</span>
+      <span v-if="activeTotal" class="cs-facets-grip-count">{{ activeTotal }}</span>
+    </div>
 
     <!-- The domain sits above the divider, not inside a group: every facet
          below it is read against it. -->
@@ -143,6 +135,7 @@ const activeTotal = computed(
           @click="toggleGroup(group.id)"
         >
           <Icon icon="lucide:chevron-down" width="14" height="14" class="cs-facet-chev" />
+          <Icon :icon="group.icon" width="18" height="18" class="cs-facet-head-icon" />
           <span class="cs-facet-head-label">{{ group.label }}</span>
           <span v-if="setCounts[group.id]" class="cs-facet-head-count">
             {{ setCounts[group.id] }}
@@ -190,35 +183,6 @@ const activeTotal = computed(
         </template>
       </div>
     </div>
-
-    <!-- Folded: the domain stays switchable and the group icons still say WHICH
-         facets the column holds. Clicking a group is the fastest way back. -->
-    <div class="cs-facets-stubs">
-      <button
-        v-for="d in DOMAINS"
-        :key="'dom-' + d.id"
-        class="cs-facet-stub cs-facet-stub--dom"
-        :class="{ 'cs-facet-stub--on': domain === d.id }"
-        v-tip="d.tip(domainCounts[d.id])"
-        :aria-label="`Show ${d.label}`"
-        @click="emit('update:domain', d.id)"
-      >
-        <Icon :icon="d.icon" width="21" height="21" />
-        <span class="cs-stub-count">{{ domainCounts[d.id] }}</span>
-      </button>
-      <span class="cs-stub-sep" />
-      <button
-        v-for="group in groups"
-        :key="'stub-' + group.id"
-        class="cs-facet-stub"
-        :class="{ 'cs-facet-stub--set': setCounts[group.id] > 0 }"
-        v-tip="group.label"
-        :aria-label="`Show ${group.label} filters`"
-        @click="emit('fold', false)"
-      >
-        <Icon :icon="group.icon" width="20" height="20" />
-      </button>
-    </div>
   </aside>
 </template>
 
@@ -235,54 +199,34 @@ const activeTotal = computed(
 .cs-facets-grip {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
-  height: 44px;
-  padding: 0 11px;
+  height: 50px;
+  padding: 0 14px;
   background: #1e1006;
   border: none;
-  border-bottom: 1px solid #5c3310;
+  border-bottom: 2px solid #5c3310;
   color: #c89040;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  cursor: pointer;
-  transition: color 0.15s;
-}
-.cs-facets-grip:hover {
-  color: #e8c040;
 }
 .cs-facets-grip-label {
   flex: 1;
   text-align: left;
 }
 .cs-facets-grip-count {
-  min-width: 20px;
-  padding: 1px 5px;
+  min-width: 24px;
+  padding: 3px 6px;
   border-radius: 4px;
   background: rgba(10, 8, 4, 0.7);
   border: 1px solid #7a4e20;
   color: #e8c040;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   text-align: center;
-}
-.cs-facets-grip-arrow {
-  font-size: 14px;
-  opacity: 0.75;
-}
-.cs-facets--folded .cs-facets-grip {
-  justify-content: center;
-  padding: 0;
-}
-.cs-facets--folded .cs-facets-grip-arrow {
-  display: none;
-}
-.cs-facets--folded .cs-facets-grip svg {
-  width: 15px;
-  height: 15px;
 }
 
 /* ── Domain ──
@@ -291,20 +235,17 @@ const activeTotal = computed(
 .cs-doms {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   flex-shrink: 0;
-  padding: 10px 10px 11px;
+  padding: 12px 12px 13px;
   border-bottom: 1px solid #3e200a;
-}
-.cs-facets--folded .cs-doms {
-  display: none;
 }
 .cs-dom {
   display: flex;
   align-items: center;
-  gap: 9px;
-  height: 38px;
-  padding: 0 9px;
+  gap: 10px;
+  height: 44px;
+  padding: 0 11px;
   border: 1px solid #3e200a;
   border-left: 3px solid #3e200a;
   border-radius: 4px;
@@ -365,13 +306,10 @@ const activeTotal = computed(
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 8px 9px 14px;
+  padding: 10px 11px 16px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-}
-.cs-facets--folded .cs-facets-scroll {
-  display: none;
+  gap: 4px;
 }
 
 .cs-facet-group {
@@ -385,11 +323,13 @@ const activeTotal = computed(
 .cs-facet-head {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
-  margin-top: 9px;
-  padding: 3px 4px;
+  min-height: 30px;
+  margin-top: 10px;
+  padding: 4px 6px;
   border: none;
+  border-bottom: 1px solid #3e200a;
   border-radius: 4px;
   background: transparent;
   color: #8a6030;
@@ -411,6 +351,10 @@ const activeTotal = computed(
   flex-shrink: 0;
   opacity: 0.7;
   transition: transform 0.15s;
+}
+.cs-facet-head-icon {
+  flex-shrink: 0;
+  color: #c89040;
 }
 .cs-facet-head--closed .cs-facet-chev {
   transform: rotate(-90deg);
@@ -444,15 +388,16 @@ const activeTotal = computed(
 .cs-facet-row {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   width: 100%;
-  padding: 6px 9px;
+  min-height: 34px;
+  padding: 5px 10px;
   border: 1px solid transparent;
   border-left: 3px solid transparent;
   border-radius: 4px;
   background: transparent;
   color: #b09a74;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-align: left;
@@ -468,7 +413,11 @@ const activeTotal = computed(
   border-left-color: var(--chip-color, #c89040);
 }
 .cs-facet-row--active {
-  background: color-mix(in srgb, var(--chip-color, #e8c040) 26%, rgba(18, 16, 10, var(--cs-veil, 1)));
+  background: color-mix(
+    in srgb,
+    var(--chip-color, #e8c040) 26%,
+    rgba(18, 16, 10, var(--cs-veil, 1))
+  );
   border-color: color-mix(in srgb, var(--chip-color, #e8c040) 50%, transparent);
   border-left-color: var(--chip-color, #e8c040);
   color: #fff4dc;
@@ -488,8 +437,8 @@ const activeTotal = computed(
   color: #fff;
 }
 .cs-facet-img {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
   object-fit: contain;
 }
@@ -526,76 +475,5 @@ const activeTotal = computed(
 .cs-facet-lock {
   flex-shrink: 0;
   color: #7a4e20;
-}
-
-/* ── Folded stubs ── */
-.cs-facets-stubs {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  padding: 8px 0;
-}
-.cs-facets--folded .cs-facets-stubs {
-  display: flex;
-}
-.cs-facet-stub {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 30px;
-  border: 1px solid #3e200a;
-  border-radius: 4px;
-  background: #16140e;
-  color: #8a6030;
-  cursor: pointer;
-  transition:
-    color 0.15s,
-    border-color 0.15s,
-    background 0.15s;
-}
-.cs-facet-stub:hover {
-  color: #e8c040;
-  border-color: #5c3310;
-}
-.cs-facet-stub--dom.cs-facet-stub--on {
-  background: #2a1c0c;
-  color: #e8c040;
-  border-color: #7a4e20;
-}
-/* Folded, this number is the only thing left saying what the other half holds. */
-.cs-stub-count {
-  position: absolute;
-  right: -4px;
-  bottom: -4px;
-  min-width: 16px;
-  padding: 0 3px;
-  border-radius: 4px;
-  background: #14100a;
-  border: 1px solid #5c3310;
-  color: #c89040;
-  font-size: 9px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  line-height: 13px;
-  text-align: center;
-}
-.cs-facet-stub--on .cs-stub-count {
-  border-color: #7a4e20;
-  color: #e8c060;
-}
-.cs-stub-sep {
-  width: 22px;
-  height: 2px;
-  margin: 3px 0;
-  background: #3e200a;
-}
-/* A folded rail must still admit that a filter is set — otherwise an empty grid
-   has no visible cause. */
-.cs-facet-stub--set {
-  color: #e8c040;
-  border-color: #c89040;
 }
 </style>

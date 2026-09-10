@@ -746,30 +746,20 @@ export const SHOP_SCROLL_SETTLE_MS = 150
  * Four at Full HD is the floor that matters: it is what the old 900px rail
  * showed, and this layout must not buy its detail column with a narrower grid.
  *
- * The rail grew from 196 to 232 so the domain switch could move into it out of
- * the command bar; the 36px came off CARD_MIN_WIDTH, not off the column count.
- * That the card lands near 144px on all three screens instead of 154/180/167 is
- * the second gain — one card size everywhere.
+ * The permanent rail is 232px so the domain switch and facet labels have room
+ * to stay visible beside the card grid. The card floor is 144px, preserving
+ * four columns at Full HD.
  */
-export const SHOP_ATLAS_FACET_RAIL_WIDTH = 192
-/** Collapsed facet rail — the group icons stay, the chips fold away. */
-export const SHOP_ATLAS_FACET_RAIL_COLLAPSED = 28
+export const SHOP_ATLAS_FACET_RAIL_WIDTH = 232
 export const SHOP_ATLAS_DETAIL_MIN_WIDTH = 360
 export const SHOP_ATLAS_DETAIL_PCT = 30
 export const SHOP_ATLAS_DETAIL_MAX_WIDTH = 520
-/**
- * Container width (px) below which the facet rail folds itself. Measured against
- * the ATLAS, not the viewport — the profile modal is inset by `--hud-panel-size`
- * on both sides, so a viewport media query would fold the rail on the wrong
- * screens (see `container-type: inline-size` on .cs-atlas).
- */
-export const SHOP_ATLAS_FACET_AUTOFOLD_WIDTH = 1180
 /**
  * Card grid geometry. The min width is what `repeat(auto-fill, minmax(…))` in
  * .cs-cards reads, so the column count follows the space the other two zones
  * leave over instead of being fixed per breakpoint.
  */
-export const SHOP_ATLAS_CARD_MIN_WIDTH = 152
+export const SHOP_ATLAS_CARD_MIN_WIDTH = 144
 export const SHOP_ATLAS_CARD_HEIGHT = 228
 export const SHOP_ATLAS_GRID_GAP = 10
 export const SHOP_ATLAS_COMFORT_CARD_COLUMNS = 5
