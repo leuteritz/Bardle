@@ -1,27 +1,5 @@
 <script setup lang="ts">
-/**
- * The shop's left column — the domain, then every facet of it, standing open.
- *
- * The filters used to live in a drawer above the grid: opening it pushed the
- * cards down, so narrowing a list moved the list. Across the full tab there is
- * room to just leave them out, and a facet you can see is one you remember you
- * set.
- *
- * The Champions/Items switch sits at the TOP of this column rather than in the
- * command bar: it is the first filter decision, and every group below it means
- * something different depending on it. The bar above is the search, and nothing
- * else.
- *
- * Chips are ROWS here, not pills. Wrapped pills would break "Void Sovereign"
- * across two lines and turn a facet list into a shape puzzle. A row has a fixed
- * anchor for the icon, the name and the count, so the eye runs down one edge —
- * and the count is what makes the facet honest: it says what picking it would
- * leave over.
- *
- * The rail knows nothing about champions or items. It renders the groups it is
- * handed and reports back which chip was hit; what a facet MEANS stays with the
- * shop, which is the only place that can resolve it against the catalog.
- */
+/** Permanent filter rail for the shop atlas. */
 import { computed, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { highlightSegments } from '@/utils/ui/searchHighlight'
@@ -113,36 +91,50 @@ const activeTotal = computed(
       <!-- Affordable — above the groups because it cuts across all of them:
            what the player can pay for right now is a different question from
            what kind of thing it is. -->
-      <button
-        class="cs-facet-row cs-facet-row--afford"
-        :class="{ 'cs-facet-row--active': affordableOnly }"
-        v-tip="`${affordableCount} affordable right now`"
-        @click="emit('update:affordableOnly', !affordableOnly)"
-      >
-        <Icon icon="game-icons:coins" width="20" height="20" class="cs-facet-icon" />
-        <span class="cs-facet-label">Affordable</span>
-        <span class="cs-facet-count">{{ affordableCount }}</span>
-      </button>
-
-      <div v-for="group in groups" :key="group.id" class="cs-facet-group">
-        <!-- Traits and Origins carry ~25 rows between them and push the short
-             groups out of sight; the head folds its own. The count stays on a
-             closed head, so a filter can never hide its own cause. -->
+      <section class="cs-facet-panel cs-facet-panel--afford">
         <button
-          class="cs-facet-head"
-          :class="{ 'cs-facet-head--closed': collapsedGroups.has(group.id) }"
+          class="cs-facet-row cs-facet-row--afford"
+          :class="{ 'cs-facet-row--active': affordableOnly }"
+          v-tip="`${affordableCount} affordable right now`"
+          @click="emit('update:affordableOnly', !affordableOnly)"
+        >
+          <span class="cs-facet-crest" aria-hidden="true">
+            <Icon icon="game-icons:coins" width="22" height="22" class="cs-facet-icon" />
+          </span>
+          <span class="cs-facet-copy">
+            <small>Availability</small>
+            <span class="cs-facet-label">Affordable</span>
+          </span>
+          <span class="cs-facet-count">{{ affordableCount }}</span>
+        </button>
+      </section>
+
+      <section
+        v-for="group in groups"
+        :key="group.id"
+        class="cs-facet-panel"
+        :class="{ 'cs-facet-panel--active': setCounts[group.id] > 0 }"
+      >
+        <button
+          class="cs-facet-panel-head"
+          :class="{ 'cs-facet-panel-head--closed': collapsedGroups.has(group.id) }"
           :aria-expanded="!collapsedGroups.has(group.id)"
           @click="toggleGroup(group.id)"
         >
-          <Icon icon="lucide:chevron-down" width="14" height="14" class="cs-facet-chev" />
-          <Icon :icon="group.icon" width="18" height="18" class="cs-facet-head-icon" />
-          <span class="cs-facet-head-label">{{ group.label }}</span>
-          <span v-if="setCounts[group.id]" class="cs-facet-head-count">
+          <span class="cs-facet-panel-crest" aria-hidden="true">
+            <Icon :icon="group.icon" width="19" height="19" />
+          </span>
+          <span class="cs-facet-panel-copy">
+            <small>Filter group</small>
+            <strong>{{ group.label }}</strong>
+          </span>
+          <span v-if="setCounts[group.id]" class="cs-facet-panel-count">
             {{ setCounts[group.id] }}
           </span>
+          <Icon icon="lucide:chevron-down" width="16" height="16" class="cs-facet-chev" />
         </button>
 
-        <template v-if="!collapsedGroups.has(group.id)">
+        <div v-if="!collapsedGroups.has(group.id)" class="cs-facet-panel-body">
           <p v-if="group.chips.length === 0" class="trait-empty-state">Nothing here yet</p>
           <button
             v-for="chip in group.chips"
@@ -157,19 +149,23 @@ const activeTotal = computed(
             v-tip="chip.title ?? chip.label"
             @click="emit('toggle', group.id, chip.id)"
           >
-            <img v-if="chip.image" :src="chip.image" :alt="chip.label" class="cs-facet-img" />
-            <Icon
-              v-else-if="chip.icon"
-              :icon="chip.icon"
-              width="20"
-              height="20"
-              class="cs-facet-icon"
-            />
-            <span class="cs-facet-label">
-              <template v-for="(seg, i) in highlightSegments(chip.label, query)" :key="i">
-                <mark v-if="seg.hit" class="cs-facet-mark">{{ seg.text }}</mark>
-                <template v-else>{{ seg.text }}</template>
-              </template>
+            <span class="cs-facet-crest" aria-hidden="true">
+              <img v-if="chip.image" :src="chip.image" :alt="chip.label" class="cs-facet-img" />
+              <Icon
+                v-else-if="chip.icon"
+                :icon="chip.icon"
+                width="21"
+                height="21"
+                class="cs-facet-icon"
+              />
+            </span>
+            <span class="cs-facet-copy">
+              <span class="cs-facet-label">
+                <template v-for="(seg, i) in highlightSegments(chip.label, query)" :key="i">
+                  <mark v-if="seg.hit" class="cs-facet-mark">{{ seg.text }}</mark>
+                  <template v-else>{{ seg.text }}</template>
+                </template>
+              </span>
             </span>
             <Icon
               v-if="chip.locked"
@@ -180,8 +176,8 @@ const activeTotal = computed(
             />
             <span v-else-if="chip.count != null" class="cs-facet-count">{{ chip.count }}</span>
           </button>
-        </template>
-      </div>
+        </div>
+      </section>
     </div>
   </aside>
 </template>
@@ -309,97 +305,137 @@ const activeTotal = computed(
   padding: 10px 11px 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
-.cs-facet-group {
+.cs-facet-panel {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
+  padding: 6px;
+  background: #111008;
+  border: 1px solid #3e200a;
+  border-left: 3px solid #5c3310;
+  border-radius: 4px;
+}
+.cs-facet-panel--active {
+  border-left-color: #e8c040;
 }
 
 /* ── Group head ──
    Not `.filter-divider`: that one is global and still carries the swap grid. */
-.cs-facet-head {
-  display: flex;
+.cs-facet-panel-head {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto 16px;
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 30px;
-  margin-top: 10px;
+  min-height: 40px;
   padding: 4px 6px;
-  border: none;
-  border-bottom: 1px solid #3e200a;
+  border: 1px solid #3e200a;
+  border-left: 3px solid #c89040;
   border-radius: 4px;
-  background: transparent;
-  color: #8a6030;
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
+  background: #141410;
+  color: inherit;
+  font: inherit;
   text-align: left;
   cursor: pointer;
   transition:
-    color 0.15s,
-    background 0.15s;
+    background 0.15s,
+    border-color 0.15s;
 }
-.cs-facet-head:hover {
+.cs-facet-panel-head:hover,
+.cs-facet-panel-head:focus-visible {
+  background: #1c1c18;
+  border-color: #7a4e20;
+  border-left-color: #e8c040;
+}
+.cs-facet-panel-head--closed .cs-facet-chev {
+  transform: rotate(-90deg);
+}
+.cs-facet-panel-crest,
+.cs-facet-crest {
+  display: grid;
+  place-items: center;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: #c89040;
+  color: #fff;
+}
+.cs-facet-panel-crest {
+  width: 30px;
+  height: 32px;
+}
+.cs-facet-panel-copy,
+.cs-facet-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.cs-facet-panel-copy small,
+.cs-facet-copy small {
+  overflow: hidden;
+  color: #a59675;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.cs-facet-panel-copy strong {
+  overflow: hidden;
   color: #c89040;
-  background: #1c1a12;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cs-facet-chev {
   flex-shrink: 0;
   opacity: 0.7;
   transition: transform 0.15s;
 }
-.cs-facet-head-icon {
+.cs-facet-panel-count {
   flex-shrink: 0;
-  color: #c89040;
-}
-.cs-facet-head--closed .cs-facet-chev {
-  transform: rotate(-90deg);
-}
-.cs-facet-head-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* A folded group must still admit that it holds a filter — otherwise an empty
-   grid has no visible cause. */
-.cs-facet-head-count {
-  flex-shrink: 0;
-  min-width: 20px;
-  padding: 1px 5px;
+  min-width: 22px;
+  padding: 2px 5px;
   border-radius: 4px;
   background: rgba(10, 8, 4, 0.7);
   border: 1px solid #7a4e20;
   color: #e8c040;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   text-align: center;
+}
+.cs-facet-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 1px 0 0;
 }
 
 /* One row, three anchors: mark, name, number. The left border is where the
    facet's own colour lives — a full tinted fill on every row would make the
    column louder than the cards it filters. */
 .cs-facet-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  min-height: 34px;
-  padding: 5px 10px;
-  border: 1px solid transparent;
-  border-left: 3px solid transparent;
+  min-height: 40px;
+  padding: 5px 8px;
+  border: 1px solid #3e200a;
+  border-left: 3px solid var(--chip-color, #c89040);
   border-radius: 4px;
-  background: transparent;
+  background: #141410;
   color: #b09a74;
-  font-size: 13.5px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   text-align: left;
   cursor: pointer;
   transition:
@@ -410,15 +446,12 @@ const activeTotal = computed(
 .cs-facet-row:hover:not(:disabled) {
   background: #1c1a12;
   color: #e8dcc0;
+  border-color: var(--chip-color, #c89040);
   border-left-color: var(--chip-color, #c89040);
 }
 .cs-facet-row--active {
-  background: color-mix(
-    in srgb,
-    var(--chip-color, #e8c040) 26%,
-    rgba(18, 16, 10, var(--cs-veil, 1))
-  );
-  border-color: color-mix(in srgb, var(--chip-color, #e8c040) 50%, transparent);
+  background: #1c1c18;
+  border-color: var(--chip-color, #e8c040);
   border-left-color: var(--chip-color, #e8c040);
   color: #fff4dc;
 }
@@ -429,11 +462,12 @@ const activeTotal = computed(
 .cs-facet-row--afford {
   --chip-color: #52b830;
 }
-.cs-facet-icon {
-  flex-shrink: 0;
-  color: var(--chip-color, #c89040);
+.cs-facet-crest {
+  width: 28px;
+  height: 30px;
+  background: var(--chip-color, #c89040);
 }
-.cs-facet-row--active .cs-facet-icon {
+.cs-facet-icon {
   color: #fff;
 }
 .cs-facet-img {
@@ -443,7 +477,7 @@ const activeTotal = computed(
   object-fit: contain;
 }
 .cs-facet-label {
-  flex: 1;
+  display: block;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -469,7 +503,7 @@ const activeTotal = computed(
   color: #7a6848;
 }
 .cs-facet-row--active .cs-facet-count {
-  border-color: #7a4e20;
+  border-color: var(--chip-color, #7a4e20);
   color: #e8c040;
 }
 .cs-facet-lock {
