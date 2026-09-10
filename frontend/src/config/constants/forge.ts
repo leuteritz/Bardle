@@ -2191,8 +2191,6 @@ export const FORGE_UPGRADE_EMPTY_ICON = 'game-icons:sprout'
  * Fassungen desselben Zeichens ergeben.
  */
 export const FORGE_COUNT_TOKEN = '{n}'
-/** Und derselbe Gedanke für den Preis, der in `FORGE_BUY_ALL_TITLE` danebensteht. */
-export const FORGE_BUY_ALL_COST_TOKEN = '{c}'
 /**
  * Der Sammelkauf sass bis zum Umbau in der Kopfleiste ÜBER DEM BAUM, zusammen
  * mit Suchfeld und Ringfiltern. Er steht jetzt am Kopf der DETAILSPALTE —
@@ -2220,12 +2218,6 @@ export const FORGE_BUY_ALL_COST_TOKEN = '{c}'
  */
 export const FORGE_BUY_ALL_LABEL = 'Buy All'
 export const FORGE_BUY_ALL_ICON = 'ph:lightning-fill'
-/**
- * Der volle Satz im `title` des Knopfes. Er nennt beides — Anzahl UND Preis —,
- * weil die Leiste ihre Zahlen als Pille und Preisblock zeigt und ein Screenreader
- * (oder ein sehr schmaler Viewport) sonst nur die nackten Ziffern bekäme.
- */
-export const FORGE_BUY_ALL_TITLE = `${FORGE_BUY_ALL_LABEL} · ${FORGE_COUNT_TOKEN} levels · ${FORGE_BUY_ALL_COST_TOKEN} chimes`
 /**
  * Kantenlänge des Blitz-Glyphs auf der Leiste. 20 statt 18: die 18er-Grenze ist
  * die, ab der gefüllte Glyphen zu Grau zerfallen, und die eine Primäraktion der

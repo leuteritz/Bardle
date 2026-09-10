@@ -17,7 +17,6 @@
       class="fba"
       :class="{ 'fba--flash': flashing }"
       :aria-label="FORGE_BUY_ALL_LABEL"
-      :title="title"
       @mouseenter="freeze"
       @mouseleave="thaw"
       @click="handleClick"
@@ -80,9 +79,6 @@ import {
   FORGE_BUY_ALL_ICON,
   FORGE_BUY_ALL_ICON_SIZE,
   FORGE_BUY_ALL_LABEL,
-  FORGE_BUY_ALL_TITLE,
-  FORGE_BUY_ALL_COST_TOKEN,
-  FORGE_COUNT_TOKEN,
   FORGE_CHIME_IMAGE,
   FORGE_CARD_FLASH_MS,
 } from '@/config/constants'
@@ -130,13 +126,6 @@ function freeze(): void {
 function thaw(): void {
   frozenPlan.value = null
 }
-
-const title = computed(() =>
-  FORGE_BUY_ALL_TITLE.replace(FORGE_COUNT_TOKEN, String(plan.value.count)).replace(
-    FORGE_BUY_ALL_COST_TOKEN,
-    formatNumber(plan.value.chimeCost),
-  ),
-)
 
 // ── Quittung im Knopf ────────────────────────────────────────────────────────
 /** Rein visuell, daher reale Zeit. */
@@ -186,28 +175,27 @@ function handleClick(): void {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 50px;
-  padding: 11px 14px;
+  min-height: 60px;
+  padding: 12px 14px;
   border: 1px solid #6ec040;
   border-radius: 4px;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   color: #08130a;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 900;
   letter-spacing: 0.05em;
+  line-height: 1;
   text-transform: uppercase;
   cursor: pointer;
   isolation: isolate;
-  transition:
-    filter 0.15s ease,
-    transform 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
 /* Kein `:not(:disabled)` mehr an Hover und Druckpunkt: der Knopf ist nur da,
    wenn er auch geht. */
 .fba:hover {
-  filter: brightness(1.12);
+  transform: translateY(-1px);
 }
 
 .fba:active {
@@ -224,6 +212,19 @@ function handleClick(): void {
   z-index: 1;
   flex-shrink: 0;
   color: currentColor;
+}
+
+.fba::before {
+  position: absolute;
+  inset: -20% -30%;
+  z-index: 0;
+  content: '';
+  background: #e8c040;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-125%) skewX(-18deg);
+  will-change: transform, opacity;
+  animation: fba-background-wave 4.6s ease-in-out infinite;
 }
 
 /* Der Wortlaut nimmt den Restplatz und schiebt Pille und Preis an die rechte
@@ -250,16 +251,17 @@ function handleClick(): void {
 
 .fba-word--buy {
   color: #08130a;
+  font-size: 1.08em;
   font-style: italic;
-  animation: fba-word-buy 3.8s ease-in-out infinite;
+  animation: fba-word-buy 4.6s ease-in-out infinite;
 }
 
 .fba-word--all {
   color: #e8c040;
-  font-size: 1.12em;
+  font-size: 1.38em;
   font-style: italic;
-  letter-spacing: 0.08em;
-  animation: fba-word-all 3.8s 0.16s ease-in-out infinite;
+  letter-spacing: 0.1em;
+  animation: fba-word-all 4.6s 0.16s ease-in-out infinite;
 }
 
 @keyframes fba-word-buy {
@@ -303,6 +305,8 @@ function handleClick(): void {
 /* Die ANZAHL ist die Information, der Blitz trägt nur die Bedeutung — sie
    bekommt deshalb einen eigenen Träger statt bloss eines Punktes im Satz. */
 .fba-count {
+  position: relative;
+  z-index: 1;
   flex-shrink: 0;
   padding: 2px 9px;
   border-radius: 3px;
@@ -343,22 +347,22 @@ function handleClick(): void {
 }
 
 .fba-aura {
-  inset: 2px;
+  inset: 1px;
   border: 2px solid #e8c040;
   opacity: 0;
   transform: scale(0.94);
-  animation: fba-aura 3.8s ease-out infinite;
+  animation: fba-aura 4.6s ease-out infinite;
 }
 
 .fba-sweep {
   top: -30%;
   bottom: -30%;
   left: -18%;
-  width: 12%;
+  width: 20%;
   background: #e8c040;
   opacity: 0;
   transform: translateX(-220%) skewX(-18deg);
-  animation: fba-sweep 3.8s ease-in-out infinite;
+  animation: fba-sweep 4.6s ease-in-out infinite;
 }
 
 @keyframes fba-aura {
@@ -403,6 +407,29 @@ function handleClick(): void {
   }
 }
 
+@keyframes fba-background-wave {
+  0%,
+  14%,
+  100% {
+    opacity: 0;
+    transform: translateX(-125%) skewX(-18deg);
+  }
+
+  20% {
+    opacity: 0.1;
+  }
+
+  42% {
+    opacity: 0.03;
+    transform: translateX(125%) skewX(-18deg);
+  }
+
+  48% {
+    opacity: 0;
+    transform: translateX(125%) skewX(-18deg);
+  }
+}
+
 /* ── Kaufquittung ───────────────────────────────────────────────────────────── */
 .fba-flash {
   position: absolute;
@@ -410,6 +437,7 @@ function handleClick(): void {
   background: #eaffd8;
   opacity: 0;
   pointer-events: none;
+  z-index: 2;
   transition: opacity 0.18s ease;
 }
 
@@ -427,9 +455,9 @@ function handleClick(): void {
 
   .fba {
     gap: 8px;
-    min-height: 46px;
-    padding: 9px 12px;
-    font-size: 13px;
+    min-height: 56px;
+    padding: 10px 12px;
+    font-size: 16px;
   }
 
   .fba-count {
@@ -440,6 +468,10 @@ function handleClick(): void {
   .fba-cost-num {
     font-size: 12.5px;
   }
+
+  .fba-word--all {
+    font-size: 1.32em;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -448,6 +480,12 @@ function handleClick(): void {
   .fba-word--buy,
   .fba-word--all {
     animation: none;
+    transform: none;
+  }
+
+  .fba::before {
+    animation: none;
+    opacity: 0;
     transform: none;
   }
 
