@@ -7,11 +7,15 @@
  * `RpgBadgeTooltip` mit. Hier steht nur, was DIESE Karte vom Rest unterscheidet.
  * Eine eigene Flaeche oder eine zweite `clamp()`-Skala braeche
  * `tooltipLanguage.spec.ts`, und das ist sein Zweck.
+ *
+ * Jede Zahl steht GENAU EINMAL: die Gesichter sagen wer, die Ablesungen sagen
+ * wie viele. Warum kein „Stars" neben „rescued" und kein Tier mehr dasteht,
+ * steht in `docs/firmament.md`.
  */
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { GALAXY_THEMES } from '@/config/world/galaxyThemes'
-import { tierOf, useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { formatCompactDuration, toRoman } from '@/utils/ui/format'
 import { starSeats } from '@/utils/ui/starSeats'
@@ -52,13 +56,11 @@ const state = computed(() =>
       : 'unlit',
 )
 
-/** Die Zeile, wegen der die Karte aufgeht. */
-const headline = computed(() => {
-  const n = props.node
-  if (n.state === 'unlit') return 'Not charted yet'
-  if (n.state === 'current') return `${n.rescued} of ${n.stars} stars rescued`
-  return `${n.rescued} rescued${n.lost > 0 ? ` · ${n.lost} lost` : ''}`
-})
+/** Die Zeile, wegen der die Karte aufgeht: der NAME der Galaxie. Die Zahlen des
+ *  Laufs stehen darunter als Ablesung — hier stuenden sie ein zweites Mal. */
+const lead = computed(() =>
+  props.node.state === 'unlit' ? 'Not charted yet' : themeName.value,
+)
 
 /** Wer geflogen ist, in FLUGREIHENFOLGE — der Sternbogen am Knoten gruppiert
  *  (gold, dann rot), die Reihe erzaehlt die Chronologie des Laufs.
@@ -92,6 +94,10 @@ const seatRowW = `${(
   UNIVERSE_MAP_TIP_SEAT_COLS * UNIVERSE_MAP_TIP_SEAT_EM +
   (UNIVERSE_MAP_TIP_SEAT_COLS - 1) * UNIVERSE_MAP_TIP_SEAT_GAP_EM
 ).toFixed(2)}em`
+
+// Die zwei Kanaele des Sternbogens am Knoten, hier als Zahl.
+const freedInk = UNIVERSE_MAP_FREED_COLOR
+const lostInk = UNIVERSE_MAP_LOST_COLOR
 </script>
 
 <template>
@@ -101,9 +107,9 @@ const seatRowW = `${(
       <span class="tip-state">{{ state }}</span>
     </header>
 
-    <div class="tip-effect fgt-line">{{ headline }}</div>
+    <div class="tip-effect" :class="{ 'fgt-name': node.state !== 'unlit' }">{{ lead }}</div>
 
-    <!-- Wer, nicht wie viele: die Zahl steht darueber, hier stehen die
+    <!-- Wer, nicht wie viele: die Zahl steht darunter, hier stehen die
          Gesichter. Kein Name und kein Knopf — die Karte ist
          `pointer-events: none`, und Namen traegt die Galaxie in Voyages. -->
     <ul v-if="seats.seats.length" class="fgt-seats">
@@ -123,30 +129,40 @@ const seatRowW = `${(
     <div class="tip-read tip-read--lg">
       <span class="tip-read-cell">
         <span class="tip-read-k">Stars</span>
-        <span class="tip-read-v">{{ node.stars }}</span>
+        <span class="tip-read-v">
+          <template v-if="node.state === 'unlit'">{{ node.stars }}</template>
+          <template v-else>
+            <span class="fgt-freed">{{ node.rescued }}</span>
+            <template v-if="node.state === 'current'">
+              <span class="tip-read-sep">/</span>
+              <span class="fgt-need">{{ node.stars }}</span>
+            </template>
+            <template v-if="node.lost > 0">
+              <span class="tip-read-sep">·</span>
+              <span class="fgt-lost">{{ node.lost }}</span>
+            </template>
+          </template>
+        </span>
       </span>
-      <span class="tip-read-cell">
+      <span v-if="node.state !== 'unlit'" class="tip-read-cell">
         <span class="tip-read-k">Landfalls</span>
         <span class="tip-read-v">{{ node.landfalls }}</span>
       </span>
-      <span class="tip-read-cell">
-        <span class="tip-read-k">Tier</span>
-        <span class="tip-read-v">{{ tierOf(node.galaxy) }}</span>
+      <span v-if="node.record" class="tip-read-cell fgt-run">
+        <span class="tip-read-k">Run</span>
+        <span class="tip-read-v">
+          {{ formatCompactDuration(node.record.durationSeconds * MS_PER_SECOND) }}
+        </span>
       </span>
     </div>
 
-    <div class="tip-hint fgt-foot">
-      <span class="fgt-theme">{{ themeName }}</span>
-      <span v-if="node.record">
-        · {{ formatCompactDuration(node.record.durationSeconds * MS_PER_SECOND) }} · {{ day }}
-      </span>
-      <span v-else-if="node.state === 'current'">· core gate sealed</span>
-      <span v-else>· the Bard has not been here yet</span>
+    <!-- Die Fusszeile haengt am Record: ohne Lauf gibt es weder Datum noch
+         Geste. Kein `.tip-act` — die Karte traegt `pointer-events: none`, ein
+         Knopf waere darin nicht zu treffen; die Geste sitzt am Knoten selbst. -->
+    <div v-if="node.record" class="tip-hint fgt-foot">
+      <span class="fgt-cta">↗ Click to open in Galaxy</span>
+      <span class="fgt-day">{{ day }}</span>
     </div>
-
-    <!-- Kein `.tip-act`: die Karte traegt `pointer-events: none`, ein Knopf
-         waere darin nicht zu treffen. Die Geste sitzt am Knoten selbst. -->
-    <div v-if="node.record" class="tip-hint fgt-cta">↗ Click to open in Galaxy</div>
   </div>
 </template>
 
@@ -164,8 +180,8 @@ const seatRowW = `${(
   margin: 0 -1.16em;
 }
 
-.fgt-line {
-  text-transform: none;
+.fgt-name {
+  color: var(--tip-color);
 }
 
 .fgt-seats {
@@ -211,20 +227,40 @@ const seatRowW = `${(
   padding-top: 0;
 }
 
+/* Die zwei Kanaele des Sternbogens am Knoten, hier als Zahl. */
+.fgt-freed {
+  color: v-bind(freedInk);
+}
+
+.fgt-lost {
+  color: v-bind(lostInk);
+}
+
+/* Was die laufende Galaxie noch verlangt — Ziel, nicht Ertrag. */
+.fgt-need {
+  color: rgba(232, 220, 192, 0.55);
+}
+
+/* Die Dauer ist der breiteste Wert der Reihe — bei gleichen Anteilen fehlten ihr
+   gemessen 17 px, und `nowrap` schnitt sie an. Der Elternselektor ist noetig:
+   `.tip-read--lg .tip-read-cell` traegt dieselbe Spezifitaet und steht spaeter. */
+.fgt .fgt-run {
+  flex: 1.7;
+}
+
 .fgt-foot {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.28em;
-}
-
-.fgt-theme {
-  color: var(--tip-color);
+  gap: 0.4em;
 }
 
 /* Die einzige Zeile der Karte, die eine HANDLUNG nennt — Gold, damit sie sich
-   von den Ablesungen darueber trennt. Der Abstand kommt von der Karte. */
+   von der Ablesung darueber trennt. */
 .fgt-cta {
-  margin-top: -0.36em;
   color: #e8c040;
+}
+
+.fgt-day {
+  margin-left: auto;
 }
 </style>

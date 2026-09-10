@@ -878,4 +878,17 @@ describe('Universe — die Portraitreihe der Knotenkarte', () => {
     // Bardle hat keine Pixel-Art — eine „Schaerfe"-Regel waere der Rueckfall.
     expect(CARD).not.toMatch(/image-rendering/)
   })
+
+  // `tierOf(g)` ist eine reine Funktion der Galaxienummer, und die steht als
+  // roemische Ziffer im Titel derselben Karte.
+  it('die Karte nennt keinen Rang', () => {
+    expect(CARD).not.toMatch(/tierOf/)
+  })
+
+  // Genau zwei: der Ueberlaufzaehler der Portraitreihe und die Fusszeile.
+  // Datum und Geste teilen sich EINEN Trennstrich — zwei `tip-hint` untereinander
+  // zogen zwei Linien durch das untere Drittel der Karte.
+  it('die Karte hat EINE Fusszeile', () => {
+    expect(CARD.match(/tip-hint/g)?.length).toBe(2)
+  })
 })
