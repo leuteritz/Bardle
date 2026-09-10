@@ -148,19 +148,16 @@ function openGalaxyTab() {
   uiStore.setBardTab('galaxy')
 }
 
-/**
- * Der Weg zu The Wandering — beide Aufrufer wollen dasselbe.
- *
- * Die Marke „schmiedbar" traegt die Ecktaste rechts; diese hier meldet
- * „lernbar", und ein Sprung, der nur den Reiter oeffnet, laesst den Spieler mit
- * 195 Knoten allein. Wohin es geht, entscheidet der Store — dieselbe Quelle,
- * aus der Taste K liest.
- */
+/** Skill-Badge und K-Taste führen zum nächsten Meep der Wandering-Straße. */
 function openRoadTab() {
   uiStore.openBardModal()
   uiStore.setBardTab('tree')
   const target = meepTreeStore.roadAnchorId
   if (target) focusNode(target, { readable: true })
+}
+
+function openSkillTreeTab() {
+  uiStore.setBardTab('tree')
 }
 
 function openPlanetsTab() {
@@ -540,13 +537,11 @@ onUnmounted(() => {
       <div class="flex-shrink-0 header-inventory-bump">
         <button
           class="btn-gem btn-gem--corner-right"
-          title="Open the Skill Tree — the camera lands on The Wandering"
-          @click="openRoadTab"
+          title="Open the Skill Tree — centered on the sun"
+          @click="openSkillTreeTab"
         >
           <!-- Das Glyph des Netzes (HEADER_GEM_ICONS.tree). Zwei Ecktasten,
-               zwei Reiter: links der Laden, hier der Sternbaum. Der Knopf
-               oeffnet ihn nicht nur, er faehrt weiter an den aeusseren Rand —
-               am Zoomboden ist ein Meep-Knoten sechs Pixel gross.
+               zwei Reiter: links der Laden, hier der Sternbaum.
                OHNE den `boost` der Reiterleiste: dort gleicht er das Motiv an
                schlankere Phosphor-Nachbarn in EINER Reihe an — hier steht es
                allein in seiner Platte und füllt seinen Kasten ohnehin bis an
