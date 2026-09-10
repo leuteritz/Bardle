@@ -10,16 +10,13 @@
  *
  * Hier bleibt NUR, was allein dieser Leiste gehoert: die Scheibe samt ihrer
  * Ziffer, der Puls auf „du bist hier", die Toenung der gewaehlten Bahn, die
- * Ablesungszeile, der Fortschrittsbalken und der Knopf in die Annalen.
+ * Ablesungszeile und der Fortschrittsbalken.
  *
  * **Die Zeile ist eine KARTE, und die Leiste ROLLT.** Zehn Karten passen auf
  * keiner Zielaufloesung unter 4K; gebunden ist deshalb ein BODEN
  * (`UNIVERSE_RAIL_MIN_VISIBLE`), nicht die Vollzahl. Die Hoehe ist gerechnet,
  * nicht geraten — `UNIVERSE_RAIL_ROW_H` summiert Polsterung, Scheibe und
  * Ablesungskasten, und `universeLayout.spec.ts` zaehlt mit derselben Summe.
- *
- * Der Detailknopf ist ein GESCHWISTER der Zeile, kein Kind: ein Knopf im Knopf
- * ist ungueltiges HTML, das der Browser still aushaengt. Darum der Wrapper.
  *
  * Sie hat KEINE eigene Ueberschrift, genau wie ihre beiden Vorbilder: das Wort
  * steht senkrecht auf dem Griff daneben, und die Zahl der begangenen Universen
@@ -31,7 +28,6 @@
  * Zuklappen, ohne dass jemand sie sichert.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Icon } from '@iconify/vue'
 import {
   UNIVERSE_MAP_HERE_COLOR,
   UNIVERSE_MAP_RAIL_HANDLE_LABEL,
@@ -50,11 +46,6 @@ import {
   UNIVERSE_RAIL_CARD_PAD_T,
   UNIVERSE_RAIL_CARD_PAD_T_COMPACT,
   UNIVERSE_RAIL_COMPACT_MAX_VH,
-  UNIVERSE_RAIL_DETAIL_ICON,
-  UNIVERSE_RAIL_DETAIL_ICON_PX,
-  UNIVERSE_RAIL_DETAIL_INSET,
-  UNIVERSE_RAIL_DETAIL_PX,
-  UNIVERSE_RAIL_DETAIL_TITLE,
   UNIVERSE_RAIL_READ_H,
   UNIVERSE_RAIL_READ_H_COMPACT,
   UNIVERSE_RAIL_ROW_GAP,
@@ -74,7 +65,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'select', value: UniverseSelection): void
-  (e: 'annals', universe: number): void
 }>()
 
 /** Kein Toggle: die Bahn ist der Ansichtszustand, es gibt kein Nichts. */
@@ -150,19 +140,6 @@ const readH = computed(() =>
 )
 const barH = px(UNIVERSE_RAIL_BAR_H)
 const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
-const detailPx = px(UNIVERSE_RAIL_DETAIL_PX)
-const detailTop = computed(() =>
-  px(compact.value ? UNIVERSE_RAIL_CARD_PAD_T_COMPACT : UNIVERSE_RAIL_CARD_PAD_T),
-)
-const detailRight = px(UNIVERSE_RAIL_TINT_BAR_W + UNIVERSE_RAIL_DETAIL_INSET)
-/** Die Gasse, die der Kopf dem Knopf freihaelt — das Polster deckt sie zum Teil
- *  schon ab. */
-const detailGutter = px(
-  UNIVERSE_RAIL_DETAIL_PX +
-    UNIVERSE_RAIL_TINT_BAR_W +
-    UNIVERSE_RAIL_DETAIL_INSET -
-    UNIVERSE_RAIL_CARD_PAD_R,
-)
 </script>
 
 <template>
@@ -170,76 +147,53 @@ const detailGutter = px(
        in einem Knopf — ohne das `aria-label` waere die Region namenlos. -->
   <aside class="sr un-rail" :class="{ 'sr--compact': compact }" :aria-label="railLabel">
     <div ref="scroll" class="sr-scroll un-rail-list">
-      <!-- Die Huelle traegt nichts Sichtbares: sie haelt nur den Ton, den beide
-           Kinder lesen, und traegt den Knopf als Geschwister der Zeile. -->
-      <div
+      <button
         v-for="row in rows"
         :key="row.id"
-        class="un-rail-card"
+        class="sr-row un-rail-row"
+        :class="{
+          'is-current': row.current,
+          'is-picked': row.picked,
+          'is-dim': !row.walked,
+          'is-inert': !row.pickable,
+        }"
         :style="{ '--un-row-tint': row.tint }"
+        :data-universe="row.id"
+        :aria-label="`Universe ${row.roman}, ${row.note}`"
+        :aria-pressed="row.picked"
+        @click="pick(row)"
       >
-        <button
-          class="sr-row un-rail-row"
-          :class="{
-            'is-current': row.current,
-            'is-picked': row.picked,
-            'is-dim': !row.walked,
-            'is-inert': !row.pickable,
-          }"
-          :data-universe="row.id"
-          :aria-label="`Universe ${row.roman}, ${row.note}`"
-          :aria-pressed="row.picked"
-          @click="pick(row)"
-        >
-          <span class="un-rail-head">
-            <span class="un-rail-disc">
-              <UniverseDisc :universe="row.id" :state="row.discState" :px="discPx" />
-              <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre
-                   Deckkraft. Nur „du bist hier" atmet. -->
-              <span v-if="row.current" class="un-rail-pulse" aria-hidden="true" />
-              <span class="un-rail-roman">{{ row.roman }}</span>
-            </span>
-
-            <span class="sr-row-body">
-              <span class="sr-row-name">Universe {{ row.roman }}</span>
-              <span class="sr-row-note">{{ row.state }}</span>
-            </span>
+        <span class="un-rail-head">
+          <span class="un-rail-disc">
+            <UniverseDisc :universe="row.id" :state="row.discState" :px="discPx" />
+            <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre
+                 Deckkraft. Nur „du bist hier" atmet. -->
+            <span v-if="row.current" class="un-rail-pulse" aria-hidden="true" />
+            <span class="un-rail-roman">{{ row.roman }}</span>
           </span>
 
-          <!-- Grad, Farbe und Ellipse kommen von `.sr-row-note` — eine zweite
-               Textzeile ohne zweite Schriftskala. -->
-          <span class="sr-row-note un-rail-read">
-            <span class="un-rail-v">{{ row.galaxies }}</span> freed<span class="un-rail-sep"
-              >·</span
-            ><span class="un-rail-v">{{ row.rescued }}</span
-            ><span class="un-rail-slash">/</span
-            ><span class="un-rail-lost">{{ row.lost }}</span> stars<span class="un-rail-sep"
-              >·</span
-            ><span class="un-rail-t">{{ row.elapsed }}</span>
+          <span class="sr-row-body">
+            <span class="sr-row-name">Universe {{ row.roman }}</span>
+            <span class="sr-row-note">{{ row.state }}</span>
           </span>
+        </span>
 
-          <span class="un-rail-bar" aria-hidden="true">
-            <span class="un-rail-fill" :style="{ transform: `scaleX(${row.progress})` }" />
-          </span>
-        </button>
+        <!-- Grad, Farbe und Ellipse kommen von `.sr-row-note` — eine zweite
+             Textzeile ohne zweite Schriftskala. -->
+        <span class="sr-row-note un-rail-read">
+          <span class="un-rail-v">{{ row.galaxies }}</span> freed<span class="un-rail-sep"
+            >·</span
+          ><span class="un-rail-v">{{ row.rescued }}</span
+          ><span class="un-rail-slash">/</span
+          ><span class="un-rail-lost">{{ row.lost }}</span> stars<span class="un-rail-sep"
+            >·</span
+          ><span class="un-rail-t">{{ row.elapsed }}</span>
+        </span>
 
-        <!-- Zuletzt im DOM: er malt ohne `z-index` darueber, und die
-             Tabulator-Reihenfolge liest „Bahn waehlen" vor „Bahn nachlesen". -->
-        <button
-          v-if="row.walked"
-          class="un-rail-detail"
-          :data-universe-detail="row.id"
-          :title="`${UNIVERSE_RAIL_DETAIL_TITLE} — Universe ${row.roman}`"
-          :aria-label="`Open the annals of Universe ${row.roman}`"
-          @click="emit('annals', row.id)"
-        >
-          <Icon
-            :icon="UNIVERSE_RAIL_DETAIL_ICON"
-            :width="UNIVERSE_RAIL_DETAIL_ICON_PX"
-            :height="UNIVERSE_RAIL_DETAIL_ICON_PX"
-          />
-        </button>
-      </div>
+        <span class="un-rail-bar" aria-hidden="true">
+          <span class="un-rail-fill" :style="{ transform: `scaleX(${row.progress})` }" />
+        </span>
+      </button>
     </div>
   </aside>
 </template>
@@ -257,21 +211,15 @@ const detailGutter = px(
   gap: v-bind(rowGap);
 }
 
-/* `flex: 1 0 <ROW_H>` ist der ganze Groessenmechanismus: Basis ist die Zahl, mit
-   der die Spec rechnet, `shrink: 0` haelt sie (die Pflicht, die frueher `.sr-row`
-   trug), und `grow: 1` verteilt nur POSITIVEN Rest — passen zehn nicht, gibt es
+/* Die Zeilenkarte ist eine SPALTE: Kopf, Ablesung, Balken. `flex: 1 0 <ROW_H>`
+   ist ihr ganzer Groessenmechanismus — Basis ist die Zahl, mit der die Spec
+   rechnet, und `grow: 1` verteilt nur POSITIVEN Rest: passen zehn nicht, gibt es
    keinen, und die Rechnung der Spec bleibt wahr. */
-.un-rail-card {
-  position: relative;
+.un-rail-row {
   flex: 1 0 v-bind(cardH);
   max-height: v-bind(cardMaxH);
-}
-
-/* Die Zeilenkarte ist eine SPALTE geworden: Kopf, Ablesung, Balken. */
-.un-rail-row {
   flex-direction: column;
   align-items: stretch;
-  height: 100%;
   gap: v-bind(cardGapY);
   padding: v-bind(cardPad);
 }
@@ -283,7 +231,6 @@ const detailGutter = px(
   flex: 1;
   min-height: v-bind(headMinH);
   min-width: 0;
-  padding-right: v-bind(detailGutter);
 }
 
 .un-rail-row.is-current {
@@ -421,32 +368,6 @@ const detailGutter = px(
   background: var(--un-row-tint);
   opacity: 0.85;
   transition: transform 220ms ease;
-}
-
-/* ══ Der Knopf in die Annalen ══ */
-.un-rail-detail {
-  position: absolute;
-  top: v-bind(detailTop);
-  right: v-bind(detailRight);
-  display: grid;
-  place-items: center;
-  width: v-bind(detailPx);
-  height: v-bind(detailPx);
-  padding: 0;
-  color: var(--sr-accent);
-  background: color-mix(in srgb, var(--sr-row-bg) 82%, #000);
-  border: 1px solid var(--sr-row-border);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.12s ease;
-}
-.un-rail-detail:hover {
-  color: var(--sr-accent-hi);
-  background: #241a0f;
-}
-.un-rail-detail:focus-visible {
-  outline: 2px solid var(--sr-accent-hi);
-  outline-offset: -2px;
 }
 
 /* ══ Kompakte Stufe ══

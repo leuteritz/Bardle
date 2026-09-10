@@ -304,23 +304,6 @@ describe('Universe — das Zonenbudget', () => {
     expect(UNIVERSE_RAIL_COMPACT_MAX_VH).toBeLessThan(1080)
   })
 
-  /* Ein Knopf IM Knopf ist ungueltiges HTML: der Parser haengt ihn still aus,
-     und der Klick geht verloren. Die Zeile ist ein `<button>`, also steht der
-     Annalen-Knopf daneben — es gibt keinen Mount-Test fuer diese Datei, der das
-     sonst faenge. */
-  it('haelt den Annalen-Knopf als GESCHWISTER der Zeile', () => {
-    const src = readFileSync(
-      resolve(__dirname, '../../components/bardProfil/universe/UniverseRail.vue'),
-      'utf8',
-    )
-    const row = src.indexOf('class="sr-row un-rail-row"')
-    const detail = src.indexOf('class="un-rail-detail"')
-    expect(row).toBeGreaterThan(-1)
-    expect(detail).toBeGreaterThan(-1)
-    // Zwischen beiden muss das schliessende Tag der Zeile liegen.
-    expect(src.lastIndexOf('</button>', detail)).toBeGreaterThan(row)
-  })
-
   /* Zehn Karten, die je Einkommens-Tick neu rechnen, sind etwas anderes als ein
      Kopfband. Die laufende Uhr gehoert dorthin, nicht hierher. */
   it('haelt die Zeilenrechnung der Leiste zeitfrei', () => {
