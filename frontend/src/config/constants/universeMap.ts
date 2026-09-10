@@ -367,7 +367,8 @@ export const UNIVERSE_MAP_TIP_SEAT_COLS = GALAXY_STARS_MAX
  *  zweiten Downloads derselben Gesichter. */
 export const UNIVERSE_MAP_TIP_SEAT_EM = 2.36
 export const UNIVERSE_MAP_TIP_SEAT_GAP_EM = 0.33
-/** Zwei volle Zeilen; darueber sagt die Karte die Zahl, wie bei den Rauten. */
+/** Beide Baender zusammen: gerettet und verloren stehen getrennt, je eine volle
+ *  Zeile (`_COLS`). Darueber sagt die Karte die Zahl, wie bei den Rauten. */
 export const UNIVERSE_MAP_TIP_SEAT_MAX = 2 * UNIVERSE_MAP_TIP_SEAT_COLS
 
 // ── Der Startpunkt ──────────────────────────────────────────────────────────
