@@ -25,6 +25,9 @@ import {
   FORGE_VAULT_REQUIRED_LEVEL,
   SOLAR_BRANCHES,
   FORGE_CONFLUENCE_BASE_COST,
+  FORGE_CONFLUENCE_MEEP_COST,
+  FORGE_CONFLUENCE_LINK_COST_MULTIPLIER,
+  FORGE_CONFLUENCE_LINK_MEEP_COST,
 } from '@/config/constants'
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -351,9 +354,17 @@ export const FORGE_LEAVES: ForgeNodeDef[] = [
   leaf('vitalBloom', 'Vital Bloom', 'regeneration', 'game-icons:heart-plus', '#e05050', 'guard', {
     solar_essence: 2,
   }),
-  leaf('echoingBulwark', 'Echoing Bulwark', 'aegis', 'game-icons:shield-echoes', '#ff8080', 'guard', {
-    void_shard: 2,
-  }),
+  leaf(
+    'echoingBulwark',
+    'Echoing Bulwark',
+    'aegis',
+    'game-icons:shield-echoes',
+    '#ff8080',
+    'guard',
+    {
+      void_shard: 2,
+    },
+  ),
   leaf('coinCascade', 'Coin Cascade', 'goldenEcho', 'game-icons:coins-pile', '#52b830', 'click', {
     solar_essence: 2,
   }),
@@ -1224,12 +1235,11 @@ function crown(
   }
 }
 
-
 /* ── DIE NAHT: Confluences ───────────────────────────────────────────────────
  *
- * Fuenf Knoten, die es ohne den Merge nicht geben koennte. Jeder haengt an einem
- * Bough der Sonne UND verlangt einen Knoten von The Wandering — und seine
- * Wirkung ist keine feste Zahl, sondern eine KOPPLUNG: sie waechst mit jedem
+ * Zehn Knoten, die es ohne den Merge nicht geben koennten. Fuenf Einstiege
+ * verlangen einen Knoten von The Wandering; fuenf Verstaerkungen bauen auf
+ * ihrem Einstieg auf. Ihre Wirkung ist eine KOPPLUNG: sie waechst mit jedem
  * Knoten, der auf der Strasse gelernt ist.
  *
  * Das ist der Grund, warum sie keine weiteren Prozente sind. Eine Krone
@@ -1244,44 +1254,51 @@ function crown(
  * Spur um 80 px, und `forgeNetGeometry.spec.ts` faengt genau das. An Rang 1
  * zieht sie am innersten Knoten, und die Ordnung bleibt.
  *
- * Es kostet auch nichts: das TOR ist der erste Schritt auf die Strasse, die
- * WIRKUNG kommt aus dem ganzen Weg. Ein tieferes Tor haette nur verschoben,
- * wann man kaufen darf — nicht, was der Kauf wert ist.
+ * Die erste Stufe sitzt zwischen Bough und Strasse, die zweite verankert die
+ * Verbindung. Beide zahlen mit Chimes, Material und Meeps; die Wirkung kommt
+ * aus dem ganzen Weg.
  *
  * `maxLevel` ist 1 — dieselbe Begruendung wie bei der Krone: sie sind
  * Entscheidungen, keine Leitern. Ihr Preis hat drei Beine (Chimes, Material,
  * Meeps) und ist die einzige Stelle im Spiel, an der das so ist.
  *
  * Sie zaehlen NICHT in `progressMetrics.forgeLevels` — dieselbe Begruendung,
- * aus der `crownLevels` dort fehlt: fuenf Einsen sind keine geschmiedete Tiefe.
+ * aus der `crownLevels` dort fehlt: zehn Einsen sind keine geschmiedete Tiefe.
  */
 function confluence(
   id: string,
   name: string,
   parentId: string,
-  requiresMeep: string,
+  requiresMeep: string | undefined,
   icon: string,
   color: string,
   family: ForgeEffectFamily,
   materialCost: Record<string, number>,
   desc: string,
   effectPerLevel: number,
+  options: {
+    stage?: number
+    baseCost?: number
+    meepCost?: number
+  } = {},
 ): ForgeNodeDef {
   return {
     id,
     name,
     parentId,
-    requires: [{ id: requiresMeep, level: 1 }],
+    requires: requiresMeep ? [{ id: requiresMeep, level: 1 }] : undefined,
     tier: 'confluence',
     phase: FORGE_BOUGH_UNLOCK_PHASE,
     icon,
     color,
     family,
-    baseCost: FORGE_CONFLUENCE_BASE_COST,
+    baseCost: options.baseCost ?? FORGE_CONFLUENCE_BASE_COST,
     costMultiplier: 1,
     materialCost,
     desc,
     effectPerLevel,
+    meepCost: options.meepCost ?? FORGE_CONFLUENCE_MEEP_COST,
+    confluenceStage: options.stage ?? 1,
   }
 }
 
@@ -1346,7 +1363,100 @@ export const FORGE_CONFLUENCES: ForgeNodeDef[] = [
     'Damage to planet bosses +{v}% for every node opened on The Wandering.',
     3,
   ),
+  confluence(
+    'tideweave',
+    'Tideweave',
+    'tidewatch',
+    undefined,
+    'game-icons:gem-chain',
+    '#f0d878',
+    'idle',
+    { star_iron: 6, aether_dust: 1 },
+    'Offline earnings +{v}% for every node opened on The Wandering.',
+    2,
+    {
+      stage: 2,
+      baseCost: FORGE_CONFLUENCE_BASE_COST * FORGE_CONFLUENCE_LINK_COST_MULTIPLIER,
+      meepCost: FORGE_CONFLUENCE_LINK_MEEP_COST,
+    },
+  ),
+  confluence(
+    'handspan',
+    'Handspan',
+    'handfast',
+    undefined,
+    'game-icons:chain-lightning',
+    '#b0f090',
+    'click',
+    { plasma_core: 2, comet_ice: 4 },
+    'Chimes per click +{v}% for every node opened on The Wandering.',
+    2,
+    {
+      stage: 2,
+      baseCost: FORGE_CONFLUENCE_BASE_COST * FORGE_CONFLUENCE_LINK_COST_MULTIPLIER,
+      meepCost: FORGE_CONFLUENCE_LINK_MEEP_COST,
+    },
+  ),
+  confluence(
+    'waythread',
+    'Waythread',
+    'waychart',
+    undefined,
+    'game-icons:andromeda-chain',
+    '#86d0ff',
+    'travel',
+    { aether_dust: 2, star_iron: 5 },
+    'Expedition rewards +{v}% for every node opened on The Wandering.',
+    2,
+    {
+      stage: 2,
+      baseCost: FORGE_CONFLUENCE_BASE_COST * FORGE_CONFLUENCE_LINK_COST_MULTIPLIER,
+      meepCost: FORGE_CONFLUENCE_LINK_MEEP_COST,
+    },
+  ),
+  confluence(
+    'hostlink',
+    'Hostlink',
+    'hostcall',
+    undefined,
+    'game-icons:crossroad',
+    '#f0a0d0',
+    'ladder',
+    { plasma_core: 2, star_iron: 5 },
+    '+{v} battle power for every node opened on The Wandering.',
+    250,
+    {
+      stage: 2,
+      baseCost: FORGE_CONFLUENCE_BASE_COST * FORGE_CONFLUENCE_LINK_COST_MULTIPLIER,
+      meepCost: FORGE_CONFLUENCE_LINK_MEEP_COST,
+    },
+  ),
+  confluence(
+    'sunweave',
+    'Sunweave',
+    'sunbind',
+    undefined,
+    'game-icons:solar-power',
+    '#d090f0',
+    'boss',
+    { comet_ice: 6, aether_dust: 1 },
+    'Damage to planet bosses +{v}% for every node opened on The Wandering.',
+    2,
+    {
+      stage: 2,
+      baseCost: FORGE_CONFLUENCE_BASE_COST * FORGE_CONFLUENCE_LINK_COST_MULTIPLIER,
+      meepCost: FORGE_CONFLUENCE_LINK_MEEP_COST,
+    },
+  ),
 ]
+
+export const FORGE_CONFLUENCE_LANES = [
+  { id: 'vigil', title: 'Vigil Crossing', nodeIds: ['tidewatch', 'tideweave'] },
+  { id: 'resonance', title: 'Resonance Crossing', nodeIds: ['handfast', 'handspan'] },
+  { id: 'cosmos', title: 'Cosmos Crossing', nodeIds: ['waychart', 'waythread'] },
+  { id: 'battle', title: 'Battle Crossing', nodeIds: ['hostcall', 'hostlink'] },
+  { id: 'warden', title: 'Warden Crossing', nodeIds: ['sunbind', 'sunweave'] },
+] as const
 
 export const FORGE_CROWNS: ForgeNodeDef[] = [
   /* ── Die fünf ALTEN: die eigene Achse bis nach unten ───────────────────────
@@ -1734,7 +1844,16 @@ export const FORGE_GLIMMERS: ForgeNodeDef[] = [
   glimmer('omenSilt', 'Omen Silt', 'omenReader', 'sunderingWake', 'combat', 1, 2, 120000),
   glimmer('coreEmber', 'Core Ember', 'hollowCore', 'heraldsFavor', 'ladder', 0.5, 2, 200000),
   glimmer('oathGlint', 'Oath Glint', 'pathfindersOath', 'wayfindersCache', 'travel', 4, 2, 120000),
-  glimmer('beaconSpark', 'Beacon Spark', 'wanderersBeacon', 'siegeReckoning', 'boss', 0.8, 2, 200000),
+  glimmer(
+    'beaconSpark',
+    'Beacon Spark',
+    'wanderersBeacon',
+    'siegeReckoning',
+    'boss',
+    0.8,
+    2,
+    200000,
+  ),
   glimmer('wellGrain', 'Well Grain', 'gravityWell', 'regeneration', 'guard', 0.15, 2, 120000),
   glimmer('vaultGleam', 'Vault Gleam', 'unbrokenPact', 'resonantPact', 'ability', 0.5, 3, 2000000),
   glimmer('wardSilt', 'Ward Silt', 'wardensPact', 'prospectorsPact', 'harvest', 0.8, 3, 2000000),
@@ -1742,30 +1861,165 @@ export const FORGE_GLIMMERS: ForgeNodeDef[] = [
   glimmer('loomGlint', 'Loom Glint', 'merchantsPact', 'longVigilPact', 'idle', 0.1, 3, 2000000),
   glimmer('chordSpark', 'Chord Spark', 'resonantPact', 'siegeReckoning', 'boss', 0.8, 3, 2000000),
   glimmer('lodeGrain', 'Lode Grain', 'prospectorsPact', 'shatter', 'combat', 2.5, 3, 2000000),
-  glimmer('foundGleam', 'Found Gleam', 'foundersPact', 'prospectorsPact', 'harvest', 0.8, 3, 2000000),
+  glimmer(
+    'foundGleam',
+    'Found Gleam',
+    'foundersPact',
+    'prospectorsPact',
+    'harvest',
+    0.8,
+    3,
+    2000000,
+  ),
   glimmer('augurSilt', 'Augur Silt', 'augursPact', 'heraldsFavor', 'ladder', 0.5, 3, 2000000),
   glimmer('honorEmber', 'Honor Ember', 'honoredPact', 'resonantPact', 'ability', 0.5, 3, 2000000),
   glimmer('patientGlint', 'Patient Glint', 'patientPact', 'honoredPact', 'ladder', 0.8, 3, 2000000),
-  glimmer('arbiterSpark', 'Arbiter Spark', 'arbitersPact', 'longVigilPact', 'idle', 0.1, 3, 2000000),
-  glimmer('chartGrain', 'Chart Grain', 'cartographersPact', 'honoredPact', 'ladder', 0.8, 3, 2000000),
+  glimmer(
+    'arbiterSpark',
+    'Arbiter Spark',
+    'arbitersPact',
+    'longVigilPact',
+    'idle',
+    0.1,
+    3,
+    2000000,
+  ),
+  glimmer(
+    'chartGrain',
+    'Chart Grain',
+    'cartographersPact',
+    'honoredPact',
+    'ladder',
+    0.8,
+    3,
+    2000000,
+  ),
   glimmer('roadGleam', 'Road Gleam', 'starroadPact', 'longVigilPact', 'idle', 0.1, 3, 2000000),
-  glimmer('vigilSilt', 'Vigil Silt', 'longVigilPact', 'prospectorsPact', 'harvest', 0.8, 3, 2000000),
+  glimmer(
+    'vigilSilt',
+    'Vigil Silt',
+    'longVigilPact',
+    'prospectorsPact',
+    'harvest',
+    0.8,
+    3,
+    2000000,
+  ),
   glimmer('hollowEmber', 'Hollow Ember', 'hollowPact', 'resonantPact', 'ability', 0.5, 3, 2000000),
-  glimmer('summitSpark', 'Summit Spark', 'sealedThreshold', 'darkTithe', 'void', 3.0, 4, 25000000000),
+  glimmer(
+    'summitSpark',
+    'Summit Spark',
+    'sealedThreshold',
+    'darkTithe',
+    'void',
+    3.0,
+    4,
+    25000000000,
+  ),
   glimmer('stillGrain', 'Still Grain', 'stillpoint', 'kindledVigil', 'star', 1.0, 4, 25000000000),
-  glimmer('cartGlint', 'Cart Glint', 'reclaimedBargain', 'brimmingCart', 'market', 1.5, 4, 25000000000),
-  glimmer('spireGleam', 'Spire Gleam', 'midasOverflow', 'gildedCascade', 'click', 1.25, 4, 25000000000),
+  glimmer(
+    'cartGlint',
+    'Cart Glint',
+    'reclaimedBargain',
+    'brimmingCart',
+    'market',
+    1.5,
+    4,
+    25000000000,
+  ),
+  glimmer(
+    'spireGleam',
+    'Spire Gleam',
+    'midasOverflow',
+    'gildedCascade',
+    'click',
+    1.25,
+    4,
+    25000000000,
+  ),
   glimmer('veilSilt', 'Veil Silt', 'sanctumVeil', 'deepResonance', 'click', 0.25, 4, 25000000000),
-  glimmer('quarryEmber', 'Quarry Ember', 'tirelessQuarry', 'rivenLode', 'harvest', 1.75, 4, 25000000000),
-  glimmer('watchGlint', 'Watch Glint', 'tidelessWatch', 'endlessTide', 'income', 0.75, 4, 25000000000),
-  glimmer('signSpark', 'Sign Spark', 'unfailingSign', 'worldsBounty', 'harvest', 1.25, 4, 25000000000),
-  glimmer('tributeGrain', 'Tribute Grain', 'steadfastTribute', 'eternalHost', 'combat', 2.0, 4, 25000000000),
+  glimmer(
+    'quarryEmber',
+    'Quarry Ember',
+    'tirelessQuarry',
+    'rivenLode',
+    'harvest',
+    1.75,
+    4,
+    25000000000,
+  ),
+  glimmer(
+    'watchGlint',
+    'Watch Glint',
+    'tidelessWatch',
+    'endlessTide',
+    'income',
+    0.75,
+    4,
+    25000000000,
+  ),
+  glimmer(
+    'signSpark',
+    'Sign Spark',
+    'unfailingSign',
+    'worldsBounty',
+    'harvest',
+    1.25,
+    4,
+    25000000000,
+  ),
+  glimmer(
+    'tributeGrain',
+    'Tribute Grain',
+    'steadfastTribute',
+    'eternalHost',
+    'combat',
+    2.0,
+    4,
+    25000000000,
+  ),
   glimmer('markGleam', 'Mark Gleam', 'sunderersMark', 'rendingArc', 'combat', 0.38, 4, 25000000000),
-  glimmer('woundSilt', 'Wound Silt', 'rememberedWound', 'undyingWrath', 'combat', 2.5, 4, 25000000000),
-  glimmer('accordEmber', 'Accord Ember', 'pilgrimsAccord', 'driftersDue', 'drifter', 2.5, 4, 25000000000),
-  glimmer('gateGlint', 'Gate Glint', 'wanderersGate', 'wayfarersHoard', 'travel', 2.25, 4, 25000000000),
+  glimmer(
+    'woundSilt',
+    'Wound Silt',
+    'rememberedWound',
+    'undyingWrath',
+    'combat',
+    2.5,
+    4,
+    25000000000,
+  ),
+  glimmer(
+    'accordEmber',
+    'Accord Ember',
+    'pilgrimsAccord',
+    'driftersDue',
+    'drifter',
+    2.5,
+    4,
+    25000000000,
+  ),
+  glimmer(
+    'gateGlint',
+    'Gate Glint',
+    'wanderersGate',
+    'wayfarersHoard',
+    'travel',
+    2.25,
+    4,
+    25000000000,
+  ),
   glimmer('skySpark', 'Sky Spark', 'homewardSky', 'sleeplessOrbit', 'idle', 2.0, 4, 25000000000),
-  glimmer('repriveGrain', 'Reprieve Grain', 'wardensReprieve', 'adamantCore', 'guard', 22.5, 4, 25000000000),
+  glimmer(
+    'repriveGrain',
+    'Reprieve Grain',
+    'wardensReprieve',
+    'adamantCore',
+    'guard',
+    22.5,
+    4,
+    25000000000,
+  ),
 ]
 
 export const FORGE_NODES: ForgeNodeDef[] = [

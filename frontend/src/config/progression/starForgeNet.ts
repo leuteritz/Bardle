@@ -1,7 +1,7 @@
 import type { ForgeBridgeDef, ForgeClusterDef, ForgeRoadClusterDef } from '@/types'
 import { FORGE_CONFLUENCE_ANGLES_DEG, FORGE_ROAD_LANE_ANGLES_DEG } from '@/config/constants'
 import { MEEP_TREE_BRANCHES } from '@/config/progression/meepTree'
-import { FORGE_CONFLUENCES } from '@/config/progression/starForge'
+import { FORGE_CONFLUENCE_LANES, FORGE_CONFLUENCES } from '@/config/progression/starForge'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // STAR FORGE — die KARTE
@@ -117,19 +117,22 @@ export const FORGE_ROAD_LANES: readonly ForgeRoadClusterDef[] = MEEP_TREE_BRANCH
  * Confluence hängt an einem Bough und verlangt einen Knoten der Strasse, und
  * beide Kanten müssen unter `FORGE_EDGE_MAX_PX` bleiben.
  *
- * Ein Cluster je Confluence und nicht einer für alle fünf: sie stehen nicht
- * beieinander, sie stehen JE an ihrer Naht.
+ * Ein Cluster je Spur und nicht einer für alle zehn: beide Stufen stehen
+ * beieinander und markieren dieselbe Naht.
  */
-export const FORGE_SEAM_CLUSTERS: readonly ForgeRoadClusterDef[] = FORGE_CONFLUENCES.map(
-  (def, index) => ({
-    id: `seam_${def.id}`,
-    title: def.name,
-    region: 'road' as const,
-    rank: 0,
-    angleDeg: FORGE_CONFLUENCE_ANGLES_DEG[index] ?? 0,
-    accent: def.color,
-    members: [def.id],
-  }),
+export const FORGE_SEAM_CLUSTERS: readonly ForgeRoadClusterDef[] = FORGE_CONFLUENCE_LANES.map(
+  (lane, index) => {
+    const anchor = FORGE_CONFLUENCES.find((def) => def.id === lane.nodeIds[0])
+    return {
+      id: `seam_${lane.id}`,
+      title: lane.title,
+      region: 'road' as const,
+      rank: 0,
+      angleDeg: FORGE_CONFLUENCE_ANGLES_DEG[index] ?? 0,
+      accent: anchor?.color ?? '#e8c040',
+      members: [...lane.nodeIds],
+    }
+  },
 )
 
 export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
@@ -160,14 +163,7 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     phase: 0,
     angleDeg: 139,
     accent: '#58c0d0',
-    members: [
-      'cometMiner',
-      'quarryGleam',
-      'tidalDrift',
-      'tideEcho',
-      'quickening',
-      'hourGrain',
-    ],
+    members: ['cometMiner', 'quarryGleam', 'tidalDrift', 'tideEcho', 'quickening', 'hourGrain'],
   },
   {
     id: 'warmarch',
@@ -175,14 +171,7 @@ export const FORGE_CLUSTERS: readonly ForgeClusterDef[] = [
     phase: 0,
     angleDeg: 212,
     accent: '#c06090',
-    members: [
-      'warcry',
-      'sunderingWake',
-      'shatter',
-      'marchEmber',
-      'solarSails',
-      'sailSplinter',
-    ],
+    members: ['warcry', 'sunderingWake', 'shatter', 'marchEmber', 'solarSails', 'sailSplinter'],
   },
   {
     id: 'sailward',
