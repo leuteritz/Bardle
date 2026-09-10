@@ -2218,7 +2218,7 @@ export const FORGE_BUY_ALL_COST_TOKEN = '{c}'
  * und das Scrollfeld darunter nimmt den Rest. Eine Konstante wäre eine zweite
  * Quelle für eine Zahl, die das Layout ohnehin kennt.
  */
-export const FORGE_BUY_ALL_LABEL = 'Forge all ready'
+export const FORGE_BUY_ALL_LABEL = 'Buy All'
 export const FORGE_BUY_ALL_ICON = 'ph:lightning-fill'
 /**
  * Der volle Satz im `title` des Knopfes. Er nennt beides — Anzahl UND Preis —,
