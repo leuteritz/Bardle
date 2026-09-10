@@ -643,11 +643,6 @@ export const UNIVERSE_RAIL_CARD_GAP_Y = 3
 export const UNIVERSE_RAIL_READ_H = 20
 export const UNIVERSE_RAIL_BAR_H = 4
 export const UNIVERSE_RAIL_TINT_BAR_W = 4
-export const UNIVERSE_RAIL_DETAIL_PX = 22
-export const UNIVERSE_RAIL_DETAIL_ICON_PX = 16
-/** Luft zwischen Knopf und Toenungsstreifen. Sie bemisst auch die Gasse, die der
- *  Kopf dem Knopf freihaelt — sonst liefe der Name darunter. */
-export const UNIVERSE_RAIL_DETAIL_INSET = 3
 
 export const UNIVERSE_RAIL_ROW_H =
   2 * UNIVERSE_RAIL_CARD_BORDER +
@@ -677,9 +672,6 @@ export const UNIVERSE_RAIL_PROGRESS_FLOOR = 10
  *  geschobener Lauf keine ueberlieferte — und das ist nicht dasselbe wie null. */
 export const UNIVERSE_RAIL_ELAPSED_NOW = 'now'
 export const UNIVERSE_RAIL_UNKNOWN = '—'
-
-export const UNIVERSE_RAIL_DETAIL_TITLE = 'Open the annals'
-export const UNIVERSE_RAIL_DETAIL_ICON = 'lucide:file-search'
 
 /** Listenpolsterung der Leiste (8 oben, 12 unten) — sie ist alles, was neben
  *  den Karten noch Hoehe kostet: Kopfzeile und Carry-over-Fuss sind gefallen. */
@@ -725,19 +717,6 @@ export const UNIVERSE_RAIL_ROW_GAP_COMPACT = 3
  *  543), nicht die Scheibe: sie traegt die Zeile. Bei 112 bleiben 6,1 px Luft,
  *  die kompakte Stufe musste dafuer nichts weiter abgeben. */
 export const UNIVERSE_RAIL_COMPACT_STAGE_H = 549.1
-
-// ── Die Annalen ─────────────────────────────────────────────────────────────
-/* Das Dossier EINER Bahn, geoeffnet vom Knopf auf ihrer Karte. Es zeigt, was das
-   Kopfband nicht kann: die Besuche EINZELN statt summiert, die Spanne der Bahn
-   und was das Archiv nicht mehr haelt. „Annals" und nicht „Chronicle" — das ist
-   die Ereignis-Chronik, und nicht „Record": das sind drei Typen im Code. */
-export const UNIVERSE_ANNALS_TITLE = 'Universe Annals'
-export const UNIVERSE_ANNALS_MAX_W = 620
-export const UNIVERSE_ANNALS_MAX_H_PCT = 84
-export const UNIVERSE_ANNALS_SLIDE_MS = 200
-export const UNIVERSE_DISC_ANNALS_PX = 72
-export const UNIVERSE_ANNALS_GOTO_LABEL = 'Show this path'
-export const UNIVERSE_ANNALS_CLOSE_LABEL = 'Done'
 
 // ── Drehung der Scheibe ─────────────────────────────────────────────────────
 /* Feld und Wall drehen GLEICHSINNIG, der Wall mit halbem Tempo. Das Verhaeltnis
