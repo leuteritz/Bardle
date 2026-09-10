@@ -7,12 +7,23 @@ import {
   registerBodyFollower,
   registerWakeFollower,
   resetFlightLive,
+  setFlightCourse,
   stepFlightJolt,
   unregisterBodyFollower,
   unregisterWakeFollower,
   wakeFollowerTransform,
+  wakeStrength,
   writeFlightFollowers,
 } from '@/utils/orbit/flightLive'
+
+const EDGE = 1000
+/** Lange genug, dass die Dämpfung den Zielwinkel praktisch erreicht. */
+const SETTLED = 10
+
+function shift(t: string): { x: number; y: number } {
+  const m = /translate\((-?[\d.]+)%,(-?[\d.]+)%\)/.exec(t)!
+  return { x: Number(m[1]), y: Number(m[2]) }
+}
 
 describe('flightLive — Schweif-Kopplung', () => {
   it('ohne Kurs ist der Transform die Identität', () => {
@@ -23,16 +34,54 @@ describe('flightLive — Schweif-Kopplung', () => {
   })
 
   it('besteht nur aus translate, rotate und scale', () => {
-    const t = wakeFollowerTransform(40, -20, 0.05)
+    const t = wakeFollowerTransform(0.6, 1.2, 0.05)
     const names = [...t.matchAll(/([a-z]+)\(/g)].map((m) => m[1])
     expect(new Set(names)).toEqual(new Set(['translate', 'rotate', 'scale']))
   })
 
-  it('ein Slip nach rechts versetzt den Kranz nach rechts', () => {
-    const t = wakeFollowerTransform(55, 0, 0)
-    const m = /translate\((-?[\d.]+)%,(-?[\d.]+)%\)/.exec(t)!
-    expect(Number(m[1])).toBeGreaterThan(0)
-    expect(Number(m[2])).toBe(0)
+  // Gebunden wird die WIRKUNG, nicht der Rohwinkel: die Keule des Kranzes liegt
+  // kanonisch auf +x, `rotate` legt sie auf die Achse. Ein Kurs nach rechts muss
+  // den Schweif nach LINKS tragen — er liegt entgegen der Nase.
+  it('legt den Schweif entgegen den Kurs und versetzt ihn dorthin', () => {
+    resetFlightLive()
+    setFlightCourse(100, 0, EDGE, SETTLED)
+    expect(Math.cos(flightLive.wakeAngle)).toBeLessThan(-0.99)
+    expect(shift(wakeFollowerTransform(wakeStrength(), flightLive.wakeAngle, 0)).x).toBeLessThan(0)
+
+    setFlightCourse(0, -100, EDGE, SETTLED)
+    expect(Math.sin(flightLive.wakeAngle)).toBeGreaterThan(0.99)
+    expect(shift(wakeFollowerTransform(wakeStrength(), flightLive.wakeAngle, 0)).y).toBeGreaterThan(
+      0,
+    )
+    resetFlightLive()
+  })
+
+  it('entwickelt die Achse — am Durchgang bei ±π dreht sie nicht ganz herum', () => {
+    resetFlightLive()
+    flightLive.wakeAngle = Math.PI - 0.01
+    // Zielwinkel knapp jenseits von −π: roh wären das fast 360°.
+    setFlightCourse(190 * Math.cos(0.02), 190 * Math.sin(0.02), EDGE, SETTLED)
+    expect(Math.abs(flightLive.wakeAngle - (Math.PI - 0.01))).toBeLessThan(0.1)
+    resetFlightLive()
+  })
+
+  it('ohne Kurs und ohne Slip hält die Achse ihren Stand', () => {
+    resetFlightLive()
+    flightLive.wakeAngle = 1.23
+    setFlightCourse(0, 0, EDGE, SETTLED)
+    expect(flightLive.wakeAngle).toBe(1.23)
+    resetFlightLive()
+  })
+
+  // Der Warp fährt ohne Helm und erzeugt deshalb keinen Slip — trüge die Stärke
+  // allein der Slip, stünde der Kranz im Tunnel still.
+  it('schlägt auch ohne Slip aus, wenn der Kurs steht', () => {
+    resetFlightLive()
+    expect(wakeStrength()).toBe(0)
+    setFlightCourse(150, 0, EDGE, SETTLED)
+    expect(flightLive.slipX).toBe(0)
+    expect(wakeStrength()).toBeGreaterThan(0.5)
+    resetFlightLive()
   })
 
   it('schreibt registrierten Elementen den Transform und räumt beim Abmelden', () => {
@@ -46,6 +95,7 @@ describe('flightLive — Schweif-Kopplung', () => {
     resetFlightLive()
     expect(el.style.transform).toBe('')
     expect(flightLive.slipX).toBe(0)
+    expect(flightLive.wakeAngle).toBe(0)
     flightLive.slipX = 30
     writeFlightFollowers()
     expect(el.style.transform).not.toBe('')

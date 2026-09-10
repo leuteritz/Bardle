@@ -52,10 +52,21 @@ export const HELM_RESPAWN_BIAS = 0.6
 export const HELM_GALAXY_DEPTH = 0.15
 /** Auslaufen aller Werte, wenn der Helm inaktiv wird — wie FLIGHT_DRIFT_EASE_SEC. */
 export const HELM_EASE_OUT_SEC = 1.5
-/** Schweif-Kopplung: Versatz in Prozent des Kranzes, Streckung, Rollgewicht. */
-export const HELM_WAKE_SHIFT_PCT = 7
-export const HELM_WAKE_STRETCH = 0.08
+/** Schweif-Kopplung: Versatz in Prozent des Kranzes, Streckung, Rollgewicht.
+ *  Der Kranz trägt seine Keule kanonisch nach +x (SUN_WAKE_TAIL_*), der
+ *  Transform dreht sie auf den Kurs — Versatz und Streckung liegen deshalb auf
+ *  DERSELBEN Achse wie die Keule. Vorher hingen sie am Slip allein und meinten
+ *  im Warp, der keinen Slip erzeugt, gar nichts. */
+export const HELM_WAKE_SHIFT_PCT = 10
+export const HELM_WAKE_STRETCH = 0.18
 export const HELM_WAKE_ROLL_GAIN = 1
+/** Darunter gilt der Kurs als still und der Schweif hält seinen letzten Winkel
+ *  — auf 0 zurückzuschnappen las sich als Zucken. */
+export const HELM_WAKE_COURSE_EPS = 0.02
+/** Einschwingzeit der Schweifachse. Hart gesetzt schlug der Kranz um 180° um,
+ *  sobald der Fokus die Bildmitte querte; träger als der Helm (2,8 s) wäre die
+ *  Drehung im Manöver nicht mehr zu sehen. */
+export const HELM_WAKE_TURN_TAU_SEC = 0.35
 
 // ── Himmelsbegegnungen ────────────────────────────────────────────────────────
 export const ENCOUNTER_MAX_MAJOR = 1
@@ -71,10 +82,7 @@ export const ENCOUNTER_SPRITE_CACHE_MAX = 48
 /** Ab diesem Lebensanteil bittet ein Feld den Helm ums Ausweichen. */
 export const ENCOUNTER_EVADE_AT = 0.22
 export const ENCOUNTER_KIND_WEIGHTS: Readonly<
-  Record<
-    'asteroids' | 'shower' | 'pulsar' | 'nova' | 'shards' | 'dustlane' | 'binary',
-    number
-  >
+  Record<'asteroids' | 'shower' | 'pulsar' | 'nova' | 'shards' | 'dustlane' | 'binary', number>
 > = {
   asteroids: 3,
   shower: 3,

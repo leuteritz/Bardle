@@ -177,6 +177,33 @@ describe('Signatur → Motiv', () => {
     }
   })
 
+  // Die Richtung des Schweifs steckt im BILD, nicht im Sprite-Schlüssel: der
+  // Kranz wird kanonisch nach +x gebacken, gedreht wird er erst vom
+  // Frame-Transform (wakeFollowerTransform). Ein symmetrischer Kranz — so lag er
+  // ursprünglich — sah in jeder Kurve gleich aus, eine Drehung an ihm ist per
+  // Konstruktion unsichtbar.
+  it('der Kranz trägt seine Keule nach +x', () => {
+    for (const kind of KINDS) {
+      let tail = 0
+      let nose = 0
+      const ops = run(body(kind, 2, stages({ wake: 3 })), 'wake', 2)
+      for (let i = 0; i + 1 < ops.length; i++) {
+        const a = /^moveTo\((-?[\d.]+),(-?[\d.]+)\)$/.exec(ops[i]!)
+        const b = /^lineTo\((-?[\d.]+),(-?[\d.]+)\)$/.exec(ops[i + 1]!)
+        if (!a || !b) continue
+        const x0 = Number(a[1]) - R * 2
+        const y0 = Number(a[2]) - R * 2
+        const x1 = Number(b[1]) - R * 2
+        const y1 = Number(b[2]) - R * 2
+        const len = Math.hypot(x1 - x0, y1 - y0)
+        if (x0 + x1 >= 0) tail += len
+        else nose += len
+      }
+      expect(nose, kind).toBeGreaterThan(0)
+      expect(tail / nose, kind).toBeGreaterThan(1.5)
+    }
+  })
+
   it('der Komet trägt keine Achse — nur seine Stufe und die Grundsignatur', () => {
     const bare = run(body('comet', 2), 'core', 2).join('|')
     expect(

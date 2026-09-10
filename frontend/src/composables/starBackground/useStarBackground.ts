@@ -151,6 +151,7 @@ import {
   kickFlightJolt,
   resetFlightJolt,
   resetFlightLive,
+  setFlightCourse,
   stepFlightJolt,
   writeFlightFollowers,
 } from '@/utils/orbit/flightLive'
@@ -1181,8 +1182,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       if (hop.phase !== 'idle') {
         if (cachedCtx === null || cachedW === 0) refreshCanvasCache()
         const ho = hop.out
-        const far =
-          Math.hypot(cachedW / 2, cachedH / 2) + Math.hypot(ho.focusX, ho.focusY)
+        const far = Math.hypot(cachedW / 2, cachedH / 2) + Math.hypot(ho.focusX, ho.focusY)
         stepUniverseHop(hop, delta * 1000, Math.min(cachedW, cachedH), far)
         if (ho.wash) {
           uiStore.setUniverseHopPhase('threshold')
@@ -1296,12 +1296,18 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       flightLive.roll = helmOut.roll
       flightLive.bank = helmOut.bank
       flightLive.mode = helmOut.mode
-      writeFlightFollowers()
     }
     // Im Warp kommt der Kurs dazu: der Fluchtpunkt steht am Kursziel, die
     // Sterne fließen von dort weg — das ist der Tunnel.
     const cx = w / 2 + (helmOut ? helmOut.focusX : baseFx) + wo.focusX
     const cy = h / 2 + (helmOut ? helmOut.focusY : baseFy) + wo.focusY
+    // Der Schweif liest DIESEN Fluchtpunkt, nicht den Helm allein — sonst
+    // stünde er im Warp still, der ohne Helm fährt. Erst der Kurs, dann die
+    // Follower: umgekehrt trügen sie den Stand des Vorframes.
+    if (!isFrozen) {
+      setFlightCourse(cx - w / 2, cy - h / 2, Math.min(w, h), delta)
+      writeFlightFollowers()
+    }
     // Die Prozession liest denselben Fluchtpunkt, den auch der Tunnel zeichnet:
     // `wo.focusX` allein wäre nur der Kursanteil ohne Helm und Drift, und der
     // Zug stünde neben den Strichen. Nur die Vollbild-Instanz schreibt — eine
@@ -1349,7 +1355,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         const rgb = hexToRgbTriple(hopTint)
         hopThroat = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
         hopThroat.addColorStop(0, `rgba(${rgb},${UNIVERSE_HOP_THROAT_ALPHA_CORE})`)
-        hopThroat.addColorStop(UNIVERSE_HOP_THROAT_MID_STOP, `rgba(${rgb},${UNIVERSE_HOP_THROAT_ALPHA_MID})`)
+        hopThroat.addColorStop(
+          UNIVERSE_HOP_THROAT_MID_STOP,
+          `rgba(${rgb},${UNIVERSE_HOP_THROAT_ALPHA_MID})`,
+        )
         hopThroat.addColorStop(1, `rgba(${rgb},0)`)
       }
       ctx.save()
@@ -1409,7 +1418,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const ratio = rMax / rMin
       ctx.strokeStyle = hopTint
       for (let i = 0; i < UNIVERSE_HOP_TUNNEL_RINGS; i++) {
-        const u = (ho.tunnelSec * UNIVERSE_HOP_TUNNEL_CYCLES_PER_SEC + i / UNIVERSE_HOP_TUNNEL_RINGS) % 1
+        const u =
+          (ho.tunnelSec * UNIVERSE_HOP_TUNNEL_CYCLES_PER_SEC + i / UNIVERSE_HOP_TUNNEL_RINGS) % 1
         const r = rMin * Math.pow(ratio, u)
         const a = persistentDrawAlpha(UNIVERSE_HOP_TUNNEL_ALPHA * (1 - u), ho.trailFade)
         ctx.globalAlpha = a
