@@ -548,8 +548,17 @@ const overviewPlanetScale = String(STAR_FIGHT_SYS_OVERVIEW_PLANET_SCALE)
   position: absolute;
   inset: 0;
   transform-origin: center;
+}
+
+/* Nur bei k = 1: im Kampf-Zoom (×32) würden ±2 px zu einem wandernden Doppelbild hinter dem stillstehenden Hero. */
+.sfs--intro .sfs-planet-life,
+.sfs--travel .sfs-planet-life {
   animation: sfs-planet-drift var(--planet-drift-duration) ease-in-out infinite;
   animation-delay: var(--planet-drift-delay);
+}
+
+.sfs--rm .sfs-planet-life {
+  animation: none;
 }
 
 .sfs--intro .sfs-planet-life {

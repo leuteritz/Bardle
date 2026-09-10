@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import {
   STAR_FIGHT_SYS_CENTER_X_PCT,
@@ -25,6 +27,7 @@ import {
   STAR_FIGHT_PLANET_SPRITE_SPANS,
   STAR_FIGHT_PLANET_SPRITE_SPAN,
   STAR_FIGHT_SYS_SPRITE_OVERSAMPLE,
+  STAR_FIGHT_PLANET_DRIFT_PX,
   STAR_FIGHT_HUD_OUT_MS,
   STAR_FIGHT_HUD_IN_MS,
   STAR_FIGHT_HUD_IN_STAGGER_MS,
@@ -127,5 +130,43 @@ describe('Star-Fight-Systembühne — Sprites', () => {
   it('das kleine Sprite unter dem Hero ist höchstens 4× hochskaliert', () => {
     const zoom = STAR_FIGHT_FIGHT_PLANET_D_PCT / STAR_FIGHT_SYS_PLANET_D_PCT
     expect(zoom / STAR_FIGHT_SYS_SPRITE_OVERSAMPLE).toBeLessThanOrEqual(4)
+  })
+})
+
+/*
+ * Der kleine Systemplanet liegt im Kampf pixelgenau UNTER dem stillstehenden
+ * Hero (LOD-Fallback). Jede Eigenbewegung an ihm wird dort mit dem Kamera-Zoom
+ * multipliziert und schiebt ihn als zweites, wanderndes Bild hervor.
+ */
+describe('Star-Fight-Systembühne — die Drift lebt nur in der Übersicht', () => {
+  const STAGE = resolve(process.cwd(), 'src/components/idle/planet/StarFightSystemStage.vue')
+  const OVERVIEW = ['.sfs--intro', '.sfs--travel']
+
+  function driftSelectors(): string[] {
+    const css = readFileSync(STAGE, 'utf8')
+    const out: string[] = []
+    for (const [, selector] of css.matchAll(
+      /(?:^|\})([^{}]*)\{[^{}]*animation:\s*sfs-planet-drift[^{}]*\}/g,
+    )) {
+      out.push(selector.replace(/\/\*[\s\S]*?\*\//g, '').trim())
+    }
+    return out
+  }
+
+  it('keine Regel startet die Drift ausserhalb der Systemansicht', () => {
+    const selectors = driftSelectors()
+    expect(selectors.length).toBe(1)
+    for (const part of selectors[0].split(',')) {
+      const sel = part.trim()
+      expect(
+        OVERVIEW.some((phase) => sel.startsWith(phase)),
+        sel,
+      ).toBe(true)
+    }
+  })
+
+  it('im Kampf-Zoom wäre die Drift kein Detail, sondern ein Doppelbild', () => {
+    const zoom = STAR_FIGHT_FIGHT_PLANET_D_PCT / STAR_FIGHT_SYS_PLANET_D_PCT
+    expect(STAR_FIGHT_PLANET_DRIFT_PX * zoom).toBeGreaterThan(32)
   })
 })
