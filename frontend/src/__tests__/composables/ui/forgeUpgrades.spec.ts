@@ -2,6 +2,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   useForgeUpgrades,
+  forgeNodeTipView,
   forgeUpgradeBucket,
   forgeUpgradeMayTravel,
   forgeLevelParts,
@@ -13,7 +14,7 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { useInventoryStore } from '@/stores/economy/inventoryStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
-import { FORGE_NODES, getForgeNode } from '@/config/progression/starForge'
+import { FORGE_CONFLUENCES, FORGE_NODES, getForgeNode } from '@/config/progression/starForge'
 import { FORGE_SEATS } from '@/config/progression/forgeSeats'
 import { MEEP_TREE_NODE_INDEX } from '@/config/progression/meepTree'
 import {
@@ -382,6 +383,17 @@ describe('useForgeUpgrades — Wirkungstexte', () => {
     expect(e.desc).not.toContain(FORGE_DESC_VALUE_TOKEN)
     expect(e.nextDesc).not.toContain(FORGE_DESC_VALUE_TOKEN)
     expect(e.desc).not.toContain('{p}')
+  })
+
+  it('previews the first confluence effect before any Meep node is learned', () => {
+    for (const def of FORGE_CONFLUENCES) {
+      const e = entry(def.id)
+      const expected = def.desc.replace(FORGE_DESC_VALUE_TOKEN, String(def.effectPerLevel))
+
+      expect(e.level).toBe(0)
+      expect(e.nextDesc).toBe(expected)
+      expect(forgeNodeTipView(e).effect).toBe(expected)
+    }
   })
 
   /**
