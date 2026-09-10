@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Ringed – multi-band ring with inner shadow, tilted ring plane, icy body
@@ -9,7 +9,10 @@ export function drawRinged(
   cx: number,
   cy: number,
   r: number,
+  seed?: number,
 ): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, -14, 14), roll() < 0.5)
   const defs = svgEl('defs')
 
   // Ring gradient with more bands
@@ -111,6 +114,7 @@ export function drawRinged(
   // Ice-like bands on body
   const bandG = svgEl('g')
   bandG.setAttribute('clip-path', `url(#rnpc-${id})`)
+  bandG.setAttribute('transform', surface)
   for (const [oy, h, op] of [
     [-0.28, 0.14, 0.14],
     [-0.05, 0.12, 0.1],

@@ -22,7 +22,7 @@ import {
   STAR_FIGHT_CAM_NET_MUL,
   STAR_FIGHT_HERO_FADE_FRAC,
   STAR_FIGHT_PLANET_SPRITE_MAX_PX,
-  STAR_FIGHT_PLANET_SPRITE_SPAN_RINGED,
+  STAR_FIGHT_PLANET_SPRITE_SPANS,
   STAR_FIGHT_PLANET_SPRITE_SPAN,
   STAR_FIGHT_SYS_SPRITE_OVERSAMPLE,
   STAR_FIGHT_HUD_OUT_MS,
@@ -113,10 +113,15 @@ describe('Star-Fight-Systembühne — Zeiten', () => {
 
 describe('Star-Fight-Systembühne — Sprites', () => {
   it('Ringe brauchen die grosse Kante, der Deckel liegt auf der Kante', () => {
-    expect(STAR_FIGHT_PLANET_SPRITE_SPAN_RINGED).toBeGreaterThanOrEqual(1.9)
+    expect(STAR_FIGHT_PLANET_SPRITE_SPANS.ringed).toBeGreaterThanOrEqual(1.9)
     expect(STAR_FIGHT_PLANET_SPRITE_SPAN).toBeGreaterThanOrEqual(1)
-    expect(STAR_FIGHT_PLANET_SPRITE_SPAN).toBeLessThan(STAR_FIGHT_PLANET_SPRITE_SPAN_RINGED)
     expect(STAR_FIGHT_PLANET_SPRITE_MAX_PX).toBeLessThanOrEqual(2048)
+    // Jede Kante der Tabelle liegt ueber der knappen und unter der des Rings —
+    // sie kostet quadratisch, ein Ausreisser waere ein stiller Speicherposten.
+    for (const [type, span] of Object.entries(STAR_FIGHT_PLANET_SPRITE_SPANS)) {
+      expect(span, type).toBeGreaterThan(STAR_FIGHT_PLANET_SPRITE_SPAN)
+      expect(span, type).toBeLessThanOrEqual(STAR_FIGHT_PLANET_SPRITE_SPANS.ringed)
+    }
   })
 
   it('das kleine Sprite unter dem Hero ist höchstens 4× hochskaliert', () => {

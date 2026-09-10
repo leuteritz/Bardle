@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Crystal – faceted gem world: teal-to-magenta prism facets, glowing edges, sharp glints
@@ -9,7 +9,10 @@ export function drawCrystal(
   cx: number,
   cy: number,
   r: number,
+  seed?: number,
 ): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, 0, 360), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -42,6 +45,7 @@ export function drawCrystal(
 
   const facetG = svgEl('g')
   facetG.setAttribute('clip-path', `url(#cc-${id})`)
+  facetG.setAttribute('transform', surface)
 
   // Facets: translucent polygons with a bright leading edge
   const facets: [number[][], string, number][] = [

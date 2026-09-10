@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Obsidian – volcanic-glass world: mirror-black surface with hard specular
@@ -10,7 +10,10 @@ export function drawObsidian(
   cx: number,
   cy: number,
   r: number,
+  seed?: number,
 ): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, 0, 360), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -31,6 +34,7 @@ export function drawObsidian(
 
   const detailG = svgEl('g')
   detailG.setAttribute('clip-path', `url(#obc-${id})`)
+  detailG.setAttribute('transform', surface)
 
   // Glassy flow bands — barely-visible tonal sweeps in the glass
   for (const [d, op] of [

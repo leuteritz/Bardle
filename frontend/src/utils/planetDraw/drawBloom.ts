@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Bloom – pastel spring world: rose meadows, mint seas, drifting petal streams,
@@ -10,7 +10,10 @@ export function drawBloom(
   cx: number,
   cy: number,
   r: number,
+  seed?: number,
 ): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, 0, 360), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -31,6 +34,7 @@ export function drawBloom(
 
   const detailG = svgEl('g')
   detailG.setAttribute('clip-path', `url(#bc-${id})`)
+  detailG.setAttribute('transform', surface)
 
   // Mint lagoon seas breaking up the rose surface
   for (const [ox, oy, rx, ry, rot, op] of [

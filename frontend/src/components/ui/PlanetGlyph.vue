@@ -22,6 +22,12 @@ const props = withDefaults(
     type: PlanetType
     /** Rendered height in px — the width follows the viewBox aspect. */
     size?: number
+    /**
+     * Which planet of that type. Without it every render rolls anew and the
+     * glyph never matches the sprite of the planet it names — pass
+     * `planetSeedFor(planetId)`.
+     */
+    seed?: number
   }>(),
   { size: PLANET_GLYPH_DEFAULT_SIZE_PX },
 )
@@ -46,12 +52,13 @@ function render() {
     PLANET_GLYPH_VIEW_W / 2,
     PLANET_GLYPH_VIEW_H / 2,
     PLANET_GLYPH_RADIUS,
+    props.seed,
   )
   el.appendChild(svg)
 }
 
 onMounted(render)
-watch(() => props.type, render)
+watch([() => props.type, () => props.seed], render)
 </script>
 
 <template>

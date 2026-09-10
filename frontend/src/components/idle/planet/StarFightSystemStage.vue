@@ -118,6 +118,7 @@ import {
   quantSpritePx,
   systemSpritePx,
   heroSpritePx,
+  heroPlanetD,
   type SystemPlanet,
   type SystemSlotInput,
 } from '@/utils/orbit/starFightSystem'
@@ -305,7 +306,9 @@ const heroPlanetId = computed<string | null>(() => {
 const heroPlanet = computed(() => (heroPlanetId.value ? (planetOf(layout.value, heroPlanetId.value) ?? null) : null))
 const heroIsGalaxy = computed(() => heroPlanet.value?.isGalaxyBoss ?? false)
 
-const heroD = computed(() => (h.value * STAR_FIGHT_FIGHT_PLANET_D_PCT) / 100)
+const heroD = computed(() =>
+  heroPlanet.value ? heroPlanetD(heroPlanet.value.r) : (h.value * STAR_FIGHT_FIGHT_PLANET_D_PCT) / 100,
+)
 
 const heroStyle = computed(() => ({
   left: `${(w.value * STAR_FIGHT_ANCHOR_X_PCT) / 100}px`,
@@ -328,7 +331,7 @@ function paintHero() {
   mountPlanetSprite(el, {
     type: p.type,
     seed: p.seed,
-    px: heroSpritePx(h.value),
+    px: heroSpritePx(p.r),
     dpr: dpr.value,
     lightAngle: p.lightAngle,
   })

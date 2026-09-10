@@ -107,10 +107,64 @@ export const STAR_FIGHT_PLANET_PX_STEP = 64
 export const STAR_FIGHT_SYS_SPRITE_OVERSAMPLE = 8
 export const STAR_FIGHT_PLANET_LIGHT_STEPS = 16
 export const STAR_FIGHT_PLANET_SPRITE_MAX_PX = 1024
+/**
+ * Kante des Sprites als Vielfaches des Durchmessers, je Typ.
+ *
+ * Sie ist das BUDGET des Zierrats, nicht seine Folge: was weiter als span·r von
+ * der Mitte steht, schneidet das Raster ab — die Truemmer von `shattered` lagen
+ * bei 1,29 r und wurden von der alten 1,05 wortlos abgeschnitten. Und sie kostet
+ * quadratisch: ein Ringplanet rastert 3,4-mal so viele Pixel wie ein blanker
+ * Koerper. Wer einen Mond weiter hinausschiebt, zahlt hier.
+ */
 export const STAR_FIGHT_PLANET_SPRITE_SPAN = 1.05
-export const STAR_FIGHT_PLANET_SPRITE_SPAN_RINGED = 1.95
-export const STAR_FIGHT_PLANET_SPRITE_CANVAS_MAX = 12
-export const STAR_FIGHT_PLANET_SPRITE_URL_MAX = 16
+export const STAR_FIGHT_PLANET_SPRITE_SPANS: Record<string, number> = {
+  ringed: 1.95,
+  'gas-giant': 1.6,
+  ice: 1.52,
+  shattered: 1.36,
+  rocky: 1.3,
+  ocean: 1.3,
+  desert: 1.3,
+  jungle: 1.3,
+  obsidian: 1.3,
+  crystal: 1.12,
+}
+/**
+ * Deckel der beiden Sprite-Caches. Von 12/16 herauf, weil Minimap und Modal
+ * jetzt DIESELBEN Sprites ziehen und gleichzeitig laufen: drei bis vier kleine
+ * Minimap-Sprites, drei bis vier der Buehne und ein Hero verdraengten sich bei
+ * zwoelf Plaetzen jeden Frame gegenseitig.
+ */
+export const STAR_FIGHT_PLANET_SPRITE_CANVAS_MAX = 24
+export const STAR_FIGHT_PLANET_SPRITE_URL_MAX = 32
+/**
+ * Groessenklasse je Typ. `sizeMin`/`sizeMax` in PLANET_TYPE_CONFIGS lagen brach —
+ * jeder Planet der Systembuehne hatte denselben Radius. Der Faktor holt die
+ * Spanne zurueck, gestaucht: ungestaucht waere der kleinste Typ 0,44 und auf der
+ * Minimap (r 12) nur fuenf Pixel breit.
+ */
+/**
+ * Reichweite des Zierrats, als Vielfaches des Koerperradius. Zusammen mit der
+ * Grösse ergibt sie die Kante, die STAR_FIGHT_PLANET_SPRITE_SPANS decken muss —
+ * `planetOrnamentBudget.spec.ts` rechnet beides gegeneinander.
+ */
+export const PLANET_MOON_DIST_MIN = 1.02
+export const PLANET_MOON_DIST_MAX = 1.14
+export const PLANET_MOON_R_MIN = 0.07
+export const PLANET_MOON_R_MAX = 0.12
+export const PLANET_SHARD_DIST_MIN = 1.04
+export const PLANET_SHARD_DIST_MAX = 1.16
+export const PLANET_SHARD_SIZE_MIN = 0.05
+export const PLANET_SHARD_SIZE_MAX = 0.1
+
+// 72 ist das GEWICHTETE Mittel der Typspannen (Summe weight·mid / 27), nicht die
+// Mitte der Skala: mit 90 lag `rocky` — der haeufigste Typ, Gewicht 3 — durchweg
+// unter 1,0, und die Planeten der Minimap wurden im Schnitt kleiner statt
+// vielfaeltiger. Der Boden von 0,82 haelt sie dort ueber 19 px Durchmesser.
+export const PLANET_SIZE_REF_PX = 72
+export const PLANET_SIZE_COMPRESSION = 0.45
+export const PLANET_SIZE_FACTOR_MIN = 0.82
+export const PLANET_SIZE_FACTOR_MAX = 1.28
 export const STAR_FIGHT_PLANET_SPRITE_CROSSFADE_MS = 250
 
 // Pre-scaled planet thumbnails (256px, HQ resampling) for small UI tiles —

@@ -1,9 +1,11 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Ice – subsurface scatter, glow crack network, detailed polar caps
  */
-export function drawIce(svg: SVGSVGElement, id: string, cx: number, cy: number, r: number): void {
+export function drawIce(svg: SVGSVGElement, id: string, cx: number, cy: number, r: number, seed?: number): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, 0, 360), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -36,6 +38,7 @@ export function drawIce(svg: SVGSVGElement, id: string, cx: number, cy: number, 
 
   const crackG = svgEl('g')
   crackG.setAttribute('clip-path', `url(#ic-${id})`)
+  crackG.setAttribute('transform', surface)
 
   // Each crack: wide glow underneath, sharp line on top
   for (const [ox1, oy1, ox2, oy2, sw, op] of [

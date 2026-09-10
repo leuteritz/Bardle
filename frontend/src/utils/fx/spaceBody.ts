@@ -183,6 +183,48 @@ export function paintTerminator(ctx: CanvasRenderingContext2D, span: number, r: 
   ctx.restore()
 }
 
+/**
+ * Dasselbe Licht wie `paintTerminator`, nur auf einem FREMDEN Canvas.
+ *
+ * Wer seinen Koerper aus dem Sprite-Cache zieht und ihn kreisen laesst, kann den
+ * Terminator nicht einbrennen: der Lichtwinkel aendert sich pro Frame. Also
+ * kommt der Koerper lichtneutral aus dem Raster und die Schattierung hier
+ * darueber. `lightAngle` zeigt vom Koerper ZUR Lichtquelle.
+ *
+ * Die Nachtseite bleibt bei 0,8 stehen und nicht bei 1 — leuchtende Adern,
+ * Stadtlichter und Polarlichter muessen durchkommen, sonst waere die
+ * abgewandte Seite eine schwarze Scheibe.
+ */
+export function paintPlanetShade(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  r: number,
+  lightAngle: number,
+): void {
+  const dx = Math.cos(lightAngle)
+  const dy = Math.sin(lightAngle)
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.clip()
+  const g = ctx.createLinearGradient(x + dx * r, y + dy * r, x - dx * r, y - dy * r)
+  g.addColorStop(0, 'rgba(255, 250, 236, 0.34)')
+  g.addColorStop(0.14, 'rgba(255, 250, 236, 0.1)')
+  g.addColorStop(0.3, 'rgba(255, 250, 236, 0)')
+  g.addColorStop(0.5, 'rgba(4, 3, 2, 0)')
+  g.addColorStop(0.74, 'rgba(4, 3, 2, 0.44)')
+  g.addColorStop(1, 'rgba(4, 3, 2, 0.8)')
+  ctx.fillStyle = g
+  ctx.fillRect(x - r, y - r, r * 2, r * 2)
+  const ambient = ctx.createLinearGradient(x, y, x - dx * r, y - dy * r)
+  ambient.addColorStop(0, `rgba(${SPACE_BODY_AMBIENT_RGB}, 0)`)
+  ambient.addColorStop(1, `rgba(${SPACE_BODY_AMBIENT_RGB}, ${SPACE_BODY_AMBIENT_ALPHA})`)
+  ctx.fillStyle = ambient
+  ctx.fillRect(x - r, y - r, r * 2, r * 2)
+  ctx.restore()
+}
+
 /* ── Bau, Cache, Blit ───────────────────────────────────────────────────────── */
 
 export function clampSpriteDpr(dpr: number): number {

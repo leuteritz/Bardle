@@ -4,6 +4,7 @@ import {
   fightTransform,
   farTransform,
   fightZoom,
+  heroPlanetD,
   courseLine,
   cameraCss,
   type SystemSlotInput,
@@ -54,13 +55,20 @@ describe('starFightSystem — Systemansicht', () => {
   })
 
   it('erzwingt den Mindestabstand per Ablehnungspass, auch bei gleichem Spawn-Winkel', () => {
-    const same = [0, 1, 2, 3].map((i) => slot(i, { orbitAngle: 1.2, orbitRx: 40, orbitRy: 22, orbitTilt: 0.15 }))
+    const kinds = ['gas-giant', 'obsidian', 'ringed', 'lava'] as const
+    const same = [0, 1, 2, 3].map((i) =>
+      slot(i, { type: kinds[i], orbitAngle: 1.2, orbitRx: 40, orbitRy: 22, orbitTilt: 0.15 }),
+    )
     const layout = systemLayout({ planetSlots: same }, 1108, 913)
     for (let i = 0; i < layout.planets.length; i++) {
       for (let j = i + 1; j < layout.planets.length; j++) {
         const a = layout.planets[i]
         const b = layout.planets[j]
-        expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(2 * a.r + STAR_FIGHT_SYS_MIN_GAP_PX - 1e-6)
+        // Der Abstand haengt am PAAR: seit die Groessenklasse den Radius
+        // spreizt, sind zwei Nachbarn selten gleich gross.
+        expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(
+          a.r + b.r + STAR_FIGHT_SYS_MIN_GAP_PX - 1e-6,
+        )
       }
     }
   })
@@ -105,8 +113,9 @@ describe('starFightSystem — Kamera', () => {
         expect(t.k).toBe(fightZoom())
         expect(t.k * p.x + t.tx).toBeCloseTo((w * STAR_FIGHT_ANCHOR_X_PCT) / 100, 9)
         expect(t.k * p.y + t.ty).toBeCloseTo((h * STAR_FIGHT_ANCHOR_Y_PCT) / 100, 9)
-        // Der Planet füllt am Anker exakt seinen Kampfdurchmesser
-        expect(2 * p.r * t.k).toBeCloseTo((h * STAR_FIGHT_FIGHT_PLANET_D_PCT) / 100, 9)
+        // Der eingezoomte kleine Planet und sein Hero sind deckungsgleich —
+        // die beiden blenden gegeneinander, ein Versatz waere sofort sichtbar.
+        expect(2 * p.r * t.k).toBeCloseTo(heroPlanetD(p.r), 9)
       }
     }
   })

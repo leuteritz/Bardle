@@ -1,4 +1,4 @@
-import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular } from '@/utils/planetDraw/svgHelpers'
+import { svgEl, setAttrs, addGradStop, addLimbGrad, addClip, drawSpecular , seedRoll, rollIn, detailTransform } from '@/utils/planetDraw/svgHelpers'
 
 /**
  * Storm – indigo tempest giant: curved cloud bands, spiral cyclone eye,
@@ -10,7 +10,10 @@ export function drawStorm(
   cx: number,
   cy: number,
   r: number,
+  seed?: number,
 ): void {
+  const roll = seedRoll(seed)
+  const surface = detailTransform(cx, cy, rollIn(roll, -14, 14), roll() < 0.5)
   const defs = svgEl('defs')
 
   const grad = svgEl('radialGradient')
@@ -31,6 +34,7 @@ export function drawStorm(
 
   const stormG = svgEl('g')
   stormG.setAttribute('clip-path', `url(#stc-${id})`)
+  stormG.setAttribute('transform', surface)
 
   // Curved storm bands — darker troughs and lighter crests sweeping the sphere
   const bands: [string, string, number, number][] = [

@@ -15,7 +15,7 @@ import {
   STAR_FIGHT_PLANET_LIGHT_STEPS,
   STAR_FIGHT_PLANET_SPRITE_MAX_PX,
   STAR_FIGHT_PLANET_SPRITE_SPAN,
-  STAR_FIGHT_PLANET_SPRITE_SPAN_RINGED,
+  STAR_FIGHT_PLANET_SPRITE_SPANS,
 } from '@/config/constants'
 
 afterEach(() => {
@@ -36,11 +36,18 @@ describe('planetSprite — Schlüssel, Seed, Span', () => {
     expect(Number.isInteger(planetSeedFor('x'))).toBe(true)
   })
 
-  it('gibt dem Ringplaneten die grosse Kante, allen anderen die knappe', () => {
-    expect(planetSpriteSpan('ringed')).toBe(STAR_FIGHT_PLANET_SPRITE_SPAN_RINGED)
+  it('gibt jedem Typ die Kante, die sein Zierrat braucht', () => {
+    expect(planetSpriteSpan('ringed')).toBe(STAR_FIGHT_PLANET_SPRITE_SPANS.ringed)
     expect(planetSpriteSpan('ringed')).toBeGreaterThanOrEqual(1.9)
-    expect(planetSpriteSpan('rocky')).toBe(STAR_FIGHT_PLANET_SPRITE_SPAN)
-    expect(planetSpriteSpan('gas-giant')).toBe(STAR_FIGHT_PLANET_SPRITE_SPAN)
+    // Ein Typ ohne Eintrag faellt auf die knappe Kante zurueck
+    expect(planetSpriteSpan('lava')).toBe(STAR_FIGHT_PLANET_SPRITE_SPAN)
+    // Was ueber die Scheibe hinausragt, braucht seine Reserve
+    for (const type of ['rocky', 'ocean', 'desert', 'jungle', 'obsidian'] as const) {
+      expect(planetSpriteSpan(type)).toBeGreaterThan(STAR_FIGHT_PLANET_SPRITE_SPAN)
+    }
+    expect(planetSpriteSpan('gas-giant')).toBeGreaterThan(1.5)
+    expect(planetSpriteSpan('ice')).toBeGreaterThan(1.44)
+    expect(planetSpriteSpan('shattered')).toBeGreaterThan(1.3)
   })
 
   it('quantisiert den Lichtwinkel periodisch und im Bereich', () => {

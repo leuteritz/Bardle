@@ -3,6 +3,8 @@
 </template>
 
 <script lang="ts">
+import { planetSeedFor } from '@/utils/fx/planetSprite'
+import { planetSizeFactor } from '@/utils/planetDraw/types'
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
@@ -74,6 +76,7 @@ import {
   drawPlanet,
   generateGalaxyDots,
 } from './minimapGalaxyGeometry'
+import type { PlanetBodySprite } from './minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor } from '@/utils/fx/galaxyLandmarks'
 import { landfallMarks } from '@/utils/game/landfalls'
 import { incidentMarkRadius, incidentMarks, incidentPaint } from '@/utils/game/galaxyIncidents'
@@ -795,6 +798,28 @@ export default defineComponent({
       ctx.restore()
     }
 
+    /**
+     * Woraus der Koerper eines Ankunftsplaneten gemalt wird. Der Lichtwinkel
+     * zeigt zum Stern — dieselbe Rechnung wie `systemLayout`, damit derselbe
+     * Planet hier und im Star-Fight-Modal gleich beleuchtet steht.
+     */
+    function planetBody(
+      slot: { type?: PlanetType },
+      seed: number,
+      px: number,
+      py: number,
+      cx: number,
+      cy: number,
+    ): PlanetBodySprite | undefined {
+      if (!slot.type) return undefined
+      return {
+        type: slot.type,
+        seed,
+        lightAngle: Math.atan2(cy - py, cx - px),
+        dpr: renderDpr,
+      }
+    }
+
     function drawArrivalView(ctx: CanvasRenderingContext2D, w: number, h: number) {
       const cx = w / 2
       const cy = h / 2
@@ -935,9 +960,13 @@ export default defineComponent({
       const planetData = slots.map((slot, idx) => {
         const isChamp = slot.isChampionPlanet ?? false
         const cleared = slot.cleared ?? false
-        const fullR = isChamp
-          ? MINIMAP_ARRIVAL_CHAMP_PLANET_R
-          : MINIMAP_ARRIVAL_PLANET_R + idx * MINIMAP_ARRIVAL_PLANET_STEP
+        // Derselbe Seed wie auf der Systembuehne — sonst ist es nicht derselbe Planet
+        const bodySeed = slot.planetId ? planetSeedFor(slot.planetId) : galaxySeed + idx * 17
+        const sizeK = slot.type ? planetSizeFactor(slot.type, bodySeed) : 1
+        const fullR =
+          (isChamp
+            ? MINIMAP_ARRIVAL_CHAMP_PLANET_R
+            : MINIMAP_ARRIVAL_PLANET_R + idx * MINIMAP_ARRIVAL_PLANET_STEP) * sizeK
         const planetR = cleared ? fullR * MINIMAP_ARRIVAL_CLEARED_SCALE : fullR
 
         const orbitRx =
@@ -974,6 +1003,7 @@ export default defineComponent({
           orbitRx,
           orbitRy,
           planetR,
+          bodySeed,
           cleared,
           isChamp,
           idx,
@@ -999,10 +1029,9 @@ export default defineComponent({
       })
 
       // Behind-planets (py < cy) drawn first at reduced opacity (brighter when hovered)
-      planetData.forEach(({ px, py, planetR, idx, cleared }) => {
+      planetData.forEach(({ px, py, planetR, bodySeed, idx, cleared }) => {
         if (py >= cy) return
         const slot = slots[idx]
-        const typePal = slot.type ? PLANET_TYPE_PALETTES[slot.type] : undefined
         const alpha = cleared ? MINIMAP_ARRIVAL_CLEARED_ALPHA : hoverPlanetAlpha
         ctx.save()
         ctx.globalAlpha = alpha
@@ -1011,10 +1040,11 @@ export default defineComponent({
           px,
           py,
           planetR,
-          galaxySeed + idx * 17,
+          bodySeed,
           cleared ? 'rescued' : 'unrescued',
           false,
-          cleared ? undefined : typePal,
+          slot.type ? PLANET_TYPE_PALETTES[slot.type] : undefined,
+          planetBody(slot, bodySeed, px, py, cx, cy),
         )
         ctx.restore()
         if (!cleared) drawChampionPortrait(ctx, px, py, planetR, slot, alpha)
@@ -1100,18 +1130,19 @@ export default defineComponent({
       }
 
       // Foreground planets (py >= cy) at full opacity
-      planetData.forEach(({ px, py, planetR, idx, cleared }) => {
+      planetData.forEach(({ px, py, planetR, bodySeed, idx, cleared }) => {
         if (py < cy) return
         const slot = slots[idx]
         const typePal = slot.type ? PLANET_TYPE_PALETTES[slot.type] : undefined
+        const body = planetBody(slot, bodySeed, px, py, cx, cy)
         if (cleared) {
           ctx.save()
           ctx.globalAlpha = MINIMAP_ARRIVAL_CLEARED_ALPHA
-          drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'rescued')
+          drawPlanet(ctx, px, py, planetR, bodySeed, 'rescued', false, typePal, body)
           ctx.restore()
           return
         }
-        drawPlanet(ctx, px, py, planetR, galaxySeed + idx * 17, 'unrescued', false, typePal)
+        drawPlanet(ctx, px, py, planetR, bodySeed, 'unrescued', false, typePal, body)
         drawChampionPortrait(ctx, px, py, planetR, slot, 1)
       })
 

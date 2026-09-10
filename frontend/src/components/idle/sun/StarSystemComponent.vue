@@ -241,7 +241,11 @@
                 :class="{ 'summary-planet--target': row.planetId === targetPlanetId }"
               >
                 <span class="summary-planet__world">
-                  <PlanetGlyph :type="row.planetType" :size="STAR_SUMMARY_PLANET_GLYPH_PX" />
+                  <PlanetGlyph
+                    :type="row.planetType"
+                    :seed="planetSeedFor(row.planetId)"
+                    :size="STAR_SUMMARY_PLANET_GLYPH_PX"
+                  />
                 </span>
 
                 <!-- Der Zustand der Welt, an der gerade gearbeitet wird: nur die
@@ -340,6 +344,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useStarSystem } from '@/composables/orbit/useStarSystem'
 import OrbitPath from './OrbitPath.vue'
 import PlanetGlyph from '@/components/ui/PlanetGlyph.vue'
+import { planetSeedFor } from '@/utils/fx/planetSprite'
 import type { StarRenderEntry } from '@/composables/orbit/useStarSystem'
 import { usePlanetBossStore } from '@/stores/world/planetBossStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
