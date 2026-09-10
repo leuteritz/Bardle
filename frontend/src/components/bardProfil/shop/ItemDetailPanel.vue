@@ -19,10 +19,7 @@
           <span class="cs-hero-chip" :style="{ '--cc': detail.rarityColor }">
             {{ detail.rarityLabel }}
           </span>
-          <span
-            class="cs-hero-chip cs-hero-chip--solid"
-            :style="{ '--cc': detail.categoryColor }"
-          >
+          <span class="cs-hero-chip cs-hero-chip--solid" :style="{ '--cc': detail.categoryColor }">
             <img :src="detail.categoryImage" :alt="detail.categoryLabel" class="cs-hero-chip-img" />
             {{ detail.categoryLabel }}
           </span>
@@ -30,16 +27,87 @@
       </div>
     </div>
 
-    <!-- Info body. It never scrolls: it asks for the height it needs and the
-         hero above takes whatever is left. -->
     <div class="cs-detail-body">
-      <!-- Effect — the item's whole point, so it carries no headline; the
-           rarity edge and the green reading are what mark it. -->
-      <div class="cs-block cs-block--stack" :style="{ '--ac': detail.rarityColor }">
+      <div class="cs-identity" aria-label="Item identity">
+        <div class="cs-tier-band cs-item-rarity-band" :style="{ '--ac': detail.rarityColor }">
+          <span class="cs-tier-crest cs-item-crest" aria-hidden="true">
+            <img
+              v-if="detail.icon.startsWith('/')"
+              :src="detail.icon"
+              :alt="detail.name"
+              class="rpg-img"
+            />
+            <Icon v-else :icon="detail.icon" width="24" height="24" />
+          </span>
+          <span class="cs-tier-copy">
+            <span class="cs-affinity-head"><small>Item Rarity</small></span>
+            <strong>{{ detail.rarityLabel }}</strong>
+          </span>
+          <span class="cs-item-owned">
+            <Icon icon="game-icons:knapsack" width="15" height="15" aria-hidden="true" />
+            ×{{ detail.ownedCount }}
+          </span>
+        </div>
+
+        <div class="cs-affinity-list" aria-label="Item category and set">
+          <div class="cs-affinity cs-item-affinity" :style="{ '--ac': detail.categoryColor }">
+            <span class="cs-affinity-crest" aria-hidden="true">
+              <img :src="detail.categoryImage" :alt="detail.categoryLabel" class="rpg-img" />
+            </span>
+            <span class="cs-affinity-copy">
+              <span class="cs-affinity-head"><small>Category</small></span>
+              <strong>{{ detail.categoryLabel }}</strong>
+              <span class="cs-affinity-next">Equipment slot</span>
+            </span>
+          </div>
+
+          <div
+            v-if="detail.set"
+            class="cs-affinity cs-item-affinity"
+            :class="{ 'cs-item-affinity--active': detail.set.active }"
+            :style="{ '--ac': detail.set.active ? '#e8c040' : '#7a4e20' }"
+          >
+            <span class="cs-affinity-crest" aria-hidden="true">
+              <Icon
+                v-if="detail.set.icon.includes(':')"
+                :icon="detail.set.icon"
+                width="19"
+                height="19"
+              />
+              <img v-else :src="detail.set.icon" :alt="detail.set.name" class="rpg-img" />
+            </span>
+            <span class="cs-affinity-copy">
+              <span class="cs-affinity-head">
+                <small>Set Bonus</small>
+                <em v-if="detail.set.active">Active</em>
+              </span>
+              <strong>{{ detail.set.name }}</strong>
+              <span class="cs-affinity-next">{{
+                detail.set.active ? 'Activated' : 'Inactive'
+              }}</span>
+            </span>
+          </div>
+          <div v-else class="cs-affinity cs-item-affinity cs-item-affinity--empty">
+            <span class="cs-affinity-crest" aria-hidden="true">
+              <Icon icon="lucide:minus" width="19" height="19" />
+            </span>
+            <span class="cs-affinity-copy">
+              <span class="cs-affinity-head"><small>Set Bonus</small></span>
+              <strong>None</strong>
+              <span class="cs-affinity-next">No set bonus</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cs-block cs-block--stack cs-effect-card" :style="{ '--ac': detail.rarityColor }">
+        <div class="cs-block-head">
+          <span class="cs-block-kicker">Item Effect</span>
+          <span class="cs-block-rule" aria-hidden="true"></span>
+        </div>
         <p class="effect-desc">{{ detail.description }}</p>
       </div>
 
-      <!-- Set bonus -->
       <div
         v-if="detail.set"
         class="cs-block cs-block--stack set-card"
@@ -63,8 +131,6 @@
         </p>
       </div>
 
-      <!-- Cost breakdown. The stock count rides in the label row: what the
-           player owns and what it costs are the same question. -->
       <div class="cs-cost">
         <div class="cs-cost-label">
           <span>Cost</span>
@@ -103,18 +169,15 @@
               {{ formatNumber(detail.chimes.have) }} / {{ formatNumber(detail.chimes.need) }}
             </span>
             <span class="cs-mat-state">{{ detail.chimes.ok ? '✓' : '✕' }}</span>
-            <i
-              class="cs-mat-fill"
-              :style="fillStyle(detail.chimes.have, detail.chimes.need)"
-            ></i>
+            <i class="cs-mat-fill" :style="fillStyle(detail.chimes.have, detail.chimes.need)"></i>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Buy footer -->
     <div class="cs-detail-footer">
       <button
+        type="button"
         class="cs-buy-btn"
         :class="{ 'cs-buy-btn--ready': detail.canBuy }"
         :disabled="!detail.canBuy"
@@ -289,19 +352,155 @@ export default defineComponent({
   text-shadow: none;
 }
 
-/* ── Info body — never a scrollport ──
-   `clip` rather than `hidden`: hidden is a scrollport and can still be moved
-   programmatically, clip cannot. */
+/* ── Identity ── */
+.cs-identity {
+  margin-bottom: 4px;
+}
+.cs-tier-band {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--ac) 46%, #3e200a);
+  border-left: 3px solid var(--ac);
+  border-radius: 4px;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 17%, #17150e), #141410 78%);
+  color: inherit;
+}
+.cs-tier-crest,
+.cs-affinity-crest {
+  display: grid;
+  place-items: center;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: var(--ac);
+  color: #fff;
+}
+.cs-tier-crest {
+  width: 38px;
+  height: 42px;
+}
+.cs-item-crest img {
+  width: 25px;
+  height: 25px;
+  object-fit: contain;
+}
+.cs-tier-copy,
+.cs-affinity-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.cs-tier-copy strong,
+.cs-affinity strong {
+  overflow: hidden;
+  color: var(--ac);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--ac) 34%, transparent);
+  white-space: nowrap;
+}
+.cs-affinity-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cs-affinity-head small {
+  color: #a59675;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.cs-item-owned {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #6ec040;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.cs-item-owned svg {
+  color: #c89040;
+}
+.cs-affinity-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 8px;
+  margin-top: 9px;
+}
+.cs-affinity {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--ac) 46%, #3e200a);
+  border-left: 3px solid var(--ac);
+  border-radius: 4px;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--ac) 15%, #17150e), #141410 78%);
+  color: inherit;
+}
+.cs-affinity-crest {
+  width: 30px;
+  height: 33px;
+}
+.cs-affinity-crest img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+.cs-affinity-next {
+  display: block;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--ac) 76%, #fff9e8);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cs-affinity em {
+  margin-left: auto;
+  color: var(--ac);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.cs-item-affinity--active {
+  box-shadow: inset 0 0 14px rgba(232, 192, 64, 0.08);
+}
+.cs-item-affinity--empty {
+  --ac: #7a4e20;
+  opacity: 0.76;
+}
+
+/* ── Info body ── */
 .cs-detail-body {
-  flex: 0 0 auto;
-  overflow: clip;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  scrollbar-color: #5c3310 #111008;
+  scrollbar-width: thin;
 }
 
-/* Blocks carry no headline: the accent edge and the content say what they are. */
+/* ── Effect ── */
 .cs-block {
   display: flex;
   align-items: center;
@@ -317,7 +516,26 @@ export default defineComponent({
   align-items: stretch;
   gap: 6px;
 }
+.cs-block-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cs-block-kicker {
+  color: #e8c040;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.cs-block-rule {
+  height: 1px;
+  flex: 1;
+  background: #5c3310;
+  opacity: 0.7;
+}
 .effect-desc {
+  margin: 0;
   font-size: 13.5px;
   line-height: 1.45;
   color: #b8e0a0;
@@ -588,7 +806,7 @@ export default defineComponent({
   letter-spacing: 0.05em;
 }
 .cs-detail-body {
-  order: 3;
+  order: 2;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -636,7 +854,7 @@ export default defineComponent({
   font-size: 15px;
 }
 .cs-detail-footer {
-  order: 2;
+  order: 3;
   padding: 12px 18px 14px;
   background: #1a1008;
   border-top: 1px solid #5c3310;
