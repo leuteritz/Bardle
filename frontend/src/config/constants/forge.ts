@@ -3716,9 +3716,8 @@ export const FORGE_FOCUS_CARD_COST_LABEL = 'Next rank cost'
 export const FORGE_FOCUS_CARD_UNLOCK_LABEL = 'Unlock path'
 export const FORGE_FOCUS_CARD_LEVEL_LABEL = 'Current rank'
 export const FORGE_FOCUS_CARD_CLEAR_LABEL = 'Clear focus'
-export const FORGE_FOCUS_CARD_GROW_LABEL = 'Grow this upgrade'
+export const FORGE_FOCUS_CARD_BUY_LABEL = 'Buy'
 export const FORGE_FOCUS_CARD_ICON_SIZE = 64
-export const FORGE_FOCUS_CARD_ACTION_ICON = 'ph:arrow-up-right-bold'
 export const FORGE_FOCUS_CARD_STATE_LABELS: Record<ForgeUpgradeState, string> = {
   locked: 'LOCKED',
   empty: 'NOT STARTED',

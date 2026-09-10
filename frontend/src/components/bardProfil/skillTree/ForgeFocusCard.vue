@@ -10,8 +10,6 @@
     </div>
 
     <section class="sfc" aria-labelledby="forge-focus-title">
-      <div class="sfc-glow" aria-hidden="true" />
-
       <header class="sfc-head">
         <div class="sfc-icon-wrap">
           <Icon
@@ -86,11 +84,10 @@
         v-if="entry.canBuy"
         class="sfc-action"
         type="button"
-        :aria-label="`${FORGE_FOCUS_CARD_GROW_LABEL}: ${entry.name}`"
+        :aria-label="`${FORGE_FOCUS_CARD_BUY_LABEL}: ${entry.name}`"
         @click="grow"
       >
-        <Icon :icon="FORGE_FOCUS_CARD_ACTION_ICON" width="18" height="18" />
-        {{ FORGE_FOCUS_CARD_GROW_LABEL }}
+        {{ FORGE_FOCUS_CARD_BUY_LABEL }}
       </button>
     </section>
   </div>
@@ -105,11 +102,10 @@ import ForgeCostRow from './ForgeCostRow.vue'
 import type { ForgeUpgradeEntry } from '@/types'
 import {
   FORGE_FOCUS_CARD_CLEAR_LABEL,
-  FORGE_FOCUS_CARD_ACTION_ICON,
   FORGE_FOCUS_CARD_COST_LABEL,
   FORGE_FOCUS_CARD_CURRENT_LABEL,
   FORGE_FOCUS_CARD_EFFECT_LABEL,
-  FORGE_FOCUS_CARD_GROW_LABEL,
+  FORGE_FOCUS_CARD_BUY_LABEL,
   FORGE_FOCUS_CARD_ICON_SIZE,
   FORGE_FOCUS_CARD_LABEL,
   FORGE_FOCUS_CARD_LEVEL_LABEL,
@@ -172,9 +168,7 @@ function grow(): void {
 ══════════════════════════════════════════════════ */
 .sfc-slot {
   flex-shrink: 0;
-  padding: 12px 18px 14px;
-  background: #14100c;
-  border-bottom: 1px solid #2a1a08;
+  padding: 8px 18px 12px;
 }
 
 /* ══════════════════════════════════════════════════
@@ -189,7 +183,7 @@ function grow(): void {
   display: flex;
   align-items: center;
   gap: 9px;
-  margin: 0 2px 11px;
+  margin: 0 2px 8px;
 }
 
 .sfc-div::before,
@@ -237,7 +231,7 @@ function grow(): void {
   padding: 2px 7px;
   border: 1px solid color-mix(in srgb, var(--focus-color, #c89040) 35%, #32210c);
   border-radius: 3px;
-  background: rgba(0, 0, 0, 0.4);
+  background: transparent;
   color: var(--focus-color, #c89040);
   font-size: 12px;
   font-weight: 900;
@@ -259,20 +253,13 @@ function grow(): void {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   overflow: hidden;
-  padding: 18px;
+  padding: 14px;
   border: 2px solid var(--focus-color, #7a4e20);
   border-radius: 4px;
   background: #1a1008;
-  box-shadow: inset 0 0 0 2px #3e200a, inset 0 0 24px rgba(0, 0, 0, 0.34);
-}
-
-.sfc-glow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 0 0, color-mix(in srgb, var(--focus-color, #e8c040) 18%, transparent), transparent 62%);
-  pointer-events: none;
+  box-shadow: inset 0 0 0 2px #3e200a;
 }
 
 .sfc-head,
@@ -288,14 +275,14 @@ function grow(): void {
 .sfc-head {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .sfc-icon-wrap {
   display: grid;
-  flex: 0 0 78px;
-  width: 78px;
-  height: 78px;
+  flex: 0 0 70px;
+  width: 70px;
+  height: 70px;
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--focus-color, #7a4e20) 72%, #3e200a);
   border-radius: 4px;
@@ -321,7 +308,7 @@ function grow(): void {
 }
 
 .sfc-heading h2 {
-  margin: 0 0 7px;
+  margin: 0 0 5px;
   color: var(--focus-color, #e8c040);
   font-size: clamp(22px, 2.1vw, 30px);
   font-weight: 900;
@@ -331,16 +318,16 @@ function grow(): void {
 .sfc-status-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .sfc-status,
 .sfc-level {
-  padding: 4px 7px;
+  padding: 3px 6px;
   border: 1px solid #32210c;
   border-radius: 3px;
-  background: #1e1409;
+  background: transparent;
   color: #e8c040;
   font-size: 10px;
   font-weight: 900;
@@ -359,7 +346,7 @@ function grow(): void {
   height: 28px;
   border: 1px solid #32210c;
   border-radius: 4px;
-  background: #1e1409;
+  background: transparent;
   color: #b9a47a;
   font-size: 22px;
   line-height: 1;
@@ -373,15 +360,16 @@ function grow(): void {
 }
 
 .sfc-effect-block {
-  padding: 13px 14px;
+  padding: 8px 12px;
   border-left: 3px solid var(--focus-color, #e8c040);
-  background: #1e1409;
+  border-top: 1px solid #32210c;
+  border-bottom: 1px solid #32210c;
 }
 
 .sfc-effect {
-  margin: 7px 0 0;
+  margin: 4px 0 0;
   color: #f1e6c9;
-  font-size: clamp(17px, 1.8vw, 24px);
+  font-size: clamp(16px, 1.8vw, 22px);
   font-weight: 900;
   line-height: 1.12;
 }
@@ -389,23 +377,20 @@ function grow(): void {
 .sfc-data-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 12px;
 }
 
 .sfc-stat {
   min-width: 0;
-  padding: 10px 11px;
-  border: 1px solid #32210c;
-  border-radius: 4px;
-  background: #1e1409;
+  padding: 3px 0;
 }
 
 .sfc-stat strong {
   display: block;
-  margin-top: 5px;
+  margin-top: 3px;
   overflow: hidden;
   color: #eee0b6;
-  font-size: clamp(18px, 1.65vw, 23px);
+  font-size: clamp(17px, 1.65vw, 22px);
   font-weight: 900;
   line-height: 1;
   text-overflow: ellipsis;
@@ -416,43 +401,47 @@ function grow(): void {
   color: #72c94c;
 }
 
+.sfc-stat + .sfc-stat {
+  padding-left: 12px;
+  border-left: 1px solid #32210c;
+}
+
 .sfc-cost-block,
 .sfc-unlock {
-  padding-top: 12px;
+  padding-top: 8px;
   border-top: 1px solid #32210c;
 }
 
 .sfc-cost {
-  margin-top: 8px;
+  margin-top: 5px;
 }
 
 .sfc-cost :deep(.fc-cost-row) {
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 10px;
 }
 
 .sfc-cost :deep(.fc-cost-pair) {
-  padding: 5px 7px;
-  border: 1px solid #32210c;
-  border-radius: 3px;
-  background: #1e1409;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
 }
 
 .sfc-lock-reason {
   display: block;
-  margin-top: 7px;
+  margin-top: 4px;
   color: #d57962;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
 }
 
 .sfc-reqs {
   display: grid;
-  gap: 5px;
-  margin: 7px 0 0;
+  gap: 3px;
+  margin: 4px 0 0;
   padding: 0;
   color: #d2c5a4;
-  font-size: 13px;
+  font-size: 12.5px;
   list-style: none;
 }
 
@@ -477,16 +466,17 @@ function grow(): void {
 }
 
 .sfc-action {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 42px;
+  min-height: 52px;
+  padding: 11px 14px;
   border: 1px solid #6ec040;
   border-radius: 4px;
   background: linear-gradient(to bottom, #52b830, #2e7a1a);
   color: #08130a;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -500,22 +490,22 @@ function grow(): void {
 
 @media (max-height: 1100px) {
   .sfc-slot {
-    padding: 10px 15px 12px;
+    padding: 7px 15px 10px;
   }
 
   .sfc-div {
-    margin-bottom: 9px;
+    margin-bottom: 7px;
   }
 
   .sfc {
-    gap: 11px;
-    padding: 14px;
+    gap: 8px;
+    padding: 12px;
   }
 
   .sfc-icon-wrap {
-    flex-basis: 66px;
-    width: 66px;
-    height: 66px;
+    flex-basis: 64px;
+    width: 64px;
+    height: 64px;
   }
 }
 

@@ -161,9 +161,7 @@ function handleClick(): void {
 ══════════════════════════════════════════════════ */
 .fba-shell {
   flex-shrink: 0;
-  padding: 10px 18px;
-  background: #16120a;
-  border-bottom: 2px solid #3e200a;
+  padding: 12px 18px 8px;
 }
 
 /* ══════════════════════════════════════════════════
@@ -180,6 +178,7 @@ function handleClick(): void {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 50px;
   padding: 11px 14px;
   border: 1px solid #6ec040;
   border-radius: 4px;
@@ -279,11 +278,12 @@ function handleClick(): void {
 ══════════════════════════════════════════════════ */
 @media (max-height: 1100px) {
   .fba-shell {
-    padding: 8px 15px;
+    padding: 9px 15px 6px;
   }
 
   .fba {
     gap: 8px;
+    min-height: 46px;
     padding: 9px 12px;
     font-size: 13px;
   }
