@@ -34,6 +34,8 @@ import {
   HELM_SLIP_MIN_DIST_PX,
   HELM_TRAVEL_GAP_SCALE,
   HELM_WAKE_SHIFT_PCT,
+  HELM_WAKE_STRETCH,
+  HELM_WAKE_TURN_TAU_SEC,
   HELM_YAW_AMP_FRAC_MAX,
   HELM_YAW_AMP_FRAC_MIN,
   JOLT_FOCUS_FRAC,
@@ -128,6 +130,17 @@ describe('Helm — Kurs', () => {
   it('der Schweif versetzt sich um höchstens ein Zehntel', () => {
     expect(HELM_WAKE_SHIFT_PCT).toBeLessThanOrEqual(10)
   })
+
+  it('die Streckung bleibt ein Zug, keine Verzerrung', () => {
+    expect(HELM_WAKE_STRETCH).toBeLessThanOrEqual(0.25)
+  })
+
+  // Die Achse muss im Manöver sichtbar drehen: träger als der Helm selbst
+  // (HELM_FOCUS_TAU_SEC) käme sie erst an, wenn die Kurve vorbei ist.
+  it('die Schweifachse schwingt schneller ein als der Kurs', () => {
+    expect(HELM_WAKE_TURN_TAU_SEC).toBeLessThan(HELM_FOCUS_TAU_SEC)
+    expect(HELM_WAKE_TURN_TAU_SEC).toBeGreaterThan(0)
+  })
 })
 
 describe('Himmelsbegegnungen', () => {
@@ -150,7 +163,9 @@ describe('Himmelsbegegnungen', () => {
   })
 
   it('jede Art hat Gewicht und Lebensspanne, die grossen sind gelistet', () => {
-    for (const kind of Object.keys(ENCOUNTER_KIND_WEIGHTS) as (keyof typeof ENCOUNTER_KIND_WEIGHTS)[]) {
+    for (const kind of Object.keys(
+      ENCOUNTER_KIND_WEIGHTS,
+    ) as (keyof typeof ENCOUNTER_KIND_WEIGHTS)[]) {
       expect(ENCOUNTER_KIND_WEIGHTS[kind]).toBeGreaterThan(0)
       const [lo, hi] = ENCOUNTER_LIFE_SEC[kind]
       expect(lo).toBeLessThan(hi)

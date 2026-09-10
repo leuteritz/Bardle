@@ -160,6 +160,22 @@ export const SUN_WAKE_STREAKS_RANGE = 36
 /** Zuschlag auf die Wake-Dichte je Phasen- bzw. Kometenstufe (0..1 gesamt). */
 export const SUN_WAKE_PHASE_GAIN = 0.12
 
+/* ── Nachlaufachse des Kranzes ─────────────────────────────────────────────
+   Die Richtung steckt im BILD, nicht im Sprite-Schlüssel: der Kranz wird
+   kanonisch nach +x gebacken, den Winkel legt der Frame-Transform
+   (`wakeFollowerTransform`). Ein rotationssymmetrischer Kranz — 36…72 Streifen
+   auf `i · GOLDEN` — sah in jeder Kurve gleich aus; eine Drehung an ihm ist
+   per Konstruktion unsichtbar. Die Fläche wird nur UMVERTEILT: der Slot bleibt
+   `SUN_SPRITE_SPAN.wake` (2,0), der Deckel bei 1,96 r die Slotkante. */
+export const SUN_WAKE_TAIL_LEN_K = 1.3
+export const SUN_WAKE_NOSE_LEN_K = 0.4
+export const SUN_WAKE_TAIL_ALPHA_K = 1.25
+export const SUN_WAKE_NOSE_ALPHA_K = 0.34
+/** Härtet den Übergang: linear las sich die Keule als schiefer Kranz. */
+export const SUN_WAKE_TAIL_BIAS_POW = 1.6
+/** Neigung jedes Streifens zur Nachlaufachse in rad — Haare im Fahrtwind. */
+export const SUN_WAKE_SWEEP = 0.34
+
 /** Sonnenfleckengruppen je Phase (Spark … Pyre). Riesen haben wenige, grosse. */
 export const SUN_SPOT_GROUPS_BY_PHASE = [1, 2, 4, 3, 2]
 /** Granulationszellen relativ zum Körperradius je Phase — Riesen haben

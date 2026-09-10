@@ -76,9 +76,15 @@ import {
   SUN_SPRITE_SPAN,
   SUN_SPRITE_URL_MAX,
   SUN_WAKE_GUST_STAGGER,
+  SUN_WAKE_NOSE_ALPHA_K,
+  SUN_WAKE_NOSE_LEN_K,
   SUN_WAKE_PHASE_GAIN,
   SUN_WAKE_STREAKS_MIN,
   SUN_WAKE_STREAKS_RANGE,
+  SUN_WAKE_SWEEP,
+  SUN_WAKE_TAIL_ALPHA_K,
+  SUN_WAKE_TAIL_BIAS_POW,
+  SUN_WAKE_TAIL_LEN_K,
 } from '@/config/constants'
 import {
   bodyFill,
@@ -877,13 +883,21 @@ const paintWake: SunPaint = (ctx, x, y, r, pal, body) => {
     : 1
   const dustTone = comet ? blend(mix(pal.core, 255, 0.45), dust, gold) : dust
   for (let i = 0; i < n; i++) {
-    const a = i * GOLDEN + sway(seed, 1100 + i) * 0.12
+    // +x ist der Nachlauf. Die Streuung bleibt gleichverteilt, jeder Streifen
+    // neigt sich dann zur Achse (Fixpunkte 0 und π) und wird nach seiner Lage
+    // gewichtet — daher die Keule, die der Frame-Transform drehen kann.
+    const spread = i * GOLDEN + sway(seed, 1100 + i) * 0.12
+    const a = spread - SUN_WAKE_SWEEP * Math.sin(spread)
+    const tail = Math.pow((Math.cos(a) + 1) / 2, SUN_WAKE_TAIL_BIAS_POW)
+    const lenK = SUN_WAKE_NOSE_LEN_K + (SUN_WAKE_TAIL_LEN_K - SUN_WAKE_NOSE_LEN_K) * tail
+    const alphaK = SUN_WAKE_NOSE_ALPHA_K + (SUN_WAKE_TAIL_ALPHA_K - SUN_WAKE_NOSE_ALPHA_K) * tail
     const ion = comet && i % 3 === 0
     const from = inner * (1.05 + jitter(seed, 1110 + i) * 0.45)
-    const len = r * (ion ? 0.7 + jitter(seed, 1120 + i) * 0.9 : 0.3 + jitter(seed, 1120 + i) * 0.75)
+    const len =
+      r * (ion ? 0.7 + jitter(seed, 1120 + i) * 0.9 : 0.3 + jitter(seed, 1120 + i) * 0.75) * lenK
     const to = Math.min(from + len, r * 1.96)
     const w = Math.max(0.5, r * (ion ? 0.004 : 0.006 + jitter(seed, 1130 + i) * 0.012))
-    const alpha = (ion ? 0.3 : 0.28) + jitter(seed, 1140 + i) * 0.4
+    const alpha = Math.min(1, ((ion ? 0.3 : 0.28) + jitter(seed, 1140 + i) * 0.4) * alphaK)
     streak(ctx, x, y, a, from, to, w, ion ? SUN_COMET_ION_RGB : dustTone, alpha)
   }
 }
@@ -1484,44 +1498,44 @@ function swapSlotImage(
   return url.then(
     (src) =>
       new Promise<void>((resolve) => {
-    if (slot.dataset.layerKey !== layerKey) {
-      resolve()
-      return
-    }
-    if (!src) {
-      slot.replaceChildren()
-      resolve()
-      return
-    }
-    const current = slot.querySelector<HTMLImageElement>('img.is-in')
-    if (current && current.src === src) {
-      resolve()
-      return
-    }
-    const img = document.createElement('img')
-    img.alt = ''
-    img.draggable = false
-    img.decoding = 'async'
-    const show = () => {
-      if (slot.dataset.layerKey !== layerKey) {
-        resolve()
-        return
-      }
-      const old = Array.from(slot.querySelectorAll<HTMLImageElement>('img'))
-      slot.appendChild(img)
-      requestAnimationFrame(() => {
-        img.classList.add('is-in')
-        for (const o of old) o.classList.remove('is-in')
-        resolve()
-      })
-      // Rein visuelle Frist — bleibt Wanduhr
-      setTimeout(() => {
-        for (const o of old) if (o.parentElement === slot) o.remove()
-      }, fadeMs + 50)
-    }
-    img.src = src
-    const decode = typeof img.decode === 'function' ? img.decode() : Promise.resolve()
-    decode.then(show, show)
+        if (slot.dataset.layerKey !== layerKey) {
+          resolve()
+          return
+        }
+        if (!src) {
+          slot.replaceChildren()
+          resolve()
+          return
+        }
+        const current = slot.querySelector<HTMLImageElement>('img.is-in')
+        if (current && current.src === src) {
+          resolve()
+          return
+        }
+        const img = document.createElement('img')
+        img.alt = ''
+        img.draggable = false
+        img.decoding = 'async'
+        const show = () => {
+          if (slot.dataset.layerKey !== layerKey) {
+            resolve()
+            return
+          }
+          const old = Array.from(slot.querySelectorAll<HTMLImageElement>('img'))
+          slot.appendChild(img)
+          requestAnimationFrame(() => {
+            img.classList.add('is-in')
+            for (const o of old) o.classList.remove('is-in')
+            resolve()
+          })
+          // Rein visuelle Frist — bleibt Wanduhr
+          setTimeout(() => {
+            for (const o of old) if (o.parentElement === slot) o.remove()
+          }, fadeMs + 50)
+        }
+        img.src = src
+        const decode = typeof img.decode === 'function' ? img.decode() : Promise.resolve()
+        decode.then(show, show)
       }),
     () => undefined,
   )
