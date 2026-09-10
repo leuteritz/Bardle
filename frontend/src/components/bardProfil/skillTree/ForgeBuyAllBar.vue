@@ -16,6 +16,7 @@
     <button
       class="fba"
       :class="{ 'fba--flash': flashing }"
+      :aria-label="FORGE_BUY_ALL_LABEL"
       :title="title"
       @mouseenter="freeze"
       @mouseleave="thaw"
@@ -24,6 +25,8 @@
       <!-- Rein visuelle Quittung. Nur `opacity` — Performance-Regel 2; der
            Wortlaut der eigentlichen Meldung liegt im Herold. -->
       <span class="fba-flash" aria-hidden="true" />
+      <span class="fba-aura" aria-hidden="true" />
+      <span class="fba-sweep" aria-hidden="true" />
 
       <Icon
         :icon="FORGE_BUY_ALL_ICON"
@@ -31,7 +34,10 @@
         :height="FORGE_BUY_ALL_ICON_SIZE"
         class="fba-glyph"
       />
-      <span class="fba-label">{{ FORGE_BUY_ALL_LABEL }}</span>
+      <span class="fba-label">
+        <span class="fba-word fba-word--buy">{{ buyAllWords[0] }}</span>
+        <span class="fba-word fba-word--all">{{ buyAllWords[1] }}</span>
+      </span>
       <span class="fba-count">{{ plan.count }}</span>
       <span class="fba-cost">
         <img :src="FORGE_CHIME_IMAGE" class="fba-cost-img" alt="Chimes" />
@@ -82,6 +88,8 @@ import {
 } from '@/config/constants'
 
 const { buyAllPlan, buyAllReady } = useForgeUpgrades()
+
+const buyAllWords = computed(() => FORGE_BUY_ALL_LABEL.split(' '))
 
 /**
  * Die angezeigte Zahl steht still, solange der Zeiger auf dem Knopf liegt.
@@ -190,6 +198,7 @@ function handleClick(): void {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   cursor: pointer;
+  isolation: isolate;
   transition:
     filter 0.15s ease,
     transform 0.15s ease;
@@ -211,6 +220,8 @@ function handleClick(): void {
 }
 
 .fba-glyph {
+  position: relative;
+  z-index: 1;
   flex-shrink: 0;
   color: currentColor;
 }
@@ -219,12 +230,74 @@ function handleClick(): void {
    Kante — dieselbe Leserichtung wie in der Zeile darunter: erst was passiert,
    dann was es kostet. */
 .fba-label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.28em;
   flex: 1;
   min-width: 0;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.fba-word {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+.fba-word--buy {
+  color: #08130a;
+  font-style: italic;
+  animation: fba-word-buy 3.8s ease-in-out infinite;
+}
+
+.fba-word--all {
+  color: #e8c040;
+  font-size: 1.12em;
+  font-style: italic;
+  letter-spacing: 0.08em;
+  animation: fba-word-all 3.8s 0.16s ease-in-out infinite;
+}
+
+@keyframes fba-word-buy {
+  0%,
+  70%,
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+
+  77% {
+    opacity: 0.94;
+    transform: translateY(-2px) rotate(-2deg);
+  }
+
+  84% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+@keyframes fba-word-all {
+  0%,
+  70%,
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+
+  77% {
+    opacity: 0.94;
+    transform: translateY(-3px) rotate(2deg);
+  }
+
+  84% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
 }
 
 /* Die ANZAHL ist die Information, der Blitz trägt nur die Bedeutung — sie
@@ -241,6 +314,8 @@ function handleClick(): void {
 }
 
 .fba-cost {
+  position: relative;
+  z-index: 1;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -257,6 +332,75 @@ function handleClick(): void {
   font-size: 13.5px;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
+}
+
+.fba-aura,
+.fba-sweep {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform, opacity;
+}
+
+.fba-aura {
+  inset: 2px;
+  border: 2px solid #e8c040;
+  opacity: 0;
+  transform: scale(0.94);
+  animation: fba-aura 3.8s ease-out infinite;
+}
+
+.fba-sweep {
+  top: -30%;
+  bottom: -30%;
+  left: -18%;
+  width: 12%;
+  background: #e8c040;
+  opacity: 0;
+  transform: translateX(-220%) skewX(-18deg);
+  animation: fba-sweep 3.8s ease-in-out infinite;
+}
+
+@keyframes fba-aura {
+  0%,
+  54%,
+  100% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+
+  62% {
+    opacity: 0.58;
+    transform: scale(0.99);
+  }
+
+  78% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes fba-sweep {
+  0%,
+  14%,
+  100% {
+    opacity: 0;
+    transform: translateX(-220%) skewX(-18deg);
+  }
+
+  20% {
+    opacity: 0.34;
+  }
+
+  42% {
+    opacity: 0.08;
+    transform: translateX(1040%) skewX(-18deg);
+  }
+
+  48% {
+    opacity: 0;
+    transform: translateX(1040%) skewX(-18deg);
+  }
 }
 
 /* ── Kaufquittung ───────────────────────────────────────────────────────────── */
@@ -295,6 +439,21 @@ function handleClick(): void {
 
   .fba-cost-num {
     font-size: 12.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fba-aura,
+  .fba-sweep,
+  .fba-word--buy,
+  .fba-word--all {
+    animation: none;
+    transform: none;
+  }
+
+  .fba-aura,
+  .fba-sweep {
+    opacity: 0;
   }
 }
 </style>
