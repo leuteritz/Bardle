@@ -724,8 +724,10 @@ export const useGameStore = defineStore('game', {
         galaxiesFreed: stats.galaxiesFreed,
         chimes: this.chimesForNextUniverse,
         // Die Vorsehung gehoert zum verlassenen Lauf — sie wird beim naechsten
-        // Aufbruch neu gezogen und waere danach nicht mehr zu erfahren.
+        // Aufbruch neu gezogen und waere danach nicht mehr zu erfahren. Der
+        // NAME traegt die Hover-Karten, der WURF die zwei Ablesungen im Kopfband.
         providence: useProvidenceStore().active?.name,
+        providenceRoll: useProvidenceStore().active ?? undefined,
         // Wanduhr: Chronikstempel eines abgeschlossenen Universums-Durchlaufs.
         // eslint-disable-next-line no-restricted-syntax
         completedAt: Date.now(),

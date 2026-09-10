@@ -44,7 +44,7 @@
 import { computed } from 'vue'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
-import { providenceEffectLines } from '@/config/progression/providences'
+import { universeProvidenceReading } from '@/utils/ui/universeProvidence'
 import { formatNumber } from '@/config/ui/numberFormat'
 import {
   formatCompactDuration,
@@ -96,25 +96,31 @@ const pastRun = computed(() => {
   return mine.length ? mine[mine.length - 1] : null
 })
 
-/** Was in diesem Universum GILT. Nur auf der laufenden Bahn: ein vergangener
- *  Lauf speichert den Namen seiner Vorsehung, nicht ihre Achsen — dort waere
- *  jede Zahl erfunden. */
-const provLines = computed(() =>
-  isHere.value && providenceStore.active ? providenceEffectLines(providenceStore.active) : [],
+/** Was in diesem Universum GILT beziehungsweise GALT. Ein Lauf legt seinen
+ *  ganzen Wurf ins Archiv, seit es das Feld gibt — davor nur den Namen. Zwei
+ *  Ablesungen oder eine breite entscheidet `universeProvidenceReading`. */
+const prov = computed(() =>
+  universeProvidenceReading({
+    roll: isHere.value ? providenceStore.active : (pastRun.value?.providenceRoll ?? null),
+    name: (isHere.value ? providenceStore.active?.name : pastRun.value?.providence) ?? null,
+    isHere: isHere.value,
+  }),
 )
+const provLines = computed(() => prov.value.lines)
+const provFallback = computed(() => prov.value.fallback)
 
-/** Ohne Achsen bleibt EINE Ablesung ueber die Breite der beiden. Ihr Wert ist
- *  dann ein Name statt einer Zahl — und wo auch der fehlt, ein „—" mit dem
- *  Grund als Beschriftung, wie bei Chimes und Elapsed. */
-const provFallback = computed(() => {
-  const name = isHere.value ? providenceStore.active?.name : pastRun.value?.providence
-  if (name) return { value: name, key: 'Providence' }
-  return { value: '—', key: isHere.value ? 'No providence drawn' : 'No providence recorded' }
-})
-
-const PROV_TIP = 'The providence drawn on entering this universe — it rules the whole run.'
-const PROV_TIP_UP = `What this universe's providence grants for the whole run.`
-const PROV_TIP_DOWN = `What this universe's providence costs for the whole run.`
+/** Die Zeitform haengt an der gezeigten Bahn: eine vergangene Vorsehung regiert
+ *  nichts mehr. */
+const tense = computed(() => (isHere.value ? ['rules', 'grants', 'costs'] : ['ruled', 'granted', 'cost']))
+const PROV_TIP = computed(
+  () => `The providence drawn on entering this universe — it ${tense.value[0]} the whole run.`,
+)
+const PROV_TIP_UP = computed(
+  () => `What this universe's providence ${tense.value[1]} for the whole run.`,
+)
+const PROV_TIP_DOWN = computed(
+  () => `What this universe's providence ${tense.value[2]} for the whole run.`,
+)
 
 /** Wie oft man hier war — nur, wenn es mehr als einmal war. Ein "x1" traegt
  *  nichts und stuende auf neun von zehn Bahnen. */
@@ -220,7 +226,8 @@ const kickerScale = `clamp(${UNIVERSE_MAP_CREST_KICKER_ID_MIN_PX}px, ${UNIVERSE_
       </div>
 
       <!-- Die Vorsehung IST das Gesetz dieses Universums und steht deshalb IN
-           der Reihe, nicht daneben. Die Richtung haengt an `line.positive`, NIE
+           der Reihe, nicht daneben — auf einer vergangenen Bahn ebenso, seit ihr
+           Wurf mit ins Archiv geht. Die Richtung haengt an `line.positive`, NIE
            am Vorzeichen: eine Achse mit `higherIsBetter: false` (Building cost)
            traegt als BUFF ein Minus. -->
       <template v-if="provLines.length">
@@ -242,7 +249,7 @@ const kickerScale = `clamp(${UNIVERSE_MAP_CREST_KICKER_ID_MIN_PX}px, ${UNIVERSE_
         </div>
       </template>
       <div
-        v-else
+        v-else-if="provFallback"
         v-tip="{ label: 'Providence', text: PROV_TIP }"
         class="un-crest-read un-crest-read--provwide"
       >

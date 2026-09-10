@@ -294,14 +294,23 @@ export function providenceAxis(key: keyof ProvidenceEffects): ProvidenceAxis | u
   return PROVIDENCE_AXES.find((a) => a.key === key)
 }
 
-function pick<T>(items: T[]): T {
-  return items[Math.floor(Math.random() * items.length)]
+/** Der Name haengt an der BUFF-Achse — aus ihm ist sie wieder zu finden. Das
+ *  traegt zwei Dinge: die Domaene einer archivierten Vorsehung und den Wurf
+ *  hinter einem bereits gezogenen Namen. */
+export function providenceAxisByName(name: string): ProvidenceAxis | undefined {
+  return PROVIDENCE_AXES.find((a) => a.names.includes(name))
+}
+
+type Rng = () => number
+
+function pick<T>(items: T[], rng: Rng = Math.random): T {
+  return items[Math.floor(rng() * items.length)]
 }
 
 /** Ein Prozentwert aus der Spanne, auf `PROVIDENCE_PCT_STEP` gerastert — eine
  *  krumme „+143 %" läse sich wie Rauschen, „+145 %" wie eine Ansage. */
-function rollPct([min, max]: [number, number]): number {
-  const raw = min + Math.random() * (max - min)
+function rollPct([min, max]: [number, number], rng: Rng = Math.random): number {
+  const raw = min + rng() * (max - min)
   return Math.round(raw / PROVIDENCE_PCT_STEP) * PROVIDENCE_PCT_STEP
 }
 
@@ -320,33 +329,49 @@ function multiplierFor(axis: ProvidenceAxis, pct: number, isBuff: boolean): numb
   return Number(value.toFixed(PROVIDENCE_MULT_PRECISION))
 }
 
+/** Eine Vorsehung dieser Domäne würfeln — die Buff-Achse kommt aus ihr. */
+export function rollProvidence(
+  domain: ProvidenceDomain,
+  rng: Rng = Math.random,
+): RolledProvidence {
+  const inDomain = PROVIDENCE_AXES.filter((a) => a.domain === domain)
+  return rollFor(pick(inDomain, rng), rng)
+}
+
 /**
- * Eine Vorsehung dieser Domäne würfeln.
+ * Der Wurf hinter einem schon gezogenen NAMEN — der Nachtrag zieht ihn zuerst
+ * und braucht danach die Achsen dazu. Ein Name, den der Katalog nicht kennt
+ * (umbenannt, alter Spielstand), gibt `null` statt eines erfundenen Wurfs.
+ */
+export function rollProvidenceNamed(name: string, rng: Rng = Math.random): RolledProvidence | null {
+  const buff = providenceAxisByName(name)
+  return buff ? rollFor(buff, rng, name) : null
+}
+
+/**
+ * Der EINE Wurf — beide Einstiege laufen hier durch.
  *
  * Der Debuff kommt aus derselben Domäne, solange sie eine zweite Achse hat —
  * sonst (theoretisch, heute führt jede Domäne mindestens zwei) aus dem ganzen
  * Vorrat. Nie dieselbe Achse wie der Buff: das hübe sich auf und liesse eine
  * Karte übrig, die nichts tut.
  */
-export function rollProvidence(domain: ProvidenceDomain): RolledProvidence {
-  const inDomain = PROVIDENCE_AXES.filter((a) => a.domain === domain)
-  const buff = pick(inDomain)
-
-  const sameDomain = inDomain.filter((a) => a.key !== buff.key)
+function rollFor(buff: ProvidenceAxis, rng: Rng, fixedName?: string): RolledProvidence {
+  const sameDomain = PROVIDENCE_AXES.filter((a) => a.domain === buff.domain && a.key !== buff.key)
   const debuffPool = sameDomain.length
     ? sameDomain
     : PROVIDENCE_AXES.filter((a) => a.key !== buff.key)
-  const debuff = pick(debuffPool)
+  const debuff = pick(debuffPool, rng)
 
   return {
-    name: pick(buff.names),
+    name: fixedName ?? pick(buff.names, rng),
     icon: buff.icon,
-    domain,
+    domain: buff.domain,
     buffKey: buff.key,
     debuffKey: debuff.key,
     effects: {
-      [buff.key]: multiplierFor(buff, rollPct(buff.buffPct), true),
-      [debuff.key]: multiplierFor(debuff, rollPct(debuff.debuffPct), false),
+      [buff.key]: multiplierFor(buff, rollPct(buff.buffPct, rng), true),
+      [debuff.key]: multiplierFor(debuff, rollPct(debuff.debuffPct, rng), false),
     },
   }
 }

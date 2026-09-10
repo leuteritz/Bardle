@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { buildBackfillUniverseRuns, gateRecordIndex } from '@/utils/game/universeRunBackfill'
 import { assignRecordUniverses } from '@/utils/game/galaxyUniverseBackfill'
 import { universes } from '@/config/progression/universes'
+import { providenceAxisByName } from '@/config/progression/providences'
 import { UNIVERSE_RUN_HISTORY_LIMIT } from '@/config/constants'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { UniverseRunRecord } from '@/types'
@@ -121,6 +122,31 @@ describe('universeRunBackfill', () => {
     const first = buildBackfillUniverseRuns(records, 10, [])
     expect(buildBackfillUniverseRuns(records, 10, [])).toEqual(first)
     expect(buildBackfillUniverseRuns(records, 10, first)).toEqual([])
+  })
+
+  /*
+   * Der Nachtrag erfindet Chimes, Dauern und Sterne ohnehin. Ein Lauf mit Namen,
+   * aber ohne Wurf waere die einzige Stelle, an der die Vorsehungs-Ablesungen des
+   * Kopfbands in einem geseedeten Spielstand leer blieben.
+   */
+  it('gibt jedem Lauf einen Wurf, der zu seinem Namen passt', () => {
+    const runs = buildBackfillUniverseRuns(archive(50), 10, [])
+
+    for (const run of runs) {
+      expect(run.providence, 'Name').toBeTruthy()
+      const axis = providenceAxisByName(run.providence!)
+      expect(axis, run.providence).toBeDefined()
+      // Der Name haengt an der BUFF-Achse — beides muss dieselbe sein.
+      expect(run.providenceRoll?.name).toBe(run.providence)
+      expect(run.providenceRoll?.buffKey).toBe(axis!.key)
+      expect(run.providenceRoll?.debuffKey).not.toBe(axis!.key)
+      expect(Object.keys(run.providenceRoll!.effects)).toHaveLength(2)
+    }
+
+    // Namen bleiben eindeutig — der Wurf haengt am selben Strom und darf die
+    // Ziehung nicht durcheinanderbringen.
+    const names = runs.map((r) => r.providence)
+    expect(new Set(names).size).toBe(names.length)
   })
 
   it('trägt ohne Archiv nichts nach, statt Tore zu erfinden', () => {
