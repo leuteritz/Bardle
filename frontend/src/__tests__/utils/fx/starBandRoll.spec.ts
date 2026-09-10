@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  paintBandMark,
   paintStarBandStrip,
   starAxisStyle,
   starBandStrip,
@@ -16,6 +17,8 @@ import {
   STAR_BODY_BAND_MASK_FULL,
   STAR_BODY_BAND_PERIOD_BR,
   STAR_BODY_BAND_STRIP_PERIODS,
+  STAR_BODY_BAND_LANDMARK_R,
+  STAR_BODY_BAND_LOOK,
   STAR_BODY_DISC_R,
   STAR_BODY_SEED_SLOTS,
   STAR_BODY_SPIN_LOOKS,
@@ -131,6 +134,55 @@ describe('Achsdrehung — der Streifen rollt, er dreht nicht', () => {
       expect(STAR_BODY_BAND_MASK_EDGE * STAR_BODY_DISC_R[look], look).toBeLessThanOrEqual(1)
       expect(STAR_BODY_BAND_MASK_FULL).toBeLessThan(STAR_BODY_BAND_MASK_EDGE)
     }
+  })
+})
+
+describe('Die Landmarke — das Motiv, das die Drehung trägt', () => {
+  const KINDS = ['storm', 'spotgroup', 'plage', 'crack', 'basin', 'knot'] as const
+
+  it('jede Gestalt trägt eine — sonst dreht sie sich unsichtbar', () => {
+    for (const look of LOOKS) {
+      expect(STAR_BODY_BAND_LOOK[look].mark, look).not.toBe('none')
+    }
+  })
+
+  it('jede Lesart malt etwas, und keine zwei malen dasselbe', () => {
+    const sigs = new Map<string, string>()
+    for (const kind of KINDS) {
+      const { ctx, ops } = recordingCtx()
+      paintBandMark(ctx, 200, 100, 20, kind, starPaletteFromRgb(RGB), 7)
+      expect(ops.some((o) => o === 'fill()' || o === 'stroke()'), kind).toBe(true)
+      sigs.set(kind, ops.join('|'))
+    }
+    expect(new Set(sigs.values()).size).toBe(KINDS.length)
+  })
+
+  it('ist gross genug, um bei 60 px aufzufallen — und bleibt in ihrem Radius', () => {
+    // Halber Scheibenradius: zwanzig kleine Flecken mitteln sich zu Rauschen
+    expect(STAR_BODY_BAND_LANDMARK_R).toBeGreaterThanOrEqual(0.4)
+    const mr = 20
+    for (const kind of KINDS) {
+      const { ctx, ops } = recordingCtx()
+      paintBandMark(ctx, 200, 100, mr, kind, starPaletteFromRgb(RGB), 7)
+      const pts = ops
+        .map((o) => /^(arc|ellipse|moveTo|lineTo)\((-?[\d.]+),(-?[\d.]+)/.exec(o))
+        .filter((m): m is RegExpExecArray => m !== null)
+      expect(pts.length, kind).toBeGreaterThan(0)
+      for (const p of pts) {
+        expect(Math.abs(Number(p[2]) - 200), kind + ': ' + p[0]).toBeLessThanOrEqual(mr * 1.6)
+        expect(Math.abs(Number(p[3]) - 100), kind + ': ' + p[0]).toBeLessThanOrEqual(mr * 1.6)
+      }
+    }
+  })
+
+  it('ist deterministisch und streut über den Seed', () => {
+    const paint = (seed: number) => {
+      const { ctx, ops } = recordingCtx()
+      paintBandMark(ctx, 200, 100, 20, 'spotgroup', starPaletteFromRgb(RGB), seed)
+      return ops.join('|')
+    }
+    expect(paint(4)).toBe(paint(4))
+    expect(paint(4)).not.toBe(paint(9))
   })
 })
 

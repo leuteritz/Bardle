@@ -18,7 +18,11 @@ import {
   STAR_BODY_DETAIL_PX_2,
   STAR_BODY_LOOK_POOL,
   STAR_BODY_SEED_SLOTS,
+  STAR_BODY_DWARF_PLUMES,
+  STAR_BODY_PULSAR_RAYS,
   STAR_BODY_SPIN_SEC,
+  STAR_BODY_SPLINTER_RAYS,
+  STAR_BODY_UMBRA_ARMS,
   STAR_BODY_SPRITE_SPAN,
   STAR_BODY_WIND_RESOURCE_EVERY,
   STAR_BODY_WIND_SEC_MIN,
@@ -140,6 +144,50 @@ describe('Sternkörper — acht Gestalten, ihre Ebenen', () => {
     expect(base).not.toBe(starBodySpriteKey('core', 'dwarf', RGB, 1, 34, 2, 1))
     expect(base).not.toBe(starBodySpriteKey('core', 'dwarf', RGB, 1, 46, 1, 1))
     expect(base).not.toBe(starBodySpriteKey('core', 'dwarf', RGB, 1, 46, 2, 2))
+  })
+})
+
+describe('Silhouette — jeder Stern ein eigenes Gesicht', () => {
+  // Auf Stufe 0 malt jede dieser Ebenen genau EINEN Zug je Zacke: die Zahl der
+  // fill() ist damit die Zahl der Zacken.
+  const zacken = (look: StarLook, seed: number) =>
+    run(look, 'spin', 0, seed).filter((o) => o === 'fill()').length
+
+  const SPANNEN: [StarLook, readonly [number, number], number][] = [
+    ['dwarf', STAR_BODY_DWARF_PLUMES, 0],
+    ['pulsar', STAR_BODY_PULSAR_RAYS, 0],
+    ['splinter', STAR_BODY_SPLINTER_RAYS, 0],
+    ['umbra', STAR_BODY_UMBRA_ARMS, -2],
+  ]
+
+  it('die Zahl bleibt in ihrer Spanne', () => {
+    for (const [look, span, offset] of SPANNEN) {
+      for (let seed = 0; seed < STAR_BODY_SEED_SLOTS; seed++) {
+        const n = zacken(look, seed)
+        expect(n, `${look}/${seed}`).toBeGreaterThanOrEqual(span[0] + offset)
+        expect(n, `${look}/${seed}`).toBeLessThanOrEqual(span[1] + offset)
+      }
+    }
+  })
+
+  it('zwei Sterne derselben Gestalt sehen verschieden aus', () => {
+    for (const [look] of SPANNEN) {
+      const sigs = new Set<string>()
+      for (let seed = 0; seed < STAR_BODY_SEED_SLOTS; seed++) {
+        sigs.add(run(look, 'spin', 2, seed).join('|'))
+      }
+      expect(sigs.size, look).toBeGreaterThanOrEqual(STAR_BODY_SEED_SLOTS - 1)
+    }
+  })
+
+  it('der Zwerg trägt keinen gleichmässigen Kranz mehr', () => {
+    // Ein Kranz hiesse: alle Zacken gleich lang und gleich weit auseinander.
+    const spitzen = run('dwarf', 'spin', 0, 3)
+      .map((o) => /^lineTo\((-?[\d.]+),(-?[\d.]+)\)/.exec(o))
+      .filter((m): m is RegExpExecArray => m !== null)
+      .map((m) => Math.hypot(Number(m[1]) - 100, Number(m[2]) - 100))
+    const längen = [...new Set(spitzen.map((d) => Math.round(d)))]
+    expect(längen.length).toBeGreaterThan(2)
   })
 })
 

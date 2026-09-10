@@ -87,6 +87,7 @@ import {
 } from '@/utils/fx/galaxyPlate'
 
 import { hexToRgba } from '@/utils/ui/format'
+import { drawStarBody } from '@/utils/fx/starBodyCanvas'
 import {
   ARRIVAL_TRANSITION_MS,
   PLANET_TYPE_PALETTES,
@@ -666,7 +667,12 @@ export default defineComponent({
           MINIMAP_TARGET_BASE_R +
           (MINIMAP_TARGET_MAX_R - MINIMAP_TARGET_BASE_R) *
             smoothstep(cam.zoom, MINIMAP_NEARFIELD_FADE[0], MINIMAP_ZOOM_MAX)
-        drawRoleStar(ctx, tx, ty, targetR, targetPal, nowMs)
+        // Derselbe Körper wie im Idle-Orbit, samt Achsdrehung. Steht noch kein
+        // Champion-Stern (Rolle gewählt, Spawn folgt), bleibt der Rollen-Leuchtball.
+        const bodyDrawn =
+          !!champStar &&
+          drawStarBody(ctx, tx, ty, targetR * 2, champStar, nowMs, renderDpr)
+        if (!bodyDrawn) drawRoleStar(ctx, tx, ty, targetR, targetPal, nowMs)
 
         // Expanding beacon rings in the destination's role color — draws the
         // eye more reliably than a text label and scales with the zoom
@@ -1014,30 +1020,46 @@ export default defineComponent({
         if (!cleared) drawChampionPortrait(ctx, px, py, planetR, slot, alpha)
       })
 
-      // Star body (on top of behind-planets, below foreground-planets)
+      // Star body (on top of behind-planets, below foreground-planets) — derselbe
+      // Körper wie im Idle-Orbit samt rollender Oberfläche. Der gemalte Halo ersetzt
+      // den früheren `shadowBlur` auf einer 92-px-Scheibe, den teuersten Posten
+      // dieser Schleife.
       const pulseGlow = (1 + 0.12 * pulse) * hoverBodyMult
-      const bodyGrad = ctx.createRadialGradient(
-        cx - ARRIVAL_STAR_R * 0.28,
-        cy - ARRIVAL_STAR_R * 0.25,
-        2,
-        cx,
-        cy,
-        ARRIVAL_STAR_R * pulseGlow,
-      )
-      bodyGrad.addColorStop(0, '#fff8f0')
-      bodyGrad.addColorStop(
-        0.22,
-        `rgb(${Math.min(255, sr + 30)}, ${Math.min(255, sg + 15)}, ${sb})`,
-      )
-      bodyGrad.addColorStop(0.65, `rgb(${sr}, ${sg}, ${Math.max(0, sb - 20)})`)
-      bodyGrad.addColorStop(1, `rgb(${Math.max(0, sr - 90)}, ${Math.max(0, sg - 70)}, 0)`)
-      ctx.shadowColor = `rgba(${sr}, ${sg}, ${sb}, 0.9)`
-      ctx.shadowBlur = ARRIVAL_STAR_R * (1.6 + 0.3 * pulse) * hoverBlurMult
-      ctx.beginPath()
-      ctx.arc(cx, cy, ARRIVAL_STAR_R * pulseGlow, 0, Math.PI * 2)
-      ctx.fillStyle = bodyGrad
-      ctx.fill()
-      ctx.shadowBlur = 0
+      const bodyDrawn =
+        !!championStar &&
+        drawStarBody(
+          ctx,
+          cx,
+          cy,
+          ARRIVAL_STAR_R * 2 * pulseGlow,
+          championStar,
+          nowMs,
+          renderDpr,
+        )
+      if (!bodyDrawn) {
+        const bodyGrad = ctx.createRadialGradient(
+          cx - ARRIVAL_STAR_R * 0.28,
+          cy - ARRIVAL_STAR_R * 0.25,
+          2,
+          cx,
+          cy,
+          ARRIVAL_STAR_R * pulseGlow,
+        )
+        bodyGrad.addColorStop(0, '#fff8f0')
+        bodyGrad.addColorStop(
+          0.22,
+          `rgb(${Math.min(255, sr + 30)}, ${Math.min(255, sg + 15)}, ${sb})`,
+        )
+        bodyGrad.addColorStop(0.65, `rgb(${sr}, ${sg}, ${Math.max(0, sb - 20)})`)
+        bodyGrad.addColorStop(1, `rgb(${Math.max(0, sr - 90)}, ${Math.max(0, sg - 70)}, 0)`)
+        ctx.shadowColor = `rgba(${sr}, ${sg}, ${sb}, 0.9)`
+        ctx.shadowBlur = ARRIVAL_STAR_R * (1.6 + 0.3 * pulse) * hoverBlurMult
+        ctx.beginPath()
+        ctx.arc(cx, cy, ARRIVAL_STAR_R * pulseGlow, 0, Math.PI * 2)
+        ctx.fillStyle = bodyGrad
+        ctx.fill()
+        ctx.shadowBlur = 0
+      }
 
       // ── Boss Rage: der Stern glüht crimson und stösst Wellen aus ──────────
       // Liegt zwischen Sternkörper und Vordergrundplaneten, damit die Planeten
