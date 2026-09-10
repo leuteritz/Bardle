@@ -412,6 +412,7 @@
                 // an `canBuy` und NICHT an `state === 'affordable'` — dieselbe
                 // Wahl wie in `ForgeUpgradeTile.vue`, damit Baum und Liste
                 // dieselbe Frage gleich beantworten.
+                'node-circle--locked': isNodeLocked(node),
                 'node-circle--ready': entryOf(node).canBuy,
                 'node-circle--short': isShort(node),
                 'node-circle--spot': isSpot(node.id),
@@ -527,7 +528,12 @@
                der Liste (`.fc-lock-badge` in rpg-theme.css) — daran erkennt man
                beide als dasselbe Upgrade wieder.
                `capped` bekommt keins: ein Deckel ist keine Sperre. -->
-            <span v-if="entryOf(node).state === 'locked'" class="fc-lock-badge" aria-hidden="true">
+            <span
+              v-if="isNodeLocked(node)"
+              class="fc-lock-badge"
+              :class="{ 'fc-lock-badge--meep': node.tier === 'meep' }"
+              aria-hidden="true"
+            >
               <Icon :icon="FORGE_LOCK_ICON" width="100%" height="100%" />
             </span>
 
@@ -1743,6 +1749,11 @@ const zoneHazeStyle = computed(() => {
  */
 function entryOf(node: TreeNode): ForgeUpgradeEntry {
   return entryById.value.get(node.id) ?? FORGE_EMPTY_UPGRADE_ENTRY
+}
+
+function isNodeLocked(node: TreeNode): boolean {
+  const state = entryOf(node).state
+  return state === 'locked' || state === 'sealed'
 }
 
 /**
@@ -3170,6 +3181,12 @@ const nextPhasePreviewStyle = computed(() => ({
   border: 2px solid #2a1a08;
 }
 
+.node-circle--meep {
+  width: v-bind('nodePx.meep');
+  height: v-bind('nodePx.meep');
+  border: 2px solid color-mix(in srgb, var(--node-color, #40a0e0) 38%, #2a1a08);
+}
+
 /* Die zwei mittleren Ringe stehen mit 40 px eine Spur ÜBER dem Blatt und unter
    dem Zweig — sie tragen eigene Achsen, sind aber keine Hauptäste. Der farbige
    Rand ist das einzige, was sie optisch trennt: dieselben Töne wie ihr Kamm im
@@ -3530,6 +3547,22 @@ const nextPhasePreviewStyle = computed(() => ({
 .node-circle--locked .node-glyph {
   opacity: 0.42;
   filter: grayscale(60%);
+}
+
+.node-circle--meep.node-circle--locked,
+.node-circle--meep.node-circle--sealed {
+  border-color: color-mix(in srgb, var(--node-color, #40a0e0) 52%, #2a1a08);
+  border-style: dashed;
+}
+
+.node-circle--meep.node-circle--locked:hover,
+.node-circle--meep.node-circle--sealed:hover {
+  transform: scale(1.08);
+}
+
+.fc-lock-badge.fc-lock-badge--meep {
+  border-color: color-mix(in srgb, var(--node-color, #40a0e0) 72%, #3a2a12);
+  color: color-mix(in srgb, var(--node-color, #40a0e0) 82%, #e8c040);
 }
 
 /* Freigeschaltet, nie gekauft. Hier stand ein pinker Rand mit Schein bei
