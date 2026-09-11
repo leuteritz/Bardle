@@ -65,7 +65,7 @@ const state = computed(() => voyageGalaxyState(props.row))
 
 const title = computed(
   () =>
-    `${props.row.name} — Galaxy ${props.row.galaxy} · ${props.row.contracts} contract(s), ` +
+    `Galaxy ${props.row.galaxy} · ${props.row.contracts} contract(s), ` +
     `${props.row.inField} in the field, ${props.row.ready} ready to collect`,
 )
 </script>
@@ -96,7 +96,7 @@ const title = computed(
     </span>
 
     <span class="sr-row-body egr-body">
-      <span class="sr-row-name egr-name">{{ row.name }}</span>
+      <span class="sr-row-name egr-name">{{ toRoman(row.galaxy) }}</span>
       <span class="egr-meta">
         <span v-if="row.contracts" class="egr-chip egr-chip--offer">
           <Icon icon="ph:scroll-fill" width="12" height="12" />
