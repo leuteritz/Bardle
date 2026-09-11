@@ -3,7 +3,7 @@
 import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { highlightSegments } from '@/utils/ui/searchHighlight'
-import { SEARCH_BAR_ICON_PX, SHOP_HERO_BAR_H } from '@/config/constants'
+import { SHOP_HERO_BAR_H } from '@/config/constants'
 import type { ShopFacetGroup } from '@/types'
 
 type ShopDomain = 'champions' | 'items'
@@ -90,15 +90,19 @@ const heroBarHeightPx = `${SHOP_HERO_BAR_H}px`
 <template>
   <aside class="cs-facets">
     <div class="cs-facets-grip" role="heading" aria-level="2">
-      <div class="cs-facets-field" :class="{ 'cs-facets-field--active': activeTotal > 0 }">
-        <Icon
-          icon="lucide:sliders-horizontal"
-          :width="SEARCH_BAR_ICON_PX.lg"
-          :height="SEARCH_BAR_ICON_PX.lg"
-          class="cs-facets-field-icon"
-        />
-        <span class="cs-facets-grip-label">Filters</span>
-        <span v-if="activeTotal" class="cs-facets-grip-count">{{ activeTotal }}</span>
+      <div class="cs-facets-title" :class="{ 'cs-facets-title--active': activeTotal > 0 }">
+        <span class="cs-facets-title-main">
+          <Icon
+            icon="lucide:sliders-horizontal"
+            width="22"
+            height="22"
+            class="cs-facets-title-icon"
+          />
+          <span class="cs-facets-grip-label">Filters</span>
+        </span>
+        <span v-if="activeTotal" class="cs-facets-title-sub">
+          <strong>{{ activeTotal }}</strong> active
+        </span>
       </div>
     </div>
 
@@ -256,51 +260,65 @@ const heroBarHeightPx = `${SHOP_HERO_BAR_H}px`
   background: #1a1008;
   border-bottom: 1px solid #5c3310;
 }
-/* The search field's twin (`.sb--lg`), so both heads read as one band. */
-.cs-facets-field {
-  display: flex;
-  align-items: center;
-  gap: 11px;
+/* A heading, not a control: no surface — the edge alone matches the search field's height. */
+.cs-facets-title {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 5px;
   flex: 1;
   min-width: 0;
   height: 56px;
-  padding: 0 14px 0 16px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid #5c3310;
-  border-radius: var(--bp-radius);
-  transition: border-color 0.2s;
+  padding-left: 14px;
 }
-.cs-facets-field-icon {
+.cs-facets-title::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: #7a4e20;
+}
+.cs-facets-title--active::before {
+  background: #e8c040;
+}
+.cs-facets-title-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.cs-facets-title-icon {
   flex-shrink: 0;
-  color: #8a6030;
-  transition: color 0.2s;
+  color: #c89040;
+}
+.cs-facets-title--active .cs-facets-title-icon {
+  color: #e8c040;
 }
 .cs-facets-grip-label {
-  flex: 1;
   min-width: 0;
-  color: #c89040;
-  font-size: 16px;
+  color: #e8c040;
+  font-size: 18px;
   font-weight: 800;
+  line-height: 1;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  text-align: left;
-  transition: color 0.2s;
+  text-shadow: 0 0 12px rgba(232, 192, 64, 0.35);
 }
-.cs-facets-grip-count {
-  flex-shrink: 0;
-  min-width: 26px;
-  color: #e8c040;
-  font-size: 14px;
-  font-weight: 900;
+.cs-facets-title-sub {
+  padding-left: 32px;
+  color: #a59675;
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1;
-  text-align: right;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
-.cs-facets-field--active {
-  border-color: #7a4e20;
-}
-.cs-facets-field--active .cs-facets-field-icon,
-.cs-facets-field--active .cs-facets-grip-label {
+.cs-facets-title-sub strong {
   color: #e8c040;
+  font-weight: 900;
 }
 
 /* ── Domain ──
