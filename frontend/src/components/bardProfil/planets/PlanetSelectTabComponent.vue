@@ -25,6 +25,7 @@ import { useOrbitSlotHerald } from '@/composables/ui/useOrbitSlotHerald'
 import BattleReturnButton from '@/components/bardProfil/BattleReturnButton.vue'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import PlanetRailSlot from './PlanetRailSlot.vue'
+import PlanetBuyAllBar from './PlanetBuyAllBar.vue'
 import SideRailHandle from '@/components/ui/SideRailHandle.vue'
 import { useSideRail } from '@/composables/ui/useSideRail'
 import PlanetLockedPanel from './PlanetLockedPanel.vue'
@@ -82,6 +83,7 @@ function selectSlot(id: string) {
 const activeSlot = computed(() => store.slots.find((s) => s.id === selectedSlotId.value) ?? null)
 const activeSlotIndex = computed(() => store.slots.findIndex((s) => s.id === selectedSlotId.value))
 const purchasedSlots = computed(() => store.slots.filter((slot) => slot.purchased).length)
+const hasLevelablePlanet = computed(() => store.slots.some((s) => s.purchased && s.role))
 
 const railChoice = ref<boolean | null>(null)
 const narrow = ref(false)
@@ -129,7 +131,7 @@ watch(root, (el) => {
 // Eine einzige rAF-Schleife versorgt Rail-Kacheln und Bühne, damit beide im
 // selben Frame umschalten wie das Command Panel.
 const stageRef = ref<InstanceType<typeof PlanetStagePanel> | null>(null)
-const { orbitBehind, isSlotEclipsed, orbitPhaseStyle } = usePlanetTabOrbit(
+const { orbitBehind, eclipsedSlotIds, isSlotEclipsed, orbitPhaseStyle } = usePlanetTabOrbit(
   selectedSlotId,
   () => stageRef.value?.orbitEl ?? null,
   isVisible,
@@ -307,16 +309,19 @@ const sunPhaseStyle = computed(() => {
           :inert="railInert"
         >
           <div class="sr ps-rail">
-            <PlanetRailSlot
-              v-for="(slot, slotIndex) in store.slots"
-              :key="slot.id"
-              :planet="slot"
-              :slot-index="slotIndex"
-              :selected="selectedSlotId === slot.id"
-              :eclipsed="isSlotEclipsed(slot)"
-              :now="now"
-              @select="selectSlot"
-            />
+            <PlanetBuyAllBar v-if="hasLevelablePlanet" :eclipsed-ids="eclipsedSlotIds" />
+            <div class="ps-rail-list">
+              <PlanetRailSlot
+                v-for="(slot, slotIndex) in store.slots"
+                :key="slot.id"
+                :planet="slot"
+                :slot-index="slotIndex"
+                :selected="selectedSlotId === slot.id"
+                :eclipsed="isSlotEclipsed(slot)"
+                :now="now"
+                @select="selectSlot"
+              />
+            </div>
           </div>
         </div>
 
@@ -416,29 +421,33 @@ const sunPhaseStyle = computed(() => {
  * tab's .cosmic-stage-bg is absolutely positioned at z-index 0 and would
  * otherwise paint OVER a static panel however opaque its background is (same
  * trap the team page documents on .sdp-panel). */
-/* Flaeche, Naht und Schriftskala stehen als `.sr` im Theme — dieselbe
-   Seitenleiste wie im Skill Tree, in Voyages und im Universe. Hier bleiben nur
-   die Masse und die Nahtbreite, die an PLANET_TAB_RAIL_SEAM_WIDTH haengt.
-
-   Diese Leiste ist Flaeche UND Rollkasten in einem: sie traegt sechs Kacheln,
-   keine Liste, und braucht deshalb kein eigenes `.sr-scroll` darin. */
+/* Flaeche, Naht und Schriftskala stehen als `.sr` im Theme. Buy All steht
+   AUSSERHALB des Rollkastens; dessen Polster traegt Badge, Karett und Medaillon,
+   die ueber die Kachelkante ragen. */
 .ps-rail {
   width: 100%;
   box-sizing: border-box;
+  border-left-width: v-bind(railSeamWidthPx);
+}
+
+.ps-rail-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   gap: clamp(6px, 0.8vh, 12px);
   padding: clamp(8px, 1vh, 14px);
-  border-left-width: v-bind(railSeamWidthPx);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--sr-seam) #111;
 }
-.ps-rail::-webkit-scrollbar {
+.ps-rail-list::-webkit-scrollbar {
   width: 4px;
 }
-.ps-rail::-webkit-scrollbar-track {
+.ps-rail-list::-webkit-scrollbar-track {
   background: #111;
 }
-.ps-rail::-webkit-scrollbar-thumb {
+.ps-rail-list::-webkit-scrollbar-thumb {
   background: var(--sr-seam);
   border-radius: 2px;
 }
@@ -459,17 +468,14 @@ const sunPhaseStyle = computed(() => {
   scrollbar-color: #5c3310 #111;
 }
 
-.ps-rail::-webkit-scrollbar,
 .ps-detail::-webkit-scrollbar {
   width: 6px;
 }
 
-.ps-rail::-webkit-scrollbar-track,
 .ps-detail::-webkit-scrollbar-track {
   background: #111;
 }
 
-.ps-rail::-webkit-scrollbar-thumb,
 .ps-detail::-webkit-scrollbar-thumb {
   background: #5c3310;
   border-radius: 3px;

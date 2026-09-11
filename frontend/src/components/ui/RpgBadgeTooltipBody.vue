@@ -10,6 +10,7 @@ import { usePlanetShopStore, PLANET_ROLES } from '@/stores/world/planetShopStore
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useHerald } from '@/composables/ui/useHerald'
+import { useOrbitSlotHerald } from '@/composables/ui/useOrbitSlotHerald'
 import { useNotifyBadgeCount } from '@/composables/ui/useNotifyBadges'
 import { CHAMPION_ROLES } from '@/config/champions/championData'
 import { NOTIFY_BADGE_BY_KIND, NOTIFY_BADGE_TIP_COLOR } from '@/config/ui/notifyBadges'
@@ -19,6 +20,7 @@ import {
   STAR_PHASE_DATA,
   CHIMES_COST_ICON,
   FORGE_AFFORDABLE_TOTAL_ICON,
+  FORGE_BUY_ALL_ICON,
   FORGE_PANEL_SECTIONS,
   NOTIFY_BADGE_TITLE,
   type NotifyBadgeKind,
@@ -52,6 +54,7 @@ const planetShopStore = usePlanetShopStore()
 const starForgeStore = useStarForgeStore()
 const uiStore = useUiStore()
 const { announceReceipt } = useHerald()
+const { buyAllPlanetLevels } = useOrbitSlotHerald()
 
 /* ── expedition ─────────────────────────────────────────────────────── */
 const readyExpeditions = computed(() => expeditionStore.readyExpeditions)
@@ -104,8 +107,8 @@ const skillCount = useNotifyBadgeCount('skill')
 const skillBuyableCount = computed(() => meepTree.buyableNodeCount)
 
 /* ── planet ─────────────────────────────────────────────────────────── */
-// Total level-ups affordable across all six slots (matches the header badge).
-const planetLevelCount = computed(() => planetShopStore.affordableLevelCount)
+// Was der Sammelkauf wirklich kauft — nicht die Summe der Einzelzähler.
+const planetBuyAllCount = computed(() => planetShopStore.planBuyAllLevels().count)
 
 interface PlanetUpgradeRow {
   id: string
@@ -192,15 +195,6 @@ const shopShowAffordableTotal = computed(
   () => shopAffordableTotal.value > starForgeStore.shopFreshTotal,
 )
 
-// Buy all possible upgrades across every slot, spending chimes greedily in slot
-// order until the budget runs dry.
-function buyAllUpgrades() {
-  for (const s of planetShopStore.slots) {
-    if (!s.purchased || !s.role) continue
-    const n = planetShopStore.getMaxAffordableLevelCount(s.id)
-    if (n > 0) planetShopStore.levelUpPlanetTimes(s.id, n)
-  }
-}
 </script>
 
 <template>
@@ -293,10 +287,10 @@ function buyAllUpgrades() {
 
     <!-- ══════════ PLANET ══════════ -->
     <template v-else-if="kind === 'planet'">
-      <button class="tip-act" @click.stop="buyAllUpgrades">
-        <Icon icon="ph:arrow-fat-up-fill" width="15" height="15" />
+      <button v-if="planetBuyAllCount > 0" class="tip-act" @click.stop="buyAllPlanetLevels">
+        <Icon :icon="FORGE_BUY_ALL_ICON" width="15" height="15" />
         Buy All
-        <span class="tip-act-count">{{ planetLevelCount }}</span>
+        <span class="tip-act-count">{{ planetBuyAllCount }}</span>
       </button>
       <ul class="tip-rows">
         <li

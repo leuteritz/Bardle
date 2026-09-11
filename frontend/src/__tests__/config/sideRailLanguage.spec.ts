@@ -58,6 +58,7 @@ const RAIL_FILES = [
  */
 const TINT_FILES = [
   'components/bardProfil/planets/PlanetRailSlot.vue',
+  'components/bardProfil/planets/PlanetBuyAllBar.vue',
   'components/bardProfil/team/TeamSidePanelShell.vue',
   'components/bardProfil/team/SigilDetailsPanel.vue',
 ]
@@ -90,7 +91,9 @@ const tabs = TAB_FILES.map(load)
 const theme = readFileSync(join(SRC, THEME), 'utf8')
 
 /** Der Sektionskommentar ist der Anker — wie bei `hudCardLanguage.spec.ts`. */
-const LANG = theme.slice(theme.indexOf('/* ── Seitenleisten-Sprache (.sr-*) ──────────────────────────────────'))
+const LANG = theme.slice(
+  theme.indexOf('/* ── Seitenleisten-Sprache (.sr-*) ──────────────────────────────────'),
+)
 
 describe('Seitenleisten-Sprache: die Gestalt steht an EINER Stelle', () => {
   it('das Netz ist nicht leer', () => {

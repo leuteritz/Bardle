@@ -26,6 +26,7 @@ import {
 import { orbitOrderedSlots } from '@/utils/orbit/planetOrbitPhase'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import { useHerald } from '@/composables/ui/useHerald'
+import { displaySunPhase } from '@/composables/orbit/useSunPhaseDisplay'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import PlanetStatDeck from './PlanetStatDeck.vue'
@@ -103,7 +104,9 @@ const bonusText = computed(() =>
 
 // ── Per-planet leveling ────────────────────────────────────────────────────
 const levelUpCost = computed(() => store.getPlanetLevelUpCost(props.planet.id))
-const levelUpReqPhase = computed(() => store.getPlanetLevelRequiredPhase(props.planet.id))
+const levelUpReqPhase = computed(() =>
+  displaySunPhase(store.getPlanetLevelRequiredPhase(props.planet.id)),
+)
 const levelUpReason = computed(() => store.planetLevelUpBlockReason(props.planet.id))
 
 // ── Max attune (the only buy action) ───────────────────────────────────────

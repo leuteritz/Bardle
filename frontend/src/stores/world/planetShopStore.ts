@@ -130,6 +130,62 @@ export function planetLevelRequiredPhase(nextLevel: number): number {
   return Math.min(PLANET_LEVEL_MAX_PHASE, Math.floor((nextLevel - 1) / PLANET_LEVELS_PER_PHASE))
 }
 
+export interface PlanetBuyAllPlan {
+  /** Level je Slot-ID, die der Sammelkauf gewinnt. */
+  levels: Record<string, number>
+  count: number
+  cost: number
+  /** Warum nach dem Plan nichts mehr geht — nur bei `count === 0` angezeigt. */
+  block: 'chimes' | 'phase' | 'reach' | null
+  nextCost: number
+  nextPhase: number
+}
+
+/** Günstigstes nächstes Level zuerst, über alle erreichbaren Planeten. */
+export function planPlanetBuyAll(
+  slots: readonly PlanetSlot[],
+  chimes: number,
+  starPhase: number,
+  reachable: (slot: PlanetSlot) => boolean,
+): PlanetBuyAllPlan {
+  const cursors = slots
+    .filter((s) => s.purchased && s.role && !isPlanetDown(s) && reachable(s))
+    .map((s) => ({ id: s.id, baseCost: s.baseCost, level: s.level }))
+  const levels: Record<string, number> = {}
+  let budget = chimes
+  let count = 0
+  let cost = 0
+  let nextCost = Infinity
+  let nextPhase = Infinity
+
+  while (count < PLANET_MAX_BULK_LEVELS) {
+    let pick: (typeof cursors)[number] | null = null
+    nextCost = Infinity
+    nextPhase = Infinity
+    for (const c of cursors) {
+      const phase = planetLevelRequiredPhase(c.level + 1)
+      if (starPhase < phase) {
+        nextPhase = Math.min(nextPhase, phase)
+        continue
+      }
+      const price = planetLevelUpCost(c)
+      if (price < nextCost) {
+        nextCost = price
+        pick = c
+      }
+    }
+    if (!pick || budget < nextCost) break
+    budget -= nextCost
+    cost += nextCost
+    pick.level++
+    levels[pick.id] = (levels[pick.id] ?? 0) + 1
+    count++
+  }
+
+  const block = cursors.length === 0 ? 'reach' : nextCost < Infinity ? 'chimes' : 'phase'
+  return { levels, count, cost, block, nextCost, nextPhase }
+}
+
 /**
  * Erntetakt eines Harvesters in Ticks — je höher sein Level, desto dichter.
  *
@@ -650,6 +706,19 @@ export const usePlanetShopStore = defineStore('planetShop', {
     // Attune a slot up to `maxCount` times, stopping at the chimes/phase gate.
     // Returns the number of levels actually gained. CPS/CPC recomputed once.
     levelUpPlanetTimes(slotId: string, maxCount: number): number {
+      const gained = this._attune(slotId, maxCount)
+      if (gained > 0) {
+        this._refreshRatesAfterAttune()
+        logger.info(
+          'Planet',
+          `Slot ${slotId} attuned +${gained} → level ${this.getSlot(slotId)?.level}`,
+        )
+      }
+      return gained
+    },
+
+    /** Kaufschleife ohne CPS-Neuberechnung — die macht der Aufrufer einmal. */
+    _attune(slotId: string, maxCount: number): number {
       const slot = this.getSlot(slotId)
       if (!slot || !slot.purchased) return 0
 
@@ -668,15 +737,43 @@ export const usePlanetShopStore = defineStore('planetShop', {
         slot.currentHp = Math.min(slot.maxHp, slot.currentHp + (slot.maxHp - prevMaxHp))
         gained++
       }
-
-      if (gained > 0) {
-        // Level affects role bonuses (incl. resonance CPS) → recompute production.
-        const shopStore = useShopStore()
-        gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
-        gameStore.chimesPerClick = shopStore.calculateTotalCPC()
-        logger.info('Planet', `Slot ${slotId} attuned +${gained} → level ${slot.level}`)
-      }
       return gained
+    },
+
+    // Level affects role bonuses (incl. resonance CPS) → recompute production.
+    _refreshRatesAfterAttune(): void {
+      const gameStore = useGameStore()
+      const shopStore = useShopStore()
+      gameStore.chimesPerSecond = shopStore.calculateTotalCPS()
+      gameStore.chimesPerClick = shopStore.calculateTotalCPC()
+    },
+
+    /** Hinter der Sonne und zerstört ist ein Planet außer Reichweite. */
+    planBuyAllLevels(
+      reachable: (slot: PlanetSlot) => boolean = (s) => playerSlotInForeground(s.id),
+    ): PlanetBuyAllPlan {
+      return planPlanetBuyAll(
+        this.slots,
+        useGameStore().chimes,
+        useSolarUpgradeStore().starPhase,
+        reachable,
+      )
+    },
+
+    buyAllPlanetLevels(): { gained: number; levels: Record<string, number> } {
+      const plan = this.planBuyAllLevels()
+      const levels: Record<string, number> = {}
+      let gained = 0
+      for (const [slotId, count] of Object.entries(plan.levels)) {
+        const got = this._attune(slotId, count)
+        if (got > 0) levels[slotId] = got
+        gained += got
+      }
+      if (gained > 0) {
+        this._refreshRatesAfterAttune()
+        logger.info('Planet', `Buy all attuned +${gained} across ${Object.keys(levels).length}`)
+      }
+      return { gained, levels }
     },
 
     // How many levels the player can currently afford (respecting the phase gate).
