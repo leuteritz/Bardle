@@ -10,7 +10,6 @@
 import { computed } from 'vue'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
-import { destinationName } from '@/config/economy/expeditionDestinations'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { toRoman } from '@/utils/ui/format'
 import {
@@ -32,8 +31,6 @@ const rowH = `${VOYAGE_LIVE_ROW_H}px`
 const accent = computed(
   () => `rgb(${minimapAccentForTheme(galaxyStore.currentThemeIndex, gameStore.currentUniverse)})`,
 )
-
-const themeName = computed(() => destinationName(galaxyStore.currentThemeIndex))
 
 const starScale = computed(() => {
   const need = Math.max(1, galaxyStore.starsRequired)
@@ -57,8 +54,7 @@ const starScale = computed(() => {
         {{ VOYAGE_LIVE_RAIL_LABEL }}
       </span>
       <span class="elr-name">
-        <span class="elr-galaxy">Galaxy {{ toRoman(galaxyStore.currentGalaxy) }}</span>
-        <span class="elr-theme">{{ themeName }}</span>
+        <span class="elr-number">{{ toRoman(galaxyStore.currentGalaxy) }}</span>
       </span>
     </span>
 
@@ -140,15 +136,8 @@ const starScale = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.elr-galaxy {
+.elr-number {
   color: #e8c040;
-}
-.elr-theme {
-  min-width: 0;
-  width: 100%;
-  overflow: hidden;
-  color: #e8dcc0;
-  text-overflow: ellipsis;
 }
 
 .elr-stars {
