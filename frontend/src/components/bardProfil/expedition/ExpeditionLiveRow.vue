@@ -18,6 +18,7 @@ import {
   VOYAGE_LIVE_RAIL_LABEL,
   VOYAGE_LIVE_RAIL_TITLE,
   VOYAGE_LIVE_ROW_H,
+  VOYAGE_LIVE_STARS_LABEL,
 } from '@/config/constants'
 
 defineProps<{ selected: boolean }>()
@@ -51,17 +52,22 @@ const starScale = computed(() => {
     @click="emit('select')"
   >
     <span class="elr-body">
+      <span class="elr-kicker">
+        <span class="elr-status-dot" aria-hidden="true" />
+        {{ VOYAGE_LIVE_RAIL_LABEL }}
+      </span>
       <span class="elr-name">
         <span class="elr-galaxy">Galaxy {{ toRoman(galaxyStore.currentGalaxy) }}</span>
-        <span class="elr-separator" aria-hidden="true">·</span>
         <span class="elr-theme">{{ themeName }}</span>
       </span>
-      <span class="elr-kicker">{{ VOYAGE_LIVE_RAIL_LABEL }}</span>
     </span>
 
     <span class="elr-stars">
-      <span class="elr-freed">{{ galaxyStore.starsRescued }}</span
-      ><span class="elr-of">/{{ galaxyStore.starsRequired }}</span>
+      <span class="elr-stars-label">{{ VOYAGE_LIVE_STARS_LABEL }}</span>
+      <span class="elr-stars-count">
+        <span class="elr-freed">{{ galaxyStore.starsRescued }}</span
+        ><span class="elr-of">/{{ galaxyStore.starsRequired }}</span>
+      </span>
     </span>
 
     <span class="elr-rail" aria-hidden="true">
@@ -75,16 +81,21 @@ const starScale = computed(() => {
    Theme — die laufende Galaxie ist dieselbe Karte wie die Zeilen darunter.
    Hier bleiben nur ihre Masse und ihre Farben. */
 .elr {
-  gap: 8px;
+  gap: 0.85em;
   height: v-bind(rowH);
   margin-top: -4px;
-  padding: 0 11px 0 12px;
+  align-items: stretch;
+  padding: 0.85em 0.8em 0.95em 0.9em;
+  background: color-mix(in srgb, var(--elr-accent) 10%, var(--sr-row-bg));
+  border-color: color-mix(in srgb, var(--elr-accent) 55%, var(--sr-row-border));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--elr-accent) 45%, transparent);
   /* Die Akzentkante der laufenden Galaxie — dieselbe Geste wie bei den Zeilen
      darunter, nur traegt sie hier die Farbe des THEMAS statt der Stufe. */
   --sr-color: var(--elr-accent, #c89040);
+  --sr-pick: var(--elr-accent, #c89040);
 }
 .elr.is-picked {
-  --sr-pick: var(--rpg-wood);
+  background: color-mix(in srgb, var(--elr-accent) 22%, var(--sr-row-bg));
 }
 
 .elr-body {
@@ -92,23 +103,37 @@ const starScale = computed(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  justify-content: center;
+  gap: 0.5em;
 }
 
 .elr-kicker {
-  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  font-size: 0.76em;
+  line-height: 1;
   font-weight: 800;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: #c89040;
+  color: var(--elr-accent);
+}
+.elr-status-dot {
+  flex: 0 0 auto;
+  width: 0.55em;
+  height: 0.55em;
+  border-radius: 50%;
+  background: var(--elr-accent);
+  box-shadow: 0 0 0 0.3em color-mix(in srgb, var(--elr-accent) 18%, transparent);
 }
 
 .elr-name {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
-  font-size: 16px;
-  line-height: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15em;
+  font-size: 1.28em;
+  line-height: 1.05;
   font-weight: 800;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -118,21 +143,41 @@ const starScale = computed(() => {
 .elr-galaxy {
   color: #e8c040;
 }
-.elr-separator {
-  color: #7a4e20;
-}
 .elr-theme {
   min-width: 0;
+  width: 100%;
   overflow: hidden;
   color: #e8dcc0;
   text-overflow: ellipsis;
 }
 
 .elr-stars {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.25em;
   flex-shrink: 0;
-  font-size: 14px;
+  min-width: 4.7em;
+  padding-left: 0.75em;
+  border-left: 1px solid color-mix(in srgb, var(--elr-accent) 45%, var(--sr-row-border));
+}
+.elr-stars-label {
+  max-width: 4.2em;
+  font-size: 0.64em;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  text-align: right;
+  color: var(--elr-accent);
+}
+.elr-stars-count {
+  font-size: 1.5em;
   font-weight: 900;
   letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
 }
 .elr-freed {
   color: var(--elr-freed);
@@ -146,7 +191,7 @@ const starScale = computed(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 3px;
+  height: 4px;
   background: #3e200a;
   overflow: hidden;
 }

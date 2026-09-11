@@ -2115,10 +2115,11 @@ export const VOYAGE_CREW_MARKER_PULSE_MS = 2400
 /** Die Zeile der laufenden Galaxie in der Zielliste. Eigene Höhe, KEIN
  *  `VOYAGE_RAIL_ROW_H`: die lebt von ihrer Snapshot-Miniatur, und für einen
  *  laufenden Lauf gibt es kein Standbild. */
-export const VOYAGE_LIVE_ROW_H = 68
+export const VOYAGE_LIVE_ROW_H = 108
 
 export const VOYAGE_LIVE_RAIL_LABEL = 'Current run'
 export const VOYAGE_LIVE_RAIL_TITLE = 'Follow your current run'
+export const VOYAGE_LIVE_STARS_LABEL = 'Stars rescued'
 
 // ══ Der Spielerkörper auf der Live-Karte ═════════════════════════════════════
 // Er ist DOM, kein Canvas-Zug: die Platte ist ein Standbild und wird nur bei
