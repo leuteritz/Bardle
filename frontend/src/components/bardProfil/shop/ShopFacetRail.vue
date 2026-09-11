@@ -129,7 +129,9 @@ const activeTotal = computed(
             <small>Availability</small>
             <span class="cs-facet-label">Affordable</span>
           </span>
-          <span class="cs-facet-count">{{ affordableCount }}</span>
+          <span class="cs-facet-count" :class="{ 'cs-facet-count--zero': affordableCount === 0 }">
+            {{ affordableCount }}
+          </span>
         </button>
       </section>
 
@@ -209,7 +211,13 @@ const activeTotal = computed(
               height="14"
               class="cs-facet-lock"
             />
-            <span v-else-if="chip.count != null" class="cs-facet-count">{{ chip.count }}</span>
+            <span
+              v-else-if="chip.count != null"
+              class="cs-facet-count"
+              :class="{ 'cs-facet-count--zero': chip.count === 0 }"
+            >
+              {{ chip.count }}
+            </span>
           </button>
         </div>
       </section>
@@ -249,15 +257,12 @@ const activeTotal = computed(
 }
 .cs-facets-grip-count {
   min-width: 24px;
-  padding: 3px 6px;
-  border-radius: 4px;
-  background: rgba(10, 8, 4, 0.7);
-  border: 1px solid #7a4e20;
   color: #e8c040;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: right;
 }
 
 /* ── Domain ──
@@ -314,23 +319,22 @@ const activeTotal = computed(
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* The count is what keeps the split honest — it says how many cards the OTHER
-   half is holding, so a search can never quietly land out of sight. */
+/* Shows what the OTHER half holds, so a search never lands out of sight. */
 .cs-dom-count {
   flex-shrink: 0;
-  min-width: 24px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(10, 8, 4, 0.7);
-  border: 1px solid #3e200a;
-  font-size: 10.5px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
+  min-width: 28px;
+  color: #a8946a;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: right;
+}
+.cs-dom:not(.cs-dom--on):hover .cs-dom-count {
+  color: #e8dcc0;
 }
 .cs-dom--on .cs-dom-count {
-  border-color: #7a4e20;
-  color: #e8c060;
+  color: #e8c040;
 }
 
 .cs-facets-scroll {
@@ -476,21 +480,12 @@ const activeTotal = computed(
 }
 .cs-facet-panel-count {
   flex-shrink: 0;
-  min-width: 22px;
-  padding: 2px 5px;
-  border-radius: 4px;
-  background: rgba(10, 8, 4, 0.7);
-  border: 1px solid color-mix(in srgb, var(--facet-group-color) 60%, #3e200a);
+  min-width: 18px;
   color: var(--facet-group-color);
-  font-size: 10.5px;
+  font-size: 16px;
   font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-.cs-facet-panel--open .cs-facet-panel-count {
-  background: #141410;
-  border-color: var(--facet-group-color);
-  color: #f1dfb6;
+  line-height: 1;
+  text-align: right;
 }
 .cs-facet-panel-body {
   display: flex;
@@ -612,21 +607,25 @@ const activeTotal = computed(
   border-radius: 2px;
   padding: 0 1px;
 }
+/* Reserved width, not tabular-nums: MedievalSharp has no tabular figures. */
 .cs-facet-count {
   flex-shrink: 0;
-  min-width: 24px;
-  padding: 2px 5px;
-  border-radius: 4px;
-  background: rgba(10, 8, 4, 0.7);
-  border: 1px solid #3e200a;
-  font-size: 10.5px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-  color: #7a6848;
+  min-width: 26px;
+  color: #a8946a;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: right;
+  transition: color 0.13s;
+}
+.cs-facet-count--zero {
+  color: #5c4a30;
+}
+.cs-facet-row:not(.cs-facet-row--active):hover:not(:disabled) .cs-facet-count {
+  color: #e8dcc0;
 }
 .cs-facet-row--active .cs-facet-count {
-  border-color: var(--chip-color, #7a4e20);
   color: #e8c040;
 }
 .cs-facet-lock {
