@@ -1614,6 +1614,10 @@ export const VOYAGE_MAP_LEGEND_ICON_CQW = 4.2
 export const VOYAGE_MAP_LEGEND_ICON_OFFSET = 20.5
 export const VOYAGE_MAP_LEGEND_LABEL_CQW = 1.5
 export const VOYAGE_MAP_LEGEND_LABEL_OFFSET = 6.3
+export const VOYAGE_MAP_DRIFTER_ART_SCALE = 2
+export const VOYAGE_MAP_DRIFTER_ART_MIN_PX = 24
+export const VOYAGE_MAP_DRIFTER_ART_MAX_PX = 34
+export const VOYAGE_MAP_DRIFTER_LEGEND_IMAGE = '/img/drifter/riftEcho-512.png'
 
 /**
  * Die fuenf Chronikmarken — was ein gespielter Lauf auf der Karte hinterlaesst.
@@ -1645,7 +1649,11 @@ export const VOYAGE_MAP_LEGEND_ROWS = [
   { kind: 'star-lost', label: 'Lost', tip: 'A star this run never reached.' },
   { kind: 'landfall-reef', label: 'Landfall', tip: 'A waypoint a leg brushed past.' },
   { kind: 'void-impact', label: 'Void', tip: 'Where a Void creature struck.' },
-  { kind: 'drifter-trace', label: 'Drifter', tip: 'Where a drifter crossed the run.' },
+  {
+    kind: 'drifter-trace',
+    label: 'Drifter',
+    tip: 'The artwork and trail left by a rare drifter encounter.',
+  },
 ] as const
 
 /**
