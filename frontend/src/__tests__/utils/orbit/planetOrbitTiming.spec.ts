@@ -6,11 +6,17 @@ import {
   orbitOrderedSlots,
   orbitTierForSlotIndex,
   planetOrbitTiming,
+  planetTabOrbitOpacity,
 } from '@/utils/orbit/planetOrbitPhase'
 import { planetOrbitSpeedMultiplier } from '@/stores/world/planetShopStore'
 import {
   ORBIT_TIERS,
+  PLANET_ORBIT_OPACITY_BEHIND_BASE,
+  PLANET_ORBIT_OPACITY_BEHIND_SPAN,
+  PLANET_ORBIT_OPACITY_FRONT_BASE,
+  PLANET_ORBIT_OPACITY_FRONT_SPAN,
   PLANET_SLOT_CONFIG,
+  PLANET_TAB_ECLIPSE_FADE_PROGRESS,
   PLANET_TAB_ORBIT_FOREGROUND_PROGRESS,
 } from '@/config/constants'
 
@@ -71,6 +77,39 @@ describe('eclipseProgressOfPhase — der Corona-Ring auf der Sonne', () => {
         prev = p
       }
       expect(prev).toBeGreaterThan(0.98)
+    }
+  })
+})
+
+describe('planetTabOrbitOpacity — Tiefe wie im Idle-Orbit', () => {
+  const fg = PLANET_TAB_ORBIT_FOREGROUND_PROGRESS
+
+  it('steht am vorderen Scheitel voll und am hinteren im tiefsten Schatten', () => {
+    expect(planetTabOrbitOpacity(fg / 2)).toBeCloseTo(
+      PLANET_ORBIT_OPACITY_FRONT_BASE + PLANET_ORBIT_OPACITY_FRONT_SPAN,
+      9,
+    )
+    expect(planetTabOrbitOpacity((fg + 1) / 2)).toBeCloseTo(PLANET_ORBIT_OPACITY_BEHIND_BASE, 9)
+  })
+
+  it('bleibt im Band des Idle-Orbits und springt nirgends — auch nicht an der Sonnenkante', () => {
+    let prev = planetTabOrbitOpacity(0)
+    for (let i = 1; i <= 1000; i++) {
+      const o = planetTabOrbitOpacity(i / 1000)
+      expect(o).toBeGreaterThanOrEqual(PLANET_ORBIT_OPACITY_BEHIND_BASE - 1e-9)
+      expect(o).toBeLessThanOrEqual(1 + 1e-9)
+      expect(Math.abs(o - prev)).toBeLessThan(0.05)
+      prev = o
+    }
+    expect(Math.abs(planetTabOrbitOpacity(0) - planetTabOrbitOpacity(1))).toBeLessThan(1e-9)
+  })
+
+  it('taucht den Planeten über den ganzen Kern der Verdeckung ab', () => {
+    const fade = PLANET_TAB_ECLIPSE_FADE_PROGRESS
+    for (let e = fade; e <= 1 - fade; e += 0.01) {
+      expect(planetTabOrbitOpacity(fg + e * (1 - fg))).toBeLessThan(
+        PLANET_ORBIT_OPACITY_BEHIND_BASE + PLANET_ORBIT_OPACITY_BEHIND_SPAN / 2 + 1e-9,
+      )
     }
   })
 })

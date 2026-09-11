@@ -14,6 +14,11 @@ import {
   ORBIT_TIERS,
   PLANET_ORBIT_FOREGROUND_DEPTH,
   PLANET_ORBIT_KEPLER_BOOST,
+  PLANET_ORBIT_OPACITY_BEHIND_BASE,
+  PLANET_ORBIT_OPACITY_BEHIND_SPAN,
+  PLANET_ORBIT_OPACITY_FRONT_BASE,
+  PLANET_ORBIT_OPACITY_FRONT_SPAN,
+  PLANET_TAB_ECLIPSE_FADE_PROGRESS,
   PLANET_TAB_ORBIT_FOREGROUND_PROGRESS,
 } from '@/config/constants'
 
@@ -125,6 +130,29 @@ export function orbitEclipsePhase(
 export function eclipseProgressOfPhase(phase: number): number {
   const fg = PLANET_TAB_ORBIT_FOREGROUND_PROGRESS
   return Math.max(0, Math.min(1, (phase - fg) / (1 - fg)))
+}
+
+const frontOpacity = (depth: number) =>
+  PLANET_ORBIT_OPACITY_FRONT_BASE + depth * PLANET_ORBIT_OPACITY_FRONT_SPAN
+const behindOpacity = (depth: number) =>
+  PLANET_ORBIT_OPACITY_BEHIND_BASE + depth * PLANET_ORBIT_OPACITY_BEHIND_SPAN
+
+/**
+ * Deckkraft des Tab-Planeten nach Keyframe-Phase — die Tiefenformel des Idle-Orbits,
+ * auf die Tab-Ellipse übertragen (Seiten `relY` 0, vorderer Scheitel 1, hinterer −1).
+ * An Ein- und Austritt der Verdeckung weich überblendet statt gesprungen.
+ */
+export function planetTabOrbitOpacity(phase: number): number {
+  const fg = PLANET_TAB_ORBIT_FOREGROUND_PROGRESS
+  if (phase < fg) return frontOpacity((Math.sin((Math.PI * phase) / fg) + 1) / 2)
+
+  const e = eclipseProgressOfPhase(phase)
+  const behind = behindOpacity((1 - Math.sin(Math.PI * e)) / 2)
+  const edge = Math.min(e, 1 - e) / PLANET_TAB_ECLIPSE_FADE_PROGRESS
+  if (edge >= 1) return behind
+  const side = frontOpacity(0.5)
+  const t = edge * edge * (3 - 2 * edge)
+  return side + (behind - side) * t
 }
 
 /** Auflösung der Periodenintegration — 0,5° je Schritt. */

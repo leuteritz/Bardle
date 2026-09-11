@@ -15,6 +15,7 @@ import {
   orbitOrderedSlots,
   orbitTierForSlotIndex,
   planetOrbitPhases,
+  planetTabOrbitOpacity,
 } from '@/utils/orbit/planetOrbitPhase'
 import { playerSlotInForeground } from '@/utils/orbit/foregroundGate'
 import { PLANET_TAB_ORBIT_PERIOD_SEC } from '@/config/constants'
@@ -32,12 +33,14 @@ function orbitDelayFor(progress: number): string {
  *                        dieses Signal liefe die Schleife für immer weiter und
  *                        schriebe 60-mal pro Sekunde an ein unsichtbares Element.
  * @param paintEclipse    Fortschritt 0 … 1 durch die Verdeckung, pro Frame, nur hinter der Sonne.
+ * @param paintOpacity    Tiefen-Deckkraft des Planeten, pro Frame.
  */
 export function usePlanetTabOrbit(
   selectedSlotId: Ref<string | null>,
   getOrbitEl: () => HTMLElement | null,
   isActive: Ref<boolean>,
   paintEclipse: (progress: number) => void,
+  paintOpacity: (opacity: number) => void,
 ) {
   const store = usePlanetShopStore()
 
@@ -101,6 +104,7 @@ export function usePlanetTabOrbit(
     // großen Komponente nur für eine CSS-Variable wären Verschwendung.
     const phase = orbitProgressOf(slotId)
     getOrbitEl()?.style.setProperty('--orbit-delay', orbitDelayFor(phase))
+    paintOpacity(planetTabOrbitOpacity(phase))
 
     // Das Medaillon hängt an EXAKT derselben Quelle wie das im Command Panel —
     // dieselbe Positions-Map, im selben rAF-Takt gelesen. Ein eigener Nachbau der
