@@ -50,6 +50,12 @@ const { announceReceipt } = useHerald()
 
 /** Orbit-Wrapper — der Tab-Loop setzt hier pro Frame `--orbit-delay`. */
 const orbitEl = ref<HTMLElement | null>(null)
+const orbitImgEl = ref<HTMLImageElement | null>(null)
+
+// Ans Bild, nicht an den Wrapper: dessen opacity gehört der Swap-Transition.
+function paintOrbitOpacity(opacity: number) {
+  if (orbitImgEl.value) orbitImgEl.value.style.opacity = opacity.toFixed(3)
+}
 
 // Corona und Zündschnur: pro Frame vom Tab-Loop beschrieben, nie über Vue.
 const eclipseArcEl = ref<SVGCircleElement | null>(null)
@@ -62,7 +68,7 @@ function paintEclipse(progress: number) {
   if (eclipseFuseEl.value) eclipseFuseEl.value.style.transform = `scaleX(${progress})`
 }
 
-defineExpose({ orbitEl, paintEclipse })
+defineExpose({ orbitEl, paintEclipse, paintOrbitOpacity })
 
 /** Endphase: der Stern ist kollabiert, statt der Plasmascheibe steht hier das
  *  Schwarze Loch — mit demselben Footprint, damit der Planet weiter dahinter
@@ -327,9 +333,13 @@ const configTarget = computed(() => {
               :style="orbitPhaseStyle"
             >
               <img
+                ref="orbitImgEl"
                 :src="roleImage"
                 class="ps-planet-preview-img"
-                :class="{ 'ps-planet-preview-img--buffed': planet.jungleBuff?.active }"
+                :class="{
+                  'ps-planet-preview-img--buffed': planet.jungleBuff?.active,
+                  'ps-planet-preview-img--eclipsed': orbitBehind,
+                }"
                 alt="Planet"
               />
             </div>
@@ -1400,6 +1410,8 @@ const configTarget = computed(() => {
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.55));
+  /* opacity kommt pro Frame aus dem Tab-Loop (Tiefe wie im Idle-Orbit). */
+  will-change: opacity;
 }
 
 /* ── Rollenname (planet-type title above the HP bar) ───────────────────────── */
@@ -1633,6 +1645,12 @@ const configTarget = computed(() => {
 /* Pulsing green glow on the orbiting planet itself — follows it on its path. */
 .ps-planet-preview-img--buffed {
   animation: ps-planet-buff-glow 1.8s ease-in-out infinite;
+}
+
+/* Hinter der Sonne: derselbe statische Schatten wie im Idle-Orbit, der Buff-Puls ruht. */
+.ps-planet-preview-img--eclipsed {
+  filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.55)) blur(2px) brightness(0.7) saturate(0.5);
+  animation: none;
 }
 
 /* ── Planet-Orbit-Wrapper Transition (per-slot swap) ───────────────────────── */

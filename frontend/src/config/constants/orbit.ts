@@ -180,6 +180,8 @@ export const PLANET_ORBIT_FOREGROUND_DEPTH = 0.65
  * Sonne verbringen. Muss zum z-index-Wechsel bei 70 % / 71 % passen.
  */
 export const PLANET_TAB_ORBIT_FOREGROUND_PROGRESS = 0.7
+/** Anteil des verdeckten Bogens, über den der Tab-Planet an Ein- und Austritt weich überblendet. */
+export const PLANET_TAB_ECLIPSE_FADE_PROGRESS = 0.12
 /** Dauer der `ps-planet-orbit`-Keyframes in Sekunden — Basis fürs Phasen-Scrubbing. */
 export const PLANET_TAB_ORBIT_PERIOD_SEC = 26
 
