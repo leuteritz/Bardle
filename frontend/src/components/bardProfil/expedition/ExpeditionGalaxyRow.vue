@@ -90,7 +90,6 @@ const title = computed(
            Nur der einsammelbare Zustand atmet. -->
       <span v-if="state === 'ready'" class="egr-pulse" aria-hidden="true" />
 
-      <span class="egr-no">{{ toRoman(row.galaxy) }}</span>
       <ExpeditionWaitBadge v-if="waiting" :count="waiting" :ready="state === 'ready'" />
       <span v-if="!row.seen" class="egr-new">NEW</span>
     </span>
@@ -202,17 +201,6 @@ const title = computed(
   50% {
     opacity: 1;
   }
-}
-
-.egr-no {
-  position: absolute;
-  left: 4px;
-  top: 1px;
-  font-family: 'MedievalSharp', Georgia, serif;
-  font-size: 13px;
-  line-height: 1.1;
-  color: #e8c040;
-  text-shadow: 0 1px 3px #000;
 }
 
 .egr-new {
