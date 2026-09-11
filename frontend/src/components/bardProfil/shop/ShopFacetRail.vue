@@ -180,7 +180,11 @@ const activeTotal = computed(
             v-tip="chip.title ?? chip.label"
             @click="emit('toggle', group.id, chip.id)"
           >
-            <span class="cs-facet-crest" aria-hidden="true">
+            <span
+              class="cs-facet-crest"
+              :class="{ 'cs-facet-crest--art': chip.image }"
+              aria-hidden="true"
+            >
               <img v-if="chip.image" :src="chip.image" :alt="chip.label" class="cs-facet-img" />
               <Icon
                 v-else-if="chip.icon"
@@ -551,10 +555,44 @@ const activeTotal = computed(
   color: #fff;
 }
 .cs-facet-img {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   object-fit: contain;
+}
+/* Painted art carries its own colour — a filled crest behind it swallowed the gold. */
+.cs-facet-crest--art {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  clip-path: none;
+  background: none;
+}
+.cs-facet-crest--art::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--chip-color, #c89040) 55%, transparent),
+    transparent
+  );
+  opacity: 0.45;
+  transition: opacity 0.13s;
+}
+.cs-facet-row:hover:not(:disabled) .cs-facet-crest--art::before {
+  opacity: 0.75;
+}
+.cs-facet-row--active .cs-facet-crest--art::before {
+  opacity: 1;
+}
+.cs-facet-crest--art .cs-facet-img {
+  position: relative;
+  transition: transform 0.13s;
+}
+.cs-facet-row:hover:not(:disabled) .cs-facet-crest--art .cs-facet-img,
+.cs-facet-row--active .cs-facet-crest--art .cs-facet-img {
+  transform: scale(1.08);
 }
 .cs-facet-label {
   display: block;
