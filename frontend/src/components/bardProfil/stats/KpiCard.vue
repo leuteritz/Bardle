@@ -74,8 +74,6 @@ const chimeScale = `${CHIME_ART_ALPHA_SCALE}`
 const meepScale = `${UNIVERSE_TOOLTIP_MEEP_SCALE}`
 
 const gridStyle = {
-  '--cols': JOURNEY_OVERVIEW_KPI_GRID.COLS,
-  '--rows': JOURNEY_OVERVIEW_KPI_GRID.ROWS,
   '--tracks': JOURNEY_OVERVIEW_KPI_GRID.TRACKS,
 }
 </script>
@@ -85,9 +83,8 @@ const gridStyle = {
     <div class="jt-kpis-head">
       <Icon icon="lucide:list" width="18" height="18" class="jt-kpis-sys" aria-hidden="true" />
       <span v-ink-center class="jt-kpis-title">Stats</span>
-      <button type="button" class="jt-kpis-more" @click="emit('open', null)">
-        All stats →
-      </button>
+      <span class="jt-kpis-count">{{ tiles.length }} signals</span>
+      <button type="button" class="jt-kpis-more" @click="emit('open', null)">View all →</button>
     </div>
     <div class="jt-kpi-grid" role="list" :style="gridStyle">
       <button
@@ -162,12 +159,19 @@ const gridStyle = {
   flex-shrink: 0;
 }
 .jt-kpis-title {
-  flex: 1;
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--rpg-gold);
+}
+.jt-kpis-count {
+  margin-right: auto;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8a7a58;
 }
 .jt-kpis-more {
   padding: 6px 11px;
@@ -195,19 +199,18 @@ const gridStyle = {
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(var(--tracks), minmax(0, 1fr));
-  grid-template-rows: minmax(100px, 1.25fr) repeat(2, minmax(64px, 1fr));
+  grid-template-rows: minmax(88px, 1.1fr) repeat(3, minmax(62px, 0.9fr));
   gap: 8px;
 }
 
 .jt-kpi {
   position: relative;
-  grid-column: span 2;
   display: flex;
   align-items: center;
-  gap: clamp(10px, 2.8cqh, 16px);
+  gap: clamp(8px, 1.8cqh, 14px);
   min-width: 0;
   min-height: 0;
-  padding: clamp(10px, 2.4cqh, 16px) clamp(10px, 3cqh, 18px);
+  padding: clamp(9px, 1.8cqh, 14px) clamp(9px, 2.2cqh, 16px);
   overflow: hidden;
   text-align: left;
   color: inherit;
@@ -231,16 +234,15 @@ const gridStyle = {
 }
 
 .jt-kpi--hero {
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  gap: 7px;
-  padding: 14px 16px;
+  gap: clamp(8px, 2cqh, 13px);
+  padding: 12px 14px;
 }
 
 .jt-kpi--hero .jt-kpi-icon {
-  width: clamp(30px, 12cqh, 42px);
-  height: clamp(30px, 12cqh, 42px);
+  width: clamp(28px, 10cqh, 38px);
+  height: clamp(28px, 10cqh, 38px);
 }
 
 /* Gleiche Box wie der Glyph, groesseres Motiv: der Ueberstand ist der
@@ -263,7 +265,7 @@ const gridStyle = {
 }
 
 .jt-kpi-val {
-  font-size: clamp(16px, 6.3cqh, 23px);
+  font-size: clamp(15px, 5.1cqh, 22px);
   font-weight: 900;
   line-height: 1;
   color: var(--rpg-gold);
@@ -273,7 +275,7 @@ const gridStyle = {
 }
 
 .jt-kpi--hero .jt-kpi-val {
-  font-size: clamp(20px, 8cqh, 32px);
+  font-size: clamp(18px, 7cqh, 28px);
 }
 /* Sieg und Niederlage im Zweiklang der Bottom-Leiste, nebeneinander statt
    gestapelt: hier traegt die Kachel eine Zeile, keine Spalte. Drei Zahlen
@@ -300,7 +302,7 @@ const gridStyle = {
 }
 
 .jt-kpi-lbl {
-  font-size: clamp(10px, 4.2cqh, 12px);
+  font-size: clamp(9px, 3.5cqh, 11px);
   font-weight: 700;
   letter-spacing: 0.1em;
   line-height: 1.1;
@@ -317,20 +319,19 @@ const gridStyle = {
     padding: 13px 15px 14px;
   }
   .jt-kpi-grid {
-    grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
+    grid-template-rows: minmax(76px, 1.05fr) repeat(3, minmax(54px, 0.95fr));
   }
   .jt-kpi {
     gap: 8px;
-    padding: 7px 9px;
+    padding: 7px 8px;
   }
   .jt-kpi--hero {
-    flex-direction: row;
     align-items: center;
     padding: 7px 9px;
   }
   .jt-kpi--hero .jt-kpi-icon {
-    width: 26px;
-    height: 26px;
+    width: 25px;
+    height: 25px;
   }
 }
 </style>
