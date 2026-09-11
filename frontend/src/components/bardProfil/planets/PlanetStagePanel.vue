@@ -50,7 +50,19 @@ const { announceReceipt } = useHerald()
 
 /** Orbit-Wrapper — der Tab-Loop setzt hier pro Frame `--orbit-delay`. */
 const orbitEl = ref<HTMLElement | null>(null)
-defineExpose({ orbitEl })
+
+// Corona und Zündschnur: pro Frame vom Tab-Loop beschrieben, nie über Vue.
+const eclipseArcEl = ref<SVGCircleElement | null>(null)
+const eclipseBeadEl = ref<HTMLElement | null>(null)
+const eclipseFuseEl = ref<HTMLElement | null>(null)
+
+function paintEclipse(progress: number) {
+  if (eclipseArcEl.value) eclipseArcEl.value.style.strokeDashoffset = String(1 - progress)
+  if (eclipseBeadEl.value) eclipseBeadEl.value.style.transform = `rotate(${progress * 360}deg)`
+  if (eclipseFuseEl.value) eclipseFuseEl.value.style.transform = `scaleX(${progress})`
+}
+
+defineExpose({ orbitEl, paintEclipse })
 
 /** Endphase: der Stern ist kollabiert, statt der Plasmascheibe steht hier das
  *  Schwarze Loch — mit demselben Footprint, damit der Planet weiter dahinter
@@ -342,19 +354,32 @@ const configTarget = computed(() => {
             <span class="ps-down-secs">{{ downSecsLeft }}<i>s</i></span>
           </div>
 
-          <!-- Eclipse medallion — same emblem and same source of truth as the
-               Command Panel's, sitting on the sun's face because the planet
-               itself is occluded while this shows. Deliberately without a
-               transition: the Command Panel switches its medallion instantly,
-               and a fade here would make this one linger behind it.
-               A destroyed planet suppresses it: it isn't in orbit at all,
-               so "behind the sun" would be the wrong story. -->
+          <!-- Eclipse-Corona: der Ring schließt sich, während der Planet verdeckt
+               quert, die Perle ist er selbst. Ohne Transition — synchron zum
+               Medaillon im Command Panel. -->
           <span
             v-if="orbitBehind && !down"
             class="ps-eclipse-medal"
             title="Behind the Sun — out of reach"
           >
-            <Icon icon="game-icons:eclipse-flare" width="104" height="104" />
+            <span class="ps-eclipse-halo" aria-hidden="true" />
+            <svg class="ps-eclipse-ring" viewBox="0 0 100 100" aria-hidden="true">
+              <circle class="ps-eclipse-ring-track" cx="50" cy="50" r="46" pathLength="1" />
+              <circle
+                ref="eclipseArcEl"
+                class="ps-eclipse-ring-arc"
+                cx="50"
+                cy="50"
+                r="46"
+                pathLength="1"
+              />
+            </svg>
+            <span ref="eclipseBeadEl" class="ps-eclipse-bead-orbit" aria-hidden="true">
+              <span class="ps-eclipse-bead" />
+            </span>
+            <span class="ps-eclipse-disc">
+              <Icon icon="game-icons:eclipse-flare" width="104" height="104" />
+            </span>
           </span>
         </div>
 
@@ -460,32 +485,6 @@ const configTarget = computed(() => {
           </div>
         </div>
       </div>
-
-      <!-- Status banner — states why the readout is dimmed and the
-           Level-Up button is locked. Lives in the free space between the
-           readout and the action dock, so nothing above it shifts.
-           Destruction outranks the eclipse: it is the harder state and
-           the one with a timer attached. -->
-      <div v-if="down" class="ps-eclipse-banner ps-eclipse-banner--down">
-        <span class="ps-eclipse-banner-line" aria-hidden="true" />
-        <div class="ps-eclipse-banner-core">
-          <span class="ps-eclipse-banner-title">✦ Planet Destroyed ✦</span>
-          <span class="ps-eclipse-banner-sub">
-            Rebuilding — returns at full HP in {{ downSecsLeft }}s
-          </span>
-        </div>
-        <span class="ps-eclipse-banner-line ps-eclipse-banner-line--right" aria-hidden="true" />
-      </div>
-      <Transition v-else name="ps-eclipse-fade">
-        <div v-if="orbitBehind" class="ps-eclipse-banner">
-          <span class="ps-eclipse-banner-line" aria-hidden="true" />
-          <div class="ps-eclipse-banner-core">
-            <span class="ps-eclipse-banner-title">✦ Behind the Sun ✦</span>
-            <span class="ps-eclipse-banner-sub">Out of reach until it comes back around</span>
-          </div>
-          <span class="ps-eclipse-banner-line ps-eclipse-banner-line--right" aria-hidden="true" />
-        </div>
-      </Transition>
     </div>
 
     <!-- Action dock — pinned to the stage bottom so the sun stays centered.
@@ -546,6 +545,10 @@ const configTarget = computed(() => {
             </template>
           </span>
         </button>
+        <!-- Geschwister statt Kind: Opacity und Grayscale des gesperrten Knopfs trüben sie nicht. -->
+        <span v-if="orbitBehind && !down" class="ps-eclipse-fuse" aria-hidden="true">
+          <span ref="eclipseFuseEl" class="ps-eclipse-fuse-fill" />
+        </span>
         <span v-if="maxAffordableCount > 0 && !levelUpBlocked" class="ps-buy-badge" aria-hidden="true">{{
           maxAffordableCount
         }}</span>
@@ -690,7 +693,9 @@ const configTarget = computed(() => {
   font-size: clamp(1.15rem, 1.9vh, 1.6rem);
 }
 
+/* Chime-Höhe als Boden: ohne Bild ist die Zeile sonst knapp flacher. */
 .ps-hero-buy .ps-level-btn-cost {
+  min-height: clamp(19px, 2.5vh, 25px);
   font-size: clamp(1rem, 1.5vh, 1.22rem);
 }
 
@@ -947,141 +952,138 @@ const configTarget = computed(() => {
   filter: grayscale(70%);
 }
 
-/* Banner in Rot statt Gold — Verlust, nicht bloß Pause */
-.ps-eclipse-banner--down .ps-eclipse-banner-line {
-  background: linear-gradient(to right, transparent, rgba(224, 128, 112, 0.7));
-  box-shadow: 0 0 8px rgba(204, 96, 80, 0.4);
-}
-
-.ps-eclipse-banner--down .ps-eclipse-banner-line--right {
-  background: linear-gradient(to left, transparent, rgba(224, 128, 112, 0.7));
-}
-
-.ps-eclipse-banner--down .ps-eclipse-banner-title {
-  color: #ffd0c0;
-  text-shadow:
-    0 0 16px rgba(224, 128, 112, 0.8),
-    0 0 36px rgba(168, 64, 44, 0.45),
-    0 2px 3px rgba(0, 0, 0, 0.95);
-}
-
-.ps-eclipse-banner--down .ps-eclipse-banner-sub {
-  color: rgba(240, 176, 160, 0.75);
-}
-
 .ps-down-icon {
   animation-name: ps-down-icon-pulse;
 }
 
-/* ── Eclipse — planet passing behind the sun, in sync with the idle orbit ───── */
-/* Medallion sits on the sun's face: the planet itself is fully occluded while
-   this shows. Same emblem and framing as rsq-eclipse / tbh-eclipse / sf-eclipse-medal. */
+/* ── Eclipse-Corona — Planet hinter der Sonne, im Takt des Idle-Orbits ──────── */
 .ps-eclipse-medal {
   position: absolute;
   left: 50%;
   top: 50%;
   z-index: 4;
   transform: translate(-50%, -50%);
-  /* Deutlich auf der Sonnenscheibe: gut halb so breit wie der Sonnenkern, damit
-     das Medaillon auf Full HD wie auf 4K sofort ins Auge fällt. */
   width: min(168px, 52cqmin);
   height: min(168px, 52cqmin);
+  pointer-events: none;
+}
+
+.ps-eclipse-medal > * {
+  position: absolute;
+}
+
+/* Eigene Ebene fürs Atmen: statischer Schein, nur die Deckkraft fährt. */
+.ps-eclipse-halo {
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(232, 192, 64, 0.34) 0%,
+    rgba(232, 150, 30, 0.14) 46%,
+    transparent 70%
+  );
+  animation: ps-eclipse-breathe 1.6s ease-in-out infinite alternate;
+}
+
+.ps-eclipse-ring {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform: rotate(-90deg);
+}
+
+/* Dunkle Rinne unter dem Bogen — sonst verschwindet Gold auf der hellen Sonne. */
+.ps-eclipse-ring-track {
+  fill: none;
+  stroke: rgba(17, 16, 8, 0.72);
+  stroke-width: 7;
+}
+
+/* Kein filter: der Bogen wird pro Frame neu gezeichnet. */
+.ps-eclipse-ring-arc {
+  fill: none;
+  stroke: #e8c040;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.ps-eclipse-bead-orbit {
+  inset: 0;
+  will-change: transform;
+}
+
+/* Sitzt auf der Mittellinie des Rings (r 46 von 50 → 4 % vom Rand). */
+.ps-eclipse-bead {
+  position: absolute;
+  top: 4%;
+  left: 50%;
+  width: 10%;
+  height: 10%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--rc, #e8c040) 55%, #fff),
+    var(--rc, #e8c040) 70%
+  );
+  box-shadow:
+    0 0 0 2px #111008,
+    0 0 10px color-mix(in srgb, var(--rc, #e8c040) 70%, transparent);
+}
+
+.ps-eclipse-disc {
+  inset: 14%;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(38, 26, 8, 0.96), rgba(10, 7, 3, 0.96));
-  border: 4px solid #5c3310;
+  background: radial-gradient(circle at 35% 30%, #261a08, #0a0703);
+  border: 2px solid #7a4e20;
   box-shadow:
-    0 0 0 3px rgba(200, 144, 64, 0.4),
-    0 0 44px rgba(232, 192, 64, 0.45),
+    inset 0 0 0 2px #3e200a,
     0 6px 20px rgba(0, 0, 0, 0.75);
   color: #e8c040;
+}
+
+.ps-eclipse-disc :deep(svg) {
+  width: min(88px, 27cqmin);
+  height: min(88px, 27cqmin);
+  filter: drop-shadow(0 0 12px rgba(232, 192, 64, 0.6));
+}
+
+/* Zündschnur über der Unterkante des gesperrten Level-Up-Knopfs. */
+.ps-eclipse-fuse {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  z-index: 1;
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(232, 192, 64, 0.18);
   pointer-events: none;
-  animation: ps-eclipse-breathe 1.6s ease-in-out infinite alternate;
 }
 
-.ps-eclipse-medal :deep(svg) {
-  width: min(104px, 32cqmin);
-  height: min(104px, 32cqmin);
-  filter: drop-shadow(0 0 14px rgba(232, 192, 64, 0.65));
+.ps-eclipse-fuse-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(to right, #b8860f, #ffe9a0);
+  transform: scaleX(0);
+  transform-origin: left;
+  will-change: transform;
 }
 
-/* Readout recedes while the planet is out of reach — dimmed, never unreadable,
-   so the player can still compare values during the eclipse. */
+/* Gedimmt, nie unlesbar — nur `opacity` fährt, wie an den Instrumentenspalten. */
 .ps-planet-readout--eclipsed {
   opacity: 0.62;
-  filter: saturate(70%);
-  transition:
-    opacity 320ms ease,
-    filter 320ms ease;
-}
-
-/* Banner in the free space between readout and action dock — states why the
-   readout is dimmed and the button is locked. Same language as the Star Fight. */
-.ps-eclipse-banner {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: min(520px, 92%);
-  margin-top: clamp(8px, 1.6vh, 20px);
-}
-
-.ps-eclipse-banner-line {
-  flex: 1;
-  height: 2px;
-  background: linear-gradient(to right, transparent, rgba(232, 192, 64, 0.65));
-  box-shadow: 0 0 8px rgba(232, 192, 64, 0.35);
-}
-
-.ps-eclipse-banner-line--right {
-  background: linear-gradient(to left, transparent, rgba(232, 192, 64, 0.65));
-}
-
-.ps-eclipse-banner-core {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-}
-
-.ps-eclipse-banner-title {
-  font-size: clamp(0.95rem, 1.7vh, 1.25rem);
-  font-weight: 900;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: #ffe9b0;
-  text-shadow:
-    0 0 16px rgba(255, 210, 90, 0.75),
-    0 0 36px rgba(232, 150, 30, 0.4),
-    0 2px 3px rgba(0, 0, 0, 0.95);
-  animation: ps-eclipse-breathe 1.6s ease-in-out infinite alternate;
-}
-
-.ps-eclipse-banner-sub {
-  font-size: clamp(0.6rem, 1vh, 0.72rem);
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: rgba(232, 192, 64, 0.62);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
-}
-
-/* Nur das Erscheinen darf weich sein. Beim Verlassen der Sonne muss das Banner
-   im selben Frame gehen wie das Medaillon (das gar keine Transition hat) —
-   ein Fade-Out ließe es hinter dem wieder auftauchenden Planeten zurückhängen. */
-.ps-eclipse-fade-enter-active {
-  transition: opacity 0.28s ease;
-}
-
-.ps-eclipse-fade-enter-from {
-  opacity: 0;
+  transition: opacity 320ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ps-eclipse-medal,
-  .ps-eclipse-banner-title {
+  .ps-eclipse-halo {
     animation: none;
   }
 }
@@ -1201,7 +1203,11 @@ const configTarget = computed(() => {
   box-shadow: none;
 }
 
+/* inline-flex: Preflight macht das Icon zum Block — es bräche sonst die Zeile und der Knopf wüchse. */
 .ps-level-btn-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
   font-size: clamp(1.02rem, 1.5vh, 1.28rem);
   font-weight: 800;
   letter-spacing: 0.08em;
