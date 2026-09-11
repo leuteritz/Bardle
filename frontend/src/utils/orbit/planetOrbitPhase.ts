@@ -121,6 +121,12 @@ export function orbitEclipsePhase(
   return fg + (1 - fg) * ((travelled - foregroundArc) / behindArc)
 }
 
+/** Keyframe-Phase → Fortschritt durch die Verdeckung: 0 beim Eintauchen, 1 beim Austritt. */
+export function eclipseProgressOfPhase(phase: number): number {
+  const fg = PLANET_TAB_ORBIT_FOREGROUND_PROGRESS
+  return Math.max(0, Math.min(1, (phase - fg) / (1 - fg)))
+}
+
 /** Auflösung der Periodenintegration — 0,5° je Schritt. */
 const TIMING_STEPS = 720
 

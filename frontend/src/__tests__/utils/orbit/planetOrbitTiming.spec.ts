@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  eclipseProgressOfPhase,
   orbitArcs,
   orbitEclipsePhase,
   orbitOrderedSlots,
@@ -7,7 +8,11 @@ import {
   planetOrbitTiming,
 } from '@/utils/orbit/planetOrbitPhase'
 import { planetOrbitSpeedMultiplier } from '@/stores/world/planetShopStore'
-import { ORBIT_TIERS, PLANET_SLOT_CONFIG } from '@/config/constants'
+import {
+  ORBIT_TIERS,
+  PLANET_SLOT_CONFIG,
+  PLANET_TAB_ORBIT_FOREGROUND_PROGRESS,
+} from '@/config/constants'
 
 const TWO_PI = Math.PI * 2
 
@@ -37,6 +42,36 @@ describe('orbitArcs — die zwei Bögen einer Bahn', () => {
     const arcs = orbitArcs(ratio, tiltRad)!
     const angleAtExit = arcs.psiExit - arcs.phaseShift
     expect(orbitEclipsePhase(angleAtExit, 1, ratio, tiltRad)).toBeCloseTo(0, 6)
+  })
+})
+
+describe('eclipseProgressOfPhase — der Corona-Ring auf der Sonne', () => {
+  const fg = PLANET_TAB_ORBIT_FOREGROUND_PROGRESS
+
+  it('läuft über den verdeckten Keyframe-Bereich von 0 auf 1', () => {
+    expect(eclipseProgressOfPhase(fg)).toBe(0)
+    expect(eclipseProgressOfPhase((fg + 1) / 2)).toBeCloseTo(0.5, 9)
+    expect(eclipseProgressOfPhase(1)).toBe(1)
+  })
+
+  it('bleibt im Vordergrund auf 0 statt negativ zu werden', () => {
+    expect(eclipseProgressOfPhase(0)).toBe(0)
+    expect(eclipseProgressOfPhase(fg / 2)).toBe(0)
+  })
+
+  it('wächst über den verdeckten Bogen monoton — der Ring springt nie zurück', () => {
+    for (const { ratio, tiltRad } of TIERS) {
+      const arcs = orbitArcs(ratio, tiltRad)!
+      const entry = arcs.psiExit + arcs.foregroundArc - arcs.phaseShift
+      let prev = -1
+      for (let i = 1; i < 100; i++) {
+        const angle = entry + (arcs.behindArc * i) / 100
+        const p = eclipseProgressOfPhase(orbitEclipsePhase(angle, 1, ratio, tiltRad))
+        expect(p).toBeGreaterThan(prev)
+        prev = p
+      }
+      expect(prev).toBeGreaterThan(0.98)
+    }
   })
 })
 

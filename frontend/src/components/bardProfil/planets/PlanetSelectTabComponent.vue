@@ -133,6 +133,7 @@ const { orbitBehind, isSlotEclipsed, orbitPhaseStyle } = usePlanetTabOrbit(
   selectedSlotId,
   () => stageRef.value?.orbitEl ?? null,
   isVisible,
+  (progress) => stageRef.value?.paintEclipse(progress),
 )
 
 // ── Gemeinsame Uhr für alle Countdowns (Buff-Dauer, Respawn) ───────────────

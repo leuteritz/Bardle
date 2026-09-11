@@ -9,6 +9,7 @@ import type { Ref } from 'vue'
 import { usePlanetShopStore, isPlanetDown } from '@/stores/world/planetShopStore'
 import type { PlanetSlot } from '@/stores/world/planetShopStore'
 import {
+  eclipseProgressOfPhase,
   initialOrbitAngle,
   orbitEclipsePhase,
   orbitOrderedSlots,
@@ -30,11 +31,13 @@ function orbitDelayFor(progress: number): string {
  *                        dem ersten Öffnen gemountet (siehe BardProfileMenu) — ohne
  *                        dieses Signal liefe die Schleife für immer weiter und
  *                        schriebe 60-mal pro Sekunde an ein unsichtbares Element.
+ * @param paintEclipse    Fortschritt 0 … 1 durch die Verdeckung, pro Frame, nur hinter der Sonne.
  */
 export function usePlanetTabOrbit(
   selectedSlotId: Ref<string | null>,
   getOrbitEl: () => HTMLElement | null,
   isActive: Ref<boolean>,
+  paintEclipse: (progress: number) => void,
 ) {
   const store = usePlanetShopStore()
 
@@ -96,13 +99,15 @@ export function usePlanetTabOrbit(
     const slotId = selectedSlotId.value
     // Direkt aufs Element statt über einen ref: 60 Re-Renders pro Sekunde dieser
     // großen Komponente nur für eine CSS-Variable wären Verschwendung.
-    getOrbitEl()?.style.setProperty('--orbit-delay', orbitDelayFor(orbitProgressOf(slotId)))
+    const phase = orbitProgressOf(slotId)
+    getOrbitEl()?.style.setProperty('--orbit-delay', orbitDelayFor(phase))
 
     // Das Medaillon hängt an EXAKT derselben Quelle wie das im Command Panel —
     // dieselbe Positions-Map, im selben rAF-Takt gelesen. Ein eigener Nachbau der
     // Schwelle würde unweigerlich wieder auseinanderlaufen.
     const behind = slotId !== null && !playerSlotInForeground(slotId)
     if (orbitBehind.value !== behind) orbitBehind.value = behind
+    if (behind) paintEclipse(eclipseProgressOfPhase(phase))
 
     // Im gleichen Frame wie die Bühne — sonst hinkte die Sidebar hinterher.
     syncEclipsedSlots()
