@@ -26,9 +26,7 @@
            belongs to no single zone — it stands over the sections it filters.
            Outside the transition below (`out-in`: what unmounts on every domain
            swap jumps) and without a `v-if`: the field has to stand exactly when
-           nothing was found. One row — the field takes what the two buttons
-           leave over, and below SHOP_HERO_LABEL_MIN_W they leave more by
-           dropping their labels. -->
+           nothing was found. The field IS the row; collapse-all sits inside it. -->
       <div class="cs-search-hero" role="search" aria-label="Search the shop">
         <div class="cs-search-row">
           <RpgSearchBar
@@ -45,27 +43,28 @@
                 {{ domainHitCount }}
               </span>
             </template>
+            <template v-if="canCollapseAll && !domainNarrowed" #actions>
+              <!-- mousedown.prevent: a click must not pull focus out of the query -->
+              <button
+                type="button"
+                class="cs-hero-btn"
+                :class="{ 'cs-hero-btn--on': allTiersCollapsed }"
+                v-tip="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
+                :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
+                @mousedown.prevent
+                @click="toggleAllTiers"
+              >
+                <Icon
+                  :icon="allTiersCollapsed ? 'lucide:list-tree' : 'lucide:list-collapse'"
+                  width="17"
+                  height="17"
+                />
+                <span class="cs-hero-btn-label">
+                  {{ allTiersCollapsed ? 'Expand all' : 'Collapse all' }}
+                </span>
+              </button>
+            </template>
           </RpgSearchBar>
-
-          <!-- Both carry a `v-tip`: labelless they have nothing else to say what
-             they do. -->
-          <button
-            v-if="canCollapseAll && !domainNarrowed"
-            class="cs-hero-btn"
-            :class="{ 'cs-hero-btn--on': allTiersCollapsed }"
-            v-tip="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
-            :aria-label="allTiersCollapsed ? 'Expand all sections' : 'Collapse all sections'"
-            @click="toggleAllTiers"
-          >
-            <Icon
-              :icon="allTiersCollapsed ? 'lucide:list-tree' : 'lucide:list-collapse'"
-              width="17"
-              height="17"
-            />
-            <span class="cs-hero-btn-label">
-              {{ allTiersCollapsed ? 'Expand all' : 'Collapse all' }}
-            </span>
-          </button>
         </div>
 
         <div
@@ -2314,28 +2313,26 @@ export default defineComponent({
   width: 100%;
   min-height: v-bind(heroBarHeightPx);
 }
-/* Takes whatever the two buttons leave over — that is the point of the row. */
 .cs-hero-field {
   flex: 1;
   min-width: 0;
 }
-/* Square and labelless by default: a label costs ~78px a button, which the Full
-   HD column (636) cannot pay and the 2K one (930) can. Lower than the field so
-   the search stays the subject of the row. */
+/* A key set into the field. Square on Full HD: its label would push the query
+   under SHOP_HERO_FIELD_MIN_W. */
 .cs-hero-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: 1px solid #5c3310;
-  border-radius: var(--bp-radius);
-  background: #16120a;
+  border-radius: 4px;
+  background: #141410;
   color: #c89040;
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2349,23 +2346,19 @@ export default defineComponent({
 .cs-hero-btn-label {
   display: none;
 }
-/* Labelless the glyph carries the whole button on its own, so it gets the size
-   of one. (The chevron pair this used to draw collapsed into a cross at that
-   size — next to the field's own clear button that read as a second X.) */
 .cs-hero-btn svg {
   width: 22px;
   height: 22px;
 }
-/* 760 = SHOP_HERO_LABEL_MIN_W, which only MIRRORS this number: a container query
-   condition takes no custom property, so the literal is the source. */
+/* 760 = SHOP_HERO_LABEL_MIN_W; a container query takes no custom property. */
 @container cs-grid (min-width: 760px) {
   .cs-hero-btn {
     width: auto;
     padding: 0 13px;
   }
   .cs-hero-btn svg {
-    width: 17px;
-    height: 17px;
+    width: 18px;
+    height: 18px;
   }
   .cs-hero-btn-label {
     display: inline;
@@ -2375,6 +2368,10 @@ export default defineComponent({
   color: #e8c060;
   background: #221408;
   border-color: #7a4e20;
+}
+.cs-hero-btn:focus-visible {
+  outline: 1px solid #c89040;
+  outline-offset: 1px;
 }
 .cs-hero-btn--on {
   color: #e8c040;
