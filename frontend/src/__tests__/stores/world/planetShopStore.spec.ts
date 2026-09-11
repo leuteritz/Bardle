@@ -13,6 +13,7 @@ import {
   harvestIntervalTicks,
   planetOrbitSpeedMultiplier,
   isPlanetDown,
+  planPlanetBuyAll,
 } from '@/stores/world/planetShopStore'
 import type { PlanetRoleType } from '@/stores/world/planetShopStore'
 import { useGameStore } from '@/stores/core/gameStore'
@@ -267,6 +268,102 @@ describe('planetShopStore — Attunement leveling', () => {
     })
   })
 
+  // ─── Buy All ───────────────────────────────────────────────────────────────
+  describe('buy all', () => {
+    function setup(phase = 6, chimes = 1e12, levels = [1, 1, 1]) {
+      const store = usePlanetShopStore()
+      const game = useGameStore()
+      const solar = useSolarUpgradeStore()
+      const slots = levels.map((level, i) => {
+        const slot = store.slots[i]
+        slot.purchased = true
+        slot.role = 'turret_planet'
+        slot.level = level
+        slot.maxHp = computePlanetMaxHp(level)
+        slot.currentHp = slot.maxHp
+        slot.downUntilMs = 0
+        return slot
+      })
+      solar.starPhase = phase
+      game.chimes = chimes
+      return { store, game, slots }
+    }
+
+    const all = () => true
+    const cheapestOpen = (slots: { baseCost: number; level: number }[], phase: number) =>
+      Math.min(
+        ...slots
+          .filter((s) => phase >= planetLevelRequiredPhase(s.level + 1))
+          .map((s) => planetLevelUpCost(s)),
+      )
+
+    it('buys the cheapest next level first, across planets', () => {
+      const { store, slots } = setup(6, 60_000)
+      const plan = planPlanetBuyAll(store.slots, 60_000, 6, all)
+      expect(plan.count).toBeGreaterThan(0)
+      expect(plan.cost).toBeLessThanOrEqual(60_000)
+      // Greedy-Abbruch: das billigste offene Level passt nicht mehr in den Rest.
+      const after = slots.map((s) => ({
+        baseCost: s.baseCost,
+        level: s.level + (plan.levels[s.id] ?? 0),
+      }))
+      expect(cheapestOpen(after, 6)).toBeGreaterThan(60_000 - plan.cost)
+      // Der billigste Slot bekommt mehr Level als der teuerste.
+      expect(plan.levels[slots[0].id]).toBeGreaterThan(plan.levels[slots[2].id] ?? 0)
+    })
+
+    it('buyAllPlanetLevels gains exactly the plan and spends exactly its cost', () => {
+      const { store, game, slots } = setup(6, 60_000)
+      const plan = store.planBuyAllLevels(all)
+      const { gained, levels } = store.buyAllPlanetLevels()
+      expect(gained).toBe(plan.count)
+      expect(levels).toEqual(plan.levels)
+      expect(game.chimes).toBe(60_000 - plan.cost)
+      for (const s of slots) expect(s.maxHp).toBe(computePlanetMaxHp(s.level))
+    })
+
+    it('skips destroyed planets', () => {
+      const { store, slots } = setup()
+      slots[0].downUntilMs = Date.now() + PLANET_RESPAWN_MS
+      const plan = store.planBuyAllLevels(all)
+      expect(plan.levels[slots[0].id]).toBeUndefined()
+      expect(plan.levels[slots[1].id]).toBeGreaterThan(0)
+    })
+
+    it('skips planets the predicate marks out of reach', () => {
+      const { store, slots } = setup()
+      const plan = store.planBuyAllLevels((s) => s.id !== slots[1].id)
+      expect(plan.levels[slots[1].id]).toBeUndefined()
+      expect(plan.levels[slots[0].id]).toBeGreaterThan(0)
+    })
+
+    it('respects the phase gate', () => {
+      const { store, slots } = setup(0, 1e12)
+      const plan = store.planBuyAllLevels(all)
+      for (const s of slots) {
+        expect(s.level + (plan.levels[s.id] ?? 0)).toBe(PLANET_LEVELS_PER_PHASE)
+      }
+      expect(plan.block).toBe('phase')
+      expect(plan.nextPhase).toBe(1)
+    })
+
+    it('names why nothing is buyable', () => {
+      expect(setup(6, 0).store.planBuyAllLevels(all)).toMatchObject({ count: 0, block: 'chimes' })
+      const broke = usePlanetShopStore().planBuyAllLevels(all)
+      expect(broke.nextCost).toBe(planetLevelUpCost({ baseCost: 100, level: 1 }))
+      expect(usePlanetShopStore().planBuyAllLevels(() => false)).toMatchObject({
+        count: 0,
+        block: 'reach',
+      })
+    })
+
+    it('levelUpPlanetTimes still levels one planet only', () => {
+      const { store, slots } = setup()
+      expect(store.levelUpPlanetTimes(slots[1].id, 3)).toBe(3)
+      expect(slots.map((s) => s.level)).toEqual([1, 4, 1])
+    })
+  })
+
   // ─── Destruction + respawn ─────────────────────────────────────────────────
   describe('destroyed planets', () => {
     function armed(role: PlanetRoleType = 'turret_planet', level = 3) {
@@ -482,8 +579,7 @@ describe('planetShopStore — Bahntempo je Attunement', () => {
   })
 
   it('erreicht den Deckel auf einem erreichbaren Level', () => {
-    const capLevel =
-      1 + Math.ceil((PLANET_ORBIT_SPEED_MAX_MULT - 1) / PLANET_ORBIT_SPEED_PER_LEVEL)
+    const capLevel = 1 + Math.ceil((PLANET_ORBIT_SPEED_MAX_MULT - 1) / PLANET_ORBIT_SPEED_PER_LEVEL)
     expect(planetOrbitSpeedMultiplier(capLevel)).toBe(PLANET_ORBIT_SPEED_MAX_MULT)
     expect(planetOrbitSpeedMultiplier(capLevel - 1)).toBeLessThan(PLANET_ORBIT_SPEED_MAX_MULT)
     // Sonst wäre die Achse abgeschnitten statt gedeckelt.

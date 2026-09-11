@@ -1,5 +1,10 @@
 import { useHerald } from '@/composables/ui/useHerald'
-import { usePlanetShopStore } from '@/stores/world/planetShopStore'
+import { usePlanetShopStore, PLANET_ROLES } from '@/stores/world/planetShopStore'
+import {
+  PLANET_BUY_ALL_HERALD,
+  PLANET_BUY_ALL_UNIT,
+  PLANET_BUY_ALL_UNIT_ONE,
+} from '@/config/constants'
 
 /**
  * Ein Orbit-Slot wird an DREI Knöpfen gekauft — in der Planetenleiste des
@@ -30,5 +35,24 @@ export function useOrbitSlotHerald() {
     return true
   }
 
-  return { buyOrbitSlot }
+  /** Sammelkauf aus Planetenleiste und Header-Tooltip — EIN Wortlaut für beide. */
+  function buyAllPlanetLevels(): number {
+    const { gained, levels } = planetShopStore.buyAllPlanetLevels()
+    if (gained === 0) return 0
+    const ids = Object.keys(levels)
+    const top = ids.reduce((a, b) => (levels[b] > levels[a] ? b : a))
+    const role = planetShopStore.getSlot(top)?.role
+    announceReceipt({
+      kind: 'levelup',
+      eyebrow: 'ORBIT',
+      headline: PLANET_BUY_ALL_HERALD,
+      subline: ids.length === 1 ? 'Across 1 planet' : `Across ${ids.length} planets`,
+      portraitSrc: role ? PLANET_ROLES[role].image : undefined,
+      delta: { value: gained, unit: PLANET_BUY_ALL_UNIT, unitOne: PLANET_BUY_ALL_UNIT_ONE },
+      mergeKey: 'levelup/planet/all',
+    })
+    return gained
+  }
+
+  return { buyOrbitSlot, buyAllPlanetLevels }
 }

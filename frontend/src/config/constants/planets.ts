@@ -761,12 +761,11 @@ export const PLANET_ROLES: Record<PlanetRoleType, PlanetRole> = {
  * ein blasser Knopf. Was von Anfang an läuft (Drifter, Sonne, Material,
  * Champions) steht hier bewusst nicht.
  */
-export const PLANET_ROLE_UNLOCK: Partial<
-  Record<PlanetRoleType, { level: number; label: string }>
-> = {
-  omen_scryer: { level: OMEN_UNLOCK_LEVEL, label: 'Omens' },
-  void_bastion: { level: VOID_UNLOCK_LEVEL, label: 'The Void' },
-}
+export const PLANET_ROLE_UNLOCK: Partial<Record<PlanetRoleType, { level: number; label: string }>> =
+  {
+    omen_scryer: { level: OMEN_UNLOCK_LEVEL, label: 'Omens' },
+    void_bastion: { level: VOID_UNLOCK_LEVEL, label: 'The Void' },
+  }
 
 export const PLANET_ROLES_LIST: PlanetRole[] = Object.values(PLANET_ROLES)
 
@@ -921,6 +920,19 @@ export const PLANET_TAB_RAIL_CLOSE_TITLE = 'Hide planets'
  * senkrechtem Goldverlauf und zwei Glows, die Eigensprache dieses Reiters.
  */
 export const PLANET_TAB_RAIL_SEAM_WIDTH = 2
+
+// ── Buy All (PlanetBuyAllBar.vue) ────────────────────────────────────────────
+export const PLANET_BUY_ALL_LABEL = 'Buy All'
+export const PLANET_BUY_ALL_UNIT = 'levels'
+export const PLANET_BUY_ALL_UNIT_ONE = 'level'
+export const PLANET_BUY_ALL_TIP = 'Level up every planet in reach — cheapest levels first'
+export const PLANET_BUY_ALL_NEXT = 'Next level'
+export const PLANET_BUY_ALL_PHASE = 'Needs Sun Phase'
+export const PLANET_BUY_ALL_REACH = 'Planets out of reach'
+export const PLANET_BUY_ALL_HERALD = 'Planets leveled up'
+export const PLANET_BUY_ALL_ICON_SIZE = 24
+/** Rein visuell, daher reale Zeit. */
+export const PLANET_BUY_ALL_FLASH_MS = 420
 
 // ── Planet glyph (PlanetGlyph.vue) ───────────────────────────────────────────
 /**
