@@ -3,6 +3,7 @@
 import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { highlightSegments } from '@/utils/ui/searchHighlight'
+import { SEARCH_BAR_ICON_PX, SHOP_HERO_BAR_H } from '@/config/constants'
 import type { ShopFacetGroup } from '@/types'
 
 type ShopDomain = 'champions' | 'items'
@@ -82,14 +83,23 @@ const setCounts = computed<Record<string, number>>(() =>
 const activeTotal = computed(
   () => Object.values(setCounts.value).reduce((a, b) => a + b, 0) + (props.affordableOnly ? 1 : 0),
 )
+
+const heroBarHeightPx = `${SHOP_HERO_BAR_H}px`
 </script>
 
 <template>
   <aside class="cs-facets">
     <div class="cs-facets-grip" role="heading" aria-level="2">
-      <Icon icon="lucide:sliders-horizontal" width="20" height="20" />
-      <span class="cs-facets-grip-label">Filters</span>
-      <span v-if="activeTotal" class="cs-facets-grip-count">{{ activeTotal }}</span>
+      <div class="cs-facets-field" :class="{ 'cs-facets-field--active': activeTotal > 0 }">
+        <Icon
+          icon="lucide:sliders-horizontal"
+          :width="SEARCH_BAR_ICON_PX.lg"
+          :height="SEARCH_BAR_ICON_PX.lg"
+          class="cs-facets-field-icon"
+        />
+        <span class="cs-facets-grip-label">Filters</span>
+        <span v-if="activeTotal" class="cs-facets-grip-count">{{ activeTotal }}</span>
+      </div>
     </div>
 
     <!-- The domain sits above the divider, not inside a group: every facet
@@ -235,34 +245,62 @@ const activeTotal = computed(
   background: rgba(18, 16, 10, var(--cs-veil, 1));
   border-right: 2px solid #5c3310;
 }
+/* Mirrors `.cs-search-hero`: content-box so the rule sits below the 77px row, as it does there. */
 .cs-facets-grip {
   display: flex;
   align-items: center;
-  gap: 10px;
   flex-shrink: 0;
-  height: 50px;
-  padding: 0 14px;
-  background: #1e1006;
-  border: none;
-  border-bottom: 2px solid #5c3310;
-  color: #c89040;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  box-sizing: content-box;
+  min-height: v-bind(heroBarHeightPx);
+  padding: 0 12px;
+  background: #1a1008;
+  border-bottom: 1px solid #5c3310;
+}
+/* The search field's twin (`.sb--lg`), so both heads read as one band. */
+.cs-facets-field {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex: 1;
+  min-width: 0;
+  height: 56px;
+  padding: 0 14px 0 16px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #5c3310;
+  border-radius: var(--bp-radius);
+  transition: border-color 0.2s;
+}
+.cs-facets-field-icon {
+  flex-shrink: 0;
+  color: #8a6030;
+  transition: color 0.2s;
 }
 .cs-facets-grip-label {
   flex: 1;
+  min-width: 0;
+  color: #c89040;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   text-align: left;
+  transition: color 0.2s;
 }
 .cs-facets-grip-count {
-  min-width: 24px;
+  flex-shrink: 0;
+  min-width: 26px;
   color: #e8c040;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 900;
   line-height: 1;
-  letter-spacing: 0;
   text-align: right;
+}
+.cs-facets-field--active {
+  border-color: #7a4e20;
+}
+.cs-facets-field--active .cs-facets-field-icon,
+.cs-facets-field--active .cs-facets-grip-label {
+  color: #e8c040;
 }
 
 /* ── Domain ──
