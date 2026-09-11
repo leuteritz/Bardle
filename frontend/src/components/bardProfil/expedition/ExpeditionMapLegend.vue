@@ -50,6 +50,7 @@ import {
   VOYAGE_MAP_LEGEND_LABEL_OFFSET,
   VOYAGE_MAP_LEGEND_R_RATIO,
   VOYAGE_MAP_LEGEND_ROWS,
+  VOYAGE_MAP_DRIFTER_LEGEND_IMAGE,
 } from '@/config/constants'
 
 const props = defineProps<{
@@ -80,6 +81,7 @@ function paint(size: number): void {
   const dpr = Math.max(1, Math.min(props.dpr || 1, 2))
   const r = roundLandmarkRadius(size / VOYAGE_MAP_LEGEND_R_RATIO)
   VOYAGE_MAP_LEGEND_ROWS.forEach((row, i) => {
+    if (row.kind === 'drifter-trace') return
     const el = probes.value[i]
     if (!el) return
     el.width = Math.round(size * dpr)
@@ -146,7 +148,11 @@ watch(
       :data-kind="row.kind"
       v-tip="{ label: row.label, text: row.tip }"
     >
+      <span v-if="row.kind === 'drifter-trace'" class="eml-art-probe" aria-hidden="true">
+        <img :src="VOYAGE_MAP_DRIFTER_LEGEND_IMAGE" alt="" draggable="false" />
+      </span>
       <canvas
+        v-else
         :ref="(el) => (probes[i] = el as HTMLCanvasElement | null)"
         class="eml-probe"
         aria-hidden="true"
@@ -198,6 +204,25 @@ watch(
   flex: none;
   width: v-bind(iconSize);
   height: v-bind(iconSize);
+}
+
+.eml-art-probe {
+  display: block;
+  flex: none;
+  width: v-bind(iconSize);
+  height: v-bind(iconSize);
+  overflow: clip;
+  background: #111008;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+}
+
+.eml-art-probe img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
 }
 
 /* Gleiche Skalierungsart wie die übrigen Beschriftungen, aber leiser: die

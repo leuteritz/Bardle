@@ -49,6 +49,9 @@ import {
   VOYAGE_SITE_MOVE_MS,
   VOYAGE_MAP_LEGEND_ICONS_MIN_W,
   VOYAGE_MAP_LEGEND_MIN_W,
+  VOYAGE_MAP_DRIFTER_ART_MAX_PX,
+  VOYAGE_MAP_DRIFTER_ART_MIN_PX,
+  VOYAGE_MAP_DRIFTER_ART_SCALE,
   VOYAGE_MAP_STATS_BAND_H,
   VOYAGE_MAP_STATS_MIN_H,
   VOYAGE_MAP_STATS_MIN_W,
@@ -229,17 +232,23 @@ const incidentNodes = computed(() => {
  *  Rang wächst in die Grösse, also wächst sie mit. */
 function incidentHit(rank: number): number {
   return Math.max(
-    16,
+    VOYAGE_MAP_DRIFTER_ART_MIN_PX,
     Math.round(incidentMarkRadius(rank, GALAXY_INCIDENT_MARK_R * historyHk.value) * 2.4),
+  )
+}
+
+function incidentArtSize(rank: number): number {
+  const markR = incidentMarkRadius(rank, GALAXY_INCIDENT_MARK_R * historyHk.value)
+  return Math.min(
+    VOYAGE_MAP_DRIFTER_ART_MAX_PX,
+    Math.max(VOYAGE_MAP_DRIFTER_ART_MIN_PX, Math.round(markR * VOYAGE_MAP_DRIFTER_ART_SCALE)),
   )
 }
 
 /** Der Massstab der HISTORIE — dieselbe Zahl, mit der `paintGalaxy` die Marken
  *  malt. Sie steht hier einmal, damit Fangfläche und Sperrzone nicht
  *  auseinanderlaufen. */
-const historyHk = computed(
-  () => (box.value.w / GALAXY_PLATE_REF_W) * VOYAGE_MAP_HISTORY_SCALE,
-)
+const historyHk = computed(() => (box.value.w / GALAXY_PLATE_REF_W) * VOYAGE_MAP_HISTORY_SCALE)
 
 /** Kantenlänge der Fangfläche: sie folgt der gemalten Marke, wie beim Tor. */
 const landfallHit = computed(() =>
@@ -300,12 +309,8 @@ function isLit(kind: LandmarkKind): boolean {
 /** Das Sternsoll dieser Galaxie — dieselbe Formel, gegen die das Spiel zählt. */
 const starsRequired = computed(() => computeRequired(props.record.galaxy))
 
-const starsFreed = computed(
-  () => props.record.attemptResults.filter((r) => r !== 'failed').length,
-)
-const starsLost = computed(
-  () => props.record.attemptResults.filter((r) => r === 'failed').length,
-)
+const starsFreed = computed(() => props.record.attemptResults.filter((r) => r !== 'failed').length)
+const starsLost = computed(() => props.record.attemptResults.filter((r) => r === 'failed').length)
 
 /** Kantenlängen der Fangflächen — sie folgen den GEMALTEN Radien aus
  *  `galaxyPlate` (verloren 7, befreit 8.5, Portal 9), wie beim Ort. */
@@ -316,10 +321,7 @@ const starHit = computed(() =>
   ),
 )
 const portalHit = computed(() =>
-  Math.max(
-    GALAXY_STAR_MARK_HIT_MIN,
-    Math.round(9 * historyHk.value * GALAXY_STAR_MARK_HIT_SCALE),
-  ),
+  Math.max(GALAXY_STAR_MARK_HIT_MIN, Math.round(9 * historyHk.value * GALAXY_STAR_MARK_HIT_SCALE)),
 )
 
 /**
@@ -401,11 +403,7 @@ function paint() {
   // Backing-Store bliebe sonst bis zum nächsten Galaxiewechsel leer.
   resetCanvasIfContextLost(el)
 
-  const dpr = Math.min(
-    window.devicePixelRatio || 1,
-    2,
-    VOYAGE_MAP_MAX_BACKING_PX / Math.max(w, h),
-  )
+  const dpr = Math.min(window.devicePixelRatio || 1, 2, VOYAGE_MAP_MAX_BACKING_PX / Math.max(w, h))
   el.width = Math.max(1, Math.round(w * dpr))
   el.height = Math.max(1, Math.round(h * dpr))
   const ctx = el.getContext('2d')
@@ -574,6 +572,7 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
         :left="pct(m.x, m.y).left"
         :top="pct(m.x, m.y).top"
         :hit="incidentHit(m.rank)"
+        :art-size="incidentArtSize(m.rank)"
         :mark-r="incidentMarkRadiusAt(m.rank, historyHk)"
         :core-tint="m.coreTint"
         :lit="isLit(incidentPaint(m).kind)"
@@ -682,19 +681,25 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
 }
 .egm--lit :deep(.sn),
 .egm--lit :deep(.gt),
-.egm--lit :deep(.ecml) {
+.egm--lit :deep(.ecml),
+.egm--lit :deep(.ein) {
   opacity: 0.28;
 }
 .egm :deep(.sn),
 .egm :deep(.gt),
-.egm :deep(.ecml) {
+.egm :deep(.ecml),
+.egm :deep(.ein) {
   transition: opacity 0.16s ease;
+}
+.egm--lit :deep(.ein--lit) {
+  opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
   .egm-dim,
   .egm :deep(.sn),
   .egm :deep(.gt),
-  .egm :deep(.ecml) {
+  .egm :deep(.ecml),
+  .egm :deep(.ein) {
     transition: none;
   }
 }

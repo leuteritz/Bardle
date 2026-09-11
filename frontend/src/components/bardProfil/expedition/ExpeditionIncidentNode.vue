@@ -32,6 +32,7 @@ const props = defineProps<{
   top: number
   /** Kantenlänge der Fangfläche in px — sie folgt dem gemalten Zug. */
   hit: number
+  artSize: number
   /** Der GEMALTE Radius (`incidentMarkRadiusAt`), nicht aus `hit` gerechnet. */
   markR: number
   /** Der Schwere-Ton des Einschlags, wie ihn die Marke im Kern trägt. */
@@ -87,10 +88,23 @@ const haloInk = computed(() =>
     <template #default>
       <span
         class="ein"
-        :style="{ left: `${left}%`, top: `${top}%`, '--ein-hit': `${hit}px` }"
+        :class="{
+          'ein--lit': !!lit,
+          'ein--missed': props.kind === 'drifter-missed',
+        }"
+        :style="{
+          left: `${left}%`,
+          top: `${top}%`,
+          '--ein-hit': `${hit}px`,
+          '--ein-art-size': `${artSize}px`,
+          '--ein-color': drifter?.color ?? LANDMARK_DRIFTER_TRACE,
+        }"
         :aria-label="`${def.name} — ${label}`"
       >
         <ExpeditionMarkHalo :mark-r="markR" :ink="haloInk" :on="!!lit" />
+        <span v-if="drifter" class="ein-art" aria-hidden="true">
+          <img :src="drifter.image" alt="" draggable="false" />
+        </span>
       </span>
     </template>
     <template #tip>
@@ -115,5 +129,35 @@ const haloInk = computed(() =>
   height: var(--ein-hit);
   transform: translate(-50%, -50%);
   pointer-events: auto;
+}
+
+.ein-art {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: var(--ein-art-size);
+  height: var(--ein-art-size);
+  transform: translate(-50%, -50%);
+  overflow: clip;
+  background: #111008;
+  border: 1px solid var(--ein-color);
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(11, 8, 6, 0.9);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ein-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+}
+
+.ein--missed .ein-art {
+  opacity: 0.42;
 }
 </style>
