@@ -12,6 +12,7 @@
  * is transparent and simply flexes inside it. That is what lets the optional
  * `trailing` slot (Ctrl-K hint, result counter) sit *inside* the field next to
  * the clear button instead of being absolutely positioned over the input.
+ * The `actions` slot holds clickable keys behind a seam at the far right.
  *
  * Layout is deliberately NOT set here: the component brings no `flex`/`width`
  * of its own, so each call site keeps sizing it through the class it passes.
@@ -104,6 +105,9 @@ defineExpose({
     </button>
     <span v-if="slots.trailing" class="sb-trailing">
       <slot name="trailing" />
+    </span>
+    <span v-if="slots.actions" class="sb-actions">
+      <slot name="actions" />
     </span>
   </div>
 </template>
@@ -206,6 +210,16 @@ defineExpose({
   align-items: center;
   gap: 4px;
   pointer-events: none;
+}
+
+/* Clickable keys inside the field; the seam keeps them apart from the query. */
+.sb-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 10px;
+  border-left: 1px solid #5c3310;
 }
 
 /* ─── Default size: the Champion Shop bar ─── */

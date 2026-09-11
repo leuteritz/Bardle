@@ -113,22 +113,19 @@ describe('shop atlas layout', () => {
     expect(columns(zones(vw, vh).grid)).toBeGreaterThanOrEqual(SHOP_ATLAS_CARD_FULL_HD_COLUMNS)
   })
 
-  /** What the search row leaves the field once its two buttons took their share. */
-  function searchFieldWidth(gridWidth: number): number {
-    const actions =
+  /** What the field leaves its input once the chrome inside it took its share. */
+  function searchInputWidth(gridWidth: number): number {
+    const chrome =
       gridWidth >= SHOP_HERO_LABEL_MIN_W ? SHOP_HERO_ACTIONS_W : SHOP_HERO_ACTIONS_ICON_W
-    return gridWidth - GRID_PADDING - actions
+    return gridWidth - GRID_PADDING - chrome
   }
 
-  it.each(DESKTOPS)('%s: the search row leaves the field its floor', (_l, vw, vh) => {
-    // The field takes what reset and collapse-all leave over. Widen a button or a
-    // zone and the field is what pays for it — silently, until it is unreadable.
-    expect(searchFieldWidth(zones(vw, vh).grid)).toBeGreaterThanOrEqual(SHOP_HERO_FIELD_MIN_W)
+  it.each(DESKTOPS)('%s: the search field leaves the input its floor', (_l, vw, vh) => {
+    // Widen the collapse key or shrink a zone and the typed query pays for it.
+    expect(searchInputWidth(zones(vw, vh).grid)).toBeGreaterThanOrEqual(SHOP_HERO_FIELD_MIN_W)
   })
 
-  it('uses compact search actions at Full HD and labels at 2K', () => {
-    // The threshold is the decision, not a round number: spelled out the buttons
-    // cost 264px, which the Full HD column cannot pay and the 2K one can.
+  it('uses a square collapse key at Full HD and a labelled one at 2K', () => {
     expect(zones(1920, 1080).grid).toBeLessThan(SHOP_HERO_LABEL_MIN_W)
     expect(zones(2560, 1440).grid).toBeGreaterThanOrEqual(SHOP_HERO_LABEL_MIN_W)
     expect(SHOP_HERO_ACTIONS_ICON_W).toBeLessThan(SHOP_HERO_ACTIONS_W)
