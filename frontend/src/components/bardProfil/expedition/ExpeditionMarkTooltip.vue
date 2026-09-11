@@ -36,6 +36,8 @@ export interface MarkChip {
 withDefaults(
   defineProps<{
     icon: string
+    /** Artwork statt Glyph, wo das Spiel eines hat (Drifter). */
+    image?: string
     name: string
     headless?: boolean
     /** Die einzige Beschriftung: eine Zeile über dem Namen, klein und versal. */
@@ -52,7 +54,8 @@ withDefaults(
   <div class="vtt" :class="{ 'vtt--headless': headless }" :style="{ '--tip-color': accent }">
     <header v-if="!headless" class="tip-head tip-head--banded">
       <span class="vtt-glyph">
-        <Icon :icon="icon" width="24" height="24" />
+        <img v-if="image" :src="image" alt="" class="vtt-art" draggable="false" />
+        <Icon v-else :icon="icon" width="24" height="24" />
       </span>
       <span class="vtt-headtext">
         <span class="tip-state">{{ state }}</span>
@@ -103,6 +106,15 @@ withDefaults(
   border: 1px solid var(--rpg-wood-inner);
   border-radius: 4px;
   color: var(--tip-color, var(--rpg-gold));
+}
+
+.vtt-art {
+  display: block;
+  width: 92%;
+  height: 92%;
+  max-width: none;
+  object-fit: contain;
+  image-rendering: high-quality;
 }
 
 .vtt-headtext {

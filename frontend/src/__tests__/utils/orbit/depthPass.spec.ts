@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { depthPassWeight, depthPassPointAt } from '@/utils/orbit/depthPass'
-import { drifterField, drifterFlightPointAt, drifterPointAt } from '@/utils/orbit/drifterPath'
+import { drifterBodyPx, drifterField, drifterFlightPointAt, drifterPointAt } from '@/utils/orbit/drifterPath'
 import { landfallBodyPx, landfallLaneFor, landfallFlightModeFor, landfallFlyPointAt } from '@/utils/orbit/landfallPath'
 import { hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
 import { gameNow, resetGameClock, setGameSpeed } from '@/utils/game/gameClock'
@@ -46,7 +46,7 @@ describe('depth passes', () => {
       const metrics = fieldMetrics(w, h)
       const bodies = [
         ...DRIFTERS.filter(d => DRIFTER_DEPTH_CHANCE[d.id]).map(d => ({
-          px: d.sizePx, pad: DRIFTER_HIT_PADDING_PX,
+          px: drifterBodyPx(d, w), pad: DRIFTER_HIT_PADDING_PX,
           max: DRIFTER_DEPTH_SCALE_MAX, clearance: DRIFTER_CENTER_CLEARANCE,
         })),
         { px: landfallBodyPx(w), pad: LANDFALL_BODY_HIT_PADDING_PX,

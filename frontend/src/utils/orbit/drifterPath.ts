@@ -14,10 +14,23 @@ import {
   DRIFTER_DEPTH_SCALE_MAX,
   DRIFTER_HIT_PADDING_PX,
   DRIFTER_FADE_IN_FRAC,
+  DRIFTER_BODY_VP_REF_W,
+  DRIFTER_BODY_SCALE_MIN,
+  DRIFTER_BODY_SCALE_MAX,
 } from '@/config/constants'
 import { hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
-import type { ActiveDrifter, DrifterFlightMode } from '@/types'
+import type { ActiveDrifter, DrifterDef, DrifterFlightMode } from '@/types'
 import { depthPassPointAt, type DepthPassPoint } from '@/utils/orbit/depthPass'
+
+/** Körperkante im Viewport — wächst mit der Breite wie `landfallBodyPx`, gerundet,
+ *  weil sie im Korridor-Cache von `depthPass` steht. Nur je Resize, nie im Frame. */
+export function drifterBodyPx(def: Pick<DrifterDef, 'sizePx'>, viewportW: number): number {
+  const k = Math.min(
+    DRIFTER_BODY_SCALE_MAX,
+    Math.max(DRIFTER_BODY_SCALE_MIN, viewportW / DRIFTER_BODY_VP_REF_W),
+  )
+  return Math.round(def.sizePx * k)
+}
 
 export function drifterFlightPointAt(
   flight: Pick<ActiveDrifter, 'routeIndex' | 'mirrored' | 'flightMode'>,
@@ -173,18 +186,20 @@ function catmullRom(
  *
  * `clearance` ist ein Parameter, weil der Landfall-Körper einen weiteren Kreis
  * braucht als ein Drifter: er wird querab am grössten, also gerade dort.
+ * `bodyRadiusPx` hält den RAND frei, nicht nur den Mittelpunkt.
  */
 export function pushOutOfCenter(
   x: number,
   y: number,
   field: DrifterFieldRect,
   clearance = DRIFTER_CENTER_CLEARANCE,
+  bodyRadiusPx = 0,
 ): { x: number; y: number } {
   // Work in pixels: normalized distance is meaningless on a non-square field.
   const dxPx = (x - 0.5) * field.width
   const dyPx = (y - 0.5) * field.height
   const distPx = Math.hypot(dxPx, dyPx)
-  const clearPx = Math.min(field.width, field.height) * clearance
+  const clearPx = Math.min(field.width, field.height) * clearance + bodyRadiusPx
   if (distPx >= clearPx) return { x, y }
   // Straight up when the point sits dead center — any direction is as good.
   if (distPx < 0.001) return { x, y: 0.5 - clearPx / field.height }
@@ -255,9 +270,10 @@ function clampToHudContour(
   // Über die Breite des Körpers, nicht an seinem Mittelpunkt: in der Kehle
   // neben einem Seitenpanel springt die Kontur auf wenigen Pixeln.
   const band = hudFreeBandOver(xPx, bodyRadiusPx, metrics)
-  if (yPx >= band.top && yPx <= band.bottom) return yPx
   if (yPx < band.top) return yPx < 0 ? yPx : band.top + bodyRadiusPx
-  return yPx > metrics.viewportH ? yPx : band.bottom - bodyRadiusPx
+  if (yPx > band.bottom) return yPx > metrics.viewportH ? yPx : band.bottom - bodyRadiusPx
+  // Mitte im Band reicht nicht: der RAND muss hinein, sonst hängt die halbe Kante unterm Header.
+  return Math.min(Math.max(yPx, band.top + bodyRadiusPx), band.bottom - bodyRadiusPx)
 }
 
 /**
@@ -282,7 +298,7 @@ export function drifterPointAt(
   const sample = (u: number) => {
     const raw = catmullRom(route, Math.min(Math.max(u, 0), 1))
     const mx = mirrored ? 1 - raw.x : raw.x
-    const safe = pushOutOfCenter(mx, raw.y, field)
+    const safe = pushOutOfCenter(mx, raw.y, field, DRIFTER_CENTER_CLEARANCE, bodyRadiusPx)
     const x = field.left + safe.x * field.width
     let y = field.top + safe.y * field.height
     if (metrics) {

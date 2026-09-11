@@ -2,11 +2,12 @@ import type { DrifterBuffEffects, DrifterDef, DrifterFxStage, DrifterRarity } fr
 
 /**
  * Drifters — objects that pass through the idle orbit view and pay out when
- * clicked. Everything about a type lives here: silhouette, flight behavior,
+ * clicked. Everything about a type lives here: artwork, flight behavior,
  * instant reward and timed buff. The store only rolls, flies and settles them.
  *
- * `body` picks the sprite motif drifterSprite.ts paints in flight — the icon
- * below it is the HUD glyph (buff chip, herald), never the object.
+ * `image` is the one artwork everywhere (flight, card, chip, herald); `body`
+ * picks its pose and motion (`DRIFTER_ART_POSE`). `sizePx` climbs with the
+ * rarity — rarity shows as the SPACE a body takes.
  *
  * Balance intent, cheapest to richest:
  *  - common    → keeps the screen alive, small but always welcome
@@ -22,10 +23,10 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 30,
     icon: 'game-icons:ringing-bell',
     body: 'chime',
-    image: '/img/BardAbilities/BardChime-128.png',
+    image: '/img/BardAbilities/BardChime.png',
     color: '#e8c040',
     flightMs: 12_000,
-    sizePx: 46,
+    sizePx: 58,
     hits: 1,
     effectLine: '90 seconds of production, instantly',
     reward: { chimesFromCpsSeconds: 90 },
@@ -37,9 +38,10 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 22,
     icon: 'game-icons:burning-embers',
     body: 'shard',
+    image: '/img/drifter/emberShard-512.png',
     color: '#ff8a3c',
     flightMs: 11_000,
-    sizePx: 44,
+    sizePx: 60,
     hits: 1,
     effectLine: '×3 chimes per click for 30s',
     buff: { durationMs: 30_000, effects: { cpcMult: 3 } },
@@ -51,12 +53,12 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 14,
     icon: 'game-icons:meeple',
     body: 'meep',
-    image: '/img/BardAbilities/BardMeep-64.png',
+    image: '/img/BardAbilities/BardMeep-128.png',
     color: '#9fd4ff',
     // Tumbles along slowly — it is lost, after all, and the extra seconds make
     // the rarest currency in the game feel catchable.
     flightMs: 16_000,
-    sizePx: 50,
+    sizePx: 64,
     hits: 1,
     // Die „volle Meep-Leiste" gibt es seit dem Ökonomie-Umbau nicht mehr —
     // Meeps zahlt jetzt der Aufbruch. Der Fund bleibt bei 1 und ist dabei
@@ -72,9 +74,10 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 12,
     icon: 'game-icons:delivery-drone',
     body: 'probe',
+    image: '/img/drifter/salvageProbe-512.png',
     color: '#52b830',
     flightMs: 13_000,
-    sizePx: 48,
+    sizePx: 66,
     hits: 1,
     effectLine: '4 materials, then ×2 drop chance for 60s',
     reward: { materials: 4 },
@@ -87,10 +90,11 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 8,
     icon: 'game-icons:sun-radiations',
     body: 'surge',
+    image: '/img/drifter/coronalSurge-512.png',
     color: '#ffe28a',
     // A pressure wave running ahead of the sun — fast, and gone if missed.
     flightMs: 9_500,
-    sizePx: 54,
+    sizePx: 80,
     hits: 1,
     effectLine: 'Star phase −3 min, ×2 chimes for 20s',
     reward: { dwellSkipSeconds: 180 },
@@ -103,9 +107,10 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 8,
     icon: 'game-icons:vortex',
     body: 'vortex',
+    image: '/img/drifter/riftEcho-512.png',
     color: '#b45cff',
     flightMs: 12_000,
-    sizePx: 52,
+    sizePx: 78,
     hits: 1,
     effectLine: '×2 champion and turret damage for 45s',
     buff: { durationMs: 45_000, effects: { combatDpsMult: 2 } },
@@ -117,6 +122,7 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 7,
     icon: 'game-icons:resonance',
     body: 'pulse',
+    image: '/img/drifter/sunderingPulse-512.png',
     color: '#ff4f8b',
     // The one drifter that is not a payout but a weapon: catching it fires a
     // shockwave through the whole orbit and hits every planet at once. Short,
@@ -124,7 +130,7 @@ export const DRIFTERS: DrifterDef[] = [
     // leisure. Worth a share of MAX health rather than a flat number, so it
     // stays exactly as relevant in galaxy 1 as in galaxy 12.
     flightMs: 10_500,
-    sizePx: 56,
+    sizePx: 82,
     hits: 1,
     effectLine: '−20% max HP on every planet in orbit',
     reward: { orbitStrikeMaxHpPct: 0.2 },
@@ -136,9 +142,10 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 5,
     icon: 'game-icons:lighthouse',
     body: 'beacon',
+    image: '/img/drifter/wayfarerBeacon-512.png',
     color: '#e04a4a',
     flightMs: 14_000,
-    sizePx: 50,
+    sizePx: 76,
     hits: 1,
     effectLine: '+45s on every star currently in orbit',
     reward: { starTimeSeconds: 45 },
@@ -150,11 +157,12 @@ export const DRIFTERS: DrifterDef[] = [
     weight: 2,
     icon: 'game-icons:whale-tail',
     body: 'leviathan',
+    image: '/img/drifter/starLeviathan.png',
     color: '#46d6c0',
     // Vast and unhurried: four strikes along a long, slow passage. Missing one
     // is not fatal — the passage lasts long enough to come back to it.
     flightMs: 26_000,
-    sizePx: 128,
+    sizePx: 190,
     hits: 4,
     effectLine: "Caretaker's Boon — ×3 to everything for 90s",
     buff: {
@@ -197,37 +205,22 @@ export function getDrifter(id: string): DrifterDef | undefined {
  *
  * The cost lands where it belongs. A common drifter comes every 20–30 s and is
  * the CHEAPEST body in the set; the legendary comes every 10–15 minutes and is
- * the only one carrying a debris belt and a mote swarm.
+ * the only one carrying a debris belt, a ray crown and a mote swarm.
+ *
+ * Aura alphas sit lower than in the sprite era: the artwork carries its own glow.
  */
 /* prettier-ignore */
 export const DRIFTER_FX_STAGES: Record<DrifterRarity, DrifterFxStage> = {
-  common:    { rarity: 'common',    auraAlpha: 0.30, auraLayers: 1, motion: 0.35, detail: 0, motes: 0, flow: 0, rim: true, pulse: false, dust: false, ring: false, herald: false },
-  uncommon:  { rarity: 'uncommon',  auraAlpha: 0.40, auraLayers: 1, motion: 0.50, detail: 1, motes: 2, flow: 1, rim: true, pulse: true,  dust: false, ring: false, herald: false },
-  rare:      { rarity: 'rare',      auraAlpha: 0.55, auraLayers: 2, motion: 0.70, detail: 1, motes: 4, flow: 2, rim: true, pulse: true,  dust: true,  ring: false, herald: false },
-  legendary: { rarity: 'legendary', auraAlpha: 0.75, auraLayers: 3, motion: 1.00, detail: 2, motes: 7, flow: 3, rim: true, pulse: true,  dust: true,  ring: true,  herald: true  },
+  common:    { rarity: 'common',    auraAlpha: 0.22, auraLayers: 1, motion: 0.35, motes: 0, flow: 0, pulse: false, dust: false, sheen: false, ring: false, crown: false, herald: false },
+  uncommon:  { rarity: 'uncommon',  auraAlpha: 0.30, auraLayers: 1, motion: 0.50, motes: 2, flow: 1, pulse: true,  dust: false, sheen: false, ring: false, crown: false, herald: false },
+  rare:      { rarity: 'rare',      auraAlpha: 0.42, auraLayers: 2, motion: 0.70, motes: 4, flow: 2, pulse: true,  dust: true,  sheen: true,  ring: false, crown: false, herald: false },
+  legendary: { rarity: 'legendary', auraAlpha: 0.55, auraLayers: 3, motion: 1.00, motes: 7, flow: 3, pulse: true,  dust: true,  sheen: true,  ring: true,  crown: true,  herald: true  },
 }
 
 /** The stage a drifter flies at. */
 export function drifterFxStage(rarity: DrifterRarity): DrifterFxStage {
   return DRIFTER_FX_STAGES[rarity]
 }
-
-/**
- * Bodies whose silhouette has a FRONT, and which therefore have to be flipped
- * to match the direction of travel.
- *
- * Almost every drifter is radially symmetric — a crystal, a rock, a lens, a
- * pulsar look the same whichever way they go, and turning them would only make
- * their own animation wobble. The leviathan does not: it has an eye at one end
- * and fins at the other, and once the wake was corrected to trail BEHIND the
- * body, it became obvious that it was swimming backwards.
- *
- * Flipped with `scaleX(-1)` rather than rotated to the heading: a rotation
- * would stand the creature on its nose during the steep parts of a route,
- * while a mirror keeps it level and only ever answers the one question the
- * silhouette actually asks — which way is forward.
- */
-export const DRIFTER_DIRECTIONAL_BODIES: ReadonlySet<string> = new Set(['leviathan'])
 
 /** Total spawn weight across the pool — cached, the pool is static. */
 export const DRIFTER_TOTAL_WEIGHT = DRIFTERS.reduce((sum, d) => sum + d.weight, 0)

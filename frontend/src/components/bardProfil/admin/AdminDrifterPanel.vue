@@ -64,13 +64,7 @@ function clearField(): void {
         @click="spawn(def.id)"
       >
         <span class="dr-preview" :style="{ '--drifter-size': `${ADMIN_DRIFTER_PREVIEW_PX}px` }">
-          <DrifterBody
-            :kind="def.body"
-            :color="def.color"
-            :motion="drifterFxStage(def.rarity).motion"
-            :px="ADMIN_DRIFTER_PREVIEW_PX"
-            :detail="drifterFxStage(def.rarity).detail"
-          />
+          <DrifterBody :def="def" :motion="drifterFxStage(def.rarity).motion" still />
         </span>
         <span class="dr-name">{{ def.name }}</span>
         <span class="dr-rarity" :style="{ color: DRIFTER_RARITY_COLOR[def.rarity] }">

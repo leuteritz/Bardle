@@ -121,12 +121,8 @@ export interface DrifterFxStage {
   auraLayers: number
   /** Amplitude of the body's own motion, 0..1. Scales durations and travel. */
   motion: number
-  /** Extra sprite passes the body is rastered with. */
-  detail: 0 | 1 | 2
   /** Debris motes orbiting the body. */
   motes: number
-  /** Grazing highlight along the sunlit limb. */
-  rim: boolean
   /** Second, offset aura beat — the shell stops reading as one flat ring. */
   pulse: boolean
   /** Dust plume trailing inside the wake. */
@@ -140,14 +136,17 @@ export interface DrifterFxStage {
    * invisible. Pure CSS, inside the rotating wake, so it costs no frame write.
    */
   flow: number
+  /** Foil light sweeping across the artwork. */
+  sheen: boolean
   /** Debris belt around the body. */
   ring: boolean
+  /** Ray corona behind the body. */
+  crown: boolean
   /** Announces itself at the screen edge earlier, and with a second beat. */
   herald: boolean
 }
 
-/** Which sprite motif `drifterSprite.ts` paints for a drifter in flight. Every
- *  type has its own body; the icon only ever shows up in the HUD chips. */
+/** Motion signature and pose of a drifter's artwork — see `DRIFTER_ART_POSE`. */
 export type DrifterBodyKind =
   | 'chime'
   | 'shard'
@@ -159,6 +158,27 @@ export type DrifterBodyKind =
   | 'pulse'
   | 'leviathan'
 
+/** `still` hält die Lage, `heading` dreht frei auf den Kurs, `mirror` spiegelt
+ *  und neigt sich gedeckelt — ein Wesen steht nie auf dem Kopf. */
+export type DrifterArtOrient = 'still' | 'heading' | 'mirror'
+
+/** Wie ein Artwork im Flug steht. Punkte in Bildkoordinaten 0..1. */
+export interface DrifterArtPose {
+  /** Kern des Körpers im Bild: Drehpunkt, Trefferfläche und Ansatz des Schweifs. */
+  core: { x: number; y: number }
+  /** Bildkante als Vielfaches der Körperkante — Schein und gemalter Schweif ragen hinaus. */
+  scale: number
+  orient: DrifterArtOrient
+  /** Richtung, in die das Bild fliegt (0 = rechts, 90 = unten). */
+  artHeadingDeg: number
+  /** Grösste Neigung bei `mirror`. */
+  tiltMaxDeg: number
+  /** Länge des CSS-Schweifs, Anteil — ein gemalter Schweif braucht keinen zweiten. */
+  wake: number
+  /** Ort des Zeit-Overlays (Glanz, Strobe, Lampe, Glut). */
+  fx: { x: number; y: number }
+}
+
 /** Static definition of a drifter type — pure data, no runtime state. */
 export interface DrifterDef {
   id: string
@@ -167,17 +187,17 @@ export interface DrifterDef {
   rarity: DrifterRarity
   /** Relative spawn weight inside the whole pool. */
   weight: number
-  /** Iconify `game-icons:*` name — the chip/card icon. NOT the flying body. */
+  /** Iconify `game-icons:*` name — fallback glyph where no artwork fits. */
   icon: string
-  /** Sprite motif drawn while the drifter crosses the orbit view. */
+  /** Motion signature and pose of the artwork (`DRIFTER_ART_POSE`). */
   body: DrifterBodyKind
-  /** Optional image shown instead of the icon in the HUD (chime / meep art). */
-  image?: string
+  /** The artwork: flying body, HUD card, buff chip, herald — one URL everywhere. */
+  image: string
   /** Signature color: aura, trail, edge ping and buff chip. */
   color: string
   /** Flight duration across the screen in ms — rare types linger longer. */
   flightMs: number
-  /** Rendered size of the clickable body in px. */
+  /** Edge of the clickable body in px at 1920 px viewport width (`drifterBodyPx`). */
   sizePx: number
   /** Clicks needed to collect it. >1 spreads the payout across the flight. */
   hits: number

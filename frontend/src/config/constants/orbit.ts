@@ -4,6 +4,7 @@
 
 import type {
   ChampionRole,
+  DrifterArtPose,
   DrifterBodyKind,
   RoleAbilityMetric,
   RoleKitAbility,
@@ -116,8 +117,8 @@ export const DEPTH_PASS_PROFILES = [
   { from: 0.6, to: 0.3 },
 ] as const
 export const DRIFTER_DEPTH_SCALE_MAX = 1.25
+/** Der Leviathan fehlt: bei 190 px und Skala 1,25 passt er auf Full HD in keinen Korridor. */
 export const DRIFTER_DEPTH_CHANCE: Readonly<Record<string, number>> = {
-  starLeviathan: 0.5,
   emberShard: 0.4,
   coronalSurge: 0.4,
   riftEcho: 0.4,
@@ -917,6 +918,8 @@ export const DRIFTER_BURST_RING_MS = 520
  *  von `sizePx`, Laufzeit in ms. */
 export const DRIFTER_BURST_PILLAR_SCALE = 7
 export const DRIFTER_BURST_PILLAR_MS = 620
+/** Höhe der Lichtsäule höchstens als Anteil der Viewporthöhe. */
+export const DRIFTER_BURST_PILLAR_MAX_VH = 0.55
 
 /** Flugbahnen in normierten Feldkoordinaten (0..1 der Spielfläche zwischen
  *  Header und Bottom-Bar). Start- und Endpunkt liegen absichtlich außerhalb
@@ -990,9 +993,7 @@ export const DRIFTER_HIT_PADDING_PX = 14
 /** Buff-Chips: ab so vielen verbleibenden Sekunden blinkt der Chip warnend. */
 export const DRIFTER_BUFF_EXPIRY_WARN_SEC = 5
 
-/** Formfaktoren des Drifter-Körpers, alle relativ zu `DrifterDef.sizePx` —
- *  so bleibt ein 44px-Splitter proportional zum 128px-Leviathan. */
-export const DRIFTER_AURA_SCALE = 2.1
+/** Formfaktoren des Drifter-Körpers, alle relativ zur Körperkante. */
 export const DRIFTER_TRAIL_LENGTH_SCALE = 2.8
 /** Breite der Spur, Anteil von `sizePx`. Zweimal im Browser nachgemessen und
  *  von 0,14 über 0,21 auf diesen Wert angehoben: bei 11 px Höhe auf 145 px
@@ -1044,10 +1045,8 @@ export const DRIFTER_TRAIL_WIDTH_MIN_PX = 14
 export const DRIFTER_HUD_PANEL_MARGIN_PX = 24
 
 // ── Licht und Zierrat ───────────────────────────────────────────────────
-// Ein Drifter ist ein Körper im Licht der Sonne, kein Zeichen auf dem Himmel.
-// Die Sonne steht in der Bildmitte — dieselbe Annahme, auf der `OrbitStrikeWave`
-// seine ganze Inszenierung aufbaut. Aus dieser EINEN Lichtquelle folgt der
-// Terminator auf jedem Körper und die Richtung jedes Schweifs.
+// Die Sonne steht in der Bildmitte; der Landfall-Terminator dreht auf
+// `drifterLightAngleDeg`. Die Drifter-Artworks tragen ihr Licht selbst.
 
 /** Rasterung des Lichtwinkels in Grad. Der Winkel ändert sich mit jedem Frame,
  *  und jede RotationsÄNDERUNG kann eine Neurasterung auslösen — dieselbe
@@ -1057,20 +1056,13 @@ export const DRIFTER_HUD_PANEL_MARGIN_PX = 24
  *  weniger als eine halbe Umdrehung. */
 export const DRIFTER_LIGHT_QUANTIZE_DEG = 5
 
-/** Unterhalb dieser Anzeigekante trägt ein Drifter nur Kern, Terminator und
- *  Saum — keine Aura-Staffel, keine Moten, keinen Gürtel, keine Staubfahne.
- *
- *  Vorbild ist `CHAMPION_REGALIA_ORNAMENT_MIN_SIZE`, und der Grund ist derselbe
- *  (Performance-Regel 7): eine Zierebene, die keine zwei Pixel breit ausfällt,
- *  ist unsichtbar und wird trotzdem voll bezahlt. Die Schwelle liegt bewusst
- *  ÜBER `ADMIN_DRIFTER_PREVIEW_PX` (34) — die Vorschauen im Admin-Panel und in
- *  der Infokarte zeigen damit die reine Silhouette, was dort genau richtig ist:
- *  sie sollen den TYP zeigen, nicht seinen Rang. */
+/** Unterhalb dieser Anzeigekante trägt ein Drifter nur sein Artwork — keine
+ *  Aura-Staffel, keine Moten, keinen Gürtel, keine Staubfahne (Performance-Regel 7,
+ *  wie `CHAMPION_REGALIA_ORNAMENT_MIN_SIZE`). */
 export const DRIFTER_ORNAMENT_MIN_SIZE = 40
 
-/** Radien der gestaffelten Aura-Schalen, Vielfache von `sizePx`. Die innerste
- *  ist `DRIFTER_AURA_SCALE`; jede weitere greift weiter aus und wird schwächer,
- *  sodass drei Schalen als EIN weicher Abfall lesen statt als drei Ringe. */
+/** Radien der gestaffelten Aura-Schalen, Vielfache der Körperkante. Jede weitere
+ *  greift weiter aus und wird schwächer — drei Schalen lesen als EIN Abfall. */
 export const DRIFTER_AURA_SHELL_SCALES: readonly number[] = [2.1, 2.9, 3.8]
 
 /** Deckkraft je Schale, relativ zur `auraAlpha` der Rangstufe. */
@@ -1105,71 +1097,45 @@ export const DRIFTER_RING_SPIN_MS = 9000
 export const DRIFTER_DUST_LENGTH_SCALE = 1.5
 export const DRIFTER_DUST_WIDTH_SCALE = 2.4
 
-/** Umlaufzeit der freien Eigendrehung eines SELBSTLEUCHTENDEN Körpers in ms,
- *  bei `motion` = 1. Kleinere Rangstufen drehen langsamer. */
-export const DRIFTER_TUMBLE_MS = 14_000
+// ── Der Körper als Artwork ──────────────────────────────────────────────────
+/** Die Körperkante wächst mit dem Viewport, bezogen auf 1920 px — wie der
+ *  Landfall, nicht `--hud-scale` (deckelt bei 1 und verlöre den Körper auf 4K). */
+export const DRIFTER_BODY_VP_REF_W = 1920
+export const DRIFTER_BODY_SCALE_MIN = 0.85
+export const DRIFTER_BODY_SCALE_MAX = 1.6
 
-// ── Der Körper als Sprite (utils/fx/drifterSprite.ts) ─────────────────────────
-/** Kantenlänge des Sprites als Vielfaches von `sizePx` — Finnen, Jets und
- *  Solarflügel ragen über den Körper hinaus. */
-export const DRIFTER_SPRITE_SPAN = 1.5
-/** Neun Typen in Flug-, Karten- und Admin-Grösse. */
-export const DRIFTER_SPRITE_CACHE_MAX = 24
-/** Wiegen eines beleuchteten Körpers um den Lichtwinkel, in Grad. Gedeckelt wie
- *  `LANDFALL_SPIN_TURN_DEG`: die Sonnenseite ist im Sprite eingebacken, jede
- *  Eigendrehung verdreht sie um genau ihren Betrag. */
-export const DRIFTER_ROCK_DEG = 16
-/** Takt des Wiegens bei `motion` = 1. */
-export const DRIFTER_ROCK_MS = 5200
-/** Rasterung der Sprite-Drehung in Grad. */
+/** Deckel der Kante, von der Aura, Schweif, Krone und Burst abgeleitet werden —
+ *  sonst griffe die äusserste Leviathan-Schale über den halben Bildschirm. */
+export const DRIFTER_FX_BASE_MAX_PX = 170
+
+/** Spätestens so lange nach dem Mount werden die Artworks vorgeladen. */
+export const DRIFTER_ART_PREWARM_TIMEOUT_MS = 4000
+
+/** Rasterung der Kursdrehung in Grad. */
 export const DRIFTER_TURN_QUANTIZE_DEG = 1
-/** Unrundheit des Meteoroiden. */
-export const DRIFTER_SILHOUETTE_WOBBLE = 0.14
-/** Das echte Meep-Artwork, und wie gross es in seiner Blase steht. */
-export const DRIFTER_MEEP_ART = '/img/BardAbilities/BardMeep-128.png'
-export const DRIFTER_MEEP_ART_SCALE = 0.74
-/** Wer eine Oberfläche hat, trägt einen Terminator. Plasma, Linse und Magnetar
- *  leuchten selbst; das Meep-Artwork wird nicht angeschnitten. */
-/* prettier-ignore */
-export const DRIFTER_BODY_LIT: Record<DrifterBodyKind, boolean> = {
-  chime: true, shard: true, meep: false, probe: true, surge: false,
-  vortex: false, beacon: true, pulse: false, leviathan: true,
-}
-/** Wer frei dreht — nur Selbstleuchter, ein eingebackenes Licht drehte mit. */
-/* prettier-ignore */
-export const DRIFTER_BODY_SPIN: Record<DrifterBodyKind, boolean> = {
-  chime: false, shard: false, meep: false, probe: false, surge: false,
-  vortex: true, beacon: false, pulse: true, leviathan: false,
-}
-/** Materialtöne je Körper — unbunt, die Signaturfarbe bleibt der Akzent. */
-/* prettier-ignore */
-export const DRIFTER_BODY_PALETTE: Record<
-  DrifterBodyKind,
-  { hi: string; mid: string; low: string; edge: string }
-> = {
-  chime:     { hi: '#e9dcb4', mid: '#b8a478', low: '#3a3020', edge: '#f2ecd6' },
-  shard:     { hi: '#8a7a6a', mid: '#524638', low: '#1c1610', edge: '#a89888' },
-  meep:      { hi: '#dbe6f0', mid: '#8fa3b8', low: '#2e3a48', edge: '#eef4fa' },
-  probe:     { hi: '#c8cdd2', mid: '#7c848c', low: '#2a2e34', edge: '#e8ecf0' },
-  surge:     { hi: '#fff4d6', mid: '#d6c09a', low: '#5a4626', edge: '#fff8e8' },
-  vortex:    { hi: '#e6e2f2', mid: '#8f86ad', low: '#07060c', edge: '#c9bff0' },
-  beacon:    { hi: '#d2c8b8', mid: '#7a6e60', low: '#2a2420', edge: '#ece4d6' },
-  pulse:     { hi: '#fbeaf0', mid: '#c9a0b4', low: '#3a2030', edge: '#ffffff' },
-  leviathan: { hi: '#a6bcb8', mid: '#4f6864', low: '#182220', edge: '#c4d6d2' },
-}
-/** Teile je Motiv — Grundzahl, `detail` legt zu. */
-export const DRIFTER_CHIME_FACETS = 5
-export const DRIFTER_SHARD_CRATERS = 3
-export const DRIFTER_SHARD_VEINS = 3
-export const DRIFTER_PROBE_CELLS = 4
-export const DRIFTER_SURGE_LOOPS = 2
-export const DRIFTER_VORTEX_ARCS = 3
-export const DRIFTER_LEVIATHAN_RIBS = 5
-/** Länge einer Keule des Bojen-Leuchtfeuers als Vielfaches der Körperkante. */
+
+/** Länge einer Keule des Leuchtfeuers als Vielfaches der Körperkante, und die
+ *  Kante der Laterne, an der sie hängt, als Anteil der Bildkante. */
 export const DRIFTER_BEACON_LOBE_LEN = 1.35
-/** Goldfolie und Solarzellen der Sonde — Materialfarben, kein Akzent. */
-export const DRIFTER_PROBE_FOIL_HEX = '#c9a34e'
-export const DRIFTER_PROBE_CELL_HEX = '#243a66'
+export const DRIFTER_BEACON_LAMP_FRAC = 0.12
+
+/** Strahlenkrone (legendary): Durchmesser als Vielfaches der gedeckelten Kante. */
+export const DRIFTER_CROWN_SCALE = 2.4
+
+/** Pose je Motiv, an den PNGs ausgemessen. Surge und Shard tragen ihren Schweif
+ *  im Bild: Kern ausserhalb der Mitte, CSS-Schweif gekürzt. */
+/* prettier-ignore */
+export const DRIFTER_ART_POSE: Record<DrifterBodyKind, DrifterArtPose> = {
+  chime:     { core: { x: 0.5,  y: 0.5   }, scale: 1.1,  orient: 'still',   artHeadingDeg: 0,   tiltMaxDeg: 0,  wake: 1,    fx: { x: 0.63,  y: 0.26  } },
+  shard:     { core: { x: 0.6,  y: 0.48  }, scale: 1.5,  orient: 'heading', artHeadingDeg: -50, tiltMaxDeg: 0,  wake: 0.55, fx: { x: 0.62,  y: 0.52  } },
+  meep:      { core: { x: 0.5,  y: 0.5   }, scale: 1,    orient: 'still',   artHeadingDeg: 0,   tiltMaxDeg: 0,  wake: 1,    fx: { x: 0.5,   y: 0.5   } },
+  probe:     { core: { x: 0.52, y: 0.52  }, scale: 1.2,  orient: 'still',   artHeadingDeg: 0,   tiltMaxDeg: 0,  wake: 1,    fx: { x: 0.855, y: 0.12  } },
+  surge:     { core: { x: 0.33, y: 0.555 }, scale: 1.8,  orient: 'mirror',  artHeadingDeg: 170, tiltMaxDeg: 35, wake: 0.5,  fx: { x: 0.33,  y: 0.555 } },
+  vortex:    { core: { x: 0.52, y: 0.5   }, scale: 1.15, orient: 'still',   artHeadingDeg: 0,   tiltMaxDeg: 0,  wake: 1,    fx: { x: 0.52,  y: 0.49  } },
+  beacon:    { core: { x: 0.5,  y: 0.52  }, scale: 1.15, orient: 'still',   artHeadingDeg: 0,   tiltMaxDeg: 0,  wake: 1,    fx: { x: 0.494, y: 0.32  } },
+  pulse:     { core: { x: 0.5,  y: 0.5   }, scale: 1.2,  orient: 'still',   artHeadingDeg: 0,   tiltMaxDeg: 0,  wake: 1,    fx: { x: 0.51,  y: 0.455 } },
+  leviathan: { core: { x: 0.5,  y: 0.5   }, scale: 1.12, orient: 'mirror',  artHeadingDeg: 180, tiltMaxDeg: 12, wake: 0.8,  fx: { x: 0.5,   y: 0.55  } },
+}
 
 /** Infokarte oben links: wie lange die Meldung nach dem Einsammeln bzw. nach
  *  einem verpassten Drifter noch stehen bleibt, bevor sie ausblendet. */

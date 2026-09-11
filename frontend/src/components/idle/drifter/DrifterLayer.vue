@@ -23,6 +23,7 @@
       :ref="(el) => setObjRef(d.uid, el)"
       :drifter="d"
       :def="defOf(d.defId)!"
+      :body-px="drifterBodyPx(defOf(d.defId)!, viewportW)"
       @hit="(x, y) => onHit(d.uid, x, y)"
     />
 
@@ -36,6 +37,7 @@
       :style="burst.rootStyle"
       aria-hidden="true"
     >
+      <img class="burst-art" :src="burst.image" alt="" decoding="async" draggable="false" />
       <span class="burst-ring"></span>
       <span v-if="burst.pillar" class="burst-pillar"></span>
       <span
@@ -65,6 +67,7 @@ import { useHeaderCenterArc } from '@/composables/ui/useHeaderCenterArc'
 import { logDrifterCollected } from '@/config/ui/eventLog'
 import { getDrifter, drifterFxStage } from '@/config/world/drifters'
 import {
+  drifterBodyPx,
   drifterEntryEdge,
   drifterField,
   measuredFieldInsets,
@@ -73,7 +76,7 @@ import {
 import { hudFieldMetrics } from '@/utils/ui/hudField'
 import { hexToRgbTriple, hexToRgba } from '@/utils/ui/format'
 import DrifterObject from './DrifterObject.vue'
-import { prewarmDrifterArt } from '@/utils/fx/drifterSprite'
+import { decodeDrifterArt, prewarmDrifterArt } from '@/utils/fx/drifterArt'
 import OrbitStrikeWave from './OrbitStrikeWave.vue'
 import {
   DRIFTER_EDGE_PING_LEAD_MS,
@@ -90,6 +93,10 @@ import {
   DRIFTER_BURST_RING_MS,
   DRIFTER_BURST_PILLAR_SCALE,
   DRIFTER_BURST_PILLAR_MS,
+  DRIFTER_BURST_PILLAR_MAX_VH,
+  DRIFTER_FX_BASE_MAX_PX,
+  DRIFTER_ART_POSE,
+  DRIFTER_ART_PREWARM_TIMEOUT_MS,
   DRIFTER_BURST_ANGLE_JITTER,
   DRIFTER_BURST_DIST_MIN_FACTOR,
   DRIFTER_BURST_DIST_RANGE_FACTOR,
@@ -135,8 +142,6 @@ type RenderFrame = (
   now: number,
   field: DrifterFieldRect,
   metrics: ReturnType<typeof hudFieldMetrics>,
-  viewportW: number,
-  viewportH: number,
 ) => void
 
 function setObjRef(uid: number, el: Element | ComponentPublicInstance | null): void {
@@ -154,18 +159,18 @@ function setObjRef(uid: number, el: Element | ComponentPublicInstance | null): v
 
 let frame = 0
 let cachedField = drifterField(0, 0)
+const viewportW = ref(typeof window === 'undefined' ? 0 : window.innerWidth)
 
 function refreshField(): void {
   cachedField = drifterField(window.innerWidth, window.innerHeight, measuredFieldInsets())
+  viewportW.value = window.innerWidth
 }
 
 function renderAll(): void {
   if (objRefs.size === 0) return
   const now = gameNow()
   const metrics = hudFieldMetrics(headerCenterArc.value ?? null)
-  const w = window.innerWidth
-  const h = window.innerHeight
-  for (const obj of objRefs.values()) obj.renderFrame(now, cachedField, metrics, w, h)
+  for (const obj of objRefs.values()) obj.renderFrame(now, cachedField, metrics)
 }
 
 function tick(): void {
@@ -182,6 +187,10 @@ function tick(): void {
 watch(
   () => active.value.map((d) => d.uid).join(','),
   () => {
+    for (const d of active.value) {
+      const def = getDrifter(d.defId)
+      if (def) void decodeDrifterArt(def.image)
+    }
     void nextTick(renderAll)
   },
 )
@@ -257,6 +266,7 @@ const edgePings = computed(() => {
 
 const burst = ref<{
   seq: number
+  image: string
   color: string
   name: string
   effect: string
@@ -292,6 +302,8 @@ watch(
         headline: def.name,
         subline: def.effectLine,
         icon: def.icon,
+        imageSrc: def.image,
+        round: false,
         accent: hexToRgbTriple(def.color),
       })
     } else {
@@ -301,6 +313,8 @@ watch(
         headline: def.name,
         subline: def.effectLine,
         icon: def.icon,
+        portraitSrc: def.image,
+        imageRound: false,
         accent: hexToRgbTriple(def.color),
         mergeKey: 'drifter',
       })
@@ -309,13 +323,14 @@ watch(
     // Sparks are STREAKS, not dots: matter coming apart draws itself out along
     // the direction it leaves in. How many, and how far, is the rank's business —
     // an Errant Chime should not throw the same fireworks as the Leviathan.
+    const fxBase = Math.min(drifterBodyPx(def, window.innerWidth), DRIFTER_FX_BASE_MAX_PX)
     const count = DRIFTER_BURST_PARTICLES + rank * DRIFTER_BURST_PER_STAGE
     const step = (Math.PI * 2) / count
     const base = Math.random() * Math.PI * 2
     const particles = Array.from({ length: count }, (_, i) => {
       const angle = base + step * i + (Math.random() - 0.5) * step * DRIFTER_BURST_ANGLE_JITTER
       const dist =
-        def.sizePx *
+        fxBase *
         (DRIFTER_BURST_DIST_MIN_FACTOR + Math.random() * DRIFTER_BURST_DIST_RANGE_FACTOR) *
         (0.7 + stage.motion * 0.5)
       return {
@@ -335,6 +350,7 @@ watch(
 
     burst.value = {
       seq: lastCollect.value.seq,
+      image: def.image,
       color: def.color,
       name: def.name,
       effect: def.effectLine,
@@ -345,10 +361,14 @@ watch(
         '--burst-c': def.color,
         '--burst-c-55': hexToRgba(def.color, 0.55),
         '--burst-c-0': hexToRgba(def.color, 0),
-        '--burst-ring': `${def.sizePx * DRIFTER_BURST_RING_SCALE}px`,
+        '--burst-art': `${fxBase * DRIFTER_ART_POSE[def.body].scale}px`,
+        '--burst-ring': `${fxBase * DRIFTER_BURST_RING_SCALE}px`,
         '--burst-ring-ms': `${DRIFTER_BURST_RING_MS}ms`,
-        '--burst-pillar-h': `${def.sizePx * DRIFTER_BURST_PILLAR_SCALE}px`,
-        '--burst-pillar-w': `${def.sizePx * 0.42}px`,
+        '--burst-pillar-h': `${Math.min(
+          fxBase * DRIFTER_BURST_PILLAR_SCALE,
+          window.innerHeight * DRIFTER_BURST_PILLAR_MAX_VH,
+        )}px`,
+        '--burst-pillar-w': `${fxBase * 0.42}px`,
         '--burst-pillar-ms': `${DRIFTER_BURST_PILLAR_MS}ms`,
       },
       particles,
@@ -361,8 +381,14 @@ watch(
   },
 )
 
+let prewarmHandle = 0
+
 onMounted(() => {
-  prewarmDrifterArt()
+  // Nach dem Start, nicht dagegen: der erste Drifter kommt frühestens nach Sekunden.
+  prewarmHandle =
+    typeof requestIdleCallback === 'function'
+      ? requestIdleCallback(prewarmDrifterArt, { timeout: DRIFTER_ART_PREWARM_TIMEOUT_MS })
+      : window.setTimeout(prewarmDrifterArt, DRIFTER_ART_PREWARM_TIMEOUT_MS)
   refreshField()
   window.addEventListener('resize', refreshField)
   frame = requestAnimationFrame(tick)
@@ -375,6 +401,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (typeof cancelIdleCallback === 'function') cancelIdleCallback(prewarmHandle)
+  else clearTimeout(prewarmHandle)
   window.removeEventListener('resize', refreshField)
   if (frame) cancelAnimationFrame(frame)
   frame = 0
@@ -479,6 +507,32 @@ onUnmounted(() => {
 .drifter-burst {
   position: fixed;
   pointer-events: none;
+}
+
+/* Loot-Pop: das Artwork steigt, wächst und löst sich auf. */
+.burst-art {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: var(--burst-art);
+  height: var(--burst-art);
+  max-width: none;
+  margin: calc(var(--burst-art) / -2) 0 0 calc(var(--burst-art) / -2);
+  object-fit: contain;
+  image-rendering: high-quality;
+  animation: burst-art 0.6s cubic-bezier(0.2, 0.7, 0.4, 1) forwards;
+}
+
+@keyframes burst-art {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-38%) scale(1.4);
+    opacity: 0;
+  }
 }
 
 /* Pressure front as a radial gradient, not a border. A scaled-up border is at
@@ -627,7 +681,8 @@ onUnmounted(() => {
   }
   .burst-streak,
   .burst-ring,
-  .burst-pillar {
+  .burst-pillar,
+  .burst-art {
     display: none;
   }
 }

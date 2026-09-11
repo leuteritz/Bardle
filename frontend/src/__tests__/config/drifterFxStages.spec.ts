@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { DRIFTERS, DRIFTER_FX_STAGES, drifterFxStage } from '@/config/world/drifters'
+import { drifterBodyPx } from '@/utils/orbit/drifterPath'
 import {
   DRIFTER_RARITY_ORDER,
   DRIFTER_ORNAMENT_MIN_SIZE,
@@ -47,7 +48,7 @@ describe('DRIFTER_FX_STAGES', () => {
     // The whole point of the table: common is plain, legendary is loud. Every
     // continuous value climbs monotonically, and none of them may stall the
     // whole way — a column of identical numbers is a column that says nothing.
-    const columns = ['auraAlpha', 'auraLayers', 'motion', 'detail', 'motes', 'flow'] as const
+    const columns = ['auraAlpha', 'auraLayers', 'motion', 'motes', 'flow'] as const
     for (const key of columns) {
       const values = BY_RANK.map((r) => DRIFTER_FX_STAGES[r][key])
       for (let i = 1; i < values.length; i++) {
@@ -59,7 +60,7 @@ describe('DRIFTER_FX_STAGES', () => {
 
   it('never takes a feature away that a lower rank already had', () => {
     // Flags are cumulative: a stage adds one new layer, it never trades one in.
-    const flags = ['rim', 'pulse', 'dust', 'ring', 'herald'] as const
+    const flags = ['pulse', 'dust', 'sheen', 'ring', 'crown', 'herald'] as const
     for (const key of flags) {
       let seen = false
       for (const rarity of BY_RANK) {
@@ -75,7 +76,7 @@ describe('DRIFTER_FX_STAGES', () => {
   it('gives every step at least one new layer over the one below it', () => {
     // What keeps the escalation legible: no rank may be a louder repeat of its
     // predecessor, it has to bring something that was not there before.
-    const flags = ['rim', 'pulse', 'dust', 'ring', 'herald'] as const
+    const flags = ['pulse', 'dust', 'sheen', 'ring', 'crown', 'herald'] as const
     for (let i = 1; i < BY_RANK.length; i++) {
       const prev = DRIFTER_FX_STAGES[BY_RANK[i - 1]]
       const cur = DRIFTER_FX_STAGES[BY_RANK[i]]
@@ -129,10 +130,17 @@ describe('ornament threshold', () => {
     for (const def of DRIFTERS) {
       const stage = drifterFxStage(def.rarity)
       const wantsOrnament =
-        stage.ring || stage.dust || stage.motes > 0 || stage.flow > 0 || stage.auraLayers > 1
+        stage.ring ||
+        stage.crown ||
+        stage.sheen ||
+        stage.dust ||
+        stage.motes > 0 ||
+        stage.flow > 0 ||
+        stage.auraLayers > 1
       if (!wantsOrnament) continue
+      // Am schmalsten Viewport, wo die Kante am kleinsten ausfällt.
       expect(
-        def.sizePx,
+        drifterBodyPx(def, 0),
         `${def.id} (${def.rarity}) is too small to show the ornament its rank grants`,
       ).toBeGreaterThanOrEqual(DRIFTER_ORNAMENT_MIN_SIZE)
     }

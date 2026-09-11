@@ -16,6 +16,7 @@ import { splitDuration } from '@/utils/ui/format'
 import { landfallAcceptsTap } from '@/utils/game/landfalls'
 import { gameNow } from '@/utils/game/gameClock'
 import {
+  drifterBodyPx,
   drifterField,
   drifterRevealProgress,
   measuredFieldInsets,
@@ -246,7 +247,7 @@ function createInstance(): HudCardColumnApi {
     const w = window.innerWidth
     const h = window.innerHeight
     const field = drifterField(w, h, measuredFieldInsets())
-    const geometric = drifterRevealProgress(routeIndex, mirrored, field, def.sizePx / 2, w, h, flightMode)
+    const geometric = drifterRevealProgress(routeIndex, mirrored, field, drifterBodyPx(def, w) / 2, w, h, flightMode)
     return Math.min(1, Math.max(geometric, DRIFTER_FADE_IN_FRAC))
   }
 

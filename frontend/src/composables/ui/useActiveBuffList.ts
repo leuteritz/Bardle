@@ -140,6 +140,7 @@ export function useActiveBuffList(): {
         multiplier: buffPeakMultiplier(buff.effects),
         color: def.color,
         icon: def.icon,
+        image: def.image,
         rankColor: DRIFTER_RARITY_COLOR[def.rarity],
         timer: timer(buff.expiresAt - drifterStore.drifterNow, buff.durationMs),
       })

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
+  drifterBodyPx,
   drifterField,
+  pushOutOfCenter,
   drifterPointAt,
   drifterRevealProgress,
   drifterEntryEdge,
@@ -14,8 +16,11 @@ import {
   DRIFTER_HUD_PANEL_MARGIN_PX,
   DRIFTER_LIGHT_QUANTIZE_DEG,
   DRIFTER_REVEAL_PROBE_STEPS,
+  DRIFTER_BODY_SCALE_MIN,
+  DRIFTER_BODY_SCALE_MAX,
 } from '@/config/constants'
 import { DRIFTERS } from '@/config/world/drifters'
+import { hudFreeBandOver, type HudFieldMetrics } from '@/utils/ui/hudField'
 
 /** The desktop reference resolutions from CLAUDE.md, viewport heights. */
 const VIEWPORTS: Array<[number, number]> = [
@@ -131,8 +136,8 @@ describe('drifterPointAt', () => {
     // hide the body — and with it its click target — while the player still
     // expects to be able to reach it. Measured with the largest body in the
     // pool, which is the case that actually breaks.
-    const radius = Math.max(...DRIFTERS.map((d) => d.sizePx)) / 2
     for (const [w, h] of VIEWPORTS) {
+      const radius = Math.max(...DRIFTERS.map((d) => drifterBodyPx(d, w))) / 2
       const field = drifterField(w, h)
       for (let route = 0; route < DRIFTER_ROUTES.length; route++) {
         for (const mirrored of [false, true]) {
@@ -156,8 +161,8 @@ describe('drifterPointAt', () => {
   })
 
   it('keeps the body out from under the header while it is in the band', () => {
-    const radius = Math.max(...DRIFTERS.map((d) => d.sizePx)) / 2
     for (const [w, h] of VIEWPORTS) {
+      const radius = Math.max(...DRIFTERS.map((d) => drifterBodyPx(d, w))) / 2
       const field = drifterField(w, h)
       for (let route = 0; route < DRIFTER_ROUTES.length; route++) {
         for (const mirrored of [false, true]) {
@@ -298,10 +303,30 @@ describe('drifterLightAngleDeg', () => {
   })
 })
 
+describe('drifterBodyPx', () => {
+  it('grows with the viewport and clamps at both ends', () => {
+    const def = { sizePx: 100 }
+    expect(drifterBodyPx(def, 1920)).toBe(100)
+    expect(drifterBodyPx(def, 2560)).toBeGreaterThan(100)
+    expect(drifterBodyPx(def, 0)).toBe(Math.round(100 * DRIFTER_BODY_SCALE_MIN))
+    expect(drifterBodyPx(def, 100_000)).toBe(Math.round(100 * DRIFTER_BODY_SCALE_MAX))
+  })
+})
+
+describe('pushOutOfCenter', () => {
+  it('keeps the body EDGE clear of the sun, not just its centre', () => {
+    const field = drifterField(1920, 950)
+    const r = 95
+    const p = pushOutOfCenter(0.52, 0.5, field, DRIFTER_CENTER_CLEARANCE, r)
+    const dist = Math.hypot((p.x - 0.5) * field.width, (p.y - 0.5) * field.height)
+    expect(dist).toBeGreaterThanOrEqual(Math.min(field.width, field.height) * DRIFTER_CENTER_CLEARANCE + r - 0.01)
+  })
+})
+
 describe('drifterRevealProgress', () => {
   const STEP = 1 / DRIFTER_REVEAL_PROBE_STEPS
-  const BIGGEST = Math.max(...DRIFTERS.map((d) => d.sizePx)) / 2
-  const SMALLEST = Math.min(...DRIFTERS.map((d) => d.sizePx)) / 2
+  const biggest = (w: number) => Math.max(...DRIFTERS.map((d) => drifterBodyPx(d, w))) / 2
+  const smallest = (w: number) => Math.min(...DRIFTERS.map((d) => drifterBodyPx(d, w))) / 2
 
   const inside = (
     route: number,
@@ -323,7 +348,7 @@ describe('drifterRevealProgress', () => {
       const field = drifterField(w, h)
       for (let route = 0; route < DRIFTER_ROUTES.length; route++) {
         for (const mirrored of [false, true]) {
-          const t = drifterRevealProgress(route, mirrored, field, BIGGEST, w, h)
+          const t = drifterRevealProgress(route, mirrored, field, biggest(w), w, h)
           expect(t).toBeGreaterThan(0)
           expect(t).toBeLessThan(1)
         }
@@ -336,9 +361,9 @@ describe('drifterRevealProgress', () => {
       const field = drifterField(w, h)
       for (let route = 0; route < DRIFTER_ROUTES.length; route++) {
         for (const mirrored of [false, true]) {
-          const t = drifterRevealProgress(route, mirrored, field, BIGGEST, w, h)
-          expect(inside(route, mirrored, t, w, h, BIGGEST)).toBe(true)
-          expect(inside(route, mirrored, t - STEP, w, h, BIGGEST)).toBe(false)
+          const t = drifterRevealProgress(route, mirrored, field, biggest(w), w, h)
+          expect(inside(route, mirrored, t, w, h, biggest(w))).toBe(true)
+          expect(inside(route, mirrored, t - STEP, w, h, biggest(w))).toBe(false)
         }
       }
     }
@@ -348,8 +373,8 @@ describe('drifterRevealProgress', () => {
     for (const [w, h] of VIEWPORTS) {
       const field = drifterField(w, h)
       for (let route = 0; route < DRIFTER_ROUTES.length; route++) {
-        const small = drifterRevealProgress(route, false, field, SMALLEST, w, h)
-        const large = drifterRevealProgress(route, false, field, BIGGEST, w, h)
+        const small = drifterRevealProgress(route, false, field, smallest(w), w, h)
+        const large = drifterRevealProgress(route, false, field, biggest(w), w, h)
         expect(large).toBeGreaterThanOrEqual(small)
       }
     }
@@ -364,8 +389,43 @@ describe('drifterRevealProgress', () => {
       const field = drifterField(w, h)
       for (let route = 0; route < DRIFTER_ROUTES.length; route++) {
         for (const mirrored of [false, true]) {
-          const t = drifterRevealProgress(route, mirrored, field, BIGGEST, w, h)
+          const t = drifterRevealProgress(route, mirrored, field, biggest(w), w, h)
           expect(shortestMs * (1 - t)).toBeGreaterThan(5000)
+        }
+      }
+    }
+  })
+})
+
+describe('HUD contour clamp', () => {
+  function fieldMetrics(w: number, h: number): HudFieldMetrics {
+    const k = Math.min(w / 1920, h / 950)
+    return {
+      viewportW: w, viewportH: h, hudScale: Math.min(1, k * 0.7),
+      headerBottom: 86 * k, headerLeft: 404 * k, headerRight: w - 404 * k,
+      headerCenterBottom: 133 * k, centerArc: null,
+      keycapBar: 30 * k, keycapBarReach: 511 * k,
+      abilityBarTop: h - 150 * k, abilityBarHalfW: 230 * k,
+      wayfinderBottom: 220 * k, wayfinderRight: 370 * k,
+      eventLogBottom: 330 * k, eventLogLeft: w - 370 * k,
+    }
+  }
+
+  it('keeps the body EDGE inside the free band, not just its centre', () => {
+    for (const [w, h] of VIEWPORTS) {
+      const m = fieldMetrics(w, h)
+      const field = drifterField(w, h)
+      const r = Math.max(...DRIFTERS.map((d) => drifterBodyPx(d, w))) / 2
+      for (let route = 0; route < DRIFTER_ROUTES.length; route++) {
+        for (const mirrored of [false, true]) {
+          for (let step = 0; step <= 100; step++) {
+            const p = drifterPointAt(route, mirrored, step / 100, field, r, m)
+            if (p.y < 0 || p.y > h) continue
+            const band = hudFreeBandOver(p.x, r, m)
+            if (band.bottom - band.top < 2 * r) continue
+            expect(p.y - r).toBeGreaterThanOrEqual(band.top - 0.5)
+            expect(p.y + r).toBeLessThanOrEqual(band.bottom + 0.5)
+          }
         }
       }
     }

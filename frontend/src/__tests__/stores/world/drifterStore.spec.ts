@@ -47,7 +47,7 @@ describe('drifterStore', () => {
       random.mockReturnValue(0.99)
       expect(active.flightMode).toBe('approach')
       expect(spawn('emberShard').flightMode).toBe('lane')
-      for (const id of ['errantChime', 'lostMeep', 'wayfarerBeacon', 'sunderingPulse']) {
+      for (const id of ['errantChime', 'lostMeep', 'wayfarerBeacon', 'sunderingPulse', 'starLeviathan']) {
         store.forceSpawn(id, 'approach')
         expect(store.active[0].flightMode).toBe('lane')
       }

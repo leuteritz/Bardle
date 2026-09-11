@@ -10,7 +10,7 @@ import {
 } from '@/config/world/drifters'
 import DrifterBody from './DrifterBody.vue'
 import type { DrifterBuffEffects } from '@/types'
-import { DRIFTER_CARD_ICON, HUD_CARD_PORTRAIT_PX } from '@/config/constants'
+import { DRIFTER_CARD_ICON } from '@/config/constants'
 
 /**
  * Was fliegt da gerade, was bringt es, und wie lange ist es noch da — als
@@ -89,13 +89,7 @@ const headline = computed(() => {
            nur die Silhouette, die dort auch wirklich fliegt. -->
       <span class="hc-stage hc-stage--round">
         <span class="dic-body">
-          <DrifterBody
-            :kind="def.body"
-            :color="def.color"
-            :motion="drifterFxStage(def.rarity).motion"
-            :px="HUD_CARD_PORTRAIT_PX"
-            :detail="drifterFxStage(def.rarity).detail"
-          />
+          <DrifterBody :def="def" :motion="drifterFxStage(def.rarity).motion" />
         </span>
       </span>
 
@@ -160,8 +154,8 @@ const headline = computed(() => {
 
 .dic-body {
   position: relative;
-  width: 72%;
-  height: 72%;
+  width: 86%;
+  height: 86%;
 }
 
 .dic-rarity {

@@ -39,7 +39,8 @@
            text can stay down to what the buff DOES and how long it lasts.
            The full name is announced by the collect burst and the toast. -->
       <span class="chip-icon" :title="chip.name">
-        <Icon :icon="chip.icon" class="chip-icon__glyph" :style="{ color: chip.color }" />
+        <img v-if="chip.image" :src="chip.image" alt="" class="chip-icon__art" draggable="false" />
+        <Icon v-else :icon="chip.icon" class="chip-icon__glyph" :style="{ color: chip.color }" />
       </span>
 
       <span class="chip-text">
@@ -124,6 +125,8 @@ const omenStore = useOmenStore()
 interface BuffChip {
   key: string
   icon: string
+  /** Artwork statt Glyph, wo das Spiel eines hat (Drifter). */
+  image?: string
   color: string
   name: string
   label: string
@@ -169,6 +172,7 @@ const chips = computed<BuffChip[]>(() => {
     out.push({
       key: `drifter-${buff.sourceId}`,
       icon: def.icon,
+      image: def.image,
       color: def.color,
       name: def.name,
       label: buffAxisLabel(buff.effects),
@@ -326,6 +330,17 @@ const overflowCount = computed(() => chips.value.length - visibleChips.value.len
 .chip-icon__glyph {
   width: 30px;
   height: 30px;
+}
+
+/* Wächst mit jeder Chip-Stufe mit — die Bühne ist je Dock anders gross. */
+.chip-icon__art {
+  display: block;
+  width: 88%;
+  height: 88%;
+  max-width: none;
+  object-fit: contain;
+  image-rendering: high-quality;
+  pointer-events: none;
 }
 
 .chip-text {

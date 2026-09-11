@@ -1,6 +1,6 @@
 <template>
   <div ref="shell" class="drifter-shell" :style="shellStyle">
-    <div ref="scaleEl" class="drifter-scale">
+    <div ref="scaleEl" class="drifter-scale" :class="{ 'drifter-scale--live': drifter.flightMode === 'approach' }">
     <button
       class="drifter-hit"
       :class="{ 'drifter-hit--large': def.hits > 1 }"
@@ -53,6 +53,15 @@
         aria-hidden="true"
       ></span>
 
+      <!-- Strahlenkrone — legendary only. Zwei statische Strahlensätze, die
+           gegenläufig atmen; gedreht wird nichts. -->
+      <span v-if="showCrown" class="drifter-crown" :style="crownStyle" aria-hidden="true">
+        <i class="drifter-crown-rays"></i>
+        <i class="drifter-crown-rays drifter-crown-rays--b"></i>
+      </span>
+
+      <span class="drifter-focus" :style="focusStyle" aria-hidden="true"></span>
+
       <!-- Debris belt — legendary only. Two elements: a static tilt that
            foreshortens the circle into an orbit plane, and the belt turning
            inside it. One element carries only one transform. -->
@@ -60,17 +69,10 @@
         <i class="drifter-ring"></i>
       </span>
 
-      <!-- The body is a sprite — see DrifterBody.vue. Nothing in here paints
-           per frame; the frame loop only turns it to the sun. -->
+      <!-- The body is the artwork — see DrifterBody.vue. The frame loop only
+           turns or mirrors it along the course its pose asks for. -->
       <span ref="bodyBox" class="drifter-body" :style="bodyStyle">
-        <DrifterBody
-          :kind="def.body"
-          :color="def.color"
-          :motion="stage.motion"
-          :px="def.sizePx"
-          :detail="stage.detail"
-          live
-        />
+        <DrifterBody :def="def" :motion="stage.motion" :sheen="showSheen" live />
       </span>
 
       <!-- Debris motes. Two turning planes carry all of them, rather than one
@@ -108,15 +110,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import type { ActiveDrifter, DrifterDef } from '@/types'
-import {
-  drifterFlightPointAt,
-  drifterLightAngleDeg,
-  type DrifterFieldRect,
-} from '@/utils/orbit/drifterPath'
+import { drifterFlightPointAt, type DrifterFieldRect } from '@/utils/orbit/drifterPath'
 import type { HudFieldMetrics } from '@/utils/ui/hudField'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { hexToRgba } from '@/utils/ui/format'
-import { drifterFxStage, DRIFTER_DIRECTIONAL_BODIES } from '@/config/world/drifters'
+import { drifterFxStage } from '@/config/world/drifters'
 import DrifterBody from './DrifterBody.vue'
 import {
   DRIFTER_FADE_IN_FRAC,
@@ -149,9 +147,9 @@ import {
   DRIFTER_RING_SPIN_MS,
   DRIFTER_DUST_LENGTH_SCALE,
   DRIFTER_DUST_WIDTH_SCALE,
-  DRIFTER_BODY_LIT,
-  DRIFTER_ROCK_DEG,
-  DRIFTER_ROCK_MS,
+  DRIFTER_ART_POSE,
+  DRIFTER_FX_BASE_MAX_PX,
+  DRIFTER_CROWN_SCALE,
   DRIFTER_TURN_QUANTIZE_DEG,
   HEADING_FLIP_DEADZONE,
   DEPTH_PASS_HIT_MIN_PX,
@@ -161,6 +159,8 @@ import {
 const props = defineProps<{
   drifter: ActiveDrifter
   def: DrifterDef
+  /** Körperkante im aktuellen Viewport (`drifterBodyPx`). */
+  bodyPx: number
 }>()
 
 const emit = defineEmits<{ hit: [x: number, y: number] }>()
@@ -173,14 +173,11 @@ const hitMinPx = `${DEPTH_PASS_HIT_MIN_PX}px`
 const trail = ref<HTMLElement>()
 const bodyBox = ref<HTMLElement>()
 
-const reducedMotion =
-  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    ? window.matchMedia('(prefers-reduced-motion: reduce)')
-    : null
+const pose = computed(() => DRIFTER_ART_POSE[props.def.body])
 
-/** Hat dieser Körper ein Vorn? Nur der Leviathan — siehe die Begründung an
- *  `DRIFTER_DIRECTIONAL_BODIES`. */
-const directional = computed(() => DRIFTER_DIRECTIONAL_BODIES.has(props.def.body))
+/** Kante, von der Aura, Schweif und Krone abgeleitet werden — gedeckelt, sonst
+ *  griffe beim Leviathan jede Schale über den halben Bildschirm. */
+const fxBasePx = computed(() => Math.min(props.bodyPx, DRIFTER_FX_BASE_MAX_PX))
 
 /** The rarity stage — how much ornament this drifter has earned. */
 const stage = computed(() => drifterFxStage(props.def.rarity))
@@ -193,19 +190,37 @@ const stage = computed(() => drifterFxStage(props.def.rarity))
  *
  * Every flag below is read through this AND, never on its own.
  */
-const ornate = computed(() => props.def.sizePx >= DRIFTER_ORNAMENT_MIN_SIZE)
+const ornate = computed(() => props.bodyPx >= DRIFTER_ORNAMENT_MIN_SIZE)
 
 const showRing = computed(() => ornate.value && stage.value.ring)
 const showDust = computed(() => ornate.value && stage.value.dust)
+const showSheen = computed(() => ornate.value && stage.value.sheen)
+const showCrown = computed(() => ornate.value && stage.value.crown)
 
 const shellStyle = computed(() => ({
-  '--drifter-size': `${props.def.sizePx}px`,
+  '--drifter-size': `${props.bodyPx}px`,
   '--drifter-hit-pad': `${DRIFTER_HIT_PADDING_PX}px`,
 }))
 
 const bodyStyle = computed(() => ({
-  width: `${props.def.sizePx}px`,
-  height: `${props.def.sizePx}px`,
+  width: `${props.bodyPx}px`,
+  height: `${props.bodyPx}px`,
+}))
+
+const crownStyle = computed(() => ({
+  width: `${fxBasePx.value * DRIFTER_CROWN_SCALE}px`,
+  height: `${fxBasePx.value * DRIFTER_CROWN_SCALE}px`,
+  '--crown-c': hexToRgba(props.def.color, 0.34),
+  '--crown-c-0': hexToRgba(props.def.color, 0),
+}))
+
+const focusStyle = computed(() => ({
+  width: `${fxBasePx.value * DRIFTER_AURA_SHELL_SCALES[0]}px`,
+  height: `${fxBasePx.value * DRIFTER_AURA_SHELL_SCALES[0]}px`,
+  background: `radial-gradient(circle, ${hexToRgba(props.def.color, 0.5)} 0%, ${hexToRgba(
+    props.def.color,
+    0.18,
+  )} 42%, ${hexToRgba(props.def.color, 0)} 70%)`,
 }))
 
 // ── Aura shells ─────────────────────────────────────────────────────────────
@@ -225,8 +240,8 @@ const auraShells = computed(() => {
       i,
       breathes,
       style: {
-        width: `${props.def.sizePx * scale}px`,
-        height: `${props.def.sizePx * scale}px`,
+        width: `${fxBasePx.value * scale}px`,
+        height: `${fxBasePx.value * scale}px`,
         background: `radial-gradient(circle, ${hexToRgba(props.def.color, alpha)} 0%, ${hexToRgba(
           props.def.color,
           alpha * 0.45,
@@ -283,8 +298,8 @@ const motePlanes = computed(() => {
       i: plane.i,
       motes,
       style: {
-        width: `${props.def.sizePx * 2}px`,
-        height: `${props.def.sizePx * 2}px`,
+        width: `${props.bodyPx * 2}px`,
+        height: `${props.bodyPx * 2}px`,
         animationDuration: `${plane.ms}ms`,
         animationDirection: plane.reverse ? 'reverse' : 'normal',
       } as Record<string, string>,
@@ -295,8 +310,8 @@ const motePlanes = computed(() => {
 // ── Debris belt ─────────────────────────────────────────────────────────────
 
 const ringPlaneStyle = computed(() => ({
-  width: `${props.def.sizePx * DRIFTER_RING_SCALE}px`,
-  height: `${props.def.sizePx * DRIFTER_RING_SCALE}px`,
+  width: `${props.bodyPx * DRIFTER_RING_SCALE}px`,
+  height: `${props.bodyPx * DRIFTER_RING_SCALE}px`,
   '--ring-tilt': `${DRIFTER_RING_TILT}`,
   '--ring-ms': `${DRIFTER_RING_SPIN_MS}ms`,
   '--ring-color': hexToRgba(props.def.color, 0.3),
@@ -308,14 +323,14 @@ const ringPlaneStyle = computed(() => ({
 const trailWidthPx = computed(() =>
   Math.min(
     DRIFTER_TRAIL_WIDTH_MAX_PX,
-    Math.max(DRIFTER_TRAIL_WIDTH_MIN_PX, props.def.sizePx * DRIFTER_TRAIL_WIDTH_SCALE),
+    Math.max(DRIFTER_TRAIL_WIDTH_MIN_PX, fxBasePx.value * DRIFTER_TRAIL_WIDTH_SCALE),
   ),
 )
 
 /** Die Bühne der Spur — sie trägt nur noch Maße und Drehpunkt, gezeichnet
  *  wird in den Kindern. */
 const trailStyle = computed(() => ({
-  width: `${props.def.sizePx * DRIFTER_TRAIL_LENGTH_SCALE}px`,
+  width: `${fxBasePx.value * DRIFTER_TRAIL_LENGTH_SCALE * pose.value.wake}px`,
   height: `${trailWidthPx.value}px`,
 }))
 
@@ -394,24 +409,18 @@ const dustStyle = computed(() => ({
 // All values are written straight to element.style; routing them through Vue
 // would re-render the subtree 60×/s.
 
-/** The one element that turns to the sun — collected once at mount. */
+/** Das eine Element, das der Kursdrehung folgt — einmal beim Mount geholt. */
 let turnEl: HTMLElement | null = null
-/** Only lit bodies turn per frame; the sun side is baked into their sprite. */
-const lit = computed(() => DRIFTER_BODY_LIT[props.def.body])
-const rockMs = computed(() => DRIFTER_ROCK_MS / Math.max(0.2, stage.value.motion))
 
-/** Zeigt der Körper gerade nach links? Wird nur ausserhalb der Totzone neu
- *  gesetzt, damit ein fast senkrechter Flug ihn nicht flattern lässt. Die
- *  Silhouetten sind nach LINKS gezeichnet (Kopf links), das ist der Ruhestand. */
-let faceLeft = true
+/** Gespiegelt gegen die Blickrichtung des Bildes? Nur ausserhalb der Totzone
+ *  neu gesetzt, sonst flattert ein fast senkrechter Flug um die Nulllinie. */
+let flipped = false
 
-function renderFrame(
-  now: number,
-  field: DrifterFieldRect,
-  metrics: HudFieldMetrics,
-  viewportW: number,
-  viewportH: number,
-): void {
+function wrapDeg(deg: number): number {
+  return ((((deg + 180) % 360) + 360) % 360) - 180
+}
+
+function renderFrame(now: number, field: DrifterFieldRect, metrics: HudFieldMetrics): void {
   const el = shell.value
   if (!el) return
 
@@ -420,7 +429,7 @@ function renderFrame(
     props.drifter,
     t,
     field,
-    props.def.sizePx,
+    props.bodyPx,
     metrics,
     planetShop.currentSunRadius,
   )
@@ -428,7 +437,7 @@ function renderFrame(
   const scale = Math.round(point.scale * ORBIT_SCALE_QUANTIZE_STEPS) / ORBIT_SCALE_QUANTIZE_STEPS
   if (scaleEl.value) scaleEl.value.style.transform = `scale(${scale})`
   if (hitFloor.value) hitFloor.value.style.transform = `translate(-50%, -50%) scale(${1 / scale})`
-  el.classList.toggle('drifter-shell--tiny', props.def.sizePx * scale < DRIFTER_ORNAMENT_MIN_SIZE)
+  el.classList.toggle('drifter-shell--tiny', props.bodyPx * scale < DRIFTER_ORNAMENT_MIN_SIZE)
 
   // Fade in on entry, out on exit — the shell carries the envelope so the wake,
   // the aura and the motes ride along without a second animated property.
@@ -440,38 +449,22 @@ function renderFrame(
   el.style.opacity = opacity.toFixed(3)
   if (el.inert !== (opacity <= 0)) el.inert = opacity <= 0
 
-  // The sun sits at the centre of the stage, so this one angle drives both the
-  // terminator across the body and the direction the tail is blown.
-  const light = drifterLightAngleDeg(point.x, point.y, viewportW, viewportH)
-
-  // Der Körper zeigt in Flugrichtung — aber nur der, der ein Vorn hat.
-  //
-  // Gespiegelt statt gedreht: eine Drehung auf die Bahntangente stünde das
-  // Wesen auf den steilen Abschnitten einer Route auf die Nase, während die
-  // Spiegelung es waagrecht lässt und genau die eine Frage beantwortet, die
-  // seine Silhouette stellt. Umgeschaltet wird erst ab einer deutlichen
-  // Waagrechtkomponente: bei fast senkrechtem Flug würde der Körper sonst um
-  // die Nulllinie herum hin- und herklappen.
-  if (directional.value && bodyBox.value) {
-    const cos = Math.cos((point.angleDeg * Math.PI) / 180)
-    if (Math.abs(cos) > HEADING_FLIP_DEADZONE) faceLeft = cos < 0
-    bodyBox.value.style.transform = faceLeft ? '' : 'scaleX(-1)'
-  }
-
-  // Die Spiegelung nimmt den Terminator mit, also muss der Lichtwinkel sie
-  // ausgleichen: an der senkrechten Achse gespiegelt wird aus θ der Winkel
-  // 180 − θ. Ohne das fällt der Schatten auf der falschen Seite, sobald das
-  // Wesen die Richtung wechselt.
-  const litDeg = directional.value && !faceLeft ? 180 - light : light
-  if (lit.value && turnEl) {
-    // Ein kleines Wiegen obendrauf; gedeckelt, weil es das eingebackene Licht
-    // um genau seinen Betrag verdreht. Auf 1° gerastert wie beim Landfall.
-    const rock = reducedMotion?.matches
-      ? 0
-      : Math.sin(((now - props.drifter.spawnedAt) / rockMs.value) * Math.PI * 2) *
-        DRIFTER_ROCK_DEG
+  // Kurs laut Pose. `mirror` spiegelt statt zu drehen und neigt nur gedeckelt:
+  // eine volle Drehung stellte ein Wesen auf den steilen Stücken auf den Kopf.
+  const p = pose.value
+  if (p.orient !== 'still' && turnEl) {
+    let local = point.angleDeg
+    if (p.orient === 'mirror') {
+      const cos = Math.cos((point.angleDeg * Math.PI) / 180)
+      const artLeft = Math.cos((p.artHeadingDeg * Math.PI) / 180) < 0
+      if (Math.abs(cos) > HEADING_FLIP_DEADZONE) flipped = cos < 0 !== artLeft
+      if (bodyBox.value) bodyBox.value.style.transform = flipped ? 'scaleX(-1)' : ''
+      if (flipped) local = 180 - local
+    }
+    let turn = wrapDeg(local - p.artHeadingDeg)
+    if (p.orient === 'mirror') turn = Math.max(-p.tiltMaxDeg, Math.min(p.tiltMaxDeg, turn))
     const q = DRIFTER_TURN_QUANTIZE_DEG
-    turnEl.style.transform = `rotate(${Math.round((litDeg + rock) / q) * q}deg)`
+    turnEl.style.transform = `rotate(${Math.round(turn / q) * q}deg)`
   }
 
   if (trail.value) {
@@ -543,8 +536,16 @@ defineExpose({ renderFrame })
 .drifter-shell--tiny .drifter-aura,
 .drifter-shell--tiny .drifter-motes,
 .drifter-shell--tiny .drifter-ring-plane,
-.drifter-shell--tiny .drifter-trail {
+.drifter-shell--tiny .drifter-crown,
+.drifter-shell--tiny .drifter-trail,
+.drifter-shell--tiny :deep(.db-sheen) {
   display: none;
+}
+
+/* Nur im Approach-Modus wird die Skala pro Frame geschrieben — ohne eigene Ebene
+   rastert jeder Schritt das Artwork neu. */
+.drifter-scale--live {
+  will-change: transform;
 }
 
 .drifter-hit:hover {
@@ -553,6 +554,59 @@ defineExpose({ renderFrame })
 
 .drifter-hit:active {
   transform: translate(-50%, -50%) scale(0.92);
+}
+
+.drifter-focus {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.2s ease;
+}
+
+.drifter-hit:hover .drifter-focus,
+.drifter-hit:focus-visible .drifter-focus {
+  opacity: 1;
+}
+
+.drifter-crown {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+/* Statisch gerastert; animiert wird allein die Deckkraft (Performance-Regel 11). */
+.drifter-crown-rays {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    var(--crown-c) 0deg 3deg,
+    var(--crown-c-0) 6deg 30deg
+  );
+  mask: radial-gradient(circle, transparent 20%, #000 34%, #000 46%, transparent 70%);
+  animation: drifter-crown-breathe 3600ms ease-in-out infinite;
+}
+
+.drifter-crown-rays--b {
+  transform: rotate(15deg);
+  animation-delay: -1800ms;
+}
+
+@keyframes drifter-crown-breathe {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
 }
 
 /* The wake is a STAGE, not a shape: it carries the measurements and the pivot,
@@ -780,8 +834,12 @@ defineExpose({ renderFrame })
   .drifter-aura,
   .drifter-motes,
   .drifter-ring,
+  .drifter-crown-rays,
   .dt-flow {
     animation: none;
+  }
+  .drifter-focus {
+    transition: none;
   }
   /* Ohne den Takt bliebe die Schliere als heller Klecks am Körper stehen. */
   .dt-flow {

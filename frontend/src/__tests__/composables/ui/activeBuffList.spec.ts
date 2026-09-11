@@ -83,6 +83,7 @@ describe('useActiveBuffList', () => {
     expect(byId.ability.timer?.progress).toBeCloseTo(0.5)
     expect(byId.mvp.timer?.secondsLeft).toBe(4)
     expect(byId.drifter.rankColor).toBeTruthy()
+    expect(byId.drifter.image).toBeTruthy()
     expect(byId.drifter.label).toBe('PER CLICK')
     expect(byId.forge.label).toBe('CHIMES')
     expect(byId.forge.timer?.secondsLeft).toBe(600)

@@ -96,6 +96,7 @@ const haloInk = computed(() =>
     <template #tip>
       <ExpeditionMarkTooltip
         :icon="def.icon"
+        :image="drifter?.image"
         :name="def.name"
         :state="label"
         :accent="isVoid ? '#cc6050' : '#e8c040'"
