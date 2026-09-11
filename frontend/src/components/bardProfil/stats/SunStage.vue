@@ -172,6 +172,7 @@ const rayTiles = computed(() =>
     return {
       id: b.id,
       name: b.name,
+      statLabel: b.statLabel,
       icon: b.icon,
       color: b.color,
       level,
@@ -183,6 +184,7 @@ const rayTiles = computed(() =>
 )
 const raysMet = computed(() => rayTiles.value.filter((r) => r.met).length)
 const raysAllMet = computed(() => raysMet.value >= SOLAR_BRANCHES.length)
+const requirementCount = computed(() => (dwellMet.value ? 1 : 0) + (raysAllMet.value ? 1 : 0))
 
 /** Von der Anforderung zu ihrer Behebung — die Kachel IST der Weg dorthin. */
 function openRay(id: string): void {
@@ -327,7 +329,13 @@ function handleSunKey(e: KeyboardEvent): void {
 
     <!-- ═ 3 · the two gates, and nothing else ═══════════════════ -->
     <section v-if="!isMax" class="se-gates" :class="{ 'is-open': canEvolveNow }">
-      <span class="se-gates-k">Requirements</span>
+      <div class="se-gates-k">
+        <span>Requirements</span>
+        <span class="se-gates-status" :class="{ 'is-ready': canEvolveNow }">
+          <Icon v-if="canEvolveNow" icon="lucide:check" width="14" height="14" aria-hidden="true" />
+          {{ canEvolveNow ? 'Ready' : `${requirementCount}/2 met` }}
+        </span>
+      </div>
 
       <div class="se-gates-grid">
         <!-- Die Verweildauer ist eine Uhr, also steht sie als Zifferblatt da —
@@ -349,11 +357,13 @@ function handleSunKey(e: KeyboardEvent): void {
             <Icon v-if="dwellMet" icon="lucide:check" class="se-dial-check" aria-hidden="true" />
           </span>
           <span class="se-gate-copy">
-            <span class="se-gate-name">Dwell</span>
+            <span class="se-gate-name">Dwell time</span>
             <strong class="se-dwell-val">{{
-              dwellMet ? 'Served' : formatCompactDuration(dwellRemainingMs)
+              dwellMet ? 'Ready' : formatCompactDuration(dwellRemainingMs)
             }}</strong>
-            <span class="se-dwell-sub">{{ dwellMet ? 'Minimum dwell met' : 'remaining' }}</span>
+            <span class="se-dwell-sub">{{
+              dwellMet ? 'Minimum time served' : 'until next stage'
+            }}</span>
           </span>
         </article>
 
@@ -406,15 +416,15 @@ function handleSunKey(e: KeyboardEvent): void {
                   />
                 </svg>
                 <Icon :icon="ray.icon" class="se-dial-ico" aria-hidden="true" />
-                <Icon
-                  v-if="ray.met"
-                  icon="lucide:check"
-                  class="se-dial-check"
-                  aria-hidden="true"
-                />
+                <Icon v-if="ray.met" icon="lucide:check" class="se-dial-check" aria-hidden="true" />
               </span>
+              <span class="se-ray-name">{{ ray.statLabel }}</span>
               <span class="se-ray-lv">
-                {{ ray.level }}<span class="se-ray-req">/{{ requiredRayLevel }}</span>
+                <strong>Lv {{ ray.level }}</strong
+                ><span class="se-ray-req">/ {{ requiredRayLevel }}</span>
+              </span>
+              <span class="se-ray-meter" aria-hidden="true">
+                <span class="se-ray-meter-fill" :style="{ width: `${ray.fillPct}%` }" />
               </span>
             </button>
           </div>
@@ -690,18 +700,19 @@ function handleSunKey(e: KeyboardEvent): void {
   grid-row: 4;
   width: 100%;
   min-width: 0;
-  padding-top: clamp(12px, 1.6cqw, 20px);
-  border-top: 1px solid #2c1806;
+  padding-top: clamp(6px, 1cqw, 12px);
 }
 
 .se-gates-k {
-  display: block;
-  margin-bottom: clamp(8px, 1.1cqw, 14px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: clamp(10px, 1.2cqw, 16px);
   font-size: clamp(11px, 1.7cqw, 18px);
   font-weight: 700;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  text-align: center;
   color: #7a6c56;
 }
 
@@ -709,12 +720,29 @@ function handleSunKey(e: KeyboardEvent): void {
   color: #8bcf60;
 }
 
+.se-gates-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #3e200a;
+  font-size: 0.72em;
+  letter-spacing: 0.12em;
+  color: #8a7c66;
+}
+
+.se-gates-status.is-ready {
+  color: #8bcf60;
+  border-color: #6ec040;
+}
+
 /* Mittig, mit Deckel: auf 4K soll die Zeile nicht auf 1,5 m auseinanderlaufen. */
 .se-gates-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
-  gap: clamp(14px, 2cqw, 30px);
-  max-width: clamp(560px, 94cqw, 1120px);
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: clamp(22px, 3.2cqw, 48px);
+  max-width: 100%;
   margin-inline: auto;
 }
 
@@ -724,16 +752,13 @@ function handleSunKey(e: KeyboardEvent): void {
   justify-content: center;
   gap: clamp(8px, 1.1cqw, 14px);
   min-width: 0;
-  padding: clamp(10px, 1.3cqw, 16px) clamp(12px, 1.6cqw, 20px);
-  background: #1a1008;
-  border: 1px solid #2c1806;
-  border-radius: 4px;
+  padding: clamp(4px, 0.7cqw, 9px) 0 clamp(4px, 0.8cqw, 10px) clamp(12px, 1.4cqw, 20px);
+  border-left: 2px solid #3e200a;
 }
 /* Erfüllt heisst Schleier, nicht Signal — derselbe Griff wie an der erfüllten
    Strahlenkachel, sonst schriee der Rahmen lauter als der Inhalt. */
 .se-gate.is-met {
-  background: color-mix(in srgb, #6ec040 10%, #1a1008);
-  border-color: color-mix(in srgb, #6ec040 45%, #2c1806);
+  border-left-color: #6ec040;
 }
 
 /* Zifferblatt links, Text rechts, beides mittig: so ist die Höhe gefüllt, die
@@ -746,7 +771,7 @@ function handleSunKey(e: KeyboardEvent): void {
 
 .se-gate--dwell .se-dial {
   --dial: #e0a828;
-  --dial-size: clamp(46px, 10cqw, 116px);
+  --dial-size: clamp(52px, 8cqw, 92px);
 }
 .se-gate--dwell.is-met .se-dial {
   --dial: #6ec040;
@@ -861,7 +886,7 @@ function handleSunKey(e: KeyboardEvent): void {
 .se-rays {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(4px, 0.9cqw, 12px);
+  gap: clamp(6px, 0.9cqw, 12px);
 }
 
 .se-ray {
@@ -869,10 +894,11 @@ function handleSunKey(e: KeyboardEvent): void {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(2px, 0.4cqw, 6px);
-  padding: clamp(5px, 0.7cqw, 9px) 2px clamp(4px, 0.6cqw, 8px);
-  background: #16100a;
-  border: 1px solid #2c1806;
+  gap: clamp(4px, 0.55cqw, 8px);
+  min-width: 0;
+  padding: clamp(7px, 0.9cqw, 12px) 4px clamp(6px, 0.8cqw, 10px);
+  background: #141410;
+  border: 1px solid #3e200a;
   border-radius: 4px;
   cursor: pointer;
   transition:
@@ -954,7 +980,7 @@ function handleSunKey(e: KeyboardEvent): void {
    — the colour IS the ray's name here. */
 .se-ray .se-dial {
   --dial: var(--ray);
-  --dial-size: clamp(36px, 6.2cqw, 68px);
+  --dial-size: clamp(36px, 5.6cqw, 60px);
 }
 .se-ray .se-dial-ico {
   color: color-mix(in srgb, var(--ray) 40%, #4e422c);
@@ -964,19 +990,32 @@ function handleSunKey(e: KeyboardEvent): void {
 }
 
 .se-ray.is-met {
-  background: color-mix(in srgb, var(--ray) 14%, #1a1008);
-  border-color: color-mix(in srgb, var(--ray) 50%, #2c1806);
+  background: #1c1c18;
+  border-color: var(--ray);
+}
+
+.se-ray-name {
+  min-height: 2.2em;
+  font-size: clamp(9px, 1.15cqw, 14px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--ray);
 }
 
 .se-ray-lv {
-  font-size: clamp(14px, 2.5cqw, 27px);
-  font-weight: 900;
+  font-size: clamp(13px, 2.1cqw, 23px);
   line-height: 1;
   color: #6a5a3a;
   white-space: nowrap;
 }
 .se-ray.is-lit .se-ray-lv {
   color: #e8e4d8;
+}
+
+.se-ray-lv strong {
+  font-weight: 900;
 }
 
 .se-ray-req {
@@ -986,6 +1025,21 @@ function handleSunKey(e: KeyboardEvent): void {
 }
 .se-ray.is-lit .se-ray-req {
   color: #7a6c56;
+}
+
+.se-ray-meter {
+  display: block;
+  width: 74%;
+  height: 3px;
+  overflow: clip;
+  background: #2c1806;
+  border-radius: 2px;
+}
+
+.se-ray-meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--ray);
 }
 
 /* ── das Ende der Straße ─────────────────────────────────────────
@@ -1055,12 +1109,13 @@ function handleSunKey(e: KeyboardEvent): void {
   }
 }
 
-/* Gestapelt erst, wenn nebeneinander wirklich nicht mehr geht: die Spalte ist
-   auf Full HD nur ~466px breit, und jede gestapelte Zeile nimmt der Sonne 70px. */
-@container (max-width: 430px) {
+@container (max-width: 560px) {
   .se-gates-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 10px;
+    gap: 16px;
+  }
+  .se-ray .se-dial {
+    --dial-size: clamp(40px, 7cqw, 64px);
   }
 }
 
