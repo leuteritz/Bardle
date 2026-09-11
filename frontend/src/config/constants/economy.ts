@@ -1924,6 +1924,7 @@ export const VOYAGE_RAIL_ROW_H = VOYAGE_RAIL_THUMB_H + 2 * VOYAGE_RAIL_ROW_PAD_Y
  * dafuer 20 px abgibt.
  */
 export const VOYAGE_RAIL_BODY_MIN = 106
+export const VOYAGE_RAIL_TIER_FONT_PX = 11
 /* ── Voyages-Ladeschleier ─────────────────────────────────────────────────── */
 export const VOYAGE_LOADER_MIN_MS = 380
 export const VOYAGE_LOADER_SETTLE_FRAMES = 4
@@ -2127,8 +2128,8 @@ export const VOYAGE_CREW_MARKER_PULSE_MS = 2400
  *  laufenden Lauf gibt es kein Standbild. */
 export const VOYAGE_LIVE_ROW_H = 108
 
-export const VOYAGE_LIVE_RAIL_LABEL = 'Current run'
-export const VOYAGE_LIVE_RAIL_TITLE = 'Follow your current run'
+export const VOYAGE_LIVE_RAIL_LABEL = 'Current galaxy'
+export const VOYAGE_LIVE_RAIL_TITLE = 'Follow your current galaxy'
 export const VOYAGE_LIVE_STARS_LABEL = 'Stars rescued'
 
 // ══ Der Spielerkörper auf der Live-Karte ═════════════════════════════════════

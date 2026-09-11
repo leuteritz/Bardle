@@ -50,7 +50,6 @@ const starScale = computed(() => {
   >
     <span class="elr-body">
       <span class="elr-kicker">
-        <span class="elr-status-dot" aria-hidden="true" />
         {{ VOYAGE_LIVE_RAIL_LABEL }}
       </span>
       <span class="elr-name">
@@ -114,15 +113,6 @@ const starScale = computed(() => {
   text-transform: uppercase;
   color: var(--elr-accent);
 }
-.elr-status-dot {
-  flex: 0 0 auto;
-  width: 0.55em;
-  height: 0.55em;
-  border-radius: 50%;
-  background: var(--elr-accent);
-  box-shadow: 0 0 0 0.3em color-mix(in srgb, var(--elr-accent) 18%, transparent);
-}
-
 .elr-name {
   display: flex;
   flex-direction: column;

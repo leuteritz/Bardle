@@ -33,6 +33,7 @@ import {
   VOYAGE_RAIL_ROW_PAD_R,
   VOYAGE_RAIL_ROW_PAD_Y,
   VOYAGE_RAIL_STATE_BAR_PX,
+  VOYAGE_RAIL_TIER_FONT_PX,
   VOYAGE_RAIL_THUMB_H,
   VOYAGE_RAIL_THUMB_W,
 } from '@/config/constants'
@@ -54,6 +55,7 @@ const thumbH = `${VOYAGE_RAIL_THUMB_H}px`
 const rowPad = `${VOYAGE_RAIL_ROW_PAD_Y}px ${VOYAGE_RAIL_ROW_PAD_R}px ${VOYAGE_RAIL_ROW_PAD_Y}px ${VOYAGE_RAIL_ROW_PAD_L}px`
 const rowGap = `${VOYAGE_RAIL_ROW_GAP}px`
 const stateBar = `${VOYAGE_RAIL_STATE_BAR_PX}px`
+const tierFontSize = `${VOYAGE_RAIL_TIER_FONT_PX}px`
 
 const chartPct = computed(() => props.row.charted / EXPEDITION_CHART_MAX)
 /** Was auf den Spieler wartet — die eine Zahl, die der Zähler trägt. */
@@ -253,7 +255,7 @@ const title = computed(
 }
 .egr-tier {
   margin-left: auto;
-  font-size: 8.5px;
+  font-size: v-bind(tierFontSize);
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
