@@ -75,6 +75,7 @@ const meepScale = `${UNIVERSE_TOOLTIP_MEEP_SCALE}`
 
 const gridStyle = {
   '--tracks': JOURNEY_OVERVIEW_KPI_GRID.TRACKS,
+  '--detail-rows': JOURNEY_OVERVIEW_KPI_GRID.ROWS - 1,
 }
 </script>
 
@@ -117,7 +118,7 @@ const gridStyle = {
         <span class="jt-kpi-body">
           <span
             class="jt-kpi-val"
-            :class="{ 'jt-kpi-val--pair': t.pair }"
+            :class="{ 'jt-kpi-val--pair': t.pair, 'jt-kpi-val--rank': t.emblem }"
             :style="t.emblem ? { color: rankColor } : undefined"
           >
             <template v-if="t.pair"
@@ -135,15 +136,41 @@ const gridStyle = {
 
 <style scoped>
 .jt-kpis {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-height: 0;
   min-width: 0;
   padding: 16px 18px 18px;
-  background: #1a1008;
+  background: #111008;
   border: 1px solid #2c1806;
   border-radius: 4px;
+}
+.jt-kpis::after {
+  position: absolute;
+  top: 12px;
+  right: 20px;
+  width: 2px;
+  height: 2px;
+  content: '';
+  pointer-events: none;
+  background: #7a4e20;
+  box-shadow:
+    28px 18px 0 #3e200a,
+    56px 8px 0 #5c3310,
+    88px 30px 0 #3e200a,
+    120px 12px 0 #7a4e20,
+    148px 42px 0 #3e200a,
+    184px 20px 0 #5c3310,
+    220px 50px 0 #3e200a;
+  opacity: 0.8;
+  z-index: 0;
+}
+.jt-kpis > * {
+  position: relative;
+  z-index: 1;
 }
 
 .jt-kpis-head {
@@ -199,18 +226,22 @@ const gridStyle = {
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(var(--tracks), minmax(0, 1fr));
-  grid-template-rows: minmax(88px, 1.1fr) repeat(3, minmax(62px, 0.9fr));
-  gap: 8px;
+  grid-template-rows: minmax(76px, 1.1fr) repeat(var(--detail-rows), minmax(48px, 0.9fr));
+  gap: 6px;
+  padding: 7px;
+  background: #141410;
+  border: 1px solid #2c1806;
 }
 
 .jt-kpi {
   position: relative;
   display: flex;
   align-items: center;
-  gap: clamp(8px, 1.8cqh, 14px);
+  gap: clamp(6px, 1.4cqh, 10px);
   min-width: 0;
   min-height: 0;
-  padding: clamp(9px, 1.8cqh, 14px) clamp(9px, 2.2cqh, 16px);
+  flex: 1;
+  padding: clamp(8px, 1.5cqh, 12px) clamp(8px, 1.8cqh, 13px);
   overflow: hidden;
   text-align: left;
   color: inherit;
@@ -221,6 +252,16 @@ const gridStyle = {
   cursor: pointer;
   transition: border-color 0.15s;
 }
+.jt-kpi::after {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 3px;
+  height: 3px;
+  content: '';
+  background: var(--accent);
+  opacity: 0.85;
+}
 .jt-kpi:hover {
   border-color: color-mix(in srgb, var(--accent) 55%, #3e200a);
   border-left-color: var(--accent);
@@ -228,21 +269,21 @@ const gridStyle = {
 
 .jt-kpi-icon {
   flex-shrink: 0;
-  width: clamp(22px, 10cqh, 32px);
-  height: clamp(22px, 10cqh, 32px);
+  width: clamp(20px, 7cqh, 28px);
+  height: clamp(20px, 7cqh, 28px);
   color: var(--accent);
 }
 
 .jt-kpi--hero {
   align-items: center;
   justify-content: center;
-  gap: clamp(8px, 2cqh, 13px);
-  padding: 12px 14px;
+  gap: clamp(7px, 1.6cqh, 11px);
+  padding: 10px 12px;
 }
 
 .jt-kpi--hero .jt-kpi-icon {
-  width: clamp(28px, 10cqh, 38px);
-  height: clamp(28px, 10cqh, 38px);
+  width: clamp(26px, 8cqh, 34px);
+  height: clamp(26px, 8cqh, 34px);
 }
 
 /* Gleiche Box wie der Glyph, groesseres Motiv: der Ueberstand ist der
@@ -262,10 +303,11 @@ const gridStyle = {
   flex-direction: column;
   gap: clamp(2px, 1.2cqh, 5px);
   min-width: 0;
+  flex: 1;
 }
 
 .jt-kpi-val {
-  font-size: clamp(15px, 5.1cqh, 22px);
+  font-size: clamp(13px, 3.6cqh, 18px);
   font-weight: 900;
   line-height: 1;
   color: var(--rpg-gold);
@@ -275,13 +317,25 @@ const gridStyle = {
 }
 
 .jt-kpi--hero .jt-kpi-val {
-  font-size: clamp(18px, 7cqh, 28px);
+  font-size: clamp(16px, 5.4cqh, 24px);
 }
 /* Sieg und Niederlage im Zweiklang der Bottom-Leiste, nebeneinander statt
    gestapelt: hier traegt die Kachel eine Zeile, keine Spalte. Drei Zahlen
    teilen sich die Zeile, die übrigen Kacheln tragen eine einzelne Zahl. */
 .jt-kpi-val--pair {
-  font-size: clamp(12px, 4.8cqh, 17px);
+  font-size: clamp(11px, 3.4cqh, 15px);
+}
+.jt-kpi-val--rank {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.3em;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.jt-kpi-val--rank .jt-kpi-sub {
+  margin-left: 0;
 }
 .jt-kpi--hero .jt-kpi-val--pair {
   font-size: clamp(14px, 5.6cqh, 20px);
@@ -296,15 +350,15 @@ const gridStyle = {
 
 .jt-kpi-sub {
   margin-left: 0.3em;
-  font-size: clamp(9px, 5cqh, 13px);
+  font-size: clamp(8px, 2.9cqh, 11px);
   font-weight: 700;
   color: var(--rpg-text-muted);
 }
 
 .jt-kpi-lbl {
-  font-size: clamp(9px, 3.5cqh, 11px);
+  font-size: clamp(8px, 2.5cqh, 10px);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   line-height: 1.1;
   text-transform: uppercase;
   color: #8a7a58;
@@ -319,7 +373,8 @@ const gridStyle = {
     padding: 13px 15px 14px;
   }
   .jt-kpi-grid {
-    grid-template-rows: minmax(76px, 1.05fr) repeat(3, minmax(54px, 0.95fr));
+    grid-template-rows: minmax(64px, 1.05fr) repeat(var(--detail-rows), minmax(44px, 0.95fr));
+    padding: 6px;
   }
   .jt-kpi {
     gap: 8px;

@@ -1418,13 +1418,29 @@ export const JOURNEY_KPI_TILES: readonly {
   { category: 'starForge', key: 'relics', icon: 'game-icons:crystal-cluster' },
   { category: 'meepTree', key: 'nodes', icon: 'game-icons:tree-growth' },
   { category: 'champions', key: 'owned', short: 'Champions', icon: 'game-icons:crested-helmet' },
+  { category: 'progression', key: 'level', short: 'Bard Level', icon: 'game-icons:progression' },
+  {
+    category: 'progression',
+    key: 'skill-points',
+    short: 'Skill Points',
+    icon: 'game-icons:upgrade',
+  },
+  { category: 'economy', key: 'chimes-bank', short: 'Chimes Bank', icon: 'game-icons:coins-pile' },
+  { category: 'economy', key: 'clicks', short: 'Total Clicks', icon: 'lucide:mouse-pointer-click' },
+  { category: 'economy', key: 'hourly', short: 'Per Hour', icon: 'game-icons:hourglass' },
+  {
+    category: 'autoBattle',
+    key: 'battles',
+    short: 'Battles Played',
+    icon: 'game-icons:crossed-swords',
+  },
 ]
 
 export const JOURNEY_OVERVIEW_KPI_TILES = JOURNEY_KPI_TILES
 
 export const JOURNEY_OVERVIEW_KPI_GRID = {
   COLS: 3,
-  ROWS: 4,
+  ROWS: 6,
   TRACKS: 3,
 } as const
 
@@ -1433,7 +1449,7 @@ export const JOURNEY_OVERVIEW_KPI_HERO_COUNT = 3
 /** Raster der Stats-Karte: fest, die Zeilen teilen die Höhe, Schrift skaliert per cqh. */
 export const JOURNEY_KPI_GRID = {
   COLS: 3,
-  ROWS: 4,
+  ROWS: 6,
 } as const
 
 /** Das Bonus-Band am Kopf der Stats-Seite: keine Katalogkategorie, aber dieselbe
