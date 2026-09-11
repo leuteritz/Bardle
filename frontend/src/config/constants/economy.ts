@@ -1617,7 +1617,6 @@ export const VOYAGE_MAP_LEGEND_LABEL_OFFSET = 6.3
 export const VOYAGE_MAP_DRIFTER_ART_SCALE = 2
 export const VOYAGE_MAP_DRIFTER_ART_MIN_PX = 24
 export const VOYAGE_MAP_DRIFTER_ART_MAX_PX = 34
-export const VOYAGE_MAP_DRIFTER_LEGEND_IMAGE = '/img/drifter/riftEcho-512.png'
 
 /**
  * Die fuenf Chronikmarken — was ein gespielter Lauf auf der Karte hinterlaesst.
@@ -1652,7 +1651,7 @@ export const VOYAGE_MAP_LEGEND_ROWS = [
   {
     kind: 'drifter-trace',
     label: 'Drifter',
-    tip: 'The artwork and trail left by a rare drifter encounter.',
+    tip: 'A rare drifter that crossed this galaxy.',
   },
 ] as const
 
