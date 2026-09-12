@@ -72,6 +72,7 @@ const pursuitId = ref<string | null>(null)
 const pursuitPingTick = ref(0)
 
 const focusTick = ref(0)
+const offerFocusTick = ref(0)
 
 /**
  * „Und zwar so, dass ich ihn LESEN kann" — der zweite Impuls, und der einzige,
@@ -149,6 +150,7 @@ export function useForgeSpotlight(): {
   pursuitId: Readonly<Ref<string | null>>
   pursuitPingTick: Readonly<Ref<number>>
   focusTick: Readonly<Ref<number>>
+  offerFocusTick: Readonly<Ref<number>>
   readableTick: Readonly<Ref<number>>
   listHovering: ComputedRef<boolean>
   pinned: ComputedRef<boolean>
@@ -156,6 +158,7 @@ export function useForgeSpotlight(): {
   setTreeHover: (id: string | null) => void
   setPin: (id: string) => void
   refocus: () => void
+  focusOffers: () => void
   focusNode: (id: string, opts?: { readable?: boolean }) => void
   clearPin: () => void
   setPursuit: (id: string) => void
@@ -186,6 +189,10 @@ export function useForgeSpotlight(): {
   /** Denselben Knoten noch einmal ins Bild holen, ohne den Fokus anzufassen. */
   function refocus(): void {
     focusTick.value += 1
+  }
+
+  function focusOffers(): void {
+    offerFocusTick.value += 1
   }
 
   /**
@@ -246,6 +253,7 @@ export function useForgeSpotlight(): {
     pursuitId: readonly(pursuitId),
     pursuitPingTick: readonly(pursuitPingTick),
     focusTick: readonly(focusTick),
+    offerFocusTick: readonly(offerFocusTick),
     readableTick: readonly(readableTick),
     listHovering,
     pinned,
@@ -253,6 +261,7 @@ export function useForgeSpotlight(): {
     setTreeHover,
     setPin,
     refocus,
+    focusOffers,
     focusNode,
     clearPin,
     setPursuit,

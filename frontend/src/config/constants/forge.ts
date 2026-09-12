@@ -2543,6 +2543,8 @@ export const FORGE_NODE_TIP_EDGE_PAD_PX = 10
 export const FORGE_OFFER_TITLE = 'Special offers'
 export const FORGE_OFFER_ICON = 'game-icons:anvil-impact'
 export const FORGE_OFFER_COLOR = '#e8a020'
+export const FORGE_SUN_FOCUS_LABEL = 'Star Core'
+export const FORGE_SUN_FOCUS_TIP = 'Center the Star Core and reveal Special offers'
 /** Die Verben der drei Arten — je Art eines, nie zwei Wörter für dieselbe Tat. */
 export const FORGE_OFFER_VERB_RELIC = 'Forge'
 export const FORGE_OFFER_VERB_UPGRADE = 'Upgrade'
@@ -2556,6 +2558,7 @@ export const FORGE_OFFER_TAG_CONSTELLATION = 'FUSION'
  * und `FORGE_CARD_FLASH_MS` daneben eine andere Frage beantwortet.
  */
 export const FORGE_OFFER_POP_MS = 180
+export const FORGE_OFFER_FOCUS_FLASH_MS = 900
 /**
  * Das Zeichen einer Zeile. Kleiner als das der Upgrade-Zeile (36) — der
  * Streifen steht über der Liste und darf sie nicht überstimmen.
