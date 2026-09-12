@@ -1,7 +1,8 @@
 <template>
-  <!-- Every temporary effect the player carries, as ONE stack in the right
-       gutter under the event log trail (`dock: 'free'`). Hidden while a bard
-       profile tab covers the screen — nothing under there can be read anyway.
+  <!-- Every temporary effect the player carries, as ONE stack rising from the
+       command panel in the bottom-right corner (`dock: 'free'`), newest row at
+       the bottom. Hidden while a bard profile tab covers the screen — nothing
+       under there can be read anyway.
 
        During a star fight the stack is docked into the modal's rail
        (`dock: 'rail'`); while the game is paused it stands in the pause
@@ -23,6 +24,12 @@
     }"
     role="status"
   >
+    <!-- Frei: die Pille steht OBEN — der Stapel wächst vom Panel nach oben, und
+         was nicht mehr passt, sind die ältesten Zeilen. -->
+    <div v-if="props.dock === 'free' && overflowCount > 0" key="more-free" class="buff-more">
+      +{{ overflowCount }} more
+    </div>
+
     <div
       v-for="chip in visibleChips"
       :key="chip.key"
@@ -68,7 +75,11 @@
 
       <span class="chip-text">
         <span class="chip-name">{{ chip.name }}</span>
-        <span class="chip-label">{{ chip.label }}</span>
+        <span class="chip-label">
+          {{ chip.label }}
+          <!-- Das Rangwort in der Rangfarbe — nur wo es einen echten Rang gibt. -->
+          <span v-if="chip.tier >= 2 && chip.rank" class="chip-rankword">· {{ chip.rank }}</span>
+        </span>
       </span>
 
       <span class="chip-side">
@@ -87,9 +98,6 @@
          spränge die Spaltenbreite und mit ihr die Kit-Zellen. -->
     <div v-if="props.dock === 'pause'" key="more" class="buff-chip--more">
       <span v-if="overflowCount > 0">+{{ overflowCount }}</span>
-    </div>
-    <div v-else-if="overflowCount > 0" key="more-free" class="buff-more">
-      +{{ overflowCount }} more
     </div>
   </TransitionGroup>
 </template>
@@ -128,21 +136,24 @@ const RING_C = 2 * Math.PI * RING_R
 
 type BuffChip = ActiveBuffView & { tier: 1 | 2 | 3 }
 
-/** Stufe absteigend, sonst Quellreihenfolge — stabil, nie im Sekundentakt. */
+/** Nach Ankunft, älteste zuerst — der neueste Buff steht unten am Panel. Ein
+ *  Segen ohne Uhr gilt seit Galaxiebeginn und steht ganz oben. Der Rang
+ *  sortiert NICHT um: er zeigt sich an der Platte, nicht am Platz. */
 const chips = computed<BuffChip[]>(() =>
   buffs.value
     .map((b, i) => ({ ...b, tier: b.rank ? BUFF_RANK_TIER[b.rank] : (1 as const), i }))
-    .sort((a, b) => b.tier - a.tier || a.i - b.i),
+    .sort((a, b) => (a.startedAt ?? -Infinity) - (b.startedAt ?? -Infinity) || a.i - b.i),
 )
 
 function isExpiring(chip: BuffChip): boolean {
   return chip.timer !== null && chip.timer.secondsLeft <= DRIFTER_BUFF_EXPIRY_WARN_SEC
 }
 
-/* ── Wie viele Zeilen passen in die Gasse ─────────────────────────────────
-   Der Stapel misst sein Band (oben Eventlog-Kante, unten Keybind-HUD) an sich
-   selbst; die Zeilenhöhe liest er aus seiner eigenen `--chip-h` — eine Zahl je
-   Auflösungsstufe, nie calc(). Passt nicht alles, nimmt „+N" die letzte Zeile. */
+/* ── Wie viele Zeilen passen in das Band ──────────────────────────────────
+   Der Stapel misst sein Band (unten Panel-Oberkante, oben Eventlog-Kante) an
+   sich selbst; die Zeilenhöhe liest er aus seiner eigenen `--chip-h` — eine
+   Zahl je Auflösungsstufe, nie calc(). Passt nicht alles, nimmt „+N" die
+   oberste Zeile, und gezeigt werden die NEUESTEN. */
 const stackRef = ref<{ $el: HTMLElement } | null>(null)
 /** Ganze Zeilen im Band — und wie viele neben der „+N"-Pille noch stehen. */
 const fitRows = ref(Infinity)
@@ -191,7 +202,7 @@ const visibleChips = computed<BuffChip[]>(() => {
   if (props.dock === 'pause') return all.slice(0, PAUSE_KIT_EFFECT_COLS)
   if (props.dock === 'rail') return all
   if (all.length <= fitRows.value) return all
-  return all.slice(0, fitRowsWithMore.value)
+  return all.slice(Math.max(0, all.length - fitRowsWithMore.value))
 })
 
 const overflowCount = computed(() => chips.value.length - visibleChips.value.length)
@@ -209,24 +220,25 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 </script>
 
 <style scoped>
-/* ── Frei: der Stapel in der rechten Gasse ─────────────────────────────────
-   Oben die gemeldete Kante der Eventlog-Spur (eingeklappt: ihre Leiste),
-   unten das Keybind-HUD über dem Command-Panel. Beides reine px-Werte aus JS.
-   Flüchtig wie die Karten links: meldet KEINE Kante an die HUD-Kontur. */
+/* ── Frei: der Stapel über dem Command-Panel ──────────────────────────────
+   Unten die Oberkante des Panels, oben die gemeldete Kante der Eventlog-Spur
+   (eingeklappt: ihre Leiste). Beides reine px-Werte. Flüchtig wie die Karten
+   links: meldet KEINE Kante an die HUD-Kontur. */
 .buff-bar {
   --chip-w: v-bind(rowW);
   --chip-w-legendary: v-bind(rowWLegendary);
   --chip-h: v-bind(rowH);
   --chip-gap: v-bind(rowGap);
-  --chip-stage: 40px;
+  --chip-stage: 52px;
   position: fixed;
-  /* Bündig mit der Gasse, aber nie über dem Encyclopedia-Griff am Rand. */
-  right: max(var(--hud-col-edge, 12px), v-bind(edgeClear));
+  /* In der Flucht des Panelrahmens, aber nie über dem Encyclopedia-Griff am Rand. */
+  right: max(calc(20px * var(--hud-scale, 1)), v-bind(edgeClear));
   top: calc(max(var(--event-log-bottom, 0px), var(--header-total-height, 0px)) + v-bind(topGap));
-  bottom: calc(var(--hud-panel-size, 330px) + var(--kb-hud-h, 0px) + v-bind(bottomGap));
+  bottom: calc(var(--hud-panel-size, 330px) + v-bind(bottomGap));
   z-index: 900;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   align-items: flex-end;
   gap: var(--chip-gap);
   width: max-content;
@@ -241,11 +253,11 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 0 10px 0 9px;
+  gap: 12px;
+  padding: 0 14px 0 11px;
   background: #16140e;
   border: 1px solid #3e200a;
-  border-left: 3px solid var(--chip-color, #e8c040);
+  border-left: 4px solid var(--chip-color, #e8c040);
   border-radius: 4px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7);
   overflow: hidden;
@@ -261,7 +273,7 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 .buff-chip--t3 {
   width: var(--chip-w-legendary);
   border: 2px solid #7a4e20;
-  border-left: 3px solid var(--chip-color, #e8c040);
+  border-left: 4px solid var(--chip-color, #e8c040);
   box-shadow:
     inset 0 0 0 1px #3e200a,
     inset 0 0 0 2px #5c3310,
@@ -304,9 +316,9 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 .chip-gem {
   position: absolute;
   top: -4px;
-  left: 9px;
-  width: 7px;
-  height: 7px;
+  left: 11px;
+  width: 8px;
+  height: 8px;
   background: var(--chip-rank, #4a90e2);
   border: 1px solid #111008;
   transform: rotate(45deg);
@@ -315,27 +327,27 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 
 .buff-chip--t3 .chip-gem {
   top: -3px;
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
 }
 
 .chip-ornament {
   position: absolute;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
   color: #e8c040;
-  opacity: 0.75;
+  opacity: 0.8;
   pointer-events: none;
 }
 
 .chip-ornament--tr {
-  top: 3px;
-  right: 4px;
+  top: 4px;
+  right: 5px;
 }
 
 .chip-ornament--bl {
-  bottom: 3px;
-  left: 6px;
+  bottom: 4px;
+  left: 7px;
 }
 
 /* Letzte Sekunden: eigene Ebene, statisch gefärbt, animiert wird nur ihre
@@ -394,9 +406,12 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
   stroke-width: 7;
 }
 
-.buff-chip--t2 .chip-ring__track,
-.buff-chip--t3 .chip-ring__track {
+.buff-chip--t2 .chip-ring__track {
   stroke: color-mix(in srgb, var(--chip-rank, #4a90e2) 32%, transparent);
+}
+
+.buff-chip--t3 .chip-ring__track {
+  stroke: color-mix(in srgb, #e8c040 34%, transparent);
 }
 
 /* Der Bogen zieht per Offset — dieselbe Bahn wie jeder Ring im Spiel. */
@@ -437,28 +452,43 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
   min-width: 0;
   line-height: 1;
 }
 
+/* Der Name trägt die Farbe der Quelle — welcher Buff ist das. */
 .chip-name {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
-  color: #f0e6c8;
+  color: var(--chip-color, #f0e6c8);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.buff-chip--t3 .chip-name {
+  color: #e8c040;
+}
+
 .chip-label {
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 800;
-  letter-spacing: 1.4px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
   color: #b89b5a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Das Rangwort in der Rangfarbe — was war der Buff wert. */
+.chip-rankword {
+  color: var(--chip-rank, #b89b5a);
+}
+
+.buff-chip--t3 .chip-rankword {
+  color: #e8c040;
 }
 
 .chip-side {
@@ -466,23 +496,20 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 3px;
+  gap: 4px;
   flex-shrink: 0;
   line-height: 1;
 }
 
+/* Der Multiplikator in Gold — das Gewicht, das jede Zeile gleich liest. */
 .chip-mult {
-  font-size: 20px;
+  font-size: 28px;
   font-weight: 900;
-  color: var(--chip-color, #e8c040);
+  color: #e8c040;
 }
 
 .buff-chip--t3 .chip-mult {
-  font-size: 22px;
-}
-
-.buff-chip--t3 .chip-name {
-  color: #e8c040;
+  font-size: 32px;
 }
 
 /* Right-aligned with a reserved width: the number may lose a digit without
@@ -497,13 +524,9 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 }
 
 .chip-seconds {
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 900;
   color: #f2ead2;
-}
-
-.buff-chip--t3 .chip-seconds {
-  color: #e8c040;
 }
 
 .buff-chip--expiring .chip-seconds {
@@ -511,15 +534,15 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 }
 
 .chip-unit {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   color: #8a7a52;
 }
 
 .chip-clock--endless {
-  font-size: 8.5px;
+  font-size: 9.5px;
   font-weight: 800;
-  letter-spacing: 1.2px;
+  letter-spacing: 1.3px;
   text-transform: uppercase;
   color: #8a7a58;
   min-width: 0;
@@ -540,7 +563,7 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
   border-radius: 4px;
 }
 
-/* ── Enter / leave ── */
+/* ── Enter / leave: von unten herein, wie der Stapel wächst ── */
 .buff-chip-enter-active {
   transition:
     opacity 0.3s ease,
@@ -554,7 +577,7 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 }
 .buff-chip-enter-from {
   opacity: 0;
-  transform: translateX(18px) scale(0.92);
+  transform: translateY(14px) scale(0.92);
 }
 .buff-chip-leave-to {
   opacity: 0;
@@ -567,30 +590,30 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 /* ── Auflösungsstufen — dieselben Schwellen wie die Fähigkeitenleiste ── */
 @media (min-width: 2400px) {
   .buff-bar {
-    --chip-w: 272px;
-    --chip-w-legendary: 312px;
-    --chip-h: 64px;
+    --chip-w: 344px;
+    --chip-w-legendary: 392px;
+    --chip-h: 82px;
     --chip-gap: 10px;
-    --chip-stage: 46px;
+    --chip-stage: 60px;
   }
   .chip-name {
-    font-size: 15px;
+    font-size: 18px;
   }
   .chip-label {
-    font-size: 11px;
-    letter-spacing: 1.6px;
+    font-size: 12px;
+    letter-spacing: 1.7px;
   }
   .chip-mult {
-    font-size: 23px;
+    font-size: 32px;
   }
   .buff-chip--t3 .chip-mult {
-    font-size: 26px;
+    font-size: 37px;
   }
   .chip-seconds {
-    font-size: 15px;
+    font-size: 19px;
   }
   .chip-unit {
-    font-size: 10px;
+    font-size: 12px;
   }
   .buff-more {
     font-size: 12px;
@@ -599,33 +622,33 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 
 @media (min-width: 3400px) {
   .buff-bar {
-    --chip-w: 320px;
-    --chip-w-legendary: 368px;
-    --chip-h: 76px;
+    --chip-w: 404px;
+    --chip-w-legendary: 460px;
+    --chip-h: 98px;
     --chip-gap: 12px;
-    --chip-stage: 56px;
+    --chip-stage: 72px;
   }
   .chip-name {
-    font-size: 18px;
+    font-size: 22px;
   }
   .chip-label {
-    font-size: 13px;
-    letter-spacing: 1.9px;
+    font-size: 14px;
+    letter-spacing: 2px;
   }
   .chip-mult {
-    font-size: 28px;
+    font-size: 38px;
   }
   .buff-chip--t3 .chip-mult {
-    font-size: 31px;
+    font-size: 44px;
   }
   .chip-seconds {
-    font-size: 18px;
+    font-size: 23px;
   }
   .chip-unit {
-    font-size: 12px;
+    font-size: 14px;
   }
   .chip-ornament {
-    font-size: 11px;
+    font-size: 13px;
   }
   .buff-more {
     font-size: 14px;
@@ -633,32 +656,32 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 }
 
 /* Flache Fenster (Full HD bei 125 %): die Spur liegt unter dem Header und ihr
-   Boden frisst die Gasse — die Zeile rückt zusammen, damit noch eine steht. */
+   Boden frisst das Band — die Zeile rückt zusammen, damit noch zwei stehen. */
 @media (max-height: 800px) {
   .buff-bar {
     --chip-h: v-bind(rowHCompact);
     --chip-gap: v-bind(rowGapCompact);
-    --chip-stage: 32px;
+    --chip-stage: 40px;
   }
   .buff-chip {
-    gap: 7px;
-    padding: 0 8px 0 7px;
+    gap: 9px;
+    padding: 0 10px 0 8px;
   }
   .chip-name {
-    font-size: 12px;
+    font-size: 13px;
   }
   .chip-label {
-    font-size: 8.5px;
+    font-size: 9px;
     letter-spacing: 1.2px;
   }
   .chip-mult {
-    font-size: 17px;
+    font-size: 21px;
   }
   .buff-chip--t3 .chip-mult {
-    font-size: 19px;
+    font-size: 24px;
   }
   .chip-seconds {
-    font-size: 12px;
+    font-size: 13px;
   }
 }
 
@@ -687,6 +710,7 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
   position: static;
   flex-direction: column;
   flex-wrap: nowrap;
+  justify-content: flex-start;
   align-items: stretch;
   gap: 6px;
   width: 100%;
@@ -705,6 +729,7 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
   row-gap: 2px;
   align-items: center;
   padding: 0 7px 0 6px;
+  border-left-width: 3px;
 }
 
 .buff-bar--docked .chip-text,
@@ -713,6 +738,7 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 }
 
 .buff-bar--docked .chip-name,
+.buff-bar--docked .chip-rankword,
 .buff-bar--docked .chip-ornament,
 .buff-bar--docked .chip-gem {
   display: none;
@@ -824,6 +850,7 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
   flex: 0 0 var(--chip-w);
   gap: 8px;
   padding: 0 10px 0 8px;
+  border-left-width: 3px;
 }
 
 .buff-bar--pause .chip-name {
@@ -832,6 +859,10 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 
 .buff-bar--pause .chip-label {
   font-size: 10px;
+}
+
+.buff-bar--pause .chip-rankword {
+  display: none;
 }
 
 .buff-bar--pause .chip-mult {
