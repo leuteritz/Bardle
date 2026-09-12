@@ -2549,6 +2549,11 @@ export const FORGE_SUN_FOCUS_FRAME_INSET_PX = 18
 export const FORGE_SUN_FOCUS_FRAME_LINE_PX = 2
 export const FORGE_SUN_FOCUS_FRAME_REST_SCALE = 0.94
 export const FORGE_SUN_FOCUS_FRAME_OPACITY = 0.94
+export const FORGE_OFFER_FOCUS_BUTTON_FONT_PX = 14
+export const FORGE_OFFER_FOCUS_BUTTON_MIN_HEIGHT_PX = 44
+export const FORGE_OFFER_FOCUS_BUTTON_MIN_WIDTH_PX = 108
+export const FORGE_OFFER_FOCUS_BUTTON_PADDING_X_PX = 16
+export const FORGE_OFFER_FOCUS_BUTTON_PADDING_Y_PX = 11
 /** Die Verben der drei Arten — je Art eines, nie zwei Wörter für dieselbe Tat. */
 export const FORGE_OFFER_VERB_RELIC = 'Forge'
 export const FORGE_OFFER_VERB_UPGRADE = 'Upgrade'
