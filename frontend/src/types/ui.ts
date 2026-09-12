@@ -599,6 +599,10 @@ export interface BadgeSeedResult {
  */
 export type AbilityBarDock = 'free' | 'rail' | 'pause'
 
+/** Rang eines laufenden Buffs — nur Quellen mit ECHTER Rarität tragen einen
+ *  (Drifter, Augment); Union beider Skalen, damit der Stapel eine Stufe kennt. */
+export type BuffRank = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+
 /**
  * Was ein Aufbruch hinterlässt, damit die Ankunft ihn ansagen kann.
  *
