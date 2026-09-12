@@ -11,7 +11,7 @@
     v-if="shown.length > 0"
     ref="wrapEl"
     class="fos"
-    :class="{ 'fos--focused': focused }"
+    :class="{ 'fos--focused': focused, 'fos--pinned': offerFocusPinned }"
     @mouseleave="leaveStrip"
   >
     <header class="fos-head">
@@ -29,6 +29,7 @@
         :key="offer.id"
         :offer="offer"
         :fresh="freshIds.has(offer.id)"
+        :focus-pinned="offerFocusPinned"
         :can-reroll="offer.kind === 'bargain' && canReroll"
         @buy="handleBuy"
         @hover="enterRow"
@@ -91,7 +92,7 @@ import {
 const forgeStore = useStarForgeStore()
 const { offers, offerById, freshIds, buyOffer, pursuedId, bargainExtras, rerollBargain, canReroll } =
   useForgeOffers()
-const { offerFocusTick } = useForgeSpotlight()
+const { offerFocusTick, offerFocusPinned } = useForgeSpotlight()
 
 // ── Eingefrorene Reihenfolge ─────────────────────────────────────────────────
 const frozenIds = ref<string[] | null>(null)
@@ -221,6 +222,11 @@ const listMaxCompact = `${FORGE_OFFER_LIST_MAX_COMPACT_PX}px`
 }
 
 .fos--focused::after {
+  opacity: 0.9;
+  transform: scale(1);
+}
+
+.fos--pinned::after {
   opacity: 0.9;
   transform: scale(1);
 }

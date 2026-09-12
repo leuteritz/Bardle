@@ -19,6 +19,7 @@ describe('useForgeSpotlight', () => {
     pinnedId,
     focusTick,
     offerFocusTick,
+    offerFocusPinned,
     listHovering,
     pinned,
     setListHover,
@@ -249,6 +250,25 @@ describe('useForgeSpotlight', () => {
 
       expect(focused).toBe(before + 1)
       expect(offerFocusTick.value).toBe(focused)
+    })
+
+    it('hält den Special-Offers-Fokus bis zu einem anderen Ziel', () => {
+      const tree = useForgeSpotlight()
+
+      tree.focusOffers()
+      expect(offerFocusPinned.value).toBe(true)
+
+      tree.setPin('upgrade_node')
+      expect(offerFocusPinned.value).toBe(false)
+    })
+
+    it('lässt sich ausdrücklich lösen', () => {
+      const tree = useForgeSpotlight()
+
+      tree.focusOffers()
+      tree.clearOfferFocus()
+
+      expect(offerFocusPinned.value).toBe(false)
     })
   })
 

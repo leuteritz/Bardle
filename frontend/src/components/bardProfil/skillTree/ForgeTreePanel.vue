@@ -281,7 +281,7 @@
            Komet taumelt, die Plasmascheibe atmet, und eine Zahl, die mitdreht
            oder mitpulst, ist keine Anzeige mehr. Alle vier sind absolut in der
            Mitte des Wrappers verankert und tragen ihre Größe selbst. -->
-        <div class="sun-wrapper" :class="{ 'sun-wrapper--focused': starCoreFocused }">
+        <div class="sun-wrapper" :class="{ 'sun-wrapper--focused': offerFocusPinned }">
           <CometDisc v-if="solarStore.isCometState" :diameter="bodyDiameter" @ready="onSunReady" />
           <PhaseSunDisc v-else :diameter="bodyDiameter" @ready="onSunReady" />
           <div
@@ -299,7 +299,7 @@
           <button
             class="sun-focus-button"
             type="button"
-            :aria-pressed="starCoreFocused"
+            :aria-pressed="offerFocusPinned"
             :aria-label="FORGE_SUN_FOCUS_TIP"
             v-tip="{
               text: FORGE_SUN_FOCUS_TIP,
@@ -808,10 +808,12 @@ const {
   pinnedId,
   focusTick,
   readableTick,
+  offerFocusPinned,
   setTreeHover,
   setPin,
   refocus,
   clearPin,
+  clearOfferFocus,
   pursuitId,
   setPursuit,
   pingPursuit,
@@ -823,7 +825,6 @@ const { searchActive, matchIds } = useForgeSearch()
 const { detailsOpen, openDetails, closeDetails } = useForgeDetailsPane()
 
 const sunReady = ref(false)
-const starCoreFocused = ref(false)
 const entryPhase = ref<'wait' | 'core' | 'complete'>('wait')
 const entryMs = `${FORGE_TREE_ENTRY_CORE_MS}ms`
 let entryTimer: ReturnType<typeof setTimeout> | null = null
@@ -1557,7 +1558,7 @@ const pursuitNameStyle = computed(() => {
 
 /** Ein Klick im Netz ist dieselbe Geste wie der Sprung aus dem Voyages-Reiter. */
 function aimFusion(id: string): void {
-  starCoreFocused.value = false
+  clearOfferFocus()
   openDetails()
   if (pursuitId.value === id) pingPursuit()
   else setPursuit(id)
@@ -1900,7 +1901,7 @@ function isTooltipBelow(node: TreeNode): boolean {
  * Weg nehmen. Hier bleibt nur, was der Baum eigenes tut.
  */
 function handleNodeClick(node: TreeNode): void {
-  starCoreFocused.value = false
+  clearOfferFocus()
   // Spalte zu: aufklappen und fokussieren. Gekauft wird hier nicht — der Baum
   // zeigt einen Ring, keine Rechnung.
   if (!detailsOpen.value) {
@@ -2033,7 +2034,7 @@ const stageTransitionMs = computed(() =>
 
 watch(detailsOpen, (open) => {
   paneShift = true
-  if (!open) starCoreFocused.value = false
+  if (!open) clearOfferFocus()
 })
 
 onMounted(() => {
@@ -2327,7 +2328,7 @@ function onClickCapture(event: MouseEvent): void {
 function onBackgroundClick(): void {
   if (didDrag) return
   starFocusPending = false
-  starCoreFocused.value = false
+  clearOfferFocus()
   clearPin()
   clearPursuit()
   closeDetails()
@@ -2336,7 +2337,6 @@ function onBackgroundClick(): void {
 function focusStarCore(): void {
   clearPin()
   clearPursuit()
-  starCoreFocused.value = true
   focusOffers()
   if (detailsOpen.value) {
     starFocusPending = false
