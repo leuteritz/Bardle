@@ -18,6 +18,7 @@ describe('useForgeSpotlight', () => {
     treeHoverId,
     pinnedId,
     focusTick,
+    offerFocusTick,
     listHovering,
     pinned,
     setListHover,
@@ -224,6 +225,30 @@ describe('useForgeSpotlight', () => {
       const before = focusTick.value
       resetForgeSpotlight()
       expect(focusTick.value).toBe(before)
+    })
+  })
+
+  describe('offerFocusTick', () => {
+    it('meldet den Star-Core-Impuls über getrennte Leser hinweg', () => {
+      const tree = useForgeSpotlight()
+      const shop = useForgeSpotlight()
+      const before = offerFocusTick.value
+
+      tree.focusOffers()
+
+      expect(offerFocusTick.value).toBe(before + 1)
+      expect(shop.offerFocusTick.value).toBe(before + 1)
+    })
+
+    it('bleibt beim Aufräumen ohne neuen Scroll-Impuls', () => {
+      const before = offerFocusTick.value
+      useForgeSpotlight().focusOffers()
+      const focused = offerFocusTick.value
+
+      resetForgeSpotlight()
+
+      expect(focused).toBe(before + 1)
+      expect(offerFocusTick.value).toBe(focused)
     })
   })
 
