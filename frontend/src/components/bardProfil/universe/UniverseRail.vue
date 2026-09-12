@@ -258,10 +258,10 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
   --sr-color: var(--un-row-tint);
 }
 .un-rail-row.is-current.is-picked {
-  --sr-color: v-bind(hereColor);
-  --sr-picked: v-bind(hereColor);
-  background: color-mix(in srgb, v-bind(hereColor) 18%, var(--sr-row-bg));
-  border-color: color-mix(in srgb, v-bind(hereColor) 82%, var(--sr-row-border));
+  --sr-color: var(--sr-accent-hi);
+  --sr-picked: var(--sr-accent-hi);
+  background: color-mix(in srgb, var(--sr-accent-hi) 18%, var(--sr-row-bg));
+  border-color: color-mix(in srgb, var(--sr-accent-hi) 82%, var(--sr-row-border));
 }
 
 .un-rail-disc {
@@ -292,6 +292,9 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
 
 .un-rail-row.is-current .un-rail-head .sr-row-note {
   color: v-bind(hereColor);
+}
+.un-rail-row.is-current.is-picked .un-rail-head .sr-row-note {
+  color: var(--sr-accent-hi);
 }
 
 /* ══ Die Ablesungszeile ══
@@ -344,6 +347,10 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
 .un-rail-row.is-current::after {
   background: v-bind(hereColor);
   opacity: 0.9;
+}
+.un-rail-row.is-current.is-picked::after {
+  background: var(--sr-accent-hi);
+  opacity: 1;
 }
 .un-rail-row:not(.is-inert):not(.is-picked):hover::after {
   opacity: 0.8;
