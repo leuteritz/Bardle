@@ -9,7 +9,12 @@
  * `gameNow()` — die Position wird NIE fortgeschrieben, sondern jedes Mal neu
  * gerechnet. Damit übersteht sie Zeitraffer, Reiterwechsel und Reload.
  */
-import type { DotPos } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { seededRng, type DotPos } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import {
+  PLAYER_DRIFT_AMP,
+  PLAYER_DRIFT_HEADING_STEP_MS,
+  PLAYER_DRIFT_PERIOD_MS,
+} from '@/config/constants'
 
 /** Der Kern der Scheibe im normalisierten 0..1-Raum. */
 const CORE: DotPos = { x: 0.5, y: 0.5 }
@@ -23,6 +28,39 @@ export interface PlayerFlightState {
   championTravelState: string
   championTravelStartTime: number
   championTravelDurationMs: number
+  /** Kurs offen: der Körper treibt um seinen Ort, statt zu stehen. */
+  pendingRoleSelection?: boolean
+  /** Seed der Drift — je Galaxie ein eigener Wanderweg. */
+  mapSeed?: number
+}
+
+function clampDot(p: DotPos): DotPos {
+  return { x: Math.min(0.94, Math.max(0.06, p.x)), y: Math.min(0.94, Math.max(0.06, p.y)) }
+}
+
+/**
+ * Die Wanderung ohne Kurs: zwei überlagerte Sinus-Wellen mit seed-eigenen
+ * Phasen und Frequenzen — eine Lissajous-Figur um den Ort, immer frisch aus
+ * `now`, nie fortgeschrieben.
+ */
+export function driftOffset(seed: number, nowMs: number): DotPos {
+  const rng = seededRng((seed ^ 0x9e3779b9) >>> 0)
+  const p1 = rng() * Math.PI * 2
+  const p2 = rng() * Math.PI * 2
+  const f1 = 0.8 + rng() * 0.4
+  const f2 = 0.5 + rng() * 0.3
+  const t = (nowMs / PLAYER_DRIFT_PERIOD_MS) * Math.PI * 2
+  return {
+    x: PLAYER_DRIFT_AMP * (0.7 * Math.sin(t * f1 + p1) + 0.3 * Math.sin(t * f2 * 2.3 + p2)),
+    y: PLAYER_DRIFT_AMP * (0.7 * Math.cos(t * f2 + p2) + 0.3 * Math.cos(t * f1 * 1.7 + p1)),
+  }
+}
+
+/** Kurswinkel des treibenden Körpers aus finiter Differenz. */
+export function driftHeading(seed: number, nowMs: number): number {
+  const a = driftOffset(seed, nowMs)
+  const b = driftOffset(seed, nowMs + PLAYER_DRIFT_HEADING_STEP_MS)
+  return Math.atan2(b.y - a.y, b.x - a.x)
 }
 
 /** Die offene Etappe: woher, wohin. `target` ist null, wenn keine läuft. */
@@ -68,6 +106,10 @@ export function playerGalaxyPos(
   // Am Bossstern im Kern angedockt.
   if (state.bossPhaseActive || state.isComplete) return CORE
   const { from, target } = playerLeg(spawn, dots, attempts, state)
+  if (state.pendingRoleSelection && !state.isRescueRotating) {
+    const d = driftOffset(state.mapSeed ?? 0, now)
+    return clampDot({ x: from.x + d.x, y: from.y + d.y })
+  }
   if (!target) return from
   if (state.championTravelState === 'traveling') {
     const p = playerTravelProgress(state, now)

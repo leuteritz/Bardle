@@ -333,6 +333,11 @@ export const CREST_SEPARATOR = ' · '
 
 // Minimap travel rendering (static galaxy map)
 export const MINIMAP_FLIGHTPATH_BEND = 0.18 // quadratic ctrl-point offset (fraction of leg length)
+/** Treiben ohne Kurs: Amplitude im 0..1-Kartenraum und Grundperiode; nie fortgeschrieben. */
+export const PLAYER_DRIFT_AMP = 0.045
+export const PLAYER_DRIFT_PERIOD_MS = 14_000
+/** Vorgriff für die Ausrichtung des treibenden Körpers (finite Differenz). */
+export const PLAYER_DRIFT_HEADING_STEP_MS = 80
 export const MINIMAP_ROUTE_ARROW_SIZE = 5 // chevron wing length on flown-route segments (live map)
 export const MINIMAP_ROUTE_ARROW_GAP = 14 // chevron tip distance before the segment endpoint (clears the star marker)
 export const MINIMAP_ROUTE_ARROW_SPREAD = 0.48 // half-opening angle of the chevron in radians (~27°)

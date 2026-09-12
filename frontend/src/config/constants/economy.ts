@@ -2121,6 +2121,7 @@ export const VOYAGE_LIVE_ROW_H = 108
 export const VOYAGE_LIVE_RAIL_LABEL = 'Current galaxy'
 /** Die Kopfzeile der Live-Zeile, solange kein Kurs gesetzt ist. */
 export const VOYAGE_LIVE_RAIL_COURSE_LABEL = 'Awaiting course'
+export const VOYAGE_LIVE_RAIL_ADRIFT_LABEL = 'Adrift'
 export const VOYAGE_LIVE_RAIL_TITLE = 'Follow your current galaxy'
 export const VOYAGE_LIVE_STARS_LABEL = 'Stars rescued'
 
@@ -2152,5 +2153,8 @@ export const VOYAGE_COURSE_HEAD_LABEL = 'Chart your course'
 export const VOYAGE_COURSE_HEAD_SUB = 'Pick a star — its role flies out next'
 export const VOYAGE_COURSE_ACT_LABEL = 'Click to set course'
 export const VOYAGE_COURSE_TIP_STATE = 'Course option'
+/** Vor dem Tor: Bard treibt, der Wayfinder führt. */
+export const VOYAGE_ADRIFT_HEAD_LABEL = 'Adrift'
+export const VOYAGE_ADRIFT_HEAD_SUB = 'Follow the Wayfinder to chart a course'
 export const VOYAGE_COURSE_FLIGHT_LABEL = 'Flight'
 export const VOYAGE_COURSE_LEFT_LABEL = 'champions left'

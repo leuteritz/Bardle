@@ -5,12 +5,14 @@ import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { liveGalaxyRecord } from '@/utils/game/liveGalaxyRecord'
+import { courseUnlocked } from '@/utils/game/courseGate'
 import { toRoman } from '@/utils/ui/format'
 import { useLazyGalaxySnapshot } from '@/composables/ui/useLazyGalaxySnapshot'
 import {
   LANDMARK_FREED_CORE,
   VOYAGE_LIVE_RAIL_LABEL,
   VOYAGE_LIVE_RAIL_COURSE_LABEL,
+  VOYAGE_LIVE_RAIL_ADRIFT_LABEL,
   VOYAGE_LIVE_RAIL_TITLE,
   VOYAGE_LIVE_ROW_H,
   VOYAGE_LIVE_STARS_LABEL,
@@ -24,9 +26,10 @@ const emit = defineEmits<{ select: [] }>()
 const galaxyStore = useGalaxyStore()
 const gameStore = useGameStore()
 
-const kicker = computed(() =>
-  galaxyStore.pendingRoleSelection ? VOYAGE_LIVE_RAIL_COURSE_LABEL : VOYAGE_LIVE_RAIL_LABEL,
-)
+const kicker = computed(() => {
+  if (!galaxyStore.pendingRoleSelection) return VOYAGE_LIVE_RAIL_LABEL
+  return courseUnlocked() ? VOYAGE_LIVE_RAIL_COURSE_LABEL : VOYAGE_LIVE_RAIL_ADRIFT_LABEL
+})
 const rowH = `${VOYAGE_LIVE_ROW_H}px`
 const thumbW = `${VOYAGE_RAIL_THUMB_W}px`
 const thumbH = `${VOYAGE_RAIL_THUMB_H}px`
