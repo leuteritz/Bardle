@@ -81,6 +81,7 @@ import { DRAKE_TYPES, type DrakeTypeId } from '@/config/battle/drakes'
 import { logger } from '@/utils/logger'
 import { anchorGameClock, gameClockOffset, gameNow } from '@/utils/game/gameClock'
 import { openOfflineWindow } from '@/utils/game/offlineWindow'
+import { useEventLog } from '@/composables/ui/useEventLog'
 
 /** Content id as the current catalog spells it — see SAVE_ID_RENAMES. An id
  *  that was never renamed passes through untouched. */
@@ -1528,6 +1529,7 @@ export function usePersistence() {
 
     // 10. Clear localStorage
     localStorage.removeItem(SAVE_KEY)
+    useEventLog().clearEvents()
   }
 
   return { saveGame, loadGame, resetGame }
