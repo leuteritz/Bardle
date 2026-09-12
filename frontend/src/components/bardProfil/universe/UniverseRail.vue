@@ -46,6 +46,7 @@ import {
   UNIVERSE_RAIL_CARD_PAD_T,
   UNIVERSE_RAIL_CARD_PAD_T_COMPACT,
   UNIVERSE_RAIL_COMPACT_MAX_VH,
+  UNIVERSE_RAIL_CURRENT_ROW_H,
   UNIVERSE_RAIL_READ_H,
   UNIVERSE_RAIL_READ_H_COMPACT,
   UNIVERSE_RAIL_ROW_GAP,
@@ -125,6 +126,7 @@ const rowGap = computed(() =>
   px(compact.value ? UNIVERSE_RAIL_ROW_GAP_COMPACT : UNIVERSE_RAIL_ROW_GAP),
 )
 const cardH = computed(() => px(compact.value ? UNIVERSE_RAIL_ROW_H_COMPACT : UNIVERSE_RAIL_ROW_H))
+const currentRowH = px(UNIVERSE_RAIL_CURRENT_ROW_H)
 const cardMaxH = px(UNIVERSE_RAIL_CARD_MAX_H)
 const cardGapY = computed(() =>
   px(compact.value ? UNIVERSE_RAIL_CARD_GAP_Y_COMPACT : UNIVERSE_RAIL_CARD_GAP_Y),
@@ -220,6 +222,12 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
   align-items: stretch;
   gap: v-bind(cardGapY);
   padding: v-bind(cardPad);
+}
+
+/* Die laufende Bahn ist die Live-Karte des Reiters und bleibt als erste Karte
+   sichtbar; der Rest der Leiste verteilt nur den verbleibenden Platz. */
+.un-rail-row.is-current {
+  flex: 0 0 v-bind(currentRowH);
 }
 
 .un-rail-head {
