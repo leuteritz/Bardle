@@ -46,7 +46,9 @@ import {
   UNIVERSE_RAIL_CARD_PAD_T,
   UNIVERSE_RAIL_CARD_PAD_T_COMPACT,
   UNIVERSE_RAIL_COMPACT_MAX_VH,
+  UNIVERSE_RAIL_CURRENT_LABEL,
   UNIVERSE_RAIL_CURRENT_ROW_H,
+  UNIVERSE_RAIL_GALAXIES_LABEL,
   UNIVERSE_RAIL_READ_H,
   UNIVERSE_RAIL_READ_H_COMPACT,
   UNIVERSE_RAIL_ROW_GAP,
@@ -165,7 +167,33 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
         :aria-pressed="row.picked"
         @click="pick(row)"
       >
-        <span class="un-rail-head">
+        <template v-if="row.current">
+          <span class="un-current-main">
+            <span class="un-current-thumb">
+              <UniverseDisc :universe="row.id" :state="row.discState" :px="discPx" />
+              <span class="un-rail-pulse" aria-hidden="true" />
+            </span>
+            <span class="un-current-body">
+              <span class="un-current-kicker">{{ UNIVERSE_RAIL_CURRENT_LABEL }}</span>
+              <span class="un-current-name">
+                <span class="un-current-prefix">Universe</span>
+                <span class="un-current-number">{{ row.roman }}</span>
+              </span>
+            </span>
+          </span>
+
+          <span class="un-current-progress">
+            <span class="un-current-progress-head">
+              <span class="un-current-progress-label">{{ UNIVERSE_RAIL_GALAXIES_LABEL }}</span>
+              <span class="un-current-count">{{ row.galaxies }}</span>
+            </span>
+            <span class="un-current-rail" aria-hidden="true">
+              <span class="un-current-fill" :style="{ transform: `scaleX(${row.progress})` }" />
+            </span>
+          </span>
+        </template>
+
+        <span v-else class="un-rail-head">
           <span class="un-rail-disc">
             <UniverseDisc :universe="row.id" :state="row.discState" :px="discPx" />
             <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre
@@ -181,7 +209,7 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
 
         <!-- Grad, Farbe und Ellipse kommen von `.sr-row-note` — eine zweite
              Textzeile ohne zweite Schriftskala. -->
-        <span class="sr-row-note un-rail-read">
+        <span v-if="!row.current" class="sr-row-note un-rail-read">
           <span class="un-rail-v">{{ row.galaxies }}</span> freed<span class="un-rail-sep">·</span
           ><span class="un-rail-v">{{ row.rescued }}</span
           ><span class="un-rail-slash">/</span
@@ -189,7 +217,7 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
           ><span class="un-rail-t">{{ row.elapsed }}</span>
         </span>
 
-        <span class="un-rail-bar" aria-hidden="true">
+        <span v-if="!row.current" class="un-rail-bar" aria-hidden="true">
           <span class="un-rail-fill" :style="{ transform: `scaleX(${row.progress})` }" />
         </span>
       </button>
@@ -277,7 +305,7 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
   inset: -2px;
   border-radius: 50%;
   pointer-events: none;
-  box-shadow: 0 0 10px 2px color-mix(in srgb, v-bind(hereColor) 55%, transparent);
+  box-shadow: 0 0 10px 2px color-mix(in srgb, var(--sr-color) 55%, transparent);
   animation: un-rail-breathe 2.6s ease-in-out infinite;
 }
 @keyframes un-rail-breathe {
@@ -295,6 +323,113 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
 }
 .un-rail-row.is-current.is-picked .un-rail-head .sr-row-note {
   color: var(--sr-accent-hi);
+}
+
+.un-current-main {
+  display: flex;
+  align-items: center;
+  gap: 0.65em;
+  min-height: 0;
+  flex: 1;
+}
+.un-current-thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 v-bind(discPx);
+  width: v-bind(discPx);
+  height: v-bind(discPx);
+  overflow: clip;
+  border: 1px solid color-mix(in srgb, var(--sr-color) 60%, #6b5330);
+  border-radius: 3px;
+  background: #0b0806;
+}
+.un-current-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35em;
+}
+.un-current-kicker {
+  display: block;
+  overflow: hidden;
+  font-size: 0.55em;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--sr-color);
+}
+.un-current-name {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35em;
+  font-size: 1.3em;
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.un-current-prefix {
+  color: var(--sr-text);
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.un-current-number {
+  color: #e8c040;
+}
+.un-current-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  min-width: 0;
+}
+.un-current-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75em;
+}
+.un-current-progress-label {
+  font-size: 0.7em;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  color: var(--sr-color);
+}
+.un-current-count {
+  flex-shrink: 0;
+  color: #e8c040;
+  font-size: 1.3em;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.un-current-rail {
+  display: block;
+  height: 5px;
+  border: 1px solid #5c3310;
+  border-radius: 2px;
+  background: #3e200a;
+  overflow: clip;
+}
+.un-current-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  background: var(--sr-color);
+  transition: transform 0.4s ease;
 }
 
 /* ══ Die Ablesungszeile ══
@@ -400,6 +535,7 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
     opacity: 0.7;
   }
   .un-rail-fill,
+  .un-current-fill,
   .un-rail-row::after {
     transition: none;
   }
