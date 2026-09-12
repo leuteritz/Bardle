@@ -2,8 +2,9 @@
 // derselben Schleife, ohne Verlauf je Strand und Frame.
 //
 // Geometrie: Scheiben in exponentieller Tiefe (v 0 fern … 1 nah). Ihr
-// Mittelpunkt wandert vom Fluchtpunkt (fern) zur Bildmitte (nah), mit
-// Ausbauchung — steht der Fokus neben der Mitte, KRÜMMT sich die Röhre. Die
+// Mittelpunkt wandert vom KURVENPUNKT (fern) zur Bildmitte (nah), mit
+// Ausbauchung — die Röhre krümmt sich voraus, die Kamera bleibt hinter dem
+// Spieler (der Fluchtpunkt der Striche ist ein anderer, kleinerer Punkt). Die
 // Wand ist EIN gebackener weicher Ring mit Lichtfasern, je Scheibe additiv
 // gezeichnet (fern hell, nah dunkel: der Trichter); die Stränge sind
 // Polylinien durch die Scheibenpunkte, verdrillt um den Roll.
@@ -81,12 +82,12 @@ export interface WormholeTunnel {
 }
 
 export interface WormholeFrame {
-  /** Fluchtpunkt in Canvas-px. */
-  cx: number
-  cy: number
+  /** Kurvenpunkt in Canvas-px — dorthin biegt sich die Röhre; NICHT der Fluchtpunkt der Striche. */
+  bx: number
+  by: number
   w: number
   h: number
-  /** Abstand Fluchtpunkt → fernste Ecke. */
+  /** Abstand Kurvenpunkt → fernste Ecke. */
   far: number
   tunnelSec: number
   twist: number
@@ -279,7 +280,7 @@ function fillExit(
   alpha: number,
 ): void {
   ctx.save()
-  ctx.translate(frame.cx, frame.cy)
+  ctx.translate(frame.bx, frame.by)
   ctx.scale(r, r / UNIVERSE_MAP_PORTAL_RY)
   ctx.globalAlpha = alpha
   ctx.fillStyle = tunnel.exit!
@@ -303,8 +304,8 @@ export function drawWormholeTunnel(
   for (let k = 0; k < s; k++) {
     const v = k / last
     const b = wormholeBendAt(v)
-    tunnel.sx[k] = frame.cx + (mx - frame.cx) * b
-    tunnel.sy[k] = frame.cy + (my - frame.cy) * b
+    tunnel.sx[k] = frame.bx + (mx - frame.bx) * b
+    tunnel.sy[k] = frame.by + (my - frame.by) * b
     tunnel.sr[k] = rMin * Math.pow(ratio, v)
   }
   const twist = frame.twist * UNIVERSE_HOP_STRAND_TWIST
@@ -386,7 +387,7 @@ export function drawWormholeTunnel(
     ctx.globalAlpha = persistentDrawAlpha(UNIVERSE_HOP_TUNNEL_RING_ALPHA * (1 - u) * ramp, fade)
     ctx.lineWidth = Math.max(1, r * 0.02)
     ctx.beginPath()
-    ctx.arc(frame.cx + (mx - frame.cx) * b, frame.cy + (my - frame.cy) * b, r, 0, Math.PI * 2)
+    ctx.arc(frame.bx + (mx - frame.bx) * b, frame.by + (my - frame.by) * b, r, 0, Math.PI * 2)
     ctx.stroke()
   }
   // Ausgangslicht am Fokus, frontal entzerrt wie das Tor; darum ein weiter Hof (additiv).

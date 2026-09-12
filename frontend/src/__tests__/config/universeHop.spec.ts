@@ -15,6 +15,8 @@ import {
   UNIVERSE_HOP_EXIT_REVEAL_END,
   UNIVERSE_HOP_EXIT_REVEAL_T,
   UNIVERSE_HOP_GROUP_LEAD_FRAC,
+  UNIVERSE_HOP_TRAVEL_LEAD,
+  UNIVERSE_HOP_EXIT_STRAIGHTEN,
   UNIVERSE_HOP_FOCUS_FRAC_MAX,
   UNIVERSE_HOP_FOCUS_FRAC_MIN,
   UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX,
@@ -104,6 +106,10 @@ describe('Universumssprung — die Zeremonie', () => {
     expect(UNIVERSE_HOP_EXIT_REVEAL_END).toBeGreaterThan(UNIVERSE_HOP_EXIT_REVEAL_T)
     expect(UNIVERSE_HOP_EXIT_REVEAL_END).toBeLessThan(1)
     expect(UNIVERSE_HOP_GROUP_LEAD_FRAC).toBeLessThan(0.1)
+    // Der Fokus ist nur ein Anteil des Kurvenpunkts (Kamera hinter dem Spieler), das Ende steht am Reveal vor ihm.
+    expect(UNIVERSE_HOP_TRAVEL_LEAD).toBeLessThan(0.3)
+    expect(UNIVERSE_HOP_EXIT_STRAIGHTEN).toBeGreaterThan(0.5)
+    expect(UNIVERSE_HOP_EXIT_STRAIGHTEN).toBeLessThan(1)
     // Ein Schlauch, kein Trichter: die nahe Wand steht im Bild, die Ferne läuft auf einen Punkt zu.
     expect(UNIVERSE_HOP_TUNNEL_R_MAX_K).toBeLessThan(1)
     expect(UNIVERSE_HOP_TUNNEL_R_MIN_FRAC).toBeLessThanOrEqual(0.1)

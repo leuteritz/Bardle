@@ -471,8 +471,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   /** Die Wormhole-Röhre der Passage: Stränge und Palette je Sprung gewürfelt. */
   let hopTunnel: WormholeTunnel | null = null
   const hopFrame: WormholeFrame = {
-    cx: 0,
-    cy: 0,
+    bx: 0,
+    by: 0,
     w: 0,
     h: 0,
     far: 0,
@@ -1348,11 +1348,11 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     const hopInTunnel = ctx !== null && hop.out.tunnelT > 0 && hopTunnel !== null
     if (hopInTunnel) {
       const ho = hop.out
-      hopFrame.cx = cx
-      hopFrame.cy = cy
+      hopFrame.bx = w / 2 + ho.bendX
+      hopFrame.by = h / 2 + ho.bendY
       hopFrame.w = w
       hopFrame.h = h
-      hopFrame.far = Math.hypot(w / 2, h / 2) + Math.hypot(ho.focusX, ho.focusY)
+      hopFrame.far = Math.hypot(w / 2, h / 2) + Math.hypot(ho.bendX, ho.bendY)
       hopFrame.tunnelSec = ho.tunnelSec
       hopFrame.twist = ho.twist
       hopFrame.trailFade = ho.trailFade

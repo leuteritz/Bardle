@@ -473,6 +473,13 @@ export default defineComponent({
   opacity: 0;
 }
 
+/* Die Klick-Aura kennt den Flugmaßstab nicht — bei der geschrumpften Sonne stand sie als weißer Ring frei. */
+.idle-flight-stage--galaxy .chime-aura,
+.idle-flight-stage--universe .chime-aura {
+  opacity: 0;
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .idle-flight-stage :deep(.planet-orbit-rings),
   .idle-flight-stage :deep(.orbit-paths),

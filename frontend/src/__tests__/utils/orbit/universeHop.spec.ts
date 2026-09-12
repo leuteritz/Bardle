@@ -16,6 +16,8 @@ import {
   UNIVERSE_HOP_EXIT_R0_FRAC,
   UNIVERSE_HOP_EXIT_R1_FRAC,
   UNIVERSE_HOP_EXIT_REVEAL_T,
+  UNIVERSE_HOP_EXIT_STRAIGHTEN,
+  UNIVERSE_HOP_TRAVEL_LEAD,
   UNIVERSE_HOP_COURSE_BANK_MAX_DEG,
   UNIVERSE_HOP_COURSE_BANK_MIN_DEG,
   UNIVERSE_HOP_FOCUS_FRAC_MAX,
@@ -391,36 +393,53 @@ describe('universeHop — die Wormhole-Reise kurvt', () => {
     }
   })
 
-  it('bleibt mit dem Fokus in jedem Tunnelframe im Radiusband — die Prozession bleibt im Bild', () => {
+  it('biegt die Röhre zum Kurvenpunkt, die Kamera bleibt hinter dem Spieler', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(29))
     stepUniverseHop(state, APPROACH_END, MIN_EDGE, FAR)
     const [bx, by] = universeHopFocusAt(state, 1, MIN_EDGE)
+    // Nahtlos aus dem Anflug: Fokus und Kurvenpunkt starten bei B.
     expect(state.out.focusX).toBeCloseTo(bx, 6)
     expect(state.out.focusY).toBeCloseTo(by, 6)
+    expect(state.out.bendX).toBeCloseTo(bx, 6)
     let moved = 0
     let lastX = bx
     let lastY = by
+    let lastFocus = Math.hypot(bx, by)
+    let lastBend = lastFocus
+    let lastLight = 0
     while (state.out.phase === 'passage') {
       stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
       if (state.out.phase !== 'passage') break
-      const r = Math.hypot(state.out.focusX, state.out.focusY) / MIN_EDGE
-      expect(r).toBeGreaterThanOrEqual(
-        Math.min(UNIVERSE_HOP_FOCUS_FRAC_MIN, UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN) - 1e-9,
-      )
-      expect(r).toBeLessThanOrEqual(
-        Math.max(UNIVERSE_HOP_FOCUS_FRAC_MAX, UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX) + 1e-9,
-      )
+      const bend = Math.hypot(state.out.bendX, state.out.bendY)
+      const focus = Math.hypot(state.out.focusX, state.out.focusY)
+      if (state.out.exitLight === 0) {
+        // Vor dem Reveal: der Kurvenpunkt im Band, der Fokus nur ein Anteil davon.
+        // Die erste Kurve startet bei B aus dem Anflugband — beide Böden gelten.
+        expect(bend / MIN_EDGE).toBeGreaterThanOrEqual(
+          Math.min(UNIVERSE_HOP_FOCUS_FRAC_MIN, UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN) - 1e-9,
+        )
+        expect(bend / MIN_EDGE).toBeLessThanOrEqual(UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX + 1e-9)
+        if (state.out.tunnelT > 0.15) expect(focus).toBeLessThanOrEqual(UNIVERSE_HOP_TRAVEL_LEAD * bend + 1e-6)
+        else expect(focus).toBeLessThanOrEqual(Math.max(lastFocus, bend) + 1e-6)
+      }
       // Kein Sprung: je Frame höchstens ein paar Prozent der kurzen Kante.
-      expect(Math.hypot(state.out.focusX - lastX, state.out.focusY - lastY)).toBeLessThan(
+      expect(Math.hypot(state.out.bendX - lastX, state.out.bendY - lastY)).toBeLessThan(
         MIN_EDGE * 0.06,
       )
-      moved += Math.hypot(state.out.focusX - lastX, state.out.focusY - lastY)
-      lastX = state.out.focusX
-      lastY = state.out.focusY
+      moved += Math.hypot(state.out.bendX - lastX, state.out.bendY - lastY)
+      lastX = state.out.bendX
+      lastY = state.out.bendY
+      lastFocus = focus
+      lastBend = bend
+      lastLight = state.out.exitLight
     }
-    // Der Fokus steht nicht mehr geparkt — er fährt Kurven.
+    // Der Kurvenpunkt fährt Kurven — und richtet sich am Ende auf.
     expect(moved).toBeGreaterThan(MIN_EDGE * 0.5)
+    expect(lastBend).toBeLessThanOrEqual(
+      (1 - UNIVERSE_HOP_EXIT_STRAIGHTEN) * UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX * MIN_EDGE + 1e-6,
+    )
+    expect(lastLight).toBe(1)
   })
 
   it('rollt sich in jede Kurve: Vorzeichen des Rolls folgt der Kurve, Wechsel je Wegpunkt', () => {
@@ -520,7 +539,10 @@ describe('universeHop — die Wormhole-Reise kurvt', () => {
     const [ex, ey] = universeHopTunnelFocusAt(state, 1, MIN_EDGE)
     const [bx, by] = universeHopFocusAt(state, 1, MIN_EDGE)
     expect(Math.hypot(ex - bx, ey - by)).toBeGreaterThan(MIN_EDGE * 0.05)
-    expect(state.out.focusX).toBeCloseTo(ex, -1)
-    expect(state.out.focusY).toBeCloseTo(ey, -1)
+    // Der Fokus des Ausrollens ist der aufgerichtete, kleine Passage-Fokus.
+    const endLead = UNIVERSE_HOP_TRAVEL_LEAD * (1 - UNIVERSE_HOP_EXIT_STRAIGHTEN)
+    expect(state.out.focusX).toBeCloseTo(ex * endLead, -1)
+    expect(state.out.focusY).toBeCloseTo(ey * endLead, -1)
+    expect(state.out.bendX).toBe(0)
   })
 })

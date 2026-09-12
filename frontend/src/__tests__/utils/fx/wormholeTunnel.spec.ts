@@ -34,8 +34,8 @@ function lum(triple: string): number {
 
 function frame(over: Partial<WormholeFrame> = {}): WormholeFrame {
   return {
-    cx: 1200,
-    cy: 400,
+    bx: 1200,
+    by: 400,
     w: 1920,
     h: 950,
     far: 1400,
@@ -101,8 +101,8 @@ describe('wormholeTunnel — Geometrie', () => {
     const f = frame()
     drawWormholeTunnel(ctx, t, f)
     const s = UNIVERSE_HOP_TUNNEL_SLICES
-    expect(t.sx[0]).toBeCloseTo(f.cx, 6)
-    expect(t.sy[0]).toBeCloseTo(f.cy, 6)
+    expect(t.sx[0]).toBeCloseTo(f.bx, 6)
+    expect(t.sy[0]).toBeCloseTo(f.by, 6)
     expect(t.sx[s - 1]).toBeCloseTo(f.w / 2, 6)
     expect(t.sy[s - 1]).toBeCloseTo(f.h / 2, 6)
     for (let k = 1; k < s; k++) expect(t.sr[k]).toBeGreaterThan(t.sr[k - 1]! * 1.05)

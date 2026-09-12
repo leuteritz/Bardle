@@ -25,6 +25,7 @@ import {
   UNIVERSE_HOP_EXIT_GROWTH_POW,
   UNIVERSE_HOP_EXIT_REVEAL_END,
   UNIVERSE_HOP_EXIT_REVEAL_T,
+  UNIVERSE_HOP_EXIT_STRAIGHTEN,
   UNIVERSE_HOP_EXIT_R0_FRAC,
   UNIVERSE_HOP_EXIT_R1_FRAC,
   UNIVERSE_HOP_FIELD_PASS_FADE,
@@ -49,6 +50,7 @@ import {
   UNIVERSE_HOP_TUNNEL_ROLL_RAD_S,
   UNIVERSE_HOP_TUNNEL_STAR_GAIN,
   UNIVERSE_HOP_TUNNEL_STREAK_GAIN,
+  UNIVERSE_HOP_TRAVEL_LEAD,
   UNIVERSE_HOP_TUNNEL_TRAIL_FADE,
   UNIVERSE_HOP_WALL_ALPHA,
   UNIVERSE_HOP_WASH_MS,
@@ -92,6 +94,9 @@ export interface UniverseHopOut extends WarpFlightOut {
   exitLight: number
   /** 0 … 1: wie weit die Gruppe (Sonne + Prozession) auf dem Anker der Röhrenachse reitet. */
   groupLead: number
+  /** Kurvenpunkt in px gegen die Bildmitte: dorthin biegt sich die Röhre voraus; der Fokus ist nur ein Anteil davon. */
+  bendX: number
+  bendY: number
   /** Flanken — je genau einen Frame lang wahr. */
   wash: boolean
   commit: boolean
@@ -189,6 +194,8 @@ export function createUniverseHop(): UniverseHopState {
       exitAlpha: 0,
       exitLight: 0,
       groupLead: 0,
+      bendX: 0,
+      bendY: 0,
       wash: false,
       commit: false,
       hudIn: false,
@@ -377,6 +384,8 @@ export function stepUniverseHop(
     o.exitAlpha = 0
     o.exitLight = 0
     o.groupLead = 0
+    o.bendX = 0
+    o.bendY = 0
     o.done = true
     return
   }
@@ -415,6 +424,8 @@ export function stepUniverseHop(
     o.exitAlpha = 0
     o.exitLight = 0
     o.groupLead = 0
+    o.bendX = 0
+    o.bendY = 0
   } else if (phase === 'approach') {
     const t = (e - DEPART_END_MS) / UNIVERSE_HOP_APPROACH_MS
     const [fx, fy] = universeHopFocusAt(state, t, minEdge)
@@ -448,15 +459,30 @@ export function stepUniverseHop(
     o.exitAlpha = 0
     o.exitLight = 0
     o.groupLead = 0
+    o.bendX = 0
+    o.bendY = 0
   } else if (phase === 'passage') {
     const t = (e - APPROACH_END_MS) / UNIVERSE_HOP_PASSAGE_MS
-    const [fx, fy] = universeHopTunnelFocusAt(state, t, minEdge)
+    const [kx, ky] = universeHopTunnelFocusAt(state, t, minEdge)
     o.speed = UNIVERSE_HOP_SPEED_PEAK * shimmerAt(e)
-    o.focusX = fx
-    o.focusY = fy
     // Die Röhre blendet über die ersten 15 % ein; Striche und Kehlenlicht
     // treten im selben Takt zurück.
     const tube = clamp01(t / 0.15)
+    // Das Ende zeigt sich erst am Ende: Licht und Wachstum ab dem Reveal.
+    const reveal = clamp01(
+      (t - UNIVERSE_HOP_EXIT_REVEAL_T) / (UNIVERSE_HOP_EXIT_REVEAL_END - UNIVERSE_HOP_EXIT_REVEAL_T),
+    )
+    o.exitLight = easeInOutCubic(reveal)
+    // Kurvenpunkt und Fokus sind getrennt: die Röhre biegt sich zum Kurvenpunkt
+    // voraus, der Fokus (Kamera hinter dem Spieler) folgt ihm nur zu einem
+    // kleinen Anteil — wie der Helm im Orbit. Der Anteil fährt aus B (Anflug)
+    // mit der Einblendung herunter; am Reveal richtet sich die Röhre auf.
+    const bendGain = 1 - UNIVERSE_HOP_EXIT_STRAIGHTEN * o.exitLight
+    o.bendX = kx * bendGain
+    o.bendY = ky * bendGain
+    const lead = UNIVERSE_HOP_TRAVEL_LEAD + (1 - UNIVERSE_HOP_TRAVEL_LEAD) * (1 - tube)
+    o.focusX = o.bendX * lead
+    o.focusY = o.bendY * lead
     o.streakGain = 1 - (1 - UNIVERSE_HOP_TUNNEL_STREAK_GAIN) * tube
     o.starGain = 1 - (1 - UNIVERSE_HOP_TUNNEL_STAR_GAIN) * tube
     o.trailFade = UNIVERSE_HOP_TUNNEL_TRAIL_FADE
@@ -477,11 +503,6 @@ export function stepUniverseHop(
     o.tunnelSec = (e - APPROACH_END_MS) / 1000
     o.roll = tunnelRollAt(state, t)
     o.twist += (o.roll * dt) / 1000
-    // Das Ende zeigt sich erst am Ende: Licht und Wachstum ab dem Reveal.
-    const reveal = clamp01(
-      (t - UNIVERSE_HOP_EXIT_REVEAL_T) / (UNIVERSE_HOP_EXIT_REVEAL_END - UNIVERSE_HOP_EXIT_REVEAL_T),
-    )
-    o.exitLight = easeInOutCubic(reveal)
     // Kein Scheinwerfer im Tunnel — er las sich als Ende; mit dem Reveal kehrt er zurück.
     o.headlight = 0.3 * (1 - tube) + UNIVERSE_HOP_TUNNEL_HEADLIGHT_EXIT * o.exitLight
     o.exitR =
@@ -492,13 +513,16 @@ export function stepUniverseHop(
     o.exitAlpha = tube
     o.groupLead = tube
   } else {
-    // emerge — vom Ende der Tunnelreise zurück zur Mitte.
+    // emerge — vom (aufgerichteten, kleinen) Passage-Fokus zurück zur Mitte.
     const t = (e - PASSAGE_END_MS) / UNIVERSE_HOP_EMERGE_MS
-    const [fx, fy] = universeHopTunnelFocusAt(state, 1, minEdge)
+    const [kx, ky] = universeHopTunnelFocusAt(state, 1, minEdge)
+    const endLead = UNIVERSE_HOP_TRAVEL_LEAD * (1 - UNIVERSE_HOP_EXIT_STRAIGHTEN)
     o.speed = 1 + PEAK_SPAN * Math.pow(1 - t, 3.5)
     const back = 1 - easeOutBack(t)
-    o.focusX = fx * back
-    o.focusY = fy * back
+    o.focusX = kx * endLead * back
+    o.focusY = ky * endLead * back
+    o.bendX = 0
+    o.bendY = 0
     o.streakGain = 1
     o.trailFade = 1 - (1 - UNIVERSE_HOP_TUNNEL_TRAIL_FADE) * clamp01(1 - t / 0.5)
     o.tintGain = 1 - easeOutCubic(t)

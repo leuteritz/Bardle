@@ -110,6 +110,11 @@ export const UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX = 0.9
 /** Die Kamera folgt dem Spieler: die Gruppe zieht nur leicht in die Kurve nach (× Fokusabstand) und schlingert
  *  (× kurze Kante) — ein echter Versatz auf die Achse (28 %) las sich als „Illusion komisch". */
 export const UNIVERSE_HOP_GROUP_LEAD_FRAC = 0.05
+/** Die Kamera hängt am Spieler wie im Orbit: der Fluchtpunkt (Striche, Prozession) ist nur ein kleiner Anteil des
+ *  KURVENPUNKTS, zu dem sich die Röhre voraus biegt — sonst schaut die Kamera seitlich an der Kurve entlang. */
+export const UNIVERSE_HOP_TRAVEL_LEAD = 0.18
+/** Am Reveal richtet sich die letzte Kurve auf: das Ende steht VOR dem Spieler, nicht neben ihm. */
+export const UNIVERSE_HOP_EXIT_STRAIGHTEN = 0.8
 export const UNIVERSE_HOP_GROUP_SWAY_FRAC = 0.035
 /** In der Passage tritt das Kehlenlicht zurück und die Sternstriche werden kürzer — sonst ertrinkt die Röhre. */
 export const UNIVERSE_HOP_TUNNEL_MAW_DROP = 0.7
