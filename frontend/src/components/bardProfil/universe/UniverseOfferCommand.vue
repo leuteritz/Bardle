@@ -131,25 +131,11 @@ function setHovered(universe: number | null) {
   z-index: 4;
   left: 50%;
   top: 50%;
-  width: min(1040px, calc(100% - 40px));
+  width: min(860px, calc(100% - 48px));
   transform: translate(-50%, -50%);
-  padding: 1.2rem 1.35rem 0.9rem;
-  background: #111008;
-  border: 4px solid #7a4e20;
-  box-shadow:
-    inset 0 0 0 2px #3e200a,
-    inset 0 0 0 4px #5c3310,
-    0 12px 32px rgba(0, 0, 0, 0.55);
+  padding: 0.5rem 0;
   color: #e8dcc0;
   text-align: center;
-  pointer-events: auto;
-}
-
-.un-offer-command::before {
-  content: '';
-  position: absolute;
-  inset: 7px;
-  border: 1px solid color-mix(in srgb, var(--un-command-tint) 62%, #5c3310);
   pointer-events: none;
 }
 
@@ -158,15 +144,15 @@ function setHovered(universe: number | null) {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.3rem;
-  min-height: 5.7rem;
+  gap: 0.9rem;
+  padding: 0 1rem;
 }
 
 .un-offer-command-mark {
   flex: 0 0 auto;
-  color: var(--un-command-tint);
-  font-size: 1.55rem;
-  text-shadow: 0 0 12px color-mix(in srgb, var(--un-command-tint) 54%, transparent);
+  color: #e8c040;
+  font-size: 1.35rem;
+  text-shadow: 0 0 12px var(--un-command-tint);
 }
 
 .un-offer-command-reading {
@@ -187,24 +173,25 @@ function setHovered(universe: number | null) {
 .un-offer-command h2 {
   margin: 0.2rem 0 0;
   color: var(--un-command-tint);
-  font-size: clamp(1.45rem, 2.5vw, 2.35rem);
+  font-size: clamp(1.35rem, 2.35vw, 2.15rem);
   letter-spacing: 0.08em;
   line-height: 1.05;
-  text-shadow: 0 0 16px color-mix(in srgb, var(--un-command-tint) 34%, transparent);
+  text-shadow: 0 2px 9px #111008;
   text-transform: uppercase;
 }
 
 .un-offer-command p {
   margin: 0.35rem 0 0;
   color: #c9b994;
-  font-size: clamp(0.84rem, 1.1vw, 1.05rem);
+  font-size: clamp(0.78rem, 1vw, 0.96rem);
   letter-spacing: 0.06em;
+  text-shadow: 0 2px 7px #111008;
 }
 
 .un-offer-command-rule {
   position: relative;
   height: 1px;
-  margin: 0.25rem auto 0.9rem;
+  margin: 0.65rem auto 0.65rem;
   background: linear-gradient(to right, transparent, var(--un-command-tint), transparent);
   opacity: 0.65;
 }
@@ -212,23 +199,24 @@ function setHovered(universe: number | null) {
 .un-offer-options {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.8rem;
+  gap: 0.45rem;
 }
 
 .un-offer-option {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(145px, 1.05fr) minmax(130px, 0.95fr) minmax(190px, 1.4fr) auto;
+  align-items: center;
+  gap: 0.8rem;
   min-width: 0;
-  flex-direction: column;
-  gap: 0.58rem;
-  padding: 0.7rem 0.75rem 0.62rem;
-  background: #1c1c18;
-  border: 1px solid #5c3310;
-  border-top: 3px solid var(--un-offer-tint);
+  padding: 0.48rem 0.65rem 0.48rem 0.7rem;
+  background: #111008;
+  border-bottom: 1px solid #5c3310;
+  border-left: 4px solid var(--un-offer-tint);
   border-radius: 4px;
   text-align: left;
   outline: none;
+  pointer-events: auto;
 }
 
 .un-offer-option::after {
@@ -255,7 +243,7 @@ function setHovered(universe: number | null) {
 .un-offer-universe-icon {
   flex: 0 0 auto;
   color: var(--un-offer-tint);
-  font-size: 2rem;
+  font-size: 1.7rem;
 }
 
 .un-offer-option-title {
@@ -266,7 +254,7 @@ function setHovered(universe: number | null) {
   display: block;
   overflow: hidden;
   color: var(--un-offer-tint);
-  font-size: clamp(1.1rem, 1.55vw, 1.45rem);
+  font-size: clamp(1rem, 1.3vw, 1.25rem);
   letter-spacing: 0.04em;
   line-height: 1.1;
   text-overflow: ellipsis;
@@ -285,7 +273,7 @@ function setHovered(universe: number | null) {
   gap: 0.45rem;
   min-width: 0;
   color: #e8c040;
-  font-size: clamp(0.85rem, 1.05vw, 1rem);
+  font-size: clamp(0.8rem, 0.95vw, 0.92rem);
   letter-spacing: 0.04em;
   line-height: 1.1;
   white-space: nowrap;
@@ -309,7 +297,7 @@ function setHovered(universe: number | null) {
 
 .un-offer-effect {
   min-width: 0;
-  padding: 0.42rem 0.42rem 0.35rem;
+  padding: 0.3rem 0.42rem 0.28rem;
   border-left: 3px solid;
   background: #141410;
 }
@@ -324,7 +312,7 @@ function setHovered(universe: number | null) {
 
 .un-offer-effect-value {
   display: block;
-  font-size: clamp(0.96rem, 1.35vw, 1.25rem);
+  font-size: clamp(0.9rem, 1.1vw, 1.08rem);
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
@@ -357,7 +345,6 @@ function setHovered(universe: number | null) {
 }
 
 .un-offer-option-cta {
-  margin-top: auto;
   color: var(--un-offer-tint);
   font-size: 0.64rem;
   font-weight: 700;
@@ -368,7 +355,7 @@ function setHovered(universe: number | null) {
 
 .un-offer-command-hint {
   position: relative;
-  margin: 0.7rem 0 0;
+  margin: 0.6rem 0 0;
   color: #8a7a5c;
   font-size: clamp(0.68rem, 0.85vw, 0.82rem);
   letter-spacing: 0.09em;
@@ -377,20 +364,21 @@ function setHovered(universe: number | null) {
 
 @media (max-height: 1100px) {
   .un-offer-command {
-    padding: 0.85rem 1rem 0.7rem;
+    padding: 0.35rem 0;
   }
 
   .un-offer-command-head {
-    min-height: 4.4rem;
+    padding: 0 0.75rem;
   }
 
   .un-offer-command-rule {
-    margin-bottom: 0.62rem;
+    margin-top: 0.48rem;
+    margin-bottom: 0.48rem;
   }
 
   .un-offer-option {
     gap: 0.42rem;
-    padding: 0.55rem 0.6rem 0.5rem;
+    padding: 0.4rem 0.55rem 0.4rem 0.6rem;
   }
 
   .un-offer-providence {
@@ -398,7 +386,7 @@ function setHovered(universe: number | null) {
   }
 
   .un-offer-effect {
-    padding: 0.32rem 0.35rem 0.3rem;
+    padding: 0.26rem 0.35rem 0.24rem;
   }
 
   .un-offer-command-hint {
