@@ -31,6 +31,7 @@ import UniverseChart from './UniverseChart.vue'
 import { buildUniversePath, type UniversePath } from '@/utils/ui/universeLayout'
 import { buildUniverseRailRows, visibleUniverseRailRows } from '@/utils/ui/universeRail'
 import { buildUniverseChronicle } from '@/utils/ui/universeChronicle'
+import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 import {
   UNIVERSE_MAP_RAIL_AUTOFOLD_W,
   UNIVERSE_MAP_RAIL_CLOSE_TITLE,
@@ -67,7 +68,9 @@ const isUnlocked = computed(() => completedGalaxies.value.length > 0 || gameStor
  * Haelfte dieser Zusage (es gibt auf der laufenden Bahn nie eine `departure`).
  */
 const offers = computed(() =>
-  selection.value.universe === gameStore.currentUniverse ? providenceStore.offerCards : [],
+  selection.value.universe === gameStore.currentUniverse && hasCurrentPathContent.value
+    ? providenceStore.offerCards
+    : [],
 )
 
 // ── Auswahl: der Ansichtszustand, nie leer ──────────────────────────────────
@@ -93,6 +96,12 @@ watch(() => gameStore.currentUniverse, resetSelection)
  *  Zwei Zaehlungen liefen still auseinander, sobald eine davon nachzog. */
 const currentRescued = computed(() => attemptResults.value.filter((a) => a !== 'failed').length)
 const currentLost = computed(() => attemptResults.value.filter((a) => a === 'failed').length)
+const hasCurrentPathContent = computed(
+  () =>
+    completedGalaxies.value.some((record) => universeOfRecord(record) === gameStore.currentUniverse) ||
+    currentRescued.value > 0 ||
+    currentLost.value > 0,
+)
 
 /** Alles ausser dem Universum. */
 const pathBase = computed(() => ({
