@@ -179,7 +179,7 @@ function buffTip(buff: (typeof buffs.value)[number]): TipValue {
   height: v-bind(chipSize);
   background: transparent;
   border: 0;
-  cursor: help;
+  cursor: default;
   outline: none;
   pointer-events: auto;
   transition: transform 160ms ease;
