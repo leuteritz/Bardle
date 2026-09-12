@@ -192,7 +192,7 @@ const STEPS: Step[] = [
   {
     name: 'narrow',
     viewport: 1920,
-    fontPx: 10,
+    fontPx: 11,
     barPad: EVENT_LOG_BAR_PAD,
     barGap: EVENT_LOG_BAR_GAP,
     tabW: EVENT_LOG_TAB_MIN_W,
@@ -205,7 +205,7 @@ const STEPS: Step[] = [
     // eine Spur von 508 — dort steht nur der aktive Name, aber jede Zahl.
     name: 'mid',
     viewport: 2480,
-    fontPx: 11,
+    fontPx: 12,
     barPad: 6,
     barGap: 4,
     tabW: EVENT_LOG_TAB_MIN_W_MID,
@@ -214,10 +214,10 @@ const STEPS: Step[] = [
     named: 'active',
   },
   {
-    // Hier weicht das ICON: der Tab traegt nur noch Polster (2x5) und Zahl.
+    // Hier weicht das ICON: der Tab traegt nur noch Polster (2x3) und Zahl.
     name: 'names',
     viewport: 2560,
-    fontPx: 11,
+    fontPx: 12,
     barPad: 6,
     barGap: 4,
     tabW: EVENT_LOG_TAB_MIN_W_NAMES,
@@ -228,7 +228,7 @@ const STEPS: Step[] = [
   {
     name: 'wide',
     viewport: 3840,
-    fontPx: 12,
+    fontPx: 13,
     barPad: 8,
     barGap: 5,
     tabW: EVENT_LOG_TAB_MIN_W_WIDE,
