@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import JourneyHeaderBand from './JourneyHeaderBand.vue'
-import JourneyBuffPanel from './JourneyBuffPanel.vue'
 import SunStage from './SunStage.vue'
 import WayfinderNowCard from './WayfinderNowCard.vue'
 import KpiCard from './KpiCard.vue'
@@ -18,7 +17,6 @@ const emit = defineEmits<{ 'open-records': [category: StatCategoryId | null] }>(
   <div class="jt-overview">
     <div class="jt-left">
       <JourneyHeaderBand />
-      <JourneyBuffPanel />
       <SunStage />
     </div>
     <aside class="jt-aside">
@@ -37,11 +35,9 @@ const emit = defineEmits<{ 'open-records': [category: StatCategoryId | null] }>(
   min-width: 0;
 }
 
-/* Band, Effektzeile, Sonne — nur die Sonne flext. Der Wrapper hält die
-   Spaltennaht: `.jt-aside` trägt sie nicht mehr, sonst stünde sie doppelt. */
 .jt-left {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   min-width: 0;
   border-right: 1px solid #2c1806;

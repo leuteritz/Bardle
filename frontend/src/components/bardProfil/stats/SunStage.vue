@@ -17,6 +17,7 @@ import {
 import { useSunPhaseDisplay } from '@/composables/orbit/useSunPhaseDisplay'
 import PhaseSunDisc from '@/components/idle/sun/PhaseSunDisc.vue'
 import CometDisc from '@/components/idle/sun/CometDisc.vue'
+import JourneyBuffPanel from './JourneyBuffPanel.vue'
 import { gameNow } from '@/utils/game/gameClock'
 
 /** Die Sonne auf der Journey-Übersicht — die EINZIGE Stelle, an der sie evolviert. */
@@ -273,6 +274,8 @@ function handleSunKey(e: KeyboardEvent): void {
         @click="handleSunClick"
         @keydown="handleSunKey"
       >
+        <JourneyBuffPanel @click.stop @keydown.stop />
+
         <!-- Not before the stage has measured itself: a body without a box. -->
         <template v-if="sunDiameter > 0">
           <CometDisc v-if="isComet" :diameter="sunDiameter" />
