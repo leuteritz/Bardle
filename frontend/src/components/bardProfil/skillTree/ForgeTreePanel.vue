@@ -313,6 +313,18 @@
         :class="{ 'tree-node--spot': isSpot(node.id) }"
         :style="nodePos(node)"
       >
+        <span
+          v-if="node.tier === 'meep'"
+          class="node-meep-frame"
+          :style="{ '--node-color': node.color }"
+          aria-hidden="true"
+        >
+          <svg viewBox="0 0 100 100">
+            <polygon class="node-meep-frame-outer" :points="FORGE_MEEP_FRAME_POINTS" />
+            <polygon class="node-meep-frame-inner" :points="FORGE_MEEP_FRAME_INNER_POINTS" />
+            <polygon class="node-meep-frame-core" :points="FORGE_MEEP_FRAME_CORE_POINTS" />
+          </svg>
+        </span>
         <div
           class="node-circle"
           :class="[
@@ -351,12 +363,6 @@
           @mouseleave="setTreeHover(null)"
         >
           <span class="node-glow" aria-hidden="true" />
-          <span v-if="node.tier === 'meep'" class="node-meep-frame" aria-hidden="true">
-            <svg viewBox="0 0 100 100">
-              <polygon class="node-meep-frame-outer" :points="FORGE_MEEP_FRAME_POINTS" />
-              <polygon class="node-meep-frame-inner" :points="FORGE_MEEP_FRAME_INNER_POINTS" />
-            </svg>
-          </span>
           <!-- Der SUCHRING. Eigene, statische Ebene mit eigenem Ton — Gold ist
                „kaufbar", Grün/Rot sind die Voraussetzung. -->
           <span v-if="isSearchHit(node.id)" class="node-hit" aria-hidden="true" />
@@ -622,9 +628,12 @@ import {
   FORGE_SEAL_POINTS,
   FORGE_MEEP_FRAME_POINTS,
   FORGE_MEEP_FRAME_INNER_POINTS,
+  FORGE_MEEP_FRAME_CORE_POINTS,
   FORGE_MEEP_FRAME_CLIP_PATH,
+  FORGE_MEEP_FRAME_OUTSET_PX,
   FORGE_MEEP_FRAME_STROKE_PX,
   FORGE_MEEP_FRAME_INNER_STROKE_PX,
+  FORGE_MEEP_FRAME_CORE_STROKE_PX,
   FORGE_RELIC_RARITY_COLOR,
   FORGE_FUSION_ICON_SIZE,
   FORGE_ICON_SIZE_CONFLUENCE,
@@ -818,8 +827,10 @@ const sealBorderPx = `${FORGE_SEAL_BORDER_PX}px`
 const sealDash = FORGE_SEAL_DASH
 const meepFrameColor = FORGE_RELIC_RARITY_COLOR.epic
 const meepFrameClipPath = FORGE_MEEP_FRAME_CLIP_PATH
+const meepFrameSize = `${FORGE_NODE_DIAMETER.meep + FORGE_MEEP_FRAME_OUTSET_PX * 2}px`
 const meepFrameStroke = String(FORGE_MEEP_FRAME_STROKE_PX)
 const meepFrameInnerStroke = String(FORGE_MEEP_FRAME_INNER_STROKE_PX)
+const meepFrameCoreStroke = String(FORGE_MEEP_FRAME_CORE_STROKE_PX)
 /* Im `viewBox`-Raum 0…100 gerechnet, nicht in px: das SVG streckt sich auf die
    Ebene, und eine px-Angabe würde mit ihr skaliert. Der Faktor ist der Kehrwert
    der Ebenenbreite, also der Knotendurchmesser abzüglich zweier Einzüge — für
@@ -3041,22 +3052,32 @@ const nextPhasePreviewStyle = computed(() => ({
 }
 
 .node-circle--meep {
+  width: v-bind("nodePx.meep");
+  height: v-bind("nodePx.meep");
   border: 0;
   border-radius: 0;
   clip-path: polygon(v-bind(meepFrameClipPath));
+  position: relative;
+  z-index: 1;
 }
 
 .node-meep-frame {
   position: absolute;
-  inset: 0;
+  top: 50%;
+  left: 50%;
+  width: v-bind(meepFrameSize);
+  height: v-bind(meepFrameSize);
+  transform: translate(-50%, -50%);
   pointer-events: none;
-  transition: opacity 0.15s;
+  z-index: 0;
+  filter: drop-shadow(0 0 3px rgba(201, 160, 255, 0.8)) drop-shadow(0 0 8px rgba(232, 192, 64, 0.35));
 }
 
 .node-meep-frame svg {
   width: 100%;
   height: 100%;
   display: block;
+  overflow: visible;
 }
 
 .node-meep-frame polygon {
@@ -3067,27 +3088,19 @@ const nextPhasePreviewStyle = computed(() => ({
 .node-meep-frame-outer {
   stroke: v-bind(meepFrameColor);
   stroke-width: v-bind(meepFrameStroke);
-  opacity: 0.9;
-}
-
-.node-meep-frame-inner {
-  stroke: var(--node-color, #e8c040);
-  stroke-width: v-bind(meepFrameInnerStroke);
-  opacity: 0.9;
-}
-
-.node-circle--meep.node-circle--locked .node-meep-frame,
-.node-circle--meep.node-circle--short .node-meep-frame {
-  opacity: 0.45;
-}
-
-.node-circle--meep.node-circle--ready .node-meep-frame,
-.node-circle--meep.node-circle--maxed .node-meep-frame {
   opacity: 1;
 }
 
-.node-circle--meep.node-circle--maxed .node-meep-frame-inner {
+.node-meep-frame-inner {
   stroke: #e8c040;
+  stroke-width: v-bind(meepFrameInnerStroke);
+  opacity: 1;
+}
+
+.node-meep-frame-core {
+  stroke: var(--node-color, #e8c040);
+  stroke-width: v-bind(meepFrameCoreStroke);
+  opacity: 1;
 }
 
 /* Ring 6 ist der GRÖSSTE nach dem Kern — grösser als ein Zweig, kleiner als ein

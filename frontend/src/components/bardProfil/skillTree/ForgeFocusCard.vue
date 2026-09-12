@@ -136,7 +136,13 @@ const showNext = computed(() => {
 })
 const showCost = computed(() => {
   const e = entry.value
-  return Boolean(e && e.state !== 'maxed' && e.state !== 'sealed' && (e.goldCost > 0 || e.meepCost > 0 || e.materials.length > 0))
+  return Boolean(
+    e &&
+      e.tier !== 'meep' &&
+      e.state !== 'maxed' &&
+      e.state !== 'sealed' &&
+      (e.goldCost > 0 || e.meepCost > 0 || e.materials.length > 0),
+  )
 })
 const showUnlock = computed(() => {
   const e = entry.value
