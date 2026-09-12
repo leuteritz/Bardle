@@ -4,6 +4,7 @@ import JourneyBuffPanel from './JourneyBuffPanel.vue'
 import SunStage from './SunStage.vue'
 import WayfinderNowCard from './WayfinderNowCard.vue'
 import KpiCard from './KpiCard.vue'
+import { useActiveBuffList } from '@/composables/ui/useActiveBuffList'
 import type { StatCategoryId, StatCategoryView } from '@/types'
 
 /**
@@ -12,13 +13,14 @@ import type { StatCategoryId, StatCategoryView } from '@/types'
  */
 defineProps<{ categories: StatCategoryView[] }>()
 const emit = defineEmits<{ 'open-records': [category: StatCategoryId | null] }>()
+const { count: activeBuffCount } = useActiveBuffList()
 </script>
 
 <template>
   <div class="jt-overview">
-    <div class="jt-left">
+    <div class="jt-left" :class="{ 'has-buffs': activeBuffCount > 0 }">
       <JourneyHeaderBand />
-      <JourneyBuffPanel />
+      <JourneyBuffPanel v-if="activeBuffCount > 0" />
       <SunStage />
     </div>
     <aside class="jt-aside">
@@ -41,10 +43,14 @@ const emit = defineEmits<{ 'open-records': [category: StatCategoryId | null] }>(
    Spaltennaht: `.jt-aside` trägt sie nicht mehr, sonst stünde sie doppelt. */
 .jt-left {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   min-width: 0;
   border-right: 1px solid #2c1806;
+}
+
+.jt-left.has-buffs {
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 
 .jt-aside {
