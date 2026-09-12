@@ -704,7 +704,7 @@ export const FLIGHT_STREAK_LEN_FACTOR = 2.6
  *  × Frame-Delta — sonst hängt die sichtbare Länge an der Framerate. */
 export const FLIGHT_EXPOSURE_SEC = 1 / 60
 /** Sternstriche im Warp, als Vielfaches des Weges je Belichtung. */
-export const WARP_STREAK_LEN_FACTOR = 3.6
+export const WARP_STREAK_LEN_FACTOR = 4.4
 
 // ── Galaxien-Warp: Überlichtflug zur nächsten Galaxie ─────────────────────
 // (utils/orbit/galaxyWarp.ts + useStarBackground.ts). Der Flug ist ein
@@ -739,44 +739,58 @@ export const WARP_CRUISE_SHIMMER_PERIOD_A_SEC = 0.9
 export const WARP_CRUISE_SHIMMER_PERIOD_B_SEC = 1.7
 /** Kursziel: Versatz des Fluchtpunkts als Anteil der kurzen Kante. */
 export const WARP_FOCUS_FRAC_MIN = 0.1
-export const WARP_FOCUS_FRAC_MAX = 0.18
+export const WARP_FOCUS_FRAC_MAX = 0.26
 /** Bogen um „oben", aus dem der Kurs gezogen wird — nie in die Bottom-Bar. */
 export const WARP_COURSE_ARC_DEG = 240
 /** Persistenz-Blur: Anteil des Vorbilds, der je Frame gelöscht wird (1 = kein Blur); bleibt über dem Hop-Anflug (0,28). */
 export const WARP_TRAIL_FADE = 0.3
 // ── Der Aufbruch: Boost um den Spieler beim Klick, dann Überlicht ──────────
-/** Tempo am Ende des Aufbruchs (easeOut von 1) — der Punch vor dem Anlauf. */
-export const WARP_LAUNCH_SPEED = 24
+/** Der Atemzug: die Sterne treiben auf den Spieler ZU, bevor der Schlag sie hinauswirft. */
+export const WARP_INHALE_SPEED = -6
+/** Tempo am Ende des Aufbruchs (easeOut vom Atemzug) — der Punch vor dem Anlauf. */
+export const WARP_LAUNCH_SPEED = 40
 /** Schockringe vom Spielerkörper: additiv mit ROHEM Alpha (wandernd, kein Stationärwert), gestaffelt, Radius als Anteil der kurzen Kante. */
-export const WARP_LAUNCH_RING_COUNT = 3
+export const WARP_LAUNCH_RING_COUNT = 5
 export const WARP_LAUNCH_RING_MS = 1000
-export const WARP_LAUNCH_RING_STAGGER = 0.18
+export const WARP_LAUNCH_RING_STAGGER = 0.12
 export const WARP_LAUNCH_RING_R0_FRAC = 0.05
-export const WARP_LAUNCH_RING_R1_FRAC = 0.6
-export const WARP_LAUNCH_RING_ALPHA = 0.45
-export const WARP_LAUNCH_RING_W_FRAC = 0.02
+export const WARP_LAUNCH_RING_R1_FRAC = 0.9
+export const WARP_LAUNCH_RING_ALPHA = 0.6
+export const WARP_LAUNCH_RING_W_FRAC = 0.03
+/** Die Ringe heben ihren Galaxieton Richtung Weiss — sonst gehen sie zwischen den Bahnringen unter. */
+export const WARP_LAUNCH_RING_WHITE_LIFT = 0.5
 /** Die Bugwelle am Ende des Anlaufs: EIN Ring vom Fluchtpunkt, Headlight-Glocke — der Überlicht-Boost. */
 export const WARP_BOW_WAVE_MS = 600
 export const WARP_BOW_WAVE_REACH_K = 0.5
 export const WARP_BOW_WAVE_ALPHA = 0.45
 export const WARP_BOW_WAVE_W_FRAC = 0.02
 export const WARP_BOW_WAVE_HEADLIGHT_GAIN = 0.5
-/** Sternen-Schub des Warps: unter dem des Sprungs (320 / 1,6). */
-export const WARP_STAR_SURGE_COUNT = 220
-export const WARP_STAR_SURGE_SPEED_MULT = 1.5
+/** Sternen-Schub des Warps: so viele wie der Sprung, schneller — sie tragen den Rand. */
+export const WARP_STAR_SURGE_COUNT = 320
+export const WARP_STAR_SURGE_SPEED_MULT = 2.2
+/** Schub-Sterne respawnen im Flug im MITTELRING (Anteil maxDist), nicht am Fokus — sonst ist der Rand leer. */
+export const WARP_SURGE_RESPAWN_FRAC: readonly [number, number] = [0.35, 0.75]
+/** Feldstern-Deckkraft im Flug (× distAlpha). */
+export const WARP_STAR_ALPHA_GAIN = 1.8
 // ── Der Kurs: Wegpunkte A→B→C, die Kurve erzählen Roll und Lehne ───────────
 /** Etappen im Reiseflug; Wegpunkte = LEGS + 1. */
-export const WARP_COURSE_LEGS = 2
+export const WARP_COURSE_LEGS = 3
+/** Etappenlängen aus dem Wurf, normiert auf die Reiseflugstrecke — kurz und scharf, lang und weit. */
+export const WARP_LEG_WEIGHT_MIN = 0.7
+export const WARP_LEG_WEIGHT_MAX = 1.3
 /** Azimut-Sprung je Wegpunkt; MAX ≤ ARC/2, damit immer eine Richtung im Bogen bleibt. */
-export const WARP_COURSE_TURN_MIN_DEG = 35
-export const WARP_COURSE_TURN_MAX_DEG = 80
+export const WARP_COURSE_TURN_MIN_DEG = 50
+export const WARP_COURSE_TURN_MAX_DEG = 110
 /** Roll des Feldes am Kurvenscheitel einer MAX-Kurve; unter dem Hop-Anflug (0,3). */
-export const WARP_BANK_MAX_RAD = 0.22
-/** Lehne des Spielers: playerX = focusX · K; der Warp-Fokus liegt weiter aussen als das Tor. */
-export const WARP_LEAN_K = 0.35
+export const WARP_BANK_MAX_RAD = 0.28
+/** Lehne des Spielers: playerX = focusX · K, mit Nachlauf τ — die Kamera holt ihn ein. */
+export const WARP_LEAN_K = 0.55
+export const WARP_LEAN_TAU_SEC = 0.3
+/** Der Körper kippt in die Kurve: bodyRoll = Bank · K (rad). */
+export const WARP_BODY_ROLL_K = 0.6
 /** Strichbreite: Grundwert + Tempo-Anteil (bei 54× ≈ 4,8 px). */
 export const WARP_STREAK_WIDTH_BASE = 1.0
-export const WARP_STREAK_WIDTH_PER_SPEED = 0.07
+export const WARP_STREAK_WIDTH_PER_SPEED = 0.1
 /**
  * Wie weit ein Sternstrich höchstens reichen darf, als Anteil seines ABSTANDS
  * zum Fluchtpunkt. Die Länge wächst linear mit dem Tempo und war ungedeckelt;

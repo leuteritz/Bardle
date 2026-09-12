@@ -169,8 +169,9 @@ export const RESCUE_ROTATION_DURATION_MS = 2_000 // camera spin after role selec
  */
 export const GALAXY_TRANS_WARP_MS = 10_000
 export const GALAXY_TRANS_DECEL_MS = 3_600
-/** Der Boost um den Spieler beim Klick — VOR dem Anlauf, innerhalb der Flugzeit. */
-export const GALAXY_WARP_LAUNCH_MS = 700
+/** Der Boost um den Spieler beim Klick — VOR dem Anlauf, innerhalb der Flugzeit: Atemzug, dann Schlag. */
+export const GALAXY_WARP_LAUNCH_MS = 900
+export const GALAXY_WARP_LAUNCH_INHALE_MS = 300
 export const GALAXY_WARP_ACCEL_MS = 2_200
 export const GALAXY_SPAWN_INTERVAL_MIN = 5_000
 export const GALAXY_SPAWN_INTERVAL_MAX = 12_000

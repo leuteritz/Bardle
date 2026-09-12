@@ -77,7 +77,14 @@ import {
   WARP_STREAK_LEN_MAX_FRAC,
   UNIVERSE_HOP_SPEED_PEAK,
   GALAXY_WARP_LAUNCH_MS,
+  GALAXY_WARP_LAUNCH_INHALE_MS,
   WARP_LAUNCH_SPEED,
+  WARP_INHALE_SPEED,
+  WARP_LEG_WEIGHT_MIN,
+  WARP_LEG_WEIGHT_MAX,
+  WARP_SURGE_RESPAWN_FRAC,
+  WARP_BODY_ROLL_K,
+  WARP_LEAN_TAU_SEC,
   WARP_COURSE_ARC_DEG,
   WARP_COURSE_LEGS,
   WARP_COURSE_TURN_MIN_DEG,
@@ -277,6 +284,10 @@ describe('Prozession — die Zahlen', () => {
 describe('Warp — Aufbruch und Kurs', () => {
   it('punscht vor dem Anlauf, aber unter das Höchsttempo', () => {
     expect(GALAXY_WARP_LAUNCH_MS).toBeGreaterThan(0)
+    // Der Atemzug liegt IM Aufbruch und zieht einwärts, der Schlag wirft hinaus.
+    expect(GALAXY_WARP_LAUNCH_INHALE_MS).toBeGreaterThan(0)
+    expect(GALAXY_WARP_LAUNCH_INHALE_MS).toBeLessThan(GALAXY_WARP_LAUNCH_MS)
+    expect(WARP_INHALE_SPEED).toBeLessThan(0)
     expect(WARP_LAUNCH_SPEED).toBeGreaterThan(1)
     expect(WARP_LAUNCH_SPEED).toBeLessThan(WARP_SPEED_PEAK)
     expect(JOLT_PROFILES.launch.strength).toBeLessThan(JOLT_PROFILES.strike.strength)
@@ -297,6 +308,15 @@ describe('Warp — Aufbruch und Kurs', () => {
     expect(WARP_LEAN_K).toBeLessThan(1)
     expect(WARP_STAR_SURGE_COUNT).toBeLessThanOrEqual(UNIVERSE_HOP_STAR_SURGE_COUNT)
     expect(WARP_TRAIL_FADE).toBeGreaterThan(UNIVERSE_HOP_APPROACH_TRAIL_FADE)
+    // Etappen ungleich, aber keine verschwindet; Schub-Sterne im Mittelring; Körper-Bank gedeckelt.
+    expect(WARP_LEG_WEIGHT_MIN).toBeGreaterThan(0.3)
+    expect(WARP_LEG_WEIGHT_MIN).toBeLessThan(WARP_LEG_WEIGHT_MAX)
+    expect(WARP_SURGE_RESPAWN_FRAC[0]).toBeGreaterThan(0.1)
+    expect(WARP_SURGE_RESPAWN_FRAC[0]).toBeLessThan(WARP_SURGE_RESPAWN_FRAC[1])
+    expect(WARP_SURGE_RESPAWN_FRAC[1]).toBeLessThan(1)
+    expect(WARP_BODY_ROLL_K * WARP_BANK_MAX_RAD).toBeLessThan(0.2)
+    expect(WARP_LEAN_TAU_SEC).toBeGreaterThan(0)
+    expect(WARP_LEAN_TAU_SEC).toBeLessThan(1)
   })
 })
 

@@ -45,6 +45,8 @@ export const flightLive = {
   bodyX: 0,
   /** Versatz der Gruppe in px (Wormhole-Anker) — additiv zum Jolt, nie in dessen Einheiten. */
   shiftX: 0,
+  /** Bank des Spielerkörpers in rad — er kippt in die Kurve des Warps. */
+  bodyRoll: 0,
   shiftY: 0,
   bodyY: 0,
 }
@@ -122,6 +124,7 @@ export function resetFlightJolt(): void {
   flightLive.bodyY = 0
   flightLive.shiftX = 0
   flightLive.shiftY = 0
+  flightLive.bodyRoll = 0
 }
 
 /* ── Follower ───────────────────────────────────────────────────────────────── */
@@ -174,8 +177,10 @@ export function bodyFollowerTransform(
   ampPx: number,
   shiftX = 0,
   shiftY = 0,
+  rollRad = 0,
 ): string {
-  return `translate(calc(-50% + ${(ux * ampPx + shiftX).toFixed(1)}px),calc(-50% + ${(uy * ampPx + shiftY).toFixed(1)}px))`
+  const t = `translate(calc(-50% + ${(ux * ampPx + shiftX).toFixed(1)}px),calc(-50% + ${(uy * ampPx + shiftY).toFixed(1)}px))`
+  return rollRad === 0 ? t : `${t} rotate(${((rollRad * 180) / Math.PI).toFixed(2)}deg)`
 }
 
 /** Ohne `wert !== zuletzt`-Wächter: Blink verwirft identische Zuweisungen selbst. */
@@ -191,6 +196,7 @@ export function writeFlightFollowers(): void {
       amp,
       flightLive.shiftX,
       flightLive.shiftY,
+      flightLive.bodyRoll,
     )
   }
 }

@@ -69,8 +69,11 @@ import {
   WARP_LAUNCH_RING_R1_FRAC,
   WARP_LAUNCH_RING_STAGGER,
   WARP_LAUNCH_RING_W_FRAC,
+  WARP_LAUNCH_RING_WHITE_LIFT,
+  WARP_STAR_ALPHA_GAIN,
   WARP_STAR_SURGE_COUNT,
   WARP_STAR_SURGE_SPEED_MULT,
+  WARP_SURGE_RESPAWN_FRAC,
   UNIVERSE_HOP_RIPPLE_COUNT,
   UNIVERSE_HOP_RIPPLE_GROWTH,
   UNIVERSE_HOP_RIPPLE_POW,
@@ -1169,7 +1172,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
             warpUniverse,
           )
           warpGlowKey++
-          warpLaunchStyle = `rgb(${warpGlowFrom[0]}, ${warpGlowFrom[1]}, ${warpGlowFrom[2]})`
+          warpLaunchStyle = `rgb(${warpGlowFrom
+            .map((v) => Math.round(v + (255 - v) * WARP_LAUNCH_RING_WHITE_LIFT))
+            .join(', ')})`
           clearEncounters(sky)
           warpNebulaHidden.value = true
           warpVignetteOn.value = true
@@ -1182,9 +1187,12 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         stepGalaxyWarp(warp, delta * 1000, Math.min(cachedW, cachedH))
         const wo = warp.out
         if (wo.launched) {
-          // Der Rückstoss des Aufbruchs: gegen den Kurs, mit Blitz auf dem Körper.
+          // Der Schlag nach dem Atemzug: Rückstoss gegen den Kurs, Blitz im Ton
+          // der alten Welt (derselbe Baustein wie am Schnitt), Schub-Sterne.
           kickFlightJolt('launch', warp.waypoints[0].az)
           spawnSurgeStars(WARP_STAR_SURGE_COUNT, WARP_STAR_SURGE_SPEED_MULT)
+          warpAccent.value = warpLaunchStyle
+          warpFlashKey.value++
         }
         if (wo.commit) {
           galaxyStore.commitAdvance()
@@ -1344,6 +1352,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       setFlightCourse(cx - w / 2, cy - h / 2, Math.min(w, h), delta)
       flightLive.shiftX = leadShift.x
       flightLive.shiftY = leadShift.y
+      flightLive.bodyRoll = wo.bodyRoll
       writeFlightFollowers()
     }
     // Die Prozession liest denselben Fluchtpunkt, den auch der Tunnel zeichnet:
@@ -1630,13 +1639,22 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         const wgt = norm * norm
         slipPolar(star, slipX * wgt, slipY * wgt, Math.cos(star.angle), Math.sin(star.angle))
       }
-      if (star.dist > maxDist) {
+      if (star.dist > maxDist || star.dist < 0) {
         star.angle = respawnAngle()
         // Im Flug rückt der Nachschub mit dem Tempo an den Fluchtpunkt (der
         // Tunnel); beim Ausrollen rundum verteilt, sonst wie gehabt. Nicht
         // schlagartig: mit 2× am Rand geboren und bei Warp-Tempo dicht am Fokus —
         // sonst stand der Schirm beim Losfliegen für eine Sekunde leer.
-        if (warpFlight)
+        // Schub-Sterne kommen im MITTELRING: sie tragen den Rand, den die
+        // norm²-Perspektive sonst leert. Im Atemzug (Tempo < 0) kehrt ein Stern,
+        // der den Fokus erreicht, am Rand zurück.
+        if (star.dist < 0) star.dist = maxDist * (0.6 + Math.random() * 0.35)
+        else if (warpFlight && star.surge)
+          star.dist =
+            maxDist *
+            (WARP_SURGE_RESPAWN_FRAC[0] +
+              Math.random() * (WARP_SURGE_RESPAWN_FRAC[1] - WARP_SURGE_RESPAWN_FRAC[0]))
+        else if (warpFlight)
           star.dist = maxDist * (0.1 - 0.08 * tunnel + Math.random() * (0.35 - 0.27 * tunnel))
         else if (rollingOut) star.dist = maxDist * (0.25 + Math.random() * 0.65)
         else star.dist = maxDist * (0.1 + Math.random() * 0.35)
@@ -1659,7 +1677,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const twinkle = 0.5 + 0.5 * Math.sin(star.twinklePhase)
       const fadeEdge = norm > 0.88 ? 1 - (norm - 0.88) / 0.12 : 1
       let alpha: number
-      if (warpFlight) alpha = Math.min(1, distAlpha * 1.5) * wo.starGain
+      if (warpFlight) alpha = Math.min(1, distAlpha * WARP_STAR_ALPHA_GAIN) * wo.starGain
       else if (rollingOut) alpha = Math.min(1, distAlpha * 1.8) * fadeEdge
       else alpha = distAlpha * (0.5 + 0.5 * twinkle) * fadeEdge
       // Aberration: bei Höchsttempo drängt das Licht nach vorn — voraus heller.
@@ -1784,20 +1802,24 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     if (ctx && warp.phase !== 'idle') {
       const lp = warp.out.launchPulse
       const bw = warp.out.bowWave
-      if ((lp > 0 && lp < 1) || (bw > 0 && bw < 1)) {
+      if ((lp !== 0 && lp < 1) || (bw > 0 && bw < 1)) {
         const minEdge = Math.min(w, h)
         ctx.globalCompositeOperation = 'lighter'
         ctx.strokeStyle = warpLaunchStyle
-        if (lp > 0 && lp < 1) {
+        if (lp !== 0 && lp < 1) {
+          // lp < 0: der Atemzug — die Ringe laufen von aussen auf den Körper zu.
+          const inhale = lp < 0
+          const pulse = inhale ? -lp : lp
           const span = 1 - (WARP_LAUNCH_RING_COUNT - 1) * WARP_LAUNCH_RING_STAGGER
           for (let k = 0; k < WARP_LAUNCH_RING_COUNT; k++) {
-            const u = (lp - k * WARP_LAUNCH_RING_STAGGER) / span
+            const u = (pulse - k * WARP_LAUNCH_RING_STAGGER) / span
             if (u <= 0 || u >= 1) continue
+            const grow = inhale ? 1 - u : easeOutCubic(u)
             const r =
               minEdge *
               (WARP_LAUNCH_RING_R0_FRAC +
-                (WARP_LAUNCH_RING_R1_FRAC - WARP_LAUNCH_RING_R0_FRAC) * easeOutCubic(u))
-            ctx.globalAlpha = WARP_LAUNCH_RING_ALPHA * (1 - u)
+                (WARP_LAUNCH_RING_R1_FRAC - WARP_LAUNCH_RING_R0_FRAC) * grow)
+            ctx.globalAlpha = WARP_LAUNCH_RING_ALPHA * (inhale ? u : 1 - u)
             ctx.lineWidth = Math.max(1.5, r * WARP_LAUNCH_RING_W_FRAC)
             ctx.beginPath()
             ctx.arc(w / 2 + leadShift.x, h / 2 + leadShift.y, r, 0, Math.PI * 2)

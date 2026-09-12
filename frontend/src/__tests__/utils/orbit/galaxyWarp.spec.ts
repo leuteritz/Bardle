@@ -3,7 +3,9 @@ import {
   GALAXY_TRANS_DECEL_MS,
   GALAXY_TRANS_WARP_MS,
   GALAXY_WARP_ACCEL_MS,
+  GALAXY_WARP_LAUNCH_INHALE_MS,
   GALAXY_WARP_LAUNCH_MS,
+  WARP_BODY_ROLL_K,
   WARP_BANK_MAX_RAD,
   WARP_BOW_WAVE_MS,
   WARP_COURSE_LEGS,
@@ -11,6 +13,7 @@ import {
   WARP_COURSE_TURN_MIN_DEG,
   WARP_FOCUS_FRAC_MAX,
   WARP_FOCUS_FRAC_MIN,
+  WARP_INHALE_SPEED,
   WARP_LAUNCH_SPEED,
   WARP_LEAN_K,
   WARP_SPEED_PEAK,
@@ -22,7 +25,6 @@ import {
   additiveDrawAlpha,
   createGalaxyWarp,
   GALAXY_WARP_ACCEL_END_MS,
-  GALAXY_WARP_LEG_MS,
   persistentDrawAlpha,
   resetGalaxyWarp,
   startGalaxyWarp,
@@ -49,6 +51,7 @@ function run(dtMs: number, untilMs: number, rand = seeded(7)) {
   startGalaxyWarp(state, rand)
   const phases: GalaxyWarpPhase[] = ['launch']
   let launches = 0
+  let launchAt = -1
   let commits = 0
   let dones = 0
   let commitAt = -1
@@ -58,7 +61,10 @@ function run(dtMs: number, untilMs: number, rand = seeded(7)) {
     t += dtMs
     stepGalaxyWarp(state, dtMs, MIN_EDGE)
     const o = state.out
-    if (o.launched) launches++
+    if (o.launched) {
+      launches++
+      launchAt = t
+    }
     if (o.commit) {
       commits++
       commitAt = t
@@ -69,7 +75,7 @@ function run(dtMs: number, untilMs: number, rand = seeded(7)) {
     }
     if (phases[phases.length - 1] !== o.phase) phases.push(o.phase)
   }
-  return { state, phases, launches, commits, dones, commitAt, doneAt }
+  return { state, phases, launches, launchAt, commits, dones, commitAt, doneAt }
 }
 
 /** Fokus des Wegpunkts in px. */
@@ -87,6 +93,9 @@ describe('galaxyWarp — Phasen und Flanken', () => {
   it.each([16.7, 100])('feuert launched, commit und done genau einmal (dt %s ms)', (dt) => {
     const r = run(dt, TOTAL_MS + 500)
     expect(r.launches).toBe(1)
+    // Der Schlag kommt nach dem Atemzug, im ersten Frame über der Grenze.
+    expect(r.launchAt).toBeGreaterThanOrEqual(GALAXY_WARP_LAUNCH_INHALE_MS)
+    expect(r.launchAt).toBeLessThan(GALAXY_WARP_LAUNCH_INHALE_MS + dt + 0.01)
     expect(r.commits).toBe(1)
     expect(r.dones).toBe(1)
     expect(r.commitAt).toBeGreaterThanOrEqual(GALAXY_TRANS_WARP_MS)
@@ -124,17 +133,38 @@ describe('galaxyWarp — Phasen und Flanken', () => {
 })
 
 describe('galaxyWarp — der Aufbruch', () => {
-  it('punscht das Tempo im Aufbruch monoton hoch und hält den Fokus in der Mitte', () => {
+  it('atmet ein: im Atemzug fällt das Tempo unter null, alles zieht auf den Spieler zu', () => {
     const state = createGalaxyWarp()
     startGalaxyWarp(state, seeded(11))
     const dt = 16.7
     let t = 0
     let last = 1
+    while (t + dt < GALAXY_WARP_LAUNCH_INHALE_MS) {
+      t += dt
+      stepGalaxyWarp(state, dt, MIN_EDGE)
+      expect(state.out.phase).toBe('launch')
+      expect(state.out.speed).toBeLessThanOrEqual(last + 1e-9)
+      expect(state.out.launched).toBe(false)
+      expect(state.out.launchPulse).toBeLessThanOrEqual(0)
+      expect(state.out.streakGain).toBe(0)
+      last = state.out.speed
+    }
+    expect(last).toBeLessThan(WARP_INHALE_SPEED * 0.9)
+  })
+
+  it('schlägt zu: nach dem Atemzug steigt das Tempo monoton bis zum Punch, der Fokus bleibt in der Mitte', () => {
+    const state = createGalaxyWarp()
+    startGalaxyWarp(state, seeded(11))
+    stepGalaxyWarp(state, GALAXY_WARP_LAUNCH_INHALE_MS, MIN_EDGE)
+    const dt = 16.7
+    let t = GALAXY_WARP_LAUNCH_INHALE_MS
+    let last = state.out.speed
     while (t + dt < GALAXY_WARP_LAUNCH_MS) {
       t += dt
       stepGalaxyWarp(state, dt, MIN_EDGE)
       expect(state.out.phase).toBe('launch')
       expect(state.out.speed).toBeGreaterThanOrEqual(last - 1e-9)
+      expect(state.out.launchPulse).toBeGreaterThan(0)
       expect(state.out.focusX).toBe(0)
       expect(state.out.focusY).toBe(0)
       expect(state.out.groupLead).toBe(0)
@@ -143,12 +173,13 @@ describe('galaxyWarp — der Aufbruch', () => {
     expect(last).toBeGreaterThan(WARP_LAUNCH_SPEED * 0.9)
   })
 
-  it('geht ohne Sprung vom Aufbruch in den Anlauf und weiter auf Überlicht', () => {
+  it('geht ohne Sprung vom Schlag in den Anlauf und weiter auf Überlicht', () => {
     const state = createGalaxyWarp()
     startGalaxyWarp(state, seeded(11))
+    stepGalaxyWarp(state, GALAXY_WARP_LAUNCH_INHALE_MS, MIN_EDGE)
     const dt = 16.7
-    let t = 0
-    let last = 1
+    let t = GALAXY_WARP_LAUNCH_INHALE_MS
+    let last = state.out.speed
     while (t < ACCEL_END) {
       t += dt
       stepGalaxyWarp(state, dt, MIN_EDGE)
@@ -169,10 +200,12 @@ describe('galaxyWarp — der Aufbruch', () => {
     const state = createGalaxyWarp()
     startGalaxyWarp(state, seeded(12))
     stepGalaxyWarp(state, 1, MIN_EDGE)
-    expect(state.out.launchPulse).toBeGreaterThanOrEqual(0)
-    expect(state.out.launchPulse).toBeLessThan(0.01)
+    expect(state.out.launchPulse).toBeLessThanOrEqual(0)
+    expect(state.out.launchPulse).toBeGreaterThan(-0.01)
     expect(state.out.bowWave).toBe(0)
-    stepGalaxyWarp(state, GALAXY_WARP_LAUNCH_MS, MIN_EDGE)
+    stepGalaxyWarp(state, GALAXY_WARP_LAUNCH_INHALE_MS - 2, MIN_EDGE)
+    expect(state.out.launchPulse).toBeCloseTo(-1, 2)
+    stepGalaxyWarp(state, GALAXY_WARP_LAUNCH_MS - GALAXY_WARP_LAUNCH_INHALE_MS + 1, MIN_EDGE)
     expect(state.out.launchPulse).toBeGreaterThan(0.5)
     expect(state.out.bowWave).toBe(0)
     stepGalaxyWarp(state, ACCEL_END - GALAXY_WARP_LAUNCH_MS - 1, MIN_EDGE)
@@ -226,7 +259,7 @@ describe('galaxyWarp — Kurven', () => {
     expect(state.out.focusY).toBeCloseTo(ay, 6)
     expect(Math.hypot(ax, ay)).toBeGreaterThan(MIN_EDGE * 0.09)
     for (let leg = 1; leg <= WARP_COURSE_LEGS; leg++) {
-      stepGalaxyWarp(state, GALAXY_WARP_LEG_MS, MIN_EDGE)
+      stepGalaxyWarp(state, state.legEndMs[leg - 1] - state.elapsedMs, MIN_EDGE)
       const [bx, by] = wpPx(state, leg)
       expect(state.out.focusX).toBeCloseTo(bx, 4)
       expect(state.out.focusY).toBeCloseTo(by, 4)
@@ -254,6 +287,13 @@ describe('galaxyWarp — Kurven', () => {
       const state = createGalaxyWarp()
       startGalaxyWarp(state, seeded(seed * 7919))
       expect(state.waypoints).toHaveLength(WARP_COURSE_LEGS + 1)
+      // Etappen: monoton, ungleich, die letzte endet exakt am Schnitt.
+      let prevEnd = ACCEL_END
+      for (const end of state.legEndMs) {
+        expect(end).toBeGreaterThan(prevEnd)
+        prevEnd = end
+      }
+      expect(state.legEndMs[state.legEndMs.length - 1]).toBe(GALAXY_TRANS_WARP_MS)
       for (let i = 0; i < state.waypoints.length; i++) {
         const wp = state.waypoints[i]
         // Ausgeschlossen ist [30°, 150°] (y nach unten) — dort ist sin > 0.5.
@@ -283,7 +323,10 @@ describe('galaxyWarp — Kurven', () => {
       const d = Math.hypot(state.out.focusX - lx, state.out.focusY - ly)
       expect(d).toBeLessThan(MIN_EDGE * 0.02)
       expect(Math.abs(state.out.playerX - lpx)).toBeLessThan(MIN_EDGE * 0.01)
-      expect(state.out.playerX).toBeCloseTo(state.out.focusX * WARP_LEAN_K, 9)
+      // Die Lehne läuft dem Ziel Fokus × K nach — nie weiter aussen als das Ziel.
+      expect(Math.hypot(state.out.playerX, state.out.playerY)).toBeLessThanOrEqual(
+        WARP_LEAN_K * WARP_FOCUS_FRAC_MAX * MIN_EDGE + 1e-6,
+      )
       moved += d
       lx = state.out.focusX
       ly = state.out.focusY
@@ -300,15 +343,19 @@ describe('galaxyWarp — Kurven', () => {
     let t = 0
     let bank = 0
     let maxRoll = 0
-    const checkpoints = []
-    for (let leg = 1; leg <= WARP_COURSE_LEGS; leg++)
-      checkpoints.push(ACCEL_END + leg * GALAXY_WARP_LEG_MS)
+    const checkpoints = state.legEndMs.slice()
     while (t < TOTAL_MS) {
       t += dt
       stepGalaxyWarp(state, dt, MIN_EDGE)
       const o = state.out
-      if (o.phase !== 'cruise') expect(o.roll).toBe(0)
+      if (o.phase !== 'cruise') {
+        expect(o.roll).toBe(0)
+        expect(o.bodyRoll).toBe(0)
+      }
       bank -= (o.roll * dt) / 1000
+      // Der Körper kippt mit der Bank — gedeckelt und am Schnitt gerade.
+      expect(Math.abs(o.bodyRoll)).toBeLessThanOrEqual(WARP_BODY_ROLL_K * WARP_BANK_MAX_RAD + 1e-6)
+      if (o.commit) expect(Math.abs(o.bodyRoll)).toBeLessThan(0.01)
       expect(Math.abs(bank)).toBeLessThanOrEqual(WARP_BANK_MAX_RAD + 1e-3)
       maxRoll = Math.max(maxRoll, Math.abs(o.roll))
       for (const c of checkpoints)
@@ -440,6 +487,7 @@ describe('galaxyWarp — Kurven', () => {
     const state = createGalaxyWarp()
     const out = state.out
     const wps = state.waypoints
+    const legs = state.legEndMs
     startGalaxyWarp(state, seeded(1))
     stepGalaxyWarp(state, 100, MIN_EDGE)
     stepGalaxyWarp(state, TOTAL_MS, MIN_EDGE)
@@ -448,6 +496,8 @@ describe('galaxyWarp — Kurven', () => {
     expect(state.out).toBe(out)
     expect(state.waypoints).toBe(wps)
     expect(state.waypoints[0].r).toBe(0)
+    expect(state.legEndMs).toBe(legs)
+    expect(state.legEndMs[0]).toBe(0)
   })
 })
 

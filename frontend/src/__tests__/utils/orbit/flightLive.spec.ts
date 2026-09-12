@@ -115,6 +115,10 @@ describe('flightLive — Treffer-Ruck und Körper', () => {
     expect(bodyFollowerTransform(1, 0, 10, 120, -30)).toBe(
       'translate(calc(-50% + 130.0px),calc(-50% + -30.0px))',
     )
+    // Die Bank des Warps hängt als rotate() HINTER der Zentrierung — der Körper kippt um seine Mitte.
+    expect(bodyFollowerTransform(0, 0, 10, 0, 0, Math.PI / 18)).toBe(
+      'translate(calc(-50% + 0.0px),calc(-50% + 0.0px)) rotate(10.00deg)',
+    )
   })
 
   it('ein Volley stösst nicht, ein Strike zählt den Treffer hoch', () => {

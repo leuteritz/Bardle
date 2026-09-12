@@ -270,7 +270,7 @@ export const JOLT_PROFILES: Readonly<
   // Schubbeginn und Tunnelausgang des Universumssprungs: spürbar, kein Treffer.
   hop: { strength: 0.45, tremor: 0.35 },
   // Rückstoss gegen den Kurs beim Aufbruch des Galaxien-Warps.
-  launch: { strength: 0.5, tremor: 0.45 },
+  launch: { strength: 0.75, tremor: 0.8 },
 }
 export const JOLT_VOID_PROFILES: Readonly<
   Record<'lesser' | 'greater' | 'abyssal', { strength: number; tremor: number }>

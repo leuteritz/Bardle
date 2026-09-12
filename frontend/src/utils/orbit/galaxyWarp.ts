@@ -9,9 +9,11 @@
 // mehrere Grenzen, und `launched`/`commit`/`done` feuern trotzdem genau einmal.
 //
 // Choreografie (Zeiten aus config/constants/progression.ts):
-//   launch  0 … LAUNCH_MS        der Boost um den Spieler: Punch, Ringe, Rückstoss, Schub
+//   launch  0 … LAUNCH_MS        Atemzug (Sterne einwärts, Ringe auf den Körper zu), dann der
+//                                Schlag: Punch, Ringe hinaus, Rückstoss, Blitz, Schub
 //   accel   … + ACCEL_MS         Kurs und Überlicht setzen gemeinsam weich ein
-//   cruise  … GALAXY_TRANS_WARP_MS   Wegpunkte A→B→C: Bank-Glocke, Roll des Feldes, Lehne
+//   cruise  … GALAXY_TRANS_WARP_MS   Wegpunkte A→B→C→D in ungleichen Etappen: Bank-Glocke,
+//                                Roll des Feldes, Lehne mit Nachlauf, Körper kippt in die Kurve
 //   commit  = GALAXY_TRANS_WARP_MS   Galaxiewechsel (Theme, Zähler), Blitz
 //   decel   … + GALAXY_TRANS_DECEL_MS   Ausrollen, Fluchtpunkt kehrt zur Mitte
 //   done    → idle
@@ -19,7 +21,9 @@ import {
   GALAXY_TRANS_DECEL_MS,
   GALAXY_TRANS_WARP_MS,
   GALAXY_WARP_ACCEL_MS,
+  GALAXY_WARP_LAUNCH_INHALE_MS,
   GALAXY_WARP_LAUNCH_MS,
+  WARP_BODY_ROLL_K,
   WARP_BANK_MAX_RAD,
   WARP_BOW_WAVE_HEADLIGHT_GAIN,
   WARP_BOW_WAVE_MS,
@@ -32,9 +36,13 @@ import {
   WARP_CRUISE_SHIMMER_PERIOD_B_SEC,
   WARP_FOCUS_FRAC_MAX,
   WARP_FOCUS_FRAC_MIN,
+  WARP_INHALE_SPEED,
   WARP_LAUNCH_RING_MS,
   WARP_LAUNCH_SPEED,
   WARP_LEAN_K,
+  WARP_LEAN_TAU_SEC,
+  WARP_LEG_WEIGHT_MAX,
+  WARP_LEG_WEIGHT_MIN,
   WARP_SPEED_PEAK,
   WARP_SURGE_FROM,
   WARP_SURGE_PEAK,
@@ -88,11 +96,13 @@ export interface WarpFlightOut {
   playerY: number
   /** 0 … 1: Einblendung der Zusatzsterne des Flugs. */
   starSurge: number
+  /** Bank des Spielerkörpers in rad — er kippt in die Kurve; der Sprung lässt sie 0. */
+  bodyRoll: number
 }
 
 export interface GalaxyWarpOut extends WarpFlightOut {
   phase: GalaxyWarpPhase
-  /** 0 … 1: die Schockringe vom Spielerkörper beim Aufbruch. */
+  /** Schockringe vom Spielerkörper: −1 … 0 laufen sie im Atemzug auf ihn zu, 0 … 1 nach dem Schlag hinaus. */
   launchPulse: number
   /** 0 … 1: der eine Ring vom Fluchtpunkt beim Erreichen von Überlicht. */
   bowWave: number
@@ -111,9 +121,14 @@ export interface WarpWaypoint {
 export interface GalaxyWarpState {
   phase: GalaxyWarpPhase
   elapsedMs: number
-  /** A → B → C; bleibt bei Resize gültig. Dieselbe Liste über jeden Reset. */
+  /** A → B → C → D; bleibt bei Resize gültig. Dieselbe Liste über jeden Reset. */
   waypoints: WarpWaypoint[]
+  /** Ende jeder Etappe in Flug-ms (aus dem Wurf gewichtet); die letzte endet am Schnitt. */
+  legEndMs: number[]
   lastBank: number
+  /** Nachlauf der Lehne — die Kamera holt den Spieler ein. */
+  leanX: number
+  leanY: number
   launched: boolean
   committed: boolean
   out: GalaxyWarpOut
@@ -123,8 +138,8 @@ const FLIGHT_MS = GALAXY_TRANS_WARP_MS
 const LAUNCH_END_MS = GALAXY_WARP_LAUNCH_MS
 export const GALAXY_WARP_ACCEL_END_MS = LAUNCH_END_MS + GALAXY_WARP_ACCEL_MS
 const ACCEL_END_MS = GALAXY_WARP_ACCEL_END_MS
+const INHALE_END_MS = GALAXY_WARP_LAUNCH_INHALE_MS
 const CRUISE_MS = FLIGHT_MS - ACCEL_END_MS
-export const GALAXY_WARP_LEG_MS = CRUISE_MS / WARP_COURSE_LEGS
 /** Beginn des Crescendos — ein Anteil der Reiseflugstrecke, nicht der Gesamtzeit. */
 const SURGE_START_MS = ACCEL_END_MS + CRUISE_MS * WARP_SURGE_FROM
 const TOTAL_MS = GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS
@@ -154,11 +169,16 @@ function clamp01(v: number): number {
 export function createGalaxyWarp(): GalaxyWarpState {
   const waypoints: WarpWaypoint[] = []
   for (let i = 0; i <= WARP_COURSE_LEGS; i++) waypoints.push({ az: 0, r: 0 })
+  const legEndMs: number[] = []
+  for (let i = 0; i < WARP_COURSE_LEGS; i++) legEndMs.push(0)
   return {
     phase: 'idle',
     elapsedMs: 0,
     waypoints,
+    legEndMs,
     lastBank: 0,
+    leanX: 0,
+    leanY: 0,
     launched: false,
     committed: false,
     out: {
@@ -180,6 +200,7 @@ export function createGalaxyWarp(): GalaxyWarpState {
       playerX: 0,
       playerY: 0,
       starSurge: 0,
+      bodyRoll: 0,
       launchPulse: 0,
       bowWave: 0,
       launched: false,
@@ -199,6 +220,8 @@ export function resetGalaxyWarp(state: GalaxyWarpState): void {
     wp.r = 0
   }
   fresh.waypoints = state.waypoints
+  state.legEndMs.fill(0)
+  fresh.legEndMs = state.legEndMs
   Object.assign(state, fresh)
 }
 
@@ -228,9 +251,25 @@ export function randomGalaxyWarpCourse(rand: () => number, out: WarpWaypoint[]):
   }
 }
 
+/** Etappenlängen aus dem Wurf: kurz und scharf, lang und weit — normiert auf die Reiseflugstrecke. */
+export function randomGalaxyWarpLegs(rand: () => number, out: number[]): void {
+  let sum = 0
+  for (let i = 0; i < out.length; i++) {
+    out[i] = WARP_LEG_WEIGHT_MIN + rand() * (WARP_LEG_WEIGHT_MAX - WARP_LEG_WEIGHT_MIN)
+    sum += out[i]
+  }
+  let acc = ACCEL_END_MS
+  for (let i = 0; i < out.length; i++) {
+    acc += (out[i] / sum) * CRUISE_MS
+    out[i] = acc
+  }
+  out[out.length - 1] = FLIGHT_MS
+}
+
 export function startGalaxyWarp(state: GalaxyWarpState, rand: () => number): void {
   resetGalaxyWarp(state)
   randomGalaxyWarpCourse(rand, state.waypoints)
+  randomGalaxyWarpLegs(rand, state.legEndMs)
   state.phase = 'launch'
   state.out.phase = 'launch'
 }
@@ -262,7 +301,8 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
   state.elapsedMs += dt
   const e = state.elapsedMs
 
-  if (!state.launched) {
+  // Der Schlag kommt nach dem Atemzug — dort sitzen Ruck, Blitz und Schub.
+  if (!state.launched && e >= INHALE_END_MS) {
     state.launched = true
     o.launched = true
   }
@@ -298,9 +338,12 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.playerX = 0
     o.playerY = 0
     o.starSurge = 0
+    o.bodyRoll = 0
     o.launchPulse = 0
     o.bowWave = 0
     state.lastBank = 0
+    state.leanX = 0
+    state.leanY = 0
     o.done = true
     return
   }
@@ -311,28 +354,48 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
   // ein Viertel ab, während die Persistenz-Spur noch drei Frames lang die
   // längeren Striche danebenzeigt: ein Ruck, kein Schnitt.
   const surgeSpan = WARP_SURGE_PEAK - 1
-  o.launchPulse = clamp01(e / WARP_LAUNCH_RING_MS)
+  o.launchPulse =
+    e < INHALE_END_MS ? -(e / INHALE_END_MS) : clamp01((e - INHALE_END_MS) / WARP_LAUNCH_RING_MS)
   o.bowWave = clamp01((e - ACCEL_END_MS) / WARP_BOW_WAVE_MS)
   o.starGain = 1
   o.flightSec = e / 1000
+  // Die Lehne folgt ihrem Ziel mit Nachlauf: die Kamera holt den Spieler ein.
+  const leanEase = dt > 0 ? 1 - Math.exp(-dt / 1000 / WARP_LEAN_TAU_SEC) : 1
+  const lean = (tx: number, ty: number): void => {
+    state.leanX += (tx - state.leanX) * leanEase
+    state.leanY += (ty - state.leanY) * leanEase
+    o.playerX = state.leanX
+    o.playerY = state.leanY
+  }
 
   if (phase === 'launch') {
-    const k = easeOutCubic(e / LAUNCH_END_MS)
-    o.speed = 1 + (WARP_LAUNCH_SPEED - 1) * k
+    if (e < INHALE_END_MS) {
+      // Der Atemzug: alles zieht auf den Spieler zu, die Ringe laufen ein.
+      const k = easeOutCubic(e / INHALE_END_MS)
+      o.speed = 1 + (WARP_INHALE_SPEED - 1) * k
+      o.streakGain = 0
+      o.trailFade = 1 - (1 - WARP_TRAIL_FADE) * k
+      o.ambientGain = 1 - k
+      o.starSurge = 0
+    } else {
+      // Der Schlag: vom Sog in den Punch.
+      const k = easeOutCubic((e - INHALE_END_MS) / (LAUNCH_END_MS - INHALE_END_MS))
+      o.speed = WARP_INHALE_SPEED + (WARP_LAUNCH_SPEED - WARP_INHALE_SPEED) * k
+      o.streakGain = k
+      o.trailFade = WARP_TRAIL_FADE
+      o.ambientGain = 0
+      o.starSurge = k
+    }
     o.focusX = 0
     o.focusY = 0
-    o.streakGain = k
-    o.trailFade = 1 - (1 - WARP_TRAIL_FADE) * k
     o.tintGain = 0
     o.headlight = 0
-    o.ambientGain = 1 - k
     o.themeMix = 0
     o.procession = 0
     o.roll = 0
     o.groupLead = 0
-    o.playerX = 0
-    o.playerY = 0
-    o.starSurge = k
+    o.bodyRoll = 0
+    lean(0, 0)
     state.lastBank = 0
   } else if (phase === 'accel') {
     const t = (e - LAUNCH_END_MS) / GALAXY_WARP_ACCEL_MS
@@ -351,8 +414,8 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.procession = k
     o.roll = 0
     o.groupLead = k
-    o.playerX = o.focusX * WARP_LEAN_K
-    o.playerY = o.focusY * WARP_LEAN_K
+    lean(o.focusX * WARP_LEAN_K, o.focusY * WARP_LEAN_K)
+    o.bodyRoll = 0
     o.starSurge = 1
     state.lastBank = 0
   } else if (phase === 'cruise') {
@@ -373,10 +436,11 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.speed = (WARP_SPEED_PEAK + (WARP_SURGE_PEAK - WARP_SPEED_PEAK) * surge) * shimmer
     // Die Etappe: der Fokus wandert zum nächsten Wegpunkt, das Feld rollt in
     // die Bank (Glocke, an beiden Etappenenden 0 — keine Ecke), der Spieler
-    // lehnt sich in die Kurve. Die letzte Etappe endet am Schnitt: Bank 0.
-    const u = e - ACCEL_END_MS
-    const leg = Math.min(WARP_COURSE_LEGS - 1, Math.floor(u / GALAXY_WARP_LEG_MS))
-    const t = clamp01((u - leg * GALAXY_WARP_LEG_MS) / GALAXY_WARP_LEG_MS)
+    // lehnt sich in die Kurve und kippt. Die letzte Etappe endet am Schnitt: Bank 0.
+    let leg = 0
+    while (leg < WARP_COURSE_LEGS - 1 && e >= state.legEndMs[leg]) leg++
+    const legStart = leg === 0 ? ACCEL_END_MS : state.legEndMs[leg - 1]
+    const t = clamp01((e - legStart) / (state.legEndMs[leg] - legStart))
     const [fx, fy] = galaxyWarpFocusAt(state, leg, t, minEdge)
     const dAz = state.waypoints[leg + 1].az - state.waypoints[leg].az
     const amp = WARP_BANK_MAX_RAD * Math.min(1, Math.abs(dAz) / (WARP_COURSE_TURN_MAX_DEG * DEG))
@@ -395,8 +459,8 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.themeMix = surge
     o.procession = 1
     o.groupLead = 1
-    o.playerX = fx * WARP_LEAN_K
-    o.playerY = fy * WARP_LEAN_K
+    lean(fx * WARP_LEAN_K, fy * WARP_LEAN_K)
+    o.bodyRoll = bank * WARP_BODY_ROLL_K
     o.starSurge = 1
   } else {
     // decel
@@ -420,8 +484,8 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.procession = settle
     o.roll = 0
     o.groupLead = settle
-    o.playerX = cxEnd * WARP_LEAN_K * settle
-    o.playerY = cyEnd * WARP_LEAN_K * settle
+    lean(cxEnd * WARP_LEAN_K, cyEnd * WARP_LEAN_K)
+    o.bodyRoll = 0
     o.starSurge = settle
     o.flightSec = FLIGHT_MS / 1000
     state.lastBank = 0
