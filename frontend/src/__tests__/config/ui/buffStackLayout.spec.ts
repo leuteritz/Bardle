@@ -10,8 +10,8 @@ import {
   BUFF_STACK_ROW_H,
   BUFF_STACK_ROW_H_COMPACT,
   BUFF_STACK_TOP_GAP,
+  BUFF_STACK_SHORT_LABELS,
   BUFF_STACK_W,
-  BUFF_STACK_W_LEGENDARY,
   DRIFTER_RARITY_COLOR,
   EVENT_LOG_PANEL_MAX_H,
   EVENT_LOG_PANEL_MIN_H,
@@ -70,9 +70,12 @@ describe('buff stack — over the command panel, under the event log', () => {
     expect(BUFF_STACK_MORE_H).toBeLessThan(BUFF_STACK_ROW_H_COMPACT)
   })
 
-  it('grows in width with the rank, never in height', () => {
-    expect(BUFF_STACK_W_LEGENDARY).toBeGreaterThan(BUFF_STACK_W)
+  it('keeps ONE width for every rank and short axis words for the effect token', () => {
     // Nie über die HUD-Gasse (Full HD 380 px) hinaus in die Bildmitte.
-    expect(BUFF_STACK_W_LEGENDARY).toBeLessThanOrEqual(380)
+    expect(BUFF_STACK_W).toBeLessThanOrEqual(380)
+    for (const word of Object.values(BUFF_STACK_SHORT_LABELS)) {
+      expect(word.length).toBeLessThanOrEqual(6)
+      expect(word).toBe(word.toUpperCase())
+    }
   })
 })
