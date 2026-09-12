@@ -52,10 +52,16 @@ describe('Eventlog-Gruppen', () => {
     expect(EVENT_GROUPS).toHaveLength(5)
   })
 
-  it('gibt jedem Tab einen Leerzustand', () => {
+  it('gibt jedem Tab einen beschreibenden Leerzustand', () => {
     expect(Object.keys(EVENT_GROUP_EMPTY).sort()).toEqual([...tabIds].sort())
-    for (const text of Object.values(EVENT_GROUP_EMPTY)) {
-      expect(text.length).toBeGreaterThan(0)
+    const states = Object.values(EVENT_GROUP_EMPTY)
+    expect(new Set(states.map((state) => state.title)).size).toBe(states.length)
+    for (const state of states) {
+      expect(state.eyebrow.length).toBeGreaterThan(0)
+      expect(state.title.length).toBeGreaterThan(0)
+      expect(state.detail.length).toBeGreaterThan(0)
+      expect(state.icon).toMatch(/^[a-z][a-z0-9-]*:[a-z0-9-]+$/)
+      expect(state.color).toMatch(/^#[0-9a-f]{6}$/i)
     }
   })
 
