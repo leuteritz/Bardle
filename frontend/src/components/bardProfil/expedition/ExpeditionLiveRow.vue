@@ -1,13 +1,7 @@
 <script setup lang="ts">
-/**
- * Die erste Zeile der Zielliste: der laufende Lauf.
- *
- * Bewusst KEINE `ExpeditionGalaxyRow`: die lebt von ihrer Snapshot-Miniatur,
- * und für eine Galaxie, die noch läuft, gibt es kein Standbild — das entsteht
- * erst, wenn sie befreit ist. Sie ist deshalb schmaler, trägt statt der
- * Miniatur den Live-Punkt und statt der Zähler den Sternstand.
- */
+/** Live galaxy selection row; no snapshot exists before completion. */
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
@@ -48,49 +42,74 @@ const starScale = computed(() => {
     :aria-pressed="selected"
     @click="emit('select')"
   >
-    <span class="elr-body">
-      <span class="elr-kicker">
-        {{ VOYAGE_LIVE_RAIL_LABEL }}
+    <span class="elr-main">
+      <span class="elr-sigil" aria-hidden="true">
+        <Icon icon="game-icons:galaxy" class="elr-sigil-icon" />
       </span>
-      <span class="elr-name">
-        <span class="elr-number">{{ toRoman(galaxyStore.currentGalaxy) }}</span>
-      </span>
-    </span>
-
-    <span class="elr-stars">
-      <span class="elr-stars-label">{{ VOYAGE_LIVE_STARS_LABEL }}</span>
-      <span class="elr-stars-count">
-        <span class="elr-freed">{{ galaxyStore.starsRescued }}</span
-        ><span class="elr-of">/{{ galaxyStore.starsRequired }}</span>
+      <span class="elr-body">
+        <span class="elr-kicker">{{ VOYAGE_LIVE_RAIL_LABEL }}</span>
+        <span class="elr-name">
+          <span class="elr-prefix">Galaxy</span>
+          <span class="elr-number">{{ toRoman(galaxyStore.currentGalaxy) }}</span>
+        </span>
       </span>
     </span>
 
-    <span class="elr-rail" aria-hidden="true">
-      <span class="elr-fill" :style="{ transform: `scaleX(${starScale})` }" />
+    <span class="elr-progress">
+      <span class="elr-progress-head">
+        <span class="elr-stars-label">{{ VOYAGE_LIVE_STARS_LABEL }}</span>
+        <span class="elr-stars-count">
+          <span class="elr-freed">{{ galaxyStore.starsRescued }}</span
+          ><span class="elr-of">/{{ galaxyStore.starsRequired }}</span>
+        </span>
+      </span>
+      <span class="elr-rail" aria-hidden="true">
+        <span class="elr-fill" :style="{ transform: `scaleX(${starScale})` }" />
+      </span>
     </span>
   </button>
 </template>
 
 <style scoped>
-/* Flaeche, Rahmen, Radius, Hover, Auswahl und Fokus stehen als `.sr-row` im
-   Theme — die laufende Galaxie ist dieselbe Karte wie die Zeilen darunter.
-   Hier bleiben nur ihre Masse und ihre Farben. */
 .elr {
-  gap: 0.85em;
+  gap: 0.5em;
   height: v-bind(rowH);
   margin-top: -4px;
   align-items: stretch;
-  padding: 0.85em 0.8em 0.95em 0.9em;
+  flex-direction: column;
+  padding: 0.65em 0.8em 0.75em 0.9em;
   background: color-mix(in srgb, var(--elr-accent) 10%, var(--sr-row-bg));
   border-color: color-mix(in srgb, var(--elr-accent) 55%, var(--sr-row-border));
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--elr-accent) 45%, transparent);
-  /* Die Akzentkante der laufenden Galaxie — dieselbe Geste wie bei den Zeilen
-     darunter, nur traegt sie hier die Farbe des THEMAS statt der Stufe. */
   --sr-color: var(--elr-accent, #c89040);
   --sr-pick: var(--elr-accent, #c89040);
 }
 .elr.is-picked {
   background: color-mix(in srgb, var(--elr-accent) 22%, var(--sr-row-bg));
+}
+
+.elr-main {
+  display: flex;
+  align-items: center;
+  gap: 0.65em;
+  min-height: 0;
+  flex: 1;
+}
+
+.elr-sigil {
+  display: grid;
+  flex: 0 0 2.2em;
+  place-items: center;
+  width: 2.2em;
+  height: 2.2em;
+  border: 1px solid #6b5330;
+  border-radius: 4px;
+  background: #141410;
+  color: var(--elr-accent);
+}
+.elr-sigil-icon {
+  width: 1.55em;
+  height: 1.55em;
 }
 
 .elr-body {
@@ -99,7 +118,7 @@ const starScale = computed(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.5em;
+  gap: 0.35em;
 }
 
 .elr-kicker {
@@ -115,10 +134,9 @@ const starScale = computed(() => {
 }
 .elr-name {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15em;
-  font-size: 1.28em;
+  align-items: baseline;
+  gap: 0.35em;
+  font-size: 1.3em;
   line-height: 1.05;
   font-weight: 800;
   letter-spacing: 0.01em;
@@ -126,33 +144,42 @@ const starScale = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.elr-prefix {
+  color: var(--sr-text);
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 .elr-number {
   color: #e8c040;
 }
 
-.elr-stars {
+.elr-progress {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 0.25em;
-  flex-shrink: 0;
-  min-width: 4.7em;
-  padding-left: 0.75em;
-  border-left: 1px solid color-mix(in srgb, var(--elr-accent) 45%, var(--sr-row-border));
+  gap: 0.28em;
+  min-width: 0;
+}
+.elr-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75em;
 }
 .elr-stars-label {
-  max-width: 4.2em;
-  font-size: 0.64em;
+  font-size: 0.7em;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   line-height: 1.1;
   text-transform: uppercase;
-  text-align: right;
   color: var(--elr-accent);
 }
 .elr-stars-count {
-  font-size: 1.5em;
+  display: inline-flex;
+  align-items: baseline;
+  flex-shrink: 0;
+  font-size: 1.3em;
   font-weight: 900;
   letter-spacing: 0.04em;
   line-height: 1;
@@ -166,11 +193,10 @@ const starScale = computed(() => {
 }
 
 .elr-rail {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 4px;
+  display: block;
+  height: 5px;
+  border: 1px solid #5c3310;
+  border-radius: 2px;
   background: #3e200a;
   overflow: hidden;
 }
