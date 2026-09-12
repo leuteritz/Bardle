@@ -14,6 +14,7 @@
  */
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { gameNow } from '@/utils/game/gameClock'
@@ -21,6 +22,8 @@ import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeo
 import { playerLeg, playerTravelProgress } from '@/utils/game/playerGalaxyPos'
 import SunOrb from '@/components/ui/SunOrb.vue'
 import { sunBodyFor } from '@/utils/fx/sunBodySprite'
+import { drawStarBody } from '@/utils/fx/starBodyCanvas'
+import { drawRoleStar, rolePaletteFromHex } from '@/components/bottom/minimap/minimapDraw'
 import {
   COMET_PHASE_DATA,
   LANDMARK_ROLE_CORE,
@@ -37,6 +40,8 @@ import {
   VOYAGE_LIVE_PLAYER_TAIL_PX,
   VOYAGE_LIVE_PLAYER_TAIL_H_PX,
   VOYAGE_LIVE_TARGET_R_PX,
+  ROLE_COLORS,
+  STAR_BODY_SPRITE_SPAN,
 } from '@/config/constants'
 import type { FitBox } from '@/utils/fx/galaxyPlate'
 import type { CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
@@ -54,6 +59,7 @@ const props = defineProps<{
 }>()
 
 const galaxyStore = useGalaxyStore()
+const starGroupStore = useStarGroupStore()
 const solarStore = useSolarUpgradeStore()
 const { isRenderingPaused } = useRenderingPaused()
 
@@ -91,6 +97,49 @@ const targetTint = computed(() => {
   if (galaxyStore.travelingToGalaxyBoss || !role) return LANDMARK_FREED_CORE
   return LANDMARK_ROLE_CORE[role] ?? LANDMARK_FREED_CORE
 })
+
+/** Same destination body as the minimap; only the target marker is painted here. */
+const targetStar = computed(() =>
+  starGroupStore.activeStars.find((star) => star.starType === 'champion'),
+)
+const targetBodyVisible = computed(() => !!targetPos.value && !galaxyStore.travelingToGalaxyBoss)
+const targetBodyPx = VOYAGE_LIVE_TARGET_R_PX * 2
+const targetCanvasPx = targetBodyPx * STAR_BODY_SPRITE_SPAN
+const targetCanvasSize = `${targetCanvasPx}px`
+const targetCanvas = ref<HTMLCanvasElement | null>(null)
+
+function paintTargetBody() {
+  const el = targetCanvas.value
+  if (!el || !targetBodyVisible.value) return
+
+  const size = targetCanvasPx
+  const dpr = Math.min(window.devicePixelRatio || 1, 2)
+  el.width = Math.max(1, Math.round(size * dpr))
+  el.height = Math.max(1, Math.round(size * dpr))
+  const ctx = el.getContext('2d')
+  if (!ctx) return
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.clearRect(0, 0, size, size)
+
+  const center = size / 2
+  const star = targetStar.value
+  if (star) {
+    drawStarBody(ctx, center, center, targetBodyPx, star, Date.now(), dpr)
+    return
+  }
+
+  const role = galaxyStore.nextStarRole
+  const roleColor = role ? ROLE_COLORS[role] : undefined
+  if (roleColor)
+    drawRoleStar(
+      ctx,
+      center,
+      center,
+      VOYAGE_LIVE_TARGET_R_PX,
+      rolePaletteFromHex(roleColor),
+      Date.now(),
+    )
+}
 
 // ── Bahn ────────────────────────────────────────────────────────────────────
 interface Curve {
@@ -200,8 +249,7 @@ function place(now: number) {
     y = pt.y
     angle = pt.angle
   }
-  el.style.transform =
-    `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) rotate(${angle.toFixed(3)}rad)`
+  el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) rotate(${angle.toFixed(3)}rad)`
 }
 
 function tick() {
@@ -228,6 +276,12 @@ watch(
     nextTick(() => place(gameNow()))
   },
   { immediate: true, deep: false },
+)
+
+watch(
+  [targetPos, targetStar, () => galaxyStore.nextStarRole, targetBodyVisible],
+  () => nextTick(paintTargetBody),
+  { immediate: true, flush: 'post' },
 )
 
 watch(
@@ -281,6 +335,14 @@ const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
         '--ep-t': targetTint,
       }"
     >
+      <canvas
+        v-if="targetBodyVisible"
+        ref="targetCanvas"
+        class="epml-target-star"
+        :width="Math.ceil(targetCanvasPx)"
+        :height="Math.ceil(targetCanvasPx)"
+        aria-hidden="true"
+      />
       <span class="epml-target-ring" />
     </span>
 
@@ -444,6 +506,15 @@ const targetPx = `${VOYAGE_LIVE_TARGET_R_PX * 2}px`
   border: 2px solid var(--ep-t, #64dcb4);
   box-shadow: 0 0 8px var(--ep-t, #64dcb4);
   animation: epml-breathe 2600ms ease-in-out infinite;
+}
+.epml-target-star {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: v-bind(targetCanvasSize);
+  height: v-bind(targetCanvasSize);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
