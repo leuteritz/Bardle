@@ -2392,6 +2392,12 @@ export const FORGE_SEAL_DASH = '9 6'
  * hinein, während die flachen Kanten dort den grössten Abstand halten.
  */
 export const FORGE_SEAL_POINTS = '25,3 75,3 100,50 75,97 25,97 0,50'
+/** Geometrie der epischen Fassung für The Wandering. */
+export const FORGE_MEEP_FRAME_POINTS = '50,3 86,14 97,50 86,86 50,97 14,86 3,50 14,14'
+export const FORGE_MEEP_FRAME_INNER_POINTS = '50,10 80,19 90,50 80,81 50,90 20,81 10,50 20,19'
+export const FORGE_MEEP_FRAME_CLIP_PATH = '50% 0%, 88% 12%, 100% 50%, 88% 88%, 50% 100%, 12% 88%, 0% 50%, 12% 12%'
+export const FORGE_MEEP_FRAME_STROKE_PX = 3
+export const FORGE_MEEP_FRAME_INNER_STROKE_PX = 1
 /** Was über dem Namen steht, wenn der Kauf eine BEDIENUNG aufschliesst. */
 export const FORGE_RULE_LABEL_GESTURE = 'UNLOCKS A CONTROL'
 /** … und wenn er eine Regel verschiebt, ohne dass ein Knopf dazukommt. */
