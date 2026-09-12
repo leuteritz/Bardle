@@ -2545,6 +2545,10 @@ export const FORGE_OFFER_ICON = 'game-icons:anvil-impact'
 export const FORGE_OFFER_COLOR = '#e8a020'
 export const FORGE_SUN_FOCUS_LABEL = 'Star Core'
 export const FORGE_SUN_FOCUS_TIP = 'Center the Star Core and reveal Special offers'
+export const FORGE_SUN_FOCUS_FRAME_INSET_PX = 18
+export const FORGE_SUN_FOCUS_FRAME_LINE_PX = 2
+export const FORGE_SUN_FOCUS_FRAME_REST_SCALE = 0.94
+export const FORGE_SUN_FOCUS_FRAME_OPACITY = 0.94
 /** Die Verben der drei Arten — je Art eines, nie zwei Wörter für dieselbe Tat. */
 export const FORGE_OFFER_VERB_RELIC = 'Forge'
 export const FORGE_OFFER_VERB_UPGRADE = 'Upgrade'
