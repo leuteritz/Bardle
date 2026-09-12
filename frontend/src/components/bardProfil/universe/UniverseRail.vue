@@ -171,7 +171,6 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
             <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre
                  Deckkraft. Nur „du bist hier" atmet. -->
             <span v-if="row.current" class="un-rail-pulse" aria-hidden="true" />
-            <span class="un-rail-roman">{{ row.roman }}</span>
           </span>
 
           <span class="sr-row-body">
@@ -256,27 +255,11 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
   --sr-color: var(--un-row-tint);
 }
 
-/* Die Scheibe traegt die Ziffer, wie die Voyages-Miniatur (`.egr-no`) — in der
-   Namenszeile kostete sie die 24 px, die der Name braucht. */
 .un-rail-disc {
   position: relative;
   flex-shrink: 0;
   display: block;
   line-height: 0;
-}
-
-.un-rail-roman {
-  position: absolute;
-  left: 1px;
-  top: -1px;
-  font-size: 0.87em;
-  font-weight: 900;
-  line-height: 1.1;
-  color: var(--sr-accent-hi);
-  text-shadow: 0 1px 3px #000;
-}
-.un-rail-row.is-dim .un-rail-roman {
-  color: #8a7a52;
 }
 
 /* Statischer Schein, animierte Deckkraft — Performance-Regel 11. */
