@@ -1328,6 +1328,11 @@ export const SOLAR_EVOLUTION_PANEL = {
 export const JOURNEY_BUFF_PANEL = {
   H: 72,
   H_COMPACT: 66,
+  VITAL_MIN_W: 152,
+  VITAL_MAX_W: 260,
+  VITAL_SHARE: 34,
+  VITAL_H: 30,
+  VITAL_H_COMPACT: 28,
   /** Karten nebeneinander, bevor der Rest als ein Platz „+N" zusammenfällt. */
   COLS: 4,
   /** Schmalste noch lesbare Karte, gemessen: bei 206px läuft kein Name über,
