@@ -128,6 +128,12 @@ const viewportInset = `${ACTIVE_BUFF_HUD.VIEWPORT_INSET}px`
 const bottomGap = `${ACTIVE_BUFF_HUD.BOTTOM_GAP}px`
 const auxiliaryHudClearance = `${ACTIVE_BUFF_HUD.AUX_HUD_CLEARANCE}px`
 const drainInset = `${ACTIVE_BUFF_HUD.DRAIN_INSET}px`
+const timerSize = `${ACTIVE_BUFF_HUD.TIMER_SIZE}px`
+const timerSizeCompact = `${ACTIVE_BUFF_HUD.TIMER_SIZE_COMPACT}px`
+const timerSizeWide = `${ACTIVE_BUFF_HUD.TIMER_SIZE_WIDE}px`
+const timerUnitSize = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE}px`
+const timerUnitSizeCompact = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_COMPACT}px`
+const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
 
 const visibleBuffs = computed<ActiveBuffView[]>(() => {
   if (props.dock === 'pause') return buffs.value.slice(0, PAUSE_KIT_EFFECT_COLS)
@@ -294,16 +300,16 @@ function buffTip(buff: ActiveBuffView): TipValue {
   min-width: 3.2ch;
   margin-top: 2px;
   color: #e8c040;
-  font-size: 15px;
+  font-size: v-bind(timerSize);
   font-weight: 900;
-  line-height: 15px;
+  line-height: v-bind(timerSize);
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
 .buff-bar--free .chip-unit {
   color: #8a7a58;
-  font-size: 10px;
+  font-size: v-bind(timerUnitSize);
 }
 
 .buff-bar--free .buff-chip--expiring .chip-seconds {
@@ -314,6 +320,11 @@ function buffTip(buff: ActiveBuffView): TipValue {
   color: #8a7a58;
   font-size: 19px;
   line-height: 15px;
+}
+
+.buff-bar--free .chip-endless {
+  font-size: 1.15em;
+  line-height: 1;
 }
 
 .buff-bar--free .chip-track {
@@ -636,12 +647,12 @@ function buffTip(buff: ActiveBuffView): TipValue {
   }
 
   .buff-bar--free .chip-clock {
-    font-size: 18px;
-    line-height: 18px;
+    font-size: v-bind(timerSizeWide);
+    line-height: v-bind(timerSizeWide);
   }
 
   .buff-bar--free .chip-unit {
-    font-size: 12px;
+    font-size: v-bind(timerUnitSizeWide);
   }
 }
 
@@ -652,8 +663,8 @@ function buffTip(buff: ActiveBuffView): TipValue {
   }
 
   .buff-bar--free .chip-clock {
-    font-size: 20px;
-    line-height: 20px;
+    font-size: v-bind(timerSizeWide);
+    line-height: v-bind(timerSizeWide);
   }
 }
 
@@ -676,12 +687,12 @@ function buffTip(buff: ActiveBuffView): TipValue {
   }
 
   .buff-bar--free .chip-clock {
-    font-size: 14px;
-    line-height: 14px;
+    font-size: v-bind(timerSizeCompact);
+    line-height: v-bind(timerSizeCompact);
   }
 
   .buff-bar--free .chip-unit {
-    font-size: 9px;
+    font-size: v-bind(timerUnitSizeCompact);
   }
 }
 

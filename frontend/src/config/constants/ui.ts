@@ -1351,8 +1351,14 @@ export const ACTIVE_BUFF_HUD = {
   PANEL_INSET: 20,
   VIEWPORT_INSET: 24,
   BOTTOM_GAP: 12,
-  AUX_HUD_CLEARANCE: 46,
+  AUX_HUD_CLEARANCE: 34,
   DRAIN_INSET: 6,
+  TIMER_SIZE: 20,
+  TIMER_SIZE_COMPACT: 18,
+  TIMER_SIZE_WIDE: 23,
+  TIMER_UNIT_SIZE: 12,
+  TIMER_UNIT_SIZE_COMPACT: 11,
+  TIMER_UNIT_SIZE_WIDE: 13,
 } as const
 
 /** Die Unterseiten des Journey-Reiters, in Leistenreihenfolge. */
