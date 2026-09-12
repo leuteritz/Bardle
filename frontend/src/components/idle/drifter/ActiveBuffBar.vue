@@ -1,558 +1,360 @@
 <template>
-  <!-- Every temporary effect the player currently carries, in one row right
-       above the bottom scoreboard strip. Hidden while a bard profile tab
-       covers the screen — nothing under there can be read anyway.
-
-       During a star fight the row is docked into the modal's rail instead
-       (`dock: 'rail'`): at the bottom of the screen it sat on top of the sun
-       horizon and the player's own health bar. While the game is paused it
-       stands in the pause overlay's kit band (`dock: 'pause'`) as a row of
-       fixed-width plates — in the free field it sits at z-index 10001, on top
-       of the overlay itself.
-       App.vue teleports the same instance — only the shape changes.
-
-       Paused the `bardActiveTab` guard does not apply: it keeps the row out of
-       a view that covers it, and the overlay covers everything anyway. -->
   <TransitionGroup
     v-if="uiStore.bardActiveTab === null || props.dock === 'pause'"
     name="buff-chip"
     tag="div"
     class="buff-bar"
     :class="{
+      'buff-bar--free': props.dock === 'free',
       'buff-bar--docked': props.dock === 'rail',
       'buff-bar--pause': props.dock === 'pause',
-      'buff-bar--empty': props.dock === 'pause' && chips.length === 0,
+      'buff-bar--empty': props.dock === 'pause' && buffs.length === 0,
     }"
     role="status"
   >
-    <div
-      v-for="chip in visibleChips"
-      :key="chip.key"
+    <article
+      v-for="buff in visibleBuffs"
+      :key="buff.key"
       class="buff-chip"
       :class="{
-        'buff-chip--expiring': chip.secondsLeft <= DRIFTER_BUFF_EXPIRY_WARN_SEC,
-        'buff-chip--ranked': !!chip.rankColor,
+        'buff-chip--expiring': buff.timer && buff.timer.secondsLeft <= DRIFTER_BUFF_EXPIRY_WARN_SEC,
+        'buff-chip--endless': !buff.timer,
+        'buff-chip--ranked': !!buff.rankColor,
       }"
-      :style="{ '--chip-color': chip.color, '--chip-rank': chip.rankColor }"
+      :style="{ '--chip-color': buff.color, '--chip-rank': buff.rankColor }"
+      :aria-label="buffAriaLabel(buff)"
+      tabindex="0"
+      v-tip="buffTip(buff)"
     >
-      <!-- The icon carries the identity (every drifter has its own), so the
-           text can stay down to what the buff DOES and how long it lasts.
-           The full name is announced by the collect burst and the toast. -->
-      <span class="chip-icon" :title="chip.name">
-        <img v-if="chip.image" :src="chip.image" alt="" class="chip-icon__art" draggable="false" />
-        <Icon v-else :icon="chip.icon" class="chip-icon__glyph" :style="{ color: chip.color }" />
+      <span class="chip-pulse" aria-hidden="true" />
+      <span class="chip-icon">
+        <img
+          v-if="buff.image"
+          :src="buff.image"
+          alt=""
+          class="chip-art"
+          draggable="false"
+        />
+        <Icon v-else-if="buff.icon" :icon="buff.icon" class="chip-glyph" aria-hidden="true" />
       </span>
 
-      <span class="chip-text">
-        <span class="chip-head">
-          <!-- In the kit band the chip says where it CAME from. Three plates
-               that only read "2× CHIMES · 38s" do not tell you which one is
-               about to run out, and the plate is sized for a name. The
-               multiplier moves down to join the axis, so the plate keeps its
-               two text lines and its height. -->
-          <span v-if="props.dock === 'pause'" class="chip-name">{{ chip.name }}</span>
-          <span v-else class="chip-mult">{{ chip.multiplier }}×</span>
-          <!-- Reserved width: the seconds drop from two digits to one, and
-               without the reservation every chip in the row would twitch
-               sideways once per second. -->
-          <span class="chip-clock">
-            <span class="chip-seconds">{{ chip.secondsLeft }}</span>
+      <template v-if="props.dock === 'free'">
+        <span class="chip-clock">
+          <template v-if="buff.timer">
+            <span class="chip-seconds">{{ buff.timer.secondsLeft }}</span>
             <span class="chip-unit">s</span>
+          </template>
+          <span v-else class="chip-endless">∞</span>
+        </span>
+      </template>
+
+      <template v-else>
+        <span class="chip-text">
+          <span class="chip-head">
+            <span v-if="props.dock === 'pause'" class="chip-name">{{ buff.name }}</span>
+            <span v-else class="chip-mult">{{ buff.multiplier }}×</span>
+            <span class="chip-clock">
+              <template v-if="buff.timer">
+                <span class="chip-seconds">{{ buff.timer.secondsLeft }}</span>
+                <span class="chip-unit">s</span>
+              </template>
+              <span v-else class="chip-endless">∞</span>
+            </span>
+          </span>
+          <span class="chip-label">
+            <span v-if="props.dock === 'pause'" class="chip-label-mult">{{ buff.multiplier }}×</span>
+            {{ buff.label }}
           </span>
         </span>
-        <!-- Own line across the full text column, so "DAMAGE" is not competing
-             with the clock for the same few pixels. -->
-        <span class="chip-label">
-          <span v-if="props.dock === 'pause'" class="chip-label-mult"
-            >{{ chip.multiplier }}×</span
-          >{{ chip.label }}</span
-        >
-      </span>
+      </template>
 
-      <span class="chip-track" aria-hidden="true">
-        <span class="chip-progress" :style="{ transform: `scaleX(${chip.progress})` }"></span>
-      </span>
-    </div>
+      <span
+        class="chip-track"
+        :style="{ transform: `scaleX(${buff.timer ? buff.timer.progress : 1})` }"
+        aria-hidden="true"
+      />
+    </article>
 
-    <!-- Die Reihe im Pause-Band ist auf PAUSE_KIT_EFFECT_COLS fest reserviert;
-         was darüber hinausgeht, steht als Zahl auf einem eigenen Platz. Der
-         ist IMMER da, auch leer: sonst spränge die Spaltenbreite und mit ihr
-         die Breite der Kit-Zellen, sobald ein Buff dazukommt oder ausläuft. -->
-    <div v-if="props.dock === 'pause'" key="more" class="buff-chip--more">
+    <span
+      v-if="props.dock === 'pause' || (props.dock === 'free' && overflowCount > 0)"
+      key="more"
+      class="buff-chip--more"
+      :aria-label="
+        overflowCount > 0
+          ? `${overflowCount} more effect${overflowCount === 1 ? '' : 's'} running`
+          : undefined
+      "
+      :tabindex="overflowCount > 0 ? 0 : undefined"
+      v-tip="
+        overflowCount > 0
+          ? `${overflowCount} more effect${overflowCount === 1 ? '' : 's'} running`
+          : null
+      "
+    >
       <span v-if="overflowCount > 0">+{{ overflowCount }}</span>
-    </div>
-
+    </span>
   </TransitionGroup>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useGameStore } from '@/stores/core/gameStore'
 import { useUiStore } from '@/stores/core/uiStore'
-import { useDrifterStore } from '@/stores/world/drifterStore'
-import { useOmenStore } from '@/stores/progression/omenStore'
-import { omenIcon } from '@/utils/game/rolledIcons'
-import { getOmen } from '@/config/progression/omens'
+import { useActiveBuffList, type ActiveBuffView } from '@/composables/ui/useActiveBuffList'
 import {
-  getDrifter,
-  MVP_BUFF_ICON,
-  MVP_BUFF_COLOR,
-  MVP_BUFF_LABEL,
-  MVP_BUFF_NAME,
-} from '@/config/world/drifters'
-import { buffAxisLabel, buffPeakMultiplier } from '@/utils/ui/buffAxis'
-import {
+  ACTIVE_BUFF_HUD,
   DRIFTER_BUFF_EXPIRY_WARN_SEC,
   DRIFTER_RARITY_COLOR,
-  HONOR_MVP_BUFF_MULT,
-  HONOR_MVP_BUFF_DURATION_S,
   PAUSE_KIT_EFFECT_COLS,
 } from '@/config/constants'
 import type { AbilityBarDock } from '@/types'
+import type { TipValue } from '@/utils/ui/tipDirective'
 
-/**
- * Where the row stands — see `AbilityBarDock`. Decided by App.vue, which also
- * does the teleporting; reading it from a store here would state it twice.
- */
 const props = withDefaults(defineProps<{ dock?: AbilityBarDock }>(), { dock: 'free' })
-
-const gameStore = useGameStore()
 const uiStore = useUiStore()
-const drifterStore = useDrifterStore()
-const omenStore = useOmenStore()
+const { buffs } = useActiveBuffList()
 
-interface BuffChip {
-  key: string
-  icon: string
-  /** Artwork statt Glyph, wo das Spiel eines hat (Drifter). */
-  image?: string
-  color: string
-  name: string
-  label: string
-  multiplier: number
-  secondsLeft: number
-  /** 0..1 — remaining share of the buff's full duration. */
-  progress: number
-  /**
-   * Rank colour of the drifter this came from, if it came from one.
-   *
-   * Undefined for the MVP honour buff and for omen rewards — neither has a
-   * rarity, and inventing one for them would say something untrue. A chip
-   * without a rank simply has no rank edge.
-   */
-  rankColor?: string
+const freeTileSize = `${ACTIVE_BUFF_HUD.TILE_SIZE}px`
+const freeTileSizeCompact = `${ACTIVE_BUFF_HUD.TILE_SIZE_COMPACT}px`
+const freeTileSizeWide = `${ACTIVE_BUFF_HUD.TILE_SIZE_WIDE}px`
+const freeIconSize = `${ACTIVE_BUFF_HUD.ICON_SIZE}px`
+const freeIconSizeCompact = `${ACTIVE_BUFF_HUD.ICON_SIZE_COMPACT}px`
+const freeIconSizeWide = `${ACTIVE_BUFF_HUD.ICON_SIZE_WIDE}px`
+const freeGap = `${ACTIVE_BUFF_HUD.GAP}px`
+const freeGapCompact = `${ACTIVE_BUFF_HUD.GAP_COMPACT}px`
+const freeGapWide = `${ACTIVE_BUFF_HUD.GAP_WIDE}px`
+const panelInset = `${ACTIVE_BUFF_HUD.PANEL_INSET}px`
+const viewportInset = `${ACTIVE_BUFF_HUD.VIEWPORT_INSET}px`
+const bottomGap = `${ACTIVE_BUFF_HUD.BOTTOM_GAP}px`
+const auxiliaryHudClearance = `${ACTIVE_BUFF_HUD.AUX_HUD_CLEARANCE}px`
+const drainInset = `${ACTIVE_BUFF_HUD.DRAIN_INSET}px`
+
+const visibleBuffs = computed<ActiveBuffView[]>(() => {
+  if (props.dock === 'pause') return buffs.value.slice(0, PAUSE_KIT_EFFECT_COLS)
+  if (props.dock !== 'free') return buffs.value
+
+  const limit =
+    buffs.value.length > ACTIVE_BUFF_HUD.COLS ? ACTIVE_BUFF_HUD.COLS - 1 : ACTIVE_BUFF_HUD.COLS
+  return buffs.value.slice(-limit)
+})
+
+const overflowCount = computed(() => Math.max(0, buffs.value.length - visibleBuffs.value.length))
+
+type BuffRarity = 'common' | 'uncommon' | 'rare' | 'legendary'
+
+function buffRarity(buff: ActiveBuffView): BuffRarity | null {
+  if (buff.source !== 'drifter' || !buff.rankColor) return null
+  if (buff.rankColor === DRIFTER_RARITY_COLOR.legendary) return 'legendary'
+  if (buff.rankColor === DRIFTER_RARITY_COLOR.rare) return 'rare'
+  if (buff.rankColor === DRIFTER_RARITY_COLOR.uncommon) return 'uncommon'
+  return 'common'
 }
 
-/**
- * One list for every timed effect. The MVP honor buff comes first because it
- * is granted by a battle result the player just watched; drifter buffs follow
- * in the order they were collected.
- */
-const chips = computed<BuffChip[]>(() => {
-  const out: BuffChip[] = []
+function buffAriaLabel(buff: ActiveBuffView): string {
+  const duration = buff.timer ? `${buff.timer.secondsLeft}s remaining` : 'lasts this galaxy'
+  return `${buff.name}: ${buff.multiplier}× ${buff.label}, ${duration}`
+}
 
-  if (gameStore.mvpBuffSecondsLeft > 0) {
-    out.push({
-      key: 'mvp',
-      icon: MVP_BUFF_ICON,
-      color: MVP_BUFF_COLOR,
-      name: MVP_BUFF_NAME,
-      label: MVP_BUFF_LABEL,
-      multiplier: HONOR_MVP_BUFF_MULT,
-      secondsLeft: gameStore.mvpBuffSecondsLeft,
-      progress: Math.min(1, gameStore.mvpBuffSecondsLeft / HONOR_MVP_BUFF_DURATION_S),
-    })
+function buffTip(buff: ActiveBuffView): TipValue {
+  const rarity = buffRarity(buff)
+  const duration = buff.timer ? `${buff.timer.secondsLeft}s remaining` : 'lasts this galaxy'
+  return {
+    label: rarity ? `${rarity} buff` : 'active effect',
+    labelAccent: buff.name,
+    text: `${buff.multiplier}× ${buff.label} · ${duration}`,
+    color: buff.color,
   }
-
-  for (const buff of drifterStore.liveBuffs) {
-    const def = getDrifter(buff.sourceId)
-    if (!def) continue
-    const remainingMs = Math.max(0, buff.expiresAt - drifterStore.drifterNow)
-    out.push({
-      key: `drifter-${buff.sourceId}`,
-      icon: def.icon,
-      image: def.image,
-      color: def.color,
-      name: def.name,
-      label: buffAxisLabel(buff.effects),
-      multiplier: buffPeakMultiplier(buff.effects),
-      secondsLeft: Math.ceil(remainingMs / 1000),
-      progress: buff.durationMs > 0 ? Math.min(1, remainingMs / buff.durationMs) : 0,
-      rankColor: DRIFTER_RARITY_COLOR[def.rarity],
-    })
-  }
-
-  // Omen rewards last: they run the longest of the three, so they belong at the
-  // quiet end of the row where they are not the thing that keeps changing.
-  for (const buff of omenStore.liveBuffs) {
-    const def = getOmen(buff.sourceId)
-    if (!def) continue
-    const remainingMs = Math.max(0, buff.expiresAt - omenStore.omenNow)
-    out.push({
-      key: `omen-${buff.sourceId}`,
-      // Das Glyph der erfüllten Karte; ein Buff aus einem alten Spielstand hat
-      // keines gespeichert und bekommt eines aus seiner Motivfamilie.
-      icon: buff.icon ?? omenIcon(def.id, 0),
-      color: def.color,
-      // Der Eilbonus steht im Namen und nicht als eigenes Zeichen: der Chip
-      // hat für ein zweites Abzeichen keinen Platz, und wissen muss man es nur,
-      // solange der Buff läuft.
-      name: buff.swift ? `${def.name} (swift)` : def.name,
-      label: buffAxisLabel(buff.effects),
-      multiplier: buffPeakMultiplier(buff.effects),
-      secondsLeft: Math.ceil(remainingMs / 1000),
-      progress: buff.durationMs > 0 ? Math.min(1, remainingMs / buff.durationMs) : 0,
-    })
-  }
-
-  return out
-})
-
-/**
- * Im Band stehen höchstens PAUSE_KIT_EFFECT_COLS Plaketten; der Rest steht als
- * Zahl auf einem EIGENEN, immer reservierten Platz daneben
- * (PAUSE_KIT_EFFECT_MORE_W). Gäbe die letzte Plakette ihre Zelle an die Zahl ab
- * — das Muster von `.mat-card--more` —, stünde bei drei laufenden Effekten nur
- * noch einer von ihnen da.
- *
- * Überall sonst gilt kein Deckel: dort trägt die Reihe die Breite des Bildes.
- */
-const visibleChips = computed<BuffChip[]>(() => {
-  if (props.dock !== 'pause') return chips.value
-  return chips.value.slice(0, PAUSE_KIT_EFFECT_COLS)
-})
-
-const overflowCount = computed(() => chips.value.length - visibleChips.value.length)
+}
 </script>
 
 <style scoped>
-/* The center strip of the bottom bar is 79px tall, scaled by --hud-scale —
-   same anchor the MVP badge used before it moved in here.
-   The width is capped to the gap between the two raised HUD panels (measured:
-   1260px on Full HD, 1680px on QHD). Beyond that the row wraps upward instead
-   of sliding over the travel and command panels. */
 .buff-bar {
-  /* Every chip is exactly this wide, whatever it says. A row where each plate
-     sizes itself would re-flow once a second as "12s" becomes "9s" — six chips
-     twitching sideways in the corner of the eye, right above the scoreboard.
-     Six of these plus the gaps fit the narrowest gap (Full HD, 1260px) with
-     room to spare; wider screens get bigger plates further down. */
-  --chip-w: 176px;
-  --chip-h: 84px;
   position: fixed;
-  /* Die Fähigkeitenleiste belegt dieselbe Ankerlinie über dem Scoreboard und
-     veröffentlicht ihre gemessene Höhe — die Buff-Reihe stapelt sich darüber,
-     statt eine Zahl zu raten. Ohne Leiste greift der Default 0px und die Reihe
-     sitzt wieder wie zuvor. */
-  bottom: calc(79px * var(--hud-scale, 1) + 16px + var(--ability-bar-h, 0px));
-  left: 50%;
-  transform: translateX(-50%);
   z-index: 10001;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: stretch;
-  gap: 10px;
-  /* Ohne max-content bekäme ein fixed-Element mit left:50% als Shrink-to-fit-
-     Breite nur den Raum RECHTS davon, also die halbe Viewportbreite (Full HD:
-     960px). Die Reihe wäre dann umgebrochen, lange bevor die max-width unten
-     überhaupt greift — gemessen an sechs Chips, die in zwei Zeilen fielen,
-     obwohl 1106px Inhalt in 1236px erlaubte Breite gepasst hätten. */
-  width: max-content;
-  max-width: calc(100vw - 2 * var(--hud-panel-size, 440px) - 24px);
   pointer-events: none;
 }
 
-.buff-chip {
+.buff-bar--free {
+  right: calc(v-bind(panelInset) * var(--hud-scale, 1));
+  bottom: calc(
+    var(--hud-panel-size, 330px) + var(--kb-hud-h, 0px) + v-bind(bottomGap) +
+      v-bind(auxiliaryHudClearance)
+  );
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: v-bind(freeGap);
+  width: min(
+    calc(var(--hud-panel-size, 330px) - v-bind(panelInset)),
+    calc(100vw - v-bind(viewportInset))
+  );
+  --chip-w: v-bind(freeTileSize);
+  --chip-h: v-bind(freeTileSize);
+}
+
+.buff-bar--free .buff-chip,
+.buff-bar--free .buff-chip--more {
   position: relative;
+  display: flex;
+  flex: 0 0 var(--chip-w);
+  align-items: center;
+  flex-direction: column;
+  justify-content: flex-start;
   width: var(--chip-w);
   height: var(--chip-h);
-  flex: 0 0 var(--chip-w);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 12px 0 10px;
-  background: #16140e;
-  border: 2px solid #5c3310;
-  border-radius: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
-  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  cursor: default;
+  pointer-events: auto;
+  transition: transform 160ms ease;
 }
 
-/* Hairline in the buff's own color, so a row of chips stays readable at a
-   glance without tinting the whole plate. */
-.buff-chip::before {
+.buff-bar--free .buff-chip:hover,
+.buff-bar--free .buff-chip:focus-visible,
+.buff-bar--free .buff-chip--more:hover,
+.buff-bar--free .buff-chip--more:focus-visible {
+  transform: translateY(-4px);
+}
+
+.buff-bar--free .buff-chip:focus-visible,
+.buff-bar--free .buff-chip--more:focus-visible {
+  outline: 1px solid #e8c040;
+  outline-offset: 2px;
+}
+
+.buff-bar--free .chip-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: v-bind(freeIconSize);
+  height: v-bind(freeIconSize);
+  background: #141410;
+  border: 1px solid color-mix(in srgb, var(--chip-color, #5c3310) 55%, #2c1806);
+  border-radius: 3px;
+}
+
+.buff-bar--free .buff-chip--ranked .chip-icon {
+  border-color: var(--chip-rank);
+}
+
+.buff-bar--free .buff-chip--ranked .chip-icon::after {
+  position: absolute;
+  inset: 3px;
+  border: 1px solid color-mix(in srgb, var(--chip-rank) 60%, transparent);
+  border-radius: 2px;
   content: '';
+  pointer-events: none;
+}
+
+.buff-bar--free .buff-chip--endless .chip-icon {
+  border-color: color-mix(in srgb, var(--chip-color, #8a7a58) 65%, #2c1806);
+}
+
+.chip-pulse {
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--chip-color, #e8c040);
-}
-
-/* Rank edge down the left side. Two different statements, so two different
-   edges: the hairline above is the drifter's OWN colour (which buff is this),
-   this one is its rarity (what was it worth). The same split the info card
-   makes with its top stripe and its left border.
-   No beat of its own — a chip is HUD, not an effect. */
-.buff-chip--ranked::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--chip-rank);
-  opacity: 0.85;
+  left: 50%;
+  width: v-bind(freeIconSize);
+  height: v-bind(freeIconSize);
+  border-radius: 3px;
+  background: color-mix(in srgb, #cc6050 22%, transparent);
+  opacity: 0;
   pointer-events: none;
+  transform: translateX(-50%);
 }
 
-/* Round stage in the buff's colour — the same treatment the drifter info card
-   uses for the same object, so the two read as one system. */
-.chip-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--chip-color, #e8c040) 55%, #14120c);
-  background: radial-gradient(
-    circle at 50% 38%,
-    color-mix(in srgb, var(--chip-color, #e8c040) 22%, #14120c),
-    #100e08 74%
-  );
+.buff-chip--expiring .chip-pulse {
+  animation: buff-pulse 1s ease-in-out infinite;
 }
 
-.chip-icon__glyph {
-  width: 30px;
-  height: 30px;
-}
-
-/* Wächst mit jeder Chip-Stufe mit — die Bühne ist je Dock anders gross. */
-.chip-icon__art {
+.chip-art {
   display: block;
-  width: 88%;
-  height: 88%;
+  width: 90%;
+  height: 90%;
   max-width: none;
   object-fit: contain;
-  image-rendering: high-quality;
   pointer-events: none;
 }
 
-.chip-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  line-height: 1;
-}
-
-.chip-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.chip-mult {
-  font-size: 30px;
-  font-weight: 900;
-  line-height: 1;
+.chip-glyph {
+  width: 52px;
+  height: 52px;
   color: var(--chip-color, #e8c040);
 }
 
-.chip-label {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1.6px;
-  color: #b89b5a;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Right-aligned with a reserved width: the number may lose a digit without
-   moving anything else. Tabular figures keep the digits from dancing. */
-.chip-clock {
+.buff-bar--free .chip-clock {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: baseline;
-  justify-content: flex-end;
-  gap: 1px;
+  justify-content: center;
   min-width: 3.2ch;
-  flex-shrink: 0;
+  margin-top: 2px;
+  color: #e8c040;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 15px;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
-.chip-seconds {
-  font-size: 24px;
-  font-weight: 900;
-  line-height: 1;
-  color: #f2ead2;
+.buff-bar--free .chip-unit {
+  color: #8a7a58;
+  font-size: 10px;
 }
 
-.chip-unit {
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1;
-  color: #8a7a52;
+.buff-bar--free .buff-chip--expiring .chip-seconds {
+  color: #cc6050;
 }
 
-.chip-track {
+.chip-endless {
+  color: #8a7a58;
+  font-size: 19px;
+  line-height: 15px;
+}
+
+.buff-bar--free .chip-track {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.07);
-}
-
-/* scaleX on the bar itself, driven by an inline transform — a width in percent
-   would relayout the chip every second, and a CSS variable on the chip would
-   invalidate its whole subtree. */
-.chip-progress {
-  display: block;
-  width: 100%;
-  height: 100%;
+  right: v-bind(drainInset);
+  bottom: calc(100% - v-bind(freeIconSize) - v-bind(drainInset));
+  left: v-bind(drainInset);
+  z-index: 2;
+  height: 2px;
   transform-origin: left center;
-  background: var(--chip-color, #e8c040);
+  background: var(--chip-color, #5c3310);
+  opacity: 0.9;
+  pointer-events: none;
   transition: transform 1s linear;
 }
 
-/* Last seconds: the chip pulses so an expiring window is noticed while the
-   player is looking elsewhere. Opacity only — never a shadow or border color. */
-.buff-chip--expiring {
-  animation: chip-expiring 0.9s ease-in-out infinite;
+.buff-bar--free .buff-chip--more {
+  align-items: center;
+  justify-content: center;
+  color: #e8c040;
+  font-size: 22px;
+  font-weight: 900;
 }
 
-@keyframes chip-expiring {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
+.buff-bar--free .buff-chip--more::before {
+  position: absolute;
+  inset: 8px;
+  background: #141410;
+  border: 1px solid #5c3310;
+  border-radius: 3px;
+  content: '';
 }
 
-/* ── Enter / leave ── */
-.buff-chip-enter-active {
-  transition:
-    opacity 0.3s ease,
-    transform 0.3s cubic-bezier(0.2, 1.4, 0.4, 1);
-}
-.buff-chip-leave-active {
-  transition:
-    opacity 0.45s ease,
-    transform 0.45s ease;
-  animation: none !important;
-}
-.buff-chip-enter-from {
-  opacity: 0;
-  transform: translateY(14px) scale(0.88);
-}
-.buff-chip-leave-to {
-  opacity: 0;
-  transform: translateY(8px) scale(0.94);
-}
-.buff-chip-move {
-  transition: transform 0.3s ease;
+.buff-bar--free .buff-chip--more span {
+  position: relative;
+  z-index: 1;
 }
 
-/* ── Auflösungsstufen ────────────────────────────────────────────────
-   Die Plakette wächst mit dem Bildschirm; die Obergrenze ist stets, dass
-   sechs davon zwischen die HUD-Panels passen (2K: 1680px frei, 4K: 2960px). */
-@media (min-width: 2400px) {
-  .buff-bar {
-    --chip-w: 212px;
-    --chip-h: 98px;
-    gap: 12px;
-  }
-  .chip-icon {
-    width: 62px;
-    height: 62px;
-  }
-  .chip-icon__glyph {
-    width: 36px;
-    height: 36px;
-  }
-  .chip-mult {
-    font-size: 35px;
-  }
-  .chip-label {
-    font-size: 13px;
-    letter-spacing: 1.9px;
-  }
-  .chip-seconds {
-    font-size: 28px;
-  }
-  .chip-unit {
-    font-size: 14px;
-  }
-  .chip-track {
-    height: 5px;
-  }
-}
-
-@media (min-width: 3400px) {
-  .buff-bar {
-    --chip-w: 258px;
-    --chip-h: 118px;
-    gap: 14px;
-  }
-  .chip-icon {
-    width: 74px;
-    height: 74px;
-  }
-  .chip-icon__glyph {
-    width: 44px;
-    height: 44px;
-  }
-  .chip-mult {
-    font-size: 42px;
-  }
-  .chip-label {
-    font-size: 15px;
-    letter-spacing: 2.2px;
-  }
-  .chip-seconds {
-    font-size: 34px;
-  }
-  .chip-unit {
-    font-size: 17px;
-  }
-  .chip-track {
-    height: 6px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .buff-chip--expiring {
-    animation: none;
-  }
-  .chip-progress {
-    transition: none;
-  }
-}
-
-/* ── Docked: the rail of the star fight modal ───────────────────────────
-   Same instance, different shape: a column of narrow plates under the ability
-   tiles. Everything a chip says stays — icon, multiplier, what it lifts and how
-   long — only the plate is cut down to the width of the rail.
-
-   `--chip-w: 100%` deliberately: the rail declares ONE width (`--sf-rail-w`),
-   and the plates take it. A width of their own here would be a second source
-   for the same measure, and the arena would jump sideways the moment the first
-   buff appeared. */
 .buff-bar--docked {
-  --chip-h: 50px;
   position: static;
   flex-direction: column;
-  flex-wrap: nowrap;
   align-items: stretch;
   gap: 6px;
   width: 100%;
@@ -562,132 +364,154 @@ const overflowCount = computed(() => chips.value.length - visibleChips.value.len
 }
 
 .buff-bar--docked .buff-chip {
-  width: 100%;
+  position: relative;
+  display: flex;
   flex: 0 0 auto;
-  height: var(--chip-h);
+  align-items: center;
+  width: 100%;
+  height: 50px;
   gap: 7px;
   padding: 0 8px 0 7px;
+  background: #1c1c18;
+  border: 2px solid #5c3310;
+  border-radius: 4px;
+  pointer-events: auto;
 }
 
 .buff-bar--docked .buff-chip::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
   height: 2px;
+  background: var(--chip-color, #e8c040);
+  content: '';
+}
+
+.buff-bar--docked .buff-chip--ranked::after {
+  position: absolute;
+  top: 2px;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--chip-rank);
+  content: '';
+  pointer-events: none;
 }
 
 .buff-bar--docked .chip-icon {
+  display: grid;
+  flex: 0 0 24px;
+  place-items: center;
   width: 24px;
   height: 24px;
+  background: #141410;
+  border: 1px solid color-mix(in srgb, var(--chip-color, #5c3310) 55%, #2c1806);
+  border-radius: 3px;
 }
 
-.buff-bar--docked .chip-icon__glyph {
+.buff-bar--docked .chip-art {
+  width: 88%;
+  height: 88%;
+}
+
+.buff-bar--docked .chip-glyph {
   width: 15px;
   height: 15px;
 }
 
-.buff-bar--docked .chip-text {
+.chip-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
   gap: 3px;
+  line-height: 1;
 }
 
-.buff-bar--docked .chip-head {
+.chip-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 4px;
+  min-width: 0;
 }
 
-.buff-bar--docked .chip-mult {
-  font-size: 15px;
-}
-
-.buff-bar--docked .chip-seconds {
+.chip-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #e8dcc0;
   font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.buff-bar--docked .chip-unit {
-  font-size: 9px;
+.chip-mult {
+  color: var(--chip-color, #e8c040);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
 }
 
-.buff-bar--docked .chip-label {
+.buff-bar--docked .chip-clock,
+.buff-bar--pause .chip-clock {
+  display: flex;
+  flex-shrink: 0;
+  align-items: baseline;
+  justify-content: flex-end;
+  min-width: 3.2ch;
+  color: #f2ead2;
+  font-variant-numeric: tabular-nums;
+}
+
+.buff-bar--docked .chip-seconds,
+.buff-bar--pause .chip-seconds {
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.buff-bar--docked .chip-unit,
+.buff-bar--pause .chip-unit {
+  color: #8a7a52;
   font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.buff-bar--docked .chip-label,
+.buff-bar--pause .chip-label {
+  overflow: hidden;
+  color: #b89b5a;
+  font-size: 9px;
+  font-weight: 800;
   letter-spacing: 0.9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.buff-bar--docked .chip-track {
+.chip-label-mult {
+  margin-right: 6px;
+  color: var(--chip-color, #e8c040);
+  font-weight: 700;
+}
+
+.buff-bar--docked .chip-track,
+.buff-bar--pause .chip-track {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
   height: 3px;
+  transform-origin: left center;
+  background: var(--chip-color, #e8c040);
+  opacity: 0.9;
+  pointer-events: none;
+  transition: transform 1s linear;
 }
 
-/* Größere Schienen tragen größere Plaketten — dieselben Schwellen wie die
-   Kachelleiter der Fähigkeitenleiste. */
-@media (min-width: 2400px) {
-  .buff-bar--docked {
-    --chip-h: 58px;
-  }
-
-  .buff-bar--docked .chip-icon {
-    width: 30px;
-    height: 30px;
-  }
-
-  .buff-bar--docked .chip-icon__glyph {
-    width: 19px;
-    height: 19px;
-  }
-
-  .buff-bar--docked .chip-mult {
-    font-size: 18px;
-  }
-
-  .buff-bar--docked .chip-seconds {
-    font-size: 16px;
-  }
-
-  .buff-bar--docked .chip-unit {
-    font-size: 11px;
-  }
-
-  .buff-bar--docked .chip-label {
-    font-size: 11px;
-  }
-}
-
-@media (min-width: 3400px) {
-  .buff-bar--docked {
-    --chip-h: 68px;
-  }
-
-  .buff-bar--docked .chip-icon {
-    width: 36px;
-    height: 36px;
-  }
-
-  .buff-bar--docked .chip-icon__glyph {
-    width: 23px;
-    height: 23px;
-  }
-
-  .buff-bar--docked .chip-mult {
-    font-size: 22px;
-  }
-
-  .buff-bar--docked .chip-seconds {
-    font-size: 19px;
-  }
-
-  .buff-bar--docked .chip-unit {
-    font-size: 13px;
-  }
-
-  .buff-bar--docked .chip-label {
-    font-size: 13px;
-  }
-}
-
-/* ── Im Kit-Band des Pause-Overlays ───────────────────────────────────────
-   Dieselbe Spaltenform wie in der Star-Fight-Schiene, nur mit eigener
-   Zeilenhöhe: das Band hat Breite im Überfluss, aber jede Zeile Höhe geht in
-   den Fit-Scale des ganzen Overlays.
-
-   Doppelte Spezifität gegen die Auflösungsstufen weiter oben — über dem Panel
-   liegt bereits useFitScale, eine zweite Staffelung skalierte doppelt. */
 .buff-bar.buff-bar--pause {
-  --chip-w: var(--pause-kit-chip-w, 210px);
-  --chip-h: var(--pause-kit-chip-h, 80px);
   position: static;
   flex-direction: row;
   flex-wrap: nowrap;
@@ -700,22 +524,31 @@ const overflowCount = computed(() => chips.value.length - visibleChips.value.len
   z-index: auto;
 }
 
-/* Feste Breite, nicht `1fr`: die Reihe steht auch mit einem einzigen Effekt an
-   derselben Stelle, und die Kit-Zellen daneben rechnen mit dieser Spalte. */
 .buff-bar--pause .buff-chip {
-  width: var(--chip-w);
-  flex: 0 0 var(--chip-w);
-  height: var(--chip-h);
+  width: var(--pause-kit-chip-w, 210px);
+  flex: 0 0 var(--pause-kit-chip-w, 210px);
+  height: var(--pause-kit-chip-h, 80px);
   gap: 8px;
   padding: 0 10px 0 8px;
 }
 
 .buff-bar--pause .chip-icon {
+  display: grid;
+  flex: 0 0 26px;
+  place-items: center;
   width: 26px;
   height: 26px;
+  background: #141410;
+  border: 1px solid color-mix(in srgb, var(--chip-color, #5c3310) 55%, #2c1806);
+  border-radius: 3px;
 }
 
-.buff-bar--pause .chip-icon__glyph {
+.buff-bar--pause .chip-art {
+  width: 88%;
+  height: 88%;
+}
+
+.buff-bar--pause .chip-glyph {
   width: 20px;
   height: 20px;
 }
@@ -736,44 +569,134 @@ const overflowCount = computed(() => chips.value.length - visibleChips.value.len
   font-size: 12px;
 }
 
-/* Der Rest-Zähler trägt keine Uhr und keinen Rang — er ist eine Zahl, kein
-   Effekt. Deshalb ohne Farbkante, ohne Fortschrittsschiene und ohne Füllung:
-   sein Platz ist immer reserviert, und ein leerer Kasten läse sich als fehlende
-   Plakette. */
 .buff-chip--more {
-  flex: 0 0 var(--pause-kit-more-w, 56px);
-  width: var(--pause-kit-more-w, 56px);
-  height: var(--chip-h);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #8a7a62;
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: #8a7a62;
+  pointer-events: auto;
 }
 
-/* Der Name im Band. Er nimmt den Platz des Multiplikators in der Kopfzeile —
-   die Uhr daneben behält ihre reservierte Breite, der Name bekommt den Rest.
-   Ein Omen-Buff trägt im Namen ein angehängtes „(swift)" und läuft sonst
-   über; abgeschnitten wird mit Auslassung, nicht mit Umbruch (eine dritte
-   Zeile spränge über die reservierte Chip-Höhe). */
-.chip-name {
-  min-width: 0;
-  flex: 1 1 auto;
-  font-size: 13px;
-  font-weight: 700;
-  color: #e8dcc0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.buff-bar--pause .buff-chip--more {
+  flex: 0 0 var(--pause-kit-more-w, 56px);
+  width: var(--pause-kit-more-w, 56px);
+  height: var(--pause-kit-chip-h, 80px);
 }
 
-/* Der Multiplikator in der zweiten Zeile, vor der Achse. In der Chip-Farbe,
-   damit er sich vom Label absetzt, ohne eine eigene Zeile zu brauchen. */
-.chip-label-mult {
-  margin-right: 6px;
-  font-weight: 700;
-  color: var(--chip-color, #e8c040);
+.buff-chip-enter-active,
+.buff-chip-leave-active {
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+.buff-chip-enter-from,
+.buff-chip-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.buff-chip-leave-active {
+  position: absolute;
+}
+
+.buff-chip-move {
+  transition: transform 0.22s ease;
+}
+
+@keyframes buff-pulse {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (min-width: 2400px) {
+  .buff-bar--free {
+    --chip-w: v-bind(freeTileSizeWide);
+    --chip-h: v-bind(freeTileSizeWide);
+    gap: v-bind(freeGapWide);
+  }
+
+  .buff-bar--free .chip-icon,
+  .buff-bar--free .chip-pulse {
+    width: v-bind(freeIconSizeWide);
+    height: v-bind(freeIconSizeWide);
+  }
+
+  .buff-bar--free .chip-glyph {
+    width: 64px;
+    height: 64px;
+  }
+
+  .buff-bar--free .chip-clock {
+    font-size: 18px;
+    line-height: 18px;
+  }
+
+  .buff-bar--free .chip-unit {
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 3400px) {
+  .buff-bar--free .chip-glyph {
+    width: 72px;
+    height: 72px;
+  }
+
+  .buff-bar--free .chip-clock {
+    font-size: 20px;
+    line-height: 20px;
+  }
+}
+
+@media (max-height: 1100px) {
+  .buff-bar--free {
+    --chip-w: v-bind(freeTileSizeCompact);
+    --chip-h: v-bind(freeTileSizeCompact);
+    gap: v-bind(freeGapCompact);
+  }
+
+  .buff-bar--free .chip-icon,
+  .buff-bar--free .chip-pulse {
+    width: v-bind(freeIconSizeCompact);
+    height: v-bind(freeIconSizeCompact);
+  }
+
+  .buff-bar--free .chip-glyph {
+    width: 44px;
+    height: 44px;
+  }
+
+  .buff-bar--free .chip-clock {
+    font-size: 14px;
+    line-height: 14px;
+  }
+
+  .buff-bar--free .chip-unit {
+    font-size: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .buff-chip--expiring .chip-pulse {
+    animation: none;
+    opacity: 0.6;
+  }
+
+  .buff-chip,
+  .buff-chip--more,
+  .buff-bar--free .chip-track,
+  .buff-bar--docked .chip-track,
+  .buff-bar--pause .chip-track {
+    transition: none;
+  }
 }
 </style>
