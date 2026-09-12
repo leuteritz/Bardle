@@ -11,10 +11,16 @@
                und feuerten doppelt. Sie liegt unter allem Bedienbaren. -->
           <div v-if="liveReady" class="atlas-hit" title="Open this galaxy" @click="openLive" />
 
-          <!-- ── Waiting for role selection ── -->
-          <div v-if="galaxyStore.pendingRoleSelection" class="minimap-waiting-label">
-            Choose your Role
-          </div>
+          <!-- ── Kurs offen: die Pille führt in den Galaxy-Tab ── -->
+          <button
+            v-if="galaxyStore.pendingRoleSelection"
+            type="button"
+            class="minimap-waiting-label"
+            title="Open the galaxy and pick a star"
+            @click="openLive"
+          >
+            Chart your course
+          </button>
 
           <!-- ── HUD-Panel: Ankunft · Entfernung · Tempo ── -->
           <MiniMapHudPanel />
@@ -215,12 +221,9 @@ export default defineComponent({
       starGroupStore.openStarFightModal(championStar.value.id)
     }
 
-    /** Rollenwahl und Pause liegen über allem — dieselbe Klausel wie die
-     *  Tab-Kürzel; die Bottom-Bar-Panels stehen ÜBER dem Pause-Overlay, der
-     *  Klick wäre sonst erreichbar. Und `isComplete` gehört „Next Galaxy". */
-    const reachable = computed(
-      () => !galaxyStore.pendingRoleSelection && !isPaused.value && !galaxyStore.isComplete,
-    )
+    /** Die Bottom-Bar-Panels stehen ÜBER dem Pause-Overlay, der Klick wäre
+     *  sonst erreichbar. Und `isComplete` gehört „Next Galaxy". */
+    const reachable = computed(() => !isPaused.value && !galaxyStore.isComplete)
 
     /** Kein Sprungziel nötig: die laufende Galaxie steht in keinem Archiv, der
      *  Reiter zeichnet sie live mit demselben Renderer wie hier. */
@@ -480,10 +483,14 @@ export default defineComponent({
   letter-spacing: 0.22em;
   color: #e8c040;
   white-space: nowrap;
-  pointer-events: none;
   z-index: 10;
   user-select: none;
   text-transform: uppercase;
+  cursor: pointer;
+  padding: 4px 12px;
+  background: #111008;
+  border: 1px solid #7a4e20;
+  border-radius: 4px;
   animation: waiting-label-pulse 1.8s ease-in-out infinite alternate;
   text-shadow:
     0 0 12px rgba(232, 192, 64, 0.9),

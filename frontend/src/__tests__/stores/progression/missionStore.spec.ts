@@ -80,6 +80,9 @@ function setMetric(metric: ProgressMetricId, value: number) {
     case 'planetsCleared':
       useStarGroupStore().totalPlanetsCleared = value
       break
+    case 'coursesCharted':
+      useGalaxyStore().totalCoursesCharted = value
+      break
     case 'driftersCollected':
       useDrifterStore().totalDriftersCollected = value
       break
@@ -160,7 +163,7 @@ describe('missionStore — the running rung', () => {
 
   it('leaves an unmet rung alone', () => {
     const store = useMissionStore()
-    setMetric('clicks', mission('firstTouch').target - 1)
+    setMetric('chimesEarned', mission('firstLight').target - 1)
     store.tick()
     expect(store.index).toBe(0)
     expect(store.totalMissionsClaimed).toBe(0)
@@ -169,23 +172,23 @@ describe('missionStore — the running rung', () => {
 
   it('claims the moment the target is met', () => {
     const store = useMissionStore()
-    fulfil('firstTouch')
+    fulfil('firstLight')
     expect(store.index).toBe(1)
     expect(store.totalMissionsClaimed).toBe(1)
-    expect(store.lastClaimed.defId).toBe('firstTouch')
+    expect(store.lastClaimed.defId).toBe('firstLight')
   })
 
   it('caps the shown progress at the target', () => {
     const store = useMissionStore()
-    setMetric('clicks', mission('firstTouch').target * 10)
-    expect(store.activeView?.progress).toBe(mission('firstTouch').target)
+    setMetric('chimesEarned', mission('firstLight').target * 10)
+    expect(store.activeView?.progress).toBe(mission('firstLight').target)
     expect(store.activeView?.ratio).toBe(1)
   })
 
   it('does not pay the same rung twice', () => {
     const store = useMissionStore()
     const game = useGameStore()
-    fulfil('firstTouch')
+    fulfil('firstLight')
     const after = game.chimes
     store.tick()
     expect(game.chimes).toBe(after)
@@ -194,17 +197,17 @@ describe('missionStore — the running rung', () => {
 
   it('stamps the claim and raises the sequence', () => {
     const store = useMissionStore()
-    fulfil('firstTouch')
-    expect(store.lastClaimed.seq).toBe(1)
     fulfil('firstLight')
+    expect(store.lastClaimed.seq).toBe(1)
+    fulfil('chartCourse')
     expect(store.lastClaimed.seq).toBe(2)
-    expect(store.lastClaimed.defId).toBe('firstLight')
+    expect(store.lastClaimed.defId).toBe('chartCourse')
   })
 
   it('announces a ceremony, not a receipt', () => {
     const { current, receipts } = useHerald()
-    fulfil('firstTouch')
-    expect(current.value?.headline).toBe(mission('firstTouch').name)
+    fulfil('firstLight')
+    expect(current.value?.headline).toBe(mission('firstLight').name)
     expect(current.value?.subline).toContain('chimes')
     expect(receipts.value).toHaveLength(0)
   })
@@ -224,7 +227,7 @@ describe('missionStore — payout', () => {
       total: game.totalChimesEarned,
       level: game.chimesEarnedForLevel,
     }
-    fulfil('firstTouch')
+    fulfil('firstLight')
 
     const gain = game.chimes - before.chimes
     expect(gain, 'the flat floor should have paid').toBeGreaterThan(0)
@@ -304,18 +307,18 @@ describe('missionStore — the ladder walk', () => {
   })
 
   it('does not cascade through its own chime reward', () => {
-    // „First Touch" zahlt flat, und dieselben Chimes erfüllen „First Light".
-    // Ohne die Ein-Stufe-Regel liefe ein einziger Takt durch beide.
+    // „First Light" zahlt flat; steht die Kurs-Stufe dahinter schon erfüllt,
+    // darf ein einziger Takt trotzdem nicht durch beide laufen.
     const store = useMissionStore()
-    setMetric('clicks', mission('firstTouch').target)
-    setMetric('chimesEarned', mission('firstLight').target - 1)
+    setMetric('chimesEarned', mission('firstLight').target)
+    setMetric('coursesCharted', mission('chartCourse').target)
     store.tick()
     expect(store.index).toBe(1)
     expect(store.totalMissionsClaimed).toBe(1)
     expect(
       progressMetricValue('chimesEarned'),
-      'the reward must actually have met the next rung, else this test proves nothing',
-    ).toBeGreaterThanOrEqual(mission('firstLight').target)
+      'the reward must have raised the chime metric, else this test proves nothing',
+    ).toBeGreaterThan(mission('firstLight').target)
     store.tick()
     expect(store.index).toBe(2)
   })
@@ -374,7 +377,7 @@ describe('missionStore — silent catch-up', () => {
   it('skips without paying anything out', () => {
     const store = useMissionStore()
     const game = useGameStore()
-    setMetric('clicks', 10_000)
+    setMetric('chimesEarned', 10_000)
     const before = game.chimes
     store.catchUpSilently()
     expect(store.index).toBe(1)

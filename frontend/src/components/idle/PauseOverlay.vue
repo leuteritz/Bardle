@@ -653,10 +653,7 @@ const planetBossStore = usePlanetBossStore()
 const planetShopStore = usePlanetShopStore()
 const solarStore = useSolarUpgradeStore()
 
-// Die Rollenwahl hält das Spiel bereits an und liegt über allem — eine zweite
-// Pause darüber wäre nur ein Overlay über einem Overlay.
 onKeybinding('pause', () => {
-  if (galaxyStore.pendingRoleSelection) return
   togglePause()
 })
 const starGroupStore = useStarGroupStore()

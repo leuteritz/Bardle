@@ -33,6 +33,7 @@ const ALL_METRICS: readonly ProgressMetricId[] = [
   'driftersCollected',
   'riftsSealed',
   'landfallsCleared',
+  'coursesCharted',
   'planetSlotsOwned',
   'planetLevels',
   'bossesDefeated',

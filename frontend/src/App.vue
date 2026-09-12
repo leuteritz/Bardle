@@ -20,7 +20,6 @@ import PlanetRescueOverlay from '@/components/idle/planet/PlanetRescueOverlay.vu
 import StarFightModal from '@/components/idle/planet/StarFightModal.vue'
 import AugmentSelectionModal from '@/components/augment/AugmentSelectionModal.vue'
 import HudCardColumn from '@/components/idle/hud/HudCardColumn.vue'
-import RoleSelectionModal from '@/components/roleSelection/RoleSelectionModal.vue'
 import UniverseHopVeil from '@/components/idle/prestige/UniverseHopVeil.vue'
 import EncyclopediaPanel from '@/components/encyclopedia/EncyclopediaPanel.vue'
 import AppHeaderComponent from '@/components/header/AppHeaderComponent.vue'
@@ -178,7 +177,6 @@ watch(
          andere als Zeile — der Wayfinder immer zuoberst, weil er als einziges
          dauerhaftes Glied in der HUD-Kontur steht und sich nie bewegen darf. -->
       <HudCardColumn />
-      <RoleSelectionModal />
       <EventLogPanel />
       <OfflineProgressModal />
       <PauseOverlay />

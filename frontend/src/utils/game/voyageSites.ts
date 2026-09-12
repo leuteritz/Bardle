@@ -6,9 +6,9 @@ import {
   armRadius,
   galaxyGeo,
   galaxyPlaneToWorld,
-  generateGalaxyDots,
   seededRng,
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { galaxyStarDots } from '@/utils/game/galaxyStarDots'
 import { landfallMarks } from '@/utils/game/landfalls'
 import { incidentMarks } from '@/utils/game/galaxyIncidents'
 import {
@@ -62,7 +62,7 @@ export interface VoyageBerth {
 export function voyageBerthsOf(record: CompletedGalaxyRecord): VoyageBerth[] {
   const attempts = record.attemptResults.length
   const geo = galaxyGeo(record.mapSeed)
-  const { spawn, dots } = generateGalaxyDots(record.mapSeed, attempts + 1)
+  const { spawn, dots } = galaxyStarDots(record.mapSeed, attempts, record.starPositions)
   // Die Startmenge des Farthest-Point-Sampling ist die GESCHICHTE der Galaxie —
   // seit es Landfalls gibt, gehören sie dazu. Ohne sie setzte ein Hafen sich auf
   // eine Ortsmarke, und `voyageMarkerSizeFor` misst nur Hafen gegen Hafen.

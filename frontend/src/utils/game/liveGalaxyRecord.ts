@@ -12,6 +12,7 @@
  */
 import type { CompletedGalaxyRecord, StarAttemptResult } from '@/stores/world/galaxyStore'
 import type { GalaxyIncident, LandfallOutcome, StarManifest } from '@/types'
+import type { DotPos } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 
 export interface LiveGalaxyState {
   galaxy: number
@@ -22,6 +23,7 @@ export interface LiveGalaxyState {
   landfallResults: LandfallOutcome[]
   incidentResults: GalaxyIncident[]
   starManifests: StarManifest[]
+  starPositions: DotPos[]
 }
 
 export function liveGalaxyRecord(state: LiveGalaxyState): CompletedGalaxyRecord {
@@ -34,6 +36,7 @@ export function liveGalaxyRecord(state: LiveGalaxyState): CompletedGalaxyRecord 
     landfallResults: [...state.landfallResults],
     incidentResults: state.incidentResults.map((e) => ({ ...e })),
     starManifests: state.starManifests.map((m) => ({ ...m })),
+    starPositions: state.starPositions.map((p) => ({ ...p })),
     durationSeconds: 0,
     completedAt: 0,
   }

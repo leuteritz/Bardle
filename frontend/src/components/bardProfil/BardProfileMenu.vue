@@ -248,9 +248,8 @@ watch(
  */
 function bindTabShortcut(id: KeybindId, tab: BardTabId) {
   onKeybinding(id, () => {
-    // Rollenwahl und Pause liegen über allem — ein Tab, der sich dahinter
-    // öffnet, wäre unsichtbar und stünde beim Zurückkehren im Weg.
-    if (galaxyStore.pendingRoleSelection || isPaused.value) return
+    // Die Pause liegt über allem — ein Tab dahinter wäre unsichtbar.
+    if (isPaused.value) return
     if (uiStore.bardActiveTab === tab) uiStore.closeBardModal()
     else uiStore.setBardTab(tab)
   })
@@ -260,7 +259,7 @@ bindTabShortcut('shop', 'shop')
 
 /** Taste K öffnet den Skill Tree wie der Header-Button. */
 onKeybinding('road', () => {
-  if (galaxyStore.pendingRoleSelection || isPaused.value) return
+  if (isPaused.value) return
   uiStore.setBardTab('tree')
 })
 

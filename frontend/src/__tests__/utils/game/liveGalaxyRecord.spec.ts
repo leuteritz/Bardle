@@ -19,6 +19,7 @@ function live(over: Partial<LiveGalaxyState> = {}): LiveGalaxyState {
     landfallResults: [{ kind: 'derelict', cleared: true }],
     incidentResults: [{ kind: 'void', rank: 1 } as never],
     starManifests: [{ champion: 'Bard', role: 'support' } as never],
+    starPositions: [{ x: 0.3, y: 0.4 }],
     ...over,
   }
 }
@@ -35,6 +36,7 @@ describe('liveGalaxyRecord', () => {
         'landfallResults',
         'mapSeed',
         'starManifests',
+        'starPositions',
         'themeIndex',
         'universe',
       ].sort(),
@@ -56,6 +58,7 @@ describe('liveGalaxyRecord', () => {
     expect(r.landfallResults).toEqual(s.landfallResults)
     expect(r.incidentResults).toEqual(s.incidentResults)
     expect(r.starManifests).toEqual(s.starManifests)
+    expect(r.starPositions).toEqual(s.starPositions)
   })
 
   /** Kopien, keine Verweise: die Bühne darf den Store nicht anfassen können. */

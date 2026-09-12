@@ -2119,6 +2119,8 @@ export const VOYAGE_CREW_MARKER_PULSE_MS = 2400
 export const VOYAGE_LIVE_ROW_H = 108
 
 export const VOYAGE_LIVE_RAIL_LABEL = 'Current galaxy'
+/** Die Kopfzeile der Live-Zeile, solange kein Kurs gesetzt ist. */
+export const VOYAGE_LIVE_RAIL_COURSE_LABEL = 'Awaiting course'
 export const VOYAGE_LIVE_RAIL_TITLE = 'Follow your current galaxy'
 export const VOYAGE_LIVE_STARS_LABEL = 'Stars rescued'
 
@@ -2133,3 +2135,19 @@ export const VOYAGE_LIVE_PLAYER_TAIL_PX = 42
 export const VOYAGE_LIVE_PLAYER_TAIL_H_PX = 5
 /** Die ruhende Marke am Zielstern der offenen Etappe. */
 export const VOYAGE_LIVE_TARGET_R_PX = 9
+
+// ══ Chart your course — die drei Kandidaten auf der Live-Karte ═══════════════
+/** Radius des Kandidaten-Sternkörpers; grösser als das Ziel, er ist die WAHL. */
+export const VOYAGE_COURSE_R_PX = 12
+/** Fangfläche eines Kandidaten — die Beschriftung darunter zählt nicht dazu. */
+export const VOYAGE_COURSE_HIT_PX = 52
+/** Atemperiode der Ringe; nur opacity läuft. */
+export const VOYAGE_COURSE_RING_PERIOD_MS = 2600
+/** Höchstens so viele Roster-Zeilen in der Hover-Karte. */
+export const VOYAGE_COURSE_ROSTER_MAX = 5
+export const VOYAGE_COURSE_HEAD_LABEL = 'Chart your course'
+export const VOYAGE_COURSE_HEAD_SUB = 'Pick a star — its role flies out next'
+export const VOYAGE_COURSE_ACT_LABEL = 'Click to set course'
+export const VOYAGE_COURSE_TIP_STATE = 'Course option'
+export const VOYAGE_COURSE_FLIGHT_LABEL = 'Flight'
+export const VOYAGE_COURSE_LEFT_LABEL = 'champions left'
