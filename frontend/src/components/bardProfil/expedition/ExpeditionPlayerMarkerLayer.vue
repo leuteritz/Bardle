@@ -19,7 +19,12 @@ import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { gameNow } from '@/utils/game/gameClock'
 import { galaxyStarDots } from '@/utils/game/galaxyStarDots'
-import { playerLeg, playerTravelProgress } from '@/utils/game/playerGalaxyPos'
+import {
+  driftHeading,
+  playerGalaxyPos,
+  playerLeg,
+  playerTravelProgress,
+} from '@/utils/game/playerGalaxyPos'
 import SunOrb from '@/components/ui/SunOrb.vue'
 import { sunBodyFor } from '@/utils/fx/sunBodySprite'
 import { drawStarBody } from '@/utils/fx/starBodyCanvas'
@@ -197,6 +202,11 @@ const flying = computed(
   () => galaxyStore.championTravelState === 'traveling' && !docked.value && !!curve.value,
 )
 
+/** Kurs offen: der Körper treibt — dieselbe Schleife wie der Flug, andere Rechnung. */
+const drifting = computed(
+  () => galaxyStore.pendingRoleSelection && !docked.value && !galaxyStore.isRescueRotating,
+)
+
 function pointOn(c: Curve, t: number): { x: number; y: number; angle: number } {
   const u = 1 - t
   const x = u * u * c.x0 + 2 * u * t * c.cx + t * t * c.x2
@@ -212,6 +222,7 @@ const body = ref<HTMLElement | null>(null)
 let curveCache: Curve | null = null
 let restCache = { x: 0, y: 0, angle: 0 }
 let flyCache = false
+let driftCache = false
 let frame: number | null = null
 
 const reduceMotion =
@@ -222,6 +233,7 @@ const reduceMotion =
 function rebuild() {
   curveCache = curve.value
   flyCache = flying.value
+  driftCache = drifting.value
   const b = props.box
   if (docked.value) {
     restCache = { x: b.x + 0.5 * b.w, y: b.y + 0.5 * b.h, angle: 0 }
@@ -243,7 +255,14 @@ function place(now: number) {
   const el = body.value
   if (!el) return
   let { x, y, angle } = restCache
-  if (flyCache && curveCache) {
+  if (driftCache) {
+    const g = geometry.value
+    const p = playerGalaxyPos(g.spawn, g.dots, g.attempts, galaxyStore, now)
+    const b = props.box
+    x = b.x + p.x * b.w
+    y = b.y + p.y * b.h
+    angle = driftHeading(galaxyStore.mapSeed, now)
+  } else if (flyCache && curveCache) {
     const pt = pointOn(curveCache, playerTravelProgress(galaxyStore, now))
     x = pt.x
     y = pt.y
@@ -270,7 +289,7 @@ function stopLoop() {
 }
 
 watch(
-  [() => props.box, leg, docked, flying, () => galaxyStore.championTravelStartTime],
+  [() => props.box, leg, docked, flying, drifting, () => galaxyStore.championTravelStartTime],
   () => {
     rebuild()
     nextTick(() => place(gameNow()))
@@ -285,9 +304,9 @@ watch(
 )
 
 watch(
-  [flying, () => props.visible],
-  ([isFlying, visible]) => {
-    if (isFlying && visible) startLoop()
+  [flying, drifting, () => props.visible],
+  ([isFlying, isDrifting, visible]) => {
+    if ((isFlying || isDrifting) && visible) startLoop()
     else stopLoop()
   },
   { immediate: true },

@@ -74,6 +74,8 @@ import ExpeditionStarManifest from './ExpeditionStarManifest.vue'
 import ExpeditionCrewMarkerLayer from './ExpeditionCrewMarkerLayer.vue'
 import ExpeditionPlayerMarkerLayer from './ExpeditionPlayerMarkerLayer.vue'
 import ExpeditionCourseLayer from './ExpeditionCourseLayer.vue'
+import ExpeditionAdriftHead from './ExpeditionAdriftHead.vue'
+import { courseUnlocked } from '@/utils/game/courseGate'
 import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 
 const props = defineProps<{
@@ -114,7 +116,10 @@ const ACTION_FALLBACK: VoyageMarkAction = { kind: 'waiting', endsAt: 0 }
 
 const galaxyStore = useGalaxyStore()
 /** Die Kurswahl liegt nur auf der LAUFENDEN Galaxie, solange kein Stern gewählt ist. */
-const courseOpen = computed(() => !!props.live && galaxyStore.pendingRoleSelection)
+const coursePending = computed(() => !!props.live && galaxyStore.pendingRoleSelection)
+const courseOpen = computed(() => coursePending.value && courseUnlocked())
+/** Vor dem Tor: Bard treibt, das Scrim sagt, wer führt. */
+const adrift = computed(() => coursePending.value && !courseUnlocked())
 
 const stage = ref<HTMLElement | null>(null)
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -540,6 +545,7 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
     />
 
     <ExpeditionCourseLayer v-if="courseOpen" :box="box" :width="cssW" :height="cssH" />
+    <ExpeditionAdriftHead v-if="adrift" />
 
     <ExpeditionCrewMarkerLayer
       :record="record"

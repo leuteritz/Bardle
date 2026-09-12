@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest'
+import { PLAYER_DRIFT_AMP } from '@/config/constants'
 import {
   playerGalaxyPos,
   playerLeg,
   playerTravelProgress,
+  driftOffset,
   type PlayerFlightState,
 } from '@/utils/game/playerGalaxyPos'
 
@@ -133,5 +135,35 @@ describe('playerGalaxyPos', () => {
     const b = playerGalaxyPos(SPAWN, DOTS, 1, s, 1_900)
     expect(playerGalaxyPos(SPAWN, DOTS, 1, s, 1_300)).toEqual(a)
     expect(b.x).toBeGreaterThan(a.x)
+  })
+})
+
+describe('Treiben ohne Kurs', () => {
+  it('bleibt ohne das Flag am Ort — die alten Leser merken nichts', () => {
+    expect(playerGalaxyPos(SPAWN, DOTS, 0, state(), 5_000)).toEqual(SPAWN)
+  })
+
+  it('wandert um den Ort, innerhalb der Amplitude, geklemmt', () => {
+    const s = state({ pendingRoleSelection: true, mapSeed: 4242 })
+    const pts = [0, 700, 2_100, 4_800, 9_900].map((t) => playerGalaxyPos(SPAWN, DOTS, 0, s, t))
+    for (const p of pts) {
+      expect(Math.abs(p.x - SPAWN.x)).toBeLessThanOrEqual(PLAYER_DRIFT_AMP + 1e-9)
+      expect(Math.abs(p.y - SPAWN.y)).toBeLessThanOrEqual(PLAYER_DRIFT_AMP + 1e-9)
+      expect(p.x).toBeGreaterThanOrEqual(0.06)
+      expect(p.y).toBeLessThanOrEqual(0.94)
+    }
+    expect(new Set(pts.map((p) => p.x.toFixed(4))).size).toBeGreaterThan(1)
+  })
+
+  it('ist je Zeitpunkt und Seed deterministisch, je Seed verschieden', () => {
+    expect(driftOffset(7, 1234)).toEqual(driftOffset(7, 1234))
+    expect(driftOffset(7, 1234)).not.toEqual(driftOffset(8, 1234))
+  })
+
+  it('weicht der Rettungsrotation und dem Kern', () => {
+    const s = state({ pendingRoleSelection: true, mapSeed: 1, isRescueRotating: true })
+    expect(playerGalaxyPos(SPAWN, DOTS, 0, s, 3_000)).toEqual(SPAWN)
+    const c = state({ pendingRoleSelection: true, mapSeed: 1, bossPhaseActive: true })
+    expect(playerGalaxyPos(SPAWN, DOTS, 0, c, 3_000)).toEqual({ x: 0.5, y: 0.5 })
   })
 })

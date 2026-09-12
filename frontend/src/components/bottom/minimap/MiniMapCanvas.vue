@@ -107,6 +107,7 @@ import {
 } from './minimapDraw'
 import { gameNow, getGameSpeed } from '@/utils/game/gameClock'
 import { playerGalaxyPos } from '@/utils/game/playerGalaxyPos'
+import { courseUnlocked } from '@/utils/game/courseGate'
 
 export default defineComponent({
   name: 'MiniMapCanvas',
@@ -689,7 +690,7 @@ export default defineComponent({
 
       // Kurs offen: die drei Kandidaten klein in ihrer Rollenfarbe, EIN leiser
       // Ring — die Wahl selbst liegt im Galaxy-Tab, die Pille darunter führt hin.
-      if (galaxyStore.pendingRoleSelection) {
+      if (galaxyStore.pendingRoleSelection && courseUnlocked()) {
         for (const opt of galaxyStore.courseOptions) {
           const [cx, cy] = wToC(opt.pos.x, opt.pos.y)
           const pal = rolePaletteFromHex(ROLE_COLORS[opt.role])

@@ -13,7 +13,7 @@
 
           <!-- ── Kurs offen: die Pille führt in den Galaxy-Tab ── -->
           <button
-            v-if="galaxyStore.pendingRoleSelection"
+            v-if="galaxyStore.pendingRoleSelection && courseOpen"
             type="button"
             class="minimap-waiting-label"
             title="Open the galaxy and pick a star"
@@ -141,6 +141,7 @@ import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useHerald } from '@/composables/ui/useHerald'
+import { courseUnlocked } from '@/utils/game/courseGate'
 import { useGamePause } from '@/composables/system/useGamePause'
 import { HUD_PANEL_ARC_R, SKIP_DURATION_SECONDS, MINIMAP_TIER_FLASH_MS } from '@/config/constants'
 import MiniMapCanvas from './MiniMapCanvas.vue'
@@ -228,6 +229,8 @@ export default defineComponent({
     /** Kein Sprungziel nötig: die laufende Galaxie steht in keinem Archiv, der
      *  Reiter zeichnet sie live mit demselben Renderer wie hier. */
     const liveReady = reachable
+    /** Vor Wayfinder-Stufe 2 gibt es keine Pille — die Karte oben links führt. */
+    const courseOpen = computed(() => courseUnlocked())
 
     function openLive() {
       if (!liveReady.value) return
@@ -254,6 +257,7 @@ export default defineComponent({
       onMinimapStarLeave,
       onMinimapStarClick,
       liveReady,
+      courseOpen,
       openLive,
       teleportNearPlanet,
       SKIP_DURATION_SECONDS,
