@@ -1,17 +1,20 @@
 <script setup lang="ts">
 /** Live galaxy selection row; no snapshot exists before completion. */
 import { computed } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
 import { useGameStore } from '@/stores/core/gameStore'
 import { minimapAccentForTheme } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { liveGalaxyRecord } from '@/utils/game/liveGalaxyRecord'
 import { toRoman } from '@/utils/ui/format'
+import { useLazyGalaxySnapshot } from '@/composables/ui/useLazyGalaxySnapshot'
 import {
   LANDMARK_FREED_CORE,
   VOYAGE_LIVE_RAIL_LABEL,
   VOYAGE_LIVE_RAIL_TITLE,
   VOYAGE_LIVE_ROW_H,
   VOYAGE_LIVE_STARS_LABEL,
+  VOYAGE_RAIL_THUMB_H,
+  VOYAGE_RAIL_THUMB_W,
 } from '@/config/constants'
 
 defineProps<{ selected: boolean }>()
@@ -21,10 +24,26 @@ const galaxyStore = useGalaxyStore()
 const gameStore = useGameStore()
 
 const rowH = `${VOYAGE_LIVE_ROW_H}px`
+const thumbW = `${VOYAGE_RAIL_THUMB_W}px`
+const thumbH = `${VOYAGE_RAIL_THUMB_H}px`
 
 const accent = computed(
   () => `rgb(${minimapAccentForTheme(galaxyStore.currentThemeIndex, gameStore.currentUniverse)})`,
 )
+
+const liveRecord = computed(() =>
+  liveGalaxyRecord({
+    galaxy: galaxyStore.currentGalaxy,
+    mapSeed: galaxyStore.mapSeed,
+    themeIndex: galaxyStore.currentThemeIndex,
+    universe: gameStore.currentUniverse,
+    attemptResults: galaxyStore.attemptResults,
+    landfallResults: galaxyStore.landfallResults,
+    incidentResults: galaxyStore.incidentResults,
+    starManifests: galaxyStore.starManifests,
+  }),
+)
+const { root, snapshot } = useLazyGalaxySnapshot(liveRecord, 'thumb')
 
 const starScale = computed(() => {
   const need = Math.max(1, galaxyStore.starsRequired)
@@ -34,6 +53,7 @@ const starScale = computed(() => {
 
 <template>
   <button
+    ref="root"
     type="button"
     class="sr-row elr"
     :class="{ 'is-picked': selected }"
@@ -43,8 +63,9 @@ const starScale = computed(() => {
     @click="emit('select')"
   >
     <span class="elr-main">
-      <span class="elr-sigil" aria-hidden="true">
-        <Icon icon="game-icons:galaxy" class="elr-sigil-icon" />
+      <span class="elr-thumb">
+        <img v-if="snapshot" :src="snapshot" class="elr-img" alt="" />
+        <span v-else class="elr-img elr-img--holding" />
       </span>
       <span class="elr-body">
         <span class="elr-kicker">{{ VOYAGE_LIVE_RAIL_LABEL }}</span>
@@ -72,12 +93,12 @@ const starScale = computed(() => {
 
 <style scoped>
 .elr {
-  gap: 0.5em;
+  gap: 0.2em;
   height: v-bind(rowH);
   margin-top: -4px;
   align-items: stretch;
   flex-direction: column;
-  padding: 0.65em 0.8em 0.75em 0.9em;
+  padding: 0.3em 0.8em 0.35em 0.9em;
   background: color-mix(in srgb, var(--elr-accent) 10%, var(--sr-row-bg));
   border-color: color-mix(in srgb, var(--elr-accent) 55%, var(--sr-row-border));
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--elr-accent) 45%, transparent);
@@ -96,20 +117,25 @@ const starScale = computed(() => {
   flex: 1;
 }
 
-.elr-sigil {
-  display: grid;
-  flex: 0 0 2.2em;
-  place-items: center;
-  width: 2.2em;
-  height: 2.2em;
-  border: 1px solid #6b5330;
-  border-radius: 4px;
-  background: #141410;
-  color: var(--elr-accent);
+.elr-thumb {
+  position: relative;
+  display: block;
+  flex: 0 0 v-bind(thumbW);
+  width: v-bind(thumbW);
+  height: v-bind(thumbH);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--elr-accent) 60%, #6b5330);
+  border-radius: 3px;
+  background: #0b0806;
 }
-.elr-sigil-icon {
-  width: 1.55em;
-  height: 1.55em;
+.elr-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.elr-img--holding {
+  background: #0b0806;
 }
 
 .elr-body {
@@ -125,11 +151,15 @@ const starScale = computed(() => {
   display: flex;
   align-items: center;
   gap: 0.45em;
-  font-size: 0.76em;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.55em;
   line-height: 1;
   font-weight: 800;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   color: var(--elr-accent);
 }
 .elr-name {
@@ -158,7 +188,7 @@ const starScale = computed(() => {
 .elr-progress {
   display: flex;
   flex-direction: column;
-  gap: 0.28em;
+  gap: 0.2em;
   min-width: 0;
 }
 .elr-progress-head {
