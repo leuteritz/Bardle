@@ -162,13 +162,15 @@ export const MAX_ABILITY_LEVEL = 5
 export const RESCUE_ROTATION_DURATION_MS = 2_000 // camera spin after role selection
 
 /**
- * Anlauf plus Reiseflug bis zum Schnitt. Von 12 000 auf 10 000 gekürzt: der
- * Reiseflug trug zwei Sekunden, in denen nichts Neues mehr passierte. Der
- * Anlauf (`GALAXY_WARP_ACCEL_MS`) und das Ausrollen bleiben — gekürzt wird die
- * Strecke, nicht der Auf- und Abbau. Gesamt damit 13 600 statt 15 600 ms.
+ * Aufbruch, Anlauf und Reiseflug bis zum Schnitt. Von 12 000 auf 10 000 gekürzt: der
+ * Reiseflug trug zwei Sekunden, in denen nichts Neues mehr passierte. Aufbruch
+ * (`GALAXY_WARP_LAUNCH_MS`), Anlauf (`GALAXY_WARP_ACCEL_MS`) und das Ausrollen
+ * bleiben — gekürzt wird die Strecke, nicht der Auf- und Abbau. Gesamt 13 600 ms.
  */
 export const GALAXY_TRANS_WARP_MS = 10_000
 export const GALAXY_TRANS_DECEL_MS = 3_600
+/** Der Boost um den Spieler beim Klick — VOR dem Anlauf, innerhalb der Flugzeit. */
+export const GALAXY_WARP_LAUNCH_MS = 700
 export const GALAXY_WARP_ACCEL_MS = 2_200
 export const GALAXY_SPAWN_INTERVAL_MIN = 5_000
 export const GALAXY_SPAWN_INTERVAL_MAX = 12_000

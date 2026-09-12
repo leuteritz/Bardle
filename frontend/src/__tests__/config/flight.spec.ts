@@ -76,7 +76,20 @@ import {
   WARP_HEADLIGHT_TINT_MID,
   WARP_STREAK_LEN_MAX_FRAC,
   UNIVERSE_HOP_SPEED_PEAK,
-  GALAXY_WARP_ACCEL_MS,
+  GALAXY_WARP_LAUNCH_MS,
+  WARP_LAUNCH_SPEED,
+  WARP_COURSE_ARC_DEG,
+  WARP_COURSE_LEGS,
+  WARP_COURSE_TURN_MIN_DEG,
+  WARP_COURSE_TURN_MAX_DEG,
+  WARP_BANK_MAX_RAD,
+  WARP_LEAN_K,
+  WARP_STAR_SURGE_COUNT,
+  WARP_BOW_WAVE_MS,
+  WARP_TRAIL_FADE,
+  UNIVERSE_HOP_APPROACH_BANK_MAX_RAD,
+  UNIVERSE_HOP_APPROACH_TRAIL_FADE,
+  UNIVERSE_HOP_STAR_SURGE_COUNT,
 } from '@/config/constants'
 
 /**
@@ -256,8 +269,34 @@ describe('Prozession — die Zahlen', () => {
   it('lässt die Rampe der Prozession in den Flug passen', () => {
     // Der Aufbruch teilt sich sein Easing mit dem Schub — er muss vor dem
     // Schnitt fertig sein, sonst bräche die Aufstellung mitten im Hochfahren ab.
-    expect(GALAXY_WARP_ACCEL_MS).toBeLessThan(GALAXY_TRANS_WARP_MS)
+    expect(GALAXY_WARP_LAUNCH_MS + GALAXY_WARP_ACCEL_MS).toBeLessThan(GALAXY_TRANS_WARP_MS)
     expect(GALAXY_TRANS_DECEL_MS).toBeGreaterThan(0)
+  })
+})
+
+describe('Warp — Aufbruch und Kurs', () => {
+  it('punscht vor dem Anlauf, aber unter das Höchsttempo', () => {
+    expect(GALAXY_WARP_LAUNCH_MS).toBeGreaterThan(0)
+    expect(WARP_LAUNCH_SPEED).toBeGreaterThan(1)
+    expect(WARP_LAUNCH_SPEED).toBeLessThan(WARP_SPEED_PEAK)
+    expect(JOLT_PROFILES.launch.strength).toBeLessThan(JOLT_PROFILES.strike.strength)
+    expect(WARP_BOW_WAVE_MS).toBeLessThan(
+      GALAXY_TRANS_WARP_MS - GALAXY_WARP_LAUNCH_MS - GALAXY_WARP_ACCEL_MS,
+    )
+  })
+
+  it('lässt die Kurve im Bogen Platz finden und bleibt unter dem Sprung', () => {
+    expect(WARP_COURSE_LEGS).toBeGreaterThanOrEqual(2)
+    expect(WARP_COURSE_TURN_MIN_DEG).toBeGreaterThan(0)
+    expect(WARP_COURSE_TURN_MIN_DEG).toBeLessThan(WARP_COURSE_TURN_MAX_DEG)
+    // MAX ≤ ARC/2: von jedem Punkt im Bogen passt mindestens eine Richtung.
+    expect(WARP_COURSE_TURN_MAX_DEG).toBeLessThanOrEqual(WARP_COURSE_ARC_DEG / 2)
+    expect(WARP_BANK_MAX_RAD).toBeGreaterThan(0)
+    expect(WARP_BANK_MAX_RAD).toBeLessThan(UNIVERSE_HOP_APPROACH_BANK_MAX_RAD)
+    expect(WARP_LEAN_K).toBeGreaterThan(0)
+    expect(WARP_LEAN_K).toBeLessThan(1)
+    expect(WARP_STAR_SURGE_COUNT).toBeLessThanOrEqual(UNIVERSE_HOP_STAR_SURGE_COUNT)
+    expect(WARP_TRAIL_FADE).toBeGreaterThan(UNIVERSE_HOP_APPROACH_TRAIL_FADE)
   })
 })
 

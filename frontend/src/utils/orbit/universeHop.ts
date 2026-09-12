@@ -82,23 +82,14 @@ export interface UniverseHopOut extends WarpFlightOut {
   tunnelT: number
   /** Sekunden seit Tunnelbeginn — der Fluss der Stränge läuft im festen Takt. */
   tunnelSec: number
-  /** Roll des Sternfelds um den Fluchtpunkt in rad/s: die Änderung der Kamera-Bank. */
-  roll: number
   /** Bank der Kamera in rad — die Spirale der Wandfasern; ausserhalb des Tunnels 0. */
   twist: number
   /** 0 … 1: die Röhre blendet am Tunnelbeginn ein. */
   exitAlpha: number
   /** 0 … 1: das Ausgangslicht — erst hinter der letzten Ecke, das Ende zeigt sich am Ende. */
   exitLight: number
-  /** 0 … 1: wie weit die Gruppe (Sonne + Prozession) dem Spieler auf der Bahn folgt. */
-  groupLead: number
-  /** Der Spieler im Bild, px gegen die Bildmitte — die Kamera fährt hinter ihm, er lehnt sich in die Ecke. */
-  playerX: number
-  playerY: number
   /** Brennweite der Verfolgerkamera in px (× kurze Kante). */
   focal: number
-  /** 0 … 1: Einblendung der Zusatzsterne des Sprungs. */
-  starSurge: number
   /** Takt der Sogwellen, kumuliert (1 = eine Welle); nur im Anflug > 0. */
   ripplePhase: number
   /** Winkel des Lichtbogens auf dem Ring in rad, kumuliert. */

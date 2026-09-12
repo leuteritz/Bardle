@@ -6,11 +6,12 @@
 // place beschrieben (Muster wie `stepHelm`), damit hier nichts je Frame
 // alloziert. Die Phasengrenzen leiten sich aus der Gesamtzeit ab, nicht aus
 // Zählern — ein großes Delta (Tab-Rückkehr, 100-ms-Deckel) springt sauber über
-// mehrere Grenzen, und `commit`/`done` feuern trotzdem genau einmal.
+// mehrere Grenzen, und `launched`/`commit`/`done` feuern trotzdem genau einmal.
 //
 // Choreografie (Zeiten aus config/constants/progression.ts):
-//   accel   0 … ACCEL_MS       Kurs und Schub setzen gemeinsam weich ein
-//   cruise  … GALAXY_TRANS_WARP_MS   Reiseflug durch den Sterntunnel
+//   launch  0 … LAUNCH_MS        der Boost um den Spieler: Punch, Ringe, Rückstoss, Schub
+//   accel   … + ACCEL_MS         Kurs und Überlicht setzen gemeinsam weich ein
+//   cruise  … GALAXY_TRANS_WARP_MS   Wegpunkte A→B→C: Bank-Glocke, Roll des Feldes, Lehne
 //   commit  = GALAXY_TRANS_WARP_MS   Galaxiewechsel (Theme, Zähler), Blitz
 //   decel   … + GALAXY_TRANS_DECEL_MS   Ausrollen, Fluchtpunkt kehrt zur Mitte
 //   done    → idle
@@ -18,19 +19,29 @@ import {
   GALAXY_TRANS_DECEL_MS,
   GALAXY_TRANS_WARP_MS,
   GALAXY_WARP_ACCEL_MS,
+  GALAXY_WARP_LAUNCH_MS,
+  WARP_BANK_MAX_RAD,
+  WARP_BOW_WAVE_HEADLIGHT_GAIN,
+  WARP_BOW_WAVE_MS,
   WARP_COURSE_ARC_DEG,
+  WARP_COURSE_LEGS,
+  WARP_COURSE_TURN_MAX_DEG,
+  WARP_COURSE_TURN_MIN_DEG,
   WARP_CRUISE_SHIMMER,
   WARP_CRUISE_SHIMMER_PERIOD_A_SEC,
   WARP_CRUISE_SHIMMER_PERIOD_B_SEC,
   WARP_FOCUS_FRAC_MAX,
   WARP_FOCUS_FRAC_MIN,
+  WARP_LAUNCH_RING_MS,
+  WARP_LAUNCH_SPEED,
+  WARP_LEAN_K,
   WARP_SPEED_PEAK,
   WARP_SURGE_FROM,
   WARP_SURGE_PEAK,
   WARP_TRAIL_FADE,
 } from '@/config/constants'
 
-export type GalaxyWarpPhase = 'idle' | 'accel' | 'cruise' | 'decel'
+export type GalaxyWarpPhase = 'idle' | 'launch' | 'accel' | 'cruise' | 'decel'
 
 /** Was eine Flugmaschine der Sternschleife je Frame liefert — Warp und Universumssprung teilen die Leser. */
 export interface WarpFlightOut {
@@ -45,7 +56,7 @@ export interface WarpFlightOut {
   trailFade: number
   /** 0 … 1: Doppler-Tönung, Vignette. */
   tintGain: number
-  /** 0 … 1: Aufhellung um den Fluchtpunkt. */
+  /** 0 … 1 (kurz darüber in der Bugwelle): Aufhellung um den Fluchtpunkt. */
   headlight: number
   /** 0 … 1: Staub, Cluster, Flug-Linien — 0 im Flug, Rampe im Ausrollen. */
   ambientGain: number
@@ -68,32 +79,58 @@ export interface WarpFlightOut {
   flightSec: number
   /** 0 … 1: Deckkraft der Sterne im Flug — die Wormhole-Röhre dämpft sie, der Warp nicht. */
   starGain: number
+  /** Roll des Sternfelds um den Fluchtpunkt in rad/s: die Änderung der Kamera-Bank. */
+  roll: number
+  /** 0 … 1: wie weit die Gruppe (Sonne + Prozession) der Lehne des Spielers folgt. */
+  groupLead: number
+  /** Der Spieler im Bild, px gegen die Bildmitte — die Kamera fährt hinter ihm, er lehnt sich in die Kurve. */
+  playerX: number
+  playerY: number
+  /** 0 … 1: Einblendung der Zusatzsterne des Flugs. */
+  starSurge: number
 }
 
 export interface GalaxyWarpOut extends WarpFlightOut {
   phase: GalaxyWarpPhase
+  /** 0 … 1: die Schockringe vom Spielerkörper beim Aufbruch. */
+  launchPulse: number
+  /** 0 … 1: der eine Ring vom Fluchtpunkt beim Erreichen von Überlicht. */
+  bowWave: number
   /** Flanken — je genau einen Frame lang wahr. */
+  launched: boolean
   commit: boolean
   done: boolean
+}
+
+/** Ein Wegpunkt des Kurses: Azimut in rad, Radius als Anteil der kurzen Kante. */
+export interface WarpWaypoint {
+  az: number
+  r: number
 }
 
 export interface GalaxyWarpState {
   phase: GalaxyWarpPhase
   elapsedMs: number
-  /** Kursziel als Anteil der kurzen Kante — bleibt bei Resize gültig. */
-  courseFx: number
-  courseFy: number
+  /** A → B → C; bleibt bei Resize gültig. Dieselbe Liste über jeden Reset. */
+  waypoints: WarpWaypoint[]
+  lastBank: number
+  launched: boolean
   committed: boolean
   out: GalaxyWarpOut
 }
 
 const FLIGHT_MS = GALAXY_TRANS_WARP_MS
-const ACCEL_END_MS = GALAXY_WARP_ACCEL_MS
+const LAUNCH_END_MS = GALAXY_WARP_LAUNCH_MS
+export const GALAXY_WARP_ACCEL_END_MS = LAUNCH_END_MS + GALAXY_WARP_ACCEL_MS
+const ACCEL_END_MS = GALAXY_WARP_ACCEL_END_MS
+const CRUISE_MS = FLIGHT_MS - ACCEL_END_MS
+export const GALAXY_WARP_LEG_MS = CRUISE_MS / WARP_COURSE_LEGS
 /** Beginn des Crescendos — ein Anteil der Reiseflugstrecke, nicht der Gesamtzeit. */
-const SURGE_START_MS =
-  GALAXY_WARP_ACCEL_MS + (GALAXY_TRANS_WARP_MS - GALAXY_WARP_ACCEL_MS) * WARP_SURGE_FROM
+const SURGE_START_MS = ACCEL_END_MS + CRUISE_MS * WARP_SURGE_FROM
 const TOTAL_MS = GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS
 const DEG = Math.PI / 180
+const ARC_LO = (-90 - WARP_COURSE_ARC_DEG / 2) * DEG
+const ARC_HI = (-90 + WARP_COURSE_ARC_DEG / 2) * DEG
 
 export function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
@@ -115,11 +152,14 @@ function clamp01(v: number): number {
 }
 
 export function createGalaxyWarp(): GalaxyWarpState {
+  const waypoints: WarpWaypoint[] = []
+  for (let i = 0; i <= WARP_COURSE_LEGS; i++) waypoints.push({ az: 0, r: 0 })
   return {
     phase: 'idle',
     elapsedMs: 0,
-    courseFx: 0,
-    courseFy: 0,
+    waypoints,
+    lastBank: 0,
+    launched: false,
     committed: false,
     out: {
       phase: 'idle',
@@ -135,42 +175,79 @@ export function createGalaxyWarp(): GalaxyWarpState {
       procession: 0,
       flightSec: 0,
       starGain: 1,
+      roll: 0,
+      groupLead: 0,
+      playerX: 0,
+      playerY: 0,
+      starSurge: 0,
+      launchPulse: 0,
+      bowWave: 0,
+      launched: false,
       commit: false,
       done: false,
     },
   }
 }
 
-/** Setzt in place zurück — `state.out` bleibt dasselbe Objekt (Leser halten es). */
+/** Setzt in place zurück — `state.out` und `state.waypoints` bleiben dieselben Objekte (Leser halten sie). */
 export function resetGalaxyWarp(state: GalaxyWarpState): void {
   const fresh = createGalaxyWarp()
   Object.assign(state.out, fresh.out)
   fresh.out = state.out
+  for (const wp of state.waypoints) {
+    wp.az = 0
+    wp.r = 0
+  }
+  fresh.waypoints = state.waypoints
   Object.assign(state, fresh)
 }
 
 /**
- * Kurs setzen und den Flug beginnen. Der Azimut kommt aus dem Bogen um „oben"
- * (Bildschirm-y nach unten positiv): nie in die Bottom-Bar, nie hinter das HUD.
+ * Den Kurs würfeln. Der erste Azimut kommt aus dem Bogen um „oben" (Bildschirm-y
+ * nach unten positiv): nie in die Bottom-Bar, nie hinter das HUD. Jeder weitere
+ * springt um TURN_MIN…MAX weiter, abwechselnd links und rechts — eine S-Kurve;
+ * fiele er aus dem Bogen, kippt die Richtung (MAX ≤ ARC/2 garantiert Platz).
  */
-export function randomGalaxyWarpCourse(
-  rand: () => number,
-): Pick<GalaxyWarpState, 'courseFx' | 'courseFy'> {
-  const azimuth = (-90 - WARP_COURSE_ARC_DEG / 2 + rand() * WARP_COURSE_ARC_DEG) * DEG
-  const radius = WARP_FOCUS_FRAC_MIN + rand() * (WARP_FOCUS_FRAC_MAX - WARP_FOCUS_FRAC_MIN)
-  return {
-    courseFx: Math.cos(azimuth) * radius,
-    courseFy: Math.sin(azimuth) * radius,
+export function randomGalaxyWarpCourse(rand: () => number, out: WarpWaypoint[]): void {
+  const span = WARP_FOCUS_FRAC_MAX - WARP_FOCUS_FRAC_MIN
+  out[0].az = ARC_LO + rand() * WARP_COURSE_ARC_DEG * DEG
+  out[0].r = WARP_FOCUS_FRAC_MIN + rand() * span
+  let sign = rand() < 0.5 ? -1 : 1
+  for (let i = 1; i < out.length; i++) {
+    const turn =
+      (WARP_COURSE_TURN_MIN_DEG + rand() * (WARP_COURSE_TURN_MAX_DEG - WARP_COURSE_TURN_MIN_DEG)) *
+      DEG
+    let az = out[i - 1].az + sign * turn
+    if (az < ARC_LO || az > ARC_HI) {
+      sign = -sign
+      az = out[i - 1].az + sign * turn
+    }
+    out[i].az = az
+    out[i].r = WARP_FOCUS_FRAC_MIN + rand() * span
+    sign = -sign
   }
 }
 
 export function startGalaxyWarp(state: GalaxyWarpState, rand: () => number): void {
   resetGalaxyWarp(state)
-  const course = randomGalaxyWarpCourse(rand)
-  state.courseFx = course.courseFx
-  state.courseFy = course.courseFy
-  state.phase = 'accel'
-  state.out.phase = 'accel'
+  randomGalaxyWarpCourse(rand, state.waypoints)
+  state.phase = 'launch'
+  state.out.phase = 'launch'
+}
+
+/** Fokus in px auf Etappe `leg` bei Anteil `t` — Winkel UND Radius laufen mit easeInOut: eine Kurve, keine Gerade. */
+export function galaxyWarpFocusAt(
+  state: GalaxyWarpState,
+  leg: number,
+  t: number,
+  minEdge: number,
+): [number, number] {
+  const a = state.waypoints[leg]
+  const b = state.waypoints[Math.min(leg + 1, state.waypoints.length - 1)]
+  const k = easeInOutCubic(clamp01(t))
+  const az = a.az + (b.az - a.az) * k
+  const r = (a.r + (b.r - a.r) * k) * minEdge
+  return [Math.cos(az) * r, Math.sin(az) * r]
 }
 
 /** Ein Frame. `minEdge` = kurze Kante des Canvas in px (für den Fokus-Versatz). */
@@ -178,11 +255,17 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
   const o = state.out
   o.commit = false
   o.done = false
+  o.launched = false
   if (state.phase === 'idle') return
 
-  state.elapsedMs += Math.max(0, dtMs)
+  const dt = Math.max(0, dtMs)
+  state.elapsedMs += dt
   const e = state.elapsedMs
 
+  if (!state.launched) {
+    state.launched = true
+    o.launched = true
+  }
   if (!state.committed && e >= FLIGHT_MS) {
     state.committed = true
     o.commit = true
@@ -192,7 +275,8 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
   if (e >= TOTAL_MS) phase = 'idle'
   else if (e >= FLIGHT_MS) phase = 'decel'
   else if (e >= ACCEL_END_MS) phase = 'cruise'
-  else phase = 'accel'
+  else if (e >= LAUNCH_END_MS) phase = 'accel'
+  else phase = 'launch'
   state.phase = phase
   o.phase = phase
 
@@ -208,34 +292,69 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.themeMix = 0
     o.procession = 0
     o.flightSec = 0
+    o.starGain = 1
+    o.roll = 0
+    o.groupLead = 0
+    o.playerX = 0
+    o.playerY = 0
+    o.starSurge = 0
+    o.launchPulse = 0
+    o.bowWave = 0
+    state.lastBank = 0
     o.done = true
     return
   }
 
-  const fx = state.courseFx * minEdge
-  const fy = state.courseFy * minEdge
   const peakSpan = WARP_SPEED_PEAK - 1
   // Das Ausrollen setzt dort an, wo das Crescendo endete — nicht beim
   // Anlauf-Höchsttempo. Mit `peakSpan` fiele das Tempo im Frame des Schnitts um
   // ein Viertel ab, während die Persistenz-Spur noch drei Frames lang die
-  // längeren Striche danebenzeigt: ein Ruck, kein Schnitt. Der Blitz deckt ihn
-  // nicht, er beginnt bei Deckkraft 0 und steht erst vier Frames später.
+  // längeren Striche danebenzeigt: ein Ruck, kein Schnitt.
   const surgeSpan = WARP_SURGE_PEAK - 1
+  o.launchPulse = clamp01(e / WARP_LAUNCH_RING_MS)
+  o.bowWave = clamp01((e - ACCEL_END_MS) / WARP_BOW_WAVE_MS)
+  o.starGain = 1
+  o.flightSec = e / 1000
 
-  if (phase === 'accel') {
-    const t = e / GALAXY_WARP_ACCEL_MS
+  if (phase === 'launch') {
+    const k = easeOutCubic(e / LAUNCH_END_MS)
+    o.speed = 1 + (WARP_LAUNCH_SPEED - 1) * k
+    o.focusX = 0
+    o.focusY = 0
+    o.streakGain = k
+    o.trailFade = 1 - (1 - WARP_TRAIL_FADE) * k
+    o.tintGain = 0
+    o.headlight = 0
+    o.ambientGain = 1 - k
+    o.themeMix = 0
+    o.procession = 0
+    o.roll = 0
+    o.groupLead = 0
+    o.playerX = 0
+    o.playerY = 0
+    o.starSurge = k
+    state.lastBank = 0
+  } else if (phase === 'accel') {
+    const t = (e - LAUNCH_END_MS) / GALAXY_WARP_ACCEL_MS
     const k = easeInOutCubic(t)
-    o.speed = 1 + peakSpan * k
-    o.focusX = fx * k
-    o.focusY = fy * k
-    o.streakGain = clamp01(t * 2)
-    o.trailFade = 1 - (1 - WARP_TRAIL_FADE) * easeOutCubic(t)
+    const [ax, ay] = galaxyWarpFocusAt(state, 0, 0, minEdge)
+    o.speed = WARP_LAUNCH_SPEED + (WARP_SPEED_PEAK - WARP_LAUNCH_SPEED) * k
+    o.focusX = ax * k
+    o.focusY = ay * k
+    o.streakGain = 1
+    o.trailFade = WARP_TRAIL_FADE
     o.tintGain = t
     o.headlight = t * clamp01((o.speed - 1) / peakSpan)
-    o.ambientGain = clamp01(1 - t / 0.4)
+    o.ambientGain = 0
     o.themeMix = 0
+    // Prozession und Lehne fahren mit DEMSELBEN Easing wie Schub und Schwenk.
     o.procession = k
-    o.flightSec = e / 1000
+    o.roll = 0
+    o.groupLead = k
+    o.playerX = o.focusX * WARP_LEAN_K
+    o.playerY = o.focusY * WARP_LEAN_K
+    o.starSurge = 1
+    state.lastBank = 0
   } else if (phase === 'cruise') {
     const sec = e / 1000
     // Das Atmen blendet über die erste halbe Sekunde ein — sonst stünde am
@@ -252,23 +371,41 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     // Farbe gemeinsam an und stehen am Schnitt beide auf ihrem Gipfel.
     const surge = easeInOutCubic(clamp01((e - SURGE_START_MS) / (FLIGHT_MS - SURGE_START_MS)))
     o.speed = (WARP_SPEED_PEAK + (WARP_SURGE_PEAK - WARP_SPEED_PEAK) * surge) * shimmer
+    // Die Etappe: der Fokus wandert zum nächsten Wegpunkt, das Feld rollt in
+    // die Bank (Glocke, an beiden Etappenenden 0 — keine Ecke), der Spieler
+    // lehnt sich in die Kurve. Die letzte Etappe endet am Schnitt: Bank 0.
+    const u = e - ACCEL_END_MS
+    const leg = Math.min(WARP_COURSE_LEGS - 1, Math.floor(u / GALAXY_WARP_LEG_MS))
+    const t = clamp01((u - leg * GALAXY_WARP_LEG_MS) / GALAXY_WARP_LEG_MS)
+    const [fx, fy] = galaxyWarpFocusAt(state, leg, t, minEdge)
+    const dAz = state.waypoints[leg + 1].az - state.waypoints[leg].az
+    const amp = WARP_BANK_MAX_RAD * Math.min(1, Math.abs(dAz) / (WARP_COURSE_TURN_MAX_DEG * DEG))
+    const bell = Math.sin(Math.PI * t)
+    const bank = Math.sign(dAz) * amp * bell * bell
+    o.roll = dt > 0 ? (-(bank - state.lastBank) * 1000) / dt : 0
+    state.lastBank = bank
     o.focusX = fx
     o.focusY = fy
     o.streakGain = 1
     o.trailFade = WARP_TRAIL_FADE
     o.tintGain = 1
-    o.headlight = 1
+    // Die Bugwelle: das Headlight schwillt einmal an und legt sich wieder.
+    o.headlight = 1 + WARP_BOW_WAVE_HEADLIGHT_GAIN * Math.sin(Math.PI * o.bowWave)
     o.ambientGain = 0
     o.themeMix = surge
     o.procession = 1
-    o.flightSec = sec
+    o.groupLead = 1
+    o.playerX = fx * WARP_LEAN_K
+    o.playerY = fy * WARP_LEAN_K
+    o.starSurge = 1
   } else {
     // decel
     const t = (e - FLIGHT_MS) / GALAXY_TRANS_DECEL_MS
+    const [cxEnd, cyEnd] = galaxyWarpFocusAt(state, WARP_COURSE_LEGS - 1, 1, minEdge)
     o.speed = 1 + surgeSpan * Math.pow(1 - t, 3.5)
     const back = 1 - easeOutBack(t)
-    o.focusX = fx * back
-    o.focusY = fy * back
+    o.focusX = cxEnd * back
+    o.focusY = cyEnd * back
     o.streakGain = 1
     o.trailFade = 1 - (1 - WARP_TRAIL_FADE) * clamp01(1 - t / 0.5)
     o.tintGain = 1 - easeOutCubic(t)
@@ -278,9 +415,16 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.themeMix = 1
     // Bewusst NICHT die back-Kurve des Fluchtpunkts: die schwingt über ihr
     // Ziel hinaus, und ein Körper, der an seiner Bahn vorbeischießt und
-    // zurückrutscht, liest sich als Fehler.
-    o.procession = 1 - easeOutCubic(t)
+    // zurückrutscht, liest sich als Fehler. Lehne und Schub legen sich genauso.
+    const settle = 1 - easeOutCubic(t)
+    o.procession = settle
+    o.roll = 0
+    o.groupLead = settle
+    o.playerX = cxEnd * WARP_LEAN_K * settle
+    o.playerY = cyEnd * WARP_LEAN_K * settle
+    o.starSurge = settle
     o.flightSec = FLIGHT_MS / 1000
+    state.lastBank = 0
   }
 }
 

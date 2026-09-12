@@ -29,6 +29,7 @@ import {
   startGalaxyWarp,
   stepGalaxyWarp,
   type WarpFlightOut,
+  easeOutCubic,
 } from '@/utils/orbit/galaxyWarp'
 import {
   createUniverseHop,
@@ -59,6 +60,17 @@ import {
   UNIVERSE_HOP_PORTAL_SPRITE_PX,
   UNIVERSE_HOP_STAR_SURGE_COUNT,
   UNIVERSE_HOP_STAR_SURGE_SPEED_MULT,
+  WARP_BOW_WAVE_ALPHA,
+  WARP_BOW_WAVE_REACH_K,
+  WARP_BOW_WAVE_W_FRAC,
+  WARP_LAUNCH_RING_ALPHA,
+  WARP_LAUNCH_RING_COUNT,
+  WARP_LAUNCH_RING_R0_FRAC,
+  WARP_LAUNCH_RING_R1_FRAC,
+  WARP_LAUNCH_RING_STAGGER,
+  WARP_LAUNCH_RING_W_FRAC,
+  WARP_STAR_SURGE_COUNT,
+  WARP_STAR_SURGE_SPEED_MULT,
   UNIVERSE_HOP_RIPPLE_COUNT,
   UNIVERSE_HOP_RIPPLE_GROWTH,
   UNIVERSE_HOP_RIPPLE_POW,
@@ -501,7 +513,9 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     peekSpan: portalSpriteSpan('maw', UNIVERSE_HOP_PORTAL_SPRITE_PX),
   }
   /** Versatz der Gruppe im Wormhole, je Frame der Spieler im Bild der Verfolgerkamera. */
-  const hopShift = { x: 0, y: 0 }
+  const leadShift = { x: 0, y: 0 }
+  /** Ton der Aufbruch-Ringe — einmal je Reise, kein String je Frame. */
+  let warpLaunchStyle = 'rgb(255, 255, 255)'
   /** Aufhellung um den Fluchtpunkt: EIN Verlauf bei (0,0), neu nur bei anderem Radius. */
   let headlightRadius = 0
   /** Signale an die Komponente: Nebel aus, Vignette an, Blitz (Zähler + Akzentfarbe). */
@@ -1036,13 +1050,13 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     return item
   }
 
-  /** Der Sternen-Schub des Sprungs: nahe, schnelle Zusatzsterne in derselben Liste, derselben Schleife. */
-  function spawnSurgeStars(): void {
-    const n = Math.round(UNIVERSE_HOP_STAR_SURGE_COUNT * densityScale())
+  /** Der Sternen-Schub eines Flugs: nahe, schnelle Zusatzsterne in derselben Liste, derselben Schleife. */
+  function spawnSurgeStars(count: number, speedMult: number): void {
+    const n = Math.round(count * densityScale())
     for (let i = 0; i < n; i++) {
       const s = spawnStar(true)
       s.surge = true
-      s.baseSpeed *= UNIVERSE_HOP_STAR_SURGE_SPEED_MULT
+      s.baseSpeed *= speedMult
     }
   }
 
@@ -1088,7 +1102,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const hopFlight = hopReq !== null && hopReq.phase !== 'gate'
       if (hopFlight && !wasHopFlight && hop.phase === 'idle' && warp.phase === 'idle') {
         startUniverseHop(hop, Math.random)
-        spawnSurgeStars()
+        spawnSurgeStars(UNIVERSE_HOP_STAR_SURGE_COUNT, UNIVERSE_HOP_STAR_SURGE_SPEED_MULT)
         hopTint = hopReq!.accent
         const seed = gameStore.currentUniverse
         const px = UNIVERSE_HOP_PORTAL_SPRITE_PX
@@ -1155,6 +1169,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
             warpUniverse,
           )
           warpGlowKey++
+          warpLaunchStyle = `rgb(${warpGlowFrom[0]}, ${warpGlowFrom[1]}, ${warpGlowFrom[2]})`
           clearEncounters(sky)
           warpNebulaHidden.value = true
           warpVignetteOn.value = true
@@ -1166,6 +1181,11 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         if (cachedCtx === null || cachedW === 0) refreshCanvasCache()
         stepGalaxyWarp(warp, delta * 1000, Math.min(cachedW, cachedH))
         const wo = warp.out
+        if (wo.launched) {
+          // Der Rückstoss des Aufbruchs: gegen den Kurs, mit Blitz auf dem Körper.
+          kickFlightJolt('launch', warp.waypoints[0].az)
+          spawnSurgeStars(WARP_STAR_SURGE_COUNT, WARP_STAR_SURGE_SPEED_MULT)
+        }
         if (wo.commit) {
           galaxyStore.commitAdvance()
           // Der Blitz war einmal ein VORHANG: eine Fläche im dunklen Akzent, die
@@ -1185,6 +1205,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         }
         if (wo.done) {
           retireSkyDecor()
+          dropSurgeStars()
           galaxyStore.setGalaxyTransitioning(false)
         }
         backgroundPaused = false
@@ -1315,15 +1336,14 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // Der Schweif liest DIESEN Fluchtpunkt, nicht den Helm allein — sonst
     // stünde er im Warp still, der ohne Helm fährt. Erst der Kurs, dann die
     // Follower: umgekehrt trügen sie den Stand des Vorframes.
-    // Im Wormhole steht die Sonne dort, wo die Verfolgerkamera den Spieler
-    // sieht — nahe der Mitte, in der Ecke leicht zur Innenseite; die Prozession
-    // gruppiert sich um sie.
-    hopShift.x = hop.out.playerX * hop.out.groupLead
-    hopShift.y = hop.out.playerY * hop.out.groupLead
+    // Die Lehne: im Wormhole steht die Sonne dort, wo die Verfolgerkamera den
+    // Spieler sieht; im Warp lehnt sie sich in die Kurve zum Fluchtpunkt.
+    leadShift.x = wo.playerX * wo.groupLead
+    leadShift.y = wo.playerY * wo.groupLead
     if (!isFrozen) {
       setFlightCourse(cx - w / 2, cy - h / 2, Math.min(w, h), delta)
-      flightLive.shiftX = hopShift.x
-      flightLive.shiftY = hopShift.y
+      flightLive.shiftX = leadShift.x
+      flightLive.shiftY = leadShift.y
       writeFlightFollowers()
     }
     // Die Prozession liest denselben Fluchtpunkt, den auch der Tunnel zeichnet:
@@ -1332,10 +1352,13 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // eingebettete (Shop) überschriebe sonst dasselbe globale Objekt.
     if (!isFrozen) {
       processionLive.t = wo.procession
-      processionLive.focusX = hop.out.groupLead > 0 ? w / 2 + hopShift.x : cx
-      processionLive.focusY = hop.out.groupLead > 0 ? h / 2 + hopShift.y : cy
-      processionLive.shiftX = hopShift.x
-      processionLive.shiftY = hopShift.y
+      // Nur das Wormhole gruppiert um den Spieler (der Ausgang liegt hinter der
+      // Ecke); der Warp gruppiert um den Fluchtpunkt, die Sonne lehnt allein.
+      const groupAroundPlayer = hop.phase !== 'idle' && wo.groupLead > 0
+      processionLive.focusX = groupAroundPlayer ? w / 2 + leadShift.x : cx
+      processionLive.focusY = groupAroundPlayer ? h / 2 + leadShift.y : cy
+      processionLive.shiftX = leadShift.x
+      processionLive.shiftY = leadShift.y
       processionLive.minEdge = Math.min(w, h)
       processionLive.sec += delta
       processionLive.active = warpActive
@@ -1351,8 +1374,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     const slipVy = slipOn ? helmOut!.slipY : 0
     const slipX = slipVx * delta
     const slipY = slipVy * delta
-    // Im Tunnel rollt das Feld um den Fluchtpunkt — zusätzlich zum Helm.
-    const rollStep = (slipOn ? helmOut!.rollRate * delta : 0) + hop.out.roll * delta
+    // Im Flug rollt das Feld um den Fluchtpunkt — zusätzlich zum Helm.
+    const rollStep = (slipOn ? helmOut!.rollRate * delta : 0) + wo.roll * delta
     encounterFrame.w = w
     encounterFrame.h = h
     encounterFrame.cx = cx
@@ -1597,7 +1620,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     const lensReach = lensR * UNIVERSE_HOP_LENS_REACH
     const lensCap = lensR * UNIVERSE_HOP_LENS_MAX_FRAC
     const lensK = lensR * lensR * UNIVERSE_HOP_LENS_K
-    const surgeGain = hop.out.starSurge
+    const surgeGain = wo.starSurge
     for (const star of stars) {
       const norm = star.dist / maxDist
       const speed = star.baseSpeed * norm * norm * WARP_SPEED_MAX * speedMultiplier
@@ -1752,6 +1775,46 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       }
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.globalAlpha = 1
+    }
+
+    // ── Der Aufbruch des Warps: Schockringe vom Spielerkörper, Bugwelle vom
+    // Fluchtpunkt. Strichkreise, additiv, ROHES Alpha: ein wandernder Ring
+    // summiert sich nirgends zum Stationärwert — seine Geister unter der Spur
+    // sind sein Kielwasser, additiveDrawAlpha hätte ihn gedrittelt.
+    if (ctx && warp.phase !== 'idle') {
+      const lp = warp.out.launchPulse
+      const bw = warp.out.bowWave
+      if ((lp > 0 && lp < 1) || (bw > 0 && bw < 1)) {
+        const minEdge = Math.min(w, h)
+        ctx.globalCompositeOperation = 'lighter'
+        ctx.strokeStyle = warpLaunchStyle
+        if (lp > 0 && lp < 1) {
+          const span = 1 - (WARP_LAUNCH_RING_COUNT - 1) * WARP_LAUNCH_RING_STAGGER
+          for (let k = 0; k < WARP_LAUNCH_RING_COUNT; k++) {
+            const u = (lp - k * WARP_LAUNCH_RING_STAGGER) / span
+            if (u <= 0 || u >= 1) continue
+            const r =
+              minEdge *
+              (WARP_LAUNCH_RING_R0_FRAC +
+                (WARP_LAUNCH_RING_R1_FRAC - WARP_LAUNCH_RING_R0_FRAC) * easeOutCubic(u))
+            ctx.globalAlpha = WARP_LAUNCH_RING_ALPHA * (1 - u)
+            ctx.lineWidth = Math.max(1.5, r * WARP_LAUNCH_RING_W_FRAC)
+            ctx.beginPath()
+            ctx.arc(w / 2 + leadShift.x, h / 2 + leadShift.y, r, 0, Math.PI * 2)
+            ctx.stroke()
+          }
+        }
+        if (bw > 0 && bw < 1) {
+          const r = maxDist * WARP_BOW_WAVE_REACH_K * easeOutCubic(bw)
+          ctx.globalAlpha = WARP_BOW_WAVE_ALPHA * (1 - bw)
+          ctx.lineWidth = Math.max(1.5, r * WARP_BOW_WAVE_W_FRAC)
+          ctx.beginPath()
+          ctx.arc(cx, cy, r, 0, Math.PI * 2)
+          ctx.stroke()
+        }
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.globalAlpha = 1
+      }
     }
 
     // ── Flight streaks — the player flies INTO the screen in every phase;
@@ -1931,8 +1994,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       // Fluchtpunkt noch auf ihm (der Kurs baut sich erst auf), gibt es keine
       // Richtung und er bleibt aus.
       const sunR = processionLive.sunR
-      const sunX = w / 2 + hopShift.x
-      const sunY = h / 2 + hopShift.y
+      const sunX = w / 2 + leadShift.x
+      const sunY = h / 2 + leadShift.y
       const sdx = sunX - cx
       const sdy = sunY - cy
       // Im Wormhole kein Sonnenschweif — er las sich als Rauch in der Bildmitte.

@@ -86,7 +86,7 @@ export function wakeStrength(): number {
 
 /* ── Treffer-Ruck ───────────────────────────────────────────────────────────── */
 
-export type JoltKind = 'strike' | 'nova' | 'void' | 'volley' | 'hop'
+export type JoltKind = 'strike' | 'nova' | 'void' | 'volley' | 'hop' | 'launch'
 
 const jolt = createJoltState()
 /** Zählt je wirksamem Treffer hoch — der Blitz am Körper hängt daran (selten, daher reaktiv). */

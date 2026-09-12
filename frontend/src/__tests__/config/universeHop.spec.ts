@@ -9,6 +9,7 @@ import {
   UNIVERSE_HOP_HUD_STAGGER_MS,
   UNIVERSE_HOP_PASSAGE_MS,
   UNIVERSE_HOP_TUNNEL_TRAIL_FADE,
+  UNIVERSE_HOP_APPROACH_TRAIL_FADE,
   UNIVERSE_HOP_CAM_BACK,
   UNIVERSE_HOP_CAM_FOCAL_K,
   UNIVERSE_HOP_CAM_LOOK_AT,
@@ -68,6 +69,7 @@ describe('Universumssprung — die Zeremonie', () => {
     // Der Wash liegt ganz im Durchflug (Peak am Ausgang), die Schweife im Tunnel sind länger als im Warp.
     expect(UNIVERSE_HOP_WASH_MS * UNIVERSE_HOP_WASH_PEAK).toBeLessThan(UNIVERSE_HOP_PASSAGE_MS)
     expect(UNIVERSE_HOP_TUNNEL_TRAIL_FADE).toBeLessThan(WARP_TRAIL_FADE)
+    expect(UNIVERSE_HOP_APPROACH_TRAIL_FADE).toBeLessThan(WARP_TRAIL_FADE)
     // Überlicht schlägt den Warp; die Beschleunigung überdauert das Heben — sie ist SICHTBAR.
     // Gemessen gegen die SPITZE des Warps, nicht gegen sein Anlaufziel: seit dem
     // Crescendo steigt er im Reiseflug weiter, und der Sprung durch ein ganzes

@@ -86,7 +86,7 @@ export const UNIVERSE_HOP_COURSE_BANK_MAX_DEG = 70
 export const UNIVERSE_HOP_APPROACH_BANK_MAX_RAD = 0.3
 /** Der Spieler steht zwischen Mitte und Tor: playerX = focusX · K — die Lehne der Verfolgerkamera. */
 export const UNIVERSE_HOP_APPROACH_LEAN_K = 0.55
-/** Spur im Anflug: tiefer als der Warp (0,35), flacher als die Röhre (0,22). */
+/** Spur im Anflug: tiefer als der Warp (0,30), flacher als die Röhre (0,22). */
 export const UNIVERSE_HOP_APPROACH_TRAIL_FADE = 0.28
 /** Sternen-Schub: nur im Sprung zusätzliche NAHE Sterne (schneller = näher), blenden im Ausrollen aus. */
 export const UNIVERSE_HOP_STAR_SURGE_COUNT = 320
@@ -704,7 +704,7 @@ export const FLIGHT_STREAK_LEN_FACTOR = 2.6
  *  × Frame-Delta — sonst hängt die sichtbare Länge an der Framerate. */
 export const FLIGHT_EXPOSURE_SEC = 1 / 60
 /** Sternstriche im Warp, als Vielfaches des Weges je Belichtung. */
-export const WARP_STREAK_LEN_FACTOR = 2.7
+export const WARP_STREAK_LEN_FACTOR = 3.6
 
 // ── Galaxien-Warp: Überlichtflug zur nächsten Galaxie ─────────────────────
 // (utils/orbit/galaxyWarp.ts + useStarBackground.ts). Der Flug ist ein
@@ -742,8 +742,38 @@ export const WARP_FOCUS_FRAC_MIN = 0.1
 export const WARP_FOCUS_FRAC_MAX = 0.18
 /** Bogen um „oben", aus dem der Kurs gezogen wird — nie in die Bottom-Bar. */
 export const WARP_COURSE_ARC_DEG = 240
-/** Persistenz-Blur: Anteil des Vorbilds, der je Frame gelöscht wird (1 = kein Blur). */
-export const WARP_TRAIL_FADE = 0.35
+/** Persistenz-Blur: Anteil des Vorbilds, der je Frame gelöscht wird (1 = kein Blur); bleibt über dem Hop-Anflug (0,28). */
+export const WARP_TRAIL_FADE = 0.3
+// ── Der Aufbruch: Boost um den Spieler beim Klick, dann Überlicht ──────────
+/** Tempo am Ende des Aufbruchs (easeOut von 1) — der Punch vor dem Anlauf. */
+export const WARP_LAUNCH_SPEED = 24
+/** Schockringe vom Spielerkörper: additiv mit ROHEM Alpha (wandernd, kein Stationärwert), gestaffelt, Radius als Anteil der kurzen Kante. */
+export const WARP_LAUNCH_RING_COUNT = 3
+export const WARP_LAUNCH_RING_MS = 1000
+export const WARP_LAUNCH_RING_STAGGER = 0.18
+export const WARP_LAUNCH_RING_R0_FRAC = 0.05
+export const WARP_LAUNCH_RING_R1_FRAC = 0.6
+export const WARP_LAUNCH_RING_ALPHA = 0.45
+export const WARP_LAUNCH_RING_W_FRAC = 0.02
+/** Die Bugwelle am Ende des Anlaufs: EIN Ring vom Fluchtpunkt, Headlight-Glocke — der Überlicht-Boost. */
+export const WARP_BOW_WAVE_MS = 600
+export const WARP_BOW_WAVE_REACH_K = 0.5
+export const WARP_BOW_WAVE_ALPHA = 0.45
+export const WARP_BOW_WAVE_W_FRAC = 0.02
+export const WARP_BOW_WAVE_HEADLIGHT_GAIN = 0.5
+/** Sternen-Schub des Warps: unter dem des Sprungs (320 / 1,6). */
+export const WARP_STAR_SURGE_COUNT = 220
+export const WARP_STAR_SURGE_SPEED_MULT = 1.5
+// ── Der Kurs: Wegpunkte A→B→C, die Kurve erzählen Roll und Lehne ───────────
+/** Etappen im Reiseflug; Wegpunkte = LEGS + 1. */
+export const WARP_COURSE_LEGS = 2
+/** Azimut-Sprung je Wegpunkt; MAX ≤ ARC/2, damit immer eine Richtung im Bogen bleibt. */
+export const WARP_COURSE_TURN_MIN_DEG = 35
+export const WARP_COURSE_TURN_MAX_DEG = 80
+/** Roll des Feldes am Kurvenscheitel einer MAX-Kurve; unter dem Hop-Anflug (0,3). */
+export const WARP_BANK_MAX_RAD = 0.22
+/** Lehne des Spielers: playerX = focusX · K; der Warp-Fokus liegt weiter aussen als das Tor. */
+export const WARP_LEAN_K = 0.35
 /** Strichbreite: Grundwert + Tempo-Anteil (bei 54× ≈ 4,8 px). */
 export const WARP_STREAK_WIDTH_BASE = 1.0
 export const WARP_STREAK_WIDTH_PER_SPEED = 0.07
