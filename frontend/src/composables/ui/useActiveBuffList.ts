@@ -23,6 +23,7 @@ import { augmentIcon, omenIcon } from '@/utils/game/rolledIcons'
 import { buffAxisLabel, buffPeakMultiplier } from '@/utils/ui/buffAxis'
 import {
   AUGMENT_OVERCLOCK_DEFAULT_MS,
+  AUGMENT_RARITY_COLOR,
   AUGMENT_TIMED_BUFF_COLOR,
   AUGMENT_TIMED_EFFECT_LABELS,
   DRIFTER_RARITY_COLOR,
@@ -33,7 +34,7 @@ import {
   LANDFALL_ACCENT_HEX,
   LANDFALL_CAIRN_BOON_MULT,
 } from '@/config/constants'
-import type { ForgeBuffId, TimedBuffEffects } from '@/types'
+import type { BuffRank, ForgeBuffId, TimedBuffEffects } from '@/types'
 
 export type ActiveBuffSource =
   | 'ability'
@@ -55,6 +56,8 @@ export interface ActiveBuffView {
   icon?: string
   /** Bard-Fähigkeiten tragen ein Bild statt eines Glyphs. */
   image?: string
+  /** Nur Quellen mit ECHTER Rarität (Drifter, Augment) — nie erfunden. */
+  rank?: BuffRank
   rankColor?: string
   /** `null` = ohne Uhr; der Landfall-Segen gilt bis zum Galaxieende. */
   timer: { secondsLeft: number; progress: number } | null
@@ -141,6 +144,7 @@ export function useActiveBuffList(): {
         color: def.color,
         icon: def.icon,
         image: def.image,
+        rank: def.rarity,
         rankColor: DRIFTER_RARITY_COLOR[def.rarity],
         timer: timer(buff.expiresAt - drifterStore.drifterNow, buff.durationMs),
       })
@@ -191,6 +195,8 @@ export function useActiveBuffList(): {
         multiplier: buff.multiplier,
         color: AUGMENT_TIMED_BUFF_COLOR,
         icon: augmentIcon(buff.augmentId, idx),
+        rank: def?.rarity,
+        rankColor: def ? AUGMENT_RARITY_COLOR[def.rarity] : undefined,
         timer: timer(buff.expiresAt - now, durationMs),
       })
     })

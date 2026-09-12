@@ -198,8 +198,8 @@ watch(
       </div>
 
       <!-- Drifters fly over the idle orbit, below every modal. Their card lives in
-         `HudCardColumn`; the buff bar above the scoreboard collects every timed
-         effect. -->
+         `HudCardColumn`; the buff stack in the right gutter under the event log
+         collects every timed effect. -->
       <DrifterLayer />
       <div id="orbit-buff-dock" class="bard-dock" />
       <Teleport defer :to="BUFF_DOCK_IDS[buffDock]">
@@ -570,10 +570,10 @@ html.uhop-hud-out
     opacity var(--uhop-hud-out) ease-in,
     translate var(--uhop-hud-out) ease-in;
 }
-html.uhop-hud-out body :is(.header-bar, .star-timer-bars-host, .hcc-root, .elp) {
+html.uhop-hud-out body :is(.header-bar, .star-timer-bars-host, .hcc-root, .elp, .buff-bar) {
   translate: 0 calc(-1 * var(--uhop-hud-shift));
 }
-html.uhop-hud-out body :is(.bottom-bar-shell, .ability-bar, .buff-bar, .kb-hud, .credit-row) {
+html.uhop-hud-out body :is(.bottom-bar-shell, .ability-bar, .kb-hud, .credit-row) {
   translate: 0 var(--uhop-hud-shift);
 }
 html.uhop-hud-out body .music-widget {
@@ -608,10 +608,10 @@ html.uhop-hud-in body .bottom-bar-shell {
 html.uhop-hud-in body .hcc-root {
   --uhop-d: calc(var(--uhop-hud-stagger) * 2);
 }
-html.uhop-hud-in body .elp {
+html.uhop-hud-in body :is(.elp, .buff-bar) {
   --uhop-d: calc(var(--uhop-hud-stagger) * 3);
 }
-html.uhop-hud-in body :is(.ability-bar, .buff-bar) {
+html.uhop-hud-in body .ability-bar {
   --uhop-d: calc(var(--uhop-hud-stagger) * 4);
 }
 html.uhop-hud-in body .star-timer-bars-host {

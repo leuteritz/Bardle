@@ -83,12 +83,18 @@ describe('useActiveBuffList', () => {
     expect(byId.ability.timer?.progress).toBeCloseTo(0.5)
     expect(byId.mvp.timer?.secondsLeft).toBe(4)
     expect(byId.drifter.rankColor).toBeTruthy()
+    expect(byId.drifter.rank).toBe(DRIFTERS[0].rarity)
     expect(byId.drifter.image).toBeTruthy()
     expect(byId.drifter.label).toBe('PER CLICK')
     expect(byId.forge.label).toBe('CHIMES')
     expect(byId.forge.timer?.secondsLeft).toBe(600)
     expect(byId.augment.label).toBe('CHIMES')
     expect(byId.augment.multiplier).toBe(2)
+    expect(byId.augment.rank).toBe('rare')
+    expect(byId.augment.rankColor).toBeTruthy()
+    for (const src of ['ability', 'mvp', 'omen', 'forge', 'landfall']) {
+      expect(byId[src].rank).toBeUndefined()
+    }
     expect(byId.landfall.timer).toBeNull()
     for (const b of buffs.value) {
       expect(b.key.length).toBeGreaterThan(0)

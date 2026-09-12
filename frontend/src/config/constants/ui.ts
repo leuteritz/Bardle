@@ -3,6 +3,7 @@
 // alles ein- und ausblendet.
 
 import type {
+  BuffRank,
   ChampionRole,
   HeraldReceiptKind,
   HeraldReceiptKindDef,
@@ -874,6 +875,41 @@ export const PAUSE_KIT_EFFECT_COL_W =
  *  Fit-Scale des ganzen Overlays mitten in der Pause, sobald ein Buff ausläuft.
  *  Dieselbe Reservierung wie PAUSE_KIT_EFFECT_COLS und PAUSE_CALLOUT_ROWS. */
 export const PAUSE_KIT_BLOCK_H = PAUSE_KIT_TILE_H + PAUSE_KIT_GAP_PX + PAUSE_KIT_EFFECT_CHIP_H
+
+// ── Der Buff-Stapel in der rechten Gasse ──────────────────────────────────
+// Steht unter der Eventlog-Spur (`--event-log-bottom`) und endet über dem
+// Keybind-HUD. Flüchtig wie die Karten der linken Spalte: meldet KEINE Kante
+// an die HUD-Kontur. Gebunden in `buffStackLayout.spec.ts`.
+/** Stufe je Rang — nur `legendary` erreicht 3. Ohne Rang gilt 1. */
+export const BUFF_RANK_TIER: Record<BuffRank, 1 | 2 | 3> = {
+  common: 1,
+  uncommon: 2,
+  rare: 2,
+  epic: 2,
+  legendary: 3,
+}
+/** Lücke zwischen zwei Zeilen des Stapels. */
+export const BUFF_STACK_GAP = 8
+/** Höhe einer Zeile auf Full HD — EINE Höhe für alle Stufen: Höhe ist das
+ *  Budget der Gasse, der Rang wächst in die Breite. */
+export const BUFF_STACK_ROW_H = 56
+/** Kompaktstufe unter 800 px Viewporthöhe (Full HD bei 125 %: 760): dort liegt
+ *  die Spur unter dem Header, und ihr 200-px-Boden frisst die Gasse. */
+export const BUFF_STACK_ROW_H_COMPACT = 44
+export const BUFF_STACK_GAP_COMPACT = 6
+/** Höhe der „+N"-Pille, die die letzte passende Zeile ersetzt. */
+export const BUFF_STACK_MORE_H = 26
+/** Breite einer Zeile; Stufe 3 bekommt mehr, Breite ist in der Gasse billig. */
+export const BUFF_STACK_W = 236
+export const BUFF_STACK_W_LEGENDARY = 272
+/** Abstand zur Eventlog-Kante oben. */
+export const BUFF_STACK_TOP_GAP = 10
+/** Abstand über dem Keybind-HUD — 46 wie die Eventlog-Spur: Keycap-Leiste plus
+ *  der Admin-Knopf „Reset cooldowns" (z-index 9999) darüber. */
+export const BUFF_STACK_BOTTOM_GAP = 46
+/** Mindestabstand zur rechten Bildkante: der Encyclopedia-Griff (41 px, mittig
+ *  am Rand) plus Luft — sonst deckt eine Zeile ihn zu. */
+export const BUFF_STACK_EDGE_CLEAR = 47
 
 // ── Das Wayfinder-Band unter der Kopfzeile ────────────────────────────────
 // Draußen steht die Leiter als HUD-Karte oben links bei z-index 899 — unter
