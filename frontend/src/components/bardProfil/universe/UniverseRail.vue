@@ -241,10 +241,13 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
 .un-rail-row.is-current {
   --sr-color: v-bind(hereColor);
 }
-.un-rail-row.is-current:not(.is-picked) {
+.un-rail-row.is-current:not(.is-picked),
+.un-rail-row.is-current.is-picked {
   background: color-mix(in srgb, v-bind(hereColor) 10%, var(--sr-row-bg));
   border-color: color-mix(in srgb, v-bind(hereColor) 55%, var(--sr-row-border));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, v-bind(hereColor) 45%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, v-bind(hereColor) 28%, transparent),
+    0 0 12px color-mix(in srgb, v-bind(hereColor) 12%, transparent);
 }
 
 /* Die gewaehlte Bahn traegt den Ton DIESES Universums, nicht den einer
@@ -253,6 +256,12 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
    bei gleicher Spezifitaet entscheidet die Reihenfolge, und die Wahl gewinnt. */
 .un-rail-row.is-picked {
   --sr-color: var(--un-row-tint);
+}
+.un-rail-row.is-current.is-picked {
+  --sr-color: v-bind(hereColor);
+  --sr-picked: v-bind(hereColor);
+  background: color-mix(in srgb, v-bind(hereColor) 18%, var(--sr-row-bg));
+  border-color: color-mix(in srgb, v-bind(hereColor) 82%, var(--sr-row-border));
 }
 
 .un-rail-disc {
@@ -268,7 +277,7 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
   inset: -2px;
   border-radius: 50%;
   pointer-events: none;
-  box-shadow: 0 0 10px 2px rgba(159, 224, 98, 0.55);
+  box-shadow: 0 0 10px 2px color-mix(in srgb, v-bind(hereColor) 55%, transparent);
   animation: un-rail-breathe 2.6s ease-in-out infinite;
 }
 @keyframes un-rail-breathe {
@@ -331,6 +340,10 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
   opacity: 0.4;
   pointer-events: none;
   transition: opacity 180ms ease;
+}
+.un-rail-row.is-current::after {
+  background: v-bind(hereColor);
+  opacity: 0.9;
 }
 .un-rail-row:not(.is-inert):not(.is-picked):hover::after {
   opacity: 0.8;
