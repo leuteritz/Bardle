@@ -480,7 +480,7 @@ function handleSunKey(e: KeyboardEvent): void {
   min-height: 0;
   padding-bottom: clamp(20px, 2.6cqw, 34px);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
 }
 

@@ -111,7 +111,7 @@ function buffAriaLabel(buff: (typeof buffs.value)[number]) {
   align-items: center;
   flex-direction: column;
   gap: v-bind(gap);
-  width: min(100%, v-bind(vitalW));
+  width: v-bind(vitalW);
   min-width: 0;
   transform: translateX(-50%);
   pointer-events: none;
@@ -186,14 +186,14 @@ function buffAriaLabel(buff: (typeof buffs.value)[number]) {
 }
 
 .jbp-glyph {
-  width: 23px;
-  height: 23px;
+  width: 37px;
+  height: 37px;
   color: var(--buff, #e8c040);
 }
 
 .jbp-art {
-  width: 26px;
-  height: 26px;
+  width: 43px;
+  height: 43px;
   object-fit: contain;
 }
 
@@ -206,15 +206,15 @@ function buffAriaLabel(buff: (typeof buffs.value)[number]) {
   min-width: 3.2ch;
   margin-top: 2px;
   color: #e8c040;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
-  line-height: 10px;
+  line-height: 12px;
   text-align: center;
 }
 
 .jbp-unit {
   color: #8a7a58;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .jbp-card.is-expiring .jbp-sec {
@@ -224,14 +224,14 @@ function buffAriaLabel(buff: (typeof buffs.value)[number]) {
 .jbp-clock--endless {
   min-width: 0;
   color: #8a7a58;
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .jbp-more {
   align-items: center;
   justify-content: center;
   color: #e8c040;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 900;
 }
 
@@ -313,7 +313,7 @@ function buffAriaLabel(buff: (typeof buffs.value)[number]) {
   .jbp {
     bottom: calc(100% + v-bind(gapCompact));
     gap: v-bind(gapCompact);
-    width: min(100%, v-bind(vitalWCompact));
+    width: v-bind(vitalWCompact);
   }
 
   .jbp-row {
@@ -333,26 +333,26 @@ function buffAriaLabel(buff: (typeof buffs.value)[number]) {
   }
 
   .jbp-glyph {
-    width: 20px;
-    height: 20px;
+    width: 32px;
+    height: 32px;
   }
 
   .jbp-art {
-    width: 23px;
-    height: 23px;
+    width: 37px;
+    height: 37px;
   }
 
   .jbp-clock {
-    font-size: 9px;
-    line-height: 8px;
+    font-size: 11px;
+    line-height: 10px;
   }
 
   .jbp-unit {
-    font-size: 7px;
+    font-size: 8px;
   }
 
   .jbp-clock--endless {
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .jbp-vitality-bar {
