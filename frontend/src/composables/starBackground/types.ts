@@ -12,6 +12,8 @@ export type StarItem = {
   twinkleSpeed: number
   /** Trägt einen Bloom, sobald er nah genug ist (STAR_BG_BLOOM_*). */
   bloom: boolean
+  /** Zusatzstern des Universumssprungs — blendet mit `starSurge`, fällt auf `done`. */
+  surge: boolean
 }
 
 export type GalaxyItem = {

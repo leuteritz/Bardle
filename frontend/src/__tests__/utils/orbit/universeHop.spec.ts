@@ -8,16 +8,11 @@ import {
   UNIVERSE_HOP_HUD_IN_DELAY_MS,
   UNIVERSE_HOP_EMERGE_MS,
   UNIVERSE_HOP_PORTAL_R0_FRAC,
-  UNIVERSE_HOP_TUNNEL_BEND_MAX_DEG,
-  UNIVERSE_HOP_TUNNEL_BEND_MIN_DEG,
-  UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX,
-  UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN,
-  UNIVERSE_HOP_TUNNEL_ROLL_RAD_S,
-  UNIVERSE_HOP_EXIT_R0_FRAC,
-  UNIVERSE_HOP_EXIT_R1_FRAC,
-  UNIVERSE_HOP_EXIT_REVEAL_T,
-  UNIVERSE_HOP_EXIT_STRAIGHTEN,
-  UNIVERSE_HOP_TRAVEL_LEAD,
+  UNIVERSE_HOP_CAM_BACK,
+  UNIVERSE_HOP_CAM_FOCAL_K,
+  UNIVERSE_HOP_TUNNEL_BANK_MAX_RAD,
+  UNIVERSE_HOP_TUNNEL_TURNS_MAX,
+  UNIVERSE_HOP_TUNNEL_TURNS_MIN,
   UNIVERSE_HOP_COURSE_BANK_MAX_DEG,
   UNIVERSE_HOP_COURSE_BANK_MIN_DEG,
   UNIVERSE_HOP_FOCUS_FRAC_MAX,
@@ -25,6 +20,8 @@ import {
   UNIVERSE_HOP_WALL_ALPHA,
   UNIVERSE_HOP_WASH_MS,
   UNIVERSE_HOP_WASH_PEAK,
+  UNIVERSE_HOP_APPROACH_BANK_MAX_RAD,
+  UNIVERSE_HOP_APPROACH_LEAN_K,
 } from '@/config/constants'
 import {
   createUniverseHop,
@@ -35,9 +32,8 @@ import {
   UNIVERSE_HOP_HUD_IN_AT_MS,
   UNIVERSE_HOP_TOTAL_MS,
   UNIVERSE_HOP_WASH_AT_MS,
-  UNIVERSE_HOP_TUNNEL_LEGS,
+  UNIVERSE_HOP_TUBE_IN_FRAC,
   universeHopFocusAt,
-  universeHopTunnelFocusAt,
   type UniverseHopPhase,
 } from '@/utils/orbit/universeHop'
 
@@ -214,11 +210,12 @@ describe('universeHop — Kurven', () => {
     expect(state.out.flightSec).toBe(0)
   })
 
-  it('rollt nur im Tunnel, weich an und ab, und der Tunnel läuft 0 → 1', () => {
+  it('rollt im Tunnel weich an und ab, und der Tunnel läuft 0 → 1', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(13))
     stepUniverseHop(state, APPROACH_END - 1, MIN_EDGE, FAR)
-    expect(state.out.roll).toBe(0)
+    // Am Anflugende steht die Bank still (sin²-Glocke) — kein Knick in die Röhre.
+    expect(Math.abs(state.out.roll)).toBeLessThan(0.01)
     expect(state.out.tunnelT).toBe(0)
     expect(state.out.wallAlpha).toBe(0)
     let maxAbs = 0
@@ -242,12 +239,13 @@ describe('universeHop — Kurven', () => {
       expect(state.out.fieldAlpha).toBe(0)
       expect(state.out.wallAlpha).toBe(UNIVERSE_HOP_WALL_ALPHA)
     }
-    expect(maxAbs).toBeGreaterThan(UNIVERSE_HOP_TUNNEL_ROLL_RAD_S * 0.8)
-    expect(maxAbs).toBeLessThanOrEqual(UNIVERSE_HOP_TUNNEL_ROLL_RAD_S + 1e-9)
-    // Der Twist wechselt die Richtung — sonst ist es ein Karussell.
+    // Die Bank kippt in die Yaw-Ecke und wieder zurück — der Roll wechselt das Vorzeichen.
+    expect(maxAbs).toBeGreaterThan(0.1)
+    expect(maxAbs).toBeLessThan(4)
     expect(signChanges).toBeGreaterThanOrEqual(1)
     expect(lastSec).toBeCloseTo(UNIVERSE_HOP_PASSAGE_MS / 1000, 1)
-    expect(Math.abs(state.out.roll)).toBeLessThan(UNIVERSE_HOP_TUNNEL_ROLL_RAD_S * 0.2)
+    // Auf der letzten Geraden steht die Kamera gerade.
+    expect(Math.abs(state.out.roll)).toBeLessThan(0.05)
     stepUniverseHop(state, 40, MIN_EDGE, FAR)
     expect(state.out.phase).toBe('emerge')
     expect(state.out.roll).toBe(0)
@@ -265,16 +263,6 @@ describe('universeHop — Kurven', () => {
     expect(Math.hypot(state.out.focusX, state.out.focusY)).toBeLessThan(Math.hypot(ax, ay) * 0.3)
   })
 
-  it('würfelt das Roll-Vorzeichen', () => {
-    const signs = new Set<number>()
-    for (let i = 0; i < 40; i++) {
-      const st = createUniverseHop()
-      startUniverseHop(st, seeded(Math.imul(i + 1, 2654435761) >>> 0))
-      signs.add(st.rollSign)
-    }
-    expect(signs).toEqual(new Set([-1, 1]))
-  })
-
   it('fliegt eine KURVE: der Fokus startet bei A, endet bei B, und kehrt exakt zurück', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(21))
@@ -287,7 +275,7 @@ describe('universeHop — Kurven', () => {
     expect(state.out.focusX).toBeCloseTo(bx, 6)
     expect(state.out.focusY).toBeCloseTo(by, 6)
     // A und B liegen sichtbar auseinander — die Bank ist keine Null.
-    expect(Math.hypot(bx - ax, by - ay)).toBeGreaterThan(MIN_EDGE * 0.05)
+    expect(Math.hypot(bx - ax, by - ay)).toBeGreaterThan(MIN_EDGE * 0.01)
     stepUniverseHop(state, UNIVERSE_HOP_TOTAL_MS, MIN_EDGE, FAR)
     expect(state.out.focusX).toBe(0)
     expect(state.out.focusY).toBe(0)
@@ -368,150 +356,114 @@ describe('Universumssprung — die Prozession', () => {
   })
 })
 
-describe('universeHop — die Wormhole-Reise kurvt', () => {
-  const DEG = Math.PI / 180
+describe('universeHop — die Wormhole-Reise fährt eine 3D-Bahn mit Verfolgerkamera', () => {
+  const TUBE_IN_END = APPROACH_END + UNIVERSE_HOP_PASSAGE_MS * UNIVERSE_HOP_TUBE_IN_FRAC
 
-  it('würfelt Wegpunkte ab B: alternierende Kurven im Radiusband', () => {
-    for (let i = 0; i < 60; i++) {
+  it('würfelt beim Aufbruch eine Bahn mit 3 … 4 Ecken', () => {
+    for (let i = 0; i < 30; i++) {
       const st = createUniverseHop()
+      expect(st.path).toBeNull()
       startUniverseHop(st, seeded(Math.imul(i + 3, 2654435761) >>> 0))
-      expect(st.tunnelAz.length).toBe(UNIVERSE_HOP_TUNNEL_LEGS + 1)
-      expect(st.tunnelAz[0]).toBe(st.courseAz1)
-      expect(st.tunnelR[0]).toBe(st.courseR1)
-      let lastSign = 0
-      for (let k = 1; k < st.tunnelAz.length; k++) {
-        const d = st.tunnelAz[k]! - st.tunnelAz[k - 1]!
-        expect(Math.abs(d)).toBeGreaterThanOrEqual(UNIVERSE_HOP_TUNNEL_BEND_MIN_DEG * DEG - 1e-9)
-        expect(Math.abs(d)).toBeLessThanOrEqual(UNIVERSE_HOP_TUNNEL_BEND_MAX_DEG * DEG + 1e-9)
-        if (lastSign !== 0) expect(Math.sign(d)).toBe(-lastSign)
-        lastSign = Math.sign(d)
-        expect(st.tunnelR[k]).toBeGreaterThanOrEqual(UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN)
-        expect(st.tunnelR[k]).toBeLessThanOrEqual(UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX)
-      }
-      // Die erste Kurve dreht in Roll-Richtung.
-      expect(Math.sign(st.tunnelAz[1]! - st.tunnelAz[0]!)).toBe(st.rollSign)
+      expect(st.path).not.toBeNull()
+      expect(st.path!.turns).toBeGreaterThanOrEqual(UNIVERSE_HOP_TUNNEL_TURNS_MIN)
+      expect(st.path!.turns).toBeLessThanOrEqual(UNIVERSE_HOP_TUNNEL_TURNS_MAX)
+      expect(st.path!.length).toBeGreaterThan(0)
     }
   })
 
-  it('biegt die Röhre zum Kurvenpunkt, die Kamera bleibt hinter dem Spieler', () => {
+  it('zieht den Fokus nahtlos aus B in die Bildmitte und hält den Spieler nahe der Mitte', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(29))
     stepUniverseHop(state, APPROACH_END, MIN_EDGE, FAR)
     const [bx, by] = universeHopFocusAt(state, 1, MIN_EDGE)
-    // Nahtlos aus dem Anflug: Fokus und Kurvenpunkt starten bei B.
     expect(state.out.focusX).toBeCloseTo(bx, 6)
     expect(state.out.focusY).toBeCloseTo(by, 6)
-    expect(state.out.bendX).toBeCloseTo(bx, 6)
-    let moved = 0
-    let lastX = bx
-    let lastY = by
+    expect(state.out.focal).toBeCloseTo(UNIVERSE_HOP_CAM_FOCAL_K * MIN_EDGE, 6)
     let lastFocus = Math.hypot(bx, by)
-    let lastBend = lastFocus
-    let lastLight = 0
+    // Die Lehne kommt aus dem Anflug mit — gemessen wird der Sprung je Frame, nicht gegen 0.
+    let lastPx = state.out.playerX
+    let lastPy = state.out.playerY
+    let maxPlayer = 0
+    let t = APPROACH_END
     while (state.out.phase === 'passage') {
       stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
+      t += 16.7
       if (state.out.phase !== 'passage') break
-      const bend = Math.hypot(state.out.bendX, state.out.bendY)
       const focus = Math.hypot(state.out.focusX, state.out.focusY)
-      if (state.out.exitLight === 0) {
-        // Vor dem Reveal: der Kurvenpunkt im Band, der Fokus nur ein Anteil davon.
-        // Die erste Kurve startet bei B aus dem Anflugband — beide Böden gelten.
-        expect(bend / MIN_EDGE).toBeGreaterThanOrEqual(
-          Math.min(UNIVERSE_HOP_FOCUS_FRAC_MIN, UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN) - 1e-9,
-        )
-        expect(bend / MIN_EDGE).toBeLessThanOrEqual(UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX + 1e-9)
-        if (state.out.tunnelT > 0.15) expect(focus).toBeLessThanOrEqual(UNIVERSE_HOP_TRAVEL_LEAD * bend + 1e-6)
-        else expect(focus).toBeLessThanOrEqual(Math.max(lastFocus, bend) + 1e-6)
-      }
-      // Kein Sprung: je Frame höchstens ein paar Prozent der kurzen Kante.
-      expect(Math.hypot(state.out.bendX - lastX, state.out.bendY - lastY)).toBeLessThan(
-        MIN_EDGE * 0.06,
-      )
-      moved += Math.hypot(state.out.bendX - lastX, state.out.bendY - lastY)
-      lastX = state.out.bendX
-      lastY = state.out.bendY
+      expect(focus).toBeLessThanOrEqual(lastFocus + 1e-6)
+      if (t > TUBE_IN_END + 17) expect(focus).toBe(0)
       lastFocus = focus
-      lastBend = bend
-      lastLight = state.out.exitLight
+      // Der Spieler: höchstens ~10 % der Brennweite von der Mitte, ohne Sprung.
+      maxPlayer = Math.max(maxPlayer, Math.abs(state.out.playerX), Math.abs(state.out.playerY))
+      expect(Math.abs(state.out.playerX - lastPx)).toBeLessThan(MIN_EDGE * 0.02)
+      expect(Math.abs(state.out.playerY - lastPy)).toBeLessThan(MIN_EDGE * 0.02)
+      lastPx = state.out.playerX
+      lastPy = state.out.playerY
     }
-    // Der Kurvenpunkt fährt Kurven — und richtet sich am Ende auf.
-    expect(moved).toBeGreaterThan(MIN_EDGE * 0.5)
-    expect(lastBend).toBeLessThanOrEqual(
-      (1 - UNIVERSE_HOP_EXIT_STRAIGHTEN) * UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX * MIN_EDGE + 1e-6,
-    )
-    expect(lastLight).toBe(1)
+    expect(maxPlayer).toBeGreaterThan(0)
+    expect(maxPlayer).toBeLessThan(UNIVERSE_HOP_CAM_FOCAL_K * MIN_EDGE * 0.1)
   })
 
-  it('rollt sich in jede Kurve: Vorzeichen des Rolls folgt der Kurve, Wechsel je Wegpunkt', () => {
-    const state = createUniverseHop()
-    startUniverseHop(state, seeded(31))
-    stepUniverseHop(state, APPROACH_END, MIN_EDGE, FAR)
-    let changes = 0
-    let lastSign = 0
-    while (state.out.phase === 'passage') {
-      stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
-      if (state.out.phase !== 'passage') break
-      const s = Math.sign(state.out.roll)
-      if (s !== 0 && lastSign !== 0 && s !== lastSign) changes++
-      if (s !== 0) lastSign = s
-    }
-    expect(changes).toBe(UNIVERSE_HOP_TUNNEL_LEGS - 1)
-  })
-
-  it('kumuliert die Verdrillung nur im Tunnel und lässt das Ausgangslicht wachsen', () => {
+  it('zeigt das Ende erst hinter der letzten Ecke, monoton bis 1', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(37))
     stepUniverseHop(state, APPROACH_END - 1, MIN_EDGE, FAR)
-    expect(state.out.twist).toBe(0)
-    expect(state.out.exitR).toBe(0)
-    expect(state.out.exitAlpha).toBe(0)
     expect(state.out.exitLight).toBe(0)
-    let lastR = 0
+    expect(state.out.exitAlpha).toBe(0)
+    const path = state.path!
+    const gateT = (path.lastArcStart + UNIVERSE_HOP_CAM_BACK) / path.length
+    expect(gateT).toBeGreaterThan(0.5)
     let lastAlpha = 0
     let lastLight = 0
     let lastHeadlight = 0
-    let maxTwist = 0
     while (state.out.phase !== 'emerge') {
       stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
       if (state.out.phase !== 'passage') break
-      expect(state.out.exitR).toBeGreaterThanOrEqual(lastR)
       expect(state.out.exitAlpha).toBeGreaterThanOrEqual(lastAlpha)
       expect(state.out.exitLight).toBeGreaterThanOrEqual(lastLight)
-      // Kein Sprung beim Einblenden.
       expect(state.out.exitAlpha - lastAlpha).toBeLessThan(0.2)
       expect(state.out.exitLight - lastLight).toBeLessThan(0.2)
-      // Das Ende zeigt sich erst am Ende: vor dem Reveal kein Licht, das Wachstum ruht —
-      // und kein Scheinwerfer, der sich als Ende liest.
-      if (state.out.tunnelT < UNIVERSE_HOP_EXIT_REVEAL_T) {
+      if (state.out.tunnelT < gateT) {
         expect(state.out.exitLight).toBe(0)
-        expect(state.out.exitR).toBeCloseTo(MIN_EDGE * UNIVERSE_HOP_EXIT_R0_FRAC, 6)
         if (state.out.tunnelT > 0.2) expect(state.out.headlight).toBeLessThan(0.05)
       } else {
         expect(state.out.headlight).toBeGreaterThanOrEqual(lastHeadlight - 1e-9)
       }
       lastHeadlight = state.out.headlight
-      lastR = state.out.exitR
       lastAlpha = state.out.exitAlpha
       lastLight = state.out.exitLight
-      maxTwist = Math.max(maxTwist, Math.abs(state.out.twist))
     }
-    expect(lastR).toBeGreaterThan(MIN_EDGE * UNIVERSE_HOP_EXIT_R0_FRAC)
-    expect(lastR).toBeLessThanOrEqual(MIN_EDGE * UNIVERSE_HOP_EXIT_R1_FRAC + 1e-6)
     expect(lastAlpha).toBe(1)
     expect(lastLight).toBe(1)
-    expect(maxTwist).toBeGreaterThan(0)
     expect(state.out.phase).toBe('emerge')
-    expect(state.out.twist).toBe(0)
-    expect(state.out.exitR).toBe(0)
     expect(state.out.exitAlpha).toBe(0)
     expect(state.out.exitLight).toBe(0)
   })
 
-  it('lässt die Gruppe im Tunnel auf den Anker reiten und im Ausrollen zurück', () => {
+  it('kippt die Kamera nur im Tunnel und nur bis zur Bank-Grenze', () => {
+    const state = createUniverseHop()
+    startUniverseHop(state, seeded(31))
+    stepUniverseHop(state, APPROACH_END - 1, MIN_EDGE, FAR)
+    expect(state.out.twist).toBe(0)
+    let maxTwist = 0
+    while (state.out.phase !== 'emerge') {
+      stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
+      if (state.out.phase !== 'passage') break
+      expect(Math.abs(state.out.twist)).toBeLessThanOrEqual(UNIVERSE_HOP_TUNNEL_BANK_MAX_RAD + 1e-9)
+      maxTwist = Math.max(maxTwist, Math.abs(state.out.twist))
+    }
+    expect(maxTwist).toBeGreaterThan(UNIVERSE_HOP_TUNNEL_BANK_MAX_RAD * 0.5)
+    expect(state.out.twist).toBe(0)
+    expect(state.out.roll).toBe(0)
+  })
+
+  it('lässt die Gruppe ab dem Anflug dem Spieler folgen und im Ausrollen zurück', () => {
     const state = createUniverseHop()
     startUniverseHop(state, seeded(43))
-    stepUniverseHop(state, APPROACH_END - 1, MIN_EDGE, FAR)
+    stepUniverseHop(state, DEPART_END, MIN_EDGE, FAR)
     expect(state.out.groupLead).toBe(0)
+    stepUniverseHop(state, APPROACH_END - DEPART_END - 1, MIN_EDGE, FAR)
+    expect(state.out.groupLead).toBe(1)
     let last = 0
     while (state.out.phase !== 'emerge') {
       stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
@@ -521,28 +473,137 @@ describe('universeHop — die Wormhole-Reise kurvt', () => {
     }
     expect(last).toBe(1)
     let prev = 1
+    let prevPlayer = Math.hypot(state.out.playerX, state.out.playerY)
     while (state.out.phase === 'emerge') {
       stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
       if (state.out.phase !== 'emerge') break
       expect(state.out.groupLead).toBeLessThanOrEqual(prev + 1e-9)
       expect(state.out.groupLead).toBeCloseTo(state.out.procession, 9)
+      // Der Spieler legt sich in die Mitte zurück; der Ausgang lag geradeaus.
+      const player = Math.hypot(state.out.playerX, state.out.playerY)
+      expect(player).toBeLessThanOrEqual(prevPlayer + 1e-9)
+      expect(state.out.focusX).toBe(0)
+      expect(state.out.focusY).toBe(0)
+      prevPlayer = player
       prev = state.out.groupLead
     }
     expect(state.out.groupLead).toBe(0)
+    expect(state.out.playerX).toBe(0)
+    expect(state.out.playerY).toBe(0)
+  })
+})
+
+describe('universeHop — der Anflug als Verfolgerkamera', () => {
+  it('lehnt den Spieler zum Tor, rollt das Feld in die Bank und steht am Anflugende gerade', () => {
+    const state = createUniverseHop()
+    startUniverseHop(state, seeded(51))
+    stepUniverseHop(state, DEPART_END, MIN_EDGE, FAR)
+    // Die Lehne steht schon, die Gruppe blendet sie erst ein.
+    expect(state.out.groupLead).toBe(0)
+    expect(Math.abs(state.out.roll)).toBe(0)
+    let maxLean = 0
+    let maxRoll = 0
+    let bank = 0
+    let maxBank = 0
+    let t = DEPART_END
+    while (t < APPROACH_END - 1) {
+      t += 16.7
+      stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
+      if (state.out.phase !== 'approach') break
+      const lean = Math.hypot(state.out.playerX, state.out.playerY)
+      const focus = Math.hypot(state.out.focusX, state.out.focusY)
+      // Die Lehne liegt auf der Linie Mitte → Tor, beim festen Anteil.
+      expect(lean).toBeCloseTo(focus * UNIVERSE_HOP_APPROACH_LEAN_K, 6)
+      maxLean = Math.max(maxLean, lean)
+      maxRoll = Math.max(maxRoll, Math.abs(state.out.roll))
+      bank -= (state.out.roll * 16.7) / 1000
+      maxBank = Math.max(maxBank, Math.abs(bank))
+      expect(state.out.starSurge).toBe(1)
+      expect(state.out.focal).toBeCloseTo(UNIVERSE_HOP_CAM_FOCAL_K * MIN_EDGE, 6)
+    }
+    expect(maxLean).toBeGreaterThan(0)
+    expect(maxLean).toBeLessThanOrEqual(
+      UNIVERSE_HOP_FOCUS_FRAC_MAX * UNIVERSE_HOP_APPROACH_LEAN_K * MIN_EDGE + 1e-6,
+    )
+    expect(maxRoll).toBeGreaterThan(0)
+    expect(maxBank).toBeLessThanOrEqual(UNIVERSE_HOP_APPROACH_BANK_MAX_RAD + 1e-3)
+    // Zurück auf null: die Glocke ist geschlossen, die Röhre beginnt ohne Knick.
+    expect(Math.abs(bank)).toBeLessThan(0.01)
+    expect(Math.abs(state.out.roll)).toBeLessThan(0.01)
+    expect(state.out.groupLead).toBe(1)
   })
 
-  it('rollt vom Ende der Tunnelreise aus, nicht von B', () => {
+  it('blendet die Gruppe im Anflug ein und geht ohne Sprung der Lehne in die Röhre', () => {
     const state = createUniverseHop()
-    startUniverseHop(state, seeded(41))
-    stepUniverseHop(state, PASSAGE_END + 1, MIN_EDGE, FAR)
-    expect(state.out.phase).toBe('emerge')
-    const [ex, ey] = universeHopTunnelFocusAt(state, 1, MIN_EDGE)
-    const [bx, by] = universeHopFocusAt(state, 1, MIN_EDGE)
-    expect(Math.hypot(ex - bx, ey - by)).toBeGreaterThan(MIN_EDGE * 0.05)
-    // Der Fokus des Ausrollens ist der aufgerichtete, kleine Passage-Fokus.
-    const endLead = UNIVERSE_HOP_TRAVEL_LEAD * (1 - UNIVERSE_HOP_EXIT_STRAIGHTEN)
-    expect(state.out.focusX).toBeCloseTo(ex * endLead, -1)
-    expect(state.out.focusY).toBeCloseTo(ey * endLead, -1)
-    expect(state.out.bendX).toBe(0)
+    startUniverseHop(state, seeded(53))
+    stepUniverseHop(state, DEPART_END + 1, MIN_EDGE, FAR)
+    expect(state.out.groupLead).toBeLessThan(0.05)
+    stepUniverseHop(state, UNIVERSE_HOP_APPROACH_MS * UNIVERSE_HOP_TUBE_IN_FRAC, MIN_EDGE, FAR)
+    expect(state.out.groupLead).toBe(1)
+    stepUniverseHop(state, APPROACH_END - state.elapsedMs - 8, MIN_EDGE, FAR)
+    let lastPx = state.out.playerX
+    let lastPy = state.out.playerY
+    for (let i = 0; i < 40; i++) {
+      stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
+      expect(Math.abs(state.out.playerX - lastPx)).toBeLessThan(MIN_EDGE * 0.02)
+      expect(Math.abs(state.out.playerY - lastPy)).toBeLessThan(MIN_EDGE * 0.02)
+      lastPx = state.out.playerX
+      lastPy = state.out.playerY
+    }
+    expect(state.out.phase).toBe('passage')
+  })
+
+  it('führt den Sternen-Schub hoch, hält ihn bis zum Ausgang und blendet ihn im Ausrollen aus', () => {
+    const state = createUniverseHop()
+    startUniverseHop(state, seeded(57))
+    let last = 0
+    let t = 0
+    while (t < DEPART_END) {
+      t += 16.7
+      stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
+      if (state.out.phase !== 'depart') break
+      expect(state.out.starSurge).toBeGreaterThanOrEqual(last)
+      last = state.out.starSurge
+    }
+    stepUniverseHop(state, PASSAGE_END - state.elapsedMs - 1, MIN_EDGE, FAR)
+    expect(state.out.starSurge).toBe(1)
+    let prev = 1
+    while (state.out.phase !== 'idle') {
+      stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
+      expect(state.out.starSurge).toBeLessThanOrEqual(prev + 1e-9)
+      prev = state.out.starSurge
+    }
+    expect(state.out.starSurge).toBe(0)
+  })
+
+  it('lässt die Sogwellen nur im Anflug laufen, monoton und beschleunigend', () => {
+    const state = createUniverseHop()
+    startUniverseHop(state, seeded(59))
+    stepUniverseHop(state, DEPART_END - 1, MIN_EDGE, FAR)
+    expect(state.out.ripplePhase).toBe(0)
+    expect(state.out.rimArc).toBe(0)
+    let last = 0
+    let firstStep = 0
+    let lastStep = 0
+    let lastArc = 0
+    let t = DEPART_END - 1
+    while (t < APPROACH_END - 1) {
+      t += 16.7
+      stepUniverseHop(state, 16.7, MIN_EDGE, FAR)
+      if (state.out.phase !== 'approach') break
+      const step = state.out.ripplePhase - last
+      expect(step).toBeGreaterThan(0)
+      if (firstStep === 0) firstStep = step
+      lastStep = step
+      last = state.out.ripplePhase
+      expect(state.out.rimArc).toBeGreaterThan(lastArc)
+      lastArc = state.out.rimArc
+    }
+    expect(lastStep).toBeGreaterThan(firstStep * 1.5)
+    stepUniverseHop(state, 40, MIN_EDGE, FAR)
+    expect(state.out.phase).toBe('passage')
+    expect(state.out.ripplePhase).toBe(0)
+    stepUniverseHop(state, UNIVERSE_HOP_PASSAGE_MS, MIN_EDGE, FAR)
+    expect(state.out.rimArc).toBe(0)
   })
 })

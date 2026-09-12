@@ -8,23 +8,24 @@ import {
   UNIVERSE_HOP_HUD_IN_MS,
   UNIVERSE_HOP_HUD_STAGGER_MS,
   UNIVERSE_HOP_PASSAGE_MS,
-  UNIVERSE_HOP_TUNNEL_LEG_MS,
   UNIVERSE_HOP_TUNNEL_TRAIL_FADE,
-  UNIVERSE_HOP_EXIT_R0_FRAC,
-  UNIVERSE_HOP_EXIT_R1_FRAC,
-  UNIVERSE_HOP_EXIT_REVEAL_END,
-  UNIVERSE_HOP_EXIT_REVEAL_T,
-  UNIVERSE_HOP_GROUP_LEAD_FRAC,
-  UNIVERSE_HOP_TRAVEL_LEAD,
-  UNIVERSE_HOP_EXIT_STRAIGHTEN,
-  UNIVERSE_HOP_FOCUS_FRAC_MAX,
-  UNIVERSE_HOP_FOCUS_FRAC_MIN,
-  UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX,
-  UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN,
-  UNIVERSE_HOP_TUNNEL_R_MAX_K,
-  UNIVERSE_HOP_TUNNEL_R_MIN_FRAC,
+  UNIVERSE_HOP_CAM_BACK,
+  UNIVERSE_HOP_CAM_FOCAL_K,
+  UNIVERSE_HOP_CAM_LOOK_AT,
+  UNIVERSE_HOP_EXIT_R_MAX_FRAC,
+  UNIVERSE_HOP_TUNNEL_EXIT_LEG,
+  UNIVERSE_HOP_TUNNEL_LEG_MAX,
+  UNIVERSE_HOP_TUNNEL_LEG_MIN,
+  UNIVERSE_HOP_TUNNEL_NEAR,
+  UNIVERSE_HOP_TUNNEL_SIGHT,
+  UNIVERSE_HOP_TUNNEL_TURN_RADIUS,
+  UNIVERSE_HOP_TUNNEL_TURNS_MAX,
+  UNIVERSE_HOP_TUNNEL_TURNS_MIN,
+  UNIVERSE_HOP_TUNNEL_Z_NEAR,
   UNIVERSE_HOP_WALL_ALPHA_FAR,
   UNIVERSE_HOP_WALL_ALPHA_NEAR,
+  UNIVERSE_HOP_WALL_FOG_END,
+  UNIVERSE_HOP_WALL_FOG_FROM,
   UNIVERSE_HOP_WASH_MS,
   UNIVERSE_HOP_WASH_PEAK,
   UNIVERSE_HOP_DEPART_MS,
@@ -90,33 +91,30 @@ describe('Universumssprung — die Zeremonie', () => {
     expect(heraldAt).toBeLessThan(UNIVERSE_HOP_TOTAL_MS)
   })
 
-  it('gibt der Wormhole-Reise mindestens zwei Kurven und ein wachsendes Ausgangslicht', () => {
-    expect(UNIVERSE_HOP_TUNNEL_LEG_MS * 2).toBeLessThanOrEqual(UNIVERSE_HOP_PASSAGE_MS)
-    expect(UNIVERSE_HOP_EXIT_R0_FRAC).toBeLessThan(UNIVERSE_HOP_EXIT_R1_FRAC)
-    // Das Ausgangslicht bleibt am Fokus im Bild: Fokusband plus Radius unter der halben kurzen Kante … am Ende darf es überstrahlen.
-    expect(UNIVERSE_HOP_FOCUS_FRAC_MAX + UNIVERSE_HOP_EXIT_R0_FRAC).toBeLessThanOrEqual(0.5)
-    // Die Tunnel-Kurven sind HÄRTER als der Anflug: der Ausgang darf hinter die Kurve; die
-    // Gruppe reitet auf dem Anker, nicht am Ausgang.
-    expect(UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN).toBeGreaterThanOrEqual(UNIVERSE_HOP_FOCUS_FRAC_MIN)
-    expect(UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX).toBeGreaterThan(UNIVERSE_HOP_FOCUS_FRAC_MAX)
-    // Der Ausgang bleibt klein — kleiner als der Boden des Wegpunkt-Radius.
-    expect(UNIVERSE_HOP_EXIT_R0_FRAC).toBeLessThan(UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN)
-    // Das Ende zeigt sich erst am Ende, und die Kamera folgt dem Spieler (kein Versatz auf die Achse).
-    expect(UNIVERSE_HOP_EXIT_REVEAL_T).toBeGreaterThan(0.5)
-    expect(UNIVERSE_HOP_EXIT_REVEAL_END).toBeGreaterThan(UNIVERSE_HOP_EXIT_REVEAL_T)
-    expect(UNIVERSE_HOP_EXIT_REVEAL_END).toBeLessThan(1)
-    expect(UNIVERSE_HOP_GROUP_LEAD_FRAC).toBeLessThan(0.1)
-    // Der Fokus ist nur ein Anteil des Kurvenpunkts (Kamera hinter dem Spieler), das Ende steht am Reveal vor ihm.
-    expect(UNIVERSE_HOP_TRAVEL_LEAD).toBeLessThan(0.3)
-    expect(UNIVERSE_HOP_EXIT_STRAIGHTEN).toBeGreaterThan(0.5)
-    expect(UNIVERSE_HOP_EXIT_STRAIGHTEN).toBeLessThan(1)
-    // Ein Schlauch, kein Trichter: die nahe Wand steht im Bild, die Ferne läuft auf einen Punkt zu.
-    expect(UNIVERSE_HOP_TUNNEL_R_MAX_K).toBeLessThan(1)
-    expect(UNIVERSE_HOP_TUNNEL_R_MIN_FRAC).toBeLessThanOrEqual(0.1)
-    expect(UNIVERSE_HOP_EXIT_R1_FRAC).toBeLessThan(UNIVERSE_HOP_TUNNEL_R_MAX_K)
-    // Die Wand ist ein Trichter: fern hell, nah dunkel — und nie ganz weg.
+  it('gibt der Wormhole-Bahn Ecken, eine Verfolgerkamera und ein Ende hinter der letzten Ecke', () => {
+    // Mindestens zwei Ecken — sonst gibt es kein „um die Ecke".
+    expect(UNIVERSE_HOP_TUNNEL_TURNS_MIN).toBeGreaterThanOrEqual(2)
+    expect(UNIVERSE_HOP_TUNNEL_TURNS_MAX).toBeGreaterThanOrEqual(UNIVERSE_HOP_TUNNEL_TURNS_MIN)
+    // Die Ecke ist eine Kurve, keine Kante: Radius über dem Röhrenradius.
+    expect(UNIVERSE_HOP_TUNNEL_TURN_RADIUS).toBeGreaterThan(1)
+    // Die Gerade zum Ausgang ist die längste — das Ende kommt in Ruhe in Sicht.
+    expect(UNIVERSE_HOP_TUNNEL_EXIT_LEG).toBeGreaterThan(UNIVERSE_HOP_TUNNEL_LEG_MAX)
+    expect(UNIVERSE_HOP_TUNNEL_LEG_MIN).toBeLessThanOrEqual(UNIVERSE_HOP_TUNNEL_LEG_MAX)
+    // Die Kamera zielt VOR sich, aber hinter den Spieler: er lehnt sich zur Innenseite, nie nach aussen.
+    expect(UNIVERSE_HOP_CAM_LOOK_AT).toBeLessThan(UNIVERSE_HOP_CAM_BACK)
+    expect(UNIVERSE_HOP_CAM_LOOK_AT).toBeGreaterThan(0)
+    // Der Ring am Spieler misst unter der halben kurzen Kante — ein Schlauch um ihn, kein Trichter am Rand.
+    expect(UNIVERSE_HOP_CAM_FOCAL_K / UNIVERSE_HOP_CAM_BACK).toBeLessThan(0.5)
+    expect(UNIVERSE_HOP_EXIT_R_MAX_FRAC).toBeLessThan(0.5)
+    // Sicht: die nächste Scheibe liegt vor der Kamera, die fernste jenseits einer Ecke.
+    expect(UNIVERSE_HOP_TUNNEL_NEAR).toBeGreaterThan(UNIVERSE_HOP_TUNNEL_Z_NEAR)
+    expect(UNIVERSE_HOP_TUNNEL_SIGHT).toBeGreaterThan(UNIVERSE_HOP_TUNNEL_TURN_RADIUS * Math.PI)
+    // Die Wand: nah matt, fern hell, ganz fern Nebel — und nie ganz weg.
     expect(UNIVERSE_HOP_WALL_ALPHA_FAR).toBeGreaterThan(UNIVERSE_HOP_WALL_ALPHA_NEAR)
     expect(UNIVERSE_HOP_WALL_ALPHA_NEAR).toBeGreaterThan(0)
+    expect(UNIVERSE_HOP_WALL_FOG_END).toBeGreaterThan(0)
+    expect(UNIVERSE_HOP_WALL_FOG_END).toBeLessThan(1)
+    expect(UNIVERSE_HOP_WALL_FOG_FROM).toBeGreaterThan(0.5)
   })
 
   it.each([FILES.veil, FILES.portal])('bewegt in %s nur transform und opacity', (rel) => {
