@@ -255,6 +255,12 @@ const viewportInset = `${ACTIVE_BUFF_HUD.VIEWPORT_INSET}px`
 const freeBottomGap = `${ACTIVE_BUFF_HUD.BOTTOM_GAP}px`
 const auxiliaryHudClearance = `${ACTIVE_BUFF_HUD.AUX_HUD_CLEARANCE}px`
 const drainInset = `${ACTIVE_BUFF_HUD.DRAIN_INSET}px`
+const timerSize = `${ACTIVE_BUFF_HUD.TIMER_SIZE}px`
+const timerSizeCompact = `${ACTIVE_BUFF_HUD.TIMER_SIZE_COMPACT}px`
+const timerSizeWide = `${ACTIVE_BUFF_HUD.TIMER_SIZE_WIDE}px`
+const timerUnitSize = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE}px`
+const timerUnitSizeCompact = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_COMPACT}px`
+const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
 </script>
 
 <style scoped>
@@ -1061,11 +1067,11 @@ const drainInset = `${ACTIVE_BUFF_HUD.DRAIN_INSET}px`
 }
 
 .buff-bar--free .chip-seconds {
-  font-size: 12px;
+  font-size: v-bind(timerSize);
 }
 
 .buff-bar--free .chip-unit {
-  font-size: 9px;
+  font-size: v-bind(timerUnitSize);
 }
 
 .buff-bar--free .chip-clock--endless {
@@ -1127,6 +1133,14 @@ const drainInset = `${ACTIVE_BUFF_HUD.DRAIN_INSET}px`
   .buff-bar--free .chip-track {
     top: calc(v-bind(freeIconCompact) - 2px);
   }
+
+  .buff-bar--free .chip-seconds {
+    font-size: v-bind(timerSizeCompact);
+  }
+
+  .buff-bar--free .chip-unit {
+    font-size: v-bind(timerUnitSizeCompact);
+  }
 }
 
 @media (min-width: 2400px) {
@@ -1151,7 +1165,21 @@ const drainInset = `${ACTIVE_BUFF_HUD.DRAIN_INSET}px`
   }
 
   .buff-bar--free .chip-seconds {
-    font-size: 13px;
+    font-size: v-bind(timerSizeWide);
+  }
+
+  .buff-bar--free .chip-unit {
+    font-size: v-bind(timerUnitSizeWide);
+  }
+}
+
+@media (min-width: 3400px) {
+  .buff-bar--free .chip-seconds {
+    font-size: v-bind(timerSizeWide);
+  }
+
+  .buff-bar--free .chip-unit {
+    font-size: v-bind(timerUnitSizeWide);
   }
 }
 
