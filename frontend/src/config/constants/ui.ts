@@ -1373,6 +1373,24 @@ export const JOURNEY_BUFF_PANEL = {
   COLS: 4,
 } as const
 
+export const ACTIVE_BUFF_HUD = {
+  TILE_SIZE: 108,
+  TILE_SIZE_COMPACT: 88,
+  TILE_SIZE_WIDE: 122,
+  ICON_SIZE: 80,
+  ICON_SIZE_COMPACT: 66,
+  ICON_SIZE_WIDE: 92,
+  GAP: 8,
+  GAP_COMPACT: 6,
+  GAP_WIDE: 10,
+  COLS: 3,
+  PANEL_INSET: 20,
+  VIEWPORT_INSET: 24,
+  BOTTOM_GAP: 12,
+  AUX_HUD_CLEARANCE: 46,
+  DRAIN_INSET: 6,
+} as const
+
 /** Die Unterseiten des Journey-Reiters, in Leistenreihenfolge. */
 export const JOURNEY_SUBPAGES: readonly { id: JourneySubpageId; label: string; icon: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'lucide:layout-dashboard' },
