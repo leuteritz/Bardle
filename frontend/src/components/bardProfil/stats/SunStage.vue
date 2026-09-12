@@ -266,7 +266,6 @@ function handleSunKey(e: KeyboardEvent): void {
       <div
         class="se-sun"
         :class="{ 'is-armed': canEvolveNow, 'is-working': solarStore.isUpgrading }"
-        v-tip="sunTip"
         :role="canEvolveNow ? 'button' : null"
         :tabindex="canEvolveNow ? 0 : null"
         :aria-label="canEvolveNow ? sunTip : null"
@@ -485,7 +484,6 @@ function handleSunKey(e: KeyboardEvent): void {
 .se-sun {
   position: relative;
   flex-shrink: 0;
-  cursor: help;
 }
 
 /* Bereit = der Körper IST der Knopf. Hover fährt nur `transform`. */
