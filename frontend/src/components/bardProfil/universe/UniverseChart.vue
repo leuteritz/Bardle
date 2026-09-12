@@ -61,6 +61,7 @@ import UniverseOriginTip from './UniverseOriginTip.vue'
 import UniversePortal from './UniversePortal.vue'
 import UniverseDepartureTip from './UniverseDepartureTip.vue'
 import UniverseDisc from './UniverseDisc.vue'
+import UniverseOfferCommand from './UniverseOfferCommand.vue'
 import {
   UNIVERSE_MAP_DIVE_ARRIVE_MS,
   UNIVERSE_MAP_DIVE_EASE_ARRIVE,
@@ -338,7 +339,6 @@ const portalLabelStyle = computed(() => {
     '--un-portal-tint': portalTint.value,
   }
 })
-
 
 // ── Die Angebotsportale ─────────────────────────────────────────────────────
 /**
@@ -629,7 +629,14 @@ function paintGround() {
   const ctx = el.getContext('2d')
   if (!ctx) return
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  paintUniverseGround(ctx, w, h, UNIVERSE_MAP_PENUMBRA_SEED, props.selection.universe, viewTint.value)
+  paintUniverseGround(
+    ctx,
+    w,
+    h,
+    UNIVERSE_MAP_PENUMBRA_SEED,
+    props.selection.universe,
+    viewTint.value,
+  )
 }
 
 function paintRim() {
@@ -761,7 +768,6 @@ const diveLeaveDur = `${UNIVERSE_MAP_DIVE_LEAVE_MS}ms`
 const diveArriveDur = `${UNIVERSE_MAP_DIVE_ARRIVE_MS}ms`
 const diveEaseLeave = UNIVERSE_MAP_DIVE_EASE_LEAVE
 const diveEaseArrive = UNIVERSE_MAP_DIVE_EASE_ARRIVE
-
 </script>
 
 <template>
@@ -848,7 +854,12 @@ const diveEaseArrive = UNIVERSE_MAP_DIVE_EASE_ARRIVE
 
         <!-- Ein Knopf je Knoten. Kein Schein, kein Zierrat — den malt das Canvas
              darunter; hier liegt nur, was auf Zeiger und Tastatur antwortet. -->
-        <RpgBadgeTooltip v-for="mark in marks" :key="mark.node.galaxy" passive :accent="mark.accent">
+        <RpgBadgeTooltip
+          v-for="mark in marks"
+          :key="mark.node.galaxy"
+          passive
+          :accent="mark.accent"
+        >
           <button
             class="un-node"
             :class="{
@@ -907,6 +918,13 @@ const diveEaseArrive = UNIVERSE_MAP_DIVE_EASE_ARRIVE
         </template>
       </RpgBadgeTooltip>
     </div>
+
+    <UniverseOfferCommand
+      v-if="offers.length && isHere && zoomStep === 0 && !dive && departingUniverse === null"
+      :offers="offers"
+      :hovered-universe="hoveredOffer"
+      @hover="hoveredOffer = $event"
+    />
 
     <!-- Die Trefferflaeche des Portals liegt NACH der fahrenden Ebene, also
          ueber der Kartenplatte: die faengt Klicks ueber ihr ganzes Quadrat, und
@@ -1002,7 +1020,6 @@ const diveEaseArrive = UNIVERSE_MAP_DIVE_EASE_ARRIVE
         />
       </template>
     </RpgBadgeTooltip>
-
   </div>
 </template>
 
@@ -1192,7 +1209,6 @@ const diveEaseArrive = UNIVERSE_MAP_DIVE_EASE_ARRIVE
   }
 }
 
-
 /* Beim Ueberfahren haelt ALLES an — Bahn, Wolke und Wall gemeinsam.
    Am aeusseren Rand wandert ein Knoten mit 7,4 px/s und verlaesst seine
    26-px-Trefferflaeche in 1,75 s: die Hover-Karte risse mitten im Lesen ab.
@@ -1221,8 +1237,7 @@ const diveEaseArrive = UNIVERSE_MAP_DIVE_EASE_ARRIVE
    Trefferflaeche laeuft; das Portal steht fest, und ein Durchgang, der auf den
    Blick hin anzieht, ist selbst die Auskunft: hier geht es weiter. Was es beim
    Ueberfahren tut, steht in `UniversePortal.vue`. */
-.un-stage:has(.un-portal-hit:hover, .un-portal-hit:focus-visible)
-  :deep(.un-hero .uni-disc-l) {
+.un-stage:has(.un-portal-hit:hover, .un-portal-hit:focus-visible) :deep(.un-hero .uni-disc-l) {
   animation-play-state: paused;
 }
 
