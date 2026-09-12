@@ -68,6 +68,16 @@ export interface UniverseRailInput {
   currentLost: number
 }
 
+/** Sichtbare Karten: aktives Universum zuerst, danach befreite Universen. */
+export function visibleUniverseRailRows(rows: readonly UniverseRailRow[]): UniverseRailRow[] {
+  return rows
+    .filter((row) => row.current || row.pickable)
+    .sort((a, b) => {
+      if (a.current !== b.current) return a.current ? -1 : 1
+      return b.id - a.id
+    })
+}
+
 interface Tally {
   galaxies: number
   rescued: number
@@ -142,9 +152,7 @@ export function buildUniverseRailRows(input: UniverseRailInput): UniverseRailRow
       lost,
       elapsed,
       progress: Math.min(1, galaxies / deepest),
-      note: walked
-        ? `${state}, ${galaxies} freed, ${rescued} stars rescued, ${lost} lost`
-        : state,
+      note: walked ? `${state}, ${galaxies} freed, ${rescued} stars rescued, ${lost} lost` : state,
     }
   })
 }
