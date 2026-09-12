@@ -100,6 +100,8 @@ const history = computed<GameEvent[]>(() => {
 /** Die ganze gefilterte Historie — davon liest Copy, nicht die Spur. */
 const rows = computed(() => history.value.filter((e) => inTab(e, activeTab.value)))
 
+const emptyState = computed(() => EVENT_GROUP_EMPTY[activeTab.value])
+
 const trailRows = computed(() => rows.value.slice(0, EVENT_LOG_TRAIL_MAX_ROWS))
 
 /** Was die Spur zeigt: live — oder der Stand, an dem gerade gelesen wird. */
@@ -325,9 +327,22 @@ onUnmounted(() => {
       :class="{ 'elp-trail--scrolled': scrolled }"
       role="log"
     >
-      <p v-if="!rows.length" key="empty" class="elp-empty">
-        {{ EVENT_GROUP_EMPTY[activeTab] }}
-      </p>
+      <div
+        v-if="!rows.length"
+        key="empty"
+        class="elp-empty"
+        :style="{ '--empty-color': emptyState.color }"
+        role="status"
+      >
+        <div class="elp-empty-mark" aria-hidden="true">
+          <Icon :icon="emptyState.icon" class="elp-empty-icon" width="48" height="48" />
+        </div>
+        <div class="elp-empty-copy">
+          <span class="elp-empty-eyebrow">{{ emptyState.eyebrow }}</span>
+          <strong class="elp-empty-title">{{ emptyState.title }}</strong>
+          <span class="elp-empty-detail">{{ emptyState.detail }}</span>
+        </div>
+      </div>
       <div
         v-for="(event, index) in displayRows"
         :key="event.id"
@@ -606,9 +621,66 @@ onUnmounted(() => {
 }
 
 .elp-empty {
-  padding: 4px 11px;
-  color: #6d5a3a;
-  font-size: 12px;
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: clamp(24px, 4cqw, 48px) 12px;
+  color: var(--empty-color, #e8c040);
+  text-align: center;
+}
+
+.elp-empty-mark {
+  display: grid;
+  width: clamp(42px, 5.4cqw, 60px);
+  height: clamp(42px, 5.4cqw, 60px);
+  place-items: center;
+  border: 1px solid var(--empty-color, #e8c040);
+  border-radius: 4px;
+  opacity: 0.74;
+  transform: rotate(45deg);
+}
+
+.elp-empty-icon {
+  width: clamp(28px, 3.7cqw, 42px);
+  height: clamp(28px, 3.7cqw, 42px);
+  transform: rotate(-45deg);
+}
+
+.elp-empty-copy {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  max-width: 100%;
+}
+
+.elp-empty-eyebrow {
+  color: #a27a42;
+  font-size: clamp(9px, 1.3cqw, 12px);
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  line-height: 1;
+}
+
+.elp-empty-title {
+  max-width: 100%;
+  color: var(--empty-color, #e8c040);
+  font-size: clamp(24px, 4.2cqw, 38px);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  text-shadow: 0 0 14px color-mix(in oklab, var(--empty-color, #e8c040) 34%, transparent);
+}
+
+.elp-empty-detail {
+  max-width: 30em;
+  color: #a89572;
+  font-size: clamp(12px, 1.65cqw, 15px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 
 .elp-row-enter-active {

@@ -84,13 +84,51 @@ export const EVENT_GROUPS = [
 
 export type EventTabId = (typeof EVENT_GROUPS)[number]['id']
 
-/** Leerzustand je Tab — der Satz sagt, was hier stuende, wenn etwas da waere. */
-export const EVENT_GROUP_EMPTY: Record<EventTabId, string> = {
-  all: 'Nothing recorded yet.',
-  combat: 'No combat yet.',
-  cosmos: 'The cosmos is quiet.',
-  progress: 'No progress logged yet.',
-  system: 'No system messages.',
+export interface EventGroupEmptyState {
+  eyebrow: string
+  title: string
+  detail: string
+  icon: string
+  color: string
+}
+
+/** Leerzustand je Tab — der Zustand sagt, was hier stuende, wenn etwas da waere. */
+export const EVENT_GROUP_EMPTY: Record<EventTabId, EventGroupEmptyState> = {
+  all: {
+    eyebrow: 'ALL SIGNALS',
+    title: 'Nothing logged yet.',
+    detail: 'Your next discovery will appear here.',
+    icon: 'ph:list-bullets',
+    color: '#e8c040',
+  },
+  combat: {
+    eyebrow: 'COMBAT TRACE',
+    title: 'The rift is waiting.',
+    detail: 'Champion clashes will be recorded here.',
+    icon: 'ph:sword',
+    color: '#fb923c',
+  },
+  cosmos: {
+    eyebrow: 'COSMIC TRACE',
+    title: 'The cosmos is quiet.',
+    detail: 'Chimes, planets, and Void signals will gather here.',
+    icon: 'ph:planet',
+    color: '#7ec8e3',
+  },
+  progress: {
+    eyebrow: 'PROGRESS TRACE',
+    title: 'The path is unwritten.',
+    detail: 'Augments, Omens, and milestones will leave their mark here.',
+    icon: 'ph:trend-up',
+    color: '#818cf8',
+  },
+  system: {
+    eyebrow: 'SYSTEM TRACE',
+    title: 'All systems are quiet.',
+    detail: 'Warnings and world updates will surface here.',
+    icon: 'ph:gear',
+    color: '#c8b89a',
+  },
 }
 
 function safeNumber(value: number) {
