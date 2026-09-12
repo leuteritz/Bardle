@@ -398,6 +398,18 @@
           :class="{ 'tree-node--spot': isSpot(node.id) }"
           :style="nodePos(node)"
         >
+          <span
+            v-if="node.tier === 'meep'"
+            class="node-meep-frame"
+            :style="{ '--node-color': node.color }"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 100 100">
+              <polygon class="node-meep-frame-outer" :points="FORGE_MEEP_FRAME_POINTS" />
+              <polygon class="node-meep-frame-inner" :points="FORGE_MEEP_FRAME_INNER_POINTS" />
+              <polygon class="node-meep-frame-core" :points="FORGE_MEEP_FRAME_CORE_POINTS" />
+            </svg>
+          </span>
           <div
             class="node-circle"
             :class="[
@@ -440,12 +452,6 @@
             @mouseleave="setTreeHover(null)"
           >
             <span class="node-glow" aria-hidden="true" />
-            <span v-if="node.tier === 'meep'" class="node-meep-frame" aria-hidden="true">
-              <svg viewBox="0 0 100 100">
-                <polygon class="node-meep-frame-outer" :points="FORGE_MEEP_FRAME_POINTS" />
-                <polygon class="node-meep-frame-inner" :points="FORGE_MEEP_FRAME_INNER_POINTS" />
-              </svg>
-            </span>
             <!-- Der SUCHRING. Eigene, statische Ebene mit eigenem Ton — Gold ist
                „kaufbar", Grün/Rot sind die Voraussetzung. -->
             <span v-if="isSearchHit(node.id)" class="node-hit" aria-hidden="true" />
@@ -597,20 +603,6 @@
               <Icon :icon="FORGE_PIN_ICON" width="100%" height="100%" />
             </span>
 
-            <span
-              v-if="node.tier === 'meep' || entryOf(node).meepCost > 0"
-              class="meep-cost-badge"
-              :class="{
-                'meep-cost-badge--short': !entryOf(node).meepOk,
-                'meep-cost-badge--bought': entryOf(node).state === 'maxed',
-                'meep-cost-badge--confluence': node.tier === 'confluence',
-              }"
-              :style="{ '--meep-c': node.color }"
-              aria-hidden="true"
-            >
-              <img :src="FORGE_MEEP_IMAGE" alt="" />
-              <span>{{ entryOf(node).meepCost }}</span>
-            </span>
           </div>
 
           <!-- Die Karte am Knoten. Sie hängt am Hover DIESER Spalte, nicht am
@@ -731,11 +723,7 @@ import {
   FORGE_ICON_SIZE_CROWN,
   FORGE_ICON_SIZE_BOUGH,
   FORGE_ICON_SIZE_MEEP,
-  FORGE_MEEP_IMAGE,
   FORGE_MEEP_ROAD_DASH,
-  FORGE_MEEP_COST_BADGE_OFFSET_PX,
-  FORGE_MEEP_COST_BADGE_ICON_PX,
-  FORGE_MEEP_COST_BADGE,
   FORGE_SEAL_ICON_SIZE,
   FORGE_SEAL_INSET_PX,
   FORGE_SEAL_BORDER_PX,
@@ -744,9 +732,12 @@ import {
   FORGE_SEAL_POINTS,
   FORGE_MEEP_FRAME_POINTS,
   FORGE_MEEP_FRAME_INNER_POINTS,
+  FORGE_MEEP_FRAME_CORE_POINTS,
   FORGE_MEEP_FRAME_CLIP_PATH,
+  FORGE_MEEP_FRAME_OUTSET_PX,
   FORGE_MEEP_FRAME_STROKE_PX,
   FORGE_MEEP_FRAME_INNER_STROKE_PX,
+  FORGE_MEEP_FRAME_CORE_STROKE_PX,
   FORGE_RELIC_RARITY_COLOR,
   FORGE_FUSION_ICON_SIZE,
   FORGE_ICON_SIZE_CONFLUENCE,
@@ -940,8 +931,10 @@ const sealBorderPx = `${FORGE_SEAL_BORDER_PX}px`
 const sealDash = FORGE_SEAL_DASH
 const meepFrameColor = FORGE_RELIC_RARITY_COLOR.epic
 const meepFrameClipPath = FORGE_MEEP_FRAME_CLIP_PATH
+const meepFrameSize = `${FORGE_NODE_DIAMETER.meep + FORGE_MEEP_FRAME_OUTSET_PX * 2}px`
 const meepFrameStroke = String(FORGE_MEEP_FRAME_STROKE_PX)
 const meepFrameInnerStroke = String(FORGE_MEEP_FRAME_INNER_STROKE_PX)
+const meepFrameCoreStroke = String(FORGE_MEEP_FRAME_CORE_STROKE_PX)
 /* Im `viewBox`-Raum 0…100 gerechnet, nicht in px: das SVG streckt sich auf die
    Ebene, und eine px-Angabe würde mit ihr skaliert. Der Faktor ist der Kehrwert
    der Ebenenbreite, also der Knotendurchmesser abzüglich zweier Einzüge — für
@@ -2663,15 +2656,6 @@ const compassStyle = computed(() => {
  *  (`panDurationMs`), nicht als Custom Property am Komponentenrahmen. */
 const ringInset = `${-FORGE_SPOTLIGHT_RING_INSET_PX}px`
 const trailInset = `${-FORGE_TRAIL_RING_INSET_PX}px`
-const meepCostBadgeOffset = `${FORGE_MEEP_COST_BADGE_OFFSET_PX}px`
-const meepCostBadgeIcon = `${FORGE_MEEP_COST_BADGE_ICON_PX}px`
-const meepCostBadgeGap = `${FORGE_MEEP_COST_BADGE.gapPx}px`
-const meepCostBadgeMinWidth = `${FORGE_MEEP_COST_BADGE.minWidthPx}px`
-const meepCostBadgeMinHeight = `${FORGE_MEEP_COST_BADGE.minHeightPx}px`
-const meepCostBadgePadding = `${FORGE_MEEP_COST_BADGE.paddingYPx}px ${FORGE_MEEP_COST_BADGE.paddingXPx}px`
-const meepCostBadgeBorder = `${FORGE_MEEP_COST_BADGE.borderPx}px`
-const meepCostBadgeRadius = `${FORGE_MEEP_COST_BADGE.radiusPx}px`
-const meepCostBadgeFont = `${FORGE_MEEP_COST_BADGE.fontPx}px`
 const trailOpacity = String(FORGE_TRAIL_DIM_OPACITY)
 const trailWaveMs = `${FORGE_TRAIL_WAVE_MS}ms`
 const compassIconPx = FORGE_SPOTLIGHT_COMPASS_ICON_PX
@@ -3240,17 +3224,32 @@ const nextPhasePreviewStyle = computed(() => ({
   border: 2px solid #3a4048;
 }
 
+.node-circle--meep {
+  width: v-bind("nodePx.meep");
+  height: v-bind("nodePx.meep");
+  border: 0;
+  border-radius: 0;
+  clip-path: polygon(v-bind(meepFrameClipPath));
+  position: relative;
+  z-index: 1;
+}
 .node-meep-frame {
   position: absolute;
-  inset: 0;
+  top: 50%;
+  left: 50%;
+  width: v-bind(meepFrameSize);
+  height: v-bind(meepFrameSize);
+  transform: translate(-50%, -50%);
   pointer-events: none;
-  transition: opacity 0.15s;
+  z-index: 0;
+  filter: drop-shadow(0 0 3px rgba(201, 160, 255, 0.8)) drop-shadow(0 0 8px rgba(232, 192, 64, 0.35));
 }
 
 .node-meep-frame svg {
   width: 100%;
   height: 100%;
   display: block;
+  overflow: visible;
 }
 
 .node-meep-frame polygon {
@@ -3261,27 +3260,19 @@ const nextPhasePreviewStyle = computed(() => ({
 .node-meep-frame-outer {
   stroke: v-bind(meepFrameColor);
   stroke-width: v-bind(meepFrameStroke);
-  opacity: 0.9;
-}
-
-.node-meep-frame-inner {
-  stroke: var(--node-color, #e8c040);
-  stroke-width: v-bind(meepFrameInnerStroke);
-  opacity: 0.9;
-}
-
-.node-circle--meep.node-circle--locked .node-meep-frame,
-.node-circle--meep.node-circle--short .node-meep-frame {
-  opacity: 0.45;
-}
-
-.node-circle--meep.node-circle--ready .node-meep-frame,
-.node-circle--meep.node-circle--maxed .node-meep-frame {
   opacity: 1;
 }
 
-.node-circle--meep.node-circle--maxed .node-meep-frame-inner {
+.node-meep-frame-inner {
   stroke: #e8c040;
+  stroke-width: v-bind(meepFrameInnerStroke);
+  opacity: 1;
+}
+
+.node-meep-frame-core {
+  stroke: var(--node-color, #e8c040);
+  stroke-width: v-bind(meepFrameCoreStroke);
+  opacity: 1;
 }
 
 /* Ring 6 ist der GRÖSSTE nach dem Kern — grösser als ein Zweig, kleiner als ein
@@ -3317,57 +3308,6 @@ const nextPhasePreviewStyle = computed(() => ({
   line-height: 10px;
   text-align: center;
   pointer-events: none;
-}
-
-.meep-cost-badge {
-  position: absolute;
-  top: 50%;
-  right: auto;
-  left: calc(100% + v-bind(meepCostBadgeOffset));
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: v-bind(meepCostBadgeGap);
-  min-width: v-bind(meepCostBadgeMinWidth);
-  min-height: v-bind(meepCostBadgeMinHeight);
-  padding: v-bind(meepCostBadgePadding);
-  border: v-bind(meepCostBadgeBorder) solid var(--meep-c, #9fe062);
-  border-radius: v-bind(meepCostBadgeRadius);
-  background: #111008;
-  color: #e8c040;
-  font-size: v-bind(meepCostBadgeFont);
-  font-weight: 900;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-  transform: translateY(-50%);
-  white-space: nowrap;
-}
-
-.meep-cost-badge img {
-  width: v-bind(meepCostBadgeIcon);
-  height: v-bind(meepCostBadgeIcon);
-  object-fit: contain;
-}
-
-.meep-cost-badge--short {
-  border-color: #cc6050;
-  color: #cc6050;
-}
-
-.meep-cost-badge--bought {
-  border-color: #52b830;
-  color: #9fe062;
-}
-
-.meep-cost-badge--confluence {
-  border-color: #e8c040;
-  color: #f0d878;
-}
-
-.meep-cost-badge--confluence.meep-cost-badge--short {
-  border-color: #cc6050;
-  color: #cc6050;
 }
 
 /* ══════════════════════════════════════════════════
