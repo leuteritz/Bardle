@@ -413,7 +413,7 @@ onUnmounted(() => {
   border: none;
   border-radius: 3px;
   color: #8a6030;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -474,6 +474,7 @@ onUnmounted(() => {
 
 .elp-tab-count {
   font-variant-numeric: tabular-nums;
+  font-size: 12px;
 }
 
 /* Name und Icon stehen IMMER im DOM — eine Container-Query kann kein `v-if`.
@@ -687,7 +688,11 @@ onUnmounted(() => {
     height: 26px;
     padding: 0 7px;
     gap: 5px;
-    font-size: 11px;
+    font-size: 12px;
+  }
+
+  .elp-tab-count {
+    font-size: 13px;
   }
 
   .elp-tab svg,
@@ -714,10 +719,9 @@ onUnmounted(() => {
   }
 }
 
-/* Ab hier traegt JEDER Tab seinen Namen — und das ICON weicht ihm: Icon, Name
-   und Zahl wiegen zusammen 610 px in einem Innenraum von 534, das Icon allein
-   100 davon. Der Name sagt dasselbe; auf der breiten Stufe kommt es zurueck.
-   Das kleinere Polster holen die wachsenden Tabs selbst wieder herein. */
+/* Ab hier traegt JEDER Tab seinen Namen — und das ICON weicht ihm. Das kleinere
+   Polster gibt den wachsenden Namen Raum; auf der breiten Stufe kommt das Icon
+   zurueck. */
 @container (min-width: 540px) {
   .elp-tab-label {
     display: inline;
@@ -728,7 +732,11 @@ onUnmounted(() => {
   }
 
   .elp-tab {
-    padding: 0 5px;
+    padding: 0 3px;
+  }
+
+  .elp-tab-count {
+    font-size: 12px;
   }
 }
 
@@ -742,7 +750,11 @@ onUnmounted(() => {
   .elp-tab {
     height: 30px;
     padding: 0 8px;
-    font-size: 12px;
+    font-size: 13px;
+  }
+
+  .elp-tab-count {
+    font-size: 14px;
   }
 
   .elp-tab svg,

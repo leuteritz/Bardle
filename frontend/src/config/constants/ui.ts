@@ -990,15 +990,15 @@ export const EVENT_LOG_BAR_H = 28
 export const EVENT_LOG_BAR_H_MID = 32
 export const EVENT_LOG_BAR_H_WIDE = 38
 /** Was ein Tab OHNE Namen misst — Polster, Icon, Zahl. */
-export const EVENT_LOG_TAB_MIN_W = 50
-export const EVENT_LOG_TAB_MIN_W_MID = 56
-export const EVENT_LOG_TAB_MIN_W_WIDE = 68
-/** Namensstufe: das Icon weicht — es bleiben Polster (2x5) und die Zahl. */
-export const EVENT_LOG_TAB_MIN_W_NAMES = 36
+export const EVENT_LOG_TAB_MIN_W = 52
+export const EVENT_LOG_TAB_MIN_W_MID = 58
+export const EVENT_LOG_TAB_MIN_W_WIDE = 69
+/** Namensstufe: das Icon weicht — es bleiben Polster (2x3) und die Zahl. */
+export const EVENT_LOG_TAB_MIN_W_NAMES = 32
 /** Was davon die ZAHL wiegt (dreistellig plus Abstand). */
-export const EVENT_LOG_TAB_COUNT_W = 22
-export const EVENT_LOG_TAB_COUNT_W_MID = 26
-export const EVENT_LOG_TAB_COUNT_W_WIDE = 30
+export const EVENT_LOG_TAB_COUNT_W = 24
+export const EVENT_LOG_TAB_COUNT_W_MID = 27
+export const EVENT_LOG_TAB_COUNT_W_WIDE = 31
 /** Was ein randloser Werkzeugknopf misst (Copy, Clear, Chevron). */
 export const EVENT_LOG_TOOL_W = 22
 export const EVENT_LOG_TOOL_W_MID = 26
