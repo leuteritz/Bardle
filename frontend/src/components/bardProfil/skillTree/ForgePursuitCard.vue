@@ -24,6 +24,7 @@
     <ForgeOfferRow
       :offer="offer"
       :fresh="false"
+      :focus-pinned="false"
       :can-reroll="false"
       @buy="handleBuy"
       @hover="handleHover"

@@ -101,7 +101,10 @@
     <button
       v-else
       class="fc-act fo-act"
-      :class="{ 'fc-act--gold': offer.kind === 'bargain' }"
+      :class="{
+        'fc-act--gold': offer.kind === 'bargain',
+        'fo-act--focus': focusPinned,
+      }"
       :disabled="!offer.ready"
       :title="offer.ready ? `${offer.verb} ${offer.name}` : gated ? FORGE_OFFER_LOCKED_TITLE : FORGE_OFFER_SHORT_TITLE"
       @click="$emit('buy', offer.id)"
@@ -159,6 +162,11 @@ import {
   FORGE_OFFER_COST_IMAGE_PX,
   FORGE_OFFER_FREE_LABEL,
   FORGE_OFFER_GLYPH_SIZE,
+  FORGE_OFFER_FOCUS_BUTTON_FONT_PX,
+  FORGE_OFFER_FOCUS_BUTTON_MIN_HEIGHT_PX,
+  FORGE_OFFER_FOCUS_BUTTON_MIN_WIDTH_PX,
+  FORGE_OFFER_FOCUS_BUTTON_PADDING_X_PX,
+  FORGE_OFFER_FOCUS_BUTTON_PADDING_Y_PX,
   FORGE_OFFER_SHINE_MS,
   FORGE_OFFER_REROLL_ICON,
   FORGE_OFFER_REROLL_TITLE,
@@ -171,6 +179,7 @@ const props = defineProps<{
   offer: ForgeOffer
   /** Seit dem letzten Blick des Spielers erreichbar geworden. */
   fresh: boolean
+  focusPinned: boolean
   canReroll: boolean
 }>()
 
@@ -193,6 +202,11 @@ const shineDuration = `${FORGE_OFFER_SHINE_MS}ms`
 /* Statisch, einmal je Zeile — kein Frame-Wert (Performance-Regel 3). */
 const freshBadgeSize = `${FORGE_FRESH_BADGE_OFFER_PX}px`
 const costImageSize = `${FORGE_OFFER_COST_IMAGE_PX}px`
+const focusButtonFontSize = `${FORGE_OFFER_FOCUS_BUTTON_FONT_PX}px`
+const focusButtonMinHeight = `${FORGE_OFFER_FOCUS_BUTTON_MIN_HEIGHT_PX}px`
+const focusButtonMinWidth = `${FORGE_OFFER_FOCUS_BUTTON_MIN_WIDTH_PX}px`
+const focusButtonPaddingX = `${FORGE_OFFER_FOCUS_BUTTON_PADDING_X_PX}px`
+const focusButtonPaddingY = `${FORGE_OFFER_FOCUS_BUTTON_PADDING_Y_PX}px`
 </script>
 
 <style scoped>
@@ -509,6 +523,13 @@ const costImageSize = `${FORGE_OFFER_COST_IMAGE_PX}px`
   .fo-sold {
     min-width: 70px;
   }
+}
+
+.fo-act--focus {
+  min-width: v-bind(focusButtonMinWidth);
+  min-height: v-bind(focusButtonMinHeight);
+  padding: v-bind(focusButtonPaddingY) v-bind(focusButtonPaddingX);
+  font-size: v-bind(focusButtonFontSize);
 }
 
 @media (prefers-reduced-motion: reduce) {

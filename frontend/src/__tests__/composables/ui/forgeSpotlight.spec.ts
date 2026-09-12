@@ -18,6 +18,8 @@ describe('useForgeSpotlight', () => {
     treeHoverId,
     pinnedId,
     focusTick,
+    offerFocusTick,
+    offerFocusPinned,
     listHovering,
     pinned,
     setListHover,
@@ -224,6 +226,49 @@ describe('useForgeSpotlight', () => {
       const before = focusTick.value
       resetForgeSpotlight()
       expect(focusTick.value).toBe(before)
+    })
+  })
+
+  describe('offerFocusTick', () => {
+    it('meldet den Star-Core-Impuls über getrennte Leser hinweg', () => {
+      const tree = useForgeSpotlight()
+      const shop = useForgeSpotlight()
+      const before = offerFocusTick.value
+
+      tree.focusOffers()
+
+      expect(offerFocusTick.value).toBe(before + 1)
+      expect(shop.offerFocusTick.value).toBe(before + 1)
+    })
+
+    it('bleibt beim Aufräumen ohne neuen Scroll-Impuls', () => {
+      const before = offerFocusTick.value
+      useForgeSpotlight().focusOffers()
+      const focused = offerFocusTick.value
+
+      resetForgeSpotlight()
+
+      expect(focused).toBe(before + 1)
+      expect(offerFocusTick.value).toBe(focused)
+    })
+
+    it('hält den Special-Offers-Fokus bis zu einem anderen Ziel', () => {
+      const tree = useForgeSpotlight()
+
+      tree.focusOffers()
+      expect(offerFocusPinned.value).toBe(true)
+
+      tree.setPin('upgrade_node')
+      expect(offerFocusPinned.value).toBe(false)
+    })
+
+    it('lässt sich ausdrücklich lösen', () => {
+      const tree = useForgeSpotlight()
+
+      tree.focusOffers()
+      tree.clearOfferFocus()
+
+      expect(offerFocusPinned.value).toBe(false)
     })
   })
 

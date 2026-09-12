@@ -18,6 +18,7 @@
     tag="div"
     class="buff-bar"
     :class="{
+      'buff-bar--free': props.dock === 'free',
       'buff-bar--docked': props.dock === 'rail',
       'buff-bar--pause': props.dock === 'pause',
       'buff-bar--empty': props.dock === 'pause' && chips.length === 0,
@@ -42,6 +43,9 @@
         },
       ]"
       :style="{ '--chip-color': chip.color, '--chip-rank': chip.rankColor }"
+      :aria-label="buffAriaLabel(chip)"
+      tabindex="0"
+      v-tip="buffTip(chip)"
     >
       <!-- Stufe 3: statischer Schein, animiert wird nur seine Deckkraft. -->
       <span v-if="chip.tier === 3" class="chip-aura" aria-hidden="true"></span>
@@ -56,7 +60,7 @@
       >
 
       <!-- Die Bühne IST die Uhr: der Ring läuft gegen den Uhrzeigersinn leer. -->
-      <span class="chip-icon" :title="chip.name">
+      <span class="chip-icon">
         <svg class="chip-ring" viewBox="0 0 100 100" aria-hidden="true">
           <circle class="chip-ring__track" cx="50" cy="50" :r="RING_R" />
           <circle
@@ -89,8 +93,15 @@
           <span class="chip-seconds">{{ chip.timer.secondsLeft }}</span>
           <span class="chip-unit">s</span>
         </span>
-        <span v-else class="chip-clock chip-clock--endless">galaxy</span>
+        <span v-else class="chip-clock chip-clock--endless">{{ props.dock === 'free' ? '∞' : 'galaxy' }}</span>
       </span>
+
+      <span
+        v-if="props.dock === 'free'"
+        class="chip-track"
+        :style="{ transform: `scaleX(${chip.timer ? chip.timer.progress : 1})` }"
+        aria-hidden="true"
+      />
     </div>
 
     <!-- Pause-Band: der Platz für „+N" ist IMMER reserviert, auch leer — sonst
@@ -117,10 +128,12 @@ import {
   BUFF_STACK_ROW_H_COMPACT,
   BUFF_STACK_TOP_GAP,
   BUFF_STACK_W,
+  ACTIVE_BUFF_HUD,
   DRIFTER_BUFF_EXPIRY_WARN_SEC,
   PAUSE_KIT_EFFECT_COLS,
 } from '@/config/constants'
 import type { AbilityBarDock } from '@/types'
+import type { TipValue } from '@/utils/ui/tipDirective'
 
 /** Where the stack stands — see `AbilityBarDock`. Decided by App.vue. */
 const props = withDefaults(defineProps<{ dock?: AbilityBarDock }>(), { dock: 'free' })
@@ -145,6 +158,21 @@ const chips = computed<BuffChip[]>(() =>
 
 function isExpiring(chip: BuffChip): boolean {
   return chip.timer !== null && chip.timer.secondsLeft <= DRIFTER_BUFF_EXPIRY_WARN_SEC
+}
+
+function buffAriaLabel(chip: BuffChip): string {
+  const duration = chip.timer ? `${chip.timer.secondsLeft}s remaining` : 'until galaxy end'
+  return `${chip.name}: ${chip.multiplier}× ${chip.label}, ${duration}`
+}
+
+function buffTip(chip: BuffChip): TipValue {
+  const duration = chip.timer ? `${chip.timer.secondsLeft}s remaining` : 'until galaxy end'
+  return {
+    label: chip.source === 'drifter' ? 'Drifter blessing' : 'Active effect',
+    labelAccent: chip.name,
+    text: `${chip.multiplier}× ${chip.label} · ${duration}`,
+    color: chip.color,
+  }
 }
 
 /* ── Wie viele Zeilen passen in das Band ──────────────────────────────────
@@ -199,8 +227,8 @@ const visibleChips = computed<BuffChip[]>(() => {
   const all = chips.value
   if (props.dock === 'pause') return all.slice(0, PAUSE_KIT_EFFECT_COLS)
   if (props.dock === 'rail') return all
-  if (all.length <= fitRows.value) return all
-  return all.slice(Math.max(0, all.length - fitRowsWithMore.value))
+  if (all.length <= ACTIVE_BUFF_HUD.COLS) return all
+  return all.slice(-(ACTIVE_BUFF_HUD.COLS - 1))
 })
 
 const overflowCount = computed(() => chips.value.length - visibleChips.value.length)
@@ -213,6 +241,26 @@ const moreH = `${BUFF_STACK_MORE_H}px`
 const rowW = `${BUFF_STACK_W}px`
 const topGap = `${BUFF_STACK_TOP_GAP}px`
 const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
+const freeTile = `${ACTIVE_BUFF_HUD.TILE_SIZE}px`
+const freeTileCompact = `${ACTIVE_BUFF_HUD.TILE_SIZE_COMPACT}px`
+const freeTileWide = `${ACTIVE_BUFF_HUD.TILE_SIZE_WIDE}px`
+const freeIcon = `${ACTIVE_BUFF_HUD.ICON_SIZE}px`
+const freeIconCompact = `${ACTIVE_BUFF_HUD.ICON_SIZE_COMPACT}px`
+const freeIconWide = `${ACTIVE_BUFF_HUD.ICON_SIZE_WIDE}px`
+const freeGap = `${ACTIVE_BUFF_HUD.GAP}px`
+const freeGapCompact = `${ACTIVE_BUFF_HUD.GAP_COMPACT}px`
+const freeGapWide = `${ACTIVE_BUFF_HUD.GAP_WIDE}px`
+const panelInset = `${ACTIVE_BUFF_HUD.PANEL_INSET}px`
+const viewportInset = `${ACTIVE_BUFF_HUD.VIEWPORT_INSET}px`
+const freeBottomGap = `${ACTIVE_BUFF_HUD.BOTTOM_GAP}px`
+const auxiliaryHudClearance = `${ACTIVE_BUFF_HUD.AUX_HUD_CLEARANCE}px`
+const drainInset = `${ACTIVE_BUFF_HUD.DRAIN_INSET}px`
+const timerSize = `${ACTIVE_BUFF_HUD.TIMER_SIZE}px`
+const timerSizeCompact = `${ACTIVE_BUFF_HUD.TIMER_SIZE_COMPACT}px`
+const timerSizeWide = `${ACTIVE_BUFF_HUD.TIMER_SIZE_WIDE}px`
+const timerUnitSize = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE}px`
+const timerUnitSizeCompact = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_COMPACT}px`
+const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
 </script>
 
 <style scoped>
@@ -869,4 +917,270 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
   letter-spacing: 0.06em;
   color: #8a7a62;
 }
+.buff-bar--free {
+  --chip-w: v-bind(freeTile);
+  --chip-h: v-bind(freeTile);
+  --chip-gap: v-bind(freeGap);
+  top: auto;
+  right: calc(v-bind(panelInset) * var(--hud-scale, 1));
+  bottom: calc(
+    var(--hud-panel-size, 330px) + var(--kb-hud-h, 0px) + v-bind(freeBottomGap) +
+      v-bind(auxiliaryHudClearance)
+  );
+  width: min(
+    calc(var(--hud-panel-size, 330px) - v-bind(panelInset)),
+    calc(100vw - v-bind(viewportInset))
+  );
+  max-width: calc(100vw - v-bind(viewportInset));
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: var(--chip-gap);
+  overflow: visible;
+}
+
+.buff-bar--free .buff-chip,
+.buff-bar--free .buff-more {
+  box-sizing: border-box;
+  flex: 0 0 var(--chip-w);
+  width: var(--chip-w);
+  height: var(--chip-h);
+}
+
+.buff-bar--free .buff-chip {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+  cursor: default;
+  pointer-events: auto;
+  transition: transform 160ms ease;
+}
+
+.buff-bar--free .buff-chip:hover,
+.buff-bar--free .buff-chip:focus-visible,
+.buff-bar--free .buff-more:hover,
+.buff-bar--free .buff-more:focus-visible {
+  transform: translateY(-3px);
+}
+
+.buff-bar--free .buff-chip:focus-visible,
+.buff-bar--free .buff-more:focus-visible {
+  outline: 1px solid #e8c040;
+  outline-offset: 2px;
+}
+
+.buff-bar--free .chip-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  flex: 0 0 v-bind(freeIcon);
+  place-items: center;
+  width: v-bind(freeIcon);
+  height: v-bind(freeIcon);
+  background: #141410;
+  border: 1px solid var(--chip-rank, #5c3310);
+  border-radius: 3px;
+}
+
+.buff-bar--free .buff-chip--t2 .chip-icon {
+  border-width: 2px;
+  border-color: var(--chip-rank, #4a90e2);
+}
+
+.buff-bar--free .buff-chip--t3 .chip-icon {
+  background: #1c1608;
+  border: 2px solid #e8c040;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px #6e4f17,
+    0 0 16px #6e4f17;
+}
+
+.buff-bar--free .buff-chip--t3 .chip-icon::before {
+  position: absolute;
+  inset: 3px;
+  border: 1px solid #8a6522;
+  border-radius: 2px;
+  content: '';
+  pointer-events: none;
+}
+
+.buff-bar--free .chip-icon__art {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+}
+
+.buff-bar--free .chip-icon__glyph {
+  width: 58%;
+  height: 58%;
+}
+
+.buff-bar--free .chip-ring {
+  display: none;
+}
+
+.buff-bar--free .chip-aura {
+  inset: 0;
+  border-radius: 3px;
+}
+
+.buff-bar--free .chip-pulse {
+  top: 0;
+  right: v-bind(drainInset);
+  bottom: auto;
+  left: v-bind(drainInset);
+  height: v-bind(freeIcon);
+  border-radius: 3px;
+}
+
+.buff-bar--free .chip-gem {
+  z-index: 3;
+}
+
+.buff-bar--free .chip-side {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  width: 100%;
+  height: calc(var(--chip-h) - v-bind(freeIcon));
+  min-height: 17px;
+  margin: 0;
+  background: #111008;
+  border-top: 1px solid #3e200a;
+}
+
+.buff-bar--free .chip-clock {
+  justify-content: center;
+  min-width: 3.2ch;
+}
+
+.buff-bar--free .chip-seconds {
+  font-size: v-bind(timerSize);
+}
+
+.buff-bar--free .chip-unit {
+  font-size: v-bind(timerUnitSize);
+}
+
+.buff-bar--free .chip-clock--endless {
+  min-width: 0;
+  color: #8a7a58;
+  font-size: 16px;
+}
+
+.buff-bar--free .chip-text {
+  display: none;
+}
+
+.buff-bar--free .chip-track {
+  position: absolute;
+  right: v-bind(drainInset);
+  left: v-bind(drainInset);
+  top: calc(v-bind(freeIcon) - 2px);
+  z-index: 3;
+  height: 2px;
+  transform-origin: left center;
+  background: var(--chip-color, #5c3310);
+  opacity: 0.9;
+  pointer-events: none;
+  transition: transform 1s linear;
+}
+
+.buff-bar--free .buff-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: #e8c040;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: 18px;
+  font-weight: 900;
+  pointer-events: auto;
+  cursor: default;
+}
+
+@media (max-height: 1100px) {
+  .buff-bar--free {
+    --chip-w: v-bind(freeTileCompact);
+    --chip-h: v-bind(freeTileCompact);
+    --chip-gap: v-bind(freeGapCompact);
+  }
+
+  .buff-bar--free .chip-icon {
+    flex-basis: v-bind(freeIconCompact);
+    width: v-bind(freeIconCompact);
+    height: v-bind(freeIconCompact);
+  }
+
+  .buff-bar--free .chip-pulse {
+    height: v-bind(freeIconCompact);
+  }
+
+  .buff-bar--free .chip-track {
+    top: calc(v-bind(freeIconCompact) - 2px);
+  }
+
+  .buff-bar--free .chip-seconds {
+    font-size: v-bind(timerSizeCompact);
+  }
+
+  .buff-bar--free .chip-unit {
+    font-size: v-bind(timerUnitSizeCompact);
+  }
+}
+
+@media (min-width: 2400px) {
+  .buff-bar--free {
+    --chip-w: v-bind(freeTileWide);
+    --chip-h: v-bind(freeTileWide);
+    --chip-gap: v-bind(freeGapWide);
+  }
+
+  .buff-bar--free .chip-icon {
+    flex-basis: v-bind(freeIconWide);
+    width: v-bind(freeIconWide);
+    height: v-bind(freeIconWide);
+  }
+
+  .buff-bar--free .chip-pulse {
+    height: v-bind(freeIconWide);
+  }
+
+  .buff-bar--free .chip-track {
+    top: calc(v-bind(freeIconWide) - 2px);
+  }
+
+  .buff-bar--free .chip-seconds {
+    font-size: v-bind(timerSizeWide);
+  }
+
+  .buff-bar--free .chip-unit {
+    font-size: v-bind(timerUnitSizeWide);
+  }
+}
+
+@media (min-width: 3400px) {
+  .buff-bar--free .chip-seconds {
+    font-size: v-bind(timerSizeWide);
+  }
+
+  .buff-bar--free .chip-unit {
+    font-size: v-bind(timerUnitSizeWide);
+  }
+}
+
 </style>

@@ -46,6 +46,9 @@ import {
   UNIVERSE_RAIL_CARD_PAD_T,
   UNIVERSE_RAIL_CARD_PAD_T_COMPACT,
   UNIVERSE_RAIL_COMPACT_MAX_VH,
+  UNIVERSE_RAIL_CURRENT_LABEL,
+  UNIVERSE_RAIL_CURRENT_ROW_H,
+  UNIVERSE_RAIL_GALAXIES_LABEL,
   UNIVERSE_RAIL_READ_H,
   UNIVERSE_RAIL_READ_H_COMPACT,
   UNIVERSE_RAIL_ROW_GAP,
@@ -125,6 +128,7 @@ const rowGap = computed(() =>
   px(compact.value ? UNIVERSE_RAIL_ROW_GAP_COMPACT : UNIVERSE_RAIL_ROW_GAP),
 )
 const cardH = computed(() => px(compact.value ? UNIVERSE_RAIL_ROW_H_COMPACT : UNIVERSE_RAIL_ROW_H))
+const currentRowH = px(UNIVERSE_RAIL_CURRENT_ROW_H)
 const cardMaxH = px(UNIVERSE_RAIL_CARD_MAX_H)
 const cardGapY = computed(() =>
   px(compact.value ? UNIVERSE_RAIL_CARD_GAP_Y_COMPACT : UNIVERSE_RAIL_CARD_GAP_Y),
@@ -163,13 +167,38 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
         :aria-pressed="row.picked"
         @click="pick(row)"
       >
-        <span class="un-rail-head">
+        <template v-if="row.current">
+          <span class="un-current-main">
+            <span class="un-current-thumb">
+              <UniverseDisc :universe="row.id" :state="row.discState" :px="discPx" />
+              <span class="un-rail-pulse" aria-hidden="true" />
+            </span>
+            <span class="un-current-body">
+              <span class="un-current-kicker">{{ UNIVERSE_RAIL_CURRENT_LABEL }}</span>
+              <span class="un-current-name">
+                <span class="un-current-prefix">Universe</span>
+                <span class="un-current-number">{{ row.roman }}</span>
+              </span>
+            </span>
+          </span>
+
+          <span class="un-current-progress">
+            <span class="un-current-progress-head">
+              <span class="un-current-progress-label">{{ UNIVERSE_RAIL_GALAXIES_LABEL }}</span>
+              <span class="un-current-count">{{ row.galaxies }}</span>
+            </span>
+            <span class="un-current-rail" aria-hidden="true">
+              <span class="un-current-fill" :style="{ transform: `scaleX(${row.progress})` }" />
+            </span>
+          </span>
+        </template>
+
+        <span v-else class="un-rail-head">
           <span class="un-rail-disc">
             <UniverseDisc :universe="row.id" :state="row.discState" :px="discPx" />
             <!-- Eigene Ebene mit statischem Schein; animiert wird nur ihre
                  Deckkraft. Nur „du bist hier" atmet. -->
             <span v-if="row.current" class="un-rail-pulse" aria-hidden="true" />
-            <span class="un-rail-roman">{{ row.roman }}</span>
           </span>
 
           <span class="sr-row-body">
@@ -180,7 +209,7 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
 
         <!-- Grad, Farbe und Ellipse kommen von `.sr-row-note` — eine zweite
              Textzeile ohne zweite Schriftskala. -->
-        <span class="sr-row-note un-rail-read">
+        <span v-if="!row.current" class="sr-row-note un-rail-read">
           <span class="un-rail-v">{{ row.galaxies }}</span> freed<span class="un-rail-sep">·</span
           ><span class="un-rail-v">{{ row.rescued }}</span
           ><span class="un-rail-slash">/</span
@@ -188,7 +217,7 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
           ><span class="un-rail-t">{{ row.elapsed }}</span>
         </span>
 
-        <span class="un-rail-bar" aria-hidden="true">
+        <span v-if="!row.current" class="un-rail-bar" aria-hidden="true">
           <span class="un-rail-fill" :style="{ transform: `scaleX(${row.progress})` }" />
         </span>
       </button>
@@ -222,6 +251,12 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
   padding: v-bind(cardPad);
 }
 
+/* Die laufende Bahn ist die Live-Karte des Reiters und bleibt als erste Karte
+   sichtbar; der Rest der Leiste verteilt nur den verbleibenden Platz. */
+.un-rail-row.is-current {
+  flex: 0 0 v-bind(currentRowH);
+}
+
 .un-rail-head {
   display: flex;
   align-items: center;
@@ -234,10 +269,13 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
 .un-rail-row.is-current {
   --sr-color: v-bind(hereColor);
 }
-.un-rail-row.is-current:not(.is-picked) {
+.un-rail-row.is-current:not(.is-picked),
+.un-rail-row.is-current.is-picked {
   background: color-mix(in srgb, v-bind(hereColor) 10%, var(--sr-row-bg));
   border-color: color-mix(in srgb, v-bind(hereColor) 55%, var(--sr-row-border));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, v-bind(hereColor) 45%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, v-bind(hereColor) 28%, transparent),
+    0 0 12px color-mix(in srgb, v-bind(hereColor) 12%, transparent);
 }
 
 /* Die gewaehlte Bahn traegt den Ton DIESES Universums, nicht den einer
@@ -247,28 +285,18 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
 .un-rail-row.is-picked {
   --sr-color: var(--un-row-tint);
 }
+.un-rail-row.is-current.is-picked {
+  --sr-color: var(--sr-accent-hi);
+  --sr-picked: var(--sr-accent-hi);
+  background: color-mix(in srgb, var(--sr-accent-hi) 18%, var(--sr-row-bg));
+  border-color: color-mix(in srgb, var(--sr-accent-hi) 82%, var(--sr-row-border));
+}
 
-/* Die Scheibe traegt die Ziffer, wie die Voyages-Miniatur (`.egr-no`) — in der
-   Namenszeile kostete sie die 24 px, die der Name braucht. */
 .un-rail-disc {
   position: relative;
   flex-shrink: 0;
   display: block;
   line-height: 0;
-}
-
-.un-rail-roman {
-  position: absolute;
-  left: 1px;
-  top: -1px;
-  font-size: 0.87em;
-  font-weight: 900;
-  line-height: 1.1;
-  color: var(--sr-accent-hi);
-  text-shadow: 0 1px 3px #000;
-}
-.un-rail-row.is-dim .un-rail-roman {
-  color: #8a7a52;
 }
 
 /* Statischer Schein, animierte Deckkraft — Performance-Regel 11. */
@@ -277,7 +305,7 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
   inset: -2px;
   border-radius: 50%;
   pointer-events: none;
-  box-shadow: 0 0 10px 2px rgba(159, 224, 98, 0.55);
+  box-shadow: 0 0 10px 2px color-mix(in srgb, var(--sr-color) 55%, transparent);
   animation: un-rail-breathe 2.6s ease-in-out infinite;
 }
 @keyframes un-rail-breathe {
@@ -292,6 +320,116 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
 
 .un-rail-row.is-current .un-rail-head .sr-row-note {
   color: v-bind(hereColor);
+}
+.un-rail-row.is-current.is-picked .un-rail-head .sr-row-note {
+  color: var(--sr-accent-hi);
+}
+
+.un-current-main {
+  display: flex;
+  align-items: center;
+  gap: 0.65em;
+  min-height: 0;
+  flex: 1;
+}
+.un-current-thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 v-bind(discPx);
+  width: v-bind(discPx);
+  height: v-bind(discPx);
+  overflow: clip;
+  border: 1px solid color-mix(in srgb, var(--sr-color) 60%, #6b5330);
+  border-radius: 3px;
+  background: #0b0806;
+}
+.un-current-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35em;
+}
+.un-current-kicker {
+  display: block;
+  overflow: hidden;
+  font-size: 0.55em;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--sr-color);
+}
+.un-current-name {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35em;
+  font-size: 1.3em;
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.un-current-prefix {
+  color: var(--sr-text);
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.un-current-number {
+  color: #e8c040;
+}
+.un-current-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  min-width: 0;
+}
+.un-current-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75em;
+}
+.un-current-progress-label {
+  font-size: 0.7em;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  color: var(--sr-color);
+}
+.un-current-count {
+  flex-shrink: 0;
+  color: #e8c040;
+  font-size: 1.3em;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.un-current-rail {
+  display: block;
+  height: 5px;
+  border: 1px solid #5c3310;
+  border-radius: 2px;
+  background: #3e200a;
+  overflow: clip;
+}
+.un-current-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  background: var(--sr-color);
+  transition: transform 0.4s ease;
 }
 
 /* ══ Die Ablesungszeile ══
@@ -341,6 +479,14 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
   pointer-events: none;
   transition: opacity 180ms ease;
 }
+.un-rail-row.is-current::after {
+  background: v-bind(hereColor);
+  opacity: 0.9;
+}
+.un-rail-row.is-current.is-picked::after {
+  background: var(--sr-accent-hi);
+  opacity: 1;
+}
 .un-rail-row:not(.is-inert):not(.is-picked):hover::after {
   opacity: 0.8;
 }
@@ -389,6 +535,7 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
     opacity: 0.7;
   }
   .un-rail-fill,
+  .un-current-fill,
   .un-rail-row::after {
     transition: none;
   }

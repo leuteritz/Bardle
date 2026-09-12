@@ -22,7 +22,6 @@ import { useGameStore } from '@/stores/core/gameStore'
 import { useGalaxyStore, computeRequired } from '@/stores/world/galaxyStore'
 import { useProvidenceStore } from '@/stores/progression/providenceStore'
 import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
-import UniverseLockedPanel from './UniverseLockedPanel.vue'
 import UniverseCrestBand from './UniverseCrestBand.vue'
 import UniverseRail from './UniverseRail.vue'
 import SideRailHandle from '@/components/ui/SideRailHandle.vue'
@@ -53,12 +52,6 @@ const { completedGalaxies, currentGalaxy, currentThemeIndex, attemptResults, lan
   storeToRefs(galaxyStore)
 
 const isVisible = computed(() => uiStore.bardActiveTab === 'universe')
-/* Das Schloss weicht auch, wenn ein Aufbruch ansteht: der Prestige-Knopf im
-   Header fuehrt hierher, und die Chimes-Schwelle und die erste befreite Galaxie
-   sind zwei verschiedene Uhren. Die laufende Bahn traegt auch ohne Archiv immer
-   den `current`-Knoten samt seinen Vorausplaetzen. */
-const isUnlocked = computed(() => completedGalaxies.value.length > 0 || gameStore.prestigeAvailable)
-
 /**
  * Die Karten des Aufbruchs — aber nur auf der LAUFENDEN Bahn.
  *
@@ -287,46 +280,42 @@ const slideMs = `${UNIVERSE_MAP_RAIL_SLIDE_MS}ms`
   <div ref="root" class="un-tab">
     <CosmicStageBackground />
 
-    <UniverseLockedPanel v-if="!isUnlocked" />
+    <UniverseCrestBand :universe="selection.universe" :chronicle="chronicle" />
 
-    <template v-else>
-      <UniverseCrestBand :universe="selection.universe" :chronicle="chronicle" />
+    <div class="un-body">
+      <UniverseChart
+        :nodes="path.nodes"
+        :departure="path.departure"
+        :offers="offers"
+        :selection="selection"
+        :visible="isVisible"
+        :arriving="arriving"
+        @select="select"
+        @open="openInGalaxy"
+        @dive="diveInto"
+      />
 
-      <div class="un-body">
-        <UniverseChart
-          :nodes="path.nodes"
-          :departure="path.departure"
-          :offers="offers"
-          :selection="selection"
-          :visible="isVisible"
-          :arriving="arriving"
-          @select="select"
-          @open="openInGalaxy"
-          @dive="diveInto"
-        />
-
-        <!-- Die Leiste faehrt als EIN Stueck seitlich hinaus; stehen bleibt die
-             Griffleiste. Sie steht im DOM HINTER der Karte, damit Tabulator und
-             Screenreader dem Bild folgen. -->
-        <div class="un-rail-zone">
-          <div
-            class="un-rail-slide"
-            :class="{ 'un-rail-slide--parked': railFolded }"
-            :inert="railInert"
-          >
-            <UniverseRail :rows="visibleRailRows" :selection="selection" @select="select" />
-          </div>
-
-          <SideRailHandle
-            :label="UNIVERSE_MAP_RAIL_HANDLE_LABEL"
-            :width-px="UNIVERSE_MAP_RAIL_HANDLE_PX"
-            :open="!railFolded"
-            :title="handleTitle"
-            @toggle="railChoice = !railFolded"
-          />
+      <!-- Die Leiste faehrt als EIN Stueck seitlich hinaus; stehen bleibt die
+           Griffleiste. Sie steht im DOM HINTER der Karte, damit Tabulator und
+           Screenreader dem Bild folgen. -->
+      <div class="un-rail-zone">
+        <div
+          class="un-rail-slide"
+          :class="{ 'un-rail-slide--parked': railFolded }"
+          :inert="railInert"
+        >
+          <UniverseRail :rows="visibleRailRows" :selection="selection" @select="select" />
         </div>
+
+        <SideRailHandle
+          :label="UNIVERSE_MAP_RAIL_HANDLE_LABEL"
+          :width-px="UNIVERSE_MAP_RAIL_HANDLE_PX"
+          :open="!railFolded"
+          :title="handleTitle"
+          @toggle="railChoice = !railFolded"
+        />
       </div>
-    </template>
+    </div>
   </div>
 </template>
 

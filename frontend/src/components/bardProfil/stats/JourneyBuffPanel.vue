@@ -4,7 +4,12 @@ import { Icon } from '@iconify/vue'
 import { useActiveBuffList } from '@/composables/ui/useActiveBuffList'
 import VitalityBar from '@/components/ui/VitalityBar.vue'
 import { usePlayerStore } from '@/stores/battle/playerStore'
-import { DRIFTER_BUFF_EXPIRY_WARN_SEC, JOURNEY_BUFF_PANEL } from '@/config/constants'
+import {
+  DRIFTER_BUFF_EXPIRY_WARN_SEC,
+  DRIFTER_RARITY_COLOR,
+  JOURNEY_BUFF_PANEL,
+} from '@/config/constants'
+import type { TipValue } from '@/utils/ui/tipDirective'
 
 const { buffs } = useActiveBuffList()
 const playerStore = usePlayerStore()
@@ -36,6 +41,32 @@ function buffAriaLabel(buff: (typeof buffs.value)[number]) {
   const duration = buff.timer ? `${buff.timer.secondsLeft}s remaining` : 'lasts this galaxy'
   return `${buff.name}: ${buff.multiplier}× ${buff.label}, ${duration}`
 }
+
+type BuffRarity = 'common' | 'uncommon' | 'rare' | 'legendary'
+
+function buffRarity(buff: (typeof buffs.value)[number]): BuffRarity | null {
+  if (buff.source !== 'drifter' || !buff.rankColor) return null
+  if (buff.rankColor === DRIFTER_RARITY_COLOR.legendary) return 'legendary'
+  if (buff.rankColor === DRIFTER_RARITY_COLOR.rare) return 'rare'
+  if (buff.rankColor === DRIFTER_RARITY_COLOR.uncommon) return 'uncommon'
+  return 'common'
+}
+
+function buffRarityClass(buff: (typeof buffs.value)[number]) {
+  const rarity = buffRarity(buff)
+  return rarity ? `is-${rarity}` : undefined
+}
+
+function buffTip(buff: (typeof buffs.value)[number]): TipValue {
+  const rarity = buffRarity(buff)
+  const duration = buff.timer ? `${buff.timer.secondsLeft}s remaining` : 'lasts this galaxy'
+  return {
+    label: rarity ? `${rarity} buff` : 'active effect',
+    labelAccent: buff.name,
+    text: `${buff.multiplier}× ${buff.label} · ${duration}`,
+    color: buff.color,
+  }
+}
 </script>
 
 <template>
@@ -46,15 +77,18 @@ function buffAriaLabel(buff: (typeof buffs.value)[number]) {
           v-for="buff in shown"
           :key="buff.key"
           class="jbp-card"
-          :class="{
-            'is-expiring': buff.timer && buff.timer.secondsLeft <= DRIFTER_BUFF_EXPIRY_WARN_SEC,
-            'is-endless': !buff.timer,
-            'is-ranked': !!buff.rankColor,
-          }"
+          :class="[
+            {
+              'is-expiring': buff.timer && buff.timer.secondsLeft <= DRIFTER_BUFF_EXPIRY_WARN_SEC,
+              'is-endless': !buff.timer,
+              'is-ranked': !!buff.rankColor,
+            },
+            buffRarityClass(buff),
+          ]"
           :style="{ '--buff': buff.color, '--buff-rank': buff.rankColor }"
           :aria-label="buffAriaLabel(buff)"
           tabindex="0"
-          v-tip="`${buff.name} — ${buff.multiplier}× ${buff.label}`"
+          v-tip="buffTip(buff)"
         >
           <span class="jbp-pulse" aria-hidden="true" />
           <span class="jbp-icon">
@@ -145,7 +179,7 @@ function buffAriaLabel(buff: (typeof buffs.value)[number]) {
   height: v-bind(chipSize);
   background: transparent;
   border: 0;
-  cursor: help;
+  cursor: default;
   outline: none;
   pointer-events: auto;
   transition: transform 160ms ease;
@@ -180,9 +214,61 @@ function buffAriaLabel(buff: (typeof buffs.value)[number]) {
   border-color: var(--buff-rank);
 }
 
+.jbp-card.is-common .jbp-icon {
+  border-color: var(--buff-rank, #9d9d9d);
+}
+
+.jbp-card.is-uncommon .jbp-icon {
+  border-width: 2px;
+}
+
+.jbp-card.is-rare .jbp-icon {
+  border-width: 2px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--buff-rank) 35%, transparent);
+}
+
+.jbp-card.is-legendary .jbp-icon {
+  background: #1c1608;
+  border: 2px solid #e8c040;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px #6e4f17,
+    0 0 16px color-mix(in srgb, #e8c040 38%, transparent);
+}
+
+.jbp-card.is-legendary .jbp-icon::before {
+  position: absolute;
+  inset: 3px;
+  border: 1px solid #8a6522;
+  border-radius: 2px;
+  content: '';
+  pointer-events: none;
+}
+
+.jbp-card.is-legendary .jbp-icon::after {
+  position: absolute;
+  top: -8px;
+  right: -7px;
+  color: #e8c040;
+  content: '✦';
+  font-size: 13px;
+  line-height: 1;
+  text-shadow: 0 0 8px #e8c040;
+  pointer-events: none;
+}
+
+.jbp-card.is-legendary .jbp-art {
+  transform: scale(1.08);
+}
+
 .jbp-card:hover .jbp-icon,
 .jbp-card:focus-visible .jbp-icon {
   border-color: var(--buff, #e8c040);
+}
+
+.jbp-card.is-legendary:hover .jbp-icon,
+.jbp-card.is-legendary:focus-visible .jbp-icon {
+  border-color: #e8c040;
 }
 
 .jbp-glyph {

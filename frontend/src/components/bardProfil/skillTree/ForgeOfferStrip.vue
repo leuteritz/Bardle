@@ -7,7 +7,13 @@
        Zeile darin; verkauft ist er weg, und dann kann der Streifen wieder leer
        sein — ein „WITHIN REACH 0" über nichts wäre schlimmer als kein
        Streifen. -->
-  <section v-if="shown.length > 0" ref="wrapEl" class="fos" @mouseleave="leaveStrip">
+  <section
+    v-if="shown.length > 0"
+    ref="wrapEl"
+    class="fos"
+    :class="{ 'fos--focused': focused, 'fos--pinned': offerFocusPinned }"
+    @mouseleave="leaveStrip"
+  >
     <header class="fos-head">
       <Icon :icon="FORGE_OFFER_ICON" width="17" height="17" class="fos-head-ico" />
       <span class="fos-head-label">{{ FORGE_OFFER_TITLE }}</span>
@@ -23,6 +29,7 @@
         :key="offer.id"
         :offer="offer"
         :fresh="freshIds.has(offer.id)"
+        :focus-pinned="offerFocusPinned"
         :can-reroll="offer.kind === 'bargain' && canReroll"
         @buy="handleBuy"
         @hover="enterRow"
@@ -64,15 +71,17 @@
  * Dasselbe Mittel wie `frozenBuckets` in `ForgeUpgradesSection` direkt darunter,
  * und aus demselben Grund.
  */
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import ForgeOfferRow from './ForgeOfferRow.vue'
 import ForgeOfferTooltip from './ForgeOfferTooltip.vue'
 import { useForgeOffers } from '@/composables/ui/useForgeOffers'
+import { useForgeSpotlight } from '@/composables/ui/useForgeSpotlight'
 import { useStarForgeStore } from '@/stores/progression/starForgeStore'
 import type { ForgeOffer, ForgeRowTipAnchor } from '@/types'
 import {
   FORGE_OFFER_COLOR,
+  FORGE_OFFER_FOCUS_FLASH_MS,
   FORGE_OFFER_ICON,
   FORGE_OFFER_LIST_MAX_COMPACT_PX,
   FORGE_OFFER_LIST_MAX_PX,
@@ -83,6 +92,7 @@ import {
 const forgeStore = useStarForgeStore()
 const { offers, offerById, freshIds, buyOffer, pursuedId, bargainExtras, rerollBargain, canReroll } =
   useForgeOffers()
+const { offerFocusTick, offerFocusPinned } = useForgeSpotlight()
 
 // ── Eingefrorene Reihenfolge ─────────────────────────────────────────────────
 const frozenIds = ref<string[] | null>(null)
@@ -118,6 +128,8 @@ const readyCount = computed(
 
 const wrapEl = ref<HTMLElement | null>(null)
 const hoverId = ref<string | null>(null)
+const focused = ref(false)
+let focusTimer: ReturnType<typeof setTimeout> | null = null
 
 /**
  * Betreten heißt zugleich GESEHEN: die pinke Marke an dieser Zeile ist damit
@@ -163,6 +175,27 @@ watch(hoverId, (id) => {
   tipAnchor.value = { top: rect.top, bottom: rect.bottom, left: rect.left }
 })
 
+watch(offerFocusTick, async () => {
+  await nextTick()
+  const strip = wrapEl.value
+  const scroller = strip?.closest<HTMLElement>('[data-forge-scroll]')
+  if (!strip || !scroller || shown.value.length === 0) return
+
+  const scrollerRect = scroller.getBoundingClientRect()
+  const stripRect = strip.getBoundingClientRect()
+  scroller.scrollTo({ top: scroller.scrollTop + stripRect.top - scrollerRect.top })
+  focused.value = true
+  if (focusTimer !== null) clearTimeout(focusTimer)
+  focusTimer = setTimeout(() => {
+    focused.value = false
+    focusTimer = null
+  }, FORGE_OFFER_FOCUS_FLASH_MS)
+})
+
+onBeforeUnmount(() => {
+  if (focusTimer !== null) clearTimeout(focusTimer)
+})
+
 const popDuration = `${FORGE_OFFER_POP_MS}ms`
 const listMax = `${FORGE_OFFER_LIST_MAX_PX}px`
 const listMaxCompact = `${FORGE_OFFER_LIST_MAX_COMPACT_PX}px`
@@ -170,9 +203,32 @@ const listMaxCompact = `${FORGE_OFFER_LIST_MAX_COMPACT_PX}px`
 
 <style scoped>
 .fos {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.fos::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 1px solid v-bind('FORGE_OFFER_COLOR');
+  border-radius: 4px;
+  opacity: 0;
+  transform: scale(0.985);
+  transition: opacity v-bind(popDuration) ease, transform v-bind(popDuration) ease;
+  pointer-events: none;
+}
+
+.fos--focused::after {
+  opacity: 0.9;
+  transform: scale(1);
+}
+
+.fos--pinned::after {
+  opacity: 0.9;
+  transform: scale(1);
 }
 
 /* `relative` trägt die abgehende Zeile: sie verlässt den Fluss, damit der Rest

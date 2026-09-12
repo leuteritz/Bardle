@@ -654,6 +654,11 @@ export const UNIVERSE_RAIL_ROW_H =
   UNIVERSE_RAIL_READ_H +
   UNIVERSE_RAIL_CARD_PAD_B
 
+/** Die laufende Bahn bekommt wie die Live-Galaxie eine eigene, groessere Karte. */
+export const UNIVERSE_RAIL_CURRENT_LABEL = 'Current universe'
+export const UNIVERSE_RAIL_GALAXIES_LABEL = 'Galaxies freed'
+export const UNIVERSE_RAIL_CURRENT_ROW_H = 108
+
 /** Wie hoch eine Karte auf einem hohen Schirm werden darf. Sie waechst per
  *  `flex-grow` in den freien Rest; darueber ist der Zuwachs nur noch Luft — die
  *  Scheibe waechst nicht mit. */

@@ -72,6 +72,8 @@ const pursuitId = ref<string | null>(null)
 const pursuitPingTick = ref(0)
 
 const focusTick = ref(0)
+const offerFocusTick = ref(0)
+const offerFocusPinned = ref(false)
 
 /**
  * „Und zwar so, dass ich ihn LESEN kann" — der zweite Impuls, und der einzige,
@@ -149,6 +151,8 @@ export function useForgeSpotlight(): {
   pursuitId: Readonly<Ref<string | null>>
   pursuitPingTick: Readonly<Ref<number>>
   focusTick: Readonly<Ref<number>>
+  offerFocusTick: Readonly<Ref<number>>
+  offerFocusPinned: Readonly<Ref<boolean>>
   readableTick: Readonly<Ref<number>>
   listHovering: ComputedRef<boolean>
   pinned: ComputedRef<boolean>
@@ -156,6 +160,8 @@ export function useForgeSpotlight(): {
   setTreeHover: (id: string | null) => void
   setPin: (id: string) => void
   refocus: () => void
+  focusOffers: () => void
+  clearOfferFocus: () => void
   focusNode: (id: string, opts?: { readable?: boolean }) => void
   clearPin: () => void
   setPursuit: (id: string) => void
@@ -180,12 +186,22 @@ export function useForgeSpotlight(): {
    * verlöre seine Auswahl durch genau die Geste, mit der er sie bestätigt.
    */
   function setPin(id: string): void {
+    offerFocusPinned.value = false
     pinnedId.value = id
   }
 
   /** Denselben Knoten noch einmal ins Bild holen, ohne den Fokus anzufassen. */
   function refocus(): void {
     focusTick.value += 1
+  }
+
+  function focusOffers(): void {
+    offerFocusPinned.value = true
+    offerFocusTick.value += 1
+  }
+
+  function clearOfferFocus(): void {
+    offerFocusPinned.value = false
   }
 
   /**
@@ -207,6 +223,7 @@ export function useForgeSpotlight(): {
 
   /** Von aussen auf einen Vault-Eintrag zeigen. */
   function setPursuit(id: string): void {
+    offerFocusPinned.value = false
     pursuitId.value = id
   }
 
@@ -235,6 +252,7 @@ export function useForgeSpotlight(): {
     treeHoverId.value = null
     pinnedId.value = null
     pursuitId.value = null
+    offerFocusPinned.value = false
   }
 
   return {
@@ -246,6 +264,8 @@ export function useForgeSpotlight(): {
     pursuitId: readonly(pursuitId),
     pursuitPingTick: readonly(pursuitPingTick),
     focusTick: readonly(focusTick),
+    offerFocusTick: readonly(offerFocusTick),
+    offerFocusPinned: readonly(offerFocusPinned),
     readableTick: readonly(readableTick),
     listHovering,
     pinned,
@@ -253,6 +273,8 @@ export function useForgeSpotlight(): {
     setTreeHover,
     setPin,
     refocus,
+    focusOffers,
+    clearOfferFocus,
     focusNode,
     clearPin,
     setPursuit,

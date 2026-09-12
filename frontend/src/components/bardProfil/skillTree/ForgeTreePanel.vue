@@ -281,7 +281,7 @@
            Komet taumelt, die Plasmascheibe atmet, und eine Zahl, die mitdreht
            oder mitpulst, ist keine Anzeige mehr. Alle vier sind absolut in der
            Mitte des Wrappers verankert und tragen ihre Größe selbst. -->
-        <div class="sun-wrapper">
+        <div class="sun-wrapper" :class="{ 'sun-wrapper--focused': offerFocusPinned }">
           <CometDisc v-if="solarStore.isCometState" :diameter="bodyDiameter" @ready="onSunReady" />
           <PhaseSunDisc v-else :diameter="bodyDiameter" @ready="onSunReady" />
           <div
@@ -290,6 +290,24 @@
             :style="nextPhasePreviewStyle"
           />
           <SunChimeBoost :diameter="bodyDiameter" :scale="totalScale" />
+          <div class="sun-focus-frame" aria-hidden="true">
+            <span class="sun-focus-frame__corner sun-focus-frame__corner--tl" />
+            <span class="sun-focus-frame__corner sun-focus-frame__corner--tr" />
+            <span class="sun-focus-frame__corner sun-focus-frame__corner--bl" />
+            <span class="sun-focus-frame__corner sun-focus-frame__corner--br" />
+          </div>
+          <button
+            class="sun-focus-button"
+            type="button"
+            :aria-pressed="offerFocusPinned"
+            :aria-label="FORGE_SUN_FOCUS_TIP"
+            v-tip="{
+              text: FORGE_SUN_FOCUS_TIP,
+              label: FORGE_SUN_FOCUS_LABEL,
+              color: FORGE_OFFER_COLOR,
+            }"
+            @click.stop="focusStarCore"
+          />
         </div>
 
         <!-- DER ANKERKNOTEN der Verfolgung — die Konstellation selbst.
@@ -760,6 +778,14 @@ import {
   FORGE_SPOTLIGHT_COMPASS_ICON,
   FORGE_SPOTLIGHT_COMPASS_ICON_PX,
   FORGE_SPOTLIGHT_COMPASS_SIZE_PX,
+  FORGE_OFFER_COLOR,
+  FORGE_OFFER_POP_MS,
+  FORGE_SUN_FOCUS_LABEL,
+  FORGE_SUN_FOCUS_TIP,
+  FORGE_SUN_FOCUS_FRAME_INSET_PX,
+  FORGE_SUN_FOCUS_FRAME_LINE_PX,
+  FORGE_SUN_FOCUS_FRAME_REST_SCALE,
+  FORGE_SUN_FOCUS_FRAME_OPACITY,
   FORGE_TREE_PAN_MS,
   FORGE_TREE_ENTRY_CORE_MS,
   FORGE_CAMERA_PAN_MIN_MS,
@@ -782,14 +808,17 @@ const {
   pinnedId,
   focusTick,
   readableTick,
+  offerFocusPinned,
   setTreeHover,
   setPin,
   refocus,
   clearPin,
+  clearOfferFocus,
   pursuitId,
   setPursuit,
   pingPursuit,
   clearPursuit,
+  focusOffers,
   resetForgeSpotlight,
 } = useForgeSpotlight()
 const { searchActive, matchIds } = useForgeSearch()
@@ -799,6 +828,7 @@ const sunReady = ref(false)
 const entryPhase = ref<'wait' | 'core' | 'complete'>('wait')
 const entryMs = `${FORGE_TREE_ENTRY_CORE_MS}ms`
 let entryTimer: ReturnType<typeof setTimeout> | null = null
+let starFocusPending = false
 
 function onSunReady(): void {
   if (sunReady.value) return
@@ -1528,6 +1558,7 @@ const pursuitNameStyle = computed(() => {
 
 /** Ein Klick im Netz ist dieselbe Geste wie der Sprung aus dem Voyages-Reiter. */
 function aimFusion(id: string): void {
+  clearOfferFocus()
   openDetails()
   if (pursuitId.value === id) pingPursuit()
   else setPursuit(id)
@@ -1870,6 +1901,7 @@ function isTooltipBelow(node: TreeNode): boolean {
  * Weg nehmen. Hier bleibt nur, was der Baum eigenes tut.
  */
 function handleNodeClick(node: TreeNode): void {
+  clearOfferFocus()
   // Spalte zu: aufklappen und fokussieren. Gekauft wird hier nicht — der Baum
   // zeigt einen Ring, keine Rechnung.
   if (!detailsOpen.value) {
@@ -2000,8 +2032,9 @@ const stageTransitionMs = computed(() =>
   isDragging.value || panInstant.value || isWheelZooming.value ? 0 : panDurationMs.value,
 )
 
-watch(detailsOpen, () => {
+watch(detailsOpen, (open) => {
   paneShift = true
+  if (!open) clearOfferFocus()
 })
 
 onMounted(() => {
@@ -2020,6 +2053,10 @@ onMounted(() => {
     if (!paneShift || prevW === 0) {
       zoom.value = clampZoom(zoom.value)
       movePan(pan.value)
+      if (starFocusPending) {
+        starFocusPending = false
+        recenterCamera()
+      }
       if (pursuitFramePending) frameToPursuit()
       return
     }
@@ -2044,6 +2081,11 @@ onMounted(() => {
       panInstant.value = false
       zoom.value = clampZoom(zoom.value)
       movePan(pan.value)
+      if (starFocusPending) {
+        starFocusPending = false
+        recenterCamera()
+        return
+      }
       /* Und erst JETZT den Fokus nachführen.
 
          Das ist der Fall, den man beim ersten Klick jedes Besuchs sieht: der
@@ -2285,9 +2327,24 @@ function onClickCapture(event: MouseEvent): void {
  *  aber nur, wenn es wirklich ein Klick war. */
 function onBackgroundClick(): void {
   if (didDrag) return
+  starFocusPending = false
+  clearOfferFocus()
   clearPin()
   clearPursuit()
   closeDetails()
+}
+
+function focusStarCore(): void {
+  clearPin()
+  clearPursuit()
+  focusOffers()
+  if (detailsOpen.value) {
+    starFocusPending = false
+    recenterCamera()
+    return
+  }
+  starFocusPending = true
+  openDetails()
 }
 
 /**
@@ -2412,6 +2469,10 @@ const recenterAtRest = computed(() => {
 
 const viewportInset = `${FORGE_VIEWPORT_INSET_PX}px`
 const zoomBarW = `${FORGE_ZOOM_BAR.w}px`
+const sunFocusFrameOutset = `-${FORGE_SUN_FOCUS_FRAME_INSET_PX}px`
+const sunFocusFrameLine = `${FORGE_SUN_FOCUS_FRAME_LINE_PX}px`
+const sunFocusFrameRestScale = String(FORGE_SUN_FOCUS_FRAME_REST_SCALE)
+const sunFocusFrameOpacity = String(FORGE_SUN_FOCUS_FRAME_OPACITY)
 
 /**
  * Die NACHFÜHRUNG — so weit wie nötig, nicht so weit wie möglich.
@@ -2660,6 +2721,7 @@ const trailOpacity = String(FORGE_TRAIL_DIM_OPACITY)
 const trailWaveMs = `${FORGE_TRAIL_WAVE_MS}ms`
 const compassIconPx = FORGE_SPOTLIGHT_COMPASS_ICON_PX
 const compassSize = `${FORGE_SPOTLIGHT_COMPASS_SIZE_PX}px`
+const sunFocusTransitionMs = `${FORGE_OFFER_POP_MS}ms`
 
 // ── Phase-colored stage vars (mirrors PlanetSelectTabComponent sunPhaseStyle) ─
 const stageStyle = computed(() => {
@@ -2996,6 +3058,105 @@ const nextPhasePreviewStyle = computed(() => ({
 /* Die Korona steckt im Halo-Sprite und wächst mit dem Körper. */
 :deep(.phase-sun-root) {
   z-index: 1;
+}
+
+.sun-focus-frame {
+  position: absolute;
+  inset: v-bind(sunFocusFrameOutset);
+  z-index: 7;
+  border: 1px solid #7a4e20;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px #3e200a,
+    inset 0 0 0 1px #5c3310;
+  opacity: 0;
+  transform: scale(v-bind(sunFocusFrameRestScale));
+  transition: opacity v-bind(sunFocusTransitionMs) ease, transform v-bind(sunFocusTransitionMs) ease;
+  pointer-events: none;
+}
+
+.sun-focus-frame::before {
+  content: '';
+  position: absolute;
+  inset: 5%;
+  border: 1px dashed #e8c040;
+  border-radius: 50%;
+  opacity: 0.42;
+}
+
+.sun-wrapper--focused .sun-focus-frame {
+  opacity: v-bind(sunFocusFrameOpacity);
+  transform: scale(1);
+}
+
+.sun-focus-frame__corner {
+  position: absolute;
+  width: 9%;
+  height: 9%;
+  border: v-bind(sunFocusFrameLine) solid #e8c040;
+}
+
+.sun-focus-frame__corner--tl {
+  top: 4%;
+  left: 4%;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.sun-focus-frame__corner--tr {
+  top: 4%;
+  right: 4%;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+.sun-focus-frame__corner--bl {
+  bottom: 4%;
+  left: 4%;
+  border-right: 0;
+  border-top: 0;
+}
+
+.sun-focus-frame__corner--br {
+  right: 4%;
+  bottom: 4%;
+  border-left: 0;
+  border-top: 0;
+}
+
+.sun-focus-button {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.sun-focus-button::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border: 1px solid #e8c040;
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity v-bind(sunFocusTransitionMs) ease, transform v-bind(sunFocusTransitionMs) ease;
+  pointer-events: none;
+}
+
+.sun-focus-button:hover::before,
+.sun-focus-button:focus-visible::before {
+  opacity: 0.9;
+  transform: scale(1);
+}
+
+.sun-focus-button:focus-visible {
+  outline: 2px solid #e8c040;
+  outline-offset: 4px;
 }
 
 .next-phase-preview {
@@ -4088,6 +4249,11 @@ const nextPhasePreviewStyle = computed(() => ({
   .tree-svg,
   .tree-node,
   .pursuit-mark {
+    transition: none;
+  }
+
+  .sun-focus-frame,
+  .sun-focus-button::before {
     transition: none;
   }
 
