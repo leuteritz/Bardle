@@ -110,7 +110,6 @@ import { useActiveBuffList, type ActiveBuffView } from '@/composables/ui/useActi
 import {
   BUFF_RANK_TIER,
   BUFF_STACK_BOTTOM_GAP,
-  BUFF_STACK_EDGE_CLEAR,
   BUFF_STACK_GAP,
   BUFF_STACK_GAP_COMPACT,
   BUFF_STACK_MORE_H,
@@ -216,7 +215,6 @@ const rowW = `${BUFF_STACK_W}px`
 const rowWLegendary = `${BUFF_STACK_W_LEGENDARY}px`
 const topGap = `${BUFF_STACK_TOP_GAP}px`
 const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
-const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 </script>
 
 <style scoped>
@@ -231,8 +229,8 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
   --chip-gap: v-bind(rowGap);
   --chip-stage: 52px;
   position: fixed;
-  /* In der Flucht des Panelrahmens, aber nie über dem Encyclopedia-Griff am Rand. */
-  right: max(calc(20px * var(--hud-scale, 1)), v-bind(edgeClear));
+  /* Randbündig: die Zeilen kommen aus der Kante wie Reiter. */
+  right: 0;
   top: calc(max(var(--event-log-bottom, 0px), var(--header-total-height, 0px)) + v-bind(topGap));
   bottom: calc(var(--hud-panel-size, 330px) + v-bind(bottomGap));
   z-index: 900;
@@ -258,7 +256,8 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
   background: #16140e;
   border: 1px solid #3e200a;
   border-left: 4px solid var(--chip-color, #e8c040);
-  border-radius: 4px;
+  border-right: 0;
+  border-radius: 4px 0 0 4px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7);
   overflow: hidden;
 }
@@ -274,6 +273,7 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
   width: var(--chip-w-legendary);
   border: 2px solid #7a4e20;
   border-left: 4px solid var(--chip-color, #e8c040);
+  border-right: 0;
   box-shadow:
     inset 0 0 0 1px #3e200a,
     inset 0 0 0 2px #5c3310,
@@ -342,7 +342,7 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 
 .chip-ornament--tr {
   top: 4px;
-  right: 5px;
+  right: 8px;
 }
 
 .chip-ornament--bl {
@@ -560,7 +560,8 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
   color: #8a7a58;
   background: #16100a;
   border: 1px solid #2c1806;
-  border-radius: 4px;
+  border-right: 0;
+  border-radius: 4px 0 0 4px;
 }
 
 /* ── Enter / leave: von unten herein, wie der Stapel wächst ── */
@@ -722,6 +723,8 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
 
 .buff-bar--docked .buff-chip {
   width: 100%;
+  border-right: 1px solid #3e200a;
+  border-radius: 4px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   grid-template-rows: auto auto;
@@ -847,6 +850,8 @@ const edgeClear = `${BUFF_STACK_EDGE_CLEAR}px`
    derselben Stelle, und die Kit-Zellen daneben rechnen mit dieser Spalte. */
 .buff-bar--pause .buff-chip {
   width: var(--chip-w);
+  border-right: 1px solid #3e200a;
+  border-radius: 4px;
   flex: 0 0 var(--chip-w);
   gap: 8px;
   padding: 0 10px 0 8px;

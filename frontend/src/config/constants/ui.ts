@@ -906,9 +906,6 @@ export const BUFF_STACK_W_LEGENDARY = 340
 export const BUFF_STACK_TOP_GAP = 10
 /** Abstand über der Oberkante des Command-Panels. */
 export const BUFF_STACK_BOTTOM_GAP = 8
-/** Mindestabstand zur rechten Bildkante: der Encyclopedia-Griff (41 px, mittig
- *  am Rand) plus Luft — sonst deckt eine Zeile ihn zu. */
-export const BUFF_STACK_EDGE_CLEAR = 47
 
 // ── Das Wayfinder-Band unter der Kopfzeile ────────────────────────────────
 // Draußen steht die Leiter als HUD-Karte oben links bei z-index 899 — unter
