@@ -67,3 +67,4 @@ export const PROVIDENCE_MULT_PRECISION = 4
  * einzige Fläche, die den Ort überhaupt zeigt.
  */
 export const PRESTIGE_CARD_UNIVERSE_ICON_PX = 44
+export const PRESTIGE_CARD_PROVIDENCE_ICON_PX = 24
