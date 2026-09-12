@@ -111,6 +111,10 @@ describe('flightLive — Treffer-Ruck und Körper', () => {
     expect(bodyFollowerTransform(1, -0.5, 10)).toBe(
       'translate(calc(-50% + 10.0px),calc(-50% + -5.0px))',
     )
+    // Der Gruppen-Shift ist in px und additiv — nicht in Jolt-Einheiten.
+    expect(bodyFollowerTransform(1, 0, 10, 120, -30)).toBe(
+      'translate(calc(-50% + 130.0px),calc(-50% + -30.0px))',
+    )
   })
 
   it('ein Volley stösst nicht, ein Strike zählt den Treffer hoch', () => {

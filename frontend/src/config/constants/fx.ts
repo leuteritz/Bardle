@@ -60,8 +60,8 @@ export const STAR_RESCUE_BURST_RAY_MAX_LEN = 0.42
  *  EINEM Easing bis 1400 — man sieht das Strecken der Sterne, keinen Schnitt. */
 export const UNIVERSE_HOP_DEPART_MS = 1400
 export const UNIVERSE_HOP_APPROACH_MS = 5000
-/** Der Durchflug: Ringtunnel und Roll, der Wash liegt an seinem AUSGANG. */
-export const UNIVERSE_HOP_PASSAGE_MS = 4500
+/** Der Durchflug: Wormhole-Röhre in Kurven, der Wash liegt an seinem AUSGANG. */
+export const UNIVERSE_HOP_PASSAGE_MS = 8000
 export const UNIVERSE_HOP_EMERGE_MS = 3000
 /** DOM-Wash im Zielton an der Schwelle; der Reset liegt unter seinem Peak. */
 export const UNIVERSE_HOP_WASH_MS = 420
@@ -87,19 +87,87 @@ export const UNIVERSE_HOP_PORTAL_PASS_K = 1.25
 export const UNIVERSE_HOP_PORTAL_GROWTH_POW = 2.6
 /** Der Wirbel dreht im Anflug schneller: SPIN · (1 + GAIN · t). */
 export const UNIVERSE_HOP_PORTAL_SPIN_APPROACH_GAIN = 2
-/** Ringtunnel im Durchflug: Echo-Ringe wandern exponentiell von R_MIN·far bis R_MAX_K·far, zyklisch gestaffelt. */
+/** Echo-Ringe (Rippen der Röhre) wandern exponentiell von R_MIN·far bis R_MAX_K·far, zyklisch gestaffelt.
+ *  R_MAX_K < 1: die nahe Wand steht IM Bild — ein Schlauch um den Spieler, kein Trichter am Rand. */
 export const UNIVERSE_HOP_TUNNEL_RINGS = 6
 export const UNIVERSE_HOP_TUNNEL_CYCLES_PER_SEC = 2
-/** Halbwellen des Roll-Vorzeichens über die Tunnelreise — der Twist wechselt die Richtung. */
-export const UNIVERSE_HOP_TUNNEL_TWISTS = 1.5
-/** Die Wirbelarme des Portals bleiben als Tunnelwände sichtbar. */
+export const UNIVERSE_HOP_TUNNEL_RING_ALPHA = 0.12
+/** Deckkraft der Röhre (Stränge, Ringe, Körper) — im Durchflug konstant. */
 export const UNIVERSE_HOP_WALL_ALPHA = 0.25
-export const UNIVERSE_HOP_TUNNEL_R_MIN_FRAC = 0.15
-export const UNIVERSE_HOP_TUNNEL_R_MAX_K = 1.3
-export const UNIVERSE_HOP_TUNNEL_ALPHA = 0.7
+export const UNIVERSE_HOP_TUNNEL_R_MIN_FRAC = 0.1
+export const UNIVERSE_HOP_TUNNEL_R_MAX_K = 0.62
 /** Im Tunnel längere Schweife (unter WARP_TRAIL_FADE) und ein Roll des Sternfelds um den Fluchtpunkt. */
 export const UNIVERSE_HOP_TUNNEL_TRAIL_FADE = 0.22
-export const UNIVERSE_HOP_TUNNEL_ROLL_RAD_S = 0.35
+export const UNIVERSE_HOP_TUNNEL_ROLL_RAD_S = 0.5
+/** Der Tunnel KURVT: Wegpunkte alle LEG ms, jede Kurve BEND Grad, Vorzeichen alternierend (S-Kurven, kein Karussell). */
+export const UNIVERSE_HOP_TUNNEL_LEG_MS = 1600
+export const UNIVERSE_HOP_TUNNEL_BEND_MIN_DEG = 60
+export const UNIVERSE_HOP_TUNNEL_BEND_MAX_DEG = 150
+/** Radiusband der Tunnel-Wegpunkte (× kurze Kante) — WEITER als der Anflug: der Ausgang darf hinter die Kurve
+ *  wandern. Die Gruppe (Sonne + Prozession) reitet auf dem Anker der Achse, nicht am Ausgang. */
+export const UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN = 0.3
+export const UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX = 0.9
+/** Die Kamera folgt dem Spieler: die Gruppe zieht nur leicht in die Kurve nach (× Fokusabstand) und schlingert
+ *  (× kurze Kante) — ein echter Versatz auf die Achse (28 %) las sich als „Illusion komisch". */
+export const UNIVERSE_HOP_GROUP_LEAD_FRAC = 0.05
+export const UNIVERSE_HOP_GROUP_SWAY_FRAC = 0.035
+/** In der Passage tritt das Kehlenlicht zurück und die Sternstriche werden kürzer — sonst ertrinkt die Röhre. */
+export const UNIVERSE_HOP_TUNNEL_MAW_DROP = 0.7
+export const UNIVERSE_HOP_TUNNEL_STREAK_GAIN = 0.35
+/** Deckkraft der Sterne in der Passage — die Röhre IST dort das Feld; bei 1 lagen weisse Balken über der Wand. */
+export const UNIVERSE_HOP_TUNNEL_STAR_GAIN = 0.3
+/** Der Warp-Scheinwerfer am Fluchtpunkt ist im Tunnel AUS (er las sich als Ende und als Rauch); er kehrt mit dem Reveal zurück. */
+export const UNIVERSE_HOP_TUNNEL_HEADLIGHT_EXIT = 0.5
+/** Röhrengeometrie: Scheiben in exponentieller Tiefe, Mittelpunkt vom Fokus (fern) zur Bildmitte (nah) mit Ausbauchung. */
+export const UNIVERSE_HOP_TUNNEL_SLICES = 12
+export const UNIVERSE_HOP_TUNNEL_BEND_POW = 2.2
+export const UNIVERSE_HOP_TUNNEL_BEND_OVERSHOOT = 0.5
+/** Lichtstränge: Anzahl, Verdrillung je rad Roll, zwei Pässe (Glow breit/matt, Kern dünn/hell), Fluss zur Kamera. */
+export const UNIVERSE_HOP_TUNNEL_STRANDS = 40
+export const UNIVERSE_HOP_STRAND_TWIST = 1.2
+/** Eigene Spiralneigung je Strand (± rad zur Ferne hin) — sonst sind es Speichen, die Stränge sollen sich kreuzen. */
+export const UNIVERSE_HOP_STRAND_SPIN_RAD = 0.15
+export const UNIVERSE_HOP_STRAND_CORE_ALPHA = 0.9
+export const UNIVERSE_HOP_STRAND_GLOW_ALPHA = 0.4
+export const UNIVERSE_HOP_STRAND_DASH_PX = 260
+export const UNIVERSE_HOP_STRAND_GAP_PX = 70
+export const UNIVERSE_HOP_STRAND_FLOW_PX_S = 900
+/** Strichbreiten in px (× Breitenfaktor je Strand) und die Dämpfung der nahen Hälfte. */
+export const UNIVERSE_HOP_STRAND_CORE_W_FAR = 1.8
+export const UNIVERSE_HOP_STRAND_CORE_W_NEAR = 4.5
+export const UNIVERSE_HOP_STRAND_GLOW_W_FAR = 8
+export const UNIVERSE_HOP_STRAND_GLOW_W_NEAR = 18
+export const UNIVERSE_HOP_STRAND_NEAR_ALPHA_K = 0.6
+/** Der dunkle Röhrenkörper: EIN fillRect je Frame, unter der Persistenz-Spur. */
+export const UNIVERSE_HOP_TUNNEL_BODY_ALPHA = 0.5
+/** Das Ausgangslicht wächst über die Passage (× kurze Kante) — der Wash am Ende ist sein Peak. */
+export const UNIVERSE_HOP_EXIT_R0_FRAC = 0.07
+export const UNIVERSE_HOP_EXIT_R1_FRAC = 0.3
+export const UNIVERSE_HOP_EXIT_GROWTH_POW = 2.2
+/** Das Ende zeigt sich erst am Ende: das Ausgangslicht blendet ab REVEAL_T der Passage bis REVEAL_END ein. */
+export const UNIVERSE_HOP_EXIT_REVEAL_T = 0.8
+export const UNIVERSE_HOP_EXIT_REVEAL_END = 0.96
+/** Stufen des Ausgangslichts: weißer Kern → hell → Ton → transparent. */
+export const UNIVERSE_HOP_EXIT_CORE_ALPHA = 0.95
+export const UNIVERSE_HOP_EXIT_BRIGHT_STOP = 0.2
+export const UNIVERSE_HOP_EXIT_BRIGHT_ALPHA = 0.8
+export const UNIVERSE_HOP_EXIT_MID_STOP = 0.45
+export const UNIVERSE_HOP_EXIT_MID_ALPHA = 0.45
+/** Weiter Hof um den Ausgang: derselbe Verlauf bei K × exitR, additiv. */
+export const UNIVERSE_HOP_EXIT_HALO_K = 2.2
+export const UNIVERSE_HOP_EXIT_HALO_ALPHA = 0.35
+/** Die Wand als Fläche: EIN gebackener weicher Ring mit Lichtfasern, je Scheibe additiv gezeichnet — fern hell, nah dunkel (der Trichter). */
+export const UNIVERSE_HOP_WALL_SPRITE_PX = 512
+export const UNIVERSE_HOP_WALL_RING_WIDTH_FRAC = 0.5
+export const UNIVERSE_HOP_WALL_FIBERS = 48
+export const UNIVERSE_HOP_WALL_ALPHA_FAR = 0.6
+export const UNIVERSE_HOP_WALL_ALPHA_NEAR = 0.3
+/** Die fernste Wandscheibe bleibt gedämpft — die Ferne ist ein dunkler Schlund, kein heller Ring. */
+export const UNIVERSE_HOP_WALL_FAR_DIM = 0.5
+/** Wormhole-Palette aus dem Zielton: dunkel → Ton → hell → weißer Kern. */
+export const WORMHOLE_DEEP_MIX = 0.55
+export const WORMHOLE_BRIGHT_LIFT = 0.65
+export const WORMHOLE_CORE_LIFT = 0.88
 /** Beim Austritt stehen sofort Körper der neuen Welt da, statt leerem Raum. */
 export const UNIVERSE_HOP_ARRIVAL_GALAXIES = 3
 /** Gebackener Ringdurchmesser; Schlund-Span 1,6× bleibt unter UNIVERSE_MAP_PORTAL_MAX_BACKING_PX. */
@@ -136,7 +204,7 @@ export const UNIVERSE_HOP_HUD_SHIFT_PX = 8
 export const FLIGHT_FORMATION = {
   idle: { bodyScale: 1 },
   galaxy: { bodyScale: 0.62 },
-  universe: { bodyScale: 0.55 },
+  universe: { bodyScale: 0.4 },
 } as const
 
 /* ── Die Prozession — die Bühne reist mit ──────────────────────────────────
@@ -429,7 +497,6 @@ export const CLUSTER_COLOR_WEIGHTS: Readonly<
   knot: [0.005, 0.035, 0.07, 0.84, 0.05],
   pair: STAR_BG_COLOR_WEIGHTS,
 }
-
 
 // Vorgerenderte Stern-Sprites (starBackground/starSprites.ts). Sterne werden per
 // drawImage geblittet statt pro Frame als Pfad gefüllt — die Palette hat nur

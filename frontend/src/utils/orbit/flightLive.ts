@@ -43,6 +43,9 @@ export const flightLive = {
   wakeAngle: 0,
   /** Zucken des Körpers in Einheiten (−1,25..1,25). */
   bodyX: 0,
+  /** Versatz der Gruppe in px (Wormhole-Anker) — additiv zum Jolt, nie in dessen Einheiten. */
+  shiftX: 0,
+  shiftY: 0,
   bodyY: 0,
 }
 
@@ -117,6 +120,8 @@ export function resetFlightJolt(): void {
   resetJolt(jolt)
   flightLive.bodyX = 0
   flightLive.bodyY = 0
+  flightLive.shiftX = 0
+  flightLive.shiftY = 0
 }
 
 /* ── Follower ───────────────────────────────────────────────────────────────── */
@@ -161,9 +166,16 @@ export function wakeFollowerTransform(strength: number, angle: number, roll: num
   return `translate(${tx}%,${ty}%) rotate(${rollDeg}deg) rotate(${deg}deg) scale(${(1 + stretch).toFixed(3)},${(1 - stretch / 2).toFixed(3)})`
 }
 
-/** Die Zentrierung bleibt im Transform — der Körper springt um seine Mitte. */
-export function bodyFollowerTransform(ux: number, uy: number, ampPx: number): string {
-  return `translate(calc(-50% + ${(ux * ampPx).toFixed(1)}px),calc(-50% + ${(uy * ampPx).toFixed(1)}px))`
+/** Die Zentrierung bleibt im Transform — der Körper springt um seine Mitte. Der Shift (px)
+ *  ist der Versatz der ganzen Gruppe im Wormhole, NICHT in Jolt-Einheiten. */
+export function bodyFollowerTransform(
+  ux: number,
+  uy: number,
+  ampPx: number,
+  shiftX = 0,
+  shiftY = 0,
+): string {
+  return `translate(calc(-50% + ${(ux * ampPx + shiftX).toFixed(1)}px),calc(-50% + ${(uy * ampPx + shiftY).toFixed(1)}px))`
 }
 
 /** Ohne `wert !== zuletzt`-Wächter: Blink verwirft identische Zuweisungen selbst. */
@@ -173,7 +185,13 @@ export function writeFlightFollowers(): void {
     for (const el of wakeFollowers) el.style.transform = t
   }
   for (const [el, amp] of bodyFollowers) {
-    el.style.transform = bodyFollowerTransform(flightLive.bodyX, flightLive.bodyY, amp)
+    el.style.transform = bodyFollowerTransform(
+      flightLive.bodyX,
+      flightLive.bodyY,
+      amp,
+      flightLive.shiftX,
+      flightLive.shiftY,
+    )
   }
 }
 

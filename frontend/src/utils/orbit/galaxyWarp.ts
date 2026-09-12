@@ -66,6 +66,8 @@ export interface WarpFlightOut {
   procession: number
   /** Flugzeit in Sekunden (für die bestehenden Ausblend-Kurven der SVG-Ebenen). */
   flightSec: number
+  /** 0 … 1: Deckkraft der Sterne im Flug — die Wormhole-Röhre dämpft sie, der Warp nicht. */
+  starGain: number
 }
 
 export interface GalaxyWarpOut extends WarpFlightOut {
@@ -88,7 +90,8 @@ export interface GalaxyWarpState {
 const FLIGHT_MS = GALAXY_TRANS_WARP_MS
 const ACCEL_END_MS = GALAXY_WARP_ACCEL_MS
 /** Beginn des Crescendos — ein Anteil der Reiseflugstrecke, nicht der Gesamtzeit. */
-const SURGE_START_MS = GALAXY_WARP_ACCEL_MS + (GALAXY_TRANS_WARP_MS - GALAXY_WARP_ACCEL_MS) * WARP_SURGE_FROM
+const SURGE_START_MS =
+  GALAXY_WARP_ACCEL_MS + (GALAXY_TRANS_WARP_MS - GALAXY_WARP_ACCEL_MS) * WARP_SURGE_FROM
 const TOTAL_MS = GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS
 const DEG = Math.PI / 180
 
@@ -131,6 +134,7 @@ export function createGalaxyWarp(): GalaxyWarpState {
       themeMix: 0,
       procession: 0,
       flightSec: 0,
+      starGain: 1,
       commit: false,
       done: false,
     },

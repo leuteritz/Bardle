@@ -9,7 +9,7 @@
 // Choreografie (Zeiten aus config/constants/fx.ts):
 //   depart     0 … DEPART_MS             weicher Schub auf Überlicht, Fokus zum Startkurs
 //   approach   … + APPROACH_MS           der Kurs KURVT (Bank), das Tor wächst
-//   passage    … + PASSAGE_MS            Tunnelreise: Echo-Ringe, Twist, Wände
+//   passage    … + PASSAGE_MS            Wormhole in S-Kurven: Wegpunkte je LEG, Roll legt sich in die Kurve
 //   wash       = Ausgang − WASH_PEAK·WASH  DOM-Wash im Zielton
 //   commit     = Ausgang                 Reset unter dem Peak des Wash
 //   emerge     … + EMERGE_MS             Ausrollen im neuen Universum
@@ -22,6 +22,11 @@ import {
   UNIVERSE_HOP_COURSE_BANK_MIN_DEG,
   UNIVERSE_HOP_DEPART_MS,
   UNIVERSE_HOP_EMERGE_MS,
+  UNIVERSE_HOP_EXIT_GROWTH_POW,
+  UNIVERSE_HOP_EXIT_REVEAL_END,
+  UNIVERSE_HOP_EXIT_REVEAL_T,
+  UNIVERSE_HOP_EXIT_R0_FRAC,
+  UNIVERSE_HOP_EXIT_R1_FRAC,
   UNIVERSE_HOP_FIELD_PASS_FADE,
   UNIVERSE_HOP_FOCUS_FRAC_MAX,
   UNIVERSE_HOP_FOCUS_FRAC_MIN,
@@ -34,9 +39,17 @@ import {
   UNIVERSE_HOP_PORTAL_SPIN_APPROACH_GAIN,
   UNIVERSE_HOP_PORTAL_SPIN_RAD_S,
   UNIVERSE_HOP_SPEED_PEAK,
+  UNIVERSE_HOP_TUNNEL_BEND_MAX_DEG,
+  UNIVERSE_HOP_TUNNEL_BEND_MIN_DEG,
+  UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX,
+  UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN,
+  UNIVERSE_HOP_TUNNEL_HEADLIGHT_EXIT,
+  UNIVERSE_HOP_TUNNEL_LEG_MS,
+  UNIVERSE_HOP_TUNNEL_MAW_DROP,
   UNIVERSE_HOP_TUNNEL_ROLL_RAD_S,
+  UNIVERSE_HOP_TUNNEL_STAR_GAIN,
+  UNIVERSE_HOP_TUNNEL_STREAK_GAIN,
   UNIVERSE_HOP_TUNNEL_TRAIL_FADE,
-  UNIVERSE_HOP_TUNNEL_TWISTS,
   UNIVERSE_HOP_WALL_ALPHA,
   UNIVERSE_HOP_WASH_MS,
   UNIVERSE_HOP_WASH_PEAK,
@@ -67,8 +80,18 @@ export interface UniverseHopOut extends WarpFlightOut {
   tunnelT: number
   /** Sekunden seit Tunnelbeginn — die Echo-Ringe laufen im festen Takt. */
   tunnelSec: number
-  /** Roll des Sternfelds um den Fluchtpunkt in rad/s, nur im Tunnel; wechselt das Vorzeichen. */
+  /** Roll des Sternfelds um den Fluchtpunkt in rad/s, nur im Tunnel; legt sich in jede Kurve. */
   roll: number
+  /** ∫ roll·dt in rad — die Verdrillung der Stränge; ausserhalb des Tunnels 0. */
+  twist: number
+  /** Radius des Ausgangslichts in px, wächst über die Passage; sonst 0. */
+  exitR: number
+  /** 0 … 1: die Röhre blendet am Tunnelbeginn ein. */
+  exitAlpha: number
+  /** 0 … 1: das Ausgangslicht — erst ab EXIT_REVEAL_T, das Ende zeigt sich am Ende. */
+  exitLight: number
+  /** 0 … 1: wie weit die Gruppe (Sonne + Prozession) auf dem Anker der Röhrenachse reitet. */
+  groupLead: number
   /** Flanken — je genau einen Frame lang wahr. */
   wash: boolean
   commit: boolean
@@ -84,6 +107,9 @@ export interface UniverseHopState {
   courseR0: number
   courseAz1: number
   courseR1: number
+  /** Wegpunkte der Tunnelreise, Punkt 0 = B; Azimut alterniert im Vorzeichen (S-Kurven). */
+  tunnelAz: number[]
+  tunnelR: number[]
   rollSign: number
   washed: boolean
   committed: boolean
@@ -103,9 +129,20 @@ export const UNIVERSE_HOP_COMMIT_AT_MS = PASSAGE_END_MS
 export const UNIVERSE_HOP_HUD_IN_AT_MS = PASSAGE_END_MS + UNIVERSE_HOP_HUD_IN_DELAY_MS
 const DEG = Math.PI / 180
 const PEAK_SPAN = UNIVERSE_HOP_SPEED_PEAK - 1
+/** Zahl der Kurven im Tunnel — mindestens zwei, sonst wechselt der Roll nie das Vorzeichen. */
+export const UNIVERSE_HOP_TUNNEL_LEGS = Math.max(
+  2,
+  Math.round(UNIVERSE_HOP_PASSAGE_MS / UNIVERSE_HOP_TUNNEL_LEG_MS),
+)
+/** Spitze der Ableitung von easeInOutCubic (bei 0,5) — normiert den Roll auf ROLL_RAD_S. */
+const EASE_DERIV_PEAK = 3
 
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v
+}
+
+function easeInOutCubicDeriv(t: number): number {
+  return t < 0.5 ? 12 * t * t : 3 * (2 - 2 * t) * (2 - 2 * t)
 }
 
 export function createUniverseHop(): UniverseHopState {
@@ -116,6 +153,8 @@ export function createUniverseHop(): UniverseHopState {
     courseR0: 0,
     courseAz1: 0,
     courseR1: 0,
+    tunnelAz: [],
+    tunnelR: [],
     rollSign: 1,
     washed: false,
     committed: false,
@@ -135,6 +174,7 @@ export function createUniverseHop(): UniverseHopState {
       themeMix: 0,
       procession: 0,
       flightSec: 0,
+      starGain: 1,
       portalR: 0,
       portalAlpha: 0,
       mawAlpha: 0,
@@ -144,6 +184,11 @@ export function createUniverseHop(): UniverseHopState {
       tunnelT: 0,
       tunnelSec: 0,
       roll: 0,
+      twist: 0,
+      exitR: 0,
+      exitAlpha: 0,
+      exitLight: 0,
+      groupLead: 0,
       wash: false,
       commit: false,
       hudIn: false,
@@ -178,6 +223,19 @@ export function startUniverseHop(state: UniverseHopState, rand: () => number): v
   state.courseAz1 = state.courseAz0 + bankSign * bank
   state.courseR1 = UNIVERSE_HOP_FOCUS_FRAC_MIN + rand() * span
   state.rollSign = rand() < 0.5 ? -1 : 1
+  // Der Tunnel: ab B alternierende Kurven im selben Radiusband — die Prozession
+  // bleibt so immer im Bild. Die erste Kurve dreht in Roll-Richtung.
+  const bendSpan = UNIVERSE_HOP_TUNNEL_BEND_MAX_DEG - UNIVERSE_HOP_TUNNEL_BEND_MIN_DEG
+  const tunnelSpan = UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX - UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN
+  state.tunnelAz = [state.courseAz1]
+  state.tunnelR = [state.courseR1]
+  let sign = state.rollSign
+  for (let i = 0; i < UNIVERSE_HOP_TUNNEL_LEGS; i++) {
+    const bend = (UNIVERSE_HOP_TUNNEL_BEND_MIN_DEG + rand() * bendSpan) * DEG
+    state.tunnelAz.push(state.tunnelAz[i]! + sign * bend)
+    state.tunnelR.push(UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN + rand() * tunnelSpan)
+    sign = -sign
+  }
   state.phase = 'depart'
   state.out.phase = 'depart'
 }
@@ -192,6 +250,41 @@ export function universeHopFocusAt(
   const az = state.courseAz0 + (state.courseAz1 - state.courseAz0) * k
   const r = (state.courseR0 + (state.courseR1 - state.courseR0) * k) * minEdge
   return [Math.cos(az) * r, Math.sin(az) * r]
+}
+
+/** Kurve i und lokaler Anteil u der Tunnelreise (t 0 … 1). */
+function tunnelLeg(state: UniverseHopState, t: number): [number, number] {
+  const legs = state.tunnelAz.length - 1
+  const s = clamp01(t) * legs
+  const i = Math.min(legs - 1, Math.floor(s))
+  return [i, s - i]
+}
+
+/** Fokus auf der Tunnelreise (0 … 1): startet bei B, je Kurve dasselbe Easing wie der Anflug. */
+export function universeHopTunnelFocusAt(
+  state: UniverseHopState,
+  t: number,
+  minEdge: number,
+): [number, number] {
+  if (state.tunnelAz.length < 2) return universeHopFocusAt(state, 1, minEdge)
+  const [i, u] = tunnelLeg(state, t)
+  const k = easeInOutCubic(u)
+  const az = state.tunnelAz[i]! + (state.tunnelAz[i + 1]! - state.tunnelAz[i]!) * k
+  const r = (state.tunnelR[i]! + (state.tunnelR[i + 1]! - state.tunnelR[i]!) * k) * minEdge
+  return [Math.cos(az) * r, Math.sin(az) * r]
+}
+
+/** Roll-Rate in rad/s: das Vorzeichen der Kurve, die Stärke ihre Winkelgeschwindigkeit. */
+function tunnelRollAt(state: UniverseHopState, t: number): number {
+  if (state.tunnelAz.length < 2) return 0
+  const [i, u] = tunnelLeg(state, t)
+  const dir = Math.sign(state.tunnelAz[i + 1]! - state.tunnelAz[i]!)
+  return (
+    dir *
+    UNIVERSE_HOP_TUNNEL_ROLL_RAD_S *
+    (easeInOutCubicDeriv(u) / EASE_DERIV_PEAK) *
+    rollEnvelope(t)
+  )
 }
 
 function shimmerAt(elapsedMs: number): number {
@@ -270,6 +363,7 @@ export function stepUniverseHop(
     o.themeMix = 0
     o.procession = 0
     o.flightSec = 0
+    o.starGain = 1
     o.portalR = 0
     o.portalAlpha = 0
     o.mawAlpha = 0
@@ -278,6 +372,11 @@ export function stepUniverseHop(
     o.tunnelT = 0
     o.tunnelSec = 0
     o.roll = 0
+    o.twist = 0
+    o.exitR = 0
+    o.exitAlpha = 0
+    o.exitLight = 0
+    o.groupLead = 0
     o.done = true
     return
   }
@@ -302,6 +401,7 @@ export function stepUniverseHop(
     o.themeMix = 0
     o.procession = k
     o.flightSec = e / 1000
+    o.starGain = 1
     o.portalR = 0
     o.portalAlpha = 0
     o.mawAlpha = 0
@@ -310,6 +410,11 @@ export function stepUniverseHop(
     o.tunnelT = 0
     o.tunnelSec = 0
     o.roll = 0
+    o.twist = 0
+    o.exitR = 0
+    o.exitAlpha = 0
+    o.exitLight = 0
+    o.groupLead = 0
   } else if (phase === 'approach') {
     const t = (e - DEPART_END_MS) / UNIVERSE_HOP_APPROACH_MS
     const [fx, fy] = universeHopFocusAt(state, t, minEdge)
@@ -323,6 +428,7 @@ export function stepUniverseHop(
     o.themeMix = 0
     o.procession = 1
     o.flightSec = e / 1000
+    o.starGain = 1
     const r0 = UNIVERSE_HOP_PORTAL_R0_FRAC * minEdge
     o.portalR = r0 + (rPass - r0) * Math.pow(t, UNIVERSE_HOP_PORTAL_GROWTH_POW)
     o.portalAlpha = clamp01(t * 4)
@@ -332,43 +438,63 @@ export function stepUniverseHop(
     // Der Schlund übernimmt das Licht vom Scheinwerfer.
     o.headlight = 1 - 0.7 * clamp01(o.portalR / farCorner)
     o.portalSpin +=
-      (UNIVERSE_HOP_PORTAL_SPIN_RAD_S * (1 + UNIVERSE_HOP_PORTAL_SPIN_APPROACH_GAIN * t) * dt) / 1000
+      (UNIVERSE_HOP_PORTAL_SPIN_RAD_S * (1 + UNIVERSE_HOP_PORTAL_SPIN_APPROACH_GAIN * t) * dt) /
+      1000
     o.tunnelT = 0
     o.tunnelSec = 0
     o.roll = 0
+    o.twist = 0
+    o.exitR = 0
+    o.exitAlpha = 0
+    o.exitLight = 0
+    o.groupLead = 0
   } else if (phase === 'passage') {
     const t = (e - APPROACH_END_MS) / UNIVERSE_HOP_PASSAGE_MS
-    const [fx, fy] = universeHopFocusAt(state, 1, minEdge)
+    const [fx, fy] = universeHopTunnelFocusAt(state, t, minEdge)
     o.speed = UNIVERSE_HOP_SPEED_PEAK * shimmerAt(e)
     o.focusX = fx
     o.focusY = fy
-    o.streakGain = 1
+    // Die Röhre blendet über die ersten 15 % ein; Striche und Kehlenlicht
+    // treten im selben Takt zurück.
+    const tube = clamp01(t / 0.15)
+    o.streakGain = 1 - (1 - UNIVERSE_HOP_TUNNEL_STREAK_GAIN) * tube
+    o.starGain = 1 - (1 - UNIVERSE_HOP_TUNNEL_STAR_GAIN) * tube
     o.trailFade = UNIVERSE_HOP_TUNNEL_TRAIL_FADE
     o.tintGain = 1
     o.ambientGain = 0
     o.themeMix = 0
     o.procession = 1
     o.flightSec = e / 1000
-    // Der Ring ist im ersten Viertel vorbei; Tunnel und Wände übernehmen.
+    // Der Ring ist im ersten Viertel vorbei; die Röhre übernimmt.
     o.portalR = rPass * (1 + 0.3 * t)
     o.portalAlpha = 1 - clamp01(t * 4)
-    o.mawAlpha = UNIVERSE_HOP_MAW_ALPHA
+    o.mawAlpha = UNIVERSE_HOP_MAW_ALPHA * (1 - UNIVERSE_HOP_TUNNEL_MAW_DROP * tube)
     o.fieldAlpha = 0
     o.wallAlpha = UNIVERSE_HOP_WALL_ALPHA
-    o.headlight = 0.3
     o.portalSpin +=
       (UNIVERSE_HOP_PORTAL_SPIN_RAD_S * (1 + UNIVERSE_HOP_PORTAL_SPIN_APPROACH_GAIN) * dt) / 1000
     o.tunnelT = t
     o.tunnelSec = (e - APPROACH_END_MS) / 1000
-    o.roll =
-      state.rollSign *
-      UNIVERSE_HOP_TUNNEL_ROLL_RAD_S *
-      rollEnvelope(t) *
-      Math.sin(Math.PI * UNIVERSE_HOP_TUNNEL_TWISTS * t)
+    o.roll = tunnelRollAt(state, t)
+    o.twist += (o.roll * dt) / 1000
+    // Das Ende zeigt sich erst am Ende: Licht und Wachstum ab dem Reveal.
+    const reveal = clamp01(
+      (t - UNIVERSE_HOP_EXIT_REVEAL_T) / (UNIVERSE_HOP_EXIT_REVEAL_END - UNIVERSE_HOP_EXIT_REVEAL_T),
+    )
+    o.exitLight = easeInOutCubic(reveal)
+    // Kein Scheinwerfer im Tunnel — er las sich als Ende; mit dem Reveal kehrt er zurück.
+    o.headlight = 0.3 * (1 - tube) + UNIVERSE_HOP_TUNNEL_HEADLIGHT_EXIT * o.exitLight
+    o.exitR =
+      minEdge *
+      (UNIVERSE_HOP_EXIT_R0_FRAC +
+        (UNIVERSE_HOP_EXIT_R1_FRAC - UNIVERSE_HOP_EXIT_R0_FRAC) *
+          Math.pow(reveal, UNIVERSE_HOP_EXIT_GROWTH_POW))
+    o.exitAlpha = tube
+    o.groupLead = tube
   } else {
-    // emerge
+    // emerge — vom Ende der Tunnelreise zurück zur Mitte.
     const t = (e - PASSAGE_END_MS) / UNIVERSE_HOP_EMERGE_MS
-    const [fx, fy] = universeHopFocusAt(state, 1, minEdge)
+    const [fx, fy] = universeHopTunnelFocusAt(state, 1, minEdge)
     o.speed = 1 + PEAK_SPAN * Math.pow(1 - t, 3.5)
     const back = 1 - easeOutBack(t)
     o.focusX = fx * back
@@ -385,6 +511,7 @@ export function stepUniverseHop(
     // Null, nicht eingefroren: die Körper der NEUEN Welt blenden über diese
     // Flugzeit ein, und die alte ist mit dem commit abgeräumt.
     o.flightSec = 0
+    o.starGain = 1
     o.portalR = 0
     o.portalAlpha = 0
     o.mawAlpha = 0
@@ -393,5 +520,10 @@ export function stepUniverseHop(
     o.tunnelT = 0
     o.tunnelSec = 0
     o.roll = 0
+    o.twist = 0
+    o.exitR = 0
+    o.exitAlpha = 0
+    o.exitLight = 0
+    o.groupLead = o.procession
   }
 }

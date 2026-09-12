@@ -109,6 +109,9 @@ export const processionLive = {
   sunRed: 255,
   sunGreen: 210,
   sunBlue: 140,
+  /** Versatz der Gruppe in px — im Wormhole reitet die Sonne auf dem Anker der Achse; der Freiraum-Kreis folgt. */
+  shiftX: 0,
+  shiftY: 0,
   planets: [] as ProcessionBody[],
   planetCount: 0,
   champions: [] as ProcessionBody[],
@@ -122,6 +125,8 @@ export function resetProcessionLive(): void {
   processionLive.minEdge = 0
   processionLive.sec = 0
   processionLive.active = false
+  processionLive.shiftX = 0
+  processionLive.shiftY = 0
   processionLive.planetCount = 0
   processionLive.championCount = 0
 }
@@ -204,14 +209,17 @@ export function processionSpot(
   // weg, dort steht die Sonne.
   const clear = sunR * PROCESSION_SUN_CLEAR_K
   if (clear > 0) {
-    const ox = x - cx
-    const oy = y - cy
+    // Die Sonne steht um den Gruppen-Shift versetzt — der Freiraum-Kreis mit ihr.
+    const sx = cx + processionLive.shiftX
+    const sy = cy + processionLive.shiftY
+    const ox = x - sx
+    const oy = y - sy
     const dist = Math.hypot(ox, oy)
     if (dist < clear) {
       // Genau im Mittelpunkt gibt es keine Richtung — dann trägt der Slotwinkel.
       const a = dist > 0.001 ? Math.atan2(oy, ox) : phi
-      x = cx + Math.cos(a) * clear
-      y = cy + Math.sin(a) * clear
+      x = sx + Math.cos(a) * clear
+      y = sy + Math.sin(a) * clear
     }
   }
   out.x = x

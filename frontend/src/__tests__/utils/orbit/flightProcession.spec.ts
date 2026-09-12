@@ -117,6 +117,24 @@ describe('Prozession — die Perspektive', () => {
     expect(b.scale).toBeCloseTo(a.scale, 6)
   })
 
+  it('lässt den Freiraum-Kreis dem Gruppen-Shift folgen — die Sonne steht versetzt', () => {
+    const slot = { depth: 2, spread: 0, phi: 0.3, swellSec: 5, seed: 0, rank: 0 }
+    const out = { x: 0, y: 0, scale: 1 }
+    const sunR = 100
+    const clear = sunR * PROCESSION_SUN_CLEAR_K
+    processionLive.shiftX = 0
+    processionLive.shiftY = 0
+    const a = { ...processionSpot(slot, 0, 0, 0, 0, 0, 600, sunR, out) }
+    expect(Math.hypot(a.x, a.y)).toBeCloseTo(clear, 6)
+    processionLive.shiftX = 300
+    processionLive.shiftY = -80
+    const b = { ...processionSpot(slot, 0, 300, -80, 0, 0, 600, sunR, out) }
+    expect(Math.hypot(b.x - 300, b.y + 80)).toBeCloseTo(clear, 6)
+    resetProcessionLive()
+    expect(processionLive.shiftX).toBe(0)
+    expect(processionLive.shiftY).toBe(0)
+  })
+
   it('hält jeden Körper aus dem Spielerkörper heraus', () => {
     const sunR = 140
     const clear = sunR * PROCESSION_SUN_CLEAR_K

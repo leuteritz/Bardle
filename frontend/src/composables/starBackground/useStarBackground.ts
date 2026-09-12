@@ -38,6 +38,15 @@ import {
 } from '@/utils/orbit/universeHop'
 import { buildPortalSprite, portalSpriteSpan } from '@/utils/fx/portalSprite'
 import { hexToRgbTriple } from '@/utils/ui/format'
+import {
+  bakeWormholeWall,
+  createWormholeTunnel,
+  drawWormholeBody,
+  drawWormholeTunnel,
+  wormholeGroupShift,
+  type WormholeFrame,
+  type WormholeTunnel,
+} from '@/utils/fx/wormholeTunnel'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
@@ -52,11 +61,6 @@ import {
   UNIVERSE_HOP_THROAT_ALPHA_MID,
   UNIVERSE_HOP_THROAT_MID_STOP,
   UNIVERSE_HOP_ARRIVAL_GALAXIES,
-  UNIVERSE_HOP_TUNNEL_ALPHA,
-  UNIVERSE_HOP_TUNNEL_CYCLES_PER_SEC,
-  UNIVERSE_HOP_TUNNEL_R_MAX_K,
-  UNIVERSE_HOP_TUNNEL_R_MIN_FRAC,
-  UNIVERSE_HOP_TUNNEL_RINGS,
   WARP_SPEED_MAX,
   WARP_STREAK_WIDTH_BASE,
   WARP_STREAK_WIDTH_PER_SPEED,
@@ -464,6 +468,23 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
   let hopTint = ''
   /** Kehlenlicht: EIN Verlauf im Einheitsradius, je Frame nur skaliert. */
   let hopThroat: CanvasGradient | null = null
+  /** Die Wormhole-Röhre der Passage: Stränge und Palette je Sprung gewürfelt. */
+  let hopTunnel: WormholeTunnel | null = null
+  const hopFrame: WormholeFrame = {
+    cx: 0,
+    cy: 0,
+    w: 0,
+    h: 0,
+    far: 0,
+    tunnelSec: 0,
+    twist: 0,
+    trailFade: 1,
+    tubeAlpha: 0,
+    exitLight: 0,
+    exitR: 0,
+  }
+  /** Versatz der Gruppe im Wormhole, je Frame aus dem Anker der Röhrenachse. */
+  const hopShift = { x: 0, y: 0 }
   /** Aufhellung um den Fluchtpunkt: EIN Verlauf bei (0,0), neu nur bei anderem Radius. */
   let headlightRadius = 0
   /** Signale an die Komponente: Nebel aus, Vignette an, Blitz (Zähler + Akzentfarbe). */
@@ -801,6 +822,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     hopSwirl = null
     hopHalo = null
     hopThroat = null
+    hopTunnel = null
   }
 
   /** Bei der Ankunft: alles, was den Flug ausgeblendet überlebt hat, räumen.
@@ -1037,6 +1059,8 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         hopMaw = buildPortalSprite('maw', seed, hopTint, hopReq!.target, px, 1)
         hopSwirl = buildPortalSprite('swirl', seed, hopTint, hopReq!.target, px, 1)
         hopHalo = buildPortalSprite('halo', seed, hopTint, hopReq!.target, px, 1)
+        hopTunnel = createWormholeTunnel(hopTint, Math.random)
+        bakeWormholeWall(hopTunnel, Math.random)
         clearEncounters(sky)
         warpNebulaHidden.value = true
         warpVignetteOn.value = true
@@ -1255,8 +1279,19 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // Der Schweif liest DIESEN Fluchtpunkt, nicht den Helm allein — sonst
     // stünde er im Warp still, der ohne Helm fährt. Erst der Kurs, dann die
     // Follower: umgekehrt trügen sie den Stand des Vorframes.
+    // Im Wormhole reitet die Gruppe auf dem Anker der Röhrenachse — die Sonne
+    // verlässt die Bildmitte, die Prozession gruppiert sich um sie, nicht um den
+    // Ausgang (der darf hinter der Kurve liegen).
+    if (hop.out.groupLead > 0) {
+      wormholeGroupShift(cx - w / 2, cy - h / 2, hop.out.roll, Math.min(w, h), hop.out.groupLead, hopShift)
+    } else {
+      hopShift.x = 0
+      hopShift.y = 0
+    }
     if (!isFrozen) {
       setFlightCourse(cx - w / 2, cy - h / 2, Math.min(w, h), delta)
+      flightLive.shiftX = hopShift.x
+      flightLive.shiftY = hopShift.y
       writeFlightFollowers()
     }
     // Die Prozession liest denselben Fluchtpunkt, den auch der Tunnel zeichnet:
@@ -1265,8 +1300,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // eingebettete (Shop) überschriebe sonst dasselbe globale Objekt.
     if (!isFrozen) {
       processionLive.t = wo.procession
-      processionLive.focusX = cx
-      processionLive.focusY = cy
+      processionLive.focusX = hop.out.groupLead > 0 ? w / 2 + hopShift.x : cx
+      processionLive.focusY = hop.out.groupLead > 0 ? h / 2 + hopShift.y : cy
+      processionLive.shiftX = hopShift.x
+      processionLive.shiftY = hopShift.y
       processionLive.minEdge = Math.min(w, h)
       processionLive.sec += delta
       processionLive.active = warpActive
@@ -1307,6 +1344,23 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
     // Vektorkreis je — ein skaliertes Rim-Sprite trüge gebackenen shadowBlur,
     // bei 5× ein Schmierfleck. Über der teilgelöschten Spur hinterlässt der
     // Ring Geisterringe nach innen: ein Tunnel aus Ringen, gewollt.
+    // In der Passage liegt darunter der dunkle Körper der Wormhole-Röhre.
+    const hopInTunnel = ctx !== null && hop.out.tunnelT > 0 && hopTunnel !== null
+    if (hopInTunnel) {
+      const ho = hop.out
+      hopFrame.cx = cx
+      hopFrame.cy = cy
+      hopFrame.w = w
+      hopFrame.h = h
+      hopFrame.far = Math.hypot(w / 2, h / 2) + Math.hypot(ho.focusX, ho.focusY)
+      hopFrame.tunnelSec = ho.tunnelSec
+      hopFrame.twist = ho.twist
+      hopFrame.trailFade = ho.trailFade
+      hopFrame.tubeAlpha = ho.exitAlpha
+      hopFrame.exitLight = ho.exitLight
+      hopFrame.exitR = ho.exitR
+      drawWormholeBody(ctx!, hopTunnel!, hopFrame)
+    }
     if (ctx && hop.out.portalR > 0 && hopMaw && hopSwirl && hopHalo) {
       const ho = hop.out
       const R = ho.portalR
@@ -1343,12 +1397,11 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
         ctx.globalAlpha = persistentDrawAlpha(0.8 * ho.portalAlpha, ho.trailFade)
         ctx.drawImage(hopHalo, -haloSpan / 2, -haloSpan / 2, haloSpan, haloSpan)
       }
-      // Die Arme: im Anflug der Wirbel, in der Tunnelreise die vorbeiziehenden Wände.
-      const armsAlpha = Math.max(ho.portalAlpha, ho.wallAlpha)
-      if (armsAlpha > 0) {
+      // Die Arme: der Wirbel im Anflug — in der Passage ist die Röhre die Wand.
+      if (ho.portalAlpha > 0) {
         ctx.rotate(ho.portalSpin)
         const swirlSpan = portalSpriteSpan('swirl', px)
-        ctx.globalAlpha = persistentDrawAlpha(armsAlpha, ho.trailFade)
+        ctx.globalAlpha = persistentDrawAlpha(ho.portalAlpha, ho.trailFade)
         ctx.drawImage(hopSwirl, -swirlSpan / 2, -swirlSpan / 2, swirlSpan, swirlSpan)
       }
       ctx.restore()
@@ -1368,35 +1421,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       ctx.globalAlpha = 1
     }
 
-    // ── Der Ringtunnel — der Durchflug ─────────────────────────────────────
-    // Echo-Ringe des Tors laufen von innen nach aussen an der Kamera vorbei,
-    // exponentiell (konstantes Tempo in Perspektive), zyklisch gestaffelt.
-    // Zwölf Bögen je Frame, sonst nichts.
-    if (ctx && hop.out.tunnelT > 0 && hopTint) {
-      const ho = hop.out
-      const far = Math.hypot(w / 2, h / 2) + Math.hypot(ho.focusX, ho.focusY)
-      const rMin = UNIVERSE_HOP_TUNNEL_R_MIN_FRAC * far
-      const rMax = UNIVERSE_HOP_TUNNEL_R_MAX_K * far
-      const ratio = rMax / rMin
-      ctx.strokeStyle = hopTint
-      for (let i = 0; i < UNIVERSE_HOP_TUNNEL_RINGS; i++) {
-        const u =
-          (ho.tunnelSec * UNIVERSE_HOP_TUNNEL_CYCLES_PER_SEC + i / UNIVERSE_HOP_TUNNEL_RINGS) % 1
-        const r = rMin * Math.pow(ratio, u)
-        const a = persistentDrawAlpha(UNIVERSE_HOP_TUNNEL_ALPHA * (1 - u), ho.trailFade)
-        ctx.globalAlpha = a
-        ctx.lineWidth = Math.max(1.5, r * 0.035)
-        ctx.beginPath()
-        ctx.arc(cx, cy, r, 0, Math.PI * 2)
-        ctx.stroke()
-        ctx.globalAlpha = a * 0.5
-        ctx.lineWidth = Math.max(0.8, r * 0.01)
-        ctx.beginPath()
-        ctx.arc(cx, cy, r * UNIVERSE_MAP_PORTAL_PHOTON_R, 0, Math.PI * 2)
-        ctx.stroke()
-      }
-      ctx.globalAlpha = 1
-    }
+    // ── Die Wormhole-Röhre — der Durchflug ─────────────────────────────────
+    // Stränge, Rippen und Ausgangslicht auf der gebogenen Achse Fokus → Mitte
+    // (utils/fx/wormholeTunnel.ts); der Kurs der Maschine biegt die Röhre.
+    if (hopInTunnel) drawWormholeTunnel(ctx!, hopTunnel!, hopFrame)
 
     // ── Kosmischer Staub ────────────────────────────────────────────────────
     // Im Flug ausgesetzt (bei Warp-Tempo wäre er ohnehin nur Schmier), beim Ausrollen
@@ -1505,7 +1533,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       const twinkle = 0.5 + 0.5 * Math.sin(star.twinklePhase)
       const fadeEdge = norm > 0.88 ? 1 - (norm - 0.88) / 0.12 : 1
       let alpha: number
-      if (warpFlight) alpha = Math.min(1, distAlpha * 1.5)
+      if (warpFlight) alpha = Math.min(1, distAlpha * 1.5) * wo.starGain
       else if (rollingOut) alpha = Math.min(1, distAlpha * 1.8) * fadeEdge
       else alpha = distAlpha * (0.5 + 0.5 * twinkle) * fadeEdge
       // Aberration: bei Höchsttempo drängt das Licht nach vorn — voraus heller.
@@ -1798,16 +1826,19 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
       // Fluchtpunkt noch auf ihm (der Kurs baut sich erst auf), gibt es keine
       // Richtung und er bleibt aus.
       const sunR = processionLive.sunR
-      const sdx = w / 2 - cx
-      const sdy = h / 2 - cy
-      if (sunR > 0 && Math.hypot(sdx, sdy) > 1) {
+      const sunX = w / 2 + hopShift.x
+      const sunY = h / 2 + hopShift.y
+      const sdx = sunX - cx
+      const sdy = sunY - cy
+      // Im Wormhole kein Sonnenschweif — er las sich als Rauch in der Bildmitte.
+      if (sunR > 0 && Math.hypot(sdx, sdy) > 1 && hop.out.exitAlpha <= 0) {
         drawStreakSprite(
           ctx,
           processionLive.sunRed,
           processionLive.sunGreen,
           processionLive.sunBlue,
-          w / 2,
-          h / 2,
+          sunX,
+          sunY,
           processionTrailAngle(sdx, sdy),
           sunR * PROCESSION_SUN_TRAIL_LEN_K,
           sunR * PROCESSION_TRAIL_WIDTH_K,

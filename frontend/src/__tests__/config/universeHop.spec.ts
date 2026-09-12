@@ -8,7 +8,21 @@ import {
   UNIVERSE_HOP_HUD_IN_MS,
   UNIVERSE_HOP_HUD_STAGGER_MS,
   UNIVERSE_HOP_PASSAGE_MS,
+  UNIVERSE_HOP_TUNNEL_LEG_MS,
   UNIVERSE_HOP_TUNNEL_TRAIL_FADE,
+  UNIVERSE_HOP_EXIT_R0_FRAC,
+  UNIVERSE_HOP_EXIT_R1_FRAC,
+  UNIVERSE_HOP_EXIT_REVEAL_END,
+  UNIVERSE_HOP_EXIT_REVEAL_T,
+  UNIVERSE_HOP_GROUP_LEAD_FRAC,
+  UNIVERSE_HOP_FOCUS_FRAC_MAX,
+  UNIVERSE_HOP_FOCUS_FRAC_MIN,
+  UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX,
+  UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN,
+  UNIVERSE_HOP_TUNNEL_R_MAX_K,
+  UNIVERSE_HOP_TUNNEL_R_MIN_FRAC,
+  UNIVERSE_HOP_WALL_ALPHA_FAR,
+  UNIVERSE_HOP_WALL_ALPHA_NEAR,
   UNIVERSE_HOP_WASH_MS,
   UNIVERSE_HOP_WASH_PEAK,
   UNIVERSE_HOP_DEPART_MS,
@@ -66,9 +80,37 @@ describe('Universumssprung — die Zeremonie', () => {
     const heraldAt = UNIVERSE_HOP_COMMIT_AT_MS + HYPERSPACE_ARRIVAL_HERALD_DELAY_MS
     const emergeStart = UNIVERSE_HOP_TOTAL_MS - UNIVERSE_HOP_EMERGE_MS
     const hudSettled =
-      emergeStart + UNIVERSE_HOP_HUD_IN_DELAY_MS + UNIVERSE_HOP_HUD_IN_MS + 6 * UNIVERSE_HOP_HUD_STAGGER_MS
+      emergeStart +
+      UNIVERSE_HOP_HUD_IN_DELAY_MS +
+      UNIVERSE_HOP_HUD_IN_MS +
+      6 * UNIVERSE_HOP_HUD_STAGGER_MS
     expect(heraldAt).toBeGreaterThan(hudSettled)
     expect(heraldAt).toBeLessThan(UNIVERSE_HOP_TOTAL_MS)
+  })
+
+  it('gibt der Wormhole-Reise mindestens zwei Kurven und ein wachsendes Ausgangslicht', () => {
+    expect(UNIVERSE_HOP_TUNNEL_LEG_MS * 2).toBeLessThanOrEqual(UNIVERSE_HOP_PASSAGE_MS)
+    expect(UNIVERSE_HOP_EXIT_R0_FRAC).toBeLessThan(UNIVERSE_HOP_EXIT_R1_FRAC)
+    // Das Ausgangslicht bleibt am Fokus im Bild: Fokusband plus Radius unter der halben kurzen Kante … am Ende darf es überstrahlen.
+    expect(UNIVERSE_HOP_FOCUS_FRAC_MAX + UNIVERSE_HOP_EXIT_R0_FRAC).toBeLessThanOrEqual(0.5)
+    // Die Tunnel-Kurven sind HÄRTER als der Anflug: der Ausgang darf hinter die Kurve; die
+    // Gruppe reitet auf dem Anker, nicht am Ausgang.
+    expect(UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN).toBeGreaterThanOrEqual(UNIVERSE_HOP_FOCUS_FRAC_MIN)
+    expect(UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MAX).toBeGreaterThan(UNIVERSE_HOP_FOCUS_FRAC_MAX)
+    // Der Ausgang bleibt klein — kleiner als der Boden des Wegpunkt-Radius.
+    expect(UNIVERSE_HOP_EXIT_R0_FRAC).toBeLessThan(UNIVERSE_HOP_TUNNEL_FOCUS_FRAC_MIN)
+    // Das Ende zeigt sich erst am Ende, und die Kamera folgt dem Spieler (kein Versatz auf die Achse).
+    expect(UNIVERSE_HOP_EXIT_REVEAL_T).toBeGreaterThan(0.5)
+    expect(UNIVERSE_HOP_EXIT_REVEAL_END).toBeGreaterThan(UNIVERSE_HOP_EXIT_REVEAL_T)
+    expect(UNIVERSE_HOP_EXIT_REVEAL_END).toBeLessThan(1)
+    expect(UNIVERSE_HOP_GROUP_LEAD_FRAC).toBeLessThan(0.1)
+    // Ein Schlauch, kein Trichter: die nahe Wand steht im Bild, die Ferne läuft auf einen Punkt zu.
+    expect(UNIVERSE_HOP_TUNNEL_R_MAX_K).toBeLessThan(1)
+    expect(UNIVERSE_HOP_TUNNEL_R_MIN_FRAC).toBeLessThanOrEqual(0.1)
+    expect(UNIVERSE_HOP_EXIT_R1_FRAC).toBeLessThan(UNIVERSE_HOP_TUNNEL_R_MAX_K)
+    // Die Wand ist ein Trichter: fern hell, nah dunkel — und nie ganz weg.
+    expect(UNIVERSE_HOP_WALL_ALPHA_FAR).toBeGreaterThan(UNIVERSE_HOP_WALL_ALPHA_NEAR)
+    expect(UNIVERSE_HOP_WALL_ALPHA_NEAR).toBeGreaterThan(0)
   })
 
   it.each([FILES.veil, FILES.portal])('bewegt in %s nur transform und opacity', (rel) => {
@@ -99,7 +141,10 @@ describe('Universumssprung — die Zeremonie', () => {
     const game = code(FILES.game)
     expect(game.includes('HYPERSPACE_ANIM_')).toBe(false)
     expect(game).toMatch(/travelToUniverse\([\s\S]*?\n {4}\},/)
-    const travel = game.slice(game.indexOf('travelToUniverse('), game.indexOf('commitUniverseHop()'))
+    const travel = game.slice(
+      game.indexOf('travelToUniverse('),
+      game.indexOf('commitUniverseHop()'),
+    )
     expect(travel.includes('gameTimeout')).toBe(false)
     expect(travel.includes('setTimeout')).toBe(false)
     const machine = code(FILES.machine)
