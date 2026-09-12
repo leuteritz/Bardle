@@ -85,6 +85,9 @@ import {
   WARP_SURGE_RESPAWN_FRAC,
   WARP_BODY_ROLL_K,
   WARP_LEAN_TAU_SEC,
+  WARP_SLIP_HOLD_K,
+  WARP_SLIP_RATE_K,
+  WARP_SLIP_MAX_FRAC,
   WARP_COURSE_ARC_DEG,
   WARP_COURSE_LEGS,
   WARP_COURSE_TURN_MIN_DEG,
@@ -317,6 +320,11 @@ describe('Warp — Aufbruch und Kurs', () => {
     expect(WARP_BODY_ROLL_K * WARP_BANK_MAX_RAD).toBeLessThan(0.2)
     expect(WARP_LEAN_TAU_SEC).toBeGreaterThan(0)
     expect(WARP_LEAN_TAU_SEC).toBeLessThan(1)
+    // Der Slip ist ein Anteil der Strömung: gedeckelt, damit die Bahn eine Kurve bleibt und kein Wirbel.
+    expect(WARP_SLIP_HOLD_K).toBeGreaterThan(0)
+    expect(WARP_SLIP_RATE_K).toBeGreaterThan(0)
+    expect(WARP_SLIP_MAX_FRAC).toBeGreaterThan(0)
+    expect(WARP_SLIP_MAX_FRAC).toBeLessThanOrEqual(2)
   })
 })
 

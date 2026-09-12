@@ -1375,16 +1375,22 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
 
     const maxDist = Math.hypot(w / 2, h / 2) + 20 + Math.hypot(cx - w / 2, cy - h / 2)
     // Slip in px/s (Gewicht 1 am Rand) und als Schritt dieses Frames; Roll als Schritt.
-    const slipOn =
+    const helmSlipOn =
       helmOut !== null &&
       !warpActive &&
       (Math.hypot(helmOut.slipX, helmOut.slipY) >= HELM_SLIP_EPS_PX_S || helmOut.rollRate !== 0)
-    const slipVx = slipOn ? helmOut!.slipX : 0
-    const slipVy = slipOn ? helmOut!.slipY : 0
+    // Im Warp fliegen die Sterne die Kurve mit: der Slip der Maschine ist ein
+    // ANTEIL der Strömung und wird hier auf dieselbe Skala wie die Radialformel
+    // (norm² · WARP_SPEED_MAX · speedMultiplier) gebracht.
+    const warpSlipOn = warpActive && (wo.slipX !== 0 || wo.slipY !== 0)
+    const slipOn = helmSlipOn || warpSlipOn
+    const warpSlipK = warpSlipOn ? WARP_SPEED_MAX * speedMultiplier : 0
+    const slipVx = (helmSlipOn ? helmOut!.slipX : 0) + wo.slipX * warpSlipK
+    const slipVy = (helmSlipOn ? helmOut!.slipY : 0) + wo.slipY * warpSlipK
     const slipX = slipVx * delta
     const slipY = slipVy * delta
     // Im Flug rollt das Feld um den Fluchtpunkt — zusätzlich zum Helm.
-    const rollStep = (slipOn ? helmOut!.rollRate * delta : 0) + wo.roll * delta
+    const rollStep = (helmSlipOn ? helmOut!.rollRate * delta : 0) + wo.roll * delta
     encounterFrame.w = w
     encounterFrame.h = h
     encounterFrame.cx = cx
@@ -1705,6 +1711,10 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
           : 0
         if (trailLength > starSize * 3) {
           const width = Math.max(streakWidth, starSize)
+          // Der Strich liegt auf der ECHTEN Bewegung (radial + Slip) — sonst
+          // biegt sich die Bahn, der Strich zeigt weiter radial, und die Spur
+          // malt Zickzack.
+          const ta = slipOn ? trailAngle(star.angle, speed, slipVx, slipVy, norm * norm) : star.angle
           drawStreakSprite(
             ctx,
             star.r,
@@ -1712,7 +1722,7 @@ export function useStarBackground(options: { frozen?: boolean } = {}) {
             star.b,
             x,
             y,
-            star.angle,
+            ta,
             trailLength,
             width,
             alpha,

@@ -189,6 +189,8 @@ export function createUniverseHop(): UniverseHopState {
       playerX: 0,
       playerY: 0,
       bodyRoll: 0,
+      slipX: 0,
+      slipY: 0,
       focal: 0,
       starSurge: 0,
       ripplePhase: 0,

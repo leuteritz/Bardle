@@ -43,6 +43,9 @@ import {
   WARP_LEAN_TAU_SEC,
   WARP_LEG_WEIGHT_MAX,
   WARP_LEG_WEIGHT_MIN,
+  WARP_SLIP_HOLD_K,
+  WARP_SLIP_MAX_FRAC,
+  WARP_SLIP_RATE_K,
   WARP_SPEED_PEAK,
   WARP_SURGE_FROM,
   WARP_SURGE_PEAK,
@@ -98,6 +101,13 @@ export interface WarpFlightOut {
   starSurge: number
   /** Bank des Spielerkörpers in rad — er kippt in die Kurve; der Sprung lässt sie 0. */
   bodyRoll: number
+  /**
+   * Seitliche Strömung des Feldes als ANTEIL der radialen Flussgeschwindigkeit
+   * (norm²-gewichtet wie sie): die Sterne fliegen die Kurve mit. Vorzeichen wie
+   * beim Helm — das nahe Feld rutscht ENTGEGEN dem Fokus. Der Sprung lässt sie 0.
+   */
+  slipX: number
+  slipY: number
 }
 
 export interface GalaxyWarpOut extends WarpFlightOut {
@@ -129,6 +139,9 @@ export interface GalaxyWarpState {
   /** Nachlauf der Lehne — die Kamera holt den Spieler ein. */
   leanX: number
   leanY: number
+  /** Fokus des Vorframes in Anteilen der kurzen Kante — für die Kursrate des Slips. */
+  lastFocusNX: number
+  lastFocusNY: number
   launched: boolean
   committed: boolean
   out: GalaxyWarpOut
@@ -179,6 +192,8 @@ export function createGalaxyWarp(): GalaxyWarpState {
     lastBank: 0,
     leanX: 0,
     leanY: 0,
+    lastFocusNX: 0,
+    lastFocusNY: 0,
     launched: false,
     committed: false,
     out: {
@@ -201,6 +216,8 @@ export function createGalaxyWarp(): GalaxyWarpState {
       playerY: 0,
       starSurge: 0,
       bodyRoll: 0,
+      slipX: 0,
+      slipY: 0,
       launchPulse: 0,
       bowWave: 0,
       launched: false,
@@ -339,11 +356,15 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.playerY = 0
     o.starSurge = 0
     o.bodyRoll = 0
+    o.slipX = 0
+    o.slipY = 0
     o.launchPulse = 0
     o.bowWave = 0
     state.lastBank = 0
     state.leanX = 0
     state.leanY = 0
+    state.lastFocusNX = 0
+    state.lastFocusNY = 0
     o.done = true
     return
   }
@@ -366,6 +387,25 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     state.leanY += (ty - state.leanY) * leanEase
     o.playerX = state.leanX
     o.playerY = state.leanY
+  }
+  // Der Slip aus der Kursbewegung: gehaltener Versatz + Schwenkrate, gegen den
+  // Fokus, im Betrag geklemmt. Muss NACH dem Fokus des Frames laufen.
+  const slip = (gain: number): void => {
+    const nx = o.focusX / minEdge
+    const ny = o.focusY / minEdge
+    const rx = dt > 0 ? ((nx - state.lastFocusNX) * 1000) / dt : 0
+    const ry = dt > 0 ? ((ny - state.lastFocusNY) * 1000) / dt : 0
+    state.lastFocusNX = nx
+    state.lastFocusNY = ny
+    let sx = -(WARP_SLIP_HOLD_K * nx + WARP_SLIP_RATE_K * rx)
+    let sy = -(WARP_SLIP_HOLD_K * ny + WARP_SLIP_RATE_K * ry)
+    const m = Math.hypot(sx, sy)
+    if (m > WARP_SLIP_MAX_FRAC) {
+      sx *= WARP_SLIP_MAX_FRAC / m
+      sy *= WARP_SLIP_MAX_FRAC / m
+    }
+    o.slipX = sx * gain
+    o.slipY = sy * gain
   }
 
   if (phase === 'launch') {
@@ -396,6 +436,10 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.groupLead = 0
     o.bodyRoll = 0
     lean(0, 0)
+    o.slipX = 0
+    o.slipY = 0
+    state.lastFocusNX = 0
+    state.lastFocusNY = 0
     state.lastBank = 0
   } else if (phase === 'accel') {
     const t = (e - LAUNCH_END_MS) / GALAXY_WARP_ACCEL_MS
@@ -415,6 +459,7 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.roll = 0
     o.groupLead = k
     lean(o.focusX * WARP_LEAN_K, o.focusY * WARP_LEAN_K)
+    slip(1)
     o.bodyRoll = 0
     o.starSurge = 1
     state.lastBank = 0
@@ -460,6 +505,7 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.procession = 1
     o.groupLead = 1
     lean(fx * WARP_LEAN_K, fy * WARP_LEAN_K)
+    slip(1)
     o.bodyRoll = bank * WARP_BODY_ROLL_K
     o.starSurge = 1
   } else {
@@ -485,6 +531,10 @@ export function stepGalaxyWarp(state: GalaxyWarpState, dtMs: number, minEdge: nu
     o.roll = 0
     o.groupLead = settle
     lean(cxEnd * WARP_LEAN_K, cyEnd * WARP_LEAN_K)
+    // Die back-Kurve des Fokus schwingt über; der Rutsch folgt nur dem Hold-Anteil und läuft aus.
+    state.lastFocusNX = o.focusX / minEdge
+    state.lastFocusNY = o.focusY / minEdge
+    slip(settle)
     o.bodyRoll = 0
     o.starSurge = settle
     o.flightSec = FLIGHT_MS / 1000

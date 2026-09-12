@@ -16,6 +16,7 @@ import {
   WARP_INHALE_SPEED,
   WARP_LAUNCH_SPEED,
   WARP_LEAN_K,
+  WARP_SLIP_MAX_FRAC,
   WARP_SPEED_PEAK,
   WARP_SURGE_FROM,
   WARP_SURGE_PEAK,
@@ -363,6 +364,53 @@ describe('galaxyWarp — Kurven', () => {
       if (o.commit) expect(Math.abs(bank)).toBeLessThan(0.01)
     }
     expect(maxRoll).toBeGreaterThan(0)
+  })
+
+  it('lässt die Sterne die Kurve mitfliegen: der Slip steht gegen den Fokus, ist geklemmt, stetig und läuft aus', () => {
+    const state = createGalaxyWarp()
+    startGalaxyWarp(state, seeded(37))
+    const dt = 16.7
+    let t = 0
+    let lastSx = 0
+    let lastSy = 0
+    let maxSlip = 0
+    let lastFx = 0
+    let lastFy = 0
+    while (t < TOTAL_MS) {
+      t += dt
+      stepGalaxyWarp(state, dt, MIN_EDGE)
+      const o = state.out
+      const m = Math.hypot(o.slipX, o.slipY)
+      if (o.phase === 'launch' || o.phase === 'idle') expect(m).toBe(0)
+      expect(m).toBeLessThanOrEqual(WARP_SLIP_MAX_FRAC + 1e-9)
+      // Stetig: kein Sprung grösser als ein Fünftel des Deckels je Frame.
+      expect(Math.hypot(o.slipX - lastSx, o.slipY - lastSy)).toBeLessThan(WARP_SLIP_MAX_FRAC * 0.2)
+      if (o.phase === 'cruise') {
+        maxSlip = Math.max(maxSlip, m)
+        // Gegen die Kursbewegung: wandert der Fokus, rutscht das Feld entgegen.
+        const rx = o.focusX - lastFx
+        const ry = o.focusY - lastFy
+        if (Math.hypot(rx, ry) > 0.5 && Math.hypot(o.focusX, o.focusY) < MIN_EDGE * 0.05)
+          expect(o.slipX * rx + o.slipY * ry).toBeLessThanOrEqual(1e-9)
+      }
+      lastSx = o.slipX
+      lastSy = o.slipY
+      lastFx = o.focusX
+      lastFy = o.focusY
+    }
+    expect(maxSlip).toBeGreaterThan(WARP_SLIP_MAX_FRAC * 0.3)
+    expect(Math.hypot(state.out.slipX, state.out.slipY)).toBe(0)
+  })
+
+  it('hält im gehaltenen Kurs einen Rutsch gegen den Fokus', () => {
+    // Am Ende des Anlaufs steht der Fokus auf A und ruht kurz: der Hold-Anteil allein
+    // schiebt das Feld entgegen — Vorzeichenvertrag des Helms.
+    const state = createGalaxyWarp()
+    startGalaxyWarp(state, seeded(41))
+    stepGalaxyWarp(state, ACCEL_END, MIN_EDGE)
+    stepGalaxyWarp(state, 16.7, MIN_EDGE)
+    const o = state.out
+    expect(o.slipX * o.focusX + o.slipY * o.focusY).toBeLessThan(0)
   })
 
   it('löscht das Vorbild nur im Flug unvollständig (Persistenz-Blur)', () => {

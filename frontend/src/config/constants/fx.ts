@@ -788,6 +788,15 @@ export const WARP_LEAN_K = 0.55
 export const WARP_LEAN_TAU_SEC = 0.3
 /** Der Körper kippt in die Kurve: bodyRoll = Bank · K (rad). */
 export const WARP_BODY_ROLL_K = 0.6
+/**
+ * Die Sterne fliegen die Kurve MIT: seitliche Strömung als ANTEIL der radialen
+ * Flussgeschwindigkeit (nicht px/s — am Rand laufen 17 000 px/s, da sind 110 px/s
+ * Helm-Slip 0,4°). Hold: ein gehaltener Versatz ist eine gehaltene Kurve; Rate: der
+ * Schwenk zur nächsten Etappe. Bei 1,1 biegt ein Stern mit baseSpeed 1 um ~45°.
+ */
+export const WARP_SLIP_HOLD_K = 2.2
+export const WARP_SLIP_RATE_K = 2.5
+export const WARP_SLIP_MAX_FRAC = 1.1
 /** Strichbreite: Grundwert + Tempo-Anteil (bei 54× ≈ 4,8 px). */
 export const WARP_STREAK_WIDTH_BASE = 1.0
 export const WARP_STREAK_WIDTH_PER_SPEED = 0.1
