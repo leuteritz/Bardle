@@ -241,7 +241,7 @@ watch(
 
       <button
         v-show="!gameStore.isEncyclopediaOpen"
-        class="fixed right-0 z-[45] px-2 py-3 transition-all duration-300 -translate-y-1/2 border border-r-0 shadow-lg top-1/2 hover:pr-3 group encyclopedia-toggle"
+        class="fixed left-0 z-[45] px-2 py-3 transition-all duration-300 -translate-y-1/2 border border-l-0 shadow-lg hover:pl-3 group encyclopedia-toggle"
         @click="gameStore.toggleEncyclopedia()"
       >
         <Icon
@@ -552,7 +552,7 @@ html.uhop-hud-out body .music-widget {
   translate: calc(-1 * var(--uhop-hud-shift)) 0;
 }
 html.uhop-hud-out body .encyclopedia-toggle {
-  translate: var(--uhop-hud-shift) 0;
+  translate: calc(-1 * var(--uhop-hud-shift)) 0;
 }
 html.uhop-hud-in
   body
@@ -642,10 +642,13 @@ html.uhop-hud-in body :is(.kb-hud, .music-widget, .encyclopedia-toggle) {
   padding-inline: var(--bard-avatar-radius);
 }
 
+/* Links unter dem Musik-Widget (52 px, mittig) — der rechte Rand gehört dem
+   Buff-Stapel. Das Codex-Panel öffnet weiter rechts, es hängt nicht am Griff. */
 .encyclopedia-toggle {
+  top: calc(50% + 62px);
   background: var(--rpg-bg-header, rgba(6, 4, 14, 0.88));
   border-color: var(--rpg-wood-mid, rgba(255, 200, 80, 0.15));
-  border-radius: 4px 0 0 4px;
+  border-radius: 0 4px 4px 0;
 }
 
 .encyclopedia-toggle:hover {
