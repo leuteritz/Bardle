@@ -29,7 +29,7 @@ import SideRailHandle from '@/components/ui/SideRailHandle.vue'
 import { useSideRail } from '@/composables/ui/useSideRail'
 import UniverseChart from './UniverseChart.vue'
 import { buildUniversePath, type UniversePath } from '@/utils/ui/universeLayout'
-import { buildUniverseRailRows } from '@/utils/ui/universeRail'
+import { buildUniverseRailRows, visibleUniverseRailRows } from '@/utils/ui/universeRail'
 import { buildUniverseChronicle } from '@/utils/ui/universeChronicle'
 import {
   UNIVERSE_MAP_RAIL_AUTOFOLD_W,
@@ -56,9 +56,7 @@ const isVisible = computed(() => uiStore.bardActiveTab === 'universe')
    Header fuehrt hierher, und die Chimes-Schwelle und die erste befreite Galaxie
    sind zwei verschiedene Uhren. Die laufende Bahn traegt auch ohne Archiv immer
    den `current`-Knoten samt seinen Vorausplaetzen. */
-const isUnlocked = computed(
-  () => completedGalaxies.value.length > 0 || gameStore.prestigeAvailable,
-)
+const isUnlocked = computed(() => completedGalaxies.value.length > 0 || gameStore.prestigeAvailable)
 
 /**
  * Die Karten des Aufbruchs — aber nur auf der LAUFENDEN Bahn.
@@ -161,6 +159,7 @@ const railRows = computed(() =>
     currentLost: currentLost.value,
   }),
 )
+const visibleRailRows = computed(() => visibleUniverseRailRows(railRows.value))
 const walkedCount = computed(() => railRows.value.filter((r) => r.walked).length)
 
 /** `null` = der Reiter entscheidet nach Breite, sonst hat es der Spieler gesagt. */
@@ -172,7 +171,11 @@ const root = ref<HTMLElement | null>(null)
 
 /** Fahrt, Fokus und Breitenmessung teilen sich alle vier Leisten. Die
  *  Politik — Startzustand und Escape-Richtung — bleibt hier. */
-const { inert: railInert, observe, unobserve } = useSideRail({
+const {
+  inert: railInert,
+  observe,
+  unobserve,
+} = useSideRail({
   folded: railFolded,
   slideMs: UNIVERSE_MAP_RAIL_SLIDE_MS,
   autofoldW: UNIVERSE_MAP_RAIL_AUTOFOLD_W,
@@ -260,7 +263,6 @@ const handleTitle = computed(
 const railPanelWidth = `${UNIVERSE_MAP_RAIL_PANEL_W}px`
 const handleWidth = `${UNIVERSE_MAP_RAIL_HANDLE_PX}px`
 const slideMs = `${UNIVERSE_MAP_RAIL_SLIDE_MS}ms`
-
 </script>
 
 <template>
@@ -294,11 +296,7 @@ const slideMs = `${UNIVERSE_MAP_RAIL_SLIDE_MS}ms`
             :class="{ 'un-rail-slide--parked': railFolded }"
             :inert="railInert"
           >
-            <UniverseRail
-              :rows="railRows"
-              :selection="selection"
-              @select="select"
-            />
+            <UniverseRail :rows="visibleRailRows" :selection="selection" @select="select" />
           </div>
 
           <SideRailHandle

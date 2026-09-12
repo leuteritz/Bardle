@@ -181,12 +181,10 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
         <!-- Grad, Farbe und Ellipse kommen von `.sr-row-note` — eine zweite
              Textzeile ohne zweite Schriftskala. -->
         <span class="sr-row-note un-rail-read">
-          <span class="un-rail-v">{{ row.galaxies }}</span> freed<span class="un-rail-sep"
-            >·</span
+          <span class="un-rail-v">{{ row.galaxies }}</span> freed<span class="un-rail-sep">·</span
           ><span class="un-rail-v">{{ row.rescued }}</span
           ><span class="un-rail-slash">/</span
-          ><span class="un-rail-lost">{{ row.lost }}</span> stars<span class="un-rail-sep"
-            >·</span
+          ><span class="un-rail-lost">{{ row.lost }}</span> stars<span class="un-rail-sep">·</span
           ><span class="un-rail-t">{{ row.elapsed }}</span>
         </span>
 
@@ -235,6 +233,11 @@ const tintBarW = px(UNIVERSE_RAIL_TINT_BAR_W)
 
 .un-rail-row.is-current {
   --sr-color: v-bind(hereColor);
+}
+.un-rail-row.is-current:not(.is-picked) {
+  background: color-mix(in srgb, v-bind(hereColor) 10%, var(--sr-row-bg));
+  border-color: color-mix(in srgb, v-bind(hereColor) 55%, var(--sr-row-border));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, v-bind(hereColor) 45%, transparent);
 }
 
 /* Die gewaehlte Bahn traegt den Ton DIESES Universums, nicht den einer
