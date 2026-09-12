@@ -2,17 +2,39 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useActiveBuffList } from '@/composables/ui/useActiveBuffList'
+import VitalityBar from '@/components/ui/VitalityBar.vue'
+import { usePlayerStore } from '@/stores/battle/playerStore'
+import { sunVitalStage } from '@/utils/ui/format'
 import { DRIFTER_BUFF_EXPIRY_WARN_SEC, JOURNEY_BUFF_PANEL } from '@/config/constants'
 
-/** Die laufenden Zeiteffekte, als eigene Zeile über der Sonne. Ohne Rubrik:
- *  auf Full HD ist die Sonnenspalte 490px breit, und eine Beschriftung „Running
- *  6" nahm zwei Karten den Namen weg, den sie selbst zeigen. Die dauerhafte
- *  Summe steht auf der Stats-Seite — sie ist Bilanz, kein Ticker. */
+/** Gemeinsame Statusspur für Sonne und aktive Effekte. */
 const { buffs } = useActiveBuffList()
+const playerStore = usePlayerStore()
 
 const P = JOURNEY_BUFF_PANEL
 const panelH = `${P.H}px`
 const panelHCompact = `${P.H_COMPACT}px`
+const vitalMinW = `${P.VITAL_MIN_W}px`
+const vitalMaxW = `${P.VITAL_MAX_W}px`
+const vitalShare = `${P.VITAL_SHARE}%`
+const vitalH = `${P.VITAL_H}px`
+const vitalHCompact = `${P.VITAL_H_COMPACT}px`
+
+const regen = computed(() => Math.round(playerStore.regenPerSec * 10) / 10)
+const vitalityStage = computed(() => sunVitalStage(playerStore.hpPercent))
+const vitalityState = computed(() => `is-${vitalityStage.value}`)
+const vitalityStatus = computed(() => {
+  if (vitalityStage.value === 'red') return 'Critical'
+  if (vitalityStage.value === 'yellow') return 'Wounded'
+  return 'Stable'
+})
+const vitalityTip = computed(
+  () =>
+    `Sun vitality · ${Math.ceil(playerStore.currentHP).toLocaleString()} / ${Math.round(playerStore.maxHP).toLocaleString()} · +${regen.value}/s regeneration`,
+)
+const vitalityLabel = computed(
+  () => `Sun health ${Math.ceil(playerStore.currentHP)} of ${playerStore.maxHP}`,
+)
 
 /* Wie viele Karten nebeneinander passen, misst die Reihe an sich selbst: auf
    Full HD ist die Sonnenspalte rund 570px breit, auf 4K viermal so viel. */
@@ -51,61 +73,86 @@ onUnmounted(() => rowObserver?.disconnect())
 </script>
 
 <template>
-  <section class="jbp" aria-label="Active effects">
-    <div ref="rowEl" class="jbp-row">
-      <span v-if="buffs.length === 0" class="jbp-empty">
-        <Icon icon="game-icons:hourglass" width="24" height="24" aria-hidden="true" />
-        No effects running
-      </span>
+  <section class="jbp" aria-label="Journey status">
+    <div class="jbp-vitals" :class="vitalityState" v-tip="vitalityTip">
+      <div class="jbp-vitals-head">
+        <span class="jbp-vitals-label">Sun vitality</span>
+        <span class="jbp-vitals-state">{{ vitalityStatus }}</span>
+      </div>
+      <VitalityBar
+        class="jbp-vitality-bar"
+        :current="playerStore.currentHP"
+        :max="playerStore.maxHP"
+        :regen-per-sec="regen"
+        label-placement="inside"
+        spark
+        aria-role="status"
+        :aria-label="vitalityLabel"
+      />
+    </div>
 
-      <TransitionGroup name="jbp-card">
-        <article
-          v-for="b in shown"
-          :key="b.key"
-          class="jbp-card"
-          :class="{
-            'is-expiring': b.timer && b.timer.secondsLeft <= DRIFTER_BUFF_EXPIRY_WARN_SEC,
-            'is-endless': !b.timer,
-            'is-ranked': !!b.rankColor,
-          }"
-          :style="{ '--buff': b.color, '--buff-rank': b.rankColor }"
-          v-tip="`${b.name} — ${b.multiplier}× ${b.label}`"
-        >
-          <!-- Die Karte IST die Uhr: der Grund läuft nach links leer. -->
-          <span
-            class="jbp-drain"
-            :style="{ transform: `scaleX(${b.timer ? b.timer.progress : 1})` }"
-            aria-hidden="true"
-          />
-          <span class="jbp-pulse" aria-hidden="true" />
+    <span class="jbp-seam" aria-hidden="true" />
 
-          <span class="jbp-icon">
-            <img v-if="b.image" :src="b.image" class="jbp-art" alt="" aria-hidden="true" />
-            <Icon v-else-if="b.icon" :icon="b.icon" class="jbp-glyph" aria-hidden="true" />
-          </span>
+    <div class="jbp-effects">
+      <div class="jbp-effects-head">
+        <span class="jbp-effects-label">Active effects</span>
+        <span class="jbp-effects-count">{{ buffs.length ? `${buffs.length} running` : 'Clear' }}</span>
+      </div>
 
-          <span class="jbp-copy">
-            <span class="jbp-name">{{ b.name }}</span>
-            <span class="jbp-axis">
-              <span class="jbp-mult">{{ b.multiplier }}×</span> {{ b.label }}
+      <div ref="rowEl" class="jbp-row">
+        <span v-if="buffs.length === 0" class="jbp-empty">
+          <Icon icon="game-icons:hourglass" width="24" height="24" aria-hidden="true" />
+          No effects running
+        </span>
+
+        <TransitionGroup name="jbp-card">
+          <article
+            v-for="b in shown"
+            :key="b.key"
+            class="jbp-card"
+            :class="{
+              'is-expiring': b.timer && b.timer.secondsLeft <= DRIFTER_BUFF_EXPIRY_WARN_SEC,
+              'is-endless': !b.timer,
+              'is-ranked': !!b.rankColor,
+            }"
+            :style="{ '--buff': b.color, '--buff-rank': b.rankColor }"
+            v-tip="`${b.name} — ${b.multiplier}× ${b.label}`"
+          >
+            <span
+              class="jbp-drain"
+              :style="{ transform: `scaleX(${b.timer ? b.timer.progress : 1})` }"
+              aria-hidden="true"
+            />
+            <span class="jbp-pulse" aria-hidden="true" />
+
+            <span class="jbp-icon">
+              <img v-if="b.image" :src="b.image" class="jbp-art" alt="" aria-hidden="true" />
+              <Icon v-else-if="b.icon" :icon="b.icon" class="jbp-glyph" aria-hidden="true" />
             </span>
-          </span>
 
-          <span v-if="b.timer" class="jbp-clock">
-            <span class="jbp-sec">{{ b.timer.secondsLeft }}</span
-            ><span class="jbp-unit">s</span>
-          </span>
-          <span v-else class="jbp-clock jbp-clock--endless">galaxy</span>
-        </article>
+            <span class="jbp-copy">
+              <span class="jbp-name">{{ b.name }}</span>
+              <span class="jbp-axis">
+                <span class="jbp-mult">{{ b.multiplier }}×</span> {{ b.label }}
+              </span>
+            </span>
 
-        <span
-          v-if="overflow > 0"
-          key="more"
-          class="jbp-more"
-          v-tip="`${overflow} more effect${overflow === 1 ? '' : 's'} running`"
-          >+{{ overflow }}</span
-        >
-      </TransitionGroup>
+            <span v-if="b.timer" class="jbp-clock">
+              <span class="jbp-sec">{{ b.timer.secondsLeft }}</span
+              ><span class="jbp-unit">s</span>
+            </span>
+            <span v-else class="jbp-clock jbp-clock--endless">galaxy</span>
+          </article>
+
+          <span
+            v-if="overflow > 0"
+            key="more"
+            class="jbp-more"
+            v-tip="`${overflow} more effect${overflow === 1 ? '' : 's'} running`"
+            >+{{ overflow }}</span
+          >
+        </TransitionGroup>
+      </div>
     </div>
   </section>
 </template>
@@ -116,13 +163,95 @@ onUnmounted(() => rowObserver?.disconnect())
 .jbp {
   display: flex;
   align-items: stretch;
-  gap: 14px;
+  gap: 12px;
   height: v-bind(panelH);
   min-width: 0;
   padding: 8px 16px;
   background: #16100a;
   border-bottom: 1px solid #2c1806;
   overflow: clip;
+}
+
+.jbp-vitals {
+  display: flex;
+  flex: 1 1 v-bind(vitalShare);
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-width: v-bind(vitalMinW);
+  max-width: v-bind(vitalMaxW);
+  padding-right: 2px;
+}
+
+.jbp-vitals-head,
+.jbp-effects-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.jbp-vitals-label,
+.jbp-effects-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #c79b42;
+  white-space: nowrap;
+}
+
+.jbp-vitals-state,
+.jbp-effects-count {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a6a4a;
+}
+
+.jbp-vitals.is-yellow .jbp-vitals-state {
+  color: #e0a828;
+}
+
+.jbp-vitals.is-red .jbp-vitals-label,
+.jbp-vitals.is-red .jbp-vitals-state {
+  color: #cc6050;
+}
+
+.jbp-vitality-bar {
+  --vb-w: 100%;
+  --vb-h: v-bind(vitalH);
+  --vb-label-size: 16px;
+  --vb-label-sub-size: 10px;
+  --vb-regen-size: 9px;
+  --vb-regen-display: inline;
+  --vb-cur-reserve: 0;
+}
+
+.jbp-seam {
+  align-self: stretch;
+  width: 1px;
+  margin: 7px 1px;
+  background: linear-gradient(to bottom, transparent, #5c3310 25%, #5c3310 75%, transparent);
+}
+
+.jbp-effects {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.jbp-effects-label {
+  color: #8a7a58;
+}
+
+.jbp-effects-count {
+  color: #5f553e;
 }
 
 .jbp-row {
@@ -325,9 +454,22 @@ onUnmounted(() => rowObserver?.disconnect())
 
 @media (max-height: 1100px) {
   .jbp {
-    gap: 11px;
+    gap: 10px;
     height: v-bind(panelHCompact);
     padding: 6px 12px;
+  }
+  .jbp-vitals {
+    gap: 4px;
+  }
+  .jbp-vitality-bar {
+    --vb-h: v-bind(vitalHCompact);
+    --vb-label-size: 15px;
+  }
+  .jbp-seam {
+    margin-block: 6px;
+  }
+  .jbp-effects {
+    gap: 4px;
   }
   .jbp-card {
     gap: 9px;
