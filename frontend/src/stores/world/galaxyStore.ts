@@ -19,6 +19,9 @@ import { clampPercent } from '@/utils/orbit/geometry'
 import { gameNow, gameTimeout } from '@/utils/game/gameClock'
 import { landfallFlightModeFor } from '@/utils/orbit/landfallPath'
 import { galaxyDepth } from '@/utils/game/galaxyDepth'
+import { courseCandidates, type CourseOption } from '@/utils/game/courseCandidates'
+import { galaxyStarDots } from '@/utils/game/galaxyStarDots'
+import type { DotPos } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
   landfallOnLeg,
   landfallWindowMs,
@@ -100,6 +103,10 @@ export interface CompletedGalaxyRecord {
    *  Migration, und der Archiv-Nachtrag lässt es bewusst leer. Beides ist wahr,
    *  nicht gelogen — dort hat nie jemand geflogen. */
   starManifests?: StarManifest[]
+  /** Der gewählte Ort je Etappe, parallel zu `attemptResults`. OPTIONAL und
+   *  dauerhaft: Altbestand und Nachtrag laden ohne — dort gilt die alte
+   *  Generierung (`galaxyStarDots`). */
+  starPositions?: DotPos[]
   /** Void-Einschläge und seltene Drifter dieser Galaxie, in Buchungsreihenfolge.
    *  OPTIONAL, und zwar dauerhaft: Altbestand lädt ohne Migration und zeigt
    *  keine — dort ist nie eine gebucht worden, ein Nachtrag erfände sie. */
@@ -317,8 +324,14 @@ export const useGalaxyStore = defineStore('galaxy', {
      */
     pendingThemeIndex: null as number | null,
     pendingUsedThemes: null as number[] | null,
-    // Role selection modal
+    // Kurswahl: drei Kandidaten-Sterne im Galaxy-Tab, kein Modal mehr.
     pendingRoleSelection: true,
+    /** Der gewählte Ort je Etappe, parallel zu `attemptResults`. */
+    starPositions: [] as DotPos[],
+    /** Flugzeit-Faktor der laufenden Etappe (Entfernung des gewählten Sterns). */
+    courseLegFactor: 1,
+    /** Lifetime: gesetzte Kurse — die Wayfinder-Metrik `coursesCharted`. */
+    totalCoursesCharted: 0,
     /** Folgeaktion eines Champion-Sterns, die auf das Schliessen des Star-Fight-Modals wartet. */
     rescueFollowUp: null as 'role' | 'travel' | null,
     nextStarRole: null as ChampionRole | null,
@@ -489,6 +502,18 @@ export const useGalaxyStore = defineStore('galaxy', {
       return clampPercent((elapsed / dur) * 100)
     },
 
+    /** Die Flugzeit einer Etappe mit diesem Kursfaktor — dieselbe Formel wie startChampionTravel + effectiveTravelDurationMs. */
+    flightMsForFactor(): (legFactor: number) => number {
+      const base = Math.min(
+        CHAMPION_TRAVEL_MAX_MS,
+        CHAMPION_TRAVEL_BASE_MS + galaxyDepth(this.currentGalaxy) * CHAMPION_TRAVEL_SCALE_MS,
+      )
+      const flightMult = useSolarUpgradeStore().flightSpeedMultiplier
+      const forgeMult = useStarForgeStore().championTravelMult
+      return (legFactor) =>
+        Math.max(1000, Math.round((Math.round(base * legFactor) / flightMult) * forgeMult))
+    },
+
     travelRemainingMs(): number {
       void this._travelTickMs
       if (this.championTravelState !== 'traveling') return 0
@@ -501,10 +526,31 @@ export const useGalaxyStore = defineStore('galaxy', {
       if (this.rescueRotationPhase === 'rotating') return false
       // Auch der komplette Endkampf am Galaxiekern (Eskorten-Wellen + Boss)
       // friert den Hintergrund ein — wie bei einem erreichten Champion-Stern.
-      return (
-        this.pendingRoleSelection ||
-        this.championTravelState === 'champion_spawned' ||
-        this.bossPhaseActive
+      // Die offene Kurswahl hält NICHT an — Bard treibt, bis ein Stern gewählt ist.
+      return this.championTravelState === 'champion_spawned' || this.bossPhaseActive
+    },
+
+    /** Sternorte der laufenden Galaxie — dieselbe Rechnung wie Platte und Minimap. */
+    starDots(): { spawn: DotPos; dots: DotPos[] } {
+      return galaxyStarDots(this.mapSeed, this.attemptResults.length, this.starPositions)
+    },
+
+    /** Wo das Schiff steht, wenn kein Flug läuft: Abflugportal oder letzter Stern. */
+    courseOrigin(): DotPos {
+      const { spawn, dots } = this.starDots
+      const n = this.attemptResults.length
+      return n > 0 ? dots[n - 1] : spawn
+    },
+
+    /** Die drei Kandidaten der offenen Etappe — abgeleitet, deterministisch, nie persistiert. */
+    courseOptions(): CourseOption[] {
+      if (!this.pendingRoleSelection) return []
+      const { dots } = this.starDots
+      return courseCandidates(
+        this.mapSeed,
+        this.currentLegIndex,
+        this.courseOrigin,
+        dots.slice(0, this.attemptResults.length),
       )
     },
   },
@@ -513,6 +559,20 @@ export const useGalaxyStore = defineStore('galaxy', {
     requestRoleSelection() {
       this.nextStarRole = null
       this.pendingRoleSelection = true
+    },
+
+    /** Die Geste der Kurswahl: Rolle UND Ort, dann Abflug wie bisher. */
+    chartCourse(optionIndex: number) {
+      if (!this.pendingRoleSelection) return
+      const opt = this.courseOptions[optionIndex]
+      if (!opt) return
+      this.nextStarRole = opt.role
+      this.courseLegFactor = opt.legFactor
+      this.starPositions = [...this.starPositions.slice(0, this.currentLegIndex), opt.pos]
+      this.totalCoursesCharted++
+      this.pendingRoleSelection = false
+      this.travelPendingAfterRotation = true
+      this.startRescueRotation()
     },
 
     /**
@@ -543,11 +603,10 @@ export const useGalaxyStore = defineStore('galaxy', {
       this._runRescueFollowUp(kind)
     },
 
+    /** Dünner Wrapper für Admin, maxEverything und Specs: der Kandidat dieser Rolle, sonst der erste. */
     confirmRoleSelection(role: ChampionRole) {
-      this.nextStarRole = role
-      this.pendingRoleSelection = false
-      this.travelPendingAfterRotation = true
-      this.startRescueRotation()
+      const idx = this.courseOptions.findIndex((o) => o.role === role)
+      this.chartCourse(idx >= 0 ? idx : 0)
     },
 
     startChampionTravel() {
@@ -555,9 +614,12 @@ export const useGalaxyStore = defineStore('galaxy', {
       // (flightSpeedMultiplier) endet bei ×1,6 — ab Galaxie 13 wurde daraus das
       // Tempolimit des ganzen Spiels. Ab dem Deckel wächst nur noch die ANZAHL
       // der Sterne je Galaxie.
-      const baseDuration = Math.min(
-        CHAMPION_TRAVEL_MAX_MS,
-        CHAMPION_TRAVEL_BASE_MS + galaxyDepth(this.currentGalaxy) * CHAMPION_TRAVEL_SCALE_MS,
+      // Der Deckel gilt der Achse, der Kursfaktor der Wahl — erst deckeln, dann wiegen.
+      const baseDuration = Math.round(
+        Math.min(
+          CHAMPION_TRAVEL_MAX_MS,
+          CHAMPION_TRAVEL_BASE_MS + galaxyDepth(this.currentGalaxy) * CHAMPION_TRAVEL_SCALE_MS,
+        ) * this.courseLegFactor,
       )
       this.championTravelBaseDurationMs = baseDuration
       this.championTravelState = 'traveling'
@@ -903,6 +965,15 @@ export const useGalaxyStore = defineStore('galaxy', {
       }
       this.attemptResults.push('failed')
       this.starManifests.push(manifest)
+      // Die Ersatz-Etappe bekommt ihren Ort im selben Atemzug — ohne Wahl den ersten Kandidaten.
+      const next = courseCandidates(
+        this.mapSeed,
+        this.currentLegIndex,
+        this.courseOrigin,
+        this.starDots.dots.slice(0, this.attemptResults.length),
+      )[0]
+      this.starPositions = [...this.starPositions.slice(0, this.currentLegIndex), next.pos]
+      this.courseLegFactor = next.legFactor
       this.totalStarsLost++
       this.starJustFailed = true
       gameTimeout(() => {
@@ -943,6 +1014,7 @@ export const useGalaxyStore = defineStore('galaxy', {
         landfallResults: [...this.landfallResults],
         incidentResults: this.incidentResults.map((e) => ({ ...e })),
         starManifests: this._manifestsForArchive(),
+        starPositions: this.starPositions.slice(0, this.attemptResults.length).map((p) => ({ ...p })),
         durationSeconds: Math.max(0, inGameTime - this.galaxyStartedAtInGameTime),
         // Wanduhr: Chronikstempel, wird im Galaxy-Archiv als Datum gelesen und
         // nie gegen eine Frist geprüft.
@@ -999,6 +1071,8 @@ export const useGalaxyStore = defineStore('galaxy', {
       if (!val && this.roleSelectionAfterWarp) {
         this.roleSelectionAfterWarp = false
         this.requestRoleSelection()
+        // Die Ankunft zeigt die Kandidaten gleich gross — der Reiter öffnet sich selbst.
+        useUiStore().requestOpenGalaxyLive()
       }
     },
 
@@ -1073,6 +1147,8 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.starsRequired = computeRequired(this.currentGalaxy)
       this.attemptResults = []
       this.starManifests = []
+      this.starPositions = []
+      this.courseLegFactor = 1
       this.landfallResults = []
       this.incidentResults = []
       this.activeLandfall = null

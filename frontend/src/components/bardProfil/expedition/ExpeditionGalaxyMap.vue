@@ -35,7 +35,7 @@ import { incidentMarkRadius, incidentMarks, incidentPaint } from '@/utils/game/g
 import { galaxyStarMarksOf } from '@/utils/game/starNames'
 import { resetCanvasIfContextLost } from '@/utils/fx/canvasContext'
 import { voyageGateSizeFor, voyageMarkerSizeFor } from '@/utils/game/voyageSites'
-import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { galaxyStarDots } from '@/utils/game/galaxyStarDots'
 import {
   VOYAGE_MAP_HISTORY_SCALE,
   LANDFALL_MARK_R,
@@ -61,7 +61,7 @@ import {
   UNIVERSE_MAP_DIVE_EASE_LEAVE,
   UNIVERSE_MAP_DIVE_LEAVE_MS,
 } from '@/config/constants'
-import { computeRequired, type CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
+import { computeRequired, useGalaxyStore, type CompletedGalaxyRecord } from '@/stores/world/galaxyStore'
 import type { VoyageHomecoming, VoyageMarkAction, VoyagePlacedSite } from '@/types'
 import ExpeditionSiteNode from './ExpeditionSiteNode.vue'
 import ExpeditionGateNode from './ExpeditionGateNode.vue'
@@ -73,6 +73,7 @@ import ExpeditionGalaxyStatsBand from './ExpeditionGalaxyStatsBand.vue'
 import ExpeditionStarManifest from './ExpeditionStarManifest.vue'
 import ExpeditionCrewMarkerLayer from './ExpeditionCrewMarkerLayer.vue'
 import ExpeditionPlayerMarkerLayer from './ExpeditionPlayerMarkerLayer.vue'
+import ExpeditionCourseLayer from './ExpeditionCourseLayer.vue'
 import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
 
 const props = defineProps<{
@@ -110,6 +111,10 @@ const emit = defineEmits<{ select: [string | null]; act: [string] }>()
 
 /** Eine platzierte Marke hat immer einen Eintrag — der Rückfall hält nur den Typ dicht. */
 const ACTION_FALLBACK: VoyageMarkAction = { kind: 'waiting', endsAt: 0 }
+
+const galaxyStore = useGalaxyStore()
+/** Die Kurswahl liegt nur auf der LAUFENDEN Galaxie, solange kein Stern gewählt ist. */
+const courseOpen = computed(() => !!props.live && galaxyStore.pendingRoleSelection)
 
 const stage = ref<HTMLElement | null>(null)
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -189,7 +194,7 @@ const markerSize = computed(() => voyageMarkerSizeFor(props.sites, box.value))
  */
 const chart = computed(() => {
   const attempts = props.record.attemptResults.length
-  return { attempts, ...generateGalaxyDots(props.record.mapSeed, attempts + 1) }
+  return { attempts, ...galaxyStarDots(props.record.mapSeed, attempts, props.record.starPositions) }
 })
 
 const landfallNodes = computed(() => {
@@ -533,6 +538,8 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
       :visible="visible"
       :now="now"
     />
+
+    <ExpeditionCourseLayer v-if="courseOpen" :box="box" :width="cssW" :height="cssH" />
 
     <ExpeditionCrewMarkerLayer
       :record="record"

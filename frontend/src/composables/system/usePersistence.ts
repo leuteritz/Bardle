@@ -325,6 +325,9 @@ export function usePersistence() {
         landfallResults: galaxyStore.landfallResults.map((l) => ({ ...l })),
         incidentResults: galaxyStore.incidentResults.map((e) => ({ ...e })),
         starManifests: galaxyStore.starManifests.map((m) => ({ ...m })),
+        starPositions: galaxyStore.starPositions.map((p) => ({ ...p })),
+        courseLegFactor: galaxyStore.courseLegFactor,
+        totalCoursesCharted: galaxyStore.totalCoursesCharted,
         // Der Cairn-Segen wird MIT der Galaxie gespeichert, nicht in einem
         // eigenen Block: er gilt für genau diese eine, und `boonGalaxy` ist die
         // Prüfgrösse beim Laden — es gibt keine Frist, gegen die man prüfen
@@ -340,6 +343,7 @@ export function usePersistence() {
           landfallResults: r.landfallResults?.map((l) => ({ ...l })),
           incidentResults: r.incidentResults?.map((e) => ({ ...e })),
           starManifests: r.starManifests?.map((m) => ({ ...m })),
+          starPositions: r.starPositions?.map((p) => ({ ...p })),
         })),
         unlockedTier: galaxyStore.unlockedTier,
         galaxyBossDefeated: galaxyStore.galaxyBossDefeated,
@@ -917,6 +921,10 @@ export function usePersistence() {
         galaxyStore.starManifests = Array.isArray(gx.starManifests)
           ? gx.starManifests.map(migrateManifest)
           : []
+        // Vor der Kurswahl begonnene Läufe haben keine Orte — `galaxyStarDots` füllt aus der alten Generierung.
+        galaxyStore.starPositions = Array.isArray(gx.starPositions) ? gx.starPositions : []
+        galaxyStore.courseLegFactor = gx.courseLegFactor ?? 1
+        galaxyStore.totalCoursesCharted = gx.totalCoursesCharted ?? 0
         // Der offene Ort wird bewusst NICHT gespeichert (dieselbe Regel wie bei
         // Void-Wesen unterwegs). Beim Laden steht die Etappe damit wieder offen;
         // der Etappen-Tick entscheidet neu, ob seine Stelle schon passiert ist.

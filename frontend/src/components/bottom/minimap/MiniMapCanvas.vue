@@ -74,7 +74,6 @@ import {
   minimapAccentForTheme,
   STAR_PALETTE,
   drawPlanet,
-  generateGalaxyDots,
 } from './minimapGalaxyGeometry'
 import type { PlanetBodySprite } from './minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor } from '@/utils/fx/galaxyLandmarks'
@@ -218,10 +217,7 @@ export default defineComponent({
       // One dot per past attempt (rescued or failed) + the upcoming target.
       // Placement lives in minimapGalaxyGeometry so the archived-galaxy
       // snapshot renderer reproduces the exact same layout.
-      const { spawn, dots } = generateGalaxyDots(
-        galaxyStore.mapSeed,
-        galaxyStore.attemptResults.length + 1,
-      )
+      const { spawn, dots } = galaxyStore.starDots
       spawnPos.value = spawn
       dotPositions.value = dots
     }
@@ -691,6 +687,22 @@ export default defineComponent({
         }
       }
 
+      // Kurs offen: die drei Kandidaten klein in ihrer Rollenfarbe, EIN leiser
+      // Ring — die Wahl selbst liegt im Galaxy-Tab, die Pille darunter führt hin.
+      if (galaxyStore.pendingRoleSelection) {
+        for (const opt of galaxyStore.courseOptions) {
+          const [cx, cy] = wToC(opt.pos.x, opt.pos.y)
+          const pal = rolePaletteFromHex(ROLE_COLORS[opt.role])
+          drawRoleStar(ctx, cx, cy, MINIMAP_TARGET_BASE_R, pal, nowMs)
+          const ringT = (nowMs / 2600) % 1
+          ctx.beginPath()
+          ctx.arc(cx, cy, MINIMAP_TARGET_BASE_R * (1.4 + ringT * 1.2), 0, Math.PI * 2)
+          ctx.strokeStyle = hexToRgba(pal.base, (1 - ringT) * 0.5)
+          ctx.lineWidth = 1.5
+          ctx.stroke()
+        }
+      }
+
       if (flight) {
         // Player comet travelling along the quadratic flight path:
         // glowing white-gold head + tapering tail along the flown route
@@ -743,9 +755,8 @@ export default defineComponent({
           nowMs,
           Math.min(window.devicePixelRatio || 1, 2),
         )
-      } else if (!galaxyStore.isRescueRotating && !galaxyStore.pendingRoleSelection) {
-        // Idle: player-sun at the current position (the waiting screen draws
-        // its own departure beacon at the flight origin instead)
+      } else if (!galaxyStore.isRescueRotating) {
+        // Idle oder Kurs offen: der Spielerkörper an seinem Ort
         const player = getPlayerWorldPos(dots, attempts)
         const [px, py] = wToC(player.x, player.y)
         drawMiniSun(
@@ -1277,8 +1288,7 @@ export default defineComponent({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, w, h)
       if (galaxyStore.pendingRoleSelection) {
-        // Waiting for role selection: plain galaxy overview only — the
-        // "Choose your Role" label is a DOM overlay in MiniMap.vue.
+        // Kurs offen: Übersicht mit Kandidaten — die Pille ist DOM in MiniMap.vue.
         drawNormalMap(ctx, w, h)
         return
       }
@@ -1396,7 +1406,12 @@ export default defineComponent({
     }
 
     watch(
-      () => [galaxyStore.currentGalaxy, galaxyStore.mapSeed, galaxyStore.attemptResults.length],
+      () => [
+        galaxyStore.currentGalaxy,
+        galaxyStore.mapSeed,
+        galaxyStore.attemptResults.length,
+        galaxyStore.starPositions.length,
+      ],
       () => generateDots(),
       { immediate: true },
     )

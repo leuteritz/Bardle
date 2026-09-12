@@ -47,6 +47,18 @@ export const CHAMPION_TRAVEL_BASE_LY = 500 // 500 LY for Galaxy 1
 export const CHAMPION_TRAVEL_LY_PER_GALAXY = 500 // +500 LY per Galaxy
 
 export const CHAMPION_STAR_DURATION_MS = 60_000 // champion star window: 60s
+// ── Chart your course — drei Kandidaten-Sterne je Etappe ──────────────────
+/** Wie viele Sterne je Etappe zur Wahl stehen — drei Rollen aus fünf. */
+export const COURSE_OPTION_COUNT = 3
+/** Spanne der Flugzeit nach Entfernung: 1 ± 0,2, Mittel der drei bleibt ≈ 1. */
+export const COURSE_LEG_TIME_SPAN = 0.2
+/** Mindestabstand (0..1-Raum) zwischen Kandidaten und zu besuchten Sternen. */
+export const COURSE_MIN_DIST = 0.12
+/** XOR-Salz je Etappe — ein Strom je Liste, nie ein Seed je Index. */
+export const COURSE_RNG_SALT = 0x5bd1e995
+/** Höchstzahl Platzierungsversuche je Kandidat, danach gilt der letzte. */
+export const COURSE_PLACE_TRIES = 12
+
 
 // ── Champion-Karte im Pause-Overlay ────────────────────────────────────────
 // Sie steht an erster Stelle der Reihe, neben Stern- und Void-Karte, und ist

@@ -1,7 +1,7 @@
 // Fortschritt: Universen, Prestige-Läufe, Abschnitte.
 
 import type { TimedBuffEffects } from './core'
-import type { IconPoolKey } from './ui'
+import type { BardTabId, IconPoolKey } from './ui'
 /* Reiner Typ-Import — er verschwindet im Build und dreht die Abhängigkeit
    deshalb nicht wirklich um. `MeepTreeNodeState` steht im Store, weil die
    Reihenfolge seiner Prüfungen dort die Regel IST (siehe `nodeState`); ihn
@@ -354,6 +354,8 @@ export type ProgressMetricId =
   | 'riftsSealed'
   /** Orte auf Reiseetappen, die geschafft wurden (`utils/game/landfalls.ts`). */
   | 'landfallsCleared'
+  /** Gesetzte Kurse — die Sternwahl im Galaxy-Tab (`galaxyStore.chartCourse`). */
+  | 'coursesCharted'
   // ── Orbit ──
   | 'planetSlotsOwned'
   | 'planetLevels'
@@ -703,6 +705,8 @@ export interface MissionDef {
   /** Einheit hinter den Zahlen ("strikes", "chimes", "buildings"). */
   unit: string
   reward: MissionReward
+  /** Der Reiter, in dem die Aufgabe liegt — die Karte führt per Klick dorthin. */
+  tab?: BardTabId
 }
 
 /** Die aktive Mission, wie die Karte sie zeigt. */

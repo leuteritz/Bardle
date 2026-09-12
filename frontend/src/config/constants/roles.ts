@@ -7,9 +7,6 @@ import type { ChampionRole, RoleStat, RoleAbilityDetail } from '@/types'
 import { SUN_RADIUS } from '@/config/constants/sun'
 import { JUNGLE_BUFF_COOLDOWN_MS } from '@/config/constants/planets'
 
-/** Nachlauf nach der Rollenwahl, damit die Auswahl-Animation sichtbar bleibt. */
-export const ROLE_SELECTION_CONFIRM_DELAY_MS = 260
-
 /** Passive DPS bonus per assigned ally of the attacking main's role.
  *  Full row (5 allies) → ×3.0 = the old ceiling where main + 2 orbiting allies attacked as 3 units. */
 export const ALLY_DPS_CONTRIBUTION = 0.4

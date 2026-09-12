@@ -107,7 +107,7 @@ const status = computed<FleetStatus>(() => {
     return {
       tone: 'wait',
       icon: GALAXY_TOOLTIP_ICONS.roleChoice,
-      text: 'Waiting for the role that flies out next',
+      text: 'Adrift — set course for a star in the Galaxy tab',
     }
   }
   return {

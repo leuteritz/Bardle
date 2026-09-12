@@ -556,6 +556,9 @@ describe('Warp bei reduzierter Bewegung', () => {
     expect(uiStore.bardActiveTab).toBeNull()
 
     vi.advanceTimersByTime(GALAXY_TRANS_WARP_MS + GALAXY_TRANS_DECEL_MS + 100)
+    // Die Ankunft öffnet den Galaxy-Tab selbst — die Kurswahl liegt dort.
+    expect(uiStore.bardActiveTab).toBe('galaxy')
+    uiStore.closeBardModal()
     uiStore.openBardModal()
     expect(uiStore.bardActiveTab).toBe('bard')
   })

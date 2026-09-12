@@ -18,7 +18,7 @@ import { useStarGroupStore } from '@/stores/world/starGroupStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
 import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { gameNow } from '@/utils/game/gameClock'
-import { generateGalaxyDots } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { galaxyStarDots } from '@/utils/game/galaxyStarDots'
 import { playerLeg, playerTravelProgress } from '@/utils/game/playerGalaxyPos'
 import SunOrb from '@/components/ui/SunOrb.vue'
 import { sunBodyFor } from '@/utils/fx/sunBodySprite'
@@ -68,7 +68,7 @@ const playerBody = computed(() => sunBodyFor(solarStore, solarStore.solarSignatu
 /** Dieselbe Quelle wie `paintGalaxy` — beide setzen so denselben Punkt. */
 const geometry = computed(() => {
   const attempts = props.record.attemptResults.length
-  const { spawn, dots } = generateGalaxyDots(props.record.mapSeed, attempts + 1)
+  const { spawn, dots } = galaxyStarDots(props.record.mapSeed, attempts, props.record.starPositions)
   return { spawn, dots, attempts }
 })
 

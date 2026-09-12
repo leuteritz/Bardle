@@ -4,6 +4,7 @@ import { formatNumber } from '@/config/ui/numberFormat'
 import { invalidateHudField } from '@/utils/ui/hudField'
 import { useMissionFace } from '@/composables/ui/useMissionFace'
 import { missionObjectiveLine } from '@/config/progression/missions'
+import { useUiStore } from '@/stores/core/uiStore'
 
 /**
  * Woran Bard als Nächstes arbeitet — ganz oben in der Kartenspalte.
@@ -22,6 +23,13 @@ import { missionObjectiveLine } from '@/config/progression/missions'
 /** Gesicht und Abschlussblitz teilt die Karte mit der Wayfinder-Zeile im
  *  Pause-Overlay — beim Blitz steht der Store schon eine Stufe weiter. */
 const { face, flashing } = useMissionFace()
+const uiStore = useUiStore()
+
+/** Nennt die Stufe einen Reiter, führt die Karte per Klick dorthin. */
+const linkTab = computed(() => (flashing.value ? undefined : face.value?.def.tab))
+function openTab() {
+  if (linkTab.value) uiStore.setBardTab(linkTab.value)
+}
 
 const tooltip = computed(() => {
   const f = face.value
@@ -75,10 +83,11 @@ onUnmounted(() => {
   <div
     ref="root"
     class="hc hc--anchored wf"
-    :class="{ 'wf--done': flashing }"
+    :class="{ 'wf--done': flashing, 'wf--link': !!linkTab }"
     :style="{ '--hc-color': face?.color }"
     :title="tooltip"
-    role="status"
+    @click="openTab"
+    :role="linkTab ? 'button' : 'status'"
   >
     <!-- Die Kartenfläche IST der Balken. Der Schlüssel wechselt beim
          Missionswechsel und baut das Element neu, damit die Füllung nicht von
@@ -126,6 +135,13 @@ onUnmounted(() => {
    eine mit dem Missionsnamen wechselnde Höhe liesse das freie Feld wandern. */
 .wf {
   padding-bottom: var(--hc-pad-y);
+}
+
+.wf--link {
+  cursor: pointer;
+}
+.wf--link:hover .wf-task {
+  color: #e8c040;
 }
 
 /* Goldene Oberkante — sie markiert das eine DAUERHAFTE Glied der Spalte gegen

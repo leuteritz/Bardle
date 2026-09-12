@@ -20,8 +20,8 @@ import {
   GALAXY_PARTICLE_COLORS,
   minimapAccentForTheme,
   pathRouteArrowhead,
-  generateGalaxyDots,
 } from '@/components/bottom/minimap/minimapGalaxyGeometry'
+import { galaxyStarDots } from '@/utils/game/galaxyStarDots'
 import type { GalaxyGeo } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import { drawLandmark, landmarkVariantFor, roundLandmarkRadius } from './galaxyLandmarks'
 import { universeOfRecord } from '@/utils/game/galaxyUniverseBackfill'
@@ -476,7 +476,7 @@ export function paintGalaxy(
 
   // ── Die Reise: Start → jeder versuchte Stern → der befreite Kern ──
   const attempts = record.attemptResults.length
-  const { spawn, dots } = generateGalaxyDots(record.mapSeed, attempts + 1)
+  const { spawn, dots } = galaxyStarDots(record.mapSeed, attempts, record.starPositions)
   const [spx, spy] = toC(spawn.x, spawn.y)
   // Der Zug endet im Kern — anders als live, wo die Reise am letzten besuchten
   // Stern aufhört, weil es dort noch kein Tor gibt.

@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useGameStore } from '@/stores/core/gameStore'
 import { useShopStore } from '@/stores/economy/shopStore'
 import { useSolarUpgradeStore } from '@/stores/progression/solarUpgradeStore'
+import { useMissionStore } from '@/stores/progression/missionStore'
 import { gameTickPlan, resetGameClock, setGameSpeed } from '@/utils/game/gameClock'
 import { SOLAR_CPS_PER_LEVEL } from '@/config/constants'
 
@@ -41,6 +42,9 @@ function runAtSpeed(speed: number): Snapshot {
   const shop = useShopStore()
   const solar = useSolarUpgradeStore()
 
+  // Der Wayfinder zahlt seine erste Stufe schon nach zehn Chimes — die Leiter
+  // ist hier Rauschen, nicht Messgrösse.
+  useMissionStore().adminCompleteLadder()
   // Eine Produktionsquelle, damit `chimes` überhaupt wächst.
   solar.chimesPerSecondLevel = RAY_LEVEL
   shop.refreshRates()

@@ -10,6 +10,7 @@ import { useLazyGalaxySnapshot } from '@/composables/ui/useLazyGalaxySnapshot'
 import {
   LANDMARK_FREED_CORE,
   VOYAGE_LIVE_RAIL_LABEL,
+  VOYAGE_LIVE_RAIL_COURSE_LABEL,
   VOYAGE_LIVE_RAIL_TITLE,
   VOYAGE_LIVE_ROW_H,
   VOYAGE_LIVE_STARS_LABEL,
@@ -23,6 +24,9 @@ const emit = defineEmits<{ select: [] }>()
 const galaxyStore = useGalaxyStore()
 const gameStore = useGameStore()
 
+const kicker = computed(() =>
+  galaxyStore.pendingRoleSelection ? VOYAGE_LIVE_RAIL_COURSE_LABEL : VOYAGE_LIVE_RAIL_LABEL,
+)
 const rowH = `${VOYAGE_LIVE_ROW_H}px`
 const thumbW = `${VOYAGE_RAIL_THUMB_W}px`
 const thumbH = `${VOYAGE_RAIL_THUMB_H}px`
@@ -41,6 +45,7 @@ const liveRecord = computed(() =>
     landfallResults: galaxyStore.landfallResults,
     incidentResults: galaxyStore.incidentResults,
     starManifests: galaxyStore.starManifests,
+    starPositions: galaxyStore.starPositions,
   }),
 )
 const { root, snapshot } = useLazyGalaxySnapshot(liveRecord, 'thumb')
@@ -68,7 +73,7 @@ const starScale = computed(() => {
         <span v-else class="elr-img elr-img--holding" />
       </span>
       <span class="elr-body">
-        <span class="elr-kicker">{{ VOYAGE_LIVE_RAIL_LABEL }}</span>
+        <span class="elr-kicker">{{ kicker }}</span>
         <span class="elr-name">
           <span class="elr-prefix">Galaxy</span>
           <span class="elr-number">{{ toRoman(galaxyStore.currentGalaxy) }}</span>

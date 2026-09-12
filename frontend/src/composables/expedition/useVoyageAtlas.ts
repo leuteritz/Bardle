@@ -89,6 +89,7 @@ export function useVoyageAtlas(isVisible: Ref<boolean>) {
       landfallResults: galaxyStore.landfallResults,
       incidentResults: galaxyStore.incidentResults,
       starManifests: galaxyStore.starManifests,
+      starPositions: galaxyStore.starPositions,
     }),
   )
   const selectedRecord = computed(() =>
