@@ -57,9 +57,7 @@ describe('Eventlog-Gruppen', () => {
     const states = Object.values(EVENT_GROUP_EMPTY)
     expect(new Set(states.map((state) => state.title)).size).toBe(states.length)
     for (const state of states) {
-      expect(state.eyebrow.length).toBeGreaterThan(0)
       expect(state.title.length).toBeGreaterThan(0)
-      expect(state.detail.length).toBeGreaterThan(0)
       expect(state.icon).toMatch(/^[a-z][a-z0-9-]*:[a-z0-9-]+$/)
       expect(state.color).toMatch(/^#[0-9a-f]{6}$/i)
     }

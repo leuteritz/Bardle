@@ -337,11 +337,7 @@ onUnmounted(() => {
         <div class="elp-empty-mark" aria-hidden="true">
           <Icon :icon="emptyState.icon" class="elp-empty-icon" width="48" height="48" />
         </div>
-        <div class="elp-empty-copy">
-          <span class="elp-empty-eyebrow">{{ emptyState.eyebrow }}</span>
-          <strong class="elp-empty-title">{{ emptyState.title }}</strong>
-          <span class="elp-empty-detail">{{ emptyState.detail }}</span>
-        </div>
+        <strong class="elp-empty-title">{{ emptyState.title }}</strong>
       </div>
       <div
         v-for="(event, index) in displayRows"
@@ -646,21 +642,6 @@ onUnmounted(() => {
   transform: rotate(-45deg);
 }
 
-.elp-empty-copy {
-  display: grid;
-  justify-items: center;
-  gap: 5px;
-  max-width: 100%;
-}
-
-.elp-empty-eyebrow {
-  color: #a27a42;
-  font-size: clamp(9px, 1.3cqw, 12px);
-  font-weight: 900;
-  letter-spacing: 0.18em;
-  line-height: 1;
-}
-
 .elp-empty-title {
   max-width: 100%;
   color: var(--empty-color, #e8c040);
@@ -669,15 +650,6 @@ onUnmounted(() => {
   letter-spacing: 0.02em;
   line-height: 1.05;
   text-shadow: 0 0 14px color-mix(in oklab, var(--empty-color, #e8c040) 34%, transparent);
-}
-
-.elp-empty-detail {
-  max-width: 30em;
-  color: #a89572;
-  font-size: clamp(12px, 1.65cqw, 15px);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1.4;
 }
 
 .elp-row-enter-active {
