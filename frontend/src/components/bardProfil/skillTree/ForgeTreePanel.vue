@@ -431,6 +431,7 @@
                 // Nicht `maxed`: das färbt den ganzen Kreis gold. Gemeint ist
                 // allein die Fassung.
                 'node-circle--forged': entryOf(node).level > 0,
+                'node-circle--meep': node.tier === 'meep',
               },
             ]"
             :style="{ '--node-color': node.color }"
@@ -439,6 +440,12 @@
             @mouseleave="setTreeHover(null)"
           >
             <span class="node-glow" aria-hidden="true" />
+            <span v-if="node.tier === 'meep'" class="node-meep-frame" aria-hidden="true">
+              <svg viewBox="0 0 100 100">
+                <polygon class="node-meep-frame-outer" :points="FORGE_MEEP_FRAME_POINTS" />
+                <polygon class="node-meep-frame-inner" :points="FORGE_MEEP_FRAME_INNER_POINTS" />
+              </svg>
+            </span>
             <!-- Der SUCHRING. Eigene, statische Ebene mit eigenem Ton — Gold ist
                „kaufbar", Grün/Rot sind die Voraussetzung. -->
             <span v-if="isSearchHit(node.id)" class="node-hit" aria-hidden="true" />
@@ -735,6 +742,12 @@ import {
   FORGE_SEAL_STROKE_PX,
   FORGE_SEAL_DASH,
   FORGE_SEAL_POINTS,
+  FORGE_MEEP_FRAME_POINTS,
+  FORGE_MEEP_FRAME_INNER_POINTS,
+  FORGE_MEEP_FRAME_CLIP_PATH,
+  FORGE_MEEP_FRAME_STROKE_PX,
+  FORGE_MEEP_FRAME_INNER_STROKE_PX,
+  FORGE_RELIC_RARITY_COLOR,
   FORGE_FUSION_ICON_SIZE,
   FORGE_ICON_SIZE_CONFLUENCE,
   FORGE_LOCK_ICON,
@@ -925,6 +938,10 @@ const reqDotInsetPx = `${-FORGE_REQ_DOT_SIZE / 2}px`
 const sealInsetPx = `${FORGE_SEAL_INSET_PX}px`
 const sealBorderPx = `${FORGE_SEAL_BORDER_PX}px`
 const sealDash = FORGE_SEAL_DASH
+const meepFrameColor = FORGE_RELIC_RARITY_COLOR.epic
+const meepFrameClipPath = FORGE_MEEP_FRAME_CLIP_PATH
+const meepFrameStroke = String(FORGE_MEEP_FRAME_STROKE_PX)
+const meepFrameInnerStroke = String(FORGE_MEEP_FRAME_INNER_STROKE_PX)
 /* Im `viewBox`-Raum 0…100 gerechnet, nicht in px: das SVG streckt sich auf die
    Ebene, und eine px-Angabe würde mit ihr skaliert. Der Faktor ist der Kehrwert
    der Ebenenbreite, also der Knotendurchmesser abzüglich zweier Einzüge — für
@@ -3184,7 +3201,9 @@ const nextPhasePreviewStyle = computed(() => ({
 .node-circle--meep {
   width: v-bind('nodePx.meep');
   height: v-bind('nodePx.meep');
-  border: 2px solid color-mix(in srgb, var(--node-color, #40a0e0) 38%, #2a1a08);
+  border: 0;
+  border-radius: 0;
+  clip-path: polygon(v-bind(meepFrameClipPath));
 }
 
 /* Die zwei mittleren Ringe stehen mit 40 px eine Spur ÜBER dem Blatt und unter
@@ -3219,6 +3238,50 @@ const nextPhasePreviewStyle = computed(() => ({
   width: v-bind('nodePx.glimmer');
   height: v-bind('nodePx.glimmer');
   border: 2px solid #3a4048;
+}
+
+.node-meep-frame {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.node-meep-frame svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.node-meep-frame polygon {
+  fill: none;
+  stroke-linejoin: bevel;
+}
+
+.node-meep-frame-outer {
+  stroke: v-bind(meepFrameColor);
+  stroke-width: v-bind(meepFrameStroke);
+  opacity: 0.9;
+}
+
+.node-meep-frame-inner {
+  stroke: var(--node-color, #e8c040);
+  stroke-width: v-bind(meepFrameInnerStroke);
+  opacity: 0.9;
+}
+
+.node-circle--meep.node-circle--locked .node-meep-frame,
+.node-circle--meep.node-circle--short .node-meep-frame {
+  opacity: 0.45;
+}
+
+.node-circle--meep.node-circle--ready .node-meep-frame,
+.node-circle--meep.node-circle--maxed .node-meep-frame {
+  opacity: 1;
+}
+
+.node-circle--meep.node-circle--maxed .node-meep-frame-inner {
+  stroke: #e8c040;
 }
 
 /* Ring 6 ist der GRÖSSTE nach dem Kern — grösser als ein Zweig, kleiner als ein
