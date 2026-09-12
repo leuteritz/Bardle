@@ -68,7 +68,8 @@ const isUnlocked = computed(() => completedGalaxies.value.length > 0 || gameStor
  * Haelfte dieser Zusage (es gibt auf der laufenden Bahn nie eine `departure`).
  */
 const offers = computed(() =>
-  selection.value.universe === gameStore.currentUniverse && hasCurrentPathContent.value
+  selection.value.universe === gameStore.currentUniverse &&
+  (hasCurrentPathContent.value || uiStore.universeDepartureRequested)
     ? providenceStore.offerCards
     : [],
 )
@@ -224,6 +225,14 @@ watch(
 watch(root, (el) => {
   if (isVisible.value) observe(el)
 })
+
+watch(
+  () => [isVisible.value, uiStore.universeDepartureRequested, gameStore.prestigeAvailable] as const,
+  ([visible, requested, available]) => {
+    if (visible && requested && available) gameStore.checkPrestigeAvailability()
+  },
+  { immediate: true },
+)
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown, true)

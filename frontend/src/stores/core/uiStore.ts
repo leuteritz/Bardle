@@ -60,6 +60,7 @@ export const useUiStore = defineStore('ui', () => {
   // Reiterwechsel ab — das Profil schliesst mitten im Sprung, die Zeremonie
   // laeuft weiter. Abgeraeumt wird er von `gameStore.finishUniverseHop`.
   const universeHop = ref<UniverseHop | null>(null)
+  const universeDepartureRequested = ref(false)
   // Was der Aufbruch hinterlaesst, bis der Herold es ansagen kann. Es liegt
   // HIER und nicht im gameStore, weil dieser Store nicht persistiert wird: ein
   // Reload kann damit keinen Sprung feiern, der lange vorbei ist — derselbe
@@ -105,6 +106,7 @@ export const useUiStore = defineStore('ui', () => {
     if (bardActiveTab.value === null) {
       universeTabReturnPending.value = false
       universeDive.value = null
+      universeDepartureRequested.value = false
     }
     clearHoverMarks()
   }
@@ -122,6 +124,7 @@ export const useUiStore = defineStore('ui', () => {
     battleTabReturnPending.value = false
     universeTabReturnPending.value = false
     universeDive.value = null
+    universeDepartureRequested.value = false
     clearHoverMarks()
   }
 
@@ -130,6 +133,7 @@ export const useUiStore = defineStore('ui', () => {
     battleTabReturnPending.value = false
     universeTabReturnPending.value = false
     universeDive.value = null
+    universeDepartureRequested.value = false
     clearHoverMarks()
   }
 
@@ -297,6 +301,7 @@ export const useUiStore = defineStore('ui', () => {
    * Portale.
    */
   function requestOpenUniverseDeparture() {
+    universeDepartureRequested.value = true
     bardActiveTab.value = 'universe'
     clearHoverMarks()
   }
@@ -380,6 +385,7 @@ export const useUiStore = defineStore('ui', () => {
     settleUniverseDive,
     clearUniverseDive,
     universeHop,
+    universeDepartureRequested,
     beginUniverseHop,
     setUniverseHopPhase,
     clearUniverseHop,
