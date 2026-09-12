@@ -3,7 +3,6 @@ import { watch, computed, ref, reactive, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
-import { useGameStore } from '@/stores/core/gameStore'
 import { usePlanetShopStore } from '@/stores/world/planetShopStore'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import { useGamePause } from '@/composables/system/useGamePause'
@@ -34,7 +33,6 @@ import ProfileReadinessCluster from '@/components/bardProfil/hud/ProfileReadines
 
 const uiStore = useUiStore()
 const galaxyStore = useGalaxyStore()
-const gameStore = useGameStore()
 const planetShopStore = usePlanetShopStore()
 const battleStore = useBattleStore()
 const { isPaused } = useGamePause()
@@ -132,6 +130,7 @@ const allMenuItems: {
   { id: 'shop', name: 'Shop', icon: HEADER_GEM_ICONS.shop },
   { id: 'tree', name: 'Skill Tree', icon: HEADER_GEM_ICONS.tree, boost: true },
   { id: 'galaxy', name: 'Galaxy', icon: 'ph:map-trifold-fill' },
+  { id: 'universe', name: 'Universe', icon: 'ph:globe-hemisphere-west-fill' },
   { id: 'team', name: 'Team', icon: 'ph:users-three-fill' },
   {
     id: 'battle',
@@ -154,17 +153,6 @@ const allMenuItems: {
     icon: 'ph:planet-fill',
     locked: () => !planetShopStore.isUnlocked,
     lockNote: 'claim your first orbit',
-  },
-  {
-    id: 'universe',
-    name: 'Universe',
-    icon: 'ph:globe-hemisphere-west-fill',
-    // Das Schloss weicht, sobald ein Aufbruch ansteht: der Prestige-Knopf im
-    // Header fuehrt hierher, und er darf nie in einen verriegelten Reiter
-    // fuehren — die Chimes-Schwelle und die erste befreite Galaxie sind zwei
-    // verschiedene Uhren.
-    locked: () => galaxyStore.completedGalaxies.length === 0 && !gameStore.prestigeAvailable,
-    lockNote: 'free your first galaxy',
   },
   { id: 'admin', name: 'Admin', icon: 'ph:gear-six-fill' },
 ]
