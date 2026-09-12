@@ -7,16 +7,18 @@
  * auf eigener Ebene mit statischem Schein, animiert wird nur `opacity`.
  */
 import { computed, onMounted, ref, watch } from 'vue'
-import { Icon } from '@iconify/vue'
 import RpgBadgeTooltip from '@/components/ui/RpgBadgeTooltip.vue'
 import ExpeditionCourseTooltip from './ExpeditionCourseTooltip.vue'
 import { drawRoleStar, rolePaletteFromHex } from '@/components/bottom/minimap/minimapDraw'
 import { formatMinuteClock } from '@/utils/ui/format'
 import { STAR_BODY_SPRITE_SPAN } from '@/config/constants'
 import {
+  ROLE_ART_MD_SUFFIX,
   ROLE_BY_KEY,
   ROLE_COLORS,
+  VOYAGE_COURSE_ART_PX,
   VOYAGE_COURSE_HIT_PX,
+  VOYAGE_COURSE_RING_PX,
   VOYAGE_COURSE_R_PX,
   VOYAGE_COURSE_RING_PERIOD_MS,
   VOYAGE_TIP_GAP_PX,
@@ -39,6 +41,8 @@ const emit = defineEmits<{ hover: [number | null]; chart: [number] }>()
 
 const def = computed(() => ROLE_BY_KEY[props.option.role])
 const accent = computed(() => ROLE_COLORS[props.option.role])
+/** 40 px Anzeige → die mittlere Stufe, wie die Pause-Ansage. */
+const art = computed(() => def.value.image.replace(/\.png$/, ROLE_ART_MD_SUFFIX))
 const label = computed(
   () => `${def.value.label} star — ${formatMinuteClock(props.flightMs)} flight, click to set course`,
 )
@@ -66,6 +70,8 @@ watch(accent, paint)
 const hitPx = `${VOYAGE_COURSE_HIT_PX}px`
 const canvasSize = `${canvasPx}px`
 const ringPeriod = `${VOYAGE_COURSE_RING_PERIOD_MS}ms`
+const artPx = `${VOYAGE_COURSE_ART_PX}px`
+const ringPx = `${VOYAGE_COURSE_RING_PX}px`
 </script>
 
 <template>
@@ -96,8 +102,8 @@ const ringPeriod = `${VOYAGE_COURSE_RING_PERIOD_MS}ms`
         </span>
         <span class="ecn-glow" aria-hidden="true" />
         <canvas ref="canvas" class="ecn-body" :width="canvasPx" :height="canvasPx" aria-hidden="true" />
-        <span class="ecn-glyph" aria-hidden="true">
-          <Icon :icon="def.icon" width="24" height="24" />
+        <span class="ecn-medal" aria-hidden="true">
+          <img :src="art" alt="" class="ecn-art" draggable="false" />
         </span>
         <span class="ecn-tag" aria-hidden="true">
           <span class="ecn-tag-role">{{ def.short }}</span>
@@ -206,16 +212,33 @@ const ringPeriod = `${VOYAGE_COURSE_RING_PERIOD_MS}ms`
   }
 }
 
-.ecn-glyph {
+/* Das Medaillon: dunkle Platte, Rollenring, das Artwork rund beschnitten. */
+.ecn-medal {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 24px;
-  height: 24px;
-  margin: -12px 0 0 -12px;
-  color: #fff;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9));
+  width: v-bind(artPx);
+  height: v-bind(artPx);
+  margin: calc(v-bind(artPx) / -2) 0 0 calc(v-bind(artPx) / -2);
+  border-radius: 50%;
+  background: #141410;
+  border: v-bind(ringPx) solid var(--ecn-ink);
+  box-shadow:
+    0 0 0 1px #111008,
+    0 2px 8px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  transition: transform 0.16s ease;
   pointer-events: none;
+}
+.ecn--on .ecn-medal {
+  transform: scale(1.06);
+}
+.ecn-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .ecn-tag {

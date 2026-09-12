@@ -2141,6 +2141,9 @@ export const VOYAGE_LIVE_TARGET_R_PX = 9
 export const VOYAGE_COURSE_R_PX = 12
 /** Fangfläche eines Kandidaten — die Beschriftung darunter zählt nicht dazu. */
 export const VOYAGE_COURSE_HIT_PX = 52
+/** Kante des Medaillons mit dem Rollen-Artwork; 40 px → Stufe `-256`. */
+export const VOYAGE_COURSE_ART_PX = 40
+export const VOYAGE_COURSE_RING_PX = 2
 /** Atemperiode der Ringe; nur opacity läuft. */
 export const VOYAGE_COURSE_RING_PERIOD_MS = 2600
 /** Höchstens so viele Roster-Zeilen in der Hover-Karte. */
