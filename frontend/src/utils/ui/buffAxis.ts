@@ -1,5 +1,6 @@
 import type { TimedBuffEffects } from '@/types'
 import { DRIFTER_BUFF_EFFECT_LABELS, DRIFTER_BUFF_LABEL_ALL } from '@/config/world/drifters'
+import { BUFF_STACK_SHORT_LABELS } from '@/config/constants'
 
 /**
  * Die zwei Ableitungen, die JEDER Zeit-Buff braucht: welche Achse er anhebt und
@@ -12,6 +13,11 @@ import { DRIFTER_BUFF_EFFECT_LABELS, DRIFTER_BUFF_LABEL_ALL } from '@/config/wor
 export function buffAxisLabel(effects: TimedBuffEffects): string {
   const keys = Object.keys(effects) as (keyof TimedBuffEffects)[]
   return keys.length === 1 ? DRIFTER_BUFF_EFFECT_LABELS[keys[0]] : DRIFTER_BUFF_LABEL_ALL
+}
+
+/** Die Achse als Kurzwort für das Effekt-Token der Buff-Zeile. */
+export function buffShortLabel(label: string): string {
+  return BUFF_STACK_SHORT_LABELS[label] ?? label
 }
 
 /** Der stärkste Faktor des Buffs — die Zahl, die auf dem Chip steht. */

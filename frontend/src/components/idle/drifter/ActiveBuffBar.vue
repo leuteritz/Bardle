@@ -75,15 +75,14 @@
 
       <span class="chip-text">
         <span class="chip-name">{{ chip.name }}</span>
+        <!-- Der Effekt als EIN Token: Faktor zuerst, dann die Achse als Kurzwort. -->
         <span class="chip-label">
-          {{ chip.label }}
-          <!-- Das Rangwort in der Rangfarbe — nur wo es einen echten Rang gibt. -->
-          <span v-if="chip.tier >= 2 && chip.rank" class="chip-rankword">· {{ chip.rank }}</span>
+          <span class="chip-mult">×{{ chip.multiplier }}</span>
+          <span class="chip-axis">{{ buffShortLabel(chip.label) }}</span>
         </span>
       </span>
 
       <span class="chip-side">
-        <span class="chip-mult">{{ chip.multiplier }}×</span>
         <!-- Reserved width: the seconds drop from two digits to one, and
              without the reservation every row would twitch once per second. -->
         <span v-if="chip.timer" class="chip-clock">
@@ -107,6 +106,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useUiStore } from '@/stores/core/uiStore'
 import { useActiveBuffList, type ActiveBuffView } from '@/composables/ui/useActiveBuffList'
+import { buffShortLabel } from '@/utils/ui/buffAxis'
 import {
   BUFF_RANK_TIER,
   BUFF_STACK_BOTTOM_GAP,
@@ -117,7 +117,6 @@ import {
   BUFF_STACK_ROW_H_COMPACT,
   BUFF_STACK_TOP_GAP,
   BUFF_STACK_W,
-  BUFF_STACK_W_LEGENDARY,
   DRIFTER_BUFF_EXPIRY_WARN_SEC,
   PAUSE_KIT_EFFECT_COLS,
 } from '@/config/constants'
@@ -212,7 +211,6 @@ const rowHCompact = `${BUFF_STACK_ROW_H_COMPACT}px`
 const rowGapCompact = `${BUFF_STACK_GAP_COMPACT}px`
 const moreH = `${BUFF_STACK_MORE_H}px`
 const rowW = `${BUFF_STACK_W}px`
-const rowWLegendary = `${BUFF_STACK_W_LEGENDARY}px`
 const topGap = `${BUFF_STACK_TOP_GAP}px`
 const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
 </script>
@@ -224,7 +222,6 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
    links: meldet KEINE Kante an die HUD-Kontur. */
 .buff-bar {
   --chip-w: v-bind(rowW);
-  --chip-w-legendary: v-bind(rowWLegendary);
   --chip-h: v-bind(rowH);
   --chip-gap: v-bind(rowGap);
   --chip-stage: 52px;
@@ -268,9 +265,8 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
   border-left-color: var(--chip-color, #e8c040);
 }
 
-/* Stufe 3 — Holzrahmen mit Gold, Ornamente, Aura. Breiter, nicht höher. */
+/* Stufe 3 — Holzrahmen mit Gold, Ornamente, Aura. Dieselbe Breite. */
 .buff-chip--t3 {
-  width: var(--chip-w-legendary);
   border: 2px solid #7a4e20;
   border-left: 4px solid var(--chip-color, #e8c040);
   border-right: 0;
@@ -471,24 +467,27 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
   color: #e8c040;
 }
 
+/* Das Effekt-Token: Faktor in Gold, Achse als Kurzwort in Caps. */
 .chip-label {
-  font-size: 10.5px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.chip-mult {
+  font-size: 18px;
+  font-weight: 900;
+  color: #e8c040;
+}
+
+.chip-axis {
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: #b89b5a;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Das Rangwort in der Rangfarbe — was war der Buff wert. */
-.chip-rankword {
-  color: var(--chip-rank, #b89b5a);
-}
-
-.buff-chip--t3 .chip-rankword {
-  color: #e8c040;
 }
 
 .chip-side {
@@ -499,17 +498,6 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
   gap: 4px;
   flex-shrink: 0;
   line-height: 1;
-}
-
-/* Der Multiplikator in Gold — das Gewicht, das jede Zeile gleich liest. */
-.chip-mult {
-  font-size: 28px;
-  font-weight: 900;
-  color: #e8c040;
-}
-
-.buff-chip--t3 .chip-mult {
-  font-size: 32px;
 }
 
 /* Right-aligned with a reserved width: the number may lose a digit without
@@ -524,7 +512,7 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
 }
 
 .chip-seconds {
-  font-size: 17px;
+  font-size: 22px;
   font-weight: 900;
   color: #f2ead2;
 }
@@ -534,7 +522,7 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
 }
 
 .chip-unit {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   color: #8a7a52;
 }
@@ -592,7 +580,6 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
 @media (min-width: 2400px) {
   .buff-bar {
     --chip-w: 344px;
-    --chip-w-legendary: 392px;
     --chip-h: 82px;
     --chip-gap: 10px;
     --chip-stage: 60px;
@@ -600,21 +587,18 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
   .chip-name {
     font-size: 18px;
   }
-  .chip-label {
-    font-size: 12px;
+  .chip-axis {
+    font-size: 12.5px;
     letter-spacing: 1.7px;
   }
   .chip-mult {
-    font-size: 32px;
-  }
-  .buff-chip--t3 .chip-mult {
-    font-size: 37px;
+    font-size: 21px;
   }
   .chip-seconds {
-    font-size: 19px;
+    font-size: 25px;
   }
   .chip-unit {
-    font-size: 12px;
+    font-size: 13px;
   }
   .buff-more {
     font-size: 12px;
@@ -624,7 +608,6 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
 @media (min-width: 3400px) {
   .buff-bar {
     --chip-w: 404px;
-    --chip-w-legendary: 460px;
     --chip-h: 98px;
     --chip-gap: 12px;
     --chip-stage: 72px;
@@ -632,21 +615,18 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
   .chip-name {
     font-size: 22px;
   }
-  .chip-label {
-    font-size: 14px;
+  .chip-axis {
+    font-size: 15px;
     letter-spacing: 2px;
   }
   .chip-mult {
-    font-size: 38px;
-  }
-  .buff-chip--t3 .chip-mult {
-    font-size: 44px;
+    font-size: 25px;
   }
   .chip-seconds {
-    font-size: 23px;
+    font-size: 30px;
   }
   .chip-unit {
-    font-size: 14px;
+    font-size: 15px;
   }
   .chip-ornament {
     font-size: 13px;
@@ -671,18 +651,15 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
   .chip-name {
     font-size: 13px;
   }
-  .chip-label {
-    font-size: 9px;
+  .chip-axis {
+    font-size: 9.5px;
     letter-spacing: 1.2px;
   }
   .chip-mult {
-    font-size: 21px;
-  }
-  .buff-chip--t3 .chip-mult {
-    font-size: 24px;
+    font-size: 15px;
   }
   .chip-seconds {
-    font-size: 13px;
+    font-size: 17px;
   }
 }
 
@@ -741,7 +718,6 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
 }
 
 .buff-bar--docked .chip-name,
-.buff-bar--docked .chip-rankword,
 .buff-bar--docked .chip-ornament,
 .buff-bar--docked .chip-gem {
   display: none;
@@ -758,14 +734,11 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
 }
 
 .buff-bar--docked .chip-mult {
-  grid-column: 2;
-  grid-row: 1;
-  font-size: 14px;
-  white-space: nowrap;
+  font-size: 13px;
 }
 
 .buff-bar--docked .chip-clock {
-  grid-column: 3;
+  grid-column: 2 / 4;
   grid-row: 1;
   justify-self: end;
   min-width: 0;
@@ -782,6 +755,10 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
 .buff-bar--docked .chip-label {
   grid-column: 2 / 4;
   grid-row: 2;
+  gap: 4px;
+}
+
+.buff-bar--docked .chip-axis {
   font-size: 9px;
   letter-spacing: 0.9px;
 }
@@ -792,7 +769,7 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
     --chip-stage: 30px;
   }
   .buff-bar--docked .chip-mult {
-    font-size: 18px;
+    font-size: 16px;
   }
   .buff-bar--docked .chip-seconds {
     font-size: 16px;
@@ -800,7 +777,7 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
   .buff-bar--docked .chip-unit {
     font-size: 11px;
   }
-  .buff-bar--docked .chip-label {
+  .buff-bar--docked .chip-axis {
     font-size: 11px;
   }
 }
@@ -811,7 +788,7 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
     --chip-stage: 36px;
   }
   .buff-bar--docked .chip-mult {
-    font-size: 22px;
+    font-size: 19px;
   }
   .buff-bar--docked .chip-seconds {
     font-size: 19px;
@@ -819,7 +796,7 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
   .buff-bar--docked .chip-unit {
     font-size: 13px;
   }
-  .buff-bar--docked .chip-label {
+  .buff-bar--docked .chip-axis {
     font-size: 13px;
   }
 }
@@ -830,7 +807,6 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
    dem Panel liegt bereits useFitScale, eine zweite Staffelung skalierte doppelt. */
 .buff-bar.buff-bar--pause {
   --chip-w: var(--pause-kit-chip-w, 210px);
-  --chip-w-legendary: var(--pause-kit-chip-w, 210px);
   --chip-h: var(--pause-kit-chip-h, 80px);
   --chip-stage: 30px;
   position: static;
@@ -862,16 +838,12 @@ const bottomGap = `${BUFF_STACK_BOTTOM_GAP}px`
   font-size: 13px;
 }
 
-.buff-bar--pause .chip-label {
+.buff-bar--pause .chip-axis {
   font-size: 10px;
 }
 
-.buff-bar--pause .chip-rankword {
-  display: none;
-}
-
 .buff-bar--pause .chip-mult {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .buff-bar--pause .chip-seconds {

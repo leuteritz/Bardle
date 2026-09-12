@@ -899,9 +899,13 @@ export const BUFF_STACK_ROW_H_COMPACT = 56
 export const BUFF_STACK_GAP_COMPACT = 6
 /** Höhe der „+N"-Pille, die die oberste Zeile ersetzt. */
 export const BUFF_STACK_MORE_H = 26
-/** Breite einer Zeile; Stufe 3 bekommt mehr, Breite ist in der Gasse billig. */
+/** EINE Breite für alle Zeilen — der Rang zeigt sich am Rahmen, nicht am Maß. */
 export const BUFF_STACK_W = 300
-export const BUFF_STACK_W_LEGENDARY = 340
+/** Kurzwort je Achse für das Effekt-Token („×3 CLICK"); was fehlt, bleibt wie es ist. */
+export const BUFF_STACK_SHORT_LABELS: Record<string, string> = {
+  'PER CLICK': 'CLICK',
+  DAMAGE: 'DMG',
+}
 /** Abstand zur Eventlog-Kante oben. */
 export const BUFF_STACK_TOP_GAP = 10
 /** Abstand über der Oberkante des Command-Panels. */
