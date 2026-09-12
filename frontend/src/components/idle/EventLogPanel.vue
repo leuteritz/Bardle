@@ -352,12 +352,9 @@ onUnmounted(() => {
   top: calc(var(--header-total-height, 118px) + 8px);
   width: v-bind(boxW);
   height: v-bind(boxH);
-  /* Nie tiefer als das freie Band zwischen Header und erhobener Bottom-Bar.
-     46px = Keycap-Leiste plus der temporäre Admin-Knopf (z-index 9999). */
-  max-height: calc(
-    100vh - var(--header-total-height, 118px) - var(--hud-panel-size, 330px) -
-      var(--kb-hud-h, 0px) - 46px
-  );
+  /* Nie tiefer als das freie Band zwischen Header und erhobener Bottom-Bar;
+     46px Puffer über dem Command-Panel (darüber steht der Buff-Stapel). */
+  max-height: calc(100vh - var(--header-total-height, 118px) - var(--hud-panel-size, 330px) - 46px);
   /* Über der Missionskarte (899), unter allem, was darüber aufgeht. */
   z-index: 910;
   display: flex;
@@ -655,7 +652,7 @@ onUnmounted(() => {
     /* Neben dem Header traegt die Spur die Spaltenbreite — dieselbe Formel wie
        die Kartenspalte links, damit beide Kanten auf einer Linie enden. */
     width: var(--hud-col-w);
-    max-height: calc(100vh - 0.5rem - var(--hud-panel-size, 330px) - var(--kb-hud-h, 0px) - 46px);
+    max-height: calc(100vh - 0.5rem - var(--hud-panel-size, 330px) - 46px);
   }
 }
 

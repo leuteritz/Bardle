@@ -116,15 +116,15 @@ export function hudBarTopAt(x: number, m: HudFieldMetrics): number {
   // Die Bar ist spiegelsymmetrisch — gerechnet wird auf dem Abstand zur
   // näheren Seitenkante.
   const dx = Math.min(x, m.viewportW - x)
-  // Über dem Panel sitzt noch die Keycap-Leiste. Ihre HÖHE wird auf beiden
+  // Über der Minimap sitzt der Keycap-Block. Seine HÖHE wird auf beiden
   // Seiten gerechnet: die Symmetrie ist billiger als eine Sonderbehandlung, und
-  // links kostet sie 30 px in einer Ecke, in der die Minimap ohnehin steht.
+  // rechts kostet sie wenige px in einer Ecke, in der das Command-Panel steht.
   const panelTop = barTop + inset - m.keycapBar
 
-  // Ihre REICHWEITE dagegen nicht — sie ist breiter als das Panel, und
-  // gespiegelt nähme sie links rund 300 px freies Feld in einem Streifen, in
-  // dem gar nichts steht.
-  const unterKeycaps = m.keycapBarReach > 0 && m.viewportW - x <= m.keycapBarReach
+  // Seine REICHWEITE dagegen nicht — er ist breiter als das Panel, und
+  // gespiegelt nähme sie rechts rund 100 px freies Feld über dem Command-Panel,
+  // wo nur der flüchtige Buff-Stapel steht (der meldet sich nicht).
+  const unterKeycaps = m.keycapBarReach > 0 && x <= m.keycapBarReach
 
   if (dx <= side - arc) return panelTop
   if (dx <= side) {

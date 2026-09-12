@@ -96,6 +96,10 @@ describe('useActiveBuffList', () => {
       expect(byId[src].rank).toBeUndefined()
     }
     expect(byId.landfall.timer).toBeNull()
+    expect(byId.landfall.startedAt).toBeNull()
+    expect(byId.ability.startedAt).toBe(now - 5_000)
+    expect(byId.drifter.startedAt).toBe(now - 30_000)
+    expect(byId.mvp.startedAt).toBeLessThanOrEqual(now)
     for (const b of buffs.value) {
       expect(b.key.length).toBeGreaterThan(0)
       expect(b.name.length).toBeGreaterThan(0)

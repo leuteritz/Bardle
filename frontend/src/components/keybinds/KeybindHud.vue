@@ -1,27 +1,36 @@
 <template>
-  <div ref="hudEl" class="kb-hud" :class="{ 'kb-hud--in': revealed }" aria-label="Keyboard shortcuts">
-    <!-- Der Griff öffnet die vollständige Übersicht; die Keycaps daneben lösen
-         ihr Kürzel direkt aus, damit die Leiste auch mit der Maus bedienbar
-         bleibt. Deshalb NICHT ein Button um alles herum. -->
-    <button
-      type="button"
-      class="kb-hud__handle"
-      :aria-label="`Show all shortcuts (${controlsCap})`"
-      @click="openControls"
-    >
-      <Icon icon="lucide:keyboard" width="16" height="16" aria-hidden="true" />
-      <span class="kb-hud__handle-cap">{{ controlsCap }}</span>
-    </button>
+  <!-- Der Eckblock unten links: Zeile 1 die Keycaps, Zeile 2 die Signatur, die
+       App.vue in den Slot reicht. EIN Anker über der Minimap — die Nachbarn
+       (Admin-Knopf, Zeitraffer-Pille) stapeln sich über die gemessene Höhe. -->
+  <div ref="hudEl" class="kb-hud" aria-label="Keyboard shortcuts">
+    <div class="kb-hud__row" :class="{ 'kb-hud__row--in': revealed }">
+      <!-- Der Griff öffnet die vollständige Übersicht; die Keycaps daneben lösen
+           ihr Kürzel direkt aus, damit die Leiste auch mit der Maus bedienbar
+           bleibt. Deshalb NICHT ein Button um alles herum. -->
+      <button
+        type="button"
+        class="kb-hud__handle"
+        :aria-label="`Show all shortcuts (${controlsCap})`"
+        @click="openControls"
+      >
+        <Icon icon="lucide:keyboard" width="16" height="16" aria-hidden="true" />
+        <span class="kb-hud__handle-cap">{{ controlsCap }}</span>
+      </button>
 
-    <span class="kb-hud__rule" aria-hidden="true" />
+      <span class="kb-hud__rule" aria-hidden="true" />
 
-    <KeybindChip
-      v-for="bind in hudBindings"
-      :id="bind.id"
-      :key="bind.id"
-      :label="labelFor(bind)"
-      :lit="isActive(bind.id)"
-    />
+      <KeybindChip
+        v-for="bind in hudBindings"
+        :id="bind.id"
+        :key="bind.id"
+        :label="labelFor(bind)"
+        :lit="isActive(bind.id)"
+      />
+    </div>
+
+    <div class="kb-hud__sig">
+      <slot name="sig" />
+    </div>
   </div>
 </template>
 
@@ -59,20 +68,19 @@ const revealed = ref(false)
 let revealTimer: ReturnType<typeof setTimeout> | null = null
 
 /**
- * Die Leiste belegt die Ankerlinie über dem Command Panel (dieselbe Höhe wie
- * die Signatur-Zeile links). Wer sonst noch dort sitzt, stapelt sich über ihr —
- * dafür veröffentlicht sie ihre gemessene Höhe als CSS-Variable, statt dass die
- * andere Stelle eine Zahl raten müsste. Fällt die Leiste weg, greift der
- * Default 0px und der Anker liegt wieder wie zuvor.
+ * Der Block belegt die Ankerlinie über der Minimap. Wer sonst noch dort sitzt,
+ * stapelt sich über ihm — dafür veröffentlicht er seine gemessene Höhe als
+ * CSS-Variable, statt dass die andere Stelle eine Zahl raten müsste. Fällt er
+ * weg, greift der Default 0px und der Anker liegt wieder wie zuvor.
  */
 const hudEl = ref<HTMLElement | null>(null)
 let sizeObserver: ResizeObserver | null = null
 
 /**
- * Höhe UND Reichweite. Die Leiste ist breiter als das Panel, über dem sie sitzt
- * (gemessen 499 px gegen 330 auf Full HD) — ohne die zweite Zahl endet die
+ * Höhe UND Reichweite. Der Block ist breiter als das Panel, über dem er sitzt
+ * (gemessen ~385 px gegen 290 auf Full HD) — ohne die zweite Zahl endet die
  * Panel-Zone der Kontur an der Panelbreite und der Streifen daneben meldet
- * freies Feld, in dem die Leiste steht.
+ * freies Feld, in dem die Keycaps stehen. Gemessen von der LINKEN Bildkante.
  */
 function publishBox() {
   const el = hudEl.value
@@ -80,7 +88,7 @@ function publishBox() {
   const r = el.getBoundingClientRect()
   const root = document.documentElement.style
   root.setProperty('--kb-hud-h', `${Math.round(r.height)}px`)
-  root.setProperty('--kb-hud-reach', `${Math.round(Math.max(0, window.innerWidth - r.left))}px`)
+  root.setProperty('--kb-hud-reach', `${Math.round(Math.max(0, r.right))}px`)
   // Die Reichweite hängt am Inhalt, nicht am Viewport — der Cache-Schlüssel der
   // Kontur sähe eine Änderung sonst nicht.
   invalidateHudField()
@@ -98,8 +106,6 @@ onMounted(() => {
     // gehören zur Höhe, an der sich die Nachbarn ausrichten.
     sizeObserver = new ResizeObserver(publishBox)
     sizeObserver.observe(hudEl.value)
-    // Die Reichweite misst gegen die Bildkante — sie ändert sich auch, wenn nur
-    // das Fenster wandert.
     window.addEventListener('resize', publishBox)
   }
 })
@@ -119,41 +125,57 @@ function openControls() {
 </script>
 
 <style scoped>
-/* Spiegelbild der Signatur-Zeile unten links: gleiche Höhe über dem
-   Bottom-Bar-Panel, gleicher Randabstand — die beiden Ecken tragen damit
-   dasselbe Gewicht. Und dieselbe Zurückhaltung: kein Kasten, kein Rahmen.
-   Die Leiste steht frei über dem Command Panel und tritt erst
-   beim Darüberfahren nach vorn; ein zweiter gerahmter Block direkt über der
-   Bar-Silhouette hätte wie ein weiteres Panel gelesen.
-
+/* Unten links über der Minimap, ohne Kasten und Rahmen: ein zweiter gerahmter
+   Block direkt über der Bar-Silhouette hätte wie ein weiteres Panel gelesen.
    Der Chip selbst steht in `KeybindChip.vue` — dieselbe Darstellung trägt die
    Kürzel-Zeile unten links im Forge-Graphen.
 
    z-index 45 wie Musik-Widget und Enzyklopädie-Reiter: jedes Modal legt sich
-   darüber, ohne dass die Leiste sie einzeln kennen muss. */
+   darüber, ohne dass der Block sie einzeln kennen muss. */
 .kb-hud {
   position: fixed;
   bottom: calc(var(--hud-panel-size, 330px) + 8px);
-  right: 0.75rem;
+  left: 0.75rem;
   z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  user-select: none;
+}
+
+/* Nur die Keycap-Zeile fährt ein und tritt beim Darüberfahren nach vorn;
+   die Signatur darunter steht immer. */
+.kb-hud__row {
   display: flex;
   align-items: center;
   gap: 10px;
-  user-select: none;
-  /* Einfahren und Zurücktreten laufen über dieselbe Eigenschaft — die
-     Ruhe-Deckkraft steht deshalb am eingefahrenen Zustand, nicht hier. */
   opacity: 0;
   transform: translateY(10px);
   transition:
     opacity 300ms ease,
     transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.kb-hud--in {
+.kb-hud__row--in {
   opacity: 0.62;
   transform: translateY(0);
 }
-.kb-hud--in:hover {
+.kb-hud__row--in:hover {
   opacity: 1;
+}
+
+/* Signatur und FPS auf EINER Grundlinie und in EINER Größe, ganz gleich wie
+   der clamp() bei welcher Auflösung ausfällt. */
+.kb-hud__sig {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6em;
+  pointer-events: none;
+  font-size: clamp(0.72rem, 0.9vw, 1rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* ── Griff: öffnet die Übersicht ──────────────────────── */
@@ -183,10 +205,10 @@ function openControls() {
   background: rgba(122, 78, 32, 0.6);
 }
 
-/* Full HD ist der flachste Viewport — dort rückt die Leiste enger zusammen
+/* Full HD ist der flachste Viewport — dort rückt die Zeile enger zusammen
    (der Schriftgrad der Chips gibt in `KeybindChip.vue` nach). */
 @media (max-height: 1100px) {
-  .kb-hud {
+  .kb-hud__row {
     gap: 8px;
   }
 }

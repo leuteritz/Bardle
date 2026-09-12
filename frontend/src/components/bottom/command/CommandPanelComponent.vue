@@ -287,8 +287,8 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
   <!-- ── TEMP admin: reset every role ability cooldown ──
        Bewusst AUSSERHALB von .cmd-hud: dessen scale()-Transform wäre sonst der
        Bezugsrahmen jeder fixed-Positionierung. So hängt der Knopf am selben
-       Viewport-Anker wie das ©-Overlay links und liegt damit exakt auf dessen
-       Höhe. Wird später wieder entfernt. -->
+       Viewport-Anker wie der Keybind-Block unten links und stapelt sich über
+       ihn. Wird später wieder entfernt. -->
   <button
     class="cmd-admin-cd-btn"
     title="Admin: reset all role ability cooldowns"
@@ -364,12 +364,11 @@ function handleSlotClick(slot: (typeof slots.value)[number]) {
    Debug-Element vom warmen HUD absetzt. Temporär — kommt wieder raus. */
 .cmd-admin-cd-btn {
   position: fixed;
-  /* Auf der Ankerlinie steht seit den Tastenkürzeln die Keycap-Leiste
-     (KeybindHud) — die gehört dem Spieler, dieser Debug-Knopf stapelt sich
-     darüber. `--kb-hud-h` veröffentlicht die Leiste selbst; fehlt sie, greift
-     0px und der Knopf sitzt wieder exakt auf der Höhe des ©-Overlays. */
+  /* Auf der Ankerlinie unten links steht der Keybind-Block (KeybindHud) —
+     der gehört dem Spieler, dieser Debug-Knopf stapelt sich darüber.
+     `--kb-hud-h` veröffentlicht der Block selbst; fehlt er, greift 0px. */
   bottom: calc(var(--hud-panel-size, 330px) + 8px + var(--kb-hud-h, 0px) + 8px);
-  right: calc(20px * var(--hud-scale, 1));
+  left: 0.75rem;
   z-index: 9999;
   display: flex;
   align-items: center;

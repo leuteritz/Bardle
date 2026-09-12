@@ -256,10 +256,15 @@ watch(
       <EncyclopediaPanel />
       <BottomBarComponent />
 
-      <!-- Tastenkürzel: die Keycap-Leiste sitzt unten rechts als Gegenstück zur
-         Signatur-Zeile links, das Panel listet alle Kürzel auf. Das Panel ist
-         immer montiert — es hält den Handler für sein eigenes Kürzel. -->
-      <KeybindHud />
+      <!-- Tastenkürzel und Signatur: EIN Block unten links über der Minimap —
+         Zeile 1 die Keycaps, Zeile 2 © und FPS. Das Panel listet alle Kürzel
+         auf und ist immer montiert — es hält den Handler für sein Kürzel. -->
+      <KeybindHud>
+        <template #sig>
+          <span class="copyright-overlay text-amber-600/60">© Leuteritz</span>
+          <FpsOverlay />
+        </template>
+      </KeybindHud>
       <KeybindPanel />
 
       <!-- Zeitraffer-Warnung. Sie ist die wichtigere Hälfte des Reglers: ein Lauf
@@ -273,12 +278,6 @@ watch(
         {{ gameStore.gameSpeed }}× TIME WARP — NOT LIVE
       </div>
 
-      <!-- Signatur und FPS-Zähler sitzen als ein Paar unten links über der
-         Minimap — die obere linke Ecke gehört der Auto-Pick-Meldung. -->
-      <div class="credit-row">
-        <span class="copyright-overlay text-amber-600/60">© Leuteritz</span>
-        <FpsOverlay />
-      </div>
     </div>
   </div>
 </template>
@@ -375,37 +374,11 @@ watch(
   initial-value: 0.85;
 }
 
-/* Die Zeile trägt Position und Schriftgrad für beide Kinder — Signatur und
-   FPS stehen dadurch garantiert auf einer Grundlinie und in einer Größe,
-   ganz gleich wie der clamp() bei welcher Auflösung ausfällt. */
-.credit-row {
-  position: fixed;
-  /* unten links, direkt über dem oberen Rahmen des Minimap-Panels */
-  bottom: calc(var(--hud-panel-size, 330px) + 8px);
-  left: 0.75rem;
-  z-index: 9999;
-  display: flex;
-  align-items: baseline;
-  gap: 0.6em;
-  pointer-events: none;
-  font-size: clamp(0.72rem, 0.9vw, 1rem);
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  user-select: none;
-}
-
+/* Signatur — steht in Zeile 2 des Keybind-Blocks (KeybindHud, Slot `sig`). */
 .copyright-overlay {
   font-size: inherit;
   color: #f8e7a6;
   white-space: nowrap;
-}
-
-@media (max-width: 1200px) {
-  .credit-row {
-    font-size: 1.5rem;
-  }
 }
 
 /* Ab hier rücken BEIDE HUD-Spalten gemeinsam von der Bildkante ab — dieselbe
@@ -429,11 +402,11 @@ watch(
   box-shadow: inset 0 0 0 3px #cc6050;
 }
 
-/* Unten links über der Signatur — dieselbe Ecke, die das Spiel schon für
-   Chrome nutzt. Über dem Minimap-Panel, damit sie nichts überdeckt. */
+/* Unten links über dem Keybind-Block und dem Admin-Knopf — dieselbe Ecke,
+   die das Spiel schon für Chrome nutzt. Über dem Minimap-Panel. */
 .warp-pill {
   position: fixed;
-  bottom: calc(var(--hud-panel-size, 330px) + 30px);
+  bottom: calc(var(--hud-panel-size, 330px) + var(--kb-hud-h, 0px) + 44px);
   left: 0.75rem;
   z-index: 99999;
   pointer-events: none;
@@ -561,7 +534,6 @@ html.uhop-hud-out
     .buff-bar,
     .kb-hud,
     .music-widget,
-    .credit-row,
     .encyclopedia-toggle
   ) {
   opacity: 0 !important;
@@ -570,10 +542,10 @@ html.uhop-hud-out
     opacity var(--uhop-hud-out) ease-in,
     translate var(--uhop-hud-out) ease-in;
 }
-html.uhop-hud-out body :is(.header-bar, .star-timer-bars-host, .hcc-root, .elp, .buff-bar) {
+html.uhop-hud-out body :is(.header-bar, .star-timer-bars-host, .hcc-root, .elp) {
   translate: 0 calc(-1 * var(--uhop-hud-shift));
 }
-html.uhop-hud-out body :is(.bottom-bar-shell, .ability-bar, .kb-hud, .credit-row) {
+html.uhop-hud-out body :is(.bottom-bar-shell, .ability-bar, .buff-bar, .kb-hud) {
   translate: 0 var(--uhop-hud-shift);
 }
 html.uhop-hud-out body .music-widget {
@@ -594,7 +566,6 @@ html.uhop-hud-in
     .buff-bar,
     .kb-hud,
     .music-widget,
-    .credit-row,
     .encyclopedia-toggle
   ) {
   translate: 0 0;
@@ -608,16 +579,16 @@ html.uhop-hud-in body .bottom-bar-shell {
 html.uhop-hud-in body .hcc-root {
   --uhop-d: calc(var(--uhop-hud-stagger) * 2);
 }
-html.uhop-hud-in body :is(.elp, .buff-bar) {
+html.uhop-hud-in body .elp {
   --uhop-d: calc(var(--uhop-hud-stagger) * 3);
 }
-html.uhop-hud-in body .ability-bar {
+html.uhop-hud-in body :is(.ability-bar, .buff-bar) {
   --uhop-d: calc(var(--uhop-hud-stagger) * 4);
 }
 html.uhop-hud-in body .star-timer-bars-host {
   --uhop-d: calc(var(--uhop-hud-stagger) * 5);
 }
-html.uhop-hud-in body :is(.kb-hud, .music-widget, .credit-row, .encyclopedia-toggle) {
+html.uhop-hud-in body :is(.kb-hud, .music-widget, .encyclopedia-toggle) {
   --uhop-d: calc(var(--uhop-hud-stagger) * 6);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -633,7 +604,6 @@ html.uhop-hud-in body :is(.kb-hud, .music-widget, .credit-row, .encyclopedia-tog
       .buff-bar,
       .kb-hud,
       .music-widget,
-      .credit-row,
       .encyclopedia-toggle
     ) {
     transition: none;

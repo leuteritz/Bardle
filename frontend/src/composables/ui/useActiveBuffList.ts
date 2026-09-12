@@ -61,6 +61,8 @@ export interface ActiveBuffView {
   rankColor?: string
   /** `null` = ohne Uhr; der Landfall-Segen gilt bis zum Galaxieende. */
   timer: { secondsLeft: number; progress: number } | null
+  /** Spielzeit-Stempel der Ankunft; `null` = seit Galaxiebeginn (ältester). */
+  startedAt: number | null
 }
 
 const FORGE_BUFF_LABEL: Record<ForgeBuffId, { name: string; label: string }> = {
@@ -113,6 +115,7 @@ export function useActiveBuffList(): {
         color: def.color,
         image: def.image,
         timer: timer(buff.expiresAt - abilityStore.abilityNow, buff.durationMs),
+        startedAt: buff.expiresAt - buff.durationMs,
       })
     }
 
@@ -129,6 +132,9 @@ export function useActiveBuffList(): {
           secondsLeft: gameStore.mvpBuffSecondsLeft,
           progress: Math.min(1, gameStore.mvpBuffSecondsLeft / HONOR_MVP_BUFF_DURATION_S),
         },
+        // Der Ehrenbuff kennt nur Restsekunden — die Ankunft wird zurückgerechnet.
+        startedAt:
+          drifterStore.drifterNow - (HONOR_MVP_BUFF_DURATION_S - gameStore.mvpBuffSecondsLeft) * 1000,
       })
     }
 
@@ -147,6 +153,7 @@ export function useActiveBuffList(): {
         rank: def.rarity,
         rankColor: DRIFTER_RARITY_COLOR[def.rarity],
         timer: timer(buff.expiresAt - drifterStore.drifterNow, buff.durationMs),
+        startedAt: buff.expiresAt - buff.durationMs,
       })
     }
 
@@ -162,6 +169,7 @@ export function useActiveBuffList(): {
         color: def.color,
         icon: buff.icon ?? omenIcon(def.id, 0),
         timer: timer(buff.expiresAt - omenStore.omenNow, buff.durationMs),
+        startedAt: buff.expiresAt - buff.durationMs,
       })
     }
 
@@ -178,6 +186,7 @@ export function useActiveBuffList(): {
         color: FORGE_TIMED_BUFF_COLOR,
         icon: FORGE_TIMED_BUFF_ICON,
         timer: timer(buff.expiresAt - forgeStore.forgeNow, bargain?.durationMs ?? 0),
+        startedAt: buff.expiresAt - (bargain?.durationMs ?? 0),
       })
     }
 
@@ -198,6 +207,7 @@ export function useActiveBuffList(): {
         rank: def?.rarity,
         rankColor: def ? AUGMENT_RARITY_COLOR[def.rarity] : undefined,
         timer: timer(buff.expiresAt - now, durationMs),
+        startedAt: buff.expiresAt - durationMs,
       })
     })
 
@@ -213,6 +223,7 @@ export function useActiveBuffList(): {
           color: LANDFALL_ACCENT_HEX,
           icon: def.icon,
           timer: null,
+          startedAt: null,
         })
     }
 
