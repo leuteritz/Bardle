@@ -18,6 +18,20 @@
  */
 export const MISSION_CLAIM_FLASH_MS = 700
 
+// ── Zeremonien der HUD-Karte: Auftakt (frischer Spielstand) und Übergabe
+//    (neues Ziel eingezogen). Nur `opacity`/`transform`, Ende per animationend.
+/** Atemzüge des Innenscheins beim Auftakt — vier, damit der Blick hängen bleibt. */
+export const MISSION_DEBUT_BREATHS = 4
+export const MISSION_DEBUT_BREATH_MS = 1500
+/** Übergabe kürzer: sie läuft nach jedem der 41 Abschlüsse. */
+export const MISSION_HANDOVER_BREATHS = 2
+export const MISSION_HANDOVER_BREATH_MS = 1100
+/** EIN Lichtstreifen über die Karte, beide Phasen. */
+export const MISSION_SHEEN_MS = 800
+/** Aufstieg je Textzeile bei der Übergabe, gestaffelt. */
+export const MISSION_RISE_MS = 420
+export const MISSION_RISE_STAGGER_MS = 60
+
 /**
  * Obergrenze der Chime-Belohnung, ausgedrückt in Sekunden laufender Produktion.
  *

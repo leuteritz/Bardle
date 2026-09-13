@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, nextTick, ref, watch, onMounted, onUnmounted } from 'vue'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { invalidateHudField } from '@/utils/ui/hudField'
 import { useMissionFace } from '@/composables/ui/useMissionFace'
 import { missionObjectiveLine } from '@/config/progression/missions'
 import { useUiStore } from '@/stores/core/uiStore'
+import { useMissionStore } from '@/stores/progression/missionStore'
+import {
+  MISSION_DEBUT_BREATHS,
+  MISSION_DEBUT_BREATH_MS,
+  MISSION_HANDOVER_BREATHS,
+  MISSION_HANDOVER_BREATH_MS,
+  MISSION_RISE_MS,
+  MISSION_RISE_STAGGER_MS,
+  MISSION_SHEEN_MS,
+} from '@/config/constants'
 
 /**
  * Woran Bard als Nächstes arbeitet — ganz oben in der Kartenspalte.
@@ -18,12 +28,47 @@ import { useUiStore } from '@/stores/core/uiStore'
  *
  * Sie hat KEINEN eigenen Takt: der Store rechnet im Sekundentakt aus
  * `gameStore.tick()`, und ein Ziel ohne Frist braucht nichts Feineres.
+ *
+ * Zwei Zeremonien, nur `opacity`/`transform`, Ende per `animationend`:
+ * der Auftakt beim frischen Spielstand (einmal je Sitzung) und die Übergabe,
+ * sobald nach dem Abschlussblitz das neue Ziel steht.
  */
+
+/** Einmal je Sitzung — die Spalte unmountet bei offenem Profil-Tab. */
+let debutShown = false
 
 /** Gesicht und Abschlussblitz teilt die Karte mit der Wayfinder-Zeile im
  *  Pause-Overlay — beim Blitz steht der Store schon eine Stufe weiter. */
 const { face, flashing } = useMissionFace()
 const uiStore = useUiStore()
+const missionStore = useMissionStore()
+
+type Phase = 'idle' | 'debut' | 'handover'
+const phase = ref<Phase>('idle')
+const glowEl = ref<HTMLElement>()
+
+watch(flashing, (now, was) => {
+  if (!was || now || !face.value) return
+  // Erst zurücksetzen: zwei Einlösungen kurz nacheinander sind zwei Übergaben.
+  phase.value = 'idle'
+  nextTick(() => {
+    phase.value = 'handover'
+  })
+})
+
+/** Der Innenschein läuft in beiden Phasen am längsten — sein Ende ist das Ende. */
+function onCeremonyEnd(e: AnimationEvent) {
+  if (e.target === glowEl.value) phase.value = 'idle'
+}
+
+const debutBreaths = String(MISSION_DEBUT_BREATHS)
+const debutBreathMs = `${MISSION_DEBUT_BREATH_MS}ms`
+const handoverBreaths = String(MISSION_HANDOVER_BREATHS)
+const handoverBreathMs = `${MISSION_HANDOVER_BREATH_MS}ms`
+const sheenMs = `${MISSION_SHEEN_MS}ms`
+const riseMs = `${MISSION_RISE_MS}ms`
+const rise2Ms = `${MISSION_RISE_STAGGER_MS}ms`
+const rise3Ms = `${MISSION_RISE_STAGGER_MS * 2}ms`
 
 /** Nennt die Stufe einen Reiter, führt die Karte per Klick dorthin. */
 const linkTab = computed(() => (flashing.value ? undefined : face.value?.def.tab))
@@ -68,6 +113,12 @@ onMounted(() => {
   resizeObserver = new ResizeObserver(publishBottom)
   resizeObserver.observe(root.value)
   publishBottom()
+  const fresh =
+    missionStore.index === 0 && missionStore.caughtUp === 0 && missionStore.totalMissionsClaimed === 0
+  if (fresh && !debutShown && face.value) {
+    debutShown = true
+    phase.value = 'debut'
+  }
 })
 
 onUnmounted(() => {
@@ -83,10 +134,16 @@ onUnmounted(() => {
   <div
     ref="root"
     class="hc hc--anchored wf"
-    :class="{ 'wf--done': flashing, 'wf--link': !!linkTab }"
+    :class="{
+      'wf--done': flashing,
+      'wf--link': !!linkTab,
+      'wf--debut': phase === 'debut',
+      'wf--handover': phase === 'handover',
+    }"
     :style="{ '--hc-color': face?.color }"
     :title="tooltip"
     @click="openTab"
+    @animationend="onCeremonyEnd"
     :role="linkTab ? 'button' : 'status'"
   >
     <!-- Die Kartenfläche IST der Balken. Der Schlüssel wechselt beim
@@ -105,6 +162,10 @@ onUnmounted(() => {
       :style="{ transform: `translateX(${(face?.ratio ?? 0) * 100}%)` }"
       aria-hidden="true"
     ></span>
+
+    <!-- Zeremonie-Ebenen: vor dem Text, damit sie ohne z-index darunter liegen. -->
+    <span ref="glowEl" class="wf-glow" aria-hidden="true"></span>
+    <span class="wf-sheen" aria-hidden="true"></span>
 
     <span class="hc-over wf-name">{{ face?.name }}</span>
     <span class="hc-over wf-task">{{ face?.task }}</span>
@@ -164,6 +225,110 @@ onUnmounted(() => {
 .wf--done .hc-fill,
 .wf--done .hc-edge {
   transition-duration: 0.25s;
+}
+
+/* ── Zeremonien ── Innenschein: statischer Schein, nur seine Deckkraft atmet. */
+.wf-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px var(--hc-color, var(--rpg-gold)),
+    inset 0 0 1.4em color-mix(in srgb, var(--hc-color, var(--rpg-gold)) 45%, transparent);
+}
+
+.wf--debut .wf-glow {
+  animation: wf-breathe v-bind(debutBreathMs) ease-in-out v-bind(debutBreaths);
+}
+
+.wf--handover .wf-glow {
+  animation: wf-breathe v-bind(handoverBreathMs) ease-in-out v-bind(handoverBreaths);
+}
+
+/* Lichtstreifen — EIN Lauf über die Karte. */
+.wf-sheen {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 38%;
+  opacity: 0;
+  transform: translateX(-120%) skewX(-18deg);
+  background: linear-gradient(100deg, transparent, rgba(242, 234, 210, 0.22), transparent);
+  pointer-events: none;
+}
+
+.wf--debut .wf-sheen,
+.wf--handover .wf-sheen {
+  animation: wf-sheen v-bind(sheenMs) cubic-bezier(0.2, 0.7, 0.3, 1) 1;
+}
+
+/* Textaufstieg nur bei der Übergabe — beim Auftakt steht die Karte schon. */
+.wf--handover .wf-name,
+.wf--handover .wf-task,
+.wf--handover .wf-foot {
+  animation: wf-rise v-bind(riseMs) cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.wf--handover .wf-task {
+  animation-delay: v-bind(rise2Ms);
+}
+
+.wf--handover .wf-foot {
+  animation-delay: v-bind(rise3Ms);
+}
+
+@keyframes wf-breathe {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes wf-sheen {
+  0% {
+    opacity: 0;
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(220%) skewX(-18deg);
+  }
+}
+
+@keyframes wf-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.45em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Gleiche Spezifität wie die Phasenregeln, sonst gewinnen die. */
+@media (prefers-reduced-motion: reduce) {
+  .wf--debut .wf-glow,
+  .wf--handover .wf-glow,
+  .wf--debut .wf-sheen,
+  .wf--handover .wf-sheen,
+  .wf--handover .wf-name,
+  .wf--handover .wf-task,
+  .wf--handover .wf-foot {
+    animation: none;
+  }
 }
 
 .wf-name,

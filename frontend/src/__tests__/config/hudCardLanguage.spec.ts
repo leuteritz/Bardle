@@ -118,7 +118,12 @@ describe('HUD-Kartensprache: die Gestalt steht an EINER Stelle', () => {
        aufgeschlagen: eine gekürzte Kette rutscht unter eine sichtbare Karte,
        sobald das dazwischenliegende Glied fehlt. Die Stapelung macht jetzt Flex.
        Nur `--wayfinder-bottom` bleibt, weil die HUD-Kontur daran klemmt. */
-    const DEAD = ['--autopick-bottom', '--void-card-bottom', '--omen-card-bottom', '--landfall-card-bottom']
+    const DEAD = [
+      '--autopick-bottom',
+      '--void-card-bottom',
+      '--omen-card-bottom',
+      '--landfall-card-bottom',
+    ]
     const offenders: string[] = []
     for (const { file, source } of [...cards, column]) {
       for (const name of DEAD) {
@@ -186,7 +191,10 @@ describe('HUD-Kartensprache: die Gestalt steht an EINER Stelle', () => {
     for (const r of radii) {
       expect(r, `border-radius "${r}" skaliert mit der Schrift`).not.toMatch(/\d(em|rem)/)
       for (const px of r.match(/(\d+)px/g) ?? []) {
-        expect(Number.parseInt(px, 10), `border-radius "${r}" reisst die 4–5-px-Grenze`).toBeLessThanOrEqual(5)
+        expect(
+          Number.parseInt(px, 10),
+          `border-radius "${r}" reisst die 4–5-px-Grenze`,
+        ).toBeLessThanOrEqual(5)
       }
     }
   })
@@ -201,5 +209,27 @@ describe('HUD-Kartensprache: die Gestalt steht an EINER Stelle', () => {
         /filter|box-shadow|border-color|width|height|\btop\b|\bleft\b/,
       )
     }
+  })
+
+  it('die Zeremonien des Wayfinders bewegen nur opacity und transform — und lassen sich abschalten', () => {
+    /* Auftakt und Übergabe laufen IN der Karte, deren Kante in der HUD-Kontur
+       steht: ein Keyframe auf Farbe, Schatten oder Maß rasterte die Fläche je
+       Frame neu — oder verschöbe die Kontur. */
+    const wf = cards.find((c) => c.file.includes('WayfinderHudCard'))!.source
+    const frames = [...wf.matchAll(/@keyframes\s+([\w-]+)\s*\{([\s\S]*?)\n\}/g)]
+    expect(frames.map((m) => m[1]).sort()).toEqual(['wf-breathe', 'wf-rise', 'wf-sheen'])
+    for (const [, name, body] of frames) {
+      const props = [...body.matchAll(/^\s*([a-z-]+):/gm)].map((m) => m[1])
+      expect(props.length, `${name} ist leer`).toBeGreaterThan(0)
+      for (const prop of props) {
+        expect(['opacity', 'transform'], `${name} animiert ${prop}`).toContain(prop)
+      }
+    }
+    const reduced = wf.slice(wf.indexOf('@media (prefers-reduced-motion: reduce)'))
+    expect(reduced).toMatch(/\.wf--debut \.wf-glow[\s\S]*animation: none/)
+    expect(reduced).toMatch(/\.wf--handover \.wf-sheen[\s\S]*animation: none/)
+    // Kein Timer beendet die Zeremonie — das tut das Ende des Innenscheins.
+    expect(wf).toContain('@animationend')
+    expect(wf).not.toMatch(/setTimeout|gameTimeout/)
   })
 })
