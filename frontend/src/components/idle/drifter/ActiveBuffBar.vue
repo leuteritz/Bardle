@@ -978,8 +978,8 @@ const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
 .buff-bar--free .chip-icon {
   position: absolute;
   left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
+  top: 50%;
+  transform: translate(-50%, -50%);
   z-index: 1;
   display: grid;
   flex: 0 0 v-bind(freeIcon);
@@ -1040,12 +1040,12 @@ const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
 }
 
 .buff-bar--free .chip-pulse {
-  top: auto;
+  top: 0;
   right: v-bind(drainInset);
   bottom: 0;
   left: v-bind(drainInset);
-  height: v-bind(freeIcon);
-  border-radius: 3px;
+  height: auto;
+  border-radius: 4px;
 }
 
 .buff-bar--free .chip-gem {
@@ -1054,9 +1054,10 @@ const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
 
 .buff-bar--free .chip-side {
   position: absolute;
-  top: 3px;
+  top: auto;
   left: 0;
   right: 0;
+  bottom: 100%;
   z-index: 2;
   display: flex;
   align-items: center;
@@ -1100,13 +1101,14 @@ const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
 
 .buff-bar--free .chip-track {
   position: absolute;
-  top: 0;
-  right: v-bind(drainInset);
-  left: v-bind(drainInset);
+  top: calc(-1 * (var(--chip-h) - v-bind(freeIcon) - 3px));
+  right: 0;
+  left: 0;
   z-index: 3;
-  height: 3px;
+  height: 4px;
   transform-origin: left center;
   background: var(--chip-color, #6ec040);
+  border-radius: 4px 4px 0 0;
   pointer-events: none;
   transition: transform 250ms linear;
 }
