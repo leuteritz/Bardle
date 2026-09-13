@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { PLAYER_DRIFT_AMP } from '@/config/constants'
 import {
   playerGalaxyPos,
   playerLeg,
   playerTravelProgress,
-  driftOffset,
+  playerHeading,
   type PlayerFlightState,
 } from '@/utils/game/playerGalaxyPos'
 
@@ -138,26 +137,25 @@ describe('playerGalaxyPos', () => {
   })
 })
 
-describe('Treiben ohne Kurs', () => {
+describe('Kreuzfahrt ohne Kurs', () => {
   it('bleibt ohne das Flag am Ort — die alten Leser merken nichts', () => {
     expect(playerGalaxyPos(SPAWN, DOTS, 0, state(), 5_000)).toEqual(SPAWN)
   })
 
-  it('wandert um den Ort, innerhalb der Amplitude, geklemmt', () => {
-    const s = state({ pendingRoleSelection: true, mapSeed: 4242 })
-    const pts = [0, 700, 2_100, 4_800, 9_900].map((t) => playerGalaxyPos(SPAWN, DOTS, 0, s, t))
+  it('kreuzt vom letzten Ort aus durch die Karte, im Rahmen, deterministisch', () => {
+    const s = state({ pendingRoleSelection: true, mapSeed: 4242, courseAwaitSince: 1_000 })
+    expect(playerGalaxyPos(SPAWN, DOTS, 0, s, 1_000)).toEqual(SPAWN)
+    const pts = [1_000, 4_000, 9_000, 20_000, 45_000].map((t) => playerGalaxyPos(SPAWN, DOTS, 0, s, t))
     for (const p of pts) {
-      expect(Math.abs(p.x - SPAWN.x)).toBeLessThanOrEqual(PLAYER_DRIFT_AMP + 1e-9)
-      expect(Math.abs(p.y - SPAWN.y)).toBeLessThanOrEqual(PLAYER_DRIFT_AMP + 1e-9)
       expect(p.x).toBeGreaterThanOrEqual(0.06)
+      expect(p.x).toBeLessThanOrEqual(0.94)
+      expect(p.y).toBeGreaterThanOrEqual(0.06)
       expect(p.y).toBeLessThanOrEqual(0.94)
     }
-    expect(new Set(pts.map((p) => p.x.toFixed(4))).size).toBeGreaterThan(1)
-  })
-
-  it('ist je Zeitpunkt und Seed deterministisch, je Seed verschieden', () => {
-    expect(driftOffset(7, 1234)).toEqual(driftOffset(7, 1234))
-    expect(driftOffset(7, 1234)).not.toEqual(driftOffset(8, 1234))
+    const far = Math.hypot(pts[4].x - SPAWN.x, pts[4].y - SPAWN.y)
+    expect(far).toBeGreaterThan(0.1)
+    expect(playerGalaxyPos(SPAWN, DOTS, 0, s, 20_000)).toEqual(pts[3])
+    expect(playerHeading(SPAWN, DOTS, 0, s, 20_000)).toBeTypeOf('number')
   })
 
   it('weicht der Rettungsrotation und dem Kern', () => {
@@ -165,5 +163,18 @@ describe('Treiben ohne Kurs', () => {
     expect(playerGalaxyPos(SPAWN, DOTS, 0, s, 3_000)).toEqual(SPAWN)
     const c = state({ pendingRoleSelection: true, mapSeed: 1, bossPhaseActive: true })
     expect(playerGalaxyPos(SPAWN, DOTS, 0, c, 3_000)).toEqual({ x: 0.5, y: 0.5 })
+  })
+
+  it('startet die Etappe am departPos, nicht am letzten Stern', () => {
+    const depart = { x: 0.61, y: 0.33 }
+    const s = state({
+      departPos: depart,
+      championTravelState: 'traveling',
+      championTravelStartTime: 1_000,
+      championTravelDurationMs: 1_000,
+    })
+    expect(playerLeg(SPAWN, DOTS, 1, s).from).toEqual(depart)
+    expect(playerGalaxyPos(SPAWN, DOTS, 1, s, 1_000)).toEqual(depart)
+    expect(playerGalaxyPos(SPAWN, DOTS, 1, s, 2_000)).toEqual(DOTS[1])
   })
 })

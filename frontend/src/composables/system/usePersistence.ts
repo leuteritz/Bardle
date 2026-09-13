@@ -327,6 +327,8 @@ export function usePersistence() {
         starManifests: galaxyStore.starManifests.map((m) => ({ ...m })),
         starPositions: galaxyStore.starPositions.map((p) => ({ ...p })),
         courseLegFactor: galaxyStore.courseLegFactor,
+        courseAwaitSince: galaxyStore.courseAwaitSince,
+        departPos: galaxyStore.departPos ? { ...galaxyStore.departPos } : null,
         totalCoursesCharted: galaxyStore.totalCoursesCharted,
         // Der Cairn-Segen wird MIT der Galaxie gespeichert, nicht in einem
         // eigenen Block: er gilt für genau diese eine, und `boonGalaxy` ist die
@@ -924,6 +926,9 @@ export function usePersistence() {
         // Vor der Kurswahl begonnene Läufe haben keine Orte — `galaxyStarDots` füllt aus der alten Generierung.
         galaxyStore.starPositions = Array.isArray(gx.starPositions) ? gx.starPositions : []
         galaxyStore.courseLegFactor = gx.courseLegFactor ?? 1
+        // Ohne Anker beginnt die Kreuzfahrt jetzt — sie ist Anzeige, kein Fortschritt.
+        galaxyStore.courseAwaitSince = gx.courseAwaitSince ?? gameNow()
+        galaxyStore.departPos = gx.departPos ?? null
         galaxyStore.totalCoursesCharted = gx.totalCoursesCharted ?? 0
         // Der offene Ort wird bewusst NICHT gespeichert (dieselbe Regel wie bei
         // Void-Wesen unterwegs). Beim Laden steht die Etappe damit wieder offen;
