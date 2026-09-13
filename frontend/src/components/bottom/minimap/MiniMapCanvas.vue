@@ -418,7 +418,7 @@ export default defineComponent({
         y2: number
       } | null = null
       if (travelDest && isTraveling) {
-        const from = attempts > 0 ? dots[attempts - 1] : spawnPos.value
+        const from = galaxyStore.departPos ?? (attempts > 0 ? dots[attempts - 1] : spawnPos.value)
         const [x0, y0] = wToC(from.x, from.y)
         const [x2, y2] = wToC(travelDest.x, travelDest.y)
         const dx = x2 - x0

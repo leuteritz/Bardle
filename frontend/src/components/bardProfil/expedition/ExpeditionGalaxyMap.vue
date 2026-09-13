@@ -544,7 +544,13 @@ defineExpose({ paintCount, box, cssW, cssH, markerSize, gateSize, bandH, diveAnc
       :now="now"
     />
 
-    <ExpeditionCourseLayer v-if="courseOpen" :box="box" :width="cssW" :height="cssH" />
+    <ExpeditionCourseLayer
+      v-if="courseOpen"
+      :box="box"
+      :width="cssW"
+      :height="cssH"
+      :visible="visible"
+    />
     <ExpeditionAdriftHead v-if="adrift" />
 
     <ExpeditionCrewMarkerLayer

@@ -21,6 +21,7 @@ import { landfallFlightModeFor } from '@/utils/orbit/landfallPath'
 import { galaxyDepth } from '@/utils/game/galaxyDepth'
 import { courseCandidates, type CourseOption } from '@/utils/game/courseCandidates'
 import { galaxyStarDots } from '@/utils/game/galaxyStarDots'
+import { playerGalaxyPos } from '@/utils/game/playerGalaxyPos'
 import type { DotPos } from '@/components/bottom/minimap/minimapGalaxyGeometry'
 import {
   landfallOnLeg,
@@ -330,6 +331,11 @@ export const useGalaxyStore = defineStore('galaxy', {
     starPositions: [] as DotPos[],
     /** Flugzeit-Faktor der laufenden Etappe (Entfernung des gewählten Sterns). */
     courseLegFactor: 1,
+    /** Beginn der Kreuzfahrt ohne Kurs (gameNow) — der Anker der Bahn. Ein frischer
+     *  Stand beginnt bei der Store-Geburt zu kreuzen. */
+    courseAwaitSince: gameNow(),
+    /** Wo das Schiff stand, als der Kurs gesetzt wurde; dort beginnt die Etappe. */
+    departPos: null as DotPos | null,
     /** Lifetime: gesetzte Kurse — die Wayfinder-Metrik `coursesCharted`. */
     totalCoursesCharted: 0,
     /** Folgeaktion eines Champion-Sterns, die auf das Schliessen des Star-Fight-Modals wartet. */
@@ -559,6 +565,8 @@ export const useGalaxyStore = defineStore('galaxy', {
     requestRoleSelection() {
       this.nextStarRole = null
       this.pendingRoleSelection = true
+      this.courseAwaitSince = gameNow()
+      this.departPos = null
     },
 
     /** Die Geste der Kurswahl: Rolle UND Ort, dann Abflug wie bisher. */
@@ -568,6 +576,9 @@ export const useGalaxyStore = defineStore('galaxy', {
       if (!opt) return
       this.nextStarRole = opt.role
       this.courseLegFactor = opt.legFactor
+      // Der Flug beginnt, wo die Kreuzfahrt gerade ist — nicht am letzten Stern.
+      const { spawn, dots } = this.starDots
+      this.departPos = playerGalaxyPos(spawn, dots, this.attemptResults.length, this, gameNow())
       this.starPositions = [...this.starPositions.slice(0, this.currentLegIndex), opt.pos]
       this.totalCoursesCharted++
       this.pendingRoleSelection = false
@@ -941,6 +952,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       if (this.starsRescued >= this.starsRequired) return
       this.starsRescued++
       this.totalStarsRescued++
+      this.departPos = null
       this.attemptResults.push('rescued')
       // Immer im selben Atemzug wie `attemptResults` — die Index-Gleichheit ist
       // der ganze Vertrag des Manifests.
@@ -965,6 +977,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       }
       this.attemptResults.push('failed')
       this.starManifests.push(manifest)
+      this.departPos = null
       // Die Ersatz-Etappe bekommt ihren Ort im selben Atemzug — ohne Wahl den ersten Kandidaten.
       const next = courseCandidates(
         this.mapSeed,
@@ -1149,6 +1162,7 @@ export const useGalaxyStore = defineStore('galaxy', {
       this.starManifests = []
       this.starPositions = []
       this.courseLegFactor = 1
+      this.departPos = null
       this.landfallResults = []
       this.incidentResults = []
       this.activeLandfall = null

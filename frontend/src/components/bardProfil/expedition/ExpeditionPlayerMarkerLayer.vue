@@ -20,8 +20,8 @@ import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
 import { gameNow } from '@/utils/game/gameClock'
 import { galaxyStarDots } from '@/utils/game/galaxyStarDots'
 import {
-  driftHeading,
   playerGalaxyPos,
+  playerHeading,
   playerLeg,
   playerTravelProgress,
 } from '@/utils/game/playerGalaxyPos'
@@ -261,7 +261,7 @@ function place(now: number) {
     const b = props.box
     x = b.x + p.x * b.w
     y = b.y + p.y * b.h
-    angle = driftHeading(galaxyStore.mapSeed, now)
+    angle = playerHeading(g.spawn, g.dots, g.attempts, galaxyStore, now)
   } else if (flyCache && curveCache) {
     const pt = pointOn(curveCache, playerTravelProgress(galaxyStore, now))
     x = pt.x

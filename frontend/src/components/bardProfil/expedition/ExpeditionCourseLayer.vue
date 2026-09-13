@@ -7,8 +7,11 @@
  * weiter erst nach der Wahl (`ExpeditionPlayerMarkerLayer`). Kurse sind
  * statische SVG-Pfade; beim Hover wechselt nur `opacity`.
  */
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useGalaxyStore } from '@/stores/world/galaxyStore'
+import { useRenderingPaused } from '@/composables/system/useRenderingPaused'
+import { gameNow } from '@/utils/game/gameClock'
+import { playerGalaxyPos } from '@/utils/game/playerGalaxyPos'
 import { useBattleStore } from '@/stores/battle/battleStore'
 import ExpeditionCourseNode from './ExpeditionCourseNode.vue'
 import { obtainableByRole } from '@/utils/game/roleRoster'
@@ -24,10 +27,13 @@ const props = defineProps<{
   box: FitBox
   width: number
   height: number
+  /** Der Reiter bleibt gemountet — die Linien-Schleife hängt daran. */
+  visible: boolean
 }>()
 
 const galaxyStore = useGalaxyStore()
 const battleStore = useBattleStore()
+const { isRenderingPaused } = useRenderingPaused()
 const hovered = ref<number | null>(null)
 
 const options = computed(() => galaxyStore.courseOptions)
@@ -52,19 +58,52 @@ function pct(p: { x: number; y: number }): { left: number; top: number } {
 }
 
 /** Dieselbe Biegung wie der spätere Flug — der Kurs zeigt, was geflogen wird. */
-const paths = computed(() => {
-  const o = px(galaxyStore.courseOrigin)
-  return options.value.map((opt) => {
-    const t = px(opt.pos)
-    const dx = t.x - o.x
-    const dy = t.y - o.y
-    const len = Math.hypot(dx, dy)
-    if (len <= 1) return ''
-    const bend = len * MINIMAP_FLIGHTPATH_BEND
-    const cx = (o.x + t.x) / 2 - (dy / len) * bend
-    const cy = (o.y + t.y) / 2 + (dx / len) * bend
-    return `M${o.x.toFixed(1)} ${o.y.toFixed(1)} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${t.x.toFixed(1)} ${t.y.toFixed(1)}`
+function pathD(o: { x: number; y: number }, t: { x: number; y: number }): string {
+  const dx = t.x - o.x
+  const dy = t.y - o.y
+  const len = Math.hypot(dx, dy)
+  if (len <= 1) return ''
+  const bend = len * MINIMAP_FLIGHTPATH_BEND
+  const cx = (o.x + t.x) / 2 - (dy / len) * bend
+  const cy = (o.y + t.y) / 2 + (dx / len) * bend
+  return `M${o.x.toFixed(1)} ${o.y.toFixed(1)} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${t.x.toFixed(1)} ${t.y.toFixed(1)}`
+}
+
+// ── Die Linien folgen dem kreuzenden Schiff: EIN rAF, nicht reaktiv, nur `d`. ──
+const routeEls = ref<SVGPathElement[]>([])
+let frame: number | null = null
+let optCache = options.value
+
+function writeRoutes(now: number) {
+  const { spawn, dots } = galaxyStore.starDots
+  const o = px(playerGalaxyPos(spawn, dots, galaxyStore.attemptResults.length, galaxyStore, now))
+  optCache.forEach((opt, i) => {
+    const el = routeEls.value[i]
+    if (el) el.setAttribute('d', pathD(o, px(opt.pos)))
   })
+}
+
+function tick() {
+  frame = requestAnimationFrame(tick)
+  if (!props.visible || isRenderingPaused.value) return
+  writeRoutes(gameNow())
+}
+
+watch(
+  [() => props.visible, options],
+  ([visible, opts]) => {
+    optCache = opts
+    if (visible && frame === null) frame = requestAnimationFrame(tick)
+    if (!visible && frame !== null) {
+      cancelAnimationFrame(frame)
+      frame = null
+    }
+    writeRoutes(gameNow())
+  },
+  { immediate: true, flush: 'post' },
+)
+onBeforeUnmount(() => {
+  if (frame !== null) cancelAnimationFrame(frame)
 })
 
 const flightMs = computed(() => options.value.map((o) => galaxyStore.flightMsForFactor(o.legFactor)))
@@ -83,9 +122,9 @@ function chart(i: number) {
       aria-hidden="true"
     >
       <path
-        v-for="(d, i) in paths"
-        :key="i"
-        :d="d"
+        v-for="(opt, i) in options"
+        :key="`${opt.role}-${i}`"
+        ref="routeEls"
         class="ecl-route"
         :class="{ 'ecl-route--on': hovered === i }"
         :style="{ stroke: ROLE_COLORS[options[i].role] }"

@@ -146,6 +146,21 @@ describe('galaxyStore — Kurswahl', () => {
     expect(ui.pendingGalaxyLive).toBe(true)
   })
 
+  it('merkt sich beim Kurs den Ort der Kreuzfahrt und räumt ihn am Stern', () => {
+    const store = useGalaxyStore()
+    store.starsRequired = 5
+    store.requestRoleSelection()
+    expect(store.departPos).toBeNull()
+    expect(store.courseAwaitSince).toBeGreaterThan(0)
+    vi.advanceTimersByTime(20_000)
+    store.chartCourse(0)
+    expect(store.departPos).not.toBeNull()
+    const d = store.departPos!
+    expect(Math.hypot(d.x - store.starDots.spawn.x, d.y - store.starDots.spawn.y)).toBeGreaterThan(0.05)
+    store.onChampionStarRescued(manifest())
+    expect(store.departPos).toBeNull()
+  })
+
   it('nimmt die Orte mit ins Archiv', () => {
     const store = useGalaxyStore()
     store.starsRequired = 1

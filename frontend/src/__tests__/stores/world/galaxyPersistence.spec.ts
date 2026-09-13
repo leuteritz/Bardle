@@ -48,6 +48,20 @@ describe('galaxy travel state persistence', () => {
     vi.stubGlobal('localStorage', makeLocalStorageStub())
   })
 
+  it('nimmt Anker und Abflugort der Kreuzfahrt mit über den Reload', () => {
+    const galaxyStore = useGalaxyStore()
+    galaxyStore.courseAwaitSince = 123_456
+    galaxyStore.departPos = { x: 0.31, y: 0.62 }
+    usePersistence().saveGame()
+
+    setActivePinia(createPinia())
+    const reloaded = useGalaxyStore()
+    usePersistence().loadGame()
+
+    expect(reloaded.courseAwaitSince).toBe(123_456)
+    expect(reloaded.departPos).toEqual({ x: 0.31, y: 0.62 })
+  })
+
   it('resumes travel after a save taken mid rescue-rotation', () => {
     // Rollenwahl bestätigt → Rotationsanimation läuft, Travel steht noch aus.
     const galaxyStore = useGalaxyStore()

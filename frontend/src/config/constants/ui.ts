@@ -333,11 +333,21 @@ export const CREST_SEPARATOR = ' · '
 
 // Minimap travel rendering (static galaxy map)
 export const MINIMAP_FLIGHTPATH_BEND = 0.18 // quadratic ctrl-point offset (fraction of leg length)
-/** Treiben ohne Kurs: Amplitude im 0..1-Kartenraum und Grundperiode; nie fortgeschrieben. */
-export const PLAYER_DRIFT_AMP = 0.045
-export const PLAYER_DRIFT_PERIOD_MS = 14_000
-/** Vorgriff für die Ausrichtung des treibenden Körpers (finite Differenz). */
-export const PLAYER_DRIFT_HEADING_STEP_MS = 80
+// ── Kreuzfahrt ohne Kurs (utils/game/driftCruise.ts) ──────────────────────
+/** Tempo in Karteneinheiten (0..1) je Sekunde — die Scheibe in etwa 25 s. */
+export const CRUISE_SPEED = 0.032
+/** Dauer eines Segments (eine Richtung bzw. ein Bogen). */
+export const CRUISE_SEG_MIN_MS = 5_000
+export const CRUISE_SEG_MAX_MS = 11_000
+/** Anteil gerader Segmente. */
+export const CRUISE_STRAIGHT_CHANCE = 0.45
+/** Drehrate eines Bogens, rad/s. Der Wenderadius bei MAX ist SPEED/MAX ≈ 0,08. */
+export const CRUISE_TURN_MIN = 0.08
+export const CRUISE_TURN_MAX = 0.4
+/** Heimatkreis um den Kern; ausserhalb dreht das Schiff zurück (max. Ausflug ≈ 0,42). */
+export const CRUISE_HOME_RADIUS = 0.26
+/** Nach dieser Zeit beginnt die Bahn von vorn — begrenzt den Segment-Cache. */
+export const CRUISE_TRACK_CYCLE_MS = 2 * 60 * 60_000
 export const MINIMAP_ROUTE_ARROW_SIZE = 5 // chevron wing length on flown-route segments (live map)
 export const MINIMAP_ROUTE_ARROW_GAP = 14 // chevron tip distance before the segment endpoint (clears the star marker)
 export const MINIMAP_ROUTE_ARROW_SPREAD = 0.48 // half-opening angle of the chevron in radians (~27°)
