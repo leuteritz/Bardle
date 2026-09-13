@@ -233,25 +233,18 @@ watch(
 }
 
 .eml-count {
-  display: inline-grid;
-  place-items: center;
-  min-width: 1.45em;
-  margin-left: 0.25em;
-  padding: 0 0.22em;
-  border: 1px solid #5c3310;
-  border-radius: 3px;
-  background: #141410;
+  margin-left: 0.35em;
   color: #e8c040;
-  font-size: 0.88em;
-  line-height: 1.15;
+  font-size: max(11px, 1.18em);
+  font-weight: 900;
+  line-height: 0.9;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
-  text-align: center;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 .eml--icons .eml-count {
   margin-left: 0;
-  font-size: clamp(9px, 1.05cqw, 14px);
+  font-size: clamp(11px, 1.25cqw, 18px);
 }
 </style>
