@@ -89,6 +89,16 @@ const chartStore = useExpeditionChartStore()
 
 const rescued = computed(() => props.record.attemptResults.filter((r) => r === 'rescued').length)
 const lost = computed(() => props.record.attemptResults.filter((r) => r === 'failed').length)
+const legendCounts = computed(() => {
+  const incidents = props.record.incidentResults ?? []
+  return {
+    'star-freed': rescued.value,
+    'star-lost': lost.value,
+    'landfall-reef': props.record.landfallResults?.length ?? 0,
+    'void-impact': incidents.filter((incident) => incident.kind === 'void-impact').length,
+    'drifter-trace': incidents.filter((incident) => incident.kind !== 'void-impact').length,
+  }
+})
 
 /** Nur noch fürs `aria-label` — im Bild trägt die Leistenzeile die Identität. */
 const freedOn = computed(() => new Date(props.record.completedAt).toLocaleDateString())
@@ -179,6 +189,7 @@ const summary = computed(
         :key="legendMode"
         :mode="legendMode"
         :dpr="dpr"
+        :counts="legendCounts"
         @hover="emit('lit', $event)"
       />
 
