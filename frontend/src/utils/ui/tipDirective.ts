@@ -38,6 +38,8 @@ export interface TipValue {
   labelAccent?: string
   /** Zugehörigkeitsfarbe für Leiste und Pfeil. */
   color?: string
+  /** Bevorzugte Seite; die Gegenseite bleibt der Fallback. */
+  prefer?: 'top' | 'bottom'
 }
 
 type TipBinding = string | TipValue | null | undefined
@@ -148,6 +150,7 @@ function show(el: TipHost): void {
     gap: TIP_DIRECTIVE_GAP_PX,
     margin: TIP_DIRECTIVE_VIEWPORT_MARGIN_PX,
     caretInset: TIP_DIRECTIVE_CARET_INSET_PX,
+    prefer: val.prefer,
   })
 
   panel.style.left = `${p.left}px`
