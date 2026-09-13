@@ -52,10 +52,13 @@ import {
   VOYAGE_MAP_LEGEND_ROWS,
 } from '@/config/constants'
 
+type LegendRowKind = (typeof VOYAGE_MAP_LEGEND_ROWS)[number]['kind']
+
 const props = defineProps<{
   /** `full` trägt die Wörter, `icons` nur die Sonden. */
   mode: 'full' | 'icons'
   dpr: number
+  counts: Record<LegendRowKind, number>
 }>()
 
 /** Auf welche Markenart der Zeiger gerade zeigt — die Karte hört mit. */
@@ -67,6 +70,14 @@ const probes = ref<(HTMLCanvasElement | null)[]>([])
    Spec rechnet gegen dieselben Konstanten. Muster: `EventLogPanel`. */
 const iconSize = `clamp(${VOYAGE_MAP_LEGEND_ICON_MIN}px, calc(${VOYAGE_MAP_LEGEND_ICON_CQW}cqw - ${VOYAGE_MAP_LEGEND_ICON_OFFSET}px), ${VOYAGE_MAP_LEGEND_ICON_MAX}px)`
 const labelSize = `clamp(${VOYAGE_MAP_LEGEND_LABEL_MIN}px, calc(${VOYAGE_MAP_LEGEND_LABEL_CQW}cqw - ${VOYAGE_MAP_LEGEND_LABEL_OFFSET}px), ${VOYAGE_MAP_LEGEND_LABEL_MAX}px)`
+
+function countFor(kind: LegendRowKind): number {
+  return Math.max(0, Math.round(props.counts[kind] ?? 0))
+}
+
+function tipFor(row: (typeof VOYAGE_MAP_LEGEND_ROWS)[number]): string {
+  return `${row.tip} ${countFor(row.kind)} recorded in this galaxy.`
+}
 
 function onOver(e: MouseEvent): void {
   const row = (e.target as HTMLElement | null)?.closest<HTMLElement>('.eml-row')
@@ -144,14 +155,19 @@ watch(
       :key="row.kind"
       class="eml-row"
       :data-kind="row.kind"
-      v-tip="{ label: row.label, text: row.tip }"
+      :aria-label="`${row.label}: ${countFor(row.kind)} in this galaxy`"
+      v-tip="{ label: row.label, text: tipFor(row) }"
     >
       <canvas
         :ref="(el) => (probes[i] = el as HTMLCanvasElement | null)"
         class="eml-probe"
         aria-hidden="true"
       />
-      <span v-if="mode === 'full'" class="eml-lbl">{{ row.label }}</span>
+      <span v-if="mode === 'full'" class="eml-lbl">
+        {{ row.label }}
+        <span class="eml-count">{{ countFor(row.kind) }}</span>
+      </span>
+      <span v-else class="eml-count">{{ countFor(row.kind) }}</span>
     </span>
   </div>
 </template>
@@ -205,6 +221,8 @@ watch(
    wie bei `.egsb-lbl--chip` — bei `line-height: 1` sässe das Wort neben der
    Sonde zu tief. */
 .eml-lbl {
+  display: inline-flex;
+  align-items: baseline;
   font-size: v-bind(labelSize);
   line-height: normal;
   font-weight: 800;
@@ -212,5 +230,28 @@ watch(
   text-transform: uppercase;
   color: rgba(216, 200, 160, 0.42);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.eml-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.45em;
+  margin-left: 0.25em;
+  padding: 0 0.22em;
+  border: 1px solid #5c3310;
+  border-radius: 3px;
+  background: #141410;
+  color: #e8c040;
+  font-size: 0.88em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+}
+
+.eml--icons .eml-count {
+  margin-left: 0;
+  font-size: clamp(9px, 1.05cqw, 14px);
 }
 </style>
