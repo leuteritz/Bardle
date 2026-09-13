@@ -150,7 +150,7 @@
             >
               <!-- Tier section: collapsible header (click to toggle) + its grid -->
               <div
-                class="tier-header"
+                class="tier-header cs-tier-header"
                 :class="{
                   'is-collapsed': isTierCollapsed(group.tier),
                   'is-galaxy-locked': group.isGalaxyLocked,
@@ -166,16 +166,23 @@
                 @keydown.enter.prevent="toggleTier(group.tier)"
                 @keydown.space.prevent="toggleTier(group.tier)"
               >
-                <Icon
-                  v-if="group.isGalaxyLocked"
-                  icon="lucide:lock"
-                  class="tier-header-lock"
-                  width="14"
-                  height="14"
-                />
-                <span v-else class="tier-header-chevron">▾</span>
-                <Icon :icon="group.icon" class="tier-header-icon" width="15" height="15" />
-                <span class="tier-header-label">{{ group.label }}</span>
+                <span class="cs-tier-toggle" aria-hidden="true">
+                  <Icon
+                    v-if="group.isGalaxyLocked"
+                    icon="lucide:lock"
+                    class="tier-header-lock"
+                    width="16"
+                    height="16"
+                  />
+                  <span v-else class="tier-header-chevron">▾</span>
+                </span>
+                <span class="cs-tier-emblem" aria-hidden="true">
+                  <Icon :icon="group.icon" class="tier-header-icon" width="27" height="27" />
+                </span>
+                <span class="cs-tier-heading">
+                  <span class="cs-tier-kicker">Tier {{ group.starLevel }}</span>
+                  <span class="tier-header-label">{{ group.label }}</span>
+                </span>
                 <span class="tier-header-stars">★{{ group.starLevel }}</span>
                 <span
                   class="tier-header-chance"
@@ -186,17 +193,22 @@
                       : `This tier's current spawn chance`
                   "
                 >
-                  {{ group.spawnPercent != null ? group.spawnPercent + '%' : 'Locked' }}
+                  <strong>{{ group.spawnPercent != null ? group.spawnPercent + '%' : 'Locked' }}</strong>
+                  <small>spawn</small>
                 </span>
                 <span class="tier-header-line"></span>
                 <span v-if="group.isGalaxyLocked" class="tier-header-req">
                   <Icon icon="lucide:lock" class="tier-req-icon" width="16" height="16" />
-                  Galaxy {{ group.requiredGalaxy }}
+                  <span>
+                    <small>Unlocks at</small>
+                    Galaxy {{ group.requiredGalaxy }}
+                  </span>
                 </span>
                 <span v-else class="tier-header-counter">
                   <span class="tier-header-count"
                     >{{ tierOwned(group.tier) }}/{{ tierTotal(group.tier) }}</span
                   >
+                  <small>recruited</small>
                 </span>
               </div>
               <Transition @enter="onTierEnter" @after-enter="onTierAfterEnter" @leave="onTierLeave">
@@ -293,7 +305,7 @@
           <div v-else class="tier-groups">
             <div v-for="group in itemGroups" :key="'cat-' + group.id" class="tier-group">
               <div
-                class="tier-header"
+                class="tier-header cs-tier-header"
                 :class="{ 'is-collapsed': isItemCatCollapsed(group.id) }"
                 :style="{ '--tier-c': group.color }"
                 role="button"
@@ -303,14 +315,22 @@
                 @keydown.enter.prevent="toggleItemCatSection(group.id)"
                 @keydown.space.prevent="toggleItemCatSection(group.id)"
               >
-                <span class="tier-header-chevron">▾</span>
-                <img :src="group.image" :alt="group.label" class="item-cat-header-img" />
-                <span class="tier-header-label">{{ group.label }}</span>
+                <span class="cs-tier-toggle" aria-hidden="true">
+                  <span class="tier-header-chevron">▾</span>
+                </span>
+                <span class="cs-tier-emblem">
+                  <img :src="group.image" :alt="group.label" class="item-cat-header-img" />
+                </span>
+                <span class="cs-tier-heading">
+                  <span class="cs-tier-kicker">Equipment category</span>
+                  <span class="tier-header-label">{{ group.label }}</span>
+                </span>
                 <span class="tier-header-line"></span>
                 <span class="tier-header-counter">
                   <span class="tier-header-count"
                     >{{ group.ownedCount }}/{{ group.totalCount }}</span
                   >
+                  <small>owned</small>
                 </span>
               </div>
               <Transition @enter="onTierEnter" @after-enter="onTierAfterEnter" @leave="onTierLeave">
@@ -2581,7 +2601,198 @@ export default defineComponent({
   opacity: 1;
 }
 
-/* ── Tier section spacing (header styles shared in rpg-theme.css → .tier-header*) ── */
+/* ── Tier category cards ── */
+.cs-tier-header {
+  min-height: 62px;
+  margin-bottom: 12px;
+  padding: 7px 10px 7px 8px;
+  gap: 8px;
+  border: 1px solid #3e200a;
+  border-left: 4px solid var(--tier-c, #c89040);
+  border-radius: 4px;
+  background: #1a1008;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.cs-tier-header::after {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 0;
+  background: var(--tier-c, #c89040);
+  opacity: 0.65;
+}
+.cs-tier-header:hover,
+.cs-tier-header.is-active-tier {
+  border-color: #7a4e20;
+  background: #1c1c18;
+}
+.cs-tier-header.is-collapsed {
+  margin-bottom: 0;
+  background: #141410;
+}
+.cs-tier-header.is-collapsed::after {
+  opacity: 0.35;
+}
+.cs-tier-header.is-galaxy-locked {
+  border-left-color: #5c3310;
+}
+.cs-tier-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  background: #141410;
+}
+.cs-tier-toggle .tier-header-chevron {
+  width: 100%;
+  font-size: 16px;
+}
+.cs-tier-toggle .tier-header-lock {
+  color: #b89a5a;
+}
+.cs-tier-emblem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  background: #141410;
+  color: var(--tier-c, #c89040);
+}
+.cs-tier-emblem .tier-header-icon {
+  color: inherit;
+  filter: none;
+}
+.cs-tier-heading {
+  display: grid;
+  align-content: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 3px;
+}
+.cs-tier-kicker {
+  overflow: hidden;
+  color: #a89478;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.cs-tier-header .tier-header-label {
+  min-width: 0;
+  color: var(--tier-c, #c89040);
+  font-size: clamp(18px, 2.2cqi, 24px);
+  letter-spacing: 0.09em;
+  line-height: 1;
+}
+.cs-tier-header .tier-header-stars {
+  flex-shrink: 0;
+  padding: 5px 7px;
+  border: 1px solid #5c3310;
+  border-radius: 4px;
+  background: #141410;
+  font-size: 13px;
+}
+.cs-tier-header .tier-header-line {
+  min-width: 10px;
+  background: #3e200a;
+}
+.cs-tier-header .tier-header-chance {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 4px 7px;
+  border: 1px solid var(--tier-c, #c89040);
+  border-radius: 4px;
+  background: #141410;
+  color: var(--tier-c, #e8c040);
+  line-height: 1;
+}
+.cs-tier-header .tier-header-chance strong {
+  font-size: 14px;
+  font-weight: 900;
+}
+.cs-tier-header .tier-header-chance small,
+.cs-tier-header .tier-header-counter small,
+.cs-tier-header .tier-header-req small {
+  display: block;
+  color: #a89478;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.cs-tier-header .tier-header-chance.is-locked {
+  border-color: #5c3310;
+  color: #b89a5a;
+}
+.cs-tier-header .tier-header-counter {
+  align-items: flex-end;
+  gap: 3px;
+}
+.cs-tier-header .tier-header-count {
+  font-size: 20px;
+}
+.cs-tier-header .tier-header-req {
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+}
+.cs-tier-header .tier-header-req > span {
+  display: grid;
+  gap: 3px;
+}
+.cs-tier-header .tier-header-req small {
+  color: #8a7448;
+}
+
+@container cs-grid (max-width: 719px) {
+  .cs-tier-header {
+    gap: 6px;
+    padding-right: 7px;
+  }
+  .cs-tier-toggle {
+    flex-basis: 28px;
+    width: 28px;
+    height: 28px;
+  }
+  .cs-tier-emblem {
+    flex-basis: 36px;
+    width: 36px;
+    height: 36px;
+  }
+  .cs-tier-header .tier-header-label {
+    font-size: 18px;
+  }
+  .cs-tier-header .tier-header-stars {
+    padding: 4px 5px;
+  }
+  .cs-tier-header .tier-header-chance {
+    gap: 0;
+  }
+  .cs-tier-header .tier-header-chance small {
+    display: none;
+  }
+  .cs-tier-header .tier-header-count {
+    font-size: 18px;
+  }
+}
+
+/* ── Tier section spacing ── */
 .tier-group + .tier-group {
   margin-top: 12px;
 }
