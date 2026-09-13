@@ -687,6 +687,9 @@ export const MATERIAL_ICON_MD_SUFFIX = '-256.png'
  */
 export const SHOP_HOME_PLANET_GLYPH_SIZE = 84
 export const SHOP_CHAMPION_AFFINITY_COUNT = 1
+export const SHOP_LOCK_IMAGE = '/img/lock-128.png'
+export const SHOP_FACET_LOCK_SIZE = 28
+export const SHOP_DETAIL_LOCK_SIZE = 32
 
 // ── Shop domain tabs (ChampionShopComponent) ─────────────────────────────────
 /** Gap kept above a section header after the tab's landing scroll (px). */

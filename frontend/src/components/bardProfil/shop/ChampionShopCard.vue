@@ -33,7 +33,7 @@
           :class="locked ? 'grayscale' : ''"
         />
 
-        <img v-if="locked" src="/img/lock-128.png" alt="Locked" class="lock-overlay" />
+        <img v-if="locked" :src="SHOP_LOCK_IMAGE" alt="Locked" class="lock-overlay" />
 
         <div
           class="absolute inset-0 card-overlay"
@@ -70,6 +70,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import RpgNotifyBadge from '@/components/ui/RpgNotifyBadge.vue'
+import { SHOP_LOCK_IMAGE } from '@/config/constants'
 import { truncate } from '@/config/ui/numberFormat'
 
 /**
@@ -100,7 +101,7 @@ export default defineComponent({
   },
   emits: ['select', 'hover'],
   setup() {
-    return { truncate }
+    return { SHOP_LOCK_IMAGE, truncate }
   },
 })
 </script>

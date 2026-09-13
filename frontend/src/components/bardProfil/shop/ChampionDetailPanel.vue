@@ -150,7 +150,7 @@
           @click="$emit('buy', detail.name)"
         >
           <span v-if="detail.locked">
-            <Icon icon="lucide:lock" width="15" height="15" class="cs-buy-lock" />
+            <img :src="SHOP_LOCK_IMAGE" alt="Locked" class="cs-buy-lock" draggable="false" />
             {{ lockedButtonLabel }}
           </span>
           <span v-else-if="detail.canBuy">Recruit {{ detail.name }}</span>
@@ -181,7 +181,12 @@ import CosmicStageBackground from '@/components/ui/CosmicStageBackground.vue'
 import { formatNumber } from '@/config/ui/numberFormat'
 import { ORIGIN_SYNERGIES } from '@/config/champions/championOrigins'
 import { TRAIT_DEFINITIONS } from '@/config/champions/championTraits'
-import { MAX_STAR_LEVEL, SHOP_CHAMPION_AFFINITY_COUNT } from '@/config/constants'
+import {
+  MAX_STAR_LEVEL,
+  SHOP_CHAMPION_AFFINITY_COUNT,
+  SHOP_DETAIL_LOCK_SIZE,
+  SHOP_LOCK_IMAGE,
+} from '@/config/constants'
 import type { ShopChampionDetail } from '@/types'
 
 type AffinityCard = {
@@ -268,12 +273,15 @@ export default defineComponent({
         .map((threshold) => `At ${threshold.count}: ${threshold.bonus}`)
         .join('; ')}`
 
+    const detailLockSizePx = `${SHOP_DETAIL_LOCK_SIZE}px`
+
     return {
       affinityAriaLabel,
       affinityEffect,
       affinityTip,
       affinities,
       costState,
+      detailLockSizePx,
       fillStyle,
       formatNumber,
       lockedButtonLabel,
@@ -281,6 +289,7 @@ export default defineComponent({
       recruitHover,
       setRecruitHover,
       SHOP_CHAMPION_AFFINITY_COUNT,
+      SHOP_LOCK_IMAGE,
     }
   },
 })
@@ -733,7 +742,10 @@ export default defineComponent({
   gap: 8px;
 }
 .cs-buy-lock {
-  color: #cc6050;
+  width: v-bind(detailLockSizePx);
+  height: v-bind(detailLockSizePx);
+  flex: 0 0 auto;
+  object-fit: contain;
 }
 @media (prefers-reduced-motion: reduce) {
   .cs-recruit-signal,
