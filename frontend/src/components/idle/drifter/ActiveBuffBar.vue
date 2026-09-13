@@ -96,12 +96,6 @@
         <span v-else class="chip-clock chip-clock--endless">{{ props.dock === 'free' ? '∞' : 'galaxy' }}</span>
       </span>
 
-      <span
-        v-if="props.dock === 'free'"
-        class="chip-track"
-        :style="{ transform: `scaleX(${chip.timer ? chip.timer.progress : 1})` }"
-        aria-hidden="true"
-      />
     </div>
 
     <!-- Pause-Band: der Platz für „+N" ist IMMER reserviert, auch leer — sonst
@@ -253,7 +247,6 @@ const freeGapWide = `${ACTIVE_BUFF_HUD.GAP_WIDE}px`
 const panelInset = `${ACTIVE_BUFF_HUD.PANEL_INSET}px`
 const viewportInset = `${ACTIVE_BUFF_HUD.VIEWPORT_INSET}px`
 const freeBottomGap = `${ACTIVE_BUFF_HUD.BOTTOM_GAP}px`
-const auxiliaryHudClearance = `${ACTIVE_BUFF_HUD.AUX_HUD_CLEARANCE}px`
 const drainInset = `${ACTIVE_BUFF_HUD.DRAIN_INSET}px`
 const timerSize = `${ACTIVE_BUFF_HUD.TIMER_SIZE}px`
 const timerSizeCompact = `${ACTIVE_BUFF_HUD.TIMER_SIZE_COMPACT}px`
@@ -924,8 +917,7 @@ const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
   top: auto;
   right: calc(v-bind(panelInset) * var(--hud-scale, 1));
   bottom: calc(
-    var(--hud-panel-size, 330px) + var(--kb-hud-h, 0px) + v-bind(freeBottomGap) +
-      v-bind(auxiliaryHudClearance)
+    var(--hud-panel-size, 330px) + var(--kb-hud-h, 0px) + v-bind(freeBottomGap)
   );
   width: min(
     calc(var(--hud-panel-size, 330px) - v-bind(panelInset)),
@@ -986,9 +978,12 @@ const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
   place-items: center;
   width: v-bind(freeIcon);
   height: v-bind(freeIcon);
-  background: #141410;
+  background: #111008;
   border: 1px solid var(--chip-rank, #5c3310);
-  border-radius: 3px;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px #3e200a,
+    0 4px 14px rgba(0, 0, 0, 0.72);
 }
 
 .buff-bar--free .buff-chip--t2 .chip-icon {
@@ -1018,6 +1013,8 @@ const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
   width: 90%;
   height: 90%;
   object-fit: contain;
+  position: relative;
+  z-index: 1;
 }
 
 .buff-bar--free .chip-icon__glyph {
@@ -1026,7 +1023,22 @@ const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
 }
 
 .buff-bar--free .chip-ring {
-  display: none;
+  display: block;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  z-index: 2;
+}
+
+.buff-bar--free .chip-ring__track {
+  stroke: #3e200a;
+  stroke-width: 5;
+}
+
+.buff-bar--free .chip-ring__fill {
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 250ms linear;
 }
 
 .buff-bar--free .chip-aura {
@@ -1048,22 +1060,34 @@ const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
 }
 
 .buff-bar--free .chip-side {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 2;
-  display: flex;
-  align-items: baseline;
+  display: grid;
+  place-items: center;
   justify-content: center;
   width: 100%;
-  height: calc(var(--chip-h) - v-bind(freeIcon));
-  min-height: 17px;
+  height: v-bind(freeIcon);
   margin: 0;
-  background: #111008;
-  border-top: 1px solid #3e200a;
+  pointer-events: none;
 }
 
 .buff-bar--free .chip-clock {
+  position: relative;
+  display: flex;
+  align-items: baseline;
   justify-content: center;
-  min-width: 3.2ch;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 7px 3px;
+  background: #111008;
+  border: 1px solid #6ec040;
+  border-radius: 4px;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.8),
+    inset 0 0 0 1px #3e200a;
 }
 
 .buff-bar--free .chip-seconds {
@@ -1082,20 +1106,6 @@ const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
 
 .buff-bar--free .chip-text {
   display: none;
-}
-
-.buff-bar--free .chip-track {
-  position: absolute;
-  right: v-bind(drainInset);
-  left: v-bind(drainInset);
-  top: calc(v-bind(freeIcon) - 2px);
-  z-index: 3;
-  height: 2px;
-  transform-origin: left center;
-  background: var(--chip-color, #5c3310);
-  opacity: 0.9;
-  pointer-events: none;
-  transition: transform 1s linear;
 }
 
 .buff-bar--free .buff-more {
@@ -1130,10 +1140,6 @@ const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
     height: v-bind(freeIconCompact);
   }
 
-  .buff-bar--free .chip-track {
-    top: calc(v-bind(freeIconCompact) - 2px);
-  }
-
   .buff-bar--free .chip-seconds {
     font-size: v-bind(timerSizeCompact);
   }
@@ -1158,10 +1164,6 @@ const timerUnitSizeWide = `${ACTIVE_BUFF_HUD.TIMER_UNIT_SIZE_WIDE}px`
 
   .buff-bar--free .chip-pulse {
     height: v-bind(freeIconWide);
-  }
-
-  .buff-bar--free .chip-track {
-    top: calc(v-bind(freeIconWide) - 2px);
   }
 
   .buff-bar--free .chip-seconds {
