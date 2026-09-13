@@ -3,7 +3,11 @@
 import { computed, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { highlightSegments } from '@/utils/ui/searchHighlight'
-import { SHOP_HERO_BAR_H } from '@/config/constants'
+import {
+  SHOP_FACET_LOCK_SIZE,
+  SHOP_HERO_BAR_H,
+  SHOP_LOCK_IMAGE,
+} from '@/config/constants'
 import type { ShopFacetGroup } from '@/types'
 
 type ShopDomain = 'champions' | 'items'
@@ -85,6 +89,7 @@ const activeTotal = computed(
 )
 
 const heroBarHeightPx = `${SHOP_HERO_BAR_H}px`
+const facetLockSizePx = `${SHOP_FACET_LOCK_SIZE}px`
 </script>
 
 <template>
@@ -218,12 +223,12 @@ const heroBarHeightPx = `${SHOP_HERO_BAR_H}px`
                 </template>
               </span>
             </span>
-            <Icon
+            <img
               v-if="chip.locked"
-              icon="lucide:lock"
-              width="14"
-              height="14"
+              :src="SHOP_LOCK_IMAGE"
+              alt="Locked"
               class="cs-facet-lock"
+              draggable="false"
             />
             <span
               v-else-if="chip.count != null"
@@ -685,7 +690,10 @@ const heroBarHeightPx = `${SHOP_HERO_BAR_H}px`
   color: #e8c040;
 }
 .cs-facet-lock {
+  width: v-bind(facetLockSizePx);
+  height: v-bind(facetLockSizePx);
   flex-shrink: 0;
-  color: #7a4e20;
+  object-fit: contain;
+  opacity: 0.92;
 }
 </style>
