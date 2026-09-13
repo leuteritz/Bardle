@@ -31,6 +31,11 @@ export const MISSION_SHEEN_MS = 800
 /** Aufstieg je Textzeile bei der Übergabe, gestaffelt. */
 export const MISSION_RISE_MS = 420
 export const MISSION_RISE_STAGGER_MS = 60
+/** Ein Lauf des Peilrings außerhalb der Karte; der Auftakt peilt dreimal. */
+export const MISSION_PING_MS = 1400
+export const MISSION_DEBUT_PINGS = 3
+/** Eckmarken enden vor dem Innenschein — sein animationend meldet das Ende. */
+export const MISSION_MARK_LEAD_MS = 200
 
 /**
  * Obergrenze der Chime-Belohnung, ausgedrückt in Sekunden laufender Produktion.
