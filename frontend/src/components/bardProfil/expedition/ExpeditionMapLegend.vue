@@ -50,6 +50,11 @@ import {
   VOYAGE_MAP_LEGEND_LABEL_OFFSET,
   VOYAGE_MAP_LEGEND_R_RATIO,
   VOYAGE_MAP_LEGEND_ROWS,
+  LANDMARK_FREED_CORE,
+  LANDMARK_LANDFALL_RING,
+  LANDMARK_VOID_TRACE,
+  LANDMARK_DRIFTER_TRACE,
+  UNIVERSE_MAP_LOST_COLOR,
 } from '@/config/constants'
 
 type LegendRowKind = (typeof VOYAGE_MAP_LEGEND_ROWS)[number]['kind']
@@ -60,6 +65,14 @@ const props = defineProps<{
   dpr: number
   counts: Record<LegendRowKind, number>
 }>()
+
+const LEGEND_TIP_COLORS: Record<LegendRowKind, string> = {
+  'star-freed': LANDMARK_FREED_CORE,
+  'star-lost': UNIVERSE_MAP_LOST_COLOR,
+  'landfall-reef': LANDMARK_LANDFALL_RING,
+  'void-impact': LANDMARK_VOID_TRACE,
+  'drifter-trace': LANDMARK_DRIFTER_TRACE,
+}
 
 /** Auf welche Markenart der Zeiger gerade zeigt — die Karte hört mit. */
 const emit = defineEmits<{ hover: [LandmarkKind | null] }>()
@@ -73,10 +86,6 @@ const labelSize = `clamp(${VOYAGE_MAP_LEGEND_LABEL_MIN}px, calc(${VOYAGE_MAP_LEG
 
 function countFor(kind: LegendRowKind): number {
   return Math.max(0, Math.round(props.counts[kind] ?? 0))
-}
-
-function tipFor(row: (typeof VOYAGE_MAP_LEGEND_ROWS)[number]): string {
-  return `${row.tip} ${countFor(row.kind)} recorded in this galaxy.`
 }
 
 function onOver(e: MouseEvent): void {
@@ -156,7 +165,13 @@ watch(
       class="eml-row"
       :data-kind="row.kind"
       :aria-label="`${row.label}: ${countFor(row.kind)} in this galaxy`"
-      v-tip="{ label: row.label, text: tipFor(row) }"
+      v-tip="{
+        label: row.label,
+        labelAccent: String(countFor(row.kind)),
+        text: row.tip,
+        color: LEGEND_TIP_COLORS[row.kind],
+        prefer: 'top',
+      }"
     >
       <canvas
         :ref="(el) => (probes[i] = el as HTMLCanvasElement | null)"

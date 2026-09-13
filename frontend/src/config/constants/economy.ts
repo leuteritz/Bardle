@@ -1633,15 +1633,15 @@ export const VOYAGE_MAP_LEGEND_ROWS = [
   {
     kind: 'star-freed',
     label: 'Freed',
-    tip: 'A star Bard pulled out of this galaxy.',
+    tip: 'Rescued star in this galaxy.',
   },
-  { kind: 'star-lost', label: 'Lost', tip: 'A star this run never reached.' },
-  { kind: 'landfall-reef', label: 'Landfall', tip: 'A waypoint a leg brushed past.' },
-  { kind: 'void-impact', label: 'Void', tip: 'Where a Void creature struck.' },
+  { kind: 'star-lost', label: 'Lost', tip: 'Unreached star this run.' },
+  { kind: 'landfall-reef', label: 'Landfall', tip: 'Route waypoint crossed.' },
+  { kind: 'void-impact', label: 'Void', tip: 'Void impact recorded.' },
   {
     kind: 'drifter-trace',
     label: 'Drifter',
-    tip: 'A rare drifter that crossed this galaxy.',
+    tip: 'Rare drifter crossing.',
   },
 ] as const
 
