@@ -9,8 +9,11 @@ import { useMissionStore } from '@/stores/progression/missionStore'
 import {
   MISSION_DEBUT_BREATHS,
   MISSION_DEBUT_BREATH_MS,
+  MISSION_DEBUT_PINGS,
   MISSION_HANDOVER_BREATHS,
   MISSION_HANDOVER_BREATH_MS,
+  MISSION_MARK_LEAD_MS,
+  MISSION_PING_MS,
   MISSION_RISE_MS,
   MISSION_RISE_STAGGER_MS,
   MISSION_SHEEN_MS,
@@ -31,7 +34,9 @@ import {
  *
  * Zwei Zeremonien, nur `opacity`/`transform`, Ende per `animationend`:
  * der Auftakt beim frischen Spielstand (einmal je Sitzung) und die Übergabe,
- * sobald nach dem Abschlussblitz das neue Ziel steht.
+ * sobald nach dem Abschlussblitz das neue Ziel steht. Aura, Peilring und
+ * Eckmarken liegen AUSSERHALB der Kante — Deko, klickdurchlässig, nicht in der
+ * Kontur.
  */
 
 /** Einmal je Sitzung — die Spalte unmountet bei offenem Profil-Tab. */
@@ -69,6 +74,10 @@ const sheenMs = `${MISSION_SHEEN_MS}ms`
 const riseMs = `${MISSION_RISE_MS}ms`
 const rise2Ms = `${MISSION_RISE_STAGGER_MS}ms`
 const rise3Ms = `${MISSION_RISE_STAGGER_MS * 2}ms`
+const pingMs = `${MISSION_PING_MS}ms`
+const debutPings = String(MISSION_DEBUT_PINGS)
+const debutMarkMs = `${MISSION_DEBUT_BREATHS * MISSION_DEBUT_BREATH_MS - MISSION_MARK_LEAD_MS}ms`
+const handoverMarkMs = `${MISSION_HANDOVER_BREATHS * MISSION_HANDOVER_BREATH_MS - MISSION_MARK_LEAD_MS}ms`
 
 /** Nennt die Stufe einen Reiter, führt die Karte per Klick dorthin. */
 const linkTab = computed(() => (flashing.value ? undefined : face.value?.def.tab))
@@ -164,8 +173,14 @@ onUnmounted(() => {
     ></span>
 
     <!-- Zeremonie-Ebenen: vor dem Text, damit sie ohne z-index darunter liegen. -->
+    <span class="wf-aura" aria-hidden="true"></span>
+    <span class="wf-ping" aria-hidden="true"></span>
+    <span class="wf-mark wf-mark--tl" aria-hidden="true"></span>
+    <span class="wf-mark wf-mark--tr" aria-hidden="true"></span>
+    <span class="wf-mark wf-mark--bl" aria-hidden="true"></span>
+    <span class="wf-mark wf-mark--br" aria-hidden="true"></span>
     <span ref="glowEl" class="wf-glow" aria-hidden="true"></span>
-    <span class="wf-sheen" aria-hidden="true"></span>
+    <span class="wf-clip" aria-hidden="true"><span class="wf-sheen"></span></span>
 
     <span class="hc-over wf-name">{{ face?.name }}</span>
     <span class="hc-over wf-task">{{ face?.task }}</span>
@@ -196,6 +211,9 @@ onUnmounted(() => {
    eine mit dem Missionsnamen wechselnde Höhe liesse das freie Feld wandern. */
 .wf {
   padding-bottom: var(--hc-pad-y);
+  /* Aura, Peilring und Eckmarken liegen vor der Kante; nichts im Fluss ragt
+     hinaus, der Streifen hat seinen eigenen Clip. */
+  overflow: visible;
 }
 
 .wf--link {
@@ -236,15 +254,112 @@ onUnmounted(() => {
   pointer-events: none;
   box-shadow:
     inset 0 0 0 1px var(--hc-color, var(--rpg-gold)),
-    inset 0 0 1.4em color-mix(in srgb, var(--hc-color, var(--rpg-gold)) 45%, transparent);
+    inset 0 0 2em color-mix(in srgb, var(--hc-color, var(--rpg-gold)) 50%, transparent);
 }
 
-.wf--debut .wf-glow {
+/* Aura: Außenschatten malt nie unter dem eigenen Kasten — es leuchtet die
+   Umgebung, nicht die Karte. Atmet im Takt des Innenscheins. */
+.wf-aura {
+  position: absolute;
+  inset: -1px;
+  border-radius: 5px;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1px var(--hc-color, var(--rpg-gold)),
+    0 0 3em 0.7em color-mix(in srgb, var(--hc-color, var(--rpg-gold)) 46%, transparent);
+}
+
+.wf--debut .wf-glow,
+.wf--debut .wf-aura {
   animation: wf-breathe v-bind(debutBreathMs) ease-in-out v-bind(debutBreaths);
 }
 
-.wf--handover .wf-glow {
+.wf--handover .wf-glow,
+.wf--handover .wf-aura {
   animation: wf-breathe v-bind(handoverBreathMs) ease-in-out v-bind(handoverBreaths);
+}
+
+/* Peilring: läuft von der Kante nach außen und verblasst. */
+.wf-ping {
+  position: absolute;
+  inset: -2px;
+  border: 1px solid var(--hc-color, var(--rpg-gold));
+  border-radius: 5px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.wf--debut .wf-ping {
+  animation: wf-ping v-bind(pingMs) cubic-bezier(0.2, 0.6, 0.3, 1) v-bind(debutPings);
+}
+
+.wf--handover .wf-ping {
+  animation: wf-ping v-bind(pingMs) cubic-bezier(0.2, 0.6, 0.3, 1) 1;
+}
+
+/* Eckmarken: vier L-Winkel vor den Ecken, fahren ein, stehen, verblassen.
+   Richtung je Ecke als statische --mx/--my, der Keyframe rechnet damit. */
+.wf-mark {
+  position: absolute;
+  width: 0.9em;
+  height: 0.9em;
+  opacity: 0;
+  pointer-events: none;
+  border: 0 solid var(--hc-color, var(--rpg-gold));
+}
+
+.wf-mark--tl {
+  --mx: -1;
+  --my: -1;
+  top: -0.5em;
+  left: -0.5em;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.wf-mark--tr {
+  --mx: 1;
+  --my: -1;
+  top: -0.5em;
+  right: -0.5em;
+  border-top-width: 2px;
+  border-right-width: 2px;
+}
+
+.wf-mark--bl {
+  --mx: -1;
+  --my: 1;
+  bottom: -0.5em;
+  left: -0.5em;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
+
+.wf-mark--br {
+  --mx: 1;
+  --my: 1;
+  bottom: -0.5em;
+  right: -0.5em;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+}
+
+.wf--debut .wf-mark {
+  animation: wf-lock v-bind(debutMarkMs) cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.wf--handover .wf-mark {
+  animation: wf-lock v-bind(handoverMarkMs) cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+/* Der Streifen braucht seinen Clip selbst, seit die Karte ihre Kante öffnet. */
+.wf-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  pointer-events: none;
 }
 
 /* Lichtstreifen — EIN Lauf über die Karte. */
@@ -253,11 +368,10 @@ onUnmounted(() => {
   top: 0;
   bottom: 0;
   left: 0;
-  width: 38%;
+  width: 44%;
   opacity: 0;
   transform: translateX(-120%) skewX(-18deg);
-  background: linear-gradient(100deg, transparent, rgba(242, 234, 210, 0.22), transparent);
-  pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(242, 234, 210, 0.34), transparent);
 }
 
 .wf--debut .wf-sheen,
@@ -307,6 +421,33 @@ onUnmounted(() => {
   }
 }
 
+@keyframes wf-ping {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.07);
+  }
+}
+
+@keyframes wf-lock {
+  0% {
+    opacity: 0;
+    transform: translate(calc(var(--mx) * 0.7em), calc(var(--my) * 0.7em));
+  }
+  12%,
+  86% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+}
+
 @keyframes wf-rise {
   from {
     opacity: 0;
@@ -322,6 +463,12 @@ onUnmounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .wf--debut .wf-glow,
   .wf--handover .wf-glow,
+  .wf--debut .wf-aura,
+  .wf--handover .wf-aura,
+  .wf--debut .wf-ping,
+  .wf--handover .wf-ping,
+  .wf--debut .wf-mark,
+  .wf--handover .wf-mark,
   .wf--debut .wf-sheen,
   .wf--handover .wf-sheen,
   .wf--handover .wf-name,

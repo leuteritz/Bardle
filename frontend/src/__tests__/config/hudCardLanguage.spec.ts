@@ -217,7 +217,7 @@ describe('HUD-Kartensprache: die Gestalt steht an EINER Stelle', () => {
        Frame neu — oder verschöbe die Kontur. */
     const wf = cards.find((c) => c.file.includes('WayfinderHudCard'))!.source
     const frames = [...wf.matchAll(/@keyframes\s+([\w-]+)\s*\{([\s\S]*?)\n\}/g)]
-    expect(frames.map((m) => m[1]).sort()).toEqual(['wf-breathe', 'wf-rise', 'wf-sheen'])
+    expect(frames.map((m) => m[1]).sort()).toEqual(['wf-breathe', 'wf-lock', 'wf-ping', 'wf-rise', 'wf-sheen'])
     for (const [, name, body] of frames) {
       const props = [...body.matchAll(/^\s*([a-z-]+):/gm)].map((m) => m[1])
       expect(props.length, `${name} ist leer`).toBeGreaterThan(0)
@@ -228,6 +228,7 @@ describe('HUD-Kartensprache: die Gestalt steht an EINER Stelle', () => {
     const reduced = wf.slice(wf.indexOf('@media (prefers-reduced-motion: reduce)'))
     expect(reduced).toMatch(/\.wf--debut \.wf-glow[\s\S]*animation: none/)
     expect(reduced).toMatch(/\.wf--handover \.wf-sheen[\s\S]*animation: none/)
+    expect(reduced).toMatch(/\.wf--debut \.wf-mark[\s\S]*animation: none/)
     // Kein Timer beendet die Zeremonie — das tut das Ende des Innenscheins.
     expect(wf).toContain('@animationend')
     expect(wf).not.toMatch(/setTimeout|gameTimeout/)
